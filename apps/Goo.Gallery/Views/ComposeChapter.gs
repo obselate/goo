@@ -5,6 +5,7 @@ import Gsharp.Extensions.Go
 import System
 import System.Collections.Generic
 import System.Numerics
+import System.Threading
 
 open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
     private let tiles List[GallerySpecimenTile]
@@ -13,6 +14,7 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
     private var orientation int32
     private var shuffleState int64
     private var workerGeneration int32
+    private let lifetime CancellationTokenSource = CancellationTokenSource()
     private let posterFormReflow GalleryPosterReflowItem
     private let posterAlignReflow GalleryPosterReflowItem
     private let posterFlowReflow GalleryPosterReflowItem
@@ -43,6 +45,9 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
 
     /// Releases poster geometry subscriptions.
     public func Dispose() {
+        workerGeneration++
+        lifetime.Cancel()
+        lifetime.Dispose()
         posterFormReflow.Dispose()
         posterAlignReflow.Dispose()
         posterFlowReflow.Dispose()
@@ -84,61 +89,58 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
         Rebuild()
     }
 
-    private async func rankTiles(generation int32) List[GalleryTileWorkerResult] {
-        let count = tiles.Count
-        let output = chan[GalleryTileWorkerResult](count)
-        scope {
-            var index int32 = 0
-            while index < count {
-                let tile = tiles[index]
-                go GalleryRankTile(tile.Index, tile.Value, generation, output)
-                index = index + 1
+    private func rankTiles(
+        snapshot List[GallerySpecimenTile],
+        generation int32,
+        window Window,
+        token CancellationToken
+    ) {
+        try {
+            using let cancellation = CancellationTokenSource.CreateLinkedTokenSource(token, window.Closed)
+            let count = snapshot.Count
+            let output = chan[GalleryTileWorkerResult](count)
+            scope {
+                for tile in snapshot {
+                    cancellation.Token.ThrowIfCancellationRequested()
+                    go GalleryRankTile(tile.Index, tile.Value, generation, output)
+                }
             }
+            let ranks = Dictionary[int32, int64](count)
+            for index in 0 ... count {
+                let result = <-output
+                ranks.Add(result.Index, result.Rank)
+            }
+            snapshot.Sort(
+                (left, right) -> {
+                    let rank = ranks[left.Index].CompareTo(ranks[right.Index])
+                    return rank == 0 ? left.Index.CompareTo(right.Index): rank
+                }
+            )
+            cancellation.Token.ThrowIfCancellationRequested()
+            window.TryPost(
+                () -> {
+                    if generation != workerGeneration {
+                        return
+                    }
+                    tiles.Clear()
+                    tiles.AddRange(snapshot)
+                    Rebuild()
+                }
+            )
+        } catch (error OperationCanceledException) { } catch (error Exception) {
+            Console.Error.WriteLine(error)
         }
-
-        let results = List[GalleryTileWorkerResult](count)
-        var received int32 = 0
-        while received < count {
-            results.Add(<-output)
-            received = received + 1
-        }
-        return results
     }
 
-    private func runWorkers() {
-        workerGeneration = workerGeneration + 1
-        // Finish the worker batch before updating tiles on the UI thread.
-        let results = rankTiles(workerGeneration).GetAwaiter().GetResult()
-        var left int32 = 0
-        while left < results.Count - 1 {
-            var right = left + 1
-            while right < results.Count {
-                let before = results[right].Rank < results[left].Rank ||
-                    results[right].Rank == results[left].Rank &&
-                    results[right].Index < results[left].Index
-                if before {
-                    let result = results[left]
-                    results[left] = results[right]
-                    results[right] = result
-                }
-                right = right + 1
-            }
-            left = left + 1
+    private func runWorkers(owner Window?) {
+        guard let window = owner else {
+            return
         }
-
-        let ordered = List[GallerySpecimenTile](results.Count)
-        for result in results {
-            for tile in tiles {
-                if tile.Index == result.Index {
-                    ordered.Add(tile)
-                }
-            }
-        }
-        tiles.Clear()
-        for tile in ordered {
-            tiles.Add(tile)
-        }
-        Rebuild()
+        workerGeneration++
+        let snapshot = List[GallerySpecimenTile](tiles)
+        let generation = workerGeneration
+        let token = lifetime.Token
+        go rankTiles(snapshot, generation, window, token)
     }
 
     private func orientationName() string {
@@ -148,13 +150,14 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
         if orientation == 1 {
             return "portrait"
         }
-        if orientation == 2 {
-            return "landscape flipped"
+        return if orientation == 2 {
+            "landscape flipped"
+        } else {
+            "portrait flipped"
         }
-        return "portrait flipped"
     }
 
-    private func tileContent() Blob {
+    private func tileContent(window Window?) Blob {
         let shownRotation = int32(rotation) % 360
         let controls = Container{
             FlexDirection: FlexDirection.Row,
@@ -164,7 +167,7 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
             GalleryTheme.GhostButton("Rotate 90° · " + shownRotation.ToString() + "°", () -> rotateTiles()),
             GalleryTheme.GhostButton("Swap ends", () -> swapEnds()),
             GalleryTheme.GhostButton("Shuffle", () -> shuffleTiles()),
-            GalleryTheme.GhostButton("Go workers", () -> runWorkers()),
+            GalleryTheme.GhostButton("Go workers", () -> runWorkers(window)),
         }
         let spiral = Container{
             Height: Percent(100),
@@ -654,7 +657,7 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
         GallerySpecimen(
             "Keyed Fibonacci tiles",
             "Reorient, rotate, shuffle, swap, or race workers while keyed identity survives.",
-            tileContent()
+            tileContent(input.Window)
         )
     } else {
         GallerySpecimen(

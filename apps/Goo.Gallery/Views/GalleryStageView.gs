@@ -9,7 +9,8 @@ internal class GalleryStageView {
             currentShowcase int32,
             compact bool,
             assets GalleryMathAssets,
-            programs GalleryShaderPrograms
+            programs GalleryShaderPrograms,
+            window Window?
         ) Blob {
             if currentShowcase == 0 {
                 return Cell.Mount[HeroCell](
@@ -25,7 +26,7 @@ internal class GalleryStageView {
             return switch showcase.Chapter {
                 case 0: Cell.Mount[ComposeChapterInput, ComposeChapter](
                     "showcase-compose",
-                    ComposeChapterInput{Showcase: showcase.Local}
+                    ComposeChapterInput{Showcase: showcase.Local, Window: window}
                 )
                 case 1: Container{Key: "showcase-surfaces-placeholder", Display: Display.None}
                 case 2: Cell.Mount[MotionChapter](
@@ -57,11 +58,12 @@ internal class GalleryStageView {
             currentShowcase int32,
             compact bool,
             assets GalleryMathAssets,
-            programs GalleryShaderPrograms
+            programs GalleryShaderPrograms,
+            window Window?
         ) Blob {
             let showcase = catalog.Showcases[currentShowcase]
             let surfacesActive = showcase.Chapter == 1
-            let transient = Transient(catalog, currentShowcase, compact, assets, programs)
+            let transient = Transient(catalog, currentShowcase, compact, assets, programs, window)
             return Container{
                 Key: "gallery-stage",
                 Width: Percent(100),
