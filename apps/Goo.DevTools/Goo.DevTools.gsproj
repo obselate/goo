@@ -26,7 +26,6 @@
     <Content Include="Assets/Fonts/*" Link="Fonts/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="../../tests/Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf" Link="Fonts/VendSans-VariableFont_wght.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="../../tests/Goo.VulkanProof/Assets/Text/VendSans-OFL.txt" Link="Fonts/VendSans-OFL.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Assets/Icons/**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <ProjectReference Include="../../Goo/Goo.gsproj" />
     <PackageReference Include="Goo.Widgets" Version="0.16.2" />
     <None Update="README.md" Pack="true" PackagePath="/" />
