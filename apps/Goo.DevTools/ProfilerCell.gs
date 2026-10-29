@@ -87,10 +87,15 @@ internal partial class ProfilerCell : Cell, IDisposable {
         if fileAction != "" {
             children.Add(FilePanel())
         }
-        if fileStatus != "" {
-            let status = Caption("profiler-file-status", fileStatus, theme.MutedTextColor)
-            status.Margin = Edges{Left: Pad, Right: Pad, Top: 2}
-            children.Add(status)
+        if fileStatus != "" && !fileStatus.StartsWith("Exported ", StringComparison.Ordinal) {
+            children.Add(
+                Container{
+                    Key: "profiler-file-status",
+                    FlexShrink: 0.0,
+                    Padding: Edges{Left: Pad, Right: Pad, Top: 4},
+                    Banner{Tone: Tone.Danger, Content: fileStatus, Live: true}.Build()
+                }
+            )
         }
         let problem = Problem()
         if problem != "" {
@@ -111,8 +116,10 @@ internal partial class ProfilerCell : Cell, IDisposable {
                     FlexGrow: 1.0,
                     AlignItems: AlignItems.Center,
                     JustifyContent: JustifyContent.Center,
-                    EmptyState{Illustration: MaterialIcons.Create("monitoring", 32.0, theme.FaintTextColor), Title: "No trace"}
-                        .Build()
+                    EmptyState{
+                        Illustration: MaterialIcons.Create("monitoring", 32.0, theme.FaintTextColor),
+                        Title: "No trace"
+                    }.Build()
                 }
             )
             return Column(children)
@@ -132,7 +139,11 @@ internal partial class ProfilerCell : Cell, IDisposable {
         let record = ActionButton{
             Content: active ? "Stop": "Record",
             Leading: MaterialIcons.Create(active ? "stop": "fiber_manual_record", 18.0, theme.DangerColor),
-            Disabled: fileBusy || session.State != DiagnosticConnectionState.Connected || !session.Capabilities.ProfilerTrace,
+            Disabled: fileBusy ||
+                session.State != DiagnosticConnectionState.Connected ||
+                !session
+                .Capabilities
+                .ProfilerTrace,
             OnClick: () -> ToggleRecording(active),
         }.Build()
         record.Key = "profiler-record"
@@ -231,7 +242,14 @@ internal partial class ProfilerCell : Cell, IDisposable {
         }
     }
 
-    private func Tool(key string, icon string, tip string, action Action, enabled bool = true, active bool = false) Blob {
+    private func Tool(
+        key string,
+        icon string,
+        tip string,
+        action Action,
+        enabled bool = true,
+        active bool = false
+    ) Blob {
         let theme = Theme.Read()
         let button = IconButton{
             Icon: MaterialIcons.Create(icon, 18.0, active ? theme.LinkColor: theme.MutedTextColor),
@@ -302,7 +320,10 @@ internal partial class ProfilerCell : Cell, IDisposable {
 
     private func Problem() string {
         guard let trace = session.Profiler else {
-            let unavailable = session.State == DiagnosticConnectionState.Connected && !session.Capabilities.ProfilerTrace
+            let unavailable = session.State == DiagnosticConnectionState.Connected &&
+                !session
+                .Capabilities
+                .ProfilerTrace
             return unavailable ? "Recording is not available for this target": ""
         }
         let parts = List[string]()
@@ -323,6 +344,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
         let pid = trace.Process.Split(" / ")[0]
         return trace.State + " · " + trace.Records.Count.ToString() + " records · " + Time(trace, trace.End)
         + " · " + name + (pid == "" ? "": " (pid " + pid + ")")
+        + (fileStatus.StartsWith("Exported ", StringComparison.Ordinal) ? " · " + fileStatus: "")
     }
 
     private func WindowTitle(id string) string {
@@ -365,7 +387,10 @@ internal partial class ProfilerCell : Cell, IDisposable {
         ticks.Add(
             RulerLabel(
                 "ruler-base",
-                (trace.Milliseconds(start) / 1000.0).ToString("F" + baseDecimals.ToString(), CultureInfo.InvariantCulture)
+                (trace.Milliseconds(start) / 1000.0).ToString(
+                    "F" + baseDecimals.ToString(),
+                    CultureInfo.InvariantCulture
+                )
                 + " s",
                 0.0,
                 theme
@@ -423,7 +448,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
             Rect(selection, left, 0.0, Math.Max(1.0, Math.Min(w, X(selectionEnd)) - left), Span)
         }
         shapes.Add(PathShape(selection.Build(), theme.AccentColor.WithAlpha(0.18)))
-        shapes.Add(PathShape(Highlight(selectedFrame, w), theme.ActiveColor))
+        shapes.Add(PathShape(Highlight(selectedFrame, w), theme.AccentColor.WithAlpha(0.35)))
         shapes.Add(PathShape(Highlight(hovered, w), theme.HoverColor))
         for phase in 0 ... trace.FramePhases.Count {
             shapes.Add(PathShape(paths["phase" + phase.ToString()], PhaseColor(theme, phase)))
@@ -459,7 +484,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                     BorderRadius: theme.RadiusMd,
                     BoxShadow: theme.ElevationMd,
                     HitTestSelf: false,
-                    Children: Breakdown(trace, trace.Frames[hovered], theme)
+                    Children: Breakdown(trace, trace.Frames[hovered], theme, 8)
                 }
             )
         }
@@ -471,7 +496,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
             FlexGrow: 1.0,
             Margin: Edges{Left: Pad},
             Position: PositionType.Relative,
-            Overflow: Overflow.Hidden,
+            ZIndex: 1,
             BackgroundColor: theme.SunkenColor,
             BorderRadius: theme.RadiusSm,
             Focusable: true,
@@ -649,7 +674,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
     private func FrameAt(x float64) int32 {
         let column = int32(x)
         for distance in 0 ... 7 {
-            for candidate in []int32{column - distance, column + distance} {
+            for candidate in[]int32{column - distance, column + distance} {
                 if candidate >= 0 && candidate < columns.Length && columns[candidate] >= 0 {
                     return columns[candidate]
                 }
@@ -688,17 +713,28 @@ internal partial class ProfilerCell : Cell, IDisposable {
         Caption("label", name, theme.MutedTextColor)
     }
 
-    private func Breakdown(trace ProfilerTrace, frame ProfilerFrame, theme Theme) List[Blob] {
+    private func Breakdown(trace ProfilerTrace, frame ProfilerFrame, theme Theme, limit int32) List[Blob] {
         let r = trace.Records[frame.Record]
         let rows = List[Blob]()
         rows.Add(Segment("Frame", r.EndTicks - r.Ticks, nil, theme, trace))
-        for k in 0 ... frame.Phases.Length {
-            let phase = frame.Phases[k]
-            rows.Add(Segment(LaneTitle(trace.FramePhases[phase]), frame.Ticks[k], PhaseColor(theme, phase), theme, trace))
+        let order = List[int32]()
+        for k in 0 ... frame.Phases.Length + 1 {
+            order.Add(k)
         }
-        rows.Add(Segment("Other", frame.Other, theme.FaintTextColor, theme, trace))
+        let ticks = (k int32) -> k < frame.Phases.Length ? frame.Ticks[k]: frame.Other
+        order.Sort((a int32, b int32) -> ticks(b).CompareTo(ticks(a)))
+        for k in order.GetRange(0, Math.Min(limit, order.Count)) {
+            if k == frame.Phases.Length {
+                rows.Add(Segment("Other", frame.Other, theme.FaintTextColor, theme, trace))
+            } else {
+                let phase = frame.Phases[k]
+                rows.Add(
+                    Segment(LaneTitle(trace.FramePhases[phase]), frame.Ticks[k], PhaseColor(theme, phase), theme, trace)
+                )
+            }
+        }
         if frame.Wait > 0L {
-            rows.Add(Segment("Wait", frame.Wait, nil, theme, trace))
+            rows.Add(Segment("Wait", frame.Wait, Color.Transparent, theme, trace))
         }
         return rows
     }
@@ -794,7 +830,10 @@ internal partial class ProfilerCell : Cell, IDisposable {
                                 if let current = session.Profiler {
                                     SelectRecord(
                                         current,
-                                        Int32.Parse(ids[0].Substring("profiler-event-".Length), CultureInfo.InvariantCulture)
+                                        Int32.Parse(
+                                            ids[0].Substring("profiler-event-".Length),
+                                            CultureInfo.InvariantCulture
+                                        )
                                     )
                                 }
                             }
@@ -916,7 +955,11 @@ internal partial class ProfilerCell : Cell, IDisposable {
             for index in 0 ... trace.Records.Count {
                 let r = trace.Records[index]
                 let gpu = r.GpuNs != nil
-                if gpu ? r.Ticks < lo || r.Ticks >= hi: r.Kind != "duration" || r.Resource != nil || r.EndTicks <= lo || r.Ticks >= hi {
+                if gpu ? r.Ticks < lo ||
+                    r.Ticks >= hi: r.Kind != "duration" ||
+                    r.Resource != nil ||
+                    r.EndTicks <= lo ||
+                    r.Ticks >= hi {
                     continue
                 }
                 if filterWindow != "" && r.Window != "" && r.Window != filterWindow {
@@ -971,7 +1014,9 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 let gpu = pair.Key.StartsWith("GPU ", StringComparison.Ordinal)
                 durations.Sort()
                 let p50 = durations.Count == 0 ? -1L: durations[(durations.Count - 1) / 2]
-                let p99 = durations.Count == 0 ? -1L: durations[int32(Math.Ceiling(float64(durations.Count) * 0.99)) - 1]
+                let p99 = durations.Count == 0 ? -1L: durations[
+                    int32(Math.Ceiling(float64(durations.Count) * 0.99)) - 1
+                ]
                 rows.Add(
                     ProfilerTableRow(
                         []string{
@@ -981,7 +1026,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                             p50 < 0L ? "partial": Time(trace, p50),
                             p99 < 0L ? "partial": Time(trace, p99),
                             Time(trace, maximum),
-                            gpu ? "": (measured == 0 ? "unmeasured": Bytes(float64(allocation)))
+                            gpu ? "": (measured == 0 ? "—": Bytes(float64(allocation)))
                             + (measured < count ? " *": "")
                         },
                         []float64{
@@ -1069,7 +1114,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                             LaneTitle(lane.Name),
                             OptionalValue(initial, unit),
                             OptionalValue(final, unit),
-                            delta == nil ? "unmeasured": SignedValue(delta ?? 0.0, unit),
+                            delta == nil ? "—": SignedValue(delta ?? 0.0, unit),
                             OptionalValue(peak, unit)
                         },
                         []float64{0.0, initial ?? -1.0, final ?? -1.0, delta ?? -1.0, peak ?? -1.0},
@@ -1118,7 +1163,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                             durationText,
                             kind,
                             name,
-                            bytes == nil ? "unmeasured": Bytes(float64(bytes ?? 0uL)),
+                            bytes == nil ? "—": Bytes(float64(bytes ?? 0uL)),
                             trace.OwnerChain(r),
                             Result(r)
                         },
@@ -1160,7 +1205,10 @@ internal partial class ProfilerCell : Cell, IDisposable {
         let gridColumns = [names.Length]DataGridColumn
         for column in 0 ... names.Length {
             let text = tab == "Resources" ? column == 3 || column == 5: column == 0
-            let number = tab == "Resources" ? column == 0 || column == 1 || column == 4: column != 0 && !(tab == "Types" && column == 3)
+            let number = tab == "Resources" ? column == 0 ||
+                column == 1 ||
+                column == 4: column != 0 &&
+                !(tab == "Types" && column == 3)
             var definition = DataGridColumn{
                 Id: "c" + column.ToString(),
                 Label: names[column],
@@ -1171,7 +1219,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
             if text {
                 definition.Flex = 1.0
             } else {
-                definition.Width = number ? 84.0: 110.0
+                definition.Width = number ? 96.0: 110.0
             }
             gridColumns[column] = definition
         }
@@ -1182,11 +1230,14 @@ internal partial class ProfilerCell : Cell, IDisposable {
         let r = trace.Records[selected]
         let rows = List[Blob]()
         if selectedFrame >= 0 && selectedFrame < trace.Frames.Count && trace.Frames[selectedFrame].Record == selected {
-            rows.AddRange(Breakdown(trace, trace.Frames[selectedFrame], theme))
+            rows.AddRange(Breakdown(trace, trace.Frames[selectedFrame], theme, Int32.MaxValue))
             if trace.PumpGpu.TryGetValue(r.Window + ":" + r.Pump.ToString(), out var gpu) {
                 for index in gpu {
                     let sample = trace.Records[index]
-                    rows.Add(Detail("GPU " + ProfilerTrace.GpuStage(sample.Event), TimeNs(float64(sample.GpuNs ?? 0uL)), theme))
+                    let ticks = int64(float64(sample.GpuNs ?? 0uL) * float64(trace.Frequency) / 1000000000.0)
+                    rows.Add(
+                        Segment("GPU " + ProfilerTrace.GpuStage(sample.Event), ticks, Color.Transparent, theme, trace)
+                    )
                 }
             }
         } else {
@@ -1200,11 +1251,29 @@ internal partial class ProfilerCell : Cell, IDisposable {
                     Padding: Edges{Top: 4, Bottom: 4}
                 }
             )
-            rows.Add(Detail("Duration", r.GpuNs != nil ? TimeNs(float64(r.GpuNs ?? 0uL)): Time(trace, r.EndTicks - r.Ticks), theme))
+            rows.Add(
+                Detail(
+                    "Duration",
+                    r.GpuNs != nil ? TimeNs(float64(r.GpuNs ?? 0uL)): Time(trace, r.EndTicks - r.Ticks),
+                    theme
+                )
+            )
         }
-        rows.Add(Detail("Start", Time(trace, r.Ticks), theme))
+        rows.Add(
+            Detail(
+                "Start",
+                (trace.Milliseconds(r.Ticks) / 1000.0).ToString("F4", CultureInfo.InvariantCulture) + " s",
+                theme
+            )
+        )
         if let pause = r.GcPauseTicks {
-            rows.Add(Detail("GC pause", (float64(pause) / 10000.0).ToString("F3", CultureInfo.InvariantCulture) + " ms", theme))
+            rows.Add(
+                Detail(
+                    "GC pause",
+                    (float64(pause) / 10000.0).ToString("F3", CultureInfo.InvariantCulture) + " ms",
+                    theme
+                )
+            )
         }
         if r.Window != "" {
             rows.Add(Detail("Window", WindowTitle(r.Window), theme))
@@ -1225,7 +1294,9 @@ internal partial class ProfilerCell : Cell, IDisposable {
             if owner != "" {
                 rows.Add(Detail("Owner", owner, theme))
             }
-            rows.Add(Detail("Resource", r.Resource.ToString() + " · generation " + r.ResourceGeneration.ToString(), theme))
+            rows.Add(
+                Detail("Resource", r.Resource.ToString() + " · generation " + r.ResourceGeneration.ToString(), theme)
+            )
             if r.Width != nil && r.Height != nil {
                 rows.Add(Detail("Dimensions", r.Width.ToString() + " × " + r.Height.ToString(), theme))
             }
@@ -1454,7 +1525,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
         private func PhaseColor(theme Theme, phase int32) Color {
             let series = theme.SeriesPalette
             let extra = theme.ColorBlindPalette
-            let index = phase % (series.Length + extra.Length)
+            let index = phase % (series.Length + extra.Length - 1)
             return index < series.Length ? series[index]: extra[index - series.Length]
         }
 
@@ -1574,7 +1645,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
 
         private func OptionalValue(value float64?, unit string) string {
             guard let actual = value else {
-                return "unmeasured"
+                return "—"
             }
             return Value(actual, unit)
         }
