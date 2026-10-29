@@ -32,7 +32,7 @@ internal class ProfilerTrackRow {
     }
 }
 
-internal partial class ProfilerCell : Cell {
+internal partial class ProfilerCell : Cell, IDisposable {
     internal var session DiagnosticSession
     private var width float64 = 1400.0
     private var start int64

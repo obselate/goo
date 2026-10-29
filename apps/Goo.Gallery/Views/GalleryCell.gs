@@ -172,7 +172,7 @@ class GalleryCell : Cell, IDisposable {
                 },
                 AlignItems: AlignItems.Center,
                 JustifyContent: JustifyContent.Center,
-                GalleryStageView.Build(catalog, currentShowcase, Compact, Assets, Programs),
+                GalleryStageView.Build(catalog, currentShowcase, Compact, Assets, Programs, attachedWindow),
             },
         },
         GalleryNavigationView.StatusBar(catalog, currentShowcase, Compact),

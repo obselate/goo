@@ -12,6 +12,14 @@ internal partial class ProfilerCell {
     private var filePath string = ""
     private var fileStatus string = ""
     private var fileBusy bool
+    private let fileLifetime CancellationTokenSource = CancellationTokenSource()
+    private var fileGeneration int32
+
+    public func Dispose() {
+        fileGeneration++
+        fileLifetime.Cancel()
+        fileLifetime.Dispose()
+    }
 
     private func ShowFile(action string) {
         fileAction = action
@@ -68,6 +76,9 @@ internal partial class ProfilerCell {
         guard let window = owner else {
             return
         }
+        if fileBusy {
+            return
+        }
         try {
             let task = window.ShowFileDialogAsync(
                 fileAction == "Import" ? FileDialogKind.OpenFile: FileDialogKind.SaveFile,
@@ -79,30 +90,47 @@ internal partial class ProfilerCell {
             )
             fileBusy = true
             Rebuild()
-            task.ContinueWith(
-                (completed Task[FileDialogResult]) -> {
-                    window.TryPost(
-                        () -> {
-                            fileBusy = false
-                            if completed.IsFaulted {
-                                fileStatus = completed.Exception?.GetBaseException().Message ?? "File chooser failed"
-                            } else {
-                                let result = completed.Result
-                                if result.Status == FileDialogStatus.Success && result.Paths.Count == 1 {
-                                    filePath = result.Paths[0]
-                                } else if result.Status != FileDialogStatus.Cancelled {
-                                    fileStatus = result.Error == "" ? "File chooser unavailable. Enter a path directly.": result.Error
-                                }
-                            }
-                            Rebuild()
-                        }
-                    )
-                }
-            )
+            fileGeneration++
+            let generation = fileGeneration
+            let token = fileLifetime.Token
+            go CompleteBrowse(task, window, generation, token)
         } catch (error Exception) {
             fileBusy = false
             fileStatus = error.Message
             Rebuild()
+        }
+    }
+
+    private func CompleteBrowse(task Task[FileDialogResult], window Window, generation int32, token CancellationToken) {
+        try {
+            using let cancellation = CancellationTokenSource.CreateLinkedTokenSource(token, window.Closed)
+            let result = await task.WaitAsync(cancellation.Token)
+            window.TryPost(
+                () -> {
+                    if generation != fileGeneration {
+                        return
+                    }
+                    fileBusy = false
+                    if result.Status == FileDialogStatus.Success && result.Paths.Count == 1 {
+                        filePath = result.Paths[0]
+                    } else if result.Status != FileDialogStatus.Cancelled {
+                        fileStatus = result.Error == "" ? "File chooser unavailable. Enter a path directly.": result.Error
+                    }
+                    Rebuild()
+                }
+            )
+        } catch (error OperationCanceledException) { } catch (error Exception) {
+            let message = error.GetBaseException().Message
+            window.TryPost(
+                () -> {
+                    if generation != fileGeneration {
+                        return
+                    }
+                    fileBusy = false
+                    fileStatus = message
+                    Rebuild()
+                }
+            )
         }
     }
 
@@ -123,8 +151,13 @@ internal partial class ProfilerCell {
             fileBusy = true
             fileStatus = ""
             Rebuild()
-            let worker = Thread(
-                () -> {
+            fileGeneration++
+            let generation = fileGeneration
+            let token = fileLifetime.Token
+            go {
+                try {
+                    using let cancellation = CancellationTokenSource.CreateLinkedTokenSource(token, window.Closed)
+                    cancellation.Token.ThrowIfCancellationRequested()
                     var loaded ProfilerTrace? = nil
                     var failure string = ""
                     try {
@@ -136,8 +169,12 @@ internal partial class ProfilerCell {
                     } catch (error Exception) {
                         failure = error.Message
                     }
+                    cancellation.Token.ThrowIfCancellationRequested()
                     window.TryPost(
                         () -> {
+                            if generation != fileGeneration {
+                                return
+                            }
                             fileBusy = false
                             if loaded != nil && session.Profiler?.Active == true {
                                 fileStatus = "Import ignored because a recording started."
@@ -171,10 +208,20 @@ internal partial class ProfilerCell {
                             Rebuild()
                         }
                     )
+                } catch (error OperationCanceledException) { } catch (error Exception) {
+                    let message = error.Message
+                    window.TryPost(
+                        () -> {
+                            if generation != fileGeneration {
+                                return
+                            }
+                            fileBusy = false
+                            fileStatus = message
+                            Rebuild()
+                        }
+                    )
                 }
-            )
-            worker.IsBackground = true
-            worker.Start()
+            }
         } catch (error Exception) {
             fileBusy = false
             fileStatus = error.Message
