@@ -1237,6 +1237,7 @@ internal shared class Program {
     }
 
     private func RunDamageJournalGate() int32 {
+        RunBackdropDamageGate()
         const width = 320u
         const height = 180u
         const scaleX = 1.0F
@@ -1296,6 +1297,52 @@ internal shared class Program {
             "VULKAN_DAMAGE_JOURNAL_GATE sameKey=1 scale=1 extent=1 scaleMutation=1 scaleTransition=1 unchangedKey=1 mutationUnchanged=1 logicalBounded=1 evictionGap=1 reset=1 abandoned=1"
         )
         return 0
+    }
+
+    private func RunBackdropDamageGate() {
+        for behind in []bool{false, true} {
+            let root = Node(){
+                Kind = NodeKind.Container,
+                Rect = Rect{X: 0.0F, Y: 0.0F, W: 320.0F, H: 180.0F}
+            }
+            let panel = Node(){
+                Kind = NodeKind.Container,
+                Parent = root,
+                Rect = Rect{X: 50.0F, Y: 40.0F, W: 200.0F, H: 100.0F},
+                BackdropBlur = 4.0F
+            }
+            let child = Node(){
+                Kind = NodeKind.Container,
+                Parent = if behind { root } else { panel },
+                Rect = Rect{X: 80.0F, Y: 60.0F, W: 30.0F, H: 20.0F},
+                BackgroundColor = Color.Rgb(200, 80, 40)
+            }
+            if behind { root.Children.Add(child) } else { panel.Children.Add(child) }
+            root.Children.Add(panel)
+            let compiler = VulkanSceneCompiler(8)
+            let before = compiler.Compile(root, Color.Black, 320.0F, 180.0F).FrameVersion
+            compiler.BuildDamage(0uL, before, 1.0F, 1.0F, 320u, 180u, out var initial, out var initialFull)
+            child.BackgroundColor = Color.Rgba(40, 180, 120, 128)
+            child.BumpScenePaintVersion()
+            let after = compiler.Compile(root, Color.Black, 320.0F, 180.0F).FrameVersion
+            let hasDamage = compiler.BuildDamage(before, after, 1.0F, 1.0F, 320u, 180u,
+                out var region, out var fullRedraw)
+            let expected = if behind {
+                VulkanDamageRegion{X: 38, Y: 28, Width: 224, Height: 124}
+            } else {
+                VulkanDamageRegion{X: 80, Y: 60, Width: 30, Height: 20}
+            }
+            if !hasDamage || fullRedraw || region.X != expected.X || region.Y != expected.Y
+                || region.Width != expected.Width || region.Height != expected.Height {
+                throw InvalidOperationException("Backdrop damage behind=" + behind.ToString()
+                    + " region=" + region.X.ToString() + "," + region.Y.ToString()
+                    + "," + region.Width.ToString() + "," + region.Height.ToString()
+                    + " full=" + fullRedraw.ToString())
+            }
+            Console.WriteLine("VULKAN_BACKDROP_DAMAGE behind=" + behind.ToString()
+                + " region=" + region.X.ToString() + "," + region.Y.ToString()
+                + "," + region.Width.ToString() + "," + region.Height.ToString())
+        }
     }
 
     private func RequireJournalNone(

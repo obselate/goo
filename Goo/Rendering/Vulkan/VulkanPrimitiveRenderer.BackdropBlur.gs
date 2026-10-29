@@ -6,6 +6,19 @@ import System.Numerics
 
 internal unsafe partial class VulkanPrimitiveRenderer {
     private var backdropBlurEffect ShaderEffect?
+    private var reuseBackdrops bool
+
+    internal func CanRedrawBackdrops(frame SceneFrame, damage VulkanDamageRegion) bool {
+        for index in 0 ... frame.LayerCount {
+            let layer = frame.Layers[index]
+            if layer.BackdropVersion == 0uL || !LayerIntersectsDamage(frame, index, damage) { continue }
+            if float32(damage.X) <= layer.OriginX && float32(damage.Y) <= layer.OriginY
+                && float32(damage.Right) >= layer.OriginX + float32(layer.ExtentWidth)
+                && float32(damage.Bottom) >= layer.OriginY + float32(layer.ExtentHeight) { continue }
+            if layerPool?.FindBackdrop(layer) == nil || layerPool?.FindBackdrop(layer, true) == nil { return false }
+        }
+        return true
+    }
 
     private func LoadBackdropBlur() ShaderEffect {
         using let stream = typeof(VulkanPrimitiveRenderer).Assembly.GetManifestResourceStream(

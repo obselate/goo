@@ -845,7 +845,17 @@ internal partial class VulkanSceneCompiler {
   }
 
   internal func GrowDamageForTest(region VulkanDamageRegion, extentWidth int32,
-    extentHeight int32) VulkanDamageRegion -> GrowDamageToEffectLayers(region, extentWidth, extentHeight)
+    extentHeight int32) VulkanDamageRegion {
+    let bounds = GrowDamageToEffectLayers(ConservativeBounds{
+      X: float32(region.X), Y: float32(region.Y),
+      Width: float32(region.Width), Height: float32(region.Height),
+    }, frame.DrawRefCount)
+    let left = Math.Max(0, int32(MathF.Floor(bounds.X)))
+    let top = Math.Max(0, int32(MathF.Floor(bounds.Y)))
+    return VulkanDamageRegion{X: left, Y: top,
+      Width: Math.Min(extentWidth, int32(MathF.Ceiling(bounds.Right))) - left,
+      Height: Math.Min(extentHeight, int32(MathF.Ceiling(bounds.Bottom))) - top}
+  }
 }
 
 internal class WindowReadbackTestFixture {

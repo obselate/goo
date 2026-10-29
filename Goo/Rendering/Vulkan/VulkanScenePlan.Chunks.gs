@@ -344,6 +344,7 @@ internal partial class SceneFrame {
     ValidateLayer(value)
     ValidateTransformIndex(value.TransformIndex)
     let index = AppendRecord(&layers, &layerCount, value)
+    layers[index].DrawOrdinal = drawRefCount
     AppendResourceIfValid(value.OffscreenTargetId)
     if value.EffectIndex >= 0 {
       AppendResourceIfValid(ResourceId{
