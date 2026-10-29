@@ -323,12 +323,14 @@ class DiagnosticTreeRow {
 }
 
 class DiagnosticLogEntry {
+    var Id string
     var Timestamp string
     var Level string
     var Source string
     var Message string
 
-    init(timestamp string, level string, source string, message string) {
+    init(id string, timestamp string, level string, source string, message string) {
+        Id = id
         Timestamp = timestamp
         Level = level
         Source = source
@@ -380,6 +382,7 @@ class DiagnosticSession {
     private var inspecting bool
     private var activeTab DiagnosticDetailsTab
     private var screenshotSequence int32
+    private var logSequence int64
     private var overrideText string
     private var overrideActive bool
     private var pendingOverrideAction string
@@ -1595,7 +1598,8 @@ class DiagnosticSession {
     }
 
     private func AppendLog(timestamp string, level string, source string, message string) {
-        logs.Add(DiagnosticLogEntry(timestamp, level, source, message))
+        logSequence = logSequence + 1
+        logs.Add(DiagnosticLogEntry(logSequence.ToString(), timestamp, level, source, message))
         while logs.Count > 24 {
             logs.RemoveAt(0)
         }
