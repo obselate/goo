@@ -330,7 +330,10 @@ internal partial class ProfilerTrace {
             return
         }
         if record.Kind != "duration" || record.Source == "cpu.instrumented"
-        || record.Source.Contains("derived", StringComparison.Ordinal) {
+        || record.Source.Contains("derived", StringComparison.Ordinal) || record.Source.EndsWith(
+            "-observed",
+            StringComparison.Ordinal
+        ) {
             return
         }
         if record.Category == 0 && record.Event == 0 {

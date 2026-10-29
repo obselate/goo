@@ -948,7 +948,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
         tableKey = key
         let rows = List[ProfilerTableRow]()
         let names = tab == "Phases" ? []string{"Name", "Count", "Total", "p50", "p99", "Max", "Alloc"}
-        : tab == "Memory" ? []string{"Counter", "Start", "End", "Δ", "Peak"}
+        : tab == "Memory" ? []string{"Counter", "Start", "End", "Change", "Peak"}
         : tab == "Types" ? []string{"Type", "Samples", "Sampled bytes", "Status"}
         : []string{"Start", "Duration", "Kind", "Name", "Bytes", "Owner", "Result"}
         if tab == "Phases" {
@@ -1526,9 +1526,16 @@ internal partial class ProfilerCell : Cell, IDisposable {
 
         private func PhaseColor(theme Theme, phase int32) Color {
             let series = theme.SeriesPalette
-            let extra = theme.ColorBlindPalette
-            let index = phase % (series.Length + extra.Length - 1)
-            return index < series.Length ? series[index]: extra[index - series.Length]
+            let color = series[phase % series.Length]
+            let round = phase / series.Length
+            let amount = float32(Math.Min(0.8, 0.35 * float64((round + 1) / 2)))
+            let target = round % 2 == 1 ? 0.0F: 1.0F
+            return Color.FromNormalized(
+                color.R + (target - color.R) * amount,
+                color.G + (target - color.G) * amount,
+                color.B + (target - color.B) * amount,
+                1.0F
+            )
         }
 
         private func Swatch(color Color) Container -> Container{
