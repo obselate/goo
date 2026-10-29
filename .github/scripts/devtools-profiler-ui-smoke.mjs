@@ -426,7 +426,8 @@ try {
         'Resource name retained lifecycle or API text');
     assert(resourceCells.some(cells => /×| (B|KiB|MiB|GiB) /.test(cells[3])), 'Allocation name has no dimensions or size');
     assert(resourceCells.every(cells => !/Resource \d+/.test(cells[5])), 'Owner chain retained an unnamed parent');
-    await request(['input', 'click', '--pid', String(inspector), '--target', rows[0].target]);
+    await request(['input', 'click', '--pid', String(inspector), '--x', String(rows[0].bounds.x + rows[0].bounds.width / 2),
+        '--y', String(rows[0].bounds.y + rows[0].bounds.height / 2)]);
     nodes = await snapshot(inspector);
     assert(text(nodes, 'profiler-details').includes('Kind'), 'Resource row selection lost its details');
     const bytes = value => {
