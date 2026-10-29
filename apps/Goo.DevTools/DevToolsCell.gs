@@ -32,7 +32,7 @@ class DevToolsCell : Cell {
     private var showActivity bool
     private var showOverrides bool
     private var detailsHidden bool
-    private var detailsWidth float64 = 440.0
+    private var detailsWidth float64
     private var layoutWidth float64 = 1540.0
 
     public init(sessionValue DiagnosticSession) {
@@ -147,7 +147,7 @@ class DevToolsCell : Cell {
                 SplitPaneInput{
                     First: tree,
                     Second: BuildInspector(theme),
-                    Value: layoutWidth - detailsWidth,
+                    Value: layoutWidth - (detailsWidth > 0.0 ? detailsWidth: Math.Max(440.0, layoutWidth * 0.35)),
                     Unit: SplitUnit.Pixels,
                     MinimumFirst: 280.0,
                     MinimumSecond: 320.0,
