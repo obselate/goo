@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.23.3 - 2026-10-29
+
+- Render a visible missing-glyph box for bitmap-only emoji such as Noto Color Emoji instead of failing the Vulkan frame. COLR color glyphs keep their color rendering.
+
 ## 0.23.2 - 2026-10-29
 
 - Keep backdrop blur unchanged when only foreground children change, and limit their redraw damage to their bounds.

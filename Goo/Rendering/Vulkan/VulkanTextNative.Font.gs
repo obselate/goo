@@ -279,11 +279,17 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
             }
           }
           hb_gpu_draw_set_scale(harfBuzzDraw, harfBuzzDesignScale, harfBuzzDesignScale)
-          let drawResult = hb_gpu_draw_glyph_or_fail(harfBuzzDraw, harfBuzzDesignFont, glyphId)
-          if drawResult == 0u {
-            return ProviderResult(VulkanTextProviderAbi.NativeFailure, 0, 0)
-          }
           var extents = VulkanTextGlyphExtents{}
+          if hb_gpu_draw_glyph_or_fail(harfBuzzDraw, harfBuzzDesignFont, glyphId) == 0u {
+            hb_gpu_draw_clear(harfBuzzDraw)
+            if hb_font_get_glyph_extents(harfBuzzDesignFont, glyphId, ref extents) != 0u
+              && extents.Width != 0 && extents.Height != 0 {
+              var state = VulkanHarfBuzzDrawState{}
+              hb_draw_rectangle(hb_gpu_draw_get_funcs(harfBuzzDraw), harfBuzzDraw, ref state,
+                float32(extents.XBearing), float32(extents.YBearing),
+                float32(extents.Width), float32(extents.Height), float32(harfBuzzDesignScale) / 16.0F)
+            }
+          }
           let blob = hb_gpu_draw_encode(harfBuzzDraw, ref extents)
           if blob == nint(0) {
             return ProviderResult(VulkanTextProviderAbi.NativeFailure, 0, 0)

@@ -25,6 +25,21 @@ internal class VulkanTextE2EContract {
 }
 
 internal func RunVulkanTextE2E() {
+  if OperatingSystem.IsLinux() {
+    let emojiPath = SystemFontResolvers.Current().Find("Noto Color Emoji", 400, false)
+      ?? throw InvalidOperationException("Noto Color Emoji proof font is missing")
+    using let emojiFont = LoadVulkanTextFont(emojiPath, VulkanTextE2EContract.PixelHeight)
+    let emojiRun = emojiFont.Shape("😀", VulkanTextShapingOptions{})
+    if emojiRun.Count != 1 || emojiRun.GlyphAt(0).GlyphId == 0u {
+      throw InvalidOperationException("Bitmap emoji proof glyph is missing")
+    }
+    let emojiEncoding = emojiFont.EncodeGlyph(emojiRun.GlyphAt(0).GlyphId)
+    if emojiEncoding.Bytes.Length == 0 || (emojiEncoding.Bytes.Length & 7) != 0
+      || emojiEncoding.Extents.Width <= 0 || emojiEncoding.Extents.Height >= 0 {
+      throw InvalidOperationException("Bitmap emoji must encode a visible fallback glyph")
+    }
+    Console.WriteLine("TEXT_BITMAP_EMOJI fallbackBytes=" + emojiEncoding.Bytes.Length.ToString())
+  }
   let fontPath = Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf")
   if !File.Exists(fontPath) {
     throw FileNotFoundException("VendSans proof font is missing", fontPath)

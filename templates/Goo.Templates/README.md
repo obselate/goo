@@ -3,13 +3,13 @@
 Install the package and create a Goo application:
 
 ```sh
-dotnet new install Goo.Templates@0.23.2
+dotnet new install Goo.Templates@0.23.3
 dotnet new goo --name HelloGoo
 cd HelloGoo
 dotnet run
 ```
 
-The generated project targets .NET 10, uses `Gsharp.NET.Sdk`, and references Goo 0.23.2. Use `--goo-version` to select another compatible Goo package version.
+The generated project targets .NET 10, uses `Gsharp.NET.Sdk`, and references Goo 0.23.3. Use `--goo-version` to select another compatible Goo package version.
 
 Images, gestures, native dialogs and menus, notifications, printing, rich text clipboard, spell checking, and desktop instance hosting are included in `Goo`.
 Android printing and spell checking are included in `Goo.Android`. No separate feature packages are needed.
