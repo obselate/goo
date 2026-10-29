@@ -49,6 +49,7 @@ internal class DiagnosticNodeIdentity {
 internal class DiagnosticTreeState {
   private let owner Window?
   private let identity DiagnosticNodeIdentity
+  private let textBuffer StringBuilder = StringBuilder()
   private var previous Dictionary[int64, DiagnosticNodeSnapshot]
   private var nodes Dictionary[int64, WeakReference]
   private var targets Dictionary[string, int64]
@@ -521,19 +522,19 @@ internal class DiagnosticTreeState {
   private func finiteEdge(value float32) float32 -> if Single.IsNaN(value) || Single.IsInfinity(value) { 0.0F } else { value }
 
   private func configurationText(value DiagnosticNodeSnapshot) string {
-    let builder = StringBuilder()
+    let builder = textBuffer.Clear()
     builder.Append(value.Width).Append(" ").Append(value.Height).Append(" ").Append(value.MinWidth).Append(" ").Append(value.MinHeight).Append(" ").Append(value.MaxWidth).Append(" ").Append(value.MaxHeight).Append(" ").Append(value.Padding).Append(" ").Append(value.PaddingLeft).Append(" ").Append(value.PaddingTop).Append(" ").Append(value.PaddingRight).Append(" ").Append(value.PaddingBottom).Append(" ").Append(value.Margin).Append(" ").Append(value.MarginLeft).Append(" ").Append(value.MarginTop).Append(" ").Append(value.MarginRight).Append(" ").Append(value.MarginBottom).Append(" ").Append(value.Gap).Append(" ").Append(value.RowGap).Append(" ").Append(value.ColumnGap).Append(" ").Append(value.FlexBasis).Append(" ").Append(value.Left).Append(" ").Append(value.Top).Append(" ").Append(value.Right).Append(" ").Append(value.Bottom).Append(" ").Append(value.FlexDirection).Append(" ").Append(value.FlexWrap).Append(" ").Append(value.JustifyContent).Append(" ").Append(value.AlignItems).Append(" ").Append(value.AlignSelf).Append(" ").Append(value.AlignContent).Append(" ").Append(value.Position).Append(" ").Append(value.FlexGrow).Append(" ").Append(value.FlexShrink).Append(" ").Append(value.AspectRatio)
     return builder.ToString()
   }
 
   private func computedText(value DiagnosticNodeSnapshot) string {
-    let builder = StringBuilder()
+    let builder = textBuffer.Clear()
     builder.Append(value.Display).Append(" ").Append(value.Direction).Append(" ").Append(value.OverflowX).Append("/").Append(value.OverflowY).Append(" ").Append(value.Opacity).Append(" ").Append(value.BackgroundColor).Append(" ").Append(value.BorderColor).Append(" ").Append(value.BorderWidth).Append(" ").Append(value.BorderRadius).Append(" ").Append(value.FontFamily).Append(" ").Append(value.FontSize).Append(" ").Append(value.FontWeight).Append(" ").Append(value.FontStyle).Append(" ").Append(value.Color).Append(" ").Append(value.TextAlign).Append(" ").Append(value.TextWrap).Append(" ").Append(value.TextTrimming)
     return builder.ToString()
   }
 
   private func stateText(value DiagnosticNodeSnapshot) string {
-    let builder = StringBuilder()
+    let builder = textBuffer.Clear()
     if value.Hovered { builder.Append("hover ") }
     if value.Pressed { builder.Append("pressed ") }
     if value.Focused { builder.Append("focused ") }
@@ -543,7 +544,7 @@ internal class DiagnosticTreeState {
   }
 
   private func eventsText(value DiagnosticNodeSnapshot) string {
-    let builder = StringBuilder()
+    let builder = textBuffer.Clear()
     if value.HasClickHandler { builder.Append("click ") }
     if value.HasPointerHandlers { builder.Append("pointer ") }
     if value.HasKeyboardHandlers { builder.Append("keyboard ") }
@@ -551,7 +552,7 @@ internal class DiagnosticTreeState {
   }
 
   private func fingerprint(value DiagnosticNodeSnapshot) string {
-    let builder = StringBuilder()
+    let builder = textBuffer.Clear()
     builder.Append(value.Id).Append('|').Append(value.ParentId).Append('|').Append(value.ChildIndex).Append('|').Append(value.Kind).Append('|').Append(value.Key).Append('|').Append(value.Content).Append('|').Append(value.OwnerType).Append('|').Append(rectText(value.Bounds)).Append('|').Append(rectText(value.BorderBox)).Append('|').Append(rectText(value.PaddingBox)).Append('|').Append(rectText(value.ContentBox)).Append('|').Append(rectText(value.MarginBox)).Append('|').Append(rectText(value.ClipBox)).Append('|').Append(value.ScrollOffset.X).Append('|').Append(value.ScrollOffset.Y).Append('|').Append(value.ContentSize.X).Append('|').Append(value.ContentSize.Y).Append('|').Append(value.Configuration).Append('|').Append(value.Computed).Append('|').Append(value.State).Append('|').Append(value.Events).Append('|').Append(value.AccessibilityRole).Append('|').Append(value.AccessibilityCustomRole).Append('|').Append(value.AccessibilityName).Append('|').Append(value.AccessibilityDescription).Append('|').Append(value.AccessibilityValue).Append('|').Append(value.AccessibilityHidden).Append('|').Append(value.AccessibilityChecked).Append('|').Append(value.AccessibilitySelected).Append('|').Append(value.AccessibilityExpanded).Append('|').Append(value.AccessibilityReadOnly).Append('|').Append(value.AccessibilityRequired).Append('|').Append(value.AccessibilityInvalid).Append('|').Append(value.AccessibilityBusy).Append('|').Append(value.AccessibilityState)
     builder.Append('|').Append(value.Target).Append('|').Append(value.Visible).Append('|').Append(value.Clipped)
       .Append('|').Append(value.ClipApproximate).Append('|').Append(value.Actionable).Append('|').Append(value.ActionStatus)
