@@ -203,7 +203,9 @@ async function traceFile(pid, action, filename, error) {
     await request(['input', 'text', '--pid', String(pid), '--text', filename]);
     await click(pid, 'profiler-file-apply');
     const expected = error ?? (action === 'Import' ? 'Imported ' : 'Exported ') + path.basename(filename);
-    return waitSnapshot(pid, data => text(data, 'profiler-file-status').includes(expected), action + ' trace did not finish: ' + expected);
+    const done = data => error ? text(data, 'profiler-file-status').includes(expected)
+        : !data.some(node => node.key === 'profiler-file-panel') && status(data).includes(expected);
+    return waitSnapshot(pid, done, action + ' trace did not finish: ' + expected);
 }
 function validateChrome(trace) {
     assert.equal(trace.displayTimeUnit, 'ms', 'Chrome display unit changed');
@@ -346,7 +348,7 @@ try {
     const segments = segmentTimes(nodes);
     const duration = segments.Frame;
     assert(duration > 0, 'Frame interval is empty or reversed');
-    const sum = Object.entries(segments).filter(([name]) => name !== 'Frame' && name !== 'Wait')
+    const sum = Object.entries(segments).filter(([name]) => !['Frame', 'Wait'].includes(name) && !name.startsWith('GPU '))
         .reduce((total, [, value]) => total + value, 0);
     assert(Math.abs(sum - duration) <= duration * 0.01, `Frame segments ${sum} do not sum to ${duration}`);
     const renderCells = branch(nodes, 'summary-row-Render').filter(node => node.content).map(node => node.content);

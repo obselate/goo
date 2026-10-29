@@ -200,7 +200,7 @@ internal partial class ProfilerCell {
                                     start = 0L
                                     end = Math.Max(1L, current.End)
                                 }
-                                fileStatus = (importing ? "Imported ": "Exported ") + Path.GetFileName(path)
+                                fileStatus = importing ? "": "Exported " + Path.GetFileName(path)
                                 fileAction = ""
                             }
                             Rebuild()
