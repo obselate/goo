@@ -2,7 +2,7 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/Cell`](https://github.com/obselate/goo/tree/d5381597d03e44742c0ad9b00637d2054d9cb6ac/Goo/Cell)
+Source: [`Goo/Cell`](https://github.com/obselate/goo/tree/4a825ee77ea0e15c4aaee0e885a1ced7a712b243/Goo/Cell)
 
 ## Build input cells
 
@@ -68,7 +68,7 @@ Capturing factories inside parent builds can allocate delegates and closures eve
 
 Source:
 
-- [`Cell.gs`](https://github.com/obselate/goo/blob/d5381597d03e44742c0ad9b00637d2054d9cb6ac/Goo/Cell/Cell.gs)
+- [`Cell.gs`](https://github.com/obselate/goo/blob/4a825ee77ea0e15c4aaee0e885a1ced7a712b243/Goo/Cell/Cell.gs)
 
 Defines a stateful Goo component.
 
@@ -258,7 +258,7 @@ Requests a rebuild of this component.
 
 Source:
 
-- [`InputCell.gs`](https://github.com/obselate/goo/blob/d5381597d03e44742c0ad9b00637d2054d9cb6ac/Goo/Cell/InputCell.gs)
+- [`InputCell.gs`](https://github.com/obselate/goo/blob/4a825ee77ea0e15c4aaee0e885a1ced7a712b243/Goo/Cell/InputCell.gs)
 
 Defines a stateful Goo component with an immutable input snapshot.
 
@@ -282,7 +282,7 @@ Gets the current immutable input snapshot.
 
 Source:
 
-- [`Context.gs`](https://github.com/obselate/goo/blob/d5381597d03e44742c0ad9b00637d2054d9cb6ac/Goo/Cell/Context.gs)
+- [`Context.gs`](https://github.com/obselate/goo/blob/4a825ee77ea0e15c4aaee0e885a1ced7a712b243/Goo/Cell/Context.gs)
 
 Identifies one retained value independently of other keys of the same type.
 
