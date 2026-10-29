@@ -11,7 +11,6 @@ import System.IO
 import System.IO.Pipes
 import System.Text
 import System.Text.Json
-import System.Threading
 
 class DiagnosticWire {
     shared {
@@ -1024,7 +1023,7 @@ class DiagnosticPipeTransport : DiagnosticTransport {
     private var state DiagnosticConnectionState
     private var capabilities DiagnosticCapabilities
     private var wake Action?
-    private var worker Thread?
+    private var connectionGeneration int32
     private var stream NamedPipeClientStream?
     private var reader StreamReader?
     private var stopRequested bool
@@ -1069,24 +1068,18 @@ class DiagnosticPipeTransport : DiagnosticTransport {
     }
 
     func Connect() bool {
+        var generation int32
         lock gate {
             if state == DiagnosticConnectionState.Connected || state == DiagnosticConnectionState.Connecting {
                 return true
             }
             stopRequested = false
             state = DiagnosticConnectionState.Connecting
+            connectionGeneration++
+            generation = connectionGeneration
         }
         try {
-            let created = Thread(
-                func () {
-                    Run()
-                }
-            )
-            created.IsBackground = true
-            lock gate {
-                worker = created
-            }
-            created.Start()
+            go Run(generation)
             Signal()
             return true
         } catch (error Exception) {
@@ -1159,7 +1152,7 @@ class DiagnosticPipeTransport : DiagnosticTransport {
         }
     }
 
-    private func Run() {
+    private func Run(generation int32) {
         var current NamedPipeClientStream?
         try {
             let pipeName = NormalizePipe(endpoint.PipeName)
@@ -1171,12 +1164,12 @@ class DiagnosticPipeTransport : DiagnosticTransport {
             )
             current = created
             lock gate {
-                if stopRequested || !Object.ReferenceEquals(worker, Thread.CurrentThread) {
+                if stopRequested || generation != connectionGeneration {
                     return
                 }
                 stream = created
             }
-            created.Connect(3000)
+            await created.ConnectAsync(3000)
             using let localReader = StreamReader(created, Encoding.UTF8, false, 16 * 1024, true)
             using let localWriter = StreamWriter(created, Encoding.UTF8, 16 * 1024, true)
             localWriter.AutoFlush = true
@@ -1192,8 +1185,8 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                 snapshotsEnabled = true
                 snapshotPending = true
             }
-            localWriter.WriteLine(Handshake())
-            localWriter.WriteLine(RequestLine("snapshot", "{\"full\":true}"))
+            await localWriter.WriteLineAsync(Handshake())
+            await localWriter.WriteLineAsync(RequestLine("snapshot", "{\"full\":true}"))
             go WriteRequests(created, localWriter, queue)
             Signal()
             while true {
@@ -1202,7 +1195,7 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                         return
                     }
                 }
-                let line = localReader.ReadLine()
+                let line = await localReader.ReadLineAsync()
                 if line == nil {
                     return
                 }
@@ -1225,7 +1218,7 @@ class DiagnosticPipeTransport : DiagnosticTransport {
             }
         } catch (error Exception) {
             lock gate {
-                if !stopRequested && Object.ReferenceEquals(worker, Thread.CurrentThread) {
+                if !stopRequested && generation == connectionGeneration {
                     state = DiagnosticConnectionState.Faulted
                     pending.Enqueue(
                         DiagnosticMessage(endpoint.Protocol, DiagnosticMessageKind.Error, 0, "", "", error.Message)
@@ -1301,7 +1294,9 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                                 snapshotsEnabled = false
                             }
                         }
-                        output.WriteLine(message.Raw == "" ? RequestLine(message.Command, message.Payload): message.Raw)
+                        await output.WriteLineAsync(
+                            message.Raw == "" ? RequestLine(message.Command, message.Payload): message.Raw
+                        )
                     }
                 }
             }
