@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add Goo app best practices to the plugin authoring skill: UI-thread rules, `go` and `scope` background work, rebuild scope, virtualization and frame-time checks.
+
 ## 0.23.3 - 2026-10-29
 
 - Render a visible missing-glyph box for bitmap-only emoji such as Noto Color Emoji instead of failing the Vulkan frame. COLR color glyphs keep their color rendering.
