@@ -28,6 +28,7 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
   private var metrics VulkanHarfBuzzMetrics
   private var hasColorPaint bool
   private var hasColorLayers bool
+  private var hasColorBitmaps bool
   private var disposed bool
   private let profileName string?
 
@@ -103,6 +104,7 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
         }
         hasColorPaint = hb_ot_color_has_paint(harfBuzzFace) != 0u
         hasColorLayers = hb_ot_color_has_layers(harfBuzzFace) != 0u
+        hasColorBitmaps = hb_ot_color_has_png(harfBuzzFace) != 0u
         let upem = hb_face_get_upem(harfBuzzFace)
         if upem == 0u || upem > uint32(Int32.MaxValue) {
           throw InvalidOperationException("HarfBuzz face UPEM is invalid")
@@ -281,6 +283,9 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
           hb_gpu_draw_set_scale(harfBuzzDraw, harfBuzzDesignScale, harfBuzzDesignScale)
           var extents = VulkanTextGlyphExtents{}
           if hb_gpu_draw_glyph_or_fail(harfBuzzDraw, harfBuzzDesignFont, glyphId) == 0u {
+            if !hasColorBitmaps {
+              return ProviderResult(VulkanTextProviderAbi.NativeFailure, 0, 0)
+            }
             hb_gpu_draw_clear(harfBuzzDraw)
             if hb_font_get_glyph_extents(harfBuzzDesignFont, glyphId, ref extents) != 0u
               && extents.Width != 0 && extents.Height != 0 {

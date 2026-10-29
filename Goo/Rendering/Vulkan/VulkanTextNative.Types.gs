@@ -72,6 +72,9 @@ internal func hb_ot_color_has_paint(face nint) uint32;
 @DllImport("goo-harfbuzz", EntryPoint: "hb_ot_color_has_layers", CallingConvention: CallingConvention.Cdecl)
 internal func hb_ot_color_has_layers(face nint) uint32;
 
+@DllImport("goo-harfbuzz", EntryPoint: "hb_ot_color_has_png", CallingConvention: CallingConvention.Cdecl)
+internal func hb_ot_color_has_png(face nint) uint32;
+
 @DllImport("goo-harfbuzz", EntryPoint: "hb_ot_color_glyph_get_layers", CallingConvention: CallingConvention.Cdecl)
 internal func hb_ot_color_glyph_get_layers(face nint, glyph uint32, startOffset uint32,
   ref layerCount uint32, layers nint) uint32;

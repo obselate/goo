@@ -38,6 +38,10 @@ internal func RunVulkanTextE2E() {
       || emojiEncoding.Extents.Width <= 0 || emojiEncoding.Extents.Height >= 0 {
       throw InvalidOperationException("Bitmap emoji must encode a visible fallback glyph")
     }
+    let spaceRun = emojiFont.Shape(" ", VulkanTextShapingOptions{})
+    if spaceRun.Count != 1 || emojiFont.EncodeGlyph(spaceRun.GlyphAt(0).GlyphId).Bytes.Length != 0 {
+      throw InvalidOperationException("Bitmap font whitespace must remain empty")
+    }
     Console.WriteLine("TEXT_BITMAP_EMOJI fallbackBytes=" + emojiEncoding.Bytes.Length.ToString())
   }
   let fontPath = Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf")
