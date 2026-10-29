@@ -120,7 +120,7 @@ internal partial class ProfilerTrace {
     internal let PumpGpu Dictionary[string, List[int32]] = Dictionary[string, List[int32]]()
     private let framePhaseIds Dictionary[string, int32] = Dictionary[string, int32]()
     private let pumpScopes Dictionary[string, List[int32]] = Dictionary[string, List[int32]]()
-    private let lastFrames Dictionary[string, ProfilerFrame] = Dictionary[string, ProfilerFrame]()
+    internal let PumpFrames Dictionary[string, int32] = Dictionary[string, int32]()
     internal var StartMetadata string = "{}"
     internal var FileName string = ""
     internal var Id string = ""
@@ -336,8 +336,9 @@ internal partial class ProfilerTrace {
         if record.Category == 0 && record.Event == 0 {
             AddFrame(index, record, key)
         } else if record.Category == 0 && PhaseName(record.Event) == "CapWait" {
-            if lastFrames.TryGetValue(record.Window, out var frame) && Records[frame.Record].Pump == record.Pump {
-                frame.Wait += record.EndTicks - record.Ticks
+            if PumpFrames.TryGetValue(key, out var frame) {
+                let target = Frames[frame]
+                target.Wait += record.EndTicks - record.Ticks
             }
         } else {
             if !pumpScopes.TryGetValue(key, out var scopes) {
@@ -403,8 +404,8 @@ internal partial class ProfilerTrace {
             ticks[i] = totals[ids[i]]
         }
         let result = ProfilerFrame(index, ids.ToArray(), ticks, other)
+        PumpFrames[key] = Frames.Count
         Frames.Add(result)
-        lastFrames[frame.Window] = result
     }
 
     private func Credit(totals Dictionary[int32, int64], phases List[int32], ends List[int64], cursor int64) int64 {

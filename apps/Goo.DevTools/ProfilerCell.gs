@@ -189,6 +189,8 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 () -> {
                     start = selectionStart
                     end = selectionEnd
+                    selectionStart = 0L
+                    selectionEnd = 0L
                     Changed()
                 },
                 selectionEnd > selectionStart
