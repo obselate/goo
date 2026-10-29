@@ -339,7 +339,6 @@ try {
         'Numeric table header and cells are not aligned');
     assert(!/cpu\.instrumented|submit\.prepare-to-observed/.test(text(nodes, 'profiler-summary')),
         'Phase table retained raw source titles');
-    const phaseSummary = text(nodes, 'profiler-summary');
     await capture(inspector, 'timeline');
     nodes = await selectRenderedFrame(inspector, nodes);
     const details = text(nodes, 'profiler-details').split('\n');
@@ -438,7 +437,8 @@ try {
         .map(row => bytes(branch(data, row.key).filter(node => node.content)[4].content)).filter(Number.isFinite);
     const descendingSizes = sizes(nodes);
     const bytesHeader = branch(nodes, 'profiler-table').find(node => node.key === 'column:c4');
-    await request(['input', 'click', '--pid', String(inspector), '--target', bytesHeader.target]);
+    await request(['input', 'click', '--pid', String(inspector), '--x', String(bytesHeader.bounds.x + bytesHeader.bounds.width / 2),
+        '--y', String(bytesHeader.bounds.y + bytesHeader.bounds.height / 2)]);
     nodes = await snapshot(inspector);
     const ascendingSizes = sizes(nodes);
     assert(descendingSizes[0] >= descendingSizes.at(-1) && ascendingSizes[0] <= ascendingSizes.at(-1),
@@ -448,8 +448,8 @@ try {
     await traceFile(inspector, 'Export', exportedPath);
     const exported = JSON.parse(await readFile(exportedPath, 'utf8'));
     validateChrome(exported);
-    assert(!exported.traceEvents.some(event => event.goo?.GpuNs) || phaseSummary.includes('GPU '),
-        'GPU elapsed is missing from the Phases table');
+    assert(!exported.traceEvents.some(event => event.goo?.GpuNs) || Object.keys(segments).some(name => name.startsWith('GPU ')),
+        'GPU elapsed is missing from the frame details');
     await click(inspector, 'profiler-clear');
     nodes = await snapshot(inspector);
     assert(nodes.some(node => node.key === 'profiler-empty'), 'Clear retained the previous trace');
