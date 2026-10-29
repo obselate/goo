@@ -1,6 +1,7 @@
 package GooDevTools
 
 import Goo
+import Goo.Widgets
 import System
 import System.Collections.Generic
 import System.IO
@@ -36,6 +37,7 @@ func Main() {
         Background: Color.Transparent,
         Root: root,
     }
+    Theme.Attach(window, Theme.Ink)
     root.AttachWindow(window)
     if sample || selectedEndpoint != nil || requestedPipe != "" {
         session.Connect()

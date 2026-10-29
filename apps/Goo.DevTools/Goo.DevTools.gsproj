@@ -26,6 +26,7 @@
     <Compile Include="../Shared/AppKeyBindings.gs" Link="AppKeyBindings.gs" />
     <Content Include="Assets/Icons/**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <ProjectReference Include="../../Goo/Goo.gsproj" />
+    <PackageReference Include="Goo.Widgets" Version="0.16.2" />
     <None Update="README.md" Pack="true" PackagePath="/" />
     <None Include="$(MSBuildProjectDirectory)/../../LICENSE" Pack="true" PackagePath="/" />
   </ItemGroup>
