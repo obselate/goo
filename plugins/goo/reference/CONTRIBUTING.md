@@ -29,7 +29,7 @@ Set `SLANG_SDK` and `VULKAN_SDK` to their SDK roots, or put `slangc` and
 
 Linux Vulkan runs also need a native Wayland session, a Vulkan 1.3 driver, and
 a TrueType or OpenType sans-serif font. The CI dependency list in
-[ci.yml](https://github.com/obselate/goo/blob/95edd88d9f4ee0455f9898d9298960ca30628ee2/.github/workflows/ci.yml) is the authoritative Ubuntu 24.04 setup.
+[ci.yml](https://github.com/obselate/goo/blob/d5381597d03e44742c0ad9b00637d2054d9cb6ac/.github/workflows/ci.yml) is the authoritative Ubuntu 24.04 setup.
 Windows builds have been tested on Windows 11 with current vendor Vulkan
 drivers. A minimum supported Windows version has not yet been established.
 
@@ -55,7 +55,7 @@ repository default. Do not replace it with filename-based XML deletion:
 generic staging must preserve arbitrary XML, notices, licenses, globalization
 data, and features.
 
-See [code conventions](https://github.com/obselate/goo/blob/95edd88d9f4ee0455f9898d9298960ca30628ee2/CONVENTIONS.md) for repository rules and native authoring.
+See [code conventions](https://github.com/obselate/goo/blob/d5381597d03e44742c0ad9b00637d2054d9cb6ac/CONVENTIONS.md) for repository rules and native authoring.
 
 ## Verification
 
@@ -80,7 +80,7 @@ The API snapshot marks nullable reference types with `?`, including array elemen
 and generic arguments. Value types and non-null reference types keep their existing spelling.
 
 Edit the explanatory input, window, tree, layout, and accessibility guides in
-[`tools/Goo.ApiDocs/Guides`](https://github.com/obselate/goo/tree/95edd88d9f4ee0455f9898d9298960ca30628ee2/tools/Goo.ApiDocs/Guides). Member descriptions belong
+[`tools/Goo.ApiDocs/Guides`](https://github.com/obselate/goo/tree/d5381597d03e44742c0ad9b00637d2054d9cb6ac/tools/Goo.ApiDocs/Guides). Member descriptions belong
 in source XML comments. Do not commit regenerated `docs/api` pages or
 `plugins/goo/reference` files in PRs, because `main` syncs them after merge.
 For a local preview, run
@@ -126,8 +126,8 @@ dotnet pack Goo/Goo.gsproj -c Release \
 ```
 
 The pinned Windows SDL fetch and Linux SDL build are implemented in
-[fetch-sdl-win-x64.sh](https://github.com/obselate/goo/blob/95edd88d9f4ee0455f9898d9298960ca30628ee2/.github/scripts/fetch-sdl-win-x64.sh) and
-[build-sdl-linux-x64.sh](https://github.com/obselate/goo/blob/95edd88d9f4ee0455f9898d9298960ca30628ee2/.github/scripts/build-sdl-linux-x64.sh).
+[fetch-sdl-win-x64.sh](https://github.com/obselate/goo/blob/d5381597d03e44742c0ad9b00637d2054d9cb6ac/.github/scripts/fetch-sdl-win-x64.sh) and
+[build-sdl-linux-x64.sh](https://github.com/obselate/goo/blob/d5381597d03e44742c0ad9b00637d2054d9cb6ac/.github/scripts/build-sdl-linux-x64.sh).
 
 ## Submitting changes
 
