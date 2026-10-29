@@ -1,38 +1,32 @@
 package GooDevTools
 
 import Goo
+import Goo.Widgets
+import Goo.Widgets.Actions
+import Goo.Widgets.Data
+import Goo.Widgets.Feedback
+import Goo.Widgets.Icons
+import Goo.Widgets.Inputs
+import Goo.Widgets.Layout
+import Goo.Widgets.Navigation
 import System
 import System.Collections.Generic
 import System.Globalization
-import System.Text
 
 internal class ProfilerTableRow {
     internal let Cells[]string
     internal let Values[]float64
-    internal let Record int32
-    internal init(cells[]string, values[]float64, record int32 = -1) {
+    internal let Id string
+    internal init(cells[]string, values[]float64, id string) {
         Cells = cells
         Values = values
-        Record = record
-    }
-}
-
-internal class ProfilerTrackRow {
-    internal let Key string
-    internal let Title string
-    internal let Height float64
-    internal let Lane ProfilerLane?
-    internal let Device uint64?
-    internal init(key string, title string, height float64, lane ProfilerLane? = nil, device uint64? = nil) {
-        Key = key
-        Title = title
-        Height = height
-        Lane = lane
-        Device = device
+        Id = id
     }
 }
 
 internal partial class ProfilerCell : Cell, IDisposable {
+    private const Pad float64 = 8.0
+    private const Span float64 = 1000.0
     internal var session DiagnosticSession
     private var width float64 = 1400.0
     private var start int64
@@ -40,28 +34,26 @@ internal partial class ProfilerCell : Cell, IDisposable {
     private var selectionStart int64
     private var selectionEnd int64
     private var selected int32 = -1
+    private var selectedFrame int32 = -1
+    private var selectedIds[]string = []string{}
+    private var hovered int32 = -1
+    private var hoverX float64
+    private var pressX float64
     private var anchor int64
     private var selecting bool
-    private var overviewDrag bool
-    private var overviewX float64
-    private var overviewStart int64
     private var filterWindow string = ""
-    private var windowPicker bool
     private var follow bool = true
-    private var lifetimes bool
-    private var moreCounters bool
     private var allocationSamples bool
-    private var expandedResource string = ""
     private var revision int32 = -1
     private var tab string = "Phases"
     private var sortColumn int32 = 2
     private var descending bool = true
     private var tableKey string = ""
-    private var tableRows List[ProfilerTableRow] = List[ProfilerTableRow]()
-    private var resourceTotals string = ""
-    private let collapsed HashSet[string] = HashSet[string]()
+    private var tableRows[]DataGridRow = []DataGridRow{}
+    private var tableColumns[]DataGridColumn = []DataGridColumn{}
+    private var columns[]int32 = []int32{}
+    private var scale float64 = 1.0
     private let paths Dictionary[string, VectorPath] = Dictionary[string, VectorPath]()
-    private let scales Dictionary[string, float64] = Dictionary[string, float64]()
     private var detailsWidth float64 = 380.0
     private var resizing bool
     private var resizePointer int64
@@ -84,210 +76,245 @@ internal partial class ProfilerCell : Cell, IDisposable {
         }
         if changed {
             paths.Clear()
-            scales.Clear()
             Rebuild()
         }
     }
 
     override func Build() Blob {
+        let theme = Theme.Read()
         let children = List[Blob]()
-        children.Add(Toolbar())
+        children.Add(Toolbar(theme))
         if fileAction != "" {
             children.Add(FilePanel())
         }
         if fileStatus != "" {
-            children.Add(
-                Text{Key: "profiler-file-status", Content: fileStatus, Color: DevToolsTheme.InkMuted, FontSize: 11}
-            )
+            let status = Caption("profiler-file-status", fileStatus, theme.MutedTextColor)
+            status.Margin = Edges{Left: Pad, Right: Pad, Top: 2}
+            children.Add(status)
         }
-        if windowPicker {
-            children.Add(WindowPicker())
+        let problem = Problem()
+        if problem != "" {
+            children.Add(
+                Container{
+                    Key: "profiler-problem",
+                    FlexShrink: 0.0,
+                    Padding: Edges{Left: Pad, Right: Pad, Top: 4},
+                    Banner{Tone: Tone.Warning, Content: problem, Live: false}.Build()
+                }
+            )
         }
         guard let trace = session.Profiler else {
             children.Add(
-                Label(
-                    session
-                        .Capabilities
-                        .ProfilerTrace ? "Record a real target trace or import Chrome JSON to inspect phases, memory and resource loads."
-                    : "Recording unavailable: target lacks profiler.trace.v1. Import Chrome trace JSON to inspect offline."
-                )
+                Container{
+                    Key: "profiler-empty",
+                    Height: 0,
+                    FlexGrow: 1.0,
+                    AlignItems: AlignItems.Center,
+                    JustifyContent: JustifyContent.Center,
+                    EmptyState{Illustration: MaterialIcons.Create("monitoring", 32.0, theme.FaintTextColor), Title: "No trace"}
+                        .Build()
+                }
             )
-            return Column("profiler-panel", children)
+            return Column(children)
         }
-        children.Add(
-            Text{
-                Key: "profiler-status",
-                Content: Status(trace),
-                FontSize: 11,
-                Color: trace.Partial || trace.Dropped > 0uL ? DevToolsTheme.Amber: DevToolsTheme.InkMuted,
-                TextWrap: TextWrap.NoWrap,
-                TextTrimming: TextTrimming.Ellipsis
-            }
-        )
-        if trace.Reason != "" {
-            children.Add(Label(trace.Reason))
-        }
-        children.Add(Overview(trace))
-        children.Add(Ruler(trace))
-        let tracks = Tracks(trace)
-        let heights = List[float64]()
-        for row in tracks {
-            heights.Add(row.Height)
-        }
-        children.Add(
-            Virtual(ProfilerVirtualSource(heights, (index int32) -> Track(trace, tracks[index]))){
-                Key = "profiler-tracks",
-                Height = 0,
-                MinHeight = 160,
-                FlexGrow = 1.0,
-                OverflowY = Overflow.Scroll,
-                OverflowX = Overflow.Hidden,
-                ScrollbarVisibility = ScrollbarVisibility.Auto,
-                Accessibility = Accessibility{Role: AccessibilityRole.Tree, Name: "Profiler tracks"},
-            }
-        )
-        children.Add(Analysis(trace))
-        return Column("profiler-panel", children)
+        children.Add(Ruler(trace, theme))
+        children.Add(FrameChart(trace, theme))
+        children.Add(Legend(trace, theme))
+        children.Add(Analysis(trace, theme))
+        return Column(children)
     }
 
-    private func Toolbar() Container {
+    private func Toolbar(theme Theme) Container {
+        let trace = session.Profiler
+        let active = trace?.Active == true
+        let idle = !active && !fileBusy
         let controls = List[Blob]()
-        let active = session.Profiler?.Active == true
+        let record = ActionButton{
+            Content: active ? "Stop": "Record",
+            Leading: MaterialIcons.Create(active ? "stop": "fiber_manual_record", 18.0, theme.DangerColor),
+            Disabled: fileBusy || session.State != DiagnosticConnectionState.Connected || !session.Capabilities.ProfilerTrace,
+            OnClick: () -> ToggleRecording(active),
+        }.Build()
+        record.Key = "profiler-record"
+        controls.Add(record)
         controls.Add(
-            Control(
-                "profiler-record",
-                active ? "Stop": "Record",
-                () -> {
-                    if active {
-                        session.StopProfiler()
-                    } else {
-                        session.StartProfiler(allocationSamples)
-                        selected = -1
-                        selectionStart = 0L
-                        selectionEnd = 0L
-                        revision = -1
-                        follow = true
-                        paths.Clear()
-                    }
-                    Rebuild()
-                },
-                !fileBusy && session.State == DiagnosticConnectionState.Connected && session.Capabilities.ProfilerTrace
-            )
-        )
-        controls.Add(
-            Toggle(
+            Tool(
                 "profiler-allocation-samples",
-                "Types (10 s)",
-                allocationSamples,
+                "category",
+                "Allocation types (10 s)",
                 () -> {
                     allocationSamples = !allocationSamples
-                    Rebuild()
-                }
-            )
-        )
-        controls.Add(
-            Control(
-                "profiler-clear",
-                "Clear",
-                () -> {
-                    session.ClearProfiler()
-                    selected = -1
-                    selectionStart = 0L
-                    selectionEnd = 0L
-                    tableRows.Clear()
-                    tableKey = ""
-                    paths.Clear()
-                    Rebuild()
                 },
-                !active && !fileBusy
+                true,
+                allocationSamples
             )
         )
-        controls.Add(Control("profiler-import", "Import", () -> ShowFile("Import"), !active && !fileBusy))
+        controls.Add(Tool("profiler-clear", "delete_sweep", "Clear", () -> ClearTrace(), idle))
+        controls.Add(Tool("profiler-import", "file_open", "Import", () -> ShowFile("Import"), idle))
         controls.Add(
-            Control(
-                "profiler-export",
-                "Export",
-                () -> ShowFile("Export"),
-                !active && !fileBusy && (session.Profiler?.Records.Count ?? 0) > 0
-            )
+            Tool("profiler-export", "save", "Export", () -> ShowFile("Export"), idle && (trace?.Records.Count ?? 0) > 0)
         )
-        controls.Add(
-            Control(
-                "profiler-window",
-                filterWindow == "" ? "All windows": WindowTitle(filterWindow),
-                () -> {
-                    windowPicker = !windowPicker
-                    Rebuild()
-                }
-            )
-        )
-        controls.Add(Control("profiler-fit", "Fit", () -> Fit()))
-        controls.Add(
-            Control(
-                "profiler-zoom-selection",
-                "Zoom selection",
-                () -> {
-                    if selectionEnd > selectionStart {
-                        start = selectionStart
-                        end = selectionEnd
-                        Changed()
+        let windows = WindowOptions()
+        if windows.Length > 2 {
+            controls.Add(
+                Cell.Mount[ComboBoxInput, ComboBox](
+                    "profiler-window",
+                    ComboBoxInput{
+                        Items: windows,
+                        SelectedId: filterWindow == "" ? "all": filterWindow,
+                        OnSelect: (id string) -> PickWindow(id == "all" ? "": id),
+                        Width: 180.0,
+                        AccessibilityName: "Window",
                     }
+                )
+            )
+        }
+        controls.Add(Tool("profiler-fit", "fit_screen", "Fit", () -> Fit()))
+        controls.Add(
+            Tool(
+                "profiler-zoom-selection",
+                "zoom_in_map",
+                "Zoom to selection",
+                () -> {
+                    start = selectionStart
+                    end = selectionEnd
+                    Changed()
                 },
                 selectionEnd > selectionStart
             )
         )
-        controls.Add(Control("profiler-zoom-out", "−", () -> Zoom(2.0, 0.5)))
-        controls.Add(Control("profiler-zoom-in", "+", () -> Zoom(0.5, 0.5)))
+        controls.Add(Tool("profiler-zoom-out", "zoom_out", "Zoom out", () -> Zoom(2.0, 0.5)))
+        controls.Add(Tool("profiler-zoom-in", "zoom_in", "Zoom in", () -> Zoom(0.5, 0.5)))
         controls.Add(
-            Toggle(
+            Tool(
                 "profiler-follow",
+                "last_page",
                 "Follow",
-                follow,
                 () -> {
                     follow = !follow
-                    Rebuild()
-                }
+                },
+                true,
+                follow
             )
         )
+        if let current = trace {
+            controls.Add(
+                Text{
+                    Key: "profiler-status",
+                    Content: Status(current),
+                    Width: 0,
+                    FlexGrow: 1.0,
+                    MinWidth: 0,
+                    Margin: Edges{Left: Pad},
+                    TextAlign: TextAlign.Right,
+                    FontFamily: theme.FontFamily,
+                    FontSize: theme.CaptionFontSize,
+                    Color: current.Active ? theme.DangerColor: theme.MutedTextColor,
+                    TextWrap: TextWrap.NoWrap,
+                    TextTrimming: TextTrimming.Ellipsis
+                }
+            )
+        }
         return Container{
             Key: "profiler-toolbar",
             Width: Percent(100),
-            Height: 34,
+            Height: theme.ControlHeight + 12.0,
             FlexShrink: 0.0,
             FlexDirection: FlexDirection.Row,
             AlignItems: AlignItems.Center,
             Gap: 4,
-            Padding: 3,
+            Padding: Edges{Left: Pad, Right: Pad},
+            BorderWidth: Edges{Bottom: 1},
+            BorderColor: theme.BorderColor,
             OverflowX: Overflow.Hidden,
             Children: controls
         }
     }
 
-    private func WindowPicker() Container {
-        let controls = List[Blob]()
-        controls.Add(Control("profiler-window-all", "All windows", () -> PickWindow("")))
+    private func Tool(key string, icon string, tip string, action Action, enabled bool = true, active bool = false) Blob {
+        let theme = Theme.Read()
+        let button = IconButton{
+            Icon: MaterialIcons.Create(icon, 18.0, active ? theme.LinkColor: theme.MutedTextColor),
+            AccessibilityName: tip,
+            Disabled: !enabled,
+            Active: active,
+            OnClick: () -> {
+                action()
+                Rebuild()
+            },
+        }.Build()
+        button.Key = key
+        guard let window = owner else {
+            return button
+        }
+        return Cell.Mount[TooltipInput, Tooltip](
+            key + "-tooltip",
+            TooltipInput{Window: window, Text: tip, Placement: PortalPlacement.Bottom, Target: button}
+        )
+    }
+
+    private func ToggleRecording(active bool) {
+        if active {
+            session.StopProfiler()
+        } else {
+            session.StartProfiler(allocationSamples)
+            Select(-1)
+            selectionStart = 0L
+            selectionEnd = 0L
+            revision = -1
+            follow = true
+            paths.Clear()
+        }
+        Rebuild()
+    }
+
+    private func ClearTrace() {
+        session.ClearProfiler()
+        Select(-1)
+        selectionStart = 0L
+        selectionEnd = 0L
+        tableRows = []DataGridRow{}
+        tableKey = ""
+        paths.Clear()
+    }
+
+    private func WindowOptions()[]ComboBoxOption {
+        let options = List[ComboBoxOption]()
+        options.Add(ComboBoxOption{Id: "all", Label: "All windows"})
         if let trace = session.Profiler {
-            let seen = HashSet[string]()
-            for lane in trace.Lanes {
-                let id = lane.Window
-                if id != "" && seen.Add(id) {
-                    controls.Add(Control("profiler-window-" + id, WindowTitle(id), () -> PickWindow(id)))
-                }
+            for id in trace.WindowNames.Keys {
+                options.Add(ComboBoxOption{Id: id, Label: WindowTitle(id)})
             }
         } else {
             for window in session.Windows {
-                let id = window.Id
-                controls.Add(Control("profiler-window-" + id, WindowTitle(id), () -> PickWindow(id)))
+                options.Add(ComboBoxOption{Id: window.Id, Label: WindowTitle(window.Id)})
             }
         }
-        return Container{Key: "profiler-window-picker", FlexDirection: FlexDirection.Row, Gap: 4, Children: controls}
+        return options.ToArray()
     }
 
     private func PickWindow(id string) {
         filterWindow = id
-        windowPicker = false
         tableKey = ""
+        paths.Clear()
         Rebuild()
+    }
+
+    private func Problem() string {
+        guard let trace = session.Profiler else {
+            let unavailable = session.State == DiagnosticConnectionState.Connected && !session.Capabilities.ProfilerTrace
+            return unavailable ? "Recording is not available for this target": ""
+        }
+        let parts = List[string]()
+        if trace.Reason != "" {
+            parts.Add(trace.Reason)
+        } else if trace.Partial {
+            parts.Add("Partial trace")
+        }
+        if trace.Dropped > 0uL {
+            parts.Add(trace.Dropped.ToString() + " dropped")
+        }
+        return String.Join(" · ", parts)
     }
 
     private func Status(trace ProfilerTrace) string {
@@ -296,9 +323,6 @@ internal partial class ProfilerCell : Cell, IDisposable {
         let pid = trace.Process.Split(" / ")[0]
         return trace.State + " · " + trace.Records.Count.ToString() + " records · " + Time(trace, trace.End)
         + " · " + name + (pid == "" ? "": " (pid " + pid + ")")
-        + (trace.Devices == "" ? "": " · " + trace.Devices)
-        + (trace.Dropped > 0uL ? " · " + trace.Dropped.ToString() + " dropped": "")
-        + (trace.Partial ? " · PARTIAL": "")
     }
 
     private func WindowTitle(id string) string {
@@ -325,331 +349,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
         return same > 1 ? title + " #" + same.ToString(): title
     }
 
-    private func Tracks(trace ProfilerTrace) List[ProfilerTrackRow] {
-        let rows = List[ProfilerTrackRow]()
-        let windows = List[string]()
-        for lane in trace.Lanes {
-            if lane.Window != "" && !windows.Contains(lane.Window) {
-                windows.Add(lane.Window)
-            }
-        }
-        for window in windows {
-            if filterWindow != "" && window != filterWindow {
-                continue
-            }
-            AddGroup(trace, rows, "window-" + window, WindowTitle(window), window, "")
-        }
-        AddGroup(trace, rows, "process", "Process markers", "", "Markers")
-        AddGroup(trace, rows, "GPU", "GPU · per-submission elapsed, not CPU-aligned", "", "GPU")
-        AddGroup(trace, rows, "Memory", "Memory · separate accounts", "", "Memory")
-        AddGroup(trace, rows, "Resources", "Resources", "", "Resources")
-        return rows
-    }
-
-    private func AddGroup(
-        trace ProfilerTrace,
-        rows List[ProfilerTrackRow],
-        key string,
-        title string,
-        window string,
-        group string
-    ) {
-        let lanes = List[ProfilerLane]()
-        for lane in trace.Lanes {
-            if group == "" ? lane.Window == window: lane.Group == group {
-                lanes.Add(lane)
-            }
-        }
-        if lanes.Count == 0 {
-            return
-        }
-        rows.Add(ProfilerTrackRow(key, title + " (" + lanes.Count.ToString() + ")", 30.0))
-        if collapsed.Contains(key) {
-            return
-        }
-        if group == "Memory" {
-            for device in trace.DeviceIds {
-                rows.Add(
-                    ProfilerTrackRow("owner-" + device.ToString(), "GPU live / retired by owner", 70.0, device: device)
-                )
-            }
-        }
-        for lane in lanes {
-            if group == "Memory" && IsMore(lane) && !moreCounters {
-                continue
-            }
-            if group == "Memory" && lane.Name.StartsWith("driver.heap.budget", StringComparison.Ordinal) &&
-                !moreCounters {
-                continue
-            }
-            rows.Add(
-                ProfilerTrackRow(
-                    "lane-" + lane.Group + lane.Name + lane.Window,
-                    LaneTitle(lane.Name),
-                    lane.Group == "CPU" || lane.Group == "Queue" ? Math.Max(
-                        34.0,
-                        float64(lane.MaxDepth + 1) * 16.0 + 8.0
-                    ): 40.0,
-                    lane
-                )
-            )
-            if lane.Group == "Resources" && expandedResource == lane.Name {
-                let byId = Dictionary[uint64, ProfilerLane]()
-                for index in lane.Records {
-                    let r = trace.Records[index]
-                    guard let id = r.Resource else {
-                        continue
-                    }
-                    if !byId.TryGetValue(id, out var child) {
-                        let name = trace.ResourceNames.TryGetValue(id, out var actual) ? actual: "Resource " +
-                            id.ToString()
-                        child = ProfilerLane("  " + name + " #" + id.ToString(), "Resources", "")
-                        byId.Add(id, child)
-                    }
-                    child.Records.Add(index)
-                    child.Dirty = true
-                }
-                for pair in byId {
-                    let child = pair.Value
-                    child.Prepare(trace.Records)
-                    rows.Add(ProfilerTrackRow("resource-" + pair.Key.ToString(), child.Name, 34.0, child))
-                }
-            }
-        }
-        if group == "Memory" {
-            rows.Add(ProfilerTrackRow("more", "More counters", 30.0))
-        }
-    }
-
-    private func Track(trace ProfilerTrace, row ProfilerTrackRow) Blob {
-        if let lane = row.Lane {
-            return Lane(trace, lane, row.Height)
-        }
-        if let device = row.Device {
-            return OwnerStack(trace, device)
-        }
-        let expanded = row.Key == "more" ? moreCounters: !collapsed.Contains(row.Key)
-        let children = List[Blob]()
-        children.Add(
-            Button{
-                Key: "profiler-group-" + row.Key,
-                Height: 30,
-                Width: 0,
-                FlexGrow: 1.0,
-                JustifyContent: JustifyContent.FlexStart,
-                FlexDirection: FlexDirection.Row,
-                AlignItems: AlignItems.Center,
-                Gap: 6,
-                Padding: Edges{Left: 6, Right: 8},
-                BackgroundColor: DevToolsTheme.SurfaceRaised,
-                Hover: Style{BackgroundColor: DevToolsTheme.SurfaceStrong},
-                Focus: FocusStyle(),
-                Accessibility: Accessibility{Role: AccessibilityRole.TreeItem, Name: row.Title, Expanded: expanded},
-                OnClick: () -> {
-                    if row.Key == "more" {
-                        moreCounters = !moreCounters
-                    } else if !collapsed.Remove(row.Key) {
-                        collapsed.Add(row.Key)
-                    }
-                    Rebuild()
-                },
-                DevToolsIcons.View("disclosure-" + row.Key, expanded ? DevToolsIcons.Expand: DevToolsIcons.Chevron),
-                Label(row.Title),
-            }
-        )
-        if row.Key == "Resources" {
-            children.Add(
-                Toggle(
-                    "profiler-lifetimes",
-                    "Lifetimes",
-                    lifetimes,
-                    () -> {
-                        lifetimes = !lifetimes
-                        paths.Clear()
-                        Rebuild()
-                    }
-                )
-            )
-        }
-        return Container{
-            Key: "group-row-" + row.Key,
-            Width: Percent(100),
-            Height: 30,
-            FlexDirection: FlexDirection.Row,
-            Children: children
-        }
-    }
-
-    private func Overview(trace ProfilerTrace) Container {
-        let w = PlotWidth()
-        let total = Math.Max(1L, trace.End)
-        let key = "overview"
-        if !paths.ContainsKey(key + "0") {
-            let maxima = [int32(w) + 1]float64
-            let indices = [int32(w) + 1]int32
-            Array.Fill(indices, -1)
-            let maximum = 50.1
-            for index in 0 ... trace.Records.Count {
-                let r = trace.Records[index]
-                if r.Kind != "duration" || r.Category != 0 || r.Event != 0 || r.Window == "" {
-                    continue
-                }
-                if filterWindow != "" && r.Window != filterWindow {
-                    continue
-                }
-                let pixel = Math.Clamp(int32(float64(r.Ticks) / float64(total) * w), 0, int32(w))
-                let ms = trace.Milliseconds(r.EndTicks - r.Ticks)
-                if ms >= maxima[pixel] {
-                    maxima[pixel] = ms
-                    indices[pixel] = index
-                }
-            }
-            let builders = []PathBuilder{
-                PathBuilder(0.0, 0.0, w, 56.0),
-                PathBuilder(0.0, 0.0, w, 56.0),
-                PathBuilder(0.0, 0.0, w, 56.0),
-                PathBuilder(0.0, 0.0, w, 56.0)
-            }
-            for pixel in 0 ... indices.Length {
-                if indices[pixel] < 0 {
-                    continue
-                }
-                let r = trace.Records[indices[pixel]]
-                let ms = maxima[pixel]
-                let bucket = ms > maximum ||
-                    (r.GcPauseTicks ?? 0uL) >= 20000uL ? 2: r.Result == 0 ? 3: ms <= 16.7 ? 0: ms <= 33.4 ? 1: 2
-                let height = Math.Clamp(ms / maximum * 48.0, 1.0, 48.0)
-                Rect(builders[bucket], float64(pixel), 54.0 - height, 2.0, height)
-            }
-            for bucket in 0 ... 4 {
-                paths[key + bucket.ToString()] = builders[bucket].Build()
-            }
-            scales[key] = maximum
-        }
-        let shapes = List[Blob]()
-        let colors = []Color{DevToolsTheme.Green, DevToolsTheme.Amber, DevToolsTheme.Red, DevToolsTheme.InkSubtle}
-        for bucket in 0 ... 4 {
-            shapes.Add(PathShape(paths[key + bucket.ToString()], colors[bucket], w, 56.0))
-        }
-        let budget = PathBuilder(0.0, 0.0, w, 56.0)
-        Rect(budget, 0.0, 54.0 - 16.7 / scales[key] * 48.0, w, 1.0)
-        shapes.Add(PathShape(budget.Build(), DevToolsTheme.InkMuted, w, 56.0))
-        let viewport = PathBuilder(0.0, 0.0, w, 56.0)
-        let left = Math.Clamp(float64(start) / float64(total) * w, 0.0, w)
-        let right = Math.Clamp(float64(end) / float64(total) * w, left, w)
-        Rect(viewport, left, 1.0, Math.Max(1.0, right - left), 54.0)
-        shapes.Add(
-            Shape{
-                Position: PositionType.Absolute,
-                Left: 0,
-                Top: 0,
-                Width: w,
-                Height: 56,
-                Path: viewport.Build(),
-                Fit: ShapeFit.Fill,
-                BackgroundColor: Color.Transparent,
-                BorderWidth: 1,
-                BorderColor: DevToolsTheme.Accent
-            }
-        )
-        let dim = PathBuilder(0.0, 0.0, w, 56.0)
-        if left > 0.0 {
-            Rect(dim, 0.0, 0.0, left, 56.0)
-        }
-        if right < w {
-            Rect(dim, right, 0.0, w - right, 56.0)
-        }
-        shapes.Add(
-            Shape{
-                Position: PositionType.Absolute,
-                Left: 0,
-                Top: 0,
-                Width: w,
-                Height: 56,
-                Path: dim.Build(),
-                Fit: ShapeFit.Fill,
-                BackgroundColor: Color.Rgba(0, 0, 0, 110)
-            }
-        )
-        return Container{
-            Key: "profiler-frame-overview",
-            Width: Percent(100),
-            Height: 60,
-            FlexShrink: 0.0,
-            FlexDirection: FlexDirection.Row,
-            Container{
-                Width: 220,
-                Height: 56,
-                Padding: 6,
-                FlexDirection: FlexDirection.Column,
-                Label("Frame time"),
-                Label("16.7 ms (60 Hz) budget")
-            },
-            Container{
-                Key: "profiler-overview",
-                Width: w,
-                Height: 56,
-                Position: PositionType.Relative,
-                BackgroundColor: DevToolsTheme.Surface,
-                Children: shapes,
-                Focusable: true,
-                Focus: FocusStyle(),
-                Accessibility: Accessibility{Role: AccessibilityRole.Group, Name: "Frame time overview"},
-                OnPointerDown: (e PointerEvent) -> {
-                    if e.Button != PointerButton.Primary {
-                        return
-                    }
-                    e.Capture()
-                    overviewDrag = true
-                    overviewX = e.Position.X
-                    overviewStart = start
-                },
-                OnPointerMove: (e PointerEvent) -> {
-                    if overviewDrag && Math.Abs(e.Position.X - overviewX) > 3.0 {
-                        let span = end - start
-                        start = Math.Max(0L, overviewStart + int64((e.Position.X - overviewX) / w * float64(total)))
-                        end = start + span
-                        Changed()
-                    }
-                },
-                OnPointerUp: (e PointerEvent) -> {
-                    e.ReleaseCapture()
-                    if overviewDrag && Math.Abs(e.Position.X - overviewX) <= 3.0 {
-                        let tick = int64(Math.Clamp(e.Position.X / w, 0.0, 1.0) * float64(total))
-                        var nearest int32 = -1
-                        var distance int64 = int64.MaxValue
-                        for index in 0 ... trace.Records.Count {
-                            let r = trace.Records[index]
-                            if r.Kind == "duration" && r.Category == 0 && r.Event == 0 && r.Window != "" {
-                                if filterWindow != "" && r.Window != filterWindow {
-                                    continue
-                                }
-                                let delta = Math.Abs(tick - r.Ticks)
-                                if delta < distance {
-                                    nearest = index
-                                    distance = delta
-                                }
-                            }
-                        }
-                        if nearest >= 0 {
-                            SelectRecord(trace, nearest, false)
-                        }
-                        let span = end - start
-                        start = Math.Max(0L, tick - span / 2L)
-                        end = start + span
-                        Changed()
-                    }
-                    overviewDrag = false
-                },
-                OnPointerCancel: (e PointerEvent) -> {
-                    overviewDrag = false
-                    e.ReleaseCapture()
-                },
-            },
-        }
-    }
-
-    private func Ruler(trace ProfilerTrace) Container {
+    private func Ruler(trace ProfilerTrace, theme Theme) Container {
         let ticks = List[Blob]()
         let target = float64(Math.Max(1L, end - start)) / 7.0
         let power = Math.Pow(10.0, Math.Floor(Math.Log10(target)))
@@ -658,58 +358,43 @@ internal partial class ProfilerCell : Cell, IDisposable {
             Math.Max(1.0, (normalized <= 1.0 ? 1.0: normalized <= 2.0 ? 2.0: normalized <= 5.0 ? 5.0: 10.0) * power)
         )
         let stepMs = trace.Milliseconds(step)
-        let scale = stepMs >= 1000.0 ? 0.001: stepMs >= 1.0 ? 1.0: 1000.0
+        let unitScale = stepMs >= 1000.0 ? 0.001: stepMs >= 1.0 ? 1.0: 1000.0
         let unit = stepMs >= 1000.0 ? "s": stepMs >= 1.0 ? "ms": "µs"
-        let decimals = Math.Clamp(int32(Math.Ceiling(-Math.Log10(stepMs * scale))), 0, 6)
-        let basis = start
+        let decimals = Math.Clamp(int32(Math.Ceiling(-Math.Log10(stepMs * unitScale))), 0, 6)
         let baseDecimals = Math.Clamp(int32(Math.Ceiling(-Math.Log10(stepMs / 1000.0))) + 2, 0, 9)
         ticks.Add(
-            Text{
-                Key: "ruler-base",
-                Content: (trace.Milliseconds(basis) / 1000.0).ToString(
-                    "F" + baseDecimals.ToString(),
-                    CultureInfo.InvariantCulture
-                ) +
-                    " s",
-                FontSize: 10,
-                Color: DevToolsTheme.InkMuted,
-                Position: PositionType.Absolute,
-                Left: 0,
-                Top: 2,
-                TextWrap: TextWrap.NoWrap
-            }
-        )
-        var tick = basis + step
-        while tick <= end {
-            if X(tick) < 100.0 {
-                tick += step
-                continue
-            }
-            ticks.Add(
-                Text{
-                    Key: "ruler-" + tick.ToString(),
-                    Content: "+" + (trace.Milliseconds(tick - basis) * scale).ToString(
-                        "F" + decimals.ToString(),
-                        CultureInfo.InvariantCulture
-                    ) +
-                        " " +
-                        unit,
-                    FontSize: 10,
-                    Color: DevToolsTheme.InkMuted,
-                    Position: PositionType.Absolute,
-                    Left: X(tick),
-                    Top: 2,
-                    TextWrap: TextWrap.NoWrap
-                }
+            RulerLabel(
+                "ruler-base",
+                (trace.Milliseconds(start) / 1000.0).ToString("F" + baseDecimals.ToString(), CultureInfo.InvariantCulture)
+                + " s",
+                0.0,
+                theme
             )
+        )
+        var tick = start + step
+        while tick <= end {
+            if X(tick) >= 100.0 && X(tick) < PlotWidth() - 60.0 {
+                ticks.Add(
+                    RulerLabel(
+                        "ruler-" + tick.ToString(),
+                        "+" + (trace.Milliseconds(tick - start) * unitScale).ToString(
+                            "F" + decimals.ToString(),
+                            CultureInfo.InvariantCulture
+                        )
+                        + " " + unit,
+                        X(tick),
+                        theme
+                    )
+                )
+            }
             tick += step
         }
         return Container{
             Key: "profiler-ruler",
-            Margin: Edges{Left: 220},
             Width: PlotWidth(),
-            Height: 24,
+            Height: 22,
             FlexShrink: 0.0,
+            Margin: Edges{Left: Pad, Top: 4},
             Position: PositionType.Relative,
             Children: ticks,
             OnPointerDown: (e PointerEvent) -> BeginSelection(e),
@@ -726,586 +411,339 @@ internal partial class ProfilerCell : Cell, IDisposable {
         }
     }
 
-    private func Lane(trace ProfilerTrace, lane ProfilerLane, height float64) Container {
+    private func FrameChart(trace ProfilerTrace, theme Theme) Container {
         let w = PlotWidth()
-        let key = lane.Group + lane.Name + lane.Window
-        let h = height - 4.0
-        if !paths.ContainsKey(key) {
-            let geometry = PathBuilder(0.0, 0.0, w, h)
-            let baseline = PathBuilder(0.0, 0.0, w, h)
-            let annotations = PathBuilder(0.0, 0.0, w, h)
-            var budgetLane ProfilerLane? = nil
-            if lane.Name.StartsWith("driver.heap.usage.estimate", StringComparison.Ordinal) {
-                let suffix = lane.Name.Substring("driver.heap.usage.estimate".Length)
-                for candidate in trace.Lanes {
-                    if candidate.Name == "driver.heap.budget" + suffix {
-                        budgetLane = candidate
-                    }
-                }
-            }
-            var maximum = 1.0
-            var minimum = 0.0
-            let first = lane.FirstVisible(start)
-            if lane.Group == "Memory" {
-                for offset in Math.Max(0, first - 1) ... lane.Records.Count {
-                    let r = trace.Records[lane.Records[offset]]
-                    if r.Ticks > end {
-                        break
-                    }
-                    if let value = SeriesValue(trace, lane, offset) {
-                        maximum = Math.Max(maximum, value)
-                        minimum = Math.Min(minimum, value)
-                    }
-                }
-                if let budgets = budgetLane {
-                    for offset in Math.Max(0, budgets.FirstVisible(start) - 1) ... budgets.Records.Count {
-                        let r = trace.Records[budgets.Records[offset]]
-                        if r.Ticks > end {
-                            break
-                        }
-                        if let value = r.Value {
-                            maximum = Math.Max(maximum, value)
-                        }
-                    }
-                }
-            }
-            scales[key] = maximum
-            scales[key + "minimum"] = minimum
-            var lastPixel = -1
-            for offset in(
-                lane.Group == "Memory" ? Math.Max(0, first - 1): lifetimes && lane.Group == "Resources" ? 0: first
-            ) ... lane
-                .Records
-                .Count {
-                let r = trace.Records[lane.Records[offset]]
-                if r.Ticks > end {
-                    break
-                }
-                if lane.Group == "Memory" {
-                    if let value = SeriesValue(trace, lane, offset) {
-                        let next = offset + 1 < lane.Records.Count ? trace.Records[lane.Records[offset + 1]].Ticks: end
-                        let left = Math.Max(0.0, X(r.Ticks))
-                        let right = Math.Min(w, X(next))
-                        let zero = h - (0.0 - minimum) / (maximum - minimum) * (h - 5.0)
-                        let position = h - (value - minimum) / (maximum - minimum) * (h - 5.0)
-                        if right > left {
-                            Rect(
-                                geometry,
-                                left,
-                                Math.Min(zero, position),
-                                right - left,
-                                Math.Max(0.5, Math.Abs(zero - position))
-                            )
-                        }
-                    }
-                    continue
-                }
-                if r.Kind == "resourcebaseline" {
-                    let left = Math.Clamp(X(r.Ticks), 0.0, w - 2.0)
-                    Rect(baseline, left, 7.0, 2.0, h - 12.0)
-                    continue
-                }
-                let a = r.Ticks
-                var z = r.EndTicks
-                if lifetimes && lane.Group == "Resources" && r.Resource != nil && r.Kind == "resourcelifecycle"
-                && (r.Event == 200 || r.Event == 220 || r.Event == 120) {
-                    z = trace.End
-                    if trace.ResourceReleased.TryGetValue(r.Resource ?? 0uL, out var released) {
-                        z = released
-                    }
-                }
-                if z < start {
-                    continue
-                }
-                let left = Math.Clamp(X(a), 0.0, w - 1.0)
-                let right = Math.Clamp(X(z), left, w)
-                let nested = lane.Group == "CPU" || lane.Group == "Queue"
-                let depth = nested ? lane.Depth[offset]: 0
-                let y = nested ? 3.0 + float64(depth) * 16.0: r.Kind == "duration" ? 5.0: 3.0
-                if int32(left) != lastPixel || right - left > 2.0 {
-                    Rect(
-                        geometry,
-                        left,
-                        y,
-                        Math.Max(2.0, right - left),
-                        nested ? 14.0: r.Kind == "duration" ? h - 10.0: 5.0
-                    )
-                }
-                lastPixel = int32(left)
-            }
-            if let budgets = budgetLane {
-                for offset in Math.Max(0, budgets.FirstVisible(start) - 1) ... budgets.Records.Count {
-                    let r = trace.Records[budgets.Records[offset]]
-                    if r.Ticks > end {
-                        break
-                    }
-                    guard let value = r.Value else {
-                        continue
-                    }
-                    let next = offset +
-                        1 < budgets
-                        .Records
-                        .Count ? trace
-                        .Records[budgets.Records[offset + 1]]
-                        .Ticks: end
-                    let left = Math.Max(0.0, X(r.Ticks))
-                    let right = Math.Min(w, X(next))
-                    if right > left {
-                        Rect(annotations, left, h - value / maximum * (h - 5.0), right - left, 1.0)
-                    }
-                }
-            }
-            if lane.Name.StartsWith("managed.heap.estimate", StringComparison.Ordinal) {
-                for candidate in trace.Lanes {
-                    if !candidate.Name.StartsWith("gc.gen", StringComparison.Ordinal) {
-                        continue
-                    }
-                    var previous float64? = nil
-                    for index in candidate.Records {
-                        let r = trace.Records[index]
-                        if r.Ticks > end {
-                            break
-                        }
-                        if let value = r.Value {
-                            if let before = previous {
-                                if value > before && r.Ticks >= start {
-                                    Rect(annotations, Math.Clamp(X(r.Ticks), 0.0, w - 1.0), 0.0, 1.0, h)
-                                }
-                            }
-                            previous = value
-                        }
-                    }
-                }
-            }
-            paths[key + "annotations"] = annotations.Build()
-            paths[key] = geometry.Build()
-            paths[key + "baseline"] = baseline.Build()
+        if !paths.ContainsKey("other") {
+            DrawFrames(trace, w)
         }
-        let plot = List[Blob]()
-        plot.Add(
-            PathShape(
-                paths[key],
-                lane.Group == "Memory" ? DevToolsTheme.Green: lane.Group == "Resources" ? DevToolsTheme.Amber: DevToolsTheme.Accent,
-                w,
-                h
-            )
-        )
-        plot.Add(PathShape(paths[key + "baseline"], DevToolsTheme.InkSubtle, w, h))
-        plot.Add(PathShape(paths[key + "annotations"], DevToolsTheme.Amber, w, h))
-        let selection = PathBuilder(0.0, 0.0, w, h)
+        let shapes = List[Blob]()
+        let selection = PathBuilder(0.0, 0.0, w, Span)
         if selectionEnd > selectionStart && selectionEnd > start && selectionStart < end {
             let left = Math.Max(0.0, X(selectionStart))
-            Rect(selection, left, 0.0, Math.Max(1.0, Math.Min(w, X(selectionEnd)) - left), h)
+            Rect(selection, left, 0.0, Math.Max(1.0, Math.Min(w, X(selectionEnd)) - left), Span)
         }
-        plot.Add(PathShape(selection.Build(), Color.Rgba(137, 171, 249, 12), w, h))
-        if lane.Group == "CPU" || lane.Group == "Queue" {
-            for offset in lane.FirstVisible(start) ... lane.Records.Count {
-                let r = trace.Records[lane.Records[offset]]
-                if r.Ticks > end {
-                    break
+        shapes.Add(PathShape(selection.Build(), theme.AccentColor.WithAlpha(0.18)))
+        shapes.Add(PathShape(Highlight(selectedFrame, w), theme.ActiveColor))
+        shapes.Add(PathShape(Highlight(hovered, w), theme.HoverColor))
+        for phase in 0 ... trace.FramePhases.Count {
+            shapes.Add(PathShape(paths["phase" + phase.ToString()], PhaseColor(theme, phase)))
+        }
+        shapes.Add(PathShape(paths["other"], theme.FaintTextColor))
+        shapes.Add(PathShape(paths["clipped"], theme.TextColor))
+        shapes.Add(PathShape(paths["markers"], theme.InfoColor))
+        shapes.Add(
+            Text{
+                Key: "profiler-frame-scale",
+                Content: Time(trace, int64(scale)),
+                Position: PositionType.Absolute,
+                Left: 6,
+                Top: 4,
+                FontFamily: theme.MonoFontFamily,
+                FontSize: theme.CaptionFontSize,
+                Color: theme.MutedTextColor,
+            }
+        )
+        if hovered >= 0 && hovered < trace.Frames.Count && !selecting {
+            shapes.Add(
+                Container{
+                    Key: "profiler-frame-tooltip",
+                    Position: PositionType.Absolute,
+                    Left: hoverX + 248.0 < w ? hoverX + 14.0: Math.Max(0.0, hoverX - 248.0),
+                    Top: 8,
+                    Width: 234,
+                    Padding: 8,
+                    Gap: 2,
+                    BackgroundColor: theme.OverlayColor,
+                    BorderWidth: 1,
+                    BorderColor: theme.BorderColor,
+                    BorderRadius: theme.RadiusMd,
+                    BoxShadow: theme.ElevationMd,
+                    HitTestSelf: false,
+                    Children: Breakdown(trace, trace.Frames[hovered], theme)
                 }
-                if r.Kind != "duration" {
-                    continue
+            )
+        }
+        return Container{
+            Key: "profiler-frames",
+            Width: w,
+            Height: 0,
+            MinHeight: 80,
+            FlexGrow: 1.0,
+            Margin: Edges{Left: Pad},
+            Position: PositionType.Relative,
+            Overflow: Overflow.Hidden,
+            BackgroundColor: theme.SunkenColor,
+            BorderRadius: theme.RadiusSm,
+            Focusable: true,
+            Focus: Style{OutlineWidth: 1, OutlineColor: theme.FocusColor},
+            Accessibility: Accessibility{Role: AccessibilityRole.Group, Name: "Frames"},
+            OnWheel: (e WheelEvent) -> {
+                if e.Modifiers.Ctrl {
+                    e.PreventDefault()
+                    Zoom(e.Delta.Y > 0.0 ? 0.8: 1.25, Math.Clamp(e.Position.X / w, 0.0, 1.0))
+                } else if e.Modifiers.Shift {
+                    e.PreventDefault()
+                    Pan(e.Delta.Y > 0.0 ? -0.1: 0.1)
                 }
-                let left = Math.Max(0.0, X(r.Ticks))
-                let right = Math.Min(w, X(r.EndTicks))
-                if right - left > 40.0 {
-                    plot.Add(
-                        Text{
-                            Key: "slice-label-" + lane.Records[offset].ToString(),
-                            Content: LaneTitle(trace.EventName(r)),
-                            FontSize: 10,
-                            Color: DevToolsTheme.Background,
-                            Position: PositionType.Absolute,
-                            Left: left + 3.0,
-                            Top: 3.0 + float64(lane.Depth[offset]) * 16.0,
-                            Width: right - left - 6.0,
-                            Height: 14,
-                            TextWrap: TextWrap.NoWrap,
-                            TextTrimming: TextTrimming.Ellipsis
-                        }
-                    )
+            },
+            OnPointerDown: (e PointerEvent) -> {
+                pressX = e.Position.X
+                BeginSelection(e)
+            },
+            OnPointerMove: (e PointerEvent) -> {
+                if selecting {
+                    if Math.Abs(e.Position.X - pressX) > 3.0 {
+                        MoveSelection(e)
+                    }
+                    return
+                }
+                let frame = FrameAt(e.Position.X)
+                hoverX = e.Position.X
+                if frame != hovered {
+                    hovered = frame
+                    Rebuild()
+                }
+            },
+            OnPointerLeave: (e PointerEvent) -> {
+                if hovered >= 0 {
+                    hovered = -1
+                    Rebuild()
+                }
+            },
+            OnPointerUp: (e PointerEvent) -> {
+                if !selecting {
+                    return
+                }
+                selecting = false
+                e.ReleaseCapture()
+                if Math.Abs(e.Position.X - pressX) <= 3.0 {
+                    let frame = FrameAt(e.Position.X)
+                    if frame >= 0 {
+                        SelectFrame(trace, frame)
+                    } else {
+                        selectionStart = 0L
+                        selectionEnd = 0L
+                    }
+                }
+                tableKey = ""
+                Rebuild()
+            },
+            OnPointerCancel: (e PointerEvent) -> {
+                selecting = false
+                e.ReleaseCapture()
+            },
+            OnKeyDown: (e KeyEvent) -> Keys(e),
+            Children: shapes,
+        }
+    }
+
+    private func DrawFrames(trace ProfilerTrace, w float64) {
+        let count = Math.Max(1, int32(Math.Ceiling(w)))
+        let best = [count]int32
+        let longest = [count]int64
+        Array.Fill(best, -1)
+        let durations = List[int64]()
+        for index in trace.FirstFrame(start) ... trace.Frames.Count {
+            let r = trace.Records[trace.Frames[index].Record]
+            if r.Ticks > end {
+                break
+            }
+            if filterWindow != "" && r.Window != filterWindow {
+                continue
+            }
+            let duration = r.EndTicks - r.Ticks
+            durations.Add(duration)
+            let left = Math.Clamp(int32(X(r.Ticks)), 0, count - 1)
+            let right = Math.Clamp(int32(X(r.EndTicks)), left, count - 1)
+            for column in left ... right + 1 {
+                if best[column] < 0 || duration > longest[column] {
+                    best[column] = index
+                    longest[column] = duration
                 }
             }
         }
-        let labels = List[Blob]()
-        labels.Add(
+        durations.Sort()
+        scale = durations.Count == 0 ? 1.0: Math.Max(
+            1.0,
+            Math.Min(
+                float64(durations[durations.Count - 1]),
+                2.0 * float64(durations[int32(float64(durations.Count - 1) * 0.95)])
+            )
+        )
+        let builders = List[PathBuilder]()
+        for phase in 0 ... trace.FramePhases.Count {
+            builders.Add(PathBuilder(0.0, 0.0, w, Span))
+        }
+        let other = PathBuilder(0.0, 0.0, w, Span)
+        let clipped = PathBuilder(0.0, 0.0, w, Span)
+        var column = 0
+        while column < count {
+            let index = best[column]
+            var next = column + 1
+            while next < count && best[next] == index {
+                next++
+            }
+            if index >= 0 {
+                let frame = trace.Frames[index]
+                let r = trace.Records[frame.Record]
+                let x = float64(column)
+                let barWidth = next - column >= 4 ? float64(next - column - 1): float64(next - column)
+                var bottom = Span
+                for k in 0 ... frame.Phases.Length {
+                    bottom = Stack(builders[frame.Phases[k]], x, barWidth, bottom, frame.Ticks[k])
+                }
+                Stack(other, x, barWidth, bottom, frame.Other)
+                if float64(r.EndTicks - r.Ticks) > scale {
+                    Rect(clipped, x, 0.0, barWidth, 12.0)
+                }
+            }
+            column = next
+        }
+        let markers = PathBuilder(0.0, 0.0, w, Span)
+        for lane in trace.Lanes {
+            if lane.Group != "Markers" {
+                continue
+            }
+            for index in lane.Records {
+                let tick = trace.Records[index].Ticks
+                if tick >= start && tick <= end {
+                    Rect(markers, Math.Min(w - 2.0, X(tick)), 0.0, 2.0, 60.0)
+                }
+            }
+        }
+        for phase in 0 ... builders.Count {
+            paths["phase" + phase.ToString()] = builders[phase].Build()
+        }
+        paths["other"] = other.Build()
+        paths["clipped"] = clipped.Build()
+        paths["markers"] = markers.Build()
+        columns = best
+    }
+
+    private func Stack(path PathBuilder, x float64, barWidth float64, bottom float64, ticks int64) float64 {
+        let top = Math.Max(0.0, bottom - float64(ticks) / scale * Span)
+        if bottom > top {
+            Rect(path, x, top, barWidth, bottom - top)
+        }
+        return top
+    }
+
+    private func Highlight(frame int32, w float64) VectorPath {
+        let path = PathBuilder(0.0, 0.0, w, Span)
+        if frame >= 0 {
+            var first = -1
+            var last = -1
+            for column in 0 ... columns.Length {
+                if columns[column] == frame {
+                    first = first < 0 ? column: first
+                    last = column
+                }
+            }
+            if first >= 0 {
+                Rect(path, Math.Max(0.0, float64(first) - 1.0), 0.0, float64(last - first) + 3.0, Span)
+            }
+        }
+        return path.Build()
+    }
+
+    private func FrameAt(x float64) int32 {
+        let column = int32(x)
+        for distance in 0 ... 7 {
+            for candidate in []int32{column - distance, column + distance} {
+                if candidate >= 0 && candidate < columns.Length && columns[candidate] >= 0 {
+                    return columns[candidate]
+                }
+            }
+        }
+        return -1
+    }
+
+    private func Legend(trace ProfilerTrace, theme Theme) Container {
+        let items = List[Blob]()
+        for phase in 0 ... trace.FramePhases.Count {
+            items.Add(LegendItem(LaneTitle(trace.FramePhases[phase]), PhaseColor(theme, phase), theme))
+        }
+        if trace.Frames.Count > 0 {
+            items.Add(LegendItem("Other", theme.FaintTextColor, theme))
+        }
+        return Container{
+            Key: "profiler-legend",
+            Width: Percent(100),
+            FlexShrink: 0.0,
+            FlexDirection: FlexDirection.Row,
+            FlexWrap: FlexWrap.Wrap,
+            ColumnGap: 12,
+            RowGap: 2,
+            Padding: Edges{Left: Pad, Right: Pad, Top: 6, Bottom: 6},
+            Children: items
+        }
+    }
+
+    private func LegendItem(name string, color Color, theme Theme) Container -> Container{
+        Key: "legend-" + name,
+        FlexDirection: FlexDirection.Row,
+        AlignItems: AlignItems.Center,
+        Gap: 5,
+        Swatch(color),
+        Caption("label", name, theme.MutedTextColor)
+    }
+
+    private func Breakdown(trace ProfilerTrace, frame ProfilerFrame, theme Theme) List[Blob] {
+        let r = trace.Records[frame.Record]
+        let rows = List[Blob]()
+        rows.Add(Segment("Frame", r.EndTicks - r.Ticks, nil, theme, trace))
+        for k in 0 ... frame.Phases.Length {
+            let phase = frame.Phases[k]
+            rows.Add(Segment(LaneTitle(trace.FramePhases[phase]), frame.Ticks[k], PhaseColor(theme, phase), theme, trace))
+        }
+        rows.Add(Segment("Other", frame.Other, theme.FaintTextColor, theme, trace))
+        if frame.Wait > 0L {
+            rows.Add(Segment("Wait", frame.Wait, nil, theme, trace))
+        }
+        return rows
+    }
+
+    private func Segment(name string, ticks int64, color Color?, theme Theme, trace ProfilerTrace) Container {
+        let children = List[Blob]()
+        if let swatch = color {
+            children.Add(Swatch(swatch))
+        }
+        children.Add(
             Text{
-                Content: LaneTitle(lane.Name),
-                FontSize: 11,
-                Color: DevToolsTheme.Ink,
+                Content: name,
+                Width: 0,
+                FlexGrow: 1.0,
+                MinWidth: 0,
+                FontFamily: theme.FontFamily,
+                FontSize: theme.CaptionFontSize,
+                FontWeight: color == nil ? 600: 400,
+                Color: color == nil ? theme.TextColor: theme.MutedTextColor,
                 TextWrap: TextWrap.NoWrap,
                 TextTrimming: TextTrimming.Ellipsis
             }
         )
-        if lane.Group == "Memory" {
-            let unit = lane.Name.StartsWith("managed.allocated", StringComparison.Ordinal) ? "bytes/s": trace
-                .Records[lane.Records[0]]
-                .Unit
-            labels.Add(
-                Label(
-                    (scales[key + "minimum"] < 0.0 ? Value(scales[key + "minimum"], unit) + " to ": "max ")
-                    + Value(scales[key], unit)
-                    +
-                        (
-                        lane.Name.StartsWith("driver.heap.usage", StringComparison.Ordinal) ? " · amber: budget"
-                        : lane.Name.StartsWith("managed.heap.estimate", StringComparison.Ordinal) ? " · amber: GC": ""
-                    )
-                )
-            )
-        } else if lane.Group == "Resources" {
-            labels.Add(Label("gray marker: live before recording"))
-        }
-        var title Blob = Container{
-            Width: 220,
-            Height: height,
-            Padding: Edges{Left: 8, Right: 6},
-            Overflow: Overflow.Hidden,
-            FlexDirection: FlexDirection.Column,
-            JustifyContent: JustifyContent.Center,
-            Children: labels
-        }
-        if lane.Group == "Resources" && !lane.Name.StartsWith("  ", StringComparison.Ordinal) {
-            title = Button{
-                Key: "resource-disclosure-" + lane.Name,
-                Width: 220,
-                Height: height,
-                FlexDirection: FlexDirection.Row,
-                JustifyContent: JustifyContent.FlexStart,
-                Padding: Edges{Left: 22},
-                AlignItems: AlignItems.Center,
-                Gap: 4,
-                Focus: FocusStyle(),
-                Accessibility: Accessibility{
-                    Role: AccessibilityRole.TreeItem,
-                    Name: lane.Name,
-                    Expanded: expandedResource == lane.Name
-                },
-                OnClick: () -> {
-                    expandedResource = expandedResource == lane.Name ? "": lane.Name
-                    Rebuild()
-                },
-                DevToolsIcons.View(
-                    "resource-chevron",
-                    expandedResource == lane.Name ? DevToolsIcons.Expand: DevToolsIcons.Chevron
-                ),
-                Text{
-                    Content: lane.Name,
-                    FontSize: 11,
-                    Color: DevToolsTheme.Ink,
-                    TextWrap: TextWrap.NoWrap,
-                    TextTrimming: TextTrimming.Ellipsis
-                },
+        children.Add(
+            Text{
+                Content: Time(trace, ticks),
+                FontFamily: theme.MonoFontFamily,
+                FontSize: theme.CaptionFontSize,
+                Color: theme.TextColor,
+                TextWrap: TextWrap.NoWrap
             }
-        }
+        )
         return Container{
-            Key: "lane-" + key,
-            Width: Percent(100),
-            Height: height,
+            Key: "segment-" + name,
+            Height: 20,
+            FlexShrink: 0.0,
             FlexDirection: FlexDirection.Row,
-            BorderWidth: Edges{Bottom: 1},
-            BorderColor: DevToolsTheme.Border,
-            title,
-            Container{
-                Key: "plot-" + key,
-                Width: w,
-                Height: h,
-                Position: PositionType.Relative,
-                Focusable: true,
-                Focus: FocusStyle(),
-                BackgroundColor: DevToolsTheme.Surface,
-                Accessibility: Accessibility{
-                    Role: AccessibilityRole.Group,
-                    Name: LaneTitle(lane.Name) + (lane.Window == "" ? "": " · " + WindowTitle(lane.Window))
-                },
-                OnWheel: (e WheelEvent) -> {
-                    if e.Modifiers.Ctrl {
-                        e.PreventDefault()
-                        Zoom(e.Delta.Y > 0.0 ? 0.8: 1.25, Math.Clamp(e.Position.X / w, 0.0, 1.0))
-                    } else if e.Modifiers.Shift {
-                        e.PreventDefault()
-                        Pan(e.Delta.Y > 0.0 ? -0.1: 0.1)
-                    }
-                },
-                OnPointerDown: (e PointerEvent) -> BeginSelection(e),
-                OnPointerMove: (e PointerEvent) -> MoveSelection(e),
-                OnPointerUp: (e PointerEvent) -> {
-                    if !selecting {
-                        return
-                    }
-                    selecting = false
-                    e.ReleaseCapture()
-                    if selectionEnd - selectionStart < Math.Max(1L, (end - start) / int64(w) * 3L) {
-                        Hit(trace, lane, Tick(e.Position.X), e.Position.Y)
-                    }
-                    Rebuild()
-                },
-                OnPointerCancel: (e PointerEvent) -> {
-                    selecting = false
-                    e.ReleaseCapture()
-                },
-                OnKeyDown: (e KeyEvent) -> Keys(e),
-                Children: plot,
-            },
+            AlignItems: AlignItems.Center,
+            Gap: 6,
+            Children: children
         }
     }
 
-    private func SeriesValue(trace ProfilerTrace, lane ProfilerLane, offset int32) float64? {
-        let r = trace.Records[lane.Records[offset]]
-        if let value = r.FloatingValue {
-            return value
-        }
-        guard let value = r.Value else {
-            return nil
-        }
-        if lane.Name.StartsWith("managed.allocated.total", StringComparison.Ordinal) {
-            if offset == 0 {
-                return nil
-            }
-            let previous = trace.Records[lane.Records[offset - 1]]
-            guard let before = previous.Value else {
-                return nil
-            }
-            if r.Ticks <= previous.Ticks || value < before {
-                return nil
-            }
-            return float64(value - before) * float64(trace.Frequency) / float64(r.Ticks - previous.Ticks)
-        }
-        return float64(value)
-    }
-
-    private func OwnerStack(trace ProfilerTrace, device uint64) Container {
-        let key = "owner-" + device.ToString()
-        if !paths.ContainsKey(key + "0") {
-            let indices = List[int32]()
-            for lane in trace.Lanes {
-                if lane.Group != "Memory" {
-                    continue
-                }
-                for index in lane.Records {
-                    let r = trace.Records[index]
-                    if r.Device == device &&
-                        r.Ticks <= end &&
-                        (r.Name == "vulkan.live.requirements" || r.Name == "vulkan.retired.requirements") {
-                        indices.Add(index)
-                    }
-                }
-            }
-            indices.Sort((a int32, b int32) -> trace.Records[a].Ticks.CompareTo(trace.Records[b].Ticks))
-            indices.Add(-1)
-            let builders = [16]PathBuilder
-            for slot in 0 ... 16 {
-                builders[slot] = PathBuilder(0.0, 0.0, PlotWidth(), 34.0)
-            }
-            var maximum = 1.0
-            for pass in 0 ... 2 {
-                let values = [16]uint64
-                var previous int64 = 0L
-                var sampled = false
-                for index in indices {
-                    let tick = index < 0 ? end: trace.Records[index].Ticks
-                    if sampled && tick != previous && tick >= start && previous < end {
-                        var total = 0.0
-                        for value in values {
-                            total += float64(value)
-                        }
-                        if pass == 0 {
-                            maximum = Math.Max(maximum, total)
-                        } else {
-                            let left = Math.Max(0.0, X(previous))
-                            let right = Math.Min(PlotWidth(), X(tick))
-                            var bottom = 32.0
-                            for slot in 0 ... 16 {
-                                let bar = float64(values[slot]) / maximum * 30.0
-                                if bar > 0.0 && right > left {
-                                    Rect(builders[slot], left, bottom - bar, right - left, bar)
-                                }
-                                bottom -= bar
-                            }
-                        }
-                    }
-                    if index < 0 {
-                        break
-                    }
-                    let r = trace.Records[index]
-                    if let owner = r.Owner {
-                        if owner < 8uL {
-                            if let value = r.Value {
-                                values[int32(owner) * 2 + (r.Name == "vulkan.retired.requirements" ? 1: 0)] = value
-                                sampled = true
-                            }
-                        }
-                    }
-                    previous = tick
-                }
-            }
-            for slot in 0 ... 16 {
-                paths[key + slot.ToString()] = builders[slot].Build()
-            }
-            scales[key] = maximum
-        }
-        let colors = OwnerColors()
-        let shapes = List[Blob]()
-        for slot in 0 ... 16 {
-            shapes.Add(
-                Shape{
-                    Position: PositionType.Absolute,
-                    Left: 0,
-                    Top: 0,
-                    Width: PlotWidth(),
-                    Height: 34,
-                    Path: paths[key + slot.ToString()],
-                    Fit: ShapeFit.Fill,
-                    BackgroundColor: colors[slot / 2],
-                    Opacity: slot % 2 == 0 ? 1.0: 0.45
-                }
-            )
-        }
-        let legend = List[Blob]()
-        for owner in 0 ... 8 {
-            if !trace.PositiveOwners.TryGetValue(device, out var owners) || (owners & (1uL << owner)) == 0uL {
-                continue
-            }
-            legend.Add(
-                Container{
-                    FlexDirection: FlexDirection.Row,
-                    AlignItems: AlignItems.Center,
-                    Gap: 3,
-                    Container{Width: 9, Height: 9, BackgroundColor: colors[owner]},
-                    Label(trace.OwnerName(uint64(owner)))
-                }
-            )
-        }
-        legend.Add(Label("retired: dim"))
-        return Container{
-            Key: key,
-            Width: Percent(100),
-            Height: 70,
-            FlexDirection: FlexDirection.Column,
-            Container{
-                Height: 34,
-                FlexDirection: FlexDirection.Row,
-                Container{
-                    Width: 220,
-                    Padding: 6,
-                    FlexDirection: FlexDirection.Column,
-                    Label("GPU live / retired by owner"),
-                    Label("max " + Value(scales[key], "bytes"))
-                },
-                Container{Width: PlotWidth(), Height: 34, Position: PositionType.Relative, Children: shapes}
-            },
-            Container{
-                Margin: Edges{Left: 220},
-                Height: 30,
-                FlexDirection: FlexDirection.Row,
-                FlexWrap: FlexWrap.Wrap,
-                Gap: 7,
-                Children: legend
-            },
-        }
-    }
-
-    private func Analysis(trace ProfilerTrace) Container {
-        let tabs = List[Blob]()
-        for name in[]string{"Phases", "Memory", "Types", "Resources"} {
-            let current = name
-            tabs.Add(
-                Button{
-                    Key: "profiler-tab-" + current,
-                    Height: 28,
-                    Padding: Edges{Left: 12, Right: 12},
-                    BackgroundColor: tab == current ? DevToolsTheme.Selection: DevToolsTheme.Surface,
-                    Focus: FocusStyle(),
-                    Accessibility: Accessibility{Role: AccessibilityRole.Tab, Name: current, Selected: tab == current},
-                    OnClick: () -> {
-                        tab = current
-                        sortColumn = current == "Phases" ? 2: current == "Types" ? 1: 4
-                        descending = true
-                        tableKey = ""
-                        Rebuild()
-                    },
-                    Label(current),
-                }
-            )
-        }
-        let columns = tab == "Phases" ? []string{"Name (last 240)", "Count", "Total", "p50", "p99", "Max", "Alloc"}
-        : tab == "Memory" ? []string{"Counter", "Start", "End", "Δ", "Observed peak"}
-        : tab == "Types" ? []string{"Type", "Samples", "Sampled bytes", "Status", ""}
-        : []string{"Start", "Duration", "Kind", "Name", "Bytes", "Owner", "Result"}
+    private func Analysis(trace ProfilerTrace, theme Theme) Container {
         PrepareTable(trace)
-        let headers = List[Blob]()
-        for column in 0 ... columns.Length {
-            let index = column
-            headers.Add(
-                Button{
-                    Key: "profiler-sort-" + column.ToString(),
-                    Width: ColumnWidth(column),
-                    FlexGrow: FlexibleColumn(column) ? 1.0: 0.0,
-                    FlexShrink: 0.0,
-                    MinWidth: 0,
-                    Padding: 0,
-                    JustifyContent: JustifyContent.FlexStart,
-                    Height: 28,
-                    BackgroundColor: DevToolsTheme.SurfaceRaised,
-                    Focus: FocusStyle(),
-                    Accessibility: Accessibility{Role: AccessibilityRole.ColumnHeader, Name: columns[column]},
-                    OnClick: () -> {
-                        if sortColumn == index {
-                            descending = !descending
-                        } else {
-                            sortColumn = index
-                            descending = true
-                        }
-                        tableKey = ""
-                        Rebuild()
-                    },
-                    Text{
-                        Content: columns[column] + (sortColumn == column ? descending ? " ↓": " ↑": ""),
-                        Width: Percent(100),
-                        Padding: Edges{Left: 5, Right: 5},
-                        FontSize: 11,
-                        Color: DevToolsTheme.Ink,
-                        TextAlign: NumericColumn(column) ? TextAlign.Right: TextAlign.Left,
-                        TextWrap: TextWrap.NoWrap,
-                        TextTrimming: TextTrimming.Ellipsis
-                    },
-                }
-            )
-        }
-        let left = List[Blob]()
-        left.Add(
-            Container{
-                Height: 28,
-                FlexDirection: FlexDirection.Row,
-                Accessibility: Accessibility{Role: AccessibilityRole.TabList},
-                Children: tabs
-            }
-        )
-        left.Add(
-            Label(
-                tab == "Phases" ? "Last 240 scopes per row. p50/p99 use complete scopes. Nested elapsed times overlap."
-                : tab == "Memory" ? "Separate accounts. First sample and observed peaks are labelled."
-                : tab == "Types" ? "Runtime allocation samples, not exact object counts. At most 500 types."
-                : resourceTotals
-            )
-        )
-        left.Add(Container{Height: 28, FlexDirection: FlexDirection.Row, Children: headers})
-        let rows = tableRows
-        let heights = List[float64]()
-        for row in rows {
-            heights.Add(28.0)
-        }
-        left.Add(
-            Virtual(ProfilerVirtualSource(heights, (index int32) -> TableRow(trace, rows[index]))){
-                Key = "profiler-summary-rows",
-                Height = 0,
-                MinHeight = 0,
-                FlexGrow = 1.0,
-                OverflowX = Overflow.Hidden,
-                ScrollbarVisibility = ScrollbarVisibility.Auto,
-                Accessibility = Accessibility{Role: AccessibilityRole.Grid, Name: tab + " summary"},
-            }
-        )
         let panes = List[Blob]()
         panes.Add(
             Container{
@@ -1315,11 +753,67 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 MinWidth: 0,
                 Height: Percent(100),
                 FlexDirection: FlexDirection.Column,
-                Children: left
+                Cell.Mount[TabBarInput, TabBar](
+                    "profiler-tabs",
+                    TabBarInput{
+                        Items: []NavigationItem{
+                            NavigationItem{Id: "profiler-tab-Phases", Label: "Phases"},
+                            NavigationItem{Id: "profiler-tab-Memory", Label: "Memory"},
+                            NavigationItem{Id: "profiler-tab-Types", Label: "Types"},
+                            NavigationItem{Id: "profiler-tab-Resources", Label: "Resources"},
+                        },
+                        SelectedId: "profiler-tab-" + tab,
+                        OnSelect: (id string) -> {
+                            tab = id.Substring("profiler-tab-".Length)
+                            sortColumn = tab == "Phases" ? 2: tab == "Types" ? 1: tab == "Memory" ? 0: 4
+                            descending = tab != "Memory"
+                            tableKey = ""
+                            Rebuild()
+                        },
+                        AccessibilityName: "Summary",
+                    }
+                ),
+                Cell.Mount[DataGridInput, DataGrid](
+                    "profiler-table",
+                    DataGridInput{
+                        Columns: tableColumns,
+                        Rows: tableRows,
+                        SortColumnId: "c" + sortColumn.ToString(),
+                        SortDirection: descending ? DataGridSort.Descending: DataGridSort.Ascending,
+                        OnSort: (id string, direction DataGridSort) -> {
+                            let column = Int32.Parse(id.Substring(1), CultureInfo.InvariantCulture)
+                            descending = column == sortColumn ? !descending: direction != DataGridSort.Ascending
+                            sortColumn = column
+                            tableKey = ""
+                            Rebuild()
+                        },
+                        Selection: DataGridSelection.Single,
+                        SelectedIds: selectedIds,
+                        OnSelectionChange: (ids[]string) -> {
+                            if ids.Length == 1 && ids[0].StartsWith("profiler-event-", StringComparison.Ordinal) {
+                                if let current = session.Profiler {
+                                    SelectRecord(
+                                        current,
+                                        Int32.Parse(ids[0].Substring("profiler-event-".Length), CultureInfo.InvariantCulture)
+                                    )
+                                }
+                            }
+                        },
+                        FitColumnsToViewport: true,
+                        Density: DataGridDensity.Compact,
+                        Height: Length.Auto,
+                        AccessibilityName: tab,
+                        CreateRoot: (input DataGridInput, root Container) -> {
+                            root.FlexGrow = 1
+                            root.FlexBasis = 0
+                            return root
+                        },
+                    }
+                ),
             }
         )
         if selected >= 0 && selected < trace.Records.Count {
-            panes.Add(DetailsDivider())
+            panes.Add(DetailsDivider(theme))
             panes.Add(
                 Container{
                     Key: "profiler-details",
@@ -1329,47 +823,39 @@ internal partial class ProfilerCell : Cell, IDisposable {
                     OverflowY: Overflow.Scroll,
                     FlexDirection: FlexDirection.Column,
                     ScrollbarVisibility: ScrollbarVisibility.Auto,
-                    Children: Details(trace)
+                    Padding: Edges{Left: Pad, Right: Pad, Top: 4},
+                    Children: Details(trace, theme)
                 }
             )
         }
         return Container{
             Key: "profiler-analysis",
             Width: Percent(100),
-            Height: 280,
+            Height: 0,
             MinHeight: 180,
-            FlexShrink: 0.0,
+            FlexGrow: 1.0,
             FlexDirection: FlexDirection.Row,
             BorderWidth: Edges{Top: 1},
-            BorderColor: DevToolsTheme.Border,
+            BorderColor: theme.BorderColor,
             Children: panes
         }
     }
 
-    private func FlexibleColumn(column int32) bool -> tab == "Resources" ? column == 3 || column == 5: column == 0
+    private func DetailsWidth() float64 -> Math.Clamp(detailsWidth, 260.0, Math.Max(260.0, width - 520.0))
 
-    private func NumericColumn(column int32) bool -> tab == "Resources" ? column == 0 ||
-        column == 1 ||
-        column == 4: column != 0
-
-    private func ColumnWidth(column int32) float64 -> FlexibleColumn(column) ? 0.0
-    : tab == "Memory" && column == 1 ? 140.0
-    : tab == "Memory" && column == 4 ? 110.0
-    : NumericColumn(column) ? 84.0: column == 2 ? 100.0: 140.0
-
-    private func DetailsWidth() float64 -> Math.Clamp(detailsWidth, 280.0, Math.Max(280.0, width - 560.0))
-
-    private func DetailsDivider() Container -> Container{
+    private func DetailsDivider(theme Theme) Container -> Container{
         Key: "profiler-details-divider",
         Width: 6,
         Height: Percent(100),
         FlexShrink: 0.0,
         Focusable: true,
-        Focus: FocusStyle(),
+        Focus: Style{OutlineWidth: 1, OutlineColor: theme.FocusColor},
         Cursor: Cursor.ResizeHorizontal,
-        BackgroundColor: resizing ? DevToolsTheme.Accent: DevToolsTheme.Background,
-        Hover: Style{BackgroundColor: DevToolsTheme.BorderStrong},
-        Accessibility: Accessibility{Role: AccessibilityRole.Group, Name: "Resize profiler details"},
+        BackgroundColor: resizing ? theme.AccentColor: theme.PanelColor,
+        Hover: Style{BackgroundColor: theme.StrongBorderColor},
+        BorderWidth: Edges{Left: 1},
+        BorderColor: theme.BorderColor,
+        Accessibility: Accessibility{Role: AccessibilityRole.Group, Name: "Resize details"},
         OnPointerDown: (e PointerEvent) -> {
             if e.Button != PointerButton.Primary || resizing {
                 return
@@ -1383,11 +869,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
         },
         OnPointerMove: (e PointerEvent) -> {
             if resizing && e.PointerId == resizePointer {
-                detailsWidth = Math.Clamp(
-                    resizeStartWidth + resizeStartX - e.WindowPosition.X,
-                    280.0,
-                    Math.Max(280.0, width - 560.0)
-                )
+                detailsWidth = resizeStartWidth + resizeStartX - e.WindowPosition.X
                 Rebuild()
             }
         },
@@ -1407,53 +889,11 @@ internal partial class ProfilerCell : Cell, IDisposable {
         },
         OnKeyDown: (e KeyEvent) -> {
             if e.Key == Key.Left || e.Key == Key.Right {
-                detailsWidth = Math.Clamp(
-                    DetailsWidth() + (e.Key == Key.Left ? 16.0: -16.0),
-                    280.0,
-                    Math.Max(280.0, width - 560.0)
-                )
+                detailsWidth = DetailsWidth() + (e.Key == Key.Left ? 16.0: -16.0)
                 e.PreventDefault()
                 Rebuild()
             }
         },
-    }
-
-    private func TableRow(trace ProfilerTrace, row ProfilerTableRow) Blob {
-        let cells = List[Blob]()
-        for column in 0 ... row.Cells.Length {
-            cells.Add(
-                Text{
-                    Content: row.Cells[column],
-                    Width: ColumnWidth(column),
-                    FlexGrow: FlexibleColumn(column) ? 1.0: 0.0,
-                    FlexShrink: 0.0,
-                    MinWidth: 0,
-                    TextAlign: NumericColumn(column) ? TextAlign.Right: TextAlign.Left,
-                    Padding: Edges{Left: 5, Right: 5},
-                    FontSize: 11,
-                    Color: DevToolsTheme.InkMuted,
-                    TextWrap: TextWrap.NoWrap,
-                    TextTrimming: TextTrimming.Ellipsis,
-                    Accessibility: Accessibility{Role: AccessibilityRole.GridCell}
-                }
-            )
-        }
-        return Button{
-            Key: row.Record >= 0 ? "profiler-event-" + row.Record.ToString(): "summary-row-" + row.Cells[0],
-            Height: 28,
-            Width: Percent(100),
-            FlexDirection: FlexDirection.Row,
-            AlignItems: AlignItems.Center,
-            BackgroundColor: selected >= 0 && row.Record == selected ? DevToolsTheme.Selection: DevToolsTheme.Surface,
-            Focus: FocusStyle(),
-            Accessibility: Accessibility{Role: AccessibilityRole.Row},
-            OnClick: () -> {
-                if row.Record >= 0 {
-                    SelectRecord(trace, row.Record, true)
-                }
-            },
-            Children: cells
-        }
     }
 
     private func PrepareTable(trace ProfilerTrace) {
@@ -1466,52 +906,59 @@ internal partial class ProfilerCell : Cell, IDisposable {
         }
         tableKey = key
         let rows = List[ProfilerTableRow]()
-        resourceTotals = "Already-live baselines excluded from load totals."
+        let names = tab == "Phases" ? []string{"Name", "Count", "Total", "p50", "p99", "Max", "Alloc"}
+        : tab == "Memory" ? []string{"Counter", "Start", "End", "Δ", "Peak"}
+        : tab == "Types" ? []string{"Type", "Samples", "Sampled bytes", "Status"}
+        : []string{"Start", "Duration", "Kind", "Name", "Bytes", "Owner", "Result"}
         if tab == "Phases" {
-            let groups = Dictionary[string, List[int32]]()
+            let groups = Dictionary[string, List[int64]]()
+            let allocations = Dictionary[string, List[int64]]()
             for index in 0 ... trace.Records.Count {
                 let r = trace.Records[index]
-                if r.Kind != "duration" || r.EndTicks <= lo || r.Ticks >= hi || r.Resource != nil {
+                let gpu = r.GpuNs != nil
+                if gpu ? r.Ticks < lo || r.Ticks >= hi: r.Kind != "duration" || r.Resource != nil || r.EndTicks <= lo || r.Ticks >= hi {
                     continue
                 }
                 if filterWindow != "" && r.Window != "" && r.Window != filterWindow {
                     continue
                 }
-                var name = LaneTitle(trace.EventName(r))
+                var name = gpu ? "GPU " + ProfilerTrace.GpuStage(r.Event): LaneTitle(trace.EventName(r))
                 if filterWindow == "" && trace.WindowNames.Count > 1 && r.Window != "" {
                     name = WindowTitle(r.Window) + " / " + name
                 }
                 if !groups.TryGetValue(name, out var list) {
-                    list = List[int32]()
+                    list = List[int64]()
                     groups.Add(name, list)
+                    allocations.Add(name, List[int64]())
                 }
-                if list.Count == 240 {
-                    list.RemoveAt(0)
+                if gpu {
+                    list.Add(int64(float64(r.GpuNs ?? 0uL) * float64(trace.Frequency) / 1000000000.0))
+                    continue
                 }
-                list.Add(index)
+                let complete = r.Ticks >= lo && r.EndTicks <= hi
+                list.Add(complete ? r.EndTicks - r.Ticks: -(Math.Min(hi, r.EndTicks) - Math.Max(lo, r.Ticks)) - 1L)
+                allocations[name].Add(complete && r.Allocated != nil ? int64(r.Allocated ?? 0uL): -1L)
             }
             var reconcile int64 = 0L
             var buildStyle int64 = 0L
             for pair in groups {
                 var total int64 = 0L
                 var maximum int64 = 0L
-                var allocation uint64 = 0uL
-                var measured = 0
-                var incomplete = false
-                let durations = List[int64](Math.Min(240, pair.Value.Count))
-                for index in pair.Value {
-                    let r = trace.Records[index]
-                    let duration = Math.Min(hi, r.EndTicks) - Math.Max(lo, r.Ticks)
+                let durations = List[int64](pair.Value.Count)
+                for value in pair.Value {
+                    let duration = value < 0L ? -value - 1L: value
                     total += duration
                     maximum = Math.Max(maximum, duration)
-                    if r.Ticks >= lo && r.EndTicks <= hi {
+                    if value >= 0L {
                         durations.Add(duration)
-                        if let value = r.Allocated {
-                            allocation += value
-                            measured++
-                        }
-                    } else {
-                        incomplete = true
+                    }
+                }
+                var allocation int64 = 0L
+                var measured = 0
+                for value in allocations[pair.Key] {
+                    if value >= 0L {
+                        allocation += value
+                        measured++
                     }
                 }
                 if pair.Key == "Reconcile" {
@@ -1521,11 +968,10 @@ internal partial class ProfilerCell : Cell, IDisposable {
                     buildStyle += total
                 }
                 let count = pair.Value.Count
+                let gpu = pair.Key.StartsWith("GPU ", StringComparison.Ordinal)
                 durations.Sort()
                 let p50 = durations.Count == 0 ? -1L: durations[(durations.Count - 1) / 2]
-                let p99 = durations.Count == 0 ? -1L: durations[
-                    int32(Math.Ceiling(float64(durations.Count) * 0.99)) - 1
-                ]
+                let p99 = durations.Count == 0 ? -1L: durations[int32(Math.Ceiling(float64(durations.Count) * 0.99)) - 1]
                 rows.Add(
                     ProfilerTableRow(
                         []string{
@@ -1535,8 +981,8 @@ internal partial class ProfilerCell : Cell, IDisposable {
                             p50 < 0L ? "partial": Time(trace, p50),
                             p99 < 0L ? "partial": Time(trace, p99),
                             Time(trace, maximum),
-                            (measured == 0 ? "unmeasured": Bytes(float64(allocation))) +
-                                (incomplete || measured < count ? " *": "")
+                            gpu ? "": (measured == 0 ? "unmeasured": Bytes(float64(allocation)))
+                            + (measured < count ? " *": "")
                         },
                         []float64{
                             0.0,
@@ -1546,7 +992,8 @@ internal partial class ProfilerCell : Cell, IDisposable {
                             float64(p99),
                             float64(maximum),
                             measured == 0 ? -1.0: float64(allocation)
-                        }
+                        },
+                        "summary-row-" + pair.Key
                     )
                 )
             }
@@ -1554,8 +1001,9 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 let diff = Math.Max(0L, reconcile - buildStyle)
                 rows.Add(
                     ProfilerTableRow(
-                        []string{"Diff (derived)", "—", Time(trace, diff), "—", "—", "—", "—"},
-                        []float64{0.0, 0.0, float64(diff), 0.0, 0.0, 0.0, -1.0}
+                        []string{"Diff (derived)", "", Time(trace, diff), "", "", "", ""},
+                        []float64{0.0, 0.0, float64(diff), 0.0, 0.0, 0.0, -1.0},
+                        "summary-row-Diff (derived)"
                     )
                 )
             }
@@ -1565,9 +1013,9 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 if r.Name == "allocation.samples" && r.Validity == "unavailable" {
                     rows.Add(
                         ProfilerTableRow(
-                            []string{r.Source, "", "", "Unavailable", ""},
-                            []float64{0.0, 0.0, 0.0, 0.0, 0.0},
-                            index
+                            []string{r.Source, "", "", "Unavailable"},
+                            []float64{0.0, 0.0, 0.0, 0.0},
+                            "profiler-event-" + index.ToString()
                         )
                     )
                 }
@@ -1576,9 +1024,9 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 }
                 rows.Add(
                     ProfilerTableRow(
-                        []string{r.Name, (r.Value ?? 0uL).ToString(), Bytes(float64(r.Value1 ?? 0uL)), "Sampled", ""},
-                        []float64{0.0, float64(r.Value ?? 0uL), float64(r.Value1 ?? 0uL), 0.0, 0.0},
-                        index
+                        []string{r.Name, (r.Value ?? 0uL).ToString(), Bytes(float64(r.Value1 ?? 0uL)), "Sampled"},
+                        []float64{0.0, float64(r.Value ?? 0uL), float64(r.Value1 ?? 0uL), 0.0},
+                        "profiler-event-" + index.ToString()
                     )
                 )
             }
@@ -1590,7 +1038,6 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 var initial float64? = nil
                 var final float64? = nil
                 var peak float64? = nil
-                var firstSample = false
                 var unit = ""
                 for offset in 0 ... lane.Records.Count {
                     let r = trace.Records[lane.Records[offset]]
@@ -1599,12 +1046,8 @@ internal partial class ProfilerCell : Cell, IDisposable {
                     }
                     unit = lane.Name.StartsWith("managed.allocated", StringComparison.Ordinal) ? "bytes/s": r.Unit
                     let value = SeriesValue(trace, lane, offset)
-                    if r.Ticks <= lo {
+                    if r.Ticks <= lo || initial == nil {
                         initial = value
-                    }
-                    if initial == nil && r.Ticks >= lo && value != nil {
-                        initial = value
-                        firstSample = true
                     }
                     final = value
                     if r.Ticks >= lo {
@@ -1613,9 +1056,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                         }
                     }
                 }
-                if peak == nil {
-                    peak = initial
-                }
+                peak = peak ?? initial
                 var delta float64? = nil
                 if let a = initial {
                     if let z = final {
@@ -1626,24 +1067,23 @@ internal partial class ProfilerCell : Cell, IDisposable {
                     ProfilerTableRow(
                         []string{
                             LaneTitle(lane.Name),
-                            OptionalValue(initial, unit) + (firstSample ? " (first sample)": ""),
+                            OptionalValue(initial, unit),
                             OptionalValue(final, unit),
                             delta == nil ? "unmeasured": SignedValue(delta ?? 0.0, unit),
                             OptionalValue(peak, unit)
                         },
-                        []float64{0.0, initial ?? -1.0, final ?? -1.0, delta ?? -1.0, peak ?? -1.0}
+                        []float64{0.0, initial ?? -1.0, final ?? -1.0, delta ?? -1.0, peak ?? -1.0},
+                        "summary-row-" + LaneTitle(lane.Name)
                     )
                 )
             }
         } else {
-            let totals = Dictionary[string, uint64]()
             for index in 0 ... trace.Records.Count {
                 let r = trace.Records[index]
                 if r.Resource == nil || r.Ticks < lo || r.Ticks > hi {
                     continue
                 }
                 let kind = trace.ResourceName(r.ResourceKind)
-                let baseline = r.Kind == "resourcebaseline"
                 let bytes = r.Payload ?? r.Requirement
                 let id = r.Resource ?? 0uL
                 var duration = r.EndTicks - r.Ticks
@@ -1671,9 +1111,6 @@ internal partial class ProfilerCell : Cell, IDisposable {
                         name = Bytes(float64(size)) + " " + kind.ToLowerInvariant()
                     }
                 }
-                if !baseline && r.Payload != nil {
-                    totals[kind] = (totals.TryGetValue(kind, out var old) ? old: 0uL) + (r.Payload ?? 0uL)
-                }
                 rows.Add(
                     ProfilerTableRow(
                         []string{
@@ -1694,23 +1131,15 @@ internal partial class ProfilerCell : Cell, IDisposable {
                             0.0,
                             float64(r.Result)
                         },
-                        index
+                        "profiler-event-" + index.ToString()
                     )
                 )
             }
-            let labels = List[string]()
-            for pair in totals {
-                labels.Add(pair.Key + " " + Bytes(float64(pair.Value)))
-            }
-            resourceTotals = "Loads: " + String.Join(" · ", labels) + " (excludes already-live baselines)"
         }
+        let numeric = tab == "Resources" ? sortColumn == 0 || sortColumn == 1 || sortColumn == 4 || sortColumn == 6
+        : sortColumn != 0 && !(tab == "Types" && sortColumn == 3)
         rows.Sort(
             (a ProfilerTableRow, b ProfilerTableRow) -> {
-                let numeric = tab == "Resources" ? sortColumn == 0 ||
-                    sortColumn == 1 ||
-                    sortColumn == 4 ||
-                    sortColumn == 6
-                : sortColumn != 0
                 let order = numeric ? a.Values[sortColumn].CompareTo(b.Values[sortColumn]): String.Compare(
                     a.Cells[sortColumn],
                     b.Cells[sortColumn],
@@ -1719,167 +1148,187 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 return descending ? -order: order
             }
         )
-        tableRows = rows
+        let gridRows = [rows.Count]DataGridRow
+        for row in 0 ... rows.Count {
+            let values = Dictionary[string, string]()
+            for column in 0 ... names.Length {
+                values.Add("c" + column.ToString(), rows[row].Cells[column])
+            }
+            gridRows[row] = DataGridRow{Id: rows[row].Id, Label: rows[row].Cells[0], Values: values}
+        }
+        tableRows = gridRows
+        let gridColumns = [names.Length]DataGridColumn
+        for column in 0 ... names.Length {
+            let text = tab == "Resources" ? column == 3 || column == 5: column == 0
+            let number = tab == "Resources" ? column == 0 || column == 1 || column == 4: column != 0 && !(tab == "Types" && column == 3)
+            var definition = DataGridColumn{
+                Id: "c" + column.ToString(),
+                Label: names[column],
+                Minimum: text ? 120.0: 56.0,
+                Sortable: true,
+                Alignment: number ? TextAlign.Right: TextAlign.Left,
+            }
+            if text {
+                definition.Flex = 1.0
+            } else {
+                definition.Width = number ? 84.0: 110.0
+            }
+            gridColumns[column] = definition
+        }
+        tableColumns = gridColumns
     }
 
-    private func Details(trace ProfilerTrace) List[Blob] {
-        let rows = List[Blob]()
-        if selected < 0 || selected >= trace.Records.Count {
-            return rows
-        }
+    private func Details(trace ProfilerTrace, theme Theme) List[Blob] {
         let r = trace.Records[selected]
-        rows.Add(
-            Text{
-                Content: LaneTitle(trace.EventName(r)),
-                FontSize: 13,
-                FontWeight: 600,
-                Color: DevToolsTheme.Ink,
-                Padding: 8
+        let rows = List[Blob]()
+        if selectedFrame >= 0 && selectedFrame < trace.Frames.Count && trace.Frames[selectedFrame].Record == selected {
+            rows.AddRange(Breakdown(trace, trace.Frames[selectedFrame], theme))
+            if trace.PumpGpu.TryGetValue(r.Window + ":" + r.Pump.ToString(), out var gpu) {
+                for index in gpu {
+                    let sample = trace.Records[index]
+                    rows.Add(Detail("GPU " + ProfilerTrace.GpuStage(sample.Event), TimeNs(float64(sample.GpuNs ?? 0uL)), theme))
+                }
             }
-        )
-        rows.Add(Detail("Start", Time(trace, r.Ticks)))
-        rows.Add(
-            Detail(
-                "Duration",
-                r.GpuNs != nil ? TimeNs(float64(r.GpuNs ?? 0uL)) +
-                    " (GPU, unaligned)": Time(trace, r.EndTicks - r.Ticks)
-            )
-        )
-        if let pause = r.GcPauseTicks {
-            let pauseMs = float64(pause) / 10000.0
-            rows.Add(Detail("Process GC pause", pauseMs.ToString("F3") + " ms"))
+        } else {
             rows.Add(
-                Detail(
-                    "GC-exclusive elapsed",
-                    Math.Max(0.0, trace.Milliseconds(r.EndTicks - r.Ticks) - pauseMs).ToString("F3") + " ms"
-                )
+                Text{
+                    Content: LaneTitle(trace.EventName(r)),
+                    FontFamily: theme.FontFamily,
+                    FontSize: theme.FontSize,
+                    FontWeight: 600,
+                    Color: theme.TextColor,
+                    Padding: Edges{Top: 4, Bottom: 4}
+                }
             )
+            rows.Add(Detail("Duration", r.GpuNs != nil ? TimeNs(float64(r.GpuNs ?? 0uL)): Time(trace, r.EndTicks - r.Ticks), theme))
         }
-        rows.Add(Detail("End", Time(trace, r.EndTicks)))
+        rows.Add(Detail("Start", Time(trace, r.Ticks), theme))
+        if let pause = r.GcPauseTicks {
+            rows.Add(Detail("GC pause", (float64(pause) / 10000.0).ToString("F3", CultureInfo.InvariantCulture) + " ms", theme))
+        }
         if r.Window != "" {
-            rows.Add(Detail("Window", WindowTitle(r.Window)))
+            rows.Add(Detail("Window", WindowTitle(r.Window), theme))
         }
         if let pump = r.Pump {
-            rows.Add(Detail("Pump", pump.ToString()))
+            rows.Add(Detail("Pump", pump.ToString(), theme))
         }
         if let frame = r.Frame {
-            rows.Add(Detail("Frame", frame.ToString()))
+            rows.Add(Detail("Frame", frame.ToString(), theme))
         }
         if let submission = r.Submission {
-            rows.Add(Detail("Submission", submission.ToString()))
+            rows.Add(Detail("Submission", submission.ToString(), theme))
         }
-        rows.Add(Detail("Result", Result(r)))
+        rows.Add(Detail("Result", Result(r), theme))
         if r.Resource != nil {
-            rows.Add(Detail("Kind", trace.ResourceName(r.ResourceKind)))
+            rows.Add(Detail("Kind", trace.ResourceName(r.ResourceKind), theme))
             let owner = trace.OwnerChain(r)
             if owner != "" {
-                rows.Add(Detail("Owner", owner))
+                rows.Add(Detail("Owner", owner, theme))
             }
-            rows.Add(Detail("Resource", r.Resource.ToString() + " · generation " + r.ResourceGeneration.ToString()))
+            rows.Add(Detail("Resource", r.Resource.ToString() + " · generation " + r.ResourceGeneration.ToString(), theme))
             if r.Width != nil && r.Height != nil {
-                rows.Add(Detail("Dimensions", r.Width.ToString() + " × " + r.Height.ToString()))
+                rows.Add(Detail("Dimensions", r.Width.ToString() + " × " + r.Height.ToString(), theme))
             }
             if r.Payload != nil {
-                rows.Add(Detail("Payload", Bytes(float64(r.Payload ?? 0uL))))
+                rows.Add(Detail("Payload", Bytes(float64(r.Payload ?? 0uL)), theme))
             }
             if r.Requirement != nil {
-                rows.Add(Detail("Requirement", Bytes(float64(r.Requirement ?? 0uL))))
+                rows.Add(Detail("Requirement", Bytes(float64(r.Requirement ?? 0uL)), theme))
             }
             if r.Placement != nil {
-                rows.Add(Detail("Placement", Bytes(float64(r.Placement ?? 0uL))))
+                rows.Add(Detail("Placement", Bytes(float64(r.Placement ?? 0uL)), theme))
             }
             if r.Block != nil {
-                rows.Add(Detail("Block", Bytes(float64(r.Block ?? 0uL))))
+                rows.Add(Detail("Block", Bytes(float64(r.Block ?? 0uL)), theme))
             }
             if let flags = r.HeapFlags {
-                rows.Add(Detail("Heap", (flags & 1uL) != 0uL ? "Device-local": "Host-visible/shared"))
+                rows.Add(Detail("Heap", (flags & 1uL) != 0uL ? "Device-local": "Host-visible", theme))
             }
             if let dedicated = r.Dedicated {
-                rows.Add(Detail("Dedicated", dedicated ? "Yes": "No"))
-            }
-            if r.Kind == "resourcebaseline" {
-                rows.Add(Detail("Lifetime", "Live before recording. Creation time is unknown."))
+                rows.Add(Detail("Dedicated", dedicated ? "Yes": "No", theme))
             }
             if trace.ResourceRetired.TryGetValue(r.Resource ?? 0uL, out var retired) {
-                rows.Add(Detail("Retired", Time(trace, retired)))
+                rows.Add(Detail("Retired", Time(trace, retired), theme))
             }
             if trace.ResourceReleased.TryGetValue(r.Resource ?? 0uL, out var released) {
-                rows.Add(Detail("Released", Time(trace, released)))
+                rows.Add(Detail("Released", Time(trace, released), theme))
             }
         }
         if r.Kind == "counter" {
             if let value = r.FloatingValue {
-                rows.Add(Detail("Value", Value(value, r.Unit)))
+                rows.Add(Detail("Value", Value(value, r.Unit), theme))
             } else if let value = r.Value {
-                rows.Add(Detail("Value", Value(float64(value), r.Unit)))
+                rows.Add(Detail("Value", Value(float64(value), r.Unit), theme))
             }
             if r.Source != "" {
-                rows.Add(Detail("Source", r.Source))
-            }
-            if r.Validity != "" {
-                rows.Add(Detail("Validity", r.Validity))
+                rows.Add(Detail("Source", r.Source, theme))
             }
             if let sampled = r.SampleTicks {
-                rows.Add(Detail("Sample age", Time(trace, Math.Max(0L, r.Ticks - sampled))))
+                rows.Add(Detail("Sample age", Time(trace, Math.Max(0L, r.Ticks - sampled)), theme))
             }
         }
         if r.Chrome != "" {
-            rows.Add(Detail("Chrome event", r.Chrome))
+            rows.Add(Detail("Chrome event", r.Chrome, theme))
         }
         if r.Allocated != nil {
-            rows.Add(Detail("Allocation traffic", Bytes(float64(r.Allocated ?? 0uL))))
+            rows.Add(Detail("Allocated", Bytes(float64(r.Allocated ?? 0uL)), theme))
         }
         if r.X != nil && r.Y != nil {
-            rows.Add(Detail("Damage origin", r.X.ToString() + ", " + r.Y.ToString()))
+            rows.Add(Detail("Damage origin", r.X.ToString() + ", " + r.Y.ToString(), theme))
         }
         if let scene = r.Scene {
-            rows.Add(Detail("Scene", scene.ToString()))
-        }
-        if trace.Partial {
-            rows.Add(Detail("Continuity", "Unknown across dropped or missing data"))
+            rows.Add(Detail("Scene", scene.ToString(), theme))
         }
         return rows
     }
 
-    private func Hit(trace ProfilerTrace, lane ProfilerLane, tick int64, y float64) {
-        var best = int64.MaxValue
-        var found = -1
-        for offset in lane.FirstVisible(start) ... lane.Records.Count {
-            let r = trace.Records[lane.Records[offset]]
-            if r.Ticks > end {
-                break
-            }
-            if (lane.Group == "CPU" || lane.Group == "Queue") &&
-                int32(Math.Max(0.0, y - 3.0) / 16.0) != lane.Depth[offset] {
-                continue
-            }
-            let distance = tick >= r.Ticks && tick <= r.EndTicks ? 0L: Math.Min(
-                Math.Abs(tick - r.Ticks),
-                Math.Abs(tick - r.EndTicks)
-            )
-            if distance < best {
-                best = distance
-                found = lane.Records[offset]
-            }
+    private func SeriesValue(trace ProfilerTrace, lane ProfilerLane, offset int32) float64? {
+        let r = trace.Records[lane.Records[offset]]
+        if let value = r.FloatingValue {
+            return value
         }
-        if found >= 0 {
-            SelectRecord(trace, found, false)
+        guard let value = r.Value else {
+            return nil
         }
+        if lane.Name.StartsWith("managed.allocated.total", StringComparison.Ordinal) {
+            if offset == 0 {
+                return nil
+            }
+            let previous = trace.Records[lane.Records[offset - 1]]
+            guard let before = previous.Value else {
+                return nil
+            }
+            if r.Ticks <= previous.Ticks || value < before {
+                return nil
+            }
+            return float64(value - before) * float64(trace.Frequency) / float64(r.Ticks - previous.Ticks)
+        }
+        return float64(value)
     }
 
-    private func SelectRecord(trace ProfilerTrace, index int32, zoom bool) {
+    private func Select(index int32) {
         selected = index
+        selectedFrame = -1
+        selectedIds = index >= 0 ? []string{"profiler-event-" + index.ToString()}: []string{}
+    }
+
+    private func SelectFrame(trace ProfilerTrace, frame int32) {
+        Select(trace.Frames[frame].Record)
+        selectedFrame = frame
+        let r = trace.Records[selected]
+        selectionStart = r.Ticks
+        selectionEnd = Math.Max(r.Ticks + 1L, r.EndTicks)
+    }
+
+    private func SelectRecord(trace ProfilerTrace, index int32) {
+        Select(index)
         let r = trace.Records[index]
         selectionStart = r.Ticks
         selectionEnd = Math.Max(r.Ticks + 1L, r.EndTicks)
-        if zoom {
-            let padding = Math.Max(trace.Frequency / 1000L, (selectionEnd - selectionStart) / 4L)
-            start = Math.Max(0L, selectionStart - padding)
-            end = selectionEnd + padding
-            Changed()
-        } else {
-            Rebuild()
-        }
+        let padding = Math.Max(trace.Frequency / 1000L, (selectionEnd - selectionStart) / 4L)
+        start = Math.Max(0L, selectionStart - padding)
+        end = selectionEnd + padding
+        Changed()
     }
 
     private func BeginSelection(e PointerEvent) {
@@ -1889,14 +1338,12 @@ internal partial class ProfilerCell : Cell, IDisposable {
         e.Capture()
         selecting = true
         anchor = Tick(e.Position.X)
-        selectionStart = anchor
-        selectionEnd = anchor
-        selected = -1
     }
 
     private func MoveSelection(e PointerEvent) {
         if selecting {
             let tick = Tick(e.Position.X)
+            Select(-1)
             selectionStart = Math.Min(anchor, tick)
             selectionEnd = Math.Max(anchor, tick)
             Rebuild()
@@ -1917,9 +1364,10 @@ internal partial class ProfilerCell : Cell, IDisposable {
             e.PreventDefault()
         }
         if e.Key == Key.Escape {
-            selected = -1
+            Select(-1)
             selectionStart = 0L
             selectionEnd = 0L
+            tableKey = ""
             Rebuild()
             e.PreventDefault()
         }
@@ -1940,8 +1388,8 @@ internal partial class ProfilerCell : Cell, IDisposable {
         Changed()
     }
 
-    private func Zoom(scale float64, fraction float64) {
-        let span = Math.Max(1L, int64(float64(end - start) * scale))
+    private func Zoom(factor float64, fraction float64) {
+        let span = Math.Max(1L, int64(float64(end - start) * factor))
         let center = start + int64(float64(end - start) * fraction)
         start = Math.Max(0L, center - int64(float64(span) * fraction))
         end = start + span
@@ -1950,26 +1398,19 @@ internal partial class ProfilerCell : Cell, IDisposable {
 
     private func Changed() {
         follow = false
+        hovered = -1
         paths.Clear()
-        scales.Clear()
         tableKey = ""
         Rebuild()
     }
 
-    private func PlotWidth() float64 -> Math.Max(100.0, width - 242.0)
+    private func PlotWidth() float64 -> Math.Max(100.0, width - 2.0 * Pad)
 
     private func X(tick int64) float64 -> float64(tick - start) / float64(Math.Max(1L, end - start)) * PlotWidth()
 
     private func Tick(x float64) int64 -> start + int64(Math.Clamp(x / PlotWidth(), 0.0, 1.0) * float64(end - start))
 
     shared {
-        private func IsMore(lane ProfilerLane) bool -> !(
-            lane.Name.StartsWith("managed.heap.estimate", StringComparison.Ordinal)
-            || lane.Name.StartsWith("managed.allocated.total", StringComparison.Ordinal)
-            || lane.Name.StartsWith("process.", StringComparison.Ordinal)
-            || lane.Name.StartsWith("driver.heap.", StringComparison.Ordinal)
-        )
-
         private func LaneTitle(name string) string {
             let slash = name.IndexOf(" /", StringComparison.Ordinal)
             let counter = slash < 0 ? name: name.Substring(0, slash)
@@ -1990,6 +1431,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
             : counter == "present.prepare-to-observed" ? "Present prepare to completion"
             : counter == "cpu.instrumented" ? "Instrumented CPU"
             : counter == "command.record" ? "Command recording"
+            : counter == "upload.prepare" ? "Upload preparation"
             : counter == "graphics.completion-observed" ? "Graphics completion"
             : counter == "managed.heap.estimate" ? "Managed heap (estimate)"
             : counter == "managed.allocated.total" ? "Managed allocation rate"
@@ -2009,46 +1451,48 @@ internal partial class ProfilerCell : Cell, IDisposable {
             r.Event == 0 ? r.Result == 1 ? "Rendered": r.Result == 2 ? "Deferred": r.Result < 0 ? "Failed": "Skipped"
         : r.Validity != "" ? r.Validity: r.Result == 0 ? "Success": r.Result.ToString(CultureInfo.InvariantCulture)
 
-        private func FocusStyle() Style -> Style{OutlineWidth: 1, OutlineColor: DevToolsTheme.Accent}
-
-        private func Control(key string, text string, action Action, enabled bool = true) Button -> Button{
-            Key: key,
-            Height: 28,
-            Padding: Edges{Left: 9, Right: 9},
-            BackgroundColor: DevToolsTheme.SurfaceRaised,
-            Hover: Style{BackgroundColor: DevToolsTheme.SurfaceStrong},
-            Active: Style{BackgroundColor: DevToolsTheme.Selection},
-            Focus: FocusStyle(),
-            Disabled: !enabled,
-            OnClick: action,
-            Label(text),
+        private func PhaseColor(theme Theme, phase int32) Color {
+            let series = theme.SeriesPalette
+            let extra = theme.ColorBlindPalette
+            let index = phase % (series.Length + extra.Length)
+            return index < series.Length ? series[index]: extra[index - series.Length]
         }
 
-        private func Toggle(key string, text string, active bool, action Action) Button -> Button{
-            Key: key,
-            Height: 28,
-            Padding: Edges{Left: 9, Right: 9},
-            BackgroundColor: active ? DevToolsTheme.Selection: DevToolsTheme.Surface,
-            Focus: FocusStyle(),
-            OnClick: action,
-            Accessibility: Accessibility{
-                Role: AccessibilityRole.Switch,
-                Name: text,
-                Checked: active ? AccessibilityChecked.True: AccessibilityChecked.False
-            },
-            Label(text),
+        private func Swatch(color Color) Container -> Container{
+            Width: 9,
+            Height: 9,
+            FlexShrink: 0.0,
+            BorderRadius: 2,
+            BackgroundColor: color
         }
 
-        private func Label(text string) Text -> Text{
+        private func Caption(key string, text string, color Color) Text {
+            let theme = Theme.Read()
+            return Text{
+                Key: key,
+                Content: text,
+                FontFamily: theme.FontFamily,
+                FontSize: theme.CaptionFontSize,
+                Color: color,
+                TextWrap: TextWrap.NoWrap,
+                TextTrimming: TextTrimming.Ellipsis
+            }
+        }
+
+        private func RulerLabel(key string, text string, left float64, theme Theme) Text -> Text{
+            Key: key,
             Content: text,
-            FontSize: 11,
-            Color: DevToolsTheme.InkMuted,
-            TextWrap: TextWrap.NoWrap,
-            TextTrimming: TextTrimming.Ellipsis
+            FontFamily: theme.MonoFontFamily,
+            FontSize: theme.CaptionFontSize,
+            Color: theme.MutedTextColor,
+            Position: PositionType.Absolute,
+            Left: left,
+            Top: 2,
+            TextWrap: TextWrap.NoWrap
         }
 
-        private func Column(key string, children List[Blob]) Container -> Container{
-            Key: key,
+        private func Column(children List[Blob]) Container -> Container{
+            Key: "profiler-panel",
             Width: Percent(100),
             Height: 0,
             MinHeight: 0,
@@ -2057,47 +1501,42 @@ internal partial class ProfilerCell : Cell, IDisposable {
             Children: children
         }
 
-        private func Detail(label string, value string) Container -> Container{
+        private func Detail(label string, value string, theme Theme) Container -> Container{
             Key: "detail-" + label,
             Width: Percent(100),
-            MinHeight: 28,
-            Padding: Edges{Left: 8, Right: 8, Top: 4, Bottom: 4},
+            MinHeight: 24,
+            FlexShrink: 0.0,
             FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
             Gap: 8,
-            BorderWidth: Edges{Bottom: 1},
-            BorderColor: DevToolsTheme.Border,
-            Text{Content: label, Width: Percent(32), FontSize: 11, Color: DevToolsTheme.InkSubtle},
+            Text{
+                Content: label,
+                Width: Percent(36),
+                FontFamily: theme.FontFamily,
+                FontSize: theme.CaptionFontSize,
+                Color: theme.MutedTextColor
+            },
             Text{
                 Content: value,
                 Width: 0,
                 MinWidth: 0,
                 FlexGrow: 1.0,
-                FontSize: 11,
-                Color: DevToolsTheme.Ink,
+                FontFamily: theme.FontFamily,
+                FontSize: theme.CaptionFontSize,
+                Color: theme.TextColor,
                 TextWrap: TextWrap.Wrap
             }
         }
 
-        private func PathShape(path VectorPath, color Color, width float64, height float64) Shape -> Shape{
+        private func PathShape(path VectorPath, color Color) Shape -> Shape{
             Position: PositionType.Absolute,
             Left: 0,
             Top: 0,
-            Width: width,
-            Height: height,
+            Width: Percent(100),
+            Height: Percent(100),
             Path: path,
             Fit: ShapeFit.Fill,
-            BackgroundColor: color
-        }
-
-        private func OwnerColors()[]Color -> []Color{
-            DevToolsTheme.InkSubtle,
-            DevToolsTheme.Accent,
-            DevToolsTheme.Green,
-            DevToolsTheme.Amber,
-            DevToolsTheme.Red,
-            Color.Rgb(174, 144, 214),
-            Color.Rgb(104, 190, 199),
-            Color.Rgb(214, 164, 134)
+            BackgroundColor: color,
         }
 
         private func Rect(path PathBuilder, x float64, y float64, width float64, height float64) {
@@ -2141,78 +1580,5 @@ internal partial class ProfilerCell : Cell, IDisposable {
         }
 
         private func SignedValue(value float64, unit string) string -> (value > 0.0 ? "+": "") + Value(value, unit)
-    }
-}
-
-internal class ProfilerVirtualSource : VirtualSource {
-    internal let Heights List[float64]
-    internal let Render Func[int32, Blob]
-    internal init(heights List[float64], render Func[int32, Blob]) {
-        Heights = heights
-        Render = render
-    }
-
-    public func State(current VirtualState?) VirtualState -> ProfilerVirtualState(this)
-}
-
-internal class ProfilerVirtualState : VirtualState {
-    private let source ProfilerVirtualSource
-    private let offsets List[float64] = List[float64]()
-    private var first int32 = -1
-    private var last int32 = -1
-    private var pendingFirst int32
-    private var pendingLast int32
-    internal init(value ProfilerVirtualSource) {
-        source = value
-        offsets.Add(0.0)
-        for height in source.Heights {
-            offsets.Add(offsets[offsets.Count - 1] + height)
-        }
-    }
-
-    private func Index(y float64) int32 {
-        var lo = 0
-        var hi = source.Heights.Count
-        while lo < hi {
-            let mid = lo + (hi - lo) / 2
-            if offsets[mid + 1] < y {
-                lo = mid + 1
-            } else {
-                hi = mid
-            }
-        }
-        return lo
-    }
-
-    public override func Realize(viewport VirtualViewport, output VirtualOutput) {
-        pendingFirst = Math.Max(0, Index(viewport.ScrollOffset.Y) - 1)
-        pendingLast = Math.Min(source.Heights.Count, Index(viewport.ScrollOffset.Y + viewport.Size.Height) + 2)
-        output.ContentSize = LayoutSize{Width: viewport.Size.Width, Height: offsets[offsets.Count - 1]}
-        output.ItemCount = source.Heights.Count
-        for index in pendingFirst ... pendingLast {
-            let content = source.Render(index)
-            output.Add(
-                VirtualItem{
-                    Key: content.Key ?? index.ToString(),
-                    Index: index,
-                    X: 0.0,
-                    Y: offsets[index],
-                    Width: viewport.Size.Width,
-                    Height: source.Heights[index],
-                    Content: content
-                }
-            )
-        }
-    }
-
-    public override func NeedsRealize(viewport VirtualViewport) bool -> first != Math.Max(
-        0,
-        Index(viewport.ScrollOffset.Y) - 1
-    )
-    || last != Math.Min(source.Heights.Count, Index(viewport.ScrollOffset.Y + viewport.Size.Height) + 2)
-
-    public override func Commit() {
-        first = pendingFirst
-        last = pendingLast
     }
 }
