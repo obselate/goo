@@ -53,6 +53,13 @@ internal unsafe func hb_font_get_extents_for_direction(font nint, direction uint
 @DllImport("goo-harfbuzz", EntryPoint: "hb_font_set_scale", CallingConvention: CallingConvention.Cdecl)
 internal func hb_font_set_scale(font nint, xScale int32, yScale int32) void;
 
+@DllImport("goo-harfbuzz", EntryPoint: "hb_font_get_glyph_extents", CallingConvention: CallingConvention.Cdecl)
+internal func hb_font_get_glyph_extents(font nint, glyph uint32, ref extents VulkanTextGlyphExtents) uint32;
+
+@DllImport("goo-harfbuzz", EntryPoint: "hb_draw_rectangle", CallingConvention: CallingConvention.Cdecl)
+internal func hb_draw_rectangle(funcs nint, data nint, ref state VulkanHarfBuzzDrawState,
+  x float32, y float32, width float32, height float32, strokeWidth float32) void;
+
 @DllImport("goo-harfbuzz", EntryPoint: "hb_font_set_variations", CallingConvention: CallingConvention.Cdecl)
 internal func hb_font_set_variations(font nint, variations nint, variationCount uint32) void;
 
@@ -64,6 +71,9 @@ internal func hb_ot_color_has_paint(face nint) uint32;
 
 @DllImport("goo-harfbuzz", EntryPoint: "hb_ot_color_has_layers", CallingConvention: CallingConvention.Cdecl)
 internal func hb_ot_color_has_layers(face nint) uint32;
+
+@DllImport("goo-harfbuzz", EntryPoint: "hb_ot_color_has_png", CallingConvention: CallingConvention.Cdecl)
+internal func hb_ot_color_has_png(face nint) uint32;
 
 @DllImport("goo-harfbuzz", EntryPoint: "hb_ot_color_glyph_get_layers", CallingConvention: CallingConvention.Cdecl)
 internal func hb_ot_color_glyph_get_layers(face nint, glyph uint32, startOffset uint32,
@@ -122,6 +132,12 @@ internal func hb_gpu_draw_destroy(draw nint) void;
 
 @DllImport("goo-harfbuzz-gpu", EntryPoint: "hb_gpu_draw_glyph_or_fail", CallingConvention: CallingConvention.Cdecl)
 internal func hb_gpu_draw_glyph_or_fail(draw nint, font nint, glyph uint32) uint32;
+
+@DllImport("goo-harfbuzz-gpu", EntryPoint: "hb_gpu_draw_get_funcs", CallingConvention: CallingConvention.Cdecl)
+internal func hb_gpu_draw_get_funcs(draw nint) nint;
+
+@DllImport("goo-harfbuzz-gpu", EntryPoint: "hb_gpu_draw_clear", CallingConvention: CallingConvention.Cdecl)
+internal func hb_gpu_draw_clear(draw nint) void;
 
 @DllImport("goo-harfbuzz-gpu", EntryPoint: "hb_gpu_draw_encode", CallingConvention: CallingConvention.Cdecl)
 internal unsafe func hb_gpu_draw_encode(draw nint, ref extents VulkanTextGlyphExtents) nint;
@@ -182,6 +198,21 @@ internal unsafe data struct VulkanHarfBuzzFontExtents {
   var reserved3 int32
   var reserved2 int32
   var reserved1 int32
+}
+
+internal data struct VulkanHarfBuzzDrawState {
+  var PathOpen uint32
+  var PathStartX float32
+  var PathStartY float32
+  var CurrentX float32
+  var CurrentY float32
+  var Reserved1 uint32
+  var Reserved2 uint32
+  var Reserved3 uint32
+  var Reserved4 uint32
+  var Reserved5 uint32
+  var Reserved6 uint32
+  var Reserved7 uint32
 }
 
 internal unsafe data struct VulkanTextGlyphExtents {
