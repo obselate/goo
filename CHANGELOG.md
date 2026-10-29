@@ -2,7 +2,10 @@
 
 ## Unreleased
 
+## 0.23.2 - 2026-10-29
+
 - Keep backdrop blur unchanged when only foreground children change, and limit their redraw damage to their bounds.
+- Retry transient Windows CI downloads.
 
 ## 0.23.1 - 2026-10-28
 
