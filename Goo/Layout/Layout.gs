@@ -222,6 +222,7 @@ internal class Layout {
       if YGNodeAPI.YGNodeGetChildCount(yg) != nuint(0) { YGNodeAPI.YGNodeSetChildrenRetaining(yg, []Facebook.Yoga.Node{}) }
       YGNodeAPI.YGNodeSetContext(yg, n)
       YGNodeAPI.YGNodeSetMeasureFunc(yg, CustomLayouts.Measure)
+      YGNodeAPI.YGNodeSetNodeType(yg, YGNodeType.Default)
       for child in n.Children {
         if !child.IsPortal { syncNode(child, true) }
       }

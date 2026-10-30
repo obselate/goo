@@ -139,8 +139,8 @@ internal class CustomLayoutState {
     YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga, CustomLayouts.Maximum(n.MaxWidth, width, width))
     YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga, CustomLayouts.Maximum(n.MaxHeight, height, height))
     YGNodeAPI.YGNodeCalculateLayout(yoga, width, height, yogaDirection(Node.Direction))
-    let desiredWidth = YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga) + CustomLayouts.MarginX(yoga)
-    let desiredHeight = YGNodeLayoutAPI.YGNodeLayoutGetHeight(yoga) + CustomLayouts.MarginY(yoga)
+    let desiredWidth = yoga.Layout.MeasuredDimension(Dimension.Width) + CustomLayouts.MarginX(yoga)
+    let desiredHeight = yoga.Layout.MeasuredDimension(Dimension.Height) + CustomLayouts.MarginY(yoga)
     let result = LayoutSize{
       Width: Math.Max(0.0, Math.Min(float64(desiredWidth), available.Width)),
       Height: Math.Max(0.0, Math.Min(float64(desiredHeight), available.Height)),

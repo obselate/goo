@@ -3,6 +3,8 @@
 ## 0.24.1 - 2026-10-30
 
 - Keep Wayland clipboard text valid when an empty set is followed by replacement text in the same handler.
+- Preserve logical child measurements in custom layouts before snapping the final geometry to physical pixels.
+- Keep small virtual item sizes accurate when pixel snapping uses distant content coordinates.
 
 ## 0.24.0 - 2026-10-30
 
