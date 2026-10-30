@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Add Goo app best practices to the plugin authoring skill: UI-thread rules, `go` and `scope` background work, rebuild scope, virtualization and frame-time checks.
+- Add Goo app best practices to the plugin authoring skill: UI-thread rules, `go` and `scope` background work, model, view and service structure, component reuse, theme tokens, rebuild scope, virtualization and frame-time checks.
 
 ## 0.23.3 - 2026-10-29
 
