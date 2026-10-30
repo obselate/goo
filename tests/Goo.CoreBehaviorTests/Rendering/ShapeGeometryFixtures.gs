@@ -1,6 +1,41 @@
 package Goo
 
 internal class ShapeGeometryFixtures {
+  func ArcSubdivisionIsTranslationInvariant() bool {
+    var count = 0
+    for centerX in []float64{ 0.0, 1000.0, 100000.0 } {
+      let centerY = centerX * 0.5
+      let path = PathBuilder(centerX - 3.0, centerY - 3.0, 6.0, 6.0)
+        .MoveTo(centerX + 3.0, centerY)
+        .ArcTo(3.0, 3.0, 0.0, false, true, centerX - 3.0, centerY)
+        .ArcTo(3.0, 3.0, 0.0, false, true, centerX + 3.0, centerY).Close().Build()
+      let geometry = PathGeometry.For(path)
+      if centerX == 0.0 {
+        count = geometry.QuadraticCount
+        if count <= 0 || count > 128 { return false }
+        for curve in geometry.Quadratics {
+          let scale = MathF.Max(
+            MathF.Max(MathF.Abs(curve.CX - curve.X0), MathF.Abs(curve.X1 - curve.CX)),
+            MathF.Max(MathF.Abs(curve.CY - curve.Y0), MathF.Abs(curve.Y1 - curve.CY)))
+          let tolerance = float64(MathF.Max(PathGeometry.MinimumTolerance,
+            scale * PathGeometry.RelativeTolerance))
+          for sample in 0 ... 257 {
+            let t = float64(sample) / 256.0
+            let inverse = 1.0 - t
+            let x = inverse * inverse * float64(curve.X0)
+              + 2.0 * inverse * t * float64(curve.CX) + t * t * float64(curve.X1)
+            let y = inverse * inverse * float64(curve.Y0)
+              + 2.0 * inverse * t * float64(curve.CY) + t * t * float64(curve.Y1)
+            if Math.Abs(Math.Sqrt(x * x + y * y) - 3.0) > tolerance { return false }
+          }
+        }
+      } else if geometry.QuadraticCount != count {
+        return false
+      }
+    }
+    return true
+  }
+
   func LoneMoveToContoursPreserveOtherStrokes() bool {
     for closed in []bool{ false, true } {
       for position in 0 ... 3 {
