@@ -397,7 +397,8 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
     let baseWord = AllocateWordRange(uint32(wordCount))
     if baseWord == uint32.MaxValue {
       RequestRedraw()
-      return if records.TryGetValue(identity.PathId.LogicalId, out var prior) { BuildRenderable(prior, fillRule) } else { EmptyRenderable(fillRule) }
+      let fallback = if records.TryGetValue(identity.PathId.LogicalId, out var prior) { BuildRenderable(prior, fillRule) } else { EmptyRenderable(fillRule) }
+      return fallback with { RedrawRequired = true }
     }
 
     let bounds = EncodingBounds(encoding)
@@ -692,7 +693,7 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
         Renderable: (published || submittedUploadCovers || renderAfterPlannedUpload)
           && supportsFill && curveCount > 0u,
         Published: published,
-        RedrawRequired: needsUpload,
+        RedrawRequired: needsUpload && !submittedUploadCovers && !renderAfterPlannedUpload,
         UploadPending: uploadPending,
         UploadRecorded: uploadRecorded,
         UploadSubmitted: uploadSubmitted,

@@ -8,7 +8,7 @@ import System.IO
 import System.Threading
 
 class PendingPathReadinessCell : Cell {
-  private let clip VectorPath
+  internal var clip VectorPath
 
   shared {
     let CoveredPath VectorPath = PathBuilder().MoveTo(0.5, 0.0).LineTo(1.0, 0.5).LineTo(0.5, 1.0).LineTo(0.0, 0.5).Close().Build()
@@ -72,6 +72,42 @@ func RoundedResizeClose(window Window) {
     window.RequestClose()
     WindowReadbackTestFixture.Pump(window, 0.0)
     Require(!window.IsOpen, "Path readiness probe window did not close")
+  }
+}
+
+func RunPathUpdateFramesSmoke() {
+  let root = PendingPathReadinessCell(PendingPathReadinessCell.CoveredPath)
+  let window = Window{
+    Title: "Goo path update frames",
+    Width: 180,
+    Height: 120,
+    VSync: false,
+    Root: root,
+  }
+  try {
+    window.Open()
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    guard let target = WindowReadbackTestFixture.CaptureTarget(window) else {
+      throw InvalidOperationException("Path update target is unavailable")
+    }
+    for update in 0 ... 5 {
+      let startFrame = target.DiagnosticFrameIdForTest()
+      root.clip = PathBuilder().MoveTo(0.5, float64(update + 1) * 0.02)
+        .LineTo(1.0, 0.5).LineTo(0.5, 1.0).LineTo(0.0, 0.5).Close().Build()
+      root.Rebuild()
+      let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency
+      while Stopwatch.GetTimestamp() < deadline {
+        WindowReadbackTestFixture.Pump(window, 0.0)
+        Thread.Sleep(5)
+      }
+      let frames = target.DiagnosticFrameIdForTest() - startFrame
+      Console.WriteLine("path-update-frames: update=" + update.ToString()
+        + " paints=" + frames.ToString())
+      Require(frames > 0uL && frames <= 2uL,
+        "Path data update required more than one follow-up paint")
+    }
+  } finally {
+    RoundedResizeClose(window)
   }
 }
 
@@ -160,6 +196,7 @@ func RunRoundedResizeFirstFrameSmoke() {
   try {
     Console.SetError(capturedError)
     RunPendingPathReadinessSmoke()
+    RunPathUpdateFramesSmoke()
     let opened = Window{
       Title: "Goo rounded resize first frame gate",
       Width: 300,
