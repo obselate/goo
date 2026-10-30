@@ -381,6 +381,41 @@ internal class LayoutFixtures {
       && !ScrollState.HasDemand(scroll)
   }
 
+  func PixelSnappingPreservesDistantItemSizes() bool {
+    for density in []float32{ 1.0F, 1.5F, 2.0F } {
+      let root = Reconciler{ Res: Resolver{} }.Mount(Container{ Width: 100, Height: 200,
+        Container{ Position: PositionType.Absolute, Top: 65999672, Left: 65999672,
+          Width: 33, Height: 33 },
+      })
+      let layout = Layout()
+      layout.SetPixelDensity(density)
+      layout.Calculate(root, 100.0F, 200.0F)
+      let size = root.Children[0].Rect
+      let expected = MathF.Floor(33.0F * density + 0.5F) / density
+      if size.W != expected || size.H != expected { return false }
+    }
+    return true
+  }
+
+  func CustomMeasurementsPreserveLogicalSizes() bool {
+    for density in []float32{ 1.0F, 1.5F, 2.0F } {
+      let policy = LayoutMeasurementFixtureAlgorithm()
+      let root = Reconciler{ Res: Resolver{} }.Mount(Container{ Width: 100, Height: 200,
+        Container{ Layout: policy,
+          TextEntry{ Value: "value", Width: 50.25, FontSize: 15.5, LineHeight: 1.5,
+            Padding: 12, BorderWidth: 1 },
+        },
+      })
+      let layout = Layout()
+      layout.SetPixelDensity(density)
+      layout.Calculate(root, 100.0F, 200.0F)
+      if policy.DesiredSize.Width != 50.25 || policy.DesiredSize.Height != 49.25 { return false }
+      let expected = MathF.Floor(49.25F * density + 0.5F) / density
+      if root.Children[0].Rect.H != expected || root.Children[0].Children[0].Rect.H != expected { return false }
+    }
+    return true
+  }
+
   func HiddenCustomLayoutsWaitForVisibleGeometry() bool {
     let policy = LayoutVisibilityFixtureAlgorithm()
     let reconciler = Reconciler{ Res: Resolver{} }
@@ -712,5 +747,18 @@ internal class LayoutVisibilityFixtureAlgorithm : LayoutAlgorithm {
     context.MeasureChild(0, finalSize)
     context.ArrangeChild(0, ElementRect{ Width: finalSize.Width, Height: finalSize.Height })
     FinalSize = finalSize
+  }
+}
+
+internal class LayoutMeasurementFixtureAlgorithm : LayoutAlgorithm {
+  internal var DesiredSize LayoutSize
+
+  public func Measure(context LayoutContext, available LayoutSize) LayoutSize {
+    DesiredSize = context.MeasureChild(0, available)
+    return DesiredSize
+  }
+
+  public func Arrange(context LayoutContext, finalSize LayoutSize) {
+    context.ArrangeChild(0, ElementRect{ Width: finalSize.Width, Height: finalSize.Height })
   }
 }

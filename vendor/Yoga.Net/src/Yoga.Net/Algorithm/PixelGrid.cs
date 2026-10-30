@@ -10,6 +10,13 @@ namespace Facebook.Yoga
             double value,
             double pointScaleFactor,
             bool forceCeil,
+            bool forceFloor) =>
+            (float)RoundValueToPixelGridDouble(value, pointScaleFactor, forceCeil, forceFloor);
+
+        private static double RoundValueToPixelGridDouble(
+            double value,
+            double pointScaleFactor,
+            bool forceCeil,
             bool forceFloor)
         {
             double scaledValue = value * pointScaleFactor;
@@ -46,8 +53,8 @@ namespace Facebook.Yoga
             }
 
             return (double.IsNaN(scaledValue) || double.IsNaN(pointScaleFactor))
-                ? YGUndefined
-                : (float)(scaledValue / pointScaleFactor);
+                ? double.NaN
+                : scaledValue / pointScaleFactor;
         }
 
         public static void RoundLayoutResultsToPixelGrid(
@@ -91,23 +98,23 @@ namespace Facebook.Yoga
 
                 node.GetLayout().SetDimension(
                     Dimension.Width,
-                    RoundValueToPixelGrid(
+                    (float)(RoundValueToPixelGridDouble(
                         absoluteNodeRight,
                         pointScaleFactor,
                         (textRounding && hasFractionalWidth),
                         (textRounding && !hasFractionalWidth)) -
-                    RoundValueToPixelGrid(
-                        absoluteNodeLeft, pointScaleFactor, false, textRounding));
+                    RoundValueToPixelGridDouble(
+                        absoluteNodeLeft, pointScaleFactor, false, textRounding)));
 
                 node.GetLayout().SetDimension(
                     Dimension.Height,
-                    RoundValueToPixelGrid(
+                    (float)(RoundValueToPixelGridDouble(
                         absoluteNodeBottom,
                         pointScaleFactor,
                         (textRounding && hasFractionalHeight),
                         (textRounding && !hasFractionalHeight)) -
-                    RoundValueToPixelGrid(
-                        absoluteNodeTop, pointScaleFactor, false, textRounding));
+                    RoundValueToPixelGridDouble(
+                        absoluteNodeTop, pointScaleFactor, false, textRounding)));
             }
 
             var childCount = node.GetChildCount();
