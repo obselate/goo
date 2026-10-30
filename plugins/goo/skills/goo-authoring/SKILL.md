@@ -23,7 +23,7 @@ Goo is a retained desktop UI framework, not HTML/CSS or Sandbox panels:
 
 - Build immutable Blob descriptions in `Cell.Build`. Keep local state in Cell fields. Mount fixed children with `Cell.Mount[TCell]()`. Use keys when siblings can be inserted, removed, or reordered. Keyed and unkeyed siblings can mix. Unkeyed identity uses the absolute sibling index and never matches a keyed entry.
 - Separate models, views and controllers. Domain data and logic go in `Models/`. Each screen or region is a Cell in `Views/`. Shared UI goes in `Components/`. I/O goes in `Services/` and runs in `go` children. Reuse Goo.Widgets and app components. Do not copy UI code.
-- Put `KeyBindings: WidgetKeyBindings.Editing(window.PlatformInput)` on the app root and on each `ModalDialog`. Without it, text fields accept only typed characters: no Backspace, arrows, selection, clipboard, undo, Enter submit or Tab focus. Use `TextField` and `TextArea`, never a custom key handler.
+- Text editing keys and Tab focus traversal are built into Goo core. No binding setup is needed on the app root or dialogs. Use `TextField` and `TextArea`. Override an editing key only on the field, with `KeyBindings` or `OnKeyDown`.
 - For typed Cells consumed across assemblies, use `open class X : Cell[Input]` with `protected override func Build(input Input) Blob`.
 - Goo input callbacks invalidate their owning Cell. Call `Rebuild()` on the UI thread for state changed outside Goo input dispatch. Background work posts through `Window.TryPost`.
 - Put `BasedOn` before overrides. Style declarations apply in order, so later declarations win.

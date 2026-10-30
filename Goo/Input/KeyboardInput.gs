@@ -476,15 +476,14 @@ internal class KeyboardInput {
     guard let command = kind else { return result }
     result.Handled = true
     result.SuppressTextInput = true
-    result.Repeat = switch command {
-      case TextCommandKind.MoveLeft, TextCommandKind.MoveRight, TextCommandKind.MoveUp,
-        TextCommandKind.MoveDown, TextCommandKind.PageUp, TextCommandKind.PageDown,
-        TextCommandKind.MoveLineStart, TextCommandKind.MoveLineEnd, TextCommandKind.MoveDocumentStart,
-        TextCommandKind.MoveDocumentEnd, TextCommandKind.MoveWordLeft, TextCommandKind.MoveWordRight,
-        TextCommandKind.DeleteBackward, TextCommandKind.DeleteForward,
-        TextCommandKind.DeleteWordBackward, TextCommandKind.DeleteWordForward: true
-      case _: false
-    }
+    result.Repeat = command == TextCommandKind.MoveLeft || command == TextCommandKind.MoveRight
+      || command == TextCommandKind.MoveUp || command == TextCommandKind.MoveDown
+      || command == TextCommandKind.PageUp || command == TextCommandKind.PageDown
+      || command == TextCommandKind.MoveLineStart || command == TextCommandKind.MoveLineEnd
+      || command == TextCommandKind.MoveDocumentStart || command == TextCommandKind.MoveDocumentEnd
+      || command == TextCommandKind.MoveWordLeft || command == TextCommandKind.MoveWordRight
+      || command == TextCommandKind.DeleteBackward || command == TextCommandKind.DeleteForward
+      || command == TextCommandKind.DeleteWordBackward || command == TextCommandKind.DeleteWordForward
     if !repeat || result.Repeat {
       text.ExecuteEditorCommand(root, resolver, TextCommand{
         Kind: command, ExtendSelection: modifiers.Shift, Text: command == TextCommandKind.Insert ? "\n" : "" })

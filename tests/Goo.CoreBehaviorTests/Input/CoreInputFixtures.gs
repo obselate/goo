@@ -24,17 +24,17 @@ internal class InputFixtures {
     focus.SetFocus(resolver, root)
     keyboard.Dispatch(KeyboardEvent{ Kind: KeyboardEventKind.Press, Key: Key.Backspace,
       Modifiers: KeyModifiers{ Ctrl: true } }, root, resolver, text, nil, 0, pointer)
-    keyboard.Step(0.3, 0)
+    keyboard.Step(0.3, 0, root, resolver, text, pointer)
     keyboard.Dispatch(KeyboardEvent{ Kind: KeyboardEventKind.Release, Key: Key.ControlLeft },
       root, resolver, text, nil, 0, pointer)
-    keyboard.Step(0.11, 0)
+    keyboard.Step(0.11, 0, root, resolver, text, pointer)
     if words != 1 || characters != 1 { return false }
     keyboard.Dispatch(KeyboardEvent{ Kind: KeyboardEventKind.Press, Key: Key.ControlLeft,
       Modifiers: KeyModifiers{ Ctrl: true } }, root, resolver, text, nil, 0, pointer)
-    keyboard.Step(0.04, 0)
+    keyboard.Step(0.04, 0, root, resolver, text, pointer)
     if words != 2 || characters != 1 { return false }
     focus.SetFocus(resolver, nil)
-    keyboard.Step(0.5, 0)
+    keyboard.Step(0.5, 0, root, resolver, text, pointer)
     return words == 2 && characters == 1
   }
 
