@@ -63,12 +63,11 @@ internal unsafe sealed class VulkanPathScene : IDisposable {
   internal func BeginCompile() {
     EnsureOpen()
     CommitCurrentReferences()
-    let sharedRedraw = resources.RedrawRequiredSince(observedRedrawSequence)
     observedRedrawSequence = resources.RedrawSequence
     resources.BeginCompile(sceneId)
     currentPaths.Begin()
     referencesCommitted = false
-    redrawRequired = sharedRedraw
+    redrawRequired = false
     renderAfterPlannedUpload = resources.CanRenderAfterPlannedUpload
     resourceDeferred = false
   }
@@ -96,9 +95,7 @@ internal unsafe sealed class VulkanPathScene : IDisposable {
   internal func PrepareUpload() {
     EnsureOpen()
     resources.PrepareUpload()
-    if resources.UploadPending {
-      redrawRequired = true
-    }
+    observedRedrawSequence = resources.RedrawSequence
   }
 
   internal func PublishCompletedUploads() {
