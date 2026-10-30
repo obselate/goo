@@ -85,6 +85,9 @@ async function click(pid, key) {
 async function wheel(pid, key, delta, modifier) {
     const node = (await snapshot(pid)).find(item => item.key === key);
     assert(node, 'Missing wheel surface ' + key);
+    await wheelNode(pid, node, delta, modifier);
+}
+async function wheelNode(pid, node, delta, modifier) {
     await request(['input', 'wheel', '--pid', String(pid), '--target', node.target,
         '--delta-y', String(delta), ...(modifier ? ['--' + modifier] : [])]);
 }
@@ -128,7 +131,7 @@ async function capture(pid, name) {
     await writeFile(path.join(output, name + '.json'), JSON.stringify(await snapshot(pid)));
 }
 async function selectRenderedFrame(pid, nodes) {
-    const overview = nodes.find(node => node.key === 'profiler-overview');
+    const chart = nodes.find(node => node.key === 'profiler-frames');
     const png = await readFile(path.join(output, 'timeline.png'));
     assert(png[24] === 8 && png[25] === 6, 'CLI capture is not an RGBA8 PNG');
     const chunks = [];
@@ -140,28 +143,31 @@ async function selectRenderedFrame(pid, nodes) {
     const pixels = inflateSync(Buffer.concat(chunks));
     const stride = png.readUInt32BE(16) * 4 + 1;
     for (let y = 0; y < png.readUInt32BE(20); y++) assert.equal(pixels[y * stride], 0, 'CLI capture row filter changed');
-    const candidates = [];
-    let budgetRow = -1;
-    for (let y = 3; y < 54; y++) {
-        let gray = 0;
-        for (let x = 1; x < overview.bounds.width - 2; x++) {
-            const at = Math.round(overview.bounds.y + y) * stride + 1 + Math.round(overview.bounds.x + x) * 4;
-            const [r, g, b] = pixels.subarray(at, at + 3);
-            if (r > 80 && r < 200 && Math.max(r, g, b) - Math.min(r, g, b) < 30) gray++;
-            if ((g > r * 1.1 && g > b * 1.05) || (r > 180 && r > b * 1.2)) candidates.push(x);
-        }
-        if (gray > overview.bounds.width * 0.8) budgetRow = y;
+    const row = Math.round(chart.bounds.y + chart.bounds.height - 2);
+    const colors = [];
+    for (let x = 0; x < chart.bounds.width - 1; x++) {
+        const at = row * stride + 1 + Math.round(chart.bounds.x + x) * 4;
+        colors.push(pixels.subarray(at, at + 3).join(','));
     }
-    assert(budgetRow >= 35 && budgetRow <= 40, 'Frame overview scale did not stay near three budgets');
-    for (const x of [...new Set(candidates)].sort((a, b) => a - b).filter((value, index, values) => index === 0 || value - values[index - 1] > 1)) {
-        for (const fraction of [0.25, 0.75]) {
-            await request(['input', 'click', '--pid', String(pid), '--target', overview.target,
-                '--offset-x', String(x + fraction), '--offset-y', '30']);
-            const selected = await snapshot(pid);
-            if (selected.some(node => node.key === 'summary-row-Render')) return selected;
-        }
+    const counts = new Map();
+    for (const color of colors) counts.set(color, (counts.get(color) ?? 0) + 1);
+    const background = [...counts].sort((a, b) => b[1] - a[1])[0][0];
+    const bars = colors.map((color, x) => color === background ? -1 : x).filter(x => x >= 0);
+    assert(bars.length > 0, 'Frame row drew no bars');
+    for (const x of bars.filter((value, index) => index === 0 || value - bars[index - 1] > 1)) {
+        await request(['input', 'click', '--pid', String(pid), '--target', chart.target,
+            '--offset-x', String(x + 0.5), '--offset-y', String(chart.bounds.height - 3)]);
+        const selected = await snapshot(pid);
+        if (selected.some(node => node.key === 'segment-Render')) return selected;
     }
-    assert.fail('No rendered frame in overview');
+    assert.fail('No rendered frame in the frame row');
+}
+function segmentTimes(nodes) {
+    const details = branch(nodes, 'profiler-details');
+    return Object.fromEntries(details.filter(node => node.key?.startsWith('segment-')).map(node => {
+        const values = details.filter(item => node.childIds.includes(item.id) && item.content).map(item => item.content);
+        return [node.key.slice(8), seconds(values.at(-1))];
+    }));
 }
 async function resizeDetails(pid) {
     const nodes = await snapshot(pid);
@@ -188,14 +194,18 @@ async function dragRange(pid) {
 }
 async function traceFile(pid, action, filename, error) {
     await click(pid, action === 'Import' ? 'profiler-import' : 'profiler-export');
-    await click(pid, 'profiler-file-path');
+    const panel = await waitSnapshot(pid, data => data.some(node => node.key === 'profiler-file-path'));
+    const entry = branch(panel, 'profiler-file-path').find(node => node.key === 'entry');
+    await request(['input', 'click', '--pid', String(pid), '--target', entry.target]);
     const gesture = (await request(['input', 'key.down', '--pid', String(pid), '--key', 'A', '--ctrl']))
         .find(item => item.payload)?.payload.gestureId;
     await request(['input', 'key.up', '--pid', String(pid), '--key', 'A', '--ctrl', '--gesture', gesture]);
     await request(['input', 'text', '--pid', String(pid), '--text', filename]);
     await click(pid, 'profiler-file-apply');
     const expected = error ?? (action === 'Import' ? 'Imported ' : 'Exported ') + path.basename(filename);
-    return waitSnapshot(pid, data => text(data, 'profiler-file-status').includes(expected), action + ' trace did not finish: ' + expected);
+    const done = data => error ? text(data, 'profiler-file-status').includes(expected)
+        : !data.some(node => node.key === 'profiler-file-panel') && status(data).includes(expected);
+    return waitSnapshot(pid, done, action + ' trace did not finish: ' + expected);
 }
 function validateChrome(trace) {
     assert.equal(trace.displayTimeUnit, 'ms', 'Chrome display unit changed');
@@ -285,7 +295,7 @@ try {
     const inspector = launch('apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll', 'devtools', ['--pid', String(target)]);
     await snapshot(inspector);
     await click(inspector, 'tab-profiler');
-    await waitSnapshot(inspector, data => content(data).includes('Record a real target trace')
+    await waitSnapshot(inspector, data => data.some(node => node.key === 'profiler-empty')
         && data.find(node => node.key === 'profiler-record')?.disabled === false,
     'Connected target did not enable Record');
     await click(inspector, 'profiler-record');
@@ -313,38 +323,42 @@ try {
     await stopChild(contender);
     await click(inspector, 'profiler-record');
     let nodes = await waitSnapshot(inspector, data => status(data).startsWith('Complete ·'));
-    assert(!status(nodes).includes('PARTIAL'), 'Normal recording was marked partial');
+    assert(!nodes.some(node => node.key === 'profiler-problem'), 'Normal recording was marked partial');
     await click(inspector, 'profiler-fit');
     nodes = await snapshot(inspector);
-    assert(content(nodes).includes('16.7 ms (60 Hz) budget'), 'Frame overview budget is missing');
+    assert(!/budget|16\.7 ms/.test(content(nodes)), 'Frame row shows a target marker');
+    assert(nodes.some(node => node.key === 'profiler-frames') && nodes.some(node => node.key === 'legend-Other'),
+        'Frame row or its legend is missing');
     assert(nodes.some(node => node.key === 'profiler-tab-Phases'), 'Phases table is missing');
     assert(!nodes.some(node => node.key === 'profiler-details'), 'Unselected trace retained an empty details pane');
-    const header = branch(nodes, 'profiler-sort-2').find(node => node.content);
-    const totalCell = branch(nodes, 'summary-row-Frame').filter(node => node.content)[2];
-    assert(totalCell, 'Frame interval is empty or reversed');
-    assert(Math.abs(header.bounds.x - totalCell.bounds.x) < 1 && Math.abs(header.bounds.width - 84) < 1,
+    const table = branch(nodes, 'profiler-table');
+    const header = table.find(node => node.key === 'column:c2');
+    const totalCell = branch(nodes, 'summary-row-Frame').find(node => node.key === 'column:c2');
+    assert(header && totalCell, 'Frame summary is missing');
+    assert(Math.abs(header.bounds.x - totalCell.bounds.x) < 1 && Math.abs(header.bounds.width - totalCell.bounds.width) < 1,
         'Numeric table header and cells are not aligned');
     assert(!/cpu\.instrumented|submit\.prepare-to-observed/.test(text(nodes, 'profiler-summary')),
         'Phase table retained raw source titles');
     await capture(inspector, 'timeline');
-    const framePlot = nodes.find(node => node.key.startsWith('plot-CPUCPU thread '));
-    assert(framePlot, 'No correlated frame track');
     nodes = await selectRenderedFrame(inspector, nodes);
     const details = text(nodes, 'profiler-details').split('\n');
     assert(details.includes('Pump'), 'Frame details lost pump correlation');
     assert.match(details[details.indexOf('Pump') + 1], /^[1-9]\d*$/, 'Frame pump correlation is invalid');
-    const duration = seconds(details[details.indexOf('Duration') + 1]);
+    const segments = segmentTimes(nodes);
+    const duration = segments.Frame;
     assert(duration > 0, 'Frame interval is empty or reversed');
+    const sum = Object.entries(segments).filter(([name]) => !['Frame', 'Wait'].includes(name) && !name.startsWith('GPU '))
+        .reduce((total, [, value]) => total + value, 0);
+    assert(Math.abs(sum - duration) <= duration * 0.01, `Frame segments ${sum} do not sum to ${duration}`);
+    const renderCells = branch(nodes, 'summary-row-Render').filter(node => node.content).map(node => node.content);
+    assert(renderCells.length === 7 && renderCells.slice(2, 6).every(value => seconds(value) > 0),
+        'Selected frame summary left timing cells empty');
     await resizeDetails(inspector);
     await click(inspector, 'profiler-zoom-selection');
     nodes = await snapshot(inspector);
     let times = rulerTimes(nodes);
     assert(times.length >= 2 && times.at(-1) - times[0] <= duration * 1.01,
         'Zoom selection did not fit the selected interval');
-    assert(nodes.some(node => node.key.startsWith('slice-label-') && node.content === 'Frame'),
-        'Frame is missing from the CPU flame root');
-    assert(nodes.some(node => node.key.startsWith('slice-label-') && node.content === 'Render'),
-        'Rendered frame has no labelled nested phase');
     await capture(inspector, 'rendered-frame');
     await dragRange(inspector);
     nodes = await snapshot(inspector);
@@ -361,66 +375,42 @@ try {
         'Ruler did not show a base plus offsets');
     const selectedSummary = text(nodes, 'profiler-summary');
     times = rulerTimes(nodes);
-    for (let i = 0; i < 5; i++) await wheel(inspector, framePlot.key, -120, 'shift');
+    for (let i = 0; i < 5; i++) await wheel(inspector, 'profiler-frames', -120, 'shift');
     nodes = await snapshot(inspector);
     assert.equal(text(nodes, 'profiler-summary'), selectedSummary, 'Panning changed the selected range');
     assert(rulerTimes(nodes)[0] > times[0], 'Shift+wheel did not pan the viewport');
     await capture(inspector, 'selected-frame');
     await click(inspector, 'profiler-fit');
-    nodes = await snapshot(inspector);
-    await click(inspector, framePlot.key);
+    await click(inspector, 'profiler-frames');
     const escape = (await request(['input', 'key.down', '--pid', String(inspector), '--key', 'Escape']))
         .find(item => item.payload)?.payload.gestureId;
     await request(['input', 'key.up', '--pid', String(inspector), '--key', 'Escape', '--gesture', escape]);
-    const windowGroup = nodes.find(node => node.key.startsWith('profiler-group-window-'));
-    assert(windowGroup, 'Window title group is missing');
-    await click(inspector, windowGroup.key);
     nodes = await snapshot(inspector);
-    assert(!nodes.some(node => node.key === framePlot.key), 'Collapsed window retained its frame track');
-    assert(nodes.some(node => node.key === 'profiler-group-GPU'), 'GPU group is missing');
-    assert(content(nodes).includes('GPU stages'), 'GPU elapsed counters are missing from the GPU lane');
-    await click(inspector, 'profiler-group-GPU');
+    assert(!nodes.some(node => node.key === 'profiler-details'), 'Escape did not clear the selection');
     await click(inspector, 'profiler-tab-Memory');
     nodes = await snapshot(inspector);
-    const ownerNames = ['Unknown', 'LayerTarget', 'GlyphAtlas', 'PathAtlas', 'ClipAtlas', 'Staging', 'Image', 'Buffer'];
-    const legendOwners = new Set(content(nodes).split('\n').filter(value => ownerNames.includes(value)));
-    const positiveOwners = new Set();
-    assert(!content(nodes).split('\n').includes('Unknown'), 'Zero-value Unknown owner remained in the legend');
-    assert(content(nodes).includes('(first sample)'), 'Memory start did not use the first in-range sample');
-    const firstCounter = nodes.find(node => node.key.startsWith('summary-row-'));
+    const memory = branch(nodes, 'profiler-table');
+    const body = memory.find(node => node.key === 'body');
+    const firstCounter = memory.find(node => node.key?.startsWith('summary-row-'));
     const counterNames = new Set();
-    for (let i = 0; i < 100; i++) {
-        const names = nodes.filter(node => node.key.startsWith('summary-row-')).map(node => node.key);
-        for (const name of names) counterNames.add(name);
-        for (const key of names) {
-            const cells = branch(nodes, key).filter(node => node.content).map(node => node.content);
-            const owner = cells[0].match(/^GPU (?:live|retired) requirements \/ (.+)$/)?.[1];
-            if (owner && parseFloat(cells[4]) > 0) positiveOwners.add(owner);
-        }
-        const table = nodes.find(node => node.key === 'profiler-summary-rows');
-        const end = Math.max(0, table.contentSize.y - table.bounds.height);
-        if (table.scrollOffset.y >= end - 0.5) break;
-        const next = Math.min(end, table.scrollOffset.y + 28);
-        await wheel(inspector, 'profiler-summary-rows', -1);
-        nodes = await waitSnapshot(inspector, data => data.find(node => node.key === 'profiler-summary-rows')
+    for (let i = 0; i < 200; i++) {
+        const current = branch(nodes, 'profiler-table');
+        for (const node of current.filter(item => item.key?.startsWith('summary-row-'))) counterNames.add(node.key);
+        const viewport = current.find(node => node.key === 'body');
+        const end = Math.max(0, viewport.contentSize.y - viewport.bounds.height);
+        if (viewport.scrollOffset.y >= end - 0.5) break;
+        const next = Math.min(end, viewport.scrollOffset.y + 24);
+        await wheelNode(inspector, viewport, -1);
+        nodes = await waitSnapshot(inspector, data => branch(data, 'profiler-table').find(node => node.key === 'body')
             ?.scrollOffset.y >= next - 0.5, 'Memory table did not scroll');
     }
     for (const owner of ['Unknown', 'LayerTarget', 'GlyphAtlas', 'PathAtlas', 'ClipAtlas', 'Staging', 'Image', 'Buffer']) {
         assert(counterNames.has('summary-row-GPU live requirements / ' + owner), 'Owner name mapping lost ' + owner);
     }
-    assert.deepEqual([...legendOwners].sort(), [...positiveOwners].sort(), 'Owner legend does not match positive accounts');
-    await wheel(inspector, 'profiler-summary-rows', 5000);
+    await wheelNode(inspector, body, 5000);
     await waitSnapshot(inspector, data => data.some(node => node.key === firstCounter.key
         && Math.abs(node.bounds.y - firstCounter.bounds.y) < 0.5));
     await capture(inspector, 'memory');
-    const beforeScroll = nodes.find(node => node.key === 'profiler-group-Memory').bounds.y;
-    await wheel(inspector, 'profiler-tracks', -300);
-    nodes = await snapshot(inspector);
-    assert(!nodes.some(node => node.key === 'profiler-group-Memory')
-        || nodes.find(node => node.key === 'profiler-group-Memory').bounds.y < beforeScroll,
-    'Normal wheel did not scroll the track list');
-    await wheel(inspector, 'profiler-tracks', 5000);
-    await click(inspector, 'profiler-group-Memory');
     await click(inspector, 'profiler-tab-Resources');
     nodes = await snapshot(inspector);
     assert(content(nodes).includes('Image'), 'Image resource kind mapping was lost');
@@ -428,30 +418,41 @@ try {
     await capture(inspector, 'resources');
     const rows = nodes.filter(node => node.key.startsWith('profiler-event-'));
     assert(rows.length > 0, 'Resource table is empty');
-    const sizes = rows.map(row => branch(nodes, row.key).filter(node => node.content).map(node => node.content)[4]);
-    assert(sizes.some(value => /[\d.] (B|KiB|MiB|GiB)/.test(value)), 'Resource bytes are not human-readable');
     const resourceCells = rows.map(row => branch(nodes, row.key).filter(node => node.content).map(node => node.content));
+    assert(resourceCells.some(cells => /[\d.] (B|KiB|MiB|GiB)/.test(cells[4])), 'Resource bytes are not human-readable');
     assert(resourceCells.every(cells => cells[1] !== '—'), 'Resource duration did not show lifetime or live');
     assert(resourceCells.every(cells => !cells[3].includes('live before recording') && !cells[3].startsWith('vulkan.')),
         'Resource name retained lifecycle or API text');
     assert(resourceCells.some(cells => /×| (B|KiB|MiB|GiB) /.test(cells[3])), 'Allocation name has no dimensions or size');
     assert(resourceCells.every(cells => !/Resource \d+/.test(cells[5])), 'Owner chain retained an unnamed parent');
-    await click(inspector, rows[0].key);
+    await request(['input', 'click', '--pid', String(inspector), '--x', String(rows[0].bounds.x + rows[0].bounds.width / 2),
+        '--y', String(rows[0].bounds.y + rows[0].bounds.height / 2)]);
     nodes = await snapshot(inspector);
     assert(text(nodes, 'profiler-details').includes('Kind'), 'Resource row selection lost its details');
-    await click(inspector, 'profiler-sort-4');
+    const bytes = value => {
+        const match = value.match(/^([\d.]+) (B|KiB|MiB|GiB)$/);
+        return match ? Number(match[1]) * 1024 ** ['B', 'KiB', 'MiB', 'GiB'].indexOf(match[2]) : NaN;
+    };
+    const sizes = data => data.filter(node => node.key?.startsWith('profiler-event-'))
+        .map(row => bytes(branch(data, row.key).filter(node => node.content)[4].content)).filter(Number.isFinite);
+    const descendingSizes = sizes(nodes);
+    const bytesHeader = branch(nodes, 'profiler-table').find(node => node.key === 'column:c4');
+    await request(['input', 'click', '--pid', String(inspector), '--x', String(bytesHeader.bounds.x + bytesHeader.bounds.width / 2),
+        '--y', String(bytesHeader.bounds.y + bytesHeader.bounds.height / 2)]);
     nodes = await snapshot(inspector);
-    assert(text(nodes, 'profiler-sort-4').includes('↑'), 'Resource Bytes sort did not change direction');
-    await click(inspector, 'profiler-lifetimes');
+    const ascendingSizes = sizes(nodes);
+    assert(descendingSizes[0] >= descendingSizes.at(-1) && ascendingSizes[0] <= ascendingSizes.at(-1),
+        'Resource Bytes sort did not change direction');
     await capture(inspector, 'selected-resource');
-    await writeFile(path.join(output, 'final-snapshot.json'), JSON.stringify(await snapshot(inspector)));
     const exportedPath = path.join(output, 'Fixture trace ü.json');
     await traceFile(inspector, 'Export', exportedPath);
     const exported = JSON.parse(await readFile(exportedPath, 'utf8'));
     validateChrome(exported);
+    assert(!exported.traceEvents.some(event => event.goo?.GpuNs) || Object.keys(segments).some(name => name.startsWith('GPU ')),
+        'GPU elapsed is missing from the frame details');
     await click(inspector, 'profiler-clear');
     nodes = await snapshot(inspector);
-    assert(content(nodes).includes('Record a real target trace'), 'Clear retained the previous trace');
+    assert(nodes.some(node => node.key === 'profiler-empty'), 'Clear retained the previous trace');
     const endpoint = (await request(['list'])).flatMap(item => item.targets).find(item => item.pid === target);
     for (const command of ['snapshot', 'profiler.start']) {
         const proxy = await faultProxy(endpoint.pipe, command);
@@ -466,7 +467,7 @@ try {
             await waitSnapshot(client, data => data.find(node => node.key === 'profiler-record')?.disabled === false);
             await click(client, 'profiler-record');
             await waitSnapshot(client, data => proxy.rejected && proxy.disconnected
-                && status(data).startsWith('Complete ·') && status(data).includes('PARTIAL')
+                && status(data).startsWith('Complete ·') && data.some(node => node.key === 'profiler-problem')
                 && data.find(node => node.key === 'profiler-record')?.disabled === true,
             'Errored profiler.start did not disconnect');
         }
@@ -516,7 +517,7 @@ try {
     const precisionPath = path.join(output, 'gap-precision-fixture.json');
     await writeFile(precisionPath, JSON.stringify(precision));
     await traceFile(offline, 'Import', precisionPath);
-    assert(status(await snapshot(offline)).includes('7 dropped') && status(await snapshot(offline)).includes('PARTIAL'),
+    assert(text(await snapshot(offline), 'profiler-problem').includes('7 dropped'),
         'Imported gap or dropped-data status was lost');
     const precisePath = path.join(output, 'gap-precision-roundtrip.json');
     await traceFile(offline, 'Export', precisePath);
@@ -550,12 +551,9 @@ try {
     await writeFile(externalPath, JSON.stringify(external.traceEvents));
     await traceFile(offline, 'Import', externalPath);
     assert(content(await snapshot(offline)).includes('unsupported Chrome'), 'Unknown Chrome events were not reported');
-    assert(content(await snapshot(offline)).includes('Imported thread') && content(await snapshot(offline)).includes('External fixture'),
-        'Chrome process or thread metadata was lost');
+    assert(content(await snapshot(offline)).includes('External fixture'), 'Chrome process metadata was lost');
     await click(offline, 'profiler-tab-Memory');
     assert(content(await snapshot(offline)).includes('-1.25'), 'Fractional or negative Chrome counter was lost');
-    await click(offline, 'profiler-group-more');
-    assert(/-1\.25\s+to/.test(content(await snapshot(offline))), 'Negative counter scale was clamped to zero');
     await capture(offline, 'imported-counters');
     const canonicalPath = path.join(output, 'external-canonical.json');
     await traceFile(offline, 'Export', canonicalPath);
@@ -624,7 +622,7 @@ try {
     assert.deepEqual(retained.traceEvents.filter(event => event.goo).map(event => event.goo), externalRecords,
         'Invalid import corrupted the previous trace');
     console.log('profiler-files: chrome_subset=verified crossing_slices=partitioned flow_ids=preserved invalid_imports=atomic file_event_name_limits=verified');
-    console.log('profiler-ui: real_fixture=verified busy=connected owners=8 overview=verified gpu_counter_lane=verified selection=stable clipped_range=verified scrolling=verified tables=verified screenshots=9 clear=verified');
+    console.log('profiler-ui: real_fixture=verified busy=connected owners=8 frame_row=verified segment_sum=verified gpu_elapsed=verified selection=stable clipped_range=verified scrolling=verified tables=verified screenshots=7 clear=verified');
 } catch (error) {
     const inspector = children[1]?.pid;
     if (inspector) {

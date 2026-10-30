@@ -1,6 +1,9 @@
 package GooDevTools
 
 import Goo
+import Goo.Widgets
+import Goo.Widgets.Actions
+import Goo.Widgets.Inputs
 import System
 import System.IO
 import System.Threading
@@ -33,43 +36,42 @@ internal partial class ProfilerCell {
     private func FilePanel() Container -> Container{
         Key: "profiler-file-panel",
         Width: Percent(100),
-        Height: 36,
         FlexShrink: 0.0,
         FlexDirection: FlexDirection.Row,
         AlignItems: AlignItems.Center,
         Gap: 4,
-        Padding: 3,
-        TextEntry{
+        Padding: Edges{Left: Pad, Right: Pad, Top: 4},
+        Container{
             Key: "profiler-file-path",
             Width: 0,
             FlexGrow: 1.0,
-            Height: 28,
-            Padding: Edges{Left: 9, Right: 9},
-            Value: filePath,
-            Placeholder: "Chrome trace JSON path",
-            Color: DevToolsTheme.Ink,
-            FontSize: 11,
-            BackgroundColor: DevToolsTheme.Surface,
-            BorderRadius: 4,
-            BorderWidth: 1,
-            BorderColor: DevToolsTheme.Border,
-            SelectionColor: DevToolsTheme.Selection,
-            Disabled: fileBusy,
-            OnChange: (value string) -> {
-                filePath = value
-            },
+            TextField{
+                Value: filePath,
+                Placeholder: "Chrome trace JSON path",
+                AccessibilityName: "Trace file",
+                Disabled: fileBusy,
+                Width: Percent(100),
+                OnChange: (value string) -> {
+                    filePath = value
+                },
+            }.Build()
         },
-        Control("profiler-file-browse", "Browse…", () -> BrowseFile(), !fileBusy),
-        Control("profiler-file-apply", fileBusy ? "Working…": fileAction, () -> ApplyFile(), !fileBusy),
-        Control(
+        FileButton("profiler-file-browse", "Browse…", () -> BrowseFile()),
+        FileButton("profiler-file-apply", fileBusy ? "Working…": fileAction, () -> ApplyFile()),
+        FileButton(
             "profiler-file-cancel",
             "Cancel",
             () -> {
                 fileAction = ""
                 Rebuild()
-            },
-            !fileBusy
+            }
         ),
+    }
+
+    private func FileButton(key string, text string, action Action) Blob {
+        let button = ActionButton{Content: text, Disabled: fileBusy, OnClick: action}.Build()
+        button.Key = key
+        return button
     }
 
     private func BrowseFile() {
@@ -187,22 +189,18 @@ internal partial class ProfilerCell {
                             } else {
                                 if let current = loaded {
                                     session.Profiler = current
-                                    selected = -1
+                                    Select(-1)
                                     selectionStart = 0L
                                     selectionEnd = 0L
                                     filterWindow = ""
-                                    windowPicker = false
                                     follow = false
-                                    collapsed.Clear()
                                     paths.Clear()
-                                    scales.Clear()
-                                    tableRows.Clear()
                                     tableKey = ""
                                     revision = current.Revision
                                     start = 0L
                                     end = Math.Max(1L, current.End)
                                 }
-                                fileStatus = (importing ? "Imported ": "Exported ") + Path.GetFileName(path)
+                                fileStatus = importing ? "": "Exported " + Path.GetFileName(path)
                                 fileAction = ""
                             }
                             Rebuild()

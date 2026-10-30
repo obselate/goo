@@ -298,7 +298,7 @@ internal partial class ProfilerTrace {
         && !record.Source.StartsWith("vulkan.timestamp", StringComparison.Ordinal)
         && !record.Source.Contains("derived", StringComparison.Ordinal)
 
-        private func GpuStage(eventId int32) string -> eventId == 316 ? "Upload"
+        internal func GpuStage(eventId int32) string -> eventId == 316 ? "Upload"
         : eventId == 318 ? "Main": eventId == 319 ? "Effects"
         : eventId == 320 ? "Offscreen": "GPU event " + eventId.ToString(CultureInfo.InvariantCulture)
 

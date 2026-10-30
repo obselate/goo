@@ -1,12 +1,18 @@
 package GooDevTools
 
 import Goo
+import Goo.Widgets
+import Goo.Widgets.Layout
 import System
 import System.Collections.Generic
 import System.IO
 
 func Main() {
     Window.ConfigureApplication("Goo DevTools", "0.23.3", "io.github.obselate.goo.devtools")
+    using let sansRegular = RegisterFont("Vend Sans", "VendSans-VariableFont_wght.ttf", 400)
+    using let sansMedium = RegisterFont("Vend Sans", "VendSans-VariableFont_wght.ttf", 500)
+    using let sansSemibold = RegisterFont("Vend Sans", "VendSans-VariableFont_wght.ttf", 600)
+    using let mono = RegisterFont("JetBrains Mono", "JetBrainsMono-VariableFont_wght.ttf", 400)
     let sample = Environment.GetEnvironmentVariable("GOO_DEVTOOLS_SAMPLE") == "1"
     || HasArgument("--sample")
     let endpoints = DiagnosticEndpointDiscovery.Scan(Directory.GetCurrentDirectory())
@@ -28,7 +34,8 @@ func Main() {
         Title: "Goo DevTools",
         Width: 1540,
         Height: 960,
-        Decorated: false,
+        MinWidth: 800,
+        MinHeight: 560,
         Transparent: true,
         ResizeBand: 8.0F,
         Resizable: true,
@@ -36,12 +43,27 @@ func Main() {
         Background: Color.Transparent,
         Root: root,
     }
+    WindowChrome.ReplaceTitlebar(window)
+    Theme.Attach(window, Theme.Ink)
     root.AttachWindow(window)
     if sample || selectedEndpoint != nil || requestedPipe != "" {
         session.Connect()
         session.Pump()
     }
     window.Run()
+}
+
+private func RegisterFont(family string, file string, weight int32) FontSource {
+    let font = FontSource(
+        family,
+        weight,
+        false,
+        File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fonts", file)),
+        0u,
+        []FontVariation{FontVariation("wght", float32(weight))}
+    )
+    font.Register()
+    return font
 }
 
 private func HasArgument(value string) bool {

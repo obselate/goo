@@ -60,9 +60,6 @@ internal class ProfilerLane {
     internal let Group string
     internal let Window string
     internal let Records List[int32] = List[int32]()
-    internal let PrefixEnd List[int64] = List[int64]()
-    internal let Depth List[int32] = List[int32]()
-    internal var MaxDepth int32
     internal var Dirty bool
 
     internal init(name string, group string, window string) {
@@ -81,46 +78,22 @@ internal class ProfilerLane {
                 return order != 0 ? order: records[b].EndTicks.CompareTo(records[a].EndTicks)
             }
         )
-        PrefixEnd.Clear()
-        Depth.Clear()
-        MaxDepth = 0
-        let threads = Dictionary[uint64, List[int64]]()
-        var end int64 = 0L
-        for index in Records {
-            let record = records[index]
-            var depth = 0
-            if (Group == "CPU" || Group == "Queue") && record.Kind == "duration" {
-                let thread = record.Thread ?? 0uL
-                if !threads.TryGetValue(thread, out var stack) {
-                    stack = List[int64]()
-                    threads.Add(thread, stack)
-                }
-                while stack.Count > 0 && stack[stack.Count - 1] <= record.Ticks {
-                    stack.RemoveAt(stack.Count - 1)
-                }
-                depth = stack.Count
-                stack.Add(record.EndTicks)
-                MaxDepth = Math.Max(MaxDepth, depth)
-            }
-            Depth.Add(depth)
-            end = Math.Max(end, records[index].EndTicks)
-            PrefixEnd.Add(end)
-        }
         Dirty = false
     }
+}
 
-    internal func FirstVisible(start int64) int32 {
-        var lo = 0
-        var hi = PrefixEnd.Count
-        while lo < hi {
-            let mid = lo + (hi - lo) / 2
-            if PrefixEnd[mid] < start {
-                lo = mid + 1
-            } else {
-                hi = mid
-            }
-        }
-        return lo
+internal class ProfilerFrame {
+    internal let Record int32
+    internal let Phases[]int32
+    internal let Ticks[]int64
+    internal let Other int64
+    internal var Wait int64
+
+    internal init(record int32, phases[]int32, ticks[]int64, other int64) {
+        Record = record
+        Phases = phases
+        Ticks = ticks
+        Other = other
     }
 }
 
@@ -142,6 +115,12 @@ internal partial class ProfilerTrace {
     internal let PositiveOwners Dictionary[uint64, uint64] = Dictionary[uint64, uint64]()
     internal let WindowNames Dictionary[string, string] = Dictionary[string, string]()
     internal let ThreadNames Dictionary[uint64, string] = Dictionary[uint64, string]()
+    internal let Frames List[ProfilerFrame] = List[ProfilerFrame]()
+    internal let FramePhases List[string] = List[string]()
+    internal let PumpGpu Dictionary[string, List[int32]] = Dictionary[string, List[int32]]()
+    private let framePhaseIds Dictionary[string, int32] = Dictionary[string, int32]()
+    private let pumpScopes Dictionary[string, List[int32]] = Dictionary[string, List[int32]]()
+    internal let PumpFrames Dictionary[string, int32] = Dictionary[string, int32]()
     internal var StartMetadata string = "{}"
     internal var FileName string = ""
     internal var Id string = ""
@@ -326,6 +305,9 @@ internal partial class ProfilerTrace {
             }
         }
         AddLane(index, record)
+        if let pump = record.Pump {
+            Attribute(index, record, record.Window + ":" + pump.ToString())
+        }
         if record.Kind == "gap" {
             Partial = true
         }
@@ -336,6 +318,121 @@ internal partial class ProfilerTrace {
             lane.Prepare(Records)
         }
         Revision++
+    }
+
+    private func Attribute(index int32, record ProfilerRecord, key string) {
+        if record.GpuNs != nil {
+            if !PumpGpu.TryGetValue(key, out var gpu) {
+                gpu = List[int32]()
+                PumpGpu.Add(key, gpu)
+            }
+            gpu.Add(index)
+            return
+        }
+        if record.Kind != "duration" || record.Source == "cpu.instrumented"
+        || record.Source.Contains("derived", StringComparison.Ordinal) || record.Source.EndsWith(
+            "-observed",
+            StringComparison.Ordinal
+        ) {
+            return
+        }
+        if record.Category == 0 && record.Event == 0 {
+            AddFrame(index, record, key)
+        } else if record.Category == 0 && PhaseName(record.Event) == "CapWait" {
+            if PumpFrames.TryGetValue(key, out var frame) {
+                let target = Frames[frame]
+                target.Wait += record.EndTicks - record.Ticks
+            }
+        } else {
+            if !pumpScopes.TryGetValue(key, out var scopes) {
+                scopes = List[int32]()
+                pumpScopes.Add(key, scopes)
+            }
+            scopes.Add(index)
+        }
+    }
+
+    private func AddFrame(index int32, frame ProfilerRecord, key string) {
+        let scopes = List[int32]()
+        if pumpScopes.Remove(key, out var pending) {
+            for item in pending {
+                let r = Records[item]
+                if r.Thread == frame.Thread && r.Ticks >= frame.Ticks && r.EndTicks <= frame.EndTicks {
+                    scopes.Add(item)
+                }
+            }
+        }
+        scopes.Sort(
+            (a int32, b int32) -> {
+                let order = Records[a].Ticks.CompareTo(Records[b].Ticks)
+                return order != 0 ? order: Records[b].EndTicks.CompareTo(Records[a].EndTicks)
+            }
+        )
+        let totals = Dictionary[int32, int64]()
+        let phases = List[int32]()
+        let ends = List[int64]()
+        var other = 0L
+        var cursor = frame.Ticks
+        for item in scopes {
+            let r = Records[item]
+            while ends.Count > 0 && ends[ends.Count - 1] <= r.Ticks {
+                cursor = Credit(totals, phases, ends, cursor)
+            }
+            if ends.Count > 0 {
+                totals[phases[phases.Count - 1]] += r.Ticks - cursor
+            } else {
+                other += r.Ticks - cursor
+            }
+            cursor = r.Ticks
+            let name = r.Category == 0 ? PhaseName(r.Event): r.Source
+            if !framePhaseIds.TryGetValue(name, out var phase) {
+                phase = FramePhases.Count
+                FramePhases.Add(name)
+                framePhaseIds.Add(name, phase)
+            }
+            phases.Add(phase)
+            ends.Add(ends.Count > 0 ? Math.Min(r.EndTicks, ends[ends.Count - 1]): r.EndTicks)
+            if !totals.ContainsKey(phase) {
+                totals.Add(phase, 0L)
+            }
+        }
+        while ends.Count > 0 {
+            cursor = Credit(totals, phases, ends, cursor)
+        }
+        other += frame.EndTicks - cursor
+        let ids = List[int32](totals.Keys)
+        ids.Sort()
+        let ticks = [ids.Count]int64
+        for i in 0 ... ids.Count {
+            ticks[i] = totals[ids[i]]
+        }
+        let result = ProfilerFrame(index, ids.ToArray(), ticks, other)
+        PumpFrames[key] = Frames.Count
+        Frames.Add(result)
+    }
+
+    private func Credit(totals Dictionary[int32, int64], phases List[int32], ends List[int64], cursor int64) int64 {
+        let last = ends.Count - 1
+        totals[phases[last]] += ends[last] - cursor
+        let next = ends[last]
+        phases.RemoveAt(last)
+        ends.RemoveAt(last)
+        return next
+    }
+
+    internal func FirstFrame(tick int64) int32 {
+        var lo = 0
+        var hi = Frames.Count
+        while lo < hi {
+            let mid = lo + (hi - lo) / 2
+            let frame = Frames[mid]
+            if tick > Records[frame.Record].EndTicks {
+                lo = mid + 1
+            } else {
+                hi = mid
+            }
+        }
+        return lo
     }
 
     private func AddLane(index int32, record ProfilerRecord) {
