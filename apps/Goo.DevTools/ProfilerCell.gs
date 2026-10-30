@@ -51,8 +51,6 @@ internal partial class ProfilerCell : Cell, IDisposable {
     private var tableKey string = ""
     private var tableRows[]DataGridRow = []DataGridRow{}
     private var tableColumns[]DataGridColumn = []DataGridColumn{}
-    private let tableViewport ElementHandle = ElementHandle()
-    private var tableMount int32
     private var columns[]int32 = []int32{}
     private var scale float64 = 1.0
     private let paths Dictionary[string, VectorPath] = Dictionary[string, VectorPath]()
@@ -813,53 +811,46 @@ internal partial class ProfilerCell : Cell, IDisposable {
                         AccessibilityName: "Summary",
                     }
                 ),
-                Container{
-                    Key: "profiler-table",
-                    Height: 0,
-                    FlexGrow: 1.0,
-                    FlexDirection: FlexDirection.Column,
-                    Cell.Mount[DataGridInput, DataGrid](
-                        "profiler-table-" + tableMount.ToString(),
-                        DataGridInput{
-                            ViewportHandle: tableViewport,
-                            Columns: tableColumns,
-                            Rows: tableRows,
-                            SortColumnId: "c" + sortColumn.ToString(),
-                            SortDirection: descending ? DataGridSort.Descending: DataGridSort.Ascending,
-                            OnSort: (id string, direction DataGridSort) -> {
-                                let column = Int32.Parse(id.Substring(1), CultureInfo.InvariantCulture)
-                                descending = column == sortColumn ? !descending: direction != DataGridSort.Ascending
-                                sortColumn = column
-                                tableKey = ""
-                                Rebuild()
-                            },
-                            Selection: DataGridSelection.Single,
-                            SelectedIds: selectedIds,
-                            OnSelectionChange: (ids[]string) -> {
-                                if ids.Length == 1 && ids[0].StartsWith("profiler-event-", StringComparison.Ordinal) {
-                                    if let current = session.Profiler {
-                                        SelectRecord(
-                                            current,
-                                            Int32.Parse(
-                                                ids[0].Substring("profiler-event-".Length),
-                                                CultureInfo.InvariantCulture
-                                            )
+                Cell.Mount[DataGridInput, DataGrid](
+                    "profiler-table",
+                    DataGridInput{
+                        Columns: tableColumns,
+                        Rows: tableRows,
+                        SortColumnId: "c" + sortColumn.ToString(),
+                        SortDirection: descending ? DataGridSort.Descending: DataGridSort.Ascending,
+                        OnSort: (id string, direction DataGridSort) -> {
+                            let column = Int32.Parse(id.Substring(1), CultureInfo.InvariantCulture)
+                            descending = column == sortColumn ? !descending: direction != DataGridSort.Ascending
+                            sortColumn = column
+                            tableKey = ""
+                            Rebuild()
+                        },
+                        Selection: DataGridSelection.Single,
+                        SelectedIds: selectedIds,
+                        OnSelectionChange: (ids[]string) -> {
+                            if ids.Length == 1 && ids[0].StartsWith("profiler-event-", StringComparison.Ordinal) {
+                                if let current = session.Profiler {
+                                    SelectRecord(
+                                        current,
+                                        Int32.Parse(
+                                            ids[0].Substring("profiler-event-".Length),
+                                            CultureInfo.InvariantCulture
                                         )
-                                    }
+                                    )
                                 }
-                            },
-                            FitColumnsToViewport: true,
-                            Density: DataGridDensity.Compact,
-                            Height: Length.Auto,
-                            AccessibilityName: tab,
-                            CreateRoot: (input DataGridInput, root Container) -> {
-                                root.FlexGrow = 1
-                                root.FlexBasis = 0
-                                return root
-                            },
-                        }
-                    ),
-                },
+                            }
+                        },
+                        FitColumnsToViewport: true,
+                        Density: DataGridDensity.Compact,
+                        Height: Length.Auto,
+                        AccessibilityName: tab,
+                        CreateRoot: (input DataGridInput, root Container) -> {
+                            root.FlexGrow = 1
+                            root.FlexBasis = 0
+                            return root
+                        },
+                    }
+                ),
             }
         )
         if selected >= 0 && selected < trace.Records.Count {
@@ -955,9 +946,6 @@ internal partial class ProfilerCell : Cell, IDisposable {
             return
         }
         tableKey = key
-        if tableViewport.ScrollOffset.Y <= 0.5 {
-            tableMount++
-        }
         let rows = List[ProfilerTableRow]()
         let names = tab == "Phases" ? []string{"Name", "Count", "Total", "p50", "p99", "Max", "Alloc"}
         : tab == "Memory" ? []string{"Counter", "Start", "End", "Change", "Peak"}
