@@ -2,7 +2,7 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/Window`](https://github.com/obselate/goo/tree/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window)
+Source: [`Goo/Window`](https://github.com/obselate/goo/tree/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window)
 
 ## Native desktop backdrops
 
@@ -558,7 +558,7 @@ Start clipboard calls on the open window's UI thread. Check `result.Status`.
 
 Source:
 
-- [`TransferData.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/TransferData.gs)
+- [`TransferData.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/TransferData.gs)
 
 Contains an owned multi-format clipboard snapshot and its file-transfer intent.
 
@@ -582,7 +582,7 @@ Gets the snapshot outcome, independently of individual representation lengths.
 
 Source:
 
-- [`Clipboard.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/Clipboard.gs)
+- [`Clipboard.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/Clipboard.gs)
 
 Contains an immutable owned file-path list copied from the native clipboard.
 
@@ -602,7 +602,7 @@ Gets the read outcome; Empty differs from native failure and unsupported access.
 
 Source:
 
-- [`Clipboard.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/Clipboard.gs)
+- [`Clipboard.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/Clipboard.gs)
 
 Describes the available clipboard MIME representations without reading payload bytes.
 
@@ -630,7 +630,7 @@ Gets the query outcome.
 
 Source:
 
-- [`Clipboard.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/Clipboard.gs)
+- [`Clipboard.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/Clipboard.gs)
 
 Contains encoded image bytes copied into managed ownership from the clipboard.
 
@@ -654,7 +654,7 @@ Gets the read outcome.
 
 Source:
 
-- [`TransferData.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/TransferData.gs)
+- [`TransferData.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/TransferData.gs)
 
 Selects whether a file clipboard publication prefers copying or a deferred move.
 
@@ -675,7 +675,7 @@ Requests a deferred file move where the native clipboard supports that intent.
 
 Source:
 
-- [`Clipboard.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/Clipboard.gs)
+- [`Clipboard.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/Clipboard.gs)
 
 Reports a native clipboard query/read outcome independently of payload contents.
 
@@ -691,7 +691,7 @@ Reports a native clipboard query/read outcome independently of payload contents.
 
 Source:
 
-- [`TransferData.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/TransferData.gs)
+- [`TransferData.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/TransferData.gs)
 
 Reports whether all requested clipboard representations were published.
 
@@ -707,7 +707,7 @@ Gets the publication outcome, not confirmation that another application pasted i
 
 Source:
 
-- [`TransferData.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/TransferData.gs)
+- [`TransferData.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/TransferData.gs)
 
 Reports a native data publication outcome without throwing for platform failures.
 
@@ -748,7 +748,7 @@ The host cannot provide the requested transfer or intent.
 
 Source:
 
-- [`FileDialog.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/FileDialog.gs)
+- [`FileDialog.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/FileDialog.gs)
 
 Describes one immutable native chooser filter.
 
@@ -771,7 +771,7 @@ Gets semicolon-separated extensions, such as png;jpg, or a single * for all file
 
 Source:
 
-- [`FileDialog.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/FileDialog.gs)
+- [`FileDialog.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/FileDialog.gs)
 
 Selects an open-file, save-file, or folder chooser.
 
@@ -785,7 +785,7 @@ Selects an open-file, save-file, or folder chooser.
 
 Source:
 
-- [`FileDialog.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/FileDialog.gs)
+- [`FileDialog.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/FileDialog.gs)
 
 Supplies optional native chooser hints, copied when the request starts.
 
@@ -813,7 +813,7 @@ Gets the optional title; empty uses the platform default.
 
 Source:
 
-- [`FileDialog.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/FileDialog.gs)
+- [`FileDialog.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/FileDialog.gs)
 
 Contains owned native chooser results without opening or writing any selected file.
 
@@ -837,7 +837,7 @@ Gets the request outcome.
 
 Source:
 
-- [`FileDialog.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/FileDialog.gs)
+- [`FileDialog.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/FileDialog.gs)
 
 Distinguishes selected paths, cancellation, unavailable backends, excessive results, and native failures.
 
@@ -853,7 +853,7 @@ Distinguishes selected paths, cancellation, unavailable backends, excessive resu
 
 Source:
 
-- [`LayerWindowOptions.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/LayerWindowOptions.gs)
+- [`LayerWindowOptions.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/LayerWindowOptions.gs)
 
 Selects the output edges to which a layer-shell window is anchored.
 
@@ -869,7 +869,7 @@ Selects the output edges to which a layer-shell window is anchored.
 
 Source:
 
-- [`LayerWindowOptions.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/LayerWindowOptions.gs)
+- [`LayerWindowOptions.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/LayerWindowOptions.gs)
 
 Controls keyboard focus for a layer-shell window.
 
@@ -883,7 +883,7 @@ Controls keyboard focus for a layer-shell window.
 
 Source:
 
-- [`LayerWindowOptions.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/LayerWindowOptions.gs)
+- [`LayerWindowOptions.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/LayerWindowOptions.gs)
 
 Configures a Wayland layer-shell surface before Window.Open. Sizes and margins use compositor logical units. Zero sizes require opposite anchors.
 
@@ -943,7 +943,7 @@ Gets the requested width. Zero fills the horizontal anchors.
 
 Source:
 
-- [`Window.Backdrop.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Backdrop.gs)
+- [`Window.Backdrop.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Backdrop.gs)
 
 Selects a semantic AppKit backdrop material. Appearance follows macOS policy.
 
@@ -1024,7 +1024,7 @@ Uses the window background material.
 
 Source:
 
-- [`Window.Backdrop.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Backdrop.gs)
+- [`Window.Backdrop.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Backdrop.gs)
 
 Configures this window's behind-window AppKit effect. Other platforms ignore it.
 
@@ -1048,7 +1048,7 @@ Gets the activation policy. Defaults to FollowWindow and still respects accessib
 
 Source:
 
-- [`Window.Backdrop.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Backdrop.gs)
+- [`Window.Backdrop.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Backdrop.gs)
 
 Controls whether an AppKit backdrop uses its active or inactive appearance.
 
@@ -1074,7 +1074,7 @@ Uses the inactive material appearance.
 
 Source:
 
-- [`NativeDialogOwner.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/NativeDialogOwner.gs)
+- [`NativeDialogOwner.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/NativeDialogOwner.gs)
 
 Identifies the borrowed native owner representation.
 
@@ -1088,7 +1088,7 @@ Identifies the borrowed native owner representation.
 
 Source:
 
-- [`NativeDialogOwner.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/NativeDialogOwner.gs)
+- [`NativeDialogOwner.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/NativeDialogOwner.gs)
 
 Keeps a native dialog owner alive and blocks only that owner's Goo input until disposed.
 
@@ -1116,7 +1116,7 @@ Gets the kind of borrowed native owner. The lease never owns the native window.
 
 Source:
 
-- [`NativeDialogOwner.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/NativeDialogOwner.gs)
+- [`NativeDialogOwner.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/NativeDialogOwner.gs)
 
 Contains Status, an Owner lease on Success and Error detail on failure.
 
@@ -1124,7 +1124,7 @@ Contains Status, an Owner lease on Success and Error detail on failure.
 
 Source:
 
-- [`NativeDialogOwner.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/NativeDialogOwner.gs)
+- [`NativeDialogOwner.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/NativeDialogOwner.gs)
 
 Reports whether a native service can borrow this window as a modal owner.
 
@@ -1142,7 +1142,7 @@ Reports whether a native service can borrow this window as a modal owner.
 
 Source:
 
-- [`PopupWindow.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/PopupWindow.gs)
+- [`PopupWindow.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/PopupWindow.gs)
 
 Identifies why a complete native popup chain was dismissed.
 
@@ -1188,7 +1188,7 @@ The application requested dismissal.
 
 Source:
 
-- [`PopupWindow.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/PopupWindow.gs)
+- [`PopupWindow.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/PopupWindow.gs)
 
 Selects an interactive native popup or an input-transparent tooltip.
 
@@ -1209,7 +1209,7 @@ Does not receive keyboard or pointer input.
 
 Source:
 
-- [`PopupWindow.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/PopupWindow.gs)
+- [`PopupWindow.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/PopupWindow.gs)
 
 Contains a native popup creation outcome and owned failure detail.
 
@@ -1225,7 +1225,7 @@ Gets the native creation outcome.
 
 Source:
 
-- [`PopupWindow.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/PopupWindow.gs)
+- [`PopupWindow.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/PopupWindow.gs)
 
 Reports native popup creation without substituting an ordinary window.
 
@@ -1266,7 +1266,7 @@ The host does not provide the requested native popup operation.
 
 Source:
 
-- [`PopupWindow.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/PopupWindow.gs)
+- [`PopupWindow.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/PopupWindow.gs)
 
 Hosts one new Goo root in a transient native surface outside its owner's bounds. Create a new root and PopupWindow for each opening. Portal ownership is unchanged.
 
@@ -1332,7 +1332,7 @@ Gets the current logical and framebuffer metrics on the owner thread.
 
 Source:
 
-- [`Window.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/Window.gs)
+- [`Window.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/Window.gs)
 
 Describes the selected rendering device.
 
@@ -1348,7 +1348,7 @@ Gets the selected device name, or an empty string when unavailable.
 
 Source:
 
-- [`Window.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/Window.gs)
+- [`Window.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/Window.gs)
 
 Identifies the selected Vulkan physical device type.
 
@@ -1389,7 +1389,7 @@ A virtual GPU.
 
 Source:
 
-- [`TransferData.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/TransferData.gs)
+- [`TransferData.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/TransferData.gs)
 
 Owns MIME alternatives and an ordered document URI selection without reading document contents.
 
@@ -1412,7 +1412,7 @@ Gets document references, which do not imply local paths or persistent access gr
 
 Source:
 
-- [`TransferData.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/TransferData.gs)
+- [`TransferData.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/TransferData.gs)
 
 Owns immutable bytes for one exact MIME representation of a selection.
 
@@ -1435,7 +1435,7 @@ Gets the exact MIME type offered to native consumers.
 
 Source:
 
-- [`Window.Backdrop.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Backdrop.gs)
+- [`Window.Backdrop.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Backdrop.gs)
 
 Configures this window's Wayland background effect. Other platforms ignore it.
 
@@ -1451,42 +1451,42 @@ Gets a surface-local rectangle in logical pixels, or nil for the whole window. C
 
 Sources:
 
-- [`NativeAccessibilityHost.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Accessibility/Native/NativeAccessibilityHost.gs)
-- [`Clipboard.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/Clipboard.gs)
-- [`FileDialog.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/FileDialog.gs)
-- [`NativeDialogOwner.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/NativeDialogOwner.gs)
-- [`NativeFileDrop.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/NativeFileDrop.gs)
-- [`Window.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/Window.gs)
-- [`Window.Accessibility.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Accessibility.gs)
-- [`Window.Activation.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Activation.gs)
-- [`Window.ApplicationActivation.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.ApplicationActivation.gs)
-- [`Window.Backdrop.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Backdrop.gs)
-- [`Window.Context.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Context.gs)
-- [`Window.Dispatcher.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Dispatcher.gs)
-- [`Window.Displays.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Displays.gs)
-- [`Window.DragRegion.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.DragRegion.gs)
-- [`Window.ElementHandle.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.ElementHandle.gs)
-- [`Window.Embedded.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Embedded.gs)
-- [`Window.ExternalImages.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.ExternalImages.gs)
-- [`Window.Frame.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Frame.gs)
-- [`Window.Host.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Host.gs)
-- [`Window.Images.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Images.gs)
-- [`Window.Input.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Input.gs)
-- [`Window.NativeModal.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.NativeModal.gs)
-- [`Window.Offscreen.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Offscreen.gs)
-- [`Window.Ownership.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Ownership.gs)
-- [`Window.Placement.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Placement.gs)
-- [`Window.Platform.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Platform.gs)
-- [`Window.Popup.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Popup.gs)
-- [`Window.Preferences.Layout.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Preferences.Layout.gs)
-- [`Window.Preferences.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Preferences.gs)
-- [`Window.Profile.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Profile.gs)
-- [`Window.Retained.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Retained.gs)
-- [`Window.SizeConstraints.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.SizeConstraints.gs)
-- [`Window.Timers.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Timers.gs)
-- [`Window.Titlebar.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Titlebar.gs)
-- [`Window.UiScale.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.UiScale.gs)
-- [`Window.Visibility.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Visibility.gs)
+- [`NativeAccessibilityHost.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Accessibility/Native/NativeAccessibilityHost.gs)
+- [`Clipboard.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/Clipboard.gs)
+- [`FileDialog.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/FileDialog.gs)
+- [`NativeDialogOwner.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/NativeDialogOwner.gs)
+- [`NativeFileDrop.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/NativeFileDrop.gs)
+- [`Window.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/Window.gs)
+- [`Window.Accessibility.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Accessibility.gs)
+- [`Window.Activation.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Activation.gs)
+- [`Window.ApplicationActivation.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.ApplicationActivation.gs)
+- [`Window.Backdrop.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Backdrop.gs)
+- [`Window.Context.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Context.gs)
+- [`Window.Dispatcher.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Dispatcher.gs)
+- [`Window.Displays.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Displays.gs)
+- [`Window.DragRegion.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.DragRegion.gs)
+- [`Window.ElementHandle.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.ElementHandle.gs)
+- [`Window.Embedded.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Embedded.gs)
+- [`Window.ExternalImages.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.ExternalImages.gs)
+- [`Window.Frame.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Frame.gs)
+- [`Window.Host.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Host.gs)
+- [`Window.Images.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Images.gs)
+- [`Window.Input.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Input.gs)
+- [`Window.NativeModal.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.NativeModal.gs)
+- [`Window.Offscreen.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Offscreen.gs)
+- [`Window.Ownership.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Ownership.gs)
+- [`Window.Placement.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Placement.gs)
+- [`Window.Platform.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Platform.gs)
+- [`Window.Popup.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Popup.gs)
+- [`Window.Preferences.Layout.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Preferences.Layout.gs)
+- [`Window.Preferences.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Preferences.gs)
+- [`Window.Profile.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Profile.gs)
+- [`Window.Retained.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Retained.gs)
+- [`Window.SizeConstraints.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.SizeConstraints.gs)
+- [`Window.Timers.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Timers.gs)
+- [`Window.Titlebar.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Titlebar.gs)
+- [`Window.UiScale.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.UiScale.gs)
+- [`Window.Visibility.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Visibility.gs)
 
 Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread.
 
@@ -2038,7 +2038,7 @@ Gets or sets the requested vertical position.
 
 Source:
 
-- [`Window.Backdrop.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Backdrop.gs)
+- [`Window.Backdrop.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Backdrop.gs)
 
 Selects a native material behind the window's rendered content.
 
@@ -2059,7 +2059,7 @@ No native background effect.
 
 Source:
 
-- [`Window.Backdrop.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Backdrop.gs)
+- [`Window.Backdrop.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Backdrop.gs)
 
 Owns an immutable alpha mask for a native macOS backdrop, stretched to its bounds.
 
@@ -2083,7 +2083,7 @@ Gets the mask width in pixels.
 
 Source:
 
-- [`Window.Visibility.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Visibility.gs)
+- [`Window.Visibility.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Visibility.gs)
 
 Reports native lifecycle operations supported by the current host.
 
@@ -2099,7 +2099,7 @@ Reports native lifecycle operations supported by the current host.
 
 Source:
 
-- [`Window.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/Window.gs)
+- [`Window.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/Window.gs)
 
 Owns RGBA8, sRGB, premultiplied pixels copied from a completed scene capture.
 
@@ -2135,7 +2135,7 @@ Gets the captured width in pixels.
 
 Source:
 
-- [`Window.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/Window.gs)
+- [`Window.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/Window.gs)
 
 Reports whether an asynchronous window capture request was accepted.
 
@@ -2153,7 +2153,7 @@ Reports whether an asynchronous window capture request was accepted.
 
 Source:
 
-- [`Window.Displays.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Displays.gs)
+- [`Window.Displays.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Displays.gs)
 
 Describes one display from an immutable SDL inventory snapshot.
 
@@ -2181,7 +2181,7 @@ Gets usable non-fullscreen bounds, or nil if SDL could not provide them.
 
 Source:
 
-- [`Window.Displays.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Displays.gs)
+- [`Window.Displays.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Displays.gs)
 
 Identifies one SDL display in the current process. The value can become stale after display changes.
 
@@ -2189,7 +2189,7 @@ Identifies one SDL display in the current process. The value can become stale af
 
 Source:
 
-- [`Window.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/Window.gs)
+- [`Window.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/Window.gs)
 
 Controls how Window.Run schedules frames that have visual demand.
 
@@ -2202,7 +2202,7 @@ Controls how Window.Run schedules frames that have visual demand.
 
 Source:
 
-- [`LayerWindowOptions.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/LayerWindowOptions.gs)
+- [`LayerWindowOptions.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/LayerWindowOptions.gs)
 
 Selects the compositor layer for a Wayland layer-shell window.
 
@@ -2217,7 +2217,7 @@ Selects the compositor layer for a Wayland layer-shell window.
 
 Source:
 
-- [`Window.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/Window.gs)
+- [`Window.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/Window.gs)
 
 Describes one stable window size and display-scale snapshot.
 
@@ -2253,7 +2253,7 @@ Gets the retained UI scale. A default snapshot uses 1.
 
 Source:
 
-- [`Window.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/Window.gs)
+- [`Window.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/Window.gs)
 
 Reports observed occlusion, not visibility or focus.
 
@@ -2279,7 +2279,7 @@ The host reports that the window is not occluded.
 
 Source:
 
-- [`Window.Visibility.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Visibility.gs)
+- [`Window.Visibility.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Visibility.gs)
 
 Reports whether a window operation was submitted to the host. Accepted does not guarantee that desktop policy grants activation or stacking.
 
@@ -2294,7 +2294,7 @@ Reports whether a window operation was submitted to the host. Accepted does not 
 
 Source:
 
-- [`WindowPlacement.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowPlacement.gs)
+- [`WindowPlacement.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowPlacement.gs)
 
 Owns restorable desktop geometry and display matching hints, without process-local display IDs.
 
@@ -2330,7 +2330,7 @@ Gets the restorable state. Capture records the last non-minimized state for a mi
 
 Source:
 
-- [`WindowPlacement.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowPlacement.gs)
+- [`WindowPlacement.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowPlacement.gs)
 
 Identifies the placement fields retained or accepted by a desktop host.
 
@@ -2366,7 +2366,7 @@ Restorable window state is present.
 
 Source:
 
-- [`WindowPlacement.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowPlacement.gs)
+- [`WindowPlacement.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowPlacement.gs)
 
 Reports captured placement or the fields accepted by an apply request.
 
@@ -2390,7 +2390,7 @@ Gets Accepted, Closed, Unsupported or Failed for this placement operation.
 
 Source:
 
-- [`Window.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/Window.gs)
+- [`Window.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/Window.gs)
 
 Reports a successful queue-present handoff, not display scanout.
 
@@ -2406,7 +2406,7 @@ Gets the one-based accepted presentation number for this window opening.
 
 Source:
 
-- [`Window.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/Window.gs)
+- [`Window.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/Window.gs)
 
 Identifies the requested state of a window.
 
@@ -2421,7 +2421,7 @@ Identifies the requested state of a window.
 
 Source:
 
-- [`Window.Timers.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Timers.gs)
+- [`Window.Timers.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Timers.gs)
 
 A cancellable callback scheduled on a Window's UI thread.
 
@@ -2437,7 +2437,7 @@ Reports whether the callback remains scheduled.
 
 Source:
 
-- [`Window.Titlebar.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Titlebar.gs)
+- [`Window.Titlebar.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Titlebar.gs)
 
 A native double-click on eligible blank space in an undecorated drag region.
 
@@ -2453,7 +2453,7 @@ Gets the pointer position in logical client coordinates.
 
 Source:
 
-- [`Window.Backdrop.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Backdrop.gs)
+- [`Window.Backdrop.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Backdrop.gs)
 
 Selects a Windows 11 system backdrop material.
 
@@ -2484,7 +2484,7 @@ Uses the alternate Mica material for tabbed windows.
 
 Source:
 
-- [`Window.Backdrop.gs`](https://github.com/obselate/goo/blob/c088b7f54cafe40ee5a151d7f01cc2ff3b6cd4aa/Goo/Window/WindowParts/Window.Backdrop.gs)
+- [`Window.Backdrop.gs`](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/Goo/Window/WindowParts/Window.Backdrop.gs)
 
 Configures the native material for this window on Windows. Other platforms ignore it.
 
