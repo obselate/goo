@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Keep Vulkan native handle outputs stable during garbage collection and retry failed swapchain recreation without closing the window.
 - Avoid redundant path-upload repaints and retry deferred path frames without draining acquired images on the UI thread.
 - Keep arc subdivision counts independent of path translation.
 - Keep frames running under Vulkan clip-mask and layer budget pressure after display-scale changes. Evict idle resources and reduce clip and layer resolution when needed. Include request dimensions in pressure diagnostics.

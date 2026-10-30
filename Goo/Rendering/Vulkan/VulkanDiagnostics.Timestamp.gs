@@ -170,7 +170,9 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
       createInfo.queryType = VkConstants.VK_QUERY_TYPE_TIMESTAMP
       createInfo.queryCount = uint32(TimestampQueryCount)
       let createQueryPool = timestampDispatch.vkCreateQueryPool
-      let result = createQueryPool(timestampDevice, &createInfo, nil, &timestampPool)
+      var createdPool VkQueryPool
+      let result = createQueryPool(timestampDevice, &createInfo, nil, &createdPool)
+      timestampPool = createdPool
       timestampLastResult = result
       if result != VkConstants.VK_SUCCESS || timestampPool == 0uL {
         timestampPool = 0uL

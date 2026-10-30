@@ -133,7 +133,10 @@ public unsafe sealed partial class ExternalImageSession {
         var poolInfo = VkCommandPoolCreateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
             flags: uint32(VkConstants.VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT), queueFamilyIndex: Runtime.GraphicsFamilyIndex }
         let create = dispatch.vkCreateCommandPool
-        if create(Runtime.Device, &poolInfo, nil, &commandPool) != VkConstants.VK_SUCCESS {
+        var createdPool VkCommandPool
+        let result = create(Runtime.Device, &poolInfo, nil, &createdPool)
+        commandPool = createdPool
+        if result != VkConstants.VK_SUCCESS {
             throw InvalidOperationException("External release command pool creation failed")
         }
         var allocation = VkCommandBufferAllocateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,

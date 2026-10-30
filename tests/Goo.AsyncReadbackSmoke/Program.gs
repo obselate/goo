@@ -250,6 +250,8 @@ func RunReadbackSmoke() {
       WindowReadbackTestFixture.ForceRender(opened, 0.0166666666666667)
       frame = frame + 1
     }
+    WindowReadbackTestFixture.CaptureTarget(opened)!!.VerifySwapchainCreationRecoveryForTest()
+    WindowReadbackTestFixture.ForceRender(opened, 0.0)
     Require(ReadbackSmokeCell.Root.IsMounted
         && ReadbackSmokeCell.Root.BorderBox.Width == 64.0
         && ReadbackSmokeCell.Root.BorderBox.Height == 64.0,
@@ -281,6 +283,22 @@ func RunReadbackSmoke() {
   }
   let diagnostics = capturedError.ToString()
   ReadbackValidateCommonDiagnostics(diagnostics)
+  var creationFailures int32
+  for line in diagnostics.Split('\n') {
+    if !line.StartsWith("{\"kind\":\"trace\",") { continue }
+    using let record = System.Text.Json.JsonDocument.Parse(line)
+    let entry = record.RootElement
+    if entry.GetProperty("event").GetUInt64() != 120uL
+      || entry.GetProperty("severity").GetUInt64() != 1uL { continue }
+    Require(entry.GetProperty("result").GetInt32() == (if creationFailures == 0 { int32(VkConstants.VK_ERROR_OUT_OF_DATE_KHR) } else { 0 })
+        && entry.GetProperty("value0").GetUInt64() == 0uL
+        && (entry.GetProperty("value1").GetUInt64() != 0uL) == (creationFailures == 0)
+        && entry.GetProperty("requestedWidth").GetUInt32() == 64u
+        && entry.GetProperty("requestedHeight").GetUInt32() == 64u,
+      "Swapchain creation diagnostics lost the native result, handles or extent")
+    creationFailures++
+  }
+  Require(creationFailures == 2, "Swapchain creation failure diagnostics are missing")
   Console.WriteLine("readback: frames=9 width=64 height=64 row_bytes=256"
     +" bytes=16384 origin=top-left premultiplied=1 request_ready_ns="
     +requestReadyNs.ToString() + " resource_resident_before_close="

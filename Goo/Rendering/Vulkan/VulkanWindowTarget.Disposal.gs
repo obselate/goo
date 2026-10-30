@@ -52,7 +52,7 @@ internal unsafe partial class VulkanWindowTarget {
     if !recreated && frameFailureRetryable {
       recreatePending = true
     }
-    return recreated || frameFailureRetryable
+    return recreated || frameFailureRetryable || recoveryPending
   }
 
   public func Dispose() {

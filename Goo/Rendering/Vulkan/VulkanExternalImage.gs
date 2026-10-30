@@ -150,7 +150,10 @@ internal unsafe sealed partial class VulkanExternalImage : IDisposable {
         }
         if handleType == 0x200u { imageInfo.pNext = *void(&modifierInfo) }
         let createImage = dispatch.vkCreateImage
-        Check(createImage(device, &imageInfo, nil, &Image), "External image creation failed")
+        var createdImage VkImage
+        let imageResult = createImage(device, &imageInfo, nil, &createdImage)
+        Image = createdImage
+        Check(imageResult, "External image creation failed")
         var dedicated = VkMemoryDedicatedRequirements{ sType: VkConstants.VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS }
         var requirements = VkMemoryRequirements2{ sType: VkConstants.VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2, pNext: *void(&dedicated) }
         var requirementsInfo = VkImageMemoryRequirementsInfo2{ sType: VkConstants.VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2, image: Image }
@@ -198,7 +201,10 @@ internal unsafe sealed partial class VulkanExternalImage : IDisposable {
             allocationSize: description.AllocationSize, memoryTypeIndex: description.MemoryTypeIndex,
         }
         let allocate = dispatch.vkAllocateMemory
-        Check(allocate(device, &allocationInfo, nil, &memory), "External memory import failed")
+        var importedMemory VkDeviceMemory
+        let memoryResult = allocate(device, &allocationInfo, nil, &importedMemory)
+        memory = importedMemory
+        Check(memoryResult, "External memory import failed")
         if !OperatingSystem.IsWindows() { handle.SetHandleAsInvalid() }
         var bindInfo = VkBindImageMemoryInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO,
             image: Image, memory: memory, memoryOffset: description.MemoryOffset }
@@ -213,7 +219,10 @@ internal unsafe sealed partial class VulkanExternalImage : IDisposable {
             viewType: VkConstants.VK_IMAGE_VIEW_TYPE_2D, format: Format,
             subresourceRange: VulkanTransitions.ColorSubresourceRange() }
         let create = Runtime.Dispatch.vkCreateImageView
-        Check(create(Runtime.Device, &info, nil, &View), "External image view creation failed")
+        var createdView VkImageView
+        let result = create(Runtime.Device, &info, nil, &createdView)
+        View = createdView
+        Check(result, "External image view creation failed")
     }
 
     internal func EnsureAlphaView(alpha ExternalImageAlphaMode) ExternalImageStatus {
@@ -226,7 +235,9 @@ internal unsafe sealed partial class VulkanExternalImage : IDisposable {
             subresourceRange: VulkanTransitions.ColorSubresourceRange(),
         }
         let create = Runtime.Dispatch.vkCreateImageView
-        let result = create(Runtime.Device, &info, nil, &OpaqueView)
+        var createdView VkImageView
+        let result = create(Runtime.Device, &info, nil, &createdView)
+        OpaqueView = createdView
         return if result == VkConstants.VK_SUCCESS { ExternalImageStatus.Success }
             else if result == VkConstants.VK_ERROR_DEVICE_LOST { ExternalImageStatus.DeviceLost }
             else { ExternalImageStatus.Failed }
