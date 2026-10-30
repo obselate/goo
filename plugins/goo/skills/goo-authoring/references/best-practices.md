@@ -33,6 +33,7 @@ Read this before you write or review Goo app code. These rules override threadin
 
 - The view Cell is the controller for its region. It owns UI state such as selection and scroll, handles input, calls the model, starts `go` work and calls `Rebuild()`.
 - When a screen has many state transitions, put them in a model class with methods, for example `SearchModel.Apply(query)`. The Cell then only connects input to model calls.
+- A form model owns one `CanSubmit` value. The submit button `Disabled` state and the Enter (`OnSubmit`) handler of every field read only that value. Do not write the submit condition twice.
 - Data flow: a service result returns through `window.TryPost`, the model changes on the UI thread, the Cell rebuilds, the view builds from the model.
 - Pass a child view only the model values it shows, as a `data struct` input. Goo then rebuilds the child only when those values change.
 - Before you write a component, search Goo.Widgets and the app's `Components/`. Change an existing component when it is close. Do not copy it.
