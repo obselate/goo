@@ -48,6 +48,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if preparedClipFrame != nil {
         throw InvalidOperationException("Vulkan clip frame is already prepared")
       }
+      bypassLayers = if let pool = layerPool {
+        !pool.PrepareLayerBudget(frame, completedSubmissionSerial,
+          presentEncode ? extent.width : 0u, presentEncode ? extent.height : 0u)
+      } else { false }
       EnsureClipRegionCapacity(frame.ClipMaskCount)
       var usageBatchEnded bool = frame.ClipMaskCount == 0
       if !usageBatchEnded {
@@ -93,7 +97,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           index++
         }
         let stats = frameData.Prepare(frame, clipRegions, frame.ClipMaskCount,
-          slotIndex, completedSubmissionSerial)
+          slotIndex, completedSubmissionSerial, bypassLayers)
         if !usageBatchEnded {
           atlas.EndUsageBatch()
           usageBatchEnded = true
@@ -439,23 +443,25 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       let transform = ResolveTransform(frame, value.TransformIndex)
       let width = float32(clipMaskAtlas!!.Width)
       let height = float32(clipMaskAtlas!!.Height)
-      let deltaX = float32(region.ContentX) - float32(region.ScreenX)
-      let deltaY = float32(region.ContentY) - float32(region.ScreenY)
+      let scaleX = float32(region.ContentWidth) / float32(region.ScreenWidth)
+      let scaleY = float32(region.ContentHeight) / float32(region.ScreenHeight)
+      let deltaX = float32(region.ContentX) - float32(region.ScreenX) * scaleX
+      let deltaY = float32(region.ContentY) - float32(region.ScreenY) * scaleY
       var push = ClipMaskPushConstants{}
-      push.transform0_x = 2.0F * transform.A * value.ScaleX / width
-      push.transform0_y = 2.0F * transform.C * value.ScaleY / width
-      push.transform0_z = 2.0F * (transform.A * value.TranslateX
-        +transform.C * value.TranslateY + transform.TX + deltaX) / width - 1.0F
-      push.transform1_x = 2.0F * transform.B * value.ScaleX / height
-      push.transform1_y = 2.0F * transform.D * value.ScaleY / height
-      push.transform1_z = 2.0F * (transform.B * value.TranslateX
-        +transform.D * value.TranslateY + transform.TY + deltaY) / height - 1.0F
+      push.transform0_x = 2.0F * transform.A * value.ScaleX * scaleX / width
+      push.transform0_y = 2.0F * transform.C * value.ScaleY * scaleX / width
+      push.transform0_z = 2.0F * ((transform.A * value.TranslateX
+        + transform.C * value.TranslateY + transform.TX) * scaleX + deltaX) / width - 1.0F
+      push.transform1_x = 2.0F * transform.B * value.ScaleX * scaleY / height
+      push.transform1_y = 2.0F * transform.D * value.ScaleY * scaleY / height
+      push.transform1_z = 2.0F * ((transform.B * value.TranslateX
+        + transform.D * value.TranslateY + transform.TY) * scaleY + deltaY) / height - 1.0F
       push.sampleStep_x = 1.0F / width
       push.sampleStep_y = 1.0F / height
-      let matrix00 = transform.A * value.ScaleX
-      let matrix01 = transform.C * value.ScaleY
-      let matrix10 = transform.B * value.ScaleX
-      let matrix11 = transform.D * value.ScaleY
+      let matrix00 = transform.A * value.ScaleX * scaleX
+      let matrix01 = transform.C * value.ScaleY * scaleX
+      let matrix10 = transform.B * value.ScaleX * scaleY
+      let matrix11 = transform.D * value.ScaleY * scaleY
       let determinant = matrix00 * matrix11 - matrix01 * matrix10
       var inflationX = 0.0F
       var inflationY = 0.0F
@@ -481,16 +487,14 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         let inverseC = -transform.C / nodeDeterminant
         let inverseB = -transform.B / nodeDeterminant
         let inverseD = transform.A / nodeDeterminant
-        let inverseTX = -(inverseA * transform.TX + inverseC * transform.TY)
-        -(inverseA * deltaX + inverseC * deltaY)
-        let inverseTY = -(inverseB * transform.TX + inverseD * transform.TY)
-        -(inverseB * deltaX + inverseD * deltaY)
-        push.borderTransform0_x = inverseA
-        push.borderTransform0_y = inverseC
-        push.borderTransform0_z = inverseTX
-        push.borderTransform1_x = inverseB
-        push.borderTransform1_y = inverseD
-        push.borderTransform1_z = inverseTY
+        push.borderTransform0_x = inverseA / scaleX
+        push.borderTransform0_y = inverseC / scaleY
+        push.borderTransform0_z = -(inverseA * transform.TX + inverseC * transform.TY)
+          - inverseA * deltaX / scaleX - inverseC * deltaY / scaleY
+        push.borderTransform1_x = inverseB / scaleX
+        push.borderTransform1_y = inverseD / scaleY
+        push.borderTransform1_z = -(inverseB * transform.TX + inverseD * transform.TY)
+          - inverseB * deltaX / scaleX - inverseD * deltaY / scaleY
       } else {
         push.borderRect_z = 0.0F
         push.borderRect_w = 0.0F

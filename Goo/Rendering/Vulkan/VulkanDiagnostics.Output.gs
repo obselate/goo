@@ -43,7 +43,7 @@ internal unsafe partial class VulkanDiagnostics {
       var index = start
       while index < total {
         let record = storage[int32(index % int64(storage.Length))]
-        writer.WriteLine("{\"kind\":\"trace\",\"run\":${record.run},\"workload\":${record.workload},\"process\":${record.process},\"window\":${record.window},\"frame\":${record.frame},\"sample\":${record.sample},\"queue\":${record.queue},\"submission\":${record.submission},\"fence\":${record.fence},\"query\":${record.query},\"event\":${record.eventId},\"category\":${record.category},\"severity\":${record.severity},\"result\":${record.result},\"value0\":${record.value0},\"value1\":${record.value1}}")
+        writer.WriteLine("{\"kind\":\"trace\",\"run\":${record.run},\"workload\":${record.workload},\"process\":${record.process},\"window\":${record.window},\"frame\":${record.frame},\"sample\":${record.sample},\"queue\":${record.queue},\"submission\":${record.submission},\"fence\":${record.fence},\"query\":${record.query},\"event\":${record.eventId},\"category\":${record.category},\"severity\":${record.severity},\"result\":${record.result},\"value0\":${record.value0},\"value1\":${record.value1},\"requestedWidth\":${record.requestedWidth},\"requestedHeight\":${record.requestedHeight}}")
         index++
       }
     }

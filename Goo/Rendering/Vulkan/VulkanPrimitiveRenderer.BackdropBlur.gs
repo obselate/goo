@@ -93,6 +93,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
                 }
                 let target = RenderBackdropBlurPass(commandBuffer, extent, source, blur,
                     Vector4(downX ? 1.0F: 0.0F, downY ? 1.0F: 0.0F, 2.0F, 0.0F), mapping)
+                if !primitivePrepass && target == nil { return captured }
                 if let previous = source {
                     if previous != captured { pool.ReleaseForReuse(previous) }
                 }
@@ -111,6 +112,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
                 }
                 let target = RenderBackdropBlurPass(commandBuffer, extent, source, blur,
                     Vector4(residual, residual, float32(axis), 0.0F), mapping)
+                if !primitivePrepass && target == nil { return captured }
                 if let previous = source {
                     if previous != captured { pool.ReleaseForReuse(previous) }
                 }
@@ -122,6 +124,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
                 Vector4(0.0F, 0.0F, 4.0F, 0.0F),
                 Vector4(paddingX / float32(paddedWidth), paddingY / float32(paddedHeight),
                     float32(record.ExtentWidth) / float32(paddedWidth), float32(record.ExtentHeight) / float32(paddedHeight)))
+            if !primitivePrepass && cropped == nil { return captured }
             if let previous = source {
                 if previous != captured { pool.ReleaseForReuse(previous) }
             }
@@ -167,7 +170,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         guard let pool = layerPool else {
             throw InvalidOperationException("Vulkan layer pool is unavailable")
         }
-        let target = pool.Acquire(extent.width, extent.height, completedLayerSerial)
+        guard let target = pool.Acquire(extent.width, extent.height, completedLayerSerial) else { return nil }
         try {
             target.TransitionToColorAttachment(commandBuffer)
             BeginLayerRendering(commandBuffer, extent, target.ImageView, false)

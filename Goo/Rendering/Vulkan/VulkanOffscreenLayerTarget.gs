@@ -365,6 +365,10 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
   private let descriptorPools List[VkDescriptorPool]
   private var sampler VkSampler = 0uL
   private let byteBudget VkDeviceSize
+  private var requestedWidth uint32
+  private var requestedHeight uint32
+  private var presentTarget VulkanOffscreenLayerTarget?
+  private var bypassCount uint64
   private var residentBytes VkDeviceSize
   private var descriptorPoolCount int32
   private var samplerAccounted bool
@@ -374,6 +378,8 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
 
   internal prop ResidentBytes VkDeviceSize{ get -> residentBytes }
   internal prop ByteBudget VkDeviceSize{ get -> byteBudget }
+  internal prop PresentTarget VulkanOffscreenLayerTarget?{ get -> presentTarget }
+  internal prop BypassCount uint64{ get -> bypassCount }
   internal prop LiveTargetCount int32{
     get {
       var result int32 = 0
@@ -448,11 +454,64 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       }
     }
 
-  internal func Acquire(width uint32, height uint32, completedSerial uint64) VulkanOffscreenLayerTarget {
+  internal func PrepareLayerBudget(frame SceneFrame, completedSerial uint64,
+    presentWidth uint32 = 0u, presentHeight uint32 = 0u) bool {
+    presentTarget = nil
+    var presentIndex int32 = -1
+    if presentWidth != 0u {
+      presentTarget = Acquire(presentWidth, presentHeight, completedSerial, &presentIndex, true)
+    }
+    let reservations * int32 = stackalloc[64]int32
+    var depth int32 = 0
+    var available = true
+    for drawIndex in 0 ... frame.DrawRefCount {
+      let reference = frame.DrawRefs[drawIndex]
+      if reference.Kind == SceneDrawKind.LayerBegin {
+        if depth >= 32 { throw InvalidOperationException("Vulkan layer depth exceeded") }
+        let layer = frame.Layers[reference.Index]
+        var targetIndex int32 = -1
+        if Acquire(layer.ExtentWidth, layer.ExtentHeight, completedSerial, &targetIndex) == nil {
+          available = false
+          break
+        }
+        reservations[depth * 2] = targetIndex
+        reservations[depth * 2 + 1] = -1
+        let needsBackdrop = (layer.Flags & uint32(LayerRecordFlags.BorrowsParentBackdrop)) == 0u
+          && (layer.BlendMode != 0u
+              || (layer.Flags & (uint32(LayerRecordFlags.PreservesBackdrop)
+                  | uint32(LayerRecordFlags.SamplesBackdrop))) != 0u)
+        if needsBackdrop {
+          if Acquire(layer.ExtentWidth, layer.ExtentHeight, completedSerial, &targetIndex) == nil {
+            available = false
+            break
+          }
+          reservations[depth * 2 + 1] = targetIndex
+        }
+        depth++
+      } else if reference.Kind == SceneDrawKind.LayerEnd {
+        if depth <= 0 { throw InvalidOperationException("Vulkan layer stack underflow") }
+        depth--
+        leased[reservations[depth * 2]] = false
+        let backdropIndex = reservations[depth * 2 + 1]
+        if backdropIndex >= 0 { leased[backdropIndex] = false }
+      }
+    }
+    for index in 0 ... targets.Length {
+      if inFrame[index] && index != presentIndex { leased[index] = false }
+    }
+    if !available { bypassCount++ }
+    PublishStats()
+    return available
+  }
+
+  internal func Acquire(width uint32, height uint32, completedSerial uint64,
+    reservationIndex * int32 = nil, mandatory bool = false) VulkanOffscreenLayerTarget? {
     EnsureOpen()
     if width == 0u || height == 0u {
       throw ArgumentOutOfRangeException("extent")
     }
+    requestedWidth = width
+    requestedHeight = height
     Collect(completedSerial)
     var reusableIndex int32 = -1
     var reusableLastUse uint64 = uint64.MaxValue
@@ -487,6 +546,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       }
       let sameCommand = inFrame[reusableIndex]
       leased[reusableIndex] = true
+      if reservationIndex != nil { reservationIndex[0] = reusableIndex }
       if !sameCommand {
         inFrame[reusableIndex] = true
         target.BeginLease()
@@ -510,10 +570,10 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       RecordPressure(estimatedBytes, completedSerial)
       EvictIdle(estimatedBytes, completedSerial)
     }
-    if NeedsBudgetPressure(estimatedBytes) {
+    if !mandatory && NeedsBudgetPressure(estimatedBytes) {
       RecordPressureFailure(estimatedBytes, residentBytes)
       RecordFailure(estimatedBytes, residentBytes)
-      throw InvalidOperationException("Vulkan layer pool byte budget exhausted")
+      return nil
     }
     index = FindEmptySlot()
     if index < 0 {
@@ -540,16 +600,17 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       RecordPressure(created.Bytes, completedSerial)
       EvictIdle(created.Bytes, completedSerial)
     }
-    if created.Bytes > byteBudget || NeedsBudgetPressure(created.Bytes) {
+    if !mandatory && (created.Bytes > byteBudget || NeedsBudgetPressure(created.Bytes)) {
       let bytes = created.Bytes
       created.Dispose()
       let available = residentBytes <= byteBudget ? byteBudget - residentBytes : 0uL
       RecordPressureFailure(uint64(bytes), uint64(available))
       RecordFailure(uint64(bytes), residentBytes)
-      throw InvalidOperationException("Vulkan layer target exceeds byte budget")
+      return nil
     }
     targets[index] = created
     leased[index] = true
+    if reservationIndex != nil { reservationIndex[0] = index }
     inFrame[index] = true
     residentBytes = residentBytes + created.Bytes
     created.BeginLease()
@@ -920,10 +981,6 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       while index < targets.Length {
         if !leased[index] && !inFrame[index] {
           if let target = targets[index] {
-            if target.RetainedBackdrop.BackdropVersion != 0uL {
-              index++
-              continue
-            }
             if target.LastUseSerial <= completedSerial {
               RetireTarget(index, target)
               evicted = true
@@ -1023,7 +1080,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     value0 uint64, value1 uint64, severity uint64 = 0uL, completionSerial uint64 = 0uL) {
       try {
         current.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, completionSerial, 0uL, 0uL,
-          eventId, category, severity, 0, value0, value1)
+          eventId, category, severity, 0, value0, value1, requestedWidth, requestedHeight)
       } catch (cleanup Exception) { }
     }
 

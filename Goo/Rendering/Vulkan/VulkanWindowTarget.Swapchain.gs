@@ -786,7 +786,7 @@ internal unsafe partial class VulkanWindowTarget {
       clipMaskFormatSupport,
       0uL,
       activeRuntime.Generation,
-      windowObjectAccounting)
+      windowObjectAccounting, diagnostics)
     clipMaskRedrawPending = true
     clipMaskAtlasAbandoned = false
   }

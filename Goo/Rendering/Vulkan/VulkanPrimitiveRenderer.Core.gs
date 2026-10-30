@@ -73,6 +73,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private var rootExtent VkExtent2D
   private var rootLayout VkImageLayout
   private var layerPool VulkanOffscreenLayerPool?
+  private var bypassLayers bool
   private var currentTarget VulkanOffscreenLayerTarget?
   private var currentOriginX float32
   private var currentOriginY float32
@@ -897,6 +898,14 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     commandBuffer VkCommandBuffer,
     record LayerRecord,
     frame SceneFrame) {
+      if bypassLayers {
+        if layerDepth >= layerStates.Length {
+          throw InvalidOperationException("Vulkan layer depth exceeded")
+        }
+        layerStates[layerDepth] = VulkanLayerRenderState{ Record: record }
+        layerDepth++
+        return
+      }
       let borrowedBackdrop = ValidateBorrowedBackdrop(record)
       if !primitivePrepass {
         FlushPendingPrimitiveDraw(commandBuffer)
@@ -961,6 +970,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       let target = if backdropOnly { cached } else {
         pool.Acquire(record.ExtentWidth, record.ExtentHeight, completedLayerSerial)
       }
+      if target == nil && !backdropOnly {
+        layerStates[layerDepth] = VulkanLayerRenderState{ Record: record }
+        layerDepth++
+        return
+      }
       let needsBackdrop = preservesBackdrop || record.BlendMode != 0u
         || (record.EffectIndex >= 0
             && (record.Flags & uint32(LayerRecordFlags.SamplesBackdrop)) != 0u)
@@ -971,6 +985,12 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       } else if needsBackdrop {
         pool.Acquire(record.ExtentWidth, record.ExtentHeight, completedLayerSerial)
       } else { nil }
+      if needsBackdrop && backdropTarget == nil && !borrowsParentBackdrop {
+        if let acquired = target { pool.ReleaseForReuse(acquired) }
+        layerStates[layerDepth] = VulkanLayerRenderState{ Record: record }
+        layerDepth++
+        return
+      }
       pool.RecordLayerPass(uint64(record.ExtentWidth), uint64(record.ExtentHeight))
       var state = VulkanLayerRenderState{
         Record: record,
@@ -1013,6 +1033,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       guard let layerTarget = state.Target else {
         throw InvalidOperationException("Vulkan layer target is unavailable")
       }
+      if state.Target == state.BackdropTarget { state.BackdropTarget = nil }
       if backdropOnly {
         layerTarget.RetainedBackdrop = record
         layerTarget.RetainedBackdropSource = false
@@ -1061,6 +1082,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         || state.Record.OffscreenTargetId.Version != record.OffscreenTargetId.Version{
           throw InvalidOperationException("Vulkan layer record does not match layer stack")
         }
+      if bypassLayers || (!primitivePrepass && state.Target == nil) {
+        layerDepth--
+        return
+      }
       if !primitivePrepass {
         FlushPendingPrimitiveDraw(commandBuffer)
       }
@@ -1139,10 +1164,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     commandBuffer VkCommandBuffer,
     extent VkExtent2D,
     damage PrimitiveClip) {
-      guard let pool = layerPool else {
-        throw InvalidOperationException("Vulkan present encode requires a layer pool")
+      guard let pool = layerPool, let copy = pool.PresentTarget else {
+        throw InvalidOperationException("Vulkan present encode target was not reserved")
       }
-      let copy = pool.Acquire(extent.width, extent.height, completedLayerSerial)
       let endRendering = dispatch.vkCmdEndRendering
       endRendering(commandBuffer)
       copy.TransitionToTransferDestination(commandBuffer)

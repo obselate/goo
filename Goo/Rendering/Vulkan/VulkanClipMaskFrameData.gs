@@ -217,7 +217,8 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
     }
 
   internal func Prepare(frame SceneFrame, regions []VulkanClipMaskRegion,
-    regionCount int32, slotIndex int32, completedSubmissionSerial uint64) VulkanClipMaskFrameStats{
+    regionCount int32, slotIndex int32, completedSubmissionSerial uint64,
+    bypassLayers bool = false) VulkanClipMaskFrameStats{
       EnsureOpen()
       if frame == nil {
         throw ArgumentNullException("frame")
@@ -297,7 +298,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
         slot.InvalidateRetention()
         let words = *uint32(nint(slot.Buffers.Mapped))
         WriteWords(words, frame, regions, regionCount,
-          textChainTable, tableBaseWord)
+          textChainTable, tableBaseWord, bypassLayers)
         slot.Flush(byteCount)
       }
       UpdateDescriptors(slotIndex, byteCount)
@@ -519,7 +520,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
 
   private func WriteWords(words * uint32, frame SceneFrame,
     regions []VulkanClipMaskRegion, regionCount int32,
-    textChainTable bool, tableBaseWord uint64) {
+    textChainTable bool, tableBaseWord uint64, bypassLayers bool) {
       words[0] = uint32(frame.DrawRefCount)
       let maskBaseWord = if frame.ClipMaskCount == 0 {
         4uL
@@ -550,13 +551,13 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
           maskIndex++
         }
         words[base + 9] = 0u
-        let originX = if reference.Kind == SceneDrawKind.LayerEnd {
+        let originX = if !bypassLayers && reference.Kind == SceneDrawKind.LayerEnd {
           if layerDepth <= 0 {
             throw InvalidOperationException("Vulkan layer clip origin stack underflow")
           }
           if layerDepth > 1 { layerOriginsX[layerDepth - 2] } else { 0.0F }
         } else if layerDepth > 0 { layerOriginsX[layerDepth - 1] } else { 0.0F }
-        let originY = if reference.Kind == SceneDrawKind.LayerEnd {
+        let originY = if !bypassLayers && reference.Kind == SceneDrawKind.LayerEnd {
           if layerDepth <= 0 {
             throw InvalidOperationException("Vulkan layer clip origin stack underflow")
           }
@@ -596,7 +597,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
         if forceZero {
           words[base + 9] = 2u
         }
-        if reference.Kind == SceneDrawKind.LayerBegin {
+        if !bypassLayers && reference.Kind == SceneDrawKind.LayerBegin {
           if reference.Index < 0 || reference.Index >= frame.LayerCount
             || layerDepth >= MaxLayerDepth{
               throw InvalidOperationException("Vulkan layer clip origin stack is invalid")
@@ -605,7 +606,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
           layerOriginsX[layerDepth] = layer.OriginX
           layerOriginsY[layerDepth] = layer.OriginY
           layerDepth = layerDepth + 1
-        } else if reference.Kind == SceneDrawKind.LayerEnd {
+        } else if !bypassLayers && reference.Kind == SceneDrawKind.LayerEnd {
           if layerDepth <= 0 {
             throw InvalidOperationException("Vulkan layer clip origin stack underflow")
           }

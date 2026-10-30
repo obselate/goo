@@ -50,6 +50,7 @@ internal class VulkanDiagnosticEventIds {
     const LayerPressure uint64 = 332uL
     const LayerFailure uint64 = 333uL
     const LayerCommandReuse uint64 = 334uL
+    const ClipMaskPressure uint64 = 335uL
     const VulkanResult uint64 = 400uL
     const ValidationMessage uint64 = 401uL
     const FatalSnapshot uint64 = 402uL
@@ -102,6 +103,8 @@ internal data struct VulkanDiagnosticTraceRecord {
   var result int32
   var value0 uint64
   var value1 uint64
+  var requestedWidth uint32
+  var requestedHeight uint32
 }
 
 internal data struct VulkanDiagnosticResultRecord {
