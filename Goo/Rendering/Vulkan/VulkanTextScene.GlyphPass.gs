@@ -249,7 +249,7 @@ internal unsafe sealed partial class VulkanTextScene {
               var foregroundG float32
               var foregroundB float32
               var foregroundA float32
-              LinearForeground(color, pipelineKind, effectMode,
+              EncodedForeground(color, pipelineKind, effectMode,
                 out foregroundR, out foregroundG, out foregroundB,
                 out foregroundA)
               workspace.Records[recordIndex] = HbGpuTextInstanceRecord{

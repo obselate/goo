@@ -49,9 +49,9 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
       if targetExtent.width == 0u || targetExtent.height == 0u {
         throw ArgumentOutOfRangeException("targetExtent")
       }
-      if colorFormat != VkConstants.VK_FORMAT_R8G8B8A8_SRGB
-        && colorFormat != VkConstants.VK_FORMAT_B8G8R8A8_SRGB{
-          throw ArgumentException("Vulkan layer target requires an sRGB RGBA format", "colorFormat")
+      if colorFormat != VkConstants.VK_FORMAT_R8G8B8A8_UNORM
+        && colorFormat != VkConstants.VK_FORMAT_B8G8R8A8_UNORM{
+          throw ArgumentException("Vulkan layer target requires a UNORM RGBA format", "colorFormat")
         }
       if nativeDescriptorSet == 0uL || nativeSampler == 0uL {
         throw ArgumentException("Vulkan layer target descriptor is invalid")

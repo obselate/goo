@@ -120,7 +120,7 @@ internal partial class VulkanWindowTarget {
     if plan.ResourceByteSize > ReadbackBudgetBytes {
       throw InvalidOperationException("Vulkan production readback exceeds the byte budget")
     }
-    if !ReadbackFormatSupported(VkConstants.VK_FORMAT_R8G8B8A8_SRGB) {
+    if !ReadbackFormatSupported(VkConstants.VK_FORMAT_R8G8B8A8_UNORM) {
       throw NotSupportedException("Vulkan production readback format is unavailable")
     }
     guard let currentAllocator = memoryAllocator,
@@ -143,7 +143,7 @@ internal partial class VulkanWindowTarget {
         currentGeneration.Extent,
         plan.ByteSize,
         activeRuntime.GraphicsFamilyIndex,
-        VkConstants.VK_FORMAT_R8G8B8A8_SRGB,
+        VkConstants.VK_FORMAT_R8G8B8A8_UNORM,
         currentImages,
         activeRuntime.Generation,
         activeRuntime.MaxStorageBufferRange,

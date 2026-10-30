@@ -138,7 +138,7 @@ internal unsafe partial class VulkanWindowTarget {
         readbackBudgetExceededCount = readbackBudgetExceededCount + 1uL
         return WindowReadbackRequestStatus.BudgetExceeded
       }
-      if !ReadbackFormatSupported(VkConstants.VK_FORMAT_R8G8B8A8_SRGB) {
+      if !ReadbackFormatSupported(VkConstants.VK_FORMAT_R8G8B8A8_UNORM) {
         return WindowReadbackRequestStatus.Failed
       }
 
@@ -217,7 +217,7 @@ internal unsafe partial class VulkanWindowTarget {
             extent,
             requestedByteSize,
             activeRuntime.GraphicsFamilyIndex,
-            VkConstants.VK_FORMAT_R8G8B8A8_SRGB,
+            VkConstants.VK_FORMAT_R8G8B8A8_UNORM,
             currentImages,
             activeRuntime.Generation,
             activeRuntime.MaxStorageBufferRange,

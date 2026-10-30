@@ -234,9 +234,9 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       if nativePipelineCache == nil {
         throw ArgumentNullException("nativePipelineCache")
       }
-      if targetFormat != VkConstants.VK_FORMAT_R8G8B8A8_SRGB
-        && targetFormat != VkConstants.VK_FORMAT_B8G8R8A8_SRGB{
-          throw ArgumentException("Vulkan primitive pipeline requires an sRGB RGBA target", "targetFormat")
+      if targetFormat != VkConstants.VK_FORMAT_R8G8B8A8_UNORM
+        && targetFormat != VkConstants.VK_FORMAT_B8G8R8A8_UNORM{
+          throw ArgumentException("Vulkan primitive pipeline requires a UNORM RGBA target", "targetFormat")
         }
       if nativePipelineLayout == 0uL {
         throw ArgumentException("Vulkan primitive pipeline layout is null", "nativePipelineLayout")
@@ -689,10 +689,10 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
         if backdrop == nil { throw FileNotFoundException("Goo backdrop blur effect is missing") }
         let blur = ShaderEffect(ShaderEffectProgram(
           BoundedInput.ReadAll(backdrop, ShaderEffectProgram.MaximumProgramByteCount, "Shader effect program")))
-        PipelinesFor(VkConstants.VK_FORMAT_R8G8B8A8_SRGB).ResolveShaderEffectPipeline(blur)
-        PipelinesFor(VkConstants.VK_FORMAT_B8G8R8A8_SRGB).ResolveShaderEffectPipeline(blur)
-        PipelinesFor(VkConstants.VK_FORMAT_R8G8B8A8_SRGB).ResolveShaderEffectPipeline(BackdropBlurEffect.Shared)
-        PipelinesFor(VkConstants.VK_FORMAT_B8G8R8A8_SRGB).ResolveShaderEffectPipeline(BackdropBlurEffect.Shared)
+        PipelinesFor(VkConstants.VK_FORMAT_R8G8B8A8_UNORM).ResolveShaderEffectPipeline(blur)
+        PipelinesFor(VkConstants.VK_FORMAT_B8G8R8A8_UNORM).ResolveShaderEffectPipeline(blur)
+        PipelinesFor(VkConstants.VK_FORMAT_R8G8B8A8_UNORM).ResolveShaderEffectPipeline(BackdropBlurEffect.Shared)
+        PipelinesFor(VkConstants.VK_FORMAT_B8G8R8A8_UNORM).ResolveShaderEffectPipeline(BackdropBlurEffect.Shared)
       } catch (error Exception) {
         Dispose()
         throw error
@@ -702,12 +702,12 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
   internal func PipelinesFor(targetFormat VkFormat) VulkanSharedPrimitiveFormatState {
     EnsureOpen()
     var slot int32 = -1
-    if targetFormat == VkConstants.VK_FORMAT_R8G8B8A8_SRGB {
+    if targetFormat == VkConstants.VK_FORMAT_R8G8B8A8_UNORM {
       slot = 0
-    } else if targetFormat == VkConstants.VK_FORMAT_B8G8R8A8_SRGB {
+    } else if targetFormat == VkConstants.VK_FORMAT_B8G8R8A8_UNORM {
       slot = 1
     } else {
-      throw ArgumentException("Vulkan primitive pipeline requires an sRGB RGBA target", "targetFormat")
+      throw ArgumentException("Vulkan primitive pipeline requires a UNORM RGBA target", "targetFormat")
     }
     if let existing = formatStates[slot] {
       return existing

@@ -41,7 +41,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private let clipStack []PrimitiveClip
   private let layerStates []VulkanLayerRenderState
   private let layerClipSnapshots []PrimitiveClip
-  private let linearChannels []float32
   private var pipelineLayout VkPipelineLayout
   private var blendPipelineLayout VkPipelineLayout
   private var pathPipelineLayout VkPipelineLayout
@@ -157,9 +156,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if nativeDevice == nint(0) {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
-      if colorFormat != VkConstants.VK_FORMAT_R8G8B8A8_SRGB
-        && colorFormat != VkConstants.VK_FORMAT_B8G8R8A8_SRGB{
-          throw ArgumentException("Vulkan primitive renderer requires an sRGB RGBA target", "colorFormat")
+      if colorFormat != VkConstants.VK_FORMAT_R8G8B8A8_UNORM
+        && colorFormat != VkConstants.VK_FORMAT_B8G8R8A8_UNORM{
+          throw ArgumentException("Vulkan primitive renderer requires a UNORM RGBA target", "colorFormat")
         }
       if maxClipDepth <= 0 || maxClipDepth > Int32.MaxValue {
         throw ArgumentOutOfRangeException("maxClipDepth")
@@ -239,11 +238,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       this.clipStack = [maxClipDepth + 1]PrimitiveClip
       this.layerStates = [MaxLayerDepth]VulkanLayerRenderState
       this.layerClipSnapshots = [MaxLayerDepth * (maxClipDepth + 1)]PrimitiveClip
-      this.linearChannels = [256]float32
       this.primitiveRecordPlan = [1]uint32
       this.clipRegions = [64]VulkanClipMaskRegion
       this.clipContentKeys = Dictionary[uint64, uint64]()
-      BuildLinearChannelTable()
     }
 
   internal func SetLayerPool(value VulkanOffscreenLayerPool?) {
@@ -1484,17 +1481,5 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     Dispose()
   }
 
-  private func BuildLinearChannelTable() {
-    var index int32 = 0
-    while index < 256 {
-      let encoded = float32(index) / 255.0F
-      if encoded <= 0.04045F {
-        linearChannels[index] = encoded / 12.92F
-      } else {
-        linearChannels[index] = MathF.Pow((encoded + 0.055F) / 1.055F, 2.4F)
-      }
-      index = index + 1
-    }
-  }
 
 }

@@ -392,7 +392,7 @@ internal unsafe sealed partial class VulkanTextScene {
       }
     }
 
-  private func LinearForeground(
+  private func EncodedForeground(
     color uint32,
     pipelineKind uint32,
     effectMode uint32,
@@ -405,9 +405,9 @@ internal unsafe sealed partial class VulkanTextScene {
       let greenByte = (packed >> int32(16)) & int32(255)
       let blueByte = (packed >> int32(8)) & int32(255)
       alpha = float32(packed & int32(255)) / 255.0F
-      red = srgbToLinear[redByte]
-      green = srgbToLinear[greenByte]
-      blue = srgbToLinear[blueByte]
+      red = float32(redByte) / 255.0F
+      green = float32(greenByte) / 255.0F
+      blue = float32(blueByte) / 255.0F
       if pipelineKind == 0u || effectMode != TextEffectFill {
         red = red * alpha
         green = green * alpha

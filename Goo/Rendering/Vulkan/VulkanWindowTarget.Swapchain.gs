@@ -530,8 +530,8 @@ internal unsafe partial class VulkanWindowTarget {
     }
     var selectedFormat VkSurfaceFormatKHR = VkSurfaceFormatKHR{}
     fixed values * VkSurfaceFormatKHR = formats {
-      if !SelectSrgbFormat(values, formatCount, out selectedFormat) {
-        throw InvalidOperationException("Vulkan surface exposes no supported sRGB swapchain format")
+      if !SelectEncodedFormat(values, formatCount, out selectedFormat) {
+        throw InvalidOperationException("Vulkan surface exposes no supported UNORM swapchain format")
       }
     }
     var formatProperties = VkFormatProperties{}
@@ -619,7 +619,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
   }
 
-  private func SelectSrgbFormat(
+  private func SelectEncodedFormat(
     formats * VkSurfaceFormatKHR,
     count uint32,
     out selected VkSurfaceFormatKHR) bool{
@@ -631,13 +631,13 @@ internal unsafe partial class VulkanWindowTarget {
         if formats[0].colorSpace != VkConstants.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR {
           return false
         }
-        selected.format = VkConstants.VK_FORMAT_B8G8R8A8_SRGB
+        selected.format = VkConstants.VK_FORMAT_B8G8R8A8_UNORM
         selected.colorSpace = VkConstants.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
         return true
       }
       var index uint32 = 0u
       while index < count {
-        if formats[index].format == VkConstants.VK_FORMAT_B8G8R8A8_SRGB
+        if formats[index].format == VkConstants.VK_FORMAT_B8G8R8A8_UNORM
           && formats[index].colorSpace == VkConstants.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR{
             selected = formats[index]
             return true
@@ -646,7 +646,7 @@ internal unsafe partial class VulkanWindowTarget {
       }
       index = 0u
       while index < count {
-        if formats[index].format == VkConstants.VK_FORMAT_R8G8B8A8_SRGB
+        if formats[index].format == VkConstants.VK_FORMAT_R8G8B8A8_UNORM
           && formats[index].colorSpace == VkConstants.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR{
             selected = formats[index]
             return true

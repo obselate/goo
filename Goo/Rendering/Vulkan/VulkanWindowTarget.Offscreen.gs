@@ -121,7 +121,7 @@ internal unsafe partial class VulkanWindowTarget {
         var leaseTransferred bool
         try {
           target = VulkanOffscreenTarget(device, dispatch, queue, allocator, EnsureReadbackDispatch(),
-            extent, pixels * 4uL, active.GraphicsFamilyIndex, VkConstants.VK_FORMAT_R8G8B8A8_SRGB,
+            extent, pixels * 4uL, active.GraphicsFamilyIndex, VkConstants.VK_FORMAT_R8G8B8A8_UNORM,
             active.ImageResources, active.Generation, active.MaxStorageBufferRange, active.ResourcePolicy,
             active.PrimitiveState, active.PathResources.Atlas, active.PathResources, clips, atlases,
             objectAccounting, nil, nil, active.QueueWorker.CreateMailbox(nil), lease)

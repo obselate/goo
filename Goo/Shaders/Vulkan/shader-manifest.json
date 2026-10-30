@@ -317,8 +317,8 @@
       "output": "analytic_linear4.frag.spv",
       "entryPoint": "main",
       "sourceSha256": "7c73af823c486f620086842b754d265eafbfbfa3efc5f4330cdfc602120c2be5",
-      "outputSha256": "82b4bfe6a1323370869c135d2a5b0996f075127987a48903a960520f47eda7c8",
-      "outputBytes": 19608,
+      "outputSha256": "ddc5b3e3dde903bc30f884e0358e3d11a28ba6d5f5dc2b808975046b7fd35d90",
+      "outputBytes": 18976,
       "capabilities": [
         1
       ]
@@ -330,8 +330,8 @@
       "output": "analytic_radial4.frag.spv",
       "entryPoint": "main",
       "sourceSha256": "eebb41d1784e1a2068ca45c7c23d836425ba325777586f3f7ab73ebb7fbdf5b3",
-      "outputSha256": "689ecad256f50642a5aa09df85916ac01ca284b3604118d8f6b894a1b7cbd137",
-      "outputBytes": 19580,
+      "outputSha256": "c100b724636ef0bfa93cbf9ecbe5641ca778daae1213e6ca125cb0d1f149d3f1",
+      "outputBytes": 18948,
       "capabilities": [
         1
       ]
@@ -342,9 +342,9 @@
       "source": "analytic_sampled_image.frag.slang",
       "output": "analytic_sampled_image.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "11132b5357c96985407f7145f3f2b2ca068a5e0ba6313cfc7eb1de6c5d9c421c",
-      "outputSha256": "8ebe28bddd84a80ffae0d40fb8775d7409b99499d1bf33523f43e1b23c6c8a46",
-      "outputBytes": 7784,
+      "sourceSha256": "5df92340fcaf8f55b73c0d16bfc326d413290169208d93e8f34ed0d7e73c4cd4",
+      "outputSha256": "35670fc136f90e8df527f606726758537afd636be8b048509b11c025e340790c",
+      "outputBytes": 6836,
       "capabilities": [
         1
       ]
@@ -635,10 +635,10 @@
           ]
         }
       ],
-      "colorFormat": "swapchain-sRGB",
+      "colorFormat": "swapchain-UNORM-sRGB",
       "sampleCount": 1,
-      "blend": "source-over-premultiplied-linear",
-      "colorPacking": "rgb11-11-10-alpha10-premultiplied-linear",
+      "blend": "source-over-premultiplied-srgb",
+      "colorPacking": "rgb11-11-10-alpha10-premultiplied-srgb",
       "depthStencil": "disabled",
       "cullMode": "none",
       "frontFace": "counter-clockwise",
@@ -785,10 +785,10 @@
           ]
         }
       ],
-      "colorFormat": "swapchain-sRGB",
+      "colorFormat": "swapchain-UNORM-sRGB",
       "sampleCount": 1,
-      "blend": "source-over-premultiplied-linear",
-      "colorPacking": "rgb11-11-10-alpha10-premultiplied-linear",
+      "blend": "source-over-premultiplied-srgb",
+      "colorPacking": "rgb11-11-10-alpha10-premultiplied-srgb",
       "depthStencil": "disabled",
       "cullMode": "none",
       "frontFace": "counter-clockwise",
@@ -935,10 +935,10 @@
           ]
         }
       ],
-      "colorFormat": "swapchain-sRGB",
+      "colorFormat": "swapchain-UNORM-sRGB",
       "sampleCount": 1,
-      "blend": "source-over-premultiplied-linear",
-      "colorPacking": "rgb11-11-10-alpha10-premultiplied-linear",
+      "blend": "source-over-premultiplied-srgb",
+      "colorPacking": "rgb11-11-10-alpha10-premultiplied-srgb",
       "depthStencil": "disabled",
       "cullMode": "none",
       "frontFace": "counter-clockwise",
@@ -1085,10 +1085,10 @@
           ]
         }
       ],
-      "colorFormat": "swapchain-sRGB",
+      "colorFormat": "swapchain-UNORM-sRGB",
       "sampleCount": 1,
-      "blend": "source-over-premultiplied-linear",
-      "colorPacking": "rgb11-11-10-alpha10-premultiplied-linear",
+      "blend": "source-over-premultiplied-srgb",
+      "colorPacking": "rgb11-11-10-alpha10-premultiplied-srgb",
       "depthStencil": "disabled",
       "cullMode": "none",
       "frontFace": "counter-clockwise",
@@ -1235,10 +1235,10 @@
           ]
         }
       ],
-      "colorFormat": "swapchain-sRGB",
+      "colorFormat": "swapchain-UNORM-sRGB",
       "sampleCount": 1,
-      "blend": "source-over-premultiplied-linear",
-      "colorPacking": "rgb11-11-10-alpha10-premultiplied-linear",
+      "blend": "source-over-premultiplied-srgb",
+      "colorPacking": "rgb11-11-10-alpha10-premultiplied-srgb",
       "depthStencil": "disabled",
       "cullMode": "none",
       "frontFace": "counter-clockwise",
@@ -1394,10 +1394,10 @@
           ]
         }
       ],
-      "colorFormat": "swapchain-sRGB",
+      "colorFormat": "swapchain-UNORM-sRGB",
       "sampleCount": 1,
-      "blend": "source-over-premultiplied-linear",
-      "colorPacking": "straight-or-premultiplied-srgb-rgba8-sampled-to-premultiplied-linear",
+      "blend": "source-over-premultiplied-srgb",
+      "colorPacking": "straight-or-premultiplied-srgb-rgba8-sampled-to-premultiplied-srgb",
       "depthStencil": "disabled",
       "cullMode": "none",
       "frontFace": "counter-clockwise",
@@ -1562,10 +1562,10 @@
           ]
         }
       ],
-      "colorFormat": "swapchain-sRGB",
+      "colorFormat": "swapchain-UNORM-sRGB",
       "sampleCount": 1,
-      "blend": "source-over-premultiplied-linear",
-      "colorPacking": "premultiplied-linear-source-over-css-blend",
+      "blend": "source-over-premultiplied-srgb",
+      "colorPacking": "premultiplied-srgb-source-over-css-blend",
       "depthStencil": "disabled",
       "cullMode": "none",
       "frontFace": "counter-clockwise",
@@ -1690,10 +1690,10 @@
           ]
         }
       ],
-      "colorFormat": "swapchain-sRGB",
+      "colorFormat": "swapchain-UNORM-sRGB",
       "sampleCount": 1,
-      "blend": "source-over-premultiplied-linear",
-      "colorPacking": "path-band-premultiplied-linear",
+      "blend": "source-over-premultiplied-srgb",
+      "colorPacking": "path-band-premultiplied-srgb",
       "depthStencil": "disabled",
       "cullMode": "none",
       "frontFace": "counter-clockwise",
@@ -1840,10 +1840,10 @@
           ]
         }
       ],
-      "colorFormat": "swapchain-sRGB",
+      "colorFormat": "swapchain-UNORM-sRGB",
       "sampleCount": 1,
-      "blend": "source-over-premultiplied-linear",
-      "colorPacking": "hb-gpu-premultiplied-linear-foreground",
+      "blend": "source-over-premultiplied-srgb",
+      "colorPacking": "hb-gpu-premultiplied-srgb-foreground",
       "depthStencil": "disabled",
       "cullMode": "none",
       "frontFace": "counter-clockwise",
@@ -1990,10 +1990,10 @@
           ]
         }
       ],
-      "colorFormat": "swapchain-sRGB",
+      "colorFormat": "swapchain-UNORM-sRGB",
       "sampleCount": 1,
-      "blend": "source-over-premultiplied-linear",
-      "colorPacking": "hb-gpu-premultiplied-linear-foreground",
+      "blend": "source-over-premultiplied-srgb",
+      "colorPacking": "hb-gpu-premultiplied-srgb-foreground",
       "depthStencil": "disabled",
       "cullMode": "none",
       "frontFace": "counter-clockwise",
@@ -2237,10 +2237,10 @@
           ]
         }
       ],
-      "colorFormat": "swapchain-sRGB",
+      "colorFormat": "swapchain-UNORM-sRGB",
       "sampleCount": 1,
-      "blend": "source-over-premultiplied-linear",
-      "colorPacking": "path-band-premultiplied-linear",
+      "blend": "source-over-premultiplied-srgb",
+      "colorPacking": "path-band-premultiplied-srgb",
       "depthStencil": "disabled",
       "cullMode": "none",
       "frontFace": "counter-clockwise",

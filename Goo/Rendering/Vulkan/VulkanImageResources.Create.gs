@@ -182,7 +182,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         allocator,
         objectAccounting,
         VkExtent2D{ width: width, height: height },
-        VkConstants.VK_FORMAT_R8G8B8A8_SRGB,
+        VkConstants.VK_FORMAT_R8G8B8A8_UNORM,
         uint32(VkConstants.VK_IMAGE_USAGE_TRANSFER_DST_BIT)
         | uint32(VkConstants.VK_IMAGE_USAGE_SAMPLED_BIT),
         uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT),

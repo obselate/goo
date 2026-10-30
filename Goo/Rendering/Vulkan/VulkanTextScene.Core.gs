@@ -18,7 +18,6 @@ internal unsafe sealed partial class VulkanTextScene {
   private let buildWorkspace VulkanTextSegmentBuildWorkspace
   private let effectGlyphWorkspace VulkanTextProviderWorkspace
   private let entryMetrics TextMetrics
-  private let srgbToLinear []float32
   private let activeAtlasUse []bool
   private let nodeSegments ConditionalWeakTable[Node, VulkanTextNodeSegmentCache]
   private let gutterSegments ConditionalWeakTable[Node, VulkanTextNodeSegmentCache]
@@ -77,17 +76,6 @@ internal unsafe sealed partial class VulkanTextScene {
     effectGlyphWorkspace = VulkanTextProviderWorkspace([int32(atlasBytes)]uint8)
     buildWorkspace = VulkanTextSegmentBuildWorkspace(4)
     entryMetrics = TextMetrics()
-    srgbToLinear = [256]float32
-    var srgbIndex int32 = 0
-    while srgbIndex < srgbToLinear.Length {
-      let value = float32(srgbIndex) / 255.0F
-      srgbToLinear[srgbIndex] = if value <= 0.04045F {
-        value / 12.92F
-      } else {
-        MathF.Pow((value + 0.055F) / 1.055F, 2.4F)
-      }
-      srgbIndex = srgbIndex + 1
-    }
     EnsureAtlasStates()
   }
 
