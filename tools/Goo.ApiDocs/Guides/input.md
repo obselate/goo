@@ -50,26 +50,31 @@ It excludes the current handler itself; unrouted hover notifications report fals
 
 ## Route keyboard and focus callbacks
 
-Primitives have no automatic keyboard bindings, including editing, submit, button activation, or focus traversal. Assign `KeyBindings` on a primitive or ancestor just like other UI properties. Native text and IME input still insert text independently of physical keys.
+TextEntry and TextEditor have built-in editing keys. No binding setup is needed. Tab and Shift+Tab move focus, except in an editable multiline editor, where they indent and outdent. Enter submits a single-line entry and inserts a newline in an editable multiline editor. Button activation still needs an explicit binding.
 
 ```gsharp
 controller.UseTabs = false
 controller.IndentWidth = 2
 controller.TabWidth = 8
 
-TextEditor(controller) {
-  KeyBindings: []KeyBinding{
-    KeyBinding{ Key: Key.Tab,
-      Action: () -> { controller.Execute(TextCommand{ Kind: TextCommandKind.InsertTab }) } },
-    KeyBinding{ Key: Key.Tab, Modifiers: KeyModifiers{ Shift: true },
-      Action: () -> { controller.Execute(TextCommand{ Kind: TextCommandKind.Outdent }) } },
-    KeyBinding{ Key: Key.Left, Repeat: true,
-      Action: () -> { controller.Execute(TextCommand{ Kind: TextCommandKind.MoveLeft }) } },
-  },
-}
+TextEditor(controller)
 ```
 
 Keys match physical `Key` values and exact `Modifiers`. Omitted modifiers mean none. The first matching binding on the nearest element wins. `Action` runs on press. `OnRelease` is paired with that press and runs only if the original target still owns focus, even if modifiers were released first. Changing focus, disabling, or removing the target cancels the pending release. `Repeat: true` repeats the action after 400 ms and then at 30 Hz while focus remains on the original target. It works on any focusable primitive and any key.
+
+Key press precedence is:
+
+1. Routed `OnKeyDown` handlers, from the focused node up to the root.
+2. `KeyBindings` on the focused node.
+3. Built-in text editing for a focused TextEntry or TextEditor.
+4. `KeyBindings` on ancestors.
+5. Built-in Tab and Shift+Tab focus traversal.
+
+Any routed `OnKeyDown` handler, including an ancestor's handler, can call `PreventDefault()` to block bindings and built-in defaults. A root handler for app navigation keys must skip events while a text field has focus. Check `window.PlatformInput.Selection != nil`.
+
+An app-root Ctrl+A binding does not replace Select All in a focused text field. Override a field with its own binding or `OnKeyDown`. Existing app-root editing bindings do not run twice.
+
+Movement and deletion repeat. Clipboard, history, submit, Tab, and Escape do not. Shift extends movement selection. Ctrl is the primary and word modifier on Windows and Linux. On macOS, Command is primary and Option moves or deletes words. Primary+A/C/X/V/Z selects all, copies, cuts, pastes, and undoes. Primary+Shift+Z and Ctrl+Y redo. Escape cancels a drag, then composition, then a single-line edit.
 
 Share an application action with `Command(execute, canExecute)`. Assign the same
 instance to `Button.Command`, `KeyBinding.Command`, or call `Execute()` from a
@@ -83,7 +88,7 @@ accessibility state update. Invocation checks availability even before that
 rebuild. No shortcut is installed by assigning a command. Text operations still
 use `TextCommand` through `PlatformInput.Execute` or a text editor controller.
 
-`OnKeyDown` and `OnKeyUp` first bubble from the focused element through its parents. With no focused element they start at the root, so a root Tab binding can acquire initial focus. The matching binding runs after these callbacks. `KeyEvent.StopPropagation()` limits both callbacks and binding lookup to the visited elements. `KeyEvent.PreventDefault()` skips assigned bindings and suppresses direct committed text from that key without stopping callbacks. A handled binding also suppresses its direct committed text. Preedit and IME commits remain text input. `KeyEvent.IsComposing` reports active preedit so callbacks can leave its keys to the IME; bindings are skipped while preedit is active. Both controls expire after dispatch. Repeated callbacks report `Repeat: true`.
+`OnKeyDown` and `OnKeyUp` first bubble from the focused element through its parents. With no focused element they start at the root. Bindings and built-in defaults run after these callbacks. `KeyEvent.StopPropagation()` limits callbacks and binding lookup to the visited elements. `KeyEvent.PreventDefault()` skips bindings and built-in defaults and suppresses direct committed text from that key without stopping callbacks. A handled binding or default also suppresses its direct committed text. Preedit and IME commits remain text input. `KeyEvent.IsComposing` reports active preedit so callbacks can leave its keys to the IME. Bindings and defaults are skipped during preedit, except Escape can cancel it. Both controls expire after dispatch. Repeated callbacks report `Repeat: true`.
 
 Pointer, keyboard, text, and native focus changes share an ordered ingress queue.
 Input injected from an input callback runs after the current event finishes.
@@ -100,7 +105,7 @@ They work through `PlatformInput.Execute` for either text primitive and through
 `TextEditorController.Execute` for an editor. `ExtendSelection` preserves the anchor.
 Mouse selection uses the same core operations.
 
-For an editor's Tab policy, bind `InsertTab` to Tab and `Outdent` to Shift+Tab.
+An editable editor uses `InsertTab` for Tab and `Outdent` for Shift+Tab.
 `UseTabs` selects literal tabs or spaces. `IndentWidth` sets the space indentation
 level and its insertion stops. `TabWidth` sets displayed tab stops without changing
 document text. All three settings are per controller. Their defaults preserve
@@ -111,11 +116,9 @@ next indentation stop. With a selection, `InsertTab` and `Indent` add one level 
 every affected logical line. `Outdent` removes leading mixed tab and space
 indentation through one indentation stop. A selected range ending at the next
 line's start excludes that next line. Each action is one undo step. Source tabs
-remain one character for selection, clipboard, caret, and hit testing. No Tab
-binding is installed automatically. The sample applications assign this policy
-explicitly and use focus traversal for single-line and read-only controls.
+remain one character for selection, clipboard, caret, and hit testing. Single-line and read-only controls use focus traversal.
 
-Bind `window.PlatformInput.MoveFocus(true)` and `MoveFocus(false)` explicitly for forward and backward traversal. For buttons, `ElementHandle.Activate()` performs a click. To show a held press and activate on release, bind `Action: () -> { handle.BeginPress() }` and `OnRelease: () -> { handle.EndPress(true) }`. `EndPress(false)` cancels the press. Focus loss, removal, and a canceled or failing key release clear the pressed state.
+Call `window.PlatformInput.MoveFocus(true)` or `MoveFocus(false)` for explicit forward or backward traversal. For buttons, `ElementHandle.Activate()` performs a click. To show a held press and activate on release, bind `Action: () -> { handle.BeginPress() }` and `OnRelease: () -> { handle.EndPress(true) }`. `EndPress(false)` cancels the press. Focus loss, removal, and a canceled or failing key release clear the pressed state.
 
 A focus transfer updates the old and new `Focused` states first, then routes `OnBlur` from the old element to its parents and `OnFocus` from the new element to its parents. These lifecycle callbacks cannot cancel the transfer. `FocusEvent.StopPropagation()` only skips the remaining ancestors. A reentrant focus request from `OnBlur` or `OnFocus` wins over the superseded transfer.
 
@@ -128,9 +131,8 @@ for example from `MetricsChanged`, and dispose the returned `FocusScope` when an
 overlay closes. The visible, enabled root must be focusable. On the next stable
 input/tree update, Goo uses the eligible `InitialFocus` handle, an `AutoFocus`
 descendant, the first descendant tab stop, or the root when no child accepts
-focus. Explicit `MoveFocus` bindings wrap within the top scope and skip the scope
-root unless it is the fallback. Bind `InsertTab` and `Outdent` explicitly when an
-editor should handle Tab itself.
+focus. Tab and explicit `MoveFocus` calls wrap within the top scope and skip the scope
+root unless it is the fallback. Editable multiline editors keep Tab for indentation.
 
 `Modal: true` blocks input and accessibility outside the latest modal scope and
 any nonmodal scopes opened after it. This lets menus and submenus remain usable

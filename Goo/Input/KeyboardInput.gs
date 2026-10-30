@@ -114,7 +114,7 @@ internal class KeyboardInput {
       }
       pointer.UpdateDragModifiers(root, e.Modifiers)
       let target = focus.FocusedNode() ?? root
-      let dispatch = DispatchKeyDown(target, e.Key, e.Modifiers, false)
+      let dispatch = DispatchKeyDown(target, e.Key, e.Modifiers, false, root, resolver, text, pointer)
       if !compositionActive && dispatch.SuppressTextInput { suppressedTextKey = e.Key }
       if dispatch.Repeat && focus.FocusedNode() == target {
         StartKeyRepeat(e.Key, e.Modifiers, repeatStartTicks)
@@ -124,7 +124,8 @@ internal class KeyboardInput {
     if e.Kind == KeyboardEventKind.Release {
       try {
         pointer.UpdateDragModifiers(root, e.Modifiers)
-        return DispatchKeyUp(focus.FocusedNode() ?? root, e.Key, e.Modifiers).Handled
+        return dispatchKey(focus.FocusedNode() ?? root, e.Key, e.Modifiers, false, false,
+          root, resolver, text, pointer).Handled
       } finally {
         if e.Key == suppressedTextKey { suppressedTextKey = Key.Unknown }
         if e.Key == pressedKey { EndPress(root, resolver, pressedButton, false) }
@@ -160,7 +161,8 @@ internal class KeyboardInput {
     return false
   }
 
-  internal func Step(dt float64, nowTicks int64) bool {
+  internal func Step(dt float64, nowTicks int64, root Node?, resolver Resolver,
+    text TextInput, pointer PointerInput) bool {
     if let target = heldTarget {
       if target != focus.FocusedNode() || heldFocusGeneration != focus.Generation || !canReceiveInput(target) {
         resetRepeat()
@@ -181,7 +183,7 @@ internal class KeyboardInput {
       }
       nextRepeatTicks = nowTicks + repeatIntervalTicks()
       try {
-        return HandleRepeatedKey()
+        return HandleRepeatedKey(root, resolver, text, pointer)
       } catch (error Exception) {
         resetRepeat()
         throw error
@@ -192,7 +194,7 @@ internal class KeyboardInput {
     if heldT >= 0.4 {
       heldT = 0.4 - 1.0 / 30.0
       try {
-        changed = HandleRepeatedKey()
+        changed = HandleRepeatedKey(root, resolver, text, pointer)
       } catch (error Exception) {
         resetRepeat()
         throw error
@@ -292,19 +294,18 @@ internal class KeyboardInput {
     skipRepeatStep = false
   }
 
-  private func HandleRepeatedKey() bool {
-    let dispatch = DispatchKeyDown(heldTarget, heldKey, heldModifiers, true)
+  private func HandleRepeatedKey(root Node?, resolver Resolver, text TextInput, pointer PointerInput) bool {
+    let dispatch = DispatchKeyDown(heldTarget, heldKey, heldModifiers, true, root, resolver, text, pointer)
     if !dispatch.Repeat { resetRepeat() }
     return dispatch.Handled
   }
 
-  private func DispatchKeyDown(target Node?, key Key, modifiers KeyModifiers, repeat bool)
-  KeyboardDispatchResult -> dispatchKey(target, key, modifiers, repeat, true)
-
-  private func DispatchKeyUp(target Node?, key Key, modifiers KeyModifiers) KeyboardDispatchResult -> dispatchKey(target, key, modifiers, false, false)
+  private func DispatchKeyDown(target Node?, key Key, modifiers KeyModifiers, repeat bool,
+    root Node?, resolver Resolver, text TextInput, pointer PointerInput) KeyboardDispatchResult ->
+    dispatchKey(target, key, modifiers, repeat, true, root, resolver, text, pointer)
 
   private func dispatchKey(target Node?, key Key, modifiers KeyModifiers, repeat bool,
-    down bool) KeyboardDispatchResult{
+    down bool, root Node?, resolver Resolver, text TextInput, pointer PointerInput) KeyboardDispatchResult{
       var result KeyboardDispatchResult
       guard let start = target else { return result }
       if !canReceiveInput(start) {
@@ -340,7 +341,7 @@ internal class KeyboardInput {
         if focusGeneration != focus.Generation || !canReceiveInput(start) {
           return result
         }
-        if down && compositionActive { return result }
+        if down && compositionActive && key != Key.Escape { return result }
         current = start
         while current != nil {
           let node = current
@@ -379,9 +380,19 @@ internal class KeyboardInput {
                 return result
               }
             }
+            if node == start && start == focus.FocusedNode()
+              && (start.Kind == NodeKind.Entry || start.Kind == NodeKind.Editor) {
+                result = dispatchTextDefault(start, key, modifiers, repeat, root, resolver, text, pointer)
+                if result.Handled { return result }
+              }
           }
           if node == last { break }
           current = node.Parent
+        }
+        if down && key == Key.Tab && !modifiers.Ctrl && !modifiers.Alt && !modifiers.Super {
+          result.Handled = true
+          result.SuppressTextInput = true
+          if !repeat { focus.MoveFocus(root, resolver, !modifiers.Shift) }
         }
         return result
       } finally {
@@ -389,6 +400,97 @@ internal class KeyboardInput {
         dispatchingKey = previousKey
       }
     }
+
+  private func dispatchTextDefault(target Node, key Key, modifiers KeyModifiers, repeat bool,
+    root Node?, resolver Resolver, text TextInput, pointer PointerInput) KeyboardDispatchResult {
+    var result KeyboardDispatchResult
+    let plain = !modifiers.Ctrl && !modifiers.Alt && !modifiers.Super
+    let primary = InputPolicy.Mac
+      ? modifiers.Super && !modifiers.Ctrl && !modifiers.Alt
+      : modifiers.Ctrl && !modifiers.Super && !modifiers.Alt
+    let word = InputPolicy.Mac
+      ? modifiers.Alt && !modifiers.Ctrl && !modifiers.Super : primary
+    var kind TextCommandKind?
+    if plain {
+      kind = switch key {
+        case Key.Left: TextCommandKind.MoveLeft
+        case Key.Right: TextCommandKind.MoveRight
+        case Key.Up: TextCommandKind.MoveUp
+        case Key.Down: TextCommandKind.MoveDown
+        case Key.PageUp: TextCommandKind.PageUp
+        case Key.PageDown: TextCommandKind.PageDown
+        case Key.Home: TextCommandKind.MoveLineStart
+        case Key.End: TextCommandKind.MoveLineEnd
+        case Key.Backspace: TextCommandKind.DeleteBackward
+        case Key.Delete: TextCommandKind.DeleteForward
+        case _: nil
+      }
+      if key == Key.Tab {
+        result.Handled = true
+        result.SuppressTextInput = true
+        if !repeat {
+          if target.Kind == NodeKind.Editor && !target.EditorReadOnly {
+            text.ExecuteEditorCommand(root, resolver, TextCommand{
+              Kind: modifiers.Shift ? TextCommandKind.Outdent : TextCommandKind.InsertTab })
+          } else { focus.MoveFocus(root, resolver, !modifiers.Shift) }
+        }
+        return result
+      }
+      if key == Key.Enter || key == Key.KeypadEnter {
+        kind = target.Kind == NodeKind.Editor && !target.EditorReadOnly
+          ? TextCommandKind.Insert : TextCommandKind.Submit
+      }
+      if key == Key.Escape && !modifiers.Shift {
+        result.Handled = true
+        result.SuppressTextInput = true
+        if !repeat && !pointer.CancelDrag(root) && !text.HandleCompositionCancel(root) {
+          text.ExecuteEditorCommand(root, resolver, TextCommand{ Kind: TextCommandKind.CancelEdit })
+        }
+        compositionActive = false
+        compositionCommitPending = false
+        return result
+      }
+    }
+    if primary {
+      kind = switch key {
+        case Key.Home: TextCommandKind.MoveDocumentStart
+        case Key.End: TextCommandKind.MoveDocumentEnd
+        case Key.A: TextCommandKind.SelectAll
+        case Key.C: TextCommandKind.Copy
+        case Key.X: TextCommandKind.Cut
+        case Key.V: TextCommandKind.Paste
+        case Key.Z: modifiers.Shift ? TextCommandKind.Redo : TextCommandKind.Undo
+        case _: kind
+      }
+    }
+    if word {
+      kind = switch key {
+        case Key.Left: TextCommandKind.MoveWordLeft
+        case Key.Right: TextCommandKind.MoveWordRight
+        case Key.Backspace: TextCommandKind.DeleteWordBackward
+        case Key.Delete: TextCommandKind.DeleteWordForward
+        case _: kind
+      }
+    }
+    if key == Key.Y && modifiers == KeyModifiers{ Ctrl: true } { kind = TextCommandKind.Redo }
+    guard let command = kind else { return result }
+    result.Handled = true
+    result.SuppressTextInput = true
+    result.Repeat = command == TextCommandKind.MoveLeft || command == TextCommandKind.MoveRight
+      || command == TextCommandKind.MoveUp || command == TextCommandKind.MoveDown
+      || command == TextCommandKind.PageUp || command == TextCommandKind.PageDown
+      || command == TextCommandKind.MoveLineStart || command == TextCommandKind.MoveLineEnd
+      || command == TextCommandKind.MoveDocumentStart || command == TextCommandKind.MoveDocumentEnd
+      || command == TextCommandKind.MoveWordLeft || command == TextCommandKind.MoveWordRight
+      || command == TextCommandKind.DeleteBackward || command == TextCommandKind.DeleteForward
+      || command == TextCommandKind.DeleteWordBackward || command == TextCommandKind.DeleteWordForward
+    if !repeat || result.Repeat {
+      text.ExecuteEditorCommand(root, resolver, command == TextCommandKind.Insert
+        ? TextCommand{ Kind: command, Text: "\n" }
+        : TextCommand{ Kind: command, ExtendSelection: modifiers.Shift })
+    }
+    return result
+  }
 
   private func firstRepeatDelayTicks() int64 -> int64(Math.Ceiling(0.4 * float64(Stopwatch.Frequency)))
 

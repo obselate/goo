@@ -20,10 +20,6 @@ class ExplicitKeyBindingTests {
             Assert.True(handle.Focus())
             let input = window.PlatformInput
             input.CommitText("a")
-            input.KeyPress(Key.Enter, default(KeyModifiers))
-            input.KeyRelease(Key.Enter)
-            input.KeyPress(Key.Enter, KeyModifiers{Shift: true})
-            input.KeyRelease(Key.Enter)
             Assert.Equal("a", controller.Document.GetText())
             let seen = List[TextCommandKind]()
             controller.OnCommand = (e TextCommandEvent) -> seen.Add(e.Command.Kind)
@@ -205,7 +201,7 @@ class ExplicitKeyBindingTests {
     }
 
     @Fact
-    func PrimitivesRequireBindingsAndEntryCancelRestoresTheFocusValue() {
+    func TextEditingIsBuiltInAndButtonActivationRequiresBindings() {
         let entry = ElementHandle()
         let button = ElementHandle()
         var value = "original"
@@ -241,10 +237,13 @@ class ExplicitKeyBindingTests {
                 input.KeyPress(key, default(KeyModifiers))
                 input.KeyRelease(key)
             }
-            Assert.Equal("originalX", value)
-            Assert.Equal(0, submissions)
-            Assert.NotNull(input.Editor)
-            Assert.True(input.Execute(TextCommand{Kind: TextCommandKind.CancelEdit}))
+            Assert.Equal("original", value)
+            Assert.Equal(1, submissions)
+            Assert.Null(input.Editor)
+            Assert.True(entry.Focus())
+            input.CommitText("X")
+            input.KeyPress(Key.Escape, default(KeyModifiers))
+            input.KeyRelease(Key.Escape)
             Assert.Equal("original", value)
             Assert.Null(input.Editor)
             Assert.True(button.Focus())
@@ -681,6 +680,338 @@ class ExplicitKeyBindingTests {
         } finally {
             window.Close()
         }
+    }
+
+    @Theory
+    @InlineData(false, false, false)
+    @InlineData(false, true, false)
+    @InlineData(true, false, false)
+    @InlineData(true, true, false)
+    @InlineData(false, false, true)
+    @InlineData(false, true, true)
+    @InlineData(true, false, true)
+    @InlineData(true, true, true)
+    func DefaultEditingKeysPrecedeRootBindings(editor bool, legacyBindings bool, mac bool) {
+        let saved = InputPolicy.Mac
+        InputPolicy.Mac = mac
+        using let controller = TextEditorController(TextDocument("abcd"))
+        let field = ElementHandle()
+        let button = ElementHandle()
+        var value = "abcd"
+        var submissions = 0
+        var rootActions = 0
+        var window Window?
+        let primary = KeyModifiers{Ctrl: !mac, Super: mac}
+        let primaryShift = KeyModifiers{Ctrl: !mac, Super: mac, Shift: true}
+        window = Window{
+            Width: 320,
+            Height: 160,
+            Root: ExplicitKeyBindingTests.BuildCell(
+                () -> Container{
+                    KeyBindings: if legacyBindings {
+                        ExplicitKeyBindingTests.EditingBindings(window!!.PlatformInput, () -> rootActions++)
+                    } else {
+                        []KeyBinding{KeyBinding{Key: Key.A, Modifiers: primary, Action: () -> rootActions++}}
+                    },
+                    Children: []Blob{
+                        if editor {
+                            cast[Blob](TextEditor(controller){Handle = field, Height = 60})
+                        } else {
+                            cast[Blob](TextEntry{
+                                Handle: field,
+                                Value: value,
+                                Height: 30,
+                                OnChange: (next string) -> { value = next },
+                                OnSubmit: (_ string) -> submissions++
+                            })
+                        },
+                        Button{Handle: button, Height: 30}
+                    }
+                }
+            )
+        }
+        try {
+            window.UpdateTree()
+            Assert.True(field.Focus())
+            let input = window.PlatformInput
+            input.SetSelection(4, 4)
+            ExplicitKeyBindingTests.Press(input, Key.Backspace)
+            Assert.Equal("abc", input.Editor!!.Text)
+            ExplicitKeyBindingTests.Press(input, Key.Home)
+            ExplicitKeyBindingTests.Press(input, Key.Delete)
+            Assert.Equal("bc", input.Editor!!.Text)
+            ExplicitKeyBindingTests.Press(input, Key.Right)
+            Assert.Equal(1, input.Editor!!.SelectionEnd)
+            ExplicitKeyBindingTests.Press(input, Key.Right, KeyModifiers{Shift: true})
+            Assert.Equal(1, input.Editor!!.SelectionStart)
+            Assert.Equal(2, input.Editor!!.SelectionEnd)
+            ExplicitKeyBindingTests.Press(input, Key.Left)
+            Assert.Equal(1, input.Editor!!.SelectionEnd)
+            ExplicitKeyBindingTests.Press(input, Key.A, primary)
+            Assert.Equal(0, input.Editor!!.SelectionStart)
+            Assert.Equal(2, input.Editor!!.SelectionEnd)
+            ExplicitKeyBindingTests.Press(input, Key.C, primary)
+            ExplicitKeyBindingTests.Press(input, Key.End)
+            ExplicitKeyBindingTests.Press(input, Key.V, primary)
+            Assert.Equal("bcbc", input.Editor!!.Text)
+            ExplicitKeyBindingTests.Press(input, Key.Z, primary)
+            Assert.Equal("bc", input.Editor!!.Text)
+            ExplicitKeyBindingTests.Press(input, Key.Z, primaryShift)
+            Assert.Equal("bcbc", input.Editor!!.Text)
+            ExplicitKeyBindingTests.Press(input, Key.A, primary)
+            ExplicitKeyBindingTests.Press(input, Key.X, primary)
+            Assert.Equal("", input.Editor!!.Text)
+            ExplicitKeyBindingTests.Press(input, Key.Z, primary)
+            Assert.Equal("bcbc", input.Editor!!.Text)
+            ExplicitKeyBindingTests.Press(input, Key.Y, KeyModifiers{Ctrl: true})
+            Assert.Equal("", input.Editor!!.Text)
+            ExplicitKeyBindingTests.Press(input, Key.V, primary)
+            ExplicitKeyBindingTests.Press(input, Key.Enter)
+            Assert.Equal(editor ? "bcbc\n" : "bcbc", input.Editor!!.Text)
+            Assert.Equal(editor ? 0 : 1, submissions)
+            ExplicitKeyBindingTests.Press(input, Key.KeypadEnter, KeyModifiers{Shift: true})
+            Assert.Equal(editor ? "bcbc\n\n" : "bcbc", input.Editor!!.Text)
+            Assert.Equal(editor ? 0 : 2, submissions)
+            ExplicitKeyBindingTests.Press(input, Key.Tab)
+            if editor {
+                Assert.Equal("bcbc\n\n\t", input.Editor!!.Text)
+                ExplicitKeyBindingTests.Press(input, Key.Tab, KeyModifiers{Shift: true})
+                Assert.Equal("bcbc\n\n", input.Editor!!.Text)
+            } else {
+                Assert.Null(input.Editor)
+                Assert.True(button.AttachedNode()!!.Focused)
+                ExplicitKeyBindingTests.Press(input, Key.Tab, KeyModifiers{Shift: true})
+                Assert.NotNull(input.Editor)
+            }
+            let before = input.Editor!!.Text
+            window.InputForTest.QueueComposition("preedit", 0, 0)
+            input.KeyRelease(Key.Unknown)
+            Assert.True(input.Editor!!.CompositionStart >= 0)
+            ExplicitKeyBindingTests.Press(input, Key.Escape)
+            Assert.Equal(before, input.Editor!!.Text)
+            Assert.Equal(-1, input.Editor!!.CompositionStart)
+            ExplicitKeyBindingTests.Press(input, Key.Escape)
+            if editor {
+                Assert.Equal(before, input.Editor!!.Text)
+            } else {
+                Assert.Equal(before, value)
+                Assert.Null(input.Editor)
+            }
+            Assert.Equal(legacyBindings && !editor ? 1 : 0, rootActions)
+            rootActions = 0
+            Assert.True(button.Focus())
+            ExplicitKeyBindingTests.Press(input, Key.A, primary)
+            Assert.Equal(1, rootActions)
+            input.ClearFocus()
+            ExplicitKeyBindingTests.Press(input, Key.Tab)
+            Assert.True(field.AttachedNode()!!.Focused)
+        } finally {
+            window.Close()
+            InputPolicy.Mac = saved
+        }
+    }
+
+    @Fact
+    func FieldBindingsAndPreventDefaultOverrideEditingAndOnlyEditingMotionRepeats() {
+        let field = ElementHandle()
+        var value = "abcd"
+        var overrideCalls = 0
+        var prevent = true
+        let primary = KeyModifiers{Ctrl: !InputPolicy.Mac, Super: InputPolicy.Mac}
+        let window = Window{
+            Width: 320,
+            Height: 120,
+            Root: ExplicitKeyBindingTests.BuildCell(
+                () -> TextEntry{
+                    Handle: field,
+                    Value: value,
+                    OnChange: (next string) -> { value = next },
+                    OnKeyDown: (e KeyEvent) -> {
+                        if prevent { e.PreventDefault() }
+                    },
+                    KeyBindings: []KeyBinding{
+                        KeyBinding{Key: Key.A, Modifiers: primary, Action: () -> overrideCalls++}
+                    }
+                }
+            )
+        }
+        try {
+            window.UpdateTree()
+            Assert.True(field.Focus())
+            let input = window.PlatformInput
+            input.SetSelection(4, 4)
+            ExplicitKeyBindingTests.Press(input, Key.Backspace)
+            ExplicitKeyBindingTests.Press(input, Key.A, primary)
+            Assert.Equal("abcd", value)
+            Assert.Equal(0, overrideCalls)
+            prevent = false
+            ExplicitKeyBindingTests.Press(input, Key.A, primary)
+            Assert.Equal(1, overrideCalls)
+            Assert.Equal(4, input.Editor!!.SelectionStart)
+            input.KeyPress(Key.Backspace, default(KeyModifiers))
+            window.InputForTest.Step(window.Tree, Resolver(), 0.5)
+            Assert.Equal("ab", value)
+            input.KeyRelease(Key.Backspace)
+            input.KeyPress(Key.Left, default(KeyModifiers))
+            window.InputForTest.Step(window.Tree, Resolver(), 0.5)
+            Assert.Equal(0, input.Editor!!.SelectionEnd)
+            input.KeyRelease(Key.Left)
+            input.KeyPress(Key.Delete, default(KeyModifiers))
+            window.InputForTest.Step(window.Tree, Resolver(), 0.5)
+            Assert.Equal("", value)
+            input.KeyRelease(Key.Delete)
+            window.InputForTest.SetClipboardFallback("x")
+            input.KeyPress(Key.V, primary)
+            window.InputForTest.Step(window.Tree, Resolver(), 0.5)
+            Assert.Equal("x", value)
+            input.KeyRelease(Key.V)
+            input.KeyPress(Key.Z, primary)
+            window.InputForTest.Step(window.Tree, Resolver(), 0.5)
+            Assert.Equal("", value)
+            input.KeyRelease(Key.Z)
+            input.KeyPress(Key.Z, KeyModifiers{Ctrl: primary.Ctrl, Super: primary.Super, Shift: true})
+            window.InputForTest.Step(window.Tree, Resolver(), 0.5)
+            Assert.Equal("x", value)
+            input.KeyRelease(Key.Z)
+        } finally {
+            window.Close()
+        }
+    }
+
+    @Theory
+    @InlineData(false)
+    @InlineData(true)
+    func DefaultNavigationAndDeletionUsePlatformModifiersAndRepeat(mac bool) {
+        let saved = InputPolicy.Mac
+        InputPolicy.Mac = mac
+        using let controller = TextEditorController(TextDocument("one two\nthree four"))
+        let field = ElementHandle()
+        let commands = List[TextCommand]()
+        controller.OnCommand = (e TextCommandEvent) -> {
+            commands.Add(e.Command)
+            e.Cancel = true
+        }
+        let window = Window{
+            Width: 320,
+            Height: 120,
+            Root: ExplicitKeyBindingTests.BuildCell(() -> TextEditor(controller){Handle = field})
+        }
+        try {
+            window.UpdateTree()
+            Assert.True(field.Focus())
+            let input = window.PlatformInput
+            for shift in []bool{false, true} {
+                let plain = KeyModifiers{Shift: shift}
+                let primary = KeyModifiers{Shift: shift, Ctrl: !mac, Super: mac}
+                let word = KeyModifiers{Shift: shift, Ctrl: !mac, Alt: mac}
+                for (key, kind, modifiers) in [](Key, TextCommandKind, KeyModifiers){
+                    (Key.Left, TextCommandKind.MoveLeft, plain),
+                    (Key.Right, TextCommandKind.MoveRight, plain),
+                    (Key.Up, TextCommandKind.MoveUp, plain),
+                    (Key.Down, TextCommandKind.MoveDown, plain),
+                    (Key.PageUp, TextCommandKind.PageUp, plain),
+                    (Key.PageDown, TextCommandKind.PageDown, plain),
+                    (Key.Home, TextCommandKind.MoveLineStart, plain),
+                    (Key.End, TextCommandKind.MoveLineEnd, plain),
+                    (Key.Home, TextCommandKind.MoveDocumentStart, primary),
+                    (Key.End, TextCommandKind.MoveDocumentEnd, primary),
+                    (Key.Backspace, TextCommandKind.DeleteBackward, plain),
+                    (Key.Delete, TextCommandKind.DeleteForward, plain),
+                    (Key.Left, TextCommandKind.MoveWordLeft, word),
+                    (Key.Right, TextCommandKind.MoveWordRight, word),
+                    (Key.Backspace, TextCommandKind.DeleteWordBackward, word),
+                    (Key.Delete, TextCommandKind.DeleteWordForward, word)
+                } {
+                    commands.Clear()
+                    input.KeyPress(key, modifiers)
+                    window.InputForTest.Step(window.Tree, Resolver(), 0.5)
+                    input.KeyRelease(key)
+                    Assert.Equal(2, commands.Count)
+                    for command in commands {
+                        Assert.Equal(kind, command.Kind)
+                        Assert.Equal(shift, command.ExtendSelection)
+                    }
+                }
+            }
+            commands.Clear()
+            ExplicitKeyBindingTests.Press(input, Key.Left, KeyModifiers{Ctrl: true, Alt: true})
+            ExplicitKeyBindingTests.Press(input, Key.Left, KeyModifiers{Ctrl: mac, Alt: !mac})
+            Assert.Empty(commands)
+        } finally {
+            window.Close()
+            InputPolicy.Mac = saved
+        }
+    }
+
+    shared {
+    private func Press(input PlatformInput, key Key, modifiers KeyModifiers = default(KeyModifiers)) {
+        input.KeyPress(key, modifiers)
+        input.KeyRelease(key, modifiers)
+    }
+
+    private func EditingBindings(input PlatformInput, action() -> void) []KeyBinding {
+        let result = List[KeyBinding]()
+        for shift in []bool{false, true} {
+            let plain = KeyModifiers{Shift: shift}
+            let primary = KeyModifiers{Shift: shift, Ctrl: !InputPolicy.Mac, Super: InputPolicy.Mac}
+            let word = KeyModifiers{Shift: shift, Ctrl: !InputPolicy.Mac, Alt: InputPolicy.Mac}
+            for (key, kind, modifiers, repeat) in [](Key, TextCommandKind, KeyModifiers, bool){
+                (Key.Left, TextCommandKind.MoveLeft, plain, true),
+                (Key.Right, TextCommandKind.MoveRight, plain, true),
+                (Key.Up, TextCommandKind.MoveUp, plain, true),
+                (Key.Down, TextCommandKind.MoveDown, plain, true),
+                (Key.PageUp, TextCommandKind.PageUp, plain, true),
+                (Key.PageDown, TextCommandKind.PageDown, plain, true),
+                (Key.Home, TextCommandKind.MoveLineStart, plain, true),
+                (Key.End, TextCommandKind.MoveLineEnd, plain, true),
+                (Key.Home, TextCommandKind.MoveDocumentStart, primary, true),
+                (Key.End, TextCommandKind.MoveDocumentEnd, primary, true),
+                (Key.Backspace, TextCommandKind.DeleteBackward, plain, true),
+                (Key.Delete, TextCommandKind.DeleteForward, plain, true),
+                (Key.Left, TextCommandKind.MoveWordLeft, word, true),
+                (Key.Right, TextCommandKind.MoveWordRight, word, true),
+                (Key.Backspace, TextCommandKind.DeleteWordBackward, word, true),
+                (Key.Delete, TextCommandKind.DeleteWordForward, word, true),
+                (Key.A, TextCommandKind.SelectAll, primary, false),
+                (Key.C, TextCommandKind.Copy, primary, false),
+                (Key.X, TextCommandKind.Cut, primary, false),
+                (Key.V, TextCommandKind.Paste, primary, false),
+                (Key.Z, shift ? TextCommandKind.Redo : TextCommandKind.Undo, primary, false)
+            } {
+                result.Add(KeyBinding{Key: key, Modifiers: modifiers, Repeat: repeat, Action: () -> {
+                    action()
+                    input.Execute(TextCommand{Kind: kind, ExtendSelection: modifiers.Shift})
+                }})
+            }
+            result.Add(KeyBinding{Key: Key.Tab, Modifiers: plain, Action: () -> {
+                action()
+                if input.Editor?.IsMultiline == true && input.Editor?.IsReadOnly == false {
+                    input.Execute(TextCommand{Kind: shift ? TextCommandKind.Outdent : TextCommandKind.InsertTab})
+                } else { input.MoveFocus(!shift) }
+            }})
+            for key in []Key{Key.Enter, Key.KeypadEnter} {
+                result.Add(KeyBinding{Key: key, Modifiers: plain, Action: () -> {
+                    action()
+                    input.Execute(TextCommand{
+                        Kind: input.Editor?.IsMultiline == true && input.Editor?.IsReadOnly == false
+                            ? TextCommandKind.Insert : TextCommandKind.Submit,
+                        Text: "\n"
+                    })
+                }})
+            }
+        }
+        result.Add(KeyBinding{Key: Key.Y, Modifiers: KeyModifiers{Ctrl: true}, Action: () -> {
+            action()
+            input.Execute(TextCommand{Kind: TextCommandKind.Redo})
+        }})
+        result.Add(KeyBinding{Key: Key.Escape, Action: () -> {
+            action()
+            if !input.CancelDrag() && !input.CancelComposition() {
+                input.Execute(TextCommand{Kind: TextCommandKind.CancelEdit})
+            }
+        }})
+        return result.ToArray()
+    }
     }
 
     private class BuildCell(build() -> Blob) : Cell {

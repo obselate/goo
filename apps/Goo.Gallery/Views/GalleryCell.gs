@@ -1,7 +1,6 @@
 package GooGallery
 
 import Goo
-import GooSamples
 import System
 
 class GalleryCell : Cell, IDisposable {
@@ -102,7 +101,6 @@ class GalleryCell : Cell, IDisposable {
 
     override func Build() Blob -> Container{
         Key: "root",
-        KeyBindings: AppKeyBindings.Editing(attachedWindow?.PlatformInput),
         Width: Percent(100),
         Height: Percent(100),
         Handle: rootHandle,
@@ -114,6 +112,9 @@ class GalleryCell : Cell, IDisposable {
         Position: PositionType.Relative,
         FlexDirection: FlexDirection.Column,
         OnKeyDown: func (e KeyEvent) {
+            if attachedWindow?.PlatformInput.Selection != nil {
+                return
+            }
             if e.Key == Key.PageUp || e.Key == Key.Left {
                 e.PreventDefault()
                 PreviousShowcase()
