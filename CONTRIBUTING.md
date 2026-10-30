@@ -108,7 +108,7 @@ XDG_CACHE_HOME="$(mktemp -d)" .github/scripts/with-headless-wayland.sh \
   dotnet run --project tools/Goo.Investigation -c Release -- performance \
   --output /absolute/new/goo-consumer-report \
   --rid linux-x64 \
-  --package-version 0.24.0 \
+  --package-version 0.24.1 \
   --package-source /absolute/path/to/package-feed
 ```
 
