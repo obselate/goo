@@ -1,4 +1,7 @@
 <Project>
+  <PropertyGroup Condition="'$(PublishAot)' == 'true'">
+    <IlcFoldIdenticalMethodBodies Condition="'$(IlcFoldIdenticalMethodBodies)' == ''">true</IlcFoldIdenticalMethodBodies>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(PublishAot)' == 'true' and '$(RuntimeIdentifier)' == 'linux-x64'">
     <GooNativeAotStaticRoot Condition="'$(GooNativeAotStaticRoot)' == ''">$(MSBuildThisFileDirectory)native/linux-x64</GooNativeAotStaticRoot>
   </PropertyGroup>
