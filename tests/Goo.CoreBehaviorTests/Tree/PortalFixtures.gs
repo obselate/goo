@@ -8,7 +8,8 @@ internal class PortalFixtures {
     let window = Window{Root: cell, Width: 300, Height: 200, UiScale: 1.25F}
     window.UpdateTree()
     if window.Tree?.Rect.W != 240.0F || window.Tree?.Rect.H != 160.0F
-      || !samePortalBox(cell.Popup.BorderBox, 150.0, 50.0, 90.0, 50.0) { return false }
+      || !samePortalBox(cell.Popup.BorderBox, float64(240.0F - 113.0F / 1.25F), float64(100.0F - 63.0F / 1.25F),
+        float64(113.0F / 1.25F), float64(63.0F / 1.25F)) { return false }
     window.PlatformInput.PointerPress(0, PointerDevice.Mouse, 200.0F, 75.0F,
       PointerButton.Primary, KeyModifiers{}, 1.0F)
     window.PlatformInput.PointerRelease(0, PointerDevice.Mouse, 200.0F, 75.0F,
