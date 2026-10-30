@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.24.0 - 2026-10-30
 
 - Compress embedded Vulkan shader resources to reduce NativeAOT executable size.
 - Keep backdrop layers rendering after live display-scale changes reduce layer resolution.
