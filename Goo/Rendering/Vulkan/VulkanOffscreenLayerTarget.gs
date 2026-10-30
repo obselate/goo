@@ -206,6 +206,7 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
       return
     }
     if imageLayout != VkConstants.VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+      && imageLayout != VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
       && imageLayout != VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL{
         throw InvalidOperationException("Vulkan layer target is not a color attachment")
       }
@@ -214,6 +215,9 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
     if imageLayout == VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL {
       srcStageMask = VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT
       srcAccessMask = VkConstants.VK_ACCESS_2_TRANSFER_WRITE_BIT
+    } else if imageLayout == VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL {
+      srcStageMask = VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT
+      srcAccessMask = VkConstants.VK_ACCESS_2_TRANSFER_READ_BIT
     } else {
       srcStageMask = VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT
       srcAccessMask = VkConstants.VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT

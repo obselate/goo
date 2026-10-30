@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Compress embedded Vulkan shader resources to reduce NativeAOT executable size.
+- Keep backdrop layers rendering after live display-scale changes reduce layer resolution.
 - Default NativeAOT apps to identical method-body folding. Explicit app settings take precedence.
 - Add keyboard and text input rules to the Goo authoring skill: standard text controls, built-in editing, focus traversal and a keyboard test list.
 - Snap window layout and border widths to physical pixels at fractional display scales.
