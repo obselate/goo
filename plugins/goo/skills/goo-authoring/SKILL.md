@@ -15,13 +15,14 @@ Use one focused natural-language or symbol `goo_search`, then `goo_read` the rel
 
 ## Create and edit
 
-For a new app, `goo_starter` returns the official project, counter source, source/generated hashes, SDK/package/compiler versions, and a `Watch` item. Use this metadata instead of rereading templates or CONTRIBUTING.md. Write the files and run the returned `lint` and `build` commands. Checkout builds select its pinned compiler. Keep existing apps' SDK/package choices and architecture. For changed G# in a Goo checkout, run `tools/Goo.Gslint` strict policy and the exact project build. Gslint proves only its finite rules.
+For a new app, `goo_starter` returns the official project, counter source, source/generated hashes, SDK/package/compiler versions, and a `Watch` item. Use this metadata instead of rereading templates or CONTRIBUTING.md. Write the files and run the returned `lint` and `build` commands. Checkout builds select its pinned compiler. Keep existing apps' SDK and package choices. For changed G# in a Goo checkout, run `tools/Goo.Gslint` strict policy and the exact project build. Gslint proves only its finite rules.
 
-Read [app best practices](references/best-practices.md) before you write or review app code. It sets the threading, rebuild, virtualization and frame-time rules.
+Read [app best practices](references/best-practices.md) before you write or review app code. It sets the threading, app structure, component reuse, rebuild, virtualization and frame-time rules.
 
 Goo is a retained desktop UI framework, not HTML/CSS or Sandbox panels:
 
 - Build immutable Blob descriptions in `Cell.Build`. Keep local state in Cell fields. Mount fixed children with `Cell.Mount[TCell]()`. Use keys when siblings can be inserted, removed, or reordered. Keyed and unkeyed siblings can mix. Unkeyed identity uses the absolute sibling index and never matches a keyed entry.
+- Separate models, views and controllers. Domain data and logic go in `Models/`. Each screen or region is a Cell in `Views/`. Shared UI goes in `Components/`. I/O goes in `Services/` and runs in `go` children. Reuse Goo.Widgets and app components. Do not copy UI code.
 - For typed Cells consumed across assemblies, use `open class X : Cell[Input]` with `protected override func Build(input Input) Blob`.
 - Goo input callbacks invalidate their owning Cell. Call `Rebuild()` on the UI thread for state changed outside Goo input dispatch. Background work posts through `Window.TryPost`.
 - Put `BasedOn` before overrides. Style declarations apply in order, so later declarations win.

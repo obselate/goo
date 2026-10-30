@@ -3,7 +3,9 @@
 ## Unreleased
 
 - Keep frames running under Vulkan clip-mask and layer budget pressure after display-scale changes. Evict idle resources, reduce clip resolution and draw layers directly when needed. Include request dimensions in pressure diagnostics.
-- Add Goo app best practices to the plugin authoring skill: UI-thread rules, `go` and `scope` background work, rebuild scope, virtualization and frame-time checks.
+- Stop Windows from drawing native minimize, maximize and close buttons under a replaced title bar on undecorated windows.
+- Request rounded corners for undecorated windows on Windows 11. Windows still keeps them square in virtual machines and when maximized or snapped.
+- Add Goo app best practices to the plugin authoring skill: UI-thread rules, `go` and `scope` background work, model, view and service structure, component reuse, theme tokens, rebuild scope, virtualization and frame-time checks.
 
 ## 0.23.3 - 2026-10-29
 
