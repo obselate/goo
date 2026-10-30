@@ -23,7 +23,7 @@ internal shared partial class PackageApplication {
         Company string
     ) : IEquatable[Metadata] { }
 
-    private const AppImageToolHash string = "95cbe7cce9717fce90c484e34052ee7c7f1d7635b33c12525b4776826a7d29b6"
+    private const AppImageToolHash string = "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0"
     private const AppImageRuntimeHash string = "617aa77314d57c8b8e4fae9c3f0b35af7b30d5529cb69e98f64f92510ed98a46"
     private const MetadataProperties string = "AssemblyName,Product,Version,GooPackageId,GooPackageIcon,Company"
 
