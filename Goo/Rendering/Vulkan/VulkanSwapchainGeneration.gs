@@ -156,7 +156,8 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
     generationId uint64,
     enablePresentFence bool,
     nativeObjectAccounting VulkanObjectAccounting?,
-    preferRequestedExtent bool = false) {
+    preferRequestedExtent bool = false,
+    nativeDiagnostics VulkanDiagnostics? = nil) {
       if nativeDevice == nint(0) {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
@@ -210,7 +211,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
       | (capabilities.supportedUsageFlags
         &uint32(VkConstants.VK_IMAGE_USAGE_TRANSFER_SRC_BIT))
       this.requestedImageCount = requestedImageCount
-      Create(chosenPresentMode, chosenCompositeAlpha, oldSwapchain)
+      Create(chosenPresentMode, chosenCompositeAlpha, oldSwapchain, nativeDiagnostics)
     }
 
   internal func Image(index uint32) VkImage -> RequireImageSet().Image(index)
@@ -300,7 +301,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
   private func Create(
     chosenPresentMode VkPresentModeKHR,
     chosenCompositeAlpha VkCompositeAlphaFlagBitsKHR,
-    oldSwapchain VkSwapchainKHR) {
+    oldSwapchain VkSwapchainKHR, diagnostics VulkanDiagnostics?) {
       try {
         var createInfo = VkSwapchainCreateInfoKHR{}
         createInfo.sType = VkConstants.VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR
@@ -318,11 +319,25 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
         createInfo.clipped = VkConstants.VK_TRUE
         createInfo.oldSwapchain = oldSwapchain
         let createSwapchain = dispatch.vkCreateSwapchainKHR
-        let createResult = createSwapchain(device, &createInfo, nil, &swapchain)
-        if createResult != VkConstants.VK_SUCCESS || swapchain == 0uL {
-          throw System.Runtime.InteropServices.ExternalException("vkCreateSwapchainKHR failed: " + createResult.ToString(),
+        var createdSwapchain VkSwapchainKHR
+        let createResult = createSwapchain(device, &createInfo, nil, &createdSwapchain)
+        if createResult != VkConstants.VK_SUCCESS || createdSwapchain == 0uL {
+          diagnostics?.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
+            VulkanDiagnosticEventIds.SwapchainCreate, VulkanDiagnosticCategories.Window, 1uL,
+            int32(createResult), createdSwapchain, oldSwapchain, extent.width, extent.height)
+          if let recorder = FrameRecorder.Current {
+            recorder.Publish(FrameTraceRecord{Kind: FrameTraceKind.Instant,
+              Ticks: System.Diagnostics.Stopwatch.GetTimestamp() - recorder.Origin,
+              Context: FrameTraceContext{DeviceId: uint64(device), Generation: generation},
+              EventId: VulkanDiagnosticEventIds.SwapchainCreate, Category: VulkanDiagnosticCategories.Window,
+              Result: int32(createResult), Value0: createdSwapchain, Value1: oldSwapchain,
+              Width: int32(extent.width), Height: int32(extent.height), Source: "vkCreateSwapchainKHR"})
+          }
+          throw System.Runtime.InteropServices.ExternalException(
+            "vkCreateSwapchainKHR failed: result=${createResult}, handle=${createdSwapchain}, extent=${extent.width}x${extent.height}, oldSwapchain=${oldSwapchain}",
             int32(createResult))
         }
+        swapchain = createdSwapchain
         try {
           if let accounting = objectAccounting {
             accounting.Allocate()

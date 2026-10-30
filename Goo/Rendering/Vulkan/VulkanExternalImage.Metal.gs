@@ -89,7 +89,10 @@ internal unsafe sealed partial class VulkanExternalImage {
             tiling: VkConstants.VK_IMAGE_TILING_OPTIMAL, usage: uint32(VkConstants.VK_IMAGE_USAGE_SAMPLED_BIT),
             sharingMode: VkConstants.VK_SHARING_MODE_EXCLUSIVE, initialLayout: VkConstants.VK_IMAGE_LAYOUT_UNDEFINED }
         let create = Runtime.Dispatch.vkCreateImage
-        Check(create(Runtime.Device, &info, nil, &Image), "Metal image import failed")
+        var createdImage VkImage
+        let result = create(Runtime.Device, &info, nil, &createdImage)
+        Image = createdImage
+        Check(result, "Metal image import failed")
         if surface { BindSurfaceMemory() }
         CreateView()
     }
@@ -106,7 +109,10 @@ internal unsafe sealed partial class VulkanExternalImage {
         var allocation = VkMemoryAllocateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
             pNext: *void(&dedicated), allocationSize: requirements.memoryRequirements.size, memoryTypeIndex: memoryType }
         let allocate = Runtime.Dispatch.vkAllocateMemory
-        Check(allocate(Runtime.Device, &allocation, nil, &memory), "IOSurface memory binding allocation failed")
+        var importedMemory VkDeviceMemory
+        let result = allocate(Runtime.Device, &allocation, nil, &importedMemory)
+        memory = importedMemory
+        Check(result, "IOSurface memory binding allocation failed")
         var bind = VkBindImageMemoryInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO, image: Image, memory: memory }
         let bindMemory = Runtime.Dispatch.vkBindImageMemory2
         Check(bindMemory(Runtime.Device, 1u, &bind), "IOSurface memory binding failed")
