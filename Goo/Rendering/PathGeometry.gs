@@ -683,11 +683,14 @@ internal class PathGeometryBuilder {
   private func appendArcQuadratics(centerX float32, centerY float32, rx float32, ry float32,
     cosPhi float32, sinPhi float32, angle0 float32, angle1 float32,
     p0 PathPoint, p1 PathPoint, depth int32) {
-      let control = arcControl(p0, rx, ry, cosPhi, sinPhi, angle0, angle1 - angle0)
-      let tolerance = arcTolerance(p0, control, p1)
-      let error = arcQuadraticError(centerX, centerY, rx, ry, cosPhi, sinPhi,
-        angle0, angle1, p0, control, p1)
+      let localStart = ellipsePoint(0.0F, 0.0F, rx, ry, cosPhi, sinPhi, angle0)
+      let localEnd = ellipsePoint(0.0F, 0.0F, rx, ry, cosPhi, sinPhi, angle1)
+      let localControl = arcControl(localStart, rx, ry, cosPhi, sinPhi, angle0, angle1 - angle0)
+      let tolerance = arcTolerance(localStart, localControl, localEnd)
+      let error = arcQuadraticError(0.0F, 0.0F, rx, ry, cosPhi, sinPhi,
+        angle0, angle1, localStart, localControl, localEnd)
       if error <= tolerance || depth >= PathGeometry.MaximumSubdivisionDepth {
+        let control = arcControl(p0, rx, ry, cosPhi, sinPhi, angle0, angle1 - angle0)
         addQuadratic(p0.X, p0.Y, control.X, control.Y, p1.X, p1.Y)
         return
       }
