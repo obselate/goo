@@ -41,6 +41,11 @@ publish a framework-dependent application without a RID. NativeAOT is the
 preferred desktop release mode. Do not treat trimmed JIT as a validated
 release profile.
 
+The Goo package defaults NativeAOT apps to
+`IlcFoldIdenticalMethodBodies=true`. Apps can override this property.
+Identical methods can share addresses and stack-trace names.
+Globalization remains an explicit app setting.
+
 For Linux x64 NativeAOT, Goo links its packaged SDL3 and HarfBuzz static
 archives into the executable. A release may stage only the executable after
 checking its runtime library dependencies and exercising a window on the
