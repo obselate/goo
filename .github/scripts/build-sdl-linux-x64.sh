@@ -81,6 +81,8 @@ patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/wayland-secondary-startup.patch"
 patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/wayland-activation-token.patch"
+patch -d "$work/src" -p1 --fuzz=0 < \
+  "$(dirname "$0")/../patches/sdl/wayland-clipboard-replacement.patch"
 python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_wayland.py" "$work/src"
 
 # SDL vendors protocols newer than the baseline wayland-scanner schema.
