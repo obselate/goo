@@ -361,10 +361,20 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
   private var targets []VulkanOffscreenLayerTarget?
   private var leased []bool
   private var inFrame []bool
+  private var reserved []bool
   private var descriptorSets []VkDescriptorSet
   private let descriptorPools List[VkDescriptorPool]
   private var sampler VkSampler = 0uL
   private let byteBudget VkDeviceSize
+  private var requestedWidth uint32
+  private var requestedHeight uint32
+  private var presentTarget VulkanOffscreenLayerTarget?
+  private var layerResolutionShift int32
+  private var layerExtents []VkExtent2D = [0]VkExtent2D
+  private var layerReservations []int32 = [0]int32
+  private var lastFailedRequestBytes VkDeviceSize
+  private var fullResolutionRequiredBytes VkDeviceSize
+  private var pressureLayerOperations (List[ValueTuple[uint32, uint32, bool, bool]])? = nil
   private var residentBytes VkDeviceSize
   private var descriptorPoolCount int32
   private var samplerAccounted bool
@@ -374,6 +384,8 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
 
   internal prop ResidentBytes VkDeviceSize{ get -> residentBytes }
   internal prop ByteBudget VkDeviceSize{ get -> byteBudget }
+  internal prop PresentTarget VulkanOffscreenLayerTarget?{ get -> presentTarget }
+  internal prop LayerResolutionShift int32{ get -> layerResolutionShift }
   internal prop LiveTargetCount int32{
     get {
       var result int32 = 0
@@ -431,6 +443,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       targets = [initialTargetCapacity]VulkanOffscreenLayerTarget?
       leased = [initialTargetCapacity]bool
       inFrame = [initialTargetCapacity]bool
+      reserved = [initialTargetCapacity]bool
       descriptorSets = [initialTargetCapacity]VkDescriptorSet
       descriptorPools = List[VkDescriptorPool]()
       var descriptorIndex int32 = 0
@@ -448,17 +461,172 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       }
     }
 
-  internal func Acquire(width uint32, height uint32, completedSerial uint64) VulkanOffscreenLayerTarget {
+  internal func PrepareLayerBudget(frame SceneFrame, completedSerial uint64,
+    presentWidth uint32 = 0u, presentHeight uint32 = 0u) {
+    presentTarget = nil
+    var presentIndex int32 = -1
+    if presentWidth != 0u {
+      presentTarget = Acquire(presentWidth, presentHeight, completedSerial, &presentIndex, true)
+    }
+    if layerExtents.Length < frame.LayerCount {
+      layerExtents = [frame.LayerCount]VkExtent2D
+      layerReservations = [frame.LayerCount * 2]int32
+    }
+    let reservations * int32 = stackalloc[64]int32
+    let sameShape = layerResolutionShift > 0 && LayerShapeMatches(frame)
+    if !sameShape { fullResolutionRequiredBytes = 0uL }
+    if layerResolutionShift > 0 {
+      let fullPeak = fullResolutionRequiredBytes
+      let presentBytes = presentTarget?.Bytes ?? 0uL
+      let available = presentBytes < byteBudget ? byteBudget - presentBytes : 0uL
+      var recoveryShift int32 = 0
+      while recoveryShift < layerResolutionShift
+        && (fullPeak >> (recoveryShift * 2)) > available { recoveryShift++ }
+      layerResolutionShift = recoveryShift
+    }
+    while true {
+      var depth int32 = 0
+      var available = true
+      for drawIndex in 0 ... frame.DrawRefCount {
+        let reference = frame.DrawRefs[drawIndex]
+        if reference.Kind == SceneDrawKind.LayerBegin {
+          if depth >= 32 { throw InvalidOperationException("Vulkan layer depth exceeded") }
+          let layer = frame.Layers[reference.Index]
+          let divisor = 1u << layerResolutionShift
+          let width = Math.Max(1u, (layer.ExtentWidth + divisor - 1u) / divisor)
+          let height = Math.Max(1u, (layer.ExtentHeight + divisor - 1u) / divisor)
+          layerExtents[reference.Index] = VkExtent2D{ width: width, height: height }
+          var targetIndex int32 = -1
+          if Acquire(width, height, completedSerial, &targetIndex, width == 1u && height == 1u) == nil {
+            available = false
+            break
+          }
+          layerReservations[reference.Index * 2] = targetIndex
+          layerReservations[reference.Index * 2 + 1] = -1
+          reservations[depth * 2] = targetIndex
+          reservations[depth * 2 + 1] = -1
+          if NeedsBackdrop(layer) {
+            if Acquire(width, height, completedSerial, &targetIndex, width == 1u && height == 1u) == nil {
+              available = false
+              break
+            }
+            layerReservations[reference.Index * 2 + 1] = targetIndex
+            reservations[depth * 2 + 1] = targetIndex
+          }
+          depth++
+        } else if reference.Kind == SceneDrawKind.LayerEnd {
+          if depth <= 0 { throw InvalidOperationException("Vulkan layer stack underflow") }
+          depth--
+          leased[reservations[depth * 2]] = false
+          let backdropIndex = reservations[depth * 2 + 1]
+          if backdropIndex >= 0 { leased[backdropIndex] = false }
+        }
+      }
+      if !available {
+        var required = lastFailedRequestBytes
+        for index in 0 ... targets.Length {
+          if inFrame[index] && index != presentIndex {
+            if let target = targets[index] { required += target.Bytes }
+          }
+        }
+        let presentBytes = presentTarget?.Bytes ?? 0uL
+        let availableBytes = presentBytes < byteBudget ? byteBudget - presentBytes : 0uL
+        if required > availableBytes {
+          let shift = layerResolutionShift * 2
+          let fullBytes = if required > (uint64.MaxValue >> shift) {
+            uint64.MaxValue
+          } else { required << shift }
+          fullResolutionRequiredBytes = Math.Max(fullResolutionRequiredBytes, fullBytes)
+        }
+      }
+      for index in 0 ... targets.Length {
+        if inFrame[index] && index != presentIndex {
+          leased[index] = false
+          if !available {
+            targets[index]?.RestoreLeaseLayout()
+            inFrame[index] = false
+          }
+        }
+        reserved[index] = available && inFrame[index]
+      }
+      if available { break }
+      layerResolutionShift++
+    }
+    if layerResolutionShift > 0 && !sameShape { RememberLayerShape(frame) }
+    PublishStats()
+  }
+
+  private func NeedsBackdrop(layer LayerRecord) bool ->
+    (layer.Flags & uint32(LayerRecordFlags.BorrowsParentBackdrop)) == 0u
+      && (layer.BlendMode != 0u
+          || (layer.Flags & (uint32(LayerRecordFlags.PreservesBackdrop)
+              | uint32(LayerRecordFlags.SamplesBackdrop))) != 0u)
+
+  private func LayerShapeMatches(frame SceneFrame) bool {
+    guard let operations = pressureLayerOperations else { return false }
+    var index int32 = 0
+    for drawIndex in 0 ... frame.DrawRefCount {
+      let reference = frame.DrawRefs[drawIndex]
+      if reference.Kind != SceneDrawKind.LayerBegin && reference.Kind != SceneDrawKind.LayerEnd { continue }
+      if index >= operations.Count { return false }
+      var shape = ValueTuple[uint32, uint32, bool, bool](0u, 0u, false, false)
+      if reference.Kind == SceneDrawKind.LayerBegin {
+        let layer = frame.Layers[reference.Index]
+        shape = ValueTuple[uint32, uint32, bool, bool](
+          layer.ExtentWidth, layer.ExtentHeight, NeedsBackdrop(layer), true)
+      }
+      if !shape.Equals(operations[index]) { return false }
+      index++
+    }
+    return index == operations.Count
+  }
+
+  private func RememberLayerShape(frame SceneFrame) {
+    let operations = pressureLayerOperations ?? List[ValueTuple[uint32, uint32, bool, bool]]()
+    pressureLayerOperations = operations
+    operations.Clear()
+    for drawIndex in 0 ... frame.DrawRefCount {
+      let reference = frame.DrawRefs[drawIndex]
+      if reference.Kind == SceneDrawKind.LayerBegin {
+        let layer = frame.Layers[reference.Index]
+        operations.Add(ValueTuple[uint32, uint32, bool, bool](
+          layer.ExtentWidth, layer.ExtentHeight, NeedsBackdrop(layer), true))
+      } else if reference.Kind == SceneDrawKind.LayerEnd {
+        operations.Add(ValueTuple[uint32, uint32, bool, bool](0u, 0u, false, false))
+      }
+    }
+  }
+
+  internal func LayerExtent(layerIndex int32) VkExtent2D -> layerExtents[layerIndex]
+
+  internal func AcquireLayer(layerIndex int32, backdrop bool = false) VulkanOffscreenLayerTarget {
+    let index = layerReservations[layerIndex * 2 + (backdrop ? 1 : 0)]
+    if index < 0 || index >= targets.Length || !inFrame[index] {
+      throw InvalidOperationException("Vulkan layer reservation is unavailable")
+    }
+    guard let target = targets[index] else {
+      throw InvalidOperationException("Vulkan layer target is unavailable")
+    }
+    if leased[index] { throw InvalidOperationException("Vulkan layer reservation is already leased") }
+    target.RetainedBackdrop = LayerRecord{}
+    leased[index] = true
+    return target
+  }
+
+  internal func Acquire(width uint32, height uint32, completedSerial uint64,
+    reservationIndex * int32 = nil, mandatory bool = false) VulkanOffscreenLayerTarget? {
     EnsureOpen()
     if width == 0u || height == 0u {
       throw ArgumentOutOfRangeException("extent")
     }
+    requestedWidth = width
+    requestedHeight = height
     Collect(completedSerial)
     var reusableIndex int32 = -1
     var reusableLastUse uint64 = uint64.MaxValue
     var index int32 = 0
     while index < targets.Length {
-      if !leased[index] {
+      if !leased[index] && !(reservationIndex == nil && reserved[index] && inFrame[index]) {
         if let target = targets[index] {
           if target.RetainedBackdrop.BackdropVersion != 0uL {
             index++
@@ -487,6 +655,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       }
       let sameCommand = inFrame[reusableIndex]
       leased[reusableIndex] = true
+      if reservationIndex != nil { reservationIndex[0] = reusableIndex }
       if !sameCommand {
         inFrame[reusableIndex] = true
         target.BeginLease()
@@ -510,10 +679,10 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       RecordPressure(estimatedBytes, completedSerial)
       EvictIdle(estimatedBytes, completedSerial)
     }
-    if NeedsBudgetPressure(estimatedBytes) {
+    if !mandatory && NeedsBudgetPressure(estimatedBytes) {
       RecordPressureFailure(estimatedBytes, residentBytes)
       RecordFailure(estimatedBytes, residentBytes)
-      throw InvalidOperationException("Vulkan layer pool byte budget exhausted")
+      return nil
     }
     index = FindEmptySlot()
     if index < 0 {
@@ -540,16 +709,17 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       RecordPressure(created.Bytes, completedSerial)
       EvictIdle(created.Bytes, completedSerial)
     }
-    if created.Bytes > byteBudget || NeedsBudgetPressure(created.Bytes) {
+    if !mandatory && (created.Bytes > byteBudget || NeedsBudgetPressure(created.Bytes)) {
       let bytes = created.Bytes
       created.Dispose()
       let available = residentBytes <= byteBudget ? byteBudget - residentBytes : 0uL
       RecordPressureFailure(uint64(bytes), uint64(available))
       RecordFailure(uint64(bytes), residentBytes)
-      throw InvalidOperationException("Vulkan layer target exceeds byte budget")
+      return nil
     }
     targets[index] = created
     leased[index] = true
+    if reservationIndex != nil { reservationIndex[0] = index }
     inFrame[index] = true
     residentBytes = residentBytes + created.Bytes
     created.BeginLease()
@@ -816,14 +986,17 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     let previousTargets = targets
     let previousLeased = leased
     let previousInFrame = inFrame
+    let previousReserved = reserved
     let previousDescriptorSets = descriptorSets
     targets = [nextCapacity]VulkanOffscreenLayerTarget?
     leased = [nextCapacity]bool
     inFrame = [nextCapacity]bool
+    reserved = [nextCapacity]bool
     descriptorSets = [nextCapacity]VkDescriptorSet
     Array.Copy(previousTargets, targets, previousTargets.Length)
     Array.Copy(previousLeased, leased, previousLeased.Length)
     Array.Copy(previousInFrame, inFrame, previousInFrame.Length)
+    Array.Copy(previousReserved, reserved, previousReserved.Length)
     Array.Copy(previousDescriptorSets, descriptorSets, previousDescriptorSets.Length)
     try {
       CreateDescriptorResources(nextCapacity - previousTargets.Length, previousTargets.Length)
@@ -831,6 +1004,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       targets = previousTargets
       leased = previousLeased
       inFrame = previousInFrame
+      reserved = previousReserved
       descriptorSets = previousDescriptorSets
       throw error
     }
@@ -920,10 +1094,6 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       while index < targets.Length {
         if !leased[index] && !inFrame[index] {
           if let target = targets[index] {
-            if target.RetainedBackdrop.BackdropVersion != 0uL {
-              index++
-              continue
-            }
             if target.LastUseSerial <= completedSerial {
               RetireTarget(index, target)
               evicted = true
@@ -986,6 +1156,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
   }
 
   private func RecordPressureFailure(required VkDeviceSize, available VkDeviceSize) {
+    lastFailedRequestBytes = required
     if let current = diagnostics {
       current.AddLayerPoolPressureFailure(1uL)
       RecordLayerEvent(current, VulkanDiagnosticEventIds.LayerPressure,
@@ -1023,7 +1194,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     value0 uint64, value1 uint64, severity uint64 = 0uL, completionSerial uint64 = 0uL) {
       try {
         current.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, completionSerial, 0uL, 0uL,
-          eventId, category, severity, 0, value0, value1)
+          eventId, category, severity, 0, value0, value1, requestedWidth, requestedHeight)
       } catch (cleanup Exception) { }
     }
 

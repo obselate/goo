@@ -187,13 +187,13 @@ internal unsafe partial class VulkanDiagnostics {
   internal func Record(run uint64, workload uint64, process uint64, window uint64,
     frame uint64, sample uint64, queue uint64, submission uint64, fence uint64,
     query uint64, eventId uint64, category uint64, severity uint64, result int32,
-    value0 uint64, value1 uint64) {
+    value0 uint64, value1 uint64, requestedWidth uint32 = 0u, requestedHeight uint32 = 0u) {
       if !EnterWriter() {
         return
       }
       try {
         RecordCore(run, workload, process, window, frame, sample, queue, submission, fence,
-          query, eventId, category, severity, result, value0, value1)
+          query, eventId, category, severity, result, value0, value1, requestedWidth, requestedHeight)
       } finally {
         ExitWriter()
       }
@@ -202,7 +202,7 @@ internal unsafe partial class VulkanDiagnostics {
   private func RecordCore(run uint64, workload uint64, process uint64, window uint64,
     frame uint64, sample uint64, queue uint64, submission uint64, fence uint64,
     query uint64, eventId uint64, category uint64, severity uint64, result int32,
-    value0 uint64, value1 uint64) {
+    value0 uint64, value1 uint64, requestedWidth uint32 = 0u, requestedHeight uint32 = 0u) {
       let writeIndex = Interlocked.Increment(ref traceWrite) - 1L
       if writeIndex < 0L {
         return
@@ -229,6 +229,8 @@ internal unsafe partial class VulkanDiagnostics {
           result: result,
           value0: value0,
           value1: value1,
+          requestedWidth: requestedWidth,
+          requestedHeight: requestedHeight,
         }
       }
     }

@@ -67,6 +67,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private var textInstanceDescriptorSlot int32 = -1
   private var clipDepth int32
   private var activeExtent VkExtent2D
+  private var physicalExtent VkExtent2D
   private var rootCommandBuffer VkCommandBuffer
   private var rootImage VkImage
   private var rootImageView VkImageView
@@ -399,6 +400,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       currentOriginX = 0.0F
       currentOriginY = 0.0F
       activeExtent = extent
+      physicalExtent = extent
       clipStack[0] = FullClip()
       clipDepth = 1
       textFrameScaleX = scaleX
@@ -611,6 +613,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         Bottom: damage.Bottom,
       }
       activeExtent = extent
+      physicalExtent = extent
       clipStack[0] = baseClip
       clipDepth = 1
       SetScissor(commandBuffer, baseClip)
@@ -729,7 +732,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
       case SceneDrawKind.LayerBegin {
         RequireRecordIndex(reference.Index, frame.LayerCount, "layer index")
-        BeginLayer(commandBuffer, frame.Layers[reference.Index], frame)
+        BeginLayer(commandBuffer, frame.Layers[reference.Index], frame, reference.Index)
       }
       case SceneDrawKind.LayerEnd {
         RequireRecordIndex(reference.Index, frame.LayerCount, "layer index")
@@ -896,7 +899,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private func BeginLayer(
     commandBuffer VkCommandBuffer,
     record LayerRecord,
-    frame SceneFrame) {
+    frame SceneFrame, layerIndex int32) {
+      guard let pool = layerPool else {
+        throw NotSupportedException("Vulkan layer pool is unavailable")
+      }
       let borrowedBackdrop = ValidateBorrowedBackdrop(record)
       if !primitivePrepass {
         FlushPendingPrimitiveDraw(commandBuffer)
@@ -917,6 +923,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           ParentOriginX: currentOriginX,
           ParentOriginY: currentOriginY,
           ParentExtent: activeExtent,
+          ParentPhysicalExtent: physicalExtent,
           ParentClipDepth: clipDepth,
           ClipSnapshotOffset: layerDepth * clipStack.Length,
           TimestampHandle: -1,
@@ -932,6 +939,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         currentOriginX = record.OriginX
         currentOriginY = record.OriginY
         activeExtent = VkExtent2D{ width: record.ExtentWidth, height: record.ExtentHeight }
+        physicalExtent = pool.LayerExtent(layerIndex)
         var clipIndex int32 = 0
         while clipIndex < clipDepth {
           clipStack[clipIndex] = TranslateClip(
@@ -942,9 +950,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           clipIndex++
         }
         return
-      }
-      guard let pool = layerPool else {
-        throw NotSupportedException("Vulkan layer pool is unavailable")
       }
       if layerDepth >= layerStates.Length {
         throw InvalidOperationException("Vulkan layer depth exceeded")
@@ -957,10 +962,12 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       let preservesBackdrop = (record.Flags & uint32(LayerRecordFlags.PreservesBackdrop)) != 0u
       let backdropOnly = BackdropBlurRadius(record, frame) > 0.0F
         && frame.ShaderEffects[record.EffectIndex].Program == BackdropBlurEffect.Shared
-      let cached = if backdropOnly && reuseBackdrops { pool.FindBackdrop(record, acquire: true) } else { nil }
-      let target = if backdropOnly { cached } else {
-        pool.Acquire(record.ExtentWidth, record.ExtentHeight, completedLayerSerial)
-      }
+      let cached = if backdropOnly && reuseBackdrops && pool.LayerResolutionShift == 0
+        && pool.FindBackdrop(record, true) != nil {
+        pool.FindBackdrop(record, acquire: true)
+      } else { nil }
+      let target = cached ?? pool.AcquireLayer(layerIndex)
+      var retainBackdrop = cached != nil
       let needsBackdrop = preservesBackdrop || record.BlendMode != 0u
         || (record.EffectIndex >= 0
             && (record.Flags & uint32(LayerRecordFlags.SamplesBackdrop)) != 0u)
@@ -969,7 +976,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       } else if borrowsParentBackdrop {
         borrowedBackdrop
       } else if needsBackdrop {
-        pool.Acquire(record.ExtentWidth, record.ExtentHeight, completedLayerSerial)
+        pool.AcquireLayer(layerIndex, true)
       } else { nil }
       pool.RecordLayerPass(uint64(record.ExtentWidth), uint64(record.ExtentHeight))
       var state = VulkanLayerRenderState{
@@ -980,6 +987,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         ParentOriginX: currentOriginX,
         ParentOriginY: currentOriginY,
         ParentExtent: activeExtent,
+        ParentPhysicalExtent: physicalExtent,
         ParentClipDepth: clipDepth,
         ClipSnapshotOffset: layerDepth * clipStack.Length,
         TimestampHandle: -1,
@@ -1002,18 +1010,26 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         EndLayerTimestamp(effectHandle, VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT)
       }
       if needsBackdrop && BackdropBlurRadius(record, frame) > 0.0F && cached == nil {
-        let blurred = BlurBackdrop(commandBuffer, record, frame, backdropTarget, backdropOnly)
+        let blurred = BlurBackdrop(commandBuffer, record, frame, backdropTarget, backdropOnly,
+          backdropOnly ? target : nil)
         if backdropOnly {
-          state.Target = blurred
+          retainBackdrop = blurred == target
+          if blurred != target {
+            guard let source = blurred else {
+              throw InvalidOperationException("Vulkan layer backdrop source is unavailable")
+            }
+            CopyBackdropCapture(commandBuffer, source, target)
+          }
         } else {
           state.BackdropTarget = blurred
-          state.Record.Flags &= ~uint32(LayerRecordFlags.BorrowsParentBackdrop)
+          if blurred != backdropTarget { state.Record.Flags &= ~uint32(LayerRecordFlags.BorrowsParentBackdrop) }
         }
       }
       guard let layerTarget = state.Target else {
         throw InvalidOperationException("Vulkan layer target is unavailable")
       }
-      if backdropOnly {
+      if state.Target == state.BackdropTarget { state.BackdropTarget = nil }
+      if backdropOnly && retainBackdrop {
         layerTarget.RetainedBackdrop = record
         layerTarget.RetainedBackdropSource = false
         if let backdrop = state.BackdropTarget {
@@ -1031,7 +1047,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       currentTarget = layerTarget
       currentOriginX = record.OriginX
       currentOriginY = record.OriginY
-      activeExtent = layerTarget.Extent
+      activeExtent = VkExtent2D{ width: record.ExtentWidth, height: record.ExtentHeight }
+      physicalExtent = layerTarget.Extent
       var clipIndex int32 = 0
       while clipIndex < clipDepth {
         clipStack[clipIndex] = TranslateClip(
@@ -1070,6 +1087,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         currentOriginX = state.ParentOriginX
         currentOriginY = state.ParentOriginY
         activeExtent = state.ParentExtent
+        physicalExtent = state.ParentPhysicalExtent
         clipDepth = state.ParentClipDepth
         var clipIndex int32 = 0
         while clipIndex < clipDepth {
@@ -1100,6 +1118,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       currentOriginX = state.ParentOriginX
       currentOriginY = state.ParentOriginY
       activeExtent = state.ParentExtent
+      physicalExtent = state.ParentPhysicalExtent
       clipDepth = state.ParentClipDepth
       var clipIndex int32 = 0
       while clipIndex < clipDepth {
@@ -1111,7 +1130,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       } else {
         rootImageView
       }
-      BeginLayerRendering(commandBuffer, activeExtent, parentImageView, true)
+      BeginLayerRendering(commandBuffer, physicalExtent, parentImageView, true)
       SetLayerViewport(commandBuffer)
       SetScissor(commandBuffer, clipStack[clipDepth - 1])
       if let pool = layerPool {
@@ -1139,10 +1158,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     commandBuffer VkCommandBuffer,
     extent VkExtent2D,
     damage PrimitiveClip) {
-      guard let pool = layerPool else {
-        throw InvalidOperationException("Vulkan present encode requires a layer pool")
+      guard let pool = layerPool, let copy = pool.PresentTarget else {
+        throw InvalidOperationException("Vulkan present encode target was not reserved")
       }
-      let copy = pool.Acquire(extent.width, extent.height, completedLayerSerial)
       let endRendering = dispatch.vkCmdEndRendering
       endRendering(commandBuffer)
       copy.TransitionToTransferDestination(commandBuffer)
@@ -1223,6 +1241,25 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       beginRendering(commandBuffer, &rendering)
     }
 
+  private func CopyBackdropCapture(commandBuffer VkCommandBuffer,
+    source VulkanOffscreenLayerTarget, destination VulkanOffscreenLayerTarget) {
+    source.TransitionToTransferSource(commandBuffer)
+    destination.TransitionToTransferDestination(commandBuffer)
+    var region = VkImageCopy{}
+    region.srcSubresource = VkImageSubresourceLayers{
+      aspectMask: uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT), layerCount: 1u,
+    }
+    region.dstSubresource = region.srcSubresource
+    region.extent = VkExtent3D{
+      width: destination.Extent.width, height: destination.Extent.height, depth: 1u,
+    }
+    let copyImage = dispatch.vkCmdCopyImage
+    copyImage(commandBuffer, source.Image, VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+      destination.Image, VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1u, &region)
+    source.TransitionToShaderRead(commandBuffer)
+    destination.TransitionToShaderRead(commandBuffer)
+  }
+
   private func CopyBackdrop(
     commandBuffer VkCommandBuffer,
     record LayerRecord,
@@ -1230,12 +1267,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       let sourceImage = if let parent = currentTarget {
         parent.Image
       } else { rootImage }
-      let sourceWidth = if let parent = currentTarget {
-        int32(parent.Extent.width)
-      } else { int32(rootExtent.width) }
-      let sourceHeight = if let parent = currentTarget {
-        int32(parent.Extent.height)
-      } else { int32(rootExtent.height) }
+      let sourceWidth = int32(activeExtent.width)
+      let sourceHeight = int32(activeExtent.height)
       let sourceX = int32(MathF.Floor(record.OriginX - currentOriginX))
       let sourceY = int32(MathF.Floor(record.OriginY - currentOriginY))
       var copySourceX = sourceX
@@ -1261,8 +1294,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         copyHeight = sourceHeight - copySourceY
       }
       let clearBackdrop = copyDestinationX != 0 || copyDestinationY != 0
-        || copyWidth != int32(destination.Extent.width)
-        || copyHeight != int32(destination.Extent.height)
+        || copyWidth != int32(record.ExtentWidth)
+        || copyHeight != int32(record.ExtentHeight)
       destination.TransitionToTransferDestination(commandBuffer)
       if clearBackdrop {
         var clear = VkClearColorValue{}
@@ -1314,11 +1347,42 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           height: uint32(copyHeight),
           depth: 1u,
         }
-        let copyImage = dispatch.vkCmdCopyImage
-        copyImage(commandBuffer, sourceImage,
-          VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-          destination.Image, VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-          1u, &region)
+        if physicalExtent.width != activeExtent.width || physicalExtent.height != activeExtent.height
+          || destination.Extent.width != record.ExtentWidth || destination.Extent.height != record.ExtentHeight {
+          let sourceScaleX = float32(physicalExtent.width) / float32(activeExtent.width)
+          let sourceScaleY = float32(physicalExtent.height) / float32(activeExtent.height)
+          let destinationScaleX = float32(destination.Extent.width) / float32(record.ExtentWidth)
+          let destinationScaleY = float32(destination.Extent.height) / float32(record.ExtentHeight)
+          var blit = VkImageBlit{}
+          blit.srcSubresource = region.srcSubresource
+          blit.dstSubresource = region.dstSubresource
+          blit.srcOffset0 = VkOffset3D{
+            x: int32(MathF.Floor(float32(copySourceX) * sourceScaleX)),
+            y: int32(MathF.Floor(float32(copySourceY) * sourceScaleY)),
+          }
+          blit.srcOffset1 = VkOffset3D{
+            x: Math.Min(int32(physicalExtent.width), int32(MathF.Ceiling(float32(copySourceX + copyWidth) * sourceScaleX))),
+            y: Math.Min(int32(physicalExtent.height), int32(MathF.Ceiling(float32(copySourceY + copyHeight) * sourceScaleY))), z: 1,
+          }
+          blit.dstOffset0 = VkOffset3D{
+            x: int32(MathF.Floor(float32(copyDestinationX) * destinationScaleX)),
+            y: int32(MathF.Floor(float32(copyDestinationY) * destinationScaleY)),
+          }
+          blit.dstOffset1 = VkOffset3D{
+            x: Math.Min(int32(destination.Extent.width), int32(MathF.Ceiling(float32(copyDestinationX + copyWidth) * destinationScaleX))),
+            y: Math.Min(int32(destination.Extent.height), int32(MathF.Ceiling(float32(copyDestinationY + copyHeight) * destinationScaleY))), z: 1,
+          }
+          let blitImage = dispatch.vkCmdBlitImage
+          blitImage(commandBuffer, sourceImage, VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            destination.Image, VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1u, &blit,
+            VkConstants.VK_FILTER_LINEAR)
+        } else {
+          let copyImage = dispatch.vkCmdCopyImage
+          copyImage(commandBuffer, sourceImage,
+            VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            destination.Image, VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            1u, &region)
+        }
       }
       destination.TransitionToShaderRead(commandBuffer)
       if let parent = currentTarget {
@@ -1366,8 +1430,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
 
   private func SetLayerViewport(commandBuffer VkCommandBuffer) {
     var viewport = VkViewport{}
-    viewport.width = float32(activeExtent.width)
-    viewport.height = float32(activeExtent.height)
+    viewport.width = float32(physicalExtent.width)
+    viewport.height = float32(physicalExtent.height)
     viewport.minDepth = 0.0F
     viewport.maxDepth = 1.0F
     let setViewport = dispatch.vkCmdSetViewport

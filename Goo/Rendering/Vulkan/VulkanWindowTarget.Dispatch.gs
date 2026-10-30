@@ -138,6 +138,9 @@ internal unsafe partial class VulkanWindowTarget {
     let copyImage = ResolveDeviceProc("vkCmdCopyImage") as (unmanaged[Cdecl](VkCommandBuffer, VkImage, VkImageLayout, VkImage, VkImageLayout, uint32, *VkImageCopy) -> void)?
     if copyImage == nil { throw InvalidOperationException("vkCmdCopyImage is unavailable") }
     dispatch.vkCmdCopyImage = copyImage
+    let blitImage = ResolveDeviceProc("vkCmdBlitImage") as (unmanaged[Cdecl](VkCommandBuffer, VkImage, VkImageLayout, VkImage, VkImageLayout, uint32, *VkImageBlit, VkFilter) -> void)?
+    if blitImage == nil { throw InvalidOperationException("vkCmdBlitImage is unavailable") }
+    dispatch.vkCmdBlitImage = blitImage
     let queueSubmit = ResolveDeviceProc("vkQueueSubmit2") as (unmanaged[Cdecl](VkQueue, uint32, *VkSubmitInfo2, VkFence) -> VkResult)?
     if queueSubmit == nil { throw InvalidOperationException("vkQueueSubmit2 is unavailable") }
     dispatch.vkQueueSubmit2 = queueSubmit

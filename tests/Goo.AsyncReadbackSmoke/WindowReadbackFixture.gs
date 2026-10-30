@@ -94,10 +94,11 @@ internal data struct VulkanClipMaskAtlasGrowthTestSnapshot {
   internal var MaximumLayerCount uint32
   internal var UniqueLayerMask uint32
   internal var IncrementalGrowth bool
-  internal var GenerationPreserved bool
-  internal var ImagePreserved bool
-  internal var Reacquired bool
-  internal var FailureObserved bool
+  internal var ResolutionReduced bool
+  internal var ScreenMappingPreserved bool
+  internal var ResizeGenerationPreserved bool
+  internal var PressureGenerationPreserved bool
+  internal var ShrinkQualityRecovered bool
   internal var PressureFailureCount uint64
   internal var CompletedRegionsReclaimed bool
 }
@@ -111,8 +112,39 @@ internal partial class VulkanWindowTarget {
   }
 
   internal func DiagnosticFrameIdForTest() uint64 -> nextFrameId
+  internal func LayerResolutionShiftForTest() int32 -> layerPool?.LayerResolutionShift ?? 0
+  internal func FullPresentCopyReservedForTest() bool ->
+    layerPool?.PresentTarget?.Extent.width == uint32(framebufferWidth)
+      && layerPool?.PresentTarget?.Extent.height == uint32(framebufferHeight)
   internal func ClipAtlasStatsForTest() VulkanClipMaskAtlasStats ->
     clipMaskAtlas?.Stats ?? VulkanClipMaskAtlasStats{}
+  internal func SetRenderBudgetsForTest(layerBytes uint64, clipBytes uint64) {
+    guard let activeRuntime = runtime, let allocator = memoryAllocator,
+      let resources = imageResources, let current = generation else {
+      throw InvalidOperationException("Render budget fixture resources are unavailable")
+    }
+    if WaitDeviceIdleResult() != VkConstants.VK_SUCCESS || !ClearReadbackStorage() {
+      throw InvalidOperationException("Render budget fixture could not retire prior frame resources")
+    }
+    let completed = CompletedGlobalSubmissionSerial()
+    primitiveRenderer?.Collect(completed)
+    layerPool?.Collect(completed)
+    primitiveRenderer?.Dispose()
+    primitiveRenderer = nil
+    layerPool?.Dispose()
+    layerPool = nil
+    clipMaskAtlas?.RetireAll(completed)
+    clipMaskAtlas?.Dispose()
+    clipMaskAtlas = VulkanClipMaskAtlas(device, dispatch, allocator,
+      current.Extent.width, current.Extent.height, clipMaskFormatSupport,
+      clipBytes, activeRuntime.Generation, windowObjectAccounting, diagnostics)
+    RecreateSwapchain(framebufferWidth, framebufferHeight)
+    layerPool?.Dispose()
+    layerPool = VulkanOffscreenLayerPool(device, dispatch, allocator,
+      resources.DescriptorSetLayout, current.Format, windowObjectAccounting,
+      8, layerBytes, diagnostics)
+    primitiveRenderer!!.SetLayerPool(layerPool)
+  }
 
   internal func DiagnosticCountersSnapshotForTest() VulkanDiagnosticCounterSnapshot {
     if let current = diagnostics {
@@ -343,6 +375,21 @@ internal partial class VulkanWindowTarget {
       nil)
     try {
       atlas.BeginUsageBatch()
+      atlas.Acquire(1000uL, 0, 0, 16u, 16u)
+      let resizeGeneration = atlas.Generation
+      var resizeGenerationPreserved = true
+      for size in 8 ... 17 {
+        atlas.EndUsageBatch()
+        atlas.AbortUsageBatch()
+        atlas.BeginUsageBatch()
+        atlas.Acquire(1000uL, 0, 0, uint32(size), uint32(size))
+        resizeGenerationPreserved &= atlas.Generation == resizeGeneration
+      }
+      atlas.AbortUsageBatch()
+      atlas.Reset(0uL)
+      atlas.Resize(32u, 32u, 0uL)
+      let evictionBaseline = atlas.Stats.EvictionCount
+      atlas.BeginUsageBatch()
       var key uint64 = 1uL
       var incrementalGrowth = true
       while key <= 32uL {
@@ -362,40 +409,54 @@ internal partial class VulkanWindowTarget {
         }
         key++
       }
-      var failureObserved = false
-      try {
-        atlas.Acquire(33uL, 0, 0, 32u, 32u)
-      } catch (error InvalidOperationException) {
-        failureObserved = true
-      }
-      let afterFailure = atlas.Stats
+      let reduced = atlas.Acquire(33uL, 0, 0, 32u, 32u)
+      let afterReduction = atlas.Stats
       let recovered = atlas.Acquire(1uL, 0, 0, 32u, 32u)
-      let regions = [32]VulkanClipMaskRegion
-      for index in 0 ... 32 {
-        regions[index] = atlas.Acquire(uint64(index) + 1uL, 0, 0, 32u, 32u)
+      var pressureGenerationPreserved = true
+      for frameIndex in 0 ... 4 {
+        atlas.EndUsageBatch()
+        atlas.AbortUsageBatch()
+        atlas.BeginUsageBatch()
+        for retainedKey in 1 ... 34 {
+          atlas.Acquire(uint64(retainedKey), 0, 0, 32u, 32u)
+        }
+        pressureGenerationPreserved &= atlas.Generation == afterReduction.Generation
+      }
+      let regions = [33]VulkanClipMaskRegion
+      for retainedKey in 1 ... 34 {
+        atlas.Acquire(uint64(retainedKey), 0, 0, 16u, 32u)
+      }
+      atlas.RestoreFullResolution()
+      let afterShrink = atlas.Acquire(1uL, 0, 0, 16u, 32u)
+      for index in 0 ... 33 {
+        regions[index] = atlas.Acquire(uint64(index) + 1uL, 0, 0, 16u, 32u)
       }
       atlas.EndUsageBatch()
       atlas.MarkUsed(regions, regions.Length, 1uL)
-      atlas.Collect(1uL)
+      atlas.Collect(3uL)
       atlas.BeginUsageBatch()
-      let replacement = atlas.Acquire(33uL, 0, 0, 32u, 32u)
+      let replacement = atlas.Acquire(34uL, 0, 0, 32u, 32u)
       let reclaimed = atlas.Stats
       return VulkanClipMaskAtlasGrowthTestSnapshot{
         ActiveLayerCount: grown.ActiveLayerCount,
         MaximumLayerCount: grown.MaximumLayerCount,
         UniqueLayerMask: uniqueLayerMask,
         IncrementalGrowth: incrementalGrowth,
-        GenerationPreserved: afterFailure.Generation == grown.Generation,
-        ImagePreserved: afterFailure.Image == grown.Image,
-        Reacquired: recovered.Generation == grown.Generation && recovered.Layer == 0u,
-        FailureObserved: failureObserved,
-        PressureFailureCount: afterFailure.PressureFailureCount,
+        ResolutionReduced: reduced.ContentWidth < reduced.ScreenWidth
+          && recovered.ContentWidth < recovered.ScreenWidth,
+        ScreenMappingPreserved: recovered.ScreenWidth == 32u
+          && recovered.ScreenHeight == 32u && recovered.Mapping.ScaleX > 0.0F,
+        ResizeGenerationPreserved: resizeGenerationPreserved,
+        PressureGenerationPreserved: pressureGenerationPreserved,
+        ShrinkQualityRecovered: afterShrink.ContentWidth >= afterShrink.ScreenWidth
+          && afterShrink.ContentHeight >= afterShrink.ScreenHeight,
+        PressureFailureCount: afterReduction.PressureFailureCount,
         CompletedRegionsReclaimed: replacement.Dirty
           && reclaimed.RegionCount == 1
-          && reclaimed.EvictionCount == 32uL
-          && reclaimed.Generation == grown.Generation
-          && reclaimed.Image == grown.Image
-          && reclaimed.PressureFailureCount == afterFailure.PressureFailureCount,
+          && replacement.ContentWidth == replacement.ScreenWidth
+          && reclaimed.EvictionCount == evictionBaseline + 33uL
+          && reclaimed.Generation >= grown.Generation
+          && reclaimed.PressureFailureCount == afterReduction.PressureFailureCount,
       }
     } finally {
       atlas.AbortUsageBatch()

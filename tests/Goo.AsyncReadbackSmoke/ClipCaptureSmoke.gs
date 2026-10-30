@@ -65,10 +65,11 @@ func RunClipCaptureSmoke() {
         && growth.MaximumLayerCount == 32u
         && growth.UniqueLayerMask == uint32.MaxValue
         && growth.IncrementalGrowth
-        && growth.GenerationPreserved
-        && growth.ImagePreserved
-        && growth.Reacquired
-        && growth.FailureObserved
+        && growth.ResolutionReduced
+        && growth.ScreenMappingPreserved
+        && growth.ResizeGenerationPreserved
+        && growth.PressureGenerationPreserved
+        && growth.ShrinkQualityRecovered
         && growth.PressureFailureCount == 1uL
         && growth.CompletedRegionsReclaimed,
       "Clip mask atlas growth and failure recovery did not qualify")
@@ -128,7 +129,8 @@ func RunClipCaptureSmoke() {
     "Clip capture emitted unsupported-scene diagnostics")
   Require(DiagnosticCounter(diagnostics, "readbackCount") == 2uL,
     "Clip capture diagnostics did not record two readbacks")
-  Console.WriteLine("clip-capture-submission-gate: captures=2 atlas_layers=32 atlas_failure_recovered=1 atlas_completed_reclaimed=1 submission_ready=1 live_frames=4 pixels=validated close=1")
+  Console.WriteLine("clip-capture-submission-gate: captures=2 atlas_layers=32 atlas_resolution_reduced=1 atlas_completed_reclaimed=1 submission_ready=1 live_frames=4 pixels=validated close=1")
+  RunRenderBudgetPressureSmoke()
 }
 
 func AwaitHiddenResources(window Window) {
@@ -306,4 +308,99 @@ func RunHiddenDeviceRecoverySmoke() {
   }
   ReadbackValidateCommonDiagnostics(capturedError.ToString())
   Console.WriteLine("hidden-device-recovery: new_window=presented hidden_window=restored pixels=validated")
+}
+
+class RenderBudgetPressureCell : Cell {
+  override func Build() Blob -> Container() {.Width: Percent(100),.Height: Percent(100),.BackgroundColor: Color.Rgb(12, 20, 32),.ClipPath: RoundedOverflowCell.OuterClipPath,.ClipPathFit: ShapeFit.Fill,
+    Container() {.Width: Percent(100),.Height: Percent(100),.Opacity: 0.9,.ClipPath: RoundedOverflowCell.InnerClipPath,.ClipPathFit: ShapeFit.Fill,.BackgroundColor: Color.Rgb(32, 96, 144),
+      Container() {.Width: Percent(100),.Height: Percent(100),.Opacity: 0.9,.ClipPath: RoundedOverflowCell.OuterClipPath,.ClipPathFit: ShapeFit.Fill,.BackgroundColor: Color.Rgb(160, 64, 192),
+        Container() {.Width: Percent(100),.Height: Percent(100),.Opacity: 0.9,.ClipPath: RoundedOverflowCell.InnerClipPath,.ClipPathFit: ShapeFit.Fill,.BackgroundColor: Color.Rgb(236, 196, 72),
+          Container{ Width: Percent(100), Height: Percent(100), Opacity: 0.9, BackgroundColor: Color.Rgb(52, 196, 112) },
+        },
+      },
+    },
+  }
+}
+
+class RenderBudgetSiblingCell : Cell {
+  private var nested bool
+  func UseNested() {
+    nested = true
+    Rebuild()
+  }
+  
+  override func Build() Blob -> if nested {
+    Cell.Mount[RenderBudgetPressureCell]()
+  } else {
+    Container() {.Width: Percent(100),.Height: Percent(100),
+    Container() {.Position: PositionType.Absolute,.Width: Percent(100),.Height: Percent(100),.Opacity: 0.9,.BackgroundColor: Color.Rgb(32, 96, 144),
+      Container{ Width: Percent(75), Height: Percent(75), BackgroundColor: Color.Rgb(52, 196, 112) },
+    },
+    Container() {.Position: PositionType.Absolute,.Width: Percent(100),.Height: Percent(100),.Opacity: 0.9,.BackgroundColor: Color.Rgb(32, 96, 144),
+      Container{ Width: Percent(75), Height: Percent(75), BackgroundColor: Color.Rgb(52, 196, 112) },
+    },
+    Container() {.Position: PositionType.Absolute,.Width: Percent(100),.Height: Percent(100),.Opacity: 0.9,.BackgroundColor: Color.Rgb(32, 96, 144),
+      Container{ Width: Percent(75), Height: Percent(75), BackgroundColor: Color.Rgb(52, 196, 112) },
+    },
+    Container() {.Position: PositionType.Absolute,.Width: Percent(100),.Height: Percent(100),.Opacity: 0.9,.BackgroundColor: Color.Rgb(32, 96, 144),
+      Container{ Width: Percent(75), Height: Percent(75), BackgroundColor: Color.Rgb(52, 196, 112) },
+    },
+  }
+  }
+}
+
+func RunRenderBudgetPressureSmoke() {
+  let root = RenderBudgetSiblingCell{}
+  let window = Window{ Title: "Goo render budget pressure gate",
+    Width: 400, Height: 190, VSync: false, Root: root }
+  try {
+    window.Open()
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
+    let metrics = WindowReadbackTestFixture.Metrics(window)
+    guard let target = WindowReadbackTestFixture.CaptureTarget(window) else {
+      throw InvalidOperationException("Render budget target is unavailable")
+    }
+    let pixels = uint64(metrics.FramebufferWidth) * uint64(metrics.FramebufferHeight)
+    target.SetRenderBudgetsForTest(pixels * 8uL, pixels)
+    WindowReadbackTestFixture.SetForceFullRedraw(window, true)
+    let siblingPasses = target.DiagnosticCountersSnapshotForTest().layerPoolPassCount
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    Require(target.LayerResolutionShiftForTest() == 0
+        && target.DiagnosticCountersSnapshotForTest().layerPoolPassCount >= siblingPasses + 4uL,
+      "Sibling layers that fit concurrently were drawn without layers")
+    WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
+    root.UseNested()
+    target.SetRenderBudgetsForTest(pixels * 4uL, pixels)
+    WindowReadbackTestFixture.SetForceFullRedraw(window, true)
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    let frame = ClipCaptureReadback(window, metrics)
+    Require(frame.Pixels.Length > 0 && window.IsOpen,
+      "Render budget pressure did not complete a frame")
+    Require(target.DiagnosticCountersSnapshotForTest().layerPoolPressureFailureCount > 0uL
+        && target.ClipAtlasStatsForTest().PressureFailureCount > 0uL,
+      "Render budget scene did not exceed both budgets")
+    Require(target.LayerResolutionShiftForTest() > 0, "Render budget frame did not reduce layer resolution")
+    let sample = (int32(frame.Height) * 3 / 4 * int32(frame.Width) + int32(frame.Width) / 2) * 4
+    Require(frame.Pixels[sample + 1] > frame.Pixels[sample]
+        && frame.Pixels[sample + 1] > frame.Pixels[sample + 2],
+      "Render budget frame did not contain the green layer content")
+    let outside = (int32(frame.Height) * 9 / 10 * int32(frame.Width) + int32(frame.Width) / 10) * 4
+    Require(frame.Pixels[outside + 1] <= frame.Pixels[outside]
+        || frame.Pixels[outside + 1] <= frame.Pixels[outside + 2],
+      "Nested layer content escaped its outer nonrectangular clip")
+    let pressureGeneration = target.ClipAtlasStatsForTest().Generation
+    for frameIndex in 0 ... 4 {
+      WindowReadbackTestFixture.ForceRender(window, 0.0)
+      Require(target.ClipAtlasStatsForTest().Generation == pressureGeneration,
+        "Steady clip budget pressure replaced the atlas generation")
+    }
+    WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
+    target.SetRenderBudgetsForTest(536870912uL, 67108864uL)
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    ClipCaptureReadback(window, metrics)
+  } finally {
+    window.Close()
+  }
+  Console.WriteLine("render-budget-pressure: clip_resolution=reduced layers=reduced frame=completed recovery=completed")
 }

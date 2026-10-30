@@ -43,10 +43,11 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         record LayerRecord,
         frame SceneFrame,
         captured VulkanOffscreenLayerTarget?,
-        preserveCaptured bool = false
+        preserveCaptured bool = false,
+        destination VulkanOffscreenLayerTarget? = nil
     ) VulkanOffscreenLayerTarget? {
         let radius = BackdropBlurRadius(record, frame)
-        if radius <= 0.0F {
+        if radius <= 0.0F || (layerPool?.LayerResolutionShift ?? 0) > 0 {
             return captured
         }
         let blur = backdropBlurEffect ?? LoadBackdropBlur()
@@ -61,6 +62,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         var mapping = Vector4(-paddingX / float32(record.ExtentWidth), -paddingY / float32(record.ExtentHeight),
             float32(paddedWidth) / float32(record.ExtentWidth), float32(paddedHeight) / float32(record.ExtentHeight))
         let parentExtent = activeExtent
+        let parentPhysicalExtent = physicalExtent
         guard let pool = layerPool else {
             throw InvalidOperationException("Vulkan layer pool is unavailable")
         }
@@ -93,6 +95,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
                 }
                 let target = RenderBackdropBlurPass(commandBuffer, extent, source, blur,
                     Vector4(downX ? 1.0F: 0.0F, downY ? 1.0F: 0.0F, 2.0F, 0.0F), mapping)
+                if !primitivePrepass && target == nil { return captured }
                 if let previous = source {
                     if previous != captured { pool.ReleaseForReuse(previous) }
                 }
@@ -111,6 +114,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
                 }
                 let target = RenderBackdropBlurPass(commandBuffer, extent, source, blur,
                     Vector4(residual, residual, float32(axis), 0.0F), mapping)
+                if !primitivePrepass && target == nil { return captured }
                 if let previous = source {
                     if previous != captured { pool.ReleaseForReuse(previous) }
                 }
@@ -121,7 +125,9 @@ internal unsafe partial class VulkanPrimitiveRenderer {
                 VkExtent2D{width: record.ExtentWidth, height: record.ExtentHeight}, source, blur,
                 Vector4(0.0F, 0.0F, 4.0F, 0.0F),
                 Vector4(paddingX / float32(paddedWidth), paddingY / float32(paddedHeight),
-                    float32(record.ExtentWidth) / float32(paddedWidth), float32(record.ExtentHeight) / float32(paddedHeight)))
+                    float32(record.ExtentWidth) / float32(paddedWidth), float32(record.ExtentHeight) / float32(paddedHeight)),
+                destination)
+            if !primitivePrepass && cropped == nil { return captured }
             if let previous = source {
                 if previous != captured { pool.ReleaseForReuse(previous) }
             }
@@ -135,6 +141,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         } finally {
             EndLayerTimestamp(timestamp, VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT)
             activeExtent = parentExtent
+            physicalExtent = parentPhysicalExtent
             if let target = source {
                 if target != captured { pool.ReleaseForReuse(target) }
             }
@@ -147,7 +154,8 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         source VulkanOffscreenLayerTarget?,
         blur ShaderEffect,
         parameter Vector4,
-        mapping Vector4
+        mapping Vector4,
+        destination VulkanOffscreenLayerTarget? = nil
     ) VulkanOffscreenLayerTarget? {
         let layer = LayerRecord{
             Bounds: ConservativeBounds{
@@ -160,6 +168,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         }
         let effect = ShaderEffectRecord{Program: blur, Parameter0: parameter, Parameter1: mapping}
         activeExtent = extent
+        physicalExtent = extent
         if primitivePrepass {
             EmitShaderEffect(commandBuffer, extent, layer, nil, nil, effect)
             return nil
@@ -167,7 +176,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         guard let pool = layerPool else {
             throw InvalidOperationException("Vulkan layer pool is unavailable")
         }
-        let target = pool.Acquire(extent.width, extent.height, completedLayerSerial)
+        guard let target = destination ?? pool.Acquire(extent.width, extent.height, completedLayerSerial) else { return nil }
         try {
             target.TransitionToColorAttachment(commandBuffer)
             BeginLayerRendering(commandBuffer, extent, target.ImageView, false)

@@ -365,6 +365,7 @@ internal unsafe partial class VulkanWindowTarget {
             renderer.SetPathAtlas(resources.Resources.Atlas)
           }
           renderer.ReserveImageReferences(sceneCompiler.Frame)
+          renderer.SetPresentEncode(host.Transparent && current.SupportsTransferSource)
           clipMaskFrameStarted = true
           let clipFrameStats = renderer.PrepareClipMasks(
             sceneCompiler.Frame,
@@ -376,7 +377,6 @@ internal unsafe partial class VulkanWindowTarget {
           clipMaskFramePrepared = true
           clipMaskRedrawPending = clipFrameStats.DirtyRegionCount > 0
           renderer.SetPrimitiveFrameSlot(int32(activeFrameSlotIndex))
-          renderer.SetPresentEncode(host.Transparent && current.SupportsTransferSource)
           renderer.PreparePrimitiveFrame(
             sceneCompiler.Frame,
             current.Extent,

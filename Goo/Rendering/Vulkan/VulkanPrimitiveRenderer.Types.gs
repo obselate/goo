@@ -82,6 +82,7 @@ internal struct VulkanLayerRenderState {
   var ParentOriginX float32
   var ParentOriginY float32
   var ParentExtent VkExtent2D
+  var ParentPhysicalExtent VkExtent2D
   var ParentClipDepth int32
   var ClipSnapshotOffset int32
   var TimestampHandle int32
