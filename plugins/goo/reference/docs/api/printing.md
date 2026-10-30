@@ -2,13 +2,13 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/Printing`](https://github.com/obselate/goo/tree/7d92136cfac8bd76dcb644816e2d85197124574b/Goo/Printing)
+Source: [`Goo/Printing`](https://github.com/obselate/goo/tree/71ce57a838efac7ecf5f5b87b7a501c7b33166cd/Goo/Printing)
 
 ## `IPrintDocument`
 
 Source:
 
-- [`PrintDocument.gs`](https://github.com/obselate/goo/blob/7d92136cfac8bd76dcb644816e2d85197124574b/Goo/Printing/PrintDocument.gs)
+- [`PrintDocument.gs`](https://github.com/obselate/goo/blob/71ce57a838efac7ecf5f5b87b7a501c7b33166cd/Goo/Printing/PrintDocument.gs)
 
 Supplies fresh page cells from a fixed document snapshot on the Goo owner thread.
 
@@ -24,7 +24,7 @@ Recomputes page breaks for paper settings. Page count must be positive on Ready.
 
 Source:
 
-- [`PrintDocument.gs`](https://github.com/obselate/goo/blob/7d92136cfac8bd76dcb644816e2d85197124574b/Goo/Printing/PrintDocument.gs)
+- [`PrintDocument.gs`](https://github.com/obselate/goo/blob/71ce57a838efac7ecf5f5b87b7a501c7b33166cd/Goo/Printing/PrintDocument.gs)
 
 Pagination Status, PageCount and optional Error detail for the chosen paper settings.
 
@@ -32,7 +32,7 @@ Pagination Status, PageCount and optional Error detail for the chosen paper sett
 
 Source:
 
-- [`PrintDocument.gs`](https://github.com/obselate/goo/blob/7d92136cfac8bd76dcb644816e2d85197124574b/Goo/Printing/PrintDocument.gs)
+- [`PrintDocument.gs`](https://github.com/obselate/goo/blob/71ce57a838efac7ecf5f5b87b7a501c7b33166cd/Goo/Printing/PrintDocument.gs)
 
 Reports document pagination independently of export or spooler results.
 
@@ -58,7 +58,7 @@ The document can create the stated pages.
 
 Source:
 
-- [`PrintDocument.gs`](https://github.com/obselate/goo/blob/7d92136cfac8bd76dcb644816e2d85197124574b/Goo/Printing/PrintDocument.gs)
+- [`PrintDocument.gs`](https://github.com/obselate/goo/blob/71ce57a838efac7ecf5f5b87b7a501c7b33166cd/Goo/Printing/PrintDocument.gs)
 
 Physical WidthPoints and HeightPoints, margins LeftPoints, TopPoints, RightPoints and BottomPoints, and raster resolution DpiX and DpiY in dots per inch.
 
@@ -66,7 +66,7 @@ Physical WidthPoints and HeightPoints, margins LeftPoints, TopPoints, RightPoint
 
 Source:
 
-- [`PrintDocument.gs`](https://github.com/obselate/goo/blob/7d92136cfac8bd76dcb644816e2d85197124574b/Goo/Printing/PrintDocument.gs)
+- [`PrintDocument.gs`](https://github.com/obselate/goo/blob/71ce57a838efac7ecf5f5b87b7a501c7b33166cd/Goo/Printing/PrintDocument.gs)
 
 A print Status with an optional native JobId and bounded Error detail.
 
@@ -74,7 +74,7 @@ A print Status with an optional native JobId and bounded Error detail.
 
 Source:
 
-- [`PrintDocument.gs`](https://github.com/obselate/goo/blob/7d92136cfac8bd76dcb644816e2d85197124574b/Goo/Printing/PrintDocument.gs)
+- [`PrintDocument.gs`](https://github.com/obselate/goo/blob/71ce57a838efac7ecf5f5b87b7a501c7b33166cd/Goo/Printing/PrintDocument.gs)
 
 Reports export completion or native submission. Submission does not mean physical printing finished.
 
@@ -130,7 +130,7 @@ The platform print service or requested rendering is unavailable.
 
 Source:
 
-- [`Printing.gs`](https://github.com/obselate/goo/blob/7d92136cfac8bd76dcb644816e2d85197124574b/Goo/Printing/Printing.gs)
+- [`Printing.gs`](https://github.com/obselate/goo/blob/71ce57a838efac7ecf5f5b87b7a501c7b33166cd/Goo/Printing/Printing.gs)
 
 Exports raster PDF pages or submits them through the platform print dialog.
 
