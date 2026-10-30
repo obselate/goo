@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Keep Wayland clipboard text valid when an empty set is followed by replacement text in the same handler.
+
 ## 0.24.0 - 2026-10-30
 
 - Compress embedded Vulkan shader resources to reduce NativeAOT executable size.

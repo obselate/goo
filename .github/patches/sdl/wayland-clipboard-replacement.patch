@@ -1,0 +1,40 @@
+Backport libsdl-org/SDL 01997ebebde6a57af1506956764732554c2b85b0
+wayland: Don't clear the clipboard when a nil selection is ignored
+Upstream main: cc2713c0477118d3074b625abe8df7de7118fe2e
+
+diff --git a/src/video/wayland/SDL_waylanddatamanager.c b/src/video/wayland/SDL_waylanddatamanager.c
+--- a/src/video/wayland/SDL_waylanddatamanager.c
++++ b/src/video/wayland/SDL_waylanddatamanager.c
+@@ -420,6 +420,10 @@ static void offer_source_done_handler(void *data, struct wl_callback *callback,
+         SDL_free(id);
+         if (source_is_external) {
+             Wayland_data_offer_notify_from_mimes(offer, false);
++        } else {
++            SDL_WaylandDataDevice *data_device = offer->data_device;
++            Wayland_data_offer_destroy(offer);
++            data_device->selection_offer = NULL;
+         }
+     }
+ }
+diff --git a/src/video/wayland/SDL_waylandevents.c b/src/video/wayland/SDL_waylandevents.c
+--- a/src/video/wayland/SDL_waylandevents.c
++++ b/src/video/wayland/SDL_waylandevents.c
+@@ -2991,12 +2991,13 @@ static void data_device_handle_selection(void *data, struct wl_data_device *wl_data_device,
+     SDL_LogTrace(SDL_LOG_CATEGORY_INPUT,
+                  ". In data_device_listener . data_device_handle_selection on data_offer 0x%08x",
+                  (id ? WAYLAND_wl_proxy_get_id((struct wl_proxy *)id) : -1));
+-    if (data_device->selection_offer != offer) {
+-        Wayland_data_offer_destroy(data_device->selection_offer);
+-        data_device->selection_offer = offer;
+-    }
+ 
+-    Wayland_data_offer_notify_from_mimes(offer, true);
++    const bool notify = offer || (!offer && data_device->selection_offer && (!data_device->selection_offer->callback || !data_device->selection_source));
++    Wayland_data_offer_destroy(data_device->selection_offer);
++    data_device->selection_offer = offer;
++    if (notify) {
++        Wayland_data_offer_notify_from_mimes(offer, true);
++    }
+ }
+ 
+ static const struct wl_data_device_listener data_device_listener = {
