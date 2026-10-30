@@ -167,7 +167,7 @@ executable. Packaging rechecks the hashes and never downloads tools or a moving 
 
 | Input | SHA-256 |
 | --- | --- |
-| [appimagetool asset 610035789](https://api.github.com/repos/AppImage/appimagetool/releases/assets/610035789) | `95cbe7cce9717fce90c484e34052ee7c7f1d7635b33c12525b4776826a7d29b6` |
+| [appimagetool 1.9.1 asset 324406736](https://api.github.com/repos/AppImage/appimagetool/releases/assets/324406736) | `ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0` |
 | [type-2 runtime asset 657374641](https://api.github.com/repos/AppImage/type2-runtime/releases/assets/657374641) | `617aa77314d57c8b8e4fae9c3f0b35af7b30d5529cb69e98f64f92510ed98a46` |
 
 Output is `Id-Version-linux-x64.AppImage`, plus `.symbols.zip` when debug symbols
