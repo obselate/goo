@@ -2,7 +2,7 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/Input`](https://github.com/obselate/goo/tree/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input)
+Source: [`Goo/Input`](https://github.com/obselate/goo/tree/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input)
 
 ## Software keyboard hints
 
@@ -56,40 +56,31 @@ It excludes the current handler itself; unrouted hover notifications report fals
 
 ## Route keyboard and focus callbacks
 
-Primitives have no automatic keyboard bindings, including editing, submit, button activation, or focus traversal. Assign `KeyBindings` on a primitive or ancestor just like other UI properties. Native text and IME input still insert text independently of physical keys.
+TextEntry and TextEditor have built-in editing keys. No binding setup is needed. Tab and Shift+Tab move focus, except in an editable multiline editor, where they indent and outdent. Enter submits a single-line entry and inserts a newline in an editable multiline editor. Button activation still needs an explicit binding.
 
 ```gsharp
 controller.UseTabs = false
 controller.IndentWidth = 2
 controller.TabWidth = 8
 
-TextEditor(controller){
-    KeyBindings: []KeyBinding{
-        KeyBinding{
-            Key: Key.Tab,
-            Action: () -> {
-                controller.Execute(TextCommand{Kind: TextCommandKind.InsertTab})
-            }
-        },
-        KeyBinding{
-            Key: Key.Tab,
-            Modifiers: KeyModifiers{Shift: true},
-            Action: () -> {
-                controller.Execute(TextCommand{Kind: TextCommandKind.Outdent})
-            }
-        },
-        KeyBinding{
-            Key: Key.Left,
-            Repeat: true,
-            Action: () -> {
-                controller.Execute(TextCommand{Kind: TextCommandKind.MoveLeft})
-            }
-        },
-    },
-}
+TextEditor(controller)
 ```
 
 Keys match physical `Key` values and exact `Modifiers`. Omitted modifiers mean none. The first matching binding on the nearest element wins. `Action` runs on press. `OnRelease` is paired with that press and runs only if the original target still owns focus, even if modifiers were released first. Changing focus, disabling, or removing the target cancels the pending release. `Repeat: true` repeats the action after 400 ms and then at 30 Hz while focus remains on the original target. It works on any focusable primitive and any key.
+
+Key press precedence is:
+
+1. Routed `OnKeyDown` handlers, from the focused node up to the root.
+2. `KeyBindings` on the focused node.
+3. Built-in text editing for a focused TextEntry or TextEditor.
+4. `KeyBindings` on ancestors.
+5. Built-in Tab and Shift+Tab focus traversal.
+
+Any routed `OnKeyDown` handler, including an ancestor's handler, can call `PreventDefault()` to block bindings and built-in defaults. A root handler for app navigation keys must skip events while a text field has focus. Check `window.PlatformInput.Selection != nil`.
+
+An app-root Ctrl+A binding does not replace Select All in a focused text field. Override a field with its own binding or `OnKeyDown`. Existing app-root editing bindings do not run twice.
+
+Movement and deletion repeat. Clipboard, history, submit, Tab, and Escape do not. Shift extends movement selection. Ctrl is the primary and word modifier on Windows and Linux. On macOS, Command is primary and Option moves or deletes words. Primary+A/C/X/V/Z selects all, copies, cuts, pastes, and undoes. Primary+Shift+Z and Ctrl+Y redo. Escape cancels a drag, then composition, then a single-line edit.
 
 Share an application action with `Command(execute, canExecute)`. Assign the same
 instance to `Button.Command`, `KeyBinding.Command`, or call `Execute()` from a
@@ -103,7 +94,7 @@ accessibility state update. Invocation checks availability even before that
 rebuild. No shortcut is installed by assigning a command. Text operations still
 use `TextCommand` through `PlatformInput.Execute` or a text editor controller.
 
-`OnKeyDown` and `OnKeyUp` first bubble from the focused element through its parents. With no focused element they start at the root, so a root Tab binding can acquire initial focus. The matching binding runs after these callbacks. `KeyEvent.StopPropagation()` limits both callbacks and binding lookup to the visited elements. `KeyEvent.PreventDefault()` skips assigned bindings and suppresses direct committed text from that key without stopping callbacks. A handled binding also suppresses its direct committed text. Preedit and IME commits remain text input. `KeyEvent.IsComposing` reports active preedit so callbacks can leave its keys to the IME; bindings are skipped while preedit is active. Both controls expire after dispatch. Repeated callbacks report `Repeat: true`.
+`OnKeyDown` and `OnKeyUp` first bubble from the focused element through its parents. With no focused element they start at the root. Bindings and built-in defaults run after these callbacks. `KeyEvent.StopPropagation()` limits callbacks and binding lookup to the visited elements. `KeyEvent.PreventDefault()` skips bindings and built-in defaults and suppresses direct committed text from that key without stopping callbacks. A handled binding or default also suppresses its direct committed text. Preedit and IME commits remain text input. `KeyEvent.IsComposing` reports active preedit so callbacks can leave its keys to the IME. Bindings and defaults are skipped during preedit, except Escape can cancel it. Both controls expire after dispatch. Repeated callbacks report `Repeat: true`.
 
 Pointer, keyboard, text, and native focus changes share an ordered ingress queue.
 Input injected from an input callback runs after the current event finishes.
@@ -120,7 +111,7 @@ They work through `PlatformInput.Execute` for either text primitive and through
 `TextEditorController.Execute` for an editor. `ExtendSelection` preserves the anchor.
 Mouse selection uses the same core operations.
 
-For an editor's Tab policy, bind `InsertTab` to Tab and `Outdent` to Shift+Tab.
+An editable editor uses `InsertTab` for Tab and `Outdent` for Shift+Tab.
 `UseTabs` selects literal tabs or spaces. `IndentWidth` sets the space indentation
 level and its insertion stops. `TabWidth` sets displayed tab stops without changing
 document text. All three settings are per controller. Their defaults preserve
@@ -131,11 +122,9 @@ next indentation stop. With a selection, `InsertTab` and `Indent` add one level 
 every affected logical line. `Outdent` removes leading mixed tab and space
 indentation through one indentation stop. A selected range ending at the next
 line's start excludes that next line. Each action is one undo step. Source tabs
-remain one character for selection, clipboard, caret, and hit testing. No Tab
-binding is installed automatically. The sample applications assign this policy
-explicitly and use focus traversal for single-line and read-only controls.
+remain one character for selection, clipboard, caret, and hit testing. Single-line and read-only controls use focus traversal.
 
-Bind `window.PlatformInput.MoveFocus(true)` and `MoveFocus(false)` explicitly for forward and backward traversal. For buttons, `ElementHandle.Activate()` performs a click. To show a held press and activate on release, bind `Action: () -> { handle.BeginPress() }` and `OnRelease: () -> { handle.EndPress(true) }`. `EndPress(false)` cancels the press. Focus loss, removal, and a canceled or failing key release clear the pressed state.
+Call `window.PlatformInput.MoveFocus(true)` or `MoveFocus(false)` for explicit forward or backward traversal. For buttons, `ElementHandle.Activate()` performs a click. To show a held press and activate on release, bind `Action: () -> { handle.BeginPress() }` and `OnRelease: () -> { handle.EndPress(true) }`. `EndPress(false)` cancels the press. Focus loss, removal, and a canceled or failing key release clear the pressed state.
 
 A focus transfer updates the old and new `Focused` states first, then routes `OnBlur` from the old element to its parents and `OnFocus` from the new element to its parents. These lifecycle callbacks cannot cancel the transfer. `FocusEvent.StopPropagation()` only skips the remaining ancestors. A reentrant focus request from `OnBlur` or `OnFocus` wins over the superseded transfer.
 
@@ -148,9 +137,8 @@ for example from `MetricsChanged`, and dispose the returned `FocusScope` when an
 overlay closes. The visible, enabled root must be focusable. On the next stable
 input/tree update, Goo uses the eligible `InitialFocus` handle, an `AutoFocus`
 descendant, the first descendant tab stop, or the root when no child accepts
-focus. Explicit `MoveFocus` bindings wrap within the top scope and skip the scope
-root unless it is the fallback. Bind `InsertTab` and `Outdent` explicitly when an
-editor should handle Tab itself.
+focus. Tab and explicit `MoveFocus` calls wrap within the top scope and skip the scope
+root unless it is the fallback. Editable multiline editors keep Tab for indentation.
 
 `Modal: true` blocks input and accessibility outside the latest modal scope and
 any nonmodal scopes opened after it. This lets menus and submenus remain usable
@@ -352,7 +340,7 @@ Keep one TransformGesture for combined pan, pinch and rotation.
 
 Source:
 
-- [`Command.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Command.gs)
+- [`Command.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Command.gs)
 
 Shares an application action and its current availability across explicit bindings and controls. Rebuild the owning cell when availability changes to update button disabled styling and semantics.
 
@@ -372,7 +360,7 @@ Evaluates whether the action can execute now.
 
 Source:
 
-- [`Gestures.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gestures/Gestures.gs)
+- [`Gestures.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gestures/Gestures.gs)
 
 Recognizes two completed direct-touch taps within 400 milliseconds and four logical units. Core defers the first ordinary click only where this recognizer is installed.
 
@@ -388,7 +376,7 @@ Creates isolated state for one routed interaction.
 
 Source:
 
-- [`DragDrop.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/DragDrop.gs)
+- [`DragDrop.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/DragDrop.gs)
 
 Holds the consumer-owned value, allowed effects and optional native representations.
 
@@ -427,7 +415,7 @@ Gets the consumer-owned payload.
 
 Source:
 
-- [`DragDrop.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/DragDrop.gs)
+- [`DragDrop.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/DragDrop.gs)
 
 Selects the effects allowed or accepted by a drag operation.
 
@@ -441,7 +429,7 @@ Selects the effects allowed or accepted by a drag operation.
 
 Source:
 
-- [`DragDrop.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/DragDrop.gs)
+- [`DragDrop.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/DragDrop.gs)
 
 Describes the terminal source callback for an in-app or native drag.
 
@@ -469,7 +457,7 @@ Gets Success for an accepted drop, Cancelled for cancellation, or the native fai
 
 Source:
 
-- [`DragDrop.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/DragDrop.gs)
+- [`DragDrop.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/DragDrop.gs)
 
 Identifies how a drag operation ended.
 
@@ -482,7 +470,7 @@ Identifies how a drag operation ended.
 
 Source:
 
-- [`DragDrop.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/DragDrop.gs)
+- [`DragDrop.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/DragDrop.gs)
 
 Describes one callback in the lifetime of an accepting drop target.
 
@@ -530,7 +518,7 @@ Gets the pointer position in logical window coordinates.
 
 Source:
 
-- [`DragDrop.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/DragDrop.gs)
+- [`DragDrop.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/DragDrop.gs)
 
 Identifies a drop-target lifecycle callback.
 
@@ -545,7 +533,7 @@ Identifies a drop-target lifecycle callback.
 
 Source:
 
-- [`DragDrop.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/DragDrop.gs)
+- [`DragDrop.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/DragDrop.gs)
 
 Defines data creation and terminal notification for a drag source.
 
@@ -568,7 +556,7 @@ Gets the optional callback invoked after the operation terminates.
 
 Source:
 
-- [`DragDrop.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/DragDrop.gs)
+- [`DragDrop.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/DragDrop.gs)
 
 Describes the source position and input when an in-app drag begins.
 
@@ -600,7 +588,7 @@ Gets the pointer position in logical window coordinates.
 
 Source:
 
-- [`DragDrop.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/DragDrop.gs)
+- [`DragDrop.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/DragDrop.gs)
 
 Defines negotiation and lifecycle callbacks for an in-app drop target.
 
@@ -635,7 +623,7 @@ Gets whether this target blocks ancestor fallback when its query rejects a drag.
 
 Source:
 
-- [`TextInputOptions.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/TextInputOptions.gs)
+- [`TextInputOptions.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/TextInputOptions.gs)
 
 Selects the software keyboard's enter action.
 
@@ -676,7 +664,7 @@ Submits a message.
 
 Source:
 
-- [`KeyboardEvent.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/KeyboardEvent.gs)
+- [`KeyboardEvent.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/KeyboardEvent.gs)
 
 Describes a non-cancelable focus lifecycle callback.
 
@@ -688,7 +676,7 @@ Stops this lifecycle event before the next ancestor callback. Focus has already 
 
 Source:
 
-- [`FocusScope.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/FocusScope.gs)
+- [`FocusScope.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/FocusScope.gs)
 
 Contains sequential keyboard focus until disposed or its root becomes unavailable. Nested scopes activate in opening order; dispose on the owning window's UI thread.
 
@@ -712,7 +700,7 @@ Gets this scope's opening order among overlapping scopes in this window.
 
 Source:
 
-- [`FocusScope.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/FocusScope.gs)
+- [`FocusScope.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/FocusScope.gs)
 
 Configures one mounted focus scope. The root must be focusable for empty-scope fallback.
 
@@ -736,7 +724,7 @@ Restores prior eligible focus on close unless focus has explicitly moved outside
 
 Source:
 
-- [`PlatformInput.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/PlatformInput.gs)
+- [`PlatformInput.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/PlatformInput.gs)
 
 Captures FocusId, effective UTF-16 Text, SelectionStart, SelectionEnd, CompositionStart, CompositionEnd, IsPassword, IsMultiline, IsReadOnly, logical CaretArea, and optional InputOptions for one editor. Password text is available only to the trusted host, which must apply platform privacy rules.
 
@@ -748,7 +736,7 @@ Gets optional software keyboard and autofill hints.
 
 Source:
 
-- [`Gesture.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gesture.gs)
+- [`Gesture.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gesture.gs)
 
 Explains why a gesture session did not complete normally.
 
@@ -799,7 +787,7 @@ The owner's recognizer declarations changed.
 
 Source:
 
-- [`Gesture.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gesture.gs)
+- [`Gesture.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gesture.gs)
 
 Selects the next arbitration operation without invoking application callbacks.
 
@@ -835,7 +823,7 @@ Withdraws this session.
 
 Source:
 
-- [`Gesture.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gesture.gs)
+- [`Gesture.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gesture.gs)
 
 Provides callback-lifetime access to an owner's settled contact samples. Do not retain this object beyond GestureSession.Evaluate.
 
@@ -879,7 +867,7 @@ Gets the logical-window pointer anchor for a scale-only trackpad gesture.
 
 Source:
 
-- [`Gesture.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gesture.gs)
+- [`Gesture.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gesture.gs)
 
 Identifies the input transition evaluated by a gesture session.
 
@@ -910,7 +898,7 @@ A contact was released, or a trackpad pinch ended.
 
 Source:
 
-- [`Gesture.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gesture.gs)
+- [`Gesture.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gesture.gs)
 
 Identifies a gesture callback's lifecycle transition.
 
@@ -941,7 +929,7 @@ The session acquired the interaction.
 
 Source:
 
-- [`Gesture.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gesture.gs)
+- [`Gesture.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gesture.gs)
 
 Describes one contact with stable PointerId, Device, owner-local Position, logical WindowPosition and IsDown state. Up retains its contact through evaluation.
 
@@ -949,7 +937,7 @@ Describes one contact with stable PointerId, Device, owner-local Position, logic
 
 Source:
 
-- [`Gesture.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gesture.gs)
+- [`Gesture.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gesture.gs)
 
 Declares a reusable recognizer whose mutable state belongs to created sessions.
 
@@ -961,7 +949,7 @@ Creates a distinct session for one mounted owner and interaction.
 
 Source:
 
-- [`Gestures.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gestures/Gestures.gs)
+- [`Gestures.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gestures/Gestures.gs)
 
 Reports rotation Status and clockwise Radians. Read Radians only when Status is Available.
 
@@ -969,7 +957,7 @@ Reports rotation Status and clockwise Radians. Read Radians only when Status is 
 
 Source:
 
-- [`Gestures.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gestures/Gestures.gs)
+- [`Gestures.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gestures/Gestures.gs)
 
 Reports whether rotation data is available from this gesture source.
 
@@ -990,7 +978,7 @@ The platform supplies scale without rotation.
 
 Source:
 
-- [`Gesture.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gesture.gs)
+- [`Gesture.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gesture.gs)
 
 Evaluates input before core resolves ownership, then receives settled lifecycle notifications.
 
@@ -1010,7 +998,7 @@ Delivers a resolved transition. Every session receives exactly one terminal noti
 
 Source:
 
-- [`Gesture.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gesture.gs)
+- [`Gesture.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gesture.gs)
 
 Identifies whether samples are direct contacts or a scale-only trackpad gesture.
 
@@ -1031,7 +1019,7 @@ Provides cumulative scale and a pointer anchor without contact samples.
 
 Source:
 
-- [`TextInputOptions.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/TextInputOptions.gs)
+- [`TextInputOptions.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/TextInputOptions.gs)
 
 Selects the software keyboard's input purpose.
 
@@ -1082,7 +1070,7 @@ Requests a URL.
 
 Source:
 
-- [`Key.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Key.gs)
+- [`Key.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Key.gs)
 
 Identifies a physical keyboard key.
 
@@ -1215,7 +1203,7 @@ Identifies a physical keyboard key.
 
 Source:
 
-- [`KeyBinding.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/KeyBinding.gs)
+- [`KeyBinding.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/KeyBinding.gs)
 
 Assigns callbacks to one exact physical key and modifier combination.
 
@@ -1247,7 +1235,7 @@ Enables repeated key downs while this key stays held and its target keeps focus.
 
 Source:
 
-- [`KeyboardEvent.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/KeyboardEvent.gs)
+- [`KeyboardEvent.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/KeyboardEvent.gs)
 
 Describes a keyboard callback.
 
@@ -1279,7 +1267,7 @@ Reports whether this key down came from Goo key repeat.
 
 Source:
 
-- [`KeyModifiers.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/KeyModifiers.gs)
+- [`KeyModifiers.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/KeyModifiers.gs)
 
 Describes the modifier keys for one key press.
 
@@ -1303,7 +1291,7 @@ Reports whether Super is pressed.
 
 Source:
 
-- [`Gestures.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gestures/Gestures.gs)
+- [`Gestures.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gestures/Gestures.gs)
 
 Recognizes a stationary direct-touch hold, then retains ownership until release or cancellation.
 
@@ -1319,7 +1307,7 @@ Creates isolated state for one routed interaction.
 
 Source:
 
-- [`NativeFileDrop.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/NativeFileDrop.gs)
+- [`NativeFileDrop.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/NativeFileDrop.gs)
 
 Contains the allowed MIME formats and owned data for one native offer.
 
@@ -1339,7 +1327,7 @@ Gets whether final data is still unavailable.
 
 Source:
 
-- [`NativeFileDrag.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/NativeFileDrag.gs)
+- [`NativeFileDrag.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/NativeFileDrag.gs)
 
 Owns local file paths for a native Copy offer while DragData.Value stays available to in-window targets.
 
@@ -1366,7 +1354,7 @@ Gets the validated, immutable local paths in their original order.
 
 Source:
 
-- [`NativeFileDrop.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/NativeFileDrop.gs)
+- [`NativeFileDrop.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/NativeFileDrop.gs)
 
 Contains an owned external file list, or an empty preview before the host delivers paths.
 
@@ -1382,7 +1370,7 @@ Gets absolute file paths without reading file contents; the list survives the dr
 
 Source:
 
-- [`NativeFileDrop.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/NativeFileDrop.gs)
+- [`NativeFileDrop.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/NativeFileDrop.gs)
 
 Reports the native transfer operations supported by an open desktop window.
 
@@ -1423,7 +1411,7 @@ The host can offer application data to other applications.
 
 Source:
 
-- [`Gestures.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gestures/Gestures.gs)
+- [`Gestures.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gestures/Gestures.gs)
 
 Restricts pan recognition to both axes or one axis.
 
@@ -1449,7 +1437,7 @@ Rejects predominantly horizontal movement before activation.
 
 Source:
 
-- [`Gestures.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gestures/Gestures.gs)
+- [`Gestures.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gestures/Gestures.gs)
 
 Recognizes direct touch movement without adding scrolling or inertia policy.
 
@@ -1465,7 +1453,7 @@ Creates isolated state for one routed interaction.
 
 Source:
 
-- [`Gestures.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gestures/Gestures.gs)
+- [`Gestures.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gestures/Gestures.gs)
 
 Reports Phase, owner-local Position, WindowPosition, cumulative Translation, per-update Delta and cancellation Reason for a pan.
 
@@ -1473,7 +1461,7 @@ Reports Phase, owner-local Position, WindowPosition, cumulative Translation, per
 
 Source:
 
-- [`PlatformInput.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/PlatformInput.gs)
+- [`PlatformInput.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/PlatformInput.gs)
 
 Routes platform events and semantic editing through the window's existing input system. Call on the window owner thread. Use Window.Post to dispatch from another thread.
 
@@ -1595,7 +1583,7 @@ Gets the focused editor's effective selection, preserving endpoint affinities, o
 
 Source:
 
-- [`PointerButton.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/PointerButton.gs)
+- [`PointerButton.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/PointerButton.gs)
 
 Identifies the pointer button that changed for an input event.
 
@@ -1612,7 +1600,7 @@ Identifies the pointer button that changed for an input event.
 
 Source:
 
-- [`PointerButton.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/PointerButton.gs)
+- [`PointerButton.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/PointerButton.gs)
 
 Identifies the pointer buttons held during an input event.
 
@@ -1629,7 +1617,7 @@ Identifies the pointer buttons held during an input event.
 
 Source:
 
-- [`PointerDevice.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/PointerDevice.gs)
+- [`PointerDevice.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/PointerDevice.gs)
 
 Identifies the pointer device type that produced a pointer event.
 
@@ -1643,7 +1631,7 @@ Identifies the pointer device type that produced a pointer event.
 
 Source:
 
-- [`PointerEvent.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/PointerEvent.gs)
+- [`PointerEvent.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/PointerEvent.gs)
 
 Describes a pointer input callback.
 
@@ -1715,7 +1703,7 @@ Gets the pointer position in logical window coordinates.
 
 Source:
 
-- [`Gestures.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gestures/Gestures.gs)
+- [`Gestures.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gestures/Gestures.gs)
 
 Reports Phase, owner-local Position, WindowPosition and cancellation Reason for a held press.
 
@@ -1723,7 +1711,7 @@ Reports Phase, owner-local Position, WindowPosition and cancellation Reason for 
 
 Source:
 
-- [`Gestures.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gestures/Gestures.gs)
+- [`Gestures.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gestures/Gestures.gs)
 
 Reports a recognized double tap's owner-local Position and WindowPosition.
 
@@ -1731,7 +1719,7 @@ Reports a recognized double tap's owner-local Position and WindowPosition.
 
 Source:
 
-- [`TextInputEvent.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/TextInputEvent.gs)
+- [`TextInputEvent.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/TextInputEvent.gs)
 
 Describes one native IME candidate-list update with Candidates, SelectedCandidate, and Horizontal layout.
 
@@ -1739,7 +1727,7 @@ Describes one native IME candidate-list update with Candidates, SelectedCandidat
 
 Source:
 
-- [`TextInputEvent.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/TextInputEvent.gs)
+- [`TextInputEvent.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/TextInputEvent.gs)
 
 Describes transient IME composition Text and its selected UTF-16 SelectionStart and SelectionLength.
 
@@ -1747,7 +1735,7 @@ Describes transient IME composition Text and its selected UTF-16 SelectionStart 
 
 Source:
 
-- [`TextInputOptions.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/TextInputOptions.gs)
+- [`TextInputOptions.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/TextInputOptions.gs)
 
 Supplies optional platform editing hints. Desktop hosts ignore these except entry password protection.
 
@@ -1771,7 +1759,7 @@ Gets the keyboard purpose. Defaults to Text.
 
 Source:
 
-- [`Gestures.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gestures/Gestures.gs)
+- [`Gestures.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gestures/Gestures.gs)
 
 Recognizes centroid pan, two-contact pinch and rotation as one exclusive interaction.
 
@@ -1787,7 +1775,7 @@ Creates isolated state for one routed interaction.
 
 Source:
 
-- [`Gestures.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/Gestures/Gestures.gs)
+- [`Gestures.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/Gestures/Gestures.gs)
 
 Reports Phase, Source, owner-local Center, WindowCenter, cumulative Translation, cumulative Scale, typed Rotation and cancellation Reason.
 
@@ -1795,7 +1783,7 @@ Reports Phase, Source, owner-local Center, WindowCenter, cumulative Translation,
 
 Source:
 
-- [`WheelEvent.gs`](https://github.com/obselate/goo/blob/34391a7ee26f2bfcb58466b3e3b9cece07e90f19/Goo/Input/WheelEvent.gs)
+- [`WheelEvent.gs`](https://github.com/obselate/goo/blob/9013558620036b7d3f08f369536b9d487325b9fb/Goo/Input/WheelEvent.gs)
 
 Describes a pointer wheel callback.
 

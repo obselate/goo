@@ -332,7 +332,7 @@ Gets the stable key within the sibling list.
 
 ### `KeyBindings`
 
-Gets explicit key bindings. Primitives have no built-in keyboard bindings.
+Gets explicit key bindings. Focused-element bindings override built-in text editing keys.
 
 ### `LayoutTransition`
 
