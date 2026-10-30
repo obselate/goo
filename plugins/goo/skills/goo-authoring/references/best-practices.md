@@ -240,7 +240,7 @@ GOO_FRAME_PROFILE=1 goo dev --no-watch --project App.gsproj
 - Idle prints no console report, because a report needs 240 frames. Check idle with a trace: Record 10 s with no input. Rebuild, layout, render and present stay at zero.
 - For a trace, add `--inspector`, open the Profiler tab, select Record, run the workload, select Stop.
 - A high `build` phase means expensive Cell builds. A high `reconcile` phase can also come from style resolution or diff work. Check `build`, `style_resolve` and `diff` before you change the rebuild scope.
-- Test every text field with the keyboard only: type, Backspace, Delete, Left, Right, Ctrl+Left, Ctrl+Right, Home, End, Shift+arrows, Ctrl+A, Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+Z, Ctrl+Shift+Z, Enter, Tab and Shift+Tab (Cmd instead of Ctrl on macOS). Repeat in each dialog.
+- Test every text field with the keyboard only: type, Backspace, Delete, Left, Right, Ctrl+Left, Ctrl+Right, Ctrl+Backspace, Home, End, Shift+arrows, Ctrl+A, Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+Z, Ctrl+Shift+Z, Enter, Tab and Shift+Tab. On macOS use Cmd for select all, clipboard, undo and redo, and Option for word movement and word delete. Repeat in each dialog.
 
 Find violations before review:
 
