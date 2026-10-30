@@ -1,6 +1,6 @@
 # Goo app best practices
 
-Read this before you write or review Goo app code. These rules override threading and list code in older samples.
+Read this before you write or review Goo app code. These rules override threading, structure and list code in older samples.
 
 ## Rules
 
@@ -8,14 +8,34 @@ Read this before you write or review Goo app code. These rules override threadin
 | --- | --- | --- |
 | 1 | Never block the UI thread. | No `.Result`, `.Wait()`, `.GetAwaiter().GetResult()`, `Thread.Sleep`, synchronous file, network or process I/O in `Build`, handlers, timers or posted actions. |
 | 2 | Use `go` and `scope` for background work. | No `Task.Run`, `Thread`, `ThreadPool` or `ContinueWith` in app code. |
-| 3 | Change Cell state and call `Rebuild()` only on the UI thread. | Every background result returns through `window.TryPost`. |
-| 4 | Bind background work to the Cell and the window. | The Cell implements `IDisposable` and cancels its token. The token links `window.Closed`. |
-| 5 | Drop stale results. | A generation number guards every posted result. |
-| 6 | Virtualize every list sized by data. | No `for` loop over data rows inside `Build`. |
-| 7 | Keep `Build` cheap. | No sort, filter, group, parse or format of a whole collection in `Build`. |
-| 8 | Rebuild the smallest Cell that changed. | Each region is its own Cell. High-rate data is coalesced. |
-| 9 | Idle draws no frames. | At rest the profile shows no rebuild, layout, render or present. |
-| 10 | Measure before you report done. | Frame `p99` stays below budget under the heaviest interaction. |
+| 3 | Separate models, views and controllers. | Models hold data and domain logic. Views build Blobs from a model. The view Cell handles input and calls the model. See App structure. |
+| 4 | Put I/O and long work in services. | File, network, process, parse and heavy compute code is in `Services/` and runs in `go` children. Views and models do no I/O. |
+| 5 | Reuse components. | A visual pattern that occurs twice is one component. Use Goo.Widgets controls before you write a new control. |
+| 6 | Use theme tokens. | Views contain no color, font, radius or spacing literals. All values come from one theme. |
+| 7 | Change Cell state and call `Rebuild()` only on the UI thread. | Every background result returns through `window.TryPost`. |
+| 8 | Bind background work to the Cell and the window. | The Cell implements `IDisposable` and cancels its token. The token links `window.Closed`. |
+| 9 | Drop stale results. | A generation number guards every posted result. |
+| 10 | Virtualize every list sized by data. | No `for` loop over data rows inside `Build`. |
+| 11 | Keep `Build` cheap. | No sort, filter, group, parse or format of a whole collection in `Build`. |
+| 12 | Rebuild the smallest Cell that changed. | Each region is its own Cell. High-rate data is coalesced. |
+| 13 | Idle draws no frames. | At rest the profile shows no rebuild, layout, render or present. |
+| 14 | Measure before you report done. | Frame `p99` stays below budget under the heaviest interaction. |
+
+## App structure
+
+| Folder | Contents | Rules |
+| --- | --- | --- |
+| `Models/` | Domain data, state and logic. View inputs as `data struct` types. | Domain types do not import `Goo`. No I/O. A model can be tested without a window. |
+| `Views/` | One Cell for each screen or region. | `Build` reads the model and Cell fields and returns a Blob. Handlers call model or service methods. No domain logic and no I/O. |
+| `Components/` | Cells and Blob factories that more than one view uses, and the app theme. | Data comes in through `Cell[TInput]` inputs or parameters. Components hold no app state. |
+| `Services/` | File, network, process, platform and persistence access, and heavy compute. | Called from `go` children. A service returns results and never touches a Cell. |
+| `Program.gs` | Window setup and the root Cell. | No view code. |
+
+- The view Cell is the controller for its region. It owns UI state such as selection and scroll, handles input, calls the model, starts `go` work and calls `Rebuild()`.
+- When a screen has many state transitions, put them in a model class with methods, for example `SearchModel.Apply(query)`. The Cell then only connects input to model calls.
+- Data flow: a service result returns through `window.TryPost`, the model changes on the UI thread, the Cell rebuilds, the view builds from the model.
+- Pass a child view only the model values it shows, as a `data struct` input. Goo then rebuilds the child only when those values change.
+- Before you write a component, search Goo.Widgets and the app's `Components/`. Change an existing component when it is close. Do not copy it.
 
 ## Threads
 
@@ -204,6 +224,7 @@ Find violations before review:
 
 ```sh
 rg -n --glob '*.gs' 'Task\.Run|Thread\(|ThreadPool|ContinueWith|GetAwaiter\(\)\.GetResult|\.Wait\(\)|Thread\.Sleep|System\.Threading\.Timer'
+rg -n --glob '**/Views/**/*.gs' 'Color\.(Rgb|Parse)|"#[0-9a-fA-F]{6}|File\.|Directory\.|HttpClient|Process\.Start'
 ```
 
-Each hit in app code is a defect. Fix it with the table in Background work.
+Each hit in app code is a defect. Fix threading hits with the table in Background work. Fix structure hits with App structure.
