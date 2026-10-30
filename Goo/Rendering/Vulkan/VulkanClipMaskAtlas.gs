@@ -402,6 +402,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
   private var height uint32
   private var resolutionShift int32
   private var resolutionEvictionCount uint64
+  private var resolutionRecoveryPending bool
   private var requestedWidth uint32
   private var requestedHeight uint32
   private var format VulkanClipMaskFormat
@@ -623,6 +624,9 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
           && existing.ScreenWidth == screenWidth && existing.ScreenHeight == screenHeight{
             return BuildRegion(existing)
           }
+        if resolutionShift > 0 && (screenWidth < existing.ScreenWidth || screenHeight < existing.ScreenHeight) {
+          resolutionRecoveryPending = true
+        }
         existing.ScreenX = screenX
         existing.ScreenY = screenY
         existing.ScreenWidth = screenWidth
@@ -670,26 +674,32 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
       return BuildRegion(record)
     }
 
+  internal func RestoreFullResolution() {
+    EnsureOpen()
+    if resolutionShift == 0
+      || (!resolutionRecoveryPending && resolutionEvictionCount == evictionCount) { return }
+    resolutionRecoveryPending = false
+    resolutionEvictionCount = evictionCount
+    let priorShift = resolutionShift
+    resolutionShift = 0
+    let required = PackedLayerCount(width, height, maximumLayerCount, 0u, 0u, false, true)
+    if required <= maximumLayerCount {
+      for record in regionOrder {
+        record.ContentWidth = record.ScreenWidth
+        record.ContentHeight = record.ScreenHeight
+      }
+      ReplaceGeneration(required, width, height)
+    } else {
+      resolutionShift = priorShift
+    }
+  }
+
   internal func BeginUsageBatch() {
     EnsureOpen()
     if usageBatchOpen || protectedUsageBatchToken != 0uL {
       throw InvalidOperationException("Vulkan clip mask atlas usage batch is already active")
     }
-    if resolutionShift > 0 && resolutionEvictionCount != evictionCount {
-      resolutionEvictionCount = evictionCount
-      let priorShift = resolutionShift
-      resolutionShift = 0
-      let required = PackedLayerCount(width, height, maximumLayerCount, 0u, 0u, false, true)
-      if required <= maximumLayerCount {
-        for record in regionOrder {
-          record.ContentWidth = record.ScreenWidth
-          record.ContentHeight = record.ScreenHeight
-        }
-        ReplaceGeneration(required, width, height)
-      } else {
-        resolutionShift = priorShift
-      }
-    }
+    RestoreFullResolution()
     if nextUsageBatchToken == uint64.MaxValue {
       throw OverflowException("Vulkan clip mask atlas usage batch token overflow")
     }

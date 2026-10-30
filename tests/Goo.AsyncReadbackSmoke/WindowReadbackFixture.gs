@@ -98,6 +98,7 @@ internal data struct VulkanClipMaskAtlasGrowthTestSnapshot {
   internal var ScreenMappingPreserved bool
   internal var ResizeGenerationPreserved bool
   internal var PressureGenerationPreserved bool
+  internal var ShrinkQualityRecovered bool
   internal var PressureFailureCount uint64
   internal var CompletedRegionsReclaimed bool
 }
@@ -422,8 +423,13 @@ internal partial class VulkanWindowTarget {
         pressureGenerationPreserved &= atlas.Generation == afterReduction.Generation
       }
       let regions = [33]VulkanClipMaskRegion
+      for retainedKey in 1 ... 34 {
+        atlas.Acquire(uint64(retainedKey), 0, 0, 16u, 32u)
+      }
+      atlas.RestoreFullResolution()
+      let afterShrink = atlas.Acquire(1uL, 0, 0, 16u, 32u)
       for index in 0 ... 33 {
-        regions[index] = atlas.Acquire(uint64(index) + 1uL, 0, 0, 32u, 32u)
+        regions[index] = atlas.Acquire(uint64(index) + 1uL, 0, 0, 16u, 32u)
       }
       atlas.EndUsageBatch()
       atlas.MarkUsed(regions, regions.Length, 1uL)
@@ -442,6 +448,8 @@ internal partial class VulkanWindowTarget {
           && recovered.ScreenHeight == 32u && recovered.Mapping.ScaleX > 0.0F,
         ResizeGenerationPreserved: resizeGenerationPreserved,
         PressureGenerationPreserved: pressureGenerationPreserved,
+        ShrinkQualityRecovered: afterShrink.ContentWidth >= afterShrink.ScreenWidth
+          && afterShrink.ContentHeight >= afterShrink.ScreenHeight,
         PressureFailureCount: afterReduction.PressureFailureCount,
         CompletedRegionsReclaimed: replacement.Dirty
           && reclaimed.RegionCount == 1

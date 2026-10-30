@@ -69,6 +69,7 @@ func RunClipCaptureSmoke() {
         && growth.ScreenMappingPreserved
         && growth.ResizeGenerationPreserved
         && growth.PressureGenerationPreserved
+        && growth.ShrinkQualityRecovered
         && growth.PressureFailureCount == 1uL
         && growth.CompletedRegionsReclaimed,
       "Clip mask atlas growth and failure recovery did not qualify")

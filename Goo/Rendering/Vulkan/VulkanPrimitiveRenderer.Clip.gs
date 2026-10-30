@@ -89,6 +89,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           clipRegions[index] = region
           index++
         }
+        if !usageBatchEnded { atlas.RestoreFullResolution() }
         index = 0
         while index < frame.ClipMaskCount {
           let current = clipRegions[index]
