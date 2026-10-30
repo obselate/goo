@@ -90,8 +90,44 @@ internal class WindowsBackdrop : NativeBackdrop {
       DwmSetWindowAttribute(window, 20u, ref dark, 4u)
     }
 
+    internal func SetCaption(window nint, decorated bool) {
+      if window == nint(0) { return }
+      var corner = decorated ? 0 : 2
+      DwmSetWindowAttribute(window, 33u, ref corner, 4u)
+      if decorated {
+        if captionAddress != nint(0) { RemoveWindowSubclass(window, captionAddress, nuint(1)) }
+      } else {
+        if captionAddress == nint(0) {
+          captionCallback = CaptionMessage
+          captionAddress = Marshal.GetFunctionPointerForDelegate(captionCallback!!)
+        }
+        SetWindowSubclass(window, captionAddress, nuint(1), nuint(0))
+      }
+      let style = GetWindowLongPtr(window, -16)
+      SetWindowLongPtr(window, -16, decorated ? style | nint(0x80000) : style & ~nint(0x80000))
+      SetWindowPos(window, nint(0), 0, 0, 0, 0, 0x37u)
+    }
+
+    private func CaptionMessage(window nint, message uint32, wparam nuint, lparam nint, id nuint, data nuint) nint {
+      if message == 0x7Cu && (wparam & nuint(0xffffffffu)) == nuint(0xfffffff0u) {
+        Marshal.WriteInt32(lparam, 4, Marshal.ReadInt32(lparam, 4) & ~0x80000)
+      } else if message == 0x82u {
+        RemoveWindowSubclass(window, captionAddress, nuint(1))
+      }
+      return DefSubclassProc(window, message, wparam, lparam)
+    }
+
+    private var captionCallback SdlTitlebarSubclass?
+    private var captionAddress nint
+
     @DllImport("dwmapi.dll") private func DwmSetWindowAttribute(window nint, attribute uint32, ref value int32, size uint32) int32;
     @DllImport("dwmapi.dll") private func DwmExtendFrameIntoClientArea(window nint, ref margins BackdropWindowsMargins) int32;
+    @DllImport("comctl32.dll") private func SetWindowSubclass(window nint, callback nint, id nuint, data nuint) int32;
+    @DllImport("comctl32.dll") private func RemoveWindowSubclass(window nint, callback nint, id nuint) int32;
+    @DllImport("comctl32.dll") private func DefSubclassProc(window nint, message uint32, wparam nuint, lparam nint) nint;
+    @DllImport("user32.dll", EntryPoint: "GetWindowLongPtrW") private func GetWindowLongPtr(window nint, index int32) nint;
+    @DllImport("user32.dll", EntryPoint: "SetWindowLongPtrW") private func SetWindowLongPtr(window nint, index int32, value nint) nint;
+    @DllImport("user32.dll") private func SetWindowPos(window nint, after nint, x int32, y int32, width int32, height int32, flags uint32) int32;
     @DllImport("user32.dll", EntryPoint: "SystemParametersInfoW")
     private func SystemParametersInfo(action uint32, parameter uint32, ref value BackdropWindowsContrast, flags uint32) int32;
   }

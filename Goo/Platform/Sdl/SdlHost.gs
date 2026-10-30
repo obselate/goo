@@ -357,6 +357,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     if decorated && !contentUnderTitlebar {
       DisableHitTest()
     }
+    if OperatingSystem.IsWindows() {
+      WindowsBackdrop.SetCaption(BackdropPointer(BackdropProperties(WindowHandle), "SDL.window.win32.hwnd", nint(0)), decorated)
+    }
   }
 
   public func SetVSync(value bool) {
