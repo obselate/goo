@@ -967,6 +967,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         pool.FindBackdrop(record, acquire: true)
       } else { nil }
       let target = cached ?? pool.AcquireLayer(layerIndex)
+      var retainBackdrop = cached != nil
       let needsBackdrop = preservesBackdrop || record.BlendMode != 0u
         || (record.EffectIndex >= 0
             && (record.Flags & uint32(LayerRecordFlags.SamplesBackdrop)) != 0u)
@@ -1012,6 +1013,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         let blurred = BlurBackdrop(commandBuffer, record, frame, backdropTarget, backdropOnly,
           backdropOnly ? target : nil)
         if backdropOnly {
+          retainBackdrop = blurred == target
           if blurred != target {
             guard let source = blurred else {
               throw InvalidOperationException("Vulkan layer backdrop source is unavailable")
@@ -1027,7 +1029,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         throw InvalidOperationException("Vulkan layer target is unavailable")
       }
       if state.Target == state.BackdropTarget { state.BackdropTarget = nil }
-      if backdropOnly && pool.LayerResolutionShift == 0 {
+      if backdropOnly && retainBackdrop {
         layerTarget.RetainedBackdrop = record
         layerTarget.RetainedBackdropSource = false
         if let backdrop = state.BackdropTarget {
