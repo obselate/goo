@@ -112,7 +112,7 @@ internal partial class VulkanWindowTarget {
   }
 
   internal func DiagnosticFrameIdForTest() uint64 -> nextFrameId
-  internal func LayerBypassCountForTest() uint64 -> layerPool?.BypassCount ?? 0uL
+  internal func LayerResolutionShiftForTest() int32 -> layerPool?.LayerResolutionShift ?? 0
   internal func FullPresentCopyReservedForTest() bool ->
     layerPool?.PresentTarget?.Extent.width == uint32(framebufferWidth)
       && layerPool?.PresentTarget?.Extent.height == uint32(framebufferHeight)

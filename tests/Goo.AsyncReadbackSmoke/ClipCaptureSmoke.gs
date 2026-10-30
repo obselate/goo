@@ -366,7 +366,7 @@ func RunRenderBudgetPressureSmoke() {
     WindowReadbackTestFixture.SetForceFullRedraw(window, true)
     let siblingPasses = target.DiagnosticCountersSnapshotForTest().layerPoolPassCount
     WindowReadbackTestFixture.ForceRender(window, 0.0)
-    Require(target.LayerBypassCountForTest() == 0uL
+    Require(target.LayerResolutionShiftForTest() == 0
         && target.DiagnosticCountersSnapshotForTest().layerPoolPassCount >= siblingPasses + 4uL,
       "Sibling layers that fit concurrently were drawn without layers")
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
@@ -380,10 +380,15 @@ func RunRenderBudgetPressureSmoke() {
     Require(target.DiagnosticCountersSnapshotForTest().layerPoolPressureFailureCount > 0uL
         && target.ClipAtlasStatsForTest().PressureFailureCount > 0uL,
       "Render budget scene did not exceed both budgets")
+    Require(target.LayerResolutionShiftForTest() > 0, "Render budget frame did not reduce layer resolution")
     let sample = (int32(frame.Height) * 3 / 4 * int32(frame.Width) + int32(frame.Width) / 2) * 4
     Require(frame.Pixels[sample + 1] > frame.Pixels[sample]
         && frame.Pixels[sample + 1] > frame.Pixels[sample + 2],
       "Render budget frame did not contain the green layer content")
+    let outside = (int32(frame.Height) * 9 / 10 * int32(frame.Width) + int32(frame.Width) / 10) * 4
+    Require(frame.Pixels[outside + 1] <= frame.Pixels[outside]
+        || frame.Pixels[outside + 1] <= frame.Pixels[outside + 2],
+      "Nested layer content escaped its outer nonrectangular clip")
     let pressureGeneration = target.ClipAtlasStatsForTest().Generation
     for frameIndex in 0 ... 4 {
       WindowReadbackTestFixture.ForceRender(window, 0.0)
@@ -397,5 +402,5 @@ func RunRenderBudgetPressureSmoke() {
   } finally {
     window.Close()
   }
-  Console.WriteLine("render-budget-pressure: clip_resolution=reduced layers=direct frame=completed recovery=completed")
+  Console.WriteLine("render-budget-pressure: clip_resolution=reduced layers=reduced frame=completed recovery=completed")
 }

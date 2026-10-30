@@ -80,6 +80,16 @@ internal unsafe struct VkImageCopy {
 }
 
 @StructLayout(LayoutKind.Sequential)
+internal unsafe struct VkImageBlit {
+  var srcSubresource VkImageSubresourceLayers
+  var srcOffset0 VkOffset3D
+  var srcOffset1 VkOffset3D
+  var dstSubresource VkImageSubresourceLayers
+  var dstOffset0 VkOffset3D
+  var dstOffset1 VkOffset3D
+}
+
+@StructLayout(LayoutKind.Sequential)
 internal unsafe struct VkBufferMemoryBarrier2 {
   var sType VkStructureType
   var pNext * void

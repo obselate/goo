@@ -48,10 +48,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if preparedClipFrame != nil {
         throw InvalidOperationException("Vulkan clip frame is already prepared")
       }
-      bypassLayers = if let pool = layerPool {
-        !pool.PrepareLayerBudget(frame, completedSubmissionSerial,
+      if let pool = layerPool {
+        pool.PrepareLayerBudget(frame, completedSubmissionSerial,
           presentEncode ? extent.width : 0u, presentEncode ? extent.height : 0u)
-      } else { false }
+      }
       EnsureClipRegionCapacity(frame.ClipMaskCount)
       var usageBatchEnded bool = frame.ClipMaskCount == 0
       if !usageBatchEnded {
@@ -98,7 +98,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           index++
         }
         let stats = frameData.Prepare(frame, clipRegions, frame.ClipMaskCount,
-          slotIndex, completedSubmissionSerial, bypassLayers)
+          slotIndex, completedSubmissionSerial, layerPool)
         if !usageBatchEnded {
           atlas.EndUsageBatch()
           usageBatchEnded = true

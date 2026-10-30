@@ -236,15 +236,22 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           throw ArgumentOutOfRangeException("shadow mask index")
         }
         let region = clipRegions[value.MaskIndex]
-        push.stopPositions_x = region.Mapping.ScaleX
-        push.stopPositions_y = region.Mapping.ScaleY
+        let scaleX = float32(physicalExtent.width) / float32(extent.width)
+        let scaleY = float32(physicalExtent.height) / float32(extent.height)
+        let shadowScale = MathF.Sqrt(scaleX * scaleY)
+        push.params_x *= shadowScale
+        push.params_y *= shadowScale
+        push.params_z *= scaleX
+        push.params_w *= scaleY
+        push.stopPositions_x = region.Mapping.ScaleX / scaleX
+        push.stopPositions_y = region.Mapping.ScaleY / scaleY
         push.stopPositions_z = region.Mapping.OffsetX
         push.stopPositions_w = region.Mapping.OffsetY
-        push.packedColors_y = uint32(BitConverter.SingleToInt32Bits(float32(region.ScreenWidth)))
-        push.packedColors_z = uint32(BitConverter.SingleToInt32Bits(float32(region.ScreenHeight)))
+        push.packedColors_y = uint32(BitConverter.SingleToInt32Bits(float32(region.ScreenWidth) * scaleX))
+        push.packedColors_z = uint32(BitConverter.SingleToInt32Bits(float32(region.ScreenHeight) * scaleY))
         push.packedColorsExtra_y = region.Mapping.Layer * 2u | 1u
-        push.packedColorsExtra_z = uint32(BitConverter.SingleToInt32Bits(float32(region.ScreenX)))
-        push.packedColorsExtra_w = uint32(BitConverter.SingleToInt32Bits(float32(region.ScreenY)))
+        push.packedColorsExtra_z = uint32(BitConverter.SingleToInt32Bits(float32(region.ScreenX) * scaleX))
+        push.packedColorsExtra_w = uint32(BitConverter.SingleToInt32Bits(float32(region.ScreenY) * scaleY))
       }
       BindAndDraw(commandBuffer, primitivePipelines.ShadowPipeline, *void(&push))
     }
@@ -791,12 +798,14 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           EnsureClipDescriptorAt(commandBuffer, textPipelineLayout, 1u)
           EnsureTextInstanceDescriptor(commandBuffer, textPipelineLayout)
           var framePush = HbGpuTextFrameConstants{}
-          framePush.viewport_x = float32(extent.width)
-          framePush.viewport_y = float32(extent.height)
-          framePush.viewport_z = textFrameScaleX
-          framePush.viewport_w = textFrameScaleY
-          framePush.origin_x = currentOriginX
-          framePush.origin_y = currentOriginY
+          let scaleX = float32(physicalExtent.width) / float32(extent.width)
+          let scaleY = float32(physicalExtent.height) / float32(extent.height)
+          framePush.viewport_x = float32(physicalExtent.width)
+          framePush.viewport_y = float32(physicalExtent.height)
+          framePush.viewport_z = textFrameScaleX * scaleX
+          framePush.viewport_w = textFrameScaleY * scaleY
+          framePush.origin_x = currentOriginX * scaleX
+          framePush.origin_y = currentOriginY * scaleY
           framePush.origin_z = 0.0F
           framePush.origin_w = 0.0F
           let pushConstants = dispatch.vkCmdPushConstants
@@ -1156,10 +1165,12 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     FlushPendingPrimitiveDraw(commandBuffer)
     var scissor = VkRect2D{}
     scissor.offset = VkOffset2D{}
-    scissor.offset.x = value.Left
-    scissor.offset.y = value.Top
-    var width int32 = value.Right - value.Left
-    var height int32 = value.Bottom - value.Top
+    let scaleX = float32(physicalExtent.width) / float32(activeExtent.width)
+    let scaleY = float32(physicalExtent.height) / float32(activeExtent.height)
+    scissor.offset.x = int32(MathF.Floor(float32(value.Left) * scaleX))
+    scissor.offset.y = int32(MathF.Floor(float32(value.Top) * scaleY))
+    var width = int32(MathF.Ceiling(float32(value.Right) * scaleX)) - scissor.offset.x
+    var height = int32(MathF.Ceiling(float32(value.Bottom) * scaleY)) - scissor.offset.y
     if width < 0 { width = 0 }
     if height < 0 { height = 0 }
     scissor.extent.width = uint32(width)

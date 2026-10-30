@@ -1,6 +1,8 @@
 package Goo
 
 import System
+import System.Collections.Generic
+import System.Numerics
 
 internal data struct VulkanClipMaskFrameStats {
   var SlotIndex int32
@@ -141,6 +143,10 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
   private var totalFlushes uint64
   private var totalRetainedReuse uint64
   private var disposed bool
+  private var scaledMasks (Dictionary[ValueTuple[int32, float32, float32], int32])? = nil
+  private var drawScales []Vector2 = [0]Vector2
+  private var textScales []Vector2 = [0]Vector2
+  private var scaledLayerData bool
 
   internal prop PreparedSlot int32{ get -> preparedSlot }
   internal prop LastStats VulkanClipMaskFrameStats{ get -> lastStats }
@@ -218,7 +224,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
 
   internal func Prepare(frame SceneFrame, regions []VulkanClipMaskRegion,
     regionCount int32, slotIndex int32, completedSubmissionSerial uint64,
-    bypassLayers bool = false) VulkanClipMaskFrameStats{
+    layerPool VulkanOffscreenLayerPool? = nil) VulkanClipMaskFrameStats{
       EnsureOpen()
       if frame == nil {
         throw ArgumentNullException("frame")
@@ -252,9 +258,10 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
       if textChainTable && frame.ClipChainCount <= 0 {
         throw ArgumentOutOfRangeException("clip frame chains")
       }
+      PrepareScaledMasks(frame, layerPool)
       let maxWordCount = uint64(Int32.MaxValue)
       let drawCount = uint64(frame.DrawRefCount)
-      let maskCount = uint64(frame.ClipMaskCount)
+      let maskCount = uint64(frame.ClipMaskCount) + uint64(scaledMasks?.Count ?? 0)
       let chainCount = uint64(frame.ClipChainCount)
       if hasMasks && (drawCount > maxWordCount / 12uL
           || maskCount > maxWordCount / 12uL
@@ -298,7 +305,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
         slot.InvalidateRetention()
         let words = *uint32(nint(slot.Buffers.Mapped))
         WriteWords(words, frame, regions, regionCount,
-          textChainTable, tableBaseWord, bypassLayers)
+          textChainTable, tableBaseWord)
         slot.Flush(byteCount)
       }
       UpdateDescriptors(slotIndex, byteCount)
@@ -518,9 +525,95 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
     try { Dispose() } catch (cleanup Exception) { }
   }
 
+  private func PrepareScaledMasks(frame SceneFrame, layerPool VulkanOffscreenLayerPool?) {
+    scaledMasks?.Clear()
+    scaledLayerData = false
+    guard let pool = layerPool else { return }
+    if frame.ClipMaskCount == 0 || pool.LayerResolutionShift == 0 { return }
+    scaledLayerData = true
+    if scaledMasks == nil {
+      scaledMasks = Dictionary[ValueTuple[int32, float32, float32], int32]()
+    }
+    if drawScales.Length < frame.DrawRefCount {
+      drawScales = [frame.DrawRefCount]Vector2
+    }
+    if textScales.Length < frame.ClipChainCount {
+      textScales = [frame.ClipChainCount]Vector2
+    }
+    for index in 0 ... frame.ClipChainCount { textScales[index] = Vector2.One }
+    let scales * Vector2 = stackalloc[MaxLayerDepth]Vector2
+    var layerDepth int32 = 0
+    for drawIndex in 0 ... frame.DrawRefCount {
+      let reference = frame.DrawRefs[drawIndex]
+      if reference.Kind == SceneDrawKind.LayerEnd {
+        if layerDepth <= 0 { throw InvalidOperationException("Vulkan layer clip scale stack underflow") }
+        layerDepth--
+      }
+      let scale = if layerDepth > 0 { scales[layerDepth - 1] } else { Vector2.One }
+      drawScales[drawIndex] = scale
+      if reference.Kind == SceneDrawKind.CachedTextSegment
+        && reference.ClipChainId > 0 && reference.ClipChainId < frame.ClipChainCount {
+        textScales[reference.ClipChainId] = scale
+      }
+      var chainIndex = reference.ClipChainId
+      var depth int32 = 0
+      while chainIndex > 0 {
+        if chainIndex >= frame.ClipChainCount || depth >= 8 {
+          throw InvalidOperationException("Vulkan clip chain is invalid")
+        }
+        let chain = frame.ClipChains[chainIndex]
+        if (chain.Flags & uint32(SceneClipChainFlags.Zero)) != 0u { break }
+        if chain.MaskIndex < 0 || chain.MaskIndex >= frame.ClipMaskCount {
+          throw InvalidOperationException("Vulkan clip chain mask is invalid")
+        }
+        ScaledMaskIndex(chain.MaskIndex, scale, frame.ClipMaskCount)
+        chainIndex = chain.ParentIndex
+        depth++
+      }
+      if reference.Kind == SceneDrawKind.LayerBegin {
+        if reference.Index < 0 || reference.Index >= frame.LayerCount || layerDepth >= MaxLayerDepth {
+          throw InvalidOperationException("Vulkan layer clip scale stack is invalid")
+        }
+        let layer = frame.Layers[reference.Index]
+        let extent = pool.LayerExtent(reference.Index)
+        scales[layerDepth] = Vector2(float32(layer.ExtentWidth) / float32(extent.width),
+          float32(layer.ExtentHeight) / float32(extent.height))
+        layerDepth++
+      }
+    }
+    if layerDepth != 0 { throw InvalidOperationException("Vulkan layer clip scale stack is not balanced") }
+  }
+
+  private func ScaledMaskIndex(maskIndex int32, scale Vector2, originalCount int32) int32 {
+    if scale == Vector2.One { return maskIndex }
+    guard let copies = scaledMasks else {
+      throw InvalidOperationException("Vulkan scaled clip masks are unavailable")
+    }
+    let key = ValueTuple[int32, float32, float32](maskIndex, scale.X, scale.Y)
+    if copies.TryGetValue(key, out var existing) { return existing }
+    let index = originalCount + copies.Count
+    copies.Add(key, index)
+    return index
+  }
+
+  private func WriteMaskWords(words * uint32, base int32, region VulkanClipMaskRegion, scale Vector2) {
+    words[base] = BitValue(float32(region.ScreenX) / scale.X)
+    words[base + 1] = BitValue(float32(region.ScreenY) / scale.Y)
+    words[base + 2] = BitValue(float32(region.ScreenX + int32(region.ScreenWidth)) / scale.X)
+    words[base + 3] = BitValue(float32(region.ScreenY + int32(region.ScreenHeight)) / scale.Y)
+    words[base + 4] = BitValue(region.Mapping.ScaleX * scale.X)
+    words[base + 5] = BitValue(region.Mapping.ScaleY * scale.Y)
+    words[base + 6] = BitValue(region.Mapping.OffsetX)
+    words[base + 7] = BitValue(region.Mapping.OffsetY)
+    words[base + 8] = region.Mapping.Layer
+    words[base + 9] = 1u
+    words[base + 10] = 0u
+    words[base + 11] = 0u
+  }
+
   private func WriteWords(words * uint32, frame SceneFrame,
     regions []VulkanClipMaskRegion, regionCount int32,
-    textChainTable bool, tableBaseWord uint64, bypassLayers bool) {
+    textChainTable bool, tableBaseWord uint64) {
       words[0] = uint32(frame.DrawRefCount)
       let maskBaseWord = if frame.ClipMaskCount == 0 {
         4uL
@@ -528,7 +621,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
         4uL + uint64(frame.DrawRefCount) * 12uL
       }
       words[1] = uint32(maskBaseWord)
-      words[2] = uint32(frame.ClipMaskCount)
+      words[2] = uint32(frame.ClipMaskCount) + uint32(scaledMasks?.Count ?? 0)
       words[3] = if frame.ClipMaskCount == 0 || !textChainTable {
         0u
       } else {
@@ -551,20 +644,21 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
           maskIndex++
         }
         words[base + 9] = 0u
-        let originX = if !bypassLayers && reference.Kind == SceneDrawKind.LayerEnd {
+        let originX = if reference.Kind == SceneDrawKind.LayerEnd {
           if layerDepth <= 0 {
             throw InvalidOperationException("Vulkan layer clip origin stack underflow")
           }
           if layerDepth > 1 { layerOriginsX[layerDepth - 2] } else { 0.0F }
         } else if layerDepth > 0 { layerOriginsX[layerDepth - 1] } else { 0.0F }
-        let originY = if !bypassLayers && reference.Kind == SceneDrawKind.LayerEnd {
+        let originY = if reference.Kind == SceneDrawKind.LayerEnd {
           if layerDepth <= 0 {
             throw InvalidOperationException("Vulkan layer clip origin stack underflow")
           }
           if layerDepth > 1 { layerOriginsY[layerDepth - 2] } else { 0.0F }
         } else if layerDepth > 0 { layerOriginsY[layerDepth - 1] } else { 0.0F }
-        words[base + 10] = BitValue(originX)
-        words[base + 11] = BitValue(originY)
+        let scale = if scaledLayerData { drawScales[drawIndex] } else { Vector2.One }
+        words[base + 10] = BitValue(originX / scale.X)
+        words[base + 11] = BitValue(originY / scale.Y)
         var chainIndex = reference.ClipChainId
         let reverse * int32 = stackalloc[8]int32
         var depth int32 = 0
@@ -581,7 +675,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
           if chain.MaskIndex < 0 || chain.MaskIndex >= frame.ClipMaskCount {
             throw InvalidOperationException("Vulkan clip chain mask is invalid")
           }
-          reverse[depth] = chain.MaskIndex
+          reverse[depth] = ScaledMaskIndex(chain.MaskIndex, scale, frame.ClipMaskCount)
           depth++
           chainIndex = chain.ParentIndex
           if chainIndex < 0 {
@@ -597,7 +691,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
         if forceZero {
           words[base + 9] = 2u
         }
-        if !bypassLayers && reference.Kind == SceneDrawKind.LayerBegin {
+        if reference.Kind == SceneDrawKind.LayerBegin {
           if reference.Index < 0 || reference.Index >= frame.LayerCount
             || layerDepth >= MaxLayerDepth{
               throw InvalidOperationException("Vulkan layer clip origin stack is invalid")
@@ -606,7 +700,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
           layerOriginsX[layerDepth] = layer.OriginX
           layerOriginsY[layerDepth] = layer.OriginY
           layerDepth = layerDepth + 1
-        } else if !bypassLayers && reference.Kind == SceneDrawKind.LayerEnd {
+        } else if reference.Kind == SceneDrawKind.LayerEnd {
           if layerDepth <= 0 {
             throw InvalidOperationException("Vulkan layer clip origin stack underflow")
           }
@@ -622,27 +716,22 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
         if clipIndex >= regionCount {
           throw InvalidOperationException("Vulkan clip mask region is unavailable")
         }
-        let region = regions[clipIndex]
-        let base = int32(words[1]) + clipIndex * 12
-        words[base] = BitValue(float32(region.ScreenX))
-        words[base + 1] = BitValue(float32(region.ScreenY))
-        words[base + 2] = BitValue(float32(region.ScreenX + int32(region.ScreenWidth)))
-        words[base + 3] = BitValue(float32(region.ScreenY + int32(region.ScreenHeight)))
-        words[base + 4] = BitValue(region.Mapping.ScaleX)
-        words[base + 5] = BitValue(region.Mapping.ScaleY)
-        words[base + 6] = BitValue(region.Mapping.OffsetX)
-        words[base + 7] = BitValue(region.Mapping.OffsetY)
-        words[base + 8] = region.Mapping.Layer
-        words[base + 9] = 1u
-        words[base + 10] = 0u
-        words[base + 11] = 0u
+        WriteMaskWords(words, int32(words[1]) + clipIndex * 12, regions[clipIndex], Vector2.One)
         clipIndex++
+      }
+      if let copies = scaledMasks {
+        for copy in copies {
+          let key = copy.Key
+          WriteMaskWords(words, int32(words[1]) + copy.Value * 12, regions[key.Item1],
+            Vector2(key.Item2, key.Item3))
+        }
       }
       if textChainTable {
         let tableBase = int32(tableBaseWord)
         words[tableBase] = uint32(frame.ClipChainCount)
         var tableIndex int32 = 0
         while tableIndex < frame.ClipChainCount {
+          let scale = if scaledLayerData { textScales[tableIndex] } else { Vector2.One }
           let base = tableBase + 1 + tableIndex * 12
           var wordIndex int32 = 0
           while wordIndex < 12 {
@@ -666,7 +755,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
               if chain.MaskIndex < 0 || chain.MaskIndex >= frame.ClipMaskCount {
                 throw InvalidOperationException("Vulkan clip chain mask is invalid")
               }
-              reverse[depth] = chain.MaskIndex
+              reverse[depth] = ScaledMaskIndex(chain.MaskIndex, scale, frame.ClipMaskCount)
               depth++
               chainIndex = chain.ParentIndex
               if chainIndex < 0 {

@@ -97,6 +97,7 @@ internal unsafe struct VkDeviceDispatch {
   var vkCmdCopyBuffer unmanaged[Cdecl](VkCommandBuffer, VkBuffer, VkBuffer, uint32, *VkBufferCopy) -> void
   var vkCmdCopyBufferToImage unmanaged[Cdecl](VkCommandBuffer, VkBuffer, VkImage, VkImageLayout, uint32, *VkBufferImageCopy) -> void
   var vkCmdCopyImage unmanaged[Cdecl](VkCommandBuffer, VkImage, VkImageLayout, VkImage, VkImageLayout, uint32, *VkImageCopy) -> void
+  var vkCmdBlitImage unmanaged[Cdecl](VkCommandBuffer, VkImage, VkImageLayout, VkImage, VkImageLayout, uint32, *VkImageBlit, VkFilter) -> void
   var vkCreateBufferView unmanaged[Cdecl](VkDevice, *VkBufferViewCreateInfo, *VkAllocationCallbacks, *VkBufferView) -> VkResult
   var vkDestroyBufferView unmanaged[Cdecl](VkDevice, VkBufferView, *VkAllocationCallbacks) -> void
   var vkCreateSampler unmanaged[Cdecl](VkDevice, *VkSamplerCreateInfo, *VkAllocationCallbacks, *VkSampler) -> VkResult
