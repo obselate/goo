@@ -113,6 +113,19 @@ func RunBackdropBlurSmoke() {
         && inside[2] == outside[2] && inside[3] == outside[3],
       "Backdrop blur changed a uniform translucent backdrop: " + PrimitivePixelText(inside)
       +" " + PrimitivePixelText(outside))
+    guard let target = WindowReadbackTestFixture.CaptureTarget(opened) else {
+      throw InvalidOperationException("Backdrop blur target is unavailable")
+    }
+    target.SetRenderBudgetsForTest(4096uL, 67108864uL)
+    WindowReadbackTestFixture.SetForceFullRedraw(opened, true)
+    WindowReadbackTestFixture.ForceRender(opened, 0.0)
+    let reduced = PrimitiveReadback(opened, metrics)
+    let reducedInside = PrimitiveLogicalPixel(reduced.Pixels, reduced.Width, metrics, 64.0, 156.0)
+    Require(target.LayerResolutionShiftForTest() > 0 && opened.IsOpen,
+      "Backdrop blur pressure did not render at reduced resolution")
+    Require(reducedInside[0] > reducedInside[1] && reducedInside[0] > reducedInside[2]
+        && Math.Abs(int32(reducedInside[3]) - int32(inside[3])) <= 2,
+      "Reduced backdrop blur did not preserve the translucent red backdrop: " + PrimitivePixelText(reducedInside))
     opened.RequestClose()
     WindowReadbackTestFixture.ForceRender(opened, 0.0)
     Require(!opened.IsOpen, "Backdrop blur gate window did not close")
