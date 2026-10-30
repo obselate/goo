@@ -7,8 +7,13 @@ internal class PortalFixtures {
     let cell = PortalPlacementCell{}
     let window = Window{Root: cell, Width: 300, Height: 200, UiScale: 1.25F}
     window.UpdateTree()
+    let popup = cell.Popup.BorderBox
+    let physicalScale = float64(window.UiScale)
     if window.Tree?.Rect.W != 240.0F || window.Tree?.Rect.H != 160.0F
-      || !samePortalBox(cell.Popup.BorderBox, 150.0, 50.0, 90.0, 50.0) { return false }
+      || Math.Abs(popup.X * physicalScale - (float64(window.Width) - 113.0)) > 0.0001
+      || Math.Abs(popup.Y * physicalScale - (100.0 * physicalScale - 63.0)) > 0.0001
+      || Math.Abs(popup.Width * physicalScale - 113.0) > 0.0001
+      || Math.Abs(popup.Height * physicalScale - 63.0) > 0.0001 { return false }
     window.PlatformInput.PointerPress(0, PointerDevice.Mouse, 200.0F, 75.0F,
       PointerButton.Primary, KeyModifiers{}, 1.0F)
     window.PlatformInput.PointerRelease(0, PointerDevice.Mouse, 200.0F, 75.0F,

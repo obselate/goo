@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Snap window layout and border widths to physical pixels at fractional display scales.
+
 ## 0.23.4 - 2026-10-30
 
 - Rebuild DevTools on Goo.Widgets with one stacked phase bar per profiler frame.

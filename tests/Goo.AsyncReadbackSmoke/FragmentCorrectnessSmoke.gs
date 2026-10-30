@@ -38,6 +38,10 @@ class FragmentCorrectnessCell : Cell {
       BorderColor: Color.Rgb(255, 0, 0),
       BackgroundColor: Color.Rgb(0, 0, 255),
     },
+    Container{
+      Position: PositionType.Absolute, Left: 16.25, Top: 72.25, Width: 24, Height: 16,
+      BorderRadius: 4, BorderWidth: 1, BorderColor: Color.White,
+    },
     Container() {.Position: PositionType.Absolute,.Left: 160,.Top: 16,.Width: 640,.Height: 96,.BackgroundColor: Color.Transparent,.ShaderEffect: crtEffect,
       Container{
             Position: PositionType.Absolute,
@@ -109,6 +113,15 @@ func RunFragmentCorrectnessSmoke() {
     ReadbackAwaitReadbackReady(opened, 10000)
     let frame = ReadbackTakeReadback(opened)
     PrimitiveValidateResult(frame, metrics)
+    let borderTop = int32(Math.Round(72.25 * scale, MidpointRounding.AwayFromZero))
+    let borderWidth = int32(Math.Round(scale, MidpointRounding.AwayFromZero))
+    let borderX = int32(Math.Round(28.0 * scale, MidpointRounding.AwayFromZero))
+    for y in -1 ... borderWidth + 1 {
+      let index = ((borderTop + y) * int32(frame.Width) + borderX) * 4
+      Require(frame.Pixels[index] == (y >= 0 && y < borderWidth ? uint8(255) : uint8(0)),
+        "Rounded border is not aligned to physical pixels at row " + y.ToString()
+          + ": " + frame.Pixels[index].ToString())
+    }
     for point in []Point{
       Point{X: 3, Y: 19}, Point{X: 3, Y: 5}, Point{X: 21, Y: 19}, Point{X: 21, Y: 5},
       Point{X: 5, Y: 3}, Point{X: 19, Y: 3}, Point{X: 5, Y: 21}, Point{X: 19, Y: 21},
