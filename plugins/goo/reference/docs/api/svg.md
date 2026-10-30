@@ -2,13 +2,13 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/Svg`](https://github.com/obselate/goo/tree/8e5b2811cdbca3f152b0e42ccf45a72ef25ab3d7/Goo/Svg)
+Source: [`Goo/Svg`](https://github.com/obselate/goo/tree/8bfebbb377488e6804044033a820db04ff4a4efe/Goo/Svg)
 
 ## `Svg`
 
 Source:
 
-- [`Svg.gs`](https://github.com/obselate/goo/blob/8e5b2811cdbca3f152b0e42ccf45a72ef25ab3d7/Goo/Svg/Svg.gs)
+- [`Svg.gs`](https://github.com/obselate/goo/blob/8bfebbb377488e6804044033a820db04ff4a4efe/Goo/Svg/Svg.gs)
 
 Loads SVG sources as reusable vector assets.
 
@@ -40,7 +40,7 @@ Returns: The reusable vector asset.
 
 Source:
 
-- [`Svg.gs`](https://github.com/obselate/goo/blob/8e5b2811cdbca3f152b0e42ccf45a72ef25ab3d7/Goo/Svg/Svg.gs)
+- [`Svg.gs`](https://github.com/obselate/goo/blob/8bfebbb377488e6804044033a820db04ff4a4efe/Goo/Svg/Svg.gs)
 
 Reports invalid or unsupported SVG content.
 
