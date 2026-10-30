@@ -204,6 +204,15 @@ internal unsafe partial class VulkanWindowTarget {
         host.Wake()
         return
       }
+      if frameRenderDeferred {
+        let result = activeRuntime.GetCompletedGraphicsSubmissionSerial(out var completed)
+        if result != VkConstants.VK_SUCCESS {
+          HandleFrameFailure(result, VulkanDiagnosticEventIds.PresentWait)
+          return
+        }
+        completedGraphicsSubmissionSerial = completed
+        pathScene?.Collect(completed)
+      }
     }
     guard let renderer = primitiveRenderer else {
       return
@@ -228,11 +237,6 @@ internal unsafe partial class VulkanWindowTarget {
         sceneCompiler.Frame.Counters, sceneCompiler.Frame)
       if compileResult.PathResourceDeferred {
         pathRedrawPending = true
-        AbortUnsubmittedTextUpload()
-        AbortUnsubmittedImageUploads()
-        AbandonRecordedFrameForRetry()
-        CloseDiagnosticFrame(false)
-        ClearActiveFrame()
         frameRenderDeferred = true
         host.Wake()
         return
@@ -248,7 +252,6 @@ internal unsafe partial class VulkanWindowTarget {
       }
       textRedrawPending = textScene?.RedrawRequired == true
       imageRedrawPending = imageScene?.RedrawRequired == true
-      pathRedrawPending = pathScene?.RedrawRequired == true
       var deferInitialPresentation bool
       if firstPresentationPending && imageScene?.PendingImages == true {
         if initialImageWaitStarted == 0 { initialImageWaitStarted = Stopwatch.GetTimestamp() }
@@ -294,6 +297,7 @@ internal unsafe partial class VulkanWindowTarget {
           }
         }
       }
+      pathRedrawPending = pathScene?.RedrawRequired == true
       if let resources = textScene {
         resources.PrepareUpload()
         if let slot = activeFrameSlot, let atlas = textAtlas {
