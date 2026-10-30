@@ -49,11 +49,17 @@ internal class Layout {
   // No web defaults: native Yoga's Column direction matches Goo's default.
   internal init() {
     config = YGConfigAPI.YGConfigNew()
-    YGConfigAPI.YGConfigSetPointScaleFactor(config, 0.0F)
     scrollNodes = List[Node]()
     placedPortals = HashSet[Node]()
     scrollListDirty = true
     portalStructureDirty = true
+  }
+
+  internal func SetPixelDensity(value float32) {
+    if YGConfigAPI.YGConfigGetPointScaleFactor(config) == value { return }
+    YGConfigAPI.YGConfigSetPointScaleFactor(config, value)
+    laidOut = false
+    portalLaidOut = false
   }
 
   // Walk only when structure changed; targeted style pushes keep Yoga current,

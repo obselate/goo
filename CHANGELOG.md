@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Snap window layout and border widths to physical pixels at fractional display scales.
 - Keep arc subdivision counts independent of path translation.
 - Keep frames running under Vulkan clip-mask and layer budget pressure after display-scale changes. Evict idle resources and reduce clip and layer resolution when needed. Include request dimensions in pressure diagnostics.
 - Stop Windows from drawing native minimize, maximize and close buttons under a replaced title bar on undecorated windows.

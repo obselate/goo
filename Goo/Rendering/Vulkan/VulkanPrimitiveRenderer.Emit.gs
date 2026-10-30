@@ -162,8 +162,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.radii_y = radiusTopRight
       push.radii_z = radiusBottomRight
       push.radii_w = radiusBottomLeft
-      push.params_x = opaqueBorderWidth
-      push.params_y = opaqueBorderHeight
+      push.params_x = MathF.Round(opaqueBorderWidth, MidpointRounding.AwayFromZero)
+      push.params_y = MathF.Round(opaqueBorderHeight, MidpointRounding.AwayFromZero)
       let packed = PackColor(color, opacity)
       push.packedColors_x = packed.Rgb
       push.packedColors_w = packed.Alpha
@@ -276,10 +276,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if bounds.IsEmpty {
         return
       }
-      let topWidth = ClampLength(value.TopWidth, bounds.Height)
-      let bottomWidth = ClampLength(value.BottomWidth, MathF.Max(bounds.Height - topWidth, 0.0F))
-      let rightWidth = ClampLength(value.RightWidth, bounds.Width)
-      let leftWidth = ClampLength(value.LeftWidth, MathF.Max(bounds.Width - rightWidth, 0.0F))
+      let topWidth = ClampLength(MathF.Round(value.TopWidth, MidpointRounding.AwayFromZero), bounds.Height)
+      let bottomWidth = ClampLength(MathF.Round(value.BottomWidth, MidpointRounding.AwayFromZero), MathF.Max(bounds.Height - topWidth, 0.0F))
+      let rightWidth = ClampLength(MathF.Round(value.RightWidth, MidpointRounding.AwayFromZero), bounds.Width)
+      let leftWidth = ClampLength(MathF.Round(value.LeftWidth, MidpointRounding.AwayFromZero), MathF.Max(bounds.Width - rightWidth, 0.0F))
       if value.Style != uint32(int32(BorderStyle.Solid))
         && value.Style != uint32(int32(BorderStyle.Dashed))
         && value.Style != uint32(int32(BorderStyle.Dotted)) {

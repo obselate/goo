@@ -246,6 +246,7 @@ public partial class Window {
     var metricsChanged bool
     var layoutChanged bool
     if let n = node {
+      layout.SetPixelDensity(RenderScale.X)
       if hasEffect(effects, ReconcileEffects.Structure) {
         Portals.Sync(n, portalRoot)
       }
