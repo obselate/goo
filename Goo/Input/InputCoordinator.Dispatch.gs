@@ -68,7 +68,7 @@ internal partial class InputCoordinator {
     var changed = false
     try {
       changed = text.Step(dt)
-      if keyboard.Step(dt, nowTicks) { changed = true }
+      if keyboard.Step(dt, nowTicks, root, resolver, text, pointer) { changed = true }
       if queue.HasPending && drain(root, resolver, float64(nowTicks) / float64(Stopwatch.Frequency),
         resolver.Owner?.PlatformKeyPressedCallbacks, nowTicks) { changed = true }
       if pointer.StepGestures(root, resolver,

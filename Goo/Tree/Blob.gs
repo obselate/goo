@@ -175,7 +175,7 @@ public open class Blob : Style {
     }
   }
 
-  /// Gets explicit key bindings. Primitives have no built-in keyboard bindings.
+  /// Gets explicit key bindings. Focused-element bindings override built-in text editing keys.
   public prop KeyBindings ([]KeyBinding)? {
     get -> InputCallbacks.BlobBindings(this)
     init {

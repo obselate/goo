@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Snap window layout and border widths to physical pixels at fractional display scales.
+- Handle text editing keys and Tab focus traversal in core without application bindings.
 
 ## 0.23.4 - 2026-10-30
 
