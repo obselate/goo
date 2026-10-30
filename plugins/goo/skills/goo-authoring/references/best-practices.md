@@ -20,6 +20,7 @@ Read this before you write or review Goo app code. These rules override threadin
 | 12 | Rebuild the smallest Cell that changed. | Each region is its own Cell. High-rate data is coalesced. |
 | 13 | Idle draws no frames. | At rest the profile shows no rebuild, layout, render or present. |
 | 14 | Measure before you report done. | Frame `p99` stays below budget under the heaviest interaction. |
+| 15 | Attach the editing key bindings. | The app root and every `ModalDialog` set `KeyBindings: WidgetKeyBindings.Editing(window.PlatformInput)`. Text input uses `TextField` or `TextArea`. See Keyboard and text input. |
 
 ## App structure
 
@@ -185,6 +186,25 @@ Start it with `go Rank(batches, generation)`. Start one child per batch, not per
 - Animate paint with `AnimateValue`. It skips `Build` and layout. `Animate(initial)` rebuilds the Cell on every tick.
 - Remove idle frame sources: a focused caret blinks, an interval runs, a shader background redraws. Unfocus at start, stop intervals, cap shader frame rate.
 
+## Keyboard and text input
+
+Goo has no default editing keys. Without `WidgetKeyBindings.Editing`, a text field accepts typed characters, and nothing else works: no Backspace, Delete, arrows, Home, End, selection, copy, cut, paste, undo, redo, Enter submit, Escape or Tab focus traversal.
+
+| Need | Use |
+| --- | --- |
+| Single-line text | `TextField` (core `TextEntry`) |
+| Multiline text | `TextArea` (core `TextEditor`) |
+| Editing, clipboard, undo, Tab traversal | `KeyBindings: WidgetKeyBindings.Editing(window.PlatformInput)` on the app root |
+| Dialog content | The same `KeyBindings` on each `ModalDialog` |
+| App shortcuts, for example Ctrl+S | `KeyBinding` on the root or the region that owns the command |
+| Submit on Enter | `OnSubmit` of a single-line field. It reads the form `CanSubmit`. |
+
+- Never build a text input from `Text`, `Label` or a `Container` with `OnKeyDown` or `OnTextInput`. It loses selection, clipboard, undo, IME and screen reader support.
+- Never prevent default on a key that the editing bindings use. That blocks the binding.
+- Keyboard focus moves in tree order through enabled nodes with `TabStop`. There is no `TabIndex`. Order the tree as the user reads it.
+- `DataGrid`, `TreeView` and `ComboBox` are one Tab stop each. Arrows move inside them. Enter and Space activate.
+- Not supported: middle-click primary-selection paste, a text context menu, and line selection by triple-click in `TextField` (it selects all).
+
 ## Virtualization
 
 | Data | Use |
@@ -220,12 +240,14 @@ GOO_FRAME_PROFILE=1 goo dev --no-watch --project App.gsproj
 - Idle prints no console report, because a report needs 240 frames. Check idle with a trace: Record 10 s with no input. Rebuild, layout, render and present stay at zero.
 - For a trace, add `--inspector`, open the Profiler tab, select Record, run the workload, select Stop.
 - A high `build` phase means expensive Cell builds. A high `reconcile` phase can also come from style resolution or diff work. Check `build`, `style_resolve` and `diff` before you change the rebuild scope.
+- Test every text field with the keyboard only: type, Backspace, Delete, Left, Right, Ctrl+Left, Ctrl+Right, Home, End, Shift+arrows, Ctrl+A, Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+Z, Ctrl+Shift+Z, Enter, Tab and Shift+Tab (Cmd instead of Ctrl on macOS). Repeat in each dialog.
 
 Find violations before review:
 
 ```sh
 rg -n --glob '*.gs' 'Task\.Run|Thread\(|ThreadPool|ContinueWith|GetAwaiter\(\)\.GetResult|\.Wait\(\)|Thread\.Sleep|System\.Threading\.Timer'
 rg -n --glob '**/Views/**/*.gs' 'Color\.(Rgb|Parse)|"#[0-9a-fA-F]{6}|File\.|Directory\.|HttpClient|Process\.Start'
+rg -q --glob '*.gs' 'TextField|TextArea|TextEntry|TextEditor' && ! rg -q --glob '*.gs' 'WidgetKeyBindings\.Editing' && echo 'Text input without editing key bindings'
 ```
 
 Each hit in app code is a defect. Fix threading hits with the table in Background work. Fix structure hits with App structure.

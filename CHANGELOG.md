@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add keyboard and text input rules to the Goo authoring skill: editing key bindings on the app root and dialogs, standard text controls, focus traversal and a keyboard test list.
 - Snap window layout and border widths to physical pixels at fractional display scales.
 
 ## 0.23.4 - 2026-10-30
