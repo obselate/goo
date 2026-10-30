@@ -878,6 +878,71 @@ class ExplicitKeyBindingTests {
         }
     }
 
+    @Theory
+    @InlineData(false)
+    @InlineData(true)
+    func DefaultNavigationAndDeletionUsePlatformModifiersAndRepeat(mac bool) {
+        let saved = InputPolicy.Mac
+        InputPolicy.Mac = mac
+        using let controller = TextEditorController(TextDocument("one two\nthree four"))
+        let field = ElementHandle()
+        let commands = List[TextCommand]()
+        controller.OnCommand = (e TextCommandEvent) -> {
+            commands.Add(e.Command)
+            e.Cancel = true
+        }
+        let window = Window{
+            Width: 320,
+            Height: 120,
+            Root: ExplicitKeyBindingTests.BuildCell(() -> TextEditor(controller){Handle = field})
+        }
+        try {
+            window.UpdateTree()
+            Assert.True(field.Focus())
+            let input = window.PlatformInput
+            for shift in []bool{false, true} {
+                let plain = KeyModifiers{Shift: shift}
+                let primary = KeyModifiers{Shift: shift, Ctrl: !mac, Super: mac}
+                let word = KeyModifiers{Shift: shift, Ctrl: !mac, Alt: mac}
+                for (key, kind, modifiers) in [](Key, TextCommandKind, KeyModifiers){
+                    (Key.Left, TextCommandKind.MoveLeft, plain),
+                    (Key.Right, TextCommandKind.MoveRight, plain),
+                    (Key.Up, TextCommandKind.MoveUp, plain),
+                    (Key.Down, TextCommandKind.MoveDown, plain),
+                    (Key.PageUp, TextCommandKind.PageUp, plain),
+                    (Key.PageDown, TextCommandKind.PageDown, plain),
+                    (Key.Home, TextCommandKind.MoveLineStart, plain),
+                    (Key.End, TextCommandKind.MoveLineEnd, plain),
+                    (Key.Home, TextCommandKind.MoveDocumentStart, primary),
+                    (Key.End, TextCommandKind.MoveDocumentEnd, primary),
+                    (Key.Backspace, TextCommandKind.DeleteBackward, plain),
+                    (Key.Delete, TextCommandKind.DeleteForward, plain),
+                    (Key.Left, TextCommandKind.MoveWordLeft, word),
+                    (Key.Right, TextCommandKind.MoveWordRight, word),
+                    (Key.Backspace, TextCommandKind.DeleteWordBackward, word),
+                    (Key.Delete, TextCommandKind.DeleteWordForward, word)
+                } {
+                    commands.Clear()
+                    input.KeyPress(key, modifiers)
+                    window.InputForTest.Step(window.Tree, Resolver(), 0.5)
+                    input.KeyRelease(key)
+                    Assert.Equal(2, commands.Count)
+                    for command in commands {
+                        Assert.Equal(kind, command.Kind)
+                        Assert.Equal(shift, command.ExtendSelection)
+                    }
+                }
+            }
+            commands.Clear()
+            ExplicitKeyBindingTests.Press(input, Key.Left, KeyModifiers{Ctrl: true, Alt: true})
+            ExplicitKeyBindingTests.Press(input, Key.Left, KeyModifiers{Ctrl: mac, Alt: !mac})
+            Assert.Empty(commands)
+        } finally {
+            window.Close()
+            InputPolicy.Mac = saved
+        }
+    }
+
     shared {
     private func Press(input PlatformInput, key Key, modifiers KeyModifiers = default(KeyModifiers)) {
         input.KeyPress(key, modifiers)

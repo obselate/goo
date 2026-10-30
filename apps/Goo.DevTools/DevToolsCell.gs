@@ -89,7 +89,6 @@ class DevToolsCell : Cell {
         }
         return Container{
             Key: "devtools-root",
-            KeyBindings: WidgetKeyBindings.Editing(window?.PlatformInput),
             Width: Percent(100),
             Height: Percent(100),
             FlexDirection: FlexDirection.Column,
