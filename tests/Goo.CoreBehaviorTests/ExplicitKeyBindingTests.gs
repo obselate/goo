@@ -784,7 +784,9 @@ class ExplicitKeyBindingTests {
                 Assert.NotNull(input.Editor)
             }
             let before = input.Editor!!.Text
-            Assert.True(input.SetComposition("preedit", 0, 0))
+            window.InputForTest.QueueComposition("preedit", 0, 0)
+            input.KeyRelease(Key.Unknown)
+            Assert.True(input.Editor!!.CompositionStart >= 0)
             ExplicitKeyBindingTests.Press(input, Key.Escape)
             Assert.Equal(before, input.Editor!!.Text)
             Assert.Equal(-1, input.Editor!!.CompositionStart)

@@ -485,8 +485,9 @@ internal class KeyboardInput {
       || command == TextCommandKind.DeleteBackward || command == TextCommandKind.DeleteForward
       || command == TextCommandKind.DeleteWordBackward || command == TextCommandKind.DeleteWordForward
     if !repeat || result.Repeat {
-      text.ExecuteEditorCommand(root, resolver, TextCommand{
-        Kind: command, ExtendSelection: modifiers.Shift, Text: command == TextCommandKind.Insert ? "\n" : "" })
+      text.ExecuteEditorCommand(root, resolver, command == TextCommandKind.Insert
+        ? TextCommand{ Kind: command, Text: "\n" }
+        : TextCommand{ Kind: command, ExtendSelection: modifiers.Shift })
     }
     return result
   }
