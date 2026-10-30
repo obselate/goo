@@ -80,7 +80,7 @@ SDK and JDK. Put signing paths in a private MSBuild import or environment:
 - Store uploads, key creation and device installation are separate operations.
 - Keep signing logs private. Do not publish diagnostic build logs.
 
-See [Android integration](https://github.com/obselate/goo/blob/0ecec4f37a2d30036f9928f8b4162f4ba77d0cac/docs/android.md) for device, Vulkan and native-library checks.
+See [Android integration](https://github.com/obselate/goo/blob/0ce57b4e1bd636e1baac505dd866567e2bd15492/docs/android.md) for device, Vulkan and native-library checks.
 
 ## macOS app and DMG
 
