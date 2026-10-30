@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 0.23.4 - 2026-10-30
+
+- Rebuild DevTools on Goo.Widgets with one stacked phase bar per profiler frame.
 - Keep frames running under Vulkan clip-mask and layer budget pressure after display-scale changes. Evict idle resources and reduce clip and layer resolution when needed. Include request dimensions in pressure diagnostics.
 - Stop Windows from drawing native minimize, maximize and close buttons under a replaced title bar on undecorated windows.
 - Request rounded corners for undecorated windows on Windows 11. Windows still keeps them square in virtual machines and when maximized or snapped.
