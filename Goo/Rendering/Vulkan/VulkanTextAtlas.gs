@@ -347,10 +347,12 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
     viewInfo.offset = 0uL
     viewInfo._range = byteSize
     let createBufferView = dispatch.vkCreateBufferView
-    if createBufferView(device, &viewInfo, nil, &atlasBufferView) != VkConstants.VK_SUCCESS
-      || atlasBufferView == 0uL {
-        throw InvalidOperationException("vkCreateBufferView failed for text atlas")
-      }
+    var createdView VkBufferView
+    let result = createBufferView(device, &viewInfo, nil, &createdView)
+    atlasBufferView = createdView
+    if result != VkConstants.VK_SUCCESS || atlasBufferView == 0uL {
+      throw InvalidOperationException("vkCreateBufferView failed for text atlas")
+    }
     try {
       if let accounting = objectAccounting {
         accounting.Allocate()

@@ -296,7 +296,10 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
     samplerInfo.maxLod = 1.0F
     samplerInfo.borderColor = VkConstants.VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK
     let createSampler = Dispatch.vkCreateSampler
-    if createSampler(Device, &samplerInfo, nil, &Sampler) != VkConstants.VK_SUCCESS || Sampler == 0uL {
+    var createdSampler VkSampler
+    let result = createSampler(Device, &samplerInfo, nil, &createdSampler)
+    Sampler = createdSampler
+    if result != VkConstants.VK_SUCCESS || Sampler == 0uL {
       throw InvalidOperationException("vkCreateSampler failed for Vulkan clip mask atlas")
     }
     if let accounting = ObjectAccounting {

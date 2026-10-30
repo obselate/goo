@@ -5,6 +5,8 @@ import System
 import System.Diagnostics
 import System.IO
 import System.Numerics
+import System.Runtime.CompilerServices
+import System.Runtime.InteropServices
 import System.Threading
 import System.Text.Json
 
@@ -104,6 +106,79 @@ internal data struct VulkanClipMaskAtlasGrowthTestSnapshot {
 }
 
 internal partial class VulkanWindowTarget {
+  shared {
+    private var nativeSwapchainCreateForTest unmanaged[Cdecl](VkDevice, *VkSwapchainCreateInfoKHR, *VkAllocationCallbacks, *VkSwapchainKHR) -> VkResult
+    private var nativeSwapchainDestroyForTest unmanaged[Cdecl](VkDevice, VkSwapchainKHR, *VkAllocationCallbacks) -> void
+    private var swapchainCreateAttemptsForTest int32
+    private var swapchainOldHandleValidForTest bool
+
+    @UnmanagedCallersOnly(CallConvs = []Type{typeof(CallConvCdecl)})
+    private func CreateSwapchainForTest(device VkDevice, info *VkSwapchainCreateInfoKHR,
+      callbacks *VkAllocationCallbacks, output *VkSwapchainKHR) VkResult {
+      swapchainCreateAttemptsForTest++
+      let create = nativeSwapchainCreateForTest
+      if swapchainCreateAttemptsForTest == 2 || swapchainCreateAttemptsForTest == 3 {
+        let oldSwapchain = info[0].oldSwapchain
+        swapchainOldHandleValidForTest &= (oldSwapchain != 0uL) == (swapchainCreateAttemptsForTest == 2)
+        if swapchainCreateAttemptsForTest == 2 {
+          var created VkSwapchainKHR
+          let result = create(device, info, callbacks, &created)
+          if result != VkConstants.VK_SUCCESS { return result }
+          let destroy = nativeSwapchainDestroyForTest
+          destroy(device, created, callbacks)
+        }
+        *output = 0uL
+        return if swapchainCreateAttemptsForTest == 2 {
+          VkConstants.VK_ERROR_OUT_OF_DATE_KHR
+        } else { VkConstants.VK_SUCCESS }
+      }
+      GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true, true)
+      return create(device, info, callbacks, output)
+    }
+  }
+
+  internal func VerifySwapchainCreationRecoveryForTest() {
+    let original = dispatch.vkCreateSwapchainKHR
+    nativeSwapchainCreateForTest = original
+    nativeSwapchainDestroyForTest = dispatch.vkDestroySwapchainKHR
+    swapchainCreateAttemptsForTest = 0
+    swapchainOldHandleValidForTest = true
+    dispatch.vkCreateSwapchainKHR = cast[unmanaged[Cdecl](VkDevice, *VkSwapchainCreateInfoKHR, *VkAllocationCallbacks, *VkSwapchainKHR) -> VkResult](nint(&CreateSwapchainForTest))
+    recreatePending = true
+    try {
+      for attempt in 1 ... 5 {
+        let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5L
+        while swapchainCreateAttemptsForTest < attempt && Stopwatch.GetTimestamp() < deadline {
+          BeginFrame()
+          if swapchainCreateAttemptsForTest < attempt { Thread.Sleep(1) }
+        }
+        if swapchainCreateAttemptsForTest != attempt {
+          throw InvalidOperationException("Swapchain recreation did not make one attempt per frame")
+        }
+        if attempt == 2 || attempt == 3 {
+          if frameBegun || generation != nil || !recreatePending || !frameFailureRetryable {
+            throw InvalidOperationException("Failed swapchain creation did not preserve a retryable window")
+          }
+        } else {
+          if !frameBegun || generation?.Handle == 0uL || recreatePending {
+            throw InvalidOperationException("Swapchain recreation did not recover after compacting GC")
+          }
+          if AbandonAcquiredFrameForTest() != VkConstants.VK_SUCCESS {
+            throw InvalidOperationException("Swapchain recovery fixture could not release its acquired frame")
+          }
+        }
+      }
+      if !swapchainOldHandleValidForTest {
+        throw InvalidOperationException("Swapchain retry reused a retired old handle")
+      }
+    } finally {
+      dispatch.vkCreateSwapchainKHR = original
+      nativeSwapchainCreateForTest = nil
+      nativeSwapchainDestroyForTest = nil
+    }
+    Console.WriteLine("swapchain-recovery: compacting_gc=2 failures=2 attempts=4 retry=ok")
+  }
+
   internal func LiveStartupObjectsForTest() uint64 {
     guard let accounting = objectAccounting else {
       throw InvalidOperationException("startup object accounting is unavailable")

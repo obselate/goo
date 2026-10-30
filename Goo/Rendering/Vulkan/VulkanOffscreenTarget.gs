@@ -1288,7 +1288,9 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       commandPoolCreateInfo.flags = uint32(VkConstants.VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT)
       commandPoolCreateInfo.queueFamilyIndex = graphicsFamilyIndex
       let createCommandPool = dispatch.vkCreateCommandPool
-      let poolResult = createCommandPool(device, &commandPoolCreateInfo, nil, &commandPool)
+      var createdCommandPool VkCommandPool
+      let poolResult = createCommandPool(device, &commandPoolCreateInfo, nil, &createdCommandPool)
+      commandPool = createdCommandPool
       NoteResult(poolResult)
       if poolResult != VkConstants.VK_SUCCESS || commandPool == 0uL {
         throw InvalidOperationException("vkCreateCommandPool failed: " + poolResult.ToString())
@@ -1321,7 +1323,9 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       imageCreateInfo.sharingMode = VkConstants.VK_SHARING_MODE_EXCLUSIVE
       imageCreateInfo.initialLayout = VkConstants.VK_IMAGE_LAYOUT_UNDEFINED
       let createImage = dispatch.vkCreateImage
-      let imageResult = createImage(device, &imageCreateInfo, nil, &image)
+      var createdImage VkImage
+      let imageResult = createImage(device, &imageCreateInfo, nil, &createdImage)
+      image = createdImage
       NoteResult(imageResult)
       if imageResult != VkConstants.VK_SUCCESS || image == 0uL {
         throw InvalidOperationException("vkCreateImage failed: " + imageResult.ToString())
@@ -1363,7 +1367,9 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       viewCreateInfo.subresourceRange.baseArrayLayer = 0u
       viewCreateInfo.subresourceRange.layerCount = 1u
       let createImageView = dispatch.vkCreateImageView
-      let viewResult = createImageView(device, &viewCreateInfo, nil, &imageView)
+      var createdView VkImageView
+      let viewResult = createImageView(device, &viewCreateInfo, nil, &createdView)
+      imageView = createdView
       NoteResult(viewResult)
       if viewResult != VkConstants.VK_SUCCESS || imageView == 0uL {
         throw InvalidOperationException("vkCreateImageView failed: " + viewResult.ToString())
@@ -1386,7 +1392,9 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       bufferCreateInfo.usage = uint32(VkConstants.VK_BUFFER_USAGE_TRANSFER_DST_BIT)
       bufferCreateInfo.sharingMode = VkConstants.VK_SHARING_MODE_EXCLUSIVE
       let createBuffer = dispatch.vkCreateBuffer
-      let bufferResult = createBuffer(device, &bufferCreateInfo, nil, &stagingBuffer)
+      var createdBuffer VkBuffer
+      let bufferResult = createBuffer(device, &bufferCreateInfo, nil, &createdBuffer)
+      stagingBuffer = createdBuffer
       NoteResult(bufferResult)
       if bufferResult != VkConstants.VK_SUCCESS || stagingBuffer == 0uL {
         throw InvalidOperationException("vkCreateBuffer failed: " + bufferResult.ToString())
@@ -1475,7 +1483,9 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     createInfo.queryType = VkConstants.VK_QUERY_TYPE_TIMESTAMP
     createInfo.queryCount = uint32(TimestampQueryCount)
     let createQueryPool = dispatch.vkCreateQueryPool
-    let result = createQueryPool(device, &createInfo, nil, &timestampQueryPool)
+    var createdPool VkQueryPool
+    let result = createQueryPool(device, &createInfo, nil, &createdPool)
+    timestampQueryPool = createdPool
     if result == VkConstants.VK_ERROR_DEVICE_LOST {
       NoteResult(result)
       throw InvalidOperationException("vkCreateQueryPool failed: " + result.ToString())

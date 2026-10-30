@@ -85,22 +85,34 @@ internal unsafe partial class VulkanWindowTarget {
       surfaceLost = false
     }
     var next VulkanSwapchainGeneration?
-    if !TryCreateGeneration(width, height, out next) {
-      if startup { return false }
-      if !surfaceLost {
-        return false
-      }
-      surfaceRecovery = true
-      if !RetireCurrentSwapchain(true) {
-        return false
-      }
-      if !RecreateSurface() {
-        return false
-      }
-      surfaceLost = false
+    try {
       if !TryCreateGeneration(width, height, out next) {
-        return false
+        if startup { return false }
+        if !surfaceLost {
+          return false
+        }
+        surfaceRecovery = true
+        if !RetireCurrentSwapchain(true) {
+          return false
+        }
+        if !RecreateSurface() {
+          return false
+        }
+        surfaceLost = false
+        if !TryCreateGeneration(width, height, out next) {
+          return false
+        }
       }
+    } catch (error System.Runtime.InteropServices.ExternalException) {
+      recreatePending = true
+      if error.ErrorCode == int32(VkConstants.VK_ERROR_DEVICE_LOST) {
+        HandleFrameFailure(VkConstants.VK_ERROR_DEVICE_LOST, VulkanDiagnosticEventIds.SwapchainCreate)
+      } else {
+        frameFailureRetryable = true
+        surfaceLost = error.ErrorCode == int32(VkConstants.VK_ERROR_SURFACE_LOST_KHR)
+        RetireCurrentSwapchain(false)
+      }
+      return false
     }
     guard let created = next else { return false }
     let oldFormat = if let old = generation { old.Format } else { VkFormat(-1) }
@@ -432,7 +444,7 @@ internal unsafe partial class VulkanWindowTarget {
       VkExtent2D{width: uint32(width), height: uint32(height)},
       selection.CompositeAlpha, oldSwapchain, generationId,
       swapchainMaintenanceVariant != VulkanSwapchainMaintenanceVariant.None,
-      windowObjectAccounting, preferExtent)
+      windowObjectAccounting, preferExtent, diagnostics)
     if !startupFirstSwapchainRecorded {
       startupFirstSwapchainRecorded = true
       RecordDiagnosticTiming(VulkanDiagnosticEventIds.SwapchainCreate,
