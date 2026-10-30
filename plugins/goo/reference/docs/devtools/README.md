@@ -9,8 +9,8 @@ Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 and meet Goo's [platform requirements](../../README.md#platforms), then install:
 
 ```sh
-dotnet tool install --global Goo.DevTools --version 0.23.3
-dotnet tool install --global Goo.DevTools.App --version 0.23.3
+dotnet tool install --global Goo.DevTools --version 0.23.4
+dotnet tool install --global Goo.DevTools.App --version 0.23.4
 ```
 
 `Goo.DevTools` provides the `goo` CLI. `Goo.DevTools.App` provides the
@@ -170,12 +170,12 @@ Run `goo doctor` to check the SDK, project, and inspector installation.
 
 ## IDE integration
 
-See the setup guides for [VS Code](https://github.com/obselate/goo/blob/d1b197fbf62929896bb3eed2ae92fe58bc47da32/integrations/vscode/README.md) and
-[Rider](https://github.com/obselate/goo/blob/d1b197fbf62929896bb3eed2ae92fe58bc47da32/integrations/rider/README.md).
+See the setup guides for [VS Code](https://github.com/obselate/goo/blob/8e5b2811cdbca3f152b0e42ccf45a72ef25ab3d7/integrations/vscode/README.md) and
+[Rider](https://github.com/obselate/goo/blob/8e5b2811cdbca3f152b0e42ccf45a72ef25ab3d7/integrations/rider/README.md).
 
 For work on DevTools itself, see [development](development.md) and the
 [local protocol](protocol.md).
 
-For AI agents, the [Goo plugin](https://github.com/obselate/goo/blob/d1b197fbf62929896bb3eed2ae92fe58bc47da32/plugins/goo/README.md) exposes documentation,
+For AI agents, the [Goo plugin](https://github.com/obselate/goo/blob/8e5b2811cdbca3f152b0e42ccf45a72ef25ab3d7/plugins/goo/README.md) exposes documentation,
 starter generation, live target discovery, full snapshots, screenshots, and
 separately opted-in application input as MCP tools.
