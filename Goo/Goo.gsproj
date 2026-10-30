@@ -25,8 +25,7 @@
     <InternalsVisibleTo Include="Goo.Android" />
     <InternalsVisibleTo Include="Goo.Audio" />
     <InternalsVisibleTo Include="Goo.Notifications.WindowsSmoke" />
-    <EmbeddedResource Include="Shaders/Vulkan/*.spv;Shaders/Vulkan/shader-manifest.json"
-                      LogicalName="Goo.Vulkan.Shaders.%(Filename)%(Extension)" />
+    <VulkanShaderAsset Include="Shaders/Vulkan/*.spv;Shaders/Vulkan/shader-manifest.json" />
     <EmbeddedResource Include="Shaders/Effects/*.goo-effect"
                       LogicalName="Goo.Effects.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Rendering/Text/Data/*.bin"
@@ -37,6 +36,38 @@
     <PackageReference Include="Unicode.Bidi" />
     <PackageReference Include="Tmds.DBus.Protocol" />
   </ItemGroup>
+  <UsingTask TaskName="CompressVulkanShaderAssets" TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Sources ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <OutputDirectory ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.IO.Compression" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        Directory.CreateDirectory(OutputDirectory);
+        foreach (var source in Sources)
+        {
+            using var input = File.OpenRead(source.ItemSpec);
+            using var output = File.Create(Path.Combine(OutputDirectory, Path.GetFileName(source.ItemSpec) + ".gz"));
+            using var compressed = new GZipStream(output, CompressionLevel.Optimal);
+            input.CopyTo(compressed);
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+  <Target Name="CompressVulkanShaders" BeforeTargets="AssignTargetPaths"
+          Inputs="@(VulkanShaderAsset);$(MSBuildProjectFullPath)" Outputs="@(VulkanShaderAsset->'$(IntermediateOutputPath)shaders/%(Filename)%(Extension).gz')">
+    <CompressVulkanShaderAssets Sources="@(VulkanShaderAsset)" OutputDirectory="$(IntermediateOutputPath)shaders" />
+  </Target>
+  <Target Name="EmbedCompressedVulkanShaders" BeforeTargets="AssignTargetPaths" DependsOnTargets="CompressVulkanShaders">
+    <ItemGroup>
+      <EmbeddedResource Include="@(VulkanShaderAsset->'$(IntermediateOutputPath)shaders/%(Filename)%(Extension).gz')"
+                        LogicalName="Goo.Vulkan.Shaders.%(Filename)%(Extension)" />
+      <FileWrites Include="@(VulkanShaderAsset->'$(IntermediateOutputPath)shaders/%(Filename)%(Extension).gz')" />
+    </ItemGroup>
+  </Target>
   <Import Project="$(GooTestFixturesProps)"
           Condition="'$(IncludeTestFixtures)' == 'true' and '$(GooTestFixturesProps)' != ''" />
   <Import Project="Goo.Packaging.targets" />

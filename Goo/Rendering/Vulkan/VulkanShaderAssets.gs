@@ -1,6 +1,7 @@
 package Goo
 
 import System.IO
+import System.IO.Compression
 
 internal class VulkanShaderAssets {
   shared {
@@ -10,7 +11,8 @@ internal class VulkanShaderAssets {
       using let stream = typeof(VulkanShaderAssets).Assembly.GetManifestResourceStream(
         "Goo.Vulkan.Shaders." + fileName)
       if stream == nil { throw FileNotFoundException("Goo Vulkan shader asset is missing", fileName) }
-      return BoundedInput.ReadAll(stream, MaxAssetBytes, "Vulkan shader asset")
+      using let decompressed = GZipStream(stream, CompressionMode.Decompress)
+      return BoundedInput.ReadAll(decompressed, MaxAssetBytes, "Vulkan shader asset")
     }
   }
 }
