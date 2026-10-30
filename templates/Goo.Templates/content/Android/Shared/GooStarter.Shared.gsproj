@@ -5,6 +5,6 @@
     <AssemblyName>GooStarter.Shared</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Goo" Version="0.23.3" />
+    <PackageReference Include="Goo" Version="0.23.4" />
   </ItemGroup>
 </Project>

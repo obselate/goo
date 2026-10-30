@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 0.23.4 - 2026-10-30
+
+- Rebuild DevTools on Goo.Widgets with one stacked phase bar per profiler frame.
 - Keep Vulkan native handle outputs stable during garbage collection and retry failed swapchain recreation without closing the window.
 - Avoid redundant path-upload repaints and retry deferred path frames without draining acquired images on the UI thread.
 - Keep arc subdivision counts independent of path translation.
