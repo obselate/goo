@@ -62,14 +62,17 @@ TextEditor(controller)
 
 Keys match physical `Key` values and exact `Modifiers`. Omitted modifiers mean none. The first matching binding on the nearest element wins. `Action` runs on press. `OnRelease` is paired with that press and runs only if the original target still owns focus, even if modifiers were released first. Changing focus, disabling, or removing the target cancels the pending release. `Repeat: true` repeats the action after 400 ms and then at 30 Hz while focus remains on the original target. It works on any focusable primitive and any key.
 
-After routed key callbacks, precedence is:
+Key press precedence is:
 
-1. Bindings on the focused element.
-2. Built-in text editing keys for a focused TextEntry or TextEditor.
-3. Bindings on ancestors.
-4. Built-in Tab and Shift+Tab focus traversal.
+1. Routed `OnKeyDown` handlers, from the focused node up to the root.
+2. `KeyBindings` on the focused node.
+3. Built-in text editing for a focused TextEntry or TextEditor.
+4. `KeyBindings` on ancestors.
+5. Built-in Tab and Shift+Tab focus traversal.
 
-An app-root Ctrl+A binding does not replace Select All in a focused text field. Override a field with its own binding or call `PreventDefault()` in `OnKeyDown`. Existing app-root editing bindings do not run twice.
+Any routed `OnKeyDown` handler, including an ancestor's handler, can call `PreventDefault()` to block bindings and built-in defaults. A root handler for app navigation keys must skip events while a text field has focus. Check `window.PlatformInput.Selection != nil`.
+
+An app-root Ctrl+A binding does not replace Select All in a focused text field. Override a field with its own binding or `OnKeyDown`. Existing app-root editing bindings do not run twice.
 
 Movement and deletion repeat. Clipboard, history, submit, Tab, and Escape do not. Shift extends movement selection. Ctrl is the primary and word modifier on Windows and Linux. On macOS, Command is primary and Option moves or deletes words. Primary+A/C/X/V/Z selects all, copies, cuts, pastes, and undoes. Primary+Shift+Z and Ctrl+Y redo. Escape cancels a drag, then composition, then a single-line edit.
 

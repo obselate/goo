@@ -199,7 +199,8 @@ Goo core provides editing keys for `TextEntry` and `TextEditor`. No app-root or 
 | Submit on Enter | `OnSubmit` of a single-line field. It reads the form `CanSubmit`. |
 
 - Never build a text input from `Text`, `Label` or a `Container` with `OnKeyDown` or `OnTextInput`. It loses selection, clipboard, undo, IME and screen reader support.
-- A field's `OnKeyDown` can prevent default. Its own `KeyBindings` override built-in editing. Built-in editing takes precedence over ancestor bindings, so app-root Ctrl+A does not replace Select All in a text field. Existing root editing bindings do not run twice.
+- Key press order: routed `OnKeyDown` handlers from the focused node up to the root, focused-node `KeyBindings`, built-in text editing, ancestor `KeyBindings`, then Tab focus traversal. Any routed handler can call `PreventDefault()` to block bindings and built-in defaults.
+- A root `OnKeyDown` handler for app navigation keys must skip events while a text field has focus. Check `window.PlatformInput.Selection != nil`. Use a field's own `KeyBindings` to override editing. App-root Ctrl+A does not replace Select All. Existing root editing bindings do not run twice.
 - Tab and Shift+Tab insert indentation and outdent in an editable multiline editor. Otherwise they move focus. Enter submits a single-line field and inserts a newline in an editable multiline editor. Escape cancels a drag, then composition, then a single-line edit.
 - Keyboard focus moves in tree order through enabled nodes with `TabStop`. There is no `TabIndex`. Order the tree as the user reads it.
 - `DataGrid`, `TreeView` and `ComboBox` are one Tab stop each. Arrows move inside them. Enter and Space activate.
