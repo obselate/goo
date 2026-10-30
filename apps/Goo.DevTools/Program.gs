@@ -8,7 +8,7 @@ import System.Collections.Generic
 import System.IO
 
 func Main() {
-    Window.ConfigureApplication("Goo DevTools", "0.24.0", "io.github.obselate.goo.devtools")
+    Window.ConfigureApplication("Goo DevTools", "0.24.1", "io.github.obselate.goo.devtools")
     using let sansRegular = RegisterFont("Vend Sans", "VendSans-VariableFont_wght.ttf", 400)
     using let sansMedium = RegisterFont("Vend Sans", "VendSans-VariableFont_wght.ttf", 500)
     using let sansSemibold = RegisterFont("Vend Sans", "VendSans-VariableFont_wght.ttf", 600)

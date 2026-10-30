@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.24.1 - 2026-10-30
 
 - Keep Wayland clipboard text valid when an empty set is followed by replacement text in the same handler.
 
