@@ -15,13 +15,6 @@ float roundedRectDistance(float2 p, float2 size, float radius)
     return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r;
 }
 
-float3 srgbToLinear(float3 color)
-{
-    float3 low = color / 12.92;
-    float3 high = pow((color + 0.055) / 1.055, float3(2.4, 2.4, 2.4));
-    return lerp(low, high, step(0.04045, color));
-}
-
 float4 gooEffect(float2 uv, float4 source, float4 backdrop)
 {
     float4 controls = gooParameter(2);
@@ -89,7 +82,7 @@ float4 gooEffect(float2 uv, float4 source, float4 backdrop)
     blurred /= totalWeight;
 
     bool configured = accentParameter.w > 0.5;
-    float3 tintColor = srgbToLinear(configured ? tintParameter.rgb : float3(0.018, 0.030, 0.048));
+    float3 tintColor = configured ? tintParameter.rgb : float3(0.018, 0.030, 0.048);
     float opacity = configured ? saturate(tintParameter.w) : 0.92;
     float blurredAlpha = saturate(blurred.a);
     float3 backdropColor = blurredAlpha > 0.001 ? blurred.rgb / blurredAlpha : tintColor;

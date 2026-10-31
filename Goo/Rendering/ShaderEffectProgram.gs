@@ -10,7 +10,7 @@ internal data struct ShaderEffectProgramArtifact(Kind uint32, Bytes []uint8) { }
 
 public sealed class ShaderEffectProgram {
   private const Magic uint32 = 0x46464547u
-  private const Schema uint32 = 1u
+  private const Schema uint32 = 2u
   private const VulkanSpirvKind uint32 = 0x56505356u
   private const VulkanGeneratorSpirvKind uint32 = 0x47505356u
   private const HeaderBytes int32 = 12

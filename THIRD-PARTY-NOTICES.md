@@ -75,14 +75,6 @@ with the committed files.
 - Signed tag commit: `35f656a1a2bab548ea7f54a6dd3fba2b09680d14`.
 - Source archive SHA-256:
   `968536e9abd782f07f7954044c0c4020199fcdd39b41d221ec42d2a3be4a44df`.
-- Goo applies the checked-in
-  `tools/Goo.TextNative/patches/harfbuzz-15.0.0-cpal-linear-light.patch`
-  with SHA-256
-  `db74dc354fdcb7bc3ae8b9f7e02dcda1e662d8ff9b4737726a9569caced3072d`.
-  It patches `src/hb-gpu-paint.cc` at upstream SHA-256
-  `db822c4f947c787e583bb80d28143e7e9094728822fc81bcea9e901ca353c948`
-  to encode explicit CPAL RGB bytes as linear-light Q15 through a fixed
-  256-entry lookup. Alpha and foreground color semantics remain unchanged.
 - The selected hb-gpu GLSL inputs and retained `COPYING` text are vendored at
   `tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/`; the native libraries are
   built from the pinned upstream archive above. These GLSL inputs are byte-identical

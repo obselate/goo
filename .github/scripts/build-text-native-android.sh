@@ -49,7 +49,6 @@ curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 "${source[0]}" -o "$work
 printf '%s  %s\n' "${source[1]}" "$work/harfbuzz.tar.xz" | sha256sum -c -
 tar -xJf "$work/harfbuzz.tar.xz" -C "$work"
 source_root="$work/harfbuzz-${source[2]}"
-python3 "$repo_root/tools/Goo.TextNative/apply-source-patches.py" --manifest "$manifest" --source-root "$source_root"
 python3 - "$source_root/src/meson.build" <<'PY'
 import sys
 from pathlib import Path

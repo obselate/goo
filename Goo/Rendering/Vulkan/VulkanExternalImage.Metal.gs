@@ -24,8 +24,8 @@ internal unsafe sealed partial class VulkanExternalImage {
                         return ExternalImageResult(ExternalImageStatus.UnsupportedFormat)
                     }
                     format = switch MetalObjectHandle.SurfaceFormat(value) {
-                        case 0x42475241u: VkConstants.VK_FORMAT_B8G8R8A8_SRGB
-                        case 0x52474241u: VkConstants.VK_FORMAT_R8G8B8A8_SRGB
+                        case 0x42475241u: VkConstants.VK_FORMAT_B8G8R8A8_UNORM
+                        case 0x52474241u: VkConstants.VK_FORMAT_R8G8B8A8_UNORM
                         default: 0
                     }
                 } else {
@@ -43,8 +43,8 @@ internal unsafe sealed partial class VulkanExternalImage {
                         return ExternalImageResult(ExternalImageStatus.UnsupportedFormat)
                     }
                     format = switch MetalObjectHandle.Integer(value, "pixelFormat") {
-                        case 71uL: VkConstants.VK_FORMAT_R8G8B8A8_SRGB
-                        case 81uL: VkConstants.VK_FORMAT_B8G8R8A8_SRGB
+                        case 70uL: VkConstants.VK_FORMAT_R8G8B8A8_UNORM
+                        case 80uL: VkConstants.VK_FORMAT_B8G8R8A8_UNORM
                         default: 0
                     }
                 }

@@ -21,6 +21,7 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
   private var harfBuzzDraw nint
   private var harfBuzzPaint nint
   private var harfBuzzDesignScale int32
+  private var hinting VulkanTextHinting?
   private let faceIndex uint32
   private let faceCount uint32
   private let variations([]VulkanTextVariation)?
@@ -37,6 +38,7 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
   internal prop FaceIndex uint32{ get -> faceIndex }
   internal prop FaceCount uint32{ get -> faceCount }
   public prop AbiVersion uint32{ get -> VulkanTextProviderAbi.Version }
+  public prop OutlineHintingAvailable bool{ get -> !hasColorPaint && !hasColorLayers && !hasColorBitmaps }
 
   shared {
     internal func ReadBytes(path string) []uint8 ->
@@ -264,7 +266,7 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
     }
 
   public func EncodeGlyphInto(glyphId uint32,
-    workspace VulkanTextProviderWorkspace) VulkanTextProviderResult{
+    workspace VulkanTextProviderWorkspace, ppem int32) VulkanTextProviderResult {
       lock (nativeGate) {
         if disposed {
           return ProviderResult(VulkanTextProviderAbi.Disposed, 0, 0)
@@ -282,7 +284,13 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
           }
           hb_gpu_draw_set_scale(harfBuzzDraw, harfBuzzDesignScale, harfBuzzDesignScale)
           var extents = VulkanTextGlyphExtents{}
-          if hb_gpu_draw_glyph_or_fail(harfBuzzDraw, harfBuzzDesignFont, glyphId) == 0u {
+          let drawn = if ppem > 0 && OutlineHintingAvailable {
+            let fitter = hinting ?? VulkanTextHinting(harfBuzzDesignFont, harfBuzzDesignScale)
+            hinting = fitter
+            fitter.Draw(harfBuzzDesignFont, glyphId, harfBuzzDraw, ppem)
+              || hb_gpu_draw_glyph_or_fail(harfBuzzDraw, harfBuzzDesignFont, glyphId) != 0u
+          } else { hb_gpu_draw_glyph_or_fail(harfBuzzDraw, harfBuzzDesignFont, glyphId) != 0u }
+          if !drawn {
             if !hasColorBitmaps {
               return ProviderResult(VulkanTextProviderAbi.NativeFailure, 0, 0)
             }
@@ -428,6 +436,8 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
         return
       }
       disposed = true
+      hinting?.Dispose()
+      hinting = nil
       if harfBuzzDraw != nint(0) {
         hb_gpu_draw_destroy(harfBuzzDraw)
         harfBuzzDraw = nint(0)

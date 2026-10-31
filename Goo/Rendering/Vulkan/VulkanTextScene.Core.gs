@@ -18,7 +18,6 @@ internal unsafe sealed partial class VulkanTextScene {
   private let buildWorkspace VulkanTextSegmentBuildWorkspace
   private let effectGlyphWorkspace VulkanTextProviderWorkspace
   private let entryMetrics TextMetrics
-  private let srgbToLinear []float32
   private let activeAtlasUse []bool
   private let nodeSegments ConditionalWeakTable[Node, VulkanTextNodeSegmentCache]
   private let gutterSegments ConditionalWeakTable[Node, VulkanTextNodeSegmentCache]
@@ -34,8 +33,10 @@ internal unsafe sealed partial class VulkanTextScene {
   private var emissionFailed bool
   private var completedGlobalSubmissionSerial uint64
   private var textLayoutRequestCount int32
+  private var pixelScale float32 = 1.0F
 
   internal prop ResourceGeneration uint64{ get -> atlasSet.Generation }
+  internal prop PixelScale float32{ get -> pixelScale }
   internal prop RedrawRequired bool{ get -> redrawRequired }
   internal prop TextLayoutRequestCount int32{ get -> textLayoutRequestCount }
 
@@ -77,21 +78,15 @@ internal unsafe sealed partial class VulkanTextScene {
     effectGlyphWorkspace = VulkanTextProviderWorkspace([int32(atlasBytes)]uint8)
     buildWorkspace = VulkanTextSegmentBuildWorkspace(4)
     entryMetrics = TextMetrics()
-    srgbToLinear = [256]float32
-    var srgbIndex int32 = 0
-    while srgbIndex < srgbToLinear.Length {
-      let value = float32(srgbIndex) / 255.0F
-      srgbToLinear[srgbIndex] = if value <= 0.04045F {
-        value / 12.92F
-      } else {
-        MathF.Pow((value + 0.055F) / 1.055F, 2.4F)
-      }
-      srgbIndex = srgbIndex + 1
-    }
     EnsureAtlasStates()
   }
 
-  internal func BeginCompile(completedSerial uint64) {
+  internal func BeginCompile(completedSerial uint64, deviceScale float32) {
+    if deviceScale != pixelScale {
+      pixelScale = deviceScale
+      nodeSegments.Clear()
+      gutterSegments.Clear()
+    }
     redrawRequired = false
     capacityExhausted = false
     colorEffectSkipped = false
@@ -240,6 +235,7 @@ internal unsafe sealed partial class VulkanTextScene {
     nodeBounds ConservativeBounds,
     out bounds ConservativeBounds) bool{
       if owner.CachedTextPaintLayout != nil
+        && owner.CachedTextPaintScale == pixelScale
         && owner.CachedTextPaintLayout!!.FontRegistryGeneration == FontRegistry.Generation
         && Object.ReferenceEquals(owner.CachedTextPaintContent, node.Content)
         && owner.CachedTextPaintVersion == node.ScenePaintVersion
@@ -258,6 +254,7 @@ internal unsafe sealed partial class VulkanTextScene {
       let layout = RequestTextLayout(node, contentWidth)
       if layout.Rich != nil { return false }
       if Object.ReferenceEquals(owner.CachedTextPaintLayout, layout)
+        && owner.CachedTextPaintScale == pixelScale
         && owner.CachedTextPaintContentX == contentX
         && owner.CachedTextPaintContentY == contentY
         && owner.CachedTextPaintContentWidth == contentWidth
@@ -283,11 +280,12 @@ internal unsafe sealed partial class VulkanTextScene {
         var runIndex int32 = 0
         while runIndex < runs.Count {
           let run = runs[runIndex]
+          let ppem = HintPpem(run.Provider, layout.FontSize)
           var glyphIndex int32 = 0
           while glyphIndex < run.Glyphs.Length {
             let glyphId = run.Glyphs[glyphIndex]
             if glyphId != 0u {
-              guard let glyph = CachedGlyph(run, glyphId) else { return false }
+              guard let glyph = CachedGlyph(run, glyphId, ppem) else { return false }
               if !CanRender(glyph) { return false }
               if glyph.ByteLength != 0u {
                 let extents = glyph.Extents
@@ -359,6 +357,7 @@ internal unsafe sealed partial class VulkanTextScene {
     nodeBounds ConservativeBounds) {
       owner.CachedTextPaintContent = node.Content
       owner.CachedTextPaintVersion = node.ScenePaintVersion
+      owner.CachedTextPaintScale = pixelScale
       owner.CachedTextPaintNodeBounds = nodeBounds
     }
 

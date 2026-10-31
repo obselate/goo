@@ -17,6 +17,7 @@ internal class VulkanWindowTargetExtensionNames {
   internal const SurfaceMaintenanceKhr string = "VK_KHR_surface_maintenance1"
   internal const SwapchainMaintenanceExt string = "VK_EXT_swapchain_maintenance1"
   internal const SwapchainMaintenanceKhr string = "VK_KHR_swapchain_maintenance1"
+  internal const SwapchainMutableFormat string = "VK_KHR_swapchain_mutable_format"
 }
 
 internal data struct VulkanWindowTargetSelection {

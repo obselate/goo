@@ -1400,6 +1400,7 @@ internal shared class Program {
         let assembly = manifest.Assemblies.Single((value ShaderAssembly) -> value.Id == shader.Assembly)
         let output = List[uint8]()
         AppendUtf8(output, "#version 450 core\n")
+        if assembly.Id == "hb_gpu_draw_fragment" { AppendUtf8(output, "#define HB_GPU_NO_MSAA\n") }
         for part in assembly.Parts {
             let path = ResolveRepositoryPath(repositoryRoot, part.Path, "assembly part")
             var partBytes = ReadSourceFile(path)
@@ -1714,7 +1715,7 @@ internal shared class Program {
                 AssemblyPart{Path: HarfBuzzVertexPath, Sha256: HarfBuzzVertexSha256},
                 AssemblyPart{
                     Path: "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/hb_gpu.vert.wrapper.glsl",
-                    Sha256: "37a82cdf392a96c35dcb6d42f0840f56621e2bfccb5f9ec43a3ce10231d52bb5"
+                    Sha256: "3334df8e716c8d2da459f1a2806412b67547cccb408e742dbb80393461c3b874"
                 }
             }
         )
@@ -1730,7 +1731,7 @@ internal shared class Program {
                 },
                 AssemblyPart{
                     Path: "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/hb_gpu_draw.frag.wrapper.glsl",
-                    Sha256: "7fe1b95d73f72a4492f98f798a03c0a1d4f72ceebfa08dfe499b7b4d470ca82e"
+                    Sha256: "2b9c7f952a24f28eecb111afc0b91ee360d0429150f0c6740dc856aafc220ce5"
                 }
             }
         )
@@ -1885,8 +1886,8 @@ internal shared class Program {
                 PushConstantMember{Name: "packedColorsExtra", Offset: 112, Type: "uvec4"}
             },
             Array.Empty[string](),
-            "source-over-premultiplied-linear",
-            "rgb11-11-10-alpha10-premultiplied-linear",
+            "source-over-premultiplied-srgb",
+            "rgb11-11-10-alpha10-premultiplied-srgb",
             "analytic_vertex",
             "analytic_solid_fragment",
             "vec2",
@@ -1910,8 +1911,8 @@ internal shared class Program {
                 PushConstantMember{Name: "packedColorsExtra", Offset: 112, Type: "uvec4"}
             },
             Array.Empty[string](),
-            "source-over-premultiplied-linear",
-            "rgb11-11-10-alpha10-premultiplied-linear",
+            "source-over-premultiplied-srgb",
+            "rgb11-11-10-alpha10-premultiplied-srgb",
             "analytic_vertex",
             "analytic_shadow_fragment",
             "vec2",
@@ -1935,8 +1936,8 @@ internal shared class Program {
                 PushConstantMember{Name: "packedColorsExtra", Offset: 112, Type: "uvec4"}
             },
             Array.Empty[string](),
-            "source-over-premultiplied-linear",
-            "rgb11-11-10-alpha10-premultiplied-linear",
+            "source-over-premultiplied-srgb",
+            "rgb11-11-10-alpha10-premultiplied-srgb",
             "analytic_vertex",
             "analytic_border_fragment",
             "vec2",
@@ -1960,8 +1961,8 @@ internal shared class Program {
                 PushConstantMember{Name: "packedColorsExtra", Offset: 112, Type: "uvec4"}
             },
             Array.Empty[string](),
-            "source-over-premultiplied-linear",
-            "rgb11-11-10-alpha10-premultiplied-linear",
+            "source-over-premultiplied-srgb",
+            "rgb11-11-10-alpha10-premultiplied-srgb",
             "analytic_vertex",
             "analytic_linear4_fragment",
             "vec2",
@@ -1985,8 +1986,8 @@ internal shared class Program {
                 PushConstantMember{Name: "packedColorsExtra", Offset: 112, Type: "uvec4"}
             },
             Array.Empty[string](),
-            "source-over-premultiplied-linear",
-            "rgb11-11-10-alpha10-premultiplied-linear",
+            "source-over-premultiplied-srgb",
+            "rgb11-11-10-alpha10-premultiplied-srgb",
             "analytic_vertex",
             "analytic_radial4_fragment",
             "vec2",
@@ -2010,8 +2011,8 @@ internal shared class Program {
                 PushConstantMember{Name: "packedColorsExtra", Offset: 112, Type: "uvec4"}
             },
             Array.Empty[string](),
-            "source-over-premultiplied-linear",
-            "straight-or-premultiplied-srgb-rgba8-sampled-to-premultiplied-linear",
+            "source-over-premultiplied-srgb",
+            "straight-or-premultiplied-srgb-rgba8-sampled-to-premultiplied-srgb",
             "analytic_vertex",
             "analytic_sampled_image_fragment",
             "vec2",
@@ -2058,8 +2059,8 @@ internal shared class Program {
                 PushConstantMember{Name: "packedColorsExtra", Offset: 112, Type: "uvec4"}
             },
             Array.Empty[string](),
-            "source-over-premultiplied-linear",
-            "premultiplied-linear-source-over-css-blend",
+            "source-over-premultiplied-srgb",
+            "premultiplied-srgb-source-over-css-blend",
             "analytic_vertex",
             "analytic_blend_fragment",
             "vec2",
@@ -2110,8 +2111,8 @@ internal shared class Program {
                 PushConstantMember{Name: "params", Offset: 64, Type: "uvec4"}
             },
             []string{"vertex", "fragment"},
-            "source-over-premultiplied-linear",
-            "path-band-premultiplied-linear",
+            "source-over-premultiplied-srgb",
+            "path-band-premultiplied-srgb",
             "path_band_vertex",
             "path_band_fragment",
             "vec2",
@@ -2192,8 +2193,8 @@ internal shared class Program {
             80,
             manifest.Pipelines[7].PushConstants.Members,
             []string{"vertex", "fragment"},
-            "source-over-premultiplied-linear",
-            "path-band-premultiplied-linear",
+            "source-over-premultiplied-srgb",
+            "path-band-premultiplied-srgb",
             "path_band_vertex",
             "path_stroke_fragment",
             "vec2",
@@ -2370,17 +2371,17 @@ internal shared class Program {
             },
             "pipeline[$id].descriptors"
         )
-        Require(pipeline.ColorFormat == "swapchain-sRGB", "pipeline[$id].colorFormat", "swapchain-sRGB")
+        Require(pipeline.ColorFormat == "swapchain-UNORM-sRGB", "pipeline[$id].colorFormat", "swapchain-UNORM-sRGB")
         Require(pipeline.SampleCount == 1, "pipeline[$id].sampleCount", "1")
         Require(
-            pipeline.Blend == "source-over-premultiplied-linear",
+            pipeline.Blend == "source-over-premultiplied-srgb",
             "pipeline[$id].blend",
-            "source-over-premultiplied-linear"
+            "source-over-premultiplied-srgb"
         )
         Require(
-            pipeline.ColorPacking == "hb-gpu-premultiplied-linear-foreground",
+            pipeline.ColorPacking == "hb-gpu-premultiplied-srgb-foreground",
             "pipeline[$id].colorPacking",
-            "hb-gpu-premultiplied-linear-foreground"
+            "hb-gpu-premultiplied-srgb-foreground"
         )
         Require(pipeline.DepthStencil == "disabled", "pipeline[$id].depthStencil", "disabled")
         Require(pipeline.CullMode == "none", "pipeline[$id].cullMode", "none")
@@ -2529,7 +2530,7 @@ internal shared class Program {
         interfaceName string,
         descriptors IReadOnlyList[Descriptor],
         clipAware bool = true,
-        colorFormat string = "swapchain-sRGB"
+        colorFormat string = "swapchain-UNORM-sRGB"
     ) {
         Require(pipeline.Id == id, "pipeline[$id].id", id)
         let topology = if pushStages.Count == 0 {

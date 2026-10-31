@@ -86,9 +86,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       let blue = (rgba >> int32(8)) & int32(255)
       let alpha = float32(rgba & int32(255)) / 255.0F
       let effectiveAlpha = Clamp01(alpha * value.Opacity)
-      push.color_x = linearChannels[red] * effectiveAlpha
-      push.color_y = linearChannels[green] * effectiveAlpha
-      push.color_z = linearChannels[blue] * effectiveAlpha
+      push.color_x = float32(red) / 255.0F * effectiveAlpha
+      push.color_y = float32(green) / 255.0F * effectiveAlpha
+      push.color_z = float32(blue) / 255.0F * effectiveAlpha
       push.color_w = effectiveAlpha
       push.params_x = value.AtlasWordOffset
       push.params_y = value.FillRule == 1u ? 1u : 0u

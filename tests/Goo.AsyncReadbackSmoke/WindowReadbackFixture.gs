@@ -111,6 +111,15 @@ internal partial class VulkanWindowTarget {
     private var nativeSwapchainDestroyForTest unmanaged[Cdecl](VkDevice, VkSwapchainKHR, *VkAllocationCallbacks) -> void
     private var swapchainCreateAttemptsForTest int32
     private var swapchainOldHandleValidForTest bool
+    private var encodedSurfaceFormatForTest VkSurfaceFormatKHR
+
+    @UnmanagedCallersOnly(CallConvs = []Type{typeof(CallConvCdecl)})
+    private func GetEncodedSurfaceFormatForTest(physicalDevice VkPhysicalDevice, surface VkSurfaceKHR,
+      count *uint32, formats *VkSurfaceFormatKHR) VkResult {
+      if formats != nil { formats[0] = encodedSurfaceFormatForTest }
+      *count = 1u
+      return VkConstants.VK_SUCCESS
+    }
 
     @UnmanagedCallersOnly(CallConvs = []Type{typeof(CallConvCdecl)})
     private func CreateSwapchainForTest(device VkDevice, info *VkSwapchainCreateInfoKHR,
@@ -179,6 +188,67 @@ internal partial class VulkanWindowTarget {
     Console.WriteLine("swapchain-recovery: compacting_gc=2 failures=2 attempts=4 retry=ok")
   }
 
+  internal func VerifyEncodedSurfaceForTest() {
+    let mutableSupported = deviceFacts.SwapchainMutableFormat
+    let formats * VkSurfaceFormatKHR = stackalloc[2]VkSurfaceFormatKHR{
+      VkSurfaceFormatKHR{ format: VkConstants.VK_FORMAT_B8G8R8A8_SRGB,
+        colorSpace: VkConstants.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR },
+      VkSurfaceFormatKHR{ format: VkConstants.VK_FORMAT_R8G8B8A8_UNORM,
+        colorSpace: VkConstants.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR },
+    }
+    var selected VkSurfaceFormatKHR
+    try {
+      deviceFacts.SwapchainMutableFormat = false
+      if SelectEncodedFormat(formats, 1u, out selected)
+        || !SelectEncodedFormat(formats, 2u, out selected)
+        || selected.format != VkConstants.VK_FORMAT_R8G8B8A8_UNORM {
+          throw InvalidOperationException("Encoded surface selection did not require an UNORM view")
+        }
+      deviceFacts.SwapchainMutableFormat = true
+      if !SelectEncodedFormat(formats, 1u, out selected)
+        || selected.format != VkConstants.VK_FORMAT_B8G8R8A8_SRGB {
+          throw InvalidOperationException("Encoded surface selection refused a mutable sRGB surface")
+        }
+    } finally { deviceFacts.SwapchainMutableFormat = mutableSupported }
+    if !mutableSupported {
+      Console.WriteLine("encoded-surface: selection=passed native=unavailable-extension")
+      return
+    }
+    let getFormats = instanceDispatch.vkGetPhysicalDeviceSurfaceFormatsKHR
+    var count uint32
+    if getFormats(physicalDevice, surface, &count, nil) != VkConstants.VK_SUCCESS || count == 0u {
+      throw InvalidOperationException("Encoded surface fixture could not query formats")
+    }
+    let available * VkSurfaceFormatKHR = stackalloc[int32(count)]VkSurfaceFormatKHR
+    if getFormats(physicalDevice, surface, &count, available) != VkConstants.VK_SUCCESS {
+      throw InvalidOperationException("Encoded surface fixture could not read formats")
+    }
+    encodedSurfaceFormatForTest = VkSurfaceFormatKHR{}
+    for index in 0 ... int32(count) {
+      if (available[index].format == VkConstants.VK_FORMAT_B8G8R8A8_SRGB
+        || available[index].format == VkConstants.VK_FORMAT_R8G8B8A8_SRGB)
+        && available[index].colorSpace == VkConstants.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR {
+          encodedSurfaceFormatForTest = available[index]
+          break
+        }
+    }
+    if encodedSurfaceFormatForTest.format == VkConstants.VK_FORMAT_UNDEFINED {
+      Console.WriteLine("encoded-surface: selection=passed native=unavailable-format")
+      return
+    }
+    instanceDispatch.vkGetPhysicalDeviceSurfaceFormatsKHR =
+      cast[unmanaged[Cdecl](VkPhysicalDevice, VkSurfaceKHR, *uint32, *VkSurfaceFormatKHR) -> VkResult](nint(&GetEncodedSurfaceFormatForTest))
+    try {
+      if !RecreateSwapchain(framebufferWidth, framebufferHeight)
+        || generation?.SurfaceFormat.format != encodedSurfaceFormatForTest.format
+        || (generation?.Format != VkConstants.VK_FORMAT_B8G8R8A8_UNORM
+          && generation?.Format != VkConstants.VK_FORMAT_R8G8B8A8_UNORM) {
+          throw InvalidOperationException("Encoded sRGB-only surface did not create an UNORM view")
+        }
+    } finally { instanceDispatch.vkGetPhysicalDeviceSurfaceFormatsKHR = getFormats }
+    Console.WriteLine("encoded-surface: selection=passed native=srgb-only-unorm-view")
+  }
+
   internal func LiveStartupObjectsForTest() uint64 {
     guard let accounting = objectAccounting else {
       throw InvalidOperationException("startup object accounting is unavailable")
@@ -188,9 +258,6 @@ internal partial class VulkanWindowTarget {
 
   internal func DiagnosticFrameIdForTest() uint64 -> nextFrameId
   internal func LayerResolutionShiftForTest() int32 -> layerPool?.LayerResolutionShift ?? 0
-  internal func FullPresentCopyReservedForTest() bool ->
-    layerPool?.PresentTarget?.Extent.width == uint32(framebufferWidth)
-      && layerPool?.PresentTarget?.Extent.height == uint32(framebufferHeight)
   internal func ClipAtlasStatsForTest() VulkanClipMaskAtlasStats ->
     clipMaskAtlas?.Stats ?? VulkanClipMaskAtlasStats{}
   internal func SetRenderBudgetsForTest(layerBytes uint64, clipBytes uint64) {

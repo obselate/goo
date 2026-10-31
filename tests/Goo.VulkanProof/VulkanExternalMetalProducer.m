@@ -40,7 +40,7 @@
     result = CVMetalTextureCacheCreate(kCFAllocatorDefault, NULL, device, NULL, &cache);
     if (result != kCVReturnSuccess) return nil;
     result = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, cache, pixels, NULL,
-                                                       MTLPixelFormatBGRA8Unorm_sRGB, 8, 4, 0, &image);
+                                                       MTLPixelFormatBGRA8Unorm, 8, 4, 0, &image);
     if (result != kCVReturnSuccess) {
         fprintf(stderr, "CVMetalTextureCacheCreateTextureFromImage: %d\n", result);
         return nil;

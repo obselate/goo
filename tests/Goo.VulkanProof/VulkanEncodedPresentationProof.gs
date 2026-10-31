@@ -3,22 +3,22 @@ package Goo.VulkanProof
 import Goo
 import System
 
-private func RequirePresentEncodePixel(result VulkanReadbackResult, x int32, y int32,
+private func RequireEncodedPresentationPixel(result VulkanReadbackResult, x int32, y int32,
   red int32, green int32, blue int32, alpha int32) {
     let expected = []int32{ red, green, blue, alpha }
     for channel in 0 ... 4 {
       let actual = int32(result.Pixels[(y * 64 + x) * 4 + channel])
       if Math.Abs(actual - expected[channel]) > 2 {
-        throw InvalidOperationException("Present encode pixels: x=${x} y=${y} channel=${channel} expected=${expected[channel]} actual=${actual}")
+        throw InvalidOperationException("Encoded presentation pixels: x=${x} y=${y} channel=${channel} expected=${expected[channel]} actual=${actual}")
       }
     }
   }
 
-internal func RunPresentEncodeReadback() {
+internal func RunEncodedPresentationReadback() {
   let window = OpenVulkanProductionProofWindow()
   var capture VulkanProductionReadbackCapture? = nil
   try {
-    let opened = VulkanProductionReadbackFixture.Open(window, 64u, 64u, true)
+    let opened = VulkanProductionReadbackFixture.Open(window, 64u, 64u)
     capture = opened
     let frame = SceneFrame(16)
     let clear = VkClearColorValue{}
@@ -39,11 +39,11 @@ internal func RunPresentEncodeReadback() {
     frame.EndChunk()
     WarmVulkanProductionReadback(opened, frame, clear)
     let result = RequestVulkanProductionReadback(opened, frame, clear)
-    RequirePresentEncodePixel(result, 16, 16, 128, 128, 128, 128)
-    RequirePresentEncodePixel(result, 48, 16, 51, 102, 153, 255)
-    RequirePresentEncodePixel(result, 16, 48, 64, 32, 0, 64)
-    RequirePresentEncodePixel(result, 48, 48, 0, 0, 0, 0)
-    Console.WriteLine("Present encode readback: translucent, opaque and empty pixels passed")
+    RequireEncodedPresentationPixel(result, 16, 16, 128, 128, 128, 128)
+    RequireEncodedPresentationPixel(result, 48, 16, 51, 102, 153, 255)
+    RequireEncodedPresentationPixel(result, 16, 48, 64, 32, 0, 64)
+    RequireEncodedPresentationPixel(result, 48, 48, 0, 0, 0, 0)
+    Console.WriteLine("Encoded presentation readback: translucent, opaque and empty pixels passed")
   } finally {
     if let active = capture {
       active.Dispose()

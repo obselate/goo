@@ -356,6 +356,7 @@ class FixtureContractTests {
             yield Contract[StyleFixtures]("RepeatedLayerDeclarationsKeepTransitionProgressContract")
             yield Contract[StyleFixtures]("ResolvePrecedenceAndResetContract")
             yield Contract[StyleFixtures]("ShaderEffectOnlyReplacementContract")
+            yield Contract[StyleFixtures]("ShaderEffectRejectsLinearProgramContract")
             yield Contract[StyleFixtures]("ShaderEffectMetricsPublishCoalescesPaintContract")
             yield Contract[StyleFixtures]("ShapeSideTransitionSelectorsSnapUniformStrokeContract")
             yield Contract[StyleFixtures]("ShapeStrokeShorthandResolutionContract")

@@ -121,7 +121,7 @@ internal unsafe partial class VulkanWindowTarget {
         var leaseTransferred bool
         try {
           target = VulkanOffscreenTarget(device, dispatch, queue, allocator, EnsureReadbackDispatch(),
-            extent, pixels * 4uL, active.GraphicsFamilyIndex, VkConstants.VK_FORMAT_R8G8B8A8_SRGB,
+            extent, pixels * 4uL, active.GraphicsFamilyIndex, VkConstants.VK_FORMAT_R8G8B8A8_UNORM,
             active.ImageResources, active.Generation, active.MaxStorageBufferRange, active.ResourcePolicy,
             active.PrimitiveState, active.PathResources.Atlas, active.PathResources, clips, atlases,
             objectAccounting, nil, nil, active.QueueWorker.CreateMailbox(nil), lease)
@@ -162,8 +162,10 @@ internal unsafe partial class VulkanWindowTarget {
       FinishPage(OffscreenRenderStatus.DeviceLost)
       return
     }
+    let scaleX = float32(pageOptions.PixelWidth) / pageOptions.LogicalWidth
+    let scaleY = float32(pageOptions.PixelHeight) / pageOptions.LogicalHeight
     text.PublishCompletedUploads()
-    text.BeginCompile(completed)
+    text.BeginCompile(completed, scaleY)
     let result = compiler.Compile(page.Tree, pageOptions.Background,
       pageOptions.LogicalWidth, pageOptions.LogicalHeight)
     if result.UnsupportedNodeCount != 0 || result.UnsupportedPrimitiveCount != 0 {
@@ -173,8 +175,6 @@ internal unsafe partial class VulkanWindowTarget {
     pageRepeat = text.RedrawRequired || images.RedrawRequired || paths.RedrawRequired || result.PathResourceDeferred
     text.PrepareUpload()
     paths.PrepareUpload()
-    let scaleX = float32(pageOptions.PixelWidth) / pageOptions.LogicalWidth
-    let scaleY = float32(pageOptions.PixelHeight) / pageOptions.LogicalHeight
     ScaleFrame(compiler.Frame, scaleX, scaleY)
     let pixels = request.Result?.OwnedPixels ?? pagePixels
     let submitted = request.Request(compiler.Frame, VkClearColorValue{},

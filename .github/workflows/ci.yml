@@ -1945,11 +1945,23 @@ jobs:
           sudo apt-get install -y meson ninja-build
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'ndk;27.2.12479018' 'platforms;android-36' 'build-tools;36.0.0'
           dotnet workload install android
-      - name: Rebuild Android native payloads and compare with the committed files
+      - name: Rebuild Android native payloads
         if: needs.changes.outputs.full == 'true'
         run: |
           for rid in android-arm64 android-x64; do
             bash .github/scripts/build-text-native-android.sh "$rid" "artifacts/android-rebuild/$rid" "$ANDROID_HOME/ndk/27.2.12479018"
+          done
+      - name: Upload rebuilt Android native payloads
+        if: needs.changes.outputs.full == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: goo-android-native
+          path: artifacts/android-rebuild/
+          if-no-files-found: error
+      - name: Compare rebuilt Android native payloads with the committed files
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          for rid in android-arm64 android-x64; do
             cmp "artifacts/android-rebuild/$rid/libgoo-harfbuzz.so" "Goo/Runtime/Vulkan/$rid/libgoo-harfbuzz.so"
             cmp "artifacts/android-rebuild/$rid/libgoo-harfbuzz-gpu.so" "Goo/Runtime/Vulkan/$rid/libgoo-harfbuzz-gpu.so"
           done

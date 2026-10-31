@@ -560,25 +560,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       DrawSampledTarget(commandBuffer, &push, target)
     }
 
-  private func EmitPresentEncode(
-    commandBuffer VkCommandBuffer,
-    extent VkExtent2D,
-    target VulkanOffscreenLayerTarget?) {
-      var push = VulkanPrimitiveGpuRecord{}
-      FillTransform(&push.Geometry, ConservativeBounds{
-          X: 0.0F,
-          Y: 0.0F,
-          Width: float32(extent.width),
-          Height: float32(extent.height),
-        }, PrimitiveTransform{ A: 1.0F, D: 1.0F }, extent)
-      push.radii_x = 1.0F
-      push.radii_y = 1.0F
-      push.radii_z = 1.0F
-      push.params_z = 1.0F
-      push.params_w = 1.0F
-      DrawSampledTarget(commandBuffer, &push, target)
-    }
-
   private func DrawSampledTarget(
     commandBuffer VkCommandBuffer,
     push * VulkanPrimitiveGpuRecord,
@@ -1221,9 +1202,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     let blue = (rgba >> int32(8)) & int32(255)
     let alpha = float32(rgba & int32(255)) / 255.0F
     let effectiveAlpha = Clamp01(alpha * opacity)
-    let packedRed = Quantize(linearChannels[red] * effectiveAlpha, 2047u)
-    let packedGreen = Quantize(linearChannels[green] * effectiveAlpha, 2047u)
-    let packedBlue = Quantize(linearChannels[blue] * effectiveAlpha, 1023u)
+    let packedRed = Quantize(float32(red) / 255.0F * effectiveAlpha, 2047u)
+    let packedGreen = Quantize(float32(green) / 255.0F * effectiveAlpha, 2047u)
+    let packedBlue = Quantize(float32(blue) / 255.0F * effectiveAlpha, 1023u)
     let packedAlpha = Quantize(effectiveAlpha, 1023u)
     let packedRgb = uint32(int32(packedRed)
       | (int32(packedGreen) << int32(11))

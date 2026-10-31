@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Blend colors in encoded sRGB, as browsers and native toolkits do. This changes the colors of translucent content and the apparent weight of text.
+- Shader effects use encoded sRGB colors. Rebuild effect sources with the current Goo build adapter.
+- Use UNORM color views for sRGB-only surfaces when mutable swapchain formats are supported. Reject surfaces that cannot preserve encoded blending.
+- Snap text stems and x-height to the device pixel grid vertically. Text shapes change slightly.
+
 ## 0.24.2 - 2026-10-30
 
 - Preserve logical child measurements in custom layouts before snapping the final geometry to physical pixels.

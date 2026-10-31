@@ -11,7 +11,7 @@ internal data struct VulkanImageFitResult {
 }
 
 internal unsafe sealed class VulkanImageScene : IDisposable {
-  private const ImageFormat VkFormat = VkConstants.VK_FORMAT_R8G8B8A8_SRGB
+  private const ImageFormat VkFormat = VkConstants.VK_FORMAT_R8G8B8A8_UNORM
   private const CurrentReferenceCapacity int32 = 256
 
   private let identities VulkanImageIdentityRegistry

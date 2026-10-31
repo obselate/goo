@@ -319,7 +319,7 @@ internal unsafe partial class VulkanExternalImageProof {
                 sharingMode: VkConstants.VK_SHARING_MODE_EXCLUSIVE }
             if dma { external.pNext = *void(&modifier) }
             var info = VkPhysicalDeviceImageFormatInfo2{ sType: 1000059004, pNext: *void(&external),
-                format: VkConstants.VK_FORMAT_R8G8B8A8_SRGB, imageType: VkConstants.VK_IMAGE_TYPE_2D,
+                format: VkConstants.VK_FORMAT_R8G8B8A8_UNORM, imageType: VkConstants.VK_IMAGE_TYPE_2D,
                 tiling: if dma { 1000158000 } else { VkConstants.VK_IMAGE_TILING_OPTIMAL },
                 usage: uint32(VkConstants.VK_IMAGE_USAGE_SAMPLED_BIT) | uint32(VkConstants.VK_IMAGE_USAGE_TRANSFER_DST_BIT) }
             var externalProperties = VkExternalImageFormatProperties{ sType: 1000071001 }

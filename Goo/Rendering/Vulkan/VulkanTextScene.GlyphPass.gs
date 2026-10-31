@@ -122,6 +122,7 @@ internal unsafe sealed partial class VulkanTextScene {
       var runIndex int32 = 0
       while runIndex < shape.Runs.Count {
         let run = shape.Runs[runIndex]
+        let ppem = HintPpem(run.Provider, fontSize)
         let runX = lineX + MathF.Min(run.VisualStart, run.VisualEnd)
         let runOriginX = parentTransform.A * runX + parentTransform.C * baseline + parentTransform.TX
         let runOriginY = parentTransform.B * runX + parentTransform.D * baseline + parentTransform.TY
@@ -129,7 +130,7 @@ internal unsafe sealed partial class VulkanTextScene {
         while glyphIndex < run.Glyphs.Length {
           let glyphId = run.Glyphs[glyphIndex]
           if glyphId != 0u {
-            guard let glyph = GetGlyph(run, glyphId) else {
+            guard let glyph = GetGlyph(run, glyphId, ppem) else {
               redrawRequired = true
               publicationPending = true
               complete = false
@@ -249,7 +250,7 @@ internal unsafe sealed partial class VulkanTextScene {
               var foregroundG float32
               var foregroundB float32
               var foregroundA float32
-              LinearForeground(color, pipelineKind, effectMode,
+              EncodedForeground(color, pipelineKind, effectMode,
                 out foregroundR, out foregroundG, out foregroundB,
                 out foregroundA)
               workspace.Records[recordIndex] = HbGpuTextInstanceRecord{

@@ -104,7 +104,7 @@ internal sealed class VulkanTextFont : IDisposable {
   if paint {
     inner.EncodePaintGlyphInto(glyphId, paletteIndex, workspace)
   } else {
-    inner.EncodeGlyphInto(glyphId, workspace)
+    inner.EncodeGlyphInto(glyphId, workspace, 0)
   }
 
   private func CopyBytes(workspace VulkanTextProviderWorkspace) []uint8 {

@@ -49,8 +49,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         throw InvalidOperationException("Vulkan clip frame is already prepared")
       }
       if let pool = layerPool {
-        pool.PrepareLayerBudget(frame, completedSubmissionSerial,
-          presentEncode ? extent.width : 0u, presentEncode ? extent.height : 0u)
+        pool.PrepareLayerBudget(frame, completedSubmissionSerial)
       }
       EnsureClipRegionCapacity(frame.ClipMaskCount)
       var usageBatchEnded bool = frame.ClipMaskCount == 0

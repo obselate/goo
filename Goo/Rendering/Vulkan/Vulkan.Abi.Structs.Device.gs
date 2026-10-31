@@ -522,6 +522,14 @@ internal unsafe struct VkSurfaceFormatKHR {
 }
 
 @StructLayout(LayoutKind.Sequential)
+internal unsafe struct VkImageFormatListCreateInfo {
+  var sType VkStructureType
+  var pNext * void
+  var viewFormatCount uint32
+  var pViewFormats * VkFormat
+}
+
+@StructLayout(LayoutKind.Sequential)
 internal unsafe struct VkSwapchainCreateInfoKHR {
   var sType VkStructureType
   var pNext * void

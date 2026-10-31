@@ -80,7 +80,6 @@ mkdir -p "$staging"
 curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 "$hb_url" -o "$work/harfbuzz.tar.xz"
 printf '%s  %s\n' "$hb_sha256" "$work/harfbuzz.tar.xz" | sha256sum -c -
 tar -xJf "$work/harfbuzz.tar.xz" -C "$work"
-python3 "$repo_root/tools/Goo.TextNative/apply-source-patches.py" --manifest "$manifest" --source-root "$work/harfbuzz-15.0.0"
 
 python3 - "$work/harfbuzz-15.0.0/src/meson.build" <<'PY'
 import sys

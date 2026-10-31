@@ -1,7 +1,7 @@
 {
   "artifacts": {
     "gpu": {
-      "bytes": 297175,
+      "bytes": 296151,
       "exports": [
         "goo_image_decode_rgba",
         "goo_image_free",
@@ -51,7 +51,7 @@
         "goo-harfbuzz.dll",
         "msvcrt.dll"
       ],
-      "sha256": "ab6cc6cff5830c55c61628681902fdf31cbd1631c0eb2e3893ef80f4c3325df4"
+      "sha256": "26da135c8e43d71553757160b6c172d29d4c375eaf7395b0633ee77535b7dfee"
     },
     "harfbuzz": {
       "bytes": 2008100,
@@ -707,15 +707,6 @@
     },
     "sourcePatch": "Set the core and GPU shared-library identities to Goo-owned private names before the pinned Meson build; Linux keeps private SONAMEs, macOS keeps private @rpath install names, and Windows uses unversioned DLL names.",
     "sourcePatches": [
-      {
-        "description": "Convert explicit CPAL RGB bytes to linear-light Q15 with a fixed 256-entry lookup. Preserve alpha and foreground encoding.",
-        "name": "cpal-linear-light",
-        "patchedSha256": "44c68d7ceab1be78b6704e4c84b2793ebe6f5f4f1c713b01a04fbe7dc2f71a74",
-        "path": "tools/Goo.TextNative/patches/harfbuzz-15.0.0-cpal-linear-light.patch",
-        "sha256": "db74dc354fdcb7bc3ae8b9f7e02dcda1e662d8ff9b4737726a9569caced3072d",
-        "upstreamPath": "src/hb-gpu-paint.cc",
-        "upstreamSha256": "db822c4f947c787e583bb80d28143e7e9094728822fc81bcea9e901ca353c948"
-      },
       {
         "description": "Keep the GIF disposal history pointer inside the allocated frame buffer.",
         "name": "stb-gif-two-back",

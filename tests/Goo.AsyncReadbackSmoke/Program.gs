@@ -179,8 +179,8 @@ func ReadbackValidateReadbackResult(result VulkanReadbackResult) {
     "Readback result extent is not 64x64")
   Require(result.RowBytes == 256u,
     "Readback result row bytes are not 256")
-  Require(int32(result.Format) == 43,
-    "Readback result format is not VK_FORMAT_R8G8B8A8_SRGB")
+  Require(int32(result.Format) == 37,
+    "Readback result format is not VK_FORMAT_R8G8B8A8_UNORM")
   Require(result.Generation > 0uL && result.SubmissionSerial > 0uL,
     "Readback result identity is invalid")
   Require(result.Premultiplied && !result.OriginBottomLeft && result.SrgbEncoded,
@@ -202,9 +202,9 @@ func ReadbackValidateReadbackResult(result VulkanReadbackResult) {
   +"/" + ReadbackPixel(pixels, 32, 32, 1).ToString()
   +"/" + ReadbackPixel(pixels, 32, 32, 2).ToString()
   +"/" + ReadbackPixel(pixels, 32, 32, 3).ToString()
-  Require(Math.Abs(int32(ReadbackPixel(pixels, 32, 32, 0)) - 161) <= 1
-      && Math.Abs(int32(ReadbackPixel(pixels, 32, 32, 1)) - 32) <= 1
-      && Math.Abs(int32(ReadbackPixel(pixels, 32, 32, 2)) - 51) <= 1
+  Require(Math.Abs(int32(ReadbackPixel(pixels, 32, 32, 0)) - 116) <= 1
+      && Math.Abs(int32(ReadbackPixel(pixels, 32, 32, 1)) - 30) <= 1
+      && Math.Abs(int32(ReadbackPixel(pixels, 32, 32, 2)) - 48) <= 1
       && ReadbackPixel(pixels, 32, 32, 3) == uint8(255),
     "Readback center pixel is incorrect: " + center)
 }
@@ -251,6 +251,7 @@ func RunReadbackSmoke() {
       frame = frame + 1
     }
     WindowReadbackTestFixture.CaptureTarget(opened)!!.VerifySwapchainCreationRecoveryForTest()
+    WindowReadbackTestFixture.CaptureTarget(opened)!!.VerifyEncodedSurfaceForTest()
     WindowReadbackTestFixture.ForceRender(opened, 0.0)
     Require(ReadbackSmokeCell.Root.IsMounted
         && ReadbackSmokeCell.Root.BorderBox.Width == 64.0
@@ -440,7 +441,7 @@ func PrimitiveValidateResult(result VulkanReadbackResult, metrics WindowMetrics)
     "Primitive readback row bytes are incorrect")
   Require(uint64(result.Pixels.Length) == expectedBytes,
     "Primitive readback byte count is incorrect")
-  Require(int32(result.Format) == 43 && result.Premultiplied
+  Require(int32(result.Format) == 37 && result.Premultiplied
       && !result.OriginBottomLeft && result.SrgbEncoded,
     "Primitive readback metadata is incorrect")
   Require(result.Generation > 0uL && result.SubmissionSerial > 0uL,

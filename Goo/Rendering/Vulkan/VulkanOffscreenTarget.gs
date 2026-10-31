@@ -160,8 +160,8 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       if targetExtent.width == 0u || targetExtent.height == 0u {
         throw ArgumentOutOfRangeException("targetExtent")
       }
-      if colorFormat != VkConstants.VK_FORMAT_R8G8B8A8_SRGB {
-        throw ArgumentException("Vulkan readback target requires VK_FORMAT_R8G8B8A8_SRGB", "colorFormat")
+      if colorFormat != VkConstants.VK_FORMAT_R8G8B8A8_UNORM {
+        throw ArgumentException("Vulkan readback target requires VK_FORMAT_R8G8B8A8_UNORM", "colorFormat")
       }
       if nativeMaxStorageBufferRange == 0uL {
         throw ArgumentOutOfRangeException("nativeMaxStorageBufferRange")
@@ -440,10 +440,6 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     layerSubmissionReconcilePending = false
     state = VulkanOffscreenState.Prepared
     return VkConstants.VK_SUCCESS
-  }
-
-  internal func SetPresentEncode(value bool) {
-    primitiveRenderer?.SetPresentEncode(value)
   }
 
   internal func SetPartialRepeat(damage VulkanDamageRegion) {

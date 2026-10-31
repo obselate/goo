@@ -70,11 +70,11 @@ func RunLiquidGlassAlphaSmoke() {
     let metrics = WindowReadbackTestFixture.Metrics(opened)
     let frame = PrimitiveReadback(opened, metrics)
     let edge = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 32.0, 40.0)
-    Require(int32(edge[0]) >= 166 && int32(edge[0]) <= 178
+    Require(int32(edge[0]) >= 97 && int32(edge[0]) <= 114
         && int32(edge[1]) <= 22 && int32(edge[2]) <= 12 && edge[3] == uint8(255),
       "Liquid glass alpha edge color is invalid: " + PrimitivePixelText(edge))
     let discontinuity = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 34.0, 40.0)
-    Require(int32(discontinuity[0]) >= 124 && int32(discontinuity[0]) <= 134
+    Require(int32(discontinuity[0]) >= 51 && int32(discontinuity[0]) <= 61
         && int32(discontinuity[1]) <= 16 && int32(discontinuity[2]) <= 12
         && discontinuity[3] == uint8(255),
       "Liquid glass alpha discontinuity is invalid: "
@@ -88,7 +88,7 @@ func RunLiquidGlassAlphaSmoke() {
     for x in 32 ... 64 {
       let opaque = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics,
         float64(x), 88.0)
-      Require(int32(opaque[0]) >= 244 && int32(opaque[0]) <= 250
+      Require(int32(opaque[0]) >= 233 && int32(opaque[0]) <= 240
           && int32(opaque[1]) >= 20 && int32(opaque[1]) <= 26
           && int32(opaque[2]) >= 4 && int32(opaque[2]) <= 10
           && opaque[3] == uint8(255),
@@ -105,7 +105,7 @@ func RunLiquidGlassAlphaSmoke() {
     Console.WriteLine("liquid-glass-alpha-smoke: edge=" + PrimitivePixelText(edge)
       +" discontinuity=" + PrimitivePixelText(discontinuity)
       +" transparent=" + PrimitivePixelText(transparent)
-      +" opaque=247/23/7/255 validation=0 cleanup=1")
+      +" opaque=236/22/7/255 validation=0 cleanup=1")
   } finally {
     Console.SetError(originalError)
     if let active = window {

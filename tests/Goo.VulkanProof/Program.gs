@@ -27,7 +27,7 @@ internal unsafe func RunVulkanProof() int32 {
   if Environment.GetEnvironmentVariable("GOO_VK_IMAGE_READBACK") == "1" {
     RunProductionImageReadback()
     RunLongGradientReadback()
-    RunPresentEncodeReadback()
+    RunEncodedPresentationReadback()
     VulkanExternalImageProof.Run()
     VulkanExternalImageProof.Run(true)
     return 0

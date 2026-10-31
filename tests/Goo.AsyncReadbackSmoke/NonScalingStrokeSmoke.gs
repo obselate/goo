@@ -426,10 +426,10 @@ func CompareNonScalingStrokePixels(frame WindowCapture, context string) {
                 }
             }
             let actual = int32(frame.Pixels[y * rowBytes + x * 4])
-            if minimum >= 224 {
+            if minimum >= 190 {
                 interior++
             }
-            if (minimum >= 224 && actual < 160) || (maximum <= 16 && actual > 96) {
+            if (minimum >= 190 && actual < 90) || (maximum <= 1 && actual > 30) {
                 throw InvalidOperationException(
                     "Non-scaling stroke differs from host-space CPU stroke: " + context
                     + " x=" + x.ToString() + " y=" + y.ToString() + " actual=" + actual.ToString()

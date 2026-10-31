@@ -98,7 +98,11 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
   internal prop Format VkFormat{
     get {
       EnsureUsable()
-      return surfaceFormat.format
+      return switch surfaceFormat.format {
+        case VkConstants.VK_FORMAT_R8G8B8A8_SRGB: VkConstants.VK_FORMAT_R8G8B8A8_UNORM
+        case VkConstants.VK_FORMAT_B8G8R8A8_SRGB: VkConstants.VK_FORMAT_B8G8R8A8_UNORM
+        default: surfaceFormat.format
+      }
     }
   }
 
@@ -305,6 +309,13 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
       try {
         var createInfo = VkSwapchainCreateInfoKHR{}
         createInfo.sType = VkConstants.VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR
+        let viewFormats * VkFormat = stackalloc[2]VkFormat{surfaceFormat.format, Format}
+        var formatList = VkImageFormatListCreateInfo{
+          sType: 1000147000, viewFormatCount: 2u, pViewFormats: viewFormats }
+        if surfaceFormat.format != Format {
+          createInfo.flags = 4u
+          createInfo.pNext = *void(&formatList)
+        }
         createInfo.surface = surface
         createInfo.minImageCount = requestedImageCount
         createInfo.imageFormat = surfaceFormat.format
@@ -364,7 +375,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
           dispatch,
           swapchain,
           capacity,
-          surfaceFormat.format,
+          Format,
           swapchainMaintenanceEnabled,
           objectAccounting)
         if let recorder = FrameRecorder.Current { Profile(recorder, VulkanDiagnosticEventIds.SwapchainCreate) }

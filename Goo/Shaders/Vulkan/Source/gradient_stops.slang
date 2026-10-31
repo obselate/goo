@@ -76,10 +76,8 @@ float4 ditherGradient(float4 color)
 {
     if (color.a <= 0.0) return color;
     float noise = frac(52.9829189 * frac(dot(floor(gooFragmentPosition.xy), float2(0.06711056, 0.00583715))));
-    float3 linear = saturate(color.rgb / color.a);
-    float3 encoded = select(linear <= 0.0031308, linear * 12.92, 1.055 * pow(linear, 1.0 / 2.4) - 0.055);
+    float3 encoded = saturate(color.rgb / color.a);
     encoded = saturate(encoded + (noise - 0.5) / 255.0);
-    linear = select(encoded <= 0.04045, encoded / 12.92, pow((encoded + 0.055) / 1.055, 2.4));
-    return float4(linear * color.a, color.a);
+    return float4(encoded * color.a, color.a);
 }
 

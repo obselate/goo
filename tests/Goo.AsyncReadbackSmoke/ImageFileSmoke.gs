@@ -73,9 +73,8 @@ func RunImageFileSmoke() {
     }
     PrimitiveRequirePixelNear(frame.Pixels, frame.Width, metrics, 12.0, 12.0,
       uint8(224), uint8(48), uint8(32), 3, "local_png_red")
-    // Expected sRGB after the renderer blends half-alpha green over black in linear light.
     PrimitiveRequirePixelNear(frame.Pixels, frame.Width, metrics, 84.0, 12.0,
-      uint8(21), uint8(152), uint8(51), 3, "local_png_linear_alpha")
+      uint8(16), uint8(104), uint8(36), 3, "local_png_encoded_alpha")
     PrimitiveRequirePixelNear(frame.Pixels, frame.Width, metrics, 12.0, 84.0,
       uint8(48), uint8(96), uint8(224), 3, "local_png_blue")
     PrimitiveRequirePixelNear(frame.Pixels, frame.Width, metrics, 84.0, 84.0,

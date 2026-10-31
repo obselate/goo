@@ -228,7 +228,7 @@ internal unsafe partial class VulkanWindowTarget {
         activeGeneration.SupportsTransferSource
       } else { false }
       sceneCompiler.SetBlendModeSupport(blendModesSupported)
-      textScene?.BeginCompile(completedGraphicsSubmissionSerial)
+      textScene?.BeginCompile(completedGraphicsSubmissionSerial, scaleY)
       imageScene?.BeginCompile()
       let planStart = DiagnosticTimestamp()
       let compileResult = sceneCompiler.Compile(root, portalRoot, background,
@@ -369,7 +369,6 @@ internal unsafe partial class VulkanWindowTarget {
             renderer.SetPathAtlas(resources.Resources.Atlas)
           }
           renderer.ReserveImageReferences(sceneCompiler.Frame)
-          renderer.SetPresentEncode(host.Transparent && current.SupportsTransferSource)
           clipMaskFrameStarted = true
           let clipFrameStats = renderer.PrepareClipMasks(
             sceneCompiler.Frame,

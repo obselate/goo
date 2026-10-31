@@ -179,6 +179,7 @@ internal class VulkanSceneOwnerId {
   internal var RetainedTextColor uint32
   internal var RetainedTextOpacity float32
   internal var RetainedTextAtlasGeneration uint64
+  internal var RetainedTextPixelScale float32
   internal var RetainedTextFontRegistryGeneration uint64
   internal var RetainedTextParentTranslateX float32
   internal var RetainedTextParentTranslateY float32
@@ -194,6 +195,7 @@ internal class VulkanSceneOwnerId {
   internal var CachedTextPaintAlign TextAlign
   internal var CachedTextPaintContent string?
   internal var CachedTextPaintVersion uint64
+  internal var CachedTextPaintScale float32
   internal var CachedTextPaintNodeBounds ConservativeBounds
   internal var CachedTextCullVersion uint64
   internal var CachedTextCullBounds ConservativeBounds

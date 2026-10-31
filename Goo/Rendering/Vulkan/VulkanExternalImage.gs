@@ -37,8 +37,8 @@ internal unsafe sealed partial class VulkanExternalImage : IDisposable {
             if handleType == 0u || (runtime.Dispatch.ExternalMemoryKinds & handleType) == 0u {
                 return ExternalImageResult(ExternalImageStatus.Unsupported, detail: "External memory handle type is unavailable")
             }
-            if description.Format != VkConstants.VK_FORMAT_R8G8B8A8_SRGB
-                && description.Format != VkConstants.VK_FORMAT_B8G8R8A8_SRGB {
+            if description.Format != VkConstants.VK_FORMAT_R8G8B8A8_UNORM
+                && description.Format != VkConstants.VK_FORMAT_B8G8R8A8_UNORM {
                 return ExternalImageResult(ExternalImageStatus.UnsupportedFormat)
             }
             let dma = handleType == 0x200u
