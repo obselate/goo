@@ -19,6 +19,8 @@ internal data struct VulkanTextPaintReadbackResult {
   var ColoredPixels uint32
   var LeftColoredPixels uint32
   var RightColoredPixels uint32
+  var LeftPalettePixels uint32
+  var RightPalettePixels uint32
 }
 
 internal unsafe sealed class VulkanTextPaintReadbackFixture : IDisposable {
@@ -200,6 +202,8 @@ internal unsafe func AnalyzeVulkanTextPaintReadback(
     var coloredPixels uint32 = 0u
     var leftColoredPixels uint32 = 0u
     var rightColoredPixels uint32 = 0u
+    var leftPalettePixels uint32 = 0u
+    var rightPalettePixels uint32 = 0u
     var y uint32 = 0u
     while y < VulkanTextPaintReadbackContract.Height {
       var x uint32 = 0u
@@ -215,6 +219,13 @@ internal unsafe func AnalyzeVulkanTextPaintReadback(
         hash = (hash ^ uint64(alpha)) * 1099511628211uL
         if alpha == 255u {
           opaquePixels++
+          if x < 32u && red == 200u && green == 0u && blue == 0u {
+            leftPalettePixels++
+          } else if x >= 32u
+            && ((red == 237u && green == 51u && blue == 59u)
+              || (red == 255u && green == 120u && blue == 0u)) {
+                rightPalettePixels++
+              }
         }
         let isBackground = red == 0u && green == 0u && blue == 0u && alpha == 255u
         if isBackground {
@@ -242,6 +253,8 @@ internal unsafe func AnalyzeVulkanTextPaintReadback(
       ColoredPixels: coloredPixels,
       LeftColoredPixels: leftColoredPixels,
       RightColoredPixels: rightColoredPixels,
+      LeftPalettePixels: leftPalettePixels,
+      RightPalettePixels: rightPalettePixels,
     }
   }
 
@@ -260,7 +273,9 @@ internal unsafe func VerifyVulkanTextPaintReadback(
       || result.InkPixels == 0u
       || result.ColoredPixels < VulkanTextPaintReadbackContract.MinColoredPixelsPerGlyph
       || result.LeftColoredPixels < VulkanTextPaintReadbackContract.MinColoredPixelsPerGlyph
-      || result.RightColoredPixels < VulkanTextPaintReadbackContract.MinColoredPixelsPerGlyph{
+      || result.RightColoredPixels < VulkanTextPaintReadbackContract.MinColoredPixelsPerGlyph
+      || result.LeftPalettePixels < VulkanTextPaintReadbackContract.MinColoredPixelsPerGlyph
+      || result.RightPalettePixels < VulkanTextPaintReadbackContract.MinColoredPixelsPerGlyph{
         return false
       }
     return result.BackgroundPixels + result.InkPixels == totalPixels
@@ -294,7 +309,7 @@ internal unsafe func RunProductionTextPaintReadback() {
     let result = RequestVulkanProductionReadback(activeCapture, activeFixture.Frame, clearColor)
     fixed readback * uint8 = result.Pixels{
       let analyzed = AnalyzeVulkanTextPaintReadback(readback, result.Width, result.Height)
-      Console.WriteLine("Text paint readback: digest=${analyzed.Digest} ink=${analyzed.InkPixels} background=${analyzed.BackgroundPixels} colored=${analyzed.ColoredPixels} leftColored=${analyzed.LeftColoredPixels} rightColored=${analyzed.RightColoredPixels} opaque=${analyzed.OpaquePixels} allocated=${activeCapture.LastRequestAllocatedBytes}")
+      Console.WriteLine("Text paint readback: digest=${analyzed.Digest} ink=${analyzed.InkPixels} background=${analyzed.BackgroundPixels} colored=${analyzed.ColoredPixels} leftColored=${analyzed.LeftColoredPixels} rightColored=${analyzed.RightColoredPixels} leftPalette=${analyzed.LeftPalettePixels} rightPalette=${analyzed.RightPalettePixels} opaque=${analyzed.OpaquePixels} allocated=${activeCapture.LastRequestAllocatedBytes}")
       if !VerifyVulkanTextPaintReadback(readback, result.Width, result.Height, analyzed) {
         throw InvalidOperationException("Vulkan text paint readback pixels are invalid")
       }
