@@ -220,7 +220,7 @@
         },
         {
           "path": "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/hb_gpu_draw.frag.wrapper.glsl",
-          "sha256": "7fe1b95d73f72a4492f98f798a03c0a1d4f72ceebfa08dfe499b7b4d470ca82e"
+          "sha256": "37b2c77bc2493af93bb1c24df218236f11d2f7734e8aaa9ecc3437e7563cc3e0"
         }
       ]
     },
@@ -409,9 +409,9 @@
       "output": "hb_gpu_draw.frag.spv",
       "entryPoint": "main",
       "assembly": "hb_gpu_draw_fragment",
-      "sourceSha256": "a4157fa3f5d86808dbabb5ba2858fb9d1f645bb924d79681145cc8b0256ad6f0",
-      "outputSha256": "cfa75999be07bec51a6dfa496bc54f2d90fdffdc395303fc34150b468336aecd",
-      "outputBytes": 66304,
+      "sourceSha256": "7abd7d8c66500d6b2c2d22a53af652a3864dd816e87ba3561a9112bba379c742",
+      "outputSha256": "df4ae9226b5ce836d7ea3f84e012b3efbf1348147b1e2fb2c46b11a94a6aa72c",
+      "outputBytes": 66772,
       "capabilities": [
         1,
         46

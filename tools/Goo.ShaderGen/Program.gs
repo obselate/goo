@@ -1731,7 +1731,7 @@ internal shared class Program {
                 },
                 AssemblyPart{
                     Path: "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/hb_gpu_draw.frag.wrapper.glsl",
-                    Sha256: "7fe1b95d73f72a4492f98f798a03c0a1d4f72ceebfa08dfe499b7b4d470ca82e"
+                    Sha256: "37b2c77bc2493af93bb1c24df218236f11d2f7734e8aaa9ecc3437e7563cc3e0"
                 }
             }
         )
