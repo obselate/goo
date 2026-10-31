@@ -14,11 +14,6 @@ void shade()
 {
     float2 sourceUv = pc.params.xy + uv * pc.params.zw;
     float4 sampleColor = imageTexture.Sample(sourceUv);
-    if (pc.radii.z > 0.5)
-    {
-        outColor = sampleColor;
-        return;
-    }
     float opacity = clamp(pc.radii.x, 0.0, 1.0);
     float alpha = sampleColor.a * opacity;
     float colorScale = pc.radii.y > 0.5 ? opacity : alpha;

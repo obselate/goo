@@ -44,9 +44,8 @@ func RunTransparentWindowSmoke() {
     let budget = uint64(metrics.FramebufferWidth) * uint64(metrics.FramebufferHeight) * 2uL
     target.SetRenderBudgetsForTest(budget, 67108864uL)
     WindowReadbackTestFixture.ForceRender(window, 0.0)
-    Require(target.FullPresentCopyReservedForTest()
-        && target.DiagnosticCountersSnapshotForTest().layerPoolResidentBytes > budget,
-      "Transparent presentation refused the mandatory present copy")
+    Require(target.DiagnosticCountersSnapshotForTest().layerPoolResidentBytes == 0uL,
+      "Transparent encoded presentation allocated an unnecessary present copy")
     window.RequestClose()
     WindowReadbackTestFixture.ForceRender(window, 0.0)
     Require(!window.IsOpen, "Transparent window gate did not close")

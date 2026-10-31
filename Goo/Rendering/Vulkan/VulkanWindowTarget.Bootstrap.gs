@@ -662,6 +662,7 @@ internal unsafe partial class VulkanWindowTarget {
       TimestampValidBits: timestampValidBits,
       TimestampPeriod: timestampPeriod,
       TimestampComputeAndGraphics: timestampComputeAndGraphics,
+      SwapchainMutableFormat: deviceFacts.SwapchainMutableFormat,
     }
     try {
       CreateCandidateRuntime()
@@ -733,6 +734,7 @@ internal unsafe partial class VulkanWindowTarget {
     swapchainMaintenanceVariant = VulkanSwapchainMaintenanceVariant.None
     portabilitySubsetSupported = false
     memoryBudgetSupported = false
+    deviceFacts.SwapchainMutableFormat = false
     externalMemoryExtension = ""
     externalSemaphoreExtension = ""
     externalDmaExtension = ""
@@ -783,6 +785,9 @@ internal unsafe partial class VulkanWindowTarget {
         }
         if ExtensionNameEquals(&extensions[index], VkConstants.VK_EXT_MEMORY_BUDGET_EXTENSION_NAME) {
           hasMemoryBudget = true
+        }
+        if ExtensionNameEquals(&extensions[index], VulkanWindowTargetExtensionNames.SwapchainMutableFormat) {
+          deviceFacts.SwapchainMutableFormat = true
         }
         index = index + 1u
       }
@@ -886,6 +891,12 @@ internal unsafe partial class VulkanWindowTarget {
         extensionStorage[extensionIndex] = Marshal.StringToCoTaskMemUTF8(VkConstants.VK_EXT_MEMORY_BUDGET_EXTENSION_NAME)
         extensionPointers[extensionIndex].Value = *int8(extensionStorage[extensionIndex])
         deviceExtensionCount = deviceExtensionCount + 1u
+      }
+      if deviceFacts.SwapchainMutableFormat {
+        let extensionIndex = int32(deviceExtensionCount)
+        extensionStorage[extensionIndex] = Marshal.StringToCoTaskMemUTF8(VulkanWindowTargetExtensionNames.SwapchainMutableFormat)
+        extensionPointers[extensionIndex].Value = *int8(extensionStorage[extensionIndex])
+        deviceExtensionCount++
       }
       for externalIndex in 0 ... ExternalExtensionCount {
         let extension = switch externalIndex {

@@ -372,7 +372,6 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
   private let byteBudget VkDeviceSize
   private var requestedWidth uint32
   private var requestedHeight uint32
-  private var presentTarget VulkanOffscreenLayerTarget?
   private var layerResolutionShift int32
   private var layerExtents []VkExtent2D = [0]VkExtent2D
   private var layerReservations []int32 = [0]int32
@@ -388,7 +387,6 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
 
   internal prop ResidentBytes VkDeviceSize{ get -> residentBytes }
   internal prop ByteBudget VkDeviceSize{ get -> byteBudget }
-  internal prop PresentTarget VulkanOffscreenLayerTarget?{ get -> presentTarget }
   internal prop LayerResolutionShift int32{ get -> layerResolutionShift }
   internal prop LiveTargetCount int32{
     get {
@@ -465,13 +463,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       }
     }
 
-  internal func PrepareLayerBudget(frame SceneFrame, completedSerial uint64,
-    presentWidth uint32 = 0u, presentHeight uint32 = 0u) {
-    presentTarget = nil
-    var presentIndex int32 = -1
-    if presentWidth != 0u {
-      presentTarget = Acquire(presentWidth, presentHeight, completedSerial, &presentIndex, true)
-    }
+  internal func PrepareLayerBudget(frame SceneFrame, completedSerial uint64) {
     if layerExtents.Length < frame.LayerCount {
       layerExtents = [frame.LayerCount]VkExtent2D
       layerReservations = [frame.LayerCount * 2]int32
@@ -481,11 +473,9 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     if !sameShape { fullResolutionRequiredBytes = 0uL }
     if layerResolutionShift > 0 {
       let fullPeak = fullResolutionRequiredBytes
-      let presentBytes = presentTarget?.Bytes ?? 0uL
-      let available = presentBytes < byteBudget ? byteBudget - presentBytes : 0uL
       var recoveryShift int32 = 0
       while recoveryShift < layerResolutionShift
-        && (fullPeak >> (recoveryShift * 2)) > available { recoveryShift++ }
+        && (fullPeak >> (recoveryShift * 2)) > byteBudget { recoveryShift++ }
       layerResolutionShift = recoveryShift
     }
     while true {
@@ -529,13 +519,11 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       if !available {
         var required = lastFailedRequestBytes
         for index in 0 ... targets.Length {
-          if inFrame[index] && index != presentIndex {
+          if inFrame[index] {
             if let target = targets[index] { required += target.Bytes }
           }
         }
-        let presentBytes = presentTarget?.Bytes ?? 0uL
-        let availableBytes = presentBytes < byteBudget ? byteBudget - presentBytes : 0uL
-        if required > availableBytes {
+        if required > byteBudget {
           let shift = layerResolutionShift * 2
           let fullBytes = if required > (uint64.MaxValue >> shift) {
             uint64.MaxValue
@@ -544,7 +532,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
         }
       }
       for index in 0 ... targets.Length {
-        if inFrame[index] && index != presentIndex {
+        if inFrame[index] {
           leased[index] = false
           if !available {
             targets[index]?.RestoreLeaseLayout()

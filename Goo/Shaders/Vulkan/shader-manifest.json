@@ -342,9 +342,9 @@
       "source": "analytic_sampled_image.frag.slang",
       "output": "analytic_sampled_image.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "5df92340fcaf8f55b73c0d16bfc326d413290169208d93e8f34ed0d7e73c4cd4",
-      "outputSha256": "35670fc136f90e8df527f606726758537afd636be8b048509b11c025e340790c",
-      "outputBytes": 6836,
+      "sourceSha256": "1d5268cf468cfb6f5773998d5747ada75055e5b8ec750e4c6cfe3904f34e9276",
+      "outputSha256": "8e47adb7452882b007a2c3e5c0db74ca9c0944c9bc6dd92785fc888f30658794",
+      "outputBytes": 6668,
       "capabilities": [
         1
       ]

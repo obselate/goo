@@ -369,7 +369,6 @@ internal unsafe partial class VulkanWindowTarget {
             renderer.SetPathAtlas(resources.Resources.Atlas)
           }
           renderer.ReserveImageReferences(sceneCompiler.Frame)
-          renderer.SetPresentEncode(false)
           clipMaskFrameStarted = true
           let clipFrameStats = renderer.PrepareClipMasks(
             sceneCompiler.Frame,

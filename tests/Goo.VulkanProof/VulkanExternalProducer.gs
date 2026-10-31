@@ -155,7 +155,7 @@ internal unsafe sealed partial class VulkanExternalProducer : IDisposable {
             pNext: *void(&external), drmFormatModifierCount: 1u, pDrmFormatModifiers: &modifier }
         var info = VkImageCreateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             pNext: *void(&external), imageType: VkConstants.VK_IMAGE_TYPE_2D,
-            format: VkConstants.VK_FORMAT_R8G8B8A8_SRGB,
+            format: VkConstants.VK_FORMAT_R8G8B8A8_UNORM,
             extent: VkExtent3D{ width: 8u, height: 4u, depth: 1u }, mipLevels: 1u, arrayLayers: 1u,
             samples: VkConstants.VK_SAMPLE_COUNT_1_BIT, tiling: if dma { 1000158000 } else { VkConstants.VK_IMAGE_TILING_OPTIMAL },
             usage: uint32(VkConstants.VK_IMAGE_USAGE_SAMPLED_BIT) | uint32(VkConstants.VK_IMAGE_USAGE_TRANSFER_DST_BIT),
@@ -243,7 +243,7 @@ internal unsafe sealed partial class VulkanExternalProducer : IDisposable {
     internal func Description(session ExternalImageSession, format int32 = 0) VulkanExternalImageDescription -> VulkanExternalImageDescription{
         HandleKind: if dma { ExternalImageHandleKind.DmaBuf } else { ExternalImageHandleKind.OpaqueFd }, Memory: handle!!,
         DeviceUuid: session.DeviceUuid, DriverUuid: session.DriverUuid,
-        Width: 8, Height: 4, Format: if format == 0 { VkConstants.VK_FORMAT_R8G8B8A8_SRGB } else { format },
+        Width: 8, Height: 4, Format: if format == 0 { VkConstants.VK_FORMAT_R8G8B8A8_UNORM } else { format },
         Tiling: if dma { 1000158000 } else { VkConstants.VK_IMAGE_TILING_OPTIMAL }, AllocationSize: allocationSize,
         MemoryTypeIndex: memoryType, DedicatedAllocation: true,
         ImageUsage: uint32(VkConstants.VK_IMAGE_USAGE_SAMPLED_BIT) | uint32(VkConstants.VK_IMAGE_USAGE_TRANSFER_DST_BIT),

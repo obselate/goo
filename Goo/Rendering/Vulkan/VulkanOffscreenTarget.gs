@@ -442,10 +442,6 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     return VkConstants.VK_SUCCESS
   }
 
-  internal func SetPresentEncode(value bool) {
-    primitiveRenderer?.SetPresentEncode(value)
-  }
-
   internal func SetPartialRepeat(damage VulkanDamageRegion) {
     partialRepeat = damage
   }

@@ -56,9 +56,8 @@ internal unsafe func VerifyLongGradientReadbacks(capture VulkanProductionReadbac
           let shift = (3 - channel) * 8
           let a = float32((first >> shift) & 255u) / 255.0F * alphaA
           let b = float32((last >> shift) & 255u) / 255.0F * alphaB
-          let linear = a + (b - a) * amount + if channel == 2 { 1.0F - (alphaA + (alphaB - alphaA) * amount) } else { 0.0F }
-          let srgb = if linear <= 0.0031308F { linear * 12.92F } else { 1.055F * MathF.Pow(linear, 1.0F / 2.4F) - 0.055F }
-          let expected = int32(srgb * 255.0F + 0.5F)
+          let encoded = a + (b - a) * amount + if channel == 2 { 1.0F - (alphaA + (alphaB - alphaA) * amount) } else { 0.0F }
+          let expected = int32(encoded * 255.0F + 0.5F)
           for y in []int32 { 16, 48 } {
             let actual = int32(result.Pixels[(y * 64 + x) * 4 + channel])
             if Math.Abs(actual - expected) > 3 {

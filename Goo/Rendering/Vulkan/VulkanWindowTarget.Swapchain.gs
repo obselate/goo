@@ -531,19 +531,23 @@ internal unsafe partial class VulkanWindowTarget {
     var selectedFormat VkSurfaceFormatKHR = VkSurfaceFormatKHR{}
     fixed values * VkSurfaceFormatKHR = formats {
       if !SelectEncodedFormat(values, formatCount, out selectedFormat) {
-        throw InvalidOperationException("Vulkan surface exposes no supported UNORM swapchain format")
+        throw InvalidOperationException("Vulkan surface requires an sRGB-nonlinear UNORM format or VK_KHR_swapchain_mutable_format for an encoded UNORM view")
       }
     }
     var formatProperties = VkFormatProperties{}
     let getFormatProperties = instanceDispatch.vkGetPhysicalDeviceFormatProperties
     getFormatProperties(
       physicalDevice,
-      selectedFormat.format,
+      switch selectedFormat.format {
+        case VkConstants.VK_FORMAT_R8G8B8A8_SRGB: VkConstants.VK_FORMAT_R8G8B8A8_UNORM
+        case VkConstants.VK_FORMAT_B8G8R8A8_SRGB: VkConstants.VK_FORMAT_B8G8R8A8_UNORM
+        default: selectedFormat.format
+      },
       &formatProperties)
     let requiredFormatFeatures = uint32(VkConstants.VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)
     | uint32(VkConstants.VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT)
     if (formatProperties.optimalTilingFeatures & requiredFormatFeatures) != requiredFormatFeatures {
-      throw InvalidOperationException("Vulkan sRGB surface format lacks color attachment blend support")
+      throw InvalidOperationException("Vulkan encoded surface view lacks color attachment blend support")
     }
     var modeCount uint32 = 0u
     let getModes = instanceDispatch.vkGetPhysicalDeviceSurfacePresentModesKHR
@@ -652,6 +656,18 @@ internal unsafe partial class VulkanWindowTarget {
             return true
           }
         index = index + 1u
+      }
+      if deviceFacts.SwapchainMutableFormat {
+        index = 0u
+        while index < count {
+          if (formats[index].format == VkConstants.VK_FORMAT_B8G8R8A8_SRGB
+            || formats[index].format == VkConstants.VK_FORMAT_R8G8B8A8_SRGB)
+            && formats[index].colorSpace == VkConstants.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR {
+              selected = formats[index]
+              return true
+            }
+          index++
+        }
       }
       return false
     }

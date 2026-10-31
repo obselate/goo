@@ -93,14 +93,7 @@ internal func WarmVulkanProductionReadback(
     AwaitVulkanProductionReadback(capture)
   }
 
-internal func VulkanProofTextChannel(value int32) float32 {
-  let encoded = float32(value) / 255.0F
-  return if encoded <= 0.04045F {
-    encoded / 12.92F
-  } else {
-    MathF.Pow((encoded + 0.055F) / 1.055F, 2.4F)
-  }
-}
+internal func VulkanProofTextChannel(value int32) float32 -> float32(value) / 255.0F
 
 internal func AppendVulkanProofGlyph(
   frame SceneFrame,

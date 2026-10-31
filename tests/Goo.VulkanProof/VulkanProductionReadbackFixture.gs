@@ -92,8 +92,7 @@ internal partial class VulkanWindowTarget {
     return if first > second { first } else { second }
   }
 
-  internal func OpenProductionReadbackForProof(region VulkanReadbackRegion,
-    presentEncode bool = false) VulkanProductionReadbackCapture{
+  internal func OpenProductionReadbackForProof(region VulkanReadbackRegion) VulkanProductionReadbackCapture{
     PollQueueCompletion()
     if disposed || frameFailed {
       throw InvalidOperationException("Vulkan production readback target is unavailable")
@@ -166,7 +165,6 @@ internal partial class VulkanWindowTarget {
       readbackLease.Release()
       throw InvalidOperationException("Vulkan production readback target creation failed")
     }
-    activeTarget.SetPresentEncode(presentEncode)
     let request = VulkanReadbackFactory.Create(activeTarget, readbackLease,
       activeRuntime.Generation)
     try {
@@ -249,8 +247,7 @@ internal unsafe partial class VulkanImageResources {
 
 internal class VulkanProductionReadbackFixture {
   shared {
-    internal func Open(window Window, width uint32, height uint32,
-      presentEncode bool = false) VulkanProductionReadbackCapture{
+    internal func Open(window Window, width uint32, height uint32) VulkanProductionReadbackCapture{
       if width == 0u || height == 0u {
         throw ArgumentOutOfRangeException("width")
       }
@@ -262,7 +259,7 @@ internal class VulkanProductionReadbackFixture {
         Y: 0u,
         Width: width,
         Height: height,
-      }, presentEncode)
+      })
     }
 
     internal func PollQueueCompletion(window Window) bool ->

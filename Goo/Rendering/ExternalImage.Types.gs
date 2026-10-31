@@ -46,7 +46,7 @@ public sealed class VulkanExternalImageDescription {
     public prop Width int32 { get; init; }
     /// Gets the allocation height in pixels.
     public prop Height int32 { get; init; }
-    /// Gets the numeric VkFormat. Supported imports use sRGB RGBA8 or BGRA8.
+    /// Gets the numeric VkFormat. Supported imports use UNORM RGBA8 or BGRA8 with encoded sRGB samples.
     public prop Format int32 { get; init; }
     /// Gets the numeric VkImageTiling.
     public prop Tiling int32 { get; init; }
