@@ -1715,7 +1715,7 @@ internal shared class Program {
                 AssemblyPart{Path: HarfBuzzVertexPath, Sha256: HarfBuzzVertexSha256},
                 AssemblyPart{
                     Path: "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/hb_gpu.vert.wrapper.glsl",
-                    Sha256: "46a1151546a276ac40da14dfcba7fff5ea00274a13edb0fd4a43f8085b837046"
+                    Sha256: "3334df8e716c8d2da459f1a2806412b67547cccb408e742dbb80393461c3b874"
                 }
             }
         )
