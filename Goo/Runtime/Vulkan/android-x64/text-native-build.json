@@ -1,7 +1,7 @@
 {
   "artifacts": {
     "gpu": {
-      "bytes": 246680,
+      "bytes": 246040,
       "exports": [
         "goo_image_decode_rgba",
         "goo_image_free",
@@ -43,7 +43,7 @@
         "hb_gpu_shader_source"
       ],
       "file": "libgoo-harfbuzz-gpu.so",
-      "format": "ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, for Android 33, built by NDK r27c (12479018), stripped",
+      "format": "ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, stripped",
       "loadAlignments": [
         16384,
         16384,
@@ -60,7 +60,7 @@
       "runpath": [
         "$ORIGIN/"
       ],
-      "sha256": "d8e3fa1321a02d042a686e2800cc682032bc7649599b824264069e17d4dc2faf",
+      "sha256": "658438f68191a7ad09316d335a4ec7225c3afa180b9fb08113c0e9bb953b4600",
       "soname": "libgoo-harfbuzz-gpu.so"
     },
     "harfbuzz": {
@@ -614,7 +614,7 @@
         "hb_version_string"
       ],
       "file": "libgoo-harfbuzz.so",
-      "format": "ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, for Android 33, built by NDK r27c (12479018), stripped",
+      "format": "ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, stripped",
       "loadAlignments": [
         16384,
         16384,
@@ -717,15 +717,6 @@
     "sourcePatch": "Set the core and GPU shared-library identities to Goo-owned private names before the pinned Meson build; Linux keeps private SONAMEs, macOS keeps private @rpath install names, and Windows uses unversioned DLL names.",
     "sourcePatches": [
       {
-        "description": "Convert explicit CPAL RGB bytes to linear-light Q15 with a fixed 256-entry lookup. Preserve alpha and foreground encoding.",
-        "name": "cpal-linear-light",
-        "patchedSha256": "44c68d7ceab1be78b6704e4c84b2793ebe6f5f4f1c713b01a04fbe7dc2f71a74",
-        "path": "tools/Goo.TextNative/patches/harfbuzz-15.0.0-cpal-linear-light.patch",
-        "sha256": "db74dc354fdcb7bc3ae8b9f7e02dcda1e662d8ff9b4737726a9569caced3072d",
-        "upstreamPath": "src/hb-gpu-paint.cc",
-        "upstreamSha256": "db822c4f947c787e583bb80d28143e7e9094728822fc81bcea9e901ca353c948"
-      },
-      {
         "description": "Keep the GIF disposal history pointer inside the allocated frame buffer.",
         "name": "stb-gif-two-back",
         "patchedSha256": "48b9cabe23f0a6b07654f2b7787535165695bd8bf563449088f0ab8ad7d842b2",
@@ -757,7 +748,7 @@
     "target": "android-x64",
     "toolchain": {
       "cc": "Android (12470979, +pgo, +bolt, +lto, +mlgo, based on r522817c) clang version 18.0.3 (https://android.googlesource.com/toolchain/llvm-project d8003a456d14a3deb8054cdaa529ffbf02d9b262)",
-      "meson": "1.12.0",
+      "meson": "1.3.2",
       "minimumApi": 33,
       "ndk": "27.2.12479018",
       "ninja": "1.13.2",
