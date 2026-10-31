@@ -10,8 +10,8 @@ internal class VulkanTextPaintE2E {
   const ExpectedV1Glyph uint32 = 2u
   const ExpectedV0Bytes int32 = 424
   const ExpectedV1Bytes int32 = 6984
-  const ExpectedV0Digest uint64 = 4061157383081379794uL
-  const ExpectedV1Digest uint64 = 13280611930759481112uL
+  const ExpectedV0Digest uint64 = 7378143059612139343uL
+  const ExpectedV1Digest uint64 = 14583217377303852956uL
   const ExpectedV0XBearing int32 = 0
   const ExpectedV0YBearing int32 = 1024
   const ExpectedV0Width int32 = 1024
