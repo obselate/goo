@@ -11,10 +11,10 @@ void main()
     uint effectMode = floatBitsToUint(v_effectAndOrigin.y);
     float ppem = hb_gpu_ppem(v_texcoord, v_glyphLoc);
     float coverage = _hb_gpu_slug(v_texcoord, pixelsPerEm, v_glyphLoc);
-    if (effectMode == 0u && (ppem < 11.0 || ppem > 24.0))
+    if (effectMode == 0u && (ppem < 10.99 || ppem > 24.0))
     {
-        vec2 subpixelScale = pixelsPerEm * (ppem < 11.0 ? 1.0 : 2.0);
-        if (ppem < 11.0)
+        vec2 subpixelScale = pixelsPerEm * (ppem < 10.99 ? 1.0 : 2.0);
+        if (ppem < 10.99)
         {
             dx *= 4.0 / 3.0;
             dy *= 4.0 / 3.0;
@@ -24,7 +24,7 @@ void main()
             _hb_gpu_slug_single(v_texcoord + dx - dy, subpixelScale, v_glyphLoc) +
             _hb_gpu_slug_single(v_texcoord - dx + dy, subpixelScale, v_glyphLoc) +
             _hb_gpu_slug_single(v_texcoord + dx + dy, subpixelScale, v_glyphLoc));
-        float weight = ppem < 11.0 ? smoothstep(11.0, 10.5, ppem) : smoothstep(24.0, 48.0, ppem);
+        float weight = ppem < 10.99 ? smoothstep(10.99, 10.5, ppem) : smoothstep(24.0, 48.0, ppem);
         coverage = mix(coverage, integrated, weight);
     }
     if (effectMode == 2u && v_effectAndOrigin.x > 0.0)
