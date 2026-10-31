@@ -62,7 +62,7 @@ void main()
     if (instance.transform[0].y == 0.0 && instance.transform[1].x == 0.0)
     {
         vec2 origin = round(instance.runOrigin * frameConstants.viewport.zw);
-        origin.y = floor(round(instance.runOrigin.y * frameConstants.viewport.w * 64.0) / 64.0 + 0.5);
+        origin.y = floor(instance.runOrigin.y * frameConstants.viewport.w + 0.5);
         vec2 offset = (instance.transform[3].xy - instance.runOrigin) * frameConstants.viewport.zw;
         transform[3].xy = origin + offset - frameConstants.origin.xy;
     }
