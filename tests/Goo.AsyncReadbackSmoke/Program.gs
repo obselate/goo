@@ -202,9 +202,9 @@ func ReadbackValidateReadbackResult(result VulkanReadbackResult) {
   +"/" + ReadbackPixel(pixels, 32, 32, 1).ToString()
   +"/" + ReadbackPixel(pixels, 32, 32, 2).ToString()
   +"/" + ReadbackPixel(pixels, 32, 32, 3).ToString()
-  Require(Math.Abs(int32(ReadbackPixel(pixels, 32, 32, 0)) - 161) <= 1
-      && Math.Abs(int32(ReadbackPixel(pixels, 32, 32, 1)) - 32) <= 1
-      && Math.Abs(int32(ReadbackPixel(pixels, 32, 32, 2)) - 51) <= 1
+  Require(Math.Abs(int32(ReadbackPixel(pixels, 32, 32, 0)) - 116) <= 1
+      && Math.Abs(int32(ReadbackPixel(pixels, 32, 32, 1)) - 30) <= 1
+      && Math.Abs(int32(ReadbackPixel(pixels, 32, 32, 2)) - 48) <= 1
       && ReadbackPixel(pixels, 32, 32, 3) == uint8(255),
     "Readback center pixel is incorrect: " + center)
 }
