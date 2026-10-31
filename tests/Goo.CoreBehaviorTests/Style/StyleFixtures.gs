@@ -76,7 +76,7 @@ internal class StyleFixtures {
 
   func ShaderEffectMetricsPublishCoalescesPaintContract() bool {
     let program = ShaderEffectProgram([]uint8{
-      71, 69, 70, 70, 1, 0, 0, 0, 1, 0, 0, 0,
+      71, 69, 70, 70, 2, 0, 0, 0, 1, 0, 0, 0,
       86, 83, 80, 86, 20, 0, 0, 0,
       3, 2, 35, 7, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
     })
@@ -99,9 +99,20 @@ internal class StyleFixtures {
     }
   }
 
+  func ShaderEffectRejectsLinearProgramContract() bool {
+    try {
+      ShaderEffectProgram([]uint8{
+        71, 69, 70, 70, 1, 0, 0, 0, 1, 0, 0, 0,
+        86, 83, 80, 86, 20, 0, 0, 0,
+        3, 2, 35, 7, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+      })
+      return false
+    } catch (_ ArgumentException) { return true }
+  }
+
   func ShaderEffectOnlyReplacementContract() bool {
     let program = ShaderEffectProgram([]uint8{
-      71, 69, 70, 70, 1, 0, 0, 0, 1, 0, 0, 0,
+      71, 69, 70, 70, 2, 0, 0, 0, 1, 0, 0, 0,
       86, 83, 80, 86, 20, 0, 0, 0,
       3, 2, 35, 7, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
     })
@@ -2184,7 +2195,7 @@ internal class StyleFixtures {
       case StyleField.BackgroundImageSource { return Style{ BackgroundImageSource: nil } }
       case StyleField.ShaderEffect {
         return Style{ ShaderEffect: ShaderEffect(ShaderEffectProgram([]uint8{
-          71, 69, 70, 70, 1, 0, 0, 0, 1, 0, 0, 0,
+          71, 69, 70, 70, 2, 0, 0, 0, 1, 0, 0, 0,
           86, 83, 80, 86, 20, 0, 0, 0,
           3, 2, 35, 7, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
         })) }

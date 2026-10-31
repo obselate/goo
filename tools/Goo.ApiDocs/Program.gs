@@ -15,7 +15,7 @@ func AppendGradientStopsGuide(text StringBuilder) {
     text.AppendLine("Linear and radial gradients accept two or more ordered stops, including repeated")
     text.AppendLine("positions for hard color edges. There is no fixed four-stop limit. Larger stop")
     text.AppendLine("lists use Goo-owned GPU storage and remain a single gradient draw; device storage")
-    text.AppendLine("limits still apply. Interpolation uses premultiplied linear color, including")
+    text.AppendLine("limits still apply. Interpolation uses premultiplied encoded sRGB color, including")
     text.AppendLine("per-stop alpha and element opacity.")
 }
 
@@ -122,7 +122,15 @@ func AppendImageSourceProviderMembers(text StringBuilder) {
 
 func AppendShaderEffectGuide(text StringBuilder) {
     text.AppendLine()
+    text.AppendLine("## Color and compositing")
+    text.AppendLine()
+    text.AppendLine("Compositing, gradients and image samples use premultiplied display-encoded sRGB channels in UNORM attachments. Alpha is linear coverage.")
+    text.AppendLine()
+    text.AppendLine("Vulkan surfaces keep the `SRGB_NONLINEAR` color-space tag. Goo uses an advertised UNORM format or a compatible UNORM view through `VK_KHR_swapchain_mutable_format`. Startup fails if neither is available. Goo does not fall back to linear-light blending.")
+    text.AppendLine()
     text.AppendLine("## Apply fragment shaders to retained elements")
+    text.AppendLine()
+    text.AppendLine("Effect programs use `goo-shader-effect-3`. Build effect sources with the current Goo build adapter before loading them.")
     text.AppendLine()
     text.AppendLine(
         "Load one backend-neutral `ShaderEffectProgram`, create retained `ShaderEffect` state from it, and assign the effect through the ordinary `Style.ShaderEffect` property on a `Container`, `Button`, `Text`, `Image`, `Shape`, or another Blob. Ordinary effects render that element and its subtree into a bounded offscreen layer, run the selected backend artifact, then composite the result without changing layout, hit testing, accessibility, transforms, or clipping."
@@ -187,7 +195,7 @@ func AppendShaderEffectGuide(text StringBuilder) {
     )
     text.AppendLine()
     text.AppendLine(
-        "The fixed ABI binds the isolated source at set 0, the optional backdrop at set 1, Goo primitive data at set 2, Goo clip data at set 3, optional retained effect data at set 4, and eight `vec4` values in a 128-byte fragment push block. `uv` is normalized to the visible element bounds. `source` and `backdrop` are premultiplied linear colors. Return premultiplied linear color. Goo applies retained clip coverage and element opacity after `gooEffect`. Set `backdropOutset` to the largest displacement or filter radius the shader needs beyond those bounds. When backdrop sampling is disabled, the backdrop argument aliases the source and Goo skips the target copy."
+        "The fixed ABI binds the isolated source at set 0, the optional backdrop at set 1, Goo primitive data at set 2, Goo clip data at set 3, optional retained effect data at set 4, and eight `vec4` values in a 128-byte fragment push block. `uv` is normalized to the visible element bounds. `source`, `backdrop` and returned colors use premultiplied display-encoded sRGB channels. Alpha is linear coverage. Images and render attachments use UNORM storage. Samples do not decode RGB. Mix authored sRGB tint values directly with sampled RGB. Source-independent effects return encoded RGB too. Goo applies retained clip coverage and element opacity after `gooEffect`. Set `backdropOutset` to the largest displacement or filter radius the shader needs beyond those bounds. When backdrop sampling is disabled, the backdrop argument aliases the source and Goo skips the target copy."
     )
     text.AppendLine()
     text.AppendLine(

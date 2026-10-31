@@ -15,7 +15,7 @@ internal shared class EffectAbi {
         ImageArrayed bool?
     ) : IEquatable[Descriptor] { }
 
-    const Id string = "goo-shader-effect-2"
+    const Id string = "goo-shader-effect-3"
     private let Outputs[]Interface = []Interface{Interface(0, "vec4")}
     private let Descriptors[]Descriptor = []Descriptor{
         Descriptor(0, 0, "combined-image-sampler", 1, nil, "2d", false),
