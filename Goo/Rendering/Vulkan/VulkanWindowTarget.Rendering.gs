@@ -228,7 +228,7 @@ internal unsafe partial class VulkanWindowTarget {
         activeGeneration.SupportsTransferSource
       } else { false }
       sceneCompiler.SetBlendModeSupport(blendModesSupported)
-      textScene?.BeginCompile(completedGraphicsSubmissionSerial)
+      textScene?.BeginCompile(completedGraphicsSubmissionSerial, scaleY)
       imageScene?.BeginCompile()
       let planStart = DiagnosticTimestamp()
       let compileResult = sceneCompiler.Compile(root, portalRoot, background,

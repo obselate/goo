@@ -5,8 +5,9 @@ import System.Collections.Generic
 import System.Runtime.CompilerServices
 
 internal unsafe sealed partial class VulkanTextScene {
-  private func GetGlyph(run ShapedRun, glyphId uint32) VulkanTextAtlasGlyph? {
-    let key = VulkanTextAtlasGlyphKey(run.Family, run.Provider, glyphId)
+  private func GetGlyph(run ShapedRun, glyphId uint32, fontSize float32) VulkanTextAtlasGlyph? {
+    let ppem = HintPpem(run, fontSize)
+    let key = VulkanTextAtlasGlyphKey(run.Family, run.Provider, glyphId, ppem)
     var existingFound = false
     if glyphs.TryGetValue(key, out var existing) {
       let existingIndex = atlasSet.FindIndex(existing.AtlasId)
@@ -28,7 +29,7 @@ internal unsafe sealed partial class VulkanTextScene {
       providerResult = run.Provider.EncodePaintGlyphInto(glyphId, 0u, glyphWorkspace)
       if providerResult.Status == VulkanTextProviderAbi.Success {
         renderMode = 3u
-        effectResult = run.Provider.EncodeGlyphInto(glyphId, effectGlyphWorkspace)
+        effectResult = EncodeGlyph(run.Provider, glyphId, effectGlyphWorkspace, ppem)
         if effectResult.AbiVersion != VulkanTextProviderAbi.Version {
           throw InvalidOperationException("Vulkan text provider ABI version is invalid")
         }
@@ -45,10 +46,10 @@ internal unsafe sealed partial class VulkanTextScene {
         throw InvalidOperationException("Vulkan text color glyph exceeds workspace capacity")
       } else {
         colorGlyphFallback = true
-        providerResult = run.Provider.EncodeGlyphInto(glyphId, glyphWorkspace)
+        providerResult = EncodeGlyph(run.Provider, glyphId, glyphWorkspace, ppem)
       }
     } else {
-      providerResult = run.Provider.EncodeGlyphInto(glyphId, glyphWorkspace)
+      providerResult = EncodeGlyph(run.Provider, glyphId, glyphWorkspace, ppem)
     }
     if providerResult.AbiVersion != VulkanTextProviderAbi.Version {
       throw InvalidOperationException("Vulkan text provider ABI version is invalid")
@@ -128,13 +129,27 @@ internal unsafe sealed partial class VulkanTextScene {
     return result
   }
 
-  private func CachedGlyph(run ShapedRun, glyphId uint32) VulkanTextAtlasGlyph? {
-    let key = VulkanTextAtlasGlyphKey(run.Family, run.Provider, glyphId)
+  private func CachedGlyph(run ShapedRun, glyphId uint32, fontSize float32) VulkanTextAtlasGlyph? {
+    let key = VulkanTextAtlasGlyphKey(run.Family, run.Provider, glyphId, HintPpem(run, fontSize))
     if glyphs.TryGetValue(key, out var value)
       && atlasSet.FindIndex(value.AtlasId) >= 0 {
         return value
       }
     return nil
+  }
+
+  private func HintPpem(run ShapedRun, fontSize float32) int32 {
+    let size = fontSize * pixelScale
+    if run.Provider is VulkanTextFont && size > 0.0F && size <= 48.0F {
+      return Math.Max(1, int32(MathF.Round(size * 64.0F)))
+    }
+    return 0
+  }
+
+  private func EncodeGlyph(provider VulkanTextProvider, glyphId uint32,
+    workspace VulkanTextProviderWorkspace, ppem int32) VulkanTextProviderResult {
+    if provider is VulkanTextFont { return provider.EncodeGlyphInto(glyphId, workspace, ppem) }
+    return provider.EncodeGlyphInto(glyphId, workspace)
   }
 
   private func CanRender(glyph VulkanTextAtlasGlyph) bool {

@@ -296,6 +296,7 @@ internal partial class VulkanSceneCompiler {
         || owner.RetainedTextColor != node.Color.ToPackedRgba()
         || !ExactFloat(owner.RetainedTextOpacity, opacity)
         || owner.RetainedTextAtlasGeneration != scene.ResourceGeneration
+        || owner.RetainedTextPixelScale != scene.PixelScale
         || !ExactFloat(owner.RetainedTextParentTranslateX, parentTransform.TX)
         || !ExactFloat(owner.RetainedTextParentTranslateY, parentTransform.TY)
         || owner.RetainedTextClipDepth != parentClipDepth
@@ -408,6 +409,7 @@ internal partial class VulkanSceneCompiler {
       owner.RetainedTextColor = node.Color.ToPackedRgba()
       owner.RetainedTextOpacity = opacity
       owner.RetainedTextAtlasGeneration = scene.ResourceGeneration
+      owner.RetainedTextPixelScale = scene.PixelScale
       owner.RetainedTextParentTranslateX = parentTransform.TX
       owner.RetainedTextParentTranslateY = parentTransform.TY
       owner.RetainedTextClipDepth = parentClipDepth

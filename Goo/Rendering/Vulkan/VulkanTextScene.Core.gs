@@ -33,8 +33,10 @@ internal unsafe sealed partial class VulkanTextScene {
   private var emissionFailed bool
   private var completedGlobalSubmissionSerial uint64
   private var textLayoutRequestCount int32
+  private var pixelScale float32 = 1.0F
 
   internal prop ResourceGeneration uint64{ get -> atlasSet.Generation }
+  internal prop PixelScale float32{ get -> pixelScale }
   internal prop RedrawRequired bool{ get -> redrawRequired }
   internal prop TextLayoutRequestCount int32{ get -> textLayoutRequestCount }
 
@@ -79,7 +81,12 @@ internal unsafe sealed partial class VulkanTextScene {
     EnsureAtlasStates()
   }
 
-  internal func BeginCompile(completedSerial uint64) {
+  internal func BeginCompile(completedSerial uint64, deviceScale float32 = 1.0F) {
+    if deviceScale != pixelScale {
+      pixelScale = deviceScale
+      nodeSegments.Clear()
+      gutterSegments.Clear()
+    }
     redrawRequired = false
     capacityExhausted = false
     colorEffectSkipped = false
@@ -228,6 +235,7 @@ internal unsafe sealed partial class VulkanTextScene {
     nodeBounds ConservativeBounds,
     out bounds ConservativeBounds) bool{
       if owner.CachedTextPaintLayout != nil
+        && owner.CachedTextPaintScale == pixelScale
         && owner.CachedTextPaintLayout!!.FontRegistryGeneration == FontRegistry.Generation
         && Object.ReferenceEquals(owner.CachedTextPaintContent, node.Content)
         && owner.CachedTextPaintVersion == node.ScenePaintVersion
@@ -246,6 +254,7 @@ internal unsafe sealed partial class VulkanTextScene {
       let layout = RequestTextLayout(node, contentWidth)
       if layout.Rich != nil { return false }
       if Object.ReferenceEquals(owner.CachedTextPaintLayout, layout)
+        && owner.CachedTextPaintScale == pixelScale
         && owner.CachedTextPaintContentX == contentX
         && owner.CachedTextPaintContentY == contentY
         && owner.CachedTextPaintContentWidth == contentWidth
@@ -275,7 +284,7 @@ internal unsafe sealed partial class VulkanTextScene {
           while glyphIndex < run.Glyphs.Length {
             let glyphId = run.Glyphs[glyphIndex]
             if glyphId != 0u {
-              guard let glyph = CachedGlyph(run, glyphId) else { return false }
+              guard let glyph = CachedGlyph(run, glyphId, layout.FontSize) else { return false }
               if !CanRender(glyph) { return false }
               if glyph.ByteLength != 0u {
                 let extents = glyph.Extents
@@ -347,6 +356,7 @@ internal unsafe sealed partial class VulkanTextScene {
     nodeBounds ConservativeBounds) {
       owner.CachedTextPaintContent = node.Content
       owner.CachedTextPaintVersion = node.ScenePaintVersion
+      owner.CachedTextPaintScale = pixelScale
       owner.CachedTextPaintNodeBounds = nodeBounds
     }
 

@@ -129,7 +129,7 @@ internal unsafe sealed partial class VulkanTextScene {
         while glyphIndex < run.Glyphs.Length {
           let glyphId = run.Glyphs[glyphIndex]
           if glyphId != 0u {
-            guard let glyph = GetGlyph(run, glyphId) else {
+            guard let glyph = GetGlyph(run, glyphId, fontSize) else {
               redrawRequired = true
               publicationPending = true
               complete = false
