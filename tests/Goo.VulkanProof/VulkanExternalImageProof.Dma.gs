@@ -47,7 +47,7 @@ internal unsafe partial class VulkanExternalImageProof {
                 let importedB = session.ImportVulkan(producerB.Description(session))
                 Require(importedB.Status == ExternalImageStatus.Success, "DMA-BUF import B failed: " + importedB.Detail)
                 using let imageB = importedB.Image!!
-                Require(session.ImportVulkan(producerA.Description(session, VkConstants.VK_FORMAT_R8G8B8A8_UNORM)).Status
+                Require(session.ImportVulkan(producerA.Description(session, VkConstants.VK_FORMAT_R8G8B8A8_SRGB)).Status
                     == ExternalImageStatus.UnsupportedFormat, "DMA-BUF failure path accepted an unsupported format")
                 using let source = session.CreateSource()
                 let frame = ExternalFrameDescription{ X: 2, Y: 1, Width: 4, Height: 2, Orientation: 6,
