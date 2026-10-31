@@ -131,8 +131,8 @@ func RunShaderGeneratorSmoke() {
     let metrics = WindowReadbackTestFixture.Metrics(opened)
     let first = PrimitiveReadback(opened, metrics)
     let direct = PrimitiveLogicalPixel(first.Pixels, first.Width, metrics, 52.0, 52.0)
-    Require(direct[0] > uint8(190) && direct[1] > uint8(80)
-        && direct[0] > direct[1] && direct[2] < uint8(20),
+    Require(Math.Abs(int32(direct[0]) - 204) <= 1
+        && Math.Abs(int32(direct[1]) - 51) <= 1 && direct[2] < uint8(2),
       "First-frame typed float publication did not reach GPU: " + PrimitivePixelText(direct))
     Require(ShaderGeneratorCell.Target.IsMounted,
       "Generator effect removed its input target")
@@ -150,7 +150,7 @@ func RunShaderGeneratorSmoke() {
       "Generator effect escaped parent clip: " + PrimitivePixelText(clipped))
     let blended = PrimitiveLogicalPixel(first.Pixels, first.Width, metrics, 30.0, 120.0)
     let ownClipped = PrimitiveLogicalPixel(first.Pixels, first.Width, metrics, 70.0, 120.0)
-    Require(blended[0] > uint8(190) && blended[1] > uint8(80),
+    Require(blended[0] > uint8(190) && blended[1] > uint8(50),
       "Generator effect did not compose its blend layer: " + PrimitivePixelText(blended))
     Require(ownClipped[0] < uint8(30) && ownClipped[1] < uint8(40),
       "Generator effect escaped its own overflow clip: " + PrimitivePixelText(ownClipped))
@@ -162,7 +162,8 @@ func RunShaderGeneratorSmoke() {
     let second = PrimitiveReadback(opened, metrics)
     let updated = PrimitiveLogicalPixel(second.Pixels, second.Width, metrics, 52.0, 52.0)
     Require(updated[0] < direct[0] && updated[1] > direct[1]
-        && updated[0] > uint8(90) && updated[1] > uint8(180),
+        && Math.Abs(int32(updated[0]) - 64) <= 1
+        && Math.Abs(int32(updated[1]) - 191) <= 1,
       "Typed struct publication did not reach GPU: " + PrimitivePixelText(updated))
     opened.RequestClose()
     WindowReadbackTestFixture.ForceRender(opened, 0.0)

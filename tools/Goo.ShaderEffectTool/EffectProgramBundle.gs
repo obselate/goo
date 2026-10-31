@@ -4,7 +4,7 @@ import System.IO
 
 internal shared class EffectProgramBundle {
     private const Magic uint32 = uint32(0x46464547)
-    private const Schema uint32 = uint32(1)
+    private const Schema uint32 = uint32(2)
     private const VulkanSpirv uint32 = uint32(0x56505356)
     private const VulkanGeneratorSpirv uint32 = uint32(0x47505356)
     private const HeaderBytes int32 = 12
