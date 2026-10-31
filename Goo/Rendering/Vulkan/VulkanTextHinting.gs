@@ -222,8 +222,9 @@ internal sealed class VulkanTextHinting : IDisposable {
         } else { int32(MathF.Round(xHeight * scale, MidpointRounding.AwayFromZero)) }
         for edge in edges {
             let anchor = Anchor(edge, zone)
-            fitted.Add(if anchor == xHeight { xHeightPixels }
-                else { int32(MathF.Round(anchor * scale, MidpointRounding.AwayFromZero)) })
+            let pixel = if anchor == xHeight { xHeightPixels }
+                else { int32(MathF.Round(anchor * scale, MidpointRounding.AwayFromZero)) }
+            fitted.Add(if fitted.Count == 0 { pixel } else { Math.Max(pixel, fitted[fitted.Count - 1]) })
         }
         horizontalEdges.Sort(HorizontalHeightOrder)
         for i in 0 ... horizontalEdges.Count {
