@@ -1198,7 +1198,7 @@ internal shared class Program {
     private const HarfBuzzDrawFragmentPath string = "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/src/hb-gpu-draw-fragment.glsl"
     private const HarfBuzzPaintFragmentPath string = "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/src/hb-gpu-paint-fragment.glsl"
     private const HarfBuzzVertexSha256 string = "a2d278b8fd6588f47e788f37f6add64e21f38a132a04f5c62e7092f4fe83a7a7"
-    private const HarfBuzzFragmentSha256 string = "104eb5b9512467f8dc08c897e03168c001b5b25cccd026fc41da84f1f682c6e3"
+    private const HarfBuzzFragmentSha256 string = "e9f927040dc0df193eba67e30ce927b81d6e2bb17ab39adad865251466bdd225"
     private const HarfBuzzDrawFragmentSha256 string = "cb70fd3b4db78d02652d0e3a419fe859b7ec5d1f30ee97cba7eaa2cf8ed404eb"
     private const HarfBuzzPaintFragmentSha256 string = "95e5868c3c1197962eb1976838b683fa2f7a7829375d170b3a59706e39538337"
     private let JsonOptions JsonSerializerOptions = JsonSerializerOptions{

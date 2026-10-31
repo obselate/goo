@@ -307,32 +307,9 @@ float _hb_gpu_slug_single (vec2 renderCoord, vec2 pixelsPerEm, uint glyphLoc_)
   return _hb_gpu_calc_coverage (xcov, ycov, xwgt, ywgt);
 }
 
-/* MSAA-aware Slug coverage.  Caller supplies pixelsPerEm so this
- * function can be invoked from non-uniform control flow (for
- * example inside an op-stream branch in hb-gpu-paint-fragment.wgsl,
- * where WGSL would otherwise reject an fwidth call). */
 float _hb_gpu_slug (vec2 renderCoord, vec2 pixelsPerEm, uint glyphLoc_)
 {
-  float c = _hb_gpu_slug_single (renderCoord, pixelsPerEm, glyphLoc_);
-
-#ifndef HB_GPU_NO_MSAA
-  float ppem = hb_gpu_ppem (renderCoord, glyphLoc_);
-
-  if (ppem < 16.0)
-  {
-    vec2 emsPerPixel = 1.0 / pixelsPerEm;
-    vec2 d = emsPerPixel * (1.0 / 3.0);
-    float msaa = 0.25 *
-      (_hb_gpu_slug_single (renderCoord + vec2 (-d.x, -d.y), pixelsPerEm, glyphLoc_) +
-       _hb_gpu_slug_single (renderCoord + vec2 ( d.x, -d.y), pixelsPerEm, glyphLoc_) +
-       _hb_gpu_slug_single (renderCoord + vec2 (-d.x,  d.y), pixelsPerEm, glyphLoc_) +
-       _hb_gpu_slug_single (renderCoord + vec2 ( d.x,  d.y), pixelsPerEm, glyphLoc_));
-
-    c = mix (c, msaa, smoothstep (16.0, 8.0, ppem));
-  }
-#endif
-
-  return c;
+  return _hb_gpu_slug_single (renderCoord, pixelsPerEm, glyphLoc_);
 }
 
 /* Stem darkening for small sizes.

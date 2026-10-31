@@ -208,7 +208,7 @@
       "parts": [
         {
           "path": "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/src/hb-gpu-fragment.glsl",
-          "sha256": "104eb5b9512467f8dc08c897e03168c001b5b25cccd026fc41da84f1f682c6e3"
+          "sha256": "e9f927040dc0df193eba67e30ce927b81d6e2bb17ab39adad865251466bdd225"
         },
         {
           "path": "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/src/hb-gpu-draw-fragment.glsl",
@@ -236,7 +236,7 @@
       "parts": [
         {
           "path": "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/src/hb-gpu-fragment.glsl",
-          "sha256": "104eb5b9512467f8dc08c897e03168c001b5b25cccd026fc41da84f1f682c6e3"
+          "sha256": "e9f927040dc0df193eba67e30ce927b81d6e2bb17ab39adad865251466bdd225"
         },
         {
           "path": "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/src/hb-gpu-draw-fragment.glsl",
@@ -409,9 +409,9 @@
       "output": "hb_gpu_draw.frag.spv",
       "entryPoint": "main",
       "assembly": "hb_gpu_draw_fragment",
-      "sourceSha256": "6ba3f1eff9f0c613c188a621d29a97fe8ffc1738e5362093260260a8ca458602",
-      "outputSha256": "eca27f218c0a45ee9efbae0dfca22c04e2e6066494516e8544c3c29cb449d47e",
-      "outputBytes": 168160,
+      "sourceSha256": "48c18e755b729730aad50b2cf74d0986a641ff9c5b1092d49b9a82b128cf12a4",
+      "outputSha256": "634423327d5ef5e46d1608c989e3ef03eab7fa3b63d59b3ef1dd61c0d7207cf7",
+      "outputBytes": 66304,
       "capabilities": [
         1,
         46
@@ -424,9 +424,9 @@
       "output": "hb_gpu_paint.frag.spv",
       "entryPoint": "main",
       "assembly": "hb_gpu_paint_fragment",
-      "sourceSha256": "553cda15767acdde24abd61c5285b4f5f61283688c4f0b6ea4e00b0618bb479a",
-      "outputSha256": "040c5452f8df1c82ec0abf3e42d184cd2ef16613dc299cc84df993f402b1458d",
-      "outputBytes": 284160,
+      "sourceSha256": "98206b56dcbf23d8094de71a6d52845785c76647218a365357eca0fb37708cff",
+      "outputSha256": "bffd4924ec73f525cf447fd9016caba5f3e006857631a3da154eb1134ab6b802",
+      "outputBytes": 80496,
       "capabilities": [
         1,
         46
