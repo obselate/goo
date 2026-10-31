@@ -131,6 +131,7 @@ internal sealed class VulkanTextHinting : IDisposable {
     private var designUnitsPerPixel float32
     private let units float32
     private let xHeight float32
+    private let xHeightOvershoot float32
     private let capHeight float32
 
     shared {
@@ -145,6 +146,13 @@ internal sealed class VulkanTextHinting : IDisposable {
         xHeight = float32(value)
         hb_ot_metrics_get_position_with_fallback(font, VulkanTextTag("cpht"), ref value)
         capHeight = float32(value)
+        var glyph uint32 = 0u
+        var extents = VulkanTextGlyphExtents{}
+        if xHeight > 0.0F && hb_font_get_nominal_glyph(font, uint32('o'), ref glyph) != 0u
+        && hb_font_get_glyph_extents(font, glyph, ref extents) != 0u
+        && float32(extents.YBearing) >= xHeight && float32(extents.YBearing) <= xHeight + units * 0.025F {
+            xHeightOvershoot = float32(extents.YBearing)
+        }
         moveCallback = Move
         lineCallback = Line
         quadraticCallback = Quadratic
@@ -209,8 +217,13 @@ internal sealed class VulkanTextHinting : IDisposable {
         }
         edges.RemoveRange(uniqueCount, edges.Count - uniqueCount)
         let zone = MathF.Min(units * 0.025F, 0.5F / scale)
+        let xHeightPixels = if xHeightOvershoot > 0.0F {
+            int32(MathF.Floor(xHeightOvershoot * scale + 0.625F))
+        } else { int32(MathF.Round(xHeight * scale, MidpointRounding.AwayFromZero)) }
         for edge in edges {
-            fitted.Add(int32(MathF.Round(Anchor(edge, zone) * scale, MidpointRounding.AwayFromZero)))
+            let anchor = Anchor(edge, zone)
+            fitted.Add(if anchor == xHeight { xHeightPixels }
+                else { int32(MathF.Round(anchor * scale, MidpointRounding.AwayFromZero)) })
         }
         horizontalEdges.Sort(HorizontalHeightOrder)
         for i in 0 ... horizontalEdges.Count {
