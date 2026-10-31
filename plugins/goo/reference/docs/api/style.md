@@ -2,7 +2,7 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/Style`](https://github.com/obselate/goo/tree/40351bb35c5882849cea9623a27a0659592710df/Goo/Style)
+Source: [`Goo/Style`](https://github.com/obselate/goo/tree/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style)
 
 ## Compose reusable styles
 
@@ -14,7 +14,7 @@ Source: [`Goo/Style`](https://github.com/obselate/goo/tree/40351bb35c5882849cea9
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects cross-axis distribution for wrapped lines.
 
@@ -31,7 +31,7 @@ Selects cross-axis distribution for wrapped lines.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects default cross-axis alignment for children.
 
@@ -47,7 +47,7 @@ Selects default cross-axis alignment for children.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects a child's cross-axis alignment.
 
@@ -64,7 +64,7 @@ Selects a child's cross-axis alignment.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects how an element and its descendants composite with the backdrop.
 
@@ -91,7 +91,7 @@ Selects how an element and its descendants composite with the backdrop.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects how box border edges paint.
 
@@ -105,7 +105,7 @@ Selects how box border edges paint.
 
 Source:
 
-- [`BoxShadow.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/BoxShadow.gs)
+- [`BoxShadow.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/BoxShadow.gs)
 
 Specifies one immutable outer or inset shadow. Shapes shadow their painted fill and stroke geometry.
 
@@ -137,7 +137,7 @@ Gets the spread radius in pixels.
 
 Source:
 
-- [`Color.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/Color.gs)
+- [`Color.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/Color.gs)
 
 Specifies an immutable normalized RGBA color.
 
@@ -245,7 +245,7 @@ Gets opaque white.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects the system pointer cursor shown over an element and its descendants.
 
@@ -276,7 +276,7 @@ Selects the system pointer cursor shown over an element and its descendants.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects the inherited inline direction used by layout and logical edges. Auto keeps flex layout left-to-right and detects each text paragraph's direction.
 
@@ -290,7 +290,7 @@ Selects the inherited inline direction used by layout and logical edges. Auto ke
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects whether an element participates in layout.
 
@@ -303,7 +303,7 @@ Selects whether an element participates in layout.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects the curve that shapes transition progress; Ease curves are quadratic.
 
@@ -318,7 +318,7 @@ Selects the curve that shapes transition progress; Ease curves are quadratic.
 
 Source:
 
-- [`Edges.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/Edges.gs)
+- [`Edges.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/Edges.gs)
 
 Specifies CSS-style top, right, bottom, and left lengths. One value applies to all edges. Two values mean vertical and horizontal. Three values mean top, horizontal, and bottom.
 
@@ -388,7 +388,7 @@ Sets the top edge independently.
 
 Source:
 
-- [`Edges.Generic.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/Edges.Generic.gs)
+- [`Edges.Generic.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/Edges.Generic.gs)
 
 Specifies typed values for the top, right, bottom, and left edges.
 
@@ -442,7 +442,7 @@ Sets the top edge independently.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects the main-axis direction of a flex container.
 
@@ -457,7 +457,7 @@ Selects the main-axis direction of a flex container.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects how flex children wrap.
 
@@ -471,7 +471,7 @@ Selects how flex children wrap.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects the font slant.
 
@@ -484,7 +484,7 @@ Selects the font slant.
 
 Source:
 
-- [`Gradient.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/Gradient.gs)
+- [`Gradient.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/Gradient.gs)
 
 Paints a background with interpolated color stops.
 
@@ -496,7 +496,7 @@ Gets the ordered color stops.
 
 Source:
 
-- [`Gradient.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/Gradient.gs)
+- [`Gradient.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/Gradient.gs)
 
 Specifies one immutable gradient color stop.
 
@@ -512,7 +512,7 @@ Gets the stop position from 0 through 1.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects main-axis child distribution.
 
@@ -529,7 +529,7 @@ Selects main-axis child distribution.
 
 Source:
 
-- [`Length.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/Length.gs)
+- [`Length.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/Length.gs)
 
 Specifies a layout length.
 
@@ -593,7 +593,7 @@ Gets the raw numeric magnitude: pixels when IsPercent is false, percentage point
 
 Source:
 
-- [`Gradient.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/Gradient.gs)
+- [`Gradient.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/Gradient.gs)
 
 Paints a straight-line gradient at an angle.
 
@@ -629,7 +629,7 @@ Gets the ordered color stops.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects overflow behavior.
 
@@ -643,7 +643,7 @@ Selects overflow behavior.
 
 Source:
 
-- [`PanelTransform.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/PanelTransform.gs)
+- [`PanelTransform.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/PanelTransform.gs)
 
 Specifies one normalized 2D panel transform. Scale runs first, then skew, then rotation, then translation.
 
@@ -695,7 +695,7 @@ Gets or sets the vertical pixel or percentage translation. An explicit percentag
 
 Source:
 
-- [`Length.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/Length.gs)
+- [`Length.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/Length.gs)
 
 Creates a percentage of the available size. @param value percentage of the available size @returns a percentage length
 
@@ -711,7 +711,7 @@ Returns: a percentage length
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects relative, absolute, or static positioning; static ignores inset offsets.
 
@@ -725,7 +725,7 @@ Selects relative, absolute, or static positioning; static ignores inset offsets.
 
 Source:
 
-- [`Gradient.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/Gradient.gs)
+- [`Gradient.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/Gradient.gs)
 
 Paints a circular gradient from a normalized center.
 
@@ -764,7 +764,7 @@ Gets the ordered color stops.
 
 Source:
 
-- [`Scrollbar.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/Scrollbar.gs)
+- [`Scrollbar.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/Scrollbar.gs)
 
 Describes the presentation and interaction of one built-in scrollbar axis.
 
@@ -812,7 +812,7 @@ Gets the optional track element.
 
 Source:
 
-- [`Scrollbar.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/Scrollbar.gs)
+- [`Scrollbar.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/Scrollbar.gs)
 
 Controls one built-in scrollbar axis.
 
@@ -826,7 +826,7 @@ Controls one built-in scrollbar axis.
 
 Source:
 
-- [`Style.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/Style.gs)
+- [`Style.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/Style.gs)
 
 Collects ordered layout, paint, and text declarations. Use BasedOn to copy reusable declarations. G# object spread does not copy them.
 
@@ -1274,7 +1274,7 @@ Sets this element's stacking order among direct siblings.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects horizontal text alignment. Start is the default and follows paragraph direction.
 
@@ -1290,7 +1290,7 @@ Selects horizontal text alignment. Start is the default and follows paragraph di
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects the lines painted with text. Values can be combined.
 
@@ -1304,7 +1304,7 @@ Selects the lines painted with text. Values can be combined.
 
 Source:
 
-- [`TextShadow.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/TextShadow.gs)
+- [`TextShadow.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/TextShadow.gs)
 
 Specifies one immutable text shadow.
 
@@ -1328,7 +1328,7 @@ Gets the vertical offset in pixels.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects invariant casing for static text.
 
@@ -1342,7 +1342,7 @@ Selects invariant casing for static text.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects how overflowing static text is trimmed.
 
@@ -1355,7 +1355,7 @@ Selects how overflowing static text is trimmed.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects whether static text wraps at soft-wrap opportunities.
 
@@ -1368,7 +1368,7 @@ Selects whether static text wraps at soft-wrap opportunities.
 
 Source:
 
-- [`Tokens.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/Tokens.gs)
+- [`Tokens.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/Tokens.gs)
 
 Provides typed lexical context to synchronous component functions. A scope ends when its body returns and does not flow into later Cell builds.
 
@@ -1395,7 +1395,7 @@ Returns: The value returned by the body.
 
 Source:
 
-- [`TransitionProperty.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/TransitionProperty.gs)
+- [`TransitionProperty.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/TransitionProperty.gs)
 
 Selects a style property that can interpolate during a transition.
 
@@ -1458,7 +1458,7 @@ Selects a style property that can interpolate during a transition.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/40351bb35c5882849cea9623a27a0659592710df/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/93cc6ffb48c522968b5cd73d6819374a334e42ce/Goo/Style/StyleEnums.gs)
 
 Selects whether an element and its descendants are visible and interactive.
 

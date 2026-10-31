@@ -4,7 +4,15 @@ Generated from `Goo.xml`. Source declarations supply type ownership and XML-emit
 
 Source: [`Goo/Rendering`](../../Goo/Rendering)
 
+## Color and compositing
+
+Compositing, gradients and image samples use premultiplied display-encoded sRGB channels in UNORM attachments. Alpha is linear coverage.
+
+Vulkan surfaces keep the `SRGB_NONLINEAR` color-space tag. Goo uses an advertised UNORM format or a compatible UNORM view through `VK_KHR_swapchain_mutable_format`. Startup fails if neither is available. Goo does not fall back to linear-light blending.
+
 ## Apply fragment shaders to retained elements
+
+Effect programs use `goo-shader-effect-3`. Build effect sources with the current Goo build adapter before loading them.
 
 Load one backend-neutral `ShaderEffectProgram`, create retained `ShaderEffect` state from it, and assign the effect through the ordinary `Style.ShaderEffect` property on a `Container`, `Button`, `Text`, `Image`, `Shape`, or another Blob. Ordinary effects render that element and its subtree into a bounded offscreen layer, run the selected backend artifact, then composite the result without changing layout, hit testing, accessibility, transforms, or clipping.
 
@@ -51,7 +59,7 @@ Add the source to the G# project:
 
 Build requires [Slang 2026.16](https://github.com/shader-slang/slang/releases/tag/v2026.16) through `SLANG_SDK` or `PATH` and SPIRV-Tools 2026.3 from [Vulkan SDK 1.4.357.0](https://vulkan.lunarg.com/sdk/home) through `VULKAN_SDK` or `PATH`. Goo compiles and validates the source during the build, writes deterministic intermediates under `obj`, and copies `Shaders/glass.goo-effect` plus `Shaders/glass.goo-effect.json` provenance to build and publish output. The program container can carry separate artifacts for multiple rendering backends. The current compiler emits Vulkan SPIR-V. Set `TargetPath` on `GooShaderEffect` to override the relative output path. Unchanged inputs skip compilation. Tool-version mismatches, compiler errors, validation errors, ABI mismatches, and unsupported capabilities fail the build.
 
-The fixed ABI binds the isolated source at set 0, the optional backdrop at set 1, Goo primitive data at set 2, Goo clip data at set 3, optional retained effect data at set 4, and eight `vec4` values in a 128-byte fragment push block. `uv` is normalized to the visible element bounds. `source` and `backdrop` are premultiplied linear colors. Return premultiplied linear color. Goo applies retained clip coverage and element opacity after `gooEffect`. Set `backdropOutset` to the largest displacement or filter radius the shader needs beyond those bounds. When backdrop sampling is disabled, the backdrop argument aliases the source and Goo skips the target copy.
+The fixed ABI binds the isolated source at set 0, the optional backdrop at set 1, Goo primitive data at set 2, Goo clip data at set 3, optional retained effect data at set 4, and eight `vec4` values in a 128-byte fragment push block. `uv` is normalized to the visible element bounds. `source`, `backdrop` and returned colors use premultiplied display-encoded sRGB channels. Alpha is linear coverage. Images and render attachments use UNORM storage. Samples do not decode RGB. Mix authored sRGB tint values directly with sampled RGB. Source-independent effects return encoded RGB too. Goo applies retained clip coverage and element opacity after `gooEffect`. Set `backdropOutset` to the largest displacement or filter radius the shader needs beyond those bounds. When backdrop sampling is disabled, the backdrop argument aliases the source and Goo skips the target copy.
 
 Each `ShaderEffectData` publication is a complete replacement. The constructor and `Publish` copy bytes. `Transfer` and `PublishTransferred` take array ownership and invoke the supplied callback after Goo no longer reads that publication. Each source is limited to 16 MiB, each compiled scene frame is limited to 64 MiB of effect data, and unchanged retained versions reuse the existing upload. Goo recreates device-local data from the retained publication after device recovery.
 
@@ -66,7 +74,7 @@ The compiled program stays a sidecar asset in JIT and NativeAOT builds. Goo pack
 Linear and radial gradients accept two or more ordered stops, including repeated
 positions for hard color edges. There is no fixed four-stop limit. Larger stop
 lists use Goo-owned GPU storage and remain a single gradient draw; device storage
-limits still apply. Interpolation uses premultiplied linear color, including
+limits still apply. Interpolation uses premultiplied encoded sRGB color, including
 per-stop alpha and element opacity.
 
 ## `ExternalFrameDescription`
@@ -811,7 +819,7 @@ Gets the explicit DRM format modifier for DMA-BUF import.
 
 ### `Format`
 
-Gets the numeric VkFormat. Supported imports use sRGB RGBA8 or BGRA8.
+Gets the numeric VkFormat. Supported imports use UNORM RGBA8 or BGRA8 with encoded sRGB samples.
 
 ### `HandleKind`
 
