@@ -7,7 +7,7 @@
       "args": [
         "tool",
         "exec",
-        "Goo.DevTools@0.24.1",
+        "Goo.DevTools@0.24.2",
         "--",
         "mcp",
         "--plugin-root",
