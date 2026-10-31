@@ -53,6 +53,9 @@ internal unsafe func hb_font_get_extents_for_direction(font nint, direction uint
 @DllImport("goo-harfbuzz", EntryPoint: "hb_font_set_scale", CallingConvention: CallingConvention.Cdecl)
 internal func hb_font_set_scale(font nint, xScale int32, yScale int32) void;
 
+@DllImport("goo-harfbuzz", EntryPoint: "hb_font_get_nominal_glyph", CallingConvention: CallingConvention.Cdecl)
+internal func hb_font_get_nominal_glyph(font nint, codepoint uint32, ref glyph uint32) uint32;
+
 @DllImport("goo-harfbuzz", EntryPoint: "hb_font_get_glyph_extents", CallingConvention: CallingConvention.Cdecl)
 internal func hb_font_get_glyph_extents(font nint, glyph uint32, ref extents VulkanTextGlyphExtents) uint32;
 
