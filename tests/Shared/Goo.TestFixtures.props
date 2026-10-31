@@ -28,7 +28,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Rendering/GradientFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Rendering/VulkanQueueWorkerFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Rendering/VulkanSceneCompilerFixtures.gs" />
-    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Rendering/VulkanTextHintingFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Input/ClickSequenceFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Input/GestureFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.VulkanAbiSmoke/TextShapingFixtures.gs" />

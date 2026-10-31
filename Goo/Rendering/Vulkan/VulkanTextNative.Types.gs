@@ -319,10 +319,11 @@ internal sealed class VulkanTextShapingWorkspace {
 internal interface VulkanTextProvider {
   prop AbiVersion uint32 { get; }
   prop Metrics VulkanHarfBuzzMetrics { get; }
+  prop OutlineHintingAvailable bool { get; }
   func ShapeInto(text string, options VulkanTextShapingOptions,
     workspace VulkanTextShapingWorkspace) VulkanTextProviderResult;
   func EncodeGlyphInto(glyphId uint32,
-    workspace VulkanTextProviderWorkspace) VulkanTextProviderResult;
+    workspace VulkanTextProviderWorkspace, ppem int32) VulkanTextProviderResult;
   func EncodePaintGlyphInto(glyphId uint32, paletteIndex uint32,
     workspace VulkanTextProviderWorkspace) VulkanTextProviderResult;
   func HasColorPaint() bool;

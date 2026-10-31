@@ -19,8 +19,6 @@
     <ProjectReference Include="..\Goo.FSharpInterop\Goo.FSharpInterop.fsproj"
                       AdditionalProperties="Configuration=TestRelease" />
     <None Update="Assets/*.svg" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf"
-             Link="VendSans-VariableFont_wght.ttf" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <Target Name="UseGooLinuxSdlForTests"
           AfterTargets="CopyFilesToOutputDirectory"

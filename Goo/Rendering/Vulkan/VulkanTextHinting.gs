@@ -115,7 +115,7 @@ internal data struct VulkanTextHintHorizontalEdge {
 internal sealed class VulkanTextHinting : IDisposable {
     private let segments List[VulkanTextHintSegment] = List[VulkanTextHintSegment](128)
     private let edges List[float32] = List[float32](32)
-    private let fitted List[float32] = List[float32](32)
+    private let fitted List[int32] = List[int32](32)
     private let horizontalEdges List[VulkanTextHintHorizontalEdge] = List[VulkanTextHintHorizontalEdge](32)
     private let moveCallback VulkanTextDrawPoint
     private let lineCallback VulkanTextDrawPoint
@@ -128,9 +128,15 @@ internal sealed class VulkanTextHinting : IDisposable {
     private var startX float32
     private var startY float32
     private var failed bool
+    private var designUnitsPerPixel float32
     private let units float32
     private let xHeight float32
     private let capHeight float32
+
+    shared {
+        private let HorizontalHeightOrder Comparison[VulkanTextHintHorizontalEdge] =
+        (first VulkanTextHintHorizontalEdge, second VulkanTextHintHorizontalEdge) -> first.Y.CompareTo(second.Y)
+    }
 
     internal init(font nint, designScale int32) {
         units = float32(designScale)
@@ -171,6 +177,7 @@ internal sealed class VulkanTextHinting : IDisposable {
             return false
         }
         let scale = float32(ppem) / (64.0F * units)
+        designUnitsPerPixel = 1.0F / scale
         if segments.Count > 0 {
             var minimum = segments[0].Y
             var maximum = minimum
@@ -192,33 +199,43 @@ internal sealed class VulkanTextHinting : IDisposable {
             return false
         }
         edges.Sort()
-        for edge in edges {
-            if fitted.Count > 0 && edge == fitted[fitted.Count - 1] {
-                continue
+        var uniqueCount = 0
+        for i in 0 ... edges.Count {
+            let value = edges[i]
+            if uniqueCount == 0 || value != edges[uniqueCount - 1] {
+                edges[uniqueCount] = value
+                uniqueCount++
             }
-            fitted.Add(edge)
         }
-        edges.Clear()
-        edges.AddRange(fitted)
-        fitted.Clear()
+        edges.RemoveRange(uniqueCount, edges.Count - uniqueCount)
         let zone = MathF.Min(units * 0.025F, 0.5F / scale)
         for edge in edges {
-            fitted.Add(MathF.Round(Anchor(edge, zone) * scale, MidpointRounding.AwayFromZero) / scale)
+            fitted.Add(int32(MathF.Round(Anchor(edge, zone) * scale, MidpointRounding.AwayFromZero)))
         }
-        let pixel = 1.0F / scale
-        for i in 1 ... edges.Count {
-            let lower = edges[i - 1]
-            let upper = edges[i]
-            if fitted[i - 1] != fitted[i] || Anchor(lower, zone) == Anchor(upper, zone)
-            || !HasStem(lower, upper) {
-                continue
-            }
-            let moveLower = !InZone(lower, zone) && (i == 1 || fitted[i - 1] - pixel >= fitted[i - 2])
-            let moveUpper = !InZone(upper, zone) && (i + 1 == edges.Count || fitted[i] + pixel <= fitted[i + 1])
-            if moveLower && (!moveUpper || (lower + upper) * 0.5F <= fitted[i]) {
-                fitted[i - 1] -= pixel
-            } else if moveUpper {
-                fitted[i] += pixel
+        horizontalEdges.Sort(HorizontalHeightOrder)
+        for i in 0 ... horizontalEdges.Count {
+            let first = horizontalEdges[i]
+            for j in(i + 1) ... horizontalEdges.Count {
+                let second = horizontalEdges[j]
+                if second.Y <= first.Y
+                || (first.EndX - first.StartX) * (second.EndX - second.StartX) >= 0.0F
+                || MathF.Min(first.StartX, first.EndX) >= MathF.Max(second.StartX, second.EndX)
+                || MathF.Min(second.StartX, second.EndX) >= MathF.Max(first.StartX, first.EndX) {
+                    continue
+                }
+                let lower = edges.BinarySearch(first.Y)
+                let upper = edges.BinarySearch(second.Y)
+                if fitted[lower] == fitted[upper] && Anchor(first.Y, zone) != Anchor(second.Y, zone) {
+                    let moveLower = !InZone(first.Y, zone) && (lower == 0 || fitted[lower] - 1 > fitted[lower - 1])
+                    let moveUpper = !InZone(second.Y, zone) &&
+                        (upper + 1 == edges.Count || fitted[upper] + 1 <= fitted[upper + 1])
+                    if moveLower && (!moveUpper || (first.Y + second.Y) * 0.5F * scale <= float32(fitted[upper])) {
+                        fitted[lower]--
+                    } else if moveUpper {
+                        fitted[upper]++
+                    }
+                }
+                break
             }
         }
         hb_gpu_draw_clear(draw)
@@ -265,36 +282,20 @@ internal sealed class VulkanTextHinting : IDisposable {
     }
 
     private func InZone(y float32, zone float32) bool ->
-    MathF.Abs(y) <= zone || (xHeight > 0.0F && MathF.Abs(y - xHeight) <= zone)
-    || (capHeight > 0.0F && MathF.Abs(y - capHeight) <= zone)
+    (y >= -zone && y <= 0.0F) || (xHeight > 0.0F && y >= xHeight && y <= xHeight + zone)
+    || (capHeight > 0.0F && y >= capHeight && y <= capHeight + zone)
 
     private func Anchor(y float32, zone float32) float32 {
-        if MathF.Abs(y) <= zone {
+        if y >= -zone && y <= 0.0F {
             return 0.0F
         }
-        if xHeight > 0.0F && MathF.Abs(y - xHeight) <= zone {
+        if xHeight > 0.0F && y >= xHeight && y <= xHeight + zone {
             return xHeight
         }
-        if capHeight > 0.0F && MathF.Abs(y - capHeight) <= zone {
+        if capHeight > 0.0F && y >= capHeight && y <= capHeight + zone {
             return capHeight
         }
         return y
-    }
-
-    private func HasStem(lower float32, upper float32) bool {
-        for first in horizontalEdges {
-            if first.Y != lower {
-                continue
-            }
-            for second in horizontalEdges {
-                if second.Y == upper && (first.EndX - first.StartX) * (second.EndX - second.StartX) < 0.0F
-                && MathF.Min(first.StartX, first.EndX) < MathF.Max(second.StartX, second.EndX)
-                && MathF.Min(second.StartX, second.EndX) < MathF.Max(first.StartX, first.EndX) {
-                    return true
-                }
-            }
-        }
-        return false
     }
 
     private func Horizontal(y float32, start float32, end float32) {
@@ -311,19 +312,21 @@ internal sealed class VulkanTextHinting : IDisposable {
             return y
         }
         if y <= edges[0] {
-            return y + fitted[0] - edges[0]
+            return y + float32(fitted[0]) * designUnitsPerPixel - edges[0]
         }
         let index = edges.BinarySearch(y)
         if index >= 0 {
-            return fitted[index]
+            return float32(fitted[index]) * designUnitsPerPixel
         }
         let upper = ~index
         if upper < edges.Count {
             let weight = (y - edges[upper - 1]) / (edges[upper] - edges[upper - 1])
-            return fitted[upper - 1] + weight * (fitted[upper] - fitted[upper - 1])
+            return (
+                float32(fitted[upper - 1]) + weight * float32(fitted[upper] - fitted[upper - 1])
+            ) * designUnitsPerPixel
         }
         let last = edges.Count - 1
-        return y + fitted[last] - edges[last]
+        return y + float32(fitted[last]) * designUnitsPerPixel - edges[last]
     }
 
     private func Add(
@@ -500,10 +503,5 @@ internal sealed class VulkanTextHinting : IDisposable {
             hb_draw_funcs_destroy(funcs)
             funcs = nint(0)
         }
-        GC.KeepAlive(moveCallback)
-        GC.KeepAlive(lineCallback)
-        GC.KeepAlive(quadraticCallback)
-        GC.KeepAlive(cubicCallback)
-        GC.KeepAlive(closeCallback)
     }
 }

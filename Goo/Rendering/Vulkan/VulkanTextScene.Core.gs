@@ -81,7 +81,7 @@ internal unsafe sealed partial class VulkanTextScene {
     EnsureAtlasStates()
   }
 
-  internal func BeginCompile(completedSerial uint64, deviceScale float32 = 1.0F) {
+  internal func BeginCompile(completedSerial uint64, deviceScale float32) {
     if deviceScale != pixelScale {
       pixelScale = deviceScale
       nodeSegments.Clear()
@@ -280,11 +280,12 @@ internal unsafe sealed partial class VulkanTextScene {
         var runIndex int32 = 0
         while runIndex < runs.Count {
           let run = runs[runIndex]
+          let ppem = HintPpem(run.Provider, layout.FontSize)
           var glyphIndex int32 = 0
           while glyphIndex < run.Glyphs.Length {
             let glyphId = run.Glyphs[glyphIndex]
             if glyphId != 0u {
-              guard let glyph = CachedGlyph(run, glyphId, layout.FontSize) else { return false }
+              guard let glyph = CachedGlyph(run, glyphId, ppem) else { return false }
               if !CanRender(glyph) { return false }
               if glyph.ByteLength != 0u {
                 let extents = glyph.Extents

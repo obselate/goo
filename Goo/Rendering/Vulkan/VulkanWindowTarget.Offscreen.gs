@@ -162,8 +162,10 @@ internal unsafe partial class VulkanWindowTarget {
       FinishPage(OffscreenRenderStatus.DeviceLost)
       return
     }
+    let scaleX = float32(pageOptions.PixelWidth) / pageOptions.LogicalWidth
+    let scaleY = float32(pageOptions.PixelHeight) / pageOptions.LogicalHeight
     text.PublishCompletedUploads()
-    text.BeginCompile(completed)
+    text.BeginCompile(completed, scaleY)
     let result = compiler.Compile(page.Tree, pageOptions.Background,
       pageOptions.LogicalWidth, pageOptions.LogicalHeight)
     if result.UnsupportedNodeCount != 0 || result.UnsupportedPrimitiveCount != 0 {
@@ -173,8 +175,6 @@ internal unsafe partial class VulkanWindowTarget {
     pageRepeat = text.RedrawRequired || images.RedrawRequired || paths.RedrawRequired || result.PathResourceDeferred
     text.PrepareUpload()
     paths.PrepareUpload()
-    let scaleX = float32(pageOptions.PixelWidth) / pageOptions.LogicalWidth
-    let scaleY = float32(pageOptions.PixelHeight) / pageOptions.LogicalHeight
     ScaleFrame(compiler.Frame, scaleX, scaleY)
     let pixels = request.Result?.OwnedPixels ?? pagePixels
     let submitted = request.Request(compiler.Frame, VkClearColorValue{},

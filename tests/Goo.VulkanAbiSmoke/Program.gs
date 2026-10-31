@@ -109,7 +109,7 @@ internal shared class Program {
             }
             let glyphId = glyphBuffer[0].GlyphId
             let byteCapacityProbe = VulkanTextProviderWorkspace(Array.Empty[uint8]())
-            let byteCapacityResult = provider.EncodeGlyphInto(glyphId, byteCapacityProbe)
+            let byteCapacityResult = provider.EncodeGlyphInto(glyphId, byteCapacityProbe, 0)
             if byteCapacityResult.AbiVersion != VulkanTextProviderAbi.Version ||
                 byteCapacityResult.Status != VulkanTextProviderAbi.CapacityExceeded ||
                 byteCapacityResult.Required <= 0 ||
@@ -121,7 +121,7 @@ internal shared class Program {
             outputBytes[byteCapacityResult.Required] = uint8(0xA5)
             outputBytes[byteCapacityResult.Required + 1] = uint8(0x5A)
             let byteWorkspace = VulkanTextProviderWorkspace(outputBytes)
-            let byteResult = provider.EncodeGlyphInto(glyphId, byteWorkspace)
+            let byteResult = provider.EncodeGlyphInto(glyphId, byteWorkspace, 0)
             if byteResult.AbiVersion != VulkanTextProviderAbi.Version ||
                 byteResult.Status != VulkanTextProviderAbi.Success ||
                 byteResult.Count != byteCapacityResult.Required ||
@@ -131,7 +131,7 @@ internal shared class Program {
                 outputBytes[byteCapacityResult.Required + 1] != uint8(0x5A) {
                 throw InvalidOperationException("Vulkan text provider glyph output bounds contract failed")
             }
-            let warmByteResult = provider.EncodeGlyphInto(glyphId, byteWorkspace)
+            let warmByteResult = provider.EncodeGlyphInto(glyphId, byteWorkspace, 0)
             if warmByteResult.Status != VulkanTextProviderAbi.Success ||
                 warmByteResult.Count != byteResult.Count ||
                 warmByteResult.Required != byteResult.Required ||
@@ -147,7 +147,7 @@ internal shared class Program {
                 disposedShape.Required != 0 {
                 throw InvalidOperationException("Vulkan text provider disposed shaping contract failed")
             }
-            let disposedEncoding = provider.EncodeGlyphInto(glyphId, byteWorkspace)
+            let disposedEncoding = provider.EncodeGlyphInto(glyphId, byteWorkspace, 0)
             if disposedEncoding.AbiVersion != VulkanTextProviderAbi.Version ||
                 disposedEncoding.Status != VulkanTextProviderAbi.Disposed ||
                 disposedEncoding.Count != 0 ||
@@ -451,7 +451,7 @@ internal shared class Program {
             PathGeometry.Quadratic(0f, 100f, 0f, 50f, 0f, 0f)
         }
         let contours = []PathContour{PathGeometry.Contour(0, 4, closed: true)}
-        var path = VectorPath.CreateMutableNormalized(owner, 0.0, 0.0, 100.0, 100.0)
+        let path = VectorPath.CreateMutableNormalized(owner, 0.0, 0.0, 100.0, 100.0)
         if !path.UpdateNormalized(array, 4, contours, 1) {
             throw InvalidOperationException("Initial mutable path update failed")
         }
@@ -562,7 +562,7 @@ internal shared class Program {
             PathGeometry.Quadratic(0f, 100f, 0f, 50f, 0f, 0f)
         }
         let contours = []PathContour{PathGeometry.Contour(0, 4, closed: true)}
-        var path = VectorPath.CreateMutableNormalized(owner, 0.0, 0.0, 100.0, 100.0)
+        let path = VectorPath.CreateMutableNormalized(owner, 0.0, 0.0, 100.0, 100.0)
         if !path.UpdateNormalized(array, 4, contours, 1) {
             throw InvalidOperationException("Path upload gate initial update failed")
         }
@@ -1114,8 +1114,6 @@ internal shared class Program {
     }
 
     private func AssertPortalDrawOrder(frame SceneFrame, first Color, second Color) {
-        var first = first
-        var second = second
         if frame.DrawRefCount != 4 {
             throw InvalidOperationException("Portal scene did not emit four boxes")
         }
