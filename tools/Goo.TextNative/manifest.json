@@ -65,15 +65,6 @@
     "sourcePatch": "Set the core and GPU shared-library identities to Goo-owned private names before the pinned Meson build; Linux keeps private SONAMEs, macOS keeps private @rpath install names, and Windows uses unversioned DLL names.",
     "sourcePatches": [
       {
-        "name": "cpal-linear-light",
-        "path": "tools/Goo.TextNative/patches/harfbuzz-15.0.0-cpal-linear-light.patch",
-        "sha256": "db74dc354fdcb7bc3ae8b9f7e02dcda1e662d8ff9b4737726a9569caced3072d",
-        "upstreamPath": "src/hb-gpu-paint.cc",
-        "upstreamSha256": "db822c4f947c787e583bb80d28143e7e9094728822fc81bcea9e901ca353c948",
-        "patchedSha256": "44c68d7ceab1be78b6704e4c84b2793ebe6f5f4f1c713b01a04fbe7dc2f71a74",
-        "description": "Convert explicit CPAL RGB bytes to linear-light Q15 with a fixed 256-entry lookup. Preserve alpha and foreground encoding."
-      },
-      {
         "name": "stb-gif-two-back",
         "path": "tools/Goo.TextNative/patches/stb-image-2.30-gif-two-back.patch",
         "sha256": "0b4b4a10c7e2e2c2601a661af02456d5bf68f750b3cb9a93d435da6590795135",

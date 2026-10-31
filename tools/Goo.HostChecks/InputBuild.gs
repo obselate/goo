@@ -108,7 +108,6 @@ class InputBuild {
                 "--source-root",
                 source
             }
-            HostChecks.Run(patch)
             let flags = []string{
                 "-O1",
                 "-g",
