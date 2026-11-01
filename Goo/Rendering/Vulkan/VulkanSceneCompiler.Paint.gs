@@ -872,7 +872,8 @@ internal partial class VulkanSceneCompiler {
     fallback Length,
     bounds ConservativeBounds,
     amount float32) float32{
-      let radius = Radius(value, fallback, bounds) + amount
+      let resolved = Radius(value, fallback, bounds)
+      let radius = resolved > 0.0F ? resolved + amount : 0.0F
       return radius > 0.0F && finiteVulkanSceneValue(radius) ? radius : 0.0F
     }
 
