@@ -46,4 +46,4 @@ Read [watch modes and limits](references/watch.md) for supported edits. Hot relo
 
 If MCP is unavailable, check that Goo is enabled in the host plugin manager, refresh or reinstall it, and start a new session. Do not add a manual MCP command. Until MCP is available, read bundled `reference/docs/api` files and use `goo list --json`, `goo snapshot --pid PID --window ID --json`, `goo input click --pid PID --window ID --node-id NODE_ID`, and `goo capture --pid PID --window ID --output frame.png`.
 
-Refresh bundled docs from a Goo checkout with `dotnet run --project tools/Goo.SyncDocs/Goo.SyncDocs.gsproj -c Release -- <goo-checkout>`. This records actual file hashes, including any working-tree edits. Reinstall the plugin after changing its source.
+Refresh bundled docs from the checkout root with `dotnet run --project tools/Goo.Repo -- docs`. This records source hashes. Reinstall the plugin after changing its source.

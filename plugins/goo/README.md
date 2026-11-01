@@ -92,12 +92,12 @@ Pass `repository` to documentation and starter tools or set `GOO_SOURCE_ROOT` fo
 
 ## Refresh and verify
 
-Refresh the bundle from a Goo checkout with `dotnet run --project tools/Goo.SyncDocs/Goo.SyncDocs.gsproj -c Release -- /path/to/goo-checkout`.
+Refresh the bundle from the checkout root with `dotnet run --project tools/Goo.Repo -- docs`.
 Build and verify from the repository root:
 
 ```sh
 dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj -c Release --nologo -m:4 -warnaserror
-XDG_CACHE_HOME="$(mktemp -d)" .github/scripts/with-headless-wayland.sh \
+.github/scripts/with-headless-wayland.sh \
   dotnet tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll \
   mcp --plugin-root plugins/goo --verify
 ```
