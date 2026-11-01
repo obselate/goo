@@ -1,6 +1,6 @@
 {
   "name": "goo-agent-plugin",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "G# Goo authoring, API lookup, live UI inspection and opt-in input automation.",
   "license": "MIT",
   "files": [

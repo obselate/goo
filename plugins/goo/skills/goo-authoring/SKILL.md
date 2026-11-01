@@ -1,6 +1,6 @@
 ---
 name: goo-authoring
-description: Create, modify, and debug standalone G# Goo desktop applications using Blob, Cell, Style, Window, and Vulkan. Use for Goo .gsproj consumers and the standalone Goo framework. Do not use for the older s&box Goo framework or SharpTUI.
+description: "Use for any work on standalone G# Goo desktop app code. This includes writing, modifying, debugging, reviewing, auditing, refactoring and planning Goo app code, and writing worker briefs for it. Mandatory: read references/best-practices.md before you start. Covers Blob, Cell, Style, Window, Vulkan, Goo .gsproj consumers and the standalone Goo framework. Do not use for the older s&box Goo framework or SharpTUI."
 ---
 
 # Goo authoring
