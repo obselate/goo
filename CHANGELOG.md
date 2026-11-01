@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.25.1 - 2026-10-31
+
+- Square controls (radius 0) now get a square focus outline. (#499)
+- Adding, removing, reordering or moving elements now redraws only the changed area instead of the whole window. (#500)
+- Single-line text inputs now replace each run of line breaks and tabs inside pasted or typed text with one space, and drop them at the start and end. Before, the parts were joined (`1.5` newline `2` became `1.52`). (#501)
+- goo agent plugin 0.2.0: the goo-authoring skill applies to review, audit, refactor and planning work, and requires references/best-practices.md. (#502)
+
 ## 0.25.0 - 2026-10-31
 
 - Blend colors in encoded sRGB, as browsers and native toolkits do. This changes the colors of translucent content and the apparent weight of text.
