@@ -22,7 +22,13 @@ partial class GooServer {
         Require(wait != "" || timeout == 0, "timeout requires until")
         Require(wait != "" || after == 0, "after_sequence requires until")
         let fields = S(a, "fields", DefaultCompactFields)
-        let names = (if fields == "" { DefaultCompactFields } else { fields })
+        let names = (
+            if fields == "" {
+                DefaultCompactFields
+            } else {
+                fields
+            }
+        )
             .Split(',')
             .Select(x -> x.Trim())
             .Where(x -> x != "")
