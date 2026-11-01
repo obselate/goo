@@ -52,6 +52,8 @@ internal data class DiscoveryDescriptor(
                     return false
                 } catch (UnauthorizedAccessException) {
                     return false
+                } catch (ArgumentException) {
+                    return false
                 }
             }
             if ProcessId <= 0 {

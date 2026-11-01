@@ -69,6 +69,15 @@ internal partial class DiagnosticPipeHost : IDisposable {
     stopped = ManualResetEventSlim(false)
     gate = Object()
     clients = List[DiagnosticPipeClient]()
+    if !OperatingSystem.IsWindows() {
+      let limit = if OperatingSystem.IsMacOS() { 104 } else { 108 }
+      if Encoding.UTF8.GetByteCount(endpoint.PipeName) >= limit {
+        Console.Error.WriteLine("Goo diagnostics: endpoint path '" + endpoint.PipeName
+          + "' exceeds the Unix socket limit of " + limit.ToString()
+          + " bytes including the terminator. Set a shorter GOO_DEVTOOLS_DIR or XDG_RUNTIME_DIR.")
+        return
+      }
+    }
     try {
       let created = Thread(() -> { run() })
       created.IsBackground = true

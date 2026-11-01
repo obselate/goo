@@ -9,7 +9,7 @@ import System.Threading
 internal class DiagnosticEndpointDiscovery {
   shared {
     private let gate object = Object()
-    private let processToken string = Guid.NewGuid().ToString("N")
+    private let processToken string = Guid.NewGuid().ToString("N").Substring(0, 16)
     private var nextWindowId int64
 
     internal func Create(window Window) DiagnosticEndpoint {

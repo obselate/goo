@@ -889,6 +889,23 @@ internal shared class CliApplication {
                 descriptors.Any((item DiscoveryDescriptor) -> item.IsProcessAlive)
             )
         )
+        if !OperatingSystem.IsWindows() {
+            for descriptor in descriptors {
+                try {
+                    let path = if Path.IsPathRooted(descriptor.Pipe) { descriptor.Pipe }
+                    else { Path.Combine(Path.GetTempPath(), "CoreFxPipe_" + descriptor.Pipe) }
+                    let limit = if OperatingSystem.IsMacOS() { 104 } else { 108 }
+                    if System.Text.Encoding.UTF8.GetByteCount(path) >= limit { throw ArgumentException() }
+                    UnixDomainSocketEndPoint(path)
+                } catch (ArgumentException) {
+                    checks.Add(DoctorCheck(
+                        "endpoint-path",
+                        "Invalid endpoint path '${descriptor.Pipe}'. Set a shorter GOO_DEVTOOLS_DIR or XDG_RUNTIME_DIR.",
+                        false
+                    ))
+                }
+            }
+        }
         let inspector string? = InspectorLauncher.Find(projectDirectory)
         checks.Add(
             DoctorCheck(
