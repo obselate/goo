@@ -1502,6 +1502,10 @@ Occurs on the UI thread when this window changes display or native display scale
 
 Occurs after the native window focus state changes.
 
+### `InputActivity`
+
+Occurs once per received pointer down, wheel, or key down before routing, including consumed and modal input. Callbacks run on the window UI thread without invalidating Cells.
+
 ### `KeyPressed`
 
 Occurs for each physical key press before focused-element routing.
@@ -2197,6 +2201,32 @@ Controls how Window.Run schedules frames that have visual demand.
 
 - `Display`
 - `Uncapped`
+
+## `WindowInputKind`
+
+Source:
+
+- [`Window.gs`](../../Goo/Window/Window.gs)
+
+Identifies input received by a window before routing.
+
+### Values
+
+- `PointerDown`
+- `Wheel`
+- `KeyDown`
+
+### `KeyDown`
+
+A physical key was pressed.
+
+### `PointerDown`
+
+A pointer button or contact was pressed.
+
+### `Wheel`
+
+A wheel event was received.
 
 ## `WindowLayer`
 
