@@ -98,6 +98,8 @@ Send `command: "input"` with an object payload whose `event` is `pointer.move`, 
 
 A successful response has `ok: true` and `payload: {"command":"input","applied":true,"sequence":N,"gestureId":"...","gestureActive":true,"leaseMs":30000}` while holds remain. `gestureId` is `null`, `gestureActive` is false and `leaseMs` is zero after release. It acknowledges synchronous handlers and subsequent reconciliation/layout, not asynchronous application work or GPU presentation. Every remote `snapshot` response is a complete settled tree with `full:true`, preserving node IDs. The `full` request field remains accepted for compatibility. Use `capture` for a presented image.
 
+`sequence` is a monotonic observation marker, not a captured snapshot. Each successful input advances it without building a tree snapshot. The next snapshot has a greater sequence and includes the settled tree. Target validation still checks the current tree before applying targeted input.
+
 Errors use `input-disabled`, `invalid-input`, `stale-target`, `target-not-actionable`, `gesture-owned`, `gesture-expired`, `closed`, `busy`, `timeout`, or `command`. Requests are limited to 65,536 characters and the UI queue to 32 pending requests. A five-second server timeout cancels work that has not begun. A handler already running may have applied input: **do not automatically retry timed-out actions**. The CLI prints the generated token before sending a hold, so use that token to release, cancel, or reset after an uncertain result. Oversized request lines close the connection. No input worker or frame work is created when diagnostics are disabled.
 
 ```sh
