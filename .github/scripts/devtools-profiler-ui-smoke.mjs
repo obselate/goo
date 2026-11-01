@@ -336,6 +336,8 @@ try {
     const phaseHeader = branch(nodes, 'profiler-table').find(node => node.key === 'column:c0');
     await request(['input', 'click', '--pid', String(inspector), '--x', String(phaseHeader.bounds.x + phaseHeader.bounds.width / 2),
         '--y', String(phaseHeader.bounds.y + phaseHeader.bounds.height / 2)]);
+    nodes = await snapshot(inspector);
+    await wheelNode(inspector, branch(nodes, 'profiler-table').find(node => node.key === 'body'), 5000);
     nodes = await waitSnapshot(inspector, data => data.some(node => node.key === 'summary-row-Frame'),
         'Frame summary is missing');
     const table = branch(nodes, 'profiler-table');
