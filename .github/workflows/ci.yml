@@ -1290,8 +1290,6 @@ jobs:
 
       - name: Run async readback checks
         if: needs.changes.outputs.full == 'true' && (matrix.lane == 'async-readback')
-        env:
-          GOO_APPLICATION_CACHE_HOME: ${{ runner.temp }}/goo-readback-cache
         run: |
           export SDL_VIDEODRIVER=wayland
           export LIBGL_ALWAYS_SOFTWARE=1
@@ -1494,8 +1492,6 @@ jobs:
 
       - name: Verify local PNG pixels in Vulkan
         if: needs.changes.outputs.full == 'true' && (matrix.lane == 'async-readback')
-        env:
-          GOO_APPLICATION_CACHE_HOME: ${{ runner.temp }}/goo-readback-cache
         run: |
           set -o pipefail
           .github/scripts/with-headless-wayland.sh env \
@@ -1505,10 +1501,6 @@ jobs:
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll \
             2>&1 | tee artifacts/reports/vulkan-cpu-startup.txt
           grep -E '"kind":"device".*"deviceType":4,' artifacts/reports/vulkan-cpu-startup.txt
-
-      - name: Remove readback application cache
-        if: always() && matrix.lane == 'async-readback'
-        run: rm -rf -- "$RUNNER_TEMP/goo-readback-cache"
 
       - name: Run focused core behavior tests
         if: needs.changes.outputs.full == 'true' && (matrix.lane == 'core')

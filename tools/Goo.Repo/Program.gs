@@ -45,7 +45,7 @@ internal shared partial class Repo {
                     "  docs [--check]         Generate or compare desktop docs\n" +
                     "  docs --android [--check]  Generate or compare Android docs\n" +
                     "  pack                   Build pinned SDL inputs and pack Goo\n" +
-                    "Every command accepts --help. Checks and builds use ~/scratch/goo-build.lock when it exists."
+                    "Every command accepts --help. On Linux, GOO_BUILD_LOCK enables a shared flock build lock."
             )
             return
         }
@@ -70,11 +70,8 @@ internal shared partial class Repo {
             Doctor()
             return
         }
-        let lockPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            "scratch/goo-build.lock"
-        )
-        if OperatingSystem.IsLinux() && File.Exists(lockPath) && Environment.GetEnvironmentVariable(
+        let lockPath = Environment.GetEnvironmentVariable("GOO_BUILD_LOCK") ?? ""
+        if OperatingSystem.IsLinux() && lockPath.Length != 0 && Environment.GetEnvironmentVariable(
             "GOO_REPO_BUILD_LOCK"
         ) != "1" {
             Environment.SetEnvironmentVariable("GOO_REPO_BUILD_LOCK", "1")

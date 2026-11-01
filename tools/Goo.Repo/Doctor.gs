@@ -26,17 +26,17 @@ internal shared partial class Repo {
             missing += Report(
                 "Native build tools",
                 []string{"cmake", "meson", "ninja", "cc", "pkg-config", "patch", "python3", "readelf"}.All(OnPath),
-                "sudo apt-get install -y build-essential cmake meson ninja-build pkg-config patch python3 binutils libxml2-dev libexpat1-dev libffi-dev libwayland-dev libxkbcommon-dev libdecor-0-dev libdbus-1-dev libibus-1.0-dev libgl1-mesa-dev libegl1"
+                "Ubuntu 24.04: sudo apt-get install -y build-essential cmake meson ninja-build pkg-config patch python3 binutils libxml2-dev libexpat1-dev libffi-dev libwayland-dev libxkbcommon-dev libdecor-0-dev libdbus-1-dev libibus-1.0-dev libgl1-mesa-dev libegl1"
             )
             missing += Report(
                 "Private display",
                 (OnPath("kwin_wayland") || OnPath("weston")) && OnPath("dbus-run-session"),
-                "sudo apt-get install -y kwin-wayland weston dbus-daemon"
+                "Ubuntu 24.04: sudo apt-get install -y kwin-wayland weston dbus-daemon"
             )
             missing += Report(
                 "Vulkan driver",
                 ReadCommand("vulkaninfo", []string{"--summary"}).Contains("deviceName"),
-                "sudo apt-get install -y mesa-vulkan-drivers vulkan-tools"
+                "Ubuntu 24.04: sudo apt-get install -y mesa-vulkan-drivers vulkan-tools"
             )
             missing += Report(
                 "Vulkan validation layer",
@@ -45,13 +45,13 @@ internal shared partial class Repo {
                     "*validation*.json"
                 )
                     .Length != 0,
-                "sudo apt-get install -y vulkan-validationlayers"
+                "Ubuntu 24.04: sudo apt-get install -y vulkan-validationlayers"
             )
             let font = ReadCommand("fc-match", []string{"sans-serif"})
             missing += Report(
                 "Fonts",
                 font.Contains(".ttf") || font.Contains(".otf"),
-                "sudo apt-get install -y fontconfig fonts-dejavu-core fonts-noto-color-emoji"
+                "Ubuntu 24.04: sudo apt-get install -y fontconfig fonts-dejavu-core fonts-noto-color-emoji"
             )
             missing += Report(
                 "Pinned Linux SDL",
@@ -96,7 +96,7 @@ internal shared partial class Repo {
         Report(
             "Java 21 (optional)",
             java.Length != 0 && ReadCommand(javaExecutable, []string{"-version"}).Contains("version \"21"),
-            "sudo apt-get install -y openjdk-21-jdk && export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64"
+            "Ubuntu 24.04: sudo apt-get install -y openjdk-21-jdk && export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64"
         )
         Console.WriteLine(
             if missing == 0 {
