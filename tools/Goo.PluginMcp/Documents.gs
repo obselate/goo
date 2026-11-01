@@ -172,7 +172,7 @@ partial class GooServer {
         result["documents"] = Strings(Documents(root))
         result[
             "runtime"
-        ] = "Install Goo.DevTools 0.26.1 and launch with goo dev --project App.gsproj. Add --no-watch when hot reload is not needed and --input to enable agent interaction. Use goo_targets to discover live windows, then pass an explicit PID and window ID. GOO_CLI may specify a goo executable or built Goo.DevTools.Cli.dll. Use a CLI build with the list command and dev --input option."
+        ] = "Install Goo.DevTools and launch with goo dev --project App.gsproj. Add --input for agent interaction. Use goo_list to list live windows. Runtime tools accept project, pid, pipe, app, window, latest and wait in seconds. GOO_CLI may name a goo executable or built Goo.DevTools.Cli.dll."
         let preflight = result["preflight"]!!
         let plugin = preflight["plugin"]!!
         plugin["version"] = Version

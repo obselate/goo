@@ -12,19 +12,27 @@ partial class GooServer {
         let offset = I(a, "offset")
         let limit = I(a, "limit")
         let after = I(a, "after_sequence")
-        let wait = S(a, "wait")
-        let timeout = I(a, "timeout_ms")
+        let wait = S(a, "until")
+        let timeout = a["timeout"]!!.GetValue[double]() * 1000
         Require(
             offset >= 0 && limit >= 1 && limit <= 200 && after >= 0,
             "offset and after_sequence must be nonnegative; limit must be 1-200"
         )
-        Require(wait == "" || timeout >= 1 && timeout <= 10000, "wait requires timeout_ms from 1 through 10000")
-        Require(wait != "" || timeout == 0, "timeout_ms requires wait")
-        Require(wait != "" || after == 0, "after_sequence requires wait")
+        Require(wait == "" || timeout >= 1 && timeout <= 10000, "until requires timeout from 0.001 through 10 seconds")
+        Require(wait != "" || timeout == 0, "timeout requires until")
+        Require(wait != "" || after == 0, "after_sequence requires until")
+        let fields = S(a, "fields", DefaultCompactFields)
+        let names = (if fields == "" { DefaultCompactFields } else { fields })
+            .Split(',')
+            .Select(x -> x.Trim())
+            .Where(x -> x != "")
+            .ToArray()
+        let unknown = names.Except(CompactFields.Split(',')).Order(StringComparer.Ordinal).ToArray()
+        Require(unknown.Length == 0, "Unknown compact fields: " + string.Join(", ", unknown))
         let query = B(a, "compact") ||
             a["text"] != nil ||
             a["value"] != nil ||
-            []string{"role", "name", "key", "state", "subtree", "fields", "wait"}.Any(x -> S(a, x) != "") ||
+            []string{"role", "name", "key", "state", "subtree", "fields", "until"}.Any(x -> S(a, x) != "") ||
             offset != 0 ||
             after != 0 ||
             limit != 100 ||
@@ -70,7 +78,7 @@ partial class GooServer {
             } else if session != current {
                 throw ArgumentException("The selected Goo diagnostic session changed while waiting; reacquire targets.")
             }
-            projected = Compact(result, a)
+            projected = Compact(result, a, names)
             projected["runtime"] = RuntimeStatus(hello)
             let gated = after == 0 || I(projected, "sequence") > after
             let satisfied = if wait == "missing" {
@@ -98,7 +106,7 @@ partial class GooServer {
         }
     }
 
-    func Compact(result JsonObject, a JsonObject) JsonObject {
+    func Compact(result JsonObject, a JsonObject, names[]string) JsonObject {
         let payload = result["payload"]!!
         let identity = payload["targetIdentity"]
         if identity is not JsonObject || S(identity, "sessionId") == "" {
@@ -130,22 +138,6 @@ partial class GooServer {
             nodes = nodes.Where(x -> allowed.Contains(I(x, "id"))).ToArray()
         }
         let selected = nodes.Where(x -> Matches(x, a)).ToArray()
-        let fields = S(a, "fields")
-        let names = (
-            if fields == "" {
-                DefaultCompactFields
-            } else {
-                fields
-            }
-        )
-            .Split(',')
-            .Select(x -> x.Trim())
-            .Where(x -> x != "")
-            .ToArray()
-        let unknown = names.Except(CompactFields.Split(',')).Order(StringComparer.Ordinal).ToArray()
-        if unknown.Length != 0 {
-            throw ArgumentException("Unknown compact fields: " + string.Join(", ", unknown))
-        }
         let offset = I(a, "offset")
         let limit = I(a, "limit")
         let page = selected.Skip(int32(offset)).Take(int32(limit)).ToArray()
@@ -163,7 +155,7 @@ partial class GooServer {
             output.Add(item)
         }
         let predicate = JsonObject(){
-            ["wait"] = S(a, "wait"),
+            ["until"] = S(a, "until"),
             ["match"] = S(a, "match"),
             ["afterSequence"] = I(a, "after_sequence")
         }

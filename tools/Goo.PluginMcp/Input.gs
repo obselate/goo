@@ -23,7 +23,7 @@ partial class GooServer {
                 a["node_id"] == nil,
             "target and node_id apply only to pointer and wheel events"
         )
-        let key = I(a, "pid").ToString() + "\0" + S(a, "window") + "\0" + S(a, "project")
+        let key = string.Join("\0", TargetArgs(a).Where(x -> !x.StartsWith("--wait=", StringComparison.Ordinal)))
         var gate object
         lock GestureGate {
             if !InputLocks.TryGetValue(key, out gate) {
@@ -40,14 +40,15 @@ partial class GooServer {
                     Gestures[key] = gesture
                 }
             }
-            let arguments = List[string](){"input", event_, "--json", "--wait", "10"}
+            let arguments = List[string](){"input", event_, "--json"}
             arguments.AddRange(TargetArgs(a))
             if gesture != nil {
                 arguments.Add("--gesture=" + gesture)
             }
             for item in a {
                 let name = item.Key
-                if item.Value == nil || []string{"pid", "event", "window", "project"}.Contains(name) {
+                if item.Value == nil ||
+                    []string{"pid", "event", "window", "project", "pipe", "app", "latest", "wait"}.Contains(name) {
                     continue
                 }
                 if item.Value.GetValueKind() == JsonValueKind.True || item.Value.GetValueKind() == JsonValueKind.False {
@@ -66,7 +67,10 @@ partial class GooServer {
             }
             var result JsonObject
             try {
-                result = ReadResponse(Run(arguments, uncertain: true, phase: "input"), "input").Item1
+                result = ReadResponse(
+                    Run(arguments, a["wait"]!!.GetValue[double]() + 15, uncertain: true, phase: "input"),
+                    "input"
+                ).Item1
             } catch (error GooFailure) {
                 if error.Message.Contains("gesture-owned") || error.Message.Contains("gesture-expired") {
                     lock GestureGate {
@@ -137,16 +141,17 @@ partial class GooServer {
             "--payload",
             body,
             "--require-capabilities",
-            string.Join(",", capabilities),
-            "--wait",
-            "10"
+            string.Join(",", capabilities)
         }
         if property != "" {
             arguments.Add("--require-override-property")
             arguments.Add(property)
         }
         arguments.AddRange(selected)
-        return ReadResponse(Run(arguments, uncertain: true, phase: command), command).Item1
+        return ReadResponse(
+            Run(arguments, a["wait"]!!.GetValue[double]() + 15, uncertain: true, phase: command),
+            command
+        ).Item1
     }
 
     func Inspect(a JsonObject) JsonObject {

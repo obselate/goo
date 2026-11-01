@@ -70,6 +70,43 @@ class Program {
         let paths = List[string]()
         for var index = 0; index < args.Length; index++ {
             let arg = args[index]
+            if arg == "--help" || arg == "-h" {
+                Console.WriteLine(
+                    """
+                    Usage: gslint [options] [files or directories]
+
+                    Paths default to the current directory. Directories are scanned for .gs files.
+
+                    Options:
+                      --help, -h                  Print this help.
+                      --version                   Print the version.
+                      --strict                    Promote GL0004, GL0005, GL0006 and GL0008 to warning.
+                      --severity ID=LEVEL         Override a rule. Repeat for each rule.
+                                                  LEVEL: error, warning, info or none.
+                      --fix                       Rewrite files with fixes and canonical formatting.
+                      --reduce                    Rewrite files with fixes only, without formatting.
+                                                  Cannot be combined with --fix.
+
+                    Rules and default severities:
+                      GL0001 warning  Canonical formatting.
+                      GL0002 warning  Canonical public type names.
+                      GL0003 warning  Explicit public binding types.
+                      GL0004 info     Use let for bindings that are never reassigned.
+                      GL0005 info     Restrict double-bang assertions.
+                      GL0006 info     Document public declarations.
+                      GL0007 warning  Remove duplicate imports.
+                      GL0008 info     Use expression-bodied functions.
+                      GL0010 warning  Use expression-bodied accessors.
+                      GL0011 warning  Space operator parameter lists.
+
+                    Exit codes:
+                      0  No warning or error findings.
+                      1  Warning, error or parse findings remain.
+                      2  Invalid arguments, paths or an internal failure.
+                    """
+                )
+                return 0
+            }
             if arg == "--strict" {
                 strict = true
             } else if arg == "--fix" {
@@ -92,6 +129,10 @@ class Program {
             } else {
                 paths.Add(arg)
             }
+        }
+        if fix && reduce {
+            Console.Error.WriteLine("gslint: --fix and --reduce cannot be combined")
+            return 2
         }
         if paths.Count == 0 {
             paths.Add(".")
