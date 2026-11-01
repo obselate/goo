@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.26.0 - 2026-11-01
+
+### Added
+
+- `Window.InputActivity` reports each pointer down, wheel and key down before routing, also for consumed and modal input. It does not rebuild any Cell. Use it for idle detection such as auto-lock. (#506)
+
 ## 0.25.2 - 2026-11-01
 
 - DevTools endpoints use a per-process random token and the per-user runtime directory, so apps in separate PID namespaces no longer share an endpoint. (#504)
