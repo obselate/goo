@@ -2,7 +2,7 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/Style`](https://github.com/obselate/goo/tree/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style)
+Source: [`Goo/Style`](https://github.com/obselate/goo/tree/main/Goo/Style)
 
 ## Compose reusable styles
 
@@ -14,7 +14,7 @@ Source: [`Goo/Style`](https://github.com/obselate/goo/tree/c5b5b2591a075279cc1fc
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/main/Goo/Style/StyleEnums.gs)
 
 Selects cross-axis distribution for wrapped lines.
 
@@ -31,7 +31,7 @@ Selects cross-axis distribution for wrapped lines.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/main/Goo/Style/StyleEnums.gs)
 
 Selects default cross-axis alignment for children.
 
@@ -47,7 +47,7 @@ Selects default cross-axis alignment for children.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/main/Goo/Style/StyleEnums.gs)
 
 Selects a child's cross-axis alignment.
 
@@ -57,14 +57,13 @@ Selects a child's cross-axis alignment.
 - `Stretch`
 - `FlexStart`
 - `Center`
-- `FlexEnd`
-- `Baseline`
+- `FlexEnd`- `Baseline`
 
 ## `BlendMode`
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/main/Goo/Style/StyleEnums.gs)
 
 Selects how an element and its descendants composite with the backdrop.
 
@@ -91,7 +90,7 @@ Selects how an element and its descendants composite with the backdrop.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/main/Goo/Style/StyleEnums.gs)
 
 Selects how box border edges paint.
 
@@ -105,7 +104,7 @@ Selects how box border edges paint.
 
 Source:
 
-- [`BoxShadow.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/BoxShadow.gs)
+- [`BoxShadow.gs`](https://github.com/obselate/goo/blob/main/Goo/Style/BoxShadow.gs)
 
 Specifies one immutable outer or inset shadow. Shapes shadow their painted fill and stroke geometry.
 
@@ -118,7 +117,6 @@ Gets the non-negative blur radius in pixels.
 Gets the shadow color.
 
 ### `Inset`
-
 Gets whether the shadow is clipped inside the painted box or Shape silhouette.
 
 ### `OffsetX`
@@ -137,7 +135,7 @@ Gets the spread radius in pixels.
 
 Source:
 
-- [`Color.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/Color.gs)
+- [`Color.gs`](https://github.com/obselate/goo/blob/main/Goo/Style/Color.gs)
 
 Specifies an immutable normalized RGBA color.
 
@@ -178,7 +176,6 @@ Creates a color from 8-bit channels.
 - `g`: The green channel from 0 through 255.
 - `b`: The blue channel from 0 through 255.
 - `a`: The alpha channel from 0 through 255.
-
 Returns: A normalized color.
 
 ### `TryParse(string)`
@@ -238,14 +235,13 @@ Gets the normalized red channel.
 Gets transparent black.
 
 ### `White`
-
 Gets opaque white.
 
 ## `Cursor`
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/main/Goo/Style/StyleEnums.gs)
 
 Selects the system pointer cursor shown over an element and its descendants.
 
@@ -276,7 +272,7 @@ Selects the system pointer cursor shown over an element and its descendants.
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/main/Goo/Style/StyleEnums.gs)
 
 Selects the inherited inline direction used by layout and logical edges. Auto keeps flex layout left-to-right and detects each text paragraph's direction.
 
@@ -290,7 +286,7 @@ Selects the inherited inline direction used by layout and logical edges. Auto ke
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/main/Goo/Style/StyleEnums.gs)
 
 Selects whether an element participates in layout.
 
@@ -298,12 +294,11 @@ Selects whether an element participates in layout.
 
 - `Flex`
 - `None`
-
 ## `Easing`
 
 Source:
 
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
+- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/main/Goo/Style/StyleEnums.gs)
 
 Selects the curve that shapes transition progress; Ease curves are quadratic.
 
@@ -318,7 +313,7 @@ Selects the curve that shapes transition progress; Ease curves are quadratic.
 
 Source:
 
-- [`Edges.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/Edges.gs)
+- [`Edges.gs`](https://github.com/obselate/goo/blob/main/Goo/Style/Edges.gs)
 
 Specifies CSS-style top, right, bottom, and left lengths. One value applies to all edges. Two values mean vertical and horizontal. Three values mean top, horizontal, and bottom.
 
@@ -357,1112 +352,3 @@ Applies top, right, bottom, and left lengths in CSS order.
 Converts pixel values into a uniform edge value.
 
 - `value`: pixel length for every edge
-
-Returns: a uniform edge value
-
-### `op_Implicit(int32)~Edges`
-
-Converts integer pixels into a uniform edge value.
-
-- `value`: pixel length for every edge
-
-Returns: a uniform edge value
-
-### `Bottom`
-
-Sets the bottom edge independently.
-
-### `Left`
-
-Sets the left edge independently.
-
-### `Right`
-
-Sets the right edge independently.
-
-### `Top`
-
-Sets the top edge independently.
-
-## `Edges<T>`
-
-Source:
-
-- [`Edges.Generic.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/Edges.Generic.gs)
-
-Specifies typed values for the top, right, bottom, and left edges.
-
-### `new(T)`
-
-Applies one value to every edge.
-
-- `all`: value for every edge
-
-### `new(T,T)`
-
-Applies one value vertically and another horizontally.
-
-- `vertical`: top and bottom value
-- `horizontal`: right and left value
-
-### `new(T,T,T)`
-
-Applies top, horizontal, and bottom values.
-
-- `top`: top value
-- `horizontal`: right and left value
-- `bottom`: bottom value
-
-### `new(T,T,T,T)`
-
-Applies values in CSS top, right, bottom, left order.
-
-- `top`: top value
-- `right`: right value
-- `bottom`: bottom value
-- `left`: left value
-
-### `Bottom`
-
-Sets the bottom edge independently.
-
-### `Left`
-
-Sets the left edge independently.
-
-### `Right`
-
-Sets the right edge independently.
-
-### `Top`
-
-Sets the top edge independently.
-
-## `FlexDirection`
-
-Source:
-
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
-
-Selects the main-axis direction of a flex container.
-
-### Values
-
-- `Column`
-- `ColumnReverse`
-- `Row`
-- `RowReverse`
-
-## `FlexWrap`
-
-Source:
-
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
-
-Selects how flex children wrap.
-
-### Values
-
-- `NoWrap`
-- `Wrap`
-- `WrapReverse`
-
-## `FontStyle`
-
-Source:
-
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
-
-Selects the font slant.
-
-### Values
-
-- `Normal`
-- `Italic`
-
-## `Gradient`
-
-Source:
-
-- [`Gradient.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/Gradient.gs)
-
-Paints a background with interpolated color stops.
-
-### `Stops`
-
-Gets the ordered color stops.
-
-## `GradientStop`
-
-Source:
-
-- [`Gradient.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/Gradient.gs)
-
-Specifies one immutable gradient color stop.
-
-### `Color`
-
-Gets the stop color.
-
-### `Offset`
-
-Gets the stop position from 0 through 1.
-
-## `JustifyContent`
-
-Source:
-
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
-
-Selects main-axis child distribution.
-
-### Values
-
-- `FlexStart`
-- `Center`
-- `FlexEnd`
-- `SpaceBetween`
-- `SpaceAround`
-- `SpaceEvenly`
-
-## `Length`
-
-Source:
-
-- [`Length.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/Length.gs)
-
-Specifies a layout length.
-
-### `Percent(float64)`
-
-Creates a percentage of the available size.
-
-- `value`: percentage of the available size
-
-Returns: a percentage length
-
-### `Pixels(float64)`
-
-Creates an absolute pixel length.
-
-- `value`: length in pixels
-
-Returns: a pixel length
-
-### `op_Implicit(Length)~Edges`
-
-Converts a length into a uniform edge value.
-
-- `value`: length for every edge
-
-Returns: a uniform edge value
-
-### `op_Implicit(float64)~Length`
-
-Converts a pixel value to a length.
-
-- `value`: length in pixels
-
-Returns: a pixel length
-
-### `op_Implicit(int32)~Length`
-
-Converts an integer pixel value to a length.
-
-- `value`: length in pixels
-
-Returns: a pixel length
-
-### `Auto`
-
-Gets an automatic layout length.
-
-### `HasMagnitude`
-
-Gets whether this length has a concrete magnitude (pixels or percent), as opposed to Auto or an unset default. Magnitude is only defined when this is true.
-
-### `IsPercent`
-
-Gets whether this length is a percentage of the available size, as opposed to an absolute pixel value.
-
-### `Magnitude`
-
-Gets the raw numeric magnitude: pixels when IsPercent is false, percentage points (0-100) when true. Undefined for Auto/unset lengths; check HasMagnitude first.
-
-## `LinearGradient`
-
-Source:
-
-- [`Gradient.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/Gradient.gs)
-
-Paints a straight-line gradient at an angle.
-
-### `new(Color[])`
-
-Creates a top-to-bottom linear gradient from evenly spread colors.
-
-- `colors`: At least two colors, spread evenly from 0 through 1.
-
-### `new(float64,Color[])`
-
-Creates an angled linear gradient from evenly spread colors.
-
-- `angle`: The finite direction in degrees. Zero points up and positive angles turn clockwise.
-- `colors`: At least two colors, spread evenly from 0 through 1.
-
-### `new(float64,GradientStop[])`
-
-Creates an angled linear gradient from explicit stops.
-
-- `angle`: The finite direction in degrees. Zero points up and positive angles turn clockwise.
-- `stops`: At least two stops with non-decreasing offsets.
-
-### `Angle`
-
-Gets the direction in degrees. Zero points up and positive angles turn clockwise.
-
-### `Stops`
-
-Gets the ordered color stops.
-
-## `Overflow`
-
-Source:
-
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
-
-Selects overflow behavior.
-
-### Values
-
-- `Visible`
-- `Hidden`
-- `Scroll`
-
-## `PanelTransform`
-
-Source:
-
-- [`PanelTransform.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/PanelTransform.gs)
-
-Specifies one normalized 2D panel transform. Scale runs first, then skew, then rotation, then translation.
-
-### `Equals(PanelTransform)`
-
-Tests whether another transform has the same normalized components.
-
-### `op_Equality(PanelTransform,PanelTransform)`
-
-Tests two panel transforms for normalized component equality.
-
-### `op_Inequality(PanelTransform,PanelTransform)`
-
-Tests two panel transforms for normalized component inequality.
-
-### `Rotate`
-
-Gets or sets clockwise rotation in degrees. Authored turns are preserved for interpolation.
-
-### `Scale`
-
-Gets or sets uniform scale. The default is 1.
-
-### `ScaleX`
-
-Gets or sets horizontal scale. It multiplies with Scale. The default is 1.
-
-### `ScaleY`
-
-Gets or sets vertical scale. It multiplies with Scale. The default is 1.
-
-### `SkewX`
-
-Gets or sets the horizontal skew angle in degrees.
-
-### `SkewY`
-
-Gets or sets the vertical skew angle in degrees.
-
-### `TranslateX`
-
-Gets or sets the horizontal pixel or percentage translation. An explicit percentage unit is retained at zero for transitions.
-
-### `TranslateY`
-
-Gets or sets the vertical pixel or percentage translation. An explicit percentage unit is retained at zero for transitions.
-
-## `Percent`
-
-Source:
-
-- [`Length.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/Length.gs)
-
-Creates a percentage of the available size. @param value percentage of the available size @returns a percentage length
-
-### `Percent(float64)`
-
-Creates a percentage of the available size.
-
-- `value`: percentage of the available size
-
-Returns: a percentage length
-
-## `PositionType`
-
-Source:
-
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
-
-Selects relative, absolute, or static positioning; static ignores inset offsets.
-
-### Values
-
-- `Relative`
-- `Absolute`
-- `Static`
-
-## `RadialGradient`
-
-Source:
-
-- [`Gradient.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/Gradient.gs)
-
-Paints a circular gradient from a normalized center.
-
-### `new(Color[])`
-
-Creates a centered radial gradient from evenly spread colors.
-
-- `colors`: At least two colors, spread evenly from 0 through 1.
-
-### `new(float64,float64,float64,GradientStop[])`
-
-Creates a radial gradient from explicit geometry and stops.
-
-- `centerX`: The normalized horizontal center from 0 through 1.
-- `centerY`: The normalized vertical center from 0 through 1.
-- `radius`: The normalized radius above 0 and at most 1.
-- `stops`: At least two stops with non-decreasing offsets.
-
-### `CenterX`
-
-Gets the normalized horizontal center from 0 through 1.
-
-### `CenterY`
-
-Gets the normalized vertical center from 0 through 1.
-
-### `Radius`
-
-Gets the normalized radius above 0 and at most 1.
-
-### `Stops`
-
-Gets the ordered color stops.
-
-## `Scrollbar`
-
-Source:
-
-- [`Scrollbar.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/Scrollbar.gs)
-
-Describes the presentation and interaction of one built-in scrollbar axis.
-
-### `new`
-
-Creates a scrollbar descriptor with overlay geometry and no visual parts.
-
-### `FadeMs`
-
-Gets the fade duration after automatic hiding starts.
-
-### `HideDelayMs`
-
-Gets the delay before automatic hiding.
-
-### `HitThickness`
-
-Gets the pointer hit thickness.
-
-### `Inset`
-
-Gets the inset from the content edge.
-
-### `MinThumbLength`
-
-Gets the minimum thumb length.
-
-### `ReserveSpace`
-
-Gets whether the overflowing content reserves a gutter.
-
-### `Thickness`
-
-Gets the painted thumb thickness.
-
-### `Thumb`
-
-Gets the optional thumb element.
-
-### `Track`
-
-Gets the optional track element.
-
-## `ScrollbarVisibility`
-
-Source:
-
-- [`Scrollbar.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/Scrollbar.gs)
-
-Controls one built-in scrollbar axis.
-
-### Values
-
-- `Auto`
-- `Always`
-- `Hidden`
-
-## `Style`
-
-Source:
-
-- [`Style.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/Style.gs)
-
-Collects ordered layout, paint, and text declarations. Use BasedOn to copy reusable declarations. G# object spread does not copy them.
-
-### `new`
-
-Creates an empty write-only style declaration sink.
-
-### `TryGetTextStyle(TextStyleProperties@)`
-
-Reads explicit inline declarations without resolving inherited values. Returns false for paint slots, other fields, or a non-pixel font size.
-
-- `properties`: The supported declarations, or an empty value on failure.
-
-Returns: True when every declaration can be represented.
-
-### `AlignContent`
-
-Sets cross-axis line distribution.
-
-### `AlignItems`
-
-Sets cross-axis alignment for child items.
-
-### `AlignSelf`
-
-Sets this item's cross-axis alignment.
-
-### `AspectRatio`
-
-Sets the preferred width-to-height ratio.
-
-### `BackdropBlur`
-
-Sets the Gaussian blur radius, from 0 through 64 pixels, applied to the window content behind the border box. BorderRadius, clips and Opacity apply to the blur.
-
-### `BackgroundColor`
-
-Sets the background color.
-
-### `BackgroundColorAnim`
-
-Binds the background color without rebuilding or changing layout.
-
-### `BackgroundGradient`
-
-Sets or explicitly clears the background gradient. A non-nil gradient wins over BackgroundColor when both apply.
-
-### `BackgroundImage`
-
-Sets the local image path painted over the background fill.
-
-### `BackgroundImageFit`
-
-Sets how the background image fits its border box. The default is Cover.
-
-### `BackgroundImageSource`
-
-Sets the owned or provider-backed background source. It wins over BackgroundImage when set.
-
-### `BasedOn`
-
-Copies another style's ordered declarations at this declaration position. The copy does not retain the source Style. Declarations written later take precedence.
-
-### `BlendMode`
-
-Sets how this element and its descendants composite with the backdrop.
-
-### `BorderBottomLeftRadius`
-
-Sets the bottom-left border radius.
-
-### `BorderBottomRightRadius`
-
-Sets the bottom-right border radius.
-
-### `BorderColor`
-
-Sets box border colors in CSS top, right, bottom, left order. A uniform value also sets the Shape stroke color.
-
-### `BorderColorAnim`
-
-Binds all border colors, including the Shape stroke.
-
-### `BorderEndColor`
-
-Sets the box border color at the inline end edge.
-
-### `BorderEndColorAnim`
-
-Binds the border color at the inline end edge.
-
-### `BorderEndWidth`
-
-Sets the box border width at the inline end edge.
-
-### `BorderRadius`
-
-Sets the radius of all border corners.
-
-### `BorderStartColor`
-
-Sets the box border color at the inline start edge.
-
-### `BorderStartColorAnim`
-
-Binds the border color at the inline start edge.
-
-### `BorderStartWidth`
-
-Sets the box border width at the inline start edge.
-
-### `BorderStyle`
-
-Sets how box border edges paint. Dashed and Dotted stroke one ring using the top border width and color. Shape strokes are unchanged.
-
-### `BorderTopLeftRadius`
-
-Sets the top-left border radius.
-
-### `BorderTopRightRadius`
-
-Sets the top-right border radius.
-
-### `BorderWidth`
-
-Sets box border widths in CSS top, right, bottom, left order. A uniform value also sets the Shape stroke width.
-
-### `Bottom`
-
-Sets the bottom position offset.
-
-### `BoxShadow`
-
-Sets one outer or inset shadow as a one-item shadow stack. Shapes shadow their painted fill and stroke geometry.
-
-### `BoxShadows`
-
-Sets the defensively copied front-to-back shadow stack. An empty array clears state-layer shadows. Shape shadows follow painted fill and stroke geometry.
-
-### `ClipPath`
-
-Sets a vector path with a contour that clips this element and its descendants.
-
-### `ClipPathFillRule`
-
-Sets the fill rule used by ClipPath.
-
-### `ClipPathFit`
-
-Sets how ClipPath maps into the element border box. The default is Fill.
-
-### `Color`
-
-Sets the text color.
-
-### `ColorAnim`
-
-Binds the inherited text color without rebuilding or changing layout.
-
-### `ColumnGap`
-
-Sets the gap between columns.
-
-### `Cursor`
-
-Sets the inherited system pointer cursor.
-
-### `Direction`
-
-Sets the inherited inline direction used by layout and logical edges.
-
-### `Display`
-
-Sets whether the element participates in layout.
-
-### `End`
-
-Sets the inline end position offset.
-
-### `FlexBasis`
-
-Sets the initial main-axis size.
-
-### `FlexDirection`
-
-Sets the main-axis direction.
-
-### `FlexGrow`
-
-Sets the flex grow factor.
-
-### `FlexShrink`
-
-Sets the flex shrink factor.
-
-### `FlexWrap`
-
-Sets whether items wrap onto multiple lines.
-
-### `FontFamily`
-
-Sets preferred font family names, never file paths. Register files with FontSource.FromPath.
-
-### `FontSize`
-
-Sets the font size.
-
-### `FontStyle`
-
-Sets the font style.
-
-### `FontWeight`
-
-Sets the font weight.
-
-### `Gap`
-
-Sets the gap between rows and columns.
-
-### `Height`
-
-Sets the preferred height.
-
-### `JustifyContent`
-
-Sets main-axis item distribution.
-
-### `Language`
-
-Sets the inherited BCP 47 language used for text shaping. Empty uses the shaper default.
-
-### `Left`
-
-Sets the left position offset.
-
-### `LetterSpacing`
-
-Sets added spacing between letters.
-
-### `LineHeight`
-
-Sets the line-height multiplier.
-
-### `Margin`
-
-Sets margins in CSS top, right, bottom, left order.
-
-### `MarginEnd`
-
-Sets the margin at the inline end edge.
-
-### `MarginStart`
-
-Sets the margin at the inline start edge.
-
-### `MaxHeight`
-
-Sets the maximum height.
-
-### `MaxWidth`
-
-Sets the maximum width.
-
-### `MinHeight`
-
-Sets the minimum height.
-
-### `MinWidth`
-
-Sets the minimum width.
-
-### `Opacity`
-
-Sets opacity from 0 through 1.
-
-### `OpacityAnim`
-
-Binds opacity. The animation wins over Opacity and TransitionMs until removed.
-
-### `OutlineColor`
-
-Sets the color of the box outline.
-
-### `OutlineColorAnim`
-
-Binds the outline color without rebuilding or changing layout.
-
-### `OutlineOffset`
-
-Sets the signed pixel offset from the border edge. Positive values move the outline outward.
-
-### `OutlineWidth`
-
-Sets the non-negative pixel thickness of the box outline. Shape does not paint box outlines.
-
-### `Overflow`
-
-Sets overflow handling on both axes.
-
-### `OverflowX`
-
-Sets horizontal overflow handling.
-
-### `OverflowY`
-
-Sets vertical overflow handling.
-
-### `Padding`
-
-Sets padding in CSS top, right, bottom, left order.
-
-### `PaddingEnd`
-
-Sets padding at the inline end edge.
-
-### `PaddingStart`
-
-Sets padding at the inline start edge.
-
-### `Position`
-
-Sets relative, absolute, or static positioning.
-
-### `Right`
-
-Sets the right position offset.
-
-### `RowGap`
-
-Sets the gap between rows.
-
-### `ScaleAnim`
-
-Binds the uniform scale factor without changing layout.
-
-### `Scrollbar`
-
-Sets scrollbar presentation on both axes.
-
-### `ScrollbarVisibility`
-
-Sets scrollbar visibility on both axes.
-
-### `ScrollbarVisibilityX`
-
-Sets horizontal scrollbar visibility.
-
-### `ScrollbarVisibilityY`
-
-Sets vertical scrollbar visibility.
-
-### `ScrollbarX`
-
-Sets horizontal scrollbar presentation.
-
-### `ScrollbarY`
-
-Sets vertical scrollbar presentation.
-
-### `ShaderEffect`
-
-Sets a layout-neutral fragment effect over the element and its retained subtree.
-
-### `Start`
-
-Sets the inline start position offset.
-
-### `TextAlign`
-
-Sets horizontal text alignment.
-
-### `TextDecoration`
-
-Sets the inherited lines painted with text. Values can be combined.
-
-### `TextMaxLines`
-
-Caps visual lines in static Text. Zero keeps all lines; negative values throw ArgumentOutOfRangeException. It does not inherit, change TextEntry, or interpolate through transitions.
-
-### `TextShadow`
-
-Sets one inherited text shadow as a one-item shadow stack.
-
-### `TextShadows`
-
-Sets the defensively copied inherited front-to-back text shadow stack. An empty array clears inherited text shadows.
-
-### `TextStrokeColor`
-
-Sets the inherited glyph stroke color without changing text layout.
-
-### `TextStrokeColorAnim`
-
-Binds the inherited glyph stroke color without changing text layout.
-
-### `TextStrokeWidth`
-
-Sets the inherited non-negative pixel width of the glyph stroke. The stroke is paint-only, outlines glyphs only, and snaps during transitions.
-
-### `TextTransform`
-
-Sets inherited invariant casing for static Text. TextEntry is unchanged.
-
-### `TextTrimming`
-
-Sets how overflowing static text is trimmed.
-
-### `TextWrap`
-
-Sets whether static text wraps at soft-wrap opportunities.
-
-### `Top`
-
-Sets the top position offset.
-
-### `Transform`
-
-Sets a layout-neutral 2D transform for this element and its descendants. Components interpolate only when their length units match.
-
-### `TransformOriginX`
-
-Sets the horizontal transform origin. The default is 50 percent.
-
-### `TransformOriginY`
-
-Sets the vertical transform origin. The default is 50 percent.
-
-### `TranslateAnim`
-
-Binds translation in pixels without changing layout. Other Transform components remain declared.
-
-### `Visibility`
-
-Sets whether this element and its descendants paint and receive input. Hidden elements remain in layout and retain their state.
-
-### `Width`
-
-Sets the preferred width.
-
-### `ZIndex`
-
-Sets this element's stacking order among direct siblings.
-
-## `TextAlign`
-
-Source:
-
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
-
-Selects horizontal text alignment. Start is the default and follows paragraph direction.
-
-### Values
-
-- `Left`
-- `Center`
-- `Right`
-- `Start`
-- `End`
-
-## `TextDecoration`
-
-Source:
-
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
-
-Selects the lines painted with text. Values can be combined.
-
-### Values
-
-- `None`
-- `Underline`
-- `LineThrough`
-
-## `TextShadow`
-
-Source:
-
-- [`TextShadow.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/TextShadow.gs)
-
-Specifies one immutable text shadow.
-
-### `Blur`
-
-Gets the non-negative blur radius in pixels.
-
-### `Color`
-
-Gets the shadow color.
-
-### `OffsetX`
-
-Gets the horizontal offset in pixels.
-
-### `OffsetY`
-
-Gets the vertical offset in pixels.
-
-## `TextTransform`
-
-Source:
-
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
-
-Selects invariant casing for static text.
-
-### Values
-
-- `None`
-- `Uppercase`
-- `Lowercase`
-
-## `TextTrimming`
-
-Source:
-
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
-
-Selects how overflowing static text is trimmed.
-
-### Values
-
-- `None`
-- `Ellipsis`
-
-## `TextWrap`
-
-Source:
-
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
-
-Selects whether static text wraps at soft-wrap opportunities.
-
-### Values
-
-- `Wrap`
-- `NoWrap`
-
-## `Tokens`
-
-Source:
-
-- [`Tokens.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/Tokens.gs)
-
-Provides typed lexical context to synchronous component functions. A scope ends when its body returns and does not flow into later Cell builds.
-
-### `Get``1`
-
-Gets the token set active in the current synchronous scope.
-
-- `T`: The token-set type.
-
-Returns: The active token set.
-
-### `Scope``2(T,System.Func{R})`
-
-Runs a synchronous component body with tokens active only until the body returns.
-
-- `T`: The token-set type.
-- `R`: The result type.
-- `tokens`: The token set to make active.
-- `body`: The synchronous body to run while the token set is active.
-
-Returns: The value returned by the body.
-
-## `TransitionProperty`
-
-Source:
-
-- [`TransitionProperty.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/TransitionProperty.gs)
-
-Selects a style property that can interpolate during a transition.
-
-### Values
-
-- `All`
-- `Width`
-- `Height`
-- `MinWidth`
-- `MinHeight`
-- `MaxWidth`
-- `MaxHeight`
-- `AspectRatio`
-- `Padding`
-- `PaddingLeft`
-- `PaddingTop`
-- `PaddingRight`
-- `PaddingBottom`
-- `Margin`
-- `MarginLeft`
-- `MarginTop`
-- `MarginRight`
-- `MarginBottom`
-- `Gap`
-- `RowGap`
-- `ColumnGap`
-- `FlexGrow`
-- `FlexShrink`
-- `FlexBasis`
-- `Left`
-- `Top`
-- `Right`
-- `Bottom`
-- `BackgroundColor`
-- `BorderRadius`
-- `BorderTopLeftRadius`
-- `BorderTopRightRadius`
-- `BorderBottomLeftRadius`
-- `BorderBottomRightRadius`
-- `BorderWidth`
-- `BorderLeftWidth`
-- `BorderTopWidth`
-- `BorderRightWidth`
-- `BorderBottomWidth`
-- `BorderColor`
-- `BorderLeftColor`
-- `BorderTopColor`
-- `BorderRightColor`
-- `BorderBottomColor`
-- `Opacity`
-- `BoxShadow`
-- `Color`
-- `FontSize`
-- `FontWeight`
-- `LetterSpacing`
-- `LineHeight`
-- `Transform`
-
-## `Visibility`
-
-Source:
-
-- [`StyleEnums.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Style/StyleEnums.gs)
-
-Selects whether an element and its descendants are visible and interactive.
-
-### Values
-
-- `Visible`
-- `Hidden`

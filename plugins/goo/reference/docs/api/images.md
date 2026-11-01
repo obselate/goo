@@ -2,13 +2,13 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/Images`](https://github.com/obselate/goo/tree/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Images)
+Source: [`Goo/Images`](https://github.com/obselate/goo/tree/main/Goo/Images)
 
 ## `ImageAssetResult`
 
 Source:
 
-- [`ImageVariants.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Images/ImageVariants.gs)
+- [`ImageVariants.gs`](https://github.com/obselate/goo/blob/main/Goo/Images/ImageVariants.gs)
 
 Contains an independently disposable image owner and its selected density on success.
 
@@ -32,7 +32,7 @@ Gets the load outcome.
 
 Source:
 
-- [`ImageVariants.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Images/ImageVariants.gs)
+- [`ImageVariants.gs`](https://github.com/obselate/goo/blob/main/Goo/Images/ImageVariants.gs)
 
 Distinguishes a loaded variant from unavailable metrics, cancellation and file or decoder failures.
 
@@ -51,14 +51,13 @@ Distinguishes a loaded variant from unavailable metrics, cancellation and file o
 
 Source:
 
-- [`ImageVariants.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Images/ImageVariants.gs)
+- [`ImageVariants.gs`](https://github.com/obselate/goo/blob/main/Goo/Images/ImageVariants.gs)
 
 Identifies one local image and the number of source pixels per logical unit.
 
 ### `new(string,float32)`
 
 Creates a variant such as logo@2x.png with density 2.
-
 - `path`: The local file path.
 - `pixelsPerUnit`: The source pixels per logical unit.
 
@@ -74,7 +73,7 @@ Gets the positive finite source pixel density.
 
 Source:
 
-- [`ImageVariants.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Images/ImageVariants.gs)
+- [`ImageVariants.gs`](https://github.com/obselate/goo/blob/main/Goo/Images/ImageVariants.gs)
 
 Selects and caches explicit local raster variants from stable window metrics.
 

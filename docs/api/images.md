@@ -1,4 +1,4 @@
-# Images API stale documentation check
+# Images API
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 

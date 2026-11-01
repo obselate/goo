@@ -2,7 +2,7 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/Cell`](https://github.com/obselate/goo/tree/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Cell)
+Source: [`Goo/Cell`](https://github.com/obselate/goo/tree/main/Goo/Cell)
 
 ## Build input cells
 
@@ -57,8 +57,7 @@ let counter (value: int ref) =
         override _.Build() =
             Text(Content = $"Count: {value.Value}") :> Blob }
 
-let value = ref 0
-let direct = Cell.Mount<Cell>(Func<Cell>(fun () -> counter value), "direct")
+let value = ref 0let direct = Cell.Mount<Cell>(Func<Cell>(fun () -> counter value), "direct")
 let throughHelper = mount "helper" (fun () -> counter value)
 ```
 
@@ -68,7 +67,7 @@ Capturing factories inside parent builds can allocate delegates and closures eve
 
 Source:
 
-- [`Cell.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Cell/Cell.gs)
+- [`Cell.gs`](https://github.com/obselate/goo/blob/main/Goo/Cell/Cell.gs)
 
 Defines a stateful Goo component.
 
@@ -117,218 +116,3 @@ Creates a point animated by this component.
 - `initial`: initial value
 
 Returns: an animation bridge owned by this component
-
-### `Animate(Point,System.Action{Point})`
-
-Creates a point animation that reports values without rebuilding this component.
-
-- `initial`: initial value
-- `onChange`: receives values from Set and each motion tick
-
-Returns: an animation bridge owned by this component
-
-### `Animate(float64)`
-
-Creates a number animated by this component.
-
-- `initial`: initial value
-
-Returns: an animation bridge owned by this component
-
-### `Animate(float64,System.Action{float64})`
-
-Creates a number animation that reports values without rebuilding this component.
-
-- `initial`: initial value
-- `onChange`: receives values from Set and each motion tick
-
-Returns: an animation bridge owned by this component
-
-### `AnimateValue(Color)`
-
-Creates a Cell-owned color animation without rebuilding this component.
-
-### `AnimateValue(Length)`
-
-Creates a Cell-owned fixed-unit length animation without rebuilding this component.
-
-### `AnimateValue(Point)`
-
-Creates a Cell-owned point animation without rebuilding this component.
-
-### `AnimateValue(float64)`
-
-Creates a Cell-owned number animation without rebuilding this component.
-
-### `AnimateValue``1(``0,MotionConverter{``0})`
-
-Creates a Cell-owned custom-coordinate animation without rebuilding this component.
-
-### `Animate``1(T,MotionConverter{T})`
-
-Creates a value animated by this component with custom coordinates.
-
-- `T`: animated value type
-- `initial`: initial value
-- `converter`: maps values to scalar simulation coordinates
-
-Returns: an animation bridge owned by this component
-
-### `Animate``1(T,MotionConverter{T},System.Action{T})`
-
-Creates a custom-coordinate animation that reports values without rebuilding this component.
-
-- `T`: animated value type
-- `initial`: initial value
-- `converter`: maps values to scalar simulation coordinates
-- `onChange`: receives values from Set and each motion tick
-
-Returns: an animation bridge owned by this component
-
-### `Build`
-
-Builds the component tree.
-
-Returns: the root blob for this component
-
-### `MountSeeded``1(string,System.Action{TCell},System.Action{TCell})`
-
-Describes a child component mount with one-time initialization.
-
-- `TCell`: child component type
-- `key`: stable sibling key, or nil for positional identity
-- `seed`: initialization applied only when the component mounts
-- `configure`: configuration applied during each parent diff; prefer stable named or cached delegates
-
-Returns: a blob that mounts the child component
-
-### `Mount``1`
-
-Describes an unkeyed child component mount using positional identity.
-
-- `TCell`: child component type
-
-Returns: a blob that mounts the child component
-
-### `Mount``1(System.Func{TCell},string)`
-
-Describes a child component mount created by a factory.
-
-- `TCell`: declared child component type
-- `factory`: creates a fresh child component when the mount has no retained instance
-- `key`: stable sibling key, or nil for positional identity
-
-Returns: a blob that mounts the child component
-
-### `Mount``1(string)`
-
-Describes a child component mount.
-
-- `TCell`: child component type
-- `key`: stable sibling key, or nil for positional identity
-
-Returns: a blob that mounts the child component
-
-### `Mount``1(string,System.Action{TCell})`
-
-Describes a child component mount.
-
-- `TCell`: child component type
-- `key`: stable sibling key, or nil for positional identity
-- `configure`: configuration applied during each parent diff; prefer stable named or cached delegates
-
-Returns: a blob that mounts the child component
-
-### `Mount``2(string,TInput)`
-
-Describes a child component mount with an immutable input snapshot.
-
-- `TInput`: component input type
-- `TCell`: child component type
-- `key`: stable sibling key, or nil for positional identity
-- `input`: immutable input snapshot
-
-Returns: a blob that mounts the child component
-
-### `Rebuild`
-
-Requests a rebuild of this component.
-
-## `Cell<TInput any>`
-
-Source:
-
-- [`InputCell.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Cell/InputCell.gs)
-
-Defines a stateful Goo component with an immutable input snapshot.
-
-### `Build(TInput any)`
-
-Builds the component tree from the current immutable input snapshot.
-
-- `input`: current input snapshot
-
-Returns: the root blob for this component
-
-### `ShouldRebuild(TInput any,TInput any)`
-
-Decides whether a later post-mount snapshot needs a rebuild after Input stores next; default uses EqualityComparer[TInput].Default.
-
-### `Input`
-
-Gets the current immutable input snapshot.
-
-## `Context<T any>`
-
-Source:
-
-- [`Context.gs`](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/Goo/Cell/Context.gs)
-
-Identifies one retained value independently of other keys of the same type.
-
-### `new`
-
-Creates a key without a default value.
-
-### `Read`
-
-Reads the nearest retained provider and records the current owner as a dependent.
-
-Returns: The nearest provided value.
-
-### `Read(Window)`
-
-Reads only the window value without subscribing or looking up subtree providers.
-
-- `window`: The owner-thread window.
-
-Returns: The window value.
-
-### `Scope(T any,System.Func{Blob})`
-
-Describes a retained, layout-transparent provider whose builder runs under its value.
-
-- `value`: The subtree value.
-- `build`: The deferred subtree builder. An already-built Blob is not accepted.
-
-Returns: A normal positional Cell mount declaration.
-
-### `Set(Window,T any)`
-
-Sets the window value and queues affected owners without synchronously building them. Equal values are suppressed with EqualityComparer[T].Default.
-
-- `window`: The owner-thread window.
-- `value`: The new window value.
-
-### `TryRead(Window,T any@)`
-
-Tries to read only the window value without registering a dependency.
-
-- `window`: The owner-thread window.
-- `value`: Receives the value, or the default value of T when absent.
-
-Returns: True when the window has a value for this key.
-
-### `Window`
-
-Gets the owner window during a Cell build or retained virtual callback. Access outside an owned build or callback throws InvalidOperationException.

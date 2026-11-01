@@ -57,8 +57,7 @@ intervals. Queued messages are applied by the UI. The session accepts full and
 delta snapshots, selection and hover updates, logs, events, and capture
 responses. Unknown fields and capability names are ignored.
 
-`apps/Goo.DevTools/DiagnosticsProtocol.gs` defines the diagnostic models and
-transport interface, including disconnected and sample transports.
+`apps/Goo.DevTools/DiagnosticsProtocol.gs` defines the diagnostic models andtransport interface, including disconnected and sample transports.
 
 UI actions send `inspect.enter`, `inspect.exit`, `select`, `clear`, `override`,
 `reset`, and `capture` requests. Log and event requests depend on the capabilities
@@ -74,5 +73,5 @@ Cells and native windows remain mounted. Diagnostics are optional.
 
 This requires a G# runtime that dispatches `MetadataUpdateHandlerAttribute`
 callbacks after applying deltas. The
-[local integration test](https://github.com/obselate/goo/blob/c5b5b2591a075279cc1fc42d18914c78bc9e1614/tests/Goo.HotReloadSmoke/README.md) explains how
+[local integration test](https://github.com/obselate/goo/blob/main/tests/Goo.HotReloadSmoke/README.md) explains how
 to build and select a compatible runtime and records the supported edit scope.
