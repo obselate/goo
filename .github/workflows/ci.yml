@@ -15,7 +15,7 @@ permissions:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
@@ -116,39 +116,22 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Build Android documentation target
-        if: needs.changes.outputs.api == 'true'
-        run: |
-          dotnet workload install android
-          dotnet build Goo.Android/Goo.Android.gsproj -c Release \
-            -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" \
-            -p:TreatWarningsAsErrors=true
-
-      - name: Build Goo and optional packages with warnings as errors
-        if: needs.changes.outputs.api == 'true'
-        run: |
-          dotnet build Goo.Audio/Goo.Audio.gsproj -c Release -p:TreatWarningsAsErrors=true
 
       - name: Verify shared gesture recognizers
         if: needs.changes.outputs.api == 'true'
         run: dotnet test tests/Goo.Gestures.Tests/Goo.Gestures.Tests.gsproj -c Release -p:TreatWarningsAsErrors=true
 
-      - name: Regenerate API documentation
+      - name: Verify generated documentation
         if: needs.changes.outputs.api == 'true'
-        run: |
-          dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release
-          dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release -- \
-            --source Goo.Audio --xml Goo.Audio/bin/Release/net10.0/Goo.Audio.xml \
-            --output docs/api-audio
-          dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release -- \
-            --source Goo.Android --xml Goo.Android/bin/Release/net10.0-android/Goo.Android.xml \
-            --output docs/api-android
-          rm -rf docs/api-gestures docs/api-images docs/api-native-menus docs/api-native-dialogs \
-            docs/api-notifications docs/api-printing docs/api-spell-check docs/api-spell-check.hunspell docs/api-app-host docs/api-rich-text
+        run: bash .github/scripts/sync-generated-docs.sh --check
 
       - name: Validate onboarding and release metadata
         run: |
           dotnet run --project tools/Goo.SyncDocs/Goo.SyncDocs.gsproj -c Release -- .
+          if [ -n "$(git status --porcelain -- plugins/goo/reference)" ]; then
+            echo "::error::Generated documentation is stale. Run: bash .github/scripts/sync-generated-docs.sh"
+            exit 1
+          fi
           dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- onboarding
 
       - name: Run focused API contract tests
@@ -270,21 +253,6 @@ jobs:
           name: goo-macos-arm64-native
           path: artifacts/macos-candidate/native
 
-      - name: Verify Metal external image lifecycle
-        if: needs.changes.outputs.full == 'true'
-        run: |
-          dotnet build tests/Goo.VulkanProof/Goo.VulkanProof.gsproj -c Release --nologo -warnaserror \
-            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
-          proof="$PWD/tests/Goo.VulkanProof/bin/Release/net10.0"
-          clang -fobjc-arc -O2 -Wall -Wextra -Werror -dynamiclib \
-            tests/Goo.VulkanProof/VulkanExternalMetalProducer.m \
-            -framework Foundation -framework Metal -framework CoreVideo -framework IOSurface \
-            -o "$proof/libgoo-external-metal-proof.dylib"
-          .github/scripts/with-headless-wayland.sh env \
-            XDG_CACHE_HOME="$RUNNER_TEMP/goo-metal-cache" \
-            DYLD_LIBRARY_PATH="$proof:$PWD/artifacts/macos-candidate/native" \
-            GOO_VK_EXTERNAL_METAL=1 MTL_DEBUG_LAYER=1 \
-            dotnet "$proof/Goo.VulkanProof.dll"
 
       - name: Publish NativeAOT macOS smoke app
         if: needs.changes.outputs.full == 'true'
@@ -298,31 +266,6 @@ jobs:
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
             -o artifacts/publish-macos-smoke
 
-      - name: Verify NativeAOT local PNG loading on macOS
-        if: needs.changes.outputs.full == 'true'
-        run: |
-          dotnet publish tests/Goo.ImageLoadingSmoke/Goo.ImageLoadingSmoke.gsproj \
-            -c Release -r osx-arm64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
-            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
-            -o artifacts/image-nativeaot
-          artifacts/image-nativeaot/Goo.ImageLoadingSmoke
-
-      - name: Verify NativeAOT native menus on macOS
-        if: needs.changes.outputs.full == 'true'
-        run: |
-          dotnet publish tests/Goo.NativeMenuSmoke/Goo.NativeMenuSmoke.gsproj \
-            -c Release -r osx-arm64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
-            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
-            -o artifacts/native-menu-smoke
-          DYLD_LIBRARY_PATH="$PWD/artifacts/macos-candidate/native" artifacts/native-menu-smoke/Goo.NativeMenuSmoke
-
-      - name: Verify native tray lifecycle on macOS
-        if: needs.changes.outputs.full == 'true'
-        run: |
-          dotnet publish tests/Goo.TraySmoke/Goo.TraySmoke.gsproj \
-            -c Release -r osx-arm64 -m:2 -p:TreatWarningsAsErrors=true \
-            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" -o artifacts/tray-smoke
-          DYLD_LIBRARY_PATH="$PWD/artifacts/macos-candidate/native" dotnet artifacts/tray-smoke/Goo.TraySmoke.dll
 
       - name: Stage, sign, and run macOS smoke bundle
         if: needs.changes.outputs.full == 'true'
@@ -374,20 +317,6 @@ jobs:
           codesign --verify --deep --strict "$RUNNER_TEMP/Consumer Copy.app"
           GOO_PRIMITIVE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
             "$RUNNER_TEMP/Consumer Copy.app/Contents/MacOS/Goo.PackageSmoke"
-      - name: Verify NativeAOT application hosting on macOS
-        if: needs.changes.outputs.full == 'true'
-        run: |
-          dotnet publish tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj \
-            -c Release -r osx-arm64 --self-contained true -m:4 \
-            -p:PublishAot=true -p:TreatWarningsAsErrors=true \
-            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" -o artifacts/app-host-aot
-          dotnet run --project tools/Goo.HostChecks -c Release -- app-host \
-            artifacts/app-host-aot/Goo.AppHostSmoke "$RUNNER_TEMP/app-host-aot"
-          dotnet run --project tools/Goo.HostChecks -c Release -- macos-host \
-            artifacts/app-host-aot "$RUNNER_TEMP/macos-app-host"
-          dotnet run --project tools/Goo.HostChecks -c Release -- placement \
-            "$RUNNER_TEMP/macos-app-host/Goo.AppHostSmoke.app/Contents/MacOS/Goo.AppHostSmoke" \
-            "$RUNNER_TEMP/window-placement"
       - name: Verify native macOS clipboard formats and source exit
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -415,35 +344,6 @@ jobs:
           path: artifacts/macos-transfer-results
           if-no-files-found: ignore
 
-      - name: Verify NativeAOT macOS notifications
-        if: needs.changes.outputs.full == 'true'
-        run: |
-          dotnet publish tests/Goo.Notifications.Smoke/Goo.Notifications.Smoke.gsproj \
-            -c Release -r osx-arm64 --self-contained true -m:4 \
-            -p:PublishAot=true -p:TreatWarningsAsErrors=true \
-            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" -o artifacts/notifications-nativeaot
-          dotnet tools/Goo.HostChecks/bin/Release/net10.0/Goo.HostChecks.dll macos-notifications \
-            artifacts/notifications-nativeaot "$RUNNER_TEMP/macos-notifications"
-
-      - name: Verify native rich clipboard editing on macOS
-        if: needs.changes.outputs.full == 'true'
-        run: |
-          dotnet publish tests/Goo.PrintingSmoke/Goo.PrintingSmoke.gsproj \
-            -c Release -r osx-arm64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
-            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
-            -o artifacts/rich-nativeaot
-          artifacts/rich-nativeaot/Goo.PrintingSmoke
-
-      - name: Verify NativeAOT UI audio on macOS
-        if: needs.changes.outputs.full == 'true'
-        run: |
-          dotnet publish tests/Goo.AudioSmoke/Goo.AudioSmoke.gsproj \
-            -c Release -r osx-arm64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
-            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
-            -o artifacts/audio-nativeaot
-          SDL_AUDIO_DRIVER=dummy artifacts/audio-nativeaot/Goo.AudioSmoke
-          SDL_AUDIO_DRIVER=goo-unavailable GOO_AUDIO_UNAVAILABLE_SMOKE=1 \
-            artifacts/audio-nativeaot/Goo.AudioSmoke
 
       - name: Fetch pinned Slang compiler
         if: needs.changes.outputs.full == 'true'
@@ -516,7 +416,126 @@ jobs:
           path: |
             artifacts/macos-candidate/
 
-  linux-validation:
+  macos-checks:
+    name: macos-${{ matrix.lane }}
+    needs: [changes, macos-native]
+    runs-on: ${{ needs.changes.outputs.full == 'true' && 'macos-15' || 'ubuntu-24.04' }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: [rendering, hosting]
+    steps:
+      - name: No affected inputs
+        if: needs.changes.outputs.full != 'true'
+        run: echo "No affected inputs"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        if: needs.changes.outputs.full == 'true'
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        if: needs.changes.outputs.full == 'true'
+        with:
+          global-json-file: global.json
+      - name: Restore pinned G# authoring tools
+        if: needs.changes.outputs.full == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: artifacts/gsharp
+          key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
+      - name: Build pinned upstream G# authoring tools
+        if: needs.changes.outputs.full == 'true'
+        run: ./bootstrap.sh --gsharp-only
+      - name: Download macOS native payloads
+        if: needs.changes.outputs.full == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: goo-macos-arm64-native
+          path: artifacts/macos-candidate/native
+
+      - name: Verify Metal external image lifecycle
+        if: needs.changes.outputs.full == 'true' && matrix.lane == 'rendering'
+        run: |
+          dotnet build tests/Goo.VulkanProof/Goo.VulkanProof.gsproj -c Release --nologo -warnaserror \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
+          proof="$PWD/tests/Goo.VulkanProof/bin/Release/net10.0"
+          clang -fobjc-arc -O2 -Wall -Wextra -Werror -dynamiclib \
+            tests/Goo.VulkanProof/VulkanExternalMetalProducer.m \
+            -framework Foundation -framework Metal -framework CoreVideo -framework IOSurface \
+            -o "$proof/libgoo-external-metal-proof.dylib"
+          .github/scripts/with-headless-wayland.sh env \
+            XDG_CACHE_HOME="$RUNNER_TEMP/goo-metal-cache" \
+            DYLD_LIBRARY_PATH="$proof:$PWD/artifacts/macos-candidate/native" \
+            GOO_VK_EXTERNAL_METAL=1 MTL_DEBUG_LAYER=1 \
+            dotnet "$proof/Goo.VulkanProof.dll"
+      - name: Verify NativeAOT local PNG loading on macOS
+        if: needs.changes.outputs.full == 'true' && matrix.lane == 'rendering'
+        run: |
+          dotnet publish tests/Goo.ImageLoadingSmoke/Goo.ImageLoadingSmoke.gsproj \
+            -c Release -r osx-arm64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
+            -o artifacts/image-nativeaot
+          artifacts/image-nativeaot/Goo.ImageLoadingSmoke
+
+      - name: Verify NativeAOT native menus on macOS
+        if: needs.changes.outputs.full == 'true' && matrix.lane == 'rendering'
+        run: |
+          dotnet publish tests/Goo.NativeMenuSmoke/Goo.NativeMenuSmoke.gsproj \
+            -c Release -r osx-arm64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
+            -o artifacts/native-menu-smoke
+          DYLD_LIBRARY_PATH="$PWD/artifacts/macos-candidate/native" artifacts/native-menu-smoke/Goo.NativeMenuSmoke
+
+      - name: Verify native tray lifecycle on macOS
+        if: needs.changes.outputs.full == 'true' && matrix.lane == 'hosting'
+        run: |
+          dotnet publish tests/Goo.TraySmoke/Goo.TraySmoke.gsproj \
+            -c Release -r osx-arm64 -m:2 -p:TreatWarningsAsErrors=true \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" -o artifacts/tray-smoke
+          DYLD_LIBRARY_PATH="$PWD/artifacts/macos-candidate/native" dotnet artifacts/tray-smoke/Goo.TraySmoke.dll
+      - name: Verify NativeAOT application hosting on macOS
+        if: needs.changes.outputs.full == 'true' && matrix.lane == 'hosting'
+        run: |
+          dotnet publish tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj \
+            -c Release -r osx-arm64 --self-contained true -m:4 \
+            -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" -o artifacts/app-host-aot
+          dotnet run --project tools/Goo.HostChecks -c Release -- app-host \
+            artifacts/app-host-aot/Goo.AppHostSmoke "$RUNNER_TEMP/app-host-aot"
+          dotnet run --project tools/Goo.HostChecks -c Release -- macos-host \
+            artifacts/app-host-aot "$RUNNER_TEMP/macos-app-host"
+          dotnet run --project tools/Goo.HostChecks -c Release -- placement \
+            "$RUNNER_TEMP/macos-app-host/Goo.AppHostSmoke.app/Contents/MacOS/Goo.AppHostSmoke" \
+            "$RUNNER_TEMP/window-placement"
+      - name: Verify NativeAOT macOS notifications
+        if: needs.changes.outputs.full == 'true' && matrix.lane == 'hosting'
+        run: |
+          dotnet publish tests/Goo.Notifications.Smoke/Goo.Notifications.Smoke.gsproj \
+            -c Release -r osx-arm64 --self-contained true -m:4 \
+            -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" -o artifacts/notifications-nativeaot
+          dotnet tools/Goo.HostChecks/bin/Release/net10.0/Goo.HostChecks.dll macos-notifications \
+            artifacts/notifications-nativeaot "$RUNNER_TEMP/macos-notifications"
+
+      - name: Verify native rich clipboard editing on macOS
+        if: needs.changes.outputs.full == 'true' && matrix.lane == 'rendering'
+        run: |
+          dotnet publish tests/Goo.PrintingSmoke/Goo.PrintingSmoke.gsproj \
+            -c Release -r osx-arm64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
+            -o artifacts/rich-nativeaot
+          artifacts/rich-nativeaot/Goo.PrintingSmoke
+
+      - name: Verify NativeAOT UI audio on macOS
+        if: needs.changes.outputs.full == 'true' && matrix.lane == 'rendering'
+        run: |
+          dotnet publish tests/Goo.AudioSmoke/Goo.AudioSmoke.gsproj \
+            -c Release -r osx-arm64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
+            -o artifacts/audio-nativeaot
+          SDL_AUDIO_DRIVER=dummy artifacts/audio-nativeaot/Goo.AudioSmoke
+          SDL_AUDIO_DRIVER=goo-unavailable GOO_AUDIO_UNAVAILABLE_SMOKE=1 \
+            artifacts/audio-nativeaot/Goo.AudioSmoke
+
+  linux-build:
     needs: changes
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -694,6 +713,72 @@ jobs:
         run: |
           dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true
 
+      - name: Build shared Goo test assembly
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet build Goo/Goo.gsproj -c TestRelease -p:TreatWarningsAsErrors=true \
+            -p:IncludeTestFixtures=true \
+            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
+
+      - name: Archive Linux build state
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          tar -czf "$RUNNER_TEMP/goo-linux-build.tar.gz" \
+            --exclude=./.git --exclude=./artifacts/image-nativeaot \
+            --exclude=./artifacts/audio-nativeaot .
+          tar -czf "$RUNNER_TEMP/goo-linux-toolchain.tar.gz" \
+            -C "$RUNNER_TEMP" goo-shader-toolchain goo-vulkan-validation-layer
+
+      - name: Upload Linux build state
+        if: needs.changes.outputs.full == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: goo-linux-build
+          compression-level: 0
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/goo-linux-build.tar.gz
+            ${{ runner.temp }}/goo-linux-toolchain.tar.gz
+
+  linux-validation:
+    needs: [changes, linux-build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: No affected inputs
+        if: needs.changes.outputs.full != 'true'
+        run: echo "No affected inputs"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        if: needs.changes.outputs.full == 'true'
+
+      - &linux-build-download
+        if: needs.changes.outputs.full == 'true'
+        name: Download Linux build state
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: goo-linux-build
+          path: ${{ runner.temp }}/goo-linux-build
+
+      - &linux-dotnet
+        if: needs.changes.outputs.full == 'true'
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          global-json-file: global.json
+
+      - &linux-build-restore
+        if: needs.changes.outputs.full == 'true'
+        name: Restore Linux build state
+        run: |
+          tar -xzf "$RUNNER_TEMP/goo-linux-build/goo-linux-build.tar.gz"
+          tar -xzf "$RUNNER_TEMP/goo-linux-build/goo-linux-toolchain.tar.gz" -C "$RUNNER_TEMP"
+          echo "GOO_VERSION=$(dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo)" >> "$GITHUB_ENV"
+          echo "VK_LAYER_PATH=$RUNNER_TEMP/goo-vulkan-validation-layer/vulkan-validationlayers-1.4.313.0/usr/share/vulkan/explicit_layer.d" >> "$GITHUB_ENV"
+      - *linux-apt-update
+      - *linux-apt-cache
+      - *linux-dependencies
+      - *linux-vulkan-driver
+      - *linux-shader-toolchain
+
       - name: Verify presentation-independent offscreen pages
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -810,35 +895,8 @@ jobs:
             exit 1
           fi
 
-      - name: Build shared Goo test assembly
-        if: needs.changes.outputs.full == 'true'
-        run: |
-          dotnet build Goo/Goo.gsproj -c TestRelease -p:TreatWarningsAsErrors=true \
-            -p:IncludeTestFixtures=true \
-            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
-
-      - name: Archive Linux build state
-        if: needs.changes.outputs.full == 'true'
-        run: |
-          tar -czf "$RUNNER_TEMP/goo-linux-build.tar.gz" \
-            --exclude=./.git --exclude=./artifacts/image-nativeaot \
-            --exclude=./artifacts/audio-nativeaot .
-          tar -czf "$RUNNER_TEMP/goo-linux-toolchain.tar.gz" \
-            -C "$RUNNER_TEMP" goo-shader-toolchain goo-vulkan-validation-layer
-
-      - name: Upload Linux build state
-        if: needs.changes.outputs.full == 'true'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-        with:
-          name: goo-linux-build
-          compression-level: 0
-          if-no-files-found: error
-          path: |
-            ${{ runner.temp }}/goo-linux-build.tar.gz
-            ${{ runner.temp }}/goo-linux-toolchain.tar.gz
-
   linux-packages:
-    needs: [changes, linux-validation, macos-native]
+    needs: [changes, linux-build, macos-native]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -847,29 +905,10 @@ jobs:
         run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: needs.changes.outputs.full == 'true'
+      - *linux-build-download
+      - *linux-dotnet
+      - *linux-build-restore
 
-      - &linux-build-download
-        if: needs.changes.outputs.full == 'true'
-        name: Download Linux build state
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
-        with:
-          name: goo-linux-build
-          path: ${{ runner.temp }}/goo-linux-build
-
-      - &linux-dotnet
-        if: needs.changes.outputs.full == 'true'
-        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
-        with:
-          global-json-file: global.json
-
-      - &linux-build-restore
-        if: needs.changes.outputs.full == 'true'
-        name: Restore Linux build state
-        run: |
-          tar -xzf "$RUNNER_TEMP/goo-linux-build/goo-linux-build.tar.gz"
-          tar -xzf "$RUNNER_TEMP/goo-linux-build/goo-linux-toolchain.tar.gz" -C "$RUNNER_TEMP"
-          echo "GOO_VERSION=$(dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo)" >> "$GITHUB_ENV"
-          echo "VK_LAYER_PATH=$RUNNER_TEMP/goo-vulkan-validation-layer/vulkan-validationlayers-1.4.313.0/usr/share/vulkan/explicit_layer.d" >> "$GITHUB_ENV"
 
       - *linux-apt-update
       - *linux-apt-cache
@@ -1230,7 +1269,7 @@ jobs:
 
   linux-fixtures:
     name: linux-${{ matrix.lane }}
-    needs: [changes, linux-validation]
+    needs: [changes, linux-build]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
@@ -1582,7 +1621,7 @@ jobs:
             artifacts/windows-native/text-native-build.json
 
   windows-x64:
-    needs: [changes, linux-packages, windows-native]
+    needs: [changes, linux-packages]
     runs-on: ${{ needs.changes.outputs.full == 'true' && 'windows-2022' || 'ubuntu-24.04' }}
     timeout-minutes: 25
     steps:
@@ -1789,7 +1828,7 @@ jobs:
 
   release-goo:
     if: github.repository == 'obselate/goo' && startsWith(github.ref, 'refs/tags/v')
-    needs: [changes, quality, macos-arm64, linux-validation, linux-fixtures, linux-packages, linux-x64, android, android-accessibility, android-consumer, android-native-menus, windows-x64]
+    needs: [changes, quality, macos-arm64, macos-checks, linux-build, linux-validation, linux-fixtures, linux-packages, linux-x64, android, android-accessibility, android-consumer, android-native-menus, windows-native, windows-x64]
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     environment: release
