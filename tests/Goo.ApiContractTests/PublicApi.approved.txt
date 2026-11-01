@@ -264,6 +264,7 @@ enum-underlying|Goo.WindowBackdrop|System.Int32
 enum-underlying|Goo.WindowCapabilities|System.Int32
 enum-underlying|Goo.WindowCaptureRequestStatus|System.Int32
 enum-underlying|Goo.WindowFramePacing|System.Int32
+enum-underlying|Goo.WindowInputKind|System.Int32
 enum-underlying|Goo.WindowLayer|System.Int32
 enum-underlying|Goo.WindowOcclusion|System.Int32
 enum-underlying|Goo.WindowOperationResult|System.Int32
@@ -1014,6 +1015,9 @@ enum|Goo.WindowCaptureRequestStatus|NotReady|3
 enum|Goo.WindowCaptureRequestStatus|Unsupported|6
 enum|Goo.WindowFramePacing|Display|0
 enum|Goo.WindowFramePacing|Uncapped|1
+enum|Goo.WindowInputKind|KeyDown|2
+enum|Goo.WindowInputKind|PointerDown|0
+enum|Goo.WindowInputKind|Wheel|1
 enum|Goo.WindowLayer|Background|0
 enum|Goo.WindowLayer|Bottom|1
 enum|Goo.WindowLayer|Overlay|3
@@ -1057,6 +1061,7 @@ event|Goo.TrayIcon|StatusChanged|System.Action`1<Goo.TrayStatus>|instance|add:pu
 event|Goo.Window|ApplicationActivated|System.Action`1<Goo.ApplicationActivation>|static|add:public,remove:public
 event|Goo.Window|DisplayChanged|System.Action|instance|add:public,remove:public
 event|Goo.Window|FocusChanged|System.Action`1<System.Boolean>|instance|add:public,remove:public
+event|Goo.Window|InputActivity|System.Action`1<Goo.WindowInputKind>|instance|add:public,remove:public
 event|Goo.Window|KeyPressed|System.Action`2<Goo.Key,Goo.KeyModifiers>|instance|add:public,remove:public
 event|Goo.Window|MetricsChanged|System.Action`1<Goo.WindowMetrics>|instance|add:public,remove:public
 event|Goo.Window|OcclusionChanged|System.Action`1<Goo.WindowOcclusion>|instance|add:public,remove:public
@@ -3191,6 +3196,7 @@ type|Goo.WindowCapture|class|public|base:System.Object|interfaces:|generic:
 type|Goo.WindowDisplayId|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.WindowDisplayId>|generic:
 type|Goo.WindowDisplay|class|public|base:System.Object|interfaces:|generic:
 type|Goo.WindowFramePacing|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.WindowInputKind|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowLayer|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowMetrics|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.WindowMetrics>|generic:
 type|Goo.WindowOcclusion|enum|public|base:System.Enum|interfaces:|generic:

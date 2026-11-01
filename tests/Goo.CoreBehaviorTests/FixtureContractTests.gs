@@ -189,6 +189,7 @@ class FixtureContractTests {
             yield Contract[InputFixtures]("KeyboardDrainConsumesThrowingEventOnceAndRetainsRest")
             yield Contract[InputFixtures]("KeyboardTraversalRevealsNestedScrollAncestors")
             yield Contract[InputFixtures]("KeyboardQueueAndRepeatLifecycle")
+            yield Contract[InputFixtures]("WindowInputActivityObservesConsumedAndModalInputWithoutRebuilding")
             yield Contract[InputFixtures]("KeyboardRepeatCancelsWhenFocusedEntryBecomesUnavailable")
             yield Contract[InputFixtures]("KeyRepeatUsesCurrentModifiersWithoutRestartingDelay")
             yield Contract[InputFixtures]("SyntheticHeldBindingRequestsSchedulerTick")

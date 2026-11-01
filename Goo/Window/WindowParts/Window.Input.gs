@@ -59,6 +59,8 @@ public partial class Window {
 
   internal func PreviewKeyPress(key Key, modifiers KeyModifiers) bool -> notifications.PreviewKeyPress(key, modifiers)
 
+  internal func NotifyInputActivity(kind WindowInputKind) { notifications.RaiseInputActivity(kind) }
+
   internal func RefreshPlatformInput() {
     platformInput?.Refresh()
   }

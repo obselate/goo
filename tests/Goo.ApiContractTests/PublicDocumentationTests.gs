@@ -719,6 +719,9 @@ class PublicDocumentationTests {
             "M:Goo.PanelTransform.op_Inequality(Goo.PanelTransform,Goo.PanelTransform)"
         }
         private let ExpectedEnumFieldIds[]string = []string{
+            "F:Goo.WindowInputKind.PointerDown",
+            "F:Goo.WindowInputKind.Wheel",
+            "F:Goo.WindowInputKind.KeyDown",
             "F:Goo.RenderingDeviceKind.Unknown",
             "F:Goo.RenderingDeviceKind.IntegratedGpu",
             "F:Goo.RenderingDeviceKind.DiscreteGpu",

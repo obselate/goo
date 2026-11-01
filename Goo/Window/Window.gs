@@ -10,6 +10,16 @@ public enum WindowState { Normal; Minimized; Maximized; Fullscreen }
 /// Controls how Window.Run schedules frames that have visual demand.
 public enum WindowFramePacing { Display; Uncapped }
 
+/// Identifies input received by a window before routing.
+public enum WindowInputKind {
+  /// A pointer button or contact was pressed.
+  PointerDown;
+  /// A wheel event was received.
+  Wheel;
+  /// A physical key was pressed.
+  KeyDown;
+}
+
 /// Identifies the selected Vulkan physical device type.
 public enum RenderingDeviceKind {
   /// No rendering device is available.
@@ -142,6 +152,7 @@ public data struct WindowMetrics {
 internal struct WindowNotifications {
   private event stateChanged Action[WindowState]
   private event keyPressed Action[Key, KeyModifiers]
+  private event inputActivity Action[WindowInputKind]
   private event previewKeyPressed Func[Key, KeyModifiers, bool]
   private var previewKeyPressedCallbacks ([]Delegate)?
   private event focusChanged Action[bool]
@@ -158,6 +169,10 @@ internal struct WindowNotifications {
   internal func AddKeyPressed(callback Action[Key, KeyModifiers]) { keyPressed += callback }
   internal func RemoveKeyPressed(callback Action[Key, KeyModifiers]) { keyPressed -= callback }
   internal prop KeyPressedCallbacks Action[Key, KeyModifiers]? { get -> keyPressed }
+
+  internal func AddInputActivity(callback Action[WindowInputKind]) { inputActivity += callback }
+  internal func RemoveInputActivity(callback Action[WindowInputKind]) { inputActivity -= callback }
+  internal func RaiseInputActivity(kind WindowInputKind) { inputActivity?.Invoke(kind) }
 
   internal func AddPreviewKeyPressed(callback Func[Key, KeyModifiers, bool]) {
     previewKeyPressed += callback
@@ -452,6 +467,18 @@ public partial class Window {
       notifications.RemoveStateChanged(value)
     }
   }
+  /// Occurs once per received pointer down, wheel, or key down before routing, including consumed and modal input.
+  /// Callbacks run on the window UI thread without invalidating Cells.
+  public event InputActivity Action[WindowInputKind]{
+    add{
+      requireUiThread("Window.InputActivity")
+      notifications.AddInputActivity(value)
+    }
+    remove{
+      requireUiThread("Window.InputActivity")
+      notifications.RemoveInputActivity(value)
+    }
+  }
   /// Occurs for each physical key press before focused-element routing.
   public event KeyPressed Action[Key, KeyModifiers]{
     add{
@@ -672,7 +699,7 @@ public partial class Window {
     motionPump.Wake = requestReconcile
     motionPump.PaintWake = wakePaintMotion
 
-    input = InputCoordinator()
+    input = InputCoordinator(this)
 
     dpi = Vector2(1.0F, 1.0F)
   }
