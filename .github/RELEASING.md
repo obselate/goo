@@ -24,18 +24,18 @@ Goo remains below 1.0.0 while its public contracts mature.
    application template, app identities, protocol strings, install commands,
    and integration metadata.
 3. Add the dated release entry to `CHANGELOG.md`. The tag workflow publishes
-   only this version's entry as the GitHub Release notes. Build Goo in Release mode,
-   regenerate API documentation with `dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release`,
-   and refresh the plugin reference with `dotnet run --project tools/Goo.SyncDocs/Goo.SyncDocs.gsproj -c Release -- .`.
-   The release helper also runs the reference sync before its release checks.
+   only this version's entry as the GitHub Release notes.
+   Run `bash .github/scripts/sync-generated-docs.sh` with the Android SDK and Java 21
+   available through `ANDROID_HOME` and `JAVA_HOME`.
+   Commit the generated API docs and plugin reference with the release changes.
    Run `dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- onboarding`.
-4. Push the release commit to `main` and require a green CI run. Wait for the
-   generated-docs workflow to sync `docs/api` and `plugins/goo/reference` before tagging.
+4. Merge the release PR to `main` and require green CI on that merge commit.
+   CI checks generated docs without creating another commit or CI run.
 5. Confirm that the release-candidates and android-package artifacts contain all seven packages,
    the Linux and macOS arm64 bundles, and that the clean template and DevTools
    installation steps passed. Confirm that Android native reproducibility and
    Release APK/AAB payload checks passed.
-6. Create and push the annotated tag: `git tag -a vX.Y.Z -m "Goo X.Y.Z"`.
+6. Tag that release merge commit and push: `git tag -a vX.Y.Z <merge-sha> -m "Goo X.Y.Z"` and `git push origin vX.Y.Z`.
 7. The tag run rebuilds and validates the packages, publishes them to
    NuGet.org, and creates the GitHub Release.
 

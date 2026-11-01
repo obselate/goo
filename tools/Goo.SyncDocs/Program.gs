@@ -1,6 +1,5 @@
 import System
 import System.Collections.Generic
-import System.Diagnostics
 import System.IO
 import System.Linq
 import System.Security.Cryptography
@@ -31,17 +30,7 @@ for directory in directories {
 }
 paths.Add("templates/Goo.Templates/content/Program.gs")
 paths.Add("templates/Goo.Templates/content/GooStarter.gsproj")
-let start = ProcessStartInfo("git")
-start.WorkingDirectory = root
-start.RedirectStandardOutput = true
-start.ArgumentList.Add("rev-parse")
-start.ArgumentList.Add("HEAD")
-using let git = Process.Start(start) ?? throw IOException("Could not start git")
-let revision = git.StandardOutput.ReadToEnd().Trim()
-git.WaitForExit()
-if git.ExitCode != 0 {
-    throw InvalidOperationException("Could not read the checkout commit")
-}
+let revision = "main"
 let links = Regex(`(?<prefix>!?\[[^\]\n]*\]\(\s*<?|(?:href|src)=["'])(?<target>[^)\s<>"']+)`)
 let files = Dictionary[string, string]()
 Directory.CreateDirectory(output)
