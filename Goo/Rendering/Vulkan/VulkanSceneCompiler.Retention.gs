@@ -5,6 +5,7 @@ import System
 internal partial class VulkanSceneCompiler {
   private var retentionProofs VulkanSceneRetentionProofStore? = nil
   private var partialRedrawSafe bool
+  private var retainedUnsupportedContent bool
   private var damageJournal VulkanSceneDamageJournal? = nil
   private var retainedLeaf VulkanRetentionCounters
   private var retainedBorder VulkanRetentionCounters
@@ -545,16 +546,27 @@ internal partial class VulkanSceneCompiler {
         index = index + 1
       }
     } else if !topologySame {
-      journal.MarkFullRedraw()
-      let maximum = proofs.ChunkCount > currentCount ? proofs.ChunkCount : currentCount
-      index = 0
-      while index < maximum {
-        let hasOld = index < proofs.ChunkCount
-        let hasNew = index < currentCount
-        let oldBounds = hasOld ? retainedChunks[index].Bounds : ConservativeBounds{}
-        let newBounds = hasNew ? frame.Chunks[index].Bounds : ConservativeBounds{}
-        journal.AddChange(oldBounds, hasOld, newBounds, hasNew)
-        index = index + 1
+      var first int32 = 0
+      while first < proofs.ChunkCount && first < currentCount && TryRetainChunk(first, first) {
+        first++
+      }
+      var oldEnd = proofs.ChunkCount
+      var newEnd = currentCount
+      while oldEnd > first && newEnd > first && TryRetainChunk(newEnd - 1, oldEnd - 1) {
+        oldEnd--
+        newEnd--
+      }
+      index = first
+      while index < oldEnd {
+        journal.AddChange(GrowDamageToEffectLayers(retainedChunks[index].Bounds, 0), true,
+          ConservativeBounds{}, false)
+        index++
+      }
+      index = first
+      while index < newEnd {
+        journal.AddChange(ConservativeBounds{}, false,
+          GrowDamageToEffectLayers(frame.Chunks[index].Bounds, 0), true)
+        index++
       }
     } else {
       index = 0
@@ -572,23 +584,19 @@ internal partial class VulkanSceneCompiler {
         } else if current.RetentionState == SceneChunkRetentionState.ExactLeafRebuild {
           journal.AddChange(GrowDamageToEffectLayers(prior.Bounds, current.FirstDraw), true,
             GrowDamageToEffectLayers(current.Bounds, current.FirstDraw), true)
-        } else if (current.RetentionState == SceneChunkRetentionState.ExactLeafHit
-            && prior.RetentionState != SceneChunkRetentionState.Generic)
-          || (current.ContentKey == prior.ContentKey
-              && ((current.RetentionState != SceneChunkRetentionState.Generic
-                  && prior.RetentionState != SceneChunkRetentionState.Generic)
-                  || ExactGenericChunkContent(index, prior))) {
-                    frame.Chunks[index].Version = prior.Version
-                    frame.Chunks[index].Dirty = false
-                  } else {
-                    journal.AddChange(GrowDamageToEffectLayers(prior.Bounds, current.FirstDraw), true,
-                      GrowDamageToEffectLayers(current.Bounds, current.FirstDraw), true)
-                  }
+        } else if ChunkContentRetained(index, index, prior) {
+          frame.Chunks[index].Version = prior.Version
+          frame.Chunks[index].Dirty = false
+        } else {
+          journal.AddChange(GrowDamageToEffectLayers(prior.Bounds, current.FirstDraw), true,
+            GrowDamageToEffectLayers(current.Bounds, current.FirstDraw), true)
+        }
         index = index + 1
       }
     }
-    partialRedrawSafe = proofs.Ready && topologySame
-      && unsupportedNodeCount == 0 && unsupportedPrimitiveCount == 0
+    let unsupportedContent = unsupportedNodeCount != 0 || unsupportedPrimitiveCount != 0
+    partialRedrawSafe = proofs.Ready && !retainedUnsupportedContent && !unsupportedContent
+    retainedUnsupportedContent = unsupportedContent
     if !partialRedrawSafe {
       journal.MarkFullRedraw()
     }
@@ -642,6 +650,30 @@ internal partial class VulkanSceneCompiler {
       return priorPlaceholder && current.DrawCount > 0
     }
 
+  private func TryRetainChunk(index int32, priorIndex int32) bool {
+    let current = frame.Chunks[index]
+    let prior = retentionProofs!!.Chunks[priorIndex]
+    let unchanged = current.OwnerId == prior.OwnerId && current.TransformKey == prior.TransformKey
+      && ExactBounds(current.Bounds, prior.Bounds) && ExactChunkTopology(index, prior)
+      && ChunkContentRetained(index, priorIndex, prior)
+    if unchanged {
+      frame.Chunks[index].Version = prior.Version
+      frame.Chunks[index].Dirty = false
+    }
+    return unchanged
+  }
+
+  private func ChunkContentRetained(index int32, priorIndex int32,
+    prior VulkanSceneChunkIdentity) bool {
+    let current = frame.Chunks[index]
+    return (current.RetentionState == SceneChunkRetentionState.ExactLeafHit
+        && prior.RetentionState != SceneChunkRetentionState.Generic)
+      || (current.ContentKey == prior.ContentKey
+        && ((current.RetentionState != SceneChunkRetentionState.Generic
+            && prior.RetentionState != SceneChunkRetentionState.Generic)
+          || ExactGenericChunkContent(index, priorIndex, prior)))
+  }
+
   private func ExactChunkTopology(index int32, prior VulkanSceneChunkIdentity) bool {
     let current = frame.Chunks[index]
     let currentExactLeaf = current.RetentionState != SceneChunkRetentionState.Generic
@@ -657,7 +689,7 @@ internal partial class VulkanSceneCompiler {
       && current.ResourceCount == prior.ProofResourceCount
   }
 
-  private func ExactGenericChunkContent(index int32,
+  private func ExactGenericChunkContent(index int32, priorIndex int32,
     prior VulkanSceneChunkIdentity) bool{
       let current = frame.Chunks[index]
       if current.RetentionState != SceneChunkRetentionState.Generic
@@ -673,8 +705,8 @@ internal partial class VulkanSceneCompiler {
       let resources = proofs.Resources
       let cachedTextSegments = proofs.CachedTextSegments
       let cachedImages = proofs.CachedImages
-      let textProof = proofs.TextProofs[index]
-      let imageProof = proofs.ImageProofs[index]
+      let textProof = proofs.TextProofs[priorIndex]
+      let imageProof = proofs.ImageProofs[priorIndex]
       if textProof.HasText {
         if textProof.CachedTextSegmentStart < 0
           || textProof.CachedTextSegmentCount < 0

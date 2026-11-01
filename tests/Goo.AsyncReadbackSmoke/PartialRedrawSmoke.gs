@@ -504,6 +504,61 @@ func PartialRedrawLayerCell() PartialLayerCell {
   return PartialLayerCell(control, glass, generator)
 }
 
+class PartialStructureCell : Cell {
+  internal var Step int32
+  internal var Mode int32
+  internal let Scroll ElementHandle = ElementHandle{}
+
+  override func Build() Blob {
+    let first = Container{
+      Key: "first", Position: PositionType.Absolute,
+      Left: Step >= 4 ? 34 : 4, Top: 8, Width: 40, Height: 30,
+      BackgroundColor: Color.Rgb(220, 60, 40),
+    }
+    let second = Container{
+      Key: "second", Position: PositionType.Absolute,
+      Left: 24, Top: 18, Width: 40, Height: 30,
+      BackgroundColor: Color.Rgb(40, 180, 220),
+    }
+    let region = Container{
+      Position: PositionType.Absolute, Left: 20, Top: 20, Width: 100, Height: 70,
+      Overflow: Mode == 4 ? Overflow.Scroll : (Mode == 1 ? Overflow.Hidden : Overflow.Visible),
+      BorderRadius: Mode == 1 ? 12 : 0, Opacity: Mode == 2 ? 0.6 : 1.0,
+      Handle: Scroll,
+    }
+    region.Add(Step >= 3 ? second : first)
+    if Step == 1 {
+      region.Add(Container{
+        Key: "added", Position: PositionType.Absolute,
+        Left: 54, Top: 14, Width: 40, Height: 24,
+        BackgroundColor: Color.Rgb(220, 200, 40),
+      })
+    }
+    region.Add(Step >= 3 ? first : second)
+    if Mode == 4 {
+      region.Add(Container{
+        Key: "extent", Position: PositionType.Absolute,
+        Left: 4, Top: 150, Width: 20, Height: 20, BackgroundColor: Color.White,
+      })
+    }
+    let root = Container() {
+      .Width: Percent(100), .Height: Percent(100), .BackgroundColor: Color.Rgb(12, 20, 32),
+      region,
+      Container{
+        Position: PositionType.Absolute, Left: 300, Top: 130,
+        Width: 40, Height: 30, BackgroundColor: Color.White,
+      },
+    }
+    if Mode == 3 {
+      root.Add(Container{
+        Position: PositionType.Absolute, Left: 16, Top: 16, Width: 112, Height: 80,
+        BorderRadius: 12, BackdropBlur: 4,
+      })
+    }
+    return root
+  }
+}
+
 func PartialRedrawRegions(width int32, height int32) []VulkanDamageRegion {
   let regions = List[VulkanDamageRegion]()
   let columns = 6
@@ -613,7 +668,11 @@ func PartialRedrawScene(name string, root Cell, steps int32, advance Action) int
       WindowReadbackTestFixture.Pump(window, 0.0)
       let changed = PartialRedrawSettledCapture(window, metrics)
       var damage VulkanDamageRegion
-      if !WindowReadbackTestFixture.ScenePartialDamageSince(window, applied, out damage) {
+      let partial = WindowReadbackTestFixture.ScenePartialDamageSince(window, applied, out damage)
+      Console.WriteLine("partial-redraw-damage: scene=" + name + " step=" + step.ToString()
+        + " full=" + (!partial).ToString() + " damage=" + PartialRedrawRegionText(damage)
+        + " area=" + (damage.Width * damage.Height).ToString())
+      if !partial {
         failures++
         Console.WriteLine("partial-redraw-full: scene=" + name + " step=" + step.ToString())
       } else {
@@ -654,6 +713,14 @@ func RunPartialRedrawSmoke() {
   font.Register()
   var failures int32 = 0
   try {
+    for mode in 0 ... 5 {
+      let structure = PartialStructureCell{ Mode: mode }
+      failures = failures + PartialRedrawScene("structure-" + mode.ToString(), structure, 4, () -> {
+        structure.Step++
+        if mode == 4 && structure.Step == 4 { structure.Scroll.JumpTo(0.0, 20.0) }
+        structure.Rebuild()
+      })
+    }
     let plain = PartialPlainCell{}
     failures = failures + PartialRedrawScene("plain", plain, 4, () -> {
       plain.Step++
@@ -691,5 +758,5 @@ func RunPartialRedrawSmoke() {
     font.Dispose()
   }
   Require(failures == 0, "Partial redraw proof failed in " + failures.ToString() + " cases")
-  Console.WriteLine("partial-redraw: scenes=7 pixels=identical")
+  Console.WriteLine("partial-redraw: scenes=12 pixels=identical")
 }
