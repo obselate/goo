@@ -42,6 +42,30 @@ class DevToolsCliEndToEndTests {
         Assert.DoesNotContain(pipeName, stale.StandardOutput, StringComparison.Ordinal)
     }
 
+    @Theory
+    @InlineData("x")
+    @InlineData("é")
+    async func DiscoverySkipsOversizedEndpointAndDoctorReportsDirectoryFix(character string) {
+        if OperatingSystem.IsWindows() { return }
+        using let directory = TemporaryDirectory.Create()
+        let pipeName = Path.Combine(directory.Path, string.Concat(Enumerable.Repeat(character, 108)))
+        await WriteDescriptorAsync(directory.Path, pipeName, "goo.devtools/1")
+        let path = Path.Combine(directory.Path, "goo-test.json")
+        let descriptor = JsonNode.Parse(await File.ReadAllTextAsync(path))!!.AsObject()
+        descriptor["sessionId"] = Guid.NewGuid().ToString("N")
+        await File.WriteAllTextAsync(path, descriptor.ToJsonString())
+        let listed = await RunCliAsync(directory.Path, "list", "--json")
+        Assert.Equal(0, listed.ExitCode)
+        Assert.DoesNotContain(pipeName, listed.StandardOutput, StringComparison.Ordinal)
+        let doctor = await RunCliAsync(
+            directory.Path, "doctor", "--project", "tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj"
+        )
+        Assert.Equal(0, doctor.ExitCode)
+        Assert.Contains(pipeName, doctor.StandardOutput, StringComparison.Ordinal)
+        Assert.Contains("GOO_DEVTOOLS_DIR", doctor.StandardOutput, StringComparison.Ordinal)
+        Assert.Contains("XDG_RUNTIME_DIR", doctor.StandardOutput, StringComparison.Ordinal)
+    }
+
     @Fact
     async func PackageRejectsUnsupportedTargetsWithStructuredError() {
         using let directory = TemporaryDirectory.Create()
