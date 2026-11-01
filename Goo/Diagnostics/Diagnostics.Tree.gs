@@ -77,9 +77,14 @@ internal class DiagnosticTreeState {
     previousSelectedId = 0
   }
 
+  internal func AdvanceSequence() int64 {
+    revisionNumber = revisionNumber == Int64.MaxValue ? 1 : revisionNumber + 1
+    return revisionNumber
+  }
+
   internal func Capture(root Node?, windowId string, hovered Node?, selected Node?,
     semantics AccessibilityManager? = nil) DiagnosticSnapshot {
-    revisionNumber = revisionNumber == Int64.MaxValue ? 1 : revisionNumber + 1
+    AdvanceSequence()
     let current Dictionary[int64, DiagnosticNodeSnapshot] = Dictionary[int64, DiagnosticNodeSnapshot]()
     let added = List[DiagnosticNodeSnapshot]()
     let updated = List[DiagnosticNodeSnapshot]()

@@ -11,6 +11,14 @@ public partial class Window {
   shared {
     internal func ProfileWindows(recorder FrameRecorder, exceptWindowId string) { scheduler.ProfileWindows(recorder, exceptWindowId) }
   }
+  internal func PostDiagnostics(action Action) {
+    Post(() -> {
+      let profiling = profiler.Active
+      let start = profiling ? profiler.Start() : FrameProfilePoint{}
+      try { action() }
+      finally { if profiling { profiler.Record(FrameProfileStage.Diagnostics, start) } }
+    })
+  }
   internal func SampleProfile(recorder FrameRecorder, force bool = false, includeShared bool = true) {
     profiler.Sink?.Sample(recorder, force, includeShared)
   }
@@ -42,7 +50,7 @@ public partial class Window {
 internal enum FrameProfileStage {
   Frame; Events; Input; Tree; Motion; Reconcile; Build; Diff; StyleResolve;
   Transitions; Layout; InputTree;
-  Render; TargetBegin; Paint; CanvasFlush; TargetFlush; Present; Virtualization; CapWait; Count
+  Render; TargetBegin; Paint; CanvasFlush; TargetFlush; Present; Virtualization; CapWait; Diagnostics; Count
 }
 
 internal data struct FrameProfilePoint {
@@ -358,6 +366,7 @@ internal class FrameProfiler {
     case FrameProfileStage.Present: "present"
     case FrameProfileStage.Virtualization: "virtualization"
     case FrameProfileStage.CapWait: "cap_wait"
+    case FrameProfileStage.Diagnostics: "diagnostics"
     default: ""
   }
 

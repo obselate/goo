@@ -94,7 +94,15 @@ internal class DevToolsInputFixtures {
       let action = find(session, "action")
       let entry = find(session, "entry")
       if action == 0 || entry == 0 { return false }
-      send(session, "{\"event\":\"click\",\"nodeId\":" + action.ToString() + "}")
+      let before = session.CaptureSnapshot().Sequence
+      using let response = JsonDocument.Parse(send(session, "{\"event\":\"click\",\"nodeId\":" + action.ToString() + "}"))
+      let acknowledged = response.RootElement.GetProperty("sequence").GetInt64()
+      if acknowledged <= before { return false }
+      let settled = session.CaptureSnapshot()
+      if settled.Sequence <= acknowledged { return false }
+      var updated = false
+      for node in settled.Updated { if node.Content == "Count 1" { updated = true } }
+      if !updated { return false }
       if root.Clicks != 1 { return false }
       guard let tree = window.Tree else { return false }
       if tree.Children[0].Children[0].Content != "Count 1" { return false }
@@ -104,8 +112,9 @@ internal class DevToolsInputFixtures {
       send(session, "{\"event\":\"key.down\",\"gestureId\":\"key-gesture\",\"key\":\"Backspace\"}")
       send(session, "{\"event\":\"key.up\",\"gestureId\":\"key-gesture\",\"key\":\"Backspace\"}")
       if root.Value != "hell" { return false }
-      root.Show = false
-      root.Rebuild()
+      root.Backspace = () -> { root.Show = false }
+      send(session, "{\"event\":\"key.down\",\"gestureId\":\"remove-gesture\",\"key\":\"Backspace\"}")
+      send(session, "{\"event\":\"key.up\",\"gestureId\":\"remove-gesture\",\"key\":\"Backspace\"}")
       var stale = false
       try { send(session, "{\"event\":\"click\",\"nodeId\":" + action.ToString() + "}") }
       catch (_ KeyNotFoundException) { stale = true }

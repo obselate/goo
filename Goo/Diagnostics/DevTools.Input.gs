@@ -117,11 +117,12 @@ internal partial class DevToolsSession {
           }
         } else { throw ArgumentException("Unknown input event: " + eventName) }
       owner.UpdateTree(0.0)
-      let settled = CaptureSnapshot(true)
+      pending = true
+      let revision = identity.AdvanceSequence()
       settleInputGesture(gesture)
       let active = inputGestureId != nil
       return "{\"command\":\"input\",\"applied\":true,\"sequence\":"
-      +settled.Sequence.ToString(CultureInfo.InvariantCulture)
+      +revision.ToString(CultureInfo.InvariantCulture)
       +",\"gestureId\":" + (if let current = inputGestureId { DiagnosticJson.Quote(current) } else { "null" })
       +",\"gestureActive\":" + (active ? "true" : "false")
       +",\"leaseMs\":" + (active ? InputGestureLeaseMs.ToString(CultureInfo.InvariantCulture) : "0") + "}"
