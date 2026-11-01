@@ -122,20 +122,21 @@ find "$work/src/wayland-protocols" -type f -name '*.xml' \
 "$cmake" --install "$work/build" --strip
 LD_LIBRARY_PATH="$work/install/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_popup_handlers.py" "$work/src" "$work/install/lib/libSDL3.so"
 
-install -D -m 0644 "$(readlink -f "$work/install/lib/libSDL3.so")" "$output"
-if [[ -n "$static_output" ]]; then
-  install -D -m 0644 "$work/install/lib/libSDL3.a" "$static_output"
-fi
+candidate="$(readlink -f "$work/install/lib/libSDL3.so")"
 for symbol in Goo_ShowPortalFileDialog Goo_CancelFileDialog Goo_GetDataTransferCapabilities Goo_StartDataDrag Goo_CancelDataDrag Goo_SetDataDropCallback Goo_ReceiveDataDrop Goo_FinishDataDrop Goo_SetForeignParent Goo_ConfigurePopup; do
-  if ! readelf --dyn-syms --wide "$output" | grep " $symbol@@" >/dev/null; then
+  if ! readelf --dyn-syms --wide "$candidate" | grep " $symbol@@" >/dev/null; then
     printf 'libSDL3.so is missing the chooser bridge export: %s\n' "$symbol" >&2
     exit 1
   fi
 done
-max_glibc="$(readelf --version-info "$output" | grep -o 'GLIBC_[0-9.]*' | sort -Vu | tail -1 | cut -d_ -f2)"
+max_glibc="$(readelf --version-info "$candidate" | grep -o 'GLIBC_[0-9.]*' | sort -Vu | tail -1 | cut -d_ -f2)"
 if [[ "$(printf '%s\n' 2.27 "$max_glibc" | sort -V | tail -1)" != "2.27" ]]; then
   printf 'libSDL3.so requires glibc %s; maximum allowed is 2.27\n' "$max_glibc" >&2
   exit 1
+fi
+install -D -m 0644 "$candidate" "$output"
+if [[ -n "$static_output" ]]; then
+  install -D -m 0644 "$work/install/lib/libSDL3.a" "$static_output"
 fi
 printf 'Built %s (%s bytes, GLIBC <= %s)\n' \
   "$output" "$(stat -c %s "$output")" "$max_glibc"

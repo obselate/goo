@@ -21,6 +21,11 @@ if [[ ${GOO_HEADLESS_PRIVATE_BUS:-} != 1 ]]; then
     trap - EXIT INT TERM
     kill -- "-$session_pid" 2>/dev/null || true
     wait "$session_pid" 2>/dev/null || true
+    for _ in $(seq 1 50); do
+      if ! kill -0 -- "-$session_pid" 2>/dev/null; then break; fi
+      sleep 0.1
+    done
+    kill -KILL -- "-$session_pid" 2>/dev/null || true
     if (( status != 0 )); then cat "$session/compositor.log" 2>/dev/null || true; fi
     rm -rf -- "$session"
     exit "$status"
