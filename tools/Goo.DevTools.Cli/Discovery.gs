@@ -4,6 +4,7 @@ import System
 import System.Collections.Generic
 import System.Diagnostics
 import System.IO
+import System.IO.Pipes
 import System.Linq
 import System.Text.Json
 
@@ -35,6 +36,24 @@ internal data class DiscoveryDescriptor(
 
     prop IsProcessAlive bool {
         get {
+            if Metadata.TryGetProperty("sessionId", out var sessionId) && sessionId.ValueKind == JsonValueKind.String {
+                try {
+                    using let client = NamedPipeClientStream(
+                        ".",
+                        Pipe,
+                        PipeDirection.InOut,
+                        PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly
+                    )
+                    client.Connect(100)
+                    return true
+                } catch (IOException) {
+                    return false
+                } catch (TimeoutException) {
+                    return false
+                } catch (UnauthorizedAccessException) {
+                    return false
+                }
+            }
             if ProcessId <= 0 {
                 return true
             }

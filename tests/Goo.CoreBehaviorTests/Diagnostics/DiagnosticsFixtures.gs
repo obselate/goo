@@ -2,9 +2,35 @@ package Goo
 
 import System
 import System.IO
+import System.IO.Pipes
 import System.Text.Json
+import System.Threading
 
 internal class DiagnosticsFixtures {
+  func IdlePipeConnectionKeepsSnapshotAvailableContract() bool {
+    let window = Window{Root: DiagnosticsOverrideCell{}, Width: 200, Height: 100}
+    window.UpdateTree()
+    using let session = window.AttachDiagnostics()
+    using let client = NamedPipeClientStream(".", session.Endpoint.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous)
+    client.Connect(5000)
+    using let reader = StreamReader(client, leaveOpen: true)
+    using let writer = StreamWriter(client, leaveOpen: true){AutoFlush = true, NewLine = "\n"}
+    if reader.ReadLine() == nil { return false }
+    Thread.Sleep(31000)
+    writer.WriteLine("{\"type\":\"request\",\"id\":\"idle\",\"command\":\"snapshot\",\"payload\":{\"full\":true}}")
+    let response = reader.ReadLineAsync()
+    let deadline = Environment.TickCount64 + 5000
+    while !response.IsCompleted && Environment.TickCount64 < deadline {
+      window.drainPostedActions()
+      Thread.Sleep(1)
+    }
+    if !response.IsCompleted { return false }
+    let line = response.GetAwaiter().GetResult()
+    if line == nil { return false }
+    using let document = JsonDocument.Parse(line)
+    return document.RootElement.GetProperty("ok").GetBoolean() && line.Contains("inherited", StringComparison.Ordinal)
+  }
+
   func PerPumpWorkCountersContract() bool {
     guard let recorder = FrameRecorder.Start(Guid.NewGuid(), FrameRecorder.DefaultBufferBytes) else {
       throw InvalidOperationException("A profiler trace is already active")

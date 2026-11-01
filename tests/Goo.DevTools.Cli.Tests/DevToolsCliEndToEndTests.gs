@@ -12,10 +12,36 @@ import System.IO.Pipes
 import System.Linq
 import System.Text
 import System.Text.Json
+import System.Text.Json.Nodes
 import System.Threading.Tasks
 import Xunit
 
 class DevToolsCliEndToEndTests {
+    @Fact
+    async func SessionDiscoveryChecksEndpointsInsteadOfNamespaceProcessIds() {
+        using let directory = TemporaryDirectory.Create()
+        let pipeName = "goo-namespace-${Guid.NewGuid():N}"
+        let path = Path.Combine(directory.Path, "goo-test.json")
+        await WriteDescriptorAsync(directory.Path, pipeName, "goo.devtools/1", processId: Int32.MaxValue)
+        let descriptor = JsonNode.Parse(await File.ReadAllTextAsync(path))!!.AsObject()
+        descriptor["sessionId"] = Guid.NewGuid().ToString("N")
+        await File.WriteAllTextAsync(path, descriptor.ToJsonString())
+        using let server = NamedPipeServerStream(
+            pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous
+        )
+        let listed = RunCliAsync(directory.Path, "list", "--pid", Int32.MaxValue.ToString(), "--json")
+        await server.WaitForConnectionAsync().WaitAsync(TimeSpan.FromSeconds(5))
+        let result = await listed
+        Assert.Equal(0, result.ExitCode)
+        Assert.Contains(pipeName, result.StandardOutput, StringComparison.Ordinal)
+        server.Dispose()
+        descriptor["pid"] = Environment.ProcessId
+        await File.WriteAllTextAsync(path, descriptor.ToJsonString())
+        let stale = await RunCliAsync(directory.Path, "list", "--pid", Environment.ProcessId.ToString(), "--json")
+        Assert.Equal(0, stale.ExitCode)
+        Assert.DoesNotContain(pipeName, stale.StandardOutput, StringComparison.Ordinal)
+    }
+
     @Fact
     async func PackageRejectsUnsupportedTargetsWithStructuredError() {
         using let directory = TemporaryDirectory.Create()

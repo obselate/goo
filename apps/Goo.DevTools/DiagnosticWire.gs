@@ -1506,7 +1506,7 @@ class DiagnosticEndpointDiscovery {
                     for path in Directory.EnumerateFiles(directory, "*.json", SearchOption.TopDirectoryOnly) {
                         let endpoint = Read(path)
                         if let actual = endpoint {
-                            if !Alive(actual.ProcessId) {
+                            if !Alive(actual.PipeName) {
                                 continue
                             }
                             var duplicate = false
@@ -1596,16 +1596,21 @@ class DiagnosticEndpointDiscovery {
             }
         }
 
-        private func Alive(pid int32) bool {
-            if pid <= 0 {
-                return true
-            }
+        private func Alive(pipe string) bool {
             try {
-                using let process = Process.GetProcessById(pid)
-                return !process.HasExited
-            } catch (_ ArgumentException) {
+                using let client = NamedPipeClientStream(
+                    ".",
+                    pipe,
+                    PipeDirection.InOut,
+                    PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly
+                )
+                client.Connect(100)
+                return true
+            } catch (_ IOException) {
                 return false
-            } catch (_ InvalidOperationException) {
+            } catch (_ TimeoutException) {
+                return false
+            } catch (_ UnauthorizedAccessException) {
                 return false
             }
         }

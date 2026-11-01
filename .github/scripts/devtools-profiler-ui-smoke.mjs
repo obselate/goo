@@ -37,7 +37,7 @@ async function faultProxy(pipe, command) {
     const state = {pipe: `goo-profiler-fault-${process.pid}-${command}`, snapshots: 0, rejected: false, disconnected: false};
     let faultId;
     const server = createServer(client => {
-        const target = connect(path.join(tmpdir(), 'CoreFxPipe_' + pipe));
+        const target = connect(pipe);
         target.pipe(client);
         createInterface({input: client}).on('line', line => {
             const request = JSON.parse(line.trim());

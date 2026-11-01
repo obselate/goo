@@ -9,19 +9,21 @@ import System.Threading
 internal class DiagnosticEndpointDiscovery {
   shared {
     private let gate object = Object()
+    private let processToken string = Guid.NewGuid().ToString("N")
     private var nextWindowId int64
 
     internal func Create(window Window) DiagnosticEndpoint {
       let processId = Environment.ProcessId
       let processName = Process.GetCurrentProcess().ProcessName
       let protocol = "goo.devtools/1"
-      let root = runtimeRoot()
+      let root = Path.GetFullPath(runtimeRoot())
       let created = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture)
       let ordinal = Interlocked.Increment(&nextWindowId)
-      let suffix = processId.ToString(CultureInfo.InvariantCulture) + "-"
+      let suffix = processId.ToString(CultureInfo.InvariantCulture) + "-" + processToken + "-"
       +ordinal.ToString(CultureInfo.InvariantCulture)
       let descriptorPath = Path.Combine(root, "goo-" + suffix + ".json")
-      let pipeName = "goo-" + suffix
+      let name = "goo-" + suffix
+      let pipeName = if OperatingSystem.IsWindows() { name } else { Path.Combine(root, name) }
       let windowId = window.ProfileWindowId
       let sessionId = Guid.NewGuid().ToString("N")
       let endpoint = DiagnosticEndpoint(processId, processName, protocol, 1, "named-pipe",
@@ -65,6 +67,7 @@ internal class DiagnosticEndpointDiscovery {
       +",\"version\":" + endpoint.Version.ToString(CultureInfo.InvariantCulture)
       +",\"transport\":" + DiagnosticJson.Quote(endpoint.Transport)
       +",\"pipe\":" + DiagnosticJson.Quote(endpoint.PipeName)
+      +",\"sessionId\":" + DiagnosticJson.Quote(endpoint.SessionId)
       +",\"createdUtc\":" + DiagnosticJson.Quote(endpoint.CreatedUtc)
       +",\"startedAt\":" + DiagnosticJson.Quote(endpoint.CreatedUtc)
       +",\"windows\":[{\"id\":" + DiagnosticJson.Quote(endpoint.WindowId)
