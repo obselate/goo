@@ -434,8 +434,12 @@ internal partial class TextInput {
 
   private func sanitize(value string) string {
     let sb = StringBuilder()
+    var separator = false
     for c in value {
+      if c == '\r' || c == '\n' || c == '\t' { separator = true }
       if c >= 32 && c != 127 {
+        if separator && sb.Length > 0 { sb.Append(' ') }
+        separator = false
         sb.Append(c)
       }
     }
