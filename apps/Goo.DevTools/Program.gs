@@ -1,32 +1,119 @@
 package GooDevTools
 
 import Goo
+import Goo.DevTools.Cli
 import Goo.Widgets
 import Goo.Widgets.Layout
 import System
-import System.Collections.Generic
+import System.Diagnostics
+import System.Globalization
 import System.IO
+import System.Linq
+import System.Threading
+import System.Threading.Tasks
 
-func Main() {
+func Main() int32 {
+    try {
+        let arguments = Environment.GetCommandLineArgs()[1 ..]
+        let commandLine = CommandLine.Parse(
+            if arguments.Length > 0 && arguments[0] == "--version" {
+                arguments
+            } else {
+                []string{"inspector"}.Concat(arguments).ToArray()
+            }
+        )
+        if commandLine.Has("version") {
+            Console.WriteLine("0.26.1")
+            return 0
+        }
+        if commandLine.Has("help") {
+            Console.WriteLine(CommandLine.Help("inspector"))
+            return 0
+        }
+        let sample = Environment.GetEnvironmentVariable("GOO_DEVTOOLS_SAMPLE") == "1"
+        var selected DiscoveryDescriptor? = nil
+        let pidText = commandLine.Get("pid")
+        var pid int32? = nil
+        if pidText != nil {
+            if !int32.TryParse(pidText, out var parsed) || parsed <= 0 {
+                throw CliException("--pid must be a positive integer.")
+            }
+            pid = parsed
+        }
+        var seconds = 15.0
+        let wait = commandLine.Get("wait")
+        if wait != nil &&
+            (
+            !float64.TryParse(wait, NumberStyles.Float, CultureInfo.InvariantCulture, out seconds) || !float64.IsFinite(
+                seconds
+            ) ||
+                seconds <= 0 ||
+                seconds > 300
+        ) {
+            throw CliException("--wait must be a positive number of seconds, up to 300.")
+        }
+        let project = commandLine.Get("project") ?? Directory.GetCurrentDirectory()
+        if !Directory.Exists(project) && !File.Exists(project) {
+            throw CliException("Project path does not exist: $project")
+        }
+        let directory = if Directory.Exists(project) {
+            project
+        } else {
+            Path.GetDirectoryName(Path.GetFullPath(project))!!
+        }
+        if !sample {
+            let started = Stopwatch.GetTimestamp()
+            while selected == nil && Stopwatch.GetElapsedTime(started).TotalSeconds < seconds {
+                selected = Discovery.Select(
+                    Discovery.Scan(directory),
+                    pid,
+                    commandLine.Get("pipe"),
+                    commandLine.Get("app"),
+                    commandLine.Get("window"),
+                    commandLine.Has("latest")
+                )
+                if selected == nil {
+                    Thread.Sleep(100)
+                }
+            }
+            if selected == nil {
+                throw CliException(
+                    "No running Goo apps found. Start an app with `goo dev --project path/to/App.gsproj`."
+                )
+            }
+        }
+        return RunWindow(selected, sample)
+    } catch (exception CliException) {
+        Console.Error.WriteLine("goo inspector: ${exception.Message}")
+        return 2
+    }
+}
+
+private func RunWindow(descriptor DiscoveryDescriptor?, sample bool) int32 {
     Window.ConfigureApplication("Goo DevTools", "0.26.1", "io.github.obselate.goo.devtools")
     using let sansRegular = RegisterFont("Vend Sans", "VendSans-VariableFont_wght.ttf", 400)
     using let sansMedium = RegisterFont("Vend Sans", "VendSans-VariableFont_wght.ttf", 500)
     using let sansSemibold = RegisterFont("Vend Sans", "VendSans-VariableFont_wght.ttf", 600)
     using let mono = RegisterFont("JetBrains Mono", "JetBrainsMono-VariableFont_wght.ttf", 400)
-    let sample = Environment.GetEnvironmentVariable("GOO_DEVTOOLS_SAMPLE") == "1"
-    || HasArgument("--sample")
-    let endpoints = DiagnosticEndpointDiscovery.Scan(Directory.GetCurrentDirectory())
-    let requestedPipe = ArgumentValue("--pipe")
-    let requestedPid = ArgumentValue("--pid")
-    let selectedEndpoint = SelectEndpoint(endpoints, requestedPipe, requestedPid)
     let transport = if sample {
         DiagnosticTransport(SampleDiagnosticTransport{})
-    } else if let endpoint = selectedEndpoint {
-        DiagnosticTransport(DiagnosticPipeTransport(endpoint))
-    } else if requestedPipe != "" {
-        DiagnosticTransport(DiagnosticPipeTransport(DirectEndpoint(requestedPipe, requestedPid)))
     } else {
-        DiagnosticTransport(DiagnosticDisconnectedTransport{})
+        let endpoint = descriptor ?? throw CliException("No running Goo app was selected.")
+        DiagnosticTransport(
+            DiagnosticPipeTransport(
+                DiagnosticEndpoint{
+                    ProcessId: endpoint.ProcessId,
+                    ProcessName: endpoint.ProcessName,
+                    PipeName: endpoint.Pipe,
+                    Protocol: DiagnosticProtocolVersion{Major: 1, Minor: 0},
+                    Transport: endpoint.Transport,
+                    DescriptorPath: endpoint.DescriptorPath,
+                    ApplicationName: endpoint.ApplicationName ?? "",
+                    WindowTitle: endpoint.WindowTitle ?? "",
+                    StartedAt: endpoint.StartedAt?.ToString("O") ?? ""
+                }
+            )
+        )
     }
     let session = DiagnosticSession(transport, sample)
     let root = DevToolsCell(session)
@@ -46,11 +133,10 @@ func Main() {
     WindowChrome.ReplaceTitlebar(window)
     Theme.Attach(window, Theme.Ink)
     root.AttachWindow(window)
-    if sample || selectedEndpoint != nil || requestedPipe != "" {
-        session.Connect()
-        session.Pump()
-    }
+    session.Connect()
+    session.Pump()
     window.Run()
+    return 0
 }
 
 private func RegisterFont(family string, file string, weight int32) FontSource {
@@ -64,74 +150,4 @@ private func RegisterFont(family string, file string, weight int32) FontSource {
     )
     font.Register()
     return font
-}
-
-private func HasArgument(value string) bool {
-    for argument in Environment.GetCommandLineArgs() {
-        if argument == value || argument == value + "=1" {
-            return true
-        }
-    }
-    return false
-}
-
-private func ArgumentValue(name string) string {
-    let arguments = Environment.GetCommandLineArgs()
-    var index int32
-    while index < arguments.Length {
-        if arguments[index] == name && index + 1 < arguments.Length {
-            return arguments[index + 1]
-        }
-        index = index + 1
-    }
-    return ""
-}
-
-private func SelectEndpoint(endpoints List[DiagnosticEndpoint], pipe string, pidText string) DiagnosticEndpoint? {
-    var pid int32
-    Int32.TryParse(pidText, out pid)
-    var selected DiagnosticEndpoint?
-    for endpoint in endpoints {
-        if pipe != "" && endpoint.PipeName != pipe {
-            continue
-        }
-        if pidText != "" && endpoint.ProcessId != pid {
-            continue
-        }
-        var shouldSelect = selected == nil
-        if let current = selected {
-            shouldSelect = IsNewer(endpoint.StartedAt, current.StartedAt)
-        }
-        if shouldSelect {
-            selected = endpoint
-        }
-    }
-    return selected
-}
-
-private func IsNewer(candidate string, current string) bool {
-    if candidate == "" {
-        return false
-    }
-    return if current == "" {
-        true
-    } else {
-        String.Compare(candidate, current, StringComparison.Ordinal) > 0
-    }
-}
-
-private func DirectEndpoint(pipe string, pidText string) DiagnosticEndpoint {
-    var pid int32
-    Int32.TryParse(pidText, out pid)
-    return DiagnosticEndpoint{
-        ProcessId: pid,
-        ProcessName: "Attached target",
-        PipeName: pipe,
-        Protocol: DiagnosticProtocolVersion{Major: 1, Minor: 0},
-        Transport: "named-pipe",
-        DescriptorPath: "",
-        ApplicationName: "",
-        WindowTitle: "",
-        StartedAt: "",
-    }
 }

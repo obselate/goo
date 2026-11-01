@@ -18,6 +18,30 @@ import Xunit
 
 class DevToolsCliEndToEndTests {
     @Fact
+    async func CommandHelpUsesTheParserOptions() {
+        using let directory = TemporaryDirectory.Create()
+        let explicitHelp = await RunCliAsync(directory.Path, "help", "input")
+        let optionHelp = await RunCliAsync(directory.Path, "input", "--help")
+        Assert.Equal(0, explicitHelp.ExitCode)
+        Assert.Equal(explicitHelp.StandardOutput, optionHelp.StandardOutput)
+        Assert.Contains("--node-id", explicitHelp.StandardOutput)
+        Assert.DoesNotContain("--configuration", explicitHelp.StandardOutput)
+        Assert.Equal(0, (await RunCliAsync(directory.Path, "-h")).ExitCode)
+    }
+
+    @Theory
+    @InlineData("input", "invalid", "Valid events:")
+    @InlineData("capture", "--format=invalid", "--format must")
+    @InlineData("input", "click", "require --target")
+    async func InvalidArgumentsFailBeforeDiscovery(command string, argument string, message string) {
+        using let directory = TemporaryDirectory.Create()
+        let result = await RunCliAsync(directory.Path, command, argument, "--wait", "300", "--json")
+        Assert.Equal(2, result.ExitCode)
+        Assert.Empty(result.StandardError)
+        Assert.Contains(message, result.StandardOutput)
+    }
+
+    @Fact
     async func SessionDiscoveryChecksEndpointsInsteadOfNamespaceProcessIds() {
         using let directory = TemporaryDirectory.Create()
         let pipeName = "goo-namespace-${Guid.NewGuid():N}"
@@ -27,7 +51,11 @@ class DevToolsCliEndToEndTests {
         descriptor["sessionId"] = Guid.NewGuid().ToString("N")
         await File.WriteAllTextAsync(path, descriptor.ToJsonString())
         using let server = NamedPipeServerStream(
-            pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous
+            pipeName,
+            PipeDirection.InOut,
+            1,
+            PipeTransmissionMode.Byte,
+            PipeOptions.Asynchronous
         )
         let listed = RunCliAsync(directory.Path, "list", "--pid", Int32.MaxValue.ToString(), "--json")
         await server.WaitForConnectionAsync().WaitAsync(TimeSpan.FromSeconds(5))
@@ -79,8 +107,8 @@ class DevToolsCliEndToEndTests {
             "--json"
         )
         Assert.Equal(2, result.ExitCode)
-        Assert.Empty(result.StandardOutput)
-        using let error = JsonDocument.Parse(result.StandardError)
+        Assert.Empty(result.StandardError)
+        using let error = JsonDocument.Parse(result.StandardOutput)
         Assert.Equal("unsupported-target", error.RootElement.GetProperty("error").GetProperty("code").GetString())
     }
 
@@ -138,7 +166,7 @@ exit 0
             "input",
             "pointer.down",
             "--latest",
-            "--node",
+            "--node-id",
             "42",
             "--offset-x",
             "3.5",
@@ -193,11 +221,7 @@ exit 0
             } else {
                 "does not permit input"
             },
-            if enabled {
-                result.StandardOutput
-            } else {
-                result.StandardError
-            },
+            result.StandardOutput,
             StringComparison.Ordinal
         )
         if enabled {
@@ -268,7 +292,7 @@ exit 0
         await writer.WriteLineAsync(ServerHello(windowId: "window-other"))
         let result = await cliTask
         Assert.Equal(2, result.ExitCode)
-        Assert.Contains("descriptor PID/window identity", result.StandardError, StringComparison.Ordinal)
+        Assert.Contains("descriptor PID/window identity", result.StandardOutput, StringComparison.Ordinal)
     }
 
     @Fact
@@ -406,17 +430,7 @@ exit 0
             PipeTransmissionMode.Byte,
             PipeOptions.Asynchronous
         )
-        let cliTask = RunCliAsync(
-            directory.Path,
-            "attach",
-            "--latest",
-            "--once",
-            "--json",
-            "--payload",
-            "{\"full\":true}",
-            "--wait",
-            "5"
-        )
+        let cliTask = RunCliAsync(directory.Path, "snapshot", "--latest", "--json", "--wait", "5")
         await server.WaitForConnectionAsync().WaitAsync(TimeSpan.FromSeconds(5))
         using let reader = StreamReader(server, leaveOpen: true)
         using let writer = StreamWriter(server, leaveOpen: true){AutoFlush = true, NewLine = "\n"}
@@ -517,7 +531,7 @@ exit 0
         let result = await cliTask
         Assert.Equal(exitCode, result.ExitCode)
         if !supported {
-            Assert.Contains("No request was sent", result.StandardError, StringComparison.Ordinal)
+            Assert.Contains("No request was sent", result.StandardOutput, StringComparison.Ordinal)
             Assert.Null(await reader.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5)))
         }
     }
@@ -622,7 +636,7 @@ exit 0
         )
         let result = await RunCliAsync(directory.Path, "attach", "--pid", processId.ToString(), "--wait", "30")
         Assert.Equal(2, result.ExitCode)
-        Assert.Contains("More than one live Goo endpoint matches", result.StandardError, StringComparison.Ordinal)
+        Assert.Contains("More than one running Goo app matches", result.StandardError, StringComparison.Ordinal)
     }
 
     @Fact
@@ -776,10 +790,6 @@ exit 0
             "Goo.DevTools"
         )
         Assert.Contains(releaseExecutable, candidates)
-        Assert.DoesNotContain(
-            candidates,
-            (item string) -> item.Contains(Path.Combine("tools", "Goo.DevTools.App"), StringComparison.Ordinal)
-        )
         using let metadata = JsonDocument.Parse("{}")
         let descriptor = DiscoveryDescriptor(
             "descriptor.json",
@@ -793,11 +803,8 @@ exit 0
             nil,
             metadata.RootElement.Clone()
         )
-        let start = InspectorLauncher.CreateStartInfo("goo-devtools", descriptor, true)
-        Assert.Equal(
-            Collection[string]{"--attach", "--pipe", "goo-1234-1", "--pid", "1234", "--focus"},
-            start.ArgumentList
-        )
+        let start = InspectorLauncher.CreateStartInfo("Goo.DevTools", descriptor)
+        Assert.Equal(Collection[string]{"--pipe", "goo-1234-1", "--pid", "1234"}, start.ArgumentList)
     }
 
     @Fact
@@ -908,6 +915,7 @@ exit 0
         let child = Path.Combine(directory.Path, "child.sh")
         await File.WriteAllTextAsync(child, (`#!/bin/sh
 printf 'input=%s\n' "$GOO_DEVTOOLS_INPUT"
+printf 'environment=%s,%s\n' "$FIRST" "$SECOND"
 printf 'arg=%s\n' "$@"
 touch ` + "$marker" + `
 `))
@@ -916,7 +924,14 @@ touch ` + "$marker" + `
             ["GOO_DEVTOOLS_DIR"] = directory.Path,
             ["GOO_DEVTOOLS_INPUT"] = "1"
         }
-        for invalid in[]string{"--input=false", "--unknown", "--wait=NaN", "--wait=Infinity", "--watch --no-watch"} {
+        for invalid in[]string{
+            "--input=false",
+            "--unknown",
+            "--wait=NaN",
+            "--wait=Infinity",
+            "--watch",
+            "--configuration Release"
+        } {
             let options = invalid.Split(' ')
             let rejected = await RunProcessAsync(
                 "dotnet",
@@ -938,6 +953,10 @@ touch ` + "$marker" + `
                 Path.Combine(AppContext.BaseDirectory, "Goo.DevTools.Cli.dll"),
                 "dev",
                 "--no-watch",
+                "--env",
+                "FIRST=one",
+                "--env",
+                "SECOND=two",
                 "--",
                 child,
                 "--input=false",
@@ -948,6 +967,7 @@ touch ` + "$marker" + `
         Assert.Equal(0, forwarded.ExitCode)
         Assert.Contains("arg=--input=false", forwarded.StandardOutput, StringComparison.Ordinal)
         Assert.Contains("arg=--unknown=child", forwarded.StandardOutput, StringComparison.Ordinal)
+        Assert.Contains("environment=one,two", forwarded.StandardOutput, StringComparison.Ordinal)
     }
 
     @Fact
@@ -1112,8 +1132,8 @@ wait
         }
 
         private async func ReadLineAsync(reader StreamReader) string ->
-            await reader.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5)) ??
-                throw InvalidOperationException("The protocol server closed before returning a line.")
+        await reader.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5)) ??
+            throw InvalidOperationException("The protocol server closed before returning a line.")
 
         private func IsRunning(processId int32) bool {
             let path = "/proc/$processId/stat"
@@ -1157,14 +1177,14 @@ wait
         }
 
         private async func RunCliAsync(descriptorDirectory string, arguments ...string) ProcessResult ->
-            await RunProcessAsync(
-                "dotnet",
-                []string{Path.Combine(AppContext.BaseDirectory, "Goo.DevTools.Cli.dll"), ...arguments},
-                Dictionary[string, string]{["GOO_DEVTOOLS_DIR"] = descriptorDirectory}
-            )
+        await RunProcessAsync(
+            "dotnet",
+            []string{Path.Combine(AppContext.BaseDirectory, "Goo.DevTools.Cli.dll"), ...arguments},
+            Dictionary[string, string]{["GOO_DEVTOOLS_DIR"] = descriptorDirectory}
+        )
 
         private async func RunProcessAsync(fileName string, arguments ...string) ProcessResult ->
-            await RunProcessAsync(fileName, arguments, nil)
+        await RunProcessAsync(fileName, arguments, nil)
 
         private async func RunProcessAsync(
             fileName string,

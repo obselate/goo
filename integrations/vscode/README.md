@@ -6,7 +6,6 @@ Install the CLI first:
 
 ```sh
 dotnet tool install --global Goo.DevTools --version 0.26.1
-dotnet tool install --global Goo.DevTools.App --version 0.26.1
 ```
 
 Then package the extension from the checkout:
@@ -20,7 +19,7 @@ For local development, open `integrations/vscode` in VS Code and press F5 to lau
 
 Commands:
 
-- Goo: Start with DevTools starts `goo dev --watch` directly in a terminal without a shell.
+- Goo: Start with DevTools starts `goo dev` directly in a terminal without a shell.
 - Goo: Attach to Latest Window streams JSON protocol events.
 - Goo: Open Inspector launches the configured standalone inspector.
 - Goo: Capture Screenshot writes a PNG selected in the save dialog.

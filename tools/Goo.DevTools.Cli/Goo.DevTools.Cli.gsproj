@@ -27,6 +27,8 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Goo.PluginMcp/Goo.PluginMcp.gsproj" />
+    <Compile Include="../../Goo/Input/Key.gs" Link="Input/Key.gs" />
+    <ProjectReference Include="../../apps/Goo.DevTools/Goo.DevTools.gsproj" ReferenceOutputAssembly="false" />
     <None Update="README.md" Pack="true" PackagePath="/" />
     <None Include="$(MSBuildProjectDirectory)/../../LICENSE" Pack="true" PackagePath="/" />
     <None Include="../../.github/scripts/stage-linux-x64.sh" Link="Packaging/stage-linux-x64.sh" CopyToOutputDirectory="PreserveNewest" />
@@ -34,4 +36,15 @@
     <None Update="Packaging/*.sh" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Packaging/*.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <Target Name="BundleInspector" AfterTargets="Build">
+    <ItemGroup>
+      <InspectorFiles Include="../../apps/Goo.DevTools/bin/$(Configuration)/$(TargetFramework)/**/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(InspectorFiles)" DestinationFiles="@(InspectorFiles->'$(OutputPath)inspector/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="PackInspector" BeforeTargets="_GetPackageFiles">
+    <ItemGroup>
+      <None Include="$(OutputPath)inspector/**/*" Pack="true" PackagePath="tools/$(TargetFramework)/any/inspector/%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+  </Target>
 </Project>

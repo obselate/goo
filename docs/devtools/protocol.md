@@ -105,14 +105,14 @@ Errors use `input-disabled`, `invalid-input`, `stale-target`, `target-not-action
 ```sh
 goo dev --input --no-watch --project App.gsproj
 goo input click --pid 1234 --window "window-1234-1" --target TARGET_HANDLE
-goo input click --pid 1234 --window "window-1234-1" --node 42
+goo input click --pid 1234 --window "window-1234-1" --node-id 42
 goo input text --pid 1234 --window "Main" --text "hello"
 goo input key.down --pid 1234 --window "Main" --key Backspace
 goo input key.up --pid 1234 --window "Main" --key Backspace --gesture TOKEN
 goo input pointer.down --pid 1234 --window "Main" --x 200 --y 60
 goo input pointer.move --pid 1234 --window "Main" --x 280 --y 60 --gesture TOKEN
 goo input pointer.cancel --pid 1234 --window "Main" --gesture TOKEN
-goo attach --pid 1234 --window "Main" --once --json --payload '{"full":true}'
+goo snapshot --pid 1234 --window "Main" --json
 ```
 
 The CLI exits successfully only after a positive acknowledgement, requires the advertised capability, and uses the same explicit PID/window selection rules as capture. Add `--json` to preserve the complete response.

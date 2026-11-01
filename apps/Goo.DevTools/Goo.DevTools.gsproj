@@ -3,33 +3,25 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <SelfContained>false</SelfContained>
-    <PackAsTool>true</PackAsTool>
-    <ToolCommandName>goo-devtools</ToolCommandName>
     <RootNamespace>GooDevTools</RootNamespace>
     <AssemblyName>Goo.DevTools</AssemblyName>
-    <PackageId>Goo.DevTools.App</PackageId>
     <Version>$(GooReleaseVersion)</Version>
-    <Authors>Xaz</Authors>
-    <Description>Standalone local inspector for Goo applications.</Description>
-    <PackageTags>goo;gsharp;devtools;inspector;diagnostics</PackageTags>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageProjectUrl>https://github.com/obselate/goo</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <IsPackable>true</IsPackable>
+    <IsPackable>false</IsPackable>
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../tools/Goo.DevTools.Cli/CommandLine.gs" Link="Cli/CommandLine.gs" />
+    <Compile Include="../../tools/Goo.DevTools.Cli/Discovery.gs" Link="Cli/Discovery.gs" />
+    <Content Include="../../Goo/Runtime/Vulkan/linux-x64/*.so;../../Goo/Runtime/Vulkan/win-x64/*.dll" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+    <Content Include="$(GooLinuxSdlPath)" Link="libSDL3.so" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" Condition="'$(GooLinuxSdlPath)' != ''" />
+    <Content Include="$(GooWindowsSdlPath)" Link="SDL3.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" Condition="'$(GooWindowsSdlPath)' != ''" />
+    <Content Include="$(GooMacOsArm64NativeRoot)/*.dylib" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" Condition="'$(GooMacOsArm64NativeRoot)' != ''" />
     <Content Include="Assets/Fonts/*" Link="Fonts/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="../../tests/Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf" Link="Fonts/VendSans-VariableFont_wght.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="../../tests/Goo.VulkanProof/Assets/Text/VendSans-OFL.txt" Link="Fonts/VendSans-OFL.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <ProjectReference Include="../../Goo/Goo.gsproj" />
     <PackageReference Include="Goo.Widgets" Version="0.16.3" />
-    <None Update="README.md" Pack="true" PackagePath="/" />
-    <None Include="$(MSBuildProjectDirectory)/../../LICENSE" Pack="true" PackagePath="/" />
   </ItemGroup>
   <Import Project="../../Goo/Goo.targets" />
 </Project>

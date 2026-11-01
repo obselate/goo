@@ -8,10 +8,10 @@ import System.Linq
 
 internal shared class InspectorLauncher {
     func Find(projectDirectory string? = nil) string? ->
-        Candidates(projectDirectory).Select(Path.GetFullPath).FirstOrDefault(IsRunnable)
+    Candidates(projectDirectory).Select(Path.GetFullPath).FirstOrDefault(IsRunnable)
 
-    func Launch(executable string, descriptor DiscoveryDescriptor, focus bool) Process? ->
-        Process.Start(CreateStartInfo(executable, descriptor, focus))
+    func Launch(executable string, descriptor DiscoveryDescriptor) Process? ->
+    Process.Start(CreateStartInfo(executable, descriptor))
 
     internal func Candidates(projectDirectory string? = nil) IReadOnlyList[string] {
         let candidates = List[string]()
@@ -19,8 +19,7 @@ internal shared class InspectorLauncher {
         if !string.IsNullOrWhiteSpace(configured) {
             candidates.Add(configured)
         }
-        AddFromPath(candidates, "goo-devtools")
-        AddFromPath(candidates, "goo-devtools.exe")
+        candidates.Add(Path.Combine(AppContext.BaseDirectory, "inspector", "Goo.DevTools.dll"))
         if projectDirectory != nil {
             let root string? = FindRepositoryRoot(projectDirectory)
             if root != nil {
@@ -34,16 +33,10 @@ internal shared class InspectorLauncher {
                 )
             }
         }
-        let local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
-        if !string.IsNullOrWhiteSpace(local) {
-            candidates.Add(Path.Combine(local, "Goo", "DevTools", "goo-devtools"))
-        }
-        candidates.Add(Path.Combine(AppContext.BaseDirectory, "goo-devtools"))
-        candidates.Add(Path.Combine(AppContext.BaseDirectory, "goo-devtools.dll"))
         return candidates
     }
 
-    internal func CreateStartInfo(executable string, descriptor DiscoveryDescriptor, focus bool) ProcessStartInfo {
+    internal func CreateStartInfo(executable string, descriptor DiscoveryDescriptor) ProcessStartInfo {
         let start = ProcessStartInfo{
             FileName: if executable.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) {
                 "dotnet"
@@ -56,14 +49,10 @@ internal shared class InspectorLauncher {
         if executable.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) {
             start.ArgumentList.Add(executable)
         }
-        start.ArgumentList.Add("--attach")
         start.ArgumentList.Add("--pipe")
         start.ArgumentList.Add(descriptor.Pipe)
         start.ArgumentList.Add("--pid")
         start.ArgumentList.Add(descriptor.ProcessId.ToString())
-        if focus {
-            start.ArgumentList.Add("--focus")
-        }
         return start
     }
 
@@ -98,18 +87,6 @@ internal shared class InspectorLauncher {
             return false
         } catch (UnauthorizedAccessException) {
             return false
-        }
-    }
-
-    private func AddFromPath(candidates List[string], name string) {
-        let path string? = Environment
-            .GetEnvironmentVariable("PATH")
-            ?.Split(Path.PathSeparator)
-            .Where((item string) -> !string.IsNullOrWhiteSpace(item))
-            .Select((item string) -> Path.Combine(item, name))
-            .FirstOrDefault(IsRunnable)
-        if path != nil {
-            candidates.Add(path)
         }
     }
 }

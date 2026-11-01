@@ -169,16 +169,21 @@ internal shared class Discovery {
         latest bool
     ) DiscoveryDescriptor? {
         let matches = Matching(descriptors, processId, pipe, application, window)
-        return if matches.Count == 0 {
-            default(DiscoveryDescriptor?)
-        } else {
-            (
-                if latest || matches.Count == 1 {
-                    matches[0]
-                } else {
-                    default(DiscoveryDescriptor?)
-                }
+        if matches.Count > 1 && !latest {
+            let candidates = string.Join(
+                Environment.NewLine,
+                matches.Select(
+                    item -> "  ${item.DisplayName} pid=${item.ProcessId} window=${item.WindowId} title=${item.WindowTitle} pipe=${item.Pipe}"
+                )
             )
+            throw CliException(
+                "More than one running Goo app matches. Use --window, --pipe, or --latest.${Environment.NewLine}$candidates"
+            )
+        }
+        return if matches.Count == 0 {
+            nil
+        } else {
+            matches[0]
         }
     }
 
@@ -200,10 +205,7 @@ internal shared class Discovery {
         }
         if !string.IsNullOrWhiteSpace(application) {
             filtered = filtered.Where(
-                (item DiscoveryDescriptor) -> item.DisplayName.Contains(
-                    application,
-                    StringComparison.OrdinalIgnoreCase
-                )
+                (item DiscoveryDescriptor) -> item.DisplayName.Contains(application, StringComparison.OrdinalIgnoreCase)
             )
         }
         if !string.IsNullOrWhiteSpace(window) {
@@ -253,7 +255,7 @@ internal shared class Discovery {
             for directory in RuntimeDirectories(projectDirectory) {
                 message += "  $directory${Environment.NewLine}"
             }
-            message += "Start the app with `goo dev --watch --inspector -- <command>` or set GOO_DEVTOOLS_DIR to the runtime descriptor directory." +
+            message += "Start the app with `goo dev --project path/to/App.gsproj` or set GOO_DEVTOOLS_DIR to the runtime descriptor directory." +
                 Environment.NewLine
         }
         return message.TrimEnd()

@@ -1,78 +1,39 @@
-# Developing Goo DevTools
-
-For installation and everyday use, see the [DevTools guide](README.md).
-This page covers source builds and the inspector's implementation.
-
-## Source builds
-
-Follow the repository's [source setup](../../CONTRIBUTING.md#source-setup).
-Run commands below from the repository root.
-
-The CLI can run directly from source:
+# Develop Goo DevTools
 
 ```sh
-dotnet run --project tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj -- doctor
+dotnet run --project tools/Goo.Repo -- check devtools
+dotnet run --project tools/Goo.DevTools.Cli -c Release -- dev --project MyApp.gsproj --input --inspector
 ```
 
-To create its local tool package:
+The CLI build includes the inspector. `Goo.DevTools` is the only tool package.
+
+## Run the inspector from source
 
 ```sh
-dotnet pack tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj -c Release -o artifacts/devtools
+dotnet run --project apps/Goo.DevTools -c Release -- --project MyApp.gsproj
 ```
 
-The graphical inspector is a Goo application. Build the framework first:
+The source app accepts the same target selection flags as `goo inspector`. `--help` and `--version` exit before creating a window. Unknown arguments fail before UI startup.
+
+For fixture data, set `GOO_DEVTOOLS_SAMPLE=1` in the inspector process environment. No target is needed in sample mode.
+
+## Verify changes
 
 ```sh
-dotnet run --project tools/Goo.Repo -- doctor
-dotnet run --project tools/Goo.Repo -- build
-dotnet run --project apps/Goo.DevTools/Goo.DevTools.gsproj -c Release
+dotnet run --project tools/Goo.Repo -- check devtools
+dotnet run --project tools/Goo.Repo -- check lint
 ```
 
-For fixture data without a running target, append `-- --sample` to the source
-launch command, run `goo-devtools --sample`, or set `GOO_DEVTOOLS_SAMPLE=1`.
-Without this option, an inspector with no live endpoint shows a disconnected
-target.
+Run GUI checks in a private headless compositor. See [contributing](../../CONTRIBUTING.md). Do not run input tests on the user's desktop.
 
-The inspector references Goo through a project reference. Its tool package
-includes the resolved managed and platform runtime assets. The CLI has no Goo
-runtime dependency. Package versions are managed by the repository release
-version configuration.
+## Source map
 
-## Discovery and connection
+| Path | Responsibility |
+| --- | --- |
+| `tools/Goo.DevTools.Cli/CommandLine.gs` | Command options, parser, help and generated reference |
+| `tools/Goo.DevTools.Cli/Discovery.gs` | Endpoint discovery and target selection, shared with the inspector |
+| `tools/Goo.DevTools.Cli/CliApplication.gs` | Launch, snapshot, capture, input and protocol commands |
+| `apps/Goo.DevTools/Program.gs` | Inspector argument validation and startup |
+| `apps/Goo.DevTools/DiagnosticWire.gs` | Inspector protocol transport |
 
-Each diagnostics-enabled window publishes a JSON endpoint descriptor. Discovery
-checks `GOO_DEVTOOLS_DIR`, the project's `.goo/devtools` directory, XDG runtime
-directories, and per-user local application data (`Goo/DevTools`).
-The descriptor schema and messages are documented in the [local protocol](protocol.md).
-Without `XDG_RUNTIME_DIR`, the runtime uses `Environment.SpecialFolder.LocalApplicationData`
-on every OS. `GOO_DEVTOOLS_DIR` and XDG runtime paths keep their existing precedence.
-
-The CLI finds the inspector through `GOO_DEVTOOLS_INSPECTOR`, `goo-devtools` on
-`PATH`, or repository build output.
-
-`apps/Goo.DevTools/DiagnosticWire.gs` handles endpoint discovery and the pipe
-connection. Reads run on a background worker. The inspector sends a
-`goo.devtools/1` hello, requests snapshots, and polls snapshots at 100 ms
-intervals. Queued messages are applied by the UI. The session accepts full and
-delta snapshots, selection and hover updates, logs, events, and capture
-responses. Unknown fields and capability names are ignored.
-
-`apps/Goo.DevTools/DiagnosticsProtocol.gs` defines the diagnostic models and
-transport interface, including disconnected and sample transports.
-
-UI actions send `inspect.enter`, `inspect.exit`, `select`, `clear`, `override`,
-`reset`, and `capture` requests. Log and event requests depend on the capabilities
-advertised by the target. Capture polling continues until the target returns
-`pending: false`.
-
-## Hot reload integration
-
-Goo handles the standard .NET metadata-update callbacks. `UpdateApplication`
-queues rebuilds for all mounted Cells on each open window's UI thread, including
-direct Cell wrappers and typed Cells whose inputs have not changed. Existing
-Cells and native windows remain mounted. Diagnostics are optional.
-
-This requires a G# runtime that dispatches `MetadataUpdateHandlerAttribute`
-callbacks after applying deltas. The
-[local integration test](../../tests/Goo.HotReloadSmoke/README.md) explains how
-to build and select a compatible runtime and records the supported edit scope.
+`GOO_DEVTOOLS_DIR` selects a runtime descriptor directory. `GOO_DEVTOOLS_INSPECTOR` can select a custom inspector executable or DLL. The CLI uses its bundled inspector by default.

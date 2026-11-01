@@ -122,7 +122,7 @@ function launchDev(args) {
 async function start() {
   try {
     const project = await projectPath();
-    const args = ['dev', '--watch', '--project', project];
+    const args = ['dev', '--project', project];
     if (configuration().get('launchInspector', true)) {
       args.push('--inspector');
     }
@@ -169,7 +169,7 @@ function detach() {
 async function openInspector() {
   try {
     output.show(true);
-    const code = await runCli(['attach', '--latest', '--inspector', '--once', '--json'], writeLine);
+    const code = await runCli(['inspector', '--latest'], writeLine);
     if (code !== 0) {
       vscode.window.showErrorMessage('Goo DevTools could not launch the inspector. Run Goo: Doctor for details.');
     }
@@ -221,7 +221,7 @@ async function openSource() {
 async function restartHotReload() {
   try {
     const project = await projectPath();
-    launchDev(['dev', '--watch', '--project', project]);
+    launchDev(['dev', '--project', project]);
     status.text = '$(sync~spin) Goo restarting';
   } catch (error) {
     showError(error);

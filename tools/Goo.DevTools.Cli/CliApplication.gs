@@ -54,7 +54,7 @@ internal shared class CliApplication {
 
     private data class LaunchSpec(FileName string, Arguments IReadOnlyList[string]) : IEquatable[LaunchSpec] { }
 
-    private data class DoctorCheck(Name string, Detail string, Ok bool) : IEquatable[DoctorCheck] { }
+    private data class DoctorCheck(Name string, Detail string, Ok bool, Fix string = "") : IEquatable[DoctorCheck] { }
 
     private const Version string = "0.26.1"
 
@@ -100,7 +100,7 @@ internal shared class CliApplication {
         try {
             let commandLine = CommandLine.Parse(args)
             if commandLine.Has("help") {
-                return PrintHelp()
+                return PrintHelp(commandLine)
             }
             if commandLine.Has("version") {
                 if commandLine.Has("json") {
@@ -124,13 +124,20 @@ internal shared class CliApplication {
                 }
                 return 0
             }
+            ValidateArguments(commandLine)
             return switch commandLine.Command {
-                case "help": PrintHelp()
-                case "mcp": await Goo.PluginMcp.McpHost.RunAsync(
-                    commandLine.Get("plugin-root") ?? throw CliException("Select the plugin directory with --plugin-root."),
+                case "help": PrintHelp(commandLine)
+                case "mcp": await Goo
+                    .PluginMcp
+                    .McpHost
+                    .RunAsync(
+                    commandLine.Get("plugin-root") ??
+                        throw CliException("Select the plugin directory with --plugin-root."),
                     commandLine.Has("verify")
                 )
                 case "dev": await RunDevAsync(commandLine)
+                case "snapshot": await RunAttachAsync(commandLine)
+                case "inspector": await RunInspectorAsync(commandLine)
                 case "attach": await RunAttachAsync(commandLine)
                 case "doctor": await RunDoctorAsync(commandLine)
                 case "package": await PackageApplication.RunAsync(
@@ -138,7 +145,7 @@ internal shared class CliApplication {
                     ResolveProject(commandLine.Get("project")) ??
                         throw CliException("Select an application project with --project.")
                 )
-                case "list": RunList(commandLine)
+                case "list": await RunList(commandLine)
                 case "capture": await RunCaptureAsync(commandLine)
                 case "input": await RunInputAsync(commandLine)
                 default: throw CliException("Unknown command '${commandLine.Command}'. Run `goo help` for usage.")
@@ -165,16 +172,154 @@ internal shared class CliApplication {
         }
     }
 
-    private func RunList(commandLine CommandLine) int32 {
+    private func ValidateArguments(commandLine CommandLine) {
+        ParseOptionalInt(commandLine.Get("pid"), "pid")
+        ParseWait(commandLine.Get("wait"))
+        for value in commandLine.Environment {
+            let separator = value.IndexOf('=')
+            if separator <= 0 || value.IndexOf('\0') >= 0 {
+                throw CliException("--env expects NAME=VALUE.")
+            }
+        }
+        if commandLine.Command == "dev" && commandLine.Has("wait") && !commandLine.Has("inspector") {
+            throw CliException("--wait requires --inspector on goo dev.")
+        }
+        if commandLine.Command == "capture" {
+            let format = commandLine.Get("format") ?? "png"
+            if format != "png" && format != "rgba8" {
+                throw CliException("--format must be png or rgba8.")
+            }
+            if commandLine.Has("json") && (!commandLine.Has("output") || commandLine.Get("output") == "-") {
+                throw CliException("--json requires --output PATH for capture. Binary output cannot be JSON.")
+            }
+        }
+        if commandLine.Command == "attach" {
+            ParsePayload(commandLine.Get("payload"))
+            if commandLine.Has("require-capabilities") && commandLine.Get("require-capabilities")!!.Split(
+                ',',
+                StringSplitOptions.TrimEntries
+            )
+                .Any(string.IsNullOrEmpty) {
+                throw CliException("--require-capabilities needs a comma-separated list of capability names.")
+            }
+        }
+        if commandLine.Command != "input" {
+            return
+        }
+        if commandLine
+            .Positionals
+            .Count != 1 ||
+            !CommandLine
+            .InputEvents
+            .Split(", ")
+            .Contains(commandLine.Positionals[0]) {
+            throw CliException("Choose one input event. Valid events: ${CommandLine.InputEvents}.")
+        }
+        let eventName = commandLine.Positionals[0]
+        let pointer = eventName is "click" or "pointer.move" or "pointer.down" or "pointer.up" or "wheel"
+        let targeted = commandLine.Has("target") || commandLine.Has("node-id")
+        for name in[]string{"x", "y", "offset-x", "offset-y", "button", "delta-x", "delta-y"} {
+            if commandLine.Has(name) && !pointer {
+                throw CliException("--$name applies only to pointer and wheel events.")
+            }
+        }
+        if targeted && (commandLine.Has("x") || commandLine.Has("y")) {
+            throw CliException("Use a target or --x and --y, not both.")
+        }
+        if commandLine.Has("x") != commandLine.Has("y") {
+            throw CliException("--x and --y must be used together.")
+        }
+        if (commandLine.Has("offset-x") || commandLine.Has("offset-y")) && !targeted {
+            throw CliException("--offset-x and --offset-y require --target or --node-id.")
+        }
+        if pointer && !targeted && !commandLine.Has("x") {
+            throw CliException("Pointer and wheel events require --target, --node-id, or --x and --y.")
+        }
+        if commandLine.Has("button") &&
+            (
+            !(eventName is "click" or "pointer.down" or "pointer.up") ||
+                ![]string{"Primary", "Secondary", "Middle", "Back", "Forward"}.Contains(
+                commandLine.Get("button"),
+                StringComparer.OrdinalIgnoreCase
+            )
+        ) {
+            throw CliException(
+                "--button must be Primary, Secondary, Middle, Back or Forward for click, pointer.down or pointer.up."
+            )
+        }
+        if (commandLine.Has("delta-x") || commandLine.Has("delta-y")) && eventName != "wheel" {
+            throw CliException("--delta-x and --delta-y apply only to wheel.")
+        }
+        if commandLine.Has("key") != (eventName is "key.down" or "key.up") {
+            throw CliException("--key is required only for key.down and key.up.")
+        }
+        if commandLine.Has("text") != (eventName == "text") {
+            throw CliException("--text is required only for the text event.")
+        }
+        if eventName is "reset" or "pointer.cancel" or "text" {
+            for modifier in[]string{"alt", "ctrl", "shift", "super"} {
+                if commandLine.Has(modifier) {
+                    throw CliException("--$modifier does not apply to $eventName.")
+                }
+            }
+        }
+        if commandLine.Has("key") {
+            let name = commandLine.Get("key")!!
+            var key Goo.Key
+            if !Enum.TryParse[Goo.Key](name, true, out key) || key == Goo.Key.Unknown || !string.Equals(
+                Enum.GetName(typeof(Goo.Key), key),
+                name,
+                StringComparison.OrdinalIgnoreCase
+            ) {
+                throw CliException("Unknown key name: $name.")
+            }
+        }
+        if commandLine.Has("text") && commandLine.Get("text")!!.Length > 16384 {
+            throw CliException("--text is limited to 16384 UTF-16 units per request.")
+        }
+    }
+
+    private async func RunInspectorAsync(commandLine CommandLine) int32 {
         let project = ResolveProject(commandLine.Get("project"))
         let directory = ResolveProjectDirectory(commandLine.Get("project"), project)
-        let targets = Discovery
-            .Matching(
+        let descriptor = await WaitForDescriptorAsync(
+            directory,
+            ParseOptionalInt(commandLine.Get("pid"), "pid"),
+            commandLine,
+            ParseWait(commandLine.Get("wait"))
+        )
+        LaunchInspector(descriptor, directory)
+        return 0
+    }
+
+    private async func RunList(commandLine CommandLine) int32 {
+        let project = ResolveProject(commandLine.Get("project"))
+        let directory = ResolveProjectDirectory(commandLine.Get("project"), project)
+        let timeout = ParseWait(commandLine.Get("wait"))
+        let started = Stopwatch.GetTimestamp()
+        var matches = Discovery.Matching(
             Discovery.Scan(directory),
             ParseOptionalInt(commandLine.Get("pid"), "pid"),
             commandLine.Get("pipe"),
             commandLine.Get("app"),
             commandLine.Get("window")
+        )
+        while matches.Count == 0 && commandLine.Has("wait") && Stopwatch.GetElapsedTime(started) < timeout {
+            await Task.Delay(100)
+            matches = Discovery.Matching(
+                Discovery.Scan(directory),
+                ParseOptionalInt(commandLine.Get("pid"), "pid"),
+                commandLine.Get("pipe"),
+                commandLine.Get("app"),
+                commandLine.Get("window")
+            )
+        }
+        let targets = (
+            if commandLine.Has("latest") {
+                matches.Take(1)
+            } else {
+                matches
+            }
         )
             .Select(
             (item DiscoveryDescriptor) -> AnonymousType7_F72729B4BAF7F0FB(
@@ -191,6 +336,10 @@ internal shared class CliApplication {
         if commandLine.Has("json") {
             Console.WriteLine(JsonSerializer.Serialize(AnonymousType1_FB3AF7D67DFD6DD2(targets)))
         } else {
+            if targets.Length == 0 {
+                Console.WriteLine("No running Goo apps found.")
+                Console.WriteLine("Start an app with `goo dev --project path/to/App.gsproj`.")
+            }
             for target in targets {
                 Console.WriteLine("${target.process} pid=${target.pid} window=${target.window} title=${target.title}")
             }
@@ -200,15 +349,12 @@ internal shared class CliApplication {
 
     private async func RunDevAsync(commandLine CommandLine) int32 {
         let inspectorWait = ParseWait(commandLine.Get("wait"))
-        if commandLine.Has("watch") && commandLine.Has("no-watch") {
-            throw CliException("Use --watch or --no-watch, not both.")
+        if commandLine.Trailing.Count != 0 && commandLine.Has("configuration") {
+            throw CliException("--configuration cannot be used with an explicit child command.")
         }
         let project = ResolveProject(commandLine.Get("project"))
         let projectDirectory = ResolveProjectDirectory(commandLine.Get("project"), project)
-        var watch = !commandLine.Has("no-watch")
-        if commandLine.Has("watch") {
-            watch = true
-        }
+        let watch = !commandLine.Has("no-watch")
         let launch = BuildLaunch(commandLine, project, watch)
         let runtimeDirectory = ResolveRuntimeDirectory(projectDirectory)
         Directory.CreateDirectory(runtimeDirectory)
@@ -244,9 +390,6 @@ internal shared class CliApplication {
         if commandLine.Has("input") {
             startInfo.Environment["GOO_DEVTOOLS_INPUT"] = "1"
         }
-        if commandLine.Has("inspector") || commandLine.Has("focus") {
-            startInfo.Environment["GOO_DEVTOOLS_AUTOSTART"] = "1"
-        }
         ApplyEnvironmentOverrides(startInfo, commandLine)
         using let shutdown = CancellationTokenSource()
         using let terminateRegistration = RegisterShutdownSignal(PosixSignal.SIGTERM, shutdown)
@@ -267,7 +410,7 @@ internal shared class CliApplication {
                 ForwardOutputAsync(process.StandardOutput, false, monitorCancellation.Token),
                 ForwardOutputAsync(process.StandardError, true, monitorCancellation.Token)
             )
-            let inspectorTask = if commandLine.Has("inspector") || commandLine.Has("focus") {
+            let inspectorTask = if commandLine.Has("inspector") {
                 LaunchInspectorWhenReadyAsync(
                     projectDirectory,
                     process.Id,
@@ -275,7 +418,6 @@ internal shared class CliApplication {
                     runtimeDirectory,
                     existingDescriptorPaths,
                     launchStartedAt,
-                    commandLine.Has("focus"),
                     inspectorWait,
                     monitorCancellation.Token
                 )
@@ -311,9 +453,15 @@ internal shared class CliApplication {
     }
 
     private async func RunAttachAsync(commandLine CommandLine) int32 {
-        if !commandLine.Has("once") &&
-            (commandLine.Has("require-capabilities") || commandLine.Has("require-override-property")) {
-            throw CliException("--require-capabilities and --require-override-property require --once.")
+        let once = commandLine.Command == "snapshot" || commandLine.Has("once")
+        if !once &&
+            (
+            commandLine.Has("command") || commandLine.Has("payload") || commandLine.Has("require-capabilities") ||
+                commandLine.Has("require-override-property")
+        ) {
+            throw CliException(
+                "--command, --payload, --require-capabilities and --require-override-property require --once."
+            )
         }
         if commandLine.Has("require-capabilities") && string.IsNullOrWhiteSpace(
             commandLine.Get("require-capabilities")
@@ -348,11 +496,8 @@ internal shared class CliApplication {
         Console.Error.WriteLine(
             "[goo] attaching to ${descriptor.DisplayName} (pid ${descriptor.ProcessId}, ${descriptor.Transport}:${descriptor.Pipe})"
         )
-        if commandLine.Has("inspector") || commandLine.Has("focus") {
-            LaunchInspector(descriptor, commandLine.Has("focus"), projectDirectory)
-        }
         using let cancellation = CancellationTokenSource()
-        if commandLine.Has("once") {
+        if once {
             cancellation.CancelAfter(ParseWait(commandLine.Get("wait")))
         }
         let connection = await ConnectAsync(descriptor, cancellation.Token)
@@ -370,14 +515,22 @@ internal shared class CliApplication {
                 commandLine.Get("require-override-property")
             )
             WriteProtocolLine(handshake!!, commandLine.Has("json"))
-            if commandLine.Has("once") {
-                let requestCommand = commandLine.Get("command") ?? "snapshot"
+            if once {
+                let requestCommand = if commandLine.Command == "snapshot" {
+                    "snapshot"
+                } else {
+                    commandLine.Get("command") ?? "snapshot"
+                }
                 let mayHaveApplied = !((requestCommand == "snapshot" || requestCommand == "capture"))
                 var request JsonObject?
                 try {
                     request = await connection.RequestAsync(
                         requestCommand,
-                        ParsePayload(commandLine.Get("payload")),
+                        if commandLine.Command == "snapshot" {
+                            JsonObject(){["full"] = !commandLine.Has("compact")}
+                        } else {
+                            ParsePayload(commandLine.Get("payload"))
+                        },
                         cancellation.Token
                     )
                 } catch (exception Exception) when exception is OperationCanceledException ||
@@ -536,18 +689,6 @@ internal shared class CliApplication {
                 "Usage: goo input <click|pointer.move|pointer.down|pointer.up|pointer.cancel|wheel|key.down|key.up|text|reset> [options]"
             )
         }
-        let project = ResolveProject(commandLine.Get("project"))
-        let projectDirectory = ResolveProjectDirectory(commandLine.Get("project"), project)
-        let processId = ParseOptionalInt(commandLine.Get("pid"), "pid")
-        let descriptor = Discovery.Select(
-            Discovery.Scan(projectDirectory),
-            processId,
-            commandLine.Get("pipe"),
-            commandLine.Get("app"),
-            commandLine.Get("window"),
-            commandLine.Has("latest")
-        ) ??
-            await WaitForDescriptorAsync(projectDirectory, processId, commandLine, ParseWait(commandLine.Get("wait")))
         let eventName = commandLine.Positionals[0]
         if !(
             (
@@ -558,8 +699,8 @@ internal shared class CliApplication {
                     eventName == "wheel"
             )
         ) &&
-            (commandLine.Has("target") || commandLine.Has("node")) {
-            throw CliException("--target and --node apply only to pointer and wheel events.")
+            (commandLine.Has("target") || commandLine.Has("node-id")) {
+            throw CliException("--target and --node-id apply only to pointer and wheel events.")
         }
         var gesture string? = commandLine.Get("gesture")
         if commandLine.Has("gesture") && string.IsNullOrWhiteSpace(gesture) {
@@ -577,8 +718,8 @@ internal shared class CliApplication {
                 payload[name] = commandLine.Get(name) ?? throw CliException("--$name needs a value.")
             }
         }
-        if commandLine.Has("node") && commandLine.Has("target") {
-            throw CliException("Use --target or --node, not both.")
+        if commandLine.Has("node-id") && commandLine.Has("target") {
+            throw CliException("Use --target or --node-id, not both.")
         }
         if commandLine.Has("target") {
             let targetHandle = commandLine.Get("target")
@@ -587,15 +728,15 @@ internal shared class CliApplication {
             }
             payload["target"] = targetHandle
         }
-        if commandLine.Has("node") {
+        if commandLine.Has("node-id") {
             if !int64.TryParse(
-                commandLine.Get("node"),
+                commandLine.Get("node-id"),
                 NumberStyles.None,
                 CultureInfo.InvariantCulture,
                 out var node
             ) ||
                 node <= int64(0) {
-                throw CliException("--node needs a positive node ID from the selected window snapshot.")
+                throw CliException("--node-id needs a positive node ID from the selected window snapshot.")
             }
             payload["nodeId"] = node
         }
@@ -630,6 +771,18 @@ internal shared class CliApplication {
         if payload.ToJsonString().Length > 65536 {
             throw CliException("Input request exceeds the endpoint request limit.")
         }
+        let project = ResolveProject(commandLine.Get("project"))
+        let projectDirectory = ResolveProjectDirectory(commandLine.Get("project"), project)
+        let processId = ParseOptionalInt(commandLine.Get("pid"), "pid")
+        let descriptor = Discovery.Select(
+            Discovery.Scan(projectDirectory),
+            processId,
+            commandLine.Get("pipe"),
+            commandLine.Get("app"),
+            commandLine.Get("window"),
+            commandLine.Has("latest")
+        ) ??
+            await WaitForDescriptorAsync(projectDirectory, processId, commandLine, ParseWait(commandLine.Get("wait")))
         using let timeout = CancellationTokenSource(ParseWait(commandLine.Get("wait")))
         let connection = await ConnectAsync(descriptor, timeout.Token)
         try {
@@ -798,7 +951,7 @@ internal shared class CliApplication {
                     handshake
                 )
             }
-            return WriteCapture(response, commandLine.Get("output"))
+            return WriteCapture(response, commandLine.Get("output"), commandLine.Has("json"))
         } finally {
             await connection.DisposeAsync()
         }
@@ -862,7 +1015,8 @@ internal shared class CliApplication {
                 } else {
                     project
                 },
-                project != nil
+                project != nil,
+                "dotnet new install Goo.Templates --version $Version && dotnet new goo -n MyApp"
             )
         )
         let runtimeDirectories = Discovery.RuntimeDirectories(projectDirectory)
@@ -875,7 +1029,8 @@ internal shared class CliApplication {
                 } else {
                     string.Join(Path.PathSeparator, existingDirectories)
                 },
-                existingDirectories.Length != 0
+                existingDirectories.Length != 0,
+                "goo dev --project \"${project ?? "path/to/App.gsproj"}\""
             )
         )
         checks.Add(
@@ -886,7 +1041,8 @@ internal shared class CliApplication {
                 } else {
                     "${descriptors.Count} descriptor(s) found."
                 },
-                descriptors.Any((item DiscoveryDescriptor) -> item.IsProcessAlive)
+                descriptors.Any((item DiscoveryDescriptor) -> item.IsProcessAlive),
+                "goo dev --project \"${project ?? "path/to/App.gsproj"}\""
             )
         )
         if !OperatingSystem.IsWindows() {
@@ -907,8 +1063,9 @@ internal shared class CliApplication {
         checks.Add(
             DoctorCheck(
                 "inspector",
-                inspector ?? "Not installed. Set GOO_DEVTOOLS_INSPECTOR to the standalone DevTools executable or DLL.",
-                inspector != nil
+                inspector ?? "The bundled inspector is missing.",
+                inspector != nil,
+                "dotnet tool update --global Goo.DevTools --version $Version"
             )
         )
         if commandLine.Has("json") {
@@ -921,6 +1078,9 @@ internal shared class CliApplication {
         } else {
             for check in checks {
                 Console.WriteLine("${(if check.Ok { "ok" } else { "warn" }),-4} ${check.Name}: ${check.Detail}")
+                if !check.Ok && check.Fix != "" {
+                    Console.WriteLine("     Fix: ${check.Fix}")
+                }
             }
             for descriptor in descriptors {
                 Console.WriteLine(
@@ -947,13 +1107,28 @@ internal shared class CliApplication {
             startInfo.ArgumentList.Add("--version")
             using let process Process? = Process.Start(startInfo)
             if process == nil {
-                return DoctorCheck("dotnet", "Could not start dotnet.", false)
+                return DoctorCheck(
+                    "dotnet",
+                    "Could not start dotnet.",
+                    false,
+                    "curl -fsSL https://dot.net/v1/dotnet-install.sh -o dotnet-install.sh && sh dotnet-install.sh --channel 10.0"
+                )
             }
             let output = await process.StandardOutput.ReadToEndAsync()
             await process.WaitForExitAsync()
-            return DoctorCheck("dotnet", output.Trim(), process.ExitCode == 0)
+            return DoctorCheck(
+                "dotnet",
+                output.Trim(),
+                process.ExitCode == 0 && output.Trim().StartsWith("10."),
+                "curl -fsSL https://dot.net/v1/dotnet-install.sh -o dotnet-install.sh && sh dotnet-install.sh --channel 10.0"
+            )
         } catch (exception Exception) when exception is Win32Exception || exception is IOException {
-            return DoctorCheck("dotnet", exception.Message, false)
+            return DoctorCheck(
+                "dotnet",
+                exception.Message,
+                false,
+                "curl -fsSL https://dot.net/v1/dotnet-install.sh -o dotnet-install.sh && sh dotnet-install.sh --channel 10.0"
+            )
         }
     }
 
@@ -1017,7 +1192,6 @@ internal shared class CliApplication {
         runtimeDirectory string,
         existingDescriptorPaths IReadOnlySet[string],
         launchStartedAt DateTimeOffset,
-        focus bool,
         timeout TimeSpan,
         cancellationToken CancellationToken
     ) {
@@ -1037,7 +1211,7 @@ internal shared class CliApplication {
                 existingDescriptorPaths,
                 launchStartedAt
             )
-            LaunchInspector(descriptor, focus, projectDirectory)
+            LaunchInspector(descriptor, projectDirectory)
         } catch (exception CliException) {
             Console.Error.WriteLine("[goo] ${exception.Message}")
         } catch (OperationCanceledException) { }
@@ -1067,18 +1241,6 @@ internal shared class CliApplication {
             )
                 .ToArray()
             let latestSelection = latest || commandLine?.Has("latest") == true
-            let matches = Discovery.Matching(
-                descriptors,
-                processId,
-                commandLine?.Get("pipe"),
-                commandLine?.Get("app"),
-                commandLine?.Get("window")
-            )
-            if matches.Count > 1 && !latestSelection {
-                throw CliException(
-                    "More than one live Goo endpoint matches the selection. Pass --window, --pipe, or --latest."
-                )
-            }
             let descriptor DiscoveryDescriptor? = if commandLine == nil && runtimeDirectory != nil {
                 SelectInspectorDescriptor(
                     descriptors,
@@ -1226,7 +1388,7 @@ internal shared class CliApplication {
         } catch (OperationCanceledException) { }
     }
 
-    private func WriteCapture(response JsonObject, outputPath string?) int32 {
+    private func WriteCapture(response JsonObject, outputPath string?, json bool) int32 {
         let payload = CapturePayload(response)
         let responseType = StringValue(payload["type"]) ?? StringValue(response["type"])
         let ok = BoolValue(response["ok"])
@@ -1260,7 +1422,7 @@ internal shared class CliApplication {
             let height = IntegerValue(payload["height"]) ??
                 throw CliException("The endpoint returned an RGBA capture without a height.")
             let stride = IntegerValue(payload["stride"]) ?? checked(width * 4)
-            return WriteCaptureBytes(PngEncoder.Encode(rgba, width, height, stride), outputPath)
+            return WriteCaptureBytes(PngEncoder.Encode(rgba, width, height, stride), outputPath, json)
         }
         let data string? = StringValue(payload["contentBase64"]) ??
             StringValue(payload["base64"]) ??
@@ -1269,7 +1431,7 @@ internal shared class CliApplication {
             Console.WriteLine(response.ToJsonString(JsonSerializerOptions{WriteIndented: true}))
             return 0
         }
-        return WriteCaptureBytes(DecodeCaptureData(data), outputPath)
+        return WriteCaptureBytes(DecodeCaptureData(data), outputPath, json)
     }
 
     private func DecodeCaptureData(data string)[]uint8 {
@@ -1280,7 +1442,7 @@ internal shared class CliApplication {
         }
     }
 
-    private func WriteCaptureBytes(bytes[]uint8, outputPath string?) int32 {
+    private func WriteCaptureBytes(bytes[]uint8, outputPath string?, json bool) int32 {
         if string.IsNullOrWhiteSpace(outputPath) || outputPath == "-" {
             Console.OpenStandardOutput().Write(bytes)
             return 0
@@ -1296,14 +1458,19 @@ internal shared class CliApplication {
             Directory.CreateDirectory(parent)
         }
         File.WriteAllBytes(fullPath, bytes)
-        Console.WriteLine(fullPath)
+        if json {
+            Console.WriteLine(JsonObject(){["output"] = fullPath, ["bytes"] = bytes.Length}.ToJsonString())
+        } else {
+            Console.WriteLine(fullPath)
+        }
         return 0
     }
 
     private func CapturePayload(response JsonObject) JsonObject -> response["payload"] as JsonObject ?? response
 
     private func IsError(response JsonObject) bool -> BoolValue(response["ok"]) == false ||
-        StringValue(response["type"]) == "error" || response["error"] != nil
+        StringValue(response["type"]) == "error" ||
+        response["error"] != nil
 
     private func DecorateError(response JsonObject, phase string, defaultMayHaveApplied bool, runtimeHello string?) {
         let error = response["error"] as JsonObject ??
@@ -1378,16 +1545,32 @@ internal shared class CliApplication {
         }
     }
 
-    private func IsRgbaFormat(format string?) bool -> format != nil &&
-        format.StartsWith("rgba8", StringComparison.OrdinalIgnoreCase)
+    private func IsRgbaFormat(format string?) bool -> format != nil && format.StartsWith(
+        "rgba8",
+        StringComparison.OrdinalIgnoreCase
+    )
 
-    private func IsPngPath(path string) bool -> string.Equals(Path.GetExtension(path), ".png", StringComparison.OrdinalIgnoreCase)
+    private func IsPngPath(path string) bool -> string.Equals(
+        Path.GetExtension(path),
+        ".png",
+        StringComparison.OrdinalIgnoreCase
+    )
 
-    private func StringValue(node JsonNode?) string? -> if node is JsonValue value &&
-        value.TryGetValue[string](out var text) { text } else { nil }
+    private func StringValue(node JsonNode?) string? -> if node is JsonValue value && value.TryGetValue[string](
+        out var text
+    ) {
+        text
+    } else {
+        nil
+    }
 
-    private func BoolValue(node JsonNode?) bool? -> if node is JsonValue value &&
-        value.TryGetValue[bool](out var result) { result } else { nil }
+    private func BoolValue(node JsonNode?) bool? -> if node is JsonValue value && value.TryGetValue[bool](
+        out var result
+    ) {
+        result
+    } else {
+        nil
+    }
 
     private func IntegerValue(node JsonNode?) int32? {
         if node is not JsonValue value {
@@ -1404,15 +1587,15 @@ internal shared class CliApplication {
         }
     }
 
-    private func LaunchInspector(descriptor DiscoveryDescriptor, focus bool, projectDirectory string) {
+    private func LaunchInspector(descriptor DiscoveryDescriptor, projectDirectory string) {
         let executable string? = InspectorLauncher.Find(projectDirectory)
         if executable == nil {
             throw CliException(
-                "The standalone Goo DevTools app was not found. Build it or set GOO_DEVTOOLS_INSPECTOR to its executable or DLL."
+                "The bundled inspector is missing. Run `dotnet tool update --global Goo.DevTools --version $Version`."
             )
         }
         try {
-            let process Process? = InspectorLauncher.Launch(executable, descriptor, focus)
+            let process Process? = InspectorLauncher.Launch(executable, descriptor)
             if process == nil {
                 throw InvalidOperationException("Process.Start returned no process.")
             }
@@ -1517,15 +1700,10 @@ internal shared class CliApplication {
     }
 
     private func ApplyEnvironmentOverrides(startInfo ProcessStartInfo, commandLine CommandLine) {
-        let value = commandLine.Get("env")
-        if string.IsNullOrWhiteSpace(value) {
-            return
+        for value in commandLine.Environment {
+            let separator = value.IndexOf('=')
+            startInfo.Environment[value[.. separator]] = value[(separator + 1) ..]
         }
-        let separator = value.IndexOf('=')
-        if separator <= 0 {
-            throw CliException("--env expects NAME=VALUE.")
-        }
-        startInfo.Environment[value[.. separator]] = value[(separator + 1) ..]
     }
 
     private func ParsePayload(value string?) JsonObject? {
@@ -1554,10 +1732,10 @@ internal shared class CliApplication {
             return TimeSpan.FromSeconds(15)
         }
         if float64.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds) &&
-            float64.IsFinite(seconds) && seconds > float64(0.0) {
-            return TimeSpan.FromSeconds(Math.Min(seconds, 300.0))
+            float64.IsFinite(seconds) && seconds > 0.0 && seconds <= 300.0 {
+            return TimeSpan.FromSeconds(seconds)
         }
-        throw CliException("--wait must be a positive number of seconds.")
+        throw CliException("--wait must be a positive number of seconds, up to 300.")
     }
 
     private func WriteError(
@@ -1569,7 +1747,7 @@ internal shared class CliApplication {
         runtimeHello string? = nil
     ) {
         if WantsJson(args) {
-            Console.Error.WriteLine(
+            Console.WriteLine(
                 JsonSerializer.Serialize(
                     AnonymousType2_51AC67F57FE22AA3(
                         "error",
@@ -1605,54 +1783,13 @@ internal shared class CliApplication {
         Console.WriteLine(ProtocolConnection.FormatLine(line, json))
     }
 
-    private func PrintHelp() int32 {
-        Console.WriteLine("Goo DevTools CLI 0.26.1")
-        Console.WriteLine()
-        Console.WriteLine("Usage:")
-        Console.WriteLine("  goo dev [options] -- <command> [args]")
-        Console.WriteLine("  goo attach [options]")
-        Console.WriteLine("  goo doctor [--json]")
-        Console.WriteLine("  goo list [--pid PID] [--project PATH] [--json]")
-        Console.WriteLine("  goo capture [options]")
-        Console.WriteLine("  goo mcp --plugin-root PATH [--verify]")
-        Console.WriteLine(
-            "  goo package --target linux|windows|macos|android [--project PATH] [--output PATH] [--json]"
-        )
-        Console.WriteLine(
-            "  goo input <event> [--pid PID --window NAME] [--target HANDLE | --node ID | --x X --y Y] [options]"
-        )
-        Console.WriteLine()
-        Console.WriteLine("Commands:")
-        Console.WriteLine("  dev       Start a Goo project with diagnostics enabled and dotnet watch by default.")
-        Console.WriteLine("  attach    Attach to a live Goo endpoint and stream protocol events.")
-        Console.WriteLine("  doctor    Check the SDK, project, endpoint directory, and inspector installation.")
-        Console.WriteLine("  list      List live endpoints without connecting or selecting a window.")
-        Console.WriteLine("  capture   Request a screenshot from an attached endpoint.")
-        Console.WriteLine("  package   Publish a desktop package or signed Android app bundle.")
-        Console.WriteLine("  input     Send an opted-in pointer, wheel, key, text, click, or reset event.")
-        Console.WriteLine("  mcp       Serve the plugin's stdio MCP tools or verify them against a live starter.")
-        Console.WriteLine()
-        Console.WriteLine("Common options:")
-        Console.WriteLine("  --project PATH       Project file or directory.")
-        Console.WriteLine("  --pid PID            Select one process ID.")
-        Console.WriteLine("  --pipe NAME          Select one pipe or socket endpoint.")
-        Console.WriteLine("  --app NAME           Select by application name.")
-        Console.WriteLine("  --window NAME        Select by stable window ID or window title.")
-        Console.WriteLine("  --latest             Select the newest endpoint.")
-        Console.WriteLine("  --wait SECONDS       Wait for a descriptor, up to 300 seconds.")
-        Console.WriteLine("  --inspector          Launch the standalone inspector when ready.")
-        Console.WriteLine("  --input              Permit agent input in the app launched by dev.")
-        Console.WriteLine("  --gesture TOKEN      Continue or release a held pointer/key gesture.")
-        Console.WriteLine("  --focus              Launch or focus the standalone inspector.")
-        Console.WriteLine("  --json               Keep protocol output as JSON lines.")
-        Console.WriteLine("  JSON errors include code, phase, and mayHaveApplied fields.")
-        Console.WriteLine()
-        Console.WriteLine("Environment:")
-        Console.WriteLine("  GOO_DEVTOOLS_DIR         Runtime descriptor directory override.")
-        Console.WriteLine("  GOO_DEVTOOLS_INSPECTOR   Standalone inspector executable or DLL.")
-        Console.WriteLine(
-            "  GOO_DEVTOOLS_INPUT=1     Permit application input when GOO_DEVTOOLS=1 enables diagnostics."
-        )
+    private func PrintHelp(commandLine CommandLine) int32 {
+        let help = CommandLine.Help(commandLine.Command)
+        if commandLine.Has("json") {
+            Console.WriteLine(JsonObject(){["help"] = help, ["reference"] = CommandLine.Reference()}.ToJsonString())
+        } else {
+            Console.WriteLine(help)
+        }
         return 0
     }
 }
