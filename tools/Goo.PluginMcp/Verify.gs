@@ -124,7 +124,7 @@ shared class Verify {
             JsonNode.DeepEquals(bundled["documents"], Strings(hashes.Select(x -> x.Key).Order(StringComparer.Ordinal))),
             bundled
         )
-        Check(S(provenance, "compilerCommit").Length == 40, provenance)
+        Check(S(provenance, "compilerVersion") == "0.5.26", provenance)
         let search = await Read(client, "cellSearch")
         Check(
             S(search, "mode") == "exact" && JsonNode.DeepEquals(
@@ -229,7 +229,7 @@ shared class Verify {
                 }
                 let trusted = await Read(configured, "starter", args)
                 Check(S(trusted, "lint").StartsWith("dotnet run --project " + linter + " "), trusted)
-                Check(S(trusted, "build") == S(starter, "build") + " -p:GsharpCompilerFullPath=" + compiler, trusted)
+                Check(S(trusted, "build") == S(starter, "build"), trusted)
             }
         } finally {
             await configured.DisposeAsync()

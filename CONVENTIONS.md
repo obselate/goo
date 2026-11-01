@@ -13,7 +13,7 @@ These rules apply to maintained source, tests, examples, templates and repositor
 
 ## Layout and spacing
 
-- Use the upstream formatter pinned by `bootstrap.sh`, not a system formatter.
+- Use the compiler and formatter from the G# SDK declared in `global.json`, not a system formatter.
 - Use four-space indentation and a 120-column budget in formatted source.
 - Keep existing core layout. Do not run a bulk formatter over core source.
 - Put one blank line between type members, including members in a `shared` block. Keep related fields together.

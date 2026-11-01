@@ -15,11 +15,21 @@ internal shared partial class Checks {
     private let Root string = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../.."))
 
     internal func Execute(arguments[]string) {
+        if arguments.Length == 0 || arguments.Any(a -> a == "--help" || a == "-h") {
+            Console.WriteLine("Usage: Goo.RepositoryChecks <command>\n" +
+                "  release --check|--write|--notes\n" +
+                "  onboarding\n" +
+                "  accessibility PACKAGE\n" +
+                "  android APK_OR_AAB\n" +
+                "  text-rebuild RECORDED_JSON REBUILT_JSON")
+            return
+        }
         Require(arguments.Length > 0, "Expected release, onboarding, accessibility, android or text-rebuild")
         let rest = arguments.Skip(1).ToArray()
         if arguments[0] == "release" {
             Release(rest)
         } else if arguments[0] == "onboarding" {
+            Require(rest.Length == 0, "onboarding does not accept arguments")
             Onboarding()
         } else if arguments[0] == "accessibility" {
             Accessibility(rest)

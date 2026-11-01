@@ -92,7 +92,6 @@ internal shared partial class Checks {
     private func SynchronizedFiles(version string) Dictionary[string, string] {
         let result = Dictionary[string, string]()
         let literals = []string{
-            "CONTRIBUTING.md",
             "README.md",
             "docs/nuget-readme.md",
             "apps/Goo.DevTools/DiagnosticWire.gs",

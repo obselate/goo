@@ -32,15 +32,6 @@ jobs:
         with:
           global-json-file: global.json
 
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
-        if: matrix.target != 'native-image' && matrix.target != 'font'
-        with:
-          path: artifacts/gsharp
-          key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
-
-      - name: Build pinned G# tools
-        if: matrix.target != 'native-image' && matrix.target != 'font'
-        run: nice -n 10 ./bootstrap.sh --gsharp-only
 
       - name: Build input target
         run: nice -n 10 dotnet run --project tools/Goo.HostChecks -c Release -- input-build '${{ matrix.target }}'

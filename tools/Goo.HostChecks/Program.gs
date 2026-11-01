@@ -135,8 +135,22 @@ class HostChecks {
         func Main(arguments[]string) int32 {
             Console.CancelKeyPress += Cancel
             try {
+                if arguments.Length == 0 || arguments.Any(a -> a == "--help" || a == "-h") {
+                    Console.WriteLine("Usage: Goo.HostChecks <command>\n" +
+                        "  app-host|desktop|macos|macos-host|placement|wayland PROGRAM OUTPUT\n" +
+                        "  macos-notifications PUBLISH OUTPUT\n" +
+                        "  wayland-notifications PROGRAM OUTPUT\n" +
+                        "  macos-data-transfer APPLICATION OUTPUT\n" +
+                        "  input-build svg|raster|wav|native-image|font")
+                    return 0
+                }
                 Require(arguments.Length >= 1, "expected a host check subcommand")
                 let args = arguments.Skip(1).ToArray()
+                if arguments[0] == "input-build" {
+                    Require(args.Length == 1 && []string{"svg", "raster", "wav", "native-image", "font"}.Contains(args[0]), "expected input-build svg|raster|wav|native-image|font")
+                } else {
+                    Require(args.Length == 2 && args.All(a -> !a.StartsWith("-")), "expected two path arguments")
+                }
                 if arguments[0] == "macos-notifications" {
                     Notifications.MacOs(args)
                 } else if arguments[0] == "wayland-notifications" {

@@ -20,11 +20,17 @@ internal shared partial class ReleaseCheck {
     private let Root string = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../.."))
 
     internal func Execute(arguments[]string) {
+        if arguments.Any(a -> a == "--help" || a == "-h") {
+            Console.WriteLine("Usage: Goo.ReleaseCheck --manifests DIRECTORY --version VERSION\n" +
+                "       Goo.ReleaseCheck --package FILE --symbols FILE --bundle DIRECTORY")
+            return
+        }
         let values = Dictionary[string, string](StringComparer.Ordinal)
         var index = 0
         while index < arguments.Length {
             Require(index + 1 < arguments.Length, "Expected option and path pairs")
-            values[arguments[index]] = arguments[index + 1]
+            Require([]string{"--manifests", "--version", "--package", "--symbols", "--bundle"}.Contains(arguments[index]), "Unknown option: " + arguments[index])
+            Require(values.TryAdd(arguments[index], arguments[index + 1]), "Duplicate option: " + arguments[index])
             index += 2
         }
         if values.ContainsKey("--manifests") {

@@ -1,42 +1,48 @@
 # Releasing Goo
 
-Goo releases use annotated `vX.Y.Z` tags from `main`.
+```sh
+dotnet run --project tools/Goo.Repo -- doctor
+dotnet run --project tools/Goo.Repo -- docs
+dotnet run --project tools/Goo.Repo -- docs --android
+dotnet run --project tools/Goo.Repo -- check metadata
+dotnet run --project tools/Goo.Repo -- pack
+```
+
+Use annotated `vX.Y.Z` tags from `main`. Do not move or reuse a published tag or
+NuGet version.
 
 ## Versioning
 
-Goo remains below 1.0.0 while its public contracts mature.
-
-- Increase `PATCH` for compatible fixes and small feature additions.
-- Increase `MINOR` for substantial feature batches.
-- Do not release 1.0.0 or higher without an explicit change to this policy.
+- Use `PATCH` for compatible fixes and small features.
+- Use `MINOR` for substantial feature batches.
+- Keep versions below 1.0.0 until the versioning policy changes.
 - Use `-name.number` for a prerelease.
 
 ## One-time NuGet setup
 
 1. Create a NuGet.org trusted-publishing policy for the package owner.
-2. Set repository owner `obselate`, repository `goo`, workflow `ci.yml`, and environment `release`.
-3. Set the GitHub repository variable `NUGET_USER` to the NuGet.org profile name.
+2. Set owner `obselate`, repository `goo`, workflow `ci.yml`, environment `release`.
+3. Set repository variable `NUGET_USER` to the NuGet.org profile name.
 
-## Release
+## Release steps
 
-1. Update `GooReleaseVersion` once in `Directory.Build.props`.
-2. Run `dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- release --write` to synchronize the
-   application template, app identities, protocol strings, install commands,
-   and integration metadata.
-3. Add the dated release entry to `CHANGELOG.md`. The tag workflow publishes
-   only this version's entry as the GitHub Release notes.
-   Run `bash .github/scripts/sync-generated-docs.sh` with the Android SDK and Java 21
-   available through `ANDROID_HOME` and `JAVA_HOME`.
-   Commit the generated API docs and plugin reference with the release changes.
-   Run `dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- onboarding`.
-4. Merge the release PR to `main` and require green CI on that merge commit.
-   CI checks generated docs without creating another commit or CI run.
-5. Confirm that the release-candidates and android-package artifacts contain all seven packages,
-   the Linux and macOS arm64 bundles, and that the clean template and DevTools
-   installation steps passed. Confirm that Android native reproducibility and
-   Release APK/AAB payload checks passed.
-6. Tag that release merge commit and push: `git tag -a vX.Y.Z <merge-sha> -m "Goo X.Y.Z"` and `git push origin vX.Y.Z`.
-7. The tag run rebuilds and validates the packages, publishes them to
-   NuGet.org, and creates the GitHub Release.
+1. Update `GooReleaseVersion` in `Directory.Build.props`.
+2. Run `dotnet run --project tools/Goo.RepositoryChecks -c Release -- release --write`
+   to update templates, identities, protocol strings and integration metadata.
+3. Add the dated entry in `CHANGELOG.md`. The tag workflow uses that entry as
+   the GitHub Release notes.
+4. Run the Goo.Repo commands above. Android docs need the installed Android
+   workload, `ANDROID_HOME` and `JAVA_HOME`. Docs commands do not install workloads.
+5. Commit generated docs with source changes, as for every PR.
+6. Merge the release PR. Require green CI on the exact merge commit.
+7. Check the release-candidates and android-package artifacts. Confirm all package,
+   clean consumer, template, DevTools, native rebuild and Android payload gates passed.
+8. Tag the checked merge commit and push it:
 
-Do not move or reuse a published tag or NuGet version.
+   ```sh
+   git tag -a vX.Y.Z <merge-sha> -m "Goo X.Y.Z"
+   git push origin vX.Y.Z
+   ```
+
+The tag run rebuilds and checks packages, publishes to NuGet.org, and creates
+the GitHub Release. Require a green tag run before reporting the release complete.

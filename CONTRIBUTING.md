@@ -2,152 +2,104 @@
 
 Everyone is welcome to contribute to Goo.
 
-## Source setup
-
-Install the .NET 10 SDK and Git. A normal framework build uses the checked-in
-SPIR-V and native HarfBuzz payloads:
-
 ```sh
 git clone https://github.com/obselate/goo.git
 cd goo
-./bootstrap.sh --gsharp-only
-dotnet build Goo/Goo.gsproj -c Release
+dotnet run --project tools/Goo.Repo -- doctor
+dotnet run --project tools/Goo.Repo -- build
+dotnet run --project tools/Goo.Repo -- check --list
+dotnet run --project tools/Goo.Repo -- check core
 ```
 
-On Windows, use `bootstrap.bat --gsharp-only`.
+## Source setup
 
-The G# SDK restores from NuGet through `Gsharp.NET.Sdk`. It is not a separate
-system installation. The bootstrap builds the compiler and formatter required
-by this checkout from upstream commit
-[`e170b286`](https://github.com/DavidObando/gsharp/tree/e170b28640e294924e30adfbbcab0e9da53f7db1).
+Install Git and the .NET 10 SDK selected by `global.json`. The G# SDK restores
+its compiler and formatter from NuGet. No bootstrap or global tool is needed.
+The root `global.json` declares the authoring version. Standalone package
+consumers and template content keep their own SDK pin.
 
-When building the Gallery or a project with `<GooShaderEffect>` items, install
-the platform downloads listed under [custom shaders](README.md#custom-shaders).
-Set `SLANG_SDK` and `VULKAN_SDK` to their SDK roots, or put `slangc` and
-`spirv-val` on `PATH`. Internal shader regeneration also uses the Vulkan SDK's
-`glslc`.
+`doctor` checks desktop prerequisites without changing the machine. Each missing
+piece has a fix command. Android and Gallery shader tools are optional checks.
+`build` uses the checked-in SPIR-V and native text payloads.
 
-Linux Vulkan runs also need a native Wayland session, a Vulkan 1.3 driver, and
-a TrueType or OpenType sans-serif font. The CI dependency list in
-[ci.yml](.github/workflows/ci.yml) is the authoritative Ubuntu 24.04 setup.
-Windows builds have been tested on Windows 11 with current vendor Vulkan
-drivers. A minimum supported Windows version has not yet been established.
+On Linux, `check core` builds the pinned SDL payload if needed. It starts a private
+Wayland session and uses software Vulkan with the validation layer, just like CI.
+It never uses your desktop. Native checks must run on their target operating system.
+Software Vulkan does not measure hardware performance.
+Set `GOO_WAYLAND_COMPOSITOR=kwin` to select KWin for local checks.
 
-For NativeAOT, install the target platform's [.NET NativeAOT
-prerequisites](https://learn.microsoft.com/dotnet/core/deploying/native-aot/).
-NativeAOT publishing must run on the target operating system and must specify
-that RID, for example `-r linux-x64`, `-r win-x64`, or `-r osx-arm64`. Do not
-publish a framework-dependent application without a RID. NativeAOT is the
-preferred desktop release mode. Do not treat trimmed JIT as a validated
-release profile.
+On Linux, set `GOO_BUILD_LOCK` to a lock file path to serialize builds and checks.
+Goo.Repo uses `flock --close` for that lock. Do not wrap it in the same lock.
 
-The Goo package defaults NativeAOT apps to
-`IlcFoldIdenticalMethodBodies=true`. Apps can override this property.
-Identical methods can share addresses and stack-trace names.
-Globalization remains an explicit app setting.
+Gallery builds and custom shader projects also need the pinned Slang and Vulkan
+SDKs. Run `doctor` for the install command. See [custom shaders](README.md#custom-shaders).
+For NativeAOT, install the target platform's
+[prerequisites](https://learn.microsoft.com/dotnet/core/deploying/native-aot/).
+Publish on the target OS with an explicit RID. NativeAOT is the preferred desktop
+release mode. Trimmed JIT is not a qualified release profile.
 
-For Linux x64 NativeAOT, Goo links its packaged SDL3 and HarfBuzz static
-archives into the executable. A release may stage only the executable after
-checking its runtime library dependencies and exercising a window on the
-target Linux baseline. This still requires the system Wayland, Vulkan, and C
-runtime facilities described above.
+The Goo package defaults NativeAOT apps to `IlcFoldIdenticalMethodBodies=true`.
+Apps can override this property. Identical methods can share addresses and
+stack-trace names. Globalization remains an explicit app setting.
 
-Applications that do not read dependency XML documentation at runtime may add
-`-p:PublishReferencesDocumentationFiles=false` to their publish command. The
-verified NativeAOT consumer removed only `Gsharp.Extensions.xml` (51,781 bytes);
-all other staged files and hashes were unchanged. This is optional and is not a
-repository default. Do not replace it with filename-based XML deletion:
-generic staging must preserve arbitrary XML, notices, licenses, globalization
-data, and features.
+Apps that do not read dependency XML docs at runtime can set
+`PublishReferencesDocumentationFiles=false`. This is optional, not a repository
+default. Do not delete XML files by name. Keep notices, licenses and feature data.
 
-See [code conventions](CONVENTIONS.md) for repository rules and native authoring.
-
-## Verification
-
-Run the focused managed checks for ordinary API or behavior changes:
+## Checks
 
 ```sh
-dotnet build tools/Goo.Gslint/Goo.Gslint.gsproj -c Release
-dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
-  --strict --severity GL0001=none --severity GL0005=none --severity GL0006=none Goo tests
-dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
-  --strict --severity GL0005=none --severity GL0006=none apps templates plugins/goo/reference/templates
-dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.gsproj -c Release
-dotnet test tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.gsproj -c Release
+dotnet run --project tools/Goo.Repo -- check gestures
+dotnet run --project tools/Goo.Repo -- check lint
+dotnet run --project tools/Goo.Repo -- docs --check
 ```
 
-Limit formatting fixes to app samples and examples; do not run a bulk formatter
-over core source. Use `--fix` only on the intended files. GL0005 remains a manual review advisory because syntax
-cannot distinguish intentional fail-fast assertions. Public API documentation
-is enforced by `Goo.ApiContractTests`, which covers supplemented documentation
-and avoids treating public test fixtures as product API.
-The API snapshot marks nullable reference types with `?`, including array elements
-and generic arguments. Value types and non-null reference types keep their existing spelling.
+| Command | Work |
+| --- | --- |
+| `doctor` | Read-only prerequisite checks and fix commands |
+| `build` | Release framework build |
+| `check --list` | Named CI lanes |
+| `check <lane>` | The same focused command and environment used by CI |
+| `docs` | Generate desktop API pages and plugin reference |
+| `docs --check` | Generate to a temporary directory and compare without changing tracked files |
+| `docs --android` | Generate Android API pages with an installed Android workload, SDK and Java 21 |
+| `docs --android --check` | Compare Android pages without changing tracked files |
+| `pack` | Build or fetch pinned Linux and Windows SDL inputs, then pack Goo |
 
-Edit the explanatory input, window, tree, layout, and accessibility guides in
-[`tools/Goo.ApiDocs/Guides`](tools/Goo.ApiDocs/Guides). Member descriptions belong
-in source XML comments. Do not commit regenerated `docs/api` pages or
-`plugins/goo/reference` files in PRs, because `main` syncs them after merge.
-For a local preview, run
-`dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release` after a
-Release build; do not edit generated pages directly. The generator validates all member mappings and parses/formats code
-examples before replacing output pages. Compile runnable examples against the
-current package to verify their types and behavior.
+Every command accepts `--help`. `check api` builds Android and runs the full API
+baseline and XML contracts. It needs the Android workload, SDK and Java 21.
+CI also runs platform package and rendering checks. See [tests](tests/README.md).
 
-Vulkan, package, native payload, template, DevTools, and NativeAOT checks are
-environment-specific. The CI workflow provisions the pinned shader tools,
-builds both platform payloads, installs the locally packed template and .NET
-tools, and exercises the clean package consumer. Use that workflow for release
-parity instead of substituting system SDL or unpinned shader tools.
+Limit formatting fixes to the intended files. Do not bulk-format core source.
+GL0005 is a manual review advisory because syntax cannot identify intentional
+fail-fast assertions. See [code conventions](CONVENTIONS.md).
 
-For advisory package-consumer size and runtime measurements, use the isolated
-fixture with an explicit RID, package version, package feed, and new output path:
+For advisory consumer size and runtime measurements, run `Goo.Investigation performance`
+with `--output NEW_DIRECTORY --rid RID --package-version VERSION --package-source FEED`.
+Use `--publish-only` for publish output without a display. Full runs need a private
+Wayland session and Vulkan. Results are advisory, not timing or memory gates.
+
+## Generated documentation
 
 ```sh
-XDG_CACHE_HOME="$(mktemp -d)" .github/scripts/with-headless-wayland.sh \
-  dotnet run --project tools/Goo.Investigation -c Release -- performance \
-  --output /absolute/new/goo-consumer-report \
-  --rid linux-x64 \
-  --package-version 0.26.1 \
-  --package-source /absolute/path/to/package-feed
+dotnet run --project tools/Goo.Repo -- docs
+dotnet run --project tools/Goo.Repo -- docs --check
 ```
 
-Use `--publish-only` when only raw publish, staged runtime, and separate symbol
-artifacts are needed. The full command needs a working display and Vulkan
-driver. Results are advisory and must not become timing or memory gates.
+Commit generated docs with the source change in every PR, including release PRs.
+Do not edit generated pages directly. Desktop docs do not need Android tools and
+never install workloads. Run `docs --android` only when Android API docs change.
 
-The fixture can also run outside the checkout to verify package isolation.
-Record the exact package, feed, SDK, RID, source and asset hashes, and run order.
-Compare timing or memory only when admitted samples report one identical
-framebuffer and display scale. Preserve rejected rows, but do not let them erase
-valid independent distributions or enter a comparison.
-
-Packing `Goo` directly requires explicit compatible SDL paths:
-
-```sh
-dotnet pack Goo/Goo.gsproj -c Release \
-  -p:GooLinuxSdlPath=/absolute/path/to/libSDL3.so \
-  -p:GooWindowsSdlPath=/absolute/path/to/SDL3.dll
-```
-
-The pinned Windows SDL fetch and Linux SDL build are implemented in
-[fetch-sdl-win-x64.sh](.github/scripts/fetch-sdl-win-x64.sh) and
-[build-sdl-linux-x64.sh](.github/scripts/build-sdl-linux-x64.sh).
+Edit guides in `tools/Goo.ApiDocs/Guides`. Write member descriptions in source XML
+comments. The generator checks member mappings and parses and formats code examples.
+Compile runnable examples against the current package to check their behavior.
 
 ## Submitting changes
 
-Please start with an issue and use the template that best fits your request. Goo
-core is deliberately selective about what it contains. An issue lets us agree on
-whether a change belongs in core and what the smallest solution is before code is
-written. Direct pull requests are welcome, but they have a higher chance of being
-declined when the scope has not been discussed.
-
-When submitting a pull request:
-
-- Link the issue.
-- Use the pull request template.
-- Keep the change focused on the agreed scope.
-- Include tests and documentation when behavior or public API changes.
+- Open an issue to agree on scope.
+- Link it in the pull request and use the pull request template.
+- Keep changes focused. Include tests and docs for changed behavior or API.
+- Include generated docs. CI checks them and does not commit them for you.
 
 AI policy:
 

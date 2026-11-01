@@ -44,12 +44,8 @@ Gsharp.NET.Sdk 0.5.26.
 
 ## G# authoring tools
 
-The compiler and canonical formatter are built without source changes from
-[DavidObando/gsharp commit e170b286](https://github.com/DavidObando/gsharp/tree/e170b28640e294924e30adfbbcab0e9da53f7db1).
-`bootstrap.sh` and `bootstrap.bat` build `src/Compiler/Compiler.csproj` and
-`src/Formatting/Gsfmt.Cli/Gsfmt.Cli.csproj` into ignored
-`artifacts/gsharp/` output. `Goo.Gslint` uses the upstream parser and ADR-0179
-formatter assemblies.
+The compiler and canonical formatter come from `Gsharp.NET.Sdk`, declared in
+`global.json`. `Goo.Gslint` uses that SDK's parser and formatter assemblies.
 Copyright (C) GSharp Authors. All rights reserved.
 
 - [G# license](https://github.com/DavidObando/gsharp/blob/e170b28640e294924e30adfbbcab0e9da53f7db1/LICENSE)

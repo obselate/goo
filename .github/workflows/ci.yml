@@ -78,75 +78,31 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Restore pinned G# authoring tools
-        if: needs.changes.outputs.tools == 'true'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: artifacts/gsharp
-          key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
 
-      - name: Build pinned upstream G# authoring tools
-        if: needs.changes.outputs.tools == 'true'
-        run: ./bootstrap.sh --gsharp-only
-
-      - name: Build repo-local G# linter
+      - name: Enforce G# formatting and lint
         if: needs.changes.outputs.lint == 'true'
-        run: |
-          dotnet build tools/Goo.Gslint/Goo.Gslint.gsproj \
-            -c Release -p:TreatWarningsAsErrors=true
-          dotnet artifacts/gsharp/formatter/gsfmt.dll --check tools/Goo.Gslint/Program.gs
-          dotnet run --project tools/Goo.Gslint.Tests/Goo.Gslint.Tests.gsproj -c Release
+        run: dotnet run --project tools/Goo.Repo -- check lint
 
-      - name: Enforce strict G# lint
-        if: needs.changes.outputs.lint == 'true'
-        run: |
-          dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
-            --strict \
-            --severity GL0005=none \
-            --severity GL0006=none \
-            --severity GL0001=none Goo Goo.Audio tests
-          dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
-            --strict --severity GL0005=none --severity GL0006=none \
-            apps templates plugins/goo/reference/templates
-
-      - name: Install Android documentation toolchain
-        if: needs.changes.outputs.api == 'true'
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
-        with:
-          distribution: temurin
-          java-version: '21'
 
 
       - name: Verify shared gesture recognizers
         if: needs.changes.outputs.api == 'true'
-        run: dotnet test tests/Goo.Gestures.Tests/Goo.Gestures.Tests.gsproj -c Release -p:TreatWarningsAsErrors=true
+        run: dotnet run --project tools/Goo.Repo -- check gestures
 
       - name: Verify generated documentation
         if: needs.changes.outputs.api == 'true'
-        run: bash .github/scripts/sync-generated-docs.sh --check
+        run: dotnet run --project tools/Goo.Repo -- check docs
 
       - name: Validate onboarding and release metadata
-        run: |
-          dotnet run --project tools/Goo.SyncDocs/Goo.SyncDocs.gsproj -c Release -- .
-          if [ -n "$(git status --porcelain -- plugins/goo/reference)" ]; then
-            echo "::error::Generated documentation is stale. Run: bash .github/scripts/sync-generated-docs.sh"
-            exit 1
-          fi
-          dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- onboarding
+        run: dotnet run --project tools/Goo.Repo -- check metadata
 
-      - name: Run focused API contract tests
-        if: needs.changes.outputs.api == 'true'
-        run: |
-          dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.gsproj \
-            -c Release -p:TreatWarningsAsErrors=true
 
       - name: Verify optional spell checking
         if: needs.changes.outputs.api == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y libhunspell-1.7-0
-          GOO_REQUIRE_HUNSPELL=1 dotnet test tests/Goo.SpellCheckTests/Goo.SpellCheckTests.gsproj \
-            -c Release -p:TreatWarningsAsErrors=true
+          dotnet run --project tools/Goo.Repo -- check spell-check
       - name: Verify application hosting process ownership
         if: needs.changes.outputs.api == 'true'
         run: |
@@ -167,15 +123,7 @@ jobs:
             artifacts/app-host-aot/Goo.AppHostSmoke "$RUNNER_TEMP/desktop-activation"
       - name: Build Goo DevTools CLI
         if: needs.changes.outputs.full == 'true'
-        run: |
-          dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj \
-            -c Release -p:TreatWarningsAsErrors=true
-
-      - name: Run Goo DevTools CLI tests
-        if: needs.changes.outputs.full == 'true'
-        run: |
-          dotnet test tests/Goo.DevTools.Cli.Tests/Goo.DevTools.Cli.Tests.gsproj \
-            -c Release -p:TreatWarningsAsErrors=true
+        run: dotnet run --project tools/Goo.Repo -- check devtools
 
       - name: Validate Goo DevTools integrations
         run: |
@@ -235,16 +183,6 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         run: echo "GOO_VERSION=$(dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo)" >> "$GITHUB_ENV"
 
-      - name: Restore pinned G# authoring tools
-        if: needs.changes.outputs.full == 'true'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: artifacts/gsharp
-          key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
-
-      - name: Build pinned upstream G# authoring tools
-        if: needs.changes.outputs.full == 'true'
-        run: ./bootstrap.sh --gsharp-only
 
       - name: Download macOS native payloads
         if: needs.changes.outputs.full == 'true'
@@ -435,15 +373,6 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         with:
           global-json-file: global.json
-      - name: Restore pinned G# authoring tools
-        if: needs.changes.outputs.full == 'true'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
-        with:
-          path: artifacts/gsharp
-          key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
-      - name: Build pinned upstream G# authoring tools
-        if: needs.changes.outputs.full == 'true'
-        run: ./bootstrap.sh --gsharp-only
       - name: Download macOS native payloads
         if: needs.changes.outputs.full == 'true'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
@@ -556,16 +485,6 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         run: echo "GOO_VERSION=$(dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo)" >> "$GITHUB_ENV"
 
-      - name: Restore pinned G# authoring tools
-        if: needs.changes.outputs.full == 'true' && (github.ref_type != 'tag')
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: artifacts/gsharp
-          key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
-
-      - name: Build pinned upstream G# authoring tools
-        if: needs.changes.outputs.full == 'true'
-        run: ./bootstrap.sh --gsharp-only
 
       - &linux-apt-update
         if: needs.changes.outputs.full == 'true'
@@ -1585,21 +1504,11 @@ jobs:
 
       - name: Run focused core behavior tests
         if: needs.changes.outputs.full == 'true' && (matrix.lane == 'core')
-        run: |
-          .github/scripts/with-headless-wayland.sh env \
-            SDL_VIDEODRIVER=wayland \
-            LIBGL_ALWAYS_SOFTWARE=1 \
-            VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
-            LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
-            dotnet test tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.gsproj \
-              -c Release --no-build -p:TreatWarningsAsErrors=true \
-              -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
+        run: dotnet run --project tools/Goo.Repo -- check core
 
       - name: Run local PNG decoder and cache tests
         if: needs.changes.outputs.full == 'true' && (matrix.lane == 'image')
-        run: |
-          dotnet test tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.gsproj \
-            -c Release --no-build -p:TreatWarningsAsErrors=true
+        run: dotnet run --project tools/Goo.Repo -- check image
 
       - name: Verify NativeAOT local PNG loading
         if: needs.changes.outputs.full == 'true' && (matrix.lane == 'image')
@@ -1994,16 +1903,6 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Restore pinned G# authoring tools
-        if: needs.changes.outputs.full == 'true'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: artifacts/gsharp
-          key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
-
-      - name: Build pinned upstream G# authoring tools
-        if: needs.changes.outputs.full == 'true'
-        run: ./bootstrap.sh --gsharp-only
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         if: needs.changes.outputs.full == 'true'
         with:
@@ -2016,6 +1915,11 @@ jobs:
           sudo apt-get install -y meson ninja-build
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'ndk;27.2.12479018' 'platforms;android-36' 'build-tools;36.0.0'
           dotnet workload install android
+      - name: Verify Android API contracts and generated documentation
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet run --project tools/Goo.Repo -- check docs-android
+          dotnet run --project tools/Goo.Repo -- check api
       - name: Rebuild Android native payloads
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -2160,16 +2064,6 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Restore pinned G# authoring tools
-        if: needs.changes.outputs.full == 'true'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: artifacts/gsharp
-          key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
-
-      - name: Build pinned upstream G# authoring tools
-        if: needs.changes.outputs.full == 'true'
-        run: ./bootstrap.sh --gsharp-only
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         if: needs.changes.outputs.full == 'true'
         with:

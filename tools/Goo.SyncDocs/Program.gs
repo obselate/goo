@@ -6,12 +6,20 @@ import System.Security.Cryptography
 import System.Text.Json
 import System.Text.RegularExpressions
 
-let arguments = Environment.GetCommandLineArgs()
-let root = Path.GetFullPath(arguments[1])
+let arguments = Environment.GetCommandLineArgs().Skip(1).ToArray()
+if arguments.Contains("--help") || arguments.Contains("-h") {
+    Console.WriteLine("Usage: Goo.SyncDocs CHECKOUT [OUTPUT_DIRECTORY [API_DIRECTORY]]")
+    return
+}
+if arguments.Length < 1 || arguments.Length > 3 || arguments.Any(a -> a.StartsWith("-")) {
+    throw ArgumentException("Usage: Goo.SyncDocs CHECKOUT [OUTPUT_DIRECTORY [API_DIRECTORY]]")
+}
+let root = Path.GetFullPath(arguments[0])
 if !File.Exists(Path.Combine(root, "Goo/Goo.gsproj")) {
     throw InvalidOperationException("Expected a standalone Goo checkout containing Goo/Goo.gsproj")
 }
-let output = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../plugins/goo/reference"))
+let output = Path.GetFullPath(if arguments.Length > 1 { arguments[1] } else { Path.Combine(root, "plugins/goo/reference") })
+let api = Path.GetFullPath(if arguments.Length > 2 { arguments[2] } else { Path.Combine(root, "docs/api") })
 let paths = List[string]{
     "README.md",
     "CONTRIBUTING.md",
@@ -24,8 +32,9 @@ let paths = List[string]{
 }
 let directories = List[string]{"docs/api", "docs/devtools"}
 for directory in directories {
-    for path in Directory.GetFiles(Path.Combine(root, directory), "*.md").OrderBy(p -> p, StringComparer.Ordinal) {
-        paths.Add(Path.GetRelativePath(root, path).Replace('\\', '/'))
+    let input = if directory == "docs/api" { api } else { Path.Combine(root, directory) }
+    for path in Directory.GetFiles(input, "*.md").OrderBy(p -> p, StringComparer.Ordinal) {
+        paths.Add(directory + "/" + Path.GetFileName(path))
     }
 }
 paths.Add("templates/Goo.Templates/content/Program.gs")
@@ -36,10 +45,11 @@ let files = Dictionary[string, string]()
 Directory.CreateDirectory(output)
 for relative in paths {
     let source = Path.Combine(root, relative)
+    let input = if relative.StartsWith("docs/api/") { Path.Combine(api, Path.GetFileName(relative)) } else { source }
     let target = Path.Combine(output, relative)
     Directory.CreateDirectory(Path.GetDirectoryName(target) ?? output)
     if relative.EndsWith(".md", StringComparison.Ordinal) {
-        let lines = File.ReadAllText(source).Split('\n')
+        let lines = File.ReadAllText(input).Split('\n')
         var fence = ""
         for var i = 0; i < lines.Length; i++ {
             let trimmed = lines[i].TrimStart()
@@ -72,7 +82,7 @@ for relative in paths {
         }
         File.WriteAllText(target, string.Join("\n", lines))
     } else {
-        File.Copy(source, target, true)
+        File.Copy(input, target, true)
     }
     files[relative] = Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(target)))
 }

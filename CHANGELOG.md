@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Use `dotnet run --project tools/Goo.Repo --` for contributor builds, checks, docs and packing.
+- Use the SDK compiler and formatter without bootstrap. Desktop docs do not need Android tooling. Docs checks do not change tracked files.
+
 ## 0.26.1 - 2026-11-01
 
 - DevTools input no longer builds a full tree snapshot after each injected event. The input response returns a sequence marker, and the next snapshot captures the settled tree. With 639 nodes and 240 events, allocation dropped 94% and GC pause 98%. (#510)

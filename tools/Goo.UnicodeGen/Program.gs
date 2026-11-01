@@ -17,17 +17,21 @@ func ParseArguments(args[]string) Dictionary[string, string] {
         let body = argument[2 ..]
         let equals = body.IndexOf('=')
         if equals >= 0 {
-            result[body[.. equals]] = body[(equals + 1) ..]
+            let name = body[.. equals]
+            if name == "scripts-only" || equals + 1 == body.Length || !result.TryAdd(name, body[(equals + 1) ..]) {
+                throw ArgumentException("Invalid or duplicate option: --" + name)
+            }
             continue
         }
         if body == "scripts-only" {
-            result[body] = "true"
+            if !result.TryAdd(body, "true") { throw ArgumentException("Duplicate option: --" + body) }
             continue
         }
         if index + 1 >= args.Length {
             throw ArgumentException("Missing value for --$body")
         }
-        result[body] = args[(index += 1)]
+        let value = args[(index += 1)]
+        if value.StartsWith("--") || !result.TryAdd(body, value) { throw ArgumentException("Invalid or duplicate option: --" + body) }
     }
     for name in result.Keys {
         if !(
@@ -663,7 +667,20 @@ const scriptExtensionsSourceUrl = "https://www.unicode.org/Public/16.0.0/ucd/Scr
 const scriptExtensionsSourceSha256 = "049117ce26b9769fe2749b06eef51a50a89faef4a97764dd2d81daa715980700"
 const propertyValueAliasesSourceUrl = "https://www.unicode.org/Public/16.0.0/ucd/PropertyValueAliases.txt"
 const propertyValueAliasesSourceSha256 = "440fd3e5460b9bfe31da67b6f923992e1989d31fe2ed91e091c4b8f8e2620bf9"
+if args.Any(a -> a == "--help" || a == "-h") {
+    Console.WriteLine("Usage: Goo.UnicodeGen [--scripts-only] [--OPTION PATH]\n" +
+        "Downloads pinned Unicode inputs and rewrites binary tables by default.\n" +
+        "Input options: input, line-break-input, east-asian-width-input, emoji-data-input,\n" +
+        "unicode-data-input, scripts-input, script-extensions-input, property-value-aliases-input,\n" +
+        "grapheme-break-input, derived-core-properties-input.\n" +
+        "Output options: output, context-output, scripts-output, script-extensions-output, grapheme-output.")
+    return
+}
 let options = ParseArguments(args)
+if options.ContainsKey("scripts-only") && (options.ContainsKey("grapheme-break-input") ||
+    options.ContainsKey("derived-core-properties-input") || options.ContainsKey("grapheme-output")) {
+    throw ArgumentException("--scripts-only cannot be combined with grapheme generation.")
+}
 let repositoryRoot = FindRepositoryRoot()
 let lineBreakOutputPath = if options.TryGetValue("output", out var requestedOutput) {
     Path.GetFullPath(requestedOutput)
@@ -763,9 +780,6 @@ Console.WriteLine(
 if options.ContainsKey("grapheme-break-input") || options.ContainsKey("derived-core-properties-input") ||
     options
     .ContainsKey("grapheme-output") {
-    if scriptsOnly {
-        throw ArgumentException("--scripts-only cannot be combined with grapheme generation.")
-    }
     let graphemeOutputPath = if options.TryGetValue("grapheme-output", out var requestedGraphemeOutput) {
         Path.GetFullPath(requestedGraphemeOutput)
     } else {

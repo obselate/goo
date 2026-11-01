@@ -62,20 +62,12 @@ partial class GooServer {
     }
 
     func Provenance(root string) JsonObject {
-        let contributing = Path.Combine(root, "CONTRIBUTING.md")
-        let match = Regex.Match(
-            if File.Exists(contributing) {
-                File.ReadAllText(contributing)
-            } else {
-                ""
-            },
-            "(?:pin is upstream `|https://github.com/DavidObando/gsharp/tree/)([0-9a-f]{40})"
-        )
-        let compilerFile = Path.Combine(root, "artifacts/gsharp/commit")
-        let compiler = if File.Exists(compilerFile) {
-            File.ReadAllText(compilerFile).Trim()
-        } else if match.Success {
-            match.Groups[1].Value
+        let configuration = Path.Combine(root, "global.json")
+        let project = Path.Combine(root, "templates/Goo.Templates/content/GooStarter.gsproj")
+        let compiler = if File.Exists(configuration) {
+            JsonNode.Parse(File.ReadAllText(configuration))?["msbuild-sdks"]?["Gsharp.NET.Sdk"]?.GetValue[string]() ?? "unavailable"
+        } else if File.Exists(project) {
+            Regex.Match(File.ReadAllText(project), `Gsharp.NET.Sdk/([^"]+)`).Groups[1].Value
         } else {
             "unavailable"
         }
@@ -85,7 +77,7 @@ partial class GooServer {
                 ["repository"] = Manifest["repository"]?.DeepClone(),
                 ["files"] = Manifest["files"]?.DeepClone(),
                 ["dirty"] = false,
-                ["compilerCommit"] = compiler
+                ["compilerVersion"] = compiler
             }
         }
         let revision = Execute([]string{"git", "-C", root, "rev-parse", "HEAD"}, 25)
@@ -103,7 +95,7 @@ partial class GooServer {
             } else {
                 JsonValue.Create("unavailable")
             },
-            ["compilerCommit"] = compiler
+            ["compilerVersion"] = compiler
         }
     }
 
@@ -241,11 +233,7 @@ partial class GooServer {
         } else {
             "unavailable"
         }
-        var build = "dotnet build " + name + ".gsproj -c Release --nologo -warnaserror"
-        let compiler = Path.Combine(root, "artifacts/gsharp/compiler/gsc.dll")
-        if trusted && File.Exists(compiler) {
-            build += " -p:GsharpCompilerFullPath=" + Quote(compiler)
-        }
+        let build = "dotnet build " + name + ".gsproj -c Release --nologo -warnaserror"
         let provenance = Provenance(root)
         provenance["sourceFiles"] = sourceFiles
         let generated = JsonObject()
@@ -267,7 +255,7 @@ partial class GooServer {
                 } else {
                     "unavailable"
                 },
-                ["compilerCommit"] = provenance["compilerCommit"]?.DeepClone()
+                ["compilerVersion"] = provenance["compilerVersion"]?.DeepClone()
             },
             ["files"] = files,
             ["lint"] = lint,

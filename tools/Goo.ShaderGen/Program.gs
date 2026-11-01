@@ -1210,6 +1210,10 @@ internal shared class Program {
 
     private func Main(args[]string) int32 {
         try {
+            if args.Length == 1 && (args[0] == "--help" || args[0] == "-h") {
+                Console.WriteLine("Usage: Goo.ShaderGen generate|check\nGenerate rewrites checked-in shader assets. Check compares them without writing.")
+                return 0
+            }
             if args.Length != 1 || (args[0] != "generate" && args[0] != "check") {
                 Console.Error.WriteLine("Usage: Goo.ShaderGen generate|check")
                 return 2

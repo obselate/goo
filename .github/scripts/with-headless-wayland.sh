@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ ${1:-} == --help || ${1:-} == -h ]]; then
+  printf '%s\n' 'Usage: with-headless-wayland.sh COMMAND [ARGUMENT ...]'
+  exit 0
+fi
+
 if [[ "$(uname -s)" == Darwin ]]; then
   exec "$@"
 fi
@@ -37,6 +42,7 @@ if [[ "${GOO_WAYLAND_COMPOSITOR:-}" != kwin ]] && command -v weston >/dev/null 2
   compositor_target=$compositor_pid
 else
   XDG_CONFIG_HOME="$runtime_root/config" XDG_CACHE_HOME="$runtime_root/cache" \
+    XDG_DATA_HOME="$runtime_root/data" \
     setsid kwin_wayland --virtual \
     --width 1400 --height 900 --scale 1 --no-global-shortcuts --no-lockscreen --no-kactivities \
     --socket "$WAYLAND_DISPLAY" >"$compositor_log" 2>&1 &
