@@ -76,11 +76,6 @@ func Main() int32 {
                     Thread.Sleep(100)
                 }
             }
-            if selected == nil {
-                throw CliException(
-                    "No running Goo apps found. Start an app with `goo dev --project path/to/App.gsproj`."
-                )
-            }
         }
         return RunWindow(selected, sample)
     } catch (exception CliException) {
@@ -97,8 +92,7 @@ private func RunWindow(descriptor DiscoveryDescriptor?, sample bool) int32 {
     using let mono = RegisterFont("JetBrains Mono", "JetBrainsMono-VariableFont_wght.ttf", 400)
     let transport = if sample {
         DiagnosticTransport(SampleDiagnosticTransport{})
-    } else {
-        let endpoint = descriptor ?? throw CliException("No running Goo app was selected.")
+    } else if let endpoint = descriptor {
         DiagnosticTransport(
             DiagnosticPipeTransport(
                 DiagnosticEndpoint{
@@ -114,6 +108,8 @@ private func RunWindow(descriptor DiscoveryDescriptor?, sample bool) int32 {
                 }
             )
         )
+    } else {
+        DiagnosticTransport(DiagnosticDisconnectedTransport{})
     }
     let session = DiagnosticSession(transport, sample)
     let root = DevToolsCell(session)
@@ -133,8 +129,10 @@ private func RunWindow(descriptor DiscoveryDescriptor?, sample bool) int32 {
     WindowChrome.ReplaceTitlebar(window)
     Theme.Attach(window, Theme.Ink)
     root.AttachWindow(window)
-    session.Connect()
-    session.Pump()
+    if sample || descriptor != nil {
+        session.Connect()
+        session.Pump()
+    }
     window.Run()
     return 0
 }

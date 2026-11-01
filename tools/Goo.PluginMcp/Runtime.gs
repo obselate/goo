@@ -218,13 +218,8 @@ partial class GooServer {
     func SnapshotResponse(a JsonObject, timeout double = 4)(JsonObject, JsonObject) {
         let output = Run(
             []string{
-                "attach",
-                "--once",
-                "--json",
-                "--command",
                 "snapshot",
-                "--payload",
-                "{\"full\":true}",
+                "--json",
                 "--wait",
                 Math.Max(0.1, timeout - 0.1).ToString("F3", CultureInfo.InvariantCulture)
             }.Concat(TargetArgs(a)),

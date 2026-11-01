@@ -55,11 +55,7 @@ partial class GooServer {
                         arguments.Add("--" + name)
                     }
                 } else {
-                    let option = if name == "node_id" {
-                        "node"
-                    } else {
-                        name.Replace('_', '-')
-                    }
+                    let option = name.Replace('_', '-')
                     let value = if item.Value.GetValueKind() == JsonValueKind.String {
                         item.Value.GetValue[string]()
                     } else {
