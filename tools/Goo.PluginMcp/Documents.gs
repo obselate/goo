@@ -241,11 +241,7 @@ partial class GooServer {
         } else {
             "unavailable"
         }
-        var build = "dotnet build " + name + ".gsproj -c Release --nologo -warnaserror"
-        let compiler = Path.Combine(root, "artifacts/gsharp/compiler/gsc.dll")
-        if trusted && File.Exists(compiler) {
-            build += " -p:GsharpCompilerFullPath=" + Quote(compiler)
-        }
+        let build = "dotnet build " + name + ".gsproj -c Release --nologo -warnaserror"
         let provenance = Provenance(root)
         provenance["sourceFiles"] = sourceFiles
         let generated = JsonObject()

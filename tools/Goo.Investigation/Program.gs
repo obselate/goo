@@ -151,6 +151,15 @@ class Runner {
         func Main(arguments[]string) int32 {
             Console.CancelKeyPress += Cancel
             try {
+                if arguments.Length == 0 || arguments.Any(a -> a == "--help" || a == "-h") {
+                    Console.WriteLine("Usage: Goo.Investigation <command>\n" +
+                        "  performance --output NEW_DIRECTORY --rid RID --package-version VERSION --package-source FEED [--publish-only]\n" +
+                        "  grid-scroll --widgets-project PROJECT --output DIRECTORY [--skip-build] [--repeats N]\n" +
+                        "  hot-reload --runtime FILE --packages DIRECTORY --goo-version VERSION [--diagnostics]\n" +
+                        "  foreign-parent SDL_SOURCE SDL_LIBRARY [--xdg-only]\n" +
+                        "  popup SDL_SOURCE SDL_LIBRARY")
+                    return 0
+                }
                 Require(arguments.Length > 0, "expected grid-scroll, hot-reload, foreign-parent, popup, or performance")
                 let rest = arguments.Skip(1).ToArray()
                 if arguments[0] == "grid-scroll" {

@@ -42,8 +42,10 @@ The Gallery compiles shaders during its build.
 ```sh
 git clone https://github.com/obselate/goo.git
 cd goo
-./bootstrap.sh
-dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release
+dotnet run --project tools/Goo.Repo -- doctor
+dotnet run --project tools/Goo.Repo -- build
+bash .github/scripts/build-sdl-linux-x64.sh artifacts/native/libSDL3.so
+dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
 ```
 
 ### On Windows:
@@ -51,13 +53,14 @@ dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release
 ```bat
 git clone https://github.com/obselate/goo.git
 cd goo
-bootstrap.bat
-dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release
+dotnet run --project tools/Goo.Repo -- doctor
+dotnet run --project tools/Goo.Repo -- build
+bash .github/scripts/fetch-sdl-win-x64.sh artifacts/native/SDL3.dll
+dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release -p:GooWindowsSdlPath="%CD%/artifacts/native/SDL3.dll"
 ```
 
-The bootstrap builds the pinned G# compiler and formatter, then downloads the
-released Goo package for the Gallery's native runtime files. It does not install
-software globally.
+The SDK restores its compiler and formatter from NuGet. The native scripts use
+pinned SDL inputs. On Windows, run the fetch command in Git Bash.
 
 ## Packages
 

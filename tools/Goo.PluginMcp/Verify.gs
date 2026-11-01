@@ -229,7 +229,7 @@ shared class Verify {
                 }
                 let trusted = await Read(configured, "starter", args)
                 Check(S(trusted, "lint").StartsWith("dotnet run --project " + linter + " "), trusted)
-                Check(S(trusted, "build") == S(starter, "build") + " -p:GsharpCompilerFullPath=" + compiler, trusted)
+                Check(S(trusted, "build") == S(starter, "build"), trusted)
             }
         } finally {
             await configured.DisposeAsync()

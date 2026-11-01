@@ -1,53 +1,42 @@
 # Tests
 
-Run the [source setup](../CONTRIBUTING.md#source-setup) before local checks. The
-CI workflow is the source of truth for complete cross-platform verification.
-
-## Managed checks
-
 ```sh
-dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.gsproj -c Release
-dotnet test tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.gsproj -c Release
-dotnet test tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.gsproj -c Release
-dotnet test tests/Goo.DevTools.Cli.Tests/Goo.DevTools.Cli.Tests.gsproj -c Release
+dotnet run --project tools/Goo.Repo -- doctor
+dotnet run --project tools/Goo.Repo -- check --list
+dotnet run --project tools/Goo.Repo -- check core
 ```
 
-## Vulkan checks
+Use the [source setup](../CONTRIBUTING.md#source-setup) first. Goo.Repo owns the
+commands and environment for these CI lanes.
 
-These projects require the platform setup and native assets used by CI:
-
-```sh
-dotnet build tests/Goo.VulkanAbiSmoke/Goo.VulkanAbiSmoke.gsproj -c Release
-dotnet build tests/Goo.VulkanProof/Goo.VulkanProof.gsproj -c Release
-dotnet build tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackSmoke.gsproj -c Release
-```
-
-`Goo.VulkanProof` contains the retained text and image proof lanes.
-`Goo.AsyncReadbackSmoke` contains the current window, readback, shader, queue,
-timeline, upload, image, and clipping lanes. Their exact environment variables
-and launch commands are defined in [CI](../.github/workflows/ci.yml).
-
-SVG parser tests are part of `Goo.CoreBehaviorTests`. To compare corpus pixels
-before and after a parser change, build `Goo.AsyncReadbackSmoke` at each revision
-and run it on the same display and driver:
-
-```sh
-GOO_SVG_CORPUS_OUTPUT=/tmp/svg-before dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-GOO_SVG_CORPUS_OUTPUT=/tmp/svg-after GOO_SVG_CORPUS_BASELINE=/tmp/svg-before dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-```
-
-The check renders all three SVG fixtures at four animation samples and compares
-every RGBA byte. It also prints each framebuffer size and SHA-256 hash.
-
-## Other platform checks
-
-| Project | Purpose |
+| Lane | Checks |
 | --- | --- |
-| `Goo.AudioSmoke` | SDL audio behavior and unavailable-device handling |
-| `Goo.ImageLoadingSmoke` | Packaged NativeAOT image loading |
-| `Goo.PackageSmoke` | Clean NuGet consumer and packaged runtime assets |
-| `Goo.AndroidSmoke` | Android packaging, lifecycle, rendering, and input |
-| `Goo.AndroidSmoke.Desktop` | Desktop host for the shared Android scene |
+| `api` | Public API and XML documentation contracts |
+| `core` | Core behavior, SVG parser, input, layout and native window behavior |
+| `image` | PNG decoder and image cache |
+| `devtools` | CLI build and command tests |
+| `gestures` | Shared gesture recognizers |
+| `spell-check` | Hunspell integration with `GOO_REQUIRE_HUNSPELL=1` |
+| `lint` | SDK formatter check, linter self-tests and strict source lint |
+| `metadata` | Onboarding and release metadata |
+| `docs` | Non-mutating desktop generated-doc comparison |
+| `docs-android` | Non-mutating Android generated-doc comparison |
 
-Native tests must run on the target operating system. Do not treat software
-Vulkan results as hardware performance evidence.
+`core` needs Linux, the native build tools and Vulkan validation layer shown by
+`doctor`. It builds pinned SDL when needed, starts a private Wayland session, and
+sets the same software Vulkan and native-library paths as CI. It cleans the
+session when the tests finish. Do not run the core test project on your desktop.
+
+`spell-check` needs `libhunspell-1.7-0` on Ubuntu. Android docs need the installed
+Android workload, SDK and Java 21. Docs commands never install workloads.
+
+## Platform checks
+
+The [CI workflow](../.github/workflows/ci.yml) also checks native payloads, package
+consumers, Vulkan rendering, Android devices, and NativeAOT. These checks need
+the pinned platform inputs. Run native checks on the target operating system.
+Software Vulkan results are not hardware performance evidence.
+
+`Goo.VulkanProof` contains retained text and image checks.
+`Goo.AsyncReadbackSmoke` contains window, readback, shader, queue, timeline,
+upload, image and clipping checks. Use CI for the full platform matrix.

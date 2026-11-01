@@ -1,0 +1,10 @@
+<Project Sdk="Gsharp.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <Target Name="WriteToolchainPath" AfterTargets="Build">
+    <WriteLinesToFile File="$(TargetDir)formatter.path" Lines="$([System.IO.Path]::GetDirectoryName('$(GsharpCompilerFullPath)'))/../formatter/gsfmt.dll" Overwrite="true" />
+  </Target>
+</Project>

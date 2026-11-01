@@ -513,10 +513,13 @@ func WriteIfChanged(path string, content string) {
 func ParseArguments(values[]string) Dictionary[string, string] {
     let result = Dictionary[string, string](StringComparer.Ordinal)
     for var index = 0; index < values.Length; index += 2 {
-        if !values[index].StartsWith("--", StringComparison.Ordinal) || index + 1 >= values.Length {
-            throw ArgumentException("Use --xml, --source, or --output followed by a path.")
+        let option = values[index]
+        if option is not("--xml" or "--source" or "--output" or "--link-output") || index + 1 >= values.Length {
+            throw ArgumentException("Use --xml, --source, --output or --link-output followed by a path.")
         }
-        result[values[index][2 ..]] = values[index + 1]
+        if !result.TryAdd(option[2 ..], values[index + 1]) {
+            throw ArgumentException("Duplicate option: " + option)
+        }
     }
     return result
 }
@@ -546,6 +549,10 @@ internal data class ApiSource(RelativeFile string, FileName string) : IEquatable
 
 internal data class ApiMember(Id string, Element XElement) : IEquatable[ApiMember] { }
 
+if args.Contains("--help") || args.Contains("-h") {
+    Console.WriteLine("Usage: Goo.ApiDocs [--xml FILE] [--source DIRECTORY] [--output DIRECTORY]")
+    return
+}
 let repositoryRoot = FindRepositoryRoot(Environment.CurrentDirectory)
 let arguments = ParseArguments(args)
 
@@ -557,7 +564,7 @@ let xmlPath = Resolve(
 let sourceRoot = Resolve(arguments.GetValueOrDefault("source"), Path.Combine(repositoryRoot, "Goo"))
 let outputRoot = Resolve(arguments.GetValueOrDefault("output"), Path.Combine(repositoryRoot, "docs", "api"))
 let product = Path.GetFileNameWithoutExtension(xmlPath)
-let sourceLink = Path.GetRelativePath(outputRoot, sourceRoot).Replace(Path.DirectorySeparatorChar, '/')
+let sourceLink = Path.GetRelativePath(Resolve(arguments.GetValueOrDefault("link-output"), outputRoot), sourceRoot).Replace(Path.DirectorySeparatorChar, '/')
 
 if !File.Exists(xmlPath) {
     throw FileNotFoundException("Build Goo in Release mode before generating API pages.", xmlPath)
