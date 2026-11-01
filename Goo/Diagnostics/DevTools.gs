@@ -293,7 +293,7 @@ internal partial class DevToolsSession : IDisposable {
 
   internal func Post(action Action) {
     if disposed { throw ObjectDisposedException("DevToolsSession") }
-    owner.Post(action)
+    owner.PostDiagnostics(action)
   }
 
   internal func CapturePayload() string -> CapturePayload(captureTracker)

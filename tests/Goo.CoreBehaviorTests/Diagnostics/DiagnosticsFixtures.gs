@@ -48,12 +48,22 @@ internal class DiagnosticsFixtures {
       profiler.BeginPump()
       let secondPump = profiler.Context.PumpId
       profiler.EndFrame(profiler.Start(), false)
+      let window = Window{}
+      using let session = window.AttachDiagnostics()
+      var applied = false
+      session.Post(() -> { applied = true })
+      window.drainPostedActions()
       let records = recorder.Read(0L, 4096, out var next, out var more, out var state, out var dropped)
       if more || dropped != 0L { return false }
       var first = 0
       var second = 0
       var frames = 0
+      var diagnostics = false
       for record in records {
+        if record.Kind == FrameTraceKind.Duration && record.Source == "cpu.phase"
+          && record.EventId == uint64(int32(FrameProfileStage.Diagnostics)) {
+            diagnostics = record.Context.WindowId == window.ProfileWindowId && record.EndTicks >= record.Ticks
+          }
         if record.Kind == FrameTraceKind.Duration && record.EventId == uint64(int32(FrameProfileStage.Frame)) {
           if record.Context.PumpId == firstPump || record.Context.PumpId == secondPump { frames++ }
         }
@@ -74,7 +84,7 @@ internal class DiagnosticsFixtures {
           second++
         } else { return false }
       }
-      return first == 4 && second == 4 && frames == 2
+      return first == 4 && second == 4 && frames == 2 && applied && diagnostics
     } finally { recorder.Stop(false) }
   }
 
