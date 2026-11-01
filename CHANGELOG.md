@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.25.2 - 2026-11-01
+
+- DevTools endpoints use a per-process random token and the per-user runtime directory, so apps in separate PID namespaces no longer share an endpoint. (#504)
+- Idle DevTools connections stay open until the client closes them or the app exits. Before, they closed after 30 s idle. (#504)
+
 ## 0.25.1 - 2026-10-31
 
 - Square controls (radius 0) now get a square focus outline. (#499)

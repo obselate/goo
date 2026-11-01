@@ -4,7 +4,7 @@ The protocol is local, explicit, and versioned. Set `GOO_DEVTOOLS=1` to attach G
 
 ## Descriptor
 
-The runtime writes one UTF-8 JSON endpoint descriptor per window into the configured runtime directory. The file may be named `<pid>-<window>.json` or any `.json` name. The CLI accepts these fields:
+The runtime writes one UTF-8 JSON endpoint descriptor per window into the configured runtime directory. Its name includes the PID, a random process token, and a window ordinal. The CLI accepts these fields:
 
 ```json
 {
@@ -13,7 +13,8 @@ The runtime writes one UTF-8 JSON endpoint descriptor per window into the config
   "process": "HelloGoo",
   "version": 1,
   "transport": "named-pipe",
-  "pipe": "goo-12345-1",
+  "pipe": "/run/user/1000/goo/goo-12345-5c724a8e64214a9ebfa918f592af698c-1",
+  "sessionId": "b3cde751cdf648c094f02fd67a818a75",
   "createdUtc": "2026-08-29T12:00:00Z",
   "windows": [
     { "id": "window-12345-1", "title": "Hello Goo" }
@@ -21,7 +22,7 @@ The runtime writes one UTF-8 JSON endpoint descriptor per window into the config
 }
 ```
 
-`pipe` is a .NET named-pipe name or an absolute Unix-domain socket path. `pipeName`, `endpoint`, `socket`, `address`, `processId`, and `applicationName` are accepted aliases. Goo named pipes accept only the current user. Network endpoints are rejected. The CLI ignores malformed descriptors and stale process IDs.
+`pipe` is a .NET named-pipe name or an absolute Unix-domain socket path. Unix endpoints use the per-user runtime directory, not the shared temporary directory. `pipeName`, `endpoint`, `socket`, `address`, `processId`, and `applicationName` are accepted aliases. Goo named pipes accept only the current user. Network endpoints are rejected. Discovery checks session endpoints directly, so PID namespaces and stale descriptors do not select another app.
 
 ## Connection
 
@@ -32,7 +33,7 @@ Messages are one JSON object per UTF-8 line. The client sends this first:
   "type": "hello",
   "protocol": "goo.devtools/1",
   "client": "goo-cli",
-  "version": "0.25.1",
+  "version": "0.25.2",
   "capabilities": ["tree", "properties", "layout", "events", "logs", "accessibility", "capture", "source-navigation", "hot-reload"]
 }
 ```
@@ -57,9 +58,8 @@ bounds its connection and request with `--wait` and exits unsuccessfully for a
 rejected response. Streaming attach remains open until disconnected.
 
 One window accepts up to eight simultaneous clients. Each request is serialized
-through the window UI queue. A client that sends no complete request or stops
-reading a response is disconnected after 30 seconds, so an inspector or broken
-client cannot block short-lived snapshot and capture clients. Interactive attach
+through the window UI queue. Idle connections stay open until the client closes
+them, the diagnostics session closes, or the app exits. Interactive attach
 uses request envelopes for plain command lines. On stdin EOF it drains responses
 for sent request IDs up to `--wait`, then detaches. Use `--once` for one scripted
 request.
