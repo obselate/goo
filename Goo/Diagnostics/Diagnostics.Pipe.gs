@@ -28,36 +28,17 @@ internal class DiagnosticPipeCompletion {
 }
 
 internal class DiagnosticPipeClient {
-  private const InactivityMs int64 = 30000
   internal let Stream NamedPipeServerStream
   internal let Capture DiagnosticCaptureTracker
   internal var Worker Thread?
   internal var Recorder FrameRecorder?
   internal var TraceOwner Guid
   internal prop IsClosed bool { get -> Volatile.Read(&closed) != 0 }
-  private var deadline int64
-  private var watchdog Timer?
   private var closed int32
 
   internal init(stream NamedPipeServerStream) {
     Stream = stream
     Capture = DiagnosticCaptureTracker()
-    deadline = Environment.TickCount64 + InactivityMs
-    watchdog = Timer(_ -> {
-      lock this {
-        if Environment.TickCount64 >= deadline {
-          try { Stream.Dispose() } catch (_ Exception) { }
-        }
-      }
-    }, nil, 1000, 1000)
-  }
-
-  internal func Touch() { lock this { deadline = Environment.TickCount64 + InactivityMs } }
-
-  internal func Write(writer StreamWriter, value string) {
-    lock this { deadline = Int64.MaxValue }
-    writer.WriteLine(value)
-    Touch()
   }
 
   internal func Close() {
@@ -66,8 +47,6 @@ internal class DiagnosticPipeClient {
       Recorder?.Stop(true)
       Recorder = nil
     }
-    watchdog?.Dispose()
-    watchdog = nil
     Stream.Dispose()
   }
 }
@@ -200,13 +179,12 @@ internal partial class DiagnosticPipeHost : IDisposable {
       using let writer = StreamWriter(server, utf8, 16 * 1024, true)
       writer.AutoFlush = true
       writer.NewLine = "\n"
-      client.Write(writer, hello())
+      writer.WriteLine(hello())
       while !stopped.IsSet {
         guard let line = readRequest(reader) else { return }
-        client.Touch()
         let result = dispatch(client, line)
         if result != "" {
-          client.Write(writer, result)
+          writer.WriteLine(result)
         }
       }
     } catch (_ InvalidDataException) {
