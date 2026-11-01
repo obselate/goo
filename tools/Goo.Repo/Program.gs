@@ -86,9 +86,7 @@ internal shared partial class Repo {
         }
         let temporary = Path.Combine(Root, "artifacts", "repo-run-" + Guid.NewGuid().ToString("N"))
         Directory.CreateDirectory(temporary)
-        Environment.SetEnvironmentVariable("TMPDIR", temporary)
-        Environment.SetEnvironmentVariable("TEMP", temporary)
-        Environment.SetEnvironmentVariable("TMP", temporary)
+        Environment.SetEnvironmentVariable("GOO_REPO_TEMP", temporary)
         try {
             if verb == "build" {
                 Build("Goo")
@@ -108,6 +106,10 @@ internal shared partial class Repo {
         Console.WriteLine("+ " + executable + " " + string.Join(" ", arguments))
         let start = ProcessStartInfo(executable)
         start.WorkingDirectory = Root
+        if executable == "bash" && arguments.Length != 0 &&
+            (arguments[0] is ".github/scripts/build-sdl-linux-x64.sh" or ".github/scripts/fetch-sdl-win-x64.sh") {
+            start.Environment["TMPDIR"] = Environment.GetEnvironmentVariable("GOO_REPO_TEMP")
+        }
         for argument in arguments {
             start.ArgumentList.Add(argument)
         }

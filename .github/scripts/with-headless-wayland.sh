@@ -53,4 +53,8 @@ for _ in $(seq 1 100); do
   sleep 0.1
 done
 test -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
+if [[ -n ${GOO_APPLICATION_CACHE_HOME:-} ]]; then
+  export XDG_CACHE_HOME="$GOO_APPLICATION_CACHE_HOME"
+  mkdir -p "$XDG_CACHE_HOME"
+fi
 "$@"
