@@ -57,7 +57,8 @@ intervals. Queued messages are applied by the UI. The session accepts full and
 delta snapshots, selection and hover updates, logs, events, and capture
 responses. Unknown fields and capability names are ignored.
 
-`apps/Goo.DevTools/DiagnosticsProtocol.gs` defines the diagnostic models andtransport interface, including disconnected and sample transports.
+`apps/Goo.DevTools/DiagnosticsProtocol.gs` defines the diagnostic models and
+transport interface, including disconnected and sample transports.
 
 UI actions send `inspect.enter`, `inspect.exit`, `select`, `clear`, `override`,
 `reset`, and `capture` requests. Log and event requests depend on the capabilities

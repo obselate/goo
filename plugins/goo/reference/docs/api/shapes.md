@@ -57,7 +57,8 @@ Creates a builder with a unit view box.
 Creates a builder with the specified view box.
 
 - `viewBoxX`: The view-box left coordinate.
-- `viewBoxY`: The view-box top coordinate.- `viewBoxWidth`: The positive view-box width.
+- `viewBoxY`: The view-box top coordinate.
+- `viewBoxWidth`: The positive view-box width.
 - `viewBoxHeight`: The positive view-box height.
 
 ### `ArcTo(float64,float64,float64,bool,bool,float64,float64)`
@@ -116,3 +117,385 @@ Begins a new contour at a point.
 - `y`: The point y coordinate.
 
 Returns: This builder.
+
+### `Polyline(Point[],bool)`
+
+Adds a polyline contour through the specified points.
+
+- `points`: The two or more contour points.
+- `close`: Whether to close the contour.
+
+Returns: This builder.
+
+### `QuadraticTo(float64,float64,float64,float64)`
+
+Adds a quadratic Bézier curve to a point.
+
+- `controlX`: The control-point x coordinate.
+- `controlY`: The control-point y coordinate.
+- `x`: The endpoint x coordinate.
+- `y`: The endpoint y coordinate.
+
+Returns: This builder.
+
+### `Reset`
+
+Clears the commands and contour while retaining the view box and storage for continued use. Previously built paths remain immutable. Each Build copies the commands.
+
+Returns: This builder.
+
+## `Point`
+
+Source:
+
+- [`Point.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/Point.gs)
+
+Represents an immutable two-dimensional point.
+
+### `X`
+
+Gets the x coordinate.
+
+### `Y`
+
+Gets the y coordinate.
+
+## `Shape`
+
+Source:
+
+- [`Shape.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/Shape.gs)
+
+Displays a vector path with fill and one uniform stroke. Side-specific border declarations apply to boxes only.
+
+### `new`
+
+Creates a shape with default paint options.
+
+### `CornerRadius`
+
+Gets or sets the non-negative finite corner radius in logical pixels.
+
+### `Dashes`
+
+Gets or sets the stroke dash pattern.
+
+### `FillRule`
+
+Gets or sets the fill rule. The default is NonZero.
+
+### `Fit`
+
+Gets or sets the geometry fit. Cover clips, Fill stretches, and None preserves view-box units.
+
+### `MiterLimit`
+
+Gets or sets the non-negative finite miter limit. The default is 4.
+
+### `Path`
+
+Gets or sets the vector path to display. Reuse one path and position instances with Transform to share encoded geometry.
+
+### `StrokeCap`
+
+Gets or sets the stroke cap style. The default is Butt.
+
+### `StrokeEnd`
+
+Gets or sets the stroke end in [0, 1]. Equal bounds omit the stroke; fill remains unchanged. Trim precedes dashes, whose phase starts at each trimmed contour. Trim preserves fully included closed contours; partial contours use StrokeCap at their open ends.
+
+### `StrokeJoin`
+
+Gets or sets the stroke join style. The default is Miter.
+
+### `StrokeStart`
+
+Gets or sets the stroke start in [0, 1], summed across contours in path order. None measures flattened geometry after fit mapping. NonScalingStroke measures geometry after the full transform. On mount, StrokeStart must not exceed StrokeEnd.
+
+### `UseCurrentColor`
+
+Uses the inherited Color for solid fill when true. The default is false. BackgroundGradient and stroke colors are unchanged.
+
+### `VectorEffect`
+
+Gets or sets the vector effect. The default is None. NonScalingStroke keeps widths and dash lengths in window logical pixels. The stroke stays centered on the path.
+
+## `ShapeFit`
+
+Source:
+
+- [`Shape.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/Shape.gs)
+
+Selects how path geometry maps into the padded layout bounds. Contain is the centered aspect-preserving default.
+
+### Values
+
+- `Contain`
+- `Cover`
+- `Fill`
+- `None`
+
+## `StrokeCap`
+
+Source:
+
+- [`Shape.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/Shape.gs)
+
+Selects the cap style for stroked paths.
+
+### Values
+
+- `Butt`
+- `Round`
+- `Square`
+
+## `StrokeJoin`
+
+Source:
+
+- [`Shape.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/Shape.gs)
+
+Selects the join style for stroked paths.
+
+### Values
+
+- `Miter`
+- `Round`
+- `Bevel`
+
+## `VectorEffect`
+
+Source:
+
+- [`Shape.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/Shape.gs)
+
+Selects whether strokes scale with geometry or remain in window logical pixels.
+
+### Values
+
+- `None`
+- `NonScalingStroke`
+
+## `VectorNode`
+
+Source:
+
+- [`VectorAssetModel.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/VectorAssetModel.gs)
+
+Describes one immutable vector node and its composed children.
+
+### `new(VectorNode[])`
+
+Creates a group node with children.
+
+### `new(VectorPath)`
+
+Creates a path node with no paint or children.
+
+### `new(VectorPath,VectorNodeStyle)`
+
+Creates a path node with immutable style options.
+
+### `new(VectorPath,VectorNodeStyle,VectorNode[])`
+
+Creates a path node with immutable style options.
+
+### `Children`
+
+Gets the immutable child sequence.
+
+### `ClipPath`
+
+Gets this node's optional clip path.
+
+### `ClipPathFillRule`
+
+Gets this node's clip fill rule.
+
+### `Fill`
+
+Gets this node's optional fill paint.
+
+### `FillRule`
+
+Gets this node's fill rule.
+
+### `Key`
+
+Gets the stable key used for this node when rendered.
+
+### `Opacity`
+
+Gets this node's local opacity.
+
+### `Path`
+
+Gets this node's path.
+
+### `Stroke`
+
+Gets this node's optional stroke.
+
+### `Style`
+
+Gets the immutable node options.
+
+### `Transform`
+
+Gets this node's local transform.
+
+## `VectorNodeStyle`
+
+Source:
+
+- [`VectorAssetModel.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/VectorAssetModel.gs)
+
+Describes immutable paint and composition options for a vector node.
+
+### `new`
+
+Creates vector node options with unit opacity and nonzero winding.
+
+### `ClipPath`
+
+Gets this node's optional clip path.
+
+### `ClipPathFillRule`
+
+Gets this node's clip fill rule.
+
+### `Fill`
+
+Gets this node's optional fill paint.
+
+### `FillRule`
+
+Gets this node's fill rule.
+
+### `Key`
+
+Gets the stable key used for this node when rendered.
+
+### `Opacity`
+
+Gets this node's local opacity.
+
+### `Stroke`
+
+Gets this node's optional stroke.
+
+### `Transform`
+
+Gets this node's local transform.
+
+## `VectorPaint`
+
+Source:
+
+- [`VectorAssetModel.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/VectorAssetModel.gs)
+
+Describes one immutable vector fill paint.
+
+### `new(Color)`
+
+Creates a solid vector paint.
+
+### `new(Gradient)`
+
+Creates a gradient vector paint.
+
+### `Color`
+
+Gets the solid color, or transparent when this paint is a gradient.
+
+### `Gradient`
+
+Gets the gradient, or nil for a solid paint.
+
+## `VectorPath`
+
+Source:
+
+- [`VectorPath.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/VectorPath.gs)
+
+Represents an immutable vector path in a top-left coordinate system. Coordinates increase rightward on x and downward on y.
+
+### `Equals(VectorPath)`
+
+Tests whether another path has the same content.
+
+### `Equals(System.Object)`
+
+Tests whether an object is a path with the same content.
+
+### `GetHashCode`
+
+Gets the content hash code.
+
+### `Empty`
+
+Gets an empty path with a unit view box.
+
+### `ViewBoxHeight`
+
+Gets the view-box height.
+
+### `ViewBoxWidth`
+
+Gets the view-box width.
+
+### `ViewBoxX`
+
+Gets the view-box left coordinate.
+
+### `ViewBoxY`
+
+Gets the view-box top coordinate.
+
+## `VectorStroke`
+
+Source:
+
+- [`VectorAssetModel.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/VectorAssetModel.gs)
+
+Describes one immutable vector stroke.
+
+### `new(float64,Color)`
+
+Creates a solid-color stroke with default cap, join, and miter settings.
+
+### `new(float64,VectorPaint)`
+
+Creates a stroke with default cap, join, and miter settings.
+
+### `new(float64,VectorPaint,StrokeCap,StrokeJoin,float64,DashPattern)`
+
+Creates a fully specified immutable stroke.
+
+### `Cap`
+
+Gets the line cap style.
+
+### `Dashes`
+
+Gets the optional dash pattern. NonScalingStroke measures dash lengths in window logical pixels.
+
+### `Join`
+
+Gets the line join style.
+
+### `MiterLimit`
+
+Gets the finite miter limit.
+
+### `Paint`
+
+Gets the stroke paint.
+
+### `VectorEffect`
+
+Gets the vector effect. The default is None.
+
+### `Width`
+
+Gets the non-negative stroke width in view-box units, or window logical pixels for NonScalingStroke.

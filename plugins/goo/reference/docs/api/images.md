@@ -58,6 +58,7 @@ Identifies one local image and the number of source pixels per logical unit.
 ### `new(string,float32)`
 
 Creates a variant such as logo@2x.png with density 2.
+
 - `path`: The local file path.
 - `pixelsPerUnit`: The source pixels per logical unit.
 

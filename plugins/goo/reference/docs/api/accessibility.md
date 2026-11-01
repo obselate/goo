@@ -58,6 +58,7 @@ can load. `Open` reports a missing runtime or unavailable desktop platform with
 x64 (glibc 2.27), Windows x64/arm64, and macOS x64/arm64. The host platform must
 also be supported by Goo's desktop renderer. Linux uses AT-SPI; Windows uses UI
 Automation; macOS uses native Accessibility.
+
 The adapter registers before the native window is shown. Close releases native
 objects; reopening the same window creates a new native binding. Replacing the
 adapter detaches it. A native replacement must be assigned while the window is
@@ -116,3 +117,670 @@ Initializes a neutral semantic declaration.
 Gets or sets actions advertised by a composed control.
 
 ### `Atomic`
+
+Gets whether a live-region update is atomic when explicitly specified.
+
+### `Busy`
+
+Gets whether the item is busy when explicitly specified.
+
+### `Checked`
+
+Gets the check state.
+
+### `CustomRole`
+
+Gets the platform-specific custom role name for AccessibilityRole.Custom.
+
+### `Description`
+
+Gets the accessible description.
+
+### `Expanded`
+
+Gets whether the item is expanded when explicitly specified.
+
+### `HasPopup`
+
+Gets whether the item opens a popup when explicitly specified.
+
+### `Hidden`
+
+Gets whether this element and its descendants are excluded from the semantic tree.
+
+### `Invalid`
+
+Gets whether the item is invalid when explicitly specified.
+
+### `Level`
+
+Gets the heading level when explicitly specified.
+
+### `Live`
+
+Gets live-region announcement behavior.
+
+### `Modal`
+
+Gets whether the item is modal when explicitly specified.
+
+### `MultiSelectable`
+
+Gets whether the item permits multiple selection when explicitly specified.
+
+### `Multiline`
+
+Gets whether the item is multiline when explicitly specified.
+
+### `Name`
+
+Gets the accessible name.
+
+### `OnAction`
+
+Gets the handler for advertised composed-control actions.
+
+### `Orientation`
+
+Gets the orientation when explicitly specified.
+
+### `PositionInSet`
+
+Gets the zero-based logical item position within its collection, including unrealized items.
+
+### `Range`
+
+Gets the optional numeric value metadata.
+
+### `ReadOnly`
+
+Gets whether the item is read-only when explicitly specified.
+
+### `Relationships`
+
+Gets semantic relationships based on mounted ElementHandle identity.
+
+### `Required`
+
+Gets whether the item is required when explicitly specified.
+
+### `Role`
+
+Gets the role. Auto selects a neutral primitive default when one exists.
+
+### `Selected`
+
+Gets whether the item is selected when explicitly specified.
+
+### `SizeOfSet`
+
+Gets the logical item count on a collection container, including unrealized items.
+
+### `Value`
+
+Gets the string value.
+
+## `AccessibilityAction`
+
+Source:
+
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/main/Goo/Accessibility/Accessibility.gs)
+
+Selects a command routed from an accessibility adapter.
+
+### Values
+
+- `Focus`
+- `Activate`
+- `SetValue`
+- `SetSelection`
+- `Increment`
+- `Decrement`
+- `Select`
+- `Deselect`
+- `Expand`
+- `Collapse`
+- `Scroll`
+- `Blur`
+- `ScrollIntoView`
+
+## `AccessibilityActionRequest`
+
+Source:
+
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/main/Goo/Accessibility/Accessibility.gs)
+
+Carries optional data for one accessibility action request.
+
+### `new(AccessibilityAction)`
+
+Initializes an action request with neutral optional data.
+
+- `action`: The requested operation.
+
+### `Scroll(float64,float64)`
+
+Creates a scroll request.
+
+- `x`: The finite nonnegative horizontal logical target.
+- `y`: The finite nonnegative vertical logical target.
+
+### `SetSelection(int32,int32)`
+
+Creates a selection-change request.
+
+- `start`: The nonnegative UTF-16 start in the exposed semantic value.
+- `length`: The nonnegative UTF-16 length in the exposed semantic value.
+
+### `SetSelection(int32,int32,int32)`
+
+Creates a selection-change request with an explicit active endpoint.
+
+- `start`: The nonnegative UTF-16 start in the exposed semantic value.
+- `length`: The nonnegative UTF-16 length in the exposed semantic value.
+- `caret`: The active endpoint, equal to start or start plus length.
+
+### `SetValue(string)`
+
+Creates a value-change request.
+
+- `value`: The text to apply.
+
+### `Action`
+
+Gets the requested operation.
+
+### `ScrollX`
+
+Gets the horizontal logical target supplied for Scroll.
+
+### `ScrollY`
+
+Gets the vertical logical target supplied for Scroll.
+
+### `SelectionCaret`
+
+Gets the active UTF-16 endpoint supplied for SetSelection.
+
+### `SelectionLength`
+
+Gets the UTF-16 selection length in the exposed semantic value supplied for SetSelection.
+
+### `SelectionStart`
+
+Gets the UTF-16 selection start in the exposed semantic value supplied for SetSelection.
+
+### `Value`
+
+Gets text supplied for SetValue.
+
+## `AccessibilityAdapter`
+
+Source:
+
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/main/Goo/Accessibility/Accessibility.gs)
+
+Receives retained semantic-tree updates from a Window.
+
+### `Update(AccessibilityTree)`
+
+Receives the current mutable retained semantic tree on the UI thread.
+
+- `tree`: The current retained semantic tree.
+
+## `AccessibilityChecked`
+
+Source:
+
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/main/Goo/Accessibility/Accessibility.gs)
+
+Describes a checkable widget state.
+
+### Values
+
+- `Unspecified`
+- `False`
+- `True`
+- `Mixed`
+
+## `AccessibilityId`
+
+Source:
+
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/main/Goo/Accessibility/Accessibility.gs)
+
+Identifies one semantic node by its stable Value for one mounted Window lifetime.
+
+## `AccessibilityLive`
+
+Source:
+
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/main/Goo/Accessibility/Accessibility.gs)
+
+Selects the announcement priority for a live region.
+
+### Values
+
+- `Off`
+- `Polite`
+- `Assertive`
+
+## `AccessibilityNode`
+
+Source:
+
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/main/Goo/Accessibility/Accessibility.gs)
+
+Represents one retained semantic node. Adapters may retain this mutable view.
+
+### `Actions`
+
+Gets supported actions in deterministic order.
+
+### `Atomic`
+
+Gets the resolved atomic live-region state.
+
+### `Bounds`
+
+Gets the transformed border bounds in window logical coordinates.
+
+### `Busy`
+
+Gets the resolved busy state.
+
+### `Caret`
+
+Gets the UTF-16 active caret offset in the exposed semantic value, when this node has editable text.
+
+### `Checked`
+
+Gets the resolved check state.
+
+### `Children`
+
+Gets published semantic children in deterministic source order.
+
+### `CustomRole`
+
+Gets the custom role text when Role is Custom.
+
+### `Description`
+
+Gets the resolved description.
+
+### `Disabled`
+
+Gets the inherited disabled state.
+
+### `Expanded`
+
+Gets the resolved expanded state.
+
+### `Focused`
+
+Gets whether this node owns keyboard focus.
+
+### `HasPopup`
+
+Gets the resolved popup state.
+
+### `Id`
+
+Gets the stable public semantic identifier.
+
+### `Invalid`
+
+Gets the resolved invalid state.
+
+### `IsPassword`
+
+Gets whether exposed text represents a protected password value.
+
+### `Level`
+
+Gets the resolved heading level.
+
+### `Live`
+
+Gets the resolved live-region behavior.
+
+### `Modal`
+
+Gets the resolved modal state.
+
+### `MultiSelectable`
+
+Gets the resolved multiselectable state.
+
+### `Multiline`
+
+Gets the resolved multiline state.
+
+### `Name`
+
+Gets the resolved name.
+
+### `Orientation`
+
+Gets the resolved orientation.
+
+### `PositionInSet`
+
+Gets the zero-based logical collection item position.
+
+### `ReadOnly`
+
+Gets the resolved read-only state.
+
+### `Relationships`
+
+Gets resolved public-ID relationships.
+
+### `Required`
+
+Gets the resolved required state.
+
+### `Role`
+
+Gets the resolved role.
+
+### `ScrollInfo`
+
+Gets built-in scroll geometry, or nil when this node has no scroll container.
+
+### `Selected`
+
+Gets the resolved selected state.
+
+### `SelectionLength`
+
+Gets the UTF-16 selection length in the exposed semantic value, when this node has editable text.
+
+### `SelectionStart`
+
+Gets the UTF-16 selection start in the exposed semantic value, when this node has editable text.
+
+### `SizeOfSet`
+
+Gets the total logical item count on a collection container.
+
+### `TextSnapshot`
+
+Gets the immutable editor text snapshot, when this node is a text editor.
+
+### `Value`
+
+Gets the resolved string value.
+
+### `ValueMaximum`
+
+Gets the resolved numeric maximum.
+
+### `ValueMinimum`
+
+Gets the resolved numeric minimum.
+
+### `ValueNow`
+
+Gets the resolved numeric value.
+
+### `ValueText`
+
+Gets the resolved localized value text.
+
+### `VisibleBounds`
+
+Gets the conservatively clipped window logical bounds, or nil when outside the viewport.
+
+## `AccessibilityOrientation`
+
+Source:
+
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/main/Goo/Accessibility/Accessibility.gs)
+
+Selects a widget orientation.
+
+### Values
+
+- `Unspecified`
+- `Horizontal`
+- `Vertical`
+
+## `AccessibilityRelationshipIds`
+
+Source:
+
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/main/Goo/Accessibility/Accessibility.gs)
+
+Reports resolved relationship IDs for one retained semantic node.
+
+### `ActiveDescendant`
+
+Gets the active descendant target, when published.
+
+### `Controls`
+
+Gets controlled targets in declaration order.
+
+### `DescribedBy`
+
+Gets description targets in declaration order.
+
+### `ErrorMessage`
+
+Gets error-message targets in declaration order.
+
+### `FlowTo`
+
+Gets flow targets in declaration order.
+
+### `LabelledBy`
+
+Gets labeling targets in declaration order.
+
+### `Owns`
+
+Gets owned targets in declaration order.
+
+## `AccessibilityRelationships`
+
+Source:
+
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/main/Goo/Accessibility/Accessibility.gs)
+
+Defines stable mounted-element relationships for one semantic declaration.
+
+### `new`
+
+Initializes an empty relationship declaration.
+
+### `ActiveDescendant`
+
+Gets or sets the active descendant, when one is mounted.
+
+### `Controls`
+
+Gets or sets the elements controlled by this element.
+
+### `DescribedBy`
+
+Gets or sets the elements that describe this element.
+
+### `ErrorMessage`
+
+Gets or sets the elements that describe a current error.
+
+### `FlowTo`
+
+Gets or sets the next logical reading targets for this element.
+
+### `LabelledBy`
+
+Gets or sets the elements that label this element.
+
+### `Owns`
+
+Gets or sets the elements owned by this element.
+
+## `AccessibilityRole`
+
+Source:
+
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/main/Goo/Accessibility/Accessibility.gs)
+
+Selects the semantic role exposed to an accessibility adapter.
+
+### Values
+
+- `Auto`
+- `None`
+- `Generic`
+- `Text`
+- `Button`
+- `TextInput`
+- `TextEditor`
+- `Image`
+- `Checkbox`
+- `Radio`
+- `Switch`
+- `Slider`
+- `SpinButton`
+- `ScrollBar`
+- `ProgressBar`
+- `Group`
+- `List`
+- `ListItem`
+- `Menu`
+- `MenuItem`
+- `TabList`
+- `Tab`
+- `Dialog`
+- `Alert`
+- `Heading`
+- `Link`
+- `Tree`
+- `TreeItem`
+- `Grid`
+- `GridCell`
+- `Row`
+- `ColumnHeader`
+- `RowHeader`
+- `ComboBox`
+- `SearchBox`
+- `Status`
+- `Custom`
+
+## `AccessibilityScrollInfo`
+
+Source:
+
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/main/Goo/Accessibility/Accessibility.gs)
+
+Reports logical scroll offsets, targets, limits, and viewport dimensions.
+
+### `MaximumX`
+
+Gets the maximum horizontal offset.
+
+### `MaximumY`
+
+Gets the maximum vertical offset.
+
+### `TargetX`
+
+Gets the horizontal animation target.
+
+### `TargetY`
+
+Gets the vertical animation target.
+
+### `ViewportHeight`
+
+Gets the untransformed viewport height.
+
+### `ViewportWidth`
+
+Gets the untransformed viewport width.
+
+### `X`
+
+Gets the current horizontal offset.
+
+### `Y`
+
+Gets the current vertical offset.
+
+## `AccessibilityTree`
+
+Source:
+
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/main/Goo/Accessibility/Accessibility.gs)
+
+Represents the retained semantic tree delivered to an AccessibilityAdapter.
+
+### `Root`
+
+Gets the published root, or nil when no visible semantic node exists.
+
+### `Version`
+
+Gets the monotonic version for retained-tree mutations.
+
+## `AccessibilityValue`
+
+Source:
+
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/main/Goo/Accessibility/Accessibility.gs)
+
+Describes one range value exposed by a semantic widget.
+
+### `new`
+
+Initializes an empty range value.
+
+### `Maximum`
+
+Gets the maximum numeric value, when one exists.
+
+### `Minimum`
+
+Gets the minimum numeric value, when one exists.
+
+### `Now`
+
+Gets the current numeric value, when one exists.
+
+### `Text`
+
+Gets the localized value text, when one exists.
+
+## `NativeAccessibilityAdapter`
+
+Sources:
+
+- [`NativeAccessibilityActions.gs`](https://github.com/obselate/goo/blob/main/Goo/Accessibility/Native/NativeAccessibilityActions.gs)
+- [`NativeAccessibilityAdapter.gs`](https://github.com/obselate/goo/blob/main/Goo/Accessibility/Native/NativeAccessibilityAdapter.gs)
+- [`NativeAccessibilityText.Geometry.gs`](https://github.com/obselate/goo/blob/main/Goo/Accessibility/Native/NativeAccessibilityText.Geometry.gs)
+- [`NativeAccessibilityText.gs`](https://github.com/obselate/goo/blob/main/Goo/Accessibility/Native/NativeAccessibilityText.gs)
+- [`NativeAccessibilityTree.gs`](https://github.com/obselate/goo/blob/main/Goo/Accessibility/Native/NativeAccessibilityTree.gs)
+
+Publishes a desktop window to AT-SPI, UI Automation, or macOS Accessibility through AccessKit. Assign before Window.Open. Requires the optional Goo.Accessibility native runtime package.
+
+### `new`
+
+Creates an unattached adapter. Assign it to exactly one Window.AccessibilityAdapter.
+
+### `Dispose`
+
+Detaches from its window and releases native objects on the owning UI thread. Idempotent.
+
+### `Update(AccessibilityTree)`
+
+Receives a retained tree on the owning window's UI thread.
+
+- `tree`: The current retained semantic tree.
+
+### `IsAvailable`
+
+Reports whether the versioned native runtime can load on this 64-bit desktop platform.

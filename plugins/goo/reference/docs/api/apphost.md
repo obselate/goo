@@ -57,3 +57,71 @@ Reports whether desktop startup arguments form an owned activation request.
 ## `Placement`
 
 Source:
+
+- [`Placement.gs`](https://github.com/obselate/goo/blob/main/Goo/AppHost/Placement.gs)
+
+Restores app-owned placement against the current desktop display inventory.
+
+### `Restore(Window,WindowPlacement)`
+
+Matches display hints and clamps normal geometry to current usable bounds and size constraints. Open the window hidden first. Restore does not read or write application settings. Saved Minimized becomes Normal. Native capture already retains the last non-minimized state. Wayland does not apply position. Fullscreen, focus and final geometry remain OS decisions.
+
+- `window`: The open window on its owner thread.
+- `saved`: App-owned saved geometry, state and display hints.
+
+Returns: Accepted with the applied mask, Closed, Unsupported, or Failed for invalid data or host failure.
+
+## `SingleInstance`
+
+Source:
+
+- [`SingleInstance.gs`](https://github.com/obselate/goo/blob/main/Goo/AppHost/SingleInstance.gs)
+
+Elects one desktop instance and forwards typed requests to its activation queue.
+
+### `AcquireAsync(string,ApplicationActivation,int32)`
+
+Acquires a primary lease or forwards to the current user's existing desktop instance. Initialize Window application activation on the UI thread before calling this method. macOS captures native launch requests before election and forwards each retained request. On Wayland, RequestActivation inside the receiving handler uses the forwarded activation token. Keep the primary lease until shutdown. Forwarded confirms queue ownership, not handler completion. A timeout never elects a second primary and does not prove that an unacknowledged request was unused. Android and other non-desktop targets return Unsupported.
+
+- `applicationId`: A stable application identity shared by both processes.
+- `activation`: The request to forward. Launch becomes Arguments and IsInitial becomes false.
+- `timeoutMilliseconds`: The positive connection and acknowledgement deadline in milliseconds.
+
+Returns: A primary lease or an explicit forwarding, timeout, unsupported, rejection, or failure result.
+
+## `SingleInstanceResult`
+
+Source:
+
+- [`SingleInstance.gs`](https://github.com/obselate/goo/blob/main/Goo/AppHost/SingleInstance.gs)
+
+Owns the primary lifetime or reports why a request was not forwarded.
+
+### `Error`
+
+Gets bounded failure detail without argument or document contents.
+
+### `Lease`
+
+Gets the primary's disposable lease, or nil for every other status.
+
+### `Status`
+
+Gets the election or forwarding outcome.
+
+## `SingleInstanceStatus`
+
+Source:
+
+- [`SingleInstance.gs`](https://github.com/obselate/goo/blob/main/Goo/AppHost/SingleInstance.gs)
+
+Reports primary ownership or the outcome of forwarding to the existing instance.
+
+### Values
+
+- `Primary`
+- `Forwarded`
+- `TimedOut`
+- `Unsupported`
+- `Rejected`
+- `Failed`
