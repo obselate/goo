@@ -584,18 +584,13 @@ internal partial class VulkanSceneCompiler {
         } else if current.RetentionState == SceneChunkRetentionState.ExactLeafRebuild {
           journal.AddChange(GrowDamageToEffectLayers(prior.Bounds, current.FirstDraw), true,
             GrowDamageToEffectLayers(current.Bounds, current.FirstDraw), true)
-        } else if (current.RetentionState == SceneChunkRetentionState.ExactLeafHit
-            && prior.RetentionState != SceneChunkRetentionState.Generic)
-          || (current.ContentKey == prior.ContentKey
-              && ((current.RetentionState != SceneChunkRetentionState.Generic
-                  && prior.RetentionState != SceneChunkRetentionState.Generic)
-                  || ExactGenericChunkContent(index, index, prior))) {
-                    frame.Chunks[index].Version = prior.Version
-                    frame.Chunks[index].Dirty = false
-                  } else {
-                    journal.AddChange(GrowDamageToEffectLayers(prior.Bounds, current.FirstDraw), true,
-                      GrowDamageToEffectLayers(current.Bounds, current.FirstDraw), true)
-                  }
+        } else if ChunkContentRetained(index, index, prior) {
+          frame.Chunks[index].Version = prior.Version
+          frame.Chunks[index].Dirty = false
+        } else {
+          journal.AddChange(GrowDamageToEffectLayers(prior.Bounds, current.FirstDraw), true,
+            GrowDamageToEffectLayers(current.Bounds, current.FirstDraw), true)
+        }
         index = index + 1
       }
     }
@@ -660,17 +655,23 @@ internal partial class VulkanSceneCompiler {
     let prior = retentionProofs!!.Chunks[priorIndex]
     let unchanged = current.OwnerId == prior.OwnerId && current.TransformKey == prior.TransformKey
       && ExactBounds(current.Bounds, prior.Bounds) && ExactChunkTopology(index, prior)
-      && ((current.RetentionState == SceneChunkRetentionState.ExactLeafHit
-          && prior.RetentionState != SceneChunkRetentionState.Generic)
-        || (current.ContentKey == prior.ContentKey
-          && ((current.RetentionState != SceneChunkRetentionState.Generic
-              && prior.RetentionState != SceneChunkRetentionState.Generic)
-            || ExactGenericChunkContent(index, priorIndex, prior))))
+      && ChunkContentRetained(index, priorIndex, prior)
     if unchanged {
       frame.Chunks[index].Version = prior.Version
       frame.Chunks[index].Dirty = false
     }
     return unchanged
+  }
+
+  private func ChunkContentRetained(index int32, priorIndex int32,
+    prior VulkanSceneChunkIdentity) bool {
+    let current = frame.Chunks[index]
+    return (current.RetentionState == SceneChunkRetentionState.ExactLeafHit
+        && prior.RetentionState != SceneChunkRetentionState.Generic)
+      || (current.ContentKey == prior.ContentKey
+        && ((current.RetentionState != SceneChunkRetentionState.Generic
+            && prior.RetentionState != SceneChunkRetentionState.Generic)
+          || ExactGenericChunkContent(index, priorIndex, prior)))
   }
 
   private func ExactChunkTopology(index int32, prior VulkanSceneChunkIdentity) bool {
