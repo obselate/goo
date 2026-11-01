@@ -1,7 +1,9 @@
 import System
 import System.Collections.Generic
+import System.Diagnostics
 import System.IO
 import System.Linq
+import System.Text.Json
 
 internal shared partial class Repo {
     private func BuildAndroid() {
@@ -27,6 +29,35 @@ internal shared partial class Repo {
     }
 
     private func Docs(check bool, android bool) {
+        if !android {
+            Build("tools/Goo.DevTools.Cli")
+            let start = ProcessStartInfo{FileName: "dotnet", WorkingDirectory: Root, RedirectStandardOutput: true}
+            for argument in[]string{
+                "tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll",
+                "--help",
+                "--json"
+            } {
+                start.ArgumentList.Add(argument)
+            }
+            using let process = Process.Start(start) ?? throw IOException("Could not start the Goo CLI.")
+            let output = process.StandardOutput.ReadToEnd()
+            process.WaitForExit()
+            if process.ExitCode != 0 {
+                throw InvalidOperationException("Could not generate the CLI reference.")
+            }
+            using let help = JsonDocument.Parse(output)
+            let reference = help.RootElement.GetProperty("reference").GetString()!!.Replace("\r\n", "\n") + "\n"
+            let path = Path.Combine(Root, "docs/devtools/cli.md")
+            if check {
+                if !File.Exists(path) || File.ReadAllText(path) != reference {
+                    throw InvalidOperationException(
+                        "The CLI reference is stale. Run: dotnet run --project tools/Goo.Repo -- docs"
+                    )
+                }
+            } else {
+                File.WriteAllText(path, reference)
+            }
+        }
         if android {
             BuildAndroid()
         } else {

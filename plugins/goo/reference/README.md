@@ -73,12 +73,11 @@ Install other packages separately as needed.
 | [Goo.Android](https://www.nuget.org/packages/Goo.Android/) | Android host, printing, and spell checking | `dotnet add package Goo.Android` |
 | [Goo.Audio](https://www.nuget.org/packages/Goo.Audio/) | Audio playback | `dotnet add package Goo.Audio` |
 | [Goo.Accessibility](https://www.nuget.org/packages/Goo.Accessibility/) | Desktop native accessibility adapters | `dotnet add package Goo.Accessibility` |
-| [Goo.DevTools](https://www.nuget.org/packages/Goo.DevTools/) | [Launch, attach, and capture](docs/devtools/README.md) with the `goo` CLI | `dotnet tool install --global Goo.DevTools` |
-| [Goo.DevTools.App](https://www.nuget.org/packages/Goo.DevTools.App/) | [Graphical inspector](https://github.com/obselate/goo/blob/main/apps/Goo.DevTools/README.md), launched with `goo-devtools` | `dotnet tool install --global Goo.DevTools.App` |
+| [Goo.DevTools](https://www.nuget.org/packages/Goo.DevTools/) | [CLI and graphical inspector](docs/devtools/README.md), launched with `goo dev` and `goo inspector` | `dotnet tool install --global Goo.DevTools` |
 | [Goo.Templates](https://www.nuget.org/packages/Goo.Templates/) | [Create starter projects](https://github.com/obselate/goo/blob/main/templates/Goo.Templates/README.md) with `dotnet new goo` | `dotnet new install Goo.Templates` |
 
-Add library packages from your application directory. Install both DevTools
-packages to launch the graphical inspector with `goo dev --inspector`.
+Add library packages from your application directory. `Goo.DevTools` includes
+the graphical inspector. Launch it with `goo dev --inspector` or `goo inspector`.
 
 Remove references to `Goo.AppHost`, `Goo.Gestures`, `Goo.Images`, `Goo.NativeDialogs`,
 `Goo.NativeMenus`, `Goo.Notifications`, `Goo.Printing`, `Goo.RichText`, `Goo.SpellCheck`, and `Goo.SpellCheck.Hunspell`
