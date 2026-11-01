@@ -15,24 +15,18 @@ and meet the [platform requirements](#platforms), then:
 
 ```sh
 dotnet new install Goo.Templates@0.26.1
-
-mkdir hello-goo
-cd hello-goo
-dotnet new goo
+dotnet tool install --global Goo.DevTools
+dotnet new goo -n HelloGoo
+cd HelloGoo
+goo dev
 ```
 
-Replace `Program.gs` with the example below, then run:
+The template restores the G# compiler from NuGet automatically.
+The generated counter runs with hot reload. A separate SDL or HarfBuzz
+installation is not required.
 
-```sh
-dotnet run
-```
-
-The template restores the G# SDK and Goo package through NuGet. A separate G#
-compiler, SDL, or HarfBuzz installation is not required. Projects that add
-custom `<GooShaderEffect>` source need the pinned Slang and Vulkan SDK tools.
-Use the platform links in the
-[custom shader setup](https://github.com/obselate/goo#custom-shaders), then set
-`SLANG_SDK` and `VULKAN_SDK` or put `slangc` and `spirv-val` on `PATH`.
+Custom `<GooShaderEffect>` source needs the
+[shader tools](https://github.com/obselate/goo#custom-shaders).
 
 ## Example
 

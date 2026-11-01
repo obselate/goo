@@ -38,7 +38,11 @@ partial class GooServer {
             "CONTRIBUTING.md",
             "docs/native-authoring.md",
             "templates/Goo.Templates/content/Program.gs",
-            "templates/Goo.Templates/content/GooStarter.gsproj"
+            "templates/Goo.Templates/content/GooStarter.gsproj",
+            "templates/Goo.Templates/content/global.json",
+            "templates/Goo.Templates/content/.gitignore",
+            "templates/Goo.Templates/content/Properties/PublishProfiles/NativeAot.pubxml",
+            "templates/Goo.Templates/content/Properties/PublishProfiles/Trimmed.pubxml"
         }
         for directory in[]string{"docs/api", "docs/devtools"} {
             let path = Path.Combine(root, directory)
@@ -207,17 +211,18 @@ partial class GooServer {
         let root = Source(S(a, "repository"))
         let files = JsonObject()
         let sourceFiles = JsonObject()
-        for filename in[]string{"Program.gs", "GooStarter.gsproj"} {
+        for filename in[]string{
+            "Program.gs",
+            "GooStarter.gsproj",
+            "global.json",
+            ".gitignore",
+            "Properties/PublishProfiles/NativeAot.pubxml",
+            "Properties/PublishProfiles/Trimmed.pubxml"
+        } {
             let relative = "templates/Goo.Templates/content/" + filename
             let template = Document(root, relative)
-            var content = File.ReadAllText(template)
+            let content = File.ReadAllText(template)
             sourceFiles[relative] = Hash(File.ReadAllBytes(template))
-            if filename.EndsWith(".gsproj") {
-                content = content.Replace(
-                    "</Project>",
-                    "  <ItemGroup>\n    <Watch Include=\"**/*.gs\" Exclude=\"bin/**;obj/**\" />\n  </ItemGroup>\n</Project>"
-                )
-            }
             files[filename.Replace("GooStarter", name)] = content.Replace("GooStarter", name)
         }
         let project = S(files, name + ".gsproj")
@@ -260,7 +265,7 @@ partial class GooServer {
             ["files"] = files,
             ["lint"] = lint,
             ["build"] = build,
-            ["run"] = "goo dev --no-watch --project " + name + ".gsproj"
+            ["run"] = "goo dev"
         }
     }
 

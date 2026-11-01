@@ -1,7 +1,40 @@
 # Ship a desktop app
 
-Create the [starter app](../README.md#quick-start) in `goo-ship`.
-Run [platform preflight](platform-preflight.md). SVG is included in `Goo`.
+## Publish
+
+From the [starter app](../README.md#quick-start) directory:
+
+```sh
+dotnet publish -c Release -r linux-x64 --self-contained true -o publish
+```
+
+Distribute the whole `publish` directory, including native libraries and licenses.
+Self-contained includes .NET, not GPU drivers, Wayland, fonts or OS libraries.
+Check [platform preflight](platform-preflight.md) on the target machine.
+Publish on the target OS. Use `-r win-x64` for Windows x64 or `-r osx-arm64`
+for Apple silicon.
+
+## NativeAOT
+
+```sh
+dotnet publish -c Release -p:PublishProfile=NativeAot -o publish/aot
+```
+
+The template includes this opt-in profile. It targets `linux-x64` and compiles
+native code. Override the runtime with `-r win-x64` or `-r osx-arm64` on that OS.
+Install the [NativeAOT build tools](https://learn.microsoft.com/dotnet/core/deploying/native-aot/).
+Check app and dependency trim/AOT warnings, then test the output.
+App-owned assets are not embedded.
+
+For a trimmed app that keeps the runtime:
+
+```sh
+dotnet publish -c Release -p:PublishProfile=Trimmed -o publish/trimmed
+```
+
+## Optional assets
+
+SVG is included in `Goo`.
 
 Create `Assets/icon.svg`:
 
@@ -29,22 +62,15 @@ Add `Container{Width: 32, Height: 32, icon.Render(),},` to the built container.
 The base-directory lookup works independently of the caller's working directory.
 See [SVG support and limits](svg.md).
 
-## Publish
+Publish again, then start `publish/HelloGoo` from another directory to check
+asset lookup. Include `Assets` in the distributed output.
+Single-file publishing is not validated for this sample.
 
-```sh
-dotnet publish -c Release -r linux-x64 --self-contained true -o publish
-```
+## Optional installers
 
-Start `publish/goo_ship` from another directory to check asset lookup.
-Distribute the whole publish directory, including `Assets`, native libraries and
-licenses. Self-contained includes .NET, not GPU drivers, Wayland, fonts or OS libraries.
+Use `goo package` for the formats below. The command is included in `Goo.DevTools`.
 
-Publish on the target OS with `-r win-x64` for Windows x64 or `-r osx-arm64` for
-Apple silicon. [NativeAOT is the preferred desktop release mode](../CONTRIBUTING.md#source-setup).
-It does not automatically embed app-owned assets. Single-file publishing is not
-validated for this sample.
-
-## Android signed AAB
+### Android signed AAB
 
 ```sh
 bash tools/Goo.DevTools.Cli/Packaging/fetch-bundletool.sh "$HOME/.cache/goo-android-tools"
@@ -82,7 +108,7 @@ SDK and JDK. Put signing paths in a private MSBuild import or environment:
 
 See [Android integration](android.md) for device, Vulkan and native-library checks.
 
-## macOS app and DMG
+### macOS app and DMG
 
 ```sh
 goo package --project MyApp.gsproj --target macos --output artifacts/packages
@@ -99,7 +125,7 @@ goo package --project MyApp.gsproj --target macos --output artifacts/packages
 - A managed Mac can prohibit this override. Do not disable Gatekeeper or remove quarantine.
 - Developer ID, notarization and Intel Mac support are not included.
 
-## Windows installer
+### Windows installer
 
 ```powershell
 $env:GOO_ISCC = 'C:\Program Files\Inno Setup 7\ISCC.exe'
@@ -127,12 +153,11 @@ The script checks SHA-256
 It does not install the compiler. Check [Inno Setup's license](https://jrsoftware.org/isinfo.php)
 for commercial use.
 
-## Linux AppImage
+### Linux AppImage
 
-The optional `Goo.DevTools` dotnet tool supplies `goo package`. It publishes
-a Release, self-contained NativeAOT app and stages the complete output.
-Build, run and publish defaults are unchanged. Requires Linux x64 and NativeAOT
-build tools. Flatpak and X11 are not supported.
+`goo package` publishes a Release, self-contained NativeAOT app and stages
+the complete output. It requires Linux x64 and NativeAOT build tools.
+Flatpak and X11 are not supported.
 
 Set these properties in the application project:
 
@@ -151,8 +176,7 @@ digits, dots, underscores and hyphens. The PNG icon path is relative to the proj
 Assets and notices need `CopyToPublishDirectory` metadata. They remain beside the
 executable, including XML data and nested directories.
 
-Install the tool, then fetch the pinned AppImage creator and static type-2 runtime.
-From a Goo source checkout:
+Fetch the pinned AppImage creator and static type-2 runtime from a Goo source checkout:
 
 ```sh
 bash tools/Goo.DevTools.Cli/Packaging/fetch-appimage-tools.sh "$HOME/.cache/goo-appimage"
@@ -187,24 +211,3 @@ Wayland, fonts, a Vulkan loader and GPU driver. Packaging does not expand platfo
 support. Include all application and dependency license notices, including those
 for the embedded AppImage runtime.
 
-## Publish presets
-
-New starter apps include opt-in profiles in `Properties/PublishProfiles`.
-Default `dotnet run` and `dotnet publish` behavior is unchanged.
-
-```sh
-dotnet publish -c Release -p:PublishProfile=NativeAot -o publish/aot
-dotnet publish -c Release -p:PublishProfile=Trimmed -o publish/trimmed
-```
-
-Both profiles target `linux-x64` and include .NET. `NativeAot` compiles native code
-for size. `Trimmed` keeps the runtime and removes unused code.
-Publish on the target OS. Override with `-r win-x64` or `-r osx-arm64`, or change
-the profile's `RuntimeIdentifier`. NativeAOT needs
-[platform build tools](https://learn.microsoft.com/dotnet/core/deploying/native-aot/).
-Check app and dependency trim/AOT warnings, then test the output.
-Neither profile embeds app-owned assets.
-
-Output size includes symbols and native payloads. Framework-dependent output
-excludes the installed .NET runtime. Memory and output size depend on GPU drivers,
-app content and host state, not just publish mode.

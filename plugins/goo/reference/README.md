@@ -19,48 +19,19 @@ and meet the [platform requirements](#platforms), then:
 
 ```sh
 dotnet new install Goo.Templates@0.26.1
-
-mkdir hello-goo
-cd hello-goo
-dotnet new goo
+dotnet tool install --global Goo.DevTools
+dotnet new goo -n HelloGoo
+cd HelloGoo
+goo dev
 ```
 
-Run the app:
+The template restores the G# compiler from NuGet automatically.
+`goo dev` runs the app with hot reload. See [edit and inspect](https://github.com/obselate/goo/blob/main/docs/edit-and-inspect.md).
 
-```sh
-dotnet run
-```
+### Build from source
 
-### Build the source Gallery
-
-Install .NET SDK 10.0.401 and Git. Download both pinned
-[shader tools](#custom-shaders) and set their SDK environment variables.
-The Gallery compiles shaders during its build.
-
-### On Linux:
-
-```sh
-git clone https://github.com/obselate/goo.git
-cd goo
-dotnet run --project tools/Goo.Repo -- doctor
-dotnet run --project tools/Goo.Repo -- build
-bash .github/scripts/build-sdl-linux-x64.sh artifacts/native/libSDL3.so
-dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
-```
-
-### On Windows:
-
-```bat
-git clone https://github.com/obselate/goo.git
-cd goo
-dotnet run --project tools/Goo.Repo -- doctor
-dotnet run --project tools/Goo.Repo -- build
-bash .github/scripts/fetch-sdl-win-x64.sh artifacts/native/SDL3.dll
-dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release -p:GooWindowsSdlPath="%CD%/artifacts/native/SDL3.dll"
-```
-
-The SDK restores its compiler and formatter from NuGet. The native scripts use
-pinned SDL inputs. On Windows, run the fetch command in Git Bash.
+Use the [contributor guide](CONTRIBUTING.md) for source builds and the Gallery.
+Contributor commands start with `dotnet run --project tools/Goo.Repo --`.
 
 ## Packages
 
@@ -76,8 +47,8 @@ Install other packages separately as needed.
 | [Goo.DevTools](https://www.nuget.org/packages/Goo.DevTools/) | [CLI and graphical inspector](docs/devtools/README.md), launched with `goo dev` and `goo inspector` | `dotnet tool install --global Goo.DevTools` |
 | [Goo.Templates](https://www.nuget.org/packages/Goo.Templates/) | [Create starter projects](https://github.com/obselate/goo/blob/main/templates/Goo.Templates/README.md) with `dotnet new goo` | `dotnet new install Goo.Templates` |
 
-Add library packages from your application directory. `Goo.DevTools` includes
-the graphical inspector. Launch it with `goo dev --inspector` or `goo inspector`.
+Add library packages from your application directory. Run `goo snapshot` to read
+the live UI or `goo inspector` to open the graphical inspector.
 
 Remove references to `Goo.AppHost`, `Goo.Gestures`, `Goo.Images`, `Goo.NativeDialogs`,
 `Goo.NativeMenus`, `Goo.Notifications`, `Goo.Printing`, `Goo.RichText`, `Goo.SpellCheck`, and `Goo.SpellCheck.Hunspell`
@@ -132,7 +103,7 @@ func Main() {
 }
 ```
 
-Continue with [After the counter](https://github.com/obselate/goo/blob/main/docs/getting-started.md), then
+Continue with [Get started](https://github.com/obselate/goo/blob/main/docs/getting-started.md), then
 [edit and inspect](https://github.com/obselate/goo/blob/main/docs/edit-and-inspect.md). The [app-author documentation index](https://github.com/obselate/goo/blob/main/docs/README.md)
 links core, widgets, assets, shipping and plugin guides with their version baselines.
 
