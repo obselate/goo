@@ -146,6 +146,11 @@ class HostChecks {
                 }
                 Require(arguments.Length >= 1, "expected a host check subcommand")
                 let args = arguments.Skip(1).ToArray()
+                if arguments[0] == "input-build" {
+                    Require(args.Length == 1 && []string{"svg", "raster", "wav", "native-image", "font"}.Contains(args[0]), "expected input-build svg|raster|wav|native-image|font")
+                } else {
+                    Require(args.Length == 2 && args.All(a -> !a.StartsWith("-")), "expected two path arguments")
+                }
                 if arguments[0] == "macos-notifications" {
                     Notifications.MacOs(args)
                 } else if arguments[0] == "wayland-notifications" {

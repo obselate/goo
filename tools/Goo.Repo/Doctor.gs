@@ -10,7 +10,7 @@ internal shared partial class Repo {
         var missing = 0
         let sdk = ReadCommand("dotnet", []string{"--list-sdks"})
         let requiredSdk = JsonNode.Parse(File.ReadAllText("global.json"))!!["sdk"]!!["version"]!!.GetValue[string]()
-        missing += Report(".NET SDK " + requiredSdk, sdk.Split('\n').Any(line -> line.StartsWith(requiredSdk + " ")), "curl -fsSL https://dot.net/v1/dotnet-install.sh -o artifacts/dotnet-install.sh && bash artifacts/dotnet-install.sh --version " + requiredSdk)
+        missing += Report(".NET SDK " + requiredSdk, sdk.Split('\n').Any(line -> line.StartsWith(requiredSdk + " ")), "mkdir -p artifacts && curl -fsSL https://dot.net/v1/dotnet-install.sh -o artifacts/dotnet-install.sh && bash artifacts/dotnet-install.sh --version " + requiredSdk)
         missing += Report("G# compiler and formatter", File.Exists(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "formatter.path")).Trim()), "dotnet restore tools/Goo.Repo")
         let linux = OperatingSystem.IsLinux()
         if linux {

@@ -17,17 +17,21 @@ func ParseArguments(args[]string) Dictionary[string, string] {
         let body = argument[2 ..]
         let equals = body.IndexOf('=')
         if equals >= 0 {
-            result[body[.. equals]] = body[(equals + 1) ..]
+            let name = body[.. equals]
+            if name == "scripts-only" || equals + 1 == body.Length || !result.TryAdd(name, body[(equals + 1) ..]) {
+                throw ArgumentException("Invalid or duplicate option: --" + name)
+            }
             continue
         }
         if body == "scripts-only" {
-            result[body] = "true"
+            if !result.TryAdd(body, "true") { throw ArgumentException("Duplicate option: --" + body) }
             continue
         }
         if index + 1 >= args.Length {
             throw ArgumentException("Missing value for --$body")
         }
-        result[body] = args[(index += 1)]
+        let value = args[(index += 1)]
+        if value.StartsWith("--") || !result.TryAdd(body, value) { throw ArgumentException("Invalid or duplicate option: --" + body) }
     }
     for name in result.Keys {
         if !(

@@ -5,7 +5,7 @@
       <Private>true</Private>
     </Reference>
     <Reference Include="GSharp.Formatting">
-      <HintPath>$([System.IO.Path]::GetDirectoryName('$(GsharpCompilerFullPath)'))/../formatter/GSharp.Formatting.dll</HintPath>
+      <HintPath>$([System.IO.Path]::GetDirectoryName('$(GsharpFormatterFullPath)'))/GSharp.Formatting.dll</HintPath>
       <Private>true</Private>
     </Reference>
     <Compile Include="$(MSBuildThisFileDirectory)SourceFormatting.gs" Link="SourceFormatting.gs" />

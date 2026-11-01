@@ -9,7 +9,7 @@ Use `goo` MCP tools to look up APIs and inspect the app. The plugin root is two 
 
 ## Source and API
 
-Call `goo_context` once and reuse the result. Check preflight before runtime work and resolve failures with its actions. Pass an available standalone checkout as `repository`; otherwise use the bundle. Bundle identity is `provenance.files` hashes. Checkout identity is `provenance.revision` plus `dirty`. `compilerCommit` is the compiler pin. The loaded server reports itself, not other sessions. Compiler diagnostics or the selected checkout take precedence over bundled guides.
+Call `goo_context` once and reuse the result. Check preflight before runtime work and resolve failures with its actions. Pass an available standalone checkout as `repository`; otherwise use the bundle. Bundle identity is `provenance.files` hashes. Checkout identity is `provenance.revision` plus `dirty`. `compilerVersion` is the G# SDK version. The loaded server reports itself, not other sessions. Compiler diagnostics or the selected checkout take precedence over bundled guides.
 
 Use one focused natural-language or symbol `goo_search`, then `goo_read` the relevant range. `mode=relaxed` matched only some `queryTerms`. Check `matchedTerms` and `missingTerms`. `mode=none` means no match in the selected documents only. Hits and reads include source hashes. Docs use XML notation such as `Cell<T>` and `System.Action{T}`. Write `Cell[T]` and `Action[T]` in G#. Read adjacent consumer code when syntax is unclear.
 

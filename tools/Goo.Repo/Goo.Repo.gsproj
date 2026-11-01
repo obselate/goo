@@ -5,6 +5,6 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <Target Name="WriteToolchainPath" AfterTargets="Build">
-    <WriteLinesToFile File="$(TargetDir)formatter.path" Lines="$([System.IO.Path]::GetDirectoryName('$(GsharpCompilerFullPath)'))/../formatter/gsfmt.dll" Overwrite="true" />
+    <WriteLinesToFile File="$(TargetDir)formatter.path" Lines="$(GsharpFormatterFullPath)" Overwrite="true" />
   </Target>
 </Project>

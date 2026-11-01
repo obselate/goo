@@ -137,11 +137,11 @@ class Runner {
                 let name = arguments[index]
                 Require(allowed.Contains(name), "unexpected argument: " + name)
                 if name == "--diagnostics" || name == "--skip-build" || name == "--publish-only" {
-                    options[name] = "true"
+                    Require(options.TryAdd(name, "true"), "duplicate option: " + name)
                 } else {
                     index++
                     Require(index < arguments.Length, "missing value: " + name)
-                    options[name] = arguments[index]
+                    Require(!arguments[index].StartsWith("--") && options.TryAdd(name, arguments[index]), "invalid or duplicate option: " + name)
                 }
                 index++
             }
@@ -169,6 +169,7 @@ class Runner {
                 } else if arguments[0] == "foreign-parent" {
                     ForeignParent.Run(rest)
                 } else if arguments[0] == "popup" {
+                    Require(rest.Length == 2, "expected popup SDL_SOURCE SDL_LIBRARY")
                     Popup.Run(rest)
                 } else if arguments[0] == "performance" {
                     Performance.Run(Options(rest, arguments[0]))
