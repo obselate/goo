@@ -223,7 +223,9 @@ partial class GooServer {
             let template = Document(root, relative)
             let content = File.ReadAllText(template)
             sourceFiles[relative] = Hash(File.ReadAllBytes(template))
-            files[filename.Replace("GooStarter", name)] = content.Replace("GooStarter", name)
+            files[filename.Replace("GooStarter", name)] = content
+                .Replace("goostarter", name.ToLowerInvariant())
+                .Replace("GooStarter", name)
         }
         let project = S(files, name + ".gsproj")
         let sdk = Regex.Match(project, "<Project Sdk=\"Gsharp.NET.Sdk/([^\"]+)\"")
