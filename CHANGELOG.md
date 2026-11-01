@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.26.1 - 2026-11-01
+
+- DevTools input no longer builds a full tree snapshot after each injected event. The input response returns a sequence marker, and the next snapshot captures the settled tree. With 639 nodes and 240 events, allocation dropped 94% and GC pause 98%. (#510)
+- Frame recordings show posted DevTools work as a `diagnostics` phase, not as app work. (#510)
+
 ## 0.26.0 - 2026-11-01
 
 ### Added
