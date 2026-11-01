@@ -1438,7 +1438,7 @@ internal class InputFixtures {
     let sanitized = InputEntryCell{}
     let sanitizeDriver = entryDriver(sanitized)
     sanitizeDriver.Char("a\nb\tc")
-    if entry(sanitizeDriver).Buffer != "abc" {
+    if entry(sanitizeDriver).Buffer != "a b c" {
       return false
     }
 
@@ -1483,7 +1483,11 @@ internal class InputFixtures {
     let paste = entryDriver(InputEntryCell{})
     paste.Input.SetClipboardFallback("a\nb\tc")
     paste.Key(Key.V, false, true)
-    return entry(paste).Buffer == "abc"
+    if entry(paste).Buffer != "a b c" { return false }
+    paste.Key(Key.A, false, true)
+    paste.Input.SetClipboardFallback("1.5\n2")
+    paste.Key(Key.V, false, true)
+    return entry(paste).Buffer == "1.5 2"
   }
 
   func KeyboardQueueAndRepeatLifecycle() bool {
