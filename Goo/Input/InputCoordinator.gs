@@ -15,9 +15,9 @@ internal partial class InputCoordinator {
   private var disposed bool
   internal prop IsDispatching bool{ get -> queue.IsDispatching }
 
-  internal init() {
+  internal init(owner Window? = nil) {
     focus = FocusManager()
-    queue = InputEventQueue()
+    queue = InputEventQueue(owner)
     keyboard = KeyboardInput(focus, queue)
     pointer = PointerInput(focus, queue)
     text = TextInput(focus)

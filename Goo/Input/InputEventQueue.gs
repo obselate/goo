@@ -17,10 +17,13 @@ internal data struct QueuedInputEvent {
 }
 
 internal class InputEventQueue {
+  private let owner Window?
   private let events Queue[QueuedInputEvent] = Queue[QueuedInputEvent]()
   private var draining bool
   internal prop IsDispatching bool{ get -> draining }
   internal prop HasPending bool{ get -> events.Count > 0 }
+
+  internal init(owner Window? = nil) { this.owner = owner }
 
   internal func Add(value QueuedPointerEvent) {
     var received = value
@@ -28,6 +31,8 @@ internal class InputEventQueue {
       received.ReceivedTime = float64(Stopwatch.GetTimestamp()) / float64(Stopwatch.Frequency)
     }
     events.Enqueue(QueuedInputEvent{ IsPointer: true, Pointer: received, NativeTimestamp: PopupInputContext.Timestamp })
+    if received.Kind == PointerEventKind.Press { owner?.NotifyInputActivity(WindowInputKind.PointerDown) }
+    else if received.Kind == PointerEventKind.Wheel { owner?.NotifyInputActivity(WindowInputKind.Wheel) }
   }
 
   internal func AddPointerFrame(samples ReadOnlySpan[QueuedPointerEvent], scale float32) {
@@ -53,8 +58,10 @@ internal class InputEventQueue {
     }
   }
 
-  internal func Add(value KeyboardEvent) ->
+  internal func Add(value KeyboardEvent) {
     events.Enqueue(QueuedInputEvent{ Keyboard: value, NativeTimestamp: PopupInputContext.Timestamp })
+    if value.Kind == KeyboardEventKind.Press { owner?.NotifyInputActivity(WindowInputKind.KeyDown) }
+  }
 
   internal func AddFocusLost() -> events.Enqueue(QueuedInputEvent{ IsFocusLost: true })
   internal func AddFocusGained() -> events.Enqueue(QueuedInputEvent{ IsFocusGained: true })

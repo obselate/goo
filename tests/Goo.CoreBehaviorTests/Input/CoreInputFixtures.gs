@@ -4,6 +4,65 @@ import System
 import System.Collections.Generic
 
 internal class InputFixtures {
+  func WindowInputActivityObservesConsumedAndModalInputWithoutRebuilding() bool {
+    let cell = InputActivityCell{}
+    let driver = InputFixtureDriver(cell, 100, 100)
+    let observed = List[WindowInputKind]()
+    let handler Action[WindowInputKind] = (kind WindowInputKind) -> { observed.Add(kind) }
+    var previewCalls int32
+    var ordered = true
+    driver.Window.InputActivity += handler
+    let preview Func[Key, KeyModifiers, bool] = (key Key, modifiers KeyModifiers) -> {
+      previewCalls++
+      if observed.Count != previewCalls * 3 || observed[observed.Count - 1] != WindowInputKind.KeyDown {
+        ordered = false
+      }
+      return true
+    }
+    driver.Window.PreviewKeyPressed += preview
+    let builds = cell.Builds
+    for i in 0 ... 10 {
+      driver.Input.QueuePointerPress(75.0F, 25.0F)
+      driver.Input.QueuePointerRelease(75.0F, 25.0F)
+      driver.Input.QueuePointerWheel(75.0F, 25.0F, 0.0F, -1.0F)
+      driver.Input.QueueKeyPress(Key.A, KeyModifiers{})
+      driver.Input.QueueKeyRelease(Key.A)
+      driver.Drain()
+    }
+    if previewCalls != 10 || cell.Builds != builds { return false }
+    using let focusScope = cell.ScopeHandle.BeginFocusScope(FocusScopeOptions{ Modal: true })
+    for i in 0 ... 10 {
+      driver.Input.QueuePointerPress(75.0F, 25.0F)
+      driver.Input.QueuePointerRelease(75.0F, 25.0F)
+      driver.Input.QueuePointerWheel(75.0F, 25.0F, 0.0F, -1.0F)
+      driver.Input.QueueKeyPress(Key.A, KeyModifiers{})
+      driver.Input.QueueKeyRelease(Key.A)
+      driver.Drain()
+    }
+    if !ordered || observed.Count != 60 || previewCalls != 20 || cell.Builds != builds { return false }
+    for i in 0 ... 20 {
+      if observed[i * 3] != WindowInputKind.PointerDown
+        || observed[i * 3 + 1] != WindowInputKind.Wheel
+        || observed[i * 3 + 2] != WindowInputKind.KeyDown { return false }
+    }
+    driver.Input.QueuePointerPress(75.0F, 25.0F)
+    driver.Input.QueuePointerWheel(75.0F, 25.0F, 0.0F, -1.0F)
+    driver.Input.QueueKeyPress(Key.A, KeyModifiers{})
+    if observed.Count != 63 { return false }
+    driver.Input.Reset(driver.Window.Tree, driver.Resolver)
+    driver.Update()
+    if observed.Count != 63 || previewCalls != 20 || cell.Builds != builds { return false }
+    driver.Window.InputActivity -= handler
+    driver.Window.PreviewKeyPressed -= preview
+    driver.Input.QueuePointerPress(75.0F, 25.0F)
+    driver.Input.QueuePointerRelease(75.0F, 25.0F)
+    driver.Input.QueuePointerWheel(75.0F, 25.0F, 0.0F, -1.0F)
+    driver.Input.QueueKeyPress(Key.A, KeyModifiers{})
+    driver.Input.QueueKeyRelease(Key.A)
+    driver.Drain()
+    return observed.Count == 63 && cell.Builds == builds
+  }
+
   func KeyRepeatUsesCurrentModifiersWithoutRestartingDelay() bool {
     let resolver = Resolver{}
     let focus = FocusManager()
@@ -2676,6 +2735,19 @@ internal class InputFixtures {
     return nil
   }
 
+}
+
+internal class InputActivityCell : Cell {
+  internal let ScopeHandle ElementHandle = ElementHandle{}
+  internal var Builds int32
+
+  override func Build() Blob {
+    Builds++
+    return Container() {
+      .Width: 100, .Height: 100,
+      Container{ Handle: ScopeHandle, Width: 50, Height: 100, Focusable: true },
+    }
+  }
 }
 
 internal class ZIndexRuntimeRootCell : Cell {

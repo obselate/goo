@@ -1,3 +1,18 @@
+## Observe window activity
+
+```gsharp
+var lastInputAt = DateTime.UtcNow
+window.InputActivity += kind -> {
+    lastInputAt = DateTime.UtcNow
+}
+```
+
+- Use `lastInputAt` to measure idle time for auto-lock without changing a `Cell`.
+- `Window.InputActivity` is an `Action[WindowInputKind]` event. `WindowInputKind` is in the `Goo` namespace.
+- `PointerDown`, `Wheel`, and `KeyDown` fire before dispatch, even when input is consumed or a modal scope is active.
+- Pointer movement, pointer release, key release, and text input do not fire the event.
+- The event does not rebuild a `Cell`.
+
 ## Software keyboard hints
 
 ```gsharp
