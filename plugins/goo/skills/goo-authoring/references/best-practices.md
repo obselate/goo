@@ -232,7 +232,7 @@ Goo core provides editing keys for `TextEntry` and `TextEditor`. No app-root or 
 ## Verify
 
 ```sh
-GOO_FRAME_PROFILE=1 goo dev --no-watch --project App.gsproj
+GOO_FRAME_PROFILE=1 goo dev --project App.gsproj
 ```
 
 - Run GUI apps only in a private headless or nested compositor. In a Goo checkout, prefix the command with `.github/scripts/with-headless-wayland.sh`.
