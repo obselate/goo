@@ -96,9 +96,6 @@ jobs:
       - name: Validate onboarding and release metadata
         run: dotnet run --project tools/Goo.Repo -- check metadata
 
-      - name: Run focused API contract tests
-        if: needs.changes.outputs.api == 'true'
-        run: dotnet run --project tools/Goo.Repo -- check api
 
       - name: Verify optional spell checking
         if: needs.changes.outputs.api == 'true'
@@ -1918,9 +1915,11 @@ jobs:
           sudo apt-get install -y meson ninja-build
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'ndk;27.2.12479018' 'platforms;android-36' 'build-tools;36.0.0'
           dotnet workload install android
-      - name: Verify Android generated documentation
+      - name: Verify Android API contracts and generated documentation
         if: needs.changes.outputs.full == 'true'
-        run: dotnet run --project tools/Goo.Repo -- check docs-android
+        run: |
+          dotnet run --project tools/Goo.Repo -- check docs-android
+          dotnet run --project tools/Goo.Repo -- check api
       - name: Rebuild Android native payloads
         if: needs.changes.outputs.full == 'true'
         run: |

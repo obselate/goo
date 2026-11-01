@@ -176,6 +176,7 @@ internal shared partial class Repo {
                 }
             )
         } else if lane == "api" {
+            BuildAndroid()
             Test("Goo.ApiContractTests")
         } else if lane == "gestures" {
             Test("Goo.Gestures.Tests")
@@ -195,7 +196,7 @@ internal shared partial class Repo {
             Docs(true, true)
         } else if lane == "core" {
             if !OperatingSystem.IsLinux() {
-                throw PlatformNotSupportedException("The core CI lane needs Linux. Use check api on this host.")
+                throw PlatformNotSupportedException("The core CI lane needs Linux. Use check gestures on this host.")
             }
             if !File.Exists("artifacts/native/libSDL3.so") {
                 Run("bash", []string{".github/scripts/build-sdl-linux-x64.sh", "artifacts/native/libSDL3.so"})

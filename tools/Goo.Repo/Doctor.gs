@@ -30,8 +30,8 @@ internal shared partial class Repo {
             )
             missing += Report(
                 "Private display",
-                OnPath("kwin_wayland") && OnPath("dbus-run-session"),
-                "sudo apt-get install -y kwin-wayland dbus-daemon"
+                (OnPath("kwin_wayland") || OnPath("weston")) && OnPath("dbus-run-session"),
+                "sudo apt-get install -y kwin-wayland weston dbus-daemon"
             )
             missing += Report(
                 "Vulkan driver",

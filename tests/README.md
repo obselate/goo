@@ -11,7 +11,7 @@ commands and environment for these CI lanes.
 
 | Lane | Checks |
 | --- | --- |
-| `api` | Public API and XML documentation contracts |
+| `api` | Full public API and XML documentation contracts, including Android |
 | `core` | Core behavior, SVG parser, input, layout and native window behavior |
 | `image` | PNG decoder and image cache |
 | `devtools` | CLI build and command tests |
@@ -27,8 +27,8 @@ commands and environment for these CI lanes.
 sets the same software Vulkan and native-library paths as CI. It cleans the
 session when the tests finish. Do not run the core test project on your desktop.
 
-`spell-check` needs `libhunspell-1.7-0` on Ubuntu. Android docs need the installed
-Android workload, SDK and Java 21. Docs commands never install workloads.
+`spell-check` needs `libhunspell-1.7-0` on Ubuntu. The `api` lane and Android docs
+need the installed Android workload, SDK and Java 21. Docs commands never install workloads.
 
 ## Platform checks
 

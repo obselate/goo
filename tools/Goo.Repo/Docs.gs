@@ -4,27 +4,31 @@ import System.IO
 import System.Linq
 
 internal shared partial class Repo {
+    private func BuildAndroid() {
+        if string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANDROID_HOME")) || string.IsNullOrEmpty(
+            Environment.GetEnvironmentVariable("JAVA_HOME")
+        ) {
+            throw InvalidOperationException(
+                "Android checks need ANDROID_HOME and JAVA_HOME. Run doctor for setup commands."
+            )
+        }
+        Run(
+            "dotnet",
+            []string{
+                "build",
+                "Goo.Android/Goo.Android.gsproj",
+                "-c",
+                "Release",
+                "-p:TreatWarningsAsErrors=true",
+                "-p:AndroidSdkDirectory=" + Environment.GetEnvironmentVariable("ANDROID_HOME"),
+                "-p:JavaSdkDirectory=" + Environment.GetEnvironmentVariable("JAVA_HOME")
+            }
+        )
+    }
+
     private func Docs(check bool, android bool) {
         if android {
-            if string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANDROID_HOME")) || string.IsNullOrEmpty(
-                Environment.GetEnvironmentVariable("JAVA_HOME")
-            ) {
-                throw InvalidOperationException(
-                    "Android docs need ANDROID_HOME and JAVA_HOME. Run doctor for setup commands."
-                )
-            }
-            Run(
-                "dotnet",
-                []string{
-                    "build",
-                    "Goo.Android/Goo.Android.gsproj",
-                    "-c",
-                    "Release",
-                    "-p:TreatWarningsAsErrors=true",
-                    "-p:AndroidSdkDirectory=" + Environment.GetEnvironmentVariable("ANDROID_HOME"),
-                    "-p:JavaSdkDirectory=" + Environment.GetEnvironmentVariable("JAVA_HOME")
-                }
-            )
+            BuildAndroid()
         } else {
             Build("tests/Goo.ApiContractTests")
         }

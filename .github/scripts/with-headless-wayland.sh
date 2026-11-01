@@ -40,7 +40,7 @@ fi
 unset DISPLAY
 export WAYLAND_DISPLAY="${GOO_WAYLAND_DISPLAY:-goo-wayland}"
 export GOO_HEADLESS_WAYLAND=1
-if [[ ${GOO_WAYLAND_COMPOSITOR:-kwin} == weston ]]; then
+if [[ ${GOO_WAYLAND_COMPOSITOR:-} != kwin ]] && command -v weston >/dev/null 2>&1; then
   weston --backend=headless-backend.so --renderer="${GOO_WESTON_RENDERER:-pixman}" \
     --socket="$WAYLAND_DISPLAY" --idle-time=0 >"$GOO_HEADLESS_SESSION/compositor.log" 2>&1 &
 else

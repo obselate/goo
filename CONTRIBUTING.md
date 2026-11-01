@@ -24,6 +24,7 @@ On Linux, `check core` builds the pinned SDL payload if needed. It starts a priv
 Wayland session and uses software Vulkan with the validation layer, just like CI.
 It never uses your desktop. Native checks must run on their target operating system.
 Software Vulkan does not measure hardware performance.
+Set `GOO_WAYLAND_COMPOSITOR=kwin` to select KWin for local checks.
 
 Build and check commands take `~/scratch/goo-build.lock` when that file exists.
 The lock covers child builds and tests. Do not wrap Goo.Repo in the same lock.
@@ -38,7 +39,7 @@ release mode. Trimmed JIT is not a qualified release profile.
 ## Checks
 
 ```sh
-dotnet run --project tools/Goo.Repo -- check api
+dotnet run --project tools/Goo.Repo -- check gestures
 dotnet run --project tools/Goo.Repo -- check lint
 dotnet run --project tools/Goo.Repo -- docs --check
 ```
@@ -55,8 +56,9 @@ dotnet run --project tools/Goo.Repo -- docs --check
 | `docs --android --check` | Compare Android pages without changing tracked files |
 | `pack` | Build or fetch pinned Linux and Windows SDL inputs, then pack Goo |
 
-Every command accepts `--help`. CI also runs platform package and rendering checks.
-See [tests](tests/README.md) for focused lanes.
+Every command accepts `--help`. `check api` builds Android and runs the full API
+baseline and XML contracts. It needs the Android workload, SDK and Java 21.
+CI also runs platform package and rendering checks. See [tests](tests/README.md).
 
 Limit formatting fixes to the intended files. Do not bulk-format core source.
 GL0005 is a manual review advisory because syntax cannot identify intentional
