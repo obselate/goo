@@ -20,11 +20,11 @@ To create its local tool package:
 dotnet pack tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj -c Release -o artifacts/devtools
 ```
 
-The graphical inspector is a Goo application. Run the repository bootstrap from
-the [Gallery source instructions](../../README.md#build-the-source-gallery),
-then:
+The graphical inspector is a Goo application. Build the framework first:
 
 ```sh
+dotnet run --project tools/Goo.Repo -- doctor
+dotnet run --project tools/Goo.Repo -- build
 dotnet run --project apps/Goo.DevTools/Goo.DevTools.gsproj -c Release
 ```
 
