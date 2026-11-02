@@ -120,6 +120,18 @@ goo package --project MyApp.gsproj --target macos --output artifacts/packages
 - Output includes `AssemblyName.app`, `Id-Version-osx-arm64.dmg` and symbols when present.
 - Choose a new output directory if the app bundle already exists.
 - Copy the app from the mounted DMG to Applications before launch.
+
+```xml
+<ItemGroup>
+  <GooPackageUrlScheme Include="blocknet" />
+  <GooPackageDocumentType Include="wallet" />
+</ItemGroup>
+```
+
+- These repeatable items apply only to `--target macos`. Other targets ignore them.
+- URL schemes start with a letter, followed by letters, digits, `+`, `-` or `.`.
+- Document types are nonempty file extensions without a dot or path separator.
+- The URL type uses `GooPackageId` as its name. Each document type uses its extension as its name. Both use the `Viewer` role.
 - The app is ad-hoc signed. The DMG is not notarized.
 - Gatekeeper can block downloaded copies. Use Apple's per-app **Open Anyway** control only for an app you trust.
 - A managed Mac can prohibit this override. Do not disable Gatekeeper or remove quarantine.

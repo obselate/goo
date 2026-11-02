@@ -20,7 +20,9 @@ internal shared partial class PackageApplication {
         Version string,
         Id string,
         Icon string,
-        Company string
+        Company string,
+        UrlSchemes[]string,
+        DocumentTypes[]string
     ) : IEquatable[Metadata] { }
 
     private const AppImageToolHash string = "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0"
@@ -223,7 +225,8 @@ internal shared partial class PackageApplication {
                 "-nologo",
                 "-p:Configuration=Release",
                 "-p:RuntimeIdentifier=$runtime",
-                "-getProperty:$MetadataProperties"
+                "-getProperty:$MetadataProperties",
+                "-getItem:GooPackageUrlScheme,GooPackageDocumentType"
             },
             Path.GetDirectoryName(project)!!,
             "invalid-package-metadata",
@@ -232,6 +235,47 @@ internal shared partial class PackageApplication {
         try {
             using let document = JsonDocument.Parse(text)
             let properties = document.RootElement.GetProperty("Properties")
+            var urlSchemes = []string{}
+            var documentTypes = []string{}
+            if runtime == "osx-arm64" {
+                let items = document.RootElement.GetProperty("Items")
+                urlSchemes = items
+                    .GetProperty("GooPackageUrlScheme")
+                    .EnumerateArray()
+                    .Select(
+                    func (item JsonElement) string {
+                        return item.GetProperty("Identity").GetString() ?? ""
+                    }
+                )
+                    .ToArray()
+                documentTypes = items
+                    .GetProperty("GooPackageDocumentType")
+                    .EnumerateArray()
+                    .Select(
+                    func (item JsonElement) string {
+                        return item.GetProperty("Identity").GetString() ?? ""
+                    }
+                )
+                    .ToArray()
+                for scheme in urlSchemes {
+                    if !Regex.IsMatch(scheme, "\\A[A-Za-z][A-Za-z0-9+.-]*\\z", RegexOptions.CultureInvariant) {
+                        throw CliException(
+                            "Invalid GooPackageUrlScheme '$scheme'. Use an RFC 3986 scheme.",
+                            "invalid-package-metadata",
+                            "validation"
+                        )
+                    }
+                }
+                for extension in documentTypes {
+                    if extension.Length == 0 || extension.IndexOfAny([]char{'.', '/', '\\'}) >= 0 {
+                        throw CliException(
+                            "Invalid GooPackageDocumentType '$extension'. Use a file extension without a dot or path separator.",
+                            "invalid-package-metadata",
+                            "validation"
+                        )
+                    }
+                }
+            }
             let executable = properties.GetProperty("AssemblyName").GetString() ?? ""
             var name = properties.GetProperty("Product").GetString()
             let version = properties.GetProperty("Version").GetString() ?? ""
@@ -283,7 +327,7 @@ internal shared partial class PackageApplication {
                     "validation"
                 )
             }
-            return Metadata(executable, name, version, id, icon, company)
+            return Metadata(executable, name, version, id, icon, company, urlSchemes, documentTypes)
         } catch (exception Exception) when exception is JsonException ||
             exception is KeyNotFoundException ||
             exception is InvalidOperationException {

@@ -30,6 +30,51 @@ internal shared partial class PackageApplication {
             )
         )
         dictionary.Add(XElement(XName?("key")!!, "NSHighResolutionCapable"), XElement(XName?("true")!!))
+        if metadata.UrlSchemes.Length > 0 {
+            dictionary.Add(
+                XElement(XName?("key")!!, "CFBundleURLTypes"),
+                XElement(
+                    XName?("array")!!,
+                    XElement(
+                        XName?("dict")!!,
+                        XElement(XName?("key")!!, "CFBundleURLName"),
+                        XElement(XName?("string")!!, metadata.Id),
+                        XElement(XName?("key")!!, "CFBundleURLSchemes"),
+                        XElement(
+                            XName?("array")!!,
+                            metadata.UrlSchemes.Select(
+                                func (scheme string) XElement {
+                                    return XElement(XName?("string")!!, scheme)
+                                }
+                            )
+                        ),
+                        XElement(XName?("key")!!, "CFBundleTypeRole"),
+                        XElement(XName?("string")!!, "Viewer")
+                    )
+                )
+            )
+        }
+        if metadata.DocumentTypes.Length > 0 {
+            dictionary.Add(
+                XElement(XName?("key")!!, "CFBundleDocumentTypes"),
+                XElement(
+                    XName?("array")!!,
+                    metadata.DocumentTypes.Select(
+                        func (extension string) XElement {
+                            return XElement(
+                                XName?("dict")!!,
+                                XElement(XName?("key")!!, "CFBundleTypeExtensions"),
+                                XElement(XName?("array")!!, XElement(XName?("string")!!, extension)),
+                                XElement(XName?("key")!!, "CFBundleTypeName"),
+                                XElement(XName?("string")!!, extension),
+                                XElement(XName?("key")!!, "CFBundleTypeRole"),
+                                XElement(XName?("string")!!, "Viewer")
+                            )
+                        }
+                    )
+                )
+            )
+        }
         XDocument(
             XDeclaration("1.0", "UTF-8", nil),
             XDocumentType(

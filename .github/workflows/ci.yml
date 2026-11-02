@@ -253,6 +253,26 @@ jobs:
           ditto "$RUNNER_TEMP/consumer-mount/Goo.PackageSmoke.app" "$RUNNER_TEMP/Consumer Copy.app"
           hdiutil detach "$RUNNER_TEMP/consumer-mount"
           codesign --verify --deep --strict "$RUNNER_TEMP/Consumer Copy.app"
+          plist="$RUNNER_TEMP/Consumer Copy.app/Contents/Info.plist"
+          plutil -lint "$plist"
+          python3 - "$plist" <<'PY'
+          import plistlib
+          import sys
+          with open(sys.argv[1], "rb") as source:
+              plist = plistlib.load(source)
+          assert plist["CFBundleURLTypes"] == [{
+              "CFBundleURLName": "org.goo.packagesmoke",
+              "CFBundleURLSchemes": ["blocknet", "goo+smoke"],
+              "CFBundleTypeRole": "Viewer",
+          }]
+          assert plist["CFBundleDocumentTypes"] == [
+              {"CFBundleTypeExtensions": [extension], "CFBundleTypeName": extension, "CFBundleTypeRole": "Viewer"}
+              for extension in ["wallet", "goo&smoke"]
+          ]
+          print(plist["CFBundleURLTypes"])
+          print(plist["CFBundleDocumentTypes"])
+          PY
+          cat "$plist"
           GOO_PRIMITIVE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
             "$RUNNER_TEMP/Consumer Copy.app/Contents/MacOS/Goo.PackageSmoke"
       - name: Verify native macOS clipboard formats and source exit
