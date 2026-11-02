@@ -51,11 +51,7 @@ class DevToolsCliEndToEndTests {
         descriptor["sessionId"] = Guid.NewGuid().ToString("N")
         await File.WriteAllTextAsync(path, descriptor.ToJsonString())
         using let server = NamedPipeServerStream(
-            pipeName,
-            PipeDirection.InOut,
-            1,
-            PipeTransmissionMode.Byte,
-            PipeOptions.Asynchronous
+            pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous
         )
         let listed = RunCliAsync(directory.Path, "list", "--pid", Int32.MaxValue.ToString(), "--json")
         await server.WaitForConnectionAsync().WaitAsync(TimeSpan.FromSeconds(5))
@@ -1132,8 +1128,8 @@ wait
         }
 
         private async func ReadLineAsync(reader StreamReader) string ->
-        await reader.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5)) ??
-            throw InvalidOperationException("The protocol server closed before returning a line.")
+            await reader.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5)) ??
+                throw InvalidOperationException("The protocol server closed before returning a line.")
 
         private func IsRunning(processId int32) bool {
             let path = "/proc/$processId/stat"
@@ -1177,14 +1173,14 @@ wait
         }
 
         private async func RunCliAsync(descriptorDirectory string, arguments ...string) ProcessResult ->
-        await RunProcessAsync(
-            "dotnet",
-            []string{Path.Combine(AppContext.BaseDirectory, "Goo.DevTools.Cli.dll"), ...arguments},
-            Dictionary[string, string]{["GOO_DEVTOOLS_DIR"] = descriptorDirectory}
-        )
+            await RunProcessAsync(
+                "dotnet",
+                []string{Path.Combine(AppContext.BaseDirectory, "Goo.DevTools.Cli.dll"), ...arguments},
+                Dictionary[string, string]{["GOO_DEVTOOLS_DIR"] = descriptorDirectory}
+            )
 
         private async func RunProcessAsync(fileName string, arguments ...string) ProcessResult ->
-        await RunProcessAsync(fileName, arguments, nil)
+            await RunProcessAsync(fileName, arguments, nil)
 
         private async func RunProcessAsync(
             fileName string,

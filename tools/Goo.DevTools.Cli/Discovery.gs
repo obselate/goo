@@ -205,7 +205,10 @@ internal shared class Discovery {
         }
         if !string.IsNullOrWhiteSpace(application) {
             filtered = filtered.Where(
-                (item DiscoveryDescriptor) -> item.DisplayName.Contains(application, StringComparison.OrdinalIgnoreCase)
+                (item DiscoveryDescriptor) -> item.DisplayName.Contains(
+                    application,
+                    StringComparison.OrdinalIgnoreCase
+                )
             )
         }
         if !string.IsNullOrWhiteSpace(window) {

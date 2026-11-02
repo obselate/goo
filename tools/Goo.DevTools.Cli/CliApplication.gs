@@ -127,12 +127,8 @@ internal shared class CliApplication {
             ValidateArguments(commandLine)
             return switch commandLine.Command {
                 case "help": PrintHelp(commandLine)
-                case "mcp": await Goo
-                    .PluginMcp
-                    .McpHost
-                    .RunAsync(
-                    commandLine.Get("plugin-root") ??
-                        throw CliException("Select the plugin directory with --plugin-root."),
+                case "mcp": await Goo.PluginMcp.McpHost.RunAsync(
+                    commandLine.Get("plugin-root") ?? throw CliException("Select the plugin directory with --plugin-root."),
                     commandLine.Has("verify")
                 )
                 case "dev": await RunDevAsync(commandLine)
@@ -1047,16 +1043,9 @@ internal shared class CliApplication {
         )
         if !OperatingSystem.IsWindows() {
             for descriptor in descriptors {
-                let path = if Path.IsPathRooted(descriptor.Pipe) {
-                    descriptor.Pipe
-                } else {
-                    Path.Combine(Path.GetTempPath(), "CoreFxPipe_" + descriptor.Pipe)
-                }
-                let limit = if OperatingSystem.IsMacOS() {
-                    104
-                } else {
-                    108
-                }
+                let path = if Path.IsPathRooted(descriptor.Pipe) { descriptor.Pipe }
+                else { Path.Combine(Path.GetTempPath(), "CoreFxPipe_" + descriptor.Pipe) }
+                let limit = if OperatingSystem.IsMacOS() { 104 } else { 108 }
                 if System.Text.Encoding.UTF8.GetByteCount(path) >= limit {
                     checks.Add(
                         DoctorCheck(
@@ -1479,8 +1468,7 @@ internal shared class CliApplication {
     private func CapturePayload(response JsonObject) JsonObject -> response["payload"] as JsonObject ?? response
 
     private func IsError(response JsonObject) bool -> BoolValue(response["ok"]) == false ||
-        StringValue(response["type"]) == "error" ||
-        response["error"] != nil
+        StringValue(response["type"]) == "error" || response["error"] != nil
 
     private func DecorateError(response JsonObject, phase string, defaultMayHaveApplied bool, runtimeHello string?) {
         let error = response["error"] as JsonObject ??
@@ -1555,32 +1543,16 @@ internal shared class CliApplication {
         }
     }
 
-    private func IsRgbaFormat(format string?) bool -> format != nil && format.StartsWith(
-        "rgba8",
-        StringComparison.OrdinalIgnoreCase
-    )
+    private func IsRgbaFormat(format string?) bool -> format != nil &&
+        format.StartsWith("rgba8", StringComparison.OrdinalIgnoreCase)
 
-    private func IsPngPath(path string) bool -> string.Equals(
-        Path.GetExtension(path),
-        ".png",
-        StringComparison.OrdinalIgnoreCase
-    )
+    private func IsPngPath(path string) bool -> string.Equals(Path.GetExtension(path), ".png", StringComparison.OrdinalIgnoreCase)
 
-    private func StringValue(node JsonNode?) string? -> if node is JsonValue value && value.TryGetValue[string](
-        out var text
-    ) {
-        text
-    } else {
-        nil
-    }
+    private func StringValue(node JsonNode?) string? -> if node is JsonValue value &&
+        value.TryGetValue[string](out var text) { text } else { nil }
 
-    private func BoolValue(node JsonNode?) bool? -> if node is JsonValue value && value.TryGetValue[bool](
-        out var result
-    ) {
-        result
-    } else {
-        nil
-    }
+    private func BoolValue(node JsonNode?) bool? -> if node is JsonValue value &&
+        value.TryGetValue[bool](out var result) { result } else { nil }
 
     private func IntegerValue(node JsonNode?) int32? {
         if node is not JsonValue value {

@@ -23,15 +23,19 @@ internal class CommandLine {
     prop Command string {
         get;
     }
+
     prop Options IReadOnlyDictionary[string, string?] {
         get;
     }
+
     prop Positionals IReadOnlyList[string] {
         get;
     }
+
     prop Trailing IReadOnlyList[string] {
         get;
     }
+
     prop Environment IReadOnlyList[string] {
         get;
     }
@@ -60,9 +64,11 @@ internal class CommandLine {
         prop Summary string {
             get;
         }
+
         prop Usage string {
             get;
         }
+
         prop Options[]Option {
             get;
         }
@@ -349,15 +355,19 @@ internal class CliException : Exception {
         MayHaveApplied = mayHaveApplied
         RuntimeHello = runtimeHello
     }
+
     prop Code string {
         get;
     }
+
     prop Phase string {
         get;
     }
+
     prop MayHaveApplied bool {
         get;
     }
+
     prop RuntimeHello string? {
         get;
     }
