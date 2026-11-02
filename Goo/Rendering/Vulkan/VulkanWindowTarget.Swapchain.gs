@@ -73,7 +73,7 @@ internal unsafe partial class VulkanWindowTarget {
     } else if let atlas = clipMaskAtlas {
       atlas.Collect(completedGlobalSubmissionSerial)
     }
-    layerPool?.Collect(completedGlobalSubmissionSerial, discardCompleted: true)
+    layerPool?.Collect(completedGlobalSubmissionSerial, discardBackdrops: true)
     var surfaceRecovery = false
     if surfaceLost {
       surfaceRecovery = true

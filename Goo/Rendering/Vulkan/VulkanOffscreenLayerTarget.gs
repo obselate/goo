@@ -781,8 +781,8 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     throw ArgumentException("target", "target")
   }
 
-  internal func Collect(completedSerial uint64, discardCompleted bool = false) {
-    using let profile = FrameProfileScope(FrameProfileStage.LayerCollect, discardCompleted)
+  internal func Collect(completedSerial uint64, discardBackdrops bool = false) {
+    using let profile = FrameProfileScope(FrameProfileStage.LayerCollect, discardBackdrops)
     EnsureOpen()
     let selectedSerial = completedSerial < lastCollectedSerial
     ? lastCollectedSerial : completedSerial
@@ -791,15 +791,14 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     while index < targets.Length {
       if !leased[index] && !inFrame[index] {
         if let target = targets[index] {
-          if discardCompleted { target.RetainedBackdrop = LayerRecord{} }
+          if discardBackdrops { target.RetainedBackdrop = LayerRecord{} }
           if target.RetainedBackdrop.BackdropVersion != 0uL {
             index++
             continue
           }
           let lastUse = target.LastUseSerial
           let retire = lastUse == 0uL
-            || (selectedSerial >= lastUse
-                && (discardCompleted || selectedSerial - lastUse >= IdleRetirementSerials))
+            || (selectedSerial >= lastUse && selectedSerial - lastUse >= IdleRetirementSerials)
           if retire {
             RetireTarget(index, target)
           }

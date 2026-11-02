@@ -372,8 +372,8 @@ func RunShaderEffectSmoke() {
       "Shader effect resize has no cached layer targets")
     Require(WindowReadbackTestFixture.Resize(opened, 176, 120, 264, 180),
       "Shader effect synthetic 1.5x resize failed")
-    Require(WindowReadbackTestFixture.DiagnosticCounters(opened).layerPoolTargetCount == 0uL,
-      "Shader effect resize retained completed layer targets")
+    Require(WindowReadbackTestFixture.DiagnosticCounters(opened).layerPoolTargetCount > 0uL,
+      "Shader effect resize discarded all completed layer targets")
     let scaledMetrics = WindowReadbackTestFixture.Metrics(opened)
     Require(Math.Abs(scaledMetrics.DisplayScaleX - 1.5) < 0.001
         && Math.Abs(scaledMetrics.DisplayScaleY - 1.5) < 0.001,

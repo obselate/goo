@@ -149,7 +149,7 @@ Resize work uses nested CPU phases from `phaseNames`:
 | `Swapchain` | The full swapchain recreation call in Events or TargetBegin, including deferred attempts. |
 | `DeviceIdle` | The `vkDeviceWaitIdle` call, only when it runs. |
 | `ClipAtlas` | Replace a clip atlas generation, including growth during Paint. |
-| `LayerCollect` | Collect offscreen layers with `discardCompleted`. |
+| `LayerCollect` | Collect offscreen layers and discard retained backdrop content on swapchain recreation. |
 | `LayerCreate` | Create an offscreen layer image, view and descriptor. |
 
 These phases are inclusive. Do not add a parent duration to its children.
