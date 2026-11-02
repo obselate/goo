@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.27.1 - 2026-11-02
+
+- Show nested CPU phases `NativeResize`, `Swapchain`, `DeviceIdle`, `ClipAtlas`, `LayerCollect` and `LayerCreate` in frame traces and the DevTools profiler. (#517)
+- Set snapshot `hasPointerHandlers` for nodes with only `OnPointerEnter` or `OnPointerLeave` handlers. (#520)
+
 ## 0.27.0 - 2026-11-01
 
 - Breaking: rename MCP `goo_targets` to `goo_list`. All runtime tools now use `project`, `pid`, `pipe`, `app`, `window`, `latest` and `wait` in seconds. Unknown arguments are rejected. (#516)
