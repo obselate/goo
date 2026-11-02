@@ -1185,6 +1185,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
     }
 
   private func ReplaceGeneration(newLayerCount uint32, newWidth uint32, newHeight uint32) {
+    using let profile = FrameProfileScope(FrameProfileStage.ClipAtlas)
     if newLayerCount == 0u || newLayerCount > maximumLayerCount {
       throw ArgumentOutOfRangeException("newLayerCount")
     }

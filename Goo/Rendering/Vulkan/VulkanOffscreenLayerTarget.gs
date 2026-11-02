@@ -304,6 +304,7 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
   }
 
   private func Create() {
+    using let profile = FrameProfileScope(FrameProfileStage.LayerCreate)
     try {
       let creation = VulkanImageFactory.Create2D(
         device,
@@ -781,6 +782,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
   }
 
   internal func Collect(completedSerial uint64, discardCompleted bool = false) {
+    using let profile = FrameProfileScope(FrameProfileStage.LayerCollect, discardCompleted)
     EnsureOpen()
     let selectedSerial = completedSerial < lastCollectedSerial
     ? lastCollectedSerial : completedSerial

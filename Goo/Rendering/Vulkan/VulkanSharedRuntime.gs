@@ -807,7 +807,11 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
       return VkConstants.VK_ERROR_INITIALIZATION_FAILED
     }
     let deviceWaitIdleFunction = nullable
-    let result = deviceWaitIdleFunction(device)
+    var result VkResult
+    {
+      using let profile = FrameProfileScope(FrameProfileStage.DeviceIdle)
+      result = deviceWaitIdleFunction(device)
+    }
     if result == VkConstants.VK_ERROR_DEVICE_LOST {
       MarkDeviceLost()
     }

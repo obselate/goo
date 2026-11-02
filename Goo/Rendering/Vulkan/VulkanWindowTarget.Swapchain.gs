@@ -59,6 +59,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func RecreateSwapchain(width int32, height int32, startup bool = false) bool {
+    using let profile = FrameProfileScope(FrameProfileStage.Swapchain)
     if width <= 0 || height <= 0 {
       recreatePending = true
       return true
@@ -784,6 +785,7 @@ internal unsafe partial class VulkanWindowTarget {
       return VkConstants.VK_ERROR_INITIALIZATION_FAILED
     }
     let deviceWaitIdleFunction = nullable
+    using let profile = FrameProfileScope(FrameProfileStage.DeviceIdle)
     return deviceWaitIdleFunction(device)
   }
 

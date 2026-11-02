@@ -400,6 +400,8 @@ public partial class Window {
       if profiling { profiler.BeginPump() }
       let frameProfile = profiling ? profiler.Start() : FrameProfilePoint{}
       let eventsProfile = profiling ? profiler.Start() : FrameProfilePoint{}
+      let previousProfiler = FrameProfiler.Current
+      FrameProfiler.Current = profiling ? profiler : nil
       try {
         if waitForEvents {
           if hasDemand() {
@@ -540,6 +542,8 @@ public partial class Window {
       } catch (_ Exception) {
         if profiling { profiler.Record(FrameProfileStage.Frame, frameProfile, -1) }
         rethrow
+      } finally {
+        FrameProfiler.Current = previousProfiler
       }
     }
 
@@ -845,6 +849,7 @@ public partial class Window {
 
   private func applyNativeResize(logicalWidth int32, logicalHeight int32,
     newFramebufferWidth int32, newFramebufferHeight int32) bool{
+      using let profile = FrameProfileScope(FrameProfileStage.NativeResize)
       let framebufferValid = newFramebufferWidth > 0 && newFramebufferHeight > 0
       HandleResize(logicalWidth, logicalHeight, framebufferValid)
       if let target = windowTarget {
