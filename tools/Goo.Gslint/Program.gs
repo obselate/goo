@@ -70,6 +70,41 @@ class Program {
         let paths = List[string]()
         for var index = 0; index < args.Length; index++ {
             let arg = args[index]
+            if arg == "--help" || arg == "-h" {
+                Console.WriteLine(
+                    "Usage: gslint [options] [files or directories]\n" +
+                        "\n" +
+                        "Paths default to the current directory. Directories are scanned for .gs files.\n" +
+                        "\n" +
+                        "Options:\n" +
+                        "  --help, -h                  Print this help.\n" +
+                        "  --version                   Print the version.\n" +
+                        "  --strict                    Promote GL0004, GL0005, GL0006 and GL0008 to warning.\n" +
+                        "  --severity ID=LEVEL         Override a rule. Repeat for each rule.\n" +
+                        "                              LEVEL: error, warning, info or none.\n" +
+                        "  --fix                       Rewrite files with fixes and canonical formatting.\n" +
+                        "  --reduce                    Rewrite files with fixes only, without formatting.\n" +
+                        "                              Cannot be combined with --fix.\n" +
+                        "\n" +
+                        "Rules and default severities:\n" +
+                        "  GL0001 warning  Canonical formatting.\n" +
+                        "  GL0002 warning  Canonical public type names.\n" +
+                        "  GL0003 warning  Explicit public binding types.\n" +
+                        "  GL0004 info     Use let for bindings that are never reassigned.\n" +
+                        "  GL0005 info     Restrict double-bang assertions.\n" +
+                        "  GL0006 info     Document public declarations.\n" +
+                        "  GL0007 warning  Remove duplicate imports.\n" +
+                        "  GL0008 info     Use expression-bodied functions.\n" +
+                        "  GL0010 warning  Use expression-bodied accessors.\n" +
+                        "  GL0011 warning  Space operator parameter lists.\n" +
+                        "\n" +
+                        "Exit codes:\n" +
+                        "  0  No warning or error findings.\n" +
+                        "  1  Warning, error or parse findings remain.\n" +
+                        "  2  Invalid arguments, paths or an internal failure."
+                )
+                return 0
+            }
             if arg == "--strict" {
                 strict = true
             } else if arg == "--fix" {
@@ -92,6 +127,10 @@ class Program {
             } else {
                 paths.Add(arg)
             }
+        }
+        if fix && reduce {
+            Console.Error.WriteLine("gslint: --fix and --reduce cannot be combined")
+            return 2
         }
         if paths.Count == 0 {
             paths.Add(".")

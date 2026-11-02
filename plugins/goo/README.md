@@ -8,7 +8,7 @@ G# Goo authoring guidance and twelve stdio MCP tools. Requires .NET 10, the [Goo
 | `goo_search` | Search API and DevTools documentation |
 | `goo_read` | Read bounded document ranges with content hashes |
 | `goo_starter` | Return the official counter project and source |
-| `goo_targets` | Discover live processes and stable window IDs |
+| `goo_list` | List live processes and windows with project, pid, pipe, app and window filters |
 | `goo_capabilities` | Read runtime capabilities and supported temporary style properties |
 | `goo_snapshot` | Read a complete tree or bounded semantic query with session-scoped target handles |
 | `goo_capture` | Return a real Vulkan screenshot as MCP image content |
@@ -57,20 +57,20 @@ MCP configuration is needed.
 Launch an app:
 
 ```sh
-goo dev --no-watch --project App.gsproj
+goo dev --project App.gsproj
 ```
 
 Then:
 
 1. Call `goo_context` to check the plugin and CLI.
-2. Call `goo_targets` and select the process and window.
+2. Call `goo_list` to list processes and windows.
 3. Use `goo_snapshot` or `goo_capture` to inspect the app.
-4. Launch with `goo dev --input --no-watch --project App.gsproj` when input
+4. Launch with `goo dev --input --project App.gsproj` when input
    automation is needed.
 
-Runtime tools require an explicit target. The plugin uses the capabilities reported
-by that runtime. A timed-out mutation may have applied, so do not retry it
-automatically. Application processes remain under the caller's control.
+Runtime tools accept `project`, `pid`, `pipe`, `app`, `window`, `latest` and `wait` in seconds.
+One match selects automatically. More than one match fails with the candidate list unless `latest` is true.
+The plugin uses the selected runtime's capabilities. Do not retry a timed-out mutation.
 
 See the [Goo authoring skill](skills/goo-authoring/SKILL.md) for query, input,
 inspection, style, and watch details.
@@ -88,16 +88,16 @@ Set `GOO_DEVTOOLS_DIR` in both the app and server environments only when testing
 a custom descriptor directory. Pass a project path to runtime tools for
 project-local discovery.
 
-Pass `repository` to documentation/starter tools or set `GOO_SOURCE_ROOT` for a checkout. `goo_context` reports bundle hashes or checkout revision and dirty state, plus the compiler pin. Search ignores stop words, splits symbol names, and reports exact/relaxed term coverage and document hashes. Empty results apply only to the selected documents. `goo_starter` reports SDK, package, compiler pin, source/generated hashes, and lint/build commands. Checkout builds select the pinned compiler. Generated projects include a source Watch item but launch with `--no-watch`.
+Pass `repository` to documentation and starter tools or set `GOO_SOURCE_ROOT` for a checkout. `goo_context` reports source hashes and revision. `goo_starter` returns files and build, lint and run commands. Run lint when available. When `lint` is `unavailable`, state that lint is skipped. Starter projects include a source Watch item and an SDK pin. Start them with `goo dev`.
 
 ## Refresh and verify
 
-Refresh the bundle from a Goo checkout with `dotnet run --project tools/Goo.SyncDocs/Goo.SyncDocs.gsproj -c Release -- /path/to/goo-checkout`.
+Refresh the bundle from the checkout root with `dotnet run --project tools/Goo.Repo -- docs`.
 Build and verify from the repository root:
 
 ```sh
 dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj -c Release --nologo -m:4 -warnaserror
-XDG_CACHE_HOME="$(mktemp -d)" .github/scripts/with-headless-wayland.sh \
+.github/scripts/with-headless-wayland.sh \
   dotnet tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll \
   mcp --plugin-root plugins/goo --verify
 ```

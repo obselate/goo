@@ -5,7 +5,6 @@ import System
 import System.Collections.Generic
 import System.ComponentModel
 import System.Diagnostics
-import System.Globalization
 import System.IO
 import System.Linq
 import System.Reflection
@@ -201,29 +200,14 @@ partial class GooServer {
         }
     }
 
-    func Targets(a JsonObject) JsonObject {
-        let pid = I(a, "pid")
-        Require(pid >= 0, "pid must be positive, or zero to list all live targets")
-        let arguments = List[string](){"list", "--json"}
-        if pid != 0 {
-            arguments.Add("--pid")
-            arguments.Add(pid.ToString(CultureInfo.InvariantCulture))
-        }
-        if S(a, "project") != "" {
-            arguments.Add("--project=" + S(a, "project"))
-        }
-        return JsonNode.Parse(Run(arguments, phase: "discovery"))!!.AsObject()
-    }
+    func ListTargets(a JsonObject) JsonObject -> JsonNode.Parse(
+        Run([]string{"list", "--json"}.Concat(TargetArgs(a)), a["wait"]!!.GetValue[double]() + 15, phase: "discovery")
+    )!!.AsObject()
 
     func SnapshotResponse(a JsonObject, timeout double = 4)(JsonObject, JsonObject) {
         let output = Run(
-            []string{
-                "snapshot",
-                "--json",
-                "--wait",
-                Math.Max(0.1, timeout - 0.1).ToString("F3", CultureInfo.InvariantCulture)
-            }.Concat(TargetArgs(a)),
-            timeout,
+            []string{"snapshot", "--json"}.Concat(TargetArgs(a)),
+            Math.Max(timeout, a["wait"]!!.GetValue[double]() + 1),
             phase: "snapshot"
         )
         let (result, hello) = ReadResponse(output, "snapshot", "snapshot-failed", false)
@@ -313,7 +297,11 @@ partial class GooServer {
         let directory = Directory.CreateTempSubdirectory("goo-capture-").FullName
         try {
             let path = Path.Combine(directory, "frame.png")
-            Run([]string{"capture", "--output", path, "--wait", "10"}.Concat(TargetArgs(a)), phase: "capture")
+            Run(
+                []string{"capture", "--json", "--output", path}.Concat(TargetArgs(a)),
+                a["wait"]!!.GetValue[double]() + 15,
+                phase: "capture"
+            )
             let data = File.ReadAllBytes(path)
             Require(
                 data.Length >= 8 && data.Take(8).SequenceEqual([]byte{137, 80, 78, 71, 13, 10, 26, 10}),
@@ -376,13 +364,21 @@ partial class GooServer {
         }
 
         func TargetArgs(a JsonObject) List[string] {
-            Require(I(a, "pid") > 0, "Provide the positive PID of the intended running Goo application")
-            let result = List[string](){"--pid", I(a, "pid").ToString(CultureInfo.InvariantCulture)}
-            if S(a, "window") != "" {
-                result.Add("--window=" + S(a, "window"))
+            let result = List[string]()
+            for name in[]string{"pid", "project", "pipe", "app", "window", "wait"} {
+                let value = a[name]
+                if value != nil && !(value.GetValueKind() == JsonValueKind.String && S(a, name) == "") {
+                    result.Add(
+                        "--" + name + "=" + if value.GetValueKind() == JsonValueKind.String {
+                            value.GetValue[string]()
+                        } else {
+                            value.ToJsonString()
+                        }
+                    )
+                }
             }
-            if S(a, "project") != "" {
-                result.Add("--project=" + S(a, "project"))
+            if B(a, "latest") {
+                result.Add("--latest")
             }
             return result
         }

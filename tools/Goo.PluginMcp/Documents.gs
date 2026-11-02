@@ -69,7 +69,8 @@ partial class GooServer {
         let configuration = Path.Combine(root, "global.json")
         let project = Path.Combine(root, "templates/Goo.Templates/content/GooStarter.gsproj")
         let compiler = if File.Exists(configuration) {
-            JsonNode.Parse(File.ReadAllText(configuration))?["msbuild-sdks"]?["Gsharp.NET.Sdk"]?.GetValue[string]() ?? "unavailable"
+            JsonNode.Parse(File.ReadAllText(configuration))?["msbuild-sdks"]?["Gsharp.NET.Sdk"]?.GetValue[string]() ??
+                "unavailable"
         } else if File.Exists(project) {
             Regex.Match(File.ReadAllText(project), `Gsharp.NET.Sdk/([^"]+)`).Groups[1].Value
         } else {
@@ -172,7 +173,7 @@ partial class GooServer {
         result["documents"] = Strings(Documents(root))
         result[
             "runtime"
-        ] = "Install Goo.DevTools 0.26.1 and launch with goo dev --project App.gsproj. Add --no-watch when hot reload is not needed and --input to enable agent interaction. Use goo_targets to discover live windows, then pass an explicit PID and window ID. GOO_CLI may specify a goo executable or built Goo.DevTools.Cli.dll. Use a CLI build with the list command and dev --input option."
+        ] = "Install Goo.DevTools 0.26.1 and launch with goo dev --project App.gsproj. Add --input for agent interaction. Use goo_list to list live windows. Runtime tools accept project, pid, pipe, app, window, latest and wait in seconds. GOO_CLI may name a goo executable or built Goo.DevTools.Cli.dll."
         let preflight = result["preflight"]!!
         let plugin = preflight["plugin"]!!
         plugin["version"] = Version
@@ -223,8 +224,7 @@ partial class GooServer {
             let template = Document(root, relative)
             let content = File.ReadAllText(template)
             sourceFiles[relative] = Hash(File.ReadAllBytes(template))
-            files[filename.Replace("GooStarter", name)] = content
-                .Replace("goostarter", name.ToLowerInvariant())
+            files[filename.Replace("GooStarter", name)] = content.Replace("goostarter", name.ToLowerInvariant())
                 .Replace("GooStarter", name)
         }
         let project = S(files, name + ".gsproj")

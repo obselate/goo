@@ -74,7 +74,7 @@ partial class GooServer {
                 case "goo_search": Search(a)
                 case "goo_read": Read(a)
                 case "goo_starter": Starter(a)
-                case "goo_targets": Targets(a)
+                case "goo_list": ListTargets(a)
                 case "goo_capabilities": Capabilities(a)
                 case "goo_snapshot": Snapshot(a)
                 case "goo_input": Input(a)
@@ -106,6 +106,14 @@ partial class GooServer {
             throw ArgumentException("Unknown tool: " + name)
         }
         let result = JsonObject()
+        if arguments != nil {
+            for propertyName in arguments.Keys {
+                Require(
+                    tool.InputSchema.GetProperty("properties").TryGetProperty(propertyName, out var ignored),
+                    "Unknown argument: " + propertyName
+                )
+            }
+        }
         for property in tool.InputSchema.GetProperty("properties").EnumerateObject() {
             let spec = property.Value
             var value JsonElement

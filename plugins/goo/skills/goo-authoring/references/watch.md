@@ -3,13 +3,13 @@
 See [Edit and inspect](https://github.com/obselate/goo/blob/main/docs/edit-and-inspect.md)
 for the app-author workflow and current refresh limit.
 
-## Choose run or watch
+## Run with hot reload
 
-Default to `dotnet watch` only when comparable measurements for the actual project show no application performance or resource-use difference versus `dotnet run`. If overhead is measured or parity is unknown, explicitly offer watch and state that tradeoff before selecting it. Keep using `dotnet run` until the user chooses watch. An existing explicit choice remains valid; do not ask again.
+```sh
+goo dev --project App.gsproj
+```
 
-For inspection, use `GOO_DEVTOOLS=1 dotnet run --project App.gsproj` or `goo dev --no-watch --project App.gsproj`. Once watch is selected, use `GOO_DEVTOOLS=1 dotnet watch --project App.gsproj` or `goo dev --project App.gsproj`. The latter enables watching by default. Preserve the project's configuration and runtime choices.
-
-The existing reload tests establish correctness, not performance parity. Do not infer zero overhead from a stable PID, unchanged UI state, or idle CPU alone. If comparing modes, hold build configuration, runtime, diagnostics, workload and warmup constant. Compare application CPU, memory/allocations and frame/input latency at idle and under load. Report watcher/build-process CPU and memory separately from application costs, including edit/rebuild spikes. Describe measurement uncertainty rather than claiming exact zero overhead. Use normal run or the intended published executable for performance acceptance measurements unless watch itself is the subject.
+This enables diagnostics and hot reload. Use `goo dev --input --project App.gsproj` for requested input automation. Measure published applications for performance acceptance.
 
 ## Which edits need restart
 
@@ -29,10 +29,5 @@ Add this project item if source files are not already watched:
   <Watch Include="**/*.gs" Exclude="bin/**;obj/**" />
 </ItemGroup>
 ```
-
-For restart-on-edit, run `dotnet clean App.gsproj`, then
-`GOO_DEVTOOLS=1 dotnet watch --no-hot-reload --project App.gsproj`.
-Clean before switching modes to remove mode-specific bootstrap output.
-Each restart reopens windows and resets application state.
 
 Goo endpoint descriptors can contain a UTF-8 BOM. Decode JSON accordingly. Raw runtime snapshots can contain `full: false` and only a delta. Request `payload: {"full":true}` for a complete tree. The MCP `goo_snapshot` tool does this on every call.
