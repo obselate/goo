@@ -2,14 +2,14 @@
   "repository": "https://github.com/obselate/goo",
   "revision": "main",
   "files": {
-    "README.md": "05f0ab7a807406920835f0a4f70145c0bf860d347f2ba75f0241461e80fe2355",
+    "README.md": "69c07ae2a77a6c91a5841b01a858d761b30b1ed4e6956b3eed00225be4c09b2d",
     "CONTRIBUTING.md": "ad8b9eed306a5798d98daf78cb97a29a997dcec693949064255a63924caeb432",
     "docs/native-authoring.md": "3c1a60df4e07a17e594f847d1af89d0d3604ea04a9304a0372ae8c2f618c3533",
     "docs/production-readiness.md": "c2e6012e9d13e7ffe1654bb24029a34ece91e47272e37a9c86cde15af0bfb6a4",
     "docs/svg.md": "a9bbb86376595820912d04b79fd886a7c560cabb7061e1de4651019df27a070d",
     "docs/migrations/gcv1.md": "6465b5704a37f637970a80fc8120002bda1cf5e10458d14cc9f71e0f9d4928a6",
-    "docs/shipping.md": "dbe18f6d716c032c52df47f0fc3ee6daef56e13731d261d28ede1689c75eb71d",
-    "docs/platform-preflight.md": "89e5fc1e7973375687db25e9df635593601046cc7719185ee36dd81695d01d69",
+    "docs/shipping.md": "c1671e23d0bacc3051fbbcadba883d31eb7275462d54a4f4231939d72e34d7ee",
+    "docs/platform-preflight.md": "18a37ef5c8224ce64f759f57bf837e2041ad41b40011a74c3b00714ad64b67b0",
     "docs/api/README.md": "6d272d909a1c6d03efb9477de0367aa527b26d7fadf046ba49426b88de2e6b42",
     "docs/api/accessibility.md": "cb413b2d65e150ff569af8190f2f7f32ad19f2d94731f70529eb1fe4e30a0206",
     "docs/api/apphost.md": "73f4bcbf38cad866f0b51ebd8c7b8f9bad196dba0e5fe14bd8d270bc501178c8",
@@ -34,6 +34,10 @@
     "docs/devtools/development.md": "bae5b47adae4643cca4011da70d1f4f0b0f7f7e112d11989337c3d4fbb2d9ebf",
     "docs/devtools/protocol.md": "bab06eeb1fa07a60cb2bde9a2d9a93757baa2f32e1d35ea37c32fb2b68d85cba",
     "templates/Goo.Templates/content/Program.gs": "6654df447b6b2e79d709b304e9c5bc79ec19bf567f30ac93f1024f45806ca1b1",
-    "templates/Goo.Templates/content/GooStarter.gsproj": "c7fa2dc631e37eaf0efa46d3b1d5a855074c5012f131de8cf9f44c04788e66ac"
+    "templates/Goo.Templates/content/GooStarter.gsproj": "7e103da657ae2bae3ac26e1e4ece0ab42c03709d84a448366d1b1a09988f39ac",
+    "templates/Goo.Templates/content/global.json": "20c93ca7812d0a9825eef71217156f95ab2f4fe5aadfeb22ebc1c24b630018d3",
+    "templates/Goo.Templates/content/.gitignore": "5598d29dcea35eed94c9f755e39a1021772b33433ae84b358aff3c8a14813711",
+    "templates/Goo.Templates/content/Properties/PublishProfiles/NativeAot.pubxml": "2d4015815d864480fd81858f47d16dd301825527b4cbc1e8828f8ac293e3e9d0",
+    "templates/Goo.Templates/content/Properties/PublishProfiles/Trimmed.pubxml": "1af67b4171abecafd330ca7b316469a98ed72bef25ff48a61bc0f9f32de95011"
   }
 }

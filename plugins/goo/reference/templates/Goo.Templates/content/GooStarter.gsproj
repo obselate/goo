@@ -8,5 +8,6 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Goo" Version="0.26.1" />
+    <Watch Include="**/*.gs" Exclude="bin/**;obj/**" />
   </ItemGroup>
 </Project>

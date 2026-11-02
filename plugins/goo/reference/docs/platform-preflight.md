@@ -10,6 +10,37 @@ dotnet --info
 Development requires a .NET 10 SDK matching the host:
 `linux-x64`, `win-x64` or `osx-arm64`.
 
+## Linux runtime packages
+
+Use a native Wayland desktop session. Install the runtime libraries and a font.
+These examples use Mesa for AMD or Intel GPUs.
+
+### Arch Linux
+
+```sh
+sudo pacman -S vulkan-icd-loader wayland libxkbcommon fontconfig ttf-dejavu
+sudo pacman -S vulkan-radeon
+```
+
+For Intel, use `vulkan-intel` instead of `vulkan-radeon`.
+
+### Debian and Ubuntu
+
+```sh
+sudo apt install libvulkan1 mesa-vulkan-drivers libwayland-client0 libwayland-cursor0 libwayland-egl1 libxkbcommon0 fontconfig fonts-dejavu-core
+```
+
+### Fedora
+
+```sh
+sudo dnf install vulkan-loader mesa-vulkan-drivers wayland-libs libxkbcommon fontconfig dejavu-sans-fonts
+```
+
+For NVIDIA, install the distribution's supported NVIDIA driver with Vulkan support
+instead of the Mesa driver. These packages do not install a Wayland desktop.
+No shader SDK is needed to run the starter. Install
+[shader tools](../README.md#custom-shaders) only for custom shader source.
+
 ## Linux checks
 
 Run from a terminal in the native Wayland desktop session. Diagnostic tools are
@@ -45,7 +76,7 @@ Goo does not support X11.
 | Vulkan loader, device or feature failure | Update the GPU vendor driver. Check the device, not only the loader. Virtual machines and old GPUs can lack required features. |
 | `No Vulkan text font file could be resolved` | Check sans-serif resolution. Install a licensed TTF/OTF font or register one through the [font API](api/text.md). Preserve its license. |
 | Missing native DLL, `.so` or `.dylib` | Check the RID. Distribute the whole publish output. |
-| Asset fails after publish | Follow [asset copying and lookup](shipping.md#ship-a-desktop-app). |
+| Asset fails after publish | Follow [asset copying and lookup](shipping.md#optional-assets). |
 
 Include package versions, `dotnet --info`, GPU, driver, session type, launch command
 and full error output in reports. Remove private data before posting.

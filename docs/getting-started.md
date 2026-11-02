@@ -1,11 +1,22 @@
-# After the counter
+# Get started
 
-Use the [version baseline](README.md#version-baseline) and start with the
-[template counter](../README.md#quick-start).
+Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+and meet the [platform requirements](platform-preflight.md).
+
+```sh
+dotnet new install Goo.Templates@0.26.1
+dotnet tool install --global Goo.DevTools
+dotnet new goo -n HelloGoo
+cd HelloGoo
+goo dev
+```
+
+The template restores the G# compiler from NuGet automatically.
+`goo dev` runs the counter with hot reload.
 
 ## 1. Separate a second Cell
 
-SVG loading is included in Goo; no separate SVG package is needed.
+SVG loading is included in Goo. No separate SVG package is needed.
 
 Replace `Program.gs` with the complete program below. It separates the parent's
 count from the child's click count and retains one parsed asset:
@@ -68,11 +79,7 @@ func Main() {
 }
 ```
 
-Run the app:
-
-```sh
-dotnet run
-```
+Save the file while `goo dev` is running. Restart if the structural edit requires it.
 
 ## 2. Read the fields and callback
 

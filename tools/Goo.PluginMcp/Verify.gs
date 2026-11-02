@@ -182,7 +182,7 @@ shared class Verify {
 
     async func Starter(client McpClient, root string, output string, app string, checkout string) {
         let starter = await Read(client, "starter")
-        Check(S(starter, "run").Contains("--no-watch"), starter)
+        Check(S(starter, "run") == "goo dev", starter)
         Check(S(starter, "build") == "dotnet build AgentProbe.gsproj -c Release --nologo -warnaserror", starter)
         Check(S(starter, "lint") == "unavailable", starter)
         let provenance = starter["provenance"]!!
@@ -193,8 +193,12 @@ shared class Verify {
                 .Order()
                 .SequenceEqual(
                 []string{
+                    "templates/Goo.Templates/content/.gitignore",
                     "templates/Goo.Templates/content/GooStarter.gsproj",
-                    "templates/Goo.Templates/content/Program.gs"
+                    "templates/Goo.Templates/content/Program.gs",
+                    "templates/Goo.Templates/content/Properties/PublishProfiles/NativeAot.pubxml",
+                    "templates/Goo.Templates/content/Properties/PublishProfiles/Trimmed.pubxml",
+                    "templates/Goo.Templates/content/global.json"
                 }
             ),
             starter
@@ -204,7 +208,16 @@ shared class Verify {
                 .AsObject()
                 .Select(x -> x.Key)
                 .Order()
-                .SequenceEqual([]string{"AgentProbe.gsproj", "Program.gs"}),
+                .SequenceEqual(
+                []string{
+                    ".gitignore",
+                    "AgentProbe.gsproj",
+                    "Program.gs",
+                    "Properties/PublishProfiles/NativeAot.pubxml",
+                    "Properties/PublishProfiles/Trimmed.pubxml",
+                    "global.json"
+                }
+            ),
             starter
         )
         for source in provenance["sourceFiles"]!!.AsObject() {
@@ -235,6 +248,7 @@ shared class Verify {
             await configured.DisposeAsync()
         }
         for file in starter["files"]!!.AsObject() {
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(app, file.Key))!!)
             File.WriteAllText(Path.Combine(app, file.Key), file.Value.GetValue[string]())
         }
         let build = Execute(

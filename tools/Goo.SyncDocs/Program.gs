@@ -39,6 +39,10 @@ for directory in directories {
 }
 paths.Add("templates/Goo.Templates/content/Program.gs")
 paths.Add("templates/Goo.Templates/content/GooStarter.gsproj")
+paths.Add("templates/Goo.Templates/content/global.json")
+paths.Add("templates/Goo.Templates/content/.gitignore")
+paths.Add("templates/Goo.Templates/content/Properties/PublishProfiles/NativeAot.pubxml")
+paths.Add("templates/Goo.Templates/content/Properties/PublishProfiles/Trimmed.pubxml")
 let revision = "main"
 let links = Regex(`(?<prefix>!?\[[^\]\n]*\]\(\s*<?|(?:href|src)=["'])(?<target>[^)\s<>"']+)`)
 let files = Dictionary[string, string]()
