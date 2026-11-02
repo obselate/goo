@@ -124,9 +124,16 @@
       "inputSchema": {
         "properties": {
           "pid": {
-            "default": 0,
-            "title": "Pid",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pid"
           },
           "project": {
             "default": "",
@@ -176,9 +183,16 @@
       "inputSchema": {
         "properties": {
           "pid": {
-            "title": "Pid",
-            "type": "integer",
-            "default": 0
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pid"
           },
           "window": {
             "default": "",
@@ -228,9 +242,16 @@
       "inputSchema": {
         "properties": {
           "pid": {
-            "title": "Pid",
-            "type": "integer",
-            "default": 0
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pid"
           },
           "action": {
             "enum": [
@@ -342,9 +363,16 @@
       "inputSchema": {
         "properties": {
           "pid": {
-            "title": "Pid",
-            "type": "integer",
-            "default": 0
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pid"
           },
           "property": {
             "title": "Property",
@@ -431,9 +459,16 @@
       "inputSchema": {
         "properties": {
           "pid": {
-            "title": "Pid",
-            "type": "integer",
-            "default": 0
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pid"
           },
           "window": {
             "default": "",
@@ -520,9 +555,16 @@
       "inputSchema": {
         "properties": {
           "pid": {
-            "title": "Pid",
-            "type": "integer",
-            "default": 0
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pid"
           },
           "window": {
             "default": "",
@@ -671,9 +713,16 @@
       "inputSchema": {
         "properties": {
           "pid": {
-            "title": "Pid",
-            "type": "integer",
-            "default": 0
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pid"
           },
           "event": {
             "enum": [
@@ -888,9 +937,16 @@
       "inputSchema": {
         "properties": {
           "pid": {
-            "title": "Pid",
-            "type": "integer",
-            "default": 0
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pid"
           },
           "window": {
             "default": "",

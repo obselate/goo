@@ -367,9 +367,7 @@ partial class GooServer {
             let result = List[string]()
             for name in[]string{"pid", "project", "pipe", "app", "window", "wait"} {
                 let value = a[name]
-                if value != nil &&
-                    !(name == "pid" && I(a, name) == 0) &&
-                    !(value.GetValueKind() == JsonValueKind.String && S(a, name) == "") {
+                if value != nil && !(value.GetValueKind() == JsonValueKind.String && S(a, name) == "") {
                     result.Add(
                         "--" + name + "=" + if value.GetValueKind() == JsonValueKind.String {
                             value.GetValue[string]()
