@@ -100,7 +100,6 @@ internal shared partial class ReleaseCheck {
     private func ValidateManifests(directory string, version string) {
         let packages = Dictionary[string, string]{
             ["Goo.DevTools"] = "DotnetTool",
-            ["Goo.DevTools.App"] = "DotnetTool",
             ["Goo.Templates"] = "Template"
         }
         for item in packages {

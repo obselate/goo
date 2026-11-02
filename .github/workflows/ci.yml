@@ -955,13 +955,10 @@ jobs:
             -c Release -o artifacts/packages \
             -p:TreatWarningsAsErrors=true \
             -p:ContinuousIntegrationBuild=true \
-            -p:RepositoryCommit="$GITHUB_SHA"
-          dotnet pack apps/Goo.DevTools/Goo.DevTools.gsproj \
-            -c Release -o artifacts/packages \
-            -p:TreatWarningsAsErrors=true \
-            -p:ContinuousIntegrationBuild=true \
             -p:RepositoryCommit="$GITHUB_SHA" \
-            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
+            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
+            -p:GooWindowsSdlPath="$PWD/artifacts/native/win-x64/SDL3.dll" \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
           dotnet pack templates/Goo.Templates/Goo.Templates.gsproj \
             -c Release -o artifacts/packages \
             -p:TreatWarningsAsErrors=true \
@@ -1071,16 +1068,10 @@ jobs:
             --tool-path "$tool_path" \
             --version "$GOO_VERSION" \
             --add-source "$PWD/artifacts/packages"
-          dotnet tool install Goo.DevTools.App \
-            --tool-path "$tool_path" \
-            --version "$GOO_VERSION" \
-            --add-source "$PWD/artifacts/packages"
           test "$("$tool_path/goo" --version)" = "$GOO_VERSION"
-          test -x "$tool_path/goo-devtools"
+          "$tool_path/goo" inspector --help
           dotnet tool list --tool-path "$tool_path" \
             | grep -F "goo.devtools "
-          dotnet tool list --tool-path "$tool_path" \
-            | grep -F "goo.devtools.app "
 
       - name: Publish clean package consumer
         if: needs.changes.outputs.full == 'true'
@@ -1210,7 +1201,6 @@ jobs:
             artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
 
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
-            artifacts/packages/Goo.DevTools.App.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Templates.${{ env.GOO_VERSION }}.nupkg
 
   linux-fixtures:
@@ -1850,10 +1840,6 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
-          dotnet nuget push "artifacts/packages/Goo.DevTools.App.$GOO_VERSION.nupkg" \
-            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
-            --source https://api.nuget.org/v3/index.json \
-            --skip-duplicate
           dotnet nuget push "artifacts/packages/Goo.Templates.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
@@ -1861,7 +1847,7 @@ jobs:
 
       - name: Publish Goo packages to GitHub Packages
         run: |
-          for package in Goo Goo.Android Goo.Accessibility Goo.Audio Goo.DevTools Goo.DevTools.App Goo.Templates; do
+          for package in Goo Goo.Android Goo.Accessibility Goo.Audio Goo.DevTools Goo.Templates; do
             dotnet nuget push "artifacts/packages/$package.$GOO_VERSION.nupkg" \
               --api-key "${{ github.token }}" \
               --source https://nuget.pkg.github.com/obselate/index.json \

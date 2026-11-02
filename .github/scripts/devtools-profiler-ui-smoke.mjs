@@ -16,6 +16,7 @@ await mkdir(output, {recursive: true});
 const cli = path.join(root, 'tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll');
 const children = [];
 const proxies = [];
+const descriptors = [];
 function launch(file, name, args = []) {
     const child = spawn('dotnet', [path.join(root, file), ...args], {
         env: {...process.env, GOO_DEVTOOLS: '1', GOO_DEVTOOLS_INPUT: '1'},
@@ -33,11 +34,11 @@ async function stopChild(pid) {
     child.kill('SIGTERM');
     await exited;
 }
-async function faultProxy(pipe, command) {
+async function faultProxy(endpoint, command) {
     const state = {pipe: `goo-profiler-fault-${process.pid}-${command}`, snapshots: 0, rejected: false, disconnected: false};
     let faultId;
     const server = createServer(client => {
-        const target = connect(pipe);
+        const target = connect(endpoint.pipe);
         target.pipe(client);
         createInterface({input: client}).on('line', line => {
             const request = JSON.parse(line.trim());
@@ -64,6 +65,19 @@ async function faultProxy(pipe, command) {
         server.once('error', reject);
         server.listen(path.join(tmpdir(), 'CoreFxPipe_' + state.pipe), resolve);
     });
+    const directory = process.env.GOO_DEVTOOLS_DIR ?? path.join(process.env.XDG_RUNTIME_DIR, 'goo');
+    await mkdir(directory, {recursive: true});
+    const descriptor = path.join(directory, state.pipe + '.json');
+    await writeFile(descriptor, JSON.stringify({
+        protocol: endpoint.protocol,
+        pid: endpoint.pid,
+        process: endpoint.process,
+        pipe: state.pipe,
+        transport: 'named-pipe',
+        windows: [{id: endpoint.window, title: endpoint.title}],
+    }));
+    descriptors.push(descriptor);
+    state.descriptorPath = descriptor;
     return state;
 }
 async function command(args) {
@@ -73,7 +87,7 @@ async function request(args) {
     return (await command([...args, '--json'])).trim().split('\n').map(JSON.parse);
 }
 async function snapshot(pid) {
-    const responses = await request(['attach', '--pid', String(pid), '--once', '--wait', '30000']);
+    const responses = await request(['snapshot', '--pid', String(pid), '--wait', '30']);
     return responses.find(item => item.payload?.added).payload.added;
 }
 async function click(pid, key) {
@@ -464,7 +478,7 @@ try {
     assert(nodes.some(node => node.key === 'profiler-empty'), 'Clear retained the previous trace');
     const endpoint = (await request(['list'])).flatMap(item => item.targets).find(item => item.pid === target);
     for (const command of ['snapshot', 'profiler.start']) {
-        const proxy = await faultProxy(endpoint.pipe, command);
+        const proxy = await faultProxy(endpoint, command);
         const client = launch('apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll', 'fault-' + command,
             ['--pipe', proxy.pipe]);
         await snapshot(client);
@@ -482,6 +496,7 @@ try {
         }
         console.log(`profiler-ui: fault=${command} rejected=verified snapshots=${proxy.snapshots} disconnected=${proxy.disconnected}`);
         await stopChild(client);
+        await rm(proxy.descriptorPath, {force: true});
     }
     await stopChild(inspector);
     await stopChild(target);
@@ -641,4 +656,5 @@ try {
 } finally {
     for (const child of children.reverse()) child.kill('SIGTERM');
     for (const proxy of proxies) proxy.close();
+    await Promise.all(descriptors.map(file => rm(file, {force: true})));
 }

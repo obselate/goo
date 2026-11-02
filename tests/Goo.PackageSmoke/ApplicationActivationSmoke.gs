@@ -10,6 +10,12 @@ func ActivationSmokeRequire(value bool, message string) {
     if !value { throw InvalidOperationException(message) }
 }
 
+private func WriteActivationResult(results string, name string, content string = "passed") {
+    let path = Path.Combine(results, name)
+    File.WriteAllText(path + ".tmp", content)
+    File.Move(path + ".tmp", path, true)
+}
+
 func RunApplicationActivationSmoke(results string) {
     let owner = Environment.CurrentManagedThreadId
     let window = Window{ Width: 180, Height: 100, Root: Cell{} }
@@ -25,11 +31,11 @@ func RunApplicationActivationSmoke(results string) {
             if uri == "goo-activation-smoke://cold" {
                 ActivationSmokeRequire(activation.IsInitial && !cold, "Cold URI was not one initial activation")
                 cold = true
-                File.WriteAllText(Path.Combine(results, "cold.txt"), "passed")
+                WriteActivationResult(results, "cold.txt")
             } else if uri == "goo-activation-smoke://warm" {
                 ActivationSmokeRequire(cold && !activation.IsInitial && !warm, "Warm URI activation was repeated or initial")
                 warm = true
-                File.WriteAllText(Path.Combine(results, "warm.txt"), "passed")
+                WriteActivationResult(results, "warm.txt")
             } else { throw InvalidOperationException("Unexpected activation URI") }
         } else if activation.Kind == ApplicationActivationKind.OpenDocuments {
             ActivationSmokeRequire(warm && !documents && !activation.IsInitial, "Document batch was repeated or initial")
@@ -39,11 +45,11 @@ func RunApplicationActivationSmoke(results string) {
             ActivationSmokeRequire((first == one && second == two) || (first == two && second == one),
                 "Native document paths changed")
             documents = true
-            File.WriteAllText(Path.Combine(results, "documents.txt"), "passed")
+            WriteActivationResult(results, "documents.txt")
         }
     }
     Directory.CreateDirectory(results)
-    File.WriteAllText(Path.Combine(results, "pid.txt"), Environment.ProcessId.ToString())
+    WriteActivationResult(results, "pid.txt", Environment.ProcessId.ToString())
     Window.ApplicationActivated += callback
     ActivationSmokeRequire(Window.InitializeApplicationActivation(ApplicationActivation{ IsInitial: true })
         == WindowOperationResult.Accepted, "Activation initialization failed")
@@ -56,11 +62,11 @@ func RunApplicationActivationSmoke(results string) {
         }
         ActivationSmokeRequire(cold && warm && documents, "Activation smoke timed out")
     } catch (error Exception) {
-        File.WriteAllText(Path.Combine(results, "error.txt"), error.ToString())
+        WriteActivationResult(results, "error.txt", error.ToString())
         throw error
     } finally {
         Window.ApplicationActivated -= callback
         ActivationSmokeRequire(CloseWindow(window), "Activation smoke window did not close")
     }
-    File.WriteAllText(Path.Combine(results, "passed.txt"), "passed")
+    WriteActivationResult(results, "passed.txt")
 }

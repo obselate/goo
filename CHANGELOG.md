@@ -4,6 +4,9 @@
 
 - Use `dotnet run --project tools/Goo.Repo --` for contributor builds, checks, docs and packing.
 - Use the SDK compiler and formatter without bootstrap. Desktop docs do not need Android tooling. Docs checks do not change tracked files.
+- Bundle the graphical inspector in `Goo.DevTools` and launch it with `goo inspector`.
+- Add `goo snapshot`, command-specific help, shared target selection and repeatable `--env`.
+- Rename input selection to `--node-id`. Remove redundant launch flags. Validate arguments before discovery and write JSON errors to stdout.
 
 ## 0.26.1 - 2026-11-01
 
@@ -219,7 +222,7 @@
 
 ## 0.12.1 - 2026-10-23
 
-- Publish Goo.Audio without an empty symbol package, so every package publishes. Goo.DevTools, Goo.DevTools.App, Goo.Templates, Goo.SpellCheck and Goo.Printing missed 0.12.0.
+- Publish Goo.Audio without an empty symbol package, so every package publishes. The DevTools packages, Goo.Templates, Goo.SpellCheck and Goo.Printing missed 0.12.0.
 
 ## 0.12.0 - 2026-10-23
 
@@ -285,7 +288,7 @@
 - Apply EXIF orientation to PNG and JPEG images and thumbnails, ignoring malformed metadata.
 - Detect nullable reference annotation changes in the public API gate.
 - Deliver coherent Android contact frames to shared gesture recognizers.
-- Publish Goo.Gestures with embedded symbols only, so the release job publishes every package (Goo.DevTools, Goo.DevTools.App and Goo.Templates missed 0.8.1).
+- Publish Goo.Gestures with embedded symbols only, so the release job publishes every package (the DevTools packages and Goo.Templates missed 0.8.1).
 - Expose OS UI and event sound preferences through PlatformPreferences.EventSoundsEnabled.
 - Report system accent colors and available Linux and Android contrast preferences.
 - Expose ordered preferred locale tags through platform preference snapshots and change events.
@@ -1038,8 +1041,8 @@
 - Added Windows x64 package support, tested on Windows 11, with the pinned SDL 3
   runtime, shared Vulkan host, software-Vulkan regression coverage, and
   NativeAOT qualification tooling.
-- Added the `Goo.Templates` application template, the `Goo.DevTools` CLI, the
-  `Goo.DevTools.App` inspector, and VS Code and Rider integrations.
+- Added the `Goo.Templates` application template, the `Goo.DevTools` CLI,
+  graphical inspector, and VS Code and Rider integrations.
 - Added renderer-driven ShaderEffect playback, computed layout transitions,
   non-throwing window dispatch, and window diagnostics.
 - Added four bounded, retained `ShaderEffectData` inputs with copy or ownership-transfer publication and shader authoring helpers.
