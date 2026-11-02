@@ -69,7 +69,7 @@ class DevToolsCliEndToEndTests {
     @Fact
     async func AbsolutePipeDiscoversPrivateDescriptorForListAndSnapshot() {
         if OperatingSystem.IsWindows() { return }
-        using let directory = TemporaryDirectory.Create()
+        using let directory = TemporaryDirectory.Create("goo-")
         using let unrelated = TemporaryDirectory.Create()
         let pipeName = Path.Combine(directory.Path, "goo-private")
         await WriteDescriptorAsync(directory.Path, pipeName, "goo.devtools/1", fileName: "goo-private.json")
@@ -1083,8 +1083,8 @@ wait
         }
 
         shared {
-            func Create() TemporaryDirectory {
-                let path = Path.Combine(Path.GetTempPath(), "goo-devtools-tests-${Guid.NewGuid():N}")
+            func Create(prefix string = "goo-devtools-tests-") TemporaryDirectory {
+                let path = Path.Combine(Path.GetTempPath(), "$prefix${Guid.NewGuid():N}")
                 Directory.CreateDirectory(path)
                 return TemporaryDirectory(path)
             }
