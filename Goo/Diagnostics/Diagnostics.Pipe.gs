@@ -492,7 +492,7 @@ internal partial class DiagnosticPipeHost : IDisposable {
 
   private func boolText(value bool) string -> value ? "true" : "false"
 
-  private func numberText(value float64) string -> value.ToString("R", CultureInfo.InvariantCulture)
+  private func numberText(value float64) string -> Double.IsFinite(value) ? value.ToString("R", CultureInfo.InvariantCulture) : "null"
 
   private func quote(value string) string -> DiagnosticJson.Quote(value)
 }
