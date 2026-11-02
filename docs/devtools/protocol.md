@@ -141,6 +141,21 @@ are strings. Unavailable measurements are `null`, not zero. Counter accounts,
 sources and freshness are separate. Allocator requirements, swapchain estimated
 payload, managed memory, RSS/PSS and driver usage must not be summed as a total.
 
+Resize work uses nested CPU phases from `phaseNames`:
+
+| Phase | Timed work |
+| --- | --- |
+| `NativeResize` | Apply pending native window metrics and resize the target. |
+| `Swapchain` | The full swapchain recreation call in Events or TargetBegin, including deferred attempts. |
+| `DeviceIdle` | The `vkDeviceWaitIdle` call, only when it runs. |
+| `ClipAtlas` | Replace a clip atlas generation, including growth during Paint. |
+| `LayerCollect` | Collect offscreen layers with `discardCompleted`. |
+| `LayerCreate` | Create an offscreen layer image, view and descriptor. |
+
+These phases are inclusive. Do not add a parent duration to its children.
+The DevTools frame chart shows exclusive phase costs. Profiling off does not
+read clocks or allocate per-call profiling data.
+
 Error envelopes retain the request `id` but need not repeat `command`. Clients
 must correlate pending requests by ID. A profiler error envelope disconnects the
 recording client, including a start error, because a timed-out handler may still

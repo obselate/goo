@@ -50,13 +50,30 @@ public partial class Window {
 internal enum FrameProfileStage {
   Frame; Events; Input; Tree; Motion; Reconcile; Build; Diff; StyleResolve;
   Transitions; Layout; InputTree;
-  Render; TargetBegin; Paint; CanvasFlush; TargetFlush; Present; Virtualization; CapWait; Diagnostics; Count
+  Render; TargetBegin; Paint; CanvasFlush; TargetFlush; Present; Virtualization; CapWait; Diagnostics;
+  NativeResize; Swapchain; DeviceIdle; ClipAtlas; LayerCollect; LayerCreate; Count
 }
 
 internal data struct FrameProfilePoint {
   internal var Ticks int64
   internal var Bytes int64
   internal var PauseTicks int64
+}
+
+internal struct FrameProfileScope : IDisposable {
+  private let profiler FrameProfiler?
+  private let stage FrameProfileStage
+  private let start FrameProfilePoint
+
+  internal init(stage FrameProfileStage, enabled bool = true) {
+    profiler = enabled ? FrameProfiler.Current : nil
+    this.stage = stage
+    start = profiler?.Start() ?? FrameProfilePoint{}
+  }
+
+  public func Dispose() {
+    profiler?.Record(stage, start)
+  }
 }
 
 internal class FrameWorkCounters {
@@ -105,6 +122,10 @@ internal class FrameProfileTotal {
 }
 
 internal class FrameProfiler {
+  shared {
+    @ThreadStatic
+    internal var Current FrameProfiler?
+  }
   private let enabled bool
   private var sink FrameProfileSink? = nil
   private var totals List[FrameProfileTotal]?
@@ -367,6 +388,12 @@ internal class FrameProfiler {
     case FrameProfileStage.Virtualization: "virtualization"
     case FrameProfileStage.CapWait: "cap_wait"
     case FrameProfileStage.Diagnostics: "diagnostics"
+    case FrameProfileStage.NativeResize: "native_resize"
+    case FrameProfileStage.Swapchain: "swapchain"
+    case FrameProfileStage.DeviceIdle: "device_idle"
+    case FrameProfileStage.ClipAtlas: "clip_atlas"
+    case FrameProfileStage.LayerCollect: "layer_collect"
+    case FrameProfileStage.LayerCreate: "layer_create"
     default: ""
   }
 
