@@ -195,6 +195,11 @@ internal shared class Discovery {
         window string?
     ) IReadOnlyList[DiscoveryDescriptor] {
         var filtered = descriptors.AsEnumerable()
+        if !string.IsNullOrWhiteSpace(pipe) && Path.IsPathFullyQualified(pipe) &&
+            !descriptors.Any(item -> string.Equals(item.Pipe, pipe, StringComparison.Ordinal)) &&
+            TryRead(pipe + ".json", out var descriptor) && descriptor!!.IsProcessAlive {
+            filtered = filtered.Append(descriptor!!)
+        }
         if (processId != nil) {
             filtered = filtered.Where((item DiscoveryDescriptor) -> item.ProcessId == processId)
         }

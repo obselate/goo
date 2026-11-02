@@ -66,6 +66,39 @@ class DevToolsCliEndToEndTests {
         Assert.DoesNotContain(pipeName, stale.StandardOutput, StringComparison.Ordinal)
     }
 
+    @Fact
+    async func AbsolutePipeDiscoversPrivateDescriptorForListAndSnapshot() {
+        if OperatingSystem.IsWindows() { return }
+        using let directory = TemporaryDirectory.Create("goo-")
+        using let unrelated = TemporaryDirectory.Create()
+        let pipeName = Path.Combine(directory.Path, "goo-private")
+        await WriteDescriptorAsync(directory.Path, pipeName, "goo.devtools/1", fileName: "goo-private.json")
+        using let server = NamedPipeServerStream(
+            pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous
+        )
+        let listed = await RunCliAsync(unrelated.Path, "list", "--pipe", pipeName, "--json")
+        Assert.Equal(0, listed.ExitCode)
+        Assert.Contains(pipeName, listed.StandardOutput, StringComparison.Ordinal)
+        let cliTask = RunCliAsync(unrelated.Path, "snapshot", "--pipe", pipeName, "--json", "--wait", "5")
+        await server.WaitForConnectionAsync().WaitAsync(TimeSpan.FromSeconds(5))
+        using let reader = StreamReader(server, leaveOpen: true)
+        using let writer = StreamWriter(server, leaveOpen: true){AutoFlush = true, NewLine = "\n"}
+        await ReadLineAsync(reader)
+        await writer.WriteLineAsync(ServerHello([]string{"tree.snapshot"}))
+        using let request = JsonDocument.Parse(await ReadLineAsync(reader))
+        await writer.WriteLineAsync(
+            JsonSerializer.Serialize(
+                AnonymousType4_51F108B6C3A8A17C(
+                    "response", request.RootElement.GetProperty("id").GetString(), true,
+                    AnonymousType2_E22102B556A9BF55("snapshot", true)
+                )
+            )
+        )
+        let snapshot = await cliTask
+        Assert.Equal(0, snapshot.ExitCode)
+        Assert.Contains("\"command\":\"snapshot\"", snapshot.StandardOutput, StringComparison.Ordinal)
+    }
+
     @Theory
     @InlineData("x")
     @InlineData("é")
@@ -1050,8 +1083,8 @@ wait
         }
 
         shared {
-            func Create() TemporaryDirectory {
-                let path = Path.Combine(Path.GetTempPath(), "goo-devtools-tests-${Guid.NewGuid():N}")
+            func Create(prefix string = "goo-devtools-tests-") TemporaryDirectory {
+                let path = Path.Combine(Path.GetTempPath(), "$prefix${Guid.NewGuid():N}")
                 Directory.CreateDirectory(path)
                 return TemporaryDirectory(path)
             }
