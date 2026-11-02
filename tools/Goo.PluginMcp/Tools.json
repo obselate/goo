@@ -1084,7 +1084,7 @@
       "name": "goo_input",
       "arguments": {
         "event": "click",
-        "node_id": 9223372036854776000
+        "node_id": 9223372036854775807
       }
     },
     "unknownInput": {
