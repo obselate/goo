@@ -68,7 +68,7 @@ Subscribe before opening the first window. Check the returned status.
 - Hosts and optional packages own native associations, IPC and notifications.
 - macOS cold and warm file or URL opens use this event.
 - Native document batches stay separate from drag/drop into a window.
-- Declare URL schemes and document types in the app bundle.
+- Declare [URL schemes and document types](../shipping.md#macos-app-and-dmg) in the app project.
 
 | Post status | Meaning |
 | --- | --- |

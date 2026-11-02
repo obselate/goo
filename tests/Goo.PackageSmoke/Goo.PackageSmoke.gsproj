@@ -5,6 +5,10 @@
     <RootNamespace>GooPackageSmoke</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <GooPackageUrlScheme Include="blocknet" />
+    <GooPackageUrlScheme Include="goo+smoke" />
+    <GooPackageDocumentType Include="wallet" />
+    <GooPackageDocumentType Include="goo&amp;smoke" />
     <Compile Include="../Shared/PrimitiveScene.gs" Link="PrimitiveScene.gs" />
     <Compile Include="../Shared/ClipboardDataSmoke.gs" Link="ClipboardDataSmoke.gs" />
     <Compile Include="../Shared/NativeDataTransferSmoke.gs" Link="NativeDataTransferSmoke.gs" />
