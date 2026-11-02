@@ -7,6 +7,38 @@ import System.Text.Json
 import System.Threading
 
 internal class DiagnosticsFixtures {
+  func SnapshotWithNonFiniteGeometryUsesValidJsonContract() bool {
+    let window = Window{Root: DiagnosticsOverrideCell{}, Width: 200, Height: 100}
+    window.UpdateTree()
+    guard let root = window.Tree else { return false }
+    root.Rect = Rect{X: Single.NaN, Y: Single.PositiveInfinity, W: Single.NegativeInfinity, H: 100.0F}
+    using let session = window.AttachDiagnostics()
+    using let client = NamedPipeClientStream(".", session.Endpoint.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous)
+    client.Connect(5000)
+    using let reader = StreamReader(client, leaveOpen: true)
+    using let writer = StreamWriter(client, leaveOpen: true){AutoFlush = true, NewLine = "\n"}
+    if reader.ReadLine() == nil { return false }
+    writer.WriteLine("{\"type\":\"request\",\"id\":\"geometry\",\"command\":\"snapshot\",\"payload\":{\"full\":false}}")
+    let response = reader.ReadLineAsync()
+    let deadline = Environment.TickCount64 + 5000
+    while !response.IsCompleted && Environment.TickCount64 < deadline {
+      window.drainPostedActions()
+      Thread.Sleep(1)
+    }
+    if !response.IsCompleted { return false }
+    guard let line = response.GetAwaiter().GetResult() else { return false }
+    using let document = JsonDocument.Parse(line)
+    let message = document.RootElement
+    if !message.GetProperty("ok").GetBoolean() || message.GetProperty("id").GetString() != "geometry" {
+      return false
+    }
+    let bounds = message.GetProperty("payload").GetProperty("added")[0].GetProperty("bounds")
+    return bounds.GetProperty("x").ValueKind == JsonValueKind.Null
+      && bounds.GetProperty("y").ValueKind == JsonValueKind.Null
+      && bounds.GetProperty("width").ValueKind == JsonValueKind.Null
+      && bounds.GetProperty("height").ValueKind == JsonValueKind.Null
+  }
+
   func IdlePipeConnectionKeepsSnapshotAvailableContract() bool {
     let window = Window{Root: DiagnosticsOverrideCell{}, Width: 200, Height: 100}
     window.UpdateTree()

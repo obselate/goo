@@ -138,6 +138,7 @@ class FixtureContractTests {
             yield Contract[DiagnosticsFixtures]("ResolvedSemanticsAndEditorPrivacyContract")
             yield Contract[DiagnosticsFixtures]("RuntimeOverrideInheritanceAndResetContract")
             yield Contract[DiagnosticsFixtures]("SnapshotIdentityAndDeltaContract")
+            yield Contract[DiagnosticsFixtures]("SnapshotWithNonFiniteGeometryUsesValidJsonContract")
             yield Contract[DiagnosticsFixtures]("PerPumpWorkCountersContract")
             yield Contract[DragDropFixtures]("ArbitrationReentrantResetAndCaptureCleanupContract")
             yield Contract[DragDropFixtures]("CallbackFailureTerminatesAndDoesNotRetry")
