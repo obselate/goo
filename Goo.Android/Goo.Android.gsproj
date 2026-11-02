@@ -19,11 +19,7 @@
     <AndroidNativeLibrary Include="../Goo/Runtime/Vulkan/android-arm64/*.so" Abi="arm64-v8a" />
     <AndroidNativeLibrary Include="../Goo/Runtime/Vulkan/android-x64/*.so" Abi="x86_64" />
   </ItemGroup>
-  <Target Name="ExcludeGooAndroidProjectNativeArchive" AfterTargets="_IncludeAarInNuGetPackage">
-    <ItemGroup>
-      <TfmSpecificPackageFile Remove="$(_AarOutputPath)" />
-    </ItemGroup>
-  </Target>
+  <Target Name="PrepareAndroidArchiveResources" BeforeTargets="_CreateAarCache" DependsOnTargets="_ComputeAndroidResourcePaths;_GenerateAndroidResourceDir" />
   <Target Name="NormalizeAndroidReferencePath" AfterTargets="_GsharpGetRefAssemblyForPack">
     <ItemGroup>
       <TfmSpecificPackageFile Update="$(TargetRefPath)" PackagePath="ref/$(TargetFramework)$(TargetPlatformVersion)/" />
