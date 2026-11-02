@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.27.2 - 2026-11-02
+
+- Register macOS URL schemes from `GooPackageUrlScheme` items and document types from `GooPackageDocumentType` items before ad-hoc signing. URL registrations use `GooPackageId` as the name and `Viewer` as the role. Projects without these items keep the same `Info.plist`. (#522)
+
 ## 0.27.1 - 2026-11-02
 
 - Show nested CPU phases `NativeResize`, `Swapchain`, `DeviceIdle`, `ClipAtlas`, `LayerCollect` and `LayerCreate` in frame traces and the DevTools profiler. (#517)
