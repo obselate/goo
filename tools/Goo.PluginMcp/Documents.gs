@@ -69,7 +69,8 @@ partial class GooServer {
         let configuration = Path.Combine(root, "global.json")
         let project = Path.Combine(root, "templates/Goo.Templates/content/GooStarter.gsproj")
         let compiler = if File.Exists(configuration) {
-            JsonNode.Parse(File.ReadAllText(configuration))?["msbuild-sdks"]?["Gsharp.NET.Sdk"]?.GetValue[string]() ?? "unavailable"
+            JsonNode.Parse(File.ReadAllText(configuration))?["msbuild-sdks"]?["Gsharp.NET.Sdk"]?.GetValue[string]() ??
+                "unavailable"
         } else if File.Exists(project) {
             Regex.Match(File.ReadAllText(project), `Gsharp.NET.Sdk/([^"]+)`).Groups[1].Value
         } else {
@@ -223,8 +224,7 @@ partial class GooServer {
             let template = Document(root, relative)
             let content = File.ReadAllText(template)
             sourceFiles[relative] = Hash(File.ReadAllBytes(template))
-            files[filename.Replace("GooStarter", name)] = content
-                .Replace("goostarter", name.ToLowerInvariant())
+            files[filename.Replace("GooStarter", name)] = content.Replace("goostarter", name.ToLowerInvariant())
                 .Replace("GooStarter", name)
         }
         let project = S(files, name + ".gsproj")
