@@ -309,6 +309,7 @@ internal class DiagnosticTreeState {
     result.HasClickHandler = n.OnClick != nil
     result.HasPointerHandlers = n.OnPointerDown != nil || n.OnPointerMove != nil
       || n.OnPointerUp != nil || n.OnPointerCancel != nil || n.OnWheel != nil
+      || InputCallbacks.PointerEnter(n) != nil || InputCallbacks.PointerLeave(n) != nil
     result.HasKeyboardHandlers = InputCallbacks.KeyDown(n) != nil || InputCallbacks.KeyUp(n) != nil
     let accessibility = if let manager = semantics { manager.DiagnosticNodeFor(n) } else { nil }
     if let accessibility = accessibility {
