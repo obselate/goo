@@ -33,6 +33,8 @@ NuGet version.
    the GitHub Release notes.
 4. Run the Goo.Repo commands above. Android docs need the installed Android
    workload, `ANDROID_HOME` and `JAVA_HOME`. Docs commands do not install workloads.
+   If Android tooling is unavailable and no Android API changed, use the CI
+   Android job's `check docs-android` gate instead of local Android docs generation.
 5. Commit generated docs with source changes, as for every PR.
 6. Merge the release PR. Require green CI on the exact merge commit.
 7. Check the release-candidates and android-package artifacts. Confirm all package,

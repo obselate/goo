@@ -1,12 +1,18 @@
 # Changelog
 
-## Unreleased
+## 0.27.0 - 2026-11-01
 
-- Use `dotnet run --project tools/Goo.Repo --` for contributor builds, checks, docs and packing.
-- Use the SDK compiler and formatter without bootstrap. Desktop docs do not need Android tooling. Docs checks do not change tracked files.
-- Bundle the graphical inspector in `Goo.DevTools` and launch it with `goo inspector`.
-- Add `goo snapshot`, command-specific help, shared target selection and repeatable `--env`.
-- Rename input selection to `--node-id`. Remove redundant launch flags. Validate arguments before discovery and write JSON errors to stdout.
+- Breaking: rename MCP `goo_targets` to `goo_list`. All runtime tools now use `project`, `pid`, `pipe`, `app`, `window`, `latest` and `wait` in seconds. Unknown arguments are rejected. (#516)
+- Breaking: rename snapshot `wait` to `until` and `timeout_ms` to `timeout` in seconds. (#516)
+- Breaking: rename CLI `--node` to `--node-id`. Remove `--watch` and `--focus`. (#514)
+- Breaking: remove `Goo.DevTools.App`. The inspector is bundled in `Goo.DevTools` and opens with `goo inspector`. (#514)
+- Breaking: replace `bootstrap.sh` and `bootstrap.bat` with `dotnet run --project tools/Goo.Repo -- doctor|build|check <lane>|docs|pack`. (#513)
+- Breaking: replace Gslint `--reduce` with `--fix`. Add `--help`. (#516)
+- Use `goo dev` as the single start path. Pin the template SDK in `global.json`, include the Watch item, and make `dotnet new goo` and `goo_starter` produce the same files. Add publish-first shipping and Linux runtime package examples. (#512)
+- Use one G# SDK version in root `global.json` and serialize contributor builds with `GOO_BUILD_LOCK`. Desktop docs do not need Android tooling. Docs checks do not change tracked files. (#513)
+- Add `goo snapshot`, per-command help, `goo help <command>`, `-h` and repeatable `--env`. Validate arguments before discovery. Ambiguous targets report their candidates. Generate `docs/devtools/cli.md`. (#514)
+- Shorten DevTools endpoint names to fit Unix socket paths. Skip invalid endpoint paths in the CLI and report them in doctor. (#515)
+- Update the Goo agent plugin to 0.3.0. (#516)
 
 ## 0.26.1 - 2026-11-01
 
