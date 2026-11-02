@@ -842,9 +842,16 @@
             "title": "Delta Y"
           },
           "button": {
-            "default": "Primary",
-            "title": "Button",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Button"
           },
           "key": {
             "anyOf": [
