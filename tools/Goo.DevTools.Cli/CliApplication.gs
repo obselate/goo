@@ -1264,7 +1264,7 @@ internal shared class CliApplication {
             }
             await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken)
         }
-        let all = Discovery.Scan(projectDirectory, includeStale: true)
+        let all = Discovery.Scan(projectDirectory)
         throw CliException(
             Discovery.DescribeNoMatch(
                 all,
