@@ -2,7 +2,9 @@
 
 ## 0.27.3 - 2026-11-02
 
-- Include the Android resource archive in Goo.Android packages so accessibility can resolve the mixed-state label.
+- Include the Android resource archive in Goo.Android packages so accessibility can resolve the mixed-state label. (#526)
+- Encode non-finite diagnostic geometry as JSON null so snapshot requests complete. (#524)
+- Resolve an absolute DevTools pipe path through its adjacent descriptor, including private runtime directories. (#525)
 
 ## 0.27.2 - 2026-11-02
 
