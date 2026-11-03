@@ -1596,3 +1596,98 @@ public partial class Window {
   internal func RejectShaderEffectWithoutVulkanArtifactForTest(effect ShaderEffect) bool ->
   VulkanTargetForTest()!!.RejectShaderEffectWithoutVulkanArtifactForTest(effect)
 }
+
+internal unsafe partial class VulkanWindowTarget {
+  shared {
+    private var dynamicTextCaptureTarget VulkanWindowTarget?
+    private var dynamicTextNativeEndRendering unmanaged[Cdecl](VkCommandBuffer) -> void
+
+    @UnmanagedCallersOnly(CallConvs = []Type{typeof(CallConvCdecl)})
+    private func CaptureDynamicTextEndRendering(commandBuffer VkCommandBuffer) {
+      let endRendering = dynamicTextNativeEndRendering
+      endRendering(commandBuffer)
+      dynamicTextCaptureTarget?.RecordDynamicTextCapture(commandBuffer)
+    }
+  }
+
+  private var dynamicTextCaptureBuffers VulkanFrameBuffers
+  private var dynamicTextCaptureRecorded bool
+
+  internal func BeginDynamicTextCapture() {
+    guard let current = generation, let allocator = memoryAllocator else {
+      throw InvalidOperationException("Dynamic text swapchain is unavailable")
+    }
+    if !current.SupportsTransferSource {
+      throw InvalidOperationException("Dynamic text swapchain does not support readback")
+    }
+    dynamicTextCaptureBuffers = VulkanFrameBuffers{
+      Device: device, Dispatch: dispatch, Allocator: allocator,
+    }
+    dynamicTextCaptureBuffers.EnsureMappedCapacity(
+      uint64(current.Extent.width) * uint64(current.Extent.height) * 4uL,
+      128uL, uint32(VkConstants.VK_BUFFER_USAGE_TRANSFER_DST_BIT))
+    dynamicTextNativeEndRendering = dispatch.vkCmdEndRendering
+    dynamicTextCaptureTarget = this
+    dispatch.vkCmdEndRendering =
+      cast[unmanaged[Cdecl](VkCommandBuffer) -> void](nint(&CaptureDynamicTextEndRendering))
+  }
+
+  private func RecordDynamicTextCapture(commandBuffer VkCommandBuffer) {
+    guard let current = generation else { return }
+    VulkanTransitions.RecordImage(commandBuffer, dispatch.vkCmdPipelineBarrier2,
+      current.Image(activeImageIndex), VulkanTransitions.ColorSubresourceRange(),
+      VkConstants.VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+      VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+      VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+      VkConstants.VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+      VkConstants.VK_PIPELINE_STAGE_2_COPY_BIT,
+      VkConstants.VK_ACCESS_2_TRANSFER_READ_BIT)
+    let region = VkBufferImageCopy{
+      imageSubresource: VkImageSubresourceLayers{
+        aspectMask: uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT), layerCount: 1u,
+      },
+      imageExtent: VkExtent3D{
+        width: current.Extent.width, height: current.Extent.height, depth: 1u,
+      },
+    }
+    EnsureReadbackDispatch().CopyImageToBuffer(commandBuffer,
+      current.Image(activeImageIndex), VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+      dynamicTextCaptureBuffers.Buffer, region)
+    VulkanTransitions.RecordImage(commandBuffer, dispatch.vkCmdPipelineBarrier2,
+      current.Image(activeImageIndex), VulkanTransitions.ColorSubresourceRange(),
+      VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+      VkConstants.VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+      VkConstants.VK_PIPELINE_STAGE_2_COPY_BIT,
+      VkConstants.VK_ACCESS_2_TRANSFER_READ_BIT,
+      VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+      VkConstants.VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT)
+    dynamicTextCaptureRecorded = true
+  }
+
+  internal func TakeDynamicTextCapture() VulkanReadbackResult {
+    guard let current = generation, let allocator = memoryAllocator,
+      let allocation = dynamicTextCaptureBuffers.Allocation else {
+      throw InvalidOperationException("Dynamic text capture storage is unavailable")
+    }
+    let serial = AcceptedSubmissionSerialForProof()
+    let status = WaitGraphicsSubmissionForTest(serial, 10000000000uL)
+    let bytes = uint64(current.Extent.width) * uint64(current.Extent.height) * 4uL
+    if status != VkConstants.VK_SUCCESS || !dynamicTextCaptureRecorded
+      || allocator.InvalidateAfterFence(allocation, 0uL, bytes) != VkConstants.VK_SUCCESS {
+      throw InvalidOperationException("Dynamic text swapchain copy did not complete")
+    }
+    let pixels = [int32(bytes)]uint8
+    fixed destination *uint8 = pixels {
+      System.Buffer.MemoryCopy(dynamicTextCaptureBuffers.Mapped, destination, bytes, bytes)
+    }
+    dynamicTextCaptureRecorded = false
+    return VulkanReadbackResult(pixels, current.Extent.width, current.Extent.height,
+      current.Extent.width * 4u, current.Format, current.Generation, serial)
+  }
+
+  internal func EndDynamicTextCapture() {
+    dispatch.vkCmdEndRendering = dynamicTextNativeEndRendering
+    dynamicTextCaptureTarget = nil
+    dynamicTextCaptureBuffers.Destroy()
+  }
+}

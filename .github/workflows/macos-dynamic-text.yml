@@ -1,0 +1,42 @@
+name: macOS dynamic text experiment
+
+on:
+  push:
+    branches: [fix/macos-dynamic-text]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  rendering:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          global-json-file: global.json
+      - name: Download checked macOS native payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download 41561544777 --repo obselate/goo --name goo-macos-arm64-native --dir artifacts/macos-native
+      - name: Build changing text fixture
+        run: dotnet build tests/Goo.VulkanProof/Goo.VulkanProof.gsproj -c Release --nologo -warnaserror -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-native"
+      - name: Count changing text coverage
+        env:
+          GOO_VK_DYNAMIC_TEXT: 1
+          GOO_VK_DIAGNOSTICS: 1
+          MTL_DEBUG_LAYER: 1
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/dynamic-text
+          DYLD_LIBRARY_PATH="$PWD/artifacts/macos-native" \
+            dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll \
+            2>&1 | tee artifacts/dynamic-text/macos.log
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: macos-dynamic-text
+          path: artifacts/dynamic-text
+          if-no-files-found: ignore
