@@ -342,6 +342,7 @@ class PublicDocumentationTests {
             "M:Goo.VirtualState.Realize(Goo.VirtualViewport,Goo.VirtualOutput)",
             "M:Goo.VirtualState.NeedsRealize(Goo.VirtualViewport)",
             "M:Goo.VirtualState.OffsetOf(Goo.VirtualViewport,System.String)",
+            "M:Goo.VirtualState.BoundsOf(Goo.VirtualViewport,System.String)",
             "M:Goo.VirtualState.Commit",
             "M:Goo.VirtualState.Cancel",
             "M:Goo.VirtualState.Dispose",
@@ -438,6 +439,9 @@ class PublicDocumentationTests {
             "M:Goo.ElementHandle.JumpTo(System.Double,System.Double)",
             "M:Goo.ElementHandle.ScrollIntoView",
             "M:Goo.ElementHandle.ScrollToItem(System.String)",
+            "M:Goo.ElementHandle.ScrollToItem(System.String,Goo.ScrollAlignment,System.Boolean)",
+            "M:Goo.ElementHandle.ScrollOffsetOf(System.String,Goo.ScrollAlignment)",
+            "M:Goo.ElementHandle.RestoreAnchor(Goo.VirtualScrollAnchor,System.Boolean)",
             "M:Goo.ElementHandle.ScrollTo(System.Double,System.Double)",
             "M:Goo.ElementHandle.SetTextInputArea(Goo.ElementRect)",
             "M:Goo.ElementHandle.TryCopyTextRangeRects(Goo.TextRange,Goo.TextCoordinateSpace,System.Span{Goo.ElementRect},System.Int32@)",
@@ -1344,6 +1348,21 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
+            ["M:Goo.ElementHandle.ScrollToItem(System.String,Goo.ScrollAlignment,System.Boolean)"] = DocumentationShape(
+                []string{"key", "alignment", "settle"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.ElementHandle.ScrollOffsetOf(System.String,Goo.ScrollAlignment)"] = DocumentationShape(
+                []string{"key", "alignment"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.ElementHandle.RestoreAnchor(Goo.VirtualScrollAnchor,System.Boolean)"] = DocumentationShape(
+                []string{"anchor", "settle"},
+                System.Array.Empty[string](),
+                true
+            ),
             ["M:Goo.Virtual.#ctor(Goo.VirtualSource)"] = DocumentationShape(
                 []string{"source"},
                 System.Array.Empty[string](),
@@ -1365,6 +1384,11 @@ class PublicDocumentationTests {
                 true
             ),
             ["M:Goo.VirtualState.OffsetOf(Goo.VirtualViewport,System.String)"] = DocumentationShape(
+                []string{"viewport", "key"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.VirtualState.BoundsOf(Goo.VirtualViewport,System.String)"] = DocumentationShape(
                 []string{"viewport", "key"},
                 System.Array.Empty[string](),
                 true

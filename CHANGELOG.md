@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Add aligned virtual item scrolling, measured settlement, target offsets and visible-anchor save and restore.
+- Let virtual policies preserve retained descendants after layout with `VirtualOutput.AnchorKey`.
+
 ## 0.27.3 - 2026-11-02
 
 - Include the Android resource archive in Goo.Android packages so accessibility can resolve the mixed-state label. (#526)

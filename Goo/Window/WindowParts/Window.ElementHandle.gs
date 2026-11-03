@@ -129,6 +129,7 @@ public partial class Window {
     let scrollable = n.Kind == NodeKind.Editor
       || n.OverflowX == Overflow.Scroll || n.OverflowY == Overflow.Scroll
     if !scrollable { return false }
+    Virtualization.State(n)?.CancelScroll()
     setElementScrollTarget(n, float32(x), float32(y))
     accessibility?.MarkDirty()
     return true
@@ -139,6 +140,7 @@ public partial class Window {
     let scrollable = n.Kind == NodeKind.Editor
       || n.OverflowX == Overflow.Scroll || n.OverflowY == Overflow.Scroll
     if !scrollable { return false }
+    Virtualization.State(n)?.CancelScroll()
     ScrollState.To(n, float32(x), float32(y), true)
     pendingReconcileEffects = combineEffects(pendingReconcileEffects,
       ReconcileEffects.Paint | ReconcileEffects.Input | ReconcileEffects.Rect

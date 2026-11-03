@@ -36,6 +36,19 @@ public interface VirtualSource {
   func State(current VirtualState?) VirtualState;
 }
 
+/// Selects an item's alignment in the viewport.
+public enum ScrollAlignment { Start; Center; End }
+
+/// Stores a visible virtual item's key and signed position inside the viewport.
+public data struct VirtualScrollAnchor {
+  private var key string
+  private var offset Point
+  /// Gets the stable item key.
+  public prop Key string { get -> key; init -> key = value }
+  /// Gets the item's position relative to the viewport origin.
+  public prop Offset Point { get -> offset; init -> offset = value }
+}
+
 /// Places the items of one mounted Virtual element. Goo retains one state for each element.
 public open class VirtualState {
   /// Adds each item to mount and sets the content size. All changes, including the inputs that
@@ -55,6 +68,21 @@ public open class VirtualState {
   /// @param key The stable key of the item.
   /// @returns The scroll offset, or nil for an unknown key.
   public open func OffsetOf(viewport VirtualViewport, key string) Point ? -> nil
+
+  /// Returns an item's content bounds, using estimates until it is measured.
+  /// @param viewport The current element geometry.
+  /// @param key The stable item key.
+  /// @returns The bounds, or nil for an unknown key.
+  public open func BoundsOf(viewport VirtualViewport, key string) ElementRect? {
+    guard let offset = OffsetOf(viewport, key) else { return nil }
+    for i in 0 ... viewport.ChildCount {
+      let child = viewport.Child(i)
+      if child.Key == key {
+        return ElementRect{X: offset.X, Y: offset.Y, Width: child.Size.Width, Height: child.Size.Height}
+      }
+    }
+    return ElementRect{X: offset.X, Y: offset.Y}
+  }
 
   /// Makes the result of the last Realize current. Goo calls it after the items are mounted.
   public open func Commit() { }
@@ -140,6 +168,13 @@ public class VirtualViewport {
       return Point{ X: float64(n.ScrollX), Y: float64(n.ScrollY) }
     }
   }
+  /// Gets the first visible mounted item and its signed position after layout.
+  public prop VisibleAnchor VirtualScrollAnchor? {
+    get {
+      let n = bound()
+      return Virtualization.State(n)?.VisibleAnchor(n)
+    }
+  }
   /// Gets the resolved gap between rows.
   public prop RowGap float64{
     get {
@@ -198,6 +233,7 @@ public class VirtualOutput {
   private var contentSize LayoutSize
   private var itemCount int32
   private var scrollOffset Point?
+  private var anchorKey string?
 
   internal init() { }
 
@@ -206,6 +242,7 @@ public class VirtualOutput {
     contentSize = LayoutSize{}
     itemCount = 0
     scrollOffset = nil
+    anchorKey = nil
   }
 
   private func bound() VirtualNodeState {
@@ -236,6 +273,16 @@ public class VirtualOutput {
     set {
       bound()
       scrollOffset = value
+    }
+  }
+
+  /// Gets or sets the visible item whose retained descendants keep their vertical position after layout.
+  /// Nil leaves descendant anchoring disabled.
+  public prop AnchorKey string? {
+    get -> anchorKey
+    set {
+      bound()
+      anchorKey = value
     }
   }
 

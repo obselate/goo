@@ -195,6 +195,7 @@ Goo wraps each item in a keyed, absolutely positioned element. The wrapper has t
 Goo calls `NeedsRealize` after each layout and scroll. A true result runs `Realize` again in the same frame, for at most three passes, and then in the next frames.
 
 Set `output.ScrollOffset` to move the scroll position together with the items, for example to keep an anchor row in place when rows above it change size. A scroll in progress keeps its remaining distance. Own tail-following state in the list or log view. `ElementHandle.MetricsChanged` reports scroll range changes, and `JumpTo` can move to the new end before paint.
+Set `output.AnchorKey` to the retained visible row key to keep its first surviving content node at the same vertical position after layout. Implement `BoundsOf` with measured or estimated item bounds for aligned scrolling.
 
 ## Animate computed position changes
 
@@ -226,6 +227,18 @@ Subscription state is sparse. Handles without a listener and ordinary blobs and 
 
 Set `OverflowX` or `OverflowY` to `Scroll` and attach an `ElementHandle`. `ScrollTo` updates the smoothed target, `JumpTo` applies an immediate clamped offset, and `ScrollIntoView` adjusts every scrollable ancestor. `ScrollOffset` is the displayed position and `ScrollRange` is the maximum legal X/Y offset.
 `JumpTo` calls made by metrics listeners refresh rectangles before the current frame is painted, so a second scroll viewport can follow the reported offset without a one-frame visual delay.
+
+```gsharp
+viewport.ScrollToItem(key, ScrollAlignment.Center)
+let target = viewport.ScrollOffsetOf(key, ScrollAlignment.End)
+let saved = viewport.VisibleAnchor
+if let anchor = saved {
+    viewport.RestoreAnchor(anchor)
+}
+```
+
+`ScrollToItem(key)` keeps its immediate behavior. The aligned overload and `RestoreAnchor` settle while visible items are measured. Set `settle: false` for one immediate move. Direct scrolling cancels settlement. `ScrollOffsetOf` returns the current measured or estimated target for `ScrollTo` or a consumer animation. `VisibleAnchor` stores the first visible item key and its signed viewport offset.
+`IsScrollSettling` reports whether measurement is still correcting the request.
 
 `ScrollbarVisibility.Auto` shows the built-in Vulkan thumb during wheel, programmatic, or drag interaction and then fades it. `Always` keeps the thumb rendered and draggable without creating idle frame demand. `Hidden` suppresses only the built-in thumb; scrolling and custom scrollbar composition continue working.
 
@@ -549,11 +562,29 @@ Immediately sets this element's logical scroll offset.
 
 Returns: False when the handle is unmounted or the element is not scrollable.
 
+### `RestoreAnchor(VirtualScrollAnchor,bool)`
+
+Restores a saved virtual item position and corrects it while visible rows are measured.
+
+- `anchor`: The saved item key and signed viewport position.
+- `settle`: Whether to correct the offset after measurement.
+
+Returns: False when the handle, collection, or key is unavailable.
+
 ### `ScrollIntoView`
 
 Scrolls each scrollable ancestor enough to reveal this element.
 
 Returns: False when the handle is unmounted.
+
+### `ScrollOffsetOf(string,ScrollAlignment)`
+
+Returns a clamped item target for ScrollTo or a consumer animation.
+
+- `key`: The stable item key.
+- `alignment`: The item's alignment in the viewport.
+
+Returns: The current measured or estimated target, or nil when unavailable.
 
 ### `ScrollTo(float64,float64)`
 
@@ -569,6 +600,16 @@ Returns: False when the handle is unmounted or the element is not scrollable.
 Immediately scrolls a virtual collection to a stable item key, using estimates for unmeasured rows.
 
 - `key`: The nonempty stable key returned by the virtual collection's itemKey callback.
+
+Returns: False for an unmounted handle, a nonvirtual element, or an unknown key.
+
+### `ScrollToItem(string,ScrollAlignment,bool)`
+
+Scrolls to an item and keeps its alignment while visible rows are measured.
+
+- `key`: The stable item key.
+- `alignment`: The item's alignment in the viewport.
+- `settle`: Whether to correct the offset after measurement. Direct scrolling cancels it.
 
 Returns: False for an unmounted handle, a nonvirtual element, or an unknown key.
 
@@ -610,6 +651,10 @@ Gets the transformed content box in window logical coordinates. An unmounted han
 
 Reports whether this handle is attached to an element.
 
+### `IsScrollSettling`
+
+Gets whether a virtual item request is still being corrected after layout.
+
 ### `ScrollOffset`
 
 Gets the current logical scroll offset. An unmounted handle returns the origin.
@@ -617,6 +662,10 @@ Gets the current logical scroll offset. An unmounted handle returns the origin.
 ### `ScrollRange`
 
 Gets the maximum legal logical scroll offset. An unmounted handle returns the origin.
+
+### `VisibleAnchor`
+
+Gets the first visible virtual item's key and signed position inside the viewport.
 
 ## `ElementMetrics`
 
@@ -1108,6 +1157,20 @@ Places the Portal above its anchor and aligns their inline-end edges.
 
 Places the Portal above its anchor and aligns their inline-start edges.
 
+## `ScrollAlignment`
+
+Source:
+
+- [`Virtual.gs`](../../Goo/Tree/Virtual.gs)
+
+Selects an item's alignment in the viewport.
+
+### Values
+
+- `Start`
+- `Center`
+- `End`
+
 ## `Text`
 
 Source:
@@ -1357,6 +1420,10 @@ Adds an item to mount. Goo places it and keys it.
 
 - `item`: The key, the position in the collection, the content box, and the content.
 
+### `AnchorKey`
+
+Gets or sets the visible item whose retained descendants keep their vertical position after layout. Nil leaves descendant anchoring disabled.
+
 ### `ContentSize`
 
 Gets or sets the finite, nonnegative size of the whole content, which sets the scroll range.
@@ -1368,6 +1435,22 @@ Gets or sets the number of items in the whole collection, for accessibility.
 ### `ScrollOffset`
 
 Gets or sets the scroll offset to apply together with the items. Nil keeps the current offset. A scroll in progress keeps its remaining distance.
+
+## `VirtualScrollAnchor`
+
+Source:
+
+- [`Virtual.gs`](../../Goo/Tree/Virtual.gs)
+
+Stores a visible virtual item's key and signed position inside the viewport.
+
+### `Key`
+
+Gets the stable item key.
+
+### `Offset`
+
+Gets the item's position relative to the viewport origin.
 
 ## `VirtualSource`
 
@@ -1392,6 +1475,15 @@ Source:
 - [`Virtual.gs`](../../Goo/Tree/Virtual.gs)
 
 Places the items of one mounted Virtual element. Goo retains one state for each element.
+
+### `BoundsOf(VirtualViewport,string)`
+
+Returns an item's content bounds, using estimates until it is measured.
+
+- `viewport`: The current element geometry.
+- `key`: The stable item key.
+
+Returns: The bounds, or nil for an unknown key.
 
 ### `Cancel`
 
@@ -1476,6 +1568,10 @@ Gets the current scroll offset.
 ### `Size`
 
 Gets the size of the visible content area.
+
+### `VisibleAnchor`
+
+Gets the first visible mounted item and its signed position after layout.
 
 ### `Wrap`
 
