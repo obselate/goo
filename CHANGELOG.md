@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.27.5 - 2026-11-03
 
-- Allow the vector text cache to grow to 32 pages on demand for mixed font sizes. The first page remains 256 KiB.
+- Let the vector text cache grow to 32 pages on demand. The first page remains 256 KiB. This fixes atlas exhaustion that could throw and close a window with many mixed font sizes since 0.25. (#531)
 
 ## 0.27.4 - 2026-11-03
 
