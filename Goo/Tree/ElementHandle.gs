@@ -146,7 +146,7 @@ public class ElementHandle {
 
   /// Scrolls to an item and keeps its alignment while visible rows are measured.
   /// @param key The stable item key.
-  /// @param alignment The item edge to align with the viewport.
+  /// @param alignment The item's alignment in the viewport.
   /// @param settle Whether to correct the offset after measurement. Direct scrolling cancels it.
   /// @returns False for an unmounted handle, a nonvirtual element, or an unknown key.
   public func ScrollToItem(key string, alignment ScrollAlignment, settle bool = true) bool {
@@ -159,7 +159,7 @@ public class ElementHandle {
 
   /// Returns a clamped item target for ScrollTo or a consumer animation.
   /// @param key The stable item key.
-  /// @param alignment The item edge to align with the viewport.
+  /// @param alignment The item's alignment in the viewport.
   /// @returns The current measured or estimated target, or nil when unavailable.
   public func ScrollOffsetOf(key string, alignment ScrollAlignment = ScrollAlignment.Start) Point? {
     if String.IsNullOrEmpty(key) { throw ArgumentException("Virtual item keys must be nonempty", "key") }

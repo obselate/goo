@@ -224,13 +224,17 @@ internal sealed class VirtualNodeState {
   internal prop IsScrollSettling bool { get -> scrollKey != nil }
 
   internal func VisibleAnchor(n Node) VirtualScrollAnchor? {
+    let left = BoxGeometry.ContentLeft(n)
+    let right = left + BoxGeometry.ViewportWidth(n)
     let top = BoxGeometry.ContentTop(n)
     let bottom = top + BoxGeometry.ViewportHeight(n)
     var first Node?
     for i in 0 ... n.Children.Count {
       let child = n.Children[i]
-      if child.Rect.H > 0.0F && child.Rect.Y < bottom && child.Rect.Y + child.Rect.H > top {
-        if first == nil || child.Rect.Y < first.Rect.Y { first = child }
+      if child.Rect.H > 0.0F && child.Rect.W > 0.0F && child.Rect.Y < bottom && child.Rect.Y + child.Rect.H > top
+        && child.Rect.X < right && child.Rect.X + child.Rect.W > left {
+        if first == nil || child.Rect.Y < first.Rect.Y
+          || (child.Rect.Y == first.Rect.Y && child.Rect.X < first.Rect.X) { first = child }
       }
     }
     guard let child = first, let key = child.Key else { return nil }

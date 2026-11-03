@@ -36,7 +36,7 @@ public interface VirtualSource {
   func State(current VirtualState?) VirtualState;
 }
 
-/// Selects which edge of a virtual item meets the viewport.
+/// Selects an item's alignment in the viewport.
 public enum ScrollAlignment { Start; Center; End }
 
 /// Stores a visible virtual item's key and signed position inside the viewport.
@@ -274,7 +274,7 @@ public class VirtualOutput {
     }
   }
 
-  /// Gets or sets the visible item whose retained descendants must stay in place after layout.
+  /// Gets or sets the visible item whose retained descendants keep their vertical position after layout.
   /// Nil leaves descendant anchoring disabled.
   public prop AnchorKey string? {
     get -> anchorKey

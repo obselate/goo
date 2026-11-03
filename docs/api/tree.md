@@ -195,7 +195,7 @@ Goo wraps each item in a keyed, absolutely positioned element. The wrapper has t
 Goo calls `NeedsRealize` after each layout and scroll. A true result runs `Realize` again in the same frame, for at most three passes, and then in the next frames.
 
 Set `output.ScrollOffset` to move the scroll position together with the items, for example to keep an anchor row in place when rows above it change size. A scroll in progress keeps its remaining distance. Own tail-following state in the list or log view. `ElementHandle.MetricsChanged` reports scroll range changes, and `JumpTo` can move to the new end before paint.
-Set `output.AnchorKey` to the retained visible row key to keep its first surviving content node in place after layout. Implement `BoundsOf` with measured or estimated item bounds for aligned scrolling.
+Set `output.AnchorKey` to the retained visible row key to keep its first surviving content node at the same vertical position after layout. Implement `BoundsOf` with measured or estimated item bounds for aligned scrolling.
 
 ## Animate computed position changes
 
@@ -582,7 +582,7 @@ Returns: False when the handle is unmounted.
 Returns a clamped item target for ScrollTo or a consumer animation.
 
 - `key`: The stable item key.
-- `alignment`: The item edge to align with the viewport.
+- `alignment`: The item's alignment in the viewport.
 
 Returns: The current measured or estimated target, or nil when unavailable.
 
@@ -608,7 +608,7 @@ Returns: False for an unmounted handle, a nonvirtual element, or an unknown key.
 Scrolls to an item and keeps its alignment while visible rows are measured.
 
 - `key`: The stable item key.
-- `alignment`: The item edge to align with the viewport.
+- `alignment`: The item's alignment in the viewport.
 - `settle`: Whether to correct the offset after measurement. Direct scrolling cancels it.
 
 Returns: False for an unmounted handle, a nonvirtual element, or an unknown key.
@@ -1163,7 +1163,7 @@ Source:
 
 - [`Virtual.gs`](../../Goo/Tree/Virtual.gs)
 
-Selects which edge of a virtual item meets the viewport.
+Selects an item's alignment in the viewport.
 
 ### Values
 
@@ -1422,7 +1422,7 @@ Adds an item to mount. Goo places it and keys it.
 
 ### `AnchorKey`
 
-Gets or sets the visible item whose retained descendants must stay in place after layout. Nil leaves descendant anchoring disabled.
+Gets or sets the visible item whose retained descendants keep their vertical position after layout. Nil leaves descendant anchoring disabled.
 
 ### `ContentSize`
 
