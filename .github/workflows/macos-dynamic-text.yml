@@ -21,19 +21,36 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh run download 41561544777 --repo obselate/goo --name goo-macos-arm64-native --dir artifacts/macos-native
+      - name: Download reported font
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          fonts=tests/Goo.VulkanProof/Assets/Text/Gyroid
+          mkdir -p "$fonts"
+          for file in JetBrainsMono-Regular.ttf OFL.txt; do
+            gh api -H 'Accept: application/vnd.github.raw+json' \
+              "repos/obselate/gyroid/contents/src/Gyroid/assets/fonts/$file?ref=3149f14cefa96afa7c91fa01cdfd5097321cd14d" \
+              > "$fonts/$file"
+          done
+          echo "a0bf60ef0f83c5ed4d7a75d45838548b1f6873372dfac88f71804491898d138f  $fonts/JetBrainsMono-Regular.ttf" \
+            | shasum -a 256 -c -
       - name: Build changing text fixture
         run: dotnet build tests/Goo.VulkanProof/Goo.VulkanProof.gsproj -c Release --nologo -warnaserror -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-native"
       - name: Count changing text coverage
         env:
           GOO_VK_DYNAMIC_TEXT: 1
           GOO_VK_DIAGNOSTICS: 1
-          MTL_DEBUG_LAYER: 1
         run: |
           set -o pipefail
           mkdir -p artifacts/dynamic-text
-          DYLD_LIBRARY_PATH="$PWD/artifacts/macos-native" \
-            dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll \
-            2>&1 | tee artifacts/dynamic-text/macos.log
+          for scale in 1 2; do
+            for submit in 1 0; do
+              GOO_DYNAMIC_TEXT_SCALE="$scale" MVK_CONFIG_SYNCHRONOUS_QUEUE_SUBMITS="$submit" \
+                DYLD_LIBRARY_PATH="$PWD/artifacts/macos-native" \
+                dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll \
+                2>&1 | tee "artifacts/dynamic-text/macos-scale-$scale-submit-$submit.log"
+            done
+          done
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:

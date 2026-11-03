@@ -19,19 +19,24 @@ internal sealed class VulkanDynamicTextCell : Cell {
     Height: 224,
     BackgroundColor: Color.Black,
     Text{
-      Position: PositionType.Absolute, Left: 16, Top: 8,
+      Position: PositionType.Absolute, Left: 16, Top: 0,
       Content: "0123456789 . K / Syncing",
-      FontFamily: "DynamicTextProof", FontSize: 24, Color: Color.White,
+      FontFamily: "DynamicTextProof", FontSize: 12, Color: Color.White,
+    },
+    Text{
+      Position: PositionType.Absolute, Left: 16, Top: 24,
+      Content: "0123456789 . K / Syncing",
+      FontFamily: "DynamicTextProof", FontSize: 20, Color: Color.White,
     },
     Text{
       Position: PositionType.Absolute, Left: 16, Top: 52,
       Content: "Syncing " + value + " / 499999",
-      FontFamily: "DynamicTextProof", FontSize: 32, Color: Color.White,
+      FontFamily: "DynamicTextProof", FontSize: 12, Color: Color.White,
     },
     Text{
       Position: PositionType.Absolute, Left: 16, Top: 104,
       Content: value.Substring(0, 3) + "." + value.Substring(3) + " K",
-      FontFamily: "DynamicTextProof", FontSize: 32, Color: Color.White,
+      FontFamily: "DynamicTextProof", FontSize: 20, Color: Color.White,
       StyleRanges: []TextStyleRange{
         TextStyleRange(TextRange(3, 6), Style{Color: Color.Rgb(32, 224, 96)}),
       },
@@ -39,7 +44,7 @@ internal sealed class VulkanDynamicTextCell : Cell {
     Text{
       Position: PositionType.Absolute, Left: 16, Top: 164,
       Content: "69%",
-      FontFamily: "DynamicTextProof", FontSize: 32, Color: Color.White,
+      FontFamily: "DynamicTextProof", FontSize: 12, Color: Color.White,
     },
   }
 }
@@ -94,11 +99,12 @@ internal func DynamicTextInk(result VulkanReadbackResult,
 
 internal func RunVulkanDynamicTextReadback() {
   using let font = FontSource.FromPath("DynamicTextProof", 400, false,
-    Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf"))
+    Path.Combine(AppContext.BaseDirectory, "JetBrainsMono-Regular.ttf"))
   font.Register()
+  let scale = Int32.Parse(Environment.GetEnvironmentVariable("GOO_DYNAMIC_TEXT_SCALE") ?? "1")
   let root = VulkanDynamicTextCell()
-  let window = Window{Title: "Goo dynamic text proof", Width: 640, Height: 224,
-    VSync: false, Root: root}.Open()
+  let window = Window{Title: "Goo dynamic text proof", Width: 640 * scale,
+    Height: 224 * scale, UiScale: float32(scale), VSync: false, Root: root}.Open()
   let target = WindowReadbackTestFixture.CaptureTarget(window)
     ?? throw InvalidOperationException("Dynamic text target is unavailable")
   try {
@@ -106,16 +112,13 @@ internal func RunVulkanDynamicTextReadback() {
       WindowReadbackTestFixture.ForceRender(window, 1.0 / 60.0)
     }
     DynamicTextCapture(window)
-    target.BeginDynamicTextCapture()
     var plainBlank int32 = 0
     var integerBlank int32 = 0
     var fractionBlank int32 = 0
     var staticBlank int32 = 0
     var minimumPlain int32 = Int32.MaxValue
-    for frame in 0 ... 600 {
-      root.Change(frame)
-      WindowReadbackTestFixture.ForceRender(window, 1.0 / 60.0)
-      let capture = target.TakeDynamicTextCapture()
+    var samples int32 = 0
+    target.BeginDynamicTextCapture((capture VulkanReadbackResult) -> {
       let plain = DynamicTextInk(capture, 48, 100)
       let integer = DynamicTextInk(capture, 100, 156)
       let fraction = DynamicTextInk(capture, 100, 156, true)
@@ -125,11 +128,18 @@ internal func RunVulkanDynamicTextReadback() {
       if integer < 8 { integerBlank++ }
       if fraction < 8 { fractionBlank++ }
       if control < 8 { staticBlank++ }
-      Console.WriteLine("dynamic-text-frame: frame=" + frame.ToString()
+      Console.WriteLine("dynamic-text-frame: frame=" + samples.ToString()
         + " plain=" + plain.ToString() + " integer=" + integer.ToString()
         + " fraction=" + fraction.ToString() + " static=" + control.ToString())
+      samples++
+    })
+    for frame in 0 ... 600 {
+      root.Change(frame)
+      WindowReadbackTestFixture.ForceRender(window, 1.0 / 60.0)
     }
-    Console.WriteLine("dynamic-text-summary: frames=600 plain_blank=" + plainBlank.ToString()
+    target.EndDynamicTextCapture()
+    Console.WriteLine("dynamic-text-summary: frames=" + samples.ToString()
+      + " scale=" + scale.ToString() + " plain_blank=" + plainBlank.ToString()
       + " integer_blank=" + integerBlank.ToString() + " fraction_blank=" + fractionBlank.ToString()
       + " static_blank=" + staticBlank.ToString() + " minimum_plain=" + minimumPlain.ToString())
   } finally {

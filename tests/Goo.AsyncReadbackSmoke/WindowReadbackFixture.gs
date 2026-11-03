@@ -1610,22 +1610,29 @@ internal unsafe partial class VulkanWindowTarget {
     }
   }
 
-  private var dynamicTextCaptureBuffers VulkanFrameBuffers
-  private var dynamicTextCaptureRecorded bool
+  private var dynamicTextCaptureBuffers []VulkanFrameBuffers
+  private var dynamicTextCaptureRecorded []bool
+  private var dynamicTextCaptureConsumer Action[VulkanReadbackResult]?
 
-  internal func BeginDynamicTextCapture() {
+  internal func BeginDynamicTextCapture(consumer Action[VulkanReadbackResult]) {
     guard let current = generation, let allocator = memoryAllocator else {
       throw InvalidOperationException("Dynamic text swapchain is unavailable")
     }
     if !current.SupportsTransferSource {
       throw InvalidOperationException("Dynamic text swapchain does not support readback")
     }
-    dynamicTextCaptureBuffers = VulkanFrameBuffers{
-      Device: device, Dispatch: dispatch, Allocator: allocator,
+    dynamicTextCaptureBuffers = [2]VulkanFrameBuffers
+    dynamicTextCaptureRecorded = [2]bool
+    dynamicTextCaptureConsumer = consumer
+    for index in 0 ... 2 {
+      var buffers = VulkanFrameBuffers{
+        Device: device, Dispatch: dispatch, Allocator: allocator,
+      }
+      buffers.EnsureMappedCapacity(
+        uint64(current.Extent.width) * uint64(current.Extent.height) * 4uL,
+        128uL, uint32(VkConstants.VK_BUFFER_USAGE_TRANSFER_DST_BIT))
+      dynamicTextCaptureBuffers[index] = buffers
     }
-    dynamicTextCaptureBuffers.EnsureMappedCapacity(
-      uint64(current.Extent.width) * uint64(current.Extent.height) * 4uL,
-      128uL, uint32(VkConstants.VK_BUFFER_USAGE_TRANSFER_DST_BIT))
     dynamicTextNativeEndRendering = dispatch.vkCmdEndRendering
     dynamicTextCaptureTarget = this
     dispatch.vkCmdEndRendering =
@@ -1634,6 +1641,8 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func RecordDynamicTextCapture(commandBuffer VkCommandBuffer) {
     guard let current = generation else { return }
+    let index = int32(activeFrameSlotIndex)
+    CollectDynamicTextCapture(index)
     VulkanTransitions.RecordImage(commandBuffer, dispatch.vkCmdPipelineBarrier2,
       current.Image(activeImageIndex), VulkanTransitions.ColorSubresourceRange(),
       VkConstants.VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -1652,7 +1661,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
     EnsureReadbackDispatch().CopyImageToBuffer(commandBuffer,
       current.Image(activeImageIndex), VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-      dynamicTextCaptureBuffers.Buffer, region)
+      dynamicTextCaptureBuffers[index].Buffer, region)
     VulkanTransitions.RecordImage(commandBuffer, dispatch.vkCmdPipelineBarrier2,
       current.Image(activeImageIndex), VulkanTransitions.ColorSubresourceRange(),
       VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
@@ -1661,33 +1670,42 @@ internal unsafe partial class VulkanWindowTarget {
       VkConstants.VK_ACCESS_2_TRANSFER_READ_BIT,
       VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
       VkConstants.VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT)
-    dynamicTextCaptureRecorded = true
+    dynamicTextCaptureRecorded[index] = true
   }
 
-  internal func TakeDynamicTextCapture() VulkanReadbackResult {
+  private func CollectDynamicTextCapture(index int32) {
+    if !dynamicTextCaptureRecorded[index] { return }
     guard let current = generation, let allocator = memoryAllocator,
-      let allocation = dynamicTextCaptureBuffers.Allocation else {
+      let allocation = dynamicTextCaptureBuffers[index].Allocation else {
       throw InvalidOperationException("Dynamic text capture storage is unavailable")
     }
-    let serial = AcceptedSubmissionSerialForProof()
-    let status = WaitGraphicsSubmissionForTest(serial, 10000000000uL)
+    let serial = frameSlots.Slot(uint32(index))?.GlobalSubmissionSerial ?? 0uL
     let bytes = uint64(current.Extent.width) * uint64(current.Extent.height) * 4uL
-    if status != VkConstants.VK_SUCCESS || !dynamicTextCaptureRecorded
-      || allocator.InvalidateAfterFence(allocation, 0uL, bytes) != VkConstants.VK_SUCCESS {
+    if allocator.InvalidateAfterFence(allocation, 0uL, bytes) != VkConstants.VK_SUCCESS {
       throw InvalidOperationException("Dynamic text swapchain copy did not complete")
     }
     let pixels = [int32(bytes)]uint8
     fixed destination *uint8 = pixels {
-      System.Buffer.MemoryCopy(dynamicTextCaptureBuffers.Mapped, destination, bytes, bytes)
+      System.Buffer.MemoryCopy(dynamicTextCaptureBuffers[index].Mapped, destination, bytes, bytes)
     }
-    dynamicTextCaptureRecorded = false
-    return VulkanReadbackResult(pixels, current.Extent.width, current.Extent.height,
-      current.Extent.width * 4u, current.Format, current.Generation, serial)
+    dynamicTextCaptureRecorded[index] = false
+    dynamicTextCaptureConsumer?.Invoke(VulkanReadbackResult(pixels, current.Extent.width,
+      current.Extent.height, current.Extent.width * 4u, current.Format, current.Generation, serial))
   }
 
   internal func EndDynamicTextCapture() {
+    if dynamicTextCaptureTarget == nil { return }
+    let serial = AcceptedSubmissionSerialForProof()
+    if WaitGraphicsSubmissionForTest(serial, 10000000000uL) != VkConstants.VK_SUCCESS {
+      throw InvalidOperationException("Dynamic text captures did not complete")
+    }
+    for index in 0 ... 2 {
+      CollectDynamicTextCapture(index)
+      var buffers = dynamicTextCaptureBuffers[index]
+      buffers.Destroy()
+    }
     dispatch.vkCmdEndRendering = dynamicTextNativeEndRendering
     dynamicTextCaptureTarget = nil
-    dynamicTextCaptureBuffers.Destroy()
+    dynamicTextCaptureConsumer = nil
   }
 }
