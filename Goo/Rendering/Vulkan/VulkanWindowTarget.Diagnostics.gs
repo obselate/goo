@@ -162,7 +162,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func DiagnosticWindowValue() uint64 {
-    if diagnostics == nil {
+    if diagnostics == nil && !frameProfileEnabled {
       return 0uL
     }
     return diagnosticWindowHandle
