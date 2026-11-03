@@ -142,7 +142,7 @@ Uses the requested framebuffer extent when the native WSI permits scaling.
 
 ### `RenderFrame(float64)`
 
-Processes queued work and one externally timed frame without polling native events.
+Processes queued work and one externally timed frame without polling native events. The first frame after idle preserves wall time but does not advance animation time.
 
 ### `RequestFrame`
 

@@ -130,6 +130,7 @@ public partial class Window {
     resumedFrame = false
     pumpCore(dt, false, !suspended && windowTarget != nil
         && framebufferWidth > 0 && framebufferHeight > 0, simulationDt)
+    resumedFrame = EmbeddedFrameDelay(suspended) > 0.0
   }
 
   internal func ResetEmbeddedClock() {
