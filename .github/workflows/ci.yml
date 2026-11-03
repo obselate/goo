@@ -1958,6 +1958,9 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         run: |
           dotnet pack Goo.Android/Goo.Android.gsproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+          unzip -p artifacts/android-packages/Goo.Android.*.nupkg lib/net10.0-android36.0/Goo.Android.aar > "$RUNNER_TEMP/Goo.Android.aar"
+          unzip -p "$RUNNER_TEMP/Goo.Android.aar" res/values/accessibility.xml | grep -F 'name="goo_accessibility_mixed"'
+          rm "$RUNNER_TEMP/Goo.Android.aar"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: needs.changes.outputs.full == 'true'
         with:
@@ -2110,9 +2113,11 @@ jobs:
           mkdir -p "$consumer/$(dirname "$font")"
           cp "tests/$font" "$consumer/$font"
           dotnet build artifacts/android-consumer/Goo.AndroidSmoke/Goo.AndroidSmoke.gsproj -c Release -p:GooSmokeUsePackages=true -p:RestoreConfigFile="$PWD/artifacts/android-nuget.config" -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
+          strings "$consumer/Goo.AndroidSmoke/obj/Release/net10.0-android/_Microsoft.Android.Resource.Designer.dll" | grep -Fx get_goo_accessibility_mixed
           dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- android artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
           dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- android artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke.aab
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump resources artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk | grep -F goo_accessibility_mixed
       - name: Build Android starter from the packed template
         if: needs.changes.outputs.full == 'true'
         env:
