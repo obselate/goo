@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.27.6 - 2026-11-03
+
+- Reduce ellipsis layout shaping with glyph position prediction and exact prefix checks. Keep the same cut and glyph output. (#533)
+
 ## 0.27.5 - 2026-11-03
 
 - Let the vector text cache grow to 32 pages on demand. The first page remains 256 KiB. This fixes atlas exhaustion that could throw and close a window with many mixed font sizes since 0.25. (#531)
