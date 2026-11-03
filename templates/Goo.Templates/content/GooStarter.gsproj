@@ -7,7 +7,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Goo" Version="0.27.3" />
+    <PackageReference Include="Goo" Version="0.27.4" />
     <Watch Include="**/*.gs" Exclude="bin/**;obj/**" />
   </ItemGroup>
 </Project>
