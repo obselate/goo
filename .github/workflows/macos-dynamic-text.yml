@@ -77,6 +77,10 @@ jobs:
         run: echo "VULKAN_SDK=$RUNNER_TEMP/vulkan-sdk-1.4.357.0" >> "$GITHUB_ENV"
       - name: Build changing text fixture
         run: dotnet build tests/Goo.VulkanProof/Goo.VulkanProof.gsproj -c Release --nologo -warnaserror -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-native"
+      - name: Build private profile display host
+        run: |
+          clang -fobjc-arc -framework Cocoa -framework CoreGraphics \
+            .github/scripts/run_macos_atlas_display.m -o "$RUNNER_TEMP/macos-atlas-display"
       - name: Count atlas publication omissions
         env:
           GOO_VK_ATLAS_PROFILE: 1
@@ -86,7 +90,8 @@ jobs:
           set -o pipefail
           mkdir -p artifacts/dynamic-text
           DYLD_LIBRARY_PATH="$PWD/artifacts/macos-native" \
-            dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll \
+            "$RUNNER_TEMP/macos-atlas-display" "$(command -v dotnet)" \
+              tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll \
             2>&1 | tee artifacts/dynamic-text/macos-atlas-publication.log
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
