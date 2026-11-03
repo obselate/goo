@@ -51,6 +51,7 @@ internal class VulkanDiagnosticEventIds {
     const LayerFailure uint64 = 333uL
     const LayerCommandReuse uint64 = 334uL
     const ClipMaskPressure uint64 = 335uL
+    const GpuFrame uint64 = 336uL
     const VulkanResult uint64 = 400uL
     const ValidationMessage uint64 = 401uL
     const FatalSnapshot uint64 = 402uL

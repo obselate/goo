@@ -34,6 +34,7 @@ internal unsafe partial class VulkanWindowTarget {
         }
         EndRendering(current, slot)
       }
+      EndDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.Frame)
       let endStart = DiagnosticTimestamp()
       let endCommandBuffer = dispatch.vkEndCommandBuffer
       let endResult = endCommandBuffer(slot.CommandBuffer)
