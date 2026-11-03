@@ -81,6 +81,7 @@ public open class EmbeddedWindowHost : IDisposable {
   }
 
   /// Processes queued work and one externally timed frame without polling native events.
+  /// The first frame after idle preserves wall time but does not advance animation time.
   public func RenderFrame(dt float64) {
     RequireOwnerThread()
     RequireWindow().PumpEmbedded(dt, suspended)
