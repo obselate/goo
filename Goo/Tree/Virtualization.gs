@@ -34,6 +34,11 @@ internal data struct VirtualEntry {
   internal var Placement VirtualPlacement
 }
 
+internal data struct VirtualAnchorNode {
+  internal var Node Node
+  internal var Y float32
+}
+
 internal sealed class VirtualNodeState {
   private var current VirtualState?
   private var pending VirtualState?
@@ -57,6 +62,15 @@ internal sealed class VirtualNodeState {
   private var pendingScrollY float32
   private var pendingTargetX float32
   private var pendingTargetY float32
+  private var anchorNodes List[VirtualAnchorNode] = List[VirtualAnchorNode]()
+  private var pendingAnchorNodes List[VirtualAnchorNode] = List[VirtualAnchorNode]()
+  private var anchorKey string?
+  private var pendingAnchorKey string?
+  private var anchorScrollY float32
+  private var scrollKey string?
+  private var scrollAlignment ScrollAlignment
+  private var scrollAnchor Point?
+  private var requestedOffset Point
 
   internal var Context ContextFrame?
   internal var Owner Window?
@@ -130,8 +144,11 @@ internal sealed class VirtualNodeState {
     contextReader?.Begin()
     try {
       let requested = state.NeedsRealize(viewport)
-      if !contextDirty && !requested { contextReader?.Commit(true) }
-      return contextDirty || requested
+      let settling = needsScroll(n, state)
+      let anchoring = Math.Abs(anchorDelta(n)) > 0.01F
+      if !requested && !settling { scrollKey = nil }
+      if !contextDirty && !requested && !settling && !anchoring { contextReader?.Commit(true) }
+      return contextDirty || requested || settling || anchoring
     } catch (_ Exception) {
       contextReader?.Cancel()
       rethrow
@@ -177,6 +194,128 @@ internal sealed class VirtualNodeState {
     }
   }
 
+  internal func ScrollOffsetForKey(n Node, key string, alignment ScrollAlignment, anchor Point? = nil) Point? {
+    guard let state = current else { return nil }
+    let previous = viewport.Bind(n)
+    let previousContext = enterContext()
+    contextReader?.Begin()
+    try {
+      let result = itemOffset(n, state, key, alignment, anchor)
+      contextReader?.Commit(true)
+      return result
+    } catch (error Exception) {
+      contextReader?.Cancel()
+      throw error
+    } finally {
+      viewport.Bind(previous)
+      ContextEnvironment.Current = previousContext
+    }
+  }
+
+  internal func RequestScroll(key string, alignment ScrollAlignment, anchor Point?, offset Point) {
+    scrollKey = key
+    scrollAlignment = alignment
+    scrollAnchor = anchor
+    requestedOffset = offset
+  }
+
+  internal func CancelScroll() { scrollKey = nil }
+
+  internal prop IsScrollSettling bool { get -> scrollKey != nil }
+
+  internal func VisibleAnchor(n Node) VirtualScrollAnchor? {
+    let top = BoxGeometry.ContentTop(n)
+    let bottom = top + BoxGeometry.ViewportHeight(n)
+    var first Node?
+    for i in 0 ... n.Children.Count {
+      let child = n.Children[i]
+      if child.Rect.H > 0.0F && child.Rect.Y < bottom && child.Rect.Y + child.Rect.H > top {
+        if first == nil || child.Rect.Y < first.Rect.Y { first = child }
+      }
+    }
+    guard let child = first, let key = child.Key else { return nil }
+    return VirtualScrollAnchor{Key: key, Offset: Point{
+      X: float64(child.Rect.X - BoxGeometry.ContentLeft(n)),
+      Y: float64(child.Rect.Y - top),
+    }}
+  }
+
+  private func itemOffset(n Node, state VirtualState, key string, alignment ScrollAlignment, anchor Point?) Point? {
+    guard let bounds = state.BoundsOf(viewport, key) else { return nil }
+    if !Double.IsFinite(bounds.X) || !Double.IsFinite(bounds.Y)
+      || !validExtent(bounds.Width) || !validExtent(bounds.Height) {
+      throw InvalidOperationException("Virtual item bounds must be finite")
+    }
+    let fraction = alignment == ScrollAlignment.Center ? 0.5 : alignment == ScrollAlignment.End ? 1.0 : 0.0
+    let x = bounds.X - (anchor?.X ?? (viewport.Size.Width - bounds.Width) * fraction)
+    let y = bounds.Y - (anchor?.Y ?? (viewport.Size.Height - bounds.Height) * fraction)
+    let size = output.ContentSize
+    let width = pending == state ? size.Width : float64(extent.Width)
+    let height = pending == state ? size.Height : float64(extent.Height)
+    return Point{
+      X: Math.Clamp(x, 0.0, Math.Max(0.0, width - viewport.Size.Width)),
+      Y: Math.Clamp(y, 0.0, Math.Max(0.0, height - viewport.Size.Height)),
+    }
+  }
+
+  private func needsScroll(n Node, state VirtualState) bool {
+    guard let key = scrollKey else { return false }
+    if Math.Abs(float64(n.ScrollX) - requestedOffset.X) > 0.01
+      || Math.Abs(float64(n.ScrollY) - requestedOffset.Y) > 0.01 {
+      scrollKey = nil
+      return false
+    }
+    guard let target = itemOffset(n, state, key, scrollAlignment, scrollAnchor) else {
+      scrollKey = nil
+      return false
+    }
+    return Math.Abs(target.X - float64(n.ScrollX)) > 0.01
+      || Math.Abs(target.Y - float64(n.ScrollY)) > 0.01
+  }
+
+  private func anchorDelta(n Node) float32 {
+    if anchorKey == nil || Math.Abs(n.ScrollY - anchorScrollY) > 0.01F { return 0.0F }
+    for i in 0 ... n.Children.Count {
+      let child = n.Children[i]
+      if child.Key != anchorKey { continue }
+      for j in 0 ... anchorNodes.Count {
+        let entry = anchorNodes[j]
+        if entry.Node.Retired { continue }
+        var parent = entry.Node.Parent
+        while let candidate = parent {
+          if candidate == child { return entry.Node.Rect.Y - child.Rect.Y - entry.Y }
+          parent = candidate.Parent
+        }
+      }
+      break
+    }
+    return 0.0F
+  }
+
+  private func captureAnchor(n Node, key string?) {
+    pendingAnchorNodes.Clear()
+    pendingAnchorKey = key
+    if key == nil { return }
+    for i in 0 ... n.Children.Count {
+      let child = n.Children[i]
+      if child.Key == key {
+        let top = BoxGeometry.ContentTop(n)
+        captureDescendants(child, child.Rect.Y, top, top + BoxGeometry.ViewportHeight(n))
+        break
+      }
+    }
+  }
+
+  private func captureDescendants(n Node, origin float32, top float32, bottom float32) {
+    if n.Children.Count == 0 {
+      if n.Rect.H > 0.0F && n.Rect.Y < bottom && n.Rect.Y + n.Rect.H > top {
+        pendingAnchorNodes.Add(VirtualAnchorNode{Node: n, Y: n.Rect.Y - origin})
+      }
+      return
+    }
+    for i in 0 ... n.Children.Count { captureDescendants(n.Children[i], origin, top, bottom) }
+  }
+
   internal func Extent() VirtualExtent ? -> if current == nil { nil } else { extent }
   internal func ItemCount() int32 ? -> if current == nil { nil } else { count }
 
@@ -197,6 +336,19 @@ internal sealed class VirtualNodeState {
     output.Bind(this)
     try {
       state.Realize(viewport, output)
+      let delta = anchorDelta(n)
+      if let key = scrollKey {
+        if let target = itemOffset(n, state, key, scrollAlignment, scrollAnchor) {
+          output.ScrollOffset = target
+        } else { scrollKey = nil }
+        captureAnchor(n, nil)
+      } else {
+        if output.AnchorKey == anchorKey && Math.Abs(delta) > 0.01F {
+          let offset = output.ScrollOffset ?? viewport.ScrollOffset
+          output.ScrollOffset = Point{X: offset.X, Y: Math.Max(0.0, offset.Y + float64(delta))}
+        }
+        captureAnchor(n, output.AnchorKey)
+      }
       let size = output.ContentSize
       if !validExtent(size.Width) || !validExtent(size.Height) {
         throw InvalidOperationException("Virtual content size must be finite and nonnegative")
@@ -286,6 +438,13 @@ internal sealed class VirtualNodeState {
       owner.ScrollTargetX = pendingTargetX
       owner.ScrollTargetY = pendingTargetY
     }
+    anchorKey = pendingAnchorKey
+    anchorScrollY = owner.ScrollY
+    let previousAnchors = anchorNodes
+    anchorNodes = pendingAnchorNodes
+    pendingAnchorNodes = previousAnchors
+    pendingAnchorNodes.Clear()
+    if scrollKey != nil { requestedOffset = Point{X: float64(owner.ScrollX), Y: float64(owner.ScrollY)} }
     let previous = current
     current = state
     pending = nil
@@ -303,6 +462,8 @@ internal sealed class VirtualNodeState {
     next.Clear()
     children.Clear()
     pendingOwner = nil
+    pendingAnchorNodes.Clear()
+    pendingAnchorKey = nil
     guard let state = pending else { return }
     pending = nil
     state.Cancel()
@@ -317,6 +478,8 @@ internal sealed class VirtualNodeState {
     Owner = nil
     source = nil
     mounted.Clear()
+    anchorNodes.Clear()
+    scrollKey = nil
     if let state = current {
       current = nil
       state.Dispose()

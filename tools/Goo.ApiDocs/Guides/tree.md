@@ -171,6 +171,7 @@ Goo wraps each item in a keyed, absolutely positioned element. The wrapper has t
 Goo calls `NeedsRealize` after each layout and scroll. A true result runs `Realize` again in the same frame, for at most three passes, and then in the next frames.
 
 Set `output.ScrollOffset` to move the scroll position together with the items, for example to keep an anchor row in place when rows above it change size. A scroll in progress keeps its remaining distance. Own tail-following state in the list or log view. `ElementHandle.MetricsChanged` reports scroll range changes, and `JumpTo` can move to the new end before paint.
+Set `output.AnchorKey` to the retained visible row key to keep its first surviving content node in place after layout. Implement `BoundsOf` with measured or estimated item bounds for aligned scrolling.
 
 ## Animate computed position changes
 
@@ -202,6 +203,16 @@ Subscription state is sparse. Handles without a listener and ordinary blobs and 
 
 Set `OverflowX` or `OverflowY` to `Scroll` and attach an `ElementHandle`. `ScrollTo` updates the smoothed target, `JumpTo` applies an immediate clamped offset, and `ScrollIntoView` adjusts every scrollable ancestor. `ScrollOffset` is the displayed position and `ScrollRange` is the maximum legal X/Y offset.
 `JumpTo` calls made by metrics listeners refresh rectangles before the current frame is painted, so a second scroll viewport can follow the reported offset without a one-frame visual delay.
+
+```gsharp
+viewport.ScrollToItem(key, ScrollAlignment.Center)
+let target = viewport.ScrollOffsetOf(key, ScrollAlignment.End)
+let saved = viewport.VisibleAnchor
+if let anchor = saved { viewport.RestoreAnchor(anchor) }
+```
+
+`ScrollToItem(key)` keeps its immediate behavior. The aligned overload and `RestoreAnchor` settle while visible items are measured. Set `settle: false` for one immediate move. Direct scrolling cancels settlement. `ScrollOffsetOf` returns the current measured or estimated target for `ScrollTo` or a consumer animation. `VisibleAnchor` stores the first visible item key and its signed viewport offset.
+`IsScrollSettling` reports whether measurement is still correcting the request.
 
 `ScrollbarVisibility.Auto` shows the built-in Vulkan thumb during wheel, programmatic, or drag interaction and then fades it. `Always` keeps the thumb rendered and draggable without creating idle frame demand. `Hidden` suppresses only the built-in thumb; scrolling and custom scrollbar composition continue working.
 

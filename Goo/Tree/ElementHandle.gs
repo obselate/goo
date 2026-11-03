@@ -144,6 +144,60 @@ public class ElementHandle {
     return owner.JumpElementTo(n, offset.X, offset.Y)
   }
 
+  /// Scrolls to an item and keeps its alignment while visible rows are measured.
+  /// @param key The stable item key.
+  /// @param alignment The item edge to align with the viewport.
+  /// @param settle Whether to correct the offset after measurement. Direct scrolling cancels it.
+  /// @returns False for an unmounted handle, a nonvirtual element, or an unknown key.
+  public func ScrollToItem(key string, alignment ScrollAlignment, settle bool = true) bool {
+    let offset = ScrollOffsetOf(key, alignment)
+    guard let target = offset, let n = mountedNode(), let owner = window, let state = Virtualization.State(n) else { return false }
+    if !owner.JumpElementTo(n, target.X, target.Y) { return false }
+    if settle { state.RequestScroll(key, alignment, nil, target) }
+    return true
+  }
+
+  /// Returns a clamped item target for ScrollTo or a consumer animation.
+  /// @param key The stable item key.
+  /// @param alignment The item edge to align with the viewport.
+  /// @returns The current measured or estimated target, or nil when unavailable.
+  public func ScrollOffsetOf(key string, alignment ScrollAlignment = ScrollAlignment.Start) Point? {
+    if String.IsNullOrEmpty(key) { throw ArgumentException("Virtual item keys must be nonempty", "key") }
+    if alignment < ScrollAlignment.Start || alignment > ScrollAlignment.End { throw ArgumentOutOfRangeException("alignment") }
+    guard let n = mountedNode(), let state = Virtualization.State(n) else { return nil }
+    return state.ScrollOffsetForKey(n, key, alignment)
+  }
+
+  /// Gets the first visible virtual item's key and signed position inside the viewport.
+  public prop VisibleAnchor VirtualScrollAnchor? {
+    get {
+      guard let n = mountedNode(), let state = Virtualization.State(n) else { return nil }
+      return state.VisibleAnchor(n)
+    }
+  }
+
+  /// Gets whether a virtual item request is still being corrected after layout.
+  public prop IsScrollSettling bool {
+    get {
+      guard let n = mountedNode() else { return false }
+      return Virtualization.State(n)?.IsScrollSettling ?? false
+    }
+  }
+
+  /// Restores a saved virtual item position and corrects it while visible rows are measured.
+  /// @param anchor The saved item key and signed viewport position.
+  /// @param settle Whether to correct the offset after measurement.
+  /// @returns False when the handle, collection, or key is unavailable.
+  public func RestoreAnchor(anchor VirtualScrollAnchor, settle bool = true) bool {
+    if String.IsNullOrEmpty(anchor.Key) { throw ArgumentException("Virtual item keys must be nonempty", "anchor") }
+    if !Double.IsFinite(anchor.Offset.X) || !Double.IsFinite(anchor.Offset.Y) { throw ArgumentOutOfRangeException("anchor") }
+    guard let n = mountedNode(), let owner = window, let state = Virtualization.State(n),
+      let target = state.ScrollOffsetForKey(n, anchor.Key, ScrollAlignment.Start, anchor.Offset) else { return false }
+    if !owner.JumpElementTo(n, target.X, target.Y) { return false }
+    if settle { state.RequestScroll(anchor.Key, ScrollAlignment.Start, anchor.Offset, target) }
+    return true
+  }
+
   /// Scrolls each scrollable ancestor enough to reveal this element.
   /// @returns False when the handle is unmounted.
   public func ScrollIntoView() bool {
