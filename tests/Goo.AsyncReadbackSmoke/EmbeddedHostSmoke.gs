@@ -180,6 +180,39 @@ internal class EmbeddedHostSmoke {
       throw InvalidOperationException("Embedded viewport did not become idle")
     }
 
+    private func VerifyIdleRestart() {
+      using let host = EmbeddedSmokeHost()
+      let root = EmbeddedSmokeCell()
+      let window = Window{Root: root}
+      try {
+        host.Resize(64, 64, 64, 64)
+        window.Attach(host)
+        host.CreateNative()
+        host.AttachPresentation()
+        Settle(host)
+        let animation = root.Animate(0.0)
+        for target in []float64{1.0, 2.0} {
+          let previous = animation.Value
+          if target == 1.0 {
+            animation.To(target, Motion.Tween(1000.0))
+          } else {
+            window.Post(() -> animation.To(target, Motion.Tween(1000.0)))
+          }
+          host.RenderFrame(5.0)
+          Require(animation.Value == previous,
+            "Idle restart applied elapsed idle time to a retained animation")
+          host.RenderFrame(1.0 / 120.0)
+          Require(animation.Value > previous && animation.Value < target,
+            "Idle restart did not advance on the next display interval")
+          Settle(host)
+        }
+        Console.WriteLine("embedded-idle-restart: retained_animation=verified posted_animation=verified first_step=0 next_step=1/120")
+      } finally {
+        host.Dispose()
+        host.DestroyNative()
+      }
+    }
+
     private func Capture(window Window, host EmbeddedSmokeHost, red bool) {
       let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
       var requested bool
@@ -319,6 +352,7 @@ internal class EmbeddedHostSmoke {
       Require(unmountedRoot.Builds == 0 && unmountedRoot.Disposals == 1 && !unmountedWindow.IsOpen,
         "Host disposal before the first frame did not dispose the root exactly once")
       VerifyPreferences()
+      VerifyIdleRestart()
       let host = EmbeddedSmokeHost()
       let root = EmbeddedSmokeCell()
       let window = Window{ Root: root }
