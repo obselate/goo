@@ -7,6 +7,10 @@ import System.Security.Cryptography
 
 internal shared class Program {
     private func Main() int32 {
+        if Environment.GetEnvironmentVariable("GOO_ELLIPSIS_GATE") == "1" {
+            TextShaping.RunEllipsisGate(Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf"))
+            return 0
+        }
         if Environment.GetEnvironmentVariable("GOO_VK_SYSTEM_FONT_WEIGHT") == "1" {
             RunSystemFontWeightGate(Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf"))
             return 0
@@ -37,6 +41,7 @@ internal shared class Program {
             throw FileNotFoundException("Vulkan text provider smoke font is missing", fontPath)
         }
         RunFontCacheGate(fontPath)
+        TextShaping.RunEllipsisGate(fontPath)
         RunFontRegistrationGate(fontPath)
         if OperatingSystem.IsLinux() { RunSystemFontWeightGate(fontPath) }
         RunPathMorphGate()

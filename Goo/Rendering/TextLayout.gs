@@ -614,7 +614,7 @@ internal class TextLayouts {
         }
         let direction = TextShaping.BaseDirection(text, int32(n.Direction))
         let display = TextShaping.Ellipsize(text, n.FontFamily, fontSize(n), int32(n.FontWeight),
-          n.FontStyle == FontStyle.Italic, letterSpacing(n), direction, maxWidth, n.Language)
+          n.FontStyle == FontStyle.Italic, letterSpacing(n), direction, maxWidth, n.Language, whole.Shape)
         let logicalWidth = whole.Width
         whole.Shape?.Dispose()
         let shaped = TextShaping.Shape(display, n.FontFamily, fontSize(n), int32(n.FontWeight),
@@ -637,7 +637,7 @@ internal class TextLayouts {
       }
       let display = maxWidth < 0.0F
       ? line.Content + "\u2026" : TextShaping.Ellipsize(line.Content, n.FontFamily, fontSize(n), int32(n.FontWeight),
-        n.FontStyle == FontStyle.Italic, letterSpacing(n), direction, maxWidth, n.Language)
+        n.FontStyle == FontStyle.Italic, letterSpacing(n), direction, maxWidth, n.Language, line.Shape)
       line.Shape?.Dispose()
       let shaped = TextShaping.Shape(display, n.FontFamily, fontSize(n), int32(n.FontWeight),
         n.FontStyle == FontStyle.Italic, letterSpacing(n), direction, n.Language)

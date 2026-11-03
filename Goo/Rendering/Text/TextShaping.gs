@@ -88,13 +88,39 @@ internal partial class TextShaping {
       }
 
     internal func Ellipsize(text string, families string, size float32, weight int32, italic bool,
-      letterSpacing float32, direction int32, maxWidth float32, language string = "") string{
+      letterSpacing float32, direction int32, maxWidth float32, language string = "",
+      shaped ShapedText? = nil) string{
         let ellipsis = "\u2026"
         let baseDirection = BaseDirection(text, direction)
         let elements = UnicodeGraphemes.Starts(text)
         if elements.Length == 0 { return ellipsis }
-        if MeasureUncached(ellipsis, families, size, weight, italic, letterSpacing,
-          baseDirection, language) > maxWidth{ return ellipsis }
+        let ellipsisWidth = MeasureUncached(ellipsis, families, size, weight, italic,
+          letterSpacing, baseDirection, language)
+        if ellipsisWidth > maxWidth { return ellipsis }
+        if let shaped = shaped {
+          if !shaped.HasRightToLeftRun && shaped.Runs.Count == 1 && letterSpacing >= 0.0F {
+            let run = shaped.Runs[0]
+            var cluster int32 = 0
+            for glyph in 0 ... run.Glyphs.Length {
+              if run.Points[glyph].X <= maxWidth - ellipsisWidth {
+                cluster = int32(run.Clusters[glyph])
+              }
+            }
+            var predicted int32 = 0
+            while predicted + 1 < elements.Length && elements[predicted + 1] <= cluster { predicted++ }
+            let candidate = text.Substring(0, elements[predicted]) + ellipsis
+            let fits = MeasureUncached(candidate, families, size, weight, italic, letterSpacing,
+              baseDirection, language) <= maxWidth
+            let adjacent = fits ? predicted + 1 : predicted - 1
+            if adjacent >= 0 && adjacent <= elements.Length {
+              let end = adjacent < elements.Length ? elements[adjacent] : text.Length
+              let neighbor = text.Substring(0, end) + ellipsis
+              let neighborFits = MeasureUncached(neighbor, families, size, weight, italic,
+                letterSpacing, baseDirection, language) <= maxWidth
+              if fits != neighborFits { return fits ? candidate : neighbor }
+            }
+          }
+        }
         var low int32 = 0
         var high = elements.Length
         while low < high {
