@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.27.7 - 2026-11-03
+
+- Restart embedded animations after idle with a zero simulation delta for the first frame, instead of advancing by up to 33.3 ms. This includes Android `GooView`. (#535)
+- Add complete-frame Vulkan GPU timing as `gpu.frame` in profiler traces and `elapsed_ns` in `[goo.profile.gpu]` output. Report timing as unavailable when timestamps are unsupported. (#536)
+
 ## 0.27.6 - 2026-11-03
 
 - Reduce ellipsis layout shaping with glyph position prediction and exact prefix checks. Keep the same cut and glyph output. (#533)
