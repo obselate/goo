@@ -1,4 +1,4 @@
-name: macOS dynamic text experiment
+name: macOS atlas publication experiment
 
 on:
   push:
@@ -27,30 +27,67 @@ jobs:
         run: |
           fonts=tests/Goo.VulkanProof/Assets/Text/Gyroid
           mkdir -p "$fonts"
-          for file in JetBrainsMono-Regular.ttf OFL.txt; do
+          for file in JetBrainsMono-Regular.ttf JetBrainsMono-Bold.ttf OFL.txt; do
             gh api --jq .content \
-              "repos/obselate/gyroid/contents/src/Gyroid/assets/fonts/$file?ref=1a12fb140981738cffe89117bfdd13c915b1033c" \
+              "repos/obselate/gyroid/contents/src/Gyroid/assets/fonts/$file?ref=f9fa6136eac28a5abee02964694b030d7ad8251d" \
               | base64 -D > "$fonts/$file"
           done
+          gh api --jq .content \
+            "repos/obselate/gyroid/contents/src/Gyroid/assets/background.slang?ref=f9fa6136eac28a5abee02964694b030d7ad8251d" \
+            | base64 -D > "$fonts/background.slang"
           echo "a0bf60ef0f83c5ed4d7a75d45838548b1f6873372dfac88f71804491898d138f  $fonts/JetBrainsMono-Regular.ttf" \
             | shasum -a 256 -c -
+      - name: Fetch pinned Slang compiler
+        run: |
+          archive="$RUNNER_TEMP/slang-2026.16-macos-aarch64.tar.gz"
+          sdk="$RUNNER_TEMP/slang-2026.16"
+          curl --fail --location --retry 5 --output "$archive" \
+            https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-macos-aarch64.tar.gz
+          echo "5d7edc2c91c38d1914c14a5a410f0fe517bce9a284395336715ba36a091e9d9e  $archive" \
+            | shasum -a 256 -c -
+          mkdir -p "$sdk"
+          tar -xzf "$archive" -C "$sdk"
+          echo "SLANG_SDK=$sdk" >> "$GITHUB_ENV"
+          echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Restore pinned SPIR-V validator
+        id: spirv-val
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ runner.temp }}/vulkan-sdk-1.4.357.0
+          key: spirv-val-macos-arm64-1.4.357.0-9a49b0883b9b635689a85b5647dbfcb223268151
+      - name: Build missing validator
+        if: steps.spirv-val.outputs.cache-hit != 'true'
+        run: |
+          source="$RUNNER_TEMP/SPIRV-Tools-1.4.357.0"
+          headers="$source/external/spirv-headers"
+          build="$RUNNER_TEMP/SPIRV-Tools-1.4.357.0-build"
+          git clone --depth 1 --branch vulkan-sdk-1.4.357.0 \
+            https://github.com/KhronosGroup/SPIRV-Tools.git "$source"
+          test "$(git -C "$source" rev-parse HEAD)" = 9a49b0883b9b635689a85b5647dbfcb223268151
+          git init "$headers"
+          git -C "$headers" remote add origin https://github.com/KhronosGroup/SPIRV-Headers.git
+          git -C "$headers" fetch --depth 1 origin 29981f65241605e08b0ede4cfeb999fe3b723c6a
+          git -C "$headers" checkout --detach FETCH_HEAD
+          cmake -S "$source" -B "$build" -DCMAKE_BUILD_TYPE=Release \
+            -DSPIRV_SKIP_TESTS=ON -DSPIRV_WERROR=OFF
+          cmake --build "$build" --target spirv-val --parallel 2
+          mkdir -p "$RUNNER_TEMP/vulkan-sdk-1.4.357.0/bin"
+          install -m0755 "$build/tools/spirv-val" "$RUNNER_TEMP/vulkan-sdk-1.4.357.0/bin/spirv-val"
+      - name: Select pinned SPIR-V validator
+        run: echo "VULKAN_SDK=$RUNNER_TEMP/vulkan-sdk-1.4.357.0" >> "$GITHUB_ENV"
       - name: Build changing text fixture
         run: dotnet build tests/Goo.VulkanProof/Goo.VulkanProof.gsproj -c Release --nologo -warnaserror -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-native"
-      - name: Count changing text coverage
+      - name: Count atlas publication omissions
         env:
-          GOO_VK_DYNAMIC_TEXT: 1
+          GOO_VK_ATLAS_PROFILE: 1
+          GOO_TEXT_ATLAS_PROFILE: 1
           GOO_VK_DIAGNOSTICS: 1
         run: |
           set -o pipefail
           mkdir -p artifacts/dynamic-text
-          for scale in 1 2; do
-            for submit in 1 0; do
-              GOO_DYNAMIC_TEXT_SCALE="$scale" MVK_CONFIG_SYNCHRONOUS_QUEUE_SUBMITS="$submit" \
-                DYLD_LIBRARY_PATH="$PWD/artifacts/macos-native" \
-                dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll \
-                2>&1 | tee "artifacts/dynamic-text/macos-scale-$scale-submit-$submit.log"
-            done
-          done
+          DYLD_LIBRARY_PATH="$PWD/artifacts/macos-native" \
+            dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll \
+            2>&1 | tee artifacts/dynamic-text/macos-atlas-publication.log
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:

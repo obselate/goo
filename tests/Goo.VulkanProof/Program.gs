@@ -4,6 +4,10 @@ import System
 import Goo
 
 internal unsafe func RunVulkanProof() int32 {
+  if Environment.GetEnvironmentVariable("GOO_VK_ATLAS_PROFILE") == "1" {
+    RunVulkanAtlasPublicationProfile()
+    return 0
+  }
   if Environment.GetEnvironmentVariable("GOO_VK_DYNAMIC_TEXT") == "1" {
     RunVulkanDynamicTextReadback()
     return 0

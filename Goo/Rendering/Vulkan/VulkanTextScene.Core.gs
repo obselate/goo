@@ -34,6 +34,13 @@ internal unsafe sealed partial class VulkanTextScene {
   private var completedGlobalSubmissionSerial uint64
   private var textLayoutRequestCount int32
   private var pixelScale float32 = 1.0F
+  private var publicationProfileGlyphs HashSet[VulkanTextAtlasGlyphKey]?
+  private var publicationProfileFrame uint64
+  private var publicationProfileSuppressedRuns int32
+  private var publicationProfileGlyphMisses uint64
+  private var publicationProfileRepublishes uint64
+  private var publicationProfileUploads uint64
+  private var publicationProfileDeferrals uint64
 
   internal prop ResourceGeneration uint64{ get -> atlasSet.Generation }
   internal prop PixelScale float32{ get -> pixelScale }
@@ -66,6 +73,9 @@ internal unsafe sealed partial class VulkanTextScene {
     atlasSet = nativeAtlases
     states = [nativeAtlases.AtlasSlotCapacity]VulkanTextSceneAtlasState?
     glyphs = Dictionary[VulkanTextAtlasGlyphKey, VulkanTextAtlasGlyph]()
+    if Environment.GetEnvironmentVariable("GOO_TEXT_ATLAS_PROFILE") == "1" {
+      publicationProfileGlyphs = HashSet[VulkanTextAtlasGlyphKey]()
+    }
     activeAtlasUse = [nativeAtlases.AtlasSlotCapacity]bool
     nodeSegments = ConditionalWeakTable[Node, VulkanTextNodeSegmentCache]()
     gutterSegments = ConditionalWeakTable[Node, VulkanTextNodeSegmentCache]()
@@ -95,6 +105,8 @@ internal unsafe sealed partial class VulkanTextScene {
     publicationPending = false
     completedGlobalSubmissionSerial = completedSerial
     textLayoutRequestCount = 0
+    publicationProfileFrame++
+    publicationProfileSuppressedRuns = 0
     Array.Clear(activeAtlasUse, 0, activeAtlasUse.Length)
   }
 
@@ -116,6 +128,7 @@ internal unsafe sealed partial class VulkanTextScene {
           state.QueuedBytePrefix = state.PublishedBytePrefix
           state.QueuedUploadSequence = 0uL
           state.UploadQueued = false
+          publicationProfileUploads++
         }
       }
       stateIndex = stateIndex + 1
@@ -148,8 +161,21 @@ internal unsafe sealed partial class VulkanTextScene {
             state.UploadQueued = true
           }
         }
+        if publicationProfileGlyphs != nil && state.Atlas.UploadPending
+          && state.NextByteOffset > state.QueuedBytePrefix {
+          publicationProfileDeferrals++
+        }
       }
       stateIndex = stateIndex + 1
+    }
+    if publicationProfileGlyphs != nil {
+      let stats = atlasSet.Stats
+      Console.Error.WriteLine("text-atlas-publication: frame=${publicationProfileFrame}"
+        + " generation=${ResourceGeneration} scale=${pixelScale}"
+        + " suppressed=${publicationProfileSuppressedRuns} glyph_misses=${publicationProfileGlyphMisses}"
+        + " republishes=${publicationProfileRepublishes} publications=${publicationProfileUploads}"
+        + " upload_deferrals=${publicationProfileDeferrals} evictions=${stats.EvictionCount}"
+        + " atlas_count=${stats.AtlasCount} resident=${stats.ResidentByteSize} budget=${stats.ByteBudget}")
     }
   }
 

@@ -119,6 +119,7 @@ internal unsafe sealed partial class VulkanTextScene {
       let parentScale = ParentTransformMinimumScale(frame, parentTransformIndex)
       var hasBounds bool = false
       var result bool = true
+      var unpublishedRun bool = false
       var runIndex int32 = 0
       while runIndex < shape.Runs.Count {
         let run = shape.Runs[runIndex]
@@ -135,6 +136,7 @@ internal unsafe sealed partial class VulkanTextScene {
               publicationPending = true
               complete = false
               result = false
+              unpublishedRun = true
               glyphIndex = glyphIndex + 1
               continue
             }
@@ -144,6 +146,7 @@ internal unsafe sealed partial class VulkanTextScene {
               publicationPending = true
               complete = false
               result = false
+              unpublishedRun = true
               glyphIndex = glyphIndex + 1
               continue
             }
@@ -320,6 +323,7 @@ internal unsafe sealed partial class VulkanTextScene {
         }
         runIndex = runIndex + 1
       }
+      if unpublishedRun { publicationProfileSuppressedRuns++ }
       if result && workspace.RecordCount > 0 {
         CommitSegment(segment)
         segment.Shape = shape

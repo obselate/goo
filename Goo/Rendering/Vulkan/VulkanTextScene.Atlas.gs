@@ -11,9 +11,16 @@ internal unsafe sealed partial class VulkanTextScene {
     if glyphs.TryGetValue(key, out var existing) {
       let existingIndex = atlasSet.FindIndex(existing.AtlasId)
       if existingIndex >= 0 {
+        if let published = publicationProfileGlyphs {
+          if CanRender(existing) { published.Add(key) }
+        }
         return existing
       }
       existingFound = true
+    }
+    if let published = publicationProfileGlyphs {
+      publicationProfileGlyphMisses++
+      if published.Contains(key) { publicationProfileRepublishes++ }
     }
     if capacityExhausted {
       throw InvalidOperationException("Vulkan text atlas capacity is exhausted")

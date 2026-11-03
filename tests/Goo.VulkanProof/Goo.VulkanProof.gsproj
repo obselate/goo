@@ -17,6 +17,8 @@
   <ItemGroup>
     <Content Include="Assets/Text/VendSans-VariableFont_wght.ttf" Link="VendSans-VariableFont_wght.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="Assets/Text/Gyroid/*" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <GooShaderEffect Include="Assets/Text/Gyroid/background.slang"
+                     TargetPath="atlas-background.goo-effect" SourceIndependent="true" />
     <Content Include="Assets/Text/VendSans-OFL.txt" Link="VendSans-OFL.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="Assets/Text/VendSans.provenance.json" Link="VendSans.provenance.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="Assets/Text/HarfBuzz-chromacheck-colr.ttf" Link="HarfBuzz-chromacheck-colr.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
@@ -38,4 +40,5 @@
     <Content Include="../../Goo/Runtime/Vulkan/win-x64/goo-harfbuzz-gpu.dll" Link="goo-harfbuzz-gpu.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="../../Goo/Runtime/Vulkan/win-x64/text-native-build.json" Link="text-native-build.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
   </ItemGroup>
+  <Import Project="../../Goo/Goo.targets" />
 </Project>
