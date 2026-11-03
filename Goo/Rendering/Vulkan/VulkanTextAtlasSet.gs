@@ -18,7 +18,7 @@ internal data struct VulkanTextAtlasSetStats {
 }
 
 internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
-  private const MaxAtlasCount int32 = 8
+  internal const MaxAtlasCount int32 = 32
   private let device VkDevice
   private let dispatch VkDeviceDispatch
   private let allocator VulkanMemoryAllocator
