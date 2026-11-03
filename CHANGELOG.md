@@ -1,9 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.27.4 - 2026-11-03
 
-- Add aligned virtual item scrolling, measured settlement, target offsets and visible-anchor save and restore.
-- Let virtual policies preserve retained descendants after layout with `VirtualOutput.AnchorKey`.
+- Report only live DevTools endpoints when a snapshot target has no match. (#528)
+- Add aligned `ScrollToItem` with measurement settlement, `ScrollOffsetOf`, `VisibleAnchor`, `RestoreAnchor` and `IsScrollSettling`. (#529)
+- Add `VirtualState.BoundsOf` and `VirtualOutput.AnchorKey` so virtual policies can align measured items and retain descendant positions after layout. (#529)
 
 ## 0.27.3 - 2026-11-02
 
