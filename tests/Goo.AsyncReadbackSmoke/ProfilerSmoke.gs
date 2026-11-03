@@ -359,7 +359,6 @@ internal class ProfilerSmoke {
             try {
                 window.Open()
                 WindowReadbackTestFixture.ForceRender(window, 0.0)
-                let baselinePixels = Capture(window).Pixels
                 guard let recorder = FrameRecorder.Start(Guid.NewGuid(), FrameRecorder.DefaultBufferBytes) else {
                     throw InvalidOperationException("Capture recorder did not start")
                 }
@@ -367,15 +366,6 @@ internal class ProfilerSmoke {
                 WindowReadbackTestFixture.ForceRender(window, 0.0)
                 recorder.Read(0L, 10000, out var after, out var more, out var state, out var dropped)
                 let captured = Capture(window)
-                Require(captured.Pixels.Length == baselinePixels.Length,
-                    "GPU profiling changed capture dimensions")
-                var maximumDifference = 0
-                for index in 0 ... baselinePixels.Length {
-                    maximumDifference = Math.Max(maximumDifference,
-                        Math.Abs(int32(captured.Pixels[index]) - int32(baselinePixels[index])))
-                }
-                Require(maximumDifference <= 4, "GPU profiling changed captured pixels")
-                Console.WriteLine("profiler-pixel-diff: max_channel_difference=" + maximumDifference.ToString())
                 var imageId uint64
                 var staging = false
                 more = true
@@ -418,7 +408,16 @@ internal class ProfilerSmoke {
                 Require(state == "Complete", "Capture recorder did not complete")
                 let idleDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 2L
                 while Stopwatch.GetTimestamp() < idleDeadline { window.Pump(0.0) }
-                Capture(window)
+                let baselinePixels = Capture(window).Pixels
+                Require(captured.Pixels.Length == baselinePixels.Length,
+                    "GPU profiling changed capture dimensions")
+                var maximumDifference = 0
+                for index in 0 ... baselinePixels.Length {
+                    maximumDifference = Math.Max(maximumDifference,
+                        Math.Abs(int32(captured.Pixels[index]) - int32(baselinePixels[index])))
+                }
+                Require(maximumDifference <= 4, "GPU profiling changed captured pixels")
+                Console.WriteLine("profiler-pixel-diff: max_channel_difference=" + maximumDifference.ToString())
                 Require(!WindowReadbackTestFixture.CaptureTarget(window)!!.ReadbackTiming.GpuTimingAvailable,
                     "Profiler capture retained GPU timing after detach")
                 Console.WriteLine("profiler-capture: pixels=verified owners=LayerTarget,Staging detached_gpu_timing=False")
