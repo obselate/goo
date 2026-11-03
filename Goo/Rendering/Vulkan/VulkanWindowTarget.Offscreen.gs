@@ -99,7 +99,7 @@ internal unsafe partial class VulkanWindowTarget {
         let atlasBytes = ResolveTextAtlasByteSize(uint64(properties.limits.maxTexelBufferElements) * 8uL)
         let atlases = VulkanTextAtlasSet(device, dispatch, allocator, atlasBytes,
           properties.limits.maxTexelBufferElements, active.PrimitiveState.TextDescriptorSetLayout,
-          objectAccounting, nil, atlasBytes * 8uL, active.Generation)
+          objectAccounting, nil, atlasBytes * uint64(VulkanTextAtlasSet.MaxAtlasCount), active.Generation)
         pageAtlases = atlases
         let clips = VulkanClipMaskAtlas(device, dispatch, allocator, options.PixelWidth, options.PixelHeight,
           clipMaskFormatSupport, uint64(options.MaxBytes), active.Generation, objectAccounting)

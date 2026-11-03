@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Allow the vector text cache to grow to 32 pages on demand for mixed font sizes. The first page remains 256 KiB.
+
 ## 0.27.4 - 2026-11-03
 
 - Report only live DevTools endpoints when a snapshot target has no match. (#528)
