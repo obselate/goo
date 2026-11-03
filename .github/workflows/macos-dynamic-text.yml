@@ -29,7 +29,7 @@ jobs:
           mkdir -p "$fonts"
           for file in JetBrainsMono-Regular.ttf OFL.txt; do
             gh api -H 'Accept: application/vnd.github.raw+json' \
-              "repos/obselate/gyroid/contents/src/Gyroid/assets/fonts/$file?ref=3149f14cefa96afa7c91fa01cdfd5097321cd14d" \
+              "repos/obselate/gyroid/contents/src/Gyroid/assets/fonts/$file?ref=1a12fb140981738cffe89117bfdd13c915b1033c" \
               > "$fonts/$file"
           done
           echo "a0bf60ef0f83c5ed4d7a75d45838548b1f6873372dfac88f71804491898d138f  $fonts/JetBrainsMono-Regular.ttf" \
