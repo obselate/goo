@@ -100,6 +100,7 @@ internal class ProfilerSmokeTrace {
     internal var Gpu bool
     internal var GpuSupported bool
     internal var GpuAvailable bool
+    internal var GpuFrameAvailable bool
     internal let Allocations Dictionary[string, ProfilerSmokeAllocation] = Dictionary[string, ProfilerSmokeAllocation]()
     internal let BaselineIds HashSet[string] = HashSet[string]()
     internal let CreatedIds HashSet[string] = HashSet[string]()
@@ -407,7 +408,16 @@ internal class ProfilerSmoke {
                 Require(state == "Complete", "Capture recorder did not complete")
                 let idleDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 2L
                 while Stopwatch.GetTimestamp() < idleDeadline { window.Pump(0.0) }
-                Capture(window)
+                let baselinePixels = Capture(window).Pixels
+                Require(captured.Pixels.Length == baselinePixels.Length,
+                    "GPU profiling changed capture dimensions")
+                var maximumDifference = 0
+                for index in 0 ... baselinePixels.Length {
+                    maximumDifference = Math.Max(maximumDifference,
+                        Math.Abs(int32(captured.Pixels[index]) - int32(baselinePixels[index])))
+                }
+                Require(maximumDifference <= 4, "GPU profiling changed captured pixels")
+                Console.WriteLine("profiler-pixel-diff: max_channel_difference=" + maximumDifference.ToString())
                 Require(!WindowReadbackTestFixture.CaptureTarget(window)!!.ReadbackTiming.GpuTimingAvailable,
                     "Profiler capture retained GPU timing after detach")
                 Console.WriteLine("profiler-capture: pixels=verified owners=LayerTarget,Staging detached_gpu_timing=False")
@@ -666,6 +676,7 @@ internal class ProfilerSmoke {
             }
             Require(trace.Cutoff >= trace.LastCpuEnd, "CPU recording did not stop at its cutoff")
             Require(!trace.GpuSupported || trace.GpuSubmitted.Count > 0, "Submitted GPU stages are missing")
+            Require(!trace.GpuSupported || trace.GpuFrameAvailable, "Whole-frame GPU timestamps did not resolve")
             for stage in trace.GpuSubmitted {
                 Require(trace.GpuResolved.Contains(stage), "Submitted GPU stage did not resolve after stop")
             }
@@ -849,6 +860,12 @@ internal class ProfilerSmoke {
                 if resourceSource == "vulkan.timestamp.elapsed" {
                     trace.Gpu = true
                     trace.GpuAvailable = trace.GpuAvailable || record.GetProperty("validity").GetString() == "available"
+                    if record.GetProperty("eventId").GetString() == VulkanDiagnosticEventIds.GpuFrame.ToString()
+                        && record.GetProperty("validity").GetString() == "available" {
+                        trace.GpuFrameAvailable = true
+                        Require(record.GetProperty("name").GetString() == "gpu.frame",
+                            "Whole-frame GPU timing has no label")
+                    }
                     Require(record.GetProperty("submissionId").ValueKind == JsonValueKind.String,
                         "GPU elapsed time has no submission")
                     Require(record.GetProperty("validity").GetString() == "unavailable"

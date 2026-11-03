@@ -9,19 +9,14 @@ internal unsafe partial class VulkanWindowTarget {
   private var pendingTraceId string?
   private var activeTraceId string?
   private var profileGpuTraceId string?
+  private let frameProfileEnabled bool = System.Environment.GetEnvironmentVariable("GOO_FRAME_PROFILE") == "1"
+  private var frameProfileCapabilitiesReported bool
 
   public func BeginPump(recorder FrameRecorder, context FrameTraceContext) {
     pendingTraceContext = context
     pendingTraceId = recorder.TraceId
     Sample(recorder, false, true)
-    if timestampState == nil {
-      if dispatch.vkCreateQueryPool == nil { LoadTimestampDispatch() }
-      guard let activeRuntime = runtime else { return }
-      let state = VulkanDiagnosticTimestampState(diagnostics, windowObjectAccounting)
-      timestampState = state
-      state.CreateTimestampQueryPool(device, dispatch, timestampValidBits,
-        timestampPeriod, timestampComputeAndGraphics, activeRuntime)
-    }
+    EnsureDiagnosticTimestamp()
     if profileGpuTraceId != recorder.TraceId {
       profileGpuTraceId = recorder.TraceId
       var gpuContext = context
@@ -31,7 +26,23 @@ internal unsafe partial class VulkanWindowTarget {
         Kind: FrameTraceKind.Metadata, Ticks: Stopwatch.GetTimestamp() - recorder.Origin,
         Context: gpuContext, Name: "gpu.timestamp", Source: "vulkan.timestamp",
         Validity: if timestampState?.TimestampQueriesSupported ?? false { "available" } else { "unavailable" },
+        Value0: uint64(timestampValidBits), Value1: uint64(timestampPeriod * 1000.0F),
       })
+    }
+  }
+
+  private func EnsureDiagnosticTimestamp() {
+    if timestampState == nil {
+      if dispatch.vkCreateQueryPool == nil { LoadTimestampDispatch() }
+      guard let activeRuntime = runtime else { return }
+      let state = VulkanDiagnosticTimestampState(diagnostics, windowObjectAccounting)
+      timestampState = state
+      state.CreateTimestampQueryPool(device, dispatch, timestampValidBits,
+        timestampPeriod, timestampComputeAndGraphics, activeRuntime)
+    }
+    if frameProfileEnabled && !frameProfileCapabilitiesReported {
+      frameProfileCapabilitiesReported = true
+      System.Console.WriteLine("[goo.profile.gpu] supported=${timestampState?.TimestampQueriesSupported == true} valid_bits=$timestampValidBits period_ns=$timestampPeriod")
     }
   }
 
@@ -151,7 +162,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func DiagnosticWindowValue() uint64 {
-    if diagnostics == nil {
+    if diagnostics == nil && !frameProfileEnabled {
       return 0uL
     }
     return diagnosticWindowHandle
@@ -278,15 +289,17 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func ResetDiagnosticTimestamp(slot VulkanFrameSlot) {
-    if diagnostics == nil && FrameRecorder.Current == nil {
+    if diagnostics == nil && FrameRecorder.Current == nil && !frameProfileEnabled {
       RetireDetachedTimestampPool()
       return
     }
     try {
+      if frameProfileEnabled { EnsureDiagnosticTimestamp() }
       if let current = timestampState {
         if current.ResetTimestampQueries(
           slot.CommandBuffer, int32(activeFrameSlotIndex), DiagnosticTimestampRecordingContext(slot)) {
-          if let recorder = TraceRecorder { current.TraceSlot(int32(activeFrameSlotIndex), recorder, TraceContext()) }
+          current.TraceSlot(int32(activeFrameSlotIndex), TraceRecorder, TraceContext())
+          BeginDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.Frame)
         }
       }
     } catch (cleanup Exception) { }
@@ -294,7 +307,7 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func BeginDiagnosticTimestamp(slot VulkanFrameSlot,
     stage VulkanDiagnosticTimestampStage) bool{
-      if diagnostics == nil && FrameRecorder.Current == nil { return false }
+      if diagnostics == nil && FrameRecorder.Current == nil && !frameProfileEnabled { return false }
       try {
         if let current = timestampState {
           return current.BeginTimestampStage(
@@ -309,7 +322,7 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func EndDiagnosticTimestamp(slot VulkanFrameSlot,
     stage VulkanDiagnosticTimestampStage) bool{
-      if diagnostics == nil && FrameRecorder.Current == nil { return false }
+      if diagnostics == nil && FrameRecorder.Current == nil && !frameProfileEnabled { return false }
       try {
         if let current = timestampState {
           return current.EndTimestampStage(
@@ -344,11 +357,11 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func RetireDetachedTimestampPool() {
     guard let state = timestampState else { return }
-    if diagnostics != nil && !state.HasTraceRecorder { return }
+    if diagnostics != nil && !frameProfileEnabled && !state.HasTraceRecorder { return }
     for i in 0 ... 2 {
       if let slot = frameSlots.Slot(uint32(i)) { ResolveDiagnosticTimestamp(slot, uint32(i)) }
     }
-    if diagnostics == nil {
+    if diagnostics == nil && !frameProfileEnabled {
       DestroyDiagnosticTimestampPool()
       if !state.TimestampQueriesSupported { timestampState = nil }
     }

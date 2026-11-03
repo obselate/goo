@@ -7,6 +7,7 @@ internal enum VulkanDiagnosticTimestampStage {
   Main;
   Effects;
   Offscreen;
+  Frame;
 }
 
 internal struct VulkanDiagnosticTimestampContext {
@@ -69,7 +70,7 @@ internal struct VulkanDiagnosticTimestampStageState {
 
 internal unsafe sealed class VulkanDiagnosticTimestampState {
   private const TimestampFrameSlotCount int32 = 2
-  private const TimestampStageCount int32 = 4
+  private const TimestampStageCount int32 = 5
   private const TimestampScopesPerStage int32 = 16
   private const TimestampQueriesPerScope int32 = 2
   private const TimestampQueriesPerStage int32 = TimestampScopesPerStage * TimestampQueriesPerScope
@@ -93,6 +94,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
   private var timestampLease VulkanSharedLease? = nil
   private var traceRecorders ([]FrameRecorder?)?
   private var traceContexts ([]FrameTraceContext)?
+  private let frameProfileEnabled bool = Environment.GetEnvironmentVariable("GOO_FRAME_PROFILE") == "1"
 
   internal prop HasTraceRecorder bool {
     get {
@@ -703,7 +705,10 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
     if stageIndex == int32(VulkanDiagnosticTimestampStage.Effects) {
       return VulkanDiagnosticTimestampStage.Effects
     }
-    return VulkanDiagnosticTimestampStage.Offscreen
+    if stageIndex == int32(VulkanDiagnosticTimestampStage.Offscreen) {
+      return VulkanDiagnosticTimestampStage.Offscreen
+    }
+    return VulkanDiagnosticTimestampStage.Frame
   }
 
   private func SaturatingAddTimestamp(left uint64, right uint64) uint64 -> if uint64.MaxValue - left < right { uint64.MaxValue } else { left + right }
@@ -857,7 +862,8 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
     case VulkanDiagnosticTimestampStage.Upload: VulkanDiagnosticEventIds.UploadStage
     case VulkanDiagnosticTimestampStage.Main: VulkanDiagnosticEventIds.MainPass
     case VulkanDiagnosticTimestampStage.Effects: VulkanDiagnosticEventIds.EffectsPass
-    default: VulkanDiagnosticEventIds.OffscreenPass
+    case VulkanDiagnosticTimestampStage.Offscreen: VulkanDiagnosticEventIds.OffscreenPass
+    default: VulkanDiagnosticEventIds.GpuFrame
   }
 
   private func RecordTimestampStage(state VulkanDiagnosticTimestampStageState,
@@ -868,10 +874,15 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
         uint64(FirstTimestampQuery(slot, int32(stage), 0)), eventId,
         VulkanDiagnosticCategories.Timing, 0uL, state.result,
         state.elapsedTicks, state.elapsedNanoseconds)
+      let available = state.result == VkConstants.VK_SUCCESS && state.droppedScopeCount == 0
+      if frameProfileEnabled && stage == VulkanDiagnosticTimestampStage.Frame {
+        let elapsed = if available { state.elapsedNanoseconds.ToString() } else { "unavailable" }
+        Console.WriteLine("[goo.profile.gpu] window=${state.window} frame=${state.frame} submission=${state.completionSerial} elapsed_ns=$elapsed available=$available")
+      }
       guard let recorders = traceRecorders, let contexts = traceContexts else { return }
       guard let recorder = recorders[slot] else { return }
       if !recorder.AcceptsGpu { return }
-      let available = state.result == VkConstants.VK_SUCCESS && state.droppedScopeCount == 0
+      let name string? = if stage == VulkanDiagnosticTimestampStage.Frame { "gpu.frame" } else { nil }
       var context = contexts[slot]
       context.FrameId = state.frame
       context.SubmissionId = state.completionSerial
@@ -881,6 +892,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
         Context: context,
         EventId: eventId, Category: VulkanDiagnosticCategories.Timing,
         GpuElapsedNs: if available { state.elapsedNanoseconds } else { nil },
+        Name: name,
         Source: "vulkan.timestamp.elapsed",
         Validity: if available { "available" } else { "unavailable" },
         Unit: "ns", Result: int32(state.result),

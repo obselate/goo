@@ -141,6 +141,14 @@ are strings. Unavailable measurements are `null`, not zero. Counter accounts,
 sources and freshness are separate. Allocator requirements, swapchain estimated
 payload, managed memory, RSS/PSS and driver usage must not be summed as a total.
 
+`gpu.frame` is the Vulkan timestamp span from the start to the end of a window
+frame command buffer. It includes uploads and nested rendering passes. Do not
+add it to Main, Effects or Offscreen times. Results are read without waiting.
+The `vulkan.timestamp` metadata gives queue timestamp valid bits in `value0` and
+the timestamp period in picoseconds in `value1`. Unsupported queues report
+unavailable timing. `GOO_FRAME_PROFILE=1` also prints capabilities and each
+completed frame's `elapsed_ns` in `[goo.profile.gpu]` lines.
+
 Resize work uses nested CPU phases from `phaseNames`:
 
 | Phase | Timed work |
