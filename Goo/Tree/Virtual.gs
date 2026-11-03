@@ -41,10 +41,12 @@ public enum ScrollAlignment { Start; Center; End }
 
 /// Stores a visible virtual item's key and signed position inside the viewport.
 public data struct VirtualScrollAnchor {
+  private var key string
+  private var offset Point
   /// Gets the stable item key.
-  public var Key string
+  public prop Key string { get -> key; init -> key = value }
   /// Gets the item's position relative to the viewport origin.
-  public var Offset Point
+  public prop Offset Point { get -> offset; init -> offset = value }
 }
 
 /// Places the items of one mounted Virtual element. Goo retains one state for each element.
