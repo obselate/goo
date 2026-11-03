@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <Version>$(GooReleaseVersion)</Version>
     <PackageId>Goo.Android</PackageId>
     <Description>Android presentation and input adapter for Goo's shared Vulkan UI runtime.</Description>
@@ -20,11 +21,6 @@
     <AndroidNativeLibrary Include="../Goo/Runtime/Vulkan/android-x64/*.so" Abi="x86_64" />
   </ItemGroup>
   <Target Name="PrepareAndroidArchiveResources" BeforeTargets="_CreateAarCache" DependsOnTargets="_ComputeAndroidResourcePaths;_GenerateAndroidResourceDir" />
-  <Target Name="NormalizeAndroidReferencePath" AfterTargets="_GsharpGetRefAssemblyForPack">
-    <ItemGroup>
-      <TfmSpecificPackageFile Update="$(TargetRefPath)" PackagePath="ref/$(TargetFramework)$(TargetPlatformVersion)/" />
-    </ItemGroup>
-  </Target>
   <Target Name="RegisterAndroidDocumentation" AfterTargets="CoreCompile">
     <ItemGroup>
       <DocFileItem Include="$(DocumentationFile)" />

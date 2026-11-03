@@ -2113,6 +2113,7 @@ jobs:
           mkdir -p "$consumer/$(dirname "$font")"
           cp "tests/$font" "$consumer/$font"
           dotnet build artifacts/android-consumer/Goo.AndroidSmoke/Goo.AndroidSmoke.gsproj -c Release -p:GooSmokeUsePackages=true -p:RestoreConfigFile="$PWD/artifacts/android-nuget.config" -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
+          strings "$consumer/Goo.AndroidSmoke/obj/Release/net10.0-android/_Microsoft.Android.Resource.Designer.dll" | grep -Fx get_goo_accessibility_mixed
           dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- android artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
           dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- android artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke.aab
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
