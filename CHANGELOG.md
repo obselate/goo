@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Release obsolete text segment references when scene frames reset and retention proofs advance.
+- Release the scrollbar layout root when its part is disposed so retired rows and application data can be collected.
 
 ## 0.27.10 - 2026-11-04
 
