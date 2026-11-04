@@ -260,6 +260,9 @@ internal unsafe partial class VulkanWindowTarget {
       }
       let uploadStart = DiagnosticTimestamp()
       var uploadBytes uint64 = 0uL
+      if let slot = activeFrameSlot {
+        BeginDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.Upload)
+      }
       if let resources = imageResources {
         if let slot = activeFrameSlot {
           var imageUploadBytes VkDeviceSize = 0uL
@@ -301,17 +304,15 @@ internal unsafe partial class VulkanWindowTarget {
       if let resources = textScene {
         resources.PrepareUpload()
         if let slot = activeFrameSlot, let atlas = textAtlas {
-          let timestampStarted = BeginDiagnosticTimestamp(
-            slot, VulkanDiagnosticTimestampStage.Upload)
           var recordedBytes VkDeviceSize = 0uL
           var recordedBarriers int32 = 0
           atlas.RecordUploads(slot.CommandBuffer, out recordedBytes, out recordedBarriers)
           RecordDiagnosticBarrierCount(recordedBarriers)
-          if timestampStarted {
-            EndDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.Upload)
-          }
           uploadBytes = uploadBytes + uint64(recordedBytes)
         }
+      }
+      if let slot = activeFrameSlot {
+        EndDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.Upload)
       }
       RecordDiagnosticUpload(uploadStart, uploadBytes)
       if deferInitialPresentation {
@@ -386,8 +387,12 @@ internal unsafe partial class VulkanWindowTarget {
             scaleX,
             scaleY,
             completedGraphicsSubmissionSerial)
+          BeginDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.PrimitiveUpload)
           renderer.RecordPrimitiveFrameUpload(slot.CommandBuffer)
+          EndDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.PrimitiveUpload)
+          BeginDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.Clip)
           renderer.RecordClipMaskPass(slot.CommandBuffer, current.Extent)
+          EndDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.Clip)
           BeginRendering(current, slot, activeImageIndex, activeDamageRegion)
           renderer.ConfigureLayerFrame(
             slot.CommandBuffer,

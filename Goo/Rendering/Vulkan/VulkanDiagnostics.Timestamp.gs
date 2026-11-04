@@ -8,6 +8,8 @@ internal enum VulkanDiagnosticTimestampStage {
   Effects;
   Offscreen;
   Frame;
+  Clip;
+  PrimitiveUpload;
 }
 
 internal struct VulkanDiagnosticTimestampContext {
@@ -70,7 +72,7 @@ internal struct VulkanDiagnosticTimestampStageState {
 
 internal unsafe sealed class VulkanDiagnosticTimestampState {
   private const TimestampFrameSlotCount int32 = 2
-  private const TimestampStageCount int32 = 5
+  private const TimestampStageCount int32 = 7
   private const TimestampScopesPerStage int32 = 16
   private const TimestampQueriesPerScope int32 = 2
   private const TimestampQueriesPerStage int32 = TimestampScopesPerStage * TimestampQueriesPerScope
@@ -708,6 +710,12 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
     if stageIndex == int32(VulkanDiagnosticTimestampStage.Offscreen) {
       return VulkanDiagnosticTimestampStage.Offscreen
     }
+    if stageIndex == int32(VulkanDiagnosticTimestampStage.Clip) {
+      return VulkanDiagnosticTimestampStage.Clip
+    }
+    if stageIndex == int32(VulkanDiagnosticTimestampStage.PrimitiveUpload) {
+      return VulkanDiagnosticTimestampStage.PrimitiveUpload
+    }
     return VulkanDiagnosticTimestampStage.Frame
   }
 
@@ -863,6 +871,8 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
     case VulkanDiagnosticTimestampStage.Main: VulkanDiagnosticEventIds.MainPass
     case VulkanDiagnosticTimestampStage.Effects: VulkanDiagnosticEventIds.EffectsPass
     case VulkanDiagnosticTimestampStage.Offscreen: VulkanDiagnosticEventIds.OffscreenPass
+    case VulkanDiagnosticTimestampStage.Clip: VulkanDiagnosticEventIds.ClipPass
+    case VulkanDiagnosticTimestampStage.PrimitiveUpload: VulkanDiagnosticEventIds.PrimitiveUploadStage
     default: VulkanDiagnosticEventIds.GpuFrame
   }
 
@@ -875,14 +885,22 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
         VulkanDiagnosticCategories.Timing, 0uL, state.result,
         state.elapsedTicks, state.elapsedNanoseconds)
       let available = state.result == VkConstants.VK_SUCCESS && state.droppedScopeCount == 0
-      if frameProfileEnabled && stage == VulkanDiagnosticTimestampStage.Frame {
+      if frameProfileEnabled {
         let elapsed = if available { state.elapsedNanoseconds.ToString() } else { "unavailable" }
-        Console.WriteLine("[goo.profile.gpu] window=${state.window} frame=${state.frame} submission=${state.completionSerial} elapsed_ns=$elapsed available=$available")
+        Console.WriteLine("[goo.profile.gpu] window=${state.window} frame=${state.frame} submission=${state.completionSerial} elapsed_ns=$elapsed available=$available stage=$stage scopes=${state.scopeCount} dropped=${state.droppedScopeCount}")
       }
       guard let recorders = traceRecorders, let contexts = traceContexts else { return }
       guard let recorder = recorders[slot] else { return }
       if !recorder.AcceptsGpu { return }
-      let name string? = if stage == VulkanDiagnosticTimestampStage.Frame { "gpu.frame" } else { nil }
+      let name = switch stage {
+        case VulkanDiagnosticTimestampStage.Upload: "gpu.upload"
+        case VulkanDiagnosticTimestampStage.Main: "gpu.main"
+        case VulkanDiagnosticTimestampStage.Effects: "gpu.effects"
+        case VulkanDiagnosticTimestampStage.Offscreen: "gpu.offscreen"
+        case VulkanDiagnosticTimestampStage.Clip: "gpu.clip"
+        case VulkanDiagnosticTimestampStage.PrimitiveUpload: "gpu.primitive-upload"
+        default: "gpu.frame"
+      }
       var context = contexts[slot]
       context.FrameId = state.frame
       context.SubmissionId = state.completionSerial
@@ -892,6 +910,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
         Context: context,
         EventId: eventId, Category: VulkanDiagnosticCategories.Timing,
         GpuElapsedNs: if available { state.elapsedNanoseconds } else { nil },
+        Value0: uint64(state.scopeCount), Value1: uint64(state.droppedScopeCount),
         Name: name,
         Source: "vulkan.timestamp.elapsed",
         Validity: if available { "available" } else { "unavailable" },
