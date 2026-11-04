@@ -165,7 +165,7 @@ timestamp valid bits in `value0` and the timestamp period in picoseconds in
 
 `GOO_FRAME_PROFILE=1` prints capabilities and one `[goo.profile.gpu]` line per
 completed stage with `elapsed_ns`, `stage`, `scopes` and `dropped`. It needs no
-DevTools connection. Version 0.27.7 prints only the complete frame span.
+DevTools connection. The previous console format prints only the complete frame span.
 
 Resize work uses nested CPU phases from `phaseNames`:
 
