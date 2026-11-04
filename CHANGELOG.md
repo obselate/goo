@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Return free glibc heap pages after background Vulkan pipeline preparation and cache persistence on Linux.
+- Release obsolete text segment references when scene frames reset and retention proofs advance.
 
 ## 0.27.10 - 2026-11-04
 
