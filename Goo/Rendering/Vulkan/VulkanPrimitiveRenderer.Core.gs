@@ -1032,11 +1032,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         EndLayerTimestamp(effectHandle, VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT)
       }
       layerTarget.TransitionToColorAttachment(commandBuffer)
-      BeginLayerRendering(commandBuffer, layerTarget.Extent, layerTarget.ImageView,
-        backdropOnly || preservesBackdrop)
       state.TimestampHandle = BeginLayerTimestamp(
         VulkanDiagnosticTimestampStage.Offscreen,
         VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT)
+      BeginLayerRendering(commandBuffer, layerTarget.Extent, layerTarget.ImageView,
+        backdropOnly || preservesBackdrop)
       currentTarget = layerTarget
       currentOriginX = record.OriginX
       currentOriginY = record.OriginY
@@ -1095,11 +1095,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
       let borrowedBackdrop =
       (state.Record.Flags & uint32(LayerRecordFlags.BorrowsParentBackdrop)) != 0u
+      let endRendering = dispatch.vkCmdEndRendering
+      endRendering(commandBuffer)
       EndLayerTimestamp(
         state.TimestampHandle,
         VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT)
-      let endRendering = dispatch.vkCmdEndRendering
-      endRendering(commandBuffer)
       target.TransitionToShaderRead(commandBuffer)
       if !borrowedBackdrop {
         if let backdrop = state.BackdropTarget {
