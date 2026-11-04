@@ -28,7 +28,9 @@ internal unsafe sealed partial class VulkanTextScene {
       providerResult = run.Provider.EncodePaintGlyphInto(glyphId, 0u, glyphWorkspace)
       if providerResult.Status == VulkanTextProviderAbi.Success {
         renderMode = 3u
-        effectResult = run.Provider.EncodeGlyphInto(glyphId, effectGlyphWorkspace, ppem)
+        let effectWorkspace = effectGlyphWorkspace ?? VulkanTextProviderWorkspace([glyphWorkspace.ByteCapacity]uint8)
+        effectGlyphWorkspace = effectWorkspace
+        effectResult = run.Provider.EncodeGlyphInto(glyphId, effectWorkspace, ppem)
         if effectResult.AbiVersion != VulkanTextProviderAbi.Version {
           throw InvalidOperationException("Vulkan text provider ABI version is invalid")
         }
@@ -39,7 +41,7 @@ internal unsafe sealed partial class VulkanTextScene {
           if effectResult.Count < 0 || (effectResult.Count & 7) != 0 {
             throw InvalidOperationException("Vulkan text color effect encoding is not texel aligned")
           }
-          effectExtents = effectGlyphWorkspace.GlyphExtents
+          effectExtents = effectWorkspace.GlyphExtents
         }
       } else if providerResult.Status == VulkanTextProviderAbi.CapacityExceeded {
         throw InvalidOperationException("Vulkan text color glyph exceeds workspace capacity")
@@ -98,7 +100,7 @@ internal unsafe sealed partial class VulkanTextScene {
     state.EnsureByteCapacity(requiredByteCount)
     Array.Copy(glyphWorkspace.ByteBuffer, 0, state.Bytes, int32(byteOffset), providerResult.Count)
     if effectByteCount != 0u {
-      Array.Copy(effectGlyphWorkspace.ByteBuffer, 0, state.Bytes,
+      Array.Copy(effectGlyphWorkspace!!.ByteBuffer, 0, state.Bytes,
         int32(effectByteOffset), int32(effectByteCount))
     }
     let result = VulkanTextAtlasGlyph{
