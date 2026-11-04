@@ -7,6 +7,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
   private const InitialActiveCapacity int32 = 32
   private const InitialBlockCapacity int32 = 4
   private const BufferBlockSize VkDeviceSize = 1048576uL
+  private const ImageInitialBlockSize VkDeviceSize = 262144uL
   private const ImageBlockSize VkDeviceSize = 4194304uL
   private const BufferDedicatedThreshold VkDeviceSize = 524288uL
   private const ImageDedicatedThreshold VkDeviceSize = 2097152uL

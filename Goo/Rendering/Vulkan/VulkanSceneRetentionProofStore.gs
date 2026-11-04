@@ -280,6 +280,7 @@ internal class VulkanSceneRetentionProofStore {
     imageProofs = nextImageProofs
     nextImageProofs = previousImageProofs
     let previousSegments = cachedTextSegments
+    Array.Clear(previousSegments, 0, cachedTextSegmentCount)
     cachedTextSegments = nextCachedTextSegments
     nextCachedTextSegments = previousSegments
     let previousImages = cachedImages
