@@ -151,7 +151,7 @@ Accept only `validity: "available"` with no omitted scopes.
 | 316 | `gpu.upload` | Image, path and glyph atlas uploads and their barriers |
 | 318 | `gpu.main` | Main rendering span, including nested layers and effects |
 | 319 | `gpu.effects` | Backdrop copies, blur and layer composition |
-| 320 | `gpu.offscreen` | Offscreen layer contents, including nested work |
+| 320 | `gpu.offscreen` | Attachment loads, layer contents and stores, including nested work |
 | 336 | `gpu.frame` | Complete window command buffer |
 | 337 | `gpu.clip` | Dirty clip mask render passes and their barriers |
 | 338 | `gpu.primitive-upload` | Primitive, text instance and stroke data uploads |
@@ -159,6 +159,8 @@ Accept only `validity: "available"` with no omitted scopes.
 These are stage aggregates, not a disjoint per-pass sum. Main includes Offscreen
 and Effects. Frame includes all stages and transitions. Nested Offscreen scopes
 can overlap. Never add overlapping times or subtract their percentiles.
+Offscreen ranges begin before a layer's rendering scope and end after it.
+This includes attachment loads and stores.
 Results are read without waiting. The `vulkan.timestamp` metadata gives queue
 timestamp valid bits in `value0` and the timestamp period in picoseconds in
 `value1`. Unsupported queues report unavailable timing.

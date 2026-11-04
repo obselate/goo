@@ -4,6 +4,7 @@
 
 - Reuse unchanged single-line text layouts across width rounding without changing ellipsis cuts or glyph output.
 - Keep resumed root render passes within the damage rectangle after offscreen layers. Preserve existing pixels without loading the full window attachment.
+- Include attachment load and store operations in offscreen layer GPU timing.
 
 ## 0.27.8 - 2026-11-03
 
