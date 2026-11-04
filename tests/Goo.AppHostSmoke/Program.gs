@@ -58,7 +58,10 @@ internal class Program {
             Require(Window.InitializeApplicationActivation(initial) == WindowOperationResult.Accepted, "Initialization failed")
             if mode == "elect" { WaitFor(Path.Combine(root, "start")) }
             let election = Acquire(identity, initial)
-            File.WriteAllText(Path.Combine(root, tag + ".status"), election.Status.ToString())
+            let statusPath = Path.Combine(root, tag + ".status")
+            let temporaryStatusPath = statusPath + ".new"
+            File.WriteAllText(temporaryStatusPath, election.Status.ToString())
+            File.Move(temporaryStatusPath, statusPath)
             if election.Status == SingleInstanceStatus.Forwarded { return 0 }
             Require(election.Status == SingleInstanceStatus.Primary && election.Lease != nil, "${election.Status}: ${election.Error}")
             using let lease = election.Lease!!
