@@ -143,6 +143,29 @@ class AccessibilityChecks : Instrumentation {
         CheckRangeAndScroll()
         CheckSurface()
         CheckActivityReplacement()
+        RunOnMainSync(() -> { activity!!.NativeView.Window.Root = GooAndroidSmoke.SmokeApplication.CreateAccessibilityRoot() })
+        Wait(() -> Exists((n AccessibilityNodeInfo) -> n.ContentDescription == "Sparse grid"), "Grid tree did not publish.")
+        {
+            using let grid = Find((n AccessibilityNodeInfo) -> n.ContentDescription == "Sparse grid")
+            using let collection = grid.GetCollectionInfo()!!
+            Require(grid.ClassName == "android.widget.GridView" && collection.RowCount == 1000 && collection.ColumnCount == 20,
+                "Grid counts are incorrect.")
+            using let cell = Find((n AccessibilityNodeInfo) -> n.ContentDescription == "Sparse value")
+            using let item = cell.GetCollectionItemInfo()!!
+            Require(item.RowIndex == 400 && item.ColumnIndex == 7 && !item.Heading, "Grid indexes are incorrect.")
+            using let header = Find((n AccessibilityNodeInfo) -> n.ContentDescription == "Column heading")
+            using let heading = header.GetCollectionItemInfo()!!
+            Require(header.Heading && heading.Heading && heading.ColumnIndex == 7, "Grid header is incorrect.")
+            using let toolbar = Find((n AccessibilityNodeInfo) -> n.ContentDescription == "Document tools")
+            Require(toolbar.ClassName == "android.widget.Toolbar", "Toolbar class is incorrect.")
+            using let panel = Find((n AccessibilityNodeInfo) -> n.ContentDescription == "Details panel")
+            Require(panel.ClassName == "android.widget.FrameLayout", "Tab panel class is incorrect.")
+            using let tooltip = Find((n AccessibilityNodeInfo) -> n.ContentDescription == "Context help")
+            Require(tooltip.ClassName == "android.widget.TextView", "Tooltip class is incorrect.")
+            using let separator = Find((n AccessibilityNodeInfo) -> n.ContentDescription == "Resize divider")
+            using let rangeInfo = separator.GetRangeInfo()!!
+            Require(separator.Focusable && rangeInfo.Current == 40.0f, "Separator range is incorrect.")
+        }
         Wait(
             () -> {
                 var idle = false
