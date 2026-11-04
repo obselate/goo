@@ -33,6 +33,12 @@ internal class ProfilerSmokeCell : Cell {
         .ShaderEffect: Effect,
         Text{Content: "Profiler"},
         Image{Source: Source, Width: 8, Height: 8},
+        for index in 0 ... 20 {
+            Container{
+                Position: PositionType.Absolute, Left: index, Top: 16, Width: 1, Height: 1,
+                BackgroundColor: Color.Rgb(80, 120, 160), ShaderEffect: Effect,
+            }
+        }
     } }
 }
 
@@ -103,6 +109,7 @@ internal class ProfilerSmokeTrace {
     internal var GpuFrameAvailable bool
     internal var GpuClipAvailable bool
     internal var GpuPrimitiveUploadAvailable bool
+    internal var GpuManyScopesAvailable bool
     internal let Allocations Dictionary[string, ProfilerSmokeAllocation] = Dictionary[string, ProfilerSmokeAllocation]()
     internal let BaselineIds HashSet[string] = HashSet[string]()
     internal let CreatedIds HashSet[string] = HashSet[string]()
@@ -681,6 +688,8 @@ internal class ProfilerSmoke {
             Require(!trace.GpuSupported || trace.GpuFrameAvailable, "Whole-frame GPU timestamps did not resolve")
             Require(!trace.GpuSupported || (trace.GpuClipAvailable && trace.GpuPrimitiveUploadAvailable),
                 "Clip mask and primitive upload GPU timestamps did not resolve")
+            Require(!trace.GpuSupported || trace.GpuManyScopesAvailable,
+                "GPU timestamps did not resolve more than sixteen offscreen scopes")
             for stage in trace.GpuSubmitted {
                 Require(trace.GpuResolved.Contains(stage), "Submitted GPU stage did not resolve after stop")
             }
@@ -872,6 +881,9 @@ internal class ProfilerSmoke {
                             || record.GetProperty("eventId").GetString() == VulkanDiagnosticEventIds.ClipPass.ToString()
                         trace.GpuPrimitiveUploadAvailable = trace.GpuPrimitiveUploadAvailable
                             || record.GetProperty("eventId").GetString() == VulkanDiagnosticEventIds.PrimitiveUploadStage.ToString()
+                        trace.GpuManyScopesAvailable = trace.GpuManyScopesAvailable
+                            || (record.GetProperty("eventId").GetString() == VulkanDiagnosticEventIds.OffscreenPass.ToString()
+                                && record.GetProperty("value0").GetUInt64() > 16uL)
                     }
                     if record.GetProperty("eventId").GetString() == VulkanDiagnosticEventIds.GpuFrame.ToString()
                         && record.GetProperty("validity").GetString() == "available" {
