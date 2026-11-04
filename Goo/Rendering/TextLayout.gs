@@ -9,6 +9,7 @@ internal class TextLine {
   internal prop Content string{ get; init; }
   internal prop Shape ShapedText? { get; init; }
   internal prop Width float32{ get; init; }
+  internal prop WidthLimit float32{ get; init; }
   internal prop DisplayWidth float32{
     get {
       return if let shaped = Shape { shaped.Width } else { 0.0F }
@@ -17,6 +18,7 @@ internal class TextLine {
 
   internal init() {
     Content = ""
+    WidthLimit = Single.PositiveInfinity
   }
 }
 
@@ -36,6 +38,8 @@ internal class TextLayout {
   internal prop LetterSpacing float32{ get; init; }
   internal prop LineHeight float64{ get; init; }
   internal prop MaxWidth float32{ get; init; }
+  internal var MinWidth float32
+  internal var WidthLimit float32 = Single.PositiveInfinity
   internal prop Rich TextRichLayout? {
     get -> rich
     set -> rich = value
@@ -374,6 +378,8 @@ internal class TextLayouts {
         }
         if n.TextWrap == TextWrap.NoWrap {
           let line = shapeNoWrap(n, paragraph, maxWidth)
+          result.MinWidth = MathF.Max(result.MinWidth, line.Content == text ? line.Width : maxWidth)
+          result.WidthLimit = MathF.Min(result.WidthLimit, line.WidthLimit)
           let displayEnd = start + text.Length
           let visibleEnd = line.Content == text ? displayEnd : start + line.Content.Length - 1
           appendLine(result, geometry, n, line, start, displayEnd, visibleEnd)
@@ -614,7 +620,7 @@ internal class TextLayouts {
         }
         let direction = TextShaping.BaseDirection(text, int32(n.Direction))
         let display = TextShaping.Ellipsize(text, n.FontFamily, fontSize(n), int32(n.FontWeight),
-          n.FontStyle == FontStyle.Italic, letterSpacing(n), direction, maxWidth, n.Language, whole.Shape)
+          n.FontStyle == FontStyle.Italic, letterSpacing(n), direction, maxWidth, out var widthLimit, n.Language, whole.Shape)
         let logicalWidth = whole.Width
         whole.Shape?.Dispose()
         let shaped = TextShaping.Shape(display, n.FontFamily, fontSize(n), int32(n.FontWeight),
@@ -623,6 +629,7 @@ internal class TextLayouts {
           Content: display,
           Shape: shaped,
           Width: logicalWidth,
+          WidthLimit: MathF.Min(widthLimit, logicalWidth),
         }
       }
 
@@ -637,7 +644,7 @@ internal class TextLayouts {
       }
       let display = maxWidth < 0.0F
       ? line.Content + "\u2026" : TextShaping.Ellipsize(line.Content, n.FontFamily, fontSize(n), int32(n.FontWeight),
-        n.FontStyle == FontStyle.Italic, letterSpacing(n), direction, maxWidth, n.Language, line.Shape)
+        n.FontStyle == FontStyle.Italic, letterSpacing(n), direction, maxWidth, out var widthLimit, n.Language, line.Shape)
       line.Shape?.Dispose()
       let shaped = TextShaping.Shape(display, n.FontFamily, fontSize(n), int32(n.FontWeight),
         n.FontStyle == FontStyle.Italic, letterSpacing(n), direction, n.Language)
@@ -653,7 +660,9 @@ internal class TextLayouts {
       && layout.FontSize == fontSize(n) && layout.FontWeight == n.FontWeight
       && layout.Policy == textPolicy(n) && layout.LetterSpacing == letterSpacing(n)
       && layout.TextMaxLines == n.TextMaxLines
-      && layout.LineHeight == n.LineHeight && layout.MaxWidth == maxWidth
+      && layout.LineHeight == n.LineHeight
+      && (layout.MaxWidth == maxWidth || (n.TextWrap == TextWrap.NoWrap && !layout.Clamped
+        && layout.Rich == nil && maxWidth >= layout.MinWidth && maxWidth < layout.WidthLimit))
 
     internal func textPolicy(n Node) int32 -> int32(n.FontStyle) | (int32(n.TextWrap) << 2) | (int32(n.TextTrimming) << 3)
     | (int32(n.TextTransform) << 4) | (int32(n.Direction) << 7)

@@ -88,8 +88,9 @@ internal partial class TextShaping {
       }
 
     internal func Ellipsize(text string, families string, size float32, weight int32, italic bool,
-      letterSpacing float32, direction int32, maxWidth float32, language string = "",
-      shaped ShapedText? = nil) string{
+      letterSpacing float32, direction int32, maxWidth float32, out widthLimit float32,
+      language string = "", shaped ShapedText? = nil) string{
+        widthLimit = maxWidth
         let ellipsis = "\u2026"
         let baseDirection = BaseDirection(text, direction)
         let elements = UnicodeGraphemes.Starts(text)
@@ -109,15 +110,20 @@ internal partial class TextShaping {
             var predicted int32 = 0
             while predicted + 1 < elements.Length && elements[predicted + 1] <= cluster { predicted++ }
             let candidate = text.Substring(0, elements[predicted]) + ellipsis
-            let fits = MeasureUncached(candidate, families, size, weight, italic, letterSpacing,
-              baseDirection, language) <= maxWidth
+            let candidateWidth = MeasureUncached(candidate, families, size, weight, italic, letterSpacing,
+              baseDirection, language)
+            let fits = candidateWidth <= maxWidth
             let adjacent = fits ? predicted + 1 : predicted - 1
             if adjacent >= 0 && adjacent <= elements.Length {
               let end = adjacent < elements.Length ? elements[adjacent] : text.Length
               let neighbor = text.Substring(0, end) + ellipsis
-              let neighborFits = MeasureUncached(neighbor, families, size, weight, italic,
-                letterSpacing, baseDirection, language) <= maxWidth
-              if fits != neighborFits { return fits ? candidate : neighbor }
+              let neighborWidth = MeasureUncached(neighbor, families, size, weight, italic,
+                letterSpacing, baseDirection, language)
+              let neighborFits = neighborWidth <= maxWidth
+              if fits != neighborFits {
+                widthLimit = fits ? neighborWidth : candidateWidth
+                return fits ? candidate : neighbor
+              }
             }
           }
         }

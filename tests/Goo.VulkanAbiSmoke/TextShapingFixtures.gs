@@ -34,6 +34,8 @@ internal partial class TextShaping {
         "office café",
       }
       var checks = 0
+      var cacheChecks = 0
+      var cacheReuses = 0
       for text in samples {
         for direction in []int32{0, 1, 2} {
           for spacing in []float32{0f, 0.75f, -0.5f} {
@@ -68,13 +70,38 @@ internal partial class TextShaping {
                 throw InvalidOperationException("Clamped ellipsis differs at case " + checks.ToString())
               }
               actualClamped.Dispose()
-              TextAnalyses.Remove(node)
+              let cached = TextLayouts.For(node, width)
+              let limit = Single.IsFinite(cached.WidthLimit) ? cached.WidthLimit : whole.Width + 1f
+              for paintWidth in []float32{MathF.Max(0f, MathF.BitDecrement(limit)), limit,
+                width + 1f / 3f, MathF.Max(0f, width - 1f / 3f)} {
+                let painted = TextLayouts.For(node, paintWidth)
+                let expectedPaint = whole.Width <= paintWidth ? text
+                  : ReferenceEllipsis(text, font.Family, spacing, direction, paintWidth)
+                using let expectedPaintShape = Shape(expectedPaint, font.Family, 21f, 400, false, spacing,
+                  BaseDirection(text, direction))
+                guard let paintedShape = painted.Lines[0].Shape else {
+                  throw InvalidOperationException("Missing cached ellipsis shape")
+                }
+                if painted.Lines[0].Content != expectedPaint || !SameEllipsisShape(expectedPaintShape, paintedShape) {
+                  throw InvalidOperationException("Cached ellipsis differs at case " + cacheChecks.ToString())
+                }
+                if paintWidth >= cached.MinWidth && paintWidth < cached.WidthLimit {
+                  if !Object.ReferenceEquals(cached, painted) {
+                    throw InvalidOperationException("Stable text width did not reuse its layout")
+                  }
+                  cacheReuses++
+                }
+                cacheChecks++
+              }
+              TextLayouts.Dispose(node)
               checks++
             }
           }
         }
       }
       Console.WriteLine("ELLIPSIS_IDENTITY cases=" + checks.ToString())
+      if cacheReuses == 0 { throw InvalidOperationException("No text width cache reuse was exercised") }
+      Console.WriteLine("ELLIPSIS_CACHE_IDENTITY cases=" + cacheChecks.ToString() + " reused=" + cacheReuses.ToString())
     }
 
     private func ReferenceEllipsis(text string, family string, spacing float32, direction int32,
