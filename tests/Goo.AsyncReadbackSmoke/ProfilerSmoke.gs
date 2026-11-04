@@ -26,20 +26,22 @@ internal class ProfilerSmokeCell : Cell {
                 Text{Content: "Profiler scroll"},
             },
         }
-    } else { Container() {
-        .Width: 24 + Frame % 2,
-        .Height: 24,
-        .BackgroundColor: Color.Rgb(Frame % 255, 80, 120),
-        .ShaderEffect: Effect,
-        Text{Content: "Profiler"},
-        Image{Source: Source, Width: 8, Height: 8},
+    } else {
+        let children = List[Blob](22)
+        children.Add(Text{Content: "Profiler"})
+        children.Add(Image{Source: Source, Width: 8, Height: 8})
         for index in 0 ... 20 {
-            Container{
+            children.Add(Container{
                 Position: PositionType.Absolute, Left: index, Top: 16, Width: 1, Height: 1,
                 BackgroundColor: Color.Rgb(80, 120, 160), ShaderEffect: Effect,
-            }
+            })
         }
-    } }
+        Container{
+            Width: 24 + Frame % 2, Height: 24,
+            BackgroundColor: Color.Rgb(Frame % 255, 80, 120), ShaderEffect: Effect,
+            Children: children,
+        }
+    }
 }
 
 internal class ProfilerSmokeClient : IDisposable {
