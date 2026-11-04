@@ -1123,7 +1123,15 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       } else {
         rootImageView
       }
-      BeginLayerRendering(commandBuffer, physicalExtent, parentImageView, true)
+      if state.ParentTarget == nil {
+        let clip = clipStack[0]
+        BeginRendering(commandBuffer, VkRect2D{
+            offset: VkOffset2D{ x: clip.Left, y: clip.Top },
+            extent: VkExtent2D{ width: uint32(clip.Right - clip.Left), height: uint32(clip.Bottom - clip.Top) },
+          }, parentImageView, true)
+      } else {
+        BeginLayerRendering(commandBuffer, physicalExtent, parentImageView, true)
+      }
       SetLayerViewport(commandBuffer)
       SetScissor(commandBuffer, clipStack[clipDepth - 1])
       if let pool = layerPool {
