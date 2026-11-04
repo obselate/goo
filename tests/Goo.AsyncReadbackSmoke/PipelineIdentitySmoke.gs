@@ -125,13 +125,16 @@ func RunPipelineIdentitySmoke() {
   try {
     Console.SetError(capturedError)
     window.Open()
-    let preparedEntryCount = WindowReadbackTestFixture.ShaderEffectPipelineEntryCount(window)
+    Require(WindowReadbackTestFixture.ShaderEffectPipelineEntryCount(window) == 0,
+      "Shader effect pipelines were created before the first frame")
     WindowReadbackTestFixture.ForceRender(window, 0.0)
     WindowReadbackTestFixture.ForceRender(window, 0.0166666666666667)
     let metrics = WindowReadbackTestFixture.Metrics(window)
     let firstBounds = PipelineIdentityCell.First.BorderBox
     let secondBounds = PipelineIdentityCell.Second.BorderBox
     let initial = PrimitiveReadback(window, metrics)
+    let preparedEntryCount = WindowReadbackTestFixture.ShaderEffectPipelineEntryCount(window) - 1
+    Require(preparedEntryCount == 2, "Built-in shader effects were not prepared after presentation")
     let firstPixel = PrimitiveLogicalPixel(initial.Pixels, initial.Width, metrics,
       firstBounds.X + firstBounds.Width * 0.5, firstBounds.Y + firstBounds.Height * 0.5)
     let secondPixel = PrimitiveLogicalPixel(initial.Pixels, initial.Width, metrics,
@@ -218,15 +221,14 @@ func RunPipelineIdentitySmoke() {
     }
     try {
       reopened.Open()
-      let recreatedPreparedCount = WindowReadbackTestFixture.ShaderEffectPipelineEntryCount(reopened)
       WindowReadbackTestFixture.ForceRender(reopened, 0.0)
       WindowReadbackTestFixture.ForceRender(reopened, 0.0166666666666667)
       let recreatedPipeline = WindowReadbackTestFixture.ResolveShaderEffectPipeline(reopened, first)
-      Require(recreatedPipeline != 0uL
-          && WindowReadbackTestFixture.ShaderEffectPipelineEntryCount(reopened) == recreatedPreparedCount + 1,
-        "Runtime recreation did not rebuild one deduplicated shader pipeline")
       let recreatedMetrics = WindowReadbackTestFixture.Metrics(reopened)
       let recreated = PrimitiveReadback(reopened, recreatedMetrics)
+      Require(recreatedPipeline != 0uL
+          && WindowReadbackTestFixture.ShaderEffectPipelineEntryCount(reopened) == preparedEntryCount + 1,
+        "Runtime recreation did not rebuild one deduplicated shader pipeline")
       let recreatedFirst = PrimitiveLogicalPixel(recreated.Pixels, recreated.Width,
         recreatedMetrics, firstBounds.X + firstBounds.Width * 0.5,
         firstBounds.Y + firstBounds.Height * 0.5)
