@@ -537,8 +537,9 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
       generation = nativeGeneration
       references = 1
       processExit = (_, _) -> {
+        primitiveState.StopPipelinePreparation()
         queueWorker.Dispose()
-        WaitDeviceIdleResult()
+        if WaitDeviceIdleResult() == VkConstants.VK_SUCCESS { pipelineCache.Persist() }
       }
       AppDomain.CurrentDomain.ProcessExit += processExit
     }
