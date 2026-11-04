@@ -8,6 +8,7 @@ import System.Runtime.InteropServices
 internal unsafe sealed class FontData : SafeHandle {
   private var mapping MemoryMappedFile?
   private var view MemoryMappedViewAccessor?
+  private var viewRetained bool
   private var pin GCHandle
   internal let Length int32
   internal let Path string?
@@ -35,12 +36,10 @@ internal unsafe sealed class FontData : SafeHandle {
       mapping = mapped
       let accessor = mapped.CreateViewAccessor(0L, int64(Length), MemoryMappedFileAccess.Read)
       view = accessor
-      var pointer * uint8
-      accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref pointer)
-      SetHandle(nint(pointer))
+      accessor.SafeMemoryMappedViewHandle.DangerousAddRef(ref viewRetained)
+      SetHandle(accessor.SafeMemoryMappedViewHandle.DangerousGetHandle())
     } catch (error Exception) {
-      view?.Dispose()
-      mapping?.Dispose()
+      ReleaseHandle()
       throw error
     }
   }
@@ -60,7 +59,10 @@ internal unsafe sealed class FontData : SafeHandle {
 
   protected override func ReleaseHandle() bool {
     if let accessor = view {
-      accessor.SafeMemoryMappedViewHandle.ReleasePointer()
+      if viewRetained {
+        accessor.SafeMemoryMappedViewHandle.DangerousRelease()
+        viewRetained = false
+      }
       accessor.Dispose()
     }
     mapping?.Dispose()
