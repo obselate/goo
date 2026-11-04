@@ -35,15 +35,13 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
   private var profileBaseline int64 = -1L
 
   internal func ProfileResources(recorder FrameRecorder) {
-    lock gate {
-      if profileTraceId == recorder.TraceId && profileBaseline == recorder.BaselineVersion { return }
-      profileTraceId = recorder.TraceId
-      profileBaseline = recorder.BaselineVersion
-      recorder.Resource(FrameResourceKind.PipelineCache,
-        recorder.NativeResource(FrameResourceKind.PipelineCache, uint64(device), cache),
-        VulkanDiagnosticEventIds.ResourceCreate, "pipeline.cache",
-        bytes: uint64(loadedBytes), device: uint64(device), baseline: true)
-    }
+    if profileTraceId == recorder.TraceId && profileBaseline == recorder.BaselineVersion { return }
+    profileTraceId = recorder.TraceId
+    profileBaseline = recorder.BaselineVersion
+    recorder.Resource(FrameResourceKind.PipelineCache,
+      recorder.NativeResource(FrameResourceKind.PipelineCache, uint64(device), cache),
+      VulkanDiagnosticEventIds.ResourceCreate, "pipeline.cache",
+      bytes: uint64(loadedBytes), device: uint64(device), baseline: true)
   }
 
   internal init(nativeDevice VkDevice, nativeDispatch VkDeviceDispatch,

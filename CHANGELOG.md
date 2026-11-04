@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Create only the Vulkan pipelines used by the first frame before presentation. Prepare the remaining standard pipelines on a background thread after the first presentation.
+
 ## 0.27.7 - 2026-11-03
 
 - Restart embedded animations after idle with a zero simulation delta for the first frame, instead of advancing by up to 33.3 ms. This includes Android `GooView`. (#535)

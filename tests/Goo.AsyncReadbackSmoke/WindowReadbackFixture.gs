@@ -1479,6 +1479,12 @@ internal unsafe partial class VulkanPrimitiveRenderer {
   }
 }
 
+internal unsafe partial class VulkanSharedPrimitiveState {
+  internal func WaitForPipelinePreparationForTest() {
+    preparationThread?.Join()
+  }
+}
+
 internal unsafe partial class VulkanWindowTarget {
   internal func PipelineIdentityForTest(effects []ShaderEffect,
     warmEffect ShaderEffect) VulkanShaderEffectPipelineIdentityTestSnapshot{
@@ -1511,7 +1517,10 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   internal prop ShaderEffectPipelineEntryCountForTest int32{
-    get -> primitiveRenderer?.ShaderEffectPipelineEntryCountForTest ?? 0
+    get {
+      runtime?.PrimitiveState.WaitForPipelinePreparationForTest()
+      return primitiveRenderer?.ShaderEffectPipelineEntryCountForTest ?? 0
+    }
   }
 }
 

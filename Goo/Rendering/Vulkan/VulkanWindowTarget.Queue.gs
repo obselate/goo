@@ -572,6 +572,7 @@ internal unsafe partial class VulkanWindowTarget {
       firstPresentationPending = false
       initialImageWaitStarted = 0
       PresentationAccepted?.Invoke(acceptedTicks)
+      runtime?.PrimitiveState.PreparePipelinesAfterPresent()
     }
     return completed
   }
