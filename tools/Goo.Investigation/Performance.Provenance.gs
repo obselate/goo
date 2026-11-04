@@ -52,7 +52,7 @@ partial class Performance {
         Runner.Save(Path.Combine(output, "options.json"), settings)
         Command("dotnet-info", []string{"dotnet", "--info"}, 60)
         let version = Command("dotnet-version", []string{"dotnet", "--version"}, 60).Trim()
-        Runner.Require(version == "10.0.401", "fixture requires .NET SDK 10.0.401, got '" + version + "'")
+        Runner.Require(version == "10.0.403", "fixture requires .NET SDK 10.0.403, got '" + version + "'")
         let sizes = Publish()
         for mode in modes {
             Runner.Require(
