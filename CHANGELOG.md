@@ -1,13 +1,10 @@
 # Changelog
 
-## Unreleased
-
-- Wait for background Vulkan pipeline preparation before checking steady-state shader resource allocation or starting gated Metal producer commands in rendering fixtures.
-- Add Vulkan GPU stage output for atlas uploads, primitive uploads and clip masks. Include scope counts in profiler traces and `GOO_FRAME_PROFILE` output.
-
 ## 0.27.8 - 2026-11-03
 
 - Create only the Vulkan pipelines used by the first frame before presentation. Prepare the remaining standard pipelines on a background thread after the first presentation. NativeAOT cold starts with an empty driver cache improved from 2.6 s to 0.71 s for the starter and from 2.6 s to 1.44 s for SWARM, with no first-use pipeline creation during interaction. (#540)
+- Use .NET SDK 10.0.403 with ILCompiler 10.0.14 in the repository and generated application templates. (#546)
+- Add Vulkan GPU stage output for atlas uploads, primitive uploads and clip masks. Include scope counts in profiler traces and `GOO_FRAME_PROFILE` output. (#542)
 
 ## 0.27.7 - 2026-11-03
 
