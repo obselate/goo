@@ -13,7 +13,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Goo.Android" Version="0.27.9" />
+    <PackageReference Include="Goo.Android" Version="0.27.10" />
     <ProjectReference Include="Shared/GooStarter.Shared.gsproj" />
   </ItemGroup>
 </Project>
