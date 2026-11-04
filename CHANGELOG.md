@@ -1,9 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.27.10 - 2026-11-04
 
-- Save the Vulkan pipeline cache after background preparation and on process exit, before the window closes.
-- Stop background pipeline preparation before process exit.
+- Save the Vulkan pipeline cache after background preparation completes and on process exit, including `Environment.Exit`. Stop and join preparation before exit. A second SWARM NativeAOT launch with a fresh driver cache reaches first presentation in about 440 ms instead of 1.4 s. (#551)
 
 ## 0.27.9 - 2026-11-04
 
