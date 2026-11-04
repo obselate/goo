@@ -1001,7 +1001,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
             guard let source = blurred else {
               throw InvalidOperationException("Vulkan layer backdrop source is unavailable")
             }
+            let effectHandle = BeginLayerTimestamp(
+              VulkanDiagnosticTimestampStage.Effects,
+              VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT)
             CopyBackdropCapture(commandBuffer, source, target)
+            EndLayerTimestamp(effectHandle, VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT)
           }
         } else {
           state.BackdropTarget = blurred
@@ -1020,7 +1024,13 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           backdrop.RetainedBackdropSource = true
         }
       }
-      if preservesBackdrop { CopyBackdrop(commandBuffer, record, layerTarget) }
+      if preservesBackdrop {
+        let effectHandle = BeginLayerTimestamp(
+          VulkanDiagnosticTimestampStage.Effects,
+          VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT)
+        CopyBackdrop(commandBuffer, record, layerTarget)
+        EndLayerTimestamp(effectHandle, VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT)
+      }
       layerTarget.TransitionToColorAttachment(commandBuffer)
       BeginLayerRendering(commandBuffer, layerTarget.Extent, layerTarget.ImageView,
         backdropOnly || preservesBackdrop)

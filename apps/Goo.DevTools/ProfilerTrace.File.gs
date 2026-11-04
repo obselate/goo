@@ -300,7 +300,9 @@ internal partial class ProfilerTrace {
 
         internal func GpuStage(eventId int32) string -> eventId == 316 ? "Upload"
         : eventId == 318 ? "Main": eventId == 319 ? "Effects"
-        : eventId == 320 ? "Offscreen": "GPU event " + eventId.ToString(CultureInfo.InvariantCulture)
+        : eventId == 320 ? "Offscreen": eventId == 336 ? "Frame"
+        : eventId == 337 ? "Clip": eventId == 338 ? "Primitive upload"
+        : "GPU event " + eventId.ToString(CultureInfo.InvariantCulture)
 
         private func WriteName(writer Utf8JsonWriter, kind string, thread int32, name string) {
             writer.WriteStartObject()

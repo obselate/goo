@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Wait for background Vulkan pipeline preparation before checking steady-state shader resource allocation or starting gated Metal producer commands in rendering fixtures.
+- Add Vulkan GPU stage output for atlas uploads, primitive uploads and clip masks. Include scope counts in profiler traces and `GOO_FRAME_PROFILE` output.
 
 ## 0.27.8 - 2026-11-03
 
