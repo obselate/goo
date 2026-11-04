@@ -992,12 +992,16 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
     code,
     fileName)
 
+  internal func StopPipelinePreparation() {
+    Volatile.Write(ref preparationStopped, 1)
+    preparationThread?.Join()
+  }
+
   public func Dispose() {
     if disposed {
       return
     }
-    Volatile.Write(ref preparationStopped, 1)
-    preparationThread?.Join()
+    StopPipelinePreparation()
     disposed = true
     var index int32 = 0
     while index < formatStates.Length {
