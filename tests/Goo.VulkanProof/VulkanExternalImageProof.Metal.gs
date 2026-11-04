@@ -88,6 +88,7 @@ internal unsafe partial class VulkanExternalImageProof {
             try {
                 window.Open()
                 WindowReadbackTestFixture.ForceRender(window, 0.0)
+                WindowReadbackTestFixture.WaitForPipelinePreparation(window)
                 let opened = ExternalImageSession.Open(window)
                 Require(opened.Status == ExternalImageStatus.Success, "bundled MoltenVK did not expose Metal import: " + opened.Detail)
                 using let session = opened.Session!!

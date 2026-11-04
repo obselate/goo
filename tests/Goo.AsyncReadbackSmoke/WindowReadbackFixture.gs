@@ -1130,6 +1130,10 @@ internal class WindowReadbackTestFixture {
     internal func ShaderEffectPipelineEntryCount(window Window) int32 ->
     window.ShaderEffectPipelineEntryCountForTest()
 
+    internal func WaitForPipelinePreparation(window Window) {
+      window.WaitForPipelinePreparationForTest()
+    }
+
     internal func VerifyShaderEffectDigestCollision(window Window,
       first ShaderEffectProgram, second ShaderEffectProgram) bool ->
     window.VerifyShaderEffectDigestCollisionForTest(first, second)
@@ -1516,9 +1520,13 @@ internal unsafe partial class VulkanWindowTarget {
     return renderer.RejectShaderEffectWithoutVulkanArtifactForTest(effect)
   }
 
+  internal func WaitForPipelinePreparationForTest() {
+    runtime?.PrimitiveState.WaitForPipelinePreparationForTest()
+  }
+
   internal prop ShaderEffectPipelineEntryCountForTest int32{
     get {
-      runtime?.PrimitiveState.WaitForPipelinePreparationForTest()
+      WaitForPipelinePreparationForTest()
       return primitiveRenderer?.ShaderEffectPipelineEntryCountForTest ?? 0
     }
   }
@@ -1599,6 +1607,9 @@ public partial class Window {
   VulkanTargetForTest()!!.ResolveShaderEffectPipelineForTest(effect)
   internal func ShaderEffectPipelineEntryCountForTest() int32 ->
   VulkanTargetForTest()!!.ShaderEffectPipelineEntryCountForTest
+  internal func WaitForPipelinePreparationForTest() {
+    VulkanTargetForTest()!!.WaitForPipelinePreparationForTest()
+  }
   internal func VerifyShaderEffectDigestCollisionForTest(
     first ShaderEffectProgram, second ShaderEffectProgram) bool ->
   VulkanTargetForTest()!!.VerifyShaderEffectDigestCollisionForTest(first, second)

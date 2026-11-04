@@ -128,6 +128,7 @@ func ShaderEffectGreenTextMinX(frame VulkanReadbackResult) int32 {
 }
 
 func ShaderEffectWarmRetainedResources(window Window) {
+  WindowReadbackTestFixture.WaitForPipelinePreparation(window)
   var stableSlots uint32
   var attempt int32
   while attempt < 32 && stableSlots != 3u {
