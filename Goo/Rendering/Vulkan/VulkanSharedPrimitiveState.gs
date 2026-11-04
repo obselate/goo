@@ -761,6 +761,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
         state?.ResolveShaderEffectPipeline(blur)
         state?.ResolveShaderEffectPipeline(BackdropBlurEffect.Shared)
       }
+      pipelineCache.Persist()
     } catch (error Exception) { }
   }
 

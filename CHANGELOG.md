@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Save the Vulkan pipeline cache after background preparation, before the window closes.
+
 ## 0.27.9 - 2026-11-04
 
 - Reuse text layouts during paint when the rounded width gives provably identical NoWrap or ellipsis output. SWARM By Rule median frame time improved from 18.9 ms to 10.8 ms and paint time from 8.8 ms to 2.3 ms. (#544)

@@ -244,7 +244,13 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
       }
     }
 
-  private func Persist() {
+  internal func Persist() {
+    lock (gate) {
+      if !disposed { PersistCore() }
+    }
+  }
+
+  private func PersistCore() {
     if !persistenceEnabled || cache == 0uL || cachePath == "" {
       return
     }
@@ -349,7 +355,7 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
         return
       }
       disposed = true
-      if save { Persist() }
+      if save { PersistCore() }
       if cache != 0uL {
         let destroy = dispatch.vkDestroyPipelineCache
         destroy(device, cache, nil)
