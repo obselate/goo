@@ -152,10 +152,10 @@ class AccessibilityChecks : Instrumentation {
                 "Grid counts are incorrect.")
             using let cell = Find((n AccessibilityNodeInfo) -> n.ContentDescription == "Sparse value")
             using let item = cell.GetCollectionItemInfo()!!
-            Require(item.RowIndex == 400 && item.ColumnIndex == 7 && !item.Heading, "Grid indexes are incorrect.")
+            Require(item.RowIndex == 400 && item.ColumnIndex == 7 && !item.IsHeading, "Grid indexes are incorrect.")
             using let header = Find((n AccessibilityNodeInfo) -> n.ContentDescription == "Column heading")
             using let heading = header.GetCollectionItemInfo()!!
-            Require(header.Heading && heading.Heading && heading.ColumnIndex == 7, "Grid header is incorrect.")
+            Require(header.Heading && heading.IsHeading && heading.ColumnIndex == 7, "Grid header is incorrect.")
             using let toolbar = Find((n AccessibilityNodeInfo) -> n.ContentDescription == "Document tools")
             Require(toolbar.ClassName == "android.widget.Toolbar", "Toolbar class is incorrect.")
             using let panel = Find((n AccessibilityNodeInfo) -> n.ContentDescription == "Details panel")
