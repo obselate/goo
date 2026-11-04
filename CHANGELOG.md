@@ -1,10 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.27.9 - 2026-11-04
 
-- Reuse unchanged single-line text layouts across width rounding without changing ellipsis cuts or glyph output.
-- Keep resumed root render passes within the damage rectangle after offscreen layers. Preserve existing pixels without loading the full window attachment.
-- Include attachment load and store operations in offscreen layer GPU timing.
+- Reuse text layouts during paint when the rounded width gives provably identical NoWrap or ellipsis output. SWARM By Rule median frame time improved from 18.9 ms to 10.8 ms and paint time from 8.8 ms to 2.3 ms. (#544)
+- Limit resumed root rendering after offscreen layers to the damage area instead of the full attachment. This reduces GPU work on tile-based GPUs. (#543)
+- Include attachment load and store operations in offscreen layer GPU timing. (#548)
 
 ## 0.27.8 - 2026-11-03
 
