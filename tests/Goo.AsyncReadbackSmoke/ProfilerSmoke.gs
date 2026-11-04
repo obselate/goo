@@ -101,6 +101,8 @@ internal class ProfilerSmokeTrace {
     internal var GpuSupported bool
     internal var GpuAvailable bool
     internal var GpuFrameAvailable bool
+    internal var GpuClipAvailable bool
+    internal var GpuPrimitiveUploadAvailable bool
     internal let Allocations Dictionary[string, ProfilerSmokeAllocation] = Dictionary[string, ProfilerSmokeAllocation]()
     internal let BaselineIds HashSet[string] = HashSet[string]()
     internal let CreatedIds HashSet[string] = HashSet[string]()
@@ -677,6 +679,8 @@ internal class ProfilerSmoke {
             Require(trace.Cutoff >= trace.LastCpuEnd, "CPU recording did not stop at its cutoff")
             Require(!trace.GpuSupported || trace.GpuSubmitted.Count > 0, "Submitted GPU stages are missing")
             Require(!trace.GpuSupported || trace.GpuFrameAvailable, "Whole-frame GPU timestamps did not resolve")
+            Require(!trace.GpuSupported || (trace.GpuClipAvailable && trace.GpuPrimitiveUploadAvailable),
+                "Clip mask and primitive upload GPU timestamps did not resolve")
             for stage in trace.GpuSubmitted {
                 Require(trace.GpuResolved.Contains(stage), "Submitted GPU stage did not resolve after stop")
             }
@@ -860,6 +864,15 @@ internal class ProfilerSmoke {
                 if resourceSource == "vulkan.timestamp.elapsed" {
                     trace.Gpu = true
                     trace.GpuAvailable = trace.GpuAvailable || record.GetProperty("validity").GetString() == "available"
+                    if record.GetProperty("validity").GetString() == "available" {
+                        Require(record.GetProperty("value0").GetUInt64() > 0uL
+                            && record.GetProperty("value1").GetUInt64() == 0uL,
+                            "Available GPU stage has no scopes or has omitted scopes")
+                        trace.GpuClipAvailable = trace.GpuClipAvailable
+                            || record.GetProperty("eventId").GetString() == VulkanDiagnosticEventIds.ClipPass.ToString()
+                        trace.GpuPrimitiveUploadAvailable = trace.GpuPrimitiveUploadAvailable
+                            || record.GetProperty("eventId").GetString() == VulkanDiagnosticEventIds.PrimitiveUploadStage.ToString()
+                    }
                     if record.GetProperty("eventId").GetString() == VulkanDiagnosticEventIds.GpuFrame.ToString()
                         && record.GetProperty("validity").GetString() == "available" {
                         trace.GpuFrameAvailable = true

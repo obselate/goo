@@ -141,13 +141,31 @@ are strings. Unavailable measurements are `null`, not zero. Counter accounts,
 sources and freshness are separate. Allocator requirements, swapchain estimated
 payload, managed memory, RSS/PSS and driver usage must not be summed as a total.
 
-`gpu.frame` is the Vulkan timestamp span from the start to the end of a window
-frame command buffer. It includes uploads and nested rendering passes. Do not
-add it to Main, Effects or Offscreen times. Results are read without waiting.
-The `vulkan.timestamp` metadata gives queue timestamp valid bits in `value0` and
-the timestamp period in picoseconds in `value1`. Unsupported queues report
-unavailable timing. `GOO_FRAME_PROFILE=1` also prints capabilities and each
-completed frame's `elapsed_ns` in `[goo.profile.gpu]` lines.
+`vulkan.timestamp.elapsed` records give elapsed GPU nanoseconds in `gpuElapsedNs`.
+Match `windowId`, `frameId` and `submissionId`. `value0` is the number of recorded
+scopes and `value1` is the number omitted when the scope limit is reached.
+Accept only `validity: "available"` with no omitted scopes.
+
+| Event ID | Name | Work |
+| --- | --- | --- |
+| 316 | `gpu.upload` | Image, path and glyph atlas uploads and their barriers |
+| 318 | `gpu.main` | Main rendering span, including nested layers and effects |
+| 319 | `gpu.effects` | Backdrop copies, blur and layer composition |
+| 320 | `gpu.offscreen` | Offscreen layer contents, including nested work |
+| 336 | `gpu.frame` | Complete window command buffer |
+| 337 | `gpu.clip` | Dirty clip mask render passes and their barriers |
+| 338 | `gpu.primitive-upload` | Primitive, text instance and stroke data uploads |
+
+These are stage aggregates, not a disjoint per-pass sum. Main includes Offscreen
+and Effects. Frame includes all stages and transitions. Nested Offscreen scopes
+can overlap. Never add overlapping times or subtract their percentiles.
+Results are read without waiting. The `vulkan.timestamp` metadata gives queue
+timestamp valid bits in `value0` and the timestamp period in picoseconds in
+`value1`. Unsupported queues report unavailable timing.
+
+`GOO_FRAME_PROFILE=1` prints capabilities and one `[goo.profile.gpu]` line per
+completed stage with `elapsed_ns`, `stage`, `scopes` and `dropped`. It needs no
+DevTools connection. Version 0.27.7 prints only the complete frame span.
 
 Resize work uses nested CPU phases from `phaseNames`:
 
