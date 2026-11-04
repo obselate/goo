@@ -228,7 +228,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
     textVertexModule VkShaderModule,
     textFragmentModule VkShaderModule,
     textPaintFragmentModule VkShaderModule,
-    nativePipelineGate object,
     nativeObjectAccounting VulkanObjectAccounting?) {
       if nativeDevice == nint(0) {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
@@ -286,7 +285,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       this.textVertexModule = textVertexModule
       this.textFragmentModule = textFragmentModule
       this.textPaintFragmentModule = textPaintFragmentModule
-      pipelineGate = nativePipelineGate
+      pipelineGate = Object()
       shaderEffectPipelines = [ShaderEffectCapacity]VulkanShaderEffectPipelineEntry?
       shaderEffectPipelineAliases = ConditionalWeakTable[ShaderEffectProgram,
         VulkanShaderEffectPipelineEntry]()
@@ -490,7 +489,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
   private let objectAccounting VulkanObjectAccounting?
   private let generation uint64
   private let formatStates []VulkanSharedPrimitiveFormatState?
-  private let pipelineGate object
+  private let clipPipelineGate object
   private var preparationThread Thread?
   private var preparationStopped int32
   private var vertexModule VkShaderModule
@@ -643,7 +642,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
       objectAccounting = nativeObjectAccounting
       generation = nativeGeneration
       formatStates = [FormatCapacity]VulkanSharedPrimitiveFormatState?
-      pipelineGate = Object()
+      clipPipelineGate = Object()
       let vertexCode = LoadShaderCode("analytic.vert.spv")
       let solidCode = LoadShaderCode("analytic_solid.frag.spv")
       let shadowCode = LoadShaderCode("analytic_shadow.frag.spv")
@@ -726,7 +725,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
       textVertexModule,
       textFragmentModule,
       textPaintFragmentModule,
-      pipelineGate,
       objectAccounting)
     formatStates[slot] = created
     return created
@@ -746,24 +744,22 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
 
   private func PreparePipelines() {
     try {
-      lock (pipelineGate) {
-        for state in formatStates {
-          if Volatile.Read(ref preparationStopped) != 0 { return }
-          state?.MaterializePipelines()
-        }
+      for state in formatStates {
         if Volatile.Read(ref preparationStopped) != 0 { return }
-        ResolveClipMaskPipeline(ref clipMaskR8Pipeline, VkConstants.VK_FORMAT_R8_UNORM)
-        ResolveClipMaskPipeline(ref clipMaskRgba8Pipeline, VkConstants.VK_FORMAT_R8G8B8A8_UNORM)
-        using let backdrop = typeof(VulkanSharedPrimitiveState).Assembly.GetManifestResourceStream(
-          "Goo.Effects.filtered_backdrop.goo-effect")
-        if backdrop == nil { throw FileNotFoundException("Goo backdrop blur effect is missing") }
-        let blur = ShaderEffect(ShaderEffectProgram(
-          BoundedInput.ReadAll(backdrop, ShaderEffectProgram.MaximumProgramByteCount, "Shader effect program")))
-        for state in formatStates {
-          if Volatile.Read(ref preparationStopped) != 0 { return }
-          state?.ResolveShaderEffectPipeline(blur)
-          state?.ResolveShaderEffectPipeline(BackdropBlurEffect.Shared)
-        }
+        state?.MaterializePipelines()
+      }
+      if Volatile.Read(ref preparationStopped) != 0 { return }
+      ResolveClipMaskPipeline(ref clipMaskR8Pipeline, VkConstants.VK_FORMAT_R8_UNORM)
+      ResolveClipMaskPipeline(ref clipMaskRgba8Pipeline, VkConstants.VK_FORMAT_R8G8B8A8_UNORM)
+      using let backdrop = typeof(VulkanSharedPrimitiveState).Assembly.GetManifestResourceStream(
+        "Goo.Effects.filtered_backdrop.goo-effect")
+      if backdrop == nil { throw FileNotFoundException("Goo backdrop blur effect is missing") }
+      let blur = ShaderEffect(ShaderEffectProgram(
+        BoundedInput.ReadAll(backdrop, ShaderEffectProgram.MaximumProgramByteCount, "Shader effect program")))
+      for state in formatStates {
+        if Volatile.Read(ref preparationStopped) != 0 { return }
+        state?.ResolveShaderEffectPipeline(blur)
+        state?.ResolveShaderEffectPipeline(BackdropBlurEffect.Shared)
       }
       pipelineCache.Persist()
     } catch (error Exception) { }
@@ -784,7 +780,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
     targetFormat VkFormat) VkPipeline{
       let existing = Volatile.Read(ref pipeline)
       if existing != 0uL { return existing }
-      lock (pipelineGate) {
+      lock (clipPipelineGate) {
         EnsureOpen()
         if pipeline == 0uL {
           Volatile.Write(ref pipeline, CreateClipMaskPipeline(targetFormat))
