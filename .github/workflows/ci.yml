@@ -1614,7 +1614,7 @@ jobs:
             dotnet new goo --name WindowsStarter --output "$root/app" --debug:custom-hive "$root/hive"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             foreach ($type in "WinExe", "Exe") {
-              $override = if ($type -eq "Exe") { @("-p:OutputType=Exe") } else { @() }
+              [string[]]$override = if ($type -eq "Exe") { @("-p:OutputType=Exe") } else { @() }
               dotnet publish "$root/app/WindowsStarter.gsproj" -c Release -r win-x64 --self-contained true `
                 -p:PublishAot=true -p:TreatWarningsAsErrors=true @override `
                 --configfile tests/Goo.PackageSmoke/NuGet.config -o "$root/publish"
