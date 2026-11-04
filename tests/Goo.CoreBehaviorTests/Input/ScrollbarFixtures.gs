@@ -579,6 +579,7 @@ internal class ScrollbarFixtures {
     catch (error InvalidOperationException) { threw = error.Message == "retire-first" }
     return threw && RetirementDisposableCell.FirstDisposals == 1
       && RetirementDisposableCell.LaterDisposals == 1 && ScrollbarParts.Children(root).Count == 0
+      && ScrollbarParts.LayoutRootForTest() == nil
   }
 
   func WarmDragBytes() int64 {
@@ -705,6 +706,12 @@ internal class ScrollbarEditorCell(controller TextEditorController, padded bool 
       Track: Container{}, Thumb: Container{}},
     ScrollbarVisibilityX = ScrollbarVisibility.Always,
     ScrollbarVisibilityY = ScrollbarVisibility.Always,
+  }
+}
+
+internal partial class ScrollbarParts {
+  shared {
+    internal func LayoutRootForTest() Node? -> partLayout.lastRoot
   }
 }
 
