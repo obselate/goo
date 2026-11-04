@@ -263,6 +263,7 @@ internal partial class ScrollbarParts {
 
         private func disposePart(root Node?, failure Exception?) Exception? {
             if let node = root {
+                if partLayout.lastRoot == node { partLayout.lastRoot = nil }
                 try { NodeLifecycle.DisposeTree(node) }
                 catch (error Exception) { return failure ?? error }
             }
