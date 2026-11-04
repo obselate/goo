@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.27.8 - 2026-11-03
 
-- Create only the Vulkan pipelines used by the first frame before presentation. Prepare the remaining standard pipelines on a background thread after the first presentation.
+- Create only the Vulkan pipelines used by the first frame before presentation. Prepare the remaining standard pipelines on a background thread after the first presentation. NativeAOT cold starts with an empty driver cache improved from 2.6 s to 0.71 s for the starter and from 2.6 s to 1.44 s for SWARM, with no first-use pipeline creation during interaction. (#540)
 
 ## 0.27.7 - 2026-11-03
 

@@ -18,7 +18,7 @@ Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 and meet the [platform requirements](#platforms), then:
 
 ```sh
-dotnet new install Goo.Templates@0.27.7
+dotnet new install Goo.Templates@0.27.8
 dotnet tool install --global Goo.DevTools
 dotnet new goo -n HelloGoo
 cd HelloGoo
