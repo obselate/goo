@@ -320,14 +320,28 @@ internal shared class Program {
                     0u,
                     []FontVariation{FontVariation("wght", 400f)}
                 )
+                using let aliasSource = FontSource.FromPath("GooAbiPathAlias", 700, false,
+                    oversizedPath, 0u, []FontVariation{FontVariation("wght", 700f)})
                 File.Delete(oversizedPath)
                 if pathSource.IsRegistered {
                     throw InvalidOperationException("Font path source registered eagerly")
                 }
                 pathSource.Register()
+                aliasSource.Register()
+                let firstRegistration = FontRegistry.Resolve("GooAbiPath", 400, false)
+                    ?? throw InvalidOperationException("File font registration is missing")
+                let aliasRegistration = FontRegistry.Resolve("GooAbiPathAlias", 700, false)
+                    ?? throw InvalidOperationException("Alias font registration is missing")
+                if !Object.ReferenceEquals(firstRegistration.Bytes, aliasRegistration.Bytes) {
+                    throw InvalidOperationException("Font selection keys did not share the file backing")
+                }
                 using let shapedPath = TextShaping.Shape("office", "GooAbiPath", 16f, 400, false, 0f, 1)
                 if shapedPath.HasMissingGlyph || shapedPath.GlyphCount <= 0 {
                     throw InvalidOperationException("Font path source did not retain its bytes")
+                }
+                using let shapedAlias = TextShaping.Shape("office", "GooAbiPathAlias", 16f, 700, false, 0f, 1)
+                if shapedAlias.HasMissingGlyph || shapedAlias.Width == shapedPath.Width {
+                    throw InvalidOperationException("Shared font backing combined variation state")
                 }
                 pathSource.Dispose()
                 GC.Collect()
@@ -339,6 +353,18 @@ internal shared class Program {
                     throw InvalidOperationException("Active shaped run did not retain its file mapping")
                 }
             }
+            File.Copy(fontPath, oversizedPath)
+            {
+                using let stream = File.OpenWrite(oversizedPath)
+                stream.Write([]uint8{98, 97, 100, 33})
+            }
+            try {
+                using let replacement = FontSource.FromPath("GooAbiReplacement", 400, false, oversizedPath)
+                replacement.Register()
+                throw InvalidOperationException("A replacement file reused the previous backing")
+            } catch (ArgumentOutOfRangeException) { }
+            File.Delete(oversizedPath)
+            Console.WriteLine("FONT_BACKING_IDENTITY sharedFile=1 independentVariations=1 replacement=1")
             File.Copy(fontPath, oversizedPath)
             {
                 using let stream = File.OpenWrite(oversizedPath)

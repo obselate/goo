@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Collections.Generic
 import System.IO
 import System.IO.MemoryMappedFiles
 import System.Runtime.InteropServices
@@ -23,12 +24,8 @@ internal unsafe sealed class FontData : SafeHandle {
     SetHandle(pin.AddrOfPinnedObject())
   }
 
-  private init(path string) : base(nint(0), true) {
-    using let file = FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete)
-    if file.Length == 0 || file.Length > VulkanTextFont.MaxFontBytes {
-      throw InvalidDataException("Font file must contain between 1 byte and 64 MiB")
-    }
-    Length = int32(file.Length)
+  private init(file FileStream, path string, length int32) : base(nint(0), true) {
+    Length = length
     Path = path
     try {
       let mapped = MemoryMappedFile.CreateFromFile(file, nil, 0L, MemoryMappedFileAccess.Read,
@@ -45,7 +42,28 @@ internal unsafe sealed class FontData : SafeHandle {
   }
 
   shared {
-    internal func FromPath(path string) FontData -> FontData(path)
+    private let gate object = Object()
+    private let files Dictionary[FontFileIdentity, WeakReference[FontData]] =
+      Dictionary[FontFileIdentity, WeakReference[FontData]]()
+
+    internal func FromPath(path string) FontData {
+      using let file = FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete)
+      let length = file.Length
+      if length == 0 || length > VulkanTextFont.MaxFontBytes {
+        throw InvalidDataException("Font file must contain between 1 byte and 64 MiB")
+      }
+      let identity = FontFileIdentity.Read(file.SafeFileHandle.DangerousGetHandle(), length)
+      lock gate {
+        if files.TryGetValue(identity, out var weak) && weak.TryGetTarget(out var current)
+          && !current.IsClosed { return current }
+        for entry in files {
+          if !entry.Value.TryGetTarget(out var live) || live.IsClosed { files.Remove(entry.Key) }
+        }
+        let created = FontData(file, path, int32(length))
+        files[identity] = WeakReference[FontData](created)
+        return created
+      }
+    }
   }
 
   public override prop IsInvalid bool { get -> handle == nint(0) }
@@ -68,5 +86,44 @@ internal unsafe sealed class FontData : SafeHandle {
     mapping?.Dispose()
     if pin.IsAllocated { pin.Free() }
     return true
+  }
+}
+
+private unsafe data struct FontFileIdentity(Device uint64, FileIdLow uint64, FileIdHigh uint64,
+  Length int64) : IEquatable[FontFileIdentity] {
+  shared {
+    internal func Read(handle nint, length int64) FontFileIdentity {
+      let status * uint64 = stackalloc[32]uint64
+      if OperatingSystem.IsWindows() {
+        if FileInformation(handle, 18, nint(status), 24u) != 0 {
+          return FontFileIdentity(status[0], status[1], status[2], length)
+        }
+        if LegacyFileInformation(handle, nint(status)) == 0 {
+          throw IOException("Cannot identify font file", Marshal.GetLastPInvokeError())
+        }
+        let words = *uint32(status)
+        return FontFileIdentity(uint64(words[7]), uint64(words[11]) << 32 | uint64(words[12]), 0uL, length)
+      }
+      let mac = OperatingSystem.IsMacOS()
+      let result = if mac {
+        if RuntimeInformation.ProcessArchitecture == Architecture.X64 {
+          MacStat64(int32(handle), nint(status))
+        } else { MacStat(int32(handle), nint(status)) }
+      } else { Stat(int32(handle), nint(status)) }
+      if result != 0 { throw IOException("Cannot identify font file", Marshal.GetLastPInvokeError()) }
+      let device = if mac { status[0] & 0xffffffffuL } else { status[0] }
+      return FontFileIdentity(device, status[1], 0uL, length)
+    }
+
+    @DllImport("libc", EntryPoint: "fstat", SetLastError: true)
+    private func Stat(descriptor int32, status nint) int32;
+    @DllImport("/usr/lib/libSystem.B.dylib", EntryPoint: "fstat", SetLastError: true)
+    private func MacStat(descriptor int32, status nint) int32;
+    @DllImport("/usr/lib/libSystem.B.dylib", EntryPoint: `fstat$INODE64`, SetLastError: true)
+    private func MacStat64(descriptor int32, status nint) int32;
+    @DllImport("kernel32", EntryPoint: "GetFileInformationByHandleEx", SetLastError: true)
+    private func FileInformation(handle nint, kind int32, data nint, length uint32) int32;
+    @DllImport("kernel32", EntryPoint: "GetFileInformationByHandle", SetLastError: true)
+    private func LegacyFileInformation(handle nint, data nint) int32;
   }
 }
