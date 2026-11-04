@@ -169,6 +169,7 @@ internal partial class SceneFrame {
       shaderEffects[shaderIndex] = ShaderEffectRecord{}
       shaderIndex = shaderIndex + 1
     }
+    Array.Clear(cachedTextSegments, 0, cachedTextSegmentCount)
     ResetShaderEffectData()
     chunkCount = 0
     drawRefCount = 0
