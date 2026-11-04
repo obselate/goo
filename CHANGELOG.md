@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Save the Vulkan pipeline cache after background preparation, before the window closes.
+- Save the Vulkan pipeline cache after background preparation and on process exit, before the window closes.
 
 ## 0.27.9 - 2026-11-04
 
