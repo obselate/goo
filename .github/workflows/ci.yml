@@ -1602,6 +1602,32 @@ jobs:
         with:
           name: linux-packages
           path: artifacts/packages
+      - name: Verify Windows starter subsystem
+        if: needs.changes.outputs.full == 'true'
+        shell: pwsh
+        run: |
+          $version = dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo
+          $root = Join-Path $env:RUNNER_TEMP "goo-windows-starter"
+          try {
+            dotnet new install "artifacts/packages/Goo.Templates.$version.nupkg" --debug:custom-hive "$root/hive"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            dotnet new goo --name WindowsStarter --output "$root/app" --debug:custom-hive "$root/hive"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            foreach ($type in "WinExe", "Exe") {
+              [string[]]$override = if ($type -eq "Exe") { @("-p:OutputType=Exe") } else { @() }
+              dotnet publish "$root/app/WindowsStarter.gsproj" -c Release -r win-x64 --self-contained true `
+                -p:PublishAot=true -p:TreatWarningsAsErrors=true @override `
+                --configfile tests/Goo.PackageSmoke/NuGet.config -o "$root/publish"
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+              $pe = [IO.File]::ReadAllBytes("$root/publish/WindowsStarter.exe")
+              $subsystem = [BitConverter]::ToUInt16($pe, [BitConverter]::ToInt32($pe, 0x3c) + 0x5c)
+              $expected = if ($type -eq "WinExe") { 2 } else { 3 }
+              if ($subsystem -ne $expected) { throw "$type PE subsystem is $subsystem, expected $expected" }
+              Write-Output "Windows starter NativeAOT $type PE subsystem: $subsystem"
+            }
+          } finally {
+            Remove-Item $root -Recurse -Force -ErrorAction SilentlyContinue
+          }
       - name: Build managed direct driver consumer
         if: needs.changes.outputs.full == 'true'
         shell: pwsh

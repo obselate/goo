@@ -14,6 +14,12 @@ Check [platform preflight](platform-preflight.md) on the target machine.
 Publish on the target OS. Use `-r win-x64` for Windows x64 or `-r osx-arm64`
 for Apple silicon.
 
+```xml
+<OutputType>WinExe</OutputType>
+```
+
+Use `WinExe` for GUI apps. `Exe` keeps a console window on Windows for apps that also serve as a CLI.
+
 ## NativeAOT
 
 ```sh
