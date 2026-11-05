@@ -78,7 +78,10 @@ internal unsafe partial class VulkanWindowTarget {
       guard let selectedSlot = slot else {
         throw InvalidOperationException("Vulkan frame slots are unavailable")
       }
+      let prepareStart = DiagnosticTimestamp()
       let prepareResult = selectedSlot.PrepareAcquire()
+      RecordDiagnosticTiming(VulkanDiagnosticEventIds.PresentWait,
+        VulkanDiagnosticCategories.Timing, prepareStart)
       RecordDiagnosticResult(VulkanDiagnosticEventIds.PresentWait, prepareResult)
       if prepareResult != VkConstants.VK_SUCCESS {
         if prepareResult == VkConstants.VK_NOT_READY || prepareResult == VkConstants.VK_TIMEOUT {
@@ -100,6 +103,7 @@ internal unsafe partial class VulkanWindowTarget {
         return
       }
       completedGraphicsSubmissionSerial = completed
+      let collectStart = DiagnosticTimestamp()
       ResolveDiagnosticTimestamp(selectedSlot, slotIndex)
       if let atlas = textAtlas {
         atlas.Collect(completedGraphicsSubmissionSerial)
@@ -120,9 +124,15 @@ internal unsafe partial class VulkanWindowTarget {
         atlas.Collect(completedGraphicsSubmissionSerial)
       }
       presentationRetirement.CollectCompleted(slotIndex, selectedSlot.LastCompletedSerial)
+      RecordDiagnosticTiming(VulkanDiagnosticEventIds.ResourceRetire,
+        VulkanDiagnosticCategories.Timing, collectStart)
+      let retireStart = DiagnosticTimestamp()
       CollectRetiredSwapchains()
+      RecordDiagnosticTiming(VulkanDiagnosticEventIds.SwapchainDestroy,
+        VulkanDiagnosticCategories.Timing, retireStart)
       var imageIndex uint32 = 0u
       let acquireNextImage = dispatch.vkAcquireNextImageKHR
+      let acquireStart = DiagnosticTimestamp()
       let acquire = acquireNextImage(
         device,
         current.Handle,
@@ -130,6 +140,8 @@ internal unsafe partial class VulkanWindowTarget {
         selectedSlot.AcquireSemaphore,
         0uL,
         &imageIndex)
+      RecordDiagnosticTiming(VulkanDiagnosticEventIds.SwapchainAcquire,
+        VulkanDiagnosticCategories.Timing, acquireStart)
       RecordDiagnosticResult(VulkanDiagnosticEventIds.SwapchainAcquire, acquire)
       let markedAcquire = selectedSlot.MarkAcquired(acquire)
       if markedAcquire != acquire {
