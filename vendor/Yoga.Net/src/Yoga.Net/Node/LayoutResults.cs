@@ -33,6 +33,8 @@ namespace Facebook.Yoga
         private float _positionTop;
         private float _positionRight;
         private float _positionBottom;
+        private float _rawPositionLeft;
+        private float _rawPositionTop;
 
         private float _marginLeft;
         private float _marginTop;
@@ -108,13 +110,22 @@ namespace Facebook.Yoga
             _ => _positionBottom,
         };
 
+        internal float RawLeft => _rawPositionLeft;
+        internal float RawTop => _rawPositionTop;
+
+        internal void SetRoundedPosition(float left, float top)
+        {
+            _positionLeft = left;
+            _positionTop = top;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetPosition(PhysicalEdge physicalEdge, float value)
         {
             switch (physicalEdge)
             {
-                case PhysicalEdge.Left: _positionLeft = value; break;
-                case PhysicalEdge.Top: _positionTop = value; break;
+                case PhysicalEdge.Left: _rawPositionLeft = _positionLeft = value; break;
+                case PhysicalEdge.Top: _rawPositionTop = _positionTop = value; break;
                 case PhysicalEdge.Right: _positionRight = value; break;
                 default: _positionBottom = value; break;
             }
@@ -206,6 +217,8 @@ namespace Facebook.Yoga
                 _positionTop = _positionTop,
                 _positionRight = _positionRight,
                 _positionBottom = _positionBottom,
+                _rawPositionLeft = _rawPositionLeft,
+                _rawPositionTop = _rawPositionTop,
                 _marginLeft = _marginLeft,
                 _marginTop = _marginTop,
                 _marginRight = _marginRight,
