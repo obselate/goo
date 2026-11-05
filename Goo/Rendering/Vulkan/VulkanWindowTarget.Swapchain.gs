@@ -181,6 +181,7 @@ internal unsafe partial class VulkanWindowTarget {
         windowObjectAccounting,
         policy.OffscreenLayerInitialCapacity,
         policy.OffscreenLayerHardBytes,
+        layerRuntime.Facts.MaxImageDimension2D,
         diagnostics)
     }
     primitiveRenderer!!.SetLayerPool(layerPool)

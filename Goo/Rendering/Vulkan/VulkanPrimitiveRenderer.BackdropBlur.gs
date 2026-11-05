@@ -169,7 +169,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
             throw InvalidOperationException("Vulkan layer pool is unavailable")
         }
         guard let target = destination ?? pool.Acquire(extent.width, extent.height, completedLayerSerial,
-            allowOversized: true) else { return nil }
+            allowBucketAllocation: true) else { return nil }
         try {
             target.TransitionToColorAttachment(commandBuffer)
             BeginLayerRendering(commandBuffer, extent, target.ImageView, false)
