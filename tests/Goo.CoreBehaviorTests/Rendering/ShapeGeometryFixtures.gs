@@ -330,10 +330,17 @@ internal class ShapeGeometryFixtures {
   func EqualPathsAllocateNoMemory() bool {
     let nan = VectorPathCommand{ X1: Double.NaN }
     let same = VectorPathCommand{ X1: Double.NaN, Y1: -0.0 }
-    if !nan.Equals(same) || nan.GetHashCode() != same.GetHashCode()
-      || nan.Equals(VectorPathCommand{ X1: Double.NaN, LargeArc: true })
-      || nan.Equals(VectorPathCommand{ X1: Double.NaN, Kind: VectorPathCommandKind.Close }) {
-      return false
+    if !nan.Equals(same) {
+      throw InvalidOperationException("Path command equality must treat NaN and signed zero as equal")
+    }
+    if nan.GetHashCode() != same.GetHashCode() {
+      throw InvalidOperationException("Equal path commands must have equal hashes")
+    }
+    if nan.Equals(VectorPathCommand{ X1: Double.NaN, LargeArc: true }) {
+      throw InvalidOperationException("Path command equality must compare LargeArc")
+    }
+    if nan.Equals(VectorPathCommand{ X1: Double.NaN, Kind: VectorPathCommandKind.Close }) {
+      throw InvalidOperationException("Path command equality must compare Kind")
     }
     let left = PathBuilder(0.0, 0.0, 128.0, 256.0)
     let right = PathBuilder(0.0, 0.0, 128.0, 256.0)
@@ -346,13 +353,28 @@ internal class ShapeGeometryFixtures {
     let a = left.Build()
     let b = right.Build()
     for index in 0 ... 100 {
-      if !a.Equals(b) { return false }
+      if !a.Equals(b) { throw InvalidOperationException("Equal paths differ during warmup at iteration $index") }
     }
-    let before = GC.GetAllocatedBytesForCurrentThread()
-    for index in 0 ... 1000 {
-      if !a.Equals(b) { return false }
+    if !GC.TryStartNoGCRegion(16777216L) {
+      throw InvalidOperationException("Could not isolate path equality from GC allocation-context accounting")
     }
-    return GC.GetAllocatedBytesForCurrentThread() == before
+    var allocated int64
+    var unequal = -1
+    try {
+      let before = GC.GetAllocatedBytesForCurrentThread()
+      for index in 0 ... 1000 {
+        if !a.Equals(b) {
+          unequal = index
+          break
+        }
+      }
+      allocated = GC.GetAllocatedBytesForCurrentThread() - before
+    } finally {
+      GC.EndNoGCRegion()
+    }
+    if unequal >= 0 { throw InvalidOperationException("Equal paths differ at measured iteration $unequal") }
+    if allocated != 0 { throw InvalidOperationException("Path equality allocated $allocated bytes. Expected zero") }
+    return true
   }
 
   func OpenContoursUseImplicitFillClosure() bool {

@@ -87,11 +87,14 @@ internal class MotionPump {
   private var clearVersion int64
   private var logicalCount int32
   private var nextGeneration int64
+  private var wallNow float64
+  internal let Owner Window?
 
   internal prop Wake(() -> void)? { get; set; }
   internal prop PaintWake Action? { get; set; }
 
-  internal init() {
+  internal init(owner Window? = nil) {
+    Owner = owner
     clock = MotionClock()
     active = List[MotionPumpEntry]()
     deferred = List[MotionPumpEntry]()
@@ -99,11 +102,22 @@ internal class MotionPump {
   }
 
   internal prop Now float64{ get -> clock.Now }
+  internal prop WallNow float64 { get -> wallNow }
   internal prop ClearVersion int64{ get -> clearVersion }
   internal var ReducedMotion bool
 
-  // True while any animation is still running.
-  internal prop Active bool{ get -> logicalCount > 0 }
+  internal prop Active bool {
+    get {
+      if logicalCount == 0 { return false }
+      for entry in active {
+        if isValid(entry) && entry.Particle.RequestsFrame() { return true }
+      }
+      for entry in deferred {
+        if isValid(entry) && entry.Particle.RequestsFrame() { return true }
+      }
+      return false
+    }
+  }
 
   internal func Register(p MotionParticle) {
     if p.registrationPump == this && p.registrationGeneration != 0 {
@@ -117,7 +131,7 @@ internal class MotionPump {
     p.registrationPump = this
     p.registrationGeneration = generation
     let entry = MotionPumpEntry{ Particle: p, Generation: generation }
-    let wasEmpty = logicalCount == 0
+    let wasEmpty = !Active
     logicalCount++
     if sweeping {
       deferred.Add(entry)
@@ -146,13 +160,19 @@ internal class MotionPump {
     }
   }
 
-  internal func Sweep(dt float64) {
+  internal func Sweep(dt float64) { Sweep(dt, dt) }
+
+  internal func Sweep(dt float64, wallDt float64) {
     if sweeping || dispatching {
       throw InvalidOperationException("MotionPump.Sweep cannot be reentered")
     }
     if !motionFinite(dt) || dt < 0.0 {
       throw ArgumentOutOfRangeException("dt")
     }
+    if !motionFinite(wallDt) || wallDt < 0.0 {
+      throw ArgumentOutOfRangeException("wallDt")
+    }
+    wallNow += wallDt
     clock.Advance(dt)
     let now = clock.Now
     let originalCount = active.Count
@@ -164,6 +184,12 @@ internal class MotionPump {
       while processed < originalCount {
         let entry = active[processed]
         if !isValid(entry) {
+          processed++
+          continue
+        }
+        if !entry.Particle.RequestsFrame() {
+          active[retained] = entry
+          retained++
           processed++
           continue
         }
@@ -290,4 +316,20 @@ internal class MotionPump {
         }
     }
   }
+}
+
+internal func motionNodeVisible(node Node?, window Window?) bool {
+  guard let n = node, let host = window else { return true }
+  if n.Retired || host.IsOpen && !host.IsVisible { return false }
+  var current Node? = n
+  while let ancestor = current {
+    if ancestor.PaintInputHidden { return false }
+    current = ancestor.Parent
+  }
+  if n.Yoga == nil { return true }
+  let bounds = TransformGeometry.BoundsToWindow(n)
+  return TransformGeometry.VisibleBoundsToWindow(n,
+    ElementRect{ X: float64(bounds.X), Y: float64(bounds.Y),
+      Width: float64(bounds.W), Height: float64(bounds.H) },
+    float64(host.LayoutWidth), float64(host.LayoutHeight)) != nil
 }

@@ -79,13 +79,16 @@ namespace Facebook.Yoga
             if (pointScaleFactor != 0.0)
             {
                 bool textRounding = node.GetNodeType() == NodeType.Text;
+                bool parentTextRounding = node.GetOwner()?.GetNodeType() == NodeType.Text;
 
                 node.SetLayoutPosition(
-                    RoundValueToPixelGrid(nodeLeft, pointScaleFactor, false, textRounding),
+                    (float)(RoundValueToPixelGridDouble(absoluteNodeLeft, pointScaleFactor, false, textRounding) -
+                        RoundValueToPixelGridDouble(absoluteLeft, pointScaleFactor, false, parentTextRounding)),
                     PhysicalEdge.Left);
 
                 node.SetLayoutPosition(
-                    RoundValueToPixelGrid(nodeTop, pointScaleFactor, false, textRounding),
+                    (float)(RoundValueToPixelGridDouble(absoluteNodeTop, pointScaleFactor, false, textRounding) -
+                        RoundValueToPixelGridDouble(absoluteTop, pointScaleFactor, false, parentTextRounding)),
                     PhysicalEdge.Top);
 
                 double scaledNodeWith = nodeWidth * pointScaleFactor;

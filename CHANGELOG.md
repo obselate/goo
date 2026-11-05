@@ -1,5 +1,43 @@
 # Changelog
 
+
+## 0.28.1 - 2026-11-05
+
+0.28.0 was not published.
+
+### Fixed
+
+- Skip fully clipped infinite animations without losing their clock phase. Keep finite animation ticks and completion unchanged.
+- Prevent false horizontal scrollbars at fractional display scales.
+- Isolate the zero-allocation path equality fixture from background GC accounting and report each equality or allocation failure separately.
+
+## 0.28.0 - 2026-11-05
+
+### Added
+
+- Add `Portal.HideWhenAnchorClipped` to hide clipped anchored overlays without unmounting their content or losing focus and text composition.
+- Add `Blob.FocusTarget`, `ElementHandle.SetFocusTarget` and `IsFocusVisible` for composite focus visuals without moving keyboard or accessibility focus.
+
+### Changed
+
+- Allocate Vulkan scene-owner text and box cache storage only when used.
+- Build all Goo packages, templates and generated consumers with G# SDK 0.5.212.
+- Update the linter syntax node and remove redundant nullable operations for the new compiler.
+- Update Microsoft.NET.Test.Sdk to 18.11.0, Unicode.Bidi to 0.4.0, Tmds.DBus.Protocol to 0.95.2 and ModelContextProtocol to 2.3.1.
+- Reduce default node storage by allocating editing, shape, pointer and portal data only when used.
+- Allocate Yoga grid track lists only when grid state is accessed.
+- Allocate Yoga style value buffers only when an indexed value is stored.
+- Avoid allocating a default child list when Container or Button receives a child list during initialization.
+- Draw large opaque solid interiors without distance coverage or blending. Keep the existing antialiasing at the edges.
+- Precompute embedded shader digests during the build so basic applications do not initialize cryptographic libraries just to name the pipeline cache or prepare built-in effects. Existing shader and cache identities are unchanged.
+- Reuse bounded offscreen layers in extent buckets during window resize without changing settled image quality.
+- Collect pending release notes in per-PR changelog fragments and join them during release preparation.
+
+### Fixed
+
+- Keep the DevTools pipe listener alive while clients disconnect so queued input and snapshot connections are not reset. (#583)
+- Size anchored Portals to the available space on their selected side instead of shifting them over the anchor. Keep cross-axis containment.
+- Prevent false horizontal scrollbars at fractional display scales.
 ## 0.27.11 - 2026-11-05
 
 - Map system and file-source fonts read-only. Share mappings by native file identity and reuse live leased typefaces. Keep defensive copies for public byte-array inputs. (#553, #562)

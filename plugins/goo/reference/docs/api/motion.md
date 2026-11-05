@@ -29,6 +29,9 @@ class Fade : Cell {
 - Rebuilding with the same Anim keeps the binding. Removing the slot or disposing its Anim restores the latest declaration under normal transition rules. Completion and pause keep the value bound.
 - An Anim and its target must belong to the same window. Removing the target releases the binding, not the Anim. `Set` and `Snap` request a frame while bound.
 - Reduced motion uses the Anim's normal settlement. Custom `Simulation` values, including Goo.Animations specifications, use the same slots.
+- Override `Simulation.IsInfinite` to return true for a looping simulation. Infinite animations skip ticks when every bound element is fully clipped or outside the viewport, or the window is hidden or minimized.
+- Infinite animations use the animation clock, so they resume at the current phase when visible. An infinite `AnimateValue` without paint bindings requests no frames. Other unbound animations use their owning Cell's mounted element.
+- `IsInfinite` defaults to false. Finite animations, mixed finite/infinite animations and unmarked custom simulations keep ticking and deliver completion as before.
 
 ## `Anim<T>`
 
@@ -252,3 +255,7 @@ Gets the rate of change of progress at the specified elapsed time.
 - `elapsed`: seconds since the simulation began
 
 Returns: the velocity at elapsed
+
+### `IsInfinite`
+
+Gets whether this simulation runs indefinitely. The default is false. An animation with only infinite simulations skips ticks while its node is fully clipped or its window is hidden, then resumes at the current clock phase.

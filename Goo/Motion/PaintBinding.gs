@@ -21,6 +21,10 @@ internal class PaintBinding {
     get -> number?.IsDisposed == true || colour?.IsDisposed == true || translation?.IsDisposed == true
   }
 
+  internal prop RequestsFrame bool {
+    get -> (number?.Handle ?? colour?.Handle ?? translation?.Handle)?.RequestsFrame() != false
+  }
+
   internal func Same(other PaintBinding?) bool -> other != nil
     && number == other?.number && colour == other?.colour && translation == other?.translation
 
@@ -30,16 +34,16 @@ internal class PaintBinding {
     }
   }
 
-  internal func Bind(pump MotionPump) {
-    number?.BindPaint(pump)
-    colour?.BindPaint(pump)
-    translation?.BindPaint(pump)
+  internal func Bind(pump MotionPump, node Node) {
+    number?.BindPaint(pump, node)
+    colour?.BindPaint(pump, node)
+    translation?.BindPaint(pump, node)
   }
 
-  internal func Unbind() {
-    number?.UnbindPaint()
-    colour?.UnbindPaint()
-    translation?.UnbindPaint()
+  internal func Unbind(node Node) {
+    number?.UnbindPaint(node)
+    colour?.UnbindPaint(node)
+    translation?.UnbindPaint(node)
   }
 
   internal func Read(field StyleField) StyleEntry {
@@ -92,7 +96,7 @@ internal partial class Resolver {
           paintWinners[int32(field)] = nil
           mask = styleMaskWith(mask, field)
         } else {
-          current.Unbind()
+          current.Unbind(n)
           bindings.RemoveAt(i - 1)
         }
       }
@@ -105,7 +109,7 @@ internal partial class Resolver {
         n.PaintBindingResolver = this
         paintNodes.Add(n)
       }
-      binding.Bind(owner.PaintMotionPump)
+      binding.Bind(owner.PaintMotionPump, n)
       n.PaintBindings?.Add(binding)
       mask = styleMaskWith(mask, StyleField(i))
     }
@@ -115,7 +119,7 @@ internal partial class Resolver {
 
   internal func ForgetPaintBindings(n Node) {
     if let bindings = n.PaintBindings {
-      for binding in bindings { binding.Unbind() }
+      for binding in bindings { binding.Unbind(n) }
     }
     n.PaintBindings = nil
     n.PaintBindingResolver = nil
@@ -138,6 +142,7 @@ internal partial class Resolver {
         Invalidate(n, false)
         continue
       }
+      if !binding.RequestsFrame { continue }
       let field = styleFieldForNode(n, binding.Field)
       finishTransition(n, field)
       if writeDirectWithInvalidation(n, binding.Read(field), PaintResourceInvalidated, Owner) {

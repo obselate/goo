@@ -4,6 +4,11 @@ package Goo
 /// every override is a pure function of elapsed seconds, so evaluation is
 /// idempotent and safe to repeat within a frame.
 public open class Simulation {
+  /// Gets whether this simulation runs indefinitely. The default is false.
+  /// An animation with only infinite simulations skips ticks while its node is fully
+  /// clipped or its window is hidden, then resumes at the current clock phase.
+  public open prop IsInfinite bool { get -> false }
+
   /// Gets the scalar coordinate at the specified elapsed time.
   /// @param elapsed seconds since the simulation began
   /// @returns the coordinate value at elapsed

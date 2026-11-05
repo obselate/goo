@@ -72,6 +72,7 @@ class FixtureContractTests {
     shared {
         func Cases() sequence[[]object] {
             yield Contract[ApplicationActivationFixtures]("ProcessQueueOwnsStartupAndForwardedData")
+            yield Contract[TreeFixtures]("NodeMountLifetimeContract")
             yield Contract[ElementHandleFixtures]("FocusProjectionContract")
             yield Contract[ElementHandleFixtures]("FocusProjectionVirtualizationContract")
             yield Contract[WindowOcclusionFixtures]("HostTransitionsNotifyOnUiThread")
@@ -255,6 +256,7 @@ class FixtureContractTests {
             yield Contract[LayoutFixtures]("ComposedTreeMapsDeclarationsAndRelayouts")
             yield Contract[LayoutFixtures]("CustomMeasurementsPreserveLogicalSizes")
             yield Contract[LayoutFixtures]("PixelSnappingPreservesDistantItemSizes")
+            yield Contract[LayoutFixtures]("PixelSnappingPreservesScrollExtent")
             yield Contract[LayoutFixtures]("KeyedReorderRetainsYogaLayouts")
             yield Contract[LayoutFixtures]("LayoutIsStableAcrossRoots")
             yield Contract[LayoutFixtures]("LayoutTransitionGlidesComputedPosition")
@@ -275,6 +277,9 @@ class FixtureContractTests {
             yield Contract[PaintBindingFixtures]("PaintSlotsWakeDisposeAndRetireContract")
             yield Contract[PaintBindingFixtures]("PaintSlotsRejectOtherWindowsAndPropagateColorContract")
             yield Contract[PaintBindingFixtures]("PaintSlotsAcceptCustomSimulationContract")
+            yield Contract[PaintBindingFixtures]("InfinitePaintSkipsClippedTicksAndResumesPhaseContract")
+            yield Contract[PaintBindingFixtures]("InfinitePaintKeepsSharedVisibleTargetContract")
+            yield Contract[PaintBindingFixtures]("ClippedFiniteAndUnmarkedSimulationsKeepTickingContract")
             yield Contract[MotionFixtures]("CompletionChainsAfterCompactionContract")
             yield Contract[MotionFixtures]("CompletionCanCloseOwningWindowContract")
             yield Contract[MotionFixtures]("CompletionFailureDrainsBatchAndAllowsReuseContract")

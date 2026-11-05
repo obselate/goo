@@ -22,6 +22,7 @@ internal class Node {
   private var nodeState int32
   private var lifecycleState uint16
   private var scenePaintVersion uint64
+  private var mountGeneration uint64 = 1uL
   private var rect Rect
   private var parent Node?
   private var focused bool
@@ -59,6 +60,17 @@ internal class Node {
   }
 
   internal prop ScenePaintVersion uint64{ get -> scenePaintVersion }
+  internal prop MountGeneration uint64{ get -> mountGeneration }
+
+  internal func TryBeginRebind() bool {
+    if !Retired { throw InvalidOperationException("Node storage must be retired before rebinding") }
+    if mountGeneration == uint64.MaxValue { return false }
+    MarkSceneDirty()
+    mountGeneration++
+    lifecycleState = lifecycleState & ~uint16(4)
+    return true
+  }
+
   internal var VulkanOwnerToken object?
   internal var VulkanOwner VulkanSceneOwnerId?
   internal var PaintBindings List[PaintBinding]?
