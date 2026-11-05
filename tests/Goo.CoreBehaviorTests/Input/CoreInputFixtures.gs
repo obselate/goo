@@ -426,6 +426,36 @@ internal class InputFixtures {
     return input.NextTickDeadlineSeconds(0.0) >= 0.99
   }
 
+  func PreventedHeldKeyRepeatsUntilReleased() bool {
+    var presses int32
+    var repeats int32
+    var defaults int32
+    let root = Reconciler{ Res: Resolver{} }.Mount(Container{
+      Focusable: true,
+      OnKeyDown: (event KeyEvent) -> {
+        presses++
+        if event.Repeat { repeats++ }
+        event.PreventDefault()
+      },
+      KeyBindings: []KeyBinding{
+        KeyBinding{Key: Key.Down, Repeat: true, Action: () -> { defaults++ }},
+      },
+    })
+    let resolver = Resolver{}
+    let input = InputCoordinator()
+    if !input.FocusElement(resolver, root) { return false }
+    input.QueueKeyPress(Key.Down, KeyModifiers{})
+    input.Drain(root, resolver, 0.0, nil)
+    for tick in 0 ... 100 { input.Step(root, resolver, 0.01) }
+    input.QueueKeyRelease(Key.Down)
+    input.Drain(root, resolver, 0.0, nil)
+    let heldPresses = presses
+    input.Step(root, resolver, 1.0)
+    Console.WriteLine("prevented Down hold: presses=${presses} repeats=${repeats} defaults=${defaults}")
+    return presses == 17 && repeats == 16 && defaults == 0 && presses == heldPresses
+      && input.NextTickDeadlineSeconds() >= 0.99
+  }
+
   func SyntheticHeldBindingSurvivesAutoFocusRebuild() bool {
     let cell = InputSyntheticRepeatCell{}
     let driver = InputFixtureDriver(cell, 100, 30)

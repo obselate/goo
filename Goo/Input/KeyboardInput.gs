@@ -337,6 +337,8 @@ internal class KeyboardInput {
         }
         if control.DefaultPrevented {
           result.SuppressTextInput = down
+          result.Repeat = down && !compositionActive && focusGeneration == focus.Generation
+            && canReceiveInput(start)
           return result
         }
         if focusGeneration != focus.Generation || !canReceiveInput(start) {

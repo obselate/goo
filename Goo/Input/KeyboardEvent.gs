@@ -22,6 +22,7 @@ public struct KeyEvent {
   }
 
   /// Prevents assigned key bindings and direct committed text without stopping ancestor callbacks.
+  /// Key down callbacks still repeat while the key is held.
   public func PreventDefault() {
     if let control = Control { control.Prevent(Generation) }
   }
