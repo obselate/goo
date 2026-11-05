@@ -6,6 +6,73 @@ import System.Collections.Generic
 import Xunit
 
 class ExplicitKeyBindingTests {
+    @Theory
+    @InlineData(false, false)
+    @InlineData(true, false)
+    @InlineData(false, true)
+    @InlineData(true, true)
+    func ClipboardFailuresPreserveSelectionAndInput(editor bool, native bool) {
+        using let controller = TextEditorController(TextDocument("keep"))
+        using let host = FailingClipboardHost()
+        let handle = ElementHandle()
+        let primary = KeyModifiers{Ctrl: !InputPolicy.Mac, Super: InputPolicy.Mac}
+        let window = Window{
+            Width: 320,
+            Height: 120,
+            Root: ExplicitKeyBindingTests.BuildCell(() -> if editor {
+                cast[Blob](TextEditor(controller){Handle = handle})
+            } else {
+                cast[Blob](TextEntry{Value: "keep", Handle: handle})
+            })
+        }
+        try {
+            if native { window.Open() }
+            else {
+                host.Resize(320, 120, 320, 120)
+                window.Attach(host)
+            }
+            window.UpdateTree()
+            Assert.True(handle.Focus())
+            let input = window.PlatformInput
+            Assert.True(input.SetSelection(4, 0))
+            var writable = false
+            if native {
+                try {
+                    window.SetClipboardText("keep")
+                    writable = true
+                } catch (error InvalidOperationException) {
+                    Assert.DoesNotContain("zwp_text_input_v3", error.Message)
+                }
+            }
+            let commands = List[TextCommandKind]()
+            controller.OnCommand = (e TextCommandEvent) -> commands.Add(e.Command.Kind)
+            for key in []Key{Key.C, Key.X, Key.V} {
+                ExplicitKeyBindingTests.Press(input, key, primary)
+                Assert.True(window.IsOpen)
+                if key == Key.C || !writable {
+                    Assert.Equal("keep", input.Editor!!.Text)
+                    Assert.Equal(0, input.Editor!!.SelectionStart)
+                    Assert.Equal(4, input.Editor!!.SelectionEnd)
+                } else {
+                    Assert.Equal(if key == Key.X { "" } else { "keep" }, input.Editor!!.Text)
+                }
+            }
+            if editor {
+                Assert.Equal([]TextCommandKind{TextCommandKind.Copy, TextCommandKind.Cut, TextCommandKind.Paste}, commands)
+            }
+            if !native {
+                Assert.Equal(2, host.Writes)
+                Assert.Equal(1, host.Reads)
+                Assert.False(input.Execute(TextCommand{Kind: TextCommandKind.Undo}))
+            }
+            input.CommitText("active")
+            Assert.Equal(if writable { "keepactive" } else { "active" }, input.Editor!!.Text)
+            if native { Console.WriteLine("Native clipboard copy, cut and paste passed, writable=" + writable.ToString()) }
+        } finally {
+            window.Close()
+        }
+    }
+
     @Fact
     func PublicPastePreservesInterceptionCompositionAndUndo() {
         using let controller = TextEditorController(TextDocument(""))
@@ -1012,6 +1079,26 @@ class ExplicitKeyBindingTests {
         }})
         return result.ToArray()
     }
+    }
+
+    private class FailingClipboardHost : EmbeddedWindowHost {
+        internal var Writes int32
+        internal var Reads int32
+        protected override func GetClipboardText() string {
+            Reads++
+            throw InvalidOperationException("Clipboard read unavailable")
+        }
+        protected override func SetClipboardText(value string) {
+            Writes++
+            throw InvalidOperationException("Clipboard write unavailable")
+        }
+        protected override func RequestFrame() { }
+        protected override func LoadVulkanLibrary() bool -> throw NotSupportedException()
+        protected override func GetVulkanGetInstanceProcAddr() nint -> throw NotSupportedException()
+        protected override func UnloadVulkanLibrary() -> throw NotSupportedException()
+        protected override func GetVulkanInstanceExtensions() []string -> throw NotSupportedException()
+        protected override func CreateVulkanSurface(instance nint, out surface uint64) bool -> throw NotSupportedException()
+        protected override func DestroyVulkanSurface(instance nint, surface uint64) -> throw NotSupportedException()
     }
 
     private class BuildCell(build() -> Blob) : Cell {
