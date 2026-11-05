@@ -94,11 +94,14 @@ Wayland does not expose global window positions, so clients should use
 window-relative geometry.
 
 `Accessibility.PositionInSet` is the zero-based logical item index.
-`SizeOfSet` belongs on the collection container and counts all logical items,
-including those outside the realized viewport. `Virtual` supplies list and list-item
-semantics, and takes this metadata from `VirtualItem.Index` and `VirtualOutput.ItemCount`.
+`SizeOfSet` counts all logical items in a collection or an item's set, including
+items outside the realized viewport. `Virtual` supplies the position and count
+from `VirtualItem.Index` and `VirtualOutput.ItemCount`. Explicit values take precedence.
 Give `Virtual` another role, or set its `Accessibility` to nil, when the content supplies
-the item semantics. Its items then have no role, and the content of each item gets the position.
+the item semantics. Its content then receives the position and count.
+AccessKit uses zero-based item and grid indices. Goo converts its one-based `Level`
+at that bridge. UIA and AT-SPI read set counts from the collection container.
+Per-level item counts in a flat tree are not exposed by the desktop adapters.
 
 Use `Separator` for dividers, including focusable splitters with `Range` and value actions.
 `TabPanel`, `Toolbar` and `Tooltip` map to their native roles.
@@ -172,7 +175,7 @@ Gets whether the item is invalid when explicitly specified.
 
 ### `Level`
 
-Gets the heading level when explicitly specified.
+Gets the one-based heading level when explicitly specified.
 
 ### `Live`
 
@@ -240,7 +243,7 @@ Gets whether the item is selected when explicitly specified.
 
 ### `SizeOfSet`
 
-Gets the logical item count on a collection container, including unrealized items.
+Gets the logical item count for a collection or an item, including unrealized items. Desktop adapters use the collection count. Per-level item counts in a flat tree are not exposed.
 
 ### `Value`
 
@@ -473,7 +476,7 @@ Gets whether exposed text represents a protected password value.
 
 ### `Level`
 
-Gets the resolved heading level.
+Gets the resolved one-based heading level.
 
 ### `Live`
 
@@ -545,7 +548,7 @@ Gets the UTF-16 selection start in the exposed semantic value, when this node ha
 
 ### `SizeOfSet`
 
-Gets the total logical item count on a collection container.
+Gets the total logical item count for a collection or an item. Desktop adapters use the collection count. Per-level item counts in a flat tree are not exposed.
 
 ### `TextSnapshot`
 

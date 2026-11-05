@@ -596,6 +596,8 @@ public partial class Window {
     }
     if !needed { return ReconcileEffects.None }
 
+    let profiling = profiler.Active
+    let reconcileProfile = profiling ? profiler.Start() : FrameProfilePoint{}
     let rec = Reconciler{
       Owner: this,
       CellInvalidated: cellHook,
@@ -603,7 +605,7 @@ public partial class Window {
       RetainedInvalidated: retainedInvalidationHook,
       Res: resolver,
       ChildScratch: childDiffScratch,
-      Profiler: profiler.Active ? profiler : nil,
+      Profiler: profiling ? profiler : nil,
       DeferStyleFlush: true,
       Pump: motionPump,
     }
@@ -614,9 +616,20 @@ public partial class Window {
       }
       rec.FlushStyles()
       stylesFlushed = true
+      if profiling {
+        profiler.RecordReconcileSplit(
+          reconcileProfile,
+          rec.ProfileBuildTicks,
+          rec.ProfileBuildBytes,
+          rec.ProfileBuildCalls,
+          rec.ProfileResolveTicks,
+          rec.ProfileResolveBytes,
+          rec.ProfileResolveCalls,)
+      }
       return rec.Effects
     } finally {
       if !stylesFlushed {
+          if profiling { profiler.Record(FrameProfileStage.Reconcile, reconcileProfile, -1) }
           pendingReconcileEffects = combineEffects(pendingReconcileEffects, rec.Effects)
           rec.DiscardStyles()
         }

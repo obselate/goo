@@ -261,7 +261,7 @@ internal class AccessibilityManager {
           declaration?.Live ?? AccessibilityLive.Off, declaration?.Atomic, n.Focused,
           ElementHandles.BorderBox(n), resolvedActionMask(n, role, disabled, declaration),
           declaration?.PositionInSet ?? Virtualization.Position(n),
-          declaration?.SizeOfSet ?? Virtualization.State(n)?.ItemCount(),
+          declaration?.SizeOfSet ?? Virtualization.ItemCount(n),
           n.Kind == NodeKind.Entry && n.Password, visibleBounds(n), scrollInfo(n),
           declaration?.RowIndex, declaration?.ColumnIndex, declaration?.RowCount, declaration?.ColumnCount) {
             rebuildingChanged = true

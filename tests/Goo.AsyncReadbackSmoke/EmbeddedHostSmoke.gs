@@ -43,6 +43,7 @@ internal open class EmbeddedSmokeHost : EmbeddedWindowHost {
   private var native SdlHost?
   internal var Creates int32
   internal var Destroys int32
+  internal var ReleaseQueueOnWake bool
   private var serviceableSubmissionWakes int32
 
   internal prop ServiceableSubmissionWakes int32{
@@ -60,6 +61,10 @@ internal open class EmbeddedSmokeHost : EmbeddedWindowHost {
     native = nil
   }
   protected override func RequestFrame() {
+    if ReleaseQueueOnWake {
+      ReleaseQueueOnWake = false
+      WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
+    }
     if Window?.CaptureTargetForTest()?.EmbeddedSubmitCompletionServiceReadyForTest == true {
       Interlocked.Increment(ref serviceableSubmissionWakes)
     }
@@ -343,6 +348,41 @@ internal class EmbeddedHostSmoke {
         }
       }
 
+    private func VerifySharedQueueDetach() {
+      let host = EmbeddedSmokeHost()
+      let otherHost = EmbeddedSmokeHost()
+      let window = Window{Root: EmbeddedSmokeCell()}
+      let otherWindow = Window{Root: EmbeddedSmokeCell()}
+      try {
+        for nativeHost in []EmbeddedSmokeHost{host, otherHost} {
+          nativeHost.Resize(64, 64, 64, 64)
+          nativeHost.CreateNative()
+        }
+        window.Attach(host)
+        host.AttachPresentation()
+        Settle(host)
+        otherWindow.Attach(otherHost)
+        otherHost.AttachPresentation()
+        Settle(otherHost)
+        WindowReadbackTestFixture.RuntimeHoldNextQueueSubmit(otherWindow)
+        WindowReadbackTestFixture.ForceRenderNonblocking(otherWindow, 0.0)
+        Require(WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(otherWindow, 2000),
+          "Shared queue did not reach held submission")
+        host.ReleaseQueueOnWake = true
+        host.DetachPresentation()
+        Require(!host.ReleaseQueueOnWake && host.Destroys == 1
+            && !host.IsPresentationAttached && otherHost.IsPresentationAttached,
+          "Embedded detach did not drain shared queue work before disposal")
+        Settle(otherHost)
+      } finally {
+        WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
+        host.Dispose()
+        otherHost.Dispose()
+        host.DestroyNative()
+        otherHost.DestroyNative()
+      }
+    }
+
     internal func Run() {
       let unmountedRoot = EmbeddedSmokeCell()
       using let unmountedHost = EmbeddedSmokeHost()
@@ -353,6 +393,7 @@ internal class EmbeddedHostSmoke {
         "Host disposal before the first frame did not dispose the root exactly once")
       VerifyPreferences()
       VerifyIdleRestart()
+      VerifySharedQueueDetach()
       let host = EmbeddedSmokeHost()
       let root = EmbeddedSmokeCell()
       let window = Window{ Root: root }

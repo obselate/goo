@@ -16,7 +16,7 @@ internal unsafe sealed partial class VulkanTextScene {
   private let glyphs Dictionary[VulkanTextAtlasGlyphKey, VulkanTextAtlasGlyph]
   private let glyphWorkspace VulkanTextProviderWorkspace
   private let buildWorkspace VulkanTextSegmentBuildWorkspace
-  private let effectGlyphWorkspace VulkanTextProviderWorkspace
+  private var effectGlyphWorkspace VulkanTextProviderWorkspace?
   private let entryMetrics TextMetrics
   private let activeAtlasUse []bool
   private let nodeSegments ConditionalWeakTable[Node, VulkanTextNodeSegmentCache]
@@ -75,7 +75,6 @@ internal unsafe sealed partial class VulkanTextScene {
       throw ArgumentOutOfRangeException("nativeAtlases")
     }
     glyphWorkspace = VulkanTextProviderWorkspace([int32(atlasBytes)]uint8)
-    effectGlyphWorkspace = VulkanTextProviderWorkspace([int32(atlasBytes)]uint8)
     buildWorkspace = VulkanTextSegmentBuildWorkspace(4)
     entryMetrics = TextMetrics()
     EnsureAtlasStates()
