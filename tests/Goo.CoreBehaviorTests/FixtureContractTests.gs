@@ -467,6 +467,7 @@ class FixtureContractTests {
             yield Contract[TreeFixtures]("ButtonSemanticPrimitiveContract")
             yield Contract[VulkanQueueWorkerFixtures]("WakeFailureDrainsFollowingMailboxAndQuiesces")
             yield Contract[VulkanSceneCompilerFixtures]("OwnerIdentitySurvivesCompilerHandoff")
+            yield Contract[VulkanSceneCompilerFixtures]("ReboundMountGetsFreshCompilerOwners")
             yield Contract[VulkanSceneCompilerFixtures]("OpaqueViewportRootSkipsCoveredBackground")
         }
 

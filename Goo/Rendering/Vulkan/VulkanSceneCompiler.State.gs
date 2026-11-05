@@ -17,11 +17,11 @@ internal partial class VulkanSceneCompiler {
   private const PathHashPrime uint64 = 1099511628211uL
 
   private let frame SceneFrame
-  private let owners ConditionalWeakTable[Node, VulkanSceneOwnerId]
+  private let owners ConditionalWeakTable[VulkanSceneOwnerId, VulkanSceneOwnerId]
   private let ownerToken object
-  private let roundedOverflowPaths ConditionalWeakTable[Node,
+  private let roundedOverflowPaths ConditionalWeakTable[VulkanSceneOwnerId,
     VulkanRoundedOverflowPathCacheEntry]
-  private let backdropBlurPaths ConditionalWeakTable[Node,
+  private let backdropBlurPaths ConditionalWeakTable[VulkanSceneOwnerId,
     VulkanRoundedOverflowPathCacheEntry]
   private let unsupportedDetails []VulkanSceneUnsupportedDetail
   private var textScene VulkanTextScene?
@@ -63,10 +63,10 @@ internal partial class VulkanSceneCompiler {
     }
     frame = SceneFrame(capacity)
     InitializeRetention(capacity)
-    owners = ConditionalWeakTable[Node, VulkanSceneOwnerId]()
-    ownerToken = WeakReference[ConditionalWeakTable[Node, VulkanSceneOwnerId]](owners)
-    roundedOverflowPaths = ConditionalWeakTable[Node, VulkanRoundedOverflowPathCacheEntry]()
-    backdropBlurPaths = ConditionalWeakTable[Node, VulkanRoundedOverflowPathCacheEntry]()
+    owners = ConditionalWeakTable[VulkanSceneOwnerId, VulkanSceneOwnerId]()
+    ownerToken = WeakReference[ConditionalWeakTable[VulkanSceneOwnerId, VulkanSceneOwnerId]](owners)
+    roundedOverflowPaths = ConditionalWeakTable[VulkanSceneOwnerId, VulkanRoundedOverflowPathCacheEntry]()
+    backdropBlurPaths = ConditionalWeakTable[VulkanSceneOwnerId, VulkanRoundedOverflowPathCacheEntry]()
     unsupportedDetails = [capacity]VulkanSceneUnsupportedDetail
     nextOwnerId = FirstNodeOwnerId
     blendModeSupported = true

@@ -7,16 +7,22 @@ import System.Runtime.CompilerServices
 internal partial class VulkanSceneCompiler {
   private func Owner(node Node) VulkanSceneOwnerId {
     if Object.ReferenceEquals(node.VulkanOwnerToken, ownerToken) {
-      if let cached = node.VulkanOwner { return cached }
+      if let cached = node.VulkanOwner && cached.Generation == node.MountGeneration {
+        return cached
+      }
     }
-    if let previous = node.VulkanOwnerToken as WeakReference[ConditionalWeakTable[Node, VulkanSceneOwnerId]] {
-      if let previousOwner = node.VulkanOwner {
+    var anchor VulkanSceneOwnerId?
+    if let previousOwner = node.VulkanOwner && previousOwner.Generation == node.MountGeneration {
+      let key = previousOwner.MountAnchor
+      anchor = key
+      if let previous = node.VulkanOwnerToken as WeakReference[ConditionalWeakTable[VulkanSceneOwnerId, VulkanSceneOwnerId]] {
         if previous.TryGetTarget(out var previousOwners) {
-          previousOwners.AddOrUpdate(node, previousOwner)
+          previousOwners.AddOrUpdate(key, previousOwner)
         }
       }
     }
-    if owners.TryGetValue(node, out var existing) {
+    if let key = anchor && owners.TryGetValue(key, out var existing)
+      && existing.Generation == node.MountGeneration {
       node.VulkanOwnerToken = ownerToken
       node.VulkanOwner = existing
       return existing
@@ -24,7 +30,7 @@ internal partial class VulkanSceneCompiler {
     if nextOwnerId >= BackdropBlurMaskBit {
       throw OverflowException("Vulkan scene owner id overflow")
     }
-    let value = VulkanSceneOwnerId(nextOwnerId)
+    let value = VulkanSceneOwnerId(nextOwnerId, node.MountGeneration, anchor)
     node.VulkanOwnerToken = ownerToken
     node.VulkanOwner = value
     nextOwnerId = nextOwnerId + 1uL

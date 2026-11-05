@@ -87,12 +87,15 @@ internal unsafe sealed partial class VulkanTextScene {
   }
 
   private func GetNodeSegmentCache(node Node, gutter bool = false) VulkanTextNodeSegmentCache {
+    guard let owner = node.VulkanOwner && owner.Generation == node.MountGeneration else {
+      throw InvalidOperationException("Vulkan text node has no current scene owner")
+    }
     let table = gutter ? gutterSegments : nodeSegments
-    if table.TryGetValue(node, out var existing) {
+    if table.TryGetValue(owner, out var existing) {
       return existing
     }
     let created = VulkanTextNodeSegmentCache()
-    table.Add(node, created)
+    table.Add(owner, created)
     return created
   }
 
