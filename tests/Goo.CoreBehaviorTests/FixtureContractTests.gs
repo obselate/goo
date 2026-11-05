@@ -72,6 +72,7 @@ class FixtureContractTests {
     shared {
         func Cases() sequence[[]object] {
             yield Contract[ApplicationActivationFixtures]("ProcessQueueOwnsStartupAndForwardedData")
+            yield Contract[TreeFixtures]("NodeMountLifetimeContract")
             yield Contract[ElementHandleFixtures]("FocusProjectionContract")
             yield Contract[ElementHandleFixtures]("FocusProjectionVirtualizationContract")
             yield Contract[WindowOcclusionFixtures]("HostTransitionsNotifyOnUiThread")
