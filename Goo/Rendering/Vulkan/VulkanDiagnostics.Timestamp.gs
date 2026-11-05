@@ -73,7 +73,7 @@ internal struct VulkanDiagnosticTimestampStageState {
 internal unsafe sealed class VulkanDiagnosticTimestampState {
   private const TimestampFrameSlotCount int32 = 2
   private const TimestampStageCount int32 = 7
-  private const TimestampScopesPerStage int32 = 16
+  private const TimestampScopesPerStage int32 = 64
   private const TimestampQueriesPerScope int32 = 2
   private const TimestampQueriesPerStage int32 = TimestampScopesPerStage * TimestampQueriesPerScope
   private const TimestampQueriesPerSlot int32 = TimestampStageCount * TimestampQueriesPerStage
