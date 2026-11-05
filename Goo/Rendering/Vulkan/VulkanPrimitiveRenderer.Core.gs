@@ -670,6 +670,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     }
 
   private func ProcessDraw(commandBuffer VkCommandBuffer, reference DrawRef, frame SceneFrame) {
+    solidInteriorEligible = reference.ClipChainId == 0
     switch reference.Kind {
       case SceneDrawKind.SolidBox {
         RequireRecordIndex(reference.Index, frame.SolidBoxCount, "solid box index")
@@ -797,12 +798,28 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     var total uint64 = 0uL
     var index int32 = 0
     while index < frame.DrawRefCount {
-      let kind = frame.DrawRefs[index].Kind
+      let reference = frame.DrawRefs[index]
+      let kind = reference.Kind
       var count uint64 = 0uL
       switch kind {
-        case SceneDrawKind.SolidBox { count = 1uL }
-        case SceneDrawKind.RoundedBox { count = 1uL }
-        case SceneDrawKind.PerEdgeBorder { count = 4uL }
+        case SceneDrawKind.SolidBox {
+          RequireRecordIndex(reference.Index, frame.SolidBoxCount, "solid box index")
+          let value = frame.SolidBoxes[reference.Index]
+          let bounds = value.Bounds
+          count = if bounds.Width * bounds.Height >= float32(OpaqueInteriorMinimumArea) { 5uL } else { 1uL }
+        }
+        case SceneDrawKind.RoundedBox {
+          RequireRecordIndex(reference.Index, frame.RoundedBoxCount, "rounded box index")
+          let value = frame.RoundedBoxes[reference.Index]
+          let bounds = value.Bounds
+          count = if bounds.Width * bounds.Height >= float32(OpaqueInteriorMinimumArea) { 5uL } else { 1uL }
+        }
+        case SceneDrawKind.PerEdgeBorder {
+          RequireRecordIndex(reference.Index, frame.PerEdgeBorderCount, "border index")
+          let value = frame.PerEdgeBorders[reference.Index]
+          let bounds = value.Bounds
+          count = if bounds.Width * bounds.Height >= float32(OpaqueInteriorMinimumArea) { 20uL } else { 4uL }
+        }
         case SceneDrawKind.LinearGradient {
           RequireRecordIndex(frame.DrawRefs[index].Index, frame.LinearGradientCount, "linear gradient index")
           let value = frame.LinearGradients[frame.DrawRefs[index].Index]
@@ -815,7 +832,12 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           ValidateGradientStops(frame, value.StopStart, value.StopCount)
           count = GradientRecordCount(value.StopCount)
         }
-        case SceneDrawKind.Underline { count = 1uL }
+        case SceneDrawKind.Underline {
+          RequireRecordIndex(reference.Index, frame.UnderlineCount, "underline index")
+          let value = frame.Underlines[reference.Index]
+          let bounds = value.Bounds
+          count = if bounds.Width * bounds.Height >= float32(OpaqueInteriorMinimumArea) { 5uL } else { 1uL }
+        }
         case SceneDrawKind.LayerBegin {
           let layer = frame.Layers[frame.DrawRefs[index].Index]
           let radius = BackdropBlurRadius(layer, frame)

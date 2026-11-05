@@ -109,6 +109,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
   private let pipelineGate object
   private var shaderEffectPipelineCount int32
   private var solidPipeline VkPipeline
+  private var opaqueSolidPipeline VkPipeline
   private var shadowPipeline VkPipeline
   private var borderPipeline VkPipeline
   private var linearPipeline VkPipeline
@@ -130,9 +131,13 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
     get -> ResolvePipeline(ref solidPipeline, analyticVertexModule, solidModule,
       pipelineLayout, true, true)
   }
+  internal prop OpaqueSolidPipeline VkPipeline {
+    get -> ResolvePipeline(ref opaqueSolidPipeline, analyticVertexModule, solidModule,
+      pipelineLayout, false, true)
+  }
   internal func ProfileResources(recorder FrameRecorder) {
     lock pipelineGate {
-      for pipeline in []uint64{solidPipeline, shadowPipeline, borderPipeline, linearPipeline,
+      for pipeline in []uint64{solidPipeline, opaqueSolidPipeline, shadowPipeline, borderPipeline, linearPipeline,
         radialPipeline, sampledPipeline, blendPipeline, clipCompositePipeline,
         pathPipeline, textPipeline, textPaintPipeline} {
         recorder.Resource(FrameResourceKind.Pipeline,
@@ -192,6 +197,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
     get {
       var count uint64 = 0uL
       if solidPipeline != 0uL { count++ }
+      if opaqueSolidPipeline != 0uL { count++ }
       if shadowPipeline != 0uL { count++ }
       if borderPipeline != 0uL { count++ }
       if linearPipeline != 0uL { count++ }
@@ -296,6 +302,8 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       textPipelineLayout, true, false)
     ResolvePipeline(ref solidPipeline, analyticVertexModule, solidModule,
       pipelineLayout, true, true)
+    ResolvePipeline(ref opaqueSolidPipeline, analyticVertexModule, solidModule,
+      pipelineLayout, false, true)
     ResolvePipeline(ref shadowPipeline, analyticVertexModule, shadowModule,
       pipelineLayout, true, true)
     ResolvePipeline(ref borderPipeline, analyticVertexModule, borderModule,
@@ -474,6 +482,8 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       device, dispatch.vkDestroyPipeline, objectAccounting, ref borderPipeline)
     VulkanNativeHandleDestroyer.DestroyPipeline(
       device, dispatch.vkDestroyPipeline, objectAccounting, ref solidPipeline)
+    VulkanNativeHandleDestroyer.DestroyPipeline(
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref opaqueSolidPipeline)
   }
 
   deinit{
