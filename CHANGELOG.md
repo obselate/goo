@@ -2,13 +2,25 @@
 
 ## Unreleased
 
-- Skip the viewport background draw when a plain opaque root covers it exactly.
-- Return free glibc heap pages after background Vulkan pipeline preparation and cache persistence on Linux.
-- Add `VirtualViewport.PixelScale` for device-pixel row rounding. Scale changes invalidate cached virtual content through `ContextVersion`.
-- Release obsolete text segment references when scene frames reset and retention proofs advance.
-- Release the scrollbar layout root when its part is disposed so retired rows and application data can be collected.
-- Limit retained child-diff, path-band and path-ownership scratch storage after exceptional peaks.
-- Include virtual row realization in the Build, Reconcile and StyleResolve profile phases during scrolling.
+- Add `Blob.FocusTarget`, `ElementHandle.SetFocusTarget` and `IsFocusVisible` for composite focus visuals without moving keyboard or accessibility focus.
+
+## 0.27.11 - 2026-11-05
+
+- Map system and file-source fonts read-only. Share mappings by native file identity and reuse live leased typefaces. Keep defensive copies for public byte-array inputs. (#553, #562)
+- Reduce initial Vulkan image memory blocks, image resource slots and descriptor capacity. Grow them on demand without changing byte limits or rendered pixels. (#555, #556)
+- Create the color glyph workspace only when needed. (#557)
+- Release obsolete text segment references and disposed scrollbar layout roots so retired content can be collected. (#554, #558)
+- Return free glibc heap pages once after background Vulkan pipeline preparation and cache persistence on Linux. (#559)
+- Add accessibility Separator, TabPanel, Toolbar and Tooltip roles, logical grid metadata and correct virtual set counts and heading levels. (#560, #568)
+- Resolve GPU profiling stages with up to 64 scopes. Include virtual row realization in Build, Reconcile, StyleResolve and Diff totals while scrolling. (#561, #563)
+- Route vertical-only Shift wheel input through the horizontal scroll chain. (#569)
+- Add `TextEntry.ReadOnly`. Keep focus, selection, navigation and copy, and report read-only accessibility and platform input state. (#565)
+- Limit retained child-diff, path-band and path-ownership scratch storage after exceptional peaks. (#570)
+- Keep held key repeat active when keyboard callbacks prevent the default action. (#571)
+- Add Portal `AnchorRect` in anchor-local coordinates and `CollisionBounds` in window logical coordinates. Preserve default placement. (#567)
+- Drain embedded Android presentation work before surface detach. (#572)
+- Skip the viewport background draw when a plain opaque root covers it exactly. (#573)
+- Add `VirtualViewport.PixelScale` for device-pixel row rounding. Scale changes invalidate cached virtual content through `ContextVersion`. (#564)
 
 ## 0.27.10 - 2026-11-04
 
