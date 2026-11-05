@@ -48,6 +48,8 @@ internal partial class TextShaping {
   shared {
     private let PrimaryFaces Dictionary[TextPrimaryFaceKey, TypefaceResource] =
     Dictionary[TextPrimaryFaceKey, TypefaceResource]()
+    private let LivePrimaryFaces Dictionary[TextPrimaryFaceKey, WeakReference[TypefaceResource]] =
+    Dictionary[TextPrimaryFaceKey, WeakReference[TypefaceResource]]()
     private let PrimaryFaceOrder Queue[TextPrimaryFaceKey] = Queue[TextPrimaryFaceKey]()
     private let PrimaryFacesLock object = Object()
     private var primaryFaceDisposals int32
@@ -673,6 +675,10 @@ internal partial class TextShaping {
       let key = TextPrimaryFaceKey(families, weight, italic, registryGeneration)
       lock (PrimaryFacesLock) {
         if PrimaryFaces.TryGetValue(key, out var cached) { return cached.Lease() }
+        if LivePrimaryFaces.TryGetValue(key, out var weak) && weak.TryGetTarget(out var live) {
+          if let retainedLease = live.TryLease() { return retainedLease }
+          LivePrimaryFaces.Remove(key)
+        }
       }
       let selection = ResolvePrimary(families, weight, italic)
       var evicted List[TypefaceResource]?
@@ -680,19 +686,28 @@ internal partial class TextShaping {
       var lease TypefaceLease
       lock (PrimaryFacesLock) {
         if PrimaryFaces.TryGetValue(key, out var cached) { return cached.Lease() }
+        if LivePrimaryFaces.TryGetValue(key, out var weak) && weak.TryGetTarget(out var live) {
+          if let retainedLease = live.TryLease() { return retainedLease }
+          LivePrimaryFaces.Remove(key)
+        }
+        for entry in LivePrimaryFaces {
+          if !entry.Value.TryGetTarget(out var retained) || retained.IsDisposed { LivePrimaryFaces.Remove(entry.Key) }
+        }
         let resource = CreateTypefaceResource(selection, weight)
-        if resource.ByteSize > PrimaryFaceCacheByteBudget {
+        if resource.HeapByteSize > PrimaryFaceCacheByteBudget {
           lease = resource.Lease()
           uncached = resource
+          LivePrimaryFaces[key] = WeakReference[TypefaceResource](resource)
         } else {
           PrimaryFaces.Add(key, resource)
           PrimaryFaceOrder.Enqueue(key)
-          primaryFaceCacheBytes = primaryFaceCacheBytes + resource.ByteSize
+          primaryFaceCacheBytes = primaryFaceCacheBytes + resource.HeapByteSize
           while PrimaryFaceOrder.Count > PrimaryFaceCacheCapacity
             || primaryFaceCacheBytes > PrimaryFaceCacheByteBudget{
               let oldKey = PrimaryFaceOrder.Dequeue()
               if PrimaryFaces.Remove(oldKey, out var removed) {
-                primaryFaceCacheBytes = primaryFaceCacheBytes - removed.ByteSize
+                primaryFaceCacheBytes = primaryFaceCacheBytes - removed.HeapByteSize
+                LivePrimaryFaces[oldKey] = WeakReference[TypefaceResource](removed)
                 if let values = evicted {
                   values.Add(removed)
                 } else {
@@ -764,6 +779,9 @@ internal partial class TextShaping {
     internal func ProfileResources(recorder FrameRecorder) {
       lock PrimaryFacesLock {
         for resource in PrimaryFaces.Values { resource.Profile(recorder) }
+        for weak in LivePrimaryFaces.Values {
+          if weak.TryGetTarget(out var live) { live.Profile(recorder) }
+        }
       }
     }
 
