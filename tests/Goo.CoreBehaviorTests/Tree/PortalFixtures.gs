@@ -677,7 +677,7 @@ internal class PortalClippedAnchorCell : Cell {
             Left: 10, Top: 60, Width: 30, Height: 30 },
           Portal{ Handle: Popup, Anchor: Anchor, HideWhenAnchorClipped: HideWhenClipped,
             AnchorRect: ElementRect{ X: 0, Y: 5, Width: 30, Height: 10 },
-            Width: 120, Height: 30,
+            Width: 120, Height: 30, Focusable: true,
             Cell.Mount[PortalRetainedInput, PortalClippedEditorCell]("editor", PortalRetainedInput(Editor)),
           },
         },
