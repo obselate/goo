@@ -124,7 +124,7 @@ shared class Verify {
             JsonNode.DeepEquals(bundled["documents"], Strings(hashes.Select(x -> x.Key).Order(StringComparer.Ordinal))),
             bundled
         )
-        Check(S(provenance, "compilerVersion") == "0.5.26", provenance)
+        Check(S(provenance, "compilerVersion") == "0.5.212", provenance)
         let search = await Read(client, "cellSearch")
         Check(
             S(search, "mode") == "exact" && JsonNode.DeepEquals(
