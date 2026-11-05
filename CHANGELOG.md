@@ -1,6 +1,19 @@
 # Changelog
 
 
+## 0.28.2 - 2026-11-05
+
+### Changed
+
+- Allow changelog-only corrections without a new fragment when they do not add an Unreleased section.
+- Keep logical mount identities separate from reusable Node storage.
+
+### Fixed
+
+- Keep centered text and nested content stationary across repeated fractional-scale resizes by snapping unrounded Yoga positions and dimensions instead of previously snapped layout results.
+- Keep input routes, focus restoration, accessibility IDs and DevTools targets bound to their original node mount when storage is reused.
+- Ignore outgoing style queue and transition entries after node storage is rebound.
+
 ## 0.28.1 - 2026-11-05
 
 0.28.0 was not published.
