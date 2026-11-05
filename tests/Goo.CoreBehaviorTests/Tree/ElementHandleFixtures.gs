@@ -513,7 +513,8 @@ internal class ElementHandleFixtures {
     if root.Children.Count != 4 || cell.Builds.Count != 4 || cell.Handle.ScrollRange.Y != 19940.0
       || !cell.Handles[0].IsMounted || semantics.Tree?.Root?.SizeOfSet != 1000
       || semantics.Tree?.Root?.Children[0].Role != AccessibilityRole.ListItem
-      || semantics.Tree?.Root?.Children[0].PositionInSet != 0 { return false }
+      || semantics.Tree?.Root?.Children[0].PositionInSet != 0
+      || semantics.Tree?.Root?.Children[0].SizeOfSet != 1000 { return false }
 
     // A frame without a change builds nothing.
     cell.Builds.Clear()
@@ -524,7 +525,8 @@ internal class ElementHandleFixtures {
     if !cell.Handle.JumpTo(0.0, 10000.0) { return false }
     window.UpdateTree()
     if root.Children.Count != 5 || cell.Builds.Count != 5 || cell.Handles[0].IsMounted
-      || !cell.Handles[500].IsMounted || semantics.Tree?.Root?.Children[0].PositionInSet != 499 { return false }
+      || !cell.Handles[500].IsMounted || semantics.Tree?.Root?.Children[0].PositionInSet != 499
+      || semantics.Tree?.Root?.Children[0].SizeOfSet != 1000 { return false }
 
     // An item without content keeps its mounted content.
     cell.Builds.Clear()
@@ -548,7 +550,8 @@ internal class ElementHandleFixtures {
     window.UpdateTree()
     if semantics.Tree?.Root?.Role != AccessibilityRole.Tree
       || semantics.Tree?.Root?.Children[0].Role != AccessibilityRole.Generic
-      || semantics.Tree?.Root?.Children[0].PositionInSet != 899 { return false }
+      || semantics.Tree?.Root?.Children[0].PositionInSet != 899
+      || semantics.Tree?.Root?.Children[0].SizeOfSet != 1001 { return false }
     window.Close()
     return Virtualization.State(root) == nil && !cell.Handles[900].IsMounted && cell.Disposes == 1
   }
@@ -891,6 +894,7 @@ internal class VirtualFixtureCell : Cell {
   internal var RowHeight float64 = 13.0
   internal var PixelScale float64
   internal var ContextVersion int64
+  internal var ItemAccessibility Accessibility?
 
   init(count int32) {
     for i in 0 ... count { Items.Add(VirtualFixtureItem{ Id: i }) }
@@ -904,7 +908,7 @@ internal class VirtualFixtureCell : Cell {
 
   internal func BuildItem(item VirtualFixtureItem) Blob {
     Builds.Add(item.Id)
-    return Container() {.Handle: Handles[item.Id],.Focusable: true,.Width: 75,.Height: RowHeight,
+    return Container() {.Handle: Handles[item.Id],.Accessibility: ItemAccessibility,.Focusable: true,.Width: 75,.Height: RowHeight,
       Text{ Content: "row ${item.Id}:${item.Revision}"},
     }
   }
