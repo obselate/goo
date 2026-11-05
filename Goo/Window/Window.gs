@@ -695,7 +695,7 @@ public partial class Window {
     layout = Layout()
     resolver = Resolver{Owner: this}
     profiler = FrameProfiler()
-    motionPump = MotionPump()
+    motionPump = MotionPump(this)
     motionPump.Wake = requestReconcile
     motionPump.PaintWake = wakePaintMotion
 

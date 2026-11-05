@@ -482,6 +482,7 @@ let modes = []SmokeMode{
   SmokeMode("GOO_EMBEDDED_HOST_SMOKE", "1", () -> EmbeddedHostSmoke.Run()),
   SmokeMode("GOO_DIAGNOSTIC_CAPTURE_BUSY_SMOKE", "1", () -> DiagnosticCaptureFixture.Run()),
   SmokeMode("GOO_PROFILER_SMOKE", "1", () -> ProfilerSmoke.Run()),
+  SmokeMode("GOO_ANIMATION_VISIBILITY_SMOKE", "", () -> PaintBindingFixtures.MeasureInfiniteVisibility()),
   SmokeMode("GOO_PROFILER_GC_SMOKE", "1", () -> {
     let root = ProfilerSmokeCell{}
     let window = Window{Title: "Goo profiler GC scroll smoke", Width: 64, Height: 64, Root: root}.Open()

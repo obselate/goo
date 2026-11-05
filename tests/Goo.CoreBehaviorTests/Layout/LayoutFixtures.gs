@@ -381,6 +381,27 @@ internal class LayoutFixtures {
       && !ScrollState.HasDemand(scroll)
   }
 
+  func PixelSnappingPreservesScrollExtent() bool {
+    for density in []float32{ 1.0F, 1.25F, 1.5F } {
+      let root = Reconciler{ Res: Resolver{} }.Mount(Container{ Width: 960, Height: 640,
+        Container{ Position: PositionType.Absolute, Left: 447.25, Top: 295.25,
+          Width: 476, Height: 28, FlexDirection: FlexDirection.Row, Gap: 2,
+          OverflowX: Overflow.Scroll,
+          Container{ FlexGrow: 1, FlexBasis: 0, MinWidth: 0 },
+          Container{ FlexGrow: 1, FlexBasis: 0, MinWidth: 0 },
+        },
+      })
+      let layout = Layout()
+      layout.SetPixelDensity(density)
+      layout.Calculate(root, 960.0F, 640.0F)
+      let tabs = root.Children[0]
+      if maxScrollX(tabs) != 0.0F {
+        throw InvalidOperationException("density=${density}, content=${tabs.ContentW}, viewport=${scrollViewportWidth(tabs)}")
+      }
+    }
+    return true
+  }
+
   func PixelSnappingPreservesDistantItemSizes() bool {
     for density in []float32{ 1.0F, 1.5F, 2.0F } {
       let root = Reconciler{ Res: Resolver{} }.Mount(Container{ Width: 100, Height: 200,

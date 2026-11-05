@@ -379,6 +379,7 @@ public open class Cell {
   }
 
   private func registerAnim[T](a Anim[T]) Anim[T] {
+    a.SetOwner(this)
     OwnMotionParticle(a.Handle)
     return a
   }

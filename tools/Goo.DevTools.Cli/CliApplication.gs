@@ -56,7 +56,7 @@ internal shared class CliApplication {
 
     private data class DoctorCheck(Name string, Detail string, Ok bool, Fix string = "") : IEquatable[DoctorCheck] { }
 
-    private const Version string = "0.27.11"
+    private const Version string = "0.28.0"
 
     internal func SelectInspectorDescriptor(
         descriptors IReadOnlyList[DiscoveryDescriptor],
