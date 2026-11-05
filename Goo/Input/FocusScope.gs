@@ -160,7 +160,7 @@ internal class FocusScopeStack {
 
   internal func Refresh(root Node?, resolver Resolver, focus FocusManager) {
     for var i = entries.Count - 1; i >= 0; i-- {
-      if root == nil || !entries[i].Root.Focusable || !available(root, entries[i].Root) {
+      if root == nil || !entries[i].Root.Focusable || !available(root, entries[i].Root, true) {
         removeAt(i)
         owner.FocusScopeChanged()
       }
@@ -215,11 +215,12 @@ internal class FocusScopeStack {
     if let current = root { FocusScopes.Bind(current, this) }
   }
 
-  private func available(root Node, target Node) bool {
+  private func available(root Node, target Node, preserveClipped bool = false) bool {
     var current Node? = target
     while current != nil {
       let n = current
-      if n.Retired || n.PaintInputHidden || n.Disabled { return false }
+      if n.Retired || n.Disabled || n.PaintInputState != 0 || n.PortalPlacementHidden
+        || n.PortalAnchorClipped && !preserveClipped { return false }
       if n == root { return true }
       current = n.Parent
     }

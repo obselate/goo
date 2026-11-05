@@ -335,7 +335,7 @@ internal class PortalFixtures {
     if !portal.PortalAnchorClipped || !portal.PaintInputHidden || Portals.Presented(portal)
       || hitTopmost(root, float32(hiddenBox.X + 5.0), float32(hiddenBox.Y + 5.0)) == entry
       || findPortalAccessibility(adapter.Tree?.Root, "retained editor") != nil
-      || !entry.Focused || cell.Editor.AttachedNode() != entry || entry.Fiber != retained
+      || !entry.Focused || !focusScope.IsActive || cell.Editor.AttachedNode() != entry || entry.Fiber != retained
       || retained.Builds != builds || cell.Builds != hostBuilds
       || hidden.Text != before.Text || hidden.SelectionStart != before.SelectionStart
       || hidden.SelectionEnd != before.SelectionEnd
@@ -343,7 +343,7 @@ internal class PortalFixtures {
       || hidden.CompositionEnd != before.CompositionEnd { return false }
     if !cell.Scroll.JumpTo(0.0, 0.0) { return false }
     window.UpdateTree()
-    if portal.PaintInputHidden || !Portals.Presented(portal) || !entry.Focused
+    if portal.PaintInputHidden || !Portals.Presented(portal) || !entry.Focused || !focusScope.IsActive
       || retained.Builds != builds || cell.Builds != hostBuilds
       || !samePortalBox(cell.Editor.BorderBox, box.X, box.Y, box.Width, box.Height)
       || hitTopmost(root, float32(box.X + 5.0), float32(box.Y + 5.0)) != entry
