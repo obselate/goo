@@ -100,7 +100,8 @@ internal class KeyboardInput {
         || e.Key == Key.PageUp || e.Key == Key.PageDown {
           focus.SetKeyboardModality(resolver, true)
         }
-      if compositionActive && compositionFocusGeneration != focus.Generation {
+      if compositionActive && (compositionFocusGeneration != focus.Generation
+        || focus.FocusedNode()?.EditorReadOnly == true) {
         compositionActive = false
       }
       suppressedTextKey = Key.Unknown
@@ -143,7 +144,7 @@ internal class KeyboardInput {
         return text.HandleChar(root, value)
       }
       if e.Kind == KeyboardEventKind.Composition {
-        compositionActive = true
+        compositionActive = focus.FocusedNode()?.EditorReadOnly != true
         compositionFocusGeneration = focus.Generation
         compositionCommitPending = false
         suppressedTextKey = Key.Unknown

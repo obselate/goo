@@ -1430,6 +1430,61 @@ internal class InputFixtures {
     return cell.value == "external" && entry(driver).Caret == 2
   }
 
+  func ReadOnlyEntryPreservesTextAndAllowsSelection() bool {
+    let cell = InputEntryCell{ value: "seed" }
+    let driver = InputFixtureDriver(cell, 300, 100)
+    if Environment.GetEnvironmentVariable("GOO_READ_ONLY_NATIVE_CLIPBOARD") == "1" {
+      driver.Window.Open()
+    }
+    try {
+      driver.Press(10.0F, 10.0F)
+      driver.Release(10.0F, 10.0F)
+      driver.Key(Key.End, false, true)
+      driver.Char("x")
+      driver.Key(Key.End, false, true)
+      driver.Char("y")
+      driver.Key(Key.Z, false, true)
+      driver.Input.QueueComposition("pending", 0, 3)
+      driver.Drain()
+      cell.readOnly = true
+      cell.Rebuild()
+      driver.Update()
+      let node = entry(driver)
+      if driver.Input.EditorSnapshot()?.IsReadOnly != true { return false }
+      driver.Key(Key.A, false, true)
+      driver.Key(Key.C, false, true)
+      if node.Anchor != 0 || node.Caret != 5 { return false }
+      driver.Char("changed")
+      for key in []Key{ Key.Backspace, Key.Delete, Key.V, Key.X, Key.Z, Key.Y } {
+        driver.Key(key, false, key != Key.Backspace && key != Key.Delete)
+        if node.Buffer != "seedx" { return false }
+      }
+      driver.Input.QueueComposition("composition", 0, 3)
+      driver.Drain()
+      if node.Buffer != "seedx" || driver.Input.EditorSnapshot()?.CompositionStart != -1 {
+        return false
+      }
+      driver.Input.CommitEditorText(driver.Window.Tree, "committed")
+      if node.Buffer != "seedx" { return false }
+      driver.Press(10.0F, 10.0F)
+      driver.Move(50.0F, 10.0F)
+      driver.Release(50.0F, 10.0F)
+      if node.Anchor == node.Caret || node.Buffer != "seedx" { return false }
+      driver.Key(Key.Home, false, true)
+      if node.Caret != 0 { return false }
+      driver.Key(Key.End, true, true)
+      if node.Anchor != 0 || node.Caret != 5 { return false }
+      cell.readOnly = false
+      cell.Rebuild()
+      driver.Update()
+      driver.Key(Key.End, false, true)
+      driver.Key(Key.V, false, true)
+      return node.Buffer == "seedxseedx"
+    } finally {
+      driver.Window.Close()
+    }
+  }
+
   func TextEntryCommandsAndSanitization() bool {
     let typed = InputEntryCell{}
     let typing = entryDriver(typed)
@@ -1823,6 +1878,33 @@ internal class InputFixtures {
     two.Release(10.0F, 31.5F)
     guard let twoTree = two.Window.Tree else { return false }
     return if twoTree.Children[1].Caret != twoTree.Children[1].Anchor { false } else { queuedPointerSelectionKeepsSdl3Order() }
+  }
+
+  func ShiftWheelUsesHorizontalScrollChain() bool {
+    let driver = InputFixtureDriver(InputAxisScrollCell{}, 100, 100)
+    guard let root = driver.Window.Tree else { return false }
+    let unit = InputPolicy.WheelUnit(false, scrollViewportWidth(root))
+    driver.Input.QueuePointerWheel(50.0F, 50.0F, 0.0F, -1.0F, KeyModifiers{ Shift: true })
+    driver.Drain()
+    if root.ScrollTargetX != unit || root.ScrollTargetY != 0.0F { return false }
+    driver.Input.QueuePointerWheel(50.0F, 50.0F, 1.0F, -0.5F, KeyModifiers{ Shift: true })
+    driver.Drain()
+    if root.ScrollTargetX != unit * 2.0F || root.ScrollTargetY != 0.0F { return false }
+
+    let nested = InputFixtureDriver(InputShiftWheelCell{}, 100, 100)
+    guard let outer = nested.Window.Tree else { return false }
+    let inner = outer.Children[0]
+    nested.Input.QueuePointerWheel(50.0F, 50.0F, 0.0F, -1.0F, KeyModifiers{ Shift: true })
+    nested.Drain()
+    if outer.ScrollTargetX != InputPolicy.WheelUnit(false, scrollViewportWidth(outer))
+      || inner.ScrollTargetY != 0.0F { return false }
+    nested.Wheel(50.0F, 50.0F, 0.0F, -1.0F)
+    if inner.ScrollTargetY != InputPolicy.WheelUnit(true, scrollViewportHeight(inner)) { return false }
+    outer.OverflowX = Overflow.Hidden
+    let previous = inner.ScrollTargetY
+    nested.Input.QueuePointerWheel(50.0F, 50.0F, 0.0F, -1.0F, KeyModifiers{ Shift: true })
+    nested.Drain()
+    return inner.ScrollTargetY == previous
   }
 
   func NestedWheelOwnershipAndBoundary() bool {
@@ -2983,6 +3065,7 @@ internal class InputEntryCell : Cell {
   internal var value string
   internal var writeBack bool
   internal var controlled bool
+  internal var readOnly bool
   internal var changed string
   internal var submitted string
 
@@ -2997,6 +3080,7 @@ internal class InputEntryCell : Cell {
         Key: "entry",
         Value: value,
         Controlled: controlled,
+        ReadOnly: readOnly,
         Placeholder: "hint",
         Width: 200.0,
         Height: 30.0,
@@ -3590,4 +3674,15 @@ internal class InputAxisScrollCell : Cell {
   override func Build() Blob -> Container() {.Width: 100.0,.Height: 100.0,.OverflowX: hiddenX ? Overflow.Hidden : Overflow.Scroll,.OverflowY: Overflow.Hidden,
     Container{ Width: 300.0, Height: 300.0, FlexShrink: 0.0 },
     }
+}
+
+internal class InputShiftWheelCell : Cell {
+  override func Build() Blob -> Container() {
+    .Width: 100, .Height: 100, .OverflowX: Overflow.Scroll, .OverflowY: Overflow.Hidden,
+    Container() {
+      .Width: 300, .Height: 100, .FlexShrink: 0,
+      .OverflowX: Overflow.Hidden, .OverflowY: Overflow.Scroll,
+      Container{ Width: 300, Height: 300, FlexShrink: 0 },
+    },
+  }
 }
