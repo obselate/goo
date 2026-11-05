@@ -84,6 +84,7 @@ internal class NodeLifecycle {
       BackgroundImageLayouts.Dispose(n)
       ShaderEffectStyles.Dispose(n)
       LayoutTransitions.Dispose(n)
+      VulkanSceneCompiler.RetireNode(n)
       for i in 0 ... n.Children.Count {
         if let error = disposeTree(n.Children[i]) {
           if firstError == nil {

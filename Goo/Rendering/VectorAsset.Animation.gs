@@ -446,6 +446,7 @@ internal sealed class VectorAnimationPlayer : MotionParticle {
     let opacity = clamp01(value.A)
     if node.Opacity == float64(opacity) { return false }
     node.Opacity = float64(opacity)
+    node.BumpScenePaintVersion()
     return true
   }
 
@@ -495,8 +496,13 @@ internal sealed class VectorAnimationPlayer : MotionParticle {
       }
       curveIndex++
     }
-    return state.Path.UpdateNormalized(state.Quadratics, state.CurveCount,
+    let changed = state.Path.UpdateNormalized(state.Quadratics, state.CurveCount,
       state.Contours, state.ContourCount)
+    if changed {
+      fills[index]?.BumpScenePaintVersion()
+      strokes[index]?.BumpScenePaintVersion()
+    }
+    return changed
   }
 
   private func applyPaint(index int32, elapsed float64) bool {
@@ -522,6 +528,7 @@ internal sealed class VectorAnimationPlayer : MotionParticle {
         if let fill = fills[nodeIndex] {
           if !fill.BackgroundColor.ContentEquals(color) {
             fill.BackgroundColor = color
+            fill.BumpScenePaintVersion()
             changed = true
           }
         }
@@ -535,6 +542,7 @@ internal sealed class VectorAnimationPlayer : MotionParticle {
         if let outline = strokes[nodeIndex] {
           if !outline.BorderLeftColor.ContentEquals(color) {
             outline.BorderLeftColor = color
+            outline.BumpScenePaintVersion()
             changed = true
           }
         }
@@ -566,25 +574,31 @@ internal sealed class VectorAnimationPlayer : MotionParticle {
         changed = true
       }
     }
+    let dashesChanged = changed
     if let targets = strokeTargets[index] {
       var targetIndex int32 = 0
       while targetIndex < targets.Count {
         let nodeIndex = targets[targetIndex]
         if let node = strokes[nodeIndex] {
+          var nodeChanged = dashesChanged
           if node.BorderLeftWidth.Value != width {
             node.BorderLeftWidth = Length{ Unit: LengthUnit.Px, Value: width }
-            changed = true
+            nodeChanged = true
           }
           if node.MiterLimit != float64(miter) {
             node.MiterLimit = float64(miter)
-            changed = true
+            nodeChanged = true
           }
           if node.ShapeStrokeCap != cap {
             node.ShapeStrokeCap = cap
-            changed = true
+            nodeChanged = true
           }
           if node.ShapeStrokeJoin != join {
             node.ShapeStrokeJoin = join
+            nodeChanged = true
+          }
+          if nodeChanged {
+            node.BumpScenePaintVersion()
             changed = true
           }
         }
@@ -716,6 +730,7 @@ internal sealed class VectorAnimationPlayer : MotionParticle {
     Transforming.SetScaleY(node, float32(transform.ScaleY))
     Transforming.SetSkewX(node, float32(transform.SkewX))
     Transforming.SetSkewY(node, float32(transform.SkewY))
+    node.BumpScenePaintVersion()
   }
 
   private func samePlaybackValue(left VectorAnimationValue,

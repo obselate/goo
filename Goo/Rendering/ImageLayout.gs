@@ -261,6 +261,7 @@ internal class ImageLayouts {
       n.DecodedImage = decoded
       n.ImageIntrinsicWidth = width
       n.ImageIntrinsicHeight = height
+      n.BumpScenePaintVersion()
       if let yoga = n.Yoga {
         YGNodeAPI.YGNodeMarkDirty(yoga)
       }
@@ -275,6 +276,7 @@ internal class ImageLayouts {
       n.ImageIntrinsicWidth = 0.0F
       n.ImageIntrinsicHeight = 0.0F
       if hadDimensions {
+        n.BumpScenePaintVersion()
         if let yoga = n.Yoga { YGNodeAPI.YGNodeMarkDirty(yoga) }
       }
     }
