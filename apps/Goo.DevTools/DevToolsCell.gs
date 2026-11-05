@@ -92,7 +92,7 @@ class DevToolsCell : Cell {
             Width: Percent(100),
             Height: Percent(100),
             FlexDirection: FlexDirection.Column,
-            BorderRadius: theme.PanelRadius,
+            BorderRadius: theme.PanelRadius!!,
             BorderWidth: theme.BorderWidth,
             BorderColor: theme.BorderColor,
             Overflow: Overflow.Hidden,

@@ -483,7 +483,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                     BackgroundColor: theme.OverlayColor,
                     BorderWidth: 1,
                     BorderColor: theme.BorderColor,
-                    BorderRadius: theme.RadiusMd,
+                    BorderRadius: theme.RadiusMd!!,
                     BoxShadow: theme.ElevationMd,
                     HitTestSelf: false,
                     Children: Breakdown(trace, trace.Frames[hovered], theme, 8)
@@ -500,7 +500,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
             Position: PositionType.Relative,
             ZIndex: 1,
             BackgroundColor: theme.SunkenColor,
-            BorderRadius: theme.RadiusSm,
+            BorderRadius: theme.RadiusSm!!,
             Focusable: true,
             Focus: Style{OutlineWidth: 1, OutlineColor: theme.FocusColor},
             Accessibility: Accessibility{Role: AccessibilityRole.Group, Name: "Frames"},
