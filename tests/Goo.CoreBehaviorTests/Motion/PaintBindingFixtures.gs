@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.Reflection
+import System.Diagnostics
 
 internal class PaintBindingFixtures {
   func PaintSlotsTickWithoutBuildOrLayoutContract() bool {
@@ -204,6 +205,134 @@ internal class PaintBindingFixtures {
     }
   }
 
+  func InfinitePaintSkipsClippedTicksAndResumesPhaseContract() bool {
+    let cell = PaintVisibilityCell(true)
+    let window = Window{ Root: cell, Width: 240, Height: 160 }
+    try {
+      window.UpdateTree()
+      let first = cell.Scroll.AttachedNode()!!.Children[0].Children[0].Children[0]
+      if Math.Abs(first.Opacity - 0.5F) > 0.000001F { return false }
+      window.UpdateTree(0.25)
+      if Math.Abs(cell.Values[0].Value - 1.0) > 0.000001 || !window.PaintMotionPump.Active { return false }
+      if !cell.Scroll.JumpTo(0.0, 200.0) { return false }
+      window.UpdateTree(1.0)
+      window.markFrameRendered()
+      let samples = cell.Loops[0].Samples
+      let builds = cell.Builds
+      window.UpdateTree(3.0, 0.0)
+      if cell.Loops[0].Samples != samples || window.PaintMotionPump.Active
+        || window.RenderPending() || cell.Builds != builds { return false }
+      if !cell.Scroll.JumpTo(0.0, 0.0) { return false }
+      window.UpdateTree(0.25, 0.0)
+      window.UpdateTree()
+      if !window.PaintMotionPump.Active || cell.Loops[0].Samples == samples
+        || Math.Abs(cell.Values[0].Value - 0.5) > 0.000001 || cell.Builds != builds { return false }
+      window.Width = 5
+      window.UpdateTree()
+      if window.PaintMotionPump.Active { return false }
+      var completions = 0
+      cell.Values[0].Completed += reason -> {
+        if reason == MotionCompletionReason.Finished { completions++ }
+      }
+      cell.Values[0].To(1.0, Motion.Tween(500.0))
+      window.UpdateTree(0.25)
+      if completions != 0 { return false }
+      window.UpdateTree(0.25)
+      if completions != 1 || cell.Values[0].Running || window.PaintMotionPump.Active { return false }
+      window.PaintMotionPump.ReducedMotion = true
+      window.UpdateTree()
+      for value in cell.Values {
+        if value.Running { return false }
+      }
+      return !window.PaintMotionPump.Active
+    } finally {
+      window.Close()
+    }
+  }
+
+  func InfinitePaintKeepsSharedVisibleTargetContract() bool {
+    let cell = PaintVisibilityCell(true)
+    let window = Window{ Root: cell, Width: 240, Height: 160 }
+    try {
+      window.UpdateTree()
+      cell.Shared = true
+      cell.Rebuild()
+      window.UpdateTree()
+      if !cell.Scroll.JumpTo(0.0, 200.0) { return false }
+      window.UpdateTree(0.25)
+      let samples = cell.Loops[0].Samples
+      window.UpdateTree(0.25)
+      if !window.PaintMotionPump.Active || cell.Loops[0].Samples <= samples
+        || Math.Abs(cell.Values[0].Value - 0.5) > 0.000001 { return false }
+      cell.Bound = false
+      cell.Shared = false
+      cell.Rebuild()
+      window.UpdateTree()
+      return !window.PaintMotionPump.Active
+    } finally {
+      window.Close()
+    }
+  }
+
+  func ClippedFiniteAndUnmarkedSimulationsKeepTickingContract() bool {
+    let cell = PaintVisibilityCell(false)
+    let window = Window{ Root: cell, Width: 240, Height: 160 }
+    var completions = 0
+    try {
+      window.UpdateTree()
+      if !cell.Scroll.JumpTo(0.0, 200.0) { return false }
+      window.UpdateTree()
+      let samples = cell.Loops[0].Samples
+      window.UpdateTree(0.25)
+      if !window.PaintMotionPump.Active || cell.Loops[0].Samples <= samples { return false }
+      for value in cell.Values { value.Snap(0.0) }
+      cell.Values[0].Completed += reason -> {
+        if reason == MotionCompletionReason.Finished { completions++ }
+      }
+      cell.Values[0].To(1.0, Motion.Tween(500.0))
+      window.UpdateTree(0.25)
+      if completions != 0 || !window.PaintMotionPump.Active { return false }
+      window.UpdateTree(0.25)
+      window.UpdateTree(1.0)
+      return completions == 1 && !window.PaintMotionPump.Active && cell.Values[0].Value == 1.0
+    } finally {
+      window.Close()
+    }
+  }
+
+  shared {
+    internal func MeasureInfiniteVisibility() {
+      let marked = Environment.GetEnvironmentVariable("GOO_ANIMATION_VISIBILITY_SMOKE") != "legacy"
+      let cell = PaintVisibilityCell(marked)
+      let window = Window{ Root: cell, Title: "Goo animation visibility", Width: 240, Height: 160 }.Open()
+      using let process = Process.GetCurrentProcess()
+      var frames uint64
+      var initialFrames uint64
+      var initialCpu float64
+      var initialTime int64
+      window.PresentationAccepted += receipt -> { frames = receipt.FrameIndex }
+      window.SetTimeout(() -> { cell.Scroll.JumpTo(0.0, 200.0) }, 2000.0)
+      window.SetTimeout(() -> {
+        process.Refresh()
+        initialCpu = process.TotalProcessorTime.TotalMilliseconds
+        initialFrames = frames
+        initialTime = Stopwatch.GetTimestamp()
+      }, 4000.0)
+      window.SetTimeout(() -> {
+        process.Refresh()
+        let elapsed = float64(Stopwatch.GetTimestamp() - initialTime) / float64(Stopwatch.Frequency)
+        let cpu = process.TotalProcessorTime.TotalMilliseconds - initialCpu
+        let count = frames - initialFrames
+        Console.WriteLine("animation-visibility: marked=${marked} seconds=" + elapsed.ToString("F3")
+          + " frames=${count} fps=" + (float64(count) / elapsed).ToString("F3")
+          + " cpu_ms=" + cpu.ToString("F3") + " cpu_percent=" + (cpu / (elapsed * 10.0)).ToString("F3"))
+        if marked && count != 0 { throw InvalidOperationException("Clipped infinite paint requested frames") }
+        window.RequestClose()
+      }, 14000.0)
+      try { window.Run() } finally { window.Close() }
+    }
+  }
+
   private func paint(window Window, compiler VulkanSceneCompiler) bool {
     if !window.RenderPending() { return false }
     compiler.Compile(window.Tree!!, Color.White, 320.0F, 240.0F)
@@ -298,4 +427,58 @@ internal class PaintSlotSpring : Simulation {
   public override func Velocity(elapsed float64) float64 -> if Done(elapsed) { 0.0 }
     else { (velocity - 12.0 * ((from - to) * 12.0 + velocity) * elapsed) * Math.Exp(-12.0 * elapsed) }
   public override func Done(elapsed float64) bool -> elapsed >= 1.875
+}
+
+internal class PaintVisibilityCell : Cell {
+  internal let Scroll ElementHandle = ElementHandle{}
+  internal let Values []Anim[float64] = [12]Anim[float64]
+  internal let Loops []PaintVisibilityLoop = [12]PaintVisibilityLoop
+  internal var Shared bool
+  internal var Bound bool = true
+  internal var Builds int32
+
+  internal init(infinite bool) {
+    for index in 0 ... 12 {
+      Values[index] = AnimateValue(0.5)
+      Loops[index] = PaintVisibilityLoop(infinite, float64(index) / 12.0)
+    }
+  }
+
+  override func Build() Blob {
+    Builds++
+    let indicator = Container{ Position: PositionType.Absolute, Left: 10, Top: 20, Width: 24, Height: 24 }
+    for index in 0 ... 12 {
+      if !Values[index].Running {
+        let loop = Loops[index]
+        Values[index].To(0.5, (from float64, to float64, velocity float64) -> loop)
+      }
+      let angle = float64(index) / 12.0 * Math.PI * 2.0
+      indicator.Children.Add(Container{ Position: PositionType.Absolute,
+        Left: 10.0 + Math.Cos(angle) * 10.0, Top: 10.0 + Math.Sin(angle) * 10.0,
+        Width: 4, Height: 4, BorderRadius: 2, BackgroundColor: Color.Black,
+        OpacityAnim: if Bound { Values[index] } else { nil } })
+    }
+    let root = Container{ Width: Percent(100), Height: Percent(100),
+      Container{ Handle: Scroll, Width: 200, Height: 100, Overflow: Overflow.Scroll,
+        Container{ Width: 200, Height: 400, indicator },
+      },
+    }
+    if Shared {
+      root.Children.Add(Container{ Position: PositionType.Absolute, Left: 220, Top: 10,
+        Width: 12, Height: 12, BackgroundColor: Color.Black, OpacityAnim: Values[0] })
+    }
+    return root
+  }
+}
+
+internal class PaintVisibilityLoop(infinite bool, offset float64) : Simulation {
+  internal var Samples int32
+  public override prop IsInfinite bool { get -> infinite }
+  public override func Position(elapsed float64) float64 {
+    Samples++
+    return 0.5 + Math.Sin((elapsed - offset) * Math.PI * 2.0) * 0.5
+  }
+  public override func Velocity(elapsed float64) float64 ->
+    Math.PI * Math.Cos((elapsed - offset) * Math.PI * 2.0)
+  public override func Done(elapsed float64) bool -> false
 }
