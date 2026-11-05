@@ -12,8 +12,8 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
   const MaxVariations int32 = 16
   const MaxFeatures int32 = 32
   const MaxLanguageUnits int32 = 64
-  private let fontBytes []uint8
-  private var fontPin GCHandle
+  private let fontBytes FontData
+  private var fontRetained bool
   private var harfBuzzBlob nint
   private var harfBuzzFace nint
   private var harfBuzzFont nint
@@ -41,19 +41,12 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
   public prop OutlineHintingAvailable bool{ get -> !hasColorPaint && !hasColorLayers && !hasColorBitmaps }
 
   shared {
-    internal func ReadBytes(path string) []uint8 ->
-    BoundedInput.ReadFile(path, MaxFontBytes, "Font")
-
-    internal func ValidateFace(bytes []uint8, selectedFaceIndex uint32) uint32 {
-      if bytes.Length == 0 {
-        throw ArgumentException("Font bytes are empty", "bytes")
-      }
-      if bytes.Length > MaxFontBytes { throw ArgumentOutOfRangeException("bytes") }
-      var pin GCHandle
+    internal func ValidateFace(bytes FontData, selectedFaceIndex uint32) uint32 {
+      var retained = false
       var blob nint
       try {
-        pin = GCHandle.Alloc(bytes, GCHandleType.Pinned)
-        blob = hb_blob_create(pin.AddrOfPinnedObject(), uint32(bytes.Length), 1u,
+        bytes.DangerousAddRef(ref retained)
+        blob = hb_blob_create(bytes.DangerousGetHandle(), uint32(bytes.Length), 1u,
           nint(0), nint(0))
         if blob == nint(0) {
           throw InvalidOperationException("hb_blob_create failed")
@@ -65,13 +58,13 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
         return count
       } finally {
         if blob != nint(0) { hb_blob_destroy(blob) }
-        if pin.IsAllocated { pin.Free() }
+        if retained { bytes.DangerousRelease() }
       }
     }
   }
 
   internal init(
-    bytes []uint8,
+    bytes FontData,
     pixelHeight uint32,
     selectedFaceIndex uint32,
     selectedVariations([]VulkanTextVariation)?, family string? = nil, systemWeight int32? = nil) {
@@ -90,9 +83,8 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
       faceIndex = selectedFaceIndex
       variations = CopyVariations(selectedVariations)
       try {
-        fontPin = GCHandle.Alloc(fontBytes, GCHandleType.Pinned)
-        let fontAddress = fontPin.AddrOfPinnedObject()
-        harfBuzzBlob = hb_blob_create(fontAddress, uint32(fontBytes.Length), 1u, nint(0), nint(0))
+        fontBytes.DangerousAddRef(ref fontRetained)
+        harfBuzzBlob = hb_blob_create(fontBytes.DangerousGetHandle(), uint32(fontBytes.Length), 1u, nint(0), nint(0))
         if harfBuzzBlob == nint(0) {
           throw InvalidOperationException("hb_blob_create failed")
         }
@@ -145,7 +137,8 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
     let bytesId = recorder.ManagedResource(fontBytes, out var firstBytes)
     if firstBytes {
       recorder.Resource(FrameResourceKind.Font, bytesId, VulkanDiagnosticEventIds.ResourceCreate,
-        "font.bytes", name: profileName, bytes: uint64(fontBytes.Length), baseline: true)
+        if fontBytes.Path == nil { "font.bytes" } else { "font.mapping" },
+        name: fontBytes.Path ?? profileName, bytes: uint64(fontBytes.Length), baseline: true)
     }
     let id = recorder.ManagedResource(this, out var first)
     if first || !baseline {
@@ -467,8 +460,9 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
         hb_blob_destroy(harfBuzzBlob)
         harfBuzzBlob = nint(0)
       }
-      if fontPin.IsAllocated {
-        fontPin.Free()
+      if fontRetained {
+        fontBytes.DangerousRelease()
+        fontRetained = false
       }
     }
   }

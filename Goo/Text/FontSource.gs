@@ -9,16 +9,16 @@ public sealed class FontSource : IDisposable {
   shared {
     private const MaxVariations int32 = 16
 
-    /// Creates an unregistered font source by reading a file of at most 64 MiB.
-    /// The source owns the bytes and does not retain an open file.
+    /// Creates an unregistered font source backed by a read-only file mapping of at most 64 MiB.
+    /// Do not change or truncate the file while the source or its text layouts are in use.
     public func FromPath(family string, weight int32, italic bool, path string) FontSource ->
     FromPath(family, weight, italic, path, 0u, []FontVariation{})
 
     /// Creates an unregistered file-backed font source for a face and variation set.
-    /// Reads at most 64 MiB and owns the bytes independently of the file.
+    /// Do not change or truncate the mapped file while the source or its text layouts are in use.
     public func FromPath(family string, weight int32, italic bool, path string,
       faceIndex uint32, variations []FontVariation) FontSource ->
-    FontSource(family, weight, italic, VulkanTextFont.ReadBytes(path), faceIndex, variations, true)
+    FontSource(family, weight, italic, FontData.FromPath(path), faceIndex, variations)
 
     private func NormalizeFamily(value string) string {
       if value == nil { throw ArgumentNullException("family") }
@@ -81,11 +81,11 @@ public sealed class FontSource : IDisposable {
 
   public convenience init(family string, weight int32, italic bool, bytes []uint8,
     faceIndex uint32, variations []FontVariation) {
-      init(family, weight, italic, bytes, faceIndex, variations, false)
+      init(family, weight, italic, FontData(bytes), faceIndex, variations)
     }
 
-  private init(family string, weight int32, italic bool, bytes []uint8,
-    faceIndex uint32, variations []FontVariation, ownsBytes bool) {
+  private init(family string, weight int32, italic bool, bytes FontData,
+    faceIndex uint32, variations []FontVariation) {
       gate = Object()
       let canonical = NormalizeFamily(family)
       if canonical.Length == 0 { throw ArgumentException("Font family is empty", "family") }
@@ -99,13 +99,8 @@ public sealed class FontSource : IDisposable {
       this.weight = weight
       this.italic = italic
       this.faceIndex = faceIndex
-      var ownedBytes = bytes
-      if !ownsBytes {
-        ownedBytes = [bytes.Length]uint8
-        Array.Copy(bytes, ownedBytes, bytes.Length)
-      }
       let copied = CopyVariations(variations)
-      payload = FontSourcePayload(ownedBytes, copied.Public, copied.Native)
+      payload = FontSourcePayload(bytes, copied.Public, copied.Native)
       sourceId = FontRegistry.AllocateSourceId()
     }
 
@@ -160,7 +155,7 @@ public sealed class FontSource : IDisposable {
       let count = current.NativeVariations?.Length ?? 0
       if faceIndex != registration.FaceIndex
         || count != (registration.Variations?.Length ?? 0)
-        || !current.Bytes.AsSpan().SequenceEqual(registration.Bytes.AsSpan()) {
+        || !current.Bytes.Matches(registration.Bytes) {
         return false
       }
       for var index = 0; index < count; index++ {
@@ -189,11 +184,11 @@ public sealed class FontSource : IDisposable {
 }
 
 private sealed class FontSourcePayload {
-  internal let Bytes []uint8
+  internal let Bytes FontData
   internal let Variations []FontVariation
   internal let NativeVariations([]VulkanTextVariation)?
 
-  internal init(bytes []uint8, variations []FontVariation,
+  internal init(bytes FontData, variations []FontVariation,
     nativeVariations([]VulkanTextVariation)?) {
       Bytes = bytes
       Variations = variations
@@ -210,12 +205,12 @@ internal sealed class FontRegistration {
   internal let Generation uint64
   internal let Weight int32
   internal let Italic bool
-  internal let Bytes []uint8
+  internal let Bytes FontData
   internal let FaceIndex uint32
   internal let Variations([]VulkanTextVariation)?
 
   internal init(family string, sourceId uint64, generation uint64, weight int32,
-    italic bool, bytes []uint8, faceIndex uint32,
+    italic bool, bytes FontData, faceIndex uint32,
     variations([]VulkanTextVariation)?) {
       Family = family
       SourceId = sourceId
