@@ -1486,6 +1486,7 @@ Sources:
 - [`Window.Timers.gs`](../../Goo/Window/WindowParts/Window.Timers.gs)
 - [`Window.Titlebar.gs`](../../Goo/Window/WindowParts/Window.Titlebar.gs)
 - [`Window.UiScale.gs`](../../Goo/Window/WindowParts/Window.UiScale.gs)
+- [`Window.Virtualization.gs`](../../Goo/Window/WindowParts/Window.Virtualization.gs)
 - [`Window.Visibility.gs`](../../Goo/Window/WindowParts/Window.Visibility.gs)
 
 Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread.

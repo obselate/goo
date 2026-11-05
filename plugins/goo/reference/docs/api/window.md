@@ -1486,6 +1486,7 @@ Sources:
 - [`Window.Timers.gs`](https://github.com/obselate/goo/blob/main/Goo/Window/WindowParts/Window.Timers.gs)
 - [`Window.Titlebar.gs`](https://github.com/obselate/goo/blob/main/Goo/Window/WindowParts/Window.Titlebar.gs)
 - [`Window.UiScale.gs`](https://github.com/obselate/goo/blob/main/Goo/Window/WindowParts/Window.UiScale.gs)
+- [`Window.Virtualization.gs`](https://github.com/obselate/goo/blob/main/Goo/Window/WindowParts/Window.Virtualization.gs)
 - [`Window.Visibility.gs`](https://github.com/obselate/goo/blob/main/Goo/Window/WindowParts/Window.Visibility.gs)
 
 Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread.
