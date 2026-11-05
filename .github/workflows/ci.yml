@@ -96,6 +96,21 @@ jobs:
       - name: Validate onboarding and release metadata
         run: dotnet run --project tools/Goo.Repo -- check metadata
 
+      - name: Require a changelog fragment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v7
+        with:
+          script: |
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              ...context.repo, pull_number: context.issue.number, per_page: 100
+            });
+            const added = files.some(file => file.status === 'added' &&
+              /^changelog\.d\/[a-z0-9][a-z0-9.-]*\.md$/.test(file.filename));
+            const release = files.some(file => file.filename === 'Directory.Build.props' && file.status === 'modified') &&
+              files.some(file => file.filename === 'CHANGELOG.md' && file.status === 'modified') &&
+              files.some(file => file.filename.startsWith('changelog.d/') && file.status === 'removed');
+            if (!added && !release) core.setFailed('Add one changelog.d/<branch-or-pr>.md fragment');
+
 
       - name: Verify optional spell checking
         if: needs.changes.outputs.api == 'true'
