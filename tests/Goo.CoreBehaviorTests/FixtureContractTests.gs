@@ -3,6 +3,7 @@ import System
 import System.Collections.Generic
 import System.Linq
 import System.Reflection
+import System.Security.Cryptography
 import Xunit
 
 class FixtureContractTests {
@@ -32,6 +33,19 @@ class FixtureContractTests {
     @InlineData("element")
     func ElementHandleMovesInOneUpdate(scenario string) ->
         Assert.True(ElementHandleFixtures().MovesInOneUpdate(scenario))
+
+    @Fact
+    func EmbeddedShaderDigestsMatchContent() {
+        Assert.True(
+            SHA256.HashData(VulkanShaderAssets.Read("shader-manifest.json")).AsSpan().SequenceEqual(
+                VulkanShaderAssets.Read("shader-manifest.sha256").AsSpan()
+            )
+        )
+        for name in []string{"backdrop_blur.goo-effect", "filtered_backdrop.goo-effect"} {
+            let program = ShaderEffectProgram.LoadEmbedded(name)
+            Assert.True(SHA256.HashData(program.VulkanSpirv).AsSpan().SequenceEqual(program.VulkanSpirvDigest.AsSpan()))
+        }
+    }
 
     @Fact
     func EveryContractIsRegistered() {

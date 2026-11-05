@@ -1,21 +1,12 @@
 package Goo
 
 import System
-import System.IO
 import System.Numerics
 
 internal class BackdropBlurEffect {
   shared {
-    internal let Shared ShaderEffect = load()
-
-    private func load() ShaderEffect {
-      using let stream = typeof(BackdropBlurEffect).Assembly.GetManifestResourceStream(
-        "Goo.Effects.backdrop_blur.goo-effect")
-      if stream == nil { throw FileNotFoundException("Goo backdrop blur effect is missing") }
-      let program = ShaderEffectProgram(
-        BoundedInput.ReadAll(stream, ShaderEffectProgram.MaximumProgramByteCount, "Shader effect program"), true)
-      return ShaderEffect(program, true)
-    }
+    internal let Shared ShaderEffect =
+      ShaderEffect(ShaderEffectProgram.LoadEmbedded("backdrop_blur.goo-effect", true), true)
   }
 }
 

@@ -26,6 +26,7 @@
     <InternalsVisibleTo Include="Goo.Audio" />
     <InternalsVisibleTo Include="Goo.Notifications.WindowsSmoke" />
     <VulkanShaderAsset Include="Shaders/Vulkan/*.spv;Shaders/Vulkan/shader-manifest.json" />
+    <BuiltinShaderEffect Include="Shaders/Effects/*.goo-effect" />
     <EmbeddedResource Include="Shaders/Effects/*.goo-effect"
                       LogicalName="Goo.Effects.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Rendering/Text/Data/*.bin"
@@ -40,11 +41,13 @@
              AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
     <ParameterGroup>
       <Sources ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <Effects ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
       <OutputDirectory ParameterType="System.String" Required="true" />
     </ParameterGroup>
     <Task>
       <Using Namespace="System.IO" />
       <Using Namespace="System.IO.Compression" />
+      <Using Namespace="System.Security.Cryptography" />
       <Code Type="Fragment" Language="cs"><![CDATA[
         Directory.CreateDirectory(OutputDirectory);
         foreach (var source in Sources)
@@ -52,20 +55,54 @@
             using var input = File.OpenRead(source.ItemSpec);
             using var output = File.Create(Path.Combine(OutputDirectory, Path.GetFileName(source.ItemSpec) + ".gz"));
             using var compressed = new GZipStream(output, CompressionLevel.Optimal);
-            input.CopyTo(compressed);
+            using var hash = Path.GetFileName(source.ItemSpec) == "shader-manifest.json" ? SHA256.Create() : null;
+            using var hashing = hash == null ? null : new CryptoStream(input, hash, CryptoStreamMode.Read);
+            ((Stream)hashing ?? input).CopyTo(compressed);
+            if (hash != null)
+            {
+                using var digestOutput = File.Create(Path.Combine(OutputDirectory, "shader-manifest.sha256.gz"));
+                using var digest = new GZipStream(digestOutput, CompressionLevel.Optimal);
+                digest.Write(hash.Hash, 0, hash.Hash.Length);
+            }
+        }
+        foreach (var effect in Effects)
+        {
+            using var input = new BinaryReader(File.OpenRead(effect.ItemSpec));
+            if (input.ReadUInt32() != 0x46464547u || input.ReadUInt32() != 2u)
+                throw new InvalidDataException("Invalid built-in shader effect: " + effect.ItemSpec);
+            var count = input.ReadUInt32();
+            byte[] digest = null;
+            for (var index = 0u; index < count; index++)
+            {
+                var kind = input.ReadUInt32();
+                var size = input.ReadUInt32();
+                var bytes = input.ReadBytes(checked((int)size));
+                if (bytes.Length != size) throw new EndOfStreamException(effect.ItemSpec);
+                if (digest == null && (kind == 0x56505356u || kind == 0x47505356u))
+                {
+                    using var hash = SHA256.Create();
+                    digest = hash.ComputeHash(bytes);
+                }
+            }
+            if (digest == null) throw new InvalidDataException("Built-in effect has no Vulkan artifact: " + effect.ItemSpec);
+            File.WriteAllBytes(Path.Combine(OutputDirectory, Path.GetFileName(effect.ItemSpec) + ".sha256"), digest);
         }
       ]]></Code>
     </Task>
   </UsingTask>
   <Target Name="CompressVulkanShaders" BeforeTargets="AssignTargetPaths"
-          Inputs="@(VulkanShaderAsset);$(MSBuildProjectFullPath)" Outputs="@(VulkanShaderAsset->'$(IntermediateOutputPath)shaders/%(Filename)%(Extension).gz')">
-    <CompressVulkanShaderAssets Sources="@(VulkanShaderAsset)" OutputDirectory="$(IntermediateOutputPath)shaders" />
+          Inputs="@(VulkanShaderAsset);@(BuiltinShaderEffect);$(MSBuildProjectFullPath)" Outputs="@(VulkanShaderAsset->'$(IntermediateOutputPath)shaders/%(Filename)%(Extension).gz');@(BuiltinShaderEffect->'$(IntermediateOutputPath)shaders/%(Filename)%(Extension).sha256');$(IntermediateOutputPath)shaders/shader-manifest.sha256.gz">
+    <CompressVulkanShaderAssets Sources="@(VulkanShaderAsset)" Effects="@(BuiltinShaderEffect)" OutputDirectory="$(IntermediateOutputPath)shaders" />
   </Target>
   <Target Name="EmbedCompressedVulkanShaders" BeforeTargets="AssignTargetPaths" DependsOnTargets="CompressVulkanShaders">
     <ItemGroup>
       <EmbeddedResource Include="@(VulkanShaderAsset->'$(IntermediateOutputPath)shaders/%(Filename)%(Extension).gz')"
                         LogicalName="Goo.Vulkan.Shaders.%(Filename)%(Extension)" />
-      <FileWrites Include="@(VulkanShaderAsset->'$(IntermediateOutputPath)shaders/%(Filename)%(Extension).gz')" />
+      <EmbeddedResource Include="$(IntermediateOutputPath)shaders/shader-manifest.sha256.gz"
+                        LogicalName="Goo.Vulkan.Shaders.shader-manifest.sha256" />
+      <EmbeddedResource Include="@(BuiltinShaderEffect->'$(IntermediateOutputPath)shaders/%(Filename)%(Extension).sha256')"
+                        LogicalName="Goo.Effects.%(Filename)%(Extension).sha256" />
+      <FileWrites Include="@(VulkanShaderAsset->'$(IntermediateOutputPath)shaders/%(Filename)%(Extension).gz');@(BuiltinShaderEffect->'$(IntermediateOutputPath)shaders/%(Filename)%(Extension).sha256');$(IntermediateOutputPath)shaders/shader-manifest.sha256.gz" />
     </ItemGroup>
   </Target>
   <Import Project="$(GooTestFixturesProps)"

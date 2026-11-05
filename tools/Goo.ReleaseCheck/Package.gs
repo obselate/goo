@@ -71,7 +71,13 @@ internal shared partial class ReleaseCheck {
         let shaderManifest = JsonNode.Parse(
             File.ReadAllText(Path.Combine(Root, "Goo/Shaders/Vulkan/shader-manifest.json"))
         )!!
-        let resources = List[string]{"Goo.Effects.backdrop_blur.goo-effect", "Goo.Vulkan.Shaders.shader-manifest.json"}
+        let resources = List[string]{
+            "Goo.Effects.backdrop_blur.goo-effect",
+            "Goo.Effects.backdrop_blur.goo-effect.sha256",
+            "Goo.Effects.filtered_backdrop.goo-effect.sha256",
+            "Goo.Vulkan.Shaders.shader-manifest.json",
+            "Goo.Vulkan.Shaders.shader-manifest.sha256"
+        }
         for shader in shaderManifest["shaders"]!!.AsArray() {
             resources.Add("Goo.Vulkan.Shaders." + shader["output"]!!.GetValue[string]())
         }
