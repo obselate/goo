@@ -52,7 +52,7 @@ internal shared class Program {
         RunRetainedPrimitiveSpanGate()
         var font VulkanTextFont? = nil
         try {
-            font = VulkanTextFont(File.ReadAllBytes(fontPath), 32u, 0u, nil)
+            font = VulkanTextFont(FontData.FromPath(fontPath), 32u, 0u, nil)
             let provider = font
             let options = VulkanTextShapingOptions{
                 Direction: 4u,
@@ -328,6 +328,15 @@ internal shared class Program {
                 using let shapedPath = TextShaping.Shape("office", "GooAbiPath", 16f, 400, false, 0f, 1)
                 if shapedPath.HasMissingGlyph || shapedPath.GlyphCount <= 0 {
                     throw InvalidOperationException("Font path source did not retain its bytes")
+                }
+                pathSource.Dispose()
+                GC.Collect()
+                GC.WaitForPendingFinalizers()
+                let workspace = VulkanTextShapingWorkspace(16)
+                let result = shapedPath.Runs[0].Provider.ShapeInto(
+                    "office", VulkanTextShapingOptions{Direction: 4u}, workspace)
+                if result.Status != VulkanTextProviderAbi.Success || result.Count <= 0 {
+                    throw InvalidOperationException("Active shaped run did not retain its file mapping")
                 }
             }
             File.Copy(fontPath, oversizedPath)
