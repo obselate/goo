@@ -307,6 +307,55 @@ internal class PortalFixtures {
     return true
   }
 
+  func ClippedAnchorPreservesMountedEditorContract() bool {
+    let cell = PortalClippedAnchorCell{}
+    let adapter = AccessibilityTestAdapter{}
+    let window = Window{ Root: cell, Width: 240, Height: 160, AccessibilityAdapter: adapter }
+    window.UpdateTree()
+    guard let root = window.Tree, let entry = cell.Editor.AttachedNode(),
+      let portal = entry.Parent, let retained = entry.Fiber as PortalClippedEditorCell ? else { return false }
+    using let focusScope = cell.Popup.BeginFocusScope()
+    if !cell.Editor.Focus() { return false }
+    window.QueueCompositionForTest("pending", 1, 2)
+    window.DrainTextInputForTest()
+    window.UpdateTree()
+    guard let before = window.InputForTest.EditorSnapshot() else { return false }
+    let builds = retained.Builds
+    let hostBuilds = cell.Builds
+    let box = cell.Editor.BorderBox
+    if !Portals.Presented(portal) || hitTopmost(root, float32(box.X + 5.0),
+      float32(box.Y + 5.0)) != entry || before.CompositionStart < 0 { return false }
+    if !cell.Scroll.JumpTo(0.0, 70.0) { return false }
+    window.UpdateTree()
+    if portal.PaintInputHidden { return false }
+    if !cell.Scroll.JumpTo(0.0, 80.0) { return false }
+    window.UpdateTree()
+    let hiddenBox = cell.Editor.BorderBox
+    guard let hidden = window.InputForTest.EditorSnapshot() else { return false }
+    if !portal.PortalAnchorClipped || !portal.PaintInputHidden || Portals.Presented(portal)
+      || hitTopmost(root, float32(hiddenBox.X + 5.0), float32(hiddenBox.Y + 5.0)) == entry
+      || findPortalAccessibility(adapter.Tree?.Root, "retained editor") != nil
+      || !entry.Focused || !focusScope.IsActive || cell.Editor.AttachedNode() != entry || entry.Fiber != retained
+      || retained.Builds != builds || cell.Builds != hostBuilds
+      || hidden.Text != before.Text || hidden.SelectionStart != before.SelectionStart
+      || hidden.SelectionEnd != before.SelectionEnd
+      || hidden.CompositionStart != before.CompositionStart
+      || hidden.CompositionEnd != before.CompositionEnd { return false }
+    if !cell.Scroll.JumpTo(0.0, 0.0) { return false }
+    window.UpdateTree()
+    if portal.PaintInputHidden || !Portals.Presented(portal) || !entry.Focused || !focusScope.IsActive
+      || retained.Builds != builds || cell.Builds != hostBuilds
+      || !samePortalBox(cell.Editor.BorderBox, box.X, box.Y, box.Width, box.Height)
+      || hitTopmost(root, float32(box.X + 5.0), float32(box.Y + 5.0)) != entry
+      || findPortalAccessibility(adapter.Tree?.Root, "retained editor") == nil { return false }
+    cell.HideWhenClipped = false
+    cell.Rebuild()
+    window.UpdateTree()
+    if !cell.Scroll.JumpTo(0.0, 80.0) { return false }
+    window.UpdateTree()
+    return !portal.PaintInputHidden && entry.Focused && cell.Editor.AttachedNode() == entry
+  }
+
   func AnchoredPlacementLifecycleAndDependencyContract() bool {
     let otherAnchor = ElementHandle{}
     let other = Window{ Root: PortalForeignAnchorCell(otherAnchor),
@@ -608,6 +657,43 @@ internal class PortalSideSizeCell : Cell {
       MinWidth: Width, MinHeight: Height,
       Container{ Width: Width, Height: Height },
     },
+  }
+}
+
+internal class PortalClippedAnchorCell : Cell {
+  internal let Scroll ElementHandle = ElementHandle{}
+  internal let Anchor ElementHandle = ElementHandle{}
+  internal let Editor ElementHandle = ElementHandle{}
+  internal let Popup ElementHandle = ElementHandle{}
+  internal var HideWhenClipped bool = true
+  internal var Builds int32
+
+  override func Build() Blob {
+    Builds++
+    return Container{ Width: Percent(100), Height: Percent(100),
+      Container{ Handle: Scroll, Width: 200, Height: 100, Overflow: Overflow.Scroll,
+        Container{ Width: 200, Height: 400,
+          Container{ Handle: Anchor, Position: PositionType.Absolute,
+            Left: 10, Top: 60, Width: 30, Height: 30 },
+          Portal{ Handle: Popup, Anchor: Anchor, HideWhenAnchorClipped: HideWhenClipped,
+            AnchorRect: ElementRect{ X: 0, Y: 5, Width: 30, Height: 10 },
+            Width: 120, Height: 30, Focusable: true,
+            Cell.Mount[PortalRetainedInput, PortalClippedEditorCell]("editor", PortalRetainedInput(Editor)),
+          },
+        },
+      },
+    }
+  }
+}
+
+internal class PortalClippedEditorCell : Cell[PortalRetainedInput] {
+  internal var Builds int32
+
+  override func Build() Blob {
+    Builds++
+    return TextEntry{ Handle: Input.Target, Key: "retained-editor",
+      Width: 120, Height: 30, Value: "seed",
+      Accessibility: Accessibility{ Role: AccessibilityRole.TextInput, Name: "retained editor" } }
   }
 }
 

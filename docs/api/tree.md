@@ -45,6 +45,12 @@ Portal{
 Nil values use the whole anchor and viewport. Collision bounds also cap the Portal's
 size. Both properties have no effect without `Anchor`.
 
+Set `HideWhenAnchorClipped: true` to hide a popup when its anchor rectangle scrolls
+fully outside its ancestor clips. It stays mounted and keeps keyboard focus, text
+composition and edit state. It is not painted, hit-tested or visible to accessibility.
+It shows again without rebuilding its content when the anchor returns.
+The default is false.
+
 Goo keeps the preferred side when the popup fits. Otherwise it flips if the opposite
 side has more space. It then caps the main-axis size to the space between the anchor
 edge and the collision edge, so the popup does not cover the anchor. The cross axis
@@ -1121,6 +1127,10 @@ Gets a rectangle within Anchor's local border-box coordinates. Nil uses the whol
 ### `CollisionBounds`
 
 Gets the collision rectangle in window logical coordinates. Nil uses the whole viewport. After choosing a side, Goo caps the main-axis size to the space between AnchorRect and these bounds, then shifts the cross axis to fit. Values must be finite and dimensions nonnegative.
+
+### `HideWhenAnchorClipped`
+
+Hides presentation when AnchorRect is fully outside the anchor's ancestor clips. The default is false. Hiding preserves the mounted subtree, focus and text composition.
 
 ### `Placement`
 

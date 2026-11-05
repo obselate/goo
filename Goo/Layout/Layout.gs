@@ -351,6 +351,7 @@ internal class Layout {
     let bounds = portalAnchorBounds(portal, anchor)
     return !portal.PortalAnchorResolved
       || !samePortalRect(portal.PortalAnchorBounds, bounds)
+      || portal.PortalAnchorClipped != portalAnchorClipped(portal, anchor, bounds)
   }
 
   private func placePortals(sourceRoot Node, overlayRoot Node, width float32,
@@ -364,6 +365,7 @@ internal class Layout {
           if portal.PortalAnchor == nil {
             portal.PortalAnchorResolved = false
             portal.PortalPlacementHidden = false
+            portal.PortalAnchorClipped = false
             readRect(portal, 0.0F, 0.0F)
             placedPortals.Add(portal)
             progressed = true
@@ -416,6 +418,7 @@ internal class Layout {
           }
           portal.PortalAnchorResolved = true
           portal.PortalPlacementHidden = false
+          portal.PortalAnchorClipped = portalAnchorClipped(portal, anchor, bounds)
           readPortalRect(portal, origin.X, origin.Y)
           placedPortals.Add(portal)
           progressed = true
@@ -453,6 +456,20 @@ internal class Layout {
     return TransformGeometry.BoundsToWindow(anchor,
       anchor.Rect.X + float32(rect.X), anchor.Rect.Y + float32(rect.Y),
       float32(rect.Width), float32(rect.Height))
+  }
+
+  private func portalAnchorClipped(portal Node, anchor Node, bounds TransformBounds) bool {
+    if portal.PortalBounds?.HideWhenAnchorClipped != true { return false }
+    var ancestor Node? = anchor
+    while let current = ancestor {
+      if current.PortalAnchorClipped { return true }
+      if current.IsPortal { break }
+      ancestor = current.Parent
+    }
+    return TransformGeometry.VisibleBoundsToWindow(anchor,
+      ElementRect{ X: float64(bounds.X), Y: float64(bounds.Y),
+        Width: float64(bounds.W), Height: float64(bounds.H) },
+      float64(lastWidth), float64(lastHeight)) == nil
   }
 
   private func portalDependenciesReady(node Node, portal Node,
