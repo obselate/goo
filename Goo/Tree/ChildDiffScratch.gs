@@ -52,20 +52,27 @@ internal class ChildDiffScratchScope {
 }
 
 internal class ChildDiffScratch {
-  private let scopes List[ChildDiffScratchScope]
+  private const RetainedCapacity int32 = 4096
+  private const RetainedScopeCount int32 = 32
+  private let scopes []ChildDiffScratchScope?
   private var active int32
 
   internal init() {
-    scopes = List[ChildDiffScratchScope]()
+    scopes = [RetainedScopeCount]ChildDiffScratchScope?
   }
 
-  internal func Rent() ChildDiffScratchScope {
-    if active == scopes.Count {
-      scopes.Add(ChildDiffScratchScope())
-    }
-    let result = scopes[active]
+  internal func Rent(required int32) ChildDiffScratchScope {
+    let index = active
     active++
-    return result
+    if required > RetainedCapacity || index >= RetainedScopeCount {
+      return ChildDiffScratchScope()
+    }
+    var value = scopes[index]
+    if value == nil {
+      value = ChildDiffScratchScope()
+      scopes[index] = value
+    }
+    return value
   }
 
   internal func Return(s ChildDiffScratchScope) {
