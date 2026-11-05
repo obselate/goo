@@ -498,6 +498,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
         && (fullPeak >> (recoveryShift * 2)) > byteBudget { recoveryShift++ }
       layerResolutionShift = recoveryShift
     }
+    let exactRequiredBytes = fullResolutionRequiredBytes
     while true {
       var depth int32 = 0
       var available = true
@@ -564,6 +565,11 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
         reserved[index] = available && inFrame[index]
       }
       if available { break }
+      if oversizedActive && allocationMode < 3 {
+        oversizedActive = false
+        fullResolutionRequiredBytes = exactRequiredBytes
+        continue
+      }
       layerResolutionShift++
     }
     if layerResolutionShift > 0 && !sameShape { RememberLayerShape(frame) }
