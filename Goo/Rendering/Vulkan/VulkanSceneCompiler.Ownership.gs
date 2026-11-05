@@ -2,35 +2,74 @@ package Goo
 
 import Facebook.Yoga
 import System
+import System.Collections.Generic
 import System.Runtime.CompilerServices
 
 internal partial class VulkanSceneCompiler {
+  shared {
+    private let retirementGate object = Object()
+    private let compilers List[WeakReference[VulkanSceneCompiler]] = List[WeakReference[VulkanSceneCompiler]]()
+
+    private func RegisterCompiler(compiler VulkanSceneCompiler) {
+      lock retirementGate {
+        for index in 0 ... compilers.Count {
+          if compilers[index].TryGetTarget(out var current) {
+            if Object.ReferenceEquals(current, compiler) { return }
+          } else {
+            compilers[index].SetTarget(compiler)
+            return
+          }
+        }
+        compilers.Add(WeakReference[VulkanSceneCompiler](compiler))
+      }
+    }
+
+    internal func RetireNode(node Node) {
+      lock retirementGate {
+        var index int32
+        while index < compilers.Count {
+          if compilers[index].TryGetTarget(out var compiler) {
+            compiler.ForgetNode(node)
+            index++
+          } else {
+            compilers.RemoveAt(index)
+          }
+        }
+        node.VulkanOwner?.ClearCachedState()
+        node.VulkanOwner = nil
+        node.VulkanOwnerToken = nil
+      }
+    }
+  }
+
   private func Owner(node Node) VulkanSceneOwnerId {
-    if Object.ReferenceEquals(node.VulkanOwnerToken, ownerToken) {
-      if let cached = node.VulkanOwner && cached.Generation == node.MountGeneration {
+    if let cached = node.VulkanOwner {
+      if cached.Generation != node.MountGeneration {
+        RetireNode(node)
+      } else if Object.ReferenceEquals(node.VulkanOwnerToken, ownerToken) {
         return cached
       }
     }
-    var anchor VulkanSceneOwnerId?
-    if let previousOwner = node.VulkanOwner && previousOwner.Generation == node.MountGeneration {
-      let key = previousOwner.MountAnchor
-      anchor = key
-      if let previous = node.VulkanOwnerToken as WeakReference[ConditionalWeakTable[VulkanSceneOwnerId, VulkanSceneOwnerId]] {
+    if let previous = node.VulkanOwnerToken as WeakReference[ConditionalWeakTable[Node, VulkanSceneOwnerId]] {
+      if let previousOwner = node.VulkanOwner {
         if previous.TryGetTarget(out var previousOwners) {
-          previousOwners.AddOrUpdate(key, previousOwner)
+          previousOwners.AddOrUpdate(node, previousOwner)
         }
       }
     }
-    if let key = anchor && owners.TryGetValue(key, out var existing)
-      && existing.Generation == node.MountGeneration {
-      node.VulkanOwnerToken = ownerToken
-      node.VulkanOwner = existing
-      return existing
+    if owners.TryGetValue(node, out var existing) {
+      if existing.Generation == node.MountGeneration {
+        node.VulkanOwnerToken = ownerToken
+        node.VulkanOwner = existing
+        return existing
+      }
+      owners.Remove(node)
+      ForgetOwner(existing)
     }
     if nextOwnerId >= BackdropBlurMaskBit {
       throw OverflowException("Vulkan scene owner id overflow")
     }
-    let value = VulkanSceneOwnerId(nextOwnerId, node.MountGeneration, anchor)
+    let value = VulkanSceneOwnerId(nextOwnerId, node.MountGeneration)
     node.VulkanOwnerToken = ownerToken
     node.VulkanOwner = value
     nextOwnerId = nextOwnerId + 1uL
@@ -38,6 +77,27 @@ internal partial class VulkanSceneCompiler {
   }
 
   private func OwnerId(node Node) uint64 -> Owner(node).Value
+
+  private func ForgetNode(node Node) {
+    var previous VulkanSceneOwnerId?
+    if owners.TryGetValue(node, out var stored) {
+      previous = stored
+      owners.Remove(node)
+    }
+    if let cached = node.VulkanOwner
+      && Object.ReferenceEquals(node.VulkanOwnerToken, ownerToken)
+      && !Object.ReferenceEquals(cached, previous) {
+      ForgetOwner(cached)
+    }
+    if let stored = previous { ForgetOwner(stored) }
+  }
+
+  private func ForgetOwner(owner VulkanSceneOwnerId) {
+    owner.ClearCachedState()
+    roundedOverflowPaths.Remove(owner)
+    backdropBlurPaths.Remove(owner)
+    textScene?.ForgetOwner(owner)
+  }
 
   private func MarkUnsupportedNode(node Node) {
     switch node.Kind {

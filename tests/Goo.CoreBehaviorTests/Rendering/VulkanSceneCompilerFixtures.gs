@@ -64,10 +64,12 @@ internal class VulkanSceneCompilerFixtures {
       let first = VulkanSceneCompiler(64)
       let second = VulkanSceneCompiler(64)
       let priorFirstId = first.Compile(root, Color.Transparent, 100.0F, 100.0F).RootOwnerId
-      let priorFirst = root.VulkanOwner
+      guard let priorFirst = root.VulkanOwner else { return false }
       let priorSecondId = second.Compile(root, Color.Transparent, 100.0F, 100.0F).RootOwnerId
-      let priorSecond = root.VulkanOwner
+      guard let priorSecond = root.VulkanOwner else { return false }
       NodeLifecycle.DisposeTree(root)
+      if root.VulkanOwner != nil || root.VulkanOwnerToken != nil
+        || priorFirst.RetainedLeafValid || priorSecond.RetainedLeafValid { return false }
       if !root.TryBeginRebind() { return false }
       let color = Color.Rgb(0, 0, 255)
       let rebound = reconciler.Diff(root, Container{

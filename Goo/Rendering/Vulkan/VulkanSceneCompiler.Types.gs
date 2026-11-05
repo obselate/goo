@@ -216,9 +216,6 @@ internal class VulkanSceneBoxState {
 internal class VulkanSceneOwnerId {
   internal var Value uint64
   internal let Generation uint64
-  private let mountAnchor VulkanSceneOwnerId?
-
-  internal prop MountAnchor VulkanSceneOwnerId { get -> mountAnchor ?? this }
   private var textState VulkanSceneTextState?
   private var boxState VulkanSceneBoxState?
 
@@ -396,10 +393,9 @@ internal class VulkanSceneOwnerId {
     set -> EnsureBoxState().RetainedBoxIsLeaf = value
   }
 
-  internal init(value uint64, generation uint64, anchor VulkanSceneOwnerId?) {
+  internal init(value uint64, generation uint64) {
     Value = value
     Generation = generation
-    mountAnchor = anchor
   }
 
   internal func ClearRetainedLeaf() {
@@ -411,5 +407,10 @@ internal class VulkanSceneOwnerId {
       state.RetainedTextValid = false
       state.RetainedTextContent = nil
     }
+  }
+
+  internal func ClearCachedState() {
+    textState = nil
+    boxState = nil
   }
 }

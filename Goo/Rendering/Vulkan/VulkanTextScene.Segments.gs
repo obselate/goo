@@ -102,6 +102,11 @@ internal unsafe sealed partial class VulkanTextScene {
     return created
   }
 
+  internal func ForgetOwner(owner VulkanSceneOwnerId) {
+    nodeSegments.Remove(owner)
+    gutterSegments.Remove(owner)
+  }
+
   private func BeginSegment(frame SceneFrame, glyphCount int32) VulkanRetainedTextSegment {
     guard let cache = activeNodeSegments else {
       throw InvalidOperationException("Vulkan text segment cache is not active")
