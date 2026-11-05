@@ -194,6 +194,58 @@ internal class PortalFixtures {
     return samePortalBox(cell.Popup.BorderBox, 65.0, 80.0, 90.0, 50.0)
   }
 
+  func AnchoredSubrectangleAndCollisionBoundsContract() bool {
+    let cell = PortalPlacementCell{}
+    let window = Window{ Root: cell, Width: 240, Height: 160 }
+    window.UpdateTree()
+    cell.AnchorRect = ElementRect{ X: 5, Y: 2, Width: 10, Height: 8 }
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 150.0, 110.0, 90.0, 50.0) { return false }
+    cell.CollisionBounds = ElementRect{ X: 20, Y: 15, Width: 180, Height: 130 }
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 110.0, 52.0, 90.0, 50.0) { return false }
+    cell.CollisionBounds = ElementRect{ X: 20, Y: 70, Width: 180, Height: 70 }
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 110.0, 70.0, 90.0, 50.0) { return false }
+    cell.Placement = PortalPlacement.RightStart
+    cell.CollisionBounds = ElementRect{ X: 20, Y: 15, Width: 180, Height: 130 }
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 85.0, 95.0, 90.0, 50.0) { return false }
+    cell.Placement = PortalPlacement.BottomStart
+    cell.Rebuild()
+    window.UpdateTree()
+    guard let anchor = cell.Anchor.AttachedNode() else { return false }
+    let builds = cell.Builds
+    Transforming.SetScale(anchor, 2.0F)
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 110.0, 44.0, 90.0, 50.0) { return false }
+    Transforming.SetScale(anchor, 1.0F)
+    Transforming.SetTranslateX(anchor, Length{ Unit: LengthUnit.Px, Value: -80.0F })
+    window.UpdateTree()
+    if cell.Builds != builds
+      || !samePortalBox(cell.Popup.BorderBox, 95.0, 52.0, 90.0, 50.0) { return false }
+    if !cell.Scroll.JumpTo(20.0, 30.0) { return false }
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 75.0, 80.0, 90.0, 50.0) { return false }
+    cell.Placement = PortalPlacement.RightStart
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 85.0, 72.0, 90.0, 50.0) { return false }
+    cell.CollisionBounds = ElementRect{ X: 90, Y: 15, Width: 70, Height: 100 }
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 90.0, 65.0, 70.0, 50.0) { return false }
+    cell.AnchorRect = nil
+    cell.CollisionBounds = nil
+    cell.Rebuild()
+    window.UpdateTree()
+    return samePortalBox(cell.Popup.BorderBox, 90.0, 70.0, 90.0, 50.0)
+  }
+
   func AnchoredPlacementLifecycleAndDependencyContract() bool {
     let otherAnchor = ElementHandle{}
     let other = Window{ Root: PortalForeignAnchorCell(otherAnchor),
@@ -451,6 +503,8 @@ internal class PortalPlacementCell : Cell {
   internal var PopupWidth float64 = 90.0
   internal var RightToLeft bool
   internal var Placement PortalPlacement
+  internal var AnchorRect ElementRect?
+  internal var CollisionBounds ElementRect?
   internal var Clicks int32
   internal var Builds int32
 
@@ -463,6 +517,8 @@ internal class PortalPlacementCell : Cell {
             Left: 170, Top: 100, Width: 20, Height: 20},
           Portal{Handle: Popup, Anchor: Anchor,
             Placement: Placement,
+            AnchorRect: AnchorRect,
+            CollisionBounds: CollisionBounds,
             Direction: RightToLeft ? Direction.RightToLeft : Direction.LeftToRight,
             Overflow: Overflow.Scroll,
             Container{Width: PopupWidth, Height: 50,
