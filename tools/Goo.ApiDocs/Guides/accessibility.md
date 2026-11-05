@@ -92,8 +92,21 @@ Wayland does not expose global window positions, so clients should use
 window-relative geometry.
 
 `Accessibility.PositionInSet` is the zero-based logical item index.
-`SizeOfSet` belongs on the collection container and counts all logical items,
-including those outside the realized viewport. `Virtual` supplies list and list-item
-semantics, and takes this metadata from `VirtualItem.Index` and `VirtualOutput.ItemCount`.
+`SizeOfSet` counts all logical items in a collection or an item's set, including
+items outside the realized viewport. `Virtual` supplies the position and count
+from `VirtualItem.Index` and `VirtualOutput.ItemCount`. Explicit values take precedence.
 Give `Virtual` another role, or set its `Accessibility` to nil, when the content supplies
-the item semantics. Its items then have no role, and the content of each item gets the position.
+the item semantics. Its content then receives the position and count.
+AccessKit uses zero-based item and grid indices. Goo converts its one-based `Level`
+at that bridge. UIA and AT-SPI read set counts from the collection container.
+Per-level item counts in a flat tree are not exposed by the desktop adapters.
+
+Use `Separator` for dividers, including focusable splitters with `Range` and value actions.
+`TabPanel`, `Toolbar` and `Tooltip` map to their native roles.
+
+For grids, set `RowCount` and `ColumnCount` on the `Grid` container.
+Set zero-based `RowIndex` and `ColumnIndex` on realized `GridCell`, `RowHeader`
+and `ColumnHeader` nodes. Counts include unrealized rows and columns.
+Android exposes these values through collection and collection-item metadata.
+The pinned AT-SPI, UIA and macOS adapters retain the grid values in AccessKit
+but do not expose them through native table interfaces.

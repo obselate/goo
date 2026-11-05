@@ -30,11 +30,26 @@ Portal{
 }
 ```
 
-Goo tries the preferred side, flips to its opposite when that reduces viewport
-overflow, then clamps the Portal border box inside the viewport. `Start` and `End`
+Set `AnchorRect` to use part of the anchor in its local border-box coordinates.
+Set `CollisionBounds` to limit placement to a rectangle in window logical coordinates:
+
+```gsharp
+Portal{
+    Anchor: trigger,
+    AnchorRect: ElementRect{X: 8, Y: 4, Width: 80, Height: 24},
+    CollisionBounds: ElementRect{X: 12, Y: 12, Width: 776, Height: 576},
+    Container{Width: 240, Height: 160},
+}
+```
+
+Nil values use the whole anchor and viewport. Collision bounds also cap the Portal's
+size. Both properties have no effect without `Anchor`.
+
+Goo tries the preferred side, flips to its opposite when that reduces collision
+overflow, then clamps the Portal border box inside the collision bounds. `Start` and `End`
 on top and bottom placements follow the Portal's resolved text direction. On left
-and right placements they mean top and bottom. A popup larger than the viewport is
-capped to the viewport. Use `Overflow.Scroll` when its content must remain reachable.
+and right placements they mean top and bottom. A popup larger than the bounds is
+capped to the bounds. Use `Overflow.Scroll` when its content must remain reachable.
 Padding on a transparent Portal can provide a gap that follows the popup when it
 flips.
 
@@ -1082,6 +1097,14 @@ Adds a child for mixed composite initialization. Siblings can mix keyed and unke
 
 Gets the optional mounted element whose transformed border box positions this Portal. When set, an unmounted, hidden, wrong-Window, descendant, or cyclic anchor suppresses the Portal. An unset Anchor keeps ordinary window-level Portal positioning.
 
+### `AnchorRect`
+
+Gets a rectangle within Anchor's local border-box coordinates. Nil uses the whole border box. Values must be finite and dimensions nonnegative.
+
+### `CollisionBounds`
+
+Gets the collision rectangle in window logical coordinates. Nil uses the whole viewport. The Portal flips, shifts, and shrinks to fit these bounds. Values must be finite and dimensions nonnegative.
+
 ### `Placement`
 
 Gets the preferred side and alignment used when Anchor is mounted in this Window. Goo flips to the opposite side when that reduces overflow, then contains the Portal border box within the viewport. The default is BottomStart.
@@ -1328,6 +1351,10 @@ Gets the placeholder shown for an empty value.
 
 Gets the placeholder color. Nil draws Color at 45% opacity.
 
+### `ReadOnly`
+
+Gets whether editing commands are disabled.
+
 ### `SelectionColor`
 
 Gets the selection highlight color.
@@ -1547,7 +1574,7 @@ Gets the resolved gap between columns.
 
 ### `ContextVersion`
 
-Gets the generation of the effective retained context during this callback. A changed lineage or unshadowed provider value invalidates cached item content.
+Gets the generation of the effective retained context during this callback. A changed lineage, unshadowed provider value or PixelScale invalidates cached item content.
 
 ### `Direction`
 
@@ -1556,6 +1583,10 @@ Gets the authored flex direction.
 ### `FocusedChild`
 
 Gets the index of the mounted item that contains keyboard focus, or -1.
+
+### `PixelScale`
+
+Gets the device pixels per layout unit used to round layout in this window. Includes Window.UiScale. A change also changes ContextVersion.
 
 ### `RowGap`
 

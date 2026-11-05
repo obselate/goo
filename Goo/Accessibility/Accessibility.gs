@@ -9,6 +9,14 @@ public enum AccessibilityRole {
   Slider; SpinButton; ScrollBar; ProgressBar; Group; List; ListItem; Menu; MenuItem;
   TabList; Tab; Dialog; Alert; Heading; Link; Tree; TreeItem; Grid; GridCell; Row;
   ColumnHeader; RowHeader; ComboBox; SearchBox; Status; Custom;
+  /// A divider that can expose focus and a numeric range when adjustable.
+  Separator;
+  /// The content associated with a tab.
+  TabPanel;
+  /// A group of related commands.
+  Toolbar;
+  /// Contextual help for another element.
+  Tooltip;
 }
 
 /// Describes a checkable widget state.
@@ -189,12 +197,25 @@ public class Accessibility {
   public prop Invalid bool? { get; init; }
   /// Gets whether the item is busy when explicitly specified.
   public prop Busy bool? { get; init; }
-  /// Gets the heading level when explicitly specified.
+  /// Gets the one-based heading level when explicitly specified.
   public prop Level int32? { get; init; }
   /// Gets the zero-based logical item position within its collection, including unrealized items.
   public prop PositionInSet int32? { get; init; }
-  /// Gets the logical item count on a collection container, including unrealized items.
+  /// Gets the logical item count for a collection or an item, including unrealized items.
+  /// Desktop adapters use the collection count. Per-level item counts in a flat tree are not exposed.
   public prop SizeOfSet int32? { get; init; }
+  /// Gets the zero-based logical row index, including unrealized rows.
+  /// Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+  public prop RowIndex int32? { get; init; }
+  /// Gets the zero-based logical column index, including unrealized columns.
+  /// Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+  public prop ColumnIndex int32? { get; init; }
+  /// Gets the total logical row count, including unrealized rows.
+  /// Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+  public prop RowCount int32? { get; init; }
+  /// Gets the total logical column count, including unrealized columns.
+  /// Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+  public prop ColumnCount int32? { get; init; }
   /// Gets the orientation when explicitly specified.
   public prop Orientation AccessibilityOrientation{ get; init; }
   /// Gets whether the item is modal when explicitly specified.
@@ -252,6 +273,18 @@ public class Accessibility {
     }
     if let size = SizeOfSet {
       if size < 0 { throw ArgumentOutOfRangeException("SizeOfSet") }
+    }
+    if let index = RowIndex {
+      if index < 0 { throw ArgumentOutOfRangeException("RowIndex") }
+    }
+    if let index = ColumnIndex {
+      if index < 0 { throw ArgumentOutOfRangeException("ColumnIndex") }
+    }
+    if let count = RowCount {
+      if count < 0 { throw ArgumentOutOfRangeException("RowCount") }
+    }
+    if let count = ColumnCount {
+      if count < 0 { throw ArgumentOutOfRangeException("ColumnCount") }
     }
     Range?.Validate()
     Relationships?.Validate()
@@ -477,12 +510,25 @@ public interface AccessibilityNode {
   prop Invalid bool? { get; }
   /// Gets the resolved busy state.
   prop Busy bool? { get; }
-  /// Gets the resolved heading level.
+  /// Gets the resolved one-based heading level.
   prop Level int32? { get; }
   /// Gets the zero-based logical collection item position.
   prop PositionInSet int32? { get; }
-  /// Gets the total logical item count on a collection container.
+  /// Gets the total logical item count for a collection or an item.
+  /// Desktop adapters use the collection count. Per-level item counts in a flat tree are not exposed.
   prop SizeOfSet int32? { get; }
+  /// Gets the zero-based logical row index.
+  /// Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+  prop RowIndex int32? { get; }
+  /// Gets the zero-based logical column index.
+  /// Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+  prop ColumnIndex int32? { get; }
+  /// Gets the total logical row count.
+  /// Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+  prop RowCount int32? { get; }
+  /// Gets the total logical column count.
+  /// Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+  prop ColumnCount int32? { get; }
   /// Gets the resolved orientation.
   prop Orientation AccessibilityOrientation { get; }
   /// Gets the resolved modal state.
@@ -546,6 +592,10 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
   private var level int32?
   private var positionInSet int32?
   private var sizeOfSet int32?
+  private var rowIndex int32?
+  private var columnIndex int32?
+  private var rowCount int32?
+  private var columnCount int32?
   private var orientation AccessibilityOrientation
   private var modal bool?
   private var multiline bool?
@@ -587,6 +637,10 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
   public prop Level int32? { get -> level }
   public prop PositionInSet int32? { get -> positionInSet }
   public prop SizeOfSet int32? { get -> sizeOfSet }
+  public prop RowIndex int32? { get -> rowIndex }
+  public prop ColumnIndex int32? { get -> columnIndex }
+  public prop RowCount int32? { get -> rowCount }
+  public prop ColumnCount int32? { get -> columnCount }
   public prop Orientation AccessibilityOrientation{ get -> orientation }
   public prop Modal bool? { get -> modal }
   public prop Multiline bool? { get -> multiline }
@@ -630,7 +684,8 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
     modal bool?, multiline bool?, multiSelectable bool?, hasPopup bool?, live AccessibilityLive,
     atomic bool?, focused bool, bounds ElementRect, actionMask int32,
     positionInSet int32? = nil, sizeOfSet int32? = nil, isPassword bool = false,
-    visibleBounds ElementRect? = nil, scrollInfo AccessibilityScrollInfo? = nil) bool{
+    visibleBounds ElementRect? = nil, scrollInfo AccessibilityScrollInfo? = nil,
+    rowIndex int32? = nil, columnIndex int32? = nil, rowCount int32? = nil, columnCount int32? = nil) bool{
       let changed = this.role != role || this.customRole != customRole || this.name != name
         || this.description != description || this.value != value || this.valueText != valueText
         || this.valueNow != valueNow || this.valueMinimum != valueMinimum
@@ -641,6 +696,8 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
         || this.expanded != expanded || this.disabled != disabled || this.readOnly != readOnly
         || this.required != required || this.invalid != invalid || this.busy != busy
         || this.level != level || this.positionInSet != positionInSet || this.sizeOfSet != sizeOfSet
+        || this.rowIndex != rowIndex || this.columnIndex != columnIndex
+        || this.rowCount != rowCount || this.columnCount != columnCount
         || this.orientation != orientation || this.modal != modal
         || this.multiline != multiline || this.multiSelectable != multiSelectable
         || this.hasPopup != hasPopup || this.live != live || this.atomic != atomic
@@ -672,6 +729,10 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
       this.level = level
       this.positionInSet = positionInSet
       this.sizeOfSet = sizeOfSet
+      this.rowIndex = rowIndex
+      this.columnIndex = columnIndex
+      this.rowCount = rowCount
+      this.columnCount = columnCount
       this.orientation = orientation
       this.modal = modal
       this.multiline = multiline
@@ -900,7 +961,7 @@ private func validateScroll(value float64, name string) float64 {
 }
 
 private func validateRole(value AccessibilityRole) {
-  if int32(value) < int32(AccessibilityRole.Auto) || int32(value) > int32(AccessibilityRole.Custom) {
+  if int32(value) < int32(AccessibilityRole.Auto) || int32(value) > int32(AccessibilityRole.Tooltip) {
     throw ArgumentOutOfRangeException("Role")
   }
 }

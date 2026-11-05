@@ -78,6 +78,7 @@ internal sealed class VirtualNodeState {
   private var contextDirty bool
   private var contextVersion int64
   private var pendingContextVersion int64
+  private var pixelScale float32 = 1.0F
 
   internal prop ContextVersion int64 { get -> contextVersion }
 
@@ -104,6 +105,13 @@ internal sealed class VirtualNodeState {
     contextVersion++
     contextDirty = true
     Owner?.ContextVirtualInvalidated()
+  }
+
+  internal func RefreshPixelScale() {
+    let scale = Owner?.RenderScale.X ?? 1.0F
+    if scale == pixelScale { return }
+    pixelScale = scale
+    InvalidateContext()
   }
 
   internal func ContextAffected(source ContextFrame, lineageChanged bool) bool {
@@ -562,6 +570,16 @@ internal class Virtualization {
     internal func Position(n Node) int32? {
       guard let wrapper = n.Parent, let key = wrapper.Key, let owner = wrapper.Parent else { return nil }
       return State(owner)?.Position(key)
+    }
+
+    internal func ItemCount(n Node) int32? {
+      if let state = State(n) { return state.ItemCount() }
+      guard let parent = n.Parent else { return nil }
+      if n.Key != nil {
+        if let state = State(parent) { return state.ItemCount() }
+      }
+      guard let key = parent.Key, let owner = parent.Parent, let state = State(owner) else { return nil }
+      return state.Position(key) != nil ? state.ItemCount() : nil
     }
 
     internal func Dispose(n Node) {

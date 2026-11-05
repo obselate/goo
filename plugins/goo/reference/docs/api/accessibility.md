@@ -94,11 +94,24 @@ Wayland does not expose global window positions, so clients should use
 window-relative geometry.
 
 `Accessibility.PositionInSet` is the zero-based logical item index.
-`SizeOfSet` belongs on the collection container and counts all logical items,
-including those outside the realized viewport. `Virtual` supplies list and list-item
-semantics, and takes this metadata from `VirtualItem.Index` and `VirtualOutput.ItemCount`.
+`SizeOfSet` counts all logical items in a collection or an item's set, including
+items outside the realized viewport. `Virtual` supplies the position and count
+from `VirtualItem.Index` and `VirtualOutput.ItemCount`. Explicit values take precedence.
 Give `Virtual` another role, or set its `Accessibility` to nil, when the content supplies
-the item semantics. Its items then have no role, and the content of each item gets the position.
+the item semantics. Its content then receives the position and count.
+AccessKit uses zero-based item and grid indices. Goo converts its one-based `Level`
+at that bridge. UIA and AT-SPI read set counts from the collection container.
+Per-level item counts in a flat tree are not exposed by the desktop adapters.
+
+Use `Separator` for dividers, including focusable splitters with `Range` and value actions.
+`TabPanel`, `Toolbar` and `Tooltip` map to their native roles.
+
+For grids, set `RowCount` and `ColumnCount` on the `Grid` container.
+Set zero-based `RowIndex` and `ColumnIndex` on realized `GridCell`, `RowHeader`
+and `ColumnHeader` nodes. Counts include unrealized rows and columns.
+Android exposes these values through collection and collection-item metadata.
+The pinned AT-SPI, UIA and macOS adapters retain the grid values in AccessKit
+but do not expose them through native table interfaces.
 
 ## `Accessibility`
 
@@ -128,6 +141,14 @@ Gets whether the item is busy when explicitly specified.
 
 Gets the check state.
 
+### `ColumnCount`
+
+Gets the total logical column count, including unrealized columns. Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+
+### `ColumnIndex`
+
+Gets the zero-based logical column index, including unrealized columns. Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+
 ### `CustomRole`
 
 Gets the platform-specific custom role name for AccessibilityRole.Custom.
@@ -154,7 +175,7 @@ Gets whether the item is invalid when explicitly specified.
 
 ### `Level`
 
-Gets the heading level when explicitly specified.
+Gets the one-based heading level when explicitly specified.
 
 ### `Live`
 
@@ -208,13 +229,21 @@ Gets whether the item is required when explicitly specified.
 
 Gets the role. Auto selects a neutral primitive default when one exists.
 
+### `RowCount`
+
+Gets the total logical row count, including unrealized rows. Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+
+### `RowIndex`
+
+Gets the zero-based logical row index, including unrealized rows. Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+
 ### `Selected`
 
 Gets whether the item is selected when explicitly specified.
 
 ### `SizeOfSet`
 
-Gets the logical item count on a collection container, including unrealized items.
+Gets the logical item count for a collection or an item, including unrealized items. Desktop adapters use the collection count. Per-level item counts in a flat tree are not exposed.
 
 ### `Value`
 
@@ -401,6 +430,14 @@ Gets the resolved check state.
 
 Gets published semantic children in deterministic source order.
 
+### `ColumnCount`
+
+Gets the total logical column count. Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+
+### `ColumnIndex`
+
+Gets the zero-based logical column index. Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+
 ### `CustomRole`
 
 Gets the custom role text when Role is Custom.
@@ -439,7 +476,7 @@ Gets whether exposed text represents a protected password value.
 
 ### `Level`
 
-Gets the resolved heading level.
+Gets the resolved one-based heading level.
 
 ### `Live`
 
@@ -485,6 +522,14 @@ Gets the resolved required state.
 
 Gets the resolved role.
 
+### `RowCount`
+
+Gets the total logical row count. Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+
+### `RowIndex`
+
+Gets the zero-based logical row index. Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+
 ### `ScrollInfo`
 
 Gets built-in scroll geometry, or nil when this node has no scroll container.
@@ -503,7 +548,7 @@ Gets the UTF-16 selection start in the exposed semantic value, when this node ha
 
 ### `SizeOfSet`
 
-Gets the total logical item count on a collection container.
+Gets the total logical item count for a collection or an item. Desktop adapters use the collection count. Per-level item counts in a flat tree are not exposed.
 
 ### `TextSnapshot`
 
@@ -670,6 +715,26 @@ Selects the semantic role exposed to an accessibility adapter.
 - `SearchBox`
 - `Status`
 - `Custom`
+- `Separator`
+- `TabPanel`
+- `Toolbar`
+- `Tooltip`
+
+### `Separator`
+
+A divider that can expose focus and a numeric range when adjustable.
+
+### `TabPanel`
+
+The content associated with a tab.
+
+### `Toolbar`
+
+A group of related commands.
+
+### `Tooltip`
+
+Contextual help for another element.
 
 ## `AccessibilityScrollInfo`
 

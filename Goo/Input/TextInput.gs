@@ -33,6 +33,7 @@ internal partial class TextInput {
   internal func RefreshFocus() {
     syncNativeTextInput()
     if let current = focus.FocusedNode() {
+      if current.Kind == NodeKind.Entry && current.EditorReadOnly { cancelEntryComposition(current) }
       if current.Kind == NodeKind.Entry || current.Kind == NodeKind.Editor {
         updateTextInputArea(current)
       }
@@ -93,7 +94,7 @@ internal partial class TextInput {
   }
 
   internal func AccessibilitySetValue(root Node?, target Node, value string) bool {
-    if !canReceiveInput(target) { return false }
+    if !canReceiveInput(target) || target.EditorReadOnly { return false }
     if target.Kind == NodeKind.Entry {
       let before = editState(target)
       let editor = Edit()
@@ -171,6 +172,10 @@ internal partial class TextInput {
       return committed
     }
     if n.Kind == NodeKind.Entry && canReceiveInput(n) {
+      if n.EditorReadOnly {
+        dispatchTextInput(n, value)
+        return true
+      }
       let clean = sanitize(value)
       if let current = entryComposition {
         let before = entryCompositionBefore
@@ -205,7 +210,7 @@ internal partial class TextInput {
             updateTextInputArea(n)
           }
         }
-      } else if n.Kind == NodeKind.Entry {
+      } else if n.Kind == NodeKind.Entry && !n.EditorReadOnly {
         updated = updateEntryComposition(n, composition)
       }
       dispatchTextComposition(n, composition)

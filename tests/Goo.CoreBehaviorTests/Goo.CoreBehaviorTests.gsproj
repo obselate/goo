@@ -18,6 +18,8 @@
                       AdditionalProperties="Configuration=TestRelease;IncludeTestFixtures=true" />
     <ProjectReference Include="..\Goo.FSharpInterop\Goo.FSharpInterop.fsproj"
                       AdditionalProperties="Configuration=TestRelease" />
+    <ProjectReference Include="..\Goo.AndroidSmoke.Shared\Goo.AndroidSmoke.Shared.gsproj"
+                      AdditionalProperties="Configuration=TestRelease;IncludeTestFixtures=true" />
     <None Update="Assets/*.svg" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <Target Name="UseGooLinuxSdlForTests"

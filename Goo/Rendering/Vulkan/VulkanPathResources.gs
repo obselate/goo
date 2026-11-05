@@ -100,6 +100,8 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
   private const DefaultAtlasLogicalId uint64 = 2147483649uL
   private const FillRuleNonZero uint32 = 0u
   private const FillRuleEvenOdd uint32 = 1u
+  private const RetainedMapCapacity int32 = 4096
+  private const RetainedMapCount int32 = 4096
 
   private var atlas VulkanPathAtlas
   private let identities VulkanPathIdentityRegistry
@@ -269,7 +271,10 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
           RemoveActiveRevisionOwner(pathId, revision)
         }
         revisions.Clear()
-        sceneRevisionSetPool.Add(revisions)
+        if revisions.EnsureCapacity(0) <= RetainedMapCapacity
+          && sceneRevisionSetPool.Count < RetainedMapCount {
+          sceneRevisionSetPool.Add(revisions)
+        }
         RemoveActiveOwner(pathId)
       }
       sceneActivePathIds.Remove(sceneId)
@@ -302,7 +307,10 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
       }
       if revisions.Count == 0 {
         active.Remove(pathId)
-        sceneRevisionSetPool.Add(revisions)
+        if revisions.EnsureCapacity(0) <= RetainedMapCapacity
+          && sceneRevisionSetPool.Count < RetainedMapCount {
+          sceneRevisionSetPool.Add(revisions)
+        }
         RemoveActiveOwner(pathId)
       }
     }
@@ -1308,7 +1316,10 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
     if revisions.Count == 0 {
       activePathRevisionOwners.Remove(pathId)
       revisions.Clear()
-      revisionOwnerMapPool.Add(revisions)
+      if revisions.EnsureCapacity(0) <= RetainedMapCapacity
+        && revisionOwnerMapPool.Count < RetainedMapCount {
+        revisionOwnerMapPool.Add(revisions)
+      }
     }
   }
 

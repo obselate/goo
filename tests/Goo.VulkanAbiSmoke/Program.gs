@@ -15,6 +15,10 @@ internal shared class Program {
             RunSystemFontWeightGate(Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf"))
             return 0
         }
+        if Environment.GetEnvironmentVariable("GOO_FONT_SCROLL_GATE") == "1" {
+            FontScrollGate.Run(Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf"))
+            return 0
+        }
         if Environment.GetEnvironmentVariable("GOO_VK_DESCRIPTOR_GC") == "1" {
             DescriptorLifetimeRegression.Run()
             return 0
@@ -52,7 +56,7 @@ internal shared class Program {
         RunRetainedPrimitiveSpanGate()
         var font VulkanTextFont? = nil
         try {
-            font = VulkanTextFont(File.ReadAllBytes(fontPath), 32u, 0u, nil)
+            font = VulkanTextFont(FontData.FromPath(fontPath), 32u, 0u, nil)
             let provider = font
             let options = VulkanTextShapingOptions{
                 Direction: 4u,
@@ -255,6 +259,16 @@ internal shared class Program {
                 File.Move(retainedPath + ".retained", retainedPath)
             }
         }
+        TextShaping.FallbackPreloadForTests().GetAwaiter().GetResult()
+        using let retained = TextShaping.Shape("office", family, 32f, 300, false, 0f, 1)
+        for weight in 1 ... 66 {
+            TextShaping.Metrics(source.Family, 14f, weight, false)
+        }
+        using let reused = TextShaping.Shape("office", family, 32f, 300, false, 0f, 1)
+        if !Object.ReferenceEquals(retained.Runs[0].Provider, reused.Runs[0].Provider) {
+            throw InvalidOperationException("Evicted typeface was loaded again while its shaped run was live")
+        }
+        Console.WriteLine("LEASED_TYPEFACE_REUSE evicted=1 reused=1")
         Console.WriteLine("MIXED_WEIGHT_FALLBACK_CACHE_SMOKE backgroundPreload=1 warmFileRemoved=1"
             + " layouts=32 cacheBytes=" + TextShaping.PrimaryFaceCacheBytesForTests().ToString())
         Console.WriteLine("SYSTEM_VARIABLE_FONT_WEIGHT_SMOKE light=" + light.Width.ToString()
@@ -309,8 +323,10 @@ internal shared class Program {
             }
         }
         let oversizedPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".ttf")
+        let aliasPath = oversizedPath + ".alias.ttf"
         try {
             File.Copy(fontPath, oversizedPath)
+            if OperatingSystem.IsLinux() { File.CreateSymbolicLink(aliasPath, oversizedPath) }
             {
                 using let pathSource = FontSource.FromPath(
                     "GooAbiPath",
@@ -320,16 +336,52 @@ internal shared class Program {
                     0u,
                     []FontVariation{FontVariation("wght", 400f)}
                 )
+                using let aliasSource = FontSource.FromPath("GooAbiPathAlias", 700, false,
+                    if OperatingSystem.IsLinux() { aliasPath } else { oversizedPath },
+                    0u, []FontVariation{FontVariation("wght", 700f)})
                 File.Delete(oversizedPath)
                 if pathSource.IsRegistered {
                     throw InvalidOperationException("Font path source registered eagerly")
                 }
                 pathSource.Register()
+                aliasSource.Register()
+                let firstRegistration = FontRegistry.Resolve("GooAbiPath", 400, false)
+                    ?? throw InvalidOperationException("File font registration is missing")
+                let aliasRegistration = FontRegistry.Resolve("GooAbiPathAlias", 700, false)
+                    ?? throw InvalidOperationException("Alias font registration is missing")
+                if !Object.ReferenceEquals(firstRegistration.Bytes, aliasRegistration.Bytes) {
+                    throw InvalidOperationException("Font selection keys did not share the file backing")
+                }
                 using let shapedPath = TextShaping.Shape("office", "GooAbiPath", 16f, 400, false, 0f, 1)
                 if shapedPath.HasMissingGlyph || shapedPath.GlyphCount <= 0 {
                     throw InvalidOperationException("Font path source did not retain its bytes")
                 }
+                using let shapedAlias = TextShaping.Shape("office", "GooAbiPathAlias", 16f, 700, false, 0f, 1)
+                if shapedAlias.HasMissingGlyph || shapedAlias.Width == shapedPath.Width {
+                    throw InvalidOperationException("Shared font backing combined variation state")
+                }
+                pathSource.Dispose()
+                GC.Collect()
+                GC.WaitForPendingFinalizers()
+                let workspace = VulkanTextShapingWorkspace(16)
+                let result = shapedPath.Runs[0].Provider.ShapeInto(
+                    "office", VulkanTextShapingOptions{Direction: 4u}, workspace)
+                if result.Status != VulkanTextProviderAbi.Success || result.Count <= 0 {
+                    throw InvalidOperationException("Active shaped run did not retain its file mapping")
+                }
             }
+            File.Copy(fontPath, oversizedPath)
+            {
+                using let stream = File.OpenWrite(oversizedPath)
+                stream.Write([]uint8{98, 97, 100, 33})
+            }
+            try {
+                using let replacement = FontSource.FromPath("GooAbiReplacement", 400, false, oversizedPath)
+                replacement.Register()
+                throw InvalidOperationException("A replacement file reused the previous backing")
+            } catch (ArgumentOutOfRangeException) { }
+            File.Delete(oversizedPath)
+            Console.WriteLine("FONT_BACKING_IDENTITY sharedFile=1 independentVariations=1 replacement=1")
             File.Copy(fontPath, oversizedPath)
             {
                 using let stream = File.OpenWrite(oversizedPath)
@@ -341,6 +393,7 @@ internal shared class Program {
             } catch (InvalidDataException) { }
         } finally {
             File.Delete(oversizedPath)
+            File.Delete(aliasPath)
         }
         let cacheBudget = TextShaping.PrimaryFaceCacheByteBudgetForTests()
         let callerBytes = File.ReadAllBytes(fontPath)

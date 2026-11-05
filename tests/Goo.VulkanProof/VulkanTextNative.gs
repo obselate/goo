@@ -123,9 +123,9 @@ internal sealed class VulkanTextFont : IDisposable {
 
 internal func LoadVulkanTextFont(path string,
   pixelHeight uint32) VulkanTextFont ->
-VulkanTextFont(Goo.VulkanTextFont(File.ReadAllBytes(path), pixelHeight, 0u, nil))
+VulkanTextFont(Goo.VulkanTextFont(Goo.FontData.FromPath(path), pixelHeight, 0u, nil))
 
 internal func LoadVulkanTextFont(path string, pixelHeight uint32,
   faceIndex uint32, variations([]VulkanTextVariation)?) VulkanTextFont ->
-VulkanTextFont(Goo.VulkanTextFont(File.ReadAllBytes(path), pixelHeight,
+VulkanTextFont(Goo.VulkanTextFont(Goo.FontData.FromPath(path), pixelHeight,
   faceIndex, variations))

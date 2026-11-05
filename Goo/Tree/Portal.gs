@@ -60,6 +60,15 @@ public class Portal : Blob {
   /// border box within the viewport. The default is BottomStart.
   public prop Placement PortalPlacement{ get; init; }
 
+  /// Gets a rectangle within Anchor's local border-box coordinates.
+  /// Nil uses the whole border box. Values must be finite and dimensions nonnegative.
+  public prop AnchorRect ElementRect? { get; init; }
+
+  /// Gets the collision rectangle in window logical coordinates.
+  /// Nil uses the whole viewport. The Portal flips, shifts, and shrinks to fit these bounds.
+  /// Values must be finite and dimensions nonnegative.
+  public prop CollisionBounds ElementRect? { get; init; }
+
   /// Initializes an empty child collection.
   public init() { }
 
@@ -69,6 +78,11 @@ public class Portal : Blob {
   public func Add(child Blob) {
     Children.Add(child)
   }
+}
+
+internal class PortalPlacementBounds {
+  internal var AnchorRect ElementRect?
+  internal var CollisionBounds ElementRect?
 }
 
 internal class Portals {
