@@ -38,6 +38,7 @@ internal class Node {
   internal var IsPortal bool
   internal var PortalAnchor ElementHandle?
   internal var PortalPlacement PortalPlacement
+  internal var PortalBounds PortalPlacementBounds?
   internal var PortalAnchorBounds Rect
   internal var PortalAnchorResolved bool
   internal var PortalPlacementHidden bool
