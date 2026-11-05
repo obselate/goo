@@ -1116,7 +1116,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                             LaneTitle(lane.Name),
                             OptionalValue(initial, unit),
                             OptionalValue(final, unit),
-                            delta == nil ? "—": SignedValue(delta ?? 0.0, unit),
+                            delta == nil ? "—": SignedValue(delta, unit),
                             OptionalValue(peak, unit)
                         },
                         []float64{0.0, initial ?? -1.0, final ?? -1.0, delta ?? -1.0, peak ?? -1.0},
@@ -1165,7 +1165,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                             durationText,
                             kind,
                             name,
-                            bytes == nil ? "—": Bytes(float64(bytes ?? 0uL)),
+                            bytes == nil ? "—": Bytes(float64(bytes)),
                             trace.OwnerChain(r),
                             Result(r)
                         },
@@ -1174,7 +1174,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                             float64(duration),
                             0.0,
                             0.0,
-                            bytes == nil ? -1.0: float64(bytes ?? 0uL),
+                            bytes == nil ? -1.0: float64(bytes),
                             0.0,
                             float64(r.Result)
                         },

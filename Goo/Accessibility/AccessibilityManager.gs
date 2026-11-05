@@ -130,7 +130,7 @@ internal class AccessibilityManager {
 
   private func rebuild(root Node?) bool {
     rebuildingChanged = false
-    visibleScopes = root == nil ? nil : FocusScopes.ModalStack(root!!)
+    visibleScopes = root == nil ? nil : FocusScopes.ModalStack(root)
     forced.Clear()
     if let treeRoot = root { collectForced(treeRoot, false) }
     nodes.Clear()

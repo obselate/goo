@@ -3,7 +3,7 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="ModelContextProtocol" Version="2.3.0" />
+    <PackageReference Include="ModelContextProtocol" Version="2.3.1" />
     <EmbeddedResource Include="Tools.json" />
     <EmbeddedResource Include="CaseFold.json" />
   </ItemGroup>

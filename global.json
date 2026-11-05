@@ -5,6 +5,6 @@
     "allowPrerelease": false
   },
   "msbuild-sdks": {
-    "Gsharp.NET.Sdk": "0.5.26"
+    "Gsharp.NET.Sdk": "0.5.212"
   }
 }

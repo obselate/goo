@@ -4,7 +4,7 @@
   "files": {
     "README.md": "da78bbe228b97257eb0bf847112b77bee96b83d89fe95d7d90e936687606add8",
     "CONTRIBUTING.md": "74bd868a81d8516cb42455f26f95e66aad73a58977903b81e418576368bf9acc",
-    "docs/native-authoring.md": "3c1a60df4e07a17e594f847d1af89d0d3604ea04a9304a0372ae8c2f618c3533",
+    "docs/native-authoring.md": "f164101965a26868bf6563ceceadaf727cb9dc8ed963e4e55e7ce0c8245d8159",
     "docs/production-readiness.md": "c2e6012e9d13e7ffe1654bb24029a34ece91e47272e37a9c86cde15af0bfb6a4",
     "docs/svg.md": "a9bbb86376595820912d04b79fd886a7c560cabb7061e1de4651019df27a070d",
     "docs/migrations/gcv1.md": "6465b5704a37f637970a80fc8120002bda1cf5e10458d14cc9f71e0f9d4928a6",
@@ -34,7 +34,7 @@
     "docs/devtools/development.md": "bae5b47adae4643cca4011da70d1f4f0b0f7f7e112d11989337c3d4fbb2d9ebf",
     "docs/devtools/protocol.md": "66055c11f714649c0a675ef3239eebc12e88de98a8f9b6ef4b765f6929eafe80",
     "templates/Goo.Templates/content/Program.gs": "6654df447b6b2e79d709b304e9c5bc79ec19bf567f30ac93f1024f45806ca1b1",
-    "templates/Goo.Templates/content/GooStarter.gsproj": "fd5627fd52dc3e15e7060ab3686d0f4e2ad6a9a57e0d5cf8053d981b44e66ecf",
+    "templates/Goo.Templates/content/GooStarter.gsproj": "e99873e261a9f267c9f93fcda6d83c3297bb9fa5a193caf58e7f42db824a113d",
     "templates/Goo.Templates/content/global.json": "d65c58739783fdc75335b2fe4908c42f7f7945b4dd551bd5e9d8cb0c71e95ce1",
     "templates/Goo.Templates/content/.gitignore": "5598d29dcea35eed94c9f755e39a1021772b33433ae84b358aff3c8a14813711",
     "templates/Goo.Templates/content/Properties/PublishProfiles/NativeAot.pubxml": "2d4015815d864480fd81858f47d16dd301825527b4cbc1e8828f8ac293e3e9d0",

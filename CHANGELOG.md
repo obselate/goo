@@ -10,6 +10,10 @@
 
 ### Changed
 
+- Allocate Vulkan scene-owner text and box cache storage only when used.
+- Build all Goo packages, templates and generated consumers with G# SDK 0.5.212.
+- Update the linter syntax node and remove redundant nullable operations for the new compiler.
+- Update Microsoft.NET.Test.Sdk to 18.11.0, Unicode.Bidi to 0.4.0, Tmds.DBus.Protocol to 0.95.2 and ModelContextProtocol to 2.3.1.
 - Reduce default node storage by allocating editing, shape, pointer and portal data only when used.
 - Allocate Yoga grid track lists only when grid state is accessed.
 - Allocate Yoga style value buffers only when an indexed value is stored.
@@ -24,7 +28,6 @@
 - Keep the DevTools pipe listener alive while clients disconnect so queued input and snapshot connections are not reset. (#583)
 - Size anchored Portals to the available space on their selected side instead of shifting them over the anchor. Keep cross-axis containment.
 - Prevent false horizontal scrollbars at fractional display scales.
-
 ## 0.27.11 - 2026-11-05
 
 - Map system and file-source fonts read-only. Share mappings by native file identity and reuse live leased typefaces. Keep defensive copies for public byte-array inputs. (#553, #562)

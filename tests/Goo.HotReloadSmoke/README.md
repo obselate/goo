@@ -33,7 +33,7 @@ state snapshots and result.json. It does not edit the original fixture or
 replace the installed SDK. Use a new package version after repacking changed
 code to avoid NuGet cache reuse.
 
-The generated consumer uses SDK 0.5.26 with
+The generated consumer uses SDK 0.5.212 with
 `GsharpHotReloadRuntimeAssemblyFullPath` pointing at the rebuilt runtime. This
 overrides the runtime payload only, keeping compiler and MSBuild inputs stable.
 
