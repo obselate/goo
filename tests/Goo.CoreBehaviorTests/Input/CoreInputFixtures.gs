@@ -1444,6 +1444,8 @@ internal class InputFixtures {
       driver.Key(Key.End, false, true)
       driver.Char("y")
       driver.Key(Key.Z, false, true)
+      driver.Input.QueueComposition("pending", 0, 3)
+      driver.Drain()
       cell.readOnly = true
       cell.Rebuild()
       driver.Update()
