@@ -167,6 +167,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       let packed = PackColor(color, opacity)
       push.packedColors_x = packed.Rgb
       push.packedColors_w = packed.Alpha
+      if TryEmitOpaqueInterior(commandBuffer, bounds, transform, &push, color, opacity) { return }
       BindAndDraw(commandBuffer, primitivePipelines.SolidPipeline, *void(&push))
     }
 

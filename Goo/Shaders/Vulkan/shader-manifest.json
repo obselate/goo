@@ -277,9 +277,9 @@
       "source": "analytic_solid.frag.slang",
       "output": "analytic_solid.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "8e30bc66f9bf6eff913673435951b7bb73fcdf97150f0952598f230c2cbe057e",
-      "outputSha256": "239bbc8e92cdc34a93e387c796a764575814bb60962cb38dfa2891e8d81c5e90",
-      "outputBytes": 16264,
+      "sourceSha256": "b68cfeea4514f0d3b02fdff91791681375ef210138f8c50abbf77b5e62e68564",
+      "outputSha256": "9605011b5f6535fdb3c7273fa33fb2919ffc00411860297fb10eae85e7dc731d",
+      "outputBytes": 16812,
       "capabilities": [
         1
       ]
