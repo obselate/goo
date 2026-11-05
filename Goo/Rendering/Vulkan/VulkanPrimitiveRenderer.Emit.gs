@@ -2,7 +2,6 @@ package Goo
 
 import System
 import System.IO
-import System.Numerics
 import System.Runtime.InteropServices
 
 internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
@@ -661,7 +660,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
             blendPipelineLayout, 0u, 2u, &descriptorSets[0], 0u, nil)
           recordDescriptorChangeCount++
         }
-        var parameters = VulkanShaderEffectPushConstants{
+        let parameters = VulkanShaderEffectPushConstants{
           Parameter0: effect.Parameter0,
           Parameter1: effect.Parameter1,
           Parameter2: effect.Parameter2,
@@ -670,20 +669,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           Parameter5: effect.Parameter5,
           Parameter6: effect.Parameter6,
           Parameter7: effect.Parameter7,
-        }
-        if effect.BackdropBlur > 0.0F {
-          if let source = target {
-            parameters.Parameter1 = Vector4(
-              float32(source.ContentExtent.width) / float32(source.Extent.width),
-              float32(source.ContentExtent.height) / float32(source.Extent.height),
-              0.5F / float32(source.Extent.width), 0.5F / float32(source.Extent.height))
-          }
-          if let source = backdrop {
-            parameters.Parameter2 = Vector4(
-              float32(source.ContentExtent.width) / float32(source.Extent.width),
-              float32(source.ContentExtent.height) / float32(source.Extent.height),
-              0.5F / float32(source.Extent.width), 0.5F / float32(source.Extent.height))
-          }
         }
         let pushConstants = dispatch.vkCmdPushConstants
         pushConstants(commandBuffer, blendPipelineLayout,

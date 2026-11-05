@@ -496,8 +496,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
         if reference.Kind == SceneDrawKind.LayerBegin {
           if depth >= 32 { throw InvalidOperationException("Vulkan layer depth exceeded") }
           let layer = frame.Layers[reference.Index]
-          let capacityEligible = layer.BlendMode == 0u
-            && (layer.EffectIndex < 0 || frame.ShaderEffects[layer.EffectIndex].BackdropBlur > 0.0F)
+          let capacityEligible = layer.EffectIndex < 0 && layer.BlendMode == 0u
           let divisor = 1u << layerResolutionShift
           let width = Math.Max(1u, (layer.ExtentWidth + divisor - 1u) / divisor)
           let height = Math.Max(1u, (layer.ExtentHeight + divisor - 1u) / divisor)
