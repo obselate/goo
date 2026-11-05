@@ -338,6 +338,10 @@ Gets the optional in-app drop target descriptor.
 
 Gets the style that applies while this element has focus.
 
+### `FocusTarget`
+
+Gets the descendant that also resolves Focus style while this owner has visible focus. The target need not be focusable. Native focus and accessibility relationships do not change.
+
 ### `Focusable`
 
 Reports whether this element can receive keyboard focus.
@@ -628,6 +632,14 @@ Scrolls to an item and keeps its alignment while visible rows are measured.
 
 Returns: False for an unmounted handle, a nonvirtual element, or an unknown key.
 
+### `SetFocusTarget(ElementHandle)`
+
+Sets the descendant that also resolves Focus style while this owner has visible focus. An unmounted target is retained for remounting. The next rebuild restores Blob.FocusTarget.
+
+- `target`: The descendant handle, or nil to clear projection.
+
+Returns: False when this owner is unmounted.
+
 ### `SetTextInputArea(ElementRect)`
 
 Sets the native IME caret/input rectangle in window logical coordinates.
@@ -661,6 +673,10 @@ Gets the transformed border box in window logical coordinates. An unmounted hand
 ### `ContentBox`
 
 Gets the transformed content box in window logical coordinates. An unmounted handle returns an empty rectangle.
+
+### `IsFocusVisible`
+
+Reports whether this mounted element resolves Focus style through direct focus or projection.
 
 ### `IsMounted`
 

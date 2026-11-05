@@ -4,6 +4,85 @@ import System
 import System.Collections.Generic
 
 internal class ElementHandleFixtures {
+  func FocusProjectionContract() bool {
+    let cell = VirtualFixtureCell(100)
+    cell.ProjectFocus = true
+    cell.ItemAccessibility = Accessibility{ Role: AccessibilityRole.ListItem }
+    cell.Target = cell.Handles[0]
+    let adapter = AccessibilityTestAdapter{}
+    let window = Window{ Root: cell, Width: 100, Height: 60 }
+    window.AccessibilityAdapter = adapter
+    try {
+      window.UpdateTree()
+      let owner = cell.Handle.AttachedNode()!!
+      let first = cell.Handles[0].AttachedNode()!!
+      let second = cell.Handles[1].AttachedNode()!!
+      guard let semantic = adapter.Tree?.Root else { throw InvalidOperationException("Missing focus owner semantics") }
+      guard let active = semantic.Relationships.ActiveDescendant else { throw InvalidOperationException("Missing active descendant") }
+      let rowSemantic = semantic.Children[0].Children[0]
+      if active != rowSemantic.Id { throw InvalidOperationException("Active descendant identity changed") }
+      window.PlatformInput.PointerPress(0L, PointerDevice.Mouse, 5.0F, 5.0F,
+        PointerButton.Primary, KeyModifiers{}, 1.0F)
+      window.PlatformInput.PointerRelease(0L, PointerDevice.Mouse, 5.0F, 5.0F,
+        PointerButton.Primary, KeyModifiers{}, 1.0F)
+      if !owner.Focused || cell.Handle.IsFocusVisible || cell.Handles[0].IsFocusVisible
+        || first.OutlineWidth.Value != 0.0F { throw InvalidOperationException("Pointer focus projection") }
+      window.PlatformInput.KeyPress(Key.Down, KeyModifiers{})
+      window.PlatformInput.KeyRelease(Key.Down)
+      window.UpdateTree()
+      if !owner.Focused || !cell.Handle.IsFocusVisible || !cell.Handles[0].IsFocusVisible
+        || first.Focused || first.Focusable || first.OutlineWidth.Value != 2.0F
+        || !semantic.Focused || rowSemantic.Focused { throw InvalidOperationException("Keyboard focus projection") }
+      let version = adapter.Tree!!.Version
+      let ownerPass = owner.StyleResolvedPass
+      let third = cell.Handles[2].AttachedNode()!!
+      let thirdPass = third.StyleResolvedPass
+      cell.Builds.Clear()
+      if !cell.Handle.SetFocusTarget(cell.Handles[1])
+        || first.FocusVisible || !second.FocusVisible || first.OutlineWidth.Value != 0.0F
+        || second.OutlineWidth.Value != 2.0F || owner.StyleResolvedPass != ownerPass
+        || third.StyleResolvedPass != thirdPass || cell.Builds.Count != 0 { throw InvalidOperationException("Projection target invalidation") }
+      window.UpdateTree()
+      if adapter.Tree!!.Version != version || semantic.Relationships.ActiveDescendant?.Value != active.Value
+        || semantic.Children.Count != owner.Children.Count || !semantic.Focused { throw InvalidOperationException("Projection changed accessibility") }
+      if !cell.Handle.SetFocusTarget(cell.Handles[1]) || !cell.Handle.Blur() { throw InvalidOperationException("Projection blur request") }
+      window.UpdateTree()
+      if cell.Handles[1].IsFocusVisible || second.OutlineWidth.Value != 0.0F { throw InvalidOperationException("Projection blur style") }
+      if !cell.Handle.Focus() || !cell.Handles[1].IsFocusVisible { throw InvalidOperationException("Projection refocus") }
+      window.Close()
+      return !cell.Handles[1].IsFocusVisible
+    } finally { window.Close() }
+  }
+
+  func FocusProjectionVirtualizationContract() bool {
+    let cell = VirtualFixtureCell(100)
+    cell.ProjectFocus = true
+    cell.Target = cell.Handles[0]
+    let window = Window{ Root: cell, Width: 100, Height: 60 }
+    try {
+      window.UpdateTree()
+      window.PlatformInput.KeyPress(Key.Tab, KeyModifiers{})
+      window.PlatformInput.KeyRelease(Key.Tab)
+      if !cell.Handle.Focus() || !cell.Handles[0].IsFocusVisible { return false }
+      let old = cell.Handles[0].AttachedNode()!!
+      cell.Handle.JumpTo(0.0, 1000.0)
+      window.UpdateTree()
+      if cell.Handles[0].IsMounted || old.FocusVisible || !cell.Handle.IsFocusVisible { return false }
+      cell.Handle.JumpTo(0.0, 0.0)
+      window.UpdateTree()
+      if !cell.Handles[0].IsFocusVisible || cell.Handles[0].AttachedNode() == old { return false }
+      let foreign = ElementHandle{}
+      let foreignNode = Reconciler{ Res: Resolver{} }.Mount(Container{ Handle: foreign })
+      if !cell.Handle.SetFocusTarget(foreign) || cell.Handles[0].IsFocusVisible
+        || foreignNode.FocusVisible { return false }
+      if !cell.Handle.SetFocusTarget(cell.Handle) || cell.Handles[0].IsFocusVisible { return false }
+      cell.Target = nil
+      cell.Rebuild()
+      window.UpdateTree()
+      return !cell.Handles[0].IsFocusVisible && cell.Handle.IsFocusVisible
+    } finally { window.Close() }
+  }
+
   func ScrollToItemWithoutPresentationContract() bool {
     using let host = ElementHandleEmbeddedHost()
     host.Resize(100, 60, 100, 60)
@@ -895,6 +974,8 @@ internal class VirtualFixtureCell : Cell {
   internal var PixelScale float64
   internal var ContextVersion int64
   internal var ItemAccessibility Accessibility?
+  internal var ProjectFocus bool
+  internal var Target ElementHandle?
 
   init(count int32) {
     for i in 0 ... count { Items.Add(VirtualFixtureItem{ Id: i }) }
@@ -903,12 +984,15 @@ internal class VirtualFixtureCell : Cell {
 
   override func Build() Blob -> Virtual(VirtualFixtureSource(this)) {
     Handle = Handle, Width = 100, Height = 60, Padding = Inset,
-    Accessibility = Accessibility{ Role: Role },
+    Focusable = ProjectFocus, FocusTarget = Target,
+    Accessibility = Accessibility{ Role: Role, Relationships: ProjectFocus ?
+      AccessibilityRelationships{ ActiveDescendant: Handles[0] } : nil },
   }
 
   internal func BuildItem(item VirtualFixtureItem) Blob {
     Builds.Add(item.Id)
-    return Container() {.Handle: Handles[item.Id],.Accessibility: ItemAccessibility,.Focusable: true,.Width: 75,.Height: RowHeight,
+    return Container() {.Handle: Handles[item.Id],.Accessibility: ItemAccessibility,.Focusable: !ProjectFocus,.Width: 75,.Height: RowHeight,
+      .Focus: ProjectFocus ? Style{ OutlineWidth: 2.0, OutlineColor: Color.White } : nil,
       Text{ Content: "row ${item.Id}:${item.Revision}"},
     }
   }

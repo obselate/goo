@@ -1182,6 +1182,7 @@ method|Goo.ElementHandle|ScrollOffsetOf|instance|public|generic:|(key:System.Str
 method|Goo.ElementHandle|ScrollToItem|instance|public|generic:|(key:System.String)->System.Boolean
 method|Goo.ElementHandle|ScrollToItem|instance|public|generic:|(key:System.String,alignment:Goo.ScrollAlignment,settle:System.Boolean=true)->System.Boolean
 method|Goo.ElementHandle|ScrollTo|instance|public|generic:|(x:System.Double,y:System.Double)->System.Boolean
+method|Goo.ElementHandle|SetFocusTarget|instance|public|generic:|(target:Goo.ElementHandle?)->System.Boolean
 method|Goo.ElementHandle|SetTextInputArea|instance|public|generic:|(area:Goo.ElementRect)->System.Boolean
 method|Goo.ElementHandle|TryCopyTextRangeRects|instance|public|generic:|(textRange:Goo.TextRange,space:Goo.TextCoordinateSpace,destination:System.Span`1<Goo.ElementRect>,out required:System.Int32&)->System.Boolean
 method|Goo.ElementHandle|TryGetTextCaretRect|instance|public|generic:|(position:Goo.TextPosition,space:Goo.TextCoordinateSpace,out rect:Goo.ElementRect&)->System.Boolean
@@ -1998,6 +1999,7 @@ property|Goo.Blob|DisabledStyle|Goo.Style?|instance|get:public,init:public|index
 property|Goo.Blob|Disabled|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.Blob|DragSource|Goo.DragSource?|instance|get:public,init:public|index:()
 property|Goo.Blob|DropTarget|Goo.DropTarget?|instance|get:public,init:public|index:()
+property|Goo.Blob|FocusTarget|Goo.ElementHandle?|instance|get:public,init:public|index:()
 property|Goo.Blob|Focusable|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.Blob|Focus|Goo.Style?|instance|get:public,init:public|index:()
 property|Goo.Blob|Gestures|System.Collections.Generic.IReadOnlyList`1<Goo.GestureRecognizer>?|instance|get:public,init:public|index:()
@@ -2108,6 +2110,7 @@ property|Goo.Edges|Right|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.Edges|Top|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.ElementHandle|BorderBox|Goo.ElementRect|instance|get:public|index:()
 property|Goo.ElementHandle|ContentBox|Goo.ElementRect|instance|get:public|index:()
+property|Goo.ElementHandle|IsFocusVisible|System.Boolean|instance|get:public|index:()
 property|Goo.ElementHandle|IsMounted|System.Boolean|instance|get:public|index:()
 property|Goo.ElementHandle|IsScrollSettling|System.Boolean|instance|get:public|index:()
 property|Goo.ElementHandle|ScrollOffset|Goo.Point|instance|get:public|index:()

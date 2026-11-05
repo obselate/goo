@@ -3,6 +3,7 @@ import System
 import System.Collections.Generic
 import System.Linq
 import System.Reflection
+import System.Security.Cryptography
 import Xunit
 
 class FixtureContractTests {
@@ -34,6 +35,19 @@ class FixtureContractTests {
         Assert.True(ElementHandleFixtures().MovesInOneUpdate(scenario))
 
     @Fact
+    func EmbeddedShaderDigestsMatchContent() {
+        Assert.True(
+            SHA256.HashData(VulkanShaderAssets.Read("shader-manifest.json")).AsSpan().SequenceEqual(
+                VulkanShaderAssets.Read("shader-manifest.sha256").AsSpan()
+            )
+        )
+        for name in []string{"backdrop_blur.goo-effect", "filtered_backdrop.goo-effect"} {
+            let program = ShaderEffectProgram.LoadEmbedded(name)
+            Assert.True(SHA256.HashData(program.VulkanSpirv).AsSpan().SequenceEqual(program.VulkanSpirvDigest.AsSpan()))
+        }
+    }
+
+    @Fact
     func EveryContractIsRegistered() {
         let registered = HashSet[(Type, string)]()
         for contract in Cases() {
@@ -58,6 +72,8 @@ class FixtureContractTests {
     shared {
         func Cases() sequence[[]object] {
             yield Contract[ApplicationActivationFixtures]("ProcessQueueOwnsStartupAndForwardedData")
+            yield Contract[ElementHandleFixtures]("FocusProjectionContract")
+            yield Contract[ElementHandleFixtures]("FocusProjectionVirtualizationContract")
             yield Contract[WindowOcclusionFixtures]("HostTransitionsNotifyOnUiThread")
             yield Contract[PathBuilderFixtures]("ResetPreservesPublishedPathAndClearsContour")
             yield Contract[PortalFixtures]("UiScaleLayoutInputAndAnchoredPortalContract")

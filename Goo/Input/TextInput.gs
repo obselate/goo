@@ -404,14 +404,23 @@ internal partial class TextInput {
 
   private func editState(n Node) EditState -> EditState { Text: n.Buffer, Caret: n.Caret, Anchor: n.Anchor }
 
-  private func clipboardGet() string -> if let native = host { native.GetClipboardText() } else { clipFallback }
-
-  private func clipboardSet(value string) {
-    if let native = host {
-      native.SetClipboardText(value)
-      return
+  private func clipboardGet() string {
+    try { return if let native = host { native.GetClipboardText() } else { clipFallback } }
+    catch (error Exception) {
+      Console.Error.WriteLine("Goo clipboard read failed: " + error.Message)
+      return ""
     }
-    clipFallback = value
+  }
+
+  private func clipboardSet(value string) bool {
+    try {
+      if let native = host { native.SetClipboardText(value) }
+      else { clipFallback = value }
+      return true
+    } catch (error Exception) {
+      Console.Error.WriteLine("Goo clipboard write failed: " + error.Message)
+      return false
+    }
   }
 
   private func updateTextInputArea(n Node) {
