@@ -376,6 +376,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
   private let descriptorPools List[VkDescriptorPool]
   private var sampler VkSampler = 0uL
   private let byteBudget VkDeviceSize
+  private let maximumDimension uint32
   private var requestedWidth uint32
   private let allocationMode int32
   private var lastResizeTicks int64
@@ -430,6 +431,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     nativeObjectAccounting VulkanObjectAccounting?,
     initialTargetCapacity int32,
     maximumBytes VkDeviceSize,
+    maximumImageDimension uint32,
     nativeDiagnostics VulkanDiagnostics?) {
       if nativeDevice == nint(0) {
         throw ArgumentException("Vulkan layer pool device is invalid")
@@ -451,6 +453,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       objectAccounting = nativeObjectAccounting
       diagnostics = nativeDiagnostics
       byteBudget = maximumBytes
+      maximumDimension = maximumImageDimension
       let selectedMode = Environment.GetEnvironmentVariable("GOO_LAYER_ALLOCATION_POLICY")
       allocationMode = selectedMode == "bucket" ? 1 : selectedMode == "growth" ? 2 : selectedMode == "retain" ? 3 : selectedMode == "skip-blur" ? 4 : 0
       residentBytes = 0uL
@@ -506,7 +509,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
           layerExtents[reference.Index] = VkExtent2D{ width: width, height: height }
           var targetIndex int32 = -1
           if Acquire(width, height, completedSerial, &targetIndex, width == 1u && height == 1u,
-            layer.EffectIndex < 0) == nil {
+            layer.EffectIndex < 0 && layer.BlendMode == 0u) == nil {
             available = false
             break
           }
@@ -516,7 +519,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
           reservations[depth * 2 + 1] = -1
           if NeedsBackdrop(layer) {
             if Acquire(width, height, completedSerial, &targetIndex, width == 1u && height == 1u,
-              layer.EffectIndex < 0) == nil {
+              layer.EffectIndex < 0 && layer.BlendMode == 0u) == nil {
               available = false
               break
             }
@@ -632,9 +635,10 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     }
     let contentExtent = VkExtent2D{ width: width, height: height }
     let oversized = oversizedActive && allocationMode < 3 && allowOversized && !mandatory
-    if oversized && allocationMode == 1 && width <= uint32.MaxValue - 127u && height <= uint32.MaxValue - 127u {
-      width = (width + 127u) / 128u * 128u
-      height = (height + 127u) / 128u * 128u
+    if oversized && allocationMode == 1 && width <= maximumDimension && height <= maximumDimension
+      && width <= uint32.MaxValue - 127u && height <= uint32.MaxValue - 127u {
+      width = Math.Min(maximumDimension, (width + 127u) / 128u * 128u)
+      height = Math.Min(maximumDimension, (height + 127u) / 128u * 128u)
     }
     requestedWidth = width
     requestedHeight = height
@@ -704,6 +708,9 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       EvictIdle(estimatedBytes, completedSerial)
     }
     if !mandatory && NeedsBudgetPressure(estimatedBytes) {
+      if width != contentWidth || height != contentHeight {
+        return Acquire(contentWidth, contentHeight, completedSerial, reservationIndex, mandatory)
+      }
       RecordPressureFailure(estimatedBytes, residentBytes)
       RecordFailure(estimatedBytes, residentBytes)
       return nil
@@ -736,6 +743,9 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     if !mandatory && (created.Bytes > byteBudget || NeedsBudgetPressure(created.Bytes)) {
       let bytes = created.Bytes
       created.Dispose()
+      if width != contentWidth || height != contentHeight {
+        return Acquire(contentWidth, contentHeight, completedSerial, reservationIndex, mandatory)
+      }
       let available = residentBytes <= byteBudget ? byteBudget - residentBytes : 0uL
       RecordPressureFailure(uint64(bytes), uint64(available))
       RecordFailure(uint64(bytes), residentBytes)
