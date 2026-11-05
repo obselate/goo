@@ -9,6 +9,7 @@ internal sealed class PathBandEncoder {
   shared {
     private const BaseBandCount int32 = 32
     private const MaxBandCount int32 = 2048
+    private const RetainedCapacity int32 = 4096
     private const NonZeroFillRuleMask uint32 = 1u
     private const EvenOddFillRuleMask uint32 = 2u
     private let cache ConditionalWeakTable[VectorPathData, PathBandEncoding] =
@@ -58,22 +59,48 @@ internal sealed class PathBandEncoder {
     }
 
     internal func Encode(path PathGeometry) PathBandEncoding {
-      if !BuildScratch(path) { return PathBandEncoding.Empty }
-      return PathBandEncoding(
-        scratchMinimumX, scratchMinimumY, scratchMaximumX, scratchMaximumY,
-        horizontalBandScratch, verticalBandScratch,
-        horizontalIndexScratch, verticalIndexScratch,
-        curveScratch, NonZeroFillRuleMask | EvenOddFillRuleMask,
-        path.GeometryRevision)
+      try {
+        if !BuildScratch(path) { return PathBandEncoding.Empty }
+        return PathBandEncoding(
+          scratchMinimumX, scratchMinimumY, scratchMaximumX, scratchMaximumY,
+          horizontalBandScratch, verticalBandScratch,
+          horizontalIndexScratch, verticalIndexScratch,
+          curveScratch, NonZeroFillRuleMask | EvenOddFillRuleMask,
+          path.GeometryRevision)
+      } finally {
+        ReleaseScratch()
+      }
     }
 
     private func EncodeInto(path PathGeometry, target PathBandEncoding) bool {
-      if !BuildScratch(path) { return false }
-      target.Rebuild(scratchMinimumX, scratchMinimumY, scratchMaximumX, scratchMaximumY,
-        horizontalBandScratch, verticalBandScratch, horizontalIndexScratch,
-        verticalIndexScratch, curveScratch, NonZeroFillRuleMask | EvenOddFillRuleMask,
-        path.GeometryRevision)
-      return true
+      try {
+        if !BuildScratch(path) { return false }
+        target.Rebuild(scratchMinimumX, scratchMinimumY, scratchMaximumX, scratchMaximumY,
+          horizontalBandScratch, verticalBandScratch, horizontalIndexScratch,
+          verticalIndexScratch, curveScratch, NonZeroFillRuleMask | EvenOddFillRuleMask,
+          path.GeometryRevision)
+        return true
+      } finally {
+        ReleaseScratch()
+      }
+    }
+
+    private func ReleaseScratch() {
+      ReleaseScratch(curveScratch)
+      ReleaseScratch(boundsScratch)
+      ReleaseScratch(horizontalBandScratch)
+      ReleaseScratch(verticalBandScratch)
+      ReleaseScratch(horizontalIndexScratch)
+      ReleaseScratch(verticalIndexScratch)
+      ReleaseScratch(candidateScratch)
+      ReleaseScratch(reverseCandidateScratch)
+    }
+
+    private func ReleaseScratch[T](values List[T]) {
+      if values.Capacity > RetainedCapacity {
+        values.Clear()
+        values.Capacity = 0
+      }
     }
 
     private func BuildScratch(path PathGeometry) bool {
