@@ -371,6 +371,20 @@ func RunRenderBudgetPressureSmoke() {
       "Sibling layers that fit concurrently were drawn without layers")
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
     root.UseNested()
+    target.SetRenderBudgetsForTest(536870912uL, 67108864uL)
+    System.Threading.Thread.Sleep(250)
+    WindowReadbackTestFixture.SetForceFullRedraw(window, true)
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
+    let exactBytes = target.DiagnosticCountersSnapshotForTest().layerPoolResidentBytes
+    Require(exactBytes > 0uL && target.LayerResolutionShiftForTest() == 0,
+      "Full-resolution layer budget measurement was unavailable")
+    target.SetRenderBudgetsForTest(exactBytes, 67108864uL)
+    WindowReadbackTestFixture.SetForceFullRedraw(window, true)
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    Require(target.LayerResolutionShiftForTest() == 0,
+      "Optional layer capacity reduced full-resolution rendering")
+    WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
     target.SetRenderBudgetsForTest(pixels * 4uL, pixels)
     WindowReadbackTestFixture.SetForceFullRedraw(window, true)
     WindowReadbackTestFixture.ForceRender(window, 0.0)
