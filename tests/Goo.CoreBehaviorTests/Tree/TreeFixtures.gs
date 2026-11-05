@@ -1,8 +1,34 @@
 package Goo
 
 import System
+import System.Collections.Generic
 
 internal class TreeFixtures {
+  func NodeMountLifetimeContract() bool {
+    let rec = Reconciler{Res: Resolver{}}
+    let node = rec.Mount(Text{Content: "old"})
+    let original = NodeMount(node)
+    let same = NodeMount(node)
+    let empty = NodeMount(nil)
+    let identities = HashSet[NodeMount]()
+    if node.MountGeneration != 1uL || original.Current != node || original.Captured != node
+      || !original.Equals(same) || original.GetHashCode() != same.GetHashCode()
+      || !empty.Equals(NodeMount{}) || empty.Current != nil || empty.Captured != nil
+      || !identities.Add(original) || identities.Add(same) { return false }
+    try {
+      node.TryBeginRebind()
+      return false
+    } catch (_ InvalidOperationException) { }
+    NodeLifecycle.DisposeTree(node)
+    if original.Current != nil || original.Captured != node || node.MountGeneration != 1uL { return false }
+    if !node.TryBeginRebind() { return false }
+    let rebound = rec.Diff(node, Text{Content: "new"})
+    let current = NodeMount(rebound)
+    return Object.ReferenceEquals(node, rebound) && node.MountGeneration == 2uL
+      && original.Current == nil && original.Captured == nil && current.Current == node
+      && !original.Equals(current) && identities.Add(current) && rebound.Content == "new"
+  }
+
   func TreeDepthLimitContract() bool {
     let message = "Node tree depth exceeds the limit of " + Reconciler.MaximumTreeDepth.ToString() + "."
     var blob Blob = Text{}
