@@ -160,12 +160,12 @@ void shade()
     float2 backdropCoordinate = sourceUv;
     if (any(pc.stopPositions.xy != float2(1.0)))
     {
-        float2 edge = 0.5 / float2(pc.packedColors.xy);
+        float2 edge = asfloat(pc.packedColors.xy);
         sourceCoordinate = clamp(sourceUv * pc.stopPositions.xy, edge, pc.stopPositions.xy - edge);
     }
     if (any(pc.stopPositions.zw != float2(1.0)))
     {
-        float2 edge = 0.5 / float2(pc.packedColors.zw);
+        float2 edge = asfloat(pc.packedColors.zw);
         backdropCoordinate = clamp(sourceUv * pc.stopPositions.zw, edge, pc.stopPositions.zw - edge);
     }
     float4 source = sourceTexture.Sample(sourceCoordinate);

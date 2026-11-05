@@ -47,7 +47,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         destination VulkanOffscreenLayerTarget? = nil
     ) VulkanOffscreenLayerTarget? {
         let radius = BackdropBlurRadius(record, frame)
-        if radius <= 0.0F || (layerPool?.LayerResolutionShift ?? 0) > 0 || layerPool?.SkipResizeBlur == true {
+        if radius <= 0.0F || (layerPool?.LayerResolutionShift ?? 0) > 0 {
             return captured
         }
         let blur = backdropBlurEffect ?? LoadBackdropBlur()

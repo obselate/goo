@@ -15,7 +15,7 @@ void shade()
     float2 sourceUv = pc.params.xy + uv * pc.params.zw;
     if (pc.radii.y > 0.5 && any(pc.stopPositions.xy != float2(1.0)))
     {
-        float2 edge = 0.5 / float2(pc.packedColors.xy);
+        float2 edge = asfloat(pc.packedColors.xy);
         sourceUv = clamp(sourceUv * pc.stopPositions.xy, edge, pc.stopPositions.xy - edge);
     }
     float4 sampleColor = imageTexture.Sample(sourceUv);

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Reuse bounded offscreen layer capacity during window resize without changing settled image quality.
 - Skip the viewport background draw when a plain opaque root covers it exactly.
 - Return free glibc heap pages after background Vulkan pipeline preparation and cache persistence on Linux.
 - Add `VirtualViewport.PixelScale` for device-pixel row rounding. Scale changes invalidate cached virtual content through `ContextVersion`.

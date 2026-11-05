@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.IO
+import System.Numerics
 import System.Runtime.InteropServices
 
 internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
@@ -560,8 +561,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if let source = target {
         push.stopPositions_x = float32(source.ContentExtent.width) / float32(source.Extent.width)
         push.stopPositions_y = float32(source.ContentExtent.height) / float32(source.Extent.height)
-        push.packedColors_x = source.Extent.width
-        push.packedColors_y = source.Extent.height
+        push.packedColors_x = uint32(BitConverter.SingleToInt32Bits(0.5F / float32(source.Extent.width)))
+        push.packedColors_y = uint32(BitConverter.SingleToInt32Bits(0.5F / float32(source.Extent.height)))
       }
       DrawSampledTarget(commandBuffer, &push, target)
     }
@@ -670,6 +671,20 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           Parameter6: effect.Parameter6,
           Parameter7: effect.Parameter7,
         }
+        if effect.BackdropBlur > 0.0F {
+          if let source = target {
+            parameters.Parameter1 = Vector4(
+              float32(source.ContentExtent.width) / float32(source.Extent.width),
+              float32(source.ContentExtent.height) / float32(source.Extent.height),
+              0.5F / float32(source.Extent.width), 0.5F / float32(source.Extent.height))
+          }
+          if let source = backdrop {
+            parameters.Parameter2 = Vector4(
+              float32(source.ContentExtent.width) / float32(source.Extent.width),
+              float32(source.ContentExtent.height) / float32(source.Extent.height),
+              0.5F / float32(source.Extent.width), 0.5F / float32(source.Extent.height))
+          }
+        }
         let pushConstants = dispatch.vkCmdPushConstants
         pushConstants(commandBuffer, blendPipelineLayout,
           uint32(VkConstants.VK_SHADER_STAGE_FRAGMENT_BIT),
@@ -717,14 +732,14 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if let source = target {
         push.stopPositions_x = float32(source.ContentExtent.width) / float32(source.Extent.width)
         push.stopPositions_y = float32(source.ContentExtent.height) / float32(source.Extent.height)
-        push.packedColors_x = source.Extent.width
-        push.packedColors_y = source.Extent.height
+        push.packedColors_x = uint32(BitConverter.SingleToInt32Bits(0.5F / float32(source.Extent.width)))
+        push.packedColors_y = uint32(BitConverter.SingleToInt32Bits(0.5F / float32(source.Extent.height)))
       }
       if let source = backdrop {
         push.stopPositions_z = float32(source.ContentExtent.width) / float32(source.Extent.width)
         push.stopPositions_w = float32(source.ContentExtent.height) / float32(source.Extent.height)
-        push.packedColors_z = source.Extent.width
-        push.packedColors_w = source.Extent.height
+        push.packedColors_z = uint32(BitConverter.SingleToInt32Bits(0.5F / float32(source.Extent.width)))
+        push.packedColors_w = uint32(BitConverter.SingleToInt32Bits(0.5F / float32(source.Extent.height)))
       }
       push.packedColorsExtra_w = value.BlendMode
       let preservesBackdrop = (value.Flags & uint32(LayerRecordFlags.PreservesBackdrop)) != 0u

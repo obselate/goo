@@ -10,7 +10,6 @@ internal data struct VulkanSharedDeviceFacts {
   var VendorId uint32
   var DeviceId uint32
   var DeviceType int32
-  var MaxImageDimension2D uint32
   var DeviceName string?
   var TimestampValidBits uint32
   var TimestampPeriod float32

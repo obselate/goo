@@ -27,7 +27,7 @@ float4 gooEffect(float2 uv, float4 source, float4 backdrop)
     }
     bool vertical = control.z == 1.0;
     float2 axis = vertical ? float2(0.0, texel.y) : float2(texel.x, 0.0);
-    float4 total = gooSourceTexture.SampleLevel(uv, 0.0);
+    float4 total = gooSourceTexture.SampleLevel(clamp(uv, edge, scale - edge), 0.0);
     float sigma = max(vertical ? control.y : control.x, 0.001);
     float weight = 1.0;
     float ratio = exp(-0.5 / (sigma * sigma));
