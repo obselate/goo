@@ -197,6 +197,7 @@ class FixtureContractTests {
             yield Contract[ElementHandleFixtures]("NestedScrollIntoViewKeepsTargetBounds")
             yield Contract[ElementHandleFixtures]("ThrowingVirtualDisposalContract")
             yield Contract[ElementHandleFixtures]("VirtualContract")
+            yield Contract[ElementHandleFixtures]("VirtualDescendantAnchoringSuppressesOrigin")
             yield Contract[ElementHandleFixtures]("VirtualTransactionContract")
             yield Contract[ElementHandleFixtures]("VirtualViewportContract")
             yield Contract[ElementHandleFixtures]("DeferredVirtualScrollContract")

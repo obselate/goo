@@ -54,6 +54,33 @@ internal class ElementHandleFixtures {
     } finally { window.Close() }
   }
 
+  func VirtualDescendantAnchoringSuppressesOrigin() bool {
+    for offset in []float64{0.0, 5.0} {
+      let cell = VirtualAnchorOriginFixtureCell{}
+      let window = Window{Root: cell, Width: 100, Height: 40}
+      try {
+        window.UpdateTree()
+        if !cell.Handle.JumpTo(0.0, offset) { return false }
+        cell.Rebuild()
+        window.UpdateTree()
+        guard let owner = window.Tree else { return false }
+        let row = owner.Children[0]
+        let leaf = row.Children[0].Children[0]
+        let rowTop = row.Rect.Y + owner.ScrollY
+        let leafTop = leaf.Rect.Y
+        let localTop = leaf.Rect.Y - row.Rect.Y
+        cell.LeafHeight = 17
+        cell.Rebuild()
+        window.UpdateTree()
+        let expected = offset == 0.0 ? 0.0 : offset + 3.0
+        if owner.ScrollY != float32(expected) || owner.Children[0] != row
+          || row.Rect.Y + owner.ScrollY != rowTop || leaf.Rect.Y - row.Rect.Y != localTop + 3.0F
+          || leaf.Rect.Y != leafTop + (offset == 0.0 ? 3.0F : 0.0F) { return false }
+      } finally { window.Close() }
+    }
+    return true
+  }
+
   func FocusProjectionVirtualizationContract() bool {
     let cell = VirtualFixtureCell(100)
     cell.ProjectFocus = true
@@ -953,6 +980,30 @@ internal class SynchronizedScrollFixtureCell : Cell {
 internal data struct VirtualFixtureItem {
   internal var Id int32
   internal var Revision int32
+}
+
+internal class VirtualAnchorOriginFixtureCell : Cell {
+  internal let Handle ElementHandle = ElementHandle{}
+  internal var LeafHeight float64 = 23
+  override func Build() Blob -> Virtual(VirtualAnchorOriginFixtureSource(LeafHeight)) {
+    Handle = Handle, Width = 100, Height = 40,
+  }
+}
+
+internal class VirtualAnchorOriginFixtureSource(height float64) : VirtualSource {
+  public func State(current VirtualState?) VirtualState -> VirtualAnchorOriginFixtureState(height)
+}
+
+internal class VirtualAnchorOriginFixtureState(height float64) : VirtualState {
+  public override func Realize(viewport VirtualViewport, output VirtualOutput) {
+    output.Add(VirtualItem{Key: "anchor-row", Index: 0, Y: 0, Width: 100, Height: 25,
+      Content: Container(){.Width: 100,.Height: 25,.FlexDirection: FlexDirection.Row,.AlignItems: AlignItems.Center,
+        Container{Key: "leaf", Width: 20, Height: height}}})
+    output.ContentSize = LayoutSize{Width: 100, Height: 200}
+    output.ItemCount = 1
+    output.AnchorKey = "anchor-row"
+  }
+  public override func NeedsRealize(viewport VirtualViewport) bool -> false
 }
 
 internal class VirtualFixtureCell : Cell {
