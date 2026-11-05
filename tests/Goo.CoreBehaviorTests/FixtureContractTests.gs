@@ -443,6 +443,7 @@ class FixtureContractTests {
             yield Contract[TreeFixtures]("ButtonSemanticPrimitiveContract")
             yield Contract[VulkanQueueWorkerFixtures]("WakeFailureDrainsFollowingMailboxAndQuiesces")
             yield Contract[VulkanSceneCompilerFixtures]("OwnerIdentitySurvivesCompilerHandoff")
+            yield Contract[VulkanSceneCompilerFixtures]("OpaqueViewportRootSkipsCoveredBackground")
         }
 
         private func Contract[TFixture](methodName string)[]object -> []object{typeof(TFixture), methodName}
