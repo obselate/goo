@@ -24,11 +24,25 @@ Portal{Anchor: trigger, Placement: PortalPlacement.BottomStart,
 }
 ```
 
-Goo tries the preferred side, flips to its opposite when that reduces viewport
-overflow, then clamps the Portal border box inside the viewport. `Start` and `End`
+Set `AnchorRect` to use part of the anchor in its local border-box coordinates.
+Set `CollisionBounds` to limit placement to a rectangle in window logical coordinates:
+
+```gsharp
+Portal{Anchor: trigger,
+  AnchorRect: ElementRect{X: 8, Y: 4, Width: 80, Height: 24},
+  CollisionBounds: ElementRect{X: 12, Y: 12, Width: 776, Height: 576},
+  Container{Width: 240, Height: 160},
+}
+```
+
+Nil values use the whole anchor and viewport. Collision bounds also cap the Portal's
+size. Both properties have no effect without `Anchor`.
+
+Goo tries the preferred side, flips to its opposite when that reduces collision
+overflow, then clamps the Portal border box inside the collision bounds. `Start` and `End`
 on top and bottom placements follow the Portal's resolved text direction. On left
-and right placements they mean top and bottom. A popup larger than the viewport is
-capped to the viewport. Use `Overflow.Scroll` when its content must remain reachable.
+and right placements they mean top and bottom. A popup larger than the bounds is
+capped to the bounds. Use `Overflow.Scroll` when its content must remain reachable.
 Padding on a transparent Portal can provide a gap that follows the popup when it
 flips.
 
