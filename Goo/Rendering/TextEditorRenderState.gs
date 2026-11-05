@@ -321,6 +321,7 @@ internal sealed class TextEditorRenderState : IDisposable {
   }
 
   internal func Invalidate(intrinsic bool) {
+    node.BumpScenePaintVersion()
     Dirty = true
     Layout = nil
     if intrinsic && !(node.Width.HasMagnitude && node.Height.HasMagnitude) {
