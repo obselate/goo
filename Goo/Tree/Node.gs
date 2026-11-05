@@ -155,8 +155,10 @@ internal class Node {
   internal prop Rect Rect {
     get -> rect
     set {
-      if rect.X == value.X && rect.Y == value.Y
-        && rect.W == value.W && rect.H == value.H { return }
+      if BitConverter.SingleToInt32Bits(rect.X) == BitConverter.SingleToInt32Bits(value.X)
+        && BitConverter.SingleToInt32Bits(rect.Y) == BitConverter.SingleToInt32Bits(value.Y)
+        && BitConverter.SingleToInt32Bits(rect.W) == BitConverter.SingleToInt32Bits(value.W)
+        && BitConverter.SingleToInt32Bits(rect.H) == BitConverter.SingleToInt32Bits(value.H) { return }
       rect = value
       BumpScenePaintVersion()
     }

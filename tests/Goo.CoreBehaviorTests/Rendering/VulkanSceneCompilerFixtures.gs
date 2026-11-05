@@ -91,4 +91,23 @@ internal class VulkanSceneCompilerFixtures {
       NodeLifecycle.DisposeTree(root)
     }
   }
+
+  func RectangleUpdatesPreserveFloatBits() bool {
+    let root = Reconciler{Res: Resolver{}}.Mount(Container{
+      Width: 100, Height: 100, BackgroundColor: Color.Rgb(255, 0, 0),
+    })
+    Layout().Calculate(root, 100.0F, 100.0F)
+    try {
+      let compiler = VulkanSceneCompiler(64)
+      compiler.Compile(root, Color.Transparent, 100.0F, 100.0F)
+      var bounds = root.Rect
+      bounds.X = BitConverter.Int32BitsToSingle(int32.MinValue)
+      root.Rect = bounds
+      compiler.Compile(root, Color.Transparent, 100.0F, 100.0F)
+      return compiler.Frame.SolidBoxCount == 1
+        && BitConverter.SingleToInt32Bits(compiler.Frame.SolidBoxes[0].Bounds.X) == int32.MinValue
+    } finally {
+      NodeLifecycle.DisposeTree(root)
+    }
+  }
 }
