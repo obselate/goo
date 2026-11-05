@@ -31,6 +31,11 @@ float roundedDistance(float2 point, float2 size, float4 cornerRadii)
 
 void shade()
 {
+    if (pc.params.z == 1.0)
+    {
+        outColor = unpackColor(pc.packedColors.x, pc.packedColors.w, 0u);
+        return;
+    }
     float2 point = uv * pc.rect.zw;
     float distance = pc.params.x > 0.0 && pc.params.y > 0.0
         ? gooRoundedRectDistance(point, pc.rect.zw, gooNormalizeRadii(pc.rect.zw, pc.radii))

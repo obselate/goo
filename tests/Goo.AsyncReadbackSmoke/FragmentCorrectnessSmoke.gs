@@ -53,6 +53,14 @@ class FragmentCorrectnessCell : Cell {
       },
     },
     Container{
+      Position: PositionType.Absolute, Left: 640, Top: 16, Width: 160, Height: 96,
+      BorderRadius: 12, BackgroundColor: Color.White,
+    },
+    Container{
+      Position: PositionType.Absolute, Left: 512, Top: 16, Width: 112, Height: 96,
+      BorderRadius: 12, BackgroundColor: Color.White, Opacity: 0.5,
+    },
+    Container{
       Position: PositionType.Absolute, Left: 16, Top: 100, Width: 112, Height: 24,
       Color: Color.Rgb(0, 0, 255), Hover: Style{Color: Color.Rgb(255, 0, 0)},
       Shape{
@@ -113,6 +121,18 @@ func RunFragmentCorrectnessSmoke() {
     ReadbackAwaitReadbackReady(opened, 10000)
     let frame = ReadbackTakeReadback(opened)
     PrimitiveValidateResult(frame, metrics)
+    for y in int32(Math.Ceiling(22.0 * scale)) ... int32(Math.Floor(106.0 * scale)) {
+      for x in int32(Math.Ceiling(646.0 * scale)) ... int32(Math.Floor(794.0 * scale)) {
+        let index = (y * int32(frame.Width) + x) * 4
+        Require(frame.Pixels[index] == uint8(255) && frame.Pixels[index + 1] == uint8(255)
+            && frame.Pixels[index + 2] == uint8(255) && frame.Pixels[index + 3] == uint8(255),
+          "Large rounded solid has a gap or a nonopaque interior")
+      }
+    }
+    let translucent = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 560.0, 64.0)
+    Require(translucent[0] >= uint8(127) && translucent[0] <= uint8(128)
+        && translucent[3] >= uint8(127) && translucent[3] <= uint8(128),
+      "A translucent rounded solid used opaque coverage: " + PrimitivePixelText(translucent))
     let borderTop = int32(Math.Round(72.25 * scale, MidpointRounding.AwayFromZero))
     let borderWidth = int32(Math.Round(scale, MidpointRounding.AwayFromZero))
     let borderX = int32(Math.Round(28.0 * scale, MidpointRounding.AwayFromZero))
