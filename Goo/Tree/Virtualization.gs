@@ -570,8 +570,8 @@ internal class Virtualization {
       if n.Key != nil {
         if let state = State(parent) { return state.ItemCount() }
       }
-      guard let key = parent.Key, let owner = parent.Parent else { return nil }
-      return State(owner)?.Position(key) != nil ? State(owner)?.ItemCount() : nil
+      guard let key = parent.Key, let owner = parent.Parent, let state = State(owner) else { return nil }
+      return state.Position(key) != nil ? state.ItemCount() : nil
     }
 
     internal func Dispose(n Node) {
