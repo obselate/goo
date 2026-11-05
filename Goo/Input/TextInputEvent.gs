@@ -33,6 +33,8 @@ internal class TextInputCallbacks {
 
     internal func EmptyCandidates() IReadOnlyList[string] -> emptyCandidates
 
+    internal func Remove(node Node) { nodeValues?.Remove(node) }
+
     internal func SetBlobTextInput(blob Blob, value Action[string]?) bool {
       let callbacks = blobCallbacks(blob, value != nil)
       if callbacks == nil { return false }

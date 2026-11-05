@@ -18,7 +18,8 @@ internal class GestureContact {
 }
 
 internal class GestureCandidate {
-    internal let Owner Node
+    internal let OwnerMount NodeMount
+    internal prop Owner Node? { get -> OwnerMount.Current }
     internal let Binding GestureBinding
     internal let Session GestureSession
     internal let Input GestureInput = GestureInput()
@@ -27,9 +28,9 @@ internal class GestureCandidate {
     internal var Accepted bool
     internal var Terminal bool
 
-    internal init(owner Node, binding GestureBinding, session GestureSession) {
+    internal init(owner NodeMount, binding GestureBinding, session GestureSession) {
         if session == nil { throw InvalidOperationException("A gesture recognizer returned no session") }
-        Owner = owner
+        OwnerMount = owner
         Binding = binding
         Session = session
     }
@@ -40,7 +41,11 @@ internal class GestureGroup {
     internal let Candidates List[GestureCandidate] = List[GestureCandidate]()
     internal var Winner GestureCandidate?
     internal var Claimed bool
-    internal var DeferredClick Node?
+    private var deferredClickMount NodeMount
+    internal prop DeferredClick Node? {
+        get -> deferredClickMount.Current
+        set -> deferredClickMount = NodeMount(value)
+    }
     internal var Source GestureSource
     internal var WindowAnchor Point
     internal var Scale float64 = 1.0
@@ -74,14 +79,14 @@ internal partial class PointerInput {
                 if existing.Source != GestureSource.Touch { continue }
                 if existing.Claimed && existing.Contacts.Count > 0 {
                     if let winner = existing.Winner {
-                        if containsNode(hitChain, winner.Owner) {
+                        if let owner = winner.Owner && containsNode(hitChain, owner) {
                             group = existing
                             break
                         }
                     }
                 }
                 for candidate in existing.Candidates {
-                    if !candidate.Terminal && containsNode(hitChain, candidate.Owner) {
+                    if let owner = candidate.Owner && !candidate.Terminal && containsNode(hitChain, owner) {
                         group = existing
                         break
                     }
@@ -109,7 +114,7 @@ internal partial class PointerInput {
         if group == nil { return }
         group.Contacts.Add(GestureContact(current.Id, x, y))
         for candidate in group.Candidates {
-            if !candidate.Terminal && containsNode(hitChain, candidate.Owner) {
+            if let owner = candidate.Owner && !candidate.Terminal && containsNode(hitChain, owner) {
                 candidate.Contacts.Add(current.Id)
             }
         }
@@ -119,11 +124,12 @@ internal partial class PointerInput {
         var group GestureGroup?
         try {
             for var i = hitChain.Count; i > 0; i-- {
-                let owner = hitChain[i - 1]
+                let mount = hitChain[i - 1]
+                guard let owner = mount.Current else { continue }
                 if let binding = GestureMetadata.Get(owner) {
                     if group == nil { group = GestureGroup() }
                     for recognizer in binding.Values {
-                        group.Candidates.Add(GestureCandidate(owner, binding, recognizer.CreateSession()))
+                        group.Candidates.Add(GestureCandidate(mount, binding, recognizer.CreateSession()))
                     }
                 }
                 if owner.IsPortal || owner.FocusScopeBoundary { break }
@@ -144,6 +150,7 @@ internal partial class PointerInput {
 
     private func prepareGestureInput(group GestureGroup, candidate GestureCandidate,
         kind GestureInputKind, id int64, time float64) bool {
+        guard let owner = candidate.Owner else { return false }
         let input = candidate.Input
         input.KindValue = kind
         input.TimeValue = time
@@ -152,35 +159,37 @@ internal partial class PointerInput {
         input.SourceValue = group.Source
         input.ScaleValue = group.Scale
         if group.Source == GestureSource.Trackpad {
-            let point = TransformGeometry.WindowToNode(candidate.Owner,
+            let point = TransformGeometry.WindowToNode(owner,
                 float32(group.WindowAnchor.X), float32(group.WindowAnchor.Y))
             if !point.Valid { return false }
-            input.AnchorValue = Point{X: float64(point.X - candidate.Owner.Rect.X),
-                Y: float64(point.Y - candidate.Owner.Rect.Y)}
+            input.AnchorValue = Point{X: float64(point.X - owner.Rect.X),
+                Y: float64(point.Y - owner.Rect.Y)}
             input.WindowAnchorValue = group.WindowAnchor
             return true
         }
         for contact in group.Contacts {
             if !candidate.Contacts.Contains(contact.Id) { continue }
-            let point = TransformGeometry.WindowToNode(candidate.Owner, contact.X, contact.Y)
+            let point = TransformGeometry.WindowToNode(owner, contact.X, contact.Y)
             if !point.Valid { return false }
             input.Pointers.Add(GesturePointer{
                 PointerId: contact.Id, Device: PointerDevice.Touch,
-                Position: Point{ X: float64(point.X - candidate.Owner.Rect.X),
-                    Y: float64(point.Y - candidate.Owner.Rect.Y) },
+                Position: Point{ X: float64(point.X - owner.Rect.X),
+                    Y: float64(point.Y - owner.Rect.Y) },
                 WindowPosition: Point{ X: float64(contact.X), Y: float64(contact.Y) }, IsDown: contact.Down,
             })
         }
         return true
     }
 
-    private func gestureOwnerAvailable(root Node?, candidate GestureCandidate) bool -> root != nil
-        && nodeVisibleInTree(root, candidate.Owner, false) && canReceiveInput(candidate.Owner)
+    private func gestureOwnerAvailable(root Node?, candidate GestureCandidate) bool {
+        guard let tree = root, let owner = candidate.Owner else { return false }
+        return nodeVisibleInTree(tree, owner, false) && canReceiveInput(owner)
+    }
 
     private func notifyGesture(root Node?, candidate GestureCandidate, phase GesturePhase,
         reason GestureCancelReason) {
         if phase == GesturePhase.Completed || phase == GesturePhase.Canceled { candidate.Terminal = true }
-        let owner = if let tree = root { CellOwnership.Within(tree, candidate.Owner) } else { nil }
+        let owner = if let tree = root, let node = candidate.OwnerMount.Captured { CellOwnership.Within(tree, node) } else { nil }
         try { candidate.Session.Notify(phase, reason) }
         finally { owner?.Rebuild() }
     }
@@ -258,8 +267,9 @@ internal partial class PointerInput {
             let group = groups[i]
             for candidate in group.Candidates {
                 if candidate.Terminal { continue }
-                let reason = if !gestureOwnerAvailable(root, candidate) { GestureCancelReason.OwnerUnavailable }
-                    else if GestureMetadata.Get(candidate.Owner) != candidate.Binding { GestureCancelReason.Replaced }
+                let owner = candidate.Owner
+                let reason = if owner == nil || !gestureOwnerAvailable(root, candidate) { GestureCancelReason.OwnerUnavailable }
+                    else if GestureMetadata.Get(owner) != candidate.Binding { GestureCancelReason.Replaced }
                     else { GestureCancelReason.None }
                 if reason == GestureCancelReason.None { continue }
                 if candidate.Accepted {
@@ -272,15 +282,16 @@ internal partial class PointerInput {
     }
 
     private func deeperDefaultReady(candidate GestureCandidate, x float32, y float32) bool {
+        guard let owner = candidate.Owner else { return false }
         if let source = dragCandidate {
             let threshold = current.Device == PointerDevice.Touch ? 4.0F : DragStartDistance
-            if source != candidate.Owner && containsPath(candidate.Owner, source)
+            if source != owner && containsPath(owner, source)
                 && dragThresholdCrossed(x, y, threshold) { return true }
         }
         if let pan = current.TouchPan {
             let dx = x - pan.StartX
             let dy = y - pan.StartY
-            if pan.Target != candidate.Owner && containsPath(candidate.Owner, pan.Target)
+            if let target = pan.Target && target != owner && containsPath(owner, target)
                 && dx * dx + dy * dy >= 64.0F { return true }
         }
         return false

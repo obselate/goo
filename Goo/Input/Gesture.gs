@@ -163,6 +163,8 @@ internal class GestureMetadata {
         private let blobs ConditionalWeakTable[Blob, GestureBinding] = ConditionalWeakTable[Blob, GestureBinding]()
         private let nodes ConditionalWeakTable[Node, GestureBinding] = ConditionalWeakTable[Node, GestureBinding]()
 
+        internal func Remove(node Node) { nodes.Remove(node) }
+
         internal func Get(blob Blob) IReadOnlyList[GestureRecognizer]? ->
             if blobs.TryGetValue(blob, out var value) { value.Values } else { nil }
 

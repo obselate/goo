@@ -5,8 +5,16 @@ import System.Collections.Generic
 import System.Runtime.ExceptionServices
 
 internal class FocusManager {
-  private var focused Node?
-  private var projected Node?
+  private var focusedMount NodeMount
+  private var projectedMount NodeMount
+  private prop focused Node? {
+    get -> focusedMount.Current
+    set -> focusedMount = NodeMount(value)
+  }
+  private prop projected Node? {
+    get -> projectedMount.Current
+    set -> projectedMount = NodeMount(value)
+  }
   private let control InputDispatchControl = InputDispatchControl()
   private var dispatchGeneration int64
   private var changeGeneration int64
@@ -18,6 +26,9 @@ internal class FocusManager {
   internal var Changed Action?
 
   internal func FocusedNode() Node ? -> focused
+  internal func RetainsInteraction(root Node) bool ->
+    FocusScopes.Contains(root, focused) || FocusScopes.Contains(root, projected)
+
   internal prop Generation int64{
     get -> changeGeneration
   }
@@ -37,7 +48,7 @@ internal class FocusManager {
       SetFocus(resolver, nil)
       return
     }
-    if let current = focused {
+    if let current = focusedMount.Captured {
       if !CanFocus(current) || !containsPath(tree, current) {
         SetFocus(resolver, nil)
       }
@@ -56,7 +67,9 @@ internal class FocusManager {
     } else {
       nil
     }
-    let previous = focused
+    let previousMount = focusedMount
+    let previous = previousMount.Captured
+    let nextMount = NodeMount(nextTarget)
     if nextTarget == previous {
       return
     }
@@ -78,26 +91,26 @@ internal class FocusManager {
       resolver.Invalidate(next, false)
     }
     RefreshProjection(resolver)
-    if let old = previous {
+    if let old = previousMount.Captured {
       try { BeforeBlur?.Invoke(old) }
       catch (error Exception) { failure ??= error }
     }
     if changeGeneration == generation {
-      if let next = nextTarget {
+      if let next = nextMount.Current {
         try { AfterFocus?.Invoke(next) }
         catch (error Exception) { failure ??= error }
       }
     }
     try { Changed?.Invoke() }
     catch (error Exception) { failure ??= error }
-    if let old = previous {
+    if let old = previousMount.Captured {
       if changeGeneration == generation {
         try { dispatchFocus(old, false) }
         catch (error Exception) { failure ??= error }
       }
     }
     if changeGeneration == generation {
-      if let next = nextTarget {
+      if let next = nextMount.Current {
         try { dispatchFocus(next, true) }
         catch (error Exception) { failure ??= error }
       }
@@ -134,8 +147,8 @@ internal class FocusManager {
 
   internal func RefreshProjection(resolver Resolver) bool {
     let target = projectionTarget()
-    if target == projected { return false }
-    if let old = projected {
+    if target == projectedMount.Captured { return false }
+    if let old = projectedMount.Captured {
       if !old.Focused { old.FocusVisible = false }
       if !old.Retired { resolver.Invalidate(old, false) }
     }
@@ -156,8 +169,9 @@ internal class FocusManager {
     collectFocusables(scopeRoot, order)
     if order.Count == 0 && scopeRoot.FocusScopeBoundary && CanFocus(scopeRoot) {
       let before = changeGeneration
+      let target = NodeMount(scopeRoot)
       SetFocus(resolver, scopeRoot)
-      if focused == scopeRoot { ScrollState.IntoView(scopeRoot) }
+      if let node = target.Current && focused == node { ScrollState.IntoView(node) }
       return changeGeneration != before
     }
     if order.Count == 0 {
@@ -172,18 +186,22 @@ internal class FocusManager {
     let next = current < 0 ? (forward ? 0 : order.Count - 1) : (
       (current + direction) % order.Count + order.Count) % order.Count
     let before = changeGeneration
+    let target = NodeMount(order[next])
     SetFocus(resolver, order[next])
-    if focused == order[next] { ScrollState.IntoView(order[next]) }
+    if let node = target.Current && focused == node { ScrollState.IntoView(node) }
     return changeGeneration != before
   }
 
   internal func Dispose() {
-    if let current = focused {
+    let previous = focusedMount
+    if let current = focusedMount.Captured {
       BeforeBlur?.Invoke(current)
-      current.Focused = false
-      current.FocusVisible = false
+      if let node = previous.Captured {
+        node.Focused = false
+        node.FocusVisible = false
+      }
     }
-    if let current = projected { current.FocusVisible = false }
+    if let current = projectedMount.Captured { current.FocusVisible = false }
     projected = nil
     focused = nil
     nativeFocusAllowed = false
@@ -242,19 +260,21 @@ internal class FocusManager {
     let generation = dispatchGeneration
     control.Begin(generation)
     try {
-      var current Node? = target
-      while current != nil {
-        let node = current
+      var current = NodeMount(target)
+      while true {
+        guard let node = received ? current.Current : current.Captured else { break }
+        let parent = NodeMount(node.Parent)
         let callback = received ? InputCallbacks.Focus(node) : InputCallbacks.Blur(node)
         if let handler = callback {
           let owner = CellOwnership.Nearest(node)
           try { handler(FocusEvent{Control: control, Generation: generation}) }
           finally { owner?.Rebuild() }
         }
+        if current.Captured == nil { break }
         if control.PropagationStopped || node.FocusScopeBoundary {
           break
         }
-        current = node.Parent
+        current = parent
       }
     } finally {
       control.Finish(generation)

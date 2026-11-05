@@ -8,9 +8,9 @@ internal class AccessibilityManager {
   private let owner Window
   private var adapter AccessibilityAdapter?
   private let tree RetainedAccessibilityTree
-  private let nodes Dictionary[int64, Node]
+  private let nodes Dictionary[int64, NodeMount]
   private let semanticNodes List[Node]
-  private let semanticSet HashSet[Node]
+  private let semanticSet HashSet[NodeMount]
   private let forced HashSet[Node]
   private let childLists List[List[AccessibilityNode]]
   private let noChildren List[AccessibilityNode]
@@ -26,9 +26,9 @@ internal class AccessibilityManager {
   internal init(owner Window) {
     this.owner = owner
     tree = RetainedAccessibilityTree()
-    nodes = Dictionary[int64, Node]()
+    nodes = Dictionary[int64, NodeMount]()
     semanticNodes = List[Node]()
-    semanticSet = HashSet[Node]()
+    semanticSet = HashSet[NodeMount]()
     forced = HashSet[Node]()
     childLists = List[List[AccessibilityNode]]()
     noChildren = List[AccessibilityNode]()
@@ -76,9 +76,9 @@ internal class AccessibilityManager {
     }
   }
 
-  internal func DiagnosticNodeFor(n Node) AccessibilityNode? -> if !semanticSet.Contains(n) { nil } else { AccessibilityNodeStates.Get(n) }
+  internal func DiagnosticNodeFor(n Node) AccessibilityNode? -> if n.Retired || !semanticSet.Contains(NodeMount(n)) { nil } else { AccessibilityNodeStates.Get(n) }
 
-  internal func NodeFor(id AccessibilityId) Node? -> if nodes.TryGetValue(id.Value, out var node) && !node.Retired { node } else { nil }
+  internal func NodeFor(id AccessibilityId) Node? -> if nodes.TryGetValue(id.Value, out var mount) { mount.Current } else { nil }
 
   internal func Supports(id AccessibilityId, action AccessibilityAction) bool {
     guard let node = NodeFor(id) else { return false }
@@ -160,6 +160,9 @@ internal class AccessibilityManager {
       return rebuildingChanged || rootChanged
     } finally {
       returnChildren()
+      semanticNodes.Clear()
+      forced.Clear()
+      visibleScopes = nil
     }
   }
 
@@ -267,9 +270,9 @@ internal class AccessibilityManager {
             rebuildingChanged = true
           }
         if view.SetChildren(childValues) { rebuildingChanged = true }
-        nodes[view.Id.Value] = n
+        nodes[view.Id.Value] = NodeMount(n)
         semanticNodes.Add(n)
-        semanticSet.Add(n)
+        semanticSet.Add(NodeMount(n))
         target.Add(view)
       } finally {
         returnChildren()

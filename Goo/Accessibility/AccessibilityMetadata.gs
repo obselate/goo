@@ -109,20 +109,24 @@ internal class AccessibilityButtonNames {
     private let values ConditionalWeakTable[Node, AccessibilityButtonName] =
     ConditionalWeakTable[Node, AccessibilityButtonName]()
 
-    internal func Get(n Node, fingerprint uint64) string? -> if values.TryGetValue(n, out var value) && value.Fingerprint == fingerprint { value.Name } else { nil }
+    internal func Get(n Node, fingerprint uint64) string? -> if !n.Retired && values.TryGetValue(n, out var value) && value.Generation == n.MountGeneration && value.Fingerprint == fingerprint { value.Name } else { nil }
 
     internal func Set(n Node, fingerprint uint64, name string) {
       values.Remove(n)
-      values.Add(n, AccessibilityButtonName(fingerprint, name))
+      values.Add(n, AccessibilityButtonName(n.MountGeneration, fingerprint, name))
     }
+
+    internal func Remove(n Node) { values.Remove(n) }
   }
 }
 
 internal class AccessibilityButtonName {
+  internal let Generation uint64
   internal let Fingerprint uint64
   internal let Name string
 
-  internal init(fingerprint uint64, name string) {
+  internal init(generation uint64, fingerprint uint64, name string) {
+    Generation = generation
     Fingerprint = fingerprint
     Name = name
   }

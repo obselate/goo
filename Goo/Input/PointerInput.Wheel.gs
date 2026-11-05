@@ -21,15 +21,16 @@ internal partial class PointerInput {
       }
     }
 
-  private func trimDisabledWheelRoute(route List[Node]) bool {
+  private func trimDisabledWheelRoute(route List[NodeMount]) bool {
     if route.Count == 0 { return false }
-    if route[0].HasFocusScopes && !FocusScopes.Allows(route[0], route[route.Count - 1]) {
-      return false
-    }
+    guard let root = route[0].Current, let target = route[route.Count - 1].Current else { return false }
+    if root.HasFocusScopes && !FocusScopes.Allows(root, target) { return false }
     for i in 0 ... route.Count {
-      if !route[i].Disabled { continue }
+      guard let node = route[i].Current else { return false }
+      if !node.Disabled { continue }
       for j in i ... route.Count {
-        if route[j].FocusScopeBoundary || route[j].IsPortal { return false }
+        guard let descendant = route[j].Current else { return false }
+        if descendant.FocusScopeBoundary || descendant.IsPortal { return false }
       }
       while route.Count > i { route.RemoveAt(route.Count - 1) }
       break
@@ -37,7 +38,7 @@ internal partial class PointerInput {
     return route.Count > 0
   }
 
-  private func dispatchWheel(route List[Node], x float32, y float32, dx float32, dy float32,
+  private func dispatchWheel(route List[NodeMount], x float32, y float32, dx float32, dy float32,
     modifiers KeyModifiers) bool{
       let transformed = routeHasTransform(route)
       if transformed && !mapRoutePositions(route, x, y, routePositions) { return false }
@@ -46,7 +47,8 @@ internal partial class PointerInput {
       wheelControl.Begin(generation)
       try {
         for var i = route.Count; i > 0; i-- {
-          let n = route[i - 1]
+          let mount = route[i - 1]
+          guard let n = mount.Current else { return true }
           let event = WheelEvent{
             Position: transformed ? routePositions[i - 1] : Point{
               X: float64(x - n.Rect.X), Y: float64(y - n.Rect.Y),
@@ -62,6 +64,7 @@ internal partial class PointerInput {
             try { callback(event) }
             finally { owner?.Rebuild() }
           }
+          if mount.Current == nil { return true }
           if wheelControl.PropagationStopped || n.FocusScopeBoundary { break }
         }
         return wheelControl.DefaultPrevented
@@ -70,13 +73,13 @@ internal partial class PointerInput {
       }
     }
 
-  private func applyWheelScroll(chain List[Node], dx float32, dy float32, modifiers KeyModifiers) bool {
+  private func applyWheelScroll(chain List[NodeMount], dx float32, dy float32, modifiers KeyModifiers) bool {
     var consumed = false
     let horizontal = modifiers.Shift && dx == 0.0F && dy != 0.0F
     var remainingX = horizontal ? -dy : dx
     var remainingY = horizontal ? 0.0F : -dy
     for var i = chain.Count; i > 0; i-- {
-      let n = chain[i - 1]
+      guard let n = chain[i - 1].Current else { break }
       let unitX = InputPolicy.WheelUnit(false, scrollViewportWidth(n)) * WheelScrollScale
       let unitY = InputPolicy.WheelUnit(true, scrollViewportHeight(n)) * WheelScrollScale
       let x = maxScrollX(n) > 0.0F ? remainingX * unitX : 0.0F

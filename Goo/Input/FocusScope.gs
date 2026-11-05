@@ -39,18 +39,24 @@ public class FocusScope : IDisposable {
 
 internal class FocusScopeEntry {
   internal var Scope FocusScope
-  internal var Root Node
-  internal var Previous Node?
-  internal var Initial Node?
+  internal let RootMount NodeMount
+  private var previousMount NodeMount
+  private let initialMount NodeMount
+  internal prop Root Node? { get -> RootMount.Current }
+  internal prop Previous Node? {
+    get -> previousMount.Current
+    set -> previousMount = NodeMount(value)
+  }
+  internal prop Initial Node? { get -> initialMount.Current }
   internal var Modal bool
   internal var Restore bool
   internal var Entered bool
 
   internal init(registration FocusScope, root Node, previous Node?, initial Node?, options FocusScopeOptions) {
     Scope = registration
-    Root = root
-    Previous = previous
-    Initial = initial
+    RootMount = NodeMount(root)
+    previousMount = NodeMount(previous)
+    initialMount = NodeMount(initial)
     Modal = options.Modal
     Restore = options.RestoreFocus
   }
@@ -59,9 +65,17 @@ internal class FocusScopeEntry {
 internal class FocusScopeStack {
   private let owner Window
   private let entries List[FocusScopeEntry]
-  private var tree Node?
-  private var restore Node?
-  private var restoreFrom Node?
+  private var treeMount NodeMount
+  private var restoreMount NodeMount
+  private var restoreFromMount NodeMount
+  private prop restore Node? {
+    get -> restoreMount.Current
+    set -> restoreMount = NodeMount(value)
+  }
+  private prop restoreFrom Node? {
+    get -> restoreFromMount.Captured
+    set -> restoreFromMount = NodeMount(value)
+  }
   private var restorePending bool
   private var disposed bool
   private var nextOrder int32
@@ -74,12 +88,22 @@ internal class FocusScopeStack {
   internal prop IsEmpty bool{ get -> entries.Count == 0 && !restorePending }
   internal prop Top Node? { get -> entries.Count == 0 ? nil : entries[entries.Count - 1].Root }
   internal prop HasModal bool{ get -> modalStart() >= 0 }
+  internal func IsBound(root Node) bool -> treeMount.Current == root
+
+  internal func RetainsInteraction(root Node) bool {
+    if FocusScopes.Contains(root, restore) || FocusScopes.Contains(root, restoreFromMount.Current) { return true }
+    for entry in entries {
+      if FocusScopes.Contains(root, entry.Root) || FocusScopes.Contains(root, entry.Initial)
+        || FocusScopes.Contains(root, entry.Previous) { return true }
+    }
+    return false
+  }
 
   internal func Allows(target Node) bool {
     let start = modalStart()
     if start < 0 { return true }
     for i in start ... entries.Count {
-      if FocusScopes.Contains(entries[i].Root, target) { return true }
+      if let root = entries[i].Root && FocusScopes.Contains(root, target) { return true }
     }
     return false
   }
@@ -88,7 +112,7 @@ internal class FocusScopeStack {
     let start = modalStart()
     if start < 0 { return true }
     for i in start ... entries.Count {
-      let active = entries[i].Root
+      guard let active = entries[i].Root else { continue }
       if FocusScopes.Contains(active, target) || FocusScopes.Contains(target, active) { return true }
     }
     return false
@@ -96,7 +120,7 @@ internal class FocusScopeStack {
 
   private func modalStart() int32 {
     for var i = entries.Count - 1; i >= 0; i-- {
-      if entries[i].Modal { return i }
+      if entries[i].Root != nil && entries[i].Modal { return i }
     }
     return -1
   }
@@ -144,15 +168,15 @@ internal class FocusScopeStack {
     let wasTop = index == entries.Count - 1
     for i in index + 1 ... entries.Count {
       if let previous = entries[i].Previous {
-        if FocusScopes.Contains(entry.Root, previous) { entries[i].Previous = entry.Restore ? entry.Previous : nil }
+        if let root = entry.RootMount.Captured && FocusScopes.Contains(root, previous) { entries[i].Previous = entry.Restore ? entry.Previous : nil }
       }
     }
     entries.RemoveAt(index)
-    entry.Root.FocusScopeBoundary = false
+    if let root = entry.RootMount.Captured { root.FocusScopeBoundary = false }
     entry.Scope.Closed()
     if wasTop {
       restore = entry.Restore ? entry.Previous : nil
-      restoreFrom = entry.Root
+      restoreFromMount = entry.RootMount
       restorePending = true
     }
     if entries.Count == 0 { bind(nil) }
@@ -160,7 +184,8 @@ internal class FocusScopeStack {
 
   internal func Refresh(root Node?, resolver Resolver, focus FocusManager) {
     for var i = entries.Count - 1; i >= 0; i-- {
-      if root == nil || !entries[i].Root.Focusable || !available(root, entries[i].Root, true) {
+      let scopeRoot = entries[i].Root
+      if scopeRoot == nil || root == nil || !scopeRoot.Focusable || !available(root, scopeRoot, true) {
         removeAt(i)
         owner.FocusScopeChanged()
       }
@@ -184,13 +209,14 @@ internal class FocusScopeStack {
     }
     if entries.Count == 0 { return }
     let active = entries[entries.Count - 1]
+    guard let activeRoot = active.Root else { return }
     let focused = focus.FocusedNode()
-    if !active.Entered || focused == nil || !FocusScopes.Contains(active.Root, focused)
+    if !active.Entered || focused == nil || !FocusScopes.Contains(activeRoot, focused)
       || !canReceiveInput(focused) {
         let initial = !active.Entered ? active.Initial : nil
         active.Entered = true
-        let target = initial != nil && available(active.Root, initial) && initial.Focusable
-        ? initial : focus.FirstScopeFocus(active.Root)
+        let target = initial != nil && available(activeRoot, initial) && initial.Focusable
+        ? initial : focus.FirstScopeFocus(activeRoot)
         focus.SetFocus(resolver, target)
       }
   }
@@ -198,7 +224,7 @@ internal class FocusScopeStack {
   internal func Dispose() {
     disposed = true
     for entry in entries {
-      entry.Root.FocusScopeBoundary = false
+      if let root = entry.RootMount.Captured { root.FocusScopeBoundary = false }
       entry.Scope.Closed()
     }
     entries.Clear()
@@ -209,9 +235,9 @@ internal class FocusScopeStack {
   }
 
   private func bind(root Node?) {
-    if tree == root { return }
-    if let old = tree { FocusScopes.Unbind(old) }
-    tree = root
+    if treeMount.Captured == root { return }
+    if let old = treeMount.Captured { FocusScopes.Unbind(old) }
+    treeMount = NodeMount(root)
     if let current = root { FocusScopes.Bind(current, this) }
   }
 
@@ -233,6 +259,7 @@ internal class FocusScopes {
     private let stacks ConditionalWeakTable[Node, FocusScopeStack] = ConditionalWeakTable[Node, FocusScopeStack]()
 
     internal func Bind(root Node, stack FocusScopeStack) {
+      stacks.Remove(root)
       stacks.Add(root, stack)
       root.HasFocusScopes = true
     }
@@ -242,11 +269,11 @@ internal class FocusScopes {
       stacks.Remove(root)
     }
 
-    internal func TraversalRoot(root Node) Node -> if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) { stack.Top ?? root } else { root }
+    internal func TraversalRoot(root Node) Node -> if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) && stack.IsBound(root) { stack.Top ?? root } else { root }
 
-    internal func ModalRoot(root Node) Node? -> if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) && stack.HasModal { stack.Top } else { nil }
+    internal func ModalRoot(root Node) Node? -> if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) && stack.IsBound(root) && stack.HasModal { stack.Top } else { nil }
 
-    internal func Contains(root Node, target Node) bool {
+    internal func Contains(root Node, target Node?) bool {
       var current Node? = target
       while current != nil {
         if current == root { return true }
@@ -255,8 +282,8 @@ internal class FocusScopes {
       return false
     }
 
-    internal func ModalStack(root Node) FocusScopeStack? -> if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) && stack.HasModal { stack } else { nil }
+    internal func ModalStack(root Node) FocusScopeStack? -> if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) && stack.IsBound(root) && stack.HasModal { stack } else { nil }
 
-    internal func Allows(root Node, target Node) bool -> if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) { stack.Allows(target) } else { true }
+    internal func Allows(root Node, target Node) bool -> if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) && stack.IsBound(root) { stack.Allows(target) } else { true }
   }
 }

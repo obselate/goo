@@ -402,6 +402,38 @@ internal class LayoutFixtures {
     return true
   }
 
+  func PixelSnappingPreservesCachedLayoutsAcrossResizes() bool {
+    let scene = Container{ Width: Percent(100), Height: Percent(100),
+      Container{ Position: PositionType.Absolute, Left: 18, Bottom: 14,
+        Width: 54, Height: 36, FlexDirection: FlexDirection.Row,
+        AlignItems: AlignItems.Center, JustifyContent: JustifyContent.Center,
+        Text{ Content: "day", FontSize: 13 },
+      },
+    }
+    for changingDensity in []bool{ false, true } {
+      let root = Reconciler{ Res: Resolver{} }.Mount(scene)
+      let layout = Layout()
+      for resize in 0 ... 100 {
+        let height = 800.0F + float32(resize % 2)
+        let density = if changingDensity { (2100.0F + float32(resize % 2) * 3.0F) / height } else { 2.625F }
+        layout.SetPixelDensity(density)
+        layout.Calculate(root, 400.0F, height)
+        let fresh = Reconciler{ Res: Resolver{} }.Mount(scene)
+        let freshLayout = Layout()
+        freshLayout.SetPixelDensity(density)
+        freshLayout.Calculate(fresh, 400.0F, height)
+        let actual = List[float32]()
+        let expected = List[float32]()
+        snapshot(root, actual)
+        snapshot(fresh, expected)
+        if !sameSnapshot(actual, expected) {
+          throw InvalidOperationException("resize=${resize}, density=${density}, cached=${root.Children[0].Children[0].Rect.Y}, fresh=${fresh.Children[0].Children[0].Rect.Y}")
+        }
+      }
+    }
+    return true
+  }
+
   func PixelSnappingPreservesDistantItemSizes() bool {
     for density in []float32{ 1.0F, 1.5F, 2.0F } {
       let root = Reconciler{ Res: Resolver{} }.Mount(Container{ Width: 100, Height: 200,

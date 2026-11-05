@@ -4,13 +4,21 @@ import System
 import System.Collections.Generic
 
 internal class PointerTouchPanSample {
-  internal var Target Node
+  private var targetMount NodeMount
+  internal prop Target Node? {
+    get -> targetMount.Current
+    set -> targetMount = NodeMount(value)
+  }
   internal var VelocityX float32
   internal var VelocityY float32
 }
 
 internal class PointerTouchPanState {
-  internal var Target Node
+  private var targetMount NodeMount
+  internal prop Target Node? {
+    get -> targetMount.Current
+    set -> targetMount = NodeMount(value)
+  }
   internal var StartX float32
   internal var StartY float32
   internal var LastX float32
@@ -29,7 +37,7 @@ internal partial class PointerInput {
     if current.Device != PointerDevice.Touch || !isSemanticPrimary()
       || current.CaptureTarget != nil || current.DragEntry != nil || current.DragEditor != nil { return }
     for i in current.PressChain.Count ... 0 {
-      let n = current.PressChain[i - 1]
+      guard let n = current.PressChain[i - 1].Current else { continue }
       if (n.OverflowX == Overflow.Scroll && maxScrollX(n) > 0.0F)
         || (n.OverflowY == Overflow.Scroll && maxScrollY(n) > 0.0F) {
           current.TouchPan = PointerTouchPanState{
@@ -53,9 +61,11 @@ internal partial class PointerInput {
   private func updateTouchPan(root Node?, resolver Resolver, x float32, y float32,
     prevented bool) bool{
       guard let state = current.TouchPan, let tree = root else { return false }
+      guard let panTarget = state.Target else { clearTouchPan()
+        return false }
       if prevented || current.CaptureTarget != nil || activeDragMatches() || current.DragEntry != nil
-        || current.DragEditor != nil || !nodeVisibleInTree(tree, state.Target, false)
-        || !canReceiveInput(state.Target) {
+        || current.DragEditor != nil || !nodeVisibleInTree(tree, panTarget, false)
+        || !canReceiveInput(panTarget) {
           clearTouchPan()
           return false
         }
@@ -76,6 +86,8 @@ internal partial class PointerInput {
           clearActiveRoute()
         }
       }
+      if state.Target == nil { clearTouchPan()
+        return false }
       var remainingX = state.LastX - x
       var remainingY = state.LastY - y
       let elapsed = gestureTime - state.LastTime
@@ -138,7 +150,7 @@ internal partial class PointerInput {
     if let state = current.TouchPan {
       if state.Active && gestureTime - state.LastTime <= 0.1 {
         for sample in state.Samples {
-          ScrollState.StartMomentum(sample.Target, sample.VelocityX, sample.VelocityY)
+          if let target = sample.Target { ScrollState.StartMomentum(target, sample.VelocityX, sample.VelocityY) }
         }
       }
     }
