@@ -4,11 +4,12 @@ import System
 
 internal unsafe partial class VulkanPrimitiveRenderer {
   private const OpaqueInteriorMinimumArea int64 = 4096L
+  private let profileOpaqueInteriors bool = Environment.GetEnvironmentVariable("GOO_OVERDRAW_OPTION") == "B"
   private var solidInteriorEligible bool
 
   private func TryEmitOpaqueInterior(commandBuffer VkCommandBuffer, bounds ConservativeBounds,
     transform PrimitiveTransform, push *VulkanPrimitiveGpuRecord, color uint32, opacity float32) bool {
-    if !solidInteriorEligible || layerDepth != 0 || currentTarget != nil
+    if !profileOpaqueInteriors || !solidInteriorEligible || layerDepth != 0 || currentTarget != nil
       || opacity != 1.0F || (color & 255u) != 255u || transform.A != 1.0F || transform.D != 1.0F
       || transform.B != 0.0F || transform.C != 0.0F || push -> params_x != 0.0F
       || push -> params_y != 0.0F { return false }

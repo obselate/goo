@@ -685,6 +685,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     }
 
   private func ProcessDraw(commandBuffer VkCommandBuffer, reference DrawRef, frame SceneFrame) {
+    if currentDrawOrdinal < uint32(frame.OccludedDraws.Length)
+      && frame.OccludedDraws[int32(currentDrawOrdinal)] { return }
     solidInteriorEligible = reference.ClipChainId == 0
     switch reference.Kind {
       case SceneDrawKind.SolidBox {

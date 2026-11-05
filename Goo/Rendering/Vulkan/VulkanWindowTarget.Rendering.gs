@@ -232,7 +232,7 @@ internal unsafe partial class VulkanWindowTarget {
       imageScene?.BeginCompile()
       let planStart = DiagnosticTimestamp()
       let compileResult = sceneCompiler.Compile(root, portalRoot, background,
-        logicalWidth, logicalHeight)
+        logicalWidth, logicalHeight, scaleX, scaleY)
       RecordDiagnosticPlan(planStart, compileResult,
         sceneCompiler.Frame.Counters, sceneCompiler.Frame)
       if compileResult.PathResourceDeferred {

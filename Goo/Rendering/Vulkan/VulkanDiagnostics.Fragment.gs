@@ -108,6 +108,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
   }
 
   private func FragmentPrimitiveKind(pipeline VkPipeline) int32 {
+    if pipeline == primitivePipelines.OpaqueSolidPipeline { return 8 }
     if pipeline == primitivePipelines.SolidPipeline { return 0 }
     if pipeline == primitivePipelines.BorderPipeline { return 2 }
     if pipeline == primitivePipelines.ShadowPipeline { return 3 }

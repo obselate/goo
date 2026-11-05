@@ -109,7 +109,9 @@ internal partial class VulkanSceneCompiler {
     overlayRoot Node?,
     background Color,
     viewportWidth float32,
-    viewportHeight float32) VulkanSceneCompileResult{
+    viewportHeight float32,
+    scaleX float32 = 1.0F,
+    scaleY float32 = 1.0F) VulkanSceneCompileResult {
       ValidateViewport(viewportWidth, viewportHeight)
       clipViewportWidth = viewportWidth
       clipViewportHeight = viewportHeight
@@ -180,6 +182,7 @@ internal partial class VulkanSceneCompiler {
       }
 
       ClassifyRetainedChunks()
+      CullOccludedDraws(scaleX, scaleY, viewportWidth, viewportHeight)
 
       lastResult.FrameVersion = frameVersion
       lastResult.RootOwnerId = rootOwnerId
