@@ -321,8 +321,10 @@ internal class RecyclingInnerCell : Cell, IDisposable {
       .Language: detailed ? "ar" : "en", .Direction: detailed ? Direction.RightToLeft : Direction.LeftToRight,
       .Focusable: true, .OpacityAnim: Animation, .Accessibility: Accessibility{Role: AccessibilityRole.Button, Name: "row-${item.Index}"},
       .OnClick: () -> { host.Clicked = item.Index },
-      Text{Key: "label-${item.Index}", TextWrap: TextWrap.NoWrap,
-        Content: detailed ? "مرحبا بالنص المختلف" : "${item.Index}:${outer.Local}:$Local"},
+      host.DetailedText && item.Index == 0
+        ? Text{Key: "label-0", Content: "0:0:0", Left: 7, Top: 9, Margin: 3, Padding: 2}
+        : Text{Key: "label-${item.Index}", TextWrap: TextWrap.NoWrap,
+          Content: detailed ? "مرحبا بالنص المختلف" : "${item.Index}:${outer.Local}:$Local"},
     }
   }
 }

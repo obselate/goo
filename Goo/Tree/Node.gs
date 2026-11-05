@@ -101,7 +101,6 @@ internal class Node {
     Context = nil
     Content = ""
     Rect = Rect{}
-    YogaStyleMask = StyleMask{}
     BaseStyle = nil
     HoverStyle = nil
     FocusStyle = nil
