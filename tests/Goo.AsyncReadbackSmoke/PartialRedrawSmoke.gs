@@ -659,7 +659,7 @@ func PartialRedrawScene(name string, root Cell, steps int32, advance Action,
     let metrics = WindowReadbackTestFixture.Metrics(window)
     if resizeCapacity {
       Require(WindowReadbackTestFixture.Resize(window, 400, 190,
-        metrics.FramebufferWidth * 11 / 10, metrics.FramebufferHeight * 11 / 10),
+        metrics.FramebufferWidth * 7 / 5, metrics.FramebufferHeight * 7 / 5),
         "Partial redraw capacity seed resize failed")
       WindowReadbackTestFixture.SetForceFullRedraw(window, true)
       for frameIndex in 0 ... 3 {

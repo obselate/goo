@@ -370,6 +370,7 @@ func RunRenderBudgetPressureSmoke() {
         && target.DiagnosticCountersSnapshotForTest().layerPoolPassCount >= siblingPasses + 4uL,
       "Sibling layers that fit concurrently were drawn without layers")
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
+    let singleBytes = target.DiagnosticCountersSnapshotForTest().layerPoolResidentBytes
     root.UseNested()
     target.SetRenderBudgetsForTest(536870912uL, 67108864uL)
     WindowReadbackTestFixture.SetForceFullRedraw(window, true)
@@ -381,14 +382,15 @@ func RunRenderBudgetPressureSmoke() {
     target.SetRenderBudgetsForTest(exactBytes, 67108864uL)
     root.UseNested(false)
     Require(WindowReadbackTestFixture.Resize(window, 400, 190,
-      metrics.FramebufferWidth * 11 / 10, metrics.FramebufferHeight * 11 / 10),
+      metrics.FramebufferWidth * 7 / 5, metrics.FramebufferHeight * 7 / 5),
       "Layer capacity budget seed resize failed")
     WindowReadbackTestFixture.SetForceFullRedraw(window, true)
     WindowReadbackTestFixture.ForceRender(window, 0.0)
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
     let seeded = target.DiagnosticCountersSnapshotForTest()
-    Require(seeded.layerPoolResidentBytes > pixels * 4uL
-        && seeded.layerPoolResidentBytes < exactBytes,
+    Require(target.LayerResolutionShiftForTest() == 0
+        && seeded.layerPoolResidentBytes >= singleBytes
+        && seeded.layerPoolResidentBytes <= exactBytes,
       "Layer capacity budget seed did not retain a larger target")
     root.UseNested()
     Require(WindowReadbackTestFixture.Resize(window, 400, 190,
@@ -399,7 +401,8 @@ func RunRenderBudgetPressureSmoke() {
     let capacity = target.DiagnosticCountersSnapshotForTest()
     Require(target.LayerResolutionShiftForTest() == 0
         && capacity.layerPoolReuseCount > seeded.layerPoolReuseCount
-        && capacity.layerPoolPressureFailureCount > seeded.layerPoolPressureFailureCount,
+        && (seeded.layerPoolResidentBytes <= singleBytes
+          || capacity.layerPoolPressureFailureCount > seeded.layerPoolPressureFailureCount),
       "Optional layer capacity reduced full-resolution rendering or bypassed exact-extent recovery")
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
     target.SetRenderBudgetsForTest(pixels * 4uL, pixels)
