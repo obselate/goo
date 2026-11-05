@@ -180,6 +180,11 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         try {
             target.TransitionToColorAttachment(commandBuffer)
             BeginLayerRendering(commandBuffer, extent, target.ImageView, false)
+            fragmentPass = 2
+            if FrameRecorder.Current != nil {
+                recordGpuWork.blurPassCount++
+                recordGpuWork.blurPassPixels += uint64(extent.width) * uint64(extent.height)
+            }
             SetLayerViewport(commandBuffer)
             SetScissor(commandBuffer, FullClip())
             pool.RecordLayerPass(uint64(extent.width), uint64(extent.height))

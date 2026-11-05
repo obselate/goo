@@ -70,7 +70,7 @@ internal struct VulkanDiagnosticTimestampStageState {
   var elapsedNanoseconds uint64
 }
 
-internal unsafe sealed class VulkanDiagnosticTimestampState {
+internal unsafe sealed partial class VulkanDiagnosticTimestampState {
   private const TimestampFrameSlotCount int32 = 2
   private const TimestampStageCount int32 = 7
   private const TimestampScopesPerStage int32 = 64
@@ -203,6 +203,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
       }
       timestampPoolCreated = true
       diagnostics?.RecordResult(VulkanDiagnosticEventIds.GpuTimestamp, int32(result))
+      CreateFragmentPool()
       return result
     }
 
@@ -219,6 +220,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
     }
     let destroyQueryPool = timestampDispatch.vkDestroyQueryPool
     destroyQueryPool(timestampDevice, timestampPool, nil)
+    DestroyFragmentPool()
     if let accounting = objectAccounting {
       accounting.Release()
     }
@@ -257,6 +259,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
     }
     let destroyQueryPool = timestampDispatch.vkDestroyQueryPool
     destroyQueryPool(timestampDevice, timestampPool, nil)
+    DestroyFragmentPool()
     if let accounting = objectAccounting {
       accounting.Release()
     }
@@ -276,6 +279,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
   }
 
   internal func AbandonTimestampQueryPool() {
+    fragmentPool = 0uL
     timestampPool = 0uL
     timestampPoolCreated = false
     timestampSupported = false
@@ -336,6 +340,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
       let firstQuery = FirstTimestampQuery(slot, 0, 0)
       let resetQueryPool = timestampDispatch.vkCmdResetQueryPool
       resetQueryPool(commandBuffer, timestampPool, firstQuery, uint32(TimestampQueriesPerSlot))
+      ResetFragmentQueries(commandBuffer, slot)
       RecordTimestampControl(context, VkConstants.VK_SUCCESS, uint64(firstQuery), uint64(TimestampQueriesPerSlot))
       return true
     }
@@ -568,6 +573,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
       }
       return completionResult
     }
+    ResolveFragmentQueries(slot)
 
     let values * uint64 = stackalloc[TimestampQueriesPerStage]uint64
     let getQueryPoolResults = timestampDispatch.vkGetQueryPoolResults
