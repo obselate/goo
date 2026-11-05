@@ -14,18 +14,18 @@ internal unsafe partial class VulkanPrimitiveRenderer {
       || push -> params_y != 0.0F { return false }
     let radius = MathF.Max(MathF.Max(push -> radii_x, push -> radii_y), MathF.Max(push -> radii_z, push -> radii_w))
     let inset = radius + 2.0F
+    let minimumX = MathF.Ceiling(bounds.X + transform.TX + inset)
+    let minimumY = MathF.Ceiling(bounds.Y + transform.TY + inset)
+    let maximumX = MathF.Floor(bounds.Right + transform.TX - inset)
+    let maximumY = MathF.Floor(bounds.Bottom + transform.TY - inset)
+    let width = float64(maximumX) - float64(minimumX)
+    let height = float64(maximumY) - float64(minimumY)
+    if width <= 0.0 || height <= 0.0 || width * height < float64(OpaqueInteriorMinimumArea) { return false }
     let clip = clipStack[clipDepth - 1]
-    let minimumX = MathF.Max(bounds.X + transform.TX + inset, float32(clip.Left))
-    let minimumY = MathF.Max(bounds.Y + transform.TY + inset, float32(clip.Top))
-    let maximumX = MathF.Min(bounds.Right + transform.TX - inset, float32(clip.Right))
-    let maximumY = MathF.Min(bounds.Bottom + transform.TY - inset, float32(clip.Bottom))
-    if minimumX >= maximumX || minimumY >= maximumY { return false }
-    let left = int32(MathF.Ceiling(minimumX))
-    let top = int32(MathF.Ceiling(minimumY))
-    let right = int32(MathF.Floor(maximumX))
-    let bottom = int32(MathF.Floor(maximumY))
-    if right <= left || bottom <= top
-      || int64(right - left) * int64(bottom - top) < OpaqueInteriorMinimumArea { return false }
+    let left = int32(MathF.Max(float32(clip.Left), MathF.Min(minimumX, float32(clip.Right))))
+    let top = int32(MathF.Max(float32(clip.Top), MathF.Min(minimumY, float32(clip.Bottom))))
+    let right = int32(MathF.Max(float32(clip.Left), MathF.Min(maximumX, float32(clip.Right))))
+    let bottom = int32(MathF.Max(float32(clip.Top), MathF.Min(maximumY, float32(clip.Bottom))))
     for band in 0 ... 5 {
       let region = switch band {
         case 0: PrimitiveClip{Left: clip.Left, Top: clip.Top, Right: clip.Right, Bottom: top}
