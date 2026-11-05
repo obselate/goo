@@ -847,6 +847,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         case SceneDrawKind.Shadow { count = 1uL }
         default { count = 0uL }
       }
+      if profileOpaqueInteriors && (kind == SceneDrawKind.SolidBox || kind == SceneDrawKind.RoundedBox
+        || kind == SceneDrawKind.PerEdgeBorder || kind == SceneDrawKind.Underline) { count *= 5uL }
       if count > 0uL {
         if total > uint64(Int32.MaxValue) - count {
           throw ArgumentOutOfRangeException("draw count")
