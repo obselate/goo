@@ -57,10 +57,10 @@ namespace Facebook.Yoga
         private StyleValueHandle _aspectRatio;
 
         // Grid properties
-        private GridTrackList _gridTemplateColumns = new GridTrackList();
-        private GridTrackList _gridTemplateRows = new GridTrackList();
-        private GridTrackList _gridAutoColumns = new GridTrackList();
-        private GridTrackList _gridAutoRows = new GridTrackList();
+        private GridTrackList? _gridTemplateColumns;
+        private GridTrackList? _gridTemplateRows;
+        private GridTrackList? _gridAutoColumns;
+        private GridTrackList? _gridAutoRows;
         private GridLine _gridColumnStart = new GridLine();
         private GridLine _gridColumnEnd = new GridLine();
         private GridLine _gridRowStart = new GridLine();
@@ -278,73 +278,73 @@ namespace Facebook.Yoga
         public GridTrackList GridTemplateColumns
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _gridTemplateColumns;
+            get => _gridTemplateColumns ??= new GridTrackList();
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set => _gridTemplateColumns = value;
         }
 
         public void ResizeGridTemplateColumns(int count)
         {
-            _gridTemplateColumns.Resize(count);
+            GridTemplateColumns.Resize(count);
         }
 
         public void SetGridTemplateColumnAt(int index, GridTrackSize value)
         {
-            _gridTemplateColumns[index] = value;
+            GridTemplateColumns[index] = value;
         }
 
         public GridTrackList GridTemplateRows
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _gridTemplateRows;
+            get => _gridTemplateRows ??= new GridTrackList();
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set => _gridTemplateRows = value;
         }
 
         public void ResizeGridTemplateRows(int count)
         {
-            _gridTemplateRows.Resize(count);
+            GridTemplateRows.Resize(count);
         }
 
         public void SetGridTemplateRowAt(int index, GridTrackSize value)
         {
-            _gridTemplateRows[index] = value;
+            GridTemplateRows[index] = value;
         }
 
         public GridTrackList GridAutoColumns
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _gridAutoColumns;
+            get => _gridAutoColumns ??= new GridTrackList();
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set => _gridAutoColumns = value;
         }
 
         public void ResizeGridAutoColumns(int count)
         {
-            _gridAutoColumns.Resize(count);
+            GridAutoColumns.Resize(count);
         }
 
         public void SetGridAutoColumnAt(int index, GridTrackSize value)
         {
-            _gridAutoColumns[index] = value;
+            GridAutoColumns[index] = value;
         }
 
         public GridTrackList GridAutoRows
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _gridAutoRows;
+            get => _gridAutoRows ??= new GridTrackList();
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set => _gridAutoRows = value;
         }
 
         public void ResizeGridAutoRows(int count)
         {
-            _gridAutoRows.Resize(count);
+            GridAutoRows.Resize(count);
         }
 
         public void SetGridAutoRowAt(int index, GridTrackSize value)
         {
-            _gridAutoRows[index] = value;
+            GridAutoRows[index] = value;
         }
 
         // Grid Item Properties
@@ -740,10 +740,10 @@ namespace Facebook.Yoga
             clone._minDimensions = _minDimensions;
             clone._maxDimensions = _maxDimensions;
 
-            clone._gridTemplateColumns = new GridTrackList(_gridTemplateColumns);
-            clone._gridTemplateRows = new GridTrackList(_gridTemplateRows);
-            clone._gridAutoColumns = new GridTrackList(_gridAutoColumns);
-            clone._gridAutoRows = new GridTrackList(_gridAutoRows);
+            clone._gridTemplateColumns = _gridTemplateColumns == null ? null : new GridTrackList(_gridTemplateColumns);
+            clone._gridTemplateRows = _gridTemplateRows == null ? null : new GridTrackList(_gridTemplateRows);
+            clone._gridAutoColumns = _gridAutoColumns == null ? null : new GridTrackList(_gridAutoColumns);
+            clone._gridAutoRows = _gridAutoRows == null ? null : new GridTrackList(_gridAutoRows);
             clone._gridColumnStart = _gridColumnStart;
             clone._gridColumnEnd = _gridColumnEnd;
             clone._gridRowStart = _gridRowStart;
@@ -785,10 +785,10 @@ namespace Facebook.Yoga
                    LengthsEqual(_minDimensions, _pool, other._minDimensions, other._pool) &&
                    LengthsEqual(_maxDimensions, _pool, other._maxDimensions, other._pool) &&
                    NumbersEqual(_aspectRatio, _pool, other._aspectRatio, other._pool) &&
-                   _gridTemplateColumns.Equals(other._gridTemplateColumns) &&
-                   _gridTemplateRows.Equals(other._gridTemplateRows) &&
-                   _gridAutoColumns.Equals(other._gridAutoColumns) &&
-                   _gridAutoRows.Equals(other._gridAutoRows) &&
+                   GridTemplateColumns.Equals(other.GridTemplateColumns) &&
+                   GridTemplateRows.Equals(other.GridTemplateRows) &&
+                   GridAutoColumns.Equals(other.GridAutoColumns) &&
+                   GridAutoRows.Equals(other.GridAutoRows) &&
                    _gridColumnStart.Equals(other._gridColumnStart) &&
                    _gridColumnEnd.Equals(other._gridColumnEnd) &&
                    _gridRowStart.Equals(other._gridRowStart) &&

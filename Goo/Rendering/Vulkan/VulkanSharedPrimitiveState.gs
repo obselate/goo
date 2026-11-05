@@ -752,11 +752,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
       if Volatile.Read(ref preparationStopped) != 0 { return }
       ResolveClipMaskPipeline(ref clipMaskR8Pipeline, VkConstants.VK_FORMAT_R8_UNORM)
       ResolveClipMaskPipeline(ref clipMaskRgba8Pipeline, VkConstants.VK_FORMAT_R8G8B8A8_UNORM)
-      using let backdrop = typeof(VulkanSharedPrimitiveState).Assembly.GetManifestResourceStream(
-        "Goo.Effects.filtered_backdrop.goo-effect")
-      if backdrop == nil { throw FileNotFoundException("Goo backdrop blur effect is missing") }
-      let blur = ShaderEffect(ShaderEffectProgram(
-        BoundedInput.ReadAll(backdrop, ShaderEffectProgram.MaximumProgramByteCount, "Shader effect program")))
+      let blur = ShaderEffect(ShaderEffectProgram.LoadEmbedded("filtered_backdrop.goo-effect"))
       for state in formatStates {
         if Volatile.Read(ref preparationStopped) != 0 { return }
         state?.ResolveShaderEffectPipeline(blur)

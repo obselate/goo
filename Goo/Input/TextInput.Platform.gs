@@ -394,15 +394,11 @@ internal partial class TextInput {
     if n.Kind == NodeKind.Editor {
       if n.EditorReadOnly && !readOnlyCommand(command.Kind) { return false }
       guard let controller = n.EditorController else { return false }
-      if command.Kind == TextCommandKind.Copy {
-        let value = controller.Copy()
-        if value != "" { clipboardSet(value) }
-        return true
-      }
-      if command.Kind == TextCommandKind.Cut {
-        let value = controller.Cut()
-        if value != "" { clipboardSet(value) }
-        return true
+      if command.Kind == TextCommandKind.Copy || command.Kind == TextCommandKind.Cut {
+        let value = controller.CopySelection(command)
+        if value == "" { return true }
+        if !clipboardSet(value) { return false }
+        return command.Kind != TextCommandKind.Cut || controller.ExecuteIntercepted(command)
       }
       let result = command.Kind == TextCommandKind.Paste
         ? controller.ExecuteIntercepted(command) : controller.Execute(command)
@@ -450,12 +446,11 @@ internal partial class TextInput {
       case TextCommandKind.SelectLine { after = edit.SelectAll(before) }
       case TextCommandKind.Copy {
         if n.Password { return false }
-        clipboardSet(edit.Selected(before))
-        return true
+        return clipboardSet(edit.Selected(before))
       }
       case TextCommandKind.Cut {
         if n.Password { return false }
-        clipboardSet(edit.Selected(before))
+        if !clipboardSet(edit.Selected(before)) { return false }
         after = edit.Insert(before, "")
       }
       case TextCommandKind.Paste { after = edit.Insert(before, sanitize(command.Text ?? "")) }

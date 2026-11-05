@@ -4,7 +4,6 @@ import System
 import System.Diagnostics
 import System.IO
 import System.Runtime.InteropServices
-import System.Security.Cryptography
 
 internal data struct VulkanPipelineCacheMetrics {
   var Enabled bool
@@ -196,7 +195,7 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
 
   private func ResolveCachePath(vendorId uint32, deviceId uint32,
     driverVersion uint32, uuid []uint8) string{
-      let manifestHash = SHA256.HashData(VulkanShaderAssets.Read("shader-manifest.json"))
+      let manifestHash = VulkanShaderAssets.Read("shader-manifest.sha256")
       let directoryOverride = Environment.GetEnvironmentVariable("GOO_VK_PIPELINE_CACHE_DIR")
       let root = if directoryOverride != nil && directoryOverride != "" {
         directoryOverride
