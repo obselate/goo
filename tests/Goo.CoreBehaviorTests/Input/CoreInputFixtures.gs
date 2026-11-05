@@ -151,7 +151,7 @@ internal class InputFixtures {
     let entry = FocusScopeEntry(FocusScope(scopes, 1), node, node, node, FocusScopeOptions{})
     NodeLifecycle.DisposeTree(node)
     if !node.TryBeginRebind() { return false }
-    if reconciler.Diff(node, Button{Width: 50, Height: 40,
+    if reconciler.Diff(node, Button{Width: 50, Height: 40, Cursor: Cursor.Pointer,
       OnClick: () -> { incomingEvents++ },
       OnFocus: (_ FocusEvent) -> { incomingEvents++ },
       OnPointerLeave: (_ PointerEvent) -> { incomingEvents++ },
@@ -159,7 +159,8 @@ internal class InputFixtures {
       OnPointerUp: (_ PointerEvent) -> { incomingEvents++ },
       KeyBindings: []KeyBinding{KeyBinding{Key: Key.Down, Action: () -> { incomingEvents++ },
         OnRelease: () -> { incomingEvents++ }}}}) != node { return false }
-    if input.FocusedNode() != nil || entry.Root != nil || entry.Previous != nil || entry.Initial != nil { return false }
+    if input.FocusedNode() != nil || input.CurrentCursor() != Cursor.Default
+      || entry.Root != nil || entry.Previous != nil || entry.Initial != nil { return false }
     input.QueuePointerMove(90.0F, 90.0F)
     input.QueuePointerRelease(90.0F, 90.0F)
     input.QueueKeyRelease(Key.Down)

@@ -9,7 +9,7 @@ internal partial class PointerInput {
       guard let n = route[i - 1].Current else { continue }
       if n.Focusable || n.OnClick != nil || n.OnPointerDown != nil || n.OnPointerUp != nil { return n }
     }
-    return route.Count == 0 ? nil : route[route.Count - 1]
+    return route.Count == 0 ? nil : route[route.Count - 1].Current
   }
 
   private func beginClickSequence(route List[NodeMount], timeS float64, x float32, y float32, button PointerButton) {

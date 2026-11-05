@@ -64,14 +64,14 @@ internal partial class Resolver {
     init;
   }
 
-  internal prop Animating List[Node]{ get; init; }
+  internal prop Animating List[NodeMount]{ get; init; }
   internal prop DebugOverrides DiagnosticOverrideStore? {
     get -> ResolverDiagnostics.Get(this)
     set(v) -> ResolverDiagnostics.Set(this, v)
   }
   internal prop PaintResourceInvalidated Action? { get; set; }
   internal prop ShaderEffectInvalidated Action? { get; set; }
-  private let pending List[Node]
+  private let pending List[NodeMount]
   internal let Scrollbars ScrollbarParts = ScrollbarParts()
   private let inheritedScratch []StyleEntry
   private let layerWinners []int32 = [StyleFields.Count]int32
@@ -80,8 +80,8 @@ internal partial class Resolver {
   internal var VisualDirty bool
   private var pendingEffects ReconcileEffects
   internal init() {
-    Animating = List[Node]()
-    pending = List[Node]()
+    Animating = List[NodeMount]()
+    pending = List[NodeMount]()
     inheritedScratch = [StyleFields.InheritableFields.Length]StyleEntry
   }
 
@@ -97,7 +97,7 @@ internal partial class Resolver {
     var visits int64 = 0
     try {
       while pendingCursor < pending.Count {
-        visits = visits + resolvePending(pending[pendingCursor])
+        if let node = pending[pendingCursor].Current { visits = visits + resolvePending(node) }
         pendingCursor++
       }
     } finally {
@@ -131,7 +131,7 @@ internal partial class Resolver {
     n.StylePendingSelf = false
     n.StylePendingInitial = false
     n.StylePendingInheritedMask = StyleMask{}
-    pending.Add(n)
+    pending.Add(NodeMount(n))
   }
 
   internal func InvalidateInherited(n Node, fields StyleMask) {
@@ -493,7 +493,7 @@ internal partial class Resolver {
       ToA: e.A, ToB: e.B, ToC: e.C, ToD: e.D,
       Easing: n.TransitionEasing,
       Elapsed: -n.TransitionDelayMs / 1000.0, Duration: n.TransitionMs / 1000.0 })
-    if !containsAnimating(n) { Animating.Add(n) }
+    if !containsAnimating(n) { Animating.Add(NodeMount(n)) }
   }
 
   internal func startOrRetargetBoxShadows(n Node, e StyleEntry, cur StyleEntry) {
@@ -516,12 +516,12 @@ internal partial class Resolver {
     }
     list.Add(makeBoxShadowTransition(entryShadows(cur), entryShadows(e),
       n.TransitionEasing, n.TransitionMs / 1000.0, n.TransitionDelayMs / 1000.0))
-    if !containsAnimating(n) { Animating.Add(n) }
+    if !containsAnimating(n) { Animating.Add(NodeMount(n)) }
   }
 
   internal func containsAnimating(n Node) bool {
     for i in 0 ... Animating.Count {
-      if Animating[i] == n { return true }
+      if Animating[i].Current == n { return true }
     }
     return false
   }
@@ -542,8 +542,7 @@ internal partial class Resolver {
   internal func Advance(dt float64) {
     advancePaintBindings()
     for var ni = Animating.Count; ni > 0; ni-- {
-      let n = Animating[ni - 1]
-      if n.Retired {
+      guard let n = Animating[ni - 1].Current else {
         Animating.RemoveAt(ni - 1)
         continue
       }

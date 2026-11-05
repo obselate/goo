@@ -49,7 +49,7 @@ internal class DiagnosticNodeIdentity {
 
 }
 
-internal data struct DiagnosticNodeReference {
+internal struct DiagnosticNodeReference {
   internal let Reference WeakReference
   internal let Generation uint64
 
