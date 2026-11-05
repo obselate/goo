@@ -16,6 +16,7 @@ internal class NativeAccessibilityNodeCache {
   internal var ScrollY float64
   internal var ScrollMaxX float64
   internal var ScrollMaxY float64
+  internal var SizeOfSet int32?
   internal var Value string = ""
   internal var Text string = ""
   internal var Boundaries List[int32]?
@@ -99,7 +100,8 @@ public sealed partial class NativeAccessibilityAdapter {
       || scrollExtent.X != retained.ScrollMaxX || scrollExtent.Y != retained.ScrollMaxY
     let textChanged = UpdateText(node, retained, source)
     UpdateTextGeometry(source, retained)
-    if all || retained.Revision != revision || textChanged || scrollChanged {
+    let sizeOfSet = CollectionSize(node)
+    if all || retained.Revision != revision || textChanged || scrollChanged || retained.SizeOfSet != sizeOfSet {
       let nativeNode = AccessKitNative.NodeNew(NodeRole(node))
       try {
         if node.Role != AccessibilityRole.Text || node.Name != node.Value { SetString(nativeNode, node.Name, 0) }
@@ -107,7 +109,7 @@ public sealed partial class NativeAccessibilityAdapter {
         SetString(nativeNode, node.ValueText != "" ? node.ValueText : node.Value, 2)
         SetString(nativeNode, node.CustomRole, 3)
         AccessKitNative.NodeSetBounds(nativeNode, NativeBounds(node.Bounds))
-        EncodeState(nativeNode, node)
+        EncodeState(nativeNode, node, sizeOfSet)
         if Supports(node, AccessibilityAction.Scroll) {
           AccessKitNative.NodeSetScrollX(nativeNode, scrollX)
           AccessKitNative.NodeSetScrollXMin(nativeNode, 0.0)
@@ -129,6 +131,7 @@ public sealed partial class NativeAccessibilityAdapter {
       retained.ScrollY = scrollY
       retained.ScrollMaxX = scrollExtent.X
       retained.ScrollMaxY = scrollExtent.Y
+      retained.SizeOfSet = sizeOfSet
     }
     if node.Focused { focus = NodeId(node.Id) }
     for i in 0 ... retained.Runs.Count {
@@ -163,7 +166,7 @@ public sealed partial class NativeAccessibilityAdapter {
       return AccessKitSchema.Role(node.Role)
     }
 
-    private func EncodeState(target nint, node AccessibilityNode) {
+    private func EncodeState(target nint, node AccessibilityNode, sizeOfSet int32?) {
       if node.Disabled { AccessKitNative.NodeSetDisabled(target) }
       if node.ReadOnly == true { AccessKitNative.NodeSetReadOnly(target) }
       if node.Required == true { AccessKitNative.NodeSetRequired(target) }
@@ -178,9 +181,9 @@ public sealed partial class NativeAccessibilityAdapter {
       if node.Orientation != AccessibilityOrientation.Unspecified { AccessKitNative.NodeSetOrientation(target, uint8(node.Orientation) - uint8(1)) }
       if node.HasPopup == true { AccessKitNative.NodeSetHasPopup(target, node.Role == AccessibilityRole.ComboBox ? uint8(1) : uint8(0)) }
       AccessKitNative.NodeSetLive(target, uint8(node.Live))
-      if let value = node.Level { AccessKitNative.NodeSetLevel(target, uint64(value)) }
+      if let value = node.Level { AccessKitNative.NodeSetLevel(target, uint64(value - 1)) }
       if let value = node.PositionInSet { AccessKitNative.NodeSetPositionInSet(target, nuint(value)) }
-      if let value = node.SizeOfSet { AccessKitNative.NodeSetSizeOfSet(target, nuint(value)) }
+      if let value = sizeOfSet { AccessKitNative.NodeSetSizeOfSet(target, nuint(value)) }
       if let value = node.RowIndex { AccessKitNative.NodeSetRowIndex(target, nuint(value)) }
       if let value = node.ColumnIndex { AccessKitNative.NodeSetColumnIndex(target, nuint(value)) }
       if let value = node.RowCount { AccessKitNative.NodeSetRowCount(target, nuint(value)) }
@@ -188,6 +191,20 @@ public sealed partial class NativeAccessibilityAdapter {
       if let value = node.ValueNow { AccessKitNative.NodeSetNumericValue(target, value) }
       if let value = node.ValueMinimum { AccessKitNative.NodeSetMinNumericValue(target, value) }
       if let value = node.ValueMaximum { AccessKitNative.NodeSetMaxNumericValue(target, value) }
+    }
+
+    private func CollectionSize(node AccessibilityNode) int32? {
+      if node.PositionInSet != nil { return node.SizeOfSet }
+      var size int32?
+      for i in 0 ... node.Children.Count {
+        let child = node.Children[i]
+        if child.PositionInSet == nil { continue }
+        if node.Role == AccessibilityRole.Tree { return nil }
+        guard let count = child.SizeOfSet else { return node.SizeOfSet }
+        if size != nil && size != count { return nil }
+        size = count
+      }
+      return size ?? node.SizeOfSet
     }
 
     private func EncodeRelationships(target nint, values AccessibilityRelationshipIds) {

@@ -197,11 +197,12 @@ public class Accessibility {
   public prop Invalid bool? { get; init; }
   /// Gets whether the item is busy when explicitly specified.
   public prop Busy bool? { get; init; }
-  /// Gets the heading level when explicitly specified.
+  /// Gets the one-based heading level when explicitly specified.
   public prop Level int32? { get; init; }
   /// Gets the zero-based logical item position within its collection, including unrealized items.
   public prop PositionInSet int32? { get; init; }
-  /// Gets the logical item count on a collection container, including unrealized items.
+  /// Gets the logical item count for a collection or an item, including unrealized items.
+  /// Desktop adapters use the collection count. Per-level item counts in a flat tree are not exposed.
   public prop SizeOfSet int32? { get; init; }
   /// Gets the zero-based logical row index, including unrealized rows.
   /// Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
@@ -509,11 +510,12 @@ public interface AccessibilityNode {
   prop Invalid bool? { get; }
   /// Gets the resolved busy state.
   prop Busy bool? { get; }
-  /// Gets the resolved heading level.
+  /// Gets the resolved one-based heading level.
   prop Level int32? { get; }
   /// Gets the zero-based logical collection item position.
   prop PositionInSet int32? { get; }
-  /// Gets the total logical item count on a collection container.
+  /// Gets the total logical item count for a collection or an item.
+  /// Desktop adapters use the collection count. Per-level item counts in a flat tree are not exposed.
   prop SizeOfSet int32? { get; }
   /// Gets the zero-based logical row index.
   /// Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
