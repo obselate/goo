@@ -10,6 +10,7 @@
 - Limit retained child-diff, path-band and path-ownership scratch storage after exceptional peaks.
 - Allocate Yoga style value buffers only when an indexed value is stored.
 - Allocate Yoga measurement caches only when a node needs a measurement entry.
+- Allocate Yoga grid track lists only when grid state is accessed.
 - Include virtual row realization in the Build, Reconcile and StyleResolve profile phases during scrolling.
 
 ## 0.27.10 - 2026-11-04
