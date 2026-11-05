@@ -204,6 +204,8 @@ internal class DragDropMetadata {
     private let nodeValues ConditionalWeakTable[Node, DragDropBinding] =
     ConditionalWeakTable[Node, DragDropBinding]()
 
+    internal func Remove(node Node) { nodeValues.Remove(node) }
+
     internal func SetBlobSource(blob Blob, value DragSource?) {
       guard let binding = blobBinding(blob, value != nil) else { return }
       binding.Source = value

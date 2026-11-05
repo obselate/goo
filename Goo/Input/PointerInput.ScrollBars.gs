@@ -3,18 +3,34 @@ package Goo
 import System.Runtime.CompilerServices
 
 internal class PointerScrollDragState {
-  internal var Target Node?
+  private var targetMount NodeMount
+  internal prop Target Node? {
+    get -> targetMount.Current
+    set -> targetMount = NodeMount(value)
+  }
   internal var Vertical bool
   internal var GrabOffset float32
 }
 
 internal class PointerScrollHoverState {
-  internal var Horizontal Node?
-  internal var Vertical Node?
+  private var horizontalMount NodeMount
+  private var verticalMount NodeMount
+  internal prop Horizontal Node? {
+    get -> horizontalMount.Current
+    set -> horizontalMount = NodeMount(value)
+  }
+  internal prop Vertical Node? {
+    get -> verticalMount.Current
+    set -> verticalMount = NodeMount(value)
+  }
 }
 
 internal class PointerScrollbarPressState {
-  internal var Target Node?
+  private var targetMount NodeMount
+  internal prop Target Node? {
+    get -> targetMount.Current
+    set -> targetMount = NodeMount(value)
+  }
   internal var Vertical bool
   internal var Thumb bool
 }
@@ -127,7 +143,7 @@ internal partial class PointerInput {
         hitChainInto(root, x, y, scratchChain)
         if chainDisabled(scratchChain) { return false }
         for var i = scratchChain.Count; i > 0; i-- {
-          let n = scratchChain[i - 1]
+          guard let n = scratchChain[i - 1].Current else { continue }
           if n.Retired || !canReceiveInput(n) { continue }
           if n.Kind == NodeKind.Editor { ScrollState.SyncEditor(n) }
           let point = TransformGeometry.WindowToNode(n, x, y)
@@ -318,7 +334,7 @@ internal partial class PointerInput {
       hitChainInto(tree, x, y, scratchChain)
       if !chainDisabled(scratchChain) {
         for var i = scratchChain.Count; i > 0; i-- {
-          let n = scratchChain[i - 1]
+          guard let n = scratchChain[i - 1].Current else { continue }
           if n.Retired || !canReceiveInput(n) { continue }
           if n.Kind == NodeKind.Editor { ScrollState.SyncEditor(n) }
           let point = TransformGeometry.WindowToNode(n, x, y)

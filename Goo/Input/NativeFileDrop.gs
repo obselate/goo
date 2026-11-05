@@ -52,7 +52,11 @@ public sealed class NativeDataDrop {
 
 internal class NativeDropSession {
   internal var Data DragData
-  internal var Target Node?
+  private var targetMount NodeMount
+  internal prop Target Node? {
+    get -> targetMount.Current
+    set -> targetMount = NodeMount(value)
+  }
   internal var X float32
   internal var Y float32
   internal var Modifiers KeyModifiers
@@ -64,7 +68,7 @@ internal class NativeDropRouter {
   private let getRoot(() -> Node?)
   private let canReceive(() -> bool)
   private let invalidate Action
-  private let path List[Node] = List[Node]()
+  private let path List[NodeMount] = List[NodeMount]()
   private var current NativeDropSession?
   private var generation int64
 
@@ -73,6 +77,8 @@ internal class NativeDropRouter {
     this.canReceive = canReceive
     this.invalidate = invalidate
   }
+
+  internal func RetainsInteraction(root Node) bool -> FocusScopes.Contains(root, current?.Target)
 
   internal func Begin(data DragData, x float32, y float32, modifiers KeyModifiers) DragEffect {
     let version = generation + 1
@@ -100,8 +106,9 @@ internal class NativeDropRouter {
     current = nil
     generation++
     if !canReceive() || !DragTargetRouting.Available(root, target) { return DragEffect.None }
+    let targetMount = NodeMount(target)
     accepted?.Invoke(session.Effect)
-    Notify(root, session, target, DragEventKind.Drop, session.Effect)
+    if targetMount.Current != nil { Notify(root, session, target, DragEventKind.Drop, session.Effect) }
     return session.Effect
   }
 
@@ -144,7 +151,8 @@ internal class NativeDropRouter {
         if DragTargetRouting.AllowsPath(path) {
           let start = DragTargetRouting.RouteStart(path)
           for var i = path.Count; i > start; i-- {
-            let target = path[i - 1]
+            let mount = path[i - 1]
+            guard let target = mount.Current else { continue }
             if !DragTargetRouting.Available(root, target) { continue }
             if let descriptor = DragDropMetadata.Target(target) {
               if let event = Event(session, target, DragEventKind.Move, DragEffect.None) {
@@ -152,7 +160,7 @@ internal class NativeDropRouter {
                 var accepted DragEffect
                 try { accepted = acceptedDragEffect(descriptor.Query(event), session.Data.AllowedEffects) }
                 finally { Rebuild(owner) }
-                if current != session || !canReceive() { return }
+                if current != session || !canReceive() || mount.Current == nil { return }
                 if DragTargetRouting.Available(root, target) {
                   if accepted != DragEffect.None { selected = target
                     selectedEffect = accepted
@@ -164,20 +172,21 @@ internal class NativeDropRouter {
           }
         }
         if current != session { return }
+        let selectedMount = NodeMount(selected)
         let previous = session.Target
         session.Effect = selectedEffect
         if previous != selected {
           session.Target = nil
           if let old = previous { if DragTargetRouting.Available(root, old) { Notify(root, session, old, DragEventKind.Leave, DragEffect.None) } }
           if current != session || !canReceive() { return }
-          if let target = selected {
+          if let target = selectedMount.Current {
             if DragTargetRouting.Available(root, target) {
               session.Target = target
               Notify(root, session, target, DragEventKind.Enter, session.Effect)
             }
           }
         } else if moved {
-          if let target = selected { Notify(root, session, target, DragEventKind.Move, session.Effect) }
+          if let target = selectedMount.Current { Notify(root, session, target, DragEventKind.Move, session.Effect) }
         }
       } catch (error Exception) {
         if current == session {

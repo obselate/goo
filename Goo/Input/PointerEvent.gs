@@ -6,10 +6,26 @@ internal class PointerDispatchFrame {
   internal var Generation int64
   internal var PropagationStopped bool
   internal var DefaultPrevented bool
-  internal var CurrentTarget Node?
-  internal var CaptureOwner Node?
-  internal var CaptureTarget Node?
-  internal var ReleaseTarget Node?
+  private var currentTargetMount NodeMount
+  private var captureOwnerMount NodeMount
+  private var captureTargetMount NodeMount
+  private var releaseTargetMount NodeMount
+  internal prop CurrentTarget Node? {
+    get -> currentTargetMount.Current
+    set -> currentTargetMount = NodeMount(value)
+  }
+  internal prop CaptureOwner Node? {
+    get -> captureOwnerMount.Current
+    set -> captureOwnerMount = NodeMount(value)
+  }
+  internal prop CaptureTarget Node? {
+    get -> captureTargetMount.Current
+    set -> captureTargetMount = NodeMount(value)
+  }
+  internal prop ReleaseTarget Node? {
+    get -> releaseTargetMount.Current
+    set -> releaseTargetMount = NodeMount(value)
+  }
   internal init(generation int64, stopped bool, prevented bool, target Node?,
     captureOwner Node?, captureTarget Node?, releaseTarget Node?) {
       Generation = generation
@@ -28,10 +44,26 @@ internal class PointerDispatchControl {
   internal var Generation int64
   internal var PropagationStopped bool
   internal var DefaultPrevented bool
-  internal var CurrentTarget Node?
-  internal var CaptureOwner Node?
-  internal var CaptureTarget Node?
-  internal var ReleaseTarget Node?
+  private var currentTargetMount NodeMount
+  private var captureOwnerMount NodeMount
+  private var captureTargetMount NodeMount
+  private var releaseTargetMount NodeMount
+  internal prop CurrentTarget Node? {
+    get -> currentTargetMount.Current
+    set -> currentTargetMount = NodeMount(value)
+  }
+  internal prop CaptureOwner Node? {
+    get -> captureOwnerMount.Current
+    set -> captureOwnerMount = NodeMount(value)
+  }
+  internal prop CaptureTarget Node? {
+    get -> captureTargetMount.Current
+    set -> captureTargetMount = NodeMount(value)
+  }
+  internal prop ReleaseTarget Node? {
+    get -> releaseTargetMount.Current
+    set -> releaseTargetMount = NodeMount(value)
+  }
 
   internal func Begin(generation int64, captureOwner Node?) {
     if Active {
