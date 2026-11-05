@@ -1,5 +1,6 @@
 # Changelog
 
+
 ## 0.27.11 - 2026-11-05
 
 - Map system and file-source fonts read-only. Share mappings by native file identity and reuse live leased typefaces. Keep defensive copies for public byte-array inputs. (#553, #562)
