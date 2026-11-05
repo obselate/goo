@@ -9,6 +9,7 @@
 - Release the scrollbar layout root when its part is disposed so retired rows and application data can be collected.
 - Limit retained child-diff, path-band and path-ownership scratch storage after exceptional peaks.
 - Include virtual row realization in the Build, Reconcile and StyleResolve profile phases during scrolling.
+- Avoid allocating a default child list when Container or Button receives a child list during initialization.
 
 ## 0.27.10 - 2026-11-04
 

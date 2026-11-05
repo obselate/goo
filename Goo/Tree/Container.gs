@@ -6,7 +6,7 @@ import System.Runtime.CompilerServices
 
 /// Defines an element that contains child blobs.
 public class Container : Blob {
-  private var children IList[Blob] = List[Blob]()
+  private var children IList[Blob]?
   private var hitTestSelf bool
   private var hasAuthoredHitTestSelf bool
 
@@ -15,7 +15,11 @@ public class Container : Blob {
 
   /// Gets the mutable child list. Read-only lists supplied during initialization are copied.
   /// Siblings can mix keyed and unkeyed entries. Keyed children match by key; unkeyed children match only at the same absolute sibling index.
-  public prop Children IList[Blob]{ get -> children
+  public prop Children IList[Blob]{
+    get {
+      children ??= List[Blob]()
+      return children!!
+    }
     init -> children = value.IsReadOnly ? List[Blob](value) : value
   }
   /// Gets the optional retained measure/arrange policy. Nil uses the normal flex layout; replace the immutable policy when its configuration changes.
