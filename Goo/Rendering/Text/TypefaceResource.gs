@@ -15,7 +15,7 @@ internal sealed class TypefaceResource : IDisposable {
   internal prop ByteSize int64{ get -> font.ByteSize }
   internal prop IsRegistered bool{ get -> sourceId != 0uL }
 
-  internal init(family string, bytes []uint8, faceIndex uint32,
+  internal init(family string, bytes FontData, faceIndex uint32,
     variations([]VulkanTextVariation)?, sourceId uint64, sourceGeneration uint64, systemWeight int32? = nil) {
       if family == nil { throw ArgumentNullException("family") }
       if bytes.Length == 0 { throw ArgumentException("Font bytes are empty", "bytes") }
