@@ -97,3 +97,13 @@ including those outside the realized viewport. `Virtual` supplies list and list-
 semantics, and takes this metadata from `VirtualItem.Index` and `VirtualOutput.ItemCount`.
 Give `Virtual` another role, or set its `Accessibility` to nil, when the content supplies
 the item semantics. Its items then have no role, and the content of each item gets the position.
+
+Use `Separator` for dividers, including focusable splitters with `Range` and value actions.
+`TabPanel`, `Toolbar` and `Tooltip` map to their native roles.
+
+For grids, set `RowCount` and `ColumnCount` on the `Grid` container.
+Set zero-based `RowIndex` and `ColumnIndex` on realized `GridCell`, `RowHeader`
+and `ColumnHeader` nodes. Counts include unrealized rows and columns.
+Android exposes these values through collection and collection-item metadata.
+The pinned AT-SPI, UIA and macOS adapters retain the grid values in AccessKit
+but do not expose them through native table interfaces.

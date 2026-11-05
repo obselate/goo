@@ -5,5 +5,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Goo.AndroidSmoke.Shared/Goo.AndroidSmoke.Shared.gsproj" />
+    <ProjectReference Include="../../Goo.Accessibility/Goo.Accessibility.gsproj" />
   </ItemGroup>
 </Project>

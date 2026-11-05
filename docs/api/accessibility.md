@@ -100,6 +100,16 @@ semantics, and takes this metadata from `VirtualItem.Index` and `VirtualOutput.I
 Give `Virtual` another role, or set its `Accessibility` to nil, when the content supplies
 the item semantics. Its items then have no role, and the content of each item gets the position.
 
+Use `Separator` for dividers, including focusable splitters with `Range` and value actions.
+`TabPanel`, `Toolbar` and `Tooltip` map to their native roles.
+
+For grids, set `RowCount` and `ColumnCount` on the `Grid` container.
+Set zero-based `RowIndex` and `ColumnIndex` on realized `GridCell`, `RowHeader`
+and `ColumnHeader` nodes. Counts include unrealized rows and columns.
+Android exposes these values through collection and collection-item metadata.
+The pinned AT-SPI, UIA and macOS adapters retain the grid values in AccessKit
+but do not expose them through native table interfaces.
+
 ## `Accessibility`
 
 Source:
@@ -127,6 +137,14 @@ Gets whether the item is busy when explicitly specified.
 ### `Checked`
 
 Gets the check state.
+
+### `ColumnCount`
+
+Gets the total logical column count, including unrealized columns. Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+
+### `ColumnIndex`
+
+Gets the zero-based logical column index, including unrealized columns. Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
 
 ### `CustomRole`
 
@@ -207,6 +225,14 @@ Gets whether the item is required when explicitly specified.
 ### `Role`
 
 Gets the role. Auto selects a neutral primitive default when one exists.
+
+### `RowCount`
+
+Gets the total logical row count, including unrealized rows. Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+
+### `RowIndex`
+
+Gets the zero-based logical row index, including unrealized rows. Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
 
 ### `Selected`
 
@@ -401,6 +427,14 @@ Gets the resolved check state.
 
 Gets published semantic children in deterministic source order.
 
+### `ColumnCount`
+
+Gets the total logical column count. Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+
+### `ColumnIndex`
+
+Gets the zero-based logical column index. Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+
 ### `CustomRole`
 
 Gets the custom role text when Role is Custom.
@@ -484,6 +518,14 @@ Gets the resolved required state.
 ### `Role`
 
 Gets the resolved role.
+
+### `RowCount`
+
+Gets the total logical row count. Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
+
+### `RowIndex`
+
+Gets the zero-based logical row index. Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
 
 ### `ScrollInfo`
 
@@ -670,6 +712,26 @@ Selects the semantic role exposed to an accessibility adapter.
 - `SearchBox`
 - `Status`
 - `Custom`
+- `Separator`
+- `TabPanel`
+- `Toolbar`
+- `Tooltip`
+
+### `Separator`
+
+A divider that can expose focus and a numeric range when adjustable.
+
+### `TabPanel`
+
+The content associated with a tab.
+
+### `Toolbar`
+
+A group of related commands.
+
+### `Tooltip`
+
+Contextual help for another element.
 
 ## `AccessibilityScrollInfo`
 

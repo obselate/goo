@@ -43,6 +43,10 @@ internal class AccessKitSchema {
       case AccessibilityRole.ComboBox: uint8(56)
       case AccessibilityRole.SearchBox: uint8(32)
       case AccessibilityRole.Status: uint8(116)
+      case AccessibilityRole.Separator: uint8(115)
+      case AccessibilityRole.TabPanel: uint8(122)
+      case AccessibilityRole.Toolbar: uint8(127)
+      case AccessibilityRole.Tooltip: uint8(128)
       case AccessibilityRole.Custom: uint8(78)
     }
   }
