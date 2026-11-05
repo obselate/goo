@@ -119,21 +119,20 @@ internal partial class DiagnosticPipeHost : IDisposable {
     while !stopped.IsSet {
       var current NamedPipeServerStream?
       try {
-        let created = NamedPipeServerStream(endpoint.PipeName, PipeDirection.InOut, MaxClients,
-          PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly)
-        current = created
-        var listening = false
+        var created NamedPipeServerStream
         lock gate {
-          if !disposed {
-            listener = created
-            listening = true
-          }
+          if disposed { return }
+          created = listener ?? NamedPipeServerStream(endpoint.PipeName, PipeDirection.InOut, MaxClients + 2,
+            PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly)
+          listener = created
         }
-        if !listening { return }
+        current = created
         created.WaitForConnection()
         lock gate {
-          if let attached = listener {
-            if Object.ReferenceEquals(created, attached) { listener = nil }
+          listener = nil
+          if !disposed {
+            listener = NamedPipeServerStream(endpoint.PipeName, PipeDirection.InOut, MaxClients + 2,
+              PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly)
           }
         }
         if !stopped.IsSet {
