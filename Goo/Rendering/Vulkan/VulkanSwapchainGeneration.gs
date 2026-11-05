@@ -190,6 +190,9 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
       }
 
       var requestedImageCount = capabilities.minImageCount + 1u
+      if Environment.GetEnvironmentVariable("GOO_RESIZE_SWAPCHAIN_IMAGES") == "minimum" {
+        requestedImageCount = capabilities.minImageCount
+      }
       if capabilities.maxImageCount != 0u && requestedImageCount > capabilities.maxImageCount {
         requestedImageCount = capabilities.maxImageCount
       }
@@ -316,6 +319,10 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
           createInfo.flags = 4u
           createInfo.pNext = *void(&formatList)
         }
+        if swapchainMaintenanceEnabled
+          && Environment.GetEnvironmentVariable("GOO_RESIZE_SWAPCHAIN_ALLOCATION") == "deferred" {
+          createInfo.flags |= 8u
+        }
         createInfo.surface = surface
         createInfo.minImageCount = requestedImageCount
         createInfo.imageFormat = surfaceFormat.format
@@ -331,7 +338,17 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
         createInfo.oldSwapchain = oldSwapchain
         let createSwapchain = dispatch.vkCreateSwapchainKHR
         var createdSwapchain VkSwapchainKHR
+        let createStart = if FrameRecorder.Current != nil { System.Diagnostics.Stopwatch.GetTimestamp() } else { 0L }
         let createResult = createSwapchain(device, &createInfo, nil, &createdSwapchain)
+        if let recorder = FrameRecorder.Current {
+          var context = FrameProfiler.Current?.Context ?? FrameTraceContext{}
+          context.DeviceId = uint64(device)
+          context.Generation = generation
+          recorder.Duration(VulkanDiagnosticEventIds.SwapchainCreate, VulkanDiagnosticCategories.Timing,
+            context, createStart, System.Diagnostics.Stopwatch.GetTimestamp(), source: "swapchain.create")
+          recorder.Instant(VulkanDiagnosticEventIds.SwapchainCreate, VulkanDiagnosticCategories.Window,
+            context, value0: uint64(createInfo.flags), value1: uint64(chosenPresentMode), source: "swapchain.policy")
+        }
         if createResult != VkConstants.VK_SUCCESS || createdSwapchain == 0uL {
           diagnostics?.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
             VulkanDiagnosticEventIds.SwapchainCreate, VulkanDiagnosticCategories.Window, 1uL,

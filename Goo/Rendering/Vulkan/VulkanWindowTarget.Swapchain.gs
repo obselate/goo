@@ -598,7 +598,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
     var presentMode VkPresentModeKHR
     if !VulkanPresentModeSelector.TrySelect(
-      requestedVsync,
+      requestedVsync && Environment.GetEnvironmentVariable("GOO_RESIZE_PRESENT_MODE") != "immediate",
       deviceFacts.DeviceType == int32(VkConstants.VK_PHYSICAL_DEVICE_TYPE_CPU),
       hasImmediate,
       hasMailbox,
