@@ -71,6 +71,10 @@ public class Portal : Blob {
   /// Values must be finite and dimensions nonnegative.
   public prop CollisionBounds ElementRect? { get; init; }
 
+  /// Hides presentation when AnchorRect is fully outside the anchor's ancestor clips.
+  /// The default is false. Hiding preserves the mounted subtree, focus and text composition.
+  public prop HideWhenAnchorClipped bool { get; init; }
+
   /// Initializes an empty child collection.
   public init() { }
 
@@ -85,6 +89,7 @@ public class Portal : Blob {
 internal class PortalPlacementBounds {
   internal var AnchorRect ElementRect?
   internal var CollisionBounds ElementRect?
+  internal var HideWhenAnchorClipped bool
 }
 
 internal class Portals {
