@@ -1825,6 +1825,33 @@ internal class InputFixtures {
     return if twoTree.Children[1].Caret != twoTree.Children[1].Anchor { false } else { queuedPointerSelectionKeepsSdl3Order() }
   }
 
+  func ShiftWheelUsesHorizontalScrollChain() bool {
+    let driver = InputFixtureDriver(InputAxisScrollCell{}, 100, 100)
+    guard let root = driver.Window.Tree else { return false }
+    let unit = InputPolicy.WheelUnit(false, scrollViewportWidth(root))
+    driver.Input.QueuePointerWheel(50.0F, 50.0F, 0.0F, -1.0F, KeyModifiers{ Shift: true })
+    driver.Drain()
+    if root.ScrollTargetX != unit || root.ScrollTargetY != 0.0F { return false }
+    driver.Input.QueuePointerWheel(50.0F, 50.0F, 1.0F, -0.5F, KeyModifiers{ Shift: true })
+    driver.Drain()
+    if root.ScrollTargetX != unit * 2.0F || root.ScrollTargetY != 0.0F { return false }
+
+    let nested = InputFixtureDriver(InputShiftWheelCell{}, 100, 100)
+    guard let outer = nested.Window.Tree else { return false }
+    let inner = outer.Children[0]
+    nested.Input.QueuePointerWheel(50.0F, 50.0F, 0.0F, -1.0F, KeyModifiers{ Shift: true })
+    nested.Drain()
+    if outer.ScrollTargetX != InputPolicy.WheelUnit(false, scrollViewportWidth(outer))
+      || inner.ScrollTargetY != 0.0F { return false }
+    nested.Wheel(50.0F, 50.0F, 0.0F, -1.0F)
+    if inner.ScrollTargetY != InputPolicy.WheelUnit(true, scrollViewportHeight(inner)) { return false }
+    outer.OverflowX = Overflow.Hidden
+    let previous = inner.ScrollTargetY
+    nested.Input.QueuePointerWheel(50.0F, 50.0F, 0.0F, -1.0F, KeyModifiers{ Shift: true })
+    nested.Drain()
+    return inner.ScrollTargetY == previous
+  }
+
   func NestedWheelOwnershipAndBoundary() bool {
     let nested = InputFixtureDriver(InputNestedScrollCell{}, 200, 200)
     nested.Wheel(50.0F, 50.0F, 0.0F, -1.0F)
@@ -3590,4 +3617,15 @@ internal class InputAxisScrollCell : Cell {
   override func Build() Blob -> Container() {.Width: 100.0,.Height: 100.0,.OverflowX: hiddenX ? Overflow.Hidden : Overflow.Scroll,.OverflowY: Overflow.Hidden,
     Container{ Width: 300.0, Height: 300.0, FlexShrink: 0.0 },
     }
+}
+
+internal class InputShiftWheelCell : Cell {
+  override func Build() Blob -> Container() {
+    .Width: 100, .Height: 100, .OverflowX: Overflow.Scroll, .OverflowY: Overflow.Hidden,
+    Container() {
+      .Width: 300, .Height: 100, .FlexShrink: 0,
+      .OverflowX: Overflow.Hidden, .OverflowY: Overflow.Scroll,
+      Container{ Width: 300, Height: 300, FlexShrink: 0 },
+    },
+  }
 }
