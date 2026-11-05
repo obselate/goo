@@ -128,6 +128,11 @@ function branch(nodes, key) {
     const visit = node => node ? [node, ...(node.childIds ?? []).flatMap(id => visit(byId.get(id)))] : [];
     return visit(nodes.find(node => node.key === key));
 }
+function profilerTable(nodes) {
+    const table = nodes.find(node => node.key?.startsWith('profiler-table-'));
+    assert(table, 'Profiler table is missing');
+    return branch(nodes, table.key);
+}
 const text = (nodes, key) => content(branch(nodes, key));
 const status = nodes => text(nodes, 'profiler-status');
 function seconds(value) {
@@ -347,14 +352,14 @@ try {
         'Frame row or its legend is missing');
     assert(nodes.some(node => node.key === 'profiler-tab-Phases'), 'Phases table is missing');
     assert(!nodes.some(node => node.key === 'profiler-details'), 'Unselected trace retained an empty details pane');
-    const phaseHeader = branch(nodes, 'profiler-table').find(node => node.key === 'column:c0');
+    const phaseHeader = profilerTable(nodes).find(node => node.key === 'column:c0');
     await request(['input', 'click', '--pid', String(inspector), '--x', String(phaseHeader.bounds.x + phaseHeader.bounds.width / 2),
         '--y', String(phaseHeader.bounds.y + phaseHeader.bounds.height / 2)]);
     nodes = await snapshot(inspector);
-    await wheelNode(inspector, branch(nodes, 'profiler-table').find(node => node.key === 'body'), 5000);
+    await wheelNode(inspector, profilerTable(nodes).find(node => node.key === 'body'), 5000);
     nodes = await waitSnapshot(inspector, data => data.some(node => node.key === 'summary-row-Frame'),
         'Frame summary is missing');
-    const table = branch(nodes, 'profiler-table');
+    const table = profilerTable(nodes);
     const header = table.find(node => node.key === 'column:c2');
     const totalCell = branch(nodes, 'summary-row-Frame').find(node => node.key === 'column:c2');
     assert(header && totalCell, 'Frame summary is missing');
@@ -411,34 +416,55 @@ try {
     nodes = await snapshot(inspector);
     assert(!nodes.some(node => node.key === 'profiler-details'), 'Escape did not clear the selection');
     await click(inspector, 'profiler-tab-Memory');
-    nodes = await snapshot(inspector);
-    const memory = branch(nodes, 'profiler-table');
+    nodes = await waitSnapshot(inspector, data => profilerTable(data).find(node => node.key === 'body')
+        ?.scrollOffset.y < 0.5, 'Memory table retained the previous tab scroll offset');
+    const memory = profilerTable(nodes);
     const body = memory.find(node => node.key === 'body');
     const firstCounter = memory.find(node => node.key?.startsWith('summary-row-'));
     const counterNames = new Set();
     for (let i = 0; i < 200; i++) {
-        const current = branch(nodes, 'profiler-table');
+        const current = profilerTable(nodes);
         for (const node of current.filter(item => item.key?.startsWith('summary-row-'))) counterNames.add(node.key);
         const viewport = current.find(node => node.key === 'body');
         const end = Math.max(0, viewport.contentSize.y - viewport.bounds.height);
         if (viewport.scrollOffset.y >= end - 0.5) break;
         const next = Math.min(end, viewport.scrollOffset.y + 24);
         await wheelNode(inspector, viewport, -1);
-        nodes = await waitSnapshot(inspector, data => branch(data, 'profiler-table').find(node => node.key === 'body')
+        nodes = await waitSnapshot(inspector, data => profilerTable(data).find(node => node.key === 'body')
             ?.scrollOffset.y >= next - 0.5, 'Memory table did not scroll');
     }
     for (const owner of ['Unknown', 'LayerTarget', 'GlyphAtlas', 'PathAtlas', 'ClipAtlas', 'Staging', 'Image', 'Buffer']) {
         assert(counterNames.has('summary-row-GPU live requirements / ' + owner), 'Owner name mapping lost ' + owner);
     }
     await wheelNode(inspector, body, 5000);
-    await waitSnapshot(inspector, data => data.some(node => node.key === firstCounter.key
-        && Math.abs(node.bounds.y - firstCounter.bounds.y) < 0.5));
+    await waitSnapshot(inspector, data => {
+        const current = profilerTable(data);
+        const viewport = current.find(node => node.key === 'body');
+        const row = current.find(node => node.key === firstCounter.key);
+        return viewport?.scrollOffset.y < 0.5 && row && Math.abs(row.bounds.y - viewport.bounds.y) < 0.5;
+    }, 'Memory table did not return its first row to the viewport top');
     await capture(inspector, 'memory');
     await click(inspector, 'profiler-tab-Resources');
     nodes = await snapshot(inspector);
     assert(content(nodes).includes('Image'), 'Image resource kind mapping was lost');
     assert(!content(nodes).includes('Unknown owner'), 'Ownerless resources acquired an Unknown owner label');
     await capture(inspector, 'resources');
+    const resourceWidths = Array.from({length: 7}, (_, column) =>
+        profilerTable(nodes).find(node => node.key === 'column:c' + column).bounds.width);
+    for (const tab of ['Types', 'Phases', 'Memory', 'Resources']) {
+        const viewport = profilerTable(nodes).find(node => node.key === 'body');
+        if (viewport.contentSize.y > viewport.bounds.height + 0.5) {
+            await wheelNode(inspector, viewport, -5000);
+            await waitSnapshot(inspector, data => profilerTable(data).find(node => node.key === 'body')
+                ?.scrollOffset.y > 0.5, 'Table did not scroll before switching tabs');
+        }
+        await click(inspector, 'profiler-tab-' + tab);
+        nodes = await waitSnapshot(inspector, data => profilerTable(data).find(node => node.key === 'body')
+            ?.scrollOffset.y < 0.5, tab + ' retained the previous tab scroll offset');
+    }
+    assert.deepEqual(Array.from({length: 7}, (_, column) =>
+        profilerTable(nodes).find(node => node.key === 'column:c' + column).bounds.width),
+    resourceWidths, 'Resources retained column widths from another tab');
     const rows = nodes.filter(node => node.key.startsWith('profiler-event-'));
     assert(rows.length > 0, 'Resource table is empty');
     const resourceCells = rows.map(row => branch(nodes, row.key).filter(node => node.content).map(node => node.content));
@@ -459,7 +485,7 @@ try {
     const sizes = data => data.filter(node => node.key?.startsWith('profiler-event-'))
         .map(row => bytes(branch(data, row.key).filter(node => node.content)[4].content)).filter(Number.isFinite);
     const descendingSizes = sizes(nodes);
-    const bytesHeader = branch(nodes, 'profiler-table').find(node => node.key === 'column:c4');
+    const bytesHeader = profilerTable(nodes).find(node => node.key === 'column:c4');
     await request(['input', 'click', '--pid', String(inspector), '--x', String(bytesHeader.bounds.x + bytesHeader.bounds.width / 2),
         '--y', String(bytesHeader.bounds.y + bytesHeader.bounds.height / 2)]);
     nodes = await snapshot(inspector);
