@@ -42,6 +42,10 @@ internal class Node {
   internal var PortalAnchorBounds Rect
   internal var PortalAnchorResolved bool
   internal var PortalPlacementHidden bool
+  internal prop PortalAnchorClipped bool {
+    get -> (lifecycleState & uint16(2048)) != uint16(0)
+    set -> lifecycleState = value ? lifecycleState | uint16(2048) : lifecycleState & ~uint16(2048)
+  }
   internal prop HasCustomLayout bool{ get; set; }
   internal prop Key string? { get; set; }
   internal prop Parent Node? { get; set; }
@@ -302,7 +306,7 @@ internal class Node {
     }
   }
   internal prop PaintInputState int32{ get -> nodeState & int32(3) }
-  internal prop PaintInputHidden bool{ get -> (nodeState & int32(3)) != 0 || PortalPlacementHidden }
+  internal prop PaintInputHidden bool{ get -> (nodeState & int32(3)) != 0 || PortalPlacementHidden || PortalAnchorClipped }
   internal prop StackingChildren bool{
     get -> (nodeState & (int32(1) << 24)) != 0
     set {
@@ -509,7 +513,8 @@ internal class Node {
 internal func canReceiveInput(n Node) bool {
   var current = n
   while true {
-    if current.PaintInputHidden || current.Disabled {
+    if current.Disabled || current.PaintInputState != 0 || current.PortalPlacementHidden
+      || current.PortalAnchorClipped && !n.Focused {
     return false
   }
   if let parent = current.Parent {

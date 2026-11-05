@@ -27,10 +27,12 @@ NuGet version.
 ## Release steps
 
 1. Update `GooReleaseVersion` in `Directory.Build.props`.
-2. Run `dotnet run --project tools/Goo.RepositoryChecks -c Release -- release --write`
-   to update templates, identities, protocol strings and integration metadata.
-3. Add the dated entry in `CHANGELOG.md`. The tag workflow uses that entry as
-   the GitHub Release notes.
+2. Run `dotnet run --project tools/Goo.RepositoryChecks -c Release -- release --dry-run`
+   to preview the changelog section without changing files.
+3. Run `dotnet run --project tools/Goo.RepositoryChecks -c Release -- release --write`
+   to synchronize release versions, join `changelog.d/*.md` into the dated
+   `CHANGELOG.md` section and delete the joined fragments. The tag workflow uses
+   that section as the GitHub Release notes.
 4. Run the Goo.Repo commands above. Android docs need the installed Android
    workload, `ANDROID_HOME` and `JAVA_HOME`. Docs commands do not install workloads.
    If Android tooling is unavailable and no Android API changed, use the CI

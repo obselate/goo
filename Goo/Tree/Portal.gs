@@ -56,8 +56,9 @@ public class Portal : Blob {
   public prop Anchor ElementHandle? { get; init; }
 
   /// Gets the preferred side and alignment used when Anchor is mounted in this Window.
-  /// Goo flips to the opposite side when that reduces overflow, then contains the Portal
-  /// border box within the viewport. The default is BottomStart.
+  /// Goo keeps this side when the popup fits, otherwise flips when the opposite side
+  /// has more space. It caps the main-axis size without covering AnchorRect and shifts
+  /// the cross axis into the collision bounds. The default is BottomStart.
   public prop Placement PortalPlacement{ get; init; }
 
   /// Gets a rectangle within Anchor's local border-box coordinates.
@@ -65,9 +66,14 @@ public class Portal : Blob {
   public prop AnchorRect ElementRect? { get; init; }
 
   /// Gets the collision rectangle in window logical coordinates.
-  /// Nil uses the whole viewport. The Portal flips, shifts, and shrinks to fit these bounds.
+  /// Nil uses the whole viewport. After choosing a side, Goo caps the main-axis size
+  /// to the space between AnchorRect and these bounds, then shifts the cross axis to fit.
   /// Values must be finite and dimensions nonnegative.
   public prop CollisionBounds ElementRect? { get; init; }
+
+  /// Hides presentation when AnchorRect is fully outside the anchor's ancestor clips.
+  /// The default is false. Hiding preserves the mounted subtree, focus and text composition.
+  public prop HideWhenAnchorClipped bool { get; init; }
 
   /// Initializes an empty child collection.
   public init() { }
@@ -83,6 +89,7 @@ public class Portal : Blob {
 internal class PortalPlacementBounds {
   internal var AnchorRect ElementRect?
   internal var CollisionBounds ElementRect?
+  internal var HideWhenAnchorClipped bool
 }
 
 internal class Portals {

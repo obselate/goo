@@ -26,14 +26,20 @@ internal shared partial class Checks {
     }
 
     private func Release(arguments[]string) {
-        Require(arguments.Length == 1, "Expected one of --check, --write or --notes")
+        Require(arguments.Length == 1, "Expected one of --check, --write, --dry-run or --notes")
         let mode = arguments[0]
         Require(
-            mode == "--check" || mode == "--write" || mode == "--notes",
-            "Expected one of --check, --write or --notes"
+            mode == "--check" || mode == "--write" || mode == "--dry-run" || mode == "--notes",
+            "Expected one of --check, --write, --dry-run or --notes"
         )
         let version = ReadVersion()
+        let fragments = ChangelogFragments()
+        if mode == "--dry-run" {
+            Console.Write(JoinedChangelog(version, fragments))
+            return
+        }
         if mode == "--notes" {
+            Require(fragments.Count == 0, "Join changelog.d fragments with release --write before extracting release notes")
             let text = File.ReadAllText(Path.Combine(Root, "CHANGELOG.md")).Replace("\r\n", "\n").Replace('\r', '\n')
             let entries = Regex.Matches(
                 text,
@@ -57,10 +63,15 @@ internal shared partial class Checks {
             return
         }
         if mode == "--write" {
+            let changelog = JoinedChangelog(version, fragments)
             for (path, expected) in SynchronizedFiles(version) {
                 if File.ReadAllText(path) != expected {
                     File.WriteAllText(path, expected)
                 }
+            }
+            File.WriteAllText(Path.Combine(Root, "CHANGELOG.md"), changelog)
+            for path in fragments.Keys {
+                File.Delete(path)
             }
         }
         CheckRelease(version)
@@ -71,6 +82,51 @@ internal shared partial class Checks {
                 "Release version OK: Goo $version"
             }
         )
+    }
+
+    private func ChangelogFragments() Dictionary[string, string] {
+        let result = Dictionary[string, string](StringComparer.Ordinal)
+        let directory = Path.Combine(Root, "changelog.d")
+        Require(
+            !Regex.IsMatch(File.ReadAllText(Path.Combine(Root, "CHANGELOG.md")), "^## Unreleased", RegexOptions.Multiline),
+            "Add pending changes in changelog.d, not a CHANGELOG.md Unreleased section"
+        )
+        if !Directory.Exists(directory) {
+            return result
+        }
+        for path in Directory.GetFiles(directory).OrderBy(p -> p, StringComparer.Ordinal) {
+            let text = File.ReadAllText(path).Replace("\r\n", "\n").Replace('\r', '\n').Trim()
+            Require(
+                Regex.IsMatch(Path.GetFileName(path), `\A[a-z0-9][a-z0-9.-]*\.md\z`) &&
+                    Regex.IsMatch(text, `\A## (Added|Changed|Fixed|Removed)\n\n- [^\n]+(?:\n- [^\n]+)*\z`),
+                Path.GetRelativePath(Root, path) + ": expected ## Added, Changed, Fixed or Removed, a blank line and one or more single-line bullets"
+            )
+            result.Add(path, text)
+        }
+        return result
+    }
+
+    private func JoinedChangelog(version string, fragments Dictionary[string, string]) string {
+        let text = File.ReadAllText(Path.Combine(Root, "CHANGELOG.md")).Replace("\r\n", "\n").Replace('\r', '\n')
+        if Regex.IsMatch(text, "^## " + Regex.Escape(version) + " - ", RegexOptions.Multiline) {
+            Require(fragments.Count == 0, "CHANGELOG.md already contains Goo $version. Update GooReleaseVersion before joining fragments")
+            return text
+        }
+        Require(fragments.Count != 0, "No changelog.d fragments to join for Goo $version")
+        let first = Regex.Match(text, "^## ", RegexOptions.Multiline)
+        Require(first.Success, "CHANGELOG.md has no version sections")
+        let sections = List[string]()
+        for section in []string{"Added", "Changed", "Fixed", "Removed"} {
+            let bullets = fragments.Values
+                .Where(fragment -> fragment.StartsWith("## " + section + "\n"))
+                .Select(fragment -> fragment.Substring(fragment.IndexOf("\n\n") + 2))
+                .ToArray()
+            if bullets.Length != 0 {
+                sections.Add("### " + section + "\n\n" + string.Join("\n", bullets))
+            }
+        }
+        return text.Substring(0, first.Index) + "## " + version + " - " + DateTime.UtcNow.ToString("yyyy-MM-dd") +
+            "\n\n" + string.Join("\n\n", sections) + "\n\n" + text.Substring(first.Index)
     }
 
     private func CheckRelease(version string) {
