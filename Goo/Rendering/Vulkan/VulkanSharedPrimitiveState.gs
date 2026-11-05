@@ -3,6 +3,7 @@ package Goo
 import System
 import System.IO
 import System.Runtime.CompilerServices
+import System.Runtime.InteropServices
 import System.Threading
 
 internal unsafe class VulkanNativeHandleDestroyer {
@@ -762,6 +763,17 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
         state?.ResolveShaderEffectPipeline(BackdropBlurEffect.Shared)
       }
       pipelineCache.Persist()
+      if OperatingSystem.IsLinux() {
+        let program = NativeLibrary.GetMainProgramHandle()
+        if NativeLibrary.TryGetExport(program, "gnu_get_libc_version", out var glibc)
+          && NativeLibrary.TryGetExport(program, "malloc_trim", out var address) {
+          let nullable = address as (unmanaged[Cdecl](nuint) -> int32)?
+          if nullable != nil {
+            let trim = nullable
+            trim(nuint(0))
+          }
+        }
+      }
     } catch (error Exception) { }
   }
 

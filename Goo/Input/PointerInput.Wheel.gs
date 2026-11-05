@@ -13,7 +13,7 @@ internal partial class PointerInput {
         let prevented = dispatchWheel(scratchChain, x, y, dx, dy, modifiers)
         var consumed = false
         if !prevented {
-          consumed = applyWheelScroll(scratchChain, dx, dy)
+          consumed = applyWheelScroll(scratchChain, dx, dy, modifiers)
         }
         return consumed
       } finally {
@@ -70,10 +70,11 @@ internal partial class PointerInput {
       }
     }
 
-  private func applyWheelScroll(chain List[Node], dx float32, dy float32) bool {
+  private func applyWheelScroll(chain List[Node], dx float32, dy float32, modifiers KeyModifiers) bool {
     var consumed = false
-    var remainingX = dx
-    var remainingY = -dy
+    let horizontal = modifiers.Shift && dx == 0.0F && dy != 0.0F
+    var remainingX = horizontal ? -dy : dx
+    var remainingY = horizontal ? 0.0F : -dy
     for var i = chain.Count; i > 0; i-- {
       let n = chain[i - 1]
       let unitX = InputPolicy.WheelUnit(false, scrollViewportWidth(n)) * WheelScrollScale

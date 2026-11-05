@@ -2,9 +2,10 @@
 
 ## Unreleased
 
-- Add `VirtualViewport.PixelScale` for device-pixel row rounding. Scale changes invalidate cached virtual content through `ContextVersion`.
+- Return free glibc heap pages after background Vulkan pipeline preparation and cache persistence on Linux.
 - Release obsolete text segment references when scene frames reset and retention proofs advance.
 - Release the scrollbar layout root when its part is disposed so retired rows and application data can be collected.
+- Add `VirtualViewport.PixelScale` for device-pixel row rounding. Scale changes invalidate cached virtual content through `ContextVersion`.
 
 ## 0.27.10 - 2026-11-04
 
