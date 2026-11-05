@@ -24,6 +24,45 @@ public class SmokeApplication {
 
     /// Creates a distinct root for native popup presentation checks.
     public func CreatePopupRoot(attached Action[Window]) Cell -> PopupSmokeCell{ Attached: attached }
+
+    /// Creates a sparse logical grid and native role checks.
+    public func CreateAccessibilityRoot() Cell -> AccessibilitySmokeCell{}
+  }
+}
+
+class AccessibilitySmokeCell : Cell {
+  private var divider float64 = 40.0
+  override func Build() Blob -> Container() {.Gap: 8,
+    Container() {.Height: 20,.Focusable: true,
+      .Accessibility: Accessibility{
+        Role: AccessibilityRole.Separator, Name: "Resize divider",
+        Range: AccessibilityValue{ Now: divider, Minimum: 0.0, Maximum: 100.0 },
+        Orientation: AccessibilityOrientation.Vertical,
+        Actions: []AccessibilityAction{ AccessibilityAction.SetValue },
+        OnAction: (request AccessibilityActionRequest) -> {
+          if !Double.TryParse(request.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) { return false }
+          divider = Math.Clamp(value, 0.0, 100.0)
+          return true
+        },
+      },
+    },
+    Container() {.Height: 20,.Accessibility: Accessibility{ Role: AccessibilityRole.TabPanel, Name: "Details panel" } },
+    Container() {.Height: 20,.Accessibility: Accessibility{ Role: AccessibilityRole.Toolbar, Name: "Document tools" } },
+    Text{ Content: "Help text", Accessibility: Accessibility{ Role: AccessibilityRole.Tooltip, Name: "Context help" } },
+    Container() {
+      .Accessibility: Accessibility{ Role: AccessibilityRole.Grid, Name: "Sparse grid", RowCount: 1000, ColumnCount: 20 },
+      Text{ Content: "Heading", Accessibility: Accessibility{
+        Role: AccessibilityRole.ColumnHeader, Name: "Column heading", RowIndex: 0, ColumnIndex: 7,
+      } },
+      Container() {.Accessibility: Accessibility{ Role: AccessibilityRole.Row, RowIndex: 400 },
+        Text{ Content: "Record", Accessibility: Accessibility{
+          Role: AccessibilityRole.RowHeader, Name: "Row heading", RowIndex: 400, ColumnIndex: 0,
+        } },
+        Text{ Content: "Value", Accessibility: Accessibility{
+          Role: AccessibilityRole.GridCell, Name: "Sparse value", RowIndex: 400, ColumnIndex: 7,
+        } },
+      },
+    },
   }
 }
 

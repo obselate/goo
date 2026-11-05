@@ -24,6 +24,8 @@ class MainActivity : GooActivity {
     internal prop NativeView GooView -> GooView
     protected override func CreateWindow() Window -> if Intent?.GetBooleanExtra("goo.gesture_smoke", false) == true {
         Window{Root: GestureCheckScene(), Background: Color.Rgb(17, 24, 39)}
+    } else if Intent?.GetBooleanExtra("goo.accessibility_roles", false) == true {
+        Window{Root: SmokeApplication.CreateAccessibilityRoot()}
     } else {
         SmokeApplication.CreateWindow()
     }

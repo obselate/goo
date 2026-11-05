@@ -12,10 +12,11 @@ internal sealed class TypefaceResource : IDisposable {
 
   internal prop Provider VulkanTextProvider{ get -> font }
   internal prop Family string{ get -> family }
-  internal prop ByteSize int64{ get -> font.ByteSize }
+  internal prop HeapByteSize int64{ get -> font.HeapByteSize }
+  internal prop IsDisposed bool{ get { lock (this) { return disposed } } }
   internal prop IsRegistered bool{ get -> sourceId != 0uL }
 
-  internal init(family string, bytes []uint8, faceIndex uint32,
+  internal init(family string, bytes FontData, faceIndex uint32,
     variations([]VulkanTextVariation)?, sourceId uint64, sourceGeneration uint64, systemWeight int32? = nil) {
       if family == nil { throw ArgumentNullException("family") }
       if bytes.Length == 0 { throw ArgumentException("Font bytes are empty", "bytes") }
@@ -25,11 +26,18 @@ internal sealed class TypefaceResource : IDisposable {
       font = VulkanTextFont(bytes, 1u, faceIndex, variations, family, systemWeight)
     }
 
-  internal func Profile(recorder FrameRecorder) { font.Profile(recorder, true) }
+  internal func Profile(recorder FrameRecorder) {
+    lock (this) { if !disposed { font.Profile(recorder, true) } }
+  }
 
   internal func Lease() TypefaceLease {
+    guard let lease = TryLease() else { throw ObjectDisposedException("TypefaceResource") }
+    return lease
+  }
+
+  internal func TryLease() TypefaceLease? {
     lock (this) {
-      if disposed { throw ObjectDisposedException("TypefaceResource") }
+      if disposed { return nil }
       references++
     }
     return TypefaceLease(this)

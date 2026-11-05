@@ -23,7 +23,7 @@ env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
   GOO_LINUX_APT_PACKAGES: >-
     binutils clang cmake curl ninja-build pkg-config zlib1g-dev
-    fonts-dejavu-core fonts-noto-color-emoji
+    fonts-dejavu-core fonts-noto-cjk fonts-noto-color-emoji
     libcanberra0 sound-theme-freedesktop
     libdbus-1-dev libdecor-0-dev libgl1-mesa-dev libgl1-mesa-dri
     libegl1 libfontconfig1 libibus-1.0-dev libwayland-dev
@@ -1279,6 +1279,8 @@ jobs:
           GOO_VK_DAMAGE_JOURNAL=1 \
             dotnet tests/Goo.VulkanAbiSmoke/bin/Release/net10.0/Goo.VulkanAbiSmoke.dll
           GOO_VK_SCENE_ALLOC=1 \
+            dotnet tests/Goo.VulkanAbiSmoke/bin/Release/net10.0/Goo.VulkanAbiSmoke.dll
+          GOO_FONT_SCROLL_GATE=1 \
             dotnet tests/Goo.VulkanAbiSmoke/bin/Release/net10.0/Goo.VulkanAbiSmoke.dll
 
       - name: Run Vulkan proof checks

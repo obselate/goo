@@ -115,6 +115,14 @@ internal class AccessKitNative {
     internal func NodeSetPositionInSet(node nint, value nuint);
     @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_size_of_set", CallingConvention: CallingConvention.Cdecl)
     internal func NodeSetSizeOfSet(node nint, value nuint);
+    @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_row_index", CallingConvention: CallingConvention.Cdecl)
+    internal func NodeSetRowIndex(node nint, value nuint);
+    @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_column_index", CallingConvention: CallingConvention.Cdecl)
+    internal func NodeSetColumnIndex(node nint, value nuint);
+    @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_row_count", CallingConvention: CallingConvention.Cdecl)
+    internal func NodeSetRowCount(node nint, value nuint);
+    @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_column_count", CallingConvention: CallingConvention.Cdecl)
+    internal func NodeSetColumnCount(node nint, value nuint);
     @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_bounds", CallingConvention: CallingConvention.Cdecl)
     internal func NodeSetBounds(node nint, value AccessKitRect);
     @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_text_selection", CallingConvention: CallingConvention.Cdecl)
