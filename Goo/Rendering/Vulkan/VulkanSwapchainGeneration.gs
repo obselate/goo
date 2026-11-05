@@ -394,7 +394,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
           capacity,
           Format,
           swapchainMaintenanceEnabled,
-          objectAccounting)
+          objectAccounting, (createInfo.flags & 8u) != 0u)
         if let recorder = FrameRecorder.Current { Profile(recorder, VulkanDiagnosticEventIds.SwapchainCreate) }
       } catch (error Exception) {
         Dispose()

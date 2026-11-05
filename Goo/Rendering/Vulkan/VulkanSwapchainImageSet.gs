@@ -22,6 +22,8 @@ internal unsafe class VulkanSwapchainImageSet {
   private let objectAccounting VulkanObjectAccounting?
   private let images []VkImage
   private let imageViews []VkImageView
+  private let imageFormat VkFormat
+  private let deferredViews bool
   private let renderSemaphores []VkSemaphore
   private let presentState VulkanSwapchainPresentState?
   private let imageLayouts []VkImageLayout
@@ -37,7 +39,7 @@ internal unsafe class VulkanSwapchainImageSet {
     imageCount int32,
     format VkFormat,
     enablePresentFence bool,
-    nativeObjectAccounting VulkanObjectAccounting?) {
+    nativeObjectAccounting VulkanObjectAccounting?, deferImageViews bool = false) {
       if nativeDevice == nint(0) {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
@@ -50,6 +52,8 @@ internal unsafe class VulkanSwapchainImageSet {
       device = nativeDevice
       dispatch = nativeDispatch
       objectAccounting = nativeObjectAccounting
+      imageFormat = format
+      deferredViews = deferImageViews
       images = [imageCount]VkImage
       imageViews = [imageCount]VkImageView
       renderSemaphores = [imageCount]VkSemaphore
@@ -79,6 +83,12 @@ internal unsafe class VulkanSwapchainImageSet {
 
   internal func ImageView(index uint32) VkImageView {
     EnsureIndex(index)
+    let offset = int32(index)
+    if imageViews[offset] == 0uL {
+      imageViews[offset] = VulkanImageFactory.CreateView(device, dispatch, objectAccounting,
+        images[offset], VkConstants.VK_IMAGE_VIEW_TYPE_2D, imageFormat,
+        uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT), 0u, 1u)
+    }
     return imageViews[int32(index)]
   }
 
@@ -376,16 +386,7 @@ internal unsafe class VulkanSwapchainImageSet {
     }
     var index int32 = 0
     while index < images.Length {
-      imageViews[index] = VulkanImageFactory.CreateView(
-        device,
-        dispatch,
-        objectAccounting,
-        images[index],
-        VkConstants.VK_IMAGE_VIEW_TYPE_2D,
-        format,
-        uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT),
-        0u,
-        1u)
+      if !deferredViews { ImageView(uint32(index)) }
       imageLayouts[index] = VkConstants.VK_IMAGE_LAYOUT_UNDEFINED
       index = index + 1
     }
