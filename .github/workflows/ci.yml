@@ -749,6 +749,15 @@ jobs:
             dotnet run --project tools/Goo.HostChecks -c Release -- placement \
             tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll \
             artifacts/reports/window-placement
+      - name: Verify read-only text entry and native clipboard
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          GOO_WAYLAND_COMPOSITOR=kwin .github/scripts/with-headless-wayland.sh env \
+            SDL_VIDEODRIVER=wayland LIBGL_ALWAYS_SOFTWARE=1 GOO_READ_ONLY_NATIVE_CLIPBOARD=1 \
+            LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+            dotnet test tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.gsproj -c Release \
+            -p:TreatWarningsAsErrors=true -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
+            --filter 'DisplayName~ReadOnlyEntryPreservesTextAndAllowsSelection'
 
       - name: Verify NativeAOT Wayland notifications
         if: needs.changes.outputs.full == 'true'

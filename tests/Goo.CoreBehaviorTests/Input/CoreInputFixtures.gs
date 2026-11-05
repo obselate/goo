@@ -1433,7 +1433,9 @@ internal class InputFixtures {
   func ReadOnlyEntryPreservesTextAndAllowsSelection() bool {
     let cell = InputEntryCell{ value: "seed" }
     let driver = InputFixtureDriver(cell, 300, 100)
-    driver.Window.Open()
+    if Environment.GetEnvironmentVariable("GOO_READ_ONLY_NATIVE_CLIPBOARD") == "1" {
+      driver.Window.Open()
+    }
     try {
       driver.Press(10.0F, 10.0F)
       driver.Release(10.0F, 10.0F)
