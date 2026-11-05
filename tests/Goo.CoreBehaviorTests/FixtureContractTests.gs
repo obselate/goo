@@ -200,6 +200,7 @@ class FixtureContractTests {
             yield Contract[InputFixtures]("MacWheelUnitScrollsTenPerUnit")
             yield Contract[InputFixtures]("MouseRemainsPrimaryWhileTouchIsHeld")
             yield Contract[InputFixtures]("NestedWheelOwnershipAndBoundary")
+            yield Contract[InputFixtures]("ShiftWheelUsesHorizontalScrollChain")
             yield Contract[InputFixtures]("DisabledWheelReachesEnabledAncestorsWithoutCrossingModalScope")
             yield Contract[InputFixtures]("PenHoverKeepsContactStateUntilCancel")
             yield Contract[InputFixtures]("PenIdentityIsDistinctFromTouchIdentity")
