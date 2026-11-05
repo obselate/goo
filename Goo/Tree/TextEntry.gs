@@ -16,6 +16,8 @@ public class TextEntry : Blob {
     get -> ControlledEntryValue;
     init -> ControlledEntryValue = value
   }
+  /// Gets whether editing commands are disabled.
+  public prop ReadOnly bool{ get; init; }
   /// Gets the placeholder shown for an empty value.
   public prop Placeholder string{ get; init; }
   /// Gets the placeholder color. Nil draws Color at 45% opacity.

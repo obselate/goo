@@ -631,6 +631,11 @@ internal partial class Reconciler {
   internal func applyEntry(n Node, t TextEntry, initial bool) {
     applyStyle(n, t, t.Focusable, initial)
     var paintChanged = false
+    if n.EditorReadOnly != t.ReadOnly {
+      n.EditorReadOnly = t.ReadOnly
+      paintChanged = true
+      MarkEffects(ReconcileEffects.Input | ReconcileEffects.Accessibility)
+    }
     if n.InputOptions != t.InputOptions {
       n.InputOptions = t.InputOptions
       MarkEffects(ReconcileEffects.Input)

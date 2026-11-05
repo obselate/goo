@@ -108,7 +108,7 @@ internal partial class TextInput {
       CompositionEnd: compositionEnd,
       IsPassword: n.Password || n.InputOptions?.Purpose == InputPurpose.Password,
       IsMultiline: n.Kind == NodeKind.Editor,
-      IsReadOnly: n.Kind == NodeKind.Editor && n.EditorReadOnly,
+      IsReadOnly: n.EditorReadOnly,
       CaretArea: editorCaretArea(n),
       InputOptions: n.InputOptions,
     }
@@ -123,7 +123,7 @@ internal partial class TextInput {
       return HandleChar(root, value) || genericClient
     }
     guard let n = focus.FocusedNode() else { return false }
-    if !canReceiveInput(n) { return false }
+    if !canReceiveInput(n) || n.EditorReadOnly { return false }
     if n.Kind == NodeKind.Editor && !n.EditorReadOnly {
       guard let controller = n.EditorController else { return false }
       let generation = focus.Generation
@@ -239,6 +239,7 @@ internal partial class TextInput {
     }
     if n.Kind != NodeKind.Entry { return false }
     guard let current = entryComposition else { return true }
+    if n.EditorReadOnly { return false }
     let before = entryCompositionBefore
     let anchor = n.Anchor
     let active = n.Caret
@@ -359,6 +360,7 @@ internal partial class TextInput {
     var command = requested
     guard let n = focus.FocusedNode() else { return false }
     if !canReceiveInput(n) { return false }
+    if n.Kind == NodeKind.Entry && n.EditorReadOnly && !readOnlyCommand(command.Kind) { return false }
     if command.Kind == TextCommandKind.CancelEdit {
       if n.Kind != NodeKind.Entry { return false }
       HandleCompositionCancel(root)
