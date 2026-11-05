@@ -83,6 +83,7 @@ class FixtureContractTests {
             yield Contract[CellFixtures]("DirtySiblingFailureResubmitsRemaining")
             yield Contract[CellFixtures]("DirtySiblingsRebuildOnceInOneUpdate")
             yield Contract[CellFixtures]("DisposesEachUnmountedCellExactlyOnce")
+            yield Contract[CellFixtures]("EmbeddedDetachWaitsForClosePreparation")
             yield Contract[CellFixtures]("FactoryBuildFailurePreservesPriorMount")
             yield Contract[CellFixtures]("FactoryKeyChangeRemountsAndDisposes")
             yield Contract[CellFixtures]("FactoryRejectsCurrentlyBuildingRootWithoutCorruption")
