@@ -51,7 +51,7 @@ internal enum FrameProfileStage {
   Frame; Events; Input; Tree; Motion; Reconcile; Build; Diff; StyleResolve;
   Transitions; Layout; InputTree;
   Render; TargetBegin; Paint; CanvasFlush; TargetFlush; Present; Virtualization; CapWait; Diagnostics;
-  NativeResize; Swapchain; DeviceIdle; ClipAtlas; LayerCollect; LayerCreate; Count
+  NativeResize; Swapchain; DeviceIdle; ClipAtlas; LayerCollect; LayerCreate; LayerDescriptor; LayerDispose; Count
 }
 
 internal data struct FrameProfilePoint {
@@ -394,6 +394,8 @@ internal class FrameProfiler {
     case FrameProfileStage.ClipAtlas: "clip_atlas"
     case FrameProfileStage.LayerCollect: "layer_collect"
     case FrameProfileStage.LayerCreate: "layer_create"
+    case FrameProfileStage.LayerDescriptor: "layer_descriptor"
+    case FrameProfileStage.LayerDispose: "layer_dispose"
     default: ""
   }
 

@@ -1035,13 +1035,13 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       state.TimestampHandle = BeginLayerTimestamp(
         VulkanDiagnosticTimestampStage.Offscreen,
         VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT)
-      BeginLayerRendering(commandBuffer, layerTarget.Extent, layerTarget.ImageView,
+      BeginLayerRendering(commandBuffer, layerTarget.ContentExtent, layerTarget.ImageView,
         backdropOnly || preservesBackdrop)
       currentTarget = layerTarget
       currentOriginX = record.OriginX
       currentOriginY = record.OriginY
       activeExtent = VkExtent2D{ width: record.ExtentWidth, height: record.ExtentHeight }
-      physicalExtent = layerTarget.Extent
+      physicalExtent = layerTarget.ContentExtent
       var clipIndex int32 = 0
       while clipIndex < clipDepth {
         clipStack[clipIndex] = TranslateClip(
@@ -1208,7 +1208,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     }
     region.dstSubresource = region.srcSubresource
     region.extent = VkExtent3D{
-      width: destination.Extent.width, height: destination.Extent.height, depth: 1u,
+      width: destination.ContentExtent.width, height: destination.ContentExtent.height, depth: 1u,
     }
     let copyImage = dispatch.vkCmdCopyImage
     copyImage(commandBuffer, source.Image, VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
@@ -1305,11 +1305,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           depth: 1u,
         }
         if physicalExtent.width != activeExtent.width || physicalExtent.height != activeExtent.height
-          || destination.Extent.width != record.ExtentWidth || destination.Extent.height != record.ExtentHeight {
+          || destination.ContentExtent.width != record.ExtentWidth || destination.ContentExtent.height != record.ExtentHeight {
           let sourceScaleX = float32(physicalExtent.width) / float32(activeExtent.width)
           let sourceScaleY = float32(physicalExtent.height) / float32(activeExtent.height)
-          let destinationScaleX = float32(destination.Extent.width) / float32(record.ExtentWidth)
-          let destinationScaleY = float32(destination.Extent.height) / float32(record.ExtentHeight)
+          let destinationScaleX = float32(destination.ContentExtent.width) / float32(record.ExtentWidth)
+          let destinationScaleY = float32(destination.ContentExtent.height) / float32(record.ExtentHeight)
           var blit = VkImageBlit{}
           blit.srcSubresource = region.srcSubresource
           blit.dstSubresource = region.dstSubresource
@@ -1326,8 +1326,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
             y: int32(MathF.Floor(float32(copyDestinationY) * destinationScaleY)),
           }
           blit.dstOffset1 = VkOffset3D{
-            x: Math.Min(int32(destination.Extent.width), int32(MathF.Ceiling(float32(copyDestinationX + copyWidth) * destinationScaleX))),
-            y: Math.Min(int32(destination.Extent.height), int32(MathF.Ceiling(float32(copyDestinationY + copyHeight) * destinationScaleY))), z: 1,
+            x: Math.Min(int32(destination.ContentExtent.width), int32(MathF.Ceiling(float32(copyDestinationX + copyWidth) * destinationScaleX))),
+            y: Math.Min(int32(destination.ContentExtent.height), int32(MathF.Ceiling(float32(copyDestinationY + copyHeight) * destinationScaleY))), z: 1,
           }
           let blitImage = dispatch.vkCmdBlitImage
           blitImage(commandBuffer, sourceImage, VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,

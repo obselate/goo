@@ -13,6 +13,11 @@ static float4 outColor;
 void shade()
 {
     float2 sourceUv = pc.params.xy + uv * pc.params.zw;
+    if (pc.radii.y > 0.5 && any(pc.stopPositions.xy != float2(1.0)))
+    {
+        float2 edge = 0.5 / float2(pc.packedColors.xy);
+        sourceUv = clamp(sourceUv * pc.stopPositions.xy, edge, pc.stopPositions.xy - edge);
+    }
     float4 sampleColor = imageTexture.Sample(sourceUv);
     float opacity = clamp(pc.radii.x, 0.0, 1.0);
     float alpha = sampleColor.a * opacity;

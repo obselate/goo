@@ -156,8 +156,20 @@ float3 blendColor(float3 backdrop, float3 source, uint mode)
 void shade()
 {
     float2 sourceUv = pc.params.xy + uv * pc.params.zw;
-    float4 source = sourceTexture.Sample(sourceUv);
-    float4 backdrop = backdropTexture.Sample(sourceUv);
+    float2 sourceCoordinate = sourceUv;
+    float2 backdropCoordinate = sourceUv;
+    if (any(pc.stopPositions.xy != float2(1.0)))
+    {
+        float2 edge = 0.5 / float2(pc.packedColors.xy);
+        sourceCoordinate = clamp(sourceUv * pc.stopPositions.xy, edge, pc.stopPositions.xy - edge);
+    }
+    if (any(pc.stopPositions.zw != float2(1.0)))
+    {
+        float2 edge = 0.5 / float2(pc.packedColors.zw);
+        backdropCoordinate = clamp(sourceUv * pc.stopPositions.zw, edge, pc.stopPositions.zw - edge);
+    }
+    float4 source = sourceTexture.Sample(sourceCoordinate);
+    float4 backdrop = backdropTexture.Sample(backdropCoordinate);
     if (pc.packedColorsExtra.z != 0u)
     {
         outColor = lerp(backdrop, source, gooClipCoverage() * clamp(pc.radii.x, 0.0, 1.0));

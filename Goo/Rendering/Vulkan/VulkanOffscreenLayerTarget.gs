@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.Collections.Generic
+import System.Diagnostics
 
 internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
   private let device VkDevice
@@ -10,6 +11,7 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
   private let objectAccounting VulkanObjectAccounting?
   private let targetFormat VkFormat
   private let extent VkExtent2D
+  internal var ContentExtent VkExtent2D
   private let descriptorSet VkDescriptorSet
   private let sampler VkSampler
   private var image VkImage
@@ -62,6 +64,7 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
       objectAccounting = nativeObjectAccounting
       targetFormat = colorFormat
       extent = targetExtent
+      ContentExtent = targetExtent
       descriptorSet = nativeDescriptorSet
       sampler = nativeSampler
       imageLayout = VkConstants.VK_IMAGE_LAYOUT_UNDEFINED
@@ -277,6 +280,7 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
     if disposed {
       return
     }
+    using let profile = FrameProfileScope(FrameProfileStage.LayerDispose)
     if imageView != 0uL {
       let destroyImageView = dispatch.vkDestroyImageView
       destroyImageView(device, imageView, nil)
@@ -333,6 +337,7 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
   }
 
   private func UpdateDescriptor() {
+    using let profile = FrameProfileScope(FrameProfileStage.LayerDescriptor)
     VulkanDescriptorFactory.WriteCombinedImageSampler(
       device,
       dispatch,
@@ -372,6 +377,9 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
   private var sampler VkSampler = 0uL
   private let byteBudget VkDeviceSize
   private var requestedWidth uint32
+  private let allocationMode int32
+  private var lastResizeTicks int64
+  private var oversizedActive bool
   private var requestedHeight uint32
   private var layerResolutionShift int32
   private var layerExtents []VkExtent2D = [0]VkExtent2D
@@ -387,6 +395,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
   private var disposed bool
 
   internal prop ResidentBytes VkDeviceSize{ get -> residentBytes }
+  internal prop SkipResizeBlur bool{ get -> allocationMode == 4 && oversizedActive }
   internal prop ByteBudget VkDeviceSize{ get -> byteBudget }
   internal prop LayerResolutionShift int32{ get -> layerResolutionShift }
   internal prop LiveTargetCount int32{
@@ -442,6 +451,8 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       objectAccounting = nativeObjectAccounting
       diagnostics = nativeDiagnostics
       byteBudget = maximumBytes
+      let selectedMode = Environment.GetEnvironmentVariable("GOO_LAYER_ALLOCATION_POLICY")
+      allocationMode = selectedMode == "bucket" ? 1 : selectedMode == "growth" ? 2 : selectedMode == "retain" ? 3 : selectedMode == "skip-blur" ? 4 : 0
       residentBytes = 0uL
       targets = [initialTargetCapacity]VulkanOffscreenLayerTarget?
       leased = [initialTargetCapacity]bool
@@ -465,6 +476,8 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     }
 
   internal func PrepareLayerBudget(frame SceneFrame, completedSerial uint64) {
+    oversizedActive = allocationMode > 0 && lastResizeTicks > 0L
+      && Stopwatch.GetTimestamp() - lastResizeTicks < Stopwatch.Frequency / 5L
     if layerExtents.Length < frame.LayerCount {
       layerExtents = [frame.LayerCount]VkExtent2D
       layerReservations = [frame.LayerCount * 2]int32
@@ -492,7 +505,8 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
           let height = Math.Max(1u, (layer.ExtentHeight + divisor - 1u) / divisor)
           layerExtents[reference.Index] = VkExtent2D{ width: width, height: height }
           var targetIndex int32 = -1
-          if Acquire(width, height, completedSerial, &targetIndex, width == 1u && height == 1u) == nil {
+          if Acquire(width, height, completedSerial, &targetIndex, width == 1u && height == 1u,
+            layer.EffectIndex < 0) == nil {
             available = false
             break
           }
@@ -501,7 +515,8 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
           reservations[depth * 2] = targetIndex
           reservations[depth * 2 + 1] = -1
           if NeedsBackdrop(layer) {
-            if Acquire(width, height, completedSerial, &targetIndex, width == 1u && height == 1u) == nil {
+            if Acquire(width, height, completedSerial, &targetIndex, width == 1u && height == 1u,
+              layer.EffectIndex < 0) == nil {
               available = false
               break
             }
@@ -602,21 +617,32 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     }
     if leased[index] { throw InvalidOperationException("Vulkan layer reservation is already leased") }
     target.RetainedBackdrop = LayerRecord{}
+    target.ContentExtent = layerExtents[layerIndex]
     leased[index] = true
     return target
   }
 
-  internal func Acquire(width uint32, height uint32, completedSerial uint64,
-    reservationIndex * int32 = nil, mandatory bool = false) VulkanOffscreenLayerTarget? {
+  internal func Acquire(contentWidth uint32, contentHeight uint32, completedSerial uint64,
+    reservationIndex * int32 = nil, mandatory bool = false, allowOversized bool = false) VulkanOffscreenLayerTarget? {
     EnsureOpen()
+    var width = contentWidth
+    var height = contentHeight
     if width == 0u || height == 0u {
       throw ArgumentOutOfRangeException("extent")
+    }
+    let contentExtent = VkExtent2D{ width: width, height: height }
+    let oversized = oversizedActive && allocationMode < 3 && allowOversized && !mandatory
+    if oversized && allocationMode == 1 && width <= uint32.MaxValue - 127u && height <= uint32.MaxValue - 127u {
+      width = (width + 127u) / 128u * 128u
+      height = (height + 127u) / 128u * 128u
     }
     requestedWidth = width
     requestedHeight = height
     Collect(completedSerial)
     var reusableIndex int32 = -1
     var reusableLastUse uint64 = uint64.MaxValue
+    var reusableArea uint64 = uint64.MaxValue
+    var reusableSameCommand bool
     var index int32 = 0
     while index < targets.Length {
       if !leased[index] && !(reservationIndex == nil && reserved[index] && inFrame[index]) {
@@ -627,17 +653,21 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
           }
           let extent = target.Extent
           let sameCommand = inFrame[index]
-          if extent.width == width && extent.height == height
-            && (sameCommand || target.LastUseSerial <= completedSerial) {
-              if sameCommand {
-                reusableIndex = index
-                break
-              }
-              if reusableIndex < 0 || target.LastUseSerial < reusableLastUse {
-                reusableIndex = index
-                reusableLastUse = target.LastUseSerial
-              }
+          let area = uint64(extent.width) * uint64(extent.height)
+          let matches = if oversized && allocationMode == 2 {
+            extent.width >= width && extent.height >= height
+              && area <= uint64(width) * uint64(height) * 2uL
+          } else { extent.width == width && extent.height == height }
+          if matches && (sameCommand || target.LastUseSerial <= completedSerial) {
+            if reusableIndex < 0 || area < reusableArea
+              || (area == reusableArea && (sameCommand && !reusableSameCommand
+                || sameCommand == reusableSameCommand && target.LastUseSerial < reusableLastUse)) {
+              reusableIndex = index
+              reusableArea = area
+              reusableLastUse = target.LastUseSerial
+              reusableSameCommand = sameCommand
             }
+          }
         }
       }
       index++
@@ -647,6 +677,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
         throw InvalidOperationException("Vulkan layer pool reusable target is unavailable")
       }
       let sameCommand = inFrame[reusableIndex]
+      target.ContentExtent = contentExtent
       leased[reusableIndex] = true
       if reservationIndex != nil { reservationIndex[0] = reusableIndex }
       if !sameCommand {
@@ -716,6 +747,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     inFrame[index] = true
     residentBytes = residentBytes + created.Bytes
     created.BeginLease()
+    created.ContentExtent = contentExtent
     RecordCreate(created)
     PublishStats()
     return created
@@ -784,6 +816,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
   internal func Collect(completedSerial uint64, discardCompleted bool = false) {
     using let profile = FrameProfileScope(FrameProfileStage.LayerCollect, discardCompleted)
     EnsureOpen()
+    if discardCompleted { lastResizeTicks = Stopwatch.GetTimestamp() }
     let selectedSerial = completedSerial < lastCollectedSerial
     ? lastCollectedSerial : completedSerial
     lastCollectedSerial = selectedSerial
@@ -799,7 +832,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
           let lastUse = target.LastUseSerial
           let retire = lastUse == 0uL
             || (selectedSerial >= lastUse
-                && (discardCompleted || selectedSerial - lastUse >= IdleRetirementSerials))
+                && ((discardCompleted && (allocationMode == 0 || allocationMode == 4)) || selectedSerial - lastUse >= IdleRetirementSerials))
           if retire {
             RetireTarget(index, target)
           }

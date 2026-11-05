@@ -557,6 +557,12 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.params_y = (value.Bounds.Y - value.OriginY) / targetHeight
       push.params_z = value.Bounds.Width / targetWidth
       push.params_w = value.Bounds.Height / targetHeight
+      if let source = target {
+        push.stopPositions_x = float32(source.ContentExtent.width) / float32(source.Extent.width)
+        push.stopPositions_y = float32(source.ContentExtent.height) / float32(source.Extent.height)
+        push.packedColors_x = source.Extent.width
+        push.packedColors_y = source.Extent.height
+      }
       DrawSampledTarget(commandBuffer, &push, target)
     }
 
@@ -708,6 +714,18 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.params_y = (value.Bounds.Y - value.OriginY) / targetHeight
       push.params_z = value.Bounds.Width / targetWidth
       push.params_w = value.Bounds.Height / targetHeight
+      if let source = target {
+        push.stopPositions_x = float32(source.ContentExtent.width) / float32(source.Extent.width)
+        push.stopPositions_y = float32(source.ContentExtent.height) / float32(source.Extent.height)
+        push.packedColors_x = source.Extent.width
+        push.packedColors_y = source.Extent.height
+      }
+      if let source = backdrop {
+        push.stopPositions_z = float32(source.ContentExtent.width) / float32(source.Extent.width)
+        push.stopPositions_w = float32(source.ContentExtent.height) / float32(source.Extent.height)
+        push.packedColors_z = source.Extent.width
+        push.packedColors_w = source.Extent.height
+      }
       push.packedColorsExtra_w = value.BlendMode
       let preservesBackdrop = (value.Flags & uint32(LayerRecordFlags.PreservesBackdrop)) != 0u
       push.packedColorsExtra_z = preservesBackdrop ? 1u : 0u
