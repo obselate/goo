@@ -35,6 +35,7 @@
 
 ### Fixed
 
+- Keep the application running when a clipboard read or write fails in built-in text editing. Report the failure to stderr and keep the selection. Window.SetClipboardText still throws.
 - Keep the DevTools pipe listener alive while clients disconnect so queued input and snapshot connections are not reset. (#583)
 - Size anchored Portals to the available space on their selected side instead of shifting them over the anchor. Keep cross-axis containment.
 - Prevent false horizontal scrollbars at fractional display scales.

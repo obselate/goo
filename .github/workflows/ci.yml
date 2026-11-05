@@ -109,7 +109,10 @@ jobs:
             const release = files.some(file => file.filename === 'Directory.Build.props' && file.status === 'modified') &&
               files.some(file => file.filename === 'CHANGELOG.md' && file.status === 'modified') &&
               files.some(file => file.filename.startsWith('changelog.d/') && file.status === 'removed');
-            if (!added && !release) core.setFailed('Add one changelog.d/<branch-or-pr>.md fragment');
+            const correction = files.length === 1 && files[0].filename === 'CHANGELOG.md' &&
+              files[0].status === 'modified' &&
+              !/^## Unreleased/m.test(require('fs').readFileSync('CHANGELOG.md', 'utf8'));
+            if (!added && !release && !correction) core.setFailed('Add one changelog.d/<branch-or-pr>.md fragment');
 
 
       - name: Verify optional spell checking
