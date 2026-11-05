@@ -147,6 +147,35 @@ A focus transfer updates the old and new `Focused` states first, then routes `On
 
 Set `Focusable: true` on a generic Blob. `Button`, `TextEntry`, and `TextEditor` are focusable by default; explicitly setting `Focusable: false` removes them from keyboard focus. During a rebuilt tree update, `AutoFocus` selects the first eligible element only when nothing else holds focus. Calls to `PlatformInput.MoveFocus` visit enabled, visible focusables in depth-first tree order and wrap at the ends. An unprevented primary pointer press focuses the deepest focusable element in its hit route. `ElementHandle.Focus()` and `ElementHandle.Blur()` use the same mounted, visible, enabled eligibility rules.
 
+## Project visible focus to a descendant
+
+```gsharp
+Container(){
+    .Handle: owner,
+    .Focusable: true,
+    .FocusTarget: activeRow,
+    Container{Handle: activeRow, Focus: Style{BasedOn: focusRing}},
+}
+```
+
+`FocusTarget` adds the focused owner's visible focus state to one mounted,
+enabled, visible descendant. The descendant resolves its own `Focus` style
+without becoming focusable. The owner keeps keyboard focus and its own focus
+style. Pointer focus does not show the projected style unless the owner's normal
+focus-visible rules require it.
+
+Call `owner.SetFocusTarget(nextRow)` on the UI thread to move the indication
+without rebuilding. Only the old and new targets are restyled. Normal inherited
+style changes can also restyle their children. The next owner rebuild restores
+its declared `FocusTarget`. An unmounted target is retained and receives the
+indication when it mounts again. A target outside the owner's descendants is
+ignored. Blur clears the indication.
+
+`ElementHandle.IsFocusVisible` reports direct or projected visible focus. It
+returns false when unmounted. Projection does not route focus callbacks or change
+accessibility focus. Set `AccessibilityRelationships.ActiveDescendant` separately.
+An active descendant alone does not enable projection.
+
 ## Mounted focus scopes
 
 Call `ElementHandle.BeginFocusScope(FocusScopeOptions)` after the element mounts,

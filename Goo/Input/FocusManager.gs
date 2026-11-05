@@ -6,6 +6,7 @@ import System.Runtime.ExceptionServices
 
 internal class FocusManager {
   private var focused Node?
+  private var projected Node?
   private let control InputDispatchControl = InputDispatchControl()
   private var dispatchGeneration int64
   private var changeGeneration int64
@@ -46,6 +47,7 @@ internal class FocusManager {
         SetFocus(resolver, target)
       }
     }
+    RefreshProjection(resolver)
   }
 
   internal func SetFocus(resolver Resolver, target Node?) {
@@ -75,6 +77,7 @@ internal class FocusManager {
       next.FocusVisible = keyboardModality || next.Kind == NodeKind.Entry || next.Kind == NodeKind.Editor
       resolver.Invalidate(next, false)
     }
+    RefreshProjection(resolver)
     if let old = previous {
       try { BeforeBlur?.Invoke(old) }
       catch (error Exception) { failure ??= error }
@@ -112,6 +115,36 @@ internal class FocusManager {
         resolver.Invalidate(node, false)
       }
     }
+    RefreshProjection(resolver)
+  }
+
+  private func projectionTarget() Node? {
+    guard let owner = focused else { return nil }
+    if !owner.FocusVisible || owner.Retired { return nil }
+    guard let handle = InputCallbacks.FocusTarget(owner) else { return nil }
+    guard let node = handle.AttachedNode() else { return nil }
+    if node.Retired || !ElementHandles.Owns(node, handle) || !canReceiveInput(node) { return nil }
+    var ancestor = node.Parent
+    while let current = ancestor {
+      if current == owner { return node }
+      ancestor = current.Parent
+    }
+    return nil
+  }
+
+  internal func RefreshProjection(resolver Resolver) bool {
+    let target = projectionTarget()
+    if target == projected { return false }
+    if let old = projected {
+      if !old.Focused { old.FocusVisible = false }
+      if !old.Retired { resolver.Invalidate(old, false) }
+    }
+    projected = target
+    if let next = target {
+      next.FocusVisible = true
+      resolver.Invalidate(next, false)
+    }
+    return true
   }
 
   internal func MoveFocus(root Node?, resolver Resolver, forward bool) bool {
@@ -150,6 +183,8 @@ internal class FocusManager {
       current.Focused = false
       current.FocusVisible = false
     }
+    if let current = projected { current.FocusVisible = false }
+    projected = nil
     focused = nil
     nativeFocusAllowed = false
     Changed?.Invoke()
