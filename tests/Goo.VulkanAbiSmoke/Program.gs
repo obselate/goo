@@ -15,6 +15,10 @@ internal shared class Program {
             RunSystemFontWeightGate(Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf"))
             return 0
         }
+        if Environment.GetEnvironmentVariable("GOO_FONT_SCROLL_GATE") == "1" {
+            FontScrollGate.Run(Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf"))
+            return 0
+        }
         if Environment.GetEnvironmentVariable("GOO_VK_DESCRIPTOR_GC") == "1" {
             DescriptorLifetimeRegression.Run()
             return 0
@@ -255,6 +259,16 @@ internal shared class Program {
                 File.Move(retainedPath + ".retained", retainedPath)
             }
         }
+        TextShaping.FallbackPreloadForTests().GetAwaiter().GetResult()
+        using let retained = TextShaping.Shape("office", family, 32f, 300, false, 0f, 1)
+        for weight in 1 ... 66 {
+            TextShaping.Metrics(source.Family, 14f, weight, false)
+        }
+        using let reused = TextShaping.Shape("office", family, 32f, 300, false, 0f, 1)
+        if !Object.ReferenceEquals(retained.Runs[0].Provider, reused.Runs[0].Provider) {
+            throw InvalidOperationException("Evicted typeface was loaded again while its shaped run was live")
+        }
+        Console.WriteLine("LEASED_TYPEFACE_REUSE evicted=1 reused=1")
         Console.WriteLine("MIXED_WEIGHT_FALLBACK_CACHE_SMOKE backgroundPreload=1 warmFileRemoved=1"
             + " layouts=32 cacheBytes=" + TextShaping.PrimaryFaceCacheBytesForTests().ToString())
         Console.WriteLine("SYSTEM_VARIABLE_FONT_WEIGHT_SMOKE light=" + light.Width.ToString()
@@ -309,8 +323,10 @@ internal shared class Program {
             }
         }
         let oversizedPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".ttf")
+        let aliasPath = oversizedPath + ".alias.ttf"
         try {
             File.Copy(fontPath, oversizedPath)
+            if OperatingSystem.IsLinux() { File.CreateSymbolicLink(aliasPath, oversizedPath) }
             {
                 using let pathSource = FontSource.FromPath(
                     "GooAbiPath",
@@ -321,7 +337,8 @@ internal shared class Program {
                     []FontVariation{FontVariation("wght", 400f)}
                 )
                 using let aliasSource = FontSource.FromPath("GooAbiPathAlias", 700, false,
-                    oversizedPath, 0u, []FontVariation{FontVariation("wght", 700f)})
+                    if OperatingSystem.IsLinux() { aliasPath } else { oversizedPath },
+                    0u, []FontVariation{FontVariation("wght", 700f)})
                 File.Delete(oversizedPath)
                 if pathSource.IsRegistered {
                     throw InvalidOperationException("Font path source registered eagerly")
@@ -376,6 +393,7 @@ internal shared class Program {
             } catch (InvalidDataException) { }
         } finally {
             File.Delete(oversizedPath)
+            File.Delete(aliasPath)
         }
         let cacheBudget = TextShaping.PrimaryFaceCacheByteBudgetForTests()
         let callerBytes = File.ReadAllBytes(fontPath)

@@ -11,11 +11,13 @@ public sealed class FontSource : IDisposable {
 
     /// Creates an unregistered font source backed by a read-only file mapping of at most 64 MiB.
     /// Do not change or truncate the file while the source or its text layouts are in use.
+    /// Live sources for the same file share one read-only backing.
     public func FromPath(family string, weight int32, italic bool, path string) FontSource ->
     FromPath(family, weight, italic, path, 0u, []FontVariation{})
 
     /// Creates an unregistered file-backed font source for a face and variation set.
     /// Do not change or truncate the mapped file while the source or its text layouts are in use.
+    /// Live sources for the same file share one read-only backing.
     public func FromPath(family string, weight int32, italic bool, path string,
       faceIndex uint32, variations []FontVariation) FontSource ->
     FontSource(family, weight, italic, FontData.FromPath(path), faceIndex, variations)
