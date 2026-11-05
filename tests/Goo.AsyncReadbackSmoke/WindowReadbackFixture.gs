@@ -1224,6 +1224,42 @@ internal class WindowReadbackTestFixture {
       PumpNativeEvents()
       host.VerifyOrderedPointerModifiersForTest()
     }
+    internal func VerifyPreventedKeyRepeat() {
+      let cell = PreventedKeyRepeatCell{}
+      let window = Window{
+        Title: "Goo prevented key repeat", Width: 200, Height: 100, Root: cell,
+      }.Open()
+      try {
+        let ready = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
+        while (!window.IsVisible || !cell.Handle.IsMounted) && Stopwatch.GetTimestamp() < ready {
+          PumpNativeEvents()
+          window.PumpScheduled(0.0)
+          Thread.Sleep(1)
+        }
+        if !window.IsVisible || !cell.Handle.Focus() {
+          throw InvalidOperationException("Prevented repeat window did not become ready")
+        }
+        window.InputForTest.QueueKeyPress(Key.Down, KeyModifiers{})
+        let end = Stopwatch.GetTimestamp() + Stopwatch.Frequency
+        while Stopwatch.GetTimestamp() < end {
+          PumpNativeEvents()
+          window.PumpScheduled(0.0)
+          Thread.Sleep(1)
+        }
+        window.InputForTest.QueueKeyRelease(Key.Down)
+        window.PumpScheduled(0.0)
+        Console.WriteLine("native prevented Down hold: presses=${cell.Presses} repeats=${cell.Repeats}")
+        if cell.Repeats < 10 { throw InvalidOperationException("Prevented Down did not repeat") }
+      } finally {
+        window.RequestClose()
+        let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5
+        while window.IsOpen && Stopwatch.GetTimestamp() < deadline {
+          PumpNativeEvents()
+          window.PumpScheduled(0.0)
+          Thread.Sleep(1)
+        }
+      }
+    }
     internal func SetForceFullRedraw(window Window, value bool) {
       window.SetForceFullRedrawForTest(value)
     }
@@ -1615,4 +1651,19 @@ public partial class Window {
   VulkanTargetForTest()!!.VerifyShaderEffectDigestCollisionForTest(first, second)
   internal func RejectShaderEffectWithoutVulkanArtifactForTest(effect ShaderEffect) bool ->
   VulkanTargetForTest()!!.RejectShaderEffectWithoutVulkanArtifactForTest(effect)
+}
+
+internal class PreventedKeyRepeatCell : Cell {
+  internal let Handle ElementHandle = ElementHandle()
+  internal var Presses int32
+  internal var Repeats int32
+
+  override func Build() Blob -> Container{
+    Handle: Handle, Focusable: true, Width: Percent(100), Height: Percent(100),
+    OnKeyDown: (event KeyEvent) -> {
+      Presses++
+      if event.Repeat { Repeats++ }
+      event.PreventDefault()
+    },
+  }
 }

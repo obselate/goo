@@ -26,14 +26,22 @@ internal class ProfilerSmokeCell : Cell {
                 Text{Content: "Profiler scroll"},
             },
         }
-    } else { Container() {
-        .Width: 24 + Frame % 2,
-        .Height: 24,
-        .BackgroundColor: Color.Rgb(Frame % 255, 80, 120),
-        .ShaderEffect: Effect,
-        Text{Content: "Profiler"},
-        Image{Source: Source, Width: 8, Height: 8},
-    } }
+    } else {
+        let children = List[Blob](22)
+        children.Add(Text{Content: "Profiler"})
+        children.Add(Image{Source: Source, Width: 8, Height: 8})
+        for index in 0 ... 20 {
+            children.Add(Container{
+                Position: PositionType.Absolute, Left: index, Top: 16, Width: 1, Height: 1,
+                BackgroundColor: Color.Rgb(80, 120, 160), ShaderEffect: Effect,
+            })
+        }
+        Container{
+            Width: 24 + Frame % 2, Height: 24,
+            BackgroundColor: Color.Rgb(Frame % 255, 80, 120), ShaderEffect: Effect,
+            Children: children,
+        }
+    }
 }
 
 internal class ProfilerSmokeClient : IDisposable {
@@ -103,6 +111,7 @@ internal class ProfilerSmokeTrace {
     internal var GpuFrameAvailable bool
     internal var GpuClipAvailable bool
     internal var GpuPrimitiveUploadAvailable bool
+    internal var GpuManyScopesAvailable bool
     internal let Allocations Dictionary[string, ProfilerSmokeAllocation] = Dictionary[string, ProfilerSmokeAllocation]()
     internal let BaselineIds HashSet[string] = HashSet[string]()
     internal let CreatedIds HashSet[string] = HashSet[string]()
@@ -117,6 +126,7 @@ internal class ProfilerSmokeTrace {
     internal let OwnerKinds HashSet[int32] = HashSet[int32]()
     internal let GpuSubmitted HashSet[string] = HashSet[string]()
     internal let GpuResolved HashSet[string] = HashSet[string]()
+    internal let GpuCompleted HashSet[string] = HashSet[string]()
 
     internal init(windowId string) { WindowId = windowId }
 
@@ -636,7 +646,7 @@ internal class ProfilerSmoke {
             Require(WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(window, 5000),
                 "GPU stop did not hold an accepted submission")
             using let stopped = client.Request("profiler.stop", "{" + identity + "}")
-            Thread.Sleep(100)
+            Thread.Sleep(600)
             var ended = false
             while true {
                 using let draining = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
@@ -652,7 +662,7 @@ internal class ProfilerSmoke {
                     Require(!drainingPayload.GetProperty("more").GetBoolean()
                         && drainingPayload.GetProperty("pollDelayMs").GetInt32() > 0,
                         "Empty stopped read did not retain polling backoff")
-                    Require(trace.GpuSubmitted.IsSubsetOf(trace.GpuResolved)
+                    Require(trace.GpuSubmitted.IsSubsetOf(trace.GpuCompleted)
                         || drainingPayload.GetProperty("state").GetString() == "Stopping",
                         "GPU stop did not wait for pending stages")
                     break
@@ -681,8 +691,10 @@ internal class ProfilerSmoke {
             Require(!trace.GpuSupported || trace.GpuFrameAvailable, "Whole-frame GPU timestamps did not resolve")
             Require(!trace.GpuSupported || (trace.GpuClipAvailable && trace.GpuPrimitiveUploadAvailable),
                 "Clip mask and primitive upload GPU timestamps did not resolve")
+            Require(!trace.GpuSupported || trace.GpuManyScopesAvailable,
+                "GPU timestamps did not resolve more than sixteen offscreen scopes")
             for stage in trace.GpuSubmitted {
-                Require(trace.GpuResolved.Contains(stage), "Submitted GPU stage did not resolve after stop")
+                Require(trace.GpuCompleted.Contains(stage), "Submitted GPU stage did not complete after stop")
             }
             for name in []string{"managed.allocated.total", "managed.heap.estimate", "gc.gen0.collections",
                 "gc.gen1.collections", "gc.gen2.collections", "process.rss", "process.pss",
@@ -711,7 +723,8 @@ internal class ProfilerSmoke {
                 + " baseline_kinds=" + trace.BaselineKinds.Count.ToString()
                 + " image_upload_link=" + trace.Uploaded.ToString() + " gpu_elapsed=" + trace.Gpu.ToString())
             Console.WriteLine("profiler-gpu: submitted=" + trace.GpuSubmitted.Count.ToString()
-                + " available=" + trace.GpuResolved.Count.ToString())
+                + " available=" + trace.GpuResolved.Count.ToString()
+                + " completed=" + trace.GpuCompleted.Count.ToString())
             Console.WriteLine(
                 "profiler-trace: trace_id=" + traceId + " records=" + trace.Sequence.ToString()
                 + " pumps=" + trace.Builds.Count.ToString() + " held_submission=" + queued
@@ -858,8 +871,17 @@ internal class ProfilerSmoke {
                         + (record.GetProperty("deviceGeneration").GetString() ?? "") + "."
                         + (record.GetProperty("submissionId").GetString() ?? "") + "."
                         + (record.GetProperty("eventId").GetString() ?? "")
-                    if resourceSource == "vulkan.timestamp.submitted" { trace.GpuSubmitted.Add(stage) }
-                    else if record.GetProperty("validity").GetString() == "available" { trace.GpuResolved.Add(stage) }
+                    if resourceSource == "vulkan.timestamp.submitted" {
+                        trace.GpuSubmitted.Add(stage)
+                    } else {
+                        if record.GetProperty("validity").GetString() == "available" {
+                            trace.GpuResolved.Add(stage)
+                        } else if trace.GpuSubmitted.Contains(stage) {
+                            Require(trace.Cutoff >= 0L && ticks - trace.Cutoff >= Stopwatch.Frequency / 2L,
+                                "GPU stop completed a pending stage before the drain deadline")
+                        }
+                        trace.GpuCompleted.Add(stage)
+                    }
                 }
                 if resourceSource == "vulkan.timestamp.elapsed" {
                     trace.Gpu = true
@@ -872,6 +894,9 @@ internal class ProfilerSmoke {
                             || record.GetProperty("eventId").GetString() == VulkanDiagnosticEventIds.ClipPass.ToString()
                         trace.GpuPrimitiveUploadAvailable = trace.GpuPrimitiveUploadAvailable
                             || record.GetProperty("eventId").GetString() == VulkanDiagnosticEventIds.PrimitiveUploadStage.ToString()
+                        trace.GpuManyScopesAvailable = trace.GpuManyScopesAvailable
+                            || (record.GetProperty("eventId").GetString() == VulkanDiagnosticEventIds.OffscreenPass.ToString()
+                                && record.GetProperty("value0").GetUInt64() > 16uL)
                     }
                     if record.GetProperty("eventId").GetString() == VulkanDiagnosticEventIds.GpuFrame.ToString()
                         && record.GetProperty("validity").GetString() == "available" {

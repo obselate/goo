@@ -115,7 +115,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
         }
         blockIndex = blockIndex + 1
       }
-      let blockSize = BlockSize(requirements, resourceClass, selection.heapIndex, selection.propertyFlags)
+      let blockSize = BlockSize(requirements, resourceClass, selection)
       let newBlock = CreateBlock(blockSize, selection, resourceClass, false,
         dedicatedImage, dedicatedBuffer)
       if !TryFindOffset(newBlock, placementSpan, placementAlignment, ref offset) {
@@ -131,23 +131,31 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
     && block.resourceClass == resourceClass
 
   private func BlockSize(requirements VkMemoryRequirements,
-    resourceClass VulkanMemoryResourceClass, heapIndex uint32,
-    propertyFlags VkMemoryPropertyFlags) VkDeviceSize{
-      let baseSize = if resourceClass == VulkanMemoryResourceClass.Image {
-        ImageBlockSize
-      } else {
-        BufferBlockSize
+    resourceClass VulkanMemoryResourceClass, selection VulkanMemoryTypeSelection) VkDeviceSize{
+      var baseSize = BufferBlockSize
+      if resourceClass == VulkanMemoryResourceClass.Image {
+        baseSize = ImageInitialBlockSize
+        for blockIndex in 0 ... blockCount {
+          if let block = blocks[blockIndex] {
+            if CanSharePooledBlock(block, selection, resourceClass) && block.size >= baseSize {
+              baseSize = if block.size < ImageBlockSize / 2uL { block.size * 2uL } else { ImageBlockSize }
+            }
+          }
+        }
+        while baseSize < requirements.size && baseSize < ImageBlockSize {
+          baseSize *= 2uL
+        }
       }
-      let placementAlignment = PlacementAlignment(requirements.alignment, propertyFlags)
-      let placementSpan = PlacementSpan(requirements.size, propertyFlags)
+      let placementAlignment = PlacementAlignment(requirements.alignment, selection.propertyFlags)
+      let placementSpan = PlacementSpan(requirements.size, selection.propertyFlags)
       let alignedBaseSize = AlignUp(baseSize, placementAlignment)
       let padding = placementAlignment - 1uL
       if placementSpan > uint64.MaxValue - padding {
         throw OverflowException("Vulkan memory block size overflow")
       }
       let minimumSize = placementSpan + padding
-      let heap = MemoryHeap(memoryProperties, heapIndex)
-      let current = heapResidentBytes[int32(heapIndex)]
+      let heap = MemoryHeap(memoryProperties, selection.heapIndex)
+      let current = heapResidentBytes[int32(selection.heapIndex)]
       if current > heap.size {
         throw InvalidOperationException("Vulkan memory heap capacity exceeded")
       }
