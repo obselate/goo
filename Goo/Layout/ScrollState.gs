@@ -121,6 +121,7 @@ internal partial class ScrollState {
           changed = true
           state.HideDeadlineTicks = 0.0
         }
+      if changed { n.BumpScenePaintVersion() }
       return changed
     }
 
@@ -220,6 +221,7 @@ internal partial class ScrollState {
       if state.Visibility == ScrollbarVisibility.Hidden || !overflowing(n, vertical) {
         return
       }
+      if state.Alpha != 1.0F { n.BumpScenePaintVersion() }
       state.Alpha = 1.0F
       state.Idle = 0.0F
       scheduleHide(state, current)
@@ -242,6 +244,7 @@ internal partial class ScrollState {
         return false
       }
       state.Hovered = value
+      n.BumpScenePaintVersion()
       if value {
         state.Alpha = 1.0F
         state.Idle = 0.0F
@@ -265,6 +268,7 @@ internal partial class ScrollState {
         return false
       }
       state.Captured = value
+      n.BumpScenePaintVersion()
       if value {
         state.Alpha = 1.0F
         state.Idle = 0.0F
@@ -278,6 +282,9 @@ internal partial class ScrollState {
 
     internal func ResetActivity(n Node) {
       guard let state = ScrollActivityStates.TryGet(n) else { return }
+      if state.Horizontal.Alpha != 0.0F || state.Vertical.Alpha != 0.0F {
+        n.BumpScenePaintVersion()
+      }
       state.Momentum = nil
       state.Horizontal.Alpha = 0.0F
       state.Horizontal.Idle = 0.0F
@@ -357,6 +364,7 @@ internal partial class ScrollState {
       changed = fadeAxis(n, false, dt) || changed
       changed = syncAxis(n, true) || changed
       changed = fadeAxis(n, true, dt) || changed
+      if changed { n.BumpScenePaintVersion() }
       return changed
     }
 

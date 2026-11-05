@@ -156,6 +156,9 @@ internal sealed class TextEditorBinding : IDisposable {
   }
 
   private func requestInvalidation(e ReconcileEffects) {
+    if (int32(e) & int32(ReconcileEffects.Paint)) != 0 {
+      node.BumpScenePaintVersion()
+    }
     if let callback = retainedInvalidated {
       callback(e)
       return

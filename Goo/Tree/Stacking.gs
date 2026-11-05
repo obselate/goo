@@ -68,6 +68,7 @@ internal class Stacking {
     }
 
     private func invalidate(parent Node) {
+      parent.MarkSceneDirty()
       parent.StackingChildren = true
       if let existing = orders {
         existing.Remove(parent)

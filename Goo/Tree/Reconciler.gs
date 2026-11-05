@@ -453,6 +453,7 @@ internal partial class Reconciler {
     applyStyle(n, c, c.Focusable, initial)
     if !Transforming.SameVectorViewport(Transforming.GetVectorViewport(n), c.VectorViewport) {
       Transforming.SetVectorViewport(n, c.VectorViewport)
+      n.BumpScenePaintVersion()
       MarkEffects(ReconcileEffects.Paint | ReconcileEffects.Input)
     }
     if n.DragsWindow != c.DragsWindow {
@@ -464,10 +465,11 @@ internal partial class Reconciler {
   internal func applyText(n Node, t Text, initial bool) {
     applyStyle(n, t, t.Focusable, initial)
     let rangeChange = PassiveTextPresentations.Apply(n, t.Content, t.StyleRangeValues)
-    if rangeChange.Changed {
+    let contentChanged = n.Content != t.Content
+    if contentChanged || rangeChange.Changed {
       n.BumpScenePaintVersion()
     }
-    if n.Content != t.Content {
+    if contentChanged {
       n.Content = t.Content
       TextLayouts.Invalidate(n)
       MarkEffects(ReconcileEffects.Content)
