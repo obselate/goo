@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add `VirtualViewport.PixelScale` for device-pixel row rounding. Scale changes invalidate cached virtual content through `ContextVersion`.
 - Release obsolete text segment references when scene frames reset and retention proofs advance.
 - Release the scrollbar layout root when its part is disposed so retired rows and application data can be collected.
 
