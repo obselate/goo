@@ -23,6 +23,7 @@ internal class NodeLifecycle {
       n.PaintBindingResolver?.ForgetPaintBindings(n)
       n.Context = nil
       ElementHandles.Detach(n)
+      InputCallbacks.SetFocusTarget(n, nil)
       if n.HasAccessibilityDeclaration {
         AccessibilityMetadata.Remove(n)
       }
