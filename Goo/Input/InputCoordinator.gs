@@ -23,6 +23,10 @@ internal partial class InputCoordinator {
     text = TextInput(focus)
   }
 
+  internal func RetainsInteraction(root Node) bool ->
+    focus.RetainsInteraction(root) || scopes?.RetainsInteraction(root) == true
+      || keyboard.RetainsInteraction(root) || pointer.RetainsInteraction(root)
+
   internal func SetDiagnostics(
     pointerHook((Node?, PointerEventKind, float32, float32, PointerButton) -> bool)?,
     keyboardHook((Key, KeyModifiers) -> bool)?) {

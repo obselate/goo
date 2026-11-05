@@ -8,7 +8,11 @@ internal class KeyboardInput {
   private let focus FocusManager
   private let queue InputEventQueue
   private let releases Dictionary[Key, PendingKeyRelease] = Dictionary[Key, PendingKeyRelease]()
-  private var heldTarget Node?
+  private var heldTargetMount NodeMount
+  private prop heldTarget Node? {
+    get -> heldTargetMount.Current
+    set -> heldTargetMount = NodeMount(value)
+  }
   private var heldFocusGeneration int64
   private var dispatchingKey Key
   private var heldKey Key
@@ -16,7 +20,11 @@ internal class KeyboardInput {
   private var heldT float64
   private var nextRepeatTicks int64
   private var skipRepeatStep bool
-  private var pressedButton Node?
+  private var pressedButtonMount NodeMount
+  private prop pressedButton Node? {
+    get -> pressedButtonMount.Current
+    set -> pressedButtonMount = NodeMount(value)
+  }
   private var pressedKey Key
   private var pressedFocusGeneration int64
   private var control InputDispatchControl
@@ -26,6 +34,15 @@ internal class KeyboardInput {
   private var compositionActive bool
   private var compositionCommitPending bool
   private var compositionFocusGeneration int64
+
+  internal func RetainsInteraction(root Node) bool {
+    if FocusScopes.Contains(root, heldTarget) || FocusScopes.Contains(root, pressedButton) { return true }
+    for release in releases.Values {
+      if FocusScopes.Contains(root, release.Target.Current)
+        || FocusScopes.Contains(root, release.Owner.Current) { return true }
+    }
+    return false
+  }
 
   internal init(focus FocusManager, queue InputEventQueue) {
     this.focus = focus
@@ -230,8 +247,9 @@ internal class KeyboardInput {
     if releases.Count > 0 {
       let stale = List[Key]()
       for item in releases {
-        if item.Value.Target != focus.FocusedNode() || item.Value.Generation != focus.Generation
-          || !canReceiveInput(item.Value.Target) {
+        let target = item.Value.Target.Current
+        if target == nil || target != focus.FocusedNode() || item.Value.Generation != focus.Generation
+          || !canReceiveInput(target) {
           stale.Add(item.Key)
         }
       }
@@ -309,6 +327,7 @@ internal class KeyboardInput {
     down bool, root Node?, resolver Resolver, text TextInput, pointer PointerInput) KeyboardDispatchResult{
       var result KeyboardDispatchResult
       guard let start = target else { return result }
+      let startMount = NodeMount(start)
       if !canReceiveInput(start) {
         return result
       }
@@ -323,6 +342,7 @@ internal class KeyboardInput {
         var current Node? = start
         while current != nil {
           let node = current
+          let nodeMount = NodeMount(node)
           let callback = down ? InputCallbacks.KeyDown(node) : InputCallbacks.KeyUp(node)
           if let handler = callback {
             let owner = CellOwnership.Nearest(node)
@@ -331,6 +351,7 @@ internal class KeyboardInput {
                 IsComposing: compositionActive, Control: control, Generation: generation })
             } finally { owner?.Rebuild() }
           }
+          if nodeMount.Current == nil { return result }
           last = node
           if control.PropagationStopped || node.FocusScopeBoundary { break }
           current = node.Parent
@@ -338,18 +359,19 @@ internal class KeyboardInput {
         if control.DefaultPrevented {
           result.SuppressTextInput = down
           result.Repeat = down && !compositionActive && focusGeneration == focus.Generation
-            && canReceiveInput(start)
+            && startMount.Current != nil && canReceiveInput(start)
           return result
         }
-        if focusGeneration != focus.Generation || !canReceiveInput(start) {
+        if focusGeneration != focus.Generation || startMount.Current == nil || !canReceiveInput(start) {
           return result
         }
         if down && compositionActive && key != Key.Escape { return result }
         current = start
         while current != nil {
           let node = current
+          let nodeMount = NodeMount(node)
           if !down && releases.TryGetValue(key, out var pending)
-            && pending.Target == start && pending.Owner == node && pending.Generation == focus.Generation {
+            && pending.Target.Current == start && pending.Owner.Current == node && pending.Generation == focus.Generation {
               result.Handled = true
               let owner = CellOwnership.Nearest(node)
               try { pending.Action() }
@@ -373,9 +395,9 @@ internal class KeyboardInput {
                         return result
                       }
                     } else { binding.Action?.Invoke() }
-                    if !repeat {
+                    if !repeat && startMount.Current != nil && nodeMount.Current != nil {
                       if let release = binding.OnRelease {
-                        releases[key] = PendingKeyRelease{ Target: start, Owner: node, Action: release, Generation: focusGeneration }
+                        releases[key] = PendingKeyRelease{ Target: startMount, Owner: nodeMount, Action: release, Generation: focusGeneration }
                       }
                     }
                   } finally { owner?.Rebuild() }
@@ -500,7 +522,7 @@ internal class KeyboardInput {
   private func repeatIntervalTicks() int64 -> int64(Math.Ceiling(float64(Stopwatch.Frequency) / 30.0))
 
   internal func ClearStalePress(resolver Resolver) bool {
-    if let n = pressedButton {
+    if let n = pressedButtonMount.Captured {
       if focus.FocusedNode() != n || pressedFocusGeneration != focus.Generation || !canReceiveInput(n) {
         clearButtonPress(resolver)
         return true
@@ -510,7 +532,7 @@ internal class KeyboardInput {
   }
 
   private func clearButtonPress(resolver Resolver) {
-    if let n = pressedButton {
+    if let n = pressedButtonMount.Captured {
       n.KeyboardPressed = false
       n.Pressed = n.PointerPressCount > 0
       resolver.Invalidate(n, false)
@@ -549,8 +571,8 @@ internal data struct KeyboardDispatchResult {
 }
 
 internal data struct PendingKeyRelease {
-  internal var Target Node
+  internal var Target NodeMount
   internal var Generation int64
-  internal var Owner Node
+  internal var Owner NodeMount
   internal var Action Action
 }

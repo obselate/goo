@@ -256,8 +256,10 @@ internal class DiagnosticOverlay {
   internal prop Sequence int64{ get; private set; }
   internal prop Hovered DiagnosticRect? { get; private set; }
   internal prop Selected DiagnosticRect? { get; private set; }
-  internal prop HoveredNode Node? { get; private set; }
-  internal prop SelectedNode Node? { get; private set; }
+  private let hoveredMount NodeMount
+  private let selectedMount NodeMount
+  internal prop HoveredNode Node? { get -> hoveredMount.Current }
+  internal prop SelectedNode Node? { get -> selectedMount.Current }
   internal prop TooltipText string{ get; private set; }
 
   internal init(revisionNumber int64, hovered DiagnosticRect?, selected DiagnosticRect?,
@@ -265,8 +267,8 @@ internal class DiagnosticOverlay {
       Sequence = revisionNumber
       Hovered = hovered
       Selected = selected
-      HoveredNode = hoveredNode
-      SelectedNode = selectedNode
+      hoveredMount = NodeMount(hoveredNode)
+      selectedMount = NodeMount(selectedNode)
       TooltipText = tooltipText
     }
 }
