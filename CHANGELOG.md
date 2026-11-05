@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Add `Blob.FocusTarget`, `ElementHandle.SetFocusTarget` and `IsFocusVisible` for composite focus visuals without moving keyboard or accessibility focus.
+- Precompute embedded shader digests during the build so basic applications do not initialize cryptographic libraries just to name the pipeline cache or prepare built-in effects. Existing shader and cache identities are unchanged.
 
 ## 0.27.11 - 2026-11-05
 

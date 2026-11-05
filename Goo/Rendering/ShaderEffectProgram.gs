@@ -36,9 +36,25 @@ public sealed class ShaderEffectProgram {
 
     public func Load(path string) ShaderEffectProgram ->
     ShaderEffectProgram(BoundedInput.ReadFile(path, MaximumProgramByteCount, "Shader effect program"))
+
+    internal func LoadEmbedded(fileName string, replacesBackdrop bool = false) ShaderEffectProgram {
+      let name = "Goo.Effects." + fileName
+      using let program = typeof(ShaderEffectProgram).Assembly.GetManifestResourceStream(name)
+      if program == nil { throw FileNotFoundException("Goo shader effect is missing", fileName) }
+      using let digest = typeof(ShaderEffectProgram).Assembly.GetManifestResourceStream(name + ".sha256")
+      if digest == nil { throw FileNotFoundException("Goo shader effect digest is missing", fileName) }
+      let bytes = BoundedInput.ReadAll(digest, 32, "Shader effect digest")
+      if bytes.Length != 32 { throw InvalidDataException("Goo shader effect digest is invalid") }
+      return ShaderEffectProgram(
+        BoundedInput.ReadAll(program, MaximumProgramByteCount, "Shader effect program"), replacesBackdrop, bytes)
+    }
   }
 
-  public init(program []uint8, replacesBackdrop bool = false) {
+  public convenience init(program []uint8, replacesBackdrop bool = false) {
+    init(program, replacesBackdrop, nil)
+  }
+
+  internal init(program []uint8, replacesBackdrop bool, embeddedDigest([]uint8)?) {
     if Object.ReferenceEquals(program, nil) { throw ArgumentNullException("program") }
     if program.Length < HeaderBytes || program.Length > MaximumProgramByteCount
       || readWord(program, 0) != Magic || readWord(program, 4) != Schema{
@@ -94,7 +110,7 @@ public sealed class ShaderEffectProgram {
     sourceIndependent = generator
     ReplacesBackdrop = replacesBackdrop
     vulkanSpirvDigest = if let bytes = selectedVulkanSpirv {
-      SHA256.HashData(bytes)
+      embeddedDigest ?? SHA256.HashData(bytes)
     } else {
       nil
     }
