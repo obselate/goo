@@ -324,8 +324,8 @@ class RenderBudgetPressureCell : Cell {
 
 class RenderBudgetSiblingCell : Cell {
   private var nested bool
-  func UseNested() {
-    nested = true
+  func UseNested(value bool = true) {
+    nested = value
     Rebuild()
   }
   
@@ -370,7 +370,41 @@ func RunRenderBudgetPressureSmoke() {
         && target.DiagnosticCountersSnapshotForTest().layerPoolPassCount >= siblingPasses + 4uL,
       "Sibling layers that fit concurrently were drawn without layers")
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
+    let singleBytes = target.DiagnosticCountersSnapshotForTest().layerPoolResidentBytes
     root.UseNested()
+    target.SetRenderBudgetsForTest(536870912uL, 67108864uL)
+    WindowReadbackTestFixture.SetForceFullRedraw(window, true)
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
+    let exactBytes = target.DiagnosticCountersSnapshotForTest().layerPoolResidentBytes
+    Require(exactBytes > 0uL && target.LayerResolutionShiftForTest() == 0,
+      "Full-resolution layer budget measurement was unavailable")
+    target.SetRenderBudgetsForTest(exactBytes, 67108864uL)
+    root.UseNested(false)
+    Require(WindowReadbackTestFixture.Resize(window, 400, 190,
+      metrics.FramebufferWidth * 7 / 5, metrics.FramebufferHeight * 7 / 5),
+      "Layer capacity budget seed resize failed")
+    WindowReadbackTestFixture.SetForceFullRedraw(window, true)
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
+    let seeded = target.DiagnosticCountersSnapshotForTest()
+    Require(target.LayerResolutionShiftForTest() == 0
+        && seeded.layerPoolResidentBytes >= singleBytes
+        && seeded.layerPoolResidentBytes <= exactBytes,
+      "Layer capacity budget seed did not retain a larger target")
+    root.UseNested()
+    Require(WindowReadbackTestFixture.Resize(window, 400, 190,
+      metrics.FramebufferWidth, metrics.FramebufferHeight),
+      "Layer capacity budget recovery resize failed")
+    WindowReadbackTestFixture.SetForceFullRedraw(window, true)
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    let capacity = target.DiagnosticCountersSnapshotForTest()
+    Require(target.LayerResolutionShiftForTest() == 0
+        && capacity.layerPoolResidentBytes <= exactBytes
+        && (seeded.layerPoolResidentBytes <= singleBytes
+          || capacity.layerPoolPressureFailureCount > seeded.layerPoolPressureFailureCount),
+      "Optional layer capacity reduced full-resolution rendering or bypassed exact-extent recovery")
+    WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
     target.SetRenderBudgetsForTest(pixels * 4uL, pixels)
     WindowReadbackTestFixture.SetForceFullRedraw(window, true)
     WindowReadbackTestFixture.ForceRender(window, 0.0)

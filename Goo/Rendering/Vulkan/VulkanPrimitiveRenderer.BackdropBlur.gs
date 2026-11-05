@@ -154,7 +154,11 @@ internal unsafe partial class VulkanPrimitiveRenderer {
             ExtentWidth: extent.width, ExtentHeight: extent.height,
             Opacity: 1.0F,
         }
-        let effect = ShaderEffectRecord{Program: blur, Parameter0: parameter, Parameter1: mapping}
+        let scale = if let sampled = source {
+            Vector4(float32(sampled.ContentExtent.width) / float32(sampled.Extent.width),
+                float32(sampled.ContentExtent.height) / float32(sampled.Extent.height), 0.0F, 0.0F)
+        } else { Vector4.One }
+        let effect = ShaderEffectRecord{Program: blur, Parameter0: parameter, Parameter1: mapping, Parameter2: scale}
         activeExtent = extent
         physicalExtent = extent
         if primitivePrepass {
@@ -164,7 +168,8 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         guard let pool = layerPool else {
             throw InvalidOperationException("Vulkan layer pool is unavailable")
         }
-        guard let target = destination ?? pool.Acquire(extent.width, extent.height, completedLayerSerial) else { return nil }
+        guard let target = destination ?? pool.Acquire(extent.width, extent.height, completedLayerSerial,
+            allowBucketAllocation: true) else { return nil }
         try {
             target.TransitionToColorAttachment(commandBuffer)
             BeginLayerRendering(commandBuffer, extent, target.ImageView, false)

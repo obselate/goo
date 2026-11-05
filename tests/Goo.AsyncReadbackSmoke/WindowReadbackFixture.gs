@@ -284,7 +284,7 @@ internal partial class VulkanWindowTarget {
     layerPool?.Dispose()
     layerPool = VulkanOffscreenLayerPool(device, dispatch, allocator,
       resources.DescriptorSetLayout, current.Format, windowObjectAccounting,
-      8, layerBytes, diagnostics)
+      8, layerBytes, activeRuntime.Facts.MaxImageDimension2D, diagnostics)
     primitiveRenderer!!.SetLayerPool(layerPool)
   }
 

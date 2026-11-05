@@ -73,7 +73,7 @@ internal unsafe partial class VulkanWindowTarget {
     } else if let atlas = clipMaskAtlas {
       atlas.Collect(completedGlobalSubmissionSerial)
     }
-    layerPool?.Collect(completedGlobalSubmissionSerial, discardCompleted: true)
+    layerPool?.Collect(completedGlobalSubmissionSerial, resizing: true)
     var surfaceRecovery = false
     if surfaceLost {
       surfaceRecovery = true
@@ -181,6 +181,7 @@ internal unsafe partial class VulkanWindowTarget {
         windowObjectAccounting,
         policy.OffscreenLayerInitialCapacity,
         policy.OffscreenLayerHardBytes,
+        layerRuntime.Facts.MaxImageDimension2D,
         diagnostics)
     }
     primitiveRenderer!!.SetLayerPool(layerPool)

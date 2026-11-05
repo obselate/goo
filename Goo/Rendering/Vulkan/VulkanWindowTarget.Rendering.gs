@@ -340,8 +340,7 @@ internal unsafe partial class VulkanWindowTarget {
         out damageRegion,
         out fullRedraw)
       if forceFullRedraw || textRedrawPending || imageRedrawPending
-        || pathRedrawPending || clipMaskRedrawPending
-        || (hasDamage && !fullRedraw && !renderer.CanRedrawBackdrops(sceneCompiler.Frame, damageRegion)) {
+        || pathRedrawPending || clipMaskRedrawPending {
           fullRedraw = true
           hasDamage = true
           damageRegion = VulkanDamageRegion{
@@ -362,7 +361,6 @@ internal unsafe partial class VulkanWindowTarget {
         }
       activeDamageRegion = damageRegion
       activePartialRedraw = hasDamage && !fullRedraw
-      RecordDiagnosticDamage(damageRegion, hasDamage)
       if let current = generation {
         if let slot = activeFrameSlot {
           let recordStart = DiagnosticTimestamp()
@@ -380,6 +378,13 @@ internal unsafe partial class VulkanWindowTarget {
           clipMaskFrameTotals = renderer.ClipMaskFrameTotals
           clipMaskFramePrepared = true
           clipMaskRedrawPending = clipFrameStats.DirtyRegionCount > 0
+          if activePartialRedraw && !renderer.CanRedrawBackdrops(sceneCompiler.Frame, activeDamageRegion) {
+            activePartialRedraw = false
+            activeDamageRegion = VulkanDamageRegion{
+              Width: int32(current.Extent.width), Height: int32(current.Extent.height),
+            }
+          }
+          RecordDiagnosticDamage(activeDamageRegion, hasDamage)
           renderer.SetPrimitiveFrameSlot(int32(activeFrameSlotIndex))
           renderer.PreparePrimitiveFrame(
             sceneCompiler.Frame,
