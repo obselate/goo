@@ -588,7 +588,10 @@ internal partial class Reconciler {
         MarkEffects(ReconcileEffects.Content)
         MarkEffects(ReconcileEffects.Layout)
       }
-      if paintChanged { MarkEffects(ReconcileEffects.Paint) }
+      if paintChanged {
+        n.BumpScenePaintVersion()
+        MarkEffects(ReconcileEffects.Paint)
+      }
       if inputChanged { MarkEffects(ReconcileEffects.Input) }
     }
 
@@ -1035,7 +1038,6 @@ internal partial class Reconciler {
     }
     if n.ShapeUseCurrentColor != s.UseCurrentColor {
       n.ShapeUseCurrentColor = s.UseCurrentColor
-      n.BumpScenePaintVersion()
       paintChanged = true
     }
     if n.ShapeStrokeCap != s.StrokeCap {
@@ -1086,6 +1088,7 @@ internal partial class Reconciler {
       MarkEffects(ReconcileEffects.Layout)
     }
     if paintChanged {
+      n.BumpScenePaintVersion()
       MarkEffects(ReconcileEffects.Paint)
     }
     if hitGeometryChanged {
@@ -1130,11 +1133,13 @@ internal partial class Reconciler {
       } else {
         ImageLayouts.ApplyPath(n, i.Path, i.Fit)
       }
+      n.BumpScenePaintVersion()
       MarkEffects(ReconcileEffects.Content)
       MarkEffects(ReconcileEffects.Layout)
       MarkEffects(ReconcileEffects.Paint)
     } else if fitChanged {
       n.ImageFit = i.Fit
+      n.BumpScenePaintVersion()
       MarkEffects(ReconcileEffects.Paint)
     } else if ImageLayouts.Refresh(n) {
       MarkEffects(ReconcileEffects.Content)
