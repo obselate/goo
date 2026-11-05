@@ -398,6 +398,7 @@ class FixtureContractTests {
             yield Contract[TextPresentationLayerFixtures]("FullProjectionDeletionIgnoresInsertionsAndRestoresHistory")
             yield Contract[TextPresentationLayerFixtures]("ViewportScrollReusesStyleSpansUntilRevisionChanges")
             yield Contract[TextPresentationLayerFixtures]("AbsolutePreviewEditorAvoidsFullDocumentInitialMeasure")
+            yield Contract[InputFixtures]("ReadOnlyEntryPreservesTextAndAllowsSelection")
             yield Contract[TextInputPrimitivesFixtures]("UndoHistoryDropsOldestGroupsAndPreservesTypingAndRedo")
             yield Contract[TextInputPrimitivesFixtures]("EntryUndoDropsOldestGroupsAtCountAndByteLimits")
             yield Contract[TextInputPrimitivesFixtures]("BuiltInDefaultsPrecedeThrowingObserversAndRetainQueuedSuffix")

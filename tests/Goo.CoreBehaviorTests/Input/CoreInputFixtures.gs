@@ -1430,6 +1430,61 @@ internal class InputFixtures {
     return cell.value == "external" && entry(driver).Caret == 2
   }
 
+  func ReadOnlyEntryPreservesTextAndAllowsSelection() bool {
+    let cell = InputEntryCell{ value: "seed" }
+    let driver = InputFixtureDriver(cell, 300, 100)
+    if Environment.GetEnvironmentVariable("GOO_READ_ONLY_NATIVE_CLIPBOARD") == "1" {
+      driver.Window.Open()
+    }
+    try {
+      driver.Press(10.0F, 10.0F)
+      driver.Release(10.0F, 10.0F)
+      driver.Key(Key.End, false, true)
+      driver.Char("x")
+      driver.Key(Key.End, false, true)
+      driver.Char("y")
+      driver.Key(Key.Z, false, true)
+      driver.Input.QueueComposition("pending", 0, 3)
+      driver.Drain()
+      cell.readOnly = true
+      cell.Rebuild()
+      driver.Update()
+      let node = entry(driver)
+      if driver.Input.EditorSnapshot()?.IsReadOnly != true { return false }
+      driver.Key(Key.A, false, true)
+      driver.Key(Key.C, false, true)
+      if node.Anchor != 0 || node.Caret != 5 { return false }
+      driver.Char("changed")
+      for key in []Key{ Key.Backspace, Key.Delete, Key.V, Key.X, Key.Z, Key.Y } {
+        driver.Key(key, false, key != Key.Backspace && key != Key.Delete)
+        if node.Buffer != "seedx" { return false }
+      }
+      driver.Input.QueueComposition("composition", 0, 3)
+      driver.Drain()
+      if node.Buffer != "seedx" || driver.Input.EditorSnapshot()?.CompositionStart != -1 {
+        return false
+      }
+      driver.Input.CommitEditorText(driver.Window.Tree, "committed")
+      if node.Buffer != "seedx" { return false }
+      driver.Press(10.0F, 10.0F)
+      driver.Move(50.0F, 10.0F)
+      driver.Release(50.0F, 10.0F)
+      if node.Anchor == node.Caret || node.Buffer != "seedx" { return false }
+      driver.Key(Key.Home, false, true)
+      if node.Caret != 0 { return false }
+      driver.Key(Key.End, true, true)
+      if node.Anchor != 0 || node.Caret != 5 { return false }
+      cell.readOnly = false
+      cell.Rebuild()
+      driver.Update()
+      driver.Key(Key.End, false, true)
+      driver.Key(Key.V, false, true)
+      return node.Buffer == "seedxseedx"
+    } finally {
+      driver.Window.Close()
+    }
+  }
+
   func TextEntryCommandsAndSanitization() bool {
     let typed = InputEntryCell{}
     let typing = entryDriver(typed)
@@ -3010,6 +3065,7 @@ internal class InputEntryCell : Cell {
   internal var value string
   internal var writeBack bool
   internal var controlled bool
+  internal var readOnly bool
   internal var changed string
   internal var submitted string
 
@@ -3024,6 +3080,7 @@ internal class InputEntryCell : Cell {
         Key: "entry",
         Value: value,
         Controlled: controlled,
+        ReadOnly: readOnly,
         Placeholder: "hint",
         Width: 200.0,
         Height: 30.0,
