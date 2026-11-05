@@ -1170,11 +1170,27 @@ internal partial class Reconciler {
     if !validPortalPlacement(p.Placement) {
       throw ArgumentOutOfRangeException("Placement")
     }
+    if let rect = p.AnchorRect {
+      if !validPortalRect(rect) { throw ArgumentOutOfRangeException("AnchorRect") }
+    }
+    if let rect = p.CollisionBounds {
+      if !validPortalRect(rect) { throw ArgumentOutOfRangeException("CollisionBounds") }
+    }
     applyStyle(n, p, p.Focusable, initial)
     n.HitTestSelf = false
-    if n.PortalAnchor != p.Anchor || n.PortalPlacement != p.Placement {
+    if n.PortalAnchor != p.Anchor || n.PortalPlacement != p.Placement
+      || n.PortalBounds?.AnchorRect != p.AnchorRect
+      || n.PortalBounds?.CollisionBounds != p.CollisionBounds {
       n.PortalAnchor = p.Anchor
       n.PortalPlacement = p.Placement
+      if p.AnchorRect != nil || p.CollisionBounds != nil {
+        let bounds = n.PortalBounds ?? PortalPlacementBounds{}
+        bounds.AnchorRect = p.AnchorRect
+        bounds.CollisionBounds = p.CollisionBounds
+        n.PortalBounds = bounds
+      } else {
+        n.PortalBounds = nil
+      }
       n.PortalAnchorResolved = false
       n.PortalPlacementHidden = p.Anchor != nil
       if !initial {
@@ -1183,6 +1199,11 @@ internal partial class Reconciler {
       }
     }
   }
+
+  private func validPortalRect(rect ElementRect) bool ->
+    Single.IsFinite(float32(rect.X)) && Single.IsFinite(float32(rect.Y))
+      && Single.IsFinite(float32(rect.Width)) && Single.IsFinite(float32(rect.Height))
+      && rect.Width >= 0.0 && rect.Height >= 0.0
 
   internal func diffButton(n Node, b Button) Node {
     if !canReuseNode(n, b) {
