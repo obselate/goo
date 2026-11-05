@@ -1,6 +1,16 @@
 # Changelog
 
 
+## 0.28.1 - 2026-11-05
+
+0.28.0 was not published.
+
+### Fixed
+
+- Skip fully clipped infinite animations without losing their clock phase. Keep finite animation ticks and completion unchanged.
+- Prevent false horizontal scrollbars at fractional display scales.
+- Isolate the zero-allocation path equality fixture from background GC accounting and report each equality or allocation failure separately.
+
 ## 0.28.0 - 2026-11-05
 
 ### Added
