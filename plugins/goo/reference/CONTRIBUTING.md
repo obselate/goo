@@ -100,6 +100,18 @@ Compile runnable examples against the current package to check their behavior.
 - Link it in the pull request and use the pull request template.
 - Keep changes focused. Include tests and docs for changed behavior or API.
 - Include generated docs. CI checks them and does not commit them for you.
+- Add one `changelog.d/<branch-or-pr>.md` file. Use a lowercase name with hyphens
+  instead of branch slashes. Do not edit `CHANGELOG.md` for pending changes.
+
+```md
+## Fixed
+
+- Keep queued diagnostics connections alive when a probe disconnects.
+```
+
+Use one section: `Added`, `Changed`, `Fixed` or `Removed`. Write each bullet on
+one line. Release preparation joins fragments in filename order within each
+section and deletes them. Release PRs consume fragments instead of adding one.
 
 AI policy:
 

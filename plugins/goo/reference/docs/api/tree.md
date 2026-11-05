@@ -45,11 +45,18 @@ Portal{
 Nil values use the whole anchor and viewport. Collision bounds also cap the Portal's
 size. Both properties have no effect without `Anchor`.
 
-Goo tries the preferred side, flips to its opposite when that reduces collision
-overflow, then clamps the Portal border box inside the collision bounds. `Start` and `End`
-on top and bottom placements follow the Portal's resolved text direction. On left
-and right placements they mean top and bottom. A popup larger than the bounds is
-capped to the bounds. Use `Overflow.Scroll` when its content must remain reachable.
+Set `HideWhenAnchorClipped: true` to hide a popup when its anchor rectangle scrolls
+fully outside its ancestor clips. It stays mounted and keeps keyboard focus, text
+composition and edit state. It is not painted, hit-tested or visible to accessibility.
+It shows again without rebuilding its content when the anchor returns.
+The default is false.
+
+Goo keeps the preferred side when the popup fits. Otherwise it flips if the opposite
+side has more space. It then caps the main-axis size to the space between the anchor
+edge and the collision edge, so the popup does not cover the anchor. The cross axis
+shifts inside the collision bounds. `Start` and `End` on top and bottom placements
+follow the Portal's resolved text direction. On left and right placements they mean
+top and bottom. Use `Overflow.Scroll` when its content must remain reachable.
 Padding on a transparent Portal can provide a gap that follows the popup when it
 flips.
 
@@ -1119,11 +1126,15 @@ Gets a rectangle within Anchor's local border-box coordinates. Nil uses the whol
 
 ### `CollisionBounds`
 
-Gets the collision rectangle in window logical coordinates. Nil uses the whole viewport. The Portal flips, shifts, and shrinks to fit these bounds. Values must be finite and dimensions nonnegative.
+Gets the collision rectangle in window logical coordinates. Nil uses the whole viewport. After choosing a side, Goo caps the main-axis size to the space between AnchorRect and these bounds, then shifts the cross axis to fit. Values must be finite and dimensions nonnegative.
+
+### `HideWhenAnchorClipped`
+
+Hides presentation when AnchorRect is fully outside the anchor's ancestor clips. The default is false. Hiding preserves the mounted subtree, focus and text composition.
 
 ### `Placement`
 
-Gets the preferred side and alignment used when Anchor is mounted in this Window. Goo flips to the opposite side when that reduces overflow, then contains the Portal border box within the viewport. The default is BottomStart.
+Gets the preferred side and alignment used when Anchor is mounted in this Window. Goo keeps this side when the popup fits, otherwise flips when the opposite side has more space. It caps the main-axis size without covering AnchorRect and shifts the cross axis into the collision bounds. The default is BottomStart.
 
 ## `PortalPlacement`
 
