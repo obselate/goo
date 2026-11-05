@@ -60,6 +60,8 @@ internal unsafe struct VkDeviceDispatch {
   var vkGetQueryPoolResults unmanaged[Cdecl](VkDevice, VkQueryPool, uint32, uint32, nuint, *void, VkDeviceSize, VkQueryResultFlags) -> VkResult
   var vkCmdResetQueryPool unmanaged[Cdecl](VkCommandBuffer, VkQueryPool, uint32, uint32) -> void
   var vkCmdWriteTimestamp2 unmanaged[Cdecl](VkCommandBuffer, VkPipelineStageFlags2, VkQueryPool, uint32) -> void
+  var vkCmdBeginQuery unmanaged[Cdecl](VkCommandBuffer, VkQueryPool, uint32, VkQueryControlFlags) -> void
+  var vkCmdEndQuery unmanaged[Cdecl](VkCommandBuffer, VkQueryPool, uint32) -> void
   var vkCreateImageView unmanaged[Cdecl](VkDevice, *VkImageViewCreateInfo, *VkAllocationCallbacks, *VkImageView) -> VkResult
   var vkDestroyImageView unmanaged[Cdecl](VkDevice, VkImageView, *VkAllocationCallbacks) -> void
   var vkCreateShaderModule unmanaged[Cdecl](VkDevice, *VkShaderModuleCreateInfo, *VkAllocationCallbacks, *VkShaderModule) -> VkResult

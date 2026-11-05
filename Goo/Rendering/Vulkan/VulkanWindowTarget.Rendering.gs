@@ -390,6 +390,10 @@ internal unsafe partial class VulkanWindowTarget {
           BeginDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.PrimitiveUpload)
           renderer.RecordPrimitiveFrameUpload(slot.CommandBuffer)
           EndDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.PrimitiveUpload)
+          renderer.ConfigureTimestampRecording(
+            timestampState,
+            int32(activeFrameSlotIndex),
+            DiagnosticTimestampRecordingContext(slot))
           BeginDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.Clip)
           renderer.RecordClipMaskPass(slot.CommandBuffer, current.Extent)
           EndDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.Clip)
@@ -400,10 +404,6 @@ internal unsafe partial class VulkanWindowTarget {
             current.ImageView(activeImageIndex),
             current.Extent,
             completedGraphicsSubmissionSerial)
-          renderer.ConfigureTimestampRecording(
-            timestampState,
-            int32(activeFrameSlotIndex),
-            DiagnosticTimestampRecordingContext(slot))
           let recordResult = renderer.RecordInsideRendering(
             slot.CommandBuffer,
             sceneCompiler.Frame,

@@ -116,6 +116,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     }
 
   internal func RecordClipMaskPass(commandBuffer VkCommandBuffer, extent VkExtent2D) int32 {
+    recordGpuWork.clipPassCount = 0uL
+    recordGpuWork.clipPassPixels = 0uL
+    fragmentPass = 3
     if disposed {
       throw ObjectDisposedException("VulkanPrimitiveRenderer")
     }
@@ -174,6 +177,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           Bottom: int32(dirty.Y + dirty.Height),
         })
         BeginClipMaskRendering(commandBuffer, atlas, dirty)
+        if FrameRecorder.Current != nil {
+          recordGpuWork.clipPassCount++
+          recordGpuWork.clipPassPixels += uint64(dirty.Width) * uint64(dirty.Height)
+        }
         try {
           EmitClipMask(commandBuffer, extent, value, region, frame, selectedPipeline, maskIndex)
         } finally {
@@ -431,6 +438,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       rendering.pColorAttachments = &attachment
       let beginRendering = dispatch.vkCmdBeginRendering
       beginRendering(commandBuffer, &rendering)
+      timestampState?.BeginFragmentPass(timestampSlot)
     }
 
   private func EmitClipMask(commandBuffer VkCommandBuffer, extent VkExtent2D,
@@ -528,7 +536,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         | uint32(VkConstants.VK_SHADER_STAGE_FRAGMENT_BIT),
         0u, 112u, *void(&push))
       let draw = dispatch.vkCmdDraw
+      let fragmentQuery = if fragmentEnabled { BeginFragmentQuery(commandBuffer, 9) } else { -1 }
       draw(commandBuffer, 6u, 1u, 0u, 0u)
+      EndFragmentQuery(commandBuffer, fragmentQuery)
     }
 
   private func ValidateExtent(extent VkExtent2D) {

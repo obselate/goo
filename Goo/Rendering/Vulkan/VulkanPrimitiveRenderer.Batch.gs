@@ -79,8 +79,12 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       throw OverflowException("Vulkan primitive batch vertex range overflow")
     }
     let draw = dispatch.vkCmdDraw
+    let fragmentQuery = if fragmentEnabled {
+      BeginFragmentQuery(commandBuffer, FragmentPrimitiveKind(pendingPrimitivePipeline))
+    } else { -1 }
     draw(commandBuffer, PrimitiveVertexCount, pendingPrimitiveRecordCount,
       uint32(firstVertex), 0u)
+    EndFragmentQuery(commandBuffer, fragmentQuery)
     recordDrawCallCount++
     pendingPrimitiveRecordCount = 0u
   }
@@ -117,8 +121,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       return
     }
     let draw = dispatch.vkCmdDraw
+    let fragmentQuery = if fragmentEnabled { BeginFragmentQuery(commandBuffer, 1) } else { -1 }
     draw(commandBuffer, 6u, pendingTextInstanceCount, 0u,
       pendingTextFirstInstance)
+    EndFragmentQuery(commandBuffer, fragmentQuery)
     recordDrawCallCount++
     pendingTextInstanceCount = 0u
   }
