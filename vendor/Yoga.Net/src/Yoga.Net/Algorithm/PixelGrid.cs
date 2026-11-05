@@ -64,11 +64,12 @@ namespace Facebook.Yoga
         {
             var pointScaleFactor = (double)node.GetConfig()!.GetPointScaleFactor();
 
-            double nodeLeft = node.GetLayout().Position(PhysicalEdge.Left);
-            double nodeTop = node.GetLayout().Position(PhysicalEdge.Top);
+            var layout = node.GetLayout();
+            double nodeLeft = layout.RawLeft;
+            double nodeTop = layout.RawTop;
 
-            double nodeWidth = node.GetLayout().Dimension(Dimension.Width);
-            double nodeHeight = node.GetLayout().Dimension(Dimension.Height);
+            double nodeWidth = layout.RawDimension(Dimension.Width);
+            double nodeHeight = layout.RawDimension(Dimension.Height);
 
             double absoluteNodeLeft = absoluteLeft + nodeLeft;
             double absoluteNodeTop = absoluteTop + nodeTop;
@@ -81,15 +82,11 @@ namespace Facebook.Yoga
                 bool textRounding = node.GetNodeType() == NodeType.Text;
                 bool parentTextRounding = node.GetOwner()?.GetNodeType() == NodeType.Text;
 
-                node.SetLayoutPosition(
+                layout.SetRoundedPosition(
                     (float)(RoundValueToPixelGridDouble(absoluteNodeLeft, pointScaleFactor, false, textRounding) -
                         RoundValueToPixelGridDouble(absoluteLeft, pointScaleFactor, false, parentTextRounding)),
-                    PhysicalEdge.Left);
-
-                node.SetLayoutPosition(
                     (float)(RoundValueToPixelGridDouble(absoluteNodeTop, pointScaleFactor, false, textRounding) -
-                        RoundValueToPixelGridDouble(absoluteTop, pointScaleFactor, false, parentTextRounding)),
-                    PhysicalEdge.Top);
+                        RoundValueToPixelGridDouble(absoluteTop, pointScaleFactor, false, parentTextRounding)));
 
                 double scaledNodeWith = nodeWidth * pointScaleFactor;
                 bool hasFractionalWidth =
