@@ -11,6 +11,7 @@ internal partial class SceneFrame {
   private var chunkCount int32
   private var drawRefs []DrawRef
   private var drawRefCount int32
+  internal var OccludedDraws []bool = [0]bool
   private var resourceRefs []ResourceId
   private var resourceRefCount int32
   private var solidBoxes []SolidBoxRecord

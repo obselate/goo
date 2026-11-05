@@ -180,6 +180,7 @@ internal partial class VulkanSceneCompiler {
       }
 
       ClassifyRetainedChunks()
+      CullOccludedDraws()
 
       lastResult.FrameVersion = frameVersion
       lastResult.RootOwnerId = rootOwnerId
