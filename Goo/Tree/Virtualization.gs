@@ -286,7 +286,7 @@ internal sealed class VirtualNodeState {
   }
 
   private func anchorDelta(n Node) float32 {
-    if anchorKey == nil || Math.Abs(n.ScrollY - anchorScrollY) > 0.01F { return 0.0F }
+    if anchorKey == nil || n.ScrollY == 0.0F || Math.Abs(n.ScrollY - anchorScrollY) > 0.01F { return 0.0F }
     for i in 0 ... n.Children.Count {
       let child = n.Children[i]
       if child.Key != anchorKey { continue }
