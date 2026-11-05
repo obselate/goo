@@ -415,7 +415,11 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
 
   public func SetClipboardText(value string) {
     ThrowIfDisposed()
-    Require(SDL.SetClipboardText(value), "SDL_SetClipboardText")
+    SDL.ClearError()
+    if !SDL.SetClipboardText(value) {
+      let error = SDL.GetErrorS()
+      throw InvalidOperationException("SDL_SetClipboardText failed" + if String.IsNullOrEmpty(error) { "" } else { ": " + error })
+    }
   }
 
   public func BeginClose() {

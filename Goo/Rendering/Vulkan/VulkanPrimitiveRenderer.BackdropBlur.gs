@@ -1,7 +1,6 @@
 package Goo
 
 import System
-import System.IO
 import System.Numerics
 
 internal unsafe partial class VulkanPrimitiveRenderer {
@@ -18,17 +17,6 @@ internal unsafe partial class VulkanPrimitiveRenderer {
             if layerPool?.FindBackdrop(layer) == nil || layerPool?.FindBackdrop(layer, true) == nil { return false }
         }
         return true
-    }
-
-    private func LoadBackdropBlur() ShaderEffect {
-        using let stream = typeof(VulkanPrimitiveRenderer).Assembly.GetManifestResourceStream(
-            "Goo.Effects.filtered_backdrop.goo-effect"
-        )
-        if stream == nil {
-            throw FileNotFoundException("Goo backdrop blur effect is missing")
-        }
-        return ShaderEffect(ShaderEffectProgram(
-            BoundedInput.ReadAll(stream, ShaderEffectProgram.MaximumProgramByteCount, "Shader effect program")))
     }
 
     private func BackdropBlurRadius(record LayerRecord, frame SceneFrame) float32 ->
@@ -50,7 +38,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         if radius <= 0.0F || (layerPool?.LayerResolutionShift ?? 0) > 0 {
             return captured
         }
-        let blur = backdropBlurEffect ?? LoadBackdropBlur()
+        let blur = backdropBlurEffect ?? ShaderEffect(ShaderEffectProgram.LoadEmbedded("filtered_backdrop.goo-effect"))
         backdropBlurEffect = blur
         let sigma = Vector2(radius * textFrameScaleX, radius * textFrameScaleY)
         let paddingX = MathF.Ceiling(sigma.X * 3.0F)
