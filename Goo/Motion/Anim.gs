@@ -541,7 +541,7 @@ public class Anim[T] {
       }
       return false
     }
-    return motionNodeVisible(owner?.mountedNode, window)
+    return (invalidate != nil || onChange != nil) && motionNodeVisible(owner?.mountedNode, window)
   }
 
   private func notifyOwner(value T) {

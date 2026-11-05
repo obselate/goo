@@ -262,8 +262,13 @@ internal class PaintBindingFixtures {
       window.UpdateTree(0.25)
       let samples = cell.Loops[0].Samples
       window.UpdateTree(0.25)
-      return window.PaintMotionPump.Active && cell.Loops[0].Samples > samples
-        && Math.Abs(cell.Values[0].Value - 0.5) < 0.000001
+      if !window.PaintMotionPump.Active || cell.Loops[0].Samples <= samples
+        || Math.Abs(cell.Values[0].Value - 0.5) > 0.000001 { return false }
+      cell.Bound = false
+      cell.Shared = false
+      cell.Rebuild()
+      window.UpdateTree()
+      return !window.PaintMotionPump.Active
     } finally {
       window.Close()
     }
@@ -429,6 +434,7 @@ internal class PaintVisibilityCell : Cell {
   internal let Values []Anim[float64] = [12]Anim[float64]
   internal let Loops []PaintVisibilityLoop = [12]PaintVisibilityLoop
   internal var Shared bool
+  internal var Bound bool = true
   internal var Builds int32
 
   internal init(infinite bool) {
@@ -449,7 +455,8 @@ internal class PaintVisibilityCell : Cell {
       let angle = float64(index) / 12.0 * Math.PI * 2.0
       indicator.Children.Add(Container{ Position: PositionType.Absolute,
         Left: 10.0 + Math.Cos(angle) * 10.0, Top: 10.0 + Math.Sin(angle) * 10.0,
-        Width: 4, Height: 4, BorderRadius: 2, BackgroundColor: Color.Black, OpacityAnim: Values[index] })
+        Width: 4, Height: 4, BorderRadius: 2, BackgroundColor: Color.Black,
+        OpacityAnim: if Bound { Values[index] } else { nil } })
     }
     let root = Container{ Width: Percent(100), Height: Percent(100),
       Container{ Handle: Scroll, Width: 200, Height: 100, Overflow: Overflow.Scroll,
