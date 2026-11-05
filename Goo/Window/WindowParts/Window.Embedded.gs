@@ -111,8 +111,7 @@ public partial class Window {
 
   internal func DetachEmbeddedPresentation() {
     guard let target = windowTarget else { return }
-    while target.QueueWorkPending {
-      target.PollQueueCompletion()
+    while !target.PrepareClose() {
       Thread.Yield()
     }
     detachPresentationNotifications(target)

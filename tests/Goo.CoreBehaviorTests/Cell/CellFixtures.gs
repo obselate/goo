@@ -282,6 +282,9 @@ internal class CellFixtures {
     return threw && calls == 1 && Window{}.DeferredCloseStopsPostsForTest()
   }
 
+  func EmbeddedDetachWaitsForClosePreparation() bool ->
+  Window{}.EmbeddedDetachWaitsForClosePreparationForTest()
+
   func DirectCompositionAddsNoRenderNode() bool {
     DirectChildCell.Last = nil
     let window = Window{ Root: DirectParentCell{}, Width: 100, Height: 100 }
@@ -1138,19 +1141,29 @@ public partial class Window {
       Close()
     }
   }
+
+  internal func EmbeddedDetachWaitsForClosePreparationForTest() bool {
+    let pending = DeferredCloseTarget{QueuePending: false, CloseAfterChecks: 3}
+    windowTarget = pending
+    DetachEmbeddedPresentation()
+    return pending.Disposed && pending.CloseChecks == 3 && windowTarget == nil
+  }
 }
 
 internal class DeferredCloseTarget : WindowRenderTarget {
   internal var CloseChecks int32
+  internal var QueuePending bool = true
+  internal var CloseAfterChecks int32 = int32.MaxValue
+  internal var Disposed bool
   public event PresentationAccepted Action[int64]
   public prop ProfileSink FrameProfileSink { get -> throw NotSupportedException() }
   public prop NeedsRender bool { get -> false }
   public prop LastFrameSubmitted bool { get -> false }
-  public prop QueueWorkPending bool { get -> true }
+  public prop QueueWorkPending bool { get -> QueuePending }
   public prop RetirementWorkPending bool { get -> true }
   public func PrepareClose() bool {
     CloseChecks++
-    return false
+    return CloseChecks >= CloseAfterChecks
   }
   public func SetVSync(value bool) { }
   public func SetHidden(value bool) { }
@@ -1164,5 +1177,10 @@ internal class DeferredCloseTarget : WindowRenderTarget {
     reusablePixels([]uint8)? = nil) WindowReadbackRequestStatus -> WindowReadbackRequestStatus.NotReady
   public func PollCapture() WindowReadbackPollStatus -> WindowReadbackPollStatus.NotReady
   public func TakeCaptureResult() WindowReadbackResult? -> nil
-  public func Dispose() { }
+  public func Dispose() {
+    if CloseChecks < CloseAfterChecks {
+      throw InvalidOperationException("Presentation was disposed before close preparation completed")
+    }
+    Disposed = true
+  }
 }
