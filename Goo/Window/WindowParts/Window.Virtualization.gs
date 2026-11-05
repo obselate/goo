@@ -2,6 +2,7 @@ package Goo
 
 import System.Collections.Generic
 
+/// Hosts a Goo tree in a native window.
 public partial class Window {
   private let retiredVirtualStates List[VirtualNodeState] = List[VirtualNodeState]()
 
