@@ -73,6 +73,12 @@ class FixtureContractTests {
         func Cases() sequence[[]object] {
             yield Contract[ApplicationActivationFixtures]("ProcessQueueOwnsStartupAndForwardedData")
             yield Contract[TreeFixtures]("NodeMountLifetimeContract")
+            yield Contract[RowRecyclingFixtures]("ReusesStorageAndResetsKeyScopedStateContract")
+            yield Contract[RowRecyclingFixtures]("DisposesRunningAnimationBeforeStorageRebindContract")
+            yield Contract[RowRecyclingFixtures]("ExcludesFocusedAndEditingRowsContract")
+            yield Contract[RowRecyclingFixtures]("ReconcilesChangedShapeAndDrainsSourcePoolContract")
+            yield Contract[RowRecyclingFixtures]("DiscardsFailedRebindAndReleasesRetiredDataContract")
+            yield Contract[RowRecyclingFixtures]("ReboundTextMatchesFreshLayoutContract")
             yield Contract[ElementHandleFixtures]("FocusProjectionContract")
             yield Contract[ElementHandleFixtures]("FocusProjectionVirtualizationContract")
             yield Contract[WindowOcclusionFixtures]("HostTransitionsNotifyOnUiThread")

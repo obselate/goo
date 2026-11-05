@@ -158,13 +158,13 @@ internal class ScrollbarFixtures {
       try {
         window.UpdateTree()
         let root = window.Tree!!
-        let row = cell.Rows.Handles[0].AttachedNode()!!
+        let row = NodeMount(cell.Rows.Handles[0].AttachedNode())
         var geometry ScrollThumbGeometry
         if !verticalScrollThumb(root, out geometry) { return false }
         let x = geometry.Bounds.X + geometry.Bounds.W / 2.0F
         let start = geometry.Bounds.Y + geometry.Bounds.H / 2.0F
         let travel = geometry.TrackBounds.H - geometry.Bounds.H
-        if hitTopmost(root, x, start) != row { return false }
+        if hitTopmost(root, x, start) != row.Current { return false }
 
         let input = window.InputForTest
         input.QueuePointerPress(x, start, PointerButton.Primary, KeyModifiers{})
@@ -173,13 +173,13 @@ internal class ScrollbarFixtures {
           input.QueuePointerMove(x, start + travel * float32(index) / 120.0F, KeyModifiers{})
           window.DrainQueuedInputForTest()
           window.UpdateTree(0.01, 0.01, !deferred || index % 3 == 0)
-          if index == 60 && (!row.Retired || root.Retired || root.ScrollY >= geometry.Maximum) {
+          if index == 60 && (row.Current != nil || root.Retired || root.ScrollY >= geometry.Maximum) {
             return false
           }
         }
         input.QueuePointerRelease(x, start + travel, PointerButton.Primary, KeyModifiers{})
         window.DrainQueuedInputForTest()
-        if root.Retired || !row.Retired || Math.Abs(root.ScrollY - geometry.Maximum) > 0.01F {
+        if root.Retired || row.Current != nil || Math.Abs(root.ScrollY - geometry.Maximum) > 0.01F {
           return false
         }
       } finally { window.Close() }
@@ -192,7 +192,7 @@ internal class ScrollbarFixtures {
     let window = Window{ Root: parent, Width: 100, Height: 20 }
     try {
       window.UpdateTree()
-      let row = window.Tree!!.Children[0]
+      let row = NodeMount(window.Tree!!.Children[0])
       window.PlatformInput.PointerMove(1, PointerDevice.Mouse, 10, 5, KeyModifiers{}, 0)
       window.UpdateTree()
       let before = parent.Builds
@@ -201,7 +201,7 @@ internal class ScrollbarFixtures {
       }
       window.UpdateTree()
       window.UpdateTree()
-      return row.Retired && parent.Leaves == 1 && parent.Enters == 2 && parent.Builds == before
+      return row.Current == nil && parent.Leaves == 1 && parent.Enters == 2 && parent.Builds == before
     } finally { window.Close() }
   }
 

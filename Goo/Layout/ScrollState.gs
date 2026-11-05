@@ -26,6 +26,10 @@ internal class ScrollActivityStates {
     private let values ConditionalWeakTable[Node, ScrollNodeActivity] =
     ConditionalWeakTable[Node, ScrollNodeActivity]()
 
+    internal func Remove(n Node) {
+      values.Remove(n)
+    }
+
     internal func For(n Node) ScrollNodeActivity -> values.GetOrCreateValue(n)
 
     internal func TryGet(n Node) ScrollNodeActivity? ->

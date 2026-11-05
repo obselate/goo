@@ -206,6 +206,10 @@ internal class CustomLayouts {
     @ThreadStatic
     internal var Depth int32
 
+    internal func Remove(node Node) {
+      Configure(node, nil)
+    }
+
     internal func BlobValue(blob Container) LayoutAlgorithm? {
       if let values = blobs {
         if values.TryGetValue(blob, out var value) { return value }

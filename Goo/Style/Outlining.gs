@@ -6,6 +6,11 @@ internal class Outlining {
   shared {
     private var values ConditionalWeakTable[Node, OutlineValue]?
 
+    internal func Remove(n Node) {
+      values?.Remove(n)
+      n.HasOutlineState = false
+    }
+
     internal func Get(n Node) OutlineValue? {
       if !n.HasOutlineState { return nil }
       if let existing = values {

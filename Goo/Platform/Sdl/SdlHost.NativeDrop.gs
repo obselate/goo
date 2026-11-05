@@ -55,6 +55,7 @@ internal partial class NativeDropState {
     router.Cancel()
   }
   internal func Validate() -> router.Validate()
+  internal func RetainsInteraction(root Node) bool -> router.RetainsInteraction(root)
 
   internal func Receive(kind SDLEventType, data nint, x float32, y float32, modifiers KeyModifiers) {
     if kind == SDLEventType.DropBegin {

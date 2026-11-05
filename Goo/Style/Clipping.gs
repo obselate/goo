@@ -6,6 +6,11 @@ internal class ClipPaths {
   shared {
     private var values ConditionalWeakTable[Node, ClipPathValue]?
 
+    internal func Remove(n Node) {
+      values?.Remove(n)
+      n.HasClipPath = false
+    }
+
     // Nil means no clip. Fit-only state remains available through Fit.
     internal func Get(n Node) ClipPathValue? {
       if !n.HasClipPath {

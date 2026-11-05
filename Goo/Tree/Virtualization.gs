@@ -32,11 +32,19 @@ internal data struct VirtualExtent {
 internal data struct VirtualEntry {
   internal var Marker VirtualRetainedBlob
   internal var Placement VirtualPlacement
+  internal var ComponentType Type?
 }
 
 internal data struct VirtualAnchorNode {
-  internal var Node Node
+  internal var Mount NodeMount
   internal var Y float32
+}
+
+internal data struct VirtualRowStorage {
+  internal var Root Node
+  internal var ComponentType Type
+  internal var Nodes int32
+  internal var Bytes int32
 }
 
 internal sealed class VirtualNodeState {
@@ -79,11 +87,156 @@ internal sealed class VirtualNodeState {
   private var contextVersion int64
   private var pendingContextVersion int64
   private var pixelScale float32 = 1.0F
+  private const MaximumRecycledRows int32 = 32
+  private const MaximumRecycledBytes int32 = 1048576
+  private const NodeStorageChargeBytes int32 = 2048
+  private let recycledRows List[VirtualRowStorage] = List[VirtualRowStorage]()
+  private let retiringRows List[VirtualRowStorage] = List[VirtualRowStorage]()
+  private var recycledNodes int32
+  private var recycledBytes int32
+  private var retiringNodes int32
+  private var retiringBytes int32
+  private var recyclingRowsLimit int32
+  private var recyclingNodesLimit int32
+
+  internal prop RecycledRowCount int32 { get -> recycledRows.Count }
+  internal prop RecycledNodeCount int32 { get -> recycledNodes }
+  internal prop RecycledStorageBytes int32 { get -> recycledBytes }
+
+  private func clearRecycledRows() {
+    recycledRows.Clear()
+    retiringRows.Clear()
+    recycledNodes = 0
+    recycledBytes = 0
+    retiringNodes = 0
+    retiringBytes = 0
+  }
+
+  private func updateRecyclingLimit(n Node) {
+    recyclingRowsLimit = Math.Min(MaximumRecycledRows, n.Children.Count)
+    recyclingNodesLimit = countNodes(n, MaximumRecycledBytes / NodeStorageChargeBytes) - 1
+    while recycledRows.Count > recyclingRowsLimit || recycledNodes > recyclingNodesLimit {
+      removeRecycledRow(recycledRows.Count - 1)
+    }
+    while retiringRows.Count + recycledRows.Count > recyclingRowsLimit
+      || retiringNodes + recycledNodes > recyclingNodesLimit {
+      let index = retiringRows.Count - 1
+      if index < 0 { break }
+      let row = retiringRows[index]
+      retiringRows.RemoveAt(index)
+      retiringNodes -= row.Nodes
+      retiringBytes -= row.Bytes
+    }
+  }
+
+  private func countNodes(n Node, limit int32) int32 {
+    var count = 1
+    for i in 0 ... n.Children.Count {
+      if count >= limit { break }
+      count += countNodes(n.Children[i], limit - count)
+    }
+    return count
+  }
+
+  private func chargeStorage(n Node, ref nodes int32, ref bytes int32) bool {
+    if n.Kind == NodeKind.Entry || n.Kind == NodeKind.Editor
+      || n.MountGeneration == uint64.MaxValue { return false }
+    nodes++
+    bytes += NodeStorageChargeBytes
+    if bytes > MaximumRecycledBytes { return false }
+    let children = n.Children
+    if children is List[Node] {
+      if children.Capacity > (MaximumRecycledBytes - bytes) / 8 { return false }
+      bytes += children.Capacity == 0 ? 0 : 24 + children.Capacity * 8
+    }
+    if let yoga = n.Yoga {
+      let yogaChildren = yoga.GetChildren()
+      if yogaChildren is List[Facebook.Yoga.Node] {
+        if yogaChildren.Capacity > (MaximumRecycledBytes - bytes) / 8 { return false }
+        bytes += yogaChildren.Capacity == 0 ? 0 : 24 + yogaChildren.Capacity * 8
+      }
+    }
+    if bytes > MaximumRecycledBytes { return false }
+    for i in 0 ... n.Children.Count {
+      if !chargeStorage(n.Children[i], ref nodes, ref bytes) { return false }
+    }
+    return true
+  }
+
+  internal func CaptureRetirement(n Node) VirtualRowStorage? {
+    if current == nil || pendingSource != nil && pendingSource != source { return nil }
+    guard let owner = Owner, let key = n.Key else { return nil }
+    if !mounted.TryGetValue(key, out var entry) { return nil }
+    guard let type = entry.ComponentType else { return nil }
+    if n.Children.Count != 1 || !owner.CanRecycleVirtualRow(n) { return nil }
+    var nodes = 0
+    var bytes = 0
+    if !chargeStorage(n, ref nodes, ref bytes) { return nil }
+    return VirtualRowStorage{Root: n, ComponentType: type, Nodes: nodes, Bytes: bytes}
+  }
+
+  internal func Quarantine(row VirtualRowStorage) {
+    guard let owner = Owner else { return }
+    if row.Nodes > recyclingNodesLimit || row.Bytes > MaximumRecycledBytes { return }
+    while recycledRows.Count > 0 && (retiringRows.Count + recycledRows.Count >= recyclingRowsLimit
+      || retiringNodes + recycledNodes + row.Nodes > recyclingNodesLimit
+      || retiringBytes + recycledBytes + row.Bytes > MaximumRecycledBytes) {
+      removeRecycledRow(recycledRows.Count - 1)
+    }
+    if retiringRows.Count >= recyclingRowsLimit || retiringNodes + row.Nodes > recyclingNodesLimit
+      || retiringBytes + row.Bytes > MaximumRecycledBytes { return }
+    retiringRows.Add(row)
+    retiringNodes += row.Nodes
+    retiringBytes += row.Bytes
+    owner.QueueVirtualRetirements(this)
+  }
+
+  internal func FinishRetirements(owner Window) {
+    if Owner != owner { return }
+    try {
+      while retiringRows.Count > 0 {
+        let index = retiringRows.Count - 1
+        let row = retiringRows[index]
+        retiringRows.RemoveAt(index)
+        retiringNodes -= row.Nodes
+        retiringBytes -= row.Bytes
+        if row.Root.Yoga?.GetOwner() != nil { continue }
+        NodeLifecycle.ResetForReuse(row.Root)
+        recycledRows.Add(row)
+        recycledNodes += row.Nodes
+        recycledBytes += row.Bytes
+      }
+    } catch (_ Exception) {
+      clearRecycledRows()
+      rethrow
+    }
+  }
+
+  internal func TakeRecycledRow(type Type) Node? {
+    if pendingSource != nil && pendingSource != source { return nil }
+    var index = recycledRows.Count
+    while index > 0 {
+      index--
+      let row = recycledRows[index]
+      if row.ComponentType != type { continue }
+      removeRecycledRow(index)
+      return row.Root
+    }
+    return nil
+  }
+
+  private func removeRecycledRow(index int32) {
+    let row = recycledRows[index]
+    recycledRows.RemoveAt(index)
+    recycledNodes -= row.Nodes
+    recycledBytes -= row.Bytes
+  }
 
   internal prop ContextVersion int64 { get -> contextVersion }
 
   internal func BindContext(frame ContextFrame?, owner Window?) {
     let changed = Context != frame || Owner != owner
+    if changed { clearRecycledRows() }
     let rebound = Owner != nil
     Context = frame
     Owner = owner
@@ -129,6 +282,7 @@ internal sealed class VirtualNodeState {
       Reader: contextReader, Virtual: this, StateCallback: stateCallback})
   internal func Prepare(n Node, source VirtualSource, items bool) IList[Blob] {
     Cancel()
+    if this.source != source { clearRecycledRows() }
     pendingSource = source
     contextReader?.BeginState()
     let previousContext = enterContext(true)
@@ -136,6 +290,7 @@ internal sealed class VirtualNodeState {
       var state VirtualState?
       try { state = source.State(current) }
       catch (_ Exception) {
+        clearRecycledRows()
         current?.Cancel()
         contextReader?.Cancel()
         rethrow
@@ -292,10 +447,10 @@ internal sealed class VirtualNodeState {
       if child.Key != anchorKey { continue }
       for j in 0 ... anchorNodes.Count {
         let entry = anchorNodes[j]
-        if entry.Node.Retired { continue }
-        var parent = entry.Node.Parent
+        guard let retained = entry.Mount.Current else { continue }
+        var parent = retained.Parent
         while let candidate = parent {
-          if candidate == child { return entry.Node.Rect.Y - child.Rect.Y - entry.Y }
+          if candidate == child { return retained.Rect.Y - child.Rect.Y - entry.Y }
           parent = candidate.Parent
         }
       }
@@ -321,7 +476,7 @@ internal sealed class VirtualNodeState {
   private func captureDescendants(n Node, origin float32, top float32, bottom float32) {
     if n.Children.Count == 0 {
       if n.Rect.H > 0.0F && n.Rect.Y < bottom && n.Rect.Y + n.Rect.H > top {
-        pendingAnchorNodes.Add(VirtualAnchorNode{Node: n, Y: n.Rect.Y - origin})
+        pendingAnchorNodes.Add(VirtualAnchorNode{Mount: NodeMount(n), Y: n.Rect.Y - origin})
       }
       return
     }
@@ -412,15 +567,20 @@ internal sealed class VirtualNodeState {
       placement.HasH = true
     }
     var marker VirtualRetainedBlob
+    var componentType Type?
+    if let content = item.Content {
+      componentType = if content is CellElement { content.CellType } else { content.GetType() }
+    }
     var same = false
     if mounted.TryGetValue(key, out var previous) {
       marker = previous.Marker
       same = sameVirtualPlacement(previous.Placement, placement)
+      componentType ??= previous.ComponentType
     } else {
       if item.Content == nil { throw InvalidOperationException("Virtual item without content is not mounted") }
       marker = VirtualRetainedBlob(key)
     }
-    next.Add(key, VirtualEntry{ Marker: marker, Placement: placement })
+    next.Add(key, VirtualEntry{ Marker: marker, Placement: placement, ComponentType: componentType })
     if let content = item.Content {
       children.Add(virtualWrapper(key, virtualItem(content, key), placement))
     } else if same {
@@ -435,6 +595,7 @@ internal sealed class VirtualNodeState {
       throw InvalidOperationException("Virtual state was not prepared")
     }
     state.Commit()
+    updateRecyclingLimit(owner)
     contextDirty = contextVersion != pendingContextVersion
     contextReader?.Commit()
     let old = mounted
@@ -469,6 +630,7 @@ internal sealed class VirtualNodeState {
   }
 
   internal func Cancel(preserveReads bool = false) {
+    if pending != nil { clearRecycledRows() }
     if !preserveReads { contextReader?.Cancel() }
     pendingSource = nil
     next.Clear()
@@ -483,6 +645,7 @@ internal sealed class VirtualNodeState {
   }
 
   internal func Dispose() {
+    clearRecycledRows()
     Cancel()
     contextReader?.Dispose()
     contextReader = nil

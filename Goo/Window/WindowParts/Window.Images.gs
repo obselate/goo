@@ -5,7 +5,7 @@ import System.Collections.Generic
 import System.Threading
 
 internal data struct ImageCompletionWork {
-  internal var Node Node
+  internal var Mount NodeMount
   internal var Token object
 }
 
@@ -26,12 +26,14 @@ public partial class Window {
   }
 
   private func enqueueImageCompletion(n Node, token object) {
+    guard let source = token as ImageSourceBindingToken else { return }
+    if source.Binding.Mount.Captured != n { return }
     var wake = false
     lock imageCompletionGate {
       if !acceptingImageCompletions {
         return
       }
-      pendingImageCompletions.Add(ImageCompletionWork{ Node: n, Token: token })
+      pendingImageCompletions.Add(ImageCompletionWork{ Mount: source.Binding.Mount, Token: token })
       wake = Interlocked.Exchange(&pendingImageCompletion, 1) == 0
     }
     if wake {
@@ -62,8 +64,8 @@ public partial class Window {
       while next < imageCompletionBatch.Count {
         let work = imageCompletionBatch[next]
         next++
-        let n = work.Node
-        if n.Retired || n.Kind != NodeKind.Image || !ImageLayouts.IsCurrent(n, work.Token) {
+        guard let n = work.Mount.Current else { continue }
+        if n.Kind != NodeKind.Image || !ImageLayouts.IsCurrent(n, work.Token) {
           continue
         }
         if ImageLayouts.Refresh(n) {

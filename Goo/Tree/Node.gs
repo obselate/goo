@@ -67,6 +67,91 @@ internal class Node {
     return true
   }
 
+  internal prop NeedsYogaBinding bool{
+    get -> (lifecycleState & uint16(4096)) != uint16(0)
+    set -> lifecycleState = value ? lifecycleState | uint16(4096) : lifecycleState & ~uint16(4096)
+  }
+
+  internal func ResetForReuse() {
+    if !Retired { throw InvalidOperationException("Node storage must be retired before reset") }
+    editingState = nil
+    shapeState = nil
+    pointerState = nil
+    portalState = nil
+    nodeState = 0
+    AutoFocus = false
+    HasFocusScopes = false
+    FocusScopeBoundary = false
+    TabStop = true
+    HasElementHandle = false
+    HasAccessibilityDeclaration = false
+    HasAccessibilityNodeState = false
+    HasSparseInputState = false
+    HasDirectImageSourceState = false
+    Password = false
+    PortalAnchorClipped = false
+    NeedsYogaBinding = true
+    HasCustomLayout = false
+    Key = nil
+    Parent = nil
+    Context = nil
+    Content = ""
+    Rect = Rect{}
+    YogaStyleMask = StyleMask{}
+    BaseStyle = nil
+    HoverStyle = nil
+    FocusStyle = nil
+    ActiveStyle = nil
+    DisabledStyle = nil
+    transitionMs = 0.0F
+    transitionDelayMs = 0.0F
+    transitionSelection = allTransitionSelection()
+    Hovered = false
+    Focused = false
+    FocusVisible = false
+    Pressed = false
+    KeyboardPressed = false
+    PointerPressCount = 0
+    LocalMask = StyleMask{}
+    AppliedMask = StyleMask{}
+    Transitions = nil
+    PaintBindings = nil
+    PaintBindingResolver = nil
+    TextLayout = nil
+    TextLayoutCache = nil
+    StyleQueuedPass = 0
+    StyleResolvedPass = 0
+    StylePendingSelf = false
+    StylePendingInitial = false
+    StylePendingInheritedMask = StyleMask{}
+    Fiber = nil
+    ScrollX = 0.0F
+    ScrollY = 0.0F
+    ScrollTargetX = 0.0F
+    ScrollTargetY = 0.0F
+    ContentW = 0.0F
+    ContentH = 0.0F
+    TextScaleFactor = 1.0F
+    DecodedImage = nil
+    ImageIntrinsicWidth = 0.0F
+    ImageIntrinsicHeight = 0.0F
+    ImageFit = ImageFit.Contain
+    BackgroundImageFit = ImageFit.Cover
+    ClipPathFillRule = FillRule.NonZero
+    PortalPlacementHidden = false
+    DragsWindow = false
+    HitTestSelf = true
+    VulkanOwner = nil
+    VulkanOwnerToken = nil
+    if let yoga = Yoga {
+      yoga.SetContext(nil)
+      yoga.SetDirtiedFunc(nil)
+      yoga.MarkDirtyAndPropagate()
+    }
+    ApplyAllDefaults(this)
+    BumpScenePaintVersion()
+  }
+
   internal var VulkanOwnerToken object?
   internal var VulkanOwner VulkanSceneOwnerId?
   internal var PaintBindings List[PaintBinding]?

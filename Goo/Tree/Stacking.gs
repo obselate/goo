@@ -8,6 +8,13 @@ internal class Stacking {
     private var orders ConditionalWeakTable[Node, List[Node]]?
     private var values ConditionalWeakTable[Node, StackingValue]?
 
+    internal func Remove(n Node) {
+      orders?.Remove(n)
+      values?.Remove(n)
+      n.StackingChildren = false
+      n.HasZIndex = false
+    }
+
     internal func Children(n Node) IList[Node] {
       if !n.StackingChildren {
         return n.Children

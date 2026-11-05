@@ -170,6 +170,7 @@ public partial class Window {
       }
       DiagnosticsSession?.OnTreeUpdated(nil, ReconcileEffects.None, false, false)
       MetricSubscriptions.Flush(this)
+      finishVirtualRetirements()
       return false
     }
     var changed = false
@@ -410,6 +411,7 @@ public partial class Window {
       flushingMetricsBeforeRender = false
       metricsFlushThreadId = 0
     }
+    finishVirtualRetirements()
     if node != nil && hasEffect(pendingReconcileEffects, ReconcileEffects.Rect) {
       layout.RefreshRects(node!!, portalRoot)
       resolver.VisualDirty = true

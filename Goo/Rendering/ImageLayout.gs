@@ -5,6 +5,7 @@ import System
 import System.Runtime.CompilerServices
 
 internal open class ImageSourceBinding {
+  internal prop Mount NodeMount{ get; init; }
   internal var Source ImageSourceProvider?
   internal var Lease ImageSourceLease?
   internal var SourceCompletion ImageSourceCompletion?
@@ -223,10 +224,10 @@ internal class ImageLayouts {
         n.DecodedImage = nil
         n.ImageIntrinsicWidth = intrinsicWidth
         n.ImageIntrinsicHeight = intrinsicHeight
-        let value = ImageSourceBinding()
+        let value = ImageSourceBinding{Mount: NodeMount(n)}
         value.PixelsPerUnit = pixelsPerUnit
         value.SetSourceChanged(() -> {
-          ImageLayouts.refreshSource(n, value, completed)
+          if let current = value.Mount.Current { ImageLayouts.refreshSource(current, value, completed) }
         })
         value.BindSource(source, owner)
         value.Fallback = fallback
@@ -237,7 +238,7 @@ internal class ImageLayouts {
           return
         }
         value.WatchSource((token ImageSourceBindingToken) -> {
-          ImageLayouts.invalidateSource(n, value, token, completed)
+          if let current = value.Mount.Current { ImageLayouts.invalidateSource(current, value, token, completed) }
         })
       }
 
@@ -336,7 +337,7 @@ internal class ImageLayouts {
           return
         }
         value.WatchSource((token ImageSourceBindingToken) -> {
-          ImageLayouts.invalidateSource(n, value, token, completed)
+          if let current = value.Mount.Current { ImageLayouts.invalidateSource(current, value, token, completed) }
         })
       }
     private func invalidateSource(n Node, value ImageSourceBinding, token ImageSourceBindingToken,
