@@ -1097,7 +1097,9 @@ class ExplicitKeyBindingTests {
         protected override func GetVulkanGetInstanceProcAddr() nint -> throw NotSupportedException()
         protected override func UnloadVulkanLibrary() -> throw NotSupportedException()
         protected override func GetVulkanInstanceExtensions() []string -> throw NotSupportedException()
-        protected override func CreateVulkanSurface(instance nint, out surface uint64) bool -> throw NotSupportedException()
+        protected override func CreateVulkanSurface(instance nint, out surface uint64) bool {
+            throw NotSupportedException()
+        }
         protected override func DestroyVulkanSurface(instance nint, surface uint64) -> throw NotSupportedException()
     }
 
