@@ -150,7 +150,7 @@ public partial class Window {
     let profiling = profiler.Active
     let motionProfile = profiling ? profiler.Start() : FrameProfilePoint{}
     let motionVersion = motionPump.ClearVersion
-    motionPump.Sweep(simDt)
+    motionPump.Sweep(simDt, wallDt)
     if profiling {
       profiler.Record(FrameProfileStage.Motion, motionProfile)
     }

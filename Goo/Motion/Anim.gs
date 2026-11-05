@@ -1,12 +1,14 @@
 package Goo
 
 import System
+import System.Collections.Generic
 
 internal open class MotionParticle {
   internal var registrationPump MotionPump?
   internal var registrationGeneration int64
 
   internal open func Tick(now float64) bool;
+  internal open func RequestsFrame() bool -> true
   internal open func HasCompletion() bool -> false
   internal open func DeliverCompletion() { }
   internal open func Dispose();
@@ -19,17 +21,20 @@ internal class AnimHandle : MotionParticle {
   private let complete() -> void
   private let dispose() -> void
   private let bind(MotionPump) -> void
+  private let requestsFrame() -> bool
 
   internal init(tick(float64) -> bool, hasCompletion() -> bool, complete() -> void,
-    dispose() -> void, bind(MotionPump) -> void) {
+    dispose() -> void, bind(MotionPump) -> void, requestsFrame() -> bool) {
     this.tick = tick
     this.hasCompletion = hasCompletion
     this.complete = complete
     this.dispose = dispose
     this.bind = bind
+    this.requestsFrame = requestsFrame
   }
 
   internal override func Tick(now float64) bool -> tick(now)
+  internal override func RequestsFrame() bool -> requestsFrame()
   internal override func HasCompletion() bool -> hasCompletion()
   internal override func DeliverCompletion() { complete() }
 
@@ -70,7 +75,9 @@ public class Anim[T] {
   private var memoValue T
   private var memoValid bool
   private var pendingCompletion MotionCompletionReason?
-  private var paintReferences int32
+  private var owner Cell?
+  private var paintTargets List[Node]?
+  private var infinite bool
 
   /// Reports completion once after the owning motion pump settles, on its UI thread.
   /// Retarget, Set, Snap, and disposal cancel pending delivery. A handler may retarget
@@ -101,7 +108,8 @@ public class Anim[T] {
     memoValue = initial
     this.invalidate = invalidate
     this.onChange = onChange
-    handle = AnimHandle(tickInternal, hasCompletionInternal, completeInternal, disposeInternal, bindInternal)
+    handle = AnimHandle(tickInternal, hasCompletionInternal, completeInternal, disposeInternal,
+      bindInternal, requestsFrameInternal)
   }
 
   /// Gets the current value at the current motion clock time.
@@ -110,10 +118,8 @@ public class Anim[T] {
       if !running || paused {
         return currentT
       }
-      guard let pump = boundPump else {
-        return currentT
-      }
-      let now = pump.Now
+      if boundPump == nil { return currentT }
+      let now = currentNow()
       return if memoValid && memoTime == now && memoScale == Motion.TimeScale { memoValue } else { memoize(now) }
     }
   }
@@ -128,10 +134,8 @@ public class Anim[T] {
       if !running || paused || disposed {
         return zeroVelocity()
       }
-      guard let pump = boundPump else {
-        return zeroVelocity()
-      }
-      let elapsed = elapsedAt(pump.Now)
+      if boundPump == nil { return zeroVelocity() }
+      let elapsed = elapsedAt(currentNow())
       for var i = 0; i < sims.Length; i++ {
         velRead[i] = simAt(i).Velocity(elapsed)
       }
@@ -150,18 +154,20 @@ public class Anim[T] {
 
   internal prop Handle MotionParticle{ get -> handle }
   internal prop PaintPump MotionPump? { get -> boundPump }
+  internal func SetOwner(cell Cell) { owner = cell }
 
-  internal func BindPaint(pump MotionPump) {
+  internal func BindPaint(pump MotionPump, node Node) {
     if boundPump != pump {
       throw InvalidOperationException("A paint animation must belong to the element's window")
     }
-    paintReferences++
+    paintTargets ??= List[Node]()
+    paintTargets!!.Add(node)
   }
 
-  internal func UnbindPaint() { paintReferences-- }
+  internal func UnbindPaint(node Node) { paintTargets?.Remove(node) }
 
   private func wakePaint() {
-    if paintReferences > 0 { boundPump?.PaintWake?.Invoke() }
+    if paintTargets?.Count > 0 { boundPump?.PaintWake?.Invoke() }
   }
 
   /// Animates toward target with Motion.Default.
@@ -393,7 +399,11 @@ public class Anim[T] {
       nextSims[i] = nil
     }
     toT = target
-    startTime = now
+    infinite = true
+    for sim in sims {
+      if sim?.IsInfinite != true { infinite = false }
+    }
+    startTime = if infinite { boundPump?.WallNow ?? now } else { boundPump?.Now ?? now }
     elapsedOffset = 0.0
     paused = false
     memoValid = false
@@ -475,7 +485,8 @@ public class Anim[T] {
     }
   }
 
-  private func tickInternal(now float64) bool {
+  private func tickInternal(time float64) bool {
+    let now = if infinite { boundPump?.WallNow ?? time } else { time }
     if !running {
       return false
     }
@@ -519,6 +530,18 @@ public class Anim[T] {
     return true
   }
 
+  private func requestsFrameInternal() bool {
+    if !infinite || Motion.TimeScale <= 0.0 || boundPump?.ReducedMotion == true { return true }
+    let window = boundPump?.Owner
+    if paintTargets?.Count > 0 {
+      for node in paintTargets!! {
+        if motionNodeVisible(node, window) { return true }
+      }
+      return false
+    }
+    return motionNodeVisible(owner?.mountedNode, window)
+  }
+
   private func notifyOwner(value T) {
     for var i = 0; i < work.Length; i++ { notified[i] = work[i] }
     if let rebuild = invalidate {
@@ -551,14 +574,14 @@ public class Anim[T] {
     guard let pump = boundPump else {
       return 0.0
     }
-    return pump.Now
+    return if infinite { pump.WallNow } else { pump.Now }
   }
 
   private func bindInternal(pump MotionPump) {
     if disposed || boundPump == pump {
       return
     }
-    if paintReferences > 0 && boundPump != pump {
+    if paintTargets?.Count > 0 && boundPump != pump {
       throw InvalidOperationException("A paint animation cannot move to another window while bound")
     }
     if let owner = handle.registrationPump {
@@ -566,7 +589,7 @@ public class Anim[T] {
     }
     boundPump = pump
     if running {
-      startTime = pump.Now
+      startTime = currentNow()
       memoValid = false
       pump.Register(handle)
     }
