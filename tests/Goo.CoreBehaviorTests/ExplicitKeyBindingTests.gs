@@ -51,8 +51,8 @@ class ExplicitKeyBindingTests {
                 Assert.True(window.IsOpen)
                 if key == Key.C || !writable {
                     Assert.Equal("keep", input.Editor!!.Text)
-                    Assert.Equal(0, input.Editor!!.SelectionStart)
-                    Assert.Equal(4, input.Editor!!.SelectionEnd)
+                    Assert.Equal(4, input.Editor!!.SelectionStart)
+                    Assert.Equal(0, input.Editor!!.SelectionEnd)
                 } else {
                     Assert.Equal(if key == Key.X { "" } else { "keep" }, input.Editor!!.Text)
                 }
