@@ -312,5 +312,10 @@ internal unsafe partial class VulkanWindowTarget {
     let writeTimestamp = ResolveDeviceProc("vkCmdWriteTimestamp2") as (unmanaged[Cdecl](VkCommandBuffer, VkPipelineStageFlags2, VkQueryPool, uint32) -> void)?
     if writeTimestamp == nil { throw InvalidOperationException("vkCmdWriteTimestamp2 is unavailable") }
     dispatch.vkCmdWriteTimestamp2 = writeTimestamp
+    let beginQuery = ResolveDeviceProc("vkCmdBeginQuery") as (unmanaged[Cdecl](VkCommandBuffer, VkQueryPool, uint32, VkQueryControlFlags) -> void)?
+    let endQuery = ResolveDeviceProc("vkCmdEndQuery") as (unmanaged[Cdecl](VkCommandBuffer, VkQueryPool, uint32) -> void)?
+    if beginQuery == nil || endQuery == nil { throw InvalidOperationException("Fragment query commands are unavailable") }
+    dispatch.vkCmdBeginQuery = beginQuery
+    dispatch.vkCmdEndQuery = endQuery
   }
 }

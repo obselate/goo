@@ -7,11 +7,13 @@ import System.Numerics
 public partial class Window {
   private var uiScale float32 = 1.0F
   private var uiScaleSet bool
+  private let profileUiScale float32 = Single.Parse(Environment.GetEnvironmentVariable("GOO_PROFILE_UI_SCALE") ?? "1")
 
   /// Gets or sets the layout and rendering scale, clamped to 0.5 through 3. The default is 1, or the owner's scale when not explicitly set.
   /// Width and Height remain native logical sizes. Layout uses those sizes divided by UiScale, and rendering multiplies the display scale by UiScale.
   public prop UiScale float32 {
-    get -> if uiScaleSet { uiScale } else { Owner?.UiScale ?? 1.0F }
+    get -> if uiScaleSet { uiScale * (if Owner == nil { profileUiScale } else { 1.0F }) }
+      else { Owner?.UiScale ?? profileUiScale }
     set(value) {
       requireUiThread("Window.UiScale")
       if !Single.IsFinite(value) { throw ArgumentOutOfRangeException("value") }

@@ -823,6 +823,10 @@ internal unsafe partial class VulkanWindowTarget {
     if portabilitySubsetSupported { features13.pNext = *void(&portability) }
     let getFeatures = instanceDispatch.vkGetPhysicalDeviceFeatures2
     getFeatures(candidate, &features2)
+    if Environment.GetEnvironmentVariable("GOO_FRAGMENT_PROFILE") == "1"
+      && features2.features.pipelineStatisticsQuery == VkConstants.VK_FALSE {
+      throw NotSupportedException("Fragment pipeline statistics are unavailable")
+    }
     externalSwizzleSupported = !portabilitySubsetSupported || portability.imageViewFormatSwizzle != 0u
     let maintenanceSupported = swapchainMaintenanceVariant == VulkanSwapchainMaintenanceVariant.None
       || maintenance.swapchainMaintenance1 == VkConstants.VK_TRUE
@@ -846,6 +850,9 @@ internal unsafe partial class VulkanWindowTarget {
     var maintenance = VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT{}
     features2.sType = VkConstants.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2
     features2.pNext = *void(&features12)
+    features2.features.pipelineStatisticsQuery = if Environment.GetEnvironmentVariable("GOO_FRAGMENT_PROFILE") == "1" {
+      VkConstants.VK_TRUE
+    } else { VkConstants.VK_FALSE }
     features12.sType = VkConstants.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES
     features12.pNext = *void(&features13)
     features12.timelineSemaphore = VkConstants.VK_TRUE

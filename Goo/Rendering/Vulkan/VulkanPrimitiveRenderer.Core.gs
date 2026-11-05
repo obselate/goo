@@ -9,6 +9,14 @@ internal data struct VulkanPrimitiveRecordResult {
   var drawCallCount uint64
   var pipelineChangeCount uint64
   var descriptorChangeCount uint64
+  var renderPassCount uint64
+  var renderPassPixels uint64
+  var layerCount uint64
+  var layerPixels uint64
+  var blurPassCount uint64
+  var blurPassPixels uint64
+  var clipPassCount uint64
+  var clipPassPixels uint64
 }
 
 internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
@@ -98,6 +106,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private let clipContentKeys Dictionary[uint64, uint64]
   private var recordPipelineChangeCount uint64
   private var recordDescriptorChangeCount uint64
+  private var recordGpuWork VulkanPrimitiveRecordResult
   private var disposed bool
 
   internal prop ClipCapacity int32{ get -> clipStack.Length }
@@ -546,6 +555,13 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         }
 
       reuseBackdrops = partial
+      fragmentPass = 0
+      recordGpuWork.renderPassCount = 0uL
+      recordGpuWork.renderPassPixels = 0uL
+      recordGpuWork.layerCount = 0uL
+      recordGpuWork.layerPixels = 0uL
+      recordGpuWork.blurPassCount = 0uL
+      recordGpuWork.blurPassPixels = 0uL
       layerPool?.DiscardBackdrops(frame, !partial)
       layerDepth = 0
       currentTarget = nil
@@ -662,11 +678,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         throw InvalidOperationException("Vulkan layer stack is not balanced")
       }
       FlushPendingPrimitiveDraw(commandBuffer)
-      return VulkanPrimitiveRecordResult{
-        drawCallCount: recordDrawCallCount,
-        pipelineChangeCount: recordPipelineChangeCount,
-        descriptorChangeCount: recordDescriptorChangeCount,
-      }
+      recordGpuWork.drawCallCount = recordDrawCallCount
+      recordGpuWork.pipelineChangeCount = recordPipelineChangeCount
+      recordGpuWork.descriptorChangeCount = recordDescriptorChangeCount
+      return recordGpuWork
     }
 
   private func ProcessDraw(commandBuffer VkCommandBuffer, reference DrawRef, frame SceneFrame) {
@@ -1037,6 +1052,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       guard let layerTarget = state.Target else {
         throw InvalidOperationException("Vulkan layer target is unavailable")
       }
+      if FrameRecorder.Current != nil {
+        recordGpuWork.layerCount++
+        recordGpuWork.layerPixels += uint64(layerTarget.Extent.width) * uint64(layerTarget.Extent.height)
+      }
       if state.Target == state.BackdropTarget { state.BackdropTarget = nil }
       if backdropOnly && retainBackdrop {
         layerTarget.RetainedBackdrop = record
@@ -1059,6 +1078,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT)
       BeginLayerRendering(commandBuffer, layerTarget.Extent, layerTarget.ImageView,
         backdropOnly || preservesBackdrop)
+      fragmentPass = 1
       currentTarget = layerTarget
       currentOriginX = record.OriginX
       currentOriginY = record.OriginY
@@ -1130,6 +1150,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
       layerDepth = layerDepth - 1
       currentTarget = state.ParentTarget
+      fragmentPass = if currentTarget == nil { 0 } else { 1 }
       currentOriginX = state.ParentOriginX
       currentOriginY = state.ParentOriginY
       activeExtent = state.ParentExtent
@@ -1218,6 +1239,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       rendering.pColorAttachments = &attachment
       let beginRendering = dispatch.vkCmdBeginRendering
       beginRendering(commandBuffer, &rendering)
+      timestampState?.BeginFragmentPass(timestampSlot)
+      if FrameRecorder.Current != nil {
+        recordGpuWork.renderPassCount++
+        recordGpuWork.renderPassPixels += uint64(area.extent.width) * uint64(area.extent.height)
+      }
     }
 
   private func CopyBackdropCapture(commandBuffer VkCommandBuffer,

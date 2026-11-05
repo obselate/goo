@@ -82,6 +82,7 @@ internal unsafe partial class VulkanWindowTarget {
       BeginDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.Main)
       let beginRendering = dispatch.vkCmdBeginRendering
       beginRendering(slot.CommandBuffer, &rendering)
+      timestampState?.BeginFragmentPass(int32(activeFrameSlotIndex))
       RecordDiagnosticPass()
       renderingBegun = true
     }
