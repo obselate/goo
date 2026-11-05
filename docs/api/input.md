@@ -150,11 +150,11 @@ Set `Focusable: true` on a generic Blob. `Button`, `TextEntry`, and `TextEditor`
 ## Project visible focus to a descendant
 
 ```gsharp
-Container() {
-  .Handle: owner,
-  .Focusable: true,
-  .FocusTarget: activeRow,
-  Container{ Handle: activeRow, Focus: Style{ BasedOn: focusRing } },
+Container(){
+    .Handle: owner,
+    .Focusable: true,
+    .FocusTarget: activeRow,
+    Container{Handle: activeRow, Focus: Style{BasedOn: focusRing}},
 }
 ```
 

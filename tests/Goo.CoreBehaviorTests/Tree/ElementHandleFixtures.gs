@@ -19,7 +19,8 @@ internal class ElementHandleFixtures {
       let second = cell.Handles[1].AttachedNode()!!
       guard let semantic = adapter.Tree?.Root else { throw InvalidOperationException("Missing focus owner semantics") }
       guard let active = semantic.Relationships.ActiveDescendant else { throw InvalidOperationException("Missing active descendant") }
-      if active != semantic.Children[0].Id { throw InvalidOperationException("Active descendant identity changed") }
+      let rowSemantic = semantic.Children[0].Children[0]
+      if active != rowSemantic.Id { throw InvalidOperationException("Active descendant identity changed") }
       window.PlatformInput.PointerPress(0L, PointerDevice.Mouse, 5.0F, 5.0F,
         PointerButton.Primary, KeyModifiers{}, 1.0F)
       window.PlatformInput.PointerRelease(0L, PointerDevice.Mouse, 5.0F, 5.0F,
@@ -31,7 +32,7 @@ internal class ElementHandleFixtures {
       window.UpdateTree()
       if !owner.Focused || !cell.Handle.IsFocusVisible || !cell.Handles[0].IsFocusVisible
         || first.Focused || first.Focusable || first.OutlineWidth.Value != 2.0F
-        || !semantic.Focused || semantic.Children[0].Focused { throw InvalidOperationException("Keyboard focus projection") }
+        || !semantic.Focused || rowSemantic.Focused { throw InvalidOperationException("Keyboard focus projection") }
       let version = adapter.Tree!!.Version
       let ownerPass = owner.StyleResolvedPass
       let third = cell.Handles[2].AttachedNode()!!
