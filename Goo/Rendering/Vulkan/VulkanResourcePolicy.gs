@@ -49,7 +49,7 @@ internal func CreateVulkanResourcePolicy(memoryProperties VkPhysicalDeviceMemory
     }
     pathHardBytes = pathHardBytes - (pathHardBytes % 4uL)
     return VulkanResourcePolicy{
-      ImageInitialResourceCapacity: 256,
+      ImageInitialResourceCapacity: 16,
       ImageInitialLogicalCapacity: 512,
       ImageResidentHardBytes: imageResidentBytes,
       ImageLogicalSourceHardBytes: imageLogicalBytes,
