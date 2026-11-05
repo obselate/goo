@@ -8,6 +8,8 @@ internal unsafe sealed partial class VulkanDiagnosticTimestampState {
   private var fragmentPool VkQueryPool
   private var fragmentKinds []int32 = [0]int32
   private var fragmentPassIds []int32 = [0]int32
+  private var fragmentExtents []VkExtent2D = [0]VkExtent2D
+  private let fragmentCurrentExtents []VkExtent2D = [2]VkExtent2D
   private let fragmentPassSequences []int32 = [2]int32
   private var fragmentValues []uint64 = [0]uint64
   private let fragmentCounts []int32 = [2]int32
@@ -28,6 +30,7 @@ internal unsafe sealed partial class VulkanDiagnosticTimestampState {
     fragmentPool = pool
     fragmentKinds = [FragmentQueriesPerSlot * TimestampFrameSlotCount]int32
     fragmentPassIds = [FragmentQueriesPerSlot * TimestampFrameSlotCount]int32
+    fragmentExtents = [FragmentQueriesPerSlot * TimestampFrameSlotCount]VkExtent2D
     fragmentValues = [FragmentQueriesPerSlot]uint64
   }
 
@@ -47,8 +50,10 @@ internal unsafe sealed partial class VulkanDiagnosticTimestampState {
     fragmentPassSequences[slot] = 0
   }
 
-  internal func BeginFragmentPass(slot int32) {
-    if fragmentPool != 0uL && ValidTimestampSlot(slot) { fragmentPassSequences[slot]++ }
+  internal func BeginFragmentPass(slot int32, extent VkExtent2D) {
+    if fragmentPool == 0uL || !ValidTimestampSlot(slot) { return }
+    fragmentPassSequences[slot]++
+    fragmentCurrentExtents[slot] = extent
   }
 
   internal func BeginFragmentQuery(commandBuffer VkCommandBuffer, slot int32,
@@ -62,6 +67,7 @@ internal unsafe sealed partial class VulkanDiagnosticTimestampState {
     let query = slot * FragmentQueriesPerSlot + count
     fragmentKinds[query] = pass * 10 + kind
     fragmentPassIds[query] = fragmentPassSequences[slot]
+    fragmentExtents[query] = fragmentCurrentExtents[slot]
     timestampDispatch.vkCmdBeginQuery(commandBuffer, fragmentPool, uint32(query), 0u)
     fragmentCounts[slot]++
     return query
@@ -89,7 +95,9 @@ internal unsafe sealed partial class VulkanDiagnosticTimestampState {
     for query in 0 ... count {
       let offset = slot * FragmentQueriesPerSlot + query
       let kind = fragmentKinds[offset]
-      Console.WriteLine("[goo.profile.fragments] window=${context.window} frame=${context.frame} submission=${context.completionSerial} physicalPass=${fragmentPassIds[offset]} pass=${kind / 10} kind=${kind % 10} invocations=${fragmentValues[query]} omitted=${fragmentOmitted[slot]} available=True")
+      let extent = fragmentExtents[offset]
+      let pixels = uint64(extent.width) * uint64(extent.height)
+      Console.WriteLine("[goo.profile.fragments] window=${context.window} frame=${context.frame} submission=${context.completionSerial} physicalPass=${fragmentPassIds[offset]} pass=${kind / 10} kind=${kind % 10} width=${extent.width} height=${extent.height} outputPixels=$pixels invocations=${fragmentValues[query]} omitted=${fragmentOmitted[slot]} available=True")
     }
   }
 }

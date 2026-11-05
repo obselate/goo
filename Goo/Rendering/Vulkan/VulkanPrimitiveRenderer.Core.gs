@@ -1241,7 +1241,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       rendering.pColorAttachments = &attachment
       let beginRendering = dispatch.vkCmdBeginRendering
       beginRendering(commandBuffer, &rendering)
-      timestampState?.BeginFragmentPass(timestampSlot)
+      timestampState?.BeginFragmentPass(timestampSlot, rendering.renderArea.extent)
       if FrameRecorder.Current != nil {
         recordGpuWork.renderPassCount++
         recordGpuWork.renderPassPixels += uint64(area.extent.width) * uint64(area.extent.height)

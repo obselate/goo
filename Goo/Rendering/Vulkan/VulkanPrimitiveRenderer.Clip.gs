@@ -438,7 +438,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       rendering.pColorAttachments = &attachment
       let beginRendering = dispatch.vkCmdBeginRendering
       beginRendering(commandBuffer, &rendering)
-      timestampState?.BeginFragmentPass(timestampSlot)
+      timestampState?.BeginFragmentPass(timestampSlot, rendering.renderArea.extent)
     }
 
   private func EmitClipMask(commandBuffer VkCommandBuffer, extent VkExtent2D,

@@ -110,6 +110,6 @@ internal partial class VulkanSceneCompiler {
       }
     }
     let ticks = Stopwatch.GetTimestamp() - started
-    Console.WriteLine("[goo.profile.occlusion] draws=$count removed=$removed comparisons=$comparisons ticks=$ticks frequency=${Stopwatch.Frequency}")
+    Console.WriteLine("[goo.profile.occlusion] sceneVersion=$frameVersion startedTicks=$started draws=$count removed=$removed comparisons=$comparisons ticks=$ticks frequency=${Stopwatch.Frequency}")
   }
 }
