@@ -379,6 +379,8 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
   private let maximumDimension uint32
   private var requestedWidth uint32
   private let allocationMode int32
+  private let profileCapacity bool
+  private var profileResidentBytes uint64 = uint64.MaxValue
   private var lastResizeTicks int64
   private var oversizedActive bool
   private var requestedHeight uint32
@@ -456,6 +458,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       maximumDimension = maximumImageDimension
       let selectedMode = Environment.GetEnvironmentVariable("GOO_LAYER_ALLOCATION_POLICY")
       allocationMode = selectedMode == "bucket" ? 1 : selectedMode == "growth" ? 2 : selectedMode == "retain" ? 3 : selectedMode == "skip-blur" ? 4 : 0
+      profileCapacity = Environment.GetEnvironmentVariable("GOO_RESIZE_VISUAL_ONLY") == "1"
       residentBytes = 0uL
       targets = [initialTargetCapacity]VulkanOffscreenLayerTarget?
       leased = [initialTargetCapacity]bool
@@ -1163,6 +1166,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
   }
 
   private func RecordCreate(target VulkanOffscreenLayerTarget) {
+    RecordCapacity(target)
     if let current = diagnostics {
       current.AddLayerPoolCreate(1uL)
       RecordLayerEvent(current, VulkanDiagnosticEventIds.LayerCreate,
@@ -1171,6 +1175,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
   }
 
   private func RecordReuse(target VulkanOffscreenLayerTarget, sameCommand bool) {
+    RecordCapacity(target)
     if let current = diagnostics {
       current.AddLayerPoolReuse(1uL)
       let eventId = if sameCommand {
@@ -1180,6 +1185,20 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       }
       RecordLayerEvent(current, eventId, VulkanDiagnosticCategories.Resource,
         uint64(target.Extent.width), uint64(target.Extent.height))
+    }
+  }
+
+  private func RecordCapacity(target VulkanOffscreenLayerTarget) {
+    if !profileCapacity { return }
+    if let recorder = FrameRecorder.Current {
+      recorder.Publish(FrameTraceRecord{
+        Kind: FrameTraceKind.Instant, Ticks: Stopwatch.GetTimestamp() - recorder.Origin,
+        Context: FrameProfiler.Current?.Context ?? FrameTraceContext{},
+        Category: VulkanDiagnosticCategories.Resource, ResourceId: target.Image, ParentId: sampler,
+        Width: int32(target.Extent.width), Height: int32(target.Extent.height),
+        Value0: uint64(target.ContentExtent.width), Value1: uint64(target.ContentExtent.height),
+        Source: "layer.capacity",
+      })
     }
   }
 
@@ -1239,6 +1258,16 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     if let current = diagnostics {
       current.SetLayerPoolStats(uint64(byteBudget), uint64(residentBytes),
         uint64(LiveTargetCount), uint64(LeasedTargetCount))
+    }
+    if let recorder = FrameRecorder.Current {
+      if profileResidentBytes == residentBytes { return }
+      profileResidentBytes = residentBytes
+      recorder.Publish(FrameTraceRecord{
+        Kind: FrameTraceKind.Counter, Ticks: Stopwatch.GetTimestamp() - recorder.Origin,
+        Context: FrameProfiler.Current?.Context ?? FrameTraceContext{}, ResourceId: sampler,
+        EventId: VulkanDiagnosticEventIds.LiveMemory, Category: VulkanDiagnosticCategories.Resource,
+        Value0: residentBytes, Value1: byteBudget, Source: "layer.pool", Name: "resident", Unit: "bytes",
+      })
     }
   }
 
