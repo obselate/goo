@@ -6,6 +6,7 @@
 - Allocate Yoga style value buffers only when an indexed value is stored.
 - Add `Blob.FocusTarget`, `ElementHandle.SetFocusTarget` and `IsFocusVisible` for composite focus visuals without moving keyboard or accessibility focus.
 - Precompute embedded shader digests during the build so basic applications do not initialize cryptographic libraries just to name the pipeline cache or prepare built-in effects. Existing shader and cache identities are unchanged.
+- Avoid allocating a default child list when Container or Button receives a child list during initialization.
 
 ## 0.27.11 - 2026-11-05
 
