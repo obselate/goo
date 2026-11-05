@@ -46,6 +46,8 @@ internal partial class InputCoordinator {
 
   internal func SyncControlledEntry(n Node, value string) bool -> text.SyncControlledEntry(n, value)
 
+  internal func RefreshFocusProjection(resolver Resolver) bool -> focus.RefreshProjection(resolver)
+
   internal func Attach(host WindowHost) {
     if disposed { throw ObjectDisposedException("InputCoordinator") }
     if attachedHost == host {

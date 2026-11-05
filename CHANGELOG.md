@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Avoid allocating a default child list when Container or Button receives a child list during initialization.
+- Add `Blob.FocusTarget`, `ElementHandle.SetFocusTarget` and `IsFocusVisible` for composite focus visuals without moving keyboard or accessibility focus.
 
 ## 0.27.11 - 2026-11-05
 

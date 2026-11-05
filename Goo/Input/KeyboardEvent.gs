@@ -42,6 +42,7 @@ public struct FocusEvent {
 internal class InputCallbackSet {
   internal var Command Command?
   internal var Bindings ([]KeyBinding)?
+  internal var FocusTarget ElementHandle?
   internal var OnKeyDown((KeyEvent) -> void)?
   internal var OnKeyUp((KeyEvent) -> void)?
   internal var OnFocus((FocusEvent) -> void)?
@@ -50,7 +51,7 @@ internal class InputCallbackSet {
   internal var OnPointerLeave((PointerEvent) -> void)?
 
   internal func Empty() bool -> OnKeyDown == nil && OnKeyUp == nil && OnFocus == nil && OnBlur == nil
-    && OnPointerEnter == nil && OnPointerLeave == nil && Bindings == nil && Command == nil
+    && OnPointerEnter == nil && OnPointerLeave == nil && Bindings == nil && Command == nil && FocusTarget == nil
 }
 
 // Sparse callback state keeps ordinary declarations and retained nodes unchanged.
@@ -70,6 +71,29 @@ internal class InputCallbacks {
     internal func BlobCommand(blob Blob) Command? -> blobCallbacks(blob, false)?.Command
 
     internal func Command(node Node) Command? -> nodeCallbacks(node)?.Command
+
+    internal func BlobFocusTarget(blob Blob) ElementHandle? -> blobCallbacks(blob, false)?.FocusTarget
+
+    internal func SetBlobFocusTarget(blob Blob, target ElementHandle?) {
+      guard let callbacks = blobCallbacks(blob, target != nil) else { return }
+      callbacks.FocusTarget = target
+      finishBlob(blob, callbacks)
+    }
+
+    internal func FocusTarget(node Node) ElementHandle? -> nodeCallbacks(node)?.FocusTarget
+
+    internal func SetFocusTarget(node Node, target ElementHandle?) bool {
+      if FocusTarget(node) == target { return false }
+      var callbacks = nodeCallbacks(node)
+      if callbacks == nil {
+        callbacks = InputCallbackSet()
+        nodeValues.Add(node, callbacks)
+      }
+      callbacks.FocusTarget = target
+      if callbacks.Empty() { nodeValues.Remove(node) }
+      InputMetadata.Refresh(node)
+      return true
+    }
 
     internal func SetBlobBindings(blob Blob, value ([]KeyBinding)?) {
       let callbacks = blobCallbacks(blob, value != nil && value.Length > 0)
@@ -158,9 +182,10 @@ internal class InputCallbacks {
       }
       let sourcePresence = presence(source)
       let destinationPresence = presence(destination)
+      let targetChanged = source?.FocusTarget != destination?.FocusTarget
       if source == nil {
         nodeValues.Remove(node)
-        return sourcePresence != destinationPresence
+        return sourcePresence != destinationPresence || targetChanged
       }
       if destination == nil {
         destination = InputCallbackSet()
@@ -168,13 +193,14 @@ internal class InputCallbacks {
       }
       destination.OnKeyDown = source.OnKeyDown
       destination.Command = source.Command
+      destination.FocusTarget = source.FocusTarget
       destination.Bindings = source.Bindings
       destination.OnKeyUp = source.OnKeyUp
       destination.OnFocus = source.OnFocus
       destination.OnBlur = source.OnBlur
       destination.OnPointerEnter = source.OnPointerEnter
       destination.OnPointerLeave = source.OnPointerLeave
-      return sourcePresence != destinationPresence
+      return sourcePresence != destinationPresence || targetChanged
     }
 
     internal func KeyDown(node Node)((KeyEvent) -> void) ? -> nodeCallbacks(node)?.OnKeyDown
