@@ -798,22 +798,26 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     var total uint64 = 0uL
     var index int32 = 0
     while index < frame.DrawRefCount {
-      let kind = frame.DrawRefs[index].Kind
+      let reference = frame.DrawRefs[index]
+      let kind = reference.Kind
       var count uint64 = 0uL
       switch kind {
         case SceneDrawKind.SolidBox {
-          RequireRecordIndex(frame.DrawRefs[index].Index, frame.SolidBoxCount, "solid box index")
-          let bounds = frame.SolidBoxes[frame.DrawRefs[index].Index].Bounds
+          RequireRecordIndex(reference.Index, frame.SolidBoxCount, "solid box index")
+          let value = frame.SolidBoxes[reference.Index]
+          let bounds = value.Bounds
           count = if bounds.Width * bounds.Height >= float32(OpaqueInteriorMinimumArea) { 5uL } else { 1uL }
         }
         case SceneDrawKind.RoundedBox {
-          RequireRecordIndex(frame.DrawRefs[index].Index, frame.RoundedBoxCount, "rounded box index")
-          let bounds = frame.RoundedBoxes[frame.DrawRefs[index].Index].Bounds
+          RequireRecordIndex(reference.Index, frame.RoundedBoxCount, "rounded box index")
+          let value = frame.RoundedBoxes[reference.Index]
+          let bounds = value.Bounds
           count = if bounds.Width * bounds.Height >= float32(OpaqueInteriorMinimumArea) { 5uL } else { 1uL }
         }
         case SceneDrawKind.PerEdgeBorder {
-          RequireRecordIndex(frame.DrawRefs[index].Index, frame.PerEdgeBorderCount, "border index")
-          let bounds = frame.PerEdgeBorders[frame.DrawRefs[index].Index].Bounds
+          RequireRecordIndex(reference.Index, frame.PerEdgeBorderCount, "border index")
+          let value = frame.PerEdgeBorders[reference.Index]
+          let bounds = value.Bounds
           count = if bounds.Width * bounds.Height >= float32(OpaqueInteriorMinimumArea) { 20uL } else { 4uL }
         }
         case SceneDrawKind.LinearGradient {
@@ -829,8 +833,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           count = GradientRecordCount(value.StopCount)
         }
         case SceneDrawKind.Underline {
-          RequireRecordIndex(frame.DrawRefs[index].Index, frame.UnderlineCount, "underline index")
-          let bounds = frame.Underlines[frame.DrawRefs[index].Index].Bounds
+          RequireRecordIndex(reference.Index, frame.UnderlineCount, "underline index")
+          let value = frame.Underlines[reference.Index]
+          let bounds = value.Bounds
           count = if bounds.Width * bounds.Height >= float32(OpaqueInteriorMinimumArea) { 5uL } else { 1uL }
         }
         case SceneDrawKind.LayerBegin {
