@@ -192,7 +192,7 @@ Goo wraps each item in a keyed, absolutely positioned element. The wrapper has t
 Goo calls `NeedsRealize` after each layout and scroll. A true result runs `Realize` again in the same frame, for at most three passes, and then in the next frames.
 
 Set `output.ScrollOffset` to move the scroll position together with the items, for example to keep an anchor row in place when rows above it change size. A scroll in progress keeps its remaining distance. Own tail-following state in the list or log view. `ElementHandle.MetricsChanged` reports scroll range changes, and `JumpTo` can move to the new end before paint.
-Set `output.AnchorKey` to the retained visible row key to keep its first surviving content node at the same vertical position after layout. Implement `BoundsOf` with measured or estimated item bounds for aligned scrolling.
+Set `output.AnchorKey` to the retained visible row key to keep its first surviving content node at the same vertical position after layout. No descendant adjustment is applied at vertical scroll offset zero. Implement `BoundsOf` with measured or estimated item bounds for aligned scrolling.
 
 ## Animate computed position changes
 
