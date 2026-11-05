@@ -147,7 +147,7 @@ internal class FocusManager {
 
   internal func RefreshProjection(resolver Resolver) bool {
     let target = projectionTarget()
-    if target == projected { return false }
+    if target == projectedMount.Captured { return false }
     if let old = projectedMount.Captured {
       if !old.Focused { old.FocusVisible = false }
       if !old.Retired { resolver.Invalidate(old, false) }

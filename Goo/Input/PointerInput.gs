@@ -613,9 +613,9 @@ internal partial class PointerInput {
       return canceled
     }
     var routeUnavailable = false
-    if current.CaptureTarget != nil {
+    if current.CapturePath.Count > 0 {
       routeUnavailable = !rebuildCapturePath(tree)
-    } else if current.ActiveTarget != nil {
+    } else if current.ActivePath.Count > 0 {
       routeUnavailable = !rebuildActivePath(tree)
     }
     if routeUnavailable {
@@ -641,18 +641,16 @@ internal partial class PointerInput {
       }
     }
     if let state = scrollDragState() {
-      if let target = state.Target {
-        if !nodeVisibleInTree(tree, target, false) || !scrollThumbAvailable(target, state.Vertical) {
-          clearScrollDrag()
-          clearScrollbarPartPress(resolver)
-        }
+      let target = state.Target
+      if target == nil || !nodeVisibleInTree(tree, target, false) || !scrollThumbAvailable(target, state.Vertical) {
+        clearScrollDrag()
+        clearScrollbarPartPress(resolver)
       }
     }
     if let state = scrollbarPartPressState() {
-      if let target = state.Target {
-        if target.Retired || !nodeVisibleInTree(tree, target, false) {
-          clearScrollbarPartPress(resolver)
-        }
+      let target = state.Target
+      if target == nil || !nodeVisibleInTree(tree, target, false) {
+        clearScrollbarPartPress(resolver)
       }
     }
     if !pressChainVisible(tree) {

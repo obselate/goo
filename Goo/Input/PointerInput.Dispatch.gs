@@ -380,7 +380,7 @@ internal partial class PointerInput {
   }
 
   private func dispatchCancel() {
-    let captured = current.CaptureTarget != nil && current.CapturePath.Count > 0
+    let captured = current.CapturePath.Count > 0
     let route = captured ? current.CapturePath : current.ActivePath
     let positions = captured ? current.CapturePositions : current.ActivePositions
     if route.Count == 0 || !current.LastEventValid {
@@ -394,7 +394,8 @@ internal partial class PointerInput {
     var interactiveChild = false
     try {
       for var i = route.Count; i > 0; i-- {
-        guard let n = route[i - 1].Current else { continue }
+        let mount = route[i - 1]
+        guard let n = mount.Current else { continue }
         let event = PointerEvent{
           Identity: current.Device == PointerDevice.Mouse ? nil : current,
           IsPrimary: isSemanticPrimary(),
@@ -419,7 +420,8 @@ internal partial class PointerInput {
           control.ClearCurrentTarget(generation)
           owner?.Rebuild()
         }
-        if current != contact || route.Count != routeCount { return }
+        if current != contact || route.Count != routeCount || mount.Current == nil
+          || !route[i - 1].Equals(mount) { return }
         if control.PropagationStopped || n.FocusScopeBoundary { break }
         interactiveChild = interactiveChild || isInteractiveContent(n)
       }
