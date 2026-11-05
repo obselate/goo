@@ -181,6 +181,15 @@ internal class AccessibilityFixtures {
       || entry.SelectionLength != 2 || entry.Caret != 3 {
         return false
       }
+    cell.ReadOnly = true
+    cell.Rebuild()
+    window.UpdateTree()
+    if entry.ReadOnly != true || entry.Role != AccessibilityRole.TextInput
+      || hasAction(entry, AccessibilityAction.SetValue)
+      || !hasAction(entry, AccessibilityAction.SetSelection)
+      || window.PerformAccessibilityAction(entry.Id, AccessibilityActionRequest.SetValue("blocked")) {
+      return false
+    }
     cell.HideAction = true
     cell.Rebuild()
     window.UpdateTree()
@@ -550,6 +559,7 @@ internal class AccessibilityTransactionalCell : Cell {
 
 internal class AccessibilityActionCell : Cell {
   internal var HideAction bool
+  internal var ReadOnly bool
 
   init() { }
 
@@ -561,7 +571,7 @@ internal class AccessibilityActionCell : Cell {
         OnAction: func(request AccessibilityActionRequest) bool { return true },
       } }
     },
-    TextEntry{ Value: "start" },
+    TextEntry{ Value: "start", ReadOnly: ReadOnly },
     Container() {.Accessibility: Accessibility{ Role: AccessibilityRole.Generic },.Height: 8,.OverflowY: Overflow.Scroll,
       Text{ Content: "scroll content" }
     } }

@@ -1328,6 +1328,10 @@ Gets the placeholder shown for an empty value.
 
 Gets the placeholder color. Nil draws Color at 45% opacity.
 
+### `ReadOnly`
+
+Gets whether editing commands are disabled.
+
 ### `SelectionColor`
 
 Gets the selection highlight color.

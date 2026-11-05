@@ -426,6 +426,36 @@ internal class InputFixtures {
     return input.NextTickDeadlineSeconds(0.0) >= 0.99
   }
 
+  func PreventedHeldKeyRepeatsUntilReleased() bool {
+    var presses int32
+    var repeats int32
+    var defaults int32
+    let root = Reconciler{ Res: Resolver{} }.Mount(Container{
+      Focusable: true,
+      OnKeyDown: (event KeyEvent) -> {
+        presses++
+        if event.Repeat { repeats++ }
+        event.PreventDefault()
+      },
+      KeyBindings: []KeyBinding{
+        KeyBinding{Key: Key.Down, Repeat: true, Action: () -> { defaults++ }},
+      },
+    })
+    let resolver = Resolver{}
+    let input = InputCoordinator()
+    if !input.FocusElement(resolver, root) { return false }
+    input.QueueKeyPress(Key.Down, KeyModifiers{})
+    input.Drain(root, resolver, 0.0, nil)
+    for tick in 0 ... 100 { input.Step(root, resolver, 0.01) }
+    input.QueueKeyRelease(Key.Down)
+    input.Drain(root, resolver, 0.0, nil)
+    let heldPresses = presses
+    input.Step(root, resolver, 1.0)
+    Console.WriteLine("prevented Down hold: presses=${presses} repeats=${repeats} defaults=${defaults}")
+    return presses == 17 && repeats == 16 && defaults == 0 && presses == heldPresses
+      && input.NextTickDeadlineSeconds() >= 0.99
+  }
+
   func SyntheticHeldBindingSurvivesAutoFocusRebuild() bool {
     let cell = InputSyntheticRepeatCell{}
     let driver = InputFixtureDriver(cell, 100, 30)
@@ -1428,6 +1458,61 @@ internal class InputFixtures {
     driver.Update()
     driver.Key(Key.Z, false, true)
     return cell.value == "external" && entry(driver).Caret == 2
+  }
+
+  func ReadOnlyEntryPreservesTextAndAllowsSelection() bool {
+    let cell = InputEntryCell{ value: "seed" }
+    let driver = InputFixtureDriver(cell, 300, 100)
+    if Environment.GetEnvironmentVariable("GOO_READ_ONLY_NATIVE_CLIPBOARD") == "1" {
+      driver.Window.Open()
+    }
+    try {
+      driver.Press(10.0F, 10.0F)
+      driver.Release(10.0F, 10.0F)
+      driver.Key(Key.End, false, true)
+      driver.Char("x")
+      driver.Key(Key.End, false, true)
+      driver.Char("y")
+      driver.Key(Key.Z, false, true)
+      driver.Input.QueueComposition("pending", 0, 3)
+      driver.Drain()
+      cell.readOnly = true
+      cell.Rebuild()
+      driver.Update()
+      let node = entry(driver)
+      if driver.Input.EditorSnapshot()?.IsReadOnly != true { return false }
+      driver.Key(Key.A, false, true)
+      driver.Key(Key.C, false, true)
+      if node.Anchor != 0 || node.Caret != 5 { return false }
+      driver.Char("changed")
+      for key in []Key{ Key.Backspace, Key.Delete, Key.V, Key.X, Key.Z, Key.Y } {
+        driver.Key(key, false, key != Key.Backspace && key != Key.Delete)
+        if node.Buffer != "seedx" { return false }
+      }
+      driver.Input.QueueComposition("composition", 0, 3)
+      driver.Drain()
+      if node.Buffer != "seedx" || driver.Input.EditorSnapshot()?.CompositionStart != -1 {
+        return false
+      }
+      driver.Input.CommitEditorText(driver.Window.Tree, "committed")
+      if node.Buffer != "seedx" { return false }
+      driver.Press(10.0F, 10.0F)
+      driver.Move(50.0F, 10.0F)
+      driver.Release(50.0F, 10.0F)
+      if node.Anchor == node.Caret || node.Buffer != "seedx" { return false }
+      driver.Key(Key.Home, false, true)
+      if node.Caret != 0 { return false }
+      driver.Key(Key.End, true, true)
+      if node.Anchor != 0 || node.Caret != 5 { return false }
+      cell.readOnly = false
+      cell.Rebuild()
+      driver.Update()
+      driver.Key(Key.End, false, true)
+      driver.Key(Key.V, false, true)
+      return node.Buffer == "seedxseedx"
+    } finally {
+      driver.Window.Close()
+    }
   }
 
   func TextEntryCommandsAndSanitization() bool {
@@ -3010,6 +3095,7 @@ internal class InputEntryCell : Cell {
   internal var value string
   internal var writeBack bool
   internal var controlled bool
+  internal var readOnly bool
   internal var changed string
   internal var submitted string
 
@@ -3024,6 +3110,7 @@ internal class InputEntryCell : Cell {
         Key: "entry",
         Value: value,
         Controlled: controlled,
+        ReadOnly: readOnly,
         Placeholder: "hint",
         Width: 200.0,
         Height: 30.0,
