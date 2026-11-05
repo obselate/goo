@@ -307,6 +307,25 @@ ViewTreeObserver
                 )
             )
         }
+        if node.Role == AccessibilityRole.Grid {
+            info.SetCollectionInfo(
+                AccessibilityNodeInfo.CollectionInfo(
+                    node.RowCount ?? -1,
+                    node.ColumnCount ?? -1,
+                    false,
+                    int32(if node.MultiSelectable == true { SelectionMode.Multiple } else { SelectionMode.Single })
+                )
+            )
+        }
+        if node.Role is AccessibilityRole.Row or AccessibilityRole.GridCell or AccessibilityRole.ColumnHeader or AccessibilityRole.RowHeader {
+            info.SetCollectionItemInfo(
+                AccessibilityNodeInfo.CollectionItemInfo(
+                    node.RowIndex ?? -1, 1, node.ColumnIndex ?? -1, 1,
+                    node.Role is AccessibilityRole.ColumnHeader or AccessibilityRole.RowHeader,
+                    node.Selected == true
+                )
+            )
+        }
         if node.Role == AccessibilityRole.ListItem && node.PositionInSet is {} position {
             info.SetCollectionItemInfo(
                 AccessibilityNodeInfo.CollectionItemInfo(position, 1, 0, 1, false, node.Selected == true)
@@ -663,6 +682,10 @@ ViewTreeObserver
             case AccessibilityRole.List: "android.widget.ListView"
             case AccessibilityRole.Grid: "android.widget.GridView"
             case AccessibilityRole.ComboBox: "android.widget.Spinner"
+            case AccessibilityRole.Separator: "android.view.View"
+            case AccessibilityRole.TabPanel: "android.widget.FrameLayout"
+            case AccessibilityRole.Toolbar: "android.widget.Toolbar"
+            case AccessibilityRole.Tooltip: "android.widget.TextView"
             default: "android.view.View"
         }
 
