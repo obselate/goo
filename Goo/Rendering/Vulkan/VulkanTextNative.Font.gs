@@ -35,6 +35,7 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
 
   public prop Metrics VulkanHarfBuzzMetrics{ get -> metrics }
   internal prop ByteSize int64{ get -> int64(fontBytes.Length) }
+  internal prop HeapByteSize int64{ get -> if fontBytes.Path == nil { ByteSize } else { 0L } }
   internal prop FaceIndex uint32{ get -> faceIndex }
   internal prop FaceCount uint32{ get -> faceCount }
   public prop AbiVersion uint32{ get -> VulkanTextProviderAbi.Version }
