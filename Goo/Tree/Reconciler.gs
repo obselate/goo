@@ -337,7 +337,7 @@ internal partial class Reconciler {
 
   internal func mountChildren(n Node, children IList[Blob]) {
     let scratch = keyedScratch()
-    let scratchScope = scratch.Rent()
+    let scratchScope = scratch.Rent(children.Count)
     try {
       let virtualRows = FrameRecorder.Current != nil && Virtualization.State(n) != nil
       validateChildren(children, scratchScope)
@@ -1204,7 +1204,7 @@ internal partial class Reconciler {
   internal func diffChildren(n Node, blobs IList[Blob]) {
     if styleRetryRoot == nil { rememberStyleRetryRoot(n) }
     let scratch = keyedScratch()
-    let scratchScope = scratch.Rent()
+    let scratchScope = scratch.Rent(Math.Max(n.Children.Count, blobs.Count))
     try {
       validateChildren(blobs, scratchScope)
       if scratchScope.IncomingKeys.Count == 0 {
