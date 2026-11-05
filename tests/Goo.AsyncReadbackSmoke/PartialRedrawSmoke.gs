@@ -477,7 +477,7 @@ class PartialBackdropCell : Cell {
       BackgroundColor: Step >= 2 ? Color.Rgb(80, 200, 100) : Color.Rgb(220, 60, 40),
     },
     Container() {
-      .Position: PositionType.Absolute, .Left: 20, .Top: 20, .Width: 120, .Height: 80,
+      .Position: PositionType.Absolute, .Left: 20, .Top: 20, .Width: Percent(30), .Height: Percent(40),
       .BorderRadius: 12, .BackdropBlur: 4,
       Container{
         Position: PositionType.Absolute, Left: 30, Top: 20, Width: 30, Height: 20,
@@ -658,8 +658,18 @@ func PartialRedrawScene(name string, root Cell, steps int32, advance Action,
     WindowReadbackTestFixture.Pump(window, 0.0)
     let metrics = WindowReadbackTestFixture.Metrics(window)
     if resizeCapacity {
-      Require(WindowReadbackTestFixture.Resize(window, 400, 190,
-        metrics.FramebufferWidth * 7 / 5, metrics.FramebufferHeight * 7 / 5),
+      window.Width = 560
+      window.Height = 266
+      var resizeAttempt int32
+      var resizedMetrics = WindowReadbackTestFixture.Metrics(window)
+      while (resizedMetrics.LogicalWidth != 560 || resizedMetrics.LogicalHeight != 266)
+        && resizeAttempt < 1000 {
+        WindowReadbackTestFixture.PumpNativeEvents()
+        WindowReadbackTestFixture.Pump(window, 0.0)
+        resizedMetrics = WindowReadbackTestFixture.Metrics(window)
+        resizeAttempt++
+      }
+      Require(resizedMetrics.LogicalWidth == 560 && resizedMetrics.LogicalHeight == 266,
         "Partial redraw capacity seed resize failed")
       WindowReadbackTestFixture.SetForceFullRedraw(window, true)
       for frameIndex in 0 ... 3 {
@@ -667,8 +677,18 @@ func PartialRedrawScene(name string, root Cell, steps int32, advance Action,
         WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
       }
       let reuseCount = WindowReadbackTestFixture.DiagnosticCounters(window).layerPoolReuseCount
-      Require(WindowReadbackTestFixture.Resize(window, 400, 190,
-        metrics.FramebufferWidth, metrics.FramebufferHeight),
+      window.Width = 400
+      window.Height = 190
+      resizeAttempt = 0
+      resizedMetrics = WindowReadbackTestFixture.Metrics(window)
+      while (resizedMetrics.LogicalWidth != 400 || resizedMetrics.LogicalHeight != 190)
+        && resizeAttempt < 1000 {
+        WindowReadbackTestFixture.PumpNativeEvents()
+        WindowReadbackTestFixture.Pump(window, 0.0)
+        resizedMetrics = WindowReadbackTestFixture.Metrics(window)
+        resizeAttempt++
+      }
+      Require(resizedMetrics.LogicalWidth == 400 && resizedMetrics.LogicalHeight == 190,
         "Partial redraw capacity recovery resize failed")
       WindowReadbackTestFixture.ForceRender(window, 0.0)
       WindowReadbackTestFixture.DrainWindowQueue(window, 10000)

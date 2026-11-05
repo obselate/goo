@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-- Reuse bounded offscreen layer capacity during window resize without changing settled image quality.
 - Add `Blob.FocusTarget`, `ElementHandle.SetFocusTarget` and `IsFocusVisible` for composite focus visuals without moving keyboard or accessibility focus.
+- Reuse bounded offscreen layer capacity during window resize without changing settled image quality.
 
 ## 0.27.11 - 2026-11-05
 
