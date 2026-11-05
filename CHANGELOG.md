@@ -8,6 +8,7 @@
 - Precompute embedded shader digests during the build so basic applications do not initialize cryptographic libraries just to name the pipeline cache or prepare built-in effects. Existing shader and cache identities are unchanged.
 - Avoid allocating a default child list when Container or Button receives a child list during initialization.
 - Draw large opaque solid interiors without distance coverage or blending. Keep the existing antialiasing at the edges.
+- Keep the DevTools pipe listener alive while clients disconnect so queued input and snapshot connections are not reset. (#583)
 - Size anchored Portals to the available space on their selected side instead of shifting them over the anchor. Keep cross-axis containment.
 - Add `Portal.HideWhenAnchorClipped` to hide clipped anchored overlays without unmounting their content or losing focus and text composition.
 

@@ -154,6 +154,7 @@ class FixtureContractTests {
             yield Contract[DiagnosticsFixtures]("CaptureRequestRetriesAfterNotReady")
             yield Contract[DiagnosticsFixtures]("IdleFramesDeferSnapshotsUntilRequestedContract")
             yield Contract[DiagnosticsFixtures]("IdlePipeConnectionKeepsSnapshotAvailableContract")
+            yield Contract[DiagnosticsFixtures]("QueuedPipeConnectionsSurviveProbeDisconnectContract")
             yield Contract[DiagnosticsFixtures]("InspectClickAndEscapeContract")
             yield Contract[DiagnosticsFixtures]("ResolvedSemanticsAndEditorPrivacyContract")
             yield Contract[DiagnosticsFixtures]("RuntimeOverrideInheritanceAndResetContract")
