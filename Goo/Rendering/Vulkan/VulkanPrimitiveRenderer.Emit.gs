@@ -660,7 +660,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
             blendPipelineLayout, 0u, 2u, &descriptorSets[0], 0u, nil)
           recordDescriptorChangeCount++
         }
-        let parameters = VulkanShaderEffectPushConstants{
+        var parameters = VulkanShaderEffectPushConstants{
           Parameter0: effect.Parameter0,
           Parameter1: effect.Parameter1,
           Parameter2: effect.Parameter2,
