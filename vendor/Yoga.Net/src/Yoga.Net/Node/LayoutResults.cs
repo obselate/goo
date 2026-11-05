@@ -15,20 +15,7 @@ namespace Facebook.Yoga
         public Direction LastOwnerDirection = Direction.Inherit;
 
         public uint NextCachedMeasurementsIndex = 0;
-        private CachedMeasurement[]? _cachedMeasurements;
-        public CachedMeasurement[] CachedMeasurements
-        {
-            get
-            {
-                if (_cachedMeasurements == null)
-                {
-                    _cachedMeasurements = new CachedMeasurement[MaxCachedMeasurements];
-                    Array.Fill(_cachedMeasurements, new CachedMeasurement());
-                }
-                return _cachedMeasurements;
-            }
-            set => _cachedMeasurements = value;
-        }
+        public CachedMeasurement[] CachedMeasurements = new CachedMeasurement[MaxCachedMeasurements];
 
         public CachedMeasurement CachedLayout = new CachedMeasurement();
 
@@ -61,6 +48,14 @@ namespace Facebook.Yoga
         private float _paddingTop;
         private float _paddingRight;
         private float _paddingBottom;
+
+        public LayoutResults()
+        {
+            for (int i = 0; i < MaxCachedMeasurements; i++)
+            {
+                CachedMeasurements[i] = new CachedMeasurement();
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Direction GetDirection() => _direction;
@@ -225,8 +220,7 @@ namespace Facebook.Yoga
                 _paddingBottom = _paddingBottom,
             };
 
-            if (_cachedMeasurements != null)
-                clone._cachedMeasurements = (CachedMeasurement[])_cachedMeasurements.Clone();
+            Array.Copy(CachedMeasurements, clone.CachedMeasurements, MaxCachedMeasurements);
 
             return clone;
         }
@@ -264,9 +258,7 @@ namespace Facebook.Yoga
 
             for (int i = 0; i < MaxCachedMeasurements && isEqual; ++i)
             {
-                var first = _cachedMeasurements == null ? new CachedMeasurement() : _cachedMeasurements[i];
-                var second = layout._cachedMeasurements == null ? new CachedMeasurement() : layout._cachedMeasurements[i];
-                isEqual = first.Equals(second);
+                isEqual = CachedMeasurements[i].Equals(layout.CachedMeasurements[i]);
             }
 
             if (!float.IsNaN(_measuredWidth) || !float.IsNaN(layout._measuredWidth))
