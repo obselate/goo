@@ -619,6 +619,14 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
 
   internal func LayerExtent(layerIndex int32) VkExtent2D -> layerExtents[layerIndex]
 
+  internal func PreparedLayer(layerIndex int32, backdrop bool = false) VulkanOffscreenLayerTarget? {
+    let index = layerReservations[layerIndex * 2 + (backdrop ? 1 : 0)]
+    if index < 0 { return nil }
+    let target = targets[index]
+    if let prepared = target { prepared.ContentExtent = layerExtents[layerIndex] }
+    return target
+  }
+
   internal func AcquireLayer(layerIndex int32, backdrop bool = false) VulkanOffscreenLayerTarget {
     let index = layerReservations[layerIndex * 2 + (backdrop ? 1 : 0)]
     if index < 0 || index >= targets.Length || !inFrame[index] {

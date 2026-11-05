@@ -900,8 +900,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         BlurBackdrop(commandBuffer, record, frame, nil)
         let state = VulkanLayerRenderState{
           Record: record,
-          Target: nil,
-          BackdropTarget: nil,
+          Target: pool.PreparedLayer(layerIndex),
+          BackdropTarget: pool.PreparedLayer(layerIndex, true),
           ParentTarget: currentTarget,
           ParentOriginX: currentOriginX,
           ParentOriginY: currentOriginY,
@@ -1087,7 +1087,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           clipStack[clipIndex] = layerClipSnapshots[state.ClipSnapshotOffset + clipIndex]
           clipIndex++
         }
-        EmitLayer(commandBuffer, activeExtent, state.Record, nil, nil, frame)
+        EmitLayer(commandBuffer, activeExtent, state.Record, state.Target, state.BackdropTarget, frame)
         return
       }
       guard let target = state.Target else {
