@@ -76,15 +76,27 @@ internal partial class DevToolsSession : IDisposable {
   private var clickLocked bool
   private var disposed bool
   private var pending bool
-  private var hovered Node?
-  private var selected Node?
-  private var selectionBeforeInspect Node?
+  private var hoveredMount NodeMount
+  private var selectedMount NodeMount
+  private var selectionBeforeInspectMount NodeMount
+  private prop hovered Node? {
+    get -> hoveredMount.Current
+    set -> hoveredMount = NodeMount(value)
+  }
+  private prop selected Node? {
+    get -> selectedMount.Current
+    set -> selectedMount = NodeMount(value)
+  }
+  private prop selectionBeforeInspect Node? {
+    get -> selectionBeforeInspectMount.Current
+    set -> selectionBeforeInspectMount = NodeMount(value)
+  }
   private var pointerX float32
   private var pointerY float32
   private var pointerValid bool
   private let captureTracker DiagnosticCaptureTracker
   private let overrideStore DiagnosticOverrideStore
-  private let debugNodes Dictionary[int64, Node]
+  private let debugNodes Dictionary[int64, NodeMount]
   private let snapshotChanged List[Action[DiagnosticSnapshot]]
   private var pipe DiagnosticPipeHost?
 
@@ -125,7 +137,7 @@ internal partial class DevToolsSession : IDisposable {
     endpoint = DiagnosticEndpointDiscovery.Create(window)
     windowId = endpoint.WindowId
     overrideStore = DiagnosticOverrideStore()
-    debugNodes = Dictionary[int64, Node]()
+    debugNodes = Dictionary[int64, NodeMount]()
     snapshotChanged = List[Action[DiagnosticSnapshot]]()
     captureTracker = DiagnosticCaptureTracker()
     pending = true
@@ -351,7 +363,7 @@ internal partial class DevToolsSession : IDisposable {
     let entries = diagnosticOverrideEntries(spec, request.Value)
     let nodeId = targetHandle != "" ? identity.FindTargetSnapshot(targetHandle)?.Id ?? 0 : request.NodeId
     for entry in entries { overrideStore.Set(node, entry) }
-    debugNodes[nodeId] = node
+    debugNodes[nodeId] = NodeMount(node)
     owner.InvalidateDiagnosticsOverride(node)
     pending = true
     owner.RequestDiagnosticsRebuild()
@@ -485,15 +497,15 @@ internal partial class DevToolsSession : IDisposable {
   private func finite(value float64) bool -> !Double.IsNaN(value) && !Double.IsInfinity(value)
 
   private func clearOverrides() {
-    let nodes = List[Node]()
-    for pair in debugNodes { nodes.Add(pair.Value) }
+    let mounts = List[NodeMount]()
+    for pair in debugNodes { mounts.Add(pair.Value) }
     debugNodes.Clear()
-    for node in nodes {
-      if node.Retired {
-        overrideStore.Drop(node)
-      } else {
+    for mount in mounts {
+      if let node = mount.Current {
         let fields = overrideFields(node)
         if overrideStore.Clear(node) { owner.CompleteDiagnosticsOverrideReset(node, fields) }
+      } else {
+        overrideStore.Drop(mount)
       }
     }
   }
@@ -507,8 +519,8 @@ internal partial class DevToolsSession : IDisposable {
 
   private func clearRemovedOverrides(ids IReadOnlyList[int64]) {
     for id in ids {
-      if debugNodes.TryGetValue(id, out var node) {
-        overrideStore.Drop(node)
+      if debugNodes.TryGetValue(id, out var mount) {
+        overrideStore.Drop(mount)
         debugNodes.Remove(id)
       }
     }

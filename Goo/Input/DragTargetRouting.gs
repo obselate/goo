@@ -4,15 +4,18 @@ import System.Collections.Generic
 
 internal class DragTargetRouting {
   shared {
-    internal func RouteStart(path List[Node]) int32 {
+    internal func RouteStart(path List[NodeMount]) int32 {
       for var i = path.Count; i > 0; i-- {
-        if path[i - 1].FocusScopeBoundary { return i - 1 }
+        if path[i - 1].Current?.FocusScopeBoundary == true { return i - 1 }
       }
       return 0
     }
 
-    internal func AllowsPath(path List[Node]) bool -> path.Count > 0
-      && canReceiveInput(path[path.Count - 1])
+    internal func AllowsPath(path List[NodeMount]) bool {
+      if path.Count == 0 { return false }
+      guard let target = path[path.Count - 1].Current else { return false }
+      return canReceiveInput(target)
+    }
 
     internal func Available(root Node, target Node) bool -> !target.Retired
       && containsPath(root, target) && canReceiveInput(target)

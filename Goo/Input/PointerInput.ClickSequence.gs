@@ -4,15 +4,15 @@ import System
 import System.Collections.Generic
 
 internal partial class PointerInput {
-  private func clickSequenceTarget(route List[Node]) Node? {
+  private func clickSequenceTarget(route List[NodeMount]) Node? {
     for var i = route.Count; i > 0; i-- {
-      let n = route[i - 1]
+      guard let n = route[i - 1].Current else { continue }
       if n.Focusable || n.OnClick != nil || n.OnPointerDown != nil || n.OnPointerUp != nil { return n }
     }
     return route.Count == 0 ? nil : route[route.Count - 1]
   }
 
-  private func beginClickSequence(route List[Node], timeS float64, x float32, y float32, button PointerButton) {
+  private func beginClickSequence(route List[NodeMount], timeS float64, x float32, y float32, button PointerButton) {
     let target = clickSequenceTarget(route)
     let elapsed = timeS - current.LastPressT
     let repeated = target != nil && target == current.LastPressNode && button == current.LastPressButton

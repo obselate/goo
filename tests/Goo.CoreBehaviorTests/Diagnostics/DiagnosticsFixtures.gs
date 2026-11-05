@@ -226,6 +226,36 @@ internal class DiagnosticsFixtures {
       && fifth.Updated[0].Content == "final"
   }
 
+  func ReboundStorageRejectsPreviousDiagnosticTargetsContract() bool {
+    let reconciler = Reconciler{Res: Resolver{}}
+    let node = reconciler.Mount(Button{Width: 50, Height: 40, OnClick: () -> {}})
+    Layout().Calculate(node, 100.0F, 100.0F)
+    let state = DiagnosticTreeState()
+    let first = state.Capture(node, "mount-window", node, node)
+    if first.Added.Count != 1 { return false }
+    let previous = first.Added[0]
+    let mount = NodeMount(node)
+    let hits = DiagnosticHitIndex(node)
+    let overlay = DiagnosticOverlay(first.Sequence, nil, nil, node, node, "")
+    let overrides = DiagnosticOverrideStore()
+    overrides.Set(node, readField(node, StyleField.Width))
+    if state.FindNode(previous.Id) != node || hits.Hit(10.0F, 10.0F) != node { return false }
+    NodeLifecycle.DisposeTree(node)
+    if !node.TryBeginRebind() { return false }
+    if reconciler.Diff(node, Button{Width: 80, Height: 40, OnClick: () -> {}}) != node { return false }
+    Layout().Calculate(node, 100.0F, 100.0F)
+    if state.FindNode(previous.Id) != nil || state.FindTarget(previous.Target) != nil
+      || state.FindTargetSnapshot(previous.Target) != nil || hits.Hit(10.0F, 10.0F) != nil
+      || overlay.HoveredNode != nil || overlay.SelectedNode != nil || overrides.State(node) != nil
+      || overrides.Clear(node) || !overrides.Drop(mount) { return false }
+    let second = state.Capture(node, "mount-window", nil, nil)
+    if second.Added.Count != 1 || second.Removed.Count != 1 || second.Removed[0] != previous.Id { return false }
+    let current = second.Added[0]
+    return current.Id != previous.Id && current.Target != previous.Target
+      && state.FindNode(current.Id) == node && state.FindTarget(current.Target) == node
+      && DiagnosticHitIndex(node).Hit(10.0F, 10.0F) == node
+  }
+
   func CaptureRequestRetriesAfterNotReady() bool {
     let tracker = DiagnosticCaptureTracker()
     if !tracker.NeedsRequest { return false }

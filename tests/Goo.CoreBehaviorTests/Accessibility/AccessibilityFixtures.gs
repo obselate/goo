@@ -127,6 +127,28 @@ internal class AccessibilityFixtures {
     return crossRoot.Relationships.LabelledBy.Count == 0
   }
 
+  func ReboundStorageRejectsPreviousSemanticIdentityContract() bool {
+    let reconciler = Reconciler{Res: Resolver{}}
+    let node = reconciler.Mount(Button{Width: 100, Height: 40,
+      Accessibility: Accessibility{Name: "outgoing"}, OnClick: () -> {}})
+    Layout().Calculate(node, 100.0F, 40.0F)
+    let manager = AccessibilityManager(Window{Root: AccessibilityFixtureCell{}})
+    manager.CaptureForDiagnostics(node)
+    guard let previous = manager.DiagnosticNodeFor(node) else { return false }
+    if manager.NodeFor(previous.Id) != node { return false }
+    AccessibilityButtonNames.Set(node, 7, "outgoing cache")
+    NodeLifecycle.DisposeTree(node)
+    if !node.TryBeginRebind() { return false }
+    if reconciler.Diff(node, Button{Width: 100, Height: 40,
+      Accessibility: Accessibility{Name: "incoming"}, OnClick: () -> {}}) != node { return false }
+    if manager.NodeFor(previous.Id) != nil || manager.DiagnosticNodeFor(node) != nil
+      || AccessibilityButtonNames.Get(node, 7) != nil { return false }
+    manager.CaptureForDiagnostics(node)
+    guard let current = manager.DiagnosticNodeFor(node) else { return false }
+    return current.Id != previous.Id && current.Name == "incoming"
+      && manager.NodeFor(previous.Id) == nil && manager.NodeFor(current.Id) == node
+  }
+
   func FailedDiffPreservesPublishedTreeContract() bool {
     let adapter = AccessibilityTestAdapter{}
     let cell = AccessibilityTransactionalCell{}

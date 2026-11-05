@@ -37,22 +37,23 @@ internal class CellOwnership {
     }
 
     // Event routes retain their ancestry even if a callback changes the live tree.
-    internal func InRoute(route List[Node], index int32) Cell? {
+    internal func InRoute(route List[NodeMount], index int32) Cell? {
       for var i = index;
       i >= 0;
       i-- {
-        if let owner = renderingCell(route[i]) {
+        guard let node = route[i].Captured else { continue }
+        if let owner = renderingCell(node) {
           return owner
         }
       }
       return nil
     }
 
-    internal func CaptureRoute(route List[Node], owners List[Cell?]) {
+    internal func CaptureRoute(route List[NodeMount], owners List[Cell?]) {
       owners.Clear()
       var owner Cell?
-      for node in route {
-        owner = renderingCell(node) ?? owner
+      for mount in route {
+        if let node = mount.Current { owner = renderingCell(node) ?? owner }
         owners.Add(owner)
       }
     }

@@ -62,6 +62,8 @@ internal class InputCallbacks {
     private let nodeValues ConditionalWeakTable[Node, InputCallbackSet] =
     ConditionalWeakTable[Node, InputCallbackSet]()
 
+    internal func Remove(node Node) { nodeValues.Remove(node) }
+
     internal func SetBlobCommand(blob Blob, value Command?) {
       guard let callbacks = blobCallbacks(blob, value != nil) else { return }
       callbacks.Command = value

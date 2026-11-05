@@ -25,20 +25,20 @@ internal class DiagnosticOverrideNode {
 }
 
 internal class DiagnosticOverrideStore {
-  private let values Dictionary[Node, DiagnosticOverrideNode]
+  private let values Dictionary[NodeMount, DiagnosticOverrideNode]
 
   internal init() {
-    values = Dictionary[Node, DiagnosticOverrideNode]()
+    values = Dictionary[NodeMount, DiagnosticOverrideNode]()
   }
 
-  internal func State(n Node) DiagnosticOverrideNode? -> if values.TryGetValue(n, out var state) { state } else { nil }
+  internal func State(n Node) DiagnosticOverrideNode? -> if values.TryGetValue(NodeMount(n), out var state) { state } else { nil }
 
   internal func Set(n Node, entry StyleEntry) {
-    let state = if values.TryGetValue(n, out var existing) {
+    let state = if values.TryGetValue(NodeMount(n), out var existing) {
       existing
     } else {
       let created = DiagnosticOverrideNode()
-      values[n] = created
+      values[NodeMount(n)] = created
       created
     }
     if state.Values.TryGetValue(entry.Field, out var prior) {
@@ -57,7 +57,7 @@ internal class DiagnosticOverrideStore {
       state.Values.Remove(field)
       changed = true
     }
-    if state.Values.Count == 0 { values.Remove(n) }
+    if state.Values.Count == 0 { values.Remove(NodeMount(n)) }
     return changed
   }
 
@@ -65,11 +65,11 @@ internal class DiagnosticOverrideStore {
     guard let state = State(n) else { return false }
     for pair in state.Values { writeDirect(n, pair.Value.Original) }
     state.Values.Clear()
-    values.Remove(n)
+    values.Remove(NodeMount(n))
     return true
   }
 
-  internal func Drop(n Node) bool -> values.Remove(n)
+  internal func Drop(mount NodeMount) bool -> values.Remove(mount)
 }
 
 internal enum DiagnosticOverrideValueKind { Length; Color; Scalar }

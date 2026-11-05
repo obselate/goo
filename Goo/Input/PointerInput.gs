@@ -17,12 +17,12 @@ internal partial class PointerInput {
   private var cursor Vector2
   private var cursorValid bool
   private let queue InputEventQueue
-  private var hoverChain List[Node]
+  private var hoverChain List[NodeMount]
   private var hoverOwners List[Cell?] = List[Cell?]()
   private var scratchHoverOwners List[Cell?] = List[Cell?]()
   private var hoverGeneration int64
-  private var scratchChain List[Node]
-  private var hitChain List[Node]
+  private var scratchChain List[NodeMount]
+  private var hitChain List[NodeMount]
   private var routePositions List[Point]
   private var routeDeltas List[Point]
   private var diagnosticsHook((Node?, PointerEventKind, float32, float32, PointerButton) -> bool)?
@@ -33,24 +33,69 @@ internal partial class PointerInput {
   internal var WheelScrollScale float32 = 1.0F
   internal var DragStartDistance float32 = 8.0F
   internal var UiScale float32 = 1.0F
-  private var dragCandidate Node?
+  private var dragCandidateMount NodeMount
+  private prop dragCandidate Node? {
+    get -> dragCandidateMount.Current
+    set -> dragCandidateMount = NodeMount(value)
+  }
   private var dragSession PointerDragSession?
   private var dragPointerId int64
   private var dragPointerDevice PointerDevice
-  private var dragHitPath List[Node]?
+  private var dragHitPath List[NodeMount]?
   private var dragGeneration int64
   private var creatingDrag bool
   private var dragHost WindowHost?
   private var resetting bool
+
+  internal func RetainsInteraction(root Node) bool {
+    if FocusScopes.Contains(root, dragCandidate) || FocusScopes.Contains(root, dragSession?.Source)
+      || FocusScopes.Contains(root, dragSession?.Target) || FocusScopes.Contains(root, dragSession?.RequestedTarget)
+      || FocusScopes.Contains(root, control.CurrentTarget) || FocusScopes.Contains(root, control.CaptureOwner)
+      || FocusScopes.Contains(root, control.CaptureTarget) || FocusScopes.Contains(root, control.ReleaseTarget) { return true }
+    if contactRetainsInteraction(root, mouse) { return true }
+    if let contacts = contacts {
+      for contact in contacts {
+        if contactRetainsInteraction(root, contact) { return true }
+      }
+    }
+    if let groups = gestureGroups {
+      for group in groups {
+        if FocusScopes.Contains(root, group.DeferredClick) { return true }
+        for candidate in group.Candidates {
+          if !candidate.Terminal && FocusScopes.Contains(root, candidate.Owner) { return true }
+        }
+      }
+    }
+    return false
+  }
+
+  private func contactRetainsInteraction(root Node, contact PointerContact) bool {
+    if FocusScopes.Contains(root, contact.CaptureTarget) || FocusScopes.Contains(root, contact.TouchPan?.Target)
+      || FocusScopes.Contains(root, PointerScrollStates.Drag(contact)?.Target)
+      || FocusScopes.Contains(root, PointerScrollStates.Press(contact)?.Target) { return true }
+    if let pan = contact.TouchPan {
+      for sample in pan.Samples {
+        if FocusScopes.Contains(root, sample.Target) { return true }
+      }
+    }
+    if contact.HeldButtons == PointerButtons.None { return false }
+    if FocusScopes.Contains(root, contact.ActiveTarget) || FocusScopes.Contains(root, contact.ClickTarget)
+      || FocusScopes.Contains(root, contact.DragEntry) || FocusScopes.Contains(root, contact.DragEditor)
+      || FocusScopes.Contains(root, contact.FocusTarget) { return true }
+    for mount in contact.PressChain {
+      if FocusScopes.Contains(root, mount.Current) { return true }
+    }
+    return false
+  }
 
   internal init(focus FocusManager, queue InputEventQueue) {
     this.focus = focus
     this.queue = queue
     mouse = PointerContact(0, PointerDevice.Mouse)
     current = mouse
-    hoverChain = List[Node]()
-    scratchChain = List[Node]()
-    hitChain = List[Node]()
+    hoverChain = List[NodeMount]()
+    scratchChain = List[NodeMount]()
+    hitChain = List[NodeMount]()
     routePositions = List[Point]()
     routeDeltas = List[Point]()
     control = PointerDispatchControl()
@@ -467,19 +512,19 @@ internal partial class PointerInput {
     if let error = leaveFailure ?? enterFailure { ExceptionDispatchInfo.Capture(error).Throw() }
   }
 
-  private func sharedHoverPrefix(left List[Node], right List[Node]) int32 {
+  private func sharedHoverPrefix(left List[NodeMount], right List[NodeMount]) int32 {
     var result int32
     let count = left.Count < right.Count ? left.Count : right.Count
-    while result < count && left[result] == right[result] {
+    while result < count && left[result].Equals(right[result]) {
       result++
     }
     return result
   }
 
-  private func setHoverState(route List[Node], start int32, end int32, hovered bool,
+  private func setHoverState(route List[NodeMount], start int32, end int32, hovered bool,
     resolver Resolver) {
       for i in start ... end {
-        let n = route[i]
+        guard let n = hovered ? route[i].Current : route[i].Captured else { continue }
         if n.Hovered != hovered {
           n.Hovered = hovered
           resolver.Invalidate(n, false)
@@ -487,11 +532,11 @@ internal partial class PointerInput {
       }
     }
 
-  private func dispatchHoverLeaves(route List[Node], owners List[Cell?], shared int32, x float32, y float32) Exception? {
+  private func dispatchHoverLeaves(route List[NodeMount], owners List[Cell?], shared int32, x float32, y float32) Exception? {
     var failure Exception?
     let generation = hoverGeneration
     for var i = route.Count; i > shared; i-- {
-      let n = route[i - 1]
+      guard let n = route[i - 1].Captured else { continue }
       if let callback = InputCallbacks.PointerLeave(n) {
         let owner = owners[i - 1]
         try { callback(hoverEvent(n, x, y)) }
@@ -503,18 +548,18 @@ internal partial class PointerInput {
     return failure
   }
 
-  private func dispatchHoverEnters(route List[Node], owners List[Cell?], shared int32, x float32, y float32) Exception? {
+  private func dispatchHoverEnters(route List[NodeMount], owners List[Cell?], shared int32, x float32, y float32) Exception? {
     var failure Exception?
     let generation = hoverGeneration
     for i in shared ... route.Count {
-      let n = route[i]
+      guard let n = route[i].Current else { continue }
       if let callback = InputCallbacks.PointerEnter(n) {
         let owner = owners[i]
         try { callback(hoverEvent(n, x, y)) }
         catch (error Exception) { failure ??= error }
         finally { owner?.Rebuild() }
       }
-      if generation != hoverGeneration || n.Retired { break }
+      if generation != hoverGeneration || route[i].Current == nil { break }
     }
     return failure
   }
@@ -589,7 +634,8 @@ internal partial class PointerInput {
       }
     }
     if let pan = current.TouchPan {
-      if !nodeVisibleInTree(tree, pan.Target, false) || !canReceiveInput(pan.Target) {
+      let target = pan.Target
+      if target == nil || !nodeVisibleInTree(tree, target, false) || !canReceiveInput(target) {
         cancelInteraction(root, resolver)
         return true
       }
@@ -627,7 +673,7 @@ internal partial class PointerInput {
 
   internal func CurrentCursor() Cursor {
     current = mouse
-    return if hoverChain.Count == 0 { Cursor.Default } else { hoverChain[hoverChain.Count - 1].Cursor }
+    return if hoverChain.Count == 0 { Cursor.Default } else { hoverChain[hoverChain.Count - 1].Current?.Cursor ?? Cursor.Default }
   }
 
   internal func HandleMove(root Node?, resolver Resolver, x float32, y float32) bool -> handleMove(root, resolver, x, y, true, true)
@@ -807,7 +853,7 @@ internal partial class PointerInput {
         return false
       }
       for i in 0 ... current.PressChain.Count {
-        let pressed = current.PressChain[i]
+        guard let pressed = current.PressChain[i].Current else { continue }
         pressed.PointerPressCount++
         if !pressed.Pressed {
           pressed.Pressed = true
@@ -822,8 +868,8 @@ internal partial class PointerInput {
 
       var target Node? = nil
       for var i = current.PressChain.Count; i > 0; i-- {
-        if current.PressChain[i - 1].Focusable {
-          target = current.PressChain[i - 1]
+        if let candidate = current.PressChain[i - 1].Current && candidate.Focusable {
+          target = candidate
           break
         }
       }
@@ -1059,7 +1105,7 @@ internal partial class PointerInput {
       return info
     }
     for i in 0 ... hitChain.Count {
-      let child = hitChain[i]
+      guard let child = hitChain[i].Current else { continue }
       if child.IsPortal { info.DragsWindow = false }
       if child.DragsWindow {
         info.DragsWindow = true
@@ -1073,46 +1119,41 @@ internal partial class PointerInput {
     return info
   }
 
-  private func deepestClickable(chain List[Node]) Node? {
+  private func deepestClickable(chain List[NodeMount]) Node? {
     for var i = chain.Count; i > 0; i-- {
-      if hasActivation(chain[i - 1]) {
-        return chain[i - 1]
-      }
-      if chain[i - 1].FocusScopeBoundary {
-        break
-      }
+      guard let node = chain[i - 1].Current else { return nil }
+      if hasActivation(node) { return node }
+      if node.FocusScopeBoundary { break }
     }
     return nil
   }
 
-  private func chainDisabled(chain List[Node]) bool {
-    if chain.Count > 0 && chain[0].HasFocusScopes
-      && !FocusScopes.Allows(chain[0], chain[chain.Count - 1]) {
-        return true
-      }
-    for i in 0 ... chain.Count {
-      if chain[i].Disabled {
-        return true
-      }
+  private func chainDisabled(chain List[NodeMount]) bool {
+    if chain.Count == 0 { return false }
+    guard let root = chain[0].Current, let target = chain[chain.Count - 1].Current else { return true }
+    if root.HasFocusScopes && !FocusScopes.Allows(root, target) { return true }
+    for mount in chain {
+      guard let node = mount.Current else { return true }
+      if node.Disabled { return true }
     }
     return false
   }
 
-  private func sameNodes(a List[Node], b List[Node]) bool {
+  private func sameNodes(a List[NodeMount], b List[NodeMount]) bool {
     if a.Count != b.Count {
       return false
     }
     for i in 0 ... a.Count {
-      if a[i] != b[i] {
+      if !a[i].Equals(b[i]) {
         return false
       }
     }
     return true
   }
 
-  private func containsNode(nodes List[Node], target Node) bool {
+  private func containsNode(nodes List[NodeMount], target Node) bool {
     for i in 0 ... nodes.Count {
-      if nodes[i] == target { return true }
+      if nodes[i].Current == target { return true }
     }
     return false
   }
@@ -1137,13 +1178,13 @@ internal partial class PointerInput {
 
   private func pressChainVisible(root Node) bool {
     if current.PressChain.Count == 0 { return true }
-    let target = current.PressChain[current.PressChain.Count - 1]
+    guard let target = current.PressChain[current.PressChain.Count - 1].Current else { return false }
     return nodeVisibleInTree(root, target, false) && canReceiveInput(target)
   }
 
   private func clearPressChain(resolver Resolver) {
     for i in 0 ... current.PressChain.Count {
-      let n = current.PressChain[i]
+      guard let n = current.PressChain[i].Captured else { continue }
       if n.PointerPressCount > 0 { n.PointerPressCount-- }
       if n.PointerPressCount == 0 && !n.KeyboardPressed && n.Pressed {
         n.Pressed = false
@@ -1180,27 +1221,51 @@ internal data struct QueuedPointerEvent {
 internal class PointerContact {
   internal let Id int64
   internal let Device PointerDevice
-  internal var PressChain List[Node]
-  internal var CapturePath List[Node]
+  internal var PressChain List[NodeMount]
+  internal var CapturePath List[NodeMount]
   internal var CapturePositions List[Point]
-  internal var ActivePath List[Node]
+  internal var ActivePath List[NodeMount]
   internal var ActivePositions List[Point]
   internal var HeldButtons PointerButtons
   internal var CanceledButtons PointerButtons
   internal var Canceling bool
-  internal var CaptureTarget Node?
+  private var captureTargetMount NodeMount
+  internal prop CaptureTarget Node? {
+    get -> captureTargetMount.Current
+    set -> captureTargetMount = NodeMount(value)
+  }
   internal var CaptureButton PointerButton
-  internal var ActiveTarget Node?
-  internal var ClickTarget Node?
-  internal var DragEntry Node?
-  internal var DragEditor Node?
+  private var activeTargetMount NodeMount
+  private var clickTargetMount NodeMount
+  private var dragEntryMount NodeMount
+  private var dragEditorMount NodeMount
+  internal prop ActiveTarget Node? {
+    get -> activeTargetMount.Current
+    set -> activeTargetMount = NodeMount(value)
+  }
+  internal prop ClickTarget Node? {
+    get -> clickTargetMount.Current
+    set -> clickTargetMount = NodeMount(value)
+  }
+  internal prop DragEntry Node? {
+    get -> dragEntryMount.Current
+    set -> dragEntryMount = NodeMount(value)
+  }
+  internal prop DragEditor Node? {
+    get -> dragEditorMount.Current
+    set -> dragEditorMount = NodeMount(value)
+  }
   internal var DragSelectionStarted bool
   internal var TouchCaretPending bool
   internal var DragSelectionOrigin TextRange
   internal var LastPressT float64
   internal var LastPressX float32
   internal var LastPressY float32
-  internal var LastPressNode Node?
+  private var lastPressMount NodeMount
+  internal prop LastPressNode Node? {
+    get -> lastPressMount.Current
+    set -> lastPressMount = NodeMount(value)
+  }
   internal var LastPressButton PointerButton
   internal var LastPressCount int32
   internal var LastEventX float32
@@ -1208,16 +1273,20 @@ internal class PointerContact {
   internal var LastEventValid bool
   internal var LastModifiers KeyModifiers
   internal var Pressure float32
-  internal var FocusTarget Node?
+  private var focusTargetMount NodeMount
+  internal prop FocusTarget Node? {
+    get -> focusTargetMount.Current
+    set -> focusTargetMount = NodeMount(value)
+  }
   internal var TouchPan PointerTouchPanState?
 
   internal init(id int64, device PointerDevice) {
     Id = id
     Device = device
-    PressChain = List[Node]()
-    CapturePath = List[Node]()
+    PressChain = List[NodeMount]()
+    CapturePath = List[NodeMount]()
     CapturePositions = List[Point]()
-    ActivePath = List[Node]()
+    ActivePath = List[NodeMount]()
     ActivePositions = List[Point]()
     LastPressT = -10.0
   }

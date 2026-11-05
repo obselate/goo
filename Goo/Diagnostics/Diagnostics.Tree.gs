@@ -10,8 +10,10 @@ import System.Text
 internal class DiagnosticNodeIdentityValue {
   internal let Id int64
   internal let Target string
+  internal let Generation uint64
 
-  internal init(value int64, target string) {
+  internal init(n Node, value int64, target string) {
+    Generation = n.MountGeneration
     Id = value
     Target = target
   }
@@ -27,12 +29,13 @@ internal class DiagnosticNodeIdentity {
   }
 
   internal func Get(n Node) int64 {
-    if values.TryGetValue(n, out var value) {
+    if values.TryGetValue(n, out var value) && value.Generation == n.MountGeneration {
       return value.Id
     }
     let assigned = nextValue
     nextValue = nextValue == Int64.MaxValue ? 1 : nextValue + 1
-    values.Add(n, DiagnosticNodeIdentityValue(assigned, Guid.NewGuid().ToString("N")))
+    values.Remove(n)
+    values.Add(n, DiagnosticNodeIdentityValue(n, assigned, Guid.NewGuid().ToString("N")))
     return assigned
   }
 
@@ -42,8 +45,25 @@ internal class DiagnosticNodeIdentity {
     throw InvalidOperationException("Diagnostic target identity is unavailable.")
   }
 
-  internal func TryGet(n Node) int64? -> if values.TryGetValue(n, out var value) { value.Id } else { nil }
+  internal func TryGet(n Node) int64? -> if !n.Retired && values.TryGetValue(n, out var value) && value.Generation == n.MountGeneration { value.Id } else { nil }
 
+}
+
+internal data struct DiagnosticNodeReference {
+  internal let Reference WeakReference
+  internal let Generation uint64
+
+  internal init(n Node) {
+    Reference = WeakReference(n)
+    Generation = n.MountGeneration
+  }
+
+  internal prop Current Node? {
+    get {
+      guard let node = Reference.Target as Node? else { return nil }
+      return !node.Retired && node.MountGeneration == Generation ? node : nil
+    }
+  }
 }
 
 internal class DiagnosticTreeState {
@@ -51,9 +71,8 @@ internal class DiagnosticTreeState {
   private let identity DiagnosticNodeIdentity
   private let textBuffer StringBuilder = StringBuilder()
   private var previous Dictionary[int64, DiagnosticNodeSnapshot]
-  private var nodes Dictionary[int64, WeakReference]
+  private var nodes Dictionary[int64, DiagnosticNodeReference]
   private var targets Dictionary[string, int64]
-  private var previousRoot WeakReference?
   private var revisionNumber int64
   private var initialized bool
   private var previousHoveredId int64
@@ -63,7 +82,7 @@ internal class DiagnosticTreeState {
     owner = window
     identity = DiagnosticNodeIdentity()
     previous = Dictionary[int64, DiagnosticNodeSnapshot]()
-    nodes = Dictionary[int64, WeakReference]()
+    nodes = Dictionary[int64, DiagnosticNodeReference]()
     targets = Dictionary[string, int64](StringComparer.Ordinal)
   }
 
@@ -72,7 +91,6 @@ internal class DiagnosticTreeState {
     previous.Clear()
     nodes.Clear()
     targets.Clear()
-    previousRoot = nil
     previousHoveredId = 0
     previousSelectedId = 0
   }
@@ -94,9 +112,6 @@ internal class DiagnosticTreeState {
       rootId = identity.Get(treeRoot)
       let hits = if let window = owner { if let tree = window.Tree { DiagnosticHitIndex(tree) } else { nil } } else { nil }
       collect(treeRoot, nil, 0, current, semantics, hits)
-      previousRoot = WeakReference(treeRoot)
-    } else {
-      previousRoot = nil
     }
 
     let full = !initialized
@@ -142,12 +157,7 @@ internal class DiagnosticTreeState {
 
   internal func FindNode(id int64) Node? {
     if !nodes.TryGetValue(id, out var reference) { return nil }
-    let target = reference.Target as Node?
-    guard let node = target else {
-      nodes.Remove(id)
-      return nil
-    }
-    if node.Retired {
+    guard let node = reference.Current else {
       nodes.Remove(id)
       return nil
     }
@@ -156,7 +166,7 @@ internal class DiagnosticTreeState {
 
   internal func FindTarget(target string) Node? -> if !targets.TryGetValue(target, out var id) { nil } else { FindNode(id) }
 
-  internal func FindTargetSnapshot(target string) DiagnosticNodeSnapshot? -> if !targets.TryGetValue(target, out var id) { nil } else { Find(id) }
+  internal func FindTargetSnapshot(target string) DiagnosticNodeSnapshot? -> if !targets.TryGetValue(target, out var id) || FindNode(id) == nil { nil } else { Find(id) }
 
   private func nodeId(node Node?, values Dictionary[int64, DiagnosticNodeSnapshot]) int64 {
     guard let value = node else { return 0 }
@@ -173,7 +183,7 @@ internal class DiagnosticTreeState {
         return
       }
       let id = identity.Get(n)
-      nodes[id] = WeakReference(n)
+      nodes[id] = DiagnosticNodeReference(n)
       let snapshot = makeSnapshot(n, parent, childIndex, id, semantics, hits)
       destination.Add(id, snapshot)
       var index int32

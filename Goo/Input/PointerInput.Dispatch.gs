@@ -34,7 +34,7 @@ internal partial class PointerInput {
     return rebuildPath(root, target, current.ActivePath, current.ActivePositions)
   }
 
-  private func rebuildPath(root Node, target Node, path List[Node], positions List[Point]) bool {
+  private func rebuildPath(root Node, target Node, path List[NodeMount], positions List[Point]) bool {
     if !canReceiveInput(target) || !containsPath(root, target) { return false }
     path.Clear()
     let rebuilt = appendPath(root, target, path)
@@ -42,8 +42,8 @@ internal partial class PointerInput {
     return rebuilt && path.Count > 0
   }
 
-  private func appendPath(root Node, target Node, path List[Node]) bool {
-    path.Add(root)
+  private func appendPath(root Node, target Node, path List[NodeMount]) bool {
+    path.Add(NodeMount(root))
     if root == target { return true }
     for child in root.Children {
       if appendPath(child, target, path) { return true }
@@ -55,7 +55,7 @@ internal partial class PointerInput {
     return false
   }
 
-  private func applyCaptureRequests(button PointerButton, route List[Node]) {
+  private func applyCaptureRequests(button PointerButton, route List[NodeMount]) {
     if let requested = control.ReleaseTarget {
       if let owner = current.CaptureTarget {
         if owner == requested { clearCapture()
@@ -70,7 +70,7 @@ internal partial class PointerInput {
       for i in 0 ... route.Count {
         let n = route[i]
         current.CapturePath.Add(n)
-        if n == requested { break }
+        if n.Current == requested { break }
       }
       savePositions(current.CapturePath, current.CapturePositions)
     }
@@ -85,13 +85,13 @@ internal partial class PointerInput {
     }
   }
 
-  private func rememberActiveRoute(route List[Node]) {
+  private func rememberActiveRoute(route List[NodeMount]) {
     current.ActivePath.Clear()
     current.ActiveTarget = nil
     for i in 0 ... route.Count {
       let n = route[i]
       current.ActivePath.Add(n)
-      current.ActiveTarget = n
+      current.ActiveTarget = n.Current
     }
     savePositions(current.ActivePath, current.ActivePositions)
   }
@@ -102,11 +102,11 @@ internal partial class PointerInput {
     current.ActivePositions.Clear()
   }
 
-  private func savePositions(route List[Node], positions List[Point]) bool {
+  private func savePositions(route List[NodeMount], positions List[Point]) bool {
     positions.Clear()
     if !routeHasTransform(route) {
       for i in 0 ... route.Count {
-        let n = route[i]
+        guard let n = route[i].Current else { return false }
         positions.Add(Point{
           X: float64(current.LastEventX - n.Rect.X),
           Y: float64(current.LastEventY - n.Rect.Y),
@@ -117,7 +117,7 @@ internal partial class PointerInput {
     return mapRoutePositions(route, current.LastEventX, current.LastEventY, positions)
   }
 
-  private func mapRoutePositions(route List[Node], x float32, y float32,
+  private func mapRoutePositions(route List[NodeMount], x float32, y float32,
     positions List[Point]) bool{
       positions.Clear()
       let portal = deepestPortal(route)
@@ -125,7 +125,7 @@ internal partial class PointerInput {
       var mappedY = y
       var valid = true
       for i in 0 ... route.Count {
-        let n = route[i]
+        guard let n = route[i].Current else { return false }
         if n.IsPortal {
           mappedX = x
           mappedY = y
@@ -152,22 +152,22 @@ internal partial class PointerInput {
       return true
     }
 
-  private func deepestPortal(route List[Node]) int32 {
+  private func deepestPortal(route List[NodeMount]) int32 {
     var result = -1
     for i in 0 ... route.Count {
-      if route[i].IsPortal { result = i }
+      if route[i].Current?.IsPortal == true { result = i }
     }
     return result
   }
 
-  private func routeHasTransform(route List[Node]) bool {
+  private func routeHasTransform(route List[NodeMount]) bool {
     for i in 0 ... route.Count {
-      if route[i].HasVisualTransform { return true }
+      if route[i].Current?.HasVisualTransform == true { return true }
     }
     return false
   }
 
-  private func mapRouteEvent(route List[Node], x float32, y float32,
+  private func mapRouteEvent(route List[NodeMount], x float32, y float32,
     previousX float32, previousY float32) bool{
       routePositions.Clear()
       routeDeltas.Clear()
@@ -178,7 +178,7 @@ internal partial class PointerInput {
       var mappedPreviousY = previousY
       var valid = true
       for i in 0 ... route.Count {
-        let n = route[i]
+        guard let n = route[i].Current else { return false }
         if n.IsPortal {
           mappedX = x
           mappedY = y
@@ -269,7 +269,8 @@ internal partial class PointerInput {
       var interactiveChild = false
       try {
         for var i = route.Count; i > 0; i-- {
-          let n = route[i - 1]
+          let mount = route[i - 1]
+          guard let n = mount.Current else { return true }
           let event = PointerEvent{
             Identity: current.Device == PointerDevice.Mouse ? nil : current,
             IsPrimary: isSemanticPrimary(),
@@ -297,7 +298,8 @@ internal partial class PointerInput {
             control.ClearCurrentTarget(generation)
             owner?.Rebuild()
           }
-          if current != contact || route.Count != routeCount || n.Retired {
+          if current != contact || route.Count != routeCount || mount.Current == nil
+            || !route[i - 1].Equals(mount) {
             current = contact
             return true
           }
@@ -392,8 +394,7 @@ internal partial class PointerInput {
     var interactiveChild = false
     try {
       for var i = route.Count; i > 0; i-- {
-        let n = route[i - 1]
-        if n.Retired { continue }
+        guard let n = route[i - 1].Current else { continue }
         let event = PointerEvent{
           Identity: current.Device == PointerDevice.Mouse ? nil : current,
           IsPrimary: isSemanticPrimary(),

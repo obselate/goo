@@ -131,6 +131,60 @@ internal class InputFixtures {
     return true
   }
 
+  func ReboundStorageRejectsPreviousInputLifetime() bool {
+    let resolver = Resolver{}
+    let reconciler = Reconciler{Res: resolver}
+    var incomingEvents int32
+    var releases int32
+    let root = reconciler.Mount(Container(){.Width: 100,.Height: 100,
+      Button{Width: 50, Height: 40, OnPointerDown: (event PointerEvent) -> { event.Capture() },
+        KeyBindings: []KeyBinding{KeyBinding{Key: Key.Down, Action: () -> {}, OnRelease: () -> { releases++ }}}}})
+    Layout().Calculate(root, 100.0F, 100.0F)
+    let node = root.Children[0]
+    let input = InputCoordinator()
+    input.QueuePointerMove(10.0F, 10.0F)
+    input.QueuePointerPress(10.0F, 10.0F)
+    input.QueueKeyPress(Key.Down, KeyModifiers{})
+    input.Drain(root, resolver, 0.0, nil)
+    if input.FocusedNode() != node || !input.RetainsInteraction(node) { return false }
+    let scopes = FocusScopeStack(Window{Root: InputActivityCell{}})
+    let entry = FocusScopeEntry(FocusScope(scopes, 1), node, node, node, FocusScopeOptions{})
+    NodeLifecycle.DisposeTree(node)
+    if !node.TryBeginRebind() { return false }
+    if reconciler.Diff(node, Button{Width: 50, Height: 40,
+      OnClick: () -> { incomingEvents++ },
+      OnFocus: (_ FocusEvent) -> { incomingEvents++ },
+      OnPointerLeave: (_ PointerEvent) -> { incomingEvents++ },
+      OnPointerMove: (_ PointerEvent) -> { incomingEvents++ },
+      OnPointerUp: (_ PointerEvent) -> { incomingEvents++ },
+      KeyBindings: []KeyBinding{KeyBinding{Key: Key.Down, Action: () -> { incomingEvents++ },
+        OnRelease: () -> { incomingEvents++ }}}}) != node { return false }
+    if input.FocusedNode() != nil || entry.Root != nil || entry.Previous != nil || entry.Initial != nil { return false }
+    input.QueuePointerMove(90.0F, 90.0F)
+    input.QueuePointerRelease(90.0F, 90.0F)
+    input.QueueKeyRelease(Key.Down)
+    input.Drain(root, resolver, 0.0, nil)
+    return incomingEvents == 0 && releases == 0 && !input.RetainsInteraction(node)
+  }
+
+  func HoverAloneDoesNotRetainRecyclableInteraction() bool {
+    let resolver = Resolver{}
+    let root = Reconciler{Res: resolver}.Mount(Container(){.Width: 100,.Height: 100,
+      Container{Width: 50, Height: 40, OnPointerDown: (event PointerEvent) -> { event.Capture() }}})
+    Layout().Calculate(root, 100.0F, 100.0F)
+    let node = root.Children[0]
+    let input = InputCoordinator()
+    input.QueuePointerMove(10.0F, 10.0F)
+    input.Drain(root, resolver, 0.0, nil)
+    if input.RetainsInteraction(node) { return false }
+    input.QueuePointerPress(10.0F, 10.0F)
+    input.Drain(root, resolver, 0.0, nil)
+    if !input.RetainsInteraction(node) { return false }
+    input.QueuePointerRelease(90.0F, 90.0F)
+    input.Drain(root, resolver, 0.0, nil)
+    return !input.RetainsInteraction(node)
+  }
+
   func TransformRoutesHitsAndLocalPositions() bool {
     let events = List[string]()
     let tree = Reconciler{ Res: Resolver{} }.Mount(Container{
@@ -2139,9 +2193,9 @@ internal class InputFixtures {
     input.QueuePointerPress(25.0F, 125.0F)
     input.QueuePointerRelease(25.0F, 125.0F)
     input.Drain(root, resolver, 0.0, nil)
-    let chain = List[Node]()
+    let chain = List[NodeMount]()
     hitChainInto(root, 125.0F, 25.0F, chain)
-    if chain.Count != 2 || chain[0] != root || chain[1] != side
+    if chain.Count != 2 || chain[0].Current != root || chain[1].Current != side
       || hitTopmost(root, 125.0F, 25.0F) != side
       || sideClicks != 1 || bottomClicks != 0 {
         return false

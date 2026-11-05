@@ -5,7 +5,7 @@ import System.Collections.Generic
 import System.Numerics
 
 internal class DiagnosticHitIndex {
-  private let nodes List[Node] = List[Node]()
+  private let nodes List[NodeMount] = List[NodeMount]()
   private let bounds []Vector4
 
   internal init(root Node) {
@@ -21,19 +21,19 @@ internal class DiagnosticHitIndex {
   }
 
   private func collect(n Node) {
-    if n.PaintInputHidden { return }
+    if n.Retired || n.PaintInputHidden { return }
     let parts = ScrollbarParts.ActiveChildren(n)
     for var i = parts.Count; i > 0; i-- { collect(parts[i - 1]) }
     let children = Stacking.Children(n)
     for var i = children.Count; i > 0; i-- {
       if !children[i - 1].IsPortal { collect(children[i - 1]) }
     }
-    if n.HitTestSelf { nodes.Add(n) }
+    if n.HitTestSelf { nodes.Add(NodeMount(n)) }
   }
 
   private func build(start int32, end int32, index int32) Vector4 {
     if end - start == 1 {
-      let n = nodes[start]
+      guard let n = nodes[start].Current else { return Vector4.Zero }
       var current Node? = n
       var transformed = false
       while let ancestor = current {
@@ -60,7 +60,7 @@ internal class DiagnosticHitIndex {
     let box = bounds[index]
     if !(x >= box.X && y >= box.Y && x < box.Z && y < box.W) { return nil }
     if end - start == 1 {
-      let n = nodes[start]
+      guard let n = nodes[start].Current else { return nil }
       let point = TransformGeometry.WindowToNode(n, x, y)
       if !point.Valid || !hitsMapped(n, point.X, point.Y) { return nil }
       var current Node? = n
@@ -95,7 +95,7 @@ private func hitWithinMapped(n Node, x float32, y float32) bool {
 }
 
 private func hitCanTraverseMapped(n Node, x float32, y float32) bool {
-  if n.PaintInputHidden { return false }
+  if n.Retired || n.PaintInputHidden { return false }
   if n.HasClipPath && !ClipPathGeometry.Contains(n, x, y) { return false }
   if n.OverflowX != Overflow.Visible && (x < n.Rect.X || x >= n.Rect.X + n.Rect.W) {
     return false
@@ -171,7 +171,7 @@ internal func hitActivate(root Node?, target Node) bool {
 }
 
 // Append the committed path from the root to the topmost node.
-internal func hitChainInto(n Node, x float32, y float32, sink List[Node]) {
+internal func hitChainInto(n Node, x float32, y float32, sink List[NodeMount]) {
   if let overlay = Portals.Overlay(n) {
     let portals = Stacking.Children(overlay)
     for var i = portals.Count; i > 0; i-- {
@@ -187,19 +187,19 @@ internal func hitChainInto(n Node, x float32, y float32, sink List[Node]) {
   appendHitChain(n, x, y, sink)
 }
 
-private func prependPortalAncestors(portal Node, start int32, sink List[Node]) {
+private func prependPortalAncestors(portal Node, start int32, sink List[NodeMount]) {
   var current = portal.Parent
   while let ancestor = current {
-    sink.Insert(start, ancestor)
+    sink.Insert(start, NodeMount(ancestor))
     current = ancestor.Parent
   }
 }
 
-private func appendHitChain(n Node, x float32, y float32, sink List[Node]) bool {
+private func appendHitChain(n Node, x float32, y float32, sink List[NodeMount]) bool {
   let point = TransformGeometry.Unmap(n, x, y)
   if !point.Valid || !hitCanTraverseMapped(n, point.X, point.Y) { return false }
   let start = sink.Count
-  sink.Add(n)
+  sink.Add(NodeMount(n))
   let parts = ScrollbarParts.ActiveChildren(n)
   for var i = parts.Count; i > 0; i-- {
     let child = parts[i - 1]
