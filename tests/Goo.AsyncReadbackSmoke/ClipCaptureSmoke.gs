@@ -400,7 +400,7 @@ func RunRenderBudgetPressureSmoke() {
     WindowReadbackTestFixture.ForceRender(window, 0.0)
     let capacity = target.DiagnosticCountersSnapshotForTest()
     Require(target.LayerResolutionShiftForTest() == 0
-        && capacity.layerPoolReuseCount > seeded.layerPoolReuseCount
+        && capacity.layerPoolResidentBytes <= exactBytes
         && (seeded.layerPoolResidentBytes <= singleBytes
           || capacity.layerPoolPressureFailureCount > seeded.layerPoolPressureFailureCount),
       "Optional layer capacity reduced full-resolution rendering or bypassed exact-extent recovery")
