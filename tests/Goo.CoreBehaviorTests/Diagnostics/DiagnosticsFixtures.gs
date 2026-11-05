@@ -7,6 +7,38 @@ import System.Text.Json
 import System.Threading
 
 internal class DiagnosticsFixtures {
+  func QueuedPipeConnectionsSurviveProbeDisconnectContract() bool {
+    let window = Window{Root: DiagnosticsOverrideCell{}, Width: 200, Height: 100}
+    window.UpdateTree()
+    using let session = window.AttachDiagnostics()
+    for index in 0 ... 32 {
+      using let probe = NamedPipeClientStream(".", session.Endpoint.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous)
+      probe.Connect(5000)
+      using let client = NamedPipeClientStream(".", session.Endpoint.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous)
+      client.Connect(5000)
+      probe.Dispose()
+      using let reader = StreamReader(client, leaveOpen: true)
+      using let writer = StreamWriter(client, leaveOpen: true){AutoFlush = true, NewLine = "\n"}
+      let hello = reader.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult()
+      if hello == nil { return false }
+      using let greeting = JsonDocument.Parse(hello)
+      if greeting.RootElement.GetProperty("type").GetString() != "hello" { return false }
+      writer.WriteLine("{\"type\":\"request\",\"id\":\"queued\",\"command\":\"snapshot\",\"payload\":{\"full\":true}}")
+      let response = reader.ReadLineAsync()
+      let deadline = Environment.TickCount64 + 5000
+      while !response.IsCompleted && Environment.TickCount64 < deadline {
+        window.drainPostedActions()
+        Thread.Sleep(1)
+      }
+      if !response.IsCompleted { return false }
+      guard let line = response.GetAwaiter().GetResult() else { return false }
+      using let document = JsonDocument.Parse(line)
+      if !document.RootElement.GetProperty("ok").GetBoolean()
+        || document.RootElement.GetProperty("id").GetString() != "queued" { return false }
+    }
+    return true
+  }
+
   func SnapshotWithNonFiniteGeometryUsesValidJsonContract() bool {
     let window = Window{Root: DiagnosticsOverrideCell{}, Width: 200, Height: 100}
     window.UpdateTree()
