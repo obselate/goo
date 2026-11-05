@@ -209,7 +209,7 @@ internal class PortalFixtures {
     cell.CollisionBounds = ElementRect{ X: 20, Y: 70, Width: 180, Height: 70 }
     cell.Rebuild()
     window.UpdateTree()
-    if !samePortalBox(cell.Popup.BorderBox, 110.0, 70.0, 90.0, 50.0) { return false }
+    if !samePortalBox(cell.Popup.BorderBox, 110.0, 70.0, 90.0, 32.0) { return false }
     cell.Placement = PortalPlacement.RightStart
     cell.CollisionBounds = ElementRect{ X: 20, Y: 15, Width: 180, Height: 130 }
     cell.Rebuild()
@@ -244,6 +244,67 @@ internal class PortalFixtures {
     cell.Rebuild()
     window.UpdateTree()
     return samePortalBox(cell.Popup.BorderBox, 90.0, 70.0, 90.0, 50.0)
+  }
+
+  func AnchoredPlacementSizesToSelectedSideContract() bool {
+    let cell = PortalSideSizeCell{}
+    let window = Window{ Root: cell, Width: 720, Height: 520 }
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 270.0, 192.0, 320.0, 250.0) { return false }
+    window.HandleResize(720, 320)
+    cell.Bounds = ElementRect{ X: 8, Y: 8, Width: 704, Height: 304 }
+    cell.Rebuild()
+    for pass in 0 ... 8 {
+      window.UpdateTree()
+      if !samePortalBox(cell.Popup.BorderBox, 270.0, 8.0, 320.0, 152.0)
+        || window.PortalLayoutNeedsForTest() { return false }
+    }
+    cell.Placement = PortalPlacement.BottomStart
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 270.0, 8.0, 320.0, 152.0) { return false }
+    window.HandleResize(720, 520)
+    cell.Bounds = ElementRect{ X: 8, Y: 8, Width: 704, Height: 504 }
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 270.0, 192.0, 320.0, 250.0) { return false }
+    cell.Placement = PortalPlacement.TopEnd
+    cell.Height = 40.0
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 8.0, 120.0, 320.0, 40.0) { return false }
+    cell.Placement = PortalPlacement.LeftStart
+    cell.Width = 600.0
+    cell.Height = 250.0
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 310.0, 160.0, 402.0, 250.0) { return false }
+    cell.Width = 80.0
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 190.0, 160.0, 80.0, 250.0) { return false }
+    guard let anchor = cell.Anchor.AttachedNode() else { return false }
+    Transforming.SetTranslateX(anchor, Length{ Unit: LengthUnit.Px, Value: 400.0F })
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 590.0, 160.0, 80.0, 250.0) { return false }
+    Transforming.SetTranslateX(anchor, Length{ Unit: LengthUnit.Px })
+    window.HandleResize(720, 320)
+    cell.Width = 600.0
+    cell.Bounds = ElementRect{ X: 8, Y: 8, Width: 704, Height: 304 }
+    for ordinal in 0 ... 12 {
+      cell.Placement = PortalPlacement(ordinal)
+      cell.Rebuild()
+      window.UpdateTree()
+      let box = cell.Popup.BorderBox
+      if box.X < 8.0 || box.Y < 8.0 || box.X + box.Width > 712.0
+        || box.Y + box.Height > 312.0 { return false }
+      if ordinal < 6 {
+        if box.Y + box.Height > 160.0 && box.Y < 192.0 { return false }
+      } else {
+        if box.X + box.Width > 270.0 && box.X < 310.0 { return false }
+      }
+    }
+    return true
   }
 
   func AnchoredPlacementLifecycleAndDependencyContract() bool {
@@ -527,6 +588,26 @@ internal class PortalPlacementCell : Cell {
         },
       },
     }
+  }
+}
+
+internal class PortalSideSizeCell : Cell {
+  internal let Anchor ElementHandle = ElementHandle{}
+  internal let Popup ElementHandle = ElementHandle{}
+  internal var Placement PortalPlacement = PortalPlacement.TopStart
+  internal var Bounds ElementRect = ElementRect{ X: 8, Y: 8, Width: 704, Height: 504 }
+  internal var Width float64 = 320.0
+  internal var Height float64 = 250.0
+
+  override func Build() Blob -> Container{ Width: Percent(100), Height: Percent(100),
+    Container{ Handle: Anchor, Position: PositionType.Absolute,
+      Left: 260, Top: 156, Width: 60, Height: 40 },
+    Portal{ Handle: Popup, Anchor: Anchor,
+      AnchorRect: ElementRect{ X: 10, Y: 4, Width: 40, Height: 32 },
+      CollisionBounds: Bounds, Placement: Placement, Overflow: Overflow.Scroll,
+      MinWidth: Width, MinHeight: Height,
+      Container{ Width: Width, Height: Height },
+    },
   }
 }
 

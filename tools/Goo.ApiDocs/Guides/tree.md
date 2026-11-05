@@ -38,11 +38,12 @@ Portal{Anchor: trigger,
 Nil values use the whole anchor and viewport. Collision bounds also cap the Portal's
 size. Both properties have no effect without `Anchor`.
 
-Goo tries the preferred side, flips to its opposite when that reduces collision
-overflow, then clamps the Portal border box inside the collision bounds. `Start` and `End`
-on top and bottom placements follow the Portal's resolved text direction. On left
-and right placements they mean top and bottom. A popup larger than the bounds is
-capped to the bounds. Use `Overflow.Scroll` when its content must remain reachable.
+Goo keeps the preferred side when the popup fits. Otherwise it flips if the opposite
+side has more space. It then caps the main-axis size to the space between the anchor
+edge and the collision edge, so the popup does not cover the anchor. The cross axis
+shifts inside the collision bounds. `Start` and `End` on top and bottom placements
+follow the Portal's resolved text direction. On left and right placements they mean
+top and bottom. Use `Overflow.Scroll` when its content must remain reachable.
 Padding on a transparent Portal can provide a gap that follows the popup when it
 flips.
 

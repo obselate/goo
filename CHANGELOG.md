@@ -9,6 +9,7 @@
 - Avoid allocating a default child list when Container or Button receives a child list during initialization.
 - Draw large opaque solid interiors without distance coverage or blending. Keep the existing antialiasing at the edges.
 - Keep the DevTools pipe listener alive while clients disconnect so queued input and snapshot connections are not reset. (#583)
+- Size anchored Portals to the available space on their selected side instead of shifting them over the anchor. Keep cross-axis containment.
 
 ## 0.27.11 - 2026-11-05
 

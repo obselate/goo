@@ -78,6 +78,7 @@ class FixtureContractTests {
             yield Contract[PathBuilderFixtures]("ResetPreservesPublishedPathAndClearsContour")
             yield Contract[PortalFixtures]("UiScaleLayoutInputAndAnchoredPortalContract")
             yield Contract[PortalFixtures]("AnchoredSubrectangleAndCollisionBoundsContract")
+            yield Contract[PortalFixtures]("AnchoredPlacementSizesToSelectedSideContract")
             yield Contract[AccessibilityFixtures]("AdapterDeliveryThreadContract")
             yield Contract[AccessibilityFixtures]("DeclaredActionFailureContract")
             yield Contract[AccessibilityFixtures]("DeliveryDemandAndReplacementContract")
