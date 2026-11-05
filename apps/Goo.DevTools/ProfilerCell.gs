@@ -812,7 +812,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                     }
                 ),
                 Cell.Mount[DataGridInput, DataGrid](
-                    "profiler-table-" + tab,
+                    tab,
                     DataGridInput{
                         Columns: tableColumns,
                         Rows: tableRows,

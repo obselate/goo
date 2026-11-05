@@ -128,8 +128,9 @@ function branch(nodes, key) {
     const visit = node => node ? [node, ...(node.childIds ?? []).flatMap(id => visit(byId.get(id)))] : [];
     return visit(nodes.find(node => node.key === key));
 }
+const profilerTableKeys = new Set(['Phases', 'Memory', 'Types', 'Resources']);
 function profilerTable(nodes) {
-    const table = nodes.find(node => node.key?.startsWith('profiler-table-'));
+    const table = nodes.find(node => profilerTableKeys.has(node.key));
     assert(table, 'Profiler table is missing');
     return branch(nodes, table.key);
 }
