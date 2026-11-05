@@ -15,27 +15,46 @@ class AccessibilityTextTests {
         window.AccessibilityAdapter = adapter
         try {
             window.UpdateTree()
-            let update = nint(
-                typeof(NativeAccessibilityAdapter).GetMethod("Encode", BindingFlags.Instance | BindingFlags.NonPublic)!!
-                    .Invoke(adapter, []object? {true})!!
-            )
-            try {
-                let text = TreeUpdateDebug(update)
-                try {
-                    let dump = Marshal.PtrToStringUTF8(text)!!
-                    Console.WriteLine(dump)
-                    for role in []string{"Splitter", "TabPanel", "Toolbar", "Tooltip", "Grid", "GridCell", "ColumnHeader", "RowHeader"} {
-                        Assert.Contains(role, dump)
-                    }
-                    for property in []string{"row_index: 400", "column_index: 7", "row_count: 1000", "column_count: 20"} {
-                        Assert.Contains(property, dump)
-                    }
-                } finally {
-                    StringFree(text)
-                }
-            } finally {
-                AccessKitNative.TreeUpdateFree(update)
+            let dump = Dump(adapter)
+            for role in []string{"Splitter", "TabPanel", "Toolbar", "Tooltip", "Grid", "GridCell", "ColumnHeader", "RowHeader"} {
+                Assert.Contains(role, dump)
             }
+            for property in []string{"row_index: 0", "column_index: 0", "row_index: 400", "column_index: 7", "row_count: 1000", "column_count: 20"} {
+                Assert.Contains(property, dump)
+            }
+        } finally {
+            window.Close()
+        }
+    }
+    @Fact
+    func NativeVirtualSetIndicesReachAccessKit() {
+        using let adapter = NativeAccessibilityAdapter()
+        let cell = VirtualFixtureCell(1000)
+        let window = Window{Width: 100, Height: 60, Root: cell}
+        window.AccessibilityAdapter = adapter
+        try {
+            window.UpdateTree()
+            let first = Dump(adapter)
+            Assert.Contains("position_in_set: 0", first)
+            Assert.Contains("size_of_set: 1000", first)
+            Assert.True(cell.Handle.JumpTo(0.0, 10000.0))
+            window.UpdateTree()
+            let scrolled = Dump(adapter)
+            Assert.Contains("position_in_set: 499", scrolled)
+            Assert.Contains("size_of_set: 1000", scrolled)
+            Assert.DoesNotContain("position_in_set: 0", scrolled)
+            cell.Role = AccessibilityRole.Tree
+            cell.ItemAccessibility = Accessibility{
+                Role: AccessibilityRole.TreeItem, PositionInSet: 2, SizeOfSet: 7, Level: 1,
+            }
+            cell.Fresh = true
+            cell.Rebuild()
+            window.UpdateTree()
+            let tree = Dump(adapter)
+            Assert.Contains("position_in_set: 2", tree)
+            Assert.Contains("size_of_set: 7", tree)
+            Assert.Contains("level: 0", tree)
+            Assert.DoesNotContain("size_of_set: 1000", tree)
         } finally {
             window.Close()
         }
@@ -76,6 +95,22 @@ class AccessibilityTextTests {
         private func TreeUpdateDebug(update nint) nint;
         @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_string_free", CallingConvention: CallingConvention.Cdecl)
         private func StringFree(value nint);
+        private func Dump(adapter NativeAccessibilityAdapter) string {
+            let update = nint(
+                typeof(NativeAccessibilityAdapter).GetMethod("Encode", BindingFlags.Instance | BindingFlags.NonPublic)!!
+                    .Invoke(adapter, []object? {true})!!
+            )
+            try {
+                let text = TreeUpdateDebug(update)
+                try {
+                    return Marshal.PtrToStringUTF8(text)!!
+                } finally {
+                    StringFree(text)
+                }
+            } finally {
+                AccessKitNative.TreeUpdateFree(update)
+            }
+        }
         private func Encode(adapter NativeAccessibilityAdapter)[]NativeAccessibilityTextRun {
             let type = typeof(NativeAccessibilityAdapter)
             let update = nint(

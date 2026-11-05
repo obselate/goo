@@ -178,9 +178,9 @@ public sealed partial class NativeAccessibilityAdapter {
       if node.Orientation != AccessibilityOrientation.Unspecified { AccessKitNative.NodeSetOrientation(target, uint8(node.Orientation) - uint8(1)) }
       if node.HasPopup == true { AccessKitNative.NodeSetHasPopup(target, node.Role == AccessibilityRole.ComboBox ? uint8(1) : uint8(0)) }
       AccessKitNative.NodeSetLive(target, uint8(node.Live))
-      if let value = node.Level { AccessKitNative.NodeSetLevel(target, uint64(value)) }
+      if let value = node.Level { AccessKitNative.NodeSetLevel(target, uint64(value - 1)) }
       if let value = node.PositionInSet { AccessKitNative.NodeSetPositionInSet(target, nuint(value)) }
-      if let value = node.SizeOfSet { AccessKitNative.NodeSetSizeOfSet(target, nuint(value)) }
+      if let value = CollectionSize(node) { AccessKitNative.NodeSetSizeOfSet(target, nuint(value)) }
       if let value = node.RowIndex { AccessKitNative.NodeSetRowIndex(target, nuint(value)) }
       if let value = node.ColumnIndex { AccessKitNative.NodeSetColumnIndex(target, nuint(value)) }
       if let value = node.RowCount { AccessKitNative.NodeSetRowCount(target, nuint(value)) }
@@ -188,6 +188,20 @@ public sealed partial class NativeAccessibilityAdapter {
       if let value = node.ValueNow { AccessKitNative.NodeSetNumericValue(target, value) }
       if let value = node.ValueMinimum { AccessKitNative.NodeSetMinNumericValue(target, value) }
       if let value = node.ValueMaximum { AccessKitNative.NodeSetMaxNumericValue(target, value) }
+    }
+
+    private func CollectionSize(node AccessibilityNode) int32? {
+      if node.PositionInSet != nil { return node.SizeOfSet }
+      var size int32?
+      for i in 0 ... node.Children.Count {
+        let child = node.Children[i]
+        if child.PositionInSet == nil { continue }
+        if node.Role == AccessibilityRole.Tree { return nil }
+        guard let count = child.SizeOfSet else { return node.SizeOfSet }
+        if size != nil && size != count { return nil }
+        size = count
+      }
+      return size ?? node.SizeOfSet
     }
 
     private func EncodeRelationships(target nint, values AccessibilityRelationshipIds) {

@@ -564,6 +564,14 @@ internal class Virtualization {
       return State(owner)?.Position(key)
     }
 
+    internal func ItemCount(n Node) int32? {
+      if let state = State(n) { return state.ItemCount() }
+      guard let parent = n.Parent else { return nil }
+      if let state = State(parent), n.Key != nil { return state.ItemCount() }
+      guard let key = parent.Key, let owner = parent.Parent else { return nil }
+      return State(owner)?.Position(key) != nil ? State(owner)?.ItemCount() : nil
+    }
+
     internal func Dispose(n Node) {
       if let state = State(n) {
         values.Remove(n)
