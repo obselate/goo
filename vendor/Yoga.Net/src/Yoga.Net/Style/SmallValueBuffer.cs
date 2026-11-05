@@ -15,28 +15,22 @@ namespace Facebook.Yoga
 
         private ushort _count;
         private byte _percentageLengthCount;
-        private readonly uint[] _buffer;
-        private readonly bool[] _wideElements;
+        private uint[]? _buffer;
+        private bool[]? _wideElements;
         private Overflow? _overflow;
 
-        private int BufferSizeValue => _buffer.Length;
+        private int BufferSizeValue => default(BufferSize).Value;
 
         public SmallValueBuffer()
         {
-            int size = default(BufferSize).Value;
-            _buffer = new uint[size];
-            _wideElements = new bool[size];
         }
 
         private SmallValueBuffer(SmallValueBuffer<BufferSize> other)
         {
             _count = other._count;
             _percentageLengthCount = other._percentageLengthCount;
-            int size = default(BufferSize).Value;
-            _buffer = new uint[size];
-            _wideElements = new bool[size];
-            Array.Copy(other._buffer, _buffer, size);
-            Array.Copy(other._wideElements, _wideElements, size);
+            _buffer = (uint[]?)other._buffer?.Clone();
+            _wideElements = (bool[]?)other._wideElements?.Clone();
 
             if (other._overflow != null)
             {
@@ -58,6 +52,7 @@ namespace Facebook.Yoga
 
             if (index < BufferSizeValue)
             {
+                _buffer ??= new uint[BufferSizeValue];
                 _buffer[index] = value;
                 return index;
             }
@@ -93,6 +88,7 @@ namespace Facebook.Yoga
 
             if (lsbIndex < BufferSizeValue)
             {
+                _wideElements ??= new bool[BufferSizeValue];
                 _wideElements[lsbIndex] = true;
             }
             else
@@ -107,6 +103,7 @@ namespace Facebook.Yoga
         {
             if (index < BufferSizeValue)
             {
+                _buffer ??= new uint[BufferSizeValue];
                 _buffer[index] = value;
             }
             else
@@ -120,7 +117,7 @@ namespace Facebook.Yoga
         public ushort Replace(ushort index, ulong value)
         {
             bool isWide = index < BufferSizeValue
-                ? _wideElements[index]
+                ? _wideElements?[index] ?? false
                 : _overflow!.WideElements[index - BufferSizeValue];
 
             if (isWide)
@@ -142,7 +139,7 @@ namespace Facebook.Yoga
         {
             if (index < BufferSizeValue)
             {
-                return _buffer[index];
+                return _buffer is null ? 0 : _buffer[index];
             }
             else
             {
