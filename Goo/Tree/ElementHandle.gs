@@ -19,6 +19,20 @@ public class ElementHandle {
     get -> mountedNode() != nil
   }
 
+  /// Reports whether this mounted element resolves Focus style through direct focus or projection.
+  public prop IsFocusVisible bool {
+    get -> mountedNode(true)?.FocusVisible ?? false
+  }
+
+  /// Sets the descendant that also resolves Focus style while this owner has visible focus.
+  /// An unmounted target is retained for remounting. The next rebuild restores Blob.FocusTarget.
+  /// @param target The descendant handle, or nil to clear projection.
+  /// @returns False when this owner is unmounted.
+  public func SetFocusTarget(target ElementHandle?) bool {
+    guard let n = mountedNode(), let owner = window else { return false }
+    return owner.SetElementFocusTarget(n, target)
+  }
+
   /// Gets the transformed border box in window logical coordinates.
   /// An unmounted handle returns an empty rectangle.
   public prop BorderBox ElementRect{

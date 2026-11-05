@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add `Blob.FocusTarget`, `ElementHandle.SetFocusTarget` and `IsFocusVisible` for composite focus visuals without moving keyboard or accessibility focus.
 - Skip the viewport background draw when a plain opaque root covers it exactly.
 - Return free glibc heap pages after background Vulkan pipeline preparation and cache persistence on Linux.
 - Add `VirtualViewport.PixelScale` for device-pixel row rounding. Scale changes invalidate cached virtual content through `ContextVersion`.

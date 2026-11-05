@@ -443,6 +443,7 @@ class PublicDocumentationTests {
             "M:Goo.ElementHandle.ScrollOffsetOf(System.String,Goo.ScrollAlignment)",
             "M:Goo.ElementHandle.RestoreAnchor(Goo.VirtualScrollAnchor,System.Boolean)",
             "M:Goo.ElementHandle.ScrollTo(System.Double,System.Double)",
+            "M:Goo.ElementHandle.SetFocusTarget(Goo.ElementHandle)",
             "M:Goo.ElementHandle.SetTextInputArea(Goo.ElementRect)",
             "M:Goo.ElementHandle.TryCopyTextRangeRects(Goo.TextRange,Goo.TextCoordinateSpace,System.Span{Goo.ElementRect},System.Int32@)",
             "M:Goo.ElementHandle.TryGetTextCaretRect(Goo.TextPosition,Goo.TextCoordinateSpace,Goo.ElementRect@)",
@@ -1334,6 +1335,11 @@ class PublicDocumentationTests {
             ),
             ["M:Goo.ElementHandle.Focus"] = DocumentationShape(
                 System.Array.Empty[string](),
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.ElementHandle.SetFocusTarget(Goo.ElementHandle)"] = DocumentationShape(
+                []string{"target"},
                 System.Array.Empty[string](),
                 true
             ),

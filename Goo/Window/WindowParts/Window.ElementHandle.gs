@@ -45,6 +45,17 @@ public partial class Window {
     return result
   }
 
+  internal func SetElementFocusTarget(n Node, target ElementHandle?) bool {
+    requireUiThread("ElementHandle.SetFocusTarget")
+    FlushDeferredVirtualization()
+    if n.Retired { return false }
+    if InputCallbacks.SetFocusTarget(n, target) && input.RefreshFocusProjection(resolver) {
+      resolver.Flush()
+      markDirtyAndRender()
+    }
+    return true
+  }
+
   internal func CancelElementGestures(n Node) bool {
     requireUiThread("ElementHandle.CancelGestures")
     let result = input.CancelGestures(node, resolver, n)
