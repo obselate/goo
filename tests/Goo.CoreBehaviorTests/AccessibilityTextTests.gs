@@ -55,6 +55,17 @@ class AccessibilityTextTests {
             Assert.Contains("size_of_set: 7", tree)
             Assert.Contains("level: 0", tree)
             Assert.DoesNotContain("size_of_set: 1000", tree)
+            cell.Role = AccessibilityRole.Group
+            cell.Rebuild()
+            window.UpdateTree()
+            Assert.Matches("role: Group, [^}]*size_of_set: 7", Dump(adapter))
+            cell.ItemAccessibility = Accessibility{
+                Role: AccessibilityRole.TreeItem, PositionInSet: 2, SizeOfSet: 9, Level: 1,
+            }
+            cell.Fresh = true
+            cell.Rebuild()
+            window.UpdateTree()
+            Assert.Matches("role: Group, [^}]*size_of_set: 9", Dump(adapter, false))
         } finally {
             window.Close()
         }
@@ -95,10 +106,10 @@ class AccessibilityTextTests {
         private func TreeUpdateDebug(update nint) nint;
         @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_string_free", CallingConvention: CallingConvention.Cdecl)
         private func StringFree(value nint);
-        private func Dump(adapter NativeAccessibilityAdapter) string {
+        private func Dump(adapter NativeAccessibilityAdapter, all bool = true) string {
             let update = nint(
                 typeof(NativeAccessibilityAdapter).GetMethod("Encode", BindingFlags.Instance | BindingFlags.NonPublic)!!
-                    .Invoke(adapter, []object? {true})!!
+                    .Invoke(adapter, []object? {all})!!
             )
             try {
                 let text = TreeUpdateDebug(update)
