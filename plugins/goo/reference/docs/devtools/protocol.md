@@ -144,6 +144,7 @@ payload, managed memory, RSS/PSS and driver usage must not be summed as a total.
 `vulkan.timestamp.elapsed` records give elapsed GPU nanoseconds in `gpuElapsedNs`.
 Match `windowId`, `frameId` and `submissionId`. `value0` is the number of recorded
 scopes and `value1` is the number omitted when the scope limit is reached.
+Each stage records up to 64 scopes per frame. Larger stages report unavailable timing.
 Accept only `validity: "available"` with no omitted scopes.
 
 | Event ID | Name | Work |
