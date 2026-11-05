@@ -1180,19 +1180,22 @@ internal partial class Reconciler {
     n.HitTestSelf = false
     if n.PortalAnchor != p.Anchor || n.PortalPlacement != p.Placement
       || n.PortalBounds?.AnchorRect != p.AnchorRect
-      || n.PortalBounds?.CollisionBounds != p.CollisionBounds {
+      || n.PortalBounds?.CollisionBounds != p.CollisionBounds
+      || (n.PortalBounds?.HideWhenAnchorClipped ?? false) != p.HideWhenAnchorClipped {
       n.PortalAnchor = p.Anchor
       n.PortalPlacement = p.Placement
-      if p.AnchorRect != nil || p.CollisionBounds != nil {
+      if p.AnchorRect != nil || p.CollisionBounds != nil || p.HideWhenAnchorClipped {
         let bounds = n.PortalBounds ?? PortalPlacementBounds{}
         bounds.AnchorRect = p.AnchorRect
         bounds.CollisionBounds = p.CollisionBounds
+        bounds.HideWhenAnchorClipped = p.HideWhenAnchorClipped
         n.PortalBounds = bounds
       } else {
         n.PortalBounds = nil
       }
       n.PortalAnchorResolved = false
       n.PortalPlacementHidden = p.Anchor != nil
+      n.PortalAnchorClipped = false
       if !initial {
         MarkEffects(ReconcileEffects.Layout | ReconcileEffects.Paint
           | ReconcileEffects.Input | ReconcileEffects.Accessibility)

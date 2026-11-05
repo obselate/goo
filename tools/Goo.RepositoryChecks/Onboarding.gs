@@ -98,6 +98,7 @@ internal shared partial class Checks {
     }
 
     private func ReleaseText(version string) {
+        ChangelogFragments()
         CheckRelease(version)
         Require(
             Regex.IsMatch(

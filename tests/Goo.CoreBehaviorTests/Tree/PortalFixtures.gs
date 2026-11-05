@@ -209,7 +209,7 @@ internal class PortalFixtures {
     cell.CollisionBounds = ElementRect{ X: 20, Y: 70, Width: 180, Height: 70 }
     cell.Rebuild()
     window.UpdateTree()
-    if !samePortalBox(cell.Popup.BorderBox, 110.0, 70.0, 90.0, 50.0) { return false }
+    if !samePortalBox(cell.Popup.BorderBox, 110.0, 70.0, 90.0, 32.0) { return false }
     cell.Placement = PortalPlacement.RightStart
     cell.CollisionBounds = ElementRect{ X: 20, Y: 15, Width: 180, Height: 130 }
     cell.Rebuild()
@@ -244,6 +244,116 @@ internal class PortalFixtures {
     cell.Rebuild()
     window.UpdateTree()
     return samePortalBox(cell.Popup.BorderBox, 90.0, 70.0, 90.0, 50.0)
+  }
+
+  func AnchoredPlacementSizesToSelectedSideContract() bool {
+    let cell = PortalSideSizeCell{}
+    let window = Window{ Root: cell, Width: 720, Height: 520 }
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 270.0, 192.0, 320.0, 250.0) { return false }
+    window.HandleResize(720, 320)
+    cell.Bounds = ElementRect{ X: 8, Y: 8, Width: 704, Height: 304 }
+    cell.Rebuild()
+    for pass in 0 ... 8 {
+      window.UpdateTree()
+      if !samePortalBox(cell.Popup.BorderBox, 270.0, 8.0, 320.0, 152.0)
+        || window.PortalLayoutNeedsForTest() { return false }
+    }
+    cell.Placement = PortalPlacement.BottomStart
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 270.0, 8.0, 320.0, 152.0) { return false }
+    window.HandleResize(720, 520)
+    cell.Bounds = ElementRect{ X: 8, Y: 8, Width: 704, Height: 504 }
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 270.0, 192.0, 320.0, 250.0) { return false }
+    cell.Placement = PortalPlacement.TopEnd
+    cell.Height = 40.0
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 8.0, 120.0, 320.0, 40.0) { return false }
+    cell.Placement = PortalPlacement.LeftStart
+    cell.Width = 600.0
+    cell.Height = 250.0
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 310.0, 160.0, 402.0, 250.0) { return false }
+    cell.Width = 80.0
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 190.0, 160.0, 80.0, 250.0) { return false }
+    guard let anchor = cell.Anchor.AttachedNode() else { return false }
+    Transforming.SetTranslateX(anchor, Length{ Unit: LengthUnit.Px, Value: 400.0F })
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 590.0, 160.0, 80.0, 250.0) { return false }
+    Transforming.SetTranslateX(anchor, Length{ Unit: LengthUnit.Px })
+    window.HandleResize(720, 320)
+    cell.Width = 600.0
+    cell.Bounds = ElementRect{ X: 8, Y: 8, Width: 704, Height: 304 }
+    for ordinal in 0 ... 12 {
+      cell.Placement = PortalPlacement(ordinal)
+      cell.Rebuild()
+      window.UpdateTree()
+      let box = cell.Popup.BorderBox
+      if box.X < 8.0 || box.Y < 8.0 || box.X + box.Width > 712.0
+        || box.Y + box.Height > 312.0 { return false }
+      if ordinal < 6 {
+        if box.Y + box.Height > 160.0 && box.Y < 192.0 { return false }
+      } else {
+        if box.X + box.Width > 270.0 && box.X < 310.0 { return false }
+      }
+    }
+    return true
+  }
+
+  func ClippedAnchorPreservesMountedEditorContract() bool {
+    let cell = PortalClippedAnchorCell{}
+    let adapter = AccessibilityTestAdapter{}
+    let window = Window{ Root: cell, Width: 240, Height: 160, AccessibilityAdapter: adapter }
+    window.UpdateTree()
+    guard let root = window.Tree, let entry = cell.Editor.AttachedNode(),
+      let portal = entry.Parent, let retained = entry.Fiber as PortalClippedEditorCell ? else { return false }
+    using let focusScope = cell.Popup.BeginFocusScope()
+    if !cell.Editor.Focus() { return false }
+    window.QueueCompositionForTest("pending", 1, 2)
+    window.DrainTextInputForTest()
+    window.UpdateTree()
+    guard let before = window.InputForTest.EditorSnapshot() else { return false }
+    let builds = retained.Builds
+    let hostBuilds = cell.Builds
+    let box = cell.Editor.BorderBox
+    if !Portals.Presented(portal) || hitTopmost(root, float32(box.X + 5.0),
+      float32(box.Y + 5.0)) != entry || before.CompositionStart < 0 { return false }
+    if !cell.Scroll.JumpTo(0.0, 70.0) { return false }
+    window.UpdateTree()
+    if portal.PaintInputHidden { return false }
+    if !cell.Scroll.JumpTo(0.0, 80.0) { return false }
+    window.UpdateTree()
+    let hiddenBox = cell.Editor.BorderBox
+    guard let hidden = window.InputForTest.EditorSnapshot() else { return false }
+    if !portal.PortalAnchorClipped || !portal.PaintInputHidden || Portals.Presented(portal)
+      || hitTopmost(root, float32(hiddenBox.X + 5.0), float32(hiddenBox.Y + 5.0)) == entry
+      || findPortalAccessibility(adapter.Tree?.Root, "retained editor") != nil
+      || !entry.Focused || !focusScope.IsActive || cell.Editor.AttachedNode() != entry || entry.Fiber != retained
+      || retained.Builds != builds || cell.Builds != hostBuilds
+      || hidden.Text != before.Text || hidden.SelectionStart != before.SelectionStart
+      || hidden.SelectionEnd != before.SelectionEnd
+      || hidden.CompositionStart != before.CompositionStart
+      || hidden.CompositionEnd != before.CompositionEnd { return false }
+    if !cell.Scroll.JumpTo(0.0, 0.0) { return false }
+    window.UpdateTree()
+    if portal.PaintInputHidden || !Portals.Presented(portal) || !entry.Focused || !focusScope.IsActive
+      || retained.Builds != builds || cell.Builds != hostBuilds
+      || !samePortalBox(cell.Editor.BorderBox, box.X, box.Y, box.Width, box.Height)
+      || hitTopmost(root, float32(box.X + 5.0), float32(box.Y + 5.0)) != entry
+      || findPortalAccessibility(adapter.Tree?.Root, "retained editor") == nil { return false }
+    cell.HideWhenClipped = false
+    cell.Rebuild()
+    window.UpdateTree()
+    if !cell.Scroll.JumpTo(0.0, 80.0) { return false }
+    window.UpdateTree()
+    return !portal.PaintInputHidden && entry.Focused && cell.Editor.AttachedNode() == entry
   }
 
   func AnchoredPlacementLifecycleAndDependencyContract() bool {
@@ -527,6 +637,63 @@ internal class PortalPlacementCell : Cell {
         },
       },
     }
+  }
+}
+
+internal class PortalSideSizeCell : Cell {
+  internal let Anchor ElementHandle = ElementHandle{}
+  internal let Popup ElementHandle = ElementHandle{}
+  internal var Placement PortalPlacement = PortalPlacement.TopStart
+  internal var Bounds ElementRect = ElementRect{ X: 8, Y: 8, Width: 704, Height: 504 }
+  internal var Width float64 = 320.0
+  internal var Height float64 = 250.0
+
+  override func Build() Blob -> Container{ Width: Percent(100), Height: Percent(100),
+    Container{ Handle: Anchor, Position: PositionType.Absolute,
+      Left: 260, Top: 156, Width: 60, Height: 40 },
+    Portal{ Handle: Popup, Anchor: Anchor,
+      AnchorRect: ElementRect{ X: 10, Y: 4, Width: 40, Height: 32 },
+      CollisionBounds: Bounds, Placement: Placement, Overflow: Overflow.Scroll,
+      MinWidth: Width, MinHeight: Height,
+      Container{ Width: Width, Height: Height },
+    },
+  }
+}
+
+internal class PortalClippedAnchorCell : Cell {
+  internal let Scroll ElementHandle = ElementHandle{}
+  internal let Anchor ElementHandle = ElementHandle{}
+  internal let Editor ElementHandle = ElementHandle{}
+  internal let Popup ElementHandle = ElementHandle{}
+  internal var HideWhenClipped bool = true
+  internal var Builds int32
+
+  override func Build() Blob {
+    Builds++
+    return Container{ Width: Percent(100), Height: Percent(100),
+      Container{ Handle: Scroll, Width: 200, Height: 100, Overflow: Overflow.Scroll,
+        Container{ Width: 200, Height: 400,
+          Container{ Handle: Anchor, Position: PositionType.Absolute,
+            Left: 10, Top: 60, Width: 30, Height: 30 },
+          Portal{ Handle: Popup, Anchor: Anchor, HideWhenAnchorClipped: HideWhenClipped,
+            AnchorRect: ElementRect{ X: 0, Y: 5, Width: 30, Height: 10 },
+            Width: 120, Height: 30, Focusable: true,
+            Cell.Mount[PortalRetainedInput, PortalClippedEditorCell]("editor", PortalRetainedInput(Editor)),
+          },
+        },
+      },
+    }
+  }
+}
+
+internal class PortalClippedEditorCell : Cell[PortalRetainedInput] {
+  internal var Builds int32
+
+  override func Build() Blob {
+    Builds++
+    return TextEntry{ Handle: Input.Target, Key: "retained-editor",
+      Width: 120, Height: 30, Value: "seed",
+      Accessibility: Accessibility{ Role: AccessibilityRole.TextInput, Name: "retained editor" } }
   }
 }
 

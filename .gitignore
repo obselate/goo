@@ -160,6 +160,8 @@
 !/README.md
 !/CONTRIBUTING.md
 !/CHANGELOG.md
+!/changelog.d/
+!/changelog.d/*.md
 !/NuGet.Config
 !/LICENSE
 !/THIRD-PARTY-NOTICES.md

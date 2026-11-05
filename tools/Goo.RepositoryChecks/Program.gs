@@ -17,7 +17,7 @@ internal shared partial class Checks {
     internal func Execute(arguments[]string) {
         if arguments.Length == 0 || arguments.Any(a -> a == "--help" || a == "-h") {
             Console.WriteLine("Usage: Goo.RepositoryChecks <command>\n" +
-                "  release --check|--write|--notes\n" +
+                "  release --check|--write|--dry-run|--notes\n" +
                 "  onboarding\n" +
                 "  accessibility PACKAGE\n" +
                 "  android APK_OR_AAB\n" +
