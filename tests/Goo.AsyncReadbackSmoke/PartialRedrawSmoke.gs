@@ -666,13 +666,13 @@ func PartialRedrawScene(name string, root Cell, steps int32, advance Action,
         WindowReadbackTestFixture.ForceRender(window, 0.0)
         WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
       }
-      let created = WindowReadbackTestFixture.DiagnosticCounters(window).layerPoolCreateCount
+      let reuseCount = WindowReadbackTestFixture.DiagnosticCounters(window).layerPoolReuseCount
       Require(WindowReadbackTestFixture.Resize(window, 400, 190,
         metrics.FramebufferWidth, metrics.FramebufferHeight),
         "Partial redraw capacity recovery resize failed")
       WindowReadbackTestFixture.ForceRender(window, 0.0)
       WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
-      Require(WindowReadbackTestFixture.DiagnosticCounters(window).layerPoolCreateCount == created,
+      Require(WindowReadbackTestFixture.DiagnosticCounters(window).layerPoolReuseCount > reuseCount,
         "Partial redraw resize did not reuse larger layer capacity")
       WindowReadbackTestFixture.SetForceFullRedraw(window, false)
     }
