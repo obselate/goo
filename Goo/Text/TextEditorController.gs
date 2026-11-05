@@ -274,7 +274,10 @@ public class TextEditorController : IDisposable {
 
   /// Gets the selected text after command interception.
   /// @returns The selected text, or an empty string when canceled.
-  public func Copy() string -> if !beginCommand(TextCommand { Kind: TextCommandKind.Copy }) { "" } else { selectedText() }
+  public func Copy() string -> CopySelection(TextCommand { Kind: TextCommandKind.Copy })
+
+  internal func CopySelection(command TextCommand) string ->
+    if !beginCommand(command) { "" } else { selectedText() }
 
   /// Gets and deletes the selected text after command interception.
   /// @returns The deleted text, or an empty string when canceled.
