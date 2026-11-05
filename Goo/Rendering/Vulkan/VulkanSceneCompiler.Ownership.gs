@@ -59,6 +59,7 @@ internal partial class VulkanSceneCompiler {
     }
     if owners.TryGetValue(node, out var existing) {
       if existing.Generation == node.MountGeneration {
+        InvalidateRange(existing)
         node.VulkanOwnerToken = ownerToken
         node.VulkanOwner = existing
         return existing
@@ -94,6 +95,7 @@ internal partial class VulkanSceneCompiler {
 
   private func ForgetOwner(owner VulkanSceneOwnerId) {
     owner.ClearCachedState()
+    ForgetRange(owner)
     roundedOverflowPaths.Remove(owner)
     backdropBlurPaths.Remove(owner)
     textScene?.ForgetOwner(owner)

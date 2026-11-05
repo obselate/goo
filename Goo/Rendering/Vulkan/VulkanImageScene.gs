@@ -70,6 +70,17 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
     pendingImages = false
   }
 
+  internal func TryRetain(value CachedImageRefRecord) bool {
+    if disposed { return false }
+    let lookup = imageResources.Lookup(value.ImageId, value.SamplerId,
+      VulkanImageSamplerMode.Linear, generation)
+    if !lookup.Renderable || lookup.Id.LogicalId != value.ImageId.LogicalId
+      || lookup.Id.Version != value.ImageId.Version { return false }
+    EnsurePendingReferenceCapacity(value.ImageId)
+    AddPendingReference(value.ImageId)
+    return true
+  }
+
   internal func Emit(
     frame SceneFrame,
     bounds ConservativeBounds,

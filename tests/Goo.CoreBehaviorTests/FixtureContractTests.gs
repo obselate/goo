@@ -469,6 +469,7 @@ class FixtureContractTests {
             yield Contract[VulkanSceneCompilerFixtures]("OwnerIdentitySurvivesCompilerHandoff")
             yield Contract[VulkanSceneCompilerFixtures]("ReboundMountGetsFreshCompilerOwners")
             yield Contract[VulkanSceneCompilerFixtures]("RectangleUpdatesPreserveFloatBits")
+            yield Contract[VulkanSceneCompilerFixtures]("DirtySubtreeRecompileMatchesFresh")
             yield Contract[VulkanSceneCompilerFixtures]("OpaqueViewportRootSkipsCoveredBackground")
         }
 

@@ -14,11 +14,15 @@ internal class VulkanSceneCompilerFixtures {
       let compiler = VulkanSceneCompiler(64)
       if compiler.Compile(root, Color.Black, 100.0F, 100.0F).BackgroundDrawn { return false }
       root.Opacity = 0.5
+      root.BumpScenePaintVersion()
       if !compiler.Compile(root, Color.Black, 100.0F, 100.0F).BackgroundDrawn { return false }
+      if compiler.Frame.SolidBoxes[compiler.Frame.SolidBoxCount - 1].Opacity != 0.5F { return false }
       root.Opacity = 1.0
       root.BorderRadius = Length(8)
+      root.BumpScenePaintVersion()
       if !compiler.Compile(root, Color.Black, 100.0F, 100.0F).BackgroundDrawn { return false }
       root.BorderRadius = Length(0)
+      root.BumpScenePaintVersion()
       return compiler.Compile(root, Color.Black, 101.0F, 100.0F).BackgroundDrawn
     } finally {
       NodeLifecycle.DisposeTree(root)
@@ -110,6 +114,55 @@ internal class VulkanSceneCompilerFixtures {
         && BitConverter.SingleToInt32Bits(compiler.Frame.SolidBoxes[0].Bounds.X) == int32.MinValue
     } finally {
       NodeLifecycle.DisposeTree(root)
+    }
+  }
+
+  func DirtySubtreeRecompileMatchesFresh() bool {
+    let create = (clipped bool, color Color) -> Container{
+      Width: 120, Height: 100,
+      Container{
+        Key: "changed", Width: 50, Height: 40, BackgroundColor: color,
+        OverflowX: clipped ? Overflow.Hidden : Overflow.Visible,
+        OverflowY: clipped ? Overflow.Hidden : Overflow.Visible,
+      },
+      Container{
+        Key: "retained", Width: 50, Height: 40,
+        OverflowX: Overflow.Hidden, OverflowY: Overflow.Hidden,
+        Container{ Width: 20, Height: 20, BackgroundColor: Color.White },
+      },
+    }
+    let resolver = Resolver{}
+    let reconciler = Reconciler{ Res: resolver }
+    let root = reconciler.Mount(create(false, Color.Black))
+    let oracleRoot = Reconciler{ Res: Resolver{} }.Mount(create(true, Color.White))
+    try {
+      Layout().Calculate(root, 120.0F, 100.0F)
+      let compiler = VulkanSceneCompiler(64)
+      compiler.Compile(root, Color.Transparent, 120.0F, 100.0F)
+      compiler.Compile(root, Color.Transparent, 120.0F, 100.0F)
+      if compiler.RangeHitCount != 1 || compiler.RangeCompileCount != 0 { return false }
+      reconciler.Diff(root, create(true, Color.White))
+      resolver.FlushEffects()
+      Layout().Calculate(root, 120.0F, 100.0F)
+      compiler.Compile(root, Color.Transparent, 120.0F, 100.0F)
+      if compiler.RangeHitCount != 1 || compiler.RangeCompileCount != 2 { return false }
+      Layout().Calculate(oracleRoot, 120.0F, 100.0F)
+      let oracle = VulkanSceneCompiler(64)
+      oracle.Compile(oracleRoot, Color.Transparent, 120.0F, 100.0F)
+      let actual = compiler.Frame
+      let expected = oracle.Frame
+      if actual.DrawRefCount != expected.DrawRefCount { return false }
+      for index in 0 ... actual.DrawRefCount {
+        let left = actual.DrawRefs[index]
+        let right = expected.DrawRefs[index]
+        if left.Kind != right.Kind || left.Flags != right.Flags || left.ClipChainId != right.ClipChainId
+          || actual.DrawContentDigest(left) != expected.DrawContentDigest(right) { return false }
+      }
+      return compiler.RangeRetainedBytes <= 16L * 1024L * 1024L
+        && compiler.RangePeakBytes <= 16L * 1024L * 1024L
+    } finally {
+      NodeLifecycle.DisposeTree(root)
+      NodeLifecycle.DisposeTree(oracleRoot)
     }
   }
 }

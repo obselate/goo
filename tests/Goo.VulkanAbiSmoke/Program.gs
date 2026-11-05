@@ -1135,10 +1135,9 @@ internal shared class Program {
         Portals.Sync(root, overlay)
         let warm = VulkanSceneCompiler(8)
         warm.Compile(root, overlay, Color.Transparent, 200.0F, 100.0F)
-        let hits = warm.RetainedLeafHitCount + warm.RetainedParentBoxHitCount
         warm.Compile(root, overlay, Color.Transparent, 200.0F, 100.0F)
-        if warm.RetainedLeafHitCount + warm.RetainedParentBoxHitCount <= hits {
-            throw InvalidOperationException("Portal scene did not exercise retained box reuse")
+        if warm.RangeHitCount != 3 || warm.RangeCompileCount != 0 {
+            throw InvalidOperationException("Portal scene did not retain all three presented subtrees")
         }
         AssertPortalDrawOrder(warm.Frame, Color.Rgb(30, 170, 80), Color.Rgb(40, 90, 210))
         first.ZIndex = 10

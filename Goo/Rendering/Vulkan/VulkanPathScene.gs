@@ -92,6 +92,17 @@ internal unsafe sealed class VulkanPathScene : IDisposable {
 
   internal func Register(path VectorPath, fillRule FillRule) VulkanPathRenderable -> Emit(path, fillRule)
 
+  internal func TryRetain(pathId ResourceId, atlasId ResourceId, wordOffset uint32,
+    wordCount uint32, fillRule uint32) bool {
+    EnsureOpen()
+    if !resources.TryRetain(pathId, atlasId, wordOffset, wordCount, fillRule, renderAfterPlannedUpload) {
+      return false
+    }
+    AddPendingPath(pathId)
+    resources.MarkActive(sceneId, pathId)
+    return true
+  }
+
   internal func PrepareUpload() {
     EnsureOpen()
     resources.PrepareUpload()
