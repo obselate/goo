@@ -477,6 +477,8 @@ public class Anim[T] {
         owner.Deregister(handle)
       }
       boundPump = nil
+      owner = nil
+      paintTargets?.Clear()
       memoValid = false
       for var i = 0; i < sims.Length; i++ {
         sims[i] = nil
