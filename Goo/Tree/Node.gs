@@ -22,6 +22,38 @@ internal class Node {
   private var nodeState int32
   private var lifecycleState uint16
   private var scenePaintVersion uint64
+  private var editingState NodeEditingState?
+  private var shapeState NodeShapeState?
+  private var pointerState NodePointerState?
+  private var portalState NodePortalState?
+
+  private func EnsureEditingState() NodeEditingState {
+    if let state = editingState { return state }
+    let state = NodeEditingState()
+    editingState = state
+    return state
+  }
+
+  private func EnsureShapeState() NodeShapeState {
+    if let state = shapeState { return state }
+    let state = NodeShapeState()
+    shapeState = state
+    return state
+  }
+
+  private func EnsurePointerState() NodePointerState {
+    if let state = pointerState { return state }
+    let state = NodePointerState()
+    pointerState = state
+    return state
+  }
+
+  private func EnsurePortalState() NodePortalState {
+    if let state = portalState { return state }
+    let state = NodePortalState()
+    portalState = state
+    return state
+  }
 
   internal prop ScenePaintVersion uint64{ get -> scenePaintVersion }
   internal var VulkanOwnerToken object?
@@ -36,11 +68,32 @@ internal class Node {
 
   internal prop Kind NodeKind{ get; set; }
   internal var IsPortal bool
-  internal var PortalAnchor ElementHandle?
-  internal var PortalPlacement PortalPlacement
-  internal var PortalBounds PortalPlacementBounds?
-  internal var PortalAnchorBounds Rect
-  internal var PortalAnchorResolved bool
+  internal prop PortalAnchor ElementHandle?{
+    get -> portalState?.PortalAnchor
+    set {
+      if portalState == nil && value == nil { return }
+      EnsurePortalState().PortalAnchor = value
+    }
+  }
+  internal prop PortalPlacement PortalPlacement{
+    get -> portalState?.PortalPlacement ?? PortalPlacement.BottomStart
+    set -> EnsurePortalState().PortalPlacement = value
+  }
+  internal prop PortalBounds PortalPlacementBounds?{
+    get -> portalState?.PortalBounds
+    set {
+      if portalState == nil && value == nil { return }
+      EnsurePortalState().PortalBounds = value
+    }
+  }
+  internal prop PortalAnchorBounds Rect{
+    get -> portalState?.PortalAnchorBounds ?? Rect{}
+    set -> EnsurePortalState().PortalAnchorBounds = value
+  }
+  internal prop PortalAnchorResolved bool{
+    get -> portalState?.PortalAnchorResolved ?? false
+    set -> EnsurePortalState().PortalAnchorResolved = value
+  }
   internal var PortalPlacementHidden bool
   internal prop HasCustomLayout bool{ get; set; }
   internal prop Key string? { get; set; }
@@ -191,26 +244,89 @@ internal class Node {
   internal prop TextMaxLines int32{ get; set; }
   internal prop TextLayout TextLayout? { get; set; }
   internal prop TextLayoutCache List[TextLayout]? { get; set; }
-  internal prop EntryShape EntryShapeState? { get; set; }
-  internal prop EntryHistory EntryUndoHistory? { get; set; }
-  internal prop EditorBinding TextEditorBinding? { get; set; }
+  internal prop EntryShape EntryShapeState?{
+    get -> editingState?.EntryShape
+    set {
+      if editingState == nil && value == nil { return }
+      EnsureEditingState().EntryShape = value
+    }
+  }
+  internal prop EntryHistory EntryUndoHistory?{
+    get -> editingState?.EntryHistory
+    set {
+      if editingState == nil && value == nil { return }
+      EnsureEditingState().EntryHistory = value
+    }
+  }
+  internal prop EditorBinding TextEditorBinding?{
+    get -> editingState?.EditorBinding
+    set {
+      if editingState == nil && value == nil { return }
+      EnsureEditingState().EditorBinding = value
+    }
+  }
   internal prop EditorController TextEditorController? {
     get -> EditorBinding?.Controller
   }
   internal prop EditorState TextEditorRenderState? { get -> EditorBinding?.RenderState
   }
-  internal prop EditorReadOnly bool{ get; set; }
-  internal prop InputOptions TextInputOptions? { get; set; }
-  internal prop EditorCaretColor Color{ get; set; }
-  internal prop EditorCurrentLineColor Color{ get; set; }
-  internal prop EditorShowLineNumbers bool{ get; set; }
-  internal prop EditorLineNumberColor Color{ get; set; }
-  internal prop EditorOverscanLines int32{ get; set; }
-  internal prop EditorOnChange Action[TextDocumentChange]? { get; set; }
-  internal prop EditorOnSubmit Action? { get; set; }
-  internal prop EditorSlotRange TextRange{ get; set; }
-  internal prop EditorSlotKey string{ get; set; }
-  internal prop EditorSlotBlock bool{ get; set; }
+  internal prop EditorReadOnly bool{
+    get -> editingState?.EditorReadOnly ?? false
+    set -> EnsureEditingState().EditorReadOnly = value
+  }
+  internal prop InputOptions TextInputOptions?{
+    get -> editingState?.InputOptions
+    set {
+      if editingState == nil && value == nil { return }
+      EnsureEditingState().InputOptions = value
+    }
+  }
+  internal prop EditorCaretColor Color{
+    get -> editingState?.EditorCaretColor ?? Color{}
+    set -> EnsureEditingState().EditorCaretColor = value
+  }
+  internal prop EditorCurrentLineColor Color{
+    get -> editingState?.EditorCurrentLineColor ?? Color{}
+    set -> EnsureEditingState().EditorCurrentLineColor = value
+  }
+  internal prop EditorShowLineNumbers bool{
+    get -> editingState?.EditorShowLineNumbers ?? false
+    set -> EnsureEditingState().EditorShowLineNumbers = value
+  }
+  internal prop EditorLineNumberColor Color{
+    get -> editingState?.EditorLineNumberColor ?? Color{}
+    set -> EnsureEditingState().EditorLineNumberColor = value
+  }
+  internal prop EditorOverscanLines int32{
+    get -> editingState?.EditorOverscanLines ?? 0
+    set -> EnsureEditingState().EditorOverscanLines = value
+  }
+  internal prop EditorOnChange Action[TextDocumentChange]?{
+    get -> editingState?.EditorOnChange
+    set {
+      if editingState == nil && value == nil { return }
+      EnsureEditingState().EditorOnChange = value
+    }
+  }
+  internal prop EditorOnSubmit Action?{
+    get -> editingState?.EditorOnSubmit
+    set {
+      if editingState == nil && value == nil { return }
+      EnsureEditingState().EditorOnSubmit = value
+    }
+  }
+  internal prop EditorSlotRange TextRange{
+    get -> editingState?.EditorSlotRange ?? TextRange{}
+    set -> EnsureEditingState().EditorSlotRange = value
+  }
+  internal prop EditorSlotKey string{
+    get -> editingState?.EditorSlotKey ?? ""
+    set -> EnsureEditingState().EditorSlotKey = value
+  }
+  internal prop EditorSlotBlock bool{
+    get -> editingState?.EditorSlotBlock ?? false
+    set -> EnsureEditingState().EditorSlotBlock = value
+  }
 
   internal prop BaseStyle StyleEntries? { get; set; }
   internal prop HoverStyle StyleEntries? { get; set; }
@@ -398,12 +514,48 @@ internal class Node {
     }
   }
 
-  internal prop OnClick Action? { get; set; }
-  internal prop OnPointerDown((PointerEvent) -> void)? { get; set; }
-  internal prop OnPointerMove((PointerEvent) -> void)? { get; set; }
-  internal prop OnPointerUp((PointerEvent) -> void)? { get; set; }
-  internal prop OnPointerCancel((PointerEvent) -> void)? { get; set; }
-  internal prop OnWheel((WheelEvent) -> void)? { get; set; }
+  internal prop OnClick Action?{
+    get -> pointerState?.OnClick
+    set {
+      if pointerState == nil && value == nil { return }
+      EnsurePointerState().OnClick = value
+    }
+  }
+  internal prop OnPointerDown ((PointerEvent) -> void)?{
+    get -> pointerState?.OnPointerDown
+    set {
+      if pointerState == nil && value == nil { return }
+      EnsurePointerState().OnPointerDown = value
+    }
+  }
+  internal prop OnPointerMove ((PointerEvent) -> void)?{
+    get -> pointerState?.OnPointerMove
+    set {
+      if pointerState == nil && value == nil { return }
+      EnsurePointerState().OnPointerMove = value
+    }
+  }
+  internal prop OnPointerUp ((PointerEvent) -> void)?{
+    get -> pointerState?.OnPointerUp
+    set {
+      if pointerState == nil && value == nil { return }
+      EnsurePointerState().OnPointerUp = value
+    }
+  }
+  internal prop OnPointerCancel ((PointerEvent) -> void)?{
+    get -> pointerState?.OnPointerCancel
+    set {
+      if pointerState == nil && value == nil { return }
+      EnsurePointerState().OnPointerCancel = value
+    }
+  }
+  internal prop OnWheel ((WheelEvent) -> void)?{
+    get -> pointerState?.OnWheel
+    set {
+      if pointerState == nil && value == nil { return }
+      EnsurePointerState().OnWheel = value
+    }
+  }
   internal prop Fiber Cell? { get; set; }
   internal prop ScrollX float32{ get; set; }
   internal prop ScrollY float32{ get; set; }
@@ -434,19 +586,61 @@ internal class Node {
   }
   internal prop DragsWindow bool{ get; set }
   internal prop HitTestSelf bool{ get; set; }
-  internal prop ShapePath VectorPath{ get; set; }
-  internal prop ShapeFit ShapeFit{ get; set; }
-  internal prop ShapeFillRule FillRule{ get; set; }
-  internal prop ShapeUseCurrentColor bool{ get; set; }
-  internal prop ShapeStrokeCap StrokeCap{ get; set; }
-  internal prop ShapeStrokeJoin StrokeJoin{ get; set; }
-  internal prop ShapeVectorEffect VectorEffect{ get; set; }
-  internal prop MiterLimit float64{ get; set; }
-  internal prop StrokeStart float64{ get; set; }
-  internal prop StrokeEnd float64{ get; set; }
-  internal prop ShapeCornerRadius float64{ get; set; }
-  internal prop Dashes DashPattern? { get; set; }
-  internal prop ShapeStrokeInset bool{ get; set; }
+  internal prop ShapePath VectorPath{
+    get -> shapeState?.ShapePath ?? VectorPath.Empty
+    set -> EnsureShapeState().ShapePath = value
+  }
+  internal prop ShapeFit ShapeFit{
+    get -> shapeState?.ShapeFit ?? ShapeFit.Contain
+    set -> EnsureShapeState().ShapeFit = value
+  }
+  internal prop ShapeFillRule FillRule{
+    get -> shapeState?.ShapeFillRule ?? FillRule.NonZero
+    set -> EnsureShapeState().ShapeFillRule = value
+  }
+  internal prop ShapeUseCurrentColor bool{
+    get -> shapeState?.ShapeUseCurrentColor ?? false
+    set -> EnsureShapeState().ShapeUseCurrentColor = value
+  }
+  internal prop ShapeStrokeCap StrokeCap{
+    get -> shapeState?.ShapeStrokeCap ?? StrokeCap.Butt
+    set -> EnsureShapeState().ShapeStrokeCap = value
+  }
+  internal prop ShapeStrokeJoin StrokeJoin{
+    get -> shapeState?.ShapeStrokeJoin ?? StrokeJoin.Miter
+    set -> EnsureShapeState().ShapeStrokeJoin = value
+  }
+  internal prop ShapeVectorEffect VectorEffect{
+    get -> shapeState?.ShapeVectorEffect ?? VectorEffect.None
+    set -> EnsureShapeState().ShapeVectorEffect = value
+  }
+  internal prop MiterLimit float64{
+    get -> shapeState?.MiterLimit ?? 4.0
+    set -> EnsureShapeState().MiterLimit = value
+  }
+  internal prop StrokeStart float64{
+    get -> shapeState?.StrokeStart ?? 0.0
+    set -> EnsureShapeState().StrokeStart = value
+  }
+  internal prop StrokeEnd float64{
+    get -> shapeState?.StrokeEnd ?? 1.0
+    set -> EnsureShapeState().StrokeEnd = value
+  }
+  internal prop ShapeCornerRadius float64{
+    get -> shapeState?.ShapeCornerRadius ?? 0.0
+    set -> EnsureShapeState().ShapeCornerRadius = value
+  }
+  internal prop Dashes DashPattern?{
+    get -> shapeState?.Dashes
+    set {
+      if shapeState == nil && value == nil { return }
+      EnsureShapeState().Dashes = value
+    }
+  }
+  internal prop ShapeStrokeInset bool{
+    get -> shapeState?.ShapeStrokeInset ?? true
+    set -> EnsureShapeState().ShapeStrokeInset = value
+  }
   internal prop ImageFit ImageFit{ get; set; }
   internal prop ImageSource ImageSourceProvider? { get -> ImageLayouts.Source(this) }
   internal prop ImageLease ImageSourceLease? { get -> ImageLayouts.Lease(this) }
@@ -456,9 +650,18 @@ internal class Node {
   internal prop DecodedImage DecodedImage? { get; set; }
   internal prop ImageIntrinsicWidth float32{ get; set; }
   internal prop ImageIntrinsicHeight float32{ get; set; }
-  internal prop Buffer string{ get; set; }
-  internal prop Caret int32{ get; set; }
-  internal prop Anchor int32{ get; set; }
+  internal prop Buffer string{
+    get -> editingState?.Buffer ?? ""
+    set -> EnsureEditingState().Buffer = value
+  }
+  internal prop Caret int32{
+    get -> editingState?.Caret ?? 0
+    set -> EnsureEditingState().Caret = value
+  }
+  internal prop Anchor int32{
+    get -> editingState?.Anchor ?? 0
+    set -> EnsureEditingState().Anchor = value
+  }
   internal prop CaretAffinity TextAffinity{
     get -> TextAffinity((nodeState >> 12) & int32(1))
     set {
@@ -471,34 +674,55 @@ internal class Node {
       nodeState = (nodeState & ~int32(8192)) | ((int32(value) & int32(1)) << 13)
     }
   }
-  internal prop EditScrollX float32{ get; set; }
-  internal prop BlinkT float64{ get; set; }
-  internal prop PreFocus string{ get; set; }
-  internal prop Placeholder string{ get; set; }
-  internal prop PlaceholderColor Color? { get; set; }
-  internal prop SelectionColor Color{ get; set; }
-  internal prop OnChange Action[string]? { get; set; }
-  internal prop OnSubmit Action[string]? { get; set; }
+  internal prop EditScrollX float32{
+    get -> editingState?.EditScrollX ?? 0.0F
+    set -> EnsureEditingState().EditScrollX = value
+  }
+  internal prop BlinkT float64{
+    get -> editingState?.BlinkT ?? 0.0
+    set -> EnsureEditingState().BlinkT = value
+  }
+  internal prop PreFocus string{
+    get -> editingState?.PreFocus ?? ""
+    set -> EnsureEditingState().PreFocus = value
+  }
+  internal prop Placeholder string{
+    get -> editingState?.Placeholder ?? ""
+    set -> EnsureEditingState().Placeholder = value
+  }
+  internal prop PlaceholderColor Color?{
+    get -> editingState?.PlaceholderColor
+    set {
+      if editingState == nil && value == nil { return }
+      EnsureEditingState().PlaceholderColor = value
+    }
+  }
+  internal prop SelectionColor Color{
+    get -> editingState?.SelectionColor ?? Color{}
+    set -> EnsureEditingState().SelectionColor = value
+  }
+  internal prop OnChange Action[string]?{
+    get -> editingState?.OnChange
+    set {
+      if editingState == nil && value == nil { return }
+      EnsureEditingState().OnChange = value
+    }
+  }
+  internal prop OnSubmit Action[string]?{
+    get -> editingState?.OnSubmit
+    set {
+      if editingState == nil && value == nil { return }
+      EnsureEditingState().OnSubmit = value
+    }
+  }
   internal init() {
     Children = List[Node]()
     Content = ""
     FontFamily = ""
     Language = ""
-    Buffer = ""
-    PreFocus = ""
-    Placeholder = ""
-    EditorSlotKey = ""
-    ShapePath = VectorPath.Empty
-    ShapeFit = ShapeFit.Contain
     ImageFit = ImageFit.Contain
     BackgroundImageFit = ImageFit.Cover
-    ShapeFillRule = FillRule.NonZero
     ClipPathFillRule = FillRule.NonZero
-    ShapeStrokeCap = StrokeCap.Butt
-    ShapeStrokeJoin = StrokeJoin.Miter
-    ShapeStrokeInset = true
-    MiterLimit = 4.0
-    StrokeEnd = 1.0
     HitTestSelf = true
     transitionSelection = allTransitionSelection()
     ApplyAllDefaults(this)
