@@ -126,6 +126,7 @@ internal class ProfilerSmokeTrace {
     internal let OwnerKinds HashSet[int32] = HashSet[int32]()
     internal let GpuSubmitted HashSet[string] = HashSet[string]()
     internal let GpuResolved HashSet[string] = HashSet[string]()
+    internal let GpuCompleted HashSet[string] = HashSet[string]()
 
     internal init(windowId string) { WindowId = windowId }
 
@@ -645,7 +646,7 @@ internal class ProfilerSmoke {
             Require(WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(window, 5000),
                 "GPU stop did not hold an accepted submission")
             using let stopped = client.Request("profiler.stop", "{" + identity + "}")
-            Thread.Sleep(100)
+            Thread.Sleep(600)
             var ended = false
             while true {
                 using let draining = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
@@ -661,7 +662,7 @@ internal class ProfilerSmoke {
                     Require(!drainingPayload.GetProperty("more").GetBoolean()
                         && drainingPayload.GetProperty("pollDelayMs").GetInt32() > 0,
                         "Empty stopped read did not retain polling backoff")
-                    Require(trace.GpuSubmitted.IsSubsetOf(trace.GpuResolved)
+                    Require(trace.GpuSubmitted.IsSubsetOf(trace.GpuCompleted)
                         || drainingPayload.GetProperty("state").GetString() == "Stopping",
                         "GPU stop did not wait for pending stages")
                     break
@@ -693,7 +694,7 @@ internal class ProfilerSmoke {
             Require(!trace.GpuSupported || trace.GpuManyScopesAvailable,
                 "GPU timestamps did not resolve more than sixteen offscreen scopes")
             for stage in trace.GpuSubmitted {
-                Require(trace.GpuResolved.Contains(stage), "Submitted GPU stage did not resolve after stop")
+                Require(trace.GpuCompleted.Contains(stage), "Submitted GPU stage did not complete after stop")
             }
             for name in []string{"managed.allocated.total", "managed.heap.estimate", "gc.gen0.collections",
                 "gc.gen1.collections", "gc.gen2.collections", "process.rss", "process.pss",
@@ -722,7 +723,8 @@ internal class ProfilerSmoke {
                 + " baseline_kinds=" + trace.BaselineKinds.Count.ToString()
                 + " image_upload_link=" + trace.Uploaded.ToString() + " gpu_elapsed=" + trace.Gpu.ToString())
             Console.WriteLine("profiler-gpu: submitted=" + trace.GpuSubmitted.Count.ToString()
-                + " available=" + trace.GpuResolved.Count.ToString())
+                + " available=" + trace.GpuResolved.Count.ToString()
+                + " completed=" + trace.GpuCompleted.Count.ToString())
             Console.WriteLine(
                 "profiler-trace: trace_id=" + traceId + " records=" + trace.Sequence.ToString()
                 + " pumps=" + trace.Builds.Count.ToString() + " held_submission=" + queued
@@ -869,8 +871,17 @@ internal class ProfilerSmoke {
                         + (record.GetProperty("deviceGeneration").GetString() ?? "") + "."
                         + (record.GetProperty("submissionId").GetString() ?? "") + "."
                         + (record.GetProperty("eventId").GetString() ?? "")
-                    if resourceSource == "vulkan.timestamp.submitted" { trace.GpuSubmitted.Add(stage) }
-                    else if record.GetProperty("validity").GetString() == "available" { trace.GpuResolved.Add(stage) }
+                    if resourceSource == "vulkan.timestamp.submitted" {
+                        trace.GpuSubmitted.Add(stage)
+                    } else {
+                        if record.GetProperty("validity").GetString() == "available" {
+                            trace.GpuResolved.Add(stage)
+                        } else if trace.GpuSubmitted.Contains(stage) {
+                            Require(trace.Cutoff >= 0L && ticks - trace.Cutoff >= Stopwatch.Frequency / 2L,
+                                "GPU stop completed a pending stage before the drain deadline")
+                        }
+                        trace.GpuCompleted.Add(stage)
+                    }
                 }
                 if resourceSource == "vulkan.timestamp.elapsed" {
                     trace.Gpu = true
