@@ -143,9 +143,16 @@ internal partial class VulkanSceneCompiler {
         Width: viewportWidth,
         Height: viewportHeight,
       }
+      let rootCoversBackground = if let node = root {
+        !node.IsPortal && !node.Retired && node.Display != Display.None
+          && node.Visibility != Visibility.Hidden && node.Opacity == 1.0
+          && node.BackgroundColor.A == 1.0F
+          && ExactBounds(NodeBounds(node), viewport) && !HasRadius(node, viewport)
+          && RetainedParentBoxEligible(node, viewport, 1.0F, RootTraversalContext(viewport))
+      } else { false }
       frame.BeginChunk(BackgroundOwnerId, frameVersion, viewport, true)
       frame.SetActiveClipChain(0)
-      if background.A > 0.0F {
+      if background.A > 0.0F && !rootCoversBackground {
         frame.AddSolidBox(SolidBoxRecord{
           Bounds: viewport,
           Color: background.ToPackedRgba(),
