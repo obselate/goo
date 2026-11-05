@@ -143,7 +143,10 @@ class AccessibilityChecks : Instrumentation {
         CheckRangeAndScroll()
         CheckSurface()
         CheckActivityReplacement()
-        RunOnMainSync(() -> { activity!!.NativeView.Window.Root = GooAndroidSmoke.SmokeApplication.CreateAccessibilityRoot() })
+        using let intent = Intent(TargetContext!!, typeof(MainActivity))
+        intent.AddFlags(ActivityFlags.NewTask | ActivityFlags.ClearTask)
+        intent.PutExtra("goo.accessibility_roles", true)
+        activity = cast[MainActivity](StartActivitySync(intent)!!)
         Wait(() -> Exists((n AccessibilityNodeInfo) -> n.ContentDescription == "Sparse grid"), "Grid tree did not publish.")
         {
             using let grid = Find((n AccessibilityNodeInfo) -> n.ContentDescription == "Sparse grid")
