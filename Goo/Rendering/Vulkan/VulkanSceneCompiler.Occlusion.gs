@@ -19,7 +19,7 @@ internal partial class VulkanSceneCompiler {
     var comparisons int32 = 0
     var chunkIndex = frame.ChunkCount - 1
     var clipDepth int32 = 0
-    occlusionClips[0] = ConservativeBounds(0, 0, viewportWidth * scaleX, viewportHeight * scaleY)
+    occlusionClips[0] = ConservativeBounds{ Width: viewportWidth * scaleX, Height: viewportHeight * scaleY }
     for reverse in 0 ... count {
       let index = count - 1 - reverse
       while chunkIndex >= 0 && index < frame.Chunks[chunkIndex].FirstDraw { chunkIndex-- }
@@ -30,11 +30,12 @@ internal partial class VulkanSceneCompiler {
         let x = bounds.X * scaleX
         let y = bounds.Y * scaleY
         let physical = if clip.TransformIndex == -1 {
-          ConservativeBounds(
-            MathF.Floor(x), MathF.Floor(y),
-            MathF.Ceiling(x + bounds.Width * scaleX) - MathF.Floor(x),
-            MathF.Ceiling(y + bounds.Height * scaleY) - MathF.Floor(y))
-        } else { ConservativeBounds(0, 0, 0, 0) }
+          ConservativeBounds{
+            X: MathF.Floor(x), Y: MathF.Floor(y),
+            Width: MathF.Ceiling(x + bounds.Width * scaleX) - MathF.Floor(x),
+            Height: MathF.Ceiling(y + bounds.Height * scaleY) - MathF.Floor(y)
+          }
+        } else { ConservativeBounds{} }
         occlusionClips[clipDepth + 1] = IntersectBounds(occlusionClips[clipDepth], physical)
         clipDepth++
         continue
@@ -63,10 +64,11 @@ internal partial class VulkanSceneCompiler {
       let logical = frame.Chunks[chunkIndex].Bounds
       let x = logical.X * scaleX
       let y = logical.Y * scaleY
-      let bounds = ConservativeBounds(
-        MathF.Floor(x), MathF.Floor(y),
-        MathF.Ceiling(x + logical.Width * scaleX) - MathF.Floor(x),
-        MathF.Ceiling(y + logical.Height * scaleY) - MathF.Floor(y))
+      let bounds = ConservativeBounds{
+        X: MathF.Floor(x), Y: MathF.Floor(y),
+        Width: MathF.Ceiling(x + logical.Width * scaleX) - MathF.Floor(x),
+        Height: MathF.Ceiling(y + logical.Height * scaleY) - MathF.Floor(y)
+      }
       for candidate in 0 ... occluderCount {
         comparisons++
         let cover = opaqueOccluders[candidate]
@@ -87,7 +89,7 @@ internal partial class VulkanSceneCompiler {
       let right = MathF.Floor(value.Bounds.X * scaleX + value.Bounds.Width * scaleX - 1.0F)
       let bottom = MathF.Floor(value.Bounds.Y * scaleY + value.Bounds.Height * scaleY - 1.0F)
       let inset = IntersectBounds(
-        ConservativeBounds(left, top, MathF.Max(0, right - left), MathF.Max(0, bottom - top)),
+        ConservativeBounds{ X: left, Y: top, Width: MathF.Max(0, right - left), Height: MathF.Max(0, bottom - top) },
         occlusionClips[clipDepth])
       if occluderCount < opaqueOccluders.Length {
         opaqueOccluders[occluderCount] = inset
