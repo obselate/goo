@@ -337,7 +337,7 @@ internal partial class Reconciler {
 
   internal func mountChildren(n Node, children IList[Blob]) {
     let scratch = keyedScratch()
-    let scratchScope = scratch.Rent()
+    let scratchScope = scratch.Rent(children.Count)
     try {
       let virtualRows = FrameRecorder.Current != nil && Virtualization.State(n) != nil
       validateChildren(children, scratchScope)
@@ -631,6 +631,11 @@ internal partial class Reconciler {
   internal func applyEntry(n Node, t TextEntry, initial bool) {
     applyStyle(n, t, t.Focusable, initial)
     var paintChanged = false
+    if n.EditorReadOnly != t.ReadOnly {
+      n.EditorReadOnly = t.ReadOnly
+      paintChanged = true
+      MarkEffects(ReconcileEffects.Input | ReconcileEffects.Accessibility)
+    }
     if n.InputOptions != t.InputOptions {
       n.InputOptions = t.InputOptions
       MarkEffects(ReconcileEffects.Input)
@@ -1165,11 +1170,27 @@ internal partial class Reconciler {
     if !validPortalPlacement(p.Placement) {
       throw ArgumentOutOfRangeException("Placement")
     }
+    if let rect = p.AnchorRect {
+      if !validPortalRect(rect) { throw ArgumentOutOfRangeException("AnchorRect") }
+    }
+    if let rect = p.CollisionBounds {
+      if !validPortalRect(rect) { throw ArgumentOutOfRangeException("CollisionBounds") }
+    }
     applyStyle(n, p, p.Focusable, initial)
     n.HitTestSelf = false
-    if n.PortalAnchor != p.Anchor || n.PortalPlacement != p.Placement {
+    if n.PortalAnchor != p.Anchor || n.PortalPlacement != p.Placement
+      || n.PortalBounds?.AnchorRect != p.AnchorRect
+      || n.PortalBounds?.CollisionBounds != p.CollisionBounds {
       n.PortalAnchor = p.Anchor
       n.PortalPlacement = p.Placement
+      if p.AnchorRect != nil || p.CollisionBounds != nil {
+        let bounds = n.PortalBounds ?? PortalPlacementBounds{}
+        bounds.AnchorRect = p.AnchorRect
+        bounds.CollisionBounds = p.CollisionBounds
+        n.PortalBounds = bounds
+      } else {
+        n.PortalBounds = nil
+      }
       n.PortalAnchorResolved = false
       n.PortalPlacementHidden = p.Anchor != nil
       if !initial {
@@ -1178,6 +1199,11 @@ internal partial class Reconciler {
       }
     }
   }
+
+  private func validPortalRect(rect ElementRect) bool ->
+    Single.IsFinite(float32(rect.X)) && Single.IsFinite(float32(rect.Y))
+      && Single.IsFinite(float32(rect.Width)) && Single.IsFinite(float32(rect.Height))
+      && rect.Width >= 0.0 && rect.Height >= 0.0
 
   internal func diffButton(n Node, b Button) Node {
     if !canReuseNode(n, b) {
@@ -1199,7 +1225,7 @@ internal partial class Reconciler {
   internal func diffChildren(n Node, blobs IList[Blob]) {
     if styleRetryRoot == nil { rememberStyleRetryRoot(n) }
     let scratch = keyedScratch()
-    let scratchScope = scratch.Rent()
+    let scratchScope = scratch.Rent(Math.Max(n.Children.Count, blobs.Count))
     try {
       validateChildren(blobs, scratchScope)
       if scratchScope.IncomingKeys.Count == 0 {

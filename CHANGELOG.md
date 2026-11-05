@@ -2,8 +2,10 @@
 
 ## Unreleased
 
+- Return free glibc heap pages after background Vulkan pipeline preparation and cache persistence on Linux.
 - Release obsolete text segment references when scene frames reset and retention proofs advance.
 - Release the scrollbar layout root when its part is disposed so retired rows and application data can be collected.
+- Limit retained child-diff, path-band and path-ownership scratch storage after exceptional peaks.
 
 ## 0.27.10 - 2026-11-04
 
