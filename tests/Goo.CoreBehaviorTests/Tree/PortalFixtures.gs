@@ -314,7 +314,7 @@ internal class PortalFixtures {
     window.UpdateTree()
     guard let root = window.Tree, let entry = cell.Editor.AttachedNode(),
       let portal = entry.Parent, let retained = entry.Fiber as PortalClippedEditorCell ? else { return false }
-    using let scope = cell.Popup.BeginFocusScope()
+    using let focusScope = cell.Popup.BeginFocusScope()
     if !cell.Editor.Focus() { return false }
     window.QueueCompositionForTest("pending", 1, 2)
     window.DrainTextInputForTest()
