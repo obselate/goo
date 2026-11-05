@@ -181,6 +181,10 @@ public sealed partial class NativeAccessibilityAdapter {
       if let value = node.Level { AccessKitNative.NodeSetLevel(target, uint64(value)) }
       if let value = node.PositionInSet { AccessKitNative.NodeSetPositionInSet(target, nuint(value)) }
       if let value = node.SizeOfSet { AccessKitNative.NodeSetSizeOfSet(target, nuint(value)) }
+      if let value = node.RowIndex { AccessKitNative.NodeSetRowIndex(target, nuint(value)) }
+      if let value = node.ColumnIndex { AccessKitNative.NodeSetColumnIndex(target, nuint(value)) }
+      if let value = node.RowCount { AccessKitNative.NodeSetRowCount(target, nuint(value)) }
+      if let value = node.ColumnCount { AccessKitNative.NodeSetColumnCount(target, nuint(value)) }
       if let value = node.ValueNow { AccessKitNative.NodeSetNumericValue(target, value) }
       if let value = node.ValueMinimum { AccessKitNative.NodeSetMinNumericValue(target, value) }
       if let value = node.ValueMaximum { AccessKitNative.NodeSetMaxNumericValue(target, value) }

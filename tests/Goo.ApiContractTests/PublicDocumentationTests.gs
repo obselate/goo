@@ -723,6 +723,10 @@ class PublicDocumentationTests {
             "M:Goo.PanelTransform.op_Inequality(Goo.PanelTransform,Goo.PanelTransform)"
         }
         private let ExpectedEnumFieldIds[]string = []string{
+            "F:Goo.AccessibilityRole.Separator",
+            "F:Goo.AccessibilityRole.TabPanel",
+            "F:Goo.AccessibilityRole.Toolbar",
+            "F:Goo.AccessibilityRole.Tooltip",
             "F:Goo.WindowInputKind.PointerDown",
             "F:Goo.WindowInputKind.Wheel",
             "F:Goo.WindowInputKind.KeyDown",
