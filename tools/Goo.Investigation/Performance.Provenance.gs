@@ -77,7 +77,7 @@ partial class Performance {
             ["restoreConfig"] = JsonObject(){["path"] = config, ["sha256"] = Hash(config)},
             ["packages"] = JsonObject(){
                 ["goo"] = Package("Goo", options["--package-version"]),
-                ["gsharpSdk"] = Package("Gsharp.NET.Sdk", "0.5.26")
+                ["gsharpSdk"] = Package("Gsharp.NET.Sdk", "0.5.212")
             },
             ["source"] = identity,
             ["font"] = JsonObject(){

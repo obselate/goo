@@ -35,7 +35,7 @@ Goo patches GIF disposal history and skips empty PNG IDAT transfers.
 ## G# runtime support
 
 Goo's Linux bundle redistributes `Gsharp.Extensions.dll` from
-Gsharp.NET.Sdk 0.5.26.
+Gsharp.NET.Sdk 0.5.212.
 
 - Copyright (c) 2019 David Obando.
 - License: MIT.
@@ -226,8 +226,8 @@ official non-private-API macOS release archive.
 
 ## Unicode.Bidi
 
-- Unicode.Bidi 0.3.18: Copyright (c) 2006 Erik A. Brandstadmoen. License: MIT.
-- [Unicode.Bidi .NET license](https://github.com/erikbra/unicode-bidi-net/blob/14fc0a5d273d2ffdc59dc3e6b2828847dbd1cda9/LICENSE)
+- Unicode.Bidi 0.4.0: Copyright (c) 2006 Erik A. Brandstadmoen. License: MIT.
+- [Unicode.Bidi .NET license](https://github.com/erikbra/unicode-bidi-net/blob/1c245e5be963be3dd6d10257345628102e19ba7f/LICENSE)
 
 Unicode.Bidi ports behavior and generated Unicode data from the Rust
 `unicode-bidi` crate version 0.3.18. That upstream work is Copyright The Servo

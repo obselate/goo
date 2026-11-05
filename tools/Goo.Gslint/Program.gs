@@ -742,7 +742,7 @@ class Program {
             case subscription is EventSubscriptionExpressionSyntax {
                 AddRootName(subscription.LeftHandSide, reassigned)
             }
-            case assignment is NullCoalescingAssignmentStatementSyntax {
+            case assignment is NullCoalescingAssignmentExpressionSyntax {
                 AddRootName(assignment.Target, reassigned)
             }
             case RefArgumentExpressionSyntax{Expression: NameExpressionSyntax name} {

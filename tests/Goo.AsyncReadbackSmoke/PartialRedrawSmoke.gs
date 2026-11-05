@@ -477,7 +477,7 @@ class PartialBackdropCell : Cell {
       BackgroundColor: Step >= 2 ? Color.Rgb(80, 200, 100) : Color.Rgb(220, 60, 40),
     },
     Container() {
-      .Position: PositionType.Absolute, .Left: 20, .Top: 20, .Width: 120, .Height: 80,
+      .Position: PositionType.Absolute, .Left: 20, .Top: 20, .Width: Percent(30), .Height: Percent(40),
       .BorderRadius: 12, .BackdropBlur: 4,
       Container{
         Position: PositionType.Absolute, Left: 30, Top: 20, Width: 30, Height: 20,
@@ -643,7 +643,8 @@ func PartialRedrawRepeat(window Window, metrics WindowMetrics, name string, step
     return 1
   }
 
-func PartialRedrawScene(name string, root Cell, steps int32, advance Action) int32 {
+func PartialRedrawScene(name string, root Cell, steps int32, advance Action,
+  resizeCapacity bool = false) int32 {
   let window = Window{
     Title: "Goo partial redraw proof",
     Width: 400,
@@ -656,7 +657,47 @@ func PartialRedrawScene(name string, root Cell, steps int32, advance Action) int
     window.Open()
     WindowReadbackTestFixture.Pump(window, 0.0)
     let metrics = WindowReadbackTestFixture.Metrics(window)
+    if resizeCapacity {
+      window.Width = 560
+      window.Height = 266
+      var resizeAttempt int32
+      var resizedMetrics = WindowReadbackTestFixture.Metrics(window)
+      while (resizedMetrics.LogicalWidth != 560 || resizedMetrics.LogicalHeight != 266)
+        && resizeAttempt < 1000 {
+        WindowReadbackTestFixture.PumpNativeEvents()
+        WindowReadbackTestFixture.Pump(window, 0.0)
+        resizedMetrics = WindowReadbackTestFixture.Metrics(window)
+        resizeAttempt++
+      }
+      Require(resizedMetrics.LogicalWidth == 560 && resizedMetrics.LogicalHeight == 266,
+        "Partial redraw capacity seed resize failed")
+      WindowReadbackTestFixture.SetForceFullRedraw(window, true)
+      for frameIndex in 0 ... 3 {
+        WindowReadbackTestFixture.ForceRender(window, 0.0)
+        WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
+      }
+      let reuseCount = WindowReadbackTestFixture.DiagnosticCounters(window).layerPoolReuseCount
+      window.Width = 400
+      window.Height = 190
+      resizeAttempt = 0
+      resizedMetrics = WindowReadbackTestFixture.Metrics(window)
+      while (resizedMetrics.LogicalWidth != 400 || resizedMetrics.LogicalHeight != 190)
+        && resizeAttempt < 1000 {
+        WindowReadbackTestFixture.PumpNativeEvents()
+        WindowReadbackTestFixture.Pump(window, 0.0)
+        resizedMetrics = WindowReadbackTestFixture.Metrics(window)
+        resizeAttempt++
+      }
+      Require(resizedMetrics.LogicalWidth == 400 && resizedMetrics.LogicalHeight == 190,
+        "Partial redraw capacity recovery resize failed")
+      WindowReadbackTestFixture.ForceRender(window, 0.0)
+      WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
+      Require(WindowReadbackTestFixture.DiagnosticCounters(window).layerPoolReuseCount > reuseCount,
+        "Partial redraw resize did not reuse larger layer capacity")
+      WindowReadbackTestFixture.SetForceFullRedraw(window, false)
+    }
     var full = PartialRedrawSettledCapture(window, metrics)
+    if resizeCapacity { System.Threading.Thread.Sleep(250) }
     for region in PartialRedrawRegions(metrics.FramebufferWidth, metrics.FramebufferHeight) {
       failures = failures + PartialRedrawRepeat(window, metrics, name, 0, full,
         WindowReadbackTestFixture.GrowDamage(window, region))
@@ -753,7 +794,7 @@ func RunPartialRedrawSmoke() {
     failures = failures + PartialRedrawScene("backdrop", backdrop, 2, () -> {
       backdrop.Step++
       backdrop.Rebuild()
-    })
+    }, true)
   } finally {
     font.Dispose()
   }

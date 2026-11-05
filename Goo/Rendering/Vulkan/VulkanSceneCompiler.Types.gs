@@ -170,8 +170,7 @@ internal data struct VulkanSceneCompileResult {
   }
 }
 
-internal class VulkanSceneOwnerId {
-  internal var Value uint64
+internal class VulkanSceneTextState {
   internal var RetainedTextValid bool
   internal var RetainedTextContent string?
   internal var RetainedTextPaintVersion uint64
@@ -200,6 +199,9 @@ internal class VulkanSceneOwnerId {
   internal var CachedTextCullVersion uint64
   internal var CachedTextCullBounds ConservativeBounds
   internal var CachedTextCullEligible bool
+}
+
+internal class VulkanSceneBoxState {
   internal var RetainedLeafValid bool
   internal var RetainedLeafNodeKind NodeKind
   internal var RetainedLeafKind SceneDrawKind
@@ -209,17 +211,199 @@ internal class VulkanSceneOwnerId {
   internal var RetainedLeafRounded RoundedBoxRecord
   internal var RetainedLeafBorder PerEdgeBorderRecord
   internal var RetainedBoxIsLeaf bool
+}
+
+internal class VulkanSceneOwnerId {
+  internal var Value uint64
+  private var textState VulkanSceneTextState?
+  private var boxState VulkanSceneBoxState?
+
+  private func EnsureTextState() VulkanSceneTextState {
+    if let state = textState { return state }
+    let state = VulkanSceneTextState()
+    textState = state
+    return state
+  }
+
+  private func EnsureBoxState() VulkanSceneBoxState {
+    if let state = boxState { return state }
+    let state = VulkanSceneBoxState()
+    boxState = state
+    return state
+  }
+  internal prop RetainedTextValid bool{
+    get -> textState?.RetainedTextValid ?? false
+    set -> EnsureTextState().RetainedTextValid = value
+  }
+  internal prop RetainedTextContent string?{
+    get -> textState?.RetainedTextContent
+    set {
+      if textState == nil && value == nil { return }
+      EnsureTextState().RetainedTextContent = value
+    }
+  }
+  internal prop RetainedTextPaintVersion uint64{
+    get -> textState?.RetainedTextPaintVersion ?? 0uL
+    set -> EnsureTextState().RetainedTextPaintVersion = value
+  }
+  internal prop RetainedTextBounds ConservativeBounds{
+    get -> textState?.RetainedTextBounds ?? default(ConservativeBounds)
+    set -> EnsureTextState().RetainedTextBounds = value
+  }
+  internal prop RetainedTextColor uint32{
+    get -> textState?.RetainedTextColor ?? 0u
+    set -> EnsureTextState().RetainedTextColor = value
+  }
+  internal prop RetainedTextOpacity float32{
+    get -> textState?.RetainedTextOpacity ?? 0.0F
+    set -> EnsureTextState().RetainedTextOpacity = value
+  }
+  internal prop RetainedTextAtlasGeneration uint64{
+    get -> textState?.RetainedTextAtlasGeneration ?? 0uL
+    set -> EnsureTextState().RetainedTextAtlasGeneration = value
+  }
+  internal prop RetainedTextPixelScale float32{
+    get -> textState?.RetainedTextPixelScale ?? 0.0F
+    set -> EnsureTextState().RetainedTextPixelScale = value
+  }
+  internal prop RetainedTextFontRegistryGeneration uint64{
+    get -> textState?.RetainedTextFontRegistryGeneration ?? 0uL
+    set -> EnsureTextState().RetainedTextFontRegistryGeneration = value
+  }
+  internal prop RetainedTextParentTranslateX float32{
+    get -> textState?.RetainedTextParentTranslateX ?? 0.0F
+    set -> EnsureTextState().RetainedTextParentTranslateX = value
+  }
+  internal prop RetainedTextParentTranslateY float32{
+    get -> textState?.RetainedTextParentTranslateY ?? 0.0F
+    set -> EnsureTextState().RetainedTextParentTranslateY = value
+  }
+  internal prop RetainedTextClipDepth int32{
+    get -> textState?.RetainedTextClipDepth ?? 0
+    set -> EnsureTextState().RetainedTextClipDepth = value
+  }
+  internal prop RetainedTextClipBounds ConservativeBounds{
+    get -> textState?.RetainedTextClipBounds ?? default(ConservativeBounds)
+    set -> EnsureTextState().RetainedTextClipBounds = value
+  }
+  internal prop RetainedTextSnapshot VulkanRetainedTextSnapshot?{
+    get -> textState?.RetainedTextSnapshot
+    set {
+      if textState == nil && value == nil { return }
+      EnsureTextState().RetainedTextSnapshot = value
+    }
+  }
+  internal prop CachedTextPaintLayout TextLayout?{
+    get -> textState?.CachedTextPaintLayout
+    set {
+      if textState == nil && value == nil { return }
+      EnsureTextState().CachedTextPaintLayout = value
+    }
+  }
+  internal prop CachedTextPaintBounds ConservativeBounds{
+    get -> textState?.CachedTextPaintBounds ?? default(ConservativeBounds)
+    set -> EnsureTextState().CachedTextPaintBounds = value
+  }
+  internal prop CachedTextPaintContentX float32{
+    get -> textState?.CachedTextPaintContentX ?? 0.0F
+    set -> EnsureTextState().CachedTextPaintContentX = value
+  }
+  internal prop CachedTextPaintContentY float32{
+    get -> textState?.CachedTextPaintContentY ?? 0.0F
+    set -> EnsureTextState().CachedTextPaintContentY = value
+  }
+  internal prop CachedTextPaintContentWidth float32{
+    get -> textState?.CachedTextPaintContentWidth ?? 0.0F
+    set -> EnsureTextState().CachedTextPaintContentWidth = value
+  }
+  internal prop CachedTextPaintLineHeight float32{
+    get -> textState?.CachedTextPaintLineHeight ?? 0.0F
+    set -> EnsureTextState().CachedTextPaintLineHeight = value
+  }
+  internal prop CachedTextPaintAlign TextAlign{
+    get -> textState?.CachedTextPaintAlign ?? default(TextAlign)
+    set -> EnsureTextState().CachedTextPaintAlign = value
+  }
+  internal prop CachedTextPaintContent string?{
+    get -> textState?.CachedTextPaintContent
+    set {
+      if textState == nil && value == nil { return }
+      EnsureTextState().CachedTextPaintContent = value
+    }
+  }
+  internal prop CachedTextPaintVersion uint64{
+    get -> textState?.CachedTextPaintVersion ?? 0uL
+    set -> EnsureTextState().CachedTextPaintVersion = value
+  }
+  internal prop CachedTextPaintScale float32{
+    get -> textState?.CachedTextPaintScale ?? 0.0F
+    set -> EnsureTextState().CachedTextPaintScale = value
+  }
+  internal prop CachedTextPaintNodeBounds ConservativeBounds{
+    get -> textState?.CachedTextPaintNodeBounds ?? default(ConservativeBounds)
+    set -> EnsureTextState().CachedTextPaintNodeBounds = value
+  }
+  internal prop CachedTextCullVersion uint64{
+    get -> textState?.CachedTextCullVersion ?? 0uL
+    set -> EnsureTextState().CachedTextCullVersion = value
+  }
+  internal prop CachedTextCullBounds ConservativeBounds{
+    get -> textState?.CachedTextCullBounds ?? default(ConservativeBounds)
+    set -> EnsureTextState().CachedTextCullBounds = value
+  }
+  internal prop CachedTextCullEligible bool{
+    get -> textState?.CachedTextCullEligible ?? false
+    set -> EnsureTextState().CachedTextCullEligible = value
+  }
+  internal prop RetainedLeafValid bool{
+    get -> boxState?.RetainedLeafValid ?? false
+    set -> EnsureBoxState().RetainedLeafValid = value
+  }
+  internal prop RetainedLeafNodeKind NodeKind{
+    get -> boxState?.RetainedLeafNodeKind ?? default(NodeKind)
+    set -> EnsureBoxState().RetainedLeafNodeKind = value
+  }
+  internal prop RetainedLeafKind SceneDrawKind{
+    get -> boxState?.RetainedLeafKind ?? default(SceneDrawKind)
+    set -> EnsureBoxState().RetainedLeafKind = value
+  }
+  internal prop RetainedLeafPaintVersion uint64{
+    get -> boxState?.RetainedLeafPaintVersion ?? 0uL
+    set -> EnsureBoxState().RetainedLeafPaintVersion = value
+  }
+  internal prop RetainedLeafBounds ConservativeBounds{
+    get -> boxState?.RetainedLeafBounds ?? default(ConservativeBounds)
+    set -> EnsureBoxState().RetainedLeafBounds = value
+  }
+  internal prop RetainedLeafSolid SolidBoxRecord{
+    get -> boxState?.RetainedLeafSolid ?? default(SolidBoxRecord)
+    set -> EnsureBoxState().RetainedLeafSolid = value
+  }
+  internal prop RetainedLeafRounded RoundedBoxRecord{
+    get -> boxState?.RetainedLeafRounded ?? default(RoundedBoxRecord)
+    set -> EnsureBoxState().RetainedLeafRounded = value
+  }
+  internal prop RetainedLeafBorder PerEdgeBorderRecord{
+    get -> boxState?.RetainedLeafBorder ?? default(PerEdgeBorderRecord)
+    set -> EnsureBoxState().RetainedLeafBorder = value
+  }
+  internal prop RetainedBoxIsLeaf bool{
+    get -> boxState?.RetainedBoxIsLeaf ?? false
+    set -> EnsureBoxState().RetainedBoxIsLeaf = value
+  }
 
   internal init(value uint64) {
     Value = value
   }
 
   internal func ClearRetainedLeaf() {
-    RetainedLeafValid = false
+    if let state = boxState { state.RetainedLeafValid = false }
   }
 
   internal func ClearRetainedText() {
-    RetainedTextValid = false
-    RetainedTextContent = nil
+    if let state = textState {
+      state.RetainedTextValid = false
+      state.RetainedTextContent = nil
+    }
   }
 }
