@@ -111,6 +111,8 @@ use `TextCommand` through `PlatformInput.Execute` or a text editor controller.
 
 `OnKeyDown` and `OnKeyUp` first bubble from the focused element through its parents. With no focused element they start at the root. Bindings and built-in defaults run after these callbacks. `KeyEvent.StopPropagation()` limits callbacks and binding lookup to the visited elements. `KeyEvent.PreventDefault()` skips bindings and built-in defaults and suppresses direct committed text from that key without stopping callbacks. A handled binding or default also suppresses its direct committed text. Preedit and IME commits remain text input. `KeyEvent.IsComposing` reports active preedit so callbacks can leave its keys to the IME. Bindings and defaults are skipped during preedit, except Escape can cancel it. Both controls expire after dispatch. Repeated callbacks report `Repeat: true`.
 
+Preventing a key's default does not stop its key down callbacks from repeating while held.
+
 Pointer, keyboard, text, and native focus changes share an ordered ingress queue.
 Input injected from an input callback runs after the current event finishes.
 Synchronous nested focus callbacks preserve the outer event's cancellation
@@ -1256,7 +1258,7 @@ Describes a keyboard callback.
 
 ### `PreventDefault`
 
-Prevents assigned key bindings and direct committed text without stopping ancestor callbacks.
+Prevents assigned key bindings and direct committed text without stopping ancestor callbacks. Key down callbacks still repeat while the key is held.
 
 ### `StopPropagation`
 

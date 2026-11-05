@@ -195,6 +195,7 @@ class FixtureContractTests {
             yield Contract[InputFixtures]("KeyRepeatUsesCurrentModifiersWithoutRestartingDelay")
             yield Contract[InputFixtures]("SyntheticHeldBindingRequestsSchedulerTick")
             yield Contract[InputFixtures]("SyntheticHeldBindingSurvivesAutoFocusRebuild")
+            yield Contract[InputFixtures]("PreventedHeldKeyRepeatsUntilReleased")
             yield Contract[InputFixtures]("MacShortcutPolicyRoutesCommandAndOptionWord")
             yield Contract[InputFixtures]("MacWheelUnitScrollsTenPerUnit")
             yield Contract[InputFixtures]("MouseRemainsPrimaryWhileTouchIsHeld")
