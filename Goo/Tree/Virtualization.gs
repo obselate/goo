@@ -78,6 +78,7 @@ internal sealed class VirtualNodeState {
   private var contextDirty bool
   private var contextVersion int64
   private var pendingContextVersion int64
+  private var pixelScale float32 = 1.0F
 
   internal prop ContextVersion int64 { get -> contextVersion }
 
@@ -104,6 +105,13 @@ internal sealed class VirtualNodeState {
     contextVersion++
     contextDirty = true
     Owner?.ContextVirtualInvalidated()
+  }
+
+  internal func RefreshPixelScale() {
+    let scale = Owner?.RenderScale.X ?? 1.0F
+    if scale == pixelScale { return }
+    pixelScale = scale
+    InvalidateContext()
   }
 
   internal func ContextAffected(source ContextFrame, lineageChanged bool) bool {

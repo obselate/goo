@@ -142,6 +142,7 @@ public class VirtualViewport {
   internal func Bind(n Node?) Node? {
     let previous = node
     node = n
+    if let current = n { Virtualization.State(current)?.RefreshPixelScale() }
     focused = -2
     return previous
   }
@@ -158,8 +159,11 @@ public class VirtualViewport {
       return LayoutSize{ Width: float64(BoxGeometry.ViewportWidth(n)), Height: float64(BoxGeometry.ViewportHeight(n)) }
     }
   }
+  /// Gets the device pixels per layout unit used to round layout in this window.
+  /// Includes Window.UiScale. A change also changes ContextVersion.
+  public prop PixelScale float64 { get -> float64(Virtualization.State(bound())?.Owner?.RenderScale.X ?? 1.0F) }
   /// Gets the generation of the effective retained context during this callback.
-  /// A changed lineage or unshadowed provider value invalidates cached item content.
+  /// A changed lineage, unshadowed provider value or PixelScale invalidates cached item content.
   public prop ContextVersion int64 { get -> Virtualization.State(bound())?.ContextVersion ?? 0L }
   /// Gets the current scroll offset.
   public prop ScrollOffset Point{

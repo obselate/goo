@@ -2775,6 +2775,7 @@ property|Goo.VirtualViewport|ColumnGap|System.Double|instance|get:public|index:(
 property|Goo.VirtualViewport|ContextVersion|System.Int64|instance|get:public|index:()
 property|Goo.VirtualViewport|Direction|Goo.FlexDirection|instance|get:public|index:()
 property|Goo.VirtualViewport|FocusedChild|System.Int32|instance|get:public|index:()
+property|Goo.VirtualViewport|PixelScale|System.Double|instance|get:public|index:()
 property|Goo.VirtualViewport|RowGap|System.Double|instance|get:public|index:()
 property|Goo.VirtualViewport|ScrollOffset|Goo.Point|instance|get:public|index:()
 property|Goo.VirtualViewport|Size|Goo.LayoutSize|instance|get:public|index:()

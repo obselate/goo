@@ -588,6 +588,14 @@ internal class ElementHandleFixtures {
     cell.Rebuild()
     window.UpdateTree()
     let moved = cell.Handle.ScrollOffset.Y == 5000.0 && cell.Handles[250].IsMounted
+    let version = cell.ContextVersion
+    window.UiScale = 1.5F
+    window.UpdateTree()
+    if cell.PixelScale != 1.5 || cell.ContextVersion <= version { return false }
+    let scaledVersion = cell.ContextVersion
+    window.UiScale = 2.25F
+    window.UpdateTree()
+    if cell.PixelScale != 2.25 || cell.ContextVersion <= scaledVersion { return false }
     window.Close()
     return moved
   }
@@ -884,6 +892,8 @@ internal class VirtualFixtureCell : Cell {
   internal var Focused int32
   internal var First VirtualChild
   internal var RowHeight float64 = 13.0
+  internal var PixelScale float64
+  internal var ContextVersion int64
   internal var ItemAccessibility Accessibility?
 
   init(count int32) {
@@ -993,6 +1003,8 @@ internal class VirtualFixtureState : VirtualState {
   }
 
   private func observe(viewport VirtualViewport) {
+    cell.PixelScale = viewport.PixelScale
+    cell.ContextVersion = viewport.ContextVersion
     cell.Focused = viewport.FocusedChild
     if viewport.ChildCount > 0 { cell.First = viewport.Child(0) }
   }

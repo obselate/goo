@@ -1574,7 +1574,7 @@ Gets the resolved gap between columns.
 
 ### `ContextVersion`
 
-Gets the generation of the effective retained context during this callback. A changed lineage or unshadowed provider value invalidates cached item content.
+Gets the generation of the effective retained context during this callback. A changed lineage, unshadowed provider value or PixelScale invalidates cached item content.
 
 ### `Direction`
 
@@ -1583,6 +1583,10 @@ Gets the authored flex direction.
 ### `FocusedChild`
 
 Gets the index of the mounted item that contains keyboard focus, or -1.
+
+### `PixelScale`
+
+Gets the device pixels per layout unit used to round layout in this window. Includes Window.UiScale. A change also changes ContextVersion.
 
 ### `RowGap`
 
