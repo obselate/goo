@@ -23,7 +23,7 @@ func Main() int32 {
             }
         )
         if commandLine.Has("version") {
-            Console.WriteLine("0.27.11")
+            Console.WriteLine("0.28.0")
             return 0
         }
         if commandLine.Has("help") {
@@ -85,7 +85,7 @@ func Main() int32 {
 }
 
 private func RunWindow(descriptor DiscoveryDescriptor?, sample bool) int32 {
-    Window.ConfigureApplication("Goo DevTools", "0.27.11", "io.github.obselate.goo.devtools")
+    Window.ConfigureApplication("Goo DevTools", "0.28.0", "io.github.obselate.goo.devtools")
     using let sansRegular = RegisterFont("Vend Sans", "VendSans-VariableFont_wght.ttf", 400)
     using let sansMedium = RegisterFont("Vend Sans", "VendSans-VariableFont_wght.ttf", 500)
     using let sansSemibold = RegisterFont("Vend Sans", "VendSans-VariableFont_wght.ttf", 600)
