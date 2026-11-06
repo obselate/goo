@@ -112,6 +112,10 @@ internal partial class VulkanSceneCompiler {
     }
 
     private func FinishRangeFrame() {
+        if textScene?.RedrawRequired == true || pathScene?.ResourceDeferred == true {
+            rangeReady = false
+            return
+        }
         let extent = frame.RangePosition()
         let metadata = RangeMetadataBytes(rangeEntries.Length)
         var bytes = rangeData.CapacityBytes(extent)
