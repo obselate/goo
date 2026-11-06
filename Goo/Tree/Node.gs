@@ -24,6 +24,8 @@ internal class Node {
   private var scenePaintVersion uint64
   private var mountGeneration uint64 = 1uL
   private var rect Rect
+  private var scrollX float32
+  private var scrollY float32
   private var parent Node?
   private var focused bool
   private var editingState NodeEditingState?
@@ -130,6 +132,8 @@ internal class Node {
     Fiber = nil
     ScrollX = 0.0F
     ScrollY = 0.0F
+    PlacedScrollX = 0.0F
+    PlacedScrollY = 0.0F
     ScrollTargetX = 0.0F
     ScrollTargetY = 0.0F
     ContentW = 0.0F
@@ -171,6 +175,11 @@ internal class Node {
     set -> lifecycleState = value ? lifecycleState | uint16(16384) : lifecycleState & ~uint16(16384)
   }
 
+  internal prop SceneContentDirty bool {
+    get -> (lifecycleState & uint16(8192)) != uint16(0)
+    set -> lifecycleState = value ? lifecycleState | uint16(8192) : lifecycleState & ~uint16(8192)
+  }
+
   internal prop SceneResourcesDirty bool {
     get -> (lifecycleState & uint16(32768)) != uint16(0)
     set -> lifecycleState = value ? lifecycleState | uint16(32768) : lifecycleState & ~uint16(32768)
@@ -181,12 +190,25 @@ internal class Node {
     MarkSceneDirty()
   }
 
-  internal func MarkSceneDirty() {
+  internal func MarkSceneDirty(content bool = true) {
     var current Node? = this
+    var markContent = content
     while let node = current {
       node.SceneSubtreeDirty = true
-      current = node.Parent
+      if markContent { node.SceneContentDirty = true }
+      let parent = node.Parent
+      markContent = true
+      if let owner = parent {
+        if owner.Kind == NodeKind.Editor || owner.OverflowX == Overflow.Scroll || owner.OverflowY == Overflow.Scroll {
+          markContent = !ScrollbarParts.Children(owner).Contains(node)
+        }
+      }
+      current = parent
     }
+  }
+
+  internal func MarkSceneChromeDirty() {
+    MarkSceneDirty(false)
   }
 
   internal prop Kind NodeKind{ get; set; }
@@ -711,8 +733,24 @@ internal class Node {
     }
   }
   internal prop Fiber Cell? { get; set; }
-  internal prop ScrollX float32{ get; set; }
-  internal prop ScrollY float32{ get; set; }
+  internal prop ScrollX float32{
+    get -> scrollX
+    set {
+      if scrollX == value { return }
+      scrollX = value
+      MarkSceneChromeDirty()
+    }
+  }
+  internal prop ScrollY float32{
+    get -> scrollY
+    set {
+      if scrollY == value { return }
+      scrollY = value
+      MarkSceneChromeDirty()
+    }
+  }
+  internal prop PlacedScrollX float32{ get; set; }
+  internal prop PlacedScrollY float32{ get; set; }
   internal prop ScrollTargetX float32{ get; set; }
   internal prop ScrollTargetY float32{ get; set; }
   internal prop ContentW float32{ get; set; }

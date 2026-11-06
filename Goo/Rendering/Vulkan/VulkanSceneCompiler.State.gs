@@ -47,7 +47,6 @@ internal partial class VulkanSceneCompiler {
   private var pathClipCount int32
   private var clipMaskCount int32
   private var clipChainCount int32
-  private var transformCount int32
   private var blendModeSupported bool
   private var exactTextClipCullEnabled bool
   private var backgroundDrawn bool
@@ -61,7 +60,7 @@ internal partial class VulkanSceneCompiler {
     if capacity <= 0 {
       throw ArgumentOutOfRangeException("capacity")
     }
-    frame = SceneFrame(capacity)
+    frame = SceneFrame(capacity, deferTransforms: true)
     InitializeRetention(capacity)
     owners = ConditionalWeakTable[Node, VulkanSceneOwnerId]()
     ownerToken = WeakReference[ConditionalWeakTable[Node, VulkanSceneOwnerId]](owners)
@@ -123,7 +122,9 @@ internal partial class VulkanSceneCompiler {
       pathScene?.BeginCompile()
       frameVersion = nextVulkanSceneVersion(frameVersion)
       frame.ResetForReuse()
+      frame.ViewportBounds = ConservativeBounds{Width: viewportWidth, Height: viewportHeight}
       frame.SetLayerCoverageNodeLimit(lastResult.VisibleNodeCount)
+      frame.SetTransformNodeLimit(lastResult.VisibleNodeCount)
       visibleNodeCount = 0
       emittedNodeCount = 0
       unsupportedNodeCount = 0
@@ -140,7 +141,6 @@ internal partial class VulkanSceneCompiler {
       pathClipCount = 0
       clipMaskCount = 0
       clipChainCount = 0
-      transformCount = 0
       backgroundDrawn = false
       BeginRangeFrame(root, overlayRoot)
 
@@ -187,6 +187,7 @@ internal partial class VulkanSceneCompiler {
       }
 
       frame.TrimLayerCoverage(visibleNodeCount)
+      frame.TrimTransformCapacity(visibleNodeCount)
       FinishRangeFrame()
       ClassifyRetainedChunks()
 
@@ -205,7 +206,7 @@ internal partial class VulkanSceneCompiler {
       lastResult.ClipMaskCount = clipMaskCount
       lastResult.ClipChainCount = clipChainCount
       lastResult.PathResourceDeferred = pathScene?.ResourceDeferred == true
-      lastResult.TransformCount = transformCount
+      lastResult.TransformCount = frame.TransformCount
       lastResult.UnsupportedMask = unsupportedMask
       lastResult.UnsupportedDetails = unsupportedDetails
       lastResult.UnsupportedDetailCount = unsupportedDetailCount

@@ -84,15 +84,14 @@ internal unsafe sealed partial class VulkanTextScene {
     parentTransformIndex int32,
     ref complete bool) bool{
       let segment = BeginSegment(frame, shape.GlyphCount)
-      var parentTransform TransformRecord
-      let identity = TransformRecord{
+      var parentTransform PrimitiveTransform
+      let identity = PrimitiveTransform{
         A: 1.0F,
         B: 0.0F,
         C: 0.0F,
         D: 1.0F,
         TX: 0.0F,
         TY: 0.0F,
-        ParentIndex: -1,
       }
       let parentTransformValid = ComposeLogicalTransform(frame, parentTransformIndex,
         identity, out parentTransform)
@@ -201,16 +200,15 @@ internal unsafe sealed partial class VulkanTextScene {
                 || effectMode == TextEffectBlurShadow{
                   originY + effectOffsetY
                 } else { originY }
-              let inner = TransformRecord{
+              let inner = PrimitiveTransform{
                 A: scale,
                 B: 0.0F,
                 C: 0.0F,
                 D: -scale,
                 TX: glyphOriginX,
                 TY: glyphOriginY,
-                ParentIndex: -1,
               }
-              var composed TransformRecord
+              var composed PrimitiveTransform
               if !ComposeLogicalTransform(frame, parentTransformIndex, inner,
                 out composed) {
                   emissionFailed = true

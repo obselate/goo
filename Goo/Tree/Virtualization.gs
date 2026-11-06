@@ -392,18 +392,23 @@ internal sealed class VirtualNodeState {
     let top = BoxGeometry.ContentTop(n)
     let bottom = top + BoxGeometry.ViewportHeight(n)
     var first Node?
+    var firstBounds TransformBounds
     for i in 0 ... n.Children.Count {
       let child = n.Children[i]
-      if child.Rect.H > 0.0F && child.Rect.W > 0.0F && child.Rect.Y < bottom && child.Rect.Y + child.Rect.H > top
-        && child.Rect.X < right && child.Rect.X + child.Rect.W > left {
-        if first == nil || child.Rect.Y < first.Rect.Y
-          || (child.Rect.Y == first.Rect.Y && child.Rect.X < first.Rect.X) { first = child }
+      let bounds = TransformGeometry.BoundsToNode(child, n)
+      if bounds.H > 0.0F && bounds.W > 0.0F && bounds.Y < bottom && bounds.Y + bounds.H > top
+        && bounds.X < right && bounds.X + bounds.W > left {
+        if first == nil || bounds.Y < firstBounds.Y
+          || (bounds.Y == firstBounds.Y && bounds.X < firstBounds.X) {
+            first = child
+            firstBounds = bounds
+          }
       }
     }
     guard let child = first, let key = child.Key else { return nil }
     return VirtualScrollAnchor{Key: key, Offset: Point{
-      X: float64(child.Rect.X - BoxGeometry.ContentLeft(n)),
-      Y: float64(child.Rect.Y - top),
+      X: float64(firstBounds.X - left),
+      Y: float64(firstBounds.Y - top),
     }}
   }
 
@@ -450,7 +455,10 @@ internal sealed class VirtualNodeState {
         guard let retained = entry.Mount.Current else { continue }
         var parent = retained.Parent
         while let candidate = parent {
-          if candidate == child { return retained.Rect.Y - child.Rect.Y - entry.Y }
+          if candidate == child {
+            let bounds = TransformGeometry.BoundsToNode(retained, child)
+            return bounds.Y - child.Rect.Y - entry.Y
+          }
           parent = candidate.Parent
         }
       }
@@ -467,20 +475,22 @@ internal sealed class VirtualNodeState {
       let child = n.Children[i]
       if child.Key == key {
         let top = BoxGeometry.ContentTop(n)
-        captureDescendants(child, child.Rect.Y, top, top + BoxGeometry.ViewportHeight(n))
+        captureDescendants(child, child, n, top, top + BoxGeometry.ViewportHeight(n))
         break
       }
     }
   }
 
-  private func captureDescendants(n Node, origin float32, top float32, bottom float32) {
+  private func captureDescendants(n Node, owner Node, viewport Node, top float32, bottom float32) {
     if n.Children.Count == 0 {
-      if n.Rect.H > 0.0F && n.Rect.Y < bottom && n.Rect.Y + n.Rect.H > top {
-        pendingAnchorNodes.Add(VirtualAnchorNode{Mount: NodeMount(n), Y: n.Rect.Y - origin})
+      let bounds = TransformGeometry.BoundsToNode(n, viewport)
+      if bounds.H > 0.0F && bounds.Y < bottom && bounds.Y + bounds.H > top {
+        let local = TransformGeometry.BoundsToNode(n, owner)
+        pendingAnchorNodes.Add(VirtualAnchorNode{Mount: NodeMount(n), Y: local.Y - owner.Rect.Y})
       }
       return
     }
-    for i in 0 ... n.Children.Count { captureDescendants(n.Children[i], origin, top, bottom) }
+    for i in 0 ... n.Children.Count { captureDescendants(n.Children[i], owner, viewport, top, bottom) }
   }
 
   internal func Extent() VirtualExtent ? -> if current == nil { nil } else { extent }

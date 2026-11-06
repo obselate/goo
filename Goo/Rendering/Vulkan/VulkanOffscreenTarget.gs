@@ -319,7 +319,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       if reference.SegmentId == 0uL || reference.SegmentVersion == 0uL
         || reference.SegmentId != segment.Id || reference.SegmentVersion != segment.Version
         || reference.GlyphCount != segment.GlyphCount || segment.ClipChainId < 0
-        || reference.ClipChainId < 0 || reference.ClipChainId >= frame.ClipChainCount
+        || reference.TransformIndex < -1 || reference.TransformIndex >= frame.TransformCount
         || segment.RunCount <= 0 || segment.RunCount > segment.Runs.Length{
           throw InvalidOperationException("cached text segment reference is invalid")
         }
@@ -343,7 +343,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       if reference.SegmentId == 0uL || reference.SegmentVersion == 0uL
         || reference.SegmentId != segment.Id || reference.SegmentVersion != segment.Version
         || reference.GlyphCount != segment.GlyphCount || segment.ClipChainId < 0
-        || reference.ClipChainId < 0 || reference.ClipChainId >= frame.ClipChainCount
+        || reference.TransformIndex < -1 || reference.TransformIndex >= frame.TransformCount
         || segment.RunCount <= 0 || segment.RunCount > segment.Runs.Length{
           throw InvalidOperationException("cached text segment reference is invalid")
         }

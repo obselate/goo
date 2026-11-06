@@ -82,7 +82,8 @@ internal partial class VulkanSceneCompiler {
   private func CompileNodeCore(
     node Node,
     context VulkanSceneTraversalContext,
-    owner VulkanSceneOwnerId) {
+    owner VulkanSceneOwnerId,
+    contentDirty bool) {
       let ownerId = owner.Value
       frame.SetActiveClipChain(context.ParentPathClipChainId)
       frame.SetActiveTransform(context.ParentTransformIndex)
@@ -120,6 +121,7 @@ internal partial class VulkanSceneCompiler {
       if node.ScrollX != 0.0F || node.ScrollY != 0.0F {
         scrollNodeCount = scrollNodeCount + 1
       }
+      let scrolls = ScrollsContent(node)
       let bounds = NodeBounds(node)
       let scrollbarParts = ScrollbarParts.ActiveChildren(node)
       let hasActiveScrollbarParts = scrollbarParts.Count != 0
@@ -216,7 +218,7 @@ internal partial class VulkanSceneCompiler {
         InvalidateRetainedText(owner)
         let retainedParentBoxEligible = RetainedParentBoxEligible(
           node, bounds, opacity, context)
-        if retainedParentBoxEligible && !hasActiveScrollbarParts {
+        if retainedParentBoxEligible && !hasActiveScrollbarParts && !scrolls {
           IncrementSaturated(ref retainedParentBox.Total)
           if TryAppendRetainedBox(node, owner, ownerId, bounds, opacity, false) {
             emittedNodeCount = emittedNodeCount + 1
@@ -243,7 +245,6 @@ internal partial class VulkanSceneCompiler {
       let chunk = frame.BeginChunk(ownerId, frameVersion, chunkBounds, true)
       let transform = AddNodeTransform(node, context.ParentTransformIndex)
       frame.SetActiveTransform(transform.Index)
-      transformCount = frame.TransformCount
       let axisAligned = context.ParentAxisAligned && transform.AxisAligned
       let subtreeBounds = isolates
       ? LayerSubtreeBounds(node, ResolveCompilerFrameTransform(context.ParentTransformIndex),
@@ -493,26 +494,6 @@ internal partial class VulkanSceneCompiler {
       }
       let inheritedChildClipIndex = scrollbarContentClipIndex >= 0
       ? scrollbarContentClipIndex : ownerContentClipIndex
-      var editorContentClipIndex int32 = -1
-      var editorContentBounds ConservativeBounds
-      if node.Kind == NodeKind.Editor {
-        let _ = TextEditorLayouts.For(node, BoxGeometry.ContentWidth(node), BoxGeometry.ContentHeight(node))
-        editorContentBounds = TextEditorContentBounds(node)
-        if TextEditorSupported(node) && TextClipSupported(node, axisAligned, childClipDepth) {
-          frame.SetActiveClipChain(overflowPathClipChainId)
-          PaintEditorContent(node, contentOpacity, transform.Index, true)
-          if !editorContentBounds.IsEmpty {
-            editorContentClipIndex = frame.AddRectClipBegin(RectClipRecord{
-              Bounds: editorContentBounds,
-              TransformIndex: transform.Index,
-              ParentIndex: inheritedChildClipIndex,
-            })
-            clipCount = clipCount + 1
-            childClipDepth = childClipDepth + 1
-            PaintEditorContent(node, contentOpacity, transform.Index)
-          }
-        }
-      }
       frame.SetActiveClipChain(overflowPathClipChainId)
       frame.EndChunk()
       if retainedTextEligible {
@@ -528,8 +509,6 @@ internal partial class VulkanSceneCompiler {
       }
       emittedNodeCount = emittedNodeCount + 1
 
-      let childClipIndex = editorContentClipIndex >= 0
-      ? editorContentClipIndex : inheritedChildClipIndex
       var childClipBounds = context.ActiveClipBounds
       let resolvedTransform = ResolveCompilerFrameTransform(transform.Index)
       if clipIndex >= 0 {
@@ -558,23 +537,18 @@ internal partial class VulkanSceneCompiler {
             ChainIndex: overflowPathClipChainId,
           }))
       }
-      if editorContentClipIndex >= 0 {
-        childClipBounds = IntersectBounds(childClipBounds,
-          TransformCompilerBounds(editorContentBounds, resolvedTransform))
-      }
       let childExactCullContextSafe = ExactCullContextForChildren(
-        context.ExactCullContextSafe, node, isolates, axisAligned, overflowPreflight)
+        context.ExactCullContextSafe, node, isolates, axisAligned, overflowPreflight) && !scrolls
       let childContext = VulkanSceneTraversalContext{
         ParentTransformIndex: transform.Index,
-        ParentRectClipIndex: childClipIndex,
+        ParentRectClipIndex: inheritedChildClipIndex,
         ParentOpacity: isolates ? 1.0F : opacity,
         ParentAxisAligned: axisAligned,
         ParentRectClipDepth: childClipDepth,
         ParentPathClipChainId: overflowPathClipChainId,
         ParentIsolation: context.ParentIsolation || isolates || node.HasTransformState
-          || node.HasClipPath || clipsX || clipsY || node.ScrollX != 0.0F
-          || node.ScrollY != 0.0F || node.BlendMode != BlendMode.Normal
-          || editorContentClipIndex >= 0,
+          || node.HasClipPath || clipsX || clipsY || scrolls
+          || node.BlendMode != BlendMode.Normal,
         RoundedOverflowOwner: roundedLayer ? node
           : shaderEffect == nil ? context.RoundedOverflowOwner : nil,
         RoundedOverflowTransformIndex: roundedLayer
@@ -584,27 +558,15 @@ internal partial class VulkanSceneCompiler {
         ExactCullContextSafe: childExactCullContextSafe,
         ActiveClipBounds: childClipBounds,
       }
-      let children = Stacking.Children(node)
-      var index int32 = 0
-      while index < children.Count
-        && (node.Kind != NodeKind.Editor || editorContentClipIndex >= 0) {
-          if !children[index].IsPortal {
-            CompileNode(children[index], childContext)
-          }
-          index = index + 1
-        }
+      let editorSupported = node.Kind != NodeKind.Editor
+        || TextEditorSupported(node) && TextClipSupported(node, axisAligned, childClipDepth)
+      CompileContentChildren(node, childContext, owner, contentDirty, scrolls, contentOpacity,
+        editorSupported)
 
       frame.SetActiveTransform(transform.Index)
-      if editorContentClipIndex >= 0 || scrollbarContentClipIndex >= 0 || clipIndex >= 0 {
+      if scrollbarContentClipIndex >= 0 || clipIndex >= 0 {
         frame.SetActiveClipChain(context.ParentPathClipChainId)
         frame.BeginChunk(ownerId, frameVersion, bounds, false)
-        if editorContentClipIndex >= 0 {
-          frame.AddRectClipEnd(RectClipRecord{
-            Bounds: editorContentBounds,
-            TransformIndex: transform.Index,
-            ParentIndex: inheritedChildClipIndex,
-          })
-        }
         if scrollbarContentClipIndex >= 0 {
           frame.AddRectClipEnd(RectClipRecord{
             Bounds: scrollbarContentBounds,

@@ -475,7 +475,7 @@ public partial class Window {
         }
         if input.ConsumeScrollRectsDirty() {
           pendingReconcileEffects = combineEffects(pendingReconcileEffects,
-            ReconcileEffects.Paint | ReconcileEffects.Input | ReconcileEffects.Rect
+            ReconcileEffects.Paint | ReconcileEffects.ScrollPlacement
             | ReconcileEffects.Accessibility)
         }
         // dt can carry a stale idle wait (up to 250 ms) plus whatever this call's

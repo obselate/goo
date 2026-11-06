@@ -239,4 +239,33 @@ internal class VulkanSceneCompilerFixtures {
       NodeLifecycle.DisposeTree(root)
     }
   }
+  func ScrollOffsetRetainsCanonicalContent() bool {
+    let root = Reconciler{Res: Resolver{}}.Mount(Container{
+      Width: 100, Height: 100, OverflowY: Overflow.Scroll,
+      Container{Width: 80, Height: 80, FlexShrink: 0, BackgroundColor: Color.White},
+      Container{Width: 80, Height: 80, FlexShrink: 0, BackgroundColor: Color.Black},
+      Container{Width: 80, Height: 80, FlexShrink: 0, BackgroundColor: Color.White},
+    })
+    try {
+      let layout = Layout()
+      layout.Calculate(root, 100.0F, 100.0F)
+      let compiler = VulkanSceneCompiler(64)
+      compiler.Compile(root, Color.Transparent, 100.0F, 100.0F)
+      let first = root.Children[0]
+      let bounds = first.Rect
+      let paintVersion = first.ScenePaintVersion
+      root.ScrollY = 37.5F
+      root.ScrollTargetY = 37.5F
+      layout.RefreshRects(root)
+      compiler.Compile(root, Color.Transparent, 100.0F, 100.0F)
+      return first.Rect.Y == bounds.Y && first.ScenePaintVersion == paintVersion
+        && TransformGeometry.BoundsToWindow(first).Y == bounds.Y - 38.0F
+        && compiler.RangeHitCount == 1 && compiler.RangeCompileCount == 1
+        && compiler.Frame.Transforms.Length <= compiler.LastResult.VisibleNodeCount * 3
+        && compiler.RangePeakBytes <= 16L * 1024L * 1024L
+    } finally {
+      NodeLifecycle.DisposeTree(root)
+    }
+  }
+
 }

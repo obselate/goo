@@ -46,6 +46,22 @@ float roundedDistance(float2 point, float2 size, float4 cornerRadii)
     return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
 }
 
+float canonicalEdge(float2 point, float2 size, float4 radii, float distance)
+{
+    float2 gradient = float2(ddx(distance), ddy(distance));
+    int2 phase = int2(pc.stopPositions.xy) & int2(1);
+    float2 pointDx = ddx(point);
+    float2 pointDy = ddy(point);
+    if (any(phase != int2(0)))
+    {
+        int2 parity = int2(floor(gooFragmentPosition.xy + pc.stopPositions.xy)) & int2(1);
+        float2 direction = 1.0 - 2.0 * float2(parity);
+        gradient.x = (roundedDistance(point + pointDx * direction.x, size, radii) - distance) * direction.x;
+        gradient.y = (roundedDistance(point + pointDy * direction.y, size, radii) - distance) * direction.y;
+    }
+    return max(abs(gradient.x) + abs(gradient.y), 0.0001);
+}
+
 float gaussianCoverage(float distance, float blur)
 {
     if (blur <= 0.0)
@@ -62,11 +78,11 @@ float gaussianCoverage(float distance, float blur)
     return 0.5 * (1.0 - erfX);
 }
 
-float roundedCoverage(float distance, float blur)
+float roundedCoverage(float2 point, float2 size, float4 radii, float distance, float blur)
 {
     if (blur <= 0.0)
     {
-        return 1.0 - smoothstep(0.0, max(fwidth(distance), 0.0001), distance);
+        return 1.0 - smoothstep(0.0, canonicalEdge(point, size, radii, distance), distance);
     }
     return gaussianCoverage(distance, blur);
 }
@@ -183,7 +199,7 @@ void shade()
         float2 baseOffset = float2(expansion - offsetX, expansion - offsetY);
         float2 baseSize = max(pc.rect.zw - float2(expansion * 2.0), float2(0.0001));
         float baseDistance = roundedDistance(point - baseOffset, baseSize, pc.radii);
-        float baseEdge = max(fwidth(baseDistance), 0.0001);
+        float baseEdge = canonicalEdge(point - baseOffset, baseSize, pc.radii, baseDistance);
         float inside = 1.0 - smoothstep(0.0, baseEdge, baseDistance);
         float2 holeOffset = float2(expansion + spread);
         float2 rawHoleSize = pc.rect.zw - holeOffset * 2.0;
@@ -193,7 +209,7 @@ void shade()
             float2 holeSize = rawHoleSize;
             float4 holeRadii = max(pc.radii - float4(spread), float4(0.0));
             float holeDistance = roundedDistance(point - holeOffset, holeSize, holeRadii);
-            float edge = max(fwidth(holeDistance), 0.0001);
+            float edge = canonicalEdge(point - holeOffset, holeSize, holeRadii, holeDistance);
             outsideHole = blur <= 0.0 ? smoothstep(0.0, edge, holeDistance)
                 : 1.0 - gaussianCoverage(holeDistance, blur);
         }
@@ -205,7 +221,7 @@ void shade()
         float2 shapeSize = pc.rect.zw - shapeOffset * 2.0;
         float4 shapeRadii = pc.radii;
         float shadowDistance = roundedDistance(point - shapeOffset, shapeSize, shapeRadii);
-        coverage = roundedCoverage(shadowDistance, blur);
+        coverage = roundedCoverage(point - shapeOffset, shapeSize, shapeRadii, shadowDistance, blur);
     }
     outColor = unpackColor(pc.packedColors.x, pc.packedColors.w, 0u) * coverage * gooClipCoverage();
 }

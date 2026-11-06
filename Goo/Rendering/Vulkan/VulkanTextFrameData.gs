@@ -369,7 +369,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
           }
           let referenceIndex = drawRef.Index
           var reference = frame.CachedTextSegments[referenceIndex]
-          let segment = ValidateSegment(drawRef, reference)
+          let segment = ValidateSegment(drawRef, reference, frame)
           let nextSegmentCount = AddInt32(slot.CandidateSegmentCount, 1,
             "text segment count")
           let candidateIndex = slot.CandidateSegmentCount
@@ -433,14 +433,14 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
           }
           let dirty = fullUpload
             || slot.CandidateVersions[textIndex] != slot.HistoryVersions[textIndex]
-            || !SegmentClipMatches(slot, slot.CandidateFirstInstances[textIndex], reference.ClipChainId)
+            || !SegmentClipMatches(slot, slot.CandidateFirstInstances[textIndex], drawRef.ClipChainId)
           if dirty {
             dirtySegmentCount = AddInt32(dirtySegmentCount, 1,
               "dirty text segment count")
             dirtyRecordCount = AddInt32(dirtyRecordCount, segment.RecordCount,
               "dirty text record count")
             CopySegmentRecords(slot, segment,
-              slot.CandidateFirstInstances[textIndex], segment.RecordCount, reference.ClipChainId)
+              slot.CandidateFirstInstances[textIndex], segment.RecordCount, drawRef.ClipChainId)
             if rangeStart < 0 {
               rangeStart = slot.CandidateFirstInstances[textIndex]
             }
@@ -714,11 +714,11 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
   }
 
   private func ValidateSegment(drawRef DrawRef,
-    reference CachedTextSegmentRefRecord) VulkanRetainedTextSegment{
-      if drawRef.ClipChainId < 0 || reference.SegmentId == 0uL
-        || reference.SegmentVersion == 0uL
-        || reference.GlyphCount <= 0
-        || reference.ClipChainId != drawRef.ClipChainId{
+    reference CachedTextSegmentRefRecord, frame SceneFrame) VulkanRetainedTextSegment{
+      if drawRef.ClipChainId < 0 || drawRef.ClipChainId >= frame.ClipChainCount
+        || reference.SegmentId == 0uL || reference.SegmentVersion == 0uL
+        || reference.GlyphCount <= 0 || reference.TransformIndex < -1
+        || reference.TransformIndex >= frame.TransformCount{
           throw ArgumentException("cached text segment reference is invalid")
         }
       guard let segment = reference.Segment else {

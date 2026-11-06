@@ -33,6 +33,7 @@ internal partial class SceneFrame {
   private var analyticPathBandCount int32
   private var transforms []TransformRecord
   private var transformCount int32
+  private var transformCapacityLimit int32 = Int32.MaxValue
   private var rectClips []RectClipRecord
   private var rectClipCount int32
   private var clipMasks []ClipMaskRecord
@@ -67,7 +68,7 @@ internal partial class SceneFrame {
     init(DefaultCapacity)
   }
 
-  internal init(capacity int32) {
+  internal init(capacity int32, deferTransforms bool = false) {
     if capacity <= 0 || capacity > Int32.MaxValue {
       throw ArgumentOutOfRangeException("capacity")
     }
@@ -83,7 +84,7 @@ internal partial class SceneFrame {
     cachedImages = [capacity]CachedImageRefRecord
     cachedTextSegments = [capacity]CachedTextSegmentRefRecord
     analyticPathBands = [capacity]AnalyticPathBandRecord
-    transforms = [capacity]TransformRecord
+    transforms = deferTransforms ? Array.Empty[TransformRecord]() : [capacity]TransformRecord
     rectClips = [capacity]RectClipRecord
     clipMasks = [capacity]ClipMaskRecord
     clipChains = [capacity]ClipChainRecord
@@ -173,6 +174,7 @@ internal partial class SceneFrame {
     RequireClosedChunk()
     reusableChunkCount = recordsLogical ? chunkCount : 0
     recordsLogical = true
+    ViewportBounds = ConservativeBounds{}
     var shaderIndex int32 = 0
     while shaderIndex < shaderEffectCount {
       shaderEffects[shaderIndex] = ShaderEffectRecord{}
@@ -438,7 +440,7 @@ internal partial class SceneFrame {
       throw ArgumentNullException("segment")
     }
     if !VulkanRetainedTextValidation.ValidReferenceStorage(value, segment)
-      || value.ClipChainId < 0 || value.ClipChainId != segment.ClipChainId
+      || segment.ClipChainId < 0 || activeClipChainId != segment.ClipChainId
       || value.FirstInstance != -1
       || segment.AtlasGeneration == 0uL {
         throw ArgumentException("cached text segment is invalid")
@@ -463,9 +465,11 @@ internal partial class SceneFrame {
       runIndex = runIndex + 1
     }
     ExtendChunkTextBounds(value.Bounds)
-    let index = AppendRecord(&cachedTextSegments, &cachedTextSegmentCount, value)
+    var reference = value
+    reference.TransformIndex = activeTransformIndex
+    let index = AppendRecord(&cachedTextSegments, &cachedTextSegmentCount, reference)
     AppendDrawRef(DrawRef{ Kind: SceneDrawKind.CachedTextSegment, Index: index,
-      Flags: 0u, ClipChainId: value.ClipChainId })
+      Flags: 0u, ClipChainId: activeClipChainId })
     return index
   }
 
@@ -522,7 +526,11 @@ internal partial class SceneFrame {
   internal func AddTransform(value TransformRecord) int32 {
     RequireOpenChunk()
     ValidateTransformParentIndex(value.ParentIndex)
-    let index = AppendRecord(&transforms, &transformCount, value)
+    GrowTransforms(NextCount(transformCount))
+    let index = transformCount
+    transforms[index] = value
+    transformCount++
+    recordOperations++
     AppendDrawRef(DrawRef{ Kind: SceneDrawKind.Transform, Index: index, Flags: 0u, ClipChainId: 0 })
     return index
   }

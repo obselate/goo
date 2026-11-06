@@ -1212,8 +1212,11 @@ internal class InputFixtures {
     driver.Key(Key.Tab, false, false)
     driver.Step(1.0)
     if !last.Focused || outer.ScrollY <= 0.0F || inner.ScrollY <= 0.0F { return false }
-    if last.Rect.Y < inner.Rect.Y || last.Rect.Y + last.Rect.H > inner.Rect.Y + inner.Rect.H
-      || last.Rect.Y < outer.Rect.Y || last.Rect.Y + last.Rect.H > outer.Rect.Y + outer.Rect.H {
+    let lastBounds = TransformGeometry.BoundsToWindow(last)
+    let innerBounds = TransformGeometry.BoundsToWindow(inner)
+    let outerBounds = TransformGeometry.BoundsToWindow(outer)
+    if lastBounds.Y < innerBounds.Y || lastBounds.Y + lastBounds.H > innerBounds.Y + innerBounds.H
+      || lastBounds.Y < outerBounds.Y || lastBounds.Y + lastBounds.H > outerBounds.Y + outerBounds.H {
       return false
     }
     driver.Key(Key.Tab, true, false)

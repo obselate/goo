@@ -139,8 +139,12 @@ internal sealed class TextEditorBinding : IDisposable {
       RenderState.Invalidate(true)
       requestIntrinsicInvalidation()
     } else if scrollChanged {
-      RenderState.Invalidate(false)
-      requestInvalidation(ReconcileEffects.Paint | ReconcileEffects.Input | ReconcileEffects.Rect)
+      if TextEditorLayouts.ScrollViewportChanged(node) {
+        RenderState.Invalidate(false)
+        node.MarkSceneDirty()
+      }
+      requestInvalidation(ReconcileEffects.Paint | ReconcileEffects.ScrollPlacement
+        | ReconcileEffects.Accessibility, false)
     } else {
       requestInvalidation(ReconcileEffects.Paint | ReconcileEffects.Input)
     }
@@ -155,10 +159,11 @@ internal sealed class TextEditorBinding : IDisposable {
     requestInvalidation(effects)
   }
 
-  private func requestInvalidation(e ReconcileEffects) {
-    if (int32(e) & int32(ReconcileEffects.Paint)) != 0 {
+  private func requestInvalidation(e ReconcileEffects, content bool = true) {
+    if content && (int32(e) & int32(ReconcileEffects.Paint)) != 0 {
       node.BumpScenePaintVersion()
     }
+    if !content { node.MarkSceneChromeDirty() }
     if let callback = retainedInvalidated {
       callback(e)
       return

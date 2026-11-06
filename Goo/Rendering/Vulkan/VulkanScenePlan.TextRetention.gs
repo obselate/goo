@@ -138,18 +138,21 @@ internal partial class SceneFrame {
         runIndex = runIndex + 1
       }
       let index = cachedTextSegmentCount
-      cachedTextSegments[index] = value
+      var reference = value
+      reference.TransformIndex = activeTransformIndex
+      cachedTextSegments[index] = reference
       cachedTextSegmentCount = NextCount(cachedTextSegmentCount)
       recordOperations = recordOperations + 1uL
       AppendDrawRef(DrawRef{ Kind: SceneDrawKind.CachedTextSegment, Index: index,
-        Flags: 0u, ClipChainId: value.ClipChainId })
+        Flags: 0u, ClipChainId: activeClipChainId })
     }
 
   private func ValidRetainedTextSegment(
     value CachedTextSegmentRefRecord,
     segment VulkanRetainedTextSegment) bool ->
   VulkanRetainedTextValidation.ValidReferenceStorage(value, segment)
-    && value.ClipChainId == activeClipChainId
+    && segment.ClipChainId == activeClipChainId
+    && value.TransformIndex == activeTransformIndex
     && value.FirstInstance == -1
     && segment.AtlasGeneration != 0uL
     && VulkanRetainedTextValidation.ValidBounds(value.Bounds)

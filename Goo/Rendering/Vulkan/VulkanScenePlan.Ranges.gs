@@ -201,7 +201,7 @@ internal partial class SceneFrame {
         Grow[RadialGradientRecord](&radialGradients, radialGradientCount, next.RadialGradients)
         Grow[CachedImageRefRecord](&cachedImages, cachedImageCount, next.CachedImages)
         Grow[AnalyticPathBandRecord](&analyticPathBands, analyticPathBandCount, next.AnalyticPathBands)
-        Grow[TransformRecord](&transforms, transformCount, next.Transforms)
+        GrowTransforms(next.Transforms)
         Grow[RectClipRecord](&rectClips, rectClipCount, next.RectClips)
         Grow[ClipMaskRecord](&clipMasks, clipMaskCount, next.ClipMasks)
         Grow[ClipChainRecord](&clipChains, clipChainCount, next.ClipChains)
@@ -210,8 +210,10 @@ internal partial class SceneFrame {
         Grow[LayerRecord](&layers, layerCount, next.Layers)
         GrowLayerCoverage(next.LayerCoverage)
         Grow[CachedTextSegmentRefRecord](&cachedTextSegments, cachedTextSegmentCount, next.Text)
+        Grow[ShaderEffectRecord](&shaderEffects, shaderEffectCount, next.Effects)
         var completed = false
         try {
+            if !CaptureRetainedEffects(data, start, end) { return false }
             for index in start.Text ... end.Text {
                 guard let weak = data.Segments[index] else {
                     return false
@@ -225,7 +227,7 @@ internal partial class SceneFrame {
                 }
                 value.Segment = segment
                 value.FirstInstance = -1
-                value.ClipChainId = binding.ClipChain(value.ClipChainId)
+                value.TransformIndex = binding.Transform(value.TransformIndex)
                 cachedTextSegments[destination.Text + index - start.Text] = value
             }
             for index in start.AnalyticPathBands ... end.AnalyticPathBands {
@@ -262,6 +264,7 @@ internal partial class SceneFrame {
                 value.TransformIndex = binding.Transform(value.TransformIndex)
                 clipMasks[destination.ClipMasks + index - start.ClipMasks] = value
             }
+            RestoreRetainedEffects(data, binding)
             for index in start.Chunks ... end.Chunks {
                 var value = data.Chunks[index]
                 value.FirstDraw += destination.DrawRefs - start.DrawRefs
@@ -366,6 +369,8 @@ internal partial class SceneFrame {
             for index in start.Layers ... end.Layers {
                 var value = data.Layers[index]
                 value.TransformIndex = binding.Transform(value.TransformIndex)
+                value.EffectIndex = binding.Index(value.EffectIndex,
+                    start.Effects, end.Effects, destination.Effects)
                 value.ParentClipLayerId = binding.Layer(value.ParentClipLayerId)
                 value.DrawOrdinal = binding.Index(value.DrawOrdinal, start.DrawRefs, end.DrawRefs, destination.DrawRefs)
                 value.ReferenceIndex = binding.Index(
@@ -396,6 +401,7 @@ internal partial class SceneFrame {
             layerCount = next.Layers
             layerCoverageCount = next.LayerCoverage
             cachedTextSegmentCount = next.Text
+            shaderEffectCount = next.Effects
             activeClipChainId = binding.ClipChain(activeClip)
             activeTransformIndex = binding.Transform(activeTransform)
             var copiedRecords = end.GradientStops - start.GradientStops
@@ -405,6 +411,7 @@ internal partial class SceneFrame {
             + end.ClipMasks - start.ClipMasks + end.ClipChains - start.ClipChains
             + end.Shadows - start.Shadows + end.Underlines - start.Underlines
             + end.Layers - start.Layers + end.LayerCoverage - start.LayerCoverage + end.Text - start.Text
+            + end.Effects - start.Effects
             if !retainPrimitives {
                 copiedRecords += end.SolidBoxes - start.SolidBoxes + end.RoundedBoxes - start.RoundedBoxes
                 + end.PerEdgeBorders - start.PerEdgeBorders
@@ -416,6 +423,7 @@ internal partial class SceneFrame {
             completed = true
             return true
         } finally {
+            ReleaseRetainedEffects(data, start, end)
             if !completed {
                 Array.Clear(cachedTextSegments, destination.Text, next.Text - destination.Text)
                 Array.Clear(
@@ -424,6 +432,7 @@ internal partial class SceneFrame {
                     next.AnalyticPathBands - destination.AnalyticPathBands
                 )
                 Array.Clear(clipMasks, destination.ClipMasks, next.ClipMasks - destination.ClipMasks)
+                Array.Clear(shaderEffects, destination.Effects, next.Effects - destination.Effects)
             }
         }
     }

@@ -55,6 +55,7 @@ internal partial class VulkanSceneCompiler {
       TY: matrix.TY,
       ParentIndex: parentIndex,
     }
+    frame.SetTransformNodeLimit(Math.Max(lastResult.VisibleNodeCount, visibleNodeCount))
     let index = frame.AddTransform(record)
     return VulkanSceneTransformState{
       Index: index,
@@ -360,10 +361,12 @@ internal partial class VulkanSceneCompiler {
       frame.SetActiveClipChain(shapePaintParentChainId)
     }
 
-  private func PaintEditorContent(node Node, opacity float32, transformIndex int32, lineNumbers bool = false) {
+  private func PaintEditorContent(node Node, opacity float32, transformIndex int32,
+    lineNumbers bool = false, viewportTransformIndex int32 = -1, verticalTransformIndex int32 = -1) {
     guard let renderer = textScene else { return }
-    let emitted = lineNumbers ? renderer.EmitEditorLineNumbers(frame, node, opacity, transformIndex)
-      : renderer.Emit(frame, node, opacity, transformIndex)
+    let emitted = lineNumbers
+      ? renderer.EmitEditorLineNumbers(frame, node, opacity, transformIndex, viewportTransformIndex)
+      : renderer.Emit(frame, node, opacity, transformIndex, verticalTransformIndex)
     if renderer.ConsumeColorEffectSkipped() {
       RecordColorEffectsSkipped(node)
     }

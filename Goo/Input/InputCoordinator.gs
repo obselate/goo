@@ -107,6 +107,10 @@ internal partial class InputCoordinator {
     }
   }
 
+  internal func RefreshTextPlacement() {
+    if let current = focus.FocusedNode() { text.RefreshInputArea(current) }
+  }
+
   internal func CurrentCursor() Cursor -> pointer.CurrentCursor()
   internal func ConsumeScrollRectsDirty() bool -> pointer.ConsumeScrollRectsDirty()
 

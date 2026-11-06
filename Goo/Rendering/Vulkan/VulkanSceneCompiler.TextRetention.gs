@@ -83,7 +83,7 @@ internal partial class VulkanSceneCompiler {
           return false
         }
         if reference.ClipChainId != 0
-          || reference.ClipChainId != value.ClipChainId
+          || reference.ClipChainId != segment.ClipChainId
           || !ValidSegmentReference(value, segment)
           || segment.GlyphCount > Int32.MaxValue - segment.RunCount{
             return false
@@ -146,7 +146,7 @@ internal partial class VulkanSceneCompiler {
     value CachedTextSegmentRefRecord,
     segment VulkanRetainedTextSegment) bool ->
   VulkanRetainedTextValidation.ValidReferenceStorage(value, segment)
-    && value.ClipChainId == segment.ClipChainId
+    && value.TransformIndex == -1
     && value.FirstInstance == -1
     && segment.AtlasGeneration != 0uL
     && VulkanRetainedTextValidation.ValidBounds(value.Bounds)

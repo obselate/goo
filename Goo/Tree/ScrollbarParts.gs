@@ -190,19 +190,30 @@ internal partial class ScrollbarParts {
             }
         }
 
-        internal func Arrange(root Node) {
+        internal func Arrange(root Node, descendants bool = true) {
             if layoutDepth != 0 {
                 return
             }
             layoutDepth++
             try {
-                layoutTree(root)
+                if descendants { layoutTree(root) }
+                else { layoutOwner(root) }
             } finally {
                 layoutDepth--
             }
         }
 
         private func layoutTree(node Node) {
+            layoutOwner(node)
+            for i in 0 ... node.Children.Count {
+                let child = node.Children[i]
+                if !child.IsPortal {
+                    layoutTree(child)
+                }
+            }
+        }
+
+        private func layoutOwner(node Node) {
             if let state = stateFor(node, false) {
                 var geometry ScrollThumbGeometry
                 if (state.HorizontalTrack != nil || state.HorizontalThumb != nil)
@@ -225,12 +236,6 @@ internal partial class ScrollbarParts {
                 }
                 for part in state.Parts {
                     layoutTree(part)
-                }
-            }
-            for i in 0 ... node.Children.Count {
-                let child = node.Children[i]
-                if !child.IsPortal {
-                    layoutTree(child)
                 }
             }
         }

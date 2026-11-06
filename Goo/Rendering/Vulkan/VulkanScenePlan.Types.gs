@@ -87,7 +87,7 @@ internal sealed class VulkanRetainedTextSegment : VulkanTextSegmentStorage {
   internal var EffectRadiusPixels float32
   internal var EffectOffsetX float32
   internal var EffectOffsetY float32
-  internal var ParentTransform TransformRecord
+  internal var ParentTransform PrimitiveTransform
   internal var BaselineReusable bool
   internal var SceneValidationVersion uint64
   internal var RendererValidationVersion uint64
@@ -104,7 +104,7 @@ internal sealed class VulkanRetainedTextSegment : VulkanTextSegmentStorage {
     SegmentId: Id,
     SegmentVersion: Version,
     GlyphCount: GlyphCount,
-    ClipChainId: ClipChainId,
+    TransformIndex: -1,
     Segment: this,
     FirstInstance: -1,
   }
@@ -371,7 +371,7 @@ internal struct CachedTextSegmentRefRecord {
   internal var SegmentId uint64
   internal var SegmentVersion uint64
   internal var GlyphCount int32
-  internal var ClipChainId int32
+  internal var TransformIndex int32
   internal var Segment VulkanRetainedTextSegment?
   internal var FirstInstance int32
 }
@@ -394,6 +394,8 @@ internal struct AnalyticPathBandRecord {
   internal var TransformIndex int32
 }
 
+internal enum SceneTransformKind { Affine; ScrollPlacement; VerticalScrollPlacement; }
+
 internal struct TransformRecord {
   internal var A float32
   internal var B float32
@@ -402,6 +404,13 @@ internal struct TransformRecord {
   internal var TX float32
   internal var TY float32
   internal var ParentIndex int32
+  internal var Kind SceneTransformKind
+  internal var ScrollOwnerId uint64
+  internal var ScrollPixelX float32
+  internal var ScrollPixelY float32
+
+  internal prop IsScrollPlacement bool { get -> Kind == SceneTransformKind.ScrollPlacement
+    || Kind == SceneTransformKind.VerticalScrollPlacement }
 }
 
 internal struct RectClipRecord {

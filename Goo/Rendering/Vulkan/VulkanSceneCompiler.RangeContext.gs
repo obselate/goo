@@ -21,10 +21,12 @@ internal partial class VulkanSceneCompiler {
                 throw InvalidOperationException("Retained scene transform chain is invalid")
             }
             let value = rangeData.Transforms[current]
-            result = ComposeCompilerTransform(
-                PrimitiveTransform{A: value.A, B: value.B, C: value.C, D: value.D, TX: value.TX, TY: value.TY,},
-                result
-            )
+            if !value.IsScrollPlacement {
+                result = ComposeCompilerTransform(
+                    PrimitiveTransform{A: value.A, B: value.B, C: value.C, D: value.D, TX: value.TX, TY: value.TY,},
+                    result
+                )
+            }
             current = value.ParentIndex
             remaining--
         }

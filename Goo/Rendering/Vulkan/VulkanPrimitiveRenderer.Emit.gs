@@ -58,6 +58,12 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     ValidateFinite(value.D, "transform d")
     ValidateFinite(value.TX, "transform tx")
     ValidateFinite(value.TY, "transform ty")
+    ValidateFinite(value.ScrollPixelX, "scroll transform pixel x")
+    ValidateFinite(value.ScrollPixelY, "scroll transform pixel y")
+    if value.Kind != SceneTransformKind.Affine && value.Kind != SceneTransformKind.ScrollPlacement
+      && value.Kind != SceneTransformKind.VerticalScrollPlacement {
+      throw ArgumentOutOfRangeException("transform kind")
+    }
     if value.ParentIndex < -1 || value.ParentIndex >= count {
       throw ArgumentOutOfRangeException("transform parent index")
     }
@@ -134,9 +140,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if bounds.IsEmpty {
         return
       }
+      let scroll = frame.ScrollOffset(transformIndex)
       EmitSolidResolved(commandBuffer, extent, bounds, radiusTopLeft, radiusTopRight,
         radiusBottomRight, radiusBottomLeft, opaqueBorderWidth, opaqueBorderHeight,
-        color, opacity, transform)
+        color, opacity, transform, currentDitherOffsetX + scroll.X, currentDitherOffsetY + scroll.Y)
     }
 
   private func EmitSolidResolved(
@@ -151,7 +158,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     opaqueBorderHeight float32,
     color uint32,
     opacity float32,
-    transform PrimitiveTransform) {
+    transform PrimitiveTransform, phaseX float32, phaseY float32) {
       var push = VulkanPrimitiveGpuRecord{}
       FillTransform(&push.Geometry, bounds, transform, extent)
       if radiusTopLeft > 0.0F || radiusTopRight > 0.0F
@@ -164,6 +171,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.radii_w = radiusBottomLeft
       push.params_x = MathF.Round(opaqueBorderWidth, MidpointRounding.AwayFromZero)
       push.params_y = MathF.Round(opaqueBorderHeight, MidpointRounding.AwayFromZero)
+      push.stopPositions_x = phaseX
+      push.stopPositions_y = phaseY
       let packed = PackColor(color, opacity)
       push.packedColors_x = packed.Rgb
       push.packedColors_w = packed.Alpha
@@ -253,6 +262,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         push.packedColorsExtra_y = region.Mapping.Layer * 2u | 1u
         push.packedColorsExtra_z = uint32(BitConverter.SingleToInt32Bits(float32(region.ScreenX) * scaleX))
         push.packedColorsExtra_w = uint32(BitConverter.SingleToInt32Bits(float32(region.ScreenY) * scaleY))
+      } else {
+        let scroll = frame.ScrollOffset(value.TransformIndex)
+        push.stopPositions_x = currentDitherOffsetX + scroll.X
+        push.stopPositions_y = currentDitherOffsetY + scroll.Y
       }
       BindAndDraw(commandBuffer, primitivePipelines.ShadowPipeline, *void(&push))
     }
@@ -319,6 +332,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         BindAndDraw(commandBuffer, primitivePipelines.BorderPipeline, *void(&push))
         return
       }
+      let scroll = frame.ScrollOffset(value.TransformIndex)
+      let phaseX = currentDitherOffsetX + scroll.X
+      let phaseY = currentDitherOffsetY + scroll.Y
       let interiorHeight = MathF.Max(bounds.Height - topWidth - bottomWidth, 0.0F)
       if topWidth > 0.0F {
         EmitSolidResolved(commandBuffer, extent, ConservativeBounds{
@@ -326,7 +342,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           Y: bounds.Y,
           Width: bounds.Width,
           Height: topWidth,
-        }, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, value.TopColor, 1.0F, transform)
+        }, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, value.TopColor, 1.0F, transform, phaseX, phaseY)
       }
       if rightWidth > 0.0F && interiorHeight > 0.0F {
         EmitSolidResolved(commandBuffer, extent, ConservativeBounds{
@@ -334,7 +350,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           Y: bounds.Y + topWidth,
           Width: rightWidth,
           Height: interiorHeight,
-        }, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, value.RightColor, 1.0F, transform)
+        }, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, value.RightColor, 1.0F, transform, phaseX, phaseY)
       }
       if bottomWidth > 0.0F {
         EmitSolidResolved(commandBuffer, extent, ConservativeBounds{
@@ -342,7 +358,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           Y: bounds.Y + bounds.Height - bottomWidth,
           Width: bounds.Width,
           Height: bottomWidth,
-        }, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, value.BottomColor, 1.0F, transform)
+        }, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, value.BottomColor, 1.0F, transform, phaseX, phaseY)
       }
       if leftWidth > 0.0F && interiorHeight > 0.0F {
         EmitSolidResolved(commandBuffer, extent, ConservativeBounds{
@@ -350,7 +366,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           Y: bounds.Y + topWidth,
           Width: leftWidth,
           Height: interiorHeight,
-        }, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, value.LeftColor, 1.0F, transform)
+        }, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, value.LeftColor, 1.0F, transform, phaseX, phaseY)
       }
     }
 
@@ -392,7 +408,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.params_z = (value.EndX - value.Bounds.X) / width
       push.params_w = (value.EndY - value.Bounds.Y) / height
       FillGradientStops(&push, frame, value.StopStart, value.StopCount, value.Opacity)
-      BindAndDraw(commandBuffer, primitivePipelines.LinearPipeline, *void(&push), true)
+      let scroll = frame.ScrollOffset(value.TransformIndex)
+      BindAndDraw(commandBuffer, primitivePipelines.LinearPipeline, *void(&push), true,
+        scroll.X, scroll.Y)
       WriteGradientStopRecords(frame, value.StopStart, value.StopCount, value.Opacity)
     }
 
@@ -434,7 +452,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.params_z = MathF.Max(value.RadiusX / width, 0.0001F)
       push.params_w = MathF.Max(value.RadiusY / height, 0.0001F)
       FillGradientStops(&push, frame, value.StopStart, value.StopCount, value.Opacity)
-      BindAndDraw(commandBuffer, primitivePipelines.RadialPipeline, *void(&push), true)
+      let scroll = frame.ScrollOffset(value.TransformIndex)
+      BindAndDraw(commandBuffer, primitivePipelines.RadialPipeline, *void(&push), true,
+        scroll.X, scroll.Y)
       WriteGradientStopRecords(frame, value.StopStart, value.StopCount, value.Opacity)
     }
 
@@ -606,7 +626,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if effect.ProgramId != value.EffectProgramId || effect.Version != value.EffectVersion {
         throw InvalidOperationException("Vulkan shader effect snapshot does not match its layer")
       }
-      let reference = frame.LayerCoverage[value.ReferenceIndex].Bounds
+      var reference = frame.LayerCoverage[value.ReferenceIndex].Bounds
+      let scroll = frame.ScrollOffset(value.TransformIndex)
+      reference.X -= scroll.X
+      reference.Y -= scroll.Y
       EmitShaderEffect(commandBuffer, extent, value, target, backdrop, effect, reference, generator)
     }
 
@@ -778,6 +801,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if value.Bounds.IsEmpty {
         return
       }
+      let scroll = frame.ScrollOffset(value.TransformIndex)
       FlushPendingPrimitiveBatch(commandBuffer)
       var runIndex int32 = 0
       while runIndex < segment.RunCount {
@@ -796,7 +820,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         }
         let firstInstance = uint32(globalFirst)
         let instanceCount = uint32(run.InstanceCount)
-        if CanAppendTextDraw(selectedPipeline, run.AtlasId, firstInstance) {
+        if CanAppendTextDraw(selectedPipeline, run.AtlasId, firstInstance, scroll.PixelX, scroll.PixelY) {
           AppendTextDraw(instanceCount)
         } else {
           FlushPendingTextDraw(commandBuffer)
@@ -812,8 +836,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           framePush.viewport_w = textFrameScaleY * scaleY
           framePush.origin_x = currentOriginX * scaleX
           framePush.origin_y = currentOriginY * scaleY
-          framePush.origin_z = 0.0F
-          framePush.origin_w = 0.0F
+          framePush.origin_z = -scroll.PixelX * scaleX
+          framePush.origin_w = -scroll.PixelY * scaleY
           let pushConstants = dispatch.vkCmdPushConstants
           pushConstants(commandBuffer, textPipelineLayout,
             uint32(VkConstants.VK_SHADER_STAGE_VERTEX_BIT),
@@ -833,7 +857,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
             activePipeline = selectedPipeline
           }
           BeginTextDraw(selectedPipeline, run.AtlasId, firstInstance,
-            instanceCount)
+            instanceCount, scroll.PixelX, scroll.PixelY)
         }
         runIndex = runIndex + 1
       }
@@ -850,8 +874,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         throw NotSupportedException("Vulkan primitive renderer has no text atlas pipeline")
       }
       ValidateBounds(value.Bounds)
-      if drawClipChainId < 0 || value.ClipChainId != drawClipChainId
-        || value.ClipChainId >= frame.ClipChainCount{
+      if drawClipChainId < 0 || drawClipChainId >= frame.ClipChainCount
+        || value.TransformIndex < -1 || value.TransformIndex >= frame.TransformCount{
           throw ArgumentException("cached text segment clip chain is invalid")
         }
       if value.SegmentId == 0uL || value.SegmentVersion == 0uL
@@ -1032,9 +1056,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     }
 
   private func BindAndDraw(commandBuffer VkCommandBuffer, pipeline VkPipeline, pushData * void,
-    gradient bool = false
+    gradient bool = false, scrollX float32 = 0.0F, scrollY float32 = 0.0F
   ) {
-    BindPrimitiveAndDraw(commandBuffer, pipeline, pipelineLayout, pushData, 1u, gradient)
+    BindPrimitiveAndDraw(commandBuffer, pipeline, pipelineLayout, pushData, 1u, gradient,
+      scrollX, scrollY)
   }
 
   private func BindPrimitiveAndDraw(
@@ -1043,7 +1068,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     layout VkPipelineLayout,
     pushData * void,
     clipSetIndex uint32,
-    gradient bool = false
+    gradient bool = false, scrollX float32 = 0.0F, scrollY float32 = 0.0F
   ) {
       if pushData == nil {
         throw ArgumentNullException("pushData")
@@ -1055,7 +1080,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         primitiveRecordCount = primitiveRecordCount + 1
         return
       }
-      QueuePrimitiveDraw(commandBuffer, pipeline, layout, clipSetIndex, gradient)
+      QueuePrimitiveDraw(commandBuffer, pipeline, layout, clipSetIndex, gradient,
+        currentDitherOffsetX + scrollX, currentDitherOffsetY + scrollY)
     }
 
   private func EnsurePrimitiveDescriptor(commandBuffer VkCommandBuffer, layout VkPipelineLayout) {
@@ -1196,16 +1222,25 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     var result = PrimitiveTransform{ A: 1.0F, B: 0.0F, C: 0.0F, D: 1.0F, TX: 0.0F, TY: 0.0F }
     var current = index
     var steps int32 = 0
+    var scrollX float32
+    var scrollY float32
     while current >= 0 {
       if current >= frame.TransformCount || steps >= frame.TransformCount {
         throw InvalidOperationException("Vulkan primitive transform chain is invalid")
       }
       let value = frame.Transforms[current]
       ValidateTransformRecord(value, frame.TransformCount)
-      result = Compose(value, result)
+      if value.IsScrollPlacement {
+        scrollX += value.TX
+        scrollY += value.TY
+      } else {
+        result = Compose(value, result)
+      }
       current = value.ParentIndex
       steps = steps + 1
     }
+    result.TX -= scrollX
+    result.TY -= scrollY
     ValidateFinite(result.A, "resolved transform a")
     ValidateFinite(result.B, "resolved transform b")
     ValidateFinite(result.C, "resolved transform c")

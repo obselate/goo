@@ -247,6 +247,7 @@ public partial class Window {
     effects = combineEffects(effects, resolver.FlushEffects())
     var metricsChanged bool
     var layoutChanged bool
+    var scrollChanged = hasEffect(effects, ReconcileEffects.ScrollPlacement)
     if let n = node {
       layout.SetPixelDensity(RenderScale.X)
       if hasEffect(effects, ReconcileEffects.Structure) {
@@ -254,6 +255,12 @@ public partial class Window {
       }
       let viewW = LayoutWidth
       let viewH = LayoutHeight
+      if scrollChanged {
+        layout.RefreshScrollPlacement(n, portalRoot)
+        changed = true
+        accessibilityScroll = true
+        metricsChanged = true
+      }
       let shouldLayout = hasEffect(effects, ReconcileEffects.Structure)
         || hasEffect(effects, ReconcileEffects.Layout)
         || layout.NeedsLayout(n, portalRoot, viewW, viewH)
@@ -324,9 +331,10 @@ public partial class Window {
           let k = instantScroll ? 1.0F : 1.0F - MathF.Exp(-dtf * 20.0F)
           if stepScroll(scrollers, k, dtf, instantScroll) {
             changed = true
+            scrollChanged = true
             accessibilityScroll = true
             metricsChanged = true
-            layout.RefreshRects(n, portalRoot)
+            layout.RefreshScrollPlacement(n, portalRoot)
             let virtualProfile = profiling ? profiler.Start() : FrameProfilePoint{}
             let virtualEffects = deferVirtual ? ReconcileEffects.None : refreshVirtualization(n)
             if profiling { profiler.Record(FrameProfileStage.Virtualization, virtualProfile) }
@@ -351,16 +359,21 @@ public partial class Window {
                 calculateLayout(n, viewW, viewH)
               }
             }
-            let inputTreeProfile = profiling ? profiler.Start() : FrameProfilePoint{}
-            if input.RefreshHover(n, resolver) {
-              changed = true
-              calculateLayout(n, viewW, viewH)
-            }
-            if profiling {
-              profiler.Record(FrameProfileStage.InputTree, inputTreeProfile)
-            }
           }
         }
+      }
+      if scrollChanged {
+        let inputTreeProfile = profiling ? profiler.Start() : FrameProfilePoint{}
+        if input.RefreshHover(n, resolver) { changed = true }
+        effects = combineEffects(effects, resolver.FlushEffects())
+        if layout.NeedsLayout(n, portalRoot, viewW, viewH) {
+          calculateLayout(n, viewW, viewH)
+          layoutChanged = true
+          accessibilityLayout = true
+          metricsChanged = true
+        }
+        input.RefreshTextPlacement()
+        if profiling { profiler.Record(FrameProfileStage.InputTree, inputTreeProfile) }
       }
       // Native repeats use a monotonic dispatch deadline. Test drivers use dt.
       let inputTreeProfile = profiling ? profiler.Start() : FrameProfilePoint{}
@@ -417,6 +430,14 @@ public partial class Window {
       layout.RefreshRects(node!!, portalRoot)
       resolver.VisualDirty = true
       changed = true
+    }
+    if let current = node {
+      if hasEffect(pendingReconcileEffects, ReconcileEffects.ScrollPlacement) {
+        layout.RefreshScrollPlacement(current, portalRoot)
+        input.RefreshTextPlacement()
+        resolver.VisualDirty = true
+        changed = true
+      }
     }
     if flushForeground() { changed = true }
     return changed

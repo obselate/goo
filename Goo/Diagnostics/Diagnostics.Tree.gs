@@ -255,7 +255,8 @@ internal class DiagnosticTreeState {
     result.Visible = result.ClipBox.Width > 0.0 && result.ClipBox.Height > 0.0
     result.Clipped = !sameRect(result.ClipBox, result.BorderBox)
     result.ClipApproximate = hasComplexClip(n)
-    result.ScrollOffset = DiagnosticPoint{ X: float64(n.ScrollX), Y: float64(n.ScrollY) }
+    let scroll = TransformGeometry.ContentPoint(n, 0.0F, 0.0F)
+    result.ScrollOffset = DiagnosticPoint{ X: float64(scroll.X), Y: float64(scroll.Y) }
     result.ContentSize = DiagnosticPoint{ X: float64(n.ContentW), Y: float64(n.ContentH) }
     result.Width = lengthText(n.Width)
     result.Height = lengthText(n.Height)

@@ -93,8 +93,10 @@ public sealed partial class NativeAccessibilityAdapter {
     retained.Generation = generation
     let revision = if let semantic = node as RetainedAccessibilityNode? { semantic.Revision } else { tree?.Version ?? 0 }
     let source = owner?.NativeAccessibilityNodeFor(node.Id)
-    let scrollX = source?.EditorController?.ScrollTargetX ?? float64(source?.ScrollX ?? 0.0F)
-    let scrollY = source?.EditorController?.ScrollTargetY ?? float64(source?.ScrollY ?? 0.0F)
+    let scroll = if let current = source { TransformGeometry.ContentPoint(current, 0.0F, 0.0F) }
+      else { TransformPoint{Valid: true} }
+    let scrollX = float64(scroll.X)
+    let scrollY = float64(scroll.Y)
     let scrollExtent = if let current = source { scrollRange(current) } else { Point{} }
     let scrollChanged = scrollX != retained.ScrollX || scrollY != retained.ScrollY
       || scrollExtent.X != retained.ScrollMaxX || scrollExtent.Y != retained.ScrollMaxY

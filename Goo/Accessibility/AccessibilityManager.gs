@@ -291,8 +291,9 @@ internal class AccessibilityManager {
       return nil
     }
     let maximum = scrollRange(n)
+    let scroll = TransformGeometry.ContentPoint(n, 0.0F, 0.0F)
     return AccessibilityScrollInfo{
-      X: float64(n.ScrollX), Y: float64(n.ScrollY),
+      X: float64(scroll.X), Y: float64(scroll.Y),
       TargetX: n.EditorController?.ScrollTargetX ?? float64(n.ScrollTargetX),
       TargetY: n.EditorController?.ScrollTargetY ?? float64(n.ScrollTargetY),
       MaximumX: maximum.X, MaximumY: maximum.Y,

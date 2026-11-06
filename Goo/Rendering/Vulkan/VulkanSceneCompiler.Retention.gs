@@ -11,6 +11,8 @@ internal partial class VulkanSceneCompiler {
   private var retainedBorder VulkanRetentionCounters
   private var retainedParentBox VulkanRetentionCounters
   private var retainedText VulkanRetentionCounters
+  private var damageClosureBounds ConservativeBounds
+  private var damageClosureFirstDraw int32
 
   internal prop RetainedLeafHitCount uint64{ get -> retainedLeaf.Hit }
   internal prop RetainedLeafRebuildCount uint64{ get -> retainedLeaf.Rebuild }
@@ -453,6 +455,18 @@ internal partial class VulkanSceneCompiler {
       return tracked
     }
 
+  private func GrowJournalDamage(bounds ConservativeBounds, firstDraw int32) ConservativeBounds {
+    if frame.LayerCount == 0 || bounds.IsEmpty { return bounds }
+    if !damageClosureBounds.IsEmpty && firstDraw >= damageClosureFirstDraw
+      && bounds.X >= damageClosureBounds.X && bounds.Y >= damageClosureBounds.Y
+      && bounds.Right <= damageClosureBounds.Right && bounds.Bottom <= damageClosureBounds.Bottom {
+        return bounds
+      }
+    damageClosureBounds = GrowDamageToEffectLayers(bounds, firstDraw)
+    damageClosureFirstDraw = firstDraw
+    return damageClosureBounds
+  }
+
   private func GrowDamageToEffectLayers(bounds ConservativeBounds, firstDraw int32) ConservativeBounds{
     if frame.LayerCount == 0 || bounds.IsEmpty { return bounds }
     var result = bounds
@@ -510,6 +524,8 @@ internal partial class VulkanSceneCompiler {
     }
     journal.BeginVersion(frameVersion)
     ResolveChunkPaintBounds()
+    damageClosureBounds = ConservativeBounds{}
+    damageClosureFirstDraw = 0
     let currentCount = frame.ChunkCount
     let retainedChunks = proofs.Chunks
     var topologySame = proofs.Ready && proofs.ChunkCount == currentCount
@@ -558,14 +574,14 @@ internal partial class VulkanSceneCompiler {
       }
       index = first
       while index < oldEnd {
-        journal.AddChange(GrowDamageToEffectLayers(retainedChunks[index].Bounds, 0), true,
+        journal.AddChange(GrowJournalDamage(retainedChunks[index].Bounds, 0), true,
           ConservativeBounds{}, false)
         index++
       }
       index = first
       while index < newEnd {
         journal.AddChange(ConservativeBounds{}, false,
-          GrowDamageToEffectLayers(frame.Chunks[index].Bounds, 0), true)
+          GrowJournalDamage(frame.Chunks[index].Bounds, 0), true)
         index++
       }
     } else {
@@ -574,22 +590,22 @@ internal partial class VulkanSceneCompiler {
         let current = frame.Chunks[index]
         let prior = retainedChunks[index]
         if current.TransformKey != prior.TransformKey {
-          journal.AddChange(GrowDamageToEffectLayers(prior.Bounds, current.FirstDraw), true,
-            GrowDamageToEffectLayers(current.Bounds, current.FirstDraw), true)
+          journal.AddChange(GrowJournalDamage(prior.Bounds, current.FirstDraw), true,
+            GrowJournalDamage(current.Bounds, current.FirstDraw), true)
         }
         if IsPlaceholderChunkTransition(current, prior) {
-          journal.AddChange(GrowDamageToEffectLayers(prior.Bounds, current.FirstDraw), true,
-            GrowDamageToEffectLayers(current.Bounds, current.FirstDraw), true)
+          journal.AddChange(GrowJournalDamage(prior.Bounds, current.FirstDraw), true,
+            GrowJournalDamage(current.Bounds, current.FirstDraw), true)
           frame.Chunks[index].Dirty = true
         } else if current.RetentionState == SceneChunkRetentionState.ExactLeafRebuild {
-          journal.AddChange(GrowDamageToEffectLayers(prior.Bounds, current.FirstDraw), true,
-            GrowDamageToEffectLayers(current.Bounds, current.FirstDraw), true)
+          journal.AddChange(GrowJournalDamage(prior.Bounds, current.FirstDraw), true,
+            GrowJournalDamage(current.Bounds, current.FirstDraw), true)
         } else if ChunkContentRetained(index, index, prior) {
           frame.Chunks[index].Version = prior.Version
           frame.Chunks[index].Dirty = false
         } else {
-          journal.AddChange(GrowDamageToEffectLayers(prior.Bounds, current.FirstDraw), true,
-            GrowDamageToEffectLayers(current.Bounds, current.FirstDraw), true)
+          journal.AddChange(GrowJournalDamage(prior.Bounds, current.FirstDraw), true,
+            GrowJournalDamage(current.Bounds, current.FirstDraw), true)
         }
         index = index + 1
       }
@@ -612,12 +628,19 @@ internal partial class VulkanSceneCompiler {
       let chunk = frame.Chunks[index]
       var bounds = chunk.Bounds
       if chunk.TransformIndex != -1 && !bounds.IsEmpty {
-        let transform = ResolveCompilerFrameTransform(chunk.TransformIndex)
+        let transform = ResolveCompilerFrameTransform(chunk.TransformIndex, true)
         bounds = TransformCompilerBounds(bounds, transform).Inflate(1.0F)
         frame.Chunks[index].TransformKey = TransformKey(transform)
       }
       if !chunk.TextBounds.IsEmpty {
-        bounds = bounds.IsEmpty ? chunk.TextBounds : unionVulkanSceneBounds(bounds, chunk.TextBounds)
+        let scroll = frame.ScrollOffset(chunk.TransformIndex)
+        let textBounds = ConservativeBounds{
+          X: chunk.TextBounds.X - scroll.X,
+          Y: chunk.TextBounds.Y - scroll.Y,
+          Width: chunk.TextBounds.Width,
+          Height: chunk.TextBounds.Height,
+        }
+        bounds = bounds.IsEmpty ? textBounds : unionVulkanSceneBounds(bounds, textBounds)
       }
       frame.Chunks[index].Bounds = bounds
       index = index + 1
@@ -831,7 +854,7 @@ internal partial class VulkanSceneCompiler {
     && left.SegmentId == right.SegmentId
     && left.SegmentVersion == right.SegmentVersion
     && left.GlyphCount == right.GlyphCount
-    && left.ClipChainId == right.ClipChainId
+    && left.TransformIndex == right.TransformIndex
     && Object.ReferenceEquals(left.Segment, right.Segment)
 
   private func ExactCachedImage(
