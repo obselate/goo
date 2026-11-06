@@ -199,7 +199,7 @@ internal class Node {
       let parent = node.Parent
       markContent = true
       if let owner = parent {
-        markContent = !ScrollbarParts.ActiveChildren(owner).Contains(node)
+        markContent = !ScrollbarParts.Children(owner).Contains(node)
       }
       current = parent
     }
