@@ -29,9 +29,9 @@ The selected value is printed to standard error. No file is polled during frames
 | `no-images` | Cached image draws | Decoding, uploads, layer boundaries and layer composites remain |
 | `no-layers` | Complete offscreen subtrees and generator effects | Removes child paint as well as pass splits. This is not a pure pass-merging comparison |
 | `no-clip-sampling` | Clip-chain lookup and sampling in all fragment families | Mask generation remains. Rectangular scissors remain. Shape-shadow masks still sample and their offscreen origin mapping can change |
-| `clip-clear-only` | Analytic path draws that populate dirty clip masks | The same dirty regions still CLEAR and STORE. Empty masks hide clipped content, which reduces later fragment work |
+| `clip-clear-only` | Analytic path draws that populate dirty clip masks | The same dirty regions still CLEAR and STORE. Empty masks hide clipped content and can change later shader paths |
 | `clip-regenerate` | Retention of clean masks | Forces every acquired mask dirty. Compare static and moving scenes separately |
-| `no-gpu-timestamps` | Vulkan timestamp pool, resets and writes | CPU profiling and diagnostics remain. Use presentation data, not missing GPU timings, as its result |
+| `no-gpu-timestamps` | Window-frame timestamp pool, resets and writes | CPU profiling and diagnostics remain. Use presentation data, not missing GPU timings, as its result. Keep readbacks outside timing windows |
 
 Use one value at a time. `no-images` versus `no-layers` separates image paint from
 layer subtrees only approximately. Neither makes arbitrary effects safe to merge.
