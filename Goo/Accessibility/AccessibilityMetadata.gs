@@ -6,8 +6,6 @@ internal class AccessibilityMetadata {
   shared {
     private let blobValues ConditionalWeakTable[Blob, Accessibility] =
     ConditionalWeakTable[Blob, Accessibility]()
-    private let nodeValues ConditionalWeakTable[Node, Accessibility] =
-    ConditionalWeakTable[Node, Accessibility]()
 
     internal func BlobValue(b Blob) Accessibility? -> if blobValues.TryGetValue(b, out var value) { value } else { nil }
 
@@ -16,18 +14,18 @@ internal class AccessibilityMetadata {
       if let next = value { blobValues.Add(b, next) }
     }
 
-    internal func Value(n Node) Accessibility? -> if n.HasAccessibilityDeclaration && nodeValues.TryGetValue(n, out var value) { value } else { nil }
+    internal func Value(n Node) Accessibility? -> if n.HasAccessibilityDeclaration { n.PointerState?.Accessibility } else { nil }
 
     internal func Sync(n Node, b Blob) bool {
       let next = BlobValue(b)
       let prior = Value(n)
       next?.Validate()
       if sameAccessibility(prior, next) { return false }
-      nodeValues.Remove(n)
       if let value = next {
-        nodeValues.Add(n, value)
+        n.EnsurePointerState().Accessibility = value
         n.HasAccessibilityDeclaration = true
       } else {
+        if let state = n.PointerState { state.Accessibility = nil }
         n.HasAccessibilityDeclaration = false
       }
       return true
@@ -37,7 +35,7 @@ internal class AccessibilityMetadata {
       if !n.HasAccessibilityDeclaration {
         return
       }
-      nodeValues.Remove(n)
+      if let state = n.PointerState { state.Accessibility = nil }
       n.HasAccessibilityDeclaration = false
     }
   }
@@ -81,24 +79,22 @@ private func sameRelationships(left AccessibilityRelationships?, right Accessibi
 
 internal class AccessibilityNodeStates {
   shared {
-    private let values ConditionalWeakTable[Node, RetainedAccessibilityNode] =
-    ConditionalWeakTable[Node, RetainedAccessibilityNode]()
 
     internal func GetOrAdd(n Node, id AccessibilityId) RetainedAccessibilityNode {
-      if n.HasAccessibilityNodeState && values.TryGetValue(n, out var value) { return value }
+      if let value = n.PointerState?.AccessibilityNode && n.HasAccessibilityNodeState { return value }
       let fresh = RetainedAccessibilityNode(id)
-      values.Add(n, fresh)
+      n.EnsurePointerState().AccessibilityNode = fresh
       n.HasAccessibilityNodeState = true
       return fresh
     }
 
-    internal func Get(n Node) RetainedAccessibilityNode? -> if n.HasAccessibilityNodeState && values.TryGetValue(n, out var value) { value } else { nil }
+    internal func Get(n Node) RetainedAccessibilityNode? -> if n.HasAccessibilityNodeState { n.PointerState?.AccessibilityNode } else { nil }
 
     internal func Remove(n Node) {
       if !n.HasAccessibilityNodeState {
         return
       }
-      values.Remove(n)
+      if let state = n.PointerState { state.AccessibilityNode = nil }
       n.HasAccessibilityNodeState = false
     }
   }
@@ -106,17 +102,12 @@ internal class AccessibilityNodeStates {
 
 internal class AccessibilityButtonNames {
   shared {
-    private let values ConditionalWeakTable[Node, AccessibilityButtonName] =
-    ConditionalWeakTable[Node, AccessibilityButtonName]()
 
-    internal func Get(n Node, fingerprint uint64) string? -> if !n.Retired && values.TryGetValue(n, out var value) && value.Generation == n.MountGeneration && value.Fingerprint == fingerprint { value.Name } else { nil }
+    internal func Get(n Node, fingerprint uint64) string? -> if let value = n.PointerState?.AccessibilityButtonName && !n.Retired && value.Generation == n.MountGeneration && value.Fingerprint == fingerprint { value.Name } else { nil }
 
     internal func Set(n Node, fingerprint uint64, name string) {
-      values.Remove(n)
-      values.Add(n, AccessibilityButtonName(n.MountGeneration, fingerprint, name))
+      n.EnsurePointerState().AccessibilityButtonName = AccessibilityButtonName(n.MountGeneration, fingerprint, name)
     }
-
-    internal func Remove(n Node) { values.Remove(n) }
   }
 }
 

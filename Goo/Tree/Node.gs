@@ -31,6 +31,11 @@ internal class Node {
   private var pointerState NodePointerState?
   private var portalState NodePortalState?
 
+  internal prop PointerState NodePointerState? { get -> pointerState }
+  internal prop EditingState NodeEditingState? { get -> editingState }
+  internal prop ShapeState NodeShapeState? { get -> shapeState }
+  internal prop PortalState NodePortalState? { get -> portalState }
+
   private func EnsureEditingState() NodeEditingState {
     if let state = editingState { return state }
     let state = NodeEditingState()
@@ -38,21 +43,21 @@ internal class Node {
     return state
   }
 
-  private func EnsureShapeState() NodeShapeState {
+  internal func EnsureShapeState() NodeShapeState {
     if let state = shapeState { return state }
     let state = NodeShapeState()
     shapeState = state
     return state
   }
 
-  private func EnsurePointerState() NodePointerState {
+  internal func EnsurePointerState() NodePointerState {
     if let state = pointerState { return state }
     let state = NodePointerState()
     pointerState = state
     return state
   }
 
-  private func EnsurePortalState() NodePortalState {
+  internal func EnsurePortalState() NodePortalState {
     if let state = portalState { return state }
     let state = NodePortalState()
     portalState = state
@@ -82,6 +87,7 @@ internal class Node {
     shapeState = nil
     pointerState = nil
     portalState = nil
+    textState = nil
     nodeState = 0
     AutoFocus = false
     HasFocusScopes = false
@@ -388,7 +394,21 @@ internal class Node {
   internal var TextScaleFactor float32 = 1.0F
   internal prop TextMaxLines int32{ get; set; }
   internal prop TextLayout TextLayout? { get; set; }
-  internal prop TextLayoutCache List[TextLayout]? { get; set; }
+  private var textState NodeTextState?
+  internal prop TextState NodeTextState? { get -> textState }
+  internal func EnsureTextState() NodeTextState {
+    if let state = textState { return state }
+    let state = NodeTextState()
+    textState = state
+    return state
+  }
+  internal prop TextLayoutCache List[TextLayout]? {
+    get -> textState?.Layouts
+    set {
+      if textState == nil && value == nil { return }
+      EnsureTextState().Layouts = value
+    }
+  }
   internal prop EntryShape EntryShapeState?{
     get -> editingState?.EntryShape
     set {

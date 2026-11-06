@@ -254,14 +254,7 @@ internal data struct ShaderEffectSnapshot {
 
 internal class ShaderEffectStyles {
   shared {
-    private var values ConditionalWeakTable[Node, ShaderEffectBinding]?
-
-    internal func Get(n Node) ShaderEffect? {
-      if let table = values {
-        if table.TryGetValue(n, out var value) { return value.Effect }
-      }
-      return nil
-    }
+    internal func Get(n Node) ShaderEffect? -> n.ShapeState?.ShaderEffect?.Effect
 
     internal func Set(n Node, effect ShaderEffect?, invalidated Action?) {
       let current = state(n)
@@ -270,27 +263,21 @@ internal class ShaderEffectStyles {
           value.Invalidated = invalidated
           return
         }
-        values?.Remove(n)
+        if let metadata = n.ShapeState { metadata.ShaderEffect = nil }
         value.Dispose()
       }
       if effect == nil { return }
-      if values == nil { values = ConditionalWeakTable[Node, ShaderEffectBinding]() }
       let binding = ShaderEffectBinding(n, effect, invalidated)
-      values?.Add(n, binding)
+      n.EnsureShapeState().ShaderEffect = binding
     }
 
     internal func Dispose(n Node) {
       guard let value = state(n) else { return }
-      values?.Remove(n)
+      if let metadata = n.ShapeState { metadata.ShaderEffect = nil }
       value.Dispose()
     }
 
-    private func state(n Node) ShaderEffectBinding? {
-      if let table = values {
-        if table.TryGetValue(n, out var value) { return value }
-      }
-      return nil
-    }
+    private func state(n Node) ShaderEffectBinding? -> n.ShapeState?.ShaderEffect
   }
 }
 

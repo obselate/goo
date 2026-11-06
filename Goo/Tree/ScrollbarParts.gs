@@ -3,7 +3,6 @@ package Goo
 import Facebook.Yoga
 import System
 import System.Collections.Generic
-import System.Runtime.CompilerServices
 
 internal class ScrollbarPartState {
     internal var HorizontalTrack Node?
@@ -22,8 +21,6 @@ internal class ScrollbarPartState {
 
 internal partial class ScrollbarParts {
     shared {
-        private let states ConditionalWeakTable[Node, ScrollbarPartState] =
-        ConditionalWeakTable[Node, ScrollbarPartState]()
         private let empty List[Node] = List[Node]()
         private let partLayout Layout = Layout()
         private var layoutDepth int32
@@ -33,7 +30,7 @@ internal partial class ScrollbarParts {
                 return
             }
             state.Queued = false
-            states.Remove(owner)
+            if let metadata = owner.PortalState { metadata.ScrollbarParts = nil }
             disposeParts(state)
         }
 
@@ -236,14 +233,14 @@ internal partial class ScrollbarParts {
         }
 
         private func stateFor(owner Node, create bool = true) ScrollbarPartState? {
-            if states.TryGetValue(owner, out var state) {
+            if let state = owner.PortalState?.ScrollbarParts {
                 return state
             }
             if !create {
                 return nil
             }
             let next = ScrollbarPartState()
-            states.Add(owner, next)
+            owner.EnsurePortalState().ScrollbarParts = next
             return next
         }
 

@@ -1,0 +1,1 @@
+- Store retained node metadata in lazy typed state instead of node-keyed weak tables. Preserve metadata reset, mount generations and compiler handoff identity during row recycling.

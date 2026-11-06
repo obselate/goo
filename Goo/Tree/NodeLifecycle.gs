@@ -12,21 +12,7 @@ internal class NodeLifecycle {
     }
 
     internal func ResetForReuse(n Node) {
-      InputCallbacks.Remove(n)
-      TextInputCallbacks.Remove(n)
-      GestureMetadata.Remove(n)
-      DragDropMetadata.Remove(n)
-      AccessibilityButtonNames.Remove(n)
-      ClipPaths.Remove(n)
-      Outlining.Remove(n)
-      Transforming.Remove(n)
-      TextShadowing.Set(n, nil)
-      TextStroking.Remove(n)
-      ScrollbarStyles.Remove(n)
-      ScrollActivityStates.Remove(n)
       CustomLayouts.Remove(n)
-      Stacking.Remove(n)
-      Portals.Remove(n)
       n.ResetForReuse()
       for i in 0 ... n.Children.Count {
         ResetForReuse(n.Children[i])

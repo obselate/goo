@@ -1,21 +1,10 @@
 package Goo
 
-import System.Runtime.CompilerServices
-
 internal class Outlining {
   shared {
-    private var values ConditionalWeakTable[Node, OutlineValue]?
-
-    internal func Remove(n Node) {
-      values?.Remove(n)
-      n.HasOutlineState = false
-    }
-
     internal func Get(n Node) OutlineValue? {
       if !n.HasOutlineState { return nil }
-      if let existing = values {
-        if existing.TryGetValue(n, out var value) { return value }
-      }
+      if let value = n.ShapeState?.Outline { return value }
       n.HasOutlineState = false
       return nil
     }
@@ -75,8 +64,7 @@ internal class Outlining {
     }
 
     private func add(n Node, value OutlineValue) {
-      if values == nil { values = ConditionalWeakTable[Node, OutlineValue]() }
-      values?.Add(n, value)
+      n.EnsureShapeState().Outline = value
       n.HasOutlineState = true
     }
 
@@ -84,7 +72,7 @@ internal class Outlining {
       if !emptyLength(value.Width) || !transparent(value.Color) || !emptyLength(value.Offset) {
         return
       }
-      values?.Remove(n)
+      if let state = n.ShapeState { state.Outline = nil }
       n.HasOutlineState = false
     }
 

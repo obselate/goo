@@ -202,7 +202,6 @@ internal class CustomLayoutState {
 internal class CustomLayouts {
   shared {
     private var blobs ConditionalWeakTable[Container, LayoutAlgorithm]?
-    private var nodes ConditionalWeakTable[Node, CustomLayoutState]?
     @ThreadStatic
     internal var Depth int32
 
@@ -227,10 +226,7 @@ internal class CustomLayouts {
 
     internal func State(node Node) CustomLayoutState? {
       if !node.HasCustomLayout { return nil }
-      if let values = nodes {
-        if values.TryGetValue(node, out var state) { return state }
-      }
-      return nil
+      return node.PortalState?.CustomLayout
     }
 
     internal func Configure(node Node, algorithm LayoutAlgorithm?) bool {
@@ -241,8 +237,7 @@ internal class CustomLayouts {
           state.Algorithm = selected
           state.Invalidate()
         } else {
-          nodes ??= ConditionalWeakTable[Node, CustomLayoutState]()
-          nodes?.Add(node, CustomLayoutState(node, selected))
+          node.EnsurePortalState().CustomLayout = CustomLayoutState(node, selected)
           node.HasCustomLayout = true
         }
         return true
@@ -257,7 +252,7 @@ internal class CustomLayouts {
         if let yoga = child.Node.Yoga { YGNodeAPI.YGNodeSetDirtiedFunc(yoga, nil) }
         RestoreSize(child.Node)
       }
-      nodes?.Remove(node)
+      if let metadata = node.PortalState { metadata.CustomLayout = nil }
       node.HasCustomLayout = false
       return true
     }

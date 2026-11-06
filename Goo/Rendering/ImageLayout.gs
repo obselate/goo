@@ -2,7 +2,6 @@ package Goo
 
 import Facebook.Yoga
 import System
-import System.Runtime.CompilerServices
 
 internal open class ImageSourceBinding {
   internal prop Mount NodeMount{ get; init; }
@@ -184,8 +183,6 @@ internal class ImageSourceBindingToken {
 
 internal class ImageLayouts {
   shared {
-    private var sourceValues ConditionalWeakTable[Node, ImageSourceBinding]?
-
     internal func Source(n Node) ImageSourceProvider ? -> sourceState(n)?.Source
     internal func Lease(n Node) ImageSourceLease ? -> sourceState(n)?.Lease
     internal func SourceCompletion(n Node) ImageSourceCompletion ? ->
@@ -231,8 +228,7 @@ internal class ImageLayouts {
         })
         value.BindSource(source, owner)
         value.Fallback = fallback
-        if sourceValues == nil { sourceValues = ConditionalWeakTable[Node, ImageSourceBinding]() }
-        sourceValues?.Add(n, value)
+        n.EnsureShapeState().ImageSource = value
         n.HasDirectImageSourceState = true
         if Refresh(n, value) {
           return
@@ -314,15 +310,13 @@ internal class ImageLayouts {
 
     private func sourceState(n Node) ImageSourceBinding? {
       if !n.HasDirectImageSourceState { return nil }
-      if let table = sourceValues {
-        if table.TryGetValue(n, out var value) { return value }
-      }
+      if let value = n.ShapeState?.ImageSource { return value }
       n.HasDirectImageSourceState = false
       return nil
     }
     private func removeSource(n Node, known ImageSourceBinding? = nil) {
       if let value = known ?? sourceState(n) {
-        sourceValues?.Remove(n)
+        if let metadata = n.ShapeState { metadata.ImageSource = nil }
         n.HasDirectImageSourceState = false
         value.ReleaseSource()
       }

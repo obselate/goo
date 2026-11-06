@@ -256,22 +256,19 @@ internal class FocusScopeStack {
 
 internal class FocusScopes {
   shared {
-    private let stacks ConditionalWeakTable[Node, FocusScopeStack] = ConditionalWeakTable[Node, FocusScopeStack]()
-
     internal func Bind(root Node, stack FocusScopeStack) {
-      stacks.Remove(root)
-      stacks.Add(root, stack)
+      root.EnsurePointerState().FocusScopes = stack
       root.HasFocusScopes = true
     }
 
     internal func Unbind(root Node) {
       root.HasFocusScopes = false
-      stacks.Remove(root)
+      if let state = root.PointerState { state.FocusScopes = nil }
     }
 
-    internal func TraversalRoot(root Node) Node -> if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) && stack.IsBound(root) { stack.Top ?? root } else { root }
+    internal func TraversalRoot(root Node) Node -> if let stack = root.PointerState?.FocusScopes && root.HasFocusScopes && stack.IsBound(root) { stack.Top ?? root } else { root }
 
-    internal func ModalRoot(root Node) Node? -> if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) && stack.IsBound(root) && stack.HasModal { stack.Top } else { nil }
+    internal func ModalRoot(root Node) Node? -> if let stack = root.PointerState?.FocusScopes && root.HasFocusScopes && stack.IsBound(root) && stack.HasModal { stack.Top } else { nil }
 
     internal func Contains(root Node, target Node?) bool {
       var current Node? = target
@@ -282,8 +279,8 @@ internal class FocusScopes {
       return false
     }
 
-    internal func ModalStack(root Node) FocusScopeStack? -> if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) && stack.IsBound(root) && stack.HasModal { stack } else { nil }
+    internal func ModalStack(root Node) FocusScopeStack? -> if let stack = root.PointerState?.FocusScopes && root.HasFocusScopes && stack.IsBound(root) && stack.HasModal { stack } else { nil }
 
-    internal func Allows(root Node, target Node) bool -> if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) && stack.IsBound(root) { stack.Allows(target) } else { true }
+    internal func Allows(root Node, target Node) bool -> if let stack = root.PointerState?.FocusScopes && root.HasFocusScopes && stack.IsBound(root) { stack.Allows(target) } else { true }
   }
 }

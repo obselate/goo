@@ -1,7 +1,6 @@
 package Goo
 
 import System
-import System.Runtime.CompilerServices
 
 internal data struct VectorViewport {
   internal let NativeWidth float64
@@ -11,19 +10,9 @@ internal data struct VectorViewport {
 
 internal class Transforming {
   shared {
-    private var values ConditionalWeakTable[Node, TransformValue]?
-
-    internal func Remove(n Node) {
-      values?.Remove(n)
-      n.HasTransformState = false
-      n.HasVisualTransform = false
-    }
-
     internal func Get(n Node) TransformValue? {
       if !n.HasTransformState { return nil }
-      if let existing = values {
-        if existing.TryGetValue(n, out var value) { return value }
-      }
+      if let value = n.ShapeState?.Transform { return value }
       n.HasTransformState = false
       n.HasVisualTransform = false
       return nil
@@ -194,8 +183,7 @@ internal class Transforming {
       if let value = Get(n) { return value }
       if settingDefault { return nil }
       let value = TransformValue()
-      if values == nil { values = ConditionalWeakTable[Node, TransformValue]() }
-      values?.Add(n, value)
+      n.EnsureShapeState().Transform = value
       n.HasTransformState = true
       return value
     }
@@ -211,7 +199,7 @@ internal class Transforming {
         || !isDefaultOrigin(state.OriginX) || !isDefaultOrigin(state.OriginY) {
           return
         }
-      values?.Remove(n)
+      if let state = n.ShapeState { state.Transform = nil }
       n.HasTransformState = false
     }
 

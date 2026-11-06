@@ -108,38 +108,35 @@ internal class PassiveTextRangeBlobs {
 
 internal class PassiveTextPresentations {
   shared {
-    private let values ConditionalWeakTable[Node, PassiveTextPresentation] =
-    ConditionalWeakTable[Node, PassiveTextPresentation]()
 
     internal func Apply(n Node, content string,
       ranges [] ? TextStyleRange) PassiveTextPresentationChange{
         if ranges == nil || ranges.Length == 0 {
-          if values.TryGetValue(n, out var prior) {
-            values.Remove(n)
+          if let metadata = n.TextState, let prior = metadata.Presentation {
+            metadata.Presentation = nil
             return PassiveTextPresentationChange{ Changed: true,
               FlowChanged: rangesAffectFlow(prior.Ranges) }
           }
           return PassiveTextPresentationChange{}
         }
-        if values.TryGetValue(n, out var current) && current.Content == content
+        if let current = n.TextState?.Presentation && current.Content == content
           && current.Transform == n.TextTransform && sameRanges(current.Ranges, ranges) {
             return PassiveTextPresentationChange{}
           }
         validateRanges(content, ranges)
         let displayRanges = mapDisplayRanges(n, content, ranges)
         var oldFlow = false
-        if values.TryGetValue(n, out var prior) { oldFlow = rangesAffectFlow(prior.Ranges) }
+        if let prior = n.TextState?.Presentation { oldFlow = rangesAffectFlow(prior.Ranges) }
         let flowChanged = rangesAffectFlow(ranges) || oldFlow
-        values.Remove(n)
-        values.Add(n, PassiveTextPresentation(content, n.TextTransform,
-          copyPassiveTextStyleRanges(ranges), displayRanges))
+        n.EnsureTextState().Presentation = PassiveTextPresentation(content, n.TextTransform,
+          copyPassiveTextStyleRanges(ranges), displayRanges)
         return PassiveTextPresentationChange{ Changed: true, FlowChanged: flowChanged }
       }
 
-    internal func Read(n Node) [] ? TextStyleRange -> if values.TryGetValue(n, out var value) { value.Plan.Ranges } else { nil }
+    internal func Read(n Node) [] ? TextStyleRange -> n.TextState?.Presentation?.Plan.Ranges
 
     internal func Remove(n Node) {
-      values.Remove(n)
+      if let state = n.TextState { state.Presentation = nil }
     }
 
     private func validateRanges(content string, ranges []TextStyleRange) {
@@ -454,15 +451,11 @@ internal data struct TextFlowCandidate(Fit int32, Preferred int32, Overflowed bo
 
 internal class TextAnalyses {
   shared {
-    private let values ConditionalWeakTable[Node, TextAnalysisStore] =
-    ConditionalWeakTable[Node, TextAnalysisStore]()
 
     internal func For(n Node) TextAnalysis {
-      var store TextAnalysisStore
-      if !values.TryGetValue(n, out store) {
-        store = TextAnalysisStore()
-        values.Add(n, store)
-      }
+      let metadata = n.EnsureTextState()
+      let store = metadata.Analysis ?? TextAnalysisStore()
+      metadata.Analysis = store
       if let current = store.Value {
         if matches(current, n) {
           return current
@@ -478,7 +471,7 @@ internal class TextAnalyses {
     }
 
     internal func Remove(n Node) {
-      values.Remove(n)
+      if let state = n.TextState { state.Analysis = nil }
     }
 
     internal func ShapeLine(paragraph TextParagraphAnalysis, start int32,

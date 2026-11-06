@@ -54,15 +54,14 @@ internal class InputCallbackSet {
     && OnPointerEnter == nil && OnPointerLeave == nil && Bindings == nil && Command == nil && FocusTarget == nil
 }
 
-// Sparse callback state keeps ordinary declarations and retained nodes unchanged.
 internal class InputCallbacks {
   shared {
     private let blobValues ConditionalWeakTable[Blob, InputCallbackSet] =
     ConditionalWeakTable[Blob, InputCallbackSet]()
-    private let nodeValues ConditionalWeakTable[Node, InputCallbackSet] =
-    ConditionalWeakTable[Node, InputCallbackSet]()
 
-    internal func Remove(node Node) { nodeValues.Remove(node) }
+    internal func Remove(node Node) {
+      if let state = node.PointerState { state.Callbacks = nil }
+    }
 
     internal func SetBlobCommand(blob Blob, value Command?) {
       guard let callbacks = blobCallbacks(blob, value != nil) else { return }
@@ -89,10 +88,10 @@ internal class InputCallbacks {
       var callbacks = nodeCallbacks(node)
       if callbacks == nil {
         callbacks = InputCallbackSet()
-        nodeValues.Add(node, callbacks)
+        node.EnsurePointerState().Callbacks = callbacks
       }
       callbacks.FocusTarget = target
-      if callbacks.Empty() { nodeValues.Remove(node) }
+      if callbacks.Empty() { Remove(node) }
       InputMetadata.Refresh(node)
       return true
     }
@@ -178,20 +177,17 @@ internal class InputCallbacks {
       if blobValues.TryGetValue(blob, out var blobCallbacks) {
         source = blobCallbacks
       }
-      var destination InputCallbackSet?
-      if nodeValues.TryGetValue(node, out var nodeCallbacks) {
-        destination = nodeCallbacks
-      }
+      var destination = node.PointerState?.Callbacks
       let sourcePresence = presence(source)
       let destinationPresence = presence(destination)
       let targetChanged = source?.FocusTarget != destination?.FocusTarget
       if source == nil {
-        nodeValues.Remove(node)
+        Remove(node)
         return sourcePresence != destinationPresence || targetChanged
       }
       if destination == nil {
         destination = InputCallbackSet()
-        nodeValues.Add(node, destination)
+        node.EnsurePointerState().Callbacks = destination
       }
       destination.OnKeyDown = source.OnKeyDown
       destination.Command = source.Command
@@ -229,7 +225,7 @@ internal class InputCallbacks {
 
     internal func HasBlobCallbacks(blob Blob) bool -> blobValues.TryGetValue(blob, out var value) && !value.Empty()
 
-    internal func HasNodeCallbacks(node Node) bool -> nodeValues.TryGetValue(node, out var value) && !value.Empty()
+    internal func HasNodeCallbacks(node Node) bool -> node.PointerState?.Callbacks?.Empty() == false
 
     private func finishBlob(blob Blob, callbacks InputCallbackSet) bool {
       if callbacks.Empty() {
@@ -241,7 +237,7 @@ internal class InputCallbacks {
 
     private func nodeCallbacks(node Node) InputCallbackSet? {
       if !node.HasSparseInputState { return nil }
-      return if nodeValues.TryGetValue(node, out var value) { value } else { nil }
+      return node.PointerState?.Callbacks
     }
 
     private func presence(value InputCallbackSet?) int32 {

@@ -699,15 +699,13 @@ internal func virtualItem(item Blob, key string) Blob {
 
 internal class Virtualization {
   shared {
-    private let values ConditionalWeakTable[Node, VirtualNodeState] =
-    ConditionalWeakTable[Node, VirtualNodeState]()
 
-    internal func State(n Node) VirtualNodeState? -> if values.TryGetValue(n, out var state) { state } else { nil }
+    internal func State(n Node) VirtualNodeState? -> n.PortalState?.Virtualization
 
     internal func Configure(n Node) VirtualNodeState {
       if let state = State(n) { return state }
       let created = VirtualNodeState()
-      values.Add(n, created)
+      n.EnsurePortalState().Virtualization = created
       return created
     }
 
@@ -747,7 +745,7 @@ internal class Virtualization {
 
     internal func Dispose(n Node) {
       if let state = State(n) {
-        values.Remove(n)
+        if let metadata = n.PortalState { metadata.Virtualization = nil }
         state.Dispose()
       }
     }

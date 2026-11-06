@@ -21,6 +21,14 @@ internal class RowRecyclingFixtures {
       let labelYoga = label.Yoga
       let stale = NodeMount(body)
       let identity = semantic.Id
+      Outlining.SetWidth(body, Length(2))
+      Transforming.SetRotate(body, 12.0F)
+      ClipPaths.SetFit(body, ShapeFit.Contain)
+      TextStroking.SetWidth(body, Length(1))
+      ScrollActivityStates.For(body)
+      ScrollbarStyles.SetVisibilityX(body, ScrollbarVisibility.Always)
+      if body.PointerState == nil || body.ShapeState == nil || body.TextState == nil
+        || body.PortalState == nil { return false }
       first.Local = 7
       inner.Local = 9
       inner.Rebuild()
@@ -30,6 +38,9 @@ internal class RowRecyclingFixtures {
       window.UpdateTree()
       if first.Disposals != 1 || inner.Disposals != 1 || !inner.Animation.IsDisposed
         || state.RecycledRowCount != 1 || stale.Current != nil { return false }
+      if body.PointerState != nil || body.ShapeState != nil || body.TextState != nil
+        || body.PortalState != nil || body.HasSparseInputState || body.HasElementHandle
+        || body.HasAccessibilityDeclaration || body.HasAccessibilityNodeState { return false }
       cell.Viewport.JumpTo(0.0, 40.0)
       window.UpdateTree()
       guard let current = cell.Current, let currentInner = current.Inner,
@@ -198,6 +209,14 @@ internal class RowRecyclingFixtures {
       }
     }
     return true
+  }
+
+  func DefaultMetadataResetDoesNotCreateSideStateContract() bool {
+    let node = Node()
+    NodeLifecycle.DisposeTree(node)
+    NodeLifecycle.ResetForReuse(node)
+    return node.PointerState == nil && node.ShapeState == nil && node.TextState == nil
+      && node.PortalState == nil && node.EditingState == nil
   }
 
   private func sameLayout(actual Node, expected Node) bool {

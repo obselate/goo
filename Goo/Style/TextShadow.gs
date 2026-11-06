@@ -37,20 +37,16 @@ public data struct TextShadow {
 
 internal class TextShadowing {
   shared {
-    private var values ConditionalWeakTable[Node, BoxShadowStack]?
-
     internal func Get(n Node) BoxShadowStack? {
       if !n.HasTextShadowState { return nil }
-      if let existing = values {
-        if existing.TryGetValue(n, out var value) { return value }
-      }
+      if let value = n.TextState?.Shadow { return value }
       n.HasTextShadowState = false
       return nil
     }
 
     internal func Set(n Node, value BoxShadowStack?) {
       if textShadowCount(value) == 0 {
-        values?.Remove(n)
+        if let state = n.TextState { state.Shadow = nil }
         n.HasTextShadowState = false
         return
       }
@@ -58,12 +54,10 @@ internal class TextShadowing {
       if sameTextShadows(current, value) {
         return
       }
-      if current != nil { values?.Remove(n) }
-      if values == nil { values = ConditionalWeakTable[Node, BoxShadowStack]() }
       guard let stack = value else {
         return
       }
-      values?.Add(n, stack)
+      n.EnsureTextState().Shadow = stack
       n.HasTextShadowState = true
     }
   }

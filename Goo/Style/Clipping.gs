@@ -1,16 +1,7 @@
 package Goo
 
-import System.Runtime.CompilerServices
-
 internal class ClipPaths {
   shared {
-    private var values ConditionalWeakTable[Node, ClipPathValue]?
-
-    internal func Remove(n Node) {
-      values?.Remove(n)
-      n.HasClipPath = false
-    }
-
     // Nil means no clip. Fit-only state remains available through Fit.
     internal func Get(n Node) ClipPathValue? {
       if !n.HasClipPath {
@@ -75,14 +66,10 @@ internal class ClipPaths {
       add(n, ClipPathValue{ FillRule: fillRule })
     }
 
-    private func state(n Node) ClipPathValue? {
-      guard let table = values else { return nil }
-      return if table.TryGetValue(n, out var value) { value } else { nil }
-    }
+    private func state(n Node) ClipPathValue? -> n.ShapeState?.ClipPath
 
     private func add(n Node, value ClipPathValue) {
-      if values == nil { values = ConditionalWeakTable[Node, ClipPathValue]() }
-      values?.Add(n, value)
+      n.EnsureShapeState().ClipPath = value
     }
 
     private func prune(n Node, value ClipPathValue) {
@@ -90,7 +77,7 @@ internal class ClipPaths {
         || value.FillRule != FillRule.NonZero{
           return
         }
-      values?.Remove(n)
+      if let state = n.ShapeState { state.ClipPath = nil }
       n.HasClipPath = false
     }
   }

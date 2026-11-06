@@ -1,21 +1,10 @@
 package Goo
 
-import System.Runtime.CompilerServices
-
 internal class TextStroking {
   shared {
-    private var values ConditionalWeakTable[Node, TextStrokeValue]?
-
-    internal func Remove(n Node) {
-      values?.Remove(n)
-      n.HasTextStrokeState = false
-    }
-
     internal func Get(n Node) TextStrokeValue? {
       if !n.HasTextStrokeState { return nil }
-      if let existing = values {
-        if existing.TryGetValue(n, out var value) { return value }
-      }
+      if let value = n.TextState?.Stroke { return value }
       n.HasTextStrokeState = false
       return nil
     }
@@ -66,8 +55,7 @@ internal class TextStroking {
     }
 
     private func add(n Node, value TextStrokeValue) {
-      if values == nil { values = ConditionalWeakTable[Node, TextStrokeValue]() }
-      values?.Add(n, value)
+      n.EnsureTextState().Stroke = value
       n.HasTextStrokeState = true
     }
 
@@ -75,7 +63,7 @@ internal class TextStroking {
       if value.Width.Unit != LengthUnit.Unset || !transparent(value.Color) {
         return
       }
-      values?.Remove(n)
+      if let state = n.TextState { state.Stroke = nil }
       n.HasTextStrokeState = false
     }
   }

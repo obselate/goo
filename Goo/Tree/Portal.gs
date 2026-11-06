@@ -94,29 +94,18 @@ internal class PortalPlacementBounds {
 
 internal class Portals {
   shared {
-    private let roots ConditionalWeakTable[Node, Node] = ConditionalWeakTable[Node, Node]()
-    private let overlays ConditionalWeakTable[Node, Node] = ConditionalWeakTable[Node, Node]()
-    private let sources ConditionalWeakTable[Node, PortalSource] = ConditionalWeakTable[Node, PortalSource]()
-
-    internal func Remove(n Node) {
-      roots.Remove(n)
-      overlays.Remove(n)
-      sources.Remove(n)
-    }
-
     internal func Sync(root Node?, overlayRoot Node) {
-      if sources.TryGetValue(overlayRoot, out var prior) {
-        if let source = prior.Root { overlays.Remove(source) }
-        sources.Remove(overlayRoot)
+      if let metadata = overlayRoot.PortalState, let prior = metadata.PortalSource {
+        if let source = prior.Root, let state = source.PortalState { state.PortalOverlay = nil }
+        metadata.PortalSource = nil
       }
       for portal in overlayRoot.Children {
-        roots.Remove(portal)
+        if let state = portal.PortalState { state.PortalRoot = nil }
       }
       overlayRoot.Children.Clear()
       if let current = root {
-        overlays.Remove(current)
-        overlays.Add(current, overlayRoot)
-        sources.Add(overlayRoot, PortalSource{ Root: current })
+        current.EnsurePortalState().PortalOverlay = overlayRoot
+        overlayRoot.EnsurePortalState().PortalSource = PortalSource{ Root: current }
         Collect(current, overlayRoot)
       }
       Stacking.InvalidateStructure(overlayRoot)
@@ -125,7 +114,7 @@ internal class Portals {
     private func Collect(node Node, overlayRoot Node) {
       if node.IsPortal {
         overlayRoot.Children.Add(node)
-        roots.Add(node, overlayRoot)
+        node.EnsurePortalState().PortalRoot = overlayRoot
       }
       for i in 0 ... node.Children.Count {
         Collect(node.Children[i], overlayRoot)
@@ -133,12 +122,12 @@ internal class Portals {
     }
 
     internal func InvalidateStacking(node Node) {
-      if roots.TryGetValue(node, out var root) {
+      if let root = node.PortalState?.PortalRoot {
         Stacking.InvalidateStructure(root)
       }
     }
 
-    internal func Overlay(root Node) Node? -> overlays.TryGetValue(root, out var overlay) ? overlay : nil
+    internal func Overlay(root Node) Node? -> root.PortalState?.PortalOverlay
 
     internal func Presented(node Node) bool {
       var current = node

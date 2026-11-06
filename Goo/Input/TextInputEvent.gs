@@ -23,17 +23,17 @@ internal class TextInputCallbackSet {
     && OnTextCompositionCancel == nil && OnTextCandidates == nil
 }
 
-// Text callbacks are separate from keyboard callbacks so key-only participants stay small.
 internal class TextInputCallbacks {
   shared {
     private var blobValues ConditionalWeakTable[Blob, TextInputCallbackSet]?
-    private var nodeValues ConditionalWeakTable[Node, TextInputCallbackSet]?
     private let emptyCandidates IReadOnlyList[string] =
     ReadOnlyCollection[string](List[string]())
 
     internal func EmptyCandidates() IReadOnlyList[string] -> emptyCandidates
 
-    internal func Remove(node Node) { nodeValues?.Remove(node) }
+    internal func Remove(node Node) {
+      if let state = node.PointerState { state.TextCallbacks = nil }
+    }
 
     internal func SetBlobTextInput(blob Blob, value Action[string]?) bool {
       let callbacks = blobCallbacks(blob, value != nil)
@@ -76,22 +76,16 @@ internal class TextInputCallbacks {
       if let values = blobValues {
         if values.TryGetValue(blob, out var callbacks) { source = callbacks }
       }
-      var destination TextInputCallbackSet?
-      if let values = nodeValues {
-        if values.TryGetValue(node, out var callbacks) { destination = callbacks }
-      }
+      var destination = node.PointerState?.TextCallbacks
       let sourcePresence = presence(source)
       let destinationPresence = presence(destination)
       if source == nil {
-        nodeValues?.Remove(node)
+        Remove(node)
         return sourcePresence != destinationPresence
       }
       if destination == nil {
-        if nodeValues == nil {
-          nodeValues = ConditionalWeakTable[Node, TextInputCallbackSet]()
-        }
         destination = TextInputCallbackSet()
-        nodeValues!!.Add(node, destination)
+        node.EnsurePointerState().TextCallbacks = destination
       }
       destination.OnTextInput = source.OnTextInput
       destination.OnTextComposition = source.OnTextComposition
@@ -104,9 +98,7 @@ internal class TextInputCallbacks {
       values.TryGetValue(blob, out var callbacks) && !callbacks.Empty()
     } else { false }
 
-    internal func HasNodeCallbacks(node Node) bool -> if let values = nodeValues {
-      values.TryGetValue(node, out var callbacks) && !callbacks.Empty()
-    } else { false }
+    internal func HasNodeCallbacks(node Node) bool -> node.PointerState?.TextCallbacks?.Empty() == false
 
     internal func TextInput(node Node) Action[string] ? -> nodeCallbacks(node)?.OnTextInput
 
@@ -139,9 +131,7 @@ internal class TextInputCallbacks {
 
     private func nodeCallbacks(node Node) TextInputCallbackSet? {
       if !node.HasSparseInputState { return nil }
-      return if let values = nodeValues {
-        if values.TryGetValue(node, out var callbacks) { callbacks } else { nil }
-      } else { nil }
+      return node.PointerState?.TextCallbacks
     }
 
     private func presence(value TextInputCallbackSet?) int32 {

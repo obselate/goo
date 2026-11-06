@@ -3,7 +3,6 @@ package Goo
 import Facebook.Yoga
 import System
 import System.Collections.Generic
-import System.Runtime.CompilerServices
 
 internal class ScrollTopologyValue {
   internal var Version int64
@@ -11,19 +10,18 @@ internal class ScrollTopologyValue {
 
 internal class ScrollTopology {
   shared {
-    private let versions ConditionalWeakTable[Node, ScrollTopologyValue] =
-    ConditionalWeakTable[Node, ScrollTopologyValue]()
 
-    internal func Version(root Node) int64 -> versions.TryGetValue(root, out var value)
-    ? value.Version : 0L
+    internal func Version(root Node) int64 -> root.PortalState?.ScrollTopology?.Version ?? 0L
 
     internal func Invalidate(node Node) {
       var root = node
       while let parent = root.Parent {
         root = parent
       }
-      let value = versions.GetOrCreateValue(root)
-      value.Version++
+      let state = root.EnsurePortalState()
+      let topology = state.ScrollTopology ?? ScrollTopologyValue()
+      state.ScrollTopology = topology
+      topology.Version++
     }
   }
 }

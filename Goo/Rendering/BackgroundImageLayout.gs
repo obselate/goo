@@ -1,12 +1,9 @@
 package Goo
 
 import System
-import System.Runtime.CompilerServices
 
 internal class BackgroundImageLayouts {
   shared {
-    private var values ConditionalWeakTable[Node, BackgroundImageValue]?
-
     internal func Path(n Node) string -> if let value = state(n) { value.Path } else { "" }
 
     internal func Source(n Node) ImageSourceProvider ? -> if let value = state(n) { value.Source } else { nil }
@@ -101,14 +98,13 @@ internal class BackgroundImageLayouts {
 
     private func create(n Node) BackgroundImageValue {
       let value = BackgroundImageValue{Mount: NodeMount(n)}
-      if values == nil { values = ConditionalWeakTable[Node, BackgroundImageValue]() }
-      values?.Add(n, value)
+      n.EnsureShapeState().BackgroundImage = value
       n.HasBackgroundImageState = true
       return value
     }
 
     private func remove(n Node, value BackgroundImageValue) {
-      values?.Remove(n)
+      if let metadata = n.ShapeState { metadata.BackgroundImage = nil }
       n.HasBackgroundImageState = false
       value.ReleaseSource()
       value.Path = ""
@@ -119,9 +115,7 @@ internal class BackgroundImageLayouts {
 
     private func state(n Node) BackgroundImageValue? {
       if !n.HasBackgroundImageState { return nil }
-      if let table = values {
-        if table.TryGetValue(n, out var value) { return value }
-      }
+      if let value = n.ShapeState?.BackgroundImage { return value }
       n.HasBackgroundImageState = false
       return nil
     }

@@ -1,39 +1,20 @@
 package Goo
 
 import System.Collections.Generic
-import System.Runtime.CompilerServices
 
 internal class Stacking {
   shared {
-    private var orders ConditionalWeakTable[Node, List[Node]]?
-    private var values ConditionalWeakTable[Node, StackingValue]?
-
-    internal func Remove(n Node) {
-      orders?.Remove(n)
-      values?.Remove(n)
-      n.StackingChildren = false
-      n.HasZIndex = false
-    }
-
     internal func Children(n Node) IList[Node] {
       if !n.StackingChildren {
         return n.Children
       }
-      if let existing = orders {
-        if existing.TryGetValue(n, out var ordered) {
-          return ordered
-        }
-      }
+      if let ordered = n.PortalState?.StackingOrder { return ordered }
       return rebuild(n)
     }
 
     internal func GetZIndex(n Node) int32 {
       if !n.HasZIndex { return 0 }
-      if let existing = values {
-        if existing.TryGetValue(n, out var value) {
-          return value.Value
-        }
-      }
+      if let value = n.PortalState?.StackingValue { return value.Value }
       n.HasZIndex = false
       return 0
     }
@@ -43,19 +24,11 @@ internal class Stacking {
         return
       }
       if value == 0 {
-        if let existing = values { existing.Remove(n) }
+        if let state = n.PortalState { state.StackingValue = nil }
         n.HasZIndex = false
       } else {
-        if values == nil {
-          values = ConditionalWeakTable[Node, StackingValue]()
-        }
-        if let existing = values {
-          if existing.TryGetValue(n, out var stored) {
-            stored.Value = value
-          } else {
-            existing.Add(n, StackingValue{ Value: value })
-          }
-        }
+        if let stored = n.PortalState?.StackingValue { stored.Value = value }
+        else { n.EnsurePortalState().StackingValue = StackingValue{ Value: value } }
         n.HasZIndex = true
       }
       InvalidateChild(n)
@@ -77,9 +50,7 @@ internal class Stacking {
     private func invalidate(parent Node) {
       parent.MarkSceneDirty()
       parent.StackingChildren = true
-      if let existing = orders {
-        existing.Remove(parent)
-      }
+      if let state = parent.PortalState { state.StackingOrder = nil }
     }
 
     private func rebuild(parent Node) IList[Node] {
@@ -110,10 +81,7 @@ internal class Stacking {
         ordered[j] = child
         i++
       }
-      if orders == nil {
-        orders = ConditionalWeakTable[Node, List[Node]]()
-      }
-      orders?.Add(parent, ordered)
+      parent.EnsurePortalState().StackingOrder = ordered
       return ordered
     }
   }

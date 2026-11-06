@@ -79,6 +79,7 @@ class FixtureContractTests {
             yield Contract[RowRecyclingFixtures]("ReconcilesChangedShapeAndDrainsSourcePoolContract")
             yield Contract[RowRecyclingFixtures]("DiscardsFailedRebindAndReleasesRetiredDataContract")
             yield Contract[RowRecyclingFixtures]("ReboundTextMatchesFreshLayoutContract")
+            yield Contract[RowRecyclingFixtures]("DefaultMetadataResetDoesNotCreateSideStateContract")
             yield Contract[ElementHandleFixtures]("FocusProjectionContract")
             yield Contract[ElementHandleFixtures]("FocusProjectionVirtualizationContract")
             yield Contract[WindowOcclusionFixtures]("HostTransitionsNotifyOnUiThread")

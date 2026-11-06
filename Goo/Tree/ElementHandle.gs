@@ -9,6 +9,7 @@ import System.Runtime.CompilerServices
 public class ElementHandle {
   private var node Node?
   private var window Window?
+  internal var MetricState ElementMetricSubscription?
 
   /// Initializes an unmounted element handle.
   public init() {
@@ -381,8 +382,6 @@ internal class ElementHandles {
   shared {
     private let blobValues ConditionalWeakTable[Blob, ElementHandle] =
     ConditionalWeakTable[Blob, ElementHandle]()
-    private let values ConditionalWeakTable[Node, ElementHandle] =
-    ConditionalWeakTable[Node, ElementHandle]()
     internal func BlobHandle(b Blob) ElementHandle? -> if blobValues.TryGetValue(b, out var value) { value } else { nil }
 
     internal func SetBlobHandle(b Blob, handle ElementHandle?) {
@@ -396,10 +395,7 @@ internal class ElementHandles {
       if handle == nil && !n.HasElementHandle {
         return
       }
-      var current ElementHandle?
-      if values.TryGetValue(n, out var value) {
-        current = value
-      }
+      let current = n.PointerState?.Handle
       if current == handle {
         if n.Kind != NodeKind.Text {
           TextLayouts.RemoveGeometry(n)
@@ -420,13 +416,13 @@ internal class ElementHandles {
       }
       if let prior = current {
         MetricSubscriptions.DetachElement(prior, owner ?? prior.AttachedWindow())
-        values.Remove(n)
+        if let metadata = n.PointerState { metadata.Handle = nil }
         prior.Detach(n)
         n.HasElementHandle = false
         InputMetadata.Refresh(n)
       }
       if let next = handle {
-        values.Add(n, next)
+        n.EnsurePointerState().Handle = next
         n.HasElementHandle = true
         InputMetadata.Refresh(n)
         if n.Kind == NodeKind.Text {
@@ -441,9 +437,9 @@ internal class ElementHandles {
         return nil
       }
       TextLayouts.RemoveGeometry(n)
-      if values.TryGetValue(n, out var value) {
+      if let value = n.PointerState?.Handle {
         MetricSubscriptions.DetachElement(value, value.AttachedWindow())
-        values.Remove(n)
+        if let metadata = n.PointerState { metadata.Handle = nil }
         value.Detach(n)
         n.HasElementHandle = false
         InputMetadata.Refresh(n)
@@ -458,14 +454,14 @@ internal class ElementHandles {
       if !n.HasElementHandle {
         return false
       }
-      return if values.TryGetValue(n, out var value) { value == handle } else { false }
+      return n.PointerState?.Handle == handle
     }
 
     internal func Current(n Node) ElementHandle? {
       if !n.HasElementHandle {
         return nil
       }
-      return if values.TryGetValue(n, out var value) { value } else { nil }
+      return n.PointerState?.Handle
     }
 
     internal func BorderBox(n Node) ElementRect {
@@ -544,7 +540,6 @@ internal class WindowMetricSubscription : MetricSubscription[WindowMetrics] {
 
 internal class MetricSubscriptions {
   shared {
-    private var elementStates ConditionalWeakTable[ElementHandle, ElementMetricSubscription]?
     private var windowStates ConditionalWeakTable[Window, WindowMetricSubscription]?
 
     internal func AddElement(handle ElementHandle, callback Action[ElementMetrics]) {
@@ -575,7 +570,7 @@ internal class MetricSubscriptions {
         return
       }
       removeElement(handle, state)
-      elementStates?.Remove(handle)
+      handle.MetricState = nil
     }
 
     internal func AttachElement(handle ElementHandle, owner Window?) {
@@ -816,14 +811,10 @@ internal class MetricSubscriptions {
     }
 
     private func elementState(handle ElementHandle, create bool) ElementMetricSubscription? {
-      if elementStates == nil {
-        if !create { return nil }
-        elementStates = ConditionalWeakTable[ElementHandle, ElementMetricSubscription]()
-      }
-      if elementStates!!.TryGetValue(handle, out var state) { return state }
+      if let state = handle.MetricState { return state }
       if !create { return nil }
       let fresh = ElementMetricSubscription()
-      elementStates!!.Add(handle, fresh)
+      handle.MetricState = fresh
       return fresh
     }
 

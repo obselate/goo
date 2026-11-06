@@ -161,15 +161,15 @@ internal class GestureBinding {
 internal class GestureMetadata {
     shared {
         private let blobs ConditionalWeakTable[Blob, GestureBinding] = ConditionalWeakTable[Blob, GestureBinding]()
-        private let nodes ConditionalWeakTable[Node, GestureBinding] = ConditionalWeakTable[Node, GestureBinding]()
 
-        internal func Remove(node Node) { nodes.Remove(node) }
+        internal func Remove(node Node) {
+            if let state = node.PointerState { state.Gestures = nil }
+        }
 
         internal func Get(blob Blob) IReadOnlyList[GestureRecognizer]? ->
             if blobs.TryGetValue(blob, out var value) { value.Values } else { nil }
 
-        internal func Get(node Node) GestureBinding? ->
-            if nodes.TryGetValue(node, out var value) { value } else { nil }
+        internal func Get(node Node) GestureBinding? -> node.PointerState?.Gestures
 
         internal func Set(blob Blob, values IReadOnlyList[GestureRecognizer]?) {
             blobs.Remove(blob)
@@ -184,8 +184,8 @@ internal class GestureMetadata {
             if blobs.TryGetValue(blob, out var value) { after = value }
             if before == nil && after == nil { return false }
             if before?.Matches(after) == true { return false }
-            nodes.Remove(node)
-            if let after = after { nodes.Add(node, after) }
+            if let after = after { node.EnsurePointerState().Gestures = after }
+            else { Remove(node) }
             return true
         }
     }

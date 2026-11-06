@@ -192,10 +192,8 @@ internal sealed class LayoutTransitionState : MotionParticle {
 
 internal class LayoutTransitions {
   shared {
-    private let values ConditionalWeakTable[Node, LayoutTransitionState] =
-    ConditionalWeakTable[Node, LayoutTransitionState]()
 
-    internal func Value(n Node) LayoutTransition? -> if values.TryGetValue(n, out var state) { state.Value } else { nil }
+    internal func Value(n Node) LayoutTransition? -> n.PortalState?.Transition?.Value
 
     internal func Configure(n Node, value LayoutTransition?, pump MotionPump?,
       invalidated Action[ReconcileEffects]?) {
@@ -203,11 +201,11 @@ internal class LayoutTransitions {
           Dispose(n)
           return
         }
-        let state = if values.TryGetValue(n, out var current) {
+        let state = if let current = n.PortalState?.Transition {
           current
         } else {
           let created = LayoutTransitionState(n)
-          values.Add(n, created)
+          n.EnsurePortalState().Transition = created
           created
         }
         state.Configure(next, pump, invalidated)
@@ -215,15 +213,15 @@ internal class LayoutTransitions {
 
     internal func Resolve(n Node, baseX float32, baseY float32, localX float32,
       localY float32) Rect{
-        if !values.TryGetValue(n, out var state) {
+        guard let state = n.PortalState?.Transition else {
           return Rect{ X: baseX, Y: baseY }
         }
         return state.Resolve(baseX, baseY, localX, localY)
       }
 
     internal func Dispose(n Node) {
-      if !values.TryGetValue(n, out var state) { return }
-      values.Remove(n)
+      guard let state = n.PortalState?.Transition else { return }
+      if let metadata = n.PortalState { metadata.Transition = nil }
       state.Dispose()
     }
   }

@@ -201,10 +201,10 @@ internal class DragDropMetadata {
   shared {
     private let blobValues ConditionalWeakTable[Blob, DragDropBinding] =
     ConditionalWeakTable[Blob, DragDropBinding]()
-    private let nodeValues ConditionalWeakTable[Node, DragDropBinding] =
-    ConditionalWeakTable[Node, DragDropBinding]()
 
-    internal func Remove(node Node) { nodeValues.Remove(node) }
+    internal func Remove(node Node) {
+      if let state = node.PointerState { state.DragDrop = nil }
+    }
 
     internal func SetBlobSource(blob Blob, value DragSource?) {
       guard let binding = blobBinding(blob, value != nil) else { return }
@@ -225,12 +225,11 @@ internal class DragDropMetadata {
     internal func Sync(node Node, blob Blob) bool {
       var source DragDropBinding?
       if blobValues.TryGetValue(blob, out var blobBindingValue) { source = blobBindingValue }
-      var destination DragDropBinding?
-      if nodeValues.TryGetValue(node, out var nodeBindingValue) { destination = nodeBindingValue }
+      let destination = node.PointerState?.DragDrop
       let sourceChanged = destination?.Source != source?.Source
       let targetChanged = destination?.Target != source?.Target
       if source == nil {
-        nodeValues.Remove(node)
+        Remove(node)
         return sourceChanged || targetChanged
       }
       if let current = destination {
@@ -240,7 +239,7 @@ internal class DragDropMetadata {
         let created = DragDropBinding()
         created.Source = source?.Source
         created.Target = source?.Target
-        nodeValues.Add(node, created)
+        node.EnsurePointerState().DragDrop = created
       }
       return sourceChanged || targetChanged
     }
@@ -252,8 +251,7 @@ internal class DragDropMetadata {
     internal func HasBlobBindings(blob Blob) bool -> blobValues.TryGetValue(blob, out var value)
       && !value.Empty()
 
-    internal func HasNodeBindings(node Node) bool -> nodeValues.TryGetValue(node, out var value)
-      && !value.Empty()
+    internal func HasNodeBindings(node Node) bool -> node.PointerState?.DragDrop?.Empty() == false
 
     private func blobBinding(blob Blob, create bool) DragDropBinding? {
       if blobValues.TryGetValue(blob, out var value) { return value }
@@ -269,7 +267,7 @@ internal class DragDropMetadata {
 
     private func nodeBinding(node Node) DragDropBinding? {
       if !node.HasSparseInputState { return nil }
-      return if nodeValues.TryGetValue(node, out var value) { value } else { nil }
+      return node.PointerState?.DragDrop
     }
 
   }
