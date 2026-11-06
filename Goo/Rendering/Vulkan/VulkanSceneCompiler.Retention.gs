@@ -520,7 +520,7 @@ internal partial class VulkanSceneCompiler {
         let prior = retainedChunks[index]
         if prior.OwnerId != current.OwnerId {
           topologySame = false
-        } else if !IsPlaceholderChunkTransition(current, prior) {
+        } else if !current.RangeContentRetained && !IsPlaceholderChunkTransition(current, prior) {
           var topologyMatches bool = false
           if current.RetentionState != SceneChunkRetentionState.Generic
             && prior.RetentionState != SceneChunkRetentionState.Generic{
@@ -603,6 +603,7 @@ internal partial class VulkanSceneCompiler {
     journal.EndVersion()
     UpdateBackdropVersions()
     proofs.Capture(frame)
+    rangeProofVersion = frameVersion
   }
 
   private func ResolveChunkPaintBounds() {
@@ -666,6 +667,9 @@ internal partial class VulkanSceneCompiler {
   private func ChunkContentRetained(index int32, priorIndex int32,
     prior VulkanSceneChunkIdentity) bool {
     let current = frame.Chunks[index]
+    if current.RangeContentRetained && index == priorIndex && current.OwnerId == prior.OwnerId {
+      return true
+    }
     return (current.RetentionState == SceneChunkRetentionState.ExactLeafHit
         && prior.RetentionState != SceneChunkRetentionState.Generic)
       || (current.ContentKey == prior.ContentKey

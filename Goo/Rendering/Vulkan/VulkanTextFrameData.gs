@@ -433,13 +433,14 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
           }
           let dirty = fullUpload
             || slot.CandidateVersions[textIndex] != slot.HistoryVersions[textIndex]
+            || !SegmentClipMatches(slot, slot.CandidateFirstInstances[textIndex], reference.ClipChainId)
           if dirty {
             dirtySegmentCount = AddInt32(dirtySegmentCount, 1,
               "dirty text segment count")
             dirtyRecordCount = AddInt32(dirtyRecordCount, segment.RecordCount,
               "dirty text record count")
             CopySegmentRecords(slot, segment,
-              slot.CandidateFirstInstances[textIndex], segment.RecordCount)
+              slot.CandidateFirstInstances[textIndex], segment.RecordCount, reference.ClipChainId)
             if rangeStart < 0 {
               rangeStart = slot.CandidateFirstInstances[textIndex]
             }
@@ -727,7 +728,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
         || reference.SegmentId != segment.Id
         || reference.SegmentVersion != segment.Version
         || reference.GlyphCount != segment.GlyphCount
-        || reference.ClipChainId != segment.ClipChainId
+        || segment.ClipChainId < 0
         || segment.RecordCount != segment.GlyphCount
         || segment.RecordCount <= 0
         || segment.RecordCount > segment.Records.Length
@@ -773,8 +774,13 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     return true
   }
 
+  private func SegmentClipMatches(slot VulkanTextFrameSlot, first int32, clipChainId int32) bool {
+    let records = *HbGpuTextInstanceRecord(slot.Buffers.Mapped)
+    return records[first].glyphInput_z == uint32(clipChainId)
+  }
+
   private func CopySegmentRecords(slot VulkanTextFrameSlot,
-    segment VulkanRetainedTextSegment, destinationFirst int32, recordCount int32) {
+    segment VulkanRetainedTextSegment, destinationFirst int32, recordCount int32, clipChainId int32) {
       if destinationFirst < 0 || recordCount <= 0
         || destinationFirst > Int32.MaxValue - recordCount{
           throw ArgumentOutOfRangeException("text record copy range")
@@ -788,6 +794,12 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
           *void(destinationBase),
           copyBytes,
           copyBytes)
+      }
+      if clipChainId != segment.ClipChainId {
+        let destination = *HbGpuTextInstanceRecord(destinationBase)
+        for index in 0 ... recordCount {
+          destination[index].glyphInput_z = uint32(clipChainId)
+        }
       }
     }
 

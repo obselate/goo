@@ -9,6 +9,7 @@ internal unsafe partial class VulkanWindowTarget {
   private var pendingTraceId string?
   private var activeTraceId string?
   private var profileGpuTraceId string?
+  private var retainedMemoryTraceId string?
   private let frameProfileEnabled bool = System.Environment.GetEnvironmentVariable("GOO_FRAME_PROFILE") == "1"
   private var frameProfileCapabilitiesReported bool
 
@@ -16,6 +17,17 @@ internal unsafe partial class VulkanWindowTarget {
     pendingTraceContext = context
     pendingTraceId = recorder.TraceId
     Sample(recorder, false, true)
+    if retainedMemoryTraceId != recorder.TraceId {
+      retainedMemoryTraceId = recorder.TraceId
+      var memoryContext = context
+      memoryContext.SceneVersion = sceneCompiler.LastResult.FrameVersion
+      recorder.Instant(VulkanDiagnosticEventIds.PlanCompile, VulkanDiagnosticCategories.FramePlan,
+        memoryContext, value0: uint64(sceneCompiler.RetainedOwnerCount), value1: uint64(sceneCompiler.Frame.Transforms.Length),
+        source: "scene.retained.metadata")
+      recorder.Instant(VulkanDiagnosticEventIds.PlanCompile, VulkanDiagnosticCategories.FramePlan,
+        memoryContext, value0: uint64(sceneCompiler.RangeRetainedBytes), value1: uint64(sceneCompiler.RangePeakBytes),
+        source: "scene.retained.bytes")
+    }
     EnsureDiagnosticTimestamp()
     if profileGpuTraceId != recorder.TraceId {
       profileGpuTraceId = recorder.TraceId
@@ -590,6 +602,12 @@ internal unsafe partial class VulkanWindowTarget {
         recorder.Instant(VulkanDiagnosticEventIds.PlanCompile, VulkanDiagnosticCategories.FramePlan,
           context, value0: uint64(result.DrawCount), value1: uint64(planCounters.RecordOperations),
           source: "scene.counters")
+        recorder.Instant(VulkanDiagnosticEventIds.PlanCompile, VulkanDiagnosticCategories.FramePlan,
+          context, value0: uint64(sceneCompiler.RangeHitCount), value1: uint64(sceneCompiler.RangeCompileCount),
+          source: "scene.retained.ranges")
+        recorder.Instant(VulkanDiagnosticEventIds.PlanCompile, VulkanDiagnosticCategories.FramePlan,
+          context, value0: uint64(sceneCompiler.RangeRetainedBytes), value1: uint64(sceneCompiler.RangePeakBytes),
+          source: "scene.retained.bytes")
       }
       try {
         if let current = diagnostics {

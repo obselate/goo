@@ -857,7 +857,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         throw ArgumentNullException("segment")
       }
       if !VulkanRetainedTextValidation.ValidReferenceStorage(value, segment)
-        || segment.ClipChainId != value.ClipChainId
+        || segment.ClipChainId < 0
         || segment.AtlasGeneration != resourceGeneration{
           throw ArgumentException("cached text segment is invalid")
         }
@@ -897,7 +897,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
               throw ArgumentException("cached text segment glyph resource is invalid")
             }
           let record = segment.Records[glyphIndex]
-          if record.glyphInput_z != uint32(value.ClipChainId)
+          if record.glyphInput_z != uint32(segment.ClipChainId)
             || record.glyphInput_y > 3u {
               throw ArgumentException("cached text segment instance mirror is invalid")
             }

@@ -1135,10 +1135,9 @@ internal shared class Program {
         Portals.Sync(root, overlay)
         let warm = VulkanSceneCompiler(8)
         warm.Compile(root, overlay, Color.Transparent, 200.0F, 100.0F)
-        let hits = warm.RetainedLeafHitCount + warm.RetainedParentBoxHitCount
         warm.Compile(root, overlay, Color.Transparent, 200.0F, 100.0F)
-        if warm.RetainedLeafHitCount + warm.RetainedParentBoxHitCount <= hits {
-            throw InvalidOperationException("Portal scene did not exercise retained box reuse")
+        if warm.RangeHitCount != 3 || warm.RangeCompileCount != 0 {
+            throw InvalidOperationException("Portal scene did not retain all three presented subtrees")
         }
         AssertPortalDrawOrder(warm.Frame, Color.Rgb(30, 170, 80), Color.Rgb(40, 90, 210))
         first.ZIndex = 10
@@ -1271,11 +1270,17 @@ internal shared class Program {
         }
         root.Children.RemoveAt(0)
         root.Children.Add(solid)
+        Stacking.InvalidateStructure(root)
         before = compiler.Frame.Counters.RecordOperations
         compiler.Compile(root, Color.Transparent, 320.0F, 180.0F)
         let reorderedWrites = compiler.Frame.Counters.RecordOperations - before
         if reorderedWrites != uint64(3) {
             throw InvalidOperationException("Reordered retained primitive spans were reused")
+        }
+        if compiler.Frame.DrawRefs[0].Kind != SceneDrawKind.RoundedBox
+        || compiler.Frame.DrawRefs[1].Kind != SceneDrawKind.PerEdgeBorder
+        || compiler.Frame.DrawRefs[2].Kind != SceneDrawKind.SolidBox {
+            throw InvalidOperationException("Retained primitive draw order did not follow the published child order")
         }
         before = compiler.Frame.Counters.RecordOperations
         compiler.Compile(root, Color.Transparent, 320.0F, 180.0F)

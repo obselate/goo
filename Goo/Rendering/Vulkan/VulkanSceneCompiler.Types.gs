@@ -216,6 +216,7 @@ internal class VulkanSceneBoxState {
 internal class VulkanSceneOwnerId {
   internal var Value uint64
   internal let Generation uint64
+  internal var RangeSlot int32 = -1
   private var textState VulkanSceneTextState?
   private var boxState VulkanSceneBoxState?
 

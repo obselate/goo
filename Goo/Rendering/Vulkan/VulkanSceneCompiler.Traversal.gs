@@ -79,10 +79,10 @@ internal partial class VulkanSceneCompiler {
       frame.EndChunk()
     }
 
-  private func CompileNode(
+  private func CompileNodeCore(
     node Node,
-    context VulkanSceneTraversalContext) {
-      let owner = Owner(node)
+    context VulkanSceneTraversalContext,
+    owner VulkanSceneOwnerId) {
       let ownerId = owner.Value
       frame.SetActiveClipChain(context.ParentPathClipChainId)
       frame.SetActiveTransform(context.ParentTransformIndex)
@@ -114,14 +114,7 @@ internal partial class VulkanSceneCompiler {
         effect.SamplesBackdrop || effect.Program.ReplacesBackdrop
       } else { false }
       if node.BackdropBlur > 0.0F || isolatesBlend || usesBackdrop {
-        var clipLayerId = context.RoundedOverflowLayerId
-        while clipLayerId != 0 {
-          var clipLayer = frame.Layers[clipLayerId - 1]
-          if (clipLayer.Flags & uint32(LayerRecordFlags.PreservesBackdrop)) != 0u { break }
-          clipLayer.Flags |= uint32(LayerRecordFlags.PreservesBackdrop)
-          frame.Layers[clipLayerId - 1] = clipLayer
-          clipLayerId = clipLayer.ParentClipLayerId
-        }
+        PreserveAncestorBackdropLayers(context.RoundedOverflowLayerId)
       }
       visibleNodeCount = visibleNodeCount + 1
       if node.ScrollX != 0.0F || node.ScrollY != 0.0F {
