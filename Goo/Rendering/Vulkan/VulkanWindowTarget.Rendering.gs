@@ -340,7 +340,8 @@ internal unsafe partial class VulkanWindowTarget {
         out damageRegion,
         out fullRedraw)
       if forceFullRedraw || textRedrawPending || imageRedrawPending
-        || pathRedrawPending || clipMaskRedrawPending {
+        || pathRedrawPending || clipMaskRedrawPending
+        || VulkanGpuExperiments.Selected == VulkanGpuExperiment.FullRedraw {
           fullRedraw = true
           hasDamage = true
           damageRegion = VulkanDamageRegion{

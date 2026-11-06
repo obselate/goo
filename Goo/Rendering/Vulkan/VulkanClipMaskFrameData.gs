@@ -306,6 +306,9 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
         let words = *uint32(nint(slot.Buffers.Mapped))
         WriteWords(words, frame, regions, regionCount,
           textChainTable, tableBaseWord)
+        if VulkanGpuExperiments.Selected == VulkanGpuExperiment.NoClipSampling {
+          words[2] = 0u
+        }
         slot.Flush(byteCount)
       }
       UpdateDescriptors(slotIndex, byteCount)

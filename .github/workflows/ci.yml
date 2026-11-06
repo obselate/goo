@@ -1545,6 +1545,39 @@ jobs:
             2>&1 | tee artifacts/reports/vulkan-cpu-startup.txt
           grep -E '"kind":"device".*"deviceType":4,' artifacts/reports/vulkan-cpu-startup.txt
 
+      - name: Verify Vulkan GPU experiment pixels
+        if: needs.changes.outputs.full == 'true' && (matrix.lane == 'async-readback')
+        run: |
+          export SDL_VIDEODRIVER=wayland LIBGL_ALWAYS_SOFTWARE=1
+          export VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation
+          export LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          export XDG_CONFIG_HOME="$RUNNER_TEMP/gpu-experiments/config"
+          export XDG_CACHE_HOME="$RUNNER_TEMP/gpu-experiments/cache"
+          export XDG_DATA_HOME="$RUNNER_TEMP/gpu-experiments/data"
+          trap 'rm -rf "$RUNNER_TEMP/gpu-experiments"' EXIT
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 GOO_GPU_EXPERIMENT_SMOKE=1 \
+            GOO_VK_GPU_EXPERIMENT=no-text GOO_GPU_EXPERIMENT_EXPECTED=none \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+          dotnet build tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackSmoke.gsproj \
+            -c Release -p:GooGpuExperiments=true -p:TreatWarningsAsErrors=true \
+            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
+          for mode in none full-redraw no-text no-shadows no-images no-layers \
+            no-clip-sampling clip-clear-only clip-regenerate no-gpu-timestamps
+          do
+            .github/scripts/with-headless-wayland.sh env \
+              GOO_VK_DIAGNOSTICS=1 GOO_GPU_EXPERIMENT_SMOKE=1 \
+              GOO_VK_GPU_EXPERIMENT="$mode" GOO_GPU_EXPERIMENT_EXPECTED="$mode" \
+              dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+          done
+          mkdir -p "$RUNNER_TEMP/gpu-experiments"
+          printf 'no-text\n' > "$RUNNER_TEMP/gpu-experiments/selection"
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 GOO_GPU_EXPERIMENT_SMOKE=1 \
+            GOO_VK_GPU_EXPERIMENT=no-shadows GOO_GPU_EXPERIMENT_EXPECTED=no-text \
+            GOO_VK_GPU_EXPERIMENT_FILE="$RUNNER_TEMP/gpu-experiments/selection" \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
       - name: Run focused core behavior tests
         if: needs.changes.outputs.full == 'true' && (matrix.lane == 'core')
         run: dotnet run --project tools/Goo.Repo -- check core

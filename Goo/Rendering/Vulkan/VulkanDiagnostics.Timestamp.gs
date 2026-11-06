@@ -153,7 +153,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
       timestampComputeAndGraphics = computeAndGraphics != VkConstants.VK_FALSE
       timestampMask = VulkanTimestamp.BuildMask(validBits)
       timestampSupported = nativeDevice != nint(0) && validBits != 0u && validBits <= 64u
-        && period > 0.0F
+        && period > 0.0F && VulkanGpuExperiments.Selected != VulkanGpuExperiment.NoGpuTimestamps
       timestampLastResult = VkConstants.VK_SUCCESS
       ResetTimestampRangeState()
 

@@ -80,6 +80,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           let regionKey = value.StableId
           let region = atlas.Acquire(regionKey, screenBounds.X, screenBounds.Y,
             screenBounds.Width, screenBounds.Height)
+          if VulkanGpuExperiments.Selected == VulkanGpuExperiment.ClipRegenerate {
+            atlas.MarkDirty(regionKey)
+          }
           if clipContentKeys.TryGetValue(regionKey, out var previousContentKey)
             && previousContentKey != value.ContentKey{
               atlas.MarkDirty(regionKey)
@@ -175,7 +178,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         })
         BeginClipMaskRendering(commandBuffer, atlas, dirty)
         try {
-          EmitClipMask(commandBuffer, extent, value, region, frame, selectedPipeline, maskIndex)
+          if VulkanGpuExperiments.Selected != VulkanGpuExperiment.ClipClearOnly {
+            EmitClipMask(commandBuffer, extent, value, region, frame, selectedPipeline, maskIndex)
+          }
         } finally {
           let endRendering = dispatch.vkCmdEndRendering
           endRendering(commandBuffer)
