@@ -1,0 +1,9 @@
+<Project>
+  <Target Name="RegisterGooAndroidNativeAotResourceDesigner"
+          AfterTargets="_AndroidComputeIlcCompileInputs"
+          Condition="'$(PublishAot)' == 'true' and '$(AndroidUseDesignerAssembly)' == 'true'">
+    <ItemGroup>
+      <IlcReference Include="$(IntermediateLinkDir)_Microsoft.Android.Resource.Designer.dll" />
+    </ItemGroup>
+  </Target>
+</Project>
