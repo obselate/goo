@@ -282,6 +282,7 @@ public class VirtualOutput {
 
   /// Gets or sets the visible item whose retained descendants keep their vertical position after layout.
   /// Nil leaves descendant anchoring disabled.
+  /// No descendant adjustment is applied at vertical scroll offset zero.
   public prop AnchorKey string? {
     get -> anchorKey
     set {

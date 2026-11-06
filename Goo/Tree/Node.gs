@@ -22,6 +22,10 @@ internal class Node {
   private var nodeState int32
   private var lifecycleState uint16
   private var scenePaintVersion uint64
+  private var mountGeneration uint64 = 1uL
+  private var rect Rect
+  private var parent Node?
+  private var focused bool
   private var editingState NodeEditingState?
   private var shapeState NodeShapeState?
   private var pointerState NodePointerState?
@@ -56,6 +60,17 @@ internal class Node {
   }
 
   internal prop ScenePaintVersion uint64{ get -> scenePaintVersion }
+  internal prop MountGeneration uint64{ get -> mountGeneration }
+
+  internal func TryBeginRebind() bool {
+    if !Retired { throw InvalidOperationException("Node storage must be retired before rebinding") }
+    if mountGeneration == uint64.MaxValue { return false }
+    MarkSceneDirty()
+    mountGeneration++
+    lifecycleState = lifecycleState & ~uint16(4)
+    return true
+  }
+
   internal var VulkanOwnerToken object?
   internal var VulkanOwner VulkanSceneOwnerId?
   internal var PaintBindings List[PaintBinding]?
@@ -64,6 +79,30 @@ internal class Node {
   internal func BumpScenePaintVersion() {
     scenePaintVersion = scenePaintVersion == uint64.MaxValue
     ? 1uL : scenePaintVersion + 1uL
+    MarkSceneDirty()
+  }
+
+  internal prop SceneSubtreeDirty bool {
+    get -> (lifecycleState & uint16(16384)) != uint16(0)
+    set -> lifecycleState = value ? lifecycleState | uint16(16384) : lifecycleState & ~uint16(16384)
+  }
+
+  internal prop SceneResourcesDirty bool {
+    get -> (lifecycleState & uint16(32768)) != uint16(0)
+    set -> lifecycleState = value ? lifecycleState | uint16(32768) : lifecycleState & ~uint16(32768)
+  }
+
+  internal func MarkSceneResourcesDirty() {
+    SceneResourcesDirty = true
+    MarkSceneDirty()
+  }
+
+  internal func MarkSceneDirty() {
+    var current Node? = this
+    while let node = current {
+      node.SceneSubtreeDirty = true
+      current = node.Parent
+    }
   }
 
   internal prop Kind NodeKind{ get; set; }
@@ -101,11 +140,29 @@ internal class Node {
   }
   internal prop HasCustomLayout bool{ get; set; }
   internal prop Key string? { get; set; }
-  internal prop Parent Node? { get; set; }
+  internal prop Parent Node? {
+    get -> parent
+    set {
+      if parent == value { return }
+      parent?.MarkSceneDirty()
+      parent = value
+      MarkSceneDirty()
+    }
+  }
   internal var Context ContextFrame?
   internal prop Children IList[Node]{ get; init; }
   internal prop Content string{ get; set; }
-  internal prop Rect Rect{ get; set; }
+  internal prop Rect Rect {
+    get -> rect
+    set {
+      if BitConverter.SingleToInt32Bits(rect.X) == BitConverter.SingleToInt32Bits(value.X)
+        && BitConverter.SingleToInt32Bits(rect.Y) == BitConverter.SingleToInt32Bits(value.Y)
+        && BitConverter.SingleToInt32Bits(rect.W) == BitConverter.SingleToInt32Bits(value.W)
+        && BitConverter.SingleToInt32Bits(rect.H) == BitConverter.SingleToInt32Bits(value.H) { return }
+      rect = value
+      BumpScenePaintVersion()
+    }
+  }
   internal prop Yoga Facebook.Yoga.Node? { get; set; }
   internal prop YogaStyleMask StyleMask{ get; set; }
   internal prop Width Length{ get; set; }
@@ -465,7 +522,14 @@ internal class Node {
   internal prop Pressed bool{ get; set; }
   internal prop PointerPressCount int32{ get; set; }
   internal prop KeyboardPressed bool{ get; set; }
-  internal prop Focused bool{ get; set; }
+  internal prop Focused bool {
+    get -> focused
+    set {
+      if focused == value { return }
+      focused = value
+      BumpScenePaintVersion()
+    }
+  }
   internal prop FocusVisible bool{ get; set; }
   internal prop LocalMask StyleMask{ get; set; }
   internal prop AppliedMask StyleMask{ get; set; }
@@ -478,6 +542,8 @@ internal class Node {
   internal prop Retired bool{
     get -> (lifecycleState & uint16(4)) != uint16(0)
     set {
+      if Retired == value { return }
+      MarkSceneDirty()
       lifecycleState = value ? lifecycleState | uint16(4) : lifecycleState & ~uint16(4)
     }
   }
@@ -656,35 +722,61 @@ internal class Node {
   internal prop ImageIntrinsicHeight float32{ get; set; }
   internal prop Buffer string{
     get -> editingState?.Buffer ?? ""
-    set -> EnsureEditingState().Buffer = value
+    set {
+      if Buffer == value { return }
+      EnsureEditingState().Buffer = value
+      BumpScenePaintVersion()
+    }
   }
   internal prop Caret int32{
     get -> editingState?.Caret ?? 0
-    set -> EnsureEditingState().Caret = value
+    set {
+      if Caret == value { return }
+      EnsureEditingState().Caret = value
+      BumpScenePaintVersion()
+    }
   }
   internal prop Anchor int32{
     get -> editingState?.Anchor ?? 0
-    set -> EnsureEditingState().Anchor = value
+    set {
+      if Anchor == value { return }
+      EnsureEditingState().Anchor = value
+      BumpScenePaintVersion()
+    }
   }
   internal prop CaretAffinity TextAffinity{
     get -> TextAffinity((nodeState >> 12) & int32(1))
     set {
+      if CaretAffinity == value { return }
       nodeState = (nodeState & ~int32(4096)) | ((int32(value) & int32(1)) << 12)
+      BumpScenePaintVersion()
     }
   }
   internal prop AnchorAffinity TextAffinity{
     get -> TextAffinity((nodeState >> 13) & int32(1))
     set {
+      if AnchorAffinity == value { return }
       nodeState = (nodeState & ~int32(8192)) | ((int32(value) & int32(1)) << 13)
+      BumpScenePaintVersion()
     }
   }
   internal prop EditScrollX float32{
     get -> editingState?.EditScrollX ?? 0.0F
-    set -> EnsureEditingState().EditScrollX = value
+    set {
+      if EditScrollX == value { return }
+      EnsureEditingState().EditScrollX = value
+      BumpScenePaintVersion()
+    }
   }
   internal prop BlinkT float64{
     get -> editingState?.BlinkT ?? 0.0
-    set -> EnsureEditingState().BlinkT = value
+    set {
+      let previous = BlinkT
+      EnsureEditingState().BlinkT = value
+      if (previous - Math.Floor(previous) < 0.5) != (value - Math.Floor(value) < 0.5) {
+        BumpScenePaintVersion()
+      }
+    }
   }
   internal prop PreFocus string{
     get -> editingState?.PreFocus ?? ""

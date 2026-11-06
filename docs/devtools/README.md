@@ -1,7 +1,7 @@
 # Goo DevTools
 
 ```sh
-dotnet tool install --global Goo.DevTools --version 0.28.0
+dotnet tool install --global Goo.DevTools --version 0.28.2
 goo dev --project MyApp.gsproj --input --inspector
 ```
 

@@ -1,6 +1,29 @@
 # Changelog
 
 
+## 0.28.2 - 2026-11-05
+
+### Changed
+
+- Allow changelog-only corrections without a new fragment when they do not add an Unreleased section.
+- Keep logical mount identities separate from reusable Node storage.
+
+### Fixed
+
+- Keep centered text and nested content stationary across repeated fractional-scale resizes by snapping unrounded Yoga positions and dimensions instead of previously snapped layout results.
+- Keep input routes, focus restoration, accessibility IDs and DevTools targets bound to their original node mount when storage is reused.
+- Ignore outgoing style queue and transition entries after node storage is rebound.
+
+## 0.28.1 - 2026-11-05
+
+0.28.0 was not published.
+
+### Fixed
+
+- Skip fully clipped infinite animations without losing their clock phase. Keep finite animation ticks and completion unchanged.
+- Prevent false horizontal scrollbars at fractional display scales.
+- Isolate the zero-allocation path equality fixture from background GC accounting and report each equality or allocation failure separately.
+
 ## 0.28.0 - 2026-11-05
 
 ### Added
@@ -25,6 +48,7 @@
 
 ### Fixed
 
+- Keep the application running when a clipboard read or write fails in built-in text editing. Report the failure to stderr and keep the selection. Window.SetClipboardText still throws.
 - Keep the DevTools pipe listener alive while clients disconnect so queued input and snapshot connections are not reset. (#583)
 - Size anchored Portals to the available space on their selected side instead of shifting them over the anchor. Keep cross-axis containment.
 - Prevent false horizontal scrollbars at fractional display scales.

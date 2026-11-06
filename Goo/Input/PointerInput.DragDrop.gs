@@ -5,16 +5,25 @@ import System.Collections.Generic
 import System.Runtime.ExceptionServices
 
 internal class PointerDragSession {
-  internal let Source Node
+  private let sourceMount NodeMount
+  internal prop Source Node? { get -> sourceMount.Current }
   internal let Data DragData
   internal let PointerId int64
   internal let Device PointerDevice
   internal let IsPointer bool
-  internal var RequestedTarget Node?
+  private var requestedTargetMount NodeMount
+  internal prop RequestedTarget Node? {
+    get -> requestedTargetMount.Current
+    set -> requestedTargetMount = NodeMount(value)
+  }
   internal var X float32
   internal var Y float32
   internal var Modifiers KeyModifiers
-  internal var Target Node?
+  private var targetMount NodeMount
+  internal prop Target Node? {
+    get -> targetMount.Current
+    set -> targetMount = NodeMount(value)
+  }
   internal var Effect DragEffect
   internal var Terminating bool
   internal var Negotiating bool
@@ -23,7 +32,7 @@ internal class PointerDragSession {
   internal var NativeCompletion NativeTransferResult?
 
   internal init(source Node, data DragData, pointerId int64, device PointerDevice, isPointer bool) {
-    Source = source
+    sourceMount = NodeMount(source)
     Data = data
     PointerId = pointerId
     Device = device
@@ -41,7 +50,7 @@ internal partial class PointerInput {
       return
     }
     for var i = current.PressChain.Count; i > 0; i-- {
-      let node = current.PressChain[i - 1]
+      guard let node = current.PressChain[i - 1].Current else { continue }
       if DragDropMetadata.Source(node) != nil {
         dragCandidate = node
         dragPointerId = current.Id
@@ -78,6 +87,7 @@ internal partial class PointerInput {
       guard let tree = root else { return false }
       if !containsPath(tree, source) || !canReceiveInput(source) { return false }
       guard let descriptor = DragDropMetadata.Source(source) else { return false }
+      let sourceMount = NodeMount(source)
       let generation = dragGeneration
       let mapped = TransformGeometry.WindowToNode(source, x, y)
       if !mapped.Valid { return false }
@@ -101,7 +111,7 @@ internal partial class PointerInput {
         ExceptionDispatchInfo.Capture(error).Throw()
       } finally { creatingDrag = false }
       guard let payload = data else { return false }
-      if dragGeneration != generation { return false }
+      if dragGeneration != generation || sourceMount.Current == nil { return false }
       if !containsPath(tree, source) || !canReceiveInput(source)
         || DragDropMetadata.Source(source) == nil {
           return false
@@ -159,6 +169,7 @@ internal partial class PointerInput {
       catch (_ ArgumentOutOfRangeException) { return false }
     }
     session.NativeActive = true
+    let rootMount = NodeMount(root)
     let started = (host as NativeDragHost?)?.BeginNativeDrag(data!!, if generalized { session.Data.AllowedEffects } else { DragEffect.Copy },
       (result NativeTransferResult) -> {
         if dragSession != session || !session.NativeActive { return }
@@ -166,7 +177,7 @@ internal partial class PointerInput {
         let previous = current
         current = mouse
         try {
-          terminateDrag(root, if result.Status == DataTransferStatus.Success { DragEndKind.Dropped } else { DragEndKind.Canceled },
+          terminateDrag(rootMount.Current, if result.Status == DataTransferStatus.Success { DragEndKind.Dropped } else { DragEndKind.Canceled },
             result.Effect, false, nil)
         } finally { current = previous }
       }) ?? NativeTransferResult(DataTransferStatus.Unsupported, error: "This host does not support native drags")
@@ -187,8 +198,8 @@ internal partial class PointerInput {
 
   private func ensureDragSession(root Node, session PointerDragSession) bool {
     if !dragSessionCurrent(session) { return false }
-    if containsPath(root, session.Source) && canReceiveInput(session.Source)
-      && DragDropMetadata.Source(session.Source) != nil {
+    if let source = session.Source && containsPath(root, source) && canReceiveInput(source)
+      && DragDropMetadata.Source(source) != nil {
         return true
       }
     terminateDrag(root, DragEndKind.Canceled, DragEffect.None, true, nil)
@@ -208,7 +219,7 @@ internal partial class PointerInput {
       else {
         var target = session.RequestedTarget
         while let node = target {
-          path.Add(node)
+          path.Add(NodeMount(node))
           if node.FocusScopeBoundary { break }
           target = node.Parent
         }
@@ -223,7 +234,8 @@ internal partial class PointerInput {
       var effect = DragEffect.None
       let start = DragTargetRouting.RouteStart(path)
       for var i = path.Count; i > start; i-- {
-        let target = path[i - 1]
+        let mount = path[i - 1]
+        guard let target = mount.Current else { continue }
         if !DragTargetRouting.Available(root, target) { continue }
         if let descriptor = DragDropMetadata.Target(target) {
           if let event = dragEvent(session, target, DragEventKind.Move, x, y,
@@ -236,7 +248,7 @@ internal partial class PointerInput {
                 path.Clear()
                 return nil
               }
-              if DragTargetRouting.Available(root, target) {
+              if mount.Current != nil && DragTargetRouting.Available(root, target) {
                 let accepted = acceptedDragEffect(queried, session.Data.AllowedEffects)
                 if accepted != DragEffect.None {
                   selected = target
@@ -253,9 +265,9 @@ internal partial class PointerInput {
       return selected
     }
 
-  private func dragTargetPath() List[Node] {
+  private func dragTargetPath() List[NodeMount] {
     if let path = dragHitPath { return path }
-    let path = List[Node]()
+    let path = List[NodeMount]()
     dragHitPath = path
     return path
   }
@@ -271,12 +283,13 @@ internal partial class PointerInput {
       guard let descriptor = DragDropMetadata.Target(target) else { return false }
       guard let event = dragEvent(session, target, kind, x, y, modifiers, effect) else { return false }
       let owner = CellOwnership.Within(root, target)
+      let targetMount = NodeMount(target)
       try { descriptor.Changed?.Invoke(event) }
       finally { owner?.Rebuild() }
       if terminalLeave {
-        return dragSession == session && DragTargetRouting.Available(root, target)
+        return dragSession == session && targetMount.Current != nil && DragTargetRouting.Available(root, target)
       }
-      return ensureDragSession(root, session) && DragTargetRouting.Available(root, target)
+      return targetMount.Current != nil && ensureDragSession(root, session) && DragTargetRouting.Available(root, target)
     }
 
   private func updateDragTarget(root Node, x float32, y float32, modifiers KeyModifiers,
@@ -289,18 +302,20 @@ internal partial class PointerInput {
         session.Y = y
         session.Modifiers = modifiers
         if !ensureDragSession(root, session) { return }
-        let previous = session.Target
+        let previousMount = NodeMount(session.Target)
         let selected = queryDragTarget(root, session, x, y, modifiers)
+        let previous = previousMount.Current
+        let selectedMount = NodeMount(selected)
         if !dragSessionCurrent(session) { return }
         let effect = session.Effect
         if previous != selected {
           session.Target = nil
-          if let oldTarget = previous {
+          if let oldTarget = previousMount.Current {
             notifyDragTarget(root, session, oldTarget, DragEventKind.Leave, x, y,
               modifiers, DragEffect.None)
             if !dragSessionCurrent(session) { return }
           }
-          if let nextTarget = selected {
+          if let nextTarget = selectedMount.Current {
             if DragTargetRouting.Available(root, nextTarget) {
               session.Target = nextTarget
               let retained = notifyDragTarget(root, session, nextTarget, DragEventKind.Enter,
@@ -313,7 +328,7 @@ internal partial class PointerInput {
             }
           }
         } else if notifyMove {
-          if let currentTarget = selected {
+          if let currentTarget = selectedMount.Current {
             let retained = notifyDragTarget(root, session, currentTarget, DragEventKind.Move,
               x, y, modifiers, effect)
             if !dragSessionCurrent(session) { return }
@@ -397,10 +412,10 @@ internal partial class PointerInput {
         if !session.EndDelivered {
           session.EndDelivered = true
           if let tree = root {
-            if containsPath(tree, session.Source) && !session.Source.Retired {
-              if let source = DragDropMetadata.Source(session.Source) {
+            if let sourceNode = session.Source && containsPath(tree, sourceNode) {
+              if let source = DragDropMetadata.Source(sourceNode) {
                 if let callback = source.End {
-                  let owner = CellOwnership.Within(tree, session.Source)
+                  let owner = CellOwnership.Within(tree, sourceNode)
                   try {
                     try { callback(DragEndEvent{
                       Kind: kind, Effect: effect,
@@ -552,8 +567,9 @@ internal partial class PointerInput {
   private func afterDragTreeUpdated(root Node) {
     if let session = dragSession {
       if session.NativeActive {
-        if !containsPath(root, session.Source) || !canReceiveInput(session.Source)
-          || DragDropMetadata.Source(session.Source) == nil { cancelDrag(root) }
+        let source = session.Source
+        if source == nil || !containsPath(root, source) || !canReceiveInput(source)
+          || DragDropMetadata.Source(source) == nil { cancelDrag(root) }
         return
       }
     }
@@ -566,8 +582,9 @@ internal partial class PointerInput {
         }
     }
     guard let session = dragSession else { return }
-    if !containsPath(root, session.Source) || !canReceiveInput(session.Source)
-      || DragDropMetadata.Source(session.Source) == nil {
+    let source = session.Source
+    if source == nil || !containsPath(root, source) || !canReceiveInput(source)
+      || DragDropMetadata.Source(source) == nil {
         terminateDrag(root, DragEndKind.Canceled, DragEffect.None, true, nil)
         return
       }

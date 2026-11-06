@@ -72,6 +72,7 @@ class FixtureContractTests {
     shared {
         func Cases() sequence[[]object] {
             yield Contract[ApplicationActivationFixtures]("ProcessQueueOwnsStartupAndForwardedData")
+            yield Contract[TreeFixtures]("NodeMountLifetimeContract")
             yield Contract[ElementHandleFixtures]("FocusProjectionContract")
             yield Contract[ElementHandleFixtures]("FocusProjectionVirtualizationContract")
             yield Contract[WindowOcclusionFixtures]("HostTransitionsNotifyOnUiThread")
@@ -90,6 +91,7 @@ class FixtureContractTests {
             yield Contract[AccessibilityFixtures]("HostClipAndTransformContract")
             yield Contract[AccessibilityFixtures]("PrimitiveAndExclusionContract")
             yield Contract[AccessibilityFixtures]("RetainedIdentityAndRelationshipsContract")
+            yield Contract[AccessibilityFixtures]("ReboundStorageRejectsPreviousSemanticIdentityContract")
             yield Contract[AccessibilityFixtures]("RetiredAndInvalidRelationshipContract")
             yield Contract[AccessibilityFixtures]("SnapshotAndSelectionContract")
             yield Contract[AccessibilityFixtures]("StateAndActionCapabilityContract")
@@ -159,6 +161,7 @@ class FixtureContractTests {
             yield Contract[DiagnosticsFixtures]("ResolvedSemanticsAndEditorPrivacyContract")
             yield Contract[DiagnosticsFixtures]("RuntimeOverrideInheritanceAndResetContract")
             yield Contract[DiagnosticsFixtures]("SnapshotIdentityAndDeltaContract")
+            yield Contract[DiagnosticsFixtures]("ReboundStorageRejectsPreviousDiagnosticTargetsContract")
             yield Contract[DiagnosticsFixtures]("SnapshotWithNonFiniteGeometryUsesValidJsonContract")
             yield Contract[DiagnosticsFixtures]("PerPumpWorkCountersContract")
             yield Contract[DragDropFixtures]("ArbitrationReentrantResetAndCaptureCleanupContract")
@@ -188,6 +191,7 @@ class FixtureContractTests {
             yield Contract[ElementHandleFixtures]("NestedScrollIntoViewKeepsTargetBounds")
             yield Contract[ElementHandleFixtures]("ThrowingVirtualDisposalContract")
             yield Contract[ElementHandleFixtures]("VirtualContract")
+            yield Contract[ElementHandleFixtures]("VirtualDescendantAnchoringSuppressesOrigin")
             yield Contract[ElementHandleFixtures]("VirtualTransactionContract")
             yield Contract[ElementHandleFixtures]("VirtualViewportContract")
             yield Contract[ElementHandleFixtures]("DeferredVirtualScrollContract")
@@ -240,6 +244,8 @@ class FixtureContractTests {
             yield Contract[InputFixtures]("PointerSelectsDeepestResolvedCursorAndClearsIt")
             yield Contract[InputFixtures]("RoutedKeyCallbackRebuildStaysPresentationIdle")
             yield Contract[InputFixtures]("RoundedCornersRouteToUnderlyingNode")
+            yield Contract[InputFixtures]("ReboundStorageRejectsPreviousInputLifetime")
+            yield Contract[InputFixtures]("HoverAloneDoesNotRetainRecyclableInteraction")
             yield Contract[InputFixtures]("ScrollStateSurvivesRebuild")
             yield Contract[InputFixtures]("ShapeStrokeHitChangesInvalidateInputContract")
             yield Contract[InputFixtures]("TextEntryCommandsAndSanitization")
@@ -256,6 +262,7 @@ class FixtureContractTests {
             yield Contract[LayoutFixtures]("CustomMeasurementsPreserveLogicalSizes")
             yield Contract[LayoutFixtures]("PixelSnappingPreservesDistantItemSizes")
             yield Contract[LayoutFixtures]("PixelSnappingPreservesScrollExtent")
+            yield Contract[LayoutFixtures]("PixelSnappingPreservesCachedLayoutsAcrossResizes")
             yield Contract[LayoutFixtures]("KeyedReorderRetainsYogaLayouts")
             yield Contract[LayoutFixtures]("LayoutIsStableAcrossRoots")
             yield Contract[LayoutFixtures]("LayoutTransitionGlidesComputedPosition")
@@ -466,6 +473,8 @@ class FixtureContractTests {
             yield Contract[TreeFixtures]("ButtonSemanticPrimitiveContract")
             yield Contract[VulkanQueueWorkerFixtures]("WakeFailureDrainsFollowingMailboxAndQuiesces")
             yield Contract[VulkanSceneCompilerFixtures]("OwnerIdentitySurvivesCompilerHandoff")
+            yield Contract[VulkanSceneCompilerFixtures]("ReboundMountGetsFreshCompilerOwners")
+            yield Contract[VulkanSceneCompilerFixtures]("RectangleUpdatesPreserveFloatBits")
             yield Contract[VulkanSceneCompilerFixtures]("OpaqueViewportRootSkipsCoveredBackground")
         }
 
