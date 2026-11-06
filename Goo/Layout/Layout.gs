@@ -720,6 +720,7 @@ internal func applyDirection(yg Facebook.Yoga.Node, n Node) {
 // Push-on-change: one resolved style write lands in Yoga through the same
 // appliers the mount-time sync uses. Nil Yoga means the mount sync covers it.
 internal func syncYogaField(n Node, f StyleField) {
+  if n.NeedsYogaBinding { return }
   guard let yg = n.Yoga else {
     return
   }

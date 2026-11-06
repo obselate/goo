@@ -171,27 +171,33 @@ internal class RowRecyclingFixtures {
   }
 
   func ReboundTextMatchesFreshLayoutContract() bool {
-    let recycled = RecyclingViewportCell{DetailedText: true}
-    let fresh = RecyclingViewportCell{DetailedText: true}
-    let recycledWindow = Window{Root: recycled, Width: 100, Height: 20}
-    let freshWindow = Window{Root: fresh, Width: 100, Height: 20}
-    try {
-      recycledWindow.UpdateTree()
-      freshWindow.UpdateTree()
-      recycled.Viewport.JumpTo(0.0, 20.0)
-      recycledWindow.UpdateTree()
-      recycled.Viewport.JumpTo(0.0, 40.0)
-      recycledWindow.UpdateTree()
-      fresh.Viewport.JumpTo(0.0, 40.0)
-      freshWindow.UpdateTree()
-      guard let actual = recycled.Handles[2].AttachedNode(),
-        let expected = fresh.Handles[2].AttachedNode() else { return false }
-      return actual.MountGeneration == 2uL && expected.MountGeneration == 1uL
-        && sameLayout(actual, expected)
-    } finally {
-      recycledWindow.Close()
-      freshWindow.Close()
+    for offset in []int32{0, 2} {
+      let recycled = RecyclingViewportCell{DetailedText: true, DataOffset: offset}
+      let fresh = RecyclingViewportCell{DetailedText: true, DataOffset: offset}
+      let recycledWindow = Window{Root: recycled, Width: 100, Height: 20}
+      let freshWindow = Window{Root: fresh, Width: 100, Height: 20}
+      try {
+        recycledWindow.UpdateTree()
+        freshWindow.UpdateTree()
+        guard let initial = recycled.Handles[0].AttachedNode() else { return false }
+        let initialTextWidth = initial.Children[0].Rect.W
+        recycled.Viewport.JumpTo(0.0, 20.0)
+        recycledWindow.UpdateTree()
+        recycled.Viewport.JumpTo(0.0, 40.0)
+        recycledWindow.UpdateTree()
+        fresh.Viewport.JumpTo(0.0, 40.0)
+        freshWindow.UpdateTree()
+        guard let actual = recycled.Handles[2].AttachedNode(),
+          let expected = fresh.Handles[2].AttachedNode() else { return false }
+        if actual.MountGeneration != 2uL || expected.MountGeneration != 1uL
+          || !sameLayout(actual, expected) { return false }
+        if offset == 2 && expected.Children[0].Rect.W <= initialTextWidth { return false }
+      } finally {
+        recycledWindow.Close()
+        freshWindow.Close()
+      }
     }
+    return true
   }
 
   private func sameLayout(actual Node, expected Node) bool {
@@ -228,6 +234,7 @@ internal class RecyclingViewportCell : Cell {
   internal var Editing bool
   internal var DifferentShape bool
   internal var DetailedText bool
+  internal var DataOffset int32
   internal var ThrowIndex int32 = -1
   internal var Clicked int32 = -1
 
@@ -250,7 +257,7 @@ internal class RecyclingRowsSource(owner RecyclingViewportCell) : VirtualState, 
 
   public override func Realize(viewport VirtualViewport, output VirtualOutput) {
     pendingIndex = Math.Clamp(int32(viewport.ScrollOffset.Y / 20.0), 0, 99)
-    let item = RecyclingRowData(pendingIndex, owner.Handles[pendingIndex])
+    let item = RecyclingRowData(pendingIndex + owner.DataOffset, owner.Handles[pendingIndex])
     output.Add(VirtualItem{Key: "row-$pendingIndex", Index: pendingIndex,
       Y: float64(pendingIndex) * 20.0, Width: 100, Height: 20,
       Content: Cell.Mount[RecyclingRowCell]("row-$pendingIndex", (row RecyclingRowCell) -> {
@@ -315,7 +322,7 @@ internal class RecyclingInnerCell : Cell, IDisposable {
     if host.DifferentShape && item.Index == 2 {
       return Text{Key: "body-${item.Index}", Handle: item.Handle, Content: "changed", Width: 100, Height: 20}
     }
-    let detailed = host.DetailedText && item.Index == 2
+    let detailed = host.DetailedText && item.Index >= 2
     return Container(){.Key: "body-${item.Index}", .Handle: item.Handle, .Width: detailed ? 80 : 100, .Height: 20,
       .FontSize: detailed ? 18 : 14, .FontWeight: detailed ? 600 : 400,
       .Language: detailed ? "ar" : "en", .Direction: detailed ? Direction.RightToLeft : Direction.LeftToRight,
@@ -323,8 +330,9 @@ internal class RecyclingInnerCell : Cell, IDisposable {
       .OnClick: () -> { host.Clicked = item.Index },
       host.DetailedText && item.Index == 0
         ? Text{Key: "label-0", Content: "0:0:0", Left: 7, Top: 9, Margin: 3, Padding: 2}
-        : Text{Key: "label-${item.Index}", TextWrap: TextWrap.NoWrap,
-          Content: detailed ? "مرحبا بالنص المختلف" : "${item.Index}:${outer.Local}:$Local"},
+        : Text{Key: "label-${item.Index}", TextWrap: detailed ? TextWrap.Wrap : TextWrap.NoWrap,
+          AlignSelf: detailed ? AlignSelf.FlexStart : AlignSelf.Auto,
+          Content: detailed ? item.Index == 2 ? "مرحبا" : "مرحبا بالنص المختلف الأطول الذي يمتد على أسطر متعددة" : "${item.Index}:${outer.Local}:$Local"},
     }
   }
 }
