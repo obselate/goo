@@ -41,6 +41,20 @@ internal class AllocationCapture : EventListener {
 
     protected override func OnEventWritten(eventData EventWrittenEventArgs) {
         if recorder == nil || Stopwatch.GetTimestamp() > deadline { return }
+        if eventData.EventName == "GCStart_V2" {
+            guard let owner = recorder, let values = eventData.Payload, let fields = eventData.PayloadNames else { return }
+            var generation uint64
+            var reason uint64
+            for i in 0 ... fields.Count {
+                if fields[i] == "Depth" { generation = Convert.ToUInt64(values[i]) }
+                if fields[i] == "Reason" { reason = Convert.ToUInt64(values[i]) }
+            }
+            owner.Publish(FrameTraceRecord{
+                Kind: FrameTraceKind.Counter, Ticks: Stopwatch.GetTimestamp() - owner.Origin,
+                Name: "gc.start", Source: "GCStart_V2", Unit: "generation,reason",
+                Value0: generation, Value1: reason, Validity: "runtime-event",
+            })
+        }
         if eventData.EventName != "GCAllocationTick_V4" { return }
         guard let payload = eventData.Payload else { return }
         guard let names = eventData.PayloadNames else { return }

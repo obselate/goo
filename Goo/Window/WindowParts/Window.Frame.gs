@@ -440,6 +440,7 @@ public partial class Window {
       }
     }
     if flushForeground() { changed = true }
+    HistoryPreparationProfile.Flush()
     return changed
   }
   private func flushForeground() bool {

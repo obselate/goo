@@ -191,6 +191,7 @@ internal class Node {
   }
 
   internal func MarkSceneDirty(content bool = true) {
+    using let profile = HistoryPreparationProfile(6)
     var current Node? = this
     var markContent = content
     while let node = current {

@@ -74,6 +74,9 @@ internal partial class FrameRecorder {
         Counter("managed.heap.last_gc", "GC.GetGCMemoryInfo", if known { uint64(info.HeapSizeBytes) } else { nil }, ticks, validity, index)
         Counter("managed.committed.last_gc", "GC.GetGCMemoryInfo", if known { uint64(info.TotalCommittedBytes) } else { nil }, ticks, validity, index)
         Counter("managed.fragmented.last_gc", "GC.GetGCMemoryInfo", if known { uint64(info.FragmentedBytes) } else { nil }, ticks, validity, index)
+        Counter("gc.pinned.last_gc", "GC.GetGCMemoryInfo", uint64(info.PinnedObjectsCount), ticks, validity, index, "count")
+        Counter("gc.promoted.last_gc", "GC.GetGCMemoryInfo", uint64(info.PromotedBytes), ticks, validity, index)
+        Counter("gc.generation.last_gc", "GC.GetGCMemoryInfo", uint64(info.Generation), ticks, validity, index, "generation")
         for generation in 0 ... 3 {
             let name = switch generation {
                 case 0: "gc.gen0.collections"
