@@ -92,7 +92,7 @@ internal partial class VulkanSceneCompiler {
             Parameter0: Vector4(1.0F, 0.0F, 0.0F, 0.0F),
           }),
         Flags: uint32(LayerRecordFlags.SamplesBackdrop),
-        TransformIndex: -1,
+        TransformIndex: frame.RangeActiveTransformIndex,
         OriginX: originX,
         OriginY: originY,
         ExtentWidth: uint32(extentWidth),

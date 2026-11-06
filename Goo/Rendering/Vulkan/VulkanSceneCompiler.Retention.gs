@@ -628,12 +628,19 @@ internal partial class VulkanSceneCompiler {
       let chunk = frame.Chunks[index]
       var bounds = chunk.Bounds
       if chunk.TransformIndex != -1 && !bounds.IsEmpty {
-        let transform = ResolveCompilerFrameTransform(chunk.TransformIndex)
+        let transform = ResolveCompilerFrameTransform(chunk.TransformIndex, true)
         bounds = TransformCompilerBounds(bounds, transform).Inflate(1.0F)
         frame.Chunks[index].TransformKey = TransformKey(transform)
       }
       if !chunk.TextBounds.IsEmpty {
-        bounds = bounds.IsEmpty ? chunk.TextBounds : unionVulkanSceneBounds(bounds, chunk.TextBounds)
+        let scroll = frame.ScrollOffset(chunk.TransformIndex)
+        let textBounds = ConservativeBounds{
+          X: chunk.TextBounds.X - scroll.X,
+          Y: chunk.TextBounds.Y - scroll.Y,
+          Width: chunk.TextBounds.Width,
+          Height: chunk.TextBounds.Height,
+        }
+        bounds = bounds.IsEmpty ? textBounds : unionVulkanSceneBounds(bounds, textBounds)
       }
       frame.Chunks[index].Bounds = bounds
       index = index + 1
@@ -847,7 +854,7 @@ internal partial class VulkanSceneCompiler {
     && left.SegmentId == right.SegmentId
     && left.SegmentVersion == right.SegmentVersion
     && left.GlyphCount == right.GlyphCount
-    && left.ClipChainId == right.ClipChainId
+    && left.TransformIndex == right.TransformIndex
     && Object.ReferenceEquals(left.Segment, right.Segment)
 
   private func ExactCachedImage(

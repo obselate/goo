@@ -186,7 +186,7 @@ internal func AppendVulkanProofGlyph(
       SegmentId: segment.Id,
       SegmentVersion: segment.Version,
       GlyphCount: 1,
-      ClipChainId: 0,
+      TransformIndex: -1,
       Segment: segment,
       FirstInstance: -1,
     })

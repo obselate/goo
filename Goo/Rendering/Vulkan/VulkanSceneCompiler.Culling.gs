@@ -31,27 +31,38 @@ internal partial class VulkanSceneCompiler {
       TY: outer.B * inner.TX + outer.D * inner.TY + outer.TY,
     }
 
-  private func ResolveCompilerFrameTransform(index int32) PrimitiveTransform {
+  private func ResolveCompilerFrameTransform(index int32, includeScroll bool = false) PrimitiveTransform {
     var result = PrimitiveTransform{ A: 1.0F, D: 1.0F }
     var current = index
     var steps int32 = 0
+    var scrollX float32
+    var scrollY float32
     while current >= 0 {
       if current >= frame.TransformCount || steps >= frame.TransformCount {
         throw InvalidOperationException("Vulkan scene transform chain is invalid")
       }
       let value = frame.Transforms[current]
-      let record = PrimitiveTransform{
-        A: value.A,
-        B: value.B,
-        C: value.C,
-        D: value.D,
-        TX: value.TX,
-        TY: value.TY,
+      if value.IsScrollPlacement {
+        if includeScroll {
+          scrollX += value.TX
+          scrollY += value.TY
+        }
+      } else {
+        let record = PrimitiveTransform{
+          A: value.A,
+          B: value.B,
+          C: value.C,
+          D: value.D,
+          TX: value.TX,
+          TY: value.TY,
+        }
+        result = ComposeCompilerTransform(record, result)
       }
-      result = ComposeCompilerTransform(record, result)
       current = value.ParentIndex
       steps = steps + 1
     }
+    result.TX -= scrollX
+    result.TY -= scrollY
     return result
   }
 
@@ -408,7 +419,7 @@ internal partial class VulkanSceneCompiler {
         EffectVersion: effectVersion,
         EffectIndex: effectIndex,
         Flags: flags,
-        TransformIndex: -1,
+        TransformIndex: frame.RangeActiveTransformIndex,
         OriginX: originX,
         OriginY: originY,
         ExtentWidth: extentWidth,

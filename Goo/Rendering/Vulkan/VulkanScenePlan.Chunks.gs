@@ -215,7 +215,7 @@ internal partial class SceneFrame {
     result = Mix(result, value.SegmentId)
     result = Mix(result, value.SegmentVersion)
     result = Mix(result, uint64(value.GlyphCount))
-    return Mix(result, uint64(value.ClipChainId))
+    return HashTransformIndex(result, value.TransformIndex)
   }
 
   private func HashAnalyticPathBand(hash uint64, value AnalyticPathBandRecord) uint64 {
@@ -241,7 +241,11 @@ internal partial class SceneFrame {
     result = HashFloat(result, value.D)
     result = HashFloat(result, value.TX)
     result = HashFloat(result, value.TY)
-    return Mix(result, uint64(value.ParentIndex))
+    result = Mix(result, uint64(value.ParentIndex))
+    result = Mix(result, uint64(value.Kind))
+    result = Mix(result, value.ScrollOwnerId)
+    result = HashFloat(result, value.ScrollPixelX)
+    return HashFloat(result, value.ScrollPixelY)
   }
 
   private func HashRectClip(hash uint64, value RectClipRecord) uint64 {
@@ -416,7 +420,7 @@ internal partial class SceneFrame {
   }
 
   internal func Layer(index int32) LayerRecord {
-    var value = layers[index]
+    var value = PlaceLayer(index, layers[index])
     if value.EffectIndex < 0 &&
       (
       value.Bounds.X < value.OriginX || value.Bounds.Y < value.OriginY

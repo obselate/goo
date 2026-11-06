@@ -21,11 +21,27 @@ float roundedDistance(float2 point, float2 size, float4 cornerRadii)
     return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
 }
 
+float canonicalAa(float2 point, float distance)
+{
+    float2 gradient = float2(ddx(distance), ddy(distance));
+    int2 phase = int2(ditherOffset) & int2(1);
+    float2 pointDx = ddx(point);
+    float2 pointDy = ddy(point);
+    if (any(phase != int2(0)))
+    {
+        int2 parity = int2(floor(gooFragmentPosition.xy + ditherOffset)) & int2(1);
+        float2 direction = 1.0 - 2.0 * float2(parity);
+        gradient.x = (roundedDistance(point + pointDx * direction.x, pc.rect.zw, pc.radii) - distance) * direction.x;
+        gradient.y = (roundedDistance(point + pointDy * direction.y, pc.rect.zw, pc.radii) - distance) * direction.y;
+    }
+    return max(length(gradient), 0.0001);
+}
+
 float roundedCoverage()
 {
     float2 point = uv * pc.rect.zw;
     float distance = roundedDistance(point, pc.rect.zw, pc.radii);
-    float aa = max(length(float2(ddx(distance), ddy(distance))), 0.0001);
+    float aa = canonicalAa(point, distance);
     return 1.0 - smoothstep(-0.5 * aa, 0.5 * aa, distance);
 }
 

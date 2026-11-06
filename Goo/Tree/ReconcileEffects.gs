@@ -13,4 +13,5 @@ internal enum ReconcileEffects {
   Input = 32;
   Rect = 64;
   Accessibility = 128;
+  ScrollPlacement = 256;
 }

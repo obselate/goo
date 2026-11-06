@@ -8,6 +8,7 @@ internal partial class VulkanWindowTarget {
       return
     }
     frame.InvalidateRetainedPrimitiveSpans()
+    frame.ViewportBounds = ScaleBounds(frame.ViewportBounds, scaleX, scaleY)
     for index in 0 ... frame.ChunkCount {
       frame.Chunks[index].Bounds = ScaleBounds(frame.Chunks[index].Bounds, scaleX, scaleY)
     }
@@ -72,8 +73,13 @@ internal partial class VulkanWindowTarget {
       paths[index].TranslateY = paths[index].TranslateY * scaleY
     }
     for index in 0 ... frame.TransformCount {
-      frame.Transforms[index].TX = frame.Transforms[index].TX * scaleX
-      frame.Transforms[index].TY = frame.Transforms[index].TY * scaleY
+      if frame.Transforms[index].IsScrollPlacement {
+        frame.Transforms[index].TX = frame.Transforms[index].ScrollPixelX
+        frame.Transforms[index].TY = frame.Transforms[index].ScrollPixelY
+      } else {
+        frame.Transforms[index].TX = frame.Transforms[index].TX * scaleX
+        frame.Transforms[index].TY = frame.Transforms[index].TY * scaleY
+      }
     }
     for index in 0 ... frame.RectClipCount {
       frame.RectClips[index].Bounds = ScaleBounds(frame.RectClips[index].Bounds, scaleX, scaleY)

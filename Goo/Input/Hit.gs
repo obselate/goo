@@ -41,9 +41,10 @@ internal class DiagnosticHitIndex {
         if ancestor.IsPortal { break }
         current = ancestor.Parent
       }
+      let mapped = TransformGeometry.BoundsToWindow(n)
       bounds[index] = if transformed || (n.Kind == NodeKind.Shape && n.ShapeVectorEffect == VectorEffect.NonScalingStroke) {
         Vector4(Single.NegativeInfinity, Single.NegativeInfinity, Single.PositiveInfinity, Single.PositiveInfinity)
-      } else { Vector4(n.Rect.X, n.Rect.Y, n.Rect.X + n.Rect.W, n.Rect.Y + n.Rect.H) }
+      } else { Vector4(mapped.X, mapped.Y, mapped.X + mapped.W, mapped.Y + mapped.H) }
     } else {
       let middle = start + (end - start) / 2
       let left = build(start, middle, index * 2)
@@ -150,11 +151,17 @@ private func hitTreeTopmost(root Node, x float32, y float32, semantics Accessibi
     if let hit = hitTreeTopmost(child, point.X, point.Y, semantics) { return hit }
   }
   if hitCanTraverseChildrenMapped(root, point.X, point.Y) {
+    let content = TransformGeometry.ContentPoint(root, point.X, point.Y)
+    if !content.Valid { return nil }
     let children = Stacking.Children(root)
     for var i = children.Count; i > 0; i-- {
       let child = children[i - 1]
       if !child.IsPortal {
-        if let hit = hitTreeTopmost(child, point.X, point.Y, semantics) { return hit }
+        let childPoint = root.Kind == NodeKind.Editor && child.EditorSlotBlock
+          ? TransformGeometry.ContentPoint(root, point.X, point.Y, true) : content
+        if childPoint.Valid {
+          if let hit = hitTreeTopmost(child, childPoint.X, childPoint.Y, semantics) { return hit }
+        }
       }
     }
   }
@@ -206,10 +213,18 @@ private func appendHitChain(n Node, x float32, y float32, sink List[NodeMount]) 
     if appendHitChain(child, point.X, point.Y, sink) { return true }
   }
   if hitCanTraverseChildrenMapped(n, point.X, point.Y) {
+    let content = TransformGeometry.ContentPoint(n, point.X, point.Y)
+    if !content.Valid {
+      sink.RemoveAt(start)
+      return false
+    }
     let children = Stacking.Children(n)
     for var i = children.Count; i > 0; i-- {
       let child = children[i - 1]
-      if !child.IsPortal && appendHitChain(child, point.X, point.Y, sink) { return true }
+      if child.IsPortal { continue }
+      let childPoint = n.Kind == NodeKind.Editor && child.EditorSlotBlock
+        ? TransformGeometry.ContentPoint(n, point.X, point.Y, true) : content
+      if childPoint.Valid && appendHitChain(child, childPoint.X, childPoint.Y, sink) { return true }
     }
   }
   if hitsMapped(n, point.X, point.Y) { return true }

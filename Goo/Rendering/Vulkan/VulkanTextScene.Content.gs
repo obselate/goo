@@ -258,12 +258,12 @@ internal unsafe sealed partial class VulkanTextScene {
     }
 
   internal func EmitEditorLineNumbers(frame SceneFrame, node Node, opacity float32,
-    transformIndex int32) bool {
+    transformIndex int32, viewportTransformIndex int32) bool {
     activeNodeSegments = nil
     if !node.EditorShowLineNumbers || node.EditorLineNumberColor.A <= 0.0F || opacity <= 0.0F {
       return true
     }
-    guard let state = node.EditorState else { return false }
+    if node.EditorState == nil { return false }
     let layout = TextEditorLayouts.For(node, BoxGeometry.ContentWidth(node), BoxGeometry.ContentHeight(node))
     let cache = GetNodeSegmentCache(node, true)
     cache.BeginBuild()
@@ -275,12 +275,11 @@ internal unsafe sealed partial class VulkanTextScene {
         Width: MathF.Min(layout.GutterWidth, layout.ViewportWidth), Height: BoxGeometry.ViewportHeight(node),
       }
       if bounds.IsEmpty { return true }
-      frame.AddRectClipBegin(RectClipRecord{ Bounds: bounds, TransformIndex: transformIndex, ParentIndex: -1 })
+      frame.AddRectClipBegin(RectClipRecord{ Bounds: bounds, TransformIndex: viewportTransformIndex, ParentIndex: -1 })
       var result = true
       for line in layout.Lines {
         guard let number = line.LineNumberShape else { continue }
-        let y = bounds.Y + line.Top - float32(state.Controller.ScrollTargetY)
-        if y + line.Height <= bounds.Y || y >= bounds.Y + bounds.Height { continue }
+        let y = bounds.Y + line.Top
         let x = bounds.X + layout.GutterWidth - TextLayouts.fontSize(node) * 0.5F - number.Width
         let baseline = y + (line.Height - (line.Descent - line.Ascent)) * 0.5F - line.Ascent
         if !EmitShapeWithStyle(frame, number, TextLayouts.fontSize(node), x, baseline,
@@ -289,7 +288,7 @@ internal unsafe sealed partial class VulkanTextScene {
           break
         }
       }
-      frame.AddRectClipEnd(RectClipRecord{ Bounds: bounds, TransformIndex: transformIndex, ParentIndex: -1 })
+      frame.AddRectClipEnd(RectClipRecord{ Bounds: bounds, TransformIndex: viewportTransformIndex, ParentIndex: -1 })
       return result
     } finally {
       activeNodeSegments = nil
@@ -300,7 +299,7 @@ internal unsafe sealed partial class VulkanTextScene {
     frame SceneFrame,
     node Node,
     opacity float32,
-    transformIndex int32) bool{
+    transformIndex int32, verticalTransformIndex int32) bool{
       guard let state = node.EditorState else { return false }
       if opacity <= 0.0F { return true }
       let width = BoxGeometry.ContentWidth(node)
@@ -309,8 +308,6 @@ internal unsafe sealed partial class VulkanTextScene {
       let controller = state.Controller.State()
       let contentX = BoxGeometry.ContentLeft(node)
       let contentY = BoxGeometry.ContentTop(node)
-      let scrollX = float32(controller.ScrollTargetX)
-      let scrollY = float32(controller.ScrollTargetY)
       let activeLine = TextEditorLayouts.LineForPosition(layout, controller.Selection.Active)
       let placeholder = if state.Document.Length == 0 && controller.Composition == nil {
         state.Placeholder(node)
@@ -322,8 +319,8 @@ internal unsafe sealed partial class VulkanTextScene {
       var result = true
       for lineIndex in 0 ... layout.Lines.Count {
         let line = layout.Lines[lineIndex]
-        let lineY = contentY + line.Top - scrollY
-        let lineX = contentX + TextEditorLayouts.editorLineOffset(node, line, width) - scrollX
+        let lineY = contentY + line.Top
+        let lineX = contentX + TextEditorLayouts.editorLineOffset(node, line, width)
         if let current = activeLine {
           if controller.Focused && current == line && node.EditorCurrentLineColor.A > 0.0F {
             AddSolid(frame, ConservativeBounds{
@@ -331,7 +328,7 @@ internal unsafe sealed partial class VulkanTextScene {
               Y: lineY,
               Width: layout.TextWidth,
               Height: line.Height,
-            }, node.EditorCurrentLineColor, opacity, transformIndex)
+            }, node.EditorCurrentLineColor, opacity, verticalTransformIndex)
           }
         }
         if controller.Focused && selectionStart != selectionEnd
@@ -406,9 +403,9 @@ internal unsafe sealed partial class VulkanTextScene {
         if let value = placeholder {
           let line = layout.Lines[0]
           let lineX = contentX + layout.GutterWidth + TextLayouts.lineOffset(node, value.Width,
-            value.RightToLeft, layout.ParagraphWidth) - scrollX
+            value.RightToLeft, layout.ParagraphWidth)
           let natural = value.Descent - value.Ascent
-          let baseline = contentY + line.Top - scrollY
+          let baseline = contentY + line.Top
           +(line.Height - natural) * 0.5F - value.Ascent
           let placeholderColor = node.PlaceholderColor ?? node.Color
           let placeholderOpacity = node.PlaceholderColor == nil ? opacity * 0.45F : opacity
@@ -425,9 +422,9 @@ internal unsafe sealed partial class VulkanTextScene {
       }
       if result && controller.Focused && BlinkVisible(node.BlinkT) {
         let caret = if let composition = controller.Composition {
-          TextEditorLayouts.CompositionCaretRect(node, composition)
+          TextEditorLayouts.CompositionCaretRect(node, composition, false)
         } else {
-          TextEditorLayouts.CaretRect(node, controller.Selection.Active)
+          TextEditorLayouts.CaretRect(node, controller.Selection.Active, false)
         }
         AddSolid(frame, ConservativeBounds{
           X: node.Rect.X + caret.X,

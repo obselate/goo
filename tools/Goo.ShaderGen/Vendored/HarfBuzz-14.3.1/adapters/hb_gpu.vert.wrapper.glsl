@@ -66,6 +66,7 @@ void main()
         vec2 offset = (instance.transform[3].xy - instance.runOrigin) * frameConstants.viewport.zw;
         transform[3].xy = origin + offset - frameConstants.origin.xy;
     }
+    transform[3].xy += frameConstants.origin.zw;
     transform[0].xy *= 2.0 / frameConstants.viewport.xy;
     transform[1].xy *= 2.0 / frameConstants.viewport.xy;
     transform[3].xy = 2.0 * transform[3].xy / frameConstants.viewport.xy - 1.0;

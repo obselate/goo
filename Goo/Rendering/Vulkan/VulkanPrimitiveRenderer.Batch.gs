@@ -15,6 +15,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private var pendingTextAtlasId ResourceId
   private var pendingTextFirstInstance uint32
   private var pendingTextInstanceCount uint32
+  private var pendingTextScrollPixelX float32
+  private var pendingTextScrollPixelY float32
   private var recordDrawCallCount uint64
 
   private var pendingPrimitiveDither bool
@@ -33,7 +35,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
 
   private func CanAppendPrimitiveDraw(
     pipeline VkPipeline,
-    clipSetIndex uint32, gradient bool) bool{
+    clipSetIndex uint32, gradient bool, ditherX float32, ditherY float32) bool{
       if pendingPrimitiveRecordCount == 0u {
         return false
       }
@@ -44,8 +46,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if gradient != pendingPrimitiveDither {
         return false
       }
-      if gradient && (pendingPrimitiveDitherX != currentDitherOffsetX
-        || pendingPrimitiveDitherY != currentDitherOffsetY) {
+      if gradient && (pendingPrimitiveDitherX != ditherX
+        || pendingPrimitiveDitherY != ditherY) {
           return false
         }
       return uint64(pendingPrimitiveFirstRecord)
@@ -57,8 +59,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     pipeline VkPipeline,
     layout VkPipelineLayout,
     clipSetIndex uint32,
-    gradient bool) {
-      if CanAppendPrimitiveDraw(pipeline, clipSetIndex, gradient) {
+    gradient bool, ditherX float32, ditherY float32) {
+      if CanAppendPrimitiveDraw(pipeline, clipSetIndex, gradient, ditherX, ditherY) {
         if pendingPrimitiveRecordCount == uint32.MaxValue {
           throw OverflowException("Vulkan primitive batch record count overflow")
         }
@@ -79,8 +81,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         pendingPrimitiveFirstRecord = primitiveRecordOrdinal
         pendingPrimitiveRecordCount = 1u
         pendingPrimitiveDither = gradient
-        pendingPrimitiveDitherX = currentDitherOffsetX
-        pendingPrimitiveDitherY = currentDitherOffsetY
+        pendingPrimitiveDitherX = ditherX
+        pendingPrimitiveDitherY = ditherY
       }
       primitiveRecordOrdinal++
     }
@@ -120,9 +122,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private func CanAppendTextDraw(
     pipeline VkPipeline,
     atlasId ResourceId,
-    firstInstance uint32) bool -> pendingTextInstanceCount > 0u
+    firstInstance uint32, scrollPixelX float32, scrollPixelY float32) bool -> pendingTextInstanceCount > 0u
     && pendingTextPipeline == pipeline
     && SameResourceId(pendingTextAtlasId, atlasId)
+    && pendingTextScrollPixelX == scrollPixelX && pendingTextScrollPixelY == scrollPixelY
     && uint64(pendingTextFirstInstance) + uint64(pendingTextInstanceCount)
   == uint64(firstInstance)
 
@@ -130,11 +133,13 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     pipeline VkPipeline,
     atlasId ResourceId,
     firstInstance uint32,
-    instanceCount uint32) {
+    instanceCount uint32, scrollPixelX float32, scrollPixelY float32) {
       pendingTextPipeline = pipeline
       pendingTextAtlasId = atlasId
       pendingTextFirstInstance = firstInstance
       pendingTextInstanceCount = instanceCount
+      pendingTextScrollPixelX = scrollPixelX
+      pendingTextScrollPixelY = scrollPixelY
     }
 
   private func AppendTextDraw(instanceCount uint32) {

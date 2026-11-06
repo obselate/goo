@@ -174,9 +174,9 @@ internal unsafe sealed partial class VulkanTextScene {
     frame SceneFrame,
     node Node,
     opacity float32,
-    parentTransformIndex int32) bool{
+    parentTransformIndex int32, verticalTransformIndex int32 = -1) bool{
       var complete bool
-      return Emit(frame, node, opacity, parentTransformIndex, out complete)
+      return Emit(frame, node, opacity, parentTransformIndex, out complete, verticalTransformIndex)
     }
 
   internal func Emit(
@@ -184,7 +184,7 @@ internal unsafe sealed partial class VulkanTextScene {
     node Node,
     opacity float32,
     parentTransformIndex int32,
-    out complete bool) bool{
+    out complete bool, verticalTransformIndex int32 = -1) bool{
       complete = true
       if node.Kind == NodeKind.Text || node.Kind == NodeKind.Entry
         || node.Kind == NodeKind.Editor{
@@ -202,7 +202,8 @@ internal unsafe sealed partial class VulkanTextScene {
             return EmitEntry(frame, node, opacity, parentTransformIndex)
           }
           case NodeKind.Editor {
-            return EmitEditorContent(frame, node, opacity, parentTransformIndex)
+            return EmitEditorContent(frame, node, opacity, parentTransformIndex,
+              verticalTransformIndex >= 0 ? verticalTransformIndex : parentTransformIndex)
           }
           case _ { return true }
         }

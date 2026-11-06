@@ -192,7 +192,7 @@
         },
         {
           "path": "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/hb_gpu.vert.wrapper.glsl",
-          "sha256": "3334df8e716c8d2da459f1a2806412b67547cccb408e742dbb80393461c3b874"
+          "sha256": "91b6487213513c606f312e8eafcc1ae9cb501f7d7d0e812a5a26e8a330300557"
         }
       ]
     },
@@ -277,9 +277,9 @@
       "source": "analytic_solid.frag.slang",
       "output": "analytic_solid.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "b68cfeea4514f0d3b02fdff91791681375ef210138f8c50abbf77b5e62e68564",
-      "outputSha256": "9605011b5f6535fdb3c7273fa33fb2919ffc00411860297fb10eae85e7dc731d",
-      "outputBytes": 16812,
+      "sourceSha256": "ce2418a9aa84ce537c0bb7efbc58f7b6b006e76cf7357b2ac1a0e94cc22ac071",
+      "outputSha256": "51eea9ef147895cb1f416d23638311f08e23e2aede356c66156cc8bded20d421",
+      "outputBytes": 25152,
       "capabilities": [
         1
       ]
@@ -290,9 +290,9 @@
       "source": "analytic_shadow.frag.slang",
       "output": "analytic_shadow.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "03f0c770721cbca0124b0c44a47bbeca1987e2d80402b461591e3b26152e2b7c",
-      "outputSha256": "d5e2d049f1f1306d8a08821b6ae1a500b2389c54c5d5443601e8e58ad6cb1b9e",
-      "outputBytes": 39224,
+      "sourceSha256": "4e85047225922ba43be808640f2bf4f6a025a00073396701c4784f3caea00852",
+      "outputSha256": "7cbf76c85b0ba4a3298dcdb5d12d2a1b3c372fcfba41dee5998d2e48930dd65a",
+      "outputBytes": 50392,
       "capabilities": [
         1
       ]
@@ -316,9 +316,9 @@
       "source": "analytic_linear4.frag.slang",
       "output": "analytic_linear4.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "7c73af823c486f620086842b754d265eafbfbfa3efc5f4330cdfc602120c2be5",
-      "outputSha256": "c56ed5e7c31dea64b10f688c5c1df932b13613f0ae8afa09ecce5907e0f1e923",
-      "outputBytes": 19260,
+      "sourceSha256": "1452c91d92956e905a34e4766a3c53ac22237bc8db245a3909d98862a1ded69f",
+      "outputSha256": "5ec4ab46964307aa5adfb5a3d3579ce017f2b9333f15263d79b3f59a21921b86",
+      "outputBytes": 21784,
       "capabilities": [
         1
       ]
@@ -329,9 +329,9 @@
       "source": "analytic_radial4.frag.slang",
       "output": "analytic_radial4.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "eebb41d1784e1a2068ca45c7c23d836425ba325777586f3f7ab73ebb7fbdf5b3",
-      "outputSha256": "547047f3124766b86c0f07082100f520f09cac47ce48f1ba7afddf952d0c8e47",
-      "outputBytes": 19232,
+      "sourceSha256": "887931f9c2457be34f65a5cdf8e5a5ba1988ecebf1a7e98af0c11530629d6cf9",
+      "outputSha256": "4ffd80edc135985a03641d4d3dd5e860295b517b079f7508008b834b088907d6",
+      "outputBytes": 21756,
       "capabilities": [
         1
       ]
@@ -395,9 +395,9 @@
       "output": "hb_gpu.vert.spv",
       "entryPoint": "main",
       "assembly": "hb_gpu_vertex",
-      "sourceSha256": "f8a52805478325ac91661818d01ab36a0afade59e463fd6983542ae191246d9d",
-      "outputSha256": "0cbbf878feee89d65fa71638e2bd5a66d4e88ce4aea6d9f8dec9314656656936",
-      "outputBytes": 5340,
+      "sourceSha256": "b6d50b694d971e09469a571ad00be11c1ca99c9d9deba42b6b5d9e96dda8a56d",
+      "outputSha256": "92d2df29e151eca05fac85ec6f7cca877d675f1ecb87931fe2f742e32f8ae27a",
+      "outputBytes": 5532,
       "capabilities": [
         1
       ]

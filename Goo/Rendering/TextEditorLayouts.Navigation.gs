@@ -130,11 +130,11 @@ internal partial class TextEditorLayouts {
         return TextLayouts.clampMeasuredSize(layout.Width, layout.Height, width, widthMode, height, heightMode)
       }
 
-    internal func CaretRect(n Node, position TextPosition) Rect {
+    internal func CaretRect(n Node, position TextPosition, scrolled bool = true) Rect {
       let width = BoxGeometry.ContentWidth(n)
       let height = BoxGeometry.ContentHeight(n)
       let layout = For(n, width, height)
-      return CaretRect(n, layout, position)
+      return CaretRect(n, layout, position, scrolled)
     }
 
     internal func TryCaretRectForGeometry(n Node, position TextPosition,
@@ -151,11 +151,11 @@ internal partial class TextEditorLayouts {
       }
 
     private func CaretRect(n Node, layout TextEditorVisualLayout,
-      position TextPosition) Rect{
+      position TextPosition, scrolled bool = true) Rect{
         let width = BoxGeometry.ContentWidth(n)
         let contentLeft = BoxGeometry.ContentLeft(n) - n.Rect.X
         let contentTop = BoxGeometry.ContentTop(n) - n.Rect.Y
-        let scroll = if let state = n.EditorState { float32(state.Controller.ScrollTargetY) } else { 0.0F }
+        let scroll = scrolled ? ScrollPoint(n) : TransformPoint{Valid: true}
         let line = LineForPosition(layout, position)
         guard let visual = line else {
           return Rect{ X: contentLeft + layout.GutterWidth, Y: contentTop,
@@ -165,18 +165,17 @@ internal partial class TextEditorLayouts {
         -visual.DisplayStart
         let x = CaretX(visual, index, position.Affinity)
         let aligned = editorLineOffset(n, visual, width)
-        let scrollX = if let state = n.EditorState { float32(state.Controller.ScrollTargetX) } else { 0.0F }
-        return Rect{ X: contentLeft + aligned + x - scrollX, Y: contentTop + visual.Top - scroll,
+        return Rect{ X: contentLeft + aligned + x - scroll.X, Y: contentTop + visual.Top - scroll.Y,
           W: 1.5F, H: visual.Height }
       }
 
-    internal func CompositionCaretRect(n Node, composition TextComposition) Rect {
+    internal func CompositionCaretRect(n Node, composition TextComposition, scrolled bool = true) Rect {
       if let selected = composition.EffectiveSelection {
         let offset = selected.Active.Offset
         let end = composition.Range.Start + composition.Text.Length
         if offset < composition.Range.Start || offset > end {
           let source = offset <= composition.Range.Start ? offset : offset - composition.Text.Length + composition.Range.Length
-          return CaretRect(n, TextPosition{ Offset: source, Affinity: selected.Active.Affinity })
+          return CaretRect(n, TextPosition{ Offset: source, Affinity: selected.Active.Affinity }, scrolled)
         }
       }
       let width = BoxGeometry.ContentWidth(n)
@@ -184,8 +183,7 @@ internal partial class TextEditorLayouts {
       let layout = For(n, width, height)
       let contentLeft = BoxGeometry.ContentLeft(n) - n.Rect.X
       let contentTop = BoxGeometry.ContentTop(n) - n.Rect.Y
-      let scrollY = if let state = n.EditorState { float32(state.Controller.ScrollTargetY) } else { 0.0F }
-      let scrollX = if let state = n.EditorState { float32(state.Controller.ScrollTargetX) } else { 0.0F }
+      let scroll = scrolled ? ScrollPoint(n) : TransformPoint{Valid: true}
       var lineIndex int32 = 0
       while lineIndex < layout.Lines.Count {
         let line = layout.Lines[lineIndex]
@@ -203,11 +201,11 @@ internal partial class TextEditorLayouts {
         }
         let x = CaretX(line, caret, TextAffinity.Downstream)
         let aligned = editorLineOffset(n, line, width)
-        return Rect{ X: contentLeft + aligned + x - scrollX,
-          Y: contentTop + line.Top - scrollY, W: 1.5F, H: line.Height }
+        return Rect{ X: contentLeft + aligned + x - scroll.X,
+          Y: contentTop + line.Top - scroll.Y, W: 1.5F, H: line.Height }
       }
       return CaretRect(n, TextPosition{ Offset: composition.Range.Start,
-        Affinity: TextAffinity.Downstream })
+        Affinity: TextAffinity.Downstream }, scrolled)
     }
 
     private func CompositionCaretDisplayIndex(line TextEditorVisualLine,
@@ -295,10 +293,11 @@ internal partial class TextEditorLayouts {
         let top = BoxGeometry.ContentTop(n) - n.Rect.Y
         let right = BoxGeometry.ContentLeft(n) - n.Rect.X + BoxGeometry.ViewportWidth(n)
         let bottom = top + BoxGeometry.ViewportHeight(n)
-        let logicalLeft = rect.X + float32(current.ScrollTargetX)
-        let logicalTop = rect.Y + float32(current.ScrollTargetY)
-        var x = float32(current.ScrollTargetX)
-        var y = float32(current.ScrollTargetY)
+        let scroll = ScrollPoint(n)
+        let logicalLeft = rect.X + scroll.X
+        let logicalTop = rect.Y + scroll.Y
+        var x = scroll.X
+        var y = scroll.Y
         if logicalLeft < x + left { x = logicalLeft - left }
         else if logicalLeft + rect.W > x + right { x = logicalLeft + rect.W - right }
         if logicalTop < y + top { y = logicalTop - top }
@@ -312,16 +311,17 @@ internal partial class TextEditorLayouts {
       let layout = For(n, width, BoxGeometry.ContentHeight(n))
       let left = TextLeft(n) - n.Rect.X
       let top = BoxGeometry.ContentTop(n) - n.Rect.Y
-      let scrollX = if let state = n.EditorState { float32(state.Controller.ScrollTargetX) } else { 0.0F }
-      let scrollY = if let state = n.EditorState { float32(state.Controller.ScrollTargetY) } else { 0.0F }
       for line in layout.Lines {
         for slot in line.Slots {
           if slot.Key != key { continue }
-          let x = slot.Block ? left : left + editorLineOffset(n, line, width) - layout.GutterWidth + slot.X - scrollX
-          let y = top + line.Top + slot.Y - scrollY
+          let x = slot.Block ? left : left + editorLineOffset(n, line, width) - layout.GutterWidth + slot.X
+          let y = top + line.Top + slot.Y
+          let scroll = ScrollPoint(n, slot.Block)
+          let visibleX = x - scroll.X
+          let visibleY = y - scroll.Y
           let contentHeight = BoxGeometry.ContentHeight(n)
-          if x + slot.Width <= left || x >= left + layout.TextWidth
-            || y + slot.Height <= top || y >= top + contentHeight{ return nil }
+          if visibleX + slot.Width <= left || visibleX >= left + layout.TextWidth
+            || visibleY + slot.Height <= top || visibleY >= top + contentHeight { return nil }
           return Rect{ X: x, Y: y, W: slot.Width, H: slot.Height }
         }
       }
@@ -369,8 +369,9 @@ internal partial class TextEditorLayouts {
         let contentLeft = BoxGeometry.ContentLeft(n) - n.Rect.X
         let contentTop = BoxGeometry.ContentTop(n) - n.Rect.Y
         let state = n.EditorState!!
-        let x = localX - contentLeft + float32(state.Controller.ScrollTargetX)
-        let y = localY - contentTop + float32(state.Controller.ScrollTargetY)
+        let scroll = ScrollPoint(n)
+        let x = localX - contentLeft + scroll.X
+        let y = localY - contentTop + scroll.Y
         var selected TextEditorVisualLine? = nil
         for i in 0 ... layout.Lines.Count {
           let line = layout.Lines[i]

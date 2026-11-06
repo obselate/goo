@@ -280,7 +280,6 @@ internal class Layout {
     YGNodeAPI.YGNodeSetChildrenRetaining(yg, children)
   }
 
-  // Rect-only refresh for scroll changes; Yoga is untouched so it is cheap.
   internal func RefreshRects(root Node) {
     if laidOut && !root.IsPortal {
       readRect(root, 0.0F, 0.0F)
@@ -297,6 +296,26 @@ internal class Layout {
       ScrollbarParts.Arrange(root)
     }
     if portalLaidOut {
+      placePortals(root, overlayRoot, overlayRoot.Rect.W, overlayRoot.Rect.H)
+    }
+  }
+
+  internal func RefreshScrollPlacement(root Node, overlayRoot Node) {
+    if !laidOut || root != lastRoot { return }
+    let scrollers = ScrollNodes(root)
+    for index in 0 ... scrollers.Count {
+      let scroller = scrollers[index]
+      if scroller.Kind == NodeKind.Editor {
+        ScrollState.SyncEditor(scroller)
+      }
+      scroller.PlacedScrollX = scroller.ScrollX
+      scroller.PlacedScrollY = scroller.ScrollY
+      if scroller.Kind == NodeKind.Editor {
+        readEditorSlotRects(scroller, scroller.PaintInputHidden, false)
+      }
+      ScrollbarParts.Arrange(scroller, false)
+    }
+    if portalLaidOut && overlayRoot == portalRoot {
       placePortals(root, overlayRoot, overlayRoot.Rect.W, overlayRoot.Rect.H)
     }
   }
@@ -590,8 +609,6 @@ internal class Layout {
   private func samePortalRect(left Rect, right TransformBounds) bool ->
   left.X == right.X && left.Y == right.Y && left.W == right.W && left.H == right.H
 
-  // Yoga positions are parent-relative; accumulate origin so Rect is absolute.
-  // Scroll containers clamp their offsets and shift their children's origin.
   internal func readRect(n Node, originX float32, originY float32,
     placementX float32 = 0.0F, placementY float32 = 0.0F, hidden bool = false) {
       guard let yg = n.Yoga else {
@@ -618,13 +635,15 @@ internal class Layout {
       } else if n.OverflowX == Overflow.Scroll || n.OverflowY == Overflow.Scroll {
         measureScrollExtent(n, yg)
       }
+      n.PlacedScrollX = n.ScrollX
+      n.PlacedScrollY = n.ScrollY
       if editor {
         readEditorSlotRects(n, hiddenSubtree)
         return
       }
       if let state = custom {
-        let x = visual.X + CustomLayouts.Inset(yg, YGEdge.Left) - n.ScrollX
-        let y = visual.Y + CustomLayouts.Inset(yg, YGEdge.Top) - n.ScrollY
+        let x = visual.X + CustomLayouts.Inset(yg, YGEdge.Left)
+        let y = visual.Y + CustomLayouts.Inset(yg, YGEdge.Top)
         for child in state.Children {
           readRect(child.Node, x, y, float32(child.Bounds.X), float32(child.Bounds.Y), hiddenSubtree)
         }
@@ -632,27 +651,41 @@ internal class Layout {
       }
       for i in 0 ... n.Children.Count {
         if !n.Children[i].IsPortal {
-          readRect(n.Children[i], visual.X - n.ScrollX, visual.Y - n.ScrollY, hidden: hiddenSubtree)
+          readRect(n.Children[i], visual.X, visual.Y, hidden: hiddenSubtree)
         }
       }
     }
 
-  private func readEditorSlotRects(n Node, hidden bool) {
+  private func readEditorSlotRects(n Node, hidden bool, calculate bool = true) {
     let layout = TextEditorLayouts.For(n, BoxGeometry.ContentWidth(n), BoxGeometry.ContentHeight(n))
     let contentWidth = layout.ParagraphWidth
     for i in 0 ... n.Children.Count {
       let child = n.Children[i]
       if child.IsPortal { continue }
       guard let yoga = child.Yoga else { continue }
-      let availableWidth = child.EditorSlotBlock ? contentWidth : Single.NaN
-      YGNodeAPI.YGNodeCalculateLayout(yoga, availableWidth, Single.NaN,
-        yogaDirection(n.Direction))
+      if calculate || YGNodeAPI.YGNodeIsDirty(yoga) {
+        let availableWidth = child.EditorSlotBlock ? contentWidth : Single.NaN
+        YGNodeAPI.YGNodeCalculateLayout(yoga, availableWidth, Single.NaN,
+          yogaDirection(n.Direction))
+      }
       guard let origin = TextEditorLayouts.SlotOrigin(n, child.EditorSlotKey) else {
-        child.Visibility = Visibility.Hidden
+        if child.Visibility != Visibility.Hidden {
+          child.Visibility = Visibility.Hidden
+          child.MarkSceneDirty()
+        }
         continue
       }
+      let wasVisible = child.Visibility == Visibility.Visible
       child.Visibility = Visibility.Visible
-      readRect(child, n.Rect.X + origin.X, n.Rect.Y + origin.Y, hidden: hidden)
+      let x = n.Rect.X + origin.X
+      let y = n.Rect.Y + origin.Y
+      if calculate || !wasVisible || child.Rect.X != x + YGNodeLayoutAPI.YGNodeLayoutGetLeft(yoga)
+        || child.Rect.Y != y + YGNodeLayoutAPI.YGNodeLayoutGetTop(yoga)
+        || child.Rect.W != YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga)
+        || child.Rect.H != YGNodeLayoutAPI.YGNodeLayoutGetHeight(yoga) {
+          readRect(child, x, y, hidden: hidden)
+          child.MarkSceneDirty()
+        }
     }
   }
 

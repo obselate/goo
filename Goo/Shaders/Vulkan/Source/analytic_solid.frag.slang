@@ -29,6 +29,28 @@ float roundedDistance(float2 point, float2 size, float4 cornerRadii)
     return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
 }
 
+float coverageDistance(float2 point, float2 size, float4 radii, bool normalized)
+{
+    return normalized ? gooRoundedRectDistance(point, size, radii)
+        : roundedDistance(point, size, radii);
+}
+
+float canonicalAa(float2 point, float2 size, float4 radii, bool normalized, float distance)
+{
+    float2 gradient = float2(ddx(distance), ddy(distance));
+    int2 phase = int2(pc.stopPositions.xy) & int2(1);
+    float2 pointDx = ddx(point);
+    float2 pointDy = ddy(point);
+    if (any(phase != int2(0)))
+    {
+        int2 parity = int2(floor(gooFragmentPosition.xy + pc.stopPositions.xy)) & int2(1);
+        float2 direction = 1.0 - 2.0 * float2(parity);
+        gradient.x = (coverageDistance(point + pointDx * direction.x, size, radii, normalized) - distance) * direction.x;
+        gradient.y = (coverageDistance(point + pointDy * direction.y, size, radii, normalized) - distance) * direction.y;
+    }
+    return max(length(gradient), 0.0001);
+}
+
 void shade()
 {
     if (pc.params.z == 1.0)
@@ -37,10 +59,10 @@ void shade()
         return;
     }
     float2 point = uv * pc.rect.zw;
-    float distance = pc.params.x > 0.0 && pc.params.y > 0.0
-        ? gooRoundedRectDistance(point, pc.rect.zw, gooNormalizeRadii(pc.rect.zw, pc.radii))
-        : roundedDistance(point, pc.rect.zw, pc.radii);
-    float aa = max(length(float2(ddx(distance), ddy(distance))), 0.0001);
+    bool normalized = pc.params.x > 0.0 && pc.params.y > 0.0;
+    float4 radii = normalized ? gooNormalizeRadii(pc.rect.zw, pc.radii) : pc.radii;
+    float distance = coverageDistance(point, pc.rect.zw, radii, normalized);
+    float aa = canonicalAa(point, pc.rect.zw, radii, normalized, distance);
     float coverage = 1.0 - smoothstep(-0.5 * aa, 0.5 * aa, distance);
     float backgroundCoverage = coverage;
     if (pc.params.x > 0.0 && pc.params.y > 0.0)
@@ -55,7 +77,7 @@ void shade()
                 max(outerRadii - float4(max(inset.x, inset.y)), float4(0.0)));
             float innerDistance = gooRoundedRectDistance(
                 point - inset, innerSize, innerRadii);
-            float innerAa = max(length(float2(ddx(innerDistance), ddy(innerDistance))), 0.0001);
+            float innerAa = canonicalAa(point - inset, innerSize, innerRadii, true, innerDistance);
             innerCoverage = smoothstep(-0.5 * innerAa, 0.5 * innerAa, innerDistance);
         }
         // Match the border shader: the border covers the outer shape minus the inner one, and the

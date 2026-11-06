@@ -49,6 +49,9 @@ internal sealed class VulkanRetainedSceneData {
     internal var Layers[]LayerRecord = Array.Empty[LayerRecord]()
     internal var LayerCoverage[]VulkanSceneLayerCoverage = Array.Empty[VulkanSceneLayerCoverage]()
     internal var Text[]CachedTextSegmentRefRecord = Array.Empty[CachedTextSegmentRefRecord]()
+    internal var Effects[]ShaderEffectRecord = Array.Empty[ShaderEffectRecord]()
+    internal var EffectPrograms[]WeakReference[ShaderEffect]? = Array.Empty[WeakReference[ShaderEffect]?]()
+    internal var CapturedEffects[]ShaderEffectSnapshot = Array.Empty[ShaderEffectSnapshot]()
     internal var Segments[]WeakReference[VulkanRetainedTextSegment]? = Array.Empty[
         WeakReference[VulkanRetainedTextSegment]?
     ]()
@@ -80,6 +83,10 @@ internal sealed class VulkanRetainedSceneData {
     + ArrayBytes(Layers, required.Layers)
     + ArrayBytes(LayerCoverage, required.LayerCoverage)
     + ArrayBytes(Text, required.Text)
+    + ArrayBytes(Effects, required.Effects)
+    + ArrayBytes(CapturedEffects, required.Effects)
+    + ArrayBytes(EffectPrograms, required.Effects)
+    + 64L * int64(Math.Max(EffectPrograms.Length, required.Effects))
     + ArrayBytes(Segments, required.Text) + 64L * int64(Math.Max(Segments.Length, required.Text))
     +
         ArrayBytes(PathDashes, required.AnalyticPathBands) +
@@ -133,6 +140,20 @@ internal sealed class VulkanRetainedSceneData {
         Segments = EnsureValues(Segments, end.Text)
         PathDashes = EnsureValues(PathDashes, end.AnalyticPathBands)
         MaskDashes = EnsureValues(MaskDashes, end.ClipMasks)
+        Effects = CopyValues(Effects, frame.ShaderEffects, end.Effects)
+        EffectPrograms = EnsureValues(EffectPrograms, end.Effects)
+        CapturedEffects = EnsureValues(CapturedEffects, end.Effects)
+        for index in 0 ... end.Effects {
+            guard let program = Effects[index].Program else {
+                throw InvalidOperationException("Retained scene effect is unavailable")
+            }
+            if let weak = EffectPrograms[index] {
+                weak.SetTarget(program)
+            } else {
+                EffectPrograms[index] = WeakReference[ShaderEffect](program)
+            }
+            Effects[index].Program = nil
+        }
         for index in 0 ... end.Text {
             guard let segment = Text[index].Segment else {
                 throw InvalidOperationException("Retained scene text segment is unavailable")
@@ -200,6 +221,9 @@ internal sealed class VulkanRetainedSceneData {
         Layers = Array.Empty[LayerRecord]()
         LayerCoverage = Array.Empty[VulkanSceneLayerCoverage]()
         Text = Array.Empty[CachedTextSegmentRefRecord]()
+        Effects = Array.Empty[ShaderEffectRecord]()
+        EffectPrograms = Array.Empty[WeakReference[ShaderEffect]?]()
+        CapturedEffects = Array.Empty[ShaderEffectSnapshot]()
         Segments = Array.Empty[WeakReference[VulkanRetainedTextSegment]?]()
         PathDashes = Array.Empty[WeakReference[DashPattern]?]()
         MaskDashes = Array.Empty[WeakReference[DashPattern]?]()

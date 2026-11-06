@@ -1,5 +1,6 @@
 package Goo
 
+import Facebook.Yoga
 import System
 
 internal data struct TransformPoint {
@@ -22,6 +23,13 @@ internal data struct TransformBounds {
   internal var Y float32
   internal var W float32
   internal var H float32
+}
+
+internal data struct ScrollTranslation {
+  internal var X float32
+  internal var Y float32
+  internal var PixelX float32
+  internal var PixelY float32
 }
 
 internal class TransformGeometry {
@@ -75,7 +83,60 @@ internal class TransformGeometry {
     internal func WindowMatrix(n Node) Affine2D {
       let local = Matrix(n)
       if n.IsPortal { return local }
-      return if let parent = n.Parent { compose(WindowMatrix(parent), local) } else { local }
+      guard let parent = n.Parent else { return local }
+      let outer = WindowMatrix(parent)
+      var result = compose(outer, local)
+      if (parent.PlacedScrollX != 0.0F || parent.PlacedScrollY != 0.0F)
+        && !ScrollbarParts.ActiveChildren(parent).Contains(n) {
+        let offset = ScrollOffset(parent, outer,
+          parent.Kind == NodeKind.Editor && n.EditorSlotBlock ? 0.0F : parent.PlacedScrollX,
+          parent.PlacedScrollY)
+        result.TX -= offset.X
+        result.TY -= offset.Y
+      }
+      return result
+    }
+
+    internal func PixelDensity(n Node) float32 {
+      if let yoga = n.Yoga {
+        if let config = YGNodeAPI.YGNodeGetConfig(yoga) {
+          let scale = YGConfigAPI.YGConfigGetPointScaleFactor(config)
+          if scale > 0.0F && finite(scale) { return scale }
+        }
+      }
+      return 1.0F
+    }
+
+    internal func ScrollOffset(n Node, window Affine2D) ScrollTranslation ->
+      ScrollOffset(n, window, n.PlacedScrollX, n.PlacedScrollY)
+
+    internal func ScrollOffset(n Node, window Affine2D, x float32, y float32) ScrollTranslation {
+      if x == 0.0F && y == 0.0F { return ScrollTranslation{} }
+      let scale = PixelDensity(n)
+      let pixelX = MathF.Round((window.A * x + window.B * y) * scale)
+      let pixelY = MathF.Round((window.C * x + window.D * y) * scale)
+      return ScrollTranslation{X: pixelX / scale, Y: pixelY / scale, PixelX: pixelX, PixelY: pixelY}
+    }
+
+    internal func ContentPoint(n Node, x float32, y float32, verticalOnly bool = false) TransformPoint ->
+      ContentPoint(n, x, y, verticalOnly ? 0.0F : n.PlacedScrollX, n.PlacedScrollY)
+
+    internal func ContentPoint(n Node, x float32, y float32,
+      scrollX float32, scrollY float32) TransformPoint {
+      if scrollX == 0.0F && scrollY == 0.0F {
+        return TransformPoint{ Valid: true, X: x, Y: y }
+      }
+      let window = WindowMatrix(n)
+      let offset = ScrollOffset(n, window, scrollX, scrollY)
+      let determinant = window.A * window.D - window.B * window.C
+      if !finite(determinant) || MathF.Abs(determinant) <= 0.000000000001F {
+        return TransformPoint{}
+      }
+      return TransformPoint{
+        Valid: true,
+        X: x + (window.D * offset.X - window.B * offset.Y) / determinant,
+        Y: y + (-window.C * offset.X + window.A * offset.Y) / determinant,
+      }
     }
 
     private func authoredMatrix(n Node, value TransformValue) Affine2D {
@@ -110,7 +171,10 @@ internal class TransformGeometry {
       if !n.HasVisualTransform {
         return TransformPoint{ Valid: true, X: x, Y: y }
       }
-      let m = Matrix(n)
+      return unmap(Matrix(n), x, y)
+    }
+
+    private func unmap(m Affine2D, x float32, y float32) TransformPoint {
       let determinant = m.A * m.D - m.B * m.C
       if !finite(determinant) || MathF.Abs(determinant) <= 0.000000000001F {
         return TransformPoint{}
@@ -127,35 +191,70 @@ internal class TransformGeometry {
       if !n.HasVisualTransform {
         return TransformPoint{ Valid: true, X: x, Y: y }
       }
-      let m = Matrix(n)
+      return MapAffinePoint(Matrix(n), x, y)
+    }
+
+    private func MapAffinePoint(m Affine2D, x float32, y float32) TransformPoint {
       let mappedX = m.A * x + m.B * y + m.TX
       let mappedY = m.C * x + m.D * y + m.TY
       if !finite(mappedX) || !finite(mappedY) { return TransformPoint{} }
       return TransformPoint{ Valid: true, X: mappedX, Y: mappedY }
     }
 
-    internal func WindowToNode(n Node, x float32, y float32) TransformPoint {
+    private func InheritedScrollOffset(n Node) ScrollTranslation {
+      var result ScrollTranslation
+      var current = n
+      while let parent = current.Parent {
+        if current.IsPortal { break }
+        if (parent.PlacedScrollX != 0.0F || parent.PlacedScrollY != 0.0F)
+          && !ScrollbarParts.ActiveChildren(parent).Contains(current) {
+            let offset = ScrollOffset(parent, WindowMatrix(parent),
+              parent.Kind == NodeKind.Editor && current.EditorSlotBlock ? 0.0F : parent.PlacedScrollX,
+              parent.PlacedScrollY)
+            result.X += offset.X
+            result.Y += offset.Y
+          }
+        current = parent
+      }
+      return result
+    }
+
+    private func unmapWindow(n Node, x float32, y float32) TransformPoint {
       if n.IsPortal { return Unmap(n, x, y) }
-      let point = if let parent = n.Parent { WindowToNode(parent, x, y) }
-      else { TransformPoint{ Valid: true, X: x, Y: y } }
-      return if !point.Valid { point } else { Unmap(n, point.X, point.Y) }
+      let point = if let parent = n.Parent { unmapWindow(parent, x, y) }
+      else { TransformPoint{Valid: true, X: x, Y: y} }
+      return !point.Valid ? point : Unmap(n, point.X, point.Y)
+    }
+
+    private func mapWindow(n Node, x float32, y float32) TransformPoint {
+      let point = Map(n, x, y)
+      if !point.Valid || n.IsPortal { return point }
+      return if let parent = n.Parent { mapWindow(parent, point.X, point.Y) } else { point }
+    }
+
+    internal func WindowToNode(n Node, x float32, y float32) TransformPoint {
+      let offset = InheritedScrollOffset(n)
+      return offset.X == 0.0F && offset.Y == 0.0F
+        ? unmapWindow(n, x, y) : unmapWindow(n, x + offset.X, y + offset.Y)
     }
 
     internal func NodeToWindow(n Node, x float32, y float32) TransformPoint {
-      let point = Map(n, x, y)
+      var point = mapWindow(n, x, y)
       if !point.Valid { return point }
-      if n.IsPortal { return point }
-      return if let parent = n.Parent { NodeToWindow(parent, point.X, point.Y) } else { point }
+      let offset = InheritedScrollOffset(n)
+      if offset.X != 0.0F { point.X -= offset.X }
+      if offset.Y != 0.0F { point.Y -= offset.Y }
+      return point
     }
 
     internal func BoundsToWindow(n Node) TransformBounds -> BoundsToWindow(n, n.Rect.X, n.Rect.Y, n.Rect.W, n.Rect.H)
 
     internal func BoundsToWindow(n Node, x float32, y float32, width float32,
       height float32) TransformBounds{
-        let p0 = NodeToWindow(n, x, y)
-        let p1 = NodeToWindow(n, x + width, y)
-        let p2 = NodeToWindow(n, x, y + height)
-        let p3 = NodeToWindow(n, x + width, y + height)
+        let p0 = mapWindow(n, x, y)
+        let p1 = mapWindow(n, x + width, y)
+        let p2 = mapWindow(n, x, y + height)
+        let p3 = mapWindow(n, x + width, y + height)
         if !p0.Valid || !p1.Valid || !p2.Valid || !p3.Valid {
           return TransformBounds{ X: x, Y: y, W: width, H: height }
         }
@@ -163,8 +262,42 @@ internal class TransformGeometry {
         let top = min4(p0.Y, p1.Y, p2.Y, p3.Y)
         let right = max4(p0.X, p1.X, p2.X, p3.X)
         let bottom = max4(p0.Y, p1.Y, p2.Y, p3.Y)
-        return TransformBounds{ X: left, Y: top, W: right - left, H: bottom - top }
+        var result = TransformBounds{ X: left, Y: top, W: right - left, H: bottom - top }
+        let offset = InheritedScrollOffset(n)
+        if offset.X != 0.0F { result.X -= offset.X }
+        if offset.Y != 0.0F { result.Y -= offset.Y }
+        return result
       }
+
+    internal func BoundsToNode(n Node, target Node, windowX float32 = 0.0F,
+      windowY float32 = 0.0F) TransformBounds {
+      if n.Parent == target && !n.IsPortal && !n.HasVisualTransform
+        && windowX == 0.0F && windowY == 0.0F {
+          let offset = ScrollbarParts.ActiveChildren(target).Contains(n)
+            ? TransformPoint{Valid: true}
+            : ContentPoint(target, 0.0F, 0.0F, target.Kind == NodeKind.Editor && n.EditorSlotBlock)
+          return TransformBounds{X: n.Rect.X - offset.X, Y: n.Rect.Y - offset.Y,
+            W: n.Rect.W, H: n.Rect.H}
+        }
+      var p0 = NodeToWindow(n, n.Rect.X, n.Rect.Y)
+      var p1 = NodeToWindow(n, n.Rect.X + n.Rect.W, n.Rect.Y)
+      var p2 = NodeToWindow(n, n.Rect.X, n.Rect.Y + n.Rect.H)
+      var p3 = NodeToWindow(n, n.Rect.X + n.Rect.W, n.Rect.Y + n.Rect.H)
+      if p0.Valid && p1.Valid && p2.Valid && p3.Valid {
+        p0 = WindowToNode(target, p0.X + windowX, p0.Y + windowY)
+        p1 = WindowToNode(target, p1.X + windowX, p1.Y + windowY)
+        p2 = WindowToNode(target, p2.X + windowX, p2.Y + windowY)
+        p3 = WindowToNode(target, p3.X + windowX, p3.Y + windowY)
+        if p0.Valid && p1.Valid && p2.Valid && p3.Valid {
+          let left = min4(p0.X, p1.X, p2.X, p3.X)
+          let top = min4(p0.Y, p1.Y, p2.Y, p3.Y)
+          let right = max4(p0.X, p1.X, p2.X, p3.X)
+          let bottom = max4(p0.Y, p1.Y, p2.Y, p3.Y)
+          return TransformBounds{X: left, Y: top, W: right - left, H: bottom - top}
+        }
+      }
+      return TransformBounds{X: n.Rect.X, Y: n.Rect.Y, W: n.Rect.W, H: n.Rect.H}
+    }
 
     private func finite(value float32) bool -> !Single.IsNaN(value) && !Single.IsInfinity(value)
 

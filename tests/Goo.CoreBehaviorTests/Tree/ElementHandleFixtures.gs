@@ -66,16 +66,16 @@ internal class ElementHandleFixtures {
         guard let owner = window.Tree else { return false }
         let row = owner.Children[0]
         let leaf = row.Children[0].Children[0]
-        let rowTop = row.Rect.Y + owner.ScrollY
-        let leafTop = leaf.Rect.Y
+        let rowTop = row.Rect.Y
+        let leafTop = TransformGeometry.BoundsToWindow(leaf).Y
         let localTop = leaf.Rect.Y - row.Rect.Y
         cell.LeafHeight = 17
         cell.Rebuild()
         window.UpdateTree()
         let expected = offset == 0.0 ? 0.0 : offset + 3.0
         if owner.ScrollY != float32(expected) || owner.Children[0] != row
-          || row.Rect.Y + owner.ScrollY != rowTop || leaf.Rect.Y - row.Rect.Y != localTop + 3.0F
-          || leaf.Rect.Y != leafTop + (offset == 0.0 ? 3.0F : 0.0F) { return false }
+          || row.Rect.Y != rowTop || leaf.Rect.Y - row.Rect.Y != localTop + 3.0F
+          || TransformGeometry.BoundsToWindow(leaf).Y != leafTop + (offset == 0.0 ? 3.0F : 0.0F) { return false }
       } finally { window.Close() }
     }
     return true
@@ -359,8 +359,11 @@ internal class ElementHandleFixtures {
       ScrollState.To(horizontal, horizontal.ScrollTargetX, 0.0F, true)
       ScrollState.To(root, 0.0F, root.ScrollTargetY, true)
       layout.RefreshRects(root)
-      if entry.Rect.X < horizontal.Rect.X || entry.Rect.X + entry.Rect.W > horizontal.Rect.X + 387.0F
-        || entry.Rect.Y < body.Rect.Y || entry.Rect.Y + entry.Rect.H > 100.0F
+      let entryBounds = TransformGeometry.BoundsToWindow(entry)
+      let horizontalBounds = TransformGeometry.BoundsToWindow(horizontal)
+      let bodyBounds = TransformGeometry.BoundsToWindow(body)
+      if entryBounds.X < horizontalBounds.X || entryBounds.X + entryBounds.W > horizontalBounds.X + 387.0F
+        || entryBounds.Y < bodyBounds.Y || entryBounds.Y + entryBounds.H > 100.0F
         || !target.ScrollIntoView() || horizontal.ScrollTargetX != expectedX {
           return false
         }

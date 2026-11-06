@@ -154,7 +154,7 @@ public partial class Window {
     Virtualization.State(n)?.CancelScroll()
     ScrollState.To(n, float32(x), float32(y), true)
     pendingReconcileEffects = combineEffects(pendingReconcileEffects,
-      ReconcileEffects.Paint | ReconcileEffects.Input | ReconcileEffects.Rect
+      ReconcileEffects.Paint | ReconcileEffects.ScrollPlacement
       | ReconcileEffects.Accessibility)
     accessibility?.MarkDirty()
     markDirtyAndRender()

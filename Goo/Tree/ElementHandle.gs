@@ -56,7 +56,8 @@ public class ElementHandle {
   public prop ScrollOffset Point{
     get {
       guard let n = mountedNode(true) else { return Point{} }
-      return Point{ X: float64(n.ScrollX), Y: float64(n.ScrollY) }
+      let offset = TransformGeometry.ContentPoint(n, 0.0F, 0.0F, n.ScrollX, n.ScrollY)
+      return Point{ X: float64(offset.X), Y: float64(offset.Y) }
     }
   }
   /// Gets the maximum legal logical scroll offset.
@@ -770,11 +771,12 @@ internal class MetricSubscriptions {
       if node.Retired || !ElementHandles.Owns(node, handle) {
         return ElementMetrics{}
       }
+      let offset = TransformGeometry.ContentPoint(node, 0.0F, 0.0F)
       return ElementMetrics{
         IsMounted: true,
         BorderBox: ElementHandles.BorderBox(node),
         ContentBox: ElementHandles.ContentBox(node),
-        ScrollOffset: Point{ X: float64(node.ScrollX), Y: float64(node.ScrollY) },
+        ScrollOffset: Point{ X: float64(offset.X), Y: float64(offset.Y) },
         ScrollRange: scrollRange(node),
       }
     }
@@ -1118,8 +1120,9 @@ internal class TextGeometryQueries {
         let end = textRange.Start + textRange.Length
         let contentX = BoxGeometry.ContentLeft(n) - n.Rect.X
         let contentY = BoxGeometry.ContentTop(n) - n.Rect.Y
-        let scrollX = float32(state.Controller.ScrollTargetX)
-        let scrollY = float32(state.Controller.ScrollTargetY)
+        let scroll = TextEditorLayouts.ScrollPoint(n)
+        let scrollX = scroll.X
+        let scrollY = scroll.Y
         let values = stackalloc[64]float32
         for i in 0 ... layout.Lines.Count {
           let line = layout.Lines[i]
@@ -1251,16 +1254,12 @@ internal class TextGeometryQueries {
 
     private func textScrollX(n Node) float32 {
       if n.Kind == NodeKind.Entry { return n.EditScrollX }
-      if n.Kind == NodeKind.Editor {
-        if let state = n.EditorState { return float32(state.Controller.ScrollTargetX) }
-      }
+      if n.Kind == NodeKind.Editor { return TextEditorLayouts.ScrollPoint(n).X }
       return 0.0F
     }
 
     private func textScrollY(n Node) float32 {
-      if n.Kind == NodeKind.Editor {
-        if let state = n.EditorState { return float32(state.Controller.ScrollTargetY) }
-      }
+      if n.Kind == NodeKind.Editor { return TextEditorLayouts.ScrollPoint(n).Y }
       return 0.0F
     }
 

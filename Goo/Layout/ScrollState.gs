@@ -40,12 +40,16 @@ internal class ScrollActivityStates {
 internal partial class ScrollState {
   shared {
     internal func IntoView(n Node) {
-      var subject = n.Rect
+      var shiftX float32
+      var shiftY float32
       var parent = n.IsPortal ? nil : n.Parent
       while let ancestor = parent {
         if ancestor.Kind == NodeKind.Editor || ancestor.OverflowX == Overflow.Scroll
           || ancestor.OverflowY == Overflow.Scroll {
           SyncEditor(ancestor)
+          let subject = TransformGeometry.BoundsToNode(n, ancestor, shiftX, shiftY)
+          let window = TransformGeometry.WindowMatrix(ancestor)
+          let previous = TransformGeometry.ScrollOffset(ancestor, window)
           let scrollX = ancestor.ScrollX
           let scrollY = ancestor.ScrollY
           let left = BoxGeometry.ContentLeft(ancestor)
@@ -63,8 +67,10 @@ internal partial class ScrollState {
             else if subject.Y + subject.H > bottom { y += subject.Y + subject.H - bottom }
           }
           To(ancestor, x, y)
-          subject.X += scrollX - ancestor.ScrollTargetX
-          subject.Y += scrollY - ancestor.ScrollTargetY
+          let target = TransformGeometry.ScrollOffset(ancestor, window,
+            ancestor.ScrollTargetX, ancestor.ScrollTargetY)
+          shiftX += previous.X - target.X
+          shiftY += previous.Y - target.Y
         }
         parent = ancestor.IsPortal ? nil : ancestor.Parent
       }
@@ -125,7 +131,7 @@ internal partial class ScrollState {
           changed = true
           state.HideDeadlineTicks = 0.0
         }
-      if changed { n.BumpScenePaintVersion() }
+      if changed { n.MarkSceneChromeDirty() }
       return changed
     }
 
@@ -225,7 +231,7 @@ internal partial class ScrollState {
       if state.Visibility == ScrollbarVisibility.Hidden || !overflowing(n, vertical) {
         return
       }
-      if state.Alpha != 1.0F { n.BumpScenePaintVersion() }
+      if state.Alpha != 1.0F { n.MarkSceneChromeDirty() }
       state.Alpha = 1.0F
       state.Idle = 0.0F
       scheduleHide(state, current)
@@ -248,7 +254,7 @@ internal partial class ScrollState {
         return false
       }
       state.Hovered = value
-      n.BumpScenePaintVersion()
+      n.MarkSceneChromeDirty()
       if value {
         state.Alpha = 1.0F
         state.Idle = 0.0F
@@ -272,7 +278,7 @@ internal partial class ScrollState {
         return false
       }
       state.Captured = value
-      n.BumpScenePaintVersion()
+      n.MarkSceneChromeDirty()
       if value {
         state.Alpha = 1.0F
         state.Idle = 0.0F
@@ -287,7 +293,7 @@ internal partial class ScrollState {
     internal func ResetActivity(n Node) {
       guard let state = ScrollActivityStates.TryGet(n) else { return }
       if state.Horizontal.Alpha != 0.0F || state.Vertical.Alpha != 0.0F {
-        n.BumpScenePaintVersion()
+        n.MarkSceneChromeDirty()
       }
       state.Momentum = nil
       state.Horizontal.Alpha = 0.0F
@@ -368,7 +374,7 @@ internal partial class ScrollState {
       changed = fadeAxis(n, false, dt) || changed
       changed = syncAxis(n, true) || changed
       changed = fadeAxis(n, true, dt) || changed
-      if changed { n.BumpScenePaintVersion() }
+      if changed { n.MarkSceneChromeDirty() }
       return changed
     }
 

@@ -17,7 +17,7 @@ internal unsafe sealed partial class VulkanTextScene {
     effectRadiusPixels float32,
     effectOffsetX float32,
     effectOffsetY float32,
-    parentTransform TransformRecord) bool{
+    parentTransform PrimitiveTransform) bool{
       if segment.Version == 0uL
         || segment.RecordCount <= 0
         || !Object.ReferenceEquals(segment.Shape, shape)
@@ -307,8 +307,8 @@ internal unsafe sealed partial class VulkanTextScene {
   private func ComposeLogicalTransform(
     frame SceneFrame,
     parentIndex int32,
-    inner TransformRecord,
-    out result TransformRecord) bool{
+    inner PrimitiveTransform,
+    out result PrimitiveTransform) bool{
       var a = inner.A
       var b = inner.B
       var c = inner.C
@@ -319,10 +319,15 @@ internal unsafe sealed partial class VulkanTextScene {
       var steps int32 = 0
       while current >= 0 {
         if current >= frame.TransformCount || steps >= frame.TransformCount {
-          result = TransformRecord{}
+          result = PrimitiveTransform{}
           return false
         }
         let outer = frame.Transforms[current]
+        if outer.IsScrollPlacement {
+          current = outer.ParentIndex
+          steps++
+          continue
+        }
         let nextA = outer.A * a + outer.C * b
         let nextB = outer.B * a + outer.D * b
         let nextC = outer.A * c + outer.C * d
@@ -340,23 +345,22 @@ internal unsafe sealed partial class VulkanTextScene {
       }
       if !FiniteValue(a) || !FiniteValue(b) || !FiniteValue(c)
         || !FiniteValue(d) || !FiniteValue(tx) || !FiniteValue(ty) {
-          result = TransformRecord{}
+          result = PrimitiveTransform{}
           return false
         }
-      result = TransformRecord{
+      result = PrimitiveTransform{
         A: a,
         B: b,
         C: c,
         D: d,
         TX: tx,
         TY: ty,
-        ParentIndex: -1,
       }
       return true
     }
 
   private func TransformGlyphBounds(
-    transform TransformRecord,
+    transform PrimitiveTransform,
     minX float32,
     minY float32,
     maxX float32,

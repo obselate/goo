@@ -39,7 +39,7 @@ internal partial class TextEditorLayouts {
         var lastLine = snapshot.LineCount
         if bounded {
           let scrollLine = lineForVerticalOffset(state, snapshot,
-            float32(state.Controller.ScrollTargetY), paragraphWidth, fingerprint, lineHeight,
+            ScrollPoint(n).Y, paragraphWidth, fingerprint, lineHeight,
             metrics.Ascent, metrics.Descent)
           let overscan = n.EditorOverscanLines
           firstLine = scrollLine - overscan
@@ -98,6 +98,28 @@ internal partial class TextEditorLayouts {
         if bounded { state.TrimParagraphs(used) }
         return result
       }
+
+    internal func ScrollPoint(n Node, verticalOnly bool = false) TransformPoint {
+      guard let state = n.EditorState else { return TransformPoint{Valid: true} }
+      return TransformGeometry.ContentPoint(n, 0.0F, 0.0F,
+        verticalOnly ? 0.0F : float32(state.Controller.ScrollTargetX),
+        float32(state.Controller.ScrollTargetY))
+    }
+
+    internal func ScrollViewportChanged(n Node) bool {
+      guard let state = n.EditorState, let layout = state.Layout else { return true }
+      if state.Dirty || layout.Version != state.Document.Version { return true }
+      if layout.HeightConstraint < 0.0F { return false }
+      if layout.Lines.Count == 0 { return true }
+      let snapshot = state.Document.Snapshot()
+      let line = lineForVerticalOffset(state, snapshot, ScrollPoint(n).Y,
+        layout.ParagraphWidth, layout.FontFingerprint, layout.LineHeight, layout.Ascent, layout.Descent)
+      let first = Math.Max(0, line - n.EditorOverscanLines)
+      let count = int32(layout.HeightConstraint / layout.LineHeight) + 1 + n.EditorOverscanLines * 2
+      let last = Math.Min(snapshot.LineCount, first + count)
+      return snapshot.GetLineIndex(layout.Lines[0].Paragraph.Source.Start) != first
+        || snapshot.GetLineIndex(layout.Lines[layout.Lines.Count - 1].Paragraph.Source.Start) + 1 != last
+    }
 
     private func paragraphLayout(n Node, state TextEditorRenderState, snapshot TextSnapshot, lineIndex int32,
       projections List[TextEditorProjection], styles List[TextEditorPresentationStyle],
