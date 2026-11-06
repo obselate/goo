@@ -181,6 +181,11 @@ internal partial class SceneFrame {
         let end = binding.End
         let destination = binding.Destination
         let next = binding.Position(end)
+        let retainPrimitives = destination.Chunks == start.Chunks && end.Chunks <= reusableChunkCount
+        && destination.SolidBoxes == start.SolidBoxes && destination.RoundedBoxes == start.RoundedBoxes
+        && destination.PerEdgeBorders == start.PerEdgeBorders && destination.Transforms == start.Transforms
+        && binding.Context.ParentTransformIndex == binding.PreviousContext.ParentTransformIndex
+        && binding.Context.RoundedOverflowTransformIndex == binding.PreviousContext.RoundedOverflowTransformIndex
         Grow[SceneChunk](&chunks, chunkCount, next.Chunks)
         Grow[DrawRef](&drawRefs, drawRefCount, next.DrawRefs)
         Grow[ResourceId](&resourceRefs, resourceRefCount, next.ResourceRefs)
@@ -261,6 +266,10 @@ internal partial class SceneFrame {
                 if value.RetentionState == SceneChunkRetentionState.ExactLeafRebuild {
                     value.RetentionState = SceneChunkRetentionState.ExactLeafHit
                 }
+                if value.RetentionState == SceneChunkRetentionState.ExactLeafHit {
+                    value.ContentKey = 0uL
+                    value.TopologyKey = 0uL
+                }
                 chunks[destination.Chunks + index - start.Chunks] = value
             }
             for index in start.DrawRefs ... end.DrawRefs {
@@ -280,20 +289,22 @@ internal partial class SceneFrame {
                 destination.GradientStops,
                 end.GradientStops - start.GradientStops
             )
-            for index in start.SolidBoxes ... end.SolidBoxes {
-                var value = data.SolidBoxes[index]
-                value.TransformIndex = binding.Transform(value.TransformIndex)
-                solidBoxes[destination.SolidBoxes + index - start.SolidBoxes] = value
-            }
-            for index in start.RoundedBoxes ... end.RoundedBoxes {
-                var value = data.RoundedBoxes[index]
-                value.TransformIndex = binding.Transform(value.TransformIndex)
-                roundedBoxes[destination.RoundedBoxes + index - start.RoundedBoxes] = value
-            }
-            for index in start.PerEdgeBorders ... end.PerEdgeBorders {
-                var value = data.PerEdgeBorders[index]
-                value.TransformIndex = binding.Transform(value.TransformIndex)
-                perEdgeBorders[destination.PerEdgeBorders + index - start.PerEdgeBorders] = value
+            if !retainPrimitives {
+                for index in start.SolidBoxes ... end.SolidBoxes {
+                    var value = data.SolidBoxes[index]
+                    value.TransformIndex = binding.Transform(value.TransformIndex)
+                    solidBoxes[destination.SolidBoxes + index - start.SolidBoxes] = value
+                }
+                for index in start.RoundedBoxes ... end.RoundedBoxes {
+                    var value = data.RoundedBoxes[index]
+                    value.TransformIndex = binding.Transform(value.TransformIndex)
+                    roundedBoxes[destination.RoundedBoxes + index - start.RoundedBoxes] = value
+                }
+                for index in start.PerEdgeBorders ... end.PerEdgeBorders {
+                    var value = data.PerEdgeBorders[index]
+                    value.TransformIndex = binding.Transform(value.TransformIndex)
+                    perEdgeBorders[destination.PerEdgeBorders + index - start.PerEdgeBorders] = value
+                }
             }
             for index in start.LinearGradients ... end.LinearGradients {
                 var value = data.LinearGradients[index]
@@ -367,6 +378,18 @@ internal partial class SceneFrame {
             cachedTextSegmentCount = next.Text
             activeClipChainId = binding.ClipChain(activeClip)
             activeTransformIndex = binding.Transform(activeTransform)
+            var copiedRecords = end.GradientStops - start.GradientStops
+            + end.LinearGradients - start.LinearGradients + end.RadialGradients - start.RadialGradients
+            + end.CachedImages - start.CachedImages + end.AnalyticPathBands - start.AnalyticPathBands
+            + end.Transforms - start.Transforms + end.RectClips - start.RectClips
+            + end.ClipMasks - start.ClipMasks + end.ClipChains - start.ClipChains
+            + end.Shadows - start.Shadows + end.Underlines - start.Underlines
+            + end.Layers - start.Layers + end.Text - start.Text
+            if !retainPrimitives {
+                copiedRecords += end.SolidBoxes - start.SolidBoxes + end.RoundedBoxes - start.RoundedBoxes
+                + end.PerEdgeBorders - start.PerEdgeBorders
+            }
+            recordOperations += uint64(copiedRecords)
             chunkOperations += uint64(end.Chunks - start.Chunks)
             drawReferenceOperations += uint64(end.DrawRefs - start.DrawRefs)
             resourceReferenceOperations += uint64(end.ResourceRefs - start.ResourceRefs)
