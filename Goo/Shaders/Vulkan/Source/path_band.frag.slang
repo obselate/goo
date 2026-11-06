@@ -34,7 +34,7 @@ static uint gooClipDrawOrdinal;
 static const uint HeaderWordCount = 12u;
 static const uint BandWordCount = 8u;
 static const uint CurveWordCount = 8u;
-static const uint FormatVersion = 1u;
+static const uint FormatVersion = 2u;
 static const float CoordinateMinimumTolerance = 0.0000001;
 static const float CoordinateRelativeTolerance = 0.000001;
 static const float MinimumPixelsPerPath = 0.0000152587890625;
@@ -1073,6 +1073,15 @@ void accumulateVerticalEvenOdd(
     upCoverage = float2(upValue, upWeight);
 }
 
+bool outsideContour(uint index, float2 point, float2 pixelsPerPath)
+{
+    uint base = pathWord(7u) + curveCount() * 2u + 2u + index * 4u;
+    float2 minimum = float2(wordFloat(base), wordFloat(base + 1u));
+    float2 maximum = float2(wordFloat(base + 2u), wordFloat(base + 3u));
+    float2 margin = 1.0 / pixelsPerPath;
+    return any(point < minimum - margin) || any(point > maximum + margin);
+}
+
 void horizontalCoverageDirections(
     float2 point,
     float2 pixelsPerPath,
@@ -1092,6 +1101,10 @@ void horizontalCoverageDirections(
     {
         uint curveIndex = pathWord(indices + start + index);
         if (curveIndex >= curveCount())
+        {
+            continue;
+        }
+        if (outsideContour(curveIndex, point, pixelsPerPath))
         {
             continue;
         }
@@ -1130,6 +1143,10 @@ void verticalCoverageDirections(
     {
         uint curveIndex = pathWord(indices + start + index);
         if (curveIndex >= curveCount())
+        {
+            continue;
+        }
+        if (outsideContour(curveIndex, point, pixelsPerPath))
         {
             continue;
         }
