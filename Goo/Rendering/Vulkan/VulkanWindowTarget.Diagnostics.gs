@@ -17,6 +17,17 @@ internal unsafe partial class VulkanWindowTarget {
     pendingTraceContext = context
     pendingTraceId = recorder.TraceId
     Sample(recorder, false, true)
+    if retainedMemoryTraceId != recorder.TraceId {
+      retainedMemoryTraceId = recorder.TraceId
+      var memoryContext = context
+      memoryContext.SceneVersion = sceneCompiler.LastResult.FrameVersion
+      recorder.Instant(VulkanDiagnosticEventIds.PlanCompile, VulkanDiagnosticCategories.FramePlan,
+        memoryContext, value0: uint64(sceneCompiler.RetainedOwnerCount), value1: uint64(sceneCompiler.Frame.Transforms.Length),
+        source: "scene.retained.metadata")
+      recorder.Instant(VulkanDiagnosticEventIds.PlanCompile, VulkanDiagnosticCategories.FramePlan,
+        memoryContext, value0: uint64(sceneCompiler.RangeRetainedBytes), value1: uint64(sceneCompiler.RangePeakBytes),
+        source: "scene.retained.bytes")
+    }
     EnsureDiagnosticTimestamp()
     if profileGpuTraceId != recorder.TraceId {
       profileGpuTraceId = recorder.TraceId
@@ -597,12 +608,6 @@ internal unsafe partial class VulkanWindowTarget {
         recorder.Instant(VulkanDiagnosticEventIds.PlanCompile, VulkanDiagnosticCategories.FramePlan,
           context, value0: uint64(sceneCompiler.RangeRetainedBytes), value1: uint64(sceneCompiler.RangePeakBytes),
           source: "scene.retained.bytes")
-        if retainedMemoryTraceId != recorder.TraceId {
-          retainedMemoryTraceId = recorder.TraceId
-          recorder.Instant(VulkanDiagnosticEventIds.PlanCompile, VulkanDiagnosticCategories.FramePlan,
-            context, value0: uint64(sceneCompiler.RetainedOwnerCount), value1: uint64(frame.Transforms.Length),
-            source: "scene.retained.metadata")
-        }
       }
       try {
         if let current = diagnostics {
