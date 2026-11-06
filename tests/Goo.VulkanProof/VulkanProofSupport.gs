@@ -2,6 +2,7 @@ package Goo.VulkanProof
 
 import Goo
 import System
+import System.Numerics
 import System.Threading
 
 internal class VulkanProductionProofCell : Cell {
@@ -189,4 +190,112 @@ internal func AppendVulkanProofGlyph(
       Segment: segment,
       FirstInstance: -1,
     })
+  }
+
+  func VerifyShaderEffectCaptureCoordinates(program ShaderEffectProgram) {
+    let window = OpenVulkanProductionProofWindow()
+    var capture VulkanProductionReadbackCapture? = nil
+    try {
+      let opened = VulkanProductionReadbackFixture.Open(window, 64u, 64u)
+      capture = opened
+      let effect = ShaderEffect(program, true)
+      effect.SetParameter(0, Vector4(1.0F, 1.0F, 1.0F, 0.0F))
+      let full = ConservativeBounds{Width: 64.0F, Height: 64.0F}
+      var reference[]uint8 = Array.Empty[uint8]()
+      for variant in 0 ... 4 {
+        let bounds = if variant == 0 {
+          full
+        } else if variant == 3 {
+          ConservativeBounds{X: 8.0F, Y: 16.0F, Width: 40.0F, Height: 32.0F}
+        } else {
+          ConservativeBounds{X: 16.0F, Y: 8.0F, Width: 32.0F, Height: 40.0F}
+        }
+        let originX = if variant == 2 {
+          8.0F
+        } else if variant == 3 {
+          4.0F
+        } else {
+          0.0F
+        }
+        let originY = if variant == 2 {
+          4.0F
+        } else if variant == 3 {
+          8.0F
+        } else {
+          0.0F
+        }
+        let frame = SceneFrame(16)
+        frame.BeginChunk(0x4C415945525556uL, uint64(variant + 1), full, true)
+        var snapshot ShaderEffectSnapshot
+        effect.CopySnapshot(out snapshot)
+        let layer = LayerRecord{
+          Bounds: bounds,
+          ReferenceIndex: frame.AddLayerCoverage(VulkanSceneLayerCoverage{Bounds: full, PaintBounds: full,}),
+          OriginX: originX,
+          OriginY: originY,
+          ExtentWidth: uint32(64.0F - originX * 2.0F),
+          ExtentHeight: uint32(64.0F - originY * 2.0F),
+          Opacity: 1.0F,
+          OffscreenTargetId: ResourceId{
+            Kind: SceneResourceKind.OffscreenTarget,
+            LogicalId: 0x4C415945525556uL,
+            Version: 1uL,
+          },
+          EffectProgramId: snapshot.ProgramId,
+          EffectVersion: snapshot.Version,
+          EffectIndex: frame.AddShaderEffect(snapshot),
+          Flags: uint32(LayerRecordFlags.SamplesBackdrop),
+          TransformIndex: -1,
+        }
+        frame.AddLayerBegin(layer)
+        frame.AddGradientStop(GradientStopRecord{Offset: 0.0F, Color: 0xFF0000FFu})
+        frame.AddGradientStop(GradientStopRecord{Offset: 1.0F, Color: 0x00FF80FFu})
+        frame.AddLinearGradient(
+        LinearGradientRecord{
+          Bounds: full,
+          StartX: 0.0F,
+          StartY: 0.0F,
+          EndX: 64.0F,
+          EndY: 64.0F,
+          StopStart: 0,
+          StopCount: 2,
+          Opacity: 1.0F,
+          TransformIndex: -1,
+        }
+        )
+        frame.AddLayerEnd(layer)
+        frame.EndChunk()
+        WarmVulkanProductionReadback(opened, frame, VkClearColorValue{})
+        let pixels = RequestVulkanProductionReadback(opened, frame, VkClearColorValue{}).Pixels
+        if variant == 0 {
+          reference = pixels
+          if reference[(32 * 64 + 32) * 4 + 3] != uint8(255)
+          || reference[(32 * 64 + 32) * 4] <= uint8(80) {
+            throw InvalidOperationException("Shader effect coordinate reference was not drawn")
+          }
+          continue
+        }
+        for y in 0 ... 64 {
+          for x in 0 ... 64 {
+            let inside = float32(x) >= bounds.X && float32(x) < bounds.Right
+            && float32(y) >= bounds.Y && float32(y) < bounds.Bottom
+            for channel in 0 ... 4 {
+              let index = (y * 64 + x) * 4 + channel
+              let expected = inside ? reference[index]: uint8(0)
+              if pixels[index] != expected {
+                throw InvalidOperationException(
+                "Shader effect capture changed coordinates at variant=${variant} x=${x} y=${y} channel=${channel} expected=${expected} actual=${pixels[index]}"
+                )
+              }
+            }
+          }
+        }
+      }
+      Console.WriteLine("shader-effect-capture: reference=1 cropped=3 max-rgba-difference=0")
+    } finally {
+      if let active = capture {
+        active.Dispose()
+      }
+      CloseVulkanProductionProofWindow(window)
+    }
   }

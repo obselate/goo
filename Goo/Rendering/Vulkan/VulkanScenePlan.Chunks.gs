@@ -280,6 +280,13 @@ internal partial class SceneFrame {
   private func HashLayerContent(hash uint64, index int32) uint64 {
     let value = layers[index]
     var result = HashBounds(hash, value.Bounds)
+    if value.ReferenceIndex >= 0 {
+      let coverage = layerCoverage[value.ReferenceIndex]
+      result = HashBounds(result, coverage.Bounds)
+      result = HashBounds(result, coverage.PaintBounds)
+      result = HashFloat(result, coverage.CaptureOriginX)
+      result = HashFloat(result, coverage.CaptureOriginY)
+    }
     result = HashFloat(result, value.OriginX)
     result = HashFloat(result, value.OriginY)
     result = Mix(result, uint64(value.ExtentWidth))
@@ -362,7 +369,79 @@ internal partial class SceneFrame {
     return index
   }
 
+  internal func AddLayerCoverage(value VulkanSceneLayerCoverage) int32 {
+    GrowLayerCoverage(layerCoverageCount + 1)
+    let index = layerCoverageCount
+    layerCoverage[index] = value
+    layerCoverageCount++
+    recordOperations++
+    return index
+  }
+
+  internal func SetLayerCoverageNodeLimit(nodes int32) {
+    layerCoverageLimit = int32(Math.Min(int64(Int32.MaxValue), int64(nodes) * 2L))
+  }
+
+  internal func TrimLayerCoverage(nodes int32) {
+    SetLayerCoverageNodeLimit(nodes)
+    if layerCoverageCount > layerCoverageLimit {
+      throw InvalidOperationException("Layer coverage exceeds the live-node bound")
+    }
+    if layerCoverage.Length <= layerCoverageLimit {
+      return
+    }
+    let replacement = layerCoverageLimit == 0
+    ? Array.Empty[VulkanSceneLayerCoverage](): [layerCoverageLimit]VulkanSceneLayerCoverage
+    Array.Copy(layerCoverage, replacement, layerCoverageCount)
+    layerCoverage = replacement
+  }
+
+  private func GrowLayerCoverage(required int32) {
+    if required > layerCoverageLimit {
+      throw InvalidOperationException("Layer coverage exceeds the live-node bound")
+    }
+    if required <= layerCoverage.Length {
+      return
+    }
+    let capacity = int32(
+      Math.Min(
+        int64(layerCoverageLimit),
+        Math.Max(int64(required), Math.Max(8L, int64(layerCoverage.Length) * 2L))
+      )
+    )
+    let replacement = [capacity]VulkanSceneLayerCoverage
+    Array.Copy(layerCoverage, replacement, layerCoverageCount)
+    layerCoverage = replacement
+    growthOperations++
+  }
+
+  internal func Layer(index int32) LayerRecord {
+    var value = layers[index]
+    if value.EffectIndex < 0 &&
+      (
+      value.Bounds.X < value.OriginX || value.Bounds.Y < value.OriginY
+      || value.Bounds.Right > value.OriginX + float32(value.ExtentWidth)
+      || value.Bounds.Bottom > value.OriginY + float32(value.ExtentHeight)
+    ) {
+      let left = MathF.Max(value.Bounds.X, value.OriginX)
+      let top = MathF.Max(value.Bounds.Y, value.OriginY)
+      let right = MathF.Min(value.Bounds.Right, value.OriginX + float32(value.ExtentWidth))
+      let bottom = MathF.Min(value.Bounds.Bottom, value.OriginY + float32(value.ExtentHeight))
+      value.Bounds = ConservativeBounds{
+        X: left,
+        Y: top,
+        Width: MathF.Max(0.0F, right - left),
+        Height: MathF.Max(0.0F, bottom - top),
+      }
+    }
+    return value
+  }
+
   private func ValidateLayer(value LayerRecord) {
+    if value.ReferenceIndex < -1 || value.ReferenceIndex >= layerCoverageCount
+    || (value.EffectIndex >= 0) != (value.ReferenceIndex >= 0) {
+      throw ArgumentException("layer coverage reference is invalid")
+    }
     if !value.OffscreenTargetId.IsValid
       || value.OffscreenTargetId.Kind != SceneResourceKind.OffscreenTarget{
         throw ArgumentException("layer target resource is invalid")

@@ -295,38 +295,65 @@ internal partial class VulkanSceneCompiler {
   private func LayerSubtreeBounds(
     node Node,
     parentTransform PrimitiveTransform,
-    activeClipBounds ConservativeBounds) ConservativeBounds{
+    activeClipBounds ConservativeBounds) VulkanSceneLayerCoverage {
       if node.Retired || node.Display == Display.None || node.Visibility == Visibility.Hidden
         || EffectiveOpacity(1.0F, node.Opacity) <= 0.0F {
-          return ConservativeBounds{}
+          return VulkanSceneLayerCoverage{}
         }
       let transform = ComposeCompilerTransform(parentTransform, CompilerTransform(node))
-      var result = TransformCompilerBounds(
+      var paintBounds = TransformCompilerBounds(
         ExpandedChunkBounds(node, NodeBounds(node), ShadowContextSupported(node)), transform)
-      result = IntersectBounds(result, activeClipBounds)
+      var result = IntersectBounds(paintBounds, activeClipBounds)
+      let clipsX = node.Kind == NodeKind.Editor || node.OverflowX != Overflow.Visible
+      let clipsY = node.Kind == NodeKind.Editor || node.OverflowY != Overflow.Visible
+      let clipBounds = clipsX || clipsY
+      ? TransformCompilerBounds(PaddingEdgeBounds(node, NodeBounds(node)), transform)
+      : ConservativeBounds{}
       let children = Stacking.Children(node)
       var index int32 = 0
       while index < children.Count {
         if !children[index].IsPortal {
           let child = LayerSubtreeBounds(children[index], transform, activeClipBounds)
           if result.IsEmpty {
-            result = child
-          } else if !child.IsEmpty {
-            result = unionVulkanSceneBounds(result, child)
+            result = child.Bounds
+          } else if !child.Bounds.IsEmpty {
+            result = unionVulkanSceneBounds(result, child.Bounds)
+          }
+          var childPaint = child.PaintBounds
+          if !childPaint.IsEmpty {
+            if clipsX && clipsY {
+              childPaint = IntersectBounds(childPaint, clipBounds)
+            } else if (clipsX || clipsY) && transform.B == 0.0F && transform.C == 0.0F {
+              let left = clipsX ? MathF.Max(childPaint.X, clipBounds.X): childPaint.X
+              let top = clipsY ? MathF.Max(childPaint.Y, clipBounds.Y): childPaint.Y
+              let right = clipsX ? MathF.Min(childPaint.Right, clipBounds.Right): childPaint.Right
+              let bottom = clipsY ? MathF.Min(childPaint.Bottom, clipBounds.Bottom): childPaint.Bottom
+              childPaint = ConservativeBounds{
+                X: left,
+                Y: top,
+                Width: MathF.Max(0.0F, right - left),
+                Height: MathF.Max(0.0F, bottom - top),
+              }
+            }
+          }
+          if paintBounds.IsEmpty {
+            paintBounds = childPaint
+          } else if !childPaint.IsEmpty {
+            paintBounds = unionVulkanSceneBounds(paintBounds, childPaint)
           }
         }
         index = index + 1
       }
-      return result
+      return VulkanSceneLayerCoverage{Bounds: result, PaintBounds: paintBounds}
     }
 
   private func MakeLayerRecord(
     ownerId uint64,
-    bounds ConservativeBounds,
+    coverage VulkanSceneLayerCoverage,
     opacity float32,
     blendMode BlendMode,
     effect ShaderEffect?) LayerRecord{
-      var layerBounds = bounds
+      var layerBounds = coverage.Bounds
       if layerBounds.IsEmpty {
         layerBounds = ConservativeBounds{ Width: 1.0F, Height: 1.0F }
       }
@@ -348,14 +375,28 @@ internal partial class VulkanSceneCompiler {
           }
         }
       }
+      let paintBounds = coverage.PaintBounds.IsEmpty ? layerBounds: coverage.PaintBounds
       let originX = MathF.Floor(captureBounds.X)
       let originY = MathF.Floor(captureBounds.Y)
       let right = MathF.Ceiling(captureBounds.Right)
       let bottom = MathF.Ceiling(captureBounds.Bottom)
       let extentWidth = uint32(MathF.Max(1.0F, right - originX))
       let extentHeight = uint32(MathF.Max(1.0F, bottom - originY))
-      return LayerRecord{
+      if effectIndex >= 0 {
+        frame.SetLayerCoverageNodeLimit(Math.Max(lastResult.VisibleNodeCount, visibleNodeCount))
+      }
+      let referenceIndex = effectIndex < 0 ? -1
+      : frame.AddLayerCoverage(
+      VulkanSceneLayerCoverage{
         Bounds: layerBounds,
+        PaintBounds: paintBounds,
+        CaptureOriginX: originX,
+        CaptureOriginY: originY,
+      }
+      )
+      return LayerRecord{
+        Bounds: effectIndex < 0 ? paintBounds: layerBounds,
+        ReferenceIndex: referenceIndex,
         Opacity: opacity,
         BlendMode: uint32(int32(blendMode)),
         OffscreenTargetId: ResourceId{

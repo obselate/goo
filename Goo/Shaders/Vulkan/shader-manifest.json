@@ -264,9 +264,9 @@
       "source": "analytic.vert.slang",
       "output": "analytic.vert.spv",
       "entryPoint": "main",
-      "sourceSha256": "bf393af83e1c615869163a94447866203c95609eccdd4df2fbfd466aa284f540",
-      "outputSha256": "49d9c005089d0ce8c3abba0e0d8b8ff31cd846260535b5098d392fc6a00e1707",
-      "outputBytes": 2872,
+      "sourceSha256": "f8ab35b0e0f33ea5d9b940aca9135ff7ca77a980039ca03d7d77495f18579746",
+      "outputSha256": "c53e1dcabc079f8efdfe00756a5cb325e2cbf7ae2415521623abb0b02d1eacfd",
+      "outputBytes": 3324,
       "capabilities": [
         1
       ]
@@ -317,8 +317,8 @@
       "output": "analytic_linear4.frag.spv",
       "entryPoint": "main",
       "sourceSha256": "7c73af823c486f620086842b754d265eafbfbfa3efc5f4330cdfc602120c2be5",
-      "outputSha256": "ddc5b3e3dde903bc30f884e0358e3d11a28ba6d5f5dc2b808975046b7fd35d90",
-      "outputBytes": 18976,
+      "outputSha256": "c56ed5e7c31dea64b10f688c5c1df932b13613f0ae8afa09ecce5907e0f1e923",
+      "outputBytes": 19260,
       "capabilities": [
         1
       ]
@@ -330,8 +330,8 @@
       "output": "analytic_radial4.frag.spv",
       "entryPoint": "main",
       "sourceSha256": "eebb41d1784e1a2068ca45c7c23d836425ba325777586f3f7ab73ebb7fbdf5b3",
-      "outputSha256": "c100b724636ef0bfa93cbf9ecbe5641ca778daae1213e6ca125cb0d1f149d3f1",
-      "outputBytes": 18948,
+      "outputSha256": "547047f3124766b86c0f07082100f520f09cac47ce48f1ba7afddf952d0c8e47",
+      "outputBytes": 19232,
       "capabilities": [
         1
       ]
@@ -955,48 +955,15 @@
       "vertexInput": "none",
       "pushConstants": {
         "offset": 0,
-        "size": 0,
-        "stages": [],
+        "size": 8,
+        "stages": [
+          "fragment"
+        ],
         "members": [
           {
-            "name": "rect",
+            "name": "ditherOffset",
             "offset": 0,
-            "type": "vec4"
-          },
-          {
-            "name": "transform0",
-            "offset": 16,
-            "type": "vec4"
-          },
-          {
-            "name": "transform1",
-            "offset": 32,
-            "type": "vec4"
-          },
-          {
-            "name": "radii",
-            "offset": 48,
-            "type": "vec4"
-          },
-          {
-            "name": "params",
-            "offset": 64,
-            "type": "vec4"
-          },
-          {
-            "name": "stopPositions",
-            "offset": 80,
-            "type": "vec4"
-          },
-          {
-            "name": "packedColors",
-            "offset": 96,
-            "type": "uvec4"
-          },
-          {
-            "name": "packedColorsExtra",
-            "offset": 112,
-            "type": "uvec4"
+            "type": "vec2"
           }
         ]
       },
@@ -1095,8 +1062,8 @@
       "hostPacking": {
         "path": "AnalyticLinear4PushConstants.Generated.gs",
         "typeName": "AnalyticLinear4PushConstants",
-        "sha256": "e03e4391f5441b1efc4fee4596c9da31df14e96fe5a6f1b38d80f82d6f4261ff",
-        "bytes": 1554
+        "sha256": "03ca39b9ca759d4670004d4e585fa1ded670be2aee8b90e990e6add67fbbb2cf",
+        "bytes": 250
       }
     },
     {
@@ -1105,48 +1072,15 @@
       "vertexInput": "none",
       "pushConstants": {
         "offset": 0,
-        "size": 0,
-        "stages": [],
+        "size": 8,
+        "stages": [
+          "fragment"
+        ],
         "members": [
           {
-            "name": "rect",
+            "name": "ditherOffset",
             "offset": 0,
-            "type": "vec4"
-          },
-          {
-            "name": "transform0",
-            "offset": 16,
-            "type": "vec4"
-          },
-          {
-            "name": "transform1",
-            "offset": 32,
-            "type": "vec4"
-          },
-          {
-            "name": "radii",
-            "offset": 48,
-            "type": "vec4"
-          },
-          {
-            "name": "params",
-            "offset": 64,
-            "type": "vec4"
-          },
-          {
-            "name": "stopPositions",
-            "offset": 80,
-            "type": "vec4"
-          },
-          {
-            "name": "packedColors",
-            "offset": 96,
-            "type": "uvec4"
-          },
-          {
-            "name": "packedColorsExtra",
-            "offset": 112,
-            "type": "uvec4"
+            "type": "vec2"
           }
         ]
       },
@@ -1245,8 +1179,8 @@
       "hostPacking": {
         "path": "AnalyticRadial4PushConstants.Generated.gs",
         "typeName": "AnalyticRadial4PushConstants",
-        "sha256": "268a385806ea90acc78d880da31679819b25e161817dbffc2aa5da0b30ed00f5",
-        "bytes": 1554
+        "sha256": "07ca1a4302c1566cf622b733d78dfa1ae6e03063b740ecf40d21e3cdce753c81",
+        "bytes": 250
       }
     },
     {

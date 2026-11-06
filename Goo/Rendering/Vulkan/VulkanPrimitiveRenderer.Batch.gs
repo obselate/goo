@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Numerics
 
 internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private const PrimitiveClipDrawOrdinalWord int32 = 7
@@ -16,20 +17,35 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private var pendingTextInstanceCount uint32
   private var recordDrawCallCount uint64
 
+  private var pendingPrimitiveDither bool
+  private var pendingPrimitiveDitherX float32
+  private var pendingPrimitiveDitherY float32
+  private var currentDitherOffsetX float32
+  private var currentDitherOffsetY float32
+
   private func ResetPrimitiveBatching() {
     pendingPrimitiveRecordCount = 0u
     pendingTextInstanceCount = 0u
     recordDrawCallCount = 0uL
+    currentDitherOffsetX = 0.0F
+    currentDitherOffsetY = 0.0F
   }
 
   private func CanAppendPrimitiveDraw(
     pipeline VkPipeline,
-    clipSetIndex uint32) bool{
+    clipSetIndex uint32, gradient bool) bool{
       if pendingPrimitiveRecordCount == 0u {
         return false
       }
       if pendingPrimitivePipeline != pipeline
-        || pendingPrimitiveClipSetIndex != clipSetIndex{
+        || pendingPrimitiveClipSetIndex != clipSetIndex {
+          return false
+        }
+      if gradient != pendingPrimitiveDither {
+        return false
+      }
+      if gradient && (pendingPrimitiveDitherX != currentDitherOffsetX
+        || pendingPrimitiveDitherY != currentDitherOffsetY) {
           return false
         }
       return uint64(pendingPrimitiveFirstRecord)
@@ -40,8 +56,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     commandBuffer VkCommandBuffer,
     pipeline VkPipeline,
     layout VkPipelineLayout,
-    clipSetIndex uint32) {
-      if CanAppendPrimitiveDraw(pipeline, clipSetIndex) {
+    clipSetIndex uint32,
+    gradient bool) {
+      if CanAppendPrimitiveDraw(pipeline, clipSetIndex, gradient) {
         if pendingPrimitiveRecordCount == uint32.MaxValue {
           throw OverflowException("Vulkan primitive batch record count overflow")
         }
@@ -61,6 +78,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         pendingPrimitiveClipSetIndex = clipSetIndex
         pendingPrimitiveFirstRecord = primitiveRecordOrdinal
         pendingPrimitiveRecordCount = 1u
+        pendingPrimitiveDither = gradient
+        pendingPrimitiveDitherX = currentDitherOffsetX
+        pendingPrimitiveDitherY = currentDitherOffsetY
       }
       primitiveRecordOrdinal++
     }
@@ -77,6 +97,18 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     let firstVertex = uint64(pendingPrimitiveFirstRecord) * uint64(PrimitiveVertexCount)
     if firstVertex > uint64(uint32.MaxValue) {
       throw OverflowException("Vulkan primitive batch vertex range overflow")
+    }
+    if pendingPrimitiveDither {
+      var offset = Vector2(pendingPrimitiveDitherX, pendingPrimitiveDitherY)
+      let pushConstants = dispatch.vkCmdPushConstants
+      pushConstants(
+        commandBuffer,
+        pipelineLayout,
+        uint32(VkConstants.VK_SHADER_STAGE_FRAGMENT_BIT),
+        0u,
+        8u,
+        *void(&offset)
+      )
     }
     let draw = dispatch.vkCmdDraw
     draw(commandBuffer, PrimitiveVertexCount, pendingPrimitiveRecordCount,

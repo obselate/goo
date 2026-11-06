@@ -392,7 +392,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.params_z = (value.EndX - value.Bounds.X) / width
       push.params_w = (value.EndY - value.Bounds.Y) / height
       FillGradientStops(&push, frame, value.StopStart, value.StopCount, value.Opacity)
-      BindAndDraw(commandBuffer, primitivePipelines.LinearPipeline, *void(&push))
+      BindAndDraw(commandBuffer, primitivePipelines.LinearPipeline, *void(&push), true)
       WriteGradientStopRecords(frame, value.StopStart, value.StopCount, value.Opacity)
     }
 
@@ -434,7 +434,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.params_z = MathF.Max(value.RadiusX / width, 0.0001F)
       push.params_w = MathF.Max(value.RadiusY / height, 0.0001F)
       FillGradientStops(&push, frame, value.StopStart, value.StopCount, value.Opacity)
-      BindAndDraw(commandBuffer, primitivePipelines.RadialPipeline, *void(&push))
+      BindAndDraw(commandBuffer, primitivePipelines.RadialPipeline, *void(&push), true)
       WriteGradientStopRecords(frame, value.StopStart, value.StopCount, value.Opacity)
     }
 
@@ -606,7 +606,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if effect.ProgramId != value.EffectProgramId || effect.Version != value.EffectVersion {
         throw InvalidOperationException("Vulkan shader effect snapshot does not match its layer")
       }
-      EmitShaderEffect(commandBuffer, extent, value, target, backdrop, effect, generator)
+      let reference = frame.LayerCoverage[value.ReferenceIndex].Bounds
+      EmitShaderEffect(commandBuffer, extent, value, target, backdrop, effect, reference, generator)
     }
 
   private func EmitShaderEffect(
@@ -616,6 +617,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     target VulkanOffscreenLayerTarget?,
     backdrop VulkanOffscreenLayerTarget?,
     effect ShaderEffectRecord,
+    reference ConservativeBounds,
     generator bool = false) {
       guard let program = effect.Program else {
         throw InvalidOperationException("Vulkan shader effect program is unavailable")
@@ -640,10 +642,14 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       primitive.radii_x = value.Opacity
       let targetWidth = float32(value.ExtentWidth)
       let targetHeight = float32(value.ExtentHeight)
-      primitive.params_x = (value.Bounds.X - value.OriginX) / targetWidth
-      primitive.params_y = (value.Bounds.Y - value.OriginY) / targetHeight
-      primitive.params_z = value.Bounds.Width / targetWidth
-      primitive.params_w = value.Bounds.Height / targetHeight
+      primitive.params_x = (reference.X - value.OriginX) / targetWidth
+      primitive.params_y = (reference.Y - value.OriginY) / targetHeight
+      primitive.params_z = reference.Width / targetWidth
+      primitive.params_w = reference.Height / targetHeight
+      primitive.EffectUvOffsetX = (value.Bounds.X - reference.X) / reference.Width
+      primitive.EffectUvOffsetY = (value.Bounds.Y - reference.Y) / reference.Height
+      primitive.EffectUvScaleX = value.Bounds.Width / reference.Width
+      primitive.EffectUvScaleY = value.Bounds.Height / reference.Height
       primitive.packedColorsExtra_w = primitiveFrameData.EffectDataWordOffset
       +effect.DataWordOffset
       primitive.stopPositions_x = effect.ElapsedSeconds
@@ -1025,8 +1031,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push -> packedColorsExtra_w = if count > 4 { uint32(primitiveRecordCount + 1) } else { 0u }
     }
 
-  private func BindAndDraw(commandBuffer VkCommandBuffer, pipeline VkPipeline, pushData * void) {
-    BindPrimitiveAndDraw(commandBuffer, pipeline, pipelineLayout, pushData, 1u)
+  private func BindAndDraw(commandBuffer VkCommandBuffer, pipeline VkPipeline, pushData * void,
+    gradient bool = false
+  ) {
+    BindPrimitiveAndDraw(commandBuffer, pipeline, pipelineLayout, pushData, 1u, gradient)
   }
 
   private func BindPrimitiveAndDraw(
@@ -1034,7 +1042,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     pipeline VkPipeline,
     layout VkPipelineLayout,
     pushData * void,
-    clipSetIndex uint32) {
+    clipSetIndex uint32,
+    gradient bool = false
+  ) {
       if pushData == nil {
         throw ArgumentNullException("pushData")
       }
@@ -1045,7 +1055,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         primitiveRecordCount = primitiveRecordCount + 1
         return
       }
-      QueuePrimitiveDraw(commandBuffer, pipeline, layout, clipSetIndex)
+      QueuePrimitiveDraw(commandBuffer, pipeline, layout, clipSetIndex, gradient)
     }
 
   private func EnsurePrimitiveDescriptor(commandBuffer VkCommandBuffer, layout VkPipelineLayout) {

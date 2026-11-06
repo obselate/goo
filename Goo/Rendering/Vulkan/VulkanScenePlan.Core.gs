@@ -45,6 +45,9 @@ internal partial class SceneFrame {
   private var underlineCount int32
   private var layers []LayerRecord
   private var layerCount int32
+  private var layerCoverage[]VulkanSceneLayerCoverage = Array.Empty[VulkanSceneLayerCoverage]()
+  private var layerCoverageCount int32
+  private var layerCoverageLimit int32 = Int32.MaxValue
   private var shaderEffects []ShaderEffectRecord
   private var shaderEffectCount int32
 
@@ -130,6 +133,12 @@ internal partial class SceneFrame {
   internal prop UnderlineCount int32{ get -> underlineCount }
   internal prop Layers []LayerRecord{ get -> layers }
   internal prop LayerCount int32{ get -> layerCount }
+  internal prop LayerCoverage[]VulkanSceneLayerCoverage {
+    get -> layerCoverage
+  }
+  internal prop LayerCoverageCount int32 {
+    get -> layerCoverageCount
+  }
   internal prop ShaderEffects []ShaderEffectRecord{ get -> shaderEffects }
   internal prop ShaderEffectCount int32{ get -> shaderEffectCount
   }
@@ -198,6 +207,7 @@ internal partial class SceneFrame {
     shadowCount = 0
     underlineCount = 0
     layerCount = 0
+    layerCoverageCount = 0
     shaderEffectCount = 0
     activeChunk = -1
     activeClipChainId = 0

@@ -52,6 +52,7 @@ internal struct VulkanSceneRangeBinding {
         Shadows: Destination.Shadows + value.Shadows - Start.Shadows,
         Underlines: Destination.Underlines + value.Underlines - Start.Underlines,
         Layers: Destination.Layers + value.Layers - Start.Layers,
+        LayerCoverage: Destination.LayerCoverage + value.LayerCoverage - Start.LayerCoverage,
         Text: Destination.Text + value.Text - Start.Text,
         Effects: Destination.Effects + value.Effects - Start.Effects,
     }
@@ -165,6 +166,7 @@ internal partial class SceneFrame {
         Shadows: shadowCount,
         Underlines: underlineCount,
         Layers: layerCount,
+        LayerCoverage: layerCoverageCount,
         Text: cachedTextSegmentCount,
         Effects: shaderEffectCount,
     }
@@ -206,6 +208,7 @@ internal partial class SceneFrame {
         Grow[ShadowRecord](&shadows, shadowCount, next.Shadows)
         Grow[UnderlineRecord](&underlines, underlineCount, next.Underlines)
         Grow[LayerRecord](&layers, layerCount, next.Layers)
+        GrowLayerCoverage(next.LayerCoverage)
         Grow[CachedTextSegmentRefRecord](&cachedTextSegments, cachedTextSegmentCount, next.Text)
         var completed = false
         try {
@@ -292,6 +295,13 @@ internal partial class SceneFrame {
                 destination.GradientStops,
                 end.GradientStops - start.GradientStops
             )
+            Array.Copy(
+                data.LayerCoverage,
+                start.LayerCoverage,
+                layerCoverage,
+                destination.LayerCoverage,
+                end.LayerCoverage - start.LayerCoverage
+            )
             if !retainPrimitives {
                 for index in start.SolidBoxes ... end.SolidBoxes {
                     var value = data.SolidBoxes[index]
@@ -358,6 +368,12 @@ internal partial class SceneFrame {
                 value.TransformIndex = binding.Transform(value.TransformIndex)
                 value.ParentClipLayerId = binding.Layer(value.ParentClipLayerId)
                 value.DrawOrdinal = binding.Index(value.DrawOrdinal, start.DrawRefs, end.DrawRefs, destination.DrawRefs)
+                value.ReferenceIndex = binding.Index(
+                    value.ReferenceIndex,
+                    start.LayerCoverage,
+                    end.LayerCoverage,
+                    destination.LayerCoverage
+                )
                 layers[destination.Layers + index - start.Layers] = value
             }
             chunkCount = next.Chunks
@@ -378,6 +394,7 @@ internal partial class SceneFrame {
             shadowCount = next.Shadows
             underlineCount = next.Underlines
             layerCount = next.Layers
+            layerCoverageCount = next.LayerCoverage
             cachedTextSegmentCount = next.Text
             activeClipChainId = binding.ClipChain(activeClip)
             activeTransformIndex = binding.Transform(activeTransform)
@@ -387,7 +404,7 @@ internal partial class SceneFrame {
             + end.Transforms - start.Transforms + end.RectClips - start.RectClips
             + end.ClipMasks - start.ClipMasks + end.ClipChains - start.ClipChains
             + end.Shadows - start.Shadows + end.Underlines - start.Underlines
-            + end.Layers - start.Layers + end.Text - start.Text
+            + end.Layers - start.Layers + end.LayerCoverage - start.LayerCoverage + end.Text - start.Text
             if !retainPrimitives {
                 copiedRecords += end.SolidBoxes - start.SolidBoxes + end.RoundedBoxes - start.RoundedBoxes
                 + end.PerEdgeBorders - start.PerEdgeBorders

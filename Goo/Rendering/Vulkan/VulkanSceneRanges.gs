@@ -22,6 +22,7 @@ internal struct VulkanSceneRangePosition {
     internal var Shadows int32
     internal var Underlines int32
     internal var Layers int32
+    internal var LayerCoverage int32
     internal var Text int32
     internal var Effects int32
 }
@@ -46,6 +47,7 @@ internal sealed class VulkanRetainedSceneData {
     internal var Shadows[]ShadowRecord = Array.Empty[ShadowRecord]()
     internal var Underlines[]UnderlineRecord = Array.Empty[UnderlineRecord]()
     internal var Layers[]LayerRecord = Array.Empty[LayerRecord]()
+    internal var LayerCoverage[]VulkanSceneLayerCoverage = Array.Empty[VulkanSceneLayerCoverage]()
     internal var Text[]CachedTextSegmentRefRecord = Array.Empty[CachedTextSegmentRefRecord]()
     internal var Segments[]WeakReference[VulkanRetainedTextSegment]? = Array.Empty[
         WeakReference[VulkanRetainedTextSegment]?
@@ -76,6 +78,7 @@ internal sealed class VulkanRetainedSceneData {
     + ArrayBytes(Shadows, required.Shadows)
     + ArrayBytes(Underlines, required.Underlines)
     + ArrayBytes(Layers, required.Layers)
+    + ArrayBytes(LayerCoverage, required.LayerCoverage)
     + ArrayBytes(Text, required.Text)
     + ArrayBytes(Segments, required.Text) + 64L * int64(Math.Max(Segments.Length, required.Text))
     +
@@ -125,6 +128,7 @@ internal sealed class VulkanRetainedSceneData {
         Shadows = CopyValues(Shadows, frame.Shadows, end.Shadows)
         Underlines = CopyValues(Underlines, frame.Underlines, end.Underlines)
         Layers = CopyValues(Layers, frame.Layers, end.Layers)
+        LayerCoverage = CopyValues(LayerCoverage, frame.LayerCoverage, end.LayerCoverage)
         Text = CopyValues(Text, frame.CachedTextSegments, end.Text)
         Segments = EnsureValues(Segments, end.Text)
         PathDashes = EnsureValues(PathDashes, end.AnalyticPathBands)
@@ -194,6 +198,7 @@ internal sealed class VulkanRetainedSceneData {
         Shadows = Array.Empty[ShadowRecord]()
         Underlines = Array.Empty[UnderlineRecord]()
         Layers = Array.Empty[LayerRecord]()
+        LayerCoverage = Array.Empty[VulkanSceneLayerCoverage]()
         Text = Array.Empty[CachedTextSegmentRefRecord]()
         Segments = Array.Empty[WeakReference[VulkanRetainedTextSegment]?]()
         PathDashes = Array.Empty[WeakReference[DashPattern]?]()
