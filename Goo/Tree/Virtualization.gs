@@ -301,6 +301,7 @@ internal sealed class VirtualNodeState {
   }
 
   internal func NeedsRefresh(n Node) bool {
+    using let profile = HistoryPreparationProfile(2)
     guard let state = current else { return false }
     let previous = viewport.Bind(n)
     let previousContext = enterContext()
@@ -387,6 +388,7 @@ internal sealed class VirtualNodeState {
   internal prop IsScrollSettling bool { get -> scrollKey != nil }
 
   internal func VisibleAnchor(n Node) VirtualScrollAnchor? {
+    using let profile = HistoryPreparationProfile(3)
     let left = BoxGeometry.ContentLeft(n)
     let right = left + BoxGeometry.ViewportWidth(n)
     let top = BoxGeometry.ContentTop(n)
@@ -441,6 +443,7 @@ internal sealed class VirtualNodeState {
   }
 
   private func anchorDelta(n Node) float32 {
+    using let profile = HistoryPreparationProfile(3)
     if anchorKey == nil || n.ScrollY == 0.0F || Math.Abs(n.ScrollY - anchorScrollY) > 0.01F { return 0.0F }
     for i in 0 ... n.Children.Count {
       let child = n.Children[i]
@@ -460,6 +463,7 @@ internal sealed class VirtualNodeState {
   }
 
   private func captureAnchor(n Node, key string?) {
+    using let profile = HistoryPreparationProfile(3)
     pendingAnchorNodes.Clear()
     pendingAnchorKey = key
     if key == nil { return }
@@ -492,6 +496,7 @@ internal sealed class VirtualNodeState {
   }
 
   private func realize(n Node, state VirtualState, items bool) IList[Blob] {
+    using let profile = HistoryPreparationProfile(1)
     pending = state
     originX = BoxGeometry.ContentLeft(n) - n.Rect.X
     originY = BoxGeometry.ContentTop(n) - n.Rect.Y

@@ -35,6 +35,7 @@ internal partial class Reconciler {
   }
 
   private func retireVirtualRows(state VirtualNodeState, nodes List[Node]) Exception? {
+    using let profile = HistoryPreparationProfile(7)
     var firstError Exception?
     for node in nodes {
       let storage = state.CaptureRetirement(node)

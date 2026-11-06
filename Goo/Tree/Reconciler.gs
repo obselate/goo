@@ -134,6 +134,7 @@ internal partial class Reconciler {
   }
 
   internal func FlushStyles() {
+    using let profile = HistoryPreparationProfile(4)
     let profiler = Profiler
     guard let value = profiler else {
       flushStylesCore()

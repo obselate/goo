@@ -182,6 +182,7 @@ internal class Node {
   }
 
   internal func MarkSceneDirty() {
+    using let profile = HistoryPreparationProfile(6)
     var current Node? = this
     while let node = current {
       node.SceneSubtreeDirty = true

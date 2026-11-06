@@ -419,6 +419,7 @@ public partial class Window {
       changed = true
     }
     if flushForeground() { changed = true }
+    HistoryPreparationProfile.Flush()
     return changed
   }
   private func flushForeground() bool {

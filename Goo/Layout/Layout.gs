@@ -265,6 +265,7 @@ internal class Layout {
   }
 
   private func syncChildren(yg Facebook.Yoga.Node, n Node) {
+    using let profile = HistoryPreparationProfile(5)
     let count = Portals.SourceChildCount(n)
     let children = [count]Facebook.Yoga.Node
     var index int32

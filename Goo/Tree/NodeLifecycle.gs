@@ -12,6 +12,7 @@ internal class NodeLifecycle {
     }
 
     internal func ResetForReuse(n Node) {
+      using let profile = HistoryPreparationProfile(0)
       InputCallbacks.Remove(n)
       TextInputCallbacks.Remove(n)
       GestureMetadata.Remove(n)
