@@ -42,7 +42,7 @@ internal data struct PathAnalyticCurve {
 }
 
 internal sealed class PathBandEncoding {
-  internal const FormatVersion uint32 = 1u
+  internal const FormatVersion uint32 = 2u
   internal const FillRuleNonZeroMask uint32 = 1u
   internal const FillRuleEvenOddMask uint32 = 2u
   internal const HeaderByteStride int64 = 48
@@ -230,6 +230,7 @@ internal sealed class PathBandEncoding {
 
   private func Repack() {
     let requiredWordCount = int32(header.MetricWordOffset) + int32(MetricByteCount / 4L)
+      + curves.Count * 4
     if requiredWordCount > words.Length {
       words = [ArrayGrowthCapacity(words.Length, requiredWordCount,
         requiredWordCount)]uint32
@@ -335,6 +336,39 @@ internal sealed class PathBandEncoding {
         prefix += length
       }
       words[metrics + 1 + values.Count * 2] = BitConverter.SingleToUInt32Bits(float32(prefix))
+      let bounds = metrics + int32(MetricByteCount / 4L)
+      var first = 0
+      while first < values.Count {
+        var last = first
+        while last + 1 < values.Count
+          && values[last + 1].ContourStart == values[first].ContourStart {
+          last++
+        }
+        var lowX = Single.NegativeInfinity
+        var lowY = Single.NegativeInfinity
+        var highX = Single.PositiveInfinity
+        var highY = Single.PositiveInfinity
+        if (values[first].Flags & 4u) != 0u {
+          lowX = Single.PositiveInfinity
+          lowY = Single.PositiveInfinity
+          highX = Single.NegativeInfinity
+          highY = Single.NegativeInfinity
+          for index in first ... last + 1 {
+            let curve = values[index]
+            lowX = MathF.Min(lowX, MathF.Min(curve.X0, MathF.Min(curve.CX, curve.X1)))
+            lowY = MathF.Min(lowY, MathF.Min(curve.Y0, MathF.Min(curve.CY, curve.Y1)))
+            highX = MathF.Max(highX, MathF.Max(curve.X0, MathF.Max(curve.CX, curve.X1)))
+            highY = MathF.Max(highY, MathF.Max(curve.Y0, MathF.Max(curve.CY, curve.Y1)))
+          }
+        }
+        for index in first ... last + 1 {
+          words[bounds + index * 4] = BitConverter.SingleToUInt32Bits(lowX)
+          words[bounds + index * 4 + 1] = BitConverter.SingleToUInt32Bits(lowY)
+          words[bounds + index * 4 + 2] = BitConverter.SingleToUInt32Bits(highX)
+          words[bounds + index * 4 + 3] = BitConverter.SingleToUInt32Bits(highY)
+        }
+        first = last + 1
+      }
     }
 
   private func curveLength(ref value PathAnalyticCurve) float64 {
