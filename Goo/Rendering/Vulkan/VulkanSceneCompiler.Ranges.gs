@@ -69,20 +69,34 @@ internal partial class VulkanSceneCompiler {
     internal prop RetainedOwnerCount int32 {
         get {
             let retained = HashSet[VulkanSceneOwnerId]()
-            if rangeRoot.TryGetTarget(out var root) { CollectRetainedOwners(root, retained) }
-            if rangeOverlayRoot.TryGetTarget(out var overlays) { CollectRetainedOwners(overlays, retained) }
-            for entry in owners { retained.Add(entry.Value) }
+            if rangeRoot.TryGetTarget(out var root) {
+                CollectRetainedOwners(root, retained)
+            }
+            if rangeOverlayRoot.TryGetTarget(out var overlays) {
+                CollectRetainedOwners(overlays, retained)
+            }
+            for entry in owners {
+                retained.Add(entry.Value)
+            }
             return retained.Count
         }
     }
 
     private func CollectRetainedOwners(node Node, retained HashSet[VulkanSceneOwnerId]) {
-        if node.Retired { return }
-        if Object.ReferenceEquals(node.VulkanOwnerToken, ownerToken) {
-            if let owner = node.VulkanOwner { retained.Add(owner) }
+        if node.Retired {
+            return
         }
-        for child in node.Children { CollectRetainedOwners(child, retained) }
-        for child in ScrollbarParts.ActiveChildren(node) { CollectRetainedOwners(child, retained) }
+        if Object.ReferenceEquals(node.VulkanOwnerToken, ownerToken) {
+            if let owner = node.VulkanOwner {
+                retained.Add(owner)
+            }
+        }
+        for child in node.Children {
+            CollectRetainedOwners(child, retained)
+        }
+        for child in ScrollbarParts.ActiveChildren(node) {
+            CollectRetainedOwners(child, retained)
+        }
     }
 
     internal prop RangeCompileCount int32 {
@@ -126,11 +140,15 @@ internal partial class VulkanSceneCompiler {
         if let node = root {
             node.SceneResourcesDirty = false
             rangeRoot.SetTarget(node)
-        } else { rangeRoot.SetTarget(nil) }
+        } else {
+            rangeRoot.SetTarget(nil)
+        }
         if let node = overlayRoot {
             node.SceneResourcesDirty = false
             rangeOverlayRoot.SetTarget(node)
-        } else { rangeOverlayRoot.SetTarget(nil) }
+        } else {
+            rangeOverlayRoot.SetTarget(nil)
+        }
         if frameVersion == 1uL && rangeSnapshotVersion != 0uL {
             rangeReady = false
         }
@@ -396,8 +414,14 @@ internal partial class VulkanSceneCompiler {
             PreviousContext: root.Context,
             Context: context,
         }
-        if !frame.AppendRange(rangeData, binding, root.ActiveClip, root.ActiveTransform, frameVersion,
-            rangeProofVersion == rangeSnapshotVersion && retentionProofs?.Ready == true) {
+        if !frame.AppendRange(
+            rangeData,
+            binding,
+            root.ActiveClip,
+            root.ActiveTransform,
+            frameVersion,
+            rangeProofVersion == rangeSnapshotVersion && retentionProofs?.Ready == true
+        ) {
             return false
         }
         if root.PreservesExternalBackdrop {
