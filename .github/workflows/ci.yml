@@ -139,6 +139,36 @@ jobs:
             artifacts/app-host-aot/Goo.AppHostSmoke "$RUNNER_TEMP/app-host-aot"
           dotnet run --project tools/Goo.HostChecks -c Release -- desktop \
             artifacts/app-host-aot/Goo.AppHostSmoke "$RUNNER_TEMP/desktop-activation"
+      - name: Verify NativeAOT Vulkan GPU experiment selection
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          run="$RUNNER_TEMP/gpu-experiment-aot"
+          trap 'rm -rf "$run"' EXIT
+          dotnet publish tests/Goo.GpuExperimentSmoke/Goo.GpuExperimentSmoke.gsproj \
+            -c Release -r linux-x64 --self-contained true -m:4 \
+            -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:IlcTreatWarningsAsErrors=true -o "$run/publish"
+          executable="$run/publish/Goo.GpuExperimentSmoke"
+          GOO_VK_DIAGNOSTICS=0 GOO_VK_GPU_EXPERIMENT=no-text \
+            GOO_GPU_EXPERIMENT_EXPECTED=None "$executable"
+          for selection in none:None full-redraw:FullRedraw no-text:NoText \
+            no-shadows:NoShadows no-images:NoImages no-layers:NoLayers \
+            no-clip-sampling:NoClipSampling clip-clear-only:ClipClearOnly \
+            clip-regenerate:ClipRegenerate no-gpu-timestamps:NoGpuTimestamps
+          do
+            GOO_VK_DIAGNOSTICS=1 GOO_VK_GPU_EXPERIMENT="${selection%:*}" \
+              GOO_GPU_EXPERIMENT_EXPECTED="${selection#*:}" "$executable"
+          done
+          printf 'no-images\n' > "$run/selection"
+          GOO_VK_DIAGNOSTICS=1 GOO_VK_GPU_EXPERIMENT=no-text \
+            GOO_VK_GPU_EXPERIMENT_FILE="$run/selection" \
+            GOO_GPU_EXPERIMENT_EXPECTED=NoImages "$executable"
+          dotnet publish tests/Goo.GpuExperimentSmoke/Goo.GpuExperimentSmoke.gsproj \
+            -c Release -r linux-x64 --self-contained true -m:4 \
+            -p:PublishAot=false -p:PublishTrimmed=true -p:TrimMode=link \
+            -p:TreatWarningsAsErrors=true -o "$run/trimmed"
+          GOO_VK_DIAGNOSTICS=1 GOO_VK_GPU_EXPERIMENT=no-text \
+            GOO_GPU_EXPERIMENT_EXPECTED=NoText "$run/trimmed/Goo.GpuExperimentSmoke"
       - name: Build Goo DevTools CLI
         if: needs.changes.outputs.full == 'true'
         run: dotnet run --project tools/Goo.Repo -- check devtools

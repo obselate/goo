@@ -1,0 +1,11 @@
+<Project Sdk="Gsharp.NET.Sdk/0.5.212">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Goo/Rendering/Vulkan/VulkanGpuExperiment.gs" Link="VulkanGpuExperiment.gs" />
+    <Compile Include="../../Goo/Rendering/Vulkan/VulkanGpuExperiments.Enabled.gs" Link="VulkanGpuExperiments.Enabled.gs" />
+  </ItemGroup>
+</Project>
