@@ -113,7 +113,7 @@ public sealed class Examples(string sample) : Cell
                         Cell.Mount<ModalDialog, ModalDialogHost>("dialog", new ModalDialog
                         {
                             Open = open, Content = new Text { Content = "Save account?" }, Padding = 20,
-                            OnClose = Close, OnCancel = Close, OnConfirm = Close
+                            OnOpenChange = value => { open = value; Rebuild(); }, OnCancel = Close, OnConfirm = Close
                         })
                     ]
                 };

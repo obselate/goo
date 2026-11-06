@@ -841,7 +841,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                             }
                         },
                         FitColumnsToViewport: true,
-                        Density: DataGridDensity.Compact,
+                        Density: Density.Compact,
                         Height: Length.Auto,
                         AccessibilityName: tab,
                         CreateRoot: (input DataGridInput, root Container) -> {

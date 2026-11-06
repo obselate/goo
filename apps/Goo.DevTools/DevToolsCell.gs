@@ -18,9 +18,7 @@ class DevToolsCell : Cell {
     private let logRow((DiagnosticLogEntry) -> Blob)
     private let captureRow((DiagnosticScreenshot) -> Blob)
     private let collapsed HashSet[string] = HashSet[string]()
-    private let collapsedSections List[string] = List[string](
-        []string{"Unset", "Computed", "State", "Events", "Accessibility", "Changes"}
-    )
+    private let expandedSections List[string] = List[string]([]string{""})
     private let typeNames Dictionary[string, string] = Dictionary[string, string]()
     private var treeNodes[]TreeNode = []TreeNode{}
     private var expandedIds[]string = []string{}
@@ -437,10 +435,11 @@ class DevToolsCell : Cell {
             PropertyGrid{
                 Items: items.ToArray(),
                 Layout: PropertyGridLayout.Compact,
-                CollapsedSections: collapsedSections.ToArray(),
-                OnSectionToggle: (section string) -> {
-                    if !collapsedSections.Remove(section) {
-                        collapsedSections.Add(section)
+                ExpandedSectionIds: expandedSections.ToArray(),
+                OnSectionExpandedChange: (section string, expanded bool) -> {
+                    expandedSections.Remove(section)
+                    if expanded {
+                        expandedSections.Add(section)
                     }
                     Rebuild()
                 },
@@ -486,7 +485,7 @@ class DevToolsCell : Cell {
                             ToggleOption{Id: "tab-Layout", Label: "Layout"},
                         },
                         SelectedIds: []string{layout ? "tab-Layout": "tab-Properties"},
-                        OnChange: (ids[]string) -> {
+                        OnSelectionChange: (ids[]string) -> {
                             let selected = ids.Length > 0 && ids[0] == "tab-Layout"
                             session.SetTab(selected ? DiagnosticDetailsTab.Layout: DiagnosticDetailsTab.Configuration)
                             Rebuild()
@@ -614,7 +613,7 @@ class DevToolsCell : Cell {
                         ToggleOption{Id: "drawer-captures", Label: "Captures " + session.Screenshots.Count.ToString()},
                     },
                     SelectedIds: []string{showCaptures ? "drawer-captures": "drawer-console"},
-                    OnChange: (ids[]string) -> {
+                    OnSelectionChange: (ids[]string) -> {
                         showCaptures = ids.Length > 0 && ids[0] == "drawer-captures"
                         Rebuild()
                     },
