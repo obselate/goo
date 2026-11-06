@@ -91,9 +91,10 @@ internal class ScrollbarNodeValues {
 
 internal class ScrollbarStyles {
     shared {
-
         internal func Remove(n Node) {
-            if let state = n.PortalState { state.Scrollbar = nil }
+            if let state = n.PortalState {
+                state.Scrollbar = nil
+            }
         }
 
         internal func GetX(n Node) Scrollbar? -> n.PortalState?.Scrollbar?.X
@@ -101,10 +102,10 @@ internal class ScrollbarStyles {
         internal func GetY(n Node) Scrollbar? -> n.PortalState?.Scrollbar?.Y
 
         internal func GetVisibilityX(n Node) ScrollbarVisibility ->
-            n.PortalState?.Scrollbar?.VisibilityX ?? ScrollbarVisibility.Auto
+        n.PortalState?.Scrollbar?.VisibilityX ?? ScrollbarVisibility.Auto
 
         internal func GetVisibilityY(n Node) ScrollbarVisibility ->
-            n.PortalState?.Scrollbar?.VisibilityY ?? ScrollbarVisibility.Auto
+        n.PortalState?.Scrollbar?.VisibilityY ?? ScrollbarVisibility.Auto
 
         internal func SetVisibilityX(n Node, value ScrollbarVisibility) {
             if let existing = n.PortalState?.Scrollbar {

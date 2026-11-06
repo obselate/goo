@@ -1,9 +1,11 @@
 package Goo
 
 import System
+import System.Collections.Generic
+import System.Runtime.CompilerServices
 
 internal class NodeTextState {
-    internal var Layouts System.Collections.Generic.List[TextLayout]?
+    internal var Layouts List[TextLayout]?
     internal var Analysis TextAnalysisStore?
     internal var Presentation PassiveTextPresentation?
     internal var Shadow BoxShadowStack?
@@ -84,7 +86,7 @@ internal class NodePortalState {
     internal var ScrollActivity ScrollNodeActivity?
     internal var ScrollTopology ScrollTopologyValue?
     internal var CustomLayout CustomLayoutState?
-    internal var StackingOrder System.Collections.Generic.List[Node]?
+    internal var StackingOrder List[Node]?
     internal var StackingValue StackingValue?
     internal var PortalRoot Node?
     internal var PortalOverlay Node?
@@ -92,7 +94,7 @@ internal class NodePortalState {
     internal var Virtualization VirtualNodeState?
     internal var ScrollbarParts ScrollbarPartState?
     internal var Transition LayoutTransitionState?
-    internal var VulkanOwners System.Runtime.CompilerServices.ConditionalWeakTable[VulkanSceneCompiler, VulkanSceneOwnerId]?
+    internal var VulkanOwners ConditionalWeakTable[VulkanSceneCompiler, VulkanSceneOwnerId]?
     internal var PortalAnchor ElementHandle?
     internal var PortalPlacement PortalPlacement
     internal var PortalBounds PortalPlacementBounds?

@@ -87,8 +87,7 @@ internal partial class VulkanSceneCompiler {
             if let owner = node.VulkanOwner {
                 retained.Add(owner)
             }
-        }
-        else if let owners = node.PortalState?.VulkanOwners && owners.TryGetValue(this, out var owner) {
+        } else if let owners = node.PortalState?.VulkanOwners && owners.TryGetValue(this, out var owner) {
             retained.Add(owner)
         }
         for child in node.Children {
