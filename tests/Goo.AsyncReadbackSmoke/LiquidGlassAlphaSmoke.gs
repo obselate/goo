@@ -65,7 +65,7 @@ func RunLiquidGlassAlphaSmoke() {
     window = opened
     Console.SetError(capturedError)
     opened.Open()
-    WindowReadbackTestFixture.ForceRender(opened, 0.0)
+    WindowReadbackTestFixture.ForceRender(opened, 0.0, timeoutSeconds: 10.0)
     WindowReadbackTestFixture.ForceRender(opened, 0.0166666666666667)
     let metrics = WindowReadbackTestFixture.Metrics(opened)
     let frame = PrimitiveReadback(opened, metrics)
