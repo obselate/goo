@@ -498,8 +498,12 @@ class AccessibilityChecks : Instrumentation {
         using let monitor = AddMonitor(activity!!.Class.Name, nil, false)!!
         try {
             RunOnMainSync(activity!!.Recreate)
-            activity = WaitForMonitorWithTimeout(monitor, 15000) as MainActivity ??
-                throw InvalidOperationException("Replacement Activity did not start.")
+            Wait(() -> {
+                let replacement = monitor.LastActivity as MainActivity
+                if replacement == nil || replacement.Equals(activity) { return false }
+                activity = replacement
+                return true
+            }, "Replacement Activity did not start.")
         } finally {
             RemoveMonitor(monitor)
         }

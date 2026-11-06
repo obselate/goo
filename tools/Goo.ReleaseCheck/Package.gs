@@ -21,6 +21,7 @@ internal shared partial class ReleaseCheck {
         "LICENSE",
         "THIRD-PARTY-NOTICES.md",
         "buildTransitive/Goo.targets",
+        "buildTransitive/Goo.Android.NativeAot.xml",
         "buildTransitive/native/linux-x64/libSDL3.a",
         "buildTransitive/native/linux-x64/libgoo-harfbuzz.a",
         "buildTransitive/native/linux-x64/libgoo-harfbuzz-gpu.a",
@@ -93,6 +94,7 @@ internal shared partial class ReleaseCheck {
             ["LICENSE"] = "LICENSE",
             ["THIRD-PARTY-NOTICES.md"] = "THIRD-PARTY-NOTICES.md",
             ["buildTransitive/Goo.targets"] = "Goo/Goo.targets",
+            ["buildTransitive/Goo.Android.NativeAot.xml"] = "Goo/Goo.Android.NativeAot.xml",
             ["contentFiles/any/any/Vulkan/Runtime/MoltenVK-LICENSE.txt"] = "Goo/Runtime/Vulkan/MoltenVK-LICENSE.txt"
         }
         for source in sources {

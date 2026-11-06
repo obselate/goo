@@ -2,6 +2,9 @@
   <PropertyGroup Condition="'$(PublishAot)' == 'true'">
     <IlcFoldIdenticalMethodBodies Condition="'$(IlcFoldIdenticalMethodBodies)' == ''">true</IlcFoldIdenticalMethodBodies>
   </PropertyGroup>
+  <ItemGroup Condition="'$(PublishAot)' == 'true' and '$(TargetPlatformIdentifier)' == 'android'">
+    <TrimmerRootDescriptor Include="$(MSBuildThisFileDirectory)Goo.Android.NativeAot.xml" />
+  </ItemGroup>
   <PropertyGroup Condition="'$(PublishAot)' == 'true' and '$(RuntimeIdentifier)' == 'linux-x64'">
     <GooNativeAotStaticRoot Condition="'$(GooNativeAotStaticRoot)' == ''">$(MSBuildThisFileDirectory)native/linux-x64</GooNativeAotStaticRoot>
   </PropertyGroup>
