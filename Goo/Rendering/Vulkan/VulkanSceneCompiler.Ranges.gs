@@ -1,7 +1,7 @@
 package Goo
 
 import System
-import System.Linq
+import System.Collections.Generic
 import System.Runtime.CompilerServices
 
 internal struct VulkanSceneRangeCounters {
@@ -63,9 +63,26 @@ internal partial class VulkanSceneCompiler {
     private var rangeCompileCount int32
     private var rangeHitCount int32
     private var rangePeakBytes int64
+    private let rangeRoot WeakReference[Node] = WeakReference[Node](nil)
+    private let rangeOverlayRoot WeakReference[Node] = WeakReference[Node](nil)
 
     internal prop RetainedOwnerCount int32 {
-        get -> owners.Count()
+        get {
+            let retained = HashSet[VulkanSceneOwnerId]()
+            if rangeRoot.TryGetTarget(out var root) { CollectRetainedOwners(root, retained) }
+            if rangeOverlayRoot.TryGetTarget(out var overlays) { CollectRetainedOwners(overlays, retained) }
+            for entry in owners { retained.Add(entry.Value) }
+            return retained.Count
+        }
+    }
+
+    private func CollectRetainedOwners(node Node, retained HashSet[VulkanSceneOwnerId]) {
+        if node.Retired { return }
+        if Object.ReferenceEquals(node.VulkanOwnerToken, ownerToken) {
+            if let owner = node.VulkanOwner { retained.Add(owner) }
+        }
+        for child in node.Children { CollectRetainedOwners(child, retained) }
+        for child in ScrollbarParts.ActiveChildren(node) { CollectRetainedOwners(child, retained) }
     }
 
     internal prop RangeCompileCount int32 {
@@ -108,10 +125,12 @@ internal partial class VulkanSceneCompiler {
         || rangeExactCullEnabled != exactTextClipCullEnabled
         if let node = root {
             node.SceneResourcesDirty = false
-        }
+            rangeRoot.SetTarget(node)
+        } else { rangeRoot.SetTarget(nil) }
         if let node = overlayRoot {
             node.SceneResourcesDirty = false
-        }
+            rangeOverlayRoot.SetTarget(node)
+        } else { rangeOverlayRoot.SetTarget(nil) }
         if frameVersion == 1uL && rangeSnapshotVersion != 0uL {
             rangeReady = false
         }

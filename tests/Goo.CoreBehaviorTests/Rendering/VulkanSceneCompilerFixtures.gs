@@ -140,7 +140,8 @@ internal class VulkanSceneCompilerFixtures {
       let compiler = VulkanSceneCompiler(64)
       compiler.Compile(root, Color.Transparent, 120.0F, 100.0F)
       compiler.Compile(root, Color.Transparent, 120.0F, 100.0F)
-      if compiler.RangeHitCount != 1 || compiler.RangeCompileCount != 0 { return false }
+      if compiler.RangeHitCount != 1 || compiler.RangeCompileCount != 0
+        || compiler.RetainedOwnerCount != 4 { return false }
       let precedingVersion = compiler.LastResult.FrameVersion
       var region VulkanDamageRegion
       var fullRedraw bool
