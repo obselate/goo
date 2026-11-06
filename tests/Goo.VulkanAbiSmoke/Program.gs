@@ -47,9 +47,7 @@ internal shared class Program {
         RunFontCacheGate(fontPath)
         TextShaping.RunEllipsisGate(fontPath)
         RunFontRegistrationGate(fontPath)
-        if OperatingSystem.IsLinux() {
-            RunSystemFontWeightGate(fontPath)
-        }
+        if OperatingSystem.IsLinux() { RunSystemFontWeightGate(fontPath) }
         RunPathMorphGate()
         RunEvenOddPathGate()
         RunPathUploadGate()
@@ -192,15 +190,10 @@ internal shared class Program {
                     padded.SetLength(20L * 1024L * 1024L)
                 }
                 let config = Path.Combine(root, "fonts.conf")
-                File.WriteAllText(
-                    config,
-                    "<fontconfig><dir>" + System.Security.SecurityElement.Escape(fonts)
+                File.WriteAllText(config, "<fontconfig><dir>" + System.Security.SecurityElement.Escape(fonts)
                     + "</dir><cachedir>" + System.Security.SecurityElement.Escape(Path.Combine(root, "cache"))
-                    + "</cachedir></fontconfig>"
-                )
-                let start = ProcessStartInfo(
-                    Environment.ProcessPath ?? throw InvalidOperationException("No process path")
-                )
+                    + "</cachedir></fontconfig>")
+                let start = ProcessStartInfo(Environment.ProcessPath ?? throw InvalidOperationException("No process path"))
                 start.UseShellExecute = false
                 if Path.GetFileNameWithoutExtension(start.FileName) == "dotnet" {
                     start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "Goo.VulkanAbiSmoke.dll"))
@@ -212,9 +205,7 @@ internal shared class Program {
                 start.Environment["GOO_VK_SYSTEM_FONT_WEIGHT"] = "1"
                 using let child = Process.Start(start) ?? throw InvalidOperationException("Font smoke did not start")
                 child.WaitForExit()
-                if child.ExitCode != 0 {
-                    throw InvalidOperationException("System variable font weight smoke failed")
-                }
+                if child.ExitCode != 0 { throw InvalidOperationException("System variable font weight smoke failed") }
             } finally {
                 Directory.Delete(root, true)
             }
@@ -237,21 +228,15 @@ internal shared class Program {
         if below.Width != light.Width || above.Width != maximum.Width || fallback.Width != semibold.Width {
             throw InvalidOperationException("System variable font axis clamp or family fallback failed")
         }
-        using let source = FontSource(
-            "GooExplicitVariableWeight",
-            600,
-            false,
-            File.ReadAllBytes(fontPath),
-            0u,
-            []FontVariation{FontVariation("wght", 300f)}
-        )
+        using let source = FontSource("GooExplicitVariableWeight", 600, false, File.ReadAllBytes(fontPath),
+            0u, []FontVariation{FontVariation("wght", 300f)})
         source.Register()
         using let explicitWeight = TextShaping.Shape("office", source.Family, 32f, 600, false, 0f, 1)
         if explicitWeight.Width != light.Width {
             throw InvalidOperationException("Explicit font variations were replaced by the requested weight")
         }
-        for families in[]string{source.Family + ", " + family, family + ", MissingPreloadFixture"} {
-            for weight in[]int32{400, 700} {
+        for families in []string{source.Family + ", " + family, family + ", MissingPreloadFixture"} {
+            for weight in []int32{400, 700} {
                 TextShaping.Metrics(families, 14f, weight, false)
                 TextShaping.FallbackPreloadForTests().GetAwaiter().GetResult()
             }
@@ -259,19 +244,10 @@ internal shared class Program {
             File.Move(retainedPath, retainedPath + ".retained")
             try {
                 for pass in 0 ... 8 {
-                    for weight in[]int32{400, 700} {
+                    for weight in []int32{400, 700} {
                         let text = "备注 页面切换输入 " + pass.ToString()
-                        if TextShaping.MeasureLineUncached(
-                            text,
-                            0,
-                            text.Length,
-                            families,
-                            14f,
-                            weight,
-                            false,
-                            0f,
-                            1
-                        ) <= 0f {
+                        if TextShaping.MeasureLineUncached(text, 0, text.Length,
+                            families, 14f, weight, false, 0f, 1) <= 0f {
                             throw InvalidOperationException("Mixed-weight fallback layout did not retain its font")
                         }
                     }
@@ -293,14 +269,10 @@ internal shared class Program {
             throw InvalidOperationException("Evicted typeface was loaded again while its shaped run was live")
         }
         Console.WriteLine("LEASED_TYPEFACE_REUSE evicted=1 reused=1")
-        Console.WriteLine(
-            "MIXED_WEIGHT_FALLBACK_CACHE_SMOKE backgroundPreload=1 warmFileRemoved=1"
-            + " layouts=32 cacheBytes=" + TextShaping.PrimaryFaceCacheBytesForTests().ToString()
-        )
-        Console.WriteLine(
-            "SYSTEM_VARIABLE_FONT_WEIGHT_SMOKE light=" + light.Width.ToString()
-            + " semibold=" + semibold.Width.ToString() + " clamp=1 fallback=1 explicit=1"
-        )
+        Console.WriteLine("MIXED_WEIGHT_FALLBACK_CACHE_SMOKE backgroundPreload=1 warmFileRemoved=1"
+            + " layouts=32 cacheBytes=" + TextShaping.PrimaryFaceCacheBytesForTests().ToString())
+        Console.WriteLine("SYSTEM_VARIABLE_FONT_WEIGHT_SMOKE light=" + light.Width.ToString()
+            + " semibold=" + semibold.Width.ToString() + " clamp=1 fallback=1 explicit=1")
     }
 
     private func RunFontRegistrationGate(fontPath string) {
@@ -318,7 +290,7 @@ internal shared class Program {
         }
         let differentBytes = [bytes.Length + 1]uint8
         Array.Copy(bytes, differentBytes, bytes.Length)
-        for candidate in[]FontSource{
+        for candidate in []FontSource{
             FontSource(source.Family, 400, false, differentBytes, 0u, variations),
             FontSource(source.Family, 400, false, bytes, 1u, variations),
             FontSource(source.Family, 400, false, bytes, 0u, []FontVariation{FontVariation("wdth", 400f)}),
@@ -354,9 +326,7 @@ internal shared class Program {
         let aliasPath = oversizedPath + ".alias.ttf"
         try {
             File.Copy(fontPath, oversizedPath)
-            if OperatingSystem.IsLinux() {
-                File.CreateSymbolicLink(aliasPath, oversizedPath)
-            }
+            if OperatingSystem.IsLinux() { File.CreateSymbolicLink(aliasPath, oversizedPath) }
             {
                 using let pathSource = FontSource.FromPath(
                     "GooAbiPath",
@@ -366,18 +336,9 @@ internal shared class Program {
                     0u,
                     []FontVariation{FontVariation("wght", 400f)}
                 )
-                using let aliasSource = FontSource.FromPath(
-                    "GooAbiPathAlias",
-                    700,
-                    false,
-                    if OperatingSystem.IsLinux() {
-                        aliasPath
-                    } else {
-                        oversizedPath
-                    },
-                    0u,
-                    []FontVariation{FontVariation("wght", 700f)}
-                )
+                using let aliasSource = FontSource.FromPath("GooAbiPathAlias", 700, false,
+                    if OperatingSystem.IsLinux() { aliasPath } else { oversizedPath },
+                    0u, []FontVariation{FontVariation("wght", 700f)})
                 File.Delete(oversizedPath)
                 if pathSource.IsRegistered {
                     throw InvalidOperationException("Font path source registered eagerly")
@@ -385,9 +346,9 @@ internal shared class Program {
                 pathSource.Register()
                 aliasSource.Register()
                 let firstRegistration = FontRegistry.Resolve("GooAbiPath", 400, false)
-                ?? throw InvalidOperationException("File font registration is missing")
+                    ?? throw InvalidOperationException("File font registration is missing")
                 let aliasRegistration = FontRegistry.Resolve("GooAbiPathAlias", 700, false)
-                ?? throw InvalidOperationException("Alias font registration is missing")
+                    ?? throw InvalidOperationException("Alias font registration is missing")
                 if !Object.ReferenceEquals(firstRegistration.Bytes, aliasRegistration.Bytes) {
                     throw InvalidOperationException("Font selection keys did not share the file backing")
                 }
@@ -403,10 +364,8 @@ internal shared class Program {
                 GC.Collect()
                 GC.WaitForPendingFinalizers()
                 let workspace = VulkanTextShapingWorkspace(16)
-                let result = shapedPath
-                    .Runs[0]
-                    .Provider
-                    .ShapeInto("office", VulkanTextShapingOptions{Direction: 4u}, workspace)
+                let result = shapedPath.Runs[0].Provider.ShapeInto(
+                    "office", VulkanTextShapingOptions{Direction: 4u}, workspace)
                 if result.Status != VulkanTextProviderAbi.Success || result.Count <= 0 {
                     throw InvalidOperationException("Active shaped run did not retain its file mapping")
                 }
@@ -1402,8 +1361,11 @@ internal shared class Program {
     }
 
     private func RunBackdropDamageGate() {
-        for behind in[]bool{false, true} {
-            let root = Node(){Kind = NodeKind.Container, Rect = Rect{X: 0.0F, Y: 0.0F, W: 320.0F, H: 180.0F}}
+        for behind in []bool{false, true} {
+            let root = Node(){
+                Kind = NodeKind.Container,
+                Rect = Rect{X: 0.0F, Y: 0.0F, W: 320.0F, H: 180.0F}
+            }
             let panel = Node(){
                 Kind = NodeKind.Container,
                 Parent = root,
@@ -1412,19 +1374,11 @@ internal shared class Program {
             }
             let child = Node(){
                 Kind = NodeKind.Container,
-                Parent = if behind {
-                    root
-                } else {
-                    panel
-                },
+                Parent = if behind { root } else { panel },
                 Rect = Rect{X: 80.0F, Y: 60.0F, W: 30.0F, H: 20.0F},
                 BackgroundColor = Color.Rgb(200, 80, 40)
             }
-            if behind {
-                root.Children.Add(child)
-            } else {
-                panel.Children.Add(child)
-            }
+            if behind { root.Children.Add(child) } else { panel.Children.Add(child) }
             root.Children.Add(panel)
             let compiler = VulkanSceneCompiler(8)
             let before = compiler.Compile(root, Color.Black, 320.0F, 180.0F).FrameVersion
@@ -1432,35 +1386,23 @@ internal shared class Program {
             child.BackgroundColor = Color.Rgba(40, 180, 120, 128)
             child.BumpScenePaintVersion()
             let after = compiler.Compile(root, Color.Black, 320.0F, 180.0F).FrameVersion
-            let hasDamage = compiler.BuildDamage(
-                before,
-                after,
-                1.0F,
-                1.0F,
-                320u,
-                180u,
-                out var region,
-                out var fullRedraw
-            )
+            let hasDamage = compiler.BuildDamage(before, after, 1.0F, 1.0F, 320u, 180u,
+                out var region, out var fullRedraw)
             let expected = if behind {
                 VulkanDamageRegion{X: 38, Y: 28, Width: 224, Height: 124}
             } else {
                 VulkanDamageRegion{X: 80, Y: 60, Width: 30, Height: 20}
             }
             if !hasDamage || fullRedraw || region.X != expected.X || region.Y != expected.Y
-            || region.Width != expected.Width || region.Height != expected.Height {
-                throw InvalidOperationException(
-                    "Backdrop damage behind=" + behind.ToString()
+                || region.Width != expected.Width || region.Height != expected.Height {
+                throw InvalidOperationException("Backdrop damage behind=" + behind.ToString()
                     + " region=" + region.X.ToString() + "," + region.Y.ToString()
                     + "," + region.Width.ToString() + "," + region.Height.ToString()
-                    + " full=" + fullRedraw.ToString()
-                )
+                    + " full=" + fullRedraw.ToString())
             }
-            Console.WriteLine(
-                "VULKAN_BACKDROP_DAMAGE behind=" + behind.ToString()
+            Console.WriteLine("VULKAN_BACKDROP_DAMAGE behind=" + behind.ToString()
                 + " region=" + region.X.ToString() + "," + region.Y.ToString()
-                + "," + region.Width.ToString() + "," + region.Height.ToString()
-            )
+                + "," + region.Width.ToString() + "," + region.Height.ToString())
         }
     }
 
