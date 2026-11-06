@@ -84,18 +84,22 @@ internal partial class VulkanSceneCompiler {
   }
 
   internal func SetTextScene(value VulkanTextScene?) {
+    if !Object.ReferenceEquals(textScene, value) { InvalidateRanges() }
     textScene = value
   }
 
   internal func SetImageScene(value VulkanImageScene?) {
+    if !Object.ReferenceEquals(imageScene, value) { InvalidateRanges() }
     imageScene = value
   }
 
   internal func SetPathScene(value VulkanPathScene?) {
+    if !Object.ReferenceEquals(pathScene, value) { InvalidateRanges() }
     pathScene = value
   }
 
   internal func SetBlendModeSupport(value bool) {
+    if blendModeSupported != value { InvalidateRanges() }
     blendModeSupported = value
   }
   internal func Compile(
@@ -137,6 +141,7 @@ internal partial class VulkanSceneCompiler {
       clipChainCount = 0
       transformCount = 0
       backgroundDrawn = false
+      BeginRangeFrame(root, overlayRoot)
 
       let viewport = ConservativeBounds{
         X: 0.0F,
@@ -180,6 +185,7 @@ internal partial class VulkanSceneCompiler {
         }
       }
 
+      FinishRangeFrame()
       ClassifyRetainedChunks()
 
       lastResult.FrameVersion = frameVersion

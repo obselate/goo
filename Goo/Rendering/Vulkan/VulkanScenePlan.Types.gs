@@ -218,6 +218,7 @@ internal struct SceneChunk {
   internal var ContentKey uint64
   internal var TopologyKey uint64
   internal var Dirty bool
+  internal var RangeContentRetained bool
   internal var RetentionState SceneChunkRetentionState
   internal var TransformIndex int32
   internal var TransformKey uint64
