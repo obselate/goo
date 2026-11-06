@@ -16,6 +16,7 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="../docs/android.md" Pack="true" PackagePath="README.md" />
+    <None Include="Goo.Android.targets" Pack="true" PackagePath="buildTransitive/Goo.Android.targets" />
     <ProjectReference Include="../Goo/Goo.gsproj" />
     <AndroidNativeLibrary Include="../Goo/Runtime/Vulkan/android-arm64/*.so" Abi="arm64-v8a" />
     <AndroidNativeLibrary Include="../Goo/Runtime/Vulkan/android-x64/*.so" Abi="x86_64" />
