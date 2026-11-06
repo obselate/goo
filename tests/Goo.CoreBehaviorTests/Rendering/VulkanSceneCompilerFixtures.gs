@@ -142,6 +142,10 @@ internal class VulkanSceneCompilerFixtures {
       compiler.Compile(root, Color.Transparent, 120.0F, 100.0F)
       if compiler.RangeHitCount != 1 || compiler.RangeCompileCount != 0 { return false }
       let precedingVersion = compiler.LastResult.FrameVersion
+      var region VulkanDamageRegion
+      var fullRedraw bool
+      if !compiler.BuildDamage(0uL, precedingVersion, 1.0F, 1.0F,
+        120u, 100u, out region, out fullRedraw) || !fullRedraw { return false }
       reconciler.Diff(root, create(false, Color.White))
       resolver.FlushEffects()
       Layout().Calculate(root, 120.0F, 100.0F)
@@ -162,8 +166,6 @@ internal class VulkanSceneCompilerFixtures {
         }
       }
       if !changedVerified || !retainedVerified { return false }
-      var region VulkanDamageRegion
-      var fullRedraw bool
       if !compiler.BuildDamage(precedingVersion, changed.FrameVersion, 1.0F, 1.0F,
         120u, 100u, out region, out fullRedraw) || fullRedraw || region.IsEmpty { return false }
       reconciler.Diff(root, create(true, Color.White))
