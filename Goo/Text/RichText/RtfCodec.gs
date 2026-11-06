@@ -339,24 +339,59 @@ internal shared class RtfCodec {
             if escaped.Count == 0 {
                 return
             }
-            let page = switch state.Charset {
-                case -1 or 0 or 1: codePage
-                case 128: 932
-                case 129: 949
-                case 130: 1361
-                case 134: 936
-                case 136: 950
-                case 161: 1253
-                case 162: 1254
-                case 163: 1258
-                case 177: 1255
-                case 178: 1256
-                case 186: 1257
-                case 204: 1251
-                case 222: 874
-                case 238: 1250
-                case 255: 437
-                default: throw UnsupportedContentException("The RTF font charset is unsupported.")
+            var page int32
+            switch state.Charset {
+                case -1 or 0 or 1 {
+                    page = codePage
+                }
+                case 128 {
+                    page = 932
+                }
+                case 129 {
+                    page = 949
+                }
+                case 130 {
+                    page = 1361
+                }
+                case 134 {
+                    page = 936
+                }
+                case 136 {
+                    page = 950
+                }
+                case 161 {
+                    page = 1253
+                }
+                case 162 {
+                    page = 1254
+                }
+                case 163 {
+                    page = 1258
+                }
+                case 177 {
+                    page = 1255
+                }
+                case 178 {
+                    page = 1256
+                }
+                case 186 {
+                    page = 1257
+                }
+                case 204 {
+                    page = 1251
+                }
+                case 222 {
+                    page = 874
+                }
+                case 238 {
+                    page = 1250
+                }
+                case 255 {
+                    page = 437
+                }
+                default {
+                    throw UnsupportedContentException("The RTF font charset is unsupported.")
+                }
             }
             if fallback != 0 {
                 let skipped = Math.Min(fallback, escaped.Count)

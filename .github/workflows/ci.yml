@@ -1611,6 +1611,17 @@ jobs:
       - name: Run focused core behavior tests
         if: needs.changes.outputs.full == 'true' && (matrix.lane == 'core')
         run: dotnet run --project tools/Goo.Repo -- check core
+      - name: Verify trimmed RTF byte decoding
+        if: needs.changes.outputs.full == 'true' && (matrix.lane == 'core')
+        run: |
+          run="$RUNNER_TEMP/rich-text-trimmed"
+          trap 'rm -rf "$run"' EXIT
+          dotnet publish tests/Goo.RichTextSmoke/Goo.RichTextSmoke.gsproj \
+            -c Release -r linux-x64 --self-contained true -m:4 \
+            -p:PublishAot=false -p:PublishTrimmed=true -p:TrimMode=link \
+            -p:TreatWarningsAsErrors=true \
+            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" -o "$run"
+          "$run/Goo.RichTextSmoke"
 
       - name: Run local PNG decoder and cache tests
         if: needs.changes.outputs.full == 'true' && (matrix.lane == 'image')
