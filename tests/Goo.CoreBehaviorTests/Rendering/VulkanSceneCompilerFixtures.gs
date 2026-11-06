@@ -141,6 +141,31 @@ internal class VulkanSceneCompilerFixtures {
       compiler.Compile(root, Color.Transparent, 120.0F, 100.0F)
       compiler.Compile(root, Color.Transparent, 120.0F, 100.0F)
       if compiler.RangeHitCount != 1 || compiler.RangeCompileCount != 0 { return false }
+      let precedingVersion = compiler.LastResult.FrameVersion
+      reconciler.Diff(root, create(false, Color.White))
+      resolver.FlushEffects()
+      Layout().Calculate(root, 120.0F, 100.0F)
+      let changed = compiler.Compile(root, Color.Transparent, 120.0F, 100.0F)
+      guard let changedOwner = root.Children[0].VulkanOwner,
+        let retainedOwner = root.Children[1].Children[0].VulkanOwner else { return false }
+      var changedVerified = false
+      var retainedVerified = false
+      for index in 0 ... compiler.Frame.ChunkCount {
+        let chunk = compiler.Frame.Chunks[index]
+        if chunk.OwnerId == changedOwner.Value && chunk.DrawCount > 0 {
+          if !chunk.Dirty || chunk.RangeContentRetained { return false }
+          changedVerified = true
+        }
+        if chunk.OwnerId == retainedOwner.Value && chunk.DrawCount > 0 {
+          if chunk.Dirty || !chunk.RangeContentRetained { return false }
+          retainedVerified = true
+        }
+      }
+      if !changedVerified || !retainedVerified { return false }
+      var region VulkanDamageRegion
+      var fullRedraw bool
+      if !compiler.BuildDamage(precedingVersion, changed.FrameVersion, 1.0F, 1.0F,
+        120u, 100u, out region, out fullRedraw) || fullRedraw || region.IsEmpty { return false }
       reconciler.Diff(root, create(true, Color.White))
       resolver.FlushEffects()
       Layout().Calculate(root, 120.0F, 100.0F)

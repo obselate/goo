@@ -52,6 +52,7 @@ internal partial class VulkanSceneCompiler {
     private var rangeEvictionIndex int32
     private var rangeActiveSlot int32 = -1
     private var rangeSnapshotVersion uint64
+    private var rangeProofVersion uint64
     private var rangeFontGeneration uint64
     private var rangeAtlasGeneration uint64
     private var rangePixelScale float64
@@ -371,7 +372,8 @@ internal partial class VulkanSceneCompiler {
             PreviousContext: root.Context,
             Context: context,
         }
-        if !frame.AppendRange(rangeData, binding, root.ActiveClip, root.ActiveTransform, frameVersion) {
+        if !frame.AppendRange(rangeData, binding, root.ActiveClip, root.ActiveTransform, frameVersion,
+            rangeProofVersion == rangeSnapshotVersion && retentionProofs?.Ready == true) {
             return false
         }
         if root.PreservesExternalBackdrop {

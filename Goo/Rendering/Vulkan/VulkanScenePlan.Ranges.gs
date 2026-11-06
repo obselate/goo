@@ -174,13 +174,15 @@ internal partial class SceneFrame {
         binding VulkanSceneRangeBinding,
         activeClip int32,
         activeTransform int32,
-        version uint64
+        version uint64,
+        sameProofFrame bool = false
     ) bool {
         RequireClosedChunk()
         let start = binding.Start
         let end = binding.End
         let destination = binding.Destination
         let next = binding.Position(end)
+        let retainContent = sameProofFrame && destination.Chunks == start.Chunks
         let retainPrimitives = destination.Chunks == start.Chunks && end.Chunks <= reusableChunkCount
         && destination.SolidBoxes == start.SolidBoxes && destination.RoundedBoxes == start.RoundedBoxes
         && destination.PerEdgeBorders == start.PerEdgeBorders && destination.Transforms == start.Transforms
@@ -263,6 +265,7 @@ internal partial class SceneFrame {
                 value.FirstResource += destination.ResourceRefs - start.ResourceRefs
                 value.TransformIndex = binding.Transform(value.TransformIndex)
                 value.Version = version
+                value.RangeContentRetained = retainContent
                 if value.RetentionState == SceneChunkRetentionState.ExactLeafRebuild {
                     value.RetentionState = SceneChunkRetentionState.ExactLeafHit
                 }
