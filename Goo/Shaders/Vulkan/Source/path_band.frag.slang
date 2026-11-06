@@ -573,7 +573,9 @@ void accumulateHorizontalCurve(
     bool rightRay,
     float2 pixelsPerPath,
     inout float value,
-    inout float weight)
+    inout float weight,
+    inout float oppositeValue,
+    inout float oppositeWeight)
 {
     AxisRoots roots = solveHorizontalRoots(curve, point);
     for (uint slot = 0u; slot < 2u; ++slot)
@@ -583,6 +585,8 @@ void accumulateHorizontalCurve(
         {
             accumulateHorizontalRoot(point, curve, root, rightRay,
                 pixelsPerPath, value, weight);
+            accumulateHorizontalRoot(point, curve, root, !rightRay,
+                pixelsPerPath, oppositeValue, oppositeWeight);
         }
     }
 }
@@ -593,7 +597,9 @@ void accumulateVerticalCurve(
     bool downRay,
     float2 pixelsPerPath,
     inout float value,
-    inout float weight)
+    inout float weight,
+    inout float oppositeValue,
+    inout float oppositeWeight)
 {
     AxisRoots roots = solveVerticalRoots(curve, point);
     for (uint slot = 0u; slot < 2u; ++slot)
@@ -603,6 +609,8 @@ void accumulateVerticalCurve(
         {
             accumulateVerticalRoot(point, curve, root, downRay,
                 pixelsPerPath, value, weight);
+            accumulateVerticalRoot(point, curve, root, !downRay,
+                pixelsPerPath, oppositeValue, oppositeWeight);
         }
     }
 }
@@ -1075,17 +1083,21 @@ void accumulateVerticalEvenOdd(
     upCoverage = float2(upValue, upWeight);
 }
 
-float2 horizontalCoverageDirection(
+void horizontalCoverageDirections(
     float2 point,
     float2 pixelsPerPath,
     bool rightRay,
-    AnalyticBand band)
+    AnalyticBand band,
+    out float2 primary,
+    out float2 opposite)
 {
     uint start = rightRay ? band.forwardStart : band.reverseStart;
     uint count = rightRay ? band.forwardCount : band.reverseCount;
     uint indices = horizontalIndexBase();
     float value = 0.0;
     float weight = 0.0;
+    float oppositeValue = 0.0;
+    float oppositeWeight = 0.0;
     for (uint index = 0u; index < count; ++index)
     {
         uint curveIndex = pathWord(indices + start + index);
@@ -1095,26 +1107,35 @@ float2 horizontalCoverageDirection(
         }
         QuadraticCurve curve = curveAt(curveIndex);
         accumulateHorizontalCurve(point, curve, rightRay, pixelsPerPath,
-            value, weight);
+            value, weight, oppositeValue, oppositeWeight);
     }
     if (!rightRay)
     {
         value = -value;
     }
-    return float2(value, weight);
+    else
+    {
+        oppositeValue = -oppositeValue;
+    }
+    primary = float2(value, weight);
+    opposite = float2(oppositeValue, oppositeWeight);
 }
 
-float2 verticalCoverageDirection(
+void verticalCoverageDirections(
     float2 point,
     float2 pixelsPerPath,
     bool downRay,
-    AnalyticBand band)
+    AnalyticBand band,
+    out float2 primary,
+    out float2 opposite)
 {
     uint start = downRay ? band.forwardStart : band.reverseStart;
     uint count = downRay ? band.forwardCount : band.reverseCount;
     uint indices = verticalIndexBase();
     float value = 0.0;
     float weight = 0.0;
+    float oppositeValue = 0.0;
+    float oppositeWeight = 0.0;
     for (uint index = 0u; index < count; ++index)
     {
         uint curveIndex = pathWord(indices + start + index);
@@ -1124,13 +1145,18 @@ float2 verticalCoverageDirection(
         }
         QuadraticCurve curve = curveAt(curveIndex);
         accumulateVerticalCurve(point, curve, downRay, pixelsPerPath,
-            value, weight);
+            value, weight, oppositeValue, oppositeWeight);
     }
     if (!downRay)
     {
         value = -value;
     }
-    return float2(value, weight);
+    else
+    {
+        oppositeValue = -oppositeValue;
+    }
+    primary = float2(value, weight);
+    opposite = float2(oppositeValue, oppositeWeight);
 }
 
 float2 horizontalCoverage(float2 point, float2 pixelsPerPath)
@@ -1152,10 +1178,8 @@ float2 horizontalCoverage(float2 point, float2 pixelsPerPath)
     }
     else
     {
-        primary = horizontalCoverageDirection(point, pixelsPerPath,
-            rightRay, band);
-        opposite = horizontalCoverageDirection(point, pixelsPerPath,
-            !rightRay, band);
+        horizontalCoverageDirections(point, pixelsPerPath,
+            rightRay, band, primary, opposite);
     }
     if (opposite.y > primary.y
         || (opposite.y == primary.y && abs(opposite.x) > abs(primary.x)))
@@ -1184,10 +1208,8 @@ float2 verticalCoverage(float2 point, float2 pixelsPerPath)
     }
     else
     {
-        primary = verticalCoverageDirection(point, pixelsPerPath,
-            downRay, band);
-        opposite = verticalCoverageDirection(point, pixelsPerPath,
-            !downRay, band);
+        verticalCoverageDirections(point, pixelsPerPath,
+            downRay, band, primary, opposite);
     }
     if (opposite.y > primary.y
         || (opposite.y == primary.y && abs(opposite.x) > abs(primary.x)))
