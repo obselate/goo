@@ -22,6 +22,10 @@
     <GooTestFixturesProps Condition="'$(GooTestFixturesProps)' == ''">$(MSBuildThisFileDirectory)../tests/Shared/Goo.TestFixtures.props</GooTestFixturesProps>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="Rendering/Vulkan/VulkanGpuExperiments.Enabled.gs"
+             Condition="'$(GooGpuExperiments)' != 'true'" />
+    <Compile Remove="Rendering/Vulkan/VulkanGpuExperiments.Disabled.gs"
+             Condition="'$(GooGpuExperiments)' == 'true'" />
     <InternalsVisibleTo Include="Goo.Android" />
     <InternalsVisibleTo Include="Goo.Audio" />
     <InternalsVisibleTo Include="Goo.Notifications.WindowsSmoke" />

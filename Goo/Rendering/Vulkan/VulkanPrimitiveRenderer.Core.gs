@@ -634,8 +634,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           } else if kind == SceneDrawKind.LayerEnd {
             skippedLayerDepth = skippedLayerDepth - 1
           }
-        } else if partial && layerDepth == 0 && kind == SceneDrawKind.LayerBegin
-          && !LayerIntersectsDamage(frame, reference.Index, damage) {
+        } else if kind == SceneDrawKind.LayerBegin
+          && (VulkanGpuExperiments.Selected == VulkanGpuExperiment.NoLayers
+            || (partial && layerDepth == 0 && !LayerIntersectsDamage(frame, reference.Index, damage))) {
             skippedLayerDepth = 1
           } else if !partial || layerDepth > 0
           || kind == SceneDrawKind.RectClipBegin || kind == SceneDrawKind.RectClipEnd
@@ -670,6 +671,12 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     }
 
   private func ProcessDraw(commandBuffer VkCommandBuffer, reference DrawRef, frame SceneFrame) {
+    if (VulkanGpuExperiments.Selected == VulkanGpuExperiment.NoText && reference.Kind == SceneDrawKind.CachedTextSegment)
+      || (VulkanGpuExperiments.Selected == VulkanGpuExperiment.NoShadows && reference.Kind == SceneDrawKind.Shadow)
+      || (VulkanGpuExperiments.Selected == VulkanGpuExperiment.NoImages && reference.Kind == SceneDrawKind.CachedImage)
+      || (VulkanGpuExperiments.Selected == VulkanGpuExperiment.NoLayers && reference.Kind == SceneDrawKind.GeneratorEffect) {
+      return
+    }
     solidInteriorEligible = reference.ClipChainId == 0
     switch reference.Kind {
       case SceneDrawKind.SolidBox {
