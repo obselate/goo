@@ -111,7 +111,7 @@ var dialog = Cell.Mount<ModalDialog, ModalDialogHost>("dialog", new ModalDialog
 });
 ```
 
-Use Goo.Widgets 0.19.1 for these examples. Rows use measured heights and need a bounded viewport.
+Use Goo.Widgets 0.19.2 for these examples. Rows use measured heights and need a bounded viewport.
 
 - Keep row values immutable, keys stable and the builder delegate unchanged.
 - Mount `Goo.Widgets.Layout.ModalDialogHost` for modal focus and portal behavior. `ModalDialog.Build()` alone creates an in-parent visual.
