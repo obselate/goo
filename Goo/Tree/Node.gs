@@ -151,6 +151,7 @@ internal class Node {
     VulkanOwner = nil
     VulkanOwnerToken = nil
     if let yoga = Yoga {
+      using let profile = HistoryPreparationProfile(10)
       yoga.SetContext(nil)
       yoga.SetDirtiedFunc(nil)
       yoga.MarkDirtyAndPropagate()

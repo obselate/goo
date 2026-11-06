@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.Diagnostics
+import Facebook.Yoga
 
 internal struct HistoryPreparationProfile : IDisposable {
   private let stage int32
@@ -10,11 +11,11 @@ internal struct HistoryPreparationProfile : IDisposable {
   private let active bool
 
   shared {
-    private let names[]string = []string{"ResetForReuse", "LogicalRows", "VirtualRange", "VirtualAnchor", "StyleFlush", "YogaChildren", "SceneDirty", "RetireRows"}
-    private let ticks[]int64 = [8]int64
-    private let allocations[]int64 = [8]int64
-    private let calls[]int64 = [8]int64
-    private let depths[]int32 = [8]int32
+    private let names[]string = []string{"ResetForReuse", "LogicalRows", "VirtualRange", "VirtualAnchor", "StyleFlush", "YogaChildren", "SceneDirty", "RetireRows", "ResetMetadata", "ResetDefaults", "ResetYoga"}
+    private let ticks[]int64 = [11]int64
+    private let allocations[]int64 = [11]int64
+    private let calls[]int64 = [11]int64
+    private let depths[]int32 = [11]int32
 
     internal func Flush() {
       guard let recorder = FrameRecorder.Current, let profiler = FrameProfiler.Current else { return }
@@ -29,6 +30,10 @@ internal struct HistoryPreparationProfile : IDisposable {
         allocations[i] = 0L
         calls[i] = 0L
       }
+      recorder.Counter("YogaRemove", "history.tree.native", uint64(YGNodeAPI.HistoryRemovalTicks), Stopwatch.GetTimestamp(), unit: "stopwatch-ticks", context: profiler.Context)
+      recorder.Counter("YogaInsert", "history.tree.native", uint64(YGNodeAPI.HistoryInsertionTicks), Stopwatch.GetTimestamp(), unit: "stopwatch-ticks", context: profiler.Context)
+      YGNodeAPI.HistoryRemovalTicks = 0L
+      YGNodeAPI.HistoryInsertionTicks = 0L
     }
   }
 

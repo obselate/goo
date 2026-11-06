@@ -1004,6 +1004,7 @@ internal func readField(n Node, f StyleField) StyleEntry {
 }
 
 internal func ApplyAllDefaults(n Node) {
+  using let profile = HistoryPreparationProfile(9)
   for field in StyleFields.InitialFields {
     applyDefault(n, field)
   }

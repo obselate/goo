@@ -8,6 +8,8 @@
 using System;
 using System.Collections.Generic;
 
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Goo")]
+
 namespace Facebook.Yoga
 {
     /// <summary>
@@ -16,6 +18,8 @@ namespace Facebook.Yoga
     /// </summary>
     public static class YGNodeAPI
     {
+        internal static long HistoryRemovalTicks;
+        internal static long HistoryInsertionTicks;
         public static Node YGNodeNew()
         {
             return YGNodeNewWithConfig(Config.Default);
@@ -178,6 +182,7 @@ namespace Facebook.Yoga
                     childOwner == null || childOwner == owner,
                     "Child belongs to another owner.");
             }
+            var removalStart = System.Diagnostics.Stopwatch.GetTimestamp();
             for (var i = 0; i < children.Length; i++)
             {
                 if (children[i].GetOwner() == owner)
@@ -205,11 +210,14 @@ namespace Facebook.Yoga
             {
                 owner.RemoveChild(owner.GetChildCount() - 1);
             }
+            HistoryRemovalTicks += System.Diagnostics.Stopwatch.GetTimestamp() - removalStart;
+            var insertionStart = System.Diagnostics.Stopwatch.GetTimestamp();
             for (var i = 0; i < children.Length; i++)
             {
                 owner.InsertChild(children[i], (nuint)i);
                 children[i].SetOwner(owner);
             }
+            HistoryInsertionTicks += System.Diagnostics.Stopwatch.GetTimestamp() - insertionStart;
             owner.MarkDirtyAndPropagate();
         }
 

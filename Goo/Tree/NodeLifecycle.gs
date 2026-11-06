@@ -13,6 +13,7 @@ internal class NodeLifecycle {
 
     internal func ResetForReuse(n Node) {
       using let profile = HistoryPreparationProfile(0)
+      let metadata = HistoryPreparationProfile(8)
       InputCallbacks.Remove(n)
       TextInputCallbacks.Remove(n)
       GestureMetadata.Remove(n)
@@ -28,6 +29,7 @@ internal class NodeLifecycle {
       CustomLayouts.Remove(n)
       Stacking.Remove(n)
       Portals.Remove(n)
+      metadata.Dispose()
       n.ResetForReuse()
       for i in 0 ... n.Children.Count {
         ResetForReuse(n.Children[i])
