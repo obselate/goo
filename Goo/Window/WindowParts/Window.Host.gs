@@ -781,6 +781,7 @@ public partial class Window {
     } else if let current = Root {
       firstError = captureCleanupError(firstError, () -> current.DisposeMounted())
     }
+    retiredVirtualStates.Clear()
     ClearContextValues()
     firstError = captureCleanupError(firstError, () -> MetricSubscriptions.Flush(this))
     firstError = captureCleanupError(firstError, () -> MetricSubscriptions.ClearWindow(this))

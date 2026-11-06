@@ -19,6 +19,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Motion/PaintBindingFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Tree/TreeFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Tree/ElementHandleFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Tree/RowRecyclingFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Tree/PortalFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Style/StyleFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Rendering/ShapeGeometryFixtures.gs" />

@@ -6,6 +6,11 @@ internal class TextStroking {
   shared {
     private var values ConditionalWeakTable[Node, TextStrokeValue]?
 
+    internal func Remove(n Node) {
+      values?.Remove(n)
+      n.HasTextStrokeState = false
+    }
+
     internal func Get(n Node) TextStrokeValue? {
       if !n.HasTextStrokeState { return nil }
       if let existing = values {

@@ -195,7 +195,7 @@ internal class Layout {
   // Structure-only walk: attaches Yoga (with a one-time full style sync) for
   // new nodes, refreshes image measures, and repairs changed child lists.
   internal func syncNode(n Node, isRoot bool) {
-    var fresh = false
+    var fresh = n.NeedsYogaBinding
     if n.Yoga == nil {
       n.Yoga = YGNodeAPI.YGNodeNewWithConfig(config)
       fresh = true
@@ -218,6 +218,7 @@ internal class Layout {
         YGNodeAPI.YGNodeSetMeasureFunc(yg, ImageLayouts.Measure)
       }
       applyAll(yg, n, isRoot)
+      n.NeedsYogaBinding = false
     } else if n.Kind == NodeKind.Shape {
       // Re-derive view-box aspect: ShapePath swaps land outside style writes.
       applyFlexLayout(yg, n, isRoot)
@@ -719,6 +720,7 @@ internal func applyDirection(yg Facebook.Yoga.Node, n Node) {
 // Push-on-change: one resolved style write lands in Yoga through the same
 // appliers the mount-time sync uses. Nil Yoga means the mount sync covers it.
 internal func syncYogaField(n Node, f StyleField) {
+  if n.NeedsYogaBinding { return }
   guard let yg = n.Yoga else {
     return
   }

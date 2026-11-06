@@ -94,6 +94,10 @@ internal class ScrollbarStyles {
         private let values ConditionalWeakTable[Node, ScrollbarNodeValues] =
         ConditionalWeakTable[Node, ScrollbarNodeValues]()
 
+        internal func Remove(n Node) {
+            values.Remove(n)
+        }
+
         internal func GetX(n Node) Scrollbar? -> if values.TryGetValue(n, out var value) {
             value.X
         } else {

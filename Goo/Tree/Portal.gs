@@ -98,6 +98,12 @@ internal class Portals {
     private let overlays ConditionalWeakTable[Node, Node] = ConditionalWeakTable[Node, Node]()
     private let sources ConditionalWeakTable[Node, PortalSource] = ConditionalWeakTable[Node, PortalSource]()
 
+    internal func Remove(n Node) {
+      roots.Remove(n)
+      overlays.Remove(n)
+      sources.Remove(n)
+    }
+
     internal func Sync(root Node?, overlayRoot Node) {
       if sources.TryGetValue(overlayRoot, out var prior) {
         if let source = prior.Root { overlays.Remove(source) }

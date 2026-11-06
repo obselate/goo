@@ -694,7 +694,7 @@ internal partial class Reconciler {
   internal func Diff(n Node, b Blob) Node {
     let previousDepth = enterTree(n.Parent)
     let outer = operationDepth == 0
-    if outer {
+    if outer && !recyclingRow {
       rememberStyleRetryRoot(n)
     }
     operationDepth++
@@ -766,6 +766,7 @@ internal partial class Reconciler {
   }
 
   private func diffCore(n Node, b Blob) Node {
+    if recyclingRow { n.Key = b.Key }
     if b is VirtualRetainedBlob {
       if n.Retired || n.Key != b.Key {
         throw InvalidOperationException("Retained virtual item does not match the mounted node")
@@ -924,7 +925,7 @@ internal partial class Reconciler {
         if let n = existing {
           n.Fiber = nil
           detached = n
-          n.Key = cell.outputKey
+          n.Key = recyclingRow ? inner.Key : cell.outputKey
           result = Diff(n, inner)
         } else {
           result = Mount(inner)
@@ -1238,6 +1239,11 @@ internal partial class Reconciler {
     let scratchScope = scratch.Rent(Math.Max(n.Children.Count, blobs.Count))
     try {
       validateChildren(blobs, scratchScope)
+      if recyclingRow {
+        for i in 0 ... Math.Min(n.Children.Count, blobs.Count) {
+          n.Children[i].Key = blobs[i].Key
+        }
+      }
       if scratchScope.IncomingKeys.Count == 0 {
         diffUnkeyedChildren(n, blobs, scratchScope.Retire)
       } else {
@@ -1301,10 +1307,11 @@ internal partial class Reconciler {
         return !n.Retired && n.Key == b.Key
       }
       case virtual is Virtual {
-        return n.Fiber == nil && n.Kind == NodeKind.Container && n.Key == b.Key
-          && Virtualization.State(n) != nil
+        return n.Fiber == nil && n.Kind == NodeKind.Container && !n.IsPortal && n.Key == b.Key
+          && (recyclingRow || Virtualization.State(n) != nil)
       }
       case e is CellElement {
+        if recyclingRow && n.Fiber == nil { return true }
         if let cell = n.Fiber {
           return mountType(cell) == e.CellType && cell.mountKey == e.Key && !cell.disposed
         }
@@ -1422,7 +1429,8 @@ internal partial class Reconciler {
             next.Add(child)
           }
         } else {
-          let child = Mount(blob)
+          let state = Virtualization.State(n)
+          let child = if let state = state { recycleVirtualRow(state, blob) ?? Mount(blob) } else { Mount(blob) }
           if virtualRows { FrameWorkCounters.VirtualMounts++ }
           provisional.Add(child)
           markStructure()
@@ -1462,7 +1470,12 @@ internal partial class Reconciler {
         Stacking.InvalidateStructure(n)
       }
 
-      if let error = disposeTrees(retire) {
+      let error = if let state = Virtualization.State(n) {
+        retireVirtualRows(state, retire)
+      } else {
+        disposeTrees(retire)
+      }
+      if let error = error {
         throw error
       }
     } catch (_ Exception) {

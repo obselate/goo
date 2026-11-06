@@ -64,7 +64,7 @@ internal class BackgroundImageLayouts {
       current.Image = nil
       current.Settled = false
       current.SetSourceChanged(() -> {
-        BackgroundImageLayouts.refreshSource(n, current)
+        if let node = current.Mount.Current { BackgroundImageLayouts.refreshSource(node, current) }
       })
       let fallback = current.CurrentToken() ?? current.Fallback
       current.ReleaseSource()
@@ -72,7 +72,7 @@ internal class BackgroundImageLayouts {
       current.Fallback = fallback
       if Refresh(n) { return true }
       current.WatchSource((token ImageSourceBindingToken) -> {
-        BackgroundImageLayouts.invalidateSource(n, current, token)
+        if let node = current.Mount.Current { BackgroundImageLayouts.invalidateSource(node, current, token) }
       })
       return false
     }
@@ -100,7 +100,7 @@ internal class BackgroundImageLayouts {
     }
 
     private func create(n Node) BackgroundImageValue {
-      let value = BackgroundImageValue()
+      let value = BackgroundImageValue{Mount: NodeMount(n)}
       if values == nil { values = ConditionalWeakTable[Node, BackgroundImageValue]() }
       values?.Add(n, value)
       n.HasBackgroundImageState = true
@@ -162,7 +162,7 @@ internal class BackgroundImageLayouts {
         return
       }
       value.WatchSource((token ImageSourceBindingToken) -> {
-        BackgroundImageLayouts.invalidateSource(n, value, token)
+        if let node = value.Mount.Current { BackgroundImageLayouts.invalidateSource(node, value, token) }
       })
     }
   }
