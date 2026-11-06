@@ -107,11 +107,11 @@ var dialog = Cell.Mount<ModalDialog, ModalDialogHost>("dialog", new ModalDialog
 {
     Open = open,
     Content = new Text { Content = "Save account?" },
-    OnClose = Close, OnCancel = Close, OnConfirm = Close
+    OnOpenChange = value => { open = value; Rebuild(); }, OnCancel = Close, OnConfirm = Close
 });
 ```
 
-Use `Goo.Widgets.Data.VirtualLists` from Goo.Widgets 0.5.0 or later. Rows use measured heights and need a bounded viewport.
+Use Goo.Widgets 0.19.0 for these examples. Rows use measured heights and need a bounded viewport.
 
 - Keep row values immutable, keys stable and the builder delegate unchanged.
 - Mount `Goo.Widgets.Layout.ModalDialogHost` for modal focus and portal behavior. `ModalDialog.Build()` alone creates an in-parent visual.

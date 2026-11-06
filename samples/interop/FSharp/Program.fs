@@ -74,7 +74,8 @@ type Examples(sample: string) as this =
             Children = ResizeArray<Blob>([Text(Content = "One") :> Blob; Text(Content = "Two") :> Blob]))
         | "dialog" ->
             let dialog = ModalDialog(Open = isOpen, Content = Text(Content = "Save account?"),
-                Padding = Nullable 20., OnClose = Action close, OnCancel = Action close, OnConfirm = Action close)
+                Padding = Nullable 20., OnOpenChange = Action<bool>(fun value -> isOpen <- value; this.Rebuild()),
+                OnCancel = Action close, OnConfirm = Action close)
             Container(Children = ResizeArray<Blob>([
                 Button(OnClick = (fun () -> isOpen <- true; this.Rebuild()),
                     Children = ResizeArray<Blob>([Text(Content = "Open dialog") :> Blob])) :> Blob

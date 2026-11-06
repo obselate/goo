@@ -118,7 +118,11 @@ Public NotInheritable Class Examples
             Case "dialog"
                 Dim dialog = New ModalDialog With {
                     .Open = isOpen, .Content = New Text With {.Content = "Save account?"},
-                    .Padding = 20, .OnClose = AddressOf CloseDialog,
+                    .Padding = 20,
+                    .OnOpenChange = Sub(value)
+                                        isOpen = value
+                                        Rebuild()
+                                    End Sub,
                     .OnCancel = AddressOf CloseDialog, .OnConfirm = AddressOf CloseDialog}
                 Return New Container With {.Children = New List(Of Blob) From {
                     New Button With {
