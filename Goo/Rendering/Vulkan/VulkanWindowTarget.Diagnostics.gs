@@ -590,6 +590,12 @@ internal unsafe partial class VulkanWindowTarget {
         recorder.Instant(VulkanDiagnosticEventIds.PlanCompile, VulkanDiagnosticCategories.FramePlan,
           context, value0: uint64(result.DrawCount), value1: uint64(planCounters.RecordOperations),
           source: "scene.counters")
+        recorder.Instant(VulkanDiagnosticEventIds.PlanCompile, VulkanDiagnosticCategories.FramePlan,
+          context, value0: uint64(sceneCompiler.RangeHitCount), value1: uint64(sceneCompiler.RangeCompileCount),
+          source: "scene.retained.ranges")
+        recorder.Instant(VulkanDiagnosticEventIds.PlanCompile, VulkanDiagnosticCategories.FramePlan,
+          context, value0: uint64(sceneCompiler.RangeRetainedBytes), value1: uint64(sceneCompiler.RangePeakBytes),
+          source: "scene.retained.bytes")
       }
       try {
         if let current = diagnostics {
