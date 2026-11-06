@@ -453,6 +453,7 @@ internal partial class Reconciler {
     applyStyle(n, c, c.Focusable, initial)
     if !Transforming.SameVectorViewport(Transforming.GetVectorViewport(n), c.VectorViewport) {
       Transforming.SetVectorViewport(n, c.VectorViewport)
+      n.BumpScenePaintVersion()
       MarkEffects(ReconcileEffects.Paint | ReconcileEffects.Input)
     }
     if n.DragsWindow != c.DragsWindow {
@@ -464,10 +465,11 @@ internal partial class Reconciler {
   internal func applyText(n Node, t Text, initial bool) {
     applyStyle(n, t, t.Focusable, initial)
     let rangeChange = PassiveTextPresentations.Apply(n, t.Content, t.StyleRangeValues)
-    if rangeChange.Changed {
+    let contentChanged = n.Content != t.Content
+    if contentChanged || rangeChange.Changed {
       n.BumpScenePaintVersion()
     }
-    if n.Content != t.Content {
+    if contentChanged {
       n.Content = t.Content
       TextLayouts.Invalidate(n)
       MarkEffects(ReconcileEffects.Content)
@@ -586,7 +588,10 @@ internal partial class Reconciler {
         MarkEffects(ReconcileEffects.Content)
         MarkEffects(ReconcileEffects.Layout)
       }
-      if paintChanged { MarkEffects(ReconcileEffects.Paint) }
+      if paintChanged {
+        n.BumpScenePaintVersion()
+        MarkEffects(ReconcileEffects.Paint)
+      }
       if inputChanged { MarkEffects(ReconcileEffects.Input) }
     }
 
@@ -1032,7 +1037,6 @@ internal partial class Reconciler {
     }
     if n.ShapeUseCurrentColor != s.UseCurrentColor {
       n.ShapeUseCurrentColor = s.UseCurrentColor
-      n.BumpScenePaintVersion()
       paintChanged = true
     }
     if n.ShapeStrokeCap != s.StrokeCap {
@@ -1083,6 +1087,7 @@ internal partial class Reconciler {
       MarkEffects(ReconcileEffects.Layout)
     }
     if paintChanged {
+      n.BumpScenePaintVersion()
       MarkEffects(ReconcileEffects.Paint)
     }
     if hitGeometryChanged {
@@ -1127,11 +1132,13 @@ internal partial class Reconciler {
       } else {
         ImageLayouts.ApplyPath(n, i.Path, i.Fit)
       }
+      n.BumpScenePaintVersion()
       MarkEffects(ReconcileEffects.Content)
       MarkEffects(ReconcileEffects.Layout)
       MarkEffects(ReconcileEffects.Paint)
     } else if fitChanged {
       n.ImageFit = i.Fit
+      n.BumpScenePaintVersion()
       MarkEffects(ReconcileEffects.Paint)
     } else if ImageLayouts.Refresh(n) {
       MarkEffects(ReconcileEffects.Content)

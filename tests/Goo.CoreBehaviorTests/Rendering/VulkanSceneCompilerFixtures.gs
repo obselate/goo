@@ -52,4 +52,64 @@ internal class VulkanSceneCompilerFixtures {
       NodeLifecycle.DisposeTree(root)
     }
   }
+
+  func ReboundMountGetsFreshCompilerOwners() bool {
+    let resolver = Resolver{}
+    let reconciler = Reconciler{Res: resolver}
+    let root = reconciler.Mount(Container{
+      Width: 100, Height: 100, BackgroundColor: Color.Rgb(255, 0, 0),
+    })
+    Layout().Calculate(root, 100.0F, 100.0F)
+    try {
+      let first = VulkanSceneCompiler(64)
+      let second = VulkanSceneCompiler(64)
+      let priorFirstId = first.Compile(root, Color.Transparent, 100.0F, 100.0F).RootOwnerId
+      guard let priorFirst = root.VulkanOwner else { return false }
+      let priorSecondId = second.Compile(root, Color.Transparent, 100.0F, 100.0F).RootOwnerId
+      guard let priorSecond = root.VulkanOwner else { return false }
+      NodeLifecycle.DisposeTree(root)
+      if root.VulkanOwner != nil || root.VulkanOwnerToken != nil
+        || priorFirst.RetainedLeafValid || priorSecond.RetainedLeafValid { return false }
+      if !root.TryBeginRebind() { return false }
+      let color = Color.Rgb(0, 0, 255)
+      let rebound = reconciler.Diff(root, Container{
+        Width: 100, Height: 100, BackgroundColor: color,
+      })
+      if !Object.ReferenceEquals(root, rebound) { return false }
+      Layout().Calculate(root, 100.0F, 100.0F)
+      let firstId = first.Compile(root, Color.Transparent, 100.0F, 100.0F).RootOwnerId
+      guard let firstOwner = root.VulkanOwner else { return false }
+      if firstId == priorFirstId || Object.ReferenceEquals(firstOwner, priorFirst)
+        || firstOwner.Generation != root.MountGeneration || first.Frame.SolidBoxCount != 1
+        || first.Frame.SolidBoxes[0].Color != color.ToPackedRgba() { return false }
+      let secondId = second.Compile(root, Color.Transparent, 100.0F, 100.0F).RootOwnerId
+      guard let secondOwner = root.VulkanOwner else { return false }
+      if secondId == priorSecondId || Object.ReferenceEquals(secondOwner, priorSecond)
+        || secondOwner.Generation != root.MountGeneration || second.Frame.SolidBoxCount != 1
+        || second.Frame.SolidBoxes[0].Color != color.ToPackedRgba() { return false }
+      return first.Compile(root, Color.Transparent, 100.0F, 100.0F).RootOwnerId == firstId
+        && Object.ReferenceEquals(root.VulkanOwner, firstOwner)
+    } finally {
+      NodeLifecycle.DisposeTree(root)
+    }
+  }
+
+  func RectangleUpdatesPreserveFloatBits() bool {
+    let root = Reconciler{Res: Resolver{}}.Mount(Container{
+      Width: 100, Height: 100, BackgroundColor: Color.Rgb(255, 0, 0),
+    })
+    Layout().Calculate(root, 100.0F, 100.0F)
+    try {
+      let compiler = VulkanSceneCompiler(64)
+      compiler.Compile(root, Color.Transparent, 100.0F, 100.0F)
+      var bounds = root.Rect
+      bounds.X = BitConverter.Int32BitsToSingle(int32.MinValue)
+      root.Rect = bounds
+      compiler.Compile(root, Color.Transparent, 100.0F, 100.0F)
+      return compiler.Frame.SolidBoxCount == 1
+        && BitConverter.SingleToInt32Bits(compiler.Frame.SolidBoxes[0].Bounds.X) == int32.MinValue
+    } finally {
+      NodeLifecycle.DisposeTree(root)
+    }
+  }
 }

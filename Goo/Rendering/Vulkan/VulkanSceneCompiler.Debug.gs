@@ -82,7 +82,10 @@ internal partial class VulkanSceneCompiler {
       label.PaddingBottom = Length{ Unit: LengthUnit.Px, Value: 4.0F }
       label.TextWrap = TextWrap.NoWrap
       label.TextTrimming = TextTrimming.Ellipsis
-      textScene?.Emit(frame, label, 1.0F, -1)
+      if let scene = textScene {
+        Owner(label)
+        scene.Emit(frame, label, 1.0F, -1)
+      }
       frame.EndChunk()
     }
 }

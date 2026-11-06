@@ -185,11 +185,12 @@ internal partial class VulkanSceneCompiler {
         contentKey = MixPathHash(contentKey, maskBit)
         return AppendZeroPathClip(parentChainId, stableId, contentKey)
       }
-      let entry = if paths.TryGetValue(node, out var existing) {
+      let owner = Owner(node)
+      let entry = if paths.TryGetValue(owner, out var existing) {
         existing
       } else {
         let created = VulkanRoundedOverflowPathCacheEntry()
-        paths.Add(node, created)
+        paths.Add(owner, created)
         created
       }
       let topLeft = borderBox ? Radius(node.BorderTopLeftRadius, node.BorderRadius, bounds)
@@ -253,11 +254,12 @@ internal partial class VulkanSceneCompiler {
       if clipBounds.IsEmpty {
         return VulkanScenePathClipResult{}
       }
-      let entry = if roundedOverflowPaths.TryGetValue(node, out var existing) {
+      let owner = Owner(node)
+      let entry = if roundedOverflowPaths.TryGetValue(owner, out var existing) {
         existing
       } else {
         let created = VulkanRoundedOverflowPathCacheEntry()
-        roundedOverflowPaths.Add(node, created)
+        roundedOverflowPaths.Add(owner, created)
         created
       }
       let clipPath = entry.Resolve(0.0F, 0.0F, 0.0F, 0.0F,

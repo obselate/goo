@@ -19,8 +19,8 @@ internal unsafe sealed partial class VulkanTextScene {
   private var effectGlyphWorkspace VulkanTextProviderWorkspace?
   private let entryMetrics TextMetrics
   private let activeAtlasUse []bool
-  private let nodeSegments ConditionalWeakTable[Node, VulkanTextNodeSegmentCache]
-  private let gutterSegments ConditionalWeakTable[Node, VulkanTextNodeSegmentCache]
+  private let nodeSegments ConditionalWeakTable[VulkanSceneOwnerId, VulkanTextNodeSegmentCache]
+  private let gutterSegments ConditionalWeakTable[VulkanSceneOwnerId, VulkanTextNodeSegmentCache]
   private var activeNodeSegments VulkanTextNodeSegmentCache?
   private var activeSegmentReuse bool
   private var nextSegmentId uint64
@@ -67,8 +67,8 @@ internal unsafe sealed partial class VulkanTextScene {
     states = [nativeAtlases.AtlasSlotCapacity]VulkanTextSceneAtlasState?
     glyphs = Dictionary[VulkanTextAtlasGlyphKey, VulkanTextAtlasGlyph]()
     activeAtlasUse = [nativeAtlases.AtlasSlotCapacity]bool
-    nodeSegments = ConditionalWeakTable[Node, VulkanTextNodeSegmentCache]()
-    gutterSegments = ConditionalWeakTable[Node, VulkanTextNodeSegmentCache]()
+    nodeSegments = ConditionalWeakTable[VulkanSceneOwnerId, VulkanTextNodeSegmentCache]()
+    gutterSegments = ConditionalWeakTable[VulkanSceneOwnerId, VulkanTextNodeSegmentCache]()
     nextSegmentId = 1uL
     let atlasBytes = nativeAtlases.AtlasAt(0).ByteSize
     if atlasBytes > uint64(Int32.MaxValue) {
@@ -193,17 +193,21 @@ internal unsafe sealed partial class VulkanTextScene {
           activeNodeSegments = cache
           activeSegmentReuse = true
         }
-      switch node.Kind {
-        case NodeKind.Text {
-          return EmitText(frame, node, opacity, parentTransformIndex, ref complete)
+      try {
+        switch node.Kind {
+          case NodeKind.Text {
+            return EmitText(frame, node, opacity, parentTransformIndex, ref complete)
+          }
+          case NodeKind.Entry {
+            return EmitEntry(frame, node, opacity, parentTransformIndex)
+          }
+          case NodeKind.Editor {
+            return EmitEditorContent(frame, node, opacity, parentTransformIndex)
+          }
+          case _ { return true }
         }
-        case NodeKind.Entry {
-          return EmitEntry(frame, node, opacity, parentTransformIndex)
-        }
-        case NodeKind.Editor {
-          return EmitEditorContent(frame, node, opacity, parentTransformIndex)
-        }
-        case _ { return true }
+      } finally {
+        activeNodeSegments = nil
       }
     }
 

@@ -191,6 +191,7 @@ public partial class Window {
         Pump: motionPump,
       }
       if paintResourceInvalidated {
+        node?.MarkSceneResourcesDirty()
         rec.MarkEffects(ReconcileEffects.Paint)
       }
       var stylesFlushed = false
