@@ -1,6 +1,46 @@
 # Changelog
 
 
+## 0.28.3 - 2026-11-06
+
+### Added
+
+- Add opt-in internal Vulkan GPU experiments for matched rendering measurements with one Android APK.
+
+### Changed
+
+- Reject Android NativeAOT publishes that report a Goo method will always throw.
+- Preserve runtime type forwarders required by G# helpers in Android NativeAOT publishes.
+- Exclude the Android template's shared project sources from its host project.
+- Include consumer resource designer metadata in Android NativeAOT compilation.
+- Reject NativeAOT methods that will always throw in the Android adapter.
+- Run Android accessibility checks against NativeAOT package consumers.
+- Keep Vulkan and SDL pointer views as plain structs without generated equality or hashing.
+- Retain full layer paint coverage separately from current capture bounds.
+- Keep shader effect coordinates stable when a layer capture is cropped.
+- Keep gradient dithering fixed to canonical capture coordinates when targets are cropped.
+- Track subtree paint changes and keep Vulkan cache identity within each logical Node mount.
+- Retain clean subtree drawing ranges in a bounded per-window cache and rebind their clip references.
+- Reuse validated subtree content proofs during damage tracking.
+- Report retained owner counts and transform capacity in profiling traces.
+- Use the Widgets control icon trimming and composite focus fixes.
+- Update DevTools and all interop samples to Goo.Widgets 0.19.2, which requires Goo 0.28.2.
+- Read resolved nullable theme radii before converting them to Goo lengths.
+- Adopt the Widgets density, property section and dialog open-state APIs.
+- Reset profiler table state when switching tabs.
+- Update every test project to xunit.runner.visualstudio 4.0.1.
+- Reuse retired virtual row Node and Yoga storage without retaining item state.
+
+### Fixed
+
+- Fix NativeAOT selection of Vulkan GPU diagnostic experiments. Verify all experiment modes and file overrides in a published native executable.
+- Share root direction and distance calculations between opposite NonZero coverage rays in Vulkan.
+- Skip path coverage outside conservative curve band bounds.
+- Reuse curve reads and root solutions for opposite nonzero path coverage rays in Vulkan.
+- Fix RTF byte decoding after assembly trimming.
+- Native CI fixtures wait for permission input focus and Activity replacement, and allow the first liquid-glass software frame to finish.
+- Keep virtual viewports at scroll offset zero when retained descendants move during layout.
+
 ## 0.28.2 - 2026-11-05
 
 ### Changed
