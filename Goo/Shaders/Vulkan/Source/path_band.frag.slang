@@ -1232,9 +1232,31 @@ float combineCoverage(float horizontal, float vertical, float horizontalWeight, 
     return clamp(max(weighted, min(abs(horizontal), abs(vertical))), 0.0, 1.0);
 }
 
+bool outsideBand(float coordinate, float margin, AnalyticBand band, bool vertical)
+{
+    if (band.forwardCount == 0u)
+    {
+        return true;
+    }
+    uint indices = vertical ? verticalIndexBase() : horizontalIndexBase();
+    QuadraticCurve first = curveAt(pathWord(indices + band.forwardStart));
+    QuadraticCurve last = curveAt(pathWord(indices + band.reverseStart));
+    float3 near = vertical ? float3(first.start.y, first.control.y, first.finish.y)
+        : float3(first.start.x, first.control.x, first.finish.x);
+    float3 far = vertical ? float3(last.start.y, last.control.y, last.finish.y)
+        : float3(last.start.x, last.control.x, last.finish.x);
+    return coordinate < min(min(near.x, near.y), near.z) - margin
+        || coordinate > max(max(far.x, far.y), far.z) + margin;
+}
+
 float analyticCoverage()
 {
     float2 pixels = pixelsPerPath();
+    if (outsideBand(pathPosition.x, 1.0 / pixels.x, horizontalBandAt(pathPosition.y), false)
+        && outsideBand(pathPosition.y, 1.0 / pixels.y, verticalBandAt(pathPosition.x), true))
+    {
+        return 0.0;
+    }
     float2 horizontal = horizontalCoverage(pathPosition, pixels);
     float2 vertical = verticalCoverage(pathPosition, pixels);
     return combineCoverage(horizontal.x, vertical.x, horizontal.y, vertical.y);
