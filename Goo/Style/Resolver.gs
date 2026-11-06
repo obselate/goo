@@ -710,6 +710,20 @@ internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Acti
   }
   let tracksText = (n.Kind == NodeKind.Text || n.Kind == NodeKind.Entry || n.Kind == NodeKind.Editor)
     && TextLayouts.IsShapingField(e.Field)
+  applyFieldValue(n, e, invalidated, owner)
+  if tracksText {
+    if n.Kind == NodeKind.Editor {
+      TextEditorLayouts.Invalidate(n)
+    } else {
+      TextLayouts.Invalidate(n)
+    }
+  }
+  n.BumpScenePaintVersion()
+  syncYogaField(n, e.Field)
+  return true
+}
+
+private func applyFieldValue(n Node, e StyleEntry, invalidated Action?, owner Window?) {
   switch e.Field {
     case StyleField.Direction { n.Direction = Direction(int32(e.A)) }
     case StyleField.Width { n.Width = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
@@ -855,16 +869,6 @@ internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Acti
     }
     default { throw NotSupportedException("writeDirect: unhandled StyleField") }
   }
-  if tracksText {
-    if n.Kind == NodeKind.Editor {
-      TextEditorLayouts.Invalidate(n)
-    } else {
-      TextLayouts.Invalidate(n)
-    }
-  }
-  n.BumpScenePaintVersion()
-  syncYogaField(n, e.Field)
-  return true
 }
 
 // The reverse of writeDirect: node field -> packed StyleEntry, same slot rules.
@@ -1005,7 +1009,9 @@ internal func readField(n Node, f StyleField) StyleEntry {
 
 internal func ApplyAllDefaults(n Node) {
   for field in StyleFields.InitialFields {
-    applyDefault(n, field)
+    if styleFieldApplies(n, field) {
+      applyFieldValue(n, defaultStyleEntry(field), nil, nil)
+    }
   }
 }
 
