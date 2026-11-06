@@ -5,7 +5,7 @@ import System.Collections.Generic
 import System.Runtime.InteropServices
 import Hexa.NET.SDL3
 
-internal unsafe data struct SdlVulkanExtensionPointer {
+internal unsafe struct SdlVulkanExtensionPointer {
   var Value * int8
 }
 
