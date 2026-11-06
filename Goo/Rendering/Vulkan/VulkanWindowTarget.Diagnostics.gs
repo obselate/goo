@@ -9,6 +9,7 @@ internal unsafe partial class VulkanWindowTarget {
   private var pendingTraceId string?
   private var activeTraceId string?
   private var profileGpuTraceId string?
+  private var retainedMemoryTraceId string?
   private let frameProfileEnabled bool = System.Environment.GetEnvironmentVariable("GOO_FRAME_PROFILE") == "1"
   private var frameProfileCapabilitiesReported bool
 
@@ -596,6 +597,12 @@ internal unsafe partial class VulkanWindowTarget {
         recorder.Instant(VulkanDiagnosticEventIds.PlanCompile, VulkanDiagnosticCategories.FramePlan,
           context, value0: uint64(sceneCompiler.RangeRetainedBytes), value1: uint64(sceneCompiler.RangePeakBytes),
           source: "scene.retained.bytes")
+        if retainedMemoryTraceId != recorder.TraceId {
+          retainedMemoryTraceId = recorder.TraceId
+          recorder.Instant(VulkanDiagnosticEventIds.PlanCompile, VulkanDiagnosticCategories.FramePlan,
+            context, value0: uint64(sceneCompiler.RetainedOwnerCount), value1: uint64(frame.Transforms.Length),
+            source: "scene.retained.metadata")
+        }
       }
       try {
         if let current = diagnostics {

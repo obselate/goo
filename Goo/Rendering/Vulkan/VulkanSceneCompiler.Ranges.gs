@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Linq
 import System.Runtime.CompilerServices
 
 internal struct VulkanSceneRangeCounters {
@@ -62,6 +63,10 @@ internal partial class VulkanSceneCompiler {
     private var rangeCompileCount int32
     private var rangeHitCount int32
     private var rangePeakBytes int64
+
+    internal prop RetainedOwnerCount int32 {
+        get -> owners.Count()
+    }
 
     internal prop RangeCompileCount int32 {
         get -> rangeCompileCount
