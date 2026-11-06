@@ -2188,7 +2188,7 @@ jobs:
       - name: Install Android toolchain
         if: needs.changes.outputs.full == 'true'
         run: |
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'ndk;27.2.12479018' 'platforms;android-36' 'build-tools;36.0.0'
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'ndk;28.2.13676358' 'platforms;android-36' 'build-tools;36.0.0'
           dotnet workload install android
       - name: Download main package for Android consumer validation
         if: needs.changes.outputs.full == 'true'
@@ -2242,7 +2242,7 @@ jobs:
           log=artifacts/android-consumer-nativeaot.log
           dotnet publish artifacts/android-consumer/Goo.AndroidSmoke/Goo.AndroidSmoke.gsproj -c Release -r android-arm64 \
             -p:PublishAot=true -p:GooSmokeUsePackages=true -p:RestoreConfigFile="$PWD/artifacts/android-nuget.config" \
-            -p:AndroidSdkDirectory="$ANDROID_HOME" -p:AndroidNdkDirectory="$ANDROID_HOME/ndk/27.2.12479018" \
+            -p:AndroidSdkDirectory="$ANDROID_HOME" -p:AndroidNdkDirectory="$ANDROID_HOME/ndk/28.2.13676358" \
             -p:JavaSdkDirectory="$JAVA_HOME" 2>&1 | tee "$log"
           if grep -E "ILC: Method '\[Goo\].*will always throw" "$log"; then
             echo "::error::NativeAOT reported a Goo method that will always throw"

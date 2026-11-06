@@ -106,6 +106,8 @@
     <None Include="$(MSBuildProjectDirectory)/../THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="/" />
     <None Include="$(MSBuildProjectDirectory)/Goo.targets"
           Pack="true" PackagePath="buildTransitive/Goo.targets" />
+    <None Include="$(MSBuildProjectDirectory)/Goo.Android.NativeAot.xml"
+          Pack="true" PackagePath="buildTransitive/Goo.Android.NativeAot.xml" />
     <None Include="$(GooLinuxSdlStaticPath)"
           Pack="true" PackagePath="buildTransitive/native/linux-x64/libSDL3.a"
           Condition="'$(GooLinuxSdlStaticPath)' != ''" />
