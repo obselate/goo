@@ -271,27 +271,14 @@ internal class TransformGeometry {
 
     internal func BoundsToNode(n Node, target Node, windowX float32 = 0.0F,
       windowY float32 = 0.0F) TransformBounds {
-      if windowX == 0.0F && windowY == 0.0F {
-        var current = n
-        var x = n.Rect.X
-        var y = n.Rect.Y
-        while current != target {
-          if current.IsPortal || current.HasVisualTransform { break }
-          guard let parent = current.Parent else { break }
-          if (parent.PlacedScrollX != 0.0F || parent.PlacedScrollY != 0.0F)
-            && !ScrollbarParts.ActiveChildren(parent).Contains(current) {
-              let offset = ContentPoint(parent, 0.0F, 0.0F,
-                parent.Kind == NodeKind.Editor && current.EditorSlotBlock)
-              if !offset.Valid { break }
-              x -= offset.X
-              y -= offset.Y
-            }
-          current = parent
+      if n.Parent == target && !n.IsPortal && !n.HasVisualTransform
+        && windowX == 0.0F && windowY == 0.0F {
+          let offset = ScrollbarParts.ActiveChildren(target).Contains(n)
+            ? TransformPoint{Valid: true}
+            : ContentPoint(target, 0.0F, 0.0F, target.Kind == NodeKind.Editor && n.EditorSlotBlock)
+          return TransformBounds{X: n.Rect.X - offset.X, Y: n.Rect.Y - offset.Y,
+            W: n.Rect.W, H: n.Rect.H}
         }
-        if current == target {
-          return TransformBounds{X: x, Y: y, W: n.Rect.W, H: n.Rect.H}
-        }
-      }
       var p0 = NodeToWindow(n, n.Rect.X, n.Rect.Y)
       var p1 = NodeToWindow(n, n.Rect.X + n.Rect.W, n.Rect.Y)
       var p2 = NodeToWindow(n, n.Rect.X, n.Rect.Y + n.Rect.H)
