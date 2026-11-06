@@ -60,6 +60,7 @@ sealed class NotificationChecks : Instrumentation {
             automation = UiAutomation ?? throw InvalidOperationException("UiAutomation is unavailable.")
             using let info = automation!!.ServiceInfo!!
             info.Flags |= Android.AccessibilityServices.AccessibilityServiceFlags.ReportViewIds
+                | Android.AccessibilityServices.AccessibilityServiceFlags.RetrieveInteractiveWindows
             automation!!.ServiceInfo = info
             using let intent = Intent(TargetContext!!, typeof(NotificationActivity))
             intent.AddFlags(ActivityFlags.NewTask | ActivityFlags.ClearTask)
@@ -109,6 +110,7 @@ sealed class NotificationChecks : Instrumentation {
     }
 
     private func DismissPermission() {
+        Wait(() -> HasPermissionButton("permission_allow_button", requireInputFocus: true), "Permission dialog did not receive input focus.")
         Require(automation!!.PerformGlobalAction(Android.AccessibilityServices.GlobalAction.Back), "Permission dialog back action failed.")
         Wait(() -> !HasPermissionButton("permission_allow_button"), "Permission dialog did not close.")
     }
@@ -151,7 +153,12 @@ sealed class NotificationChecks : Instrumentation {
         let monitor = AddMonitor("org.goo.androidsmoke.NotificationActivity", nil, false)!!
         try {
             RunOnMainSync(activity!!.Recreate)
-            activity = NotificationActivity(WaitForMonitorWithTimeout(monitor, 10000) ?? throw InvalidOperationException("The activity did not recreate."))
+            Wait(() -> {
+                let replacement = monitor.LastActivity as NotificationActivity
+                if replacement == nil || replacement.Equals(activity) { return false }
+                activity = replacement
+                return true
+            }, "The activity did not recreate.")
             RunOnMainSync(() -> {
                 var closed = false
                 try { oldService.GetPermissionAsync() }
@@ -184,10 +191,12 @@ sealed class NotificationChecks : Instrumentation {
         return task.GetAwaiter().GetResult()
     }
 
-    private func HasPermissionButton(id string) bool {
+    private func HasPermissionButton(id string, requireInputFocus bool = false) bool {
         using let root = automation!!.RootInActiveWindow
         using let button = if root == nil { nil } else { FindButton(root, id) }
-        return button != nil
+        if !requireInputFocus { return button != nil }
+        using let window = button?.Window
+        return window?.IsFocused == true
     }
 
     private func ClickPermission(id string) {
