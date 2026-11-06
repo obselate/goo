@@ -409,50 +409,6 @@ bool verticalRootHit(
     return true;
 }
 
-void accumulateHorizontalRoot(
-    float2 point,
-    QuadraticCurve curve,
-    float root,
-    bool rightRay,
-    float2 pixelsPerPath,
-    inout float value,
-    inout float weight)
-{
-    float distancePixels;
-    float direction;
-    if (!horizontalRootHit(point, curve, root, rightRay, pixelsPerPath,
-        distancePixels, direction))
-    {
-        return;
-    }
-    float amount = clamp(distancePixels + 0.5, 0.0, 1.0);
-    float rootSign = direction > 0.0 ? 1.0 : -1.0;
-    value += rootSign * amount;
-    weight = max(weight, clamp(1.0 - abs(distancePixels) * 2.0, 0.0, 1.0));
-}
-
-void accumulateVerticalRoot(
-    float2 point,
-    QuadraticCurve curve,
-    float root,
-    bool downRay,
-    float2 pixelsPerPath,
-    inout float value,
-    inout float weight)
-{
-    float distancePixels;
-    float direction;
-    if (!verticalRootHit(point, curve, root, downRay, pixelsPerPath,
-        distancePixels, direction))
-    {
-        return;
-    }
-    float amount = clamp(distancePixels + 0.5, 0.0, 1.0);
-    float rootSign = direction < 0.0 ? 1.0 : -1.0;
-    value += rootSign * amount;
-    weight = max(weight, clamp(1.0 - abs(distancePixels) * 2.0, 0.0, 1.0));
-}
-
 uint horizontalBandIndexAt(float y)
 {
     uint count = horizontalBandCount();
@@ -567,6 +523,32 @@ bool rootFollows(
     return slot > lastSlot;
 }
 
+void accumulateRootDirections(
+    float distancePixels,
+    float rootSign,
+    inout float value,
+    inout float weight,
+    inout float oppositeValue,
+    inout float oppositeWeight)
+{
+    if (isnan(distancePixels) || isinf(distancePixels))
+    {
+        return;
+    }
+    if (distancePixels >= -0.5)
+    {
+        value += rootSign * clamp(distancePixels + 0.5, 0.0, 1.0);
+        weight = max(weight, clamp(1.0 - abs(distancePixels) * 2.0, 0.0, 1.0));
+    }
+    float oppositeDistance = -distancePixels;
+    if (oppositeDistance >= -0.5)
+    {
+        oppositeValue += rootSign * clamp(oppositeDistance + 0.5, 0.0, 1.0);
+        oppositeWeight = max(oppositeWeight,
+            clamp(1.0 - abs(oppositeDistance) * 2.0, 0.0, 1.0));
+    }
+}
+
 void accumulateHorizontalCurve(
     float2 point,
     QuadraticCurve curve,
@@ -581,12 +563,16 @@ void accumulateHorizontalCurve(
     for (uint slot = 0u; slot < 2u; ++slot)
     {
         float root;
-        if (horizontalRootAt(roots, slot, root))
+        if (horizontalRootAt(roots, slot, root) && rootInRange(root))
         {
-            accumulateHorizontalRoot(point, curve, root, rightRay,
-                pixelsPerPath, value, weight);
-            accumulateHorizontalRoot(point, curve, root, !rightRay,
-                pixelsPerPath, oppositeValue, oppositeWeight);
+            float direction = endpointDirection(curve, root, false);
+            if (!(abs(direction) <= directionTolerance(curve, false)))
+            {
+                accumulateRootDirections(
+                    horizontalDistance(curve, point, root, rightRay) * pixelsPerPath.x,
+                    direction > 0.0 ? 1.0 : -1.0,
+                    value, weight, oppositeValue, oppositeWeight);
+            }
         }
     }
 }
@@ -605,12 +591,16 @@ void accumulateVerticalCurve(
     for (uint slot = 0u; slot < 2u; ++slot)
     {
         float root;
-        if (verticalRootAt(roots, slot, root))
+        if (verticalRootAt(roots, slot, root) && rootInRange(root))
         {
-            accumulateVerticalRoot(point, curve, root, downRay,
-                pixelsPerPath, value, weight);
-            accumulateVerticalRoot(point, curve, root, !downRay,
-                pixelsPerPath, oppositeValue, oppositeWeight);
+            float direction = endpointDirection(curve, root, true);
+            if (!(abs(direction) <= directionTolerance(curve, true)))
+            {
+                accumulateRootDirections(
+                    verticalDistance(curve, point, root, downRay) * pixelsPerPath.y,
+                    direction < 0.0 ? 1.0 : -1.0,
+                    value, weight, oppositeValue, oppositeWeight);
+            }
         }
     }
 }
