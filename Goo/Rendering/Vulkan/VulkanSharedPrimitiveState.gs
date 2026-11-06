@@ -350,7 +350,9 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
             format,
             topology,
             enableBlend,
-            FullColorWriteMask()))
+            FullColorWriteMask(),
+            nil
+          ))
         }
         return pipeline
       }
@@ -396,6 +398,14 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
         spirv,
         "shader effect")
       var pipeline VkPipeline
+      var coordinates uint32 = 1u
+      var specializationEntry = VkSpecializationMapEntry{constantID: 0u, size: 4u}
+      var specialization = VkSpecializationInfo{
+        mapEntryCount: 1u,
+        pMapEntries: &specializationEntry,
+        dataSize: 4u,
+        pData: *void(&coordinates),
+      }
       try {
         pipeline = VulkanPipelineFactory.CreateGraphics(
           device,
@@ -408,7 +418,9 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
           format,
           VkConstants.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
           !program.ReplacesBackdrop,
-          FullColorWriteMask())
+          FullColorWriteMask(),
+          vertexSpecialization: &specialization
+        )
       } finally {
         let destroyShaderModule = dispatch.vkDestroyShaderModule
         destroyShaderModule(device, fragmentModule, nil)
@@ -819,14 +831,15 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
     descriptorLayouts[0] = descriptorLayout
     descriptorLayouts[1] = clipDescriptorSetLayout
     descriptorLayouts[2] = primitiveDescriptorSetLayout
+    var pushRange = VkPushConstantRange{stageFlags: uint32(VkConstants.VK_SHADER_STAGE_FRAGMENT_BIT), size: 8u,}
     return VulkanPipelineFactory.CreateLayout(
       device,
       dispatch,
       objectAccounting,
       descriptorLayouts,
       3u,
-      nil,
-      0u)
+      &pushRange,
+      1u)
   }
 
   private func CreateBlendPipelineLayout() VkPipelineLayout {
@@ -991,7 +1004,9 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
       targetFormat,
       VkConstants.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
       false,
-      uint32(VkConstants.VK_COLOR_COMPONENT_R_BIT))
+      uint32(VkConstants.VK_COLOR_COMPONENT_R_BIT),
+      nil
+    )
   }
 
   private func LoadShaderCode(fileName string) []uint8 {

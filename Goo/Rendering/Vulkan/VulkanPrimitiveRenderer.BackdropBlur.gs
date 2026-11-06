@@ -145,11 +145,13 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         mapping Vector4,
         destination VulkanOffscreenLayerTarget? = nil
     ) VulkanOffscreenLayerTarget? {
-        let layer = LayerRecord{
-            Bounds: ConservativeBounds{
+        let bounds = ConservativeBounds{
                 X: currentOriginX, Y: currentOriginY,
                 Width: float32(extent.width), Height: float32(extent.height),
-            },
+            }
+            let layer = LayerRecord{
+            Bounds: bounds,
+            ReferenceIndex: -1,
             OriginX: currentOriginX, OriginY: currentOriginY,
             ExtentWidth: extent.width, ExtentHeight: extent.height,
             Opacity: 1.0F,
@@ -162,7 +164,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         activeExtent = extent
         physicalExtent = extent
         if primitivePrepass {
-            EmitShaderEffect(commandBuffer, extent, layer, nil, nil, effect)
+            EmitShaderEffect(commandBuffer, extent, layer, nil, nil, effect, bounds)
             return nil
         }
         guard let pool = layerPool else {
@@ -176,7 +178,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
             SetLayerViewport(commandBuffer)
             SetScissor(commandBuffer, FullClip())
             pool.RecordLayerPass(uint64(extent.width), uint64(extent.height))
-            EmitShaderEffect(commandBuffer, extent, layer, source, nil, effect)
+            EmitShaderEffect(commandBuffer, extent, layer, source, nil, effect, bounds)
             FlushPendingPrimitiveDraw(commandBuffer)
             let endRendering = dispatch.vkCmdEndRendering
             endRendering(commandBuffer)

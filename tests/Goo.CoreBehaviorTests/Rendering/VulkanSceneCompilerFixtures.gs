@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Runtime.CompilerServices
 
 internal class VulkanSceneCompilerFixtures {
   func OpaqueViewportRootSkipsCoveredBackground() bool {
@@ -191,6 +192,51 @@ internal class VulkanSceneCompilerFixtures {
     } finally {
       NodeLifecycle.DisposeTree(root)
       NodeLifecycle.DisposeTree(oracleRoot)
+    }
+  }
+
+  func LayerPaintCoverageSurvivesViewportClipping() bool {
+    let create = (height int32) -> Container{
+      Width: 100,
+      Height: 100,
+      Opacity: 0.5,
+      Container{
+        Position: PositionType.Absolute,
+        Left: 0,
+        Top: 0,
+        Width: 80,
+        Height: Length(height),
+        BackgroundColor: Color.White,
+      },
+    }
+    let resolver = Resolver{}
+    let reconciler = Reconciler{Res: resolver}
+    let root = reconciler.Mount(create(300))
+    try {
+      Layout().Calculate(root, 100.0F, 100.0F)
+      let compiler = VulkanSceneCompiler(64)
+      compiler.Compile(root, Color.Transparent, 100.0F, 100.0F)
+      compiler.Compile(root, Color.Transparent, 100.0F, 100.0F)
+      if compiler.RangeHitCount != 1 || compiler.RangeCompileCount != 0
+        || compiler.Frame.LayerCount != 2 {
+          return false
+        }
+      let retained = compiler.Frame.Layers[0]
+      if compiler.Frame.Layer(0).Bounds.Height != 100.0F
+        || retained.Bounds.Height != 300.0F || retained.ExtentHeight != 100u {
+          return false
+        }
+      reconciler.Diff(root, create(400))
+      resolver.FlushEffects()
+      Layout().Calculate(root, 100.0F, 100.0F)
+      compiler.Compile(root, Color.Transparent, 100.0F, 100.0F)
+      let changed = compiler.Frame.Layers[0]
+      return changed.Bounds.Height == 400.0F && compiler.Frame.Layer(0).Bounds.Height == 100.0F
+        && changed.ExtentHeight == 100u && Unsafe.SizeOf[LayerRecord]() == 120
+        && compiler.Frame.LayerCoverage.Length <= compiler.LastResult.VisibleNodeCount * 2
+        && compiler.RangePeakBytes <= 16L * 1024L * 1024L
+    } finally {
+      NodeLifecycle.DisposeTree(root)
     }
   }
 }

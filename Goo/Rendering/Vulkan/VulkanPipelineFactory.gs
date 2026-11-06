@@ -133,7 +133,9 @@ internal unsafe class VulkanPipelineFactory {
       targetFormat VkFormat,
       topology VkPrimitiveTopology,
       blendingEnabled bool,
-      colorWriteMask uint32) VkPipeline{
+      colorWriteMask uint32,
+      vertexSpecialization *VkSpecializationInfo
+    ) VkPipeline{
 
         let entryPointStorage = Marshal.StringToCoTaskMemUTF8("main")
         try {
@@ -145,6 +147,7 @@ internal unsafe class VulkanPipelineFactory {
             stage: VkConstants.VK_SHADER_STAGE_VERTEX_BIT,
             module: vertexModule,
             pName: entryPoint,
+            pSpecializationInfo: vertexSpecialization,
           }
           stages[1] = VkPipelineShaderStageCreateInfo{
             sType: VkConstants.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,

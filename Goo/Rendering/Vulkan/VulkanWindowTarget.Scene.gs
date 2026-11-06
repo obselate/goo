@@ -116,6 +116,12 @@ internal partial class VulkanWindowTarget {
       layers[index].ExtentWidth = uint32(right - layers[index].OriginX)
       layers[index].ExtentHeight = uint32(bottom - layers[index].OriginY)
     }
+    for index in 0 ... frame.LayerCoverageCount {
+      frame.LayerCoverage[index].Bounds = ScaleBounds(frame.LayerCoverage[index].Bounds, scaleX, scaleY)
+      frame.LayerCoverage[index].PaintBounds = ScaleBounds(frame.LayerCoverage[index].PaintBounds, scaleX, scaleY)
+      frame.LayerCoverage[index].CaptureOriginX = MathF.Floor(frame.LayerCoverage[index].CaptureOriginX * scaleX)
+      frame.LayerCoverage[index].CaptureOriginY = MathF.Floor(frame.LayerCoverage[index].CaptureOriginY * scaleY)
+    }
   }
 
   private func ScaleBounds(value ConservativeBounds, scaleX float32, scaleY float32) ConservativeBounds -> ConservativeBounds {

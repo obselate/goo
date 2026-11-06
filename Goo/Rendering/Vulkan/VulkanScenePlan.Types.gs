@@ -476,6 +476,13 @@ internal enum LayerRecordFlags {
   PreservesBackdrop = 4;
 }
 
+internal struct VulkanSceneLayerCoverage {
+  internal var Bounds ConservativeBounds
+  internal var PaintBounds ConservativeBounds
+  internal var CaptureOriginX float32
+  internal var CaptureOriginY float32
+}
+
 internal struct LayerRecord {
   internal var Bounds ConservativeBounds
   internal var OriginX float32
@@ -493,6 +500,7 @@ internal struct LayerRecord {
   internal var DrawOrdinal int32
   internal var Flags uint32
   internal var TransformIndex int32
+  internal var ReferenceIndex int32
 }
 
 internal struct ShaderEffectRecord {

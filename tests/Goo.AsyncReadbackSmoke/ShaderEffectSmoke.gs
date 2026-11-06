@@ -164,6 +164,7 @@ func RunShaderEffectSmoke() {
   let shaderPath = Path.Combine(AppContext.BaseDirectory, "control_effect.frag.goo-effect")
   Require(File.Exists(shaderPath), "Shader effect asset is missing")
   let program = ShaderEffectProgram.Load(shaderPath)
+  VulkanProofFixture.VerifyLayerEffectCoordinates(program)
   let effect = ShaderEffect(program, true, 20.0F)
   let replacementEffect = ShaderEffect(program, true, 20.0F)
   var transferReleaseCount int32

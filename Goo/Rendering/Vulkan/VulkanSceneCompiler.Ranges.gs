@@ -414,6 +414,7 @@ internal partial class VulkanSceneCompiler {
             PreviousContext: root.Context,
             Context: context,
         }
+        frame.SetLayerCoverageNodeLimit(Math.Max(lastResult.VisibleNodeCount, visibleNodeCount + root.Counters.Visible))
         if !frame.AppendRange(
             rangeData,
             binding,

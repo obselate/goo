@@ -247,7 +247,7 @@ internal partial class VulkanSceneCompiler {
       let axisAligned = context.ParentAxisAligned && transform.AxisAligned
       let subtreeBounds = isolates
       ? LayerSubtreeBounds(node, ResolveCompilerFrameTransform(context.ParentTransformIndex),
-        context.ActiveClipBounds) : ConservativeBounds{}
+        context.ActiveClipBounds) : VulkanSceneLayerCoverage{}
       EmitBackdropBlur(node, ownerId, bounds, opacity, transform.Index, axisAligned, context)
       var layerRecord LayerRecord
       var outerLayerRecord LayerRecord
@@ -374,9 +374,12 @@ internal partial class VulkanSceneCompiler {
             }
           }
         }
-        let layerBounds = IntersectBounds(context.ActiveClipBounds,
-          TransformCompilerBounds(paddingEdgeBounds,
-            ResolveCompilerFrameTransform(transform.Index)).Inflate(1.0F))
+        let paintBounds = TransformCompilerBounds(paddingEdgeBounds,
+            ResolveCompilerFrameTransform(transform.Index)).Inflate(1.0F)
+        let layerBounds = VulkanSceneLayerCoverage{
+          Bounds: IntersectBounds(context.ActiveClipBounds, paintBounds),
+          PaintBounds: paintBounds,
+        }
         roundedLayerRecord = MakeLayerRecord(ownerId, layerBounds, 1.0F, BlendMode.Normal, nil)
         roundedLayerRecord.ParentClipLayerId = isolates ? 0 : context.RoundedOverflowLayerId
         frame.SetActiveClipChain(0)
@@ -659,7 +662,7 @@ internal partial class VulkanSceneCompiler {
       if isolates {
         frame.SetActiveClipChain(context.ParentPathClipChainId)
         frame.SetActiveTransform(-1)
-        frame.BeginChunk(ownerId, frameVersion, subtreeBounds, false)
+        frame.BeginChunk(ownerId, frameVersion, subtreeBounds.Bounds, false)
         if combinesEffectAndBlend {
           frame.SetActiveClipChain(0)
           frame.AddLayerEnd(innerLayerRecord)

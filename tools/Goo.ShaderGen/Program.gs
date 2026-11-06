@@ -1484,14 +1484,20 @@ internal shared class Program {
             manifest.TextInstanceRecord.Members
         )
         for pipeline in manifest.Pipelines {
-            let firstShader = builtShaders.Single((value BuiltShader) -> value.Spec.Id == pipeline.Stages[0].Shader)
             var packingSize int32
             var packingMembers IReadOnlyList[PushConstantMember]
             if pipeline.PushConstants.Stages.Count > 0 {
-                let pushConstant = firstShader
+                let stage = pipeline.Stages.First(
+                    (value PipelineStage) ->
+                    pipeline.PushConstants.Stages.Contains(value.Stage, StringComparer.Ordinal)
+                )
+                let shader = builtShaders.Single((value BuiltShader) -> value.Spec.Id == stage.Shader)
+                let pushConstant = shader
                     .Reflection
                     .PushConstant ??
-                    throw InvalidOperationException("First shader has no reflected push constants: ${pipeline.Id}")
+                    throw InvalidOperationException(
+                    "Declared shader stage has no reflected push constants: ${pipeline.Id}"
+                )
                 let expected = pipeline.PushConstants
                 Require(
                     pushConstant.Size == expected.Size,
@@ -1953,18 +1959,11 @@ internal shared class Program {
             "analytic_linear4",
             "AnalyticLinear4PushConstants.Generated.gs",
             "AnalyticLinear4PushConstants",
-            0,
+            8,
             []PushConstantMember{
-                PushConstantMember{Name: "rect", Offset: 0, Type: "vec4"},
-                PushConstantMember{Name: "transform0", Offset: 16, Type: "vec4"},
-                PushConstantMember{Name: "transform1", Offset: 32, Type: "vec4"},
-                PushConstantMember{Name: "radii", Offset: 48, Type: "vec4"},
-                PushConstantMember{Name: "params", Offset: 64, Type: "vec4"},
-                PushConstantMember{Name: "stopPositions", Offset: 80, Type: "vec4"},
-                PushConstantMember{Name: "packedColors", Offset: 96, Type: "uvec4"},
-                PushConstantMember{Name: "packedColorsExtra", Offset: 112, Type: "uvec4"}
+                PushConstantMember{Name: "ditherOffset", Offset: 0, Type: "vec2"}
             },
-            Array.Empty[string](),
+            []string{"fragment"},
             "source-over-premultiplied-srgb",
             "rgb11-11-10-alpha10-premultiplied-srgb",
             "analytic_vertex",
@@ -1978,18 +1977,11 @@ internal shared class Program {
             "analytic_radial4",
             "AnalyticRadial4PushConstants.Generated.gs",
             "AnalyticRadial4PushConstants",
-            0,
+            8,
             []PushConstantMember{
-                PushConstantMember{Name: "rect", Offset: 0, Type: "vec4"},
-                PushConstantMember{Name: "transform0", Offset: 16, Type: "vec4"},
-                PushConstantMember{Name: "transform1", Offset: 32, Type: "vec4"},
-                PushConstantMember{Name: "radii", Offset: 48, Type: "vec4"},
-                PushConstantMember{Name: "params", Offset: 64, Type: "vec4"},
-                PushConstantMember{Name: "stopPositions", Offset: 80, Type: "vec4"},
-                PushConstantMember{Name: "packedColors", Offset: 96, Type: "uvec4"},
-                PushConstantMember{Name: "packedColorsExtra", Offset: 112, Type: "uvec4"}
+                PushConstantMember{Name: "ditherOffset", Offset: 0, Type: "vec2"}
             },
-            Array.Empty[string](),
+            []string{"fragment"},
             "source-over-premultiplied-srgb",
             "rgb11-11-10-alpha10-premultiplied-srgb",
             "analytic_vertex",
@@ -2537,7 +2529,8 @@ internal shared class Program {
         colorFormat string = "swapchain-UNORM-sRGB"
     ) {
         Require(pipeline.Id == id, "pipeline[$id].id", id)
-        let topology = if pushStages.Count == 0 {
+        let bufferedPrimitive = vertexShader == "analytic_vertex"
+        let topology = if bufferedPrimitive {
             "triangle-strip"
         } else {
             "triangle-list"
@@ -2597,7 +2590,7 @@ internal shared class Program {
         }
         let vertexOutputs IReadOnlyList[InterfaceLocation] = if clipAware {
             (
-                if pushStages.Count == 0 {
+                if bufferedPrimitive {
                     []InterfaceLocation{
                         InterfaceLocation{Location: 0, Type: interfaceType, Name: interfaceName},
                         InterfaceLocation{Location: 2, Type: "uint", Name: "gooClipDrawOrdinal"},
@@ -2808,12 +2801,7 @@ internal shared class Program {
             if hasTextInstanceRecord {
                 RequireTextInstanceRecordReflection(reflection, manifest.TextInstanceRecord, shader.Id)
             }
-            let hasPushConstants = pipeline.PushConstants.Stages.Contains(shader.Stage, StringComparer.Ordinal)
-            if !hasPushConstants {
-                if reflection.PushConstant != nil {
-                    throw InvalidOperationException("Shader has unexpected push constants: ${shader.Id}")
-                }
-                if pipeline.PushConstants.Size == 0 && expectedDescriptors.Any(
+                if pipeline.Stages[0].Shader == "analytic_vertex" && expectedDescriptors.Any(
                     (value Descriptor) -> value.Set == manifest
                         .PrimitiveRecord
                         .Set &&
@@ -2822,6 +2810,11 @@ internal shared class Program {
                         .Binding
                 ) {
                     RequirePrimitiveRecordReflection(reflection, manifest.PrimitiveRecord, shader.Id)
+                }
+                let hasPushConstants = pipeline.PushConstants.Stages.Contains(shader.Stage, StringComparer.Ordinal)
+            if !hasPushConstants {
+                if reflection.PushConstant != nil {
+                    throw InvalidOperationException("Shader has unexpected push constants: ${shader.Id}")
                 }
                 continue
             }

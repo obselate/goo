@@ -123,6 +123,7 @@ internal partial class VulkanSceneCompiler {
       pathScene?.BeginCompile()
       frameVersion = nextVulkanSceneVersion(frameVersion)
       frame.ResetForReuse()
+      frame.SetLayerCoverageNodeLimit(lastResult.VisibleNodeCount)
       visibleNodeCount = 0
       emittedNodeCount = 0
       unsupportedNodeCount = 0
@@ -185,6 +186,7 @@ internal partial class VulkanSceneCompiler {
         }
       }
 
+      frame.TrimLayerCoverage(visibleNodeCount)
       FinishRangeFrame()
       ClassifyRetainedChunks()
 

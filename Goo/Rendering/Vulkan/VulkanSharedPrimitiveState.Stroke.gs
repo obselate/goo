@@ -90,7 +90,8 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState {
                         mask ? VkConstants.VK_COLOR_COMPONENT_R_BIT: VkConstants.VK_COLOR_COMPONENT_R_BIT
                         | VkConstants.VK_COLOR_COMPONENT_G_BIT | VkConstants.VK_COLOR_COMPONENT_B_BIT
                         | VkConstants.VK_COLOR_COMPONENT_A_BIT
-                    )
+                    ),
+                    nil
                 )
                 profileTraceId = nil
             }

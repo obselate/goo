@@ -1,4 +1,5 @@
 #include "primitive_record.slang"
+[[vk::constant_id(0)]] const bool gooEffectCoordinates = false;
 struct AnalyticVertexOutput
 {
     float4 position : SV_Position;
@@ -30,7 +31,9 @@ AnalyticVertexOutput main(
         dot(primitive.transform1.xyz, homogeneous));
     AnalyticVertexOutput output;
     output.position = float4(position, 0.0, 1.0);
-    output.uv = expandedUv;
+    float2 effectUvOffset = primitive.stopPositions.yz;
+    float2 effectUvScale = float2(primitive.stopPositions.w, primitive.radii.y);
+    output.uv = gooEffectCoordinates ? effectUvOffset + expandedUv * effectUvScale : expandedUv;
     output.clipDrawOrdinal = asuint(primitive.transform0.w);
     output.primitiveRecordOrdinal = primitiveRecordOrdinal;
     return output;

@@ -23,7 +23,8 @@ internal partial class VulkanSceneCompiler {
         return
       }
       let transform = ResolveCompilerFrameTransform(transformIndex)
-      let visible = IntersectBounds(TransformCompilerBounds(bounds, transform), context.ActiveClipBounds)
+      let paintBounds = TransformCompilerBounds(bounds, transform)
+      let visible = IntersectBounds(paintBounds, context.ActiveClipBounds)
       if visible.IsEmpty {
         return
       }
@@ -41,7 +42,9 @@ internal partial class VulkanSceneCompiler {
       let originY = MathF.Floor(capture.Y)
       let extentWidth = MathF.Max(1.0F, MathF.Ceiling(capture.Right) - originX)
       let extentHeight = MathF.Max(1.0F, MathF.Ceiling(capture.Bottom) - originY)
-      let layer = BackdropBlurLayer(ownerId | BackdropBlurMaskBit, visible, opacity, sigma,
+      let layer = BackdropBlurLayer(ownerId | BackdropBlurMaskBit, visible,
+        paintBounds,
+        opacity, sigma,
         originX, originY, extentWidth, extentHeight)
       frame.SetActiveClipChain(0)
       frame.AddLayerBegin(layer)
@@ -53,6 +56,7 @@ internal partial class VulkanSceneCompiler {
   private func BackdropBlurLayer(
     targetId uint64,
     bounds ConservativeBounds,
+    paintBounds ConservativeBounds,
     opacity float32,
     sigma float32,
     originX float32,
@@ -60,8 +64,17 @@ internal partial class VulkanSceneCompiler {
     extentWidth float32,
     extentHeight float32) LayerRecord{
       let effect = BackdropBlurEffect.Shared
+      frame.SetLayerCoverageNodeLimit(Math.Max(lastResult.VisibleNodeCount, visibleNodeCount))
       return LayerRecord{
         Bounds: bounds,
+        ReferenceIndex: frame.AddLayerCoverage(
+          VulkanSceneLayerCoverage{
+            Bounds: bounds,
+            PaintBounds: paintBounds,
+            CaptureOriginX: originX,
+            CaptureOriginY: originY,
+          }
+        ),
         Opacity: opacity,
         OffscreenTargetId: ResourceId{
           Kind: SceneResourceKind.OffscreenTarget,

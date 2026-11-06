@@ -2,8 +2,8 @@ package Goo
 
 import System
 import System.IO
-import System.Runtime.InteropServices
 import System.Numerics
+import System.Runtime.InteropServices
 
 @StructLayout(LayoutKind.Explicit, Size: 48)
 internal unsafe struct VulkanPrimitiveGeometry {
@@ -44,6 +44,10 @@ internal unsafe struct VulkanPrimitiveGpuRecord {
   @FieldOffset(116) var packedColorsExtra_y uint32
   @FieldOffset(120) var packedColorsExtra_z uint32
   @FieldOffset(124) var packedColorsExtra_w uint32
+  @FieldOffset(84) var EffectUvOffsetX float32
+  @FieldOffset(88) var EffectUvOffsetY float32
+  @FieldOffset(92) var EffectUvScaleX float32
+  @FieldOffset(52) var EffectUvScaleY float32
 }
 
 @StructLayout(LayoutKind.Explicit, Size: 128)
@@ -81,6 +85,8 @@ internal struct VulkanLayerRenderState {
   var ParentTarget VulkanOffscreenLayerTarget?
   var ParentOriginX float32
   var ParentOriginY float32
+  var ParentDitherOffsetX float32
+  var ParentDitherOffsetY float32
   var ParentExtent VkExtent2D
   var ParentPhysicalExtent VkExtent2D
   var ParentClipDepth int32

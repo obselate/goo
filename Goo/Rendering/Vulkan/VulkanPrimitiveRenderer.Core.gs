@@ -723,15 +723,15 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
       case SceneDrawKind.LayerBegin {
         RequireRecordIndex(reference.Index, frame.LayerCount, "layer index")
-        BeginLayer(commandBuffer, frame.Layers[reference.Index], frame, reference.Index)
+        BeginLayer(commandBuffer, frame.Layer(reference.Index), frame, reference.Index)
       }
       case SceneDrawKind.LayerEnd {
         RequireRecordIndex(reference.Index, frame.LayerCount, "layer index")
-        EndLayer(commandBuffer, frame.Layers[reference.Index], frame)
+        EndLayer(commandBuffer, frame.Layer(reference.Index), frame)
       }
       case SceneDrawKind.GeneratorEffect {
         RequireRecordIndex(reference.Index, frame.LayerCount, "generator effect index")
-        EmitShaderEffectLayer(commandBuffer, activeExtent, frame.Layers[reference.Index],
+        EmitShaderEffectLayer(commandBuffer, activeExtent, frame.Layer(reference.Index),
           nil, nil, frame, true)
       }
       case SceneDrawKind.Transform {
@@ -916,6 +916,13 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         throw NotSupportedException("Vulkan layer pool is unavailable")
       }
       let borrowedBackdrop = ValidateBorrowedBackdrop(record)
+      let canonical = frame.Layers[layerIndex]
+      let canonicalOriginX = canonical.ReferenceIndex >= 0
+      ? frame.LayerCoverage[canonical.ReferenceIndex].CaptureOriginX: canonical.OriginX
+      let canonicalOriginY = canonical.ReferenceIndex >= 0
+      ? frame.LayerCoverage[canonical.ReferenceIndex].CaptureOriginY: canonical.OriginY
+      let ditherOffsetX = record.OriginX - canonicalOriginX
+      let ditherOffsetY = record.OriginY - canonicalOriginY
       if !primitivePrepass {
         FlushPendingPrimitiveDraw(commandBuffer)
       }
@@ -934,6 +941,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           ParentTarget: currentTarget,
           ParentOriginX: currentOriginX,
           ParentOriginY: currentOriginY,
+          ParentDitherOffsetX: currentDitherOffsetX,
+          ParentDitherOffsetY: currentDitherOffsetY,
           ParentExtent: activeExtent,
           ParentPhysicalExtent: physicalExtent,
           ParentClipDepth: clipDepth,
@@ -950,6 +959,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         currentTarget = nil
         currentOriginX = record.OriginX
         currentOriginY = record.OriginY
+        currentDitherOffsetX = ditherOffsetX
+        currentDitherOffsetY = ditherOffsetY
         activeExtent = VkExtent2D{ width: record.ExtentWidth, height: record.ExtentHeight }
         physicalExtent = pool.LayerExtent(layerIndex)
         var clipIndex int32 = 0
@@ -998,6 +1009,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         ParentTarget: currentTarget,
         ParentOriginX: currentOriginX,
         ParentOriginY: currentOriginY,
+        ParentDitherOffsetX: currentDitherOffsetX,
+        ParentDitherOffsetY: currentDitherOffsetY,
         ParentExtent: activeExtent,
         ParentPhysicalExtent: physicalExtent,
         ParentClipDepth: clipDepth,
@@ -1069,6 +1082,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       currentTarget = layerTarget
       currentOriginX = record.OriginX
       currentOriginY = record.OriginY
+      currentDitherOffsetX = ditherOffsetX
+      currentDitherOffsetY = ditherOffsetY
       activeExtent = VkExtent2D{ width: record.ExtentWidth, height: record.ExtentHeight }
       physicalExtent = layerTarget.ContentExtent
       var clipIndex int32 = 0
@@ -1108,6 +1123,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         currentTarget = state.ParentTarget
         currentOriginX = state.ParentOriginX
         currentOriginY = state.ParentOriginY
+        currentDitherOffsetX = state.ParentDitherOffsetX
+        currentDitherOffsetY = state.ParentDitherOffsetY
         activeExtent = state.ParentExtent
         physicalExtent = state.ParentPhysicalExtent
         clipDepth = state.ParentClipDepth
@@ -1139,6 +1156,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       currentTarget = state.ParentTarget
       currentOriginX = state.ParentOriginX
       currentOriginY = state.ParentOriginY
+      currentDitherOffsetX = state.ParentDitherOffsetX
+      currentDitherOffsetY = state.ParentDitherOffsetY
       activeExtent = state.ParentExtent
       physicalExtent = state.ParentPhysicalExtent
       clipDepth = state.ParentClipDepth

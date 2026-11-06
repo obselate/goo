@@ -1,6 +1,7 @@
 package Goo
 
 import System.Diagnostics
+import System.Runtime.CompilerServices
 import System.Runtime.InteropServices
 
 internal unsafe partial class VulkanWindowTarget {
@@ -26,7 +27,24 @@ internal unsafe partial class VulkanWindowTarget {
         source: "scene.retained.metadata")
       recorder.Instant(VulkanDiagnosticEventIds.PlanCompile, VulkanDiagnosticCategories.FramePlan,
         memoryContext, value0: uint64(sceneCompiler.RangeRetainedBytes), value1: uint64(sceneCompiler.RangePeakBytes),
-        source: "scene.retained.bytes")
+        source: "scene.retained.bytes"
+      )
+      recorder.Instant(
+        VulkanDiagnosticEventIds.PlanCompile,
+        VulkanDiagnosticCategories.FramePlan,
+        memoryContext,
+        value0: uint64(sceneCompiler.Frame.LayerCoverage.Length),
+        value1: uint64(Unsafe.SizeOf[VulkanSceneLayerCoverage]()),
+        source: "scene.retained.layers"
+      )
+      recorder.Instant(
+        VulkanDiagnosticEventIds.PlanCompile,
+        VulkanDiagnosticCategories.FramePlan,
+        memoryContext,
+        value0: uint64(sceneCompiler.Frame.Layers.Length),
+        value1: uint64(Unsafe.SizeOf[LayerRecord]()),
+        source: "scene.retained.layer-records"
+      )
     }
     EnsureDiagnosticTimestamp()
     if profileGpuTraceId != recorder.TraceId {
