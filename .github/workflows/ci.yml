@@ -1325,6 +1325,45 @@ jobs:
           dotnet build "${{ matrix.project }}" -c Release -p:TreatWarningsAsErrors=true \
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
 
+      - name: Probe legacy software text placement
+        if: needs.changes.outputs.full == 'true' && (matrix.lane == 'async-readback')
+        run: |
+          legacy="$RUNNER_TEMP/goo-scroll-legacy"
+          mkdir "$legacy"
+          trap 'rm -rf -- "$legacy"' EXIT
+          git fetch --depth=1 origin 8d8a3aca4ff0c375c820d8fe027b6211e4150df1
+          git archive 8d8a3aca4ff0c375c820d8fe027b6211e4150df1 | tar -x -C "$legacy"
+          cp tests/Goo.AsyncReadbackSmoke/ScrollPlacementSmoke.gs tests/Goo.AsyncReadbackSmoke/Program.gs \
+            "$legacy/tests/Goo.AsyncReadbackSmoke/"
+          nice -n 19 ionice -c3 dotnet build "$legacy/tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackSmoke.gsproj" \
+            -c Release -p:GsharpFormatOnBuild=false -p:NuGetAudit=false \
+            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
+            -m:1 -nr:false -p:UseSharedCompilation=false
+          export SDL_VIDEODRIVER=wayland LIBGL_ALWAYS_SOFTWARE=1
+          export LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          status=0
+          .github/scripts/with-headless-wayland.sh env GOO_VK_DIAGNOSTICS=1 \
+            GOO_SCROLL_PLACEMENT_SMOKE=1 GOO_SCROLL_PIXEL_EVIDENCE="$legacy/pixels" \
+            dotnet "$legacy/tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll" \
+            > "$legacy/readback.log" 2>&1 || status=$?
+          echo "legacy-scroll-diagnostic-exit=$status"
+          python3 - "$legacy" <<'PY'
+          import hashlib, json, pathlib, sys
+          root = pathlib.Path(sys.argv[1])
+          reference = (root / 'pixels/scale-1.25-variant-5-reference.rgba').read_bytes()
+          actual = (root / 'pixels/scale-1.25-variant-5-actual.rgba').read_bytes()
+          assert len(reference) == len(actual) == 400 * 360 * 4
+          for y in range(26, 29):
+              for x in range(121, 124):
+                  expected = list(reference[((y + 4) * 400 + x + 1) * 4:((y + 4) * 400 + x + 1) * 4 + 4])
+                  observed = list(actual[(y * 400 + x) * 4:(y * 400 + x) * 4 + 4])
+                  print('legacy-scroll-pixel: ' + json.dumps(dict(x=x, y=y, expected=expected, actual=observed)))
+          print('legacy-scroll-source-sha256=' + hashlib.sha256(reference).hexdigest())
+          print('legacy-scroll-actual-sha256=' + hashlib.sha256(actual).hexdigest())
+          print('legacy-scroll-log-sha256=' + hashlib.sha256((root / 'readback.log').read_bytes()).hexdigest())
+          print('legacy-scroll-goo-sha256=' + hashlib.sha256((root / 'tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.dll').read_bytes()).hexdigest())
+          PY
+
       - name: Run ABI checks
         if: needs.changes.outputs.full == 'true' && (matrix.lane == 'abi')
         run: |
