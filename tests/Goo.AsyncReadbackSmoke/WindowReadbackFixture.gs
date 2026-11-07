@@ -1187,8 +1187,9 @@ internal class WindowReadbackTestFixture {
     internal func CaptureTarget(window Window) VulkanWindowTarget ? -> window.CaptureTargetForTest()
 
     internal func ForceRender(window Window, dt float64,
-      timeoutSeconds float64 = 2.0) {
-        let baseline = window.PresentationAcceptedIndexForTest
+      timeoutSeconds float64 = 2.0, waitForPresentation bool = false) {
+        let baseline = window.FrameSubmissionSerialsForTest()
+        let presented = window.PresentationAcceptedIndexForTest
         window.ForceRenderForTest(dt)
         let deadline = Stopwatch.GetTimestamp()
         +int64(float64(Stopwatch.Frequency) * timeoutSeconds)
@@ -1196,7 +1197,10 @@ internal class WindowReadbackTestFixture {
         while Stopwatch.GetTimestamp() < deadline {
           SdlRuntime.PumpEvents(Int32.MaxValue)
           window.PollQueueCompletionForTest()
-          accepted = window.PresentationAcceptedIndexForTest != baseline
+          let current = window.FrameSubmissionSerialsForTest()
+          accepted = (current.Slot0Serial != baseline.Slot0Serial
+            || current.Slot1Serial != baseline.Slot1Serial)
+            && (!waitForPresentation || window.PresentationAcceptedIndexForTest != presented)
           let pending = window.RuntimeQueueWorkPendingForTest()
           if accepted && !pending {
             return

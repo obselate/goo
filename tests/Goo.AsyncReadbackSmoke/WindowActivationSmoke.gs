@@ -240,7 +240,7 @@ internal class WindowActivationSmoke {
           Width: 320, Height: 100, Owner: window, Modal: true,
         }.Open()
         try {
-          WindowReadbackTestFixture.ForceRender(child, 0.0, 10.0)
+          WindowReadbackTestFixture.ForceRender(child, 0.0, 10.0, true)
           Require(window.IsInputBlocked, "Modal child did not block its owner")
           let focused = window.IsFocused
           let events = notifications
