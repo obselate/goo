@@ -87,7 +87,7 @@ internal class CustomLayoutState {
   }
 
   private func RequireActive() {
-    if !Active || Node.Retired || activeThreadId != Environment.CurrentManagedThreadId { throw InvalidOperationException("LayoutContext is valid only on the thread running its current layout callback") }
+    if !Active || Node.Retired || activeThreadId != Environment.CurrentManagedThreadId { throw InvalidOperationException("${Algorithm.GetType().Name} used an inactive LayoutContext or the wrong thread: use the context only inside its current Measure or Arrange callback.") }
   }
 
   private func Child(index int32) CustomLayoutChild {
@@ -97,7 +97,7 @@ internal class CustomLayoutState {
   }
 
   private func Begin(isArrange bool) {
-    if Active || CustomLayouts.Depth >= 64 { throw InvalidOperationException("Custom layout is cyclic or exceeds 64 nested panels") }
+    if Active || CustomLayouts.Depth >= 64 { throw InvalidOperationException("${Algorithm.GetType().Name} reentered custom layout or exceeded 64 nested panels: remove recursive layout calls or reduce panel nesting.") }
     Active = true
     activeThreadId = Environment.CurrentManagedThreadId
     arranging = isArrange
@@ -124,7 +124,7 @@ internal class CustomLayoutState {
     let child = Child(index)
     CustomLayouts.ValidateSize(available, true)
     calls++
-    if calls > Math.Min(65536, Math.Max(32, Children.Length * 16)) { throw InvalidOperationException("Custom layout exceeded its child measurement budget") }
+    if calls > Math.Min(65536, Math.Max(32, Children.Length * 16)) { throw InvalidOperationException("${Algorithm.GetType().Name}.MeasureChild exceeded the measurement budget for child $index after $calls calls: bound measurement loops and reuse measured sizes.") }
     if let cache = child.Cache {
       for entry in cache {
         if entry.Version == version && entry.Width == available.Width && entry.Height == available.Height { return entry.Result }
@@ -155,8 +155,8 @@ internal class CustomLayoutState {
 
   internal func ArrangeChild(index int32, bounds ElementRect) {
     let child = Child(index)
-    if !arranging { throw InvalidOperationException("ArrangeChild is allowed only during Arrange") }
-    if child.Arranged { throw InvalidOperationException("A custom layout child was arranged more than once") }
+    if !arranging { throw InvalidOperationException("${Algorithm.GetType().Name}.ArrangeChild($index) ran during Measure: call ArrangeChild only from Arrange.") }
+    if child.Arranged { throw InvalidOperationException("${Algorithm.GetType().Name}.ArrangeChild($index) ran twice: arrange each child exactly once per Arrange callback.") }
     CustomLayouts.ValidateSize(LayoutSize{Width: bounds.Width, Height: bounds.Height}, false)
     if !Double.IsFinite(bounds.X) || !Double.IsFinite(bounds.Y) || Math.Abs(bounds.X) > float64(Single.MaxValue) || Math.Abs(bounds.Y) > float64(Single.MaxValue) {
       throw ArgumentOutOfRangeException("bounds")
@@ -182,7 +182,7 @@ internal class CustomLayoutState {
       ContentWidth = left + right
       ContentHeight = top + bottom
       for child in Children {
-        if !child.Arranged { throw InvalidOperationException("Custom layout must arrange every child exactly once") }
+        if !child.Arranged { throw InvalidOperationException("${Algorithm.GetType().Name}.Arrange omitted a child with key '${child.Node.Key ?? "<unkeyed>"}': call ArrangeChild once for every child.") }
         CustomLayouts.ArrangeRoot(child.Node, child.Bounds, Node.Direction)
         if let childYoga = child.Node.Yoga {
           let x = left + float32(child.Bounds.X) + YGNodeLayoutAPI.YGNodeLayoutGetLeft(childYoga)
@@ -248,7 +248,7 @@ internal class CustomLayouts {
         return true
       }
       guard let state = current else { return false }
-      if state.Active { throw InvalidOperationException("Custom layout cannot change during its callback") }
+      if state.Active { throw InvalidOperationException("${state.Algorithm.GetType().Name} changed its custom layout during a callback: defer the change until Measure or Arrange returns.") }
       if let yoga = node.Yoga {
         YGNodeAPI.YGNodeMarkDirty(yoga)
         YGNodeAPI.YGNodeSetMeasureFunc(yoga, nil)

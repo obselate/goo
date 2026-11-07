@@ -4,6 +4,8 @@ import System.Collections.Generic
 import System.Linq
 import System.Reflection
 import System.Security.Cryptography
+import System.IO
+import System.Text.Json
 import Xunit
 
 class FixtureContractTests {
@@ -44,6 +46,22 @@ class FixtureContractTests {
         for name in []string{"backdrop_blur.goo-effect", "filtered_backdrop.goo-effect"} {
             let program = ShaderEffectProgram.LoadEmbedded(name)
             Assert.True(SHA256.HashData(program.VulkanSpirv).AsSpan().SequenceEqual(program.VulkanSpirvDigest.AsSpan()))
+        }
+    }
+
+    @Fact
+    func ShaderSourcesMatchManifest() {
+        var root = DirectoryInfo(AppContext.BaseDirectory)
+        while !File.Exists(Path.Combine(root.FullName, "Goo/Shaders/Vulkan/shader-manifest.json")) {
+            root = root.Parent ?? throw DirectoryNotFoundException("Goo repository root not found")
+        }
+        using let manifest = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root.FullName, "Goo/Shaders/Vulkan/shader-manifest.json")))
+        for shader in manifest.RootElement.GetProperty("shaders").EnumerateArray() {
+            let source = shader.GetProperty("source").GetString()!!
+            if !source.EndsWith(".slang", StringComparison.Ordinal) { continue }
+            let actual = ShaderSourceDigest.Compute(Path.Combine(root.FullName, "Goo/Shaders/Vulkan/Source", source))
+            Assert.True(actual == shader.GetProperty("sourceSha256").GetString(),
+                "Stale shader: $source. Regenerate: dotnet run --project tools/Goo.ShaderGen -c Release -- generate")
         }
     }
 

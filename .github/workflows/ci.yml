@@ -797,6 +797,10 @@ jobs:
             dotnet run --project tools/Goo.HostChecks -c Release -- placement \
             tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll \
             artifacts/reports/window-placement
+          GOO_WAYLAND_COMPOSITOR=kwin .github/scripts/with-headless-wayland.sh env LIBGL_ALWAYS_SOFTWARE=1 \
+            LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+            python3 tests/NativeWindow/test_native_close.py \
+            tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll
       - name: Verify read-only text entry and native clipboard
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -1395,6 +1399,7 @@ jobs:
 
           .github/scripts/with-headless-wayland.sh env \
             GOO_SVG_CORPUS_OUTPUT="$PWD/artifacts/reports/svg-corpus" \
+            GOO_SVG_CORPUS_BASELINE="$PWD/tests/Goo.AsyncReadbackSmoke/Assets/SvgCorpus" \
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 
           .github/scripts/with-headless-wayland.sh env \

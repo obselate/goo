@@ -73,7 +73,7 @@ internal class Layout {
   }
 
   private func CalculateCore(root Node, overlayRoot Node?, width float32, height float32) {
-    if CustomLayouts.Depth != 0 { throw InvalidOperationException("A custom layout callback cannot reenter window layout") }
+    if CustomLayouts.Depth != 0 { throw InvalidOperationException("A custom layout callback reentered window layout: use LayoutContext.MeasureChild and ArrangeChild instead of requesting window layout from Measure or Arrange.") }
     if structureDirty || root != lastRoot || root.Yoga == nil {
       syncNode(root, true)
       structureDirty = false

@@ -1,6 +1,32 @@
 # Changelog
 
 
+## 0.28.7 - 2026-11-07
+
+### Added
+
+- Add nine runnable Goo tutorials with captured application images.
+
+### Changed
+
+- Reduce the README to setup, a complete counter, source checks, AI plugin installation and documentation links.
+- Keep package, platform and shader details in the docs and update links to the new sections.
+- Show an application-style Widgets view in the README without a separate capture caption.
+- Restore the original Goo README banner and remove the Widgets Gallery image.
+
+### Fixed
+
+- Fit focus outlines inside non-scrolling clipping ancestors, so rounded `Overflow.Hidden` parents no longer cut focus rings. A clipped outset ring moves onto its control and keeps the control's corner radius. A ring corner takes the parent's corner radius only where that parent corner clips more than the control's own corner rounding.
+- Keep install commands current and place SDK, Vulkan and platform requirements beside them.
+- Link G# learning and editor tools, fix widget composition, and add task-based API links.
+- Use named theme values in starter templates, update interop widget packages, and collect GPU and SDK details in bug reports.
+- Show the current Goo Widgets Gallery in the README.
+- Report missing Vulkan drivers with driver override values and the platform preflight link.
+- Name missing Vulkan device features and explain how to recover from an X11 session.
+- Avoid repeated scrollbar ownership checks during style and scene invalidation.
+- Keep thin horizontal strokes visible in small text, including 12 px caption text.
+- Use the framework build command in the README source build instructions.
+
 ## 0.28.6 - 2026-11-07
 
 ### Fixed

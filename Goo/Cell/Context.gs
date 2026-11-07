@@ -51,7 +51,7 @@ public class Context[T any] {
     public func Read(window Window) T {
         window.RequireContextThread()
         guard let frame = window.ContextValue(this) as ContextValue[T]? else {
-            throw InvalidOperationException("No value is installed for this Context key in the window.")
+            throw InvalidOperationException("Context[${typeof(T).Name}].Read(window) has no window value: call Set(window, value) on the same Context instance before reading.")
         }
         return frame.Value
     }
@@ -110,7 +110,7 @@ public class Context[T any] {
             current = frame.Parent
         }
         guard let value = window.ContextValue(this) as ContextValue[T]? else {
-            throw InvalidOperationException("No value is installed for this Context key in the active lineage.")
+            throw InvalidOperationException("Context[${typeof(T).Name}].Read has no value in the active lineage: wrap the consumer in Scope(value, build) or call Set(window, value) on the same Context instance.")
         }
         return value
     }

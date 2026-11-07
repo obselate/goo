@@ -595,7 +595,7 @@ internal class CellFixtures {
       try {
         window.UpdateTree()
       } catch (error InvalidOperationException) {
-        if error.Message == "Cell instance is already mounted or being mounted" {
+        if error.Message == "Cell FactoryRecursiveRootCell is already mounted or being mounted: return a fresh Cell instance for each Cell.Mount factory call." {
           failures++
         }
       }

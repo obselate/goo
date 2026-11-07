@@ -54,6 +54,7 @@ internal partial class Reconciler {
   private var pendingHandleMoves Dictionary[Node, ElementHandle]?
   internal var Context ContextFrame?
   private var contextCommits ContextReader?
+  private var expandingCell Cell?
 
   private func trackContext(cell Cell, preserve bool = false) {
     guard let reader = cell.contextReader else { return }
@@ -108,7 +109,8 @@ internal partial class Reconciler {
           ProfileBuildTicks = ProfileBuildTicks + end.Ticks - start.Ticks
           ProfileBuildBytes = ProfileBuildBytes + end.Bytes - start.Bytes
           ProfileBuildCalls++
-          profiler.RecordTrace(FrameProfileStage.Build, start, end, if completed { 0 } else { -1 })
+          profiler.RecordTrace(FrameProfileStage.Build, start, end, if completed { 0 } else { -1 },
+            cellType: FrameRecorder.Current != nil ? cell.GetType() : nil)
         }
       }
     } finally { ContextEnvironment.Current = previous }
@@ -297,6 +299,7 @@ internal partial class Reconciler {
     applyStyle(n, b, b.Focusable, initial)
     let state = Virtualization.Configure(n)
     state.BindContext(Context, Owner)
+    if let cell = expandingCell { state.DeclaringCell = cell }
     return state
   }
 
@@ -339,7 +342,7 @@ internal partial class Reconciler {
     let scratchScope = scratch.Rent(children.Count)
     try {
       let virtualRows = FrameRecorder.Current != nil && Virtualization.State(n) != nil
-      validateChildren(children, scratchScope)
+      validateChildren(children, scratchScope, expandingCell)
       for child in children {
         let mounted = Mount(child)
         mounted.Parent = n
@@ -839,7 +842,7 @@ internal partial class Reconciler {
   internal func createCell(e CellElement) Cell {
     let cell = e.CreateCell()
     if Object.ReferenceEquals(cell, nil) {
-      throw InvalidOperationException("Cell factory returned nil")
+      throw InvalidOperationException("Cell.Mount factory for ${e.CellType.Name} returned nil: return a fresh Cell instance from the factory.")
     }
     cell.ClaimMount(e.CellType)
     return cell
@@ -905,6 +908,8 @@ internal partial class Reconciler {
     let slotKey = existing?.Key
     let top = existing?.Fiber
     let previousContext = Context
+    let previousCell = expandingCell
+    expandingCell = cell
 
     cell.ClearDirty()
     var completed = false
@@ -948,6 +953,7 @@ internal partial class Reconciler {
       return result
     } finally {
       Context = previousContext
+      expandingCell = previousCell
       treeDepth = previousDepth
       if !completed {
         cell.contextReader?.Cancel()
@@ -1237,7 +1243,7 @@ internal partial class Reconciler {
     let scratch = keyedScratch()
     let scratchScope = scratch.Rent(Math.Max(n.Children.Count, blobs.Count))
     try {
-      validateChildren(blobs, scratchScope)
+      validateChildren(blobs, scratchScope, expandingCell)
       if recyclingRow {
         for i in 0 ... Math.Min(n.Children.Count, blobs.Count) {
           n.Children[i].Key = blobs[i].Key
@@ -1501,7 +1507,7 @@ internal partial class Reconciler {
   }
 }
 
-internal func validateChildren(blobs IList[Blob], scratchScope ChildDiffScratchScope) {
+internal func validateChildren(blobs IList[Blob], scratchScope ChildDiffScratchScope, parent Cell?) {
   scratchScope.IncomingKeys.Clear()
   scratchScope.IncomingHandles.Clear()
   var i int32
@@ -1509,7 +1515,8 @@ internal func validateChildren(blobs IList[Blob], scratchScope ChildDiffScratchS
     let blob = blobs[i]
     if let key = blob.Key {
       if !scratchScope.IncomingKeys.Add(key) {
-        throw NotSupportedException("Goo child lists must not contain duplicate keys")
+        let childType = if blob is CellElement { blob.CellType } else { blob.GetType() }
+        throw NotSupportedException("Duplicate key '$key' in ${parent?.GetType().Name ?? "<no Cell>"}.Build child $i (${childType.Name}): assign a stable unique key to each sibling.")
       }
     }
     if blob.HasElementHandle {
@@ -1517,7 +1524,7 @@ internal func validateChildren(blobs IList[Blob], scratchScope ChildDiffScratchS
         throw InvalidOperationException("Blob has no ElementHandle")
       }
       if !scratchScope.IncomingHandles.Add(handle) {
-        throw InvalidOperationException("A child list cannot assign one ElementHandle twice")
+        throw InvalidOperationException("Repeated ElementHandle in ${parent?.GetType().Name ?? "<no Cell>"}.Build child $i (${blob.GetType().Name}): create a separate ElementHandle for each child.")
       }
     }
     i++
