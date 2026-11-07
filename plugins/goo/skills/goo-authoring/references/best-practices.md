@@ -1,6 +1,6 @@
 # Goo app best practices
 
-Read this before you write or review Goo app code. These rules override threading, structure and list code in older samples.
+Read this before you write or review Goo app code. These app-authoring rules override threading, structure and list code in older samples. They do not replace contributor process or framework layer conventions.
 
 ## Rules
 
@@ -14,11 +14,11 @@ Read this before you write or review Goo app code. These rules override threadin
 | 6 | Use theme tokens. | Views contain no color, font, radius or spacing literals. All values come from one theme. |
 | 7 | Change Cell state and call `Rebuild()` only on the UI thread. | Every background result returns through `window.Post`. |
 | 8 | Bind background work to the Cell and the window. | The Cell implements `IDisposable` and cancels its token. The token links `window.Closed`. |
-| 9 | Drop stale results. | A generation number guards every posted result. |
-| 10 | Virtualize every list sized by data. | No `for` loop over data rows inside `Build`. |
+| 9 | Drop stale results. | Accept posted results only for the current request and mounted owner, using a generation number, stable request identity or an equivalent cancellation guard. |
+| 10 | Virtualize large or unbounded data lists. | Small bounded lists may use direct rows when their worst-case mount count and frame cost are measured. |
 | 11 | Keep `Build` cheap. | No sort, filter, group, parse or format of a whole collection in `Build`. |
 | 12 | Rebuild the smallest Cell that changed. | Each region is its own Cell. High-rate data is coalesced. |
-| 13 | Idle draws no frames. | At rest the profile shows no rebuild, layout, render or present. |
+| 13 | Avoid unnecessary idle frames. | With no active caret, animation or changing content, the profile shows no rebuild, layout, render or present. Identify and measure intentional frame activity separately. |
 | 14 | Measure before you report done. | Frame `p99` stays below budget under the heaviest interaction. |
 | 15 | Use standard text controls and built-in editing keys. | Text input uses `TextField` or `TextArea`. Editing and Tab focus need no binding setup on the app root or dialogs. See Keyboard and text input. |
 
@@ -183,9 +183,9 @@ Start it with `go Rank(batches, generation)`. Start one child per batch, not per
 - Compute sorted, filtered or grouped data when the source changes. Store it in a field. Compute large results in a `go` child.
 - Replace a changed list. Do not mutate it in place. Typed inputs do not see in-place changes.
 - Store the row builder in a field, as in `buildRow` above. A lambda that captures only `this` stays equal across builds, but a new closure over locals or parameters makes rows build again.
-- For high-rate sources (sockets, progress, logs), store the latest value and apply it from `window.SetInterval` at 10 Hz or less. Dispose the timer when the source is idle.
+- For high-rate sources (sockets, progress, logs), store the latest value and apply it at a measured interval that meets the latency and frame budgets. Start at 10 Hz when that is adequate. Dispose the timer when the source is idle.
 - Animate paint with `AnimateValue`. It skips `Build` and layout. `Animate(initial)` rebuilds the Cell on every tick.
-- Remove idle frame sources: a focused caret blinks, an interval runs, a shader background redraws. Unfocus at start, stop intervals, cap shader frame rate.
+- Stop intervals when their sources are idle and cap continuous shader redraw rates. Preserve useful keyboard focus, caret behavior and active animations. Measure their intentional activity separately from idle work.
 
 ## Keyboard and text input
 
@@ -219,7 +219,7 @@ Goo core provides editing keys for `TextEntry` and `TextEditor`. No app-root or 
 | Log or stream tail | `VirtualRows(items, h, key, builder, followEnd: following)` |
 | Custom 2D placement | `Virtual(source)` with your own `VirtualSource` |
 
-- Use a plain `for` loop only for a small set fixed at authoring time: tabs, toolbar buttons, form fields.
+- Use a plain `for` loop for small author-time fixed sets or measured small bounded data sets. Virtualize large or unbounded data lists.
 - The key is a stable domain ID. Never use the list index.
 - Give the virtual element a bounded height: `FlexGrow` in a sized parent, or a fixed `Height`.
 - Do not put a virtual element inside a container that scrolls as a whole.
@@ -239,12 +239,12 @@ GOO_FRAME_PROFILE=1 goo dev --project App.gsproj
 - Run GUI apps only in a private headless or nested compositor. In a Goo checkout, prefix the command with `.github/scripts/with-headless-wayland.sh`.
 - After 60 warmup frames Goo prints `p50`, `p99` and `max` for the frame and each phase every 240 frames.
 - Load real-size data, for example 100,000 rows. Scroll the largest list, type in search, start a load. Frame `p99` stays below budget. Virtual row mount counts stay flat while you scroll.
-- Idle prints no console report, because a report needs 240 frames. Check idle with a trace: Record 10 s with no input. Rebuild, layout, render and present stay at zero.
+- Idle prints no console report, because a report needs 240 frames. Record a 10 s trace with no input or intentional caret, animation or content activity. Rebuild, layout, render and present stay at zero in that idle state. Measure intentional frame activity separately.
 - For a trace, add `--inspector`, open the Profiler tab, select Record, run the workload, select Stop.
 - A high `build` phase means expensive Cell builds. A high `reconcile` phase can also come from style resolution or diff work. Check `build`, `style_resolve` and `diff` before you change the rebuild scope.
-- Test every text field without editing binding setup: type, Backspace, Delete, Left, Right, Up, Down, PageUp, PageDown, Ctrl+Left, Ctrl+Right, Ctrl+Backspace, Ctrl+Delete, Home, End, Ctrl+Home, Ctrl+End, Shift+movement, Ctrl+A, Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y, Enter, KeypadEnter, Escape, Tab and Shift+Tab. On macOS use Cmd for primary shortcuts and Option for word movement and deletion. Check submit versus newline and focus traversal versus indentation. Repeat in each dialog.
+- Qualify each shared text-control and native-host combination with this editing checklist, then carry unchanged evidence forward. Rerun affected fields and dialogs after a localized change, and the full checklist when editing, focus or dialog routing changes: type, Backspace, Delete, Left, Right, Up, Down, PageUp, PageDown, Ctrl+Left, Ctrl+Right, Ctrl+Backspace, Ctrl+Delete, Home, End, Ctrl+Home, Ctrl+End, Shift+movement, Ctrl+A, Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y, Enter, KeypadEnter, Escape, Tab and Shift+Tab. On macOS use Cmd for primary shortcuts and Option for word movement and deletion. Check submit versus newline and focus traversal versus indentation.
 
-Find violations before review:
+Search for possible violations before review:
 
 ```sh
 rg -n --glob '*.gs' 'Task\.Run|Thread\(|ThreadPool|ContinueWith|GetAwaiter\(\)\.GetResult|\.Wait\(\)|Thread\.Sleep|System\.Threading\.Timer'
@@ -252,4 +252,4 @@ rg -n --glob '**/Views/**/*.gs' 'Color\.(Rgb|Parse)|"#[0-9a-fA-F]{6}|File\.|Dire
 rg -n --glob '*.gs' 'WidgetKeyBindings\.Editing|OnKeyDown|OnTextInput'
 ```
 
-Threading and structure hits are defects. Fix them with Background work and App structure. Review keyboard hits: remove redundant editing setup and check that custom handlers do not block built-in editing except for a deliberate field override.
+Matches are leads for semantic review, not automatic defects. Check ownership, thread context and the selected compiler before applying Background work and App structure. Review keyboard hits for redundant setup or accidental blocking of built-in editing. Keep deliberate field overrides.

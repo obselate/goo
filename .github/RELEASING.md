@@ -1,5 +1,12 @@
 # Releasing Goo
 
+Releases are milestones approved by the repository owner. Merged fixes and
+consumer requests do not trigger a release. Before approval, present the milestone
+contents, regression evidence and open known issues. Do not open a release PR,
+bump a version, tag or publish until the owner approves the milestone.
+
+After approval, use the following checks and release steps.
+
 ```sh
 dotnet run --project tools/Goo.Repo -- doctor
 dotnet run --project tools/Goo.Repo -- docs
