@@ -16,6 +16,7 @@ internal class WindowScheduler {
   private var nativeStarts Queue[Action]?
   private var drainingNativeStarts bool
   private var servicingWindows bool
+  private var closedVisibleWindow bool
 
   private func EnsureSnapshotCapacity(required int32) {
     if required <= snapshot.Length {
@@ -58,14 +59,16 @@ internal class WindowScheduler {
     }
   }
 
-  internal func Unregister(window Window) {
+  internal func Unregister(window Window, wasVisible bool) {
     lock windowsGate {
       let index = windows.IndexOf(window)
       if index < 0 {
         return
       }
+      closedVisibleWindow = closedVisibleWindow || wasVisible
       windows.RemoveAt(index)
       if windows.Count == 0 {
+        closedVisibleWindow = false
         nextWindow = 0
         nativeStarts?.Clear()
         nativeStarts = nil
@@ -175,6 +178,8 @@ internal class WindowScheduler {
           break
         }
         var hasOpenWindow bool
+        var hasVisibleWindow bool
+        var hasPendingService bool
         let now = float64(Stopwatch.GetTimestamp())
         var waitMs int32 = if (nativeStarts?.Count ?? 0) > 0 { 0 } else { DefaultWaitMs }
         var currentIndex int32
@@ -185,15 +190,20 @@ internal class WindowScheduler {
             continue
           }
           hasOpenWindow = true
+          hasVisibleWindow = hasVisibleWindow || window.IsVisible
+          hasPendingService = hasPendingService || window.SchedulerHasImmediateService()
+            || window.SchedulerHasPendingQueueWork() || window.SchedulerStartupPending()
           let candidate = window.SchedulerWaitMs(now)
           if candidate < waitMs {
             waitMs = candidate
           }
           currentIndex = currentIndex + 1
         }
-        if !hasOpenWindow {
+        if !hasOpenWindow || (closedVisibleWindow && !hasVisibleWindow && !hasPendingService
+          && TrayIcon.ActiveCount == 0) {
           break
         }
+        if hasVisibleWindow { closedVisibleWindow = false }
         if waitMs == 0 {
           SdlRuntime.PumpEvents(EventBudget)
         } else {

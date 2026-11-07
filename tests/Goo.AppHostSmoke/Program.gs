@@ -27,6 +27,10 @@ internal class Program {
             let identity = args[1]
             let root = Path.GetFullPath(args[2].Substring("--output=".Length))
             let tag = if args.Length == 4 { args[3] } else { mode }
+            if mode == "native-close" {
+                RunNativeClose(root, tag)
+                return 0
+            }
             if mode == "placement" {
                 RunPlacement(root, tag)
                 return 0
@@ -338,6 +342,47 @@ internal class Program {
                 DisplayName: value.GetProperty("DisplayName").GetString()!!,
                 DisplayBounds: ReadBounds(value.GetProperty("DisplayBounds")),
                 DisplayScale: value.GetProperty("DisplayScale").GetDouble(),
+            }
+        }
+
+        private func RunNativeClose(root string, mode string) {
+            let main = Window{ Title: "Goo close $mode main", Width: 240, Height: 120, Root: Cell() }.Open()
+            let child = Window{ Title: "Goo close $mode child", Width: 240, Height: 120, Root: Cell(),
+                Owner: if mode == "visible" { main } else { nil } }.Open()
+            var closing = 0
+            child.OnClosing = () -> {
+                closing++
+                return true
+            }
+            var ready = false
+            var tray TrayIcon? = nil
+            main.SetInterval(() -> {
+                if !ready && main.IsVisible && child.IsVisible {
+                    if mode == "tray" {
+                        let result = TrayIcon.Create(main, TrayOptions{
+                            Id: "org.goo.native-close", Width: 1, Height: 1,
+                            Rgba: []uint8{255, 255, 255, 255},
+                        })
+                        Require(result.Icon != nil, "Tray creation failed: ${result.Status}: ${result.Error}")
+                        tray = result.Icon
+                    }
+                    if mode != "visible" { main.Hide() }
+                    ready = true
+                    File.WriteAllText(Path.Combine(root, "ready"), "ready")
+                }
+                if !child.IsOpen {
+                    Require(closing == 1, "Native owned close did not invoke OnClosing once")
+                    File.WriteAllText(Path.Combine(root, "child.closed"), main.IsOpen.ToString())
+                }
+                if File.Exists(Path.Combine(root, "stop")) { main.RequestClose() }
+            }, 20)
+            try {
+                main.Run()
+                File.WriteAllText(Path.Combine(root, "exited"), "${main.IsOpen},${child.IsOpen},$closing")
+            } finally {
+                tray?.Dispose()
+                main.RequestClose()
+                while main.IsOpen { main.Pump(0.005) }
             }
         }
 

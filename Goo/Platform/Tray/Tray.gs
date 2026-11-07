@@ -112,6 +112,7 @@ public class TrayIcon : IDisposable {
         Owner.NativeWindowClosing -= Dispose
         backend?.Dispose()
         backend = nil
+        ActiveCount--
         SetStatus(TrayStatus.Closed)
     }
 
@@ -146,6 +147,8 @@ public class TrayIcon : IDisposable {
     }
 
     shared {
+        internal var ActiveCount int32
+
         /// Creates an icon for an open desktop owner. Native failures return a typed result.
         /// @param owner The open desktop window that owns the icon and its callbacks.
         /// @param options The icon identity, pixels, tooltip and menu.
@@ -173,6 +176,7 @@ public class TrayIcon : IDisposable {
             icon.status = result
             if icon.backend == nil { return TrayResult(result, error: error) }
             owner.NativeWindowClosing += icon.Dispose
+            ActiveCount++
             return TrayResult(result, icon, error)
         }
     }

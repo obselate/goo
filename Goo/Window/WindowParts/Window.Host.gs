@@ -82,7 +82,7 @@ public partial class Window {
     }
 
     internal func UnregisterLiveWindow(window Window) {
-      scheduler.Unregister(window)
+      scheduler.Unregister(window, window.observedVisible)
     }
 
     internal func RunLiveWindowScheduler() {
