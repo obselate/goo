@@ -4,19 +4,44 @@ SVG loading is part of Goo core.
 
 ## Version baseline
 
-Use the Goo version in the [template command](../README.md#quick-start).
+Install the current Goo release with the [template command](../README.md#use).
 Use .NET 10 and the G# SDK selected by the template.
 
 ## Learn in order
 
 1. [Platform preflight](platform-preflight.md) checks the host requirements.
-2. [Create and run the counter](../README.md#quick-start) uses NuGet, not a source build.
+2. [Create and run the counter](../README.md#use) uses NuGet, not a source build.
 3. [After the counter](getting-started.md) adds a second Cell, typed fields,
    retained SVG, callbacks and disposal.
 4. [Edit and inspect](edit-and-inspect.md) exercises watch, restart and DevTools.
 5. [Widgets usage](https://github.com/obselate/goo-widgets/blob/main/docs/usage.md)
    covers packaged controls, controlled state and overlays.
 6. [Shipping](shipping.md) publishes and checks a self-contained desktop app.
+
+Learn G# with the [language tour](https://davidobando.github.io/gsharp/docs/tour/) and [editor support](https://github.com/DavidObando/gsharp#editor-support).
+
+## Packages
+
+| Package | Purpose |
+| --- | --- |
+| `Goo` | Core UI and native runtime assets. Included by the starter. |
+| `Goo.Android` | Android host. |
+| `Goo.Audio` | Audio playback. |
+| `Goo.Accessibility` | Native accessibility adapters. |
+| `Goo.DevTools` | CLI and inspector. Install with `dotnet tool install --global Goo.DevTools`. |
+| `Goo.Templates` | Starter projects. Install with `dotnet new install Goo.Templates`. |
+| [Goo.Widgets](https://github.com/obselate/goo-widgets) | Packaged controls. |
+| [Goo.Animations](https://github.com/obselate/goo-animations) | Animation composition. |
+
+Add libraries with `dotnet add package PACKAGE`.
+
+When upgrading to consolidated `Goo`, remove `Goo.AppHost`, `Goo.Gestures`,
+`Goo.Images`, `Goo.NativeDialogs`, `Goo.NativeMenus`, `Goo.Notifications`,
+`Goo.Printing`, `Goo.RichText`, `Goo.SpellCheck` and `Goo.SpellCheck.Hunspell`.
+Remove `Goo.Printing.Android` and `Goo.SpellCheck.Android` for `Goo.Android`.
+Keep namespace imports and type names. The old packages no longer publish.
+System services and native libraries load only when used. Hunspell supplies no library or dictionaries.
+
 
 ## Find a task or contract
 

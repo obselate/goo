@@ -111,9 +111,9 @@ internal shared partial class Checks {
         let readme = File.ReadAllText(Path.Combine(Root, "README.md"))
         let required = []string{
             "dotnet new install Goo.Templates\n",
-            "Windows x64 is tested on Windows 11",
-            "minimum supported Windows version is not yet established",
-            "## Further reading"
+            "## Use",
+            "## Build from source",
+            "## AI plugin"
         }
         let missing = required.Where(item -> !readme.Contains(item)).OrderBy(item -> item).ToArray()
         Require(missing.Length == 0, "README.md: required onboarding text is missing: " + string.Join(", ", missing))

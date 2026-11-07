@@ -32,7 +32,7 @@ On Linux, set `GOO_BUILD_LOCK` to a lock file path to serialize builds and check
 Goo.Repo uses `flock --close` for that lock. Do not wrap it in the same lock.
 
 Gallery builds and custom shader projects also need the pinned Slang and Vulkan
-SDKs. Run `doctor` for the install command. See [custom shaders](README.md#custom-shaders).
+SDKs. Run `doctor` for the install command. See [custom shaders](docs/platform-preflight.md#custom-shaders).
 For NativeAOT, install the target platform's
 [prerequisites](https://learn.microsoft.com/dotnet/core/deploying/native-aot/).
 Publish on the target OS with an explicit RID. NativeAOT is the preferred desktop
