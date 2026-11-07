@@ -70,7 +70,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 if follow {
                     let span = Math.Max(end - start, trace.Frequency * 2L)
                     end = Math.Max(1L, trace.End)
-                    start = Math.Max(0L, end - span)
+                    start = trace.Active ? Math.Max(0L, end - span): 0L
                 }
             }
         }
@@ -118,7 +118,8 @@ internal partial class ProfilerCell : Cell, IDisposable {
                     JustifyContent: JustifyContent.Center,
                     EmptyState{
                         Illustration: MaterialIcons.Create("monitoring", 32.0, theme.FaintTextColor),
-                        Title: "No trace"
+                        Title: "No trace",
+                        Description: "Select Record, use the app, then select Stop."
                     }.Build()
                 }
             )
@@ -160,7 +161,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 allocationSamples
             )
         )
-        controls.Add(Tool("profiler-clear", "delete_sweep", "Clear", () -> ClearTrace(), idle))
+        controls.Add(Tool("profiler-clear", "delete_sweep", "Clear", () -> ClearTrace(), idle && trace != nil))
         controls.Add(Tool("profiler-import", "file_open", "Import", () -> ShowFile("Import"), idle))
         controls.Add(
             Tool("profiler-export", "save", "Export", () -> ShowFile("Export"), idle && (trace?.Records.Count ?? 0) > 0)
@@ -180,7 +181,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 )
             )
         }
-        controls.Add(Tool("profiler-fit", "fit_screen", "Fit", () -> Fit()))
+        controls.Add(Tool("profiler-fit", "fit_screen", "Fit", () -> Fit(), trace != nil))
         controls.Add(
             Tool(
                 "profiler-zoom-selection",
@@ -196,8 +197,8 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 selectionEnd > selectionStart
             )
         )
-        controls.Add(Tool("profiler-zoom-out", "zoom_out", "Zoom out", () -> Zoom(2.0, 0.5)))
-        controls.Add(Tool("profiler-zoom-in", "zoom_in", "Zoom in", () -> Zoom(0.5, 0.5)))
+        controls.Add(Tool("profiler-zoom-out", "zoom_out", "Zoom out", () -> Zoom(2.0, 0.5), trace != nil))
+        controls.Add(Tool("profiler-zoom-in", "zoom_in", "Zoom in", () -> Zoom(0.5, 0.5), trace != nil))
         controls.Add(
             Tool(
                 "profiler-follow",
@@ -206,7 +207,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 () -> {
                     follow = !follow
                 },
-                true,
+                trace != nil,
                 follow
             )
         )
@@ -231,14 +232,14 @@ internal partial class ProfilerCell : Cell, IDisposable {
         return Container{
             Key: "profiler-toolbar",
             Width: Percent(100),
-            Height: theme.ControlHeight + 12.0,
             FlexShrink: 0.0,
             FlexDirection: FlexDirection.Row,
             AlignItems: AlignItems.Center,
-            Gap: 4,
-            Padding: Edges{Left: Pad, Right: Pad},
-            BorderWidth: Edges{Bottom: 1},
-            BorderColor: theme.BorderColor,
+            Gap: theme.ControlGap,
+            Padding: theme.Spacing * 2.0,
+            BackgroundColor: theme.PanelColor,
+            BorderWidth: Edges{Bottom: theme.BorderWidth},
+            BorderColor: Edges[Color]{Bottom: theme.BorderColor},
             OverflowX: Overflow.Hidden,
             Children: controls
         }
@@ -841,6 +842,10 @@ internal partial class ProfilerCell : Cell, IDisposable {
                             }
                         },
                         FitColumnsToViewport: true,
+                        EmptyContent: tab == "Types" ? EmptyState{
+                            Title: "No allocation samples",
+                            Description: "Turn on Allocation types in the toolbar, then record."
+                        }.Build(): nil,
                         Density: Density.Compact,
                         Height: Length.Auto,
                         AccessibilityName: tab,
@@ -1221,7 +1226,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
             if text {
                 definition.Flex = 1.0
             } else {
-                definition.Width = number ? 96.0: 110.0
+                definition.Width = number ? 120.0: 110.0
             }
             gridColumns[column] = definition
         }

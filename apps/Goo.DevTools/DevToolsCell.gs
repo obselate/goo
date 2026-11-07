@@ -220,6 +220,7 @@ class DevToolsCell : Cell {
                 Content: session.Inspecting ? "Stop picking": "Pick element",
                 Leading: MaterialIcons.Create("arrow_selector_tool", 18.0),
                 Pressed: session.Inspecting,
+                Disabled: session.State != DiagnosticConnectionState.Connected,
                 OnClick: () -> {
                     session.ToggleInspect()
                     Rebuild()
@@ -259,7 +260,7 @@ class DevToolsCell : Cell {
         children.Add(
             Text{
                 Key: "tree-count",
-                Content: "Elements " + elementCount.ToString(),
+                Content: elementCount == 1 ? "1 element": elementCount.ToString() + " elements",
                 Color: theme.MutedTextColor,
                 TextWrap: TextWrap.NoWrap,
             }
@@ -332,8 +333,15 @@ class DevToolsCell : Cell {
             }
             path.Add(row.Node)
             levels.Add(List[TreeNode]())
+            let parts = List[string]()
             if row.Node.TypeName != row.Node.DisplayName {
-                typeNames[row.Node.Id] = row.Node.TypeName
+                parts.Add(row.Node.TypeName)
+            }
+            if row.Node.Key != "" {
+                parts.Add("#" + row.Node.Key)
+            }
+            if parts.Count > 0 {
+                typeNames[row.Node.Id] = String.Join(" ", parts)
             }
         }
         while path.Count > 0 {
@@ -371,7 +379,7 @@ class DevToolsCell : Cell {
                     }
                     Rebuild()
                 },
-                SelectedId: session.SelectedNodeId,
+                SelectedId: session.SelectedNode().Id,
                 OnSelect: (id string) -> {
                     session.SelectNode(id)
                     Rebuild()
@@ -553,6 +561,7 @@ class DevToolsCell : Cell {
         let entry = TextField{
             Value: session.OverrideText,
             Controlled: true,
+            Placeholder: "BackgroundColor = #18212A",
             AccessibilityName: "Style override",
             Width: Percent(100),
             OnChange: (value string) -> {
@@ -563,7 +572,7 @@ class DevToolsCell : Cell {
         entry.Key = "override-entry"
         let apply = ActionButton{
             Content: "Apply",
-            Disabled: !session.IsSample && !session.Capabilities.RuntimeOverrides,
+            Disabled: session.OverrideText == "" || !session.IsSample && !session.Capabilities.RuntimeOverrides,
             OnClick: () -> {
                 session.ApplyOverride()
                 Rebuild()
@@ -637,6 +646,7 @@ class DevToolsCell : Cell {
         let capture = ActionButton{
             Content: "Capture",
             Leading: MaterialIcons.Create("screenshot_monitor", 18.0),
+            Disabled: !session.IsSample && session.State != DiagnosticConnectionState.Connected,
             OnClick: () -> {
                 session.CaptureScreenshot()
                 Rebuild()
@@ -661,6 +671,19 @@ class DevToolsCell : Cell {
         rows.MinHeight = 0
         rows.FlexGrow = 1.0
         rows.OverflowY = Overflow.Scroll
+        let body Blob = if showCaptures && session.Screenshots.Count == 0 {
+            Container{
+                Key: "captures-empty",
+                Height: 0,
+                MinHeight: 0,
+                FlexGrow: 1.0,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.Center,
+                EmptyState{Title: "No captures", Description: "Select Capture to record the selected window."}.Build(),
+            }
+        } else {
+            rows
+        }
         return Container{
             Key: "activity",
             Width: Percent(100),
@@ -680,7 +703,7 @@ class DevToolsCell : Cell {
                 Padding: theme.Spacing * 2.0,
                 Children: header,
             },
-            rows,
+            body,
         }
     }
 
