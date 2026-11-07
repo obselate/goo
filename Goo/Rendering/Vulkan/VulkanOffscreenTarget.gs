@@ -39,6 +39,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
   private let objectAccounting VulkanObjectAccounting?
   private let diagnostics VulkanDiagnostics?
   private var partialRepeat VulkanDamageRegion
+  private var retainPreviousFrame bool
   private var timestampEnabled bool
   private let timestampMask uint64
   private let timestampPeriod float32
@@ -444,8 +445,9 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     return VkConstants.VK_SUCCESS
   }
 
-  internal func SetPartialRepeat(damage VulkanDamageRegion) {
+  internal func SetPartialRepeat(damage VulkanDamageRegion, retainPrevious bool = false) {
     partialRepeat = damage
+    retainPreviousFrame = retainPrevious
   }
 
   internal func RecordScene(frame SceneFrame, clearColor VkClearColorValue,
@@ -480,17 +482,21 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
         }
         renderer.RecordPrimitiveFrameUpload(commandBuffer)
         renderer.RecordClipMasks(commandBuffer, extent)
-        BeginRendering(clearColor, VkRect2D{ extent: extent })
-        renderingActive = true
-        renderer.ConfigureLayerFrame(commandBuffer, image, imageView, extent, clipMaskSubmissionSerial)
-        renderer.ClearTimestampRecording()
-        renderer.RecordInsideRendering(commandBuffer, frame, extent)
+        if !retainPreviousFrame || partialRepeat.IsEmpty {
+          BeginRendering(clearColor, VkRect2D{ extent: extent })
+          renderingActive = true
+          renderer.ConfigureLayerFrame(commandBuffer, image, imageView, extent, clipMaskSubmissionSerial)
+          renderer.ClearTimestampRecording()
+          renderer.RecordInsideRendering(commandBuffer, frame, extent)
+        }
         if !partialRepeat.IsEmpty {
-          EndRendering()
+          if renderingActive { EndRendering() }
           BeginRendering(clearColor, VkRect2D{
             offset: VkOffset2D{ x: partialRepeat.X, y: partialRepeat.Y },
             extent: VkExtent2D{ width: uint32(partialRepeat.Width), height: uint32(partialRepeat.Height) },
           })
+          renderingActive = true
+          renderer.ConfigureLayerFrame(commandBuffer, image, imageView, extent, clipMaskSubmissionSerial)
           renderer.RecordInsideRendering(commandBuffer, frame, extent, partialRepeat, true)
         }
         renderer.ClearTimestampRecording()

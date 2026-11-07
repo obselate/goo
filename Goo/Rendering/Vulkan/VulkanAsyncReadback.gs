@@ -19,8 +19,8 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
 
   internal prop State VulkanReadbackState{ get -> state }
 
-  internal func SetPartialRepeat(damage VulkanDamageRegion) {
-    target.SetPartialRepeat(damage)
+  internal func SetPartialRepeat(damage VulkanDamageRegion, retainPrevious bool = false) {
+    target.SetPartialRepeat(damage, retainPrevious)
   }
   internal prop Generation uint64{ get -> generation }
   internal prop SubmissionSerial uint64{ get -> submissionSerial }

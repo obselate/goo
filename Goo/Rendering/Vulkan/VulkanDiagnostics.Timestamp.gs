@@ -332,7 +332,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
         return false
       }
 
-      ClearTimestampSlot(slot)
+      ClearTimestampSlot(slot, true)
       let firstQuery = FirstTimestampQuery(slot, 0, 0)
       let resetQueryPool = timestampDispatch.vkCmdResetQueryPool
       resetQueryPool(commandBuffer, timestampPool, firstQuery, uint32(TimestampQueriesPerSlot))
@@ -729,7 +729,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
     }
   }
 
-  private func ClearTimestampSlot(slot int32) {
+  private func ClearTimestampSlot(slot int32, reset bool = false) {
     if let recorders = traceRecorders, let contexts = traceContexts {
       recorders[slot] = nil
       contexts[slot] = FrameTraceContext{}
@@ -742,7 +742,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
     while stageIndex < TimestampStageCount {
       let stageRangeIndex = slot * TimestampStageCount + stageIndex
       timestampStages[stageRangeIndex] = VulkanDiagnosticTimestampStageState{
-        reset: true,
+        reset: reset,
         scopeCount: 0,
         droppedScopeCount: 0,
         submitted: false,
@@ -768,7 +768,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
           slot, TimestampStageFromIndex(stageIndex), scopeIndex)
         timestampRanges[rangeIndex] = VulkanDiagnosticTimestampRange{
           firstQuery: FirstTimestampQuery(slot, stageIndex, scopeIndex),
-          reset: true,
+          reset: reset,
           beginRecorded: false,
           endRecorded: false,
           submitted: false,

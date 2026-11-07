@@ -163,7 +163,7 @@ internal class ProfilerSmoke {
             using let cached = cache.LoadAsync(Path.Combine(AppContext.BaseDirectory, "local-rgba.png")).GetAwaiter().GetResult()
             let root = ProfilerSmokeCell{}
             let window = Window{Title: "Goo profiler pipe smoke", Width: 64, Height: 64, VSync: false, Root: root}.Open()
-            WindowReadbackTestFixture.ForceRender(window, 0.0)
+            WindowReadbackTestFixture.ForceRender(window, 0.0, 2.0, true)
             using let session = window.AttachDiagnostics()
             if Environment.GetEnvironmentVariable("GOO_FRAME_PROFILE") == "1" {
                 for i in 0 ... 320 {
@@ -249,7 +249,7 @@ internal class ProfilerSmoke {
             WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
             root.Scroll = true
             root.Rebuild()
-            WindowReadbackTestFixture.ForceRender(window, 0.0)
+            WindowReadbackTestFixture.ForceRender(window, 0.0, 2.0, true)
             let before = root.ContentHandle.BorderBox.Y
             guard let recorder = FrameRecorder.Start(Guid.NewGuid(), FrameRecorder.DefaultBufferBytes) else {
                 throw InvalidOperationException("Allocation sample trace could not start")
