@@ -1857,6 +1857,7 @@ method|Goo.Window|SetNativeDataDropFormats|instance|public|generic:|(formats:Sys
 method|Goo.Window|SetTimeout|instance|public|generic:|(callback:System.Action,delayMs:System.Double)->Goo.WindowTimer
 method|Goo.Window|ShowFileDialogAsync|instance|public|generic:|(kind:Goo.FileDialogKind,options:Goo.FileDialogOptions?=null)->System.Threading.Tasks.Task`1<Goo.FileDialogResult>
 method|Goo.Window|Show|instance|public|generic:|(activate:System.Boolean=true)->Goo.WindowOperationResult
+method|Goo.Window|TryPost|instance|public|generic:|(action:System.Action)->System.Boolean
 method|Goo.Window|TrySetFullscreenDisplay|instance|public|generic:|(display:Goo.WindowDisplayId)->Goo.WindowOperationResult
 method|Goo.Window|TrySetTopmost|instance|public|generic:|(value:System.Boolean)->Goo.WindowOperationResult
 method|Goo.Window|WriteClipboardAsync|instance|public|generic:|(data:Goo.TransferData,intent:Goo.ClipboardIntent=Copy)->System.Threading.Tasks.Task`1<Goo.ClipboardWriteResult>

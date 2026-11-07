@@ -1774,6 +1774,14 @@ Starts one owner-modal chooser on the open window's UI thread; other windows con
 
 Returns: A task completed on the UI thread with owned paths and an explicit outcome. Await continuations follow normal .NET context rules.
 
+### `TryPost(System.Action)`
+
+Attempts to queue an action for the UI thread. A successful enqueue can still be discarded if teardown begins before the action runs.
+
+- `action`: action to run during a later Pump
+
+Returns: True when the action was accepted into the queue.
+
 ### `TrySetFullscreenDisplay(WindowDisplayId)`
 
 Requests borderless fullscreen on the selected display, including retargeting an already-fullscreen window. This must run on the window's UI thread. Returns Closed before Open or after close, Unsupported for embedded hosts, Failed for a stale ID or native failure, and Accepted when SDL accepts the request. Acceptance does not guarantee compositor placement. The compositor may keep the current display when retargeting fullscreen.

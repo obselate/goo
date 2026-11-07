@@ -1,3 +1,3 @@
 ## Removed
 
-- Remove shared activation commands and the separate queue acceptance method.
+- Remove shared activation commands from buttons and key bindings.

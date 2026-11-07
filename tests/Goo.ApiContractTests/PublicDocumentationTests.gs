@@ -685,6 +685,7 @@ class PublicDocumentationTests {
             "M:Goo.Window.SetClipboardText(System.String)",
             "M:Goo.Window.SetInterval(System.Action,System.Double)",
             "M:Goo.Window.SetTimeout(System.Action,System.Double)",
+            "M:Goo.Window.TryPost(System.Action)",
             "M:Goo.WindowTimer.Dispose"
         }
         private let ExpectedProtectedMethodIds[]string = []string{
@@ -2070,6 +2071,11 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
                 false
+            ),
+            ["M:Goo.Window.TryPost(System.Action)"] = DocumentationShape(
+                []string{"action"},
+                System.Array.Empty[string](),
+                true
             ),
             ["M:Goo.Window.SetColors(Goo.Color,Goo.Color)"] = DocumentationShape(
                 []string{"background", "foreground"},
