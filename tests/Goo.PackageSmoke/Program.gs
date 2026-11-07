@@ -171,6 +171,7 @@ func RunPrimitiveSmoke() {
   var window Window? = nil
   Console.SetError(capturedError)
   try {
+    var windowMetrics WindowMetrics
     let opened = Window{
       Title: "Goo Primitive public smoke",
       Width: 400,
@@ -178,6 +179,7 @@ func RunPrimitiveSmoke() {
       VSync: false,
       Root: root,
     }
+    opened.MetricsChanged += metrics -> windowMetrics = metrics
     window = opened
     opened.Open()
     opened.Pump(0.0)
@@ -220,7 +222,9 @@ func RunPrimitiveSmoke() {
     opened.Pump(0.05)
     let afterOffset = PrimitiveSmokeCell.ScrollViewport.ScrollOffset.X
     let after = PrimitiveSmokeCell.ScrollLeaf.BorderBox
-    let offsetShift = afterOffset - beforeOffset
+    let density = float32(windowMetrics.DisplayScaleX) * windowMetrics.UiScale
+    let offsetShift = float64((MathF.Round(float32(afterOffset) * density)
+      - MathF.Round(float32(beforeOffset) * density)) / density)
     let borderShift = before.X - after.X
     if afterOffset <= beforeOffset
       || after.Y != before.Y
