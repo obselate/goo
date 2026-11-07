@@ -53,7 +53,7 @@ func RunScrollbarSmoke() {
             Title: "Goo scrollbar visual interaction gate",
             Width: 180,
             Height: 140,
-            FramePacing: WindowFramePacing.Uncapped,
+            VSync: false,
             Decorated: false,
             Resizable: true,
             Root: cell,

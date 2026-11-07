@@ -38,7 +38,7 @@ func RunPrimitiveUploadMetricsSmoke() {
   let root = PrimitiveUploadCell{}
   let window = Window{
     Title: "Goo primitive upload metrics",
-    Width: 1000, Height: 640, FramePacing: WindowFramePacing.Uncapped, Root: root, Background: Color.Transparent,
+    Width: 1000, Height: 640, VSync: false, Root: root, Background: Color.Transparent,
   }
   try {
     window.Open()

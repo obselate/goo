@@ -70,7 +70,7 @@ func RunBackdropBlurSmoke() {
       Title: "Goo backdrop blur gate",
       Width: 192,
       Height: 192,
-      FramePacing: WindowFramePacing.Uncapped,
+      VSync: false,
       Root: BackdropBlurCell{},
       Background: Color.Transparent,
     }

@@ -1,7 +1,7 @@
 ## Removed
 
-- Remove lexical style scopes, shared activation commands and the separate presentation synchronization and queue acceptance APIs.
+- Remove shared activation commands and the separate queue acceptance method.
 
 ## Changed
 
-- Use window color properties, FramePacing for presentation and scheduling, and Post returning queue acceptance.
+- Return queue acceptance from Post and migrate queued UI work to it.

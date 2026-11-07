@@ -3,13 +3,13 @@ package Goo
 internal class VulkanPresentModeSelector {
   shared {
     internal func TrySelect(
-      presentationSynchronized bool,
+      vsync bool,
       hasImmediate bool,
       hasMailbox bool,
       hasFifo bool,
       out selected VkPresentModeKHR) bool{
         selected = VkPresentModeKHR(0)
-        if presentationSynchronized {
+        if vsync {
           if !hasFifo {
             return false
           }

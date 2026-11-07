@@ -101,7 +101,7 @@ func RunFragmentCorrectnessSmoke() {
       Title: "Goo fragment correctness gate",
       Width: 816,
       Height: 128,
-      FramePacing: WindowFramePacing.Uncapped,
+      VSync: false,
       Root: cell,
       Background: Color.Transparent,
     }

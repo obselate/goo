@@ -50,6 +50,7 @@ Read this before you write or review Goo app code. These rules override threadin
 
 - Frame budget is `1000 / refresh rate` ms: 16.7 ms at 60 Hz, 6.9 ms at 144 Hz. All UI-thread work in a frame shares it.
 - Goo installs no `SynchronizationContext`. Code after `await` can run on any thread. Post UI changes through `window.Post`.
+- Check the bool returned by `window.Post` when work must not be lost and handle rejection. Queue acceptance does not guarantee execution if teardown starts later.
 - `Rebuild()` does not switch threads. It throws if called during `Build`.
 - `scope` waits for its children at its end. Normal exit does not cancel them. Pass a token.
 - A function that contains `scope` becomes suspending. A call from a synchronous boundary blocks and reports `GS0558`. Never join child work in a UI callback.

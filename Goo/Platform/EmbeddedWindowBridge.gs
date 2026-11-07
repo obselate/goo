@@ -61,7 +61,7 @@ internal partial class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   internal func RaisePreferencesChanged(value PlatformPreferences) { PreferencesChanged?.Invoke(value) }
   internal func RaiseVisibilityChanged() { VisibilityChanged?.Invoke() }
   public prop Transparent bool{ get -> Owner.Transparent }
-  public prop PresentationSynchronized bool{ get -> Owner.FramePacing == WindowFramePacing.Display }
+  public prop VSync bool{ get -> Owner.VSync }
   public prop WindowHandle nint{ get -> host.NativeHandle() }
 
   public func PollEvents() { }
@@ -91,7 +91,7 @@ internal partial class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   public func ApplyPlacement(value WindowPlacement) WindowPlacementResult -> WindowPlacementResult(WindowOperationResult.Unsupported)
   public func RequestActivation() WindowOperationResult -> WindowOperationResult.Unsupported
   public func SetBorder(decorated bool, resizable bool) { }
-  public func SetPresentationSynchronized(value bool) { }
+  public func SetVSync(value bool) { }
   public func SetCursor(value Cursor) { host.ChangeCursor(value) }
   public func SetFocusable(value bool) { throw NotSupportedException("Embedded hosts own their viewport focusability") }
   public func SetTopmost(value bool) { throw NotSupportedException("Embedded hosts own their viewport stacking") }

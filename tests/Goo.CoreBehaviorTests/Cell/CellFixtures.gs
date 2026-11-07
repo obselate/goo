@@ -1158,7 +1158,7 @@ internal class DeferredCloseTarget : WindowRenderTarget {
     CloseChecks++
     return CloseChecks >= CloseAfterChecks
   }
-  public func SetPresentationSynchronized(value bool) { }
+  public func SetVSync(value bool) { }
   public func SetHidden(value bool) { }
   public func BeginFrame() { }
   public func Render(root Node?, portalRoot Node?, background Color, dpi Vector2, overlay DiagnosticOverlay?) { }

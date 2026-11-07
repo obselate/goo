@@ -1739,6 +1739,8 @@ method|Goo.TextStyleSpan|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.TextStyleSpan|ToString|virtual|public|generic:|()->System.String
 method|Goo.TextStyleSpan|op_Equality|static|public|generic:|(left:Goo.TextStyleSpan,right:Goo.TextStyleSpan)->System.Boolean
 method|Goo.TextStyleSpan|op_Inequality|static|public|generic:|(left:Goo.TextStyleSpan,right:Goo.TextStyleSpan)->System.Boolean
+method|Goo.Tokens|Get|static|public|generic:T[attrs:0,constraints:]|()->!!0
+method|Goo.Tokens|Scope|static|public|generic:T[attrs:0,constraints:];R[attrs:0,constraints:]|(tokens:!!0,body:System.Func`1<!!1>)->!!1
 method|Goo.TrayIcon|Create|static|public|generic:|(owner:Goo.Window,options:Goo.TrayOptions)->Goo.TrayResult
 method|Goo.TrayIcon|Dispose|instance|public|generic:|()->System.Void
 method|Goo.TrayIcon|Update|instance|public|generic:|(options:Goo.TrayOptions)->Goo.TrayStatus
@@ -1849,6 +1851,7 @@ method|Goo.Window|RequestCapture|instance|public|generic:|(reusable:Goo.WindowCa
 method|Goo.Window|RequestClose|instance|public|generic:|()->System.Void
 method|Goo.Window|Run|instance|public|generic:|()->System.Void
 method|Goo.Window|SetClipboardText|instance|public|generic:|(value:System.String)->System.Void
+method|Goo.Window|SetColors|instance|public|generic:|(background:Goo.Color,foreground:Goo.Color)->System.Void
 method|Goo.Window|SetInterval|instance|public|generic:|(callback:System.Action,intervalMs:System.Double)->Goo.WindowTimer
 method|Goo.Window|SetNativeDataDropFormats|instance|public|generic:|(formats:System.Collections.Generic.IReadOnlyList`1<System.String>)->Goo.WindowOperationResult
 method|Goo.Window|SetTimeout|instance|public|generic:|(callback:System.Action,delayMs:System.Double)->Goo.WindowTimer
@@ -2892,6 +2895,7 @@ property|Goo.Window|Title|System.String|instance|get:public,set:public|index:()
 property|Goo.Window|Topmost|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|Transparent|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|UiScale|System.Single|instance|get:public,set:public|index:()
+property|Goo.Window|VSync|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|WaylandBackdrop|Goo.WaylandBackdropOptions|instance|get:public,set:public|index:()
 property|Goo.Window|WheelScrollScale|System.Single|instance|get:public,set:public|index:()
 property|Goo.Window|Width|System.Int32|instance|get:public,set:public|index:()
@@ -3194,6 +3198,7 @@ type|Goo.TextTransform|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.TextTrimming|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.TextWrap|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Text|sealed-class|public|base:Goo.Blob|interfaces:|generic:
+type|Goo.Tokens|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.TransferData|class|public|base:System.Object|interfaces:|generic:
 type|Goo.TransferRepresentation|class|public|base:System.Object|interfaces:|generic:
 type|Goo.TransitionProperty|enum|public|base:System.Enum|interfaces:|generic:

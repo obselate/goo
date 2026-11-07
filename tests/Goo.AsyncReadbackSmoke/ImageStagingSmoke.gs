@@ -151,7 +151,7 @@ func RunImageStagingSmoke() {
       Title: "Goo image staging growth gate",
       Width: 96,
       Height: 96,
-      FramePacing: WindowFramePacing.Uncapped,
+      VSync: false,
       Root: root,
     }
     window = opened

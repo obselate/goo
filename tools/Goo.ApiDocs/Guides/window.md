@@ -300,10 +300,10 @@ Equal snapshots do not notify. A listener added after another listener has alrea
 
 ## Frame pacing and manual capture
 
-`FramePacing` controls presentation and `Window.Run`. `Display` is the default and
-selects FIFO on every device. `Uncapped` prefers Immediate, then Mailbox, then FIFO
-and schedules demanded frames as soon as the native queue is ready. It does not
-override a compositor's presentation policy or render hidden and unavailable windows.
+`VSync` selects the preferred native presentation mode. `FramePacing` separately
+controls `Window.Run`: `Display` is the default and `Uncapped` schedules demanded
+frames as soon as the native queue is ready. Uncapped mode does not override a
+compositor's presentation policy or render hidden and unavailable windows.
 
 `Pump(dt)` advances simulation by the supplied seconds even when native work is
 pending. A manual clock can advance once, then service the window with `Pump(0)`
@@ -437,7 +437,7 @@ Raster selection uses `max(DisplayScaleX, DisplayScaleY) * UiScale`.
 
 Call `Window.Post` from any thread. Accepted actions use FIFO order. Post accepts work before the first `Open`. A pending `RequestClose` still accepts work because `OnClosing` can veto the request.
 
-`Post` returns `false` after posting closes. `true` means the action was accepted into the queue, not that it will run. Later teardown can discard queued work.
+`Post` returns `false` when the window no longer accepts work. Callers that must not lose work check this result and handle rejection. `true` means queue acceptance, not guaranteed execution. Later teardown can discard queued work.
 
 Each `Pump` drains one fixed accepted batch after close decisions and native metrics, and before input. Posts made while that batch runs wait for the next `Pump`. Teardown is terminal and discards queued work.
 

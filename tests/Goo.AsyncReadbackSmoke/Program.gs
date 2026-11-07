@@ -96,7 +96,7 @@ func ReadbackOpenCell(root ReadbackSmokeCell) Window {
     Title: "Goo Readback async readback",
     Width: 64,
     Height: 64,
-    FramePacing: WindowFramePacing.Uncapped,
+    VSync: false,
     Root: root,
   }
   opened.Open()

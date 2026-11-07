@@ -33,7 +33,7 @@
 ### Fixed
 
 - Keep initial desktop window bounds inside the display's usable area unless the declared minimum size exceeds it.
-- Select FIFO presentation on software Vulkan devices by default.
+- Honor VSync on software Vulkan devices by selecting FIFO presentation.
 
 ## 0.28.3 - 2026-11-06
 
@@ -620,7 +620,7 @@
 ## 0.7.36 - 2026-10-17
 
 - SVG is now part of Goo, and the Goo.Svg package is discontinued. Remove its PackageReference. `import Goo.Svg` is unchanged.
-- The default window clear is now white, with a black default foreground that Text inherits. Add `Window.Foreground`.
+- The default window clear is now white, with a black default foreground that Text inherits. Add `Window.Foreground` and atomic `Window.SetColors`.
 - Add retained typed `Context` values and scopes with dependency invalidation and virtual context generations.
 - Prefer hardware Vulkan devices and fall back to the next compatible device when startup fails.
 - Add opt-in bounded DevTools frame and queue tracing over the existing diagnostics pipe, with `GOO_PROFILE_START=1` to record from startup.

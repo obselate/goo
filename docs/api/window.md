@@ -307,10 +307,10 @@ Equal snapshots do not notify. A listener added after another listener has alrea
 
 ## Frame pacing and manual capture
 
-`FramePacing` controls presentation and `Window.Run`. `Display` is the default and
-selects FIFO on every device. `Uncapped` prefers Immediate, then Mailbox, then FIFO
-and schedules demanded frames as soon as the native queue is ready. It does not
-override a compositor's presentation policy or render hidden and unavailable windows.
+`VSync` selects the preferred native presentation mode. `FramePacing` separately
+controls `Window.Run`: `Display` is the default and `Uncapped` schedules demanded
+frames as soon as the native queue is ready. Uncapped mode does not override a
+compositor's presentation policy or render hidden and unavailable windows.
 
 `Pump(dt)` advances simulation by the supplied seconds even when native work is
 pending. A manual clock can advance once, then service the window with `Pump(0)`
@@ -446,7 +446,7 @@ Raster selection uses `max(DisplayScaleX, DisplayScaleY) * UiScale`.
 
 Call `Window.Post` from any thread. Accepted actions use FIFO order. Post accepts work before the first `Open`. A pending `RequestClose` still accepts work because `OnClosing` can veto the request.
 
-`Post` returns `false` after posting closes. `true` means the action was accepted into the queue, not that it will run. Later teardown can discard queued work.
+`Post` returns `false` when the window no longer accepts work. Callers that must not lose work check this result and handle rejection. `true` means queue acceptance, not guaranteed execution. Later teardown can discard queued work.
 
 Each `Pump` drains one fixed accepted batch after close decisions and native metrics, and before input. Posts made while that batch runs wait for the next `Pump`. Teardown is terminal and discards queued work.
 
@@ -1851,7 +1851,7 @@ Gets or sets a portal parent identifier before Open, such as wayland: followed b
 
 ### `FramePacing`
 
-Gets or sets presentation and Window.Run pacing. Display selects FIFO on every device. Uncapped prefers Immediate, then Mailbox, then FIFO and still honors GPU queue readiness.
+Gets or sets the frame pacing used by Window.Run. Uncapped still honors GPU queue readiness and the selected presentation mode.
 
 ### `FrameTheme`
 
@@ -2004,6 +2004,10 @@ Gets or sets next-open per-pixel alpha. An open window is unchanged. Transparenc
 ### `UiScale`
 
 Gets or sets the layout and rendering scale, clamped to 0.5 through 3. The default is 1, or the owner's scale when not explicitly set. Width and Height remain native logical sizes. Layout uses those sizes divided by UiScale, and rendering multiplies the display scale by UiScale.
+
+### `VSync`
+
+Gets or sets per-window GPU presentation synchronization. True selects FIFO. False prefers Immediate, then Mailbox, then FIFO on every device. Window.Run pacing is controlled separately by FramePacing.
 
 ### `WaylandBackdrop`
 

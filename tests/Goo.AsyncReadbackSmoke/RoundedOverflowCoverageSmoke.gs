@@ -103,7 +103,7 @@ func RunRoundedOverflowCoverageSmoke() {
   replacementEffect.SetParameter(0, Vector4(1.0F, 1.0F, 1.0F, 0.0F))
   let opened = Window{
     Title: "Goo rounded overflow gate", Width: 608, Height: 304,
-    FramePacing: WindowFramePacing.Uncapped, Decorated: false, Transparent: true,
+    VSync: false, Decorated: false, Transparent: true,
     Root: RoundedOverflowCoverageCell(replacementEffect), Background: Color.Transparent,
   }
   Console.SetError(capturedError)
@@ -242,7 +242,7 @@ class FocusOutlineClipCell : Cell {
 func RunFocusOutlineClipSmoke() {
   let opened = Window{
     Title: "Goo focus outline clip gate", Width: 160, Height: 96,
-    FramePacing: WindowFramePacing.Uncapped, Decorated: false, Root: FocusOutlineClipCell(),
+    VSync: false, Decorated: false, Root: FocusOutlineClipCell(),
   }
   try {
     opened.Open()

@@ -6,7 +6,7 @@ internal interface VulkanSurfaceHost {
   prop FramebufferWidth int32 { get; }
   prop FramebufferHeight int32 { get; }
   prop Transparent bool { get; }
-  prop PresentationSynchronized bool { get; }
+  prop VSync bool { get; }
   prop WindowHandle nint { get; }
   prop PreferRequestedFramebufferExtent bool { get; }
   prop AllowInheritedCompositeAlpha bool { get; }

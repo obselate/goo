@@ -55,7 +55,7 @@ func RunImageFileSmoke() {
   let imagePath = Path.Combine(AppContext.BaseDirectory, "local-rgba.png")
   using let source = cache.LoadAsync(imagePath).GetAwaiter().GetResult()
   let root = ImageFileCell(source)
-  let window = Window{ Title: "Goo local PNG gate", Width: 96, Height: 96, FramePacing: WindowFramePacing.Uncapped,
+  let window = Window{ Title: "Goo local PNG gate", Width: 96, Height: 96, VSync: false,
     IconPng: File.ReadAllBytes(imagePath), Root: root }
   let capturedError = StringWriter()
   let originalError = Console.Error
@@ -117,7 +117,7 @@ func RunOtherImageFile(name string) {
   using let first = cache.LoadAsync(path).GetAwaiter().GetResult()
   using let second = cache.LoadAsync(path).GetAwaiter().GetResult()
   let root = ImageFileCell(first)
-  let window = Window{Title: "Goo " + name, Width: 96, Height: 96, FramePacing: WindowFramePacing.Uncapped, Root: root}
+  let window = Window{Title: "Goo " + name, Width: 96, Height: 96, VSync: false, Root: root}
   let capturedError = StringWriter()
   let originalError = Console.Error
   try {
