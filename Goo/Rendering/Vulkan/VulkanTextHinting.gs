@@ -240,7 +240,7 @@ internal sealed class VulkanTextHinting : IDisposable {
                 let lower = edges.BinarySearch(first.Y)
                 let upper = edges.BinarySearch(second.Y)
                 if fitted[lower] == fitted[upper] && Anchor(first.Y, zone) != Anchor(second.Y, zone) {
-                    let moveLower = !InZone(first.Y, zone) && (lower == 0 || fitted[lower] - 1 > fitted[lower - 1])
+                    let moveLower = !InZone(first.Y, zone) && (lower == 0 || fitted[lower] - 1 >= fitted[lower - 1])
                     let moveUpper = !InZone(second.Y, zone) &&
                         (upper + 1 == edges.Count || fitted[upper] + 1 <= fitted[upper + 1])
                     if moveLower && (!moveUpper || (first.Y + second.Y) * 0.5F * scale <= float32(fitted[upper])) {
