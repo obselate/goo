@@ -199,7 +199,8 @@ internal class Node {
       let parent = node.Parent
       markContent = true
       if let owner = parent {
-        if owner.Kind == NodeKind.Editor || owner.OverflowX == Overflow.Scroll || owner.OverflowY == Overflow.Scroll {
+        if !owner.SceneContentDirty
+          && (owner.Kind == NodeKind.Editor || owner.OverflowX == Overflow.Scroll || owner.OverflowY == Overflow.Scroll) {
           markContent = !ScrollbarParts.Children(owner).Contains(node)
         }
       }
