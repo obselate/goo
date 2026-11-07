@@ -128,7 +128,7 @@ function branch(nodes, key) {
     const visit = node => node ? [node, ...(node.childIds ?? []).flatMap(id => visit(byId.get(id)))] : [];
     return visit(nodes.find(node => node.key === key));
 }
-const profilerTableKeys = new Set(['Phases', 'Memory', 'Types', 'Resources']);
+const profilerTableKeys = new Set(['Timers', 'Phases', 'Memory', 'Types', 'Resources']);
 function profilerTable(nodes) {
     const table = nodes.find(node => profilerTableKeys.has(node.key));
     assert(table, 'Profiler table is missing');
@@ -349,10 +349,13 @@ try {
     const frameValues = new Set([...branch(nodes, 'profiler-frame-scale'), ...branch(nodes, 'profiler-frame-tooltip')]);
     const frameLabels = branch(nodes, 'profiler-frames').filter(node => !frameValues.has(node));
     assert(!/budget|16\.7 ms/.test(content(frameLabels)), 'Frame row shows a target marker');
-    assert(nodes.some(node => node.key === 'profiler-frames') && nodes.some(node => node.key === 'legend-Other'),
+    assert(nodes.some(node => node.key === 'profiler-frames') && nodes.some(node => node.key === 'legend-Frame, wait and other'),
         'Frame row or its legend is missing');
     assert(nodes.some(node => node.key === 'profiler-tab-Phases'), 'Phases table is missing');
     assert(!nodes.some(node => node.key === 'profiler-details'), 'Unselected trace retained an empty details pane');
+    assert(nodes.some(node => node.key === 'Timers'), 'Timers table is not the default');
+    await click(inspector, 'profiler-tab-Phases');
+    nodes = await waitSnapshot(inspector, data => data.some(node => node.key === 'Phases'), 'Phases table did not open');
     const phaseHeader = profilerTable(nodes).find(node => node.key === 'column:c0');
     await request(['input', 'click', '--pid', String(inspector), '--x', String(phaseHeader.bounds.x + phaseHeader.bounds.width / 2),
         '--y', String(phaseHeader.bounds.y + phaseHeader.bounds.height / 2)]);
