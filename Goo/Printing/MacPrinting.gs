@@ -47,7 +47,7 @@ internal unsafe shared class MacPrinting {
                 MacPrinting.Send(MacPrinting.objc_getClass("NSPrintPanel"), MacPrinting.Selector("printPanel")),
                 MacPrinting.Selector("retain")
             )
-            registration = cancellation.Register(() -> owner.TryPost(CancelSheet))
+            registration = cancellation.Register(() -> owner.Post(CancelSheet))
         }
 
         internal func Submit(path string) {

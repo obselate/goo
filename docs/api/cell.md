@@ -191,17 +191,6 @@ Builds the component tree.
 
 Returns: the root blob for this component
 
-### `MountSeeded``1(string,System.Action{TCell},System.Action{TCell})`
-
-Describes a child component mount with one-time initialization.
-
-- `TCell`: child component type
-- `key`: stable sibling key, or nil for positional identity
-- `seed`: initialization applied only when the component mounts
-- `configure`: configuration applied during each parent diff; prefer stable named or cached delegates
-
-Returns: a blob that mounts the child component
-
 ### `Mount``1`
 
 Describes an unkeyed child component mount using positional identity.
@@ -231,7 +220,7 @@ Returns: a blob that mounts the child component
 
 ### `Mount``1(string,System.Action{TCell})`
 
-Describes a child component mount.
+Describes a child component mount. Put one-time initialization in the factory or constructor, not configure, which runs on every parent diff.
 
 - `TCell`: child component type
 - `key`: stable sibling key, or nil for positional identity

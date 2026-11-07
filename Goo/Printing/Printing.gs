@@ -132,7 +132,7 @@ public shared class Printing {
             try { completion.TrySetResult(action()) }
             catch (error Exception) { completion.TrySetException(error) }
         }
-        if !(if post == nil { owner.TryPost(run) } else { post(run) }) { cancel(CancellationToken(true)) }
+        if !(if post == nil { owner.Post(run) } else { post(run) }) { cancel(CancellationToken(true)) }
         return complete()
     }
 

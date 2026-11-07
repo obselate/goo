@@ -101,7 +101,7 @@ public partial class Window {
 
   private func requireUiThread(operation string) {
     if uiThreadBound && Environment.CurrentManagedThreadId != ownerThreadId {
-      throw InvalidOperationException("$operation ran on thread ${Environment.CurrentManagedThreadId} instead of window owner thread $ownerThreadId: use Window.TryPost to change Cell state and call Rebuild on the UI thread (Goo best practices rule 7).")
+      throw InvalidOperationException("$operation ran on thread ${Environment.CurrentManagedThreadId} instead of window owner thread $ownerThreadId: use Window.Post to change Cell state and call Rebuild on the UI thread (Goo best practices rule 7).")
     }
   }
 
@@ -178,7 +178,7 @@ public partial class Window {
       x = native.X
       y = native.Y
       input.SetUiScale(UiScale)
-      native.TransferPost = TryPost
+      native.TransferPost = Post
       native.NativeDragPost = postNativeDragStart
       input.Attach(native)
       IsOpen = true
@@ -257,7 +257,7 @@ public partial class Window {
         FrameIndex: acceptedFrameIndex,
         AcceptedTicks: ticks,
       }
-      TryPost(() -> {
+      Post(() -> {
         if IsOpen { notifications.RaisePresentationAccepted(receipt) }
       })
     }

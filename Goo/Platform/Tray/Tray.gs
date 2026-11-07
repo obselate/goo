@@ -123,11 +123,11 @@ public class TrayIcon : IDisposable {
     }
 
     internal func PostStatus(value TrayStatus) {
-        Owner.TryPost(() -> { if status != TrayStatus.Closed { SetStatus(value) } })
+        Owner.Post(() -> { if status != TrayStatus.Closed { SetStatus(value) } })
     }
 
     internal func PostActivation(nativeToken string? = nil) {
-        Owner.TryPost(() -> {
+        Owner.Post(() -> {
             if status == TrayStatus.Closed || Owner.NativeOwnerClosing { return }
             let previous = Window.CurrentActivationToken
             Window.CurrentActivationToken = nativeToken
@@ -137,7 +137,7 @@ public class TrayIcon : IDisposable {
     }
 
     internal func PostCommand(itemId string, nativeToken string? = nil) {
-        Owner.TryPost(() -> {
+        Owner.Post(() -> {
             if status == TrayStatus.Closed || Owner.NativeOwnerClosing { return }
             let previous = Window.CurrentActivationToken
             Window.CurrentActivationToken = nativeToken

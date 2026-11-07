@@ -249,7 +249,7 @@ internal sealed class MacMenuBridge {
                     if binding.Handle != nint(0) && !binding.Tracking && binding.Owner.IsInputBlocked { return }
                     binding.Selected = item.Id
                     if binding.Handle != nint(0) && !binding.Tracking {
-                        binding.Owner.TryPost(() -> {
+                        binding.Owner.Post(() -> {
                             if !binding.Closed && !binding.Owner.NativeOwnerClosing && !binding.Owner.IsInputBlocked { binding.Activate(item.Id) }
                         })
                     }
@@ -281,7 +281,7 @@ internal sealed class MacMenuBridge {
                             lease.Dispose()
                             if binding.Closed { Remove(binding) }
                             else if selected.Length != 0 {
-                                binding.Owner.TryPost(() -> {
+                                binding.Owner.Post(() -> {
                                     if !binding.Closed && !binding.Owner.NativeOwnerClosing && !binding.Owner.IsInputBlocked { binding.Activate(selected) }
                                 })
                             }

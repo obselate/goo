@@ -232,13 +232,9 @@ private func appendHitChain(n Node, x float32, y float32, sink List[NodeMount]) 
   return false
 }
 
-internal func hasActivation(n Node) bool -> n.OnClick != nil || InputCallbacks.Command(n) != nil
+internal func hasActivation(n Node) bool -> n.OnClick != nil
 
 private func hitFire(n Node, owner Cell?) bool {
-  if let command = InputCallbacks.Command(n) {
-    try { return command.Execute() }
-    finally { owner?.Rebuild() }
-  }
   if let handler = n.OnClick {
     try { handler() }
     finally { owner?.Rebuild() }

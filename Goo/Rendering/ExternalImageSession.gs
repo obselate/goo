@@ -191,7 +191,7 @@ public sealed partial class ExternalImageSession : IDisposable {
 
     internal func Wake() {
         if Interlocked.CompareExchange(ref posted, 1, 0) == 0 {
-            if !window.TryPost(pump) { Interlocked.Exchange(ref posted, 0) }
+            if !window.Post(pump) { Interlocked.Exchange(ref posted, 0) }
         }
     }
 
@@ -284,7 +284,7 @@ public sealed partial class ExternalImageSession : IDisposable {
         let error = callbackError
         callbackError = nil
         if let current = error {
-            if window.IsOpen && window.TryPost(() -> { throw current }) { return nil }
+            if window.IsOpen && window.Post(() -> { throw current }) { return nil }
         }
         return error
     }

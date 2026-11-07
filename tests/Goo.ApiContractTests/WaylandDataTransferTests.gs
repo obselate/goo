@@ -145,7 +145,7 @@ public sealed class WaylandDataTransferTests {
             "SDL.video.wayland.wl_display", nint(0))) >= 0)
 
         private func Pump(window Window) {
-            Assert.True(window.TryPost(() -> {}))
+            Assert.True(window.Post(() -> {}))
             window.Pump(0)
         }
 

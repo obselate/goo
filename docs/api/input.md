@@ -97,18 +97,6 @@ An app-root Ctrl+A binding does not replace Select All in a focused text field. 
 
 Movement and deletion repeat. Clipboard, history, submit, Tab, and Escape do not. Shift extends movement selection. Ctrl is the primary and word modifier on Windows and Linux. On macOS, Command is primary and Option moves or deletes words. Primary+A/C/X/V/Z selects all, copies, cuts, pastes, and undoes. Primary+Shift+Z and Ctrl+Y redo. Escape cancels a drag, then composition, then a single-line edit.
 
-Share an application action with `Command(execute, canExecute)`. Assign the same
-instance to `Button.Command`, `KeyBinding.Command`, or call `Execute()` from a
-menu. `Execute()` checks `CanExecute` each time and returns false when unavailable.
-The command takes precedence over `Button.OnClick` and `KeyBinding.Action`. An
-unavailable key command consumes its matching binding and does not repeat or arm
-its release callback. Button pointer, handle, keyboard activation, and default
-accessibility actions use the same command. Rebuild the owning cell when
-availability changes so the button's disabled styling, focusability, and
-accessibility state update. Invocation checks availability even before that
-rebuild. No shortcut is installed by assigning a command. Text operations still
-use `TextCommand` through `PlatformInput.Execute` or a text editor controller.
-
 `OnKeyDown` and `OnKeyUp` first bubble from the focused element through its parents. With no focused element they start at the root. Bindings and built-in defaults run after these callbacks. `KeyEvent.StopPropagation()` limits callbacks and binding lookup to the visited elements. `KeyEvent.PreventDefault()` skips bindings and built-in defaults and suppresses direct committed text from that key without stopping callbacks. A handled binding or default also suppresses its direct committed text. Preedit and IME commits remain text input. `KeyEvent.IsComposing` reports active preedit so callbacks can leave its keys to the IME. Bindings and defaults are skipped during preedit, except Escape can cancel it. Both controls expire after dispatch. Repeated callbacks report `Repeat: true`.
 
 Preventing a key's default does not stop its key down callbacks from repeating while held.
@@ -381,26 +369,6 @@ Keep one TransformGesture for combined pan, pinch and rotation.
 - SDL 3.4 cannot distinguish a normal trackpad end from native cancellation.
 
 
-
-## `Command`
-
-Source:
-
-- [`Command.gs`](../../Goo/Input/Command.gs)
-
-Shares an application action and its current availability across explicit bindings and controls. Rebuild the owning cell when availability changes to update button disabled styling and semantics.
-
-### `new(System.Action,System.Func{bool})`
-
-Creates an application action with an optional availability predicate.
-
-### `Execute`
-
-Rechecks availability and invokes the action. Returns false when unavailable.
-
-### `CanExecute`
-
-Evaluates whether the action can execute now.
 
 ## `DoubleTapGesture`
 
@@ -1255,11 +1223,7 @@ Assigns callbacks to one exact physical key and modifier combination.
 
 ### `Action`
 
-Gets the callback invoked on key down when Command is absent.
-
-### `Command`
-
-Gets the shared action invoked on key down. An unavailable command consumes the binding.
+Gets the callback invoked on key down.
 
 ### `Key`
 

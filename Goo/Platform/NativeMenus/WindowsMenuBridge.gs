@@ -286,7 +286,7 @@ internal unsafe sealed class WindowsMenuBridge {
                             let item = snapshot.Actions[index]
                             if item.Enabled && item.Items.Count == 0 && (binding.Tracking || !binding.Owner.IsInputBlocked) {
                                 if binding.Tracking { binding.Selected = item.Id } else {
-                                    binding.Owner.TryPost(() -> {
+                                    binding.Owner.Post(() -> {
                                         if !binding.Closed && !binding.Owner.NativeOwnerClosing && !binding.Owner.IsInputBlocked { binding.Activate(item.Id) }
                                     })
                                 }
@@ -310,7 +310,7 @@ internal unsafe sealed class WindowsMenuBridge {
                             lease?.Dispose()
                             if binding.Closed { Remove(binding) }
                             else if selected.Length != 0 {
-                                binding.Owner.TryPost(() -> {
+                                binding.Owner.Post(() -> {
                                     if !binding.Closed && !binding.Owner.NativeOwnerClosing && !binding.Owner.IsInputBlocked { binding.Activate(selected) }
                                 })
                             }

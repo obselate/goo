@@ -108,7 +108,7 @@ internal partial class ProfilerCell {
         try {
             using let cancellation = CancellationTokenSource.CreateLinkedTokenSource(token, window.Closed)
             let result = await task.WaitAsync(cancellation.Token)
-            window.TryPost(
+            window.Post(
                 () -> {
                     if generation != fileGeneration {
                         return
@@ -124,7 +124,7 @@ internal partial class ProfilerCell {
             )
         } catch (error OperationCanceledException) { } catch (error Exception) {
             let message = error.GetBaseException().Message
-            window.TryPost(
+            window.Post(
                 () -> {
                     if generation != fileGeneration {
                         return
@@ -173,7 +173,7 @@ internal partial class ProfilerCell {
                         failure = error.Message
                     }
                     cancellation.Token.ThrowIfCancellationRequested()
-                    window.TryPost(
+                    window.Post(
                         () -> {
                             if generation != fileGeneration {
                                 return
@@ -209,7 +209,7 @@ internal partial class ProfilerCell {
                     )
                 } catch (error OperationCanceledException) { } catch (error Exception) {
                     let message = error.Message
-                    window.TryPost(
+                    window.Post(
                         () -> {
                             if generation != fileGeneration {
                                 return

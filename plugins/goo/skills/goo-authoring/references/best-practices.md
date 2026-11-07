@@ -12,7 +12,7 @@ Read this before you write or review Goo app code. These rules override threadin
 | 4 | Put I/O and long work in services. | File, network, process, parse and heavy compute code is in `Services/` and runs in `go` children. Views and models do no I/O. |
 | 5 | Reuse components. | A visual pattern that occurs twice is one component. Use Goo.Widgets controls before you write a new control. |
 | 6 | Use theme tokens. | Views contain no color, font, radius or spacing literals. All values come from one theme. |
-| 7 | Change Cell state and call `Rebuild()` only on the UI thread. | Every background result returns through `window.TryPost`. |
+| 7 | Change Cell state and call `Rebuild()` only on the UI thread. | Every background result returns through `window.Post`. |
 | 8 | Bind background work to the Cell and the window. | The Cell implements `IDisposable` and cancels its token. The token links `window.Closed`. |
 | 9 | Drop stale results. | A generation number guards every posted result. |
 | 10 | Virtualize every list sized by data. | No `for` loop over data rows inside `Build`. |
@@ -35,7 +35,7 @@ Read this before you write or review Goo app code. These rules override threadin
 - The view Cell is the controller for its region. It owns UI state such as selection and scroll, handles input, calls the model, starts `go` work and calls `Rebuild()`.
 - When a screen has many state transitions, put them in a model class with methods, for example `SearchModel.Apply(query)`. The Cell then only connects input to model calls.
 - A form model owns one `CanSubmit` value. The submit button `Disabled` state and the Enter (`OnSubmit`) handler of every field read only that value. Do not write the submit condition twice.
-- Data flow: a service result returns through `window.TryPost`, the model changes on the UI thread, the Cell rebuilds, the view builds from the model.
+- Data flow: a service result returns through `window.Post`, the model changes on the UI thread, the Cell rebuilds, the view builds from the model.
 - Pass a child view only the model values it shows, as a `data struct` input. Goo then rebuilds the child only when those values change.
 - Before you write a component, search Goo.Widgets and the app's `Components/`. Change an existing component when it is close. Do not copy it.
 
@@ -44,12 +44,13 @@ Read this before you write or review Goo app code. These rules override threadin
 | Runs on the UI thread | No UI-thread guarantee |
 | --- | --- |
 | `Build`, input handlers, layout, render | `go f()`, `go { ... }` |
-| `window.Post` and `window.TryPost` actions | Code after `await` |
+| `window.Post` actions | Code after `await` |
 | `window.SetTimeout` and `window.SetInterval` callbacks | G# `after(d)` and `tick(d)` |
 | `Anim.Completed` callbacks | |
 
 - Frame budget is `1000 / refresh rate` ms: 16.7 ms at 60 Hz, 6.9 ms at 144 Hz. All UI-thread work in a frame shares it.
-- Goo installs no `SynchronizationContext`. Code after `await` can run on any thread. Post UI changes through `window.TryPost`.
+- Goo installs no `SynchronizationContext`. Code after `await` can run on any thread. Post UI changes through `window.Post`.
+- Check the bool returned by `window.Post` when work must not be lost and handle rejection. Queue acceptance does not guarantee execution if teardown starts later.
 - `Rebuild()` does not switch threads. It throws if called during `Build`.
 - `scope` waits for its children at its end. Normal exit does not cancel them. Pass a token.
 - A function that contains `scope` becomes suspending. A call from a synchronous boundary blocks and reports `GS0558`. Never join child work in a UI callback.
@@ -88,7 +89,7 @@ class SearchView : Cell, IDisposable {
         try {
             let found = await catalog.SearchAsync(query, token)
             let sorted = found.OrderBy(item -> item.Name).ToArray()
-            window.TryPost(() -> {
+            window.Post(() -> {
                 if id == generation {
                     rows = sorted
                     status = ""
@@ -98,7 +99,7 @@ class SearchView : Cell, IDisposable {
         } catch (error OperationCanceledException) {
         } catch (error Exception) {
             let message = error.Message
-            window.TryPost(() -> {
+            window.Post(() -> {
                 if id == generation {
                     status = message
                     Rebuild()
@@ -143,7 +144,7 @@ private func Rank(batches IReadOnlyList[Batch], id int32) {
         for i in 0 ... batches.Count {
             scores.Add(<-output)
         }
-        window.TryPost(() -> {
+        window.Post(() -> {
             if id == generation {
                 ranked = scores
                 Rebuild()
@@ -152,7 +153,7 @@ private func Rank(batches IReadOnlyList[Batch], id int32) {
     } catch (error OperationCanceledException) {
     } catch (error Exception) {
         let message = error.Message
-        window.TryPost(() -> {
+        window.Post(() -> {
             if id == generation {
                 status = message
                 Rebuild()
@@ -166,11 +167,11 @@ Start it with `go Rank(batches, generation)`. Start one child per batch, not per
 
 | Do not write | Write |
 | --- | --- |
-| `await Task.Run(() -> Compute(x))` | `go ComputeAndPost(x, window)`, with `TryPost` inside `ComputeAndPost` |
+| `await Task.Run(() -> Compute(x))` | `go ComputeAndPost(x, window)`, with `Post` inside `ComputeAndPost` |
 | `Task.Run(async () -> await LoadAsync())` | `go Load(token)` |
 | `Task.WhenAll(a, b)` | Start `go A()` and `go B()` on separate lines in a `scope` inside a `go` child |
 | `Thread(...)`, `ThreadPool.QueueUserWorkItem` | `go` |
-| `task.ContinueWith(t -> ...)` | `await` inside a `go` child, then `TryPost` |
+| `task.ContinueWith(t -> ...)` | `await` inside a `go` child, then `Post` |
 | `x.GetAwaiter().GetResult()` in UI code | `go` and post the result |
 | `Thread.Sleep(ms)` in UI code | `window.SetTimeout(callback, ms)` |
 | `System.Threading.Timer` or `tick(d)` that touches Cells | `window.SetInterval(callback, ms)` |

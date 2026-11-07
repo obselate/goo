@@ -21,7 +21,7 @@ internal sealed partial class MessageBoxRequest {
     }
 
     internal func Post() {
-        if !owner.TryPost(Launch) { Finish(MessageBoxResult(MessageBoxStatus.OwnerClosed)) }
+        if !owner.Post(Launch) { Finish(MessageBoxResult(MessageBoxStatus.OwnerClosed)) }
     }
 
     private func Closing() {

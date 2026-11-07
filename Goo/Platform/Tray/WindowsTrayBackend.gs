@@ -265,7 +265,7 @@ internal unsafe class WindowsTrayBackend : TrayBackend {
                         && uint32((nuint(lparam) >> 16) & nuint(0xFFFF)) == current.id {
                         let action = uint32(nuint(lparam) & nuint(0xFFFF))
                         if action == NinSelect || action == NinKeySelect { current.icon.PostActivation() }
-                        else if action == WmContextMenu { current.icon.Owner.TryPost(current.ShowMenu) }
+                        else if action == WmContextMenu { current.icon.Owner.Post(current.ShowMenu) }
                         return nint(0)
                     }
                 }

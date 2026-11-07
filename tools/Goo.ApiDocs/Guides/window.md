@@ -437,9 +437,9 @@ Raster selection uses `max(DisplayScaleX, DisplayScaleY) * UiScale`.
 
 Call `Window.Post` from any thread. Accepted actions use FIFO order. Post accepts work before the first `Open`. A pending `RequestClose` still accepts work because `OnClosing` can veto the request.
 
-Use `TryPost` when teardown can race the producer. It returns `false` after posting closes instead of throwing. `true` means the action was atomically accepted into the queue, not that it is guaranteed to execute, because later teardown may still discard queued work.
+`Post` returns `false` when the window no longer accepts work. Callers that must not lose work check this result and handle rejection. `true` means queue acceptance, not guaranteed execution. Later teardown can discard queued work.
 
-Each `Pump` drains one fixed accepted batch after close decisions and native metrics, and before input. Posts made while that batch runs wait for the next `Pump`. When native closing or teardown starts, Goo discards queued work. Teardown is terminal and later `Post` calls throw `InvalidOperationException`.
+Each `Pump` drains one fixed accepted batch after close decisions and native metrics, and before input. Posts made while that batch runs wait for the next `Pump`. Teardown is terminal and discards queued work.
 
 `Window.Closed` is cancelled after native teardown finishes or fails. Dispatch stops
 earlier and can discard an accepted action. Link asynchronous package work to this token.

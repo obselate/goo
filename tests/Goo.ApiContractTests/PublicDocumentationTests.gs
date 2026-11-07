@@ -374,7 +374,6 @@ class PublicDocumentationTests {
             "M:Goo.Cell.AnimateValue``1(``0,Goo.MotionConverter{``0})",
             "M:Goo.Cell.Build",
             "M:Goo.Cell`1.Build(`0)",
-            "M:Goo.Cell.MountSeeded``1(System.String,System.Action{``0},System.Action{``0})",
             "M:Goo.Cell.Mount``1",
             "M:Goo.Cell.Mount``1(System.Func{``0},System.String)",
             "M:Goo.Cell.Mount``1(System.String)",
@@ -390,8 +389,6 @@ class PublicDocumentationTests {
             "M:Goo.Color.WithAlpha(System.Double)",
             "M:Goo.Color.op_Implicit(Goo.Color)~Goo.Edges{Goo.Color}",
             "M:Goo.Color.op_Implicit(System.String)~Goo.Color",
-            "M:Goo.Command.#ctor(System.Action,System.Func{System.Boolean})",
-            "M:Goo.Command.Execute",
             "M:Goo.VectorAsset.#ctor(System.Double,System.Double,System.Double,System.Double,Goo.VectorNode[])",
             "M:Goo.VectorAsset.NodeAt(System.Int32)",
             "M:Goo.VectorAsset.PathForNode(System.Int32)",
@@ -666,8 +663,6 @@ class PublicDocumentationTests {
             "M:Goo.TextSnapshot.GetLineText(System.Int32)",
             "M:Goo.TextSnapshot.GetText",
             "M:Goo.TextSnapshot.GetText(Goo.TextRange)",
-            "M:Goo.Tokens.Get``1",
-            "M:Goo.Tokens.Scope``2(``0,System.Func{``1})",
             "M:Goo.Window.#ctor",
             "M:Goo.Window.AccessibilityHitTest(System.Double,System.Double)",
             "M:Goo.Window.Attach(Goo.EmbeddedWindowHost)",
@@ -1243,11 +1238,6 @@ class PublicDocumentationTests {
             ["M:Goo.Cell.Mount``2(System.String,``0)"] = DocumentationShape(
                 []string{"key", "input"},
                 []string{"TInput", "TCell"},
-                true
-            ),
-            ["M:Goo.Cell.MountSeeded``1(System.String,System.Action{``0},System.Action{``0})"] = DocumentationShape(
-                []string{"key", "seed", "configure"},
-                []string{"TCell"},
                 true
             ),
             [
@@ -1975,12 +1965,6 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
-            ["M:Goo.Tokens.Get``1"] = DocumentationShape(System.Array.Empty[string](), []string{"T"}, true),
-            ["M:Goo.Tokens.Scope``2(``0,System.Func{``1})"] = DocumentationShape(
-                []string{"tokens", "body"},
-                []string{"T", "R"},
-                true
-            ),
             ["M:Goo.ElementHandle.BeginFocusScope(Goo.FocusScopeOptions)"] = DocumentationShape(
                 []string{"options"},
                 System.Array.Empty[string](),
@@ -2002,7 +1986,7 @@ class PublicDocumentationTests {
             ["M:Goo.Window.Post(System.Action)"] = DocumentationShape(
                 []string{"action"},
                 System.Array.Empty[string](),
-                false
+                true
             ),
             ["M:Goo.Window.Open"] = DocumentationShape(
                 System.Array.Empty[string](),

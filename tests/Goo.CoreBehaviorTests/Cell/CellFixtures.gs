@@ -265,21 +265,14 @@ internal class CellFixtures {
     return false
   }
 
-  func TryPostReportsQueueAcceptance() bool {
+  func PostReportsQueueAcceptance() bool {
     var calls int32
     let window = Window{}
-    if !window.TryPost(() -> { calls++ }) { return false }
+    if !window.Post(() -> { calls++ }) { return false }
     window.drainPostedActions()
     if calls != 1 { return false }
     window.Close()
-    if window.TryPost(() -> { calls++ }) { return false }
-    var threw = false
-    try {
-      window.Post(() -> { calls++ })
-    } catch (error InvalidOperationException) {
-      threw = true
-    }
-    return threw && calls == 1 && Window{}.DeferredCloseStopsPostsForTest()
+    return !window.Post(() -> { calls++ }) && calls == 1 && Window{}.DeferredCloseStopsPostsForTest()
   }
 
   func EmbeddedDetachWaitsForClosePreparation() bool ->
@@ -1135,7 +1128,7 @@ public partial class Window {
     RequestClose()
     try {
       PumpScheduled(0.0)
-      return pending.CloseChecks > 0 && IsOpen && calls == 0 && !TryPost(() -> { calls++ })
+      return pending.CloseChecks > 0 && IsOpen && calls == 0 && !Post(() -> { calls++ })
     } finally {
       windowTarget = nil
       Close()

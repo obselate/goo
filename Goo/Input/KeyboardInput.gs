@@ -382,19 +382,14 @@ internal class KeyboardInput {
             if let bindings = InputCallbacks.Bindings(node) {
               for binding in bindings {
                 if binding.Key != key || binding.Modifiers != modifiers { continue }
-                if binding.Action == nil && binding.Command == nil && binding.OnRelease == nil { continue }
+                if binding.Action == nil && binding.OnRelease == nil { continue }
                 result.Handled = true
                 result.SuppressTextInput = true
                 result.Repeat = binding.Repeat
                 if !repeat || binding.Repeat {
                   let owner = CellOwnership.Nearest(node)
                   try {
-                    if let command = binding.Command {
-                      if !command.Execute() {
-                        result.Repeat = false
-                        return result
-                      }
-                    } else { binding.Action?.Invoke() }
+                    binding.Action?.Invoke()
                     if !repeat && startMount.Current != nil && nodeMount.Current != nil {
                       if let release = binding.OnRelease {
                         releases[key] = PendingKeyRelease{ Target: startMount, Owner: nodeMount, Action: release, Generation: focusGeneration }

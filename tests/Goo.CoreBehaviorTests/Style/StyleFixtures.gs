@@ -134,31 +134,6 @@ internal class StyleFixtures {
     return retained == mounted && mounted.ShaderEffect == second
   }
 
-  func TokenCompositionContract() bool {
-    let theme = CompositionTokens{
-      Surface: Color.Rgb(18, 52, 86),
-      Foreground: Color.Rgb(240, 244, 248),
-      Padding: 12,
-    }
-    let declaration = Tokens.Scope[CompositionTokens, Blob](theme, () -> Container() {.Gap: 6, tokenCard("synchronous"),
-        tokenCell("retained"),
-    })
-
-    var scopeEnded = false
-    try {
-      let ignored = Tokens.Get[CompositionTokens]()
-    } catch (error InvalidOperationException) {
-      scopeEnded = true
-    }
-    if !scopeEnded { return false }
-
-    let root = Reconciler{ Res: Resolver{} }.Mount(declaration)
-    return root.Gap.Value == 6.0F
-      && root.Children.Count == 2
-      && matchesCard(root.Children[0], "synchronous", theme)
-      && matchesCard(root.Children[1], "retained", theme)
-  }
-
   func StyleConstructionContract() bool {
     let resolved = Reconciler{ Res: Resolver{} }.Mount(Container{
       Opacity: 2.0,
@@ -2223,19 +2198,6 @@ internal class StyleFixtures {
     return (d < 0.0 ? -d : d) < 0.0001
   }
 
-  private func matchesCard(node Node, label string, theme CompositionTokens) bool {
-    if node.Kind != NodeKind.Container
-      || node.PaddingLeft.Unit != theme.Padding.Unit || node.PaddingLeft.Value != theme.Padding.Value
-      || node.PaddingTop.Unit != theme.Padding.Unit || node.PaddingTop.Value != theme.Padding.Value
-      || node.PaddingRight.Unit != theme.Padding.Unit || node.PaddingRight.Value != theme.Padding.Value
-      || node.PaddingBottom.Unit != theme.Padding.Unit || node.PaddingBottom.Value != theme.Padding.Value
-      || !sameColor(node.BackgroundColor, theme.Surface) || node.Children.Count != 1 {
-        return false
-      }
-    let text = node.Children[0]
-    return text.Kind == NodeKind.Text && text.Content == label && sameColor(text.Color, theme.Foreground)
-  }
-
   private func sameColor(left Color, right Color) bool -> left.R == right.R && left.G == right.G && left.B == right.B && left.A == right.A
 }
 
@@ -2280,30 +2242,3 @@ internal class MetricShaderEffectCell : Cell {
   }
 }
 
-internal data struct CompositionTokens {
-  internal var Surface Color
-  internal var Foreground Color
-  internal var Padding Length
-}
-
-internal data struct CompositionCellInput {
-  internal var Theme CompositionTokens
-  internal var Label string
-}
-
-internal func tokenCard(label string) Container -> compositionCard(Tokens.Get[CompositionTokens](), label)
-
-internal func tokenCell(label string) Blob {
-  let theme = Tokens.Get[CompositionTokens]()
-  return Cell.Mount[CompositionCellInput, CompositionCell](
-    nil,
-    CompositionCellInput{ Theme: theme, Label: label })
-}
-
-internal func compositionCard(theme CompositionTokens, label string) Container -> Container() {.Padding: theme.Padding,.BackgroundColor: theme.Surface,
-  Text{ Content: label, Color: theme.Foreground},
-}
-
-internal class CompositionCell : Cell[CompositionCellInput] {
-  override func Build() Blob -> compositionCard(Input.Theme, Input.Label)
-}
