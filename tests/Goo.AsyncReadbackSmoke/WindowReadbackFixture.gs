@@ -472,8 +472,19 @@ internal partial class VulkanWindowTarget {
     forceFullRedraw = value
   }
 
-  internal func SetReadbackPartialRepeatForTest(damage VulkanDamageRegion) {
-    readbackRequest?.SetPartialRepeat(damage)
+  internal func SetReadbackPartialRepeatForTest(damage VulkanDamageRegion, retainPrevious bool = false) {
+    readbackRequest?.SetPartialRepeat(damage, retainPrevious)
+  }
+
+  internal func UsePresentedSceneForTest(scaleX float32, scaleY float32) {
+    guard let current = generation else {
+      throw InvalidOperationException("Presented scene generation is unavailable")
+    }
+    readbackPrerequisiteFrame = sceneCompiler.Frame
+    readbackPrerequisiteGeneration = current.Generation
+    readbackPrerequisiteSceneVersion = sceneCompiler.LastResult.FrameVersion
+    readbackPrerequisiteTextScaleX = scaleX
+    readbackPrerequisiteTextScaleY = scaleY
   }
 
   internal prop SceneVersionForTest uint64{ get -> sceneCompiler.LatestSceneVersionForTest }
@@ -852,8 +863,8 @@ public partial class Window {
     VulkanTargetForTest()?.SetForceFullRedrawForTest(value)
   }
 
-  internal func SetReadbackPartialRepeatForTest(damage VulkanDamageRegion) {
-    VulkanTargetForTest()?.SetReadbackPartialRepeatForTest(damage)
+  internal func SetReadbackPartialRepeatForTest(damage VulkanDamageRegion, retainPrevious bool = false) {
+    VulkanTargetForTest()?.SetReadbackPartialRepeatForTest(damage, retainPrevious)
   }
 
   internal func SceneVersionForTest() uint64 {
@@ -1264,8 +1275,8 @@ internal class WindowReadbackTestFixture {
       window.SetForceFullRedrawForTest(value)
     }
 
-    internal func SetPartialRepeat(window Window, damage VulkanDamageRegion) {
-      window.SetReadbackPartialRepeatForTest(damage)
+    internal func SetPartialRepeat(window Window, damage VulkanDamageRegion, retainPrevious bool = false) {
+      window.SetReadbackPartialRepeatForTest(damage, retainPrevious)
     }
 
     internal func SceneVersion(window Window) uint64 -> window.SceneVersionForTest()
