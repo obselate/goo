@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="*.gs" />
+    <Compile Include="../../tools/Goo.ShaderGen/ShaderSourceDigest.gs" Link="ShaderSourceDigest.gs" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />

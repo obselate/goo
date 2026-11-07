@@ -1288,7 +1288,9 @@ internal shared class Program {
         hostPackings IReadOnlyList[HostPackingArtifact]
     ) string {
         for builtShader in builtShaders {
-            builtShader.Spec.SourceSha256 = HashBytes(builtShader.Source)
+            builtShader.Spec.SourceSha256 = if builtShader.Spec.Assembly == nil {
+                ShaderSourceDigest.Compute(Path.Combine(FindRepositoryRoot(), ShaderDirectory, builtShader.Spec.Source))
+            } else { HashBytes(builtShader.Source) }
             builtShader.Spec.OutputSha256 = HashBytes(builtShader.Output)
             builtShader.Spec.OutputBytes = builtShader.Output.LongLength
         }

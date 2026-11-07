@@ -1395,6 +1395,7 @@ jobs:
 
           .github/scripts/with-headless-wayland.sh env \
             GOO_SVG_CORPUS_OUTPUT="$PWD/artifacts/reports/svg-corpus" \
+            GOO_SVG_CORPUS_BASELINE="$PWD/tests/Goo.AsyncReadbackSmoke/Assets/SvgCorpus" \
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 
           .github/scripts/with-headless-wayland.sh env \
