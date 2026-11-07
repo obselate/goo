@@ -560,6 +560,15 @@ internal unsafe partial class VulkanWindowTarget {
 
   shared {
     internal var CandidateStartupForTest Action[VulkanWindowTarget]?
+    internal func NoUsableDriverMessage() string {
+      var message = "No usable Vulkan driver was found."
+      for name in []string{"VK_DRIVER_FILES", "VK_ICD_FILENAMES"} {
+        if let value = Environment.GetEnvironmentVariable(name) {
+          message += " " + name + "='" + value + "'."
+        }
+      }
+      return message + " See https://github.com/obselate/goo/blob/main/docs/platform-preflight.md."
+    }
 
     private func DeviceRank(deviceType int32) int32 {
       if deviceType == int32(VkConstants.VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) { return 5 }
@@ -574,7 +583,7 @@ internal unsafe partial class VulkanWindowTarget {
     var count uint32 = 0u
     let enumerate = instanceDispatch.vkEnumeratePhysicalDevices
     if enumerate(instance, &count, nil) != VkConstants.VK_SUCCESS || count == 0u {
-      throw InvalidOperationException("No Vulkan physical device is available")
+      throw InvalidOperationException(NoUsableDriverMessage())
     }
     let initialDevices * VkPhysicalDevice = stackalloc[int32(count)]VkPhysicalDevice
     var deviceValues = Span[VkPhysicalDevice](initialDevices, int32(count))
@@ -589,7 +598,7 @@ internal unsafe partial class VulkanWindowTarget {
       }
       count = 0u
       if enumerate(instance, &count, nil) != VkConstants.VK_SUCCESS || count == 0u {
-        throw InvalidOperationException("No Vulkan physical device is available")
+        throw InvalidOperationException(NoUsableDriverMessage())
       }
       if count > uint32(deviceValues.Length) {
         deviceValues = Span[VkPhysicalDevice]([int32(count)]VkPhysicalDevice)
@@ -649,7 +658,8 @@ internal unsafe partial class VulkanWindowTarget {
     if properties.apiVersion < VkConstants.VK_API_VERSION_1_3 { return "Vulkan 1.3 unavailable" }
     if !HasGraphicsPresentationQueue(candidate) { return "graphics presentation queue unavailable" }
     if !HasRequiredDeviceExtensions(candidate) { return "required device extensions unavailable" }
-    if !HasRequiredFeatures(candidate) { return "required features or text format unavailable" }
+    let missingFeatures = MissingRequiredFeatures(candidate)
+    if missingFeatures != "" { return missingFeatures }
     physicalDevice = candidate
     timestampPeriod = properties.limits.timestampPeriod
     timestampComputeAndGraphics = properties.limits.timestampComputeAndGraphics
@@ -807,7 +817,7 @@ internal unsafe partial class VulkanWindowTarget {
     return true
   }
 
-  private func HasRequiredFeatures(candidate VkPhysicalDevice) bool {
+  private func MissingRequiredFeatures(candidate VkPhysicalDevice) string {
     var features2 = VkPhysicalDeviceFeatures2{}
     var features12 = VkPhysicalDeviceVulkan12Features{}
     var features13 = VkPhysicalDeviceVulkan13Features{}
@@ -834,11 +844,12 @@ internal unsafe partial class VulkanWindowTarget {
       &textFormatProperties)
     let textBufferSupported = (textFormatProperties.bufferFeatures
       &uint32(VkConstants.VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)) != 0u
-    return textBufferSupported
-      && features12.timelineSemaphore == VkConstants.VK_TRUE
-      && features13.synchronization2 == VkConstants.VK_TRUE
-      && features13.dynamicRendering == VkConstants.VK_TRUE
-      && maintenanceSupported
+    if features12.timelineSemaphore != VkConstants.VK_TRUE { return "timeline semaphores unavailable" }
+    if features13.synchronization2 != VkConstants.VK_TRUE { return "synchronization2 unavailable" }
+    if features13.dynamicRendering != VkConstants.VK_TRUE { return "dynamic rendering unavailable" }
+    if !textBufferSupported { return "required text format unavailable" }
+    if !maintenanceSupported { return "swapchain maintenance unavailable" }
+    return ""
   }
 
   private func CreateDevice() {
