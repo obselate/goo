@@ -154,6 +154,7 @@ struct ScrollSoftwarePixelException {
 }
 
 func RunScrollPlacementSmoke() {
+    RunScrollImagePlacementSmoke()
     Require(Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1", "GOO_VK_DIAGNOSTICS=1 is required")
     let program = ShaderEffectProgram.Load(Path.Combine(AppContext.BaseDirectory, "control_effect.frag.goo-effect"))
     let effect = ShaderEffect(program, true)
@@ -412,4 +413,70 @@ func RunScrollPlacementSmoke() {
     } finally {
         window.Close()
     }
+}
+
+class ScrollImagePlacementCell(source ImageSourceProvider) : Cell {
+    internal let Scroller ElementHandle = ElementHandle{}
+
+    override func Build() Blob -> Container{
+        Width: 96,
+        Height: 96,
+        OverflowY: Overflow.Scroll,
+        Handle: Scroller,
+        Container{
+            Width: 96,
+            Height: 768,
+            FlexShrink: 0,
+            Image{
+                Position: PositionType.Absolute,
+                Top: 672,
+                Width: 96,
+                Height: 96,
+                BorderRadius: 8,
+                Overflow: Overflow.Hidden,
+                Source: source,
+                Fit: ImageFit.Fill,
+            },
+        },
+    }
+}
+
+func RunScrollImagePlacementSmoke() {
+    for scale in []float32{1.0F, 2.625F} {
+        let provider = ImageStagingProvider(
+            ImageStagingSource(2, 2, uint8(224), uint8(48), uint8(32)))
+        let root = ScrollImagePlacementCell(provider)
+        let window = Window{
+            Title: "Goo retained scroll image gate",
+            Width: int32(96.0F * scale),
+            Height: int32(96.0F * scale),
+            UiScale: scale,
+            VSync: false,
+            Root: root,
+        }
+        try {
+            window.Open()
+            WindowReadbackTestFixture.ForceRender(window, 0.0)
+            provider.Replace(ImageSource(2, 2, []uint8{
+                48, 96, 224, 255, 48, 96, 224, 255,
+                240, 192, 48, 255, 240, 192, 48, 255,
+            }))
+            for frame in 0 ... 8 {
+                Require(root.Scroller.JumpTo(0.0, 672.0), "Image scroll placement failed")
+                WindowReadbackTestFixture.ForceRender(window, 0.0166666666666667)
+            }
+            let metrics = WindowReadbackTestFixture.Metrics(window)
+            let readback = PrimitiveReadback(window, metrics)
+            PrimitiveRequirePixelNear(readback.Pixels, readback.Width, metrics,
+                48.0 * float64(scale), 8.0 * float64(scale),
+                uint8(48), uint8(96), uint8(224), 3, "retained_scroll_image_top")
+            PrimitiveRequirePixelNear(readback.Pixels, readback.Width, metrics,
+                48.0 * float64(scale), 88.0 * float64(scale),
+                uint8(240), uint8(192), uint8(48), 3, "retained_scroll_image_bottom")
+        } finally {
+            window.Close()
+            provider.DisposeSource()
+        }
+    }
+    Console.WriteLine("scroll-image-placement: scales=1,2.625 late-content=true frames=8 pixels=passed")
 }

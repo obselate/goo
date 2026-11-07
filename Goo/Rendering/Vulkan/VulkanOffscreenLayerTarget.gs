@@ -498,7 +498,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
         let reference = frame.DrawRefs[drawIndex]
         if reference.Kind == SceneDrawKind.LayerBegin {
           if depth >= 32 { throw InvalidOperationException("Vulkan layer depth exceeded") }
-          let layer = frame.Layers[reference.Index]
+          let layer = frame.Layer(reference.Index)
           let capacityEligible = layer.EffectIndex < 0 && layer.BlendMode == 0u
           let divisor = 1u << layerResolutionShift
           let width = Math.Max(1u, (layer.ExtentWidth + divisor - 1u) / divisor)
@@ -584,7 +584,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       if index >= operations.Count { return false }
       var shape = ValueTuple[uint32, uint32, bool, bool](0u, 0u, false, false)
       if reference.Kind == SceneDrawKind.LayerBegin {
-        let layer = frame.Layers[reference.Index]
+        let layer = frame.Layer(reference.Index)
         shape = ValueTuple[uint32, uint32, bool, bool](
           layer.ExtentWidth, layer.ExtentHeight, NeedsBackdrop(layer), true)
       }
@@ -601,7 +601,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     for drawIndex in 0 ... frame.DrawRefCount {
       let reference = frame.DrawRefs[drawIndex]
       if reference.Kind == SceneDrawKind.LayerBegin {
-        let layer = frame.Layers[reference.Index]
+        let layer = frame.Layer(reference.Index)
         operations.Add(ValueTuple[uint32, uint32, bool, bool](
           layer.ExtentWidth, layer.ExtentHeight, NeedsBackdrop(layer), true))
       } else if reference.Kind == SceneDrawKind.LayerEnd {
@@ -790,7 +790,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       if target == nil || target.RetainedBackdrop.BackdropVersion == 0uL { continue }
       var retained = false
       for index in 0 ... (discardAll ? 0 : frame.LayerCount) {
-        let layer = frame.Layers[index]
+        let layer = frame.Layer(index)
         if layer.BackdropVersion != 0uL
           && layer.OffscreenTargetId.LogicalId == target.RetainedBackdrop.OffscreenTargetId.LogicalId
           && layer.BackdropVersion == target.RetainedBackdrop.BackdropVersion
