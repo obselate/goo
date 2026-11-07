@@ -73,13 +73,12 @@ internal partial class Reconciler {
     }
   }
 
-  private func configureCell(cell Cell, declaration CellElement, seed bool) {
+  private func configureCell(cell Cell, declaration CellElement) {
     cell.BindContext(Context, Owner)
     cell.contextReader?.Begin()
     let previous = ContextEnvironment.Enter(ContextEnvironment{Window: Owner, Frame: cell.incomingContext,
       Cell: cell, Reader: cell.contextReader})
     try {
-      if seed { if let initialize = declaration.Seed { initialize(cell) } }
       declaration.ApplyInput(cell)
       if let configure = declaration.Configure { configure(cell) }
     } catch (_ Exception) {
@@ -858,7 +857,7 @@ internal partial class Reconciler {
       cell.SetRetainedMotionInvalidation(RetainedInvalidated)
       cell.SetRebuildSubmission(nil)
       let frameChanged = cell.incomingContext != Context
-      configureCell(cell, e, false)
+      configureCell(cell, e)
       cell.SetRebuildSubmission(CellInvalidated)
 
       if existing != nil && !cell.IsDirty() {
@@ -887,7 +886,7 @@ internal partial class Reconciler {
     fresh.SetRetainedMotionInvalidation(RetainedInvalidated)
     try {
       fresh.SetRebuildSubmission(nil)
-      configureCell(fresh, e, true)
+      configureCell(fresh, e)
       fresh.SetRebuildSubmission(CellInvalidated)
 
       let result = rebuildMounted(existing, fresh, owner)

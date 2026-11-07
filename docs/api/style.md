@@ -1364,33 +1364,6 @@ Selects whether static text wraps at soft-wrap opportunities.
 - `Wrap`
 - `NoWrap`
 
-## `Tokens`
-
-Source:
-
-- [`Tokens.gs`](../../Goo/Style/Tokens.gs)
-
-Provides typed lexical context to synchronous component functions. A scope ends when its body returns and does not flow into later Cell builds.
-
-### `Get``1`
-
-Gets the token set active in the current synchronous scope.
-
-- `T`: The token-set type.
-
-Returns: The active token set.
-
-### `Scope``2(T,System.Func{R})`
-
-Runs a synchronous component body with tokens active only until the body returns.
-
-- `T`: The token-set type.
-- `R`: The result type.
-- `tokens`: The token set to make active.
-- `body`: The synchronous body to run while the token set is active.
-
-Returns: The value returned by the body.
-
 ## `TransitionProperty`
 
 Source:

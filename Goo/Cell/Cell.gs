@@ -483,26 +483,16 @@ public open class Cell {
     }
 
     /// Describes a child component mount.
+    /// Put one-time initialization in the factory or constructor, not configure, which runs on every parent diff.
     /// @typeparam TCell child component type
     /// @param key stable sibling key, or nil for positional identity
     /// @param configure configuration applied during each parent diff; prefer stable named or cached delegates
     /// @returns a blob that mounts the child component
     public func Mount[TCell Cell init()](key string?, configure Action[TCell]?) Blob ->
-    MountSeeded[TCell](key, nil, configure)
-
-    /// Describes a child component mount with one-time initialization.
-    /// @typeparam TCell child component type
-    /// @param key stable sibling key, or nil for positional identity
-    /// @param seed initialization applied only when the component mounts
-    /// @param configure configuration applied during each parent diff; prefer stable named or cached delegates
-    /// @returns a blob that mounts the child component
-    public func MountSeeded[TCell Cell init()](key string?, seed Action[TCell]?,
-      configure Action[TCell]?) Blob ->
     CellElement{
       Key: key,
       CellType: typeof(TCell),
       Factory: () -> TCell(),
-      Seed: wrapAction[TCell](seed),
       Configure: wrapAction[TCell](configure),
     }
 

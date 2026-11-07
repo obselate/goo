@@ -467,7 +467,6 @@ class FixtureContractTests {
             yield Contract[TreeFixtures]("TextEntryControlledValueContract")
             yield Contract[TreeFixtures]("TreeDepthLimitContract")
             yield Contract[MotionFixtures]("TweenFactoryContract")
-            yield Contract[StyleFixtures]("TokenCompositionContract")
             yield Contract[StyleFixtures]("StyleConstructionContract")
             yield Contract[StyleFixtures]("ClipPathResolutionStorageAndSnapContract")
             yield Contract[TreeFixtures]("DirtyAncestorContract")

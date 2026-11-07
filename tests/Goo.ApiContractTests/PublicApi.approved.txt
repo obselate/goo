@@ -1134,7 +1134,6 @@ method|Goo.Cell|Animate|instance|public|generic:|(initial:Goo.Point,onChange:Sys
 method|Goo.Cell|Animate|instance|public|generic:|(initial:System.Double)->Goo.Anim`1<System.Double>
 method|Goo.Cell|Animate|instance|public|generic:|(initial:System.Double,onChange:System.Action`1<System.Double>)->Goo.Anim`1<System.Double>
 method|Goo.Cell|Build|virtual|public|generic:|()->Goo.Blob
-method|Goo.Cell|MountSeeded|static|public|generic:TCell[attrs:16,constraints:Goo.Cell]|(key:System.String?,seed:System.Action`1<!!0>?,configure:System.Action`1<!!0>?)->Goo.Blob
 method|Goo.Cell|Mount|static|public|generic:TCell[attrs:0,constraints:Goo.Cell]|(factory:System.Func`1<!!0>,key:System.String?)->Goo.Blob
 method|Goo.Cell|Mount|static|public|generic:TCell[attrs:16,constraints:Goo.Cell]|()->Goo.Blob
 method|Goo.Cell|Mount|static|public|generic:TCell[attrs:16,constraints:Goo.Cell]|(key:System.String?)->Goo.Blob
@@ -1739,8 +1738,6 @@ method|Goo.TextStyleSpan|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.TextStyleSpan|ToString|virtual|public|generic:|()->System.String
 method|Goo.TextStyleSpan|op_Equality|static|public|generic:|(left:Goo.TextStyleSpan,right:Goo.TextStyleSpan)->System.Boolean
 method|Goo.TextStyleSpan|op_Inequality|static|public|generic:|(left:Goo.TextStyleSpan,right:Goo.TextStyleSpan)->System.Boolean
-method|Goo.Tokens|Get|static|public|generic:T[attrs:0,constraints:]|()->!!0
-method|Goo.Tokens|Scope|static|public|generic:T[attrs:0,constraints:];R[attrs:0,constraints:]|(tokens:!!0,body:System.Func`1<!!1>)->!!1
 method|Goo.TrayIcon|Create|static|public|generic:|(owner:Goo.Window,options:Goo.TrayOptions)->Goo.TrayResult
 method|Goo.TrayIcon|Dispose|instance|public|generic:|()->System.Void
 method|Goo.TrayIcon|Update|instance|public|generic:|(options:Goo.TrayOptions)->Goo.TrayStatus
@@ -3199,7 +3196,6 @@ type|Goo.TextTransform|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.TextTrimming|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.TextWrap|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Text|sealed-class|public|base:Goo.Blob|interfaces:|generic:
-type|Goo.Tokens|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.TransferData|class|public|base:System.Object|interfaces:|generic:
 type|Goo.TransferRepresentation|class|public|base:System.Object|interfaces:|generic:
 type|Goo.TransitionProperty|enum|public|base:System.Enum|interfaces:|generic:
