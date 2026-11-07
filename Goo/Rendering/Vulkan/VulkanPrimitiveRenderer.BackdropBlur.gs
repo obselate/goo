@@ -9,7 +9,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
 
     internal func CanRedrawBackdrops(frame SceneFrame, damage VulkanDamageRegion) bool {
         for index in 0 ... frame.LayerCount {
-            let layer = frame.Layers[index]
+            let layer = frame.Layer(index)
             if layer.BackdropVersion == 0uL || !LayerIntersectsDamage(frame, index, damage) { continue }
             if float32(damage.X) <= layer.OriginX && float32(damage.Y) <= layer.OriginY
                 && float32(damage.Right) >= layer.OriginX + float32(layer.ExtentWidth)

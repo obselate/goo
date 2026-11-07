@@ -423,6 +423,7 @@ class ScrollImagePlacementCell(source ImageSourceProvider) : Cell {
         Height: 96,
         OverflowY: Overflow.Scroll,
         Handle: Scroller,
+        BackgroundColor: Color.White,
         Container{
             Width: 96,
             Height: 7752.76171875,
@@ -491,7 +492,14 @@ func RunScrollImagePlacementSmoke() {
                 Require(metrics.DisplayScaleX != metrics.DisplayScaleY,
                     "Unequal image framebuffer scales were lost")
             }
+            PrimitiveReadback(window, metrics)
+            WindowReadbackTestFixture.SetPartialRepeat(window, VulkanDamageRegion{
+                X: 0, Y: int32(16.0 * float64(scale) * metrics.DisplayScaleY),
+                Width: metrics.FramebufferWidth,
+                Height: int32(64.0 * float64(scale) * metrics.DisplayScaleY),
+            })
             let readback = PrimitiveReadback(window, metrics)
+            WindowReadbackTestFixture.SetPartialRepeat(window, VulkanDamageRegion{})
             PrimitiveRequirePixelNear(readback.Pixels, readback.Width, metrics,
                 48.0 * float64(scale), 24.0 * float64(scale),
                 uint8(48), uint8(96), uint8(224), 3, "retained_scroll_image_top")
