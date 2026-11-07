@@ -30,16 +30,6 @@ enum DiagnosticMessageKind {
     Error;
 }
 
-enum DiagnosticDetailsTab {
-    Configuration;
-    Computed;
-    Layout;
-    State;
-    Events;
-    Accessibility;
-    Changes;
-}
-
 data struct DiagnosticProtocolVersion {
     var Major int32
     var Minor int32
@@ -380,7 +370,6 @@ class DiagnosticSession {
     private var selectedNodeId string
     private var query string
     private var inspecting bool
-    private var activeTab DiagnosticDetailsTab
     private var screenshotSequence int32
     private var logSequence int64
     private var overrideText string
@@ -402,7 +391,6 @@ class DiagnosticSession {
         selectedWindowId = "main-window"
         selectedNodeId = "root"
         query = ""
-        activeTab = DiagnosticDetailsTab.Configuration
         overrideText = ""
         pendingOverrideAction = ""
         hoveredNodeId = ""
@@ -420,7 +408,6 @@ class DiagnosticSession {
         selectedWindowId = ""
         selectedNodeId = ""
         query = ""
-        activeTab = DiagnosticDetailsTab.Configuration
         overrideText = ""
         pendingOverrideAction = ""
         hoveredNodeId = ""
@@ -447,9 +434,6 @@ class DiagnosticSession {
     }
     prop Inspecting bool {
         get -> inspecting
-    }
-    prop ActiveTab DiagnosticDetailsTab {
-        get -> activeTab
     }
     prop SelectedWindowId string {
         get -> selectedWindowId
@@ -571,10 +555,6 @@ class DiagnosticSession {
         hoveredNodeId = ""
         SendRequest("clear", "{}")
         AppendLog(DiagnosticWire.Clock(), "debug", "inspector", "Cleared remote selection")
-    }
-
-    func SetTab(tab DiagnosticDetailsTab) {
-        activeTab = tab
     }
 
     func SetOverrideText(value string) {
