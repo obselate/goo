@@ -1,6 +1,24 @@
 # Changelog
 
 
+## 0.28.4 - 2026-11-07
+
+### Added
+
+- `VulkanDrivers.Exclusive` selects only the configured direct Vulkan drivers on Windows.
+
+### Changed
+
+- Scroll content moves in whole physical pixels without relayout or recompilation for offset-only updates.
+- Retained scene ranges preserve nested clips, text, effects and interaction placement while dirty content is compiled separately.
+- Reuse effect-closed damage bounds during scene classification.
+- Update DevTools and all CLR interop samples to Goo.Widgets 0.19.3, which requires Goo 0.28.3.
+
+### Fixed
+
+- Keep initial desktop window bounds inside the display's usable area unless the declared minimum size exceeds it.
+- Honor VSync on software Vulkan devices by selecting FIFO presentation.
+
 ## 0.28.3 - 2026-11-06
 
 ### Added
