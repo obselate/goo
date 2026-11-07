@@ -15,6 +15,7 @@
 !/.github/workflows/ci.yml
 !/.github/workflows/label-issues.yml
 !/.github/workflows/sync-generated-docs.yml
+!/.github/workflows/site.yml
 !/.github/ISSUE_TEMPLATE/
 !/.github/ISSUE_TEMPLATE/**
 !/.github/PULL_REQUEST_TEMPLATE.md
@@ -133,6 +134,8 @@
 !/tools/Goo.ReleaseCheck/**
 !/tools/Goo.ConsumerPerformance/
 !/tools/Goo.ConsumerPerformance/**
+!/tools/Goo.Site/
+!/tools/Goo.Site/**
 !/tools/Goo.Investigation/
 !/tools/Goo.Investigation/**
 !/tools/Goo.HostChecks/
@@ -167,6 +170,8 @@
 !/THIRD-PARTY-NOTICES.md
 !/Directory.Build.props
 !/Directory.Packages.props
+!/site/
+!/site/**
 
 **/bin/
 **/obj/

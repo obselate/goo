@@ -1,0 +1,224 @@
+/* Goo brand tokens. fonts: Space Grotesk + Sora (display), Didact Gothic (labels), Vend Sans (body). all via Google Fonts. */
+
+@import url('https://fonts.googleapis.com/css2?family=Didact+Gothic&family=Sora:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Vend+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
+:root {
+  /* ---------- BRAND COLORS. sampled directly from the logo ---------- */
+  --goo-ink:        #090b10;   /* near-black, slight cool tint. primary surface */
+  --goo-bone:       #eceded;   /* off-white. the goo body, primary text on dark */
+  --goo-pure-white: #ffffff;
+  --goo-pure-black: #000000;
+
+  /* Splat accents. sampled from the official goo svg assets */
+  --goo-blue:    #478AD1;   /* primary cool dot */
+  --goo-green:   #6CBC5F;   /* leafy green dot */
+  --goo-orange:  #EF6A4D;   /* punchy orange dot */
+  --goo-yellow:  #F9A238;   /* warm yellow dot */
+
+  /* Tints + shades for layering on dark surfaces */
+  --goo-blue-soft:   #6FA6DE;
+  --goo-green-soft:  #8ed682;
+  --goo-orange-soft: #f48a52;
+  --goo-yellow-soft: #ffb960;
+
+  /* Neutral scale on the ink axis (cool-leaning grays) */
+  --ink-0:  #090b10;
+  --ink-1:  #11141b;
+  --ink-2:  #181c25;
+  --ink-3:  #232834;
+  --ink-4:  #333947;
+  --ink-5:  #4a5161;
+  --ink-6:  #6b7385;
+  --ink-7:  #9099a8;
+  --ink-8:  #b8bfc9;
+  --ink-9:  #d8dce2;
+  --ink-10: #eceded;
+  --ink-11: #f5f6f7;
+
+  /* ---------- SEMANTIC COLOR TOKENS ---------- */
+  /* Foreground */
+  --fg-1:        var(--ink-10);   /* primary text on dark */
+  --fg-2:        var(--ink-8);    /* secondary text */
+  --fg-3:        var(--ink-7);    /* tertiary / hints */
+  --fg-muted:    var(--ink-6);
+  --fg-inverse:  var(--ink-0);    /* primary text on light */
+  --fg-on-dark-2: var(--ink-9);
+
+  /* Background */
+  --bg-base:     var(--ink-0);    /* default dark surface */
+  --bg-raised:   var(--ink-1);
+  --bg-sunken:   #050709;
+  --bg-card:     var(--ink-2);
+  --bg-card-hi:  var(--ink-3);
+  --bg-light:    var(--ink-11);   /* paper for light contexts */
+  --bg-light-2:  #ffffff;
+
+  /* Borders */
+  --border-1: rgba(255,255,255,0.08);
+  --border-2: rgba(255,255,255,0.14);
+  --border-strong: rgba(255,255,255,0.24);
+  --border-on-light-1: rgba(9,11,16,0.08);
+  --border-on-light-2: rgba(9,11,16,0.14);
+
+  /* Accent semantics */
+  --accent:           var(--goo-blue);
+  --accent-soft:      var(--goo-blue-soft);
+  --positive:         var(--goo-green);
+  --warning:          var(--goo-yellow);
+  --danger:           var(--goo-orange);    /* Goo uses orange for "danger". there is no red */
+  --info:             var(--goo-blue);
+
+  /* Code (Razor lives here, so it matters) */
+  --code-bg:     #11141b;
+  --code-fg:     #e6e8ec;
+  --code-comment: #6b7385;
+  --code-keyword: var(--goo-orange);
+  --code-string:  var(--goo-green);
+  --code-number:  var(--goo-yellow);
+  --code-tag:     var(--goo-blue-soft);
+  --code-attr:    var(--goo-yellow);
+  --code-razor:   var(--goo-orange);  /* the @ glyph in Razor */
+
+  /* ---------- TYPOGRAPHY FAMILIES ---------- */
+  --font-display:    'Space Grotesk', 'Sora', system-ui, sans-serif;   /* media headlines */
+  --font-display-alt:'Sora', 'Space Grotesk', system-ui, sans-serif;   /* numerals, alt display */
+  --font-ui:         'Vend Sans', system-ui, sans-serif;               /* UI body */
+  --font-ui-label:   'Didact Gothic', 'Vend Sans', system-ui, sans-serif;/* UI labels, captions */
+  --font-mono:       'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+
+  /* ---------- TYPE SCALE (display. for slides, marketing, hero) ---------- */
+  --fs-display-xl: clamp(56px, 8vw, 128px);
+  --fs-display-l:  clamp(44px, 6vw, 88px);
+  --fs-display-m:  clamp(36px, 4.5vw, 64px);
+  --fs-h1: 48px;
+  --fs-h2: 36px;
+  --fs-h3: 28px;
+  --fs-h4: 22px;
+  --fs-h5: 18px;
+  --fs-h6: 15px;
+
+  /* Body & UI */
+  --fs-body-lg: 18px;
+  --fs-body:    16px;
+  --fs-body-sm: 14px;
+  --fs-caption: 13px;
+  --fs-micro:   11px;
+
+  --lh-tight:   1.05;
+  --lh-snug:    1.2;
+  --lh-base:    1.45;
+  --lh-relaxed: 1.6;
+
+  --tracking-tight:  -0.02em;
+  --tracking-normal: 0em;
+  --tracking-wide:   0.06em;
+  --tracking-wider:  0.14em;   /* eyebrow / overline */
+
+  /* ---------- SPACING (4-step) ---------- */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  24px;
+  --space-6:  32px;
+  --space-7:  48px;
+  --space-8:  64px;
+  --space-9:  96px;
+  --space-10: 128px;
+
+  /* ---------- RADII. generous, matches the soft goo wordmark ---------- */
+  --radius-1: 6px;
+  --radius-2: 10px;
+  --radius-3: 14px;
+  --radius-4: 20px;
+  --radius-5: 28px;
+  --radius-pill: 999px;
+  --radius-blob: 60% 40% 55% 45% / 50% 60% 40% 50%;  /* organic blob mask */
+
+  /* ---------- SHADOWS ---------- */
+  --shadow-1: 0 1px 0 rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-2: 0 4px 12px rgba(0,0,0,0.35);
+  --shadow-3: 0 12px 32px rgba(0,0,0,0.45);
+  --shadow-pop: 0 18px 60px -10px rgba(0,0,0,0.6);
+  /* Colored glows for hero/focus states */
+  --glow-blue:   0 0 0 4px rgba(71,138,209,0.28);
+  --glow-orange: 0 0 0 4px rgba(239,106,77,0.28);
+  --glow-yellow: 0 0 0 4px rgba(249,162,56,0.28);
+  --glow-green:  0 0 0 4px rgba(108,188,95,0.25);
+
+  /* ---------- MOTION ---------- */
+  --ease-out:   cubic-bezier(.2,.7,.2,1);
+  --ease-in:    cubic-bezier(.6,.0,.85,.3);
+  --ease-blob:  cubic-bezier(.34,1.56,.64,1); /* tiny overshoot, like jiggly goo */
+  --dur-fast:   120ms;
+  --dur-base:   200ms;
+  --dur-slow:   400ms;
+}
+
+/* Semantic element styles. apply directly; override per-context. */
+
+html, body {
+  background: var(--bg-base);
+  color: var(--fg-1);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--lh-base);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Display headings. use on slides + marketing */
+.display-xl { font: 700 var(--fs-display-xl)/var(--lh-tight) var(--font-display); letter-spacing: var(--tracking-tight); }
+.display-l  { font: 700 var(--fs-display-l)/var(--lh-tight) var(--font-display); letter-spacing: var(--tracking-tight); }
+.display-m  { font: 600 var(--fs-display-m)/var(--lh-snug) var(--font-display); letter-spacing: var(--tracking-tight); }
+
+h1, .h1 { font: 700 var(--fs-h1)/var(--lh-tight) var(--font-display); letter-spacing: var(--tracking-tight); margin: 0; }
+h2, .h2 { font: 600 var(--fs-h2)/var(--lh-snug)  var(--font-display); letter-spacing: var(--tracking-tight); margin: 0; }
+h3, .h3 { font: 600 var(--fs-h3)/var(--lh-snug)  var(--font-display); margin: 0; }
+h4, .h4 { font: 600 var(--fs-h4)/var(--lh-snug)  var(--font-ui);      margin: 0; }
+h5, .h5 { font: 600 var(--fs-h5)/var(--lh-snug)  var(--font-ui);      margin: 0; }
+h6, .h6 { font: 600 var(--fs-h6)/var(--lh-snug)  var(--font-ui);      margin: 0; }
+
+p, .body { font: 400 var(--fs-body)/var(--lh-relaxed) var(--font-ui); margin: 0; }
+.body-lg { font-size: var(--fs-body-lg); line-height: var(--lh-relaxed); }
+.body-sm { font-size: var(--fs-body-sm); }
+.caption { font: 400 var(--fs-caption)/var(--lh-base) var(--font-ui-label); color: var(--fg-2); }
+
+/* Eyebrow / overline. UI label style. Didact Gothic, uppercase, tracked out */
+.eyebrow {
+  font: 400 var(--fs-caption)/1 var(--font-ui-label);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--fg-3);
+}
+
+code, .code, kbd, samp, pre {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+pre {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: var(--space-4);
+  border-radius: var(--radius-3);
+  border: 1px solid var(--border-1);
+  overflow: auto;
+  line-height: 1.55;
+}
+:not(pre) > code {
+  background: rgba(255,255,255,0.06);
+  padding: 2px 6px;
+  border-radius: var(--radius-1);
+  border: 1px solid var(--border-1);
+}
+
+a { color: var(--goo-blue-soft); text-decoration: none; }
+a:hover { color: var(--goo-yellow); }
+
+/* ---- Selection. themed with the splat accent ---- */
+::selection { background: var(--goo-yellow); color: var(--goo-ink); }
+
+/* ---- Light-context utility ---- */
+.on-light { background: var(--bg-light); color: var(--fg-inverse); }
+.on-light a { color: var(--goo-orange); }
+.on-light ::selection { background: var(--goo-ink); color: var(--goo-bone); }
