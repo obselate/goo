@@ -273,10 +273,7 @@ func RunRetainedFrameEqualitySmoke() {
                         partialSteps++
                         WindowReadbackTestFixture.SetPartialRepeat(window, damage, true)
                     }
-                    target.UsePresentedSceneForTest(
-                        float32(metrics.DisplayScaleX),
-                        float32(metrics.DisplayScaleY)
-                    )
+                    target.UsePresentedSceneForTest(float32(metrics.DisplayScaleX), float32(metrics.DisplayScaleY))
                     let retained = ClipCaptureReadback(window, metrics).Pixels
                     WindowReadbackTestFixture.SetPartialRepeat(window, VulkanDamageRegion{})
                     RetainedEqualityCompare(
