@@ -44,6 +44,18 @@ func Main() {
 }
 ```
 
+## Core terms
+
+| Goo term | Meaning |
+| --- | --- |
+| `Cell` | A component that owns state and builds a view. |
+| `Blob` | An element description returned by a function or `Build`. |
+| `Build` | Describes the current view from state, like a render function. |
+| `Rebuild` | Requests another build. Input callbacks rebuild their owning Cell automatically. Other state changes need an explicit call on the UI thread. |
+| `Mount` | Creates or retains a child Cell and uses its view. |
+
+Continue with [After the counter](https://github.com/obselate/goo/blob/main/docs/getting-started.md).
+
 ## Build from source
 
 ```sh
