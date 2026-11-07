@@ -7,3 +7,4 @@
 - Disable Pick element and Capture while disconnected, and show an empty state for captures.
 - Show scroll offset and content size as numbers instead of raw JSON.
 - Remove the console entry for every received snapshot, and match the profiler toolbar to the Elements toolbar.
+- Update Goo.Widgets to 0.19.6.
