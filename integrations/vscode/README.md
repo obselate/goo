@@ -5,7 +5,7 @@ This extension is a thin VS Code front end for the `goo` CLI. It does not duplic
 Install the CLI first:
 
 ```sh
-dotnet tool install --global Goo.DevTools --version 0.28.6
+dotnet tool install --global Goo.DevTools
 ```
 
 Then package the extension from the checkout:

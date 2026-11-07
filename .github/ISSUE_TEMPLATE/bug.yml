@@ -80,6 +80,23 @@ body:
       required: true
 
   - type: input
+    id: gpu-driver
+    attributes:
+      label: GPU and driver version
+      description: Include the GPU model and installed driver version.
+    validations:
+      required: true
+
+  - type: textarea
+    id: dotnet-info
+    attributes:
+      label: dotnet --info
+      description: Paste the output of dotnet --info. Remove private paths first.
+      render: text
+    validations:
+      required: true
+
+  - type: input
     id: last-working
     attributes:
       label: Last known working version

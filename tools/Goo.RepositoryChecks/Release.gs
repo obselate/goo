@@ -148,16 +148,10 @@ internal shared partial class Checks {
     private func SynchronizedFiles(version string) Dictionary[string, string] {
         let result = Dictionary[string, string]()
         let literals = []string{
-            "README.md",
-            "docs/nuget-readme.md",
             "apps/Goo.DevTools/DiagnosticWire.gs",
             "apps/Goo.DevTools/Program.gs",
-            "apps/Goo.DevTools/README.md",
             "apps/Goo.Gallery/Program.gs",
-            "docs/devtools/README.md",
             "docs/devtools/protocol.md",
-            "integrations/rider/README.md",
-            "integrations/vscode/README.md",
             "integrations/vscode/package.json",
             "templates/Goo.Templates/README.md",
             "tools/Goo.DevTools.Cli/CliApplication.gs",
@@ -200,13 +194,7 @@ internal shared partial class Checks {
             1,
             "plugins/goo/README.md: expected one current CLI prerequisite version"
         )
-        result[readme] = ReplaceVersion(
-            text,
-            "(Install the runtime CLI with `dotnet tool install --global Goo\\.DevTools --version )[^`]+(`\\.)",
-            version,
-            1,
-            "plugins/goo/README.md: expected one current CLI install version"
-        )
+        result[readme] = text
         let documents = Path.Combine(Root, "tools/Goo.PluginMcp/Documents.gs")
         result[documents] = ReplaceVersion(
             File.ReadAllText(documents),

@@ -2,6 +2,19 @@
 
 These pages are generated from the Release `Goo.xml` file.
 
+| Task | API | Package |
+| --- | --- | --- |
+| Open a window | [Window](window.md) | Goo core |
+| Arrange content | [Layout](layout.md) | Goo core |
+| Show text | [Text](text.md) | Goo core |
+| Add a button | [ActionButton](https://github.com/obselate/goo-widgets/blob/main/docs/usage.md#basic-widgets) | Goo.Widgets |
+| Accept input | [Input](input.md) | Goo core |
+| Keep local state | [Cell](cell.md) | Goo core |
+| Set styles | [Style](style.md) | Goo core |
+| Show lists | [Virtualization](tree.md) | Goo core |
+| Load images | [Images](images.md) | Goo core |
+| Apply a theme | [Themes](https://github.com/obselate/goo-widgets/blob/main/docs/usage.md#goo-theme) | Goo.Widgets |
+
 - [Accessibility](accessibility.md)
 - [AppHost](apphost.md)
 - [Cell](cell.md)

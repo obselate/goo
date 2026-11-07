@@ -2,7 +2,13 @@
   <img src="https://raw.githubusercontent.com/obselate/goo/main/docs/assets/goo-readme-banner.gif" alt="Goo" width="1200">
 </p>
 
-<p align="center">A declarative retained GUI framework for .NET. Written in G# and rendered directly with Vulkan.</p>
+<p align="center">A declarative retained GUI framework for .NET. Written in <a href="https://github.com/DavidObando/gsharp">G#</a>, a .NET language, and rendered directly with Vulkan.</p>
+
+![Goo Widgets Gallery showing theme colors, typography and controls](docs/assets/goo-gallery.png)
+
+Goo Widgets Gallery on native Wayland, captured at 1280 × 800 and scale 1.
+
+Learn G# with the [language tour](https://davidobando.github.io/gsharp/docs/tour/) and [editor support](https://github.com/DavidObando/gsharp#editor-support).
 
 <p align="center">
   <a href="https://github.com/obselate/goo/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/obselate/goo/ci.yml?branch=main&amp;style=flat-square&amp;label=ci" alt="CI status"></a>
@@ -14,11 +20,14 @@
 
 ### Create a NuGet app
 
-Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-and meet the [platform requirements](#platforms), then:
+Install [.NET SDK 10.0.403 or a later 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
+Check with `dotnet --list-sdks`. Use Vulkan 1.3 with timeline semaphores,
+synchronization2 and dynamic rendering. Linux requires native Wayland, not X11
+or XWayland. Windows x64 and macOS arm64 are also supported.
+See [platform requirements](#platforms), then:
 
 ```sh
-dotnet new install Goo.Templates@0.28.6
+dotnet new install Goo.Templates
 dotnet tool install --global Goo.DevTools
 dotnet new goo -n HelloGoo
 cd HelloGoo
@@ -75,24 +84,35 @@ package CounterApp
 
 import Goo
 
+shared class StarterTheme {
+    public let Padding Edges = 24
+    public let Gap Length = 12
+    public let ButtonPadding Edges = 10
+    public let Radius Length = 10
+    public let FontSize Length = 24
+    public let Background Color = Color.Rgb(24, 31, 43)
+    public let Accent Color = Color.Rgb(74, 125, 255)
+    public let Foreground Color = Color.White
+}
+
 class Counter : Cell {
     private var count int32
 
     override func Build() Blob -> Container{
         Width: Percent(100),
         Height: Percent(100),
-        Padding: 24,
-        Gap: 12,
-        BackgroundColor: Color.Rgb(24, 31, 43),
-        Text{Content: "Count: $count", FontSize: 24, Color: Color.White},
+        Padding: StarterTheme.Padding,
+        Gap: StarterTheme.Gap,
+        BackgroundColor: StarterTheme.Background,
+        Text{Content: "Count: $count", FontSize: StarterTheme.FontSize, Color: StarterTheme.Foreground},
         Button{
-            Padding: 10,
-            BorderRadius: 10,
-            BackgroundColor: Color.Rgb(74, 125, 255),
+            Padding: StarterTheme.ButtonPadding,
+            BorderRadius: StarterTheme.Radius,
+            BackgroundColor: StarterTheme.Accent,
             OnClick: () -> {
                 count++
             },
-            Text{Content: "Add one", Color: Color.White},
+            Text{Content: "Add one", Color: StarterTheme.Foreground},
         },
     }
 }
@@ -114,7 +134,12 @@ Core concepts:
 
 Compose reusable UI with functions and methods. Use `with` to override properties:
 
+```sh
+dotnet add package Goo.Widgets
+```
+
 ```gsharp
+import Goo.Widgets.Actions
 let baseButton = ActionButton{Height: 38.0, MinWidth: 112.0, OnClick: () -> { },}
 
 let primaryButton = baseButton with{Content = "Primary",}
@@ -128,6 +153,12 @@ let successButton = baseButton with{
 }
 
 let disabledButton = baseButton with{Content = "Disabled", Disabled = true,}
+
+let buttons = Container{
+    primaryButton.Build(),
+    successButton.Build(),
+    disabledButton.Build(),
+}
 ```
 
 Direct children and spreads use `Add` in source order. 
@@ -139,7 +170,8 @@ Check [platform preflight and troubleshooting](docs/platform-preflight.md)
 before creating or distributing an app.
 
 Goo ships runtime assets for Windows x64, Linux x64, macOS arm64, Android ARM64,
-and Android x64. The renderer requires the Vulkan 1.3 feature set used by Goo.
+and Android x64. The renderer requires Vulkan 1.3 with timeline semaphores,
+synchronization2 and dynamic rendering.
 
 - Windows x64 is tested on Windows 11 with current vendor Vulkan drivers. The
   minimum supported Windows version is not yet established.

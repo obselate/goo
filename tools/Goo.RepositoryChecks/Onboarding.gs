@@ -110,7 +110,7 @@ internal shared partial class Checks {
         )
         let readme = File.ReadAllText(Path.Combine(Root, "README.md"))
         let required = []string{
-            "dotnet new install Goo.Templates@$version",
+            "dotnet new install Goo.Templates\n",
             "Windows x64 is tested on Windows 11",
             "minimum supported Windows version is not yet established",
             "## Further reading"

@@ -1,10 +1,13 @@
 # Get started
 
-Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-and meet the [platform requirements](platform-preflight.md).
+Install [.NET SDK 10.0.403 or a later 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
+Check with `dotnet --list-sdks`. Use Vulkan 1.3 with timeline semaphores,
+synchronization2 and dynamic rendering. Linux requires native Wayland, not X11
+or XWayland. Windows x64 and macOS arm64 are also supported.
+See [platform requirements](platform-preflight.md).
 
 ```sh
-dotnet new install Goo.Templates@0.26.1
+dotnet new install Goo.Templates
 dotnet tool install --global Goo.DevTools
 dotnet new goo -n HelloGoo
 cd HelloGoo
