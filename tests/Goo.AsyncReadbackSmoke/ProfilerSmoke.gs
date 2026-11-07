@@ -967,7 +967,10 @@ internal class ProfilerSmoke {
                         let stage = Int32.Parse(record.GetProperty("eventId").GetString() ?? "-1", CultureInfo.InvariantCulture)
                         trace.Phases.Add(stage)
                         if stage == int32(FrameProfileStage.Frame) { Require(trace.FramePhases.Add(pump), "Pump ID repeated") }
-                        if stage == int32(FrameProfileStage.Build) { trace.Builds[pump] = end }
+                        if stage == int32(FrameProfileStage.Build) {
+                            Require(record.GetProperty("name").GetString() == "ProfilerSmokeCell", "Build has no Cell type name")
+                            trace.Builds[pump] = end
+                        }
                         if stage == int32(FrameProfileStage.Paint) { trace.Paints[pump] = ticks }
                     }
                 }

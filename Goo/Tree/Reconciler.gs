@@ -110,7 +110,8 @@ internal partial class Reconciler {
           ProfileBuildTicks = ProfileBuildTicks + end.Ticks - start.Ticks
           ProfileBuildBytes = ProfileBuildBytes + end.Bytes - start.Bytes
           ProfileBuildCalls++
-          profiler.RecordTrace(FrameProfileStage.Build, start, end, if completed { 0 } else { -1 })
+          profiler.RecordTrace(FrameProfileStage.Build, start, end, if completed { 0 } else { -1 },
+            cellType: FrameRecorder.Current != nil ? cell.GetType() : nil)
         }
       }
     } finally { ContextEnvironment.Current = previous }
