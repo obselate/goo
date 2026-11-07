@@ -389,7 +389,8 @@ internal unsafe func RunProductionTextReadback(effects bool) {
   }
   if !effects {
     using let source = FontSource.FromPath("Caption proof", 400, false,
-      Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf"))
+      Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf"), 0u,
+      []FontVariation{FontVariation("wght", 400.0F)})
     source.Register()
     let caption = Window{Title: "Goo caption stroke proof", Width: 64, Height: 64,
       Root: VulkanCaptionTextCell{}}.Open()
