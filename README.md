@@ -1,4 +1,6 @@
-![Goo Widgets Gallery](docs/assets/goo-gallery.png)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/obselate/goo/main/docs/assets/goo-readme-banner.gif" alt="Goo" width="1200">
+</p>
 
 A retained .NET GUI framework in [G#](https://github.com/DavidObando/gsharp), rendered with Vulkan.
 
