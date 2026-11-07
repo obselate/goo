@@ -248,7 +248,7 @@ open class PublicApiTests {
             if type == typeof(Cell[_]) {
                 methods = methods.Concat(
                     type.GetMethods(ProtectedDeclared).Where(
-                        (method MethodInfo) -> (method.Name is "Build" or "ShouldRebuild")
+                        (method MethodInfo) -> (method.Name is "Build" or "ShouldRebuild" or "InvokeInputCallback")
                     )
                 )
             }
