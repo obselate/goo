@@ -345,7 +345,7 @@ internal class KeyboardInput {
           let nodeMount = NodeMount(node)
           let callback = down ? InputCallbacks.KeyDown(node) : InputCallbacks.KeyUp(node)
           if let handler = callback {
-            let owner = CellOwnership.Nearest(node)
+            let owner = CellOwnership.ForCallback(node)
             try {
               handler(KeyEvent{ Key: key, Modifiers: modifiers, Repeat: repeat,
                 IsComposing: compositionActive, Control: control, Generation: generation })
@@ -373,7 +373,7 @@ internal class KeyboardInput {
           if !down && releases.TryGetValue(key, out var pending)
             && pending.Target.Current == start && pending.Owner.Current == node && pending.Generation == focus.Generation {
               result.Handled = true
-              let owner = CellOwnership.Nearest(node)
+              let owner = CellOwnership.ForCallback(node)
               try { pending.Action() }
               finally { owner?.Rebuild() }
               return result
@@ -387,7 +387,7 @@ internal class KeyboardInput {
                 result.SuppressTextInput = true
                 result.Repeat = binding.Repeat
                 if !repeat || binding.Repeat {
-                  let owner = CellOwnership.Nearest(node)
+                  let owner = CellOwnership.ForCallback(node)
                   try {
                     binding.Action?.Invoke()
                     if !repeat && startMount.Current != nil && nodeMount.Current != nil {

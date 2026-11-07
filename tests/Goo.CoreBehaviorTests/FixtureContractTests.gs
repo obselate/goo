@@ -146,6 +146,7 @@ class FixtureContractTests {
             yield Contract[CellFixtures]("RepeatedRebuildRequestsCoalesce")
             yield Contract[CellFixtures]("RootMountRetriesAfterInitialBuildFailure")
             yield Contract[CellFixtures]("SemanticInputEquivalenceKeepsNewestCallback")
+            yield Contract[CellFixtures]("SlottedAndForwardedCallbacksRebuildOnlyTheirAuthor")
             yield Contract[CellFixtures]("ThrowingInputEquivalenceRetriesSameSnapshot")
             yield Contract[CellFixtures]("PostReportsQueueAcceptance")
             yield Contract[CellFixtures]("WindowCloseCompletesAfterCleanupFailures")

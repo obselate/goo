@@ -83,6 +83,7 @@ internal sealed class VirtualNodeState {
   internal var Context ContextFrame?
   internal var Owner Window?
   internal var DeclaringCell Cell?
+  internal var CallbackOwner Cell?
   private var contextReader ContextReader?
   private var contextDirty bool
   private var contextVersion int64
@@ -235,12 +236,13 @@ internal sealed class VirtualNodeState {
 
   internal prop ContextVersion int64 { get -> contextVersion }
 
-  internal func BindContext(frame ContextFrame?, owner Window?) {
-    let changed = Context != frame || Owner != owner
+  internal func BindContext(frame ContextFrame?, owner Window?, callbackOwner Cell?) {
+    let changed = Context != frame || Owner != owner || CallbackOwner != callbackOwner
     if changed { clearRecycledRows() }
     let rebound = Owner != nil
     Context = frame
     Owner = owner
+    CallbackOwner = callbackOwner
     if let reader = contextReader {
       reader.Frame = frame
       reader.Window = owner

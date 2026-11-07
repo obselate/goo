@@ -4,6 +4,33 @@ import System
 import System.Numerics
 
 internal class CellFixtures {
+  func SlottedAndForwardedCallbacksRebuildOnlyTheirAuthor() bool {
+    let host = CallbackOriginHost()
+    let driver = InputFixtureDriver(host, 200, 150)
+    for pass in 0 ... 2 {
+      for index in 1 ... 3 {
+        guard let tree = driver.Window.Tree else { return false }
+        let target = tree.Children[index]
+        let builds = host.Builds
+        guard let sibling = tree.Children[3].Fiber as CallbackUnchangedCell? else { return false }
+        let siblingBuilds = sibling.Builds
+        let x = target.Rect.X + target.Rect.W * .5F
+        let y = target.Rect.Y + target.Rect.H * .5F
+        driver.Press(x, y)
+        driver.Release(x, y)
+        driver.Update()
+        let expected = index == 1 ? "slot" : "forward:7:9:True"
+        if host.Value != expected || host.Builds != builds + 1
+          || driver.Window.Tree?.Children[0].Content != expected
+          || sibling.Builds != siblingBuilds { return false }
+      }
+      host.MountKey = "remounted"
+      host.Rebuild()
+      driver.Update()
+    }
+    return true
+  }
+
   func InputEqualitySchedulesOneBuild() bool {
     CellInputFixtureCell.Builds = 0
     let rec = Reconciler{ Res: Resolver{} }
@@ -1175,5 +1202,68 @@ internal class DeferredCloseTarget : WindowRenderTarget {
       throw InvalidOperationException("Presentation was disposed before close preparation completed")
     }
     Disposed = true
+  }
+}
+
+internal data struct CallbackSlotInput {
+  internal var Content Blob
+}
+
+internal open class CallbackSlotCell : Cell[CallbackSlotInput] {
+  protected override func Build(input CallbackSlotInput) Blob -> input.Content
+}
+
+internal data struct CallbackForwardInput {
+  internal var Click Action
+  internal var Change Action[int32]
+  internal var Pair Action[int32, int32]
+  internal var Result Func[int32, bool]
+}
+
+internal open class CallbackForwardCell : Cell[CallbackForwardInput] {
+  protected override func Build(input CallbackForwardInput) Blob -> Button{
+    Width: 100, Height: 30, OnClick: Forward,
+  }
+
+  private func Forward() {
+    InvokeInputCallback(Input.Click)
+    InvokeInputCallback(Input.Change, 7)
+    InvokeInputCallback(Input.Pair, 4, 5)
+    if !InvokeInputCallback(Input.Result, 9, false) { throw InvalidOperationException("Callback result was lost") }
+  }
+}
+
+internal open class CallbackUnchangedCell : Cell {
+  internal var Builds int32
+  override func Build() Blob {
+    Builds++
+    return Container{Height: 10}
+  }
+}
+
+internal class CallbackOriginHost : Cell {
+  internal var Builds int32
+  internal var Value string = ""
+  internal var MountKey string = "initial"
+
+  override func Build() Blob {
+    Builds++
+    return Container{
+      FlexDirection: FlexDirection.Column,
+      Text{Content: Value, Height: 20},
+      Cell.Mount[CallbackSlotInput, CallbackSlotCell](MountKey, CallbackSlotInput{
+        Content: Button{Width: 100, Height: 30, OnClick: () -> Value = "slot"},
+      }),
+      Cell.Mount[CallbackForwardInput, CallbackForwardCell]("forward", CallbackForwardInput{
+        Click: () -> Value = "forward",
+        Change: value -> Value += ":" + value.ToString(),
+        Pair: (first, second) -> Value += ":" + (first + second).ToString(),
+        Result: value -> {
+          Value += ":" + (value == 9).ToString()
+          return true
+        },
+      }),
+      Cell.Mount[CallbackUnchangedCell]("unchanged"),
+    }
   }
 }

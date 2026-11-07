@@ -4,6 +4,8 @@ import System.Collections.Generic
 
 internal class CellOwnership {
   shared {
+    internal func ForCallback(node Node) Cell? -> node.CallbackOwner ?? Nearest(node)
+
     internal func Nearest(node Node) Cell? {
       var current Node? = node
       while let value = current {
@@ -24,7 +26,7 @@ internal class CellOwnership {
       while true {
         owner ??= renderingCell(current)
         if current == root {
-          return owner
+          return target.CallbackOwner ?? owner
         }
         guard let parent = current.Parent else {
           return nil
@@ -38,6 +40,7 @@ internal class CellOwnership {
 
     // Event routes retain their ancestry even if a callback changes the live tree.
     internal func InRoute(route List[NodeMount], index int32) Cell? {
+      if let owner = route[index].Captured?.CallbackOwner { return owner }
       for var i = index;
       i >= 0;
       i-- {
@@ -53,8 +56,10 @@ internal class CellOwnership {
       owners.Clear()
       var owner Cell?
       for mount in route {
-        if let node = mount.Current { owner = renderingCell(node) ?? owner }
-        owners.Add(owner)
+        if let node = mount.Current {
+          owner = renderingCell(node) ?? owner
+          owners.Add(node.CallbackOwner ?? owner)
+        } else { owners.Add(owner) }
       }
     }
 

@@ -267,6 +267,21 @@ Decides whether a later post-mount snapshot needs a rebuild after Input stores n
 
 Gets the current immutable input snapshot.
 
+### Forward input callbacks
+
+```gsharp
+private func Changed(value string) {
+    InvokeInputCallback(current.OnChange, value)
+    Rebuild()
+}
+```
+
+`Cell<TInput>` provides protected `InvokeInputCallback` overloads for `Action`, `Action<T>`,
+`Action<T1,T2>` and `Func<T,TResult>`. The function overload takes a fallback result after the argument.
+They invoke input-time callbacks and rebuild only the Cell that supplied the input, even if the callback throws.
+Call Build-time queries directly. They must not change the supplying Cell's state.
+
+
 ## `Context<T any>`
 
 Source:

@@ -11,8 +11,11 @@ public open class Blob : Style {
   private var transitionDelayMs float32
   private var transitionSelection StyleMask
   private var blobState int32
+  internal let CallbackOwner Cell?
 
   internal init() {
+    let environment = ContextEnvironment.Current
+    CallbackOwner = environment.Cell ?? environment.Virtual?.CallbackOwner
     transitionSelection = allTransitionSelection()
   }
 

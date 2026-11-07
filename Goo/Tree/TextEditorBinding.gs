@@ -61,11 +61,19 @@ internal sealed class TextEditorBinding : IDisposable {
   }
 
   private func onDocumentChanged(change TextDocumentChange) {
-    node.EditorOnChange?.Invoke(change)
+    if let callback = node.EditorOnChange {
+      let owner = CellOwnership.ForCallback(node)
+      try { callback(change) }
+      finally { owner?.Rebuild() }
+    }
   }
 
   private func onSubmitted() {
-    node.EditorOnSubmit?.Invoke()
+    if let callback = node.EditorOnSubmit {
+      let owner = CellOwnership.ForCallback(node)
+      try { callback() }
+      finally { owner?.Rebuild() }
+    }
   }
 
   internal func LayerChanged(change TextPresentationLayerChange) {

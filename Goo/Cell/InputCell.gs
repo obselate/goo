@@ -8,9 +8,61 @@ import System.Collections.Generic
 public open class Cell[TInput any] : Cell {
   private var input TInput = default (TInput)
   private var hasInput bool
+  internal var inputOwner Cell?
 
   /// Gets the current immutable input snapshot.
   protected prop Input TInput{ get -> input }
+
+  /// Invokes an input-time callback and rebuilds the Cell that supplied this input.
+  /// Call Build-time queries directly. They must not change the supplying Cell's state.
+  /// @param callback callback from the current input
+  protected func InvokeInputCallback(callback Action?) {
+    guard let callback = callback else { return }
+    let owner = inputOwner
+    try { callback() }
+    finally { owner?.Rebuild() }
+  }
+
+  /// Invokes an input-time callback and rebuilds the Cell that supplied this input.
+  /// Call Build-time queries directly. They must not change the supplying Cell's state.
+  /// @typeparam T callback argument type
+  /// @param callback callback from the current input
+  /// @param value callback argument
+  protected func InvokeInputCallback[T any](callback Action[T]?, value T) {
+    guard let callback = callback else { return }
+    let owner = inputOwner
+    try { callback(value) }
+    finally { owner?.Rebuild() }
+  }
+
+  /// Invokes an input-time callback and rebuilds the Cell that supplied this input.
+  /// Call Build-time queries directly. They must not change the supplying Cell's state.
+  /// @typeparam T1 first callback argument type
+  /// @typeparam T2 second callback argument type
+  /// @param callback callback from the current input
+  /// @param first first callback argument
+  /// @param second second callback argument
+  protected func InvokeInputCallback[T1 any, T2 any](callback Action[T1, T2]?, first T1, second T2) {
+    guard let callback = callback else { return }
+    let owner = inputOwner
+    try { callback(first, second) }
+    finally { owner?.Rebuild() }
+  }
+
+  /// Invokes an input-time callback and rebuilds the Cell that supplied this input.
+  /// Call Build-time queries directly. They must not change the supplying Cell's state.
+  /// @typeparam T callback argument type
+  /// @typeparam TResult callback result type
+  /// @param callback callback from the current input
+  /// @param value callback argument
+  /// @param fallback result when callback is nil
+  /// @returns the callback result or fallback
+  protected func InvokeInputCallback[T any, TResult any](callback Func[T, TResult]?, value T, fallback TResult) TResult {
+    guard let callback = callback else { return fallback }
+    let owner = inputOwner
+    try { return callback(value) }
+    finally { owner?.Rebuild() }
+  }
 
   /// Decides whether a later post-mount snapshot needs a rebuild after Input stores next; default uses EqualityComparer[TInput].Default.
   protected open func ShouldRebuild(previous TInput, next TInput) bool ->

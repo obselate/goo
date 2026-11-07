@@ -101,6 +101,7 @@ internal class Node {
     Key = nil
     Parent = nil
     Context = nil
+    CallbackOwner = nil
     Content = ""
     Rect = Rect{}
     BaseStyle = nil
@@ -734,6 +735,7 @@ internal class Node {
     }
   }
   internal prop Fiber Cell? { get; set; }
+  internal prop CallbackOwner Cell? { get; set; }
   internal prop ScrollX float32{
     get -> scrollX
     set {
