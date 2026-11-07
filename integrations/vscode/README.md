@@ -5,14 +5,14 @@ This extension is a thin VS Code front end for the `goo` CLI. It does not duplic
 Install the CLI first:
 
 ```sh
-dotnet tool install --global Goo.DevTools --version 0.28.5
+dotnet tool install --global Goo.DevTools --version 0.28.6
 ```
 
 Then package the extension from the checkout:
 
 ```sh
 npx @vscode/vsce package integrations/vscode
-code --install-extension goo-devtools-0.28.5.vsix
+code --install-extension goo-devtools-0.28.6.vsix
 ```
 
 For local development, open `integrations/vscode` in VS Code and press F5 to launch an Extension Development Host.
