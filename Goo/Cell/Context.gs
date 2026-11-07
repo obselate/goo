@@ -136,6 +136,8 @@ internal data struct ContextEnvironment {
             }
         }
 
+        internal prop CallbackOwner Cell? { get -> current.Cell ?? current.Virtual?.CallbackOwner }
+
         internal func Enter(environment ContextEnvironment) ContextEnvironment {
             let previous = current
             current = environment

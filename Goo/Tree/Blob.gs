@@ -14,8 +14,7 @@ public open class Blob : Style {
   internal let CallbackOwner Cell?
 
   internal init() {
-    let environment = ContextEnvironment.Current
-    CallbackOwner = environment.Cell ?? environment.Virtual?.CallbackOwner
+    CallbackOwner = ContextEnvironment.CallbackOwner
     transitionSelection = allTransitionSelection()
   }
 

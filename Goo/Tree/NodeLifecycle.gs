@@ -44,7 +44,6 @@ internal class NodeLifecycle {
       n.Retired = true
       n.PaintBindingResolver?.ForgetPaintBindings(n)
       n.Context = nil
-      n.CallbackOwner = nil
       ElementHandles.Detach(n)
       InputCallbacks.SetFocusTarget(n, nil)
       if n.HasAccessibilityDeclaration {
