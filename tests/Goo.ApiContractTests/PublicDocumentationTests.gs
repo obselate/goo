@@ -374,6 +374,10 @@ class PublicDocumentationTests {
             "M:Goo.Cell.AnimateValue``1(``0,Goo.MotionConverter{``0})",
             "M:Goo.Cell.Build",
             "M:Goo.Cell`1.Build(`0)",
+            "M:Goo.Cell`1.InvokeInputCallback(System.Action)",
+            "M:Goo.Cell`1.InvokeInputCallback``1(System.Action{``0},``0)",
+            "M:Goo.Cell`1.InvokeInputCallback``2(System.Action{``0,``1},``0,``1)",
+            "M:Goo.Cell`1.InvokeInputCallback``2(System.Func{``0,``1},``0,``1)",
             "M:Goo.Cell.Mount``1",
             "M:Goo.Cell.Mount``1(System.Func{``0},System.String)",
             "M:Goo.Cell.Mount``1(System.String)",
@@ -1223,6 +1227,14 @@ class PublicDocumentationTests {
             ),
             ["M:Goo.Cell.Build"] = DocumentationShape(System.Array.Empty[string](), System.Array.Empty[string](), true),
             ["M:Goo.Cell`1.Build(`0)"] = DocumentationShape([]string{"input"}, System.Array.Empty[string](), true),
+            ["M:Goo.Cell`1.InvokeInputCallback(System.Action)"] = DocumentationShape(
+                []string{"callback"}, System.Array.Empty[string](), false),
+            ["M:Goo.Cell`1.InvokeInputCallback``1(System.Action{``0},``0)"] = DocumentationShape(
+                []string{"callback", "value"}, []string{"T"}, false),
+            ["M:Goo.Cell`1.InvokeInputCallback``2(System.Action{``0,``1},``0,``1)"] = DocumentationShape(
+                []string{"callback", "first", "second"}, []string{"T1", "T2"}, false),
+            ["M:Goo.Cell`1.InvokeInputCallback``2(System.Func{``0,``1},``0,``1)"] = DocumentationShape(
+                []string{"callback", "value", "fallback"}, []string{"T", "TResult"}, true),
             ["M:Goo.Cell.Mount``1"] = DocumentationShape(System.Array.Empty[string](), []string{"TCell"}, true),
             ["M:Goo.Cell.Mount``1(System.Func{``0},System.String)"] = DocumentationShape(
                 []string{"factory", "key"},

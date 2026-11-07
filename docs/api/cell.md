@@ -6,9 +6,22 @@ Source: [`Goo/Cell`](../../Goo/Cell)
 
 ## Build input cells
 
-Store local Cell state in ordinary fields. Goo rebuilds the owning Cell after its input callbacks. Call `Rebuild()` after mutations outside Goo input dispatch.
+Store local Cell state in ordinary fields. Goo rebuilds the Cell that authored an input element, even when another Cell renders it. Call `Rebuild()` after mutations outside Goo input dispatch.
 
 Derive packaged components as `open class X : Cell<TInput>` and override `protected Build(input TInput) Blob`. Goo passes the stored immutable input snapshot. Same-assembly components can still override parameterless `Build()`. If both overloads are overridden, the typed overload wins. Override `ShouldRebuild(previous, next)` only when default structural equality does not match the rebuild policy.
+
+## Forward input callbacks
+
+```gsharp
+private func Changed(value string) {
+    InvokeInputCallback(current.OnChange, value)
+    Rebuild()
+}
+```
+
+Use protected `Cell<TInput>.InvokeInputCallback` for input-time callbacks. It rebuilds only the Cell that supplied the input, even if the callback throws.
+A child-created Blob must forward supplied callbacks through this helper. Parent-built Blob content keeps its original author automatically.
+Guard costly arguments when the callback can be nil. Call Build-time queries directly. They must not change host state.
 
 ## Mount parameterless cells
 
@@ -258,6 +271,42 @@ Builds the component tree from the current immutable input snapshot.
 - `input`: current input snapshot
 
 Returns: the root blob for this component
+
+### `InvokeInputCallback(System.Action)`
+
+Invokes an input-time callback and rebuilds the Cell that supplied this input. Call Build-time queries directly. They must not change the supplying Cell's state.
+
+- `callback`: callback from the current input
+
+### `InvokeInputCallback``1(System.Action{T},T)`
+
+Invokes an input-time callback and rebuilds the Cell that supplied this input. Call Build-time queries directly. They must not change the supplying Cell's state.
+
+- `T`: callback argument type
+- `callback`: callback from the current input
+- `value`: callback argument
+
+### `InvokeInputCallback``2(System.Action{T1,T2},T1,T2)`
+
+Invokes an input-time callback and rebuilds the Cell that supplied this input. Call Build-time queries directly. They must not change the supplying Cell's state.
+
+- `T1`: first callback argument type
+- `T2`: second callback argument type
+- `callback`: callback from the current input
+- `first`: first callback argument
+- `second`: second callback argument
+
+### `InvokeInputCallback``2(System.Func{T,TResult},T,TResult)`
+
+Invokes an input-time callback and rebuilds the Cell that supplied this input. Call Build-time queries directly. They must not change the supplying Cell's state.
+
+- `T`: callback argument type
+- `TResult`: callback result type
+- `callback`: callback from the current input
+- `value`: callback argument
+- `fallback`: result when callback is nil
+
+Returns: the callback result or fallback
 
 ### `ShouldRebuild(TInput any,TInput any)`
 

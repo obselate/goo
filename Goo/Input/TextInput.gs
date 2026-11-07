@@ -228,7 +228,7 @@ internal partial class TextInput {
       let values = candidates ?? TextInputCallbacks.EmptyCandidates()
       let selectedCandidate = selected >= 0 && selected < values.Count ? selected : -1
       if let callback = TextInputCallbacks.TextCandidates(n) {
-        let owner = CellOwnership.Nearest(n)
+        let owner = CellOwnership.ForCallback(n)
         try {
           callback(TextCandidateEvent{ Candidates: values, SelectedCandidate: selectedCandidate,
             Horizontal: horizontal })
@@ -254,7 +254,7 @@ internal partial class TextInput {
 
   private func dispatchTextInput(n Node, value string) {
     if let callback = TextInputCallbacks.TextInput(n) {
-      let owner = CellOwnership.Nearest(n)
+      let owner = CellOwnership.ForCallback(n)
       try { callback(value) }
       finally { owner?.Rebuild() }
     }
@@ -262,7 +262,7 @@ internal partial class TextInput {
 
   private func dispatchTextComposition(n Node, value TextCompositionEvent) {
     if let callback = TextInputCallbacks.TextComposition(n) {
-      let owner = CellOwnership.Nearest(n)
+      let owner = CellOwnership.ForCallback(n)
       try { callback(value) }
       finally { owner?.Rebuild() }
     }
@@ -270,7 +270,7 @@ internal partial class TextInput {
 
   private func dispatchTextCompositionCancel(n Node) {
     if let callback = TextInputCallbacks.TextCompositionCancel(n) {
-      let owner = CellOwnership.Nearest(n)
+      let owner = CellOwnership.ForCallback(n)
       try { callback() }
       finally { owner?.Rebuild() }
     }

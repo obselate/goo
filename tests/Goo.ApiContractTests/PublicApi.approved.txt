@@ -1117,6 +1117,10 @@ method|Goo.BoxShadow|op_Equality|static|public|generic:|(left:Goo.BoxShadow,righ
 method|Goo.BoxShadow|op_Inequality|static|public|generic:|(left:Goo.BoxShadow,right:Goo.BoxShadow)->System.Boolean
 method|Goo.Button|Add|instance|public|generic:|(child:Goo.Blob)->System.Void
 method|Goo.Cell`1|Build|virtual|protected|generic:|(input:!0)->Goo.Blob
+method|Goo.Cell`1|InvokeInputCallback|instance|protected|generic:T1[attrs:0,constraints:];T2[attrs:0,constraints:]|(callback:System.Action`2<!!0,!!1>?,first:!!0,second:!!1)->System.Void
+method|Goo.Cell`1|InvokeInputCallback|instance|protected|generic:T[attrs:0,constraints:];TResult[attrs:0,constraints:]|(callback:System.Func`2<!!0,!!1>?,value:!!0,fallback:!!1)->!!1
+method|Goo.Cell`1|InvokeInputCallback|instance|protected|generic:T[attrs:0,constraints:]|(callback:System.Action`1<!!0>?,value:!!0)->System.Void
+method|Goo.Cell`1|InvokeInputCallback|instance|protected|generic:|(callback:System.Action?)->System.Void
 method|Goo.Cell`1|ShouldRebuild|virtual|protected|generic:|(previous:!0,next:!0)->System.Boolean
 method|Goo.Cell|AnimateValue|instance|public|generic:T[attrs:0,constraints:]|(initial:!!0,converter:Goo.MotionConverter`1<!!0>)->Goo.Anim`1<!!0>
 method|Goo.Cell|AnimateValue|instance|public|generic:|(initial:Goo.Color)->Goo.Anim`1<Goo.Color>

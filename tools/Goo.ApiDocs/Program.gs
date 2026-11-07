@@ -24,11 +24,30 @@ func AppendCellInputGuide(text StringBuilder) {
     text.AppendLine("## Build input cells")
     text.AppendLine()
     text.AppendLine(
-        "Store local Cell state in ordinary fields. Goo rebuilds the owning Cell after its input callbacks. Call `Rebuild()` after mutations outside Goo input dispatch."
+        "Store local Cell state in ordinary fields. Goo rebuilds the Cell that authored an input element, even when another Cell renders it. Call `Rebuild()` after mutations outside Goo input dispatch."
     )
     text.AppendLine()
     text.AppendLine(
         "Derive packaged components as `open class X : Cell<TInput>` and override `protected Build(input TInput) Blob`. Goo passes the stored immutable input snapshot. Same-assembly components can still override parameterless `Build()`. If both overloads are overridden, the typed overload wins. Override `ShouldRebuild(previous, next)` only when default structural equality does not match the rebuild policy."
+    )
+    text.AppendLine()
+    text.AppendLine("## Forward input callbacks")
+    text.AppendLine()
+    text.AppendLine("```gsharp")
+    text.AppendLine("private func Changed(value string) {")
+    text.AppendLine("    InvokeInputCallback(current.OnChange, value)")
+    text.AppendLine("    Rebuild()")
+    text.AppendLine("}")
+    text.AppendLine("```")
+    text.AppendLine()
+    text.AppendLine(
+        "Use protected `Cell<TInput>.InvokeInputCallback` for input-time callbacks. It rebuilds only the Cell that supplied the input, even if the callback throws."
+    )
+    text.AppendLine(
+        "A child-created Blob must forward supplied callbacks through this helper. Parent-built Blob content keeps its original author automatically."
+    )
+    text.AppendLine(
+        "Guard costly arguments when the callback can be nil. Call Build-time queries directly. They must not change host state."
     )
 }
 

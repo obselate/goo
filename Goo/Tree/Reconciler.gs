@@ -298,7 +298,7 @@ internal partial class Reconciler {
   internal func applyVirtual(n Node, b Virtual, initial bool) VirtualNodeState {
     applyStyle(n, b, b.Focusable, initial)
     let state = Virtualization.Configure(n)
-    state.BindContext(Context, Owner)
+    state.BindContext(Context, Owner, b.CallbackOwner)
     if let cell = expandingCell { state.DeclaringCell = cell }
     return state
   }
@@ -369,6 +369,7 @@ internal partial class Reconciler {
 
   internal func applyStyleEntries(n Node, b Blob, entries StyleEntries?, focusable bool, initial bool) {
     n.Context = Context
+    n.CallbackOwner = b.CallbackOwner
     let hover = b.Hover?.Entries()
     let active = b.Active?.Entries()
     let focus = b.Focus?.Entries()
@@ -753,7 +754,7 @@ internal partial class Reconciler {
       }
       n.Context = Context
       if ScrollbarParts.Children(n).Count > 0 { Res.Scrollbars.Queue(n) }
-      Virtualization.State(n)?.BindContext(Context, Owner)
+      Virtualization.State(n)?.BindContext(Context, Owner, n.CallbackOwner)
       for index in 0 ... n.Children.Count {
         let old = n.Children[index]
         let child = rebindRetainedContext(old)

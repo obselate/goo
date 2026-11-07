@@ -266,7 +266,7 @@ internal class FocusManager {
         let parent = NodeMount(node.Parent)
         let callback = received ? InputCallbacks.Focus(node) : InputCallbacks.Blur(node)
         if let handler = callback {
-          let owner = CellOwnership.Nearest(node)
+          let owner = CellOwnership.ForCallback(node)
           try { handler(FocusEvent{Control: control, Generation: generation}) }
           finally { owner?.Rebuild() }
         }
