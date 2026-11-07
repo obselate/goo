@@ -22,8 +22,9 @@ def close_window(root, title):
     script = root / (title.replace(" ", "-") + ".js")
     script.write_text("function close(window) { "
                       f"if (window.caption.indexOf('{title}') === 0) window.closeWindow() "
-                      "} workspace.windowAdded.connect(close); "
-                      "for (const window of workspace.windowList()) close(window)")
+                      "} (workspace.windowAdded || workspace.clientAdded).connect(close); "
+                      "const windows = workspace.windowList ? workspace.windowList() : workspace.clientList(); "
+                      "for (const window of windows) close(window)")
     script_id = ast.literal_eval(subprocess.check_output([
         "gdbus", "call", "--session", "--dest", "org.kde.KWin", "--object-path", "/Scripting",
         "--method", "org.kde.kwin.Scripting.loadScript", str(script),
@@ -51,6 +52,7 @@ def check(program, root, mode):
                 if process.poll() is not None or (directory / "exited").exists():
                     raise RuntimeError(f"{mode}: owned close ended Run")
                 if mode == "visible":
+                    print("native-close owned: passed", flush=True)
                     close_window(directory, f"Goo close {mode} main")
                 else:
                     (directory / "stop").touch()
@@ -61,7 +63,7 @@ def check(program, root, mode):
             expected = "False,False,1"
             if state != expected:
                 raise RuntimeError(f"{mode}: expected {expected}, got {state}")
-            print(f"native-close {mode}: passed", flush=True)
+            print(f"native-close {'all-windows' if mode == 'visible' else mode}: passed", flush=True)
         except Exception:
             log.seek(0)
             print(log.read(), file=sys.stderr)
