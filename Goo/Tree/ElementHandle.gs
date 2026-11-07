@@ -56,8 +56,7 @@ public class ElementHandle {
   public prop ScrollOffset Point{
     get {
       guard let n = mountedNode(true) else { return Point{} }
-      let offset = TransformGeometry.ContentPoint(n, 0.0F, 0.0F, n.ScrollX, n.ScrollY)
-      return Point{ X: float64(offset.X), Y: float64(offset.Y) }
+      return Point{ X: float64(n.ScrollX), Y: float64(n.ScrollY) }
     }
   }
   /// Gets the maximum legal logical scroll offset.
@@ -771,12 +770,11 @@ internal class MetricSubscriptions {
       if node.Retired || !ElementHandles.Owns(node, handle) {
         return ElementMetrics{}
       }
-      let offset = TransformGeometry.ContentPoint(node, 0.0F, 0.0F)
       return ElementMetrics{
         IsMounted: true,
         BorderBox: ElementHandles.BorderBox(node),
         ContentBox: ElementHandles.ContentBox(node),
-        ScrollOffset: Point{ X: float64(offset.X), Y: float64(offset.Y) },
+        ScrollOffset: Point{ X: float64(node.ScrollX), Y: float64(node.ScrollY) },
         ScrollRange: scrollRange(node),
       }
     }

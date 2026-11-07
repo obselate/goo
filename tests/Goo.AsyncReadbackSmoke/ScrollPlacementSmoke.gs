@@ -423,29 +423,41 @@ class ScrollImagePlacementCell(source ImageSourceProvider) : Cell {
         Height: 96,
         OverflowY: Overflow.Scroll,
         Handle: Scroller,
+        BackgroundColor: Color.White,
         Container{
             Width: 96,
-            Height: 768,
+            Height: 7752.76171875,
             FlexShrink: 0,
-            Image{
+            Container{
                 Position: PositionType.Absolute,
-                Top: 672,
+                Top: 7672.76171875,
                 Width: 96,
-                Height: 96,
-                BorderRadius: 8,
+                Height: 64,
+                Opacity: 0.999999,
+                BorderRadius: 6,
                 Overflow: Overflow.Hidden,
-                Source: source,
-                Fit: ImageFit.Fill,
+                Image{
+                    Width: 96,
+                    Height: 64,
+                    BorderRadius: 8,
+                    Overflow: Overflow.Hidden,
+                    Source: source,
+                    Fit: ImageFit.Fill,
+                },
             },
         },
     }
 }
 
 func RunScrollImagePlacementSmoke() {
-    for scale in []float32{1.0F, 2.625F} {
+    for variant in 0 ... 3 {
+        let scale = variant == 0 ? 1.0F : 2.625F
         let provider = ImageStagingProvider(
             ImageStagingSource(2, 2, uint8(224), uint8(48), uint8(32)))
         let root = ScrollImagePlacementCell(provider)
+        var lastMetrics ElementMetrics
+        root.Scroller.MetricsChanged += value -> { lastMetrics = value }
+        let host EmbeddedSmokeHost? = variant == 2 ? EmbeddedSmokeHost() : nil
         let window = Window{
             Title: "Goo retained scroll image gate",
             Width: int32(96.0F * scale),
@@ -455,28 +467,51 @@ func RunScrollImagePlacementSmoke() {
             Root: root,
         }
         try {
-            window.Open()
+            if let embedded = host {
+                embedded.Resize(252, 252, 252, 251)
+                window.Attach(embedded)
+                embedded.CreateNative()
+                embedded.AttachPresentation()
+            } else {
+                window.Open()
+            }
             WindowReadbackTestFixture.ForceRender(window, 0.0)
             provider.Replace(ImageSource(2, 2, []uint8{
                 48, 96, 224, 255, 48, 96, 224, 255,
                 240, 192, 48, 255, 240, 192, 48, 255,
             }))
             for frame in 0 ... 8 {
-                Require(root.Scroller.JumpTo(0.0, 672.0), "Image scroll placement failed")
+                Require(root.Scroller.JumpTo(0.0, 7656.77783203125), "Image scroll placement failed")
                 WindowReadbackTestFixture.ForceRender(window, 0.0166666666666667)
             }
+            Require(root.Scroller.ScrollOffset.Y <= root.Scroller.ScrollRange.Y
+                && lastMetrics.ScrollOffset.Y <= lastMetrics.ScrollRange.Y,
+                "Scroll offset exceeded its clamped logical range")
             let metrics = WindowReadbackTestFixture.Metrics(window)
+            if variant == 2 {
+                Require(metrics.DisplayScaleX != metrics.DisplayScaleY,
+                    "Unequal image framebuffer scales were lost")
+            }
+            PrimitiveReadback(window, metrics)
+            WindowReadbackTestFixture.SetPartialRepeat(window, VulkanDamageRegion{
+                X: 0, Y: int32(16.0 * float64(scale) * metrics.DisplayScaleY),
+                Width: metrics.FramebufferWidth,
+                Height: int32(64.0 * float64(scale) * metrics.DisplayScaleY),
+            })
             let readback = PrimitiveReadback(window, metrics)
+            WindowReadbackTestFixture.SetPartialRepeat(window, VulkanDamageRegion{})
             PrimitiveRequirePixelNear(readback.Pixels, readback.Width, metrics,
-                48.0 * float64(scale), 8.0 * float64(scale),
+                48.0 * float64(scale), 24.0 * float64(scale),
                 uint8(48), uint8(96), uint8(224), 3, "retained_scroll_image_top")
             PrimitiveRequirePixelNear(readback.Pixels, readback.Width, metrics,
-                48.0 * float64(scale), 88.0 * float64(scale),
+                48.0 * float64(scale), 72.0 * float64(scale),
                 uint8(240), uint8(192), uint8(48), 3, "retained_scroll_image_bottom")
         } finally {
             window.Close()
+            host?.DestroyNative()
+            host?.Dispose()
             provider.DisposeSource()
         }
     }
-    Console.WriteLine("scroll-image-placement: scales=1,2.625 late-content=true frames=8 pixels=passed")
+    Console.WriteLine("scroll-image-placement: scales=1,2.625 unequal-axes=true late-content=true frames=8 pixels=passed")
 }

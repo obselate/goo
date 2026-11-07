@@ -770,7 +770,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private func LayerIntersectsDamage(frame SceneFrame, index int32,
     damage VulkanDamageRegion) bool{
       RequireRecordIndex(index, frame.LayerCount, "layer index")
-      let layer = frame.Layers[index]
+      let layer = frame.Layer(index)
       return layer.OriginX + float32(layer.ExtentWidth) > float32(damage.X)
         && layer.OriginX < float32(damage.Right)
         && layer.OriginY + float32(layer.ExtentHeight) > float32(damage.Y)
@@ -846,7 +846,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           count = if bounds.Width * bounds.Height >= float32(OpaqueInteriorMinimumArea) { 5uL } else { 1uL }
         }
         case SceneDrawKind.LayerBegin {
-          let layer = frame.Layers[frame.DrawRefs[index].Index]
+          let layer = frame.Layer(frame.DrawRefs[index].Index)
           let radius = BackdropBlurRadius(layer, frame)
           if radius > 0.0F {
             count = 3uL + uint64(MathF.Ceiling(MathF.Log2(MathF.Max(1.0F, radius * scaleX))))

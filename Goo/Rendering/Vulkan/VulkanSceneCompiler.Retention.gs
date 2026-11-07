@@ -474,7 +474,7 @@ internal partial class VulkanSceneCompiler {
     while grown {
       grown = false
       for index in 0 ... frame.LayerCount {
-        let layer = frame.Layers[index]
+        let layer = frame.Layer(index)
         if layer.EffectIndex < 0 { continue }
         let effect = frame.ShaderEffects[layer.EffectIndex]
         if effect.Program?.SourceIndependent == true
@@ -498,7 +498,7 @@ internal partial class VulkanSceneCompiler {
   private func UpdateBackdropVersions() {
     if frame.LayerCount == 0 { return }
     for index in 0 ... frame.LayerCount {
-      let layer = frame.Layers[index]
+      let layer = frame.Layer(index)
       if layer.EffectIndex < 0
         || frame.ShaderEffects[layer.EffectIndex].Program != BackdropBlurEffect.Shared { continue }
       let capture = ConservativeBounds{X: layer.OriginX, Y: layer.OriginY,
