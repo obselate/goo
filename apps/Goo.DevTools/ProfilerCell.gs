@@ -45,8 +45,8 @@ internal partial class ProfilerCell : Cell, IDisposable {
     private var follow bool = true
     private var allocationSamples bool
     private var revision int32 = -1
-    private var tab string = "Phases"
-    private var sortColumn int32 = 2
+    private var tab string = "Timers"
+    private var sortColumn int32 = 3
     private var descending bool = true
     private var tableKey string = ""
     private var tableRows[]DataGridRow = []DataGridRow{}
@@ -70,7 +70,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 if follow {
                     let span = Math.Max(end - start, trace.Frequency * 2L)
                     end = Math.Max(1L, trace.End)
-                    start = Math.Max(0L, end - span)
+                    start = trace.Active ? Math.Max(0L, end - span): 0L
                 }
             }
         }
@@ -118,14 +118,15 @@ internal partial class ProfilerCell : Cell, IDisposable {
                     JustifyContent: JustifyContent.Center,
                     EmptyState{
                         Illustration: MaterialIcons.Create("monitoring", 32.0, theme.FaintTextColor),
-                        Title: "No trace"
+                        Title: "No trace",
+                        Description: "Select Record, use the app, then select Stop."
                     }.Build()
                 }
             )
             return Column(children)
         }
         children.Add(Ruler(trace, theme))
-        children.Add(FrameChart(trace, theme))
+        children.Add(Timing(trace, theme))
         children.Add(Legend(trace, theme))
         children.Add(Analysis(trace, theme))
         return Column(children)
@@ -160,7 +161,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 allocationSamples
             )
         )
-        controls.Add(Tool("profiler-clear", "delete_sweep", "Clear", () -> ClearTrace(), idle))
+        controls.Add(Tool("profiler-clear", "delete_sweep", "Clear", () -> ClearTrace(), idle && trace != nil))
         controls.Add(Tool("profiler-import", "file_open", "Import", () -> ShowFile("Import"), idle))
         controls.Add(
             Tool("profiler-export", "save", "Export", () -> ShowFile("Export"), idle && (trace?.Records.Count ?? 0) > 0)
@@ -180,7 +181,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 )
             )
         }
-        controls.Add(Tool("profiler-fit", "fit_screen", "Fit", () -> Fit()))
+        controls.Add(Tool("profiler-fit", "fit_screen", "Fit", () -> Fit(), trace != nil))
         controls.Add(
             Tool(
                 "profiler-zoom-selection",
@@ -196,8 +197,8 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 selectionEnd > selectionStart
             )
         )
-        controls.Add(Tool("profiler-zoom-out", "zoom_out", "Zoom out", () -> Zoom(2.0, 0.5)))
-        controls.Add(Tool("profiler-zoom-in", "zoom_in", "Zoom in", () -> Zoom(0.5, 0.5)))
+        controls.Add(Tool("profiler-zoom-out", "zoom_out", "Zoom out", () -> Zoom(2.0, 0.5), trace != nil))
+        controls.Add(Tool("profiler-zoom-in", "zoom_in", "Zoom in", () -> Zoom(0.5, 0.5), trace != nil))
         controls.Add(
             Tool(
                 "profiler-follow",
@@ -206,7 +207,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 () -> {
                     follow = !follow
                 },
-                true,
+                trace != nil,
                 follow
             )
         )
@@ -231,14 +232,14 @@ internal partial class ProfilerCell : Cell, IDisposable {
         return Container{
             Key: "profiler-toolbar",
             Width: Percent(100),
-            Height: theme.ControlHeight + 12.0,
             FlexShrink: 0.0,
             FlexDirection: FlexDirection.Row,
             AlignItems: AlignItems.Center,
-            Gap: 4,
-            Padding: Edges{Left: Pad, Right: Pad},
-            BorderWidth: Edges{Bottom: 1},
-            BorderColor: theme.BorderColor,
+            Gap: theme.ControlGap,
+            Padding: theme.Spacing * 2.0,
+            BackgroundColor: theme.PanelColor,
+            BorderWidth: Edges{Bottom: theme.BorderWidth},
+            BorderColor: Edges[Color]{Bottom: theme.BorderColor},
             OverflowX: Overflow.Hidden,
             Children: controls
         }
@@ -444,20 +445,16 @@ internal partial class ProfilerCell : Cell, IDisposable {
             DrawFrames(trace, w)
         }
         let shapes = List[Blob]()
-        let selection = PathBuilder(0.0, 0.0, w, Span)
-        if selectionEnd > selectionStart && selectionEnd > start && selectionStart < end {
-            let left = Math.Max(0.0, X(selectionStart))
-            Rect(selection, left, 0.0, Math.Max(1.0, Math.Min(w, X(selectionEnd)) - left), Span)
-        }
-        shapes.Add(PathShape(selection.Build(), theme.AccentColor.WithAlpha(0.18)))
+        shapes.Add(PathShape(SelectionPath(w, Span), theme.AccentColor.WithAlpha(0.18)))
         shapes.Add(PathShape(Highlight(selectedFrame, w), theme.AccentColor.WithAlpha(0.35)))
         shapes.Add(PathShape(Highlight(hovered, w), theme.HoverColor))
-        for phase in 0 ... trace.FramePhases.Count {
-            shapes.Add(PathShape(paths["phase" + phase.ToString()], PhaseColor(theme, phase)))
+        for group in 0 ... GroupNames.Length {
+            shapes.Add(PathShape(paths["phase" + group.ToString()], GroupColor(theme, group)))
         }
         shapes.Add(PathShape(paths["other"], theme.FaintTextColor))
         shapes.Add(PathShape(paths["clipped"], theme.TextColor))
         shapes.Add(PathShape(paths["markers"], theme.InfoColor))
+        shapes.Add(PathShape(paths["budget"], theme.WarningColor))
         shapes.Add(
             Text{
                 Key: "profiler-frame-scale",
@@ -493,9 +490,8 @@ internal partial class ProfilerCell : Cell, IDisposable {
         return Container{
             Key: "profiler-frames",
             Width: w,
-            Height: 0,
-            MinHeight: 80,
-            FlexGrow: 1.0,
+            Height: FramesHeight,
+            FlexShrink: 0.0,
             Margin: Edges{Left: Pad},
             Position: PositionType.Relative,
             ZIndex: 1,
@@ -504,15 +500,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
             Focusable: true,
             Focus: Style{OutlineWidth: 1, OutlineColor: theme.FocusColor},
             Accessibility: Accessibility{Role: AccessibilityRole.Group, Name: "Frames"},
-            OnWheel: (e WheelEvent) -> {
-                if e.Modifiers.Ctrl {
-                    e.PreventDefault()
-                    Zoom(e.Delta.Y > 0.0 ? 0.8: 1.25, Math.Clamp(e.Position.X / w, 0.0, 1.0))
-                } else if e.Modifiers.Shift {
-                    e.PreventDefault()
-                    Pan(e.Delta.Y > 0.0 ? -0.1: 0.1)
-                }
-            },
+            OnWheel: (e WheelEvent) -> Wheel(e, w),
             OnPointerDown: (e PointerEvent) -> {
                 pressX = e.Position.X
                 BeginSelection(e)
@@ -597,8 +585,10 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 2.0 * float64(durations[int32(float64(durations.Count - 1) * 0.95)])
             )
         )
+        let budgetTicks = trace.Frequency / 60L
+        scale = Math.Max(scale, 1.15 * float64(budgetTicks))
         let builders = List[PathBuilder]()
-        for phase in 0 ... trace.FramePhases.Count {
+        for group in 0 ... GroupNames.Length {
             builders.Add(PathBuilder(0.0, 0.0, w, Span))
         }
         let other = PathBuilder(0.0, 0.0, w, Span)
@@ -617,7 +607,13 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 let barWidth = next - column >= 4 ? float64(next - column - 1): float64(next - column)
                 var bottom = Span
                 for k in 0 ... frame.Phases.Length {
-                    bottom = Stack(builders[frame.Phases[k]], x, barWidth, bottom, frame.Ticks[k])
+                    bottom = Stack(
+                        builders[Math.Max(0, GroupOf(trace.FramePhases[frame.Phases[k]]))],
+                        x,
+                        barWidth,
+                        bottom,
+                        frame.Ticks[k]
+                    )
                 }
                 Stack(other, x, barWidth, bottom, frame.Other)
                 if float64(r.EndTicks - r.Ticks) > scale {
@@ -638,8 +634,11 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 }
             }
         }
-        for phase in 0 ... builders.Count {
-            paths["phase" + phase.ToString()] = builders[phase].Build()
+        let budget = PathBuilder(0.0, 0.0, w, Span)
+        Rect(budget, 0.0, Span - float64(budgetTicks) / scale * Span, w, Span / FramesHeight)
+        paths["budget"] = budget.Build()
+        for group in 0 ... builders.Count {
+            paths["phase" + group.ToString()] = builders[group].Build()
         }
         paths["other"] = other.Build()
         paths["clipped"] = clipped.Build()
@@ -687,12 +686,12 @@ internal partial class ProfilerCell : Cell, IDisposable {
 
     private func Legend(trace ProfilerTrace, theme Theme) Container {
         let items = List[Blob]()
-        for phase in 0 ... trace.FramePhases.Count {
-            items.Add(LegendItem(LaneTitle(trace.FramePhases[phase]), PhaseColor(theme, phase), theme))
+        for group in 0 ... GroupNames.Length {
+            items.Add(LegendItem(GroupNames[group], GroupColor(theme, group), theme))
         }
-        if trace.Frames.Count > 0 {
-            items.Add(LegendItem("Other", theme.FaintTextColor, theme))
-        }
+        items.Add(LegendItem("Frame, wait and other", theme.FaintTextColor, theme))
+        items.Add(LegendItem("Work per frame", theme.AccentColor, theme))
+        items.Add(LegendItem("Allocated per frame", theme.WarningColor, theme))
         return Container{
             Key: "profiler-legend",
             Width: Percent(100),
@@ -731,7 +730,13 @@ internal partial class ProfilerCell : Cell, IDisposable {
             } else {
                 let phase = frame.Phases[k]
                 rows.Add(
-                    Segment(LaneTitle(trace.FramePhases[phase]), frame.Ticks[k], PhaseColor(theme, phase), theme, trace)
+                    Segment(
+                        LaneTitle(trace.FramePhases[phase]),
+                        frame.Ticks[k],
+                        GroupColor(theme, GroupOf(trace.FramePhases[phase])),
+                        theme,
+                        trace
+                    )
                 )
             }
         }
@@ -795,6 +800,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                     "profiler-tabs",
                     TabBarInput{
                         Items: []NavigationItem{
+                            NavigationItem{Id: "profiler-tab-Timers", Label: "Timers"},
                             NavigationItem{Id: "profiler-tab-Phases", Label: "Phases"},
                             NavigationItem{Id: "profiler-tab-Memory", Label: "Memory"},
                             NavigationItem{Id: "profiler-tab-Types", Label: "Types"},
@@ -803,7 +809,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                         SelectedId: "profiler-tab-" + tab,
                         OnSelect: (id string) -> {
                             tab = id.Substring("profiler-tab-".Length)
-                            sortColumn = tab == "Phases" ? 2: tab == "Types" ? 1: tab == "Memory" ? 0: 4
+                            sortColumn = tab == "Timers" ? 3: tab == "Phases" ? 2: tab == "Types" ? 1: tab == "Memory" ? 0: 4
                             descending = tab != "Memory"
                             tableKey = ""
                             Rebuild()
@@ -841,6 +847,10 @@ internal partial class ProfilerCell : Cell, IDisposable {
                             }
                         },
                         FitColumnsToViewport: true,
+                        EmptyContent: tab == "Types" ? EmptyState{
+                            Title: "No allocation samples",
+                            Description: "Turn on Allocation types in the toolbar, then record."
+                        }.Build(): nil,
                         Density: Density.Compact,
                         Height: Length.Auto,
                         AccessibilityName: tab,
@@ -851,6 +861,16 @@ internal partial class ProfilerCell : Cell, IDisposable {
                         },
                     }
                 ),
+                Container{
+                    Key: "profiler-timers-note",
+                    Display: tab == "Timers" ? Display.Flex: Display.None,
+                    Padding: Edges{Left: Pad, Right: Pad, Top: 4, Bottom: 4},
+                    Caption(
+                        "note",
+                        "Scopes that start in the selection or view. — : no data in the trace. GPU timers have no start time and are not drawn.",
+                        theme.MutedTextColor
+                    )
+                },
             }
         )
         if selected >= 0 && selected < trace.Records.Count {
@@ -947,11 +967,14 @@ internal partial class ProfilerCell : Cell, IDisposable {
         }
         tableKey = key
         let rows = List[ProfilerTableRow]()
-        let names = tab == "Phases" ? []string{"Name", "Count", "Total", "p50", "p99", "Max", "Alloc"}
+        let names = tab == "Timers" ? []string{"Name", "Count", "Inclusive", "Exclusive", "Allocated", "Self allocated"}
+        : tab == "Phases" ? []string{"Name", "Count", "Total", "p50", "p99", "Max", "Alloc"}
         : tab == "Memory" ? []string{"Counter", "Start", "End", "Change", "Peak"}
         : tab == "Types" ? []string{"Type", "Samples", "Sampled bytes", "Status"}
         : []string{"Start", "Duration", "Kind", "Name", "Bytes", "Owner", "Result"}
-        if tab == "Phases" {
+        if tab == "Timers" {
+            TimersTable(trace, lo, hi, rows)
+        } else if tab == "Phases" {
             let groups = Dictionary[string, List[int64]]()
             let allocations = Dictionary[string, List[int64]]()
             for index in 0 ... trace.Records.Count {
@@ -1221,7 +1244,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
             if text {
                 definition.Flex = 1.0
             } else {
-                definition.Width = number ? 96.0: 110.0
+                definition.Width = number ? 120.0: 110.0
             }
             gridColumns[column] = definition
         }
@@ -1245,7 +1268,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
         } else {
             rows.Add(
                 Text{
-                    Content: LaneTitle(trace.EventName(r)),
+                    Content: ScopeTitle(trace, r),
                     FontFamily: theme.FontFamily,
                     FontSize: theme.FontSize,
                     FontWeight: 600,
@@ -1483,6 +1506,11 @@ internal partial class ProfilerCell : Cell, IDisposable {
 
     private func Tick(x float64) int64 -> start + int64(Math.Clamp(x / PlotWidth(), 0.0, 1.0) * float64(end - start))
 
+    private func ScopeTitle(trace ProfilerTrace, r ProfilerRecord) string {
+        let name = trace.EventName(r)
+        return r.Name != "" && r.Name != name ? LaneTitle(name) + " · " + r.Name: LaneTitle(name)
+    }
+
     shared {
         private func LaneTitle(name string) string {
             let slash = name.IndexOf(" /", StringComparison.Ordinal)
@@ -1507,6 +1535,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
             : counter == "upload.prepare" ? "Upload preparation"
             : counter == "graphics.completion-observed" ? "Graphics completion"
             : counter == "NativeResize" ? "Native resize"
+            : counter == "CapWait" ? "Wait for next frame"
             : counter == "Swapchain" ? "Swapchain recreation"
             : counter == "DeviceIdle" ? "Device idle"
             : counter == "ClipAtlas" ? "Clip atlas replacement"

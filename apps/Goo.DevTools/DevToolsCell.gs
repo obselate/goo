@@ -11,6 +11,7 @@ import Goo.Widgets.Layout
 import Goo.Widgets.Navigation
 import System
 import System.Collections.Generic
+import System.Globalization
 import System.Threading
 
 class DevToolsCell : Cell {
@@ -18,7 +19,12 @@ class DevToolsCell : Cell {
     private let logRow((DiagnosticLogEntry) -> Blob)
     private let captureRow((DiagnosticScreenshot) -> Blob)
     private let collapsed HashSet[string] = HashSet[string]()
-    private let expandedSections List[string] = List[string]([]string{""})
+    private let collapsedSections HashSet[string] = HashSet[string]()
+    private var showDefaults bool
+    private const LayoutNames string = "width height minWidth minHeight maxWidth maxHeight flexBasis flexGrow flexShrink aspectRatio position left top right bottom display flexDirection flexWrap justifyContent alignItems alignSelf alignContent gap rowGap columnGap overflowX overflowY direction"
+    private const StyleNames string = "opacity backgroundColor borderColor borderWidth borderRadius fontFamily fontSize fontWeight fontStyle color textAlign textWrap textTrimming"
+    private const TextNames string = ";fontFamily;fontSize;fontWeight;fontStyle;color;textAlign;textWrap;textTrimming;"
+    private const DefaultValues string = ";flexDirection=Column;flexWrap=NoWrap;justifyContent=FlexStart;alignItems=Stretch;alignSelf=Auto;alignContent=FlexStart;position=Relative;flexGrow=0;flexShrink=0;aspectRatio=0;display=Flex;direction=Auto;overflowX=Visible;overflowY=Visible;opacity=1;backgroundColor=0,0,0,0;borderColor=0,0,0,0;fontFamily=;fontStyle=Normal;fontWeight=400;fontSize=16px;textAlign=Start;textWrap=Wrap;textTrimming=None;"
     private let typeNames Dictionary[string, string] = Dictionary[string, string]()
     private var treeNodes[]TreeNode = []TreeNode{}
     private var expandedIds[]string = []string{}
@@ -148,7 +154,6 @@ class DevToolsCell : Cell {
                     Unit: SplitUnit.Pixels,
                     MinimumFirst: 280.0,
                     MinimumSecond: 320.0,
-                    HandleSize: theme.Spacing,
                     AccessibilityName: "Resize details",
                     OnChange: (value float64) -> {
                         detailsWidth = layoutWidth - value
@@ -220,6 +225,7 @@ class DevToolsCell : Cell {
                 Content: session.Inspecting ? "Stop picking": "Pick element",
                 Leading: MaterialIcons.Create("arrow_selector_tool", 18.0),
                 Pressed: session.Inspecting,
+                Disabled: session.State != DiagnosticConnectionState.Connected,
                 OnClick: () -> {
                     session.ToggleInspect()
                     Rebuild()
@@ -259,7 +265,7 @@ class DevToolsCell : Cell {
         children.Add(
             Text{
                 Key: "tree-count",
-                Content: "Elements " + elementCount.ToString(),
+                Content: elementCount == 1 ? "1 element": elementCount.ToString() + " elements",
                 Color: theme.MutedTextColor,
                 TextWrap: TextWrap.NoWrap,
             }
@@ -332,8 +338,15 @@ class DevToolsCell : Cell {
             }
             path.Add(row.Node)
             levels.Add(List[TreeNode]())
+            let parts = List[string]()
             if row.Node.TypeName != row.Node.DisplayName {
-                typeNames[row.Node.Id] = row.Node.TypeName
+                parts.Add(row.Node.TypeName)
+            }
+            if row.Node.Key != "" {
+                parts.Add("#" + row.Node.Key)
+            }
+            if parts.Count > 0 {
+                typeNames[row.Node.Id] = String.Join(" ", parts)
             }
         }
         while path.Count > 0 {
@@ -371,7 +384,7 @@ class DevToolsCell : Cell {
                     }
                     Rebuild()
                 },
-                SelectedId: session.SelectedNodeId,
+                SelectedId: session.SelectedNode().Id,
                 OnSelect: (id string) -> {
                     session.SelectNode(id)
                     Rebuild()
@@ -413,41 +426,74 @@ class DevToolsCell : Cell {
         if node.Id == "" {
             return EmptyState{Title: "No root"}.Build()
         }
-        let layout = session.ActiveTab == DiagnosticDetailsTab.Layout
+        let fields = Fields(node)
         let items = List[PropertyGridItem]()
-        if layout {
-            AddFields(items, "", node.Layout)
-            AddRow(items, "", "Display scale", session.SelectedWindow().Scale)
-        } else {
-            AddRow(items, "", "Type", node.TypeName)
-            AddRow(items, "", "Component", node.CellName)
-            AddRow(items, "", "Key", node.Key)
-            AddRow(items, "", "Bounds", node.Bounds)
-            AddFields(items, "", node.Properties)
-            AddFields(items, "Computed", node.Computed)
-            AddFields(items, "State", node.State)
-            AddFields(items, "Events", node.Events)
-            AddFields(items, "Accessibility", node.Accessibility)
-            AddFields(items, "Changes", node.Changes)
-        }
         let details = List[Blob]()
+        let text = node.TypeName == "Text"
+        details.Add(BoxDiagram(fields, theme))
+        let border = Box(fields, "borderBox")
+        AddValue(items, "Layout", "Position", Number(border[0]) + ", " + Number(border[1]), false, theme)
+        AddValue(items, "Layout", "Size", Number(border[2]) + " × " + Number(border[3]), false, theme)
+        if (fields.GetValueOrDefault("overflowX", "") + fields.GetValueOrDefault("overflowY", "")).Contains("Scroll") {
+            AddValue(
+                items,
+                "Layout",
+                "Scroll",
+                fields.GetValueOrDefault("scrollOffset", "") + " of " + fields.GetValueOrDefault("contentSize", ""),
+                false,
+                theme
+            )
+        }
+        AddSet(items, "Layout", fields, LayoutNames, text, theme)
+        AddSet(items, "Style", fields, StyleNames, text, theme)
+        AddValue(
+            items,
+            "Interaction",
+            "State",
+            Flags(fields, []string{"hovered", "pressed", "focused", "disabled", "focusable"}),
+            false,
+            theme
+        )
+        AddValue(
+            items,
+            "Interaction",
+            "Handles",
+            Flags(fields, []string{"hasClickHandler", "hasPointerHandlers", "hasKeyboardHandlers"}),
+            false,
+            theme
+        )
+        AddValue(items, "Interaction", "Accessible as", Accessible(fields), false, theme)
+        AddFields(items, "Changes", node.Changes, theme)
+        let sections = List[string]()
+        for item in items {
+            if !sections.Contains(item.Section) && !collapsedSections.Contains(item.Section) {
+                sections.Add(item.Section)
+            }
+        }
         details.Add(
             PropertyGrid{
                 Items: items.ToArray(),
                 Layout: PropertyGridLayout.Compact,
-                ExpandedSectionIds: expandedSections.ToArray(),
+                ExpandedSectionIds: sections.ToArray(),
                 OnSectionExpandedChange: (section string, expanded bool) -> {
-                    expandedSections.Remove(section)
-                    if expanded {
-                        expandedSections.Add(section)
+                    collapsedSections.Remove(section)
+                    if !expanded {
+                        collapsedSections.Add(section)
                     }
                     Rebuild()
                 },
             }.Build()
         )
-        if !layout {
-            details.Add(BuildOverrides(theme))
-        }
+        details.Add(
+            ActionButton{
+                Content: showDefaults ? "Hide defaults": "Show defaults",
+                OnClick: () -> {
+                    showDefaults = !showDefaults
+                    Rebuild()
+                },
+            }.Build()
+        )
+        details.Add(BuildOverrides(theme))
         return Container{
             Key: "inspector",
             Width: Percent(100),
@@ -476,23 +522,14 @@ class DevToolsCell : Cell {
                         MaxLines: 1,
                         Trimming: TextTrimming.Ellipsis,
                     }.Build(),
+                    Typography{
+                        Content: Subtitle(node),
+                        Variant: TextVariant.Caption,
+                        Color: theme.MutedTextColor,
+                        MaxLines: 1,
+                        Trimming: TextTrimming.Ellipsis,
+                    }.Build(),
                 },
-                Cell.Mount[ToggleGroupInput, ToggleGroup](
-                    "inspector-tabs",
-                    ToggleGroupInput{
-                        Items: []ToggleOption{
-                            ToggleOption{Id: "tab-Properties", Label: "Properties"},
-                            ToggleOption{Id: "tab-Layout", Label: "Layout"},
-                        },
-                        SelectedIds: []string{layout ? "tab-Layout": "tab-Properties"},
-                        OnSelectionChange: (ids[]string) -> {
-                            let selected = ids.Length > 0 && ids[0] == "tab-Layout"
-                            session.SetTab(selected ? DiagnosticDetailsTab.Layout: DiagnosticDetailsTab.Configuration)
-                            Rebuild()
-                        },
-                        AccessibilityName: "Details view",
-                    }
-                ),
             },
             Container{
                 Key: "details-viewport",
@@ -511,48 +548,253 @@ class DevToolsCell : Cell {
         }
     }
 
-    private func AddFields(items List[PropertyGridItem], section string, text string) {
+    private func AddFields(items List[PropertyGridItem], section string, text string, theme Theme) {
         for field in text.Split("; ") {
             let separator = field.IndexOf(" = ")
             if separator <= 0 {
-                AddRow(items, section, section == "" ? "Value": section, field)
+                AddValue(items, section, section, field, false, theme)
             } else {
-                AddRow(
-                    items,
-                    section,
-                    Char.ToUpperInvariant(field[0]).ToString() + field.Substring(1, separator - 1),
-                    field.Substring(separator + 3)
-                )
+                let label = Char.ToUpperInvariant(field[0]).ToString() + field.Substring(1, separator - 1)
+                AddValue(items, section, label, field.Substring(separator + 3), false, theme)
             }
         }
     }
 
-    private func AddRow(items List[PropertyGridItem], section string, label string, value string) {
-        if value == "" {
+    private func Fields(node DiagnosticTreeNode) Dictionary[string, string] {
+        let fields = Dictionary[string, string]()
+        for text in[]string{node.Properties, node.Computed, node.Layout, node.State, node.Events, node.Accessibility} {
+            for field in text.Split("; ") {
+                let separator = field.IndexOf(" = ")
+                if separator > 0 {
+                    fields[field.Substring(0, separator)] = field.Substring(separator + 3)
+                }
+            }
+        }
+        return fields
+    }
+
+    private func Subtitle(node DiagnosticTreeNode) string {
+        let parts = List[string]()
+        if node.TypeName != node.DisplayName {
+            parts.Add(node.TypeName)
+        }
+        if node.Key != "" {
+            parts.Add("#" + node.Key)
+        }
+        if node.CellName != "" {
+            parts.Add(node.CellName)
+        }
+        return String.Join(" · ", parts)
+    }
+
+    private func AddSet(
+        items List[PropertyGridItem],
+        section string,
+        fields Dictionary[string, string],
+        names string,
+        text bool,
+        theme Theme
+    ) {
+        for name in names.Split(' ') {
+            let value = fields.GetValueOrDefault(name, "")
+            let unset = value == "" || value.Replace("unset", "").Replace(",", "") == ""
+            let muted = unset || DefaultValues.Contains(";" + name + "=" + value + ";")
+            if (showDefaults || !muted) && (text || !TextNames.Contains(";" + name + ";")) {
+                let label = Char.ToUpperInvariant(name[0]).ToString() + name.Substring(1)
+                let shown = unset ? "unset": name.EndsWith("Color") ? Hex(value): Compact(value)
+                AddValue(items, section, label, shown, muted, theme)
+            }
+        }
+    }
+
+    private func AddValue(
+        items List[PropertyGridItem],
+        section string,
+        label string,
+        value string,
+        muted bool,
+        theme Theme
+    ) {
+        if value == "" || items.Exists((item PropertyGridItem) -> item.Id == section + ":" + label) {
             return
         }
-        let theme = Theme.Read()
-        let unset = value.Replace("unset", "").Replace(",", "") == ""
+        let content = Text{
+            Content: value,
+            FontFamily: theme.MonoFontFamily,
+            FontSize: theme.CodeFontSize,
+            Color: muted ? theme.FaintTextColor: theme.TextColor,
+            TextWrap: TextWrap.Wrap,
+        }
         items.Add(
             PropertyGridItem{
                 Id: section + ":" + label,
                 Label: label,
-                Section: unset ? "Unset": section,
-                Editor: Text{
-                    Content: value,
-                    FontFamily: theme.MonoFontFamily,
-                    FontSize: theme.CodeFontSize,
-                    Color: unset ? theme.FaintTextColor: theme.TextColor,
-                    TextWrap: TextWrap.Wrap,
-                },
+                Section: section,
+                Editor: value.StartsWith("#") ? Container{
+                    FlexDirection: FlexDirection.Row,
+                    AlignItems: AlignItems.Center,
+                    Gap: theme.Spacing,
+                    Container{
+                        Width: theme.CodeFontSize,
+                        Height: theme.CodeFontSize,
+                        BorderRadius: theme.RadiusSm!!,
+                        BorderWidth: theme.BorderWidth,
+                        BorderColor: theme.StrongBorderColor,
+                        BackgroundColor: Swatch(value),
+                    },
+                    content,
+                }: content,
             }
         )
+    }
+
+    private func Compact(value string) string {
+        let parts = value.Replace("px", "").Split(",")
+        return Array.TrueForAll(parts, (part string) -> part == parts[0]) ? parts[0]: String.Join(" ", parts)
+    }
+
+    private func Flags(fields Dictionary[string, string], names[]string) string {
+        let labels = List[string]()
+        for name in names {
+            if fields.GetValueOrDefault(name, "").Equals("true", StringComparison.OrdinalIgnoreCase) {
+                labels.Add(
+                    name.StartsWith("has") ? name
+                        .Substring(3)
+                        .Replace("Handlers", "")
+                        .Replace("Handler", ""): Char
+                        .ToUpperInvariant(name[0]).ToString() + name.Substring(1)
+                )
+            }
+        }
+        return String.Join(", ", labels)
+    }
+
+    private func Accessible(fields Dictionary[string, string]) string {
+        let role = fields.GetValueOrDefault("role", "")
+        if role == "" {
+            return ""
+        }
+        if fields.GetValueOrDefault("hidden", "").Equals("true", StringComparison.OrdinalIgnoreCase) {
+            return role + ", hidden"
+        }
+        let name = fields.GetValueOrDefault("name", "")
+        let parts = List[string]([]string{name == "" ? role: role + " \"" + name + "\""})
+        for key in[]string{"description", "value", "checked", "selected", "expanded", "required", "invalid", "busy"} {
+            let value = fields.GetValueOrDefault(key, "")
+            if value != "" && value != "Unspecified" && !value.Equals("false", StringComparison.OrdinalIgnoreCase) {
+                parts.Add(key + " " + value)
+            }
+        }
+        return String.Join(", ", parts)
+    }
+
+    private func Hex(value string) string {
+        let parts = value.Split(",")
+        if parts.Length != 4 {
+            return value
+        }
+        var text = "#"
+        for i in 0 ... (parts[3] == "1" ? 3: 4) {
+            text += Channel(parts[i]).ToString("X2")
+        }
+        return text
+    }
+
+    private func Swatch(hex string) Color {
+        let value = Convert.ToUInt32(hex.Substring(1).PadRight(8, 'F'), 16)
+        return Color.Rgba(
+            int32(value >> 24),
+            int32((value >> 16) & 255u),
+            int32((value >> 8) & 255u),
+            int32(value & 255u)
+        )
+    }
+
+    private func Channel(text string) int32 -> int32(
+        Math.Round(Double.Parse(text, CultureInfo.InvariantCulture) * 255.0)
+    )
+
+    private func Box(fields Dictionary[string, string], name string)[]float64 {
+        let result = [4]float64
+        let parts = fields
+            .GetValueOrDefault(name, "")
+            .Replace("·", " ")
+            .Replace("×", " ")
+            .Replace(",", " ")
+            .Split(" ", StringSplitOptions.RemoveEmptyEntries)
+        for i in 0 ... Math.Min(4, parts.Length) {
+            result[i] = Double.Parse(parts[i], CultureInfo.InvariantCulture)
+        }
+        return result
+    }
+
+    private func Number(value float64) string -> Math.Round(value, 1).ToString(CultureInfo.InvariantCulture)
+
+    private func BoxDiagram(fields Dictionary[string, string], theme Theme) Blob {
+        let content = Box(fields, "contentBox")
+        let paddingBox = Box(fields, "paddingBox")
+        let borderBox = Box(fields, "borderBox")
+        let size = Container{
+            AlignItems: AlignItems.Center,
+            Padding: theme.Spacing,
+            BackgroundColor: theme.InfoFillColor,
+            BorderRadius: theme.RadiusSm!!,
+        }
+        size.Add(
+            Text{
+                Content: Number(content[2]) + " × " + Number(content[3]),
+                FontFamily: theme.MonoFontFamily,
+                FontSize: theme.CodeFontSize,
+                Color: theme.TextColor,
+            }
+        )
+        let padding = BoxLayer("padding", paddingBox, content, size, theme.SuccessFillColor, theme)
+        let border = BoxLayer("border", borderBox, paddingBox, padding, theme.SunkenColor, theme)
+        let margin = BoxLayer("margin", Box(fields, "marginBox"), borderBox, border, theme.WarningFillColor, theme)
+        margin.Key = "box-diagram"
+        return margin
+    }
+
+    private func BoxLayer(label string, outer[]float64, inner[]float64, child Blob, fill Color, theme Theme) Container {
+        let edge = (value float64) -> Text{
+            Content: Math.Abs(value) < 0.05 ? "–": Number(value),
+            FontFamily: theme.MonoFontFamily,
+            FontSize: theme.CodeFontSize,
+            Color: theme.MutedTextColor,
+        }
+        return Container{
+            Padding: Edges{Left: theme.Spacing, Right: theme.Spacing, Bottom: theme.Spacing / 2.0},
+            BackgroundColor: fill,
+            BorderWidth: theme.BorderWidth,
+            BorderColor: theme.StrongBorderColor,
+            BorderRadius: theme.RadiusSm!!,
+            Container{
+                FlexDirection: FlexDirection.Row,
+                Container{
+                    FlexGrow: 1.0,
+                    FlexBasis: 0,
+                    Text{Content: label, FontSize: theme.CodeFontSize, Color: theme.MutedTextColor},
+                },
+                edge(inner[1] - outer[1]),
+                Container{FlexGrow: 1.0, FlexBasis: 0},
+            },
+            Container{
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                Gap: theme.Spacing,
+                edge(inner[0] - outer[0]),
+                Container{FlexGrow: 1.0, child},
+                edge(outer[0] + outer[2] - inner[0] - inner[2]),
+            },
+            Container{AlignItems: AlignItems.Center, edge(outer[1] + outer[3] - inner[1] - inner[3])},
+        }
     }
 
     private func BuildOverrides(theme Theme) Blob {
         let entry = TextField{
             Value: session.OverrideText,
             Controlled: true,
+            Placeholder: "BackgroundColor = #18212A",
             AccessibilityName: "Style override",
             Width: Percent(100),
             OnChange: (value string) -> {
@@ -563,7 +805,7 @@ class DevToolsCell : Cell {
         entry.Key = "override-entry"
         let apply = ActionButton{
             Content: "Apply",
-            Disabled: !session.IsSample && !session.Capabilities.RuntimeOverrides,
+            Disabled: session.OverrideText == "" || !session.IsSample && !session.Capabilities.RuntimeOverrides,
             OnClick: () -> {
                 session.ApplyOverride()
                 Rebuild()
@@ -637,6 +879,7 @@ class DevToolsCell : Cell {
         let capture = ActionButton{
             Content: "Capture",
             Leading: MaterialIcons.Create("screenshot_monitor", 18.0),
+            Disabled: !session.IsSample && session.State != DiagnosticConnectionState.Connected,
             OnClick: () -> {
                 session.CaptureScreenshot()
                 Rebuild()
@@ -661,6 +904,19 @@ class DevToolsCell : Cell {
         rows.MinHeight = 0
         rows.FlexGrow = 1.0
         rows.OverflowY = Overflow.Scroll
+        let body Blob = if showCaptures && session.Screenshots.Count == 0 {
+            Container{
+                Key: "captures-empty",
+                Height: 0,
+                MinHeight: 0,
+                FlexGrow: 1.0,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.Center,
+                EmptyState{Title: "No captures", Description: "Select Capture to record the selected window."}.Build(),
+            }
+        } else {
+            rows
+        }
         return Container{
             Key: "activity",
             Width: Percent(100),
@@ -680,7 +936,7 @@ class DevToolsCell : Cell {
                 Padding: theme.Spacing * 2.0,
                 Children: header,
             },
-            rows,
+            body,
         }
     }
 

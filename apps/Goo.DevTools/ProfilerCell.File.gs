@@ -15,13 +15,14 @@ internal partial class ProfilerCell {
     private var filePath string = ""
     private var fileStatus string = ""
     private var fileBusy bool
-    private let fileLifetime CancellationTokenSource = CancellationTokenSource()
+    private let lifetime CancellationTokenSource = CancellationTokenSource()
     private var fileGeneration int32
 
     public func Dispose() {
         fileGeneration++
-        fileLifetime.Cancel()
-        fileLifetime.Dispose()
+        nestGeneration++
+        lifetime.Cancel()
+        lifetime.Dispose()
     }
 
     private func ShowFile(action string) {
@@ -94,7 +95,7 @@ internal partial class ProfilerCell {
             Rebuild()
             fileGeneration++
             let generation = fileGeneration
-            let token = fileLifetime.Token
+            let token = lifetime.Token
             go CompleteBrowse(task, window, generation, token)
         } catch (error Exception) {
             fileBusy = false
@@ -155,7 +156,7 @@ internal partial class ProfilerCell {
             Rebuild()
             fileGeneration++
             let generation = fileGeneration
-            let token = fileLifetime.Token
+            let token = lifetime.Token
             go {
                 try {
                     using let cancellation = CancellationTokenSource.CreateLinkedTokenSource(token, window.Closed)

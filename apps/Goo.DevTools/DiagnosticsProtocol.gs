@@ -30,16 +30,6 @@ enum DiagnosticMessageKind {
     Error;
 }
 
-enum DiagnosticDetailsTab {
-    Configuration;
-    Computed;
-    Layout;
-    State;
-    Events;
-    Accessibility;
-    Changes;
-}
-
 data struct DiagnosticProtocolVersion {
     var Major int32
     var Minor int32
@@ -380,7 +370,6 @@ class DiagnosticSession {
     private var selectedNodeId string
     private var query string
     private var inspecting bool
-    private var activeTab DiagnosticDetailsTab
     private var screenshotSequence int32
     private var logSequence int64
     private var overrideText string
@@ -402,8 +391,7 @@ class DiagnosticSession {
         selectedWindowId = "main-window"
         selectedNodeId = "root"
         query = ""
-        activeTab = DiagnosticDetailsTab.Configuration
-        overrideText = "BackgroundColor = #18212A"
+        overrideText = ""
         pendingOverrideAction = ""
         hoveredNodeId = ""
         seedWindows()
@@ -420,8 +408,7 @@ class DiagnosticSession {
         selectedWindowId = ""
         selectedNodeId = ""
         query = ""
-        activeTab = DiagnosticDetailsTab.Configuration
-        overrideText = "BackgroundColor = #18212A"
+        overrideText = ""
         pendingOverrideAction = ""
         hoveredNodeId = ""
         if seedSample {
@@ -447,9 +434,6 @@ class DiagnosticSession {
     }
     prop Inspecting bool {
         get -> inspecting
-    }
-    prop ActiveTab DiagnosticDetailsTab {
-        get -> activeTab
     }
     prop SelectedWindowId string {
         get -> selectedWindowId
@@ -573,10 +557,6 @@ class DiagnosticSession {
         AppendLog(DiagnosticWire.Clock(), "debug", "inspector", "Cleared remote selection")
     }
 
-    func SetTab(tab DiagnosticDetailsTab) {
-        activeTab = tab
-    }
-
     func SetOverrideText(value string) {
         overrideText = if value == nil {
             ""
@@ -597,7 +577,7 @@ class DiagnosticSession {
             AppendLog(DiagnosticWire.Clock(), "debug", "override", "Target does not advertise runtime overrides")
             return
         }
-        let nodeId = DiagnosticWire.Escape(selectedNodeId)
+        let nodeId = DiagnosticWire.Escape(SelectedNode().Id)
         let value = DiagnosticWire.Escape(overrideText)
         let sent = SendRequest("override", "{\"nodeId\":\"" + nodeId + "\",\"value\":\"" + value + "\"}")
         if !sent {
@@ -622,14 +602,14 @@ class DiagnosticSession {
             AppendLog(DiagnosticWire.Clock(), "debug", "override", "Target does not advertise runtime overrides")
             return
         }
-        let sent = SendRequest("reset", "{\"nodeId\":\"" + DiagnosticWire.Escape(selectedNodeId) + "\"}")
+        let sent = SendRequest("reset", "{\"nodeId\":\"" + DiagnosticWire.Escape(SelectedNode().Id) + "\"}")
         if !sent {
             AppendLog(DiagnosticWire.Clock(), "error", "override", "Reset request could not be sent")
             return
         }
         if transport.IsSample {
             overrideActive = false
-            overrideText = "BackgroundColor = #18212A"
+            overrideText = ""
             AppendLog(DiagnosticWire.Clock(), "debug", "override", "Cleared temporary runtime style")
         } else {
             pendingOverrideAction = "reset"
@@ -989,7 +969,7 @@ class DiagnosticSession {
         if message.Command == "reset" || message.Command == "property.reset" {
             pendingOverrideAction = ""
             overrideActive = false
-            overrideText = "BackgroundColor = #18212A"
+            overrideText = ""
             AppendLog(DiagnosticWire.Clock(), "debug", "override", "Cleared temporary runtime style")
             return
         }
@@ -1041,13 +1021,6 @@ class DiagnosticSession {
             hoveredNodeId = snapshot.HoveredId
         }
         EnsureSelection()
-        AppendLog(
-            DiagnosticWire.Clock(),
-            "info",
-            "protocol",
-            "Snapshot received: "
-            + CountNodes().ToString() + " nodes, " + windows.Count.ToString() + " windows"
-        )
     }
 
     private func ApplyDelta(snapshot DiagnosticWireSnapshot) {
@@ -1457,31 +1430,6 @@ class DiagnosticSession {
         if selectedNodeId != "" && FindNode(selectedNodeId) == nil {
             selectedNodeId = SelectedWindow().Root.Id
         }
-    }
-
-    private func CountNodes() int32 {
-        var count int32
-        for window in windows {
-            count = count + CountNodesIn(window.Root)
-        }
-        return count
-    }
-
-    private func CountNodesIn(node DiagnosticTreeNode) int32 {
-        let visited = HashSet[string]()
-        return CountNodesIn(node, visited)
-    }
-
-    private func CountNodesIn(node DiagnosticTreeNode, visited HashSet[string]) int32 {
-        if node.Id == "" || visited.Contains(node.Id) {
-            return 0
-        }
-        visited.Add(node.Id)
-        var count int32 = 1
-        for child in node.Children {
-            count = count + CountNodesIn(child, visited)
-        }
-        return count
     }
 
     func SelectedWindow() DiagnosticWindow {

@@ -636,8 +636,8 @@ class DiagnosticWire {
             AppendField(builder, "gap", ScalarField(root, []string{"gap"}))
             AppendField(builder, "rowGap", ScalarField(root, []string{"rowGap"}))
             AppendField(builder, "columnGap", ScalarField(root, []string{"columnGap"}))
-            AppendField(builder, "scrollOffset", ObjectText(root, []string{"scrollOffset"}))
-            AppendField(builder, "contentSize", ObjectText(root, []string{"contentSize"}))
+            AppendField(builder, "scrollOffset", PairText(root, "scrollOffset", ", "))
+            AppendField(builder, "contentSize", PairText(root, "contentSize", " × "))
             return builder.ToString()
         }
 
@@ -743,6 +743,16 @@ class DiagnosticWire {
                 }
             }
             return ""
+        }
+
+        private func PairText(root JsonElement, name string, separator string) string {
+            guard let value = Element(root, []string{name}) else {
+                return ""
+            }
+            if value.ValueKind != JsonValueKind.Object {
+                return ScalarField(root, []string{name})
+            }
+            return MetricField(value, []string{"x"}) + separator + MetricField(value, []string{"y"})
         }
 
         private func CapabilityText(root JsonElement, payload JsonElement) string {

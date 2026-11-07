@@ -315,7 +315,9 @@ internal partial class ProfilerTrace {
 
     internal func PrepareLanes() {
         for lane in Lanes {
-            lane.Prepare(Records)
+            if lane.Group == "Markers" || lane.Group == "Memory" {
+                lane.Prepare(Records)
+            }
         }
         Revision++
     }
@@ -474,8 +476,14 @@ internal partial class ProfilerTrace {
             lanesByKey.Add(key, lane)
             Lanes.Add(lane)
         }
+        if lane.Records.Count > 0 {
+            let last = Records[lane.Records[lane.Records.Count - 1]]
+            lane.Dirty = lane.Dirty ||
+                last.Ticks > record.Ticks ||
+                last.Ticks == record.Ticks &&
+                last.EndTicks < record.EndTicks
+        }
         lane.Records.Add(index)
-        lane.Dirty = true
     }
 
     private func ResourceLaneName(record ProfilerRecord) string {
@@ -527,7 +535,8 @@ internal partial class ProfilerTrace {
             }
             return ResourceName(record.ResourceKind)
         }
-        return record.Name != "" ? record.Name: record.Category == 0 ? PhaseName(record.Event): record.Source
+        return record.Category == 0 && record.Source == "cpu.phase" ? PhaseName(record.Event)
+        : record.Name != "" ? record.Name: record.Category == 0 ? PhaseName(record.Event): record.Source
     }
 
     internal func PhaseName(index int32) string -> index >= 0 &&
