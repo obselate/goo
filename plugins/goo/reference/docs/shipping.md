@@ -2,7 +2,7 @@
 
 ## Publish
 
-From the [starter app](../README.md#quick-start) directory:
+From the [starter app](../README.md#use) directory:
 
 ```sh
 dotnet publish -c Release -r linux-x64 --self-contained true -o publish

@@ -1,28 +1,12 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/obselate/goo/main/docs/assets/goo-readme-banner.gif" alt="Goo" width="1200">
-</p>
+![Goo Widgets Gallery](docs/assets/goo-gallery.png)
 
-<p align="center">A declarative retained GUI framework for .NET. Written in <a href="https://github.com/DavidObando/gsharp">G#</a>, a .NET language, and rendered directly with Vulkan.</p>
+A retained .NET GUI framework in [G#](https://github.com/DavidObando/gsharp), rendered with Vulkan.
 
-![Goo Widgets Gallery showing workspace settings in a property grid](docs/assets/goo-gallery.png)
+[![CI](https://img.shields.io/github/actions/workflow/status/obselate/goo/ci.yml?branch=main)](https://github.com/obselate/goo/actions/workflows/ci.yml) [![NuGet](https://img.shields.io/nuget/v/Goo)](https://www.nuget.org/packages/Goo/) [![MIT](https://img.shields.io/github/license/obselate/goo)](LICENSE)
 
-Learn G# with the [language tour](https://davidobando.github.io/gsharp/docs/tour/) and [editor support](https://github.com/DavidObando/gsharp#editor-support).
+## Use
 
-<p align="center">
-  <a href="https://github.com/obselate/goo/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/obselate/goo/ci.yml?branch=main&amp;style=flat-square&amp;label=ci" alt="CI status"></a>
-  <a href="https://www.nuget.org/packages/Goo/"><img src="https://img.shields.io/nuget/v/Goo?style=flat-square" alt="NuGet version"></a>
-  <a href="https://github.com/obselate/goo/blob/main/LICENSE"><img src="https://img.shields.io/github/license/obselate/goo?style=flat-square" alt="MIT license"></a>
-</p>
-
-## Quick start
-
-### Create a NuGet app
-
-Install [.NET SDK 10.0.403 or a later 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
-Check with `dotnet --list-sdks`. Use Vulkan 1.3 with timeline semaphores,
-synchronization2 and dynamic rendering. Linux requires native Wayland, not X11
-or XWayland. Windows x64 and macOS arm64 are also supported.
-See [platform requirements](#platforms), then:
+Requires [.NET SDK 10.0.403+](https://dotnet.microsoft.com/download/dotnet/10.0), Vulkan 1.3 and native Wayland on Linux. [Platform requirements](docs/platform-preflight.md).
 
 ```sh
 dotnet new install Goo.Templates
@@ -32,85 +16,22 @@ cd HelloGoo
 goo dev
 ```
 
-The template restores the G# compiler from NuGet automatically.
-`goo dev` runs the app with hot reload. See [edit and inspect](docs/edit-and-inspect.md).
-
-### Build from source
-
-Use the [contributor guide](CONTRIBUTING.md) for source builds and the Gallery.
-Contributor commands start with `dotnet run --project tools/Goo.Repo --`.
-
-## Packages
-
-Applications reference `Goo`. The starter already includes it.
-Install other packages separately as needed.
-
-| Package | Purpose | Install |
-| --- | --- | --- |
-| [Goo](https://www.nuget.org/packages/Goo/) | UI framework, renderer, images, gestures, native dialogs and menus, notifications, printing, rich text clipboard, spell checking, desktop instance hosting, and native runtime assets | `dotnet add package Goo` |
-| [Goo.Android](https://www.nuget.org/packages/Goo.Android/) | Android host, printing, and spell checking | `dotnet add package Goo.Android` |
-| [Goo.Audio](https://www.nuget.org/packages/Goo.Audio/) | Audio playback | `dotnet add package Goo.Audio` |
-| [Goo.Accessibility](https://www.nuget.org/packages/Goo.Accessibility/) | Desktop native accessibility adapters | `dotnet add package Goo.Accessibility` |
-| [Goo.DevTools](https://www.nuget.org/packages/Goo.DevTools/) | [CLI and graphical inspector](docs/devtools/README.md), launched with `goo dev` and `goo inspector` | `dotnet tool install --global Goo.DevTools` |
-| [Goo.Templates](https://www.nuget.org/packages/Goo.Templates/) | [Create starter projects](templates/Goo.Templates/README.md) with `dotnet new goo` | `dotnet new install Goo.Templates` |
-
-Add library packages from your application directory. Run `goo snapshot` to read
-the live UI or `goo inspector` to open the graphical inspector.
-
-Remove references to `Goo.AppHost`, `Goo.Gestures`, `Goo.Images`, `Goo.NativeDialogs`,
-`Goo.NativeMenus`, `Goo.Notifications`, `Goo.Printing`, `Goo.RichText`, `Goo.SpellCheck`, and `Goo.SpellCheck.Hunspell`
-when upgrading to the consolidated `Goo` package. Remove `Goo.Printing.Android`
-and `Goo.SpellCheck.Android` when upgrading `Goo.Android`. Keep existing namespace
-imports and type names. The old package IDs no longer publish. System services
-and native libraries load only when used. Hunspell includes no library or dictionaries.
-
-## Goo Extras
-
-Goo core supplies primitives. Use optional libraries for widgets and animation composition:
-
-| Package | Purpose | Install |
-| --- | --- | --- |
-| [Goo Widgets](https://github.com/obselate/goo-widgets/) | Pre-built UI widgets | `dotnet add package Goo.Widgets` |
-| [Goo Animations](https://github.com/obselate/goo-animations/) | A library for Animation and Motion factories | `dotnet add package Goo.Animations` |
-
 ## Example
 
-The Goo.Templates app:
-
 ```gsharp
-package CounterApp
+package GooStarter
 
 import Goo
-
-shared class StarterTheme {
-    public let Padding Edges = 24
-    public let Gap Length = 12
-    public let ButtonPadding Edges = 10
-    public let Radius Length = 10
-    public let FontSize Length = 24
-    public let Background Color = Color.Rgb(24, 31, 43)
-    public let Accent Color = Color.Rgb(74, 125, 255)
-    public let Foreground Color = Color.White
-}
 
 class Counter : Cell {
     private var count int32
 
     override func Build() Blob -> Container{
         Width: Percent(100),
-        Height: Percent(100),
-        Padding: StarterTheme.Padding,
-        Gap: StarterTheme.Gap,
-        BackgroundColor: StarterTheme.Background,
-        Text{Content: "Count: $count", FontSize: StarterTheme.FontSize, Color: StarterTheme.Foreground},
+        Text{Content: "Count: $count"},
         Button{
-            Padding: StarterTheme.ButtonPadding,
-            BorderRadius: StarterTheme.Radius,
-            BackgroundColor: StarterTheme.Accent,
-            OnClick: () -> {
-                count++
-            },
-            Text{Content: "Add one", Color: StarterTheme.Foreground},
+            OnClick: () -> { count++ },
+            Text{Content: "Add one"},
         },
     }
 }
@@ -121,92 +42,19 @@ func Main() {
 }
 ```
 
-Continue with [Get started](docs/getting-started.md), then
-[edit and inspect](docs/edit-and-inspect.md). The [app-author documentation index](docs/README.md)
-links core, widgets, assets, shipping and plugin guides with their version baselines.
-
-Core concepts:
-
-- `Blob` is a UI primitive. Core adds behavior that cannot be composed, plus the semantic `Button`.
-- `Cell` owns UI state, identity, and rebuilding. Input callbacks rebuild their owning Cell, so the template button only changes `count`.
-
-Compose reusable UI with functions and methods. Use `with` to override properties:
+## Build from source
 
 ```sh
-dotnet add package Goo.Widgets
+git clone https://github.com/obselate/goo.git
+cd goo
+dotnet run --project tools/Goo.Repo -- check gestures
 ```
 
-```gsharp
-import Goo.Widgets.Actions
-let baseButton = ActionButton{Height: 38.0, MinWidth: 112.0, OnClick: () -> { },}
+[Contributing](CONTRIBUTING.md)
 
-let primaryButton = baseButton with{Content = "Primary",}
+## AI plugin
 
-let successButton = baseButton with{
-    Content = "Success",
-    BackgroundColor = Color.Parse("#166534"),
-    TextColor = Color.Parse("#fafafa"),
-    HoverBackgroundColor = Color.Parse("#15803d"),
-    ActiveBackgroundColor = Color.Parse("#14532d"),
-}
+- Codex: `codex plugin marketplace add obselate/goo && codex plugin add goo@obselate-goo`
+- OMP, from the source checkout: `omp plugin link ./plugins/goo`
 
-let disabledButton = baseButton with{Content = "Disabled", Disabled = true,}
-
-let buttons = Container{
-    primaryButton.Build(),
-    successButton.Build(),
-    disabledButton.Build(),
-}
-```
-
-Direct children and spreads use `Add` in source order. 
-See the [native authoring guide](docs/native-authoring.md) for composition, typed Cell inputs, and current language conventions.
-
-## Platforms
-
-Check [platform preflight and troubleshooting](docs/platform-preflight.md)
-before creating or distributing an app.
-
-Goo ships runtime assets for Windows x64, Linux x64, macOS arm64, Android ARM64,
-and Android x64. The renderer requires Vulkan 1.3 with timeline semaphores,
-synchronization2 and dynamic rendering.
-
-- Windows x64 is tested on Windows 11 with current vendor Vulkan drivers. The
-  minimum supported Windows version is not yet established.
-- Linux x64 requires Linux 6.6 or newer, glibc 2.27 or newer, a native Wayland
-  1.18 or newer session, and a TrueType or OpenType sans-serif font. X11 and
-  XWayland are not supported.
-- macOS arm64 requires macOS 14 or newer on Apple silicon. Goo bundles
-  MoltenVK 1.4.2 and selects installed Apple system fonts without requiring a
-  Vulkan SDK.
-
-- Android requires Android 13 (API 33) or newer and a Vulkan 1.3 device with
-  identity presentation support. The `Goo.Android` adapter hosts the same
-  application in an Android activity or native view. See
-  [Android integration](docs/android.md).
-
-### Custom shaders
-
-Goo includes the ShaderEffect build adapter and authoring modules. Install these
-third-party tools only when the project contains `<GooShaderEffect>` items:
-
-| Platform | Slang 2026.16 | Vulkan SDK 1.4.357.0 with `spirv-val` |
-| --- | --- | --- |
-| Linux x64 | [Download `.tar.gz`](https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-linux-x86_64-glibc-2.27.tar.gz) | [Download `.tar.xz`](https://sdk.lunarg.com/sdk/download/1.4.357.0/linux/vulkan_sdk.tar.xz) |
-| Windows x64 | [Download `.zip`](https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-windows-x86_64.zip) | [Download installer](https://sdk.lunarg.com/sdk/download/1.4.357.0/windows/vulkan_sdk.exe) |
-| macOS arm64 | [Download `.tar.gz`](https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-macos-aarch64.tar.gz) | [Download `.zip`](https://sdk.lunarg.com/sdk/download/1.4.357.0/mac/vulkan_sdk.zip) |
-
-Set `SLANG_SDK` and `VULKAN_SDK` to the extracted or installed SDK roots. Goo
-also accepts `slangc` and `spirv-val` on `PATH`.
-
-## Further reading
-
-- [Ship a desktop app](docs/shipping.md)
-- [API documentation](https://github.com/obselate/goo/tree/main/docs/api)
-- [DevTools](https://github.com/obselate/goo/tree/main/docs/devtools)
-- [Goo agent plugin for Codex and OMP](plugins/goo/README.md)
-- [Shader effects](https://github.com/obselate/goo/blob/main/docs/api/rendering.md#apply-fragment-shaders-to-retained-elements)
-- [Testing and verification](https://github.com/obselate/goo/blob/main/tests/README.md)
-- [Production desktop and mobile priorities](docs/production-readiness.md)
-- [Contributing and source builds](https://github.com/obselate/goo/blob/main/CONTRIBUTING.md)
-- [Release notes](https://github.com/obselate/goo/blob/main/CHANGELOG.md)
+[Docs](docs/README.md) · [API reference](docs/api/README.md) · [License](LICENSE)

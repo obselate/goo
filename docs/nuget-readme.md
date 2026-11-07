@@ -29,7 +29,7 @@ The generated counter runs with hot reload. A separate SDL or HarfBuzz
 installation is not required.
 
 Custom `<GooShaderEffect>` source needs the
-[shader tools](https://github.com/obselate/goo#custom-shaders).
+[shader tools](https://github.com/obselate/goo/blob/main/docs/platform-preflight.md#custom-shaders).
 
 ## Example
 
