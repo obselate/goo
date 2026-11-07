@@ -101,7 +101,7 @@ public partial class Window {
 
   private func requireUiThread(operation string) {
     if uiThreadBound && Environment.CurrentManagedThreadId != ownerThreadId {
-      throw InvalidOperationException(operation + " must run on the window owner thread")
+      throw InvalidOperationException("$operation ran on thread ${Environment.CurrentManagedThreadId} instead of window owner thread $ownerThreadId: use Window.TryPost to change Cell state and call Rebuild on the UI thread (Goo best practices rule 7).")
     }
   }
 

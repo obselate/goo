@@ -82,6 +82,7 @@ internal sealed class VirtualNodeState {
 
   internal var Context ContextFrame?
   internal var Owner Window?
+  internal var DeclaringCell Cell?
   private var contextReader ContextReader?
   private var contextDirty bool
   private var contextVersion int64
@@ -295,7 +296,7 @@ internal sealed class VirtualNodeState {
         contextReader?.Cancel()
         rethrow
       }
-      guard let selected = state else { throw InvalidOperationException("VirtualSource.State returned nil") }
+      guard let selected = state else { throw InvalidOperationException("${source.GetType().Name}.State returned nil: return a VirtualState instance for this Virtual element.") }
       return realize(n, selected, items)
     } finally { ContextEnvironment.Current = previousContext }
   }
@@ -557,8 +558,15 @@ internal sealed class VirtualNodeState {
 
   internal func Add(item VirtualItem) {
     let key = item.Key
-    if String.IsNullOrEmpty(key) { throw InvalidOperationException("Virtual item keys must be nonempty") }
-    if next.ContainsKey(key) { throw InvalidOperationException("Virtual item keys must be unique") }
+    if String.IsNullOrEmpty(key) {
+      throw InvalidOperationException("Missing virtual item key in ${DeclaringCell?.GetType().Name ?? "<no Cell>"}.Build, ${pending?.GetType().Name}.Realize item ${item.Index}: assign a stable nonempty key to every VirtualItem (Goo best practices rule 10).")
+    }
+    if next.ContainsKey(key) {
+      let childType = if let content = item.Content {
+        if content is CellElement { content.CellType.Name } else { content.GetType().Name }
+      } else { next[key].ComponentType?.Name ?? "retained content" }
+      throw InvalidOperationException("Duplicate virtual item key '$key' in ${DeclaringCell?.GetType().Name ?? "<no Cell>"}.Build, ${pending?.GetType().Name}.Realize item ${item.Index} ($childType): assign a stable unique key to each VirtualItem (Goo best practices rule 10).")
+    }
     if !Double.IsFinite(item.X) || !Double.IsFinite(item.Y) { throw InvalidOperationException("Virtual item position must be finite") }
     var placement = VirtualPlacement{
       Index: item.Index,
@@ -587,7 +595,7 @@ internal sealed class VirtualNodeState {
       same = sameVirtualPlacement(previous.Placement, placement)
       componentType ??= previous.ComponentType
     } else {
-      if item.Content == nil { throw InvalidOperationException("Virtual item without content is not mounted") }
+      if item.Content == nil { throw InvalidOperationException("Virtual item '$key' at index ${item.Index} in ${pending?.GetType().Name}.Realize has no mounted content: supply Content when the key is first realized.") }
       marker = VirtualRetainedBlob(key)
     }
     next.Add(key, VirtualEntry{ Marker: marker, Placement: placement, ComponentType: componentType })
@@ -699,7 +707,7 @@ left.Index == right.Index && left.X == right.X && left.Y == right.Y
 internal func virtualItem(item Blob, key string) Blob {
   if let authored = item.Key {
     if authored != key {
-      throw InvalidOperationException("Virtual item content has a key that differs from the item key")
+      throw InvalidOperationException("Virtual item '$key' has ${item.GetType().Name} content keyed '$authored': remove the content key or make it equal to the VirtualItem key.")
     }
   } else {
     item.SetVirtualKey(key)
