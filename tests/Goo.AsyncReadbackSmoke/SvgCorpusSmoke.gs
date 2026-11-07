@@ -32,17 +32,19 @@ func RunSvgCorpusSmoke() {
         }
         try {
             window.Open()
-            WindowReadbackTestFixture.ForceRender(window, 0.0)
+            WindowReadbackTestFixture.ForceRender(window, 0.0, timeoutSeconds: 10.0)
             for sample in 0 ... 4 {
                 WindowReadbackTestFixture.ForceRender(window, if sample == 0 { 0.0 } else { 0.25 })
                 let metrics = WindowReadbackTestFixture.Metrics(window)
                 let frame = PrimitiveReadback(window, metrics)
-                let file = name + "." + sample.ToString() + ".rgba"
+                let file = name + "." + sample.ToString() + ".png"
                 let pixels = frame.Pixels
-                File.WriteAllBytes(Path.Combine(output, file), pixels)
+                using let image = ImageSource.Transfer(int32(frame.Width), int32(frame.Height), pixels, () -> {})
+                File.WriteAllBytes(Path.Combine(output, file), image.EncodePng())
                 if let expectedDirectory = baseline {
-                    let expected = File.ReadAllBytes(Path.Combine(expectedDirectory, file))
-                    Require(expected.SequenceEqual(pixels), "SVG corpus pixels differ: " + file)
+                    using let expected = RasterImageDecoder.DecodeIconPng(File.ReadAllBytes(Path.Combine(expectedDirectory, file)))
+                    Require(uint32(expected.Width) == frame.Width && uint32(expected.Height) == frame.Height
+                        && expected.Pixels.SequenceEqual(pixels), "SVG corpus pixels differ: " + file)
                 }
                 Console.WriteLine(file + " " + frame.Width.ToString() + "x" + frame.Height.ToString()
                     + " " + Convert.ToHexString(SHA256.HashData(pixels)))
