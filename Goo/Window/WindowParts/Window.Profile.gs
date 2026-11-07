@@ -225,7 +225,7 @@ internal class FrameProfiler {
   }
 
   internal func RecordTrace(stage FrameProfileStage, start FrameProfilePoint,
-    end FrameProfilePoint, result int32 = 0) {
+    end FrameProfilePoint, result int32 = 0, cellType Type? = nil) {
     if let current = FrameRecorder.Current {
       if activeTraceId != current.TraceId { return }
       let point = if (stage == FrameProfileStage.Frame || stage == FrameProfileStage.Events) && frameStart.Ticks > 0L {
@@ -235,7 +235,7 @@ internal class FrameProfiler {
       }
       current.Duration(uint64(int32(stage)), 0uL, context, point.Ticks, end.Ticks,
         end.Bytes - point.Bytes, result, source: if stage == FrameProfileStage.Paint { "target.render" } else { "cpu.phase" },
-        gcPauseTicks: Math.Max(0L, end.PauseTicks - point.PauseTicks))
+        gcPauseTicks: Math.Max(0L, end.PauseTicks - point.PauseTicks), name: cellType?.Name)
     }
   }
 

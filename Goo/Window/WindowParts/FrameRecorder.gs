@@ -146,7 +146,8 @@ internal partial class FrameRecorder {
         bytes int64? = nil,
         result int32 = 0,
         source string? = nil,
-        gcPauseTicks int64? = nil
+        gcPauseTicks int64? = nil,
+        name string? = nil
     ) {
         if start < Origin || end < start {
             return
@@ -166,6 +167,7 @@ internal partial class FrameRecorder {
                 AllocatedBytes: bytes,
                 GcPauseTicks: gcPauseTicks,
                 Result: result,
+                Name: name,
                 Source: source
             }
         )
