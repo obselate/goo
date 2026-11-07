@@ -165,7 +165,7 @@ func RetainedEqualityOpen(root RetainedEqualityCell, host EmbeddedSmokeHost, wid
     }
     host.CreateNative()
     host.AttachPresentation()
-    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    WindowReadbackTestFixture.ForceRender(window, 0.0, 10.0)
     if root.Step >= 3 && !root.GeometryOnly {
         let box = root.HoverTarget.BorderBox
         WindowReadbackTestFixture.InputQueuePointerMove(window, box.X + 8, box.Y + 8)

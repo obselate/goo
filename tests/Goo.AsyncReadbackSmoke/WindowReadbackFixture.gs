@@ -859,6 +859,8 @@ public partial class Window {
     return uint64(target.ReadbackResidentResourceBytes)
   }
 
+  internal prop PresentationAcceptedIndexForTest uint64 { get -> acceptedFrameIndex }
+
   internal func SetForceFullRedrawForTest(value bool) {
     VulkanTargetForTest()?.SetForceFullRedrawForTest(value)
   }
@@ -1186,7 +1188,7 @@ internal class WindowReadbackTestFixture {
 
     internal func ForceRender(window Window, dt float64,
       timeoutSeconds float64 = 2.0) {
-        let baseline = window.FrameSubmissionSerialsForTest()
+        let baseline = window.PresentationAcceptedIndexForTest
         window.ForceRenderForTest(dt)
         let deadline = Stopwatch.GetTimestamp()
         +int64(float64(Stopwatch.Frequency) * timeoutSeconds)
@@ -1194,9 +1196,7 @@ internal class WindowReadbackTestFixture {
         while Stopwatch.GetTimestamp() < deadline {
           SdlRuntime.PumpEvents(Int32.MaxValue)
           window.PollQueueCompletionForTest()
-          let current = window.FrameSubmissionSerialsForTest()
-          accepted = current.Slot0Serial != baseline.Slot0Serial
-            || current.Slot1Serial != baseline.Slot1Serial
+          accepted = window.PresentationAcceptedIndexForTest != baseline
           let pending = window.RuntimeQueueWorkPendingForTest()
           if accepted && !pending {
             return
