@@ -47,7 +47,7 @@ func Main() {
 ```sh
 git clone https://github.com/obselate/goo.git
 cd goo
-dotnet run --project tools/Goo.Repo -- check gestures
+dotnet run --project tools/Goo.Repo -- build
 ```
 
 [Contributing](CONTRIBUTING.md)
