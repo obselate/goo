@@ -186,6 +186,18 @@ Check the SDK, project, runtime and inspector.
 | `--json` | Write success and errors as JSON on stdout. |
 | `--help`, `-h` | Show command help. |
 
+## audit
+
+```sh
+goo audit [path]
+```
+
+Check .gs files for app best-practice violations. Exit 1 means hits.
+
+| Option | Meaning |
+| --- | --- |
+| `--help`, `-h` | Show command help. |
+
 ## package
 
 ```sh
