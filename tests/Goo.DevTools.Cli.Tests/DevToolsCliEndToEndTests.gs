@@ -18,6 +18,47 @@ import Xunit
 
 class DevToolsCliEndToEndTests {
     @Fact
+    async func AuditAcceptsTheCleanStarterAndSkipsBuildOutput() {
+        using let directory = TemporaryDirectory.Create()
+        File.Copy(Path.Combine(RepositoryRoot, "templates/Goo.Templates/content/Program.gs"), Path.Combine(directory.Path, "Program.gs"))
+        Directory.CreateDirectory(Path.Combine(directory.Path, "obj"))
+        await File.WriteAllTextAsync(Path.Combine(directory.Path, "obj", "Generated.gs"), "Task.Run(work)")
+        await File.WriteAllTextAsync(Path.Combine(directory.Path, "Ignored.cs"), "Task.Run(work)")
+        let result = await RunCliAsync(directory.Path, "audit", directory.Path)
+        Assert.Equal(0, result.ExitCode)
+        Assert.Empty(result.StandardOutput)
+        Assert.Empty(result.StandardError)
+    }
+
+    @Theory
+    @InlineData("Program.gs", "work.Wait()", 1)
+    @InlineData("Program.gs", "Task.Run(work)", 2)
+    @InlineData("Program.gs", "System.Threading.Timer(callback)", 7)
+    @InlineData("Views/Main.gs", "Color.Rgb(0, 0, 0)", 6)
+    @InlineData("App/Views/Regions/Main.gs", "File.ReadAllText(path)", 4)
+    @InlineData("Program.gs", "OnKeyDown: handler", 15)
+    async func AuditReportsTheRuleAndSourceLine(fileName string, source string, rule int32) {
+        using let directory = TemporaryDirectory.Create()
+        let file = Path.Combine(directory.Path, fileName)
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!!)
+        await File.WriteAllTextAsync(file, "\n$source\n")
+        let result = await RunCliAsync(directory.Path, "audit", directory.Path)
+        Assert.Equal(1, result.ExitCode)
+        Assert.StartsWith("${Path.GetRelativePath(RepositoryRoot, file)}:2: rule $rule: ", result.StandardOutput)
+        Assert.Single(result.StandardOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        Assert.Empty(result.StandardError)
+    }
+
+    @Fact
+    async func AuditLimitsViewRulesToViewSources() {
+        using let directory = TemporaryDirectory.Create()
+        await File.WriteAllTextAsync(Path.Combine(directory.Path, "Program.gs"), "Color.Rgb(0, 0, 0)\nFile.ReadAllText(path)")
+        let result = await RunCliAsync(directory.Path, "audit", directory.Path)
+        Assert.Equal(0, result.ExitCode)
+        Assert.Empty(result.StandardOutput)
+    }
+
+    @Fact
     async func CommandHelpUsesTheParserOptions() {
         using let directory = TemporaryDirectory.Create()
         let explicitHelp = await RunCliAsync(directory.Path, "help", "input")

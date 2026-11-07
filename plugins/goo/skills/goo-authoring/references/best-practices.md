@@ -243,12 +243,18 @@ GOO_FRAME_PROFILE=1 goo dev --project App.gsproj
 - A high `build` phase means expensive Cell builds. A high `reconcile` phase can also come from style resolution or diff work. Check `build`, `style_resolve` and `diff` before you change the rebuild scope.
 - Test every text field without editing binding setup: type, Backspace, Delete, Left, Right, Up, Down, PageUp, PageDown, Ctrl+Left, Ctrl+Right, Ctrl+Backspace, Ctrl+Delete, Home, End, Ctrl+Home, Ctrl+End, Shift+movement, Ctrl+A, Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y, Enter, KeypadEnter, Escape, Tab and Shift+Tab. On macOS use Cmd for primary shortcuts and Option for word movement and deletion. Check submit versus newline and focus traversal versus indentation. Repeat in each dialog.
 
-Find violations before review:
+Run `goo audit [path]` before review. The default path is the current directory.
+It prints one line per matching rule and source line.
 
-```sh
-rg -n --glob '*.gs' 'Task\.Run|Thread\(|ThreadPool|ContinueWith|GetAwaiter\(\)\.GetResult|\.Wait\(\)|Thread\.Sleep|System\.Threading\.Timer'
-rg -n --glob '**/Views/**/*.gs' 'Color\.(Rgb|Parse)|"#[0-9a-fA-F]{6}|File\.|Directory\.|HttpClient|Process\.Start'
-rg -n --glob '*.gs' 'WidgetKeyBindings\.Editing|OnKeyDown|OnTextInput'
-```
+Partial best-practice check for rules 1, 2, 4, 6, 7 and 15 by text pattern. Exit 1 means hits. Exit 0 does not verify the other rules, including cancellation, stale results, virtualization, Build cost and idle rendering. They need review and runtime measurement.
+
+| Rule | Files | Pattern | Message |
+| --- | --- | --- | --- |
+| 1 | `*.gs` | `GetAwaiter\(\)\.GetResult\|\.Wait\(\)\|Thread\.Sleep` | Do not block the UI thread. |
+| 2 | `*.gs` | `Task\.Run\|Thread\(\|ThreadPool\|ContinueWith` | Use go and scope for background work. |
+| 7 | `*.gs` | `System\.Threading\.Timer` | Post background timer results through Window.TryPost. |
+| 6 | `**/Views/**/*.gs` | `Color\.(Rgb\|Parse)\|"#[0-9a-fA-F]{6}` | Use theme tokens in views. |
+| 4 | `**/Views/**/*.gs` | `File\.\|Directory\.\|HttpClient\|Process\.Start` | Move I/O from views into services. |
+| 15 | `*.gs` | `WidgetKeyBindings\.Editing\|OnKeyDown\|OnTextInput` | Use built-in text editing unless this is a deliberate field override. |
 
 Threading and structure hits are defects. Fix them with Background work and App structure. Review keyboard hits: remove redundant editing setup and check that custom handlers do not block built-in editing except for a deliberate field override.

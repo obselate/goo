@@ -8,9 +8,11 @@ import System.Globalization
 import System.IO
 import System.Linq
 import System.Net.Sockets
+import System.Reflection
 import System.Runtime.InteropServices
 import System.Text.Json
 import System.Text.Json.Nodes
+import System.Text.RegularExpressions
 import System.Threading
 import System.Threading.Tasks
 import SystemObject = System.Object
@@ -136,6 +138,7 @@ internal shared class CliApplication {
                 case "inspector": await RunInspectorAsync(commandLine)
                 case "attach": await RunAttachAsync(commandLine)
                 case "doctor": await RunDoctorAsync(commandLine)
+                case "audit": RunAudit(commandLine)
                 case "package": await PackageApplication.RunAsync(
                     commandLine,
                     ResolveProject(commandLine.Get("project")) ??
@@ -166,6 +169,52 @@ internal shared class CliApplication {
             WriteError(args, exception.Message, "io-error", "operation", false)
             return 1
         }
+    }
+
+    private data class AuditRule(Number int32, Files Regex, Pattern Regex, Message string) { }
+
+    private func RunAudit(commandLine CommandLine) int32 {
+        let path = Path.GetFullPath(commandLine.Positionals.FirstOrDefault() ?? Environment.CurrentDirectory)
+        if !Directory.Exists(path) {
+            throw CliException("Audit directory does not exist: $path")
+        }
+        using let resource = Assembly.GetExecutingAssembly().GetManifestResourceStream(
+            "Goo.DevTools.Cli.BestPractices"
+        )!!
+        using let reader = StreamReader(resource)
+        let rules = List[AuditRule]()
+        while reader.ReadLine() is {} line {
+            let fields = line.Trim('|', ' ').Split(" | ")
+            if fields.Length != 4 || !Int32.TryParse(fields[0], out var number) {
+                continue
+            }
+            let pattern = fields[1].Trim('`')
+            let glob = if pattern.Contains('/') { pattern } else { "**/$pattern" }
+            let files = Regex.Escape(glob).Replace("\\*\\*/", "(?:.*/)?").Replace("\\*", "[^/]*")
+            rules.Add(AuditRule(number, Regex("^" + files + "$"), Regex(fields[2].Trim('`').Replace("\\|", "|")), fields[3]))
+        }
+        if rules.Count == 0 {
+            throw CliException("No audit rules were found in the bundled best practices.")
+        }
+        var hits = false
+        for file in Directory.EnumerateFiles(path, "*.gs", SearchOption.AllDirectories).OrderBy(x -> x) {
+            let relative = Path.GetRelativePath(path, file).Replace('\\', '/')
+            if relative.Split('/').Any(x -> x == "bin" || x == "obj" || x.StartsWith('.')) {
+                continue
+            }
+            let applicable = rules.Where(x -> x.Files.IsMatch(relative)).ToArray()
+            var lineNumber = 0
+            for line in File.ReadLines(file) {
+                lineNumber++
+                for rule in applicable {
+                    if rule.Pattern.IsMatch(line) {
+                        Console.WriteLine("${Path.GetRelativePath(Environment.CurrentDirectory, file)}:$lineNumber: rule ${rule.Number}: ${rule.Message}")
+                        hits = true
+                    }
+                }
+            }
+        }
+        return if hits { 1 } else { 0 }
     }
 
     private func ValidateArguments(commandLine CommandLine) {

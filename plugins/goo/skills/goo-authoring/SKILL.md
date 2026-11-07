@@ -19,6 +19,10 @@ For a new app, `goo_starter` returns the official project, counter source, sourc
 
 Read [app best practices](references/best-practices.md) before you write or review app code. It sets the threading, app structure, component reuse, keyboard and text input, rebuild, virtualization and frame-time rules.
 
+After each edit, run `goo audit` from the project directory and fix its hits.
+For deliberate field key overrides, review rule 15 hits against the best practices.
+Then run the project build and inspect the changed UI.
+
 Goo is a retained desktop UI framework, not HTML/CSS or Sandbox panels:
 
 - Build immutable Blob descriptions in `Cell.Build`. Keep local state in Cell fields. Mount fixed children with `Cell.Mount[TCell]()`. Use keys when siblings can be inserted, removed, or reordered. Keyed and unkeyed siblings can mix. Unkeyed identity uses the absolute sibling index and never matches a keyed entry.

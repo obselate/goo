@@ -186,6 +186,18 @@ Check the SDK, project, runtime and inspector.
 | `--json` | Write success and errors as JSON on stdout. |
 | `--help`, `-h` | Show command help. |
 
+## audit
+
+```sh
+goo audit [path]
+```
+
+Partial best-practice check for rules 1, 2, 4, 6, 7 and 15 by text pattern. Exit 1 means hits. Exit 0 does not verify the other rules, including cancellation, stale results, virtualization, Build cost and idle rendering. They need review and runtime measurement.
+
+| Option | Meaning |
+| --- | --- |
+| `--help`, `-h` | Show command help. |
+
 ## package
 
 ```sh
