@@ -1,6 +1,12 @@
 # Changelog
 
 
+## 0.28.6 - 2026-11-07
+
+### Fixed
+
+- Realize deferred virtual rows before the next render when queue work completes during a window pump.
+
 ## 0.28.5 - 2026-11-07
 
 ### Fixed
