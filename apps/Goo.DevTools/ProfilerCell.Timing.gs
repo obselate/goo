@@ -198,7 +198,7 @@ internal partial class ProfilerCell {
             }
             labels++
             let r = trace.Records[bar.Record]
-            let name = LaneTitle(trace.EventName(r))
+            let name = ScopeTitle(trace, r)
             shapes.Add(
                 Text{
                     Key: "bar-" + bar.Record.ToString(),
@@ -312,7 +312,7 @@ internal partial class ProfilerCell {
             BoxShadow: theme.ElevationMd,
             HitTestSelf: false,
             Text{
-                Content: LaneTitle(trace.EventName(r)),
+                Content: ScopeTitle(trace, r),
                 FontFamily: theme.FontFamily,
                 FontSize: theme.FontSize,
                 FontWeight: 600,

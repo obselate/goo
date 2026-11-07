@@ -1268,7 +1268,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
         } else {
             rows.Add(
                 Text{
-                    Content: LaneTitle(trace.EventName(r)),
+                    Content: ScopeTitle(trace, r),
                     FontFamily: theme.FontFamily,
                     FontSize: theme.FontSize,
                     FontWeight: 600,
@@ -1505,6 +1505,11 @@ internal partial class ProfilerCell : Cell, IDisposable {
     private func X(tick int64) float64 -> float64(tick - start) / float64(Math.Max(1L, end - start)) * PlotWidth()
 
     private func Tick(x float64) int64 -> start + int64(Math.Clamp(x / PlotWidth(), 0.0, 1.0) * float64(end - start))
+
+    private func ScopeTitle(trace ProfilerTrace, r ProfilerRecord) string {
+        let name = trace.EventName(r)
+        return r.Name != "" && r.Name != name ? LaneTitle(name) + " · " + r.Name: LaneTitle(name)
+    }
 
     shared {
         private func LaneTitle(name string) string {

@@ -535,7 +535,8 @@ internal partial class ProfilerTrace {
             }
             return ResourceName(record.ResourceKind)
         }
-        return record.Name != "" ? record.Name: record.Category == 0 ? PhaseName(record.Event): record.Source
+        return record.Category == 0 && record.Source == "cpu.phase" ? PhaseName(record.Event)
+        : record.Name != "" ? record.Name: record.Category == 0 ? PhaseName(record.Event): record.Source
     }
 
     internal func PhaseName(index int32) string -> index >= 0 &&
