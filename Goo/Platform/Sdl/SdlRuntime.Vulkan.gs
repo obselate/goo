@@ -73,7 +73,11 @@ internal unsafe partial class SdlRuntime {
         try {
           let path = if pathStorage == nint(0) { nil } else { *uint8(pathStorage) }
           if !SDL.VulkanLoadLibrary(path) {
-            return false
+            let error = SDL.GetErrorS()
+            if NoVulkanDevices() {
+              throw InvalidOperationException(VulkanWindowTarget.NoUsableDriverMessage())
+            }
+            throw InvalidOperationException("SDL Vulkan loader initialization failed: " + error)
           }
         } finally {
           if pathStorage != nint(0) {
@@ -127,6 +131,39 @@ internal unsafe partial class SdlRuntime {
           throw error
         }
       }
+    }
+
+    private func NoVulkanDevices() bool {
+      let libraryName = if OperatingSystem.IsWindows() { "vulkan-1.dll" }
+        else if OperatingSystem.IsMacOS() { "libMoltenVK.dylib" }
+        else { "libvulkan.so.1" }
+      var library nint = nint(0)
+      if !NativeLibrary.TryLoad(libraryName, out library) { return true }
+      try {
+        let createAddress = NativeLibrary.GetExport(library, "vkCreateInstance")
+          as (unmanaged[Cdecl](*VkInstanceCreateInfo, *VkAllocationCallbacks, *VkInstance) -> VkResult)?
+        if createAddress == nil { return false }
+        let create = createAddress
+        var info = VkInstanceCreateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO }
+        var instance VkInstance = nint(0)
+        let result = create(&info, nil, &instance)
+        if result == VkConstants.VK_ERROR_INCOMPATIBLE_DRIVER { return true }
+        if result != VkConstants.VK_SUCCESS { return false }
+        let destroyAddress = NativeLibrary.GetExport(library, "vkDestroyInstance")
+          as (unmanaged[Cdecl](VkInstance, *VkAllocationCallbacks) -> void)?
+        if destroyAddress == nil { return false }
+        let destroy = destroyAddress
+        try {
+          let enumerateAddress = NativeLibrary.GetExport(library, "vkEnumeratePhysicalDevices")
+            as (unmanaged[Cdecl](VkInstance, *uint32, *VkPhysicalDevice) -> VkResult)?
+          if enumerateAddress == nil { return false }
+          let enumerate = enumerateAddress
+          var count uint32 = 0u
+          let enumerated = enumerate(instance, &count, nil)
+          return enumerated == VkConstants.VK_ERROR_INITIALIZATION_FAILED
+            || (enumerated == VkConstants.VK_SUCCESS && count == 0u)
+        } finally { destroy(instance, nil) }
+      } finally { NativeLibrary.Free(library) }
     }
 
     internal func GetVulkanGetInstanceProcAddress() nint {

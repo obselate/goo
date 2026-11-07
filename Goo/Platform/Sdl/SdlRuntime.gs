@@ -231,14 +231,14 @@ internal unsafe partial class SdlRuntime {
           if requiresWayland && !SDL.SetHintWithPriority(
             SDL.SDL_HINT_VIDEO_DRIVER, "wayland", SDLHintPriority.Override) {
               throw PlatformNotSupportedException(
-                "Goo requires native Wayland on Linux, but SDL rejected the Wayland video driver selection.")
+                "Goo requires native Wayland on Linux, but SDL rejected the Wayland video driver selection. Log in to a native Wayland session. X11 and XWayland are not supported.")
             }
           SDL.SetHint(SDL.SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1")
           if !SDL.InitSubSystem(requiredSubsystems) {
             if requiresWayland {
               throw PlatformNotSupportedException(
                 "Goo requires native Wayland on Linux. SDL could not initialize the Wayland video driver: " +
-                SDL.GetErrorS())
+                SDL.GetErrorS() + ". Log in to a native Wayland session. X11 and XWayland are not supported.")
             }
             throw InvalidOperationException("SDL_InitSubSystem failed: " + SDL.GetErrorS())
           }
@@ -250,7 +250,7 @@ internal unsafe partial class SdlRuntime {
             let driver = SDL.GetCurrentVideoDriverS()
             SDL.QuitSubSystem(requiredSubsystems)
             throw PlatformNotSupportedException(
-              "Goo requires native Wayland on Linux, but SDL initialized '" + driver + "'.")
+              "Goo requires native Wayland on Linux, but SDL initialized '" + driver + "'. Log in to a native Wayland session. X11 and XWayland are not supported.")
           }
           wakeEventType = SDL.RegisterEvents(1)
           if wakeEventType == 0u || wakeEventType == uint32.MaxValue {
