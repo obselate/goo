@@ -408,10 +408,11 @@ internal unsafe func RunProductionTextReadback(effects bool) {
       guard let image = pixels else { throw TimeoutException("Caption text capture timed out") }
       var topCoverage int32 = 0
       for y in 0 ... int32(image.Height) {
+        var rowCoverage int32 = 0
         for x in 0 ... int32(image.Width) {
-          topCoverage += int32(image.Pixels[y * int32(image.RowBytes) + x * 4])
+          rowCoverage += int32(image.Pixels[y * int32(image.RowBytes) + x * 4])
         }
-        if topCoverage > 0 { break }
+        topCoverage = Math.Max(topCoverage, rowCoverage)
       }
       if topCoverage < 8 * 255 {
         throw InvalidOperationException("Caption T and 7 top strokes disappeared: coverage=$topCoverage")
