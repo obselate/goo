@@ -9,6 +9,8 @@ Use .NET 10 and the G# SDK selected by the template.
 
 ## Learn in order
 
+[Tutorials](tutorials/README.md)
+
 1. [Platform preflight](platform-preflight.md) checks the host requirements.
 2. [Create and run the counter](../README.md#use) uses NuGet, not a source build.
 3. [After the counter](getting-started.md) adds a second Cell, typed fields,
