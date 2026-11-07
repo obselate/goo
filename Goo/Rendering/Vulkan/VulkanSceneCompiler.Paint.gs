@@ -837,6 +837,14 @@ internal partial class VulkanSceneCompiler {
         let ancestorBounds = NodeBounds(ancestor)
         let clip = PaddingEdgeBounds(ancestor, ancestorBounds)
         if (!clipsX && !clipsY) || clip.IsEmpty { continue }
+        let overshoot = MathF.Max(
+          clipsX ? MathF.Max(clip.X - ring.X, ring.Right - clip.Right) : 0.0F,
+          clipsY ? MathF.Max(clip.Y - ring.Y, ring.Bottom - clip.Bottom) : 0.0F)
+        let outset = MathF.Min(MathF.Min(bounds.X - ring.X, bounds.Y - ring.Y),
+          MathF.Min(ring.Right - bounds.Right, ring.Bottom - bounds.Bottom))
+        if overshoot > 0.0F && outset > 0.0F {
+          ring = ring.Inflate(-MathF.Min(overshoot, outset))
+        }
         let left = clipsX ? MathF.Max(ring.X, clip.X) : ring.X
         let top = clipsY ? MathF.Max(ring.Y, clip.Y) : ring.Y
         let right = clipsX ? MathF.Min(ring.Right, clip.Right) : ring.Right
