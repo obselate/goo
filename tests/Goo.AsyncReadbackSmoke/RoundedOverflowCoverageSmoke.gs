@@ -222,4 +222,53 @@ func RunRoundedOverflowCoverageSmoke() {
   Require(WindowReadbackTestFixture.ResidentResourceBytes(opened) == 0uL,
     "Rounded overflow gate resources remain resident after close")
   ReadbackValidateCommonDiagnostics(capturedError.ToString())
+  RunFocusOutlineClipSmoke()
+}
+
+class FocusOutlineClipCell : Cell {
+  override func Build() Blob -> Container() {
+    .Width: Percent(100), .Height: Percent(100), .BackgroundColor: Color.Black,
+    Container() {
+      .Position: PositionType.Absolute, .Left: 16, .Top: 16, .Width: 128, .Height: 64,
+      .BorderRadius: 12, .Overflow: Overflow.Hidden, .BackgroundColor: Color.Rgb(40, 40, 40),
+      Container{
+        Width: 64, Height: 32, Focusable: true,
+        Focus: Style{OutlineWidth: 2, OutlineOffset: 2, OutlineColor: Color.Rgb(255, 32, 128)},
+      },
+    },
+  }
+}
+
+func RunFocusOutlineClipSmoke() {
+  let opened = Window{
+    Title: "Goo focus outline clip gate", Width: 160, Height: 96,
+    VSync: false, Decorated: false, Root: FocusOutlineClipCell(),
+  }
+  try {
+    opened.Open()
+    WindowReadbackTestFixture.ForceRender(opened, 0.0, 10.0)
+    opened.PlatformInput.KeyPress(Key.Tab, KeyModifiers{})
+    opened.PlatformInput.KeyRelease(Key.Tab)
+    WindowReadbackTestFixture.ForceRender(opened, 0.0166666666666667, 10.0)
+    let metrics = WindowReadbackTestFixture.Metrics(opened)
+    ReadbackRequestReadbackUntilAccepted(opened,
+      uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
+    ReadbackAwaitReadbackReady(opened, 10000)
+    let frame = ReadbackTakeReadback(opened)
+    let samples = []Point{Point{X: 48, Y: 17}, Point{X: 17, Y: 32}, Point{X: 20, Y: 20}}
+    for point in samples {
+      let pixel = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, point.X, point.Y)
+      Require(pixel[0] >= uint8(200) && pixel[1] <= uint8(96),
+        "Rounded overflow clipped the focus outline at " + point.X.ToString() + "," + point.Y.ToString()
+          + ": " + PrimitivePixelText(pixel))
+    }
+    let outside = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 82, 32)
+    Require(outside[0] <= uint8(64), "Clipped focus outline extends past its control: " + PrimitivePixelText(outside))
+    Console.WriteLine("focus-outline-clip-smoke: visible=3")
+  } finally {
+    if opened.IsOpen {
+      opened.RequestClose()
+      WindowReadbackTestFixture.ForceRender(opened, 0.0)
+    }
+  }
 }

@@ -816,28 +816,72 @@ internal partial class VulkanSceneCompiler {
     bounds ConservativeBounds,
     opacity float32,
     transformIndex int32) {
-      let outlineBounds = OutlineBounds(node, bounds)
-      if outlineBounds.IsEmpty || opacity <= 0.0F {
+      var ring = OutlineBounds(node, bounds)
+      if ring.IsEmpty || opacity <= 0.0F {
         return
       }
+      var clipTopLeft = 0.0F
+      var clipTopRight = 0.0F
+      var clipBottomRight = 0.0F
+      var clipBottomLeft = 0.0F
+      var fitX = true
+      var fitY = true
+      var current = node
+      while (fitX || fitY) && !current.IsPortal && !current.HasVisualTransform {
+        guard let ancestor = current.Parent else { break }
+        current = ancestor
+        fitX = fitX && maxScrollX(ancestor) <= 0.0F && ancestor.ScrollX == 0.0F
+        fitY = fitY && maxScrollY(ancestor) <= 0.0F && ancestor.ScrollY == 0.0F
+        let clipsX = fitX && ancestor.OverflowX != Overflow.Visible
+        let clipsY = fitY && ancestor.OverflowY != Overflow.Visible
+        let ancestorBounds = NodeBounds(ancestor)
+        let clip = PaddingEdgeBounds(ancestor, ancestorBounds)
+        if (!clipsX && !clipsY) || clip.IsEmpty { continue }
+        let overshoot = MathF.Max(
+          clipsX ? MathF.Max(clip.X - ring.X, ring.Right - clip.Right) : 0.0F,
+          clipsY ? MathF.Max(clip.Y - ring.Y, ring.Bottom - clip.Bottom) : 0.0F)
+        let outset = MathF.Min(MathF.Min(bounds.X - ring.X, bounds.Y - ring.Y),
+          MathF.Min(ring.Right - bounds.Right, ring.Bottom - bounds.Bottom))
+        if overshoot > 0.0F && outset > 0.0F {
+          ring = ring.Inflate(-MathF.Min(overshoot, outset))
+        }
+        let left = clipsX ? MathF.Max(ring.X, clip.X) : ring.X
+        let top = clipsY ? MathF.Max(ring.Y, clip.Y) : ring.Y
+        let right = clipsX ? MathF.Min(ring.Right, clip.Right) : ring.Right
+        let bottom = clipsY ? MathF.Min(ring.Bottom, clip.Bottom) : ring.Bottom
+        if right <= left || bottom <= top { return }
+        ring = ConservativeBounds{ X: left, Y: top, Width: right - left, Height: bottom - top }
+        if clipsX && clipsY {
+          clipTopLeft = MathF.Max(clipTopLeft, ClipCornerRadius(PaddingEdgeRadius(ancestor,
+            ancestor.BorderTopLeftRadius, ancestor.BorderRadius, ancestorBounds, clip, true, true),
+            left - clip.X, top - clip.Y, Radius(node.BorderTopLeftRadius, node.BorderRadius, bounds)))
+          clipTopRight = MathF.Max(clipTopRight, ClipCornerRadius(PaddingEdgeRadius(ancestor,
+            ancestor.BorderTopRightRadius, ancestor.BorderRadius, ancestorBounds, clip, false, true),
+            clip.Right - right, top - clip.Y, Radius(node.BorderTopRightRadius, node.BorderRadius, bounds)))
+          clipBottomRight = MathF.Max(clipBottomRight, ClipCornerRadius(PaddingEdgeRadius(ancestor,
+            ancestor.BorderBottomRightRadius, ancestor.BorderRadius, ancestorBounds, clip, false, false),
+            clip.Right - right, clip.Bottom - bottom, Radius(node.BorderBottomRightRadius, node.BorderRadius, bounds)))
+          clipBottomLeft = MathF.Max(clipBottomLeft, ClipCornerRadius(PaddingEdgeRadius(ancestor,
+            ancestor.BorderBottomLeftRadius, ancestor.BorderRadius, ancestorBounds, clip, true, false),
+            left - clip.X, clip.Bottom - bottom, Radius(node.BorderBottomLeftRadius, node.BorderRadius, bounds)))
+        }
+      }
       let width = node.OutlineWidth.Px
-      let offset = node.OutlineOffset.Px
-      let amount = offset + width
       let color = EffectiveColor(node.OutlineColor, opacity)
       frame.AddPerEdgeBorder(PerEdgeBorderRecord{
-        Bounds: outlineBounds,
+        Bounds: ring,
         TopWidth: width,
         RightWidth: width,
         BottomWidth: width,
         LeftWidth: width,
-        RadiusTopLeft: OutlineRadius(node.BorderTopLeftRadius, node.BorderRadius,
-          bounds, amount),
-        RadiusTopRight: OutlineRadius(node.BorderTopRightRadius, node.BorderRadius,
-          bounds, amount),
-        RadiusBottomRight: OutlineRadius(node.BorderBottomRightRadius, node.BorderRadius,
-          bounds, amount),
-        RadiusBottomLeft: OutlineRadius(node.BorderBottomLeftRadius, node.BorderRadius,
-          bounds, amount),
+        RadiusTopLeft: MathF.Max(clipTopLeft, OutlineRadius(node.BorderTopLeftRadius,
+          node.BorderRadius, bounds, MathF.Min(bounds.X - ring.X, bounds.Y - ring.Y))),
+        RadiusTopRight: MathF.Max(clipTopRight, OutlineRadius(node.BorderTopRightRadius,
+          node.BorderRadius, bounds, MathF.Min(ring.Right - bounds.Right, bounds.Y - ring.Y))),
+        RadiusBottomRight: MathF.Max(clipBottomRight, OutlineRadius(node.BorderBottomRightRadius,
+          node.BorderRadius, bounds, MathF.Min(ring.Right - bounds.Right, ring.Bottom - bounds.Bottom))),
+        RadiusBottomLeft: MathF.Max(clipBottomLeft, OutlineRadius(node.BorderBottomLeftRadius,
+          node.BorderRadius, bounds, MathF.Min(bounds.X - ring.X, ring.Bottom - bounds.Bottom))),
         TopColor: color,
         RightColor: color,
         BottomColor: color,
@@ -846,6 +890,13 @@ internal partial class VulkanSceneCompiler {
         TransformIndex: transformIndex,
       })
     }
+
+  private func ClipCornerRadius(radius float32, x float32, y float32, own float32) float32 {
+    let centerX = radius - x - own
+    let centerY = radius - y - own
+    return centerX > 0.0F && centerY > 0.0F && centerX * centerX + centerY * centerY > radius * radius
+      ? radius - MathF.Min(x, y) : 0.0F
+  }
 
   private func OutlineBounds(node Node, bounds ConservativeBounds) ConservativeBounds {
     if node.Kind == NodeKind.Shape || !node.HasOutlineState
