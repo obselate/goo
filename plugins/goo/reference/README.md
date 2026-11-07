@@ -4,9 +4,7 @@
 
 <p align="center">A declarative retained GUI framework for .NET. Written in <a href="https://github.com/DavidObando/gsharp">G#</a>, a .NET language, and rendered directly with Vulkan.</p>
 
-![Goo Widgets Gallery showing theme colors, typography and controls](https://github.com/obselate/goo/blob/main/docs/assets/goo-gallery.png)
-
-Goo Widgets Gallery on native Wayland, captured at 1280 × 800 and scale 1.
+![Goo Widgets Gallery showing workspace settings in a property grid](https://github.com/obselate/goo/blob/main/docs/assets/goo-gallery.png)
 
 Learn G# with the [language tour](https://davidobando.github.io/gsharp/docs/tour/) and [editor support](https://github.com/DavidObando/gsharp#editor-support).
 
