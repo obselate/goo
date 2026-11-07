@@ -315,7 +315,7 @@ internal unsafe partial class VulkanWindowTarget {
         EndDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.Upload)
       }
       RecordDiagnosticUpload(uploadStart, uploadBytes)
-      if deferInitialPresentation {
+      if deferInitialPresentation || textRedrawPending {
         initialImageUploadFrame = uploadBytes != 0uL
         frameRendered = initialImageUploadFrame
         frameRenderDeferred = true
