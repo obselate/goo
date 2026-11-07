@@ -21,15 +21,13 @@ public partial class Window {
                 for name in scenes.Keys.Order(StringComparer.Ordinal) {
                     Console.WriteLine(name)
                 }
-            }
+            } else { Console.WriteLine("default") }
             return
         }
+        applyPreferences(PlatformPreferences{
+            Theme: Environment.GetEnvironmentVariable("GOO_RENDER_THEME") == "dark" ? SystemTheme.Dark : SystemTheme.Light
+        })
         var root = Root ?? throw InvalidOperationException("goo render requires a window Root")
-        let theme = if Environment.GetEnvironmentVariable("GOO_RENDER_THEME") == "dark" {
-            SystemTheme.Dark
-        } else {
-            SystemTheme.Light
-        }
         let scene = Environment.GetEnvironmentVariable("GOO_RENDER_SCENE") ?? ""
         if let scenes = Scenes {
             if scene != "" {
@@ -43,8 +41,8 @@ public partial class Window {
                 }
                 root = factory()
             }
-        } else if scene != "" {
-            throw ArgumentException("No scenes are registered on Window.Scenes")
+        } else if scene != "" && scene != "default" {
+            throw ArgumentException("Unknown scene '$scene'. Available scenes: default")
         }
         var renderWidth = Width
         var renderHeight = Height
@@ -62,11 +60,12 @@ public partial class Window {
             float32(renderHeight),
             checked(uint32(Math.Ceiling(renderWidth * scale))),
             checked(uint32(Math.Ceiling(renderHeight * scale))),
-            theme == SystemTheme.Dark ? Color.Rgb(24, 24, 24): Color.White,
+            Background,
             536870912
         )
         let creation = OffscreenRenderSession.Create()
         using let session = creation.Session ?? throw InvalidOperationException("Offscreen renderer: " + creation.Error)
+        session.Foreground = Foreground
         using let cancellation = CancellationTokenSource(TimeSpan.FromSeconds(30))
         let pending = session.RenderAsync(root, options, cancellation.Token)
         while !pending.IsCompleted {

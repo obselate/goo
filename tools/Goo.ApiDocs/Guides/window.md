@@ -376,8 +376,8 @@ goo diff frame.png reference.png --tolerance 2 --out difference.png
 `goo render` builds a project or runs an existing executable. `Window.Run` renders
 through `OffscreenRenderSession` instead of opening a window. No display or
 compositor is needed. Size defaults to the declared window size. Scale controls
-output pixels. Theme sets `Window.Preferences.Theme` and default page colors
-before the first build. Apps select their own theme tokens from that preference.
+output pixels. Theme sets `Window.Preferences.Theme` before the first build.
+It does not replace the app's colors. Apps that ignore theme render unchanged.
 The renderer waits for GPU image, path and text uploads. It does not wait for
 app services or advance app animations.
 
@@ -396,7 +396,8 @@ Window{
 `Scenes` is a read-only map of names to factories that return fresh, unattached
 Cells. Registration is NativeAOT-safe and uses no reflection. `--list` prints
 the registered names. Unknown scenes report the available names. Without
-`--scene`, render uses the window's root.
+`--scene`, render uses the window's root. Without a scene map, `default` is the
+only scene and renders `Window.Root`.
 `OffscreenRenderSession.Create()` also creates a surface-free session directly.
 Create, use and dispose it on the same thread.
 

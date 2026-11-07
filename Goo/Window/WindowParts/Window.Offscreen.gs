@@ -50,7 +50,6 @@ public partial class Window {
     offscreenViewport = Vector2(options.LogicalWidth, options.LogicalHeight)
     if let theme = Environment.GetEnvironmentVariable("GOO_RENDER_THEME") {
       applyPreferences(PlatformPreferences{Theme: theme == "dark" ? SystemTheme.Dark : SystemTheme.Light})
-      Foreground = theme == "dark" ? Color.White : Color.Black
     }
     UpdateTree()
   }
