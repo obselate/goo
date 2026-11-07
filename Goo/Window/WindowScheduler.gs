@@ -68,6 +68,7 @@ internal class WindowScheduler {
       closedVisibleWindow = closedVisibleWindow || wasVisible
       windows.RemoveAt(index)
       if windows.Count == 0 {
+        closedVisibleWindow = false
         nextWindow = 0
         nativeStarts?.Clear()
         nativeStarts = nil
@@ -178,6 +179,7 @@ internal class WindowScheduler {
         }
         var hasOpenWindow bool
         var hasVisibleWindow bool
+        var hasPendingService bool
         let now = float64(Stopwatch.GetTimestamp())
         var waitMs int32 = if (nativeStarts?.Count ?? 0) > 0 { 0 } else { DefaultWaitMs }
         var currentIndex int32
@@ -189,13 +191,16 @@ internal class WindowScheduler {
           }
           hasOpenWindow = true
           hasVisibleWindow = hasVisibleWindow || window.IsVisible
+          hasPendingService = hasPendingService || window.SchedulerHasImmediateService()
+            || window.SchedulerHasPendingQueueWork() || window.SchedulerStartupPending()
           let candidate = window.SchedulerWaitMs(now)
           if candidate < waitMs {
             waitMs = candidate
           }
           currentIndex = currentIndex + 1
         }
-        if !hasOpenWindow || (closedVisibleWindow && !hasVisibleWindow && TrayIcon.ActiveCount == 0) {
+        if !hasOpenWindow || (closedVisibleWindow && !hasVisibleWindow && !hasPendingService
+          && TrayIcon.ActiveCount == 0) {
           break
         }
         if hasVisibleWindow { closedVisibleWindow = false }

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import ast
 import os
 from pathlib import Path
 import subprocess
@@ -25,13 +24,13 @@ def close_window(root, title):
                       "} (workspace.windowAdded || workspace.clientAdded).connect(close); "
                       "const windows = workspace.windowList ? workspace.windowList() : workspace.clientList(); "
                       "for (const window of windows) close(window)")
-    script_id = ast.literal_eval(subprocess.check_output([
+    subprocess.run([
         "gdbus", "call", "--session", "--dest", "org.kde.KWin", "--object-path", "/Scripting",
         "--method", "org.kde.kwin.Scripting.loadScript", str(script),
-    ], text=True))[0]
+    ], check=True)
     subprocess.run(["gdbus", "call", "--session", "--dest", "org.kde.KWin",
-                    "--object-path", f"/Scripting/Script{script_id}",
-                    "--method", "org.kde.kwin.Script.run"], check=True)
+                    "--object-path", "/Scripting",
+                    "--method", "org.kde.kwin.Scripting.start"], check=True)
 
 
 def check(program, root, mode):
