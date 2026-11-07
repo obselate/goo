@@ -5,28 +5,30 @@ import System.Numerics
 
 internal class CellFixtures {
   func SlottedAndForwardedCallbacksRebuildOnlyTheirAuthor() bool {
-    let host = CallbackOriginHost()
-    let driver = InputFixtureDriver(host, 200, 150)
-    for pass in 0 ... 2 {
-      for index in 1 ... 3 {
-        guard let tree = driver.Window.Tree else { return false }
-        let target = tree.Children[index]
-        let builds = host.Builds
-        guard let sibling = tree.Children[3].Fiber as CallbackUnchangedCell? else { return false }
-        let siblingBuilds = sibling.Builds
-        let x = target.Rect.X + target.Rect.W * .5F
-        let y = target.Rect.Y + target.Rect.H * .5F
-        driver.Press(x, y)
-        driver.Release(x, y)
+    for cached in []bool{false, true} {
+      let host = CallbackOriginHost{CacheContent: cached}
+      let driver = InputFixtureDriver(host, 200, 150)
+      for pass in 0 ... 2 {
+        for index in 1 ... 3 {
+          guard let tree = driver.Window.Tree else { return false }
+          let target = tree.Children[index]
+          let builds = host.Builds
+          guard let sibling = tree.Children[3].Fiber as CallbackUnchangedCell? else { return false }
+          let siblingBuilds = sibling.Builds
+          let x = target.Rect.X + target.Rect.W * .5F
+          let y = target.Rect.Y + target.Rect.H * .5F
+          driver.Press(x, y)
+          driver.Release(x, y)
+          driver.Update()
+          let expected = index == 1 ? "slot" : "forward:7:9:True"
+          if host.Value != expected || host.Builds != builds + 1
+            || driver.Window.Tree?.Children[0].Content != expected
+            || sibling.Builds != siblingBuilds { return false }
+        }
+        host.MountKey = "remounted"
+        host.Rebuild()
         driver.Update()
-        let expected = index == 1 ? "slot" : "forward:7:9:True"
-        if host.Value != expected || host.Builds != builds + 1
-          || driver.Window.Tree?.Children[0].Content != expected
-          || sibling.Builds != siblingBuilds { return false }
       }
-      host.MountKey = "remounted"
-      host.Rebuild()
-      driver.Update()
     }
     return true
   }
@@ -1245,14 +1247,18 @@ internal class CallbackOriginHost : Cell {
   internal var Builds int32
   internal var Value string = ""
   internal var MountKey string = "initial"
+  internal var CacheContent bool
+  private var cachedContent Blob?
 
   override func Build() Blob {
     Builds++
+    let content = cachedContent ?? Button{Width: 100, Height: 30, OnClick: () -> Value = "slot"}
+    if CacheContent { cachedContent = content }
     return Container{
       FlexDirection: FlexDirection.Column,
       Text{Content: Value, Height: 20},
       Cell.Mount[CallbackSlotInput, CallbackSlotCell](MountKey, CallbackSlotInput{
-        Content: Button{Width: 100, Height: 30, OnClick: () -> Value = "slot"},
+        Content: content,
       }),
       Cell.Mount[CallbackForwardInput, CallbackForwardCell]("forward", CallbackForwardInput{
         Click: () -> Value = "forward",
