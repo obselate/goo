@@ -79,6 +79,7 @@ internal unsafe sealed class VulkanProductionReadbackCapture : IDisposable {
 internal partial class VulkanWindowTarget {
   internal prop ImageResourcesForProof VulkanImageResources? { get -> imageResources }
   internal prop TextAtlasesForProof VulkanTextAtlasSet? { get -> textAtlas }
+  internal prop TextSceneForProof VulkanTextScene? { get -> textScene }
   internal prop PathResourcesForProof VulkanPathResources? { get -> pathResources }
   internal prop MemoryAllocatorForProof VulkanMemoryAllocator? { get -> memoryAllocator }
   internal prop ResourceGenerationForProof uint64{ get -> runtime?.Generation ?? 0uL }
@@ -245,6 +246,27 @@ internal unsafe partial class VulkanImageResources {
     }
 }
 
+internal unsafe partial class VulkanTextAtlas {
+  internal prop DeviceAllocationBytesForProof uint64 { get -> atlasAllocation?.size ?? 0uL }
+  internal prop StagingAllocationBytesForProof uint64 { get -> stagingAllocation?.size ?? 0uL }
+}
+
+internal unsafe sealed partial class VulkanTextScene {
+  internal prop CachedGlyphCountForProof int32 { get -> glyphs.Count }
+  internal prop CpuBufferBytesForProof uint64 {
+    get {
+      var bytes = uint64(glyphWorkspace.ByteCapacity) + uint64(effectGlyphWorkspace?.ByteCapacity ?? 0)
+      for state in states {
+        if state != nil {
+          bytes += uint64(state.Bytes.Length)
+            + uint64(state.Keys.Length) * uint64(System.Runtime.CompilerServices.Unsafe.SizeOf[VulkanTextAtlasGlyphKey]())
+        }
+      }
+      return bytes
+    }
+  }
+}
+
 internal class VulkanProductionReadbackFixture {
   shared {
     internal func Open(window Window, width uint32, height uint32) VulkanProductionReadbackCapture{
@@ -270,6 +292,24 @@ internal class VulkanProductionReadbackFixture {
 
     internal func TextAtlases(window Window) VulkanTextAtlasSet ? ->
     WindowReadbackTestFixture.CaptureTarget(window)?.TextAtlasesForProof
+
+    internal func ReportTextAtlasMemory(window Window) {
+      guard let target = WindowReadbackTestFixture.CaptureTarget(window),
+        let atlases = target.TextAtlasesForProof,
+        let scene = target.TextSceneForProof else {
+        throw InvalidOperationException("Text atlas memory is unavailable")
+      }
+      var deviceBytes uint64
+      var stagingBytes uint64
+      for index in 0 ... atlases.AtlasSlotCapacity {
+        if atlases.IsActive(index) {
+          deviceBytes += atlases.AtlasAt(index).DeviceAllocationBytesForProof
+          stagingBytes += atlases.AtlasAt(index).StagingAllocationBytesForProof
+        }
+      }
+      using let process = System.Diagnostics.Process.GetCurrentProcess()
+      Console.WriteLine("Text atlas memory: pages=${atlases.AtlasCount} gpuBufferBytes=$deviceBytes cpuMappedStagingBytes=$stagingBytes cpuManagedBufferBytes=${scene.CpuBufferBytesForProof} cachedGlyphs=${scene.CachedGlyphCountForProof} managedHeapBytes=${GC.GetTotalMemory(false)} processResidentBytes=${process.WorkingSet64} rendererAllocatorResidentBytes=${target.MemoryAllocatorForProof?.ResidentBytes ?? 0uL}")
+    }
 
     internal func MemoryAllocator(window Window) VulkanMemoryAllocator ? ->
     WindowReadbackTestFixture.CaptureTarget(window)?.MemoryAllocatorForProof

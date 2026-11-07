@@ -1018,10 +1018,10 @@ internal unsafe partial class VulkanWindowTarget {
     if atlasByteSize < 8192uL {
       throw InvalidOperationException("Vulkan text atlas capacity is too small")
     }
-    if atlasByteSize > uint64.MaxValue / uint64(VulkanTextAtlasSet.MaxAtlasCount) {
+    if atlasByteSize > uint64.MaxValue / uint64(VulkanTextAtlasSet.CachedAtlasCount) {
       throw OverflowException("Vulkan text atlas byte budget overflow")
     }
-    let atlasByteBudget = atlasByteSize * uint64(VulkanTextAtlasSet.MaxAtlasCount)
+    let atlasByteBudget = atlasByteSize * uint64(VulkanTextAtlasSet.CachedAtlasCount)
     textAtlas = VulkanTextAtlasSet(device, dispatch, memoryAllocator!!, atlasByteSize,
       physicalProperties.limits.maxTexelBufferElements,
       activeRuntime.PrimitiveState.TextDescriptorSetLayout, windowObjectAccounting,

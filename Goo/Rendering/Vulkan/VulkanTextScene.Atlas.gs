@@ -15,9 +15,6 @@ internal unsafe sealed partial class VulkanTextScene {
       }
       existingFound = true
     }
-    if capacityExhausted {
-      throw InvalidOperationException("Vulkan text atlas capacity is exhausted")
-    }
     var renderMode uint32 = 2u
     var providerResult VulkanTextProviderResult
     var effectResult VulkanTextProviderResult
@@ -72,22 +69,19 @@ internal unsafe sealed partial class VulkanTextScene {
     var state = CurrentState()
     if uint64(state.NextByteOffset) + totalByteCount > state.Atlas.ByteSize
       || state.KeyCount >= int32(state.Atlas.ByteSize / 8uL) {
-        var createdIndex int32 = -1
-        if atlasSet.CanCreateAtlas {
-          createdIndex = atlasSet.CreateAtlas()
-        }
-        if createdIndex < 0 {
-          if !RecycleAtlas() {
-            capacityExhausted = true
-            throw InvalidOperationException("Vulkan text atlas capacity is exhausted")
+        if atlasSet.CanCreateAtlas || !RecycleAtlas() {
+          let createdIndex = atlasSet.CreateAtlas()
+          trimAtlasPages = trimAtlasPages || !atlasSet.CanCreateAtlas
+          if states.Length < atlasSet.AtlasSlotCapacity {
+            Array.Resize(ref states, atlasSet.AtlasSlotCapacity)
+            Array.Resize(ref activeAtlasUse, atlasSet.AtlasSlotCapacity)
           }
-          state = CurrentState()
-        } else {
           EnsureAtlasStates()
           state = states[createdIndex]!!
+        } else {
+          state = CurrentState()
         }
         if totalByteCount > state.Atlas.ByteSize {
-          capacityExhausted = true
           throw InvalidOperationException("Vulkan text glyph exceeds atlas capacity")
         }
       }
@@ -240,7 +234,6 @@ internal unsafe sealed partial class VulkanTextScene {
     }
     RemoveStateGlyphs(state)
     state.Reset(atlasSet.AtlasAt(index), identity)
-    capacityExhausted = false
     return true
   }
 
@@ -252,6 +245,30 @@ internal unsafe sealed partial class VulkanTextScene {
       keyIndex = keyIndex + 1
     }
     state.KeyCount = 0
+  }
+
+  private func TrimUnusedAtlasPages() {
+    var retired = false
+    for index in 0 ... states.Length {
+      guard let state = states[index] else { continue }
+      if activeAtlasUse[index] {
+        state.UnusedCompiles = 0
+        continue
+      }
+      if state.UnusedCompiles < 2 { state.UnusedCompiles++ }
+      if state.UnusedCompiles >= 2
+        && atlasSet.TryRetireAtlas(index, completedGlobalSubmissionSerial) {
+        RemoveStateGlyphs(state)
+        states[index] = nil
+        stateCount--
+        retired = true
+      }
+    }
+    trimAtlasPages = atlasSet.AtlasCount > 1
+    if !trimAtlasPages {
+      states[atlasSet.CurrentAtlasIndex]!!.UnusedCompiles = 0
+      if retired { glyphs.TrimExcess() }
+    }
   }
 
   private func SameIdentity(left ResourceId, right ResourceId) bool -> left.Kind == right.Kind && left.LogicalId == right.LogicalId
