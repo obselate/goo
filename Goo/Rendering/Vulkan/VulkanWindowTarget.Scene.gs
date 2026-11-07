@@ -75,7 +75,8 @@ internal partial class VulkanWindowTarget {
     for index in 0 ... frame.TransformCount {
       if frame.Transforms[index].IsScrollPlacement {
         frame.Transforms[index].TX = frame.Transforms[index].ScrollPixelX
-        frame.Transforms[index].TY = frame.Transforms[index].ScrollPixelY
+        frame.Transforms[index].TY = MathF.Round(frame.Transforms[index].TY * scaleY)
+        frame.Transforms[index].ScrollPixelY = frame.Transforms[index].TY
       } else {
         frame.Transforms[index].TX = frame.Transforms[index].TX * scaleX
         frame.Transforms[index].TY = frame.Transforms[index].TY * scaleY

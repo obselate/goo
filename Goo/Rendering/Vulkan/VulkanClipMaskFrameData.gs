@@ -577,7 +577,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
         if reference.Index < 0 || reference.Index >= frame.LayerCount || layerDepth >= MaxLayerDepth {
           throw InvalidOperationException("Vulkan layer clip scale stack is invalid")
         }
-        let layer = frame.Layers[reference.Index]
+        let layer = frame.Layer(reference.Index)
         let extent = pool.LayerExtent(reference.Index)
         scales[layerDepth] = Vector2(float32(layer.ExtentWidth) / float32(extent.width),
           float32(layer.ExtentHeight) / float32(extent.height))
@@ -699,7 +699,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
             || layerDepth >= MaxLayerDepth{
               throw InvalidOperationException("Vulkan layer clip origin stack is invalid")
             }
-          let layer = frame.Layers[reference.Index]
+          let layer = frame.Layer(reference.Index)
           layerOriginsX[layerDepth] = layer.OriginX
           layerOriginsY[layerDepth] = layer.OriginY
           layerDepth = layerDepth + 1
