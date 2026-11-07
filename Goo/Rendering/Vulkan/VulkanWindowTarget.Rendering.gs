@@ -211,6 +211,8 @@ internal unsafe partial class VulkanWindowTarget {
           return
         }
         completedGraphicsSubmissionSerial = completed
+        textAtlas?.Collect(completed)
+        textScene?.PublishCompletedUploads()
         pathScene?.Collect(completed)
       }
     }
