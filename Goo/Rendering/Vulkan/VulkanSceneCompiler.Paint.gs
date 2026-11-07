@@ -854,16 +854,16 @@ internal partial class VulkanSceneCompiler {
         if clipsX && clipsY {
           clipTopLeft = MathF.Max(clipTopLeft, ClipCornerRadius(PaddingEdgeRadius(ancestor,
             ancestor.BorderTopLeftRadius, ancestor.BorderRadius, ancestorBounds, clip, true, true),
-            left - clip.X, top - clip.Y))
+            left - clip.X, top - clip.Y, Radius(node.BorderTopLeftRadius, node.BorderRadius, bounds)))
           clipTopRight = MathF.Max(clipTopRight, ClipCornerRadius(PaddingEdgeRadius(ancestor,
             ancestor.BorderTopRightRadius, ancestor.BorderRadius, ancestorBounds, clip, false, true),
-            clip.Right - right, top - clip.Y))
+            clip.Right - right, top - clip.Y, Radius(node.BorderTopRightRadius, node.BorderRadius, bounds)))
           clipBottomRight = MathF.Max(clipBottomRight, ClipCornerRadius(PaddingEdgeRadius(ancestor,
             ancestor.BorderBottomRightRadius, ancestor.BorderRadius, ancestorBounds, clip, false, false),
-            clip.Right - right, clip.Bottom - bottom))
+            clip.Right - right, clip.Bottom - bottom, Radius(node.BorderBottomRightRadius, node.BorderRadius, bounds)))
           clipBottomLeft = MathF.Max(clipBottomLeft, ClipCornerRadius(PaddingEdgeRadius(ancestor,
             ancestor.BorderBottomLeftRadius, ancestor.BorderRadius, ancestorBounds, clip, true, false),
-            left - clip.X, clip.Bottom - bottom))
+            left - clip.X, clip.Bottom - bottom, Radius(node.BorderBottomLeftRadius, node.BorderRadius, bounds)))
         }
       }
       let width = node.OutlineWidth.Px
@@ -891,8 +891,12 @@ internal partial class VulkanSceneCompiler {
       })
     }
 
-  private func ClipCornerRadius(radius float32, x float32, y float32) float32 ->
-    x < radius && y < radius ? radius - MathF.Min(x, y) : 0.0F
+  private func ClipCornerRadius(radius float32, x float32, y float32, own float32) float32 {
+    let centerX = radius - x - own
+    let centerY = radius - y - own
+    return centerX > 0.0F && centerY > 0.0F && centerX * centerX + centerY * centerY > radius * radius
+      ? radius - MathF.Min(x, y) : 0.0F
+  }
 
   private func OutlineBounds(node Node, bounds ConservativeBounds) ConservativeBounds {
     if node.Kind == NodeKind.Shape || !node.HasOutlineState
