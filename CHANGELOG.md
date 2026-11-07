@@ -1,6 +1,16 @@
 # Changelog
 
 
+## 0.28.5 - 2026-11-07
+
+### Fixed
+
+- Size offscreen layer targets from their placed scroll bounds so rounded images remain visible after scrolling and image uploads.
+- Apply vertical scroll placement with the framebuffer's vertical scale, including text placement.
+- Use placed offscreen layer origins and scales for nested clip masks.
+- Test placed layer bounds during partial redraw so late image content is not omitted.
+- Report the clamped logical scroll state through element handles and metric subscriptions.
+
 ## 0.28.4 - 2026-11-07
 
 ### Added
