@@ -244,8 +244,9 @@ GOO_FRAME_PROFILE=1 goo dev --project App.gsproj
 - Test every text field without editing binding setup: type, Backspace, Delete, Left, Right, Up, Down, PageUp, PageDown, Ctrl+Left, Ctrl+Right, Ctrl+Backspace, Ctrl+Delete, Home, End, Ctrl+Home, Ctrl+End, Shift+movement, Ctrl+A, Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y, Enter, KeypadEnter, Escape, Tab and Shift+Tab. On macOS use Cmd for primary shortcuts and Option for word movement and deletion. Check submit versus newline and focus traversal versus indentation. Repeat in each dialog.
 
 Run `goo audit [path]` before review. The default path is the current directory.
-It prints one line per matching rule and source line. Exit 0 is clean. Exit 1 means hits.
-These text checks flag possible violations, not all defects in the 15 rules.
+It prints one line per matching rule and source line.
+
+Partial best-practice check for rules 1, 2, 4, 6, 7 and 15 by text pattern. Exit 1 means hits. Exit 0 does not verify the other rules, including cancellation, stale results, virtualization, Build cost and idle rendering. They need review and runtime measurement.
 
 | Rule | Files | Pattern | Message |
 | --- | --- | --- | --- |

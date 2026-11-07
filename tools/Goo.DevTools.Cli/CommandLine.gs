@@ -169,7 +169,10 @@ internal class CommandLine {
                 []Option{Option("project", "PATH", "Project file or directory."), Json}
             ),
             ["audit"] = CommandDefinition(
-                "Check .gs files for app best-practice violations. Exit 1 means hits.",
+                "Partial best-practice check for rules 1, 2, 4, 6, 7 and 15 by text pattern. " +
+                    "Exit 1 means hits. Exit 0 does not verify the other rules, including cancellation, " +
+                    "stale results, virtualization, Build cost and idle rendering. " +
+                    "They need review and runtime measurement.",
                 "[path]",
                 []Option{}
             ),
