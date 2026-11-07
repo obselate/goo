@@ -15,9 +15,6 @@ internal unsafe sealed partial class VulkanTextScene {
       }
       existingFound = true
     }
-    if capacityExhausted {
-      throw InvalidOperationException("Vulkan text atlas capacity is exhausted")
-    }
     var renderMode uint32 = 2u
     var providerResult VulkanTextProviderResult
     var effectResult VulkanTextProviderResult
@@ -72,22 +69,18 @@ internal unsafe sealed partial class VulkanTextScene {
     var state = CurrentState()
     if uint64(state.NextByteOffset) + totalByteCount > state.Atlas.ByteSize
       || state.KeyCount >= int32(state.Atlas.ByteSize / 8uL) {
-        var createdIndex int32 = -1
-        if atlasSet.CanCreateAtlas {
-          createdIndex = atlasSet.CreateAtlas()
-        }
-        if createdIndex < 0 {
-          if !RecycleAtlas() {
-            capacityExhausted = true
-            throw InvalidOperationException("Vulkan text atlas capacity is exhausted")
+        if atlasSet.CanCreateAtlas || !RecycleAtlas() {
+          let createdIndex = atlasSet.CreateAtlas()
+          if states.Length < atlasSet.AtlasSlotCapacity {
+            Array.Resize(ref states, atlasSet.AtlasSlotCapacity)
+            Array.Resize(ref activeAtlasUse, atlasSet.AtlasSlotCapacity)
           }
-          state = CurrentState()
-        } else {
           EnsureAtlasStates()
           state = states[createdIndex]!!
+        } else {
+          state = CurrentState()
         }
         if totalByteCount > state.Atlas.ByteSize {
-          capacityExhausted = true
           throw InvalidOperationException("Vulkan text glyph exceeds atlas capacity")
         }
       }
@@ -240,7 +233,6 @@ internal unsafe sealed partial class VulkanTextScene {
     }
     RemoveStateGlyphs(state)
     state.Reset(atlasSet.AtlasAt(index), identity)
-    capacityExhausted = false
     return true
   }
 

@@ -12,20 +12,19 @@ internal unsafe sealed partial class VulkanTextScene {
   private const TextEffectBlurShadow uint32 = 3u
 
   private let atlasSet VulkanTextAtlasSet
-  private let states []VulkanTextSceneAtlasState?
+  private var states []VulkanTextSceneAtlasState?
   private let glyphs Dictionary[VulkanTextAtlasGlyphKey, VulkanTextAtlasGlyph]
   private let glyphWorkspace VulkanTextProviderWorkspace
   private let buildWorkspace VulkanTextSegmentBuildWorkspace
   private var effectGlyphWorkspace VulkanTextProviderWorkspace?
   private let entryMetrics TextMetrics
-  private let activeAtlasUse []bool
+  private var activeAtlasUse []bool
   private let nodeSegments ConditionalWeakTable[VulkanSceneOwnerId, VulkanTextNodeSegmentCache]
   private let gutterSegments ConditionalWeakTable[VulkanSceneOwnerId, VulkanTextNodeSegmentCache]
   private var activeNodeSegments VulkanTextNodeSegmentCache?
   private var activeSegmentReuse bool
   private var nextSegmentId uint64
   private var stateCount int32
-  private var capacityExhausted bool
   private var redrawRequired bool
   private var colorEffectSkipped bool
   private var colorGlyphFallback bool
@@ -87,7 +86,6 @@ internal unsafe sealed partial class VulkanTextScene {
       gutterSegments.Clear()
     }
     redrawRequired = false
-    capacityExhausted = false
     colorEffectSkipped = false
     colorGlyphFallback = false
     emissionFailed = false

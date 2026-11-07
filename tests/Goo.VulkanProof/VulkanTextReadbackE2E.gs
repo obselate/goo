@@ -423,6 +423,9 @@ internal unsafe func RunProductionTextReadback(effects bool) {
       CloseVulkanProductionProofWindow(caption)
     }
   }
+  if !effects {
+    RunTextAtlasOverflowReadback()
+  }
 }
 
 internal func PublishVulkanProofTextAtlasUpload(
@@ -442,3 +445,105 @@ internal func PublishVulkanProofTextAtlasUpload(
       throw InvalidOperationException("Vulkan production text atlas upload did not publish")
     }
   }
+
+internal class VulkanAtlasTextCell : Cell {
+  internal var Phase int32
+
+  override func Build() Blob {
+    let root = Container{Width: 960, Height: 600, BackgroundColor: Color.Black,
+      FlexDirection: FlexDirection.Column}
+    for face in 0 ... 3 {
+      for size in 9 ... 17 {
+        root.Children.Add(Text{
+          Content: if face == 2 { "ΩβλЖДЩ Agjmpy" } else { "Agjmpy éç" },
+          FontFamily: if face == 2 { "sans-serif" } else { "Atlas proof" },
+          FontWeight: if face == 1 { 700 } else { 400 },
+          FontSize: float32(9 + (size - 9 + Phase) % 8),
+          Height: 24,
+          Color: Color.White,
+        })
+      }
+    }
+    return root
+  }
+}
+
+internal func CaptureTextAtlasFrame(window Window) WindowCapture {
+  WindowReadbackTestFixture.ForceRender(window, 0.0)
+  WindowReadbackTestFixture.DrainWindowQueue(window, 5000)
+  WindowReadbackTestFixture.ForceRender(window, 0.0)
+  WindowReadbackTestFixture.DrainWindowQueue(window, 5000)
+  if window.RequestCapture() != WindowCaptureRequestStatus.Accepted {
+    throw InvalidOperationException("Text atlas capture was not accepted")
+  }
+  let deadline = Environment.TickCount64 + 5000L
+  while Environment.TickCount64 < deadline {
+    window.Pump(0.0)
+    if let image = window.PollCapture() { return image }
+  }
+  throw TimeoutException("Text atlas capture timed out")
+}
+
+internal func RunTextAtlasOverflowReadback() {
+  using let regular = FontSource.FromPath("Atlas proof", 400, false,
+    Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf"), 0u,
+    []FontVariation{FontVariation("wght", 400.0F)})
+  using let bold = FontSource.FromPath("Atlas proof", 700, false,
+    Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf"), 0u,
+    []FontVariation{FontVariation("wght", 700.0F)})
+  regular.Register()
+  bold.Register()
+  let previousDiagnostics = Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS")
+  let previousSmoke = Environment.GetEnvironmentVariable("GOO_TEXT_ATLAS_SMOKE")
+  let previousBytes = Environment.GetEnvironmentVariable("GOO_VK_TEXT_ATLAS_BYTES")
+  let reference = [3]WindowCapture?
+  try {
+    Environment.SetEnvironmentVariable("GOO_VK_DIAGNOSTICS", "1")
+    Environment.SetEnvironmentVariable("GOO_TEXT_ATLAS_SMOKE", "1")
+    for variant in 0 ... 2 {
+      Environment.SetEnvironmentVariable("GOO_VK_TEXT_ATLAS_BYTES", variant == 0 ? "262144" : "8192")
+      let cell = VulkanAtlasTextCell{}
+      let window = Window{Title: "Goo text atlas overflow", Width: 960, Height: 600,
+        VSync: false, Root: cell}.Open()
+      try {
+        for phase in 0 ... reference.Length {
+          cell.Phase = phase
+          cell.Rebuild()
+          let image = CaptureTextAtlasFrame(window)
+          guard let atlases = VulkanProductionReadbackFixture.TextAtlases(window) else {
+            throw InvalidOperationException("Text atlas set is unavailable")
+          }
+          if variant == 0 {
+            reference[phase] = image
+            var ink = 0
+            for index in 0 ... image.Pixels.Length {
+              if index % 4 != 3 && image.Pixels[index] != 0u { ink++ }
+            }
+            if ink < 1000 { throw InvalidOperationException("Text atlas reference has no ink") }
+          } else {
+            let expected = reference[phase]!!
+            if atlases.AtlasCount <= VulkanTextAtlasSet.CachedAtlasCount {
+              throw InvalidOperationException("Text atlas proof did not exceed the cache capacity")
+            }
+            if image.Width != expected.Width || image.Height != expected.Height
+              || image.Pixels.Length != expected.Pixels.Length {
+              throw InvalidOperationException("Text atlas capture dimensions differ")
+            }
+            for index in 0 ... image.Pixels.Length {
+              if image.Pixels[index] != expected.Pixels[index] {
+                throw InvalidOperationException("Text atlas page batching changed pixel $index at phase $phase")
+              }
+            }
+          }
+          Console.WriteLine("Text atlas overflow: variant=$variant phase=$phase pages=${atlases.AtlasCount} bytes=${atlases.ResidentByteSize} passed")
+        }
+      } finally {
+        CloseVulkanProductionProofWindow(window)
+      }
+    }
+  } finally {
+    Environment.SetEnvironmentVariable("GOO_VK_DIAGNOSTICS", previousDiagnostics)
+    Environment.SetEnvironmentVariable("GOO_TEXT_ATLAS_SMOKE", previousSmoke)
+    Environment.SetEnvironmentVariable("GOO_VK_TEXT_ATLAS_BYTES", previousBytes)
+  }
+}
