@@ -28,6 +28,7 @@
              Condition="'$(GooGpuExperiments)' == 'true'" />
     <InternalsVisibleTo Include="Goo.Android" />
     <InternalsVisibleTo Include="Goo.Audio" />
+    <InternalsVisibleTo Include="Goo.DevTools.Cli" />
     <InternalsVisibleTo Include="Goo.Notifications.WindowsSmoke" />
     <VulkanShaderAsset Include="Shaders/Vulkan/*.spv;Shaders/Vulkan/shader-manifest.json" />
     <BuiltinShaderEffect Include="Shaders/Effects/*.goo-effect" />

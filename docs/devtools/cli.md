@@ -27,6 +27,39 @@ Start an app with hot reload and diagnostics.
 | `--inspector` | Open the bundled inspector when the app is ready. |
 | `--help`, `-h` | Show command help. |
 
+## render
+
+```sh
+goo render <project-or-executable> [--out PATH | --list] [options]
+```
+
+Build an app and render one frame without a display.
+
+| Option | Meaning |
+| --- | --- |
+| `--project PATH` | Project file or directory, instead of the positional project. |
+| `--out PATH` | Required PNG output path. |
+| `--size WxH` | Logical viewport size. Default: app window size. |
+| `--scale NUMBER` | Pixels per logical unit. Default: 1. |
+| `--theme light\|dark` | Preferred app theme. Default: light. |
+| `--scene NAME` | Named state registered on Window.Scenes. |
+| `--list` | List registered scene names without rendering. |
+| `--help`, `-h` | Show command help. |
+
+## diff
+
+```sh
+goo diff <a.png> <b.png> [options]
+```
+
+Compare two PNG images.
+
+| Option | Meaning |
+| --- | --- |
+| `--tolerance 0..255` | Maximum per-channel difference. Default: 0. |
+| `--out PATH` | Write a PNG marking changed pixels. |
+| `--help`, `-h` | Show command help. |
+
 ## list
 
 ```sh

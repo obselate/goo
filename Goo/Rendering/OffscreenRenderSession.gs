@@ -12,6 +12,19 @@ public sealed class OffscreenRenderSession : IDisposable {
   private let threadId int32
   private var disposed bool
 
+  shared {
+    /// Creates a renderer without a native window or presentation surface.
+    /// @returns A session on Success, or an explicit renderer status and error.
+    public func Create() OffscreenRenderSessionResult {
+      try {
+        return OffscreenRenderSessionResult{Status: OffscreenRenderStatus.Success,
+          Session: OffscreenRenderSession(VulkanWindowTarget(VulkanHeadlessHost()), CancellationToken.None)}
+      } catch (error Exception) {
+        return OffscreenRenderSessionResult{Status: OffscreenRenderStatus.Failed, Error: error.Message}
+      }
+    }
+  }
+
   internal init(target VulkanWindowTarget, closed CancellationToken) {
     this.target = target
     this.closed = closed

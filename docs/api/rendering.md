@@ -517,6 +517,12 @@ Source:
 
 Holds a shared renderer alive without owning a native presentation surface. Create, render, service and dispose it on the creating thread. Service while awaiting page completion.
 
+### `Create`
+
+Creates a renderer without a native window or presentation surface.
+
+Returns: A session on Success, or an explicit renderer status and error.
+
 ### `Dispose`
 
 Cancels pending pages, waits for safe GPU cleanup and releases this session's runtime lease.

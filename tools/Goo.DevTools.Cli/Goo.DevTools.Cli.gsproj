@@ -27,7 +27,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Goo.PluginMcp/Goo.PluginMcp.gsproj" />
-    <Compile Include="../../Goo/Input/Key.gs" Link="Input/Key.gs" />
+    <ProjectReference Include="../../Goo/Goo.gsproj" />
     <ProjectReference Include="../../apps/Goo.DevTools/Goo.DevTools.gsproj" ReferenceOutputAssembly="false" Private="false" />
     <None Update="README.md" Pack="true" PackagePath="/" />
     <None Include="$(MSBuildProjectDirectory)/../../LICENSE" Pack="true" PackagePath="/" />

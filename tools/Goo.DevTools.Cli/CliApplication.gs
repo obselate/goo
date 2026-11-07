@@ -132,6 +132,8 @@ internal shared class CliApplication {
                     commandLine.Has("verify")
                 )
                 case "dev": await RunDevAsync(commandLine)
+                case "render": await RunRenderAsync(commandLine)
+                case "diff": ImageDifference.Run(commandLine)
                 case "snapshot": await RunAttachAsync(commandLine)
                 case "inspector": await RunInspectorAsync(commandLine)
                 case "attach": await RunAttachAsync(commandLine)
@@ -343,6 +345,69 @@ internal shared class CliApplication {
         return 0
     }
 
+    private async func RunRenderAsync(commandLine CommandLine) int32 {
+        if commandLine.Positionals.Count > 1 || (commandLine.Positionals.Count != 0 && commandLine.Has("project")) {
+            throw CliException("Select one project with a positional path or --project.")
+        }
+        let project = ResolveProject(commandLine.Get("project") ?? commandLine.Positionals.FirstOrDefault()) ??
+            throw CliException("Select an app project.")
+        let listing = commandLine.Has("list")
+        let output string? = if listing { nil } else {
+            Path.GetFullPath(commandLine.Get("out") ?? throw CliException("--out is required."))
+        }
+        let theme = commandLine.Get("theme") ?? "light"
+        if theme != "light" && theme != "dark" { throw CliException("--theme must be light or dark.") }
+        let scaleText = commandLine.Get("scale") ?? "1"
+        if !Double.TryParse(scaleText, NumberStyles.Float, CultureInfo.InvariantCulture, out var scale)
+            || !Double.IsFinite(scale) || scale <= 0 {
+            throw CliException("--scale must be finite and positive.")
+        }
+        if let size = commandLine.Get("size") {
+            let parts = size.Split('x')
+            if parts.Length != 2 || !Int32.TryParse(parts[0], out var width) ||
+                !Int32.TryParse(parts[1], out var height) || width <= 0 || height <= 0 ||
+                width * scale > 16384 || height * scale > 16384 {
+                throw CliException("--size must be positive WxH with at most 16384 pixels per side after scaling.")
+            }
+        }
+        var pendingOutput string? = nil
+        if let path = output {
+            let directory = Path.GetDirectoryName(path)!!
+            Directory.CreateDirectory(directory)
+            pendingOutput = Path.Combine(directory, ".goo-render-${Guid.NewGuid():N}.png")
+        }
+        let executable = !project.EndsWith("proj", StringComparison.OrdinalIgnoreCase)
+        let start = ProcessStartInfo{FileName: if executable { project } else { "dotnet" }, UseShellExecute: false,
+            WorkingDirectory: Path.GetDirectoryName(project)!!}
+        if !executable {
+            for argument in []string{"run", "--project", project, "--no-launch-profile"} { start.ArgumentList.Add(argument) }
+        }
+        start.Environment.Remove("WAYLAND_DISPLAY")
+        start.Environment.Remove("DISPLAY")
+        start.Environment["SDL_VIDEODRIVER"] = "dummy"
+        if let path = pendingOutput { start.Environment["GOO_RENDER_OUT"] = path }
+        if listing { start.Environment["GOO_RENDER_LIST"] = "1" }
+        start.Environment["GOO_RENDER_SCALE"] = scaleText
+        start.Environment["GOO_RENDER_THEME"] = theme
+        if let size = commandLine.Get("size") { start.Environment["GOO_RENDER_SIZE"] = size }
+        if let scene = commandLine.Get("scene") { start.Environment["GOO_RENDER_SCENE"] = scene }
+        try {
+            using let process = Process.Start(start) ?? throw CliException("Could not start the app.")
+            await process.WaitForExitAsync()
+            if process.ExitCode != 0 { return process.ExitCode }
+            if listing { return 0 }
+            guard let path = pendingOutput, let destination = output else { return 1 }
+            if !File.Exists(path) {
+                throw CliException("The app did not render a frame. Use a Goo version that supports goo render and call Window.Run.")
+            }
+            File.Move(path, destination, true)
+            Console.WriteLine("[goo] rendered $destination")
+            return 0
+        } finally {
+            if let path = pendingOutput { File.Delete(path) }
+        }
+    }
+
     private async func RunDevAsync(commandLine CommandLine) int32 {
         let inspectorWait = ParseWait(commandLine.Get("wait"))
         if commandLine.Trailing.Count != 0 && commandLine.Has("configuration") {
@@ -402,9 +467,25 @@ internal shared class CliApplication {
             Console.WriteLine("[goo] started ${startInfo.FileName} (pid ${process.Id})")
             Console.WriteLine("[goo] descriptors: $runtimeDirectory")
             using let monitorCancellation = CancellationTokenSource()
+            let reloadPath = Path.Combine(projectDirectory, ".goo", "reload.png")
+            let childProcessId = process.Id
+            let captureReload Func[Task] = async () -> {
+                try {
+                    let descriptor = await WaitForDescriptorAsync(projectDirectory, childProcessId, nil,
+                        TimeSpan.FromSeconds(30), monitorCancellation.Token, runtimeDirectory, watch,
+                        existingDescriptorPaths, launchStartedAt)
+                    await RunCaptureAsync(CommandLine.Parse([]string{
+                        "capture", "--project", projectDirectory, "--pipe", descriptor.Pipe,
+                        "--output", reloadPath
+                    }))
+                    Console.WriteLine("[goo] reload frame: $reloadPath")
+                } catch (exception CliException) {
+                    Console.Error.WriteLine("[goo] reload capture failed: ${exception.Message}")
+                }
+            }
             let outputTask = Task.WhenAll(
-                ForwardOutputAsync(process.StandardOutput, false, monitorCancellation.Token),
-                ForwardOutputAsync(process.StandardError, true, monitorCancellation.Token)
+                ForwardOutputAsync(process.StandardOutput, false, monitorCancellation.Token, captureReload),
+                ForwardOutputAsync(process.StandardError, true, monitorCancellation.Token, captureReload)
             )
             let inspectorTask = if commandLine.Has("inspector") {
                 LaunchInspectorWhenReadyAsync(
@@ -1131,7 +1212,8 @@ internal shared class CliApplication {
         }
     }
 
-    private async func ForwardOutputAsync(reader StreamReader, error bool, cancellationToken CancellationToken) {
+    private async func ForwardOutputAsync(reader StreamReader, error bool, cancellationToken CancellationToken,
+        captureReload Func[Task]) {
         try {
             while true {
                 let line string? = await reader.ReadLineAsync(cancellationToken)
@@ -1145,6 +1227,11 @@ internal shared class CliApplication {
                     Console.Error.WriteLine(line)
                 } else {
                     Console.WriteLine(line)
+                }
+                if line.Contains("Hot reload of changes succeeded", StringComparison.OrdinalIgnoreCase) ||
+                    line.Contains("Hot reload succeeded", StringComparison.OrdinalIgnoreCase) ||
+                    line.StartsWith("G# hot reload: applied ", StringComparison.Ordinal) {
+                    await captureReload()
                 }
             }
         } catch (OperationCanceledException) { }

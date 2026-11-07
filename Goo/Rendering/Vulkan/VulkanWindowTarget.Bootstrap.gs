@@ -32,10 +32,10 @@ internal unsafe partial class VulkanWindowTarget {
       runtime = shared
       ApplySharedRuntime(shared)
       let surfaceStart = DiagnosticTimestamp()
-      CreateSurface()
+      if !(host is VulkanHeadlessHost) { CreateSurface() }
       if host is SdlHost && SdlHost.IsWayland() && host.DeferFirstShow() {
         startupState = VulkanWindowStartupState.Pending
-      } else { ValidateSharedPresentationSupport() }
+      } else if !(host is VulkanHeadlessHost) { ValidateSharedPresentationSupport() }
       RecordDiagnosticTiming(VulkanDiagnosticEventIds.SurfaceCreate,
         VulkanDiagnosticCategories.Window, surfaceStart)
       CreateCommandResources()
@@ -71,7 +71,7 @@ internal unsafe partial class VulkanWindowTarget {
       RecordDiagnosticTiming(VulkanDiagnosticEventIds.RuntimeInstance,
         VulkanDiagnosticCategories.Runtime, instanceStart)
       let surfaceStart = DiagnosticTimestamp()
-      CreateSurface()
+      if !(host is VulkanHeadlessHost) { CreateSurface() }
       RecordDiagnosticTiming(VulkanDiagnosticEventIds.SurfaceCreate,
         VulkanDiagnosticCategories.Window, surfaceStart)
       SelectPhysicalDevice()
@@ -129,7 +129,7 @@ internal unsafe partial class VulkanWindowTarget {
     CreateCommandResources()
     let width = if requestedWidth > 0 { requestedWidth } else { Math.Max(1, host.FramebufferWidth) }
     let height = if requestedHeight > 0 { requestedHeight } else { Math.Max(1, host.FramebufferHeight) }
-    if !RecreateSwapchain(width, height, true) {
+    if !(host is VulkanHeadlessHost) && !RecreateSwapchain(width, height, true) {
       throw InvalidOperationException("Vulkan initial swapchain creation failed")
     }
     if let probe = CandidateStartupForTest { probe(this) }
@@ -724,6 +724,11 @@ internal unsafe partial class VulkanWindowTarget {
       if family.queueCount > 0u
         && (family.queueFlags & uint32(VkConstants.VK_QUEUE_GRAPHICS_BIT)) != 0u
         && (family.queueFlags & uint32(VkConstants.VK_QUEUE_COMPUTE_BIT)) != 0u {
+          if host is VulkanHeadlessHost {
+            queueFamilyIndex = familyIndex
+            timestampValidBits = family.timestampValidBits
+            return true
+          }
           var supported VkBool32 = VkConstants.VK_FALSE
           let surfaceSupport = instanceDispatch.vkGetPhysicalDeviceSurfaceSupportKHR
           let supportResult = surfaceSupport(

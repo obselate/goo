@@ -283,6 +283,7 @@ class PublicDocumentationTests {
             "M:Goo.Accessibility.#ctor",
             "M:Goo.Window.CreateOffscreenSession",
             "M:Goo.Window.RenderOffscreenAsync(Goo.Cell,Goo.OffscreenRenderOptions,System.Threading.CancellationToken,Goo.WindowCapture)",
+            "M:Goo.OffscreenRenderSession.Create",
             "M:Goo.OffscreenRenderSession.RenderAsync(Goo.Cell,Goo.OffscreenRenderOptions,System.Threading.CancellationToken,Goo.WindowCapture)",
             "M:Goo.OffscreenRenderSession.Service",
             "M:Goo.OffscreenRenderSession.Dispose",
@@ -991,6 +992,11 @@ class PublicDocumentationTests {
                 true
             ),
             ["M:Goo.Window.CreateOffscreenSession"] = DocumentationShape(
+                System.Array.Empty[string](),
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.OffscreenRenderSession.Create"] = DocumentationShape(
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
                 true
