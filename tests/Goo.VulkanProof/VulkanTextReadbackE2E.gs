@@ -448,17 +448,25 @@ internal func PublishVulkanProofTextAtlasUpload(
 
 internal class VulkanAtlasTextCell : Cell {
   internal var Phase int32
+  internal var Animated bool
+  internal var Compact bool
 
   override func Build() Blob {
     let root = Container{Width: 960, Height: 600, BackgroundColor: Color.Black,
       FlexDirection: FlexDirection.Column}
+    if Compact {
+      root.Children.Add(Text{Content: "A", FontFamily: "Atlas proof",
+        FontSize: 12, Height: 24, Color: Color.White})
+      return root
+    }
     for face in 0 ... 3 {
       for size in 9 ... 17 {
         root.Children.Add(Text{
           Content: if face == 2 { "ΩβλЖДЩ Agjmpy" } else { "Agjmpy éç" },
           FontFamily: if face == 2 { "sans-serif" } else { "Atlas proof" },
           FontWeight: if face == 1 { 700 } else { 400 },
-          FontSize: float32(9 + (size - 9 + Phase) % 8),
+          FontSize: if Animated { 9.0F + 7.0F * float32(Phase % 60) / 59.0F }
+            else { float32(9 + (size - 9 + Phase) % 8) },
           Height: 24,
           Color: Color.White,
         })
@@ -496,7 +504,7 @@ internal func RunTextAtlasOverflowReadback() {
   let previousDiagnostics = Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS")
   let previousSmoke = Environment.GetEnvironmentVariable("GOO_TEXT_ATLAS_SMOKE")
   let previousBytes = Environment.GetEnvironmentVariable("GOO_VK_TEXT_ATLAS_BYTES")
-  let reference = [3]WindowCapture?
+  let reference = [4]WindowCapture?
   try {
     Environment.SetEnvironmentVariable("GOO_VK_DIAGNOSTICS", "1")
     Environment.SetEnvironmentVariable("GOO_TEXT_ATLAS_SMOKE", "1")
@@ -507,6 +515,32 @@ internal func RunTextAtlasOverflowReadback() {
         VSync: false, Root: cell}.Open()
       try {
         for phase in 0 ... reference.Length {
+          if phase == 3 {
+            if variant == 1 {
+              let animatedAtlases = VulkanProductionReadbackFixture.TextAtlases(window)!!
+              let initialPages = animatedAtlases.AtlasCount
+              var peakPages = initialPages
+              cell.Animated = true
+              for animationFrame in 0 ... 600 {
+                cell.Phase = animationFrame
+                cell.Rebuild()
+                WindowReadbackTestFixture.ForceRender(window, 1.0 / 60.0)
+                WindowReadbackTestFixture.DrainWindowQueue(window, 5000)
+                peakPages = Math.Max(peakPages, animatedAtlases.AtlasCount)
+                if animatedAtlases.AtlasCount > initialPages + VulkanTextAtlasSet.CachedAtlasCount {
+                  throw InvalidOperationException("Text atlas animation retained an unbounded page history")
+                }
+              }
+              cell.Animated = false
+              Console.WriteLine("Text atlas animation: frames=600 simulatedSeconds=10 initialPages=$initialPages peakPages=$peakPages finalAnimatedPages=${animatedAtlases.AtlasCount}")
+            }
+            cell.Compact = true
+            for settledFrame in 0 ... 6 {
+              cell.Rebuild()
+              WindowReadbackTestFixture.ForceRender(window, 1.0 / 60.0)
+              WindowReadbackTestFixture.DrainWindowQueue(window, 5000)
+            }
+          }
           cell.Phase = phase
           cell.Rebuild()
           let image = CaptureTextAtlasFrame(window)
@@ -519,10 +553,12 @@ internal func RunTextAtlasOverflowReadback() {
             for index in 0 ... image.Pixels.Length {
               if index % 4 != 3 && image.Pixels[index] != 0u { ink++ }
             }
-            if ink < 1000 { throw InvalidOperationException("Text atlas reference has no ink") }
+            if ink < (if phase == 3 { 30 } else { 1000 }) {
+              throw InvalidOperationException("Text atlas reference has no ink")
+            }
           } else {
             let expected = reference[phase]!!
-            if atlases.AtlasCount <= VulkanTextAtlasSet.CachedAtlasCount {
+            if phase < 3 && atlases.AtlasCount <= VulkanTextAtlasSet.CachedAtlasCount {
               throw InvalidOperationException("Text atlas proof did not exceed the cache capacity")
             }
             if image.Width != expected.Width || image.Height != expected.Height
@@ -534,8 +570,12 @@ internal func RunTextAtlasOverflowReadback() {
                 throw InvalidOperationException("Text atlas page batching changed pixel $index at phase $phase")
               }
             }
+            if phase == 3 && atlases.AtlasCount != 1 {
+              throw InvalidOperationException("Text atlas animation did not settle to one page")
+            }
           }
           Console.WriteLine("Text atlas overflow: variant=$variant phase=$phase pages=${atlases.AtlasCount} bytes=${atlases.ResidentByteSize} passed")
+          VulkanProductionReadbackFixture.ReportTextAtlasMemory(window)
         }
       } finally {
         CloseVulkanProductionProofWindow(window)

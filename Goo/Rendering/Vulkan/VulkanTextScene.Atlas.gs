@@ -71,6 +71,7 @@ internal unsafe sealed partial class VulkanTextScene {
       || state.KeyCount >= int32(state.Atlas.ByteSize / 8uL) {
         if atlasSet.CanCreateAtlas || !RecycleAtlas() {
           let createdIndex = atlasSet.CreateAtlas()
+          trimAtlasPages = trimAtlasPages || !atlasSet.CanCreateAtlas
           if states.Length < atlasSet.AtlasSlotCapacity {
             Array.Resize(ref states, atlasSet.AtlasSlotCapacity)
             Array.Resize(ref activeAtlasUse, atlasSet.AtlasSlotCapacity)
@@ -244,6 +245,30 @@ internal unsafe sealed partial class VulkanTextScene {
       keyIndex = keyIndex + 1
     }
     state.KeyCount = 0
+  }
+
+  private func TrimUnusedAtlasPages() {
+    var retired = false
+    for index in 0 ... states.Length {
+      guard let state = states[index] else { continue }
+      if activeAtlasUse[index] {
+        state.UnusedCompiles = 0
+        continue
+      }
+      if state.UnusedCompiles < 2 { state.UnusedCompiles++ }
+      if state.UnusedCompiles >= 2
+        && atlasSet.TryRetireAtlas(index, completedGlobalSubmissionSerial) {
+        RemoveStateGlyphs(state)
+        states[index] = nil
+        stateCount--
+        retired = true
+      }
+    }
+    trimAtlasPages = atlasSet.AtlasCount > 1
+    if !trimAtlasPages {
+      states[atlasSet.CurrentAtlasIndex]!!.UnusedCompiles = 0
+      if retired { glyphs.TrimExcess() }
+    }
   }
 
   private func SameIdentity(left ResourceId, right ResourceId) bool -> left.Kind == right.Kind && left.LogicalId == right.LogicalId

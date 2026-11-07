@@ -47,6 +47,7 @@ internal sealed class VulkanTextSceneAtlasState {
   internal var QueuedUploadSequence uint64
   internal var UploadQueued bool
   internal var KeyCount int32
+  internal var UnusedCompiles int32
 
   internal init(nativeAtlas VulkanTextAtlas, identity ResourceId) {
     Atlas = nativeAtlas
@@ -76,6 +77,7 @@ internal sealed class VulkanTextSceneAtlasState {
     QueuedUploadSequence = 0uL
     UploadQueued = false
     KeyCount = 0
+    UnusedCompiles = 0
   }
 
   internal func EnsureByteCapacity(required uint32) {

@@ -290,6 +290,34 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
     return identity
   }
 
+  internal func TryRetireAtlas(index int32, completedSerial uint64) bool {
+    let atlas = AtlasAt(index)
+    let stats = atlas.Stats
+    if atlasCount <= 1 || lastUseSerial[index] > completedSerial
+      || stats.UploadPending || stats.UploadRecorded || stats.UploadSubmitted {
+      return false
+    }
+    if evictionCount == uint64.MaxValue || retirementCount == uint64.MaxValue {
+      throw OverflowException("Vulkan text atlas lifecycle counter overflow")
+    }
+    atlas.Dispose()
+    atlases[index] = nil
+    active[index] = false
+    identities[index] = ResourceId{}
+    lastUseSerial[index] = 0uL
+    lastTouch[index] = 0uL
+    atlasCount--
+    residentByteSize -= atlasByteSize
+    if currentAtlasIndex == index { currentAtlasIndex = FindCurrentIndex() }
+    evictionCount++
+    retirementCount++
+    if let currentDiagnostics = diagnostics {
+      currentDiagnostics.AddTextAtlasEviction(1uL)
+      currentDiagnostics.AddTextAtlasRetirement(1uL)
+    }
+    return true
+  }
+
   internal func Resolve(identity ResourceId) VulkanTextAtlas {
     EnsureOpen()
     let index = FindIndex(identity)

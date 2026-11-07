@@ -25,6 +25,7 @@ internal unsafe sealed partial class VulkanTextScene {
   private var activeSegmentReuse bool
   private var nextSegmentId uint64
   private var stateCount int32
+  private var trimAtlasPages bool
   private var redrawRequired bool
   private var colorEffectSkipped bool
   private var colorGlyphFallback bool
@@ -121,6 +122,7 @@ internal unsafe sealed partial class VulkanTextScene {
 
   internal func PrepareUpload() {
     EnsureAtlasStates()
+    if trimAtlasPages { TrimUnusedAtlasPages() }
     var stateIndex int32 = 0
     while stateIndex < states.Length {
       if atlasSet.IsActive(stateIndex) {
