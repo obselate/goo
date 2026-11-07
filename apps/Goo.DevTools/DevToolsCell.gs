@@ -154,7 +154,6 @@ class DevToolsCell : Cell {
                     Unit: SplitUnit.Pixels,
                     MinimumFirst: 280.0,
                     MinimumSecond: 320.0,
-                    HandleSize: theme.Spacing,
                     AccessibilityName: "Resize details",
                     OnChange: (value float64) -> {
                         detailsWidth = layoutWidth - value

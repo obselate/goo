@@ -21,7 +21,7 @@
     <Content Include="../../tests/Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf" Link="Fonts/VendSans-VariableFont_wght.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="../../tests/Goo.VulkanProof/Assets/Text/VendSans-OFL.txt" Link="Fonts/VendSans-OFL.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <ProjectReference Include="../../Goo/Goo.gsproj" />
-    <PackageReference Include="Goo.Widgets" Version="0.19.6" />
+    <PackageReference Include="Goo.Widgets" Version="0.19.8" />
   </ItemGroup>
   <Import Project="../../Goo/Goo.targets" />
 </Project>
