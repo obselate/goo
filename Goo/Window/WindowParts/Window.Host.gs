@@ -511,6 +511,11 @@ public partial class Window {
         advanceCapture()
         let frameNeeded = needsRenderFrame(resolver.VisualDirty)
         if allowFrame && frameNeeded && windowTarget != nil && windowTarget?.QueueWorkPending != true {
+          FlushDeferredVirtualization()
+          if !IsOpen {
+            if profiling { profiler.EndFrame(frameProfile, false) }
+            return
+          }
           let renderProfile = profiling ? profiler.Start() : FrameProfilePoint{}
           let currentProfile = profiling ? profiler.Start() : FrameProfilePoint{}
           windowTarget?.BeginFrame()
