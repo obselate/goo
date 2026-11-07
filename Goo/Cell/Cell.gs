@@ -58,7 +58,7 @@ public open class Cell {
   /// Requests a rebuild of this component.
   public func Rebuild() {
     if building {
-      throw InvalidOperationException("Cell.Rebuild cannot run during Build")
+      throw InvalidOperationException("${GetType().Name}.Rebuild was called during Build: change state in an input handler or Window.TryPost callback instead of Build.")
     }
     var submit Action[Cell]?
     lock rebuildGate {
@@ -173,10 +173,10 @@ public open class Cell {
   internal func ClaimMount(declaredType Type) {
     lock rebuildGate {
       if disposed {
-        throw InvalidOperationException("Cannot mount a disposed Cell")
+        throw InvalidOperationException("Cannot mount disposed Cell ${GetType().Name}: return a fresh Cell instance from the Cell.Mount factory.")
       }
       if mountType != nil || mountedNode != nil {
-        throw InvalidOperationException("Cell instance is already mounted or being mounted")
+        throw InvalidOperationException("Cell ${GetType().Name} is already mounted or being mounted: return a fresh Cell instance for each Cell.Mount factory call.")
       }
       mountType = declaredType
     }

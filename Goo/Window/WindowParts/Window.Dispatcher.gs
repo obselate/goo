@@ -25,7 +25,7 @@ public partial class Window {
   /// @param action action to run during the next Pump
   public func Post(action Action) {
     if !TryPost(action) {
-      throw InvalidOperationException("Window.Post is unavailable after teardown")
+      throw InvalidOperationException("Window.Post rejected work because the window is closing or closed: use Window.TryPost and stop background work when Window.Closed is cancelled (Goo best practices rule 8).")
     }
   }
 
