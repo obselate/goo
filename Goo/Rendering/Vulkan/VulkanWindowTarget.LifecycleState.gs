@@ -116,7 +116,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   private var imageRedrawPending bool
   private var pathRedrawPending bool
   private var recreatePending bool = true
-  private var vsync bool
+  private var presentationSynchronized bool
   private var surfaceLost bool
   private var disposed bool
   private var closing bool
@@ -312,11 +312,11 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
     }
   }
 
-  public func SetVSync(value bool) {
-    if disposed || vsync == value {
+  public func SetPresentationSynchronized(value bool) {
+    if disposed || presentationSynchronized == value {
       return
     }
-    vsync = value
+    presentationSynchronized = value
     recreatePending = true
     forceFullRedraw = true
     host.RefreshDisplayPacing(true)
@@ -330,7 +330,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
     host = nativeHost
     validateGraphicsSubmission = (serial uint64) -> { ValidateGraphicsSubmission(serial) }
     diagnosticWindowHandle = uint64(nativeHost.WindowHandle)
-    vsync = host.VSync
+    presentationSynchronized = host.PresentationSynchronized
     sceneCompiler = VulkanSceneCompiler()
     presentationRetirement = VulkanPresentationRetirement(64u, 8u)
     retiredSwapchains = VulkanRetiredSwapchainSet(8)

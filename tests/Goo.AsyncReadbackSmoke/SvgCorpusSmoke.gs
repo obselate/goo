@@ -28,7 +28,7 @@ func RunSvgCorpusSmoke() {
         let asset = Svg.Load(Path.Combine(AppContext.BaseDirectory, "SvgCorpus", name))
         let window = Window{
             Title: "Goo SVG corpus", Width: 256, Height: 256,
-            VSync: false, Background: Color.White, Root: SvgCorpusCell(asset),
+            FramePacing: WindowFramePacing.Uncapped, Background: Color.White, Root: SvgCorpusCell(asset),
         }
         try {
             window.Open()

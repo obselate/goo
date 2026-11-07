@@ -194,7 +194,7 @@ func RunShaderEffectSmoke() {
       Title: "Goo Shader effect gate",
       Width: 192,
       Height: 128,
-      VSync: false,
+      FramePacing: WindowFramePacing.Uncapped,
       Root: cell,
     }
     window = opened

@@ -45,7 +45,7 @@ func RunWindowsQualification() {
     Title: "Goo Windows qualification",
     Width: 1280,
     Height: 720,
-    VSync: false,
+    FramePacing: WindowFramePacing.Uncapped,
     Root: root,
   }
   window.Open()

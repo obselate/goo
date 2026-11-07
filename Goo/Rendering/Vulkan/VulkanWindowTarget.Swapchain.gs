@@ -10,7 +10,7 @@ internal unsafe partial class VulkanWindowTarget {
   private var startupTask Task[VulkanSwapchainGeneration?]?
   private var startupWidth int32
   private var startupHeight int32
-  private var startupVsync bool
+  private var startupSynchronization bool
   internal prop StartupPending bool { get -> startupState == VulkanWindowStartupState.Pending
     || startupState == VulkanWindowStartupState.Ready
     || (startupState == VulkanWindowStartupState.Closing && startupTask != nil) }
@@ -396,7 +396,7 @@ internal unsafe partial class VulkanWindowTarget {
           startupState = VulkanWindowStartupState.None
           throw error
         }
-        if startupWidth == width && startupHeight == height && startupVsync == vsync {
+        if startupWidth == width && startupHeight == height && startupSynchronization == presentationSynchronized {
           if next == nil {
             surfaceLost = true
             return false
@@ -409,8 +409,8 @@ internal unsafe partial class VulkanWindowTarget {
       }
       startupWidth = width
       startupHeight = height
-      startupVsync = vsync
-      let requestedVsync = vsync
+      startupSynchronization = presentationSynchronized
+      let requestedSynchronization = presentationSynchronized
       let generationId = nextGenerationId
       let transparent = host.Transparent
       let allowInherited = host.AllowInheritedCompositeAlpha
@@ -418,7 +418,7 @@ internal unsafe partial class VulkanWindowTarget {
       startupTask = Task.Run[VulkanSwapchainGeneration?](() -> {
         try {
           if let probe = SecondaryStartupForTest { probe() }
-          return CreateGeneration(width, height, requestedVsync, transparent,
+          return CreateGeneration(width, height, requestedSynchronization, transparent,
             allowInherited, preferExtent, generationId, stale?.Handle ?? 0uL)
         } finally {
           try { stale?.Dispose() } finally { host.Wake() }
@@ -427,7 +427,7 @@ internal unsafe partial class VulkanWindowTarget {
       frameFailureRetryable = true
       return false
     }
-    next = CreateGeneration(width, height, vsync, host.Transparent, host.AllowInheritedCompositeAlpha,
+    next = CreateGeneration(width, height, presentationSynchronized, host.Transparent, host.AllowInheritedCompositeAlpha,
       host.PreferRequestedFramebufferExtent, nextGenerationId, generation?.Handle ?? 0uL)
     if next == nil {
       surfaceLost = true
@@ -436,10 +436,10 @@ internal unsafe partial class VulkanWindowTarget {
     return true
   }
 
-  private func CreateGeneration(width int32, height int32, requestedVsync bool,
+  private func CreateGeneration(width int32, height int32, requestedSynchronization bool,
     transparent bool, allowInherited bool, preferExtent bool,
     generationId uint64, oldSwapchain VkSwapchainKHR) VulkanSwapchainGeneration? {
-    guard let selection = QuerySelection(requestedVsync, transparent, allowInherited) else { return nil }
+    guard let selection = QuerySelection(requestedSynchronization, transparent, allowInherited) else { return nil }
     let swapStart = DiagnosticTimestamp()
     let next = VulkanSwapchainGeneration(device, dispatch, surface, selection.Capabilities,
       selection.Format, selection.PresentMode,
@@ -476,7 +476,7 @@ internal unsafe partial class VulkanWindowTarget {
     return true
   }
 
-  private func QuerySelection(requestedVsync bool, transparent bool,
+  private func QuerySelection(requestedSynchronization bool, transparent bool,
     allowInherited bool) VulkanWindowTargetSelection? {
     var support VkBool32 = VkConstants.VK_FALSE
     let surfaceSupport = instanceDispatch.vkGetPhysicalDeviceSurfaceSupportKHR
@@ -598,7 +598,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
     var presentMode VkPresentModeKHR
     if !VulkanPresentModeSelector.TrySelect(
-      requestedVsync,
+      requestedSynchronization,
       hasImmediate,
       hasMailbox,
       hasFifo,

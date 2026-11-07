@@ -84,7 +84,7 @@ internal partial class NativeFileDialog {
   }
 
   private func RetryCancellation(_ object?) {
-    try { owner.TryPost(DismissIfPending) } catch (_ Exception) { }
+    try { owner.Post(DismissIfPending) } catch (_ Exception) { }
   }
 
   private func DismissIfPending() {
@@ -112,7 +112,7 @@ internal partial class NativeFileDialog {
         cancelRetry?.Dispose()
         cancelRetry = nil
       }
-      try { owner.TryPost(owner.DrainFileDialog) } catch (_ Exception) { }
+      try { owner.Post(owner.DrainFileDialog) } catch (_ Exception) { }
     }
   }
 

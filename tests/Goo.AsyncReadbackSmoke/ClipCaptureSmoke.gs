@@ -47,7 +47,7 @@ func RunClipCaptureSmoke() {
       Title: "Goo clip capture submission gate",
       Width: 400,
       Height: 190,
-      VSync: false,
+      FramePacing: WindowFramePacing.Uncapped,
       Root: root,
     }
     window = opened
@@ -156,7 +156,7 @@ func RunHideResourcesSmoke() {
     Title: "Goo hidden resource lifetime gate",
     Width: 300,
     Height: 170,
-    VSync: false,
+    FramePacing: WindowFramePacing.Uncapped,
     Background: Color.Rgb(12, 20, 32),
     Root: RoundedResizeFirstFrameCell{},
   }
@@ -247,7 +247,7 @@ func RunHiddenDeviceRecoverySmoke() {
     Title: "Goo hidden device recovery",
     Width: 300,
     Height: 170,
-    VSync: false,
+    FramePacing: WindowFramePacing.Uncapped,
     Background: Color.Rgb(12, 20, 32),
     Root: RoundedResizeFirstFrameCell{},
   }
@@ -255,7 +255,7 @@ func RunHiddenDeviceRecoverySmoke() {
     Title: "Goo new window device recovery",
     Width: 300,
     Height: 170,
-    VSync: false,
+    FramePacing: WindowFramePacing.Uncapped,
     Background: Color.Rgb(12, 20, 32),
     Root: RoundedResizeFirstFrameCell{},
   }
@@ -352,7 +352,7 @@ class RenderBudgetSiblingCell : Cell {
 func RunRenderBudgetPressureSmoke() {
   let root = RenderBudgetSiblingCell{}
   let window = Window{ Title: "Goo render budget pressure gate",
-    Width: 400, Height: 190, VSync: false, Root: root }
+    Width: 400, Height: 190, FramePacing: WindowFramePacing.Uncapped, Root: root }
   try {
     window.Open()
     WindowReadbackTestFixture.ForceRender(window, 0.0)

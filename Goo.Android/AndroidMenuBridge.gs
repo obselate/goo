@@ -43,7 +43,7 @@ internal sealed class AndroidMenuBridge {
             }
             lease.Closing = () -> session?.OwnerClosed()
             let rows = Copy(snapshot.Items)
-            if !owner.TryPost(() -> {
+            if !owner.Post(() -> {
                 if lease.IsOwnerClosing {
                     finish(AndroidContextMenuStatus.OwnerClosed, "", "")
                 } else {

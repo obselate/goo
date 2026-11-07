@@ -122,7 +122,7 @@ private func RunWindow(descriptor DiscoveryDescriptor?, sample bool) int32 {
         Transparent: true,
         ResizeBand: 8.0F,
         Resizable: true,
-        VSync: true,
+        FramePacing: WindowFramePacing.Display,
         Background: Color.Transparent,
         Root: root,
     }

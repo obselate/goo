@@ -154,7 +154,7 @@ public sealed class NativeMenus {
                 }
             }
             lease.Closing = launch
-            if !owner.TryPost(launch) {
+            if !owner.Post(launch) {
                 lease.Dispose()
                 completion.TrySetResult(NativeMenuResult(NativeMenuStatus.OwnerClosed))
             }

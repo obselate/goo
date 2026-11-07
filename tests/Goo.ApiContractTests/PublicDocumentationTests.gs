@@ -332,7 +332,6 @@ class PublicDocumentationTests {
             "M:Goo.Window.RequestCapture(Goo.WindowCapture)",
             "M:Goo.Window.PollCapture",
             "M:Goo.Window.CancelFileDialog",
-            "M:Goo.Window.SetColors(Goo.Color,Goo.Color)",
             "M:Goo.LayoutAlgorithm.Measure(Goo.LayoutContext,Goo.LayoutSize)",
             "M:Goo.LayoutAlgorithm.Arrange(Goo.LayoutContext,Goo.LayoutSize)",
             "M:Goo.LayoutContext.MeasureChild(System.Int32,Goo.LayoutSize)",
@@ -390,8 +389,6 @@ class PublicDocumentationTests {
             "M:Goo.Color.WithAlpha(System.Double)",
             "M:Goo.Color.op_Implicit(Goo.Color)~Goo.Edges{Goo.Color}",
             "M:Goo.Color.op_Implicit(System.String)~Goo.Color",
-            "M:Goo.Command.#ctor(System.Action,System.Func{System.Boolean})",
-            "M:Goo.Command.Execute",
             "M:Goo.VectorAsset.#ctor(System.Double,System.Double,System.Double,System.Double,Goo.VectorNode[])",
             "M:Goo.VectorAsset.NodeAt(System.Int32)",
             "M:Goo.VectorAsset.PathForNode(System.Int32)",
@@ -666,8 +663,6 @@ class PublicDocumentationTests {
             "M:Goo.TextSnapshot.GetLineText(System.Int32)",
             "M:Goo.TextSnapshot.GetText",
             "M:Goo.TextSnapshot.GetText(Goo.TextRange)",
-            "M:Goo.Tokens.Get``1",
-            "M:Goo.Tokens.Scope``2(``0,System.Func{``1})",
             "M:Goo.Window.#ctor",
             "M:Goo.Window.AccessibilityHitTest(System.Double,System.Double)",
             "M:Goo.Window.Attach(Goo.EmbeddedWindowHost)",
@@ -687,7 +682,6 @@ class PublicDocumentationTests {
             "M:Goo.Window.SetClipboardText(System.String)",
             "M:Goo.Window.SetInterval(System.Action,System.Double)",
             "M:Goo.Window.SetTimeout(System.Action,System.Double)",
-            "M:Goo.Window.TryPost(System.Action)",
             "M:Goo.WindowTimer.Dispose"
         }
         private let ExpectedProtectedMethodIds[]string = []string{
@@ -1975,12 +1969,6 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
-            ["M:Goo.Tokens.Get``1"] = DocumentationShape(System.Array.Empty[string](), []string{"T"}, true),
-            ["M:Goo.Tokens.Scope``2(``0,System.Func{``1})"] = DocumentationShape(
-                []string{"tokens", "body"},
-                []string{"T", "R"},
-                true
-            ),
             ["M:Goo.ElementHandle.BeginFocusScope(Goo.FocusScopeOptions)"] = DocumentationShape(
                 []string{"options"},
                 System.Array.Empty[string](),
@@ -2002,7 +1990,7 @@ class PublicDocumentationTests {
             ["M:Goo.Window.Post(System.Action)"] = DocumentationShape(
                 []string{"action"},
                 System.Array.Empty[string](),
-                false
+                true
             ),
             ["M:Goo.Window.Open"] = DocumentationShape(
                 System.Array.Empty[string](),
@@ -2071,16 +2059,6 @@ class PublicDocumentationTests {
             ),
             ["M:Goo.Window.RequestClose"] = DocumentationShape(
                 System.Array.Empty[string](),
-                System.Array.Empty[string](),
-                false
-            ),
-            ["M:Goo.Window.TryPost(System.Action)"] = DocumentationShape(
-                []string{"action"},
-                System.Array.Empty[string](),
-                true
-            ),
-            ["M:Goo.Window.SetColors(Goo.Color,Goo.Color)"] = DocumentationShape(
-                []string{"background", "foreground"},
                 System.Array.Empty[string](),
                 false
             ),

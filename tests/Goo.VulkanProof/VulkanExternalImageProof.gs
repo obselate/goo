@@ -91,7 +91,7 @@ internal unsafe partial class VulkanExternalImageProof {
 
         private func VerifyLifecycle() bool {
             let root = VulkanExternalProofCell{}
-            let window = Window{ Title: "External image lifecycle proof", Width: 64, Height: 64, VSync: false, Root: root }
+            let window = Window{ Title: "External image lifecycle proof", Width: 64, Height: 64, FramePacing: WindowFramePacing.Uncapped, Root: root }
             var session ExternalImageSession?
             var producer VulkanExternalProducer?
             var image ExternalImage?
@@ -152,7 +152,7 @@ internal unsafe partial class VulkanExternalImageProof {
                 VerifyPixel(first, 7u, 1u, 255, 0, 0)
                 VerifyPixel(first, 1u, 7u, 255, 255, 0)
                 VerifyPixel(first, 7u, 7u, 0, 255, 0)
-                secondWindow = Window{ Title: "External image shared device proof", Width: 64, Height: 64, VSync: false,
+                secondWindow = Window{ Title: "External image shared device proof", Width: 64, Height: 64, FramePacing: WindowFramePacing.Uncapped,
                     Root: VulkanExternalProofCell{ Source: source } }
                 secondWindow.Open()
                 let second = Capture(secondWindow)

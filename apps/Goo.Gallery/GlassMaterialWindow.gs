@@ -465,7 +465,7 @@ public class GlassMaterialWindow {
                 Width: 1120,
                 Height: 760,
                 Resizable: true,
-                VSync: true,
+                FramePacing: WindowFramePacing.Display,
                 Background: Color.Rgb(226, 239, 235),
                 Root: GlassMaterialRootCell(liquidEffect, terminalEffect, initialTerminal),
             }

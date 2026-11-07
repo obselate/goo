@@ -21,7 +21,6 @@ ctor|Goo.ApplicationActivation|public|()
 ctor|Goo.Button|public|()
 ctor|Goo.Cell`1|public|()
 ctor|Goo.Cell|public|()
-ctor|Goo.Command|public|(execute:System.Action,canExecute:System.Func`1<System.Boolean>?=null)
 ctor|Goo.Container|public|()
 ctor|Goo.Context`1|public|()
 ctor|Goo.DashPattern|public|(intervals:System.Double[],offset:System.Double)
@@ -1157,7 +1156,6 @@ method|Goo.Color|op_Equality|static|public|generic:|(left:Goo.Color,right:Goo.Co
 method|Goo.Color|op_Implicit|static|public|generic:|(value:Goo.Color)->Goo.Edges`1<Goo.Color>
 method|Goo.Color|op_Implicit|static|public|generic:|(value:System.String)->Goo.Color
 method|Goo.Color|op_Inequality|static|public|generic:|(left:Goo.Color,right:Goo.Color)->System.Boolean
-method|Goo.Command|Execute|instance|public|generic:|()->System.Boolean
 method|Goo.Container|Add|instance|public|generic:|(child:Goo.Blob)->System.Void
 method|Goo.Context`1|Read|instance|public|generic:|()->!0
 method|Goo.Context`1|Read|instance|public|generic:|(window:Goo.Window)->!0
@@ -1741,8 +1739,6 @@ method|Goo.TextStyleSpan|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.TextStyleSpan|ToString|virtual|public|generic:|()->System.String
 method|Goo.TextStyleSpan|op_Equality|static|public|generic:|(left:Goo.TextStyleSpan,right:Goo.TextStyleSpan)->System.Boolean
 method|Goo.TextStyleSpan|op_Inequality|static|public|generic:|(left:Goo.TextStyleSpan,right:Goo.TextStyleSpan)->System.Boolean
-method|Goo.Tokens|Get|static|public|generic:T[attrs:0,constraints:]|()->!!0
-method|Goo.Tokens|Scope|static|public|generic:T[attrs:0,constraints:];R[attrs:0,constraints:]|(tokens:!!0,body:System.Func`1<!!1>)->!!1
 method|Goo.TrayIcon|Create|static|public|generic:|(owner:Goo.Window,options:Goo.TrayOptions)->Goo.TrayResult
 method|Goo.TrayIcon|Dispose|instance|public|generic:|()->System.Void
 method|Goo.TrayIcon|Update|instance|public|generic:|(options:Goo.TrayOptions)->Goo.TrayStatus
@@ -1841,7 +1837,7 @@ method|Goo.Window|Open|instance|public|generic:|()->Goo.Window
 method|Goo.Window|PerformAccessibilityAction|instance|public|generic:|(id:Goo.AccessibilityId,request:Goo.AccessibilityActionRequest)->System.Boolean
 method|Goo.Window|PollCapture|instance|public|generic:|()->Goo.WindowCapture?
 method|Goo.Window|PostApplicationActivation|static|public|generic:|(value:Goo.ApplicationActivation)->Goo.ActivationPostStatus
-method|Goo.Window|Post|instance|public|generic:|(action:System.Action)->System.Void
+method|Goo.Window|Post|instance|public|generic:|(action:System.Action)->System.Boolean
 method|Goo.Window|Pump|instance|public|generic:|(dt:System.Double)->System.Void
 method|Goo.Window|ReadClipboardDataAsync|instance|public|generic:|(contentTypes:System.Collections.Generic.IReadOnlyList`1<System.String>)->System.Threading.Tasks.Task`1<Goo.ClipboardDataResult>
 method|Goo.Window|ReadClipboardFiles|instance|public|generic:|()->Goo.ClipboardFiles
@@ -1853,13 +1849,11 @@ method|Goo.Window|RequestCapture|instance|public|generic:|(reusable:Goo.WindowCa
 method|Goo.Window|RequestClose|instance|public|generic:|()->System.Void
 method|Goo.Window|Run|instance|public|generic:|()->System.Void
 method|Goo.Window|SetClipboardText|instance|public|generic:|(value:System.String)->System.Void
-method|Goo.Window|SetColors|instance|public|generic:|(background:Goo.Color,foreground:Goo.Color)->System.Void
 method|Goo.Window|SetInterval|instance|public|generic:|(callback:System.Action,intervalMs:System.Double)->Goo.WindowTimer
 method|Goo.Window|SetNativeDataDropFormats|instance|public|generic:|(formats:System.Collections.Generic.IReadOnlyList`1<System.String>)->Goo.WindowOperationResult
 method|Goo.Window|SetTimeout|instance|public|generic:|(callback:System.Action,delayMs:System.Double)->Goo.WindowTimer
 method|Goo.Window|ShowFileDialogAsync|instance|public|generic:|(kind:Goo.FileDialogKind,options:Goo.FileDialogOptions?=null)->System.Threading.Tasks.Task`1<Goo.FileDialogResult>
 method|Goo.Window|Show|instance|public|generic:|(activate:System.Boolean=true)->Goo.WindowOperationResult
-method|Goo.Window|TryPost|instance|public|generic:|(action:System.Action)->System.Boolean
 method|Goo.Window|TrySetFullscreenDisplay|instance|public|generic:|(display:Goo.WindowDisplayId)->Goo.WindowOperationResult
 method|Goo.Window|TrySetTopmost|instance|public|generic:|(value:System.Boolean)->Goo.WindowOperationResult
 method|Goo.Window|WriteClipboardAsync|instance|public|generic:|(data:Goo.TransferData,intent:Goo.ClipboardIntent=Copy)->System.Threading.Tasks.Task`1<Goo.ClipboardWriteResult>
@@ -2036,7 +2030,6 @@ property|Goo.BoxShadow|OffsetX|Goo.Length|instance|get:public,init:public|index:
 property|Goo.BoxShadow|OffsetY|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.BoxShadow|Spread|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.Button|Children|System.Collections.Generic.IList`1<Goo.Blob>|instance|get:public,init:public|index:()
-property|Goo.Button|Command|Goo.Command?|instance|get:public,init:public|index:()
 property|Goo.Cell`1|Input|!0|instance|get:protected|index:()
 property|Goo.ClipboardDataResult|Data|Goo.TransferData|instance|get:public|index:()
 property|Goo.ClipboardDataResult|Error|System.String|instance|get:public|index:()
@@ -2063,7 +2056,6 @@ property|Goo.Color|G|System.Single|instance|get:public|index:()
 property|Goo.Color|R|System.Single|instance|get:public|index:()
 property|Goo.Color|Transparent|Goo.Color|static|get:public|index:()
 property|Goo.Color|White|Goo.Color|static|get:public|index:()
-property|Goo.Command|CanExecute|System.Boolean|instance|get:public|index:()
 property|Goo.Container|Children|System.Collections.Generic.IList`1<Goo.Blob>|instance|get:public,init:public|index:()
 property|Goo.Container|HitTestSelf|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.Container|Layout|Goo.LayoutAlgorithm?|instance|get:public,init:public|index:()
@@ -2264,7 +2256,6 @@ property|Goo.Image|Path|System.String|instance|get:public,init:public|index:()
 property|Goo.Image|PixelsPerUnit|System.Single|instance|get:public,init:public|index:()
 property|Goo.Image|Source|Goo.ImageSourceProvider?|instance|get:public,init:public|index:()
 property|Goo.KeyBinding|Action|System.Action?|instance|get:public,init:public|index:()
-property|Goo.KeyBinding|Command|Goo.Command?|instance|get:public,init:public|index:()
 property|Goo.KeyBinding|Key|Goo.Key|instance|get:public,init:public|index:()
 property|Goo.KeyBinding|Modifiers|Goo.KeyModifiers|instance|get:public,init:public|index:()
 property|Goo.KeyBinding|OnRelease|System.Action?|instance|get:public,init:public|index:()
@@ -2901,7 +2892,6 @@ property|Goo.Window|Title|System.String|instance|get:public,set:public|index:()
 property|Goo.Window|Topmost|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|Transparent|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|UiScale|System.Single|instance|get:public,set:public|index:()
-property|Goo.Window|VSync|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|WaylandBackdrop|Goo.WaylandBackdropOptions|instance|get:public,set:public|index:()
 property|Goo.Window|WheelScrollScale|System.Single|instance|get:public,set:public|index:()
 property|Goo.Window|Width|System.Int32|instance|get:public,set:public|index:()
@@ -2948,7 +2938,6 @@ type|Goo.ClipboardIntent|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.ClipboardReadStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.ClipboardWriteResult|class|public|base:System.Object|interfaces:|generic:
 type|Goo.Color|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.Color>|generic:
-type|Goo.Command|class|public|base:System.Object|interfaces:|generic:
 type|Goo.Container|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.Context`1|sealed-class|public|base:System.Object|interfaces:|generic:T[attrs:0,constraints:]
 type|Goo.Cursor|enum|public|base:System.Enum|interfaces:|generic:
@@ -3205,7 +3194,6 @@ type|Goo.TextTransform|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.TextTrimming|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.TextWrap|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Text|sealed-class|public|base:Goo.Blob|interfaces:|generic:
-type|Goo.Tokens|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.TransferData|class|public|base:System.Object|interfaces:|generic:
 type|Goo.TransferRepresentation|class|public|base:System.Object|interfaces:|generic:
 type|Goo.TransitionProperty|enum|public|base:System.Enum|interfaces:|generic:

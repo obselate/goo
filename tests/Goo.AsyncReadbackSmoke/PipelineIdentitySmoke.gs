@@ -118,7 +118,7 @@ func RunPipelineIdentitySmoke() {
     Title: "Goo pipeline identity",
     Width: 192,
     Height: 120,
-    VSync: false,
+    FramePacing: WindowFramePacing.Uncapped,
     Root: PipelineIdentityCell(first, second),
     Background: Color.Transparent,
   }
@@ -215,7 +215,7 @@ func RunPipelineIdentitySmoke() {
       Title: "Goo pipeline identity recreation",
       Width: 192,
       Height: 120,
-      VSync: false,
+      FramePacing: WindowFramePacing.Uncapped,
       Root: PipelineIdentityCell(first, second),
       Background: Color.Transparent,
     }

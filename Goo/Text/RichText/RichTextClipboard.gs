@@ -301,7 +301,7 @@ class RichTextClipboard : IDisposable {
                 registration.Dispose()
             }
         }
-        if !owner.TryPost(
+        if !owner.Post(
             () -> {
                 if Interlocked.CompareExchange(&claimed, 1, 0) != 0 {
                     return

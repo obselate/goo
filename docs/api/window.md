@@ -307,10 +307,10 @@ Equal snapshots do not notify. A listener added after another listener has alrea
 
 ## Frame pacing and manual capture
 
-`VSync` selects the preferred native presentation mode. `FramePacing` separately
-controls `Window.Run`: `Display` is the default and `Uncapped` schedules demanded
-frames as soon as the native queue is ready. Uncapped mode does not override a
-compositor's presentation policy or render hidden and unavailable windows.
+`FramePacing` controls presentation and `Window.Run`. `Display` is the default and
+selects FIFO on every device. `Uncapped` prefers Immediate, then Mailbox, then FIFO
+and schedules demanded frames as soon as the native queue is ready. It does not
+override a compositor's presentation policy or render hidden and unavailable windows.
 
 `Pump(dt)` advances simulation by the supplied seconds even when native work is
 pending. A manual clock can advance once, then service the window with `Pump(0)`
@@ -446,9 +446,9 @@ Raster selection uses `max(DisplayScaleX, DisplayScaleY) * UiScale`.
 
 Call `Window.Post` from any thread. Accepted actions use FIFO order. Post accepts work before the first `Open`. A pending `RequestClose` still accepts work because `OnClosing` can veto the request.
 
-Use `TryPost` when teardown can race the producer. It returns `false` after posting closes instead of throwing. `true` means the action was atomically accepted into the queue, not that it is guaranteed to execute, because later teardown may still discard queued work.
+`Post` returns `false` after posting closes. `true` means the action was accepted into the queue, not that it will run. Later teardown can discard queued work.
 
-Each `Pump` drains one fixed accepted batch after close decisions and native metrics, and before input. Posts made while that batch runs wait for the next `Pump`. When native closing or teardown starts, Goo discards queued work. Teardown is terminal and later `Post` calls throw `InvalidOperationException`.
+Each `Pump` drains one fixed accepted batch after close decisions and native metrics, and before input. Posts made while that batch runs wait for the next `Pump`. Teardown is terminal and discards queued work.
 
 `Window.Closed` is cancelled after native teardown finishes or fails. Dispatch stops
 earlier and can discard an accepted action. Link asynchronous package work to this token.
@@ -1663,9 +1663,11 @@ Takes a completed capture, or returns nil while it is pending. Failed readback t
 
 ### `Post(System.Action)`
 
-Queues an action for the UI thread.
+Attempts to queue an action for the UI thread. A successful enqueue can still be discarded if teardown begins before the action runs.
 
-- `action`: action to run during the next Pump
+- `action`: action to run during a later Pump
+
+Returns: True when the action was accepted into the queue.
 
 ### `PostApplicationActivation(ApplicationActivation)`
 
@@ -1772,14 +1774,6 @@ Starts one owner-modal chooser on the open window's UI thread; other windows con
 
 Returns: A task completed on the UI thread with owned paths and an explicit outcome. Await continuations follow normal .NET context rules.
 
-### `TryPost(System.Action)`
-
-Attempts to queue an action for the UI thread. A successful enqueue can still be discarded if teardown begins before the action runs.
-
-- `action`: action to run during a later Pump
-
-Returns: True when the action was accepted into the queue.
-
 ### `TrySetFullscreenDisplay(WindowDisplayId)`
 
 Requests borderless fullscreen on the selected display, including retargeting an already-fullscreen window. This must run on the window's UI thread. Returns Closed before Open or after close, Unsupported for embedded hosts, Failed for a stale ID or native failure, and Accepted when SDL accepts the request. Acceptance does not guarantee compositor placement. The compositor may keep the current display when retargeting fullscreen.
@@ -1857,7 +1851,7 @@ Gets or sets a portal parent identifier before Open, such as wayland: followed b
 
 ### `FramePacing`
 
-Gets or sets the frame pacing used by Window.Run. Uncapped still honors GPU queue readiness and the selected presentation mode.
+Gets or sets presentation and Window.Run pacing. Display selects FIFO on every device. Uncapped prefers Immediate, then Mailbox, then FIFO and still honors GPU queue readiness.
 
 ### `FrameTheme`
 
@@ -2010,10 +2004,6 @@ Gets or sets next-open per-pixel alpha. An open window is unchanged. Transparenc
 ### `UiScale`
 
 Gets or sets the layout and rendering scale, clamped to 0.5 through 3. The default is 1, or the owner's scale when not explicitly set. Width and Height remain native logical sizes. Layout uses those sizes divided by UiScale, and rendering multiplies the display scale by UiScale.
-
-### `VSync`
-
-Gets or sets per-window GPU presentation synchronization. True selects FIFO. False prefers Immediate, then Mailbox, then FIFO on every device. Window.Run pacing is controlled separately by FramePacing.
 
 ### `WaylandBackdrop`
 

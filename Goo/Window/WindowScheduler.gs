@@ -101,14 +101,14 @@ internal class WindowScheduler {
   internal func RequestHotReload() {
     let pending = List[Window]()
     lock windowsGate { pending.AddRange(windows) }
-    for window in pending { window.TryPost(window.RebuildAllCells) }
+    for window in pending { window.Post(window.RebuildAllCells) }
   }
   internal func ProfileWindows(recorder FrameRecorder, exceptWindowId string) {
     let pending = List[Window]()
     lock windowsGate { pending.AddRange(windows) }
     for window in pending {
       if window.ProfileWindowId == exceptWindowId { continue }
-      window.TryPost(() -> {
+      window.Post(() -> {
         if Object.ReferenceEquals(FrameRecorder.Current, recorder) {
           window.SampleProfile(recorder, includeShared: false)
           let metadata = window.ProfileMetadata()

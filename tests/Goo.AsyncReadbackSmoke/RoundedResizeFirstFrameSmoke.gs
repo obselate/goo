@@ -81,7 +81,7 @@ func RunPathUpdateFramesSmoke() {
     Title: "Goo path update frames",
     Width: 180,
     Height: 120,
-    VSync: false,
+    FramePacing: WindowFramePacing.Uncapped,
     Root: root,
   }
   try {
@@ -116,21 +116,21 @@ func RunPendingPathReadinessSmoke() {
     Title: "Goo submitted path readiness",
     Width: 180,
     Height: 120,
-    VSync: false,
+    FramePacing: WindowFramePacing.Uncapped,
     Root: PendingPathReadinessCell(PendingPathReadinessCell.CoveredPath),
   }
   let covered = Window{
     Title: "Goo covered path probe",
     Width: 180,
     Height: 120,
-    VSync: false,
+    FramePacing: WindowFramePacing.Uncapped,
     Root: PendingPathReadinessCell(PendingPathReadinessCell.CoveredPath),
   }
   let uncovered = Window{
     Title: "Goo uncovered path probe",
     Width: 180,
     Height: 120,
-    VSync: false,
+    FramePacing: WindowFramePacing.Uncapped,
     Root: PendingPathReadinessCell(PendingPathReadinessCell.UncoveredPath),
   }
   try {
@@ -201,7 +201,7 @@ func RunRoundedResizeFirstFrameSmoke() {
       Title: "Goo rounded resize first frame gate",
       Width: 300,
       Height: 170,
-      VSync: false,
+      FramePacing: WindowFramePacing.Uncapped,
       Background: Color.Rgb(12, 20, 32),
       Root: RoundedResizeFirstFrameCell{},
     }

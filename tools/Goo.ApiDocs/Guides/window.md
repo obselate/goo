@@ -300,10 +300,10 @@ Equal snapshots do not notify. A listener added after another listener has alrea
 
 ## Frame pacing and manual capture
 
-`VSync` selects the preferred native presentation mode. `FramePacing` separately
-controls `Window.Run`: `Display` is the default and `Uncapped` schedules demanded
-frames as soon as the native queue is ready. Uncapped mode does not override a
-compositor's presentation policy or render hidden and unavailable windows.
+`FramePacing` controls presentation and `Window.Run`. `Display` is the default and
+selects FIFO on every device. `Uncapped` prefers Immediate, then Mailbox, then FIFO
+and schedules demanded frames as soon as the native queue is ready. It does not
+override a compositor's presentation policy or render hidden and unavailable windows.
 
 `Pump(dt)` advances simulation by the supplied seconds even when native work is
 pending. A manual clock can advance once, then service the window with `Pump(0)`
@@ -437,9 +437,9 @@ Raster selection uses `max(DisplayScaleX, DisplayScaleY) * UiScale`.
 
 Call `Window.Post` from any thread. Accepted actions use FIFO order. Post accepts work before the first `Open`. A pending `RequestClose` still accepts work because `OnClosing` can veto the request.
 
-Use `TryPost` when teardown can race the producer. It returns `false` after posting closes instead of throwing. `true` means the action was atomically accepted into the queue, not that it is guaranteed to execute, because later teardown may still discard queued work.
+`Post` returns `false` after posting closes. `true` means the action was accepted into the queue, not that it will run. Later teardown can discard queued work.
 
-Each `Pump` drains one fixed accepted batch after close decisions and native metrics, and before input. Posts made while that batch runs wait for the next `Pump`. When native closing or teardown starts, Goo discards queued work. Teardown is terminal and later `Post` calls throw `InvalidOperationException`.
+Each `Pump` drains one fixed accepted batch after close decisions and native metrics, and before input. Posts made while that batch runs wait for the next `Pump`. Teardown is terminal and discards queued work.
 
 `Window.Closed` is cancelled after native teardown finishes or fails. Dispatch stops
 earlier and can discard an accepted action. Link asynchronous package work to this token.

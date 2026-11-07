@@ -239,7 +239,7 @@ public partial class Window {
   /// @param background The window clear color.
   /// @param foreground The inherited root text color.
   /// @exception InvalidOperationException when called off the owner thread after Open or Attach.
-  public func SetColors(background Color, foreground Color) {
+  internal func SetColors(background Color, foreground Color) {
     requireUiThread("Window.SetColors")
     if this.background == background && this.foreground == foreground { return }
     let foregroundChanged = this.foreground != foreground
@@ -266,26 +266,8 @@ public partial class Window {
   public prop IsOpen bool{ get; private set; }
   internal prop Tree Node? { get -> node }
   internal prop DiagnosticsSession DevToolsSession? { get -> diagnosticsSession }
-  /// Gets or sets per-window GPU presentation synchronization.
-  /// True selects FIFO. False prefers Immediate, then Mailbox, then FIFO on every device.
-  /// Window.Run pacing is controlled separately by FramePacing.
-  public prop VSync bool{
-    get -> vsync
-    set(v) {
-      requireUiThread("Window.VSync")
-      if vsync == v {
-        return
-      }
-      vsync = v
-      if let native = host {
-        native.SetVSync(v)
-      }
-      windowTarget?.SetVSync(v)
-    }
-  }
-
-  /// Gets or sets the frame pacing used by Window.Run. Uncapped still honors
-  /// GPU queue readiness and the selected presentation mode.
+  /// Gets or sets presentation and Window.Run pacing. Display selects FIFO on every device.
+  /// Uncapped prefers Immediate, then Mailbox, then FIFO and still honors GPU queue readiness.
   public prop FramePacing WindowFramePacing{
     get -> framePacing
     set(v) {
@@ -295,6 +277,9 @@ public partial class Window {
       }
       if framePacing == v { return }
       framePacing = v
+      let synchronized = v == WindowFramePacing.Display
+      host?.SetPresentationSynchronized(synchronized)
+      windowTarget?.SetPresentationSynchronized(synchronized)
       host?.Wake()
     }
   }
@@ -630,7 +615,6 @@ public partial class Window {
   private var framebufferHeight int32
 
   private var state WindowState
-  private var vsync bool
   private var framePacing WindowFramePacing
   private var flushingMetricsBeforeRender bool
   private var metricsFlushThreadId int32
@@ -668,7 +652,6 @@ public partial class Window {
     title = ""
     background = Color.White
     foreground = Color.Black
-    vsync = true
     framePacing = WindowFramePacing.Display
     decorated = true
     resizable = true

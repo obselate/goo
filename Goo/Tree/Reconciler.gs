@@ -371,7 +371,7 @@ internal partial class Reconciler {
     let active = b.Active?.Entries()
     let focus = b.Focus?.Entries()
     let disabled = b.DisabledStyle?.Entries()
-    let nextDisabled = b.Disabled || InputCallbacks.BlobCommand(b)?.CanExecute == false
+    let nextDisabled = b.Disabled
     let nextFocusable = focusable && !nextDisabled
     let baseChanged = !sameStyleEntries(n.BaseStyle, entries)
     let hoverChanged = !sameStyleEntries(n.HoverStyle, hover)

@@ -17,7 +17,7 @@ internal func OpenVulkanProductionProofWindow() Window {
     Title: "Goo Vulkan production proof",
     Width: 64,
     Height: 64,
-    VSync: false,
+    FramePacing: WindowFramePacing.Uncapped,
     Root: VulkanProductionProofCell{},
   }
   window.Open()

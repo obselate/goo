@@ -74,14 +74,14 @@ func RunTimelineCompletionSmoke() {
       Title: "Goo graphics timeline window",
       Width: 96,
       Height: 64,
-      VSync: false,
+      FramePacing: WindowFramePacing.Uncapped,
       Root: TimelineCompletionCell{},
     }
     let openedSecond = Window{
       Title: "Goo graphics timeline offscreen",
       Width: 64,
       Height: 64,
-      VSync: false,
+      FramePacing: WindowFramePacing.Uncapped,
       Root: ReadbackSmokeCell{},
     }
     first = openedFirst

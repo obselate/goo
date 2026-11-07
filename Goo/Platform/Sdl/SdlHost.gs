@@ -22,7 +22,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   private var disposed bool
   private var runtimeOwned bool
   private var vulkanOwned bool
-  private var vsync bool
+  private var presentationSynchronized bool
   private let pacing SdlFramePacing = SdlFramePacing()
   private var pendingEvents bool
   private var textInputActive bool
@@ -39,7 +39,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
 
   internal init(title string, width int32, height int32, x int32, y int32,
     positionSet bool, state WindowState, decorated bool, resizable bool,
-    transparent bool, vsync bool, hitTest((int32, int32) -> WindowHitResult),
+    transparent bool, presentationSynchronized bool, hitTest((int32, int32) -> WindowHitResult),
     popupParent SdlHost? = nil, popupKind PopupKind = PopupKind.Menu, popupTimestamp uint64 = 0uL,
     popupAnchor ElementRect = default(ElementRect), popupPlacement PortalPlacement = PortalPlacement.BottomStart,
     popupScale float32 = 1.0F, layerOptions LayerWindowOptions? = nil,
@@ -77,7 +77,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
           throw NotSupportedException("Layer-shell windows do not support normal window states")
         }
 
-        SetVSync(vsync)
+        SetPresentationSynchronized(presentationSynchronized)
         RefreshMetrics()
         if LogicalWidth > 0 && FramebufferWidth > 0 {
           pixelDensity = float32(FramebufferWidth) / float32(LogicalWidth)
@@ -133,7 +133,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       return (SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Transparent)) != 0uL
     }
   }
-  public prop VSync bool{ get -> vsync }
+  public prop PresentationSynchronized bool{ get -> presentationSynchronized }
   internal prop FramePacing SdlFramePacing{ get -> pacing }
   public prop HasPendingEvents bool{ get -> pendingEvents }
   public prop SchedulerPacingAvailable bool{
@@ -360,9 +360,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     }
   }
 
-  public func SetVSync(value bool) {
+  public func SetPresentationSynchronized(value bool) {
     ThrowIfDisposed()
-    vsync = value
+    presentationSynchronized = value
   }
 
   public func SetCursor(value Cursor) {

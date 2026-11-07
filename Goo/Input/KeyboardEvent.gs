@@ -40,7 +40,6 @@ public struct FocusEvent {
 }
 
 internal class InputCallbackSet {
-  internal var Command Command?
   internal var Bindings ([]KeyBinding)?
   internal var FocusTarget ElementHandle?
   internal var OnKeyDown((KeyEvent) -> void)?
@@ -51,7 +50,7 @@ internal class InputCallbackSet {
   internal var OnPointerLeave((PointerEvent) -> void)?
 
   internal func Empty() bool -> OnKeyDown == nil && OnKeyUp == nil && OnFocus == nil && OnBlur == nil
-    && OnPointerEnter == nil && OnPointerLeave == nil && Bindings == nil && Command == nil && FocusTarget == nil
+    && OnPointerEnter == nil && OnPointerLeave == nil && Bindings == nil && FocusTarget == nil
 }
 
 // Sparse callback state keeps ordinary declarations and retained nodes unchanged.
@@ -63,16 +62,6 @@ internal class InputCallbacks {
     ConditionalWeakTable[Node, InputCallbackSet]()
 
     internal func Remove(node Node) { nodeValues.Remove(node) }
-
-    internal func SetBlobCommand(blob Blob, value Command?) {
-      guard let callbacks = blobCallbacks(blob, value != nil) else { return }
-      callbacks.Command = value
-      finishBlob(blob, callbacks)
-    }
-
-    internal func BlobCommand(blob Blob) Command? -> blobCallbacks(blob, false)?.Command
-
-    internal func Command(node Node) Command? -> nodeCallbacks(node)?.Command
 
     internal func BlobFocusTarget(blob Blob) ElementHandle? -> blobCallbacks(blob, false)?.FocusTarget
 
@@ -96,7 +85,6 @@ internal class InputCallbacks {
       InputMetadata.Refresh(node)
       return true
     }
-
     internal func SetBlobBindings(blob Blob, value ([]KeyBinding)?) {
       let callbacks = blobCallbacks(blob, value != nil && value.Length > 0)
       if callbacks == nil { return }
@@ -194,7 +182,6 @@ internal class InputCallbacks {
         nodeValues.Add(node, destination)
       }
       destination.OnKeyDown = source.OnKeyDown
-      destination.Command = source.Command
       destination.FocusTarget = source.FocusTarget
       destination.Bindings = source.Bindings
       destination.OnKeyUp = source.OnKeyUp
@@ -254,7 +241,6 @@ internal class InputCallbacks {
       if value.OnPointerEnter != nil { result = result | 16 }
       if value.OnPointerLeave != nil { result = result | 32 }
       if value.Bindings != nil { result = result | 64 }
-      if value.Command != nil { result = result | 128 }
       return result
     }
   }

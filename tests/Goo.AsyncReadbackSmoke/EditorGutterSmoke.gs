@@ -45,7 +45,7 @@ func RunEditorGutterSmoke() {
   using let controller = TextEditorController(document)
   let cell = EditorGutterSmokeCell(controller)
   let window = Window{ Title: "Goo editor gutter smoke", Width: 280, Height: 140,
-    VSync: false, Root: cell }
+    FramePacing: WindowFramePacing.Uncapped, Root: cell }
   window.Open()
   try {
     for i in 0 ... 20 { WindowReadbackTestFixture.Pump(window, 0.0) }

@@ -178,7 +178,7 @@ public partial class Window {
       x = native.X
       y = native.Y
       input.SetUiScale(UiScale)
-      native.TransferPost = TryPost
+      native.TransferPost = Post
       native.NativeDragPost = postNativeDragStart
       input.Attach(native)
       IsOpen = true
@@ -257,7 +257,7 @@ public partial class Window {
         FrameIndex: acceptedFrameIndex,
         AcceptedTicks: ticks,
       }
-      TryPost(() -> {
+      Post(() -> {
         if IsOpen { notifications.RaisePresentationAccepted(receipt) }
       })
     }

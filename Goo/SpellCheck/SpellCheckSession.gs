@@ -83,7 +83,7 @@ class SpellCheckSession : IDisposable {
                 result with{Status = SpellingStatus.Cancelled, Errors = Array.Empty[Misspelling]()}
             )
         )
-        if !owner.TryPost(
+        if !owner.Post(
             () -> {
                 if disposed || token.IsCancellationRequested {
                     result = result with{Status = SpellingStatus.Cancelled, Errors = Array.Empty[Misspelling]()}
@@ -338,7 +338,7 @@ class SpellCheckSession : IDisposable {
         try {
             await Task.Delay(CheckDelayMilliseconds, cancellation).ConfigureAwait(false)
             if !cancellation.IsCancellationRequested {
-                owner.TryPost(
+                owner.Post(
                     () -> {
                         if !disposed && !cancellation.IsCancellationRequested {
                             let _ = CheckAsync($range, cancellation)

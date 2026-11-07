@@ -107,7 +107,7 @@ public sealed partial class NativeAccessibilityAdapter {
         guard let adapter = Find(data), let window = adapter.owner else { return }
         let owned = ReadAction(request)
         let expected = int64(data)
-        window.TryPost(() -> adapter.DispatchAction(expected, owned))
+        window.Post(() -> adapter.DispatchAction(expected, owned))
       } catch (error Exception) {
         ReportActionError(data, error)
       } finally { AccessKitNative.ActionRequestFree(request) }
@@ -115,7 +115,7 @@ public sealed partial class NativeAccessibilityAdapter {
 
     private func ReportActionError(data nint, error Exception) {
       guard let adapter = Find(data), let window = adapter.owner else { return }
-      window.TryPost(() -> window.ReportNativeAccessibilityError(error))
+      window.Post(() -> window.ReportNativeAccessibilityError(error))
     }
 
     internal func ReadAction(request nint) NativeAccessibilityRequest {

@@ -66,7 +66,7 @@ func Main() {
   let secondHandle = NativeHandle(second)
   Console.WriteLine("pid=" + Environment.ProcessId.ToString())
   using let timer = Timer(_ -> {
-    first.TryPost(() -> {
+    first.Post(() -> {
       if !first.IsOpen || !second.IsOpen { return }
       if Leaf.Instances.Count != 2 { return }
       let lines = List[string]()

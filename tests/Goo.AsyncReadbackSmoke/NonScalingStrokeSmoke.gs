@@ -208,7 +208,7 @@ func VerifyNonScalingStrokePixels() {
         Title: "Goo non-scaling stroke proof",
         Width: 400,
         Height: 200,
-        VSync: false,
+        FramePacing: WindowFramePacing.Uncapped,
         Background: Color.Black,
         Root: root
     }
@@ -452,7 +452,7 @@ func MeasureNonScalingStroke(path VectorPath, count int32, nonScaling bool) {
         Title: "Goo stroke zoom benchmark",
         Width: 800,
         Height: 600,
-        VSync: false,
+        FramePacing: WindowFramePacing.Uncapped,
         Background: Color.Black,
         Root: root
     }

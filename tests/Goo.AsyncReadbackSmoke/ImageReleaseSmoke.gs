@@ -54,7 +54,7 @@ func RunImageReleaseSmoke() {
       Title: "Goo image release gate",
       Width: 96,
       Height: 96,
-      VSync: false,
+      FramePacing: WindowFramePacing.Uncapped,
       Root: root,
     }
     window = opened

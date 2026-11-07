@@ -1078,7 +1078,7 @@ internal class WindowReadbackTestFixture {
         attempts = attempts + 1
         if attempts == 1 { throw InvalidOperationException("injected candidate startup failure") }
       }
-      let window = Window{Title: "Vulkan startup rollback", Width: 64, Height: 64, VSync: false, Root: root}
+      let window = Window{Title: "Vulkan startup rollback", Width: 64, Height: 64, FramePacing: WindowFramePacing.Uncapped, Root: root}
       try {
         try {
           window.Open()

@@ -93,7 +93,7 @@ internal interface WindowHost {
   func ApplyPlacement(value WindowPlacement) WindowPlacementResult;
   func RequestActivation() WindowOperationResult;
   func SetBorder(decorated bool, resizable bool);
-  func SetVSync(value bool);
+  func SetPresentationSynchronized(value bool);
   func SetCursor(value Cursor);
   func SetFocusable(value bool);
   func SetTopmost(value bool);
@@ -142,7 +142,7 @@ internal interface WindowRenderTarget {
   prop RetirementWorkPending bool { get; }
 
   func PrepareClose() bool;
-  func SetVSync(value bool);
+  func SetPresentationSynchronized(value bool);
   func SetHidden(value bool);
   func BeginFrame();
   func Render(root Node?, portalRoot Node?, background Color, dpi Vector2,

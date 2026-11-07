@@ -649,7 +649,7 @@ func PartialRedrawScene(name string, root Cell, steps int32, advance Action,
     Title: "Goo partial redraw proof",
     Width: 400,
     Height: 190,
-    VSync: false,
+    FramePacing: WindowFramePacing.Uncapped,
     Root: root,
   }
   var failures int32 = 0

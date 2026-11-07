@@ -99,7 +99,7 @@ internal shared class AndroidNativeMenuSmoke {
                                     Point(),
                                     []NativeMenuItem{NativeMenuItem{Id: "close", Text: "Owner closes this menu"}}
                                 )
-                                view.Window.TryPost(() -> view.Window.RequestClose())
+                                view.Window.Post(() -> view.Window.RequestClose())
                                 closing.ContinueWith(
                                     (closed Task[NativeMenuResult]) -> view.Post(
                                         () -> {

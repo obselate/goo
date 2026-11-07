@@ -6,7 +6,7 @@ internal unsafe partial class VulkanExternalImageProof {
     shared {
         private func VerifyDmaLifecycle() bool {
             let root = VulkanExternalProofCell{}
-            let window = Window{ Title: "DMA-BUF lifecycle proof", Width: 64, Height: 64, VSync: false, Root: root }
+            let window = Window{ Title: "DMA-BUF lifecycle proof", Width: 64, Height: 64, FramePacing: WindowFramePacing.Uncapped, Root: root }
             try {
                 window.Open()
                 WindowReadbackTestFixture.ForceRender(window, 0.0)

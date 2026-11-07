@@ -176,7 +176,7 @@ func RunPrimitiveSmoke() {
       Title: "Goo Primitive public smoke",
       Width: 400,
       Height: 220,
-      VSync: false,
+      FramePacing: WindowFramePacing.Uncapped,
       Root: root,
     }
     opened.MetricsChanged += metrics -> windowMetrics = metrics
@@ -420,7 +420,7 @@ func RunDirectDriverSmoke() {
     Title: "Goo direct Vulkan driver smoke",
     Width: 64,
     Height: 64,
-    VSync: false,
+    FramePacing: WindowFramePacing.Uncapped,
     Background: Color.Rgb(12, 20, 32),
     Root: Cell{},
   }
@@ -518,21 +518,21 @@ func Main() {
       Title: "Goo package smoke first",
       Width: 160,
       Height: 90,
-      VSync: false,
+      FramePacing: WindowFramePacing.Uncapped,
       Root: firstRoot,
     }
     let second = Window{
       Title: "Goo package smoke second",
       Width: 160,
       Height: 90,
-      VSync: false,
+      FramePacing: WindowFramePacing.Uncapped,
       Root: secondRoot,
     }
     let third = Window{
       Title: "Goo package smoke third",
       Width: 160,
       Height: 90,
-      VSync: false,
+      FramePacing: WindowFramePacing.Uncapped,
       Root: thirdRoot,
     }
     first.Open()
@@ -637,7 +637,7 @@ func Main() {
     Title: "Goo package smoke test",
     Width: 320,
     Height: 180,
-    VSync: false,
+    FramePacing: WindowFramePacing.Uncapped,
     Root: smokeRoot,
   }
 

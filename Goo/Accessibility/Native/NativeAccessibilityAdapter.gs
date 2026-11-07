@@ -166,7 +166,7 @@ public sealed partial class NativeAccessibilityAdapter : AccessibilityAdapter, I
       guard let adapter = Find(data), let window = adapter.owner else { return nint(0) }
       if window.IsNativeAccessibilityThread { return EncodeSafely(adapter, true) }
       let expected = int64(data)
-      window.TryPost(() -> adapter.ActivateOnUi(expected))
+      window.Post(() -> adapter.ActivateOnUi(expected))
       return nint(0)
     }
 
@@ -195,7 +195,7 @@ public sealed partial class NativeAccessibilityAdapter : AccessibilityAdapter, I
     private func Deactivate(data nint) {
       guard let adapter = Find(data), let window = adapter.owner else { return }
       let expected = int64(data)
-      window.TryPost(() -> { if adapter.binding == expected { adapter.Reset() } })
+      window.Post(() -> { if adapter.binding == expected { adapter.Reset() } })
     }
   }
 }

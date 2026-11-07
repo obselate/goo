@@ -117,7 +117,7 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
                 }
             )
             cancellation.Token.ThrowIfCancellationRequested()
-            window.TryPost(
+            window.Post(
                 () -> {
                     if generation != workerGeneration {
                         return

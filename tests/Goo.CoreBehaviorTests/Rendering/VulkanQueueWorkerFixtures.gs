@@ -17,7 +17,7 @@ internal class ThrowingQueueWakeHost : VulkanSurfaceHost {
   public prop FramebufferWidth int32{ get -> 1 }
   public prop FramebufferHeight int32{ get -> 1 }
   public prop Transparent bool{ get -> false }
-  public prop VSync bool{ get -> true }
+  public prop PresentationSynchronized bool{ get -> true }
   public prop WindowHandle nint{ get -> nint(0) }
   public prop PreferRequestedFramebufferExtent bool{ get -> false }
   public prop AllowInheritedCompositeAlpha bool{ get -> false }

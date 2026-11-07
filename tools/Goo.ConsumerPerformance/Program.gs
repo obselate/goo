@@ -72,7 +72,7 @@ func Main() {
     Title: "Goo consumer performance",
     Width: 640,
     Height: 480,
-    VSync: true,
+    FramePacing: WindowFramePacing.Display,
     Root: ConsumerScene{},
   }
   window.MetricsChanged += (metrics WindowMetrics) -> {

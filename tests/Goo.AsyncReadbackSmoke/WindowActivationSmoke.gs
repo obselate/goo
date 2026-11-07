@@ -64,7 +64,7 @@ internal class WindowActivationSmoke {
           Require(entered.IsSet, "Secondary startup worker did not enter")
           child.Width = 360
           child.Height = 180
-          child.VSync = false
+          child.FramePacing = WindowFramePacing.Uncapped
           if closeEarly {
             child.RequestClose()
             child.PumpScheduled(0.0)
@@ -94,7 +94,7 @@ internal class WindowActivationSmoke {
             }
             Require(VulkanSharedRuntime.WaitForHeldQueueCallForTest(0),
               "Secondary first submission did not enter")
-            child.VSync = true
+            child.FramePacing = WindowFramePacing.Display
             VulkanSharedRuntime.ReleaseHeldQueueCallForTest()
             let readyDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
             while target.StartupPending && Stopwatch.GetTimestamp() < readyDeadline {

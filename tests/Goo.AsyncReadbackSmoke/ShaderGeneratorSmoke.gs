@@ -114,7 +114,7 @@ func RunShaderGeneratorSmoke() {
       Title: "Goo generator effect gate",
       Width: 200,
       Height: 160,
-      VSync: false,
+      FramePacing: WindowFramePacing.Uncapped,
       Root: cell,
     }
     window = opened

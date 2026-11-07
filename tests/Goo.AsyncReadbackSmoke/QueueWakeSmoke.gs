@@ -23,7 +23,7 @@ func RunQueueWakeSmoke() {
       Title: "Goo queue completion wake",
       Width: 180,
       Height: 96,
-      VSync: true,
+      FramePacing: WindowFramePacing.Display,
       Root: root,
     }
     var worker Thread? = nil

@@ -203,12 +203,12 @@ func RunNativeDataTransferSmoke() {
         while window.IsOpen || (sibling?.IsOpen ?? false) {
             NativeTransferRequire(timeout.Elapsed < TimeSpan.FromSeconds(45), "Native transfer did not finish")
             if window.IsOpen {
-                window.TryPost(() -> {})
+                window.Post(() -> {})
                 window.Pump(0.0)
             }
             if let other = sibling {
                 if other.IsOpen {
-                    other.TryPost(() -> {})
+                    other.Post(() -> {})
                     other.Pump(0.0)
                 }
             }

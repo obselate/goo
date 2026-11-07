@@ -134,7 +134,7 @@ internal class VectorRetainSmoke {
             let root = VectorRetainCell(asset, count, markers)
             let window = Window{
                 Title: "Goo retained vector zoom", Width: 800, Height: 600,
-                VSync: false, Background: Color.Black, Root: root,
+                FramePacing: WindowFramePacing.Uncapped, Background: Color.Black, Root: root,
             }
             try {
                 window.Open()

@@ -164,7 +164,7 @@ func RunScrollPlacementSmoke() {
         Title: "Goo canonical scroll placement gate",
         Width: 320,
         Height: 288,
-        VSync: false,
+        FramePacing: WindowFramePacing.Uncapped,
         Decorated: false,
         Root: cell,
     }
@@ -463,7 +463,7 @@ func RunScrollImagePlacementSmoke() {
             Width: int32(96.0F * scale),
             Height: int32(96.0F * scale),
             UiScale: scale,
-            VSync: false,
+            FramePacing: WindowFramePacing.Uncapped,
             Root: root,
         }
         try {

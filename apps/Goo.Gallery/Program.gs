@@ -85,7 +85,7 @@ func Main() {
         Transparent: true,
         Resizable: true,
         ResizeBand: 8.0F,
-        VSync: true,
+        FramePacing: WindowFramePacing.Display,
         Background: Color.Transparent,
         Root: root,
     }
@@ -136,7 +136,7 @@ func RunSmoke() {
         Transparent: true,
         Resizable: true,
         ResizeBand: 8.0F,
-        VSync: false,
+        FramePacing: WindowFramePacing.Uncapped,
         Background: Color.Transparent,
         Root: root,
     }
@@ -281,7 +281,7 @@ func RunBench() {
         Width: 1440,
         Height: 900,
         Resizable: true,
-        VSync: false,
+        FramePacing: WindowFramePacing.Uncapped,
         Background: GalleryTheme.Background,
         Root: root,
     }
