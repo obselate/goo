@@ -55,8 +55,8 @@ section > .wrap { position: relative; z-index: 2; }
 .mascot .body { fill: var(--tx); }
 
 .code { position: relative; min-width: 0; border-radius: var(--radius-3); background: var(--code-bg); border: 1px solid var(--border-1); }
-.code pre { margin: 0; padding: 16px 64px 16px 18px; overflow: auto; background: none; border: 0; border-radius: inherit; color: var(--code-fg); font: 400 14px/1.6 var(--font-mono); font-variant-ligatures: none; }
-.code pre span { display: block; }
+.code pre { margin: 0; padding: 16px 64px 16px 18px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: none; border: 0; border-radius: inherit; color: var(--code-fg); font: 400 14px/1.6 var(--font-mono); font-variant-ligatures: none; }
+.code pre span { display: block; padding-left: 2ch; text-indent: -2ch; }
 .code pre span::before { content: "$ "; color: var(--goo-green); user-select: none; }
 .code .copy { position: absolute; top: 8px; right: 8px; width: 36px; height: 36px; border-color: transparent; color: var(--ink-8); }
 .code .copy:hover, .bar .icon-btn:hover { background: rgba(255,255,255,.08); color: var(--goo-bone); }
@@ -194,10 +194,9 @@ pre.src code { display: block; width: max-content; min-width: 100%; padding-righ
 .done-btn[aria-pressed=true]::before { background: var(--goo-ink); border-color: var(--goo-ink); }
 .prose .codebox, .cmds { border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
 .cmds { background: var(--code-bg); }
-.tabs ~ .code pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .cmd { display: flex; align-items: center; gap: 12px; min-height: 50px; padding: 0 8px 0 18px; color: var(--code-fg); }
 .cmd + .cmd { border-top: 1px solid rgba(255,255,255,.07); }
-.cmd code { flex: 1; min-width: 0; overflow-x: auto; white-space: pre; padding: 13px 0; background: none; border: 0; border-radius: 0; font: 14px/1.4 var(--font-mono); font-variant-ligatures: none; }
+.cmd code { flex: 1; min-width: 0; padding: 13px 0 13px 2ch; text-indent: -2ch; white-space: pre-wrap; overflow-wrap: anywhere; background: none; border: 0; border-radius: 0; font: 14px/1.4 var(--font-mono); font-variant-ligatures: none; }
 .cmd code::before { content: "$ "; color: var(--goo-green); user-select: none; }
 .cmd .icon-btn { width: 34px; height: 34px; border-color: transparent; color: var(--ink-8); }
 .cmd .icon-btn:hover { background: rgba(255,255,255,.08); color: var(--goo-bone); }

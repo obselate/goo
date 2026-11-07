@@ -40,6 +40,7 @@ let tutorialSources = Regex
     .ToList()
 let pages = Directory
     .GetFiles(Path.Combine(root, "docs"), "*.md", SearchOption.AllDirectories)
+    .Where(path -> Path.GetFileName(path) != "nuget-readme.md")
     .Select(
     path -> {
         let source = Path.GetRelativePath(root, path).Replace('\\', '/')
