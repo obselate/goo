@@ -27,6 +27,7 @@ internal partial class ProfilerTrace {
                 let tracks = [Records.Count]int32
                 let names = List[string]()
                 for lane in Lanes {
+                    lane.Prepare(Records)
                     let byThread = Dictionary[uint64, List[List[int64]]]()
                     let trackNumbers = Dictionary[uint64, List[int32]]()
                     for index in lane.Records {

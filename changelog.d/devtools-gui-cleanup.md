@@ -8,4 +8,5 @@
 - Show scroll offset and content size as numbers instead of raw JSON.
 - Remove the console entry for every received snapshot, and match the profiler toolbar to the Elements toolbar.
 - Show the inspected element as a box diagram plus the values the app set, grouped into Layout, Style and Interaction, with defaults on request.
+- Replace the profiler frame chart with a timing view: frame times against a 60 Hz budget line, nested scope tracks for the UI thread, GPU and present and DevTools, and per-frame work and allocation strips. Open the Timers table by default. Scope nesting runs off the UI thread.
 - Update Goo.Widgets to 0.19.6.
