@@ -65,6 +65,7 @@ dotnet run --project tools/Goo.Repo -- docs --check
 | `docs --android` | Generate Android API pages with an installed Android workload, SDK and Java 21 |
 | `docs --android --check` | Compare Android pages without changing tracked files |
 | `pack` | Build or fetch pinned Linux and Windows SDL inputs, then pack Goo |
+| `site` | Build the website from `docs/` into `artifacts/site` |
 
 Every command accepts `--help`. `check api` builds Android and runs the full API
 baseline and XML contracts. It needs the Android workload, SDK and Java 21.

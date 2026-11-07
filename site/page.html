@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{title}} · Goo</title>
+<link rel="icon" href="{{root}}goo_light_icon.svg">
+<link rel="stylesheet" href="{{root}}colors_and_type.css">
+<link rel="stylesheet" href="{{root}}site.css">
+<script>document.documentElement.dataset.theme = localStorage.getItem('goo-theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');</script>
+<script src="{{root}}site.js" defer></script>
+</head>
+<body class="docs-page" data-root="{{root}}" data-tutorial="{{tutorial}}">
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="{{root}}index.html" aria-label="Goo"><span data-mark></span><span data-word></span></a>
+    <nav class="nav" aria-label="Site">
+      <a href="{{root}}docs/index.html">Docs</a>
+      <a href="{{root}}docs/tutorials/index.html">Tutorials</a>
+      <a href="{{root}}docs/api/index.html">API</a>
+      <a href="https://github.com/obselate/goo">GitHub</a>
+    </nav>
+    <button class="icon-btn" id="theme" type="button" aria-label="Switch theme" data-icon="theme"></button>
+    <button class="icon-btn" id="menu" type="button" aria-label="Docs menu" aria-expanded="false" aria-controls="side" data-icon="menu"></button>
+  </div>
+</header>
+<div class="docs">
+  <nav class="side" id="side" aria-label="Docs">
+    <input type="search" placeholder="Search  /" aria-label="Search docs">
+    <div id="nav-groups">{{nav}}</div>
+    <p hidden>No match</p>
+  </nav>
+  <main class="article">
+    <div class="intro"><h1>{{title}}</h1></div>
+    <div class="steps prose" id="steps">{{content}}</div>
+    <aside class="follow" aria-label="On this page">
+      <div class="preview"></div>
+      <h2>On this page</h2>
+      <ol class="outline"></ol>
+      <div class="meter"><span><i></i></span><b></b></div>
+    </aside>
+    <nav class="pager" aria-label="Tutorials"></nav>
+  </main>
+</div>
+<script type="application/json" id="tutorial-data">{{tutorials}}</script>
+</body>
+</html>

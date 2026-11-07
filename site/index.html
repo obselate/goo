@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Goo</title>
+<meta name="description" content="A retained .NET GUI framework in G#, rendered with Vulkan.">
+<link rel="icon" href="goo_light_icon.svg">
+<link rel="stylesheet" href="colors_and_type.css">
+<link rel="stylesheet" href="site.css">
+<script>document.documentElement.dataset.theme = localStorage.getItem('goo-theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');</script>
+<script src="site.js" defer></script>
+</head>
+<body data-root="" data-tutorial="-1">
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="index.html" aria-label="Goo"><span data-mark></span><span data-word></span></a>
+    <nav class="nav" id="site-nav" aria-label="Site">
+      <a href="docs/index.html">Docs</a>
+      <a href="#tutorials">Tutorials</a>
+      <a href="#examples">Examples</a>
+      <a href="https://github.com/obselate/goo">GitHub</a>
+    </nav>
+    <button class="icon-btn" id="theme" type="button" aria-label="Switch theme" data-icon="theme"></button>
+    <button class="icon-btn" id="menu" type="button" aria-label="Menu" aria-expanded="false" aria-controls="site-nav" data-icon="menu"></button>
+  </div>
+</header>
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <h1 aria-label="Goo"><span data-word></span></h1>
+        <p class="lede">A retained .NET GUI framework in G#, rendered with Vulkan.</p>
+        <div class="actions">
+          <a class="btn primary" href="docs/tutorials/your-first-app.html">Get started</a>
+          <a class="btn" href="https://github.com/obselate/goo">GitHub</a>
+        </div>
+        <div class="code copyable"><pre tabindex="0"><code>{{fence 1}}</code></pre></div>
+      </div>
+      <svg class="mascot" viewBox="-24 -24 259 263" aria-hidden="true"></svg>
+    </div>
+    <svg class="drip" aria-hidden="true"></svg>
+  </section>
+  <section class="counter" id="counter" style="--sec: var(--bg1)">
+    <div class="wrap">
+      <div class="head"><h2>Counter</h2></div>
+      <div class="play live">
+        <div class="codebox copyable">
+          <div class="bar"><span>G#</span>
+            <button class="icon-btn" type="button" data-reset data-icon="reset" aria-label="Reset" title="Reset"></button>
+            <button class="icon-btn copy" type="button" data-icon="copy" aria-label="Copy code" title="Copy"></button>
+          </div>
+          <pre class="src" data-edit>{{fence 2}}</pre>
+        </div>
+        <div class="stage">
+          <div class="gwin"></div>
+          <ul class="tree" aria-label="Tree">
+            <li style="--d:0"><b>Window</b><span data-bind="title"></span></li>
+            <li style="--d:1"><b>Counter</b><span class="flash">count <span data-bind="count"></span></span></li>
+            <li style="--d:2"><b>Container</b><span>Width 100%</span></li>
+            <li style="--d:3"><b>Text</b><span class="flash" data-bind="text"></span></li>
+            <li style="--d:3"><b>Button</b></li>
+            <li style="--d:4"><b>Text</b><span data-bind="label"></span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <svg class="drip" aria-hidden="true"></svg>
+  </section>
+  <section class="tutorials" id="tutorials">
+    <div class="wrap">
+      <div class="head"><h2>Tutorials</h2><output aria-label="Done">0/9</output></div>
+      <div class="path"><svg aria-hidden="true"></svg><ol></ol></div>
+    </div>
+    <svg class="drip" aria-hidden="true"></svg>
+  </section>
+  <section class="examples" id="examples">
+    <div class="wrap">
+      <div class="head"><h2>Examples</h2></div>
+      <div class="tiles"></div>
+    </div>
+    <svg class="drip" aria-hidden="true"></svg>
+  </section>
+  <section class="more">
+    <div class="wrap">
+      <div>
+        <h2>Platforms</h2>
+        <ul class="chips"><li>Linux</li><li>Windows</li><li>macOS</li><li>Android</li></ul>
+        <ul class="chips"><li>.NET SDK 10.0.403+</li><li>Vulkan 1.3</li><li>Native Wayland on Linux</li></ul>
+      </div>
+      <div>
+        <h2>Packages</h2>
+        <div class="pkgs">
+          <a href="https://www.nuget.org/packages/Goo/">Goo<span>Cell, Blob, Style, Layout, Input, Window</span></a>
+          <a href="https://www.nuget.org/packages/Goo.Widgets/">Goo.Widgets<span>Buttons, text fields, lists, trees, dialogs, themes</span></a>
+          <a href="https://www.nuget.org/packages/Goo.Templates/">Goo.Templates<span>dotnet new goo</span></a>
+          <a href="https://www.nuget.org/packages/Goo.DevTools/">Goo.DevTools<span>goo dev</span></a>
+        </div>
+      </div>
+      <div>
+        <h2>Build from source</h2>
+        <div class="code copyable"><pre tabindex="0"><code>{{fence 3}}</code></pre></div>
+      </div>
+      <div>
+        <h2>AI plugin</h2>
+        <div class="tabs"><button type="button" aria-pressed="true">Codex</button><button type="button" aria-pressed="false">OMP</button></div>
+        <div class="code copyable"><pre tabindex="0"><code>{{code 1}}</code></pre></div>
+        <div class="code copyable" hidden><pre tabindex="0"><code>{{code 2}}</code></pre></div>
+      </div>
+    </div>
+    <svg class="drip" aria-hidden="true"></svg>
+  </section>
+</main>
+<footer class="foot">
+  <div class="wrap">
+    <span data-mark></span>
+    <nav aria-label="Links">
+      <a href="https://github.com/obselate/goo">GitHub</a>
+      <a href="https://www.nuget.org/packages/Goo/">NuGet</a>
+      <a href="https://github.com/DavidObando/gsharp">G#</a>
+      <a href="https://github.com/obselate/goo/blob/main/LICENSE">MIT</a>
+    </nav>
+  </div>
+</footer>
+<script type="application/json" id="tutorial-data">{{tutorials}}</script>
+</body>
+</html>

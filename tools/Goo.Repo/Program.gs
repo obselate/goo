@@ -32,7 +32,7 @@ internal shared partial class Repo {
         } else {
             arguments[0]
         }
-        if verb is not("help" or "--help" or "-h" or "doctor" or "build" or "check" or "docs" or "pack") {
+        if verb is not("help" or "--help" or "-h" or "doctor" or "build" or "check" or "docs" or "pack" or "site") {
             throw ArgumentException("Unknown command: " + verb + ". Use --help.")
         }
         if (verb is "help" or "--help" or "-h") || arguments.Skip(1).Any(a -> a == "--help" || a == "-h") {
@@ -45,6 +45,7 @@ internal shared partial class Repo {
                     "  docs [--check]         Generate or compare desktop docs\n" +
                     "  docs --android [--check]  Generate or compare Android docs\n" +
                     "  pack                   Build pinned SDL inputs and pack Goo\n" +
+                    "  site                   Build the website into artifacts/site\n" +
                     "Every command accepts --help. On Linux, GOO_BUILD_LOCK enables a shared flock build lock."
             )
             return
@@ -93,6 +94,8 @@ internal shared partial class Repo {
                 Docs(rest.Contains("--check"), rest.Contains("--android"))
             } else if verb == "pack" {
                 Pack()
+            } else if verb == "site" {
+                Tool("Goo.Site", []string{Root, "artifacts/site"})
             }
         } finally {
             Directory.Delete(temporary, true)
