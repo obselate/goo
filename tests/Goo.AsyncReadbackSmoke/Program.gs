@@ -518,6 +518,7 @@ let modes = []SmokeMode{
   SmokeMode("GOO_EDITOR_GUTTER_SMOKE", "1", () -> RunEditorGutterSmoke()),
   SmokeMode("GOO_SCROLLBAR_SMOKE", "1", () -> RunScrollbarSmoke()),
   SmokeMode("GOO_SCROLL_PLACEMENT_SMOKE", "1", () -> RunScrollPlacementSmoke()),
+  SmokeMode("GOO_SCROLL_IMAGE_PLACEMENT_SMOKE", "1", () -> RunScrollImagePlacementSmoke()),
   SmokeMode("GOO_PORTAL_CAPTURE_SMOKE", "1", () -> RunPortalCaptureSmoke()),
 }
 if !RunSelectedSmoke(modes) { RunReadbackSmoke() }
