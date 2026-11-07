@@ -22,11 +22,12 @@ One running app is selected automatically. The inspector is included in
 ## Try a method edit
 
 1. Click three times, then change `Count: $count` to `Total: $count` in `Program.gs`.
-2. Wait for `applied 1 method update(s)`.
+2. Wait for `G# hot reload: applied ... method update(s)`.
 3. Click once. The label shows `Total: 4` in the same process.
 
 Method edits apply in the same process. The window uses them on the next event,
 such as a click.
+The `dotnet watch: No managed code changes to apply` line is expected. The G# hot reload line is authoritative.
 
 Structural changes require a restart and report `GSHR1001`. Press `Ctrl+R`
 to restart. Existing objects do not rerun field initializers, constructors or

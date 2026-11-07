@@ -221,6 +221,21 @@ func BuildIndex(sourceDirectories[]string, product string) string {
     text.AppendLine()
     text.AppendLine("These pages are generated from the Release `$product.xml` file.")
     text.AppendLine()
+    if product == "Goo" {
+        text.AppendLine("| Task | API | Package |")
+        text.AppendLine("| --- | --- | --- |")
+        text.AppendLine("| Open a window | [Window](window.md) | Goo core |")
+        text.AppendLine("| Arrange content | [Layout](layout.md) | Goo core |")
+        text.AppendLine("| Show text | [Text](text.md) | Goo core |")
+        text.AppendLine("| Add a button | [ActionButton](https://github.com/obselate/goo-widgets/blob/main/docs/usage.md#basic-widgets) | Goo.Widgets |")
+        text.AppendLine("| Accept input | [Input](input.md) | Goo core |")
+        text.AppendLine("| Keep local state | [Cell](cell.md) | Goo core |")
+        text.AppendLine("| Set styles | [Style](style.md) | Goo core |")
+        text.AppendLine("| Show lists | [Virtualization](tree.md) | Goo core |")
+        text.AppendLine("| Load images | [Images](images.md) | Goo core |")
+        text.AppendLine("| Apply a theme | [Themes](https://github.com/obselate/goo-widgets/blob/main/docs/usage.md#goo-theme) | Goo.Widgets |")
+        text.AppendLine()
+    }
     for path in sourceDirectories {
         let name = Path.GetFileName(path)
         text.AppendLine("- [$name](${name.ToLowerInvariant()}.md)")

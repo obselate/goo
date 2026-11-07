@@ -5,10 +5,12 @@ For publish output and asset paths, see [shipping](shipping.md).
 
 ```sh
 dotnet --info
+dotnet --list-sdks
 ```
 
-Development requires a .NET 10 SDK matching the host:
-`linux-x64`, `win-x64` or `osx-arm64`.
+Development requires .NET SDK 10.0.403 or a later 10.0 SDK matching the host:
+`linux-x64`, `win-x64` or `osx-arm64`. The renderer requires Vulkan 1.3 with
+timeline semaphores, synchronization2 and dynamic rendering.
 
 ## Linux runtime packages
 
@@ -54,6 +56,7 @@ test -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" && printf 'Wayland socket exists\n'
 wayland-info
 fc-match -f '%{family}\n%{file}\n' sans-serif
 env -u DISPLAY vulkaninfo --summary
+env -u DISPLAY vulkaninfo | grep -E 'apiVersion|timelineSemaphore|synchronization2|dynamicRendering'
 ```
 
 | Check | Expected result |
@@ -62,7 +65,7 @@ env -u DISPLAY vulkaninfo --summary
 | Session and socket | `XDG_SESSION_TYPE=wayland`, nonempty display/runtime directory, `Wayland socket exists`. |
 | Compositor | Connected report with `wl_compositor`, `xdg_wm_base` and `wl_output`. |
 | Font | A sans-serif family and an existing `.ttf` or `.otf` path. |
-| Vulkan | At least one device with `apiVersion` 1.3 or newer. |
+| Vulkan | A device with `apiVersion` 1.3 or newer and `timelineSemaphore`, `synchronization2` and `dynamicRendering` all `true`. |
 
 Check device support, not only the Vulkan instance version. Then present a Goo frame.
 `env -u DISPLAY` excludes unrelated X11 surfaces from the diagnostic.

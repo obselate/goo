@@ -19,7 +19,7 @@ G# Goo authoring guidance and twelve stdio MCP tools. Requires .NET 10, the [Goo
 
 ## Install
 
-Install the runtime CLI with `dotnet tool install --global Goo.DevTools --version 0.28.6`.
+Install the runtime CLI with `dotnet tool install --global Goo.DevTools`.
 Confirm it is available:
 
 ```sh
