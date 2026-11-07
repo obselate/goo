@@ -11,7 +11,7 @@ public partial class Window {
   private var nativeMinWidth int32
   private var nativeMinHeight int32
 
-  /// Gets or sets the client minimum width in layout pixels, multiplied by UiScale and clamped to the current display's usable width.
+  /// Gets or sets the client minimum width in layout pixels, multiplied by UiScale.
   /// Zero removes the limit. Must be nonnegative and no greater than a nonzero MaxWidth. Embedded hosts are unsupported.
   public prop MinWidth int32{
     get -> minWidth
@@ -24,7 +24,7 @@ public partial class Window {
     }
   }
 
-  /// Gets or sets the client minimum height in layout pixels, multiplied by UiScale and clamped to the current display's usable height.
+  /// Gets or sets the client minimum height in layout pixels, multiplied by UiScale.
   /// Zero removes the limit. Must be nonnegative and no greater than a nonzero MaxHeight. Embedded hosts are unsupported.
   public prop MinHeight int32{
     get -> minHeight
@@ -71,16 +71,8 @@ public partial class Window {
   }
 
   private func applyMinimumSize(minimumWidth int32, minimumHeight int32) {
-    var scaledWidth = scaledSize(minimumWidth)
-    var scaledHeight = scaledSize(minimumHeight)
-    if scaledWidth != 0 || scaledHeight != 0 {
-      if let display = host?.GetCurrentDisplay() {
-        if let usable = display.UsableBounds {
-          if usable.Width > 0.0 { scaledWidth = Math.Min(scaledWidth, int32(usable.Width)) }
-          if usable.Height > 0.0 { scaledHeight = Math.Min(scaledHeight, int32(usable.Height)) }
-        }
-      }
-    }
+    let scaledWidth = scaledSize(minimumWidth)
+    let scaledHeight = scaledSize(minimumHeight)
     host?.SetMinimumSize(scaledWidth, scaledHeight)
     nativeMinWidth = scaledWidth
     nativeMinHeight = scaledHeight
@@ -88,8 +80,6 @@ public partial class Window {
 
   private func constrainSize() {
     if embeddedHost == nil { applyMinimumSize(minWidth, minHeight) }
-    if nativeMinWidth < scaledSize(minWidth) { width = Math.Min(width, nativeMinWidth) }
-    if nativeMinHeight < scaledSize(minHeight) { height = Math.Min(height, nativeMinHeight) }
     width = Math.Max(width, nativeMinWidth)
     height = Math.Max(height, nativeMinHeight)
     if maxWidth != 0 { width = Math.Min(width, scaledSize(maxWidth)) }

@@ -82,6 +82,8 @@ class FixtureContractTests {
             yield Contract[ElementHandleFixtures]("FocusProjectionContract")
             yield Contract[ElementHandleFixtures]("FocusProjectionVirtualizationContract")
             yield Contract[WindowOcclusionFixtures]("HostTransitionsNotifyOnUiThread")
+            yield Contract[WindowStartupFixtures]("InitialBoundsContract")
+            yield Contract[WindowStartupFixtures]("PresentModesContract")
             yield Contract[PathBuilderFixtures]("ResetPreservesPublishedPathAndClearsContour")
             yield Contract[PortalFixtures]("UiScaleLayoutInputAndAnchoredPortalContract")
             yield Contract[PortalFixtures]("AnchoredSubrectangleAndCollisionBoundsContract")

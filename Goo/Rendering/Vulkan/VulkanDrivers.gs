@@ -12,8 +12,9 @@ public class VulkanDrivers {
     private var direct []string = []string{}
     private var procedures []nint = []nint{}
     private var frozen bool
+    private var exclusive bool
 
-    /// Gets or sets driver DLL paths added to system drivers in inclusive mode on Windows.
+    /// Gets or sets driver DLL paths loaded on Windows, alongside system drivers unless Exclusive is true.
     /// Set this before opening the first window. Paths are copied and are never read from the environment.
     /// Throws PlatformNotSupportedException on other platforms and InvalidOperationException after Vulkan loading starts.
     public prop Direct []string {
@@ -23,6 +24,20 @@ public class VulkanDrivers {
           if !OperatingSystem.IsWindows() { throw PlatformNotSupportedException("Direct Vulkan drivers require Windows.") }
           if frozen { throw InvalidOperationException("Vulkan drivers must be configured before Vulkan is loaded.") }
           direct = (value.Clone() as []string)!!
+        }
+      }
+    }
+
+    /// Gets or sets whether only Direct drivers are enumerated on Windows.
+    /// Set this before opening the first window. The default is false.
+    /// Throws PlatformNotSupportedException on other platforms and InvalidOperationException after Vulkan loading starts.
+    public prop Exclusive bool {
+      get { lock gate { return exclusive } }
+      set {
+        lock gate {
+          if !OperatingSystem.IsWindows() { throw PlatformNotSupportedException("Direct Vulkan drivers require Windows.") }
+          if frozen { throw InvalidOperationException("Vulkan drivers must be configured before Vulkan is loaded.") }
+          exclusive = value
         }
       }
     }

@@ -599,7 +599,6 @@ internal unsafe partial class VulkanWindowTarget {
     var presentMode VkPresentModeKHR
     if !VulkanPresentModeSelector.TrySelect(
       requestedVsync,
-      deviceFacts.DeviceType == int32(VkConstants.VK_PHYSICAL_DEVICE_TYPE_CPU),
       hasImmediate,
       hasMailbox,
       hasFifo,
