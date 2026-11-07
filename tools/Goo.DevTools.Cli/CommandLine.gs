@@ -168,6 +168,11 @@ internal class CommandLine {
                 "[options]",
                 []Option{Option("project", "PATH", "Project file or directory."), Json}
             ),
+            ["audit"] = CommandDefinition(
+                "Check .gs files for app best-practice violations. Exit 1 means hits.",
+                "[path]",
+                []Option{}
+            ),
             ["package"] = CommandDefinition(
                 "Publish a desktop package or Android app bundle.",
                 "--target TARGET [options]",
@@ -331,7 +336,7 @@ internal class CommandLine {
                     environment.Add(value!!)
                 }
             }
-            if positionals.Count != 0 && command != "input" {
+            if positionals.Count != 0 && command != "input" && (command != "audit" || positionals.Count > 1) {
                 throw CliException("Unexpected argument '${positionals[0]}'.")
             }
             if trailing.Count != 0 && command != "dev" {

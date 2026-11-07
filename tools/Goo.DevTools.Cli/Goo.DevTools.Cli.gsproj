@@ -31,6 +31,7 @@
     <ProjectReference Include="../../apps/Goo.DevTools/Goo.DevTools.gsproj" ReferenceOutputAssembly="false" Private="false" />
     <None Update="README.md" Pack="true" PackagePath="/" />
     <None Include="$(MSBuildProjectDirectory)/../../LICENSE" Pack="true" PackagePath="/" />
+    <EmbeddedResource Include="../../plugins/goo/skills/goo-authoring/references/best-practices.md" LogicalName="Goo.DevTools.Cli.BestPractices" />
     <None Include="../../.github/scripts/stage-linux-x64.sh" Link="Packaging/stage-linux-x64.sh" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../.github/scripts/stage-macos-arm64.sh" Link="Packaging/stage-macos-arm64.sh" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Packaging/*.sh" CopyToOutputDirectory="PreserveNewest" />
