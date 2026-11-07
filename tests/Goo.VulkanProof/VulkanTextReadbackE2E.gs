@@ -4,6 +4,13 @@ import Goo
 import System
 import System.IO
 
+internal class VulkanCaptionTextCell : Cell {
+  override func Build() Blob -> Container{
+    Width: 64, Height: 64, BackgroundColor: Color.Black,
+    Text{Content: "T7", FontFamily: "Caption proof", FontSize: 12, Color: Color.White},
+  }
+}
+
 internal class VulkanTextReadbackContract {
   const Width uint32 = 64u
   const Height uint32 = 64u
@@ -379,6 +386,40 @@ internal unsafe func RunProductionTextReadback(effects bool) {
       active.Dispose()
     }
     CloseVulkanProductionProofWindow(window)
+  }
+  if !effects {
+    using let source = FontSource.FromPath("Caption proof", 400, false,
+      Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf"))
+    source.Register()
+    let caption = Window{Title: "Goo caption stroke proof", Width: 64, Height: 64,
+      Root: VulkanCaptionTextCell{}}.Open()
+    try {
+      WindowReadbackTestFixture.ForceRender(caption, 0.0)
+      WindowReadbackTestFixture.DrainWindowQueue(caption, 2000)
+      if caption.RequestCapture() != WindowCaptureRequestStatus.Accepted {
+        throw InvalidOperationException("Caption text capture was not accepted")
+      }
+      var pixels WindowCapture?
+      let deadline = Environment.TickCount64 + 5000L
+      while pixels == nil && Environment.TickCount64 < deadline {
+        caption.Pump(0.0)
+        pixels = caption.PollCapture()
+      }
+      guard let image = pixels else { throw TimeoutException("Caption text capture timed out") }
+      var topCoverage int32 = 0
+      for y in 0 ... int32(image.Height) {
+        for x in 0 ... int32(image.Width) {
+          topCoverage += int32(image.Pixels[y * int32(image.RowBytes) + x * 4])
+        }
+        if topCoverage > 0 { break }
+      }
+      if topCoverage < 8 * 255 {
+        throw InvalidOperationException("Caption T and 7 top strokes disappeared: coverage=$topCoverage")
+      }
+      Console.WriteLine("Text caption top strokes: size=12 coverage=$topCoverage passed")
+    } finally {
+      CloseVulkanProductionProofWindow(caption)
+    }
   }
 }
 
