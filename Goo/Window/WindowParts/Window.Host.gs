@@ -123,7 +123,8 @@ public partial class Window {
     }
   }
 
-  /// Creates the native window and returns this window.
+  /// Creates the native window inside the display's usable bounds unless the declared minimum size exceeds them.
+  /// Centers the window when no position is set, otherwise keeps the requested position inside those bounds.
   /// @returns this window after native initialization
   public func Open() Window {
     requireUiThread("Window.Open")

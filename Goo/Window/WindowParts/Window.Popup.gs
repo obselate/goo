@@ -43,7 +43,8 @@ public partial class Window {
     return SdlHost(Title, Width, Height, x, y, positionSet, State, decorated, resizable,
       transparent || backdrop == WindowBackdrop.Blur, VSync,
       (px int32, py int32) -> hitTest(px, py), parent, popup?.Kind ?? PopupKind.Menu,
-      popup?.NativeTimestamp ?? 0uL, popupAnchor, popupPlacement, UiScale, LayerShell)
+      popup?.NativeTimestamp ?? 0uL, popupAnchor, popupPlacement, UiScale, LayerShell,
+      scaledSize(minWidth), scaledSize(minHeight))
   }
 
   internal func ShowNativePopup() {

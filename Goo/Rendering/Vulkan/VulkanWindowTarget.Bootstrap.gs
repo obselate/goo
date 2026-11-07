@@ -329,7 +329,8 @@ internal unsafe partial class VulkanWindowTarget {
         }
         driverList.sType = VkConstants.VK_STRUCTURE_TYPE_DIRECT_DRIVER_LOADING_LIST_LUNARG
         driverList.pNext = createInfo.pNext
-        driverList.mode = VkConstants.VK_DIRECT_DRIVER_LOADING_MODE_INCLUSIVE_LUNARG
+        driverList.mode = if VulkanDrivers.Exclusive { VkConstants.VK_DIRECT_DRIVER_LOADING_MODE_EXCLUSIVE_LUNARG }
+          else { VkConstants.VK_DIRECT_DRIVER_LOADING_MODE_INCLUSIVE_LUNARG }
         driverList.driverCount = uint32(directDrivers.Length)
         driverList.pDrivers = driverInfos
         createInfo.pNext = *void(&driverList)

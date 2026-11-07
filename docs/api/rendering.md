@@ -783,7 +783,11 @@ Configures additional Vulkan drivers for the process.
 
 ### `Direct`
 
-Gets or sets driver DLL paths added to system drivers in inclusive mode on Windows. Set this before opening the first window. Paths are copied and are never read from the environment. Throws PlatformNotSupportedException on other platforms and InvalidOperationException after Vulkan loading starts.
+Gets or sets driver DLL paths loaded on Windows, alongside system drivers unless Exclusive is true. Set this before opening the first window. Paths are copied and are never read from the environment. Throws PlatformNotSupportedException on other platforms and InvalidOperationException after Vulkan loading starts.
+
+### `Exclusive`
+
+Gets or sets whether only Direct drivers are enumerated on Windows. Set this before opening the first window. The default is false. Throws PlatformNotSupportedException on other platforms and InvalidOperationException after Vulkan loading starts.
 
 ## `VulkanExternalImageDescription`
 

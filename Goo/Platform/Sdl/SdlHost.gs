@@ -42,7 +42,8 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     transparent bool, vsync bool, hitTest((int32, int32) -> WindowHitResult),
     popupParent SdlHost? = nil, popupKind PopupKind = PopupKind.Menu, popupTimestamp uint64 = 0uL,
     popupAnchor ElementRect = default(ElementRect), popupPlacement PortalPlacement = PortalPlacement.BottomStart,
-    popupScale float32 = 1.0F, layerOptions LayerWindowOptions? = nil) {
+    popupScale float32 = 1.0F, layerOptions LayerWindowOptions? = nil,
+    minWidth int32 = 0, minHeight int32 = 0) {
       this.hitTest = hitTest
       hitTestRawDelegate = HitTest
       hitTestCallbackAddress = Marshal.GetFunctionPointerForDelegate(hitTestRawDelegate)
@@ -57,7 +58,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         vulkanOwned = true
         if let parent = popupParent {
           CreatePopup(parent, width, height, popupKind, popupTimestamp, popupAnchor, popupPlacement, popupScale)
-        } else { CreateWindow(title, width, height, transparent, layerOptions) }
+        } else { CreateWindow(title, width, height, x, y, positionSet, minWidth, minHeight, decorated, transparent, layerOptions) }
         windowId = SDL.GetWindowID(window)
         if windowId == 0u {
           ThrowSdl("SDL_GetWindowID")
@@ -68,9 +69,6 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         }
         SdlRuntime.Register(windowId, Dispatch)
         if popupParent == nil && layerWindow == nil {
-          if positionSet && CanMove {
-            Require(SDL.SetWindowPosition(window, x, y), "SDL_SetWindowPosition")
-          }
           SetBorder(decorated, resizable)
           ObserveNormalPlacement()
           SetState(state)
@@ -494,9 +492,10 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     }
   }
 
-  private func CreateWindow(title string, width int32, height int32, transparent bool,
-    layerOptions LayerWindowOptions?) {
-    let flags = BuildWindowFlags(transparent)
+  private func CreateWindow(title string, width int32, height int32, x int32, y int32,
+    positionSet bool, minWidth int32, minHeight int32, decorated bool, transparent bool, layerOptions LayerWindowOptions?) {
+    var flags = BuildWindowFlags(transparent)
+    if !decorated { flags = flags | SDLWindowFlags.Borderless }
     if let options = layerOptions {
       options.Validate()
       if !IsWayland() { throw NotSupportedException("Layer-shell windows require Wayland") }
@@ -522,8 +521,29 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
           pendingEvents = true
         }, () -> CloseRequested?.Invoke(WindowCloseReason.Terminating))
     } else {
-      window = SDL.CreateWindow(title, width, height, uint64(flags))
-      if window.IsNull { ThrowSdl("SDL_CreateWindow") }
+      var requested = ElementRect{ X: x, Y: y, Width: width, Height: height }
+      var displayId = SDL.GetPrimaryDisplay()
+      if positionSet {
+        var rect = SDLRect{ X: x, Y: y, W: width, H: height }
+        displayId = SDL.GetDisplayForRect(&rect)
+      }
+      if let display = ReadDisplay(displayId) {
+        if let usable = display.UsableBounds {
+          requested = ConstrainInitialBounds(requested, minWidth, minHeight, positionSet, usable)
+        }
+      }
+      let properties = SDL.CreateProperties()
+      if properties == 0u { ThrowSdl("SDL_CreateProperties") }
+      try {
+        Require(SDL.SetStringProperty(properties, "SDL.window.create.title", title), "SDL_SetStringProperty")
+        Require(SDL.SetNumberProperty(properties, "SDL.window.create.width", int64(requested.Width)), "SDL_SetNumberProperty")
+        Require(SDL.SetNumberProperty(properties, "SDL.window.create.height", int64(requested.Height)), "SDL_SetNumberProperty")
+        Require(SDL.SetNumberProperty(properties, "SDL.window.create.x", int64(requested.X)), "SDL_SetNumberProperty")
+        Require(SDL.SetNumberProperty(properties, "SDL.window.create.y", int64(requested.Y)), "SDL_SetNumberProperty")
+        Require(SDL.SetNumberProperty(properties, "SDL.window.create.flags", int64(flags)), "SDL_SetNumberProperty")
+        window = SDL.CreateWindowWithProperties(properties)
+      } finally { SDL.DestroyProperties(properties) }
+      if window.IsNull { ThrowSdl("SDL_CreateWindowWithProperties") }
     }
   }
 

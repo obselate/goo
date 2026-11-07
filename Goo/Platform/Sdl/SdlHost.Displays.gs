@@ -8,6 +8,20 @@ internal unsafe partial class SdlHost {
   private const CenteredDisplayMask uint32 = 0x2FFF0000u
 
   shared {
+    internal func ConstrainInitialBounds(requested ElementRect, minWidth int32, minHeight int32,
+      positionSet bool, usable ElementRect) ElementRect {
+      if usable.Width <= 0.0 || usable.Height <= 0.0 { return requested }
+      let width = Math.Max(Math.Max(1, minWidth), Math.Min(requested.Width, usable.Width))
+      let height = Math.Max(Math.Max(1, minHeight), Math.Min(requested.Height, usable.Height))
+      let right = usable.X + Math.Max(0.0, usable.Width - width)
+      let bottom = usable.Y + Math.Max(0.0, usable.Height - height)
+      return ElementRect{
+        X: if positionSet { Math.Clamp(requested.X, usable.X, right) } else { Math.Floor((usable.X + right) / 2.0) },
+        Y: if positionSet { Math.Clamp(requested.Y, usable.Y, bottom) } else { Math.Floor((usable.Y + bottom) / 2.0) },
+        Width: width, Height: height,
+      }
+    }
+
     private func ReadDisplays() IReadOnlyList[WindowDisplay] {
       var count int32
       let nativeDisplays = SDL.GetDisplays(&count)

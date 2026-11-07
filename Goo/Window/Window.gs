@@ -267,8 +267,7 @@ public partial class Window {
   internal prop Tree Node? { get -> node }
   internal prop DiagnosticsSession DevToolsSession? { get -> diagnosticsSession }
   /// Gets or sets per-window GPU presentation synchronization.
-  /// True requests FIFO. Software Vulkan devices prefer Immediate, then Mailbox, then FIFO.
-  /// False prefers Immediate, then Mailbox, then FIFO on every device.
+  /// True selects FIFO. False prefers Immediate, then Mailbox, then FIFO on every device.
   /// Window.Run pacing is controlled separately by FramePacing.
   public prop VSync bool{
     get -> vsync

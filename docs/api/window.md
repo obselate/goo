@@ -1644,7 +1644,7 @@ Returns: Accepted when retained, or Failed when the request exceeds the activati
 
 ### `Open`
 
-Creates the native window and returns this window.
+Creates the native window inside the display's usable bounds unless the declared minimum size exceeds them. Centers the window when no position is set, otherwise keeps the requested position inside those bounds.
 
 Returns: this window after native initialization
 
@@ -1925,11 +1925,11 @@ Gets or sets the client maximum width in layout pixels, multiplied by UiScale fo
 
 ### `MinHeight`
 
-Gets or sets the client minimum height in layout pixels, multiplied by UiScale and clamped to the current display's usable height. Zero removes the limit. Must be nonnegative and no greater than a nonzero MaxHeight. Embedded hosts are unsupported.
+Gets or sets the client minimum height in layout pixels, multiplied by UiScale. Zero removes the limit. Must be nonnegative and no greater than a nonzero MaxHeight. Embedded hosts are unsupported.
 
 ### `MinWidth`
 
-Gets or sets the client minimum width in layout pixels, multiplied by UiScale and clamped to the current display's usable width. Zero removes the limit. Must be nonnegative and no greater than a nonzero MaxWidth. Embedded hosts are unsupported.
+Gets or sets the client minimum width in layout pixels, multiplied by UiScale. Zero removes the limit. Must be nonnegative and no greater than a nonzero MaxWidth. Embedded hosts are unsupported.
 
 ### `Modal`
 
@@ -2013,7 +2013,7 @@ Gets or sets the layout and rendering scale, clamped to 0.5 through 3. The defau
 
 ### `VSync`
 
-Gets or sets per-window GPU presentation synchronization. True requests FIFO. Software Vulkan devices prefer Immediate, then Mailbox, then FIFO. False prefers Immediate, then Mailbox, then FIFO on every device. Window.Run pacing is controlled separately by FramePacing.
+Gets or sets per-window GPU presentation synchronization. True selects FIFO. False prefers Immediate, then Mailbox, then FIFO on every device. Window.Run pacing is controlled separately by FramePacing.
 
 ### `WaylandBackdrop`
 
