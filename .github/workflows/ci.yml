@@ -1820,14 +1820,19 @@ jobs:
         with:
           vulkan_version: 1.4.357.0
           install_runtime: true
-          install_lavapipe: true
+          install_lavapipe: false
           cache: true
           github_token: ${{ github.token }}
-      - name: Enable cached Vulkan runtime
+      - name: Enable pinned software Vulkan runtime
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
           $runtime = Join-Path $env:VULKAN_SDK "runtime\x64"
+          7z e "$env:RUNNER_TEMP/mesa3d-26.2.4-release-msvc.7z" x64/vulkan_lvp.dll x64/lvp_icd.x86_64.json "-o$runtime" -y
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $icd = Join-Path $runtime "lvp_icd.x86_64.json"
+          reg.exe add "HKLM\SOFTWARE\Khronos\Vulkan\Drivers" /v $icd /t REG_DWORD /d 0 /f
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $runtime | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           & (Join-Path $runtime "vulkaninfo.exe") --summary
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
