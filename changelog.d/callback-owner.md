@@ -1,4 +1,0 @@
-## Fixed
-
-- Rebuild the Cell that authored an input callback when another Cell renders its Blob content.
-- Add protected `Cell<TInput>.InvokeInputCallback` overloads for forwarding input-time callbacks to the Cell that supplied the input.
