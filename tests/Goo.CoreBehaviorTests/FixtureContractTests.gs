@@ -123,6 +123,7 @@ class FixtureContractTests {
             yield Contract[AccessibilityFixtures]("StateAndActionCapabilityContract")
             yield Contract[AccessibilityFixtures]("SyntheticRootAndPrimitiveActionContract")
             yield Contract[AccessibilityFixtures]("ValidationAndRetryContract")
+            yield Contract[CellFixtures]("ControlledEditorValueDuringBuildDoesNotRebuildOwner")
             yield Contract[CellFixtures]("DirectChildQueuesCanonicalParentOnce")
             yield Contract[CellFixtures]("DirectCompositionAddsNoRenderNode")
             yield Contract[CellFixtures]("DirectCompositionCallbacksRebuildRenderingCell")

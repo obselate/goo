@@ -73,6 +73,10 @@ public open class Cell {
     }
   }
 
+  internal func RebuildAfterCallback() {
+    if !building { Rebuild() }
+  }
+
   internal func SetRebuildSubmission(h Action[Cell]?) {
     lock rebuildGate {
       rebuildSubmission = h

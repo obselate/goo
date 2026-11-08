@@ -64,7 +64,7 @@ internal sealed class TextEditorBinding : IDisposable {
     if let callback = node.EditorOnChange {
       let owner = CellOwnership.ForCallback(node)
       try { callback(change) }
-      finally { owner?.Rebuild() }
+      finally { owner?.RebuildAfterCallback() }
     }
   }
 
@@ -72,7 +72,7 @@ internal sealed class TextEditorBinding : IDisposable {
     if let callback = node.EditorOnSubmit {
       let owner = CellOwnership.ForCallback(node)
       try { callback() }
-      finally { owner?.Rebuild() }
+      finally { owner?.RebuildAfterCallback() }
     }
   }
 

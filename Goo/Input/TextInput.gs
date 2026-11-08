@@ -232,7 +232,7 @@ internal partial class TextInput {
         try {
           callback(TextCandidateEvent{ Candidates: values, SelectedCandidate: selectedCandidate,
             Horizontal: horizontal })
-        } finally { owner?.Rebuild() }
+        } finally { owner?.RebuildAfterCallback() }
       }
     }
 
@@ -256,7 +256,7 @@ internal partial class TextInput {
     if let callback = TextInputCallbacks.TextInput(n) {
       let owner = CellOwnership.ForCallback(n)
       try { callback(value) }
-      finally { owner?.Rebuild() }
+      finally { owner?.RebuildAfterCallback() }
     }
   }
 
@@ -264,7 +264,7 @@ internal partial class TextInput {
     if let callback = TextInputCallbacks.TextComposition(n) {
       let owner = CellOwnership.ForCallback(n)
       try { callback(value) }
-      finally { owner?.Rebuild() }
+      finally { owner?.RebuildAfterCallback() }
     }
   }
 
@@ -272,7 +272,7 @@ internal partial class TextInput {
     if let callback = TextInputCallbacks.TextCompositionCancel(n) {
       let owner = CellOwnership.ForCallback(n)
       try { callback() }
-      finally { owner?.Rebuild() }
+      finally { owner?.RebuildAfterCallback() }
     }
   }
 
@@ -364,7 +364,7 @@ internal partial class TextInput {
     let owner = callback != nil ? CellOwnership.Within(root, n) : nil
     try { callback?.Invoke(after.Text) }
     finally {
-      owner?.Rebuild()
+      owner?.RebuildAfterCallback()
       if generation == focus.Generation {
         FollowCaret(n)
         updateTextInputArea(n)

@@ -349,7 +349,7 @@ internal class KeyboardInput {
             try {
               handler(KeyEvent{ Key: key, Modifiers: modifiers, Repeat: repeat,
                 IsComposing: compositionActive, Control: control, Generation: generation })
-            } finally { owner?.Rebuild() }
+            } finally { owner?.RebuildAfterCallback() }
           }
           if nodeMount.Current == nil { return result }
           last = node
@@ -375,7 +375,7 @@ internal class KeyboardInput {
               result.Handled = true
               let owner = CellOwnership.ForCallback(node)
               try { pending.Action() }
-              finally { owner?.Rebuild() }
+              finally { owner?.RebuildAfterCallback() }
               return result
             }
           if down {
@@ -395,7 +395,7 @@ internal class KeyboardInput {
                         releases[key] = PendingKeyRelease{ Target: startMount, Owner: nodeMount, Action: release, Generation: focusGeneration }
                       }
                     }
-                  } finally { owner?.Rebuild() }
+                  } finally { owner?.RebuildAfterCallback() }
                 }
                 return result
               }

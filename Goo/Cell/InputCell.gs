@@ -14,16 +14,18 @@ public open class Cell[TInput any] : Cell {
   protected prop Input TInput{ get -> input }
 
   /// Invokes an input-time callback and rebuilds the Cell that supplied this input.
+  /// A supplying Cell already in Build needs no extra rebuild.
   /// Call Build-time queries directly. They must not change the supplying Cell's state.
   /// @param callback callback from the current input
   protected func InvokeInputCallback(callback Action?) {
     guard let callback = callback else { return }
     let owner = inputOwner
     try { callback() }
-    finally { owner?.Rebuild() }
+    finally { owner?.RebuildAfterCallback() }
   }
 
   /// Invokes an input-time callback and rebuilds the Cell that supplied this input.
+  /// A supplying Cell already in Build needs no extra rebuild.
   /// Call Build-time queries directly. They must not change the supplying Cell's state.
   /// @typeparam T callback argument type
   /// @param callback callback from the current input
@@ -32,10 +34,11 @@ public open class Cell[TInput any] : Cell {
     guard let callback = callback else { return }
     let owner = inputOwner
     try { callback(value) }
-    finally { owner?.Rebuild() }
+    finally { owner?.RebuildAfterCallback() }
   }
 
   /// Invokes an input-time callback and rebuilds the Cell that supplied this input.
+  /// A supplying Cell already in Build needs no extra rebuild.
   /// Call Build-time queries directly. They must not change the supplying Cell's state.
   /// @typeparam T1 first callback argument type
   /// @typeparam T2 second callback argument type
@@ -46,10 +49,11 @@ public open class Cell[TInput any] : Cell {
     guard let callback = callback else { return }
     let owner = inputOwner
     try { callback(first, second) }
-    finally { owner?.Rebuild() }
+    finally { owner?.RebuildAfterCallback() }
   }
 
   /// Invokes an input-time callback and rebuilds the Cell that supplied this input.
+  /// A supplying Cell already in Build needs no extra rebuild.
   /// Call Build-time queries directly. They must not change the supplying Cell's state.
   /// @typeparam T callback argument type
   /// @typeparam TResult callback result type
@@ -61,7 +65,7 @@ public open class Cell[TInput any] : Cell {
     guard let callback = callback else { return fallback }
     let owner = inputOwner
     try { return callback(value) }
-    finally { owner?.Rebuild() }
+    finally { owner?.RebuildAfterCallback() }
   }
 
   /// Decides whether a later post-mount snapshot needs a rebuild after Input stores next; default uses EqualityComparer[TInput].Default.
