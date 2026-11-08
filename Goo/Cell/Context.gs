@@ -87,7 +87,7 @@ public class Context[T any] {
 
     /// Describes a retained, layout-transparent provider whose builder runs under its value.
     /// @param value The subtree value.
-    /// @param build The deferred subtree builder. An already-built Blob is not accepted.
+    /// @param build The deferred subtree builder. Its input callbacks rebuild the declaring Cell. An already-built Blob is not accepted.
     /// @returns A normal positional Cell mount declaration.
     public func Scope(value T, build Func[Blob]) Blob {
         if build == nil {
@@ -122,6 +122,7 @@ internal data struct ContextEnvironment {
     internal var Reader ContextReader?
     internal var Cell Cell?
     internal var Virtual VirtualNodeState?
+    internal var CallbackCell Cell?
     internal var StateCallback bool
     private var taskId int32
 
@@ -137,7 +138,7 @@ internal data struct ContextEnvironment {
         }
 
         internal prop CallbackOwner Cell? {
-            get -> current.Cell ?? current.Virtual?.CallbackOwner
+            get -> current.CallbackCell ?? current.Cell ?? current.Virtual?.CallbackOwner
         }
 
         internal func Enter(environment ContextEnvironment) ContextEnvironment {
@@ -552,7 +553,9 @@ internal sealed class ContextProvider : Cell {
         let reader = EnsureContextReader()
         outgoingContext = frame
         reader.Frame = frame
-        let previous = ContextEnvironment.Enter(ContextEnvironment{Window: contextWindow, Frame: frame, Reader: reader})
+        let previous = ContextEnvironment.Enter(ContextEnvironment{
+            Window: contextWindow, Frame: frame, Reader: reader, CallbackCell: input.CallbackOwner,
+        })
         try {
             return input.Builder()
         } finally {

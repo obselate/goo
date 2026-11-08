@@ -346,7 +346,7 @@ Returns: The window value.
 Describes a retained, layout-transparent provider whose builder runs under its value.
 
 - `value`: The subtree value.
-- `build`: The deferred subtree builder. An already-built Blob is not accepted.
+- `build`: The deferred subtree builder. Its input callbacks rebuild the declaring Cell. An already-built Blob is not accepted.
 
 Returns: A normal positional Cell mount declaration.
 
