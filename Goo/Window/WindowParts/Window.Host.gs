@@ -681,6 +681,11 @@ public partial class Window {
 
   /// Opens the window and processes frames until all open Goo windows close.
   public func Run() {
+    let output = Environment.GetEnvironmentVariable("GOO_RENDER_OUT")
+    if output != nil || Environment.GetEnvironmentVariable("GOO_RENDER_LIST") == "1" {
+      RenderCommandFrame(output ?? "")
+      return
+    }
     if embeddedHost != nil { throw InvalidOperationException("Embedded windows use the host frame loop") }
     requireOpenThread("Window.Run")
     Open()

@@ -26,7 +26,8 @@ internal unsafe partial class VulkanWindowTarget {
   private var queuedPageResult TaskCompletionSource[OffscreenRenderResult]?
 
   internal func RenderOffscreenAsync(root Cell, options OffscreenRenderOptions,
-    cancellation CancellationToken, ownerClosed CancellationToken, reusable WindowCapture?) Task[OffscreenRenderResult] {
+    cancellation CancellationToken, ownerClosed CancellationToken, reusable WindowCapture?,
+    foreground Color? = nil) Task[OffscreenRenderResult] {
       if cancellation.IsCancellationRequested || ownerClosed.IsCancellationRequested {
         return Task.FromResult(OffscreenRenderResult{ Status: OffscreenRenderStatus.Cancelled })
       }
@@ -44,16 +45,17 @@ internal unsafe partial class VulkanWindowTarget {
       let completion = TaskCompletionSource[OffscreenRenderResult](TaskCreationOptions.RunContinuationsAsynchronously)
       if frameBegun || queueStage != QueueStageIdle || active.QueueWorker.HasOutstandingWork {
         queuedPageResult = completion
-        queuedPage = () -> BeginPage(root, options, cancellation, ownerClosed, reusable, completion)
+        queuedPage = () -> BeginPage(root, options, cancellation, ownerClosed, reusable, foreground, completion)
         host.Wake()
       } else {
-        BeginPage(root, options, cancellation, ownerClosed, reusable, completion)
+        BeginPage(root, options, cancellation, ownerClosed, reusable, foreground, completion)
       }
       return completion.Task
     }
 
   private func BeginPage(root Cell, options OffscreenRenderOptions, cancellation CancellationToken,
-    ownerClosed CancellationToken, reusable WindowCapture?, completion TaskCompletionSource[OffscreenRenderResult]) {
+    ownerClosed CancellationToken, reusable WindowCapture?, foreground Color?,
+    completion TaskCompletionSource[OffscreenRenderResult]) {
       if cancellation.IsCancellationRequested || ownerClosed.IsCancellationRequested {
         completion.TrySetResult(OffscreenRenderResult{ Status: OffscreenRenderStatus.Cancelled })
         return
@@ -93,7 +95,8 @@ internal unsafe partial class VulkanWindowTarget {
         pageCancellation = cancellation.Register(() -> { Interlocked.Exchange(ref pageCancelled, 1) })
         pageOwnerClose = ownerClosed.Register(() -> { Interlocked.Exchange(ref pageCancelled, 1) })
         let page = Window{ Root: root, Width: int32(Math.Ceiling(options.LogicalWidth)),
-          Height: int32(Math.Ceiling(options.LogicalHeight)), Background: options.Background }
+          Height: int32(Math.Ceiling(options.LogicalHeight)), Background: options.Background,
+          Foreground: foreground ?? Color.Black }
         pageWindow = page
         page.PrepareOffscreenPage(options)
         let atlasBytes = ResolveTextAtlasByteSize(uint64(properties.limits.maxTexelBufferElements) * 8uL)

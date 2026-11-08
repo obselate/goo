@@ -18,6 +18,25 @@ import Xunit
 
 class DevToolsCliEndToEndTests {
     @Fact
+    async func ImageDifferenceReportsOnePixelAndHonorsTolerance() {
+        using let directory = TemporaryDirectory.Create()
+        let first = Path.Combine(directory.Path, "first.png")
+        let second = Path.Combine(directory.Path, "second.png")
+        let difference = Path.Combine(directory.Path, "difference.png")
+        let pixels = []uint8{0, 0, 0, 255, 0, 0, 0, 255}
+        await File.WriteAllBytesAsync(first, PngEncoder.Encode(pixels, 2, 1, 8))
+        pixels[4] = 1
+        await File.WriteAllBytesAsync(second, PngEncoder.Encode(pixels, 2, 1, 8))
+        let changed = await RunCliAsync(directory.Path, "diff", first, second, "--out", difference)
+        Assert.Equal(1, changed.ExitCode)
+        Assert.Contains("changed pixels: 1, bounds: 1,0 1x1", changed.StandardOutput)
+        Assert.True(File.Exists(difference))
+        let equal = await RunCliAsync(directory.Path, "diff", first, second, "--tolerance", "1")
+        Assert.Equal(0, equal.ExitCode)
+        Assert.Contains("changed pixels: 0, bounds: none", equal.StandardOutput)
+    }
+
+    @Fact
     async func CommandHelpUsesTheParserOptions() {
         using let directory = TemporaryDirectory.Create()
         let explicitHelp = await RunCliAsync(directory.Path, "help", "input")

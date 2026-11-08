@@ -101,6 +101,27 @@ internal class CommandLine {
                     Option("inspector", "", "Open the bundled inspector when the app is ready.")
                 }
             ),
+            ["render"] = CommandDefinition(
+                "Build an app and render one frame without a display.",
+                "<project-or-executable> [--out PATH | --list] [options]",
+                []Option{
+                    Option("project", "PATH", "Project file or directory, instead of the positional project."),
+                    Option("out", "PATH", "Required PNG output path."),
+                    Option("size", "WxH", "Logical viewport size. Default: app window size."),
+                    Option("scale", "NUMBER", "Pixels per logical unit. Default: 1."),
+                    Option("theme", "light|dark", "Preferred app theme. Default: light."),
+                    Option("scene", "NAME", "Named state registered on Window.Scenes."),
+                    Option("list", "", "List registered scene names without rendering.")
+                }
+            ),
+            ["diff"] = CommandDefinition(
+                "Compare two PNG images.",
+                "<a.png> <b.png> [options]",
+                []Option{
+                    Option("tolerance", "0..255", "Maximum per-channel difference. Default: 0."),
+                    Option("out", "PATH", "Write a PNG marking changed pixels.")
+                }
+            ),
             ["list"] = CommandDefinition("List running Goo apps.", "[options]", []Option{Json}, true),
             ["snapshot"] = CommandDefinition(
                 "Read a typed snapshot of the selected window.",
@@ -331,7 +352,7 @@ internal class CommandLine {
                     environment.Add(value!!)
                 }
             }
-            if positionals.Count != 0 && command != "input" {
+            if positionals.Count != 0 && command != "input" && command != "render" && command != "diff" {
                 throw CliException("Unexpected argument '${positionals[0]}'.")
             }
             if trailing.Count != 0 && command != "dev" {

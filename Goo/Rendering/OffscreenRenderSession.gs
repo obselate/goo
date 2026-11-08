@@ -11,6 +11,20 @@ public sealed class OffscreenRenderSession : IDisposable {
   private let closed CancellationToken
   private let threadId int32
   private var disposed bool
+  internal var Foreground Color = Color.Black
+
+  shared {
+    /// Creates a renderer without a native window or presentation surface.
+    /// @returns A session on Success, or an explicit renderer status and error.
+    public func Create() OffscreenRenderSessionResult {
+      try {
+        return OffscreenRenderSessionResult{Status: OffscreenRenderStatus.Success,
+          Session: OffscreenRenderSession(VulkanWindowTarget(VulkanHeadlessHost()), CancellationToken.None)}
+      } catch (error Exception) {
+        return OffscreenRenderSessionResult{Status: OffscreenRenderStatus.Failed, Error: error.Message}
+      }
+    }
+  }
 
   internal init(target VulkanWindowTarget, closed CancellationToken) {
     this.target = target
@@ -29,7 +43,7 @@ public sealed class OffscreenRenderSession : IDisposable {
       requireThread()
       if root == nil { throw ArgumentNullException("root") }
       validateOffscreenOptions(options)
-      return target.RenderOffscreenAsync(root, options, cancellation, closed, reusable)
+      return target.RenderOffscreenAsync(root, options, cancellation, closed, reusable, Foreground)
     }
 
   /// Consumes completed GPU work and starts a queued page without presenting a native window.

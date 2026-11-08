@@ -370,6 +370,50 @@ Both paths return an explicit `OffscreenRenderStatus`.
 Closing the owner cancels pending pages.
 `window.Closed` is a cancellation token for optional owner-bound services.
 
+## Render an app without a display
+
+```sh
+goo render App.gsproj --out frame.png --size 1280x800 --scale 2 --theme dark
+goo render App.gsproj --list
+goo render App.gsproj --scene incremented --out incremented.png
+goo render ./publish/App --scene incremented --out native.png
+goo diff frame.png reference.png --tolerance 2 --out difference.png
+```
+
+`goo render` builds a project or runs an existing executable. `Window.Run` renders
+through `OffscreenRenderSession` instead of opening a window. No display or
+compositor is needed. Size defaults to the declared window size. Scale controls
+output pixels. Theme sets `Window.Preferences.Theme` before the first build.
+It does not replace the app's colors. Apps that ignore theme render unchanged.
+The renderer waits for GPU image, path and text uploads. It does not wait for
+app services or advance app animations.
+
+Register named states in the window initializer:
+
+```gsharp
+Window{
+    Root: Counter(),
+    Scenes: Dictionary[string, Func[Cell]]{["default"] = () -> Counter(), ["incremented"] = () -> Counter(5)}
+}.Run()
+```
+
+`Scenes` is a read-only map of names to factories that return fresh, unattached
+Cells. Registration is NativeAOT-safe and uses no reflection. `--list` prints
+the registered names. Unknown scenes report the available names. Without
+`--scene`, render uses the window's root. Without a scene map, `default` is the
+only scene and renders `Window.Root`.
+`OffscreenRenderSession.Create()` also creates a surface-free session directly.
+Create, use and dispose it on the same thread.
+
+`goo diff` prints changed pixel count and an `x,y widthxheight` bounding box.
+Tolerance is the largest allowed RGBA channel difference, from 0 to 255.
+Pixels outside either image always count as changed. Equal images exit 0.
+Changed images exit 1. The optional PNG marks changed pixels magenta.
+
+After each successful hot reload, `goo dev` overwrites `.goo/reload.png` in
+the project directory and prints its full path. This captures the running app.
+
+
 ## Fullscreen displays
 
 Call `window.GetDisplays()` on an open window's UI thread for an owned read-only
@@ -1481,6 +1525,7 @@ Sources:
 - [`Window.Preferences.Layout.gs`](https://github.com/obselate/goo/blob/main/Goo/Window/WindowParts/Window.Preferences.Layout.gs)
 - [`Window.Preferences.gs`](https://github.com/obselate/goo/blob/main/Goo/Window/WindowParts/Window.Preferences.gs)
 - [`Window.Profile.gs`](https://github.com/obselate/goo/blob/main/Goo/Window/WindowParts/Window.Profile.gs)
+- [`Window.RenderCommand.gs`](https://github.com/obselate/goo/blob/main/Goo/Window/WindowParts/Window.RenderCommand.gs)
 - [`Window.Retained.gs`](https://github.com/obselate/goo/blob/main/Goo/Window/WindowParts/Window.Retained.gs)
 - [`Window.SizeConstraints.gs`](https://github.com/obselate/goo/blob/main/Goo/Window/WindowParts/Window.SizeConstraints.gs)
 - [`Window.Timers.gs`](https://github.com/obselate/goo/blob/main/Goo/Window/WindowParts/Window.Timers.gs)
@@ -1984,6 +2029,10 @@ Gets or sets the undecorated edge resize band in logical pixels.
 ### `Root`
 
 Gets the root cell.
+
+### `Scenes`
+
+Gets named, unattached Cell factories registered for display-free rendering.
 
 ### `SmoothScrolling`
 
