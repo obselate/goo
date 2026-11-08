@@ -28,6 +28,8 @@
 
 ### Fixed
 
+- Run deterministic preflight checks before platform jobs, report all CI gates through verify, and reuse pinned tool downloads.
+- Avoid a redundant callback-owner rebuild while that Cell is already building, so controlled text editor values can synchronize during Build.
 - Rebuild the Cell that authored an input callback when another Cell renders its Blob content.
 - Add protected `Cell<TInput>.InvokeInputCallback` overloads for forwarding input-time callbacks to the Cell that supplied the input.
 - Fit the whole profiler trace after Stop. The view showed the last 2 s, which was usually empty.
