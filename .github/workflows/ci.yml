@@ -2133,8 +2133,14 @@ jobs:
         run: |
           dotnet run --project tools/Goo.Repo -- check docs-android
           dotnet run --project tools/Goo.Repo -- check api
+      - name: Restore pinned Android text native payloads
+        id: android-native
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: artifacts/android-rebuild
+          key: android-text-native-ndk-27.2.12479018-${{ hashFiles('.github/scripts/build-text-native-android.sh', 'tools/Goo.TextNative/**') }}
       - name: Rebuild Android native payloads
-        if: needs.changes.outputs.full == 'true'
+        if: steps.android-native.outputs.cache-hit != 'true'
         run: |
           for rid in android-arm64 android-x64; do
             bash .github/scripts/build-text-native-android.sh "$rid" "artifacts/android-rebuild/$rid" "$ANDROID_HOME/ndk/27.2.12479018"
