@@ -4,6 +4,24 @@ import System
 import System.Numerics
 
 internal class CellFixtures {
+  func ControlledEditorValueDuringBuildDoesNotRebuildOwner() bool {
+    let document = TextDocument("initial")
+    using let controller = TextEditorController(document)
+    let cell = ControlledEditorValueCell(controller)
+    let window = Window{ Root: cell, Width: 200, Height: 100 }
+    try {
+      window.UpdateTree()
+      cell.Value = "controlled"
+      cell.Rebuild()
+      window.UpdateTree()
+      window.UpdateTree()
+      return document.GetText() == "controlled" && cell.Changes == 1
+        && cell.Builds == 2 && !cell.IsDirty()
+    } finally {
+      window.Close()
+    }
+  }
+
   func SlottedAndForwardedCallbacksRebuildOnlyTheirAuthor() bool {
     for cached in []bool{false, true} {
       let host = CallbackOriginHost{CacheContent: cached}
@@ -1270,6 +1288,28 @@ internal class CallbackOriginHost : Cell {
         },
       }),
       Cell.Mount[CallbackUnchangedCell]("unchanged"),
+    }
+  }
+}
+
+internal class ControlledEditorValueCell : Cell {
+  private let controller TextEditorController
+  internal var Value string = "initial"
+  internal var Builds int32
+  internal var Changes int32
+
+  init(controller TextEditorController) { this.controller = controller }
+
+  override func Build() Blob {
+    Builds++
+    let document = controller.Document
+    if document.GetText() != Value {
+      document.Apply(TextChange(TextRange(0, document.Length), Value))
+    }
+    return TextEditor(controller) {
+      Width = 200,
+      Height = 100,
+      OnChange = change -> { Changes++ },
     }
   }
 }

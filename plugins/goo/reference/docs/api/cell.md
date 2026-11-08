@@ -274,13 +274,13 @@ Returns: the root blob for this component
 
 ### `InvokeInputCallback(System.Action)`
 
-Invokes an input-time callback and rebuilds the Cell that supplied this input. Call Build-time queries directly. They must not change the supplying Cell's state.
+Invokes an input-time callback and rebuilds the Cell that supplied this input. A supplying Cell already in Build needs no extra rebuild. Call Build-time queries directly. They must not change the supplying Cell's state.
 
 - `callback`: callback from the current input
 
 ### `InvokeInputCallback``1(System.Action{T},T)`
 
-Invokes an input-time callback and rebuilds the Cell that supplied this input. Call Build-time queries directly. They must not change the supplying Cell's state.
+Invokes an input-time callback and rebuilds the Cell that supplied this input. A supplying Cell already in Build needs no extra rebuild. Call Build-time queries directly. They must not change the supplying Cell's state.
 
 - `T`: callback argument type
 - `callback`: callback from the current input
@@ -288,7 +288,7 @@ Invokes an input-time callback and rebuilds the Cell that supplied this input. C
 
 ### `InvokeInputCallback``2(System.Action{T1,T2},T1,T2)`
 
-Invokes an input-time callback and rebuilds the Cell that supplied this input. Call Build-time queries directly. They must not change the supplying Cell's state.
+Invokes an input-time callback and rebuilds the Cell that supplied this input. A supplying Cell already in Build needs no extra rebuild. Call Build-time queries directly. They must not change the supplying Cell's state.
 
 - `T1`: first callback argument type
 - `T2`: second callback argument type
@@ -298,7 +298,7 @@ Invokes an input-time callback and rebuilds the Cell that supplied this input. C
 
 ### `InvokeInputCallback``2(System.Func{T,TResult},T,TResult)`
 
-Invokes an input-time callback and rebuilds the Cell that supplied this input. Call Build-time queries directly. They must not change the supplying Cell's state.
+Invokes an input-time callback and rebuilds the Cell that supplied this input. A supplying Cell already in Build needs no extra rebuild. Call Build-time queries directly. They must not change the supplying Cell's state.
 
 - `T`: callback argument type
 - `TResult`: callback result type
