@@ -1,6 +1,53 @@
 # Changelog
 
 
+## 0.29.0 - 2026-11-08
+
+### Breaking changes
+
+- `Window.Post` now returns `bool` to report queue acceptance. Use `Post` for queued UI work and check its result when acceptance matters. An accepted action can still be discarded during teardown. `TryPost` remains available for now.
+- Remove `Goo.Tokens`. Pass token values directly to component functions and Cell inputs.
+- Remove `Cell.MountSeeded` and `CellElement.Seed`. Use `Cell.Mount` and put one-time initialization in the Cell constructor or `CellElement.Factory`. Keep per-diff updates in `Configure`.
+- Remove `Goo.Command`, `Button.Command` and `KeyBinding.Command`. Use `Button.OnClick` and `KeyBinding.Action`. Keep shared actions and availability checks in application code.
+
+### Added
+
+- Add `goo render` for display-free app PNGs, named root Cell scenes and theme and scale selection.
+- Add `goo diff` with channel tolerance, changed pixel bounds and an optional difference image.
+- Save the current frame to `.goo/reload.png` after each successful `goo dev` hot reload.
+- Add `OffscreenRenderSession.Create()` for rendering without a native window.
+- Compare fixed-seed retained frames and partial damage against fresh renders in the offscreen CI lane. Check state changes, integer translation and axis swaps.
+
+### Changed
+
+- Build trace duration records now include the Cell type name in the `name` field.
+- Name duplicate keys, parent Cells, child types and virtual callbacks in tree errors, with a fix in each message.
+- Add type names and fixes to Cell mount, rebuild, Context, UI-thread, dispatcher and custom layout errors. Name the related Goo best practices rules.
+- Teach a function returning Blob before child Cells in getting started. Add a core terms glossary to the README.
+- Clarify contributor and Goo app-authoring rules from the approved rule review.
+
+### Fixed
+
+- Rebuild the Cell that authored an input callback when another Cell renders its Blob content.
+- Add protected `Cell<TInput>.InvokeInputCallback` overloads for forwarding input-time callbacks to the Cell that supplied the input.
+- Fit the whole profiler trace after Stop. The view showed the last 2 s, which was usually empty.
+- Explain how to record in the empty profiler and Types views, and disable profiler view tools until a trace exists.
+- Show element keys in the DevTools tree and highlight the inspected root on first open.
+- Start the style override field empty with an example placeholder, and apply overrides to the inspected element.
+- Disable Pick element and Capture while disconnected, and show an empty state for captures.
+- Show scroll offset and content size as numbers instead of raw JSON.
+- Remove the console entry for every received snapshot, and match the profiler toolbar to the Elements toolbar.
+- Show the inspected element as a box diagram plus the values the app set, grouped into Layout, Style and Interaction, with defaults on request.
+- Replace the profiler frame chart with a timing view: frame times against a 60 Hz budget line, nested scope tracks for the UI thread, GPU and present and DevTools, and per-frame work and allocation strips. Open the Timers table by default. Scope nesting runs off the UI thread. Build scopes show their Cell type in bar labels, tooltips and details.
+- Update Goo.Widgets to 0.19.8 and use the default SplitPane pointer target, so the details divider is a 1 px line with an 8 px grab area.
+- Keep native close requests for owned windows local instead of also requesting application exit.
+- Keep hidden windows running after the last visible window closes only while a tray icon is active.
+- Allocate extra text atlas pages when active glyphs exceed the cache budget. After cache pressure, release pages unused for two frames once their GPU work is complete. Text batches keep each page's resource identity.
+- Check shader source and include hashes without a shader compiler in CI.
+- Compare SVG corpus frames with committed pixel baselines in Linux CI.
+- Upload new glyphs and rebuild the acquired frame before presenting a text edit. Do not present a frame with missing text while its glyphs are pending.
+- Reset timestamp queries before use when profiling starts during a pending upload replay.
+
 ## 0.28.7 - 2026-11-07
 
 ### Added
