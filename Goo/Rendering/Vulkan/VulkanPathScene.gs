@@ -82,11 +82,9 @@ internal unsafe sealed class VulkanPathScene : IDisposable {
     if renderable.RedrawRequired {
       redrawRequired = true
     }
-    if renderable.PathId.IsValid && renderable.AtlasId.IsValid
-      && renderable.WordCount != 0u && !renderable.Renderable
-      && renderable.UploadPending{
-        resourceDeferred = true
-      }
+    if renderable.RedrawRequired && !renderable.Renderable {
+      resourceDeferred = true
+    }
     return renderable
   }
 
