@@ -35,7 +35,6 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       full: ${{ steps.paths.outputs.full }}
-      tools: ${{ steps.paths.outputs.tools }}
       lint: ${{ steps.paths.outputs.lint }}
       api: ${{ steps.paths.outputs.api }}
     steps:
@@ -54,27 +53,33 @@ jobs:
               for (const file of files) {
                 for (const path of [file.filename, file.previous_filename].filter(Boolean)) {
                   if (path.startsWith('plugins/goo/')) plugin = true;
-                  else if (path.startsWith('docs/') && path.endsWith('.md') && path !== 'docs/nuget-readme.md') {
+                  else if ((path.startsWith('docs/') || !path.includes('/') || path.startsWith('changelog.d/')) &&
+                           path.endsWith('.md') && path !== 'docs/nuget-readme.md') {
                     if (path.startsWith('docs/api')) api = true;
                   } else if (!path.startsWith('integrations/vscode/')) full = true;
                 }
               }
             }
             core.setOutput('full', full);
-            core.setOutput('tools', full || plugin || api);
             core.setOutput('lint', full || plugin);
             core.setOutput('api', full || api);
 
-  quality:
+  preflight:
     needs: changes
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      - &nuget-cache
+        name: Restore NuGet packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/packages.lock.json', '**/*.gsproj', '**/*.csproj', '**/*.props', 'global.json', '**/NuGet.config') }}
+
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
-        if: needs.changes.outputs.tools == 'true'
         with:
           global-json-file: global.json
 
@@ -83,15 +88,6 @@ jobs:
         if: needs.changes.outputs.lint == 'true'
         run: dotnet run --project tools/Goo.Repo -- check lint
 
-
-
-      - name: Verify shared gesture recognizers
-        if: needs.changes.outputs.api == 'true'
-        run: dotnet run --project tools/Goo.Repo -- check gestures
-
-      - name: Verify generated documentation
-        if: needs.changes.outputs.api == 'true'
-        run: dotnet run --project tools/Goo.Repo -- check docs
 
       - name: Validate onboarding and release metadata
         run: dotnet run --project tools/Goo.Repo -- check metadata
@@ -113,6 +109,29 @@ jobs:
               files[0].status === 'modified' &&
               !/^## Unreleased/m.test(require('fs').readFileSync('CHANGELOG.md', 'utf8'));
             if (!added && !release && !correction) core.setFailed('Add one changelog.d/<branch-or-pr>.md fragment');
+      - name: Compile core
+        if: needs.changes.outputs.full == 'true'
+        run: dotnet build Goo/Goo.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
+
+  quality:
+    needs: [changes, preflight]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - *nuget-cache
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
+        with:
+          global-json-file: global.json
+
+
+      - name: Verify shared gesture recognizers
+        if: needs.changes.outputs.api == 'true'
+        run: dotnet run --project tools/Goo.Repo -- check gestures
+
+      - name: Verify generated documentation
+        if: needs.changes.outputs.api == 'true'
+        run: dotnet run --project tools/Goo.Repo -- check docs
 
 
       - name: Verify optional spell checking
@@ -178,23 +197,28 @@ jobs:
           node --check integrations/vscode/extension.js
 
   macos-native:
-    needs: changes
-    runs-on: ${{ needs.changes.outputs.full == 'true' && 'macos-15' || 'ubuntu-24.04' }}
+    needs: [changes, preflight]
+    if: needs.changes.outputs.full == 'true'
+    runs-on: macos-15
     timeout-minutes: 15
 
     steps:
-      - name: No affected inputs
-        if: needs.changes.outputs.full != 'true'
-        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: needs.changes.outputs.full == 'true'
 
+      - name: Restore pinned macOS native payloads
+        id: macos-native
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: artifacts/macos-native
+          key: macos-native-arm64-${{ hashFiles('.github/scripts/build-sdl-macos-arm64.sh', '.github/scripts/fetch-moltenvk-macos-arm64.sh', '.github/scripts/build-text-native-macos-arm64.sh', '.github/patches/sdl/**', 'tools/Goo.TextNative/**') }}
+
       - name: Install native build tools
-        if: needs.changes.outputs.full == 'true'
+        if: steps.macos-native.outputs.cache-hit != 'true'
         run: brew install cmake meson ninja
 
       - name: Build pinned macOS arm64 native payloads
-        if: needs.changes.outputs.full == 'true'
+        if: steps.macos-native.outputs.cache-hit != 'true'
         run: |
           native="$PWD/artifacts/macos-native"
           mkdir -p "$native"
@@ -212,16 +236,15 @@ jobs:
 
   macos-arm64:
     needs: [changes, macos-native]
-    runs-on: ${{ needs.changes.outputs.full == 'true' && 'macos-15' || 'ubuntu-24.04' }}
+    if: needs.changes.outputs.full == 'true'
+    runs-on: macos-15
     timeout-minutes: 45
 
     steps:
-      - name: No affected inputs
-        if: needs.changes.outputs.full != 'true'
-        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: needs.changes.outputs.full == 'true'
 
+      - *nuget-cache
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         if: needs.changes.outputs.full == 'true'
         with:
@@ -351,15 +374,23 @@ jobs:
           if-no-files-found: ignore
 
 
+      - name: Restore pinned Slang archive
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ runner.temp }}/slang-2026.16-macos-aarch64.tar.gz
+          key: slang-macos-arm64-5d7edc2c91c38d1914c14a5a410f0fe517bce9a284395336715ba36a091e9d9e
+
       - name: Fetch pinned Slang compiler
         if: needs.changes.outputs.full == 'true'
         run: |
           archive="$RUNNER_TEMP/slang-2026.16-macos-aarch64.tar.gz"
           sdk="$RUNNER_TEMP/slang-2026.16"
-          curl --fail --location --retry 5 --retry-delay 2 \
-            --retry-max-time 120 --retry-all-errors \
-            --output "$archive" \
-            https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-macos-aarch64.tar.gz
+          if [ ! -f "$archive" ]; then
+            curl --fail --location --retry 5 --retry-delay 2 \
+              --retry-max-time 120 --retry-all-errors \
+              --output "$archive" \
+              https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-macos-aarch64.tar.gz
+          fi
           echo "5d7edc2c91c38d1914c14a5a410f0fe517bce9a284395336715ba36a091e9d9e  $archive" \
             | shasum -a 256 -c -
           mkdir -p "$sdk"
@@ -425,18 +456,17 @@ jobs:
   macos-checks:
     name: macos-${{ matrix.lane }}
     needs: [changes, macos-native]
-    runs-on: ${{ needs.changes.outputs.full == 'true' && 'macos-15' || 'ubuntu-24.04' }}
+    if: needs.changes.outputs.full == 'true'
+    runs-on: macos-15
     timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
         lane: [rendering, hosting]
     steps:
-      - name: No affected inputs
-        if: needs.changes.outputs.full != 'true'
-        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: needs.changes.outputs.full == 'true'
+      - *nuget-cache
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
         if: needs.changes.outputs.full == 'true'
         with:
@@ -533,17 +563,16 @@ jobs:
             artifacts/audio-nativeaot/Goo.AudioSmoke
 
   linux-build:
-    needs: changes
+    needs: [changes, preflight]
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
 
     steps:
-      - name: No affected inputs
-        if: needs.changes.outputs.full != 'true'
-        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: needs.changes.outputs.full == 'true'
 
+      - *nuget-cache
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         if: needs.changes.outputs.full == 'true'
         with:
@@ -691,8 +720,15 @@ jobs:
             artifacts/reports/vulkaninfo-summary.txt
           grep -E 'deviceType *= PHYSICAL_DEVICE_TYPE_CPU$' artifacts/reports/vulkaninfo-summary.txt
 
+      - name: Restore pinned Windows SDL runtime
+        id: windows-sdl
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: artifacts/native/win-x64/SDL3.dll
+          key: windows-sdl-x64-${{ hashFiles('.github/scripts/fetch-sdl-win-x64.sh') }}
+
       - name: Fetch pinned Windows SDL runtime
-        if: needs.changes.outputs.full == 'true'
+        if: steps.windows-sdl.outputs.cache-hit != 'true'
         run: .github/scripts/fetch-sdl-win-x64.sh artifacts/native/win-x64/SDL3.dll
 
 
@@ -720,12 +756,10 @@ jobs:
 
   linux-validation:
     needs: [changes, linux-build]
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - name: No affected inputs
-        if: needs.changes.outputs.full != 'true'
-        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: needs.changes.outputs.full == 'true'
 
@@ -737,6 +771,7 @@ jobs:
           name: goo-linux-build
           path: ${{ runner.temp }}/goo-linux-build
 
+      - *nuget-cache
       - &linux-dotnet
         if: needs.changes.outputs.full == 'true'
         uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
@@ -892,15 +927,14 @@ jobs:
 
   linux-test-build:
     needs: [changes, linux-build]
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - name: No affected inputs
-        if: needs.changes.outputs.full != 'true'
-        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: needs.changes.outputs.full == 'true'
       - *linux-build-download
+      - *nuget-cache
       - *linux-dotnet
       - *linux-build-restore
 
@@ -924,15 +958,14 @@ jobs:
 
   linux-packages:
     needs: [changes, linux-build, macos-native]
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
-      - name: No affected inputs
-        if: needs.changes.outputs.full != 'true'
-        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: needs.changes.outputs.full == 'true'
       - *linux-build-download
+      - *nuget-cache
       - *linux-dotnet
       - *linux-build-restore
 
@@ -1056,15 +1089,14 @@ jobs:
 
   linux-x64:
     needs: [changes, linux-packages]
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
-      - name: No affected inputs
-        if: needs.changes.outputs.full != 'true'
-        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: needs.changes.outputs.full == 'true'
       - *linux-build-download
+      - *nuget-cache
       - *linux-dotnet
       - *linux-build-restore
       - *linux-apt-update
@@ -1198,6 +1230,12 @@ jobs:
             env -u LD_LIBRARY_PATH GOO_NATIVE_DIALOGS_SMOKE=1 \
             artifacts/nativeaot-onefile/Goo.PackageSmoke
 
+      - name: Restore pinned AppImage tools
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ runner.temp }}/appimage-tools
+          key: appimage-tools-linux-x64-${{ hashFiles('tools/Goo.DevTools.Cli/Packaging/fetch-appimage-tools.sh') }}
+
       - name: Package and run consumer AppImage
         if: needs.changes.outputs.full == 'true'
         env:
@@ -1287,6 +1325,7 @@ jobs:
   linux-fixtures:
     name: linux-${{ matrix.lane }}
     needs: [changes, linux-test-build]
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
@@ -1304,9 +1343,6 @@ jobs:
           - lane: image
             project: tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.gsproj
     steps:
-      - name: No affected inputs
-        if: needs.changes.outputs.full != 'true'
-        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: needs.changes.outputs.full == 'true'
       - name: Download Linux test build state
@@ -1315,6 +1351,7 @@ jobs:
         with:
           name: goo-linux-test-build
           path: ${{ runner.temp }}/goo-linux-build
+      - *nuget-cache
       - *linux-dotnet
       - *linux-build-restore
       - *linux-apt-update
@@ -1661,16 +1698,24 @@ jobs:
           path: artifacts/reports/
 
   windows-native:
-    needs: changes
+    needs: [changes, preflight]
     if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - *nuget-cache
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
         with:
           global-json-file: global.json
+      - name: Restore pinned Windows text native payloads
+        id: windows-native
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: artifacts/windows-native
+          key: windows-text-native-x64-${{ hashFiles('.github/scripts/build-text-native-win-x64.sh', 'tools/Goo.TextNative/**') }}
       - name: Rebuild Windows text native libraries
+        if: steps.windows-native.outputs.cache-hit != 'true'
         run: |
           mkdir -p artifacts/windows-native
           docker run --rm \
@@ -1696,14 +1741,13 @@ jobs:
 
   windows-x64:
     needs: [changes, linux-packages]
-    runs-on: ${{ needs.changes.outputs.full == 'true' && 'windows-2022' || 'ubuntu-24.04' }}
+    if: needs.changes.outputs.full == 'true'
+    runs-on: windows-2022
     timeout-minutes: 25
     steps:
-      - name: No affected inputs
-        if: needs.changes.outputs.full != 'true'
-        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: needs.changes.outputs.full == 'true'
+      - *nuget-cache
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         if: needs.changes.outputs.full == 'true'
         with:
@@ -1732,6 +1776,14 @@ jobs:
           $version = dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo
           dotnet publish tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -c Release -r win-x64 --self-contained true -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version --configfile tests/Goo.PackageSmoke/NuGet.config -o artifacts/direct-driver-smoke
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Restore pinned direct Vulkan archives
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: |
+            ${{ runner.temp }}/mesa3d-26.2.4-release-msvc.7z
+            ${{ runner.temp }}/VulkanRT-X64-1.4.363.0-Components.zip
+          key: direct-vulkan-windows-x64-351fc8c8b695878ffb3eaa044b3ead08672a48b1a045e3c3e3975811df0f6695-a25a927aa8b9f0371048f1861cf88ac3b9bc9b1fb332c42d897c8ab32695769a
+
       - name: Check elevated app-local direct Vulkan loading without an installed ICD
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
@@ -1740,14 +1792,18 @@ jobs:
           $principal = [Security.Principal.WindowsPrincipal]::new($identity)
           if (!$principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw "Direct driver smoke must run elevated" }
           $mesa = Join-Path $env:RUNNER_TEMP "mesa3d-26.2.4-release-msvc.7z"
-          curl.exe --fail --location --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 20 --speed-limit 1024 --speed-time 30 --output $mesa https://github.com/pal1000/mesa-dist-win/releases/download/26.2.4/mesa3d-26.2.4-release-msvc.7z
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (!(Test-Path $mesa)) {
+            curl.exe --fail --location --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 20 --speed-limit 1024 --speed-time 30 --output $mesa https://github.com/pal1000/mesa-dist-win/releases/download/26.2.4/mesa3d-26.2.4-release-msvc.7z
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
           if ((Get-FileHash $mesa -Algorithm SHA256).Hash -ne "351fc8c8b695878ffb3eaa044b3ead08672a48b1a045e3c3e3975811df0f6695") { throw "Mesa SHA256 mismatch" }
           7z e $mesa x64/vulkan_lvp.dll -oartifacts/direct-driver-smoke -y
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $runtime = Join-Path $env:RUNNER_TEMP "VulkanRT-X64-1.4.363.0-Components.zip"
-          curl.exe --fail --location --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 20 --speed-limit 1024 --speed-time 30 --output $runtime https://sdk.lunarg.com/sdk/download/1.4.363.0/windows/VulkanRT-X64-1.4.363.0-Components.zip
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (!(Test-Path $runtime)) {
+            curl.exe --fail --location --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 20 --speed-limit 1024 --speed-time 30 --output $runtime https://sdk.lunarg.com/sdk/download/1.4.363.0/windows/VulkanRT-X64-1.4.363.0-Components.zip
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
           if ((Get-FileHash $runtime -Algorithm SHA256).Hash -ne "a25a927aa8b9f0371048f1861cf88ac3b9bc9b1fb332c42d897c8ab32695769a") { throw "Vulkan runtime SHA256 mismatch" }
           Expand-Archive $runtime -DestinationPath "$env:RUNNER_TEMP/direct-vulkan-runtime"
           Copy-Item "$env:RUNNER_TEMP/direct-vulkan-runtime/VulkanRT-X64-1.4.363.0-Components/x64/vulkan-1.dll" artifacts/direct-driver-smoke
@@ -1764,14 +1820,19 @@ jobs:
         with:
           vulkan_version: 1.4.357.0
           install_runtime: true
-          install_lavapipe: true
+          install_lavapipe: false
           cache: true
           github_token: ${{ github.token }}
-      - name: Enable cached Vulkan runtime
+      - name: Enable pinned software Vulkan runtime
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
           $runtime = Join-Path $env:VULKAN_SDK "runtime\x64"
+          7z e "$env:RUNNER_TEMP/mesa3d-26.2.4-release-msvc.7z" x64/vulkan_lvp.dll x64/lvp_icd.x86_64.json "-o$runtime" -y
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $icd = Join-Path $runtime "lvp_icd.x86_64.json"
+          reg.exe add "HKLM\SOFTWARE\Khronos\Vulkan\Drivers" /v $icd /t REG_DWORD /d 0 /f
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $runtime | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           & (Join-Path $runtime "vulkaninfo.exe") --summary
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -1824,6 +1885,12 @@ jobs:
           }
           & artifacts/rich-nativeaot/Goo.PrintingSmoke.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Restore pinned Inno Setup installer
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ runner.temp }}/goo-inno/innosetup-7.1.0-x64.exe
+          key: inno-setup-windows-x64-${{ hashFiles('tools/Goo.DevTools.Cli/Packaging/fetch-inno-setup.ps1') }}
+
       - name: Build unsigned consumer installer
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
@@ -1916,6 +1983,7 @@ jobs:
         with:
           fetch-depth: 0
 
+      - *nuget-cache
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           global-json-file: global.json
@@ -2018,15 +2086,14 @@ jobs:
           fi
 
   android:
-    needs: changes
+    needs: [changes, preflight]
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
-      - name: No affected inputs
-        if: needs.changes.outputs.full != 'true'
-        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: needs.changes.outputs.full == 'true'
+      - *nuget-cache
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         if: needs.changes.outputs.full == 'true'
         with:
@@ -2037,23 +2104,65 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Restore pinned Android NDK archive
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ runner.temp }}/android-ndk-r27c-linux.zip
+          key: ndk-linux-x64-27.2.12479018-090e8083a715fdb1a3e402d0763c388abb03fb4e
+      - name: Install pinned Android NDK
+        run: |
+          archive="$RUNNER_TEMP/android-ndk-r27c-linux.zip"
+          if [ ! -f "$archive" ]; then
+            curl --fail --location --retry 4 --retry-connrefused --retry-max-time 120 \
+              --connect-timeout 20 --output "$archive" https://dl.google.com/android/repository/android-ndk-r27c-linux.zip
+          fi
+          echo "090e8083a715fdb1a3e402d0763c388abb03fb4e  $archive" | sha1sum --check --strict
+          unzip -q "$archive" -d "$RUNNER_TEMP/ndk"
+          mkdir -p "$ANDROID_HOME/ndk"
+          rm -rf "$ANDROID_HOME/ndk/27.2.12479018"
+          mv "$RUNNER_TEMP/ndk/android-ndk-r27c" "$ANDROID_HOME/ndk/27.2.12479018"
       - name: Install Android and native toolchains
         if: needs.changes.outputs.full == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y meson ninja-build
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'ndk;27.2.12479018' 'platforms;android-36' 'build-tools;36.0.0'
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-36' 'build-tools;36.0.0'
           dotnet workload install android
       - name: Verify Android API contracts and generated documentation
         if: needs.changes.outputs.full == 'true'
         run: |
           dotnet run --project tools/Goo.Repo -- check docs-android
           dotnet run --project tools/Goo.Repo -- check api
+      - name: Restore pinned Android text native payloads
+        id: android-native
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: artifacts/android-rebuild
+          key: android-text-native-ndk-27.2.12479018-${{ hashFiles('.github/scripts/build-text-native-android.sh', 'tools/Goo.TextNative/**') }}
+      - name: Restore pinned HarfBuzz source archive
+        id: android-source
+        if: steps.android-native.outputs.cache-hit != 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ runner.temp }}/goo-harfbuzz.tar.xz
+          key: harfbuzz-source-${{ hashFiles('tools/Goo.TextNative/manifest.json') }}
+      - name: Fetch pinned HarfBuzz release asset
+        if: steps.android-native.outputs.cache-hit != 'true' && steps.android-source.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mapfile -t source < <(jq -r '.source.harfbuzz | .tag, (.archiveUrl | split("/") | last)' tools/Goo.TextNative/manifest.json)
+          asset=$(curl --fail --location --retry 4 --retry-connrefused --retry-max-time 120 --connect-timeout 20 \
+            --header "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/harfbuzz/harfbuzz/releases/tags/${source[0]}" \
+            | jq -r --arg name "${source[1]}" '.assets[] | select(.name == $name) | .url')
+          curl --fail --location --retry 4 --retry-connrefused --retry-max-time 120 --connect-timeout 20 \
+            --header "Authorization: Bearer $GH_TOKEN" --header 'Accept: application/octet-stream' \
+            --output "$RUNNER_TEMP/goo-harfbuzz.tar.xz" "$asset"
       - name: Rebuild Android native payloads
-        if: needs.changes.outputs.full == 'true'
+        if: steps.android-native.outputs.cache-hit != 'true'
         run: |
           for rid in android-arm64 android-x64; do
-            bash .github/scripts/build-text-native-android.sh "$rid" "artifacts/android-rebuild/$rid" "$ANDROID_HOME/ndk/27.2.12479018"
+            bash .github/scripts/build-text-native-android.sh "$rid" "artifacts/android-rebuild/$rid" "$ANDROID_HOME/ndk/27.2.12479018" "$RUNNER_TEMP/goo-harfbuzz.tar.xz"
           done
       - name: Upload rebuilt Android native payloads
         if: needs.changes.outputs.full == 'true'
@@ -2105,6 +2214,12 @@ jobs:
             tests/Goo.OffscreenAndroidSmoke/bin/Release/net10.0-android/*-Signed.apk
             tests/Goo.AndroidClipboardPeer/bin/Release/net10.0-android/*.apk
             Goo/Runtime/Vulkan/android-*/text-native-build.json
+      - name: Restore pinned bundletool
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ runner.temp }}/android-tools/bundletool-all-1.18.3.jar
+          key: bundletool-${{ hashFiles('tools/Goo.DevTools.Cli/Packaging/fetch-bundletool.sh') }}
+
       - name: Package signed consumer AAB
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -2183,14 +2298,13 @@ jobs:
 
   android-consumer:
     needs: [changes, linux-packages, android]
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - name: No affected inputs
-        if: needs.changes.outputs.full != 'true'
-        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: needs.changes.outputs.full == 'true'
+      - *nuget-cache
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         if: needs.changes.outputs.full == 'true'
         with:
@@ -2201,10 +2315,27 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Restore pinned Android NDK archive
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ runner.temp }}/android-ndk-r28c-linux.zip
+          key: ndk-linux-x64-28.2.13676358-a7b54a5de87fecd125a17d54f73c446199e72a64
+      - name: Install pinned Android NDK
+        run: |
+          archive="$RUNNER_TEMP/android-ndk-r28c-linux.zip"
+          if [ ! -f "$archive" ]; then
+            curl --fail --location --retry 4 --retry-connrefused --retry-max-time 120 \
+              --connect-timeout 20 --output "$archive" https://dl.google.com/android/repository/android-ndk-r28c-linux.zip
+          fi
+          echo "a7b54a5de87fecd125a17d54f73c446199e72a64  $archive" | sha1sum --check --strict
+          unzip -q "$archive" -d "$RUNNER_TEMP/ndk"
+          mkdir -p "$ANDROID_HOME/ndk"
+          rm -rf "$ANDROID_HOME/ndk/28.2.13676358"
+          mv "$RUNNER_TEMP/ndk/android-ndk-r28c" "$ANDROID_HOME/ndk/28.2.13676358"
       - name: Install Android toolchain
         if: needs.changes.outputs.full == 'true'
         run: |
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'ndk;28.2.13676358' 'platforms;android-36' 'build-tools;36.0.0'
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-36' 'build-tools;36.0.0'
           dotnet workload install android
       - name: Download main package for Android consumer validation
         if: needs.changes.outputs.full == 'true'
@@ -2292,3 +2423,19 @@ jobs:
         with:
           name: android-nativeaot-accessibility-36
           path: artifacts/android-accessibility-36/logs
+
+  verify:
+    if: always()
+    needs: [changes, preflight, quality, macos-native, macos-arm64, macos-checks, linux-build, linux-validation, linux-test-build, linux-packages, linux-x64, linux-fixtures, windows-native, windows-x64, android, android-native-menus, android-accessibility, android-consumer, android-nativeaot-accessibility]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        with:
+          script: |
+            const blocked = Object.entries(JSON.parse(process.env.NEEDS))
+              .filter(([, job]) => !['success', 'skipped'].includes(job.result))
+              .map(([name, job]) => `${name}: ${job.result}`);
+            if (blocked.length) core.setFailed(blocked.join(', '));
