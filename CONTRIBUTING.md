@@ -28,8 +28,9 @@ It never uses your desktop. Native checks must run on their target operating sys
 Software Vulkan does not measure hardware performance.
 Set `GOO_WAYLAND_COMPOSITOR=kwin` to select KWin for local checks.
 
-On Linux, set `GOO_BUILD_LOCK` to a lock file path to serialize builds and checks.
-Goo.Repo uses `flock --close` for that lock. Do not wrap it in the same lock.
+Independent builds may run in parallel when their outputs are isolated. On Linux,
+set `GOO_BUILD_LOCK` when shared outputs need serialization. Goo.Repo owns
+`flock --close` for that lock. Do not wrap it in the same lock.
 
 Gallery builds and custom shader projects also need the pinned Slang and Vulkan
 SDKs. Run `doctor` for the install command. See [custom shaders](docs/platform-preflight.md#custom-shaders).
@@ -96,9 +97,9 @@ Compile runnable examples against the current package to check their behavior.
 
 ## Submitting changes
 
-- Open an issue to agree on scope.
-- Link it in the pull request and use the pull request template.
-- Keep changes focused. Include tests and docs for changed behavior or API.
+- Open an issue to agree on behavior, API or architecture changes. Small docs-only changes may use a focused PR directly.
+- Link the agreed issue when there is one and use the pull request template.
+- Keep changes focused and verify changed behavior with relevant checks. Include required source API documentation and changelog fragments, not incidental README, guide or instruction edits.
 - Include generated docs. CI checks them and does not commit them for you.
 - Add one `changelog.d/<branch-or-pr>.md` file. Use a lowercase name with hyphens
   instead of branch slashes. Do not edit `CHANGELOG.md` for pending changes.

@@ -6,7 +6,7 @@ These rules apply to maintained source, tests, examples, templates and repositor
 
 - Write the smallest readable change. No hacks or minification.
 - Add no helper, abstraction, file or dependency unless the change needs it.
-- Use comments only for generated API documentation.
+- Use comments for generated API documentation. Add a short comment only for a non-obvious invariant or constraint that clearer code cannot express. Do not add narration, task history or planning comments.
 - Keep owned methods in their type. Avoid unnecessary allocation, copying and computation.
 - Use [native authoring](docs/native-authoring.md) for Goo construction and spread rules.
 - Use [contributing](CONTRIBUTING.md) for setup, verification and release workflow.
@@ -23,7 +23,7 @@ These rules apply to maintained source, tests, examples, templates and repositor
 
 ## Function size
 
-- Keep functions at 120 lines or fewer.
+- Keep each function focused on one cohesive task. Treat 120 lines as a review prompt, not an automatic limit.
 - Split long functions at real steps. Use private functions named for those steps.
 - Preserve behavior and effect order. Formatting does not resolve long functions.
 
@@ -56,7 +56,7 @@ Folders are not assembly boundaries. Classify shared values and contracts separa
 - State required fields and optional defaults. Reject missing or invalid required fields at parse time with a domain-owned typed failure.
 - Read typed properties, not repeated field-name strings.
 - Preserve stored and wire bytes when compatibility requires them. Existing data must still load.
-- Use data types only when SDK 0.5.26 and the actual serializer and NativeAOT path support them.
+- Use data types only when the SDK pinned in `global.json` and the actual serializer and NativeAOT path support them.
 
 ## Errors and delivery
 
@@ -79,7 +79,7 @@ Folders are not assembly boundaries. Classify shared values and contracts separa
 
 ## G# idioms
 
-Use only forms supported by `Gsharp.NET.Sdk` 0.5.26. Authority order: pinned compiler and tests, language spec, accepted ADRs, conformance samples, then authoring prose.
+Use only forms supported by the `Gsharp.NET.Sdk` pinned in `global.json`. Authority order: pinned compiler and tests, language spec, accepted ADRs, conformance samples, then authoring prose.
 
 | Use | Instead of |
 | --- | --- |
@@ -100,19 +100,19 @@ Use only forms supported by `Gsharp.NET.Sdk` 0.5.26. Authority order: pinned com
 
 - Use `operator implicit(value)` and `operator explicit(value)`. Keep a space before symbolic operator parameter lists.
 - The compiler rejects retired `len`, `cap`, `append`, `delete` and `close` built-ins. Use their member replacements.
-- Keep internal delegate fields for observer hooks while the pinned compiler emits `internal event` accessors as public metadata.
+- Use internal delegate fields for observer hooks only when the selected compiler emits internal event accessors as public metadata. Check emitted visibility before retaining that workaround.
 - Do not rewrite native callbacks, locks or thread ownership to satisfy a syntax preference.
 
 ## Verification and public API
 
-- Run the [focused managed checks](CONTRIBUTING.md#verification) and a Release build with warnings as errors for code changes.
+- Run the [focused managed checks](CONTRIBUTING.md#checks) and a Release build with warnings as errors for code changes.
 - Run the affected behavior checks and required native, renderer, package or NativeAOT checks. Formatting alone does not verify behavior.
-- Add a test only for a deterministic end-to-end regression path.
+- Add tests only when they deterministically verify a distinct public contract or credible regression path. Prefer the smallest behavioral check and avoid duplicate, structural or implementation-detail tests.
 - Strict `Goo.Gslint` enforces GL0002/3/4/7/8/10/11. GL0001 checks formatting for samples and templates, not core or tests.
 - Review GL0005 manually. API contract tests enforce product documentation, not public test-fixture documentation under GL0006.
 - Review function size, comments, ownership, error semantics and constant meaning manually. The linter does not enforce these rules.
 - Use the pinned `gsfmt --check` for G# tools.
-- For public API changes, update `tests/Goo.ApiContractTests/PublicApi.approved.txt` and source XML documentation. Do not commit regenerated API pages or the plugin reference bundle in PRs, because `main` syncs them after merge.
+- For public API changes, update `tests/Goo.ApiContractTests/PublicApi.approved.txt` and source XML documentation. Generate current API pages and plugin references and include their changes in the source PR. Do not edit generated pages directly.
 - Internal file moves must leave the approved public surface unchanged. Do not add compatibility aliases for internal moves.
 
 ## User files and native assets
