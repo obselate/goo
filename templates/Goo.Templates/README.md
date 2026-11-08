@@ -16,7 +16,7 @@ goo dev
 
 The template restores the G# compiler from NuGet automatically. The project targets
 .NET 10, pins SDK 10 with `latestFeature` roll-forward, and watches G# files for
-hot reload. It references Goo 0.29.0. Use `--goo-version` to select another
+hot reload. It references Goo 0.29.1. Use `--goo-version` to select another
 compatible Goo package version.
 
 Images, gestures, native dialogs and menus, notifications, printing, rich text clipboard, spell checking, and desktop instance hosting are included in `Goo`.

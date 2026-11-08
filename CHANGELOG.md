@@ -1,6 +1,17 @@
 # Changelog
 
 
+## 0.29.1 - 2026-11-08
+
+### Changed
+
+- Tutorials and interop samples use Goo 0.29.0 and Goo.Widgets 0.20.0 and drop redundant `Rebuild()` calls in input callbacks.
+
+### Fixed
+
+- Retry the frame when a growing path waits for atlas space during a pending upload. Do not present a frame without that path.
+- Input callbacks created in deferred context Scope content and Cell mount factories or configuration rebuild the Cell that declared the content.
+
 ## 0.29.0 - 2026-11-08
 
 ### Breaking changes
