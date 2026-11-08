@@ -78,7 +78,7 @@ internal partial class Reconciler {
     cell.BindContext(Context, Owner)
     cell.contextReader?.Begin()
     let previous = ContextEnvironment.Enter(ContextEnvironment{Window: Owner, Frame: cell.incomingContext,
-      Cell: cell, Reader: cell.contextReader})
+      Cell: cell, Reader: cell.contextReader, CallbackCell: declaration.CallbackOwner})
     try {
       declaration.ApplyInput(cell)
       if let configure = declaration.Configure { configure(cell) }
@@ -841,12 +841,17 @@ internal partial class Reconciler {
   expandCellAt(existing, e, existing?.Fiber, nil)
 
   internal func createCell(e CellElement) Cell {
-    let cell = e.CreateCell()
-    if Object.ReferenceEquals(cell, nil) {
-      throw InvalidOperationException("Cell.Mount factory for ${e.CellType.Name} returned nil: return a fresh Cell instance from the factory.")
-    }
-    cell.ClaimMount(e.CellType)
-    return cell
+    var environment = ContextEnvironment.Current
+    environment.CallbackCell = e.CallbackOwner
+    let previous = ContextEnvironment.Enter(environment)
+    try {
+      let cell = e.CreateCell()
+      if Object.ReferenceEquals(cell, nil) {
+        throw InvalidOperationException("Cell.Mount factory for ${e.CellType.Name} returned nil: return a fresh Cell instance from the factory.")
+      }
+      cell.ClaimMount(e.CellType)
+      return cell
+    } finally { ContextEnvironment.Current = previous }
   }
 
   private func mountType(cell Cell) Type -> cell.mountType ?? cell.GetType()

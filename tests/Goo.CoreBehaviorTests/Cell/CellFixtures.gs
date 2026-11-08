@@ -22,6 +22,44 @@ internal class CellFixtures {
     }
   }
 
+  func DeferredScopeAndMountFactoryCallbacksRebuildTheirAuthor() bool {
+    for mode in []string{"scope", "nested", "factory", "configure"} {
+      let host = DeferredCallbackHost(mode)
+      let driver = InputFixtureDriver(host, 200, 150)
+      try {
+        guard let tree = driver.Window.Tree else { return false }
+        let target = tree.Children[1]
+        driver.Press(target.Rect.X + 5, target.Rect.Y + 5)
+        driver.Release(target.Rect.X + 5, target.Rect.Y + 5)
+        driver.Update()
+        if host.Count != 1 || host.Builds != 2
+          || driver.Window.Tree?.Children[0].Content != "1" { return false }
+        if (mode == "scope" || mode == "nested")
+          && driver.Window.Tree?.Children[1].Rect.H != 31 { return false }
+      } finally {
+        driver.Window.Close()
+      }
+    }
+    return true
+  }
+
+  func ScopeMountedChildCallbacksKeepTheirOwner() bool {
+    let host = DeferredCallbackHost("child")
+    let driver = InputFixtureDriver(host, 200, 150)
+    try {
+      guard let tree = driver.Window.Tree else { return false }
+      let target = tree.Children[1]
+      driver.Press(target.Rect.X + 5, target.Rect.Y + 5)
+      driver.Release(target.Rect.X + 5, target.Rect.Y + 5)
+      driver.Update()
+      return host.Builds == 1 && host.Count == 0
+        && host.Child.Builds == 2 && host.Child.Count == 1
+        && driver.Window.Tree?.Children[1].Children[0].Content == "clicked:1"
+    } finally {
+      driver.Window.Close()
+    }
+  }
+
   func SlottedAndForwardedCallbacksRebuildOnlyTheirAuthor() bool {
     for cached in []bool{false, true} {
       let host = CallbackOriginHost{CacheContent: cached}
@@ -1312,4 +1350,44 @@ internal class ControlledEditorValueCell : Cell {
       OnChange = change -> { Changes++ },
     }
   }
+}
+
+internal class DeferredCallbackHost : Cell {
+  private let key Context[int32] = Context[int32]()
+  private let mode string
+  internal var Count int32
+  internal var Builds int32
+  internal let Child DirectCallbackCell = DirectCallbackCell()
+
+  init(mode string) { this.mode = mode }
+
+  override func Build() Blob {
+    Builds++
+    let content = switch mode {
+      case "factory": Cell.Mount[DeferredCallbackContent](() -> DeferredCallbackContent(Content()), nil)
+      case "configure": Cell.Mount[DeferredCallbackContent](nil,
+        (child DeferredCallbackContent) -> { child.Content = Content() })
+      case "child": key.Scope(Count, () -> Cell.Mount[DirectCallbackCell](() -> Child, nil))
+      case _: key.Scope(Count, () -> mode == "nested" ? key.Scope(key.Read(), Content) : Content())
+    }
+    return Container() {
+      Text{Content: Count.ToString(), Height: 20},
+      content,
+    }
+  }
+
+  private func Content() Blob -> Button{
+    Width: 100,
+    Height: 30 + (mode == "factory" || mode == "configure" ? Count : key.Read()),
+    OnClick: () -> { Count++ },
+  }
+}
+
+internal class DeferredCallbackContent : Cell {
+  internal var Content Blob?
+
+  init() {}
+  init(content Blob) { Content = content }
+
+  override func Build() Blob -> Content!!
 }
