@@ -25,6 +25,7 @@
 - Add type names and fixes to Cell mount, rebuild, Context, UI-thread, dispatcher and custom layout errors. Name the related Goo best practices rules.
 - Teach a function returning Blob before child Cells in getting started. Add a core terms glossary to the README.
 - Clarify contributor and Goo app-authoring rules from the approved rule review.
+- Accept changelog-only fragment joins before tagging an already prepared release.
 
 ### Fixed
 
