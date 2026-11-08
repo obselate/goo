@@ -8,11 +8,11 @@ Start after [Your first app](your-first-app.md) and run goo dev after replacing 
 ```sh
 dotnet new goo -n AResizablePanel
 cd AResizablePanel
-dotnet add package Goo.Widgets --version 0.19.6
+dotnet add package Goo.Widgets --version 0.20.0
 ```
 
 ## 2. Control the split ratio
-The mounted splitter calls its parent, so update state and call Rebuild.
+Update the split ratio in OnChange. Goo rebuilds the Cell that authored the callback.
 
 ```gsharp
 package Tutorial
@@ -43,7 +43,6 @@ class Example : Cell {
                     Second: Text{Content: "Workspace"},
                     OnChange: (value float64) -> {
                         ratio = value
-                        Rebuild()
                     },
                 }
             ),
@@ -103,13 +102,11 @@ class Example : Cell {
                             Content: "Reset split",
                             OnClick: () -> {
                                 ratio = .35
-                                Rebuild()
                             },
                         }.Build(),
                     },
                     OnChange: (value float64) -> {
                         ratio = value
-                        Rebuild()
                     },
                 }
             ),

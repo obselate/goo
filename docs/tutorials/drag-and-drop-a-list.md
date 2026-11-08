@@ -8,7 +8,7 @@ Start after [Your first app](your-first-app.md) and run goo dev after replacing 
 ```sh
 dotnet new goo -n DragAndDropAList
 cd DragAndDropAList
-dotnet add package Goo.Widgets --version 0.19.6
+dotnet add package Goo.Widgets --version 0.20.0
 ```
 
 ## 2. Reorder rows
@@ -65,7 +65,6 @@ class Example : Cell {
                         next.Remove(source)
                         next.Insert(next.IndexOf(item), source)
                         items = next.ToArray()
-                        Rebuild()
                     }
                 }
             ),

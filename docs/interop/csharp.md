@@ -21,7 +21,6 @@ Use .NET 10 and C# 14. The [compiled sample](../../samples/interop/CSharp/Progra
         Button{
             OnClick: () -> {
                 count++
-                Rebuild()
             },
             Text{Content: "Add one"},
         },
@@ -38,7 +37,7 @@ Use .NET 10 and C# 14. The [compiled sample](../../samples/interop/CSharp/Progra
             new Text { Content = $"Count: {count}" },
             new Button
             {
-                OnClick = () => { count++; Rebuild(); },
+                OnClick = () => { count++; },
                 Children = [new Text { Content = "Add one" }]
             }
         ]
@@ -46,7 +45,7 @@ Use .NET 10 and C# 14. The [compiled sample](../../samples/interop/CSharp/Progra
 }</code></pre></td></tr>
 </table>
 
-Call `Rebuild()` after changing cell state. Set `Window.Root` to a cell, then call `Run()`.
+Goo rebuilds the Cell that authored an input callback after it runs. Call `Rebuild()` for state changed outside input dispatch. Set `Window.Root` to a cell, then call `Run()`.
 
 ## Data list
 
@@ -107,7 +106,7 @@ var dialog = Cell.Mount<ModalDialog, ModalDialogHost>("dialog", new ModalDialog
 {
     Open = open,
     Content = new Text { Content = "Save account?" },
-    OnOpenChange = value => { open = value; Rebuild(); }, OnCancel = Close, OnConfirm = Close
+    OnOpenChange = value => { open = value; }, OnCancel = Close, OnConfirm = Close
 });
 ```
 

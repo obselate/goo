@@ -7,6 +7,6 @@
   <ItemGroup>
     <Compile Include="Program.fs" />
     <PackageReference Include="Goo" Version="$(GooReleaseVersion)" />
-    <PackageReference Include="Goo.Widgets" Version="[0.19.4]" />
+    <PackageReference Include="Goo.Widgets" Version="[0.20.0]" />
   </ItemGroup>
 </Project>

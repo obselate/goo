@@ -48,7 +48,6 @@ Public NotInheritable Class Counter
     End Function
     Private Sub Increment()
         count += 1
-        Rebuild()
     End Sub
 End Class
 
@@ -68,7 +67,6 @@ Public NotInheritable Class AccountCell
     End Function
     Private Sub Edit()
         edits += 1
-        Rebuild()
     End Sub
 End Class
 
@@ -121,7 +119,6 @@ Public NotInheritable Class Examples
                     .Padding = 20,
                     .OnOpenChange = Sub(value)
                                         isOpen = value
-                                        Rebuild()
                                     End Sub,
                     .OnCancel = AddressOf CloseDialog, .OnConfirm = AddressOf CloseDialog}
                 Return New Container With {.Children = New List(Of Blob) From {
@@ -135,11 +132,9 @@ Public NotInheritable Class Examples
     End Function
     Private Sub OpenDialog()
         isOpen = True
-        Rebuild()
     End Sub
     Private Sub CloseDialog()
         isOpen = False
-        Rebuild()
     End Sub
     Public Shared Function HitTest(handle As ElementHandle, point As Point) As TextPosition?
         Dim position As TextPosition

@@ -103,9 +103,8 @@ The first counter must show `3` and the second `1`.
 Call `Mount`, not the child's `Build`, to use a child Cell. Use a key when
 children can be inserted, removed or reordered.
 
-Goo input callbacks rebuild their owning Cell. If a callback in a child changes
-parent state, call the parent's `Rebuild()` too. State changed outside input
-callbacks also needs `Rebuild()` on the UI thread.
+Goo rebuilds the Cell that authored an input callback, even when a child renders it.
+State changed outside input callbacks needs `Rebuild()` on the UI thread.
 See [Cell inputs, identity and lifetime](api/cell.md) for those cases.
 
 ## 3. Continue by task
