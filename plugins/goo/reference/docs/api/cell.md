@@ -15,7 +15,6 @@ Derive packaged components as `open class X : Cell<TInput>` and override `protec
 ```gsharp
 private func Changed(value string) {
     InvokeInputCallback(current.OnChange, value)
-    Rebuild()
 }
 ```
 

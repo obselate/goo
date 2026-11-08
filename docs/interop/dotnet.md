@@ -19,7 +19,6 @@ Use Goo from .NET 10 with ordinary objects, delegates and generic calls. See the
         Button{
             OnClick: () -> {
                 count++
-                Rebuild()
             },
             Text{Content: "Add one"},
         },
@@ -41,12 +40,11 @@ Use Goo from .NET 10 with ordinary objects, delegates and generic calls. See the
     End Function
     Private Sub Increment()
         count += 1
-        Rebuild()
     End Sub
 End Class</code></pre></td></tr>
 </table>
 
-Subclass `Cell`, return a `Blob` from `Build()` and call `Rebuild()` after state changes. Assign the cell to `Window.Root`, then call `Run()`.
+Subclass `Cell` and return a `Blob` from `Build()`. Goo rebuilds the Cell that authored an input callback after it runs. Call `Rebuild()` for state changed outside input dispatch. Assign the cell to `Window.Root`, then call `Run()`.
 
 ## Data list
 

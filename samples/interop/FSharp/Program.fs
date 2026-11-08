@@ -4,7 +4,7 @@ open Goo
 open Goo.Widgets.Data
 open Goo.Widgets.Layout
 
-type Counter() as this =
+type Counter() =
     inherit Cell()
     let mutable count = 0
     override _.Build() =
@@ -13,7 +13,7 @@ type Counter() as this =
                 Text(Content = $"Count: {count}") :> Blob
                 Button(Padding = Edges(Length.Pixels 10.), BorderRadius = Length.Pixels 10.,
                     TransitionMs = 150., Hover = Style(BackgroundColor = Color.Rgb(74, 125, 255)),
-                    OnClick = (fun () -> count <- count + 1; this.Rebuild()),
+                    OnClick = (fun () -> count <- count + 1),
                     Children = ResizeArray<Blob>([Text(Content = "Add one") :> Blob])) :> Blob
             ]))
 
@@ -28,11 +28,11 @@ let listView (data: seq<string>) =
         }))
 
 type AccountInput = { Name: string }
-type AccountCell() as this =
+type AccountCell() =
     inherit Cell<AccountInput>()
     let mutable edits = 0
     override _.Build(input: AccountInput) =
-        Button(OnClick = (fun () -> edits <- edits + 1; this.Rebuild()),
+        Button(OnClick = (fun () -> edits <- edits + 1),
             Children = ResizeArray<Blob>([Text(Content = $"{input.Name}: {edits}") :> Blob]))
 
 type EqualColumn() =
@@ -49,10 +49,10 @@ type EqualColumn() =
             for i in 0 .. context.ChildCount - 1 do
                 context.ArrangeChild(i, ElementRect(Y = float i * height, Width = finalSize.Width, Height = height))
 
-type Examples(sample: string) as this =
+type Examples(sample: string) =
     inherit Cell()
     let mutable isOpen = false
-    let close() = isOpen <- false; this.Rebuild()
+    let close() = isOpen <- false
     let items = if sample = "virtual" then Array.init 10_000 (sprintf "Item %05d") else [||]
     static let itemKey = Func<string, string>(id)
     static let buildRow = Func<string, Blob>(fun value -> Text(Content = value))
@@ -74,10 +74,10 @@ type Examples(sample: string) as this =
             Children = ResizeArray<Blob>([Text(Content = "One") :> Blob; Text(Content = "Two") :> Blob]))
         | "dialog" ->
             let dialog = ModalDialog(Open = isOpen, Content = Text(Content = "Save account?"),
-                Padding = Nullable 20., OnOpenChange = Action<bool>(fun value -> isOpen <- value; this.Rebuild()),
+                Padding = Nullable 20., OnOpenChange = Action<bool>(fun value -> isOpen <- value),
                 OnCancel = Action close, OnConfirm = Action close)
             Container(Children = ResizeArray<Blob>([
-                Button(OnClick = (fun () -> isOpen <- true; this.Rebuild()),
+                Button(OnClick = (fun () -> isOpen <- true),
                     Children = ResizeArray<Blob>([Text(Content = "Open dialog") :> Blob])) :> Blob
                 Cell.Mount<ModalDialog, ModalDialogHost>("dialog", dialog)
             ]))

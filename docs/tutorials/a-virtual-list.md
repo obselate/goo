@@ -8,7 +8,7 @@ Start after [Your first app](your-first-app.md) and run goo dev after replacing 
 ```sh
 dotnet new goo -n AVirtualList
 cd AVirtualList
-dotnet add package Goo.Widgets --version 0.19.6
+dotnet add package Goo.Widgets --version 0.20.0
 ```
 
 ## 2. Build visible rows only

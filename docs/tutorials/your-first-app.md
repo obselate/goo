@@ -6,12 +6,12 @@
 Use .NET 10.0.403 or later, Vulkan 1.3, and native Wayland on Linux.
 
 ```sh
-dotnet new install Goo.Templates@0.28.6
-dotnet tool install --global Goo.DevTools --version 0.28.6
+dotnet new install Goo.Templates@0.29.0
+dotnet tool install --global Goo.DevTools --version 0.29.0
 ```
 
 ## 2. Create and run
-The template selects Goo 0.28.6 and G# SDK 0.5.212.
+The template selects Goo 0.29.0 and G# SDK 0.5.212.
 
 ```sh
 dotnet new goo -n HelloGoo

@@ -36,7 +36,6 @@ func AppendCellInputGuide(text StringBuilder) {
     text.AppendLine("```gsharp")
     text.AppendLine("private func Changed(value string) {")
     text.AppendLine("    InvokeInputCallback(current.OnChange, value)")
-    text.AppendLine("    Rebuild()")
     text.AppendLine("}")
     text.AppendLine("```")
     text.AppendLine()

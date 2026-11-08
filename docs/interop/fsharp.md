@@ -19,12 +19,11 @@ The [compiled sample](../../samples/interop/FSharp/Program.fs) uses plain F# on 
         Button{
             OnClick: () -> {
                 count++
-                Rebuild()
             },
             Text{Content: "Add one"},
         },
     }
-}</code></pre></td><td><pre><code>type Counter() as this =
+}</code></pre></td><td><pre><code>type Counter() =
     inherit Cell()
     let mutable count = 0
     override _.Build() =
@@ -32,15 +31,14 @@ The [compiled sample](../../samples/interop/FSharp/Program.fs) uses plain F# on 
             Text(Content = $"Count: {count}") :> Blob
             Button(
                 OnClick = (fun () ->
-                    count &lt;- count + 1
-                    this.Rebuild()),
+                    count &lt;- count + 1),
                 Children = ResizeArray&lt;Blob>([
                     Text(Content = "Add one") :> Blob
                 ])) :> Blob
         ]))</code></pre></td></tr>
 </table>
 
-Constructor property assignment works for Goo's init properties. Call `Rebuild()` after changing cell state.
+Constructor property assignment works for Goo's init properties. Goo rebuilds the Cell that authored an input callback after it runs. Call `Rebuild()` for state changed outside input dispatch.
 
 ## Data list
 

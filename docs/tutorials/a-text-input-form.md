@@ -8,11 +8,11 @@ Start after [Your first app](your-first-app.md) and run goo dev after replacing 
 ```sh
 dotnet new goo -n ATextInputForm
 cd ATextInputForm
-dotnet add package Goo.Widgets --version 0.19.6
+dotnet add package Goo.Widgets --version 0.20.0
 ```
 
 ## 2. Keep the field value
-TextField supplies editing keys and Tab focus, while its callbacks explicitly rebuild the parent.
+TextField supplies editing keys and Tab focus. Goo rebuilds the Cell that authored its callbacks.
 
 ```gsharp
 package Tutorial
@@ -38,7 +38,6 @@ class Example : Cell {
                 Value: name,
                 OnChange: (value string) -> {
                     name = value
-                    Rebuild()
                 },
             }.Build(),
             Text{Content: "Hello, $name"},
@@ -82,11 +81,9 @@ class Example : Cell {
                 Value: name,
                 OnChange: (value string) -> {
                     name = value
-                    Rebuild()
                 },
                 OnSubmit: (value string) -> {
                     greeting = "Hello, $value"
-                    Rebuild()
                 },
             }.Build(),
             ActionButton{Content: "Save", OnClick: () -> { greeting = "Hello, $name" }}.Build(),

@@ -34,7 +34,7 @@ public sealed class Counter : Cell
             {
                 Padding = 10, BorderRadius = 10,
                 TransitionMs = 150, Hover = new Style { BackgroundColor = Color.Rgb(74, 125, 255) },
-                OnClick = () => { count++; Rebuild(); },
+                OnClick = () => { count++; },
                 Children = [new Text { Content = "Add one" }]
             }
         ]
@@ -47,7 +47,7 @@ public sealed class AccountCell : Cell<AccountInput>
     private int edits;
     protected override Blob Build(AccountInput input) => new Button
     {
-        OnClick = () => { edits++; Rebuild(); },
+        OnClick = () => { edits++; },
         Children = [new Text { Content = $"{input.Name}: {edits}" }]
     };
 }
@@ -107,13 +107,13 @@ public sealed class Examples(string sample) : Cell
                     [
                         new Button
                         {
-                            OnClick = () => { open = true; Rebuild(); },
+                            OnClick = () => { open = true; },
                             Children = [new Text { Content = "Open dialog" }]
                         },
                         Cell.Mount<ModalDialog, ModalDialogHost>("dialog", new ModalDialog
                         {
                             Open = open, Content = new Text { Content = "Save account?" }, Padding = 20,
-                            OnOpenChange = value => { open = value; Rebuild(); }, OnCancel = Close, OnConfirm = Close
+                            OnOpenChange = value => { open = value; }, OnCancel = Close, OnConfirm = Close
                         })
                     ]
                 };
@@ -121,7 +121,7 @@ public sealed class Examples(string sample) : Cell
         }
     }
 
-    private void Close() { open = false; Rebuild(); }
+    private void Close() { open = false; }
 
     public static TextPosition? HitTest(ElementHandle handle, Point point) =>
         handle.TryGetTextPositionAt(point, TextCoordinateSpace.Window, out var position) ? position : null;
