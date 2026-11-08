@@ -71,6 +71,22 @@ Every command accepts `--help`. `check api` builds Android and runs the full API
 baseline and XML contracts. It needs the Android workload, SDK and Java 21.
 CI also runs platform package and rendering checks. See [tests](tests/README.md).
 
+Run only the checks for the change before pushing:
+
+| Change | Local check |
+| --- | --- |
+| Public or CLI documentation | `dotnet run --project tools/Goo.Repo -- check docs` |
+| Android documentation | `dotnet run --project tools/Goo.Repo -- check docs-android` |
+| Changelog fragment or release metadata | `dotnet run --project tools/Goo.Repo -- check metadata` |
+| Public API or source XML | `dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.gsproj -c Release -p:TreatWarningsAsErrors=true`, then `check docs` |
+| Compiler or G# source | `dotnet run --project tools/Goo.Repo -- check lint`, then build each touched project |
+| Release preparation | `dotnet run --project tools/Goo.RepositoryChecks -c Release -- release --check`, then `release --notes` |
+
+For documentation drift, run `dotnet run --project tools/Goo.Repo -- docs`
+or `docs --android` and commit the generated files. Review API changes before
+updating the approved baseline. An ordinary PR also needs a new changelog
+fragment in its diff. `check metadata` validates existing fragments, not presence.
+
 Limit formatting fixes to the intended files. Do not bulk-format core source.
 GL0005 is a manual review advisory because syntax cannot identify intentional
 fail-fast assertions. See [code conventions](CONVENTIONS.md).
