@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-target="${1:?usage: build-text-native-android.sh android-arm64|android-x64 OUTPUT_DIRECTORY [NDK_DIRECTORY]}"
+target="${1:?usage: build-text-native-android.sh android-arm64|android-x64 OUTPUT_DIRECTORY [NDK_DIRECTORY [HARFBUZZ_ARCHIVE]]}"
 output="${2:?output directory is required}"
 ndk="${3:-${ANDROID_NDK_HOME:-}}"
 [[ -n "$ndk" ]] || { printf 'Set ANDROID_NDK_HOME or provide the NDK directory\n' >&2; exit 1; }
@@ -45,9 +45,12 @@ for key in ("archiveUrl", "archiveSha256", "version"):
     print(value[key])
 PY
 )
-curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 "${source[0]}" -o "$work/harfbuzz.tar.xz"
-printf '%s  %s\n' "${source[1]}" "$work/harfbuzz.tar.xz" | sha256sum -c -
-tar -xJf "$work/harfbuzz.tar.xz" -C "$work"
+archive="${4:-$work/harfbuzz.tar.xz}"
+if [[ $# -lt 4 ]]; then
+  curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 "${source[0]}" -o "$archive"
+fi
+printf '%s  %s\n' "${source[1]}" "$archive" | sha256sum -c -
+tar -xJf "$archive" -C "$work"
 source_root="$work/harfbuzz-${source[2]}"
 python3 - "$source_root/src/meson.build" <<'PY'
 import sys

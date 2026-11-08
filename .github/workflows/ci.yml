@@ -2139,11 +2139,30 @@ jobs:
         with:
           path: artifacts/android-rebuild
           key: android-text-native-ndk-27.2.12479018-${{ hashFiles('.github/scripts/build-text-native-android.sh', 'tools/Goo.TextNative/**') }}
+      - name: Restore pinned HarfBuzz source archive
+        id: android-source
+        if: steps.android-native.outputs.cache-hit != 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ runner.temp }}/goo-harfbuzz.tar.xz
+          key: harfbuzz-source-${{ hashFiles('tools/Goo.TextNative/manifest.json') }}
+      - name: Fetch pinned HarfBuzz release asset
+        if: steps.android-native.outputs.cache-hit != 'true' && steps.android-source.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mapfile -t source < <(jq -r '.source.harfbuzz | .tag, (.archiveUrl | split("/") | last)' tools/Goo.TextNative/manifest.json)
+          asset=$(curl --fail --location --retry 4 --retry-connrefused --retry-max-time 120 --connect-timeout 20 \
+            --header "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/harfbuzz/harfbuzz/releases/tags/${source[0]}" \
+            | jq -r --arg name "${source[1]}" '.assets[] | select(.name == $name) | .url')
+          curl --fail --location --retry 4 --retry-connrefused --retry-max-time 120 --connect-timeout 20 \
+            --header "Authorization: Bearer $GH_TOKEN" --header 'Accept: application/octet-stream' \
+            --output "$RUNNER_TEMP/goo-harfbuzz.tar.xz" "$asset"
       - name: Rebuild Android native payloads
         if: steps.android-native.outputs.cache-hit != 'true'
         run: |
           for rid in android-arm64 android-x64; do
-            bash .github/scripts/build-text-native-android.sh "$rid" "artifacts/android-rebuild/$rid" "$ANDROID_HOME/ndk/27.2.12479018"
+            bash .github/scripts/build-text-native-android.sh "$rid" "artifacts/android-rebuild/$rid" "$ANDROID_HOME/ndk/27.2.12479018" "$RUNNER_TEMP/goo-harfbuzz.tar.xz"
           done
       - name: Upload rebuilt Android native payloads
         if: needs.changes.outputs.full == 'true'
