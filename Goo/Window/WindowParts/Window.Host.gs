@@ -144,6 +144,7 @@ public partial class Window {
         VulkanDiagnostics.BindOpenOrigin(originTicks)
       }
       prepare()
+      constrainSize()
       let sdlStart = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
       let native = createNativeHost()
       let sdlEnd = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
@@ -158,7 +159,7 @@ public partial class Window {
       native.SetFrameTheme(frameTheme)
       native.SetContentUnderTitlebar(contentUnderTitlebar)
       native.TitlebarControlsChanged += RebuildAllCells
-      if minWidth != 0 || minHeight != 0 || maxWidth != 0 || maxHeight != 0 { pushSize() }
+      if minWidth != 0 || minHeight != 0 { native.SetMinimumSize(nativeMinWidth, nativeMinHeight) }
       if maxWidth != 0 || maxHeight != 0 { native.SetMaximumSize(scaledSize(maxWidth), scaledSize(maxHeight)) }
       let target = VulkanWindowTarget(native)
       windowTarget = target

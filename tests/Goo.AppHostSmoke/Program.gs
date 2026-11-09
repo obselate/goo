@@ -231,6 +231,21 @@ internal class Program {
                 case "full": WindowState.Fullscreen
                 case _: WindowState.Normal
             }
+            if state == WindowState.Normal {
+                let oversized = Window{ Width: 4096, Height: 4096, MinWidth: 100, MinHeight: 100, Root: Cell() }.Open()
+                try {
+                    let usable = oversized.GetCurrentDisplay()!!.UsableBounds!!
+                    for i in 0 ... 20 {
+                        oversized.Pump(0.005)
+                        Thread.Sleep(5)
+                    }
+                    Require(oversized.Width <= int32(usable.Width) && oversized.Height <= int32(usable.Height),
+                        "Oversized window left the usable bounds: ${oversized.Width}x${oversized.Height} in $usable")
+                } finally {
+                    oversized.RequestClose()
+                    oversized.Pump(0)
+                }
+            }
             var window = Window{ InitiallyVisible: false, Root: Cell() }
             Require(window.CapturePlacement().Status == WindowOperationResult.Closed, "Closed placement capture changed")
             let staged = window.ApplyPlacement(WindowPlacement{
