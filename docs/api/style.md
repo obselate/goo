@@ -1020,7 +1020,7 @@ Sets the flex grow factor.
 
 ### `FlexShrink`
 
-Sets the flex shrink factor.
+Sets the flex shrink factor. The default is 1. Set 0 to keep an item at its base size when its container is too small.
 
 ### `FlexWrap`
 
@@ -1092,11 +1092,11 @@ Sets the maximum width.
 
 ### `MinHeight`
 
-Sets the minimum height.
+Sets the minimum height. When unset, a shrinking flex item stops at its Height, or at its content height when Height is unset and overflow is visible. Set 0 to let it shrink further.
 
 ### `MinWidth`
 
-Sets the minimum width.
+Sets the minimum width. When unset, a shrinking flex item stops at its Width, or at its content width when Width is unset and overflow is visible. Set 0 to let it shrink further.
 
 ### `Opacity`
 

@@ -54,6 +54,35 @@ internal class LayoutFixtures {
     return other.Rect.W == 200.0F && other.Children[0].Rect.W == 200.0F
   }
 
+  func NarrowRowShrinksLabelAndKeepsFixedIcon() bool {
+    let label = "A long label that does not fit"
+    let root = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 120,.Gap: 4,
+      Container() {.FlexDirection: FlexDirection.Row,
+        Text{ Content: label },
+        Container{ Width: 24, Height: 24 },
+      },
+      Container() {.FlexDirection: FlexDirection.Row,
+        Text{ Content: label, TextWrap: TextWrap.NoWrap, TextTrimming: TextTrimming.Ellipsis },
+        Container{ Width: 24, Height: 24 },
+      },
+      Container() {.FlexDirection: FlexDirection.Row,.AlignItems: AlignItems.FlexStart,
+        Text{ Content: label, TextWrap: TextWrap.NoWrap },
+        Container{ Width: 24, Height: 24 },
+      },
+    })
+    Layout().Calculate(root, 120.0F, 200.0F)
+    for i in 0 ... 2 {
+      let row = root.Children[i]
+      if row.Children[0].Rect.W != 96.0F || row.Children[1].Rect.W != 24.0F
+        || row.Children[1].Rect.X != 96.0F {
+          return false
+        }
+    }
+    let fixedText = root.Children[2].Children[0]
+    return root.Children[0].Children[0].Rect.H > 20.0F && fixedText.Rect.W > 120.0F
+      && root.Children[2].Children[1].Rect.X >= fixedText.Rect.W - 1.0F
+  }
+
   func KeyedReorderRetainsYogaLayouts() bool {
     let reconciler = Reconciler{ Res: Resolver{} }
     var root = reconciler.Mount(Container() {.Width: 90,.Height: 20,.FlexDirection: FlexDirection.Row,

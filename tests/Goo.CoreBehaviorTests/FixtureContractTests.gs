@@ -288,6 +288,7 @@ class FixtureContractTests {
             yield Contract[InputFixtures]("TransformRoutesHitsAndLocalPositions")
             yield Contract[InputFixtures]("UnhandledWheelStaysPresentationIdle")
             yield Contract[InputFixtures]("UnfocusedPointerHoverPreservesKeyboardAndPressFocusGate")
+            yield Contract[LayoutFixtures]("NarrowRowShrinksLabelAndKeepsFixedIcon")
             yield Contract[LayoutFixtures]("ComposedTreeMapsDeclarationsAndRelayouts")
             yield Contract[LayoutFixtures]("CustomMeasurementsPreserveLogicalSizes")
             yield Contract[LayoutFixtures]("PixelSnappingPreservesDistantItemSizes")
