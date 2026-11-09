@@ -285,6 +285,9 @@ internal unsafe partial class VulkanWindowTarget {
     }
     lastFrameSubmitted = !initialImageUploadFrame
     try {
+      if let resources = pathScene {
+        resources.MarkSubmitted(slot.CommandBuffer, pendingGlobalSubmissionSerial)
+      }
       if !initialImageUploadFrame { layerPool?.MarkSubmitted(pendingGlobalSubmissionSerial) }
       if clipMaskFramePrepared {
         if let renderer = primitiveRenderer {
@@ -324,9 +327,6 @@ internal unsafe partial class VulkanWindowTarget {
           segmentIndex = segmentIndex + 1
         }
       }
-      if let resources = pathScene {
-        resources.MarkSubmitted(slot.CommandBuffer, pendingGlobalSubmissionSerial)
-      }
       if !initialImageUploadFrame && activeImageLayout == VkConstants.VK_IMAGE_LAYOUT_PRESENT_SRC_KHR {
         presentationRetirement.TryBindPriorSameImageToCompletion(current.Generation,
           activeImageIndex, activeFrameSlotIndex, slot.SubmissionSerial)
@@ -365,7 +365,7 @@ internal unsafe partial class VulkanWindowTarget {
       finally { FinishFailedFrame() }
       return
     }
-    if hidden || closing || recreatePending {
+    if recreatePending {
       AbandonRecordedFrameForRetry()
       CloseDiagnosticFrame(false)
       ClearActiveFrame()

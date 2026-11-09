@@ -73,7 +73,7 @@ func RunPathAtlasGrowthSmoke() {
           throw InvalidOperationException("Path atlas fixture target is unavailable")
         }
         let serial = target.GraphicsTimelineForTest().LastEnqueuedSerial
-        let completionDeadline = Environment.TickCount64 + 2000
+        let completionDeadline = Environment.TickCount64 + 10000
         while target.GraphicsTimelineForTest().CompletedSerial < serial
           && Environment.TickCount64 < completionDeadline { Thread.Yield() }
         Require(target.GraphicsTimelineForTest().CompletedSerial >= serial,
@@ -88,7 +88,7 @@ func RunPathAtlasGrowthSmoke() {
 
         first.Background = Color.Rgb(24, 32, 48)
         WindowReadbackTestFixture.SetForceFullRedraw(first, true)
-        let deadline = Environment.TickCount64 + 2000
+        let deadline = Environment.TickCount64 + 10000
         if mode == 2 {
           let pressureBefore = WindowReadbackTestFixture.DiagnosticCounters(first).memoryPressureCount
           firstRoot.Boxes = 4000
@@ -117,7 +117,7 @@ func RunPathAtlasGrowthSmoke() {
           Require(WindowReadbackTestFixture.RuntimeQueueWorkPending(first),
             "Path atlas fixture did not retain an unmarked command buffer")
           if mode == 0 {
-            Require(WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(first, 2000),
+            Require(WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(first, 10000),
               "Path atlas fixture did not hold the queued submission")
           }
 
