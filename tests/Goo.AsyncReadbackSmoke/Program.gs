@@ -518,6 +518,7 @@ let modes = []SmokeMode{
   SmokeMode("GOO_HIDE_RESOURCES_SMOKE", "1", () -> RunHideResourcesSmoke()),
   SmokeMode("GOO_HIDDEN_DEVICE_RECOVERY_SMOKE", "1", () -> RunHiddenDeviceRecoverySmoke()),
   SmokeMode("GOO_PENDING_DEVICE_RECOVERY_SMOKE", "1", () -> RunPendingDeviceRecoverySmoke()),
+  SmokeMode("GOO_ZERO_EXTENT_DEVICE_RECOVERY_SMOKE", "1", () -> RunZeroExtentDeviceRecoverySmoke()),
   SmokeMode("GOO_PARTIAL_REDRAW_SMOKE", "1", () -> RunPartialRedrawSmoke()),
   SmokeMode("GOO_RETAINED_FRAME_EQUALITY_SMOKE", "1", () -> RunRetainedFrameEqualitySmoke()),
   SmokeMode("GOO_EDITOR_GUTTER_SMOKE", "1", () -> RunEditorGutterSmoke()),

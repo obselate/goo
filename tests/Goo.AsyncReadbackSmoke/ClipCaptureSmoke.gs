@@ -394,6 +394,69 @@ func RunPendingDeviceRecoverySmoke() {
   Console.WriteLine("pending-device-recovery: startup=drained owner=presented child=presented pixels=validated validation=0")
 }
 
+func RunZeroExtentDeviceRecoverySmoke() {
+  let capturedError = StringWriter()
+  let originalError = Console.Error
+  let owner = Window{
+    Title: "Goo zero extent recovery owner", Width: 300, Height: 170, VSync: false,
+    Background: Color.Rgb(12, 20, 32), Root: RoundedResizeFirstFrameCell{},
+  }
+  let child = Window{
+    Title: "Goo zero extent recovery child", Width: 300, Height: 170, VSync: false,
+    Owner: owner, Background: Color.Rgb(12, 20, 32), Root: RoundedResizeFirstFrameCell{},
+  }
+  var childTarget VulkanWindowTarget?
+  try {
+    Console.SetError(capturedError)
+    owner.Open()
+    WindowReadbackTestFixture.Pump(owner, 0.0)
+    let ownerMetrics = WindowReadbackTestFixture.Metrics(owner)
+    RoundedResizeRequireFirstFrame(ClipCaptureReadback(owner, ownerMetrics), ownerMetrics, 0)
+    child.Open()
+    WindowReadbackTestFixture.ForceRender(child, 0.0, 10.0, true)
+    let childMetrics = WindowReadbackTestFixture.Metrics(child)
+    RoundedResizeRequireFirstFrame(ClipCaptureReadback(child, childMetrics), childMetrics, 0)
+    childTarget = WindowReadbackTestFixture.CaptureTarget(child)!!
+    let target = childTarget
+    target.SetZeroSurfaceExtentForTest(true)
+    target.VerifyZeroExtentRecreateForTest()
+    let before = WindowReadbackTestFixture.FrameSubmissions(child)
+    WindowReadbackTestFixture.ForceRenderNonblocking(child, 0.0)
+    let deferred = WindowReadbackTestFixture.FrameSubmissions(child)
+    Require(before.Slot0Serial == deferred.Slot0Serial && before.Slot1Serial == deferred.Slot1Serial,
+      "Zero surface extent submitted a frame from the old swapchain")
+    target.SetZeroSurfaceExtentForTest(false)
+    WindowReadbackTestFixture.ForceRender(child, 0.0, 10.0, true)
+    let ownerTarget = WindowReadbackTestFixture.CaptureTarget(owner)!!
+    let oldGeneration = ownerTarget.RecoveryRuntime()!!.Generation
+    VulkanWindowTarget.RecoveryStartupForTest = (rebuilding VulkanWindowTarget) -> {
+      if rebuilding == target {
+        rebuilding.SetZeroSurfaceExtentForTest(true)
+        rebuilding.VerifyZeroExtentRecreateForTest()
+      }
+    }
+    VulkanSharedRuntime.FailNextGraphicsSubmissionForTest()
+    WindowReadbackTestFixture.ForceRender(owner, 0.0, 10.0, true)
+    Require(ownerTarget.RecoveryRuntime()!!.Generation > oldGeneration
+        && target.RecoveryRuntime()?.Generation == ownerTarget.RecoveryRuntime()?.Generation
+        && child.IsOpen && int32(target.CurrentPresentMode) == -1,
+      "Zero extent window prevented device recovery or created a swapchain")
+    VulkanWindowTarget.RecoveryStartupForTest = nil
+    target.SetZeroSurfaceExtentForTest(false)
+    WindowReadbackTestFixture.ForceRender(child, 0.0, 10.0, true)
+    RoundedResizeRequireFirstFrame(ClipCaptureReadback(child, childMetrics), childMetrics, 0)
+    RoundedResizeRequireFirstFrame(ClipCaptureReadback(owner, ownerMetrics), ownerMetrics, 0)
+  } finally {
+    VulkanWindowTarget.RecoveryStartupForTest = nil
+    childTarget?.SetZeroSurfaceExtentForTest(false)
+    child.Close()
+    owner.Close()
+    Console.SetError(originalError)
+  }
+  ValidateDeviceRecoveryDiagnostics(capturedError.ToString())
+  Console.WriteLine("zero-extent-device-recovery: current_extent=0x0 recovery=completed restore=presented pixels=validated validation=0")
+}
+
 class RenderBudgetPressureCell : Cell {
   override func Build() Blob -> Container() {.Width: Percent(100),.Height: Percent(100),.BackgroundColor: Color.Rgb(12, 20, 32),.ClipPath: RoundedOverflowCell.OuterClipPath,.ClipPathFit: ShapeFit.Fill,
     Container() {.Width: Percent(100),.Height: Percent(100),.Opacity: 0.9,.ClipPath: RoundedOverflowCell.InnerClipPath,.ClipPathFit: ShapeFit.Fill,.BackgroundColor: Color.Rgb(32, 96, 144),

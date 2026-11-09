@@ -154,13 +154,12 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
     capabilities VkSurfaceCapabilitiesKHR,
     chosenSurfaceFormat VkSurfaceFormatKHR,
     chosenPresentMode VkPresentModeKHR,
-    desiredExtent VkExtent2D,
+    resolvedExtent VkExtent2D,
     chosenCompositeAlpha VkCompositeAlphaFlagBitsKHR,
     oldSwapchain VkSwapchainKHR,
     generationId uint64,
     enablePresentFence bool,
     nativeObjectAccounting VulkanObjectAccounting?,
-    preferRequestedExtent bool = false,
     nativeDiagnostics VulkanDiagnostics? = nil) {
       if nativeDevice == nint(0) {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
@@ -168,8 +167,8 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
       if nativeSurface == 0uL {
         throw ArgumentException("Vulkan surface is null", "nativeSurface")
       }
-      if desiredExtent.width == 0u || desiredExtent.height == 0u {
-        throw ArgumentOutOfRangeException("desiredExtent")
+      if resolvedExtent.width == 0u || resolvedExtent.height == 0u {
+        throw ArgumentOutOfRangeException("resolvedExtent")
       }
       if (capabilities.supportedUsageFlags & uint32(VkConstants.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) == 0u {
         throw InvalidOperationException("Vulkan surface does not support color attachment swapchain images")
@@ -182,11 +181,6 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
       }
       if capabilities.minImageCount == uint32.MaxValue {
         throw InvalidOperationException("Vulkan surface minimum image count cannot be incremented")
-      }
-
-      let resolvedExtent = ResolveExtent(capabilities, desiredExtent, preferRequestedExtent)
-      if resolvedExtent.width == 0u || resolvedExtent.height == 0u {
-        throw ArgumentOutOfRangeException("desiredExtent")
       }
 
       var requestedImageCount = capabilities.minImageCount + 1u
@@ -283,8 +277,9 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
     return storage
   }
 
-  private func ResolveExtent(capabilities VkSurfaceCapabilitiesKHR, desired VkExtent2D,
-    preferRequestedExtent bool) VkExtent2D{
+  shared {
+    internal func ResolveExtent(capabilities VkSurfaceCapabilitiesKHR, desired VkExtent2D,
+      preferRequestedExtent bool) VkExtent2D {
       if !preferRequestedExtent && capabilities.currentExtent.width != uint32.MaxValue {
         return capabilities.currentExtent
       }
@@ -301,6 +296,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
       }
       return resolved
     }
+  }
 
   private func Create(
     chosenPresentMode VkPresentModeKHR,

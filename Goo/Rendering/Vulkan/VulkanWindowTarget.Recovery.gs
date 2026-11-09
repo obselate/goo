@@ -289,6 +289,7 @@ internal unsafe partial class VulkanWindowTarget {
 
   internal func RebuildAfterDeviceRecovery() {
     Bootstrap()
+    if let probe = RecoveryStartupForTest { probe(this) }
     sceneCompiler.SetTextScene(textScene)
     sceneCompiler.SetImageScene(imageScene)
     sceneCompiler.SetPathScene(pathScene)

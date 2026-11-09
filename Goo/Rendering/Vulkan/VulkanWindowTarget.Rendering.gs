@@ -66,7 +66,7 @@ internal unsafe partial class VulkanWindowTarget {
       uint64(framebufferHeight))
     try {
       if recreatePending {
-        if !RecreateSwapchain(requestedWidth, requestedHeight) {
+        if !RecreateSwapchain(requestedWidth, requestedHeight) || recreatePending {
           return
         }
       }

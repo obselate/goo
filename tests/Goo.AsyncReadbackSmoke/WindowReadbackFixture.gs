@@ -115,6 +115,19 @@ internal partial class VulkanWindowTarget {
     private var swapchainCreateAttemptsForTest int32
     private var swapchainOldHandleValidForTest bool
     private var encodedSurfaceFormatForTest VkSurfaceFormatKHR
+    private var nativeSurfaceCapabilitiesForTest unmanaged[Cdecl](VkPhysicalDevice, VkSurfaceKHR, *VkSurfaceCapabilitiesKHR) -> VkResult
+    private var zeroExtentSurfaceForTest VkSurfaceKHR
+
+    @UnmanagedCallersOnly(CallConvs = []Type{typeof(CallConvCdecl)})
+    private func GetZeroSurfaceExtentForTest(physicalDevice VkPhysicalDevice, surface VkSurfaceKHR,
+      capabilities *VkSurfaceCapabilitiesKHR) VkResult {
+      let query = nativeSurfaceCapabilitiesForTest
+      let result = query(physicalDevice, surface, capabilities)
+      if result == VkConstants.VK_SUCCESS && surface == zeroExtentSurfaceForTest {
+        capabilities[0].currentExtent = VkExtent2D{}
+      }
+      return result
+    }
 
     @UnmanagedCallersOnly(CallConvs = []Type{typeof(CallConvCdecl)})
     private func GetEncodedSurfaceFormatForTest(physicalDevice VkPhysicalDevice, surface VkSurfaceKHR,
@@ -146,6 +159,30 @@ internal partial class VulkanWindowTarget {
       }
       GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true, true)
       return create(device, info, callbacks, output)
+    }
+  }
+
+  internal func SetZeroSurfaceExtentForTest(value bool) {
+    if value {
+      nativeSurfaceCapabilitiesForTest = instanceDispatch.vkGetPhysicalDeviceSurfaceCapabilitiesKHR
+      zeroExtentSurfaceForTest = surface
+      instanceDispatch.vkGetPhysicalDeviceSurfaceCapabilitiesKHR =
+        cast[unmanaged[Cdecl](VkPhysicalDevice, VkSurfaceKHR, *VkSurfaceCapabilitiesKHR) -> VkResult](nint(&GetZeroSurfaceExtentForTest))
+    } else {
+      instanceDispatch.vkGetPhysicalDeviceSurfaceCapabilitiesKHR = nativeSurfaceCapabilitiesForTest
+      zeroExtentSurfaceForTest = 0uL
+    }
+  }
+
+  internal func VerifyZeroExtentRecreateForTest() {
+    try {
+      if !RecreateSwapchain(framebufferWidth, framebufferHeight) || !recreatePending {
+        throw InvalidOperationException("Zero surface extent did not defer swapchain recreation")
+      }
+    } catch (error ArgumentOutOfRangeException) {
+      Console.WriteLine("zero-extent-recreate: current_extent=0x0 exception=" + error.GetType().Name
+        + " parameter=" + error.ParamName)
+      throw error
     }
   }
 
