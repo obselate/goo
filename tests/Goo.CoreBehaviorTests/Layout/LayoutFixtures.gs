@@ -498,11 +498,14 @@ internal class LayoutFixtures {
         Container{},
       },
     })
+
     Layout().Calculate(root, 200.0F, 200.0F)
+
     let scroller = root.Children[0]
     if scroller.ContentH != 80.0F {
       throw InvalidOperationException("content=${scroller.ContentH}, viewport=${scrollViewportHeight(scroller)}")
     }
+
     return true
   }
 
