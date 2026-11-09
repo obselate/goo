@@ -16,12 +16,15 @@ internal class VulkanDiagnosticCounters {
   private var heapBudgetSampleCurrent uint32
   private var heapBudget uint64
   private var driverHeapUsage uint64
+  private var heapHeadroom uint64
+  private var memoryEvictionCount uint64
+  private var memoryAllocationRetryCount uint64
+  private var memoryPressureCount uint64
   private var vulkanObjectCount uint64
   private var vulkanObjectAllocationCount uint64
   private var vulkanDeviceMemoryAllocationCount uint64
   private var vulkanDeviceMemoryBytes uint64
   private var cacheBytes uint64
-  private var imageByteBudget uint64
   private var imageResidentBytes uint64
   private var imageLiveObjectCount uint64
   private var imagePeakResidentBytes uint64
@@ -30,12 +33,11 @@ internal class VulkanDiagnosticCounters {
   private var imageUploadDeferredCount uint64
   private var imageUploadCompletedCount uint64
   private var imagePressureFailureCount uint64
+  private var textAtlasPressureFailureCount uint64
   private var textAtlasCount uint64
-  private var textAtlasByteBudget uint64
   private var textAtlasResidentBytes uint64
   private var textAtlasLiveObjectCount uint64
   private var textAtlasPeakCount uint64
-  private var textAtlasPeakByteBudget uint64
   private var textAtlasPeakResidentBytes uint64
   private var textAtlasPeakLiveObjectCount uint64
   private var textAtlasRecordedUploadBytes uint64
@@ -115,7 +117,6 @@ internal class VulkanDiagnosticCounters {
   private var validationErrorCount uint64
   private var resultCount uint64
   private var resultFailureCount uint64
-  private var layerPoolByteBudget uint64
   private var layerPoolResidentBytes uint64
   private var layerPoolTargetCount uint64
   private var layerPoolLeasedCount uint64
@@ -144,12 +145,15 @@ internal class VulkanDiagnosticCounters {
         heapBudgetSampleCurrent: Interlocked.CompareExchange(ref heapBudgetSampleCurrent, 0u, 0u),
         heapBudget: Interlocked.Read(ref heapBudget),
         driverHeapUsage: Interlocked.Read(ref driverHeapUsage),
+        heapHeadroom: Interlocked.Read(ref heapHeadroom),
+        memoryEvictionCount: Interlocked.Read(ref memoryEvictionCount),
+        memoryAllocationRetryCount: Interlocked.Read(ref memoryAllocationRetryCount),
+        memoryPressureCount: Interlocked.Read(ref memoryPressureCount),
         vulkanObjectCount: Interlocked.Read(ref vulkanObjectCount),
         vulkanObjectAllocationCount: Interlocked.Read(ref vulkanObjectAllocationCount),
         vulkanDeviceMemoryAllocationCount: Interlocked.Read(ref vulkanDeviceMemoryAllocationCount),
         vulkanDeviceMemoryBytes: Interlocked.Read(ref vulkanDeviceMemoryBytes),
         cacheBytes: Interlocked.Read(ref cacheBytes),
-        imageByteBudget: Interlocked.Read(ref imageByteBudget),
         imageResidentBytes: Interlocked.Read(ref imageResidentBytes),
         imageLiveObjectCount: Interlocked.Read(ref imageLiveObjectCount),
         imagePeakResidentBytes: Interlocked.Read(ref imagePeakResidentBytes),
@@ -158,12 +162,11 @@ internal class VulkanDiagnosticCounters {
         imageUploadDeferredCount: Interlocked.Read(ref imageUploadDeferredCount),
         imageUploadCompletedCount: Interlocked.Read(ref imageUploadCompletedCount),
         imagePressureFailureCount: Interlocked.Read(ref imagePressureFailureCount),
+        textAtlasPressureFailureCount: Interlocked.Read(ref textAtlasPressureFailureCount),
         textAtlasCount: Interlocked.Read(ref textAtlasCount),
-        textAtlasByteBudget: Interlocked.Read(ref textAtlasByteBudget),
         textAtlasResidentBytes: Interlocked.Read(ref textAtlasResidentBytes),
         textAtlasLiveObjectCount: Interlocked.Read(ref textAtlasLiveObjectCount),
         textAtlasPeakCount: Interlocked.Read(ref textAtlasPeakCount),
-        textAtlasPeakByteBudget: Interlocked.Read(ref textAtlasPeakByteBudget),
         textAtlasPeakResidentBytes: Interlocked.Read(ref textAtlasPeakResidentBytes),
         textAtlasPeakLiveObjectCount: Interlocked.Read(ref textAtlasPeakLiveObjectCount),
         textAtlasRecordedUploadBytes: Interlocked.Read(ref textAtlasRecordedUploadBytes),
@@ -243,7 +246,6 @@ internal class VulkanDiagnosticCounters {
         validationErrorCount: Interlocked.Read(ref validationErrorCount),
         resultCount: Interlocked.Read(ref resultCount),
         resultFailureCount: Interlocked.Read(ref resultFailureCount),
-        layerPoolByteBudget: Interlocked.Read(ref layerPoolByteBudget),
         layerPoolResidentBytes: Interlocked.Read(ref layerPoolResidentBytes),
         layerPoolTargetCount: Interlocked.Read(ref layerPoolTargetCount),
         layerPoolLeasedCount: Interlocked.Read(ref layerPoolLeasedCount),
@@ -278,12 +280,15 @@ internal class VulkanDiagnosticCounters {
   internal func SetDriverHeapUsage(value uint64) {
     Interlocked.Exchange(ref driverHeapUsage, value)
   }
+  internal func SetMemoryPolicy(headroom uint64, evictions uint64, retries uint64, pressure uint64) {
+    Interlocked.Exchange(ref heapHeadroom, headroom)
+    Interlocked.Exchange(ref memoryEvictionCount, evictions)
+    Interlocked.Exchange(ref memoryAllocationRetryCount, retries)
+    Interlocked.Exchange(ref memoryPressureCount, pressure)
+  }
   internal func AddVulkanObjectAllocation(value uint64) { Interlocked.Add(ref vulkanObjectAllocationCount, value) }
   internal func AddVulkanDeviceMemoryAllocation(value uint64) { Interlocked.Add(ref vulkanDeviceMemoryAllocationCount, value) }
   internal func AddUploadBytes(value uint64) { Interlocked.Add(ref uploadBytes, value) }
-  internal func SetImageByteBudget(value uint64) {
-    Interlocked.Exchange(ref imageByteBudget, value)
-  }
   internal func SetImageResidentBytes(value uint64) {
     Interlocked.Exchange(ref imageResidentBytes, value)
   }
@@ -309,9 +314,6 @@ internal class VulkanDiagnosticCounters {
   internal func SetTextAtlasCount(value uint64) {
     Interlocked.Exchange(ref textAtlasCount, value)
   }
-  internal func SetTextAtlasByteBudget(value uint64) {
-    Interlocked.Exchange(ref textAtlasByteBudget, value)
-  }
   internal func SetTextAtlasResidentBytes(value uint64) {
     Interlocked.Exchange(ref textAtlasResidentBytes, value)
   }
@@ -322,14 +324,6 @@ internal class VulkanDiagnosticCounters {
     while true {
       let current = Interlocked.Read(ref textAtlasPeakCount)
       if value <= current || Interlocked.CompareExchange(ref textAtlasPeakCount, value, current) == current {
-        return
-      }
-    }
-  }
-  internal func SetTextAtlasPeakByteBudget(value uint64) {
-    while true {
-      let current = Interlocked.Read(ref textAtlasPeakByteBudget)
-      if value <= current || Interlocked.CompareExchange(ref textAtlasPeakByteBudget, value, current) == current {
         return
       }
     }
@@ -441,6 +435,7 @@ internal class VulkanDiagnosticCounters {
   internal func AddImageUploadDeferred(value uint64) { Interlocked.Add(ref imageUploadDeferredCount, value) }
   internal func AddImageUploadCompleted(value uint64) { Interlocked.Add(ref imageUploadCompletedCount, value) }
   internal func AddImagePressureFailure(value uint64) { Interlocked.Add(ref imagePressureFailureCount, value) }
+  internal func AddTextAtlasPressureFailure(value uint64) { Interlocked.Add(ref textAtlasPressureFailureCount, value) }
   internal func AddDraw(value uint64) { Interlocked.Add(ref drawCount, value) }
   internal func AddPipelineChange(value uint64) { Interlocked.Add(ref pipelineChangeCount, value) }
   internal func AddDescriptorChange(value uint64) { Interlocked.Add(ref descriptorChangeCount, value) }
@@ -461,7 +456,6 @@ internal class VulkanDiagnosticCounters {
       Interlocked.Increment(ref resultFailureCount)
     }
   }
-  internal func SetLayerPoolByteBudget(value uint64) { Interlocked.Exchange(ref layerPoolByteBudget, value) }
   internal func SetLayerPoolResidentBytes(value uint64) { Interlocked.Exchange(ref layerPoolResidentBytes, value) }
   internal func SetLayerPoolTargetCount(value uint64) { Interlocked.Exchange(ref layerPoolTargetCount, value) }
   internal func SetLayerPoolLeasedCount(value uint64) { Interlocked.Exchange(ref layerPoolLeasedCount, value) }

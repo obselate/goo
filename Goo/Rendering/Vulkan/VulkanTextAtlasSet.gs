@@ -5,7 +5,6 @@ import System
 internal data struct VulkanTextAtlasSetStats {
   var AtlasCount int32
   var ByteSize VkDeviceSize
-  var ByteBudget VkDeviceSize
   var ResidentByteSize VkDeviceSize
   var MaxAtlasCount int32
   var LiveObjectCount uint64
@@ -18,12 +17,11 @@ internal data struct VulkanTextAtlasSetStats {
 }
 
 internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
-  internal const CachedAtlasCount int32 = 32
+  internal const InitialAtlasSlotCount int32 = 32
   private let device VkDevice
   private let dispatch VkDeviceDispatch
   private let allocator VulkanMemoryAllocator
   private let atlasByteSize VkDeviceSize
-  private let byteBudget VkDeviceSize
   private let generation uint64
   private let maxTexelBufferElements uint32
   private let descriptorSetLayout VkDescriptorSetLayout
@@ -45,19 +43,13 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
   private var evictionCount uint64
   private var retirementCount uint64
   private var disposed bool
+  private var cache VulkanGpuCache? = nil
 
   internal prop AtlasSlotCapacity int32{ get -> atlases.Length }
   internal prop AtlasCount int32{ get -> atlasCount }
   internal prop CurrentAtlasIndex int32{ get -> currentAtlasIndex }
-  internal prop ByteBudget VkDeviceSize{ get -> byteBudget }
   internal prop ResidentByteSize VkDeviceSize{ get -> residentByteSize }
   internal prop Generation uint64{ get -> generation }
-  internal prop CanCreateAtlas bool{
-    get {
-      return residentByteSize <= byteBudget
-        && atlasByteSize <= byteBudget - residentByteSize
-    }
-  }
   internal prop DescriptorSetLayout VkDescriptorSetLayout{
     get -> descriptorSetLayout
   }
@@ -89,7 +81,6 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
       return VulkanTextAtlasSetStats{
         AtlasCount: atlasCount,
         ByteSize: byteSize,
-        ByteBudget: byteBudget,
         ResidentByteSize: residentByteSize,
         MaxAtlasCount: atlases.Length,
         LiveObjectCount: liveObjectCount,
@@ -112,13 +103,12 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
     nativeDescriptorSetLayout VkDescriptorSetLayout,
     nativeObjectAccounting VulkanObjectAccounting?,
     nativeDiagnostics VulkanDiagnostics?,
-    nativeByteBudget VkDeviceSize,
     nativeGeneration uint64) {
       if nativeDevice == nint(0) {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
       if nativeAtlasByteSize == 0uL || nativeMaxTexelBufferElements == 0u
-        || nativeByteBudget < nativeAtlasByteSize || nativeGeneration == 0uL {
+        || nativeGeneration == 0uL {
           throw ArgumentOutOfRangeException("nativeAtlasByteSize")
         }
       if nativeDescriptorSetLayout == 0uL {
@@ -130,15 +120,14 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
       objectAccounting = nativeObjectAccounting
       diagnostics = nativeDiagnostics
       atlasByteSize = nativeAtlasByteSize
-      byteBudget = nativeByteBudget
       generation = nativeGeneration
       maxTexelBufferElements = nativeMaxTexelBufferElements
       descriptorSetLayout = nativeDescriptorSetLayout
-      atlases = [CachedAtlasCount]VulkanTextAtlas?
-      identities = [CachedAtlasCount]ResourceId
-      lastUseSerial = [CachedAtlasCount]uint64
-      lastTouch = [CachedAtlasCount]uint64
-      active = [CachedAtlasCount]bool
+      atlases = [InitialAtlasSlotCount]VulkanTextAtlas?
+      identities = [InitialAtlasSlotCount]ResourceId
+      lastUseSerial = [InitialAtlasSlotCount]uint64
+      lastTouch = [InitialAtlasSlotCount]uint64
+      active = [InitialAtlasSlotCount]bool
       currentAtlasIndex = -1
       CreateAtlas()
     }
@@ -189,6 +178,7 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
     let created = VulkanTextAtlas(device, dispatch, allocator, atlasByteSize,
       maxTexelBufferElements, descriptorSetLayout, objectAccounting)
     atlases[index] = created
+    if let current = cache { created.Track(current, index) }
     identities[index] = identity
     lastUseSerial[index] = 0uL
     lastTouch[index] = touch
@@ -264,6 +254,7 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
       let replacement = VulkanTextAtlas(device, dispatch, allocator, atlasByteSize,
         maxTexelBufferElements, descriptorSetLayout, objectAccounting)
       atlases[index] = replacement
+      if let current = cache { replacement.Track(current, index) }
     } catch (error Exception) {
       identities[index] = ResourceId{}
       lastUseSerial[index] = 0uL
@@ -290,13 +281,31 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
     return identity
   }
 
+  /// <summary>Registers every page with the cache that evicts it. Pages created later register on creation.</summary>
+  internal func TrackAtlases(nativeCache VulkanGpuCache) {
+    cache = nativeCache
+    for index in 0 ... atlases.Length {
+      if active[index] { atlases[index]!!.Track(nativeCache, index) }
+    }
+  }
+
+  internal func LastUseSerial(index int32) uint64 -> lastUseSerial[index]
+
+  internal func RecordPressureFailure() {
+    diagnostics?.AddTextAtlasPressureFailure(1uL)
+  }
+
+  internal func CanRetireAtlas(index int32, completedSerial uint64) bool {
+    let stats = AtlasAt(index).Stats
+    return atlasCount > 1 && lastUseSerial[index] <= completedSerial
+      && !stats.UploadPending && !stats.UploadRecorded && !stats.UploadSubmitted
+  }
+
   internal func TryRetireAtlas(index int32, completedSerial uint64) bool {
-    let atlas = AtlasAt(index)
-    let stats = atlas.Stats
-    if atlasCount <= 1 || lastUseSerial[index] > completedSerial
-      || stats.UploadPending || stats.UploadRecorded || stats.UploadSubmitted {
+    if !CanRetireAtlas(index, completedSerial) {
       return false
     }
+    let atlas = AtlasAt(index)
     if evictionCount == uint64.MaxValue || retirementCount == uint64.MaxValue {
       throw OverflowException("Vulkan text atlas lifecycle counter overflow")
     }

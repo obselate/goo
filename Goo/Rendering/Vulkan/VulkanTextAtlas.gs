@@ -294,6 +294,11 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
       pipelineLayout, 0u, 1u, &descriptorSet, 0u, nil)
   }
 
+  internal func Track(cache VulkanGpuCache, handle int32) {
+    allocator.Track(atlasAllocation!!, cache, handle)
+    allocator.Track(stagingAllocation!!, cache, handle)
+  }
+
   private func LiveObjectCount() uint64 {
     var count uint64 = 0uL
     if atlasBuffer != 0uL { count = count + 1uL }

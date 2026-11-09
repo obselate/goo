@@ -90,39 +90,40 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
         || requirements.size >= threshold
     }
 
-  private func AcquirePlacement(requirements VkMemoryRequirements,
+  private func TryAcquirePlacement(requirements VkMemoryRequirements,
     selection VulkanMemoryTypeSelection, resourceClass VulkanMemoryResourceClass,
-    dedicated bool, dedicatedImage VkImage, dedicatedBuffer VkBuffer) VulkanMemoryPlacement{
-      let placementAlignment = PlacementAlignment(requirements.alignment, selection.propertyFlags)
-      let placementSpan = if dedicated {
-        requirements.size
-      } else {
-        PlacementSpan(requirements.size, selection.propertyFlags)
-      }
+    dedicated bool, dedicatedImage VkImage, dedicatedBuffer VkBuffer,
+    placementSpan VkDeviceSize, placementAlignment VkDeviceSize) VulkanMemoryPlacement?{
       if dedicated {
-        let block = CreateBlock(requirements.size, selection, resourceClass, true,
-          dedicatedImage, dedicatedBuffer)
+        guard let block = CreateBlock(requirements.size, selection, resourceClass, true,
+          dedicatedImage, dedicatedBuffer) else { return nil }
         return VulkanMemoryPlacement{ block: block, offset: 0uL, span: placementSpan, newBlock: true }
       }
-      var blockIndex int32 = 0
       var offset VkDeviceSize = 0uL
-      while blockIndex < blockCount {
-        if let block = blocks[blockIndex] {
-          if CanSharePooledBlock(block, selection, resourceClass)
-            && TryFindOffset(block, placementSpan, placementAlignment, ref offset) {
-              return VulkanMemoryPlacement{ block: block, offset: offset, span: placementSpan, newBlock: false }
-            }
-        }
-        blockIndex = blockIndex + 1
+      if let block = FindPooledBlock(selection, resourceClass, placementSpan, placementAlignment, ref offset) {
+        return VulkanMemoryPlacement{ block: block, offset: offset, span: placementSpan, newBlock: false }
       }
       let blockSize = BlockSize(requirements, resourceClass, selection)
-      let newBlock = CreateBlock(blockSize, selection, resourceClass, false,
-        dedicatedImage, dedicatedBuffer)
+      guard let newBlock = CreateBlock(blockSize, selection, resourceClass, false,
+        dedicatedImage, dedicatedBuffer) else { return nil }
       if !TryFindOffset(newBlock, placementSpan, placementAlignment, ref offset) {
         RemoveBlock(newBlock)
         throw InvalidOperationException("Vulkan memory block cannot satisfy requirements")
       }
       return VulkanMemoryPlacement{ block: newBlock, offset: offset, span: placementSpan, newBlock: true }
+    }
+
+  private func FindPooledBlock(selection VulkanMemoryTypeSelection, resourceClass VulkanMemoryResourceClass,
+    placementSpan VkDeviceSize, placementAlignment VkDeviceSize, ref offset VkDeviceSize) VulkanMemoryBlock?{
+      for blockIndex in 0 ... blockCount {
+        if let block = blocks[blockIndex] {
+          if CanSharePooledBlock(block, selection, resourceClass)
+            && TryFindOffset(block, placementSpan, placementAlignment, ref offset) {
+              return block
+            }
+        }
+      }
+      return nil
     }
 
   private func CanSharePooledBlock(block VulkanMemoryBlock,
@@ -154,19 +155,19 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
         throw OverflowException("Vulkan memory block size overflow")
       }
       let minimumSize = placementSpan + padding
-      let heap = MemoryHeap(memoryProperties, selection.heapIndex)
-      let current = heapResidentBytes[int32(selection.heapIndex)]
-      if current > heap.size {
-        throw InvalidOperationException("Vulkan memory heap capacity exceeded")
-      }
-      let remaining = heap.size - current
+      let remaining = Headroom(selection.heapIndex)
       return if minimumSize > remaining || remaining < alignedBaseSize { minimumSize } else { alignedBaseSize }
     }
 
   private func CreateBlock(blockSize VkDeviceSize, selection VulkanMemoryTypeSelection,
     resourceClass VulkanMemoryResourceClass, dedicated bool,
-    dedicatedImage VkImage, dedicatedBuffer VkBuffer) VulkanMemoryBlock{
+    dedicatedImage VkImage, dedicatedBuffer VkBuffer) VulkanMemoryBlock?{
       EnsureBlockCapacity(selection.heapIndex, blockSize)
+      let headroom = Headroom(selection.heapIndex)
+      if blockSize > headroom {
+        pressureDeficit = blockSize - headroom
+        return nil
+      }
       var dedicatedInfo = VkMemoryDedicatedAllocateInfo{
         sType: VkConstants.VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO,
         pNext: nil,
@@ -183,9 +184,19 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
         allocateInfo.pNext = *void(&dedicatedInfo)
       }
       var memory VkDeviceMemory = 0uL
-      let allocateMemory = deviceDispatch.vkAllocateMemory
-      let allocateResult = allocateMemory(device, &allocateInfo, nil, &memory)
+      var allocateResult = VkConstants.VK_ERROR_OUT_OF_DEVICE_MEMORY
+      if failingAllocationCount > 0 {
+        failingAllocationCount--
+      } else {
+        let allocateMemory = deviceDispatch.vkAllocateMemory
+        allocateResult = allocateMemory(device, &allocateInfo, nil, &memory)
+      }
       lastResult = allocateResult
+      if allocateResult == VkConstants.VK_ERROR_OUT_OF_DEVICE_MEMORY
+        || allocateResult == VkConstants.VK_ERROR_OUT_OF_HOST_MEMORY {
+          pressureDeficit = blockSize
+          return nil
+        }
       if allocateResult != VkConstants.VK_SUCCESS || memory == 0uL {
         throw InvalidOperationException("vkAllocateMemory failed: result=" + allocateResult.ToString()
           +", blockBytes=" + blockSize.ToString()
@@ -206,6 +217,9 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
         throw error
       }
       allocationEvents++
+      if operationLimitActive {
+        operationBytesRemaining -= blockSize
+      }
       let hostVisible = (selection.propertyFlags & uint32(VkConstants.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) != 0u
       let hostCoherent = (selection.propertyFlags & uint32(VkConstants.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) != 0u
       var mapped * void = nil

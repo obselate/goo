@@ -20,6 +20,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
   private let budget VulkanMemoryBudgetState
   private let objectAccounting VulkanObjectAccounting?
   private let heapResidentBytes []VkDeviceSize
+  private let deviceLocalHeap uint32
   private var activeAllocations []VulkanMemoryAllocation?
   private var blocks []VulkanMemoryBlock?
   private var activeCount int32
@@ -56,15 +57,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
   internal prop ResidentAllocationCount uint64{ get -> residentAllocations }
   internal prop BudgetSampleAvailable bool{ get -> budget.Available }
   internal prop BudgetSampleCurrent bool{ get -> !disposed && budget.Available }
-  internal prop DriverHeapBudget VkDeviceSize{ get -> budget.TotalBudget() }
-  internal prop DriverHeapUsage VkDeviceSize{ get -> budget.TotalUsage() }
   internal prop LastResult VkResult{ get -> lastResult }
-
-  internal func RefreshBudget() {
-    if !disposed {
-      budget.Refresh()
-    }
-  }
 
   internal init(nativeDevice VkDevice, nativeDispatch VkDeviceDispatch,
     physicalProperties VkPhysicalDeviceMemoryProperties, allocationLimit uint32,
@@ -110,6 +103,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
         InitialBlockCapacity
       }
       blocks = [initialBlockCapacity]VulkanMemoryBlock?
+      deviceLocalHeap = SelectMemoryType(uint32.MaxValue, VulkanMemoryPolicy.DeviceLocalRequired).heapIndex
     }
 
   internal prop Counters VulkanMemoryCounters{
@@ -122,6 +116,9 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
         retiredAllocations: retiredAllocations,
         residentBytes: residentBytes,
         residentAllocations: residentAllocations,
+        evictionCount: evictionCount,
+        allocationRetryCount: allocationRetryCount,
+        pressureCount: pressureCount,
       }
     }
   }

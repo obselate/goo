@@ -119,6 +119,7 @@ internal unsafe partial class VulkanWindowTarget {
       } else if let atlas = clipMaskAtlas {
         atlas.Collect(completedGraphicsSubmissionSerial)
       }
+      memoryAllocator?.BeginFrame(completedGraphicsSubmissionSerial)
       presentationRetirement.CollectCompleted(slotIndex, selectedSlot.LastCompletedSerial)
       CollectRetiredSwapchains()
       var imageIndex uint32 = 0u
@@ -424,7 +425,9 @@ internal unsafe partial class VulkanWindowTarget {
         }
       }
     } catch (error Exception) {
-      CaptureDiagnosticFatal(-1, VulkanDiagnosticEventIds.CommandRecord)
+      if !(error is VulkanMemoryPressureException) {
+        CaptureDiagnosticFatal(-1, VulkanDiagnosticEventIds.CommandRecord)
+      }
       if let renderer = primitiveRenderer {
         try { renderer.ClearTimestampRecording() } catch (cleanup Exception) { }
         try { renderer.ReleaseImageReferences(sceneCompiler.Frame) } catch (cleanup Exception) { }
@@ -442,6 +445,11 @@ internal unsafe partial class VulkanWindowTarget {
       CaptureDiagnosticValidationBoundary()
       presentationRetirement.CancelPendingPresentationLatency()
       ClearActiveFrame()
+      if error is VulkanMemoryPressureException {
+        frameFailureRetryable = true
+        host.Wake()
+        return
+      }
       throw error
     }
   }

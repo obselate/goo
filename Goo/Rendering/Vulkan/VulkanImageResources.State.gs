@@ -104,7 +104,6 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     index int32,
     entry VulkanImageResourceEntry) VulkanImageResourceEntry{
       let logicalIndex = LogicalIndexForPhysical(index, entry)
-      EnsureLogicalPublication(entry.Bytes)
       let nearestDescriptor = BindDescriptorSet(index, entry.Id, entry.SamplerId,
         entry.ImageView, VulkanImageSamplerMode.Nearest)
       let linearDescriptor = BindDescriptorSet(index, entry.Id, entry.SamplerId,
@@ -123,38 +122,25 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     compileTouch = nextTouch
   }
 
-  internal func EvictLeastRecentlyUsed() bool {
-    EnsureOpen()
-    var candidate int32 = -1
-    var candidateTouch uint64 = uint64.MaxValue
-    var index int32 = 0
-    while index < entries.Length {
-      let entry = entries[index]
-      if entry.State == VulkanImageResourceState.Resident
-        && entry.Cacheable
-        && !entry.PendingRetire
-        && entry.RecordingUseCount == 0
-        && currentReferenceCounts[index] == 0
-        && entry.LastUseFence <= highestCompletedFence
-        && entry.LastTouch < compileTouch
-        && entry.LastTouch < candidateTouch{
-          candidate = index
-          candidateTouch = entry.LastTouch
-        }
-      index++
-    }
-    if candidate < 0 {
-      return false
-    }
-    let id = entries[candidate].Id
-    if !Retire(id, generation, highestCompletedFence) {
-      return false
+  public func EvictionSerial(handle int32) uint64? {
+    let entry = entries[handle]
+    return if entry.State == VulkanImageResourceState.Resident
+      && entry.Cacheable
+      && !entry.PendingRetire
+      && entry.RecordingUseCount == 0
+      && currentReferenceCounts[handle] == 0
+      && entry.LastUseFence <= highestCompletedFence
+      && entry.LastTouch < compileTouch { entry.LastUseFence } else { nil }
+  }
+
+  public func Evict(handle int32) {
+    if !Retire(entries[handle].Id, generation, highestCompletedFence) {
+      throw InvalidOperationException("Vulkan image eviction candidate did not retire")
     }
     Collect(highestCompletedFence)
     if let currentDiagnostics = diagnostics {
       currentDiagnostics.AddImageEviction(1uL)
     }
-    return true
   }
 
   internal func ReleaseSource(providerId uint64, sourceId uint64) VulkanImageSourceRelease {

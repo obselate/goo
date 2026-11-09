@@ -891,7 +891,6 @@ internal unsafe partial class VulkanWindowTarget {
         current.SetTextAtlasContribution(
           textAtlasDiagnosticsToken,
           uint64(stats.AtlasCount),
-          uint64(stats.ByteBudget),
           uint64(stats.ResidentByteSize),
           stats.LiveObjectCount)
       }
@@ -924,13 +923,15 @@ internal unsafe partial class VulkanWindowTarget {
         var retiredBytes uint64 = 0uL
         var allocatorBytes uint64 = 0uL
         if let allocator = memoryAllocator {
-          allocator.RefreshBudget()
           let values = allocator.Counters
+          let heap = allocator.DeviceLocalHeap
           if allocator.BudgetSampleAvailable {
             heapBudgetAvailable = 1u
-            heapBudget = uint64(allocator.DriverHeapBudget)
-            driverHeapUsage = uint64(allocator.DriverHeapUsage)
+            heapBudget = uint64(allocator.HeapBudget(heap))
+            driverHeapUsage = uint64(allocator.HeapUsage(heap))
           }
+          current.SetMemoryPolicy(uint64(allocator.Headroom(heap)), values.evictionCount,
+            values.allocationRetryCount, values.pressureCount)
           if allocator.BudgetSampleCurrent {
             heapBudgetSampleCurrent = 1u
           }
@@ -951,7 +952,6 @@ internal unsafe partial class VulkanWindowTarget {
         if let resources = imageResources {
           let stats = resources.Stats
           cacheBytes = cacheBytes + uint64(stats.ResidentBytes)
-          current.SetImageByteBudget(uint64(stats.ResidentByteBudget))
           current.SetImageResidentBytes(uint64(stats.ResidentBytes))
           current.SetImageLiveObjectCount(stats.LiveObjectCount)
           current.SetImagePeakResidentBytes(uint64(stats.ResidentBytes))
@@ -962,7 +962,6 @@ internal unsafe partial class VulkanWindowTarget {
           cacheBytes = cacheBytes + uint64(stats.ResidentByteSize)
           PublishTextAtlasDiagnosticContribution(current, stats)
           current.SetTextAtlasPeakCount(uint64(stats.AtlasCount))
-          current.SetTextAtlasPeakByteBudget(uint64(stats.ByteBudget))
           current.SetTextAtlasPeakResidentBytes(uint64(stats.ResidentByteSize))
           current.SetTextAtlasPeakLiveObjectCount(stats.LiveObjectCount)
         }

@@ -187,6 +187,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         | uint32(VkConstants.VK_IMAGE_USAGE_SAMPLED_BIT),
         uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT),
         VulkanMemoryPolicy.DeviceLocalRequired)
+      allocator.Track(creation.Allocation, this, index)
       let entry = VulkanImageResourceEntry{
         Id: id,
         ProviderId: source.ProviderId,

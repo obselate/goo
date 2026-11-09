@@ -45,20 +45,18 @@ internal unsafe partial class VulkanImageResources : IDisposable {
           throw InvalidOperationException("Vulkan image version is retiring")
         }
       }
-      if source.Bytes > logicalStats.LogicalSourceBudget {
-        throw InvalidOperationException("Vulkan image logical source hard limit exceeded")
-      }
-      if bytes > residentByteBudget {
-        throw InvalidOperationException("Vulkan image resident hard limit exceeded")
-      }
-      if !TryEnsureResidentCapacity(bytes) {
+      let index = if existingIndex >= 0 { existingIndex } else { EnsureEmptyIndex() }
+      try {
+        CreateImage(index, id, width, height, bytes, source, cacheable, samplerId, samplerMode)
+      } catch (pressure VulkanMemoryPressureException) {
+        if let currentDiagnostics = diagnostics {
+          currentDiagnostics.AddImagePressureFailure(1uL)
+          currentDiagnostics.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
+            VulkanDiagnosticEventIds.ImagePressure, VulkanDiagnosticCategories.Resource,
+            1uL, 0, uint64(bytes), uint64(allocator.Headroom(allocator.DeviceLocalHeap)))
+        }
         return VulkanImageResourceLookup{ Found: false }
       }
-      if !TryEnsureLogicalSourceCapacity(id, source.Bytes) {
-        return VulkanImageResourceLookup{ Found: false }
-      }
-      let index = if existingIndex >= 0 { existingIndex } else { FindEmptyIndex() }
-      CreateImage(index, id, width, height, bytes, source, cacheable, samplerId, samplerMode)
       return Lookup(index, samplerId, samplerMode)
     }
 

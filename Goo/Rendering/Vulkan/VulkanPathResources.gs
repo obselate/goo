@@ -864,7 +864,13 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
     if atlasId.Version == uint64.MaxValue || growthCount == uint64.MaxValue {
       throw OverflowException("Vulkan path atlas generation overflow")
     }
-    let replacement = atlas.CreateReplacement(replacementCapacity)
+    var replacement = atlas
+    try {
+      replacement = atlas.CreateReplacement(replacementCapacity)
+    } catch (pressure VulkanMemoryPressureException) {
+      pressureFailureCount++
+      return false
+    }
     let previous = atlas
     if atlasLastUseFence <= completedSubmissionFence {
       previous.Dispose()

@@ -45,6 +45,22 @@ internal unsafe class VulkanMemoryAllocation {
   var pendingBind bool
   var state VulkanMemoryAllocationState
   var ownerKind VulkanMemoryOwnerKind
+  var cache VulkanGpuCache?
+  var cacheHandle int32
+}
+
+/// <summary>Cache that owns evictable allocations in <see cref="VulkanMemoryAllocator"/>.</summary>
+internal interface VulkanGpuCache {
+  /// <summary>Returns the submission serial of the item's last use, or nil while the current or an in-flight frame uses it.</summary>
+  func EvictionSerial(handle int32) uint64?;
+  /// <summary>Releases the item and all of its allocations.</summary>
+  func Evict(handle int32);
+}
+
+/// <summary>An allocation does not fit in its heap after eviction and one retry.</summary>
+internal sealed class VulkanMemoryPressureException : InvalidOperationException {
+  internal init(heapIndex uint32, bytes VkDeviceSize)
+    : base("Vulkan memory heap " + heapIndex.ToString() + " cannot hold " + bytes.ToString() + " bytes") { }
 }
 
 internal data struct VulkanMemoryPlacement {
@@ -68,4 +84,7 @@ internal data struct VulkanMemoryCounters {
   var retiredAllocations uint64
   var residentBytes VkDeviceSize
   var residentAllocations uint64
+  var evictionCount uint64
+  var allocationRetryCount uint64
+  var pressureCount uint64
 }

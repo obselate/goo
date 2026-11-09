@@ -82,24 +82,14 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
   }
 
   private func EnsureBlockCapacity(heapIndex uint32, blockSize VkDeviceSize) {
-    if operationLimitActive {
-      if blockSize > operationBytesRemaining { throw VulkanOperationBudgetException() }
-      operationBytesRemaining = operationBytesRemaining - blockSize
+    if operationLimitActive && blockSize > operationBytesRemaining {
+      throw VulkanOperationBudgetException()
     }
     if residentAllocations >= maxAllocationCount {
       throw InvalidOperationException("Vulkan memory allocation count limit reached")
     }
     if heapIndex >= memoryProperties.memoryHeapCount {
       throw InvalidOperationException("Vulkan memory allocation references an invalid heap")
-    }
-    budget.Refresh()
-    if !budget.CanAllocate(heapIndex, blockSize) {
-      throw InvalidOperationException("Vulkan memory heap budget exceeded")
-    }
-    let heap = MemoryHeap(memoryProperties, heapIndex)
-    let current = heapResidentBytes[int32(heapIndex)]
-    if blockSize > heap.size || current > heap.size - blockSize {
-      throw InvalidOperationException("Vulkan memory heap capacity exceeded")
     }
     if residentBytes > uint64.MaxValue - blockSize {
       throw OverflowException("Vulkan resident memory counter overflow")
@@ -136,6 +126,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
     allocation.blockFresh = false
     allocation.pendingBind = false
     allocation.state = VulkanMemoryAllocationState.Empty
+    allocation.cache = nil
   }
 
   private func PointerAt(basePointer * void, offset VkDeviceSize) * void -> *void(nint(basePointer) + nint(offset))

@@ -30,10 +30,7 @@ internal unsafe partial class VulkanImageResources {
             return Lookup(existing, samplerId, VulkanImageSamplerMode.Linear)
         }
         let bytes = uint64(frame.Image.Width) * uint64(frame.Image.Height) * 4uL
-        if !TryEnsureResidentCapacity(bytes) || !TryEnsureLogicalSourceCapacity(id, bytes) {
-            return VulkanImageResourceLookup{}
-        }
-        let index = FindEmptyIndex()
+        let index = EnsureEmptyIndex()
         EnsureDescriptorSlots(index)
         let logical = PrepareLogicalRegistration(id, source)
         frame.Retain()

@@ -248,18 +248,13 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
           allocator = createdAllocator
           createdAllocator.ProfileGeneration = generationSeed
           createdAllocator.RefreshBudget()
-          let createdResourcePolicy = CreateVulkanResourcePolicy(
-            nativeMemoryProperties,
-            createdAllocator.DriverHeapBudget,
-            nativeMaxStorageBufferRange)
+          let createdResourcePolicy = CreateVulkanResourcePolicy(nativeMaxStorageBufferRange)
           let createdImageResources = VulkanImageResources(
             nativeDevice,
             nativeDispatch,
             createdAllocator,
             createdResourcePolicy.ImageInitialResourceCapacity,
             createdResourcePolicy.ImageInitialLogicalCapacity,
-            createdResourcePolicy.ImageResidentHardBytes,
-            createdResourcePolicy.ImageLogicalSourceHardBytes,
             createdResourcePolicy.ImageStagingInitialBytes,
             createdResourcePolicy.ImageStagingHardBytes,
             createdResourcePolicy.ImageUploadInitialRangeCapacity,

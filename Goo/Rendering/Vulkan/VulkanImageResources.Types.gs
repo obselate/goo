@@ -78,7 +78,6 @@ internal data struct VulkanImageResourceStats {
   var Capacity int32
   var LiveCount int32
   var ResidentBytes VkDeviceSize
-  var ResidentByteBudget VkDeviceSize
   var LiveObjectCount uint64
   var DescriptorCapacity int32
   var BoundDescriptorCount int32
