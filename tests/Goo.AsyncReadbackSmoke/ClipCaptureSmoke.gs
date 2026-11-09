@@ -352,7 +352,7 @@ class RenderBudgetSiblingCell : Cell {
 func RunRenderBudgetPressureSmoke() {
   let root = RenderBudgetSiblingCell{}
   let window = Window{ Title: "Goo render budget pressure gate",
-    Width: 400, Height: 190, VSync: false, Root: root }
+    Width: 1024, Height: 600, VSync: false, Root: root }
   try {
     window.Open()
     WindowReadbackTestFixture.ForceRender(window, 0.0)
@@ -361,8 +361,8 @@ func RunRenderBudgetPressureSmoke() {
     guard let target = WindowReadbackTestFixture.CaptureTarget(window) else {
       throw InvalidOperationException("Render budget target is unavailable")
     }
-    let pixels = uint64(metrics.FramebufferWidth) * uint64(metrics.FramebufferHeight)
-    target.ResetRenderResourcesForTest(int64(pixels) * 12L)
+    let pixels = int64(metrics.FramebufferWidth) * int64(metrics.FramebufferHeight)
+    target.ResetRenderResourcesForTest(pixels * 12L)
     WindowReadbackTestFixture.SetForceFullRedraw(window, true)
     let siblingPasses = target.DiagnosticCountersSnapshotForTest().layerPoolPassCount
     WindowReadbackTestFixture.ForceRender(window, 0.0)
@@ -371,27 +371,44 @@ func RunRenderBudgetPressureSmoke() {
       "Sibling layers that fit concurrently were drawn without layers")
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
     root.UseNested()
-    target.ResetRenderResourcesForTest(nil)
+    target.ResetRenderResourcesForTest(1073741824L)
     WindowReadbackTestFixture.SetForceFullRedraw(window, true)
     WindowReadbackTestFixture.ForceRender(window, 0.0)
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
-    Require(target.DiagnosticCountersSnapshotForTest().layerPoolResidentBytes > 0uL
-        && target.LayerResolutionShiftForTest() == 0,
-      "Nested layers did not render at full resolution under the driver budget")
-    Require(WindowReadbackTestFixture.Resize(window, 400, 190,
-      metrics.FramebufferWidth * 4, metrics.FramebufferHeight * 4),
-      "Render budget pressure resize failed")
-    let pressureMetrics = WindowReadbackTestFixture.Metrics(window)
-    let pressurePixels = int64(pressureMetrics.FramebufferWidth) * int64(pressureMetrics.FramebufferHeight)
-    target.ResetRenderResourcesForTest(pressurePixels * 2L)
+    let exactBytes = target.DiagnosticCountersSnapshotForTest().layerPoolResidentBytes
+    Require(exactBytes > 0uL && target.LayerResolutionShiftForTest() == 0,
+      "Full-resolution layer budget measurement was unavailable")
+    root.UseNested(false)
+    Require(WindowReadbackTestFixture.Resize(window, 1024, 600,
+      metrics.FramebufferWidth * 7 / 5, metrics.FramebufferHeight * 7 / 5),
+      "Layer capacity budget seed resize failed")
+    WindowReadbackTestFixture.SetForceFullRedraw(window, true)
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
+    let seeded = target.DiagnosticCountersSnapshotForTest()
+    Require(target.LayerResolutionShiftForTest() == 0 && seeded.layerPoolResidentBytes > exactBytes,
+      "Layer capacity budget seed did not retain a larger target")
+    root.UseNested()
+    Require(WindowReadbackTestFixture.Resize(window, 1024, 600,
+      metrics.FramebufferWidth, metrics.FramebufferHeight),
+      "Layer capacity budget recovery resize failed")
+    target.SetMemoryHeadroomForTest(int64(exactBytes) - int64(seeded.layerPoolResidentBytes))
+    WindowReadbackTestFixture.SetForceFullRedraw(window, true)
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    let capacity = target.DiagnosticCountersSnapshotForTest()
+    Require(target.LayerResolutionShiftForTest() == 0
+        && capacity.layerPoolResidentBytes <= exactBytes
+        && capacity.memoryEvictionCount > seeded.memoryEvictionCount,
+      "Optional layer capacity reduced full-resolution rendering or bypassed exact-extent recovery")
+    WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
+    target.ResetRenderResourcesForTest(pixels * 5L)
     WindowReadbackTestFixture.SetForceFullRedraw(window, true)
     WindowReadbackTestFixture.ForceRender(window, 0.0)
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
     Require(target.DiagnosticCountersSnapshotForTest().layerPoolPressureFailureCount > 0uL
         && target.ClipAtlasStatsForTest().PressureFailureCount > 0uL,
       "Render budget scene did not exceed both budgets")
-    Require(target.LayerResolutionShiftForTest() > 0 && window.IsOpen,
-      "Render budget frame did not reduce layer resolution")
+    Require(target.LayerResolutionShiftForTest() > 0, "Render budget frame did not reduce layer resolution")
     let pressureGeneration = target.ClipAtlasStatsForTest().Generation
     for frameIndex in 0 ... 4 {
       WindowReadbackTestFixture.ForceRender(window, 0.0)
@@ -399,17 +416,25 @@ func RunRenderBudgetPressureSmoke() {
         "Steady clip budget pressure replaced the atlas generation")
     }
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
-    target.ResetRenderResourcesForTest(nil)
-    WindowReadbackTestFixture.ForceRender(window, 0.0)
-    let frame = ClipCaptureReadback(window, pressureMetrics)
+    WindowReadbackTestFixture.SetForceFullRedraw(window, false)
+    Require(WindowReadbackTestFixture.Request(window, uint32(metrics.FramebufferWidth),
+      uint32(metrics.FramebufferHeight)) == WindowReadbackRequestStatus.NotReady,
+      "Render budget pressure frame was not captured")
+    target.SetMemoryHeadroomForTest(pixels * 10L)
+    let frame = ClipCaptureReadback(window, metrics)
+    Require(frame.Pixels.Length > 0 && window.IsOpen && target.LayerResolutionShiftForTest() > 0,
+      "Render budget pressure did not complete a reduced-resolution frame")
     let sample = (int32(frame.Height) * 3 / 4 * int32(frame.Width) + int32(frame.Width) / 2) * 4
     Require(frame.Pixels[sample + 1] > frame.Pixels[sample]
         && frame.Pixels[sample + 1] > frame.Pixels[sample + 2],
-      "Render budget recovery frame did not contain the green layer content")
+      "Render budget frame did not contain the green layer content")
     let outside = (int32(frame.Height) * 9 / 10 * int32(frame.Width) + int32(frame.Width) / 10) * 4
     Require(frame.Pixels[outside + 1] <= frame.Pixels[outside]
         || frame.Pixels[outside + 1] <= frame.Pixels[outside + 2],
       "Nested layer content escaped its outer nonrectangular clip")
+    target.ResetRenderResourcesForTest(nil)
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    ClipCaptureReadback(window, metrics)
   } finally {
     window.Close()
   }

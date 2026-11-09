@@ -105,6 +105,11 @@ func RunImageBudgetPressureSmoke() {
     Require(opened.IsOpen && limitedLive > 0 && limitedLive < sources.Length
         && limited.imagePressureFailureCount > limitedStart.imagePressureFailureCount,
       "Limited headroom did not keep a partial resident set: live=" + limitedLive.ToString())
+    let limitedSteady = ImageBudgetPressureSettle(opened)
+    Require(limitedSteady.memoryAllocationRetryCount == limited.memoryAllocationRetryCount
+        && limitedSteady.imagePressureFailureCount == limited.imagePressureFailureCount,
+      "Refused images retried without freed memory: retries="
+      + (limitedSteady.memoryAllocationRetryCount - limited.memoryAllocationRetryCount).ToString())
 
     target.SetMemoryHeadroomForTest(nil)
     ImageBudgetPressureReload(cell, opened, sources)
