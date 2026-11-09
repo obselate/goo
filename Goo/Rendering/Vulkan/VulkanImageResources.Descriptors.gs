@@ -180,12 +180,6 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     return count
   }
 
-  private func Unpremultiply(value uint8, alpha uint8) uint8 {
-    let numerator = uint32(value) * 255u + uint32(alpha) / 2u
-    let result = numerator / uint32(alpha)
-    return if result > 255u { uint8(255) } else { uint8(result) }
-  }
-
   private func FindExactIndex(id ResourceId) int32 {
     var index int32 = 0
     while index < entryLimit {

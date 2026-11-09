@@ -170,35 +170,9 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       }
       let sourceByteOffset = VkDeviceSize(entry.UploadCompletedRows) * rowBytes
       let chunkByteCount = VkDeviceSize(rowCount) * rowBytes
-      let source = *uint8(nint(premultipliedSourceBytes) + nint(sourceByteOffset))
-      let destination = *uint8(nint(stagingAllocation!!.mapped) + nint(reservation.Offset))
-      try {
-        var byteIndex int32 = 0
-        while byteIndex < int32(chunkByteCount) {
-          let alpha = source[byteIndex + 3]
-          if alpha == uint8(255) {
-            destination[byteIndex] = source[byteIndex]
-            destination[byteIndex + 1] = source[byteIndex + 1]
-            destination[byteIndex + 2] = source[byteIndex + 2]
-          } else if alpha == uint8(0) {
-            destination[byteIndex] = uint8(0)
-            destination[byteIndex + 1] = uint8(0)
-            destination[byteIndex + 2] = uint8(0)
-          } else {
-            destination[byteIndex] = Unpremultiply(source[byteIndex], alpha)
-            destination[byteIndex + 1] = Unpremultiply(source[byteIndex + 1], alpha)
-            destination[byteIndex + 2] = Unpremultiply(source[byteIndex + 2], alpha)
-          }
-          destination[byteIndex + 3] = alpha
-          byteIndex += 4
-        }
-      } catch (error Exception) {
-        if !uploadRing.Cancel(reservation) {
-          throw InvalidOperationException("Vulkan image upload reservation rollback failed")
-        }
-        uploadRing.Collect(highestCompletedFence)
-        throw error
-      }
+      Buffer.MemoryCopy(*uint8(nint(premultipliedSourceBytes) + nint(sourceByteOffset)),
+        *uint8(nint(stagingAllocation!!.mapped) + nint(reservation.Offset)),
+        int64(chunkByteCount), int64(chunkByteCount))
       entry.State = VulkanImageResourceState.UploadPending
       entry.UploadRowOffset = entry.UploadCompletedRows
       entry.UploadRowCount = rowCount
