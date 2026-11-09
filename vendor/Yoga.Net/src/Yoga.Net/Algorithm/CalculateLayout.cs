@@ -599,7 +599,7 @@ namespace Facebook.Yoga
                     {
                         float childSize = YogaConstants.Undefined;
                         if (Comparison.IsDefined(flexLine.Layout.TotalFlexShrinkScaledFactors) &&
-                            flexLine.Layout.TotalFlexShrinkScaledFactors == 0)
+                            flexLine.Layout.TotalFlexShrinkScaledFactors >= 0)
                         {
                             childSize = childFlexBasis + flexShrinkScaledFactor;
                         }

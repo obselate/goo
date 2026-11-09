@@ -89,7 +89,16 @@ internal class LayoutFixtures {
     })
     Layout().Calculate(column, 120.0F, 200.0F)
     let pane = column.Children[1]
-    return pane.Rect.Y == 40.0F && pane.Rect.H == 160.0F && pane.ContentH == 400.0F
+    if pane.Rect.Y != 40.0F || pane.Rect.H != 160.0F || pane.ContentH != 400.0F { return false }
+    let heights = []float64{ 36, 19.2, 48, 19.2, 19.2, 64, 48, 48, 150, 48, 48, 48, 240 }
+    let scroll = Container{ Width: 411, Height: 683, Overflow: Overflow.Scroll, Padding: 20, Gap: 14 }
+    for height in heights { scroll.Children.Add(Container{ Height: height }) }
+    let page = Reconciler{ Res: Resolver{} }.Mount(scroll)
+    Layout().Calculate(page, 411.0F, 683.0F)
+    for i in 0 ... heights.Length {
+      if MathF.Abs(page.Children[i].Rect.H - float32(heights[i])) > 1.0F { return false }
+    }
+    return page.ContentH < 1010.0F
   }
 
   func KeyedReorderRetainsYogaLayouts() bool {
