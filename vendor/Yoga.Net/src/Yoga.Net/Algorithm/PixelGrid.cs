@@ -96,25 +96,32 @@ namespace Facebook.Yoga
                 bool hasFractionalHeight =
                     !Comparison.InexactEquals(Math.Round(scaledNodeHeight), scaledNodeHeight);
 
-                node.GetLayout().SetDimension(
-                    Dimension.Width,
-                    (float)(RoundValueToPixelGridDouble(
+                double roundedWidth =
+                    RoundValueToPixelGridDouble(
                         absoluteNodeRight,
                         pointScaleFactor,
                         (textRounding && hasFractionalWidth),
                         (textRounding && !hasFractionalWidth)) -
                     RoundValueToPixelGridDouble(
-                        absoluteNodeLeft, pointScaleFactor, false, textRounding)));
-
-                node.GetLayout().SetDimension(
-                    Dimension.Height,
-                    (float)(RoundValueToPixelGridDouble(
+                        absoluteNodeLeft, pointScaleFactor, false, textRounding);
+                double roundedHeight =
+                    RoundValueToPixelGridDouble(
                         absoluteNodeBottom,
                         pointScaleFactor,
                         (textRounding && hasFractionalHeight),
                         (textRounding && !hasFractionalHeight)) -
                     RoundValueToPixelGridDouble(
-                        absoluteNodeTop, pointScaleFactor, false, textRounding)));
+                        absoluteNodeTop, pointScaleFactor, false, textRounding);
+
+                node.GetLayout().SetDimension(
+                    Dimension.Width,
+                    (float)(roundedWidth == 0.0 && hasFractionalWidth && scaledNodeWith > 0.0
+                        ? 1.0 / pointScaleFactor : roundedWidth));
+
+                node.GetLayout().SetDimension(
+                    Dimension.Height,
+                    (float)(roundedHeight == 0.0 && hasFractionalHeight && scaledNodeHeight > 0.0
+                        ? 1.0 / pointScaleFactor : roundedHeight));
             }
 
             var childCount = node.GetChildCount();
