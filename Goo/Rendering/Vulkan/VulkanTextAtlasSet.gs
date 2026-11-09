@@ -175,8 +175,19 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
     }
     let touch = TouchValue()
     let identity = NextIdentity()
-    let created = VulkanTextAtlas(device, dispatch, allocator, atlasByteSize,
-      maxTexelBufferElements, descriptorSetLayout, objectAccounting)
+    let growth = atlasCount > 0
+    if growth {
+      allocator.BeginCacheGrowth()
+    }
+    var created VulkanTextAtlas
+    try {
+      created = VulkanTextAtlas(device, dispatch, allocator, atlasByteSize,
+        maxTexelBufferElements, descriptorSetLayout, objectAccounting)
+    } finally {
+      if growth {
+        allocator.EndCacheGrowth()
+      }
+    }
     atlases[index] = created
     if let current = cache { created.Track(current, index) }
     identities[index] = identity

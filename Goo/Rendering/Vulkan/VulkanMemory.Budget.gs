@@ -83,12 +83,20 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
   private var evictionCount uint64
   private var allocationRetryCount uint64
   private var pressureCount uint64
+  private var cacheGrowthDepth int32
+  private var budgetBypass bool
 
   /// <summary>Heap that holds device-local images.</summary>
   internal prop DeviceLocalHeap uint32{ get -> deviceLocalHeap }
 
   /// <summary>Counter of a heap that advances when Goo frees memory there, the heap's headroom grows, or a refused heap gains an eviction candidate.</summary>
   internal func ReleaseGeneration(heapIndex uint32) uint64 -> heapReleaseGenerations[int32(heapIndex)]
+
+  /// <summary>Starts cache growth. Until the matching EndCacheGrowth, an allocation that does not fit its heap budget after eviction fails with VulkanMemoryPressureException. Other allocations then go to the driver above the budget.</summary>
+  internal func BeginCacheGrowth() { cacheGrowthDepth++ }
+
+  /// <summary>Ends the cache growth that the matching BeginCacheGrowth started.</summary>
+  internal func EndCacheGrowth() { cacheGrowthDepth-- }
 
   /// <summary>Bytes the process may hold in a heap: the driver budget, or a share of the heap size without one.</summary>
   internal func HeapBudget(heapIndex uint32) VkDeviceSize {
@@ -201,10 +209,17 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
       allocationRetryCount++
       EvictFor(selection, resourceClass, if dedicated { 0uL } else { placementSpan }, placementAlignment,
         pressureDeficit, false)
-      if let placement = TryAcquirePlacement(requirements, selection, resourceClass, dedicated,
-        dedicatedImage, dedicatedBuffer, placementSpan, placementAlignment) {
-          return placement
-        }
+      budgetBypass = cacheGrowthDepth == 0
+      var retried VulkanMemoryPlacement? = nil
+      try {
+        retried = TryAcquirePlacement(requirements, selection, resourceClass, dedicated,
+          dedicatedImage, dedicatedBuffer, placementSpan, placementAlignment)
+      } finally {
+        budgetBypass = false
+      }
+      if let placement = retried {
+        return placement
+      }
       pressureCount++
       heapRefusalPending[int32(selection.heapIndex)] = true
       throw VulkanMemoryPressureException(selection.heapIndex, requirements.size)

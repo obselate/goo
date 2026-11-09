@@ -164,7 +164,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
     dedicatedImage VkImage, dedicatedBuffer VkBuffer) VulkanMemoryBlock?{
       EnsureBlockCapacity(selection.heapIndex, blockSize)
       let headroom = Headroom(selection.heapIndex)
-      if blockSize > headroom {
+      if blockSize > headroom && !budgetBypass {
         pressureDeficit = blockSize - headroom
         return nil
       }

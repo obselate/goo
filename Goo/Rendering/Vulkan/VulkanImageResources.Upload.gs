@@ -50,6 +50,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         return VulkanImageResourceLookup{ Found: false }
       }
       let index = if existingIndex >= 0 { existingIndex } else { EnsureEmptyIndex() }
+      allocator.BeginCacheGrowth()
       try {
         CreateImage(index, id, width, height, bytes, source, cacheable, samplerId, samplerMode)
       } catch (pressure VulkanMemoryPressureException) {
@@ -67,6 +68,8 @@ internal unsafe partial class VulkanImageResources : IDisposable {
             1uL, 0, uint64(bytes), uint64(allocator.Headroom(heap)))
         }
         return VulkanImageResourceLookup{ Found: false }
+      } finally {
+        allocator.EndCacheGrowth()
       }
       return Lookup(index, samplerId, samplerMode)
     }

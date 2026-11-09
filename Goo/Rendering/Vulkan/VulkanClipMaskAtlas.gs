@@ -695,6 +695,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
         record.ContentWidth = record.ScreenWidth
         record.ContentHeight = record.ScreenHeight
       }
+      allocator.BeginCacheGrowth()
       try {
         ReplaceGeneration(required, width, height)
       } catch (pressure VulkanMemoryPressureException) {
@@ -703,6 +704,8 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
           record.ContentWidth = Math.Max(1u, record.ScreenWidth >> priorShift)
           record.ContentHeight = Math.Max(1u, record.ScreenHeight >> priorShift)
         }
+      } finally {
+        allocator.EndCacheGrowth()
       }
     } else {
       resolutionShift = priorShift
@@ -1197,15 +1200,23 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
     }
 
   private func TryReplaceGeneration(newLayerCount uint32) bool {
+    let growth = maximumLayerCount > activeLayerCount
+    if growth {
+      allocator.BeginCacheGrowth()
+    }
     try {
       ReplaceGeneration(newLayerCount, width, height)
       return true
     } catch (pressure VulkanMemoryPressureException) {
-      if maximumLayerCount <= activeLayerCount {
+      if !growth {
         throw pressure
       }
       maximumLayerCount = activeLayerCount
       return false
+    } finally {
+      if growth {
+        allocator.EndCacheGrowth()
+      }
     }
   }
 

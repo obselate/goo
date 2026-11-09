@@ -709,6 +709,9 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
       throw InvalidOperationException("Vulkan layer pool metadata growth failed")
     }
     var target VulkanOffscreenLayerTarget? = nil
+    if !mandatory {
+      allocator.BeginCacheGrowth()
+    }
     try {
       target = VulkanOffscreenLayerTarget(device, dispatch, allocator,
         VkExtent2D{ width: width, height: height }, targetFormat, descriptorSets[index],
@@ -727,6 +730,10 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
     } catch (error Exception) {
       RecordFailure(estimatedBytes, uint64(index))
       throw error
+    } finally {
+      if !mandatory {
+        allocator.EndCacheGrowth()
+      }
     }
     guard let created = target else {
       RecordFailure(estimatedBytes, uint64(index))
