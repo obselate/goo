@@ -878,7 +878,7 @@ jobs:
             -c Release -p:TreatWarningsAsErrors=true
           dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj \
             -c Release -p:TreatWarningsAsErrors=true
-          .github/scripts/with-headless-wayland.sh env \
+          GOO_HEADLESS_WIDTH=1600 GOO_HEADLESS_HEIGHT=1000 .github/scripts/with-headless-wayland.sh env \
             SDL_VIDEODRIVER=wayland LIBGL_ALWAYS_SOFTWARE=1 \
             LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
             VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
