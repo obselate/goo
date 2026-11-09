@@ -404,6 +404,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     reservedTextAtlasIdCount = textAtlasCount
     reservedPathIdCount = pathCount
     imageReferencesReserved = true
+    pathResources.AddPendingUse(1)
   }
 
   internal func PrepareSubmit() VkResult -> PrepareSubmit(VulkanReadbackPlan.Full(extent).Region)
@@ -1196,6 +1197,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     reservedTextAtlasIdCount = 0
     reservedPathIdCount = 0
     imageReferencesReserved = false
+    pathResources.AddPendingUse(-1)
     var index int32 = 0
     while index < imageCount {
       let imageId = reservedImageIds[index]
@@ -1242,6 +1244,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     reservedTextAtlasIdCount = 0
     reservedPathIdCount = 0
     imageReferencesReserved = false
+    pathResources.AddPendingUse(-1)
   }
 
   private func EnsureResidentResources() {

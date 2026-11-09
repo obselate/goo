@@ -8,6 +8,7 @@ import System.Threading
 
 internal unsafe partial class VulkanWindowTarget {
   private func ClearActiveFrame() {
+    pathScene?.SetUsePending(false)
     frameBegun = false
     renderingBegun = false
     frameRendered = false

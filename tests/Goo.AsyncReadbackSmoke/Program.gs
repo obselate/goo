@@ -512,6 +512,7 @@ let modes = []SmokeMode{
   SmokeMode("GOO_IMAGE_BUDGET_PRESSURE_SMOKE", "1", () -> RunImageBudgetPressureSmoke()),
   SmokeMode("GOO_TRANSPARENT_WINDOW_SMOKE", "1", () -> RunTransparentWindowSmoke()),
   SmokeMode("GOO_ROUNDED_RESIZE_FIRST_FRAME_SMOKE", "1", () -> RunRoundedResizeFirstFrameSmoke()),
+  SmokeMode("GOO_PATH_ATLAS_GROWTH_SMOKE", "1", () -> RunPathAtlasGrowthSmoke()),
   SmokeMode("GOO_CLIP_CAPTURE_SMOKE", "1", () -> RunClipCaptureSmoke()),
   SmokeMode("GOO_HIDE_RESOURCES_SMOKE", "1", () -> RunHideResourcesSmoke()),
   SmokeMode("GOO_HIDDEN_DEVICE_RECOVERY_SMOKE", "1", () -> RunHiddenDeviceRecoverySmoke()),
