@@ -511,6 +511,29 @@ internal class LayoutFixtures {
     return covered == n.Content.Length
   }
 
+  func MeasuredTextMatchesLaidOutText() bool {
+    let style = Style{ FontSize: 13.5, FontWeight: 600.0, LetterSpacing: 0.3,
+      TextTransform: TextTransform.Uppercase }
+    let failures = List[string]()
+    for scale in []float32{ 1.0F, 1.25F, 1.5F, 1.75F, 2.0F, 2.25F, 2.5F, 3.0F } {
+      for start in []float64{ 0.0, 0.3, 0.55 } {
+        if start != 0.0 && scale != 1.25F && scale != 1.75F { continue }
+        for label in []string{ "Settings", "Large file transfer", "\u05D0\u05D1\u05D2 abc" } {
+          let window = Window{ Root: LayoutTextFixtureCell(Text{ BasedOn: style, Content: label }, start),
+            Width: 600, Height: 100, UiScale: scale }
+          window.UpdateTree()
+          guard let text = window.Tree?.Children[0] else { return false }
+          let measured = window.MeasureText(label, style)
+          if measured <= 0.0F || measured != text.Rect.W {
+            failures.Add("scale=${scale} start=${start} label=${label} measured=${measured} laidOut=${text.Rect.W}")
+          }
+        }
+      }
+    }
+    if failures.Count > 0 { throw InvalidOperationException(String.Join("; ", failures)) }
+    return true
+  }
+
   func RtlRunPlacesFirstCharacterAtTheRight() bool {
     let shaped = TextShaping.Shape("\u05D0\u05D1\u05D2", "", 16.0F, 400, false, 0.0F, 0)
     if shaped.Runs.Count != 1 { return false }
@@ -814,4 +837,8 @@ internal class LayoutMeasurementFixtureAlgorithm : LayoutAlgorithm {
   public func Arrange(context LayoutContext, finalSize LayoutSize) {
     context.ArrangeChild(0, ElementRect{ Width: finalSize.Width, Height: finalSize.Height })
   }
+}
+
+internal class LayoutTextFixtureCell(text Text, start float64) : Cell {
+  override func Build() Blob -> Container{ AlignItems: AlignItems.FlexStart, PaddingStart: start, text }
 }

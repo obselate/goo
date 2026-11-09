@@ -679,6 +679,7 @@ class PublicDocumentationTests {
             "M:Goo.Window.ReadClipboardImage",
             "M:Goo.Window.PerformAccessibilityAction(Goo.AccessibilityId,Goo.AccessibilityActionRequest)",
             "M:Goo.Window.Post(System.Action)",
+            "M:Goo.Window.MeasureText(System.String,Goo.Style)",
             "M:Goo.Window.Open",
             "M:Goo.Window.Pump(System.Double)",
             "M:Goo.Window.RequestActivation",
@@ -978,6 +979,8 @@ class PublicDocumentationTests {
                 []string{"options"}, System.Array.Empty[string](), true),
             ["M:Goo.Window.CapturePlacement"] = DocumentationShape(System.Array.Empty[string](), System.Array.Empty[string](), true),
             ["M:Goo.Window.ApplyPlacement(Goo.WindowPlacement)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Window.MeasureText(System.String,Goo.Style)"] = DocumentationShape(
+                []string{"text", "style"}, System.Array.Empty[string](), true),
             ["M:Goo.NativeDialogs.ShowMessageBoxAsync(Goo.Window,Goo.MessageBoxOptions)"] = DocumentationShape(
                 []string{"owner", "options"}, System.Array.Empty[string](), true),
             ["M:Goo.NativeMenuBar.#ctor(Goo.Window)"] = DocumentationShape(

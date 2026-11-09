@@ -13,6 +13,7 @@
 - Track whether a style contains percentage lengths and invalidate cached layout
   when its owner width or height changes.
 - Keep a positive node size at least one device pixel after pixel-grid rounding.
+- Round a measured node's size up to the pixel grid independently of its position.
 
 The vendored tree contains only the source needed to build Goo. Focused Goo tests
 cover the local behavior changes; upstream Yoga tests remain in the upstream

@@ -1837,6 +1837,7 @@ method|Goo.Window|GetCurrentDisplay|instance|public|generic:|()->Goo.WindowDispl
 method|Goo.Window|GetDisplays|instance|public|generic:|()->System.Collections.Generic.IReadOnlyList`1<Goo.WindowDisplay>
 method|Goo.Window|Hide|instance|public|generic:|()->Goo.WindowOperationResult
 method|Goo.Window|InitializeApplicationActivation|static|public|generic:|(initial:Goo.ApplicationActivation)->Goo.WindowOperationResult
+method|Goo.Window|MeasureText|instance|public|generic:|(text:System.String,style:Goo.Style)->System.Single
 method|Goo.Window|Open|instance|public|generic:|()->Goo.Window
 method|Goo.Window|PerformAccessibilityAction|instance|public|generic:|(id:Goo.AccessibilityId,request:Goo.AccessibilityActionRequest)->System.Boolean
 method|Goo.Window|PollCapture|instance|public|generic:|()->Goo.WindowCapture?
