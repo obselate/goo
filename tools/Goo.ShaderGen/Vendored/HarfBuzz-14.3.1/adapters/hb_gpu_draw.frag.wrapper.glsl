@@ -3,29 +3,35 @@ layout(location = 1) flat in uint v_glyphLoc;
 layout(location = 4) flat in vec4 v_foreground;
 layout(location = 0) out vec4 outColor;
 
+float gooTextContrast(float coverage, vec3 foreground)
+{
+    const vec4 gammaRatios = vec4(0.14805442, -0.89459451, 1.47590801, -0.32466824);
+    float brightness = dot(foreground, vec3(0.30, 0.59, 0.11));
+    float contrast = clamp(4.0 * (0.75 - brightness), 0.0, 1.0);
+    float alpha = coverage * (contrast + 1.0) / (coverage * contrast + 1.0);
+    float correction = (gammaRatios.x * brightness + gammaRatios.y) * alpha + gammaRatios.z * brightness + gammaRatios.w;
+    return alpha + alpha * (1.0 - alpha) * correction;
+}
+
 void main()
 {
     vec2 pixelsPerEm = 1.0 / fwidth(v_texcoord);
     vec2 dx = dFdx(v_texcoord) * 0.25;
     vec2 dy = dFdy(v_texcoord) * 0.25;
     uint effectMode = floatBitsToUint(v_effectAndOrigin.y);
-    float ppem = hb_gpu_ppem(v_texcoord, v_glyphLoc);
-    float coverage = _hb_gpu_slug(v_texcoord, pixelsPerEm, v_glyphLoc);
-    if (effectMode == 0u && (ppem < 10.99 || ppem > 24.0))
+    float coverage;
+    if (effectMode == 0u)
     {
-        vec2 subpixelScale = pixelsPerEm * (ppem < 10.99 ? 1.0 : 2.0);
-        if (ppem < 10.99)
-        {
-            dx *= 4.0 / 3.0;
-            dy *= 4.0 / 3.0;
-        }
-        float integrated = 0.25 * (
+        vec2 subpixelScale = pixelsPerEm * 2.0;
+        coverage = 0.25 * (
             _hb_gpu_slug_single(v_texcoord - dx - dy, subpixelScale, v_glyphLoc) +
             _hb_gpu_slug_single(v_texcoord + dx - dy, subpixelScale, v_glyphLoc) +
             _hb_gpu_slug_single(v_texcoord - dx + dy, subpixelScale, v_glyphLoc) +
             _hb_gpu_slug_single(v_texcoord + dx + dy, subpixelScale, v_glyphLoc));
-        float weight = ppem < 10.99 ? smoothstep(10.99, 10.5, ppem) : smoothstep(24.0, 48.0, ppem);
-        coverage = mix(coverage, integrated, weight);
+    }
+    else
+    {
+        coverage = _hb_gpu_slug(v_texcoord, pixelsPerEm, v_glyphLoc);
     }
     if (effectMode == 2u && v_effectAndOrigin.x > 0.0)
     {
@@ -77,6 +83,10 @@ void main()
                 v_glyphLoc) * weights[index];
         }
         coverage = blurred;
+    }
+    if (effectMode != 3u && v_foreground.a > 0.0)
+    {
+        coverage = gooTextContrast(coverage, v_foreground.rgb / v_foreground.a);
     }
     outColor = vec4(
         v_foreground.rgb * coverage,
