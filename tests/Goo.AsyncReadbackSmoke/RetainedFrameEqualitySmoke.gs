@@ -113,6 +113,17 @@ class RetainedEqualityCell(seed int32, source ImageSourceProvider) : Cell {
                     }
                 )
             }
+            root.Children.Add(
+                Container{
+                    Key: "glass",
+                    Position: PositionType.Absolute,
+                    Left: 132,
+                    Top: 76,
+                    Width: 36,
+                    Height: 36,
+                    BackdropBlur: 4,
+                }
+            )
         }
         return root
     }

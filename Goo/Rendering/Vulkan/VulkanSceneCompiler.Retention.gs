@@ -503,15 +503,17 @@ internal partial class VulkanSceneCompiler {
         || frame.ShaderEffects[layer.EffectIndex].Program != BackdropBlurEffect.Shared { continue }
       let capture = ConservativeBounds{X: layer.OriginX, Y: layer.OriginY,
         Width: float32(layer.ExtentWidth), Height: float32(layer.ExtentHeight)}
-      var version = 1uL
+      var version = 1469598103934665603uL
       for chunkIndex in 0 ... frame.ChunkCount {
         let chunk = frame.Chunks[chunkIndex]
         if chunk.FirstDraw > layer.DrawOrdinal { break }
         if !IntersectBounds(GrowDamageToEffectLayers(chunk.Bounds, chunk.FirstDraw), capture).IsEmpty {
-          version = Math.Max(version, chunk.Version)
+          version = (version ^ chunk.OwnerId) * 1099511628211uL
+          version = (version ^ chunk.Version) * 1099511628211uL
+          version = (version ^ chunk.TransformKey) * 1099511628211uL
         }
       }
-      frame.Layers[index].BackdropVersion = version
+      frame.Layers[index].BackdropVersion = version | 1uL
     }
   }
 
