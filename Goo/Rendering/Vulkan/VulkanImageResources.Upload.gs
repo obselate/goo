@@ -46,7 +46,8 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         }
       }
       let heap = allocator.DeviceLocalHeap
-      if refusedBytes > 0uL && bytes >= refusedBytes && allocator.ReleaseGeneration(heap) == refusedReleaseGeneration {
+      let credited = demotedChainBytes >= bytes
+      if !credited && refusedBytes > 0uL && bytes >= refusedBytes && allocator.ReleaseGeneration(heap) == refusedReleaseGeneration {
         DemoteChains(bytes)
         return VulkanImageResourceLookup{ Found: false }
       }
@@ -54,13 +55,14 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       let chainLevels = MipLevelCount(width, height)
       let chainBytes = ResidentImageBytes(width, height, chainLevels)
       var refused = false
-      allocator.BeginCacheGrowth()
+      if !credited { allocator.BeginCacheGrowth() }
       try {
-        if chainLevels > 1u && refusedDemand == 0uL && priorRefusedDemand == 0uL
+        if !credited && chainLevels > 1u && refusedDemand == 0uL && priorRefusedDemand == 0uL
           && (refusedChainBytes == 0uL || chainBytes < refusedChainBytes
           || allocator.ReleaseGeneration(heap) != refusedChainReleaseGeneration) {
             try {
               CreateImage(index, id, width, height, bytes, source, cacheable, samplerId, samplerMode, chainLevels)
+              demotedChainBytes = 0uL
               return Lookup(index, samplerId, samplerMode)
             } catch (pressure VulkanMemoryPressureException) {
               let releaseGeneration = allocator.ReleaseGeneration(heap)
@@ -73,6 +75,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
             }
           }
         CreateImage(index, id, width, height, bytes, source, cacheable, samplerId, samplerMode, 1u)
+        if credited { demotedChainBytes -= bytes }
       } catch (pressure VulkanMemoryPressureException) {
         let releaseGeneration = allocator.ReleaseGeneration(heap)
         refusedBytes = if refusedReleaseGeneration == releaseGeneration && refusedBytes > 0uL {
@@ -89,7 +92,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         }
         refused = true
       } finally {
-        allocator.EndCacheGrowth()
+        if !credited { allocator.EndCacheGrowth() }
       }
       if refused {
         DemoteChains(bytes)

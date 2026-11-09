@@ -64,6 +64,7 @@ internal unsafe partial class VulkanImageResources : IDisposable, VulkanGpuCache
   private var refusedChainBytes VkDeviceSize
   private var refusedDemand VkDeviceSize
   private var priorRefusedDemand VkDeviceSize
+  private var demotedChainBytes VkDeviceSize
   private var demotionCount uint64
   private var flushPrepared bool
   private var disposed bool

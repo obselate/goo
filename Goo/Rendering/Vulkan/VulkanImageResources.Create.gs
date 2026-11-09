@@ -356,6 +356,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
             demoted.Allocation = target.Allocation
             demoted.MipLevels = 1u
             demoted.ResidentBytes = chain.Bytes
+            demotedChainBytes += chain.Allocation!!.size - target.Allocation!!.size
             demoted.DemotionTarget = 0
             demoted.NearestDescriptor = BindDescriptorSet(index, chain.Id, chain.SamplerId,
               target.ImageView, VulkanImageSamplerMode.Nearest)
