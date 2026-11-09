@@ -169,8 +169,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.radii_y = radiusTopRight
       push.radii_z = radiusBottomRight
       push.radii_w = radiusBottomLeft
-      push.params_x = MathF.Round(opaqueBorderWidth, MidpointRounding.AwayFromZero)
-      push.params_y = MathF.Round(opaqueBorderHeight, MidpointRounding.AwayFromZero)
+      push.params_x = SnapBorderWidth(opaqueBorderWidth)
+      push.params_y = SnapBorderWidth(opaqueBorderHeight)
       push.stopPositions_x = phaseX
       push.stopPositions_y = phaseY
       let packed = PackColor(color, opacity)
@@ -179,6 +179,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if TryEmitOpaqueInterior(commandBuffer, bounds, transform, &push, color, opacity) { return }
       BindAndDraw(commandBuffer, primitivePipelines.SolidPipeline, *void(&push))
     }
+
+  private func SnapBorderWidth(value float32) float32 ->
+    value > 0.0F ? MathF.Max(MathF.Round(value, MidpointRounding.AwayFromZero), 1.0F) : 0.0F
 
   private func EmitShadow(
     commandBuffer VkCommandBuffer,
@@ -290,10 +293,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if bounds.IsEmpty {
         return
       }
-      let topWidth = ClampLength(MathF.Round(value.TopWidth, MidpointRounding.AwayFromZero), bounds.Height)
-      let bottomWidth = ClampLength(MathF.Round(value.BottomWidth, MidpointRounding.AwayFromZero), MathF.Max(bounds.Height - topWidth, 0.0F))
-      let rightWidth = ClampLength(MathF.Round(value.RightWidth, MidpointRounding.AwayFromZero), bounds.Width)
-      let leftWidth = ClampLength(MathF.Round(value.LeftWidth, MidpointRounding.AwayFromZero), MathF.Max(bounds.Width - rightWidth, 0.0F))
+      let topWidth = ClampLength(SnapBorderWidth(value.TopWidth), bounds.Height)
+      let bottomWidth = ClampLength(SnapBorderWidth(value.BottomWidth), MathF.Max(bounds.Height - topWidth, 0.0F))
+      let rightWidth = ClampLength(SnapBorderWidth(value.RightWidth), bounds.Width)
+      let leftWidth = ClampLength(SnapBorderWidth(value.LeftWidth), MathF.Max(bounds.Width - rightWidth, 0.0F))
       if value.Style != uint32(int32(BorderStyle.Solid))
         && value.Style != uint32(int32(BorderStyle.Dashed))
         && value.Style != uint32(int32(BorderStyle.Dotted)) {
