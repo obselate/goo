@@ -78,14 +78,15 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       index++
     }
     uploadRing.Collect(effectiveCompletedFence)
+    CompleteDemotions()
     var retired int32 = 0
     index = 0
     while index < entries.Length {
       let entry = entries[index]
       if entry.State == VulkanImageResourceState.Retiring && entry.RetireFence <= effectiveCompletedFence {
-        let logicalIndex = LogicalIndexForPhysical(index, entry)
+        let logicalIndex = if entry.Id.IsValid { LogicalIndexForPhysical(index, entry) } else { -1 }
         DestroyImage(index, entry)
-        CompleteLogicalRetirement(logicalIndex, entry)
+        if entry.Id.IsValid { CompleteLogicalRetirement(logicalIndex, entry) }
         if let currentDiagnostics = diagnostics {
           currentDiagnostics.AddImageRetirement(1uL)
         }
@@ -120,6 +121,8 @@ internal unsafe partial class VulkanImageResources : IDisposable {
 
   internal func BeginCompile() {
     compileTouch = nextTouch
+    priorRefusedDemand = refusedDemand
+    refusedDemand = 0uL
   }
 
   public func EvictionSerial(handle int32) uint64? {

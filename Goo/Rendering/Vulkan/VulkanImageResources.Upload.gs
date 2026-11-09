@@ -47,14 +47,17 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       }
       let heap = allocator.DeviceLocalHeap
       if refusedBytes > 0uL && bytes >= refusedBytes && allocator.ReleaseGeneration(heap) == refusedReleaseGeneration {
+        DemoteChains(bytes)
         return VulkanImageResourceLookup{ Found: false }
       }
       let index = if existingIndex >= 0 { existingIndex } else { EnsureEmptyIndex() }
       let chainLevels = MipLevelCount(width, height)
       let chainBytes = ResidentImageBytes(width, height, chainLevels)
+      var refused = false
       allocator.BeginCacheGrowth()
       try {
-        if chainLevels > 1u && (refusedChainBytes == 0uL || chainBytes < refusedChainBytes
+        if chainLevels > 1u && refusedDemand == 0uL && priorRefusedDemand == 0uL
+          && (refusedChainBytes == 0uL || chainBytes < refusedChainBytes
           || allocator.ReleaseGeneration(heap) != refusedChainReleaseGeneration) {
             try {
               CreateImage(index, id, width, height, bytes, source, cacheable, samplerId, samplerMode, chainLevels)
@@ -84,9 +87,13 @@ internal unsafe partial class VulkanImageResources : IDisposable {
             VulkanDiagnosticEventIds.ImagePressure, VulkanDiagnosticCategories.Resource,
             1uL, 0, uint64(bytes), uint64(allocator.Headroom(heap)))
         }
-        return VulkanImageResourceLookup{ Found: false }
+        refused = true
       } finally {
         allocator.EndCacheGrowth()
+      }
+      if refused {
+        DemoteChains(bytes)
+        return VulkanImageResourceLookup{ Found: false }
       }
       return Lookup(index, samplerId, samplerMode)
     }
@@ -209,7 +216,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         throw ArgumentException("Command buffer is null", "commandBuffer")
       }
       recordedBytes = 0uL
-      recordedBarriers = 0
+      recordedBarriers = RecordDemotions(commandBuffer)
       if uploadRing.Stats.ActiveRanges == 0 {
         return 0
       }
@@ -292,6 +299,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     if commandBuffer == nint(0) {
       throw ArgumentException("Command buffer is null", "commandBuffer")
     }
+    SubmitDemotions(commandBuffer, 0uL)
     if uploadRing.Stats.ActiveRanges == 0 {
       flushPrepared = false
       return 0
@@ -442,6 +450,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     fence uint64,
     expectedGeneration uint64) int32{
       let tracked = ValidateUploadSubmission(commandBuffer, fence, expectedGeneration)
+      SubmitDemotions(commandBuffer, fence)
       if tracked == 0 {
         return 0
       }

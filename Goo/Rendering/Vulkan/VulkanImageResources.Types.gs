@@ -40,6 +40,8 @@ internal data struct VulkanImageResourceEntry {
   var Bytes VkDeviceSize
   var ResidentBytes VkDeviceSize
   var MipLevels uint32
+  var DemotionSource int32
+  var DemotionTarget int32
   var SamplerId ResourceId
   var SamplerMode VulkanImageSamplerMode
   var Cacheable bool
@@ -80,6 +82,7 @@ internal data struct VulkanImageResourceStats {
   var Capacity int32
   var LiveCount int32
   var ResidentBytes VkDeviceSize
+  var DemotionCount uint64
   var LiveObjectCount uint64
   var DescriptorCapacity int32
   var BoundDescriptorCount int32
