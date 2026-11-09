@@ -570,7 +570,7 @@ namespace Facebook.Yoga
             float ownerWidth, float mainAxisOwnerSize,
             float availableInnerMainDim, float availableInnerCrossDim,
             float availableInnerWidth, float availableInnerHeight,
-            bool mainAxisOverflows, SizingMode sizingModeCrossDim,
+            bool mainAxisOverflows, SizingMode sizingModeCrossDim, bool shrinking,
             bool performLayout, ref LayoutData layoutMarkerData,
             uint depth, uint generationCount)
         {
@@ -590,8 +590,7 @@ namespace Facebook.Yoga
                     mainAxisOwnerSize, ownerWidth).Unwrap();
                 float updatedMainSize = childFlexBasis;
 
-                if (Comparison.IsDefined(flexLine.Layout.RemainingFreeSpace) &&
-                    flexLine.Layout.RemainingFreeSpace < 0)
+                if (shrinking)
                 {
                     flexShrinkScaledFactor =
                         -currentLineChild.ResolveFlexShrink() * childFlexBasis;
@@ -729,6 +728,7 @@ namespace Facebook.Yoga
             float baseMainSize = 0;
             float boundMainSize = 0;
             float deltaFreeSpace = 0;
+            float shrinkRatio = flexLine.Layout.RemainingFreeSpace / flexLine.Layout.TotalFlexShrinkScaledFactors;
 
             for (int i = 0; i < flexLine.ItemsInFlow.Count; i++)
             {
@@ -744,9 +744,7 @@ namespace Facebook.Yoga
                         -currentLineChild.ResolveFlexShrink() * childFlexBasis;
                     if (Comparison.IsDefined(flexShrinkScaledFactor) && flexShrinkScaledFactor != 0)
                     {
-                        baseMainSize = childFlexBasis +
-                            flexLine.Layout.RemainingFreeSpace /
-                                flexLine.Layout.TotalFlexShrinkScaledFactors * flexShrinkScaledFactor;
+                        baseMainSize = childFlexBasis + shrinkRatio * flexShrinkScaledFactor;
                         boundMainSize = BoundAxis.ComputeBoundAxis(
                             currentLineChild, mainAxis, direction,
                             Math.Max(baseMainSize, AutomaticMinimum(currentLineChild, mainAxis, direction,
@@ -847,7 +845,7 @@ namespace Facebook.Yoga
                 ownerWidth, mainAxisOwnerSize,
                 availableInnerMainDim, availableInnerCrossDim,
                 availableInnerWidth, availableInnerHeight,
-                mainAxisOverflows, sizingModeCrossDim, performLayout,
+                mainAxisOverflows, sizingModeCrossDim, originalFreeSpace < 0, performLayout,
                 ref layoutMarkerData, depth, generationCount);
 
             flexLine.Layout.RemainingFreeSpace = originalFreeSpace - distributedFreeSpace;

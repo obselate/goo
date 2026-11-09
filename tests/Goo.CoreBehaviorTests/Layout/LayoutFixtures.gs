@@ -100,6 +100,31 @@ internal class LayoutFixtures {
       || volume.Children[1].Children[0].Rect.W >= word.Width {
         return false
       }
+    let natural = List[float32]()
+    for width in []float32{ 400, 128 } {
+      for grow in []float32{ 0, 1 } {
+        let row = Container() {.FlexDirection: FlexDirection.Row,.Gap: 8}
+        for label in []string{ "HSL", "HSV", "OKLCH" } {
+          row.Children.Add(Button{ Height: 32, FlexGrow: grow, Padding: Edges{ Left: 12, Right: 12 },
+            Text{ Content: label, FontFamily: "DejaVu Sans", FontSize: 13 } })
+        }
+        let swatches = Reconciler{ Res: Resolver{} }.Mount(Container{ Width: width, AlignItems: AlignItems.Stretch, row })
+        Layout().Calculate(swatches, width, 100.0F)
+        for i in 0 ... 3 {
+          let w = swatches.Children[0].Children[i].Rect.W
+          if natural.Count < 3 { natural.Add(w) } else if width == 128.0F && w != natural[i] { return false }
+        }
+      }
+    }
+    let bounded = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 112,.FlexDirection: FlexDirection.Row,
+      Container{ Width: 49, MinWidth: 34, FlexGrow: 1 },
+      Container{ Width: 51, MinWidth: 34, FlexGrow: 1 },
+      Container{ Width: 69, MinWidth: 34, FlexGrow: 1 },
+    })
+    Layout().Calculate(bounded, 112.0F, 100.0F)
+    if bounded.Children[0].Rect.W != 34.0F || bounded.Children[1].Rect.W != 34.0F || bounded.Children[2].Rect.W != 44.0F {
+      return false
+    }
     let column = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 120,.Height: 200,
       Container{ Height: 40 },
       Container{ Height: 300, OverflowY: Overflow.Scroll, Container{ Height: 400 } },
