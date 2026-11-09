@@ -142,11 +142,11 @@ public partial class Window {
     if Modal || IsInputBlocked { return WindowOperationResult.Unsupported }
     if LayerShell != nil {
       let target = windowTarget!!
+      target.SetHidden(true)
       while target.QueueWorkPending {
         target.PollQueueCompletion()
         if target.QueueWorkPending { Thread.Sleep(1) }
       }
-      target.SetHidden(true)
       while target.RetirementWorkPending {
         target.PollQueueCompletion()
         if target.RetirementWorkPending { Thread.Sleep(1) }

@@ -189,12 +189,6 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
     if startupState != VulkanWindowStartupState.None {
       startupState = VulkanWindowStartupState.Closing
       if !DrainStartup() { return false }
-      if queueStage == QueueStagePresentPrepare {
-        queueMailbox?.ResetSubmitCompletion()
-        queueStage = QueueStageIdle
-        presentationRetirement.CancelPendingPresentationLatency()
-        ClearActiveFrame()
-      }
     }
     PollQueueCompletion()
     if queueStage != QueueStageIdle || frameBegun || pageCompletion != nil {

@@ -387,6 +387,14 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func TryQueuePresent() {
+    if hidden || closing {
+      queueMailbox?.ResetSubmitCompletion()
+      queueStage = QueueStageIdle
+      presentationRetirement.CancelPendingPresentationLatency()
+      CloseDiagnosticFrame(false)
+      ClearActiveFrame()
+      return
+    }
     guard let current = generation, let mailbox = queueMailbox,
     let activeRuntime = runtime else {
       queueStage = QueueStageIdle

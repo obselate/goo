@@ -106,6 +106,9 @@ internal data struct VulkanClipMaskAtlasGrowthTestSnapshot {
 }
 
 internal partial class VulkanWindowTarget {
+  internal prop PresentPrepareForTest bool { get -> queueStage == QueueStagePresentPrepare
+    && startupState == VulkanWindowStartupState.None }
+
   shared {
     private var nativeSwapchainCreateForTest unmanaged[Cdecl](VkDevice, *VkSwapchainCreateInfoKHR, *VkAllocationCallbacks, *VkSwapchainKHR) -> VkResult
     private var nativeSwapchainDestroyForTest unmanaged[Cdecl](VkDevice, VkSwapchainKHR, *VkAllocationCallbacks) -> void
@@ -1688,5 +1691,53 @@ internal class PreventedKeyRepeatCell : Cell {
       if event.Repeat { Repeats++ }
       event.PreventDefault()
     },
+  }
+}
+
+public class LayerWindowCloseSmoke {
+  shared {
+    public func Run() {
+      for hide in []bool{false, true} {
+        let window = Window{ Title: "Layer window close", Root: PopupSmokeCell{},
+          LayerShell: LayerWindowOptions{ Width: 160, Height: 100 } }.Open()
+        WindowReadbackTestFixture.ForceRender(window, 0.0, 15.0, true)
+        let target = window.CaptureTargetForTest()!!
+        window.RuntimeHoldNextQueueSubmitForTest()
+        window.ForceRenderForTest(0.0)
+        if !window.RuntimeWaitForHeldQueueCallForTest(5000) {
+          throw InvalidOperationException("Layer frame did not reach held submission")
+        }
+        if window.SdlHostForTest()!!.Hide() != WindowOperationResult.Accepted {
+          throw InvalidOperationException("Layer surface did not hide")
+        }
+        VulkanSharedRuntime.ReleaseHeldQueueCallForTest()
+        for _ in 0 ... 2000 {
+          target.PollQueueCompletion()
+          if target.PresentPrepareForTest { break }
+          Thread.Sleep(1)
+        }
+        if !target.PresentPrepareForTest || window.SdlHostForTest()!!.PrepareFirstPresent() {
+          throw InvalidOperationException("Hidden layer frame did not stop at present preparation")
+        }
+        if hide {
+          using let watchdog = Timer(_ -> {
+            Environment.FailFast("Layer hide did not finish within five seconds")
+          }, nil, 5000, Timeout.Infinite)
+          if window.Hide() != WindowOperationResult.Accepted
+            || target.QueueWorkPending || target.RetirementWorkPending {
+            throw InvalidOperationException("Layer hide did not retire its pending frame")
+          }
+        }
+        window.RequestClose()
+        for _ in 0 ... 2000 {
+          SdlRuntime.PumpEvents(64)
+          window.PumpScheduled(0.0)
+          if !window.IsOpen { break }
+          Thread.Sleep(1)
+        }
+        if window.IsOpen { throw InvalidOperationException("Layer close did not finish within 2000 passes") }
+      }
+      Console.WriteLine("layer-window-close: close=passed hide=passed")
+    }
   }
 }
