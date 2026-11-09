@@ -531,6 +531,10 @@ public partial class Window {
             profiler.Record(FrameProfileStage.Render, renderProfile)
           }
           let submitted = windowTarget?.LastFrameSubmitted == true
+          memoryPressureWaiting = !submitted && windowTarget?.MemoryPressureWaiting == true
+          if memoryPressureWaiting {
+            resolver.VisualDirty = false
+          }
           if submitted || windowTarget?.QueueWorkPending == true {
             markFrameRendered()
           }
@@ -564,10 +568,10 @@ public partial class Window {
   // latch Pump into an unpaced, unrendered poll spin instead of a bounded
   // sleep. idleWaitMs() below is where their timing actually gets honored.
   private func hasDemand() bool -> motionPump.Active || resolver.Animating.Count > 0
-    || renderDirty || pendingRebuild != 0 || resolver.Scrollbars.HasPending
+    || renderDirty && !memoryPressureWaiting || pendingRebuild != 0 || resolver.Scrollbars.HasPending
     || pendingImageCompletion != 0 || pendingRetainedInvalidation != 0 || hasScrollDemand()
     || accessibility?.HasDemand == true || hasPostedActions() || MetricSubscriptions.HasDemand(this)
-    || windowTarget?.NeedsRender == true || windowTarget?.QueueWorkPending == true
+    || windowTarget?.NeedsRender == true && !memoryPressureWaiting || windowTarget?.QueueWorkPending == true
     || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0
     || host?.IsClosing == true
     || scheduler.HasPendingStartup()

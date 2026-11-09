@@ -180,7 +180,6 @@ internal unsafe partial class VulkanWindowTarget {
         created.Format,
         windowObjectAccounting,
         policy.OffscreenLayerInitialCapacity,
-        policy.OffscreenLayerHardBytes,
         layerRuntime.Facts.MaxImageDimension2D,
         diagnostics)
     }

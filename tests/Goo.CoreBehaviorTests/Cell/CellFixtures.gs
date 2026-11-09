@@ -1236,6 +1236,7 @@ internal class DeferredCloseTarget : WindowRenderTarget {
   public event PresentationAccepted Action[int64]
   public prop ProfileSink FrameProfileSink { get -> throw NotSupportedException() }
   public prop NeedsRender bool { get -> false }
+  public prop MemoryPressureWaiting bool { get -> false }
   public prop LastFrameSubmitted bool { get -> false }
   public prop QueueWorkPending bool { get -> QueuePending }
   public prop RetirementWorkPending bool { get -> true }

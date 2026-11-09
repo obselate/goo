@@ -4,7 +4,7 @@ import System
 import System.Collections.Generic
 import System.Runtime.CompilerServices
 
-internal unsafe sealed partial class VulkanTextScene {
+internal unsafe sealed partial class VulkanTextScene : VulkanGpuCache {
   internal const MaximumStrokeWidth float32 = 4.0F
   private const TextEffectFill uint32 = 0u
   private const TextEffectShadow uint32 = 1u
@@ -85,6 +85,7 @@ internal unsafe sealed partial class VulkanTextScene {
     buildWorkspace = VulkanTextSegmentBuildWorkspace(4)
     entryMetrics = TextMetrics()
     EnsureAtlasStates()
+    nativeAtlases.TrackAtlases(this)
   }
 
   internal func BeginCompile(completedSerial uint64, deviceScale float32) {

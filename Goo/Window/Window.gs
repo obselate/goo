@@ -600,6 +600,7 @@ public partial class Window {
   private let childDiffScratch ChildDiffScratch
   private var cellTransactionActive bool
   private var renderDirty bool
+  private var memoryPressureWaiting bool
   private var hookInstalled bool
   private var paintResourceHook Action?
   private var shaderEffectInvalidatedHook Action?

@@ -45,20 +45,32 @@ internal unsafe partial class VulkanImageResources : IDisposable {
           throw InvalidOperationException("Vulkan image version is retiring")
         }
       }
-      if source.Bytes > logicalStats.LogicalSourceBudget {
-        throw InvalidOperationException("Vulkan image logical source hard limit exceeded")
-      }
-      if bytes > residentByteBudget {
-        throw InvalidOperationException("Vulkan image resident hard limit exceeded")
-      }
-      if !TryEnsureResidentCapacity(bytes) {
+      let heap = allocator.DeviceLocalHeap
+      if refusedBytes > 0uL && bytes >= refusedBytes && allocator.ReleaseGeneration(heap) == refusedReleaseGeneration {
         return VulkanImageResourceLookup{ Found: false }
       }
-      if !TryEnsureLogicalSourceCapacity(id, source.Bytes) {
+      let index = if existingIndex >= 0 { existingIndex } else { EnsureEmptyIndex() }
+      allocator.BeginCacheGrowth()
+      try {
+        CreateImage(index, id, width, height, bytes, source, cacheable, samplerId, samplerMode)
+      } catch (pressure VulkanMemoryPressureException) {
+        let releaseGeneration = allocator.ReleaseGeneration(heap)
+        refusedBytes = if refusedReleaseGeneration == releaseGeneration && refusedBytes > 0uL {
+          Math.Min(refusedBytes, bytes)
+        } else {
+          bytes
+        }
+        refusedReleaseGeneration = releaseGeneration
+        if let currentDiagnostics = diagnostics {
+          currentDiagnostics.AddImagePressureFailure(1uL)
+          currentDiagnostics.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
+            VulkanDiagnosticEventIds.ImagePressure, VulkanDiagnosticCategories.Resource,
+            1uL, 0, uint64(bytes), uint64(allocator.Headroom(heap)))
+        }
         return VulkanImageResourceLookup{ Found: false }
+      } finally {
+        allocator.EndCacheGrowth()
       }
-      let index = if existingIndex >= 0 { existingIndex } else { FindEmptyIndex() }
-      CreateImage(index, id, width, height, bytes, source, cacheable, samplerId, samplerMode)
       return Lookup(index, samplerId, samplerMode)
     }
 

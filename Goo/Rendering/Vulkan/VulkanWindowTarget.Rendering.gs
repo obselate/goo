@@ -119,6 +119,11 @@ internal unsafe partial class VulkanWindowTarget {
       } else if let atlas = clipMaskAtlas {
         atlas.Collect(completedGraphicsSubmissionSerial)
       }
+      memoryAllocator?.BeginFrame(completedGraphicsSubmissionSerial)
+      pressureWaiting = false
+      if pressureHeapIndex >= 0 {
+        attemptHeadroom = memoryAllocator?.Headroom(uint32(pressureHeapIndex)) ?? 0uL
+      }
       presentationRetirement.CollectCompleted(slotIndex, selectedSlot.LastCompletedSerial)
       CollectRetiredSwapchains()
       var imageIndex uint32 = 0u
@@ -421,10 +426,13 @@ internal unsafe partial class VulkanWindowTarget {
           renderer.ClearTimestampRecording()
           RecordDiagnosticRecord(recordStart, sceneCompiler.Frame, recordResult)
           frameRendered = true
+          pressureHeapIndex = -1
         }
       }
     } catch (error Exception) {
-      CaptureDiagnosticFatal(-1, VulkanDiagnosticEventIds.CommandRecord)
+      if !(error is VulkanMemoryPressureException) {
+        CaptureDiagnosticFatal(-1, VulkanDiagnosticEventIds.CommandRecord)
+      }
       if let renderer = primitiveRenderer {
         try { renderer.ClearTimestampRecording() } catch (cleanup Exception) { }
         try { renderer.ReleaseImageReferences(sceneCompiler.Frame) } catch (cleanup Exception) { }
@@ -442,6 +450,17 @@ internal unsafe partial class VulkanWindowTarget {
       CaptureDiagnosticValidationBoundary()
       presentationRetirement.CancelPendingPresentationLatency()
       ClearActiveFrame()
+      if let pressure = error as VulkanMemoryPressureException? {
+        frameFailureRetryable = true
+        let sameHeap = pressureHeapIndex == int32(pressure.HeapIndex)
+        pressureWaiting = sameHeap && attemptHeadroom <= pressureHeadroom
+        pressureHeapIndex = int32(pressure.HeapIndex)
+        pressureHeadroom = if sameHeap { attemptHeadroom } else { memoryAllocator?.Headroom(pressure.HeapIndex) ?? 0uL }
+        if !pressureWaiting {
+          host.Wake()
+        }
+        return
+      }
       throw error
     }
   }

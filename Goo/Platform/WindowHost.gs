@@ -137,6 +137,7 @@ internal interface WindowRenderTarget {
   event PresentationAccepted Action[int64]
   prop ProfileSink FrameProfileSink { get; }
   prop NeedsRender bool { get; }
+  prop MemoryPressureWaiting bool { get; }
   prop LastFrameSubmitted bool { get; }
   prop QueueWorkPending bool { get; }
   prop RetirementWorkPending bool { get; }

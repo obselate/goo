@@ -69,9 +69,17 @@ internal unsafe sealed partial class VulkanTextScene {
     var state = CurrentState()
     if uint64(state.NextByteOffset) + totalByteCount > state.Atlas.ByteSize
       || state.KeyCount >= int32(state.Atlas.ByteSize / 8uL) {
-        if atlasSet.CanCreateAtlas || !RecycleAtlas() {
-          let createdIndex = atlasSet.CreateAtlas()
-          trimAtlasPages = trimAtlasPages || !atlasSet.CanCreateAtlas
+        var createdIndex = -1
+        trimAtlasPages = true
+        try {
+          createdIndex = atlasSet.CreateAtlas()
+        } catch (pressure VulkanMemoryPressureException) {
+          if !RecycleAtlas() {
+            atlasSet.RecordPressureFailure()
+            return nil
+          }
+        }
+        if createdIndex >= 0 {
           if states.Length < atlasSet.AtlasSlotCapacity {
             Array.Resize(ref states, atlasSet.AtlasSlotCapacity)
             Array.Resize(ref activeAtlasUse, atlasSet.AtlasSlotCapacity)
@@ -218,6 +226,19 @@ internal unsafe sealed partial class VulkanTextScene {
       }
       index = index + 1
     }
+  }
+
+  public func EvictionSerial(handle int32) uint64? ->
+    if handle != atlasSet.CurrentAtlasIndex && handle < activeAtlasUse.Length && !activeAtlasUse[handle]
+      && atlasSet.IsActive(handle) && atlasSet.CanRetireAtlas(handle, completedGlobalSubmissionSerial) {
+        atlasSet.LastUseSerial(handle)
+      } else { nil }
+
+  public func Evict(handle int32) {
+    if !atlasSet.TryRetireAtlas(handle, completedGlobalSubmissionSerial) {
+      throw InvalidOperationException("Vulkan text atlas eviction candidate did not retire")
+    }
+    EnsureAtlasStates()
   }
 
   private func RecycleAtlas() bool {

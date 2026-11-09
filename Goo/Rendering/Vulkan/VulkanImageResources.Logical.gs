@@ -29,7 +29,6 @@ internal data struct VulkanResourceRegistryStats {
   var ResidentBytes VkDeviceSize
   var RetiredBytes VkDeviceSize
   var LogicalSourceBytes VkDeviceSize
-  var LogicalSourceBudget VkDeviceSize
 }
 
 internal data struct VulkanImageLogicalRecord {
@@ -54,12 +53,9 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         if existing.PhysicalSlot >= 0 {
           throw InvalidOperationException("Vulkan image logical resource already has a physical slot")
         }
-        ValidateLogicalSourceCharge(existing.Bytes, source.Bytes)
         return existingIndex
       }
-      let index = FindEmptyLogicalIndex()
-      ValidateLogicalSourceCharge(0uL, source.Bytes)
-      return index
+      return FindEmptyLogicalIndex()
     }
 
   private func CommitLogicalRegistration(
@@ -190,9 +186,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
 
   private func ClearLogicalResources() {
     Array.Clear(logicalRecords, 0, logicalRecords.Length)
-    logicalStats = VulkanResourceRegistryStats{
-      LogicalSourceBudget: logicalStats.LogicalSourceBudget,
-    }
+    logicalStats = VulkanResourceRegistryStats{}
   }
 
   private func FindLogicalIndex(id ResourceId) int32 {
@@ -208,10 +202,24 @@ internal unsafe partial class VulkanImageResources : IDisposable {
   }
 
   private func FindEmptyLogicalIndex() int32 {
+    var detached = -1
     for index in 0 ... logicalRecords.Length {
-      if !logicalRecords[index].Id.IsValid {
+      let logical = logicalRecords[index]
+      if !logical.Id.IsValid {
         return index
       }
+      if detached < 0 && logical.PhysicalSlot < 0 {
+        detached = index
+      }
+    }
+    if detached >= 0 {
+      let logical = logicalRecords[detached]
+      logicalStats.EntryCount--
+      logicalStats.LogicalCount--
+      logicalStats.LogicalBytes -= logical.Bytes
+      logicalStats.LogicalSourceBytes -= logical.Bytes
+      logicalRecords[detached] = VulkanImageLogicalRecord{}
+      return detached
     }
     let empty = logicalRecords.Length
     if empty == MaxCapacity {
@@ -228,38 +236,4 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     return empty
   }
 
-  private func TryEnsureLogicalSourceCapacity(id ResourceId, bytes VkDeviceSize) bool {
-    let existingIndex = FindLogicalIndex(id)
-    let oldBytes = if existingIndex >= 0 { logicalRecords[existingIndex].Bytes } else { 0uL }
-    let available = logicalStats.LogicalSourceBudget - bytes
-    if logicalStats.LogicalSourceBytes - oldBytes <= available {
-      return true
-    }
-    for index in 0 ... logicalRecords.Length {
-      if index == existingIndex {
-        continue
-      }
-      let logical = logicalRecords[index]
-      if !logical.Id.IsValid || logical.PhysicalSlot >= 0 {
-        continue
-      }
-      logicalStats.EntryCount--
-      logicalStats.LogicalCount--
-      logicalStats.LogicalBytes -= logical.Bytes
-      logicalStats.LogicalSourceBytes -= logical.Bytes
-      logicalRecords[index] = VulkanImageLogicalRecord{}
-      if logicalStats.LogicalSourceBytes - oldBytes <= available {
-        return true
-      }
-    }
-    return false
-  }
-
-  private func ValidateLogicalSourceCharge(oldBytes VkDeviceSize, newBytes VkDeviceSize) {
-    let withoutOld = logicalStats.LogicalSourceBytes - oldBytes
-    if newBytes > logicalStats.LogicalSourceBudget
-      || withoutOld > logicalStats.LogicalSourceBudget - newBytes{
-        throw InvalidOperationException("Vulkan logical source byte budget exceeded")
-      }
-  }
 }

@@ -167,14 +167,19 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
     if testMode {
       return VulkanPathAtlas(replacementWordCapacity)
     }
-    return VulkanPathAtlas(
-      device,
-      dispatch,
-      allocator!!,
-      replacementWordCapacity * WordBytes,
-      uint32(maximumWordCapacity * WordBytes),
-      descriptorSetLayout,
-      objectAccounting)
+    allocator!!.BeginCacheGrowth()
+    try {
+      return VulkanPathAtlas(
+        device,
+        dispatch,
+        allocator!!,
+        replacementWordCapacity * WordBytes,
+        uint32(maximumWordCapacity * WordBytes),
+        descriptorSetLayout,
+        objectAccounting)
+    } finally {
+      allocator!!.EndCacheGrowth()
+    }
   }
 
   internal func QueueUpload(source * uint32, sourceWordCount VkDeviceSize) bool -> QueueUpload(source, 0uL, sourceWordCount)

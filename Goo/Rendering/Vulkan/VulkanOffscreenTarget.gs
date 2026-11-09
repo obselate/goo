@@ -1464,7 +1464,6 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
         targetFormat,
         objectAccounting,
         resourcePolicy.OffscreenLayerInitialCapacity,
-        resourcePolicy.OffscreenLayerHardBytes,
         sharedLease.Facts.MaxImageDimension2D,
         nil)
       primitiveRenderer!!.SetLayerPool(layerPool)

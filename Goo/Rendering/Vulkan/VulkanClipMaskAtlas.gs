@@ -391,7 +391,6 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
 }
 
 internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
-  private const DefaultByteBudget VkDeviceSize = 67108864uL
   private const InitialRegionCapacity int32 = 64
   private const StaleSerialWindow uint64 = 2uL
 
@@ -503,7 +502,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
         throw ArgumentOutOfRangeException("nativeWidth")
       }
       let selectedFormat = SelectFormat(nativeFormatSupport)
-      let selectedBudget = if nativeByteBudget == 0uL { DefaultByteBudget } else { nativeByteBudget }
+      let selectedBudget = if nativeByteBudget == 0uL { uint64.MaxValue } else { nativeByteBudget }
       let selectedBytesPerPixel = if selectedFormat == VulkanClipMaskFormat.R8Unorm { 1u } else { 4u }
       if selectedBudget < uint64(selectedBytesPerPixel) {
         throw ArgumentOutOfRangeException("nativeByteBudget")
@@ -590,12 +589,14 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
             IncrementPressureEventCount()
             existing.ContentWidth = contentWidth
             existing.ContentHeight = contentHeight
-            var targetLayerCount = RequiredGrowthLayerCount(0u, 0u, false)
-            while targetLayerCount > maximumLayerCount {
-              ReduceResolution()
-              targetLayerCount = RequiredGrowthLayerCount(0u, 0u, false)
+            while true {
+              var targetLayerCount = RequiredGrowthLayerCount(0u, 0u, false)
+              while targetLayerCount > maximumLayerCount {
+                ReduceResolution()
+                targetLayerCount = RequiredGrowthLayerCount(0u, 0u, false)
+              }
+              if TryReplaceGeneration(targetLayerCount) { break }
             }
-            ReplaceGeneration(targetLayerCount, width, height)
             placement = VulkanClipMaskRegionPlacement{
               Layer: existing.Layer,
               X: existing.PaddedX,
@@ -642,14 +643,16 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
         IncrementPressureEventCount()
         EvictRegions(false)
         if !TryPlace(contentWidth, contentHeight, ref placement) {
-          var targetLayerCount = RequiredGrowthLayerCount(contentWidth, contentHeight, true)
-          while targetLayerCount > maximumLayerCount {
-            ReduceResolution()
-            contentWidth = Math.Max(1u, contentWidth / 2u)
-            contentHeight = Math.Max(1u, contentHeight / 2u)
-            targetLayerCount = RequiredGrowthLayerCount(contentWidth, contentHeight, true)
+          while true {
+            var targetLayerCount = RequiredGrowthLayerCount(contentWidth, contentHeight, true)
+            while targetLayerCount > maximumLayerCount {
+              ReduceResolution()
+              contentWidth = Math.Max(1u, contentWidth / 2u)
+              contentHeight = Math.Max(1u, contentHeight / 2u)
+              targetLayerCount = RequiredGrowthLayerCount(contentWidth, contentHeight, true)
+            }
+            if TryReplaceGeneration(targetLayerCount) { break }
           }
-          ReplaceGeneration(targetLayerCount, width, height)
           if !TryPlace(contentWidth, contentHeight, ref placement) {
             throw InvalidOperationException("Vulkan clip mask atlas packing is inconsistent")
           }
@@ -685,13 +688,25 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
     resolutionEvictionCount = evictionCount
     let priorShift = resolutionShift
     resolutionShift = 0
+    maximumLayerCount = MaximumLayers(width, height, bytesPerPixel, byteBudget)
     let required = PackedLayerCount(width, height, maximumLayerCount, 0u, 0u, false, true)
     if required <= maximumLayerCount {
       for record in regionOrder {
         record.ContentWidth = record.ScreenWidth
         record.ContentHeight = record.ScreenHeight
       }
-      ReplaceGeneration(required, width, height)
+      allocator.BeginCacheGrowth()
+      try {
+        ReplaceGeneration(required, width, height)
+      } catch (pressure VulkanMemoryPressureException) {
+        resolutionShift = priorShift
+        for record in regionOrder {
+          record.ContentWidth = Math.Max(1u, record.ScreenWidth >> priorShift)
+          record.ContentHeight = Math.Max(1u, record.ScreenHeight >> priorShift)
+        }
+      } finally {
+        allocator.EndCacheGrowth()
+      }
     } else {
       resolutionShift = priorShift
     }
@@ -1183,6 +1198,27 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
       }
       return false
     }
+
+  private func TryReplaceGeneration(newLayerCount uint32) bool {
+    let growth = maximumLayerCount > activeLayerCount
+    if growth {
+      allocator.BeginCacheGrowth()
+    }
+    try {
+      ReplaceGeneration(newLayerCount, width, height)
+      return true
+    } catch (pressure VulkanMemoryPressureException) {
+      if !growth {
+        throw pressure
+      }
+      maximumLayerCount = activeLayerCount
+      return false
+    } finally {
+      if growth {
+        allocator.EndCacheGrowth()
+      }
+    }
+  }
 
   private func ReplaceGeneration(newLayerCount uint32, newWidth uint32, newHeight uint32) {
     using let profile = FrameProfileScope(FrameProfileStage.ClipAtlas)

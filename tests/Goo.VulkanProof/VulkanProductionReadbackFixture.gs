@@ -181,8 +181,7 @@ internal unsafe partial class VulkanImageResources {
   internal prop LogicalCapacityForProof int32{ get -> logicalRecords.Length }
 
   internal func CreateTinyForProof() VulkanImageResources ->
-  VulkanImageResources(device, dispatch, allocator, 1, 1, 96uL, 96uL,
-    16uL, 16uL, 1, nil, generation, objectAccounting)
+  VulkanImageResources(device, dispatch, allocator, 1, 1, 16uL, 16uL, 1, nil, generation, objectAccounting)
 
   internal func CopyLogicalResourcesForProof(destination []VulkanLogicalResource) int32 {
     EnsureOpen()

@@ -112,6 +112,10 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   private var lastPresentedImagePromoted bool
   private var frameFailed bool
   private var frameFailureRetryable bool
+  private var pressureHeapIndex int32 = -1
+  private var pressureWaiting bool
+  private var pressureHeadroom VkDeviceSize
+  private var attemptHeadroom VkDeviceSize
   private var textRedrawPending bool
   private var imageRedrawPending bool
   private var pathRedrawPending bool
@@ -170,6 +174,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   }
 
   public prop LastFrameSubmitted bool{ get -> lastFrameSubmitted }
+  public prop MemoryPressureWaiting bool{ get -> pressureWaiting }
   public prop QueueWorkPending bool{ get -> queueStage != QueueStageIdle || pageCompletion != nil || queuedPage != nil }
   public prop RetirementWorkPending bool{
     get -> !disposed && runtime?.DeviceLost != true

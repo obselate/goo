@@ -236,25 +236,11 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     return -1
   }
 
-  private func TryEnsureResidentCapacity(bytes VkDeviceSize) bool {
-    if bytes > residentByteBudget {
-      return false
-    }
-    while residentBytes > residentByteBudget - bytes {
-      if !EvictLeastRecentlyUsed() {
-        if let currentDiagnostics = diagnostics {
-          currentDiagnostics.AddImagePressureFailure(1uL)
-          currentDiagnostics.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
-            VulkanDiagnosticEventIds.ImagePressure, VulkanDiagnosticCategories.Resource,
-            1uL, 0, uint64(bytes), uint64(residentByteBudget - residentBytes))
-        }
-        return false
-      }
-    }
+  private func EnsureEmptyIndex() int32 {
     if FindEmptyIndex() < 0 {
       EnsureImageCapacity(entries.Length + 1)
     }
-    return true
+    return FindEmptyIndex()
   }
 
   private func EnsureImageCapacity(required int32) {
@@ -294,12 +280,6 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       currentReferenceCounts = previousReferences
       descriptorSets = previousDescriptorSets
       throw error
-    }
-  }
-
-  private func EnsureLogicalPublication(bytes VkDeviceSize) {
-    if bytes > residentByteBudget || logicalStats.ResidentBytes > residentByteBudget - bytes {
-      throw InvalidOperationException("Vulkan image registry byte budget exceeded")
     }
   }
 

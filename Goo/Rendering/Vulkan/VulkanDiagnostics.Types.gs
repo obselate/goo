@@ -154,12 +154,15 @@ internal data struct VulkanDiagnosticCounterSnapshot {
   var heapBudgetSampleCurrent uint32
   var heapBudget uint64
   var driverHeapUsage uint64
+  var heapHeadroom uint64
+  var memoryEvictionCount uint64
+  var memoryAllocationRetryCount uint64
+  var memoryPressureCount uint64
   var vulkanObjectCount uint64
   var vulkanObjectAllocationCount uint64
   var vulkanDeviceMemoryAllocationCount uint64
   var vulkanDeviceMemoryBytes uint64
   var cacheBytes uint64
-  var imageByteBudget uint64
   var imageResidentBytes uint64
   var imageLiveObjectCount uint64
   var imagePeakResidentBytes uint64
@@ -168,12 +171,11 @@ internal data struct VulkanDiagnosticCounterSnapshot {
   var imageUploadDeferredCount uint64
   var imageUploadCompletedCount uint64
   var imagePressureFailureCount uint64
+  var textAtlasPressureFailureCount uint64
   var textAtlasCount uint64
-  var textAtlasByteBudget uint64
   var textAtlasResidentBytes uint64
   var textAtlasLiveObjectCount uint64
   var textAtlasPeakCount uint64
-  var textAtlasPeakByteBudget uint64
   var textAtlasPeakResidentBytes uint64
   var textAtlasPeakLiveObjectCount uint64
   var textAtlasRecordedUploadBytes uint64
@@ -253,7 +255,6 @@ internal data struct VulkanDiagnosticCounterSnapshot {
   var validationErrorCount uint64
   var resultCount uint64
   var resultFailureCount uint64
-  var layerPoolByteBudget uint64
   var layerPoolResidentBytes uint64
   var layerPoolTargetCount uint64
   var layerPoolLeasedCount uint64
@@ -285,7 +286,6 @@ internal data struct VulkanDiagnosticLiveSnapshot {
 internal data struct VulkanDiagnosticTextAtlasContribution {
   var Id uint64
   var AtlasCount uint64
-  var ByteBudget uint64
   var ResidentBytes uint64
   var LiveObjectCount uint64
 }

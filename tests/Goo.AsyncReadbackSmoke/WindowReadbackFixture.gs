@@ -260,13 +260,13 @@ internal partial class VulkanWindowTarget {
   internal func LayerResolutionShiftForTest() int32 -> layerPool?.LayerResolutionShift ?? 0
   internal func ClipAtlasStatsForTest() VulkanClipMaskAtlasStats ->
     clipMaskAtlas?.Stats ?? VulkanClipMaskAtlasStats{}
-  internal func SetRenderBudgetsForTest(layerBytes uint64, clipBytes uint64) {
+  internal func ResetRenderResourcesForTest(headroom int64?) {
     guard let activeRuntime = runtime, let allocator = memoryAllocator,
       let resources = imageResources, let current = generation else {
-      throw InvalidOperationException("Render budget fixture resources are unavailable")
+      throw InvalidOperationException("Render reset fixture resources are unavailable")
     }
     if WaitDeviceIdleResult() != VkConstants.VK_SUCCESS || !ClearReadbackStorage() {
-      throw InvalidOperationException("Render budget fixture could not retire prior frame resources")
+      throw InvalidOperationException("Render reset fixture could not retire prior frame resources")
     }
     let completed = CompletedGlobalSubmissionSerial()
     primitiveRenderer?.Collect(completed)
@@ -277,15 +277,23 @@ internal partial class VulkanWindowTarget {
     layerPool = nil
     clipMaskAtlas?.RetireAll(completed)
     clipMaskAtlas?.Dispose()
+    allocator.SetHeadroomForTest(nil)
     clipMaskAtlas = VulkanClipMaskAtlas(device, dispatch, allocator,
       current.Extent.width, current.Extent.height, clipMaskFormatSupport,
-      clipBytes, activeRuntime.Generation, windowObjectAccounting, diagnostics)
+      0uL, activeRuntime.Generation, windowObjectAccounting, diagnostics)
     RecreateSwapchain(framebufferWidth, framebufferHeight)
     layerPool?.Dispose()
     layerPool = VulkanOffscreenLayerPool(device, dispatch, allocator,
       resources.DescriptorSetLayout, current.Format, windowObjectAccounting,
-      8, layerBytes, activeRuntime.Facts.MaxImageDimension2D, diagnostics)
+      8, activeRuntime.Facts.MaxImageDimension2D, diagnostics)
     primitiveRenderer!!.SetLayerPool(layerPool)
+    allocator.SetHeadroomForTest(headroom)
+  }
+  internal func SetMemoryHeadroomForTest(bytes int64?) {
+    memoryAllocator!!.SetHeadroomForTest(bytes)
+  }
+  internal func FailMemoryAllocationsForTest(count int32) {
+    memoryAllocator!!.FailAllocationsForTest(count)
   }
 
   internal func DiagnosticCountersSnapshotForTest() VulkanDiagnosticCounterSnapshot {

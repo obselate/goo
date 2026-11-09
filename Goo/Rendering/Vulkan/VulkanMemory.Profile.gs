@@ -96,7 +96,6 @@ internal unsafe partial class VulkanMemoryAllocator {
   }
 
   private func ProfileHeaps(recorder FrameRecorder, now int64) {
-    budget.Refresh()
     let validity = if budget.Available { "available" } else { "unavailable" }
     for heap in 0 ... int32(memoryProperties.memoryHeapCount) {
       let flags = uint64(MemoryHeap(memoryProperties, uint32(heap)).flags)
@@ -104,6 +103,7 @@ internal unsafe partial class VulkanMemoryAllocator {
         heap: heap, flags: flags, validity: validity)
       ProfileCounter(recorder, now, "driver.heap.budget", budget.HeapBudget(uint32(heap)),
         heap: heap, flags: flags, validity: validity)
+      ProfileCounter(recorder, now, "driver.heap.headroom", Headroom(uint32(heap)), heap: heap, flags: flags)
     }
   }
 

@@ -30,7 +30,6 @@ internal unsafe partial class VulkanDiagnostics {
   private let textAtlasContributions List[VulkanDiagnosticTextAtlasContribution]
   private var nextTextAtlasContributionId uint64 = 1uL
   private var textAtlasContributionAtlasCount uint64
-  private var textAtlasContributionByteBudget uint64
   private var textAtlasContributionResidentBytes uint64
   private var textAtlasContributionLiveObjectCount uint64
   private var traceWrite int64
@@ -629,10 +628,6 @@ internal unsafe partial class VulkanDiagnostics {
     if !EnterWriter() { return }
     try { counters.AddUploadBytes(value) } finally { ExitWriter() }
   }
-  internal func SetImageByteBudget(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetImageByteBudget(value) } finally { ExitWriter() }
-  }
   internal func SetImageResidentBytes(value uint64) {
     if !EnterWriter() { return }
     try { counters.SetImageResidentBytes(value) } finally { ExitWriter() }
@@ -669,13 +664,17 @@ internal unsafe partial class VulkanDiagnostics {
     if !EnterWriter() { return }
     try { counters.AddImagePressureFailure(value) } finally { ExitWriter() }
   }
+  internal func AddTextAtlasPressureFailure(value uint64) {
+    if !EnterWriter() { return }
+    try { counters.AddTextAtlasPressureFailure(value) } finally { ExitWriter() }
+  }
+  internal func SetMemoryPolicy(headroom uint64, evictions uint64, retries uint64, pressure uint64) {
+    if !EnterWriter() { return }
+    try { counters.SetMemoryPolicy(headroom, evictions, retries, pressure) } finally { ExitWriter() }
+  }
   internal func SetTextAtlasCount(value uint64) {
     if !EnterWriter() { return }
     try { counters.SetTextAtlasCount(value) } finally { ExitWriter() }
-  }
-  internal func SetTextAtlasByteBudget(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetTextAtlasByteBudget(value) } finally { ExitWriter() }
   }
   internal func SetTextAtlasResidentBytes(value uint64) {
     if !EnterWriter() { return }
@@ -688,10 +687,6 @@ internal unsafe partial class VulkanDiagnostics {
   internal func SetTextAtlasPeakCount(value uint64) {
     if !EnterWriter() { return }
     try { counters.SetTextAtlasPeakCount(value) } finally { ExitWriter() }
-  }
-  internal func SetTextAtlasPeakByteBudget(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetTextAtlasPeakByteBudget(value) } finally { ExitWriter() }
   }
   internal func SetTextAtlasPeakResidentBytes(value uint64) {
     if !EnterWriter() { return }
@@ -745,7 +740,7 @@ internal unsafe partial class VulkanDiagnostics {
     }
   }
 
-  internal func SetTextAtlasContribution(id uint64, atlasCount uint64, byteBudget uint64,
+  internal func SetTextAtlasContribution(id uint64, atlasCount uint64,
     residentBytes uint64, liveObjectCount uint64) {
       if id == 0uL || IsSealed {
         return
@@ -757,25 +752,20 @@ internal unsafe partial class VulkanDiagnostics {
           if current.Id == id {
             let nextAtlasCount = ReplaceTextAtlasContribution(
               textAtlasContributionAtlasCount, current.AtlasCount, atlasCount)
-            let nextByteBudget = ReplaceTextAtlasContribution(
-              textAtlasContributionByteBudget, current.ByteBudget, byteBudget)
             let nextResidentBytes = ReplaceTextAtlasContribution(
               textAtlasContributionResidentBytes, current.ResidentBytes, residentBytes)
             let nextLiveObjectCount = ReplaceTextAtlasContribution(
               textAtlasContributionLiveObjectCount, current.LiveObjectCount, liveObjectCount)
             textAtlasContributionAtlasCount = nextAtlasCount
-            textAtlasContributionByteBudget = nextByteBudget
             textAtlasContributionResidentBytes = nextResidentBytes
             textAtlasContributionLiveObjectCount = nextLiveObjectCount
             textAtlasContributions[index] = VulkanDiagnosticTextAtlasContribution{
               Id: id,
               AtlasCount: atlasCount,
-              ByteBudget: byteBudget,
               ResidentBytes: residentBytes,
               LiveObjectCount: liveObjectCount,
             }
             counters.SetTextAtlasCount(nextAtlasCount)
-            counters.SetTextAtlasByteBudget(nextByteBudget)
             counters.SetTextAtlasResidentBytes(nextResidentBytes)
             counters.SetTextAtlasLiveObjectCount(nextLiveObjectCount)
             return
@@ -796,19 +786,15 @@ internal unsafe partial class VulkanDiagnostics {
         if current.Id == id {
           let nextAtlasCount = ReplaceTextAtlasContribution(
             textAtlasContributionAtlasCount, current.AtlasCount, 0uL)
-          let nextByteBudget = ReplaceTextAtlasContribution(
-            textAtlasContributionByteBudget, current.ByteBudget, 0uL)
           let nextResidentBytes = ReplaceTextAtlasContribution(
             textAtlasContributionResidentBytes, current.ResidentBytes, 0uL)
           let nextLiveObjectCount = ReplaceTextAtlasContribution(
             textAtlasContributionLiveObjectCount, current.LiveObjectCount, 0uL)
           textAtlasContributionAtlasCount = nextAtlasCount
-          textAtlasContributionByteBudget = nextByteBudget
           textAtlasContributionResidentBytes = nextResidentBytes
           textAtlasContributionLiveObjectCount = nextLiveObjectCount
           textAtlasContributions.RemoveAt(index)
           counters.SetTextAtlasCount(nextAtlasCount)
-          counters.SetTextAtlasByteBudget(nextByteBudget)
           counters.SetTextAtlasResidentBytes(nextResidentBytes)
           counters.SetTextAtlasLiveObjectCount(nextLiveObjectCount)
           return
@@ -881,11 +867,10 @@ internal unsafe partial class VulkanDiagnostics {
     if !EnterWriter() { return }
     try { counters.AddDeviceRecovery(value) } finally { ExitWriter() }
   }
-  internal func SetLayerPoolStats(byteBudget uint64, residentBytes uint64,
+  internal func SetLayerPoolStats(residentBytes uint64,
     targetCount uint64, leasedCount uint64) {
       if !EnterWriter() { return }
       try {
-        counters.SetLayerPoolByteBudget(byteBudget)
         counters.SetLayerPoolResidentBytes(residentBytes)
         counters.SetLayerPoolTargetCount(targetCount)
         counters.SetLayerPoolLeasedCount(leasedCount)

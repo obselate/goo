@@ -3,7 +3,7 @@ package Goo
 import System
 import System.Collections.Generic
 
-internal unsafe partial class VulkanImageResources : IDisposable {
+internal unsafe partial class VulkanImageResources : IDisposable, VulkanGpuCache {
   internal prop HasUnsubmittedRecordedUpload bool{
     get {
       if uploadRing.Stats.ActiveRanges == 0 {
@@ -31,7 +31,6 @@ internal unsafe partial class VulkanImageResources : IDisposable {
   private let allocator VulkanMemoryAllocator
   private var capacity int32
   private var descriptorCapacity int32
-  private let residentByteBudget VkDeviceSize
   private var logicalStats VulkanResourceRegistryStats
   private var entries []VulkanImageResourceEntry
   private var entryLimit int32
@@ -59,6 +58,8 @@ internal unsafe partial class VulkanImageResources : IDisposable {
   private var compileTouch uint64 = uint64.MaxValue
   private var liveCount int32
   private var residentBytes VkDeviceSize
+  private var refusedReleaseGeneration uint64
+  private var refusedBytes VkDeviceSize
   private var flushPrepared bool
   private var disposed bool
 
@@ -71,7 +72,6 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         Capacity: capacity,
         LiveCount: liveCount,
         ResidentBytes: residentBytes,
-        ResidentByteBudget: residentByteBudget,
         LiveObjectCount: CurrentLiveObjectHandleCount(),
         DescriptorCapacity: descriptorCapacity,
         BoundDescriptorCount: CurrentBoundDescriptorCount(),
@@ -96,8 +96,6 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     nativeAllocator VulkanMemoryAllocator,
     imageCapacity int32,
     logicalResourceCapacity int32,
-    maximumResidentBytes VkDeviceSize,
-    maximumLogicalSourceBytes VkDeviceSize,
     stagingInitialBytes VkDeviceSize,
     maximumStagingBytes VkDeviceSize,
     uploadRangeCapacity int32,
@@ -112,12 +110,6 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       }
       if logicalResourceCapacity < imageCapacity || logicalResourceCapacity > MaxCapacity {
         throw ArgumentOutOfRangeException("logicalResourceCapacity")
-      }
-      if maximumResidentBytes == 0uL {
-        throw ArgumentOutOfRangeException("maximumResidentBytes")
-      }
-      if maximumLogicalSourceBytes == 0uL {
-        throw ArgumentOutOfRangeException("maximumLogicalSourceBytes")
       }
       if stagingInitialBytes == 0uL || stagingInitialBytes > MaxStagingBytes
         || maximumStagingBytes < stagingInitialBytes
@@ -136,10 +128,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       diagnostics = nativeDiagnostics
       objectAccounting = nativeObjectAccounting
       capacity = imageCapacity
-      residentByteBudget = maximumResidentBytes
-      logicalStats = VulkanResourceRegistryStats{
-        LogicalSourceBudget: maximumLogicalSourceBytes,
-      }
+      logicalStats = VulkanResourceRegistryStats{}
       stagingByteCapacity = stagingInitialBytes
       stagingMaximumByteCapacity = maximumStagingBytes
       stagingGate = Object()
