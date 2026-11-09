@@ -301,20 +301,6 @@ float3 roundedContour(float2 point, float2 size, float4 radii, float4 widths, ou
     return float3(along, perimeter, across);
 }
 
-float2 roundedNormal(float2 point, float2 size, float4 radii)
-{
-    float2 centered = point - size * 0.5;
-    float radius = centered.x < 0.0
-        ? (centered.y < 0.0 ? radii.x : radii.w)
-        : (centered.y < 0.0 ? radii.y : radii.z);
-    float2 q = abs(centered) - size * 0.5 + radius;
-    float2 normal = max(q, 0.0);
-    normal = dot(normal, normal) > 0.0
-        ? normalize(normal)
-        : (q.x > q.y ? float2(1.0, 0.0) : float2(0.0, 1.0));
-    return normal * sign(centered);
-}
-
 void shade()
 {
     float2 size = pc.rect.zw;
@@ -343,9 +329,7 @@ void shade()
         return;
     }
     float outerDistance = gooRoundedRectDistance(point, size, outerRadii);
-    float2 outerNormal = roundedNormal(point, size, outerRadii);
-    float outerAa = max(length(float2(dot(outerNormal, pointDx), dot(outerNormal, pointDy))), 0.0001);
-    float outerCoverage = gooEdgeCoverage(outerDistance, outerAa);
+    float outerCoverage = gooRoundedRectCoverage(point, size, outerRadii, pointDx, pointDy);
     float2 innerSize = max(size - float2(left + right, top + bottom), float2(0.0));
     float innerCoverage = 1.0;
     float conditionalCoverage = 1.0;
@@ -356,9 +340,7 @@ void shade()
             max(bottom, right), max(bottom, left)), float4(0.0));
         innerRadii = gooNormalizeRadii(innerSize, innerRadii);
         float innerDistance = gooRoundedRectDistance(point - float2(left, top), innerSize, innerRadii);
-        float2 innerNormal = roundedNormal(point - float2(left, top), innerSize, innerRadii);
-        float innerAa = max(length(float2(dot(innerNormal, pointDx), dot(innerNormal, pointDy))), 0.0001);
-        innerCoverage = 1.0 - gooEdgeCoverage(innerDistance, innerAa);
+        innerCoverage = 1.0 - gooRoundedRectCoverage(point - float2(left, top), innerSize, innerRadii, pointDx, pointDy);
         conditionalCoverage = innerDistance > outerDistance ? innerCoverage : 0.0;
     }
     // The border is the outer shape minus the nested inner shape. Subtracting coverage keeps sides
