@@ -120,6 +120,10 @@ internal unsafe partial class VulkanWindowTarget {
         atlas.Collect(completedGraphicsSubmissionSerial)
       }
       memoryAllocator?.BeginFrame(completedGraphicsSubmissionSerial)
+      pressureWaiting = false
+      if pressureHeapIndex >= 0 {
+        attemptHeadroom = memoryAllocator?.Headroom(uint32(pressureHeapIndex)) ?? 0uL
+      }
       presentationRetirement.CollectCompleted(slotIndex, selectedSlot.LastCompletedSerial)
       CollectRetiredSwapchains()
       var imageIndex uint32 = 0u
@@ -422,6 +426,7 @@ internal unsafe partial class VulkanWindowTarget {
           renderer.ClearTimestampRecording()
           RecordDiagnosticRecord(recordStart, sceneCompiler.Frame, recordResult)
           frameRendered = true
+          pressureHeapIndex = -1
         }
       }
     } catch (error Exception) {
@@ -445,9 +450,15 @@ internal unsafe partial class VulkanWindowTarget {
       CaptureDiagnosticValidationBoundary()
       presentationRetirement.CancelPendingPresentationLatency()
       ClearActiveFrame()
-      if error is VulkanMemoryPressureException {
+      if let pressure = error as VulkanMemoryPressureException? {
         frameFailureRetryable = true
-        host.Wake()
+        let sameHeap = pressureHeapIndex == int32(pressure.HeapIndex)
+        pressureWaiting = sameHeap && attemptHeadroom <= pressureHeadroom
+        pressureHeapIndex = int32(pressure.HeapIndex)
+        pressureHeadroom = if sameHeap { attemptHeadroom } else { memoryAllocator?.Headroom(pressure.HeapIndex) ?? 0uL }
+        if !pressureWaiting {
+          host.Wake()
+        }
         return
       }
       throw error

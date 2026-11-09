@@ -59,8 +59,12 @@ internal interface VulkanGpuCache {
 
 /// <summary>An allocation does not fit in its heap after eviction and one retry.</summary>
 internal sealed class VulkanMemoryPressureException : InvalidOperationException {
+  internal let HeapIndex uint32
+
   internal init(heapIndex uint32, bytes VkDeviceSize)
-    : base("Vulkan memory heap " + heapIndex.ToString() + " cannot hold " + bytes.ToString() + " bytes") { }
+    : base("Vulkan memory heap " + heapIndex.ToString() + " cannot hold " + bytes.ToString() + " bytes") {
+      HeapIndex = heapIndex
+    }
 }
 
 internal data struct VulkanMemoryPlacement {
