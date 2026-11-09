@@ -6,6 +6,7 @@ import System
 import System.Diagnostics
 import System.IO
 import System.Threading
+import System.Text.Json
 
 func ClipCaptureReadback(window Window, metrics WindowMetrics)
 VulkanReadbackResult{
@@ -311,6 +312,86 @@ func RunHiddenDeviceRecoverySmoke() {
   }
   ReadbackValidateCommonDiagnostics(capturedError.ToString())
   Console.WriteLine("hidden-device-recovery: new_window=presented hidden_window=restored pixels=validated")
+}
+
+func ValidateDeviceRecoveryDiagnostics(diagnostics string) {
+  ReadbackValidateCommonDiagnostics(diagnostics, 1uL)
+  for line in diagnostics.Split('\n') {
+    if !line.StartsWith("{\"kind\":\"validation\",") { continue }
+    using let message = JsonDocument.Parse(line)
+    Require((message.RootElement.GetProperty("types").GetInt32() & 6) == 0,
+      "Device recovery emitted a Vulkan validation message: " + line)
+  }
+}
+
+func RunPendingDeviceRecoverySmoke() {
+  let capturedError = StringWriter()
+  let originalError = Console.Error
+  using let entered = ManualResetEventSlim(false)
+  using let release = ManualResetEventSlim(false)
+  let owner = Window{
+    Title: "Goo pending recovery owner", Width: 300, Height: 170, VSync: false,
+    Background: Color.Rgb(12, 20, 32), Root: RoundedResizeFirstFrameCell{},
+  }
+  let child = Window{
+    Title: "Goo pending recovery child", Width: 300, Height: 170, VSync: false,
+    Owner: owner, Background: Color.Rgb(12, 20, 32), Root: RoundedResizeFirstFrameCell{},
+  }
+  try {
+    Console.SetError(capturedError)
+    owner.Open()
+    WindowReadbackTestFixture.Pump(owner, 0.0)
+    let metrics = WindowReadbackTestFixture.Metrics(owner)
+    RoundedResizeRequireFirstFrame(ClipCaptureReadback(owner, metrics), metrics, 0)
+    WindowReadbackTestFixture.ForceRender(owner, 0.0)
+    let ownerTarget = WindowReadbackTestFixture.CaptureTarget(owner)!!
+    let oldRuntime = ownerTarget.RecoveryRuntime()!!
+    VulkanWindowTarget.SecondaryStartupForTest = () -> {
+      entered.Set()
+      release.Wait()
+    }
+    child.Open()
+    let childTarget = WindowReadbackTestFixture.CaptureTarget(child)!!
+    let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
+    while !entered.IsSet && Stopwatch.GetTimestamp() < deadline {
+      WindowReadbackTestFixture.Pump(child, 0.0)
+      Thread.Yield()
+    }
+    Require(entered.IsSet && childTarget.StartupPending && !child.IsVisible,
+      "Recovery child did not retain an unshown startup task")
+    VulkanSharedRuntime.FailNextGraphicsSubmissionForTest()
+    WindowReadbackTestFixture.ForceRenderNonblocking(owner, 0.0)
+    let lossDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
+    while !oldRuntime.DeviceLost && Stopwatch.GetTimestamp() < lossDeadline {
+      WindowReadbackTestFixture.PollQueueCompletion(owner)
+      Thread.Yield()
+    }
+    Require(oldRuntime.DeviceLost, "Pending recovery did not detect the injected device loss")
+    WindowReadbackTestFixture.ForceRenderNonblocking(owner, 0.0)
+    Require(ownerTarget.RecoveryRuntime()?.Generation == oldRuntime.Generation && !child.IsVisible,
+      "Recovery discarded an in-flight startup task")
+    release.Set()
+    VulkanWindowTarget.SecondaryStartupForTest = nil
+    WindowReadbackTestFixture.ForceRender(owner, 0.0, 10.0, true)
+    let recovered = ownerTarget.RecoveryRuntime()!!
+    Require(recovered.Generation > oldRuntime.Generation
+        && childTarget.RecoveryRuntime()?.Generation == recovered.Generation && !child.IsVisible,
+      "Recovery did not preserve the unshown child on the recovered device")
+    WindowReadbackTestFixture.ForceRender(child, 0.0, 10.0, true)
+    Require(child.IsVisible && !childTarget.StartupPending,
+      "Recovered child did not finish its first presentation")
+    let childMetrics = WindowReadbackTestFixture.Metrics(child)
+    RoundedResizeRequireFirstFrame(ClipCaptureReadback(child, childMetrics), childMetrics, 0)
+    RoundedResizeRequireFirstFrame(ClipCaptureReadback(owner, metrics), metrics, 0)
+  } finally {
+    release.Set()
+    VulkanWindowTarget.SecondaryStartupForTest = nil
+    child.Close()
+    owner.Close()
+    Console.SetError(originalError)
+  }
+  ValidateDeviceRecoveryDiagnostics(capturedError.ToString())
+  Console.WriteLine("pending-device-recovery: startup=drained owner=presented child=presented pixels=validated validation=0")
 }
 
 class RenderBudgetPressureCell : Cell {

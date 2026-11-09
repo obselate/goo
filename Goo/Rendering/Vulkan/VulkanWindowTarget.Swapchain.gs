@@ -454,16 +454,18 @@ internal unsafe partial class VulkanWindowTarget {
     return next
   }
 
-  internal func DrainStartup() bool {
+  internal func DrainStartup(afterDeviceLoss bool = false) bool {
     guard let pending = startupTask else { return true }
-    if !pending.IsCompleted { return false }
+    if !pending.IsCompleted && !afterDeviceLoss { return false }
     startupTask = nil
-    if !pending.IsCompletedSuccessfully {
-      let _ = pending.Exception
-      return true
-    }
-    let unused = pending.GetAwaiter().GetResult()
+    var unused VulkanSwapchainGeneration?
+    try { unused = pending.GetAwaiter().GetResult() }
+    catch (error Exception) { return true }
     if let current = unused {
+      if afterDeviceLoss {
+        current.DisposeAfterDeviceLoss()
+        return true
+      }
       startupTask = Task.Run[VulkanSwapchainGeneration?](() -> {
         try {
           current.Dispose()
