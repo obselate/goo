@@ -1,0 +1,50 @@
+package Goo
+
+import Facebook.Yoga
+
+/// Measures text without mounting nodes.
+public partial class Window {
+  /// Measures the width of a single-line Text with this content and style in this window.
+  /// The result matches the laid-out Text width: it applies the text scale preference and snaps to the window's pixel grid.
+  /// Reads FontFamily, Language, FontSize, FontWeight, FontStyle, LetterSpacing, TextTransform and Direction from style.
+  /// Unset fields use Goo defaults, not values inherited from parents. Line breaks are not applied.
+  /// Call on the window's UI thread, for example in Cell.Build. It reuses the font cache and allocates no glyph runs.
+  /// @param text The text to measure.
+  /// @param style The text declarations. A Text blob is also a Style.
+  /// @returns The width in layout pixels.
+  public func MeasureText(text string, style Style) float32 {
+    requireUiThread("Window.MeasureText")
+    var family = StyleFields.Default(StyleField.FontFamily)
+    var language = StyleFields.Default(StyleField.Language)
+    var size = StyleFields.Default(StyleField.FontSize)
+    var weight = StyleFields.Default(StyleField.FontWeight)
+    var fontStyle = StyleFields.Default(StyleField.FontStyle)
+    var spacing = StyleFields.Default(StyleField.LetterSpacing)
+    var transform = StyleFields.Default(StyleField.TextTransform)
+    var direction = StyleFields.Default(StyleField.Direction)
+    if let values = style.Entries() {
+      var cursor = values.Cursor()
+      while cursor.MoveNext() {
+        let entry = cursor.Current
+        switch entry.Field {
+          case StyleField.FontFamily { family = entry }
+          case StyleField.Language { language = entry }
+          case StyleField.FontSize { size = entry }
+          case StyleField.FontWeight { weight = entry }
+          case StyleField.FontStyle { fontStyle = entry }
+          case StyleField.LetterSpacing { spacing = entry }
+          case StyleField.TextTransform { transform = entry }
+          case StyleField.Direction { direction = entry }
+          case _ { }
+        }
+      }
+    }
+    let display = TextLayouts.transformText(text, TextTransform(int32(transform.A)))
+    let width = TextShaping.MeasureLineUncached(display, 0, display.Length, entryText(family) ?? "",
+      Length{ Unit: LengthUnit(int32(size.B)), Value: size.A }.Px * (preferences.TextScaleFactor ?? 1.0F),
+      int32(weight.A), FontStyle(int32(fontStyle.A)) == FontStyle.Italic,
+      Length{ Unit: LengthUnit(int32(spacing.B)), Value: spacing.A }.Px, int32(direction.A),
+      entryText(language) ?? "")
+    return PixelGrid.RoundValueToPixelGrid(width, RenderScale.X, true, false)
+  }
+}

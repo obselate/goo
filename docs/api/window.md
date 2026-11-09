@@ -1528,6 +1528,7 @@ Sources:
 - [`Window.RenderCommand.gs`](../../Goo/Window/WindowParts/Window.RenderCommand.gs)
 - [`Window.Retained.gs`](../../Goo/Window/WindowParts/Window.Retained.gs)
 - [`Window.SizeConstraints.gs`](../../Goo/Window/WindowParts/Window.SizeConstraints.gs)
+- [`Window.TextMeasurement.gs`](../../Goo/Window/WindowParts/Window.TextMeasurement.gs)
 - [`Window.Timers.gs`](../../Goo/Window/WindowParts/Window.Timers.gs)
 - [`Window.Titlebar.gs`](../../Goo/Window/WindowParts/Window.Titlebar.gs)
 - [`Window.UiScale.gs`](../../Goo/Window/WindowParts/Window.UiScale.gs)
@@ -1686,6 +1687,15 @@ Binds activation to the current UI thread and retains the initial request until 
 - `initial`: The initial request, copied with its IsInitial value unchanged.
 
 Returns: Accepted when retained, or Failed when the request exceeds the activation data limits.
+
+### `MeasureText(string,Style)`
+
+Measures the width of a single-line Text with this content and style in this window. The result matches the laid-out Text width: it applies the text scale preference and snaps to the window's pixel grid. Reads FontFamily, Language, FontSize, FontWeight, FontStyle, LetterSpacing, TextTransform and Direction from style. Unset fields use Goo defaults, not values inherited from parents. Line breaks are not applied. Call on the window's UI thread, for example in Cell.Build. It reuses the font cache and allocates no glyph runs.
+
+- `text`: The text to measure.
+- `style`: The text declarations. A Text blob is also a Style.
+
+Returns: The width in layout pixels.
 
 ### `Open`
 

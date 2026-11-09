@@ -303,6 +303,7 @@ class FixtureContractTests {
             yield Contract[LayoutFixtures]("HiddenCustomLayoutsWaitForVisibleGeometry")
             yield Contract[LayoutFixtures]("HiddenScrollLayoutsClearGeometry")
             yield Contract[LayoutFixtures]("LoneSurrogateTextLaysOut")
+            yield Contract[LayoutFixtures]("MeasuredTextMatchesLaidOutText")
             yield Contract[LayoutFixtures]("RtlRunPlacesFirstCharacterAtTheRight")
             yield Contract[LayoutFixtures]("LogicalEdgesRespectDirection")
             yield Contract[LayoutFixtures]("StaticPositionIgnoresInsets")
