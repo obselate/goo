@@ -63,7 +63,7 @@ void shade()
     float4 radii = normalized ? gooNormalizeRadii(pc.rect.zw, pc.radii) : pc.radii;
     float distance = coverageDistance(point, pc.rect.zw, radii, normalized);
     float aa = canonicalAa(point, pc.rect.zw, radii, normalized, distance);
-    float coverage = 1.0 - smoothstep(-0.5 * aa, 0.5 * aa, distance);
+    float coverage = gooEdgeCoverage(distance, aa);
     float backgroundCoverage = coverage;
     if (pc.params.x > 0.0 && pc.params.y > 0.0)
     {
@@ -78,7 +78,7 @@ void shade()
             float innerDistance = gooRoundedRectDistance(
                 point - inset, innerSize, innerRadii);
             float innerAa = canonicalAa(point - inset, innerSize, innerRadii, true, innerDistance);
-            innerCoverage = smoothstep(-0.5 * innerAa, 0.5 * innerAa, innerDistance);
+            innerCoverage = 1.0 - gooEdgeCoverage(innerDistance, innerAa);
         }
         // Match the border shader: the border covers the outer shape minus the inner one, and the
         // background drawn beneath it is scaled so the border composites to exactly that coverage.

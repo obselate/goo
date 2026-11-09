@@ -42,7 +42,7 @@ float roundedCoverage()
     float2 point = uv * pc.rect.zw;
     float distance = roundedDistance(point, pc.rect.zw, pc.radii);
     float aa = canonicalAa(point, distance);
-    return 1.0 - smoothstep(-0.5 * aa, 0.5 * aa, distance);
+    return gooEdgeCoverage(distance, aa);
 }
 
 void shade()

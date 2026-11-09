@@ -145,14 +145,6 @@ class ScrollPlacementCell : Cell {
     }
 }
 
-struct ScrollSoftwarePixelException {
-    internal var Scale float64
-    internal var Variant int32
-    internal var X int32
-    internal var Y int32
-    internal var Maximum int32
-}
-
 func RunScrollPlacementSmoke() {
     RunScrollImagePlacementSmoke()
     Require(Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1", "GOO_VK_DIAGNOSTICS=1 is required")
@@ -237,17 +229,6 @@ func RunScrollPlacementSmoke() {
             20656,
             19091,
         }
-        let softwareCorners = []ScrollSoftwarePixelException{
-            ScrollSoftwarePixelException{Scale: 1.5, Variant: 1, X: 138, Y: 149, Maximum: 2},
-            ScrollSoftwarePixelException{Scale: 1.5, Variant: 1, X: 138, Y: 170, Maximum: 3},
-            ScrollSoftwarePixelException{Scale: 1.5, Variant: 2, X: 38, Y: 144, Maximum: 7},
-            ScrollSoftwarePixelException{Scale: 1.5, Variant: 2, X: 137, Y: 144, Maximum: 7},
-            ScrollSoftwarePixelException{Scale: 1.5, Variant: 3, X: 136, Y: 139, Maximum: 2},
-            ScrollSoftwarePixelException{Scale: 1.5, Variant: 3, X: 136, Y: 160, Maximum: 3},
-            ScrollSoftwarePixelException{Scale: 1.5, Variant: 5, X: 138, Y: 150, Maximum: 2},
-            ScrollSoftwarePixelException{Scale: 1.5, Variant: 5, X: 39, Y: 171, Maximum: 13},
-            ScrollSoftwarePixelException{Scale: 1.5, Variant: 5, X: 138, Y: 171, Maximum: 15},
-        }
         for scale in[]float64{1.0, 1.25, 1.5, 2.0} {
             cell.Clipped = false
             cell.Rebuild()
@@ -329,17 +310,6 @@ func RunScrollPlacementSmoke() {
                                         continue
                                     }
                                     if difference == 1 && legacyMaxima[legacyPose] >= 1 {
-                                        continue
-                                    }
-                                    var knownCorner = false
-                                    for corner in softwareCorners {
-                                        if scale == corner.Scale && variant == corner.Variant
-                                        && x == corner.X && y == corner.Y && difference <= corner.Maximum {
-                                            knownCorner = true
-                                            break
-                                        }
-                                    }
-                                    if knownCorner {
                                         continue
                                     }
                                 }
