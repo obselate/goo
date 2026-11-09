@@ -38,7 +38,7 @@ internal unsafe shared class DescriptorLifetimeRegression {
                 nint(&DestroySampler)
             )
         }
-        using let resources = VulkanImageResources(1, dispatch, nil, 256, 256, 4096, 4096, 4096, 4096, 16, nil, 1, nil)
+        using let resources = VulkanImageResources(1, dispatch, nil, 256, 256, 4096, 4096, 16, nil, 1, nil)
         let sets = resources.DescriptorSetsForTests
         for var index = 0; index < sets.Length; index++ {
             valid &= sets[index] == FirstSet + uint64(index)

@@ -41,8 +41,7 @@ func RunTransparentWindowSmoke() {
     guard let target = WindowReadbackTestFixture.CaptureTarget(window) else {
       throw InvalidOperationException("Transparent window target is unavailable")
     }
-    let budget = uint64(metrics.FramebufferWidth) * uint64(metrics.FramebufferHeight) * 2uL
-    target.SetRenderBudgetsForTest(budget, 67108864uL)
+    target.ResetRenderResourcesForTest(int64(metrics.FramebufferWidth) * int64(metrics.FramebufferHeight) * 2L)
     WindowReadbackTestFixture.ForceRender(window, 0.0)
     Require(target.DiagnosticCountersSnapshotForTest().layerPoolResidentBytes == 0uL,
       "Transparent encoded presentation allocated an unnecessary present copy")

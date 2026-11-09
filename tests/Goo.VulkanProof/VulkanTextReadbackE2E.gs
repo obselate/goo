@@ -527,7 +527,7 @@ internal func RunTextAtlasOverflowReadback() {
                 WindowReadbackTestFixture.ForceRender(window, 1.0 / 60.0)
                 WindowReadbackTestFixture.DrainWindowQueue(window, 5000)
                 peakPages = Math.Max(peakPages, animatedAtlases.AtlasCount)
-                if animatedAtlases.AtlasCount > initialPages + VulkanTextAtlasSet.CachedAtlasCount {
+                if animatedAtlases.AtlasCount > initialPages + VulkanTextAtlasSet.InitialAtlasSlotCount {
                   throw InvalidOperationException("Text atlas animation retained an unbounded page history")
                 }
               }
@@ -560,8 +560,8 @@ internal func RunTextAtlasOverflowReadback() {
             }
           } else {
             let expected = reference[phase]!!
-            if phase < 3 && atlases.AtlasCount <= VulkanTextAtlasSet.CachedAtlasCount {
-              throw InvalidOperationException("Text atlas proof did not exceed the cache capacity")
+            if phase < 3 && atlases.AtlasCount <= VulkanTextAtlasSet.InitialAtlasSlotCount {
+              throw InvalidOperationException("Text atlas proof did not exceed the initial page slots")
             }
             if image.Width != expected.Width || image.Height != expected.Height
               || image.Pixels.Length != expected.Pixels.Length {
@@ -572,7 +572,7 @@ internal func RunTextAtlasOverflowReadback() {
                 throw InvalidOperationException("Text atlas page batching changed pixel $index at phase $phase")
               }
             }
-            if phase == 3 && atlases.AtlasCount > VulkanTextAtlasSet.CachedAtlasCount {
+            if phase == 3 && atlases.AtlasCount > VulkanTextAtlasSet.InitialAtlasSlotCount {
               throw InvalidOperationException("Stopped text size animation retained its page history")
             }
             if phase == 4 && atlases.AtlasCount != 1 {

@@ -116,9 +116,10 @@ func RunBackdropBlurSmoke() {
     guard let target = WindowReadbackTestFixture.CaptureTarget(opened) else {
       throw InvalidOperationException("Backdrop blur target is unavailable")
     }
-    target.SetRenderBudgetsForTest(4096uL, 67108864uL)
+    target.ResetRenderResourcesForTest(int64(metrics.FramebufferWidth) * int64(metrics.FramebufferHeight) * 5L)
     WindowReadbackTestFixture.SetForceFullRedraw(opened, true)
     WindowReadbackTestFixture.ForceRender(opened, 0.0)
+    WindowReadbackTestFixture.DrainWindowQueue(opened, 10000)
     let reduced = PrimitiveReadback(opened, metrics)
     let reducedInside = PrimitiveLogicalPixel(reduced.Pixels, reduced.Width, metrics, 64.0, 156.0)
     Require(target.LayerResolutionShiftForTest() > 0 && opened.IsOpen,
