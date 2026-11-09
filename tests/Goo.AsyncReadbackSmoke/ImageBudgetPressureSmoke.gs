@@ -49,6 +49,27 @@ func ImageBudgetPressureReload(cell ImageBudgetPressureCell, window Window, sour
   cell.Show(sources)
 }
 
+func ImageBudgetPressureCapture(window Window) WindowCapture {
+  let deadline = Environment.TickCount64 + 10000L
+  var request = window.RequestCapture()
+  while (request == WindowCaptureRequestStatus.NotReady || request == WindowCaptureRequestStatus.Busy)
+    && Environment.TickCount64 < deadline {
+      window.Pump(1.0 / 60.0)
+      request = window.RequestCapture()
+    }
+  Require(request == WindowCaptureRequestStatus.Accepted,
+    "Capture under image pressure was not accepted: " + request.ToString())
+  var capture WindowCapture? = nil
+  while capture == nil && Environment.TickCount64 < deadline {
+    capture = window.PollCapture()
+    if capture == nil {
+      window.Pump(1.0 / 60.0)
+    }
+  }
+  guard let result = capture else { throw InvalidOperationException("Capture under image pressure timed out") }
+  return result
+}
+
 func RunImageBudgetPressureSmoke() {
   Require(Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1",
     "GOO_VK_DIAGNOSTICS=1 is required")
@@ -110,6 +131,11 @@ func RunImageBudgetPressureSmoke() {
         && limitedSteady.imagePressureFailureCount == limited.imagePressureFailureCount,
       "Refused images retried without freed memory: retries="
       + (limitedSteady.memoryAllocationRetryCount - limited.memoryAllocationRetryCount).ToString())
+    let pressureCapture = ImageBudgetPressureCapture(opened)
+    Require(pressureCapture.Width == uint32(WindowReadbackTestFixture.Metrics(opened).FramebufferWidth)
+        && WindowReadbackTestFixture.ImageResourceStats(opened).LiveCount == limitedLive,
+      "Capture under image pressure changed the resident images: live="
+      + WindowReadbackTestFixture.ImageResourceStats(opened).LiveCount.ToString())
 
     target.SetMemoryHeadroomForTest(nil)
     ImageBudgetPressureReload(cell, opened, sources)

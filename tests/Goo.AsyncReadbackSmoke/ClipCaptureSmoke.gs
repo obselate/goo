@@ -416,11 +416,6 @@ func RunRenderBudgetPressureSmoke() {
         "Steady clip budget pressure replaced the atlas generation")
     }
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
-    WindowReadbackTestFixture.SetForceFullRedraw(window, false)
-    Require(WindowReadbackTestFixture.Request(window, uint32(metrics.FramebufferWidth),
-      uint32(metrics.FramebufferHeight)) == WindowReadbackRequestStatus.NotReady,
-      "Render budget pressure frame was not captured")
-    target.SetMemoryHeadroomForTest(pixels * 10L)
     let frame = ClipCaptureReadback(window, metrics)
     Require(frame.Pixels.Length > 0 && window.IsOpen && target.LayerResolutionShiftForTest() > 0,
       "Render budget pressure did not complete a reduced-resolution frame")
