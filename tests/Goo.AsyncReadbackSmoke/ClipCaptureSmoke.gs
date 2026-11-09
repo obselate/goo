@@ -348,7 +348,7 @@ func RunPendingDeviceRecoverySmoke() {
     let oldRuntime = ownerTarget.RecoveryRuntime()!!
     VulkanWindowTarget.SecondaryStartupForTest = () -> {
       entered.Set()
-      release.Wait()
+      Require(release.Wait(10000), "Secondary startup was not released within 10 seconds")
     }
     child.Open()
     let childTarget = WindowReadbackTestFixture.CaptureTarget(child)!!
