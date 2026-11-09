@@ -2,7 +2,7 @@ package Goo
 
 import System
 
-/// Specifies one immutable outer or inset shadow.
+/// Specifies one immutable outer or inset shadow. An outer shadow paints only outside the border box.
 /// Shapes shadow their painted fill and stroke geometry.
 public data struct BoxShadow {
   private var offsetX Length

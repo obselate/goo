@@ -117,6 +117,21 @@ class PortalCaptureCell : Cell {
       Container{Width: 30, Height: 30,
         BackgroundColor: Color.Rgb(230, 100, 20)},
     },
+    Container{
+      Position: PositionType.Absolute,
+      Left: 180,
+      Top: 10,
+      Width: 90,
+      Height: 80,
+      BackgroundColor: Color.Rgb(40, 160, 90),
+    },
+    Portal{
+      Position: PositionType.Absolute,
+      Left: 200,
+      Top: 30,
+      Container{Width: 50, Height: 40, BackdropBlur: 4,
+        BoxShadow: BoxShadow{ Blur: 4, Color: Color.Black }},
+    },
   }
 }
 
@@ -181,6 +196,12 @@ func RunPortalCaptureSmoke() {
     PrimitiveRequirePixelNear(result.Pixels, result.Width, metrics,
       160.0, 135.0, uint8(230), uint8(100), uint8(20), 8,
       "anchored_portal_flipped")
+    PrimitiveRequirePixelNear(result.Pixels, result.Width, metrics,
+      225.0, 50.0, uint8(40), uint8(160), uint8(90), 2,
+      "transparent_portal_panel_interior")
+    PrimitiveRequirePixelDifferent(result.Pixels, result.Width, metrics,
+      199.0, 50.0, uint8(40), uint8(160), uint8(90), 24,
+      "transparent_portal_panel_shadow")
     cell.AnchorX = 100.0
     cell.Rebuild()
     WindowReadbackTestFixture.Pump(opened, 0.0)
