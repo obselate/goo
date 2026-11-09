@@ -242,6 +242,7 @@ void shade()
         : blurExtent + max(spread, 0.0);
     float2 point = uv * pc.rect.zw;
     float coverage;
+    float exterior = 1.0;
     if ((pc.packedColorsExtra.y & 1u) != 0u)
     {
         float2 screenPoint = gooClipScreenPosition();
@@ -270,6 +271,13 @@ void shade()
             coverage = gooEdgeCoverage(baseDistance, canonicalEdge(point - baseOffset, baseSize, pc.radii, baseDistance))
                 * (1.0 - coverage);
         }
+        else
+        {
+            float2 boxOffset = float2(expansion - offsetX, expansion - offsetY);
+            float2 boxSize = pc.rect.zw - float2(expansion * 2.0);
+            float boxDistance = roundedDistance(point - boxOffset, boxSize, pc.radii);
+            exterior = saturate(1.5 + boxDistance / canonicalEdge(point - boxOffset, boxSize, pc.radii, boxDistance));
+        }
     }
     float4 color = unpackColor(pc.packedColors.x, pc.packedColors.w, 0u);
     if ((pc.packedColorsExtra.y & 1u) == 0u)
@@ -277,7 +285,7 @@ void shade()
         float noise = frac(52.9829189 * frac(dot(floor(gooFragmentPosition.xy + pc.stopPositions.xy), float2(0.06711056, 0.00583715))));
         coverage = saturate(coverage + (noise - 0.5) / (255.0 * max(color.a, 0.004)));
     }
-    outColor = color * coverage * gooClipCoverage();
+    outColor = color * coverage * exterior * gooClipCoverage();
 }
 
 #include "analytic_fragment_entry.slang"

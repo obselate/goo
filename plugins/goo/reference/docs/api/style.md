@@ -107,7 +107,7 @@ Source:
 
 - [`BoxShadow.gs`](https://github.com/obselate/goo/blob/main/Goo/Style/BoxShadow.gs)
 
-Specifies one immutable outer or inset shadow. Shapes shadow their painted fill and stroke geometry.
+Specifies one immutable outer or inset shadow. An outer shadow paints only outside the border box. Shapes shadow their painted fill and stroke geometry.
 
 ### `Blur`
 
