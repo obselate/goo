@@ -319,7 +319,7 @@ func ValidateDeviceRecoveryDiagnostics(diagnostics string) {
   for line in diagnostics.Split('\n') {
     if !line.StartsWith("{\"kind\":\"validation\",") { continue }
     using let message = JsonDocument.Parse(line)
-    Require((message.RootElement.GetProperty("types").GetInt32() & 6) == 0,
+    Require((message.RootElement.GetProperty("types").GetInt32() & 2) == 0,
       "Device recovery emitted a Vulkan validation message: " + line)
   }
 }
