@@ -162,7 +162,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       var push = VulkanPrimitiveGpuRecord{}
       FillTransform(&push.Geometry, bounds, transform, extent)
       if radiusTopLeft > 0.0F || radiusTopRight > 0.0F
-        || radiusBottomRight > 0.0F || radiusBottomLeft > 0.0F {
+        || radiusBottomRight > 0.0F || radiusBottomLeft > 0.0F || transform.B != 0.0F || transform.C != 0.0F {
           push.Geometry.transform1_w = 1.0F
         }
       push.radii_x = radiusTopLeft
@@ -301,10 +301,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         }
       let rounded = value.RadiusTopLeft > 0.0F || value.RadiusTopRight > 0.0F
         || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F
+      let rotated = transform.B != 0.0F || transform.C != 0.0F
       if value.Style != uint32(int32(BorderStyle.Solid)) || rounded {
         var push = AnalyticBorderPushConstants{}
         FillTransform(&push.Geometry, bounds, transform, extent)
-        if rounded { push.Geometry.transform1_w = 1.0F }
+        if rounded || rotated { push.Geometry.transform1_w = 1.0F }
         push.widths_x = topWidth
         push.widths_y = rightWidth
         push.widths_z = bottomWidth
@@ -394,7 +395,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       var push = VulkanPrimitiveGpuRecord{}
       FillTransform(&push.Geometry, value.Bounds, transform, extent)
       if value.RadiusTopLeft > 0.0F || value.RadiusTopRight > 0.0F
-        || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F {
+        || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F || transform.B != 0.0F || transform.C != 0.0F {
           push.Geometry.transform1_w = 1.0F
         }
       push.radii_x = value.RadiusTopLeft
@@ -438,7 +439,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       var push = VulkanPrimitiveGpuRecord{}
       FillTransform(&push.Geometry, value.Bounds, transform, extent)
       if value.RadiusTopLeft > 0.0F || value.RadiusTopRight > 0.0F
-        || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F {
+        || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F || transform.B != 0.0F || transform.C != 0.0F {
           push.Geometry.transform1_w = 1.0F
         }
       push.radii_x = value.RadiusTopLeft
