@@ -247,7 +247,9 @@ internal class TextLayouts {
         let n = nodeFromYoga(yoga)
         let constraint = widthMode == MeasureMode.Undefined ? -1.0F : width
         let layout = For(n, constraint)
-        return clampMeasuredSize(layout.Width, layout.Height, width, widthMode, height, heightMode)
+        let size = clampMeasuredSize(layout.Width, layout.Height, width, widthMode, height, heightMode)
+        return widthMode == MeasureMode.AtMost && n.TextTrimming == TextTrimming.None
+          ? YGSize{ Width: layout.Width, Height: size.Height } : size
       }
 
     internal func clampMeasuredSize(measuredWidth float32, measuredHeight float32, width float32,

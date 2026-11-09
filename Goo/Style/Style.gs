@@ -125,9 +125,9 @@ public open class Style {
   public prop Width Length{ init -> pushCheckedLength(StyleField.Width, value, "Width", false, true, true) }
   /// Sets the preferred height.
   public prop Height Length{ init -> pushCheckedLength(StyleField.Height, value, "Height", false, true, true) }
-  /// Sets the minimum width.
+  /// Sets the minimum width. When unset, a shrinking flex item stops at 0 if its overflow is Scroll or Hidden, else at its Width, else at its content width. Set 0 to let any item shrink further.
   public prop MinWidth Length{ init -> pushCheckedLength(StyleField.MinWidth, value, "MinWidth", false, true, false) }
-  /// Sets the minimum height.
+  /// Sets the minimum height. When unset, a shrinking flex item stops at 0 if its overflow is Scroll or Hidden, else at its Height, else at its content height. Set 0 to let any item shrink further.
   public prop MinHeight Length{ init -> pushCheckedLength(StyleField.MinHeight, value, "MinHeight", false, true, false) }
   /// Sets the maximum width.
   public prop MaxWidth Length{ init -> pushCheckedLength(StyleField.MaxWidth, value, "MaxWidth", false, true, false) }
@@ -167,7 +167,7 @@ public open class Style {
   public prop AlignContent AlignContent{ init -> pushEnumOrdinal(StyleField.AlignContent, int32(value)) }
   /// Sets the flex grow factor.
   public prop FlexGrow float64{ init -> pushScalar(StyleField.FlexGrow, checkedNonNegative(value, "FlexGrow")) }
-  /// Sets the flex shrink factor.
+  /// Sets the flex shrink factor. The default is 1. Set 0 to keep an item at its base size when its container is too small.
   public prop FlexShrink float64{ init -> pushScalar(StyleField.FlexShrink, checkedNonNegative(value, "FlexShrink")) }
   /// Sets the initial main-axis size.
   public prop FlexBasis Length{ init -> pushCheckedLength(StyleField.FlexBasis, value, "FlexBasis", false, true, true) }

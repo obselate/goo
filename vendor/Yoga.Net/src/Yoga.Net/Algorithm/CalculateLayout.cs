@@ -599,7 +599,7 @@ namespace Facebook.Yoga
                     {
                         float childSize = YogaConstants.Undefined;
                         if (Comparison.IsDefined(flexLine.Layout.TotalFlexShrinkScaledFactors) &&
-                            flexLine.Layout.TotalFlexShrinkScaledFactors == 0)
+                            flexLine.Layout.TotalFlexShrinkScaledFactors >= 0)
                         {
                             childSize = childFlexBasis + flexShrinkScaledFactor;
                         }
@@ -612,7 +612,10 @@ namespace Facebook.Yoga
                         }
                         updatedMainSize = BoundAxis.ComputeBoundAxis(
                             currentLineChild, mainAxis, direction,
-                            childSize, availableInnerMainDim, availableInnerWidth);
+                            Math.Max(childSize, AutomaticMinimum(currentLineChild, mainAxis, direction,
+                                availableInnerMainDim, availableInnerCrossDim, availableInnerWidth,
+                                availableInnerHeight, ref layoutMarkerData, depth, generationCount)),
+                            availableInnerMainDim, availableInnerWidth);
                     }
                 }
                 else if (Comparison.IsDefined(flexLine.Layout.RemainingFreeSpace) &&
@@ -717,7 +720,9 @@ namespace Facebook.Yoga
         private static void DistributeFreeSpaceFirstPass(
             ref FlexLineState flexLine, Direction direction, FlexDirection mainAxis,
             float ownerWidth, float mainAxisOwnerSize,
-            float availableInnerMainDim, float availableInnerWidth)
+            float availableInnerMainDim, float availableInnerCrossDim,
+            float availableInnerWidth, float availableInnerHeight,
+            ref LayoutData layoutMarkerData, uint depth, uint generationCount)
         {
             float flexShrinkScaledFactor = 0;
             float flexGrowFactor = 0;
@@ -744,7 +749,10 @@ namespace Facebook.Yoga
                                 flexLine.Layout.TotalFlexShrinkScaledFactors * flexShrinkScaledFactor;
                         boundMainSize = BoundAxis.ComputeBoundAxis(
                             currentLineChild, mainAxis, direction,
-                            baseMainSize, availableInnerMainDim, availableInnerWidth);
+                            Math.Max(baseMainSize, AutomaticMinimum(currentLineChild, mainAxis, direction,
+                                availableInnerMainDim, availableInnerCrossDim, availableInnerWidth,
+                                availableInnerHeight, ref layoutMarkerData, depth, generationCount)),
+                            availableInnerMainDim, availableInnerWidth);
                         if (Comparison.IsDefined(baseMainSize) && Comparison.IsDefined(boundMainSize) &&
                             baseMainSize != boundMainSize)
                         {
@@ -779,6 +787,44 @@ namespace Facebook.Yoga
             flexLine.Layout.RemainingFreeSpace -= deltaFreeSpace;
         }
 
+        private static float AutomaticMinimum(
+            Node child, FlexDirection mainAxis, Direction direction,
+            float availableInnerMainDim, float availableInnerCrossDim,
+            float availableInnerWidth, float availableInnerHeight,
+            ref LayoutData layoutMarkerData, uint depth, uint generationCount)
+        {
+            if (child.Style.Overflow != Overflow.Visible ||
+                child.Style.MinDimension(mainAxis.Dimension()).IsDefined())
+            {
+                return 0;
+            }
+            var minimum = child.GetResolvedDimension(
+                direction, mainAxis.Dimension(), availableInnerMainDim, availableInnerWidth);
+            if (minimum.IsUndefined())
+            {
+                bool isMainAxisRow = mainAxis.IsRow();
+                var crossAxis = isMainAxisRow ? FlexDirection.Column : FlexDirection.Row;
+                float crossSize = child.HasDefiniteLength(crossAxis.Dimension(), availableInnerCrossDim)
+                    ? child.GetResolvedDimension(direction, crossAxis.Dimension(),
+                        availableInnerCrossDim, availableInnerWidth).Unwrap()
+                    : availableInnerCrossDim;
+                crossSize += child.Style.ComputeMarginForAxis(crossAxis, availableInnerWidth);
+                var crossMode = Comparison.IsUndefined(crossSize) ? SizingMode.MaxContent : SizingMode.FitContent;
+                CalculateLayoutInternal(
+                    child,
+                    isMainAxisRow ? 0 : crossSize,
+                    isMainAxisRow ? crossSize : YogaConstants.Undefined,
+                    direction,
+                    isMainAxisRow ? SizingMode.FitContent : crossMode,
+                    isMainAxisRow ? crossMode : SizingMode.MaxContent,
+                    availableInnerWidth, availableInnerHeight, false,
+                    LayoutPassReason.MeasureChild, ref layoutMarkerData, depth, generationCount);
+                minimum = new FloatOptional(child.Layout.MeasuredDimension(mainAxis.Dimension()));
+            }
+            return BoundAxis.BoundAxisWithinMinAndMax(child, direction, mainAxis,
+                minimum, availableInnerMainDim, availableInnerWidth).Unwrap();
+        }
+
         private static void ResolveFlexibleLength(
             Node node, ref FlexLineState flexLine,
             FlexDirection mainAxis, FlexDirection crossAxis, Direction direction,
@@ -792,7 +838,9 @@ namespace Facebook.Yoga
             float originalFreeSpace = flexLine.Layout.RemainingFreeSpace;
             DistributeFreeSpaceFirstPass(
                 ref flexLine, direction, mainAxis, ownerWidth,
-                mainAxisOwnerSize, availableInnerMainDim, availableInnerWidth);
+                mainAxisOwnerSize, availableInnerMainDim, availableInnerCrossDim,
+                availableInnerWidth, availableInnerHeight,
+                ref layoutMarkerData, depth, generationCount);
 
             float distributedFreeSpace = DistributeFreeSpaceSecondPass(
                 ref flexLine, node, mainAxis, crossAxis, direction,

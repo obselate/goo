@@ -289,7 +289,7 @@ internal class ElementHandleFixtures {
     let owner = Window{}
     let root = mount(Reconciler{ Res: Resolver{} }, owner, Container() {.Handle: rootHandle,.Width: 100,.Height: 100,.OverflowY: Overflow.Scroll,
         Container{ Height: 120 },
-        Container() {.Handle: innerHandle,.Height: 80,.OverflowY: Overflow.Scroll,
+        Container() {.Handle: innerHandle,.Height: 80,.FlexShrink: 0,.OverflowY: Overflow.Scroll,
           Container{ Handle: childHandle, Height: 130},
       },
     })

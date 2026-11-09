@@ -54,6 +54,53 @@ internal class LayoutFixtures {
     return other.Rect.W == 200.0F && other.Children[0].Rect.W == 200.0F
   }
 
+  func NarrowRowShrinksLabelAndKeepsFixedIcon() bool {
+    let label = "A long label that does not fit"
+    let root = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 120,.Gap: 4,
+      Container() {.FlexDirection: FlexDirection.Row,
+        Text{ Content: label },
+        Container{ Width: 24, Height: 24 },
+      },
+      Container() {.FlexDirection: FlexDirection.Row,
+        Text{ Content: label, TextWrap: TextWrap.NoWrap, TextTrimming: TextTrimming.Ellipsis },
+        Container{ Width: 24, Height: 24 },
+      },
+      Container() {.FlexDirection: FlexDirection.Row,.AlignItems: AlignItems.FlexStart,
+        Text{ Content: label, TextWrap: TextWrap.NoWrap },
+        Container{ Width: 24, Height: 24 },
+      },
+    })
+    Layout().Calculate(root, 120.0F, 200.0F)
+    for i in 0 ... 2 {
+      let row = root.Children[i]
+      if row.Children[0].Rect.W != 96.0F || row.Children[1].Rect.W != 24.0F
+        || row.Children[1].Rect.X != 96.0F {
+          return false
+        }
+    }
+    let fixedText = root.Children[2].Children[0]
+    if root.Children[0].Children[0].Rect.H <= 20.0F || fixedText.Rect.W <= 120.0F
+      || root.Children[2].Children[1].Rect.X < fixedText.Rect.W - 1.0F {
+        return false
+      }
+    let column = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 120,.Height: 200,
+      Container{ Height: 40 },
+      Container{ Height: 300, OverflowY: Overflow.Scroll, Container{ Height: 400 } },
+    })
+    Layout().Calculate(column, 120.0F, 200.0F)
+    let pane = column.Children[1]
+    if pane.Rect.Y != 40.0F || pane.Rect.H != 160.0F || pane.ContentH != 400.0F { return false }
+    let heights = []float64{ 36, 19.2, 48, 19.2, 19.2, 64, 48, 48, 150, 48, 48, 48, 240 }
+    let scroll = Container{ Width: 411, Height: 683, Overflow: Overflow.Scroll, Padding: 20, Gap: 14 }
+    for height in heights { scroll.Children.Add(Container{ Height: height }) }
+    let page = Reconciler{ Res: Resolver{} }.Mount(scroll)
+    Layout().Calculate(page, 411.0F, 683.0F)
+    for i in 0 ... heights.Length {
+      if MathF.Abs(page.Children[i].Rect.H - float32(heights[i])) > 1.0F { return false }
+    }
+    return page.ContentH < 1010.0F
+  }
+
   func KeyedReorderRetainsYogaLayouts() bool {
     let reconciler = Reconciler{ Res: Resolver{} }
     var root = reconciler.Mount(Container() {.Width: 90,.Height: 20,.FlexDirection: FlexDirection.Row,
