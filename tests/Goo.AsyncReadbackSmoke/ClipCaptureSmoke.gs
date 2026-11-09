@@ -262,6 +262,9 @@ func RunHiddenDeviceRecoverySmoke() {
   try {
     Console.SetError(capturedError)
     hiddenWindow.Open()
+    WindowReadbackTestFixture.Pump(hiddenWindow, 0.0)
+    let metrics = WindowReadbackTestFixture.Metrics(hiddenWindow)
+    RoundedResizeRequireFirstFrame(ClipCaptureReadback(hiddenWindow, metrics), metrics, 0)
     WindowReadbackTestFixture.ForceRender(hiddenWindow, 0.0)
     guard let hiddenTarget = WindowReadbackTestFixture.CaptureTarget(hiddenWindow),
       let oldRuntime = hiddenTarget.RecoveryRuntime() else {
