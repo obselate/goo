@@ -153,7 +153,7 @@ void renderRectangular(float2 point, float2 size, float2 footprint)
     float across = edgeAcross(edge, point, size);
     float phase = edgePhase(edge);
     float edgeAa = max((edge & 1u) == 0u ? footprint.y : footprint.x, 0.0001);
-    float edgeCoverage = 1.0 - smoothstep(width - edgeAa, width + edgeAa, across);
+    float edgeCoverage = gooEdgeCoverage(across - width, edgeAa);
     float patternCoverage = 1.0;
     if (pc.packedColorsExtra.w == 1u)
     {
@@ -345,7 +345,7 @@ void shade()
     float outerDistance = gooRoundedRectDistance(point, size, outerRadii);
     float2 outerNormal = roundedNormal(point, size, outerRadii);
     float outerAa = max(length(float2(dot(outerNormal, pointDx), dot(outerNormal, pointDy))), 0.0001);
-    float outerCoverage = 1.0 - smoothstep(-0.5 * outerAa, 0.5 * outerAa, outerDistance);
+    float outerCoverage = gooEdgeCoverage(outerDistance, outerAa);
     float2 innerSize = max(size - float2(left + right, top + bottom), float2(0.0));
     float innerCoverage = 1.0;
     float conditionalCoverage = 1.0;
@@ -358,7 +358,7 @@ void shade()
         float innerDistance = gooRoundedRectDistance(point - float2(left, top), innerSize, innerRadii);
         float2 innerNormal = roundedNormal(point - float2(left, top), innerSize, innerRadii);
         float innerAa = max(length(float2(dot(innerNormal, pointDx), dot(innerNormal, pointDy))), 0.0001);
-        innerCoverage = smoothstep(-0.5 * innerAa, 0.5 * innerAa, innerDistance);
+        innerCoverage = 1.0 - gooEdgeCoverage(innerDistance, innerAa);
         conditionalCoverage = innerDistance > outerDistance ? innerCoverage : 0.0;
     }
     // The border is the outer shape minus the nested inner shape. Subtracting coverage keeps sides

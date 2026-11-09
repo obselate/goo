@@ -82,7 +82,7 @@ float roundedCoverage(float2 point, float2 size, float4 radii, float distance, f
 {
     if (blur <= 0.0)
     {
-        return 1.0 - smoothstep(0.0, canonicalEdge(point, size, radii, distance), distance);
+        return gooEdgeCoverage(distance, canonicalEdge(point, size, radii, distance));
     }
     return gaussianCoverage(distance, blur);
 }
@@ -200,7 +200,7 @@ void shade()
         float2 baseSize = max(pc.rect.zw - float2(expansion * 2.0), float2(0.0001));
         float baseDistance = roundedDistance(point - baseOffset, baseSize, pc.radii);
         float baseEdge = canonicalEdge(point - baseOffset, baseSize, pc.radii, baseDistance);
-        float inside = 1.0 - smoothstep(0.0, baseEdge, baseDistance);
+        float inside = gooEdgeCoverage(baseDistance, baseEdge);
         float2 holeOffset = float2(expansion + spread);
         float2 rawHoleSize = pc.rect.zw - holeOffset * 2.0;
         float outsideHole = 1.0;
@@ -210,7 +210,7 @@ void shade()
             float4 holeRadii = max(pc.radii - float4(spread), float4(0.0));
             float holeDistance = roundedDistance(point - holeOffset, holeSize, holeRadii);
             float edge = canonicalEdge(point - holeOffset, holeSize, holeRadii, holeDistance);
-            outsideHole = blur <= 0.0 ? smoothstep(0.0, edge, holeDistance)
+            outsideHole = blur <= 0.0 ? 1.0 - gooEdgeCoverage(holeDistance, edge)
                 : 1.0 - gaussianCoverage(holeDistance, blur);
         }
         coverage = inside * outsideHole;
