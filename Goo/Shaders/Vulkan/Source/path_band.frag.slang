@@ -549,6 +549,22 @@ void accumulateRootDirections(
     }
 }
 
+float saturatedCurveSide(float3 coordinates, float coordinate, float pixelsPerPath)
+{
+    float scale = max(max(abs(coordinates.x), abs(coordinates.y)),
+        max(abs(coordinates.z), abs(coordinate)));
+    float margin = 1.0 / pixelsPerPath + scale * 0.000001;
+    if (isinf(scale * max(pixelsPerPath, 1.0) * 4.0))
+    {
+        return 0.0;
+    }
+    if (all(coordinates > coordinate + margin))
+    {
+        return 1.0;
+    }
+    return all(coordinates < coordinate - margin) ? -1.0 : 0.0;
+}
+
 void accumulateHorizontalCurve(
     float2 point,
     QuadraticCurve curve,
@@ -568,10 +584,20 @@ void accumulateHorizontalCurve(
             float direction = endpointDirection(curve, root, false);
             if (!(abs(direction) <= directionTolerance(curve, false)))
             {
-                accumulateRootDirections(
-                    horizontalDistance(curve, point, root, rightRay) * pixelsPerPath.x,
-                    direction > 0.0 ? 1.0 : -1.0,
-                    value, weight, oppositeValue, oppositeWeight);
+                float side = saturatedCurveSide(
+                    float3(curve.start.x, curve.control.x, curve.finish.x), point.x, pixelsPerPath.x);
+                float rootSign = direction > 0.0 ? 1.0 : -1.0;
+                if (side != 0.0)
+                {
+                    if ((side > 0.0) == rightRay) value += rootSign;
+                    else oppositeValue += rootSign;
+                }
+                else
+                {
+                    accumulateRootDirections(
+                        horizontalDistance(curve, point, root, rightRay) * pixelsPerPath.x,
+                        rootSign, value, weight, oppositeValue, oppositeWeight);
+                }
             }
         }
     }
@@ -596,10 +622,20 @@ void accumulateVerticalCurve(
             float direction = endpointDirection(curve, root, true);
             if (!(abs(direction) <= directionTolerance(curve, true)))
             {
-                accumulateRootDirections(
-                    verticalDistance(curve, point, root, downRay) * pixelsPerPath.y,
-                    direction < 0.0 ? 1.0 : -1.0,
-                    value, weight, oppositeValue, oppositeWeight);
+                float side = saturatedCurveSide(
+                    float3(curve.start.y, curve.control.y, curve.finish.y), point.y, pixelsPerPath.y);
+                float rootSign = direction < 0.0 ? 1.0 : -1.0;
+                if (side != 0.0)
+                {
+                    if ((side > 0.0) == downRay) value += rootSign;
+                    else oppositeValue += rootSign;
+                }
+                else
+                {
+                    accumulateRootDirections(
+                        verticalDistance(curve, point, root, downRay) * pixelsPerPath.y,
+                        rootSign, value, weight, oppositeValue, oppositeWeight);
+                }
             }
         }
     }
