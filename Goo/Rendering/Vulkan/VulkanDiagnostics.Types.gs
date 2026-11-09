@@ -54,6 +54,7 @@ internal class VulkanDiagnosticEventIds {
     const GpuFrame uint64 = 336uL
     const ClipPass uint64 = 337uL
     const PrimitiveUploadStage uint64 = 338uL
+    const ImagePressure uint64 = 339uL
     const VulkanResult uint64 = 400uL
     const ValidationMessage uint64 = 401uL
     const FatalSnapshot uint64 = 402uL
@@ -166,6 +167,7 @@ internal data struct VulkanDiagnosticCounterSnapshot {
   var imageUploadChunkCount uint64
   var imageUploadDeferredCount uint64
   var imageUploadCompletedCount uint64
+  var imagePressureFailureCount uint64
   var textAtlasCount uint64
   var textAtlasByteBudget uint64
   var textAtlasResidentBytes uint64

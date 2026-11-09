@@ -664,6 +664,11 @@ internal unsafe partial class VulkanDiagnostics {
     if !EnterWriter() { return }
     try { counters.AddImageUploadCompleted(value) } finally { ExitWriter() }
   }
+
+  internal func AddImagePressureFailure(value uint64) {
+    if !EnterWriter() { return }
+    try { counters.AddImagePressureFailure(value) } finally { ExitWriter() }
+  }
   internal func SetTextAtlasCount(value uint64) {
     if !EnterWriter() { return }
     try { counters.SetTextAtlasCount(value) } finally { ExitWriter() }

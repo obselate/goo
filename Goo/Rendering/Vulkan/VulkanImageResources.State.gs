@@ -119,6 +119,10 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       return updated
     }
 
+  internal func BeginCompile() {
+    compileTouch = nextTouch
+  }
+
   internal func EvictLeastRecentlyUsed() bool {
     EnsureOpen()
     var candidate int32 = -1
@@ -132,6 +136,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         && entry.RecordingUseCount == 0
         && currentReferenceCounts[index] == 0
         && entry.LastUseFence <= highestCompletedFence
+        && entry.LastTouch < compileTouch
         && entry.LastTouch < candidateTouch{
           candidate = index
           candidateTouch = entry.LastTouch
