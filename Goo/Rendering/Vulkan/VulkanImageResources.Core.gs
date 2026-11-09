@@ -60,11 +60,25 @@ internal unsafe partial class VulkanImageResources : IDisposable, VulkanGpuCache
   private var residentBytes VkDeviceSize
   private var refusedReleaseGeneration uint64
   private var refusedBytes VkDeviceSize
+  private var refusedChainReleaseGeneration uint64
+  private var refusedChainBytes VkDeviceSize
+  private var refusedDemand VkDeviceSize
+  private var priorRefusedDemand VkDeviceSize
+  private var demotedChainBytes VkDeviceSize
+  private var demotionCount uint64
   private var flushPrepared bool
   private var disposed bool
 
   internal prop Generation uint64{ get -> generation }
   internal prop DescriptorSetLayout VkDescriptorSetLayout{ get -> descriptorSetLayout }
+  internal prop DemotionPending bool{
+    get {
+      for index in 0 ... entryLimit {
+        if entries[index].DemotionSource != 0 || entries[index].DemotionTarget != 0 { return true }
+      }
+      return false
+    }
+  }
   internal prop Stats VulkanImageResourceStats{
     get {
       return VulkanImageResourceStats{
@@ -72,6 +86,7 @@ internal unsafe partial class VulkanImageResources : IDisposable, VulkanGpuCache
         Capacity: capacity,
         LiveCount: liveCount,
         ResidentBytes: residentBytes,
+        DemotionCount: demotionCount,
         LiveObjectCount: CurrentLiveObjectHandleCount(),
         DescriptorCapacity: descriptorCapacity,
         BoundDescriptorCount: CurrentBoundDescriptorCount(),

@@ -519,6 +519,7 @@ internal class ProfilerSmoke {
             let trace = ProfilerSmokeTrace(metadata.GetProperty("windowId").GetString() ?? "")
             var buildPump int64 = -1L
             var holdArmed = false
+            var holdWaitDeadline = 0L
             let holdDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5L
             var remaining = true
             var queued = ""
@@ -555,19 +556,24 @@ internal class ProfilerSmoke {
                 }
                 after = payload.GetProperty("nextSeq").GetString() ?? after
                 remaining = payload.GetProperty("more").GetBoolean()
-                if !holdArmed && buildPump >= 0L {
+                if holdWaitDeadline == 0L && buildPump >= 0L {
                     window.Post(() -> {
                         WindowReadbackTestFixture.RuntimeHoldNextQueueSubmit(window)
                         root.Frame++
                         root.Rebuild()
                     })
-                    Require(WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(window, 5000),
-                        "No real queue submission was held")
-                    readOnly.Set()
-                    holdArmed = true
-                    remaining = true
-                } else if !holdArmed {
+                    holdWaitDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5L
+                } else if holdWaitDeadline == 0L {
                     Require(Stopwatch.GetTimestamp() < holdDeadline, "Posted rebuild has no Build record")
+                }
+                if !holdArmed && holdWaitDeadline != 0L {
+                    if WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(window, 0) {
+                        readOnly.Set()
+                        holdArmed = true
+                        remaining = true
+                    } else {
+                        Require(Stopwatch.GetTimestamp() < holdWaitDeadline, "No real queue submission was held")
+                    }
                 }
                 if holdArmed && !remaining && (queued == "" || trace.Submitted.Contains(queued)) {
                     Require(Stopwatch.GetTimestamp() < holdDeadline, "Held submit enqueue record was not observed")

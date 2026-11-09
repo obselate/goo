@@ -46,13 +46,36 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         }
       }
       let heap = allocator.DeviceLocalHeap
-      if refusedBytes > 0uL && bytes >= refusedBytes && allocator.ReleaseGeneration(heap) == refusedReleaseGeneration {
+      let credited = demotedChainBytes >= bytes
+      if !credited && refusedBytes > 0uL && bytes >= refusedBytes && allocator.ReleaseGeneration(heap) == refusedReleaseGeneration {
+        DemoteChains(bytes)
         return VulkanImageResourceLookup{ Found: false }
       }
       let index = if existingIndex >= 0 { existingIndex } else { EnsureEmptyIndex() }
-      allocator.BeginCacheGrowth()
+      let chainLevels = MipLevelCount(width, height)
+      let chainBytes = ResidentImageBytes(width, height, chainLevels)
+      var refused = false
+      if !credited { allocator.BeginCacheGrowth() }
       try {
-        CreateImage(index, id, width, height, bytes, source, cacheable, samplerId, samplerMode)
+        if !credited && chainLevels > 1u && refusedDemand == 0uL && priorRefusedDemand == 0uL
+          && (refusedChainBytes == 0uL || chainBytes < refusedChainBytes
+          || allocator.ReleaseGeneration(heap) != refusedChainReleaseGeneration) {
+            try {
+              CreateImage(index, id, width, height, bytes, source, cacheable, samplerId, samplerMode, chainLevels)
+              demotedChainBytes = 0uL
+              return Lookup(index, samplerId, samplerMode)
+            } catch (pressure VulkanMemoryPressureException) {
+              let releaseGeneration = allocator.ReleaseGeneration(heap)
+              refusedChainBytes = if refusedChainReleaseGeneration == releaseGeneration && refusedChainBytes > 0uL {
+                Math.Min(refusedChainBytes, chainBytes)
+              } else {
+                chainBytes
+              }
+              refusedChainReleaseGeneration = releaseGeneration
+            }
+          }
+        CreateImage(index, id, width, height, bytes, source, cacheable, samplerId, samplerMode, 1u)
+        if credited { demotedChainBytes -= bytes }
       } catch (pressure VulkanMemoryPressureException) {
         let releaseGeneration = allocator.ReleaseGeneration(heap)
         refusedBytes = if refusedReleaseGeneration == releaseGeneration && refusedBytes > 0uL {
@@ -67,9 +90,13 @@ internal unsafe partial class VulkanImageResources : IDisposable {
             VulkanDiagnosticEventIds.ImagePressure, VulkanDiagnosticCategories.Resource,
             1uL, 0, uint64(bytes), uint64(allocator.Headroom(heap)))
         }
-        return VulkanImageResourceLookup{ Found: false }
+        refused = true
       } finally {
-        allocator.EndCacheGrowth()
+        if !credited { allocator.EndCacheGrowth() }
+      }
+      if refused {
+        DemoteChains(bytes)
+        return VulkanImageResourceLookup{ Found: false }
       }
       return Lookup(index, samplerId, samplerMode)
     }
@@ -153,35 +180,9 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       }
       let sourceByteOffset = VkDeviceSize(entry.UploadCompletedRows) * rowBytes
       let chunkByteCount = VkDeviceSize(rowCount) * rowBytes
-      let source = *uint8(nint(premultipliedSourceBytes) + nint(sourceByteOffset))
-      let destination = *uint8(nint(stagingAllocation!!.mapped) + nint(reservation.Offset))
-      try {
-        var byteIndex int32 = 0
-        while byteIndex < int32(chunkByteCount) {
-          let alpha = source[byteIndex + 3]
-          if alpha == uint8(255) {
-            destination[byteIndex] = source[byteIndex]
-            destination[byteIndex + 1] = source[byteIndex + 1]
-            destination[byteIndex + 2] = source[byteIndex + 2]
-          } else if alpha == uint8(0) {
-            destination[byteIndex] = uint8(0)
-            destination[byteIndex + 1] = uint8(0)
-            destination[byteIndex + 2] = uint8(0)
-          } else {
-            destination[byteIndex] = Unpremultiply(source[byteIndex], alpha)
-            destination[byteIndex + 1] = Unpremultiply(source[byteIndex + 1], alpha)
-            destination[byteIndex + 2] = Unpremultiply(source[byteIndex + 2], alpha)
-          }
-          destination[byteIndex + 3] = alpha
-          byteIndex += 4
-        }
-      } catch (error Exception) {
-        if !uploadRing.Cancel(reservation) {
-          throw InvalidOperationException("Vulkan image upload reservation rollback failed")
-        }
-        uploadRing.Collect(highestCompletedFence)
-        throw error
-      }
+      Buffer.MemoryCopy(*uint8(nint(premultipliedSourceBytes) + nint(sourceByteOffset)),
+        *uint8(nint(stagingAllocation!!.mapped) + nint(reservation.Offset)),
+        int64(chunkByteCount), int64(chunkByteCount))
       entry.State = VulkanImageResourceState.UploadPending
       entry.UploadRowOffset = entry.UploadCompletedRows
       entry.UploadRowCount = rowCount
@@ -218,7 +219,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         throw ArgumentException("Command buffer is null", "commandBuffer")
       }
       recordedBytes = 0uL
-      recordedBarriers = 0
+      recordedBarriers = RecordDemotions(commandBuffer)
       if uploadRing.Stats.ActiveRanges == 0 {
         return 0
       }
@@ -301,6 +302,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     if commandBuffer == nint(0) {
       throw ArgumentException("Command buffer is null", "commandBuffer")
     }
+    SubmitDemotions(commandBuffer, 0uL)
     if uploadRing.Stats.ActiveRanges == 0 {
       flushPrepared = false
       return 0
@@ -451,6 +453,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     fence uint64,
     expectedGeneration uint64) int32{
       let tracked = ValidateUploadSubmission(commandBuffer, fence, expectedGeneration)
+      SubmitDemotions(commandBuffer, fence)
       if tracked == 0 {
         return 0
       }

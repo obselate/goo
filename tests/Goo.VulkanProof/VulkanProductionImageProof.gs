@@ -315,12 +315,25 @@ private func VulkanProductionImageGrowthAndFailure(
         || stats.Capacity != 2 || tiny.LogicalCapacityForProof != 2
         || logical[0].Id.LogicalId != replacement.Id.LogicalId
         || logical[1].Id.LogicalId != second.Id.LogicalId
-        || stats.LiveCount != 2 || stats.ResidentBytes != 32uL
+        || stats.LiveCount != 2 || stats.ResidentBytes != 40uL
         || stats.Registry.EntryCount != 2 || stats.Registry.LogicalCount != 2
         || stats.Registry.ResidentCount != 0 || stats.Registry.RetiringCount != 0
         || stats.Registry.LogicalBytes != 32uL
         || stats.Registry.LogicalSourceBytes != 32uL {
           throw InvalidOperationException("Vulkan production image holes were not reused")
+        }
+      let column = VulkanProductionTinyLogical(9925uL, true)
+      let row = VulkanProductionTinyLogical(9926uL, true)
+      var columnSource = column.Source
+      var rowSource = row.Source
+      columnSource.Bytes = 32uL
+      rowSource.Bytes = 32uL
+      if !tiny.RegisterImage(column.Id, 1u, 8u, columnSource, true,
+          VulkanImageSamplerId(), VulkanImageSamplerMode.Linear).Found
+        || !tiny.RegisterImage(row.Id, 8u, 1u, rowSource, true,
+          VulkanImageSamplerId(), VulkanImageSamplerMode.Linear).Found
+        || tiny.Stats.ResidentBytes != 160uL {
+          throw InvalidOperationException("Vulkan production thin image mip chains were not counted")
         }
     } finally {
       tiny.Dispose()

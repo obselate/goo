@@ -30,7 +30,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
   internal prop RedrawRequired bool{
     get {
       CommitCurrentReferences()
-      return redrawRequired
+      return redrawRequired || imageResources.DemotionPending
     }
   }
 

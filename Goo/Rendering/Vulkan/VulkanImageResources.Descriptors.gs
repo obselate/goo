@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Numerics
 
 internal unsafe partial class VulkanImageResources : IDisposable {
   private func DescriptorSlot(index int32, samplerMode VulkanImageSamplerMode) int32 {
@@ -179,12 +180,6 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     return count
   }
 
-  private func Unpremultiply(value uint8, alpha uint8) uint8 {
-    let numerator = uint32(value) * 255u + uint32(alpha) / 2u
-    let result = numerator / uint32(alpha)
-    return if result > 255u { uint8(255) } else { uint8(result) }
-  }
-
   private func FindExactIndex(id ResourceId) int32 {
     var index int32 = 0
     while index < entryLimit {
@@ -212,6 +207,19 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       throw ArgumentOutOfRangeException("height")
     }
     return VkDeviceSize(bytes)
+  }
+
+  private func MipLevelCount(width uint32, height uint32) uint32 ->
+    uint32(BitOperations.Log2(Math.Max(width, height))) + 1u
+
+  private func ResidentImageBytes(width uint32, height uint32, mipLevels uint32) VkDeviceSize {
+    var bytes VkDeviceSize = 0uL
+    var level int32 = 0
+    while level < int32(mipLevels) {
+      bytes += VkDeviceSize(Math.Max(width >> level, 1u)) * VkDeviceSize(Math.Max(height >> level, 1u)) * 4uL
+      level++
+    }
+    return bytes
   }
 
   private func ValidateImageId(id ResourceId) {

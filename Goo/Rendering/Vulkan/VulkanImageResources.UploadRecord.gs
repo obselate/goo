@@ -10,7 +10,8 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         || entry.UploadRowCount > entry.Height - entry.UploadRowOffset{
           throw InvalidOperationException("Vulkan image upload row range is invalid")
         }
-      let subresourceRange = VulkanTransitions.ColorSubresourceRange()
+      let levels = entry.MipLevels
+      let subresourceRange = VulkanTransitions.ColorSubresourceRange(levelCount: levels)
       let pipelineBarrier = dispatch.vkCmdPipelineBarrier2
       var barrierCount int32 = 0
       if entry.ImageLayout != VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL {
@@ -34,7 +35,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
           VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
           srcStageMask,
           srcAccessMask,
-          VkConstants.VK_PIPELINE_STAGE_2_COPY_BIT,
+          VkConstants.VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT,
           VkConstants.VK_ACCESS_2_TRANSFER_WRITE_BIT)
         barrierCount++
       }
@@ -57,14 +58,40 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1u, &copy)
 
       if entry.UploadRowOffset + entry.UploadRowCount == entry.Height {
+        let blitImage = dispatch.vkCmdBlitImage
+        var level uint32 = 1u
+        while level < levels {
+          let source = VulkanTransitions.ColorSubresourceRange(baseMipLevel: level - 1u)
+          VulkanTransitions.RecordImage(commandBuffer, pipelineBarrier, entry.Image, source,
+            VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            VkConstants.VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT, VkConstants.VK_ACCESS_2_TRANSFER_WRITE_BIT,
+            VkConstants.VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT, VkConstants.VK_ACCESS_2_TRANSFER_READ_BIT)
+          var blit = VkImageBlit{}
+          blit.srcSubresource = VkImageSubresourceLayers{
+            aspectMask: uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT), mipLevel: level - 1u, layerCount: 1u }
+          blit.srcOffset1 = VkOffset3D{ x: int32(Math.Max(entry.Width >> int32(level - 1u), 1u)),
+            y: int32(Math.Max(entry.Height >> int32(level - 1u), 1u)), z: 1 }
+          blit.dstSubresource = VkImageSubresourceLayers{
+            aspectMask: uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT), mipLevel: level, layerCount: 1u }
+          blit.dstOffset1 = VkOffset3D{ x: int32(Math.Max(entry.Width >> int32(level), 1u)),
+            y: int32(Math.Max(entry.Height >> int32(level), 1u)), z: 1 }
+          blitImage(commandBuffer, entry.Image, VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            entry.Image, VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1u, &blit, VkConstants.VK_FILTER_LINEAR)
+          VulkanTransitions.RecordImage(commandBuffer, pipelineBarrier, entry.Image, source,
+            VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VkConstants.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VkConstants.VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT, VkConstants.VK_ACCESS_2_NONE,
+            VkConstants.VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VkConstants.VK_ACCESS_2_SHADER_SAMPLED_READ_BIT)
+          barrierCount += 2
+          level++
+        }
         VulkanTransitions.RecordImage(
           commandBuffer,
           pipelineBarrier,
           entry.Image,
-          subresourceRange,
+          VulkanTransitions.ColorSubresourceRange(baseMipLevel: levels - 1u),
           VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
           VkConstants.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-          VkConstants.VK_PIPELINE_STAGE_2_COPY_BIT,
+          VkConstants.VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT,
           VkConstants.VK_ACCESS_2_TRANSFER_WRITE_BIT,
           VkConstants.VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
           VkConstants.VK_ACCESS_2_SHADER_SAMPLED_READ_BIT)
