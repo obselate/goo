@@ -417,6 +417,7 @@ class FixtureContractTests {
             yield Contract[StyleFixtures]("DeclarationInlineSpillOrderContract")
             yield Contract[StyleFixtures]("DirectionAndLogicalEdgeContract")
             yield Contract[StyleFixtures]("EdgesContract")
+            yield Contract[StyleFixtures]("InheritedColorAfterDescendantStyleChangeContract")
             yield Contract[StyleFixtures]("LogicalEdgeTransitionContract")
             yield Contract[StyleFixtures]("OrderedCompositionAndGradientClearContract")
             yield Contract[StyleFixtures]("OutlineStateResetTransitionAndStorageContract")

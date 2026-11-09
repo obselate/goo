@@ -1078,6 +1078,35 @@ internal class StyleFixtures {
       && resolver.Animating.Count == 0
   }
 
+  func InheritedColorAfterDescendantStyleChangeContract() bool {
+    let resolver = Resolver{}
+    let reconciler = Reconciler{Res: resolver, DeferStyleFlush: true}
+    let root = reconciler.Mount(Container(){
+      .Color: Color.Black,
+      Container(){
+        Container{BorderColor: Color.Black, Text{Content: "inherited"}},
+        Text{Content: "local", Color: Color.Rgb(255, 0, 0)},
+      },
+    })
+    reconciler.FlushStyles()
+    let parent = root.Children[0]
+    let child = parent.Children[0]
+    reconciler.Diff(child, Container{BorderColor: Color.White, Text{Content: "inherited"}})
+    reconciler.Diff(root, Container(){
+      .Color: Color.White,
+      Container(){
+        Container{BorderColor: Color.White, Text{Content: "inherited"}},
+        Text{Content: "local", Color: Color.Rgb(255, 0, 0)},
+      },
+    })
+    reconciler.FlushStyles()
+    return root.Color == Color.White && parent.Color == Color.White
+      && child.BorderLeftColor == Color.White && child.Color == Color.White
+      && child.Children[0].Color == Color.White
+      && parent.Children[1].Color == Color.Rgb(255, 0, 0)
+      && styleMaskEmpty(child.StylePendingInheritedMask) && resolver.Flush() == 0
+  }
+
   func TypographyInheritanceContract() bool {
     let resolver = Resolver{}
     let root = Reconciler{ Res: resolver }.Mount(Container() {.Color: Color.Rgb(255, 0, 0),.FontFamily: "base",.TextAlign: TextAlign.Right,.Hover: Style{
