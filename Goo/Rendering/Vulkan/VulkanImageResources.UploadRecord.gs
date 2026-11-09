@@ -242,6 +242,12 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     }
     while residentBytes > residentByteBudget - bytes {
       if !EvictLeastRecentlyUsed() {
+        if let currentDiagnostics = diagnostics {
+          currentDiagnostics.AddImagePressureFailure(1uL)
+          currentDiagnostics.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
+            VulkanDiagnosticEventIds.ImagePressure, VulkanDiagnosticCategories.Resource,
+            1uL, 0, uint64(bytes), uint64(residentByteBudget - residentBytes))
+        }
         return false
       }
     }

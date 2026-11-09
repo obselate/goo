@@ -56,6 +56,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
   private var generationLastUseFence uint64
   private var highestCompletedFence uint64
   private var nextTouch uint64
+  private var compileTouch uint64 = uint64.MaxValue
   private var liveCount int32
   private var residentBytes VkDeviceSize
   private var flushPrepared bool

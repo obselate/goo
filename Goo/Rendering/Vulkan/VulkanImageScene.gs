@@ -60,7 +60,9 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
     if disposed {
       return
     }
+    ReleaseUncommittedReferences()
     currentReferences.Begin()
+    imageResources.BeginCompile()
     cachedProvider = nil
     cachedVersion = 0uL
     cachedLookup = VulkanImageResourceLookup{}
@@ -268,6 +270,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
       return
     }
     disposed = true
+    ReleaseUncommittedReferences()
     var index int32 = 0
     while index < currentReferences.CurrentCount {
       imageResources.ReleaseCurrentReference(currentReferences.CurrentAt(index), generation)
@@ -282,7 +285,24 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
   }
 
   private func AddPendingReference(id ResourceId) {
-    currentReferences.Add(id)
+    if currentReferences.Add(id) && !currentReferences.CurrentContains(id)
+      && !imageResources.AddCurrentReference(id, generation) {
+        throw InvalidOperationException("Vulkan image current reference is not registered")
+      }
+  }
+
+  private func ReleaseUncommittedReferences() {
+    if referencesCommitted {
+      return
+    }
+    var index int32 = 0
+    while index < currentReferences.PendingCount {
+      let id = currentReferences.PendingAt(index)
+      if !currentReferences.CurrentContains(id) {
+        imageResources.ReleaseCurrentReference(id, generation)
+      }
+      index++
+    }
   }
 
   private func CommitCurrentReferences() {
@@ -295,15 +315,6 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
       if !currentReferences.PendingContains(id) {
         imageResources.ReleaseCurrentReference(id, generation)
       }
-      index++
-    }
-    index = 0
-    while index < currentReferences.PendingCount {
-      let id = currentReferences.PendingAt(index)
-      if !currentReferences.CurrentContains(id)
-        && !imageResources.AddCurrentReference(id, generation) {
-          throw InvalidOperationException("Vulkan image current reference is not registered")
-        }
       index++
     }
     currentReferences.Commit()

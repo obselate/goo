@@ -29,6 +29,7 @@ internal class VulkanDiagnosticCounters {
   private var imageUploadChunkCount uint64
   private var imageUploadDeferredCount uint64
   private var imageUploadCompletedCount uint64
+  private var imagePressureFailureCount uint64
   private var textAtlasCount uint64
   private var textAtlasByteBudget uint64
   private var textAtlasResidentBytes uint64
@@ -156,6 +157,7 @@ internal class VulkanDiagnosticCounters {
         imageUploadChunkCount: Interlocked.Read(ref imageUploadChunkCount),
         imageUploadDeferredCount: Interlocked.Read(ref imageUploadDeferredCount),
         imageUploadCompletedCount: Interlocked.Read(ref imageUploadCompletedCount),
+        imagePressureFailureCount: Interlocked.Read(ref imagePressureFailureCount),
         textAtlasCount: Interlocked.Read(ref textAtlasCount),
         textAtlasByteBudget: Interlocked.Read(ref textAtlasByteBudget),
         textAtlasResidentBytes: Interlocked.Read(ref textAtlasResidentBytes),
@@ -438,6 +440,7 @@ internal class VulkanDiagnosticCounters {
   internal func AddImageUploadChunk(value uint64) { Interlocked.Add(ref imageUploadChunkCount, value) }
   internal func AddImageUploadDeferred(value uint64) { Interlocked.Add(ref imageUploadDeferredCount, value) }
   internal func AddImageUploadCompleted(value uint64) { Interlocked.Add(ref imageUploadCompletedCount, value) }
+  internal func AddImagePressureFailure(value uint64) { Interlocked.Add(ref imagePressureFailureCount, value) }
   internal func AddDraw(value uint64) { Interlocked.Add(ref drawCount, value) }
   internal func AddPipelineChange(value uint64) { Interlocked.Add(ref pipelineChangeCount, value) }
   internal func AddDescriptorChange(value uint64) { Interlocked.Add(ref descriptorChangeCount, value) }
