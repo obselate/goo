@@ -200,7 +200,7 @@ func RunShaderEffectSmoke() {
     window = opened
     Console.SetError(capturedError)
     opened.Open()
-    WindowReadbackTestFixture.ForceRender(opened, 0.0)
+    WindowReadbackTestFixture.ForceRender(opened, 0.0, waitForPresentation: true)
     WindowReadbackTestFixture.ForceRender(opened, 0.0166666666666667)
     let metrics = WindowReadbackTestFixture.Metrics(opened)
     Require(metrics.LogicalWidth == 192 && metrics.LogicalHeight == 128,
@@ -391,7 +391,7 @@ func RunShaderEffectSmoke() {
     let recoveryBefore = WindowReadbackTestFixture.DiagnosticCounters(opened).deviceRecoveryCount
     VulkanSharedRuntime.FailNextGraphicsSubmissionForTest()
     effect.SetParameter(0, Vector4(1.0F, 0.25F, 0.25F, 0.0F))
-    WindowReadbackTestFixture.ForceRender(opened, 0.0166666666666667)
+    WindowReadbackTestFixture.ForceRender(opened, 0.0166666666666667, waitForPresentation: true)
     deviceRecoveries = ShaderEffectDelta(
       WindowReadbackTestFixture.DiagnosticCounters(opened).deviceRecoveryCount,
       recoveryBefore)
