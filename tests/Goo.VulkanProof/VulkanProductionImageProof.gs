@@ -341,14 +341,14 @@ private func VulkanProductionImageLogicalBudget(
     let allocatorBefore = allocator.Counters
     let tiny = resources.CreateTinyForProof()
     try {
-      let images = [6]VulkanLogicalResource
+      let images = [8]VulkanLogicalResource
       for index in 0 ... images.Length {
         let image = VulkanProductionTinyLogical(9930uL + uint64(index), true)
         images[index] = image
         VulkanProductionImageRegister(tiny, image, VulkanImageSamplerMode.Nearest)
       }
-      if tiny.Stats.Registry.LogicalSourceBytes != 96uL {
-        throw InvalidOperationException("Vulkan logical image budget was not saturated")
+      if tiny.Stats.Registry.LogicalSourceBytes != 128uL || tiny.LogicalCapacityForProof != 8 {
+        throw InvalidOperationException("Vulkan logical image registry was not filled")
       }
       if !tiny.Retire(images[0].Id, tiny.Generation, 0uL) || tiny.Collect(0uL) <= 0 {
         throw InvalidOperationException("Vulkan cacheable image did not detach")
@@ -357,7 +357,7 @@ private func VulkanProductionImageLogicalBudget(
       if !tiny.Retire(images[1].Id, tiny.Generation, 0uL) || tiny.Collect(0uL) <= 0 {
         throw InvalidOperationException("Vulkan cacheable image did not detach for replacement")
       }
-      let replacement = VulkanProductionTinyLogical(9936uL, true)
+      let replacement = VulkanProductionTinyLogical(9938uL, true)
       let beforeInvalid = tiny.Stats
       var invalidSource = replacement.Source
       invalidSource.ProviderId = 0uL
@@ -372,22 +372,22 @@ private func VulkanProductionImageLogicalBudget(
         throw InvalidOperationException("Vulkan invalid image changed saturated registry state")
       }
       VulkanProductionImageRegister(tiny, replacement, VulkanImageSamplerMode.Nearest)
-      let logical = [6]VulkanLogicalResource
+      let logical = [8]VulkanLogicalResource
       let copied = tiny.CopyLogicalResourcesForProof(logical)
-      if copied != 6 || tiny.Stats.Registry.LogicalSourceBytes != 96uL {
+      if copied != 8 || tiny.LogicalCapacityForProof != 8 || tiny.Stats.Registry.LogicalSourceBytes != 128uL {
         throw InvalidOperationException("Vulkan detached image metadata was not reclaimed")
       }
       for index in 0 ... copied {
         if logical[index].Id.LogicalId == images[1].Id.LogicalId {
-          throw InvalidOperationException("Vulkan replaced image still holds logical budget")
+          throw InvalidOperationException("Vulkan replaced image still holds a logical record")
         }
       }
       if !tiny.Retire(images[2].Id, tiny.Generation, 0uL) || tiny.Collect(0uL) <= 0 {
         throw InvalidOperationException("Vulkan cacheable image did not detach for reload")
       }
       VulkanProductionImageRegister(tiny, images[1], VulkanImageSamplerMode.Nearest)
-      if tiny.Stats.Registry.LogicalSourceBytes != 96uL {
-        throw InvalidOperationException("Vulkan discarded image did not reload within budget")
+      if tiny.LogicalCapacityForProof != 8 || tiny.Stats.Registry.LogicalSourceBytes != 128uL {
+        throw InvalidOperationException("Vulkan discarded image did not reload into a detached record")
       }
     } finally {
       tiny.Dispose()
