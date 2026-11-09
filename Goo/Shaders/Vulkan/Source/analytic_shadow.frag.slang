@@ -78,13 +78,40 @@ float gaussianCoverage(float distance, float blur)
     return 0.5 * (1.0 - erfX);
 }
 
+float blurredRowCoverage(float2 centered, float2 halfSize, float4 radii, float blur)
+{
+    float2 corner = centered.y < 0.0 ? radii.xy : radii.wz;
+    float2 delta = min(halfSize.y - corner - abs(centered.y), 0.0);
+    float2 extent = halfSize.x - corner + sqrt(max(corner * corner - delta * delta, 0.0));
+    return gaussianCoverage(centered.x - extent.y, blur) - gaussianCoverage(centered.x + extent.x, blur);
+}
+
+float blurredRoundedCoverage(float2 point, float2 size, float4 cornerRadii, float blur)
+{
+    float2 halfSize = size * 0.5;
+    float4 radii = min(cornerRadii * normalizedRadiusScale(size, cornerRadii), min(halfSize.x, halfSize.y));
+    float2 centered = point - halfSize;
+    float sigma = blur * 0.5;
+    float start = clamp(-3.0 * sigma, centered.y - halfSize.y, centered.y + halfSize.y);
+    float step = (clamp(3.0 * sigma, centered.y - halfSize.y, centered.y + halfSize.y) - start) * 0.125;
+    float y = start + step * 0.5;
+    float coverage = 0.0;
+    for (int index = 0; index < 8; index++)
+    {
+        coverage += blurredRowCoverage(float2(centered.x, centered.y - y), halfSize, radii, blur)
+            * exp(-0.5 * y * y / (sigma * sigma)) * step / (sigma * 2.50662827463);
+        y += step;
+    }
+    return coverage;
+}
+
 float roundedCoverage(float2 point, float2 size, float4 radii, float distance, float blur)
 {
     if (blur <= 0.0)
     {
         return gooEdgeCoverage(distance, canonicalEdge(point, size, radii, distance));
     }
-    return gaussianCoverage(distance, blur);
+    return blurredRoundedCoverage(point, size, radii, blur);
 }
 
 float shapeMaskSample(float2 screenPoint)
@@ -211,7 +238,7 @@ void shade()
             float holeDistance = roundedDistance(point - holeOffset, holeSize, holeRadii);
             float edge = canonicalEdge(point - holeOffset, holeSize, holeRadii, holeDistance);
             outsideHole = blur <= 0.0 ? 1.0 - gooEdgeCoverage(holeDistance, edge)
-                : 1.0 - gaussianCoverage(holeDistance, blur);
+                : 1.0 - blurredRoundedCoverage(point - holeOffset, holeSize, holeRadii, blur);
         }
         coverage = inside * outsideHole;
     }
@@ -223,7 +250,13 @@ void shade()
         float shadowDistance = roundedDistance(point - shapeOffset, shapeSize, shapeRadii);
         coverage = roundedCoverage(point - shapeOffset, shapeSize, shapeRadii, shadowDistance, blur);
     }
-    outColor = unpackColor(pc.packedColors.x, pc.packedColors.w, 0u) * coverage * gooClipCoverage();
+    float4 color = unpackColor(pc.packedColors.x, pc.packedColors.w, 0u);
+    if ((pc.packedColorsExtra.y & 1u) == 0u)
+    {
+        float noise = frac(52.9829189 * frac(dot(floor(gooFragmentPosition.xy + pc.stopPositions.xy), float2(0.06711056, 0.00583715))));
+        coverage = saturate(coverage + (noise - 0.5) / (255.0 * max(color.a, 0.004)));
+    }
+    outColor = color * coverage * gooClipCoverage();
 }
 
 #include "analytic_fragment_entry.slang"
