@@ -1,0 +1,5 @@
+## Changed
+
+- GPU caches now use the live driver memory budget (`VK_EXT_memory_budget`) of the heap that holds each resource. The fixed image, layer, glyph atlas and clip mask budgets are removed. Without the extension, Goo uses half of each heap. Caches grow while the heap has headroom.
+- Images, offscreen layers and glyph atlas pages share one eviction policy. When an allocation does not fit or the driver returns `VK_ERROR_OUT_OF_DEVICE_MEMORY`, Goo evicts the least recently used items that no frame in flight uses and tries once more. If that fails, the frame skips the item and diagnostics report a pressure event. Goo no longer crashes on GPU memory pressure.
+- Diagnostics report `heapHeadroom`, `memoryEvictionCount`, `memoryAllocationRetryCount`, `memoryPressureCount` and `textAtlasPressureFailureCount`. The fields `imageByteBudget`, `textAtlasByteBudget`, `textAtlasPeakByteBudget` and `layerPoolByteBudget` are removed.
