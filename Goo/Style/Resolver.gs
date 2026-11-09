@@ -124,10 +124,11 @@ internal partial class Resolver {
     if pending.Count == 0 {
       stylePass = newStylePass()
     }
-    if n.StyleQueuedPass == stylePass {
+    if n.StyleQueuedPass == stylePass && n.StyleResolvedPass != stylePass {
       return
     }
     n.StyleQueuedPass = stylePass
+    n.StyleResolvedPass = 0
     n.StylePendingSelf = false
     n.StylePendingInitial = false
     n.StylePendingInheritedMask = StyleMask{}
