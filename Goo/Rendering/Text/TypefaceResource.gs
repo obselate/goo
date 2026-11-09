@@ -23,7 +23,7 @@ internal sealed class TypefaceResource : IDisposable {
       this.family = family
       this.sourceId = sourceId
       this.sourceGeneration = sourceGeneration
-      font = VulkanTextFont(bytes, 1u, faceIndex, variations, family, systemWeight)
+      font = VulkanTextFont(bytes, 1024u, faceIndex, variations, family, systemWeight)
     }
 
   internal func Profile(recorder FrameRecorder) {

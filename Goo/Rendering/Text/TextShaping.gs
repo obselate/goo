@@ -410,7 +410,7 @@ internal partial class TextShaping {
       count int32, runs List[ShapedRun]?, ref cursor float32, ref extra float32,
       ref ascent float32, ref descent float32, ref hasCluster bool, ref priorCluster uint32,
       scratch UnicodeTextAnalysisScratchScope) {
-        let factor = size / 64.0F
+        let factor = size / 65536.0F
         if runs == nil && letterSpacing == 0.0F {
           var width = 0.0F
           for i in 0 ... count {
