@@ -134,8 +134,8 @@ internal unsafe sealed partial class VulkanTextScene {
   }
 
   private func HintPpem(provider VulkanTextProvider, fontSize float32) int32 {
-    if pixelScale == 1.0F && provider.OutlineHintingAvailable && fontSize > 0.0F && fontSize <= 16.0F {
-      return Math.Max(1, int32(MathF.Round(fontSize * 64.0F)))
+    if provider.OutlineHintingAvailable && fontSize > 0.0F {
+      return Math.Max(1, int32(MathF.Round(fontSize * pixelScale * 64.0F)))
     }
     return 0
   }

@@ -256,10 +256,12 @@ internal partial class TextEditorLayouts {
         let width = BoxGeometry.ContentWidth(n)
         let height = BoxGeometry.ContentHeight(n)
         let layout = For(n, width, height)
+        let scale = TransformGeometry.PixelDensity(n)
+        let contentWidth = MathF.Ceiling((layout.ContentWidth + 1.5F) * scale) / scale
       return Point{
             X: float64(n.TextWrap == TextWrap.Wrap
-              ? MathF.Min(layout.ContentWidth + 1.5F, layout.ViewportWidth)
-              : layout.ContentWidth + 1.5F),
+              ? MathF.Min(contentWidth, layout.ViewportWidth)
+              : contentWidth),
             Y: float64(layout.ContentHeight),
         }
     }
@@ -296,10 +298,13 @@ internal partial class TextEditorLayouts {
         let scroll = ScrollPoint(n)
         let logicalLeft = rect.X + scroll.X
         let logicalTop = rect.Y + scroll.Y
+        let scale = TransformGeometry.PixelDensity(n)
         var x = scroll.X
         var y = scroll.Y
-        if logicalLeft < x + left { x = logicalLeft - left }
-        else if logicalLeft + rect.W > x + right { x = logicalLeft + rect.W - right }
+        if logicalLeft < x + left { x = MathF.Floor((logicalLeft - left) * scale) / scale }
+        else if logicalLeft + rect.W > x + right {
+          x = MathF.Ceiling((logicalLeft + rect.W - right) * scale) / scale
+        }
         if logicalTop < y + top { y = logicalTop - top }
         else if logicalTop + rect.H > y + bottom { y = logicalTop + rect.H - bottom }
         ScrollState.To(n, x, y, true, false)
