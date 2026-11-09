@@ -3596,7 +3596,7 @@ internal class InputNestedScrollCell : Cell {
   internal prop InnerFits bool{ get; init; }
 
   override func Build() Blob -> Container() {.Width: 200.0,.Height: 200.0,.Overflow: Overflow.Scroll,
-    Container() {.Key: "inner",.Width: 200.0,.Height: 100.0,.Overflow: Overflow.Scroll,
+    Container() {.Key: "inner",.Width: 200.0,.Height: 100.0,.FlexShrink: 0.0,.Overflow: Overflow.Scroll,
       Container{ Height: InnerFits ? 80.0 : 300.0},
       },
       Container{ Key: "tail", Height: 300.0},

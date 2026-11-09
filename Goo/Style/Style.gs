@@ -125,9 +125,9 @@ public open class Style {
   public prop Width Length{ init -> pushCheckedLength(StyleField.Width, value, "Width", false, true, true) }
   /// Sets the preferred height.
   public prop Height Length{ init -> pushCheckedLength(StyleField.Height, value, "Height", false, true, true) }
-  /// Sets the minimum width. When unset, a shrinking flex item stops at its Width, or at its content width when Width is unset and overflow is visible. Set 0 to let it shrink further.
+  /// Sets the minimum width. When unset, a shrinking flex item stops at 0 if its overflow is Scroll or Hidden, else at its Width, else at its content width. Set 0 to let any item shrink further.
   public prop MinWidth Length{ init -> pushCheckedLength(StyleField.MinWidth, value, "MinWidth", false, true, false) }
-  /// Sets the minimum height. When unset, a shrinking flex item stops at its Height, or at its content height when Height is unset and overflow is visible. Set 0 to let it shrink further.
+  /// Sets the minimum height. When unset, a shrinking flex item stops at 0 if its overflow is Scroll or Hidden, else at its Height, else at its content height. Set 0 to let any item shrink further.
   public prop MinHeight Length{ init -> pushCheckedLength(StyleField.MinHeight, value, "MinHeight", false, true, false) }
   /// Sets the maximum width.
   public prop MaxWidth Length{ init -> pushCheckedLength(StyleField.MaxWidth, value, "MaxWidth", false, true, false) }

@@ -79,8 +79,17 @@ internal class LayoutFixtures {
         }
     }
     let fixedText = root.Children[2].Children[0]
-    return root.Children[0].Children[0].Rect.H > 20.0F && fixedText.Rect.W > 120.0F
-      && root.Children[2].Children[1].Rect.X >= fixedText.Rect.W - 1.0F
+    if root.Children[0].Children[0].Rect.H <= 20.0F || fixedText.Rect.W <= 120.0F
+      || root.Children[2].Children[1].Rect.X < fixedText.Rect.W - 1.0F {
+        return false
+      }
+    let column = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 120,.Height: 200,
+      Container{ Height: 40 },
+      Container{ Height: 300, OverflowY: Overflow.Scroll, Container{ Height: 400 } },
+    })
+    Layout().Calculate(column, 120.0F, 200.0F)
+    let pane = column.Children[1]
+    return pane.Rect.Y == 40.0F && pane.Rect.H == 160.0F && pane.ContentH == 400.0F
   }
 
   func KeyedReorderRetainsYogaLayouts() bool {

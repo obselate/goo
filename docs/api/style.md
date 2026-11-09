@@ -1092,11 +1092,11 @@ Sets the maximum width.
 
 ### `MinHeight`
 
-Sets the minimum height. When unset, a shrinking flex item stops at its Height, or at its content height when Height is unset and overflow is visible. Set 0 to let it shrink further.
+Sets the minimum height. When unset, a shrinking flex item stops at 0 if its overflow is Scroll or Hidden, else at its Height, else at its content height. Set 0 to let any item shrink further.
 
 ### `MinWidth`
 
-Sets the minimum width. When unset, a shrinking flex item stops at its Width, or at its content width when Width is unset and overflow is visible. Set 0 to let it shrink further.
+Sets the minimum width. When unset, a shrinking flex item stops at 0 if its overflow is Scroll or Hidden, else at its Width, else at its content width. Set 0 to let any item shrink further.
 
 ### `Opacity`
 

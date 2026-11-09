@@ -793,7 +793,8 @@ namespace Facebook.Yoga
             float availableInnerWidth, float availableInnerHeight,
             ref LayoutData layoutMarkerData, uint depth, uint generationCount)
         {
-            if (child.Style.MinDimension(mainAxis.Dimension()).IsDefined())
+            if (child.Style.Overflow != Overflow.Visible ||
+                child.Style.MinDimension(mainAxis.Dimension()).IsDefined())
             {
                 return 0;
             }
@@ -801,10 +802,6 @@ namespace Facebook.Yoga
                 direction, mainAxis.Dimension(), availableInnerMainDim, availableInnerWidth);
             if (minimum.IsUndefined())
             {
-                if (child.Style.Overflow != Overflow.Visible)
-                {
-                    return 0;
-                }
                 bool isMainAxisRow = mainAxis.IsRow();
                 var crossAxis = isMainAxisRow ? FlexDirection.Column : FlexDirection.Row;
                 float crossSize = child.HasDefiniteLength(crossAxis.Dimension(), availableInnerCrossDim)

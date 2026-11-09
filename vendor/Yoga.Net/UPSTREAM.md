@@ -15,7 +15,7 @@
 - Keep a positive node size at least one device pixel after pixel-grid rounding.
 - Round a measured node's size up to the pixel grid independently of its position.
 - Stop a shrinking flex item at an automatic minimum when its main-axis minimum
-  is unset: its definite size, else its content size when overflow is visible.
+  is unset: 0 for scroll or hidden overflow, else its definite size, else its content size.
 
 The vendored tree contains only the source needed to build Goo. Focused Goo tests
 cover the local behavior changes; upstream Yoga tests remain in the upstream
