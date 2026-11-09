@@ -77,11 +77,16 @@ float gooTransformedEdgeCoverage(float2 point, float2 size, float4 cornerRadii, 
     normal = dot(normal, normal) > 0.0
         ? normalize(normal)
         : (q.x > q.y ? float2(1.0, 0.0) : float2(0.0, 1.0));
-    normal *= sign(centered);
+    normal *= float2(centered.x < 0.0 ? -1.0 : 1.0, centered.y < 0.0 ? -1.0 : 1.0);
     float2 gradient = abs(float2(dot(normal, pointDx), dot(normal, pointDy)));
-    float width = max(length(gradient), 0.0001);
+    float width = length(gradient);
+    float distance = radius - length(max(q, 0.0)) - min(max(q.x, q.y), 0.0);
+    if (width < 0.0001)
+    {
+        return distance >= 0.0 ? 1.0 : 0.0;
+    }
     float2 span = float2(max(gradient.x, gradient.y), max(min(gradient.x, gradient.y), 0.000001 * width)) / width;
-    float offset = (radius - length(max(q, 0.0)) - min(max(q.x, q.y), 0.0)) / width;
+    float offset = distance / width;
     float tail = max((span.x + span.y) * 0.5 - abs(offset), 0.0);
     tail = tail * tail / (2.0 * span.x * span.y);
     return abs(offset) <= (span.x - span.y) * 0.5 ? 0.5 + offset / span.x : (offset > 0.0 ? 1.0 - tail : tail);

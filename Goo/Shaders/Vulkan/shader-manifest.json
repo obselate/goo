@@ -277,9 +277,9 @@
       "source": "analytic_solid.frag.slang",
       "output": "analytic_solid.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "00c78e4612789d9cb56277ff68729b9c07458dfdb238c5dbfd4416c81dab019c",
-      "outputSha256": "4b2bfd264bf6e674cffe97ac8fa052615d495b7df63de5eaea8cd8303b723326",
-      "outputBytes": 35288,
+      "sourceSha256": "2eb98a226b74080bd35a9d07a2e86419f1c5273f4deccba726fe5b6022ba2750",
+      "outputSha256": "953ae16c50c6b19d0843b5d7f4050f8bcc052934e790c980fa2c2050cd67fc3e",
+      "outputBytes": 35720,
       "capabilities": [
         1
       ]
@@ -303,9 +303,9 @@
       "source": "analytic_border.frag.slang",
       "output": "analytic_border.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "1d09599e5c741f7c785a0051347c5939160b830bc886cda0766c7db6cfa84347",
-      "outputSha256": "b0ab80069fd05a2f0e76192c238837c7a5a60c944981401e89f8f2d7f5fa723b",
-      "outputBytes": 70604,
+      "sourceSha256": "36dbb08cc322990bb195435bc62c86b997fc9cd2ca6673b9c9cfe6d8e1e45dd4",
+      "outputSha256": "cb5bff0bcd6833d389614db6db00cff38b536b8bb2bd5550a94bad7decb42493",
+      "outputBytes": 71036,
       "capabilities": [
         1
       ]
@@ -316,9 +316,9 @@
       "source": "analytic_linear4.frag.slang",
       "output": "analytic_linear4.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "f6f36409e0496bcee6baf5ea1a06e13da2a997bac3f7da4076e6293b47314bc0",
-      "outputSha256": "dbb379373cca24e3d3de80774be1ad058c6a6e63e9fdf146f31e7b23259d365e",
-      "outputBytes": 30264,
+      "sourceSha256": "ba9cdee9b1841551a59bda98699053c3c5574aca8e1b8210a0ab0ff20375f857",
+      "outputSha256": "75be7723553297b85ebf33ab249ede3324fef655bf229b5c0f5e6137bedfa820",
+      "outputBytes": 30480,
       "capabilities": [
         1
       ]
@@ -329,9 +329,9 @@
       "source": "analytic_radial4.frag.slang",
       "output": "analytic_radial4.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "97d9ca30888c9686b2c450413517453f6e8c4594822c108cfa80616dbbee666d",
-      "outputSha256": "77f07295f46ca32bdc8925bc18abf06998360cd9a7b97fe844b0ea3e3157027e",
-      "outputBytes": 30236,
+      "sourceSha256": "fdcbfebc1c40bf8ee1002a672dbabf1b4ba3d87dc9be592507738792e16831d4",
+      "outputSha256": "c6f1ad49786c9335dcb8463795edd2450c510caa7a447fa2ff52407d0ffe61d0",
+      "outputBytes": 30452,
       "capabilities": [
         1
       ]
