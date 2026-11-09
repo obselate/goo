@@ -36,7 +36,7 @@ internal unsafe partial class VulkanImageResources {
         frame.Retain()
         var entry = VulkanImageResourceEntry{
             Id: id, ProviderId: source.ProviderId, SourceId: source.SourceId,
-            Width: uint32(frame.Width), Height: uint32(frame.Height), Bytes: bytes,
+            Width: uint32(frame.Width), Height: uint32(frame.Height), Bytes: bytes, ResidentBytes: bytes,
             SamplerId: samplerId, SamplerMode: VulkanImageSamplerMode.Linear,
             State: VulkanImageResourceState.Resident, Image: frame.Image.Native.Image,
             ImageView: if frame.Description.AlphaMode == ExternalImageAlphaMode.Opaque { frame.Image.Native.OpaqueView } else { frame.Image.Native.View },
@@ -125,7 +125,7 @@ internal unsafe partial class VulkanImageResources {
             currentReferenceCounts[index] = 0
             entries[index] = VulkanImageResourceEntry{}
             liveCount--
-            residentBytes -= entry.Bytes
+            residentBytes -= entry.ResidentBytes
         }
     }
 }

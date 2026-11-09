@@ -7,10 +7,12 @@ internal unsafe class VulkanTransitions {
     @MethodImpl(MethodImplOptions.AggressiveInlining)
     internal func ColorSubresourceRange(
       baseArrayLayer uint32 = 0u,
-      layerCount uint32 = 1u) VkImageSubresourceRange -> VkImageSubresourceRange{
+      layerCount uint32 = 1u,
+      baseMipLevel uint32 = 0u,
+      levelCount uint32 = 1u) VkImageSubresourceRange -> VkImageSubresourceRange{
         aspectMask: uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT),
-        baseMipLevel: 0u,
-        levelCount: 1u,
+        baseMipLevel: baseMipLevel,
+        levelCount: levelCount,
         baseArrayLayer: baseArrayLayer,
         layerCount: layerCount,
       }

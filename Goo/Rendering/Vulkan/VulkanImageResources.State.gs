@@ -92,7 +92,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         currentReferenceCounts[index] = 0
         entries[index] = VulkanImageResourceEntry{}
         liveCount--
-        residentBytes -= entry.Bytes
+        residentBytes -= entry.ResidentBytes
         retired++
       }
       index++

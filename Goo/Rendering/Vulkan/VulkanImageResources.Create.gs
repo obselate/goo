@@ -64,11 +64,15 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     samplerInfo.sType = VkConstants.VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO
     samplerInfo.magFilter = filter
     samplerInfo.minFilter = filter
-    samplerInfo.mipmapMode = VkConstants.VK_SAMPLER_MIPMAP_MODE_NEAREST
+    samplerInfo.mipmapMode = if filter == VkConstants.VK_FILTER_LINEAR {
+      VkConstants.VK_SAMPLER_MIPMAP_MODE_LINEAR
+    } else {
+      VkConstants.VK_SAMPLER_MIPMAP_MODE_NEAREST
+    }
     samplerInfo.addressModeU = VkConstants.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
     samplerInfo.addressModeV = VkConstants.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
     samplerInfo.addressModeW = VkConstants.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
-    samplerInfo.maxLod = 1.0F
+    samplerInfo.maxLod = if filter == VkConstants.VK_FILTER_LINEAR { VkConstants.VK_LOD_CLAMP_NONE } else { 0.0F }
     samplerInfo.borderColor = VkConstants.VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK
     let createSampler = dispatch.vkCreateSampler
     var sampler VkSampler = 0uL
@@ -173,7 +177,8 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     source VulkanResourceSource,
     cacheable bool,
     samplerId ResourceId,
-    samplerMode VulkanImageSamplerMode) {
+    samplerMode VulkanImageSamplerMode,
+    mipLevels uint32) {
       EnsureDescriptorSlots(index)
       let logicalIndex = PrepareLogicalRegistration(id, source)
       let creation = VulkanImageFactory.Create2D(
@@ -184,9 +189,12 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         VkExtent2D{ width: width, height: height },
         VkConstants.VK_FORMAT_R8G8B8A8_UNORM,
         uint32(VkConstants.VK_IMAGE_USAGE_TRANSFER_DST_BIT)
+        | uint32(VkConstants.VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
         | uint32(VkConstants.VK_IMAGE_USAGE_SAMPLED_BIT),
         uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT),
-        VulkanMemoryPolicy.DeviceLocalRequired)
+        VulkanMemoryPolicy.DeviceLocalRequired,
+        VulkanMemoryOwnerKind.Image,
+        mipLevels)
       allocator.Track(creation.Allocation, this, index)
       let entry = VulkanImageResourceEntry{
         Id: id,
@@ -195,6 +203,8 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         Width: width,
         Height: height,
         Bytes: bytes,
+        ResidentBytes: ResidentImageBytes(width, height, mipLevels),
+        MipLevels: mipLevels,
         SamplerId: samplerId,
         SamplerMode: samplerMode,
         Cacheable: cacheable,
@@ -209,7 +219,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       entries[index] = entry
       if index >= entryLimit { entryLimit = index + 1 }
       liveCount++
-      residentBytes += bytes
+      residentBytes += entry.ResidentBytes
     }
 
   private func BindDescriptorSet(

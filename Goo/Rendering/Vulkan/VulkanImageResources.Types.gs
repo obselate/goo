@@ -38,6 +38,8 @@ internal data struct VulkanImageResourceEntry {
   var Width uint32
   var Height uint32
   var Bytes VkDeviceSize
+  var ResidentBytes VkDeviceSize
+  var MipLevels uint32
   var SamplerId ResourceId
   var SamplerMode VulkanImageSamplerMode
   var Cacheable bool

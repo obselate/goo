@@ -50,9 +50,26 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         return VulkanImageResourceLookup{ Found: false }
       }
       let index = if existingIndex >= 0 { existingIndex } else { EnsureEmptyIndex() }
+      let chainLevels = MipLevelCount(width, height)
+      let chainBytes = ResidentImageBytes(width, height, chainLevels)
       allocator.BeginCacheGrowth()
       try {
-        CreateImage(index, id, width, height, bytes, source, cacheable, samplerId, samplerMode)
+        if chainLevels > 1u && (refusedChainBytes == 0uL || chainBytes < refusedChainBytes
+          || allocator.ReleaseGeneration(heap) != refusedChainReleaseGeneration) {
+            try {
+              CreateImage(index, id, width, height, bytes, source, cacheable, samplerId, samplerMode, chainLevels)
+              return Lookup(index, samplerId, samplerMode)
+            } catch (pressure VulkanMemoryPressureException) {
+              let releaseGeneration = allocator.ReleaseGeneration(heap)
+              refusedChainBytes = if refusedChainReleaseGeneration == releaseGeneration && refusedChainBytes > 0uL {
+                Math.Min(refusedChainBytes, chainBytes)
+              } else {
+                chainBytes
+              }
+              refusedChainReleaseGeneration = releaseGeneration
+            }
+          }
+        CreateImage(index, id, width, height, bytes, source, cacheable, samplerId, samplerMode, 1u)
       } catch (pressure VulkanMemoryPressureException) {
         let releaseGeneration = allocator.ReleaseGeneration(heap)
         refusedBytes = if refusedReleaseGeneration == releaseGeneration && refusedBytes > 0uL {

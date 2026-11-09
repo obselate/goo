@@ -19,7 +19,8 @@ internal unsafe class VulkanImageFactory {
       usage VkImageUsageFlags,
       aspectMask VkImageAspectFlags,
       memoryPolicy VulkanMemoryPolicy,
-      ownerKind VulkanMemoryOwnerKind = VulkanMemoryOwnerKind.Image) VulkanImageCreation ->
+      ownerKind VulkanMemoryOwnerKind = VulkanMemoryOwnerKind.Image,
+      mipLevels uint32 = 1u) VulkanImageCreation ->
     Create(
       device,
       dispatch,
@@ -31,7 +32,7 @@ internal unsafe class VulkanImageFactory {
       aspectMask,
       1u,
       VkConstants.VK_IMAGE_VIEW_TYPE_2D,
-      memoryPolicy, ownerKind)
+      memoryPolicy, ownerKind, mipLevels)
 
     internal func Create2DArray(
       device VkDevice,
@@ -56,7 +57,7 @@ internal unsafe class VulkanImageFactory {
       aspectMask,
       layerCount,
       VkConstants.VK_IMAGE_VIEW_TYPE_2D_ARRAY,
-      memoryPolicy, ownerKind)
+      memoryPolicy, ownerKind, 1u)
 
     internal func CreateView(
       device VkDevice,
@@ -67,7 +68,8 @@ internal unsafe class VulkanImageFactory {
       format VkFormat,
       aspectMask VkImageAspectFlags,
       baseArrayLayer uint32,
-      layerCount uint32) VkImageView{
+      layerCount uint32,
+      levelCount uint32 = 1u) VkImageView{
 
         if image == 0uL {
           throw ArgumentException("image")
@@ -100,7 +102,7 @@ internal unsafe class VulkanImageFactory {
           subresourceRange: VkImageSubresourceRange{
             aspectMask: aspectMask,
             baseMipLevel: 0u,
-            levelCount: 1u,
+            levelCount: levelCount,
             baseArrayLayer: baseArrayLayer,
             layerCount: layerCount,
           },
@@ -142,7 +144,7 @@ internal unsafe class VulkanImageFactory {
       aspectMask VkImageAspectFlags,
       layerCount uint32,
       viewType VkImageViewType,
-      memoryPolicy VulkanMemoryPolicy, ownerKind VulkanMemoryOwnerKind) VulkanImageCreation{
+      memoryPolicy VulkanMemoryPolicy, ownerKind VulkanMemoryOwnerKind, mipLevels uint32) VulkanImageCreation{
 
         if extent.width == 0u || extent.height == 0u {
           throw ArgumentOutOfRangeException("extent")
@@ -176,7 +178,7 @@ internal unsafe class VulkanImageFactory {
             height: extent.height,
             depth: 1u,
           },
-          mipLevels: 1u,
+          mipLevels: mipLevels,
           arrayLayers: layerCount,
           samples: VkConstants.VK_SAMPLE_COUNT_1_BIT,
           tiling: VkConstants.VK_IMAGE_TILING_OPTIMAL,
@@ -221,7 +223,8 @@ internal unsafe class VulkanImageFactory {
             format,
             aspectMask,
             0u,
-            layerCount)
+            layerCount,
+            mipLevels)
           imageViewAccounted = objectAccounting != nil
 
           return VulkanImageCreation(image, imageView, createdAllocation)
