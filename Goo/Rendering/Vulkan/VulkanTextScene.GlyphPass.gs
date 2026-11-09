@@ -118,6 +118,7 @@ internal unsafe sealed partial class VulkanTextScene {
       let parentScale = ParentTransformMinimumScale(frame, parentTransformIndex)
       var hasBounds bool = false
       var result bool = true
+      provisionalHint = false
       var runIndex int32 = 0
       while runIndex < shape.Runs.Count {
         let run = shape.Runs[runIndex]
@@ -318,11 +319,12 @@ internal unsafe sealed partial class VulkanTextScene {
         }
         runIndex = runIndex + 1
       }
+      if provisionalHint { complete = false }
       if result && workspace.RecordCount > 0 {
         CommitSegment(segment)
         segment.Shape = shape
         segment.RendererValidationCacheEligible = activeSegmentReuse
-        segment.FontSize = fontSize
+        segment.FontSize = if provisionalHint { Single.NaN } else { fontSize }
         segment.LineX = lineX
         segment.Baseline = baseline
         segment.Color = color

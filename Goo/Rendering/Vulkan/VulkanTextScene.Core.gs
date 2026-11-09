@@ -34,6 +34,10 @@ internal unsafe sealed partial class VulkanTextScene {
   private var completedGlobalSubmissionSerial uint64
   private var textLayoutRequestCount int32
   private var pixelScale float32 = 1.0F
+  private let fittedHintPpems HashSet[int32]
+  private var previousHintPpems HashSet[int32]
+  private var frameHintPpems HashSet[int32]
+  private var provisionalHint bool
 
   internal prop ResourceGeneration uint64{ get -> atlasSet.Generation }
   internal prop PixelScale float32{ get -> pixelScale }
@@ -66,6 +70,9 @@ internal unsafe sealed partial class VulkanTextScene {
     atlasSet = nativeAtlases
     states = [nativeAtlases.AtlasSlotCapacity]VulkanTextSceneAtlasState?
     glyphs = Dictionary[VulkanTextAtlasGlyphKey, VulkanTextAtlasGlyph]()
+    fittedHintPpems = HashSet[int32]()
+    previousHintPpems = HashSet[int32]()
+    frameHintPpems = HashSet[int32]()
     activeAtlasUse = [nativeAtlases.AtlasSlotCapacity]bool
     nodeSegments = ConditionalWeakTable[VulkanSceneOwnerId, VulkanTextNodeSegmentCache]()
     gutterSegments = ConditionalWeakTable[VulkanSceneOwnerId, VulkanTextNodeSegmentCache]()
@@ -86,6 +93,10 @@ internal unsafe sealed partial class VulkanTextScene {
       nodeSegments.Clear()
       gutterSegments.Clear()
     }
+    let reusedHintPpems = previousHintPpems
+    previousHintPpems = frameHintPpems
+    frameHintPpems = reusedHintPpems
+    frameHintPpems.Clear()
     redrawRequired = false
     colorEffectSkipped = false
     colorGlyphFallback = false
