@@ -86,21 +86,50 @@ float blurredRowCoverage(float2 centered, float2 halfSize, float4 radii, float b
     return gaussianCoverage(centered.x - extent.y, blur) - gaussianCoverage(centered.x + extent.x, blur);
 }
 
-float blurredRoundedCoverage(float2 point, float2 size, float4 cornerRadii, float blur)
+float blurredRoundedCoverage(float2 point, float2 size, float4 cornerRadii, float distance, float blur)
 {
+    float sigma = blur * 0.5;
+    if (distance >= 2.9 * sigma)
+    {
+        return 0.0;
+    }
+    if (distance <= -3.6 * sigma)
+    {
+        return 1.0;
+    }
     float2 halfSize = size * 0.5;
     float4 radii = min(cornerRadii * normalizedRadiusScale(size, cornerRadii), min(halfSize.x, halfSize.y));
     float2 centered = point - halfSize;
-    float sigma = blur * 0.5;
-    float start = clamp(-3.0 * sigma, centered.y - halfSize.y, centered.y + halfSize.y);
-    float step = (clamp(3.0 * sigma, centered.y - halfSize.y, centered.y + halfSize.y) - start) * 0.125;
-    float y = start + step * 0.5;
-    float coverage = 0.0;
-    for (int index = 0; index < 8; index++)
+    float rectangleRow = gaussianCoverage(centered.x - halfSize.x, blur) - gaussianCoverage(centered.x + halfSize.x, blur);
+    float coverage = rectangleRow
+        * (gaussianCoverage(centered.y - halfSize.y, blur) - gaussianCoverage(centered.y + halfSize.y, blur));
+    float2 bands = float2(max(radii.x, radii.y), max(radii.z, radii.w));
+    if (abs(centered.x) + 3.0 * sigma < halfSize.x - max(bands.x, bands.y))
     {
-        coverage += blurredRowCoverage(float2(centered.x, centered.y - y), halfSize, radii, blur)
-            * exp(-0.5 * y * y / (sigma * sigma)) * step / (sigma * 2.50662827463);
-        y += step;
+        return coverage;
+    }
+    for (int band = 0; band < 2; band++)
+    {
+        float side = band == 0 ? -1.0 : 1.0;
+        float pointDepth = halfSize.y - side * centered.y;
+        float lowRoot = sqrt(clamp(pointDepth - 3.0 * sigma, 0.0, bands[band]));
+        float highRoot = sqrt(clamp(pointDepth + 3.0 * sigma, 0.0, bands[band]));
+        if (highRoot <= lowRoot)
+        {
+            continue;
+        }
+        int count = int(clamp(ceil((highRoot - lowRoot) * sqrt(2.0 * bands[band]) / sigma), 2.0, 8.0));
+        float step = (highRoot - lowRoot) / float(count);
+        float previous = gaussianCoverage(lowRoot * lowRoot - pointDepth, blur);
+        for (int index = 0; index < count; index++)
+        {
+            float rowRoot = lowRoot + (float(index) + 0.5) * step;
+            float boundaryRoot = lowRoot + float(index + 1) * step;
+            float next = gaussianCoverage(boundaryRoot * boundaryRoot - pointDepth, blur);
+            coverage += (blurredRowCoverage(float2(centered.x, side * (halfSize.y - rowRoot * rowRoot)), halfSize, radii, blur)
+                - rectangleRow) * (previous - next);
+            previous = next;
+        }
     }
     return coverage;
 }
@@ -111,7 +140,7 @@ float roundedCoverage(float2 point, float2 size, float4 radii, float distance, f
     {
         return gooEdgeCoverage(distance, canonicalEdge(point, size, radii, distance));
     }
-    return blurredRoundedCoverage(point, size, radii, blur);
+    return blurredRoundedCoverage(point, size, radii, distance, blur);
 }
 
 float shapeMaskSample(float2 screenPoint)
@@ -221,34 +250,26 @@ void shade()
             ? shapeInsetCoverage(sourcePoint, spread, blur)
             : shapeShadowCoverage(sourcePoint, spread, blur);
     }
-    else if (pc.packedColorsExtra.x == 1u)
-    {
-        float2 baseOffset = float2(expansion - offsetX, expansion - offsetY);
-        float2 baseSize = max(pc.rect.zw - float2(expansion * 2.0), float2(0.0001));
-        float baseDistance = roundedDistance(point - baseOffset, baseSize, pc.radii);
-        float baseEdge = canonicalEdge(point - baseOffset, baseSize, pc.radii, baseDistance);
-        float inside = gooEdgeCoverage(baseDistance, baseEdge);
-        float2 holeOffset = float2(expansion + spread);
-        float2 rawHoleSize = pc.rect.zw - holeOffset * 2.0;
-        float outsideHole = 1.0;
-        if (rawHoleSize.x > 0.0 && rawHoleSize.y > 0.0)
-        {
-            float2 holeSize = rawHoleSize;
-            float4 holeRadii = max(pc.radii - float4(spread), float4(0.0));
-            float holeDistance = roundedDistance(point - holeOffset, holeSize, holeRadii);
-            float edge = canonicalEdge(point - holeOffset, holeSize, holeRadii, holeDistance);
-            outsideHole = blur <= 0.0 ? 1.0 - gooEdgeCoverage(holeDistance, edge)
-                : 1.0 - blurredRoundedCoverage(point - holeOffset, holeSize, holeRadii, blur);
-        }
-        coverage = inside * outsideHole;
-    }
     else
     {
-        float2 shapeOffset = float2(expansion - spread);
+        bool inset = pc.packedColorsExtra.x == 1u;
+        float2 shapeOffset = float2(inset ? expansion + spread : expansion - spread);
         float2 shapeSize = pc.rect.zw - shapeOffset * 2.0;
-        float4 shapeRadii = pc.radii;
-        float shadowDistance = roundedDistance(point - shapeOffset, shapeSize, shapeRadii);
-        coverage = roundedCoverage(point - shapeOffset, shapeSize, shapeRadii, shadowDistance, blur);
+        float4 shapeRadii = inset ? max(pc.radii - float4(spread), float4(0.0)) : pc.radii;
+        coverage = 0.0;
+        if (!inset || (shapeSize.x > 0.0 && shapeSize.y > 0.0))
+        {
+            float shapeDistance = roundedDistance(point - shapeOffset, shapeSize, shapeRadii);
+            coverage = roundedCoverage(point - shapeOffset, shapeSize, shapeRadii, shapeDistance, blur);
+        }
+        if (inset)
+        {
+            float2 baseOffset = float2(expansion - offsetX, expansion - offsetY);
+            float2 baseSize = max(pc.rect.zw - float2(expansion * 2.0), float2(0.0001));
+            float baseDistance = roundedDistance(point - baseOffset, baseSize, pc.radii);
+            coverage = gooEdgeCoverage(baseDistance, canonicalEdge(point - baseOffset, baseSize, pc.radii, baseDistance))
+                * (1.0 - coverage);
+        }
     }
     float4 color = unpackColor(pc.packedColors.x, pc.packedColors.w, 0u);
     if ((pc.packedColorsExtra.y & 1u) == 0u)
