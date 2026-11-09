@@ -115,7 +115,7 @@ internal data struct VulkanTextHintHorizontalEdge {
 internal sealed class VulkanTextHinting : IDisposable {
     private let segments List[VulkanTextHintSegment] = List[VulkanTextHintSegment](128)
     private let edges List[float32] = List[float32](32)
-    private let fitted List[int32] = List[int32](32)
+    private let fitted List[float32] = List[float32](32)
     private let horizontalEdges List[VulkanTextHintHorizontalEdge] = List[VulkanTextHintHorizontalEdge](32)
     private let moveCallback VulkanTextDrawPoint
     private let lineCallback VulkanTextDrawPoint
@@ -129,6 +129,7 @@ internal sealed class VulkanTextHinting : IDisposable {
     private var startY float32
     private var failed bool
     private var designUnitsPerPixel float32
+    private var area float32
     private let units float32
     private let xHeight float32
     private let xHeightOvershoot float32
@@ -179,6 +180,7 @@ internal sealed class VulkanTextHinting : IDisposable {
         edges.Clear()
         fitted.Clear()
         horizontalEdges.Clear()
+        area = 0.0F
         failed = false
         hb_font_draw_glyph(font, glyph, funcs, nint(0))
         if failed {
@@ -218,13 +220,13 @@ internal sealed class VulkanTextHinting : IDisposable {
         edges.RemoveRange(uniqueCount, edges.Count - uniqueCount)
         let zone = MathF.Min(units * 0.025F, 0.5F / scale)
         let xHeightPixels = if xHeightOvershoot > 0.0F {
-            int32(MathF.Floor(xHeightOvershoot * scale + 0.625F))
-        } else { int32(MathF.Round(xHeight * scale, MidpointRounding.AwayFromZero)) }
+            MathF.Floor(xHeightOvershoot * scale + 0.625F)
+        } else { MathF.Round(xHeight * scale, MidpointRounding.AwayFromZero) }
         for edge in edges {
             let anchor = Anchor(edge, zone)
             let pixel = if anchor == xHeight { xHeightPixels }
-                else { int32(MathF.Round(anchor * scale, MidpointRounding.AwayFromZero)) }
-            fitted.Add(if fitted.Count == 0 { pixel } else { Math.Max(pixel, fitted[fitted.Count - 1]) })
+                else { MathF.Round(anchor * scale, MidpointRounding.AwayFromZero) }
+            fitted.Add(if fitted.Count == 0 { pixel } else { MathF.Max(pixel, fitted[fitted.Count - 1]) })
         }
         horizontalEdges.Sort(HorizontalHeightOrder)
         for i in 0 ... horizontalEdges.Count {
@@ -239,14 +241,27 @@ internal sealed class VulkanTextHinting : IDisposable {
                 }
                 let lower = edges.BinarySearch(first.Y)
                 let upper = edges.BinarySearch(second.Y)
-                if fitted[lower] == fitted[upper] && Anchor(first.Y, zone) != Anchor(second.Y, zone) {
-                    let moveLower = !InZone(first.Y, zone) && (lower == 0 || fitted[lower] - 1 >= fitted[lower - 1])
+                let ink = (first.EndX - first.StartX) * area > 0.0F
+                let lowerFixed = lower == 0 || InZone(first.Y, zone)
+                let upperFixed = upper + 1 == edges.Count || InZone(second.Y, zone)
+                let width = (second.Y - first.Y) * scale
+                if ink && upperFixed && !lowerFixed {
+                    fitted[lower] = MathF.Max(fitted[lower - 1], fitted[upper] - width)
+                } else if ink && lowerFixed && !upperFixed {
+                    fitted[upper] = MathF.Min(fitted[upper + 1], fitted[lower] + width)
+                } else if ink && !lowerFixed && !upperFixed {
+                    let rounded = MathF.Max(1.0F, MathF.Round(width, MidpointRounding.AwayFromZero))
+                    let start = MathF.Round((first.Y + second.Y) * 0.5F * scale - rounded * 0.5F, MidpointRounding.AwayFromZero)
+                    fitted[lower] = MathF.Max(fitted[lower - 1], start)
+                    fitted[upper] = MathF.Min(fitted[upper + 1], fitted[lower] + rounded)
+                } else if fitted[lower] == fitted[upper] && Anchor(first.Y, zone) != Anchor(second.Y, zone) {
+                    let moveLower = !InZone(first.Y, zone) && (lower == 0 || fitted[lower] - 1.0F >= fitted[lower - 1])
                     let moveUpper = !InZone(second.Y, zone) &&
-                        (upper + 1 == edges.Count || fitted[upper] + 1 <= fitted[upper + 1])
-                    if moveLower && (!moveUpper || (first.Y + second.Y) * 0.5F * scale <= float32(fitted[upper])) {
-                        fitted[lower]--
+                        (upper + 1 == edges.Count || fitted[upper] + 1.0F <= fitted[upper + 1])
+                    if moveLower && (!moveUpper || (first.Y + second.Y) * 0.5F * scale <= fitted[upper]) {
+                        fitted[lower] = fitted[lower] - 1.0F
                     } else if moveUpper {
-                        fitted[upper]++
+                        fitted[upper] = fitted[upper] + 1.0F
                     }
                 }
                 break
@@ -326,21 +341,21 @@ internal sealed class VulkanTextHinting : IDisposable {
             return y
         }
         if y <= edges[0] {
-            return y + float32(fitted[0]) * designUnitsPerPixel - edges[0]
+            return y + fitted[0] * designUnitsPerPixel - edges[0]
         }
         let index = edges.BinarySearch(y)
         if index >= 0 {
-            return float32(fitted[index]) * designUnitsPerPixel
+            return fitted[index] * designUnitsPerPixel
         }
         let upper = ~index
         if upper < edges.Count {
             let weight = (y - edges[upper - 1]) / (edges[upper] - edges[upper - 1])
             return (
-                float32(fitted[upper - 1]) + weight * float32(fitted[upper] - fitted[upper - 1])
+                fitted[upper - 1] + weight * (fitted[upper] - fitted[upper - 1])
             ) * designUnitsPerPixel
         }
         let last = edges.Count - 1
-        return y + float32(fitted[last]) * designUnitsPerPixel - edges[last]
+        return y + fitted[last] * designUnitsPerPixel - edges[last]
     }
 
     private func Add(
@@ -357,6 +372,9 @@ internal sealed class VulkanTextHinting : IDisposable {
             return
         }
         segments.Add(VulkanTextHintSegment{Kind: kind, X: x, Y: y, CX: cx, CY: cy, DX: dx, DY: dy})
+        if kind != 0 {
+            area = area + currentX * y - x * currentY
+        }
         currentX = x
         currentY = y
     }
