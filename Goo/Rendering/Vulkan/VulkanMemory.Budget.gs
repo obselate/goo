@@ -73,6 +73,9 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
   private const FallbackHeapShare VkDeviceSize = 2uL
 
   private let sampledHeapResidentBytes []VkDeviceSize = [int32(VkConstants.VK_MAX_MEMORY_HEAPS)]VkDeviceSize
+  private let sampledHeapHeadroom []VkDeviceSize = [int32(VkConstants.VK_MAX_MEMORY_HEAPS)]VkDeviceSize
+  private let heapReleaseGenerations []uint64 = [int32(VkConstants.VK_MAX_MEMORY_HEAPS)]uint64
+  private let heapRefusalPending []bool = [int32(VkConstants.VK_MAX_MEMORY_HEAPS)]bool
   private var testHeapBudgets []VkDeviceSize = [0]VkDeviceSize
   private var failingAllocationCount int32
   private var lastPolledSerial uint64 = uint64.MaxValue
@@ -83,6 +86,9 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
 
   /// <summary>Heap that holds device-local images.</summary>
   internal prop DeviceLocalHeap uint32{ get -> deviceLocalHeap }
+
+  /// <summary>Counter of a heap that advances when Goo frees memory there, the heap's headroom grows, or a refused heap gains an eviction candidate.</summary>
+  internal func ReleaseGeneration(heapIndex uint32) uint64 -> heapReleaseGenerations[int32(heapIndex)]
 
   /// <summary>Bytes the process may hold in a heap: the driver budget, or a share of the heap size without one.</summary>
   internal func HeapBudget(heapIndex uint32) VkDeviceSize {
@@ -120,12 +126,20 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
 
   internal func RefreshBudget() {
     if !disposed {
+      for heap in 0 ... int32(memoryProperties.memoryHeapCount) {
+        sampledHeapHeadroom[heap] = Headroom(uint32(heap))
+      }
       budget.Refresh()
       Array.Copy(heapResidentBytes, sampledHeapResidentBytes, heapResidentBytes.Length)
+      for heap in 0 ... int32(memoryProperties.memoryHeapCount) {
+        if Headroom(uint32(heap)) > sampledHeapHeadroom[heap] {
+          heapReleaseGenerations[heap]++
+        }
+      }
     }
   }
 
-  /// <summary>Samples the driver budget once per completed submission and evicts until each heap fits its budget.</summary>
+  /// <summary>Samples the driver budget once per completed submission, evicts until each heap fits its budget, and advances the release generation of a refused heap that has an eviction candidate.</summary>
   internal func BeginFrame(completedSerial uint64) {
     if disposed || completedSerial == lastPolledSerial {
       return
@@ -139,12 +153,19 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
         EvictFor(VulkanMemoryTypeSelection{ heapIndex: uint32(heap) }, VulkanMemoryResourceClass.Image,
           0uL, 1uL, usage - budgetBytes, true)
       }
+      if heapRefusalPending[heap] && LeastRecentlyUsed(uint32(heap), false) != nil {
+        heapRefusalPending[heap] = false
+        heapReleaseGenerations[heap]++
+      }
     }
   }
 
   /// <summary>Releases empty pooled image blocks, then sets every heap budget to Goo's current usage there plus bytes, which may be negative, or restores driver budgets with nil.</summary>
   internal func SetHeadroomForTest(bytes int64?) {
     testHeapBudgets = [0]VkDeviceSize
+    for heap in 0 ... heapReleaseGenerations.Length {
+      heapReleaseGenerations[heap]++
+    }
     var blockIndex int32 = 0
     while blockIndex < blockCount {
       let block = blocks[blockIndex]!!
@@ -185,6 +206,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
           return placement
         }
       pressureCount++
+      heapRefusalPending[int32(selection.heapIndex)] = true
       throw VulkanMemoryPressureException(selection.heapIndex, requirements.size)
     }
 

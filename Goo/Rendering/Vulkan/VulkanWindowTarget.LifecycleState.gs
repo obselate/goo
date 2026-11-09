@@ -112,6 +112,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   private var lastPresentedImagePromoted bool
   private var frameFailed bool
   private var frameFailureRetryable bool
+  private var pressureRetryReleaseGeneration uint64 = uint64.MaxValue
   private var textRedrawPending bool
   private var imageRedrawPending bool
   private var pathRedrawPending bool

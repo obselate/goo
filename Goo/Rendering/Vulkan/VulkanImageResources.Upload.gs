@@ -45,15 +45,26 @@ internal unsafe partial class VulkanImageResources : IDisposable {
           throw InvalidOperationException("Vulkan image version is retiring")
         }
       }
+      let heap = allocator.DeviceLocalHeap
+      if refusedBytes > 0uL && bytes >= refusedBytes && allocator.ReleaseGeneration(heap) == refusedReleaseGeneration {
+        return VulkanImageResourceLookup{ Found: false }
+      }
       let index = if existingIndex >= 0 { existingIndex } else { EnsureEmptyIndex() }
       try {
         CreateImage(index, id, width, height, bytes, source, cacheable, samplerId, samplerMode)
       } catch (pressure VulkanMemoryPressureException) {
+        let releaseGeneration = allocator.ReleaseGeneration(heap)
+        refusedBytes = if refusedReleaseGeneration == releaseGeneration && refusedBytes > 0uL {
+          Math.Min(refusedBytes, bytes)
+        } else {
+          bytes
+        }
+        refusedReleaseGeneration = releaseGeneration
         if let currentDiagnostics = diagnostics {
           currentDiagnostics.AddImagePressureFailure(1uL)
           currentDiagnostics.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
             VulkanDiagnosticEventIds.ImagePressure, VulkanDiagnosticCategories.Resource,
-            1uL, 0, uint64(bytes), uint64(allocator.Headroom(allocator.DeviceLocalHeap)))
+            1uL, 0, uint64(bytes), uint64(allocator.Headroom(heap)))
         }
         return VulkanImageResourceLookup{ Found: false }
       }

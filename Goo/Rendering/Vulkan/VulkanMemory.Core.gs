@@ -377,6 +377,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
       retiredAllocations--
     }
     RemoveActive(allocation)
+    heapReleaseGenerations[int32(allocation.heapIndex)]++
     if !allocation.pendingBind {
       if let recorder = FrameRecorder.Current {
         ProfileAllocation(recorder, allocation, FrameTraceKind.ResourceLifecycle, VulkanDiagnosticEventIds.ResourceEvict)

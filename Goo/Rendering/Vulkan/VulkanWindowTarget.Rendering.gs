@@ -445,9 +445,13 @@ internal unsafe partial class VulkanWindowTarget {
       CaptureDiagnosticValidationBoundary()
       presentationRetirement.CancelPendingPresentationLatency()
       ClearActiveFrame()
-      if error is VulkanMemoryPressureException {
+      if let pressure = error as VulkanMemoryPressureException? {
         frameFailureRetryable = true
-        host.Wake()
+        let releaseGeneration = memoryAllocator?.ReleaseGeneration(pressure.HeapIndex) ?? 0uL
+        if releaseGeneration != pressureRetryReleaseGeneration {
+          pressureRetryReleaseGeneration = releaseGeneration
+          host.Wake()
+        }
         return
       }
       throw error

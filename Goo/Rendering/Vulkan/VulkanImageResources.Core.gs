@@ -58,6 +58,8 @@ internal unsafe partial class VulkanImageResources : IDisposable, VulkanGpuCache
   private var compileTouch uint64 = uint64.MaxValue
   private var liveCount int32
   private var residentBytes VkDeviceSize
+  private var refusedReleaseGeneration uint64
+  private var refusedBytes VkDeviceSize
   private var flushPrepared bool
   private var disposed bool
 
