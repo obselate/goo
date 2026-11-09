@@ -59,7 +59,7 @@ float canonicalEdge(float2 point, float2 size, float4 radii, float distance)
         gradient.x = (roundedDistance(point + pointDx * direction.x, size, radii) - distance) * direction.x;
         gradient.y = (roundedDistance(point + pointDy * direction.y, size, radii) - distance) * direction.y;
     }
-    return max(abs(gradient.x) + abs(gradient.y), 0.0001);
+    return max(abs(gradient.x) + abs(gradient.y), min(length(pointDx), length(pointDy)));
 }
 
 float gaussianCoverage(float distance, float blur)
