@@ -292,7 +292,6 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
     return identity
   }
 
-  /// <summary>Registers every page with the cache that evicts it. Pages created later register on creation.</summary>
   internal func TrackAtlases(nativeCache VulkanGpuCache) {
     cache = nativeCache
     for index in 0 ... atlases.Length {

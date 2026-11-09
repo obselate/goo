@@ -69,7 +69,6 @@ internal unsafe sealed class VulkanMemoryBudgetState {
 }
 
 internal unsafe partial class VulkanMemoryAllocator : IDisposable {
-  /// <summary>Divisor of a heap's size that gives its budget when the driver reports none.</summary>
   private const FallbackHeapShare VkDeviceSize = 2uL
 
   private let sampledHeapResidentBytes []VkDeviceSize = [int32(VkConstants.VK_MAX_MEMORY_HEAPS)]VkDeviceSize
@@ -86,19 +85,14 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
   private var cacheGrowthDepth int32
   private var budgetBypass bool
 
-  /// <summary>Heap that holds device-local images.</summary>
   internal prop DeviceLocalHeap uint32{ get -> deviceLocalHeap }
 
-  /// <summary>Counter of a heap that advances when Goo frees memory there, the heap's headroom grows, or a refused heap gains an eviction candidate.</summary>
   internal func ReleaseGeneration(heapIndex uint32) uint64 -> heapReleaseGenerations[int32(heapIndex)]
 
-  /// <summary>Starts cache growth. Until the matching EndCacheGrowth, an allocation that does not fit its heap budget after eviction fails with VulkanMemoryPressureException. Other allocations then go to the driver above the budget.</summary>
   internal func BeginCacheGrowth() { cacheGrowthDepth++ }
 
-  /// <summary>Ends the cache growth that the matching BeginCacheGrowth started.</summary>
   internal func EndCacheGrowth() { cacheGrowthDepth-- }
 
-  /// <summary>Bytes the process may hold in a heap: the driver budget, or a share of the heap size without one.</summary>
   internal func HeapBudget(heapIndex uint32) VkDeviceSize {
     if testHeapBudgets.Length > 0 {
       return testHeapBudgets[int32(heapIndex)]
@@ -108,7 +102,6 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
     return if sampled == 0uL { size / FallbackHeapShare } else { Math.Min(sampled, size) }
   }
 
-  /// <summary>Bytes the process holds in a heap: the last driver sample corrected by Goo's block changes since it.</summary>
   internal func HeapUsage(heapIndex uint32) VkDeviceSize {
     let resident = heapResidentBytes[int32(heapIndex)]
     if testHeapBudgets.Length > 0 || (budget.HeapBudget(heapIndex) ?? 0uL) == 0uL {
@@ -119,14 +112,12 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
     return if usage > sampledResident { usage - sampledResident } else { 0uL }
   }
 
-  /// <summary>Bytes a heap can still accept before it reaches its budget.</summary>
   internal func Headroom(heapIndex uint32) VkDeviceSize {
     let budgetBytes = HeapBudget(heapIndex)
     let usage = HeapUsage(heapIndex)
     return if usage >= budgetBytes { 0uL } else { budgetBytes - usage }
   }
 
-  /// <summary>Registers an allocation as an evictable item of a cache.</summary>
   internal func Track(allocation VulkanMemoryAllocation, cache VulkanGpuCache, handle int32) {
     allocation.cache = cache
     allocation.cacheHandle = handle
@@ -147,7 +138,6 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
     }
   }
 
-  /// <summary>Samples the driver budget once per completed submission, evicts until each heap fits its budget, and advances the release generation of a refused heap that has an eviction candidate.</summary>
   internal func BeginFrame(completedSerial uint64) {
     if disposed || completedSerial == lastPolledSerial {
       return
@@ -168,7 +158,6 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
     }
   }
 
-  /// <summary>Releases empty pooled image blocks, then sets every heap budget to Goo's current usage there plus bytes, which may be negative, or restores driver budgets with nil.</summary>
   internal func SetHeadroomForTest(bytes int64?) {
     testHeapBudgets = [0]VkDeviceSize
     for heap in 0 ... heapReleaseGenerations.Length {
@@ -192,7 +181,6 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
     }
   }
 
-  /// <summary>Makes the next device memory allocations fail with VK_ERROR_OUT_OF_DEVICE_MEMORY.</summary>
   internal func FailAllocationsForTest(count int32) {
     failingAllocationCount = count
   }

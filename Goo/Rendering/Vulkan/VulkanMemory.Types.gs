@@ -49,15 +49,11 @@ internal unsafe class VulkanMemoryAllocation {
   var cacheHandle int32
 }
 
-/// <summary>Cache that owns evictable allocations in <see cref="VulkanMemoryAllocator"/>.</summary>
 internal interface VulkanGpuCache {
-  /// <summary>Returns the submission serial of the item's last use, or nil while the current or an in-flight frame uses it.</summary>
   func EvictionSerial(handle int32) uint64?;
-  /// <summary>Releases the item and all of its allocations.</summary>
   func Evict(handle int32);
 }
 
-/// <summary>An allocation does not fit in its heap after eviction and one retry.</summary>
 internal sealed class VulkanMemoryPressureException : InvalidOperationException {
   internal let HeapIndex uint32
 
