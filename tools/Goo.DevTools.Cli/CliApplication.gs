@@ -8,6 +8,7 @@ import System.Globalization
 import System.IO
 import System.Linq
 import System.Net.Sockets
+import System.Reflection
 import System.Runtime.InteropServices
 import System.Text.Json
 import System.Text.Json.Nodes
@@ -56,7 +57,9 @@ internal shared class CliApplication {
 
     private data class DoctorCheck(Name string, Detail string, Ok bool, Fix string = "") : IEquatable[DoctorCheck] { }
 
-    private const Version string = "0.29.1"
+    internal let Version string = typeof(CliApplication)
+        .Assembly.GetCustomAttribute[AssemblyInformationalVersionAttribute]()
+        .InformationalVersion.Split('+')[0]
 
     internal func SelectInspectorDescriptor(
         descriptors IReadOnlyList[DiscoveryDescriptor],
