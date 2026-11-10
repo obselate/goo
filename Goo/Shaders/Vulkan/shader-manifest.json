@@ -381,8 +381,8 @@
       "source": "path_band.frag.slang",
       "output": "path_band.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "d7a04c55f9cde96cb40e26821b51017afd7e53b1155c773fd7ac0c1b9aacb4c1",
-      "outputSha256": "db9ab765c45929969f31eceba460d947671bfa0a52504dedb2f11e75fe220521",
+      "sourceSha256": "c4c13aa1d892974f647d7299af1f6608f23271ec53b81cf561e7a3450a421a11",
+      "outputSha256": "bf4b01755e693b9cca573e62fdcab6f94e8f83d3e2d62b7fe8c1c78a4d91ebed",
       "outputBytes": 40128,
       "capabilities": [
         1
@@ -451,8 +451,8 @@
       "source": "clip_mask.frag.slang",
       "output": "clip_mask.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "ba1815c9c5312bf1309717fb108cf7b0dcadddd81521e3587539fad788ddde83",
-      "outputSha256": "89f83f407c909331927aee8b92af98ca467c2cc7ef53b52289428e19ce75fe02",
+      "sourceSha256": "de866c79e2f452f2de57c1028bd1de499382a3395abd4df69faa4f3112f04ea8",
+      "outputSha256": "97bb076b1e71d0ff401015b649ec68aef5d935dd3708c0b20077460f4aa1893c",
       "outputBytes": 36824,
       "capabilities": [
         1
@@ -464,8 +464,8 @@
       "source": "path_stroke.frag.slang",
       "output": "path_stroke.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "b58316e6df563e7c21a9ebc05faeacf8f26196cfeec275ea4bf9703b02c421bd",
-      "outputSha256": "5953407a586092060e5a0fd69bf209a86ebf0b7397568ba0959907d1ddf41420",
+      "sourceSha256": "9348f22224ce5ceacff8513953a01e0cd12782c2333d6dc5f5c2569a983b072e",
+      "outputSha256": "61833b952d0644136d76d95dc930aaa18bdaf0a95ee65b0bc2f9cba714155172",
       "outputBytes": 112272,
       "capabilities": [
         1
@@ -477,8 +477,8 @@
       "source": "stroke_mask.frag.slang",
       "output": "stroke_mask.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "2b0afdb5418d6592fbcda49d0ebf0c3e400b1cb0dbef9b8ff6e8ddc8e9094193",
-      "outputSha256": "577644a6eb16a4c85a02939092942ea4b402edd05f0ff0a204b93e25581b3aca",
+      "sourceSha256": "a0ff20f47fbc02dbe6469d9b68d90a648920e80d91a63af28fec6d1e905b1deb",
+      "outputSha256": "de381cd1d39b66f96cfa730f892fee04d3d4a8212757f2f7bb46fe228d909164",
       "outputBytes": 109012,
       "capabilities": [
         1

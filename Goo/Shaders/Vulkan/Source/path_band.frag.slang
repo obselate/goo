@@ -616,7 +616,7 @@ float2 axisCoverage(float2 point, float2 pixelsPerPath, AnalyticBand band, bool 
         }
     }
 
-    [loop] for (uint side = 0u; side < 2u && evenOdd; ++side)
+    [unroll] for (uint side = 0u; side < 2u && evenOdd; ++side)
     {
         bool forwardSide = side == 0u;
         RayAccumulator ray = forwardSide ? forwardRay : reverseRay;
@@ -717,7 +717,7 @@ float analyticCoverage()
     }
     float2 horizontal = float2(0.0, 0.0);
     float2 vertical = float2(0.0, 0.0);
-    [loop] for (uint axis = 0u; axis < 2u; ++axis)
+    [unroll] for (uint axis = 0u; axis < 2u; ++axis)
     {
         bool isVertical = axis == 1u;
         float2 coverage = axisCoverage(pathPosition, pixels, isVertical ? verticalBand : horizontalBand, isVertical);
