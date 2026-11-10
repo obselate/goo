@@ -729,6 +729,7 @@ namespace Facebook.Yoga
             float boundMainSize = 0;
             float deltaFreeSpace = 0;
             float shrinkRatio = flexLine.Layout.RemainingFreeSpace / flexLine.Layout.TotalFlexShrinkScaledFactors;
+            float growRatio = flexLine.Layout.RemainingFreeSpace / flexLine.Layout.TotalFlexGrowFactors;
 
             for (int i = 0; i < flexLine.ItemsInFlow.Count; i++)
             {
@@ -767,9 +768,7 @@ namespace Facebook.Yoga
                     flexGrowFactor = currentLineChild.ResolveFlexGrow();
                     if (Comparison.IsDefined(flexGrowFactor) && flexGrowFactor != 0)
                     {
-                        baseMainSize = childFlexBasis +
-                            flexLine.Layout.RemainingFreeSpace /
-                                flexLine.Layout.TotalFlexGrowFactors * flexGrowFactor;
+                        baseMainSize = childFlexBasis + growRatio * flexGrowFactor;
                         boundMainSize = BoundAxis.ComputeBoundAxis(
                             currentLineChild, mainAxis, direction,
                             baseMainSize, availableInnerMainDim, availableInnerWidth);
