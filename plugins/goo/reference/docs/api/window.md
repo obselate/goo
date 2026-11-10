@@ -1587,7 +1587,7 @@ Occurs before a native titlebar double-click performs its default action. Uses p
 
 ### `VisibilityChanged`
 
-Reports observed viewport visibility changes on the owner thread.
+Reports changes to IsVisible on the owner thread.
 
 ### `new`
 

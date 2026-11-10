@@ -110,7 +110,7 @@ public partial class Window {
     }
   }
 
-  /// Reports observed viewport visibility changes on the owner thread.
+  /// Reports changes to IsVisible on the owner thread.
   public event VisibilityChanged Action[bool] {
     add {
       requireUiThread("Window.VisibilityChanged")
