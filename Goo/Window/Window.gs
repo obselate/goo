@@ -800,7 +800,7 @@ public partial class Window {
     captureFailed = false
     captureOwner = WindowCaptureOwner.None
     reusableCapture = nil
-    throw InvalidOperationException("Goo capture readback failed")
+    throw windowTarget?.CaptureFailure ?? InvalidOperationException("Goo capture readback failed")
   }
 
   /// Takes a completed capture, or returns nil while it is pending.
@@ -820,7 +820,7 @@ public partial class Window {
     let reusable = reusableCapture
     reusableCapture = nil
     if status == WindowReadbackPollStatus.Failed {
-      throw InvalidOperationException("Goo capture readback failed")
+      throw target.CaptureFailure ?? InvalidOperationException("Goo capture readback failed")
     }
     guard let result = target.TakeCaptureResult() else {
       throw InvalidOperationException("Goo capture result was unavailable")
@@ -841,7 +841,11 @@ public partial class Window {
   internal func RequestDiagnosticsCapture() WindowReadbackRequestStatus {
     if captureOwner != WindowCaptureOwner.None { return WindowReadbackRequestStatus.Busy }
     guard let target = windowTarget else { return WindowReadbackRequestStatus.NotReady }
-    return startCapture(target, WindowCaptureOwner.Diagnostics)
+    let status = startCapture(target, WindowCaptureOwner.Diagnostics)
+    if status == WindowReadbackRequestStatus.Failed {
+      throw target.CaptureFailure ?? InvalidOperationException("Goo capture readback failed")
+    }
+    return status
   }
 
   internal func PollDiagnosticsCapture() WindowReadbackResult? {
@@ -852,7 +856,7 @@ public partial class Window {
     if result == WindowReadbackPollStatus.NotReady { return nil }
     captureOwner = WindowCaptureOwner.None
     if result == WindowReadbackPollStatus.Failed {
-      throw InvalidOperationException("Goo capture readback failed")
+      throw target.CaptureFailure ?? InvalidOperationException("Goo capture readback failed")
     }
     guard let capture = target.TakeCaptureResult() else {
       throw InvalidOperationException("Goo capture result was unavailable")

@@ -14,6 +14,8 @@ internal unsafe partial class VulkanWindowTarget {
   private var readbackBudgetExceededCount uint64
   private var readbackTiming VulkanReadbackTimingSnapshot
   private var readbackObjectAllocationBaseline uint64
+  private var readbackFailure Exception?
+  public prop CaptureFailure Exception? { get -> readbackFailure }
   private var readbackPrerequisiteFrame SceneFrame? = nil
   private var readbackPrerequisiteGeneration uint64 = 0uL
   private var readbackPrerequisiteSceneVersion uint64 = 0uL
@@ -64,6 +66,7 @@ internal unsafe partial class VulkanWindowTarget {
       PollQueueCompletion()
       let hasPrerequisite = readbackPrerequisiteFrame != nil
       if !hasPrerequisite {
+        readbackFailure = nil
         readbackTiming = VulkanReadbackTimingSnapshot{
           RequestStartTicks: Stopwatch.GetTimestamp(),
           RequestedByteSize: 0uL,
@@ -262,6 +265,9 @@ internal unsafe partial class VulkanWindowTarget {
           reusablePixels
         )
         readbackTiming.SubmitTicks = Stopwatch.GetTimestamp()
+        if submitResult != VkConstants.VK_SUCCESS {
+          readbackFailure = InvalidOperationException("Vulkan readback submission failed: " + submitResult.ToString())
+        }
         if submitResult == VkConstants.VK_ERROR_DEVICE_LOST {
           try { activeRequest.AbandonAfterDeviceLoss() } catch (cleanup Exception) { }
           readbackAbandonCount = readbackAbandonCount + 1uL
@@ -280,6 +286,7 @@ internal unsafe partial class VulkanWindowTarget {
         readbackRequestCount = readbackRequestCount + 1uL
         return WindowReadbackRequestStatus.Accepted
       } catch (error Exception) {
+        readbackFailure = error
         ClearReadbackPrerequisite()
         var installedHandled = false
         if let activeRequest = request {
@@ -354,7 +361,9 @@ internal unsafe partial class VulkanWindowTarget {
     if result == VkConstants.VK_SUCCESS {
       return WindowReadbackPollStatus.Complete
     }
-    return if result == VkConstants.VK_NOT_READY { WindowReadbackPollStatus.NotReady } else { WindowReadbackPollStatus.Failed }
+    if result == VkConstants.VK_NOT_READY { return WindowReadbackPollStatus.NotReady }
+    readbackFailure = InvalidOperationException("Vulkan readback completion failed: " + result.ToString())
+    return WindowReadbackPollStatus.Failed
   }
 
   public func TakeCaptureResult() WindowReadbackResult ? -> TakeReadbackResult()

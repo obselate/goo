@@ -160,6 +160,7 @@ internal interface WindowRenderTarget {
     reusablePixels([]uint8)? = nil
   ) WindowReadbackRequestStatus;
   func PollCapture() WindowReadbackPollStatus;
+  prop CaptureFailure Exception? { get; }
   func TakeCaptureResult() WindowReadbackResult?;
   func Dispose();
 }

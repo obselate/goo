@@ -1255,6 +1255,7 @@ internal class DeferredCloseTarget : WindowRenderTarget {
   public func RequestCapture(root Node?, portalRoot Node?, background Color, dpi Vector2,
     reusablePixels([]uint8)? = nil) WindowReadbackRequestStatus -> WindowReadbackRequestStatus.NotReady
   public func PollCapture() WindowReadbackPollStatus -> WindowReadbackPollStatus.NotReady
+  public prop CaptureFailure Exception? { get -> nil }
   public func TakeCaptureResult() WindowReadbackResult? -> nil
   public func Dispose() {
     if CloseChecks < CloseAfterChecks {
