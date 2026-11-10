@@ -43,6 +43,23 @@ internal class PortalFixtures {
     return window.UiScale == 0.5F
   }
 
+  func AnchoredPortalSharesDevicePixelRowsWithTreeContract() bool {
+    for scale in []float32{ 1.25F, 1.5F, 2.25F } {
+      let cell = PortalRowAlignmentCell{}
+      let window = Window{ Root: cell, Width: 600, Height: 600, UiScale: scale }
+      window.UpdateTree()
+      let field = cell.FieldText.BorderBox
+      let option = cell.OptionText.BorderBox
+      let fieldRow = field.Y * float64(scale)
+      let optionRow = option.Y * float64(scale)
+      if Math.Abs(fieldRow - Math.Round(fieldRow)) > 0.001 || Math.Abs(optionRow - Math.Round(optionRow)) > 0.001
+        || Math.Round(fieldRow) != Math.Round(optionRow) {
+          throw InvalidOperationException("scale=${scale}, field=${fieldRow}, option=${optionRow}")
+        }
+    }
+    return true
+  }
+
   func OverlayOrderingInputAndGeometryContract() bool {
     let cell = PortalInputCell{}
     let window = Window{ Root: cell, Width: 200, Height: 100 }
@@ -637,6 +654,24 @@ internal class PortalPlacementCell : Cell {
         },
       },
     }
+  }
+}
+
+internal class PortalRowAlignmentCell : Cell {
+  internal let Field ElementHandle = ElementHandle{}
+  internal let FieldText ElementHandle = ElementHandle{}
+  internal let OptionText ElementHandle = ElementHandle{}
+
+  override func Build() Blob -> Container{ Width: Percent(100), Height: Percent(100),
+    Container{ Handle: Field, Position: PositionType.Absolute, Left: 40, Top: 166, Width: 320, Height: 32, Padding: 6,
+      Text{ Handle: FieldText, Content: "Field" },
+    },
+    Portal{ Anchor: Field, Placement: PortalPlacement.BottomStart,
+      AnchorRect: ElementRect{ X: 4.889, Y: -31.778, Width: 310.222, Height: 32 },
+      Container{ Width: 310.222, Height: 32, Padding: 6,
+        Text{ Handle: OptionText, Content: "Option" },
+      },
+    },
   }
 }
 

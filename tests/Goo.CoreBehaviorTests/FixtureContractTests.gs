@@ -107,6 +107,7 @@ class FixtureContractTests {
             yield Contract[PortalFixtures]("UiScaleLayoutInputAndAnchoredPortalContract")
             yield Contract[PortalFixtures]("AnchoredSubrectangleAndCollisionBoundsContract")
             yield Contract[PortalFixtures]("AnchoredPlacementSizesToSelectedSideContract")
+            yield Contract[PortalFixtures]("AnchoredPortalSharesDevicePixelRowsWithTreeContract")
             yield Contract[PortalFixtures]("ClippedAnchorPreservesMountedEditorContract")
             yield Contract[AccessibilityFixtures]("AdapterDeliveryThreadContract")
             yield Contract[AccessibilityFixtures]("DeclaredActionFailureContract")
