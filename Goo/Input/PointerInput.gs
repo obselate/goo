@@ -525,7 +525,7 @@ internal partial class PointerInput {
     resolver Resolver) {
       for i in start ... end {
         guard let n = hovered ? route[i].Current : route[i].Captured else { continue }
-        if n.Hovered != hovered {
+        if n.Hovered != hovered && !ScrollbarParts.IsPart(n) {
           n.Hovered = hovered
           resolver.Invalidate(n, false)
         }
@@ -666,7 +666,9 @@ internal partial class PointerInput {
 
   internal func RefreshHover(root Node?, resolver Resolver) bool {
     current = mouse
-    return if cursorValid { HandleMove(root, resolver, cursor.X, cursor.Y) } else { false }
+    if !cursorValid { return false }
+    let moved = HandleMove(root, resolver, cursor.X, cursor.Y)
+    return updateScrollHover(root, cursor.X, cursor.Y, resolver) || moved
   }
 
   internal func CurrentCursor() Cursor {

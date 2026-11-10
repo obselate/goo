@@ -390,6 +390,7 @@ class FixtureContractTests {
             yield Contract[ScrollbarFixtures]("PaddedEditorCanRevealTheEndCaret")
             yield Contract[ScrollbarFixtures]("MountedPartHandleAndCallbackContract")
             yield Contract[ScrollbarFixtures]("HoverPartsRemainOwnedByTheirWindow")
+            yield Contract[ScrollbarFixtures]("ThumbHoverCoversScrollbarAndNarrowsInTrack")
             yield Contract[ScrollbarFixtures]("PartDisposalContinuesAfterCallbackFailure")
             yield Contract[ScrollbarFixtures]("PublicMetricsAndJumpContract")
             yield Contract[ShapeGeometryFixtures]("LargeStrokeConstructionHasBoundedAllocation")

@@ -308,7 +308,7 @@ internal partial class PointerInput {
       } else {
         changed = ScrollState.Hover(node, false, false) || changed
       }
-      ScrollbarParts.SetTrackHovered(node, false, false, resolver)
+      ScrollbarParts.SetHovered(node, false, false, resolver)
     }
     if let node = state.Vertical {
       if reset {
@@ -317,7 +317,7 @@ internal partial class PointerInput {
       } else {
         changed = ScrollState.Hover(node, true, false) || changed
       }
-      ScrollbarParts.SetTrackHovered(node, true, false, resolver)
+      ScrollbarParts.SetHovered(node, true, false, resolver)
     }
     state.Horizontal = nil
     state.Vertical = nil
@@ -376,23 +376,23 @@ internal partial class PointerInput {
     if state.Horizontal != horizontal {
       if let previous = state.Horizontal {
         changed = ScrollState.Hover(previous, false, false) || changed
-        ScrollbarParts.SetTrackHovered(previous, false, false, resolver)
+        ScrollbarParts.SetHovered(previous, false, false, resolver)
       }
       state.Horizontal = horizontal
       if let next = horizontal {
         changed = ScrollState.Hover(next, false, true) || changed
-        ScrollbarParts.SetTrackHovered(next, false, true, resolver)
+        ScrollbarParts.SetHovered(next, false, true, resolver)
       }
     }
     if state.Vertical != vertical {
       if let previous = state.Vertical {
         changed = ScrollState.Hover(previous, true, false) || changed
-        ScrollbarParts.SetTrackHovered(previous, true, false, resolver)
+        ScrollbarParts.SetHovered(previous, true, false, resolver)
       }
       state.Vertical = vertical
       if let next = vertical {
         changed = ScrollState.Hover(next, true, true) || changed
-        ScrollbarParts.SetTrackHovered(next, true, true, resolver)
+        ScrollbarParts.SetHovered(next, true, true, resolver)
       }
     }
     if changed {

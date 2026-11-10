@@ -565,6 +565,29 @@ internal class ScrollbarFixtures {
     }
   }
 
+  func ThumbHoverCoversScrollbarAndNarrowsInTrack() bool {
+    let track = ElementHandle{}
+    let thumb = ElementHandle{}
+    let window = Window{ Root: ThinThumbCell(track, thumb), Width: 100, Height: 100 }
+    try {
+      window.UpdateTree()
+      guard let trackNode = track.AttachedNode(), let thumbNode = thumb.AttachedNode() else { return false }
+      if thumbNode.Rect.X != 94.0F || thumbNode.Rect.W != 4.0F || thumbNode.Hovered { return false }
+      window.PlatformInput.PointerMove(1L, PointerDevice.Mouse, 96.0F, 90.0F, KeyModifiers{}, 0.0F)
+      window.UpdateTree()
+      if !trackNode.Hovered || !thumbNode.Hovered
+        || thumbNode.Rect.X != 92.0F || thumbNode.Rect.W != 8.0F { return false }
+      window.PlatformInput.PointerMove(1L, PointerDevice.Mouse, 96.0F, 10.0F, KeyModifiers{}, 0.0F)
+      window.UpdateTree()
+      if !trackNode.Hovered || !thumbNode.Hovered { return false }
+      window.PlatformInput.PointerMove(1L, PointerDevice.Mouse, 40.0F, 10.0F, KeyModifiers{}, 0.0F)
+      window.UpdateTree()
+      return !trackNode.Hovered && !thumbNode.Hovered && thumbNode.Rect.W == 4.0F
+    } finally {
+      window.Close()
+    }
+  }
+
   func PartDisposalContinuesAfterCallbackFailure() bool {
     RetirementDisposableCell.Reset()
     let descriptor = Scrollbar{
@@ -779,6 +802,19 @@ internal class ScrollbarHoverCell(handle ElementHandle) : Cell {
     Width: 100, Height: 100, OverflowY: Overflow.Scroll,
     ScrollbarVisibilityY: ScrollbarVisibility.Always,
     Hover: Style{ ScrollbarY: Scrollbar{ Thumb: Container{ Handle: handle } } },
+    Container{ Width: 100, Height: 300, FlexShrink: 0 },
+  }
+}
+
+internal class ThinThumbCell(track ElementHandle, thumb ElementHandle) : Cell {
+  override func Build() Blob -> Container{
+    Width: 100, Height: 100, OverflowY: Overflow.Scroll,
+    ScrollbarVisibilityY: ScrollbarVisibility.Always,
+    ScrollbarY: Scrollbar{
+      Thickness: 8, Inset: 0,
+      Track: Container{ Handle: track, Hover: Style{ BackgroundColor: Color.Rgb(20, 30, 40) } },
+      Thumb: Container{ Handle: thumb, Width: 4, Hover: Style{ Width: 8 } },
+    },
     Container{ Width: 100, Height: 300, FlexShrink: 0 },
   }
 }

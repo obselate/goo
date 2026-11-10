@@ -138,15 +138,17 @@ internal partial class ScrollbarParts {
             return false
         }
 
-        internal func SetTrackHovered(owner Node, vertical bool, value bool, resolver Resolver) {
+        internal func SetHovered(owner Node, vertical bool, value bool, resolver Resolver) {
             guard let state = stateFor(owner, false) else {
                 return
             }
-            let part = if vertical {
-                state.VerticalTrack
-            } else {
-                state.HorizontalTrack
-            }
+            setHovered(vertical ? state.VerticalTrack : state.HorizontalTrack, value, resolver)
+            setHovered(vertical ? state.VerticalThumb : state.HorizontalThumb, value, resolver)
+        }
+
+        internal func IsPart(n Node) bool -> if let owner = n.Parent { Children(owner).Contains(n) } else { false }
+
+        private func setHovered(part Node?, value bool, resolver Resolver) {
             guard let root = part else {
                 return
             }
@@ -222,7 +224,7 @@ internal partial class ScrollbarParts {
                         layoutPart(track, geometry.TrackBounds)
                     }
                     if let thumb = state.HorizontalThumb {
-                        layoutPart(thumb, geometry.Bounds)
+                        layoutPart(thumb, thumbBounds(thumb, geometry.Bounds, false))
                     }
                 }
                 if (state.VerticalTrack != nil || state.VerticalThumb != nil)
@@ -231,7 +233,7 @@ internal partial class ScrollbarParts {
                         layoutPart(track, geometry.TrackBounds)
                     }
                     if let thumb = state.VerticalThumb {
-                        layoutPart(thumb, geometry.Bounds)
+                        layoutPart(thumb, thumbBounds(thumb, geometry.Bounds, true))
                     }
                 }
                 for part in state.Parts {
@@ -273,6 +275,18 @@ internal partial class ScrollbarParts {
                 catch (error Exception) { return failure ?? error }
             }
             return failure
+        }
+
+        private func thumbBounds(thumb Node, bounds Rect, vertical bool) Rect {
+            let size = vertical ? thumb.Width : thumb.Height
+            if !size.HasMagnitude {
+                return bounds
+            }
+            let track = vertical ? bounds.W : bounds.H
+            let cross = MathF.Min(track, size.IsPercent ? track * size.Value / 100.0F : size.Value)
+            let offset = (track - cross) * 0.5F
+            return vertical ? Rect{ X: bounds.X + offset, Y: bounds.Y, W: cross, H: bounds.H }
+                : Rect{ X: bounds.X, Y: bounds.Y + offset, W: bounds.W, H: cross }
         }
 
         private func layoutPart(root Node, bounds Rect) {
