@@ -18,6 +18,7 @@ public partial class Window {
     if let child = family?.BlockingChild { return child.RequestActivation() }
     guard let native = host else { return WindowOperationResult.Closed }
     let result = if native.IsClosing { WindowOperationResult.Closed } else { native.RequestActivation() }
+    if result == WindowOperationResult.Accepted { cancelNativeHide() }
     observeVisibility()
     return result
   }

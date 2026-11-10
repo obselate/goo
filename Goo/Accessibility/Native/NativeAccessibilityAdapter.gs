@@ -26,6 +26,7 @@ public sealed partial class NativeAccessibilityAdapter : AccessibilityAdapter, I
   private var rootTitle string = ""
   private var rootWidth int32
   private var rootHeight int32
+  private var rootVisible bool
 
   /// Creates an unattached adapter. Assign it to exactly one Window.AccessibilityAdapter.
   public init() { }
@@ -126,6 +127,7 @@ public sealed partial class NativeAccessibilityAdapter : AccessibilityAdapter, I
     rootTitle = ""
     rootWidth = 0
     rootHeight = 0
+    rootVisible = false
   }
 
   private func ActivateOnUi(expected int64) {

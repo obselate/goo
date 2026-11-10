@@ -29,6 +29,7 @@ internal partial class InputCoordinator {
           changed = true
           continue
         }
+        if resolver.Owner?.NativeInputSuppressed == true { continue }
         if e.IsFocusGained {
           focus.SetNativeFocus(true)
           changed = true

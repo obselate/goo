@@ -207,27 +207,79 @@ func RunHideResourcesSmoke() {
       Require(before.Pixels[index] == after.Pixels[index], "Show changed captured pixels")
     }
 
-    WindowReadbackTestFixture.RuntimeHoldNextQueuePresent(window)
-    WindowReadbackTestFixture.ForceRenderNonblocking(window, 0.0)
-    let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
-    var held = false
-    while Stopwatch.GetTimestamp() < deadline {
-      WindowReadbackTestFixture.PollQueueCompletion(window)
-      if WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(window, 10) {
-        held = true
+    var visibilityEvents = 0
+    var inputActivities = 0
+    var visible = true
+    window.VisibilityChanged += value -> {
+      visibilityEvents++
+      visible = value
+    }
+    window.InputActivity += _ -> { inputActivities++ }
+    for operation in []string{"hide", "show", "close"} {
+      WindowReadbackTestFixture.RuntimeHoldNextQueuePresent(window)
+      WindowReadbackTestFixture.ForceRenderNonblocking(window, 0.0)
+      let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
+      var held = false
+      while Stopwatch.GetTimestamp() < deadline {
+        WindowReadbackTestFixture.PollQueueCompletion(window)
+        if WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(window, 10) {
+          held = true
+          break
+        }
+        Thread.Yield()
+      }
+      Require(held, "Present queue work was not held")
+      let presentGeneration = target.CurrentPresentGeneration
+      let previousEvents = visibilityEvents
+      let previousActivities = inputActivities
+      Require(window.Hide() == WindowOperationResult.Accepted, "Queued Hide was rejected")
+      Require(!window.IsVisible && !window.IsFocused && !visible && visibilityEvents == previousEvents + 1,
+        "Queued Hide did not publish hidden state immediately")
+      Require(window.SdlHostForTest()?.IsVisible == true, "Hide unmapped a window with an in-flight present")
+      Require(target.CurrentPresentGeneration != 0uL, "Hide destroyed a queued swapchain")
+      window.InputQueueKeyPressForTest(Key.A)
+      window.InputQueueKeyReleaseForTest(Key.A)
+      window.PushNativeMouseButtonForTest(20.0F, 20.0F, PointerButton.Primary, true)
+      window.PushNativeMouseButtonForTest(20.0F, 20.0F, PointerButton.Primary, false)
+      SdlRuntime.PumpEvents(Int32.MaxValue)
+      window.PumpScheduled(0.0)
+      Require(inputActivities == previousActivities && !window.IsFocused,
+        "Queued Hide routed native input")
+      if operation == "show" {
+        Require(window.Show() == WindowOperationResult.Accepted && window.IsVisible && visible
+            && visibilityEvents == previousEvents + 2 && window.IsFocused == window.ObservedNativeFocusForTest,
+          "Show did not cancel a pending native hide")
+      } else if operation == "close" {
+        window.RequestClose()
+        window.PumpScheduled(0.0)
+        Require(window.IsOpen, "Close discarded an in-flight present")
+      }
+      WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
+      WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
+      if operation == "show" {
+        WindowReadbackTestFixture.PollQueueCompletion(window)
+        Require(target.CurrentPresentGeneration == presentGeneration,
+          "Canceled Hide discarded the mapped swapchain")
+      }
+      window.PumpScheduled(0.0)
+      if operation == "close" {
+        Require(!window.IsOpen, "Close retained a pending native hide")
         break
       }
-      Thread.Yield()
+      if operation == "show" {
+        Require(window.IsVisible && window.SdlHostForTest()?.IsVisible == true
+            && visibilityEvents == previousEvents + 2,
+          "Canceled native hide unmapped or remapped the window")
+      } else {
+        AwaitHiddenResources(window)
+        Require(!window.IsVisible && window.SdlHostForTest()?.IsVisible == false
+            && visibilityEvents == previousEvents + 1,
+          "Native hide did not finish after the present drained")
+        Require(window.Show() == WindowOperationResult.Accepted, "Queued Show was rejected")
+      }
+      WindowReadbackTestFixture.ForceRender(window, 0.0)
+      RoundedResizeRequireFirstFrame(ClipCaptureReadback(window, metrics), metrics, 2)
     }
-    Require(held, "Present queue work was not held")
-    Require(window.Hide() == WindowOperationResult.Accepted, "Queued Hide was rejected")
-    Require(target.CurrentPresentGeneration != 0uL, "Hide destroyed a queued swapchain")
-    WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
-    WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
-    AwaitHiddenResources(window)
-    Require(window.Show() == WindowOperationResult.Accepted, "Queued Show was rejected")
-    WindowReadbackTestFixture.ForceRender(window, 0.0)
-    RoundedResizeRequireFirstFrame(ClipCaptureReadback(window, metrics), metrics, 2)
   } finally {
     WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
     if window.IsOpen {
@@ -238,7 +290,7 @@ func RunHideResourcesSmoke() {
     Console.SetError(originalError)
   }
   ReadbackValidateCommonDiagnostics(capturedError.ToString())
-  Console.WriteLine("hide-resources-gate: hidden_swapchains=0 hidden_clip_layers=0 minimize=retained pending_capture=valid queued_present=safe show_capture=identical validation=0")
+  Console.WriteLine("hide-resources-gate: hidden_swapchains=0 hidden_clip_layers=0 minimize=retained pending_capture=valid queued_present=safe public_hide=immediate show_cancel=verified close_pending=verified show_capture=identical validation=0")
 }
 
 func RunHiddenDeviceRecoverySmoke() {

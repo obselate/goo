@@ -75,6 +75,8 @@ internal class AccessKitNative {
     internal func NodeSetRoleDescription(node nint, value nint, length uint64);
     @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_disabled", CallingConvention: CallingConvention.Cdecl)
     internal func NodeSetDisabled(node nint);
+    @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_hidden", CallingConvention: CallingConvention.Cdecl)
+    internal func NodeSetHidden(node nint);
     @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_read_only", CallingConvention: CallingConvention.Cdecl)
     internal func NodeSetReadOnly(node nint);
     @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_required", CallingConvention: CallingConvention.Cdecl)

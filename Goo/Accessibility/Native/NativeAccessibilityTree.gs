@@ -43,11 +43,13 @@ public sealed partial class NativeAccessibilityAdapter {
       let title = owner?.Title ?? "Goo"
       let width = owner?.Width ?? 0
       let height = owner?.Height ?? 0
-      if complete || rootId != currentId || rootTitle != title || rootWidth != width || rootHeight != height {
+      let visible = owner?.IsVisible == true
+      if complete || rootId != currentId || rootTitle != title || rootWidth != width || rootHeight != height || rootVisible != visible {
         let root = AccessKitNative.NodeNew(AccessKitSchema.Window)
         try {
           SetString(root, title, 0)
           AccessKitNative.NodeSetBounds(root, NativeBounds(ElementRect{Width: float64(width) / uiScale, Height: float64(height) / uiScale}))
+          if !visible { AccessKitNative.NodeSetHidden(root) }
           if let child = currentRoot { AccessKitNative.NodePushChild(root, NodeId(child.Id)) }
         } catch (error Exception) { AccessKitNative.NodeFree(root)
           throw error }
@@ -77,6 +79,7 @@ public sealed partial class NativeAccessibilityAdapter {
       rootTitle = title
       rootWidth = width
       rootHeight = height
+      rootVisible = visible
       full = false
       return update
     } catch (error Exception) { AccessKitNative.TreeUpdateFree(update)
