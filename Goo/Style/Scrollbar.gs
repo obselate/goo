@@ -22,7 +22,7 @@ public sealed class Scrollbar {
     private var track Container?
     private var thumb Container?
 
-    /// Gets the painted thumb thickness.
+    /// Gets the track thickness.
     public prop Thickness float64 {
         get -> thickness
         init -> thickness = checkedScrollbarValue(value, "Thickness", true)
@@ -57,12 +57,14 @@ public sealed class Scrollbar {
         get -> reserveSpace;
         init -> reserveSpace = value
     }
-    /// Gets the optional track element.
+    /// Gets the optional track element. It gets `Hover` while the pointer is over the scrollbar.
     public prop Track Container? {
         get -> track;
         init -> track = value
     }
-    /// Gets the optional thumb element.
+    /// Gets the optional thumb element. It gets `Hover` while the pointer is over the scrollbar.
+    /// Set `Width` on a vertical thumb or `Height` on a horizontal thumb to make it thinner than the track.
+    /// The thumb stays centered in the track.
     public prop Thumb Container? {
         get -> thumb;
         init -> thumb = value

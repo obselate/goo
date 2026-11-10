@@ -1,5 +1,6 @@
 package Goo
 
+import System.Collections.Generic
 import System.Runtime.CompilerServices
 
 internal class PointerScrollDragState {
@@ -307,7 +308,7 @@ internal partial class PointerInput {
       } else {
         changed = ScrollState.Hover(node, false, false) || changed
       }
-      ScrollbarParts.SetTrackHovered(node, false, false, resolver)
+      ScrollbarParts.SetHovered(node, false, false, resolver)
     }
     if let node = state.Vertical {
       if reset {
@@ -316,7 +317,7 @@ internal partial class PointerInput {
       } else {
         changed = ScrollState.Hover(node, true, false) || changed
       }
-      ScrollbarParts.SetTrackHovered(node, true, false, resolver)
+      ScrollbarParts.SetHovered(node, true, false, resolver)
     }
     state.Horizontal = nil
     state.Vertical = nil
@@ -325,71 +326,73 @@ internal partial class PointerInput {
     }
   }
 
+  internal func ScrollbarAt(root Node, x float32, y float32) bool {
+    var horizontal Node?
+    var vertical Node?
+    scrollbarsAt(root, x, y, hitChain, out horizontal, out vertical)
+    return horizontal != nil || vertical != nil
+  }
+
+  private func scrollbarsAt(root Node?, x float32, y float32, chain List[NodeMount],
+    out horizontal Node?, out vertical Node?) {
+      horizontal = nil
+      vertical = nil
+      chain.Clear()
+      if let tree = root {
+        hitChainInto(tree, x, y, chain)
+        if !chainDisabled(chain) {
+          for var i = chain.Count; i > 0; i-- {
+            guard let n = chain[i - 1].Current else { continue }
+            if n.Retired || !canReceiveInput(n) { continue }
+            if n.Kind == NodeKind.Editor { ScrollState.SyncEditor(n) }
+            let point = TransformGeometry.WindowToNode(n, x, y)
+            if !point.Valid { continue }
+            if vertical == nil && scrollbarContains(n, true, point.X, point.Y) { vertical = n }
+            if horizontal == nil && scrollbarContains(n, false, point.X, point.Y) { horizontal = n }
+            if vertical != nil && horizontal != nil { break }
+            if n.IsPortal { break }
+          }
+        }
+      }
+      chain.Clear()
+    }
+
+  private func scrollbarContains(n Node, vertical bool, x float32, y float32) bool {
+    var geometry ScrollThumbGeometry
+    let available = if vertical {
+      verticalScrollThumb(n, out geometry)
+    } else {
+      horizontalScrollThumb(n, out geometry)
+    }
+    return available && geometry.HitBounds.Contains(x, y)
+  }
+
   private func updateScrollHover(root Node?, x float32, y float32, resolver Resolver) bool {
     let state = PointerScrollStates.Hover(this)
     var horizontal Node?
     var vertical Node?
-    scratchChain.Clear()
-    if let tree = root {
-      hitChainInto(tree, x, y, scratchChain)
-      if !chainDisabled(scratchChain) {
-        for var i = scratchChain.Count; i > 0; i-- {
-          guard let n = scratchChain[i - 1].Current else { continue }
-          if n.Retired || !canReceiveInput(n) { continue }
-          if n.Kind == NodeKind.Editor { ScrollState.SyncEditor(n) }
-          let point = TransformGeometry.WindowToNode(n, x, y)
-          if !point.Valid { continue }
-          if vertical == nil {
-            var geometry ScrollThumbGeometry
-            if let descriptor = n.ScrollbarY {
-              if n.ScrollbarVisibilityY != ScrollbarVisibility.Hidden
-                && (descriptor.Track != nil || descriptor.Thumb != nil) {
-                if verticalScrollThumb(n, out geometry)
-                  && geometry.HitBounds.Contains(point.X, point.Y) {
-                    vertical = n
-                  }
-              }
-            }
-          }
-          if horizontal == nil {
-            var geometry ScrollThumbGeometry
-            if let descriptor = n.ScrollbarX {
-              if n.ScrollbarVisibilityX != ScrollbarVisibility.Hidden
-                && (descriptor.Track != nil || descriptor.Thumb != nil) {
-                if horizontalScrollThumb(n, out geometry)
-                  && geometry.HitBounds.Contains(point.X, point.Y) {
-                    horizontal = n
-                  }
-              }
-            }
-          }
-          if vertical != nil && horizontal != nil { break }
-          if n.IsPortal { break }
-        }
-      }
-    }
-    scratchChain.Clear()
+    scrollbarsAt(root, x, y, scratchChain, out horizontal, out vertical)
     var changed bool
     if state.Horizontal != horizontal {
       if let previous = state.Horizontal {
         changed = ScrollState.Hover(previous, false, false) || changed
-        ScrollbarParts.SetTrackHovered(previous, false, false, resolver)
+        ScrollbarParts.SetHovered(previous, false, false, resolver)
       }
       state.Horizontal = horizontal
       if let next = horizontal {
         changed = ScrollState.Hover(next, false, true) || changed
-        ScrollbarParts.SetTrackHovered(next, false, true, resolver)
+        ScrollbarParts.SetHovered(next, false, true, resolver)
       }
     }
     if state.Vertical != vertical {
       if let previous = state.Vertical {
         changed = ScrollState.Hover(previous, true, false) || changed
-        ScrollbarParts.SetTrackHovered(previous, true, false, resolver)
+        ScrollbarParts.SetHovered(previous, true, false, resolver)
       }
       state.Vertical = vertical
       if let next = vertical {
         changed = ScrollState.Hover(next, true, true) || changed
-        ScrollbarParts.SetTrackHovered(next, true, true, resolver)
+        ScrollbarParts.SetHovered(next, true, true, resolver)
       }
     }
     if changed {

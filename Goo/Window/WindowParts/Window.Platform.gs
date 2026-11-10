@@ -57,17 +57,14 @@ public partial class Window {
       if bottom && right {
         return WindowHitResult.BottomRight
       }
-      if top {
-        return WindowHitResult.Top
-      }
-      if bottom {
-        return WindowHitResult.Bottom
-      }
-      if left {
-        return WindowHitResult.Left
-      }
-      if right {
-        return WindowHitResult.Right
+      if (top || bottom || left || right) && !input.ScrollbarAt(n, px / UiScale, py / UiScale) {
+        if top {
+          return WindowHitResult.Top
+        }
+        if bottom {
+          return WindowHitResult.Bottom
+        }
+        return left ? WindowHitResult.Left : WindowHitResult.Right
       }
     }
     let info = input.HitInfo(n, px / UiScale, py / UiScale)

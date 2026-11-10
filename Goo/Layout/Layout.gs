@@ -811,6 +811,9 @@ internal func syncYogaField(n Node, f StyleField) {
     case StyleField.OverflowY { applyDisplay(yg, n) }
     default { }
   }
+  if YGNodeAPI.YGNodeIsDirty(yg) && YGNodeAPI.YGNodeGetOwner(yg) == nil && ScrollbarParts.IsPart(n) {
+    n.Parent?.Yoga?.MarkDirtyAndPropagate()
+  }
 }
 
 internal func markYogaStyle(n Node, field StyleField) {
