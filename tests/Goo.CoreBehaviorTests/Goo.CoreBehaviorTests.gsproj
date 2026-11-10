@@ -22,6 +22,9 @@
     <ProjectReference Include="..\Goo.AndroidSmoke.Shared\Goo.AndroidSmoke.Shared.gsproj"
                       AdditionalProperties="Configuration=TestRelease;IncludeTestFixtures=true" />
     <None Update="Assets/*.svg" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Layout/flex-conformance.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf"
+          Link="Layout/VendSans-VariableFont_wght.ttf" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <Target Name="UseGooLinuxSdlForTests"
           AfterTargets="CopyFilesToOutputDirectory"
