@@ -62,6 +62,7 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
     }
 
     internal func ReleaseHeldQueueCallForTest() {
+      holdEntered.Reset()
       holdReleased.Set()
     }
 
