@@ -350,6 +350,40 @@ internal class TextEditorInputFixtures {
       && node.EditorState!!.ParagraphCacheCount < 100
   }
 
+  func ScrollToEndBeforeMountReachesMeasuredEnd() bool {
+    using let controller = TextEditorController(TextDocument(wrappedParagraphs()))
+    controller.ScrollTo(0.0, 10000000.0)
+    let driver = InputFixtureDriver(TextEditorWrappedCell(controller), 400, 300)
+    driver.Update()
+    let node = driver.Window.Tree!!
+    let layout = TextEditorLayouts.For(node, BoxGeometry.ContentWidth(node), BoxGeometry.ContentHeight(node))
+    let last = layout.Lines[layout.Lines.Count - 1]
+    return last.SourceEnd == controller.Document.Length
+      && last.Top + last.Height <= float32(controller.ScrollTargetY) + BoxGeometry.ViewportHeight(node) + 0.01F
+  }
+
+  func CaretRevealLandsAfterNearbyParagraphsAreMeasured() bool {
+    using let controller = TextEditorController(TextDocument(wrappedParagraphs()))
+    let driver = InputFixtureDriver(TextEditorWrappedCell(controller), 400, 300)
+    let node = driver.Window.Tree!!
+    let start = controller.Document.GetLineRange(2000).Start
+    let caret = TextPosition{ Offset: start, Affinity: TextAffinity.Downstream }
+    controller.Selection = TextSelection{ Anchor: caret, Active: caret }
+    driver.Update()
+    let rect = TextEditorLayouts.CaretRect(node, caret)
+    let top = BoxGeometry.ContentTop(node) - node.Rect.Y
+    return rect.Y >= top && rect.Y + rect.H <= top + BoxGeometry.ViewportHeight(node)
+  }
+
+  private func wrappedParagraphs() string {
+    let text = StringBuilder()
+    for i in 0 ... 3000 {
+      if i > 0 { text.Append('\n') }
+      for word in 0 ... (i * 7) % 23 + 1 { text.Append("word").Append(word).Append(' ') }
+    }
+    return text.ToString()
+  }
+
   private func editorPoint(editor Node, position TextPosition) TextEditorInputPoint {
     let rect = TextEditorLayouts.CaretRect(editor, position)
     return TextEditorInputPoint{
@@ -375,6 +409,16 @@ internal class TextEditorInputCell : Cell {
     Height = 100.0,
     FontSize = 16.0,
     OnSubmit = () -> { Submits++ },
+  }
+}
+
+internal class TextEditorWrappedCell : Cell {
+  private let controller TextEditorController
+
+  internal init(controller TextEditorController) { this.controller = controller }
+
+  override func Build() Blob -> TextEditor(controller) {
+    Width = 220.0, Height = 200.0, FontSize = 14.0, TextWrap = TextWrap.Wrap,
   }
 }
 

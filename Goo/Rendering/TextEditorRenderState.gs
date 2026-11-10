@@ -64,6 +64,7 @@ internal sealed class TextEditorRenderState : IDisposable {
   internal func MatchesLayers(values []TextPresentationLayer) bool -> sameArray(layers, values)
   internal prop ParagraphCacheCount int32{ get -> paragraphs.Count }
   internal prop ParagraphBuildCount int32{ get; private set; }
+  internal prop ResolvingScroll bool{ get; set; }
 
   internal func BaseStyle(n Node, fingerprint int32) TextResolvedStyle {
     if let current = baseStyle {
