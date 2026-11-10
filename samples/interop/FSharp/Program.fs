@@ -13,7 +13,7 @@ module Counter =
                 OnClick = increment)
         button.Add(Text(Content = "Add one"))
         root.Add(button)
-        root :> Blob
+        root
 
     let create () =
         let mutable count = 0
@@ -23,7 +23,7 @@ module Counter =
 
 let listView (names: string array) (save: Action) =
     let root = Container(Width = Length.Pixels 320., MaxWidth = Length.Percent 100.,
-        Padding = Edges(Length.Pixels 12.), Gap = Length.Pixels 8., Children = ResizeArray<Blob>(names.Length + 2))
+        Padding = Edges(Length.Pixels 12.), Gap = Length.Pixels 8.)
     root.Add(Text(Content = "Account"))
     for name in names do
         root.Add(Text(Key = name, Content = name))
@@ -41,7 +41,7 @@ type AccountCell() =
     override _.Build(input: AccountInput) =
         let button = Button(OnClick = increment)
         button.Add(Text(Content = $"{input.Name}: {edits}"))
-        button :> Blob
+        button
 
 type EqualColumn() =
     interface LayoutAlgorithm with
@@ -72,7 +72,7 @@ type Examples(sample: string) =
     let save = Action(fun () -> printfn "Save")
     override _.Build() : Blob =
         match sample with
-        | "list" -> listView names save :> Blob
+        | "list" -> listView names save
         | "input" -> Cell.Mount<AccountInput, AccountCell>("account", { Name = "Ada" })
         | "virtual" -> VirtualLists.Rows(items, 24., itemKey, buildRow)
         | "variants" ->
@@ -86,12 +86,12 @@ type Examples(sample: string) =
             let primary = Button(BasedOn = basic, BackgroundColor = Color.Rgb(74, 125, 255))
             primary.Add(Text(Content = "Primary"))
             root.Add(primary)
-            root :> Blob
+            root
         | "layout" ->
             let root = Container(Height = Length.Pixels 200., Layout = column)
             root.Add(Text(Content = "One"))
             root.Add(Text(Content = "Two"))
-            root :> Blob
+            root
         | "dialog" ->
             let dialog = ModalDialog(Open = isOpen, Content = Text(Content = "Save account?"),
                 Padding = Nullable 20., OnOpenChange = setOpen,
@@ -101,7 +101,7 @@ type Examples(sample: string) =
             button.Add(Text(Content = "Open dialog"))
             root.Add(button)
             root.Add(Cell.Mount<ModalDialog, ModalDialogHost>("dialog", dialog))
-            root :> Blob
+            root
         | _ -> Cell.Mount<Cell>(counterFactory, "counter")
 
 let hitTest (handle: ElementHandle) point =

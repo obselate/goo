@@ -30,7 +30,7 @@ The [compiled sample](../../samples/interop/FSharp/Program.fs) uses plain F# on 
         let button = Button(OnClick = increment)
         button.Add(Text(Content = "Add one"))
         root.Add(button)
-        root :&gt; Blob
+        root
 
     let create () =
         let mutable count = 0
@@ -64,7 +64,7 @@ let list = Container{
         Text{Content: "Save"},
     },
 }</code></pre></td><td><pre><code>let listView (names: string array) (save: Action) =
-    let root = Container(Children = ResizeArray&lt;Blob&gt;(names.Length + 2))
+    let root = Container()
     root.Add(Text(Content = "Account"))
     for name in names do
         root.Add(Text(Key = name, Content = name))
@@ -78,7 +78,7 @@ let list = listView names save</code></pre></td></tr>
 
 Use this for small, bounded data. Keep domain data outside `Build()`. Sort, filter and format collections when the data changes. Use virtual rows for large or unbounded data.
 
-`Add` accepts derived Blobs without a cast. The capacity reserves space for the heading, rows and button without growing the child list. The code creates no temporary sequence, F# list or array. This follows the module, closure and object-expression style in [Angel D. Muñoz's Counter](https://github.com/AngelMunoz/Navs/blob/vnext/samples/GooSample/Counter.fs).
+`Add` accepts derived Blobs without a cast, and an annotated `Blob` return or match result upcasts a `Container` without `:> Blob`. The code creates no temporary sequence, F# list or array. This follows the module, closure and object-expression style in [Angel D. Muñoz's Counter](https://github.com/AngelMunoz/Navs/blob/vnext/samples/GooSample/Counter.fs).
 
 F# can also infer child upcasts from a collection's element type:
 
