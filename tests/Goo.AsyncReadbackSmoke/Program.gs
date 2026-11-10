@@ -518,6 +518,7 @@ let modes = []SmokeMode{
   SmokeMode("GOO_PARTIAL_REDRAW_SMOKE", "1", () -> RunPartialRedrawSmoke()),
   SmokeMode("GOO_RETAINED_FRAME_EQUALITY_SMOKE", "1", () -> RunRetainedFrameEqualitySmoke()),
   SmokeMode("GOO_EDITOR_GUTTER_SMOKE", "1", () -> RunEditorGutterSmoke()),
+  SmokeMode("GOO_GLYPH_UPLOAD_SMOKE", "1", () -> RunGlyphUploadSmoke()),
   SmokeMode("GOO_SCROLLBAR_SMOKE", "1", () -> RunScrollbarSmoke()),
   SmokeMode("GOO_SCROLL_PLACEMENT_SMOKE", "1", () -> RunScrollPlacementSmoke()),
   SmokeMode("GOO_SCROLL_IMAGE_PLACEMENT_SMOKE", "1", () -> RunScrollImagePlacementSmoke()),

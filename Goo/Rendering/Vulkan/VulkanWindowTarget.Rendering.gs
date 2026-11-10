@@ -257,7 +257,11 @@ internal unsafe partial class VulkanWindowTarget {
         sceneCompiler.AppendDebugOverlay(debugOverlay, compileResult.FrameVersion,
           logicalWidth, logicalHeight)
       }
-      textRedrawPending = textScene?.RedrawRequired == true
+      if textScene?.RedrawRequired == true {
+        frameRenderDeferred = true
+        host.Wake()
+        return
+      }
       imageRedrawPending = imageScene?.RedrawRequired == true
       var deferInitialPresentation bool
       if firstPresentationPending && imageScene?.PendingImages == true {
@@ -322,7 +326,7 @@ internal unsafe partial class VulkanWindowTarget {
         EndDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.Upload)
       }
       RecordDiagnosticUpload(uploadStart, uploadBytes)
-      if deferInitialPresentation || textRedrawPending {
+      if deferInitialPresentation {
         initialImageUploadFrame = uploadBytes != 0uL
         frameRendered = initialImageUploadFrame
         frameRenderDeferred = true
@@ -346,7 +350,7 @@ internal unsafe partial class VulkanWindowTarget {
         current.Extent.height,
         out damageRegion,
         out fullRedraw)
-      if forceFullRedraw || textRedrawPending || imageRedrawPending
+      if forceFullRedraw || imageRedrawPending
         || pathRedrawPending || clipMaskRedrawPending
         || VulkanGpuExperiments.Selected == VulkanGpuExperiment.FullRedraw {
           fullRedraw = true

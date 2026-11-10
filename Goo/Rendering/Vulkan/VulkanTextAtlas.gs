@@ -57,6 +57,7 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
   internal prop DescriptorSetLayout VkDescriptorSetLayout{ get -> descriptorSetLayout }
   internal prop DescriptorSet VkDescriptorSet{ get -> descriptorSet }
   internal prop UploadPending bool{ get -> uploadPending }
+  internal prop UploadSubmitted bool{ get -> uploadSubmitted }
   internal prop IsUploaded bool{ get -> uploaded }
   internal prop UploadByteOffset VkDeviceSize{ get -> uploadByteOffset }
   internal prop UploadByteCount VkDeviceSize{ get -> uploadByteCount }
@@ -279,13 +280,13 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
     if commandBuffer == nint(0) || pipelineLayout == 0uL {
       throw ArgumentException("Text atlas descriptor binding arguments are invalid")
     }
-    if !uploaded {
+    if uploadPending {
+      if !uploadRecorded || (!uploadSubmitted && uploadCommandBuffer != commandBuffer) {
+        throw InvalidOperationException("Vulkan text atlas upload is not ready for this command buffer")
+      }
+    } else if !uploaded {
       throw InvalidOperationException("Vulkan text atlas upload is not ready for this command buffer")
     }
-    if uploadPending && (!uploadRecorded
-        || (!uploadSubmitted && uploadCommandBuffer != commandBuffer)) {
-          throw InvalidOperationException("Vulkan text atlas upload is not ready for this command buffer")
-        }
     if descriptorSet == 0uL {
       throw InvalidOperationException("Vulkan text atlas descriptor set is unavailable")
     }

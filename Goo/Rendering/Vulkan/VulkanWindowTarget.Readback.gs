@@ -172,7 +172,7 @@ internal unsafe partial class VulkanWindowTarget {
           if frameFailed {
             return WindowReadbackRequestStatus.Failed
           }
-          if frameRenderDeferred || textRedrawPending {
+          if frameRenderDeferred {
             return WindowReadbackRequestStatus.NotReady
           }
           let prerequisite = sceneCompiler.Frame

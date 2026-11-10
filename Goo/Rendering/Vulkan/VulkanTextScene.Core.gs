@@ -232,8 +232,17 @@ internal unsafe sealed partial class VulkanTextScene : VulkanGpuCache {
     guard let state = states[index] else {
       return false
     }
-    return SameIdentity(state.Identity, atlasId)
-      && byteRangeEnd <= uint64(state.PublishedBytePrefix)
+    if !SameIdentity(state.Identity, atlasId) {
+      return false
+    }
+    if byteRangeEnd <= uint64(state.PublishedBytePrefix) {
+      return true
+    }
+    if state.Atlas.UploadPending {
+      return state.UploadQueued && state.Atlas.UploadSubmitted
+        && byteRangeEnd <= uint64(state.QueuedBytePrefix)
+    }
+    return byteRangeEnd <= uint64(state.NextByteOffset)
   }
 
   internal func TryMarkAtlasActive(atlasId ResourceId) bool {
