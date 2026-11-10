@@ -32,6 +32,7 @@ internal class CustomLayoutState {
   private var arrangedVersion int64
   private var arrangedWidth float64 = -1.0
   private var arrangedHeight float64 = -1.0
+  private var arrangedDensity float32
   internal var ContentWidth float32
   internal var ContentHeight float32
 
@@ -173,7 +174,9 @@ internal class CustomLayoutState {
     let bottom = CustomLayouts.Inset(yoga, YGEdge.Bottom)
     let width = Math.Max(0.0F, Node.Rect.W - left - right)
     let height = Math.Max(0.0F, Node.Rect.H - top - bottom)
-    if arrangedVersion == version && arrangedWidth == float64(width) && arrangedHeight == float64(height) { return }
+    let density = yoga.Config.GetPointScaleFactor()
+    if arrangedVersion == version && arrangedWidth == float64(width)
+      && arrangedHeight == float64(height) && arrangedDensity == density { return }
     Begin(true)
     try {
       arrangedVersion = 0L
@@ -194,6 +197,7 @@ internal class CustomLayoutState {
       if !Single.IsFinite(ContentWidth) || !Single.IsFinite(ContentHeight) { throw InvalidOperationException("Custom layout content extent overflowed") }
       arrangedWidth = float64(width)
       arrangedHeight = float64(height)
+      arrangedDensity = density
       arrangedVersion = version
     } finally { End() }
   }
