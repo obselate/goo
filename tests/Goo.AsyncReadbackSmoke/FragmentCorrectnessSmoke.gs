@@ -13,7 +13,7 @@ class FragmentCorrectnessCell : Cell {
   internal var BuildCount int32
   private let square VectorPath = PathBuilder(0.0, 0.0, 16.0, 16.0)
     .MoveTo(0.0, 0.0).LineTo(16.0, 0.0).LineTo(16.0, 16.0).LineTo(0.0, 16.0).Close().Build()
-  private let outline VectorPath = Svg.Parse("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'><path d='M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm280-80h280v-560H480v560Z'/></svg>").PathForNode(1)
+  private let outline VectorPath = Svg.Parse("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 960 960'><path d='M220 860q-33 0-56.5-23.5T140 780v-560q0-33 23.5-56.5T220 140h560q33 0 56.5 23.5T860 220v560q0 33-23.5 56.5T780 860H220Zm280-80h280v-560H500v560Z'/></svg>").PathForNode(1)
 
   init(effect ShaderEffect) {
     crtEffect = effect
@@ -25,7 +25,6 @@ class FragmentCorrectnessCell : Cell {
     Shape{
       Position: PositionType.Absolute, Left: 16, Top: 16, Width: IconSize, Height: IconSize,
       Path: outline, BackgroundColor: Color.White,
-      Transform: PanelTransform{TranslateX: PixelOffset, TranslateY: IconSize + PixelOffset},
     },
     Container{
       Position: PositionType.Absolute,
