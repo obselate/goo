@@ -748,11 +748,10 @@ internal partial class VulkanSceneCompiler {
     }
 
   private func PaddingEdgeBounds(node Node, bounds ConservativeBounds) ConservativeBounds {
-    let basis = MinDimension(bounds)
-    let left = ResolveLength(node.BorderLeftWidth, basis)
-    let top = ResolveLength(node.BorderTopWidth, basis)
-    let right = ResolveLength(node.BorderRightWidth, basis)
-    let bottom = ResolveLength(node.BorderBottomWidth, basis)
+    let left = BoxGeometry.BorderWidth(node, YGEdge.Left)
+    let top = BoxGeometry.BorderWidth(node, YGEdge.Top)
+    let right = BoxGeometry.BorderWidth(node, YGEdge.Right)
+    let bottom = BoxGeometry.BorderWidth(node, YGEdge.Bottom)
     let width = bounds.Width - left - right
     let height = bounds.Height - top - bottom
     if width <= 0.0F || height <= 0.0F {
@@ -794,17 +793,8 @@ internal partial class VulkanSceneCompiler {
     left bool,
     top bool) float32{
       let radius = Radius(value, fallback, bounds)
-      let basis = MinDimension(bounds)
-      let xInset = if left {
-        ResolveLength(node.BorderLeftWidth, basis)
-      } else {
-        ResolveLength(node.BorderRightWidth, basis)
-      }
-      let yInset = if top {
-        ResolveLength(node.BorderTopWidth, basis)
-      } else {
-        ResolveLength(node.BorderBottomWidth, basis)
-      }
+      let xInset = BoxGeometry.BorderWidth(node, left ? YGEdge.Left : YGEdge.Right)
+      let yInset = BoxGeometry.BorderWidth(node, top ? YGEdge.Top : YGEdge.Bottom)
       let inset = xInset > yInset ? xInset : yInset
       let result = radius - inset
       let limit = MinDimension(insetBounds) * 0.5F
@@ -866,7 +856,7 @@ internal partial class VulkanSceneCompiler {
             left - clip.X, clip.Bottom - bottom, Radius(node.BorderBottomLeftRadius, node.BorderRadius, bounds)))
         }
       }
-      let width = node.OutlineWidth.Px
+      let width = OutlineWidth(node)
       let color = EffectiveColor(node.OutlineColor, opacity)
       frame.AddPerEdgeBorder(PerEdgeBorderRecord{
         Bounds: ring,
@@ -903,8 +893,8 @@ internal partial class VulkanSceneCompiler {
       || bounds.IsEmpty || node.OutlineColor.A <= 0.0F {
         return ConservativeBounds{}
       }
-    let width = node.OutlineWidth.Px
-    let offset = node.OutlineOffset.Px
+    let width = OutlineWidth(node)
+    let offset = OutlineOffset(node)
     if !finiteVulkanSceneValue(width) || !finiteVulkanSceneValue(offset) || width <= 0.0F {
       return ConservativeBounds{}
     }
@@ -919,6 +909,20 @@ internal partial class VulkanSceneCompiler {
         return ConservativeBounds{}
       }
     return result
+  }
+
+  private func OutlineWidth(node Node) float32 {
+    let width = node.OutlineWidth.Px
+    if !finiteVulkanSceneValue(width) || width <= 0.0F { return width }
+    let density = TransformGeometry.PixelDensity(node)
+    return MathF.Max(1.0F, MathF.Round(width * density, MidpointRounding.AwayFromZero)) / density
+  }
+
+  private func OutlineOffset(node Node) float32 {
+    let offset = node.OutlineOffset.Px
+    if !finiteVulkanSceneValue(offset) || offset == 0.0F { return offset }
+    let density = TransformGeometry.PixelDensity(node)
+    return MathF.Round(offset * density, MidpointRounding.AwayFromZero) / density
   }
 
   private func OutlineRadius(

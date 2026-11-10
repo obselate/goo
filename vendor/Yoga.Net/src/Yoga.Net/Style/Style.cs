@@ -560,36 +560,48 @@ namespace Facebook.Yoga
                 .UnwrapOrDefault(0.0f);
         }
 
+        /// <summary>
+        /// Configuration whose point scale factor snaps resolved border widths to whole device pixels.
+        /// </summary>
+        public Config? Config { get; set; }
+
+        private float SnapBorder(float border)
+        {
+            var scale = Config?.GetPointScaleFactor() ?? 0.0f;
+            if (border <= 0.0f || !(scale > 0.0f)) return border;
+            return MathF.Max(1.0f, MathF.Round(border * scale, MidpointRounding.AwayFromZero)) / scale;
+        }
+
         public float ComputeFlexStartBorder(FlexDirection axis, Direction direction)
         {
-            return Comparison.MaxOrDefined(
+            return SnapBorder(Comparison.MaxOrDefined(
                 ComputeBorder(axis.FlexStartEdge(), direction).Resolve(0.0f).UnwrapOrDefault(0.0f),
-                0.0f);
+                0.0f));
         }
 
         public float ComputeInlineStartBorder(FlexDirection axis, Direction direction)
         {
-            return Comparison.MaxOrDefined(
+            return SnapBorder(Comparison.MaxOrDefined(
                 ComputeBorder(axis.InlineStartEdge(direction), direction)
                     .Resolve(0.0f)
                     .UnwrapOrDefault(0.0f),
-                0.0f);
+                0.0f));
         }
 
         public float ComputeFlexEndBorder(FlexDirection axis, Direction direction)
         {
-            return Comparison.MaxOrDefined(
+            return SnapBorder(Comparison.MaxOrDefined(
                 ComputeBorder(axis.FlexEndEdge(), direction).Resolve(0.0f).UnwrapOrDefault(0.0f),
-                0.0f);
+                0.0f));
         }
 
         public float ComputeInlineEndBorder(FlexDirection axis, Direction direction)
         {
-            return Comparison.MaxOrDefined(
+            return SnapBorder(Comparison.MaxOrDefined(
                 ComputeBorder(axis.InlineEndEdge(direction), direction)
                     .Resolve(0.0f)
                     .UnwrapOrDefault(0.0f),
-                0.0f);
+                0.0f));
         }
 
         public float ComputeFlexStartPadding(FlexDirection axis, Direction direction, float widthSize)
@@ -724,6 +736,7 @@ namespace Facebook.Yoga
             clone._overflow = _overflow;
             clone._display = _display;
             clone._boxSizing = _boxSizing;
+            clone.Config = Config;
 
             clone._flex = _flex;
             clone._flexGrow = _flexGrow;

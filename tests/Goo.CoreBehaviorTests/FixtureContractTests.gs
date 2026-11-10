@@ -296,6 +296,7 @@ class FixtureContractTests {
             yield Contract[LayoutFixtures]("CustomMeasurementsPreserveLogicalSizes")
             yield Contract[LayoutFixtures]("CustomPlacementsSnapToDevicePixelsAcrossRelayouts")
             yield Contract[LayoutFixtures]("PixelSnappingPreservesDistantItemSizes")
+            yield Contract[LayoutFixtures]("BorderSnappingAlignsPaddingBox")
             yield Contract[LayoutFixtures]("PixelSnappingPreservesScrollExtent")
             yield Contract[LayoutFixtures]("CustomLayoutScrollExtentExcludesInsets")
             yield Contract[LayoutFixtures]("ScrollEndShowsFractionalContentEnd")

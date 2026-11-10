@@ -22,6 +22,8 @@
   that drops as items freeze, and choose shrink or grow once per line from its initial free space.
 - Compute first-pass grow sizes from the line's initial grow ratio instead of a total
   that drops as items freeze at their maximum size.
+- Snap a positive border width to at least one whole device pixel
+  (`round half away from zero` of `width * pointScaleFactor`) when the style resolves it.
 
 The vendored tree contains only the source needed to build Goo. Focused Goo tests
 cover the local behavior changes; upstream Yoga tests remain in the upstream
