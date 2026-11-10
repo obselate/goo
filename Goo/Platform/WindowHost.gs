@@ -131,6 +131,7 @@ internal interface WindowReadbackResult {
   prop OriginBottomLeft bool { get; }
   prop SrgbEncoded bool { get; }
   prop Pixels []uint8 { get; }
+  prop LayerResolutionShift int32 { get; }
 }
 
 internal interface WindowRenderTarget {

@@ -412,6 +412,9 @@ func RunRenderBudgetPressureSmoke() {
         && target.ClipAtlasStatsForTest().PressureFailureCount > 0uL,
       "Render budget scene did not exceed both budgets")
     Require(target.LayerResolutionShiftForTest() > 0, "Render budget frame did not reduce layer resolution")
+    Require(target.DiagnosticCountersSnapshotForTest().layerPoolResolutionShift
+        == uint64(target.LayerResolutionShiftForTest()),
+      "Render budget frame did not report the layer resolution shift")
     let pressureGeneration = target.ClipAtlasStatsForTest().Generation
     for frameIndex in 0 ... 4 {
       WindowReadbackTestFixture.ForceRender(window, 0.0)
@@ -420,7 +423,8 @@ func RunRenderBudgetPressureSmoke() {
     }
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
     let frame = ClipCaptureReadback(window, metrics)
-    Require(frame.Pixels.Length > 0 && window.IsOpen && target.LayerResolutionShiftForTest() > 0,
+    Require(frame.Pixels.Length > 0 && window.IsOpen && target.LayerResolutionShiftForTest() > 0
+        && frame.LayerResolutionShift > 0,
       "Render budget pressure did not complete a reduced-resolution frame")
     let sample = (int32(frame.Height) * 3 / 4 * int32(frame.Width) + int32(frame.Width) / 2) * 4
     Require(frame.Pixels[sample + 1] > frame.Pixels[sample]

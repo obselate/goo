@@ -342,6 +342,8 @@ internal partial class DevToolsSession : IDisposable {
     +"\"origin\":\"top-left\",\"width\":" + result.Width.ToString()
     +",\"height\":" + result.Height.ToString()
     +",\"stride\":" + result.RowBytes.ToString()
+    +",\"layerResolutionShift\":" + result.LayerResolutionShift.ToString()
+    +",\"degraded\":" + (result.LayerResolutionShift > 0 ? "true" : "false")
     +",\"rgbaBase64\":\"" + Convert.ToBase64String(pixels) + "\"}"
   }
 

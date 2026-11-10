@@ -167,7 +167,8 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
       region.Width * 4u,
       target.TargetFormat,
       generation,
-      submissionSerial)
+      submissionSerial,
+      target.LayerResolutionShift)
     state = VulkanReadbackState.Complete
     return VkConstants.VK_SUCCESS
   }

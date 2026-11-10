@@ -1511,7 +1511,13 @@ internal shared class CliApplication {
             let height = IntegerValue(payload["height"]) ??
                 throw CliException("The endpoint returned an RGBA capture without a height.")
             let stride = IntegerValue(payload["stride"]) ?? checked(width * 4)
-            return WriteCaptureBytes(PngEncoder.Encode(rgba, width, height, stride), outputPath, json)
+            let resolutionShift = IntegerValue(payload["layerResolutionShift"]) ?? 0
+            if resolutionShift > 0 {
+                Console.Error.WriteLine(
+                    "capture: offscreen layers rendered at 1/${1 << resolutionShift} resolution under GPU memory pressure (layerResolutionShift=${resolutionShift})"
+                )
+            }
+            return WriteCaptureBytes(PngEncoder.Encode(rgba, width, height, stride), outputPath, json, resolutionShift)
         }
         let data string? = StringValue(payload["contentBase64"]) ??
             StringValue(payload["base64"]) ??
@@ -1531,7 +1537,7 @@ internal shared class CliApplication {
         }
     }
 
-    private func WriteCaptureBytes(bytes[]uint8, outputPath string?, json bool) int32 {
+    private func WriteCaptureBytes(bytes[]uint8, outputPath string?, json bool, resolutionShift int32 = 0) int32 {
         if string.IsNullOrWhiteSpace(outputPath) || outputPath == "-" {
             Console.OpenStandardOutput().Write(bytes)
             return 0
@@ -1548,7 +1554,13 @@ internal shared class CliApplication {
         }
         File.WriteAllBytes(fullPath, bytes)
         if json {
-            Console.WriteLine(JsonObject(){["output"] = fullPath, ["bytes"] = bytes.Length}.ToJsonString())
+            Console.WriteLine(
+                JsonObject(){
+                    ["output"] = fullPath,
+                    ["bytes"] = bytes.Length,
+                    ["layerResolutionShift"] = resolutionShift,
+                }.ToJsonString()
+            )
         } else {
             Console.WriteLine(fullPath)
         }

@@ -868,12 +868,13 @@ internal unsafe partial class VulkanDiagnostics {
     try { counters.AddDeviceRecovery(value) } finally { ExitWriter() }
   }
   internal func SetLayerPoolStats(residentBytes uint64,
-    targetCount uint64, leasedCount uint64) {
+    targetCount uint64, leasedCount uint64, resolutionShift uint64) {
       if !EnterWriter() { return }
       try {
         counters.SetLayerPoolResidentBytes(residentBytes)
         counters.SetLayerPoolTargetCount(targetCount)
         counters.SetLayerPoolLeasedCount(leasedCount)
+        counters.SetLayerPoolResolutionShift(resolutionShift)
       } finally { ExitWriter() }
     }
   internal func AddLayerPoolCreate(value uint64) {
