@@ -90,8 +90,11 @@ func Main() {
         Root: root,
     }
     root.AttachWindow(window)
-    window.Open()
-    PumpFrames(window, 8)
+    if Environment.GetEnvironmentVariable("GOO_RENDER_OUT") == nil
+    && Environment.GetEnvironmentVariable("GOO_RENDER_LIST") != "1" {
+        window.Open()
+        PumpFrames(window, 8)
+    }
     if let name = section {
         root.OpenSection(name)
     }

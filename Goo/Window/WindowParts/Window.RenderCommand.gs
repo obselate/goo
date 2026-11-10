@@ -73,7 +73,9 @@ public partial class Window {
             Thread.Sleep(1)
         }
         let result = pending.GetAwaiter().GetResult()
-        let capture = result.Capture ?? throw InvalidOperationException("Offscreen render: " + result.Status.ToString())
+        let capture = result.Capture ?? throw InvalidOperationException(
+            "Offscreen render: ${result.Status}" + (String.IsNullOrEmpty(result.Error) ? "" : ": " + result.Error)
+        )
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!!)
         File.WriteAllBytes(
             output,

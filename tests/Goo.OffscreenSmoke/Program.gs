@@ -28,9 +28,16 @@ internal class Page : Cell {
     }
 }
 
+internal class FailingPage : Cell {
+    override func Build() Blob {
+        throw InvalidOperationException("Fixture page build failed")
+    }
+}
+
 let owner = Window{Root: Page(), Width: 96, Height: 96, Title: "Offscreen proof"}.Open()
 
 try {
+    owner.Pump(0.0)
     let options = OffscreenRenderOptions(240f, 180f, 480, 360, Color.White, 134217728)
     let creation = owner.CreateOffscreenSession()
     Require(creation.Status == OffscreenRenderStatus.Success && creation.Session != nil, "session creation failed")
@@ -46,6 +53,24 @@ try {
         rejected = true
     }
     Require(rejected, "a logical viewport outside the layout integer range was accepted")
+    for render in []Func[Task[OffscreenRenderResult]]{
+        () -> session.RenderAsync(owner.Root!!, options, CancellationToken.None),
+        () -> owner.RenderOffscreenAsync(owner.Root!!, options, CancellationToken.None)
+    } {
+        rejected = false
+        try {
+            let _ = render()
+        } catch (error InvalidOperationException) {
+            rejected = error.Message ==
+                "The Cell is attached to a window. Offscreen rendering requires an unattached Cell."
+        }
+        Require(rejected, "an attached Cell was not rejected with its cause")
+    }
+    let failed = Pump(session, session.RenderAsync(FailingPage(), options, CancellationToken.None))
+    Require(
+        failed.Status == OffscreenRenderStatus.Failed && failed.Error == "Fixture page build failed",
+        "offscreen failure lost its cause"
+    )
     let first = Pump(session, session.RenderAsync(Page(), options, CancellationToken.None))
     Require(
         first.Status == OffscreenRenderStatus.Success && first.Capture != nil,

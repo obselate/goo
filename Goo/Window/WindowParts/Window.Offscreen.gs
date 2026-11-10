@@ -29,6 +29,7 @@ public partial class Window {
   /// @param cancellation Cancels the operation after in-flight GPU work is safe to release.
   /// @param reusable Previous pixels to reuse when the output size matches. Do not access them until completion.
   /// @returns Owned pixels or an explicit operation status.
+  /// @exception InvalidOperationException when root is attached to a window.
   public func RenderOffscreenAsync(root Cell, options OffscreenRenderOptions,
     cancellation CancellationToken, reusable WindowCapture? = nil) Task[OffscreenRenderResult] {
       requireUiThread("Window.RenderOffscreenAsync")

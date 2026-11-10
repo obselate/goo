@@ -28,6 +28,9 @@ internal unsafe partial class VulkanWindowTarget {
   internal func RenderOffscreenAsync(root Cell, options OffscreenRenderOptions,
     cancellation CancellationToken, ownerClosed CancellationToken, reusable WindowCapture?,
     foreground Color? = nil) Task[OffscreenRenderResult] {
+      if root.contextWindow != nil {
+        throw InvalidOperationException("The Cell is attached to a window. Offscreen rendering requires an unattached Cell.")
+      }
       if cancellation.IsCancellationRequested || ownerClosed.IsCancellationRequested {
         return Task.FromResult(OffscreenRenderResult{ Status: OffscreenRenderStatus.Cancelled })
       }
@@ -140,11 +143,12 @@ internal unsafe partial class VulkanWindowTarget {
         SubmitPage()
       } catch (_ VulkanOperationBudgetException) {
         FinishPage(OffscreenRenderStatus.BudgetExceeded)
-      } catch (_ InvalidOperationException) {
-        FinishPage(if active.DeviceLost { OffscreenRenderStatus.DeviceLost } else { OffscreenRenderStatus.Failed })
+      } catch (error InvalidOperationException) {
+        FinishPage(if active.DeviceLost { OffscreenRenderStatus.DeviceLost } else { OffscreenRenderStatus.Failed },
+          error.Message)
       } catch (error Exception) {
         completion.TrySetException(error)
-        FinishPage(OffscreenRenderStatus.Failed)
+        FinishPage(OffscreenRenderStatus.Failed, error.Message)
       } finally {
         pageBytesRemaining = allocator.EndOperationLimit()
       }
@@ -186,7 +190,7 @@ internal unsafe partial class VulkanWindowTarget {
     if submitted != VkConstants.VK_SUCCESS {
       FinishPage(if submitted == VkConstants.VK_ERROR_DEVICE_LOST {
         OffscreenRenderStatus.DeviceLost
-      } else { OffscreenRenderStatus.Failed })
+      } else { OffscreenRenderStatus.Failed }, "Offscreen readback submission failed with Vulkan result $submitted")
     }
   }
 
@@ -197,7 +201,7 @@ internal unsafe partial class VulkanWindowTarget {
     if result != VkConstants.VK_SUCCESS {
       FinishPage(if result == VkConstants.VK_ERROR_DEVICE_LOST {
         OffscreenRenderStatus.DeviceLost
-      } else { OffscreenRenderStatus.Failed })
+      } else { OffscreenRenderStatus.Failed }, "Offscreen readback completion failed with Vulkan result $result")
       return
     }
     if Interlocked.CompareExchange(ref pageCancelled, 0, 0) != 0 {
@@ -213,13 +217,13 @@ internal unsafe partial class VulkanWindowTarget {
       SubmitPage()
     } catch (_ VulkanOperationBudgetException) {
       FinishPage(OffscreenRenderStatus.BudgetExceeded)
-    } catch (_ InvalidOperationException) {
+    } catch (error InvalidOperationException) {
       FinishPage(if runtime?.DeviceLost == true {
         OffscreenRenderStatus.DeviceLost
-      } else { OffscreenRenderStatus.Failed })
+      } else { OffscreenRenderStatus.Failed }, error.Message)
     } catch (error Exception) {
       pageCompletion?.TrySetException(error)
-      FinishPage(OffscreenRenderStatus.Failed)
+      FinishPage(OffscreenRenderStatus.Failed, error.Message)
     } finally {
       pageBytesRemaining = allocator.EndOperationLimit()
     }
@@ -242,7 +246,7 @@ internal unsafe partial class VulkanWindowTarget {
     queuedPageResult = nil
   }
 
-  private func FinishPage(status OffscreenRenderStatus) {
+  private func FinishPage(status OffscreenRenderStatus, errorMessage string = "") {
     let completion = pageCompletion
     var capture WindowCapture?
     if status == OffscreenRenderStatus.Success {
@@ -273,7 +277,7 @@ internal unsafe partial class VulkanWindowTarget {
     try { pageWindow?.Close() }
     catch (error Exception) { completion?.TrySetException(error) }
     pageWindow = nil
-    completion?.TrySetResult(OffscreenRenderResult{ Status: status, Capture: capture })
+    completion?.TrySetResult(OffscreenRenderResult{ Status: status, Capture: capture, Error: errorMessage })
   }
 }
 
