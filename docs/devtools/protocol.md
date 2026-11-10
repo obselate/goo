@@ -141,6 +141,22 @@ are strings. Unavailable measurements are `null`, not zero. Counter accounts,
 sources and freshness are separate. Allocator requirements, swapchain estimated
 payload, managed memory, RSS/PSS and driver usage must not be summed as a total.
 
+Allocation-type sampling is opt-in. Set `allocationSeconds` on `profiler.start`
+to a duration from 2 through 60 seconds. NativeAOT apps must also opt into
+runtime events in their project:
+
+```xml
+<PropertyGroup>
+  <EventSourceSupport>true</EventSourceSupport>
+</PropertyGroup>
+```
+
+With EventSource support disabled, the trace contains an `allocation.samples`
+counter with `validity: "unavailable"`, `value0: null`, and source
+`unavailable: EventSourceSupport is off`. DevTools shows this reason with
+`Unavailable` in the Types table. An unavailable result does not mean that
+the app allocated no objects. Sample counts are not exact object counts.
+
 `vulkan.timestamp.elapsed` records give elapsed GPU nanoseconds in `gpuElapsedNs`.
 Match `windowId`, `frameId` and `submissionId`. `value0` is the number of recorded
 scopes and `value1` is the number omitted when the scope limit is reached.

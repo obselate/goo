@@ -158,6 +158,10 @@ internal class ProfilerSmoke {
         }
 
         internal func Run() {
+            if Environment.GetEnvironmentVariable("GOO_PROFILER_ALLOCATIONS_UNAVAILABLE") == "1" {
+                VerifyUnavailableAllocations()
+                return
+            }
             let startup = FrameRecorder.Current
             using let cache = ImageSourceCache()
             using let cached = cache.LoadAsync(Path.Combine(AppContext.BaseDirectory, "local-rgba.png")).GetAwaiter().GetResult()
@@ -252,6 +256,32 @@ internal class ProfilerSmoke {
                 }
             }
             VerifyCaptures()
+        }
+
+        private func VerifyUnavailableAllocations() {
+            Require(AppContext.TryGetSwitch("System.Diagnostics.Tracing.EventSource.IsSupported", out var supported)
+                && !supported, "Unavailable allocation test requires EventSourceSupport=false")
+            guard let recorder = FrameRecorder.Start(Guid.NewGuid(), FrameRecorder.DefaultBufferBytes) else {
+                throw InvalidOperationException("Unavailable allocation trace could not start")
+            }
+            try {
+                recorder.CaptureAllocations(2)
+                let records = recorder.Read(0L, 32768, out var next, out var more, out var state, out var dropped)
+                var unavailable = false
+                for record in records {
+                    Require(record.Source != "GCAllocationTick_V4 samples", "Disabled allocation sampling reported samples")
+                    if record.Name == "allocation.samples" {
+                        Require(record.Validity == "unavailable" && record.Value0 == nil
+                            && record.Source == "unavailable: EventSourceSupport is off",
+                            "Disabled allocation sampling did not report its unavailable reason and null value")
+                        unavailable = true
+                    }
+                }
+                Require(unavailable, "Disabled allocation sampling reported an empty trace")
+                Console.WriteLine("profiler-allocations: unavailable=verified reason=EventSourceSupport-off value=null")
+            } finally {
+                recorder.Stop(false)
+            }
         }
 
         internal func VerifyPauseAndSamples(window Window, root ProfilerSmokeCell) {

@@ -6,6 +6,7 @@
     <AssemblyName>Goo.AsyncReadbackSmoke</AssemblyName>
     <InvariantGlobalization>true</InvariantGlobalization>
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <EventSourceSupport>true</EventSourceSupport>
   </PropertyGroup>
   <ItemGroup>
     <GooShaderEffect Include="Shaders/control_effect.frag.slang"
