@@ -80,7 +80,7 @@ Use this for small, bounded data. Keep domain data outside `Build()`. Sort, filt
 
 `Add` accepts derived Blobs without a cast. The capacity reserves space for the heading, rows and button without growing the child list. The code creates no temporary sequence, F# list or array. This follows the module, closure and object-expression style in [Angel D. Muñoz's Counter](https://github.com/AngelMunoz/Navs/blob/vnext/samples/GooSample/Counter.fs).
 
-F# 6 and later can also infer child upcasts from a collection's element type:
+F# can also infer child upcasts from a collection's element type:
 
 ```fsharp
 let children: Blob array = [|
