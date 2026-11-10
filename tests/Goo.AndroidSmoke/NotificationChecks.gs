@@ -15,6 +15,13 @@ import System.Threading.Tasks
 import NodeAction = Android.Views.Accessibility.Action
 @Activity(Name: "org.goo.androidsmoke.NotificationActivity", Exported: true, LaunchMode: LaunchMode.SingleTop)
 sealed class NotificationActivity : GooActivity {
+    private var permissionResultCount int32
+    internal prop PermissionResultCount int32 -> Volatile.Read(&permissionResultCount)
+
+    public override func OnRequestPermissionsResult(requestCode int32, permissions[]string, grantResults[]Permission) {
+        base.OnRequestPermissionsResult(requestCode, permissions, grantResults)
+        Interlocked.Increment(&permissionResultCount)
+    }
 
     protected override func CreateWindow() Goo.Window {
         GooWindow.ApplicationActivated += OnActivation
@@ -110,9 +117,11 @@ sealed class NotificationChecks : Instrumentation {
     }
 
     private func DismissPermission() {
+        let resultCount = activity!!.PermissionResultCount
         Wait(() -> HasPermissionButton("permission_allow_button", requireInputFocus: true), "Permission dialog did not receive input focus.")
         Require(automation!!.PerformGlobalAction(Android.AccessibilityServices.GlobalAction.Back), "Permission dialog back action failed.")
-        Wait(() -> !HasPermissionButton("permission_allow_button"), "Permission dialog did not close.")
+        Wait(() -> activity!!.PermissionResultCount > resultCount && !HasPermissionButton("permission_allow_button"),
+            "Permission dismissal did not complete.")
     }
 
     private func CheckDelivery() {
