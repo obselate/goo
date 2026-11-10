@@ -45,6 +45,28 @@ internal class TextEditorInputFixtures {
     return controller.Selection.Active.Offset == 0
   }
 
+  func CompositionCancelWithoutPreeditIssuesNoCommand() bool {
+    let document = TextDocument("ab")
+    using let controller = TextEditorController(document)
+    let cell = TextEditorInputCell(document, controller)
+    let driver = InputFixtureDriver(cell, 320, 120)
+    let start = editorPoint(driver.Window.Tree!!,
+      TextPosition{ Offset: 0, Affinity: TextAffinity.Upstream })
+    driver.Press(start.X, start.Y)
+    if !controller.IsFocused { return false }
+    var commands = 0
+    controller.OnCommand = _ -> { commands++ }
+    driver.Input.QueueCompositionCancel()
+    driver.Drain()
+    if commands != 0 { return false }
+    driver.Input.QueueComposition("a\u0301", 1, 0)
+    driver.Drain()
+    if controller.Composition == nil || commands != 1 { return false }
+    driver.Input.QueueCompositionCancel()
+    driver.Drain()
+    return commands == 2 && controller.Composition == nil && document.GetText() == "ab"
+  }
+
   func KeyboardCompositionClipboardAndSubmit() bool {
     let savedMac = InputPolicy.Mac
     InputPolicy.Mac = false
