@@ -164,12 +164,43 @@ internal class DiagnosticCaptureFixture {
         window.Width = 1824
         window.Height = 1026
         window.Pump(0.0)
+        WindowReadbackTestFixture.ForceRender(window, 0.016, waitForPresentation: true)
+        WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
+        let target = WindowReadbackTestFixture.CaptureTarget(window)!!
+        let runtimeGeneration = WindowReadbackTestFixture.GraphicsTimeline(window).RuntimeGeneration
+        for capture in 0 ... 2 {
+          if capture == 1 { target.UsePresentedSceneForTest(float32(1.0), float32(1.0)) }
+          target.FailMemoryAllocationsForTest(2)
+          var failure string?
+          let failureTracker = DiagnosticCaptureTracker()
+          try {
+            Require(session.CapturePayload(failureTracker).Contains("\"pending\":true"),
+              "Allocation failure capture was not pending")
+            let failureDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
+            while Stopwatch.GetTimestamp() < failureDeadline {
+              window.Pump(0.0)
+              if !session.CapturePayload(failureTracker).Contains("\"pending\":true") { break }
+            }
+          } catch (error InvalidOperationException) {
+            failure = error.Message
+          } finally {
+            target.FailMemoryAllocationsForTest(0)
+          }
+          Console.WriteLine("capture-allocation-failure: immediate=${capture == 1} error=$failure")
+          Require(failure != nil && failure.StartsWith("Readback image allocation failed (Vulkan result -2):"),
+            "Capture lost the native allocation error: " + failure)
+        }
         let resized = Capture(window, reused)
         Require(
           resized.Pixels.Length == int32(resized.RowBytes * resized.Height)
           && !object.ReferenceEquals(resized.Pixels, reused.Pixels),
           "A resized capture reused an incompatible pixel buffer"
         )
+        Require(window.IsOpen
+          && WindowReadbackTestFixture.GraphicsTimeline(window).RuntimeGeneration == runtimeGeneration
+          && resized.Pixels[0] == 12 && resized.Pixels[1] == 20
+          && resized.Pixels[2] == 32 && resized.Pixels[3] == 255,
+          "Capture allocation failure did not leave a healthy window")
         var reusable = resized
         for sample in 0 ... 5 {
           let before = GC.GetAllocatedBytesForCurrentThread()

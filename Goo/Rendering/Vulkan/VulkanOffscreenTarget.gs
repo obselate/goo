@@ -1345,9 +1345,14 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
         image = 0uL
         throw error
       }
-      imageAllocation = allocator.AllocateImage(
-        image,
-        VulkanMemoryPolicy.DeviceLocalRequiredPreferred)
+      try {
+        imageAllocation = allocator.AllocateImage(
+          image,
+          VulkanMemoryPolicy.DeviceLocalRequiredPreferred)
+      } catch (error Exception) {
+        throw InvalidOperationException("Readback image allocation failed (Vulkan result "
+          + allocator.LastResult.ToString() + "): " + error.Message, error)
+      }
       imageAllocation!!.ownerKind = VulkanMemoryOwnerKind.LayerTarget
       if let recorder = FrameRecorder.Current {
         allocator.ProfileAllocation(recorder, imageAllocation!!, FrameTraceKind.ResourceLifecycle,
@@ -1414,9 +1419,14 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
         stagingBuffer = 0uL
         throw error
       }
-      stagingAllocation = allocator.AllocateBuffer(
-        stagingBuffer,
-        VulkanMemoryPolicy.HostVisibleCoherentCached)
+      try {
+        stagingAllocation = allocator.AllocateBuffer(
+          stagingBuffer,
+          VulkanMemoryPolicy.HostVisibleCoherentCached)
+      } catch (error Exception) {
+        throw InvalidOperationException("Readback staging allocation failed (Vulkan result "
+          + allocator.LastResult.ToString() + "): " + error.Message, error)
+      }
       stagingAllocation!!.ownerKind = VulkanMemoryOwnerKind.Staging
       if let recorder = FrameRecorder.Current {
         allocator.ProfileAllocation(recorder, stagingAllocation!!, FrameTraceKind.ResourceLifecycle,
