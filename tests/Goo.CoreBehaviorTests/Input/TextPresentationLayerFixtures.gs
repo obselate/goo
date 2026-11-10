@@ -64,6 +64,23 @@ internal class TextPresentationLayerFixtures {
     return true
   }
 
+  func StyledLinesUseFontSizeLineHeight() bool {
+    for lineHeight in []float64{ 1.0, 1.43 } {
+      let document = TextDocument("styled\nplain")
+      using let controller = TextEditorController(document)
+      using let layer = TextPresentationLayer(document)
+      layer.SetStyle("color", TextRange(0, 6), Style{ Color: Color.Parse("#ff0000") })
+      let node = Reconciler{ Res: Resolver{} }.Mount(TextEditor(controller, []TextPresentationLayer{layer}) {
+        Width = 200, Height = 100, FontSize = 14, LineHeight = lineHeight,
+      })
+      Layout{}.Calculate(node, 200.0F, 100.0F)
+      let layout = TextEditorLayouts.For(node, BoxGeometry.ContentWidth(node), BoxGeometry.ContentHeight(node))
+      if layout.Lines[0].Height != TextLayouts.resolvedLineHeight(node)
+        || layout.Lines[1].Height != TextLayouts.resolvedLineHeight(node) { return false }
+    }
+    return true
+  }
+
   func BulkStyleReplacementIsAtomicAndPreservesProjections() bool {
     let document = TextDocument("alpha beta")
     using let layer = TextPresentationLayer(document)

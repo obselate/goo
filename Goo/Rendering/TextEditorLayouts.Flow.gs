@@ -281,6 +281,8 @@ internal partial class TextEditorLayouts {
         var visualHeight = layout.LineHeight
         var visualAscent = layout.Ascent
         var visualDescent = layout.Descent
+        var slotAscent = 0.0F
+        var slotDescent = 0.0F
         for segment in paragraph.Segments {
           if segment.DisplayStart >= displayEnd || segment.DisplayStart + segment.DisplayLength <= displayStart {
             continue
@@ -289,19 +291,24 @@ internal partial class TextEditorLayouts {
             int32(segment.Style.FontWeight), segment.Style.FontStyle == FontStyle.Italic)
           if metrics.Ascent < visualAscent { visualAscent = metrics.Ascent }
           if metrics.Descent > visualDescent { visualDescent = metrics.Descent }
-          let styledHeight = (metrics.Descent - metrics.Ascent) * segment.Style.LineHeight
+          let styledHeight = segment.Style.FontSize * segment.Style.LineHeight
           if styledHeight > visualHeight { visualHeight = styledHeight }
           if segment.Slot && !segment.BlockSlot {
             if let baseline = segment.SlotBaseline {
-              visualAscent = Math.Min(visualAscent, -baseline)
-              visualDescent = Math.Max(visualDescent, segment.SlotHeight - baseline)
+              slotAscent = Math.Min(slotAscent, -baseline)
+              slotDescent = Math.Max(slotDescent, segment.SlotHeight - baseline)
+              visualAscent = Math.Min(visualAscent, slotAscent)
+              visualDescent = Math.Max(visualDescent, slotDescent)
             }
           }
           if segment.Slot && segment.SlotHeight > visualHeight {
             visualHeight = segment.SlotHeight
           }
         }
-        visualHeight = Math.Max(visualHeight, visualDescent - visualAscent)
+        if slotDescent > slotAscent {
+          let center = visualAscent + visualDescent
+          visualHeight = Math.Max(visualHeight, Math.Max(center - 2.0F * slotAscent, 2.0F * slotDescent - center))
+        }
         let firstSource = SourceOffsetForDisplay(paragraph, displayStart, TextAffinity.Downstream)
         let lastSource = SourceOffsetForDisplay(paragraph, displayEnd, TextAffinity.Upstream)
         let line = TextEditorVisualLine(paragraph, displayStart,
