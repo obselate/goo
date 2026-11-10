@@ -131,34 +131,44 @@ internal unsafe class VulkanSwapchainImageSet {
     }
   }
 
+  // Retires the earlier present of this image once its present fence has signaled.
+  internal func TryCompletePendingPresent(index uint32, out completedPresentId uint64) VkResult {
+    EnsureIndex(index)
+    completedPresentId = 0uL
+    if presentState == nil {
+      return VkConstants.VK_SUCCESS
+    }
+    let offset = int32(index)
+    let present = RequirePresentState()
+    let pending = present.Pending
+    let ids = present.PresentIds
+    if present.Prepared[offset] {
+      throw InvalidOperationException("Vulkan swapchain present fence is still prepared")
+    }
+    if pending[offset] {
+      let getFenceStatus = dispatch.vkGetFenceStatus
+      let status = getFenceStatus(device, present.Fences[offset])
+      if status != VkConstants.VK_SUCCESS {
+        return status
+      }
+      completedPresentId = ids[offset]
+      pending[offset] = false
+      ids[offset] = 0uL
+    }
+    return VkConstants.VK_SUCCESS
+  }
+
   internal func TryPreparePresent(index uint32, out fence VkFence,
     out completedPresentId uint64) VkResult{
-      EnsureIndex(index)
       fence = 0uL
-      completedPresentId = 0uL
-      if presentState == nil {
-        return VkConstants.VK_SUCCESS
+      let completion = TryCompletePendingPresent(index, out completedPresentId)
+      if completion != VkConstants.VK_SUCCESS || presentState == nil {
+        return completion
       }
       let offset = int32(index)
       let present = RequirePresentState()
-      let fences = present.Fences
       let prepared = present.Prepared
-      let pending = present.Pending
-      let ids = present.PresentIds
-      if prepared[offset] {
-        throw InvalidOperationException("Vulkan swapchain present fence is still prepared")
-      }
-      if pending[offset] {
-        let getFenceStatus = dispatch.vkGetFenceStatus
-        let status = getFenceStatus(device, fences[offset])
-        if status != VkConstants.VK_SUCCESS {
-          return status
-        }
-        completedPresentId = ids[offset]
-        pending[offset] = false
-        ids[offset] = 0uL
-      }
-      fence = fences[offset]
+      fence = present.Fences[offset]
       let resetFences = dispatch.vkResetFences
       let resetResult = resetFences(device, 1u, &fence)
       if resetResult != VkConstants.VK_SUCCESS {

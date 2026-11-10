@@ -223,6 +223,9 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
     out completedPresentId uint64) VkResult
   -> RequireImageSet().TryPreparePresent(index, out fence, out completedPresentId)
 
+  internal func TryCompletePendingPresent(index uint32, out completedPresentId uint64) VkResult
+  -> RequireImageSet().TryCompletePendingPresent(index, out completedPresentId)
+
   internal func ReconcilePreparedPresent(index uint32, presentAttempted bool) {
     RequireImageSet().ReconcilePreparedPresent(index, presentAttempted)
   }

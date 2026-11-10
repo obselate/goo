@@ -388,8 +388,28 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func TryQueuePresent() {
     if hidden || closing {
+      // The submitted frame reuses a swapchain image. Retire that image's earlier present here,
+      // as queueing the present would, so its record is not also retired by the submission.
+      var completedPresentId uint64 = 0uL
+      var completion = VkConstants.VK_SUCCESS
+      if let current = generation {
+        completion = current.TryCompletePendingPresent(activeImageIndex, out completedPresentId)
+      }
+      if completion == VkConstants.VK_NOT_READY || completion == VkConstants.VK_TIMEOUT {
+        host.Wake()
+        return
+      }
       queueMailbox?.ResetSubmitCompletion()
       queueStage = QueueStageIdle
+      if completion != VkConstants.VK_SUCCESS {
+        try {
+          HandleFrameFailure(completion, VulkanDiagnosticEventIds.PresentWait)
+        } finally {
+          FinishFailedFrame()
+        }
+        return
+      }
+      if completedPresentId != 0uL { presentationRetirement.CompletePresent(completedPresentId) }
       presentationRetirement.CancelPendingPresentationLatency()
       CloseDiagnosticFrame(false)
       ClearActiveFrame()
