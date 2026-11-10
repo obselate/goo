@@ -3,13 +3,13 @@ package GooAsyncReadbackSmoke
 import Goo
 import System
 import System.IO
+import System.Collections.Generic
 import System.Numerics
 
 class ScrollPlacementCell : Cell {
     internal let Outer ElementHandle = ElementHandle{}
     internal let Inner ElementHandle = ElementHandle{}
     internal let Target ElementHandle = ElementHandle{}
-    internal var Clipped bool
     internal var Clicks int32
     private let effect ShaderEffect
 
@@ -24,6 +24,7 @@ class ScrollPlacementCell : Cell {
                 Text{
                     Height: 20,
                     FlexShrink: 0,
+                    BackgroundColor: Color.Rgb(30 + row * 12, 24, 40),
                     Content: "Row ${row}",
                     FontFamily: "monospace",
                     FontSize: 12,
@@ -42,7 +43,7 @@ class ScrollPlacementCell : Cell {
                 Top: 16,
                 Width: 96,
                 Height: 176,
-                Overflow: Clipped ? Overflow.Scroll: Overflow.Visible,
+                Overflow: Overflow.Scroll,
                 Container{
                     Width: 144,
                     Height: 256,
@@ -136,7 +137,7 @@ class ScrollPlacementCell : Cell {
                         Top: 112,
                         Width: 80,
                         Height: 48,
-                        OverflowY: Clipped ? Overflow.Scroll: Overflow.Visible,
+                        OverflowY: Overflow.Scroll,
                         rows,
                     },
                 },
@@ -145,111 +146,108 @@ class ScrollPlacementCell : Cell {
     }
 }
 
+func ScrollPlacementOpen(cell ScrollPlacementCell, scale float64) Window {
+    let window = Window{
+        Title: "Goo canonical scroll placement gate",
+        Width: int32(320.0 * scale),
+        Height: int32(288.0 * scale),
+        UiScale: float32(scale),
+        VSync: false,
+        Decorated: false,
+        Root: cell,
+    }
+    window.Open()
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    let metrics = WindowReadbackTestFixture.Metrics(window)
+    Require(metrics.FramebufferWidth == int32(320.0 * scale) && metrics.FramebufferHeight == int32(288.0 * scale),
+        "Scroll placement window did not open at ${320.0 * scale}x${288.0 * scale}")
+    return window
+}
+
+func ScrollPlacementFresh(effect ShaderEffect, scale float64, outerX float64, outerY float64, innerY float64)[]uint8 {
+    let cell = ScrollPlacementCell(effect)
+    let window = ScrollPlacementOpen(cell, scale)
+    try {
+        Require(cell.Outer.JumpTo(outerX, outerY) && cell.Inner.JumpTo(0.0, innerY),
+            "Fresh scroll placement offsets were not applied")
+        WindowReadbackTestFixture.ForceRender(window, 0.0)
+        WindowReadbackTestFixture.ForceRender(window, 0.0)
+        return PartialRedrawSettledCapture(window, WindowReadbackTestFixture.Metrics(window))
+    } finally {
+        window.Close()
+    }
+}
+
+/// Returns the device rows in [top, bottom) whose pixel at column x differs from the row above.
+func ScrollPlacementBoundaries(pixels[]uint8, width int32, x int32, top int32, bottom int32) List[int32] {
+    let rows = List[int32]()
+    for y in top + 1 ... bottom {
+        let index = (y * width + x) * 4
+        let above = ((y - 1) * width + x) * 4
+        if pixels[index] != pixels[above] || pixels[index + 1] != pixels[above + 1]
+        || pixels[index + 2] != pixels[above + 2] {
+            rows.Add(y)
+        }
+    }
+    return rows
+}
+
+/// Returns the first device row in [top, bottom) with at least minimum opaque white pixels in [left, right).
+func ScrollPlacementWhiteRow(pixels[]uint8, width int32, left int32, right int32, top int32, bottom int32, minimum int32) int32 {
+    for y in top ... bottom {
+        var count = 0
+        for x in left ... right {
+            let index = (y * width + x) * 4
+            if pixels[index] == uint8(255) && pixels[index + 1] == uint8(255) && pixels[index + 2] == uint8(255) {
+                count++
+            }
+        }
+        if count >= minimum { return y }
+    }
+    return -1
+}
+
 func RunScrollPlacementSmoke() {
     RunScrollImagePlacementSmoke()
     Require(Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1", "GOO_VK_DIAGNOSTICS=1 is required")
     let program = ShaderEffectProgram.Load(Path.Combine(AppContext.BaseDirectory, "control_effect.frag.goo-effect"))
     let effect = ShaderEffect(program, true)
     effect.SetParameter(0, Vector4(1.0F, 1.0F, 1.0F, 0.0F))
-    let cell = ScrollPlacementCell(effect)
-    let window = Window{
-        Title: "Goo canonical scroll placement gate",
-        Width: 320,
-        Height: 288,
-        VSync: false,
-        Decorated: false,
-        Root: cell,
-    }
-    try {
-        window.Open()
-        var comparisons int32
-        var expectedClicks int32
-        var changedChannels int64
-        var maximumDifference int32
-        var unexpectedChannels int64
-        var firstMismatch string = ""
-        let softwareReference = Environment.GetEnvironmentVariable("GOO_SCROLL_SOFTWARE_REFERENCE") == "1"
-        let legacyMaxima = []int32{
-            0,
-            75,
-            255,
-            75,
-            255,
-            31,
-            31,
-            0,
-            104,
-            255,
-            104,
-            255,
-            85,
-            19,
-            0,
-            24,
-            255,
-            24,
-            255,
-            24,
-            24,
-            0,
-            75,
-            255,
-            75,
-            255,
-            44,
-            44,
-        }
-        let legacyChanges = []int64{
-            0,
-            447,
-            10792,
-            769,
-            9299,
-            558,
-            826,
-            0,
-            7974,
-            11037,
-            8510,
-            10946,
-            4423,
-            4831,
-            0,
-            5732,
-            15689,
-            1518,
-            15705,
-            6101,
-            6630,
-            0,
-            10030,
-            30979,
-            11306,
-            30523,
-            20656,
-            19091,
-        }
-        for scale in[]float64{1.0, 1.25, 1.5, 2.0} {
-            cell.Clipped = false
-            cell.Rebuild()
-            WindowReadbackTestFixture.ForceRender(window, 0.0)
-            let width = int32(320.0 * scale)
-            let height = int32(288.0 * scale)
-            let previous = WindowReadbackTestFixture.Metrics(window)
-            if previous.FramebufferWidth != width || previous.FramebufferHeight != height {
-                Require(
-                    WindowReadbackTestFixture.Resize(window, 320, 288, width, height),
-                    "Scroll placement scale was not applied"
-                )
+    var comparisons int32
+    var partialSteps int32
+    for scale in[]float64{1.0, 1.25, 1.5, 2.0} {
+        let cell = ScrollPlacementCell(effect)
+        let window = ScrollPlacementOpen(cell, scale)
+        try {
+            guard let target = WindowReadbackTestFixture.CaptureTarget(window) else {
+                throw InvalidOperationException("Scroll placement render target is unavailable")
             }
-            WindowReadbackTestFixture.ForceRender(window, 0.0)
-            WindowReadbackTestFixture.ForceRender(window, 0.0)
             let metrics = WindowReadbackTestFixture.Metrics(window)
-            let reference = PrimitiveReadback(window, metrics)
-            let referencePixels = reference.Pixels
-            cell.Clipped = true
-            cell.Rebuild()
-            WindowReadbackTestFixture.ForceRender(window, 0.0)
+            let width = metrics.FramebufferWidth
+            let height = metrics.FramebufferHeight
+            let device = (value float64) -> int32(MathF.Round(float32(value * scale)))
+            let viewportLeft = device(16.0)
+            let viewportRight = device(112.0)
+            let viewportTop = device(16.0)
+            let viewportBottom = device(192.0)
+            let nestedLeft = device(32.0)
+            let nestedTop = device(128.0)
+            let nestedBottom = device(176.0)
+            let rowColumn = nestedLeft + device(70.0)
+            let reference = PartialRedrawSettledCapture(window, metrics)
+            let buttonTop = ScrollPlacementWhiteRow(reference, width, viewportLeft, viewportRight,
+                viewportTop, viewportBottom, device(60.0))
+            Require(buttonTop > 0, "Scroll placement reference did not show the button border")
+            let referenceRows = ScrollPlacementBoundaries(reference, width, rowColumn, nestedTop, nestedBottom)
+            Require(referenceRows.Count == 2 && referenceRows[0] == device(148.0) && referenceRows[1] == device(168.0),
+                "Scroll placement reference did not show the nested rows at ${string.Join(",", referenceRows)}")
+            var appliedVersion = WindowReadbackTestFixture.SceneVersion(window)
+            let retainedFrames = List[[]uint8]()
+            let partialFrames = List[bool]()
+            let outerXs = List[float64]()
+            let outerYs = List[float64]()
+            let innerOffsets = List[float64]()
             for variant in 0 ... 7 {
                 let fractional = variant < 5 && variant % 2 == 0 && variant != 0
                 let outerX = (
@@ -262,127 +260,72 @@ func RunScrollPlacementSmoke() {
                 ) / scale
                 let innerY = variant < 2 ? 0.0
                 : (float64(variant) * 4.0 + (fractional ? 0.25: 0.0)) / scale
-                cell.Outer.JumpTo(outerX, outerY)
-                cell.Inner.JumpTo(0.0, innerY)
+                outerXs.Add(outerX)
+                outerYs.Add(outerY)
+                innerOffsets.Add(innerY)
+                Require(cell.Outer.JumpTo(outerX, outerY) && cell.Inner.JumpTo(0.0, innerY),
+                    "Scroll placement offsets were not applied")
                 WindowReadbackTestFixture.ForceRender(window, 0.0)
-                let actual = PrimitiveReadback(window, metrics)
-                let actualPixels = actual.Pixels
-                let dx = int32(MathF.Round(float32(outerX) * float32(scale)))
-                let dy = int32(MathF.Round(float32(outerY) * float32(scale)))
-                let innerDy = int32(MathF.Round(float32(innerY) * float32(scale)))
-                var variantChanges int64
-                var variantMaximum int32
-                let legacyPose = (scale == 1.0 ? 0: scale == 1.25 ? 1: scale == 1.5 ? 2: 3) * 7 + variant
-                for y in 0 ... height {
-                    for x in 0 ... width {
-                        let sourceX = x + dx
-                        var sourceY = y + dy
-                        var inside = float64(x) >= 16.0 * scale && float64(x) < 112.0 * scale
-                        && float64(y) >= 16.0 * scale && float64(y) < 192.0 * scale
-                        let nested = float64(sourceX) >= 32.0 * scale
-                        && float64(sourceX) < 112.0 * scale
-                        && float64(sourceY) >= 128.0 * scale
-                        && float64(sourceY) < 256.0 * scale
-                        if nested {
-                            inside = inside && float64(sourceY) < 176.0 * scale
-                            sourceY += innerDy
-                        }
-                        for channel in 0 ... 4 {
-                            let index = (y * width + x) * 4 + channel
-                            let expected = inside
-                            ? referencePixels[(sourceY * width + sourceX) * 4 + channel]
-                            : channel == 3 ? uint8(255): uint8(0)
-                            if actualPixels[index] != expected {
-                                variantChanges++
-                                let difference = Math.Abs(int32(actualPixels[index]) - int32(expected))
-                                variantMaximum = Math.Max(variantMaximum, difference)
-                                let legacyRoundingSample = scale == 1.25 && variant == 2
-                                && x == 53 && y == 155 && channel == 0
-                                && expected == uint8(40) && actualPixels[index] == uint8(41)
-                                if legacyRoundingSample {
-                                    continue
-                                }
-                                if softwareReference {
-                                    let legacySoftwareGlyphSample = scale == 1.25 && variant == 5
-                                    && x == 122 && y == 27 && channel < 3
-                                    && expected == uint8(210) && actualPixels[index] == uint8(159)
-                                    if legacySoftwareGlyphSample {
-                                        continue
-                                    }
-                                    if difference == 1 && legacyMaxima[legacyPose] >= 1 {
-                                        continue
-                                    }
-                                }
-                                unexpectedChannels++
-                                Console.WriteLine(
-                                    "scroll-placement-error: scale=${scale} variant=${variant} x=${x} y=${y} channel=${channel} expected=${expected} actual=${actualPixels[index]} difference=${difference}"
-                                )
-                                if firstMismatch.Length == 0 {
-                                    firstMismatch = "scale=${scale} variant=${variant} x=${x} y=${y} channel=${channel} expected=${expected} actual=${actualPixels[index]}"
-                                    if let output = Environment.GetEnvironmentVariable("GOO_SCROLL_PIXEL_EVIDENCE") {
-                                        Directory.CreateDirectory(output)
-                                        File.WriteAllBytes(Path.Combine(output, "reference.rgba"), referencePixels)
-                                        File.WriteAllBytes(Path.Combine(output, "actual.rgba"), actualPixels)
-                                        File.WriteAllText(
-                                            Path.Combine(output, "placement.txt"),
-                                            "width=${width} height=${height} scale=${scale} dx=${dx} dy=${dy} innerDy=${innerDy} target=${cell.Target.BorderBox}"
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                var damage VulkanDamageRegion
+                let partial = variant > 0
+                && WindowReadbackTestFixture.ScenePartialDamageSince(window, appliedVersion, out damage)
+                if partial {
+                    partialSteps++
+                    WindowReadbackTestFixture.SetPartialRepeat(window, damage, true)
                 }
-                Require(
-                    !softwareReference ||
-                        (
-                        variantMaximum <= legacyMaxima[legacyPose]
-                        && variantChanges <= legacyChanges[legacyPose]
-                    ),
-                    "Software scroll variance exceeds the measured legacy pose"
-                )
+                target.UsePresentedSceneForTest(float32(metrics.DisplayScaleX * scale), float32(metrics.DisplayScaleY * scale))
+                let retained = ClipCaptureReadback(window, metrics).Pixels
+                WindowReadbackTestFixture.SetPartialRepeat(window, VulkanDamageRegion{})
+                appliedVersion = WindowReadbackTestFixture.SceneVersion(window)
+                retainedFrames.Add(retained)
+                partialFrames.Add(partial)
+                let dx = device(outerX)
+                let dy = device(outerY)
+                let innerDy = device(innerY)
+                let movedTop = ScrollPlacementWhiteRow(retained, width, viewportLeft, viewportRight,
+                    viewportTop, viewportBottom, device(60.0))
+                Require(movedTop == buttonTop - dy,
+                    "Scroll placement moved the button border to ${movedTop}, expected ${buttonTop - dy} (scale=${scale} variant=${variant})")
+                let movedRows = ScrollPlacementBoundaries(retained, width, rowColumn - dx,
+                    nestedTop - dy, nestedBottom - dy)
+                let expectedRows = List[int32]()
+                for row in 1 ... 6 {
+                    let moved = device(128.0 + 20.0 * float64(row)) - dy - innerDy
+                    if moved > nestedTop - dy && moved < nestedBottom - dy { expectedRows.Add(moved) }
+                }
+                Require(movedRows.Count == expectedRows.Count,
+                    "Scroll placement nested rows at ${string.Join(",", movedRows)}, expected ${string.Join(",", expectedRows)} (scale=${scale} variant=${variant})")
+                for index in 0 ... expectedRows.Count {
+                    Require(movedRows[index] == expectedRows[index],
+                        "Scroll placement nested row boundary at ${movedRows[index]}, expected ${expectedRows[index]} (scale=${scale} variant=${variant})")
+                }
                 comparisons++
-                changedChannels += variantChanges
-                maximumDifference = Math.Max(maximumDifference, variantMaximum)
                 Console.WriteLine(
-                    "scroll-placement-case: scale=${scale} variant=${variant} changed-channels=${variantChanges} max-rgba-difference=${variantMaximum}"
+                    "scroll-placement-case: scale=${scale} variant=${variant} dx=${dx} dy=${dy} innerDy=${innerDy} partial=${partial}"
                 )
-                if variantChanges > 0 {
-                    if let output = Environment.GetEnvironmentVariable("GOO_SCROLL_PIXEL_EVIDENCE") {
-                        Directory.CreateDirectory(output)
-                        let prefix = "scale-${scale}-variant-${variant}"
-                        File.WriteAllBytes(Path.Combine(output, prefix + "-reference.rgba"), referencePixels)
-                        File.WriteAllBytes(Path.Combine(output, prefix + "-actual.rgba"), actualPixels)
-                    }
-                }
             }
-            let target = cell.Target.BorderBox
-            WindowReadbackTestFixture.InputQueuePointerMove(
-                window,
-                target.X + target.Width * 0.5,
-                target.Y + target.Height * 0.5
-            )
-            WindowReadbackTestFixture.InputQueuePointerPress(
-                window,
-                target.X + target.Width * 0.5,
-                target.Y + target.Height * 0.5
-            )
-            WindowReadbackTestFixture.InputQueuePointerRelease(
-                window,
-                target.X + target.Width * 0.5,
-                target.Y + target.Height * 0.5
-            )
+            let box = cell.Target.BorderBox
+            let clickX = box.X + box.Width * 0.5
+            let clickY = box.Y + box.Height * 0.5
+            WindowReadbackTestFixture.InputQueuePointerMove(window, clickX, clickY)
+            WindowReadbackTestFixture.InputQueuePointerPress(window, clickX, clickY)
+            WindowReadbackTestFixture.InputQueuePointerRelease(window, clickX, clickY)
             WindowReadbackTestFixture.ForceRender(window, 0.0)
-            expectedClicks++
-            Require(cell.Clicks == expectedClicks, "Scroll placement input did not use the rendered geometry")
+            Require(cell.Clicks == 1, "Scroll placement input did not use the rendered geometry: clicks=${cell.Clicks}")
+            for variant in 0 ... 7 {
+                let fresh = ScrollPlacementFresh(effect, scale, outerXs[variant], outerYs[variant],
+                    innerOffsets[variant])
+                RetainedEqualityCompare(fresh, retainedFrames[variant], width, height, int32(scale * 100.0),
+                    "scroll-variant-${variant}" + (partialFrames[variant] ? "-partial": "-full"))
+            }
+        } finally {
+            window.Close()
         }
-        Console.WriteLine(
-            "scroll-placement: comparisons=${comparisons} scales=1,1.25,1.5,2 nested=true changed-channels=${changedChannels} max-rgba-difference=${maximumDifference} clicks=${cell.Clicks}"
-        )
-        Require(unexpectedChannels == 0, "Scroll placement changed a canonical pixel ${firstMismatch}")
-    } finally {
-        window.Close()
     }
+    Require(partialSteps >= 8, "Scroll placement did not exercise partial redraw")
+    Console.WriteLine(
+        "scroll-placement: comparisons=${comparisons} scales=1,1.25,1.5,2 nested=true partial-steps=${partialSteps} fresh-equal=1"
+    )
 }
 
 class ScrollImagePlacementCell(source ImageSourceProvider) : Cell {
