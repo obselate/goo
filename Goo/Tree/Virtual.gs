@@ -101,7 +101,7 @@ public data struct VirtualChild {
   private var measured bool
   /// Gets the stable key of the item.
   public prop Key string{ get -> key; init -> key = value }
-  /// Gets the size of the item from its last layout.
+  /// Gets the size of the item from its last layout, before rounding to device pixels.
   public prop Size LayoutSize{ get -> size; init -> size = value }
   /// Gets whether Size is the result of a layout of the current content.
   public prop Measured bool{ get -> measured; init -> measured = value }
@@ -221,13 +221,16 @@ public class VirtualViewport {
   /// @returns The key and the last layout size of the item.
   public func Child(index int32) VirtualChild {
     let child = bound().Children[index]
+    var size = LayoutSize{ Width: float64(child.Rect.W), Height: float64(child.Rect.H) }
     var measured = false
-    if let yoga = child.Yoga { measured = !YGNodeAPI.YGNodeIsDirty(yoga) }
-    return VirtualChild{
-      Key: child.Key ?? "",
-      Size: LayoutSize{ Width: float64(child.Rect.W), Height: float64(child.Rect.H) },
-      Measured: measured,
+    if let yoga = child.Yoga {
+      size = LayoutSize{
+        Width: float64(YGNodeLayoutAPI.YGNodeLayoutGetRawWidth(yoga)),
+        Height: float64(YGNodeLayoutAPI.YGNodeLayoutGetRawHeight(yoga)),
+      }
+      measured = !YGNodeAPI.YGNodeIsDirty(yoga)
     }
+    return VirtualChild{ Key: child.Key ?? "", Size: size, Measured: measured }
   }
 }
 
