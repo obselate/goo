@@ -11,10 +11,12 @@ internal unsafe partial class SdlHost {
   private var preferenceContext nint
   private var preferenceBus nint
   private var preferenceSubscription uint32
+  private var preferenceOwnerSubscription uint32
   private var preferenceSignal PortalPreferenceSignal?
   private var preferencePortalUnavailable bool
 
   private func ReadLinuxPreferences(theme SystemTheme) PlatformPreferences {
+    var systemTheme = theme
     var sounds bool?
     var accent Color?
     var contrast bool?
@@ -34,10 +36,28 @@ internal unsafe partial class SdlHost {
               preferenceSubscription = g_dbus_connection_signal_subscribe(preferenceBus,
                 "org.freedesktop.portal.Desktop", "org.freedesktop.portal.Settings", "SettingChanged",
                 "/org/freedesktop/portal/desktop", nint(0), 0, callback, nint(0), nint(0))
+              preferenceOwnerSubscription = g_dbus_connection_signal_subscribe(preferenceBus,
+                "org.freedesktop.DBus", "org.freedesktop.DBus", "NameOwnerChanged",
+                "/org/freedesktop/DBus", "org.freedesktop.portal.Desktop", 0, callback, nint(0), nint(0))
             }
           } finally { g_main_context_pop_thread_default(preferenceContext) }
         }
         if preferenceBus != nint(0) {
+          let colorScheme = ReadPortalPreference("org.freedesktop.appearance", "color-scheme")
+          if colorScheme != nint(0) {
+            try {
+              if g_variant_is_of_type(colorScheme, "u") != 0 {
+                let level = g_variant_get_uint32(colorScheme)
+                if level <= 2u {
+                  systemTheme = switch level {
+                    case 1u: SystemTheme.Dark
+                    case 2u: SystemTheme.Light
+                    case _: SystemTheme.Unknown
+                  }
+                }
+              }
+            } finally { g_variant_unref(colorScheme) }
+          }
           sounds = ReadPortalEventSounds()
           accent = ReadPortalAccentColor()
           let value = ReadPortalPreference("org.freedesktop.appearance", "contrast")
@@ -53,7 +73,7 @@ internal unsafe partial class SdlHost {
       }
     } catch (_ DllNotFoundException) { preferencePortalUnavailable = true }
     catch (_ EntryPointNotFoundException) { preferencePortalUnavailable = true }
-    return PlatformPreferences{Theme: theme, EventSoundsEnabled: sounds, AccentColor: accent, HighContrast: contrast}
+    return PlatformPreferences{Theme: systemTheme, EventSoundsEnabled: sounds, AccentColor: accent, HighContrast: contrast}
   }
 
   private func ReadPortalPreference(namespaceName string, key string) nint {
@@ -107,6 +127,7 @@ internal unsafe partial class SdlHost {
   private func ReleasePreferencePortal() {
     if preferenceBus != nint(0) {
       g_dbus_connection_signal_unsubscribe(preferenceBus, preferenceSubscription)
+      g_dbus_connection_signal_unsubscribe(preferenceBus, preferenceOwnerSubscription)
       g_object_unref(preferenceBus)
       preferenceBus = nint(0)
     }
@@ -128,6 +149,9 @@ internal unsafe partial class SdlHost {
     @DllImport("libgio-2.0.so.0")
     private func g_dbus_connection_signal_subscribe(connection nint, sender string, contract string, member string,
       path string, argument nint, flags int32, callback PortalPreferenceSignal, data nint, destroy nint) uint32;
+    @DllImport("libgio-2.0.so.0")
+    private func g_dbus_connection_signal_subscribe(connection nint, sender string, contract string, member string,
+      path string, argument string, flags int32, callback PortalPreferenceSignal, data nint, destroy nint) uint32;
     @DllImport("libgio-2.0.so.0")
     private func g_dbus_connection_signal_unsubscribe(connection nint, subscription uint32);
     @DllImport("libgobject-2.0.so.0")
