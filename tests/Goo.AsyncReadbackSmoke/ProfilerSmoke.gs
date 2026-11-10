@@ -755,6 +755,8 @@ internal class ProfilerSmoke {
                 }
             }
             WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
+            Require(!WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(window, 0),
+                "Released queue hold remained visible to the next trace")
             while !ended {
                 using let batch = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
                 let payload = batch.RootElement.GetProperty("payload")
