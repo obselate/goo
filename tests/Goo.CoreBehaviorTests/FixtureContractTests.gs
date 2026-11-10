@@ -115,6 +115,7 @@ class FixtureContractTests {
             yield Contract[AccessibilityFixtures]("FocusLayoutAndScrollContract")
             yield Contract[AccessibilityFixtures]("HostExplorationAndRevealContract")
             yield Contract[AccessibilityFixtures]("HostClipAndTransformContract")
+            yield Contract[AccessibilityFixtures]("KeyedMoveOrderContract")
             yield Contract[AccessibilityFixtures]("PrimitiveAndExclusionContract")
             yield Contract[AccessibilityFixtures]("RetainedIdentityAndRelationshipsContract")
             yield Contract[AccessibilityFixtures]("ReboundStorageRejectsPreviousSemanticIdentityContract")

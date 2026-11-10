@@ -1599,9 +1599,6 @@ internal func childOrderChanged(old IList[Node], blobs IList[Blob]) bool {
   if old.Count != blobs.Count {
     return true
   }
-  if blobs.Count == 0 || blobs[0].Key == nil {
-    return false
-  }
   var i int32
   while i < blobs.Count {
     if old[i].Key != blobs[i].Key {
