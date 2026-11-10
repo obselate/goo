@@ -47,10 +47,15 @@ internal partial class TextEditorLayouts {
           bottomInset = glyphOverflow(last.Lines[last.Lines.Count - 1])
         }
         let bounded = height >= 0.0F
+        let heights TextEditorLineHeights? = bounded && width == BoxGeometry.ContentWidth(n)
+          ? state.TrackHeights(snapshot, paragraphWidth, fingerprint, lineHeight, metrics.Ascent, metrics.Descent) : nil
         var firstLine int32 = 0
         var lastLine = snapshot.LineCount
+        var scrollLine int32 = 0
+        var anchorShift = 0.0F
+        var anchored = false
         if bounded {
-          let scrollLine = lineForVerticalOffset(state, snapshot,
+          scrollLine = lineForVerticalOffset(state, snapshot,
             ScrollPoint(n).Y, paragraphWidth, fingerprint, lineHeight,
             metrics.Ascent, metrics.Descent)
           let overscan = n.EditorOverscanLines
@@ -60,6 +65,11 @@ internal partial class TextEditorLayouts {
           lastLine = firstLine + visible
           if lastLine > snapshot.LineCount { lastLine = snapshot.LineCount }
         }
+        if let tracked = heights && used.Count == 2 {
+          let shift = tracked.Set(0, used[0].Height - lineHeight)
+          if scrollLine > 0 { anchorShift += shift }
+          tracked.Set(snapshot.LineCount - 1, used[1].Height - lineHeight)
+        }
         var top = verticalOffsetForLine(state, snapshot, firstLine, paragraphWidth, fingerprint,
           lineHeight, metrics.Ascent, metrics.Descent)
         var widest = 0.0F
@@ -67,6 +77,13 @@ internal partial class TextEditorLayouts {
           let paragraphCache = cachedParagraph(n, state, snapshot, lineIndex, projections, styles,
             paragraphWidth, fingerprint, lineHeight, metrics.Ascent, metrics.Descent)
           used.Add(paragraphCache)
+          if let tracked = heights {
+            let delta = tracked.Set(lineIndex, paragraphCache.Height - lineHeight)
+            if !anchored {
+              anchored = lineIndex >= scrollLine && delta == 0.0F
+              anchorShift += delta
+            }
+          }
           if n.EditorShowLineNumbers && paragraphCache.Lines.Count > 0 {
             let first = paragraphCache.Lines[0]
             let number = lineIndex + 1
@@ -93,16 +110,21 @@ internal partial class TextEditorLayouts {
         if bounded {
           result.Height = height > lineHeight ? height : lineHeight
           result.ContentWidth = widest + result.GutterWidth
-          result.ContentHeight = top + bottomInset
-            + verticalOffsetForLine(state, snapshot, snapshot.LineCount, paragraphWidth, fingerprint, lineHeight,
-              metrics.Ascent, metrics.Descent)
-            - verticalOffsetForLine(state, snapshot, lastLine, paragraphWidth, fingerprint, lineHeight,
-              metrics.Ascent, metrics.Descent)
+          result.ContentHeight = if let tracked = heights {
+            state.TopInset + float32(snapshot.LineCount) * lineHeight + tracked.Total + bottomInset
+          } else {
+            top + bottomInset
+              + verticalOffsetForLine(state, snapshot, snapshot.LineCount, paragraphWidth, fingerprint, lineHeight,
+                metrics.Ascent, metrics.Descent)
+              - verticalOffsetForLine(state, snapshot, lastLine, paragraphWidth, fingerprint, lineHeight,
+                metrics.Ascent, metrics.Descent)
+          }
         } else {
           result.Height = top + bottomInset
           result.ContentWidth = widest + result.GutterWidth
           result.ContentHeight = result.Height
         }
+        result.AnchorShift = anchored ? anchorShift : 0.0F
         if bounded && !state.ResolvingScroll { state.TrimParagraphs(used) }
         return result
       }
@@ -176,30 +198,18 @@ internal partial class TextEditorLayouts {
     private func lineForVerticalOffset(state TextEditorRenderState, snapshot TextSnapshot,
       offset float32, width float32, fingerprint int32, lineHeight float32,
       ascent float32, descent float32) int32{
-        if offset <= 0.0F { return 0 }
-        var low int32 = 0
-        var high = snapshot.LineCount - 1
-        while low <= high {
-          let line = low + (high - low) / 2
-          let top = verticalOffsetForLine(state, snapshot, line, width, fingerprint,
-            lineHeight, ascent, descent)
-          let height = state.ParagraphHeightForLine(snapshot, line, width, fingerprint,
-            lineHeight, ascent, descent) ?? lineHeight
-          if offset < top {
-            high = line - 1
-          } else if offset >= top + height {
-            low = line + 1
-          } else {
-            return line
-          }
+        let content = offset - state.TopInset
+        if content <= 0.0F { return 0 }
+        if let heights = state.Heights(snapshot, width, fingerprint, lineHeight, ascent, descent) {
+          return heights.LineAt(content)
         }
-        return if low >= snapshot.LineCount { snapshot.LineCount - 1 } else { low < 0 ? 0 : low }
+        return Math.Min(snapshot.LineCount - 1, int32(content / lineHeight))
       }
 
     private func verticalOffsetForLine(state TextEditorRenderState, snapshot TextSnapshot,
       target int32, width float32, fingerprint int32, lineHeight float32,
       ascent float32, descent float32) float32 -> state.TopInset + float32(target) * lineHeight
-        + state.HeightAdjustmentBefore(snapshot, target, width, fingerprint, lineHeight, ascent, descent)
+        + (state.Heights(snapshot, width, fingerprint, lineHeight, ascent, descent)?.ExtraBefore(target) ?? 0.0F)
 
     private func appendParagraph(layout TextEditorVisualLayout, n Node,
       paragraph TextEditorResolvedParagraph, width float32, top float32) float32{

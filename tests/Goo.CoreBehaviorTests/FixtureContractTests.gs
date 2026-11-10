@@ -468,6 +468,8 @@ class FixtureContractTests {
             yield Contract[TextEditorInputFixtures]("WheelScrollAndCaretBlinkUseEditorState")
             yield Contract[TextEditorInputFixtures]("ScrollToEndBeforeMountReachesMeasuredEnd")
             yield Contract[TextEditorInputFixtures]("CaretRevealLandsAfterNearbyParagraphsAreMeasured")
+            yield Contract[TextEditorInputFixtures]("ContentHeightKeepsMeasuredParagraphsAfterEviction")
+            yield Contract[TextEditorInputFixtures]("MeasuringLinesAboveViewportKeepsVisibleLinesInPlace")
             yield Contract[TextPresentationLayerFixtures]("InlineTextSlotsShareProseBaselineAfterWrapping")
             yield Contract[TextPresentationLayerFixtures]("StyledLinesUseFontSizeLineHeight")
             yield Contract[TextPresentationLayerFixtures]("EditBelowViewportRefreshesLastLineOverflow")

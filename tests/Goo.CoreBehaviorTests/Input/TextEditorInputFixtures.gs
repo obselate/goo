@@ -375,6 +375,51 @@ internal class TextEditorInputFixtures {
     return rect.Y >= top && rect.Y + rect.H <= top + BoxGeometry.ViewportHeight(node)
   }
 
+  func ContentHeightKeepsMeasuredParagraphsAfterEviction() bool {
+    using let controller = TextEditorController(TextDocument(wrappedParagraphs()))
+    let driver = InputFixtureDriver(TextEditorWrappedCell(controller), 400, 300)
+    let node = driver.Window.Tree!!
+    var previous = node.ContentH
+    for step in 0 ... 80 {
+      controller.ScrollTo(0.0, float64(if step < 40 { step } else { 80 - step }) * 150.0)
+      driver.Update()
+      if node.ContentH < previous { return false }
+      previous = node.ContentH
+    }
+    return node.EditorState!!.ParagraphCacheCount < 200
+  }
+
+  func MeasuringLinesAboveViewportKeepsVisibleLinesInPlace() bool {
+    using let controller = TextEditorController(TextDocument(wrappedParagraphs()))
+    controller.ScrollTo(0.0, 30000.0)
+    let driver = InputFixtureDriver(TextEditorWrappedCell(controller), 400, 300)
+    driver.Update()
+    let node = driver.Window.Tree!!
+    let builds = node.EditorState!!.ParagraphBuildCount
+    for step in 0 ... 20 {
+      let layout = TextEditorLayouts.For(node, BoxGeometry.ContentWidth(node), BoxGeometry.ContentHeight(node))
+      var anchor = layout.Lines[layout.Lines.Count - 1]
+      for line in layout.Lines {
+        if line.Top >= float32(controller.ScrollTargetY) {
+          anchor = line
+          break
+        }
+      }
+      let before = anchor.Top - float32(controller.ScrollTargetY)
+      ScrollState.By(node, 0.0F, -30.0F, true)
+      driver.Update()
+      let next = TextEditorLayouts.For(node, BoxGeometry.ContentWidth(node), BoxGeometry.ContentHeight(node))
+      var found = false
+      for line in next.Lines {
+        if line.SourceStart == anchor.SourceStart && line.DisplayStart == anchor.DisplayStart {
+          found = MathF.Abs(line.Top - float32(controller.ScrollTargetY) - before - 30.0F) <= 0.01F
+        }
+      }
+      if !found { return false }
+    }
+    return node.EditorState!!.ParagraphBuildCount > builds
+  }
+
   private func wrappedParagraphs() string {
     let text = StringBuilder()
     for i in 0 ... 3000 {

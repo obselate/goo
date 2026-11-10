@@ -201,6 +201,13 @@ internal partial class ScrollState {
       }
     }
 
+    internal func ShiftEditor(n Node, dy float32) {
+      guard let controller = n.EditorController else { return }
+      n.ScrollY += dy
+      n.ScrollTargetY += dy
+      controller.SetScrollTarget(controller.ScrollTargetX, controller.ScrollTargetY + float64(dy))
+    }
+
     private func syncEditorExtent(n Node) {
       let gutter = verticalScrollbarGutter(n)
       var extent = TextEditorLayouts.ScrollExtent(n)
