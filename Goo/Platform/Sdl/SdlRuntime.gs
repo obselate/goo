@@ -82,9 +82,11 @@ internal unsafe partial class SdlRuntime {
           path = Path.GetFullPath(Path.Combine(directory, "..", "..", "runtimes", rid, "native", name))
         }
         if !File.Exists(path) {
-          throw DllNotFoundException("Goo could not find its bundled SDL. Searched: "
-            + Path.Combine(directory, name) + ", "
-            + Path.Combine(directory, "runtimes", rid, "native", name) + ", " + path)
+          throw DllNotFoundException("Goo could not find its bundled SDL file '" + name
+            + "'. Searched directories: " + directory + ", "
+            + Path.Combine(directory, "runtimes", rid, "native") + ", " + Path.GetDirectoryName(path)
+            + ". In a Goo Linux source checkout, run: "
+            + "bash .github/scripts/build-sdl-linux-x64.sh artifacts/native/libSDL3.so")
         }
         let handle = NativeLibrary.Load(path)
         NativeLibrary.SetDllImportResolver(assembly,
