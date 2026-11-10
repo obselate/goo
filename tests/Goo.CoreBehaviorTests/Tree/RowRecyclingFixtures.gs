@@ -145,6 +145,24 @@ internal class RowRecyclingFixtures {
     } finally { window.Close() }
   }
 
+  func KeepsStorageAcrossOwnerRebuildWithContinuingStateContract() bool {
+    let cell = RecyclingViewportCell{FreshSource: true}
+    let window = Window{Root: cell, Width: 100, Height: 20}
+    try {
+      window.UpdateTree()
+      guard let body = cell.Handles[0].AttachedNode(),
+        let viewport = cell.Viewport.AttachedNode(), let state = Virtualization.State(viewport) else { return false }
+      cell.Viewport.JumpTo(0.0, 20.0)
+      window.UpdateTree()
+      if state.RecycledRowCount != 1 { return false }
+      cell.Rebuild()
+      cell.Viewport.JumpTo(0.0, 40.0)
+      window.UpdateTree()
+      return cell.Handles[2].AttachedNode() == body && body.MountGeneration == 2uL
+        && state.RecycledRowCount == 1
+    } finally { window.Close() }
+  }
+
   func DiscardsFailedRebindAndReleasesRetiredDataContract() bool {
     let cell = RecyclingViewportCell()
     let window = Window{Root: cell, Width: 100, Height: 20}
@@ -232,6 +250,7 @@ internal class RecyclingViewportCell : Cell {
   internal var Source RecyclingRowsSource
   internal var Current RecyclingRowCell?
   internal var Editing bool
+  internal var FreshSource bool
   internal var DifferentShape bool
   internal var DetailedText bool
   internal var DataOffset int32
@@ -243,7 +262,11 @@ internal class RecyclingViewportCell : Cell {
     Source = RecyclingRowsSource(this)
   }
 
-  override func Build() Blob -> Virtual(Source){Handle = Viewport, Width = 100, Height = 20}
+  override func Build() Blob {
+    var source VirtualSource = Source
+    if FreshSource { source = RecyclingContinuingSource(Source) }
+    return Virtual(source){Handle = Viewport, Width = 100, Height = 20}
+  }
 }
 
 internal class RecyclingRowsSource(owner RecyclingViewportCell) : VirtualState, VirtualSource {
@@ -272,6 +295,10 @@ internal class RecyclingRowsSource(owner RecyclingViewportCell) : VirtualState, 
   public override func Commit() {
     index = pendingIndex
   }
+}
+
+internal class RecyclingContinuingSource(state RecyclingRowsSource) : VirtualSource {
+  public func State(current VirtualState?) VirtualState -> current ?? state
 }
 
 internal class RecyclingRowData(index int32, handle ElementHandle) {
