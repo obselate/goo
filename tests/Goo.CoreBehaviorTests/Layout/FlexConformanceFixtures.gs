@@ -30,19 +30,22 @@ internal class FlexConformanceFixtures {
                 var matches = actual.Count == expected.GetArrayLength()
                 for i in 0 ... Math.Min(actual.Count, expected.GetArrayLength()) {
                     for axis in 0 ... 4 {
-                        if MathF.Abs(actual[i][axis] - expected[i][axis].GetSingle()) > tolerance {
+                        if !Single.IsFinite(actual[i][axis]) || MathF.Abs(
+                            actual[i][axis] - expected[i][axis].GetSingle()
+                        ) > tolerance {
                             matches = false
                         }
                     }
                 }
-                let boxes = JsonSerializer.Serialize(actual)
-                if name.StartsWith("font-width-", StringComparison.Ordinal) {
-                    output("$name Chromium=${JsonSerializer.Serialize(reference)} Goo=$boxes")
-                }
-                if !matches {
-                    failures.Add(
-                        "$name Chromium=${JsonSerializer.Serialize(reference)} Expected=${JsonSerializer.Serialize(expected)} Goo=$boxes"
-                    )
+                if !matches || name.StartsWith("font-width-", StringComparison.Ordinal) {
+                    let boxes = JsonSerializer.Serialize(actual)
+                    if matches {
+                        output("$name Chromium=${JsonSerializer.Serialize(reference)} Goo=$boxes")
+                    } else {
+                        failures.Add(
+                            "$name Chromium=${JsonSerializer.Serialize(reference)} Expected=${JsonSerializer.Serialize(expected)} Goo=$boxes"
+                        )
+                    }
                 }
                 count++
             } finally {
