@@ -557,7 +557,7 @@ float2 axisCoverage(float2 point, float2 pixelsPerPath, AnalyticBand band, bool 
             {
                 continue;
             }
-            [loop] for (uint side = 0u; side < 2u; ++side)
+            for (uint side = 0u; side < 2u; ++side)
             {
                 bool forwardSide = side == 0u;
                 float distancePixels;

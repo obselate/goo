@@ -381,8 +381,8 @@
       "source": "path_band.frag.slang",
       "output": "path_band.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "74f8d282623a8f60756bb926742c1a5b491505066abeb79c3a28e5f0ca26b9cb",
-      "outputSha256": "09bdade4db926e4b9bef3406060f501cbfc032b812e089cd25a9630cfb66edf4",
+      "sourceSha256": "d7a04c55f9cde96cb40e26821b51017afd7e53b1155c773fd7ac0c1b9aacb4c1",
+      "outputSha256": "db9ab765c45929969f31eceba460d947671bfa0a52504dedb2f11e75fe220521",
       "outputBytes": 40128,
       "capabilities": [
         1
@@ -451,8 +451,8 @@
       "source": "clip_mask.frag.slang",
       "output": "clip_mask.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "6d6209db129a3efac4e74f8cabaa2e0eab34506f3f1e152f4db717559d5eb77f",
-      "outputSha256": "e097b19cb97c352b9aef01b992bba5dab657305d58beb9a8b5c8640fbe3f739b",
+      "sourceSha256": "ba1815c9c5312bf1309717fb108cf7b0dcadddd81521e3587539fad788ddde83",
+      "outputSha256": "89f83f407c909331927aee8b92af98ca467c2cc7ef53b52289428e19ce75fe02",
       "outputBytes": 36824,
       "capabilities": [
         1
@@ -464,9 +464,9 @@
       "source": "path_stroke.frag.slang",
       "output": "path_stroke.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "c20ac0874aa8884108619e79026ec9ed4b6d2645a49c08bc0c72a7ecab76e091",
-      "outputSha256": "f1cae1032158912ad378f34bbb80fbcee9860facf52a9deeb99221b13f9aa5bb",
-      "outputBytes": 99520,
+      "sourceSha256": "b58316e6df563e7c21a9ebc05faeacf8f26196cfeec275ea4bf9703b02c421bd",
+      "outputSha256": "5953407a586092060e5a0fd69bf209a86ebf0b7397568ba0959907d1ddf41420",
+      "outputBytes": 112272,
       "capabilities": [
         1
       ]
@@ -477,9 +477,9 @@
       "source": "stroke_mask.frag.slang",
       "output": "stroke_mask.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "ac89f6bb6cf80dd3297d9011fd5ab8013f7a7be185bf640bfe00434aff6bdd62",
-      "outputSha256": "03627594b2f51a869d40fa7a3e527871d8ecef29a5d4dac298731fd3ab6496de",
-      "outputBytes": 96260,
+      "sourceSha256": "2b0afdb5418d6592fbcda49d0ebf0c3e400b1cb0dbef9b8ff6e8ddc8e9094193",
+      "outputSha256": "577644a6eb16a4c85a02939092942ea4b402edd05f0ff0a204b93e25581b3aca",
+      "outputBytes": 109012,
       "capabilities": [
         1
       ]

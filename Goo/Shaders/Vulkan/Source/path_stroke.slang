@@ -70,35 +70,11 @@ bool strokeDash(StrokeState state, float distance, bool before, out float previo
     return false;
 }
 
-void strokeDashPair(StrokeState state, float distance, out bool after, out bool before)
+bool strokeDashOn(StrokeState state, float distance, bool before)
 {
-    after = true;
-    before = true;
-    if (state.dashCount == 0u || state.dashTotal <= 0.0) return;
-    float phase = distance + state.dashOffset;
-    phase -= floor(phase / state.dashTotal) * state.dashTotal;
-    float beforePhase = phase == 0.0 ? state.dashTotal : phase;
-    after = false;
-    before = false;
-    bool afterPending = true;
-    bool beforePending = true;
-    float cursor = 0.0;
-    for (uint index = 0u; index < state.dashCount; ++index)
-    {
-        float end = cursor + strokeFloat(state.dashes + index);
-        bool on = (index & 1u) == 0u;
-        if (afterPending && phase >= cursor && phase < end)
-        {
-            after = on;
-            afterPending = false;
-        }
-        if (beforePending && beforePhase > cursor && beforePhase <= end)
-        {
-            before = on;
-            beforePending = false;
-        }
-        cursor = end;
-    }
+    float previous, next;
+    bool previousDot, nextDot;
+    return strokeDash(state, distance, before, previous, next, previousDot, nextDot);
 }
 
 bool strokeCap(float2 center, float2 outward, StrokeState state)
@@ -180,13 +156,8 @@ bool strokeCurveHit(uint index, QuadraticCurve curve, float2 point, StrokeState 
     float2 a = strokeHost(curve.start - point, state);
     float2 b = strokeHost(curve.control - point, state);
     float2 c = strokeHost(curve.finish - point, state);
-    float low = 0.0;
-    float high = 1.0;
-    [loop] for (uint end = 0u; end < 2u && state.measured; ++end)
-    {
-        float parameter = strokeParameter(a, b, c, end == 0u ? lowDistance : highDistance, total);
-        if (end == 0u) low = parameter; else high = parameter;
-    }
+    float low = state.measured ? strokeParameter(a, b, c, lowDistance, total) : 0.0;
+    float high = state.measured ? strokeParameter(a, b, c, highDistance, total) : 1.0;
     float candidates[7];
     uint normals;
     uint count = strokeParameters(a, b, c, low, high, candidates, normals);
@@ -210,39 +181,31 @@ bool strokeCurveHit(uint index, QuadraticCurve curve, float2 point, StrokeState 
         {
             float endDistance = distance - previous;
             float startDistance = distance + next;
-            [loop] for (uint cap = 0u; cap < 2u; ++cap)
-            {
-                bool end = cap == 0u;
-                bool reachable = end ? endDistance > 0.0 || index == first : startDistance < total || index == last;
-                if (reachable && strokeDashCap(a, b, c, end ? endDistance : startDistance, total, end ? on : !on,
-                    end ? previousDot : nextDot, lowDistance, highDistance, state)) return true;
-            }
+            if ((endDistance > 0.0 || index == first)
+                && strokeDashCap(a, b, c, endDistance, total, on, previousDot,
+                    lowDistance, highDistance, state)) return true;
+            if ((startDistance < total || index == last)
+                && strokeDashCap(a, b, c, startDistance, total, !on, nextDot,
+                    lowDistance, highDistance, state)) return true;
         }
     }
     float lowAlong = prefix + lowDistance - dashStart;
     float highAlong = prefix + highDistance - dashStart;
-    bool closing = index == last;
-    bool lowAfter, lowBefore, highAfter, highBefore, nextAfter, nextBefore;
-    [loop] for (uint query = 0u; query < 3u; ++query)
-    {
-        bool after, before;
-        strokeDashPair(state, query == 0u ? lowAlong : (query == 1u || !closing ? highAlong : 0.0), after, before);
-        if (query == 0u) { lowAfter = after; lowBefore = before; }
-        else if (query == 1u) { highAfter = after; highBefore = before; }
-        else { nextAfter = after; nextBefore = before; }
-    }
+    bool lowAfter = strokeDashOn(state, lowAlong, false);
+    bool highBefore = strokeDashOn(state, highAlong, true);
     bool startCap = lowDistance > 0.0 || (index == first && !closed)
         || (state.measured && state.trimStart == prefix && !(closed && index == first))
-        || (lowAfter && !lowBefore);
+        || (lowAfter && !strokeDashOn(state, lowAlong, true));
     bool endCap = highDistance < total || (index == last && !closed)
         || (state.measured && state.trimEnd == prefix + total && !(closed && index == last))
-        || (highBefore && !highAfter);
+        || (highBefore && !strokeDashOn(state, highAlong, false));
     if (startCap && lowAfter && strokeCap(strokePoint(a, b, c, low), -strokeTangent(a, b, c, low), state)) return true;
     if (endCap && highBefore && strokeCap(strokePoint(a, b, c, high), strokeTangent(a, b, c, high), state)) return true;
+    bool closing = index == last;
     if (high != 1.0 || (closing && !closed)
         || (state.measured && !closing && state.trimEnd <= prefix + total)) return false;
     uint nextIndex = closing ? first : index + 1u;
-    if (!highBefore || !nextAfter) return false;
+    if (!highBefore || !strokeDashOn(state, closing ? 0.0 : highAlong, false)) return false;
     QuadraticCurve nextCurve = curveAt(nextIndex);
     return strokeJoin(c, strokeTangent(a, b, c, 1.0),
         strokeTangent(strokeHost(nextCurve.start - point, state), strokeHost(nextCurve.control - point, state),
