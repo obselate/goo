@@ -20,6 +20,7 @@ internal unsafe sealed class VulkanPathScene : IDisposable {
   private var observedRedrawSequence uint64
   private var renderAfterPlannedUpload bool
   private var resourceDeferred bool
+  private var usePending bool
   private var disposed bool
 
   internal prop Resources VulkanPathResources{ get -> resources }
@@ -129,6 +130,13 @@ internal unsafe sealed class VulkanPathScene : IDisposable {
     CommitCurrentReferences()
     resources.MarkSubmitted(commandBuffer, fence)
     resources.MarkPathUsage(currentPaths.Current, currentPaths.CurrentCount, fence)
+    SetUsePending(false)
+  }
+
+  internal func SetUsePending(value bool) {
+    if usePending == value { return }
+    usePending = value
+    resources.AddPendingUse(value ? 1 : -1)
   }
 
   internal func Collect(completedFence uint64) bool {
@@ -164,6 +172,7 @@ internal unsafe sealed class VulkanPathScene : IDisposable {
       return
     }
     disposed = true
+    SetUsePending(false)
     resources.UnregisterScene(sceneId)
     currentPaths.Reset()
     referencesCommitted = true

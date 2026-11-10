@@ -285,6 +285,9 @@ internal unsafe partial class VulkanWindowTarget {
     }
     lastFrameSubmitted = !initialImageUploadFrame
     try {
+      if let resources = pathScene {
+        resources.MarkSubmitted(slot.CommandBuffer, pendingGlobalSubmissionSerial)
+      }
       if !initialImageUploadFrame { layerPool?.MarkSubmitted(pendingGlobalSubmissionSerial) }
       if clipMaskFramePrepared {
         if let renderer = primitiveRenderer {
@@ -324,9 +327,6 @@ internal unsafe partial class VulkanWindowTarget {
           segmentIndex = segmentIndex + 1
         }
       }
-      if let resources = pathScene {
-        resources.MarkSubmitted(slot.CommandBuffer, pendingGlobalSubmissionSerial)
-      }
       if !initialImageUploadFrame && activeImageLayout == VkConstants.VK_IMAGE_LAYOUT_PRESENT_SRC_KHR {
         presentationRetirement.TryBindPriorSameImageToCompletion(current.Generation,
           activeImageIndex, activeFrameSlotIndex, slot.SubmissionSerial)
@@ -365,7 +365,7 @@ internal unsafe partial class VulkanWindowTarget {
       finally { FinishFailedFrame() }
       return
     }
-    if hidden || closing || recreatePending {
+    if recreatePending {
       AbandonRecordedFrameForRetry()
       CloseDiagnosticFrame(false)
       ClearActiveFrame()
@@ -387,6 +387,34 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func TryQueuePresent() {
+    if hidden || closing {
+      // The submitted frame reuses a swapchain image. Retire that image's earlier present here,
+      // as queueing the present would, so its record is not also retired by the submission.
+      var completedPresentId uint64 = 0uL
+      var completion = VkConstants.VK_SUCCESS
+      if let current = generation {
+        completion = current.TryCompletePendingPresent(activeImageIndex, out completedPresentId)
+      }
+      if completion == VkConstants.VK_NOT_READY || completion == VkConstants.VK_TIMEOUT {
+        host.Wake()
+        return
+      }
+      queueMailbox?.ResetSubmitCompletion()
+      queueStage = QueueStageIdle
+      if completion != VkConstants.VK_SUCCESS {
+        try {
+          HandleFrameFailure(completion, VulkanDiagnosticEventIds.PresentWait)
+        } finally {
+          FinishFailedFrame()
+        }
+        return
+      }
+      if completedPresentId != 0uL { presentationRetirement.CompletePresent(completedPresentId) }
+      presentationRetirement.CancelPendingPresentationLatency()
+      CloseDiagnosticFrame(false)
+      ClearActiveFrame()
+      return
+    }
     guard let current = generation, let mailbox = queueMailbox,
     let activeRuntime = runtime else {
       queueStage = QueueStageIdle

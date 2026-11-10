@@ -145,6 +145,7 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
   private var growthCount uint64
   private var deferredRequestCount uint64
   private var atlasLastUseFence uint64
+  private var pendingUseCount int32
   private var retiredWordCount uint64
   private var completedSubmissionFence uint64
   private var leastRecentlyUsed VulkanPathResourceRecord?
@@ -341,6 +342,10 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
   }
 
   internal func RedrawRequiredSince(observedSequence uint64) bool -> redrawSequence > observedSequence
+
+  internal func AddPendingUse(delta int32) {
+    pendingUseCount += delta
+  }
 
   internal func MarkPathUsage(ids []ResourceId, count int32, submissionFence uint64) {
     EnsureOpen()
@@ -846,7 +851,7 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
           +" currentWords=" + nextWordOffset.ToString()
           +" hardWords=" + atlas.MaximumWordCapacity.ToString())
       }
-    if atlas.UploadPending || uploadQueued {
+    if atlas.UploadPending || uploadQueued || pendingUseCount > 0 {
       if deferredRequestCount == uint64.MaxValue {
         throw OverflowException("Vulkan path deferred request count overflow")
       }

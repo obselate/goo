@@ -26,3 +26,8 @@ internal data struct VulkanWindowTargetSelection {
   var PresentMode VkPresentModeKHR
   var CompositeAlpha VkCompositeAlphaFlagBitsKHR
 }
+
+internal data struct VulkanSwapchainCreationResult {
+  var Generation VulkanSwapchainGeneration?
+  var SurfaceLost bool
+}

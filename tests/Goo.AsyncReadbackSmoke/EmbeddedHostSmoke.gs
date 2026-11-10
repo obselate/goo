@@ -11,6 +11,10 @@ internal partial class VulkanWindowTarget {
       && queueMailbox?.Phase == VulkanQueueMailboxPhase.SubmitComplete
       && runtime?.QueueWorker.HasOutstandingWork != true
   }
+  internal prop EmbeddedSubmittedFrameCompleteForTest bool{
+    get -> EmbeddedSubmitCompletionServiceReadyForTest
+      && runtime?.PollGraphicsSubmission(pendingGlobalSubmissionSerial) == VkConstants.VK_SUCCESS
+  }
   internal prop EmbeddedPresentCompletionReadyForTest bool{
     get -> queueMailbox?.Phase == VulkanQueueMailboxPhase.PresentComplete
   }
@@ -383,6 +387,54 @@ internal class EmbeddedHostSmoke {
       }
     }
 
+    private func VerifyDetachWithSubmittedFrame() {
+      let host = EmbeddedSmokeHost()
+      let root = EmbeddedSmokeCell()
+      let window = Window{Root: root}
+      try {
+        host.Resize(64, 64, 64, 64)
+        host.CreateNative()
+        window.Attach(host)
+        host.AttachPresentation()
+        // Present every swapchain image, so the frame below reuses an image with an earlier present.
+        var presented = 0
+        while presented < 8 {
+          root.Red = !root.Red
+          root.Rebuild()
+          Settle(host)
+          presented++
+        }
+        WindowReadbackTestFixture.RuntimeHoldNextQueueSubmit(window)
+        window.Post(() -> {
+          root.Red = !root.Red
+          root.Rebuild()
+        })
+        let heldDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
+        var held bool
+        while !held && Stopwatch.GetTimestamp() < heldDeadline {
+          host.RenderFrame(0.016)
+          held = WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(window, 10)
+        }
+        Require(held, "Embedded frame did not reach held submission")
+        WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
+        // Detach must see a submission that the GPU completed and that was not presented.
+        let completeDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
+        while window.CaptureTargetForTest()?.EmbeddedSubmittedFrameCompleteForTest != true
+          && Stopwatch.GetTimestamp() < completeDeadline {
+          Thread.Sleep(1)
+        }
+        Require(window.CaptureTargetForTest()?.EmbeddedSubmittedFrameCompleteForTest == true,
+          "Embedded submission did not complete on the GPU")
+        host.DetachPresentation()
+        Require(host.Destroys == 1 && !host.IsPresentationAttached,
+          "Embedded detach with a submitted frame did not release Vulkan presentation")
+      } finally {
+        WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
+        host.Dispose()
+        host.DestroyNative()
+      }
+    }
+
     internal func Run() {
       let unmountedRoot = EmbeddedSmokeCell()
       using let unmountedHost = EmbeddedSmokeHost()
@@ -394,6 +446,7 @@ internal class EmbeddedHostSmoke {
       VerifyPreferences()
       VerifyIdleRestart()
       VerifySharedQueueDetach()
+      VerifyDetachWithSubmittedFrame()
       let host = EmbeddedSmokeHost()
       let root = EmbeddedSmokeCell()
       let window = Window{ Root: root }

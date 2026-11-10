@@ -53,6 +53,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   internal func CleanupFailedDeviceRecovery() {
+    try { DrainStartup(true) } catch (cleanup Exception) { }
     let staleLease = runtime
     AbandonReadbackAfterDeviceLoss()
     if staleLease == nil {
@@ -148,6 +149,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func PrepareForDeviceRecovery() {
+    DrainStartup(true)
     CloseExternalSessions(ExternalImageStatus.DeviceLost)
     startupState = VulkanWindowStartupState.None
     InvalidateLastPresentedImageState()
@@ -287,6 +289,7 @@ internal unsafe partial class VulkanWindowTarget {
 
   internal func RebuildAfterDeviceRecovery() {
     Bootstrap()
+    if let probe = RecoveryStartupForTest { probe(this) }
     sceneCompiler.SetTextScene(textScene)
     sceneCompiler.SetImageScene(imageScene)
     sceneCompiler.SetPathScene(pathScene)
@@ -294,7 +297,7 @@ internal unsafe partial class VulkanWindowTarget {
     let height = if requestedHeight > 0 { requestedHeight } else { framebufferHeight }
     if hidden {
       hideReleasePending = true
-    } else if generation == nil && width > 0 && height > 0 {
+    } else if !StartupPending && generation == nil && width > 0 && height > 0 {
       if !RecreateSwapchain(width, height) {
         throw InvalidOperationException("Vulkan swapchain recreation failed during device recovery")
       }

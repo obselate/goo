@@ -6,6 +6,7 @@ import System
 import System.Diagnostics
 import System.IO
 import System.Threading
+import System.Text.Json
 
 func ClipCaptureReadback(window Window, metrics WindowMetrics)
 VulkanReadbackResult{
@@ -311,6 +312,149 @@ func RunHiddenDeviceRecoverySmoke() {
   }
   ReadbackValidateCommonDiagnostics(capturedError.ToString())
   Console.WriteLine("hidden-device-recovery: new_window=presented hidden_window=restored pixels=validated")
+}
+
+func ValidateDeviceRecoveryDiagnostics(diagnostics string) {
+  ReadbackValidateCommonDiagnostics(diagnostics, 1uL)
+  for line in diagnostics.Split('\n') {
+    if !line.StartsWith("{\"kind\":\"validation\",") { continue }
+    using let message = JsonDocument.Parse(line)
+    Require((message.RootElement.GetProperty("types").GetInt32() & 2) == 0,
+      "Device recovery emitted a Vulkan validation message: " + line)
+  }
+}
+
+func RunPendingDeviceRecoverySmoke() {
+  let capturedError = StringWriter()
+  let originalError = Console.Error
+  using let entered = ManualResetEventSlim(false)
+  using let release = ManualResetEventSlim(false)
+  let owner = Window{
+    Title: "Goo pending recovery owner", Width: 300, Height: 170, VSync: false,
+    Background: Color.Rgb(12, 20, 32), Root: RoundedResizeFirstFrameCell{},
+  }
+  let child = Window{
+    Title: "Goo pending recovery child", Width: 300, Height: 170, VSync: false,
+    Owner: owner, Background: Color.Rgb(12, 20, 32), Root: RoundedResizeFirstFrameCell{},
+  }
+  try {
+    Console.SetError(capturedError)
+    owner.Open()
+    WindowReadbackTestFixture.Pump(owner, 0.0)
+    let metrics = WindowReadbackTestFixture.Metrics(owner)
+    RoundedResizeRequireFirstFrame(ClipCaptureReadback(owner, metrics), metrics, 0)
+    WindowReadbackTestFixture.ForceRender(owner, 0.0)
+    let ownerTarget = WindowReadbackTestFixture.CaptureTarget(owner)!!
+    let oldRuntime = ownerTarget.RecoveryRuntime()!!
+    VulkanWindowTarget.SecondaryStartupForTest = () -> {
+      entered.Set()
+      Require(release.Wait(10000), "Secondary startup was not released within 10 seconds")
+    }
+    child.Open()
+    let childTarget = WindowReadbackTestFixture.CaptureTarget(child)!!
+    let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
+    while !entered.IsSet && Stopwatch.GetTimestamp() < deadline {
+      WindowReadbackTestFixture.Pump(child, 0.0)
+      Thread.Yield()
+    }
+    Require(entered.IsSet && childTarget.StartupPending && !child.IsVisible,
+      "Recovery child did not retain an unshown startup task")
+    VulkanSharedRuntime.FailNextGraphicsSubmissionForTest()
+    WindowReadbackTestFixture.ForceRenderNonblocking(owner, 0.0)
+    let lossDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
+    while !oldRuntime.DeviceLost && Stopwatch.GetTimestamp() < lossDeadline {
+      WindowReadbackTestFixture.PollQueueCompletion(owner)
+      Thread.Yield()
+    }
+    Require(oldRuntime.DeviceLost, "Pending recovery did not detect the injected device loss")
+    WindowReadbackTestFixture.ForceRenderNonblocking(owner, 0.0)
+    Require(ownerTarget.RecoveryRuntime()?.Generation == oldRuntime.Generation && !child.IsVisible,
+      "Recovery discarded an in-flight startup task")
+    release.Set()
+    VulkanWindowTarget.SecondaryStartupForTest = nil
+    WindowReadbackTestFixture.ForceRender(owner, 0.0, 10.0, true)
+    let recovered = ownerTarget.RecoveryRuntime()!!
+    Require(recovered.Generation > oldRuntime.Generation
+        && childTarget.RecoveryRuntime()?.Generation == recovered.Generation && !child.IsVisible,
+      "Recovery did not preserve the unshown child on the recovered device")
+    WindowReadbackTestFixture.ForceRender(child, 0.0, 10.0, true)
+    Require(child.IsVisible && !childTarget.StartupPending,
+      "Recovered child did not finish its first presentation")
+    let childMetrics = WindowReadbackTestFixture.Metrics(child)
+    RoundedResizeRequireFirstFrame(ClipCaptureReadback(child, childMetrics), childMetrics, 0)
+    RoundedResizeRequireFirstFrame(ClipCaptureReadback(owner, metrics), metrics, 0)
+  } finally {
+    release.Set()
+    VulkanWindowTarget.SecondaryStartupForTest = nil
+    child.Close()
+    owner.Close()
+    Console.SetError(originalError)
+  }
+  ValidateDeviceRecoveryDiagnostics(capturedError.ToString())
+  Console.WriteLine("pending-device-recovery: startup=drained owner=presented child=presented pixels=validated validation=0")
+}
+
+func RunZeroExtentDeviceRecoverySmoke() {
+  let capturedError = StringWriter()
+  let originalError = Console.Error
+  let owner = Window{
+    Title: "Goo zero extent recovery owner", Width: 300, Height: 170, VSync: false,
+    Background: Color.Rgb(12, 20, 32), Root: RoundedResizeFirstFrameCell{},
+  }
+  let child = Window{
+    Title: "Goo zero extent recovery child", Width: 300, Height: 170, VSync: false,
+    Owner: owner, Background: Color.Rgb(12, 20, 32), Root: RoundedResizeFirstFrameCell{},
+  }
+  var childTarget VulkanWindowTarget?
+  try {
+    Console.SetError(capturedError)
+    owner.Open()
+    WindowReadbackTestFixture.Pump(owner, 0.0)
+    let ownerMetrics = WindowReadbackTestFixture.Metrics(owner)
+    RoundedResizeRequireFirstFrame(ClipCaptureReadback(owner, ownerMetrics), ownerMetrics, 0)
+    child.Open()
+    WindowReadbackTestFixture.ForceRender(child, 0.0, 10.0, true)
+    let childMetrics = WindowReadbackTestFixture.Metrics(child)
+    RoundedResizeRequireFirstFrame(ClipCaptureReadback(child, childMetrics), childMetrics, 0)
+    childTarget = WindowReadbackTestFixture.CaptureTarget(child)!!
+    let target = childTarget
+    target.SetZeroSurfaceExtentForTest(true)
+    target.VerifyZeroExtentRecreateForTest()
+    let before = WindowReadbackTestFixture.FrameSubmissions(child)
+    WindowReadbackTestFixture.ForceRenderNonblocking(child, 0.0)
+    let deferred = WindowReadbackTestFixture.FrameSubmissions(child)
+    Require(before.Slot0Serial == deferred.Slot0Serial && before.Slot1Serial == deferred.Slot1Serial,
+      "Zero surface extent submitted a frame from the old swapchain")
+    target.SetZeroSurfaceExtentForTest(false)
+    WindowReadbackTestFixture.ForceRender(child, 0.0, 10.0, true)
+    let ownerTarget = WindowReadbackTestFixture.CaptureTarget(owner)!!
+    let oldGeneration = ownerTarget.RecoveryRuntime()!!.Generation
+    VulkanWindowTarget.RecoveryStartupForTest = (rebuilding VulkanWindowTarget) -> {
+      if rebuilding == target {
+        rebuilding.SetZeroSurfaceExtentForTest(true)
+        rebuilding.VerifyZeroExtentRecreateForTest()
+      }
+    }
+    VulkanSharedRuntime.FailNextGraphicsSubmissionForTest()
+    WindowReadbackTestFixture.ForceRender(owner, 0.0, 10.0, true)
+    Require(ownerTarget.RecoveryRuntime()!!.Generation > oldGeneration
+        && target.RecoveryRuntime()?.Generation == ownerTarget.RecoveryRuntime()?.Generation
+        && child.IsOpen && int32(target.CurrentPresentMode) == -1,
+      "Zero extent window prevented device recovery or created a swapchain")
+    VulkanWindowTarget.RecoveryStartupForTest = nil
+    target.SetZeroSurfaceExtentForTest(false)
+    WindowReadbackTestFixture.ForceRender(child, 0.0, 10.0, true)
+    RoundedResizeRequireFirstFrame(ClipCaptureReadback(child, childMetrics), childMetrics, 0)
+    RoundedResizeRequireFirstFrame(ClipCaptureReadback(owner, ownerMetrics), ownerMetrics, 0)
+  } finally {
+    VulkanWindowTarget.RecoveryStartupForTest = nil
+    childTarget?.SetZeroSurfaceExtentForTest(false)
+    child.Close()
+    owner.Close()
+    Console.SetError(originalError)
+  }
+  ValidateDeviceRecoveryDiagnostics(capturedError.ToString())
+  Console.WriteLine("zero-extent-device-recovery: current_extent=0x0 recovery=completed restore=presented pixels=validated validation=0")
 }
 
 class RenderBudgetPressureCell : Cell {
