@@ -26,6 +26,10 @@ class BorderSnapCell : Cell {
       Position: PositionType.Absolute, Left: 90, Top: 10, Width: 30, Height: 20,
       OutlineWidth: 1, OutlineColor: Color.Black,
     },
+    Container{
+      Position: PositionType.Absolute, Left: 130, Top: 10, Width: 30, Height: 20,
+      OutlineWidth: 1, OutlineOffset: 1, OutlineColor: Color.Black,
+    },
   }
 }
 
@@ -55,7 +59,7 @@ func RunBorderSnapSmoke() {
   let originalError = Console.Error
   Console.SetError(capturedError)
   let opened = Window{
-    Title: "Goo border snap gate", Width: 140, Height: 40,
+    Title: "Goo border snap gate", Width: 180, Height: 40,
     VSync: false, Decorated: false, Background: Color.White, Root: BorderSnapCell(),
   }
   try {
@@ -85,6 +89,9 @@ func RunBorderSnapSmoke() {
     let clipRight = BorderSnapDevice(clip.Rect.X + clip.Rect.W, device) - 1
     let outlineLeft = BorderSnapDevice(outline.Rect.X, device)
     let outlineRight = BorderSnapDevice(outline.Rect.X + outline.Rect.W, device) - 1
+    let offsetOutline = root.Children[3]
+    let offsetLeft = BorderSnapDevice(offsetOutline.Rect.X, device)
+    let offsetRight = BorderSnapDevice(offsetOutline.Rect.X + offsetOutline.Rect.W, device) - 1
     let paddingLeft = BoxGeometry.PaddingEdgeLeft(bevel) * float32(device)
     Console.WriteLine("border-snap-rects " + tag + " bevel_x=" + (float64(bevel.Rect.X) * device).ToString(CultureInfo.InvariantCulture)
       + " bevel_padding_x=" + paddingLeft.ToString(CultureInfo.InvariantCulture))
@@ -97,6 +104,9 @@ func RunBorderSnapSmoke() {
     Console.WriteLine("border-snap-outline " + tag + " row=" + row.ToString() + " x=" + (outlineLeft - 3).ToString() + ".. "
       + BorderSnapRow(frame, row, outlineLeft - 3, outlineLeft + 2, 0) + " | x=" + (outlineRight - 2).ToString() + ".. "
       + BorderSnapRow(frame, row, outlineRight - 2, outlineRight + 3, 0))
+    Console.WriteLine("border-snap-outline-offset " + tag + " row=" + row.ToString() + " x=" + (offsetLeft - 4).ToString() + ".. "
+      + BorderSnapRow(frame, row, offsetLeft - 4, offsetLeft + 1, 0) + " | x=" + (offsetRight - 1).ToString() + ".. "
+      + BorderSnapRow(frame, row, offsetRight - 1, offsetRight + 4, 0))
     let border = Math.Max(1, int32(Math.Round(device, MidpointRounding.AwayFromZero)))
     let bevelInsetLeft = frame.Pixels[PrimitivePixelIndex(frame.Width, bevelLeft + border, row)]
     let bevelInsetRight = frame.Pixels[PrimitivePixelIndex(frame.Width, bevelRight - border, row)]
@@ -105,17 +115,19 @@ func RunBorderSnapSmoke() {
     let clipInsetLeft = frame.Pixels[PrimitivePixelIndex(frame.Width, clipLeft + border, row)]
     let clipInsetRight = frame.Pixels[PrimitivePixelIndex(frame.Width, clipRight - border, row)]
     let outlinePartial = BorderSnapPartialColumns(frame, row, outlineLeft - 3, outlineRight + 3)
+    let offsetPartial = BorderSnapPartialColumns(frame, row, offsetLeft - 4, offsetRight + 4)
     Console.WriteLine("border-snap-result " + tag + " border=" + border.ToString() + " bevel_inset_left=" + bevelInsetLeft.ToString()
       + " bevel_inset_right=" + bevelInsetRight.ToString() + " clip_border_red=" + clipBorderLeft.ToString() + "," + clipBorderRight.ToString()
-      + " clip_inset_red=" + clipInsetLeft.ToString() + "," + clipInsetRight.ToString() + " outline_partial_columns=" + outlinePartial.ToString())
+      + " clip_inset_red=" + clipInsetLeft.ToString() + "," + clipInsetRight.ToString() + " outline_partial_columns=" + outlinePartial.ToString()
+      + " outline_offset_partial_columns=" + offsetPartial.ToString())
     Console.SetError(originalError)
     ReadbackValidateCommonDiagnostics(capturedError.ToString())
     Require(bevelInsetLeft == uint8(0) && bevelInsetRight == uint8(0),
       "Inset shadow line does not start at the snapped border edge at display scale " + device.ToString(CultureInfo.InvariantCulture))
     Require(clipBorderLeft == uint8(255) && clipBorderRight == uint8(255) && clipInsetLeft == uint8(0) && clipInsetRight == uint8(0),
       "Overflow clip does not start at the snapped border edge at display scale " + device.ToString(CultureInfo.InvariantCulture))
-    Require(outlinePartial == 0,
-      "Outline rendered " + outlinePartial.ToString() + " partial columns at display scale " + device.ToString(CultureInfo.InvariantCulture))
+    Require(outlinePartial == 0 && offsetPartial == 0,
+      "Outline rendered " + outlinePartial.ToString() + " partial columns (offset case " + offsetPartial.ToString() + ") at display scale " + device.ToString(CultureInfo.InvariantCulture))
   } finally {
     if opened.IsOpen {
       opened.RequestClose()

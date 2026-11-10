@@ -894,7 +894,7 @@ internal partial class VulkanSceneCompiler {
         return ConservativeBounds{}
       }
     let width = OutlineWidth(node)
-    let offset = node.OutlineOffset.Px
+    let offset = OutlineOffset(node)
     if !finiteVulkanSceneValue(width) || !finiteVulkanSceneValue(offset) || width <= 0.0F {
       return ConservativeBounds{}
     }
@@ -916,6 +916,13 @@ internal partial class VulkanSceneCompiler {
     if !finiteVulkanSceneValue(width) || width <= 0.0F { return width }
     let density = TransformGeometry.PixelDensity(node)
     return MathF.Max(1.0F, MathF.Round(width * density, MidpointRounding.AwayFromZero)) / density
+  }
+
+  private func OutlineOffset(node Node) float32 {
+    let offset = node.OutlineOffset.Px
+    if !finiteVulkanSceneValue(offset) || offset == 0.0F { return offset }
+    let density = TransformGeometry.PixelDensity(node)
+    return MathF.Round(offset * density, MidpointRounding.AwayFromZero) / density
   }
 
   private func OutlineRadius(
