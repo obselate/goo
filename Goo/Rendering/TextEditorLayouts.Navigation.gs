@@ -305,7 +305,7 @@ internal partial class TextEditorLayouts {
         else if logicalLeft + rect.W > x + right {
           x = MathF.Ceiling((logicalLeft + rect.W - right) * scale) / scale
         }
-        if logicalTop < y + top { y = logicalTop - top }
+        if logicalTop < y + top { y = logicalTop - top - state.TopInset }
         else if logicalTop + rect.H > y + bottom { y = logicalTop + rect.H - bottom }
         ScrollState.To(n, x, y, true, false)
       }

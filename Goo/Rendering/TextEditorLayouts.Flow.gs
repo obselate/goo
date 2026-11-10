@@ -34,6 +34,18 @@ internal partial class TextEditorLayouts {
         let projections = editorProjections(state, paragraphWidth, height)
         let styles = editorStyles(state, revision)
         let used = state.BeginUsedParagraphs()
+        var bottomInset = 0.0F
+        state.TopInset = 0.0F
+        if snapshot.LineCount > 0 {
+          let first = cachedParagraph(n, state, snapshot, 0, projections, styles, paragraphWidth,
+            fingerprint, lineHeight, metrics.Ascent, metrics.Descent)
+          let last = cachedParagraph(n, state, snapshot, snapshot.LineCount - 1, projections, styles,
+            paragraphWidth, fingerprint, lineHeight, metrics.Ascent, metrics.Descent)
+          used.Add(first)
+          used.Add(last)
+          state.TopInset = glyphOverflow(first.Lines[0])
+          bottomInset = glyphOverflow(last.Lines[last.Lines.Count - 1])
+        }
         let bounded = height >= 0.0F
         var firstLine int32 = 0
         var lastLine = snapshot.LineCount
@@ -52,16 +64,8 @@ internal partial class TextEditorLayouts {
           lineHeight, metrics.Ascent, metrics.Descent)
         var widest = 0.0F
         for lineIndex in firstLine ... lastLine {
-          let source = snapshot.GetLineRange(lineIndex)
-          var cached = state.Paragraph(source, paragraphWidth, fingerprint, lineHeight, metrics.Ascent,
-            metrics.Descent)
-          if cached == nil {
-            let value = paragraphLayout(n, state, snapshot, lineIndex, projections, styles, paragraphWidth,
-              fingerprint, lineHeight, metrics.Ascent, metrics.Descent)
-            state.AddParagraph(value)
-            cached = value
-          }
-          let paragraphCache = cached
+          let paragraphCache = cachedParagraph(n, state, snapshot, lineIndex, projections, styles,
+            paragraphWidth, fingerprint, lineHeight, metrics.Ascent, metrics.Descent)
           used.Add(paragraphCache)
           if n.EditorShowLineNumbers && paragraphCache.Lines.Count > 0 {
             let first = paragraphCache.Lines[0]
@@ -89,15 +93,34 @@ internal partial class TextEditorLayouts {
         if bounded {
           result.Height = height > lineHeight ? height : lineHeight
           result.ContentWidth = widest + result.GutterWidth
-          result.ContentHeight = top + float32(snapshot.LineCount - lastLine) * lineHeight
+          result.ContentHeight = top + bottomInset
+            + verticalOffsetForLine(state, snapshot, snapshot.LineCount, paragraphWidth, fingerprint, lineHeight,
+              metrics.Ascent, metrics.Descent)
+            - verticalOffsetForLine(state, snapshot, lastLine, paragraphWidth, fingerprint, lineHeight,
+              metrics.Ascent, metrics.Descent)
         } else {
-          result.Height = top
+          result.Height = top + bottomInset
           result.ContentWidth = widest + result.GutterWidth
-          result.ContentHeight = top
+          result.ContentHeight = result.Height
         }
         if bounded { state.TrimParagraphs(used) }
         return result
       }
+
+    private func cachedParagraph(n Node, state TextEditorRenderState, snapshot TextSnapshot, lineIndex int32,
+      projections List[TextEditorProjection], styles List[TextEditorPresentationStyle],
+      width float32, fingerprint int32, lineHeight float32, ascent float32, descent float32)
+    TextEditorParagraphLayout{
+      if let cached = state.Paragraph(snapshot.GetLineRange(lineIndex), width, fingerprint, lineHeight,
+        ascent, descent) { return cached }
+      let value = paragraphLayout(n, state, snapshot, lineIndex, projections, styles, width,
+        fingerprint, lineHeight, ascent, descent)
+      state.AddParagraph(value)
+      return value
+    }
+
+    private func glyphOverflow(line TextEditorVisualLine) float32 ->
+      MathF.Max(0.0F, (line.Descent - line.Ascent - line.Height) * 0.5F)
 
     internal func ScrollPoint(n Node, verticalOnly bool = false) TransformPoint {
       guard let state = n.EditorState else { return TransformPoint{Valid: true} }
@@ -175,8 +198,8 @@ internal partial class TextEditorLayouts {
 
     private func verticalOffsetForLine(state TextEditorRenderState, snapshot TextSnapshot,
       target int32, width float32, fingerprint int32, lineHeight float32,
-      ascent float32, descent float32) float32 -> float32(target) * lineHeight + state.HeightAdjustmentBefore(snapshot, target,
-        width, fingerprint, lineHeight, ascent, descent)
+      ascent float32, descent float32) float32 -> state.TopInset + float32(target) * lineHeight
+        + state.HeightAdjustmentBefore(snapshot, target, width, fingerprint, lineHeight, ascent, descent)
 
     private func appendParagraph(layout TextEditorVisualLayout, n Node,
       paragraph TextEditorResolvedParagraph, width float32, top float32) float32{
@@ -281,6 +304,8 @@ internal partial class TextEditorLayouts {
         var visualHeight = layout.LineHeight
         var visualAscent = layout.Ascent
         var visualDescent = layout.Descent
+        var slotAscent = 0.0F
+        var slotDescent = 0.0F
         for segment in paragraph.Segments {
           if segment.DisplayStart >= displayEnd || segment.DisplayStart + segment.DisplayLength <= displayStart {
             continue
@@ -289,19 +314,24 @@ internal partial class TextEditorLayouts {
             int32(segment.Style.FontWeight), segment.Style.FontStyle == FontStyle.Italic)
           if metrics.Ascent < visualAscent { visualAscent = metrics.Ascent }
           if metrics.Descent > visualDescent { visualDescent = metrics.Descent }
-          let styledHeight = (metrics.Descent - metrics.Ascent) * segment.Style.LineHeight
+          let styledHeight = segment.Style.FontSize * segment.Style.LineHeight
           if styledHeight > visualHeight { visualHeight = styledHeight }
           if segment.Slot && !segment.BlockSlot {
             if let baseline = segment.SlotBaseline {
-              visualAscent = Math.Min(visualAscent, -baseline)
-              visualDescent = Math.Max(visualDescent, segment.SlotHeight - baseline)
+              slotAscent = Math.Min(slotAscent, -baseline)
+              slotDescent = Math.Max(slotDescent, segment.SlotHeight - baseline)
+              visualAscent = Math.Min(visualAscent, slotAscent)
+              visualDescent = Math.Max(visualDescent, slotDescent)
             }
           }
           if segment.Slot && segment.SlotHeight > visualHeight {
             visualHeight = segment.SlotHeight
           }
         }
-        visualHeight = Math.Max(visualHeight, visualDescent - visualAscent)
+        if slotDescent > slotAscent {
+          let center = visualAscent + visualDescent
+          visualHeight = Math.Max(visualHeight, Math.Max(center - 2.0F * slotAscent, 2.0F * slotDescent - center))
+        }
         let firstSource = SourceOffsetForDisplay(paragraph, displayStart, TextAffinity.Downstream)
         let lastSource = SourceOffsetForDisplay(paragraph, displayEnd, TextAffinity.Upstream)
         let line = TextEditorVisualLine(paragraph, displayStart,

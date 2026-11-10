@@ -462,6 +462,8 @@ class FixtureContractTests {
             yield Contract[TextEditorInputFixtures]("ReadOnlyTabEscapesAndCommandsCanCancel")
             yield Contract[TextEditorInputFixtures]("WheelScrollAndCaretBlinkUseEditorState")
             yield Contract[TextPresentationLayerFixtures]("InlineTextSlotsShareProseBaselineAfterWrapping")
+            yield Contract[TextPresentationLayerFixtures]("StyledLinesUseFontSizeLineHeight")
+            yield Contract[TextPresentationLayerFixtures]("EditBelowViewportRefreshesLastLineOverflow")
             yield Contract[TextPresentationLayerFixtures]("BulkStyleReplacementIsAtomicAndPreservesProjections")
             yield Contract[TextPresentationLayerFixtures]("FullProjectionDeletionIgnoresInsertionsAndRestoresHistory")
             yield Contract[TextPresentationLayerFixtures]("ViewportScrollReusesStyleSpansUntilRevisionChanges")

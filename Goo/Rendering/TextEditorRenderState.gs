@@ -33,6 +33,7 @@ internal sealed class TextEditorRenderState : IDisposable {
   internal prop Layout TextEditorVisualLayout? { get; set; }
   internal prop Dirty bool{ get; set; }
   internal prop PlaceholderShape ShapedText? { get; set; }
+  internal prop TopInset float32{ get; set; }
 
   internal init(node Node, document TextDocument, controller TextEditorController,
     layers []TextPresentationLayer, readOnly bool) {
@@ -307,10 +308,15 @@ internal sealed class TextEditorRenderState : IDisposable {
     for line in layout.Lines {
       if line.SourceEnd > sourceEnd { sourceEnd = line.SourceEnd }
     }
-    for item in change.Changes {
-      if item.Range.Start <= sourceEnd { return false }
-    }
     let lineCount = document.LineCount
+    let lastLineStart = document.GetLineRange(lineCount - 1).Start
+    var shift int32 = 0
+    for item in change.Changes {
+      if item.Range.Start <= sourceEnd || item.Range.Start + shift + item.InsertedText.Length >= lastLineStart {
+        return false
+      }
+      shift = shift + item.InsertedText.Length - item.Range.Length
+    }
     if node.EditorShowLineNumbers && TextEditorLayouts.LineNumberDigits(lineCount)
       != TextEditorLayouts.LineNumberDigits(layout.DocumentLineCount) { return false }
     layout.ContentHeight = layout.ContentHeight

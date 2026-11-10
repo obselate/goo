@@ -64,6 +64,50 @@ internal class TextPresentationLayerFixtures {
     return true
   }
 
+  func StyledLinesUseFontSizeLineHeight() bool {
+    for lineHeight in []float64{ 1.0, 1.43 } {
+      let document = TextDocument("styled\nplain")
+      using let controller = TextEditorController(document)
+      using let layer = TextPresentationLayer(document)
+      layer.SetStyle("color", TextRange(0, 6), Style{ Color: Color.Parse("#ff0000") })
+      let node = Reconciler{ Res: Resolver{} }.Mount(TextEditor(controller, []TextPresentationLayer{layer}) {
+        Width = 200, FontSize = 14, LineHeight = lineHeight,
+      })
+      Layout{}.Calculate(node, 200.0F, 100.0F)
+      let layout = TextEditorLayouts.For(node, BoxGeometry.ContentWidth(node), BoxGeometry.ContentHeight(node))
+      let first = layout.Lines[0]
+      let last = layout.Lines[1]
+      let ascentTop = first.Top + (first.Height - (first.Descent - first.Ascent)) * 0.5F
+      let descentBottom = last.Top + (last.Height + (last.Descent - last.Ascent)) * 0.5F
+      if first.Height != TextLayouts.resolvedLineHeight(node) || last.Height != TextLayouts.resolvedLineHeight(node)
+        || ascentTop < 0.0F || descentBottom > BoxGeometry.ContentHeight(node) + 0.001F
+        || descentBottom > layout.ContentHeight + 0.001F { return false }
+    }
+    return true
+  }
+
+  func EditBelowViewportRefreshesLastLineOverflow() bool {
+    let text = StringBuilder()
+    for i in 0 ... 300 { text.Append("alpha\n") }
+    text.Append("BIG\ntail")
+    let document = TextDocument(text.ToString())
+    using let controller = TextEditorController(document)
+    using let layer = TextPresentationLayer(document)
+    let big = document.GetLineRange(300)
+    layer.SetStyle("big", big, Style{ FontSize: 30, LineHeight: 1.0 })
+    let driver = InputFixtureDriver(TextPresentationCacheCell(controller, layer), 320, 120)
+    document.Apply(TextChange(TextRange(big.Start + big.Length, 5), ""))
+    driver.Update()
+    let node = driver.Window.Tree!!
+    let scrollContentHeight = node.ContentH
+    controller.ScrollTo(0.0, 100000.0)
+    driver.Update()
+    let layout = TextEditorLayouts.For(node, BoxGeometry.ContentWidth(node), BoxGeometry.ContentHeight(node))
+    let last = layout.Lines[layout.Lines.Count - 1]
+    let descentBottom = last.Top + (last.Height + (last.Descent - last.Ascent)) * 0.5F
+    return descentBottom <= scrollContentHeight + 0.01F
+  }
+
   func BulkStyleReplacementIsAtomicAndPreservesProjections() bool {
     let document = TextDocument("alpha beta")
     using let layer = TextPresentationLayer(document)
