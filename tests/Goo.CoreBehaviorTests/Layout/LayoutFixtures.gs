@@ -581,6 +581,23 @@ internal class LayoutFixtures {
     return true
   }
 
+  func BorderSnappingAlignsPaddingBox() bool {
+    for density in []float32{ 1.0F, 1.25F, 1.5F, 2.0F } {
+      let root = Reconciler{ Res: Resolver{} }.Mount(Container{ Width: 100, Height: 50, BorderWidth: 1, Padding: 1,
+        Container{ FlexGrow: 1 },
+      })
+      let layout = Layout()
+      layout.SetPixelDensity(density)
+      layout.Calculate(root, 100.0F, 50.0F)
+      let border = MathF.Max(1.0F, MathF.Round(density, MidpointRounding.AwayFromZero)) / density
+      if BoxGeometry.PaddingEdgeLeft(root) != border || BoxGeometry.PaddingEdgeWidth(root) != 100.0F - 2.0F * border
+        || BoxGeometry.ContentLeft(root) != border + 1.0F {
+        throw InvalidOperationException("density=${density}, border=${border}, paddingEdge=${BoxGeometry.PaddingEdgeLeft(root)}, contentLeft=${BoxGeometry.ContentLeft(root)}")
+      }
+    }
+    return true
+  }
+
   func CustomMeasurementsPreserveLogicalSizes() bool {
     for density in []float32{ 1.0F, 1.5F, 2.0F } {
       let policy = LayoutMeasurementFixtureAlgorithm()

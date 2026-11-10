@@ -59,6 +59,7 @@ namespace Facebook.Yoga
         public Node(Config? config)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config), "Attempting to construct Node with null config");
+            _style.Config = _config;
 
             if (_config.UseWebDefaults())
             {
@@ -226,7 +227,11 @@ namespace Facebook.Yoga
 
         public void SetBaselineFunc(YGBaselineFunc? baseLineFunc) => _baselineFunc = baseLineFunc;
         public void SetDirtiedFunc(YGDirtiedFunc? dirtiedFunc) => _dirtiedFunc = dirtiedFunc;
-        public void SetStyle(Style style) => _style = style;
+        public void SetStyle(Style style)
+        {
+            _style = style;
+            _style.Config = _config;
+        }
         public void SetLayout(LayoutResults layout) => _layout = layout;
         public void SetLineIndex(nuint lineIndex) => _lineIndex = lineIndex;
         public void SetIsReferenceBaseline(bool isReferenceBaseline) => _isReferenceBaseline = isReferenceBaseline;
@@ -248,6 +253,7 @@ namespace Facebook.Yoga
             }
 
             _config = config;
+            _style.Config = config;
         }
 
         public void SetDirty(bool isDirty)
@@ -569,7 +575,7 @@ namespace Facebook.Yoga
             _measureFunc = null;
             _baselineFunc = null;
             _dirtiedFunc = null;
-            _style = new Style();
+            _style = new Style { Config = _config };
             _layout = new LayoutResults();
             _lineIndex = 0;
             _contentsChildrenCount = 0;
