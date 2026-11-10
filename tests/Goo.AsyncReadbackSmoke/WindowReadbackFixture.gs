@@ -891,7 +891,7 @@ public partial class Window {
     out region VulkanDamageRegion) bool{
       region = VulkanDamageRegion{}
       guard let target = VulkanTargetForTest() else { return false }
-      return target.ScenePartialDamageSinceForTest(applied, dpi, out region)
+      return target.ScenePartialDamageSinceForTest(applied, RenderScale, out region)
     }
 
   internal func InputQueuePointerMoveForTest(x float64, y float64) {

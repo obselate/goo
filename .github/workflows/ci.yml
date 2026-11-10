@@ -1574,7 +1574,6 @@ jobs:
           .github/scripts/with-headless-wayland.sh env \
             GOO_VK_DIAGNOSTICS=1 \
             GOO_SCROLL_PLACEMENT_SMOKE=1 \
-            GOO_SCROLL_SOFTWARE_REFERENCE=1 \
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 
           .github/scripts/with-headless-wayland.sh env \
