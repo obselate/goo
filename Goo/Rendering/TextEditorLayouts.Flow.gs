@@ -93,7 +93,11 @@ internal partial class TextEditorLayouts {
         if bounded {
           result.Height = height > lineHeight ? height : lineHeight
           result.ContentWidth = widest + result.GutterWidth
-          result.ContentHeight = top + float32(snapshot.LineCount - lastLine) * lineHeight + bottomInset
+          result.ContentHeight = top + bottomInset
+            + verticalOffsetForLine(state, snapshot, snapshot.LineCount, paragraphWidth, fingerprint, lineHeight,
+              metrics.Ascent, metrics.Descent)
+            - verticalOffsetForLine(state, snapshot, lastLine, paragraphWidth, fingerprint, lineHeight,
+              metrics.Ascent, metrics.Descent)
         } else {
           result.Height = top + bottomInset
           result.ContentWidth = widest + result.GutterWidth

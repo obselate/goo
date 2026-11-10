@@ -308,10 +308,15 @@ internal sealed class TextEditorRenderState : IDisposable {
     for line in layout.Lines {
       if line.SourceEnd > sourceEnd { sourceEnd = line.SourceEnd }
     }
-    for item in change.Changes {
-      if item.Range.Start <= sourceEnd { return false }
-    }
     let lineCount = document.LineCount
+    let lastLineStart = document.GetLineRange(lineCount - 1).Start
+    var shift int32 = 0
+    for item in change.Changes {
+      if item.Range.Start <= sourceEnd || item.Range.Start + shift + item.InsertedText.Length >= lastLineStart {
+        return false
+      }
+      shift = shift + item.InsertedText.Length - item.Range.Length
+    }
     if node.EditorShowLineNumbers && TextEditorLayouts.LineNumberDigits(lineCount)
       != TextEditorLayouts.LineNumberDigits(layout.DocumentLineCount) { return false }
     layout.ContentHeight = layout.ContentHeight
