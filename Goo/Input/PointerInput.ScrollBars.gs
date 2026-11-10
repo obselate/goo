@@ -1,5 +1,6 @@
 package Goo
 
+import System.Collections.Generic
 import System.Runtime.CompilerServices
 
 internal class PointerScrollDragState {
@@ -325,50 +326,52 @@ internal partial class PointerInput {
     }
   }
 
+  internal func ScrollbarAt(root Node, x float32, y float32) bool {
+    var horizontal Node?
+    var vertical Node?
+    scrollbarsAt(root, x, y, hitChain, out horizontal, out vertical)
+    return horizontal != nil || vertical != nil
+  }
+
+  private func scrollbarsAt(root Node?, x float32, y float32, chain List[NodeMount],
+    out horizontal Node?, out vertical Node?) {
+      horizontal = nil
+      vertical = nil
+      chain.Clear()
+      if let tree = root {
+        hitChainInto(tree, x, y, chain)
+        if !chainDisabled(chain) {
+          for var i = chain.Count; i > 0; i-- {
+            guard let n = chain[i - 1].Current else { continue }
+            if n.Retired || !canReceiveInput(n) { continue }
+            if n.Kind == NodeKind.Editor { ScrollState.SyncEditor(n) }
+            let point = TransformGeometry.WindowToNode(n, x, y)
+            if !point.Valid { continue }
+            if vertical == nil && scrollbarContains(n, true, point.X, point.Y) { vertical = n }
+            if horizontal == nil && scrollbarContains(n, false, point.X, point.Y) { horizontal = n }
+            if vertical != nil && horizontal != nil { break }
+            if n.IsPortal { break }
+          }
+        }
+      }
+      chain.Clear()
+    }
+
+  private func scrollbarContains(n Node, vertical bool, x float32, y float32) bool {
+    var geometry ScrollThumbGeometry
+    let available = if vertical {
+      verticalScrollThumb(n, out geometry)
+    } else {
+      horizontalScrollThumb(n, out geometry)
+    }
+    return available && geometry.HitBounds.Contains(x, y)
+  }
+
   private func updateScrollHover(root Node?, x float32, y float32, resolver Resolver) bool {
     let state = PointerScrollStates.Hover(this)
     var horizontal Node?
     var vertical Node?
-    scratchChain.Clear()
-    if let tree = root {
-      hitChainInto(tree, x, y, scratchChain)
-      if !chainDisabled(scratchChain) {
-        for var i = scratchChain.Count; i > 0; i-- {
-          guard let n = scratchChain[i - 1].Current else { continue }
-          if n.Retired || !canReceiveInput(n) { continue }
-          if n.Kind == NodeKind.Editor { ScrollState.SyncEditor(n) }
-          let point = TransformGeometry.WindowToNode(n, x, y)
-          if !point.Valid { continue }
-          if vertical == nil {
-            var geometry ScrollThumbGeometry
-            if let descriptor = n.ScrollbarY {
-              if n.ScrollbarVisibilityY != ScrollbarVisibility.Hidden
-                && (descriptor.Track != nil || descriptor.Thumb != nil) {
-                if verticalScrollThumb(n, out geometry)
-                  && geometry.HitBounds.Contains(point.X, point.Y) {
-                    vertical = n
-                  }
-              }
-            }
-          }
-          if horizontal == nil {
-            var geometry ScrollThumbGeometry
-            if let descriptor = n.ScrollbarX {
-              if n.ScrollbarVisibilityX != ScrollbarVisibility.Hidden
-                && (descriptor.Track != nil || descriptor.Thumb != nil) {
-                if horizontalScrollThumb(n, out geometry)
-                  && geometry.HitBounds.Contains(point.X, point.Y) {
-                    horizontal = n
-                  }
-              }
-            }
-          }
-          if vertical != nil && horizontal != nil { break }
-          if n.IsPortal { break }
-        }
-      }
-    }
-    scratchChain.Clear()
+    scrollbarsAt(root, x, y, scratchChain, out horizontal, out vertical)
     var changed bool
     if state.Horizontal != horizontal {
       if let previous = state.Horizontal {

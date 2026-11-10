@@ -154,6 +154,7 @@ class FixtureContractTests {
             yield Contract[CellFixtures]("PostReportsQueueAcceptance")
             yield Contract[CellFixtures]("WindowCloseCompletesAfterCleanupFailures")
             yield Contract[ClickSequenceFixtures]("DragRegionIgnoresFocusableAncestorsButPreservesControls")
+            yield Contract[ClickSequenceFixtures]("EdgeScrollbarTakesUndecoratedResizeBand")
             yield Contract[ClickSequenceFixtures]("GenericCountsRespectBoundariesTargetsButtonsAndCancellation")
             yield Contract[ClickSequenceFixtures]("RoutedInteractiveChildIsRelativeToEachHandler")
             yield Contract[ClickSequenceFixtures]("TextSelectionUsesTheRoutedCountAndCaptureDoesNotCreateFalseClicks")

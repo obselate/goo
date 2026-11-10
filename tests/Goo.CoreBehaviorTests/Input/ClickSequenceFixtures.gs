@@ -13,6 +13,15 @@ internal class ClickSequenceFixtures {
       && window.hitTest(10, 75) == WindowHitResult.Normal
   }
 
+  func EdgeScrollbarTakesUndecoratedResizeBand() bool {
+    let window = Window{Root: EdgeScrollbarCell{}, Width: 200, Height: 100, Decorated: false, Resizable: true}
+    window.UpdateTree()
+    return window.hitTest(196, 50) == WindowHitResult.Normal
+      && window.hitTest(4, 50) == WindowHitResult.Left
+      && window.hitTest(100, 96) == WindowHitResult.Bottom
+      && window.hitTest(196, 96) == WindowHitResult.BottomRight
+  }
+
   func RoutedInteractiveChildIsRelativeToEachHandler() bool {
     let parent = List[bool]()
     let child = List[bool]()
@@ -173,5 +182,16 @@ internal class DragRegionHitCell : Cell {
       Button{Width: 100, Height: 60, OnClick: () -> {}},
       Container{Width: 100, Height: 60, Focusable: true},
     }),
+  }
+}
+
+internal class EdgeScrollbarCell : Cell {
+  override func Build() Blob -> Container{
+    Width: 200,
+    Height: 100,
+    OverflowY: Overflow.Scroll,
+    ScrollbarVisibilityY: ScrollbarVisibility.Always,
+    ScrollbarY: Scrollbar{Thickness: 8, Inset: 0, Track: Container{}, Thumb: Container{}},
+    Container{Width: 200, Height: 300, FlexShrink: 0},
   }
 }

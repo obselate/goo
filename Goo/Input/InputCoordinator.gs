@@ -366,4 +366,6 @@ internal partial class InputCoordinator {
 
   internal func HitInfo(root Node?, x float32, y float32) InputHitInfo ->
   pointer.HitInfo(root, x, y)
+
+  internal func ScrollbarAt(root Node, x float32, y float32) bool -> pointer.ScrollbarAt(root, x, y)
 }

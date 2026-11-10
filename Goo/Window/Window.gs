@@ -441,6 +441,7 @@ public partial class Window {
   }
 
   /// Gets or sets the undecorated edge resize band in logical pixels.
+  /// A scrollbar under an edge band takes the pointer. Corners always resize.
   public prop ResizeBand float32{
     get -> resizeBand
     set(v) {
