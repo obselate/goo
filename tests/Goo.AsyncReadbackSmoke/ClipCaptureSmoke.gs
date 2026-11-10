@@ -229,6 +229,7 @@ func RunHideResourcesSmoke() {
         Thread.Yield()
       }
       Require(held, "Present queue work was not held")
+      let presentGeneration = target.CurrentPresentGeneration
       let previousEvents = visibilityEvents
       let previousActivities = inputActivities
       Require(window.Hide() == WindowOperationResult.Accepted, "Queued Hide was rejected")
@@ -255,6 +256,11 @@ func RunHideResourcesSmoke() {
       }
       WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
       WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
+      if operation == "show" {
+        WindowReadbackTestFixture.PollQueueCompletion(window)
+        Require(target.CurrentPresentGeneration == presentGeneration,
+          "Canceled Hide discarded the mapped swapchain")
+      }
       window.PumpScheduled(0.0)
       if operation == "close" {
         Require(!window.IsOpen, "Close retained a pending native hide")

@@ -18,8 +18,8 @@ internal unsafe partial class VulkanWindowTarget {
   public func SetHidden(value bool) {
     if disposed || hidden == value { return }
     hidden = value
+    hideReleasePending = value
     if value {
-      hideReleasePending = true
       CancelDeferredInitialFrame()
     } else if (host as SdlHost?)?.IsLayerWindow == true {
       firstPresentationPending = true

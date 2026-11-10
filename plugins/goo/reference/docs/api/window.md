@@ -1678,7 +1678,7 @@ Gets an immutable snapshot of the current host's displays. Open the window first
 
 ### `Hide`
 
-Hides an open desktop window and cancels transient input without destroying its tree. Releases the swapchain and clip atlas after pending GPU work completes. Show recreates them. Modal windows and owners blocked by a modal child or chooser cannot be hidden.
+Hides an open desktop window and cancels transient input without destroying its tree. Releases the swapchain and clip atlas after pending GPU work completes. Show recreates them. Modal windows and owners blocked by a modal child or chooser cannot be hidden. Visibility and input change immediately. Regular desktop unmapping can be deferred until pending queue calls complete.
 
 ### `InitializeApplicationActivation(ApplicationActivation)`
 
@@ -1946,7 +1946,7 @@ Reports whether the window is open.
 
 ### `IsVisible`
 
-Gets whether the host reports a visible viewport. This does not imply focus or lack of occlusion.
+Gets whether the host reports a visible viewport and no accepted Hide is pending. This does not imply focus or lack of occlusion.
 
 ### `LastAccessibilityError`
 
