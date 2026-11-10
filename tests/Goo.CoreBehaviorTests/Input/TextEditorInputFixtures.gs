@@ -397,6 +397,19 @@ internal class TextEditorInputFixtures {
     return rect.Y >= top && rect.Y + rect.H <= top + BoxGeometry.ViewportHeight(node)
   }
 
+  func CaretRevealInViewportShorterThanCaretIsStable() bool {
+    using let controller = TextEditorController(TextDocument("one\ntwo\nthree\nfour"))
+    let driver = InputFixtureDriver(TextEditorShortCell(controller), 400, 300)
+    driver.Update()
+    let node = driver.Window.Tree!!
+    let caret = TextPosition{ Offset: controller.Document.GetLineRange(2).Start, Affinity: TextAffinity.Downstream }
+    let first = TextEditorLayouts.RevealOffset(node, caret)
+    ScrollState.To(node, float32(first.X), float32(first.Y), true)
+    let second = TextEditorLayouts.RevealOffset(node, caret)
+    if second != first { throw InvalidOperationException("first=${first.Y}, second=${second.Y}") }
+    return true
+  }
+
   func ContentHeightKeepsMeasuredParagraphsAfterEviction() bool {
     using let controller = TextEditorController(TextDocument(wrappedParagraphs()))
     let driver = InputFixtureDriver(TextEditorWrappedCell(controller), 400, 300)
@@ -477,6 +490,14 @@ internal class TextEditorInputCell : Cell {
     FontSize = 16.0,
     OnSubmit = () -> { Submits++ },
   }
+}
+
+internal class TextEditorShortCell : Cell {
+  private let controller TextEditorController
+
+  internal init(controller TextEditorController) { this.controller = controller }
+
+  override func Build() Blob -> TextEditor(controller) { Width = 200.0, Height = 12.0, FontSize = 14.0 }
 }
 
 internal class TextEditorWrappedCell : Cell {
