@@ -4,6 +4,8 @@ import System
 
 /// Specifies one normalized 2D panel transform.
 /// Scale runs first, then skew, then rotation, then translation.
+/// Translation-only ancestor chains snap their combined translation to whole Window.PixelScale device pixels.
+/// Scale, rotation and skew retain sub-pixel precision and inherit any ancestor translation snapping.
 public struct PanelTransform : IEquatable[PanelTransform] {
   private var translateX Length
   private var translateY Length

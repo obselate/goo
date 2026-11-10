@@ -4,6 +4,95 @@ import System
 import System.Runtime.CompilerServices
 
 internal class VulkanSceneCompilerFixtures {
+  func TranslationSnappingComposesInWindowSpaceContract() bool {
+    let chain = Reconciler{ Res: Resolver{} }.Mount(Container{
+      Width: 100, Height: 100, Transform: PanelTransform{ TranslateX: 0.4 }, TransformOriginX: 0,
+      Container{ Width: 100, Height: 100, Transform: PanelTransform{ TranslateX: 0.3 }, TransformOriginX: 0,
+        Container{ Width: 100, Height: 100, Transform: PanelTransform{ TranslateX: -0.3 }, TransformOriginX: 0,
+          Container{ Width: 20, Height: 20, Transform: PanelTransform{ TranslateX: 0.1 }, TransformOriginX: 0 },
+        },
+      },
+    })
+    try {
+      let layout = Layout()
+      layout.SetPixelDensity(1.25F)
+      layout.Calculate(chain, 100.0F, 100.0F)
+      var current = chain
+      var total = 0.0F
+      var previous = 0.0F
+      for move in []float32{ 0.4F, 0.3F, -0.3F, 0.1F } {
+        total += move
+        let expected = MathF.Round(total * 1.25F) / 1.25F
+        if TransformGeometry.WindowMatrix(current).TX != expected
+          || TransformGeometry.Matrix(current).TX != expected - previous { return false }
+        previous = expected
+        if current.Children.Count > 0 { current = current.Children[0] }
+      }
+    } finally {
+      NodeLifecycle.DisposeTree(chain)
+    }
+    for transform in []PanelTransform{
+      PanelTransform{ TranslateX: 0.4 },
+      PanelTransform{ TranslateX: 0.4, Scale: 1.5 },
+      PanelTransform{ TranslateX: 0.4, Rotate: 90 },
+      PanelTransform{ TranslateX: 0.4, SkewX: 10 },
+    } {
+      let root = Reconciler{ Res: Resolver{} }.Mount(Container{
+        Width: 100, Height: 100, Transform: transform,
+        TransformOriginX: 0, TransformOriginY: 0,
+        Container{ Width: 20, Height: 20, BackgroundColor: Color.White,
+          Transform: PanelTransform{ TranslateX: 0.4 },
+          TransformOriginX: 0, TransformOriginY: 0 },
+      })
+      try {
+        let layout = Layout()
+        layout.SetPixelDensity(1.25F)
+        layout.Calculate(root, 100.0F, 100.0F)
+        let child = root.Children[0]
+        let local = TransformGeometry.Matrix(child)
+        let outer = TransformGeometry.Matrix(root)
+        let world = TransformGeometry.WindowMatrix(child)
+        let pure = transform.Scale == 1 && transform.Rotate == 0 && transform.SkewX == 0
+        if pure {
+          if world.TX * 1.25F != 1.0F || local.TX != 0.8F || outer.TX != 0.0F { return false }
+        } else if local.TX != 0.4F || outer.TX != 0.4F
+          || world.TX != outer.A * 0.4F + outer.TX { return false }
+        let compiler = VulkanSceneCompiler(64)
+        compiler.Compile(root, Color.Transparent, 100.0F, 100.0F)
+        if compiler.Frame.TransformCount != 2 { return false }
+        let drawn = compiler.Frame.Transforms[1]
+        let parent = compiler.Frame.Transforms[drawn.ParentIndex]
+        if drawn.TX != local.TX || parent.TX != outer.TX
+          || parent.A * drawn.TX + parent.C * drawn.TY + parent.TX != world.TX { return false }
+      } finally {
+        NodeLifecycle.DisposeTree(root)
+      }
+    }
+    for move in []float32{ -1.3F, -0.4F, 0.1F, 0.4F, 0.6F, 1.3F } {
+      let root = Reconciler{ Res: Resolver{} }.Mount(Container{
+        Width: 100, Height: 100, Transform: PanelTransform{ TranslateX: move },
+        TransformOriginX: 0, TransformOriginY: 0,
+        Container{ Width: 20, Height: 20, Transform: PanelTransform{ Scale: 1.5, TranslateX: 0.4 },
+          TransformOriginX: 0, TransformOriginY: 0 },
+      })
+      try {
+        let layout = Layout()
+        layout.SetPixelDensity(move == 0.1F ? 0.0F : 1.25F)
+        layout.Calculate(root, 100.0F, 100.0F)
+        let density = TransformGeometry.PixelDensity(root)
+        if move == 0.1F && density != 1.0F { return false }
+        let parent = TransformGeometry.WindowMatrix(root)
+        let child = TransformGeometry.WindowMatrix(root.Children[0])
+        if parent.TX * density != MathF.Round(move * density)
+          || MathF.Abs((parent.TX - move) * density) > 0.5F
+          || child.TX != parent.TX + 0.4F { return false }
+      } finally {
+        NodeLifecycle.DisposeTree(root)
+      }
+    }
+    return true
+  }
+
   func OpaqueViewportRootSkipsCoveredBackground() bool {
     let resolver = Resolver{}
     let root = Reconciler{Res: resolver}.Mount(Container{

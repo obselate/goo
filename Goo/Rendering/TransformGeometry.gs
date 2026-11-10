@@ -64,7 +64,14 @@ internal class TransformGeometry {
         rect.W = yoga.Layout.RawDimension(Dimension.Width)
         rect.H = yoga.Layout.RawDimension(Dimension.Height)
       }
-      var result = compose(outer, matrix(n, rect, parentRect))
+      var local = matrix(n, rect, parentRect)
+      if n.HasVisualTransform {
+        let authored = matrix(n, n.Rect, n.Parent?.Rect ?? Rect{})
+        let drawn = Matrix(n)
+        local.TX += drawn.TX - authored.TX
+        local.TY += drawn.TY - authored.TY
+      }
+      var result = compose(outer, local)
       if !n.IsPortal {
         if let parent = n.Parent {
           if !ScrollbarParts.ActiveChildren(parent).Contains(n) {
@@ -79,7 +86,40 @@ internal class TransformGeometry {
       return result
     }
 
-    internal func Matrix(n Node) Affine2D -> matrix(n, n.Rect, n.Parent?.Rect ?? Rect{})
+    internal func Matrix(n Node) Affine2D {
+      var local = matrix(n, n.Rect, n.Parent?.Rect ?? Rect{})
+      if !n.HasVisualTransform { return local }
+      if !translationOnly(local) { return local }
+      var x = 0.0F
+      var y = 0.0F
+      if !n.IsPortal {
+        if let parent = n.Parent {
+          if !translationToWindow(parent, out x, out y) { return local }
+        }
+      }
+      let scale = PixelDensity(n)
+      local.TX = (MathF.Round((x + local.TX) * scale) - MathF.Round(x * scale)) / scale
+      local.TY = (MathF.Round((y + local.TY) * scale) - MathF.Round(y * scale)) / scale
+      return local
+    }
+
+    private func translationOnly(value Affine2D) bool ->
+      value.A == 1.0F && value.B == 0.0F && value.C == 0.0F && value.D == 1.0F
+
+    private func translationToWindow(n Node, out x float32, out y float32) bool {
+      x = 0.0F
+      y = 0.0F
+      if !n.IsPortal {
+        if let parent = n.Parent {
+          if !translationToWindow(parent, out x, out y) { return false }
+        }
+      }
+      let local = matrix(n, n.Rect, n.Parent?.Rect ?? Rect{})
+      if !translationOnly(local) { return false }
+      x += local.TX
+      y += local.TY
+      return true
+    }
 
     private func matrix(n Node, rect Rect, parentRect Rect) Affine2D {
       let state = Transforming.Get(n)

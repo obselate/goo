@@ -108,6 +108,8 @@ class FixtureContractTests {
             yield Contract[PortalFixtures]("AnchoredSubrectangleAndCollisionBoundsContract")
             yield Contract[PortalFixtures]("AnchoredPlacementSizesToSelectedSideContract")
             yield Contract[PortalFixtures]("WindowPointPortalSharesDevicePixelRowsWithTreeContract")
+            yield Contract[PortalFixtures]("TranslatedWindowPointPortalSharesDeviceRowsContract")
+            yield Contract[VulkanSceneCompilerFixtures]("TranslationSnappingComposesInWindowSpaceContract")
             yield Contract[PortalFixtures]("ClippedAnchorPreservesMountedEditorContract")
             yield Contract[AccessibilityFixtures]("AdapterDeliveryThreadContract")
             yield Contract[AccessibilityFixtures]("DeclaredActionFailureContract")

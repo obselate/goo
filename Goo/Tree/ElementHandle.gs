@@ -43,6 +43,7 @@ public class ElementHandle {
   }
 
   /// Gets the transformed pre-snapping layout box in window logical coordinates.
+  /// Pure-move transforms use their drawn, device-pixel-snapped translation.
   /// Use it to position popups that must share this element's device-pixel phase.
   /// An unmounted handle returns an empty rectangle.
   public prop RawBorderBox ElementRect{
@@ -346,6 +347,7 @@ public data struct ElementMetrics {
   /// Gets the transformed border box in window logical coordinates.
   public prop BorderBox ElementRect{ get -> borderBox init -> borderBox = value }
   /// Gets the transformed pre-snapping layout box in window logical coordinates.
+  /// Pure-move transforms use their drawn, device-pixel-snapped translation.
   /// Use it to position popups that must share this element's device-pixel phase.
   public prop RawBorderBox ElementRect{ get -> rawBorderBox init -> rawBorderBox = value }
   /// Gets the transformed content box in window logical coordinates.
