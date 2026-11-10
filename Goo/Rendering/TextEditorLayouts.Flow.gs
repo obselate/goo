@@ -103,7 +103,7 @@ internal partial class TextEditorLayouts {
           result.ContentWidth = widest + result.GutterWidth
           result.ContentHeight = result.Height
         }
-        if bounded { state.TrimParagraphs(used) }
+        if bounded && !state.ResolvingScroll { state.TrimParagraphs(used) }
         return result
       }
 

@@ -182,13 +182,18 @@ internal partial class ScrollState {
       syncEditorExtent(n)
       if let request = controller.ScrollRequest, let state = n.EditorState
         && BoxGeometry.ViewportWidth(n) > 0.0F && BoxGeometry.ViewportHeight(n) > 0.0F {
-        while true {
-          let builds = state.ParagraphBuildCount
-          let target = if let position = request.Reveal { TextEditorLayouts.RevealOffset(n, position) }
-            else { Point{ X: request.X, Y: request.Y } }
-          let moved = setTarget(n, float32(target.X), float32(target.Y), true, false)
-          syncEditorExtent(n)
-          if !moved && state.ParagraphBuildCount == builds { break }
+        state.ResolvingScroll = true
+        try {
+          while true {
+            let builds = state.ParagraphBuildCount
+            let target = if let position = request.Reveal { TextEditorLayouts.RevealOffset(n, position) }
+              else { Point{ X: request.X, Y: request.Y } }
+            let moved = setTarget(n, float32(target.X), float32(target.Y), true, false)
+            syncEditorExtent(n)
+            if !moved && state.ParagraphBuildCount == builds { break }
+          }
+        } finally {
+          state.ResolvingScroll = false
         }
         controller.ScrollRequest = nil
       } else {
