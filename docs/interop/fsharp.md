@@ -23,22 +23,32 @@ The [compiled sample](../../samples/interop/FSharp/Program.fs) uses plain F# on 
             Text{Content: "Add one"},
         },
     }
-}</code></pre></td><td><pre><code>type Counter() =
-    inherit Cell()
-    let mutable count = 0
-    override _.Build() =
-        Container(Children = ResizeArray&lt;Blob>([
-            Text(Content = $"Count: {count}") :> Blob
-            Button(
-                OnClick = (fun () ->
-                    count &lt;- count + 1),
-                Children = ResizeArray&lt;Blob>([
-                    Text(Content = "Add one") :> Blob
-                ])) :> Blob
-        ]))</code></pre></td></tr>
+}</code></pre></td><td><pre><code>module Counter =
+    let view count (increment: Action) : Blob =
+        let root = Container()
+        root.Add(Text(Content = $"Count: {count}"))
+        let button = Button(OnClick = increment)
+        button.Add(Text(Content = "Add one"))
+        root.Add(button)
+        root :&gt; Blob
+
+    let create () =
+        let mutable count = 0
+        let increment = Action(fun () -&gt; count &lt;- count + 1)
+        { new Cell() with
+            override _.Build() = view count increment }</code></pre></td></tr>
 </table>
 
-Constructor property assignment works for Goo's init properties. Goo rebuilds the Cell that authored an input callback after it runs. Call `Rebuild()` for state changed outside input dispatch.
+Use `open System` and `open Goo`. The module separates the view from local state. The object expression implements `Cell` without a named subclass or `as this`. Create the callback once, outside `Build()`. `Add` changes only the new Blob tree.
+
+Assign `Counter.create()` to `Window.Root`. For a child Cell, keep a factory outside `Build()` and mount it with a stable key:
+
+```fsharp
+let counterFactory = Func<Cell>(Counter.create)
+let counter = Cell.Mount<Cell>(counterFactory, "counter")
+```
+
+The factory runs only for a new mount. Use distinct keys for different components mounted as `Cell`. Goo rebuilds the Cell that authored an input callback after it runs. Call `Rebuild()` for state changed outside input dispatch.
 
 ## Data list
 
@@ -53,23 +63,34 @@ let list = Container{
         OnClick: save,
         Text{Content: "Save"},
     },
-}</code></pre></td><td><pre><code>let rows =
-    names |> Seq.map (fun name ->
-        Text(Key = name, Content = name) :> Blob)
-let list =
-    Container(Children = ResizeArray&lt;Blob>(seq {
-        yield Text(Content = "Account") :> Blob
-        yield! rows
-        yield Button(
-            OnClick = (fun () -> save()),
-            Children = ResizeArray&lt;Blob>([
-                Text(Content = "Save") :> Blob
-            ])) :> Blob
-    }))</code></pre></td></tr>
+}</code></pre></td><td><pre><code>let listView (names: string array) (save: Action) =
+    let root = Container(Children = ResizeArray&lt;Blob&gt;(names.Length + 2))
+    root.Add(Text(Content = "Account"))
+    for name in names do
+        root.Add(Text(Key = name, Content = name))
+    let button = Button(OnClick = save)
+    button.Add(Text(Content = "Save"))
+    root.Add(button)
+    root
+
+let list = listView names save</code></pre></td></tr>
 </table>
 
-`yield!` spreads a sequence. `ResizeArray<Blob>` supplies the mutable `IList<Blob>` that `Children` accepts.
-Upcast child values with `:> Blob` when building the list.
+Use this for small, bounded data. Keep domain data outside `Build()`. Sort, filter and format collections when the data changes. Use virtual rows for large or unbounded data.
+
+`Add` accepts derived Blobs without a cast. The capacity reserves space for the heading, rows and button without growing the child list. The code creates no temporary sequence, F# list or array. This follows the module, closure and object-expression style in [Angel D. Muñoz's Counter](https://github.com/AngelMunoz/Navs/blob/vnext/samples/GooSample/Counter.fs).
+
+F# 6 and later can also infer child upcasts from a collection's element type:
+
+```fsharp
+let children: Blob array = [|
+    Text(Content = "Account")
+    Button(Children = [| Text(Content = "Save") |])
+|]
+let list = Container(Children = children)
+```
+
+Arrays work with `Children: IList<Blob>`, but Goo copies them into a mutable list. A plain F# `Blob list` cannot be assigned to `Children`. Convert it with `ResizeArray<Blob>(children)` if needed. Prefer `Add` in hot builds to avoid these temporary collections.
 
 See [shared child-list and identity rules](dotnet.md#shared-api-rules).
 
@@ -79,7 +100,7 @@ See [shared child-list and identity rules](dotnet.md#shared-api-rules).
 let basic = Style(Padding = Edges(Length.Pixels 10.))
 let primary =
     Button(BasedOn = basic, BackgroundColor = Color.Rgb(74, 125, 255),
-        Children = ResizeArray<Blob>([Text(Content = "Save") :> Blob]))
+        Children = [| Text(Content = "Save") |])
 let width = Length.Percent 100.
 let color = Color.Parse "#4a7dff"
 ```
@@ -104,7 +125,7 @@ F# turns an omitted out parameter into a tuple result. Goo's `Action` events nee
 
 ```fsharp
 let rows = VirtualLists.Rows(items, 24., itemKey, buildRow)
-let viewport = Container(Height = Length.Pixels 240., Children = ResizeArray<Blob>([rows :> Blob]))
+let viewport = Container(Height = Length.Pixels 240., Children = [| rows |])
 
 let dialog =
     ModalDialog(Open = isOpen, Padding = Nullable 20.,
@@ -118,7 +139,7 @@ Use `Goo.Widgets.Data.VirtualLists` from Goo.Widgets 0.5.0 or later. Keep row ke
 | Need | Plain F# |
 | --- | --- |
 | Typed input | Derive from `Cell<AccountInput>`. Override `Build(input: AccountInput)`. Mount with `Cell.Mount<AccountInput, AccountCell>("account", input)`. |
-| Input comparison | Use immutable records. The default comparison is `EqualityComparer<T>.Default`. |
+| Input comparison | Use immutable records. Small snapshots can use `[<Struct>]` records. The default comparison is `EqualityComparer<T>.Default`. |
 | Nullable widget field | Assign `Nullable value`. This is not an F# optional argument. |
 | Callback | Inline lambdas convert to `Action` and `Func`. Wrap named functions with the delegate type when needed. |
 | Optional method argument | Omit it, or use `?options = None` for the file chooser options. |

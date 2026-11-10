@@ -1,39 +1,47 @@
 open System
-open System.Collections.Generic
 open Goo
 open Goo.Widgets.Data
 open Goo.Widgets.Layout
 
-type Counter() =
-    inherit Cell()
-    let mutable count = 0
-    override _.Build() =
-        Container(Padding = Edges(Length.Pixels 24.), Gap = 12.,
-            Children = ResizeArray<Blob>([
-                Text(Content = $"Count: {count}") :> Blob
-                Button(Padding = Edges(Length.Pixels 10.), BorderRadius = Length.Pixels 10.,
-                    TransitionMs = 150., Hover = Style(BackgroundColor = Color.Rgb(74, 125, 255)),
-                    OnClick = (fun () -> count <- count + 1),
-                    Children = ResizeArray<Blob>([Text(Content = "Add one") :> Blob])) :> Blob
-            ]))
+module Counter =
+    let view count (increment: Action) : Blob =
+        let root = Container(Padding = Edges(Length.Pixels 24.), Gap = Length.Pixels 12.)
+        root.Add(Text(Content = $"Count: {count}"))
+        let button =
+            Button(Padding = Edges(Length.Pixels 10.), BorderRadius = Length.Pixels 10.,
+                TransitionMs = 150., Hover = Style(BackgroundColor = Color.Rgb(74, 125, 255)),
+                OnClick = increment)
+        button.Add(Text(Content = "Add one"))
+        root.Add(button)
+        root :> Blob
 
-let listView (data: seq<string>) =
-    let rows = data |> Seq.map (fun value -> Text(Key = value, Content = value) :> Blob)
-    Container(Width = Length.Pixels 320., MaxWidth = Length.Percent 100., Padding = Edges(Length.Pixels 12.), Gap = 8.,
-        Children = ResizeArray<Blob>(seq {
-            yield Text(Content = "Account") :> Blob
-            yield! rows
-            yield Button(OnClick = (fun () -> printfn "Save"),
-                Children = ResizeArray<Blob>([Text(Content = "Save") :> Blob])) :> Blob
-        }))
+    let create () =
+        let mutable count = 0
+        let increment = Action(fun () -> count <- count + 1)
+        { new Cell() with
+            override _.Build() = view count increment }
 
+let listView (names: string array) (save: Action) =
+    let root = Container(Width = Length.Pixels 320., MaxWidth = Length.Percent 100.,
+        Padding = Edges(Length.Pixels 12.), Gap = Length.Pixels 8., Children = ResizeArray<Blob>(names.Length + 2))
+    root.Add(Text(Content = "Account"))
+    for name in names do
+        root.Add(Text(Key = name, Content = name))
+    let button = Button(OnClick = save)
+    button.Add(Text(Content = "Save"))
+    root.Add(button)
+    root
+
+[<Struct>]
 type AccountInput = { Name: string }
 type AccountCell() =
     inherit Cell<AccountInput>()
     let mutable edits = 0
+    let increment = Action(fun () -> edits <- edits + 1)
     override _.Build(input: AccountInput) =
-        Button(OnClick = (fun () -> edits <- edits + 1),
-            Children = ResizeArray<Blob>([Text(Content = $"{input.Name}: {edits}") :> Blob]))
+        let button = Button(OnClick = increment)
+        button.Add(Text(Content = $"{input.Name}: {edits}"))
+        button :> Blob
 
 type EqualColumn() =
     interface LayoutAlgorithm with
@@ -52,36 +60,49 @@ type EqualColumn() =
 type Examples(sample: string) =
     inherit Cell()
     let mutable isOpen = false
-    let close() = isOpen <- false
+    let close = Action(fun () -> isOpen <- false)
+    let openDialog = Action(fun () -> isOpen <- true)
+    let setOpen = Action<bool>(fun value -> isOpen <- value)
+    let column = EqualColumn()
     let items = if sample = "virtual" then Array.init 10_000 (sprintf "Item %05d") else [||]
     static let itemKey = Func<string, string>(id)
     static let buildRow = Func<string, Blob>(fun value -> Text(Content = value))
+    static let counterFactory = Func<Cell>(Counter.create)
+    let names = [| "Ada"; "Grace"; "Linus" |]
+    let save = Action(fun () -> printfn "Save")
     override _.Build() : Blob =
         match sample with
-        | "list" -> listView ["Ada"; "Grace"; "Linus"]
+        | "list" -> listView names save :> Blob
         | "input" -> Cell.Mount<AccountInput, AccountCell>("account", { Name = "Ada" })
         | "virtual" -> VirtualLists.Rows(items, 24., itemKey, buildRow)
         | "variants" ->
             let basic =
                 Style(Padding = Edges(Length.Pixels 10.), BorderRadius = Length.Pixels 10.,
                     BackgroundColor = Color.Rgb(24, 31, 43))
-            Container(Gap = 12., Children = ResizeArray<Blob>([
-                Button(BasedOn = basic, Children = ResizeArray<Blob>([Text(Content = "Base") :> Blob])) :> Blob
-                Button(BasedOn = basic, BackgroundColor = Color.Rgb(74, 125, 255),
-                    Children = ResizeArray<Blob>([Text(Content = "Primary") :> Blob])) :> Blob
-            ]))
-        | "layout" -> Container(Height = Length.Pixels 200., Layout = EqualColumn(),
-            Children = ResizeArray<Blob>([Text(Content = "One") :> Blob; Text(Content = "Two") :> Blob]))
+            let root = Container(Gap = Length.Pixels 12.)
+            let baseButton = Button(BasedOn = basic)
+            baseButton.Add(Text(Content = "Base"))
+            root.Add(baseButton)
+            let primary = Button(BasedOn = basic, BackgroundColor = Color.Rgb(74, 125, 255))
+            primary.Add(Text(Content = "Primary"))
+            root.Add(primary)
+            root :> Blob
+        | "layout" ->
+            let root = Container(Height = Length.Pixels 200., Layout = column)
+            root.Add(Text(Content = "One"))
+            root.Add(Text(Content = "Two"))
+            root :> Blob
         | "dialog" ->
             let dialog = ModalDialog(Open = isOpen, Content = Text(Content = "Save account?"),
-                Padding = Nullable 20., OnOpenChange = Action<bool>(fun value -> isOpen <- value),
-                OnCancel = Action close, OnConfirm = Action close)
-            Container(Children = ResizeArray<Blob>([
-                Button(OnClick = (fun () -> isOpen <- true),
-                    Children = ResizeArray<Blob>([Text(Content = "Open dialog") :> Blob])) :> Blob
-                Cell.Mount<ModalDialog, ModalDialogHost>("dialog", dialog)
-            ]))
-        | _ -> Cell.Mount<Counter>("counter")
+                Padding = Nullable 20., OnOpenChange = setOpen,
+                OnCancel = close, OnConfirm = close)
+            let root = Container()
+            let button = Button(OnClick = openDialog)
+            button.Add(Text(Content = "Open dialog"))
+            root.Add(button)
+            root.Add(Cell.Mount<ModalDialog, ModalDialogHost>("dialog", dialog))
+            root :> Blob
+        | _ -> Cell.Mount<Cell>(counterFactory, "counter")
 
 let hitTest (handle: ElementHandle) point =
     match handle.TryGetTextPositionAt(point, TextCoordinateSpace.Window) with
@@ -101,11 +122,14 @@ let main args =
     window.add_FocusChanged focused
     window.remove_FocusChanged focused
     if Array.contains "--check" args then
-        let counter = Counter()
+        let counter = Counter.create()
         ((counter.Build() :?> Container).Children[1] :?> Button).OnClick.Invoke()
         if ((counter.Build() :?> Container).Children[0] :?> Text).Content <> "Count: 1" then
             invalidOp "Counter failed."
-        if (listView ["Ada"; "Grace"]).Children.Count <> 4 then invalidOp "Spread failed."
+        let list = listView [| "Ada"; "Grace" |] (Action ignore)
+        if list.Children.Count <> 4 then invalidOp "List failed."
+        if (list.Children[1] :?> Text).Key <> "Ada" then invalidOp "Row key failed."
+        if (list.Children[3] :?> Button).Children.Count <> 1 then invalidOp "Button children failed."
         printfn "F# interop checks passed."
     else window.Run()
     0
