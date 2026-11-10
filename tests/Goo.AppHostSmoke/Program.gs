@@ -28,6 +28,10 @@ internal class Program {
             let identity = args[1]
             let root = Path.GetFullPath(args[2].Substring("--output=".Length))
             let tag = if args.Length == 4 { args[3] } else { mode }
+            if mode == "clipboard" {
+                RunClipboard(identity, root)
+                return 0
+            }
             if mode == "native-close" {
                 RunNativeClose(root, tag)
                 return 0
@@ -400,6 +404,19 @@ internal class Program {
                 tray?.Dispose()
                 main.RequestClose()
                 while main.IsOpen { main.Pump(0.005) }
+            }
+        }
+
+        private func RunClipboard(text string, root string) {
+            let window = Window{ Title: "Goo clipboard", Width: 240, Height: 120, Root: Cell() }.Open()
+            try {
+                PumpUntil(window, () -> window.IsFocused)
+                window.SetClipboardText(text)
+                File.WriteAllText(Path.Combine(root, "ready"), "ready")
+                PumpUntil(window, () -> File.Exists(Path.Combine(root, "stop")))
+            } finally {
+                window.RequestClose()
+                while window.IsOpen { window.Pump(0.005) }
             }
         }
 

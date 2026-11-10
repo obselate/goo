@@ -66,4 +66,18 @@ internal partial class Host {
         }
         Console.WriteLine("Wayland activation: forwarded tokens reached the compositor on the owner-selected window")
     }
+
+    internal func WaylandClipboard() {
+        let text = "Goo copy before input λ"
+        let app = Child(Command([]string{"clipboard", text, "--output=" + Root}), environment: EnvironmentValues)
+        Children.Add(app)
+        WaitFile(Path.Combine(Root, "ready"), 30, app)
+        let paste = Child([]string{Executable("wl-paste"), "--no-newline"})
+        Children.Add(paste)
+        paste.Complete(15)
+        HostChecks.Require(paste.Text() == text, "Compositor selection changed: " + paste.Text())
+        Touch(Path.Combine(Root, "stop"))
+        app.Complete(15)
+        Console.WriteLine("Wayland clipboard: a copy made before input reached the compositor")
+    }
 }

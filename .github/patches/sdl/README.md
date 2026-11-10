@@ -115,3 +115,13 @@ bridge against the built library under an isolated compositor:
 XDG_CACHE_HOME="$(mktemp -d)" .github/scripts/with-headless-wayland.sh \
   dotnet run --project tools/Goo.Investigation -c Release -- popup "$sdl_source" "$sdl_library"
 ```
+
+`wayland-selection-serial.patch` backports
+[upstream commit 7063546](https://github.com/libsdl-org/SDL/commit/7063546818de5fcd78ac7afe0b8404b753a95ab6).
+SDL 3.4.0 defers a clipboard or primary selection set before the first key,
+button or touch serial and never sends it, so other clients never see a copy
+made before input. The backport sends the selection at once with the latest
+implicit grab serial and takes that serial from keyboard focus as well. The
+upstream change to drop the selection offer on keyboard focus loss is not
+included. `Goo.HostChecks wayland-clipboard` copies from a focused window before
+any input and reads the selection back with `wl-paste`.
