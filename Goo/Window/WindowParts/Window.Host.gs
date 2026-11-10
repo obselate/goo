@@ -232,6 +232,7 @@ public partial class Window {
       y = py
     }
     native.FocusChanged += (hasFocus bool) -> {
+      nativeFocused = hasFocus
       handleFocusChanged(hasFocus)
     }
     native.Exposed += () -> {
@@ -272,7 +273,7 @@ public partial class Window {
   }
 
   internal func handleFocusChanged(hasFocus bool) {
-    let focused = hasFocus && focusable
+    let focused = hasFocus && focusable && IsVisible
     let changed = IsFocused != focused
     IsFocused = focused
     if focused {
@@ -437,6 +438,7 @@ public partial class Window {
           }
           return
         }
+        if nativeHidePending && windowTarget?.QueueWorkPending != true { hideNative(native) }
         consumeNativeMetrics()
         if !IsOpen {
           if profiling {
@@ -571,7 +573,7 @@ public partial class Window {
     || accessibility?.HasDemand == true || hasPostedActions() || MetricSubscriptions.HasDemand(this)
     || windowTarget?.NeedsRender == true && !memoryPressureWaiting || windowTarget?.QueueWorkPending == true
     || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0
-    || host?.IsClosing == true
+    || host?.IsClosing == true || nativeHidePending
     || scheduler.HasPendingStartup()
 
   internal func SchedulerStartupPending() bool ->
@@ -585,6 +587,7 @@ public partial class Window {
     || host?.IsClosing == true
     || Window.HasPendingApplicationActivation
     || nativeModal?.HasCompletion == true
+    || nativeHidePending && windowTarget?.QueueWorkPending != true
 
   internal func SchedulerHasPendingQueueWork() bool -> windowTarget?.QueueWorkPending == true
     || windowTarget?.RetirementWorkPending == true
@@ -730,6 +733,7 @@ public partial class Window {
     windowTarget = nil
     host = nil
     embeddedHost = nil
+    nativeHidePending = false
     schedulerLastTicks = 0.0
     schedulerSimulationBank = 0.0
     acceptedFrameIndex = 0uL
@@ -748,6 +752,7 @@ public partial class Window {
     renderDirty = true
     Interlocked.Exchange(&closeRequested, 0)
     IsFocused = false
+    nativeFocused = false
     observedVisible = false
 
     if let current = target {

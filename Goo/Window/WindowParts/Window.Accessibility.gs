@@ -56,7 +56,7 @@ public partial class Window {
     if !Double.IsFinite(y) || Math.Abs(y) > float64(Single.MaxValue) {
       throw ArgumentOutOfRangeException("y")
     }
-    if IsInputBlocked || x < 0.0 || y < 0.0 || x >= float64(Width) / float64(UiScale)
+    if nativeHidePending || IsInputBlocked || x < 0.0 || y < 0.0 || x >= float64(Width) / float64(UiScale)
       || y >= float64(Height) / float64(UiScale) { return nil }
     guard let root = node, let manager = accessibility else { return nil }
     guard let hit = hitTopmost(root, float32(x), float32(y), manager) else { return nil }
@@ -70,7 +70,7 @@ public partial class Window {
   public func PerformAccessibilityAction(id AccessibilityId, request AccessibilityActionRequest) bool {
     requireUiThread("Window.PerformAccessibilityAction")
     if request == nil { throw ArgumentNullException("request") }
-    if IsInputBlocked { return false }
+    if nativeHidePending || IsInputBlocked { return false }
     FlushDeferredVirtualization()
     guard let manager = accessibility else { return false }
     if !manager.Supports(id, request.Action) { return false }

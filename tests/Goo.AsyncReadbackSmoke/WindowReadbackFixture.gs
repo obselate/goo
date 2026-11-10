@@ -671,6 +671,7 @@ public partial class Window {
   windowTarget as VulkanWindowTarget?
 
   internal func SdlHostForTest() SdlHost ? -> host as SdlHost?
+  internal prop ObservedNativeFocusForTest bool { get -> nativeFocused }
   internal func NativeHitTestForTest(x int32, y int32) SDLHitTestResult {
     guard let host = SdlHostForTest() else {
       throw InvalidOperationException("Native hit test requires an SDL host")

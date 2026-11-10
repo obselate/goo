@@ -24,6 +24,8 @@ public partial class Window {
   private var topmost bool
   private var observedVisible bool
   private var observedOcclusion WindowOcclusion
+  private var nativeHidePending bool
+  private var nativeFocused bool
 
   /// Gets or sets whether Open shows the desktop window. Configure before Open.
   public prop InitiallyVisible bool {
@@ -35,8 +37,9 @@ public partial class Window {
     }
   }
 
-  /// Gets whether the host reports a visible viewport. This does not imply focus or lack of occlusion.
-  public prop IsVisible bool { get -> IsOpen && host?.IsVisible == true }
+  /// Gets whether the host reports a visible viewport and no accepted Hide is pending. This does not imply focus or lack of occlusion.
+  public prop IsVisible bool { get -> IsOpen && !nativeHidePending && host?.IsVisible == true }
+  internal prop NativeInputSuppressed bool { get -> nativeHidePending }
 
   /// Gets occlusion on macOS, Wayland suspended surfaces and X11 hidden windows. Windows, embedded, Android and unreported states are Unknown.
   public prop Occlusion WindowOcclusion { get -> IsOpen ? observedOcclusion : WindowOcclusion.Unknown }
@@ -128,6 +131,7 @@ public partial class Window {
     guard let native = host else { return WindowOperationResult.Closed }
     if !IsOpen || native.IsClosing { return WindowOperationResult.Closed }
     let result = native.ShowWithoutActivation()
+    if result == WindowOperationResult.Accepted { cancelNativeHide() }
     observeVisibility()
     return result
   }
@@ -135,28 +139,47 @@ public partial class Window {
   /// Hides an open desktop window and cancels transient input without destroying its tree.
   /// Releases the swapchain and clip atlas after pending GPU work completes. Show recreates them.
   /// Modal windows and owners blocked by a modal child or chooser cannot be hidden.
+  /// Visibility and input change immediately. Regular desktop unmapping can be deferred until pending queue calls complete.
   public func Hide() WindowOperationResult {
     requireUiThread("Window.Hide")
     guard let native = host else { return WindowOperationResult.Closed }
     if !IsOpen || native.IsClosing { return WindowOperationResult.Closed }
     if Modal || IsInputBlocked { return WindowOperationResult.Unsupported }
-    if LayerShell != nil {
-      let target = windowTarget!!
+    if (native.Capabilities & WindowCapabilities.Visibility) == WindowCapabilities.None { return native.Hide() }
+    if let target = windowTarget {
       target.SetHidden(true)
-      while target.QueueWorkPending {
-        target.PollQueueCompletion()
-        if target.QueueWorkPending { Thread.Sleep(1) }
-      }
-      while target.RetirementWorkPending {
-        target.PollQueueCompletion()
-        if target.RetirementWorkPending { Thread.Sleep(1) }
+      if LayerShell != nil {
+        while target.QueueWorkPending {
+          target.PollQueueCompletion()
+          if target.QueueWorkPending { Thread.Sleep(1) }
+        }
+        while target.RetirementWorkPending {
+          target.PollQueueCompletion()
+          if target.RetirementWorkPending { Thread.Sleep(1) }
+        }
+      } else if target.QueueWorkPending {
+        nativeHidePending = true
+        observeVisibility()
+        native.Wake()
+        return WindowOperationResult.Accepted
       }
     }
+    return hideNative(native)
+  }
+
+  private func hideNative(native WindowHost) WindowOperationResult {
     let result = native.Hide()
-    if result == WindowOperationResult.Accepted { windowTarget?.SetHidden(true) }
-    else if LayerShell != nil { windowTarget?.SetHidden(false) }
+    nativeHidePending = false
+    if result != WindowOperationResult.Accepted { windowTarget?.SetHidden(false) }
     observeVisibility()
     return result
+  }
+
+  private func cancelNativeHide() {
+    if !nativeHidePending { return }
+    nativeHidePending = false
+    windowTarget?.SetHidden(false)
+    handleFocusChanged(nativeFocused)
   }
 
   private func observeOcclusion(value WindowOcclusion) {
@@ -176,6 +199,12 @@ public partial class Window {
       windowTarget?.SetHidden(false)
       requestRender()
     } else { handleFocusChanged(false) }
+    if let manager = accessibility {
+      if manager.Adapter is NativeAccessibilityAdapter {
+        manager.RequestDelivery()
+        manager.Publish(node)
+      }
+    }
     notifications.RaiseVisibilityChanged(visible)
   }
 }

@@ -26,6 +26,7 @@ internal class InputEventQueue {
   internal init(owner Window? = nil) { this.owner = owner }
 
   internal func Add(value QueuedPointerEvent) {
+    if owner?.NativeInputSuppressed == true { return }
     var received = value
     if received.ReceivedTime == 0.0 {
       received.ReceivedTime = float64(Stopwatch.GetTimestamp()) / float64(Stopwatch.Frequency)
@@ -36,6 +37,7 @@ internal class InputEventQueue {
   }
 
   internal func AddPointerFrame(samples ReadOnlySpan[QueuedPointerEvent], scale float32) {
+    if owner?.NativeInputSuppressed == true { return }
     if samples.Length == 0 { return }
     let buffer = ArrayPool[QueuedPointerEvent].Shared.Rent(samples.Length)
     let time = float64(Stopwatch.GetTimestamp()) / float64(Stopwatch.Frequency)
@@ -59,6 +61,7 @@ internal class InputEventQueue {
   }
 
   internal func Add(value KeyboardEvent) {
+    if owner?.NativeInputSuppressed == true { return }
     events.Enqueue(QueuedInputEvent{ Keyboard: value, NativeTimestamp: PopupInputContext.Timestamp })
     if value.Kind == KeyboardEventKind.Press { owner?.NotifyInputActivity(WindowInputKind.KeyDown) }
   }
