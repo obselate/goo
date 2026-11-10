@@ -525,9 +525,10 @@ internal class Layout {
 
   private func readPortalRect(portal Node, x float32, y float32) {
     guard let yoga = portal.Yoga else { return }
+    let density = YGConfigAPI.YGConfigGetPointScaleFactor(config)
     readRect(portal, 0.0F, 0.0F,
-      x - YGNodeLayoutAPI.YGNodeLayoutGetLeft(yoga),
-      y - YGNodeLayoutAPI.YGNodeLayoutGetTop(yoga))
+      snapPlacement(0.0F, x, density) - YGNodeLayoutAPI.YGNodeLayoutGetLeft(yoga),
+      snapPlacement(0.0F, y, density) - YGNodeLayoutAPI.YGNodeLayoutGetTop(yoga))
   }
 
   private func portalSideSpace(placement PortalPlacement, anchor TransformBounds,
