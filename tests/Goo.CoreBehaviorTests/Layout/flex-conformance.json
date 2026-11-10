@@ -1,0 +1,2523 @@
+{
+  "chromium": "Chromium 156.0.8078.73 Arch Linux",
+  "fontFamily": "FlexConformance",
+  "fontSha256": "71ffd45fe736c7d26eeae2d7cb9e62e09b80901ad3df9a564b3662876c717666",
+  "fontSource": "tests/Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf, wght=400",
+  "cssDefaults": "Border-box sizing, column flex containers, align-content flex-start, pre-wrap text, and overlay scrollbars with no reserved gutter.",
+  "cases": [
+    {
+      "name": "row-overflow-neither",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 120,
+          "Height": 40,
+          "FlexDirection": "Row"
+        },
+        "children": [
+          {
+            "style": {
+              "Width": 80,
+              "Height": 20,
+              "FlexGrow": 0,
+              "FlexShrink": 0,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          },
+          {
+            "style": {
+              "Width": 80,
+              "Height": 20,
+              "FlexGrow": 0,
+              "FlexShrink": 0,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          120,
+          40
+        ],
+        [
+          0,
+          0,
+          80,
+          20
+        ],
+        [
+          80,
+          0,
+          80,
+          20
+        ]
+      ]
+    },
+    {
+      "name": "row-overflow-grow",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 120,
+          "Height": 40,
+          "FlexDirection": "Row"
+        },
+        "children": [
+          {
+            "style": {
+              "Width": 80,
+              "Height": 20,
+              "FlexGrow": 1,
+              "FlexShrink": 0,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          },
+          {
+            "style": {
+              "Width": 80,
+              "Height": 20,
+              "FlexGrow": 1,
+              "FlexShrink": 0,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          120,
+          40
+        ],
+        [
+          0,
+          0,
+          80,
+          20
+        ],
+        [
+          80,
+          0,
+          80,
+          20
+        ]
+      ]
+    },
+    {
+      "name": "row-overflow-shrink",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 120,
+          "Height": 40,
+          "FlexDirection": "Row"
+        },
+        "children": [
+          {
+            "style": {
+              "Width": 80,
+              "Height": 20,
+              "FlexGrow": 0,
+              "FlexShrink": 1,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          },
+          {
+            "style": {
+              "Width": 80,
+              "Height": 20,
+              "FlexGrow": 0,
+              "FlexShrink": 1,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          120,
+          40
+        ],
+        [
+          0,
+          0,
+          60,
+          20
+        ],
+        [
+          60,
+          0,
+          60,
+          20
+        ]
+      ]
+    },
+    {
+      "name": "row-overflow-both",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 120,
+          "Height": 40,
+          "FlexDirection": "Row"
+        },
+        "children": [
+          {
+            "style": {
+              "Width": 80,
+              "Height": 20,
+              "FlexGrow": 1,
+              "FlexShrink": 1,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          },
+          {
+            "style": {
+              "Width": 80,
+              "Height": 20,
+              "FlexGrow": 1,
+              "FlexShrink": 1,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          120,
+          40
+        ],
+        [
+          0,
+          0,
+          60,
+          20
+        ],
+        [
+          60,
+          0,
+          60,
+          20
+        ]
+      ]
+    },
+    {
+      "name": "row-underflow-neither",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 240,
+          "Height": 40,
+          "FlexDirection": "Row"
+        },
+        "children": [
+          {
+            "style": {
+              "Width": 80,
+              "Height": 20,
+              "FlexGrow": 0,
+              "FlexShrink": 0,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          },
+          {
+            "style": {
+              "Width": 80,
+              "Height": 20,
+              "FlexGrow": 0,
+              "FlexShrink": 0,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          240,
+          40
+        ],
+        [
+          0,
+          0,
+          80,
+          20
+        ],
+        [
+          80,
+          0,
+          80,
+          20
+        ]
+      ]
+    },
+    {
+      "name": "row-underflow-grow",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 240,
+          "Height": 40,
+          "FlexDirection": "Row"
+        },
+        "children": [
+          {
+            "style": {
+              "Width": 80,
+              "Height": 20,
+              "FlexGrow": 1,
+              "FlexShrink": 0,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          },
+          {
+            "style": {
+              "Width": 80,
+              "Height": 20,
+              "FlexGrow": 1,
+              "FlexShrink": 0,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          240,
+          40
+        ],
+        [
+          0,
+          0,
+          120,
+          20
+        ],
+        [
+          120,
+          0,
+          120,
+          20
+        ]
+      ]
+    },
+    {
+      "name": "row-underflow-shrink",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 240,
+          "Height": 40,
+          "FlexDirection": "Row"
+        },
+        "children": [
+          {
+            "style": {
+              "Width": 80,
+              "Height": 20,
+              "FlexGrow": 0,
+              "FlexShrink": 1,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          },
+          {
+            "style": {
+              "Width": 80,
+              "Height": 20,
+              "FlexGrow": 0,
+              "FlexShrink": 1,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          240,
+          40
+        ],
+        [
+          0,
+          0,
+          80,
+          20
+        ],
+        [
+          80,
+          0,
+          80,
+          20
+        ]
+      ]
+    },
+    {
+      "name": "row-underflow-both",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 240,
+          "Height": 40,
+          "FlexDirection": "Row"
+        },
+        "children": [
+          {
+            "style": {
+              "Width": 80,
+              "Height": 20,
+              "FlexGrow": 1,
+              "FlexShrink": 1,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          },
+          {
+            "style": {
+              "Width": 80,
+              "Height": 20,
+              "FlexGrow": 1,
+              "FlexShrink": 1,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          240,
+          40
+        ],
+        [
+          0,
+          0,
+          120,
+          20
+        ],
+        [
+          120,
+          0,
+          120,
+          20
+        ]
+      ]
+    },
+    {
+      "name": "column-overflow-neither",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Height": 120,
+          "Width": 40,
+          "FlexDirection": "Column"
+        },
+        "children": [
+          {
+            "style": {
+              "Height": 80,
+              "Width": 20,
+              "FlexGrow": 0,
+              "FlexShrink": 0,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          },
+          {
+            "style": {
+              "Height": 80,
+              "Width": 20,
+              "FlexGrow": 0,
+              "FlexShrink": 0,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          40,
+          120
+        ],
+        [
+          0,
+          0,
+          20,
+          80
+        ],
+        [
+          0,
+          80,
+          20,
+          80
+        ]
+      ]
+    },
+    {
+      "name": "column-overflow-grow",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Height": 120,
+          "Width": 40,
+          "FlexDirection": "Column"
+        },
+        "children": [
+          {
+            "style": {
+              "Height": 80,
+              "Width": 20,
+              "FlexGrow": 1,
+              "FlexShrink": 0,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          },
+          {
+            "style": {
+              "Height": 80,
+              "Width": 20,
+              "FlexGrow": 1,
+              "FlexShrink": 0,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          40,
+          120
+        ],
+        [
+          0,
+          0,
+          20,
+          80
+        ],
+        [
+          0,
+          80,
+          20,
+          80
+        ]
+      ]
+    },
+    {
+      "name": "column-overflow-shrink",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Height": 120,
+          "Width": 40,
+          "FlexDirection": "Column"
+        },
+        "children": [
+          {
+            "style": {
+              "Height": 80,
+              "Width": 20,
+              "FlexGrow": 0,
+              "FlexShrink": 1,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          },
+          {
+            "style": {
+              "Height": 80,
+              "Width": 20,
+              "FlexGrow": 0,
+              "FlexShrink": 1,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          40,
+          120
+        ],
+        [
+          0,
+          0,
+          20,
+          60
+        ],
+        [
+          0,
+          60,
+          20,
+          60
+        ]
+      ]
+    },
+    {
+      "name": "column-overflow-both",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Height": 120,
+          "Width": 40,
+          "FlexDirection": "Column"
+        },
+        "children": [
+          {
+            "style": {
+              "Height": 80,
+              "Width": 20,
+              "FlexGrow": 1,
+              "FlexShrink": 1,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          },
+          {
+            "style": {
+              "Height": 80,
+              "Width": 20,
+              "FlexGrow": 1,
+              "FlexShrink": 1,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          40,
+          120
+        ],
+        [
+          0,
+          0,
+          20,
+          60
+        ],
+        [
+          0,
+          60,
+          20,
+          60
+        ]
+      ]
+    },
+    {
+      "name": "column-underflow-neither",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Height": 240,
+          "Width": 40,
+          "FlexDirection": "Column"
+        },
+        "children": [
+          {
+            "style": {
+              "Height": 80,
+              "Width": 20,
+              "FlexGrow": 0,
+              "FlexShrink": 0,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          },
+          {
+            "style": {
+              "Height": 80,
+              "Width": 20,
+              "FlexGrow": 0,
+              "FlexShrink": 0,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          40,
+          240
+        ],
+        [
+          0,
+          0,
+          20,
+          80
+        ],
+        [
+          0,
+          80,
+          20,
+          80
+        ]
+      ]
+    },
+    {
+      "name": "column-underflow-grow",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Height": 240,
+          "Width": 40,
+          "FlexDirection": "Column"
+        },
+        "children": [
+          {
+            "style": {
+              "Height": 80,
+              "Width": 20,
+              "FlexGrow": 1,
+              "FlexShrink": 0,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          },
+          {
+            "style": {
+              "Height": 80,
+              "Width": 20,
+              "FlexGrow": 1,
+              "FlexShrink": 0,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          40,
+          240
+        ],
+        [
+          0,
+          0,
+          20,
+          120
+        ],
+        [
+          0,
+          120,
+          20,
+          120
+        ]
+      ]
+    },
+    {
+      "name": "column-underflow-shrink",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Height": 240,
+          "Width": 40,
+          "FlexDirection": "Column"
+        },
+        "children": [
+          {
+            "style": {
+              "Height": 80,
+              "Width": 20,
+              "FlexGrow": 0,
+              "FlexShrink": 1,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          },
+          {
+            "style": {
+              "Height": 80,
+              "Width": 20,
+              "FlexGrow": 0,
+              "FlexShrink": 1,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          40,
+          240
+        ],
+        [
+          0,
+          0,
+          20,
+          80
+        ],
+        [
+          0,
+          80,
+          20,
+          80
+        ]
+      ]
+    },
+    {
+      "name": "column-underflow-both",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Height": 240,
+          "Width": 40,
+          "FlexDirection": "Column"
+        },
+        "children": [
+          {
+            "style": {
+              "Height": 80,
+              "Width": 20,
+              "FlexGrow": 1,
+              "FlexShrink": 1,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          },
+          {
+            "style": {
+              "Height": 80,
+              "Width": 20,
+              "FlexGrow": 1,
+              "FlexShrink": 1,
+              "MinWidth": 0,
+              "MinHeight": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          40,
+          240
+        ],
+        [
+          0,
+          0,
+          20,
+          120
+        ],
+        [
+          0,
+          120,
+          20,
+          120
+        ]
+      ]
+    },
+    {
+      "name": "default-shrink-one",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 120,
+          "Height": 40,
+          "FlexDirection": "Row"
+        },
+        "children": [
+          {
+            "style": {
+              "FlexBasis": 80,
+              "Height": 20,
+              "MinWidth": 0
+            }
+          },
+          {
+            "style": {
+              "FlexBasis": 80,
+              "Height": 20,
+              "MinWidth": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          120,
+          40
+        ],
+        [
+          0,
+          0,
+          60,
+          20
+        ],
+        [
+          60,
+          0,
+          60,
+          20
+        ]
+      ]
+    },
+    {
+      "name": "padding-border-gap",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 240,
+          "Height": 80,
+          "FlexDirection": "Row",
+          "Padding": 10,
+          "BorderWidth": 2,
+          "Gap": 8
+        },
+        "children": [
+          {
+            "style": {
+              "FlexGrow": 1,
+              "MinWidth": 0
+            }
+          },
+          {
+            "style": {
+              "FlexGrow": 1,
+              "MinWidth": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          240,
+          80
+        ],
+        [
+          12,
+          12,
+          104,
+          56
+        ],
+        [
+          124,
+          12,
+          104,
+          56
+        ]
+      ]
+    },
+    {
+      "name": "min-max-grow",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 240,
+          "Height": 40,
+          "FlexDirection": "Row"
+        },
+        "children": [
+          {
+            "style": {
+              "FlexBasis": 20,
+              "FlexGrow": 1,
+              "MinWidth": 60,
+              "MaxWidth": 80
+            }
+          },
+          {
+            "style": {
+              "FlexBasis": 20,
+              "FlexGrow": 1,
+              "MinWidth": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          240,
+          40
+        ],
+        [
+          0,
+          0,
+          80,
+          40
+        ],
+        [
+          80,
+          0,
+          160,
+          40
+        ]
+      ]
+    },
+    {
+      "name": "min-max-shrink",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 100,
+          "Height": 40,
+          "FlexDirection": "Row"
+        },
+        "children": [
+          {
+            "style": {
+              "Width": 80,
+              "MinWidth": 60
+            }
+          },
+          {
+            "style": {
+              "Width": 80,
+              "MinWidth": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          100,
+          40
+        ],
+        [
+          0,
+          0,
+          60,
+          40
+        ],
+        [
+          60,
+          0,
+          40,
+          40
+        ]
+      ]
+    },
+    {
+      "name": "percent-sizes",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 240,
+          "Height": 80,
+          "Padding": 8,
+          "FlexDirection": "Row"
+        },
+        "children": [
+          {
+            "style": {
+              "Width": "25%",
+              "Height": "50%"
+            }
+          },
+          {
+            "style": {
+              "Width": "50%",
+              "Height": "100%"
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          240,
+          80
+        ],
+        [
+          8,
+          8,
+          56,
+          32
+        ],
+        [
+          64,
+          8,
+          112,
+          64
+        ]
+      ]
+    },
+    {
+      "name": "nested-flex",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 240,
+          "Height": 120,
+          "FlexDirection": "Row",
+          "Gap": 8
+        },
+        "children": [
+          {
+            "style": {
+              "FlexGrow": 1,
+              "MinWidth": 0,
+              "Gap": 4
+            },
+            "children": [
+              {
+                "style": {
+                  "Height": 20
+                }
+              },
+              {
+                "style": {
+                  "FlexGrow": 1
+                }
+              }
+            ]
+          },
+          {
+            "style": {
+              "Width": 80,
+              "FlexDirection": "Row"
+            },
+            "children": [
+              {
+                "style": {
+                  "FlexGrow": 1
+                }
+              },
+              {
+                "style": {
+                  "FlexGrow": 1
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          240,
+          120
+        ],
+        [
+          0,
+          0,
+          152,
+          120
+        ],
+        [
+          0,
+          0,
+          152,
+          20
+        ],
+        [
+          0,
+          24,
+          152,
+          96
+        ],
+        [
+          160,
+          0,
+          80,
+          120
+        ],
+        [
+          160,
+          0,
+          40,
+          120
+        ],
+        [
+          200,
+          0,
+          40,
+          120
+        ]
+      ]
+    },
+    {
+      "name": "scroll-set-size",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 120,
+          "Height": 80,
+          "FlexDirection": "Row"
+        },
+        "children": [
+          {
+            "style": {
+              "Width": 200,
+              "Overflow": "Scroll"
+            },
+            "children": [
+              {
+                "style": {
+                  "Width": 240,
+                  "Height": 20
+                }
+              }
+            ]
+          },
+          {
+            "style": {
+              "Width": 40,
+              "FlexShrink": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          120,
+          80
+        ],
+        [
+          0,
+          0,
+          80,
+          80
+        ],
+        [
+          0,
+          0,
+          240,
+          20
+        ],
+        [
+          80,
+          0,
+          40,
+          80
+        ]
+      ]
+    },
+    {
+      "name": "hidden-set-size",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 120,
+          "Height": 80,
+          "FlexDirection": "Row"
+        },
+        "children": [
+          {
+            "style": {
+              "Width": 200,
+              "Overflow": "Hidden"
+            },
+            "children": [
+              {
+                "style": {
+                  "Width": 240,
+                  "Height": 20
+                }
+              }
+            ]
+          },
+          {
+            "style": {
+              "Width": 40,
+              "FlexShrink": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          120,
+          80
+        ],
+        [
+          0,
+          0,
+          80,
+          80
+        ],
+        [
+          0,
+          0,
+          240,
+          20
+        ],
+        [
+          80,
+          0,
+          40,
+          80
+        ]
+      ]
+    },
+    {
+      "name": "stretch-cross-axis",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 200,
+          "Height": 80,
+          "FlexDirection": "Row",
+          "AlignItems": "Stretch",
+          "Gap": 8,
+          "Padding": 4
+        },
+        "children": [
+          {
+            "style": {
+              "Width": 40
+            }
+          },
+          {
+            "style": {
+              "FlexGrow": 1
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          200,
+          80
+        ],
+        [
+          4,
+          4,
+          40,
+          72
+        ],
+        [
+          52,
+          4,
+          144,
+          72
+        ]
+      ]
+    },
+    {
+      "name": "wrap-lines",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 120,
+          "Height": 100,
+          "FlexDirection": "Row",
+          "FlexWrap": "Wrap",
+          "Gap": 8
+        },
+        "children": [
+          {
+            "style": {
+              "Width": 40,
+              "Height": 20,
+              "FlexShrink": 0
+            }
+          },
+          {
+            "style": {
+              "Width": 40,
+              "Height": 20,
+              "FlexShrink": 0
+            }
+          },
+          {
+            "style": {
+              "Width": 40,
+              "Height": 20,
+              "FlexShrink": 0
+            }
+          },
+          {
+            "style": {
+              "Width": 40,
+              "Height": 20,
+              "FlexShrink": 0
+            }
+          },
+          {
+            "style": {
+              "Width": 40,
+              "Height": 20,
+              "FlexShrink": 0
+            }
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          120,
+          100
+        ],
+        [
+          0,
+          0,
+          40,
+          20
+        ],
+        [
+          48,
+          0,
+          40,
+          20
+        ],
+        [
+          0,
+          28,
+          40,
+          20
+        ],
+        [
+          48,
+          28,
+          40,
+          20
+        ],
+        [
+          0,
+          56,
+          40,
+          20
+        ]
+      ]
+    },
+    {
+      "name": "visible-specified-minimum",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 100,
+          "Height": 40,
+          "FlexDirection": "Row"
+        },
+        "children": [
+          {
+            "style": {
+              "Width": 80,
+              "Height": 20
+            }
+          },
+          {
+            "style": {
+              "Width": 80,
+              "Height": 20
+            }
+          }
+        ]
+      },
+      "deviation": {
+        "reason": "Visible-overflow items use their specified Width or Height as the automatic minimum. CSS uses min(specified size, content size). Empty CSS items can shrink to 0.",
+        "boxes": [
+          [
+            0,
+            0,
+            100,
+            40
+          ],
+          [
+            0,
+            0,
+            80,
+            20
+          ],
+          [
+            80,
+            0,
+            80,
+            20
+          ]
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          100,
+          40
+        ],
+        [
+          0,
+          0,
+          50,
+          20
+        ],
+        [
+          50,
+          0,
+          50,
+          20
+        ]
+      ]
+    },
+    {
+      "name": "font-width-volume",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 300,
+          "Height": 40,
+          "AlignItems": "FlexStart"
+        },
+        "children": [
+          {
+            "style": {
+              "FontFamily": "FlexConformance",
+              "FontSize": 14,
+              "LineHeight": 1.2
+            },
+            "text": "Volume"
+          }
+        ]
+      },
+      "tolerance": 1,
+      "toleranceReason": "VendSans wght=400: Chromium Volume 46.640625px, Goo 47px. Text geometry snaps to whole Goo pixels.",
+      "boxes": [
+        [
+          0,
+          0,
+          300,
+          40
+        ],
+        [
+          0,
+          0,
+          46.640625,
+          16.796875
+        ]
+      ]
+    },
+    {
+      "name": "font-width-hsl",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 300,
+          "Height": 40,
+          "AlignItems": "FlexStart"
+        },
+        "children": [
+          {
+            "style": {
+              "FontFamily": "FlexConformance",
+              "FontSize": 13,
+              "LineHeight": 1.2
+            },
+            "text": "HSL"
+          }
+        ]
+      },
+      "tolerance": 1,
+      "toleranceReason": "VendSans wght=400: Chromium HSL 22.4375px, Goo 23px. Text geometry snaps to whole Goo pixels.",
+      "boxes": [
+        [
+          0,
+          0,
+          300,
+          40
+        ],
+        [
+          0,
+          0,
+          22.4375,
+          15.59375
+        ]
+      ]
+    },
+    {
+      "name": "font-width-hsv",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 300,
+          "Height": 40,
+          "AlignItems": "FlexStart"
+        },
+        "children": [
+          {
+            "style": {
+              "FontFamily": "FlexConformance",
+              "FontSize": 13,
+              "LineHeight": 1.2
+            },
+            "text": "HSV"
+          }
+        ]
+      },
+      "tolerance": 1,
+      "toleranceReason": "VendSans wght=400: Chromium HSV 24.046875px, Goo 25px. Text geometry snaps to whole Goo pixels.",
+      "boxes": [
+        [
+          0,
+          0,
+          300,
+          40
+        ],
+        [
+          0,
+          0,
+          24.046875,
+          15.59375
+        ]
+      ]
+    },
+    {
+      "name": "font-width-oklch",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 300,
+          "Height": 40,
+          "AlignItems": "FlexStart"
+        },
+        "children": [
+          {
+            "style": {
+              "FontFamily": "FlexConformance",
+              "FontSize": 13,
+              "LineHeight": 1.2
+            },
+            "text": "OKLCH"
+          }
+        ]
+      },
+      "tolerance": 1,
+      "toleranceReason": "VendSans wght=400: Chromium OKLCH 38.71875px, Goo 39px. Text geometry snaps to whole Goo pixels.",
+      "boxes": [
+        [
+          0,
+          0,
+          300,
+          40
+        ],
+        [
+          0,
+          0,
+          38.71875,
+          15.59375
+        ]
+      ]
+    },
+    {
+      "name": "font-width-fractional",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 300,
+          "Height": 40,
+          "AlignItems": "FlexStart"
+        },
+        "children": [
+          {
+            "style": {
+              "FontFamily": "FlexConformance",
+              "FontSize": 16,
+              "LineHeight": 1.2
+            },
+            "text": "fractional"
+          }
+        ]
+      },
+      "tolerance": 1,
+      "toleranceReason": "VendSans wght=400: Chromium fractional 69.3125px, Goo 70px. Text geometry snaps to whole Goo pixels.",
+      "boxes": [
+        [
+          0,
+          0,
+          300,
+          40
+        ],
+        [
+          0,
+          0,
+          69.3125,
+          19.1875
+        ]
+      ]
+    },
+    {
+      "name": "text-wrap",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 100,
+          "Height": 120,
+          "FlexDirection": "Row"
+        },
+        "children": [
+          {
+            "style": {
+              "FontFamily": "FlexConformance",
+              "FontSize": 14,
+              "LineHeight": 1.2,
+              "MinWidth": 0
+            },
+            "text": "Volume control wraps words"
+          }
+        ]
+      },
+      "tolerance": 1,
+      "toleranceReason": "VendSans wght=400 single-word width differences range from 0.28125px to 0.953125px. Text geometry snaps to whole Goo pixels.",
+      "boxes": [
+        [
+          0,
+          0,
+          100,
+          120
+        ],
+        [
+          0,
+          0,
+          100,
+          120
+        ]
+      ]
+    },
+    {
+      "name": "text-no-wrap",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 80,
+          "Height": 40,
+          "FlexDirection": "Row"
+        },
+        "children": [
+          {
+            "style": {
+              "FontFamily": "FlexConformance",
+              "FontSize": 14,
+              "LineHeight": 1.2,
+              "TextWrap": "NoWrap"
+            },
+            "text": "Volume control"
+          }
+        ]
+      },
+      "tolerance": 1,
+      "toleranceReason": "VendSans wght=400 single-word width differences range from 0.28125px to 0.953125px. Text geometry snaps to whole Goo pixels.",
+      "boxes": [
+        [
+          0,
+          0,
+          80,
+          40
+        ],
+        [
+          0,
+          0,
+          95,
+          40
+        ]
+      ]
+    },
+    {
+      "name": "text-ellipsis",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 80,
+          "Height": 40,
+          "FlexDirection": "Row"
+        },
+        "children": [
+          {
+            "style": {
+              "FontFamily": "FlexConformance",
+              "FontSize": 14,
+              "LineHeight": 1.2,
+              "TextWrap": "NoWrap",
+              "TextTrimming": "Ellipsis",
+              "MinWidth": 0
+            },
+            "text": "Volume control"
+          }
+        ]
+      },
+      "tolerance": 1,
+      "toleranceReason": "VendSans wght=400 single-word width differences range from 0.28125px to 0.953125px. Text geometry snaps to whole Goo pixels.",
+      "boxes": [
+        [
+          0,
+          0,
+          80,
+          40
+        ],
+        [
+          0,
+          0,
+          80,
+          40
+        ]
+      ]
+    },
+    {
+      "name": "text-long-word",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 40,
+          "Height": 40,
+          "FlexDirection": "Row"
+        },
+        "children": [
+          {
+            "style": {
+              "FontFamily": "FlexConformance",
+              "FontSize": 14,
+              "LineHeight": 1.2
+            },
+            "text": "Unbreakableword"
+          }
+        ]
+      },
+      "tolerance": 1,
+      "toleranceReason": "VendSans wght=400 single-word width differences range from 0.28125px to 0.953125px. Text geometry snaps to whole Goo pixels.",
+      "boxes": [
+        [
+          0,
+          0,
+          40,
+          40
+        ],
+        [
+          0,
+          0,
+          109.703125,
+          40
+        ]
+      ]
+    },
+    {
+      "name": "text-minimum-volume",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 160,
+          "Height": 80,
+          "Padding": 20
+        },
+        "children": [
+          {
+            "style": {
+              "Width": 100,
+              "FlexDirection": "Row"
+            },
+            "children": [
+              {
+                "style": {
+                  "FontFamily": "FlexConformance",
+                  "FontSize": 14,
+                  "LineHeight": 1.2
+                },
+                "text": "Volume"
+              },
+              {
+                "style": {
+                  "Width": 120,
+                  "Height": 10
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "tolerance": 1,
+      "toleranceReason": "VendSans wght=400: Chromium Volume 46.640625px, Goo 47px. Text geometry snaps to whole Goo pixels.",
+      "deviation": {
+        "reason": "The visible-overflow fixed sibling retains its specified Width of 120. CSS can shrink that empty item to its zero content minimum. The Volume text must retain its min-content word width in both layouts.",
+        "boxes": [
+          [
+            0,
+            0,
+            160,
+            80
+          ],
+          [
+            20,
+            20,
+            100,
+            16.796875
+          ],
+          [
+            20,
+            20,
+            46.640625,
+            16.796875
+          ],
+          [
+            66.640625,
+            20,
+            120,
+            10
+          ]
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          160,
+          80
+        ],
+        [
+          20,
+          20,
+          100,
+          16.796875
+        ],
+        [
+          20,
+          20,
+          46.640625,
+          16.796875
+        ],
+        [
+          66.640625,
+          20,
+          53.359375,
+          10
+        ]
+      ]
+    },
+    {
+      "name": "overflowing-padded-buttons",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 128,
+          "Height": 80,
+          "AlignItems": "Stretch"
+        },
+        "children": [
+          {
+            "style": {
+              "FlexDirection": "Row",
+              "Gap": 8
+            },
+            "children": [
+              {
+                "style": {
+                  "Height": 32,
+                  "FlexGrow": 1,
+                  "Padding": {
+                    "Left": 12,
+                    "Right": 12
+                  }
+                },
+                "children": [
+                  {
+                    "style": {
+                      "FontFamily": "FlexConformance",
+                      "FontSize": 13,
+                      "LineHeight": 1.2
+                    },
+                    "text": "HSL"
+                  }
+                ]
+              },
+              {
+                "style": {
+                  "Height": 32,
+                  "FlexGrow": 1,
+                  "Padding": {
+                    "Left": 12,
+                    "Right": 12
+                  }
+                },
+                "children": [
+                  {
+                    "style": {
+                      "FontFamily": "FlexConformance",
+                      "FontSize": 13,
+                      "LineHeight": 1.2
+                    },
+                    "text": "HSV"
+                  }
+                ]
+              },
+              {
+                "style": {
+                  "Height": 32,
+                  "FlexGrow": 1,
+                  "Padding": {
+                    "Left": 12,
+                    "Right": 12
+                  }
+                },
+                "children": [
+                  {
+                    "style": {
+                      "FontFamily": "FlexConformance",
+                      "FontSize": 13,
+                      "LineHeight": 1.2
+                    },
+                    "text": "OKLCH"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "tolerance": 1,
+      "toleranceReason": "VendSans wght=400: HSL, HSV, OKLCH single-word differences are 0.5625px, 0.953125px, 0.28125px. Text geometry snaps to whole Goo pixels.",
+      "boxes": [
+        [
+          0,
+          0,
+          128,
+          80
+        ],
+        [
+          0,
+          0,
+          128,
+          32
+        ],
+        [
+          0,
+          0,
+          46.4375,
+          32
+        ],
+        [
+          12,
+          0,
+          22.4375,
+          15.59375
+        ],
+        [
+          54.4375,
+          0,
+          48.046875,
+          32
+        ],
+        [
+          66.4375,
+          0,
+          24.046875,
+          15.59375
+        ],
+        [
+          110.484375,
+          0,
+          62.71875,
+          32
+        ],
+        [
+          122.484375,
+          0,
+          38.71875,
+          15.59375
+        ]
+      ]
+    },
+    {
+      "name": "all-frozen-fractional-column",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 411,
+          "Height": 683,
+          "Overflow": "Scroll",
+          "Padding": 20,
+          "Gap": 14
+        },
+        "children": [
+          {
+            "style": {
+              "Height": 36
+            }
+          },
+          {
+            "style": {
+              "Height": 19.2,
+              "FontFamily": "FlexConformance",
+              "FontSize": 16,
+              "LineHeight": 1.2
+            },
+            "text": "fractional"
+          },
+          {
+            "style": {
+              "Height": 48
+            }
+          },
+          {
+            "style": {
+              "Height": 19.2,
+              "FontFamily": "FlexConformance",
+              "FontSize": 16,
+              "LineHeight": 1.2
+            },
+            "text": "fractional"
+          },
+          {
+            "style": {
+              "Height": 19.2,
+              "FontFamily": "FlexConformance",
+              "FontSize": 16,
+              "LineHeight": 1.2
+            },
+            "text": "fractional"
+          },
+          {
+            "style": {
+              "Height": 64
+            }
+          },
+          {
+            "style": {
+              "Height": 48
+            }
+          },
+          {
+            "style": {
+              "Height": 48
+            }
+          },
+          {
+            "style": {
+              "Height": 150
+            }
+          },
+          {
+            "style": {
+              "Height": 48
+            }
+          },
+          {
+            "style": {
+              "Height": 48
+            }
+          },
+          {
+            "style": {
+              "Height": 48
+            }
+          },
+          {
+            "style": {
+              "Height": 240
+            }
+          }
+        ]
+      },
+      "tolerance": 1,
+      "toleranceReason": "VendSans 16px at line-height 1.2 gives fractional 19.2px text heights. Text edges snap to Goo's whole-pixel grid.",
+      "deviation": {
+        "reason": "Visible-overflow children retain their specified Height as the automatic minimum. CSS shrinks empty children toward 0.",
+        "boxes": [
+          [
+            0,
+            0,
+            411,
+            683
+          ],
+          [
+            20,
+            20,
+            371,
+            36
+          ],
+          [
+            20,
+            70,
+            371,
+            19.1875
+          ],
+          [
+            20,
+            103.1875,
+            371,
+            48
+          ],
+          [
+            20,
+            165.1875,
+            371,
+            19.1875
+          ],
+          [
+            20,
+            198.375,
+            371,
+            19.1875
+          ],
+          [
+            20,
+            231.5625,
+            371,
+            64
+          ],
+          [
+            20,
+            309.5625,
+            371,
+            48
+          ],
+          [
+            20,
+            371.5625,
+            371,
+            48
+          ],
+          [
+            20,
+            433.5625,
+            371,
+            150
+          ],
+          [
+            20,
+            597.5625,
+            371,
+            48
+          ],
+          [
+            20,
+            659.5625,
+            371,
+            48
+          ],
+          [
+            20,
+            721.5625,
+            371,
+            48
+          ],
+          [
+            20,
+            783.5625,
+            371,
+            240
+          ]
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          411,
+          683
+        ],
+        [
+          20,
+          20,
+          371,
+          19.3125
+        ],
+        [
+          20,
+          53.3125,
+          371,
+          19.1875
+        ],
+        [
+          20,
+          86.5,
+          371,
+          25.765625
+        ],
+        [
+          20,
+          126.265625,
+          371,
+          19.1875
+        ],
+        [
+          20,
+          159.453125,
+          371,
+          19.1875
+        ],
+        [
+          20,
+          192.640625,
+          371,
+          34.34375
+        ],
+        [
+          20,
+          240.984375,
+          371,
+          25.75
+        ],
+        [
+          20,
+          280.734375,
+          371,
+          25.765625
+        ],
+        [
+          20,
+          320.5,
+          371,
+          80.484375
+        ],
+        [
+          20,
+          414.984375,
+          371,
+          25.75
+        ],
+        [
+          20,
+          454.734375,
+          371,
+          25.75
+        ],
+        [
+          20,
+          494.484375,
+          371,
+          25.75
+        ],
+        [
+          20,
+          534.234375,
+          371,
+          128.765625
+        ]
+      ]
+    },
+    {
+      "name": "fractional-text-column",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 120,
+          "Height": 40,
+          "Gap": 4
+        },
+        "children": [
+          {
+            "style": {
+              "FontFamily": "FlexConformance",
+              "FontSize": 16,
+              "LineHeight": 1.2
+            },
+            "text": "fractional"
+          },
+          {
+            "style": {
+              "FontFamily": "FlexConformance",
+              "FontSize": 16,
+              "LineHeight": 1.2
+            },
+            "text": "fractional"
+          },
+          {
+            "style": {
+              "FontFamily": "FlexConformance",
+              "FontSize": 16,
+              "LineHeight": 1.2
+            },
+            "text": "fractional"
+          }
+        ]
+      },
+      "tolerance": 1,
+      "toleranceReason": "VendSans wght=400: Chromium fractional 69.3125px, Goo 70px. Fractional 19.2px text line boxes snap to whole Goo pixels.",
+      "boxes": [
+        [
+          0,
+          0,
+          120,
+          40
+        ],
+        [
+          0,
+          0,
+          120,
+          19.1875
+        ],
+        [
+          0,
+          23.1875,
+          120,
+          19.1875
+        ],
+        [
+          0,
+          46.375,
+          120,
+          19.1875
+        ]
+      ]
+    }
+  ]
+}
