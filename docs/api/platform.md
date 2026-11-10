@@ -817,7 +817,31 @@ Holds platform preferences independently of framebuffer density. Nil values mean
 
 ### `AccentColor`
 
-Gets the system accent color, or nil when unavailable.
+Gets the system accent color, or nil when unavailable. On Windows this is the accent palette base, not the window frame color.
+
+### `AccentDark1`
+
+Gets the accent palette shade one step darker than the base (Windows AccentDark1), or nil when the host has no accent palette.
+
+### `AccentDark2`
+
+Gets the second darkest accent palette shade (Windows AccentDark2), or nil when the host has no accent palette.
+
+### `AccentDark3`
+
+Gets the darkest accent palette shade (Windows AccentDark3), or nil when the host has no accent palette.
+
+### `AccentLight1`
+
+Gets the accent palette shade one step lighter than the base (Windows AccentLight1), or nil when the host has no accent palette.
+
+### `AccentLight2`
+
+Gets the second lightest accent palette shade (Windows AccentLight2), or nil when the host has no accent palette.
+
+### `AccentLight3`
+
+Gets the lightest accent palette shade (Windows AccentLight3), or nil when the host has no accent palette.
 
 ### `EventSoundsEnabled`
 

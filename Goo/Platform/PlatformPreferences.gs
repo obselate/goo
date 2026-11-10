@@ -17,6 +17,12 @@ public data struct PlatformPreferences {
   private var textScaleFactor float32?
   private var eventSoundsEnabled bool?
   private var accentColor Color?
+  private var accentLight1 Color?
+  private var accentLight2 Color?
+  private var accentLight3 Color?
+  private var accentDark1 Color?
+  private var accentDark2 Color?
+  private var accentDark3 Color?
   private var preferredLocales IReadOnlyList[string]?
 
   /// Gets the preferred theme, or Unknown when unavailable.
@@ -27,8 +33,20 @@ public data struct PlatformPreferences {
   public prop HighContrast bool? { get -> highContrast init -> highContrast = value }
   /// Gets whether UI and event sounds are enabled, or nil when unavailable.
   public prop EventSoundsEnabled bool? { get -> eventSoundsEnabled init -> eventSoundsEnabled = value }
-  /// Gets the system accent color, or nil when unavailable.
+  /// Gets the system accent color, or nil when unavailable. On Windows this is the accent palette base, not the window frame color.
   public prop AccentColor Color? { get -> accentColor init -> accentColor = value }
+  /// Gets the lightest accent palette shade (Windows AccentLight3), or nil when the host has no accent palette.
+  public prop AccentLight3 Color? { get -> accentLight3 init -> accentLight3 = value }
+  /// Gets the second lightest accent palette shade (Windows AccentLight2), or nil when the host has no accent palette.
+  public prop AccentLight2 Color? { get -> accentLight2 init -> accentLight2 = value }
+  /// Gets the accent palette shade one step lighter than the base (Windows AccentLight1), or nil when the host has no accent palette.
+  public prop AccentLight1 Color? { get -> accentLight1 init -> accentLight1 = value }
+  /// Gets the accent palette shade one step darker than the base (Windows AccentDark1), or nil when the host has no accent palette.
+  public prop AccentDark1 Color? { get -> accentDark1 init -> accentDark1 = value }
+  /// Gets the second darkest accent palette shade (Windows AccentDark2), or nil when the host has no accent palette.
+  public prop AccentDark2 Color? { get -> accentDark2 init -> accentDark2 = value }
+  /// Gets the darkest accent palette shade (Windows AccentDark3), or nil when the host has no accent palette.
+  public prop AccentDark3 Color? { get -> accentDark3 init -> accentDark3 = value }
   /// Gets an immutable, ordered list of preferred BCP-47 language tags, or nil when unavailable.
   public prop PreferredLocales IReadOnlyList[string]? {
     get -> preferredLocales

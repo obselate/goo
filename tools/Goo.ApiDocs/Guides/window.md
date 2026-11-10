@@ -150,7 +150,7 @@ most once per second. Portal setting changes also trigger a refresh.
 
 | Platform | Available preference sources |
 | --- | --- |
-| Windows | Client-area animation, high contrast, DWM accent and the selected sound scheme. |
+| Windows | Client-area animation, high contrast, the shell accent palette (`AccentColor` is the base; `AccentLight1`-`AccentLight3` and `AccentDark1`-`AccentDark3` are the shades) and the selected sound scheme. |
 | macOS | Reduced motion, increased contrast, `NSColor.controlAccentColor` in sRGB and `com.apple.sound.uiaudio.enabled`. |
 | Linux | Portal appearance `accent-color` and `contrast`, plus GNOME `event-sounds` when exposed. |
 | Android | Theme, font scale, disabled animations, theme `colorAccent`, high text contrast and `SOUND_EFFECTS_ENABLED`. |
