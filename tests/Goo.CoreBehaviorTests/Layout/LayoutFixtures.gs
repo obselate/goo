@@ -509,6 +509,30 @@ internal class LayoutFixtures {
     return true
   }
 
+  func ScrollEndShowsFractionalContentEnd() bool {
+    for density in []float32{ 1.0F, 1.25F, 1.5F } {
+      let root = Reconciler{ Res: Resolver{} }.Mount(Container{ Width: 200, Height: 300,
+        Container{ Height: 100, OverflowY: Overflow.Scroll },
+      })
+      let layout = Layout()
+      layout.SetPixelDensity(density)
+      layout.Calculate(root, 200.0F, 300.0F)
+      let scroller = root.Children[0]
+      for i in 0 ... 20 {
+        let content = 250.0F + float32(i) * 0.05F
+        ScrollState.SetExtent(scroller, 200.0F, content)
+        ScrollState.To(scroller, 0.0F, 100000.0F, true)
+        let end = content - scrollViewportHeight(scroller)
+        let painted = TransformGeometry.ScrollOffset(scroller, TransformGeometry.WindowMatrix(scroller),
+          scroller.ScrollX, scroller.ScrollY).Y
+        if painted < end - 0.0001F || painted > end + 1.0F / density {
+          throw InvalidOperationException("density=${density}, end=${end}, painted=${painted}")
+        }
+      }
+    }
+    return true
+  }
+
   func PixelSnappingPreservesCachedLayoutsAcrossResizes() bool {
     let scene = Container{ Width: Percent(100), Height: Percent(100),
       Container{ Position: PositionType.Absolute, Left: 18, Bottom: 14,

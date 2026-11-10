@@ -60,8 +60,7 @@ internal func verticalScrollThumb(n Node, out geometry ScrollThumbGeometry) bool
   let gutters = scrollbarGutters(n)
   let contentHeight = BoxGeometry.ContentHeight(n)
   let viewport = MathF.Max(0.0F, contentHeight - gutters.Horizontal)
-  let maximum = if n.OverflowY != Overflow.Scroll && n.Kind != NodeKind.Editor { 0.0F }
-    else { n.ContentH > viewport ? n.ContentH - viewport : 0.0F }
+  let maximum = maxScrollY(n)
   if maximum <= 0.0F || viewport <= 0.0F || n.ContentH <= 0.0F { return false }
   let horizontalSlot = reservedHorizontalSlot(n,
     BoxGeometry.ContentWidth(n) - gutters.Vertical, contentHeight - gutters.Horizontal)
@@ -99,8 +98,7 @@ internal func horizontalScrollThumb(n Node, out geometry ScrollThumbGeometry) bo
   let gutters = scrollbarGutters(n)
   let contentWidth = BoxGeometry.ContentWidth(n)
   let viewport = MathF.Max(0.0F, contentWidth - gutters.Vertical)
-  let maximum = if n.OverflowX != Overflow.Scroll && n.Kind != NodeKind.Editor { 0.0F }
-    else { n.ContentW > viewport ? n.ContentW - viewport : 0.0F }
+  let maximum = maxScrollX(n)
   if maximum <= 0.0F || viewport <= 0.0F || n.ContentW <= 0.0F { return false }
   let verticalSlot = reservedVerticalSlot(n,
     contentWidth - gutters.Vertical, BoxGeometry.ContentHeight(n) - gutters.Horizontal)
