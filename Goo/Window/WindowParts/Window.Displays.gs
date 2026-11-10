@@ -40,7 +40,7 @@ public sealed class WindowDisplay {
 
 /// Provides current desktop display information and selects a native fullscreen output.
 public partial class Window {
-  /// Occurs on the UI thread when this window changes display or native display scale, after updating its minimum size.
+  /// Occurs on the UI thread when this window changes display or native display scale.
   public event DisplayChanged Action{
     add{
       requireUiThread("Window.DisplayChanged")

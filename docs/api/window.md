@@ -1543,7 +1543,7 @@ Occurs once per application activation on the process UI thread, not once per op
 
 ### `DisplayChanged`
 
-Occurs on the UI thread when this window changes display or native display scale, after updating its minimum size.
+Occurs on the UI thread when this window changes display or native display scale.
 
 ### `FocusChanged`
 
