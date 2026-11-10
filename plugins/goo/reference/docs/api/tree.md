@@ -691,7 +691,7 @@ Gets whether a virtual item request is still being corrected after layout.
 
 ### `RawBorderBox`
 
-Gets the transformed pre-snapping layout box in window logical coordinates. Use it to position popups that must share this element's device-pixel phase. An unmounted handle returns an empty rectangle.
+Gets the transformed pre-snapping layout box in window logical coordinates. Pure-move transforms use their drawn, device-pixel-snapped translation. Use it to position popups that must share this element's device-pixel phase. An unmounted handle returns an empty rectangle.
 
 ### `ScrollOffset`
 
@@ -727,7 +727,7 @@ Reports whether the element is mounted.
 
 ### `RawBorderBox`
 
-Gets the transformed pre-snapping layout box in window logical coordinates. Use it to position popups that must share this element's device-pixel phase.
+Gets the transformed pre-snapping layout box in window logical coordinates. Pure-move transforms use their drawn, device-pixel-snapped translation. Use it to position popups that must share this element's device-pixel phase.
 
 ### `ScrollOffset`
 

@@ -109,6 +109,44 @@ internal class PortalFixtures {
     return true
   }
 
+  func TranslatedWindowPointPortalSharesDeviceRowsContract() bool {
+    let cell = PortalRowAlignmentCell{ Padding: 6, Translate: 6, Offset: 1 }
+    let window = Window{ Root: cell, Width: 720, Height: 520 }
+    window.SetDisplayScaleForTest(1.5F)
+    cell.Scale = window.PixelScale
+    window.UpdateTree()
+    window.UiScale = 1.5F
+    window.Width = 1080
+    window.Height = 780
+    cell.Scale = window.PixelScale
+    cell.Field.MetricsChanged += metrics -> {
+      if !metrics.IsMounted { return }
+      cell.FieldBox = metrics.RawBorderBox
+      cell.Rebuild()
+    }
+    cell.Rebuild()
+    window.UpdateTree()
+    window.UpdateTree()
+    let density = float64(window.PixelScale)
+    let fieldRow = cell.FieldText.BorderBox.Y * density
+    let optionRow = cell.OptionText.BorderBox.Y * density
+    if MathF.Round(float32(fieldRow)) != MathF.Round(float32(optionRow)) {
+      throw InvalidOperationException("translated field=${fieldRow}, option=${optionRow}")
+    }
+    guard let root = window.Tree, let field = cell.Field.AttachedNode() else { return false }
+    let border = cell.Field.BorderBox
+    let raw = cell.Field.RawBorderBox
+    let content = cell.Field.ContentBox
+    let translation = Math.Round(6 * density) / density
+    if border.Y != float64(field.Rect.Y + float32(translation))
+      || raw.Y != float64(167.5F + float32(translation))
+      || content.Y != float64(BoxGeometry.ContentTop(field) + float32(translation)) {
+      throw InvalidOperationException("border=${border.Y}, raw=${raw.Y}, rect=${field.Rect.Y}, translation=${translation}, field=${fieldRow}, option=${optionRow}")
+    }
+    return hitTopmost(root, float32(border.X + 1), float32(border.Y + 0.01)) == field
+      && hitTopmost(root, float32(border.X + 1), float32(border.Y - 0.01)) != field
+  }
+
   func OverlayOrderingInputAndGeometryContract() bool {
     let cell = PortalInputCell{}
     let window = Window{ Root: cell, Width: 200, Height: 100 }
@@ -732,17 +770,23 @@ internal class PortalRowAlignmentCell : Cell {
   internal var Scale float32
   internal var FieldBox ElementRect
   internal var Offset float64
+  internal var Translate float64
+  internal var Clicks int32
 
   override func Build() Blob -> Container{ Width: Percent(100), Height: Percent(100),
-    Container{ Handle: Field, Position: PositionType.Absolute, Left: 40, Top: (Padding == 6 ? 166.5 : 166) + Offset, Width: 320, Height: 32, Padding: Padding,
-      Text{ Handle: FieldText, Content: "Field" },
-    },
-    Portal{ Handle: Popup, Position: PositionType.Absolute,
-      Left: FieldBox.X + Math.Floor(4.889 * float64(Scale) + 0.5) / float64(Scale),
-      Top: Capped ? 4 : FieldBox.Y,
-      Width: 310.222, Height: Capped ? 592 : 32,
-      Container{ Width: Percent(100), Height: Percent(100), Padding: Padding,
-        Text{ Handle: OptionText, Content: "Option" },
+    Container{ Width: 400, Height: 220, Overflow: Overflow.Hidden,
+      Transform: PanelTransform{ TranslateY: Translate },
+      Container{ Handle: Field, Position: PositionType.Absolute, Left: 40, Top: (Padding == 6 ? 166.5 : 166) + Offset, Width: 320, Height: 32, Padding: Padding,
+        OnClick: () -> Clicks++,
+        Text{ Handle: FieldText, Content: "Field" },
+      },
+      Portal{ Handle: Popup, Position: PositionType.Absolute,
+        Left: FieldBox.X + Math.Floor(4.889 * float64(Scale) + 0.5) / float64(Scale),
+        Top: Capped ? 4 : FieldBox.Y,
+        Width: 310.222, Height: Capped ? 592 : 32,
+        Container{ Width: Percent(100), Height: Percent(100), Padding: Padding,
+          Text{ Handle: OptionText, Content: "Option" },
+        },
       },
     },
   }
