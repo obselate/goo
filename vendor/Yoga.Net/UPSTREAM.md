@@ -18,6 +18,8 @@
   is unset: 0 for scroll or hidden overflow, else its definite size, else its content size.
 - Treat a non-negative shrink factor total as zero in the second shrink pass, so
   float residue after every item freezes cannot flip the sign of the shrink ratio.
+- Compute first-pass shrink sizes from the line's initial shrink ratio instead of a total
+  that drops as items freeze, and choose shrink or grow once per line from its initial free space.
 
 The vendored tree contains only the source needed to build Goo. Focused Goo tests
 cover the local behavior changes; upstream Yoga tests remain in the upstream

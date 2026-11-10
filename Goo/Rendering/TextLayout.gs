@@ -246,10 +246,15 @@ internal class TextLayouts {
       height float32, heightMode MeasureMode) YGSize{
         let n = nodeFromYoga(yoga)
         let constraint = widthMode == MeasureMode.Undefined ? -1.0F : width
-        let layout = For(n, constraint)
+        var layout = For(n, constraint)
+        let minContent = widthMode == MeasureMode.AtMost && n.TextTrimming == TextTrimming.None
+          && n.TextWrap != TextWrap.NoWrap ? layout.MinWidth : 0.0F
+        if minContent > width {
+          layout = For(n, minContent)
+        }
         let size = clampMeasuredSize(layout.Width, layout.Height, width, widthMode, height, heightMode)
         return widthMode == MeasureMode.AtMost && n.TextTrimming == TextTrimming.None
-          ? YGSize{ Width: layout.Width, Height: size.Height } : size
+          ? YGSize{ Width: minContent > 0.0F ? MathF.Max(minContent, width) : layout.Width, Height: size.Height } : size
       }
 
     internal func clampMeasuredSize(measuredWidth float32, measuredHeight float32, width float32,
@@ -402,6 +407,16 @@ internal class TextLayouts {
         }
         whole.Shape?.Dispose()
         let elements = UnicodeGraphemes.Starts(text)
+        var wordStart int32 = 0
+        for element in 1 ... elements.Length + 1 {
+          let index = element < elements.Length ? elements[element] : text.Length
+          if breakAfter(text, index) {
+            result.MinWidth = MathF.Max(result.MinWidth, if result.Rich != nil {
+              measureRichRange(n, paragraph, wordStart, index)
+            } else { TextFlow.MeasureBase(paragraph, wordStart, index) })
+            wordStart = index
+          }
+        }
         var cursor int32 = 0
         while cursor < elements.Length {
           var next = cursor + 1
