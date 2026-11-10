@@ -169,7 +169,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         }
         let value = frame.ClipMasks[maskIndex]
         atlas.RecordLayerForColorAttachment(commandBuffer, region.Layer)
-        SetClipMaskViewport(commandBuffer, atlas.Width, atlas.Height)
+        SetClipMaskViewport(commandBuffer, region)
         SetScissor(commandBuffer, PrimitiveClip{
           Left: int32(dirty.X),
           Top: int32(dirty.Y),
@@ -395,10 +395,12 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       return ConservativeBounds{ X: left, Y: top, Width: right - left, Height: bottom - top }
     }
 
-  private func SetClipMaskViewport(commandBuffer VkCommandBuffer, width uint32, height uint32) {
+  private func SetClipMaskViewport(commandBuffer VkCommandBuffer, region VulkanClipMaskRegion) {
     var viewport = VkViewport{}
-    viewport.width = float32(width)
-    viewport.height = float32(height)
+    viewport.x = float32(region.ContentX)
+    viewport.y = float32(region.ContentY)
+    viewport.width = float32(region.ContentWidth)
+    viewport.height = float32(region.ContentHeight)
     viewport.minDepth = 0.0F
     viewport.maxDepth = 1.0F
     let setViewport = dispatch.vkCmdSetViewport
@@ -446,8 +448,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       let layout = if stroke { primitiveState.StrokeMaskPipelineLayout } else { clipMaskPipelineLayout }
       let selected = if stroke { primitiveState.StrokeMaskPipelineFor(clipMaskAtlas!!.Format) } else { pipeline }
       let transform = ResolveTransform(frame, value.TransformIndex)
-      let width = float32(clipMaskAtlas!!.Width)
-      let height = float32(clipMaskAtlas!!.Height)
+      let width = float32(region.ContentWidth)
+      let height = float32(region.ContentHeight)
       let scaleX = float32(region.ContentWidth) / float32(region.ScreenWidth)
       let scaleY = float32(region.ContentHeight) / float32(region.ScreenHeight)
       let deltaX = float32(region.ContentX) - float32(region.ScreenX) * scaleX
@@ -456,11 +458,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.transform0_x = 2.0F * transform.A * value.ScaleX * scaleX / width
       push.transform0_y = 2.0F * transform.C * value.ScaleY * scaleX / width
       push.transform0_z = 2.0F * ((transform.A * value.TranslateX
-        + transform.C * value.TranslateY + transform.TX) * scaleX + deltaX) / width - 1.0F
+        + transform.C * value.TranslateY + transform.TX - float32(region.ScreenX)) * scaleX) / width - 1.0F
       push.transform1_x = 2.0F * transform.B * value.ScaleX * scaleY / height
       push.transform1_y = 2.0F * transform.D * value.ScaleY * scaleY / height
       push.transform1_z = 2.0F * ((transform.B * value.TranslateX
-        + transform.D * value.TranslateY + transform.TY) * scaleY + deltaY) / height - 1.0F
+        + transform.D * value.TranslateY + transform.TY - float32(region.ScreenY)) * scaleY) / height - 1.0F
       push.sampleStep_x = 1.0F / width
       push.sampleStep_y = 1.0F / height
       let matrix00 = transform.A * value.ScaleX * scaleX
