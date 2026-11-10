@@ -301,13 +301,11 @@ internal partial class TextEditorLayouts {
       let scale = TransformGeometry.PixelDensity(n)
       var x = scroll.X
       var y = scroll.Y
+      if logicalLeft + rect.W > x + right { x = MathF.Ceiling((logicalLeft + rect.W - right) * scale) / scale }
       if logicalLeft < x + left { x = MathF.Floor((logicalLeft - left) * scale) / scale }
-      else if logicalLeft + rect.W > x + right {
-        x = MathF.Ceiling((logicalLeft + rect.W - right) * scale) / scale
-      }
-      if position.Offset == state.Document.Length { y = Single.MaxValue }
-      else if logicalTop < y + top { y = MathF.Floor((logicalTop - top - state.TopInset) * scale) / scale }
-      else if logicalTop + rect.H > y + bottom { y = MathF.Ceiling((logicalTop + rect.H - bottom) * scale) / scale }
+      if position.Offset == state.Document.Length { return Point{ X: float64(x), Y: Single.MaxValue } }
+      if logicalTop + rect.H > y + bottom { y = MathF.Ceiling((logicalTop + rect.H - bottom) * scale) / scale }
+      if logicalTop < y + top { y = MathF.Floor((logicalTop - top - state.TopInset) * scale) / scale }
       return Point{ X: float64(x), Y: float64(y) }
     }
 
