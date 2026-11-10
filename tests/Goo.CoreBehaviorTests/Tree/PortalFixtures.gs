@@ -663,12 +663,12 @@ internal class PortalRowAlignmentCell : Cell {
   internal let OptionText ElementHandle = ElementHandle{}
 
   override func Build() Blob -> Container{ Width: Percent(100), Height: Percent(100),
-    Container{ Handle: Field, Position: PositionType.Absolute, Left: 40, Top: 166, Width: 320, Height: 32, Padding: 6,
+    Container{ Handle: Field, Position: PositionType.Absolute, Left: 40, Top: 166, Width: 320, Height: 32, Padding: 4,
       Text{ Handle: FieldText, Content: "Field" },
     },
     Portal{ Anchor: Field, Placement: PortalPlacement.BottomStart,
       AnchorRect: ElementRect{ X: 4.889, Y: -31.778, Width: 310.222, Height: 32 },
-      Container{ Width: 310.222, Height: 32, Padding: 6,
+      Container{ Width: 310.222, Height: 32, Padding: 4,
         Text{ Handle: OptionText, Content: "Option" },
       },
     },
