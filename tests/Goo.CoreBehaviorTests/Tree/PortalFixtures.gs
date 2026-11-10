@@ -103,6 +103,21 @@ internal class PortalFixtures {
         throw InvalidOperationException("raw transform rotate=${rotate}, actual=${actual}")
       }
     }
+    let moved = RawBoundsMoveCell{}
+    let movedWindow = Window{ Root: moved, Width: 100, Height: 100 }
+    var notifications = 0
+    moved.Handle.MetricsChanged += metrics -> notifications++
+    movedWindow.UpdateTree()
+    movedWindow.UpdateTree()
+    let before = notifications
+    moved.Offset = 0.1
+    moved.Rebuild()
+    movedWindow.UpdateTree()
+    movedWindow.UpdateTree()
+    let raw = moved.Handle.RawBorderBox.Y
+    if moved.Handle.BorderBox.Y != 0 || Math.Abs(raw - 0.1) > 0.0001 || notifications <= before {
+      throw InvalidOperationException("raw-only move border=${moved.Handle.BorderBox.Y}, raw=${raw}, notifications=${notifications}")
+    }
     return true
   }
 
@@ -754,6 +769,14 @@ internal class RawBoundsTransformCell : Cell {
         Transform: Rotate ? PanelTransform{ Rotate: 90 } : PanelTransform{ Scale: 2 },
         TransformOriginX: Percent(50), TransformOriginY: Percent(50) },
     },
+  }
+}
+
+internal class RawBoundsMoveCell : Cell {
+  internal let Handle ElementHandle = ElementHandle{}
+  internal var Offset float64
+  override func Build() Blob -> Container{ Width: 100, Height: 100,
+    Container{ Handle: Handle, Position: PositionType.Relative, Top: Offset, Width: 10, Height: 10 },
   }
 }
 
