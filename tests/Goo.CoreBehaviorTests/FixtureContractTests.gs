@@ -293,6 +293,7 @@ class FixtureContractTests {
             yield Contract[LayoutFixtures]("NarrowRowShrinksLabelAndKeepsFixedIcon")
             yield Contract[LayoutFixtures]("ComposedTreeMapsDeclarationsAndRelayouts")
             yield Contract[LayoutFixtures]("CustomMeasurementsPreserveLogicalSizes")
+            yield Contract[LayoutFixtures]("CustomPlacementsSnapToDevicePixelsAcrossRelayouts")
             yield Contract[LayoutFixtures]("PixelSnappingPreservesDistantItemSizes")
             yield Contract[LayoutFixtures]("PixelSnappingPreservesScrollExtent")
             yield Contract[LayoutFixtures]("CustomLayoutScrollExtentExcludesInsets")

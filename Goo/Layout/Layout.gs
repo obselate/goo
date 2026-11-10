@@ -644,8 +644,10 @@ internal class Layout {
       if let state = custom {
         let x = visual.X + CustomLayouts.Inset(yg, YGEdge.Left)
         let y = visual.Y + CustomLayouts.Inset(yg, YGEdge.Top)
+        let density = YGConfigAPI.YGConfigGetPointScaleFactor(config)
         for child in state.Children {
-          readRect(child.Node, x, y, float32(child.Bounds.X), float32(child.Bounds.Y), hiddenSubtree)
+          readRect(child.Node, x, y, snapPlacement(x, float32(child.Bounds.X), density),
+            snapPlacement(y, float32(child.Bounds.Y), density), hiddenSubtree)
         }
         return
       }
@@ -655,6 +657,9 @@ internal class Layout {
         }
       }
     }
+
+  private func snapPlacement(origin float32, offset float32, density float32) float32 ->
+  density > 0.0F ? MathF.Floor((origin + offset) * density + 0.5F) / density - origin : offset
 
   private func readEditorSlotRects(n Node, hidden bool, calculate bool = true) {
     let layout = TextEditorLayouts.For(n, BoxGeometry.ContentWidth(n), BoxGeometry.ContentHeight(n))
