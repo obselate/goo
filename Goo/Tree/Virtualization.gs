@@ -166,7 +166,7 @@ internal sealed class VirtualNodeState {
   }
 
   internal func CaptureRetirement(n Node) VirtualRowStorage? {
-    if current == nil || pendingSource != nil && pendingSource != source { return nil }
+    if current == nil || pending != nil && pending != current { return nil }
     guard let owner = Owner, let key = n.Key else { return nil }
     if !mounted.TryGetValue(key, out var entry) { return nil }
     guard let type = entry.ComponentType else { return nil }
@@ -215,7 +215,7 @@ internal sealed class VirtualNodeState {
   }
 
   internal func TakeRecycledRow(type Type) Node? {
-    if pendingSource != nil && pendingSource != source { return nil }
+    if pending != nil && pending != current { return nil }
     var index = recycledRows.Count
     while index > 0 {
       index--
@@ -285,7 +285,6 @@ internal sealed class VirtualNodeState {
       Reader: contextReader, Virtual: this, StateCallback: stateCallback})
   internal func Prepare(n Node, source VirtualSource, items bool) IList[Blob] {
     Cancel()
-    if this.source != source { clearRecycledRows() }
     pendingSource = source
     contextReader?.BeginState()
     let previousContext = enterContext(true)
@@ -299,6 +298,7 @@ internal sealed class VirtualNodeState {
         rethrow
       }
       guard let selected = state else { throw InvalidOperationException("${source.GetType().Name}.State returned nil: return a VirtualState instance for this Virtual element.") }
+      if selected != current { clearRecycledRows() }
       return realize(n, selected, items)
     } finally { ContextEnvironment.Current = previousContext }
   }

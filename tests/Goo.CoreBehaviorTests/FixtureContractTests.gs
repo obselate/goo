@@ -95,6 +95,7 @@ class FixtureContractTests {
             yield Contract[RowRecyclingFixtures]("DisposesRunningAnimationBeforeStorageRebindContract")
             yield Contract[RowRecyclingFixtures]("ExcludesFocusedAndEditingRowsContract")
             yield Contract[RowRecyclingFixtures]("ReconcilesChangedShapeAndDrainsSourcePoolContract")
+            yield Contract[RowRecyclingFixtures]("KeepsStorageAcrossOwnerRebuildWithContinuingStateContract")
             yield Contract[RowRecyclingFixtures]("DiscardsFailedRebindAndReleasesRetiredDataContract")
             yield Contract[RowRecyclingFixtures]("ReboundTextMatchesFreshLayoutContract")
             yield Contract[ElementHandleFixtures]("FocusProjectionContract")
