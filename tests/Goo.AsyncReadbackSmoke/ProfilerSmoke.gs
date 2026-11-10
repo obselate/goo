@@ -6,6 +6,7 @@ import System.Diagnostics
 import System.Globalization
 import System.IO
 import System.IO.Pipes
+import System.Runtime.CompilerServices
 import System.Text
 import System.Text.Json
 import System.Threading
@@ -158,6 +159,10 @@ internal class ProfilerSmoke {
         }
 
         internal func Run() {
+            if Environment.GetEnvironmentVariable("GOO_PROFILER_ALLOCATIONS_UNAVAILABLE") == "1" {
+                VerifyUnavailableAllocations()
+                return
+            }
             let startup = FrameRecorder.Current
             using let cache = ImageSourceCache()
             using let cached = cache.LoadAsync(Path.Combine(AppContext.BaseDirectory, "local-rgba.png")).GetAwaiter().GetResult()
@@ -254,6 +259,32 @@ internal class ProfilerSmoke {
             VerifyCaptures()
         }
 
+        private func VerifyUnavailableAllocations() {
+            Require(AppContext.TryGetSwitch("System.Diagnostics.Tracing.EventSource.IsSupported", out var supported)
+                && !supported, "Unavailable allocation test requires EventSourceSupport=false")
+            guard let recorder = FrameRecorder.Start(Guid.NewGuid(), FrameRecorder.DefaultBufferBytes) else {
+                throw InvalidOperationException("Unavailable allocation trace could not start")
+            }
+            try {
+                recorder.CaptureAllocations(2)
+                let records = recorder.Read(0L, 32768, out var next, out var more, out var state, out var dropped)
+                var unavailable = false
+                for record in records {
+                    Require(record.Source != "GCAllocationTick_V4 samples", "Disabled allocation sampling reported samples")
+                    if record.Name == "allocation.samples" {
+                        Require(record.Validity == "unavailable" && record.Value0 == nil
+                            && record.Source == "unavailable: EventSourceSupport is off",
+                            "Disabled allocation sampling did not report its unavailable reason and null value")
+                        unavailable = true
+                    }
+                }
+                Require(unavailable, "Disabled allocation sampling reported an empty trace")
+                Console.WriteLine("profiler-allocations: unavailable=verified reason=EventSourceSupport-off value=null")
+            } finally {
+                recorder.Stop(false)
+            }
+        }
+
         internal func VerifyPauseAndSamples(window Window, root ProfilerSmokeCell) {
             WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
             root.Scroll = true
@@ -288,12 +319,24 @@ internal class ProfilerSmoke {
             let records = recorder.Read(0L, 32768, out var next, out var more, out var state, out var dropped)
             var samples uint64 = 0uL
             var byteSamples uint64 = 0uL
+            var typesUnavailable = false
             var maximumPause int64 = 0L
             var pauseFrameMs float64 = 0.0
             var sampledType FrameTraceRecord
             let durations = List[int64]()
             for record in records {
-                if record.Source == "GCAllocationTick_V4 samples" { samples += record.Value0 ?? 0uL }
+                if record.Name == "allocation.samples" && record.Source == "GCAllocationTick_V4 aggregate samples" {
+                    samples = record.Value0 ?? 0uL
+                }
+                if record.Name == "allocation.types" {
+                    Require(record.Validity == "unavailable" && record.Value0 == nil
+                        && record.Source == "unavailable: runtime allocation events contain no type names",
+                        "Missing runtime type names were not reported as unavailable")
+                    typesUnavailable = true
+                }
+                Require(record.Source != "GCAllocationTick_V4 samples"
+                    || (!String.IsNullOrWhiteSpace(record.Name) && record.Name != "NULL"),
+                    "Unavailable runtime type name was reported as a sampled type")
                 if record.Source == "GCAllocationTick_V4 samples" && record.Name == "System.Byte[]" {
                     byteSamples += record.Value0 ?? 0uL
                 }
@@ -310,7 +353,13 @@ internal class ProfilerSmoke {
                 }
             }
             Require(samples > 0uL, "No runtime allocation samples were captured")
-            Require(byteSamples > 0uL, "Scroll workload byte-array allocations were not sampled")
+            if RuntimeFeature.IsDynamicCodeSupported {
+                Require(byteSamples > 0uL, "Scroll workload byte-array allocations were not sampled")
+                Require(!typesUnavailable, "JIT allocation type sampling was unavailable")
+            } else {
+                Require(typesUnavailable, "NativeAOT allocation type sampling did not report unavailable")
+                Require(byteSamples == 0uL, "NativeAOT reported fabricated byte-array type samples")
+            }
             Require(maximumPause > 0L, "Forced GC pause was not associated with a frame")
             durations.Sort()
             let scale = 1000.0 / float64(Stopwatch.Frequency)
@@ -321,8 +370,12 @@ internal class ProfilerSmoke {
                 + " p50_ms=" + (float64(durations[(durations.Count - 1) / 2]) * scale).ToString("F3")
                 + " p99_ms=" + (float64(durations[int32(Math.Ceiling(float64(durations.Count) * 0.99)) - 1]) * scale).ToString("F3")
                 + " max_ms=" + (float64(durations[durations.Count - 1]) * scale).ToString("F3"))
-            Console.WriteLine("profiler-type: name=" + sampledType.Name + " samples=" + sampledType.Value0.ToString()
-                + " sampled_bytes=" + sampledType.Value1.ToString())
+            if typesUnavailable {
+                Console.WriteLine("profiler-type: unavailable=runtime-type-names")
+            } else {
+                Console.WriteLine("profiler-type: name=" + sampledType.Name + " samples=" + sampledType.Value0.ToString()
+                    + " sampled_bytes=" + sampledType.Value1.ToString())
+            }
             let disabled = FrameProfiler()
             if !disabled.Enabled {
                 for i in 0 ... 100 {

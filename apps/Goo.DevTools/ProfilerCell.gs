@@ -1078,7 +1078,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
         } else if tab == "Types" {
             for index in 0 ... trace.Records.Count {
                 let r = trace.Records[index]
-                if r.Name == "allocation.samples" && r.Validity == "unavailable" {
+                if (r.Name == "allocation.samples" || r.Name == "allocation.types") && r.Validity == "unavailable" {
                     rows.Add(
                         ProfilerTableRow(
                             []string{r.Source, "", "", "Unavailable"},
