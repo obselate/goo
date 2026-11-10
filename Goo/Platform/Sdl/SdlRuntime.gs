@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.Collections.Generic
+import System.IO
 import System.Linq
 import System.Runtime.InteropServices
 import System.Threading
@@ -39,7 +40,7 @@ internal unsafe partial class SdlRuntime {
   shared {
     @DllImport("libdl.so.2", EntryPoint: "dlopen", CallingConvention: CallingConvention.Cdecl)
     private func OpenMainModule(path nint, flags int32) nint;
-    private let staticLinkConfigured bool = ConfigureStaticLink()
+    private let libraryConfigured bool = ConfigureLibrary()
     private let requiredSubsystems uint32 = uint32(SDLInitFlags.Video | SDLInitFlags.Events)
     private let sync object = Object()
     private let events SdlEventRouter = SdlEventRouter()
@@ -56,7 +57,7 @@ internal unsafe partial class SdlRuntime {
 
     internal prop ApplicationIdentifier string { get -> applicationIdentifier ?? "" }
 
-    private func ConfigureStaticLink() bool {
+    private func ConfigureLibrary() bool {
       if OperatingSystem.IsLinux() && !RuntimeFeature.IsDynamicCodeSupported {
         let handle = OpenMainModule(nint(0), 2)
         if handle == nint(0) {
@@ -65,6 +66,28 @@ internal unsafe partial class SdlRuntime {
         if NativeLibrary.TryGetExport(handle, "SDL_IsMainThread", out var symbol) && symbol != nint(0) {
           LibraryLoader.LoadFrom("libSDL3", handle)
         }
+      } else if !OperatingSystem.IsAndroid() {
+        let assembly = typeof(SdlRuntime).Assembly
+        let directory = if RuntimeFeature.IsDynamicCodeSupported {
+          Path.GetDirectoryName(assembly.Location) ?? AppContext.BaseDirectory
+        } else { AppContext.BaseDirectory }
+        let name = if OperatingSystem.IsWindows() { "SDL3.dll" }
+          else if OperatingSystem.IsMacOS() { "libSDL3.dylib" } else { "libSDL3.so" }
+        let rid = RuntimeInformation.RuntimeIdentifier
+        var path = Path.Combine(directory, name)
+        if !File.Exists(path) { path = Path.Combine(directory, "runtimes", rid, "native", name) }
+        if !File.Exists(path) {
+          path = Path.GetFullPath(Path.Combine(directory, "..", "..", "runtimes", rid, "native", name))
+        }
+        if !File.Exists(path) {
+          throw DllNotFoundException("Goo could not find its bundled SDL. Searched: "
+            + Path.Combine(directory, name) + ", "
+            + Path.Combine(directory, "runtimes", rid, "native", name) + ", " + path)
+        }
+        let handle = NativeLibrary.Load(path)
+        NativeLibrary.SetDllImportResolver(assembly,
+          (libraryName, requestingAssembly, searchPath) -> if libraryName == "SDL3" { handle } else { nint(0) })
+        LibraryLoader.LoadFrom(if OperatingSystem.IsWindows() { "SDL3" } else { "libSDL3" }, handle)
       }
       return true
     }
@@ -292,7 +315,7 @@ internal unsafe partial class SdlRuntime {
     }
 
     private func RequireMainThreadLocked(operation string, prefix string = "") {
-      if !staticLinkConfigured {
+      if !libraryConfigured {
         throw InvalidOperationException("Goo could not configure SDL3 symbols.")
       }
       let currentThreadId = Environment.CurrentManagedThreadId
