@@ -798,15 +798,15 @@ Gets whether the overflowing content reserves a gutter.
 
 ### `Thickness`
 
-Gets the painted thumb thickness.
+Gets the track thickness.
 
 ### `Thumb`
 
-Gets the optional thumb element.
+Gets the optional thumb element. It gets Hover while the pointer is over the scrollbar. Set Width on a vertical thumb or Height on a horizontal thumb to make it thinner than the track. The thumb stays centered in the track.
 
 ### `Track`
 
-Gets the optional track element.
+Gets the optional track element. It gets Hover while the pointer is over the scrollbar.
 
 ## `ScrollbarVisibility`
 

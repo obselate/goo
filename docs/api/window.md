@@ -2034,7 +2034,7 @@ Gets or sets whether the user can resize the window.
 
 ### `ResizeBand`
 
-Gets or sets the undecorated edge resize band in logical pixels.
+Gets or sets the undecorated edge resize band in logical pixels. A scrollbar under an edge band takes the pointer. Corners always resize.
 
 ### `Root`
 
