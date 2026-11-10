@@ -590,7 +590,7 @@ internal class LayoutFixtures {
       layout.SetPixelDensity(density)
       layout.Calculate(root, 100.0F, 50.0F)
       let border = MathF.Max(1.0F, MathF.Round(density, MidpointRounding.AwayFromZero)) / density
-      if BoxGeometry.PaddingEdgeLeft(root) != border || BoxGeometry.PaddingEdgeWidth(root) != 100.0F - 2.0F * border
+      if BoxGeometry.PaddingEdgeLeft(root) != border || BoxGeometry.PaddingEdgeWidth(root) != 100.0F - border - border
         || BoxGeometry.ContentLeft(root) != border + 1.0F {
         throw InvalidOperationException("density=${density}, border=${border}, paddingEdge=${BoxGeometry.PaddingEdgeLeft(root)}, contentLeft=${BoxGeometry.ContentLeft(root)}")
       }
@@ -610,9 +610,13 @@ internal class LayoutFixtures {
       let layout = Layout()
       layout.SetPixelDensity(density)
       layout.Calculate(root, 100.0F, 200.0F)
-      if policy.DesiredSize.Width != 50.25 || policy.DesiredSize.Height != 49.25 { return false }
-      let expected = MathF.Floor(49.25F * density + 0.5F) / density
-      if root.Children[0].Rect.H != expected || root.Children[0].Children[0].Rect.H != expected { return false }
+      let border = MathF.Max(1.0F, MathF.Round(density, MidpointRounding.AwayFromZero)) / density
+      let desired = 23.25F + (24.0F + border + border)
+      let expected = MathF.Floor(desired * density + 0.5F) / density
+      if policy.DesiredSize.Width != 50.25 || policy.DesiredSize.Height != float64(desired)
+        || root.Children[0].Rect.H != expected || root.Children[0].Children[0].Rect.H != expected {
+        throw InvalidOperationException("density=${density}, desired=${policy.DesiredSize.Width}x${policy.DesiredSize.Height}, expectedHeight=${desired}, rect=${root.Children[0].Rect.H}, child=${root.Children[0].Children[0].Rect.H}, expectedRect=${expected}")
+      }
     }
     return true
   }
