@@ -236,6 +236,8 @@ func RunHideResourcesSmoke() {
       Require(!window.IsVisible && !window.IsFocused && !visible && visibilityEvents == previousEvents + 1,
         "Queued Hide did not publish hidden state immediately")
       Require(window.SdlHostForTest()?.IsVisible == true, "Hide unmapped a window with an in-flight present")
+      window.handleFocusChanged(true)
+      Require(!window.IsFocused, "Pending Hide accepted a late focus gain")
       Require(target.CurrentPresentGeneration != 0uL, "Hide destroyed a queued swapchain")
       window.InputQueueKeyPressForTest(Key.A)
       window.InputQueueKeyReleaseForTest(Key.A)
@@ -275,6 +277,8 @@ func RunHideResourcesSmoke() {
         Require(!window.IsVisible && window.SdlHostForTest()?.IsVisible == false
             && visibilityEvents == previousEvents + 1,
           "Native hide did not finish after the present drained")
+        window.handleFocusChanged(true)
+        Require(!window.IsFocused, "Completed Hide accepted a late focus gain")
         Require(window.Show() == WindowOperationResult.Accepted, "Queued Show was rejected")
       }
       WindowReadbackTestFixture.ForceRender(window, 0.0)

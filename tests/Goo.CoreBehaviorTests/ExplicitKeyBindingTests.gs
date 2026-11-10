@@ -6,6 +6,24 @@ import System.Collections.Generic
 import Xunit
 
 class ExplicitKeyBindingTests {
+    @Fact
+    func LayoutOnlyEmbeddedHostKeepsKeyboardFocusVisible() {
+        using let host = ElementHandleEmbeddedHost()
+        let handle = ElementHandle()
+        let window = Window{Root: ExplicitKeyBindingTests.BuildCell(() -> Button{Handle: handle})}
+        host.Resize(100, 40, 100, 40)
+        window.Attach(host)
+        host.RenderFrame(0.0)
+        host.SetFocused(true)
+        ExplicitKeyBindingTests.Press(window.PlatformInput, Key.Tab)
+        Assert.False(host.IsPresentationAttached)
+        Assert.True(window.IsFocused)
+        Assert.True(handle.AttachedNode()!!.FocusVisible)
+        host.Suspend()
+        Assert.False(window.IsFocused)
+        Assert.False(handle.AttachedNode()!!.FocusVisible)
+    }
+
     @Theory
     @InlineData(false, false)
     @InlineData(true, false)

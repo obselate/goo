@@ -273,7 +273,8 @@ public partial class Window {
   }
 
   internal func handleFocusChanged(hasFocus bool) {
-    let focused = hasFocus && focusable && IsVisible
+    let focused = hasFocus && focusable && !nativeHidePending
+      && (host is EmbeddedWindowBridge || host?.IsVisible == true)
     let changed = IsFocused != focused
     IsFocused = focused
     if focused {
