@@ -177,6 +177,8 @@ internal class ProfilerSmoke {
             let done = ManualResetEventSlim(false)
             using let readOnly = ManualResetEventSlim(false)
             using let allowPump = ManualResetEventSlim(false)
+            using let traceRead = AutoResetEvent(false)
+            using let pacing = ManualResetEventSlim(false)
             let thread = Thread(
                 () -> {
                     try {
@@ -187,7 +189,9 @@ internal class ProfilerSmoke {
                             session.Endpoint.PipeName,
                             startup,
                             readOnly,
-                            allowPump
+                            allowPump,
+                            traceRead,
+                            pacing
                         )
                     } catch (error Exception) {
                         failure = error
@@ -201,12 +205,17 @@ internal class ProfilerSmoke {
             thread.Start()
             try {
                 let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 30L
+                let paced = []WaitHandle{traceRead, done.WaitHandle}
                 while !done.IsSet && Stopwatch.GetTimestamp() < deadline {
                     window.Pump(1.0 / 60.0)
                     if readOnly.IsSet {
                         Require(allowPump.Wait(5000), "Trace read blocked on the UI thread")
                     }
-                    Thread.Yield()
+                    if pacing.IsSet {
+                        WaitHandle.WaitAny(paced, int32(Math.Max(0L, deadline - Stopwatch.GetTimestamp()) * 1000L / Stopwatch.Frequency))
+                    } else {
+                        Thread.Yield()
+                    }
                 }
                 Require(done.IsSet, "Profiler pipe smoke timed out")
                 thread.Join()
@@ -329,18 +338,20 @@ internal class ProfilerSmoke {
             }
         }
 
-        private func Capture(window Window) WindowCapture {
+        private func Capture(window Window, pumped Action? = nil) WindowCapture {
             let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
             var request = window.RequestCapture()
             while (request == WindowCaptureRequestStatus.NotReady || request == WindowCaptureRequestStatus.Busy)
                 && Stopwatch.GetTimestamp() < deadline {
                 window.Pump(0.0)
+                pumped?.Invoke()
                 request = window.RequestCapture()
             }
             Require(request == WindowCaptureRequestStatus.Accepted, "Profiler capture was not accepted")
             var capture = window.PollCapture()
             while capture == nil && Stopwatch.GetTimestamp() < deadline {
                 window.Pump(0.0)
+                pumped?.Invoke()
                 capture = window.PollCapture()
             }
             guard let frame = capture else { throw InvalidOperationException("Profiler capture did not complete") }
@@ -377,26 +388,34 @@ internal class ProfilerSmoke {
                 recording = recorder
                 WindowReadbackTestFixture.ForceRender(window, 0.0)
                 recorder.Read(0L, 10000, out var after, out var more, out var state, out var dropped)
-                let captured = Capture(window)
+                let created = List[FrameTraceRecord]()
+                let cursor = System.Runtime.CompilerServices.StrongBox[int64](after)
+                let collect = () -> {
+                    var pending = true
+                    while pending {
+                        let records = recorder.Read(cursor.Value, 10000, out var next, out pending, out var readState, out var readDropped)
+                        cursor.Value = next
+                        for record in records {
+                            if record.Kind == FrameTraceKind.ResourceLifecycle
+                                && record.EventId == VulkanDiagnosticEventIds.ResourceCreate { created.Add(record) }
+                        }
+                    }
+                }
+                let captured = Capture(window, collect)
+                collect()
                 var imageId uint64
                 var staging = false
-                more = true
-                while more {
-                    let records = recorder.Read(after, 10000, out after, out more, out state, out dropped)
-                    for record in records {
-                        if record.Kind != FrameTraceKind.ResourceLifecycle
-                            || record.EventId != VulkanDiagnosticEventIds.ResourceCreate { continue }
-                        if record.ResourceKind == int32(FrameResourceKind.Image)
-                            && record.OwnerKind == int32(VulkanMemoryOwnerKind.LayerTarget)
-                            && record.Width == int32(captured.Width) && record.Height == int32(captured.Height) { imageId = record.ResourceId }
-                        staging = staging || (record.ResourceKind == int32(FrameResourceKind.Buffer)
-                            && record.OwnerKind == int32(VulkanMemoryOwnerKind.Staging)
-                            && record.PayloadBytes == uint64(captured.RowBytes) * uint64(captured.Height))
-                    }
+                for record in created {
+                    if record.ResourceKind == int32(FrameResourceKind.Image)
+                        && record.OwnerKind == int32(VulkanMemoryOwnerKind.LayerTarget)
+                        && record.Width == int32(captured.Width) && record.Height == int32(captured.Height) { imageId = record.ResourceId }
+                    staging = staging || (record.ResourceKind == int32(FrameResourceKind.Buffer)
+                        && record.OwnerKind == int32(VulkanMemoryOwnerKind.Staging)
+                        && record.PayloadBytes == uint64(captured.RowBytes) * uint64(captured.Height))
                 }
                 Require(imageId != 0uL, "Profiler capture has no LayerTarget image Create")
                 Require(staging, "Profiler capture has no Staging buffer Create")
-                after = VerifyResourceChurn(window, recorder, after)
+                after = VerifyResourceChurn(window, recorder, cursor.Value)
                 for i in 0 ... 40000 { recorder.Instant(0uL, 0uL, FrameTraceContext{}) }
                 var gap = false
                 more = true
@@ -484,7 +503,7 @@ internal class ProfilerSmoke {
         }
 
         private func RecordThroughPipe(window Window, root ProfilerSmokeCell, sourceCache ImageSourceCache, name string, startup FrameRecorder?,
-            readOnly ManualResetEventSlim, allowPump ManualResetEventSlim) FrameRecorder {
+            readOnly ManualResetEventSlim, allowPump ManualResetEventSlim, traceRead AutoResetEvent, pacing ManualResetEventSlim) FrameRecorder {
             let boundary = Stopwatch.GetTimestamp()
             using let client = ProfilerSmokeClient(name)
             using let started = client.Request("profiler.start")
@@ -526,10 +545,12 @@ internal class ProfilerSmoke {
             var queuedPump = ""
             var queuedFrame = ""
             var sawStartup = false
+            pacing.Set()
             while !holdArmed || remaining || queued == "" || trace.Submitted.Contains(queued) {
                 using let batch = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
                 let payload = batch.RootElement.GetProperty("payload")
                 ValidateBatch(payload, trace)
+                traceRead.Set()
                 if buildPump < 0L {
                     for build in trace.Builds {
                         if build.Value >= rebuildBoundary {
@@ -589,6 +610,7 @@ internal class ProfilerSmoke {
                 using let batch = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
                 let payload = batch.RootElement.GetProperty("payload")
                 ValidateBatch(payload, trace)
+                traceRead.Set()
                 after = payload.GetProperty("nextSeq").GetString() ?? after
             }
             Require(
@@ -608,7 +630,8 @@ internal class ProfilerSmoke {
             let gpuDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
             var gpuFrames int32 = 0
             var submittedCount = trace.Submitted.Count
-            while trace.GpuSupported && !trace.GpuAvailable && Stopwatch.GetTimestamp() < gpuDeadline {
+            while trace.GpuSupported && !(trace.GpuAvailable && trace.GpuFrameAvailable && trace.GpuClipAvailable
+                && trace.GpuPrimitiveUploadAvailable && trace.GpuManyScopesAvailable) && Stopwatch.GetTimestamp() < gpuDeadline {
                 if gpuFrames < 3 && trace.Submitted.Count >= submittedCount {
                     window.Post(() -> {
                         root.Frame++
@@ -620,6 +643,7 @@ internal class ProfilerSmoke {
                 using let batch = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
                 let payload = batch.RootElement.GetProperty("payload")
                 ValidateBatch(payload, trace)
+                traceRead.Set()
                 after = payload.GetProperty("nextSeq").GetString() ?? after
             }
             Require(!trace.GpuSupported || trace.GpuAvailable, "Supported GPU timestamps did not resolve")
@@ -638,9 +662,12 @@ internal class ProfilerSmoke {
                 using let batch = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
                 let payload = batch.RootElement.GetProperty("payload")
                 ValidateBatch(payload, trace)
+                traceRead.Set()
                 after = payload.GetProperty("nextSeq").GetString() ?? after
             }
             Require(trace.EvictedUploads.Count > 0, "Uploaded Image allocation was not retired and evicted while recording")
+            pacing.Reset()
+            traceRead.Set()
             using let presentArmed = ManualResetEventSlim(false)
             window.Post(() -> {
                 WindowReadbackTestFixture.RuntimeHoldNextQueuePresent(window)
