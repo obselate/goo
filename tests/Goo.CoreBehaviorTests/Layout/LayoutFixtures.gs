@@ -6,6 +6,27 @@ import System.Collections.Generic
 import System.Text
 
 internal class LayoutFixtures {
+  func CustomLayoutRearrangesWhenPixelDensityChanges() bool {
+    let root = Reconciler{ Res: Resolver{} }.Mount(Container{ Width: 100, Height: 200,
+      Layout: DensityFixtureLayout(),
+      Container{ Width: 100, Height: 200,
+        Container{ Position: PositionType.Absolute, Top: 166, Width: 20, Height: 20 },
+      },
+    })
+    let layout = Layout()
+    layout.SetPixelDensity(1.5F)
+    layout.Calculate(root, 100.0F, 200.0F)
+    let child = root.Children[0].Children[0]
+    if child.Rect.Y != 166.0F { return false }
+    layout.SetPixelDensity(2.25F)
+    layout.Calculate(root, 100.0F, 200.0F)
+    let expected = PixelGrid.RoundValueToPixelGrid(166.0, 2.25, false, false)
+    if child.Rect.Y != expected {
+      throw InvalidOperationException("density=2.25, child=${child.Rect.Y}, expected=${expected}")
+    }
+    return true
+  }
+
   func ComposedTreeMapsDeclarationsAndRelayouts() bool {
     let reconciler = Reconciler{ Res: Resolver{} }
     var root = reconciler.Mount(layoutScene(20.0))
@@ -1045,4 +1066,11 @@ internal class LayoutMeasurementFixtureAlgorithm : LayoutAlgorithm {
 
 internal class LayoutTextFixtureCell(text Text, start float64) : Cell {
   override func Build() Blob -> Container{ AlignItems: AlignItems.FlexStart, PaddingStart: start, text }
+}
+
+internal class DensityFixtureLayout : LayoutAlgorithm {
+  public func Measure(context LayoutContext, available LayoutSize) LayoutSize -> available
+  public func Arrange(context LayoutContext, finalSize LayoutSize) {
+    context.ArrangeChild(0, ElementRect{ Width: finalSize.Width, Height: finalSize.Height })
+  }
 }

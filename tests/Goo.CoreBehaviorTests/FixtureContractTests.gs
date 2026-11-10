@@ -296,6 +296,7 @@ class FixtureContractTests {
             yield Contract[LayoutFixtures]("ComposedTreeMapsDeclarationsAndRelayouts")
             yield Contract[LayoutFixtures]("CustomMeasurementsPreserveLogicalSizes")
             yield Contract[LayoutFixtures]("CustomPlacementsSnapToDevicePixelsAcrossRelayouts")
+            yield Contract[LayoutFixtures]("CustomLayoutRearrangesWhenPixelDensityChanges")
             yield Contract[LayoutFixtures]("PixelSnappingPreservesDistantItemSizes")
             yield Contract[LayoutFixtures]("BorderSnappingAlignsPaddingBox")
             yield Contract[LayoutFixtures]("PixelSnappingPreservesScrollExtent")
