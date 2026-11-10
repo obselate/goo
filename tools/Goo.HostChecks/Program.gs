@@ -137,7 +137,7 @@ class HostChecks {
             try {
                 if arguments.Length == 0 || arguments.Any(a -> a == "--help" || a == "-h") {
                     Console.WriteLine("Usage: Goo.HostChecks <command>\n" +
-                        "  app-host|desktop|macos|macos-host|placement|wayland PROGRAM OUTPUT\n" +
+                        "  app-host|desktop|macos|macos-host|placement|wayland|wayland-clipboard PROGRAM OUTPUT\n" +
                         "  macos-notifications PUBLISH OUTPUT\n" +
                         "  wayland-notifications PROGRAM OUTPUT\n" +
                         "  macos-data-transfer APPLICATION OUTPUT\n" +
@@ -159,7 +159,7 @@ class HostChecks {
                     DataTransfer.Run(args)
                 } else if arguments[0] == "input-build" {
                     InputBuild.Run(args)
-                } else if []string{"app-host", "desktop", "macos", "macos-host", "placement", "wayland"}.Contains(
+                } else if []string{"app-host", "desktop", "macos", "macos-host", "placement", "wayland", "wayland-clipboard"}.Contains(
                     arguments[0]
                 ) {
                     Require(args.Length == 2, "expected PROGRAM and OUTPUT")
@@ -174,6 +174,8 @@ class HostChecks {
                         host.MacosHost()
                     } else if arguments[0] == "placement" {
                         host.Placement()
+                    } else if arguments[0] == "wayland-clipboard" {
+                        host.WaylandClipboard()
                     } else {
                         host.Wayland()
                     }

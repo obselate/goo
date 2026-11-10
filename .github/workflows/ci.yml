@@ -28,7 +28,7 @@ env:
     libdbus-1-dev libdecor-0-dev libgl1-mesa-dev libgl1-mesa-dri
     libegl1 libfontconfig1 libibus-1.0-dev libwayland-dev
     libxkbcommon-dev mesa-vulkan-drivers vulkan-tools
-    kwin-wayland mako-notifier wayland-protocols weston
+    kwin-wayland mako-notifier wayland-protocols weston wl-clipboard
 
 jobs:
   changes:
@@ -836,6 +836,11 @@ jobs:
             dotnet run --project tools/Goo.HostChecks -c Release -- placement \
             tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll \
             artifacts/reports/window-placement
+          GOO_WAYLAND_COMPOSITOR=kwin .github/scripts/with-headless-wayland.sh env LIBGL_ALWAYS_SOFTWARE=1 \
+            LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+            dotnet run --project tools/Goo.HostChecks -c Release -- wayland-clipboard \
+            tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll \
+            artifacts/reports/wayland-clipboard
           GOO_WAYLAND_COMPOSITOR=kwin .github/scripts/with-headless-wayland.sh env LIBGL_ALWAYS_SOFTWARE=1 \
             LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
             python3 tests/NativeWindow/test_native_close.py \
