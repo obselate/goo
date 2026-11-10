@@ -189,6 +189,21 @@ function segmentTimes(nodes) {
         return [node.key.slice(8), seconds(values.at(-1))];
     }));
 }
+async function revealRow(pid, key) {
+    let nodes = await snapshot(pid);
+    for (const delta of [-1, 1]) {
+        while (!nodes.some(node => node.key === key)) {
+            const viewport = profilerTable(nodes).find(node => node.key === 'body');
+            const end = Math.max(0, viewport.contentSize.y - viewport.bounds.height);
+            if (delta < 0 ? viewport.scrollOffset.y >= end - 0.5 : viewport.scrollOffset.y < 0.5) break;
+            await wheelNode(pid, viewport, delta);
+            nodes = await waitSnapshot(pid, data => delta * (profilerTable(data).find(node => node.key === 'body')
+                ?.scrollOffset.y - viewport.scrollOffset.y) < -0.5, 'Summary table did not scroll');
+        }
+    }
+    assert(nodes.some(node => node.key === key), 'Summary row is missing: ' + key);
+    return nodes;
+}
 async function resizeDetails(pid) {
     const nodes = await snapshot(pid);
     const divider = nodes.find(node => node.key === 'profiler-details-divider');
@@ -382,6 +397,7 @@ try {
     const sum = Object.entries(segments).filter(([name]) => !['Frame', 'Wait'].includes(name) && !name.startsWith('GPU '))
         .reduce((total, [, value]) => total + value, 0);
     assert(Math.abs(sum - duration) <= duration * 0.01, `Frame segments ${sum} do not sum to ${duration}`);
+    nodes = await revealRow(inspector, 'summary-row-Render');
     const renderCells = branch(nodes, 'summary-row-Render').filter(node => node.content).map(node => node.content);
     assert(renderCells.length === 7 && renderCells.slice(2, 6).every(value => seconds(value) > 0),
         'Selected frame summary left timing cells empty');
@@ -393,7 +409,7 @@ try {
         'Zoom selection did not fit the selected interval');
     await capture(inspector, 'rendered-frame');
     await dragRange(inspector);
-    nodes = await snapshot(inspector);
+    nodes = await revealRow(inspector, 'summary-row-Frame');
     const frameCells = branch(nodes, 'summary-row-Frame').filter(node => node.content).map(node => node.content);
     assert(frameCells.length === 7, 'Selected range lost the Frame summary');
     assert(Math.abs(seconds(frameCells[2]) - duration * 0.5) < duration * 0.02,

@@ -59,6 +59,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
     private var resizePointer int64
     private var resizeStartX float64
     private var resizeStartWidth float64
+    private var gutter float64
 
     internal func Refresh(value float64) {
         var changed = width != value
@@ -82,6 +83,11 @@ internal partial class ProfilerCell : Cell, IDisposable {
 
     override func Build() Blob {
         let theme = Theme.Read()
+        let scrollbarGutter = theme.Scrollbar.Thickness + theme.Scrollbar.Inset
+        if gutter != scrollbarGutter {
+            gutter = scrollbarGutter
+            paths.Clear()
+        }
         let children = List[Blob]()
         children.Add(Toolbar(theme))
         if fileAction != "" {
@@ -1492,7 +1498,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
         Rebuild()
     }
 
-    private func PlotWidth() float64 -> Math.Max(100.0, width - 2.0 * Pad)
+    private func PlotWidth() float64 -> Math.Max(100.0, width - 2.0 * Pad - gutter)
 
     private func X(tick int64) float64 -> float64(tick - start) / float64(Math.Max(1L, end - start)) * PlotWidth()
 
