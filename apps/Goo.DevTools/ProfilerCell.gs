@@ -59,6 +59,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
     private var resizePointer int64
     private var resizeStartX float64
     private var resizeStartWidth float64
+    private var gutter float64
 
     internal func Refresh(value float64) {
         var changed = width != value
@@ -82,6 +83,11 @@ internal partial class ProfilerCell : Cell, IDisposable {
 
     override func Build() Blob {
         let theme = Theme.Read()
+        let scrollbarGutter = theme.Scrollbar.Thickness + theme.Scrollbar.Inset
+        if gutter != scrollbarGutter {
+            gutter = scrollbarGutter
+            paths.Clear()
+        }
         let children = List[Blob]()
         children.Add(Toolbar(theme))
         if fileAction != "" {
@@ -469,32 +475,24 @@ internal partial class ProfilerCell : Cell, IDisposable {
         )
         if hovered >= 0 && hovered < trace.Frames.Count && !selecting {
             shapes.Add(
-                Container{
-                    Key: "profiler-frame-tooltip",
-                    Position: PositionType.Absolute,
-                    Left: hoverX + 248.0 < w ? hoverX + 14.0: Math.Max(0.0, hoverX - 248.0),
-                    Top: 8,
-                    Width: 234,
-                    Padding: 8,
-                    Gap: 2,
-                    BackgroundColor: theme.OverlayColor,
-                    BorderWidth: 1,
-                    BorderColor: theme.BorderColor,
-                    BorderRadius: theme.RadiusMd!!,
-                    BoxShadow: theme.ElevationMd,
-                    HitTestSelf: false,
-                    Children: Breakdown(trace, trace.Frames[hovered], theme, 8)
-                }
+                Tooltip(
+                    "profiler-frame-tooltip",
+                    framesHandle,
+                    hoverX,
+                    8.0,
+                    theme,
+                    Breakdown(trace, trace.Frames[hovered], theme, 8)
+                )
             )
         }
         return Container{
             Key: "profiler-frames",
+            Handle: framesHandle,
             Width: w,
             Height: FramesHeight,
             FlexShrink: 0.0,
             Margin: Edges{Left: Pad},
             Position: PositionType.Relative,
-            ZIndex: 1,
             BackgroundColor: theme.SunkenColor,
             BorderRadius: theme.RadiusSm!!,
             Focusable: true,
@@ -1500,7 +1498,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
         Rebuild()
     }
 
-    private func PlotWidth() float64 -> Math.Max(100.0, width - 2.0 * Pad)
+    private func PlotWidth() float64 -> Math.Max(100.0, width - 2.0 * Pad - gutter)
 
     private func X(tick int64) float64 -> float64(tick - start) / float64(Math.Max(1L, end - start)) * PlotWidth()
 
