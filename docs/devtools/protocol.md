@@ -157,6 +157,15 @@ counter with `validity: "unavailable"`, `value0: null`, and source
 `Unavailable` in the Types table. An unavailable result does not mean that
 the app allocated no objects. Sample counts are not exact object counts.
 
+Some runtimes emit allocation counts without usable type names. The profiler
+keeps aggregate sample counts and sampled bytes in `allocation.samples`.
+`value0` is the sample count and `value1` is sampled bytes.
+If all received names are missing, blank, or `NULL`, an `allocation.types`
+counter reports `validity: "unavailable"` with a null value and a reason.
+The Types table shows `Unavailable`, not a type named `NULL`. This decision
+comes from the received events, not the runtime name.
+NativeAOT can report unavailable type names even with EventSource support enabled.
+
 `vulkan.timestamp.elapsed` records give elapsed GPU nanoseconds in `gpuElapsedNs`.
 Match `windowId`, `frameId` and `submissionId`. `value0` is the number of recorded
 scopes and `value1` is the number omitted when the scope limit is reached.

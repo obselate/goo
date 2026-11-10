@@ -25,6 +25,8 @@ internal class AllocationCapture : EventListener {
     private var recorder FrameRecorder?
     private var timer Timer?
     private var untracked uint64
+    private var totalSamples uint64
+    private var totalBytes uint64
     private let deadline int64
 
     internal init(owner FrameRecorder, seconds int32) {
@@ -50,9 +52,18 @@ internal class AllocationCapture : EventListener {
             if names[i] == "TypeName" { name = payload[i] as string }
             if names[i] == "AllocationAmount64" { bytes = Convert.ToUInt64(payload[i]) }
         }
-        guard let typeName = name else { return }
         lock gate {
             if recorder == nil { return }
+            totalSamples++
+            totalBytes += bytes
+            guard let typeName = name else {
+                untracked++
+                return
+            }
+            if String.IsNullOrWhiteSpace(typeName) || typeName == "NULL" {
+                untracked++
+                return
+            }
             if samples.TryGetValue(typeName, out var value) {
                 samples[typeName] = (value.Item1 + bytes, value.Item2 + 1uL)
             } else if samples.Count < 500 {
@@ -68,6 +79,16 @@ internal class AllocationCapture : EventListener {
             if let owner = recorder {
                 recorder = nil
                 let ticks = Stopwatch.GetTimestamp()
+                owner.Publish(FrameTraceRecord{
+                    Kind: FrameTraceKind.Counter, Ticks: ticks - owner.Origin,
+                    Name: "allocation.samples", Source: "GCAllocationTick_V4 aggregate samples",
+                    Unit: "samples", Validity: "sampled-not-exact",
+                    Value0: totalSamples, Value1: totalBytes,
+                })
+                if totalSamples > 0uL && samples.Count == 0 {
+                    owner.Counter("allocation.types", "unavailable: runtime allocation events contain no type names",
+                        nil, ticks, "unavailable", unit: "samples")
+                }
                 for pair in samples {
                     owner.Publish(FrameTraceRecord{
                         Kind: FrameTraceKind.Counter, Ticks: ticks - owner.Origin,
@@ -76,7 +97,7 @@ internal class AllocationCapture : EventListener {
                         Value0: pair.Value.Item2, Value1: pair.Value.Item1,
                     })
                 }
-                owner.Counter("allocation.untracked.samples", "500-type bound", untracked, ticks, unit: "samples")
+                owner.Counter("allocation.untracked.samples", "unavailable type name or 500-type bound", untracked, ticks, unit: "samples")
                 samples.Clear()
             }
         }
