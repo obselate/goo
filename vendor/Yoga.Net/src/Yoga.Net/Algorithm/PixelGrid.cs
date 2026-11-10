@@ -60,7 +60,15 @@ namespace Facebook.Yoga
         public static void RoundLayoutResultsToPixelGrid(
             Node node,
             double absoluteLeft,
-            double absoluteTop)
+            double absoluteTop) =>
+            RoundLayoutResultsToPixelGrid(node, absoluteLeft, absoluteTop, absoluteLeft, absoluteTop);
+
+        private static void RoundLayoutResultsToPixelGrid(
+            Node node,
+            double absoluteLeft,
+            double absoluteTop,
+            double rawLeft,
+            double rawTop)
         {
             var pointScaleFactor = (double)node.GetConfig()!.GetPointScaleFactor();
 
@@ -71,8 +79,17 @@ namespace Facebook.Yoga
             double nodeWidth = layout.RawDimension(Dimension.Width);
             double nodeHeight = layout.RawDimension(Dimension.Height);
 
+            double rawNodeLeft = rawLeft + nodeLeft;
+            double rawNodeTop = rawTop + nodeTop;
             double absoluteNodeLeft = absoluteLeft + nodeLeft;
             double absoluteNodeTop = absoluteTop + nodeTop;
+            if (pointScaleFactor != 0.0 && node.Style.PositionType == PositionType.Absolute)
+            {
+                // Round the subtree from a snapped origin so it keeps its pixels when it moves.
+                // Snap the unsnapped position so nested absolute nodes do not accumulate rounding.
+                absoluteNodeLeft = RoundValueToPixelGridDouble(rawNodeLeft, pointScaleFactor, false, false);
+                absoluteNodeTop = RoundValueToPixelGridDouble(rawNodeTop, pointScaleFactor, false, false);
+            }
 
             double absoluteNodeRight = absoluteNodeLeft + nodeWidth;
             double absoluteNodeBottom = absoluteNodeTop + nodeHeight;
@@ -120,7 +137,7 @@ namespace Facebook.Yoga
             for (nuint index = 0; index < childCount; index++)
             {
                 var child = node.GetChild(index)!;
-                RoundLayoutResultsToPixelGrid(child, absoluteNodeLeft, absoluteNodeTop);
+                RoundLayoutResultsToPixelGrid(child, absoluteNodeLeft, absoluteNodeTop, rawNodeLeft, rawNodeTop);
             }
         }
     }

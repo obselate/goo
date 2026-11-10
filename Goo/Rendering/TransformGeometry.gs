@@ -52,15 +52,19 @@ internal class TransformGeometry {
         if let parent = n.Parent { outer = rawWindowMatrix(parent, out parentRect) }
       }
       rect = n.Rect
-      if !n.IsPortal {
+      // Layout snaps an absolute node's origin, so its drawn origin is its raw origin.
+      let snapped = n.Position == PositionType.Absolute
+      if !n.IsPortal && !snapped {
         if let parent = n.Parent {
           rect.X += parentRect.X - parent.Rect.X
           rect.Y += parentRect.Y - parent.Rect.Y
         }
       }
       if let yoga = n.Yoga {
-        rect.X += yoga.Layout.RawLeft - YGNodeLayoutAPI.YGNodeLayoutGetLeft(yoga)
-        rect.Y += yoga.Layout.RawTop - YGNodeLayoutAPI.YGNodeLayoutGetTop(yoga)
+        if !snapped {
+          rect.X += yoga.Layout.RawLeft - YGNodeLayoutAPI.YGNodeLayoutGetLeft(yoga)
+          rect.Y += yoga.Layout.RawTop - YGNodeLayoutAPI.YGNodeLayoutGetTop(yoga)
+        }
         rect.W = yoga.Layout.RawDimension(Dimension.Width)
         rect.H = yoga.Layout.RawDimension(Dimension.Height)
       }

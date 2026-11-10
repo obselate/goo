@@ -586,6 +586,45 @@ internal class LayoutFixtures {
     return true
   }
 
+  func AbsoluteSubtreeKeepsPixelsWhenItMoves() bool {
+    for density in []float32{ 1.25F, 1.5F } {
+      var first List[float32]? = nil
+      for step in 0 ... 12 {
+        let root = Reconciler{ Res: Resolver{} }.Mount(Container{ Width: 400, Height: 200,
+          Container{ Position: PositionType.Absolute, Left: 40.0F + float32(step) * 0.1F, Top: 20.3,
+            Padding: 3.3, Gap: 2.7, FlexDirection: FlexDirection.Row, AlignItems: AlignItems.Center,
+            Container{ Width: 17.5, Height: 17.5 },
+            Container{ Width: 31.3, Height: 9.9, Padding: 1.1, Container{ Width: 7.7, Height: 3.3 } },
+          },
+        })
+        let layout = Layout()
+        layout.SetPixelDensity(density)
+        layout.Calculate(root, 400.0F, 200.0F)
+        let bar = root.Children[0]
+        let pixels = List[float32]()
+        relativePixels(bar, bar.Rect, density, pixels)
+        if let expected = first {
+          if !sameSnapshot(pixels, expected) {
+            throw InvalidOperationException("density=${density}, step=${step}: subtree pixels changed")
+          }
+        } else {
+          first = pixels
+        }
+      }
+    }
+    let nested = Reconciler{ Res: Resolver{} }.Mount(Container{ Width: 100, Height: 100,
+      Container{ Position: PositionType.Absolute, Left: 0.49, Width: 50, Height: 50,
+        Container{ Position: PositionType.Absolute, Left: 0.49, Width: 10, Height: 10 },
+      },
+    })
+    Layout().Calculate(nested, 100.0F, 100.0F)
+    let inner = nested.Children[0].Children[0].Rect.X
+    if inner != 1.0F {
+      throw InvalidOperationException("nested absolute origin=${inner}, raw=0.98")
+    }
+    return true
+  }
+
   func PixelSnappingPreservesDistantItemSizes() bool {
     for density in []float32{ 1.0F, 1.5F, 2.0F } {
       let root = Reconciler{ Res: Resolver{} }.Mount(Container{ Width: 100, Height: 200,
@@ -858,6 +897,21 @@ internal class LayoutFixtures {
     values.Add(node.Rect.H)
     for i in 0 ... node.Children.Count {
       snapshot(node.Children[i], values)
+    }
+  }
+
+  private func relativePixels(node Node, origin Rect, density float32, values List[float32]) {
+    values.Add(MathF.Round((node.Rect.X - origin.X) * density))
+    values.Add(MathF.Round((node.Rect.Y - origin.Y) * density))
+    values.Add(MathF.Round(node.Rect.W * density))
+    values.Add(MathF.Round(node.Rect.H * density))
+    let raw = TransformGeometry.RawBoundsToWindow(node)
+    let drawn = TransformGeometry.BoundsToWindow(node)
+    if MathF.Abs(raw.X - drawn.X) * density > 0.501F || MathF.Abs(raw.Y - drawn.Y) * density > 0.501F {
+      throw InvalidOperationException("density=${density}: raw origin (${raw.X}, ${raw.Y}) is off the drawn pixel (${drawn.X}, ${drawn.Y})")
+    }
+    for child in node.Children {
+      relativePixels(child, origin, density, values)
     }
   }
 

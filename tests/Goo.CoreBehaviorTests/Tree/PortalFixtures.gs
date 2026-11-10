@@ -60,17 +60,14 @@ internal class PortalFixtures {
             window.Height = int32(600 * scale)
             cell.Scale = window.PixelScale
             cell.Rebuild()
-            var notifications = 0
             cell.Field.MetricsChanged += metrics -> {
               if !metrics.IsMounted { return }
-              notifications++
               cell.FieldBox = metrics.RawBorderBox
               cell.Rebuild()
             }
             window.UpdateTree()
             window.UpdateTree()
             let snapped = cell.Field.BorderBox
-            let before = notifications
             let density = float64(window.PixelScale)
             for move in []float64{ 0, 0.1 } {
               cell.Offset = move
@@ -88,7 +85,7 @@ internal class PortalFixtures {
                   || Math.Round((box.Y + box.Height) * density) > Math.Round(596.0 * density) { return false }
               }
             }
-            if cell.Field.BorderBox.Y != snapped.Y || notifications <= before { return false }
+            if cell.Field.BorderBox.Y != snapped.Y || cell.Field.RawBorderBox.Y != snapped.Y { return false }
           }
         }
       }
@@ -99,8 +96,8 @@ internal class PortalFixtures {
       window.UpdateTree()
       let actual = cell.Handle.RawBorderBox
       let expected = rotate
-        ? ElementRect{ X: -0.5, Y: 11.5, Width: 20, Height: 10 }
-        : ElementRect{ X: -0.5, Y: -3.5, Width: 20, Height: 40 }
+        ? ElementRect{ X: 0, Y: 12, Width: 20, Height: 10 }
+        : ElementRect{ X: 0, Y: -3, Width: 20, Height: 40 }
       if Math.Abs(actual.X - expected.X) > 0.0001 || Math.Abs(actual.Y - expected.Y) > 0.0001
         || Math.Abs(actual.Width - expected.Width) > 0.0001 || Math.Abs(actual.Height - expected.Height) > 0.0001 {
         throw InvalidOperationException("raw transform rotate=${rotate}, actual=${actual}")
@@ -139,7 +136,7 @@ internal class PortalFixtures {
     let content = cell.Field.ContentBox
     let translation = Math.Round(6 * density) / density
     if border.Y != float64(field.Rect.Y + float32(translation))
-      || raw.Y != float64(167.5F + float32(translation))
+      || raw.Y != border.Y
       || content.Y != float64(BoxGeometry.ContentTop(field) + float32(translation)) {
       throw InvalidOperationException("border=${border.Y}, raw=${raw.Y}, rect=${field.Rect.Y}, translation=${translation}, field=${fieldRow}, option=${optionRow}")
     }

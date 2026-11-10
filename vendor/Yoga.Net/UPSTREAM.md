@@ -24,6 +24,8 @@
   that drops as items freeze at their maximum size.
 - Snap a positive border width to at least one whole device pixel
   (`round half away from zero` of `width * pointScaleFactor`) when the style resolves it.
+- Snap an absolutely positioned node's unsnapped absolute origin to the pixel grid and round
+  its subtree from the snapped origin, so the subtree keeps its pixels when it moves.
 
 The vendored tree contains only the source needed to build Goo. Focused Goo tests
 cover the local behavior changes; upstream Yoga tests remain in the upstream

@@ -305,6 +305,7 @@ class FixtureContractTests {
             yield Contract[LayoutFixtures]("CustomLayoutScrollExtentExcludesInsets")
             yield Contract[LayoutFixtures]("ScrollEndShowsFractionalContentEnd")
             yield Contract[LayoutFixtures]("PixelSnappingPreservesCachedLayoutsAcrossResizes")
+            yield Contract[LayoutFixtures]("AbsoluteSubtreeKeepsPixelsWhenItMoves")
             yield Contract[LayoutFixtures]("KeyedReorderRetainsYogaLayouts")
             yield Contract[LayoutFixtures]("LayoutIsStableAcrossRoots")
             yield Contract[LayoutFixtures]("LayoutTransitionGlidesComputedPosition")
