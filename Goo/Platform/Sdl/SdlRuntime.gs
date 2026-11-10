@@ -73,7 +73,9 @@ internal unsafe partial class SdlRuntime {
         } else { AppContext.BaseDirectory }
         let name = if OperatingSystem.IsWindows() { "SDL3.dll" }
           else if OperatingSystem.IsMacOS() { "libSDL3.dylib" } else { "libSDL3.so" }
-        let rid = RuntimeInformation.RuntimeIdentifier
+        let rid = (if OperatingSystem.IsWindows() { "win" }
+          else if OperatingSystem.IsMacOS() { "osx" } else { "linux" })
+          + "-" + RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant()
         var path = Path.Combine(directory, name)
         if !File.Exists(path) { path = Path.Combine(directory, "runtimes", rid, "native", name) }
         if !File.Exists(path) {
