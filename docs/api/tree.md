@@ -689,6 +689,10 @@ Reports whether this handle is attached to an element.
 
 Gets whether a virtual item request is still being corrected after layout.
 
+### `RawBorderBox`
+
+Gets the transformed pre-snapping layout box in window logical coordinates. Use it to position popups that must share this element's device-pixel phase. An unmounted handle returns an empty rectangle.
+
 ### `ScrollOffset`
 
 Gets the current logical scroll offset. An unmounted handle returns the origin.
@@ -720,6 +724,10 @@ Gets the transformed content box in window logical coordinates.
 ### `IsMounted`
 
 Reports whether the element is mounted.
+
+### `RawBorderBox`
+
+Gets the transformed pre-snapping layout box in window logical coordinates. Use it to position popups that must share this element's device-pixel phase.
 
 ### `ScrollOffset`
 

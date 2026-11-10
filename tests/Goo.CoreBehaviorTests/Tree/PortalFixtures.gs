@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Numerics
 
 internal class PortalFixtures {
   func UiScaleLayoutInputAndAnchoredPortalContract() bool {
@@ -43,19 +44,67 @@ internal class PortalFixtures {
     return window.UiScale == 0.5F
   }
 
-  func AnchoredPortalSharesDevicePixelRowsWithTreeContract() bool {
-    for scale in []float32{ 1.25F, 1.5F, 2.25F } {
-      let cell = PortalRowAlignmentCell{}
-      let window = Window{ Root: cell, Width: 600, Height: 600, UiScale: scale }
-      window.UpdateTree()
-      let field = cell.FieldText.BorderBox
-      let option = cell.OptionText.BorderBox
-      let fieldRow = field.Y * float64(scale)
-      let optionRow = option.Y * float64(scale)
-      if Math.Abs(fieldRow - Math.Round(fieldRow)) > 0.001 || Math.Abs(optionRow - Math.Round(optionRow)) > 0.001
-        || Math.Round(fieldRow) != Math.Round(optionRow) {
-          throw InvalidOperationException("scale=${scale}, field=${fieldRow}, option=${optionRow}")
+  func WindowPointPortalSharesDevicePixelRowsWithTreeContract() bool {
+    for padding in []float64{ 4, 6 } {
+      for scale in []float32{ 1.0F, 1.25F, 1.5F, 2.25F } {
+        for display in []float32{ 1, 1.5F } {
+          if display != 1 && scale != 1.5F { continue }
+          for capped in []bool{ false, true } {
+            let cell = PortalRowAlignmentCell{ Padding: padding, Capped: capped }
+            let window = Window{ Root: cell, Width: 600, Height: 600 }
+            window.SetDisplayScaleForTest(display)
+            cell.Scale = window.PixelScale
+            window.UpdateTree()
+            window.UiScale = scale
+            window.Width = int32(600 * scale)
+            window.Height = int32(600 * scale)
+            cell.Scale = window.PixelScale
+            cell.Rebuild()
+            var notifications = 0
+            cell.Field.MetricsChanged += metrics -> {
+              if !metrics.IsMounted { return }
+              notifications++
+              cell.FieldBox = metrics.RawBorderBox
+              cell.Rebuild()
+            }
+            window.UpdateTree()
+            window.UpdateTree()
+            let snapped = cell.Field.BorderBox
+            let before = notifications
+            let density = float64(window.PixelScale)
+            for move in []float64{ 0, 0.1 } {
+              cell.Offset = move
+              cell.Rebuild()
+              window.UpdateTree()
+              window.UpdateTree()
+              let fieldRow = cell.FieldText.BorderBox.Y * density
+              let optionRow = cell.OptionText.BorderBox.Y * density
+              if !capped && Math.Round(fieldRow) != Math.Round(optionRow) {
+                throw InvalidOperationException("display=${display}, scale=${scale}, padding=${padding}, move=${move}, field=${fieldRow}, option=${optionRow}")
+              }
+              if capped {
+                let box = cell.Popup.BorderBox
+                if Math.Round(box.Y * density) < Math.Round(4.0 * density)
+                  || Math.Round((box.Y + box.Height) * density) > Math.Round(596.0 * density) { return false }
+              }
+            }
+            if cell.Field.BorderBox.Y != snapped.Y || notifications <= before { return false }
+          }
         }
+      }
+    }
+    for rotate in []bool{ false, true } {
+      let cell = RawBoundsTransformCell{ Rotate: rotate }
+      let window = Window{ Root: cell, Width: 100, Height: 100 }
+      window.UpdateTree()
+      let actual = cell.Handle.RawBorderBox
+      let expected = rotate
+        ? ElementRect{ X: -0.5, Y: 11.5, Width: 20, Height: 10 }
+        : ElementRect{ X: -0.5, Y: -3.5, Width: 20, Height: 40 }
+      if Math.Abs(actual.X - expected.X) > 0.0001 || Math.Abs(actual.Y - expected.Y) > 0.0001
+        || Math.Abs(actual.Width - expected.Width) > 0.0001 || Math.Abs(actual.Height - expected.Height) > 0.0001 {
+        throw InvalidOperationException("raw transform rotate=${rotate}, actual=${actual}")
+      }
     }
     return true
   }
@@ -494,6 +543,10 @@ internal class FocusScopeCloseCell : Cell {
 public partial class Window {
   internal prop InputForTest InputCoordinator { get -> input }
 
+  internal func SetDisplayScaleForTest(value float32) {
+    dpi = Vector2(value, value)
+  }
+
   internal func PortalLayoutNeedsForTest() bool {
     guard let root = node else { return false }
     return layout.NeedsLayout(root, portalRoot, float32(Width), float32(Height))
@@ -657,18 +710,38 @@ internal class PortalPlacementCell : Cell {
   }
 }
 
+internal class RawBoundsTransformCell : Cell {
+  internal let Handle ElementHandle = ElementHandle{}
+  internal var Rotate bool
+  override func Build() Blob -> Container{ Width: 100, Height: 100,
+    Container{ Position: PositionType.Absolute, Left: 0.5, Top: 0.5, Width: 50, Height: 50,
+      Container{ Handle: Handle, Position: PositionType.Absolute, Left: 4, Top: 6, Width: 10, Height: 20,
+        Transform: Rotate ? PanelTransform{ Rotate: 90 } : PanelTransform{ Scale: 2 },
+        TransformOriginX: Percent(50), TransformOriginY: Percent(50) },
+    },
+  }
+}
+
 internal class PortalRowAlignmentCell : Cell {
   internal let Field ElementHandle = ElementHandle{}
   internal let FieldText ElementHandle = ElementHandle{}
   internal let OptionText ElementHandle = ElementHandle{}
+  internal var Padding float64 = 4
+  internal let Popup ElementHandle = ElementHandle{}
+  internal var Capped bool
+  internal var Scale float32
+  internal var FieldBox ElementRect
+  internal var Offset float64
 
   override func Build() Blob -> Container{ Width: Percent(100), Height: Percent(100),
-    Container{ Handle: Field, Position: PositionType.Absolute, Left: 40, Top: 166, Width: 320, Height: 32, Padding: 6,
+    Container{ Handle: Field, Position: PositionType.Absolute, Left: 40, Top: (Padding == 6 ? 166.5 : 166) + Offset, Width: 320, Height: 32, Padding: Padding,
       Text{ Handle: FieldText, Content: "Field" },
     },
-    Portal{ Anchor: Field, Placement: PortalPlacement.BottomStart,
-      AnchorRect: ElementRect{ X: 4.889, Y: -31.778, Width: 310.222, Height: 32 },
-      Container{ Width: 310.222, Height: 32, Padding: 6,
+    Portal{ Handle: Popup, Position: PositionType.Absolute,
+      Left: FieldBox.X + Math.Floor(4.889 * float64(Scale) + 0.5) / float64(Scale),
+      Top: Capped ? 4 : FieldBox.Y,
+      Width: 310.222, Height: Capped ? 592 : 32,
+      Container{ Width: Percent(100), Height: Percent(100), Padding: Padding,
         Text{ Handle: OptionText, Content: "Option" },
       },
     },

@@ -42,6 +42,16 @@ public class ElementHandle {
     }
   }
 
+  /// Gets the transformed pre-snapping layout box in window logical coordinates.
+  /// Use it to position popups that must share this element's device-pixel phase.
+  /// An unmounted handle returns an empty rectangle.
+  public prop RawBorderBox ElementRect{
+    get {
+      guard let n = mountedNode(true) else { return ElementRect{} }
+      return ElementHandles.RawBorderBox(n)
+    }
+  }
+
   /// Gets the transformed content box in window logical coordinates.
   /// An unmounted handle returns an empty rectangle.
   public prop ContentBox ElementRect{
@@ -329,11 +339,15 @@ public data struct ElementMetrics {
   private var contentBox ElementRect
   private var scrollOffset Point
   private var scrollRange Point
+  private var rawBorderBox ElementRect
 
   /// Reports whether the element is mounted.
   public prop IsMounted bool{ get -> isMounted init -> isMounted = value }
   /// Gets the transformed border box in window logical coordinates.
   public prop BorderBox ElementRect{ get -> borderBox init -> borderBox = value }
+  /// Gets the transformed pre-snapping layout box in window logical coordinates.
+  /// Use it to position popups that must share this element's device-pixel phase.
+  public prop RawBorderBox ElementRect{ get -> rawBorderBox init -> rawBorderBox = value }
   /// Gets the transformed content box in window logical coordinates.
   public prop ContentBox ElementRect{ get -> contentBox init -> contentBox = value }
   /// Gets the current logical scroll offset.
@@ -466,6 +480,12 @@ internal class ElementHandles {
         return nil
       }
       return if values.TryGetValue(n, out var value) { value } else { nil }
+    }
+
+    internal func RawBorderBox(n Node) ElementRect {
+      let bounds = TransformGeometry.RawBoundsToWindow(n)
+      return ElementRect{ X: float64(bounds.X), Y: float64(bounds.Y),
+        Width: float64(bounds.W), Height: float64(bounds.H) }
     }
 
     internal func BorderBox(n Node) ElementRect {
@@ -773,6 +793,7 @@ internal class MetricSubscriptions {
       return ElementMetrics{
         IsMounted: true,
         BorderBox: ElementHandles.BorderBox(node),
+        RawBorderBox: ElementHandles.RawBorderBox(node),
         ContentBox: ElementHandles.ContentBox(node),
         ScrollOffset: Point{ X: float64(node.ScrollX), Y: float64(node.ScrollY) },
         ScrollRange: scrollRange(node),
@@ -880,6 +901,7 @@ internal class MetricSubscriptions {
 }
 
 private func sameElementMetrics(left ElementMetrics, right ElementMetrics) bool -> left.IsMounted == right.IsMounted && sameElementRect(left.BorderBox, right.BorderBox)
+  && sameElementRect(left.RawBorderBox, right.RawBorderBox)
   && sameElementRect(left.ContentBox, right.ContentBox)
   && left.ScrollOffset.X == right.ScrollOffset.X && left.ScrollOffset.Y == right.ScrollOffset.Y
   && left.ScrollRange.X == right.ScrollRange.X && left.ScrollRange.Y == right.ScrollRange.Y
