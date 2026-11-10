@@ -52,7 +52,7 @@ internal unsafe partial class SdlHost {
                   systemTheme = switch level {
                     case 1u: SystemTheme.Dark
                     case 2u: SystemTheme.Light
-                    case _: SystemTheme.Unknown
+                    case _: theme
                   }
                 }
               }
