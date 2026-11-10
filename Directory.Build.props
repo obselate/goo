@@ -2,6 +2,7 @@
   <PropertyGroup>
     <GooReleaseVersion>0.29.1</GooReleaseVersion>
     <GooLinuxSdlPath Condition="'$(GooLinuxSdlPath)' == '' and Exists('$(MSBuildThisFileDirectory)artifacts/gallery-native/runtimes/linux-x64/native/libSDL3.so')">$(MSBuildThisFileDirectory)artifacts/gallery-native/runtimes/linux-x64/native/libSDL3.so</GooLinuxSdlPath>
+    <GooLinuxSdlPath Condition="'$(GooLinuxSdlPath)' == '' and Exists('$(MSBuildThisFileDirectory)artifacts/native/libSDL3.so')">$(MSBuildThisFileDirectory)artifacts/native/libSDL3.so</GooLinuxSdlPath>
     <GooLinuxSdlStaticPath Condition="'$(GooLinuxSdlStaticPath)' == '' and Exists('$(MSBuildThisFileDirectory)artifacts/native/libSDL3.a')">$(MSBuildThisFileDirectory)artifacts/native/libSDL3.a</GooLinuxSdlStaticPath>
     <GooLinuxTextStaticRoot Condition="'$(GooLinuxTextStaticRoot)' == '' and Exists('$(MSBuildThisFileDirectory)artifacts/native/text/libgoo-harfbuzz.a')">$(MSBuildThisFileDirectory)artifacts/native/text</GooLinuxTextStaticRoot>
     <GooWindowsSdlPath Condition="'$(GooWindowsSdlPath)' == '' and Exists('$(MSBuildThisFileDirectory)artifacts/gallery-native/runtimes/win-x64/native/SDL3.dll')">$(MSBuildThisFileDirectory)artifacts/gallery-native/runtimes/win-x64/native/SDL3.dll</GooWindowsSdlPath>

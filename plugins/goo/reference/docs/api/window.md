@@ -4,6 +4,15 @@ Generated from `Goo.xml`. Source declarations supply type ownership and XML-emit
 
 Source: [`Goo/Window`](https://github.com/obselate/goo/tree/main/Goo/Window)
 
+## Native library loading
+
+Goo loads its bundled patched SDL and shares that handle with its SDL bindings.
+It checks beside `Goo.dll`, then `runtimes/<rid>/native` in the output or NuGet
+package. It also checks the host's native-library search directories, including
+single-file extraction directories. Scripting hosts can load the managed assemblies
+with `Assembly.LoadFrom`.
+They do not need an application dependency manifest or a custom SDL search path.
+
 ## Native desktop backdrops
 
 Set `Backdrop: WindowBackdrop.Blur` with a translucent `Background`. Configure
