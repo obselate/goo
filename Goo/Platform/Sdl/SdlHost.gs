@@ -521,30 +521,47 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
           pendingEvents = true
         }, () -> CloseRequested?.Invoke(WindowCloseReason.Terminating))
     } else {
-      var requested = ElementRect{ X: x, Y: y, Width: width, Height: height }
+      let requested = ElementRect{ X: x, Y: y, Width: width, Height: height }
+      var bounds = requested
       var displayId = SDL.GetPrimaryDisplay()
       if positionSet {
         var rect = SDLRect{ X: x, Y: y, W: width, H: height }
         displayId = SDL.GetDisplayForRect(&rect)
       }
-      if let display = ReadDisplay(displayId) {
-        if let usable = display.UsableBounds {
-          requested = ConstrainInitialBounds(requested, minWidth, minHeight, positionSet, usable)
-        }
+      let usable = ReadDisplay(displayId)?.UsableBounds
+      if let area = usable {
+        bounds = ConstrainInitialBounds(requested, minWidth, minHeight, positionSet, area)
       }
       let properties = SDL.CreateProperties()
       if properties == 0u { ThrowSdl("SDL_CreateProperties") }
       try {
         Require(SDL.SetStringProperty(properties, "SDL.window.create.title", title), "SDL_SetStringProperty")
-        Require(SDL.SetNumberProperty(properties, "SDL.window.create.width", int64(requested.Width)), "SDL_SetNumberProperty")
-        Require(SDL.SetNumberProperty(properties, "SDL.window.create.height", int64(requested.Height)), "SDL_SetNumberProperty")
-        Require(SDL.SetNumberProperty(properties, "SDL.window.create.x", int64(requested.X)), "SDL_SetNumberProperty")
-        Require(SDL.SetNumberProperty(properties, "SDL.window.create.y", int64(requested.Y)), "SDL_SetNumberProperty")
+        Require(SDL.SetNumberProperty(properties, "SDL.window.create.width", int64(bounds.Width)), "SDL_SetNumberProperty")
+        Require(SDL.SetNumberProperty(properties, "SDL.window.create.height", int64(bounds.Height)), "SDL_SetNumberProperty")
+        Require(SDL.SetNumberProperty(properties, "SDL.window.create.x", int64(bounds.X)), "SDL_SetNumberProperty")
+        Require(SDL.SetNumberProperty(properties, "SDL.window.create.y", int64(bounds.Y)), "SDL_SetNumberProperty")
         Require(SDL.SetNumberProperty(properties, "SDL.window.create.flags", int64(flags)), "SDL_SetNumberProperty")
         window = SDL.CreateWindowWithProperties(properties)
       } finally { SDL.DestroyProperties(properties) }
       if window.IsNull { ThrowSdl("SDL_CreateWindowWithProperties") }
+      if decorated && !IsWayland() {
+        if let area = usable { ConstrainFrame(requested, minWidth, minHeight, positionSet, area) }
+      }
     }
+  }
+
+  private func ConstrainFrame(requested ElementRect, minWidth int32, minHeight int32, positionSet bool, usable ElementRect) {
+    var top int32 = 0
+    var left int32 = 0
+    var bottom int32 = 0
+    var right int32 = 0
+    if !SDL.GetWindowBordersSize(window, &top, &left, &bottom, &right) { return }
+    if top == 0 && left == 0 && bottom == 0 && right == 0 { return }
+    let framed = ElementRect{ X: usable.X + float64(left), Y: usable.Y + float64(top),
+      Width: usable.Width - float64(left + right), Height: usable.Height - float64(top + bottom) }
+    let bounds = ConstrainInitialBounds(requested, minWidth, minHeight, positionSet, framed)
+    Require(SDL.SetWindowPosition(window, int32(bounds.X), int32(bounds.Y)), "SDL_SetWindowPosition")
+    Require(SDL.SetWindowSize(window, int32(bounds.Width), int32(bounds.Height)), "SDL_SetWindowSize")
   }
 
   private func ReadLayerOutput(id WindowDisplayId?) nint {
