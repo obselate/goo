@@ -491,6 +491,24 @@ internal class LayoutFixtures {
     return true
   }
 
+  func CustomLayoutScrollExtentExcludesInsets() bool {
+    let root = Reconciler{ Res: Resolver{} }.Mount(Container{ Width: 200, Height: 200,
+      Container{ Layout: LayoutMeasurementFixtureAlgorithm(), Width: 100, Height: 100, Padding: 10,
+        OverflowY: Overflow.Scroll,
+        Container{},
+      },
+    })
+
+    Layout().Calculate(root, 200.0F, 200.0F)
+
+    let scroller = root.Children[0]
+    if scroller.ContentH != 80.0F {
+      throw InvalidOperationException("content=${scroller.ContentH}, viewport=${scrollViewportHeight(scroller)}")
+    }
+
+    return true
+  }
+
   func PixelSnappingPreservesCachedLayoutsAcrossResizes() bool {
     let scene = Container{ Width: Percent(100), Height: Percent(100),
       Container{ Position: PositionType.Absolute, Left: 18, Bottom: 14,

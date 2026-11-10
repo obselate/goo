@@ -179,16 +179,16 @@ internal class CustomLayoutState {
       arrangedVersion = 0L
       for child in Children { child.Arranged = false }
       Algorithm.Arrange(context, LayoutSize{Width: float64(width), Height: float64(height)})
-      ContentWidth = left + right
-      ContentHeight = top + bottom
+      ContentWidth = 0.0F
+      ContentHeight = 0.0F
       for child in Children {
         if !child.Arranged { throw InvalidOperationException("${Algorithm.GetType().Name}.Arrange omitted a child with key '${child.Node.Key ?? "<unkeyed>"}': call ArrangeChild once for every child.") }
         CustomLayouts.ArrangeRoot(child.Node, child.Bounds, Node.Direction)
         if let childYoga = child.Node.Yoga {
-          let x = left + float32(child.Bounds.X) + YGNodeLayoutAPI.YGNodeLayoutGetLeft(childYoga)
-          let y = top + float32(child.Bounds.Y) + YGNodeLayoutAPI.YGNodeLayoutGetTop(childYoga)
-          ContentWidth = Math.Max(ContentWidth, x + YGNodeLayoutAPI.YGNodeLayoutGetWidth(childYoga) + right)
-          ContentHeight = Math.Max(ContentHeight, y + YGNodeLayoutAPI.YGNodeLayoutGetHeight(childYoga) + bottom)
+          let x = float32(child.Bounds.X) + YGNodeLayoutAPI.YGNodeLayoutGetLeft(childYoga)
+          let y = float32(child.Bounds.Y) + YGNodeLayoutAPI.YGNodeLayoutGetTop(childYoga)
+          ContentWidth = Math.Max(ContentWidth, x + YGNodeLayoutAPI.YGNodeLayoutGetWidth(childYoga))
+          ContentHeight = Math.Max(ContentHeight, y + YGNodeLayoutAPI.YGNodeLayoutGetHeight(childYoga))
         }
       }
       if !Single.IsFinite(ContentWidth) || !Single.IsFinite(ContentHeight) { throw InvalidOperationException("Custom layout content extent overflowed") }

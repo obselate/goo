@@ -50,8 +50,8 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
   private const MaxCapacity int32 = 1048576
 
   private let providerIdentities ConditionalWeakTable[ImageSourceProvider, VulkanImageProviderIdentity]
-  private let providerRecords []VulkanImageProviderRecord
-  private let imageIdentities []VulkanImageResourceIdentity
+  private var providerRecords []VulkanImageProviderRecord
+  private var imageIdentities []VulkanImageResourceIdentity
   private let linearSamplerId ResourceId
   private var nextProviderId uint64
   private var nextSourceId uint64
@@ -89,13 +89,13 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
     }
   }
 
-  internal init(maximumImageIdentities int32) {
-    if maximumImageIdentities <= 0 || maximumImageIdentities > MaxCapacity {
-      throw ArgumentOutOfRangeException("maximumImageIdentities")
+  internal init(initialCapacity int32) {
+    if initialCapacity <= 0 || initialCapacity > MaxCapacity {
+      throw ArgumentOutOfRangeException("initialCapacity")
     }
     providerIdentities = ConditionalWeakTable[ImageSourceProvider, VulkanImageProviderIdentity]()
-    providerRecords = [maximumImageIdentities]VulkanImageProviderRecord
-    imageIdentities = [maximumImageIdentities]VulkanImageResourceIdentity
+    providerRecords = [initialCapacity]VulkanImageProviderRecord
+    imageIdentities = [initialCapacity]VulkanImageResourceIdentity
     linearSamplerId = ResourceId{
       Kind: SceneResourceKind.Sampler,
       LogicalId: 1uL,
@@ -145,14 +145,16 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
         index++
       }
       if liveCount >= imageIdentities.Length {
-        throw InvalidOperationException("Vulkan image identity capacity reached")
+        if imageIdentities.Length == MaxCapacity {
+          throw InvalidOperationException("Vulkan image identity capacity reached")
+        }
+        let expanded = [Math.Min(imageIdentities.Length * 2, MaxCapacity)]VulkanImageResourceIdentity
+        Array.Copy(imageIdentities, expanded, imageIdentities.Length)
+        imageIdentities = expanded
       }
       var freeIndex int32 = 0
       while freeIndex < imageIdentities.Length && imageIdentities[freeIndex].IsValid {
         freeIndex++
-      }
-      if freeIndex >= imageIdentities.Length {
-        throw InvalidOperationException("Vulkan image identity capacity reached")
       }
       let logicalId = NextLogicalId()
       let created = VulkanImageResourceIdentity{
@@ -261,7 +263,12 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
     }
     releaseDeferred = true
     if providerRecordCount >= providerRecords.Length {
-      throw InvalidOperationException("Vulkan image provider identity capacity reached")
+      if providerRecords.Length == MaxCapacity {
+        throw InvalidOperationException("Vulkan image provider identity capacity reached")
+      }
+      let expanded = [Math.Min(providerRecords.Length * 2, MaxCapacity)]VulkanImageProviderRecord
+      Array.Copy(providerRecords, expanded, providerRecords.Length)
+      providerRecords = expanded
     }
     let providerId = NextProviderId()
     let sourceId = NextSourceId()
@@ -269,9 +276,6 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
     var freeIndex int32 = 0
     while freeIndex < providerRecords.Length && providerRecords[freeIndex].Reference != nil {
       freeIndex++
-    }
-    if freeIndex >= providerRecords.Length {
-      throw InvalidOperationException("Vulkan image provider identity capacity reached")
     }
     providerIdentities.Add(provider, created)
     if let source = provider as ImageSource? {

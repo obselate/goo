@@ -5,6 +5,35 @@ import Xunit
 
 class ImagePublicationTests {
     @Fact
+    func ImageIdentityRegistryGrowsAndPreservesLiveIdentities() {
+        using let registry = VulkanImageIdentityRegistry(2)
+        using let first = ImageSource(1, 1, [4]uint8)
+        using let second = ImageSource(1, 1, [4]uint8)
+        using let third = ImageSource(1, 1, [4]uint8)
+        using let fourth = ImageSource(1, 1, [4]uint8)
+        using let fifth = ImageSource(1, 1, [4]uint8)
+        let providers = []ImageSource{first, second, third, fourth, fifth}
+        let identities = [providers.Length]VulkanImageResourceIdentity
+        let format = VkConstants.VK_FORMAT_R8G8B8A8_UNORM
+
+        for index in 0 ... providers.Length {
+            let identity = registry.ResolveImage(providers[index], 1uL, 1uL, format)
+            Assert.True(identity.IsValid)
+            for previous in 0 ... index {
+                Assert.NotEqual(identities[previous].ImageId.LogicalId, identity.ImageId.LogicalId)
+            }
+            identities[index] = identity
+        }
+
+        Assert.Equal(providers.Length, registry.Stats.LiveCount)
+        Assert.Equal(providers.Length, registry.Stats.ProviderRecordCount)
+        for index in 0 ... providers.Length {
+            Assert.Equal(identities[index], registry.ResolveImage(providers[index], 1uL, 1uL, format))
+        }
+        Assert.Equal(providers.Length, registry.Stats.LiveCount)
+    }
+
+    @Fact
     func CompletedReplacementRequestsPaintWithoutCellRebuild() {
         using let first = ImageSource(1, 1, []uint8{255, 0, 0, 255})
         using let replacement = ImageSource(1, 1, []uint8{0, 0, 255, 255})
