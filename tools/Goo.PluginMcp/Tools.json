@@ -1100,6 +1100,13 @@
         "event": "not-an-event"
       }
     },
+    "invalidKey": {
+      "name": "goo_input",
+      "arguments": {
+        "event": "key.down",
+        "key": "KeyK"
+      }
+    },
     "pointer.down": {
       "name": "goo_input",
       "arguments": {

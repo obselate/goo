@@ -33,11 +33,13 @@ partial class GooServer {
         }
         lock gate {
             var gesture string? = nil
+            var createdGesture = false
             lock GestureGate {
                 Gestures.TryGetValue(key, out gesture)
                 if gesture == nil && (event_ == "pointer.down" || event_ == "key.down") {
                     gesture = Guid.NewGuid().ToString("N")
                     Gestures[key] = gesture
+                    createdGesture = true
                 }
             }
             let arguments = List[string](){"input", event_, "--json"}
@@ -72,7 +74,9 @@ partial class GooServer {
                     "input"
                 ).Item1
             } catch (error GooFailure) {
-                if error.Message.Contains("gesture-owned") || error.Message.Contains("gesture-expired") {
+                if error.Message.Contains("gesture-owned") || error.Message.Contains("gesture-expired") ||
+                    createdGesture &&
+                    !B(error.Detail, "mayHaveApplied") {
                     lock GestureGate {
                         Gestures.Remove(key)
                     }

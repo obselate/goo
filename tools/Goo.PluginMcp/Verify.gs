@@ -350,6 +350,7 @@ shared class Verify {
         let stale = await Call(client, "staleInput", target, true)
         Check(JsonSerializer.Serialize(stale).Contains("stale-target"), JsonSerializer.Serialize(stale))
         await Call(client, "unknownInput", target, true)
+        await Call(client, "invalidKey", target, true)
         let beforePng = await Capture(client, target)
         File.WriteAllBytes(Path.Combine(output, "before.png"), beforePng)
         for event_ in[]string{"click", "pointer.down", "pointer.up", "key.down", "key.up"} {
@@ -363,6 +364,9 @@ shared class Verify {
                 }
             )
             Check(B(applied, "ok") && B(applied["payload"]!!, "applied"), applied)
+            if event_ == "pointer.down" {
+                await Call(client, "invalidKey", target, true)
+            }
         }
         var after = await Snapshot(client, target)
         Check(after["added"]!!.AsArray().Any(x -> S(x, "content") == "Count: 2"), after)
