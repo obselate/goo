@@ -261,20 +261,20 @@ float strokeCoverage()
     float2 stepX = ddx(pathPosition);
     float2 stepY = ddy(pathPosition);
     uint coverage = 0u;
-    uint firstBand = horizontalBandIndexAt(pathPosition.y - abs(pc.sampleStep.w));
-    uint lastBand = horizontalBandIndexAt(pathPosition.y + abs(pc.sampleStep.w));
+    uint firstBand = bandIndexAt(pathPosition.y - abs(pc.sampleStep.w), false);
+    uint lastBand = bandIndexAt(pathPosition.y + abs(pc.sampleStep.w), false);
     for (uint bandIndex = firstBand; bandIndex <= lastBand; ++bandIndex)
     {
-        AnalyticBand band = readBand(horizontalBandBase() + bandIndex * BandWordCount);
+        AnalyticBand band = readBand(bandBase(false) + bandIndex * BandWordCount);
         if (band.maximum < pathPosition.y - abs(pc.sampleStep.w)
             || band.minimum > pathPosition.y + abs(pc.sampleStep.w)) continue;
         for (uint candidate = 0u; candidate < band.forwardCount; ++candidate)
         {
-            uint index = pathWord(horizontalIndexBase() + band.forwardStart + candidate);
+            uint index = pathWord(indexBase(false) + band.forwardStart + candidate);
             if (index >= curveCount()) continue;
             QuadraticCurve curve = curveAt(index);
             if (bandIndex > firstBand
-                && strokeMinimumY(curve) <= readBand(horizontalBandBase() + (bandIndex - 1u) * BandWordCount).maximum) continue;
+                && strokeMinimumY(curve) <= readBand(bandBase(false) + (bandIndex - 1u) * BandWordCount).maximum) continue;
             float minimumX = min(min(curve.start.x, curve.control.x), curve.finish.x);
             float maximumX = max(max(curve.start.x, curve.control.x), curve.finish.x);
             if (pathPosition.x < minimumX - abs(pc.sampleStep.z)

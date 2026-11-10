@@ -123,6 +123,31 @@ uint curveBase()
     return verticalIndexBase() + verticalIndexCount();
 }
 
+uint bandCount(bool vertical)
+{
+    return vertical ? verticalBandCount() : horizontalBandCount();
+}
+
+uint bandBase(bool vertical)
+{
+    return vertical ? verticalBandBase() : horizontalBandBase();
+}
+
+uint indexBase(bool vertical)
+{
+    return vertical ? verticalIndexBase() : horizontalIndexBase();
+}
+
+float solveCoordinate(float2 value, bool vertical)
+{
+    return vertical ? value.x : value.y;
+}
+
+float rayCoordinate(float2 value, bool vertical)
+{
+    return vertical ? value.y : value.x;
+}
+
 AnalyticBand readBand(uint base)
 {
     AnalyticBand result;
@@ -147,32 +172,18 @@ QuadraticCurve curveAt(uint index)
     return result;
 }
 
-float curveX(QuadraticCurve curve, float t)
+float curveCoordinate(QuadraticCurve curve, float t, bool vertical)
 {
     float inverseT = 1.0 - t;
-    return inverseT * inverseT * curve.start.x
-        + 2.0 * inverseT * t * curve.control.x
-        + t * t * curve.finish.x;
+    return inverseT * inverseT * rayCoordinate(curve.start, vertical)
+        + 2.0 * inverseT * t * rayCoordinate(curve.control, vertical)
+        + t * t * rayCoordinate(curve.finish, vertical);
 }
 
-float curveY(QuadraticCurve curve, float t)
+float curveDerivative(QuadraticCurve curve, float t, bool vertical)
 {
-    float inverseT = 1.0 - t;
-    return inverseT * inverseT * curve.start.y
-        + 2.0 * inverseT * t * curve.control.y
-        + t * t * curve.finish.y;
-}
-
-float curveXDerivative(QuadraticCurve curve, float t)
-{
-    return 2.0 * ((1.0 - t) * (curve.control.x - curve.start.x)
-        + t * (curve.finish.x - curve.control.x));
-}
-
-float curveYDerivative(QuadraticCurve curve, float t)
-{
-    return 2.0 * ((1.0 - t) * (curve.control.y - curve.start.y)
-        + t * (curve.finish.y - curve.control.y));
+    return 2.0 * ((1.0 - t) * (solveCoordinate(curve.control, vertical) - solveCoordinate(curve.start, vertical))
+        + t * (solveCoordinate(curve.finish, vertical) - solveCoordinate(curve.control, vertical)));
 }
 
 float coefficientTolerance(float first, float second, float quadratic)
@@ -201,70 +212,34 @@ uint rootCode(float first, float second, float third)
     return (0x2e74u >> shift) & 0x0101u;
 }
 
-AxisRoots solveHorizontalRoots(QuadraticCurve curve, float2 point)
+AxisRoots solveRoots(QuadraticCurve curve, float2 point, bool vertical)
 {
-    float2 first = curve.start - point;
-    float2 second = curve.control - point;
-    float2 third = curve.finish - point;
+    float first = solveCoordinate(curve.start - point, vertical);
+    float second = solveCoordinate(curve.control - point, vertical);
+    float third = solveCoordinate(curve.finish - point, vertical);
     AxisRoots result;
-    result.code = rootCode(first.y, second.y, third.y);
+    result.code = rootCode(first, second, third);
     result.first = result.second = -1.0;
     if (result.code == 0u)
     {
         return result;
     }
-    float2 a = first - second * 2.0 + third;
-    float2 b = first - second;
-    float tolerance = coefficientTolerance(first.y, b.y, a.y);
-    if (abs(a.y) > tolerance)
+    float a = first - second * 2.0 + third;
+    float b = first - second;
+    float tolerance = coefficientTolerance(first, b, a);
+    if (abs(a) > tolerance)
     {
-        float discriminant = max(b.y * b.y - a.y * first.y, 0.0);
+        float discriminant = max(b * b - a * first, 0.0);
         float root = sqrt(discriminant);
-        float q = b.y + (b.y < 0.0 ? -root : root);
-        float nearRoot = q == 0.0 ? 0.0 : first.y / q;
-        float farRoot = q / a.y;
-        result.first = b.y < 0.0 ? farRoot : nearRoot;
-        result.second = b.y < 0.0 ? nearRoot : farRoot;
+        float q = b + (b < 0.0 ? -root : root);
+        float nearRoot = q == 0.0 ? 0.0 : first / q;
+        float farRoot = q / a;
+        result.first = b < 0.0 ? farRoot : nearRoot;
+        result.second = b < 0.0 ? nearRoot : farRoot;
     }
-    else if (abs(b.y) > tolerance)
+    else if (abs(b) > tolerance)
     {
-        result.first = result.second = 0.5 * first.y / b.y;
-    }
-    else
-    {
-        result.first = result.second = -1.0;
-    }
-    return result;
-}
-
-AxisRoots solveVerticalRoots(QuadraticCurve curve, float2 point)
-{
-    float2 first = curve.start - point;
-    float2 second = curve.control - point;
-    float2 third = curve.finish - point;
-    AxisRoots result;
-    result.code = rootCode(first.x, second.x, third.x);
-    result.first = result.second = -1.0;
-    if (result.code == 0u)
-    {
-        return result;
-    }
-    float2 a = first - second * 2.0 + third;
-    float2 b = first - second;
-    float tolerance = coefficientTolerance(first.x, b.x, a.x);
-    if (abs(a.x) > tolerance)
-    {
-        float discriminant = max(b.x * b.x - a.x * first.x, 0.0);
-        float root = sqrt(discriminant);
-        float q = b.x + (b.x < 0.0 ? -root : root);
-        float nearRoot = q == 0.0 ? 0.0 : first.x / q;
-        float farRoot = q / a.x;
-        result.first = b.x < 0.0 ? farRoot : nearRoot;
-        result.second = b.x < 0.0 ? nearRoot : farRoot;
-    }
-    else if (abs(b.x) > tolerance)
-    {
-        result.first = result.second = 0.5 * first.x / b.x;
+        result.first = result.second = 0.5 * first / b;
     }
     else
     {
@@ -281,31 +256,24 @@ bool rootInRange(float root)
 float endpointDirection(QuadraticCurve curve, float root, bool vertical)
 {
     float parameter = clamp(root, 0.0, 1.0);
-    float direction = vertical ? curveXDerivative(curve, parameter)
-        : curveYDerivative(curve, parameter);
+    float direction = curveDerivative(curve, parameter, vertical);
     float tolerance = directionTolerance(curve, vertical);
     if (abs(direction) <= tolerance && parameter >= 1.0)
     {
         float previous = max(0.0, 1.0 - EndpointParameterStep);
-        direction = vertical ? curveXDerivative(curve, previous)
-            : curveYDerivative(curve, previous);
+        direction = curveDerivative(curve, previous, vertical);
     }
     return direction;
 }
 
-float horizontalDistance(QuadraticCurve curve, float2 point, float root, bool rightRay)
+float rayDistance(QuadraticCurve curve, float2 point, float root, bool forward, bool vertical)
 {
-    float value = curveX(curve, clamp(root, 0.0, 1.0));
-    return rightRay ? value - point.x : point.x - value;
+    float value = curveCoordinate(curve, clamp(root, 0.0, 1.0), vertical);
+    float origin = rayCoordinate(point, vertical);
+    return forward ? value - origin : origin - value;
 }
 
-float verticalDistance(QuadraticCurve curve, float2 point, float root, bool downRay)
-{
-    float value = curveY(curve, clamp(root, 0.0, 1.0));
-    return downRay ? value - point.y : point.y - value;
-}
-
-bool horizontalRootAt(AxisRoots roots, uint slot, out float root)
+bool rootAt(AxisRoots roots, uint slot, out float root)
 {
     root = 0.0;
     if (roots.code == 0u)
@@ -329,36 +297,13 @@ bool horizontalRootAt(AxisRoots roots, uint slot, out float root)
     return true;
 }
 
-bool verticalRootAt(AxisRoots roots, uint slot, out float root)
-{
-    root = 0.0;
-    if (roots.code == 0u)
-    {
-        return false;
-    }
-    if (slot == 0u)
-    {
-        if ((roots.code & 1u) == 0u)
-        {
-            return false;
-        }
-        root = roots.first;
-        return true;
-    }
-    if (roots.code <= 1u)
-    {
-        return false;
-    }
-    root = roots.second;
-    return true;
-}
-
-bool horizontalRootHit(
+bool rootHit(
     float2 point,
     QuadraticCurve curve,
     float root,
-    bool rightRay,
+    bool forward,
     float2 pixelsPerPath,
+    bool vertical,
     out float distancePixels,
     out float direction)
 {
@@ -368,12 +313,12 @@ bool horizontalRootHit(
     {
         return false;
     }
-    direction = endpointDirection(curve, root, false);
-    if (abs(direction) <= directionTolerance(curve, false))
+    direction = endpointDirection(curve, root, vertical);
+    if (abs(direction) <= directionTolerance(curve, vertical))
     {
         return false;
     }
-    distancePixels = horizontalDistance(curve, point, root, rightRay) * pixelsPerPath.x;
+    distancePixels = rayDistance(curve, point, root, forward, vertical) * rayCoordinate(pixelsPerPath, vertical);
     if (distancePixels < -0.5 || isnan(distancePixels) || isinf(distancePixels))
     {
         return false;
@@ -381,38 +326,10 @@ bool horizontalRootHit(
     return true;
 }
 
-bool verticalRootHit(
-    float2 point,
-    QuadraticCurve curve,
-    float root,
-    bool downRay,
-    float2 pixelsPerPath,
-    out float distancePixels,
-    out float direction)
+uint bandIndexAt(float coordinate, bool vertical)
 {
-    distancePixels = 0.0;
-    direction = 0.0;
-    if (!rootInRange(root))
-    {
-        return false;
-    }
-    direction = endpointDirection(curve, root, true);
-    if (abs(direction) <= directionTolerance(curve, true))
-    {
-        return false;
-    }
-    distancePixels = verticalDistance(curve, point, root, downRay) * pixelsPerPath.y;
-    if (distancePixels < -0.5 || isnan(distancePixels) || isinf(distancePixels))
-    {
-        return false;
-    }
-    return true;
-}
-
-uint horizontalBandIndexAt(float y)
-{
-    uint count = horizontalBandCount();
-    uint base = horizontalBandBase();
+    uint count = bandCount(vertical);
+    uint base = bandBase(vertical);
     if (count == 0u)
     {
         return 0u;
@@ -423,7 +340,7 @@ uint horizontalBandIndexAt(float y)
     {
         uint middle = low + (high - low) / 2u;
         AnalyticBand candidate = readBand(base + middle * BandWordCount);
-        if (candidate.maximum >= y)
+        if (candidate.maximum >= coordinate)
         {
             high = middle;
         }
@@ -435,36 +352,9 @@ uint horizontalBandIndexAt(float y)
     return low < count ? low : count - 1u;
 }
 
-AnalyticBand horizontalBandAt(float y)
+AnalyticBand bandAt(float coordinate, bool vertical)
 {
-    return readBand(horizontalBandBase() + horizontalBandIndexAt(y) * BandWordCount);
-}
-
-AnalyticBand verticalBandAt(float x)
-{
-    uint count = verticalBandCount();
-    uint base = verticalBandBase();
-    if (count == 0u)
-    {
-        return readBand(base);
-    }
-    uint low = 0u;
-    uint high = count;
-    while (low < high)
-    {
-        uint middle = low + (high - low) / 2u;
-        AnalyticBand candidate = readBand(base + middle * BandWordCount);
-        if (candidate.maximum >= x)
-        {
-            high = middle;
-        }
-        else
-        {
-            low = middle + 1u;
-        }
-    }
-    uint index = low < count ? low : count - 1u;
-    return readBand(base + index * BandWordCount);
+    return readBand(bandBase(vertical) + bandIndexAt(coordinate, vertical) * BandWordCount);
 }
 
 bool rootPrecedes(
@@ -549,69 +439,14 @@ void accumulateRootDirections(
     }
 }
 
-void accumulateHorizontalCurve(
-    float2 point,
-    QuadraticCurve curve,
-    bool rightRay,
-    float2 pixelsPerPath,
-    inout float value,
-    inout float weight,
-    inout float oppositeValue,
-    inout float oppositeWeight)
-{
-    AxisRoots roots = solveHorizontalRoots(curve, point);
-    for (uint slot = 0u; slot < 2u; ++slot)
-    {
-        float root;
-        if (horizontalRootAt(roots, slot, root) && rootInRange(root))
-        {
-            float direction = endpointDirection(curve, root, false);
-            if (!(abs(direction) <= directionTolerance(curve, false)))
-            {
-                accumulateRootDirections(
-                    horizontalDistance(curve, point, root, rightRay) * pixelsPerPath.x,
-                    direction > 0.0 ? 1.0 : -1.0,
-                    value, weight, oppositeValue, oppositeWeight);
-            }
-        }
-    }
-}
-
-void accumulateVerticalCurve(
-    float2 point,
-    QuadraticCurve curve,
-    bool downRay,
-    float2 pixelsPerPath,
-    inout float value,
-    inout float weight,
-    inout float oppositeValue,
-    inout float oppositeWeight)
-{
-    AxisRoots roots = solveVerticalRoots(curve, point);
-    for (uint slot = 0u; slot < 2u; ++slot)
-    {
-        float root;
-        if (verticalRootAt(roots, slot, root) && rootInRange(root))
-        {
-            float direction = endpointDirection(curve, root, true);
-            if (!(abs(direction) <= directionTolerance(curve, true)))
-            {
-                accumulateRootDirections(
-                    verticalDistance(curve, point, root, downRay) * pixelsPerPath.y,
-                    direction < 0.0 ? 1.0 : -1.0,
-                    value, weight, oppositeValue, oppositeWeight);
-            }
-        }
-    }
-}
-
-void accumulateHorizontalEvenOddOrdered(
+void accumulateEvenOddOrdered(
     float2 point,
     uint indices,
     uint start,
     uint count,
-    bool rightRay,
+    bool forward,
     float2 pixelsPerPath,
+    bool vertical,
     uint totalParity,
     inout float value,
     inout float weight)
@@ -636,97 +471,17 @@ void accumulateHorizontalEvenOddOrdered(
                 continue;
             }
             QuadraticCurve curve = curveAt(curveIndex);
-            AxisRoots roots = solveHorizontalRoots(curve, point);
+            AxisRoots roots = solveRoots(curve, point, vertical);
             for (uint slot = 0u; slot < 2u; ++slot)
             {
                 float root;
-                if (!horizontalRootAt(roots, slot, root))
+                if (!rootAt(roots, slot, root))
                 {
                     continue;
                 }
                 float distancePixels;
                 float direction;
-                if (!horizontalRootHit(point, curve, root, rightRay, pixelsPerPath,
-                    distancePixels, direction)
-                    || distancePixels >= 0.5
-                    || !rootFollows(distancePixels, curveIndex, slot, hasLast,
-                        lastDistance, lastCurve, lastSlot))
-                {
-                    continue;
-                }
-                if (rootPrecedes(distancePixels, curveIndex, slot, found,
-                    bestDistance, bestCurve, bestSlot))
-                {
-                    found = true;
-                    bestDistance = distancePixels;
-                    bestCurve = curveIndex;
-                    bestSlot = slot;
-                }
-            }
-        }
-        if (!found)
-        {
-            break;
-        }
-        float amount = clamp(bestDistance + 0.5, 0.0, 1.0);
-        float rootSign = (fractionalCount & 1u) == 0u ? 1.0 : -1.0;
-        value += rootSign * amount;
-        weight = max(weight, clamp(1.0 - abs(bestDistance) * 2.0, 0.0, 1.0));
-        fractionalCount++;
-        hasLast = true;
-        lastDistance = bestDistance;
-        lastCurve = bestCurve;
-        lastSlot = bestSlot;
-    }
-    uint tailParity = totalParity ^ (fractionalCount & 1u);
-    if (tailParity != 0u)
-    {
-        value += (fractionalCount & 1u) == 0u ? 1.0 : -1.0;
-    }
-}
-
-void accumulateVerticalEvenOddOrdered(
-    float2 point,
-    uint indices,
-    uint start,
-    uint count,
-    bool downRay,
-    float2 pixelsPerPath,
-    uint totalParity,
-    inout float value,
-    inout float weight)
-{
-    bool hasLast = false;
-    float lastDistance = 0.0;
-    uint lastCurve = 0u;
-    uint lastSlot = 0u;
-    uint fractionalCount = 0u;
-    uint maximumRoots = count * 2u;
-    for (uint iteration = 0u; iteration < maximumRoots; ++iteration)
-    {
-        bool found = false;
-        float bestDistance = 0.0;
-        uint bestCurve = 0u;
-        uint bestSlot = 0u;
-        for (uint index = 0u; index < count; ++index)
-        {
-            uint curveIndex = pathWord(indices + start + index);
-            if (curveIndex >= curveCount())
-            {
-                continue;
-            }
-            QuadraticCurve curve = curveAt(curveIndex);
-            AxisRoots roots = solveVerticalRoots(curve, point);
-            for (uint slot = 0u; slot < 2u; ++slot)
-            {
-                float root;
-                if (!verticalRootAt(roots, slot, root))
-                {
-                    continue;
-                }
-                float distancePixels;
-                float direction;
-                if (!verticalRootHit(point, curve, root, downRay, pixelsPerPath,
+                if (!rootHit(point, curve, root, forward, pixelsPerPath, vertical,
                     distancePixels, direction)
                     || distancePixels >= 0.5
                     || !rootFollows(distancePixels, curveIndex, slot, hasLast,
@@ -767,26 +522,25 @@ void accumulateVerticalEvenOddOrdered(
 
 static const uint MaxFractionalRoots = 32u;
 
-void accumulateHorizontalEvenOdd(
-    float2 point,
-    uint indices,
-    AnalyticBand band,
-    float2 pixelsPerPath,
-    out float2 rightCoverage,
-    out float2 leftCoverage)
+struct RayAccumulator {
+    float value;
+    float weight;
+    uint count;
+    uint parity;
+    bool overflow;
+};
+
+float2 axisCoverage(float2 point, float2 pixelsPerPath, AnalyticBand band, bool vertical)
 {
-    float rightDistances[32] = {};
-    float leftDistances[32] = {};
-    uint rightCount = 0u;
-    uint leftCount = 0u;
-    uint rightParity = 0u;
-    uint leftParity = 0u;
-    float rightWeight = 0.0;
-    float leftWeight = 0.0;
-    bool rightOverflow = false;
-    bool leftOverflow = false;
-    uint start = band.forwardStart;
-    uint count = band.forwardCount;
+    bool forward = rayCoordinate(point, vertical) < band.split;
+    bool evenOdd = pc.params.y == 1u;
+    uint indices = indexBase(vertical);
+    float distances[64] = {};
+    RayAccumulator forwardRay = { 0.0, 0.0, 0u, 0u, false };
+    RayAccumulator reverseRay = { 0.0, 0.0, 0u, 0u, false };
+    bool traverseForward = evenOdd || forward;
+    uint start = traverseForward ? band.forwardStart : band.reverseStart;
+    uint count = traverseForward ? band.forwardCount : band.reverseCount;
     for (uint index = 0u; index < count; ++index)
     {
         uint curveIndex = pathWord(indices + start + index);
@@ -795,412 +549,114 @@ void accumulateHorizontalEvenOdd(
             continue;
         }
         QuadraticCurve curve = curveAt(curveIndex);
-        AxisRoots roots = solveHorizontalRoots(curve, point);
+        AxisRoots roots = solveRoots(curve, point, vertical);
         for (uint slot = 0u; slot < 2u; ++slot)
         {
             float root;
-            if (!horizontalRootAt(roots, slot, root))
+            if (!rootAt(roots, slot, root))
             {
                 continue;
             }
-            float distancePixels;
-            float direction;
-            if (horizontalRootHit(point, curve, root, true, pixelsPerPath,
-                distancePixels, direction))
+            for (uint side = 0u; side < 2u; ++side)
             {
-                rightParity ^= 1u;
-                rightWeight = max(rightWeight,
-                    clamp(1.0 - abs(distancePixels) * 2.0, 0.0, 1.0));
-                if (distancePixels < 0.5)
+                bool forwardSide = side == 0u;
+                float distancePixels;
+                float direction;
+                if (!rootHit(point, curve, root, forwardSide, pixelsPerPath, vertical,
+                    distancePixels, direction))
                 {
-                    if (rightCount == MaxFractionalRoots)
+                    continue;
+                }
+                RayAccumulator ray = forwardSide ? forwardRay : reverseRay;
+                ray.weight = max(ray.weight, clamp(1.0 - abs(distancePixels) * 2.0, 0.0, 1.0));
+                if (!evenOdd)
+                {
+                    float rootSign = (vertical ? direction < 0.0 : direction > 0.0) ? 1.0 : -1.0;
+                    ray.value += rootSign * clamp(distancePixels + 0.5, 0.0, 1.0);
+                }
+                else
+                {
+                    ray.parity ^= 1u;
+                    if (distancePixels < 0.5)
                     {
-                        rightOverflow = true;
-                    }
-                    else
-                    {
-                        uint insert = rightCount;
-                        for (uint existing = 0u; existing < rightCount; ++existing)
+                        if (ray.count == MaxFractionalRoots)
                         {
-                            if (distancePixels < rightDistances[existing])
+                            ray.overflow = true;
+                        }
+                        else
+                        {
+                            uint base = forwardSide ? 0u : MaxFractionalRoots;
+                            uint insert = ray.count;
+                            for (uint existing = 0u; existing < ray.count; ++existing)
                             {
-                                insert = existing;
-                                break;
+                                if (distancePixels < distances[base + existing])
+                                {
+                                    insert = existing;
+                                    break;
+                                }
                             }
+                            for (uint move = ray.count; move > insert; --move)
+                            {
+                                distances[base + move] = distances[base + move - 1u];
+                            }
+                            distances[base + insert] = distancePixels;
+                            ray.count++;
                         }
-                        for (uint move = rightCount; move > insert; --move)
-                        {
-                            rightDistances[move] = rightDistances[move - 1u];
-                        }
-                        rightDistances[insert] = distancePixels;
-                        rightCount++;
                     }
                 }
-            }
-            if (horizontalRootHit(point, curve, root, false, pixelsPerPath,
-                distancePixels, direction))
-            {
-                leftParity ^= 1u;
-                leftWeight = max(leftWeight,
-                    clamp(1.0 - abs(distancePixels) * 2.0, 0.0, 1.0));
-                if (distancePixels < 0.5)
+                if (forwardSide)
                 {
-                    if (leftCount == MaxFractionalRoots)
-                    {
-                        leftOverflow = true;
-                    }
-                    else
-                    {
-                        uint insert = leftCount;
-                        for (uint existing = 0u; existing < leftCount; ++existing)
-                        {
-                            if (distancePixels < leftDistances[existing])
-                            {
-                                insert = existing;
-                                break;
-                            }
-                        }
-                        for (uint move = leftCount; move > insert; --move)
-                        {
-                            leftDistances[move] = leftDistances[move - 1u];
-                        }
-                        leftDistances[insert] = distancePixels;
-                        leftCount++;
-                    }
+                    forwardRay = ray;
+                }
+                else
+                {
+                    reverseRay = ray;
                 }
             }
         }
     }
 
-    float rightValue = 0.0;
-    if (rightOverflow)
+    [unroll] for (uint side = 0u; side < 2u && evenOdd; ++side)
     {
-        rightWeight = 0.0;
-        accumulateHorizontalEvenOddOrdered(point, indices,
-            band.forwardStart, band.forwardCount, true, pixelsPerPath, rightParity,
-            rightValue, rightWeight);
-    }
-    else
-    {
-        for (uint index = 0u; index < rightCount; ++index)
+        bool forwardSide = side == 0u;
+        RayAccumulator ray = forwardSide ? forwardRay : reverseRay;
+        if (ray.overflow)
         {
-            float amount = clamp(rightDistances[index] + 0.5, 0.0, 1.0);
-            rightValue += (index & 1u) == 0u ? amount : -amount;
+            ray.weight = 0.0;
+            accumulateEvenOddOrdered(point, indices,
+                forwardSide ? band.forwardStart : band.reverseStart,
+                forwardSide ? band.forwardCount : band.reverseCount,
+                forwardSide, pixelsPerPath, vertical, ray.parity,
+                ray.value, ray.weight);
         }
-        uint tailParity = rightParity ^ (rightCount & 1u);
-        if (tailParity != 0u)
+        else
         {
-            rightValue += (rightCount & 1u) == 0u ? 1.0 : -1.0;
-        }
-    }
-
-    float leftValue = 0.0;
-    if (leftOverflow)
-    {
-        leftWeight = 0.0;
-        accumulateHorizontalEvenOddOrdered(point, indices,
-            band.reverseStart, band.reverseCount, false, pixelsPerPath, leftParity,
-            leftValue, leftWeight);
-    }
-    else
-    {
-        for (uint index = 0u; index < leftCount; ++index)
-        {
-            float amount = clamp(leftDistances[index] + 0.5, 0.0, 1.0);
-            leftValue += (index & 1u) == 0u ? amount : -amount;
-        }
-        uint tailParity = leftParity ^ (leftCount & 1u);
-        if (tailParity != 0u)
-        {
-            leftValue += (leftCount & 1u) == 0u ? 1.0 : -1.0;
-        }
-    }
-
-    rightCoverage = float2(rightValue, rightWeight);
-    leftCoverage = float2(leftValue, leftWeight);
-}
-
-void accumulateVerticalEvenOdd(
-    float2 point,
-    uint indices,
-    AnalyticBand band,
-    float2 pixelsPerPath,
-    out float2 downCoverage,
-    out float2 upCoverage)
-{
-    float downDistances[32] = {};
-    float upDistances[32] = {};
-    uint downCount = 0u;
-    uint upCount = 0u;
-    uint downParity = 0u;
-    uint upParity = 0u;
-    float downWeight = 0.0;
-    float upWeight = 0.0;
-    bool downOverflow = false;
-    bool upOverflow = false;
-    uint start = band.forwardStart;
-    uint count = band.forwardCount;
-    for (uint index = 0u; index < count; ++index)
-    {
-        uint curveIndex = pathWord(indices + start + index);
-        if (curveIndex >= curveCount())
-        {
-            continue;
-        }
-        QuadraticCurve curve = curveAt(curveIndex);
-        AxisRoots roots = solveVerticalRoots(curve, point);
-        for (uint slot = 0u; slot < 2u; ++slot)
-        {
-            float root;
-            if (!verticalRootAt(roots, slot, root))
+            uint base = forwardSide ? 0u : MaxFractionalRoots;
+            for (uint index = 0u; index < ray.count; ++index)
             {
-                continue;
+                float amount = clamp(distances[base + index] + 0.5, 0.0, 1.0);
+                ray.value += (index & 1u) == 0u ? amount : -amount;
             }
-            float distancePixels;
-            float direction;
-            if (verticalRootHit(point, curve, root, true, pixelsPerPath,
-                distancePixels, direction))
+            uint tailParity = ray.parity ^ (ray.count & 1u);
+            if (tailParity != 0u)
             {
-                downParity ^= 1u;
-                downWeight = max(downWeight,
-                    clamp(1.0 - abs(distancePixels) * 2.0, 0.0, 1.0));
-                if (distancePixels < 0.5)
-                {
-                    if (downCount == MaxFractionalRoots)
-                    {
-                        downOverflow = true;
-                    }
-                    else
-                    {
-                        uint insert = downCount;
-                        for (uint existing = 0u; existing < downCount; ++existing)
-                        {
-                            if (distancePixels < downDistances[existing])
-                            {
-                                insert = existing;
-                                break;
-                            }
-                        }
-                        for (uint move = downCount; move > insert; --move)
-                        {
-                            downDistances[move] = downDistances[move - 1u];
-                        }
-                        downDistances[insert] = distancePixels;
-                        downCount++;
-                    }
-                }
-            }
-            if (verticalRootHit(point, curve, root, false, pixelsPerPath,
-                distancePixels, direction))
-            {
-                upParity ^= 1u;
-                upWeight = max(upWeight,
-                    clamp(1.0 - abs(distancePixels) * 2.0, 0.0, 1.0));
-                if (distancePixels < 0.5)
-                {
-                    if (upCount == MaxFractionalRoots)
-                    {
-                        upOverflow = true;
-                    }
-                    else
-                    {
-                        uint insert = upCount;
-                        for (uint existing = 0u; existing < upCount; ++existing)
-                        {
-                            if (distancePixels < upDistances[existing])
-                            {
-                                insert = existing;
-                                break;
-                            }
-                        }
-                        for (uint move = upCount; move > insert; --move)
-                        {
-                            upDistances[move] = upDistances[move - 1u];
-                        }
-                        upDistances[insert] = distancePixels;
-                        upCount++;
-                    }
-                }
+                ray.value += (ray.count & 1u) == 0u ? 1.0 : -1.0;
             }
         }
-    }
-
-    float downValue = 0.0;
-    if (downOverflow)
-    {
-        downWeight = 0.0;
-        accumulateVerticalEvenOddOrdered(point, indices,
-            band.forwardStart, band.forwardCount, true, pixelsPerPath, downParity,
-            downValue, downWeight);
-    }
-    else
-    {
-        for (uint index = 0u; index < downCount; ++index)
+        if (forwardSide)
         {
-            float amount = clamp(downDistances[index] + 0.5, 0.0, 1.0);
-            downValue += (index & 1u) == 0u ? amount : -amount;
+            forwardRay = ray;
         }
-        uint tailParity = downParity ^ (downCount & 1u);
-        if (tailParity != 0u)
+        else
         {
-            downValue += (downCount & 1u) == 0u ? 1.0 : -1.0;
+            reverseRay = ray;
         }
     }
 
-    float upValue = 0.0;
-    if (upOverflow)
-    {
-        upWeight = 0.0;
-        accumulateVerticalEvenOddOrdered(point, indices,
-            band.reverseStart, band.reverseCount, false, pixelsPerPath, upParity,
-            upValue, upWeight);
-    }
-    else
-    {
-        for (uint index = 0u; index < upCount; ++index)
-        {
-            float amount = clamp(upDistances[index] + 0.5, 0.0, 1.0);
-            upValue += (index & 1u) == 0u ? amount : -amount;
-        }
-        uint tailParity = upParity ^ (upCount & 1u);
-        if (tailParity != 0u)
-        {
-            upValue += (upCount & 1u) == 0u ? 1.0 : -1.0;
-        }
-    }
-
-    downCoverage = float2(downValue, downWeight);
-    upCoverage = float2(upValue, upWeight);
-}
-
-void horizontalCoverageDirections(
-    float2 point,
-    float2 pixelsPerPath,
-    bool rightRay,
-    AnalyticBand band,
-    out float2 primary,
-    out float2 opposite)
-{
-    uint start = rightRay ? band.forwardStart : band.reverseStart;
-    uint count = rightRay ? band.forwardCount : band.reverseCount;
-    uint indices = horizontalIndexBase();
-    float value = 0.0;
-    float weight = 0.0;
-    float oppositeValue = 0.0;
-    float oppositeWeight = 0.0;
-    for (uint index = 0u; index < count; ++index)
-    {
-        uint curveIndex = pathWord(indices + start + index);
-        if (curveIndex >= curveCount())
-        {
-            continue;
-        }
-        QuadraticCurve curve = curveAt(curveIndex);
-        accumulateHorizontalCurve(point, curve, rightRay, pixelsPerPath,
-            value, weight, oppositeValue, oppositeWeight);
-    }
-    if (!rightRay)
-    {
-        value = -value;
-    }
-    else
-    {
-        oppositeValue = -oppositeValue;
-    }
-    primary = float2(value, weight);
-    opposite = float2(oppositeValue, oppositeWeight);
-}
-
-void verticalCoverageDirections(
-    float2 point,
-    float2 pixelsPerPath,
-    bool downRay,
-    AnalyticBand band,
-    out float2 primary,
-    out float2 opposite)
-{
-    uint start = downRay ? band.forwardStart : band.reverseStart;
-    uint count = downRay ? band.forwardCount : band.reverseCount;
-    uint indices = verticalIndexBase();
-    float value = 0.0;
-    float weight = 0.0;
-    float oppositeValue = 0.0;
-    float oppositeWeight = 0.0;
-    for (uint index = 0u; index < count; ++index)
-    {
-        uint curveIndex = pathWord(indices + start + index);
-        if (curveIndex >= curveCount())
-        {
-            continue;
-        }
-        QuadraticCurve curve = curveAt(curveIndex);
-        accumulateVerticalCurve(point, curve, downRay, pixelsPerPath,
-            value, weight, oppositeValue, oppositeWeight);
-    }
-    if (!downRay)
-    {
-        value = -value;
-    }
-    else
-    {
-        oppositeValue = -oppositeValue;
-    }
-    primary = float2(value, weight);
-    opposite = float2(oppositeValue, oppositeWeight);
-}
-
-float2 horizontalCoverage(float2 point, float2 pixelsPerPath)
-{
-    AnalyticBand band = horizontalBandAt(point.y);
-    bool rightRay = point.x < band.split;
-    float2 primary;
-    float2 opposite;
-    if (pc.params.y == 1u)
-    {
-        float2 rightCoverage;
-        float2 leftCoverage;
-        accumulateHorizontalEvenOdd(point, horizontalIndexBase(), band,
-            pixelsPerPath, rightCoverage, leftCoverage);
-        float2 signedRight = rightCoverage;
-        float2 signedLeft = float2(-leftCoverage.x, leftCoverage.y);
-        primary = rightRay ? signedRight : signedLeft;
-        opposite = rightRay ? signedLeft : signedRight;
-    }
-    else
-    {
-        horizontalCoverageDirections(point, pixelsPerPath,
-            rightRay, band, primary, opposite);
-    }
-    if (opposite.y > primary.y
-        || (opposite.y == primary.y && abs(opposite.x) > abs(primary.x)))
-    {
-        return float2(opposite.x, max(primary.y, opposite.y));
-    }
-    return float2(primary.x, max(primary.y, opposite.y));
-}
-
-float2 verticalCoverage(float2 point, float2 pixelsPerPath)
-{
-    AnalyticBand band = verticalBandAt(point.x);
-    bool downRay = point.y < band.split;
-    float2 primary;
-    float2 opposite;
-    if (pc.params.y == 1u)
-    {
-        float2 downCoverage;
-        float2 upCoverage;
-        accumulateVerticalEvenOdd(point, verticalIndexBase(), band,
-            pixelsPerPath, downCoverage, upCoverage);
-        float2 signedDown = downCoverage;
-        float2 signedUp = float2(-upCoverage.x, upCoverage.y);
-        primary = downRay ? signedDown : signedUp;
-        opposite = downRay ? signedUp : signedDown;
-    }
-    else
-    {
-        verticalCoverageDirections(point, pixelsPerPath,
-            downRay, band, primary, opposite);
-    }
+    float2 forwardCoverage = float2(forwardRay.value, forwardRay.weight);
+    float2 reverseCoverage = float2(-reverseRay.value, reverseRay.weight);
+    float2 primary = forward ? forwardCoverage : reverseCoverage;
+    float2 opposite = forward ? reverseCoverage : forwardCoverage;
     if (opposite.y > primary.y
         || (opposite.y == primary.y && abs(opposite.x) > abs(primary.x)))
     {
@@ -1252,13 +708,28 @@ bool outsideBand(float coordinate, float margin, AnalyticBand band, bool vertica
 float analyticCoverage()
 {
     float2 pixels = pixelsPerPath();
-    if (outsideBand(pathPosition.x, 1.0 / pixels.x, horizontalBandAt(pathPosition.y), false)
-        && outsideBand(pathPosition.y, 1.0 / pixels.y, verticalBandAt(pathPosition.x), true))
+    AnalyticBand horizontalBand = bandAt(pathPosition.y, false);
+    AnalyticBand verticalBand = bandAt(pathPosition.x, true);
+    if (outsideBand(pathPosition.x, 1.0 / pixels.x, horizontalBand, false)
+        && outsideBand(pathPosition.y, 1.0 / pixels.y, verticalBand, true))
     {
         return 0.0;
     }
-    float2 horizontal = horizontalCoverage(pathPosition, pixels);
-    float2 vertical = verticalCoverage(pathPosition, pixels);
+    float2 horizontal = float2(0.0, 0.0);
+    float2 vertical = float2(0.0, 0.0);
+    [unroll] for (uint axis = 0u; axis < 2u; ++axis)
+    {
+        bool isVertical = axis == 1u;
+        float2 coverage = axisCoverage(pathPosition, pixels, isVertical ? verticalBand : horizontalBand, isVertical);
+        if (isVertical)
+        {
+            vertical = coverage;
+        }
+        else
+        {
+            horizontal = coverage;
+        }
+    }
     return combineCoverage(horizontal.x, vertical.x, horizontal.y, vertical.y);
 }
 
@@ -1306,13 +777,14 @@ void shade()
 #else
     float alpha = validHeader() ? analyticCoverage() : 0.0;
 #endif
+    float clip = gooClipCoverage();
     if (pc.params.z == 0u)
     {
-        outColor = float4(0.0, 0.0, 0.0, alpha) * gooClipCoverage();
+        outColor = float4(0.0, 0.0, 0.0, alpha) * clip;
     }
     else
     {
-        outColor = pc.color * alpha * gooClipCoverage();
+        outColor = pc.color * alpha * clip;
     }
 }
 #endif
