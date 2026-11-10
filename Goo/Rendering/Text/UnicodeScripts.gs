@@ -132,6 +132,21 @@ internal class UnicodeScripts {
       if text == nil { throw ArgumentNullException("text") }
       let runs = scratch.BeginScriptRuns(text.Length)
       if text.Length == 0 { return runs }
+      var ascii = true
+      var script = UnicodeScriptsData.CommonTag
+      for character in text {
+        if character > '\u007F' {
+          ascii = false
+          break
+        }
+        if character >= 'A' && character <= 'Z' || character >= 'a' && character <= 'z' {
+          script = 0x4C61746Eu
+        }
+      }
+      if ascii {
+        runs.Add(UnicodeScriptRun(0, text.Length, script))
+        return runs
+      }
       let graphemeScalars = scratch.BeginGraphemeScalars(text.Length)
       let starts = scratch.BeginScriptStarts(text.Length)
       UnicodeGraphemes.Starts(text, graphemeScalars, starts)

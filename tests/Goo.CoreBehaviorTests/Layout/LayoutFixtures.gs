@@ -601,20 +601,27 @@ internal class LayoutFixtures {
   }
 
   func MeasuredTextMatchesLaidOutText() bool {
-    let style = Style{ FontSize: 13.5, FontWeight: 600.0, LetterSpacing: 0.3,
-      TextTransform: TextTransform.Uppercase }
     let failures = List[string]()
-    for scale in []float32{ 1.0F, 1.25F, 1.5F, 1.75F, 2.0F, 2.25F, 2.5F, 3.0F } {
-      for start in []float64{ 0.0, 0.3, 0.55 } {
-        if start != 0.0 && scale != 1.25F && scale != 1.75F { continue }
-        for label in []string{ "Settings", "Large file transfer", "\u05D0\u05D1\u05D2 abc" } {
-          let window = Window{ Root: LayoutTextFixtureCell(Text{ BasedOn: style, Content: label }, start),
-            Width: 600, Height: 100, UiScale: scale }
-          window.UpdateTree()
-          guard let text = window.Tree?.Children[0] else { return false }
-          let measured = window.MeasureText(label, style)
-          if measured <= 0.0F || measured != text.Rect.W {
-            failures.Add("scale=${scale} start=${start} label=${label} measured=${measured} laidOut=${text.Rect.W}")
+    for style in []Style{
+      Style{ FontSize: 13.5, FontWeight: 600.0, LetterSpacing: 0.3,
+        TextTransform: TextTransform.Uppercase },
+      Style{ FontSize: 16 },
+    } {
+      for scale in []float32{ 1.0F, 1.25F, 1.5F, 1.75F, 2.0F, 2.25F, 2.5F, 3.0F } {
+        for start in []float64{ 0.0, 0.3, 0.55 } {
+          if start != 0.0 && scale != 1.25F && scale != 1.75F { continue }
+          for label in []string{ "Settings", "Large file transfer", "AVATAR office ffi",
+            "1234 ([567])", "(AV) [office] {ffi}", "a\u0301 cafe\u0301",
+            "\u05D0\u05D1\u05D2 abc", "\u0645\u0631\u062D\u0628\u0627",
+            "\u0915\u094D\u0937\u093F", "\u65E5\u672C\u8A9E" } {
+            let window = Window{ Root: LayoutTextFixtureCell(Text{ BasedOn: style, Content: label }, start),
+              Width: 600, Height: 100, UiScale: scale }
+            window.UpdateTree()
+            guard let text = window.Tree?.Children[0] else { return false }
+            let measured = window.MeasureText(label, style)
+            if measured <= 0.0F || measured != text.Rect.W {
+              failures.Add("scale=${scale} start=${start} label=${label} measured=${measured} laidOut=${text.Rect.W}")
+            }
           }
         }
       }
