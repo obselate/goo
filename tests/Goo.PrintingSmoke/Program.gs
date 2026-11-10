@@ -159,7 +159,6 @@ func Main(args[]string) {
         Settle(window)
         CheckSystemSpelling()
         CheckRichClipboard()
-        Settle(window)
         let ownerWidth = window.Width
         let ownerHeight = window.Height
         let options = OffscreenRenderOptions(240f, 180f, 480, 360, Color.Rgb(255, 255, 255), 134217728)

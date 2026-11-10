@@ -171,6 +171,8 @@ public partial class Window {
     if observedVisible == visible { return }
     observedVisible = visible
     if visible {
+      host?.RefreshMetricsIfChanged()
+      consumeNativeMetrics()
       windowTarget?.SetHidden(false)
       requestRender()
     } else { handleFocusChanged(false) }
