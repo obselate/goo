@@ -630,7 +630,8 @@ internal class ProfilerSmoke {
             let gpuDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
             var gpuFrames int32 = 0
             var submittedCount = trace.Submitted.Count
-            while trace.GpuSupported && !trace.GpuAvailable && Stopwatch.GetTimestamp() < gpuDeadline {
+            while trace.GpuSupported && !(trace.GpuAvailable && trace.GpuFrameAvailable && trace.GpuClipAvailable
+                && trace.GpuPrimitiveUploadAvailable && trace.GpuManyScopesAvailable) && Stopwatch.GetTimestamp() < gpuDeadline {
                 if gpuFrames < 3 && trace.Submitted.Count >= submittedCount {
                     window.Post(() -> {
                         root.Frame++
