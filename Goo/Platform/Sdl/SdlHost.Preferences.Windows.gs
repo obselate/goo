@@ -18,8 +18,7 @@ internal unsafe partial class SdlHost {
     private func ReadAnimationPreference(action uint32, parameter uint32, out value int32, flags uint32) int32;
     @DllImport("user32.dll", EntryPoint: "SystemParametersInfoW")
     private func ReadContrastPreference(action uint32, parameter uint32, ref value WindowsHighContrast, flags uint32) int32;
-    @DllImport("dwmapi.dll")
-    private func DwmGetColorizationColor(out color uint32, out opaque int32) int32;
+    private const AccentKey string = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Accent"
 
     private func ReadWindowsPreferences(theme SystemTheme) PlatformPreferences {
       var animation int32
@@ -29,18 +28,27 @@ internal unsafe partial class SdlHost {
       var native = WindowsHighContrast{Size: size}
       var contrast bool?
       if ReadContrastPreference(0x0042u, size, ref native, 0u) != 0 { contrast = (native.Flags & 1u) != 0u }
-      var packed uint32
-      var opaque int32
-      var accent Color?
-      if DwmGetColorizationColor(out packed, out opaque) == 0 {
-        accent = Color.Rgba(int32((packed >> 16) & 255u), int32((packed >> 8) & 255u),
-          int32(packed & 255u), int32(packed >> 24))
-      }
+      let palette = ReadWindowsAccentPalette()
       return PlatformPreferences{
         Theme: theme, ReducedMotion: motion, HighContrast: contrast,
         EventSoundsEnabled: ReadWindowsEventSounds(),
-        AccentColor: accent,
+        AccentColor: palette[3], AccentLight3: palette[0], AccentLight2: palette[1], AccentLight1: palette[2],
+        AccentDark1: palette[4], AccentDark2: palette[5], AccentDark3: palette[6],
       }
+    }
+
+    private func ReadWindowsAccentPalette() []Color? {
+      let palette = [7]Color?
+      try {
+        if Registry.GetValue(AccentKey, "AccentPalette", nil) is []uint8 bytes && bytes.Length >= 28 {
+          for index in 0 ... 7 {
+            palette[index] = Color.Rgb(int32(bytes[index * 4]), int32(bytes[index * 4 + 1]), int32(bytes[index * 4 + 2]))
+          }
+        }
+      } catch (_ System.Security.SecurityException) { }
+      catch (_ UnauthorizedAccessException) { }
+      catch (_ IOException) { }
+      return palette
     }
 
     private func ReadWindowsEventSounds() bool? {
