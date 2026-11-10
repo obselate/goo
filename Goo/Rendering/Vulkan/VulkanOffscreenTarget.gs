@@ -93,6 +93,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
   internal prop ResourceByteSize VkDeviceSize{ get -> resourceByteSize }
   internal prop ReadbackByteSize VkDeviceSize{ get -> readbackByteSize }
   internal prop TargetFormat VkFormat{ get -> targetFormat }
+  internal prop LayerResolutionShift int32{ get -> layerPool?.LayerResolutionShift ?? 0 }
   internal prop ResourceGeneration uint64{ get -> resourceGeneration }
   internal prop State VulkanOffscreenState{ get -> state }
   internal prop SubmissionPendingReconcile bool{ get -> queuePending }

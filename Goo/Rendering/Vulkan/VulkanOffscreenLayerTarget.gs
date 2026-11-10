@@ -1216,7 +1216,8 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
 
   private func PublishStats() {
     if let current = diagnostics {
-      current.SetLayerPoolStats(uint64(residentBytes), uint64(LiveTargetCount), uint64(LeasedTargetCount))
+      current.SetLayerPoolStats(uint64(residentBytes), uint64(LiveTargetCount), uint64(LeasedTargetCount),
+        uint64(layerResolutionShift))
     }
     if let recorder = FrameRecorder.Current {
       if profileResidentBytes == residentBytes { return }

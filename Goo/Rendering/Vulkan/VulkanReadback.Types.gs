@@ -93,6 +93,7 @@ internal sealed class VulkanReadbackResult : WindowReadbackResult {
   private let format VkFormat
   private let generation uint64
   private let submissionSerial uint64
+  private let layerResolutionShift int32
 
   public prop Width uint32{ get -> width }
   public prop Height uint32{ get -> height }
@@ -101,6 +102,7 @@ internal sealed class VulkanReadbackResult : WindowReadbackResult {
   internal prop Generation uint64{ get -> generation }
   internal prop SubmissionSerial uint64{ get -> submissionSerial }
   internal prop OwnedPixels []uint8{ get -> pixels }
+  public prop LayerResolutionShift int32{ get -> layerResolutionShift }
   public prop Premultiplied bool{ get -> true }
   public prop OriginBottomLeft bool{ get -> false }
   public prop SrgbEncoded bool{ get -> true }
@@ -114,7 +116,7 @@ internal sealed class VulkanReadbackResult : WindowReadbackResult {
 
   internal init(nativePixels []uint8, nativeWidth uint32, nativeHeight uint32,
     nativeRowBytes uint32, nativeFormat VkFormat, nativeGeneration uint64,
-    nativeSubmissionSerial uint64) {
+    nativeSubmissionSerial uint64, nativeLayerResolutionShift int32) {
       if nativeWidth == 0u || nativeHeight == 0u || nativeRowBytes == 0u
         || nativeGeneration == 0uL || nativeSubmissionSerial == 0uL {
           throw ArgumentOutOfRangeException("nativeWidth")
@@ -125,6 +127,7 @@ internal sealed class VulkanReadbackResult : WindowReadbackResult {
       format = nativeFormat
       generation = nativeGeneration
       submissionSerial = nativeSubmissionSerial
+      layerResolutionShift = nativeLayerResolutionShift
       pixels = nativePixels
     }
 }

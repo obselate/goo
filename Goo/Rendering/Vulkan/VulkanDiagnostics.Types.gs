@@ -258,6 +258,7 @@ internal data struct VulkanDiagnosticCounterSnapshot {
   var layerPoolResidentBytes uint64
   var layerPoolTargetCount uint64
   var layerPoolLeasedCount uint64
+  var layerPoolResolutionShift uint64
   var layerPoolCreateCount uint64
   var layerPoolReuseCount uint64
   var layerPoolEvictionCount uint64

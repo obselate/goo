@@ -120,6 +120,7 @@ internal class VulkanDiagnosticCounters {
   private var layerPoolResidentBytes uint64
   private var layerPoolTargetCount uint64
   private var layerPoolLeasedCount uint64
+  private var layerPoolResolutionShift uint64
   private var layerPoolCreateCount uint64
   private var layerPoolReuseCount uint64
   private var layerPoolEvictionCount uint64
@@ -249,6 +250,7 @@ internal class VulkanDiagnosticCounters {
         layerPoolResidentBytes: Interlocked.Read(ref layerPoolResidentBytes),
         layerPoolTargetCount: Interlocked.Read(ref layerPoolTargetCount),
         layerPoolLeasedCount: Interlocked.Read(ref layerPoolLeasedCount),
+        layerPoolResolutionShift: Interlocked.Read(ref layerPoolResolutionShift),
         layerPoolCreateCount: Interlocked.Read(ref layerPoolCreateCount),
         layerPoolReuseCount: Interlocked.Read(ref layerPoolReuseCount),
         layerPoolEvictionCount: Interlocked.Read(ref layerPoolEvictionCount),
@@ -459,6 +461,7 @@ internal class VulkanDiagnosticCounters {
   internal func SetLayerPoolResidentBytes(value uint64) { Interlocked.Exchange(ref layerPoolResidentBytes, value) }
   internal func SetLayerPoolTargetCount(value uint64) { Interlocked.Exchange(ref layerPoolTargetCount, value) }
   internal func SetLayerPoolLeasedCount(value uint64) { Interlocked.Exchange(ref layerPoolLeasedCount, value) }
+  internal func SetLayerPoolResolutionShift(value uint64) { Interlocked.Exchange(ref layerPoolResolutionShift, value) }
   internal func AddLayerPoolCreate(value uint64) { Interlocked.Add(ref layerPoolCreateCount, value) }
   internal func AddLayerPoolReuse(value uint64) { Interlocked.Add(ref layerPoolReuseCount, value) }
   internal func AddLayerPoolCommandReuse(value uint64) {
