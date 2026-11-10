@@ -159,6 +159,7 @@ internal class RowRecyclingFixtures {
       cell.Viewport.JumpTo(0.0, 40.0)
       window.UpdateTree()
       return cell.Handles[2].AttachedNode() == body && body.MountGeneration == 2uL
+        && state.RecycledRowCount == 1
     } finally { window.Close() }
   }
 
