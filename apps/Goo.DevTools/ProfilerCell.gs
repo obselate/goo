@@ -469,32 +469,24 @@ internal partial class ProfilerCell : Cell, IDisposable {
         )
         if hovered >= 0 && hovered < trace.Frames.Count && !selecting {
             shapes.Add(
-                Container{
-                    Key: "profiler-frame-tooltip",
-                    Position: PositionType.Absolute,
-                    Left: hoverX + 248.0 < w ? hoverX + 14.0: Math.Max(0.0, hoverX - 248.0),
-                    Top: 8,
-                    Width: 234,
-                    Padding: 8,
-                    Gap: 2,
-                    BackgroundColor: theme.OverlayColor,
-                    BorderWidth: 1,
-                    BorderColor: theme.BorderColor,
-                    BorderRadius: theme.RadiusMd!!,
-                    BoxShadow: theme.ElevationMd,
-                    HitTestSelf: false,
-                    Children: Breakdown(trace, trace.Frames[hovered], theme, 8)
-                }
+                Tooltip(
+                    "profiler-frame-tooltip",
+                    framesHandle,
+                    hoverX,
+                    8.0,
+                    theme,
+                    Breakdown(trace, trace.Frames[hovered], theme, 8)
+                )
             )
         }
         return Container{
             Key: "profiler-frames",
+            Handle: framesHandle,
             Width: w,
             Height: FramesHeight,
             FlexShrink: 0.0,
             Margin: Edges{Left: Pad},
             Position: PositionType.Relative,
-            ZIndex: 1,
             BackgroundColor: theme.SunkenColor,
             BorderRadius: theme.RadiusSm!!,
             Focusable: true,

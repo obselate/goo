@@ -29,6 +29,8 @@ internal partial class ProfilerCell {
     private var nestGeneration int32
     private var hoveredBar int32 = -1
     private var hoverY float64
+    private let framesHandle ElementHandle = ElementHandle{}
+    private let trackHandles[]ElementHandle = []ElementHandle{ElementHandle{}, ElementHandle{}, ElementHandle{}}
 
     private func Timing(trace ProfilerTrace, theme Theme) Container {
         Nest(trace)
@@ -43,8 +45,9 @@ internal partial class ProfilerCell {
         return Container{
             Key: "profiler-timing",
             Width: Percent(100),
-            FlexShrink: 0.0,
-            ZIndex: 1,
+            OverflowY: Overflow.Scroll,
+            ScrollbarY: theme.Scrollbar,
+            ScrollbarVisibility: ScrollbarVisibility.Always,
             FlexDirection: FlexDirection.Column,
             Gap: 4,
             Children: children
@@ -99,7 +102,6 @@ internal partial class ProfilerCell {
         return Container{
             Key: "lane-" + name,
             FlexShrink: 0.0,
-            ZIndex: (track < 0 ? hovered >= 0: hoveredBar >= 0 && bars[hoveredBar].Track == track) ? 1: 0,
             FlexDirection: FlexDirection.Column,
             Gap: 2,
             Children: children
@@ -232,11 +234,12 @@ internal partial class ProfilerCell {
                 }
             )
             if !selecting {
-                shapes.Add(ScopeTooltip(trace, theme, bar, w))
+                shapes.Add(ScopeTooltip(trace, theme, bar))
             }
         }
         return Container{
             Key: "profiler-track-" + track.ToString(),
+            Handle: trackHandles[track],
             Width: w,
             Height: height,
             FlexShrink: 0.0,
@@ -294,14 +297,50 @@ internal partial class ProfilerCell {
         }
     }
 
-    private func ScopeTooltip(trace ProfilerTrace, theme Theme, bar ProfilerBar, w float64) Container {
+    private func ScopeTooltip(trace ProfilerTrace, theme Theme, bar ProfilerBar) Portal {
         let r = trace.Records[bar.Record]
         let own = nesting.SelfAllocated[bar.Record]
-        return Container{
-            Key: "profiler-scope-tooltip",
-            Position: PositionType.Absolute,
-            Left: hoverX + 248.0 < w ? hoverX + 14.0: Math.Max(0.0, hoverX - 248.0),
-            Top: hoverY + 14.0,
+        return Tooltip(
+            "profiler-scope-tooltip",
+            trackHandles[bar.Track],
+            hoverX,
+            hoverY + 14.0,
+            theme,
+            []Blob{
+                Text{
+                    Content: ScopeTitle(trace, r),
+                    FontFamily: theme.FontFamily,
+                    FontSize: theme.FontSize,
+                    FontWeight: 600,
+                    Color: theme.TextColor
+                },
+                Detail("Inclusive", Time(trace, r.EndTicks - r.Ticks), theme),
+                Detail("Exclusive", Time(trace, Math.Max(0L, nesting.Exclusive[bar.Record])), theme),
+                Detail("Allocated", r.Allocated == nil ? "No data": Bytes(float64(r.Allocated ?? 0uL)), theme),
+                Detail("Self allocated", own < 0L ? "No data": Bytes(float64(own)), theme),
+                Detail(
+                    "Start",
+                    trace.Milliseconds(r.Ticks).ToString("F3", CultureInfo.InvariantCulture) + " ms",
+                    theme
+                ),
+            }
+        )
+    }
+
+    private func Tooltip(
+        key string,
+        anchor ElementHandle,
+        x float64,
+        y float64,
+        theme Theme,
+        children IList[Blob]
+    ) Portal -> Portal{
+        Key: key,
+        Anchor: anchor,
+        AnchorRect: ElementRect{X: x, Y: y},
+        Placement: PortalPlacement.RightStart,
+        Padding: Edges{Left: 14, Right: 14},
+        Container{
             Width: 234,
             Padding: 8,
             Gap: 2,
@@ -311,18 +350,7 @@ internal partial class ProfilerCell {
             BorderRadius: theme.RadiusMd!!,
             BoxShadow: theme.ElevationMd,
             HitTestSelf: false,
-            Text{
-                Content: ScopeTitle(trace, r),
-                FontFamily: theme.FontFamily,
-                FontSize: theme.FontSize,
-                FontWeight: 600,
-                Color: theme.TextColor
-            },
-            Detail("Inclusive", Time(trace, r.EndTicks - r.Ticks), theme),
-            Detail("Exclusive", Time(trace, Math.Max(0L, nesting.Exclusive[bar.Record])), theme),
-            Detail("Allocated", r.Allocated == nil ? "No data": Bytes(float64(r.Allocated ?? 0uL)), theme),
-            Detail("Self allocated", own < 0L ? "No data": Bytes(float64(own)), theme),
-            Detail("Start", trace.Milliseconds(r.Ticks).ToString("F3", CultureInfo.InvariantCulture) + " ms", theme),
+            Children: children
         }
     }
 
