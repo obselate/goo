@@ -267,48 +267,47 @@ internal partial class TextEditorLayouts {
     }
 
     internal func FollowCaret(n Node, position TextPosition) {
-      if let state = n.EditorState {
-        var current = state.Controller.State()
-        let initial = For(n, BoxGeometry.ContentWidth(n), BoxGeometry.ContentHeight(n))
-        var visible = false
-        for line in initial.Lines {
-          if position.Offset >= line.SourceStart && position.Offset <= line.SourceEnd {
-            visible = true
-            break
-          }
+      guard let state = n.EditorState else { return }
+      ScrollState.StopMomentum(n)
+      state.Controller.ScrollRequest = TextEditorScrollRequest{ Reveal: position }
+      ScrollState.SyncEditor(n)
+    }
+
+    internal func RevealOffset(n Node, position TextPosition) Point {
+      let state = n.EditorState!!
+      let layout = For(n, BoxGeometry.ContentWidth(n), BoxGeometry.ContentHeight(n))
+      let scroll = ScrollPoint(n)
+      var visible = false
+      for line in layout.Lines {
+        if position.Offset >= line.SourceStart && position.Offset <= line.SourceEnd {
+          visible = true
+          break
         }
-        if !visible {
-          let snapshot = state.Document.Snapshot()
-          let line = snapshot.GetLineIndex(position.Offset)
-          let y = verticalOffsetForLine(state, snapshot, line, initial.ParagraphWidth,
-            initial.FontFingerprint, initial.LineHeight, initial.Ascent, initial.Descent)
-          state.Controller.ScrollTo(current.ScrollTargetX, float64(y))
-          ScrollState.To(n, float32(current.ScrollTargetX), y, true, false)
-          current = state.Controller.State()
-        }
-        if position.Offset == state.Document.Length {
-          ScrollState.To(n, float32(current.ScrollTargetX), Single.MaxValue, true, false)
-          current = state.Controller.State()
-        }
-        let rect = CaretRect(n, position)
-        let left = TextLeft(n) - n.Rect.X
-        let top = BoxGeometry.ContentTop(n) - n.Rect.Y
-        let right = BoxGeometry.ContentLeft(n) - n.Rect.X + BoxGeometry.ViewportWidth(n)
-        let bottom = top + BoxGeometry.ViewportHeight(n)
-        let scroll = ScrollPoint(n)
-        let logicalLeft = rect.X + scroll.X
-        let logicalTop = rect.Y + scroll.Y
-        let scale = TransformGeometry.PixelDensity(n)
-        var x = scroll.X
-        var y = scroll.Y
-        if logicalLeft < x + left { x = MathF.Floor((logicalLeft - left) * scale) / scale }
-        else if logicalLeft + rect.W > x + right {
-          x = MathF.Ceiling((logicalLeft + rect.W - right) * scale) / scale
-        }
-        if logicalTop < y + top { y = logicalTop - top - state.TopInset }
-        else if logicalTop + rect.H > y + bottom { y = logicalTop + rect.H - bottom }
-        ScrollState.To(n, x, y, true, false)
       }
+      if !visible {
+        let snapshot = state.Document.Snapshot()
+        return Point{ X: float64(scroll.X), Y: float64(verticalOffsetForLine(state, snapshot,
+          snapshot.GetLineIndex(position.Offset), layout.ParagraphWidth, layout.FontFingerprint,
+          layout.LineHeight, layout.Ascent, layout.Descent)) }
+      }
+      let rect = CaretRect(n, layout, position, true)
+      let left = TextLeft(n) - n.Rect.X
+      let top = BoxGeometry.ContentTop(n) - n.Rect.Y
+      let right = BoxGeometry.ContentLeft(n) - n.Rect.X + BoxGeometry.ViewportWidth(n)
+      let bottom = top + BoxGeometry.ViewportHeight(n)
+      let logicalLeft = rect.X + scroll.X
+      let logicalTop = rect.Y + scroll.Y
+      let scale = TransformGeometry.PixelDensity(n)
+      var x = scroll.X
+      var y = scroll.Y
+      if logicalLeft < x + left { x = MathF.Floor((logicalLeft - left) * scale) / scale }
+      else if logicalLeft + rect.W > x + right {
+        x = MathF.Ceiling((logicalLeft + rect.W - right) * scale) / scale
+      }
+      if position.Offset == state.Document.Length { y = Single.MaxValue }
+      else if logicalTop < y + top { y = logicalTop - top - state.TopInset }
+      else if logicalTop + rect.H > y + bottom { y = logicalTop + rect.H - bottom }
+      return Point{ X: float64(x), Y: float64(y) }
     }
 
     internal func SlotOrigin(n Node, key string) Rect? {

@@ -171,9 +171,7 @@ internal partial class ScrollState {
         if activity && changed {
           touchAxes(n, changedX, changedY)
         }
-        if let controller = n.EditorController {
-          controller.ScrollTo(float64(nextX), float64(nextY))
-        }
+        n.EditorController?.SetScrollTarget(float64(nextX), float64(nextY))
         return changed
       }
 
@@ -181,6 +179,24 @@ internal partial class ScrollState {
       guard let controller = n.EditorController else {
         return
       }
+      syncEditorExtent(n)
+      if let request = controller.ScrollRequest, let state = n.EditorState
+        && BoxGeometry.ViewportWidth(n) > 0.0F && BoxGeometry.ViewportHeight(n) > 0.0F {
+        while true {
+          let builds = state.ParagraphBuildCount
+          let target = if let position = request.Reveal { TextEditorLayouts.RevealOffset(n, position) }
+            else { Point{ X: request.X, Y: request.Y } }
+          let moved = setTarget(n, float32(target.X), float32(target.Y), true, false)
+          syncEditorExtent(n)
+          if !moved && state.ParagraphBuildCount == builds { break }
+        }
+        controller.ScrollRequest = nil
+      } else {
+        setTarget(n, float32(controller.ScrollTargetX), float32(controller.ScrollTargetY), true, false)
+      }
+    }
+
+    private func syncEditorExtent(n Node) {
       let gutter = verticalScrollbarGutter(n)
       var extent = TextEditorLayouts.ScrollExtent(n)
       n.ContentW = float32(extent.X)
@@ -190,7 +206,6 @@ internal partial class ScrollState {
         n.ContentW = float32(extent.X)
         n.ContentH = float32(extent.Y)
       }
-      setTarget(n, float32(controller.ScrollTargetX), float32(controller.ScrollTargetY), true, false)
     }
 
     internal func RefreshAxes(n Node) {

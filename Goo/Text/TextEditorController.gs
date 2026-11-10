@@ -84,6 +84,12 @@ internal data struct TextEditorControllerState {
   internal var Focused bool
 }
 
+internal data struct TextEditorScrollRequest {
+  internal var X float64
+  internal var Y float64
+  internal var Reveal TextPosition?
+}
+
 /// Owns editing state and semantic commands for one text document view.
 public class TextEditorController : IDisposable {
   shared {
@@ -113,6 +119,7 @@ public class TextEditorController : IDisposable {
 
   internal var Changed Action?
   internal var Submitted Action?
+  internal var ScrollRequest TextEditorScrollRequest?
 
   /// Creates a controller for one document.
   /// @param document The document edited by this controller.
@@ -364,7 +371,7 @@ public class TextEditorController : IDisposable {
     }
   }
 
-  /// Changes the logical scroll target.
+  /// Changes the logical scroll target. The mounted editor clamps the request against measured lines at its next layout.
   /// @param x The non-negative horizontal target.
   /// @param y The non-negative vertical target.
   public func ScrollTo(x float64, y float64) {
@@ -374,6 +381,11 @@ public class TextEditorController : IDisposable {
     if Double.IsNaN(y) || Double.IsInfinity(y) || y < 0.0 {
       throw ArgumentOutOfRangeException("y")
     }
+    ScrollRequest = TextEditorScrollRequest{ X: x, Y: y }
+    SetScrollTarget(x, y)
+  }
+
+  internal func SetScrollTarget(x float64, y float64) {
     if scrollTargetX != x || scrollTargetY != y {
       scrollTargetX = x
       scrollTargetY = y

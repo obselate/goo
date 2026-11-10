@@ -573,7 +573,7 @@ Returns: True when the Paste interceptor allowed the edit.
 
 ### `ScrollTo(float64,float64)`
 
-Changes the logical scroll target.
+Changes the logical scroll target. The mounted editor clamps the request against measured lines at its next layout.
 
 - `x`: The non-negative horizontal target.
 - `y`: The non-negative vertical target.
