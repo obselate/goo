@@ -447,6 +447,37 @@ internal class AccessibilityFixtures {
     return child.Bounds.X == 40.0 && bounds.X == 40.0 && bounds.Width == 50.0
       && inside == child.Id && outside == root.Id
   }
+
+  func KeyedMoveOrderContract() bool {
+    let adapter = AccessibilityTestAdapter{}
+    let cell = AccessibilityKeyedOrderCell{}
+    let window = Window{ Root: cell, Width: 100, Height: 100 }
+    window.AccessibilityAdapter = adapter
+    for order in []string{"abc", "bca", "abc", "bac"} {
+      cell.Order = order
+      cell.Rebuild()
+      window.UpdateTree()
+      guard let root = adapter.Tree?.Root, let hit = window.AccessibilityHitTest(10.0, 10.0) else { return false }
+      var names = ""
+      for child in root.Children { names += child.Name }
+      if names != order || hit != root.Children[2].Id { return false }
+    }
+    return true
+  }
+}
+
+internal class AccessibilityKeyedOrderCell : Cell {
+  internal var Order string = ""
+
+  override func Build() Blob {
+    let root = Container{ Width: 100, Height: 100, Accessibility: Accessibility{ Role: AccessibilityRole.Group } }
+    root.Add(Container{ Width: 1, Height: 1 })
+    for key in Order {
+      root.Add(Container{ Key: key.ToString(), Position: PositionType.Absolute, Width: 40, Height: 40,
+        Accessibility: Accessibility{ Role: AccessibilityRole.Generic, Name: key.ToString() } })
+    }
+    return root
+  }
 }
 
 internal class AccessibilityTestAdapter : AccessibilityAdapter {
