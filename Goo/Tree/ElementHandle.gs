@@ -337,9 +337,9 @@ public data struct ElementMetrics {
   private var isMounted bool
   private var borderBox ElementRect
   private var contentBox ElementRect
-  private var rawBorderBox ElementRect
   private var scrollOffset Point
   private var scrollRange Point
+  private var rawBorderBox ElementRect
 
   /// Reports whether the element is mounted.
   public prop IsMounted bool{ get -> isMounted init -> isMounted = value }

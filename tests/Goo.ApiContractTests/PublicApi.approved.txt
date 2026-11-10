@@ -1188,7 +1188,7 @@ method|Goo.ElementHandle|SetTextInputArea|instance|public|generic:|(area:Goo.Ele
 method|Goo.ElementHandle|TryCopyTextRangeRects|instance|public|generic:|(textRange:Goo.TextRange,space:Goo.TextCoordinateSpace,destination:System.Span`1<Goo.ElementRect>,out required:System.Int32&)->System.Boolean
 method|Goo.ElementHandle|TryGetTextCaretRect|instance|public|generic:|(position:Goo.TextPosition,space:Goo.TextCoordinateSpace,out rect:Goo.ElementRect&)->System.Boolean
 method|Goo.ElementHandle|TryGetTextPositionAt|instance|public|generic:|(point:Goo.Point,space:Goo.TextCoordinateSpace,out position:Goo.TextPosition&)->System.Boolean
-method|Goo.ElementMetrics|Deconstruct|instance|public|generic:|(out isMounted:System.Boolean&,out borderBox:Goo.ElementRect&,out contentBox:Goo.ElementRect&,out rawBorderBox:Goo.ElementRect&,out scrollOffset:Goo.Point&,out scrollRange:Goo.Point&)->System.Void
+method|Goo.ElementMetrics|Deconstruct|instance|public|generic:|(out isMounted:System.Boolean&,out borderBox:Goo.ElementRect&,out contentBox:Goo.ElementRect&,out scrollOffset:Goo.Point&,out scrollRange:Goo.Point&,out rawBorderBox:Goo.ElementRect&)->System.Void
 method|Goo.ElementMetrics|Equals|instance|public|generic:|(other:Goo.ElementMetrics)->System.Boolean
 method|Goo.ElementMetrics|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
 method|Goo.ElementMetrics|GetHashCode|virtual|public|generic:|()->System.Int32
