@@ -54,13 +54,18 @@ func BorderSnapPartialColumns(frame VulkanReadbackResult, y int32, first int32, 
 }
 
 func RunBorderSnapSmoke() {
+  let scales = (Environment.GetEnvironmentVariable("GOO_BORDER_SNAP_UI_SCALES") ?? "1,1.25,1.5,2").Split(',')
+  for text in scales { RunBorderSnapScale(Single.Parse(text, CultureInfo.InvariantCulture)) }
+}
+
+func RunBorderSnapScale(uiScale float32) {
   let output = Environment.GetEnvironmentVariable("GOO_BORDER_SNAP_OUTPUT") ?? ""
   let capturedError = StringWriter()
   let originalError = Console.Error
   Console.SetError(capturedError)
   let opened = Window{
-    Title: "Goo border snap gate", Width: 180, Height: 40,
-    VSync: false, Decorated: false, Background: Color.White, Root: BorderSnapCell(),
+    Title: "Goo border snap gate", Width: int32(180.0F * uiScale), Height: int32(40.0F * uiScale),
+    UiScale: uiScale, VSync: false, Decorated: false, Background: Color.White, Root: BorderSnapCell(),
   }
   try {
     opened.Open()
@@ -71,8 +76,9 @@ func RunBorderSnapSmoke() {
       uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
     ReadbackAwaitReadbackReady(opened, 10000)
     let frame = ReadbackTakeReadback(opened)
-    let device = metrics.DisplayScaleX
-    let tag = "display=" + device.ToString(CultureInfo.InvariantCulture)
+    let device = metrics.DisplayScaleX * float64(uiScale)
+    let tag = "display=" + metrics.DisplayScaleX.ToString(CultureInfo.InvariantCulture)
+      + " ui=" + uiScale.ToString(CultureInfo.InvariantCulture)
       + " framebuffer=" + metrics.FramebufferWidth.ToString() + "x" + metrics.FramebufferHeight.ToString()
     if output != "" {
       let _ = Directory.CreateDirectory(output)
