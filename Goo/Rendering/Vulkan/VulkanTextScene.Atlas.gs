@@ -143,16 +143,7 @@ internal unsafe sealed partial class VulkanTextScene {
 
   private func HintPpem(provider VulkanTextProvider, fontSize float32) int32 {
     if !provider.OutlineHintingAvailable || fontSize <= 0.0F { return 0 }
-    let ppem = Math.Max(1, int32(MathF.Round(fontSize * pixelScale * 64.0F)))
-    if fittedHintPpems.Contains(ppem) { return ppem }
-    if previousHintPpems.Contains(ppem) {
-      fittedHintPpems.Add(ppem)
-      return ppem
-    }
-    frameHintPpems.Add(ppem)
-    provisionalHint = true
-    redrawRequired = true
-    return 0
+    return Math.Max(1, int32(MathF.Round(fontSize * pixelScale * 64.0F)))
   }
 
   private func CanRender(glyph VulkanTextAtlasGlyph) bool {

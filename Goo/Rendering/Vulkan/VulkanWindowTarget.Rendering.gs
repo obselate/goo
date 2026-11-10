@@ -257,6 +257,11 @@ internal unsafe partial class VulkanWindowTarget {
         sceneCompiler.AppendDebugOverlay(debugOverlay, compileResult.FrameVersion,
           logicalWidth, logicalHeight)
       }
+      if textScene?.ResourceDeferred == true {
+        frameRenderDeferred = true
+        host.Wake()
+        return
+      }
       textRedrawPending = textScene?.RedrawRequired == true
       imageRedrawPending = imageScene?.RedrawRequired == true
       var deferInitialPresentation bool
@@ -322,7 +327,7 @@ internal unsafe partial class VulkanWindowTarget {
         EndDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.Upload)
       }
       RecordDiagnosticUpload(uploadStart, uploadBytes)
-      if deferInitialPresentation || textRedrawPending {
+      if deferInitialPresentation {
         initialImageUploadFrame = uploadBytes != 0uL
         frameRendered = initialImageUploadFrame
         frameRenderDeferred = true

@@ -84,6 +84,8 @@ internal unsafe sealed partial class VulkanTextScene {
     parentTransformIndex int32,
     ref complete bool) bool{
       let segment = BeginSegment(frame, shape.GlyphCount)
+      let sizeChanged = segment.Version != 0uL && !SameTextFloat(segment.FontSize, fontSize)
+      let unfitted = scaleAnimating || (sizeChanged && segment.SizeChanged)
       var parentTransform PrimitiveTransform
       let identity = PrimitiveTransform{
         A: 1.0F,
@@ -100,6 +102,7 @@ internal unsafe sealed partial class VulkanTextScene {
           fontSize, lineX, baseline, color, effectMode, effectRadiusPixels,
           effectOffsetX, effectOffsetY, parentTransform)
         && ProtectSegmentAtlases(segment) {
+          segment.SizeChanged = false
           frame.AddCachedTextSegment(segment.CreateReference())
           return true
         }
@@ -110,6 +113,7 @@ internal unsafe sealed partial class VulkanTextScene {
           effectOffsetX, effectOffsetY, parentTransform)
         && ProtectSegmentAtlases(segment)
         && MoveSegmentBaseline(segment, baseline) {
+        segment.SizeChanged = false
         frame.AddCachedTextSegment(segment.CreateReference())
         return true
       }
@@ -118,11 +122,10 @@ internal unsafe sealed partial class VulkanTextScene {
       let parentScale = ParentTransformMinimumScale(frame, parentTransformIndex)
       var hasBounds bool = false
       var result bool = true
-      provisionalHint = false
       var runIndex int32 = 0
       while runIndex < shape.Runs.Count {
         let run = shape.Runs[runIndex]
-        let ppem = HintPpem(run.Provider, fontSize)
+        let ppem = if unfitted { 0 } else { HintPpem(run.Provider, fontSize) }
         let runX = lineX + MathF.Min(run.VisualStart, run.VisualEnd)
         let runOriginX = parentTransform.A * runX + parentTransform.C * baseline + parentTransform.TX
         let runOriginY = parentTransform.B * runX + parentTransform.D * baseline + parentTransform.TY
@@ -131,7 +134,7 @@ internal unsafe sealed partial class VulkanTextScene {
           let glyphId = run.Glyphs[glyphIndex]
           if glyphId != 0u {
             guard let glyph = GetGlyph(run, glyphId, ppem) else {
-              redrawRequired = true
+              resourceDeferred = true
               publicationPending = true
               complete = false
               result = false
@@ -140,7 +143,7 @@ internal unsafe sealed partial class VulkanTextScene {
             }
             MarkActiveAtlas(glyph)
             if !CanRender(glyph) {
-              redrawRequired = true
+              resourceDeferred = true
               publicationPending = true
               complete = false
               result = false
@@ -319,12 +322,17 @@ internal unsafe sealed partial class VulkanTextScene {
         }
         runIndex = runIndex + 1
       }
-      if provisionalHint { complete = false }
+      if unfitted {
+        complete = false
+        redrawRequired = true
+      }
       if result && workspace.RecordCount > 0 {
         CommitSegment(segment)
         segment.Shape = shape
         segment.RendererValidationCacheEligible = activeSegmentReuse
-        segment.FontSize = if provisionalHint { Single.NaN } else { fontSize }
+        segment.FontSize = fontSize
+        segment.SizeChanged = sizeChanged
+        segment.Unfitted = unfitted
         segment.LineX = lineX
         segment.Baseline = baseline
         segment.Color = color
