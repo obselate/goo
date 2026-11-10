@@ -73,6 +73,7 @@ internal partial class TextEditorLayouts {
       let layout = build(n, state, snapshot, width, height, revision, fingerprint)
       state.Layout = layout
       state.Dirty = false
+      if layout.AnchorShift != 0.0F { ScrollState.ShiftEditor(n, layout.AnchorShift) }
       if n.HasElementHandle {
         warmGeometry(layout)
       }
@@ -305,8 +306,8 @@ internal partial class TextEditorLayouts {
         x = MathF.Ceiling((logicalLeft + rect.W - right) * scale) / scale
       }
       if position.Offset == state.Document.Length { y = Single.MaxValue }
-      else if logicalTop < y + top { y = logicalTop - top - state.TopInset }
-      else if logicalTop + rect.H > y + bottom { y = logicalTop + rect.H - bottom }
+      else if logicalTop < y + top { y = MathF.Floor((logicalTop - top - state.TopInset) * scale) / scale }
+      else if logicalTop + rect.H > y + bottom { y = MathF.Ceiling((logicalTop + rect.H - bottom) * scale) / scale }
       return Point{ X: float64(x), Y: float64(y) }
     }
 

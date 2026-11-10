@@ -10,6 +10,7 @@ internal sealed class TextEditorRenderState : IDisposable {
   private let controller TextEditorController
   private var layers []TextPresentationLayer
   private let paragraphs List[TextEditorParagraphLayout]
+  private let heights TextEditorLineHeights
   private let analyses List[TextEditorAnalysisCacheEntry]
   private let layoutScratch TextEditorVisualLayout
   private let paragraphLayoutScratch TextEditorVisualLayout
@@ -42,6 +43,7 @@ internal sealed class TextEditorRenderState : IDisposable {
       this.controller = controller
       this.layers = copyEditorLayers(layers)
       paragraphs = List[TextEditorParagraphLayout]()
+      heights = TextEditorLineHeights()
       analyses = List[TextEditorAnalysisCacheEntry]()
       layoutScratch = TextEditorVisualLayout()
       paragraphLayoutScratch = TextEditorVisualLayout()
@@ -136,25 +138,15 @@ internal sealed class TextEditorRenderState : IDisposable {
       return nil
     }
 
-  internal func ParagraphHeightForLine(snapshot TextSnapshot, line int32, width float32,
-    fingerprint int32, lineHeight float32, ascent float32, descent float32) float32? {
-      for value in paragraphs {
-        if !matchesLayoutConstraint(value, width, fingerprint, lineHeight, ascent, descent) { continue }
-        if snapshot.GetLineIndex(value.Source.Start) == line { return value.Height }
-      }
-      return nil
-    }
+  internal func Heights(snapshot TextSnapshot, width float32, fingerprint int32, lineHeight float32,
+    ascent float32, descent float32) TextEditorLineHeights? -> if heights.Matches(snapshot, width, fingerprint, lineHeight, ascent, descent) { heights } else { nil }
 
-  internal func HeightAdjustmentBefore(snapshot TextSnapshot, target int32, width float32,
-    fingerprint int32, lineHeight float32, ascent float32, descent float32) float32{
-      var adjustment = 0.0F
-      for value in paragraphs {
-        if !matchesLayoutConstraint(value, width, fingerprint, lineHeight, ascent, descent) { continue }
-        if snapshot.GetLineIndex(value.Source.Start) < target {
-          adjustment = adjustment + value.Height - lineHeight
-        }
+  internal func TrackHeights(snapshot TextSnapshot, width float32, fingerprint int32, lineHeight float32,
+    ascent float32, descent float32) TextEditorLineHeights {
+      if !heights.Matches(snapshot, width, fingerprint, lineHeight, ascent, descent) {
+        heights.Reset(snapshot, width, fingerprint, lineHeight, ascent, descent)
       }
-      return adjustment
+      return heights
     }
 
   private func matchesLayoutConstraint(value TextEditorParagraphLayout, width float32,
@@ -298,11 +290,13 @@ internal sealed class TextEditorRenderState : IDisposable {
 
   internal func DocumentChanged(change TextDocumentChange) {
     RebaseParagraphs(change)
-    if !retainLayoutAfter(change) {
+    let total = heights.Total
+    heights.Apply(change, document.Snapshot())
+    if !retainLayoutAfter(change, total) {
       Invalidate(true) }
   }
 
-  private func retainLayoutAfter(change TextDocumentChange) bool {
+  private func retainLayoutAfter(change TextDocumentChange, total float32) bool {
     guard let layout = Layout else { return false }
     if Dirty || layout.HeightConstraint < 0.0F || layout.Lines.Count == 0 { return false }
     var sourceEnd int32 = 0
@@ -320,8 +314,10 @@ internal sealed class TextEditorRenderState : IDisposable {
     }
     if node.EditorShowLineNumbers && TextEditorLayouts.LineNumberDigits(lineCount)
       != TextEditorLayouts.LineNumberDigits(layout.DocumentLineCount) { return false }
-    layout.ContentHeight = layout.ContentHeight
-    +float32(lineCount - layout.DocumentLineCount) * layout.LineHeight
+    let snapshot = document.Snapshot()
+    guard let tracked = Heights(snapshot, layout.ParagraphWidth, layout.FontFingerprint, layout.LineHeight,
+      layout.Ascent, layout.Descent) else { return false }
+    layout.ContentHeight += float32(lineCount - layout.DocumentLineCount) * layout.LineHeight + tracked.Total - total
     layout.DocumentLineCount = lineCount
     layout.Version = change.AfterVersion
     return true

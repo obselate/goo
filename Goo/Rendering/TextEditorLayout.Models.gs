@@ -218,6 +218,7 @@ internal class TextEditorVisualLayout {
   internal prop Height float32{ get; set; }
   internal prop ContentWidth float32{ get; set; }
   internal prop ContentHeight float32{ get; set; }
+  internal prop AnchorShift float32{ get; set; }
   internal prop Lines List[TextEditorVisualLine]{ get; init; }
 
   internal init() {
