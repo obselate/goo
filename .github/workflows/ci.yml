@@ -1201,6 +1201,9 @@ jobs:
             -p:UseAppHost=false \
             --configfile tests/Goo.PackageSmoke/NuGet.config \
             -o artifacts/publish
+          LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh env \
+            GOO_APPLICATION_QUIT_SMOKE=1 \
+            dotnet artifacts/publish/Goo.PackageSmoke.dll
 
       - name: Publish and run clean NativeAOT consumer
         if: needs.changes.outputs.full == 'true'
@@ -1468,6 +1471,10 @@ jobs:
 
           .github/scripts/with-headless-wayland.sh env \
             GOO_PROFILER_SMOKE=1 GOO_PROFILE_START=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_ANIMATION_VISIBILITY_SMOKE=1 \
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 
           .github/scripts/with-headless-wayland.sh env \
