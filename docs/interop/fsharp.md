@@ -50,6 +50,8 @@ let counter = Cell.Mount<Cell>(counterFactory, "counter")
 
 The factory runs only for a new mount. Use distinct keys for different components mounted as `Cell`. Goo rebuilds the Cell that authored an input callback after it runs. Call `Rebuild()` for state changed outside input dispatch.
 
+Core `Button` requires explicit activation keys. Goo.Widgets buttons bind Enter and Space. See [shared keyboard rules](dotnet.md#shared-api-rules).
+
 ## Data list
 
 <table>

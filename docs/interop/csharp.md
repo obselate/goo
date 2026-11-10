@@ -47,6 +47,8 @@ Use .NET 10 and C# 14. The [compiled sample](../../samples/interop/CSharp/Progra
 
 Goo rebuilds the Cell that authored an input callback after it runs. Call `Rebuild()` for state changed outside input dispatch. Set `Window.Root` to a cell, then call `Run()`.
 
+Core `Button` requires explicit activation keys. Goo.Widgets buttons bind Enter and Space. See [shared keyboard rules](dotnet.md#shared-api-rules).
+
 ## Data list
 
 <table>
