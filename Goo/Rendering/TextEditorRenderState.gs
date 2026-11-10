@@ -33,6 +33,7 @@ internal sealed class TextEditorRenderState : IDisposable {
   internal prop Layout TextEditorVisualLayout? { get; set; }
   internal prop Dirty bool{ get; set; }
   internal prop PlaceholderShape ShapedText? { get; set; }
+  internal prop TopInset float32{ get; set; }
 
   internal init(node Node, document TextDocument, controller TextEditorController,
     layers []TextPresentationLayer, readOnly bool) {

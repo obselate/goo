@@ -71,12 +71,17 @@ internal class TextPresentationLayerFixtures {
       using let layer = TextPresentationLayer(document)
       layer.SetStyle("color", TextRange(0, 6), Style{ Color: Color.Parse("#ff0000") })
       let node = Reconciler{ Res: Resolver{} }.Mount(TextEditor(controller, []TextPresentationLayer{layer}) {
-        Width = 200, Height = 100, FontSize = 14, LineHeight = lineHeight,
+        Width = 200, FontSize = 14, LineHeight = lineHeight,
       })
       Layout{}.Calculate(node, 200.0F, 100.0F)
       let layout = TextEditorLayouts.For(node, BoxGeometry.ContentWidth(node), BoxGeometry.ContentHeight(node))
-      if layout.Lines[0].Height != TextLayouts.resolvedLineHeight(node)
-        || layout.Lines[1].Height != TextLayouts.resolvedLineHeight(node) { return false }
+      let first = layout.Lines[0]
+      let last = layout.Lines[1]
+      let ascentTop = first.Top + (first.Height - (first.Descent - first.Ascent)) * 0.5F
+      let descentBottom = last.Top + (last.Height + (last.Descent - last.Ascent)) * 0.5F
+      if first.Height != TextLayouts.resolvedLineHeight(node) || last.Height != TextLayouts.resolvedLineHeight(node)
+        || ascentTop < 0.0F || descentBottom > BoxGeometry.ContentHeight(node) + 0.001F
+        || descentBottom > layout.ContentHeight + 0.001F { return false }
     }
     return true
   }
