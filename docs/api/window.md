@@ -8,7 +8,9 @@ Source: [`Goo/Window`](../../Goo/Window)
 
 Goo loads its bundled patched SDL and shares that handle with its SDL bindings.
 It checks beside `Goo.dll`, then `runtimes/<rid>/native` in the output or NuGet
-package. Scripting hosts can load the managed assemblies with `Assembly.LoadFrom`.
+package. It also checks the host's native-library search directories, including
+single-file extraction directories. Scripting hosts can load the managed assemblies
+with `Assembly.LoadFrom`.
 They do not need an application dependency manifest or a custom SDL search path.
 
 ## Native desktop backdrops
