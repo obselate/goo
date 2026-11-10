@@ -242,8 +242,10 @@ internal partial class TextInput {
     var canceled = false
     if n.Kind == NodeKind.Editor {
       if let controller = n.EditorController {
-        canceled = controller.Execute(TextCommand{ Kind: TextCommandKind.CancelComposition })
-        if canceled { updateTextInputArea(n) }
+        if controller.Composition != nil {
+          canceled = controller.Execute(TextCommand{ Kind: TextCommandKind.CancelComposition })
+          if canceled { updateTextInputArea(n) }
+        }
       }
     } else if n.Kind == NodeKind.Entry {
       canceled = cancelEntryComposition(n)

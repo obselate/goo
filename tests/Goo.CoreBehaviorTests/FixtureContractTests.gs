@@ -456,6 +456,7 @@ class FixtureContractTests {
             yield Contract[StyleFixtures]("VisibilityStateResetTransitionAndStorageContract")
             yield Contract[StyleFixtures]("WindowColorPairInheritanceContract")
             yield Contract[StyleFixtures]("ZIndexRangeStateAndResetContract")
+            yield Contract[TextEditorInputFixtures]("CompositionCancelWithoutPreeditIssuesNoCommand")
             yield Contract[TextEditorInputFixtures]("KeyboardCompositionClipboardAndSubmit")
             yield Contract[TextEditorInputFixtures]("NewVerticalRepeatDoesNotUsePreInputTime")
             yield Contract[TextEditorInputFixtures]("PageNavigationUsesViewportAndVisualLineGeometry")
