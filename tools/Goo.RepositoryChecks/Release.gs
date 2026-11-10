@@ -153,9 +153,7 @@ internal shared partial class Checks {
             "apps/Goo.Gallery/Program.gs",
             "docs/devtools/protocol.md",
             "integrations/vscode/package.json",
-            "templates/Goo.Templates/README.md",
-            "tools/Goo.DevTools.Cli/CliApplication.gs",
-            "tools/Goo.DevTools.Cli/ProtocolConnection.gs"
+            "templates/Goo.Templates/README.md"
         }
         for relative in literals {
             let path = Path.Combine(Root, relative)

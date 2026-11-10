@@ -27,7 +27,7 @@ internal class ProtocolConnection : IAsyncDisposable {
             ["type"] = "hello",
             ["protocol"] = Discovery.Protocol,
             ["client"] = "goo-cli",
-            ["version"] = "0.29.1",
+            ["version"] = CliApplication.Version,
             ["capabilities"] = JsonArray(
                 ReadOnlySpan[JsonNode?](
                     []JsonNode? {
