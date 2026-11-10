@@ -38,6 +38,7 @@ public sealed class OffscreenRenderSession : IDisposable {
   /// @param cancellation Cancels after in-flight GPU work is safe to release.
   /// @param reusable Previous pixels to reuse when the output size matches.
   /// @returns Owned pixels or an explicit render status.
+  /// @exception InvalidOperationException when root is attached to a window.
   public func RenderAsync(root Cell, options OffscreenRenderOptions, cancellation CancellationToken,
     reusable WindowCapture? = nil) Task[OffscreenRenderResult] {
       requireThread()
