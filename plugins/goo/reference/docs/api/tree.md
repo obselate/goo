@@ -1418,7 +1418,7 @@ Gets whether Size is the result of a layout of the current content.
 
 ### `Size`
 
-Gets the size of the item from its last layout.
+Gets the size of the item from its last layout, before rounding to device pixels.
 
 ## `VirtualItem`
 

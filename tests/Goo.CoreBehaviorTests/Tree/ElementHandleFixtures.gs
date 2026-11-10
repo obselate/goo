@@ -701,6 +701,9 @@ internal class ElementHandleFixtures {
     window.UiScale = 1.5F
     window.UpdateTree()
     if cell.PixelScale != 1.5 || cell.ContextVersion <= version { return false }
+    cell.Rebuild()
+    window.UpdateTree()
+    if !cell.First.Measured || cell.First.Size.Height != 37.0 { return false }
     let scaledVersion = cell.ContextVersion
     window.UiScale = 2.25F
     window.UpdateTree()
