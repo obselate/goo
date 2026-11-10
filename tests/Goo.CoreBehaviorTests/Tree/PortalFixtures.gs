@@ -43,19 +43,37 @@ internal class PortalFixtures {
     return window.UiScale == 0.5F
   }
 
-  func AnchoredPortalSharesDevicePixelRowsWithTreeContract() bool {
+  func AnchoredPortalSharesDevicePixelRowsWithTreeContract() bool -> portalRows(4)
+
+  func AnchoredPortalPaddingSixSharesDevicePixelRowsWithTreeContract() bool -> portalRows(6)
+
+  private func portalRows(padding float64) bool {
     for scale in []float32{ 1.0F, 1.25F, 1.5F, 2.25F } {
-      let cell = PortalRowAlignmentCell{}
+      let cell = PortalRowAlignmentCell{ Padding: padding }
       let window = Window{ Root: cell, Width: 600, Height: 600, UiScale: scale }
       window.UpdateTree()
-      let field = cell.FieldText.BorderBox
-      let option = cell.OptionText.BorderBox
-      let fieldRow = field.Y * float64(scale)
-      let optionRow = option.Y * float64(scale)
-      if Math.Abs(fieldRow - Math.Round(fieldRow)) > 0.001 || Math.Abs(optionRow - Math.Round(optionRow)) > 0.001
-        || Math.Round(fieldRow) != Math.Round(optionRow) {
-          throw InvalidOperationException("scale=${scale}, field=${fieldRow}, option=${optionRow}")
-        }
+      let fieldRow = cell.FieldText.BorderBox.Y * float64(scale)
+      let optionRow = cell.OptionText.BorderBox.Y * float64(scale)
+      if Math.Round(fieldRow) != Math.Round(optionRow) {
+        throw InvalidOperationException("scale=${scale}, padding=${padding}, field=${fieldRow}, option=${optionRow}")
+      }
+    }
+    return true
+  }
+
+  func FractionalParentRoundsTextOnBothAxesContract() bool {
+    let cell = FractionalParentTextCell{}
+    let window = Window{ Root: cell, Width: 100, Height: 100, UiScale: 1 }
+    window.UpdateTree()
+    return cell.TextHandle.BorderBox.X == 5 && cell.TextHandle.BorderBox.Y == 5
+  }
+
+  func CustomLayoutRootSharesDevicePixelRowsWithTreeContract() bool {
+    for scale in []float32{ 1, 1.25F, 1.5F } {
+      let cell = FractionalCustomLayoutCell{}
+      let window = Window{ Root: cell, Width: 200, Height: 200, UiScale: scale }
+      window.UpdateTree()
+      if cell.CustomText.BorderBox.Y != cell.TreeText.BorderBox.Y { return false }
     }
     return true
   }
@@ -661,17 +679,48 @@ internal class PortalRowAlignmentCell : Cell {
   internal let Field ElementHandle = ElementHandle{}
   internal let FieldText ElementHandle = ElementHandle{}
   internal let OptionText ElementHandle = ElementHandle{}
+  internal var Padding float64 = 4
 
   override func Build() Blob -> Container{ Width: Percent(100), Height: Percent(100),
-    Container{ Handle: Field, Position: PositionType.Absolute, Left: 40, Top: 166, Width: 320, Height: 32, Padding: 4,
+    Container{ Handle: Field, Position: PositionType.Absolute, Left: 40, Top: Padding == 6 ? 166.5 : 166, Width: 320, Height: 32, Padding: Padding,
       Text{ Handle: FieldText, Content: "Field" },
     },
     Portal{ Anchor: Field, Placement: PortalPlacement.BottomStart,
       AnchorRect: ElementRect{ X: 4.889, Y: -31.778, Width: 310.222, Height: 32 },
-      Container{ Width: 310.222, Height: 32, Padding: 4,
+      Container{ Width: 310.222, Height: 32, Padding: Padding,
         Text{ Handle: OptionText, Content: "Option" },
       },
     },
+  }
+}
+
+internal class FractionalParentTextCell : Cell {
+  internal let TextHandle ElementHandle = ElementHandle{}
+  override func Build() Blob -> Container{ Width: Percent(100), Height: Percent(100),
+    Container{ Position: PositionType.Absolute, Left: 0.5, Top: 0.5, Padding: 4,
+      Text{ Handle: TextHandle, Content: "Text" },
+    },
+  }
+}
+
+internal class FractionalCustomLayoutCell : Cell {
+  internal let CustomText ElementHandle = ElementHandle{}
+  internal let TreeText ElementHandle = ElementHandle{}
+  override func Build() Blob -> Container{ Width: Percent(100), Height: Percent(100),
+    Container{ Position: PositionType.Absolute, Width: 100, Height: 100,
+      Layout: FractionalRootLayout(),
+      Container{ Padding: 4, Text{ Handle: CustomText, Content: "Text" } },
+    },
+    Container{ Position: PositionType.Absolute, Left: 0.5, Top: 0.5, Padding: 4,
+      Text{ Handle: TreeText, Content: "Text" },
+    },
+  }
+}
+
+internal class FractionalRootLayout : LayoutAlgorithm {
+  public func Measure(context LayoutContext, available LayoutSize) LayoutSize -> available
+  public func Arrange(context LayoutContext, finalSize LayoutSize) {
+    context.ArrangeChild(0, ElementRect{ X: 0.5, Y: 0.5, Width: 80, Height: 40 })
   }
 }
 
