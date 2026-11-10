@@ -9,6 +9,7 @@ import System.IO.Pipes
 import System.Linq
 import System.Reflection
 import System.Runtime.CompilerServices
+import System.Runtime.InteropServices
 import System.Text.Json
 import System.Threading
 
@@ -232,7 +233,7 @@ internal class Program {
                 case _: WindowState.Normal
             }
             if state == WindowState.Normal {
-                let oversized = Window{ Width: 4096, Height: 4096, MinWidth: 100, MinHeight: 100, Root: Cell() }.Open()
+                let oversized = Window{ Title: "Goo placement oversized", Width: 4096, Height: 4096, MinWidth: 100, MinHeight: 100, Root: Cell() }.Open()
                 try {
                     let usable = oversized.GetCurrentDisplay()!!.UsableBounds!!
                     for i in 0 ... 20 {
@@ -241,6 +242,7 @@ internal class Program {
                     }
                     Require(oversized.Width <= int32(usable.Width) && oversized.Height <= int32(usable.Height),
                         "Oversized window left the usable bounds: ${oversized.Width}x${oversized.Height} in $usable")
+                    if OperatingSystem.IsWindows() { RequireFrameInside(FindWindowW(nint(0), "Goo placement oversized"), usable) }
                 } finally {
                     oversized.RequestClose()
                     oversized.Pump(0)
@@ -411,6 +413,27 @@ internal class Program {
             }
             throw TimeoutException("Native placement did not reach ${condition}: ${window.Width}x${window.Height}, ${window.CapturePlacement().Placement?.State}")
         }
+
+        private func RequireFrameInside(handle nint, usable ElementRect) {
+            Require(handle != nint(0), "Oversized window handle not found")
+            let rect = Marshal.AllocHGlobal(16)
+            try {
+                Require(GetWindowRect(handle, rect) != 0, "GetWindowRect failed")
+                let left = Marshal.ReadInt32(rect, 0)
+                let top = Marshal.ReadInt32(rect, 4)
+                let right = Marshal.ReadInt32(rect, 8)
+                let bottom = Marshal.ReadInt32(rect, 12)
+                Require(float64(left) >= usable.X && float64(top) >= usable.Y
+                    && float64(right) <= usable.X + usable.Width && float64(bottom) <= usable.Y + usable.Height,
+                    "Oversized window frame left the usable bounds: $left,$top,$right,$bottom in $usable")
+            } finally { Marshal.FreeHGlobal(rect) }
+        }
+
+        @DllImport("user32.dll", CharSet: CharSet.Unicode)
+        private func FindWindowW(className nint, title string) nint;
+
+        @DllImport("user32.dll")
+        private func GetWindowRect(window nint, rect nint) int32;
 
         private func WaitFor(path string) {
             let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 20
