@@ -600,6 +600,42 @@ internal class LayoutFixtures {
     return true
   }
 
+  func CustomPlacementsSnapToDevicePixelsAcrossRelayouts() bool {
+    let scene = Container{ Width: Percent(100), Height: Percent(100),
+      Container{ Position: PositionType.Absolute, Left: 7.3, Top: 5, Width: 160, Height: 40, Padding: 1,
+        Layout: LayoutPlacementFixtureAlgorithm(),
+        Container{ Width: 30, Height: 20 },
+        Container{ Width: 30, Height: 20, Margin: 0.6 },
+      },
+    }
+    for density in []float32{ 1.25F, 1.75F } {
+      let root = Reconciler{ Res: Resolver{} }.Mount(scene)
+      let layout = Layout()
+      layout.SetPixelDensity(density)
+      layout.Calculate(root, 200.0F, 100.0F)
+      let expected = List[float32]()
+      snapshot(root, expected)
+      for pass in 0 ... 22 {
+        if pass == 20 { layout.Calculate(root, 207.0F, 100.0F) }
+        CustomLayouts.State(root.Children[0])!!.Invalidate()
+        layout.Calculate(root, 200.0F, 100.0F)
+        let actual = List[float32]()
+        snapshot(root, actual)
+        if !sameSnapshot(actual, expected) {
+          throw InvalidOperationException("density=${density}, pass=${pass}, x=${root.Children[0].Children[1].Rect.X}")
+        }
+      }
+      for child in root.Children[0].Children {
+        let x = child.Rect.X * density
+        let y = child.Rect.Y * density
+        if MathF.Abs(x - MathF.Round(x)) > 0.001F || MathF.Abs(y - MathF.Round(y)) > 0.001F {
+          throw InvalidOperationException("density=${density}, x=${x}, y=${y}")
+        }
+      }
+    }
+    return true
+  }
+
   func HiddenCustomLayoutsWaitForVisibleGeometry() bool {
     let policy = LayoutVisibilityFixtureAlgorithm()
     let reconciler = Reconciler{ Res: Resolver{} }
@@ -961,6 +997,15 @@ internal class LayoutVisibilityFixtureAlgorithm : LayoutAlgorithm {
     context.MeasureChild(0, finalSize)
     context.ArrangeChild(0, ElementRect{ Width: finalSize.Width, Height: finalSize.Height })
     FinalSize = finalSize
+  }
+}
+
+internal class LayoutPlacementFixtureAlgorithm : LayoutAlgorithm {
+  public func Measure(context LayoutContext, available LayoutSize) LayoutSize -> available
+
+  public func Arrange(context LayoutContext, finalSize LayoutSize) {
+    context.ArrangeChild(0, ElementRect{ X: 22.8, Y: 3.3, Width: 30, Height: 20 })
+    context.ArrangeChild(1, ElementRect{ X: 61.7, Y: 0.4, Width: 31.2, Height: 21.2 })
   }
 }
 
