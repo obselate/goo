@@ -22,6 +22,9 @@ public partial class Window {
     }
   }
 
+  /// Gets the display scale multiplied by UiScale, the factor used to snap layout positions to device pixels on both axes.
+  public prop PixelScale float32 { get -> RenderScale.X }
+
   internal prop LayoutWidth float32 { get -> offscreenViewport?.X ?? float32(Width) / UiScale }
   internal prop LayoutHeight float32 { get -> offscreenViewport?.Y ?? float32(Height) / UiScale }
   internal prop RenderScale Vector2 { get -> dpi * UiScale }

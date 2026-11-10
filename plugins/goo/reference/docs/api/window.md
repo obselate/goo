@@ -2012,6 +2012,10 @@ Gets or sets the close-request handler. Return false to veto closure. OS termina
 
 Gets or sets the native owner before Open. The owner must be an open desktop window on the same UI thread. Ownership cannot change while open. Self-ownership and ancestor cycles are rejected.
 
+### `PixelScale`
+
+Gets the display scale multiplied by UiScale, the factor used to snap layout positions to device pixels on both axes.
+
 ### `PlatformInput`
 
 Gets the owner-thread platform input and focused-editor contract.

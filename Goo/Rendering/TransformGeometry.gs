@@ -34,16 +34,63 @@ internal data struct ScrollTranslation {
 
 internal class TransformGeometry {
   shared {
-    internal func Matrix(n Node) Affine2D {
+    internal func RawBoundsToWindow(n Node) TransformBounds {
+      var rect Rect
+      let matrix = rawWindowMatrix(n, out rect)
+      let center = MapAffinePoint(matrix, rect.X + rect.W * 0.5F, rect.Y + rect.H * 0.5F)
+      if !center.Valid { return TransformBounds{ X: rect.X, Y: rect.Y, W: rect.W, H: rect.H } }
+      let width = MathF.Abs(matrix.A) * rect.W + MathF.Abs(matrix.B) * rect.H
+      let height = MathF.Abs(matrix.C) * rect.W + MathF.Abs(matrix.D) * rect.H
+      return TransformBounds{ X: center.X - width * 0.5F, Y: center.Y - height * 0.5F,
+        W: width, H: height }
+    }
+
+    private func rawWindowMatrix(n Node, out rect Rect) Affine2D {
+      var parentRect = n.Parent?.Rect ?? Rect{}
+      var outer = Affine2D{ A: 1.0F, D: 1.0F }
+      if !n.IsPortal {
+        if let parent = n.Parent { outer = rawWindowMatrix(parent, out parentRect) }
+      }
+      rect = n.Rect
+      if !n.IsPortal {
+        if let parent = n.Parent {
+          rect.X += parentRect.X - parent.Rect.X
+          rect.Y += parentRect.Y - parent.Rect.Y
+        }
+      }
+      if let yoga = n.Yoga {
+        rect.X += yoga.Layout.RawLeft - YGNodeLayoutAPI.YGNodeLayoutGetLeft(yoga)
+        rect.Y += yoga.Layout.RawTop - YGNodeLayoutAPI.YGNodeLayoutGetTop(yoga)
+        rect.W = yoga.Layout.RawDimension(Dimension.Width)
+        rect.H = yoga.Layout.RawDimension(Dimension.Height)
+      }
+      var result = compose(outer, matrix(n, rect, parentRect))
+      if !n.IsPortal {
+        if let parent = n.Parent {
+          if !ScrollbarParts.ActiveChildren(parent).Contains(n) {
+            let offset = ScrollOffset(parent, outer,
+              parent.Kind == NodeKind.Editor && n.EditorSlotBlock ? 0.0F : parent.PlacedScrollX,
+              parent.PlacedScrollY)
+            result.TX -= offset.X
+            result.TY -= offset.Y
+          }
+        }
+      }
+      return result
+    }
+
+    internal func Matrix(n Node) Affine2D -> matrix(n, n.Rect, n.Parent?.Rect ?? Rect{})
+
+    private func matrix(n Node, rect Rect, parentRect Rect) Affine2D {
       let state = Transforming.Get(n)
-      let authored = if let value = state { authoredMatrix(n, value) }
+      let authored = if let value = state { authoredMatrix(rect, value) }
       else { Affine2D{ A: 1.0F, D: 1.0F } }
       guard let value = state, let viewport = value.Viewport else { return authored }
-      guard let parent = n.Parent else { return authored }
+      if n.Parent == nil { return authored }
       let nativeWidth = float32(viewport.NativeWidth)
       let nativeHeight = float32(viewport.NativeHeight)
-      let destinationWidth = parent.Rect.W
-      let destinationHeight = parent.Rect.H
+      let destinationWidth = parentRect.W
+      let destinationHeight = parentRect.H
       if !finite(nativeWidth) || !finite(nativeHeight)
         || nativeWidth <= 0.0F || nativeHeight <= 0.0F
         || !finite(destinationWidth) || !finite(destinationHeight)
@@ -69,13 +116,13 @@ internal class TransformGeometry {
         }
         default { }
       }
-      let offsetX = parent.Rect.X + (destinationWidth - nativeWidth * scaleX) * 0.5F
-      let offsetY = parent.Rect.Y + (destinationHeight - nativeHeight * scaleY) * 0.5F
+      let offsetX = parentRect.X + (destinationWidth - nativeWidth * scaleX) * 0.5F
+      let offsetY = parentRect.Y + (destinationHeight - nativeHeight * scaleY) * 0.5F
       let viewportTransform = Affine2D{
         A: scaleX,
         D: scaleY,
-        TX: offsetX - scaleX * n.Rect.X,
-        TY: offsetY - scaleY * n.Rect.Y,
+        TX: offsetX - scaleX * rect.X,
+        TY: offsetY - scaleY * rect.Y,
       }
       return compose(viewportTransform, authored)
     }
@@ -139,7 +186,7 @@ internal class TransformGeometry {
       }
     }
 
-    private func authoredMatrix(n Node, value TransformValue) Affine2D {
+    private func authoredMatrix(rect Rect, value TransformValue) Affine2D {
       // Fixed pipeline: scale, then skew, then rotation (translation applies last).
       let sx = value.Scale * value.ScaleX
       let sy = value.Scale * value.ScaleY
@@ -147,10 +194,10 @@ internal class TransformGeometry {
       let b = (value.Cos * value.TanX - value.Sin) * sy
       let c = (value.Sin + value.Cos * value.TanY) * sx
       let d = (value.Sin * value.TanX + value.Cos) * sy
-      let ox = n.Rect.X + resolve(value.OriginX, n.Rect.W)
-      let oy = n.Rect.Y + resolve(value.OriginY, n.Rect.H)
-      let tx = resolve(value.TranslateX, n.Rect.W)
-      let ty = resolve(value.TranslateY, n.Rect.H)
+      let ox = rect.X + resolve(value.OriginX, rect.W)
+      let oy = rect.Y + resolve(value.OriginY, rect.H)
+      let tx = resolve(value.TranslateX, rect.W)
+      let ty = resolve(value.TranslateY, rect.H)
       return Affine2D{
         A: a, B: b, C: c, D: d,
         TX: ox + tx - a * ox - b * oy,

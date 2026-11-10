@@ -110,8 +110,8 @@ namespace Facebook.Yoga
             _ => _positionBottom,
         };
 
-        internal float RawLeft => _rawPositionLeft;
-        internal float RawTop => _rawPositionTop;
+        public float RawLeft => _rawPositionLeft;
+        public float RawTop => _rawPositionTop;
 
         internal void SetRoundedPosition(float left, float top)
         {
