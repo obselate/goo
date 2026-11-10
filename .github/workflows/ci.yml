@@ -324,7 +324,7 @@ jobs:
             --output "$PWD/artifacts/macos consumer"
           dmg="$PWD/artifacts/macos consumer/org.goo.packagesmoke-$GOO_VERSION-osx-arm64.dmg"
           mkdir -p "$RUNNER_TEMP/consumer-mount"
-          hdiutil attach "$dmg" -mountpoint "$RUNNER_TEMP/consumer-mount" -nobrowse
+          hdiutil attach "$dmg" -mountpoint "$RUNNER_TEMP/consumer-mount" -nobrowse -verify -noignorebadchecksums
           ditto "$RUNNER_TEMP/consumer-mount/Goo.PackageSmoke.app" "$RUNNER_TEMP/Consumer Copy.app"
           hdiutil detach "$RUNNER_TEMP/consumer-mount"
           codesign --verify --deep --strict "$RUNNER_TEMP/Consumer Copy.app"
