@@ -6,7 +6,7 @@ dotnet run --project samples/interop/VisualBasic -- counter
 
 Pack Goo into `artifacts/packages` before running the repository sample.
 
-Use Goo from .NET 10 with ordinary objects, delegates and generic calls. See the [VB sample](../../samples/interop/VisualBasic/Program.vb), [C# guide](csharp.md) and [F# guide](fsharp.md).
+Use Goo from .NET 10 with ordinary objects, delegates and generic calls. See the [VB sample](../../samples/interop/VisualBasic/Program.vb), [C# guide](csharp.md), [F# guide](fsharp.md) and [PowerShell guide](powershell.md).
 
 ## Counter
 
@@ -95,6 +95,7 @@ Dim viewport = New Container With {.Height = 240, .Children = New List(Of Blob) 
 | Length | Use `Length.Pixels(value)` or `Length.Percent(value)`. |
 | Input | Derive from `Cell(Of TInput)` and mount with `Cell.Mount(Of TInput, TCell)(key, input)`. The cell needs a public parameterless constructor. |
 | Equality | Inputs use `EqualityComparer<T>.Default`. Override `ShouldRebuild` when reference equality is not suitable. |
+| Keyboard | Core `Button` requires explicit `KeyBindings`. Goo.Widgets buttons bind Enter and Space. Use `ElementHandle.Activate()`, or `BeginPress()` and `EndPress(true)` for a held press. |
 | Modal | Mount `ModalDialogHost` with a `ModalDialog` input. Its host owns focus and portal behavior. |
 | Try/out | VB passes a typed local by reference. C# uses `out`. F# can match a bool/value tuple. |
 | Events | Store and remove the same delegate. F# uses `add_` and `remove_` accessors for Action events. |
@@ -103,4 +104,4 @@ Dim viewport = New Container With {.Height = 240, .Children = New List(Of Blob) 
 | Async | Await `Task<T>` with the language's normal await syntax. Return UI work through `Window.TryPost` when needed. |
 | Ownership | Dispose caller-owned resources. Goo disposes mounted cells that implement `IDisposable`. Do not dispose a retained child during `Build()`. |
 
-The sample also accepts `list`, `variants`, `input`, `virtual`, `dialog` and `layout`. CI builds all three languages against the packed Goo package and runs `--check` without opening a native window.
+The compiled samples also accept `list`, `variants`, `input`, `virtual`, `dialog` and `layout`. CI builds all four languages against the packed Goo package and runs `--check` without opening a native window.
