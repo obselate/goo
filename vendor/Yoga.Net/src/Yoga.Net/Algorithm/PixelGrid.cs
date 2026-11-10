@@ -116,6 +116,13 @@ namespace Facebook.Yoga
                         ? 1.0 / pointScaleFactor : roundedHeight));
             }
 
+            if (pointScaleFactor != 0.0)
+            {
+                bool textRounding = node.GetNodeType() == NodeType.Text;
+                absoluteNodeLeft = RoundValueToPixelGridDouble(absoluteNodeLeft, pointScaleFactor, false, textRounding);
+                absoluteNodeTop = RoundValueToPixelGridDouble(absoluteNodeTop, pointScaleFactor, false, textRounding);
+            }
+
             var childCount = node.GetChildCount();
             for (nuint index = 0; index < childCount; index++)
             {

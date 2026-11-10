@@ -44,7 +44,7 @@ internal class PortalFixtures {
   }
 
   func AnchoredPortalSharesDevicePixelRowsWithTreeContract() bool {
-    for scale in []float32{ 1.25F, 1.5F, 2.25F } {
+    for scale in []float32{ 1.0F, 1.25F, 1.5F, 2.25F } {
       let cell = PortalRowAlignmentCell{}
       let window = Window{ Root: cell, Width: 600, Height: 600, UiScale: scale }
       window.UpdateTree()
