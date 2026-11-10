@@ -27,6 +27,7 @@ internal unsafe sealed partial class VulkanTextScene : VulkanGpuCache {
   private var stateCount int32
   private var trimAtlasPages bool
   private var redrawRequired bool
+  private var resourceDeferred bool
   private var colorEffectSkipped bool
   private var colorGlyphFallback bool
   private var publicationPending bool
@@ -34,14 +35,13 @@ internal unsafe sealed partial class VulkanTextScene : VulkanGpuCache {
   private var completedGlobalSubmissionSerial uint64
   private var textLayoutRequestCount int32
   private var pixelScale float32 = 1.0F
-  private let fittedHintPpems HashSet[int32]
-  private var previousHintPpems HashSet[int32]
-  private var frameHintPpems HashSet[int32]
-  private var provisionalHint bool
+  private var scaleChanged bool
+  private var scaleAnimating bool
 
   internal prop ResourceGeneration uint64{ get -> atlasSet.Generation }
   internal prop PixelScale float32{ get -> pixelScale }
   internal prop RedrawRequired bool{ get -> redrawRequired }
+  internal prop ResourceDeferred bool{ get -> resourceDeferred }
   internal prop TextLayoutRequestCount int32{ get -> textLayoutRequestCount }
 
   internal func ConsumeColorEffectSkipped() bool {
@@ -70,9 +70,6 @@ internal unsafe sealed partial class VulkanTextScene : VulkanGpuCache {
     atlasSet = nativeAtlases
     states = [nativeAtlases.AtlasSlotCapacity]VulkanTextSceneAtlasState?
     glyphs = Dictionary[VulkanTextAtlasGlyphKey, VulkanTextAtlasGlyph]()
-    fittedHintPpems = HashSet[int32]()
-    previousHintPpems = HashSet[int32]()
-    frameHintPpems = HashSet[int32]()
     activeAtlasUse = [nativeAtlases.AtlasSlotCapacity]bool
     nodeSegments = ConditionalWeakTable[VulkanSceneOwnerId, VulkanTextNodeSegmentCache]()
     gutterSegments = ConditionalWeakTable[VulkanSceneOwnerId, VulkanTextNodeSegmentCache]()
@@ -89,16 +86,16 @@ internal unsafe sealed partial class VulkanTextScene : VulkanGpuCache {
   }
 
   internal func BeginCompile(completedSerial uint64, deviceScale float32) {
-    if deviceScale != pixelScale {
+    let changed = deviceScale != pixelScale
+    if changed {
       pixelScale = deviceScale
       nodeSegments.Clear()
       gutterSegments.Clear()
     }
-    let reusedHintPpems = previousHintPpems
-    previousHintPpems = frameHintPpems
-    frameHintPpems = reusedHintPpems
-    frameHintPpems.Clear()
+    scaleAnimating = changed && scaleChanged
+    scaleChanged = changed
     redrawRequired = false
+    resourceDeferred = false
     colorEffectSkipped = false
     colorGlyphFallback = false
     emissionFailed = false

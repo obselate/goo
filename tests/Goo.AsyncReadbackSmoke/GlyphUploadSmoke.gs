@@ -6,6 +6,7 @@ import System.IO
 
 class GlyphUploadSmokeCell : Cell {
   internal var Content string = "0%"
+  internal var FontSize float32 = 23.0F
 
   override func Build() Blob -> Container{
     Width: Percent(100),
@@ -20,14 +21,14 @@ class GlyphUploadSmokeCell : Cell {
       TextWrap: TextWrap.NoWrap,
       Content: Content,
       FontFamily: "ReadbackGateFont",
-      FontSize: 23,
+      FontSize: float64(FontSize),
       Color: Color.White,
     },
   }
 }
 
 func GlyphUploadPresent(window Window, cell GlyphUploadSmokeCell, content string,
-  expectUpload bool) {
+  expectUpload bool, fontSize float32 = 23.0F, readback bool = true) {
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
     let timeline = WindowReadbackTestFixture.GraphicsTimeline(window)
     Require(WindowReadbackTestFixture.WaitGraphicsSubmission(window,
@@ -35,6 +36,7 @@ func GlyphUploadPresent(window Window, cell GlyphUploadSmokeCell, content string
       "Glyph upload smoke did not settle before " + content)
     let before = WindowReadbackTestFixture.DiagnosticCounters(window)
     cell.Content = content
+    cell.FontSize = fontSize
     cell.Rebuild()
     WindowReadbackTestFixture.ForceRender(window, 0.0, 10.0, true)
     let after = WindowReadbackTestFixture.DiagnosticCounters(window)
@@ -44,6 +46,9 @@ func GlyphUploadPresent(window Window, cell GlyphUploadSmokeCell, content string
       "Glyph upload smoke " + content + " uploaded " + uploaded.ToString() + " atlas bytes")
     Require(submits == 1uL,
       "Glyph upload smoke " + content + " presented after " + submits.ToString() + " submissions")
+    Console.WriteLine("glyph-upload-smoke: content=" + content + " size=" + fontSize.ToString()
+      + " submits=" + submits.ToString() + " upload-bytes=" + uploaded.ToString())
+    if !readback { return }
     let metrics = WindowReadbackTestFixture.Metrics(window)
     guard let target = WindowReadbackTestFixture.CaptureTarget(window) else {
       throw InvalidOperationException("Glyph upload smoke render target is unavailable")
@@ -51,8 +56,6 @@ func GlyphUploadPresent(window Window, cell GlyphUploadSmokeCell, content string
     target.UsePresentedSceneForTest(float32(metrics.DisplayScaleX), float32(metrics.DisplayScaleY))
     let presented = ClipCaptureReadback(window, metrics)
     RequireTextCoverage(presented.Pixels, presented.Width, metrics, 8, 8, 180, 48, content)
-    Console.WriteLine("glyph-upload-smoke: content=" + content + " submits=" + submits.ToString()
-      + " upload-bytes=" + uploaded.ToString())
   }
 
 func RunGlyphUploadSmoke() {
@@ -75,6 +78,12 @@ func RunGlyphUploadSmoke() {
       GlyphUploadPresent(window, cell, digit.ToString() + "%", true)
     }
     GlyphUploadPresent(window, cell, "100%", false)
+    GlyphUploadPresent(window, cell, "100%", true, 24.0F)
+    GlyphUploadPresent(window, cell, "100%", true, 25.0F, false)
+    for step in 2 ... 12 {
+      GlyphUploadPresent(window, cell, "100%", false, 24.0F + float32(step), false)
+    }
+    GlyphUploadPresent(window, cell, "100%", true, 35.0F)
   } finally {
     window.RequestClose()
     WindowReadbackTestFixture.Pump(window, 0.0)

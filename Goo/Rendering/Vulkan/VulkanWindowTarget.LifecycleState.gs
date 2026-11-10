@@ -116,6 +116,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   private var pressureWaiting bool
   private var pressureHeadroom VkDeviceSize
   private var attemptHeadroom VkDeviceSize
+  private var textRedrawPending bool
   private var imageRedrawPending bool
   private var pathRedrawPending bool
   private var recreatePending bool = true
@@ -164,7 +165,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
           return true
         }
       }
-      return frameRenderDeferred || pageCompletion != nil || queuedPage != nil || imageRedrawPending || pathRedrawPending
+      return frameRenderDeferred || pageCompletion != nil || queuedPage != nil || textRedrawPending || imageRedrawPending || pathRedrawPending
         || clipMaskRedrawPending
         || forceFullRedraw
         || sceneCompiler.Frame.ShaderPlaybackActive

@@ -305,6 +305,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
     textScene = nil
     RemoveTextAtlasDiagnosticContribution()
+    textRedrawPending = false
     imageScene = nil
     imageRedrawPending = false
     imageResources = nil

@@ -257,11 +257,12 @@ internal unsafe partial class VulkanWindowTarget {
         sceneCompiler.AppendDebugOverlay(debugOverlay, compileResult.FrameVersion,
           logicalWidth, logicalHeight)
       }
-      if textScene?.RedrawRequired == true {
+      if textScene?.ResourceDeferred == true {
         frameRenderDeferred = true
         host.Wake()
         return
       }
+      textRedrawPending = textScene?.RedrawRequired == true
       imageRedrawPending = imageScene?.RedrawRequired == true
       var deferInitialPresentation bool
       if firstPresentationPending && imageScene?.PendingImages == true {
@@ -350,7 +351,7 @@ internal unsafe partial class VulkanWindowTarget {
         current.Extent.height,
         out damageRegion,
         out fullRedraw)
-      if forceFullRedraw || imageRedrawPending
+      if forceFullRedraw || textRedrawPending || imageRedrawPending
         || pathRedrawPending || clipMaskRedrawPending
         || VulkanGpuExperiments.Selected == VulkanGpuExperiment.FullRedraw {
           fullRedraw = true

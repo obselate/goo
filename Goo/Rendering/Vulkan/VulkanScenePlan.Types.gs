@@ -80,6 +80,8 @@ internal sealed class VulkanRetainedTextSegment : VulkanTextSegmentStorage {
   internal var Version uint64
   internal var Shape ShapedText?
   internal var FontSize float32
+  internal var SizeChanged bool
+  internal var Unfitted bool
   internal var LineX float32
   internal var Baseline float32
   internal var Color uint32

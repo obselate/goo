@@ -175,7 +175,8 @@ internal unsafe partial class VulkanWindowTarget {
       FinishPage(OffscreenRenderStatus.Unsupported)
       return
     }
-    pageRepeat = text.RedrawRequired || images.RedrawRequired || paths.RedrawRequired || result.PathResourceDeferred
+    pageRepeat = text.RedrawRequired || text.ResourceDeferred || images.RedrawRequired
+      || paths.RedrawRequired || result.PathResourceDeferred
     text.PrepareUpload()
     paths.PrepareUpload()
     ScaleFrame(compiler.Frame, scaleX, scaleY)
