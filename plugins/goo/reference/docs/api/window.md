@@ -2023,7 +2023,7 @@ Gets or sets the native owner before Open. The owner must be an open desktop win
 
 ### `PixelScale`
 
-Gets the display scale multiplied by UiScale, the factor used to snap layout positions to device pixels on both axes.
+Gets the display scale multiplied by UiScale, the factor used to snap layout positions and translation-only transforms to device pixels on both axes.
 
 ### `PlatformInput`
 
