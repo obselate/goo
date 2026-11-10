@@ -20,6 +20,13 @@ func Pump[T](session OffscreenRenderSession, pending Task[T]) T {
     return pending.GetAwaiter().GetResult()
 }
 
+internal class EdgePage : Cell {
+    override func Build() Blob -> Container{
+        Width: 100, Height: 60, BackgroundColor: Color.White,
+        Container{Position: PositionType.Absolute, Left: 7, Top: 7, Width: 40, Height: 20, BorderWidth: 1, BorderColor: Color.Black},
+    }
+}
+
 internal class Page : Cell {
     override func Build() Blob {
         let root = Container{Width: 240, Height: 180, BackgroundColor: Color.Rgb(20, 160, 60)}
@@ -85,6 +92,17 @@ try {
     Require(
         capture.Pixels[corner + 1] > uint8(140) && capture.Pixels[corner + 2] < uint8(100),
         "independent page pixels are missing"
+    )
+    let edges = Pump(
+        session,
+        session.RenderAsync(EdgePage(), OffscreenRenderOptions(100f, 60f, 150, 90, Color.White, 134217728), CancellationToken.None)
+    )
+    Require(edges.Status == OffscreenRenderStatus.Success && edges.Capture != nil, "fractional scale render failed")
+    let edgeRow = 25 * int32(edges.Capture!!.RowBytes)
+    Require(
+        edges.Capture!!.Pixels[edgeRow + 10 * 4] == uint8(255) && edges.Capture!!.Pixels[edgeRow + 11 * 4] == uint8(0),
+        "a 1 px border at logical x 7 was not snapped to device pixel 11 at scale 1.5: "
+        + edges.Capture!!.Pixels[edgeRow + 10 * 4].ToString() + "/" + edges.Capture!!.Pixels[edgeRow + 11 * 4].ToString()
     )
     let second = Pump(session, session.RenderAsync(Page(), options, CancellationToken.None, capture))
     Require(
