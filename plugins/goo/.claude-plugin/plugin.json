@@ -1,0 +1,10 @@
+{
+  "name": "goo",
+  "version": "0.29.1",
+  "description": "G# Goo authoring, API lookup, live UI inspection and opt-in input automation.",
+  "author": {
+    "name": "Xaz"
+  },
+  "repository": "https://github.com/obselate/goo",
+  "license": "MIT"
+}

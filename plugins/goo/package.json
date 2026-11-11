@@ -1,9 +1,11 @@
 {
   "name": "goo-agent-plugin",
-  "version": "0.3.0",
+  "version": "0.29.1",
   "description": "G# Goo authoring, API lookup, live UI inspection and opt-in input automation.",
   "license": "MIT",
   "files": [
+    ".claude-plugin",
+    ".mcp.json",
     "README.md",
     "mcp.json",
     "plugin.json",

@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "goo": {
+      "command": "dotnet",
+      "args": [
+        "tool",
+        "exec",
+        "Goo.DevTools@0.29.1",
+        "--",
+        "mcp",
+        "--plugin-root",
+        "${CLAUDE_PLUGIN_ROOT}"
+      ]
+    }
+  }
+}

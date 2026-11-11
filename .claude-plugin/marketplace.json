@@ -1,0 +1,13 @@
+{
+  "name": "obselate-goo",
+  "owner": {
+    "name": "Xaz"
+  },
+  "plugins": [
+    {
+      "name": "goo",
+      "source": "./plugins/goo",
+      "description": "G# Goo authoring, API lookup and live UI inspection."
+    }
+  ]
+}
