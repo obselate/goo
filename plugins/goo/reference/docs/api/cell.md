@@ -43,7 +43,7 @@ Goo owns and disposes the Cell on removal. Each invocation must return a fresh, 
 
 Constructor arguments initialize the Cell. Update it through typed inputs, configuration, or an external store read by `Build()`. Call its `Rebuild()` after changes outside Goo input callbacks. Read changing values from a store or getter, not a captured scalar copy. Calling `Build()` directly returns a Blob tree without mounting the Cell.
 
-See [language interop](https://github.com/obselate/goo/blob/main/docs/interop.md) for other languages.
+See [language interop](../interop.md) for other languages.
 
 Capturing factories inside parent builds can allocate delegates and closures even when the Cell is reused. Cache factories with stable dependencies. Goo never invokes a factory to discover its result's runtime type.
 

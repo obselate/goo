@@ -24,7 +24,8 @@ let paths = List[string]{
     "docs/svg.md",
     "docs/shipping.md",
     "docs/platform-preflight.md",
-    "docs/android.md"
+    "docs/android.md",
+    "docs/interop.md"
 }
 let directories = List[string]{"docs/api"}
 for directory in directories {
