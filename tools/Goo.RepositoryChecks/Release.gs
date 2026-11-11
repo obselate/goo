@@ -35,6 +35,10 @@ internal shared partial class Checks {
         let version = ReadVersion()
         let fragments = ChangelogFragments()
         if mode == "--dry-run" {
+            for (path, _) in SynchronizedFiles(version) {
+                Console.WriteLine("Synchronize " + Path.GetRelativePath(Root, path) + " to " + version)
+            }
+            Console.WriteLine()
             Console.Write(JoinedChangelog(version, fragments))
             return
         }
@@ -151,7 +155,6 @@ internal shared partial class Checks {
             "apps/Goo.DevTools/DiagnosticWire.gs",
             "apps/Goo.DevTools/Program.gs",
             "apps/Goo.Gallery/Program.gs",
-            "docs/devtools/protocol.md",
             "integrations/vscode/package.json",
             "templates/Goo.Templates/README.md"
         }
@@ -185,14 +188,27 @@ internal shared partial class Checks {
             )
         }
         let readme = Path.Combine(Root, "plugins/goo/README.md")
-        let text = ReplaceVersion(
+        result[readme] = ReplaceVersion(
             File.ReadAllText(readme),
-            `(and Goo\.DevTools )[^ ]+?(\. The server uses)`,
+            `(and Goo\.DevTools )[^ ]+(\.)`,
             version,
             1,
             "plugins/goo/README.md: expected one current CLI prerequisite version"
         )
-        result[readme] = text
+        for relative in []string{
+            "plugins/goo/plugin.json",
+            "plugins/goo/package.json",
+            "plugins/goo/.claude-plugin/plugin.json"
+        } {
+            let path = Path.Combine(Root, relative)
+            result[path] = ReplaceVersion(
+                File.ReadAllText(path),
+                `("version": ")[^"]+(")`,
+                version,
+                1,
+                relative + ": expected one plugin version"
+            )
+        }
         let documents = Path.Combine(Root, "tools/Goo.PluginMcp/Documents.gs")
         result[documents] = ReplaceVersion(
             File.ReadAllText(documents),
@@ -209,14 +225,16 @@ internal shared partial class Checks {
             1,
             "tools/Goo.PluginMcp/Runtime.gs: expected one current CLI recovery version"
         )
-        let manifest = Path.Combine(Root, "plugins/goo/mcp.json")
-        result[manifest] = ReplaceVersion(
-            File.ReadAllText(manifest),
-            `(Goo\.DevTools@)[^"]+(")`,
-            version,
-            1,
-            "plugins/goo/mcp.json: expected one pinned Goo.DevTools package"
-        )
+        for relative in []string{"plugins/goo/mcp.json", "plugins/goo/.mcp.json"} {
+            let path = Path.Combine(Root, relative)
+            result[path] = ReplaceVersion(
+                File.ReadAllText(path),
+                `(Goo\.DevTools@)[^"]+(")`,
+                version,
+                1,
+                relative + ": expected one pinned Goo.DevTools package"
+            )
+        }
         return result
     }
 }

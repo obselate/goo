@@ -21,22 +21,23 @@ if !File.Exists(Path.Combine(root, "Goo/Goo.gsproj")) {
 let output = Path.GetFullPath(if arguments.Length > 1 { arguments[1] } else { Path.Combine(root, "plugins/goo/reference") })
 let api = Path.GetFullPath(if arguments.Length > 2 { arguments[2] } else { Path.Combine(root, "docs/api") })
 let paths = List[string]{
-    "README.md",
-    "CONTRIBUTING.md",
-    "docs/native-authoring.md",
-    "docs/production-readiness.md",
     "docs/svg.md",
-    "docs/migrations/gcv1.md",
     "docs/shipping.md",
-    "docs/platform-preflight.md"
+    "docs/platform-preflight.md",
+    "docs/android.md",
+    "docs/images.md",
+    "docs/interop.md"
 }
-let directories = List[string]{"docs/api", "docs/devtools"}
+let directories = List[string]{"docs/api"}
 for directory in directories {
     let input = if directory == "docs/api" { api } else { Path.Combine(root, directory) }
     for path in Directory.GetFiles(input, "*.md").OrderBy(p -> p, StringComparer.Ordinal) {
         paths.Add(directory + "/" + Path.GetFileName(path))
     }
 }
+paths.Add("docs/devtools/README.md")
+paths.Add("docs/devtools/cli.md")
+paths.Add("docs/devtools/protocol.md")
 paths.Add("templates/Goo.Templates/content/Program.gs")
 paths.Add("templates/Goo.Templates/content/GooStarter.gsproj")
 paths.Add("templates/Goo.Templates/content/global.json")

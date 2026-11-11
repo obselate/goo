@@ -37,11 +37,7 @@ internal func validPortalPlacement(value PortalPlacement) bool {
   return ordinal >= 0 && ordinal <= int32(PortalPlacement.LeftEnd)
 }
 
-/// Defines a logical child subtree that is laid out against the window viewport and
-/// presented in its Window's shared overlay after the normal tree. The subtree retains
-/// its declaration-site ownership, event route, Cell lifecycle, focus, and accessibility
-/// relationships. An optional Anchor changes only its border-box placement, not that
-/// logical ownership.
+/// Presents a logical child subtree in the window overlay while retaining declaration-site ownership.
 public class Portal : Blob {
   private let children IList[Blob] = List[Blob]()
 
@@ -50,29 +46,20 @@ public class Portal : Blob {
 
   internal prop Children IList[Blob]{ get -> children }
 
-  /// Gets the optional mounted element whose transformed border box positions this Portal.
-  /// When set, an unmounted, hidden, wrong-Window, descendant, or cyclic anchor suppresses
-  /// the Portal. An unset Anchor keeps ordinary window-level Portal positioning.
+  /// Gets the mounted anchor handle. Invalid anchor relationships suppress presentation.
   public prop Anchor ElementHandle? { get; init; }
 
-  /// Gets the preferred side and alignment used when Anchor is mounted in this Window.
-  /// Goo keeps this side when the popup fits, otherwise flips when the opposite side
-  /// has more space. It caps the main-axis size without covering AnchorRect and shifts
-  /// the cross axis into the collision bounds. The default is BottomStart.
+  /// Gets the preferred side and alignment. Defaults to BottomStart. Placement flips and clamps to collision bounds.
   public prop Placement PortalPlacement{ get; init; }
 
   /// Gets a rectangle within Anchor's local border-box coordinates.
   /// Nil uses the whole border box. Values must be finite and dimensions nonnegative.
   public prop AnchorRect ElementRect? { get; init; }
 
-  /// Gets the collision rectangle in window logical coordinates.
-  /// Nil uses the whole viewport. After choosing a side, Goo caps the main-axis size
-  /// to the space between AnchorRect and these bounds, then shifts the cross axis to fit.
-  /// Values must be finite and dimensions nonnegative.
+  /// Gets collision bounds in window logical coordinates. Nil uses the viewport. Values are finite and sizes nonnegative.
   public prop CollisionBounds ElementRect? { get; init; }
 
-  /// Hides presentation when AnchorRect is fully outside the anchor's ancestor clips.
-  /// The default is false. Hiding preserves the mounted subtree, focus and text composition.
+  /// Hides presentation when AnchorRect is fully clipped by the anchor's ancestors. Content stays mounted. Defaults to false.
   public prop HideWhenAnchorClipped bool { get; init; }
 
   /// Initializes an empty child collection.

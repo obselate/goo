@@ -399,7 +399,8 @@ public open class Style {
   public prop FontStyle FontStyle{ init -> pushEnumOrdinal(StyleField.FontStyle, int32(value)) }
   /// Sets added spacing between letters.
   public prop LetterSpacing Length{ init -> pushCheckedLength(StyleField.LetterSpacing, value, "LetterSpacing", true, false, false) }
-  /// Sets the line-height multiplier.
+  /// Sets line height to FontSize times LineHeight for Text and TextEditor.
+  /// Font overflow remains above the first editor line and below the last. Inline slots may increase line height.
   public prop LineHeight float64{ init -> pushScalar(StyleField.LineHeight, checkedNonNegative(value, "LineHeight")) }
   /// Sets horizontal text alignment.
   public prop TextAlign TextAlign{ init -> pushEnumOrdinal(StyleField.TextAlign, int32(value)) }

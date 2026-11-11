@@ -91,7 +91,7 @@ internal shared partial class Checks {
             if line.TrimStart().StartsWith("```") {
                 fenced = !fenced
             } else if !fenced {
-                lines.Add(line)
+                lines.Add(Regex.Replace(line, "`[^`]*`", ""))
             }
         }
         return string.Join("\n", lines)
@@ -148,7 +148,13 @@ internal shared partial class Checks {
                     target.StartsWith("mailto:") {
                     continue
                 }
-                let destination = ResolvePath(Path.Combine(Path.GetDirectoryName(path) ?? Root, target.Split('#')[0]))
+                // API guides are copied into docs/api, so their links resolve from there.
+                let directory = if relative.StartsWith("tools/Goo.ApiDocs/Guides/") {
+                    Path.Combine(Root, "docs/api")
+                } else {
+                    Path.GetDirectoryName(path) ?? Root
+                }
+                let destination = ResolvePath(Path.Combine(directory, target.Split('#')[0]))
                 if destination != Root && !destination.StartsWith(
                     Root + Path.DirectorySeparatorChar,
                     StringComparison.Ordinal

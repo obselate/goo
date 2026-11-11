@@ -1,8 +1,12 @@
 # Window API
 
-Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
-
 Source: [`Goo/Window`](../../Goo/Window)
+
+## Open a window
+
+```gsharp
+Window{Root: Cell{}}.Run()
+```
 
 ## Native library loading
 
@@ -144,7 +148,7 @@ window from retaining the input block.
 
 ## Platform preferences
 
-`Window.Preferences` is an immutable `PlatformPreferences` snapshot.
+`Window.Preferences` is an immutable [PlatformPreferences](platform.md#platformpreferences) snapshot.
 `Theme` is `Unknown`, `Light` or `Dark`. `AccentColor`, `ReducedMotion`, `HighContrast`,
 `EventSoundsEnabled` and `TextScaleFactor` are nullable so unsupported values
 remain distinct from an explicit value. Text scale must be finite and positive and is independent
@@ -266,24 +270,16 @@ activation policy; child `State` is not a copy of owner `State`. Closing a modal
 restores the previous owner element's focus when it remains mounted and requests
 native owner activation. A compositor may deny focus or raising requests.
 
-Once the owner's `OnClosing` accepts closure, Goo tears down every owned
-descendant before destroying the owner's native window, waiting for GPU work
-without blocking the shared frame loop. Descendant `OnClosing` callbacks do not
-veto this forced teardown; put application-wide save/close policy on the owner.
-A child's normal `RequestClose` still invokes its own policy. Owned window trees
-cannot gain new children after teardown begins. Native failures establishing
-ownership/modality throw `NotSupportedException` with the SDL error and clean up
-the partially created child. Windows and macOS use the same SDL contract; native
-verification must be performed on the target desktop.
-
-Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
-
-Source: [`Goo/Window`](https://github.com/obselate/goo/tree/main/Goo/Window)
+Once the owner accepts close, descendants close first and cannot veto it.
+Put save policy on the owner. A child `RequestClose` uses its own policy.
+New children are rejected during teardown. Native ownership failures throw
+`NotSupportedException` and release the partial child.
 
 ## Native size constraints
 
-`Window.MinWidth`, `MinHeight`, `MaxWidth`, and `MaxHeight` constrain the native
-client area in logical window pixels, independently of layout-node constraints.
+`Window.MinWidth`, `MinHeight`, `MaxWidth` and `MaxHeight` use layout pixels.
+Goo multiplies them by `UiScale` for native client-area limits.
+`Width` and `Height` stay in native logical pixels.
 Zero removes a limit. Values must be nonnegative, and a nonzero maximum must be
 at least its corresponding minimum. An invalid assignment leaves the old value.
 Set these properties before `Open` or on the window's owner UI thread afterward.
@@ -345,30 +341,98 @@ present. It requires an open desktop window and does not capture a specific prio
 presentation. Embedded hosts return `Unsupported`. The application owns its
 manual clock, sampling of arbitrary scene state, frame ordering and video encoding.
 
-## Render pages without presenting
+## Measure text
 
 ```gsharp
-let created = window.CreateOffscreenSession()
+let width = Math.Max(window.MeasureText("Save", labelStyle), window.MeasureText("Save a copy", labelStyle))
+Text{BasedOn: labelStyle, Content: "Save", Width: width}
+```
+
+- Call on the window's UI thread, for example in `Cell.Build`.
+- The result is single-line width in layout units, with text scale and pixel-grid rounding.
+- Pass the same explicit style to measurement and Text. Parent styles are not inherited.
+- Line breaks are ignored.
+- Use this for a small fixed set of labels that must share the widest width.
+
+## Render pages without presenting
+
+A batch tool can block its own thread, like `goo render`:
+
+```gsharp
+let created = OffscreenRenderSession.Create()
 if created.Status == OffscreenRenderStatus.Success {
     using let session = created.Session!!
     let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
     let pending = session.RenderAsync(MyPage(), options, CancellationToken.None)
     while !pending.IsCompleted {
         session.Service()
-        Thread.Sleep(1)
+        Thread.Yield()
     }
     let rendered = pending.GetAwaiter().GetResult()
 }
 ```
 
-Create the session on the window thread before opening native UI.
-The session keeps the shared renderer, not the native surface.
-It can render while an embedded host is paused or detached.
-Call `Service` from the host's UI scheduler until each page finishes.
+An app with an open window uses a mounted Cell to own the session:
+
+```gsharp
+class RenderPageButton : Cell, IDisposable {
+    private let window Window
+    private var session OffscreenRenderSession?
+    private var timer WindowTimer?
+
+    init(window Window) {
+        this.window = window
+    }
+
+    override func Build() Blob ->
+    Button{OnClick: RenderPage, Text{Content: "Render page"}}
+
+    private func RenderPage() {
+        Dispose()
+        let created = window.CreateOffscreenSession()
+        if created.Status != OffscreenRenderStatus.Success {
+            return
+        }
+        let active = created.Session!!
+        session = active
+        let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
+        let pending = active.RenderAsync(MyPage(), options, window.Closed)
+        timer = window.SetInterval(
+            () -> {
+                try {
+                    active.Service()
+                    if !pending.IsCompleted {
+                        return
+                    }
+                    let rendered = pending.Result
+                } catch (error Exception) {
+                    Dispose()
+                    throw error
+                }
+                Dispose()
+            },
+            1.0
+        )
+    }
+
+    public func Dispose() {
+        timer?.Dispose()
+        timer = nil
+        session?.Dispose()
+        session = nil
+    }
+}
+```
+
+Mount `RenderPageButton(window)` in the window's tree. Goo disposes it on unmount
+or window close, releasing the timer and session on the UI thread.
+The timer reads `Result` only after completion, so it does not block for the result.
 Create, render, service and dispose on the same thread.
+The session keeps the renderer alive, not its presentation surface.
+Without an open window, use `OffscreenRenderSession.Create()`.
 
 Each page uses a fresh, unattached cell.
-Logical size controls layout. Pixel size controls resolution.
+Logical size sets the layout viewport. Pixel size sets resolution and the device-pixel grid used to round layout.
 `MaxBytes` bounds new GPU allocations and CPU pixels.
 Pass a previous capture to reuse its pixels at the same size.
 Do not read those pixels until the next render completes.
@@ -381,18 +445,12 @@ Closing the owner cancels pending pages.
 
 ## Render an app without a display
 
-```sh
-goo render App.gsproj --out frame.png --size 1280x800 --scale 2 --theme dark
-goo render App.gsproj --list
-goo render App.gsproj --scene incremented --out incremented.png
-goo render ./publish/App --scene incremented --out native.png
-goo diff frame.png reference.png --tolerance 2 --out difference.png
-```
+See the [render and diff commands](../devtools/cli.md) for options.
 
-`goo render` builds a project or runs an existing executable. `Window.Run` renders
-through `OffscreenRenderSession` instead of opening a window. No display or
-compositor is needed. Size defaults to the declared window size. Scale controls
-output pixels. Theme sets `Window.Preferences.Theme` before the first build.
+`goo render` builds a project or runs an existing executable. `Window.Run` uses
+`OffscreenRenderSession` without opening a window. No display or compositor is needed.
+Size defaults to the declared window size. Scale sets pixels per layout unit and
+the device-pixel grid used to round layout. Theme sets `Window.Preferences.Theme`.
 It does not replace the app's colors. Apps that ignore theme render unchanged.
 The renderer waits for GPU image, path and text uploads. It does not wait for
 app services or advance app animations.
@@ -414,13 +472,7 @@ only scene and renders `Window.Root`.
 `OffscreenRenderSession.Create()` also creates a surface-free session directly.
 Create, use and dispose it on the same thread.
 
-`goo diff` prints changed pixel count and an `x,y widthxheight` bounding box.
-Tolerance is the largest allowed RGBA channel difference, from 0 to 255.
-Pixels outside either image always count as changed. Equal images exit 0.
-Changed images exit 1. The optional PNG marks changed pixels magenta.
-
-After each successful hot reload, `goo dev` overwrites `.goo/reload.png` in
-the project directory and prints its full path. This captures the running app.
+For render, diff and hot-reload capture options, see the [CLI reference](../devtools/cli.md).
 
 
 ## Fullscreen displays
@@ -519,7 +571,7 @@ Keep the returned timer and call `Dispose` when its owner no longer needs callba
 
 ## Use the native clipboard
 
-Call `Window.GetClipboardText` and `Window.SetClipboardText` only on the open window's UI thread. Both fail deterministically after close. Reads reject text above 16 MiB of UTF-8, without truncation. An empty getter result can mean an empty clipboard, a native copy failure, or an oversized payload. Setter failures propagate. Built-in text entry and editor paste use the same limit, including supplied paste text, and leave the selection unchanged when rejected. This budget allows large source and log pastes, matches the SVG input budget, and bounds text conversion and input processing separately from the 64 MiB image budget.
+Use clipboard text methods on the open window UI thread. Reads reject more than 16 MiB of UTF-8. An empty result can mean empty data, native failure or oversize data. Set failures throw. Built-in and supplied paste share this limit and leave selection unchanged on rejection.
 
 ## Native file dialogs
 
@@ -549,14 +601,9 @@ strings that remain valid after owner close. Requests allow at most 64 filters, 
 units per path, and 1 MiB of total path code units. Invalid options throw before any
 native work; native and result-limit errors return an explicit outcome.
 
-Windows uses the SDL native chooser; macOS uses its native panel. Linux uses the
-XDG desktop FileChooser portal through Goo's bundled SDL bridge, preserving the exact
-Wayland/X11 owner and supporting `Request.Close` cancellation. A missing portal or
-an SDL payload without that bridge reports `Unsupported`. Embedded hosts report
-`Unsupported`. Normal native waiting creates no polling timer in Goo; the regular SDL event
-pump delivers completion. Windows cancellation briefly retries dismissal until SDL
-creates and closes its worker-owned chooser. Windows and macOS require runtime verification on their
-respective platforms.
+Windows and macOS use native choosers. Linux requires the XDG FileChooser portal
+and the bundled SDL bridge. Missing portal or bridge support returns `Unsupported`.
+Embedded hosts return `Unsupported`. `CancelFileDialog` requests native dismissal.
 
 ## File and image clipboard data
 
@@ -568,7 +615,6 @@ File reads support local `text/uri-list`, GNOME copied-file lists, Windows `CF_H
 
 Image reads prefer PNG, JPEG, GIF, BMP, then macOS TIFF. PNG/JPEG/GIF bytes keep their declared MIME type; a successful transfer does not validate their encoding. Windows DIB/BMP and macOS TIFF are converted to PNG. Every encoded result is limited to 64 MiB. Native bitmap conversion checks dimensions before raster decode, allowing at most 8192 pixels per dimension and 64 MiB of RGBA pixels. These are payload and raster limits, not peak temporary-memory limits. Encoded bytes can be saved directly or passed to an application image-loading workflow.
 
-Linux relies on the active SDL clipboard backend. Windows uses native file-list and DIB access; macOS uses pasteboard items and ImageIO for TIFF conversion. Backend failures are reported explicitly; native Windows/macOS execution requires validation on those systems.
 
 ## Publish multiple clipboard formats
 
@@ -609,9 +655,6 @@ Start clipboard calls on the open window's UI thread. Check `result.Status`.
 
 ## `ClipboardDataResult`
 
-Source:
-
-- [`TransferData.gs`](../../Goo/Window/TransferData.gs)
 
 Contains an owned multi-format clipboard snapshot and its file-transfer intent.
 
@@ -633,9 +676,6 @@ Gets the snapshot outcome, independently of individual representation lengths.
 
 ## `ClipboardFiles`
 
-Source:
-
-- [`Clipboard.gs`](../../Goo/Window/Clipboard.gs)
 
 Contains an immutable owned file-path list copied from the native clipboard.
 
@@ -653,9 +693,6 @@ Gets the read outcome; Empty differs from native failure and unsupported access.
 
 ## `ClipboardFormats`
 
-Source:
-
-- [`Clipboard.gs`](../../Goo/Window/Clipboard.gs)
 
 Describes the available clipboard MIME representations without reading payload bytes.
 
@@ -681,9 +718,6 @@ Gets the query outcome.
 
 ## `ClipboardImage`
 
-Source:
-
-- [`Clipboard.gs`](../../Goo/Window/Clipboard.gs)
 
 Contains encoded image bytes copied into managed ownership from the clipboard.
 
@@ -705,16 +739,8 @@ Gets the read outcome.
 
 ## `ClipboardIntent`
 
-Source:
-
-- [`TransferData.gs`](../../Goo/Window/TransferData.gs)
 
 Selects whether a file clipboard publication prefers copying or a deferred move.
-
-### Values
-
-- `Copy`
-- `Cut`
 
 ### `Copy`
 
@@ -726,9 +752,6 @@ Requests a deferred file move where the native clipboard supports that intent.
 
 ## `ClipboardReadStatus`
 
-Source:
-
-- [`Clipboard.gs`](../../Goo/Window/Clipboard.gs)
 
 Reports a native clipboard query/read outcome independently of payload contents.
 
@@ -742,9 +765,6 @@ Reports a native clipboard query/read outcome independently of payload contents.
 
 ## `ClipboardWriteResult`
 
-Source:
-
-- [`TransferData.gs`](../../Goo/Window/TransferData.gs)
 
 Reports whether all requested clipboard representations were published.
 
@@ -758,20 +778,8 @@ Gets the publication outcome, not confirmation that another application pasted i
 
 ## `DataTransferStatus`
 
-Source:
-
-- [`TransferData.gs`](../../Goo/Window/TransferData.gs)
 
 Reports a native data publication outcome without throwing for platform failures.
-
-### Values
-
-- `Success`
-- `Cancelled`
-- `Unsupported`
-- `TooLarge`
-- `Denied`
-- `Failed`
 
 ### `Cancelled`
 
@@ -799,9 +807,6 @@ The host cannot provide the requested transfer or intent.
 
 ## `FileDialogFilter`
 
-Source:
-
-- [`FileDialog.gs`](../../Goo/Window/FileDialog.gs)
 
 Describes one immutable native chooser filter.
 
@@ -822,9 +827,6 @@ Gets semicolon-separated extensions, such as png;jpg, or a single * for all file
 
 ## `FileDialogKind`
 
-Source:
-
-- [`FileDialog.gs`](../../Goo/Window/FileDialog.gs)
 
 Selects an open-file, save-file, or folder chooser.
 
@@ -836,9 +838,6 @@ Selects an open-file, save-file, or folder chooser.
 
 ## `FileDialogOptions`
 
-Source:
-
-- [`FileDialog.gs`](../../Goo/Window/FileDialog.gs)
 
 Supplies optional native chooser hints, copied when the request starts.
 
@@ -864,9 +863,6 @@ Gets the optional title; empty uses the platform default.
 
 ## `FileDialogResult`
 
-Source:
-
-- [`FileDialog.gs`](../../Goo/Window/FileDialog.gs)
 
 Contains owned native chooser results without opening or writing any selected file.
 
@@ -888,9 +884,6 @@ Gets the request outcome.
 
 ## `FileDialogStatus`
 
-Source:
-
-- [`FileDialog.gs`](../../Goo/Window/FileDialog.gs)
 
 Distinguishes selected paths, cancellation, unavailable backends, excessive results, and native failures.
 
@@ -904,9 +897,6 @@ Distinguishes selected paths, cancellation, unavailable backends, excessive resu
 
 ## `LayerWindowAnchor`
 
-Source:
-
-- [`LayerWindowOptions.gs`](../../Goo/Window/LayerWindowOptions.gs)
 
 Selects the output edges to which a layer-shell window is anchored.
 
@@ -920,9 +910,6 @@ Selects the output edges to which a layer-shell window is anchored.
 
 ## `LayerWindowKeyboardInteractivity`
 
-Source:
-
-- [`LayerWindowOptions.gs`](../../Goo/Window/LayerWindowOptions.gs)
 
 Controls keyboard focus for a layer-shell window.
 
@@ -934,9 +921,6 @@ Controls keyboard focus for a layer-shell window.
 
 ## `LayerWindowOptions`
 
-Source:
-
-- [`LayerWindowOptions.gs`](../../Goo/Window/LayerWindowOptions.gs)
 
 Configures a Wayland layer-shell surface before Window.Open. Sizes and margins use compositor logical units. Zero sizes require opposite anchors.
 
@@ -994,28 +978,8 @@ Gets the requested width. Zero fills the horizontal anchors.
 
 ## `MacOSBackdropMaterial`
 
-Source:
-
-- [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
 
 Selects a semantic AppKit backdrop material. Appearance follows macOS policy.
-
-### Values
-
-- `UnderWindowBackground`
-- `Titlebar`
-- `Selection`
-- `Menu`
-- `Popover`
-- `Sidebar`
-- `HeaderView`
-- `Sheet`
-- `WindowBackground`
-- `HudWindow`
-- `FullScreenUI`
-- `ToolTip`
-- `ContentBackground`
-- `UnderPageBackground`
 
 ### `ContentBackground`
 
@@ -1075,9 +1039,6 @@ Uses the window background material.
 
 ## `MacOSBackdropOptions`
 
-Source:
-
-- [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
 
 Configures this window's behind-window AppKit effect. Other platforms ignore it.
 
@@ -1099,17 +1060,8 @@ Gets the activation policy. Defaults to FollowWindow and still respects accessib
 
 ## `MacOSBackdropState`
 
-Source:
-
-- [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
 
 Controls whether an AppKit backdrop uses its active or inactive appearance.
-
-### Values
-
-- `FollowWindow`
-- `Active`
-- `Inactive`
 
 ### `Active`
 
@@ -1125,9 +1077,6 @@ Uses the inactive material appearance.
 
 ## `NativeDialogOwnerKind`
 
-Source:
-
-- [`NativeDialogOwner.gs`](../../Goo/Window/NativeDialogOwner.gs)
 
 Identifies the borrowed native owner representation.
 
@@ -1139,9 +1088,6 @@ Identifies the borrowed native owner representation.
 
 ## `NativeDialogOwnerLease`
 
-Source:
-
-- [`NativeDialogOwner.gs`](../../Goo/Window/NativeDialogOwner.gs)
 
 Keeps a native dialog owner alive and blocks only that owner's Goo input until disposed.
 
@@ -1167,17 +1113,11 @@ Gets the kind of borrowed native owner. The lease never owns the native window.
 
 ## `NativeDialogOwnerResult`
 
-Source:
-
-- [`NativeDialogOwner.gs`](../../Goo/Window/NativeDialogOwner.gs)
 
 Contains Status, an Owner lease on Success and Error detail on failure.
 
 ## `NativeDialogOwnerStatus`
 
-Source:
-
-- [`NativeDialogOwner.gs`](../../Goo/Window/NativeDialogOwner.gs)
 
 Reports whether a native service can borrow this window as a modal owner.
 
@@ -1193,21 +1133,8 @@ Reports whether a native service can borrow this window as a modal owner.
 
 ## `PopupDismissReason`
 
-Source:
-
-- [`PopupWindow.gs`](../../Goo/Window/PopupWindow.gs)
 
 Identifies why a complete native popup chain was dismissed.
-
-### Values
-
-- `Programmatic`
-- `Escape`
-- `OutsideInteraction`
-- `FocusLost`
-- `OwnerHidden`
-- `OwnerClosed`
-- `PlatformDismissed`
 
 ### `Escape`
 
@@ -1239,16 +1166,8 @@ The application requested dismissal.
 
 ## `PopupKind`
 
-Source:
-
-- [`PopupWindow.gs`](../../Goo/Window/PopupWindow.gs)
 
 Selects an interactive native popup or an input-transparent tooltip.
-
-### Values
-
-- `Menu`
-- `Tooltip`
 
 ### `Menu`
 
@@ -1260,9 +1179,6 @@ Does not receive keyboard or pointer input.
 
 ## `PopupResult`
 
-Source:
-
-- [`PopupWindow.gs`](../../Goo/Window/PopupWindow.gs)
 
 Contains a native popup creation outcome and owned failure detail.
 
@@ -1276,20 +1192,8 @@ Gets the native creation outcome.
 
 ## `PopupStatus`
 
-Source:
-
-- [`PopupWindow.gs`](../../Goo/Window/PopupWindow.gs)
 
 Reports native popup creation without substituting an ordinary window.
-
-### Values
-
-- `Opened`
-- `Closed`
-- `Unsupported`
-- `RequiresUserAction`
-- `Failed`
-- `Busy`
 
 ### `Busy`
 
@@ -1317,9 +1221,6 @@ The host does not provide the requested native popup operation.
 
 ## `PopupWindow`
 
-Source:
-
-- [`PopupWindow.gs`](../../Goo/Window/PopupWindow.gs)
 
 Hosts one new Goo root in a transient native surface outside its owner's bounds. Create a new root and PopupWindow for each opening. Portal ownership is unchanged.
 
@@ -1383,9 +1284,6 @@ Gets the current logical and framebuffer metrics on the owner thread.
 
 ## `RenderingDeviceInfo`
 
-Source:
-
-- [`Window.gs`](../../Goo/Window/Window.gs)
 
 Describes the selected rendering device.
 
@@ -1399,20 +1297,8 @@ Gets the selected device name, or an empty string when unavailable.
 
 ## `RenderingDeviceKind`
 
-Source:
-
-- [`Window.gs`](../../Goo/Window/Window.gs)
 
 Identifies the selected Vulkan physical device type.
-
-### Values
-
-- `Unknown`
-- `IntegratedGpu`
-- `DiscreteGpu`
-- `VirtualGpu`
-- `Cpu`
-- `Other`
 
 ### `Cpu`
 
@@ -1440,9 +1326,6 @@ A virtual GPU.
 
 ## `TransferData`
 
-Source:
-
-- [`TransferData.gs`](../../Goo/Window/TransferData.gs)
 
 Owns MIME alternatives and an ordered document URI selection without reading document contents.
 
@@ -1463,9 +1346,6 @@ Gets document references, which do not imply local paths or persistent access gr
 
 ## `TransferRepresentation`
 
-Source:
-
-- [`TransferData.gs`](../../Goo/Window/TransferData.gs)
 
 Owns immutable bytes for one exact MIME representation of a selection.
 
@@ -1486,9 +1366,6 @@ Gets the exact MIME type offered to native consumers.
 
 ## `WaylandBackdropOptions`
 
-Source:
-
-- [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
 
 Configures this window's Wayland background effect. Other platforms ignore it.
 
@@ -1502,47 +1379,6 @@ Gets a surface-local rectangle in logical pixels, or nil for the whole window. C
 
 ## `Window`
 
-Sources:
-
-- [`NativeAccessibilityHost.gs`](../../Goo/Accessibility/Native/NativeAccessibilityHost.gs)
-- [`Clipboard.gs`](../../Goo/Window/Clipboard.gs)
-- [`FileDialog.gs`](../../Goo/Window/FileDialog.gs)
-- [`NativeDialogOwner.gs`](../../Goo/Window/NativeDialogOwner.gs)
-- [`NativeFileDrop.gs`](../../Goo/Window/NativeFileDrop.gs)
-- [`Window.gs`](../../Goo/Window/Window.gs)
-- [`Window.Accessibility.gs`](../../Goo/Window/WindowParts/Window.Accessibility.gs)
-- [`Window.Activation.gs`](../../Goo/Window/WindowParts/Window.Activation.gs)
-- [`Window.ApplicationActivation.gs`](../../Goo/Window/WindowParts/Window.ApplicationActivation.gs)
-- [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
-- [`Window.Context.gs`](../../Goo/Window/WindowParts/Window.Context.gs)
-- [`Window.Dispatcher.gs`](../../Goo/Window/WindowParts/Window.Dispatcher.gs)
-- [`Window.Displays.gs`](../../Goo/Window/WindowParts/Window.Displays.gs)
-- [`Window.DragRegion.gs`](../../Goo/Window/WindowParts/Window.DragRegion.gs)
-- [`Window.ElementHandle.gs`](../../Goo/Window/WindowParts/Window.ElementHandle.gs)
-- [`Window.Embedded.gs`](../../Goo/Window/WindowParts/Window.Embedded.gs)
-- [`Window.ExternalImages.gs`](../../Goo/Window/WindowParts/Window.ExternalImages.gs)
-- [`Window.Frame.gs`](../../Goo/Window/WindowParts/Window.Frame.gs)
-- [`Window.Host.gs`](../../Goo/Window/WindowParts/Window.Host.gs)
-- [`Window.Images.gs`](../../Goo/Window/WindowParts/Window.Images.gs)
-- [`Window.Input.gs`](../../Goo/Window/WindowParts/Window.Input.gs)
-- [`Window.NativeModal.gs`](../../Goo/Window/WindowParts/Window.NativeModal.gs)
-- [`Window.Offscreen.gs`](../../Goo/Window/WindowParts/Window.Offscreen.gs)
-- [`Window.Ownership.gs`](../../Goo/Window/WindowParts/Window.Ownership.gs)
-- [`Window.Placement.gs`](../../Goo/Window/WindowParts/Window.Placement.gs)
-- [`Window.Platform.gs`](../../Goo/Window/WindowParts/Window.Platform.gs)
-- [`Window.Popup.gs`](../../Goo/Window/WindowParts/Window.Popup.gs)
-- [`Window.Preferences.Layout.gs`](../../Goo/Window/WindowParts/Window.Preferences.Layout.gs)
-- [`Window.Preferences.gs`](../../Goo/Window/WindowParts/Window.Preferences.gs)
-- [`Window.Profile.gs`](../../Goo/Window/WindowParts/Window.Profile.gs)
-- [`Window.RenderCommand.gs`](../../Goo/Window/WindowParts/Window.RenderCommand.gs)
-- [`Window.Retained.gs`](../../Goo/Window/WindowParts/Window.Retained.gs)
-- [`Window.SizeConstraints.gs`](../../Goo/Window/WindowParts/Window.SizeConstraints.gs)
-- [`Window.TextMeasurement.gs`](../../Goo/Window/WindowParts/Window.TextMeasurement.gs)
-- [`Window.Timers.gs`](../../Goo/Window/WindowParts/Window.Timers.gs)
-- [`Window.Titlebar.gs`](../../Goo/Window/WindowParts/Window.Titlebar.gs)
-- [`Window.UiScale.gs`](../../Goo/Window/WindowParts/Window.UiScale.gs)
-- [`Window.Virtualization.gs`](../../Goo/Window/WindowParts/Window.Virtualization.gs)
-- [`Window.Visibility.gs`](../../Goo/Window/WindowParts/Window.Visibility.gs)
 
 Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread.
 
@@ -1653,7 +1489,7 @@ Configures process-wide application identity before SDL initialization.
 
 ### `CreateOffscreenSession`
 
-Creates a renderer lease before opening native UI that can remove this window's presentation surface.
+Creates a renderer lease from an open window. Returns NotReady before Open or after close. The lease does not require the window's presentation surface to remain attached.
 
 Returns: A session on Success, or an explicit renderer status.
 
@@ -1699,7 +1535,7 @@ Returns: Accepted when retained, or Failed when the request exceeds the activati
 
 ### `MeasureText(string,Style)`
 
-Measures the width of a single-line Text with this content and style in this window. The result matches the laid-out Text width: it applies the text scale preference and snaps to the window's pixel grid. Reads FontFamily, Language, FontSize, FontWeight, FontStyle, LetterSpacing, TextTransform and Direction from style. Unset fields use Goo defaults, not values inherited from parents. Line breaks are not applied. Call on the window's UI thread, for example in Cell.Build. It reuses the font cache and allocates no glyph runs.
+Measures single-line Text width in layout units on the window's UI thread. Applies text scale and pixel-grid rounding. Line breaks are ignored. Reads FontFamily, Language, FontSize, FontWeight, FontStyle, LetterSpacing, TextTransform and Direction. Unset fields use Goo defaults, not parent inheritance.
 
 - `text`: The text to measure.
 - `style`: The text declarations. A Text blob is also a Style.
@@ -1839,8 +1675,6 @@ Starts one owner-modal chooser on the open window's UI thread; other windows con
 Returns: A task completed on the UI thread with owned paths and an explicit outcome. Await continuations follow normal .NET context rules.
 
 ### `TryPost(System.Action)`
-
-Attempts to queue an action for the UI thread. A successful enqueue can still be discarded if teardown begins before the action runs.
 
 - `action`: action to run during a later Pump
 
@@ -2115,16 +1949,8 @@ Gets or sets the requested vertical position.
 
 ## `WindowBackdrop`
 
-Source:
-
-- [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
 
 Selects a native material behind the window's rendered content.
-
-### Values
-
-- `None`
-- `Blur`
 
 ### `Blur`
 
@@ -2136,9 +1962,6 @@ No native background effect.
 
 ## `WindowBackdropMask`
 
-Source:
-
-- [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
 
 Owns an immutable alpha mask for a native macOS backdrop, stretched to its bounds.
 
@@ -2160,9 +1983,6 @@ Gets the mask width in pixels.
 
 ## `WindowCapabilities`
 
-Source:
-
-- [`Window.Visibility.gs`](../../Goo/Window/WindowParts/Window.Visibility.gs)
 
 Reports native lifecycle operations supported by the current host.
 
@@ -2176,9 +1996,6 @@ Reports native lifecycle operations supported by the current host.
 
 ## `WindowCapture`
 
-Source:
-
-- [`Window.gs`](../../Goo/Window/Window.gs)
 
 Owns RGBA8, sRGB, premultiplied pixels copied from a completed scene capture.
 
@@ -2212,9 +2029,6 @@ Gets the captured width in pixels.
 
 ## `WindowCaptureRequestStatus`
 
-Source:
-
-- [`Window.gs`](../../Goo/Window/Window.gs)
 
 Reports whether an asynchronous window capture request was accepted.
 
@@ -2230,9 +2044,6 @@ Reports whether an asynchronous window capture request was accepted.
 
 ## `WindowDisplay`
 
-Source:
-
-- [`Window.Displays.gs`](../../Goo/Window/WindowParts/Window.Displays.gs)
 
 Describes one display from an immutable SDL inventory snapshot.
 
@@ -2258,17 +2069,11 @@ Gets usable non-fullscreen bounds, or nil if SDL could not provide them.
 
 ## `WindowDisplayId`
 
-Source:
-
-- [`Window.Displays.gs`](../../Goo/Window/WindowParts/Window.Displays.gs)
 
 Identifies one SDL display in the current process. The value can become stale after display changes.
 
 ## `WindowFramePacing`
 
-Source:
-
-- [`Window.gs`](../../Goo/Window/Window.gs)
 
 Controls how Window.Run schedules frames that have visual demand.
 
@@ -2279,17 +2084,8 @@ Controls how Window.Run schedules frames that have visual demand.
 
 ## `WindowInputKind`
 
-Source:
-
-- [`Window.gs`](../../Goo/Window/Window.gs)
 
 Identifies input received by a window before routing.
-
-### Values
-
-- `PointerDown`
-- `Wheel`
-- `KeyDown`
 
 ### `KeyDown`
 
@@ -2305,9 +2101,6 @@ A wheel event was received.
 
 ## `WindowLayer`
 
-Source:
-
-- [`LayerWindowOptions.gs`](../../Goo/Window/LayerWindowOptions.gs)
 
 Selects the compositor layer for a Wayland layer-shell window.
 
@@ -2320,9 +2113,6 @@ Selects the compositor layer for a Wayland layer-shell window.
 
 ## `WindowMetrics`
 
-Source:
-
-- [`Window.gs`](../../Goo/Window/Window.gs)
 
 Describes one stable window size and display-scale snapshot.
 
@@ -2356,17 +2146,8 @@ Gets the retained UI scale. A default snapshot uses 1.
 
 ## `WindowOcclusion`
 
-Source:
-
-- [`Window.gs`](../../Goo/Window/Window.gs)
 
 Reports observed occlusion, not visibility or focus.
-
-### Values
-
-- `Unknown`
-- `Unoccluded`
-- `Occluded`
 
 ### `Occluded`
 
@@ -2382,9 +2163,6 @@ The host reports that the window is not occluded.
 
 ## `WindowOperationResult`
 
-Source:
-
-- [`Window.Visibility.gs`](../../Goo/Window/WindowParts/Window.Visibility.gs)
 
 Reports whether a window operation was submitted to the host. Accepted does not guarantee that desktop policy grants activation or stacking.
 
@@ -2397,9 +2175,6 @@ Reports whether a window operation was submitted to the host. Accepted does not 
 
 ## `WindowPlacement`
 
-Source:
-
-- [`WindowPlacement.gs`](../../Goo/Window/WindowPlacement.gs)
 
 Owns restorable desktop geometry and display matching hints, without process-local display IDs.
 
@@ -2433,19 +2208,8 @@ Gets the restorable state. Capture records the last non-minimized state for a mi
 
 ## `WindowPlacementFields`
 
-Source:
-
-- [`WindowPlacement.gs`](../../Goo/Window/WindowPlacement.gs)
 
 Identifies the placement fields retained or accepted by a desktop host.
-
-### Values
-
-- `None`
-- `NormalSize`
-- `Position`
-- `State`
-- `FullscreenDisplay`
 
 ### `FullscreenDisplay`
 
@@ -2469,9 +2233,6 @@ Restorable window state is present.
 
 ## `WindowPlacementResult`
 
-Source:
-
-- [`WindowPlacement.gs`](../../Goo/Window/WindowPlacement.gs)
 
 Reports captured placement or the fields accepted by an apply request.
 
@@ -2493,9 +2254,6 @@ Gets Accepted, Closed, Unsupported or Failed for this placement operation.
 
 ## `WindowPresentationAccepted`
 
-Source:
-
-- [`Window.gs`](../../Goo/Window/Window.gs)
 
 Reports a successful queue-present handoff, not display scanout.
 
@@ -2509,9 +2267,6 @@ Gets the one-based accepted presentation number for this window opening.
 
 ## `WindowState`
 
-Source:
-
-- [`Window.gs`](../../Goo/Window/Window.gs)
 
 Identifies the requested state of a window.
 
@@ -2524,9 +2279,6 @@ Identifies the requested state of a window.
 
 ## `WindowTimer`
 
-Source:
-
-- [`Window.Timers.gs`](../../Goo/Window/WindowParts/Window.Timers.gs)
 
 A cancellable callback scheduled on a Window's UI thread.
 
@@ -2540,9 +2292,6 @@ Reports whether the callback remains scheduled.
 
 ## `WindowTitlebarEvent`
 
-Source:
-
-- [`Window.Titlebar.gs`](../../Goo/Window/WindowParts/Window.Titlebar.gs)
 
 A native double-click on eligible blank space in an undecorated drag region.
 
@@ -2556,18 +2305,8 @@ Gets the pointer position in logical client coordinates.
 
 ## `WindowsBackdropMaterial`
 
-Source:
-
-- [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
 
 Selects a Windows 11 system backdrop material.
-
-### Values
-
-- `Acrylic`
-- `Automatic`
-- `Mica`
-- `MicaAlt`
 
 ### `Acrylic`
 
@@ -2587,9 +2326,6 @@ Uses the alternate Mica material for tabbed windows.
 
 ## `WindowsBackdropOptions`
 
-Source:
-
-- [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
 
 Configures the native material for this window on Windows. Other platforms ignore it.
 

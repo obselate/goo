@@ -37,6 +37,7 @@ jobs:
       full: ${{ steps.paths.outputs.full }}
       lint: ${{ steps.paths.outputs.lint }}
       api: ${{ steps.paths.outputs.api }}
+      plugin: ${{ steps.paths.outputs.plugin }}
     steps:
       - id: paths
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
@@ -52,6 +53,7 @@ jobs:
               full = files.length !== context.payload.pull_request.changed_files;
               for (const file of files) {
                 for (const path of [file.filename, file.previous_filename].filter(Boolean)) {
+                  if (path.startsWith('tools/Goo.PluginMcp/')) plugin = true;
                   if (path.startsWith('plugins/goo/')) plugin = true;
                   else if ((path.startsWith('docs/') || !path.includes('/') || path.startsWith('changelog.d/')) &&
                            path.endsWith('.md') && path !== 'docs/nuget-readme.md') {
@@ -63,6 +65,7 @@ jobs:
             core.setOutput('full', full);
             core.setOutput('lint', full || plugin);
             core.setOutput('api', full || api);
+            core.setOutput('plugin', full || plugin);
 
   preflight:
     needs: changes
@@ -188,6 +191,33 @@ jobs:
       - name: Validate Goo DevTools integrations
         run: |
           node --check integrations/vscode/extension.js
+
+  plugin:
+    needs: [changes, preflight]
+    if: needs.changes.outputs.plugin == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - *nuget-cache
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
+        with:
+          global-json-file: global.json
+      - name: Install headless runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y $GOO_LINUX_APT_PACKAGES
+      - name: Verify Goo plugin
+        run: |
+          dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
+          run="$RUNNER_TEMP/plugin"
+          trap 'rm -rf "$run"' EXIT
+          mkdir -p "$run"/{cache,config,data}
+          XDG_CACHE_HOME="$run/cache" XDG_CONFIG_HOME="$run/config" XDG_DATA_HOME="$run/data" \
+            RUNNER_TEMP="$run" GOO_WAYLAND_COMPOSITOR=kwin \
+            .github/scripts/with-headless-wayland.sh \
+            dotnet tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll \
+            mcp --plugin-root plugins/goo --verify
 
   macos-native:
     needs: [changes, preflight]
@@ -1012,6 +1042,15 @@ jobs:
             dotnet build "$project" -c Release --no-restore -m:4
             dotnet run --project "$project" -c Release --no-build -- --check
           done
+
+      - name: PowerShell interop --check
+        if: needs.changes.outputs.full == 'true'
+        env:
+          NUGET_PACKAGES: ${{ runner.temp }}/goo-interop-packages
+        run: |
+          dotnet restore samples/interop/PowerShell/PowerShell.csproj --configfile samples/interop/NuGet.Config
+          dotnet build samples/interop/PowerShell/PowerShell.csproj -c Release --no-restore -m:4
+          pwsh -NoProfile -File samples/interop/PowerShell/Start.ps1 --check
 
       - name: Verify packed NativeAOT gesture consumer
         if: needs.changes.outputs.full == 'true'
@@ -2017,7 +2056,7 @@ jobs:
 
   release-goo:
     if: github.repository == 'obselate/goo' && startsWith(github.ref, 'refs/tags/v')
-    needs: [changes, quality, macos-arm64, macos-checks, linux-build, linux-test-build, linux-validation, linux-fixtures, linux-packages, linux-x64, android, android-accessibility, android-consumer, android-native-menus, windows-native, windows-x64]
+    needs: [changes, quality, plugin, macos-arm64, macos-checks, linux-build, linux-test-build, linux-validation, linux-fixtures, linux-packages, linux-x64, android, android-accessibility, android-consumer, android-native-menus, windows-native, windows-x64]
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     environment: release

@@ -1,11 +1,11 @@
 # Platform preflight and troubleshooting
 
-For publish output and asset paths, see [shipping](shipping.md).
-
 ```sh
 dotnet --info
 dotnet --list-sdks
 ```
+
+For publish output and asset paths, see [shipping](shipping.md).
 
 Development requires .NET SDK 10.0.403 or a later 10.0 SDK matching the host:
 `linux-x64`, `win-x64` or `osx-arm64`. The renderer requires Vulkan 1.3 with
@@ -18,7 +18,7 @@ Goo ships Windows x64, Linux x64, macOS arm64, Android ARM64 and Android x64 ass
 - Windows x64 is tested on Windows 11 with current vendor Vulkan drivers. The minimum supported Windows version is not yet established.
 - Linux x64 requires Linux 6.6+, glibc 2.27+, native Wayland 1.18+ and a TrueType or OpenType sans-serif font. X11 and XWayland are unsupported.
 - macOS arm64 requires macOS 14+ on Apple silicon. Goo bundles MoltenVK 1.4.2 and uses Apple system fonts. No Vulkan SDK is needed.
-- Android requires API 33+ and Vulkan 1.3 with identity presentation support. See [Android integration](https://github.com/obselate/goo/blob/main/docs/android.md).
+- Android requires API 33+ and Vulkan 1.3 with identity presentation support. See [Android integration](android.md).
 
 ## Custom shaders
 
@@ -82,11 +82,11 @@ env -u DISPLAY vulkaninfo | grep -E 'apiVersion|timelineSemaphore|synchronizatio
 
 | Check | Expected result |
 | --- | --- |
-| Kernel and C library | Linux 6.6 or newer, glibc 2.27 or newer. |
+| Kernel and C library | Confirm the installed versions meet the platform requirements above. |
 | Session and socket | `XDG_SESSION_TYPE=wayland`, nonempty display/runtime directory, `Wayland socket exists`. |
 | Compositor | Connected report with `wl_compositor`, `xdg_wm_base` and `wl_output`. |
 | Font | A sans-serif family and an existing `.ttf` or `.otf` path. |
-| Vulkan | A device with `apiVersion` 1.3 or newer and `timelineSemaphore`, `synchronization2` and `dynamicRendering` all `true`. |
+| Vulkan | Confirm device support for the required API and features, not only loader support. |
 
 Check device support, not only the Vulkan instance version. Then present a Goo frame.
 `env -u DISPLAY` excludes unrelated X11 surfaces from the diagnostic.
@@ -102,5 +102,8 @@ Goo does not support X11.
 | Missing native DLL, `.so` or `.dylib` | Check the RID. Distribute the whole publish output. |
 | Asset fails after publish | Follow [asset copying and lookup](shipping.md#optional-assets). |
 
-Include package versions, `dotnet --info`, GPU, driver, session type, launch command
-and full error output in reports. Remove private data before posting.
+Include these items in reports. Remove private data before posting:
+
+- Package versions and `dotnet --info`.
+- GPU, driver and session type.
+- Launch command and full error output.

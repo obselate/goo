@@ -11,19 +11,10 @@ let queued = audio?.TryPlay(cue, 0.5F)
 Add `Goo.Audio` alongside `Goo` with the same package version. Types use namespace `Goo`.
 Keep the player at application scope.
 
-| Operation | Contract |
-| --- | --- |
-| Open and dispose | Use the UI thread, after `Window.ConfigureApplication` if used. Owners of the same output share playback state. |
-| `TryOpen().Status` | `Opened`, `Unsupported`, `SubsystemUnavailable`, or `DeviceUnavailable`. Only `Opened` carries a player. |
-| `TryPlay().Status` | `Queued`, `VoiceLimit`, `QueueBudget`, or `NativeFailure`. Only `Queued` carries playback. |
-| `SoundPlayback.Gain` | Set live gain in [0, 1]. Non-finite or out-of-range gain throws. |
-| `Pause()` / `Resume()` | Retain queued frames while paused, then continue. |
-| `Status` | `Playing`, `Paused`, `Completed`, `Stopped`, `SourceFailure`, or `NativeFailure`. A query reclaims finished streams. |
-| `Stop()` | Release one stream. Device buffering can briefly outlast control changes. |
-| `StopAll()` / player disposal | Stop only this owner's playback. |
-
-All operations except open and dispose are thread-safe. Invalid arguments and
-disposed-owner play calls throw. Completion means drained queues, not exact audible timing.
+Open and dispose on the UI thread, after `Window.ConfigureApplication` if used.
+Other operations are thread-safe. Owners of the same output share playback state.
+Completion means drained queues, not exact audible timing.
+See the [audio API](https://github.com/obselate/goo/blob/main/docs/api-audio/README.md) for statuses and controls.
 
 ## Sources
 

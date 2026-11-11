@@ -1,17 +1,8 @@
 # A virtual list
 
-![A virtual list of 100,000 rows](images/a-virtual-list.png)
+Start with the [tutorial setup](../README.md#tutorial-setup). Replace `Program.gs`, then run `goo dev`.
 
-## 1. Create the project
-Start after [Your first app](your-first-app.md) and run goo dev after replacing Program.gs.
-
-```sh
-dotnet new goo -n AVirtualList
-cd AVirtualList
-dotnet add package Goo.Widgets --version 0.20.0
-```
-
-## 2. Build visible rows only
+## Build rows near the viewport
 Keep stable row keys and a cached builder in a bounded viewport.
 
 ```gsharp
@@ -19,7 +10,6 @@ package Tutorial
 
 import Goo
 import Goo.Widgets
-import Goo.Widgets.Actions
 import Goo.Widgets.Data
 import System
 

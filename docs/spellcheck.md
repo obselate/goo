@@ -9,21 +9,14 @@ var result = await spelling.CheckAsync(new TextRange(0, controller.Document.Leng
 
 Create and use the session on the window thread. Dispose it when the editor is removed.
 
-| Package | Checker |
+| Platform | Service |
 | --- | --- |
-| `Goo` | Windows ISpellChecker and macOS NSSpellChecker |
-| `Goo` | System `libhunspell-1.7.so.0` and app-selected `.aff`/`.dic` files |
-| `Goo.Android` | User-enabled Android SpellCheckerSession |
+| Windows and macOS | `SystemSpellingService` from `Goo` |
+| Linux | `HunspellSpellingService("en-US", affPath, dictionaryPath)` from `Goo` |
+| Android | `AndroidSpellingService(context)` from `Goo.Android` |
 
-```cs
-using var service = new HunspellSpellingService("en-US", affPath, dictionaryPath);
-```
-
-```cs
-var service = new AndroidSpellingService(context);
-```
-
-Choose one service. Keep the `Goo.SpellCheck` namespace import. Hunspell ships no native library or dictionaries.
+Choose one service. Keep `Goo.SpellCheck` imported. Hunspell ships no native
+library or dictionaries.
 
 ## Suggestions
 
@@ -41,10 +34,9 @@ Show `choices.Values` in your menu. Run `ApplySuggestion` on the window thread.
 - Set `spelling.ReadOnly` to the editor's `ReadOnly` value.
 - Suggestions use normal undo. Changed text or language returns `Stale`.
 - Active IME composition blocks suggestion edits.
-- `LanguageUnavailable` means no installed dictionary matches the requested language.
-- `Unsupported` means the platform, library or dictionary encoding cannot serve the request.
-- `Disabled`, `Cancelled`, `TooLarge` and `Failed` are not successful empty checks.
 - macOS checker calls run on the main thread. Android requests start on the main thread.
 - Hunspell checks words, not sentence grammar. Word boundaries vary by language.
 - Do not check passwords. Android's selected service can read submitted text.
 - Link pending app work to `Window.Closed`. Teardown can discard an accepted `Post`.
+
+See the [core spelling API](api/spellcheck.md) and [Android API](api-android/README.md) for statuses and limits.

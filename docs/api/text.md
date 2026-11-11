@@ -1,14 +1,11 @@
 # Text API
 
-Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
-
 Source: [`Goo/Text`](../../Goo/Text)
+
+Use [Window.MeasureText](window.md#measuretextstringstyle) to size content to the widest label.
 
 ## `FontSource`
 
-Source:
-
-- [`FontSource.gs`](../../Goo/Text/FontSource.gs)
 
 Owns one font face and its registration state.
 
@@ -66,43 +63,12 @@ Gets the font weight.
 
 ## `FontVariation`
 
-Source:
-
-- [`FontSource.gs`](../../Goo/Text/FontSource.gs)
 
 Stores one four-character font variation axis and value.
 
 ### `new(string,float32)`
 
 Creates a font variation value.
-
-### `Deconstruct(string@,float32@)`
-
-Deconstructs the variation into its tag and value.
-
-### `Equals(FontVariation)`
-
-Tests equality with another variation.
-
-### `Equals(System.Object)`
-
-Tests equality with another value.
-
-### `GetHashCode`
-
-Gets the variation hash code.
-
-### `ToString`
-
-Returns the variation text representation.
-
-### `op_Equality(FontVariation,FontVariation)`
-
-Tests whether two variations are equal.
-
-### `op_Inequality(FontVariation,FontVariation)`
-
-Tests whether two variations are different.
 
 ### `Tag`
 
@@ -114,9 +80,6 @@ Gets the variation axis value.
 
 ## `RichTextClipboard`
 
-Source:
-
-- [`RichTextClipboard.gs`](../../Goo/Text/RichText/RichTextClipboard.gs)
 
 Binds HTML and RTF clipboard commands to one editor and its persistent style layer.
 
@@ -154,9 +117,6 @@ Disables Cut and Paste. Set this with TextEditor.ReadOnly.
 
 ## `RichTextCodec`
 
-Source:
-
-- [`RichTextCodec.gs`](../../Goo/Text/RichText/RichTextCodec.gs)
 
 Reads and writes the supported inline HTML and RTF clipboard subset.
 
@@ -170,9 +130,6 @@ Encodes one publication with UTF-8 plain text, HTML and RTF alternatives.
 
 ## `RichTextFragment`
 
-Source:
-
-- [`RichText.gs`](../../Goo/Text/RichText/RichText.gs)
 
 Owns source text and persistent, fragment-relative UTF-16 style spans.
 
@@ -190,32 +147,13 @@ Gets immutable Unicode source text.
 
 ## `RichTextResult`
 
-Source:
-
-- [`RichText.gs`](../../Goo/Text/RichText/RichText.gs)
 
 Contains Status, Fragment and bounded Error detail.
 
 ## `RichTextStatus`
 
-Source:
-
-- [`RichText.gs`](../../Goo/Text/RichText/RichText.gs)
 
 Reports rich clipboard parsing, publication or editing.
-
-### Values
-
-- `Success`
-- `PlainText`
-- `Unsupported`
-- `UnsupportedContent`
-- `Empty`
-- `TooLarge`
-- `ReadOnly`
-- `Cancelled`
-- `Stale`
-- `Failed`
 
 ### `Cancelled`
 
@@ -259,17 +197,11 @@ The content uses document features outside the supported inline subset.
 
 ## `TextChange`
 
-Source:
-
-- [`TextDocument.Models.gs`](../../Goo/Text/TextDocument.Models.gs)
 
 Specifies one replacement with a Range and InsertedText.
 
 ## `TextCommand`
 
-Source:
-
-- [`TextEditorController.gs`](../../Goo/Text/TextEditorController.gs)
 
 Describes an operation with a Kind, Text, ExtendSelection flag, and optional Position.
 
@@ -279,9 +211,6 @@ Gets the optional source position for SelectWord or SelectLine. Omission uses th
 
 ## `TextCommandEvent`
 
-Source:
-
-- [`TextEditorController.gs`](../../Goo/Text/TextEditorController.gs)
 
 Provides mutable cancellation state before a text-editor command runs.
 
@@ -295,9 +224,6 @@ Gets the semantic command being dispatched.
 
 ## `TextCommandKind`
 
-Source:
-
-- [`TextEditorController.gs`](../../Goo/Text/TextEditorController.gs)
 
 Selects a semantic text-editor operation.
 
@@ -334,10 +260,6 @@ Selects a semantic text-editor operation.
 - `UpdateComposition`
 - `CommitComposition`
 - `CancelComposition`
-- `CancelEdit`
-- `SelectWord`
-- `SelectLine`
-- `InsertTab`
 
 ### `CancelEdit`
 
@@ -357,17 +279,11 @@ Selects the word, whitespace, punctuation, or symbol run at Position or the care
 
 ## `TextComposition`
 
-Source:
-
-- [`TextEditorController.gs`](../../Goo/Text/TextEditorController.gs)
 
 Describes preedit Range, Text, SelectionStart, and SelectionLength values.
 
 ## `TextDocument`
 
-Source:
-
-- [`TextDocument.gs`](../../Goo/Text/TextDocument.gs)
 
 Stores editable text and versioned immutable snapshots.
 
@@ -491,17 +407,11 @@ Gets the monotonically increasing document version.
 
 ## `TextDocumentChange`
 
-Source:
-
-- [`TextDocument.Models.gs`](../../Goo/Text/TextDocument.Models.gs)
 
 Describes a transaction with BeforeVersion, AfterVersion, and Changes.
 
 ## `TextEditorController`
 
-Source:
-
-- [`TextEditorController.gs`](../../Goo/Text/TextEditorController.gs)
 
 Owns editing state and semantic commands for one text document view.
 
@@ -573,7 +483,7 @@ Returns: True when the Paste interceptor allowed the edit.
 
 ### `ScrollTo(float64,float64)`
 
-Changes the logical scroll target. The mounted editor clamps the request against measured lines at its next layout.
+Requests a logical scroll target. The mounted editor retains the request until lines near the target are measured, then clamps against the measured extent.
 
 - `x`: The non-negative horizontal target.
 - `y`: The non-negative vertical target.
@@ -642,17 +552,11 @@ Gets or sets whether indentation inserts tabs instead of spaces.
 
 ## `TextPosition`
 
-Source:
-
-- [`TextDocument.Models.gs`](../../Goo/Text/TextDocument.Models.gs)
 
 Specifies a caret position with an Offset and Affinity.
 
 ## `TextPresentationLayer`
 
-Source:
-
-- [`TextPresentationLayer.gs`](../../Goo/Text/TextPresentationLayer.gs)
 
 Owns keyed text styles and atomic source projections for one document.
 
@@ -764,25 +668,16 @@ Gets the monotonic revision of presentation-layer mutations.
 
 ## `TextRange`
 
-Source:
-
-- [`TextDocument.Models.gs`](../../Goo/Text/TextDocument.Models.gs)
 
 Specifies a UTF-16 range with a Start offset and Length.
 
 ## `TextSelection`
 
-Source:
-
-- [`TextDocument.Models.gs`](../../Goo/Text/TextDocument.Models.gs)
 
 Specifies an Anchor and Active position for one text selection.
 
 ## `TextSnapshot`
 
-Source:
-
-- [`TextDocument.gs`](../../Goo/Text/TextDocument.gs)
 
 Provides an immutable, thread-safe view of one text document version.
 
@@ -838,24 +733,15 @@ Gets the version represented by this snapshot.
 
 ## `TextStyleProperties`
 
-Source:
-
-- [`TextStyleProperties.gs`](../../Goo/Text/TextStyleProperties.gs)
 
 Holds explicit FontFamily, FontSize in pixels, FontWeight, FontStyle, Color and TextDecoration declarations.
 
 ## `TextStyleRange`
 
-Source:
-
-- [`TextDocument.Models.gs`](../../Goo/Text/TextDocument.Models.gs)
 
 Specifies one ordered passive Text Style over a Range in source UTF-16 offsets. Later overlapping ranges override earlier fields. Use Text.TextTransform for transformations.
 
 ## `TextStyleSpan`
 
-Source:
-
-- [`TextPresentationLayer.gs`](../../Goo/Text/TextPresentationLayer.gs)
 
 Specifies a Key, source Range, and inline Style for one document span.

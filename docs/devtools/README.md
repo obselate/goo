@@ -60,4 +60,16 @@ goo dev -- dotnet run --project MyApp.gsproj --configuration Release
 goo attach --pid 12345 --once --command capabilities --payload '{}' --json
 ```
 
-`attach` is the advanced raw protocol interface. Use `snapshot`, `capture` and `input` for common operations. See the [protocol](protocol.md) and [contributor guide](development.md).
+`attach` is the raw protocol interface. Use `snapshot`, `capture` and `input` for common operations. See the [protocol](protocol.md) and [contributor guide](../../CONTRIBUTING.md#devtools-and-plugin).
+
+## Edit a running app
+
+From the [starter counter](../../README.md#use) directory, run `goo dev`.
+
+1. Click three times. Change `Count: $count` to `Total: $count` in `Program.gs`.
+2. Wait for `G# hot reload: applied ... method update(s)`.
+3. Click once. The same process must show `Total: 4`.
+
+The G# hot reload line is authoritative. `dotnet watch: No managed code changes to apply` is expected. See the [watch reference](../../plugins/goo/skills/goo-authoring/references/watch.md) for restart and initializer limits.
+
+For IDE commands, see [VS Code](../../integrations/vscode/README.md) and [Rider](../../integrations/rider/README.md).

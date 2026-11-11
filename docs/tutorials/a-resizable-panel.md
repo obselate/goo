@@ -1,65 +1,9 @@
 # A resizable panel
 
-![Two resizable panes](images/a-resizable-panel.png)
+Start with the [tutorial setup](../README.md#tutorial-setup). Replace `Program.gs` with this program, then run `goo dev`.
 
-## 1. Create the project
-Start after [Your first app](your-first-app.md) and run goo dev after replacing Program.gs.
-
-```sh
-dotnet new goo -n AResizablePanel
-cd AResizablePanel
-dotnet add package Goo.Widgets --version 0.20.0
-```
-
-## 2. Control the split ratio
-Update the split ratio in OnChange. Goo rebuilds the Cell that authored the callback.
-
-```gsharp
-package Tutorial
-
-import Goo
-import Goo.Widgets
-import Goo.Widgets.Actions
-import Goo.Widgets.Layout
-
-class Example : Cell {
-    private var ratio float64 = .35
-
-    override func Build() Blob {
-        let theme = Theme.Read()
-        return Container{
-            BasedOn: theme.CanvasStyle,
-            Width: Percent(100),
-            Height: Percent(100),
-            Padding: theme.Spacing * 6,
-            Gap: theme.Spacing * 3,
-            Cell.Mount[SplitPaneInput, SplitPane](
-                "panes",
-                SplitPaneInput{
-                    Value: ratio,
-                    MinimumFirst: theme.ControlHeight * 3,
-                    MinimumSecond: theme.ControlHeight * 3,
-                    First: Text{Content: "Navigation"},
-                    Second: Text{Content: "Workspace"},
-                    OnChange: (value float64) -> {
-                        ratio = value
-                    },
-                }
-            ),
-        }
-    }
-}
-
-func Main() {
-    Window.ConfigureApplication("A resizable panel", "1.0.0", "com.example.tutorial")
-    let window = Window{Title: "A resizable panel", Width: 600, Height: 320, Root: Example{}}
-    Theme.Attach(window, Theme.Default)
-    window.Run()
-}
-```
-
-## 3. Add pane content
-Drag the divider or focus it and use the arrow keys.
+- `Value` reads the ratio retained by the Cell.
+- `OnChange` updates it. Drag the divider or focus it and use arrow keys.
 
 ```gsharp
 package Tutorial
@@ -100,10 +44,8 @@ class Example : Cell {
                         Text{Content: "Workspace"},
                         ActionButton{
                             Content: "Reset split",
-                            OnClick: () -> {
-                                ratio = .35
-                            },
-                        }.Build(),
+                            OnClick: () -> { ratio = .35 },
+                        },
                     },
                     OnChange: (value float64) -> {
                         ratio = value

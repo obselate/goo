@@ -52,7 +52,7 @@ public sealed class DragData {
   /// Creates drag data with an optional native file representation.
   /// @param value consumer-owned payload retained for the drag lifetime
   /// @param allowedEffects effects that a target may select
-  /// @param nativeFiles optional local file paths for a Wayland Copy offer when the pointer leaves the window
+  /// @param nativeFiles optional absolute local file paths for a native Copy offer when the pointer leaves the window. NativeTransferCapabilities reports host support.
   public init(value object, allowedEffects DragEffect, nativeFiles NativeFileDrag?) {
     if Object.ReferenceEquals(value, nil) { throw ArgumentNullException("value") }
     this.value = value

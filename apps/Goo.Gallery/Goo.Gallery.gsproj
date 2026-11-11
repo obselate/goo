@@ -12,6 +12,8 @@
   <ItemGroup>
     <Content Include="Assets/MaterialSymbolsRounded.ttf" Link="MaterialSymbolsRounded.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="Assets/SpaceGrotesk-Variable.ttf" Link="SpaceGrotesk-Variable.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+    <Content Include="Assets/MaterialSymbolsRounded-LICENSE.txt;Assets/SpaceGrotesk-OFL.txt" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+    <Content Include="../../THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="../../tests/Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf" Link="VendSans-VariableFont_wght.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="../../tests/Goo.VulkanProof/Assets/Text/VendSans-OFL.txt" Link="VendSans-OFL.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
   </ItemGroup>

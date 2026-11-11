@@ -58,16 +58,18 @@ The stream must be writable and empty. The caller owns it. Cancellation or failu
 - `CreatePage` returns a fresh full-paper cell, including margins. Page indexes start at zero.
 - Load images before printing. Each page uses the existing Vulkan renderer without resizing the visible window.
 - Output is raster PDF or a raster spooler page. Text is not selectable. Fonts need no PDF embedding.
-- Output pixels and new GPU allocations have a 128 MiB limit per page. One CPU page buffer is reused.
-- `Submitted` means the native print service accepted the job. It does not mean paper left the printer.
-- Closing the owner cancels the operation. Native submission can already be complete.
+See the [printing API](api/printing.md) for result, limit and lifetime contracts.
 
 ## Android
 
 ```csharp
+using Goo.Android.Printing;
+
 var printing = new AndroidPrinting(activity);
 var result = await printing.ShowDialogAsync(window, new Report("Hello"), "Report");
 ```
 
 Call from the Activity main thread. Android controls paper, page ranges and the destination.
 Keep the Activity and Goo window alive until completion. Pages render through an independent session while the Activity is paused.
+
+See the [Android API](api-android/README.md).

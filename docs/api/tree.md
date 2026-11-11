@@ -1,8 +1,21 @@
 # Tree API
 
-Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
-
 Source: [`Goo/Tree`](../../Goo/Tree)
+
+## Add direct children
+
+```gsharp
+let rows = []Blob{Text("Second")}
+let content = Container{Gap: 12.0, Text("First"), ...rows, Button{OnClick: () -> Save(), Text("Save")},}
+```
+
+- `Member: value` sets a member. Bare children call `Add`. A spread enumerates its source once.
+- Values, children and spreads run in source order. Put `BasedOn` before overrides.
+- Keys retain identity across moves. Unkeyed children match only at the same absolute sibling index.
+- Start with a member when mixing properties and children. Use `Text("Hello")` for plain text.
+- `Container{...source}` projects members. Use `Container(){...rows,}` to enumerate only children.
+- After a constructor or factory call, unmarked `key: value` calls `Add(key, value)`.
+- `Children: existingList` assigns the list. A spread copies its contents.
 
 ## Present content above the normal tree
 
@@ -17,8 +30,9 @@ coordinates.
 Portal{ZIndex: 20, Container{Width: 240, Height: 160, BackgroundColor: Color.White},}
 ```
 
-Set `Anchor` for automatic placement from another mounted element's transformed
-border box. `Placement` defaults to `BottomStart`:
+Set `Anchor` for automatic placement from a mounted element's unrounded layout
+geometry. Goo rounds the popup origin on the window's device grid.
+`Placement` defaults to `BottomStart`:
 
 ```gsharp
 let trigger = ElementHandle{}
@@ -74,6 +88,10 @@ past viewport containment. With `Anchor` unset, ordinary Portal positioning reta
 the authored position and margins. Transforms and descendant overflow still use
 normal rendering semantics and can extend beyond the contained placement box.
 
+For a manually positioned point popup, use `ElementHandle.RawBorderBox` and
+`Window.PixelScale` to retain the anchor's device-pixel phase. Use `BorderBox` for
+painted bounds and hit testing.
+
 Each Window owns one automatic overlay shared by all its Portals. It remains inside
 that native window; Portal does not create a native child window. The normal tree
 paints completely before the overlay. Direct Portal peers are ordered by `ZIndex`;
@@ -113,92 +131,8 @@ A policy has two parts:
 
 `Realize` must keep all changes pending until `Commit`. Goo calls `Cancel` when an item fails to mount.
 
-This policy places rows of height 20. Mount it with `Virtual(Rows(lines)) { Height = 200 }`.
-
-```gsharp
-class Rows : VirtualSource {
-    let Items IReadOnlyList[string]
-    init(items IReadOnlyList[string]) {
-        Items = items
-    }
-
-    func State(current VirtualState?) VirtualState {
-        let state = (current as RowsState) ?? RowsState()
-        state.Pending = this
-        return state
-    }
-}
-
-class RowsState : VirtualState {
-    var Pending Rows?
-    private var rows Rows?
-    private var mounted HashSet[string] = HashSet[string]()
-    private var next HashSet[string] = HashSet[string]()
-    private var first int32
-    private var last int32
-    private var pendingFirst int32
-    private var pendingLast int32
-
-    override func Realize(viewport VirtualViewport, output VirtualOutput) {
-        next.Clear()
-        guard let input = Pending ?? rows else {
-            return
-        }
-        let count = input.Items.Count
-        pendingFirst = First(viewport, count)
-        pendingLast = Last(viewport, count)
-        for index in pendingFirst ... pendingLast {
-            let key = input.Items[index]
-            let content Blob? = if mounted.Contains(key) {
-                nil
-            } else {
-                Text{Content: key}
-            }
-            output.Add(
-                VirtualItem{
-                    Key: key,
-                    Index: index,
-                    Y: float64(index) * 20.0,
-                    Width: viewport.Size.Width,
-                    Height: 20.0,
-                    Content: content,
-                }
-            )
-            next.Add(key)
-        }
-        output.ContentSize = LayoutSize{Width: viewport.Size.Width, Height: float64(count) * 20.0}
-        output.ItemCount = count
-    }
-
-    override func NeedsRealize(viewport VirtualViewport) bool {
-        guard let input = rows else {
-            return false
-        }
-        let count = input.Items.Count
-        return First(viewport, count) != first || Last(viewport, count) != last
-    }
-
-    override func Commit() {
-        let old = mounted
-        mounted = next
-        next = old
-        rows = Pending ?? rows
-        Pending = nil
-        first = pendingFirst
-        last = pendingLast
-    }
-
-    override func Cancel() {
-        Pending = nil
-    }
-
-    private func First(viewport VirtualViewport, count int32) int32 ->
-    Math.Clamp(int32(viewport.ScrollOffset.Y / 20.0) - 1, 0, count)
-
-    private func Last(viewport VirtualViewport, count int32) int32 ->
-    Math.Clamp(int32((viewport.ScrollOffset.Y + viewport.Size.Height) / 20.0) + 2, 0, count)
-}
-```
+Use [Goo.Widgets VirtualRows](https://github.com/obselate/goo-widgets/blob/main/docs/usage.md#virtual-lists)
+for measured rows instead of writing a fixed-row policy.
 
 Items use content coordinates. The origin is the start of the content box at scroll offset zero, so a scroll offset is also the content coordinate at the start of the viewport. Padding is not part of the content size.
 
@@ -212,7 +146,7 @@ Items use content coordinates. The origin is the start of the content box at scr
 
 Goo wraps each item in a keyed, absolutely positioned element. The wrapper has the list item role while the `Virtual` element has the list role. An item that leaves the result unmounts through the ordinary lifecycle, including focus, pointer capture, handles, and accessibility state.
 
-`VirtualViewport` gives the visible content size, the scroll offset, the resolved gaps, the flex direction and wrap, and the mounted items. `Child(index)` returns the key and the last layout size of a mounted item, and `Measured` is false until its current content has a layout. `FocusedChild` is the mounted item that contains keyboard focus. A policy that measures items reads these sizes and returns true from `NeedsRealize` until they settle.
+`VirtualViewport` gives visible content size, scroll offset, resolved gaps, flex direction and wrap, and mounted items. `Child(index).Size` is the layout size before device-pixel rounding. Use it for measured row offsets. `Measured` is false until current content has a layout. `FocusedChild` contains keyboard focus. Return true from `NeedsRealize` while measurements settle.
 
 Goo calls `NeedsRealize` after each layout and scroll. A true result runs `Realize` again in the same frame, for at most three passes, and then in the next frames.
 
@@ -225,25 +159,22 @@ Set `Blob.LayoutTransition` to a `LayoutTransition(durationMs, easing)` value to
 
 ## Owned image sources
 
-`Image.Source` and `Style.BackgroundImageSource` accept an `ImageSourceProvider`. A source wins over its local image path. Goo preserves the path for a later source removal, but never falls back to it after source failure.
+`Image.Source` and `Style.BackgroundImageSource` accept an `ImageSourceProvider`.
+Source takes precedence over Path. A nonempty `Image.Path` without Source throws
+when mounted. Load local assets with `ImageSourceCache.LoadAsync` and assign Source.
 
-`ImageSource(width, height, pixels)` copies one exact row-major premultiplied-RGBA buffer (`width * height * 4` bytes) into Goo-owned storage. Width and height must be positive. The buffer must be non-null and exactly that length. Disposing the source releases its owner reference while already-mounted leases remain usable until their elements unmount or replace the source.
+See [image loading and ownership](../images.md) for loading, decoding, buffer
+transfer, provider lifetime and memory-pressure behavior.
 
-`ImageSource.Transfer(width, height, pixels, released)` adopts the same validated buffer without copying. A successful call transfers ownership to Goo: the caller must not read, write, or reuse the array until `released` runs. Goo invokes that callback exactly once after it can no longer read the array. The callback may run synchronously during disposal, and its exceptions do not interrupt cleanup. Rejected arguments leave ownership with the caller and do not invoke the callback.
-
-For streaming content, retain one provider identity and publish each frame as a new immutable source with a monotonically increasing `ContentVersion`. Superseded generations may remain alive until their callbacks return their buffers to a bounded producer pool; never mutate an in-flight generation.
-
-Custom providers create one `ImageSourceLease` per mounted binding. Each lease completes once through `Complete(source)` or `Fail()`. Goo releases a replaced or unmounted lease synchronously and raises `Released` exactly once, so providers should cancel outstanding work from that event. Late completion returns `false`; callback exceptions cannot interrupt Goo cleanup. Stable source identity keeps its existing lease, so warm paints do not reacquire or lock provider state.
-
-When one provider source advances versions, Vulkan keeps the last published version renderable until the replacement upload completes, then moves current references and fence-retires the old version. Stale older versions cannot supersede a newer registration. If the configured resident or logical-source budget cannot hold both versions, Goo keeps the last-good version rather than presenting an empty handoff.
+Provider updates keep the last-good version visible until a replacement is ready.
 
 ## Observe mounted element metrics
 
-Subscribe to `ElementHandle.MetricsChanged` on the UI thread. The immutable snapshot contains mounted state, transformed border and content boxes in window logical coordinates, the actual scroll offset, and the maximum legal scroll range.
+Subscribe to `ElementHandle.MetricsChanged` on the UI thread. The immutable snapshot contains `IsMounted`, `BorderBox`, `ContentBox`, `ScrollOffset`, `ScrollRange` and `RawBorderBox`, in that positional deconstruction order. `RawBorderBox` is the transformed layout box before device-pixel snapping. Other boxes describe painted geometry in window logical coordinates.
 
 Goo calls listeners after reconciliation, layout, rect refresh, and scroll stepping settle. Detach produces one final `IsMounted = false` snapshot after tree disposal. A detach followed by reattach in the same update reports only the final mounted state.
 
-Subscription state is sparse. Handles without a listener and ordinary blobs and nodes do not retain metrics state. New handle subscriptions made during metric delivery wait for the next update. Listener changes on an already accepted handle follow ordinary live event behavior.
+A new handle subscribed during metrics delivery waits for the next update. Changes to an accepted handle follow live event behavior.
 
 ## Control scrolling
 
@@ -259,57 +190,20 @@ if let anchor = saved {
 }
 ```
 
-`ScrollToItem(key)` keeps its immediate behavior. The aligned overload and `RestoreAnchor` settle while visible items are measured. Set `settle: false` for one immediate move. Direct scrolling cancels settlement. `ScrollOffsetOf` returns the current measured or estimated target for `ScrollTo` or a consumer animation. `VisibleAnchor` stores the first visible item key and its signed viewport offset.
+`ScrollToItem(key)` moves immediately. The aligned overload and `RestoreAnchor` settle while visible items are measured. Set `settle: false` for one immediate move. Direct scrolling cancels settlement. `ScrollOffsetOf` returns the current measured or estimated target for `ScrollTo` or a consumer animation. `VisibleAnchor` stores the first visible item key and its signed viewport offset.
 `IsScrollSettling` reports whether measurement is still correcting the request.
 
-`ScrollbarVisibility.Auto` shows the built-in Vulkan thumb during wheel, programmatic, or drag interaction and then fades it. `Always` keeps the thumb rendered and draggable without creating idle frame demand. `Hidden` suppresses only the built-in thumb; scrolling and custom scrollbar composition continue working.
+`ScrollbarVisibility.Auto` shows the built-in Vulkan thumb during wheel, programmatic or drag interaction and then fades it. `Always` keeps it visible and draggable without idle frames. `Hidden` hides only the built-in thumb.
 
 A custom thumb can derive content size as viewport size plus scroll range. Its length is `track * viewport / content`, and its position is `(track - thumb) * offset / range`. Use `JumpTo` while dragging so content stays under the pointer.
 
-## Position a custom IME
-
-A focused generic text client can call `ElementHandle.SetTextInputArea` with a finite, non-negative logical-window rectangle. Goo floors the origin, ceils the far edge, and passes cursor offset zero to the native IME. The call returns false for unmounted, unfocused, built-in, closed-window, nonparticipating, or native-IME-unavailable elements. Invalid and out-of-range rectangles throw.
+For custom text clients, see [custom IME positioning](input.md#position-a-custom-ime).
 
 
-## Decode owned image data
-
-Use `ImageSource.Decode(clipboard.Bytes)` for encoded clipboard images, or pass a
-readable `Stream` positioned at the image. Both overloads share the local-file
-loader's PNG, JPEG, and first-frame GIF decoder and validation. Decoding is
-synchronous, so perform expensive decoding in a worker. The stream stays open.
-The optional cancellation token is checked between reads, during validation,
-and before publication.
-
-By default, inputs are limited to 16 MiB encoded data, 8192 pixels per dimension, and 64 MiB
-of decoded premultiplied RGBA pixels. Pass an `ImageDecodeLimits` to change the limits.
-An input that exceeds a limit throws `ImageLimitException`, which gives the source width
-and height when the header had them. Assign the returned source to `Image.Source`.
-The caller owns and disposes the source. Mounted leases keep their pixels alive
-until the image unmounts, even after source disposal. `ImageSourceCache.LoadAsync`
-continues to provide bounded path-based sharing for local assets.
-
-Use `ImageSource.LoadThumbnail(path, maxWidth, maxHeight, cancellationToken)`
-to load a local image on a worker while retaining only bounded pixels. Both
-bounds must be positive. Goo keeps the original aspect ratio, never enlarges
-the image, and area-filters premultiplied RGBA when reducing it. The decoded-byte
-limit applies to the reduced pixels. The source must obey the encoded-byte and
-pixels-per-dimension limits. The caller owns the returned source.
-
-## Set raster density
-
-```gsharp
-Image{Source: logo2x, PixelsPerUnit: 2, Fit: ImageFit.None}
-```
-
-A 128-by-64 source at density 2 measures 64-by-32 logical units.
-`ImageFit.None` uses that logical size. Other fit modes preserve their existing behavior.
-
+For decoding, thumbnails and raster density, see [images](../images.md).
 
 ## `Blob`
 
-Source:
-
-- [`Blob.gs`](../../Goo/Tree/Blob.gs)
 
 Defines the common surface for Goo-owned declarative elements.
 
@@ -463,9 +357,6 @@ Gets a defensive copy of the style properties selected for transitions. All inte
 
 ## `Button`
 
-Source:
-
-- [`Button.gs`](../../Goo/Tree/Button.gs)
 
 Defines a semantic button container with pointer and keyboard activation.
 
@@ -485,9 +376,6 @@ Gets the mutable child list. Read-only lists supplied during initialization are 
 
 ## `Container`
 
-Source:
-
-- [`Container.gs`](../../Goo/Tree/Container.gs)
 
 Defines an element that contains child blobs.
 
@@ -515,9 +403,6 @@ Gets the optional retained measure/arrange policy. Nil uses the normal flex layo
 
 ## `ElementHandle`
 
-Source:
-
-- [`ElementHandle.gs`](../../Goo/Tree/ElementHandle.gs)
 
 Represents a consumer-owned handle for one mounted element. A tree update can move the handle to another element, but cannot attach it to two live elements.
 
@@ -707,9 +592,6 @@ Gets the first visible virtual item's key and signed position inside the viewpor
 
 ## `ElementMetrics`
 
-Source:
-
-- [`ElementHandle.gs`](../../Goo/Tree/ElementHandle.gs)
 
 Describes one stable mounted-element geometry snapshot.
 
@@ -739,9 +621,6 @@ Gets the maximum legal logical scroll offset.
 
 ## `ElementRect`
 
-Source:
-
-- [`ElementHandle.gs`](../../Goo/Tree/ElementHandle.gs)
 
 Represents an axis-aligned rectangle in the requested logical coordinate space.
 
@@ -763,9 +642,6 @@ Gets the vertical origin.
 
 ## `Image`
 
-Source:
-
-- [`Image.gs`](../../Goo/Tree/Image.gs)
 
 Defines a local bitmap image element.
 
@@ -791,9 +667,6 @@ Gets the owned or provider-backed image source. It wins over Path when set.
 
 ## `ImageDecodeLimits`
 
-Source:
-
-- [`ImageDecodeLimits.gs`](../../Goo/Tree/ImageDecodeLimits.gs)
 
 Sets the size limits for one image decode.
 
@@ -819,9 +692,6 @@ Gets the maximum source width and height in pixels. The default is 8192.
 
 ## `ImageDecodeResult`
 
-Source:
-
-- [`ImageDecodeResult.gs`](../../Goo/Tree/ImageDecodeResult.gs)
 
 Contains the owned image on success and a bounded explanation on failure.
 
@@ -839,9 +709,6 @@ Gets the decode outcome.
 
 ## `ImageDecodeStatus`
 
-Source:
-
-- [`ImageDecodeResult.gs`](../../Goo/Tree/ImageDecodeResult.gs)
 
 Describes a strict image decode outcome without hiding unsupported color profiles.
 
@@ -855,18 +722,8 @@ Describes a strict image decode outcome without hiding unsupported color profile
 
 ## `ImageFit`
 
-Source:
-
-- [`Image.gs`](../../Goo/Tree/Image.gs)
 
 Controls how an image fits its destination box.
-
-### Values
-
-- `Contain`
-- `Cover`
-- `Fill`
-- `None`
 
 ### `Contain`
 
@@ -886,9 +743,6 @@ Paints the image at its intrinsic size without scaling.
 
 ## `ImageLimitException`
 
-Source:
-
-- [`ImageDecodeLimits.gs`](../../Goo/Tree/ImageDecodeLimits.gs)
 
 Reports an image that exceeds an ImageDecodeLimits value.
 
@@ -902,18 +756,12 @@ Gets the source pixel width, or 0 when the limit was exceeded before the header 
 
 ## `ImageSource`
 
-Sources:
-
-- [`ImageDecodeResult.gs`](../../Goo/Tree/ImageDecodeResult.gs)
-- [`ImageSource.Decoding.gs`](../../Goo/Tree/ImageSource.Decoding.gs)
-- [`ImageSource.Encoding.gs`](../../Goo/Tree/ImageSource.Encoding.gs)
-- [`ImageSource.gs`](../../Goo/Tree/ImageSource.gs)
 
 Owns one immutable premultiplied RGBA image resource.
 
 ### `ContentChanged`
 
-Occurs when the image content changes.
+Never raised by immutable ImageSource. Satisfies ImageSourceProvider.
 
 ### `new(int32,int32,System.Byte[])`
 
@@ -1014,9 +862,6 @@ Gets this immutable source's pixel width.
 
 ## `ImageSourceCache`
 
-Source:
-
-- [`ImageSourceCache.gs`](../../Goo/Tree/ImageSourceCache.gs)
 
 Loads local PNG, JPEG, and static GIF assets outside painting and shares immutable decoded pixels. Each result is an independently disposable owner. Mounted leases survive both result and cache disposal. Paths are snapshots; create a new cache to reload.
 
@@ -1038,9 +883,6 @@ Loads a local PNG, JPEG, or static GIF with cancellation before reading, during 
 
 ## `ImageSourceLease`
 
-Source:
-
-- [`ImageSource.gs`](../../Goo/Tree/ImageSource.gs)
 
 Owns one provider result while it is mounted by Goo.
 
@@ -1084,9 +926,6 @@ Gets whether this binding completed without an image.
 
 ## `ImageSourceProvider`
 
-Source:
-
-- [`ImageSource.gs`](../../Goo/Tree/ImageSource.gs)
 
 Supplies one image binding when a Goo element mounts.
 
@@ -1104,11 +943,8 @@ Gets the content version used to invalidate mounted image bindings.
 
 ## `Portal`
 
-Source:
 
-- [`Portal.gs`](../../Goo/Tree/Portal.gs)
-
-Defines a logical child subtree that is laid out against the window viewport and presented in its Window's shared overlay after the normal tree. The subtree retains its declaration-site ownership, event route, Cell lifecycle, focus, and accessibility relationships. An optional Anchor changes only its border-box placement, not that logical ownership.
+Presents a logical child subtree in the window overlay while retaining declaration-site ownership.
 
 ### `new`
 
@@ -1122,7 +958,7 @@ Adds a child for mixed composite initialization. Siblings can mix keyed and unke
 
 ### `Anchor`
 
-Gets the optional mounted element whose transformed border box positions this Portal. When set, an unmounted, hidden, wrong-Window, descendant, or cyclic anchor suppresses the Portal. An unset Anchor keeps ordinary window-level Portal positioning.
+Gets the mounted anchor handle. Invalid anchor relationships suppress presentation.
 
 ### `AnchorRect`
 
@@ -1130,38 +966,20 @@ Gets a rectangle within Anchor's local border-box coordinates. Nil uses the whol
 
 ### `CollisionBounds`
 
-Gets the collision rectangle in window logical coordinates. Nil uses the whole viewport. After choosing a side, Goo caps the main-axis size to the space between AnchorRect and these bounds, then shifts the cross axis to fit. Values must be finite and dimensions nonnegative.
+Gets collision bounds in window logical coordinates. Nil uses the viewport. Values are finite and sizes nonnegative.
 
 ### `HideWhenAnchorClipped`
 
-Hides presentation when AnchorRect is fully outside the anchor's ancestor clips. The default is false. Hiding preserves the mounted subtree, focus and text composition.
+Hides presentation when AnchorRect is fully clipped by the anchor's ancestors. Content stays mounted. Defaults to false.
 
 ### `Placement`
 
-Gets the preferred side and alignment used when Anchor is mounted in this Window. Goo keeps this side when the popup fits, otherwise flips when the opposite side has more space. It caps the main-axis size without covering AnchorRect and shifts the cross axis into the collision bounds. The default is BottomStart.
+Gets the preferred side and alignment. Defaults to BottomStart. Placement flips and clamps to collision bounds.
 
 ## `PortalPlacement`
 
-Source:
-
-- [`Portal.gs`](../../Goo/Tree/Portal.gs)
 
 Specifies the preferred side and alignment of an anchored Portal before automatic edge flipping and viewport containment.
-
-### Values
-
-- `BottomStart`
-- `Bottom`
-- `BottomEnd`
-- `TopStart`
-- `Top`
-- `TopEnd`
-- `RightStart`
-- `Right`
-- `RightEnd`
-- `LeftStart`
-- `Left`
-- `LeftEnd`
 
 ### `Bottom`
 
@@ -1213,9 +1031,6 @@ Places the Portal above its anchor and aligns their inline-start edges.
 
 ## `ScrollAlignment`
 
-Source:
-
-- [`Virtual.gs`](../../Goo/Tree/Virtual.gs)
 
 Selects an item's alignment in the viewport.
 
@@ -1227,9 +1042,6 @@ Selects an item's alignment in the viewport.
 
 ## `Text`
 
-Source:
-
-- [`Text.gs`](../../Goo/Tree/Text.gs)
 
 Defines a text element.
 
@@ -1253,9 +1065,6 @@ Gets ordered passive inline styles in UTF-16 source offsets. A cluster uses the 
 
 ## `TextCoordinateSpace`
 
-Source:
-
-- [`ElementHandle.gs`](../../Goo/Tree/ElementHandle.gs)
 
 Specifies the coordinate space used by mounted text geometry queries.
 
@@ -1267,9 +1076,6 @@ Specifies the coordinate space used by mounted text geometry queries.
 
 ## `TextEditor`
 
-Source:
-
-- [`TextEditor.gs`](../../Goo/Tree/TextEditor.gs)
 
 Defines a retained multiline text editor.
 
@@ -1344,9 +1150,6 @@ Gets whether logical line numbers are shown outside the document.
 
 ## `TextEntry`
 
-Source:
-
-- [`TextEntry.gs`](../../Goo/Tree/TextEntry.gs)
 
 Defines an editable single-line text element.
 
@@ -1396,11 +1199,8 @@ Gets the value used while unfocused, or also while focused when Controlled is tr
 
 ## `Virtual`
 
-Source:
 
-- [`Virtual.gs`](../../Goo/Tree/Virtual.gs)
-
-Defines a scrolling element that takes its children from a VirtualSource and mounts only the items that the source places. Items use content coordinates: the origin is the start of the content box at scroll offset zero, so a scroll offset is also the content coordinate at the start of the viewport. The element has the list role and each item has the list item role. With another role, or with Accessibility set to nil, items have no role and the content of each item gets the item position.
+Mounts the items placed by a VirtualSource. It scrolls content coordinates. Overriding the list role or clearing Accessibility forwards item position to content.
 
 ### `new(VirtualSource)`
 
@@ -1410,9 +1210,6 @@ Initializes a list element that scrolls on both axes.
 
 ## `VirtualChild`
 
-Source:
-
-- [`Virtual.gs`](../../Goo/Tree/Virtual.gs)
 
 Describes a mounted item of a Virtual element.
 
@@ -1430,9 +1227,6 @@ Gets the size of the item from its last layout, before rounding to device pixels
 
 ## `VirtualItem`
 
-Source:
-
-- [`Virtual.gs`](../../Goo/Tree/Virtual.gs)
 
 Places one item of a Virtual element.
 
@@ -1466,9 +1260,6 @@ Gets the vertical content coordinate.
 
 ## `VirtualOutput`
 
-Source:
-
-- [`Virtual.gs`](../../Goo/Tree/Virtual.gs)
 
 Receives the result of a VirtualState.Realize call. Access outside that call throws.
 
@@ -1496,9 +1287,6 @@ Gets or sets the scroll offset to apply together with the items. Nil keeps the c
 
 ## `VirtualScrollAnchor`
 
-Source:
-
-- [`Virtual.gs`](../../Goo/Tree/Virtual.gs)
 
 Stores a visible virtual item's key and signed position inside the viewport.
 
@@ -1512,9 +1300,6 @@ Gets the item's position relative to the viewport origin.
 
 ## `VirtualSource`
 
-Source:
-
-- [`Virtual.gs`](../../Goo/Tree/Virtual.gs)
 
 Supplies the inputs of one build of a Virtual element. Implementations must be immutable.
 
@@ -1528,9 +1313,6 @@ Returns: current with the inputs of this source pending when it can continue fro
 
 ## `VirtualState`
 
-Source:
-
-- [`Virtual.gs`](../../Goo/Tree/Virtual.gs)
 
 Places the items of one mounted Virtual element. Goo retains one state for each element.
 
@@ -1581,9 +1363,6 @@ Adds each item to mount and sets the content size. All changes, including the in
 
 ## `VirtualViewport`
 
-Source:
-
-- [`Virtual.gs`](../../Goo/Tree/Virtual.gs)
 
 Describes a Virtual element to its state. Access outside the call that receives it throws.
 

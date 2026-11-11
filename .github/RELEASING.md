@@ -1,11 +1,9 @@
 # Releasing Goo
 
-Releases are milestones approved by the repository owner. Merged fixes and
-consumer requests do not trigger a release. Before approval, present the milestone
-contents, regression evidence and open known issues. Do not open a release PR,
-bump a version, tag or publish until the owner approves the milestone.
+The repository owner must approve the milestone, regression evidence and known issues.
+Before approval, do not open a release PR, bump versions, tag or publish.
 
-After approval, use the following checks and release steps.
+After approval, use this command sequence:
 
 ```sh
 dotnet run --project tools/Goo.Repo -- doctor
@@ -40,10 +38,9 @@ NuGet version.
    to synchronize release versions, join `changelog.d/*.md` into the dated
    `CHANGELOG.md` section and delete the joined fragments. The tag workflow uses
    that section as the GitHub Release notes.
-4. Run the Goo.Repo commands above. Android docs need the installed Android
-   workload, `ANDROID_HOME` and `JAVA_HOME`. Docs commands do not install workloads.
-   If Android tooling is unavailable and no Android API changed, use the CI
-   Android job's `check docs-android` gate instead of local Android docs generation.
+4. Run the command sequence above. Android docs need the installed workload,
+   `ANDROID_HOME` and `JAVA_HOME`. Commands do not install workloads.
+   If tooling is unavailable and no Android API changed, use CI's `check docs-android`.
 5. Commit generated docs with source changes, as for every PR.
 6. Merge the release PR. Require green CI on the exact merge commit.
 7. Check the release-candidates and android-package artifacts. Confirm all package,

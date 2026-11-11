@@ -1,14 +1,11 @@
 # Images API
 
-Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
-
 Source: [`Goo/Images`](https://github.com/obselate/goo/tree/main/Goo/Images)
+
+See [image loading](../images.md) and [owned sources](tree.md#owned-image-sources).
 
 ## `ImageAssetResult`
 
-Source:
-
-- [`ImageVariants.gs`](https://github.com/obselate/goo/blob/main/Goo/Images/ImageVariants.gs)
 
 Contains an independently disposable image owner and its selected density on success.
 
@@ -30,9 +27,6 @@ Gets the load outcome.
 
 ## `ImageAssetStatus`
 
-Source:
-
-- [`ImageVariants.gs`](https://github.com/obselate/goo/blob/main/Goo/Images/ImageVariants.gs)
 
 Distinguishes a loaded variant from unavailable metrics, cancellation and file or decoder failures.
 
@@ -49,9 +43,6 @@ Distinguishes a loaded variant from unavailable metrics, cancellation and file o
 
 ## `ImageVariant`
 
-Source:
-
-- [`ImageVariants.gs`](https://github.com/obselate/goo/blob/main/Goo/Images/ImageVariants.gs)
 
 Identifies one local image and the number of source pixels per logical unit.
 
@@ -72,9 +63,6 @@ Gets the positive finite source pixel density.
 
 ## `ImageVariants`
 
-Source:
-
-- [`ImageVariants.gs`](https://github.com/obselate/goo/blob/main/Goo/Images/ImageVariants.gs)
 
 Selects and caches explicit local raster variants from stable window metrics.
 

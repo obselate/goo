@@ -1,14 +1,12 @@
 # Rendering API
 
-Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
-
 Source: [`Goo/Rendering`](https://github.com/obselate/goo/tree/main/Goo/Rendering)
 
 ## Color and compositing
 
 Compositing, gradients and image samples use premultiplied display-encoded sRGB channels in UNORM attachments. Alpha is linear coverage.
 
-Vulkan surfaces keep the `SRGB_NONLINEAR` color-space tag. Goo uses an advertised UNORM format or a compatible UNORM view through `VK_KHR_swapchain_mutable_format`. Startup fails if neither is available. Goo does not fall back to linear-light blending.
+Vulkan startup requires a compatible UNORM surface. Goo does not use linear-light blending.
 
 ## Apply fragment shaders to retained elements
 
@@ -57,9 +55,9 @@ Add the source to the G# project:
 </ItemGroup>
 ```
 
-Build requires [Slang 2026.16](https://github.com/shader-slang/slang/releases/tag/v2026.16) through `SLANG_SDK` or `PATH` and SPIRV-Tools 2026.3 from [Vulkan SDK 1.4.357.0](https://vulkan.lunarg.com/sdk/home) through `VULKAN_SDK` or `PATH`. Goo compiles and validates the source during the build, writes deterministic intermediates under `obj`, and copies `Shaders/glass.goo-effect` plus `Shaders/glass.goo-effect.json` provenance to build and publish output. The program container can carry separate artifacts for multiple rendering backends. The current compiler emits Vulkan SPIR-V. Set `TargetPath` on `GooShaderEffect` to override the relative output path. Unchanged inputs skip compilation. Tool-version mismatches, compiler errors, validation errors, ABI mismatches, and unsupported capabilities fail the build.
+Use the shader toolchain in [platform preflight](../platform-preflight.md#custom-shaders). Build validates the source and copies the `.goo-effect` sidecar to build and publish output. `TargetPath` overrides its relative output path. Invalid sources fail the build.
 
-The fixed ABI binds the isolated source at set 0, the optional backdrop at set 1, Goo primitive data at set 2, Goo clip data at set 3, optional retained effect data at set 4, and eight `vec4` values in a 128-byte fragment push block. `uv` is normalized to the visible element bounds. `source`, `backdrop` and returned colors use premultiplied display-encoded sRGB channels. Alpha is linear coverage. Images and render attachments use UNORM storage. Samples do not decode RGB. Mix authored sRGB tint values directly with sampled RGB. Source-independent effects return encoded RGB too. Goo applies retained clip coverage and element opacity after `gooEffect`. Set `backdropOutset` to the largest displacement or filter radius the shader needs beyond those bounds. When backdrop sampling is disabled, the backdrop argument aliases the source and Goo skips the target copy.
+`uv` is normalized to visible element bounds. Inputs and output use premultiplied encoded sRGB. Mix authored sRGB colors directly with samples. Goo applies clip coverage and opacity afterward. Set `backdropOutset` to the largest filter radius or displacement. Without backdrop sampling, `backdrop` aliases `source`.
 
 Each `ShaderEffectData` publication is a complete replacement. The constructor and `Publish` copy bytes. `Transfer` and `PublishTransferred` take array ownership and invoke the supplied callback after Goo no longer reads that publication. Each source is limited to 16 MiB, each compiled scene frame is limited to 64 MiB of effect data, and unchanged retained versions reuse the existing upload. Goo recreates device-local data from the retained publication after device recovery.
 
@@ -67,21 +65,15 @@ The generic `Publish[T]` overload accepts `ReadOnlySpan[T]` for unmanaged elemen
 
 Use `<GooShaderEffect Include="Shaders/field.slang" SourceIndependent="true" />` for a generator that replaces the element's visual subtree without sampling it. Its `source` and `backdrop` arguments are zero, and source/backdrop texture descriptors are unavailable. Goo draws it directly into the current target while retaining layout, input, accessibility, transforms, opacity and clipping. The artifact records this mode, and constructing a generator with backdrop sampling enabled throws. Group opacity and non-normal blending can still require an isolation layer. This removes the otherwise unused source capture pass, not every possible offscreen pass.
 
-The compiled program stays a sidecar asset in JIT and NativeAOT builds. Goo packages the build adapter, but neither the adapter, authoring modules, nor compiler toolchains are copied to application output. Goo does not invoke a runtime shader compiler. The first use creates a backend pipeline in a device-generation cache. Warm parameter updates reuse that pipeline and the retained layer pool. One target format supports up to 32 distinct effect program identities per device generation. A non-normal `BlendMode` cannot share the same element with an ordinary source-sampling `ShaderEffect`.
+The compiled program remains a sidecar asset in JIT and NativeAOT output. Compiler tools are not shipped or run at runtime. A target format permits 32 effect program identities per device generation. A non-normal `BlendMode` cannot share an element with a source-sampling `ShaderEffect`.
 
 ## Gradient stops
 
-Linear and radial gradients accept two or more ordered stops, including repeated
-positions for hard color edges. There is no fixed four-stop limit. Larger stop
-lists use Goo-owned GPU storage and remain a single gradient draw; device storage
-limits still apply. Interpolation uses premultiplied encoded sRGB color, including
-per-stop alpha and element opacity.
+Gradients accept two or more ordered stops. Repeated offsets create hard edges.
+Interpolation uses premultiplied encoded sRGB, including stop alpha and element opacity.
 
 ## `ExternalFrameDescription`
 
-Source:
-
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ExternalImage.Types.gs)
 
 Describes visible source pixels. Orientation uses EXIF values 1 through 8.
 
@@ -115,9 +107,6 @@ Gets the crop top edge in pixels.
 
 ## `ExternalFrameResult`
 
-Source:
-
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ExternalImage.Types.gs)
 
 Reports the end of a frame lease. Wait the returned dependency before reuse.
 
@@ -135,9 +124,6 @@ Gets the synchronization value for the returned handle, when present.
 
 ## `ExternalFrameStatus`
 
-Source:
-
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ExternalImage.Types.gs)
 
 Reports the end of a frame read lease.
 
@@ -150,9 +136,6 @@ Reports the end of a frame read lease.
 
 ## `ExternalImage`
 
-Source:
-
-- [`ExternalImage.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ExternalImage.gs)
 
 Owns one imported GPU allocation. Dispose retires it after its last frame lease.
 
@@ -170,9 +153,6 @@ Gets the allocation width in pixels.
 
 ## `ExternalImageAlphaMode`
 
-Source:
-
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ExternalImage.Types.gs)
 
 Identifies source alpha storage.
 
@@ -183,9 +163,6 @@ Identifies source alpha storage.
 
 ## `ExternalImageColorEncoding`
 
-Source:
-
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ExternalImage.Types.gs)
 
 Identifies the source sample encoding.
 
@@ -196,9 +173,6 @@ Identifies the source sample encoding.
 
 ## `ExternalImageHandleKind`
 
-Source:
-
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ExternalImage.Types.gs)
 
 Identifies an exported Vulkan memory handle.
 
@@ -212,9 +186,6 @@ Identifies an exported Vulkan memory handle.
 
 ## `ExternalImagePlane`
 
-Source:
-
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ExternalImage.Types.gs)
 
 Describes one explicit memory plane.
 
@@ -228,9 +199,6 @@ Gets the row stride in bytes.
 
 ## `ExternalImageResult`
 
-Source:
-
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ExternalImage.Types.gs)
 
 Reports an external image import.
 
@@ -248,11 +216,6 @@ Gets the import status.
 
 ## `ExternalImageSession`
 
-Sources:
-
-- [`ExternalImageSession.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ExternalImageSession.gs)
-- [`ExternalImageSession.Metal.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/Vulkan/ExternalImageSession.Metal.gs)
-- [`ExternalImageSession.Vulkan.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/Vulkan/ExternalImageSession.Vulkan.gs)
 
 Imports GPU images for one device generation. Open, import and Dispose require the window owner thread.
 
@@ -329,9 +292,6 @@ Gets Windows adapter identity, or nil when the driver does not expose a LUID.
 
 ## `ExternalImageSessionResult`
 
-Source:
-
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ExternalImage.Types.gs)
 
 Reports opening an external image session.
 
@@ -349,9 +309,6 @@ Gets the session status.
 
 ## `ExternalImageSource`
 
-Source:
-
-- [`ExternalImage.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ExternalImage.gs)
 
 Supplies a bounded latest external frame to Image.Source. Callbacks run on the session window owner thread.
 
@@ -386,9 +343,6 @@ Gets the nonzero publication version.
 
 ## `ExternalImageStatus`
 
-Source:
-
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ExternalImage.Types.gs)
 
 Reports external image operations.
 
@@ -407,9 +361,6 @@ Reports external image operations.
 
 ## `ExternalImageSync`
 
-Source:
-
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ExternalImage.Types.gs)
 
 Describes borrowed producer synchronization. AlreadyComplete requires producer completion before Publish.
 
@@ -443,9 +394,6 @@ Gets the required timeline value.
 
 ## `ExternalImageSyncKind`
 
-Source:
-
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ExternalImage.Types.gs)
 
 Identifies a producer completion dependency.
 
@@ -460,9 +408,6 @@ Identifies a producer completion dependency.
 
 ## `ExternalImageWindowsDevice`
 
-Source:
-
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ExternalImage.Types.gs)
 
 Identifies a Windows adapter for a D3D external image producer.
 
@@ -476,9 +421,6 @@ Gets the physical device node mask.
 
 ## `ImageColorProfile`
 
-Source:
-
-- [`ImageColorProfile.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ImageColorProfile.gs)
 
 Converts consumer-decoded straight RGBA samples from bounded ICC profiles to SDR sRGB.
 
@@ -495,25 +437,16 @@ Returns: Success, InvalidData, Unsupported for LUT or incompatible profiles, or 
 
 ## `OffscreenRenderOptions`
 
-Source:
-
-- [`OffscreenRender.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/OffscreenRender.gs)
 
 Specifies LogicalWidth, LogicalHeight, PixelWidth, PixelHeight, Background and the MaxBytes allocation limit.
 
 ## `OffscreenRenderResult`
 
-Source:
-
-- [`OffscreenRender.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/OffscreenRender.gs)
 
 Contains Status, owned Capture pixels on Success and Error detail on failure.
 
 ## `OffscreenRenderSession`
 
-Source:
-
-- [`OffscreenRenderSession.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/OffscreenRenderSession.gs)
 
 Holds a shared renderer alive without owning a native presentation surface. Create, render, service and dispose it on the creating thread. Service while awaiting page completion.
 
@@ -529,7 +462,7 @@ Cancels pending pages, waits for safe GPU cleanup and releases this session's ru
 
 ### `RenderAsync(Cell,OffscreenRenderOptions,System.Threading.CancellationToken,WindowCapture)`
 
-Renders a fresh page. The session remains usable while its source window has no presentation surface.
+Renders a fresh page at the logical-to-pixel render scale, including fractional scales. The session remains usable without its source window's presentation surface. Failed results retain the error detail.
 
 - `root`: Independent, unattached page content.
 - `options`: Logical viewport, output pixels, background and allocation limit.
@@ -544,17 +477,11 @@ Consumes completed GPU work and starts a queued page without presenting a native
 
 ## `OffscreenRenderSessionResult`
 
-Source:
-
-- [`OffscreenRenderSession.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/OffscreenRenderSession.gs)
 
 Contains Status, a Session on Success and Error detail on failure.
 
 ## `OffscreenRenderStatus`
 
-Source:
-
-- [`OffscreenRender.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/OffscreenRender.gs)
 
 Reports an independent render operation without exposing GPU resource handles.
 
@@ -571,9 +498,6 @@ Reports an independent render operation without exposing GPU resource handles.
 
 ## `ShaderEffect`
 
-Source:
-
-- [`ShaderEffect.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ShaderEffect.gs)
 
 Owns retained parameter state for one backend-neutral shader effect program.
 
@@ -584,7 +508,7 @@ Creates a retained fragment effect with optional bounded backdrop sampling.
 - `program`: The compiled shader effect program.
 - `samplesBackdrop`: Whether Goo copies the existing target behind the element for shader sampling.
 - `backdropOutset`: The finite nonnegative logical-pixel distance captured around the element, up to 256.
-- `backdropBlur`: The Gaussian standard deviation in logical pixels. Positive values prefilter the backdrop at quarter resolution and capture at least three standard deviations around the element.
+- `backdropBlur`: The finite Gaussian standard deviation in logical pixels, from 0 through 256/3. Nonzero blur requires samplesBackdrop. Positive values prefilter at quarter resolution and capture at least three standard deviations around the element.
 
 ### `SetData(int32,ShaderEffectData)`
 
@@ -614,9 +538,6 @@ Gets or sets whether Goo advances ElapsedSeconds and renders attached effects co
 
 ## `ShaderEffectData`
 
-Source:
-
-- [`ShaderEffectData.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ShaderEffectData.gs)
 
 Owns one retained byte sequence for ShaderEffect data inputs.
 
@@ -673,9 +594,6 @@ Gets whether this source has released its current publication.
 
 ## `ShaderEffectProgram`
 
-Source:
-
-- [`ShaderEffectProgram.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ShaderEffectProgram.gs)
 
 Owns one immutable compiled shader effect program with backend-specific artifacts.
 
@@ -696,9 +614,6 @@ Returns: The immutable compiled program.
 
 ## `TextAffinity`
 
-Source:
-
-- [`TextMetrics.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/TextMetrics.gs)
 
 Specifies the visual side of a text position at a directional boundary.
 
@@ -709,9 +624,6 @@ Specifies the visual side of a text position at a directional boundary.
 
 ## `VectorAsset`
 
-Source:
-
-- [`VectorAsset.Render.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/VectorAsset.Render.gs)
 
 Owns an immutable vector document shared by authored and runtime SVG assets.
 
@@ -781,9 +693,6 @@ Gets the view-box y origin.
 
 ## `VulkanDrivers`
 
-Source:
-
-- [`VulkanDrivers.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/Vulkan/VulkanDrivers.gs)
 
 Configures additional Vulkan drivers for the process.
 
@@ -797,9 +706,6 @@ Gets or sets whether only Direct drivers are enumerated on Windows. Set this bef
 
 ## `VulkanExternalImageDescription`
 
-Source:
-
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/main/Goo/Rendering/ExternalImage.Types.gs)
 
 Describes a borrowed exportable 2D Vulkan allocation. Goo duplicates Memory before import.
 

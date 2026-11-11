@@ -1,6 +1,7 @@
 package Goo.PluginMcp
 
 import System
+import System.Collections.Concurrent
 import System.Collections.Generic
 import System.Diagnostics
 import System.IO
@@ -12,6 +13,11 @@ import System.Text.Json.Nodes
 import System.Text.RegularExpressions
 
 partial class GooServer {
+    private data class IndexedAssets(Modified int64, Length int64, Value JsonNode) { }
+    private let Assets ConcurrentDictionary[string, IndexedAssets] = ConcurrentDictionary[string, IndexedAssets](
+        StringComparer.Ordinal
+    )
+
     func Source(repository string) string {
         let chosen = if repository != "" {
             repository
@@ -34,9 +40,15 @@ partial class GooServer {
             return Manifest["files"]!!.AsObject().Select(x -> x.Key).Order(StringComparer.Ordinal).ToArray()
         }
         let paths = List[string](){
-            "README.md",
-            "CONTRIBUTING.md",
-            "docs/native-authoring.md",
+            "docs/svg.md",
+            "docs/shipping.md",
+            "docs/platform-preflight.md",
+            "docs/android.md",
+            "docs/images.md",
+            "docs/interop.md",
+            "docs/devtools/README.md",
+            "docs/devtools/cli.md",
+            "docs/devtools/protocol.md",
             "templates/Goo.Templates/content/Program.gs",
             "templates/Goo.Templates/content/GooStarter.gsproj",
             "templates/Goo.Templates/content/global.json",
@@ -44,7 +56,7 @@ partial class GooServer {
             "templates/Goo.Templates/content/Properties/PublishProfiles/NativeAot.pubxml",
             "templates/Goo.Templates/content/Properties/PublishProfiles/Trimmed.pubxml"
         }
-        for directory in[]string{"docs/api", "docs/devtools"} {
+        for directory in[]string{"docs/api"} {
             let path = Path.Combine(root, directory)
             if Directory.Exists(path) {
                 paths.AddRange(
@@ -55,14 +67,147 @@ partial class GooServer {
         return paths.Where(x -> File.Exists(Path.Combine(root, x))).Order(StringComparer.Ordinal).ToArray()
     }
 
-    func Document(root string, path string) string {
-        Require(Documents(root).Contains(path), "Unknown document. Use goo_context to list document paths.")
+    func Document(root string, path string, documents[]string) string {
+        Require(documents.Contains(path), "Unknown document. Use goo_context to list document paths.")
         let target = Resolve(Path.Combine(root, path))
         Require(
             target.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal),
             "Document resolves outside the selected source root"
         )
         return target
+    }
+
+    func PackageDocuments(project string) Dictionary[string, string] {
+        let result = Dictionary[string, string](StringComparer.Ordinal)
+        var assets JsonNode? = nil
+        if project != "" {
+            let selected = Resolve(project)
+            let directory = if Directory.Exists(selected) {
+                selected
+            } else {
+                Path.GetDirectoryName(selected)!!
+            }
+            let path = Path.Combine(directory, "obj/project.assets.json")
+            Require(File.Exists(path), "Restore the selected project before reading package API documentation.")
+            let file = FileInfo(path)
+            if Assets.TryGetValue(path, out var cached) &&
+                cached.Modified == file
+                .LastWriteTimeUtc
+                .Ticks &&
+                cached.Length == file.Length {
+                assets = cached.Value
+            } else {
+                assets = JsonNode.Parse(File.ReadAllText(path))!!
+                Assets[path] = IndexedAssets(file.LastWriteTimeUtc.Ticks, file.Length, assets)
+            }
+        }
+        let cache = Environment.GetEnvironmentVariable("NUGET_PACKAGES") ?? Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            ".nuget/packages"
+        )
+        for name in[]string{"Goo.Widgets", "Goo.Animations"} {
+            if assets != nil {
+                for library in assets["libraries"]!!.AsObject().Where(
+                    x -> x.Key.StartsWith(name + "/", StringComparison.OrdinalIgnoreCase)
+                ) {
+                    for folder in assets["packageFolders"]!!.AsObject() {
+                        let directory = Path.Combine(folder.Key, S(library.Value, "path"))
+                        for target in assets["targets"]!!.AsObject() {
+                            let references = target.Value[library.Key]?["compile"] as JsonObject
+                            if references == nil {
+                                continue
+                            }
+                            for reference in references {
+                                let relative = Path.ChangeExtension(reference.Key, ".xml")
+                                let filename = Path.Combine(directory, relative)
+                                if Path.GetFileName(filename) == name + ".xml" && File.Exists(filename) {
+                                    result["packages/" + library.Key + "/" + relative] = filename
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                let directory = Path.Combine(cache, name.ToLowerInvariant())
+                if !Directory.Exists(directory) {
+                    continue
+                }
+                let version = Directory
+                    .GetDirectories(directory)
+                    .Where(
+                    x -> System.Version.TryParse(Path.GetFileName(x).Split('+')[0].Split('-')[0], out var parsed)
+                )
+                    .OrderByDescending(
+                    x -> Path.GetFileName(x),
+                    Comparer[string].Create((left, right) -> ComparePackageVersions(left, right))
+                )
+                    .FirstOrDefault()
+                if version == nil || !Directory.Exists(Path.Combine(version, "lib")) {
+                    continue
+                }
+                let filename = Directory
+                    .GetFiles(Path.Combine(version, "lib"), name + ".xml", SearchOption.AllDirectories)
+                    .Order(StringComparer.Ordinal)
+                    .LastOrDefault()
+                if filename != nil {
+                    result[
+                        "packages/" + name + "/" + Path.GetFileName(version) + "/" + Path.GetRelativePath(
+                            version,
+                            filename
+                        )
+                            .Replace('\\', '/')
+                    ] = filename
+                }
+            }
+        }
+        return result
+    }
+
+    func ComparePackageVersions(left string, right string) int32 {
+        let a = left.Split('+')[0].Split('-', 2)
+        let b = right.Split('+')[0].Split('-', 2)
+        let version = System.Version.Parse(a[0]).CompareTo(System.Version.Parse(b[0]))
+        if version != 0 {
+            return version
+        }
+        if a.Length != b.Length {
+            return b.Length.CompareTo(a.Length)
+        }
+        if a.Length == 1 {
+            return 0
+        }
+        let first = a[1].Split('.')
+        let second = b[1].Split('.')
+        for index in 0 ... Math.Min(first.Length, second.Length) {
+            let firstNumeric = uint64.TryParse(first[index], out var firstNumber)
+            let secondNumeric = uint64.TryParse(second[index], out var secondNumber)
+            let order = if firstNumeric && secondNumeric {
+                firstNumber.CompareTo(secondNumber)
+            } else if firstNumeric != secondNumeric {
+                secondNumeric.CompareTo(firstNumeric)
+            } else {
+                StringComparer.OrdinalIgnoreCase.Compare(first[index], second[index])
+            }
+            if order != 0 {
+                return order
+            }
+        }
+        return first.Length.CompareTo(second.Length)
+    }
+
+    func PackageStatus(packages Dictionary[string, string]) JsonObject {
+        let result = JsonObject()
+        for name in[]string{"Goo.Widgets", "Goo.Animations"} {
+            let path = packages.Keys.FirstOrDefault(
+                x -> x.StartsWith("packages/" + name + "/", StringComparison.OrdinalIgnoreCase)
+            )
+            result[name] = if path != nil {
+                JsonValue.Create(path.Split('/')[2])
+            } else {
+                JsonValue.Create("unavailable")
+            }
+        }
+        return result
     }
 
     func Provenance(root string) JsonObject {
@@ -80,7 +225,7 @@ partial class GooServer {
             return JsonObject(){
                 ["kind"] = "bundle",
                 ["repository"] = Manifest["repository"]?.DeepClone(),
-                ["files"] = Manifest["files"]?.DeepClone(),
+                ["bundleHash"] = Hash(File.ReadAllBytes(Path.Combine(Bundle, "manifest.json"))),
                 ["dirty"] = false,
                 ["compilerVersion"] = compiler
             }
@@ -187,20 +332,97 @@ partial class GooServer {
     }
 
     func Read(a JsonObject) JsonObject {
+        let root = Source(S(a, "repository"))
+        let path = S(a, "path")
+        let documents = Documents(root)
+        let packages = PackageDocuments(S(a, "project"))
+        let filename = if packages.TryGetValue(path, out var packageFile) {
+            packageFile
+        } else {
+            Document(root, path, documents)
+        }
+        let units = Units(path, filename)
+        let id = S(a, "section_id")
         let line = I(a, "line")
         let count = I(a, "count")
-        Require(line >= 1 && count >= 1 && count <= 240, "line must be positive and count must be 1-240")
-        let root = Source(S(a, "repository"))
-        let data = File.ReadAllBytes(Document(root, S(a, "path")))
-        let lines = Lines(Encoding.UTF8.GetString(data))
-        return JsonObject(){
-            ["source"] = root,
-            ["path"] = S(a, "path"),
-            ["sha256"] = Hash(data),
-            ["totalLines"] = lines.Length,
-            ["line"] = line,
-            ["text"] = string.Join("\n", lines.Skip(int32(line) - 1).Take(int32(count)))
+        let offset = I(a, "offset")
+        let cap = I(a, "max_bytes")
+        Require(
+            line >= 1 && count >= 0 && count <= 240 && offset >= 0 && cap >= 64 && cap <= 16000,
+            "Use a positive line, count 0-240, nonnegative offset and max_bytes 64-16000"
+        )
+        let unit = if id != "" {
+            units.FirstOrDefault(x -> x.Id == id)
+        } else {
+            units.LastOrDefault(x -> x.Start <= line)
         }
+        Require(unit != nil, "Unknown or stale section_id. Search the selected source again.")
+        let selected = unit
+        let text = if count > 0 {
+            string.Join(
+                "\n",
+                Lines(Encoding.UTF8.GetString(File.ReadAllBytes(filename))).Skip(int32(line) - 1).Take(int32(count))
+            )
+        } else {
+            (
+                if selected.Parent != "" {
+                    selected.Parent + "\n\n"
+                } else {
+                    ""
+                }
+            ) +
+                selected.Text
+        }
+        Require(offset <= text.Length, "offset exceeds the selected unit")
+        var end = int32(offset)
+        var used = 0
+        while end < text.Length {
+            let length = if char.IsHighSurrogate(text[end]) && end + 1 < text.Length {
+                2
+            } else {
+                1
+            }
+            let size = Encoding.UTF8.GetByteCount(text.AsSpan(end, length))
+            if used + size > cap {
+                break
+            }
+            used += size
+            end += length
+        }
+        let result = JsonObject(){
+            ["source"] = root,
+            ["path"] = path,
+            ["sha256"] = selected.Hash,
+            ["section_id"] = selected.Id,
+            ["section"] = selected.Heading,
+            ["totalLines"] = units.Max(x -> x.End),
+            ["line"] = if count > 0 {
+                line
+            } else {
+                int64(selected.Start)
+            },
+            ["endLine"] = if count > 0 {
+                Math.Min(line + count - 1, int64(units.Max(x -> x.End)))
+            } else {
+                int64(selected.End)
+            },
+            ["text"] = text.Substring(int32(offset), end - int32(offset)),
+            ["complete"] = end == text.Length,
+            ["continuation"] = if end < text.Length {
+                JsonObject(){["section_id"] = selected.Id, ["offset"] = end, ["line"] = line, ["count"] = count}
+            } else {
+                nil
+            },
+            ["bytes"] = used
+        }
+        let assembly = Path.ChangeExtension(filename, ".dll")
+        if path.EndsWith(".xml") && File.Exists(assembly) {
+            result["assembly"] = JsonObject(){
+                ["path"] = Path.ChangeExtension(path, ".dll"),
+                ["sha256"] = Index[filename].AssemblyHash
+            }
+        }
+        return result
     }
 
     func Starter(a JsonObject) JsonObject {
@@ -210,6 +432,7 @@ partial class GooServer {
             "Use a simple identifier starting with an ASCII letter, up to 64 characters"
         )
         let root = Source(S(a, "repository"))
+        let documents = Documents(root)
         let files = JsonObject()
         let sourceFiles = JsonObject()
         for filename in[]string{
@@ -221,7 +444,7 @@ partial class GooServer {
             "Properties/PublishProfiles/Trimmed.pubxml"
         } {
             let relative = "templates/Goo.Templates/content/" + filename
-            let template = Document(root, relative)
+            let template = Document(root, relative, documents)
             let content = File.ReadAllText(template)
             sourceFiles[relative] = Hash(File.ReadAllBytes(template))
             files[filename.Replace("GooStarter", name)] = content.Replace("goostarter", name.ToLowerInvariant())

@@ -114,33 +114,50 @@ shared class Verify {
         let provenance = bundled["provenance"]!!
         Check(S(provenance, "kind") == "bundle", bundled)
         Check(B(bundled["preflight"]!!["configuration"]!!, "configured"), bundled)
-        let hashes = JsonObject()
-        for document in bundled["documents"]!!.AsArray() {
-            let path = document.GetValue[string]()
-            hashes[path] = Hash(File.ReadAllBytes(Path.Combine(root, "reference", path)))
-        }
-        Check(JsonNode.DeepEquals(hashes, provenance["files"]), "Bundle hashes differ")
+        let manifest = JsonNode.Parse(File.ReadAllText(Path.Combine(root, "reference/manifest.json")))!!
         Check(
-            JsonNode.DeepEquals(bundled["documents"], Strings(hashes.Select(x -> x.Key).Order(StringComparer.Ordinal))),
+            S(provenance, "bundleHash") == Hash(File.ReadAllBytes(Path.Combine(root, "reference/manifest.json"))) &&
+                provenance["files"] == nil,
+            "Bundle identity differs"
+        )
+        Check(
+            JsonNode.DeepEquals(
+                bundled["documents"],
+                Strings(manifest["files"]!!.AsObject().Select(x -> x.Key).Order(StringComparer.Ordinal))
+            ),
             bundled
         )
         Check(S(provenance, "compilerVersion") == "0.5.212", provenance)
-        let search = await Read(client, "cellSearch")
+        let searchResult = await Call(client, "cellSearch")
+        let search = Data(searchResult)
         Check(
-            S(search, "mode") == "exact" && JsonNode.DeepEquals(
-                search["queryTerms"],
-                Strings([]string{"rebuild", "cell"})
-            ),
+            searchResult.StructuredContent == nil && searchResult.Content.Count == 1 && S(search, "mode") == "ranked",
             search
         )
         let first = search["results"]!![0]!!
-        Check(S(first, "path") == "docs/api/cell.md" && S(first, "sha256").Length == 64, search)
+        Check(S(first, "path") == "docs/api/cell.md", search)
         let missing = await Read(client, "missingSearch")
         Check(
             S(missing, "mode") == "none" && I(missing, "total") == 0 && missing["results"]!!.AsArray().Count == 0,
             missing
         )
         await Call(client, "cellRead")
+        let memberSearch = await Read(client, "sectionSearch", JsonObject(){["query"] = "Window.MeasureText"})
+        let member = memberSearch["results"]!![0]!!
+        Check(S(member, "section").StartsWith("### `MeasureText"), memberSearch)
+        let memberRead = await Read(
+            client,
+            "sectionRead",
+            JsonObject(){["path"] = S(member, "path"), ["section_id"] = S(member, "section_id")}
+        )
+        Check(
+            B(memberRead, "complete") && S(memberRead, "text").Contains("## `Window`") && S(
+                memberRead,
+                "text"
+            ).Contains("Returns:") && !S(memberRead, "text").Contains("### `Open`"),
+            memberRead
+        )
+        Check(S(memberRead, "sha256").Length == 64, memberRead)
         await Call(client, "outsideRead", rejected: true)
     }
 
@@ -151,25 +168,242 @@ shared class Verify {
         File.WriteAllText(Path.Combine(checkout, "Goo/Goo.gsproj"), "")
         Directory.CreateDirectory(Path.Combine(checkout, "docs/api"))
         let fresh = Path.Combine(checkout, "docs/api/new-api.md")
-        File.WriteAllText(fresh, "# Newly added API\n\n## Probe\n\nAgentFreshDocument\n")
+        File.WriteAllText(fresh, "# Newly added API\n\nHeaderOnlyProbe\n\n## Probe\n\nAgentFreshDocument\n")
         let current = await Read(client, "context", repository)
         Check(JsonNode.DeepEquals(current["documents"], Strings([]string{"docs/api/new-api.md"})), current)
         Check(S(current["provenance"]!!, "kind") == "checkout", current)
+        let header = await Read(
+            client,
+            "sectionSearch",
+            JsonObject(){["repository"] = checkout, ["query"] = "HeaderOnlyProbe"}
+        )
+        Check(S(header["results"]!![0]!!, "section") == "# Newly added API", header)
+        let imageGuide = Path.Combine(checkout, "docs/images.md")
+        File.WriteAllText(imageGuide, "# Images\n\nImageHeaderProbe\n")
+        let imageContext = await Read(client, "context", repository)
+        Check(imageContext["documents"]!!.AsArray().Any(x -> x.GetValue[string]() == "docs/images.md"), imageContext)
+        Check(
+            S(
+                await Read(client, "sectionRead", JsonObject(){["repository"] = checkout, ["path"] = "docs/images.md"}),
+                "text"
+            ).Contains("ImageHeaderProbe"),
+            imageContext
+        )
+        File.Delete(imageGuide)
         let found = await Read(client, "freshSearch", repository)
-        Check(I(found, "total") == 1, found)
+        Check(S(found["results"]!![0]!!, "path") == "docs/api/new-api.md", found)
         Check(
             S(await Read(client, "freshRead", repository), "text").Contains("AgentFreshDocument"),
             "Fresh read failed"
         )
         File.Delete(fresh)
         let deleted = await Read(client, "deletedSearch", repository)
-        Check(I(deleted, "total") == 0, deleted)
+        Check(deleted["results"]!!.AsArray().All(x -> S(x, "path") != "docs/api/new-api.md"), deleted)
         File.WriteAllText(fresh, "# Straße\n\nﬃ Σς\n\n")
         let unicode = await Read(client, "unicodeSearch", repository)
         Check(I(unicode, "total") == 1, unicode)
         let lines = await Read(client, "freshRead", repository)
         Check(I(lines, "totalLines") == 4, lines)
+        File.WriteAllText(
+            fresh,
+            "# Probe\n\n## `Provider`\n\nProvider for values. TypeOnlyNeedle\n\n### `Value`\n\nField summary.\n\n## Clip\n\n" +
+                String('a', 500) +
+                " DelayedSnippetTerm."
+        )
+        let typeOnly = await Read(
+            client,
+            "sectionSearch",
+            JsonObject(){["repository"] = checkout, ["query"] = "TypeOnlyNeedle"}
+        )
+        Check(
+            S(typeOnly["results"]!![0]!!, "section") == "## `Provider`" && typeOnly["results"]!!.AsArray().All(
+                x -> S(x, "path") != "docs/api/new-api.md" || S(x, "section") != "### `Value`"
+            ),
+            typeOnly
+        )
+        let clipped = await Read(
+            client,
+            "sectionSearch",
+            JsonObject(){["repository"] = checkout, ["query"] = "DelayedSnippetTerm"}
+        )
+        let excerpt = S(clipped["results"]!![0]!!, "excerpt")
+        Check(excerpt.Contains("DelayedSnippetTerm") && excerpt.Length <= 600, clipped)
         File.Delete(fresh)
+        File.WriteAllText(
+            fresh,
+            "# Probe\n\n## Type\n\n### Row\n\nArrange a row.\n\n### Throw\n\nThrow an exception.\n\n### Long\n\n" +
+                String('x', 5000)
+        )
+        Directory.CreateDirectory(Path.Combine(checkout, "obj"))
+        File.WriteAllText(
+            Path.Combine(checkout, "obj/project.assets.json"),
+            "{\"libraries\":{},\"packageFolders\":{},\"targets\":{}}"
+        )
+        let row = await Read(
+            client,
+            "sectionSearch",
+            JsonObject(){["repository"] = checkout, ["project"] = checkout, ["query"] = "row"}
+        )
+        Check(
+            S(row["results"]!![0]!!, "section") == "### Row" && row["results"]!!.AsArray().All(
+                x -> S(x, "section") != "### Throw" && S(x, "section") != "## Type"
+            ),
+            row
+        )
+        let rowId = S(row["results"]!![0]!!, "section_id")
+        let bounded = await Read(
+            client,
+            "sectionRead",
+            JsonObject(){["repository"] = checkout, ["path"] = "docs/api/new-api.md", ["line"] = 13, ["max_bytes"] = 64}
+        )
+        Check(
+            !B(bounded, "complete") && I(bounded, "bytes") <= 64 && I(bounded["continuation"]!!, "offset") > 0,
+            bounded
+        )
+        let continued = await Read(
+            client,
+            "sectionRead",
+            JsonObject(){
+                ["repository"] = checkout,
+                ["path"] = "docs/api/new-api.md",
+                ["section_id"] = S(bounded, "section_id"),
+                ["offset"] = I(bounded["continuation"]!!, "offset")
+            }
+        )
+        Check(S(continued, "text").StartsWith("x"), continued)
+        let lineRange = await Read(
+            client,
+            "sectionRead",
+            JsonObject(){
+                ["repository"] = checkout,
+                ["path"] = "docs/api/new-api.md",
+                ["line"] = 1,
+                ["count"] = 13,
+                ["max_bytes"] = 64
+            }
+        )
+        Check(!B(lineRange, "complete") && I(lineRange, "endLine") == 13, lineRange)
+        let rangeEnd = await Read(
+            client,
+            "sectionRead",
+            Merge(
+                JsonObject(){["repository"] = checkout, ["path"] = "docs/api/new-api.md"},
+                lineRange["continuation"]!!.AsObject()
+            )
+        )
+        Check(
+            B(rangeEnd, "complete") && S(lineRange, "text") + S(rangeEnd, "text") == string.Join(
+                "\n",
+                Lines(File.ReadAllText(fresh)).Take(13)
+            ),
+            rangeEnd
+        )
+        File.WriteAllText(fresh, "# Changed\n\nNo row definition.\n")
+        await Call(
+            client,
+            "sectionRead",
+            JsonObject(){["repository"] = checkout, ["path"] = "docs/api/new-api.md", ["section_id"] = rowId},
+            true
+        )
+        File.Delete(fresh)
+        File.WriteAllText(
+            fresh,
+            "# Probe\n\n## `TransferSession`\n\nA retained transfer session.\n\n### `BeginTransfer()`\n\nBegin a transfer. Call EndTransfer to end the transfer session. EndTransfer closes the transfer session.\n\n### `EndTransfer()`\n\nEnd the transfer.\n"
+        )
+        let ending = await Read(
+            client,
+            "sectionSearch",
+            JsonObject(){["repository"] = checkout, ["project"] = checkout, ["query"] = "end transfer session"}
+        )
+        Check(S(ending["results"]!![0]!!, "section") == "### `EndTransfer()`", ending)
+        let guide = Path.Combine(checkout, "docs/api/transfer-guide.md")
+        File.WriteAllText(
+            guide,
+            "# Transfer guide\n\n## Manage retained sessions\n\nBegin transfer sessions to start retained work. End transfer sessions to close retained work. An end transfer session call completes the retained transfer session.\n"
+        )
+        for query in[]string{"end transfer session", "begin transfer session"} {
+            let matching = await Read(
+                client,
+                "sectionSearch",
+                JsonObject(){["repository"] = checkout, ["project"] = checkout, ["query"] = query}
+            )
+            Check(
+                S(matching["results"]!![0]!!, "section") == (
+                    if query.StartsWith("end") {
+                        "### `EndTransfer()`"
+                    } else {
+                        "### `BeginTransfer()`"
+                    }
+                ),
+                matching
+            )
+        }
+        File.WriteAllText(
+            fresh,
+            "# Probe\n\n## `DrawingSession`\n\nA retained drawing buffer.\n\n### `Begin()`\n\nBegin drawing. Call End to end the drawing buffer. End closes the drawing buffer.\n\n### `End()`\n\nEnd drawing.\n"
+        )
+        let scoped = await Read(
+            client,
+            "sectionSearch",
+            JsonObject(){["repository"] = checkout, ["project"] = checkout, ["query"] = "end drawing buffer"}
+        )
+        Check(S(scoped["results"]!![0]!!, "section") == "### `End()`", scoped)
+        File.Delete(guide)
+        File.Delete(fresh)
+        let packageRoot = Path.Combine(output, "packages")
+        let packagePath = Path.Combine(packageRoot, "goo.widgets/1.0.0/lib/net10.0/Goo.Widgets.xml")
+        Directory.CreateDirectory(Path.GetDirectoryName(packagePath)!!)
+        File.WriteAllText(
+            packagePath,
+            "<doc><members><member name=\"M:Goo.DevTools.Cli.CliApplication.RunAsync(System.String[])\"><summary>Run the declaration probe.</summary><param name=\"args\">Arguments to parse.</param><returns>The exit code.</returns><exception cref=\"T:System.ArgumentException\">Invalid arguments.</exception><seealso cref=\"T:System.String\" /></member></members></doc>"
+        )
+        File.Copy(Assembly.GetEntryAssembly()!!.Location, Path.ChangeExtension(packagePath, ".dll"))
+        let assets = JsonObject(){
+            ["libraries"] = JsonObject(){["Goo.Widgets/1.0.0"] = JsonObject(){["path"] = "goo.widgets/1.0.0"}},
+            ["packageFolders"] = JsonObject(){[packageRoot + Path.DirectorySeparatorChar] = JsonObject()},
+            ["targets"] = JsonObject(){
+                ["net10.0"] = JsonObject(){
+                    ["Goo.Widgets/1.0.0"] = JsonObject(){
+                        ["compile"] = JsonObject(){["lib/net10.0/Goo.Widgets.dll"] = JsonObject()}
+                    }
+                }
+            }
+        }
+        File.WriteAllText(Path.Combine(checkout, "obj/project.assets.json"), assets.ToJsonString())
+        let packageSearch = await Read(
+            client,
+            "sectionSearch",
+            JsonObject(){["repository"] = checkout, ["project"] = checkout, ["query"] = "CliApplication.RunAsync"}
+        )
+        let packageHit = packageSearch["results"]!![0]!!
+        Check(
+            S(packageHit, "path").StartsWith("packages/Goo.Widgets/1.0.0/") &&
+                S(packageSearch["packages"]!!, "Goo.Animations") == "unavailable",
+            packageSearch
+        )
+        let packageRead = await Read(
+            client,
+            "sectionRead",
+            JsonObject(){
+                ["repository"] = checkout,
+                ["project"] = checkout,
+                ["path"] = S(packageHit, "path"),
+                ["section_id"] = S(packageHit, "section_id")
+            }
+        )
+        Check(
+            B(packageRead, "complete") && S(packageRead, "text").Contains("shared RunAsync(args []string)") && S(
+                packageRead,
+                "text"
+            ).Contains("Task[int32]") && S(packageRead, "text").Contains("Arguments to parse.") && S(
+                packageRead,
+                "text"
+            ).Contains("exception T:System.ArgumentException") && S(packageRead, "text").Contains(
+                "seealso T:System.String"
+            ) &&
+                S(packageRead, "sha256") == Hash(File.ReadAllBytes(packagePath)),
+            packageRead
+        )
         if !OperatingSystem.IsWindows() {
             let outside = Path.Combine(output, "outside.md")
             File.WriteAllText(outside, "Outside selected root")

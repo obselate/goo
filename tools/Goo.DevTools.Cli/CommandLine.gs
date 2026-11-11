@@ -246,25 +246,50 @@ internal class CommandLine {
 
         func Reference() string {
             let text = StringBuilder("# CLI reference\n\n```sh\ngoo help input\n```\n\n")
-            text.AppendLine("Options below come from the command parser. Use `--name VALUE` or `--name=VALUE`.")
-            text.AppendLine(
-                "One target is selected automatically. Several matches fail with a list unless `--latest` is set."
-            )
-            text.AppendLine(
-                "JSON success and errors go to stdout. Text errors go to stderr. Exit codes: 0 success, 1 operation failure, 2 invalid arguments, 130 cancelled."
-            )
+            text.AppendLine("Use `goo help COMMAND` for all options. JSON success and errors go to stdout. Text errors go to stderr.")
+            text.AppendLine("Exit codes: 0 success, 1 operation failure, 2 invalid arguments, 130 cancelled.")
+            text.AppendLine("\n## Target options\n")
+            text.AppendLine("Runtime commands share these selectors. One match is selected automatically. Several matches fail unless `--latest` is set.\n")
+            text.AppendLine("| Option | Meaning |\n| --- | --- |")
+            for option in Targets {
+                text.AppendLine("| `--${option.Name}${(if option.Value == "" { "" } else { " " + option.Value })}` | ${option.Description} |")
+            }
             for (name, definition) in Commands {
+                if name == "mcp" { continue }
                 text.AppendLine("\n## $name\n\n```sh\ngoo $name ${definition.Usage}\n```\n\n${definition.Summary}\n")
+                if name == "dev" {
+                    text.AppendLine("`goo dev` overwrites `.goo/reload.png` after each successful hot reload and prints its path.\n")
+                }
+                let targeted = definition.Options.Any(option -> option.Name == "pid")
+                if targeted {
+                    text.AppendLine("Use the shared [target options](#target-options).\n")
+                }
                 if name == "input" {
-                    text.AppendLine("Events: `$InputEvents`.\n")
+                    text.AppendLine("```sh\ngoo input click --pid PID --target HANDLE\ngoo input text --pid PID --text \"hello\"\n```\n")
+                    text.AppendLine("Use a fresh snapshot target. Release held pointer and key gestures with matching up events, or cancel/reset them. Run `goo help input` for events and parameters.")
+                    continue
+                }
+                if name == "inspector" { continue }
+                if name == "doctor" {
+                    text.AppendLine("Run `goo doctor --project App.gsproj` for prerequisite fixes.\n")
+                }
+                if name == "package" {
+                    text.AppendLine("Targets: `linux`, `windows`, `macos`, `android`. See [Shipping](../shipping.md) for metadata, signing and output limits.")
+                    continue
+                }
+                if name == "capture" {
+                    text.AppendLine("Without `--output`, capture writes binary image bytes to stdout. `--json` requires an output file.\n")
+                }
+                if name == "attach" {
+                    text.AppendLine("```sh\ngoo attach --pid PID --once --command capabilities --payload '{}' --require-capabilities profiler.trace.v1 --json\n```\n")
                 }
                 text.AppendLine("| Option | Meaning |\n| --- | --- |")
                 for option in definition.Options {
+                    if targeted && Targets.Contains(option) { continue }
                     text.AppendLine(
                         "| `--${option.Name}${(if option.Value == "" { "" } else { " " + option.Value.Replace("|", "\\|") })}` | ${option.Description} |"
                     )
                 }
-                text.AppendLine("| `--help`, `-h` | Show command help. |")
             }
             return text.ToString().TrimEnd()
         }

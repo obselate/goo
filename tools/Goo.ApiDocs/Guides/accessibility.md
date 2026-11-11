@@ -62,15 +62,11 @@ objects; reopening the same window creates a new native binding. Replacing the
 adapter detaches it. A native replacement must be assigned while the window is
 closed. `Dispose` detaches and permanently disables the adapter. After the window
 has opened, these operations and `Update` require its owner UI thread. Embedded
-hosts supply their own adapter. Existing custom adapters remain supported.
+hosts supply their own adapter.
 
-Native callbacks copy action data and post to the window. Removed nodes, stale
-text ranges, unsupported actions, disabled controls, and modal-blocked windows
-cannot receive those actions. Native node IDs remain stable until the Goo node
-is removed. Updates emit only changed nodes, their text runs, and changed parent
-child lists. The bridge creates no native objects or per-frame work when unused.
-The native runtime remains loaded for the process lifetime because macOS installs
-focus forwarding on the host window class.
+Native actions post to the owner UI thread. Removed nodes, stale text ranges,
+unsupported actions, disabled controls and modal-blocked windows reject actions.
+Native node IDs stay stable until removal.
 
 Names, roles, states, live regions, relations, focus, numeric values, scroll
 ranges, text, selection, and caret map from the retained tree. Selected list

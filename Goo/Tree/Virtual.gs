@@ -3,11 +3,8 @@ package Goo
 import System
 import Facebook.Yoga
 
-/// Defines a scrolling element that takes its children from a VirtualSource and mounts only the items that the
-/// source places. Items use content coordinates: the origin is the start of the content box at scroll offset zero,
-/// so a scroll offset is also the content coordinate at the start of the viewport. The element has the list
-/// role and each item has the list item role. With another role, or with Accessibility set to nil, items have
-/// no role and the content of each item gets the item position.
+/// Mounts the items placed by a VirtualSource. It scrolls content coordinates.
+/// Overriding the list role or clearing Accessibility forwards item position to content.
 public class Virtual : Blob {
   private let source VirtualSource
 

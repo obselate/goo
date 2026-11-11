@@ -69,33 +69,22 @@
 
 !/docs/
 /docs/*
-!/docs/native-authoring.md
 !/docs/nuget-readme.md
-!/docs/production-readiness.md
 !/docs/android.md
-!/docs/native-menus.md
-!/docs/tray.md
 !/docs/images.md
 !/docs/svg.md
 !/docs/spellcheck.md
 !/docs/printing.md
-!/docs/migrations/
-!/docs/migrations/**
+!/docs/desktop-integration.md
+!/docs/interop.md
 
 !/docs/audio.md
-!/docs/gestures.md
-!/docs/app-host.md
-!/docs/notifications.md
 !/docs/assets/
 !/docs/assets/**
 !/docs/api*/
 !/docs/api*/**
-!/docs/native-dialogs.md
 !/docs/devtools/
 !/docs/devtools/**
-!/docs/perf/
-/docs/perf/*
-!/docs/perf/performance-workloads.json
 
 !/tools/
 /tools/*
