@@ -11,19 +11,14 @@ let window = Window{
 }.Open()
 ```
 
-The native runtime is only loaded when queried or attached. `IsAvailable` reports
-whether the versioned library can load. The adapter binds one window, releases
-native objects on close or replacement, and can be disposed on the owner thread.
-Embedded hosts keep their own adapters. Native actions are copied before being
-posted to Goo's UI thread; stale or unsupported actions are rejected by the
-retained semantic tree. Custom `AccessibilityAdapter` implementations remain supported.
+See the [native accessibility API](https://github.com/obselate/goo/blob/main/docs/api/accessibility.md) for adapter lifetime and owner-thread rules.
 
 Payloads: Linux x64 (glibc 2.27 baseline), Windows x64/arm64, and macOS x64/arm64.
 Linux is built from the pinned source with `.github/scripts/build-accesskit-linux-x64.sh`;
 other payloads come from the upstream checksum-pinned release. `native-build.json`
 records source and binary hashes. AccessKit is MIT OR Apache-2.0 licensed.
 
-The Linux payload applies `atspi-cache-signal-arguments.patch`: AT-SPI cache
-notifications carry one struct argument instead of flattening it into separate
-D-Bus arguments. This keeps native client caches consistent on node insertion
-and removal. The native inspector test validates both wire signatures.
+Copyright 2023 The AccessKit Authors. All rights reserved.
+Derived portions: Copyright (c) 2021 Jacob Hoffman-Andrews.
+The package includes `LICENSE-MIT` and `LICENSE-APACHE`.
+See [native-build.json](https://github.com/obselate/goo/blob/main/Goo.Accessibility/native-build.json) for pinned source and payload hashes.

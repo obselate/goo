@@ -1,11 +1,5 @@
 # Goo templates
 
-Install .NET SDK 10.0.403 or a later 10.0 SDK. Check with `dotnet --list-sdks`.
-Use Vulkan 1.3 with timeline semaphores, synchronization2 and dynamic rendering.
-Linux requires native Wayland, not X11 or XWayland. Windows x64 and macOS arm64
-are also supported. See [platform requirements](../../docs/platform-preflight.md).
-Then install the package and create a Goo application:
-
 ```sh
 dotnet new install Goo.Templates
 dotnet tool install --global Goo.DevTools
@@ -14,13 +8,9 @@ cd HelloGoo
 goo dev
 ```
 
-The template restores the G# compiler from NuGet automatically. The project targets
-.NET 10, pins SDK 10 with `latestFeature` roll-forward, and watches G# files for
-hot reload. It references Goo 0.29.1. Use `--goo-version` to select another
-compatible Goo package version.
-
-Images, gestures, native dialogs and menus, notifications, printing, rich text clipboard, spell checking, and desktop instance hosting are included in `Goo`.
-Android printing and spell checking are included in `Goo.Android`. No separate feature packages are needed.
+The template restores the G# compiler from NuGet. It references Goo 0.30.0.
+Use `--goo-version` to select another compatible version.
+See [platform requirements](https://github.com/obselate/goo/blob/main/docs/platform-preflight.md).
 
 ## Android
 

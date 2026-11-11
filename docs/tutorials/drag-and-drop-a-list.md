@@ -1,17 +1,8 @@
 # Drag and drop a list
 
-![A reorderable list](images/drag-and-drop-a-list.png)
+Start with the [tutorial setup](../README.md#tutorial-setup). Replace `Program.gs`, then run `goo dev`.
 
-## 1. Create the project
-Start after [Your first app](your-first-app.md) and run goo dev after replacing Program.gs.
-
-```sh
-dotnet new goo -n DragAndDropAList
-cd DragAndDropAList
-dotnet add package Goo.Widgets --version 0.20.0
-```
-
-## 2. Reorder rows
+## Reorder rows
 Drop a row onto another row to move it before that row.
 
 ```gsharp
@@ -19,24 +10,13 @@ package Tutorial
 
 import Goo
 import Goo.Widgets
-import Goo.Widgets.Actions
-import Goo.Widgets.Data
-import System
 import System.Collections.Generic
 
 class Example : Cell {
     private var items []string = []string{"Plan", "Build", "Review", "Ship"}
-    private let buildRow Func[string, Blob]
-
-    init() {
-        buildRow = BuildRow
-    }
 
     override func Build() Blob {
         let theme = Theme.Read()
-        let list = VirtualRows[string](items, theme.ControlHeight * 2, ItemKey, buildRow)
-        list.FlexGrow = 1
-        list.MinHeight = 0
         return Container{
             BasedOn: theme.CanvasStyle,
             Width: Percent(100),
@@ -44,10 +24,12 @@ class Example : Cell {
             Padding: theme.Spacing * 6,
             Gap: theme.Spacing * 3,
             Text{Content: "Drag a row onto another row", FontSize: theme.HeadingFontSize},
-            list,
+            BuildRow(items[0]),
+            BuildRow(items[1]),
+            BuildRow(items[2]),
+            BuildRow(items[3]),
         }
     }
-    private func ItemKey(item string) string -> item
 
     private func BuildRow(item string) Blob {
         let theme = Theme.Read()

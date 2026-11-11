@@ -1,26 +1,33 @@
 # App-author documentation
 
-SVG loading is part of Goo core.
+Create an app with the [template command](../README.md#use). Check [platform requirements](platform-preflight.md) first. The template selects the G# SDK.
 
-## Version baseline
+## Tutorials
 
-Install the current Goo release with the [template command](../README.md#use).
-Use .NET 10 and the G# SDK selected by the template.
-
-## Learn in order
-
-[Tutorials](tutorials/README.md)
-
-1. [Platform preflight](platform-preflight.md) checks the host requirements.
-2. [Create and run the counter](../README.md#use) uses NuGet, not a source build.
-3. [After the counter](getting-started.md) adds a second Cell, typed fields,
-   retained SVG, callbacks and disposal.
-4. [Edit and inspect](edit-and-inspect.md) exercises watch, restart and DevTools.
-5. [Widgets usage](https://github.com/obselate/goo-widgets/blob/main/docs/usage.md)
-   covers packaged controls, controlled state and overlays.
-6. [Shipping](shipping.md) publishes and checks a self-contained desktop app.
+| Task | Guide |
+| --- | --- |
+| Compose functions and Cells | [After the counter](getting-started.md) |
+| Add a reset action | [State](getting-started.md#state) |
+| Edit a running app | [Hot reload exercise](devtools/README.md#edit-a-running-app) |
+| Build a form | [Text input](tutorials/a-text-input-form.md) |
+| Resize panes | [Split pane](tutorials/a-resizable-panel.md) |
+| Build a large list | [Virtual list](tutorials/a-virtual-list.md) |
+| Reorder a small list | [Drag and drop](tutorials/drag-and-drop-a-list.md) |
+| Draw a gauge | [Shapes](tutorials/drawing-a-gauge.md) |
+| Switch themes | [Styling and themes](tutorials/styling-and-themes.md) |
+| Animate a panel | [Motion](api/motion.md) |
 
 Learn G# with the [language tour](https://davidobando.github.io/gsharp/docs/tour/) and [editor support](https://github.com/DavidObando/gsharp#editor-support).
+
+### Tutorial setup
+
+Create the starter with the [template command](../README.md#use), then add:
+
+```sh
+dotnet add package Goo.Widgets --version 0.20.0
+```
+
+Each recipe replaces `Program.gs`. Restart `goo dev` after structural edits.
 
 ## Packages
 
@@ -30,45 +37,30 @@ Learn G# with the [language tour](https://davidobando.github.io/gsharp/docs/tour
 | `Goo.Android` | Android host. |
 | `Goo.Audio` | Audio playback. |
 | `Goo.Accessibility` | Native accessibility adapters. |
-| `Goo.DevTools` | CLI and inspector. Install with `dotnet tool install --global Goo.DevTools`. |
-| `Goo.Templates` | Starter projects. Install with `dotnet new install Goo.Templates`. |
+| `Goo.DevTools` | CLI and inspector. |
+| `Goo.Templates` | Starter projects. |
 | [Goo.Widgets](https://github.com/obselate/goo-widgets) | Packaged controls. |
 | [Goo.Animations](https://github.com/obselate/goo-animations) | Animation composition. |
 
 Add libraries with `dotnet add package PACKAGE`.
 
-When upgrading to consolidated `Goo`, remove `Goo.AppHost`, `Goo.Gestures`,
-`Goo.Images`, `Goo.NativeDialogs`, `Goo.NativeMenus`, `Goo.Notifications`,
-`Goo.Printing`, `Goo.RichText`, `Goo.SpellCheck` and `Goo.SpellCheck.Hunspell`.
-Remove `Goo.Printing.Android` and `Goo.SpellCheck.Android` for `Goo.Android`.
-Keep namespace imports and type names. The old packages no longer publish.
-System services and native libraries load only when used. Hunspell supplies no library or dictionaries.
-
-
 ## Find a task or contract
 
 | Task | Guide |
 | --- | --- |
-| Write Goo in another .NET language | [C#](interop/csharp.md), [F#](interop/fsharp.md), [PowerShell](interop/powershell.md), [any CLR language and VB](interop/dotnet.md) |
-| Compose primitives and Cells | [Native authoring](native-authoring.md), [Cell state and identity](api/cell.md), [tree reconciliation](api/tree.md) |
+| Use another .NET language | [C#, F#, Visual Basic and PowerShell](interop.md) |
+| Compose primitives and Cells | [Cell](api/cell.md), [tree](api/tree.md) |
 | Layout, styling and input | [Layout](api/layout.md), [style](api/style.md), [text](api/text.md), [input](api/input.md), [accessibility](api/accessibility.md) |
-| Load raster images, SVG and sound | [Images](images.md), [SVG](svg.md), [audio](audio.md), [audio API](api-audio/README.md) |
-| Use controls, themes and icons | [Widgets](https://github.com/obselate/goo-widgets/blob/main/README.md), [usage](https://github.com/obselate/goo-widgets/blob/main/docs/usage.md), [complete quick start](https://github.com/obselate/goo-widgets/tree/main/samples/Goo.Widgets.QuickStart) |
-| Animate content | [Core motion](api/motion.md), [optional animation library](https://github.com/obselate/goo-animations) |
-| Inspect a running app | [DevTools](devtools/README.md), [diagnostics API](api/diagnostics.md) |
-| Use the authoring plugin | [Plugin installation and tools](../plugins/goo/README.md), [authoring skill](../plugins/goo/skills/goo-authoring/SKILL.md) |
-| Host Android | [Android integration](android.md) |
-| Manage desktop app instances and placement | [App host](app-host.md) |
-| Open native dialogs and menus | [Dialogs](native-dialogs.md), [menus](native-menus.md) |
-| Send notifications and use the system tray | [Notifications](notifications.md), [tray](tray.md) |
-| Print and export documents | [Printing](printing.md) |
+| Load images and sound | [Images](images.md), [SVG](svg.md), [audio](audio.md), [audio API](api-audio/README.md) |
+| Use controls and themes | [Widgets usage](https://github.com/obselate/goo-widgets/blob/main/docs/usage.md) |
+| Animate content | [Core motion](api/motion.md), [animation library](https://github.com/obselate/goo-animations) |
+| Inspect an app | [DevTools](devtools/README.md), [diagnostics API](api/diagnostics.md) |
+| Use the authoring plugin | [Installation](../plugins/goo/README.md), [skill](../plugins/goo/skills/goo-authoring/SKILL.md) |
+| Host Android | [Android](android.md) |
+| Integrate with the desktop | [Instances, activation and placement](desktop-integration.md), [dialogs](desktop-integration.md#native-dialogs), [menus](desktop-integration.md#native-menus), [notifications](desktop-integration.md#notifications), [tray](desktop-integration.md#tray-icons) |
+| Print documents | [Printing](printing.md) |
 | Check spelling and exchange rich text | [Spell checking](spellcheck.md), [rich text](richtext.md) |
-| Find the complete core surface | [API index](api/README.md), [window](api/window.md), [platform](api/platform.md), [rendering and custom effects](api/rendering.md) |
+| Find the core surface | [API index](api/README.md), [window](api/window.md), [platform](api/platform.md), [rendering](api/rendering.md) |
+| Publish an app | [Shipping](shipping.md) |
 
-## Other audiences and older material
-
-- [Contributing](../CONTRIBUTING.md) and [DevTools development](devtools/development.md)
-  describe source builds. They are not app prerequisites.
-- [Production-readiness assessment](production-readiness.md) describes older
-  0.6.6/0.7.0-era work, not a current release qualification report.
-- [GCV1 migration](migrations/gcv1.md) is for older compiled vector assets.
+For source builds and checks, use [Contributing](../CONTRIBUTING.md).

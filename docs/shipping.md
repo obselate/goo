@@ -2,7 +2,7 @@
 
 ## Publish
 
-From the [starter app](../README.md#use) directory:
+From an app created by `dotnet new goo`:
 
 ```sh
 dotnet publish -c Release -r linux-x64 --self-contained true -o publish
@@ -20,13 +20,12 @@ for Apple silicon.
 dotnet publish -c Release -p:PublishProfile=NativeAot -o publish/aot
 ```
 
-The template includes this opt-in profile. It targets `linux-x64` and compiles
-native code. Override the runtime with `-r win-x64` or `-r osx-arm64` on that OS.
-Install the [NativeAOT build tools](https://learn.microsoft.com/dotnet/core/deploying/native-aot/).
-Check app and dependency trim/AOT warnings, then test the output.
-App-owned assets are not embedded.
+NativeAOT is the default release format used by this project.
+The profile targets `linux-x64`. Override with `-r win-x64` or `-r osx-arm64`
+on that OS. Install the [NativeAOT build tools](https://learn.microsoft.com/dotnet/core/deploying/native-aot/).
+Review trim and AOT warnings, then test the output. App-owned assets are not embedded.
 
-For a trimmed app that keeps the runtime:
+Trimmed JIT is also supported. It keeps the runtime:
 
 ```sh
 dotnet publish -c Release -p:PublishProfile=Trimmed -o publish/trimmed
@@ -34,16 +33,7 @@ dotnet publish -c Release -p:PublishProfile=Trimmed -o publish/trimmed
 
 ## Optional assets
 
-SVG is included in `Goo`.
-
-Create `Assets/icon.svg`:
-
-```xml
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <circle cx="16" cy="16" r="14" fill="#4a7dff" />
-  <path d="M16 8v16M8 16h16" stroke="white" stroke-width="3" />
-</svg>
-```
+Use an existing SVG asset such as `Assets/icon.svg`.
 
 Copy assets to build and publish output in the project's `ItemGroup`:
 
@@ -66,9 +56,20 @@ Publish again, then start `publish/HelloGoo` from another directory to check
 asset lookup. Include `Assets` in the distributed output.
 Single-file publishing is not validated for this sample.
 
-## Optional installers
+## Packaging
 
 Use `goo package` for the formats below. The command is included in `Goo.DevTools`.
+
+| Shared setting | Contract |
+| --- | --- |
+| Metadata | Set `Product`, numeric `Version`, stable `GooPackageId` and `GooPackageIcon`. Windows also uses `Company`. |
+| Output | Relative paths use the project directory. Desktop outputs include a symbol archive when symbols exist. `--json` reports output paths and unsigned status. |
+| Assets | Use `CopyToPublishDirectory`. Keep notices and feature data, including XML and nested directories. |
+
+The Goo package defaults NativeAOT apps to `IlcFoldIdenticalMethodBodies=true`.
+Apps can override it. Identical methods can share addresses and stack-trace names.
+Globalization remains an explicit setting. Apps that do not read dependency XML
+docs can set `PublishReferencesDocumentationFiles=false`. Do not delete XML by name.
 
 ### Android signed AAB
 
@@ -98,7 +99,6 @@ SDK and JDK. Put signing paths in a private MSBuild import or environment:
 - Use `file:` password references. AAB signing does not support `env:` password references.
 - Keep `ApplicationId` stable. Increase `ApplicationVersion` for each Play release.
 - The command creates Release AAB only. It checks the bundle and upload certificate.
-- The bundletool JAR is pinned to SHA-256 `a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29`.
 - AAB is not an installable APK. Use `bundletool build-apks` and `install-apks` for device checks.
 - Check 16 KB alignment on the generated APK, not the AAB.
 - Play App Signing uses a separate installed-app signing key. Configure it in Play Console.
@@ -115,9 +115,8 @@ goo package --project MyApp.gsproj --target macos --output artifacts/packages
 ```
 
 - Build on Apple silicon with the NativeAOT build tools.
-- Set `Product`, numeric `Version`, `GooPackageId` and `GooPackageIcon`.
 - Use an `.icns` icon. The bundle requires macOS 14 or later.
-- Output includes `AssemblyName.app`, `Id-Version-osx-arm64.dmg` and symbols when present.
+- Output includes `AssemblyName.app` and `Id-Version-osx-arm64.dmg`.
 - Choose a new output directory if the app bundle already exists.
 - Copy the app from the mounted DMG to Applications before launch.
 
@@ -145,9 +144,9 @@ goo package --project MyApp.gsproj --target windows --output artifacts/packages
 ```
 
 - Run on Windows x64 with Inno Setup 7.1.0 and the NativeAOT build tools.
-- Set `Product`, `Version`, `Company`, `GooPackageId` and `GooPackageIcon` in the project.
+- Set `Company` in addition to the shared metadata.
 - Use a `.ico` file for the Windows icon. Keep the ID stable across releases.
-- Output is `Id-Version-win-x64-setup.exe`, plus a symbol archive when present.
+- Output is `Id-Version-win-x64-setup.exe`.
 - The installer uses the current user's Local AppData directory. It does not request elevation.
 - It adds one Start Menu shortcut and an uninstaller. It keeps application data.
 - Windows 11 x64 is required. No Windows Arm or Windows 10 support is implied.
@@ -160,8 +159,7 @@ Fetch the pinned Inno Setup installer, then run it to install the compiler:
 .\tools\Goo.DevTools.Cli\Packaging\fetch-inno-setup.ps1 "$HOME\.cache\goo-inno"
 ```
 
-The script checks SHA-256
-`0362a383ed217d4c4239b5933866dd96d3eb2102737da92f80f6057a4b40df2f`.
+The [fetch script](../tools/Goo.DevTools.Cli/Packaging/fetch-inno-setup.ps1) verifies the pinned download.
 It does not install the compiler. Check [Inno Setup's license](https://jrsoftware.org/isinfo.php)
 for commercial use.
 
@@ -201,16 +199,8 @@ The fetch script also ships beside the installed tool DLL in `Packaging`.
 It downloads fixed GitHub asset IDs and checks SHA-256 before making the creator
 executable. Packaging rechecks the hashes and never downloads tools or a moving runtime.
 
-| Input | SHA-256 |
-| --- | --- |
-| [appimagetool 1.9.1 asset 324406736](https://api.github.com/repos/AppImage/appimagetool/releases/assets/324406736) | `ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0` |
-| [type-2 runtime asset 657374641](https://api.github.com/repos/AppImage/type2-runtime/releases/assets/657374641) | `617aa77314d57c8b8e4fae9c3f0b35af7b30d5529cb69e98f64f92510ed98a46` |
-
-Output is `Id-Version-linux-x64.AppImage`, plus `.symbols.zip` when debug symbols
-exist. Relative output paths use the project directory. `--json` reports paths
-and unsigned status. Failures include `unsupported-target`, `missing-tool`,
-`invalid-tool`, `invalid-package-metadata`, `publish-failed`, `stage-failed`
-and `package-failed`.
+Output is `Id-Version-linux-x64.AppImage`. Failures report unsupported targets,
+missing or invalid tools, invalid metadata, publish, staging or packaging errors.
 
 Run the AppImage from another directory to check asset paths. The runtime does
 not need a separate `libfuse2` install. If FUSE mounts are prohibited, use

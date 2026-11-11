@@ -1,149 +1,34 @@
-# Goo DevTools local protocol
+# Diagnostics and profiling
 
-The protocol is local, explicit, and versioned. Set `GOO_DEVTOOLS=1` to attach Goo diagnostics automatically when each window opens. `DevTools.Attach(window)` remains available for advanced manual control. A production window without the environment flag does not publish an endpoint descriptor.
+Use the [DevTools guide](README.md) for launch and target selection. Use `goo help attach` for raw requests when a capability has no MCP tool.
 
-## Descriptor
+## Capture and snapshot semantics
 
-The runtime writes one UTF-8 JSON endpoint descriptor per window into the configured runtime directory. Its name includes the PID, a random process token, and a window ordinal. The CLI accepts these fields:
+- A capture with `degraded: true` rendered offscreen layers at lower resolution under GPU pressure. `layerResolutionShift` is the power-of-two reduction. Text and icons in those layers are upscaled.
+- Opaque targets remain valid while their node stays mounted in the same window and diagnostic session. Remount or process restart invalidates them. Numeric IDs are window-local.
+- Editors expose UTF-16 selection and caret offsets. `text` is capped at 16,384 UTF-16 units with `textLength` and `textTruncated`. A truncated prefix cannot prove equality or absence in the unseen suffix. Password values are masked.
+- `borderBox` is the transformed layout bound. `clipBox` is its conservative visible intersection. `visible` does not prove the node is unobscured. `clipApproximate` marks geometry that an axis-aligned rectangle cannot represent exactly.
+- `actionPoint` and `actionable` require a point verified by current input routing. A visible node may still be disabled, clipped, blocked, detached or not hit-testable.
 
-```json
-{
-  "protocol": "goo.devtools/1",
-  "pid": 12345,
-  "process": "HelloGoo",
-  "version": 1,
-  "transport": "named-pipe",
-  "pipe": "/run/user/1000/goo/goo-12345-5c724a8e64214a9ebfa918f592af698c-1",
-  "sessionId": "b3cde751cdf648c094f02fd67a818a75",
-  "createdUtc": "2026-08-29T12:00:00Z",
-  "windows": [
-    { "id": "window-12345-1", "title": "Hello Goo" }
-  ]
-}
-```
+Diagnostic text events send committed UTF-16 text, at most 16,384 units, to a focused editor. They do not simulate IME composition. Native input may interleave, so use a dedicated test window. Coordinates and deltas must be finite and within ±10,000,000. Requests are limited to 65,536 characters and 32 pending UI requests. Use fresh snapshots after actions.
 
-`pipe` is a .NET named-pipe name or an absolute Unix-domain socket path. Unix endpoints use the per-user runtime directory, not the shared temporary directory. `pipeName`, `endpoint`, `socket`, `address`, `processId`, and `applicationName` are accepted aliases. Goo named pipes accept only the current user. Network endpoints are rejected. Discovery checks session endpoints directly, so PID namespaces and stale descriptors do not select another app.
+## Profiler recording
 
-## Connection
+The `profiler.trace.v1` capability provides `profiler.start`, `profiler.read` and `profiler.stop`. One persistent client owns the recorder for the process, including all windows and shared resources. Disconnect releases ownership. Use the graphical inspector to record, or keep a `goo attach` connection open for raw requests.
 
-Messages are one JSON object per UTF-8 line. The client sends this first:
+| Request | Contract |
+| --- | --- |
+| `profiler.start` | `bufferBytes` is clamped to 64 KiB through 16 MiB. Returns schema 1, trace identity, clock origin/frequency, sampling settings and device/name metadata. A competing recorder returns `state: "Busy"`. |
+| `profiler.read` | Send `traceId`, string `afterSeq` and bounded `maxBytes`. Read ordered records and `nextSeq`, `more`, `state`, `dropped`, `partial` and the empty-poll delay. Drain immediately only while `more` is true. |
+| `profiler.stop` | Freezes producers and drains submitted GPU timing through normal completion polling. Continue reading through `Complete`. No queue-idle wait is added. |
 
-```json
-{
-  "type": "hello",
-  "protocol": "goo.devtools/1",
-  "client": "goo-cli",
-  "version": "0.29.1",
-  "capabilities": ["tree", "properties", "layout", "events", "logs", "accessibility", "capture", "source-navigation", "hot-reload"]
-}
-```
+CPU timestamps use integer ticks relative to the recording origin. GPU elapsed nanoseconds use a separate clock. Large integers and IDs are strings. Unavailable measurements are `null`, not zero.
 
-Requests use a unique `id` and a command-specific payload:
+Do not add allocator requirements, estimated swapchain payload, managed memory, RSS/PSS and driver usage. These counters have different accounts, sources and freshness.
 
-```json
-{
-  "type": "request",
-  "id": "a1b2c3",
-  "command": "snapshot",
-  "payload": {}
-}
-```
+### Allocation sampling
 
-The response keeps the same `id`. Unsolicited tree, event, log, and hot-reload updates are JSON objects without a matching request ID. `goo attach --json` preserves every line for IDE or script consumers.
-
-Use `goo list --json` for live process/window discovery. Its `window` IDs can be
-passed to `--window` on attach, capture and input, including when titles match.
-Pass `--project` throughout when using project-local descriptors. `attach --once`
-bounds its connection and request with `--wait` and exits unsuccessfully for a
-rejected response. Streaming attach remains open until disconnected.
-
-One window accepts up to eight simultaneous clients. Each request is serialized
-through the window UI queue. Idle connections stay open until the client closes
-them, the diagnostics session closes, or the app exits. Interactive attach
-uses request envelopes for plain command lines. On stdin EOF it drains responses
-for sent request IDs up to `--wait`, then detaches. Use `--once` for one scripted
-request.
-
-Supported CLI requests are `snapshot`, `capture`, and the command supplied by `goo attach --command`. A capture response may first return `payload.pending: true`; repeat the `capture` request until it returns `pending: false` or the bounded CLI wait expires. The completed response uses `format: "rgba8-srgb-premultiplied"`, `width`, `height`, `stride`, `layerResolutionShift`, `degraded`, and `rgbaBase64`. `layerResolutionShift` is the power-of-two factor by which offscreen layers (rounded overflow clips, opacity groups, blur) were reduced while the capture rendered under GPU memory pressure; `degraded` is true when it is not 0, and text and icons inside such layers are upscaled. The CLI repeats this on stderr and in its `--json` output. The CLI encodes this pixel payload as a real PNG. Legacy responses can contain `payload.contentBase64`, `payload.base64`, or `payload.data`.
-
-Clients must inspect the handshake capabilities before enabling optional panels. An older runtime may omit capabilities or close the connection for an unsupported request. The CLI treats that as a connection failure and reports the endpoint and command. The server hello includes its PID, window ID, and diagnostic session ID. The CLI rejects a hello whose PID or window does not match the selected descriptor.
-
-Current runtimes advertise `inspect.enter`, `inspect.select`, `inspect.clear`, `inspect.exit`, `runtime-overrides`, and `runtime-overrides.describe`. The hello field `runtimeOverrideProperties` is the runtime-owned array of accepted temporary override property names. Clients must not substitute a local allowlist. A runtime without both override capabilities reports property discovery as unavailable.
-
-Inspection commands change diagnostics state without input permission. Typed clients must supply `inspect.select` with exactly one selector: `target`, positive window-local `nodeId`, or a complete finite `x`/`y` pair. A numeric ID or point with no match returns `selected:false`; a stale or foreign opaque handle is an error. `inspect.enter` diverts pointer routing to selection until `inspect.exit`; `inspect.clear` clears only the current selection.
-
-`property.override` requires exactly one `target` or positive `nodeId`, plus an advertised `property` and string `value`. Examples include `Width: "100px"`, `BackgroundColor: "#ff0000"`, and `Opacity: "0.5"`. Lengths accept `px` or `%`; `auto` is limited to width and height, and opacity is from 0 through 1. `property.reset` uses the same target and an optional property. Omitting property resets all temporary overrides on that node only. It does not reset input or other nodes. Overrides are diagnostics state and do not edit source. Inspection and style commands are rejected while an injected gesture is held.
-
-For scripted mutations, `goo attach --once --require-capabilities NAME[,NAME]` checks the selected hello before request dispatch on the same connection. `--require-override-property NAME` also requires `runtime-overrides.describe` and a valid `runtimeOverrideProperties` list. Missing or malformed requirements fail with no request sent. After dispatch, timeout, invalid acknowledgement, or unexpected disconnect sets `mayHaveApplied:true`; inspect state and do not retry automatically.
-
-## Snapshot identity and semantics
-
-Each full snapshot includes `targetIdentity` with `pid`, `windowId`, and `sessionId`. Every node has an opaque `target` handle scoped to that identity. Prefer this handle for later pointer or wheel input. It remains stable while the node stays mounted, and is rejected after remount, window mismatch, or process restart. Numeric `id` and `parentId` remain available for inspector compatibility, but are only local to one window and must not be treated as cross-window identity.
-
-Snapshot accessibility fields come from Goo's retained semantic tree without installing or replacing the application's accessibility adapter. They include resolved role, name, value, state, and the semantic `accessibilityId`. Editable controls expose their current value, UTF-16 selection, and caret. Editor `text` is capped at 16,384 UTF-16 units and accompanied by `textLength` and `textTruncated`; a truncated prefix cannot prove exact equality or absence in the unseen suffix. Password text and explicit password accessibility values are masked.
-
-`borderBox` is the transformed layout bound. `clipBox` is its visible intersection with window, overflow, editor-content, and conservative path-clip bounds. `visible` means that conservative rectangle is nonempty, not that overlap analysis proved the node unobscured. `accessibilityHidden` separately identifies a node omitted from the semantic tree. `clipApproximate` reports geometry that cannot be represented exactly as an axis-aligned rectangle. `actionPoint` is present only when current routing verifies a point that reaches the node or its descendant. `actionable` is true only for that verified case. `actionStatus` is one of `actionable`, `window-blocked`, `hidden`, `disabled`, `detached`, `modal-blocked`, `clipped`, `not-hit-testable`, or `no-verified-point`. The last status means the bounded search did not prove a point, not that the node is fully occluded.
-
-## Application input
-
-Input is separately opt-in: launch with `goo dev --input --no-watch --project App.gsproj`, set both `GOO_DEVTOOLS=1` and `GOO_DEVTOOLS_INPUT=1`, or call `DevTools.Attach(window, true)` on the owning UI thread. The CLI flag sets the input environment variable for its child process. Attaching without permission keeps inspection available without adding the `input` capability. Permission lasts until that diagnostics session is disposed. This is a trusted local automation endpoint, not a remote control service.
-
-Send `command: "input"` with an object payload whose `event` is `pointer.move`, `pointer.down`, `pointer.up`, `pointer.cancel`, `wheel`, `key.down`, `key.up`, `text`, `click`, or `reset`. Commands run in arrival order through `PlatformInput` on the selected window's UI queue, including normal bubbling, focus, capture, default editing, and Cell invalidation. Native user input can interleave; use a dedicated test window for deterministic automation.
-
-- Pointer and wheel coordinates are logical window coordinates (`x`, `y`). Alternatively, supply the snapshot `target`, or a legacy window-local `nodeId`, with optional `offsetX`/`offsetY` measured from its current window border-box origin. With no offsets, Goo uses the verified `actionPoint`. Supplying one axis preserves the border-box center on the other axis. The exact resulting point is verified through current clipping, transforms, overlap, disabled state, hit testing, and modal scope. Stale or foreign handles and nodes without a verified point are rejected. Raw `x`/`y` remains lower-level normal routing and is not preflighted as a node target.
-- `button` is a `PointerButton` name, defaulting to `Primary`; wheel uses logical `deltaX`/`deltaY`. Coordinates/deltas must be finite and within ±10,000,000. Node-relative offsets refer to the axis-aligned window bounds, including transforms.
-- Keys use the `Key` enum names in `key`. `text` contains committed UTF-16 text, at most 16,384 units, and requires a focused editable control. IME composition is not simulated. Optional `modifiers` contains boolean `alt`, `ctrl`, `shift`, and `super` fields on each event.
-- `click` sends a down/up pair. Pointer commands share one session-owned mouse contact, distinct from the native mouse. Targets apply only to pointer and wheel events. Text and key events route to current focus, so a supplied `target` or `nodeId` is rejected. `pointer.cancel` needs no target and releases its capture. `reset` resets window input and focus. Session disposal or an exception after injection also resets input, preventing a retained drag or pressed key. Input commands are rejected while inspector selection mode is active.
-- A runtime that advertises `input.gesture-lease` owns held pointer buttons and keys with an opaque `gestureId`. `pointer.down` or `key.down` acquires the lease. Every later input request supplies the same ID until all matching releases complete. `pointer.cancel` clears pointer holds only. `reset` clears pointer and key holds. Successful owner input renews the 30-second lease. Observation does not renew it. Expiry resets injected input without replaying any action. Snapshots and captures remain available while inspect and style mutations return `gesture-owned`.
-
-A successful response has `ok: true` and `payload: {"command":"input","applied":true,"sequence":N,"gestureId":"...","gestureActive":true,"leaseMs":30000}` while holds remain. `gestureId` is `null`, `gestureActive` is false and `leaseMs` is zero after release. It acknowledges synchronous handlers and subsequent reconciliation/layout, not asynchronous application work or GPU presentation. Every remote `snapshot` response is a complete settled tree with `full:true`, preserving node IDs. The `full` request field remains accepted for compatibility. Use `capture` for a presented image.
-
-`sequence` is a monotonic observation marker, not a captured snapshot. Each successful input advances it without building a tree snapshot. The next snapshot has a greater sequence and includes the settled tree. Target validation still checks the current tree before applying targeted input.
-
-Errors use `input-disabled`, `invalid-input`, `stale-target`, `target-not-actionable`, `gesture-owned`, `gesture-expired`, `closed`, `busy`, `timeout`, or `command`. Requests are limited to 65,536 characters and the UI queue to 32 pending requests. A five-second server timeout cancels work that has not begun. A handler already running may have applied input: **do not automatically retry timed-out actions**. The CLI prints the generated token before sending a hold, so use that token to release, cancel, or reset after an uncertain result. Oversized request lines close the connection. No input worker or frame work is created when diagnostics are disabled.
-
-```sh
-goo dev --input --no-watch --project App.gsproj
-goo input click --pid 1234 --window "window-1234-1" --target TARGET_HANDLE
-goo input click --pid 1234 --window "window-1234-1" --node-id 42
-goo input text --pid 1234 --window "Main" --text "hello"
-goo input key.down --pid 1234 --window "Main" --key Backspace
-goo input key.up --pid 1234 --window "Main" --key Backspace --gesture TOKEN
-goo input pointer.down --pid 1234 --window "Main" --x 200 --y 60
-goo input pointer.move --pid 1234 --window "Main" --x 280 --y 60 --gesture TOKEN
-goo input pointer.cancel --pid 1234 --window "Main" --gesture TOKEN
-goo snapshot --pid 1234 --window "Main" --json
-```
-
-The CLI exits successfully only after a positive acknowledgement, requires the advertised capability, and uses the same explicit PID/window selection rules as capture. Add `--json` to preserve the complete response.
-
-## Profiler recording and trace files
-
-The optional `profiler.trace.v1` capability adds `profiler.start`,
-`profiler.read`, and `profiler.stop` to the existing request/response connection.
-One pipe client owns the recorder for the target process. Recording includes
-all application windows and shared resources.
-
-- Start accepts `bufferBytes`, clamped to 64 KiB through 16 MiB, and returns
-  schema version 1, trace identity, monotonic origin/frequency, sampling settings,
-  device metadata and event/owner/resource names. A competing recorder returns
-  a successful `state: "Busy"` reply.
-- Read accepts `traceId`, string `afterSeq`, and bounded `maxBytes`. Responses
-  contain ordered records, `nextSeq`, `more`, `state`, `dropped`, `partial`, and
-  an empty-poll delay. Drain immediately only while `more` is true.
-- Stop freezes producers and drains already-submitted GPU timing through normal
-  completion polling. Clients continue reading through `Complete`. No queue-idle
-  wait is added. Disconnect releases recording ownership.
-
-CPU timestamps are integer ticks relative to the recording origin. GPU elapsed
-nanoseconds are a separate clock domain. Identifiers and large integer values
-are strings. Unavailable measurements are `null`, not zero. Counter accounts,
-sources and freshness are separate. Allocator requirements, swapchain estimated
-payload, managed memory, RSS/PSS and driver usage must not be summed as a total.
-
-Allocation-type sampling is opt-in. Set `allocationSeconds` on `profiler.start`
-to a duration from 2 through 60 seconds. NativeAOT apps must also opt into
-runtime events in their project:
+Set `allocationSeconds` on `profiler.start` to 2 through 60 seconds. NativeAOT apps must also enable runtime events:
 
 ```xml
 <PropertyGroup>
@@ -151,83 +36,41 @@ runtime events in their project:
 </PropertyGroup>
 ```
 
-With EventSource support disabled, the trace contains an `allocation.samples`
-counter with `validity: "unavailable"`, `value0: null`, and source
-`unavailable: EventSourceSupport is off`. DevTools shows this reason with
-`Unavailable` in the Types table. An unavailable result does not mean that
-the app allocated no objects. Sample counts are not exact object counts.
+With events disabled, `allocation.samples` reports `validity: "unavailable"` and a null value. Some runtimes report counts without usable type names. `allocation.types` then reports unavailable, not a type named `NULL`. NativeAOT may lack names even with events enabled. Unavailable does not mean no allocations. Sample counts are not exact object counts.
 
-Some runtimes emit allocation counts without usable type names. The profiler
-keeps aggregate sample counts and sampled bytes in `allocation.samples`.
-`value0` is the sample count and `value1` is sampled bytes.
-If all received names are missing, blank, or `NULL`, an `allocation.types`
-counter reports `validity: "unavailable"` with a null value and a reason.
-The Types table shows `Unavailable`, not a type named `NULL`. This decision
-comes from the received events, not the runtime name.
-NativeAOT can report unavailable type names even with EventSource support enabled.
+### GPU timing
 
-`vulkan.timestamp.elapsed` records give elapsed GPU nanoseconds in `gpuElapsedNs`.
-Match `windowId`, `frameId` and `submissionId`. `value0` is the number of recorded
-scopes and `value1` is the number omitted when the scope limit is reached.
-Each stage records up to 64 scopes per frame. Larger stages report unavailable timing.
-Accept only `validity: "available"` with no omitted scopes.
+Accept `vulkan.timestamp.elapsed` only with `validity: "available"` and no omitted scopes. Match window, frame and submission IDs. Each stage records up to 64 scopes per frame. Unsupported queues or larger stages report unavailable timing.
 
-| Event ID | Name | Work |
-| --- | --- | --- |
-| 316 | `gpu.upload` | Image, path and glyph atlas uploads and their barriers |
-| 318 | `gpu.main` | Main rendering span, including nested layers and effects |
-| 319 | `gpu.effects` | Backdrop copies, blur and layer composition |
-| 320 | `gpu.offscreen` | Attachment loads, layer contents and stores, including nested work |
-| 336 | `gpu.frame` | Complete window command buffer |
-| 337 | `gpu.clip` | Dirty clip mask render passes and their barriers |
-| 338 | `gpu.primitive-upload` | Primitive, text instance and stroke data uploads |
-
-These are stage aggregates, not a disjoint per-pass sum. Main includes Offscreen
-and Effects. Frame includes all stages and transitions. Nested Offscreen scopes
-can overlap. Never add overlapping times or subtract their percentiles.
-Offscreen ranges begin before a layer's rendering scope and end after it.
-This includes attachment loads and stores.
-Results are read without waiting. The `vulkan.timestamp` metadata gives queue
-timestamp valid bits in `value0` and the timestamp period in picoseconds in
-`value1`. Unsupported queues report unavailable timing.
-
-`GOO_FRAME_PROFILE=1` prints capabilities and one `[goo.profile.gpu]` line per
-completed stage with `elapsed_ns`, `stage`, `scopes` and `dropped`. It needs no
-DevTools connection. The previous console format prints only the complete frame span.
-
-Resize work uses nested CPU phases from `phaseNames`:
-
-| Phase | Timed work |
+| Stage | Work |
 | --- | --- |
-| `NativeResize` | Apply pending native window metrics and resize the target. |
-| `Swapchain` | The full swapchain recreation call in Events or TargetBegin, including deferred attempts. |
-| `DeviceIdle` | The `vkDeviceWaitIdle` call, only when it runs. |
-| `ClipAtlas` | Replace a clip atlas generation, including growth during Paint. |
-| `LayerCollect` | Collect offscreen layers with `discardCompleted`. |
-| `LayerCreate` | Create an offscreen layer image, view and descriptor. |
+| `gpu.upload` | Image, path and glyph uploads and barriers |
+| `gpu.main` | Main rendering, including nested layers and effects |
+| `gpu.effects` | Backdrop copies, blur and composition |
+| `gpu.offscreen` | Layer attachment loads, contents and stores |
+| `gpu.frame` | Complete window command buffer |
+| `gpu.clip` | Dirty clip-mask passes and barriers |
+| `gpu.primitive-upload` | Primitive, text-instance and stroke uploads |
 
-These phases are inclusive. Do not add a parent duration to its children.
-The DevTools frame chart shows exclusive phase costs. Profiling off does not
-read clocks or allocate per-call profiling data.
+Stages overlap. Main includes Offscreen and Effects. Frame includes all stages and transitions. Never add overlapping times or subtract their percentiles.
 
-Error envelopes retain the request `id` but need not repeat `command`. Clients
-must correlate pending requests by ID. A profiler error envelope disconnects the
-recording client, including a start error, because a timed-out handler may still
-finish. Successful Busy replies do not disconnect. Snapshot error responses
-release the matching pending snapshot so automatic polling can continue.
+Set `GOO_FRAME_PROFILE=1` to print capabilities and completed `[goo.profile.gpu]` stages with `elapsed_ns`, `stage`, `scopes` and `dropped`. No DevTools connection is needed.
 
-The desktop file format is separate from this wire extension. It uses
-`{"traceEvents":[...],"displayTimeUnit":"ms","goo":{...}}`. Standard event times
-are microseconds. Named projected process/thread IDs separate windows, threads
-and crossing intervals. Original IDs remain exact strings in each primary
-event's `goo` record. The top-level `goo.format` is `goo.profiler/1` and retains
-the original clock, start metadata, names, completion, gaps and dropped counts.
-Those records, not floating-point Chrome times, are authoritative for a Goo
-round trip. Generic Chrome imports retain their original event arguments.
+### Resize timing
 
-Export uses `X` durations, `i` instants, numeric `C` counters, `M` names and
-slice-bound flow events with per-file numeric IDs. Original correlation IDs stay
-in slice arguments and Goo records. Uncalibrated GPU timings stay elapsed counters or
-unavailable instants, never CPU-aligned duration slices. The mapping follows
-the [Trace Event Format](https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview)
-supported by [Perfetto's Chrome JSON importer](https://perfetto.dev/docs/getting-started/other-formats#chrome-json-format).
+| CPU phase | Work |
+| --- | --- |
+| `NativeResize` | Apply native metrics and resize the target |
+| `Swapchain` | Recreate the swapchain, including deferred attempts |
+| `DeviceIdle` | `vkDeviceWaitIdle`, only when called |
+| `ClipAtlas` | Replace a clip-atlas generation |
+| `LayerCollect` | Collect offscreen layers with `discardCompleted` |
+| `LayerCreate` | Create a layer image, view and descriptor |
+
+Phases are inclusive. Do not add a parent to its children. The frame chart shows exclusive costs. With profiling off, these phases do not read clocks or allocate per-call profiling data.
+
+## Trace files
+
+The desktop export uses `goo.profiler/1` with Chrome `traceEvents`. Standard event times are microseconds. Exact IDs, clocks, metadata, completion, gaps and dropped counts remain in Goo records. Those records, not floating-point Chrome times, are authoritative for a Goo round trip. Generic Chrome imports retain their event arguments.
+
+GPU durations are elapsed counters or unavailable instants, not CPU-aligned duration slices.

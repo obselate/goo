@@ -1,21 +1,6 @@
 # Get started
 
-Install [.NET SDK 10.0.403 or a later 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
-Check with `dotnet --list-sdks`. Use Vulkan 1.3 with timeline semaphores,
-synchronization2 and dynamic rendering. Linux requires native Wayland, not X11
-or XWayland. Windows x64 and macOS arm64 are also supported.
-See [platform requirements](platform-preflight.md).
-
-```sh
-dotnet new install Goo.Templates
-dotnet tool install --global Goo.DevTools
-dotnet new goo -n HelloGoo
-cd HelloGoo
-goo dev
-```
-
-The template restores the G# compiler from NuGet automatically.
-`goo dev` runs the counter with hot reload.
+Create the [starter counter](../README.md#use) first. See [platform requirements](platform-preflight.md) if it does not start.
 
 ## 1. Extract a function
 
@@ -58,30 +43,9 @@ must show `3`.
 
 ## 2. Mount a child when it needs state
 
-To show two independent counters, give each one its own Cell. Replace
-`Program.gs` with this complete program:
+Keep `ActionButton` and `Counter`. Add this parent:
 
 ```gsharp
-package LearnGoo
-
-import Goo
-import System
-
-func ActionButton(count int32, onAdd Action) Blob -> Button{
-    OnClick: onAdd,
-    Text{Content: "Add one (count: $count)"},
-}
-
-class Counter : Cell {
-    private var count int32
-
-    override func Build() Blob -> Container{
-        Width: Percent(100),
-        Text{Content: "Count: $count"},
-        ActionButton(count, () -> { count++ }),
-    }
-}
-
 class Counters : Cell {
     override func Build() Blob -> Container{
         Width: Percent(100),
@@ -89,12 +53,9 @@ class Counters : Cell {
         Cell.Mount[Counter](),
     }
 }
-
-func Main() {
-    Window.ConfigureApplication("Goo learning", "1.0.0", "com.example.goolearning")
-    Window{Title: "Goo learning", Width: 360, Height: 220, Root: Counters{}}.Run()
-}
 ```
+
+Change the window's `Root` to `Counters{}`.
 
 Restart `goo dev`. Click the first button three times and the second once.
 The first counter must show `3` and the second `1`.
@@ -107,11 +68,17 @@ Goo rebuilds the Cell that authored an input callback, even when a child renders
 State changed outside input callbacks needs `Rebuild()` on the UI thread.
 See [Cell inputs, identity and lifetime](api/cell.md) for those cases.
 
-## 3. Continue by task
+## State
 
-- Follow [Managing state](tutorials/managing-state.md) for shared state and reset actions.
-- Use the [tutorials](tutorials/README.md) for forms, lists, themes, animation and drawing.
-- Try [edit and inspect](edit-and-inspect.md).
-- Read [native composition](native-authoring.md) and [shipping](shipping.md).
-- Use the [SVG loader](svg.md) and [images guide](images.md) for assets.
-- See the [app-author index](README.md) for the remaining guides.
+Both actions can change the same Cell field. Add this child beside `ActionButton` in `Counter.Build`:
+
+```gsharp
+Button{
+    OnClick: () -> { count = 0 },
+    Text{Content: "Reset"},
+},
+```
+
+Click Add three times, then Reset. Both labels must show zero.
+
+See the [tutorial catalog](README.md#tutorials), [hot reload exercise](devtools/README.md#edit-a-running-app), [tree composition](api/tree.md) and [shipping](shipping.md).

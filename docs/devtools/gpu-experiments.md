@@ -9,16 +9,10 @@ These internal experiments remove rendering work. They are not application setti
 Normal builds omit the selector and use a compile-time `None` constant. No extra
 shader, GPU command or environment lookup is added to a normal frame.
 
-An experiment build also requires `GOO_VK_DIAGNOSTICS=1`. It reads one selection
-once, before the first Vulkan frame. Restart the process to change it. With no
-selection, rendering is unchanged. Experiment builds retain CPU selection checks.
-Do not compare their CPU time with a normal build as an optimization result.
-
-For one Android APK, set `GOO_VK_GPU_EXPERIMENT_FILE` to an absolute path in the
-test application's private files directory before Goo starts. The file contains
-one table value. If it exists, it overrides `GOO_VK_GPU_EXPERIMENT`. A missing file
-uses the environment value. An unknown value or an unreadable file stops startup.
-The selected value is printed to standard error. No file is polled during frames.
+- Set `GOO_VK_DIAGNOSTICS=1`. Selection is read once before the first Vulkan frame. Restart to change it.
+- No selection leaves rendering unchanged. Do not compare experiment-build CPU time with normal-build CPU time.
+- For an Android APK, set `GOO_VK_GPU_EXPERIMENT_FILE` to an absolute private-file path before startup. Its one table value overrides the environment. A missing file uses the environment.
+- Unknown values and unreadable files stop startup. The selection is printed to stderr. No file is polled during frames.
 
 | Value | Work removed or changed | Limits |
 | --- | --- | --- |
@@ -33,11 +27,7 @@ The selected value is printed to standard error. No file is polled during frames
 | `clip-regenerate` | Retention of clean masks | Forces every acquired mask dirty. Compare static and moving scenes separately |
 | `no-gpu-timestamps` | Window-frame timestamp pool, resets and writes | CPU profiling and diagnostics remain. Use presentation data, not missing GPU timings, as its result. Keep readbacks outside timing windows |
 
-Use one value at a time. `no-images` versus `no-layers` separates image paint from
-layer subtrees only approximately. Neither makes arbitrary effects safe to merge.
-There is no render-pass merging switch. Sampled intermediate images and backdrop
-copies cross rendering boundaries. Replacing them with tile-local inputs is a
-renderer change, not a diagnostics switch.
+Use one value at a time. Suppression does not prove that render passes can be merged.
 
 ## Measurement
 

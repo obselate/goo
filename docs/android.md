@@ -10,11 +10,10 @@ dotnet build HelloGoo/HelloGoo.gsproj -c Release
 
 - Requires the .NET Android workload, its supported Android SDK and JDK.
 - Includes an Activity, a shared G# library, Vulkan manifest rules and ARM64/x64 RIDs.
-- Requires API 33 and a compatible Vulkan 1.3 device.
 - Use `--goo-version` to select the matching Goo and Goo.Android release.
 - Set `AndroidSdkDirectory` and `JavaSdkDirectory` if tool discovery fails.
 
-[API reference](api-android/README.md).
+[API reference](https://github.com/obselate/goo/blob/main/docs/api-android/README.md).
 
 ## Shared application
 
@@ -37,13 +36,11 @@ public sealed class MainActivity : GooActivity
 }
 ```
 
-Reference `Goo.Android` from a `net10.0-android` application and set
-`SupportedOSPlatformVersion` to `33`. Use Android RIDs `android-arm64` and
-`android-x64`. Both hosts use the same control tree, editor, renderer, and asset
-API through `EmbeddedWindowHost` and `PlatformInput`. The sample keeps Cells
-mounted during orientation and size changes and resizes the viewport.
+Reference `Goo.Android` from a `net10.0-android` app. Set
+`SupportedOSPlatformVersion` to `33`. Both hosts share the same control tree,
+editor, renderer and assets.
 
-## Launch and document activation
+## Activation
 
 ```csharp
 private static bool subscribed;
@@ -107,10 +104,8 @@ main thread. Add it to the native layout and call `Pause()`, `Resume()`, and
 `Dispose()` from the matching activity callbacks. Size it inside safe and keyboard
 insets. Do not call `Window.Run()` or `Window.Pump()` or attach the Window to another view.
 
-The view retains one ANativeWindow reference while its Surface exists.
-Surface destruction detaches and drains Vulkan presentation before releasing it.
-A replacement Surface reuses the Window and mounted Cells. Activity destruction
-closes the Window. Keep activity/process recreation data in application state.
+Surface replacement keeps the Window and mounted Cells. Activity destruction
+closes the Window. Store process-recreation data in app state.
 
 ### Activity state restoration
 
@@ -141,21 +136,10 @@ protected override void OnSaveInstanceState(Android.OS.Bundle outState)
 
 ### Frame scheduling
 
-Choreographer runs frames only on demand or at Goo's next animation/timer
-deadline. Pause cancels scheduling and transient input. Resume resets the frame
-clock.
-
-An embedded host can call `ServicePendingSubmission()` on its owner thread
-at a frame wake, before scheduling the next timed frame. It presents a completed
-graphics submission without simulation or rendering. Presentation completion
-remains in the next normal frame pump. Goo's Android adapter does this automatically.
-
-`GooView.HasFrameDemand` is true while a Choreographer frame is pending or the
-renderer needs an immediate frame. Read it, then use `FrameDemandChanged` on the
-Android UI thread to update frame-rate hints or other host policy.
-A future animation/timer deadline leaves demand false until scheduling.
-Pause, Surface destruction, view detachment, and disposal cancel pending frames
-and clear demand. The event reports demand transitions, not every presented frame.
+Choreographer schedules only on frame demand or the next animation/timer deadline.
+Pause cancels frames and transient input. Resume resets the clock.
+Use `HasFrameDemand` and `FrameDemandChanged` on the Android UI thread for host
+frame-rate policy. The event reports demand changes, not each frame.
 
 ## Documents and URI streams
 
@@ -240,17 +224,8 @@ TextEntry{ Accessibility: Accessibility{ Name: "Name" } }
 - `Accessibility.Live` sets polite or assertive live-region behavior.
 - Atomic regions send their full current text. Resume does not replay old announcements.
 
-### Accessibility checks
-
-```bash
-.github/scripts/run-android-accessibility.sh path/to/org.goo.androidsmoke-Signed.apk
-```
-
-- CI runs the real smoke app through Android `UiAutomation` on API 36.
-- The runner uses pinned emulator and Google APIs image builds. It needs Linux KVM.
-- The checks cover native nodes, hover, actions, text events, password masks, live regions, Surface replacement and Activity replacement.
-- Logs, guest Vulkan details and a screenshot are saved under `artifacts/android-accessibility-36/logs`.
-- These checks do not test TalkBack speech.
+For repository runners and evidence, see
+[Android qualification](https://github.com/obselate/goo/blob/main/CONTRIBUTING.md#android-qualification).
 
 Before release, record the Android and TalkBack versions and check:
 
@@ -302,74 +277,18 @@ create a native archive for project references. NuGet omits it and uses Goo's
 payloads to avoid duplicate libraries. The renderer adds no SDL, Skia, OpenGL,
 FreeType, or C++ runtime payload.
 
-Build the pinned HarfBuzz 15.0.0 libraries on Linux with Android NDK
-`27.2.12479018`, Meson, Ninja, Python 3, and the normal archive tools:
+For source payload builds and device checks, use
+[Android qualification](https://github.com/obselate/goo/blob/main/CONTRIBUTING.md#android-qualification).
 
-```sh
-bash .github/scripts/build-text-native-android.sh android-arm64 Goo/Runtime/Vulkan/android-arm64 "$ANDROID_NDK_HOME"
-bash .github/scripts/build-text-native-android.sh android-x64 Goo/Runtime/Vulkan/android-x64 "$ANDROID_NDK_HOME"
-```
+## Notifications
 
-The script verifies the source archive and patch hashes, target ABI, required
-exports, private SONAMEs, dependencies, and page alignment. It writes
-`text-native-build.json` beside each payload. CI rebuilds each ABI twice and
-compares all bytes before building the Release smoke packages.
+Reference `Goo.Android` and use `AndroidNotifications.Open(activity, options)`
+on the owner's UI thread. Supply `ChannelId`, `ChannelName` and a drawable
+`SmallIconResource`. The adapter supplies `POST_NOTIFICATIONS`.
 
-## Shared smoke app
-
-`tests/Goo.AndroidSmoke.Shared` contains one G# Cell scene with a packaged font,
-system text, retained counter, image, text entry, password entry, multiline editor,
-and scroll container. Both entry projects reference that library.
-
-```sh
-dotnet run --project tests/Goo.AndroidSmoke.Desktop/Goo.AndroidSmoke.Desktop.gsproj -c Release
-dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.gsproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME"
-dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- android tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
-dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- android tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke.aab
-"$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
-adb install -r tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
-adb shell monkey -p org.goo.androidsmoke 1
-```
-
-Run the deterministic input-connection checks after installation:
-
-```sh
-adb shell am start -S -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p org.goo.androidsmoke --ez goo.input_smoke true
-adb logcat -d -s GooInputSmoke:I
-```
-
-Wait for the final `PASS` log after exercising text and composition cursors,
-surrounding deletion, code points, context queries, batches, password privacy,
-stale focus, and multiline input through the Android input connection. The
-last checks leave a Backspace key-up absent and deliver explicit native repeat
-events, then wait to verify that no additional deletion occurs.
-
-```sh
-adb shell am instrument -w -r org.goo.androidsmoke/org.goo.androidsmoke.GestureChecks
-```
-
-`GOO_GESTURES_PASS` confirms coherent two-contact movement, rotation and native cancellation.
-
-```sh
-adb shell am start -S -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p org.goo.androidsmoke --ez goo.popup_smoke true
-adb logcat -d -s GooPopupSmoke:I
-```
-
-The `PASS` log covers popup rendering, scale, placement updates, nested teardown,
-menu focus and owner pause.
-
-The package checker verifies both ABI payloads against build provenance, checks
-dependencies and page alignment, and rejects legacy native renderer libraries.
-For a single-ABI build pass `--abi arm64-v8a` or `--abi x86_64`.
-The separate `zipalign` check verifies 16 KB alignment within the installable APK.
-
-### Device checks
-
-Record OS, device, driver, package version, actions, and results.
-Report untested combinations.
-
-On a compatible device, check first-frame text and image rendering, taps, touch
-scrolling, keyboard entry, selection and composition, password privacy, rotation,
-background/resume, and Surface destruction/recreation. Increment the counter
-before recreating only the Surface and confirm that its value remains. API/ABI
-and archive checks do not establish device rendering or input correctness.
+- Request permission from an explicit user action. `ShowAsync` never requests it.
+- Android controls channel importance and notification settings.
+- Default clicks target the concrete `GooActivity` and use its shared activation event.
+- Activity destruction closes the service and ends pending permission work.
+- Accepted notifications and their `PendingIntent` routes survive service disposal.
+- See [notification outcomes](https://github.com/obselate/goo/blob/main/docs/desktop-integration.md#notifications).
