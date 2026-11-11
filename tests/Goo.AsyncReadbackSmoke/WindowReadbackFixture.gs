@@ -99,6 +99,7 @@ internal data struct VulkanClipMaskAtlasGrowthTestSnapshot {
   internal var ResolutionReduced bool
   internal var ScreenMappingPreserved bool
   internal var ResizeGenerationPreserved bool
+  internal var ResizeContentMatched bool
   internal var PressureGenerationPreserved bool
   internal var ShrinkQualityRecovered bool
   internal var PressureFailureCount uint64
@@ -579,12 +580,14 @@ internal partial class VulkanWindowTarget {
       atlas.Acquire(1000uL, 0, 0, 16u, 16u)
       let resizeGeneration = atlas.Generation
       var resizeGenerationPreserved = true
+      var resizeContentMatched = true
       for size in 8 ... 17 {
         atlas.EndUsageBatch()
         atlas.AbortUsageBatch()
         atlas.BeginUsageBatch()
-        atlas.Acquire(1000uL, 0, 0, uint32(size), uint32(size))
+        let resized = atlas.Acquire(1000uL, 0, 0, uint32(size), uint32(size))
         resizeGenerationPreserved &= atlas.Generation == resizeGeneration
+        resizeContentMatched &= resized.ContentWidth == uint32(size) && resized.ContentHeight == uint32(size)
       }
       atlas.AbortUsageBatch()
       atlas.Reset(0uL)
@@ -648,6 +651,7 @@ internal partial class VulkanWindowTarget {
         ScreenMappingPreserved: recovered.ScreenWidth == 32u
           && recovered.ScreenHeight == 32u && recovered.Mapping.ScaleX > 0.0F,
         ResizeGenerationPreserved: resizeGenerationPreserved,
+        ResizeContentMatched: resizeContentMatched,
         PressureGenerationPreserved: pressureGenerationPreserved,
         ShrinkQualityRecovered: afterShrink.ContentWidth >= afterShrink.ScreenWidth
           && afterShrink.ContentHeight >= afterShrink.ScreenHeight,

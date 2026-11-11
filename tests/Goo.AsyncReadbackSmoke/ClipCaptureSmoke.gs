@@ -69,6 +69,7 @@ func RunClipCaptureSmoke() {
         && growth.ResolutionReduced
         && growth.ScreenMappingPreserved
         && growth.ResizeGenerationPreserved
+        && growth.ResizeContentMatched
         && growth.PressureGenerationPreserved
         && growth.ShrinkQualityRecovered
         && growth.PressureFailureCount == 1uL

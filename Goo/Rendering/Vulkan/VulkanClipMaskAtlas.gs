@@ -573,7 +573,8 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
       }
       if regionMap.TryGetValue(key, out var existing) {
         existing.UsageBatchToken = CurrentUsageBatchToken()
-        if contentWidth > existing.ContentWidth || contentHeight > existing.ContentHeight {
+        let padding = existing.ContentX - existing.PaddedX
+        if contentWidth + padding * 2u > existing.PaddedWidth || contentHeight + padding * 2u > existing.PaddedHeight {
           let oldGeneration = generation
           let oldPlacement = VulkanClipMaskFreePlacement{
             Layer: existing.Layer,
@@ -622,6 +623,10 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
           if generation == oldGeneration {
             freePlacements.Add(oldPlacement)
           }
+          MarkDirty(existing)
+        } else if contentWidth != existing.ContentWidth || contentHeight != existing.ContentHeight {
+          existing.ContentWidth = contentWidth
+          existing.ContentHeight = contentHeight
           MarkDirty(existing)
         }
         if existing.ScreenX == screenX && existing.ScreenY == screenY

@@ -2605,6 +2605,8 @@ internal shared class Program {
                     }
                 }
             )
+        } else if vertexShader == "clip_mask_vertex" {
+            Array.Empty[InterfaceLocation]()
         } else {
             []InterfaceLocation{InterfaceLocation{Location: 0, Type: interfaceType, Name: interfaceName}}
         }

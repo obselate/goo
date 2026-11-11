@@ -21,8 +21,8 @@ uint pathWord(uint relativeWord)
 struct PathBandVertexOutput
 {
     float4 position : SV_Position;
-    [[vk::location(0)]] float2 pathPosition;
 #ifndef GOO_CLIP_MASK
+    [[vk::location(0)]] float2 pathPosition;
     [[vk::location(2)]] nointerpolation uint clipDrawOrdinal;
 #endif
 };
@@ -46,8 +46,8 @@ PathBandVertexOutput main(
     float2 clip = float2(dot(pc.transform0.xyz, homogeneous), dot(pc.transform1.xyz, homogeneous));
     PathBandVertexOutput output;
     output.position = float4(clip, 0.0, 1.0);
-    output.pathPosition = path;
 #ifndef GOO_CLIP_MASK
+    output.pathPosition = path;
     output.clipDrawOrdinal = instanceIndex;
 #endif
     return output;
