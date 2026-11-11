@@ -452,8 +452,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       let height = float32(region.ContentHeight)
       let scaleX = float32(region.ContentWidth) / float32(region.ScreenWidth)
       let scaleY = float32(region.ContentHeight) / float32(region.ScreenHeight)
-      let deltaX = float32(region.ContentX) - float32(region.ScreenX) * scaleX
-      let deltaY = float32(region.ContentY) - float32(region.ScreenY) * scaleY
+      let deltaX = -float32(region.ScreenX) * scaleX
+      let deltaY = -float32(region.ScreenY) * scaleY
       var push = ClipMaskPushConstants{}
       push.transform0_x = 2.0F * transform.A * value.ScaleX * scaleX / width
       push.transform0_y = 2.0F * transform.C * value.ScaleY * scaleX / width

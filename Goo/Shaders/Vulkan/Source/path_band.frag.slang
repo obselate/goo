@@ -750,7 +750,7 @@ bool validHeader()
 #ifdef GOO_CLIP_MASK
 float clipBorderCoverage()
 {
-    float3 screenPoint = float3(gooFragmentPosition.xy, 1.0);
+    float3 screenPoint = float3(gooFragmentPosition.xy - float2(pc.transform0.w, pc.transform1.w), 1.0);
     float2 borderPoint = float2(
         dot(pc.borderTransform0.xyz, screenPoint),
         dot(pc.borderTransform1.xyz, screenPoint));
