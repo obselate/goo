@@ -217,7 +217,7 @@ jobs:
         run: |
           dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
           if [ -d artifacts/packages ]; then
-            dotnet nuget add source "$PWD/artifacts/packages" --name goo-release-candidates
+            dotnet nuget add source "$PWD/artifacts/packages" --name goo-release-candidates --configfile "$HOME/.nuget/NuGet/NuGet.Config"
           fi
           run="$RUNNER_TEMP/plugin"
           trap 'rm -rf "$run"' EXIT
