@@ -383,14 +383,14 @@ func RenderPage() {
         let pending = session.RenderAsync(MyPage(), options, window.Closed)
         var timer WindowTimer? = nil
         timer = window.SetInterval(
-            async () -> {
+            () -> {
                 session.Service()
                 if !pending.IsCompleted {
                     return
                 }
                 timer!!.Dispose()
                 try {
-                    let rendered = await pending
+                    let rendered = pending.Result
                 } finally {
                     session.Dispose()
                 }
@@ -403,6 +403,7 @@ func RenderPage() {
 Button{OnClick: RenderPage, Text{Content: "Render page"}}
 ```
 
+The timer reads `Result` only after the task completes, so it never blocks the UI thread.
 Call `window.CreateOffscreenSession` on the UI thread while the window is open.
 Create the lease before a native service can remove its presentation surface.
 The lease keeps the renderer, not that surface. For no open window, use static
