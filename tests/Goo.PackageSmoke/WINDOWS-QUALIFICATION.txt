@@ -1,5 +1,0 @@
-Run this bundle from a normal signed-in Windows 11 desktop with a current Vulkan GPU driver.
-
-    powershell -ExecutionPolicy Bypass -File .\run-windows-qualification.ps1
-
-Do not run it through SSH, a service, or a disconnected session. The test opens real windows. It runs one finite end-to-end frame benchmark and three behavior lanes. Send back the complete results-YYYYMMDD-HHMMSS directory. Each result contains system and display adapter data, the executable hash, lane exit codes, Goo Vulkan device facts, diagnostic counters, and frame timing and allocation measurements.

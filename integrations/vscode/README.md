@@ -11,11 +11,12 @@ dotnet tool install --global Goo.DevTools
 Then package the extension from the checkout:
 
 ```sh
-npx @vscode/vsce package integrations/vscode
-code --install-extension goo-devtools-0.28.6.vsix
+cd integrations/vscode
+npx @vscode/vsce package --out goo-devtools.vsix
+code --install-extension goo-devtools.vsix
 ```
 
-For local development, open `integrations/vscode` in VS Code and press F5 to launch an Extension Development Host.
+For local development, run `code --extensionDevelopmentPath="$PWD/integrations/vscode"` from the repository root.
 
 Commands:
 
@@ -27,6 +28,10 @@ Commands:
 - Goo: Restart Hot Reload replaces the previous terminal and starts the watch command again.
 - Goo: Doctor reports CLI and endpoint health.
 
-Set `goo.cliPath` and `goo.inspectorPath` in user or machine settings to absolute executable paths when the defaults do not apply. An empty `goo.cliPath` uses `goo` from PATH. Set `goo.project` in workspace settings to a project inside the workspace. The status item polls `goo doctor --json` and shows whether a live endpoint exists.
+- `goo.cliPath`: absolute CLI executable path. Empty uses `goo` from PATH.
+- `goo.inspectorPath`: absolute inspector executable path.
+- `goo.project`: project inside the workspace.
+
+Set executable paths in user or machine settings. The status item polls `goo doctor --json` for a live endpoint.
 
 The extension is MIT licensed.

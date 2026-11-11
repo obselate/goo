@@ -12,35 +12,34 @@ locked upstream source against Goo's glibc baseline; Windows and macOS use the
 upstream release binaries.
 
 - Copyright 2023 The AccessKit Authors. All rights reserved.
+- Derived portions: Copyright (c) 2021 Jacob Hoffman-Andrews.
 - [AccessKit C release](https://github.com/AccessKit/accesskit-c/releases/tag/0.23.0)
 - [MIT license](https://github.com/AccessKit/accesskit-c/blob/0.23.0/LICENSE-MIT)
 - [Apache-2.0 license](https://github.com/AccessKit/accesskit-c/blob/0.23.0/LICENSE-APACHE)
 
 
-The Linux payload applies `atspi-cache-signal-arguments.patch`: AT-SPI cache
-notifications carry one struct argument instead of flattening it into separate
-D-Bus arguments. This keeps native client caches consistent on node insertion
-and removal. The native inspector test validates both wire signatures.
+Build sources and patch provenance are in `Goo.Accessibility/native-build.json`.
 
 ## stb_image decoder
 
-The `goo-harfbuzz-gpu` native library includes `stb_image` 2.30, built for PNG, JPEG,
-GIF and BMP. No additional native library ships. The source declares
-`MIT OR Unlicense`.
-Goo patches GIF disposal history and skips empty PNG IDAT transfers.
+The `goo-harfbuzz-gpu` native library includes `stb_image` 2.30.
+Goo selects the MIT license below.
+
+- Copyright (c) 2017 Sean Barrett.
 
 - Source commit: `013ac3beddff3dbffafd5177e7972067cd2b5083`.
 - [stb_image source and license](https://github.com/nothings/stb/blob/013ac3beddff3dbffafd5177e7972067cd2b5083/stb_image.h)
 
 ## G# runtime support
 
-Goo's Linux bundle redistributes `Gsharp.Extensions.dll` from
-Gsharp.NET.Sdk 0.5.212.
+Goo's Linux bundle redistributes `Gsharp.Extensions.dll`,
+`Gsharp.Runtime.Channels.dll` and `Gsharp.Runtime.Values.dll`
+from Gsharp.NET.Sdk 0.5.212.
 
 - Copyright (c) 2019 David Obando.
 - License: MIT.
-- Release commit: `e170b28640e294924e30adfbbcab0e9da53f7db1`.
-- [G# license](https://github.com/DavidObando/gsharp/blob/e170b28640e294924e30adfbbcab0e9da53f7db1/LICENSE)
+- Package source commit: `242d8777c778db4272103c9dcefd6d63609e10ee`.
+- [G# license](https://github.com/DavidObando/gsharp/blob/242d8777c778db4272103c9dcefd6d63609e10ee/LICENSE)
 
 ## G# authoring tools
 
@@ -48,7 +47,7 @@ The compiler and canonical formatter come from `Gsharp.NET.Sdk`, declared in
 `global.json`. `Goo.Gslint` uses that SDK's parser and formatter assemblies.
 Copyright (C) GSharp Authors. All rights reserved.
 
-- [G# license](https://github.com/DavidObando/gsharp/blob/e170b28640e294924e30adfbbcab0e9da53f7db1/LICENSE)
+- [G# license](https://github.com/DavidObando/gsharp/blob/242d8777c778db4272103c9dcefd6d63609e10ee/LICENSE)
 
 ## HarfBuzz and hb-gpu text runtime
 
@@ -59,13 +58,6 @@ pinned HarfBuzz 15.0.0 upstream archive with `hb-gpu` enabled:
 `libgoo-harfbuzz.dylib` and `libgoo-harfbuzz-gpu.dylib` on macOS. They are
 private Goo artifacts, not system-library replacements or a runtime fallback.
 
-All native targets use strong stack protection and fortify level 2. The pinned
-glibc, MinGW, Bionic and Darwin headers do not implement fortify level 3.
-The x64 targets enable CET instrumentation and the arm64 targets enable PAC/BTI
-instrumentation. These flags do not establish Windows CFG support.
-Each native build checks that WebAssembly and subsetting are disabled in Meson's
-generated configuration. CI compares rebuilt Linux, Windows and Android libraries
-with the committed files.
 
 - HarfBuzz 15.0.0, including hb-gpu: HarfBuzz Old MIT license.
 - Signed tag commit: `35f656a1a2bab548ea7f54a6dd3fba2b09680d14`.
@@ -77,32 +69,13 @@ with the committed files.
   in 15.0.0.
 - [HarfBuzz 15.0.0 license](https://github.com/harfbuzz/harfbuzz/blob/15.0.0/COPYING)
 
-The proof's deterministic color-font fixtures originate from the HarfBuzz 14.3.1
-test archive. `HarfBuzz-chromacheck-colr.ttf` is covered by the
-ChromaCheck MIT notice in `tests/Goo.VulkanProof/Assets/Text/ChromaCheck-MIT.txt`.
-`HarfBuzz-adwaita-colrv1.ttf` is derived from the exact upstream fixture by
-changing only its CPAL table from version 0 to version 1 with palette type 1.
-It is covered by the HarfBuzz test-font OFL notice in
-`tests/Goo.VulkanProof/Assets/Text/HarfBuzz-test-fonts-COPYING.txt`.
-The `HarfBuzz-TTC.ttc` collection fixture is covered by that same OFL 1.1
-notice. Its two-face source path, SHA-256, and license mapping are recorded in
-`tests/Goo.VulkanProof/Assets/Text/HarfBuzz-TTC.provenance.json`. Each fixture
-has a SHA-256 and source record beside it.
+| Test fixture | Retained notice |
+| --- | --- |
+| `HarfBuzz-chromacheck-colr.ttf` | `tests/Goo.VulkanProof/Assets/Text/ChromaCheck-MIT.txt` |
+| `HarfBuzz-adwaita-colrv1.ttf`, `HarfBuzz-TTC.ttc`, CFF style fixtures | `tests/Goo.VulkanProof/Assets/Text/HarfBuzz-test-fonts-COPYING.txt` |
+| `HarfBuzz-cff-f1.otf`, `HarfBuzz-cff-f2.otf`, `HarfBuzz-cff.otc` | `tests/Goo.VulkanProof/Assets/Text/HarfBuzz-aots-COPYING.txt` |
 
-The CFF corpus fixtures `HarfBuzz-cff-f1.otf` and `HarfBuzz-cff-f2.otf` are
-copied from the pinned HarfBuzz AOTS shape corpus and carry its Apache License
-2.0 notice at `tests/Goo.VulkanProof/Assets/Text/HarfBuzz-aots-COPYING.txt`.
-`HarfBuzz-cff.otc` is a deterministic two-face collection generated from those
-two exact inputs. The source paths, hashes, face order, and generation record
-are retained in the matching `HarfBuzz-cff-*.provenance.json` files.
-
-The registered-font corpus also carries three tiny CFF OpenType style fixtures
-from the pinned HarfBuzz API test corpus: `cv01.otf`, `cff1_seac.otf`, and
-`SourceHanSans-Regular.41,3041,4C2E.otf`. They are covered by the HarfBuzz test
-font SIL Open Font License 1.1 notice retained at
-`tests/Goo.VulkanProof/Assets/Text/HarfBuzz-test-fonts-COPYING.txt`. Their
-source paths, fixture hashes, CFF format, and measured `U+0041` advance widths
-are recorded in the matching `HarfBuzz-cff-style-*.provenance.json` files.
+Source paths, hashes and modifications are in the adjacent fixture provenance files.
 
 The hb-gpu GLSL inputs are the pinned HarfBuzz sources
 `src/hb-gpu-vertex.glsl`, `src/hb-gpu-fragment.glsl`,
@@ -150,6 +123,8 @@ Copyright (c) 2022 Matthias Clasen
 Copyright (c) 2018,2021 Khaled Hosny
 Copyright (c) 2018,2019,2020 Adobe, Inc.
 Copyright (c) 2013-2015 Alexei Podtelezhnikov
+Copyright (C) 2026 Behdad Esfahbod
+Copyright (C) 2017 Eric Lengyel
 
 For full copyright notices consult the individual files in the package.
 
@@ -181,17 +156,8 @@ ENHANCEMENTS, OR MODIFICATIONS.
 Hexa.NET.SDL3 distributes SDL native binaries, but its package license covers
 the MIT-licensed wrapper. Goo therefore reproduces SDL's zlib notice directly.
 
-Goo rebuilds the Linux x64 shared and static SDL 3.4.0 payloads from
-the checksum-pinned source in Ubuntu 18.04. In addition to Goo's existing
-Linux patches, `event-wakeup-race.patch` arms the native wake before the final
-event-queue check. `wayland-wakeup-pipe.patch` replaces the Wayland compositor
-sync wake with a local nonblocking pipe. `wayland-clipboard-replacement.patch`
-backports SDL commit `01997ebebde6a57af1506956764732554c2b85b0` to preserve
-clipboard data when a cleared selection is replaced. `wayland-selection-serial.patch`
-backports SDL commit `7063546818de5fcd78ac7afe0b8404b753a95ab6` to publish clipboard
-data set before the first input event. Only Linux payloads contain these
-changes. The pinned Windows x64 and macOS arm64 binaries are unchanged. Build
-inputs and patch provenance are in `.github/scripts/build-sdl-linux-x64.sh`
+Goo's Linux SDL 3.4.0 payloads are altered versions.
+Build inputs and patches are in `.github/scripts/build-sdl-linux-x64.sh`
 and `.github/patches/sdl/`.
 
 ### SDL zlib license
@@ -226,6 +192,59 @@ official non-private-API macOS release archive.
 - The complete license text is retained in
   `Goo/Runtime/Vulkan/MoltenVK-LICENSE.txt` and shipped with Goo.
 
+## Tmds.DBus.Protocol
+
+- Tmds.DBus.Protocol 0.95.2. License: MIT.
+- Copyright 2006 Alp Toker <alp@atoker.com>.
+- Copyright 2010 Other Contributors.
+- Copyright 2016 Tom Deseyn <tom.deseyn@gmail.com>.
+- [Pinned license](https://github.com/tmds/Tmds.DBus/blob/5557e043025de2251128ab8048c9d3f0cf50495e/COPYING)
+
+## Unicode 16.0.0 data
+
+Goo includes generated data from the [Unicode 16.0.0 Character Database](https://www.unicode.org/Public/16.0.0/ucd/ReadMe.txt).
+The applicable [Unicode License V3](https://www.unicode.org/license.txt) follows.
+
+UNICODE LICENSE V3
+
+COPYRIGHT AND PERMISSION NOTICE
+
+Copyright © 1991-2026 Unicode, Inc.
+
+NOTICE TO USER: Carefully read the following legal agreement. BY
+DOWNLOADING, INSTALLING, COPYING OR OTHERWISE USING DATA FILES, AND/OR
+SOFTWARE, YOU UNEQUIVOCALLY ACCEPT, AND AGREE TO BE BOUND BY, ALL OF THE
+TERMS AND CONDITIONS OF THIS AGREEMENT. IF YOU DO NOT AGREE, DO NOT
+DOWNLOAD, INSTALL, COPY, DISTRIBUTE OR USE THE DATA FILES OR SOFTWARE.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of data files and any associated documentation (the "Data Files") or
+software and any associated documentation (the "Software") to deal in the
+Data Files or Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, and/or sell
+copies of the Data Files or Software, and to permit persons to whom the
+Data Files or Software are furnished to do so, provided that either (a)
+this copyright and permission notice appear with all copies of the Data
+Files or Software, or (b) this copyright and permission notice appear in
+associated Documentation.
+
+THE DATA FILES AND SOFTWARE ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF
+THIRD PARTY RIGHTS.
+
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE
+BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES,
+OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THE DATA
+FILES OR SOFTWARE.
+
+Except as contained in this notice, the name of a copyright holder shall
+not be used in advertising or otherwise to promote the sale, use or other
+dealings in these Data Files or Software without prior written
+authorization of the copyright holder.
+
 ## Unicode.Bidi
 
 - Unicode.Bidi 0.4.0: Copyright (c) 2006 Erik A. Brandstadmoen. License: MIT.
@@ -238,41 +257,40 @@ Project Developers and is offered under either the MIT or Apache-2.0 license.
 - [unicode-bidi v0.3.18 MIT license](https://github.com/servo/unicode-bidi/blob/v0.3.18/LICENSE-MIT)
 - [unicode-bidi v0.3.18 Apache-2.0 license](https://github.com/servo/unicode-bidi/blob/v0.3.18/LICENSE-APACHE)
 
+## Application fonts
+
+| Font | Version and copyright | License |
+| --- | --- | --- |
+| Material Symbols Rounded | 2.966, Copyright 2026 Google LLC. The shipped file is a 12-codepoint subset. | Apache-2.0, retained in `apps/Goo.Gallery/Assets/MaterialSymbolsRounded-LICENSE.txt`. [Pinned grant](https://github.com/google/material-design-icons/blob/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/LICENSE). |
+| Space Grotesk | 2.000, Copyright 2020 The Space Grotesk Project Authors. Binary blob `a1b2e6c26093066510a31147e7aec9abdc8d6c5e` at [google/fonts commit 2861cb7b](https://github.com/google/fonts/tree/2861cb7b12f90c0a294a12ed666e381e2211872f/ofl/spacegrotesk). | SIL OFL 1.1, retained in `apps/Goo.Gallery/Assets/SpaceGrotesk-OFL.txt`. |
+| Vend Sans | Copyright 2025 The Vend Sans Project Authors. | SIL OFL 1.1, retained in `tests/Goo.VulkanProof/Assets/Text/VendSans-OFL.txt`. |
+| JetBrains Mono | Copyright 2020 The JetBrains Mono Project Authors. | SIL OFL 1.1, retained in `apps/Goo.DevTools/Assets/Fonts/JetBrainsMono-OFL.txt`. |
+
+Each application ships the notices beside its fonts.
+
+## AppImage runtime
+
+AppImage output embeds the type-2 runtime at commit
+`fedfad51acc2860b2916a1eef32ba4a500ff31ef`.
+Copyright (c) 2004-23 probonopd. License: MIT.
+The runtime also includes libfuse 3.15.0 (LGPL-2.1), squashfuse 0.5.2
+(BSD-2-Clause), and Alpine 3.21 packages musl (MIT), zstd (BSD-3-Clause)
+and zlib (Zlib).
+The runtime and dependency notices are retained in
+`tools/Goo.DevTools.Cli/Packaging/AppImage-Runtime-LICENSE.txt` and copied to AppImage output.
+
 ## Goo Gallery shader algorithm sources
 
 The Goo Gallery application under `apps/Goo.Gallery` ports only the required
 algorithms identified below into Slang fragment effects. No sample textures or
 unrelated source from these projects is included.
 
-- raycastergl: Copyright (c) 2020 Melchor Garau Madrigal. License: MIT.
-  Ported the grid DDA traversal and perpendicular wall distance calculation
-  into `apps/Goo.Gallery/Shaders/wolfenstein.frag.slang`.
-  [raycastergl license](https://github.com/melchor629/raycastergl/blob/8f21b5fc984681e01c1865fb44c8db6d79f58634/LICENSE)
-  at commit `8f21b5fc984681e01c1865fb44c8db6d79f58634`
-  (source file `raycastergl/res/shaders/raycaster.glsl`).
-- RayMarch: Copyright (c) 2025 Shaun Ramsey. License: MIT.
-  Ported the signed-distance primitives, sphere-tracing loop, and
-  finite-difference normal estimation into
-  `apps/Goo.Gallery/Shaders/chrome_sdf.frag.slang` and
-  `apps/Goo.Gallery/Shaders/corridor.frag.slang`.
-  [RayMarch license](https://github.com/shaunramsey/RayMarch/blob/34a9b32424b535b5993c9dd454af9f9cf802d318/LICENSE)
-  at commit `34a9b32424b535b5993c9dd454af9f9cf802d318`
-  (source file `fifthlighting.frag`).
-- webgl-noise: Copyright (c) 2011 Ashima Arts. All rights reserved.
-  Copyright (c) 2011-2016 Stefan Gustavson. License: MIT.
-  Ported the textureless 3D simplex noise function `snoise` and its
-  helper routines into `apps/Goo.Gallery/Shaders/volumetric.frag.slang`.
-  [webgl-noise license](https://github.com/ashima/webgl-noise/blob/6abed1e77ed1e18b181627c35f688eb30c9fe75e/LICENSE)
-  at commit `6abed1e77ed1e18b181627c35f688eb30c9fe75e`
-  (source file `src/noise3D.glsl`).
-- Return-of-the-One-Bit: Copyright (c) 2022 Yun Jay Kim. License: MIT.
-  Ported the 4x4 and 8x8 Bayer matrices, the halftone matrix, and the
-  ordered threshold comparison logic into
-  `apps/Goo.Gallery/Shaders/dither.frag.slang`.
-  [Return-of-the-One-Bit license](https://github.com/yunjay/Return-of-the-One-Bit/blob/5ba093eefd1761d12a9f8c54d612466e0cb71497/LICENSE)
-  at commit `5ba093eefd1761d12a9f8c54d612466e0cb71497`
-  (source files `shaders/bayer16.fs`, `shaders/bayer64.fs`, and
-  `shaders/halftone.fs`).
+| Source | Attribution and license | Gallery use |
+| --- | --- | --- |
+| [raycastergl](https://github.com/melchor629/raycastergl/blob/8f21b5fc984681e01c1865fb44c8db6d79f58634/LICENSE) | Copyright (c) 2020 Melchor Garau Madrigal. MIT. | Grid DDA traversal and perpendicular wall distance in `wolfenstein.frag.slang`. |
+| [RayMarch](https://github.com/shaunramsey/RayMarch/blob/34a9b32424b535b5993c9dd454af9f9cf802d318/LICENSE) | Copyright (c) 2025 Shaun Ramsey. MIT. | Signed-distance primitives, sphere tracing and normals in `chrome_sdf.frag.slang` and `corridor.frag.slang`. |
+| [webgl-noise](https://github.com/ashima/webgl-noise/blob/6abed1e77ed1e18b181627c35f688eb30c9fe75e/LICENSE) | Copyright (c) 2011 Ashima Arts. All rights reserved. Copyright (c) 2011-2016 Stefan Gustavson. MIT. | Textureless 3D simplex noise in `volumetric.frag.slang`. |
+| [Return-of-the-One-Bit](https://github.com/yunjay/Return-of-the-One-Bit/blob/5ba093eefd1761d12a9f8c54d612466e0cb71497/LICENSE) | Copyright (c) 2022 Yun Jay Kim. MIT. | Bayer and halftone matrices in `dither.frag.slang`. |
 
 ## MIT license text
 

@@ -1,10 +1,12 @@
 # Live G# hot reload
 
-This test opens two native Goo windows with a nested typed Cell and a direct
-Cell wrapper. It seeds a counter, editor text and selection, edits the nested
-Build method twice, and checks that both windows update while preserving the
-process ID, native window handles, Cell instances and editor state. A structural
-edit must report GSHR1001 without restarting. Run with and without diagnostics.
+This fixture checks:
+
+- Two Build edits update two native windows without changing process or Cell identity.
+- Counter, editor text and selection stay intact.
+- A structural edit reports `GSHR1001` without restarting.
+
+Run with and without diagnostics.
 
 Build the modified G# runtime:
 
@@ -17,14 +19,14 @@ package version and the pinned platform payloads described in CONTRIBUTING.md:
 
 ```sh
 dotnet pack Goo/Goo.gsproj -c Release -o artifacts/hot-reload \
-  -p:PackageVersion=0.5.0-hotreload-local.20260906 \
+  -p:PackageVersion=0.30.0-hotreload-local.1 \
   -p:GooLinuxSdlPath=/path/to/linux/libSDL3.so \
   -p:GooWindowsSdlPath=/path/to/windows/SDL3.dll \
   -p:GooMacOsArm64NativeRoot=/path/to/osx-arm64/native
-XDG_CACHE_HOME="$(mktemp -d)" .github/scripts/with-headless-wayland.sh \
+.github/scripts/with-headless-wayland.sh \
   dotnet run --project tools/Goo.Investigation -c Release -- hot-reload \
   --runtime /path/to/gsharp/out/bin/Release/Gsharp.HotReload.Runtime/Gsharp.HotReload.Runtime.dll \
-  --packages artifacts/hot-reload --goo-version 0.5.0-hotreload-local.20260906
+  --packages artifacts/hot-reload --goo-version 0.30.0-hotreload-local.1
 ```
 
 Repeat the final command with `--diagnostics` to capture both windows as PNGs.
@@ -37,7 +39,3 @@ The generated consumer uses SDK 0.5.212 with
 `GsharpHotReloadRuntimeAssemblyFullPath` pointing at the rebuilt runtime. This
 overrides the runtime payload only, keeping compiler and MSBuild inputs stable.
 
-Verified on Linux x64, .NET SDK 10.0.302: two edits in each mode preserved both
-native windows and all asserted state. This does not qualify structural edits,
-re-execution of static initializers, debugger sequence-point remapping, or other
-platforms.

@@ -1,48 +1,4 @@
-# Goo's SDL 3.4.0 Wayland window patch
-
-`build-sdl-linux-x64.sh` applies `wayland-window-interactions.patch` to the
-checksum-pinned SDL source before building the Linux runtime. It also compiles
-and runs `tests/NativeWindow/test_sdl_wayland.py` against the patched handlers.
-
-`event-wakeup-race.patch` arms `wakeup_window` before the final event-queue
-check and clears it on every early return. This prevents a posted event from
-missing the native wake between the empty queue check and the idle wait.
-`test_sdl_wakeup.py` exercises that interleaving against the actual SDL function.
-Only the Linux x64 shared and static payloads carry this patch. SDL remains
-3.4.0. The pinned Windows x64 and macOS arm64 payloads are unchanged.
-
-`wayland-wakeup-pipe.patch` replaces the compositor sync roundtrip with a
-nonblocking, close-on-exec local pipe. Both display-read and blocked-flush
-waits include the pipe and cancel the prepared Wayland read on a local wake.
-`test_sdl_wakeup_pipe.py` checks the read/cancel handshake, timeout, draining,
-simultaneous display and local readiness, and blocked-flush wake paths with
-both `ppoll` and `poll`.
-
-`wayland-no-pointer-cursor.patch` backports the SDL Wayland seat guard from
-[upstream commit 79b40ad](https://github.com/libsdl-org/SDL/commit/79b40ad3975431cbab09f29ad90b5aef469131d8).
-SDL 3.4.0 otherwise dereferences a null `wl_pointer` while initializing its
-cursor on a touch-only or virtual seat. The actual `Wayland_ShowCursor` function
-is exercised by `tests/NativeWindow/test_sdl_no_pointer.py` with pointerless,
-pointer, and tablet seats.
-
-- SDL consumes custom hit-test titlebar clicks before its normal mouse click
-  tracker. Track primary presses per seat/window with SDL's configured
-  double-click time and radius, then maximize/restore resizable windows. Before
-  the default action, the optional `Goo.Window.TitlebarDoubleClick.1` window
-  pointer property is called as `bool callback(int x, int y)`; true consumes the
-  command. Goo installs it only while `Window.TitlebarDoubleClicked` has subscribers.
-  Releases must not start additional compositor moves or resizes.
-- Backport the exposure wakeups from upstream SDL's Wayland configure handlers.
-  An idle render-on-demand client otherwise waits for a size event while SDL
-  waits for a presented frame to acknowledge that size. Both xdg-shell and
-  libdecor need the wakeup.
-
-The resize fix follows
-[SDL's upstream Wayland window implementation](https://github.com/libsdl-org/SDL/blob/main/src/video/wayland/SDL_waylandwindow.c).
-The titlebar change is Goo-specific. Keep the patch tied to the pinned release;
-review/remove the backport when updating SDL rather than applying it with fuzz.
-
-For local source builds, supply the patched library explicitly:
+# Goo SDL 3.4.0 Linux patches
 
 ```sh
 .github/scripts/build-sdl-linux-x64.sh /absolute/path/to/libSDL3.so
@@ -50,78 +6,52 @@ dotnet build path/to/App.gsproj -c Release \
   -p:GooLinuxSdlPath=/absolute/path/to/libSDL3.so
 ```
 
-The release builder retains its glibc 2.27 requirement and should run in the
-Ubuntu 18.04 build environment from CI. A library built on a newer host is
-suitable for local testing only. An arbitrary system SDL does not include Goo's
-titlebar patch. Existing published applications need a rebuilt native payload;
-no application-level click handlers or continuously running render loop are
-required. Windows and macOS payloads are unchanged.
+The builder applies these patches to checksum-pinned SDL with no fuzz. Review backports when upgrading SDL. Release payloads use the Ubuntu 18.04 environment and glibc 2.27 baseline. A newer-host build is for local checks only. System SDL does not include Goo's patches. Windows and macOS payloads are unchanged.
 
-`wayland-drop-mime-priority.patch` keeps file URIs (or a document-portal file
-transfer) ahead of text fallbacks during drag negotiation. SDL 3.4.0 otherwise
-accepts Nemo's plain-text names and tries to decode those names as file URIs,
-producing an empty drop. The build runs `test_sdl_drop.py` against the actual C
-handler; the unpatched handler fails the mixed URI/text case.
+| Patch | Purpose | Check |
+| --- | --- | --- |
+| `event-wakeup-race.patch` | Arm wakeup before the final queue check | `tests/NativeWindow/test_sdl_wakeup.py` |
+| `wayland-wakeup-pipe.patch` | Wake blocked display reads and flushes with a local pipe | `test_sdl_wakeup_pipe.py` |
+| `wayland-window-interactions.patch` | Custom-titlebar maximize/restore and resize exposure | `test_sdl_wayland.py` |
+| `wayland-drop-mime-priority.patch` | Prefer file URI and portal transfers to text fallback | `test_sdl_drop.py` |
+| `wayland-no-pointer-cursor.patch` | Guard touch-only and virtual seats, upstream `79b40ad3975431cbab09f29ad90b5aef469131d8` | `test_sdl_no_pointer.py` |
+| `wayland-data-transfer.patch` | MIME drag sources and owned drop captures | `Goo.HostChecks wayland-data-transfer` |
+| `wayland-disconnect.patch` | Report compositor disconnect without unsafe cleanup | `test_sdl_disconnect.py` |
+| `portal-dialog-lifetime.patch` | Own portal dialog request lifetime | Native file-dialog checks |
+| `wayland-foreign-parent.patch` | Import owned xdg-foreign-v2 parents | `Goo.Investigation foreign-parent` |
+| `wayland-popup-grab.patch` | Bind popup placement and grabs to the originating input serial | `test_sdl_popup_handlers.py`, `Goo.Investigation popup` |
+| `static-no-dynapi.patch` | Disable dynamic API indirection for static SDL | Static NativeAOT package checks |
+| `wayland-secondary-startup.patch` | Allow secondary-process activation forwarding | AppHost checks |
+| `wayland-activation-token.patch` | Preserve Wayland activation-token routing | AppHost checks |
+| `wayland-clipboard-replacement.patch` | Keep clipboard data when a cleared selection is replaced, upstream `01997ebebde6a57af1506956764732554c2b85b0` | `Goo.HostChecks wayland-clipboard` |
+| `wayland-selection-serial.patch` | Publish a selection set before input with the latest serial, upstream `7063546818de5fcd78ac7afe0b8404b753a95ab6` | `Goo.HostChecks wayland-clipboard` |
 
-`wayland-data-transfer.patch` adds MIME drag sources and owned drop captures.
-It uses SDL's Wayland seat, data device and event loop.
-Copy and Move complete only after the target finishes.
-Pipe I/O runs off the UI thread. Same-process drops use the owned data directly.
-The bridge adds no runtime dependency.
+Python check names without a prefix are under `tests/NativeWindow`. The build script owns patch order and automatic native checks.
 
-`wayland-foreign-parent.patch` exports
-`bool Goo_SetForeignParent(SDL_Window *, const char *bare_handle, Uint8 modal)`.
-It imports an xdg-foreign-v2 parent through SDL's Wayland registry. Hidden
-windows retain the request in owned SDL properties and apply it before the
-initial shell surface commit. Hide destroys the import, show restores it, and
-window destruction releases it. A revoked or invalid handle clears the parent
-request and modal state. Null or empty handles clear the request. Unsupported
-backends, protocols, malformed handles, and non-toplevel windows return false.
-True means the request was queued or applied, not that the compositor validated
-the handle. Modal state uses xdg-dialog-v1 when available.
+## Foreign parents and popups
 
-`tests/NativeWindow/foreign_parent_e2e.c` maps parent and child windows on two
-separate Wayland connections. It checks hidden setup, first show, hide/re-show,
-modal changes, malformed and invalid handles, explicit clearing, and parent
-revocation. Its G# runner compiles against the patched SDL library and
-`wayland-client`, runs xdg-shell and libdecor, and checks protocol traces for
-parenting and modal requests before the initial shell commit. Run it on a
-compositor with xdg-foreign-v2 and installed libdecor:
+`Goo_SetForeignParent(SDL_Window *, const char *bare_handle, Uint8 modal)` imports an xdg-foreign-v2 parent. Hidden windows apply it before the first shell commit. Hide releases the import, show restores it, and destruction releases it. Null or empty handles clear it. Invalid or revoked handles clear parenting and modal state. Unsupported backends, protocols, malformed handles and non-toplevel windows return false. True means queued or applied, not compositor validation. Modal state uses xdg-dialog-v1 when available.
+
+Use a private compositor with xdg-foreign-v2 and installed libdecor:
 
 ```sh
 sdl_source=/absolute/path/to/patched/SDL3-3.4.0
 sdl_library=/absolute/path/to/patched/libSDL3.so
-XDG_CACHE_HOME="$(mktemp -d)" .github/scripts/with-headless-wayland.sh \
+.github/scripts/with-headless-wayland.sh \
   dotnet run --project tools/Goo.Investigation -c Release -- foreign-parent "$sdl_source" "$sdl_library"
-```
-
-The fixture checks the actual xdg-surface listener owner to prevent silent
-libdecor fallback. The runner preloads the exact supplied SDL library even when
-its directory has no SONAME symlink. Use `--xdg-only` for payloads built without
-libdecor support.
-
-`wayland-popup-grab.patch` associates native button, key and touch timestamps with
-their Wayland seat and originating serial. `Goo_ConfigurePopup` configures an
-SDL popup before show, and its initial xdg_popup role takes the explicit grab
-before mapping. A nested menu inherits only an active parent's grab. Missing
-input and removed seats return failure instead of opening an ungrabbed menu.
-The same patch carries the anchor rectangle, side and constraints through the
-SDL positioner and reposition paths. Tooltip surfaces remain ungrabbed.
-`test_sdl_popup_handlers.py` compiles the patched handlers and checks exact
-event-to-seat selection and nested grab state. The G# popup check exercises the
-bridge against the built library under an isolated compositor:
-
-```sh
-XDG_CACHE_HOME="$(mktemp -d)" .github/scripts/with-headless-wayland.sh \
+.github/scripts/with-headless-wayland.sh \
   dotnet run --project tools/Goo.Investigation -c Release -- popup "$sdl_source" "$sdl_library"
 ```
 
-`wayland-selection-serial.patch` backports
-[upstream commit 7063546](https://github.com/libsdl-org/SDL/commit/7063546818de5fcd78ac7afe0b8404b753a95ab6).
-SDL 3.4.0 defers a clipboard or primary selection set before the first key,
-button or touch serial and never sends it, so other clients never see a copy
-made before input. The backport sends the selection at once with the latest
-implicit grab serial and takes that serial from keyboard focus as well. The
-upstream change to drop the selection offer on keyboard focus loss is not
-included. `Goo.HostChecks wayland-clipboard` copies from a focused window before
-any input and reads the selection back with `wl-paste`.
+The [foreign-parent runner](../../../tools/Goo.Investigation/ForeignParent.gs) owns its assertion list. Use `--xdg-only` for a payload built without libdecor. Popup checks require an input serial from the originating seat. Missing input or removed seats fail rather than opening an ungrabbed menu. Tooltips stay ungrabbed.
+
+## Idle resize qualification
+
+Use a private compositor and the patched `GooLinuxSdlPath`:
+
+1. Open an undecorated resizable window with `Window.DragRegion` and a `MetricsChanged` listener.
+2. Let it idle. Double-click the titlebar to maximize and restore.
+3. Hold a resize edge. Verify multiple metric changes and a capture with relaid-out content before releasing the button.
+4. Repeat with interactive titlebar children and fixed-size windows.
+
+Do not animate continuously. Animation can conceal an idle resize failure.

@@ -1176,7 +1176,7 @@
 
 ### Changed
 
-- Removed the GCV1 binary vector format and the Goo.SvgCompiler tool. Goo.Svg now builds vector assets directly at runtime. Existing binary assets require migration to SVG sources. See the [GCV1 migration guide](docs/migrations/gcv1.md).
+- Removed the GCV1 binary vector format and the Goo.SvgCompiler tool. Goo.Svg now builds vector assets directly at runtime. Existing binary assets require migration to SVG sources.
 - Consolidated Vulkan shader, readback, frame, motion, and diagnostic ownership while pruning disconnected generators, proof paths, harnesses, and duplicated test plumbing.
 - Stored generated Unicode data as binary resources and reorganized text layout, Vulkan scene compilation, and SVG parsing by responsibility.
 

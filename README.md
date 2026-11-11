@@ -58,13 +58,7 @@ Continue with [After the counter](docs/getting-started.md).
 
 ## Build from source
 
-```sh
-git clone https://github.com/obselate/goo.git
-cd goo
-dotnet run --project tools/Goo.Repo -- build
-```
-
-[Contributing](CONTRIBUTING.md)
+For source builds and checks, see [Contributing](CONTRIBUTING.md).
 
 ## AI plugin
 

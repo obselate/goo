@@ -2,16 +2,9 @@
 
 ![A curved gauge](images/drawing-a-gauge.png)
 
-## 1. Create the project
-Start after [Your first app](your-first-app.md) and run goo dev after replacing Program.gs.
+Start with the [tutorial setup](../README.md#tutorial-setup). Replace `Program.gs`, then run `goo dev`.
 
-```sh
-dotnet new goo -n DrawingAGauge
-cd DrawingAGauge
-dotnet add package Goo.Widgets --version 0.20.0
-```
-
-## 2. Trim a curved stroke
+## Trim a curved stroke
 Reuse one path for the track and the value.
 
 ```gsharp
