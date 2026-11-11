@@ -368,7 +368,7 @@
       "source": "path_band.vert.slang",
       "output": "path_band.vert.spv",
       "entryPoint": "main",
-      "sourceSha256": "d905e3a70c3b29a430a83aecbd8546a94f80b32098ed59e85a460908a8b94443",
+      "sourceSha256": "5c2b38b10fe407ffbf10da0ffb041ad05a1007ee5807412d05f7df8059355f26",
       "outputSha256": "8305a126ad0c144fd49648616da9299545992b2111f2381def8cee1452b202a9",
       "outputBytes": 2768,
       "capabilities": [
@@ -381,7 +381,7 @@
       "source": "path_band.frag.slang",
       "output": "path_band.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "c4c13aa1d892974f647d7299af1f6608f23271ec53b81cf561e7a3450a421a11",
+      "sourceSha256": "4844ed7eecabf96030892e47b29737781148dc1fabcdc7d96fc6579712773bb3",
       "outputSha256": "bf4b01755e693b9cca573e62fdcab6f94e8f83d3e2d62b7fe8c1c78a4d91ebed",
       "outputBytes": 40128,
       "capabilities": [
@@ -438,9 +438,9 @@
       "source": "clip_mask.vert.slang",
       "output": "clip_mask.vert.spv",
       "entryPoint": "main",
-      "sourceSha256": "260d25a08a8cbc8ca68b9eec19da4f418c47e1c5b8bbb45aace6decc420c8c28",
-      "outputSha256": "008df7a84cdec033fa9fd0eef3db92825a980444df343777b7c6a5ef1e2458af",
-      "outputBytes": 2676,
+      "sourceSha256": "539ffa5d0db9d7c3fd41d05daac12426c7cea1dd638ff30ac14af585dc22ea46",
+      "outputSha256": "7593c3c8c9d0e6dd4bb3d75020f580ae0f86d0b7bcbe764557950422c40d6879",
+      "outputBytes": 2568,
       "capabilities": [
         1
       ]
@@ -451,9 +451,9 @@
       "source": "clip_mask.frag.slang",
       "output": "clip_mask.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "de866c79e2f452f2de57c1028bd1de499382a3395abd4df69faa4f3112f04ea8",
-      "outputSha256": "97bb076b1e71d0ff401015b649ec68aef5d935dd3708c0b20077460f4aa1893c",
-      "outputBytes": 36824,
+      "sourceSha256": "fc396c1f2555c79e3a2fc8e2873bda2abeddcc357abdceed567a4d6c810c7121",
+      "outputSha256": "371d5aa6b507adabb78eb20defed52b86fa79e17fdcc9321743c5a073a56ca72",
+      "outputBytes": 38348,
       "capabilities": [
         1
       ]
@@ -464,7 +464,7 @@
       "source": "path_stroke.frag.slang",
       "output": "path_stroke.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "9348f22224ce5ceacff8513953a01e0cd12782c2333d6dc5f5c2569a983b072e",
+      "sourceSha256": "45c6087c775fd0ddde658afbcf619827c14f019a621e9fea3f670a8e119621bb",
       "outputSha256": "61833b952d0644136d76d95dc930aaa18bdaf0a95ee65b0bc2f9cba714155172",
       "outputBytes": 112272,
       "capabilities": [
@@ -477,9 +477,9 @@
       "source": "stroke_mask.frag.slang",
       "output": "stroke_mask.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "a0ff20f47fbc02dbe6469d9b68d90a648920e80d91a63af28fec6d1e905b1deb",
-      "outputSha256": "de381cd1d39b66f96cfa730f892fee04d3d4a8212757f2f7bb46fe228d909164",
-      "outputBytes": 109012,
+      "sourceSha256": "3632efc11da196fab20acc9b0cb8c3c5bd656f6e041194106331093d7f5e3699",
+      "outputSha256": "6a86a1ce1256bbce75bfb8fc76c75bc07af267597273983dc757f91749f9b209",
+      "outputBytes": 110500,
       "capabilities": [
         1
       ]
@@ -2006,25 +2006,13 @@
           "stage": "vertex",
           "entryPoint": "main",
           "inputs": [],
-          "outputs": [
-            {
-              "location": 0,
-              "type": "vec2",
-              "name": "pathPosition"
-            }
-          ]
+          "outputs": []
         },
         {
           "shader": "clip_mask_fragment",
           "stage": "fragment",
           "entryPoint": "main",
-          "inputs": [
-            {
-              "location": 0,
-              "type": "vec2",
-              "name": "pathPosition"
-            }
-          ],
+          "inputs": [],
           "outputs": [
             {
               "location": 0,
@@ -2262,25 +2250,13 @@
           "stage": "vertex",
           "entryPoint": "main",
           "inputs": [],
-          "outputs": [
-            {
-              "location": 0,
-              "type": "vec2",
-              "name": "pathPosition"
-            }
-          ]
+          "outputs": []
         },
         {
           "shader": "stroke_mask_fragment",
           "stage": "fragment",
           "entryPoint": "main",
-          "inputs": [
-            {
-              "location": 0,
-              "type": "vec2",
-              "name": "pathPosition"
-            }
-          ],
+          "inputs": [],
           "outputs": [
             {
               "location": 0,

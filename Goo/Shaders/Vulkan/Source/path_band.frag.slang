@@ -791,8 +791,8 @@ void shade()
 
 struct PathBandFragmentInput
 {
-    [[vk::location(0)]] float2 pathPosition;
 #ifndef GOO_CLIP_MASK
+    [[vk::location(0)]] float2 pathPosition;
     [[vk::location(2)]] nointerpolation uint clipDrawOrdinal;
 #endif
     float4 position : SV_Position;
@@ -804,13 +804,34 @@ struct PathBandFragmentOutput
 [shader("fragment")]
 PathBandFragmentOutput main(PathBandFragmentInput input)
 {
+    PathBandFragmentOutput output;
+#ifdef GOO_CLIP_MASK
+    float2 pixel = input.position.xy - float2(pc.transform0.w, pc.transform1.w);
+    float2 clip = pixel * pc.sampleStep.xy * 2.0 - 1.0;
+    float2 translated = clip - float2(pc.transform0.z, pc.transform1.z);
+    float determinant = pc.transform0.x * pc.transform1.y - pc.transform0.y * pc.transform1.x;
+    if (pc.borderRect.z <= 0.0 || pc.borderRect.w <= 0.0
+        || determinant == 0.0 || !isfinite(determinant))
+    {
+        output.color = float4(0.0);
+        return output;
+    }
+    pathPosition = float2(
+        pc.transform1.y * translated.x - pc.transform0.y * translated.y,
+        pc.transform0.x * translated.y - pc.transform1.x * translated.x) / determinant;
+    if (!all(isfinite(pathPosition)))
+    {
+        output.color = float4(0.0);
+        return output;
+    }
+#else
     pathPosition = input.pathPosition;
+#endif
     gooFragmentPosition = input.position;
 #ifndef GOO_CLIP_MASK
     gooClipDrawOrdinal = input.clipDrawOrdinal;
 #endif
     shade();
-    PathBandFragmentOutput output;
     output.color = outColor;
     return output;
 }
