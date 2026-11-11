@@ -5,37 +5,80 @@ import System.Collections.Generic
 import System.Collections.Immutable
 import System.IO
 import System.Linq
+import System.Reflection
 import System.Reflection.Metadata
 import System.Reflection.PortableExecutable
 import System.Text.RegularExpressions
 
+data class DeclarationContext(TypeParameters[]string, MethodParameters[]string) { }
+
 class DeclarationTypes : ISignatureTypeProvider[string, object] {
-    func GetArrayType(elementType string, shape ArrayShape) string -> elementType + "[" + string.Join(
-        ",",
-        Enumerable.Repeat("0:", shape.Rank)
-    ) +
-        "]"
+    let Display bool
+
+    init(display bool = false) {
+        Display = display
+    }
+
+    func GetArrayType(elementType string, shape ArrayShape) string -> if Display {
+        "[" + String(',', shape.Rank - 1) + "]" + elementType
+    } else {
+        elementType + "[" + string.Join(",", Enumerable.Repeat("0:", shape.Rank)) + "]"
+    }
 
     func GetByReferenceType(elementType string) string -> elementType + "@"
 
     func GetFunctionPointerType(signature MethodSignature[string]) string -> "delegate*(" + string.Join(
-        ",",
+        ", ",
         signature.ParameterTypes
     ) +
-        ") " +
-        signature.ReturnType
+        ")" +
+        (
+        if signature.ReturnType == "" {
+            ""
+        } else {
+            " " + signature.ReturnType
+        }
+    )
 
     func GetGenericInstantiation(genericType string, arguments ImmutableArray[string]) string -> Regex.Replace(
         genericType,
-        "`[0-9]+$",
+        "`[0-9]+",
         ""
     ) +
-        "{" +
-        string.Join(",", arguments) + "}"
+        (
+        if Display {
+            "["
+        } else {
+            "{"
+        }
+    ) +
+        string.Join(
+        if Display {
+            ", "
+        } else {
+            ","
+        },
+        arguments
+    ) +
+        (
+        if Display {
+            "]"
+        } else {
+            "}"
+        }
+    )
 
-    func GetGenericMethodParameter(context object, index int32) string -> "``" + index.ToString()
+    func GetGenericMethodParameter(context object, index int32) string -> if Display {
+        DeclarationContext(context).MethodParameters[index]
+    } else {
+        "``" + index.ToString()
+    }
 
-    func GetGenericTypeParameter(context object, index int32) string -> "`" + index.ToString()
+    func GetGenericTypeParameter(context object, index int32) string -> if Display {
+        DeclarationContext(context).TypeParameters[index]
+    } else {
+        "`" + index.ToString()
+    }
 
     func GetModifiedType(modifier string, unmodifiedType string, required bool) string -> unmodifiedType
 
@@ -43,27 +86,34 @@ class DeclarationTypes : ISignatureTypeProvider[string, object] {
 
     func GetPointerType(elementType string) string -> elementType + "*"
 
-    func GetSZArrayType(elementType string) string -> elementType + "[]"
+    func GetSZArrayType(elementType string) string -> if Display {
+        "[]" + elementType
+    } else {
+        elementType + "[]"
+    }
 
-    func GetPrimitiveType(code PrimitiveTypeCode) string -> "System." + switch code {
-        case PrimitiveTypeCode.Void: "Void"
-        case PrimitiveTypeCode.Boolean: "Boolean"
-        case PrimitiveTypeCode.Char: "Char"
-        case PrimitiveTypeCode.SByte: "SByte"
-        case PrimitiveTypeCode.Byte: "Byte"
-        case PrimitiveTypeCode.Int16: "Int16"
-        case PrimitiveTypeCode.UInt16: "UInt16"
-        case PrimitiveTypeCode.Int32: "Int32"
-        case PrimitiveTypeCode.UInt32: "UInt32"
-        case PrimitiveTypeCode.Int64: "Int64"
-        case PrimitiveTypeCode.UInt64: "UInt64"
-        case PrimitiveTypeCode.Single: "Single"
-        case PrimitiveTypeCode.Double: "Double"
-        case PrimitiveTypeCode.String: "String"
-        case PrimitiveTypeCode.IntPtr: "IntPtr"
-        case PrimitiveTypeCode.UIntPtr: "UIntPtr"
-        case PrimitiveTypeCode.TypedReference: "TypedReference"
-        default: "Object"
+    func GetPrimitiveType(code PrimitiveTypeCode) string {
+        if !Display {
+            return "System." + code.ToString()
+        }
+        return switch code {
+            case PrimitiveTypeCode.Void: ""
+            case PrimitiveTypeCode.Boolean: "bool"
+            case PrimitiveTypeCode.Char: "char"
+            case PrimitiveTypeCode.SByte: "int8"
+            case PrimitiveTypeCode.Byte: "byte"
+            case PrimitiveTypeCode.Int16: "int16"
+            case PrimitiveTypeCode.UInt16: "uint16"
+            case PrimitiveTypeCode.Int32: "int32"
+            case PrimitiveTypeCode.UInt32: "uint32"
+            case PrimitiveTypeCode.Int64: "int64"
+            case PrimitiveTypeCode.UInt64: "uint64"
+            case PrimitiveTypeCode.Single: "float32"
+            case PrimitiveTypeCode.Double: "float64"
+            case PrimitiveTypeCode.String: "string"
+            case PrimitiveTypeCode.Object: "object"
+            default: "System." + code.ToString()
+        }
     }
 
     func GetTypeFromDefinition(reader MetadataReader, handle TypeDefinitionHandle, rawTypeKind byte) string {
@@ -74,7 +124,7 @@ class DeclarationTypes : ISignatureTypeProvider[string, object] {
         } else {
             GetTypeFromDefinition(reader, parent, rawTypeKind)
         }
-        return (
+        let name = (
             if prefix == "" {
                 ""
             } else {
@@ -82,6 +132,11 @@ class DeclarationTypes : ISignatureTypeProvider[string, object] {
             }
         ) +
             reader.GetString(type.Name)
+        return if Display {
+            Regex.Replace(name, "`[0-9]+", "")
+        } else {
+            name
+        }
     }
 
     func GetTypeFromReference(reader MetadataReader, handle TypeReferenceHandle, rawTypeKind byte) string {
@@ -91,7 +146,7 @@ class DeclarationTypes : ISignatureTypeProvider[string, object] {
         } else {
             reader.GetString(type.Namespace)
         }
-        return (
+        let name = (
             if prefix == "" {
                 ""
             } else {
@@ -99,6 +154,11 @@ class DeclarationTypes : ISignatureTypeProvider[string, object] {
             }
         ) +
             reader.GetString(type.Name)
+        return if Display {
+            Regex.Replace(name, "`[0-9]+", "")
+        } else {
+            name
+        }
     }
 
     func GetTypeFromSpecification(
@@ -121,15 +181,17 @@ partial class GooServer {
             using let stream = File.OpenRead(assembly)
             using let pe = PEReader(stream)
             let reader = pe.GetMetadataReader()
-            let provider = DeclarationTypes()
+            let ids = DeclarationTypes()
+            let display = DeclarationTypes(true)
             for handle in reader.TypeDefinitions {
                 let type = reader.GetTypeDefinition(handle)
-                let name = provider.GetTypeFromDefinition(reader, handle, 0)
+                let name = ids.GetTypeFromDefinition(reader, handle, 0)
                 let typeArguments = type
                     .GetGenericParameters()
                     .Select(x -> reader.GetString(reader.GetGenericParameter(x).Name))
                     .ToArray()
-                result["T:" + name] = "type " + Regex.Replace(name, "`[0-9]+", "") +
+                let context object = DeclarationContext(typeArguments, Array.Empty[string]())
+                result["T:" + name] = "type " + display.GetTypeFromDefinition(reader, handle, 0) +
                     (
                     if typeArguments.Length == 0 {
                         ""
@@ -139,15 +201,33 @@ partial class GooServer {
                 )
                 for fieldHandle in type.GetFields() {
                     let field = reader.GetFieldDefinition(fieldHandle)
-                    let fieldType = field.DecodeSignature(provider, nil)
-                    result["F:" + name + "." + reader.GetString(field.Name)] = reader.GetString(field.Name) +
+                    let prefix = if (field.Attributes & FieldAttributes.Static) != FieldAttributes.PrivateScope {
+                        "shared "
+                    } else {
+                        ""
+                    }
+                    result["F:" + name + "." + reader.GetString(field.Name)] = prefix + reader.GetString(field.Name) +
                         " " +
-                        DisplayType(fieldType, typeArguments, []string{}) +
-                        DelegateDeclaration(fieldType, typeArguments)
+                        field.DecodeSignature(display, context)
                 }
                 for propertyHandle in type.GetProperties() {
                     let property = reader.GetPropertyDefinition(propertyHandle)
-                    let signature = property.DecodeSignature(provider, nil)
+                    let signature = property.DecodeSignature(ids, context)
+                    let declaration = property.DecodeSignature(display, context)
+                    let accessors = property.GetAccessors()
+                    let accessor = if accessors.Getter.IsNil {
+                        accessors.Setter
+                    } else {
+                        accessors.Getter
+                    }
+                    let prefix = if !accessor.IsNil &&
+                        (
+                        reader.GetMethodDefinition(accessor).Attributes & MethodAttributes.Static
+                    ) != MethodAttributes.PrivateScope {
+                        "shared "
+                    } else {
+                        ""
+                    }
                     let key = "P:" + name + "." + reader.GetString(property.Name) +
                         (
                         if signature.ParameterTypes.Length == 0 {
@@ -156,18 +236,26 @@ partial class GooServer {
                             "(" + string.Join(",", signature.ParameterTypes) + ")"
                         }
                     )
-                    result[key] = reader.GetString(property.Name) +
+                    result[key] = prefix + reader.GetString(property.Name) +
                         " " +
-                        DisplayType(signature.ReturnType, typeArguments, []string{}) +
-                        DelegateDeclaration(signature.ReturnType, typeArguments)
+                        declaration.ReturnType +
+                        (
+                        if accessors.Setter.IsNil {
+                            " (get-only)"
+                        } else {
+                            " (get, set)"
+                        }
+                    )
                 }
                 for methodHandle in type.GetMethods() {
                     let method = reader.GetMethodDefinition(methodHandle)
-                    let signature = method.DecodeSignature(provider, nil)
                     let methodArguments = method
                         .GetGenericParameters()
                         .Select(x -> reader.GetString(reader.GetGenericParameter(x).Name))
                         .ToArray()
+                    let methodContext object = DeclarationContext(typeArguments, methodArguments)
+                    let signature = method.DecodeSignature(ids, methodContext)
+                    let declaration = method.DecodeSignature(display, methodContext)
                     let methodName = reader.GetString(method.Name)
                     let generic = if methodArguments.Length == 0 {
                         ""
@@ -178,7 +266,7 @@ partial class GooServer {
                         .GetParameters()
                         .Select(x -> reader.GetParameter(x))
                         .Where(x -> x.SequenceNumber > 0)
-                        .ToDictionary(x -> int32(x.SequenceNumber) - 1, x -> reader.GetString(x.Name))
+                        .ToDictionary(x -> int32(x.SequenceNumber) - 1, x -> x)
                     let key = "M:" + name + "." + methodName.Replace('.', '#') +
                         generic +
                         (
@@ -195,18 +283,38 @@ partial class GooServer {
                             ""
                         }
                     )
-                    let args = signature.ParameterTypes.Select(
-                        (value string, index int32) -> (
-                            if parameters.TryGetValue(index, out var parameter) {
-                                parameter
+                    let args = declaration.ParameterTypes.Select(
+                        (value string, index int32) -> {
+                            let found = parameters.TryGetValue(index, out var parameter)
+                            let parameterName = if found {
+                                reader.GetString(parameter.Name)
                             } else {
                                 "arg" + index.ToString()
                             }
-                        ) +
-                            " " +
-                            DisplayType(value, typeArguments, methodArguments)
+                            let modifier = if found &&
+                                (parameter.Attributes & ParameterAttributes.Out) != ParameterAttributes.None {
+                                "out "
+                            } else if value.EndsWith("@") {
+                                "ref "
+                            } else {
+                                ""
+                            }
+                            return modifier + parameterName + " " + value.TrimEnd('@')
+                        }
                     )
-                    result[key] = methodName +
+                    let prefix = if (method.Attributes & MethodAttributes.Static) != MethodAttributes.PrivateScope {
+                        "shared "
+                    } else {
+                        ""
+                    }
+                    let constructor = methodName == ".ctor" || methodName == ".cctor"
+                    let declaredName = if constructor {
+                        reader.GetString(type.Name).Split('`')[0]
+                    } else {
+                        methodName
+                    }
+                    result[key] = prefix +
+                        declaredName +
                         (
                         if methodArguments.Length == 0 {
                             ""
@@ -216,79 +324,17 @@ partial class GooServer {
                     ) +
                         "(" +
                         string.Join(", ", args) +
-                        ") " +
-                        DisplayType(signature.ReturnType, typeArguments, methodArguments)
+                        ")" +
+                        (
+                        if constructor || declaration.ReturnType == "" {
+                            ""
+                        } else {
+                            " " + declaration.ReturnType
+                        }
+                    )
                 }
             }
             return result
-        }
-
-        func DelegateDeclaration(value string, typeArguments[]string) string {
-            if value != "System.Action" && !value.StartsWith("System.Action{") && !value.StartsWith("System.Func{") {
-                return ""
-            }
-            let arguments = List[string]()
-            let start = value.IndexOf('{') + 1
-            var begin = start
-            var depth = 0
-            if start > 0 {
-                for index in start ... (value.Length - 1) {
-                    if value[index] == '{' {
-                        depth++
-                    }
-                    if value[index] == '}' {
-                        depth--
-                    }
-                    if value[index] == ',' && depth == 0 {
-                        arguments.Add(value.Substring(begin, index - begin))
-                        begin = index + 1
-                    }
-                }
-                arguments.Add(value.Substring(begin, value.Length - begin - 1))
-            }
-            let returns = if value.StartsWith("System.Func{") {
-                arguments.Last()
-            } else {
-                "System.Void"
-            }
-            let count = arguments.Count - (
-                if value.StartsWith("System.Func{") {
-                    1
-                } else {
-                    0
-                }
-            )
-            return "\nInvoke(" + string.Join(
-                ", ",
-                arguments.Take(count).Select(
-                    (argument string, index int32) -> "arg" + index.ToString() +
-                        " " +
-                        DisplayType(argument, typeArguments, []string{})
-                )
-            ) +
-                ") " +
-                DisplayType(returns, typeArguments, []string{})
-        }
-
-        func DisplayType(value string, typeArguments[]string, methodArguments[]string) string {
-            let replaced = Regex.Replace(
-                value,
-                "(``?)([0-9]+)",
-                (match Match) -> {
-                    let arguments = if match.Groups[1].Value == "``" {
-                        methodArguments
-                    } else {
-                        typeArguments
-                    }
-                    let index = int32.Parse(match.Groups[2].Value)
-                    return if index < arguments.Length {
-                        arguments[index]
-                    } else {
-                        match.Value
-                    }
-                }
-            )
-            return replaced.Replace('{', '[').Replace('}', ']')
         }
     }
 }

@@ -25,7 +25,9 @@ partial class GooServer {
         Text string,
         Summary string,
         Words Dictionary[string, int32],
-        Names HashSet[string]
+        Names HashSet[string],
+        Symbol string,
+        WordTotal int32
     ) { }
 
     private data class IndexedDocument(
@@ -33,7 +35,8 @@ partial class GooServer {
         Length int64,
         AssemblyModified int64,
         AssemblyLength int64,
-        Units[]SearchUnit
+        Units[]SearchUnit,
+        AssemblyHash string
     ) { }
     private let Index ConcurrentDictionary[string, IndexedDocument] = ConcurrentDictionary[string, IndexedDocument](
         StringComparer.Ordinal
@@ -72,36 +75,54 @@ partial class GooServer {
             )
             for member in xml.Descendants("member") {
                 let name = member.Attribute("name")?.Value ?? ""
+                let parts = name.Substring(2).Split('(')[0].Split('.')
+                let memberName = Regex.Replace(
+                    string.Join(
+                        ".",
+                        parts.TakeLast(
+                            if name.StartsWith("T:") {
+                                1
+                            } else {
+                                2
+                            }
+                        )
+                    ),
+                    "`[0-9]+",
+                    ""
+                )
                 let summary = XmlText(member.Element("summary"))
                 let declaration = if declarations.TryGetValue(name, out var signature) {
                     signature
                 } else {
                     "Declaration unavailable"
                 }
-                let body = StringBuilder(name + "\n\n" + declaration + "\n\n" + summary)
+                let body = StringBuilder(memberName + "\n\n" + declaration + "\n\n" + summary)
                 for child in member.Elements().Where(x -> x.Name.LocalName != "summary") {
                     body.Append("\n\n").Append(child.Name.LocalName)
-                    let parameter = child.Attribute("name")?.Value ?? ""
+                    let parameter = child.Attribute("name")?.Value ?? child.Attribute("cref")?.Value ?? ""
                     if parameter != "" {
                         body.Append(" ").Append(parameter)
                     }
                     body.Append(": ").Append(XmlText(child))
                 }
                 let text = body.ToString()
+                let words = WordCounts(text)
                 let start = IXmlLineInfo(member).LineNumber
                 result.Add(
                     SearchUnit(
                         path,
                         digest,
                         name,
-                        name,
+                        memberName,
                         "",
                         start,
                         start + Lines(member.ToString(SaveOptions.DisableFormatting)).Length - 1,
                         text,
                         summary,
-                        WordCounts(text),
-                        HashSet[string](Words(name))
+                        words,
+                        HashSet[string](Words(memberName)),
+                        CaseFold(memberName),
+                        words.Values.Sum()
                     )
                 )
             }
@@ -152,18 +173,9 @@ partial class GooServer {
                 } else {
                     ""
                 }
-                if heading.StartsWith("## ") {
-                    parent = heading
-                }
-                let context = if heading.StartsWith("###") {
-                    parent
-                } else {
-                    ""
-                }
-                let text = string.Join("\n", lines.Skip(start).Take(end - start))
                 let summary = lines
                     .Skip(start + 1)
-                    .Take(Math.Max(0, end - start - 1))
+                    .Take(Math.Max(0, starts[i + 1] - start - 1))
                     .FirstOrDefault(
                     x -> x.Trim() != "" && !x.StartsWith("```") && !x.StartsWith("Source:") && !x.StartsWith(
                         "Sources:"
@@ -171,6 +183,33 @@ partial class GooServer {
                         !x.StartsWith("- [")
                 ) ??
                     ""
+                if heading.StartsWith("## ") {
+                    parent = heading +
+                        (
+                        if heading.StartsWith("## `") && summary != "" {
+                            "\n" + summary
+                        } else {
+                            ""
+                        }
+                    )
+                }
+                let context = if heading.StartsWith("###") {
+                    parent
+                } else {
+                    ""
+                }
+                let text = string.Join("\n", lines.Skip(start).Take(end - start))
+                let ownText = string.Join("\n", lines.Skip(start).Take(starts[i + 1] - start))
+                let words = WordCounts(context + "\n" + ownText)
+                let memberName = Regex.Match(heading, "^#{2,6} `([^`(]+)").Groups[1].Value.Split('<')[0]
+                let owner = Regex.Match(context, "^## `([^`< :(]+)").Groups[1].Value
+                let symbol = if memberName == "" {
+                    ""
+                } else if heading.StartsWith("###") && owner != "" {
+                    owner + "." + memberName
+                } else {
+                    memberName
+                }
                 result.Add(
                     SearchUnit(
                         path,
@@ -182,8 +221,10 @@ partial class GooServer {
                         end,
                         text,
                         summary,
-                        WordCounts(context + "\n" + text),
-                        HashSet[string](Words(context + "\n" + heading))
+                        words,
+                        HashSet[string](Words(context.Split('\n')[0] + "\n" + heading)),
+                        CaseFold(symbol),
+                        words.Values.Sum()
                     )
                 )
             }
@@ -194,7 +235,12 @@ partial class GooServer {
             file.Length,
             assemblyModified,
             assemblyLength,
-            units
+            units,
+            if assembly.Exists {
+                Hash(File.ReadAllBytes(assembly.FullName))
+            } else {
+                ""
+            }
         )
         return units
     }
@@ -207,19 +253,25 @@ partial class GooServer {
             terms.Count > 0 && query.Length <= 256 && limit >= 1 && limit <= 20,
             "Supply a query of 1-256 characters and a limit of 1-20"
         )
+        let queryName = CaseFold(Regex.Replace(query.Trim(), "[\\[(<].*$", ""))
+        let symbolQuery = if Regex.IsMatch(queryName, "^[\\p{L}_][\\p{L}\\p{N}_]*(?:\\.[\\p{L}_][\\p{L}\\p{N}_]*)*$") {
+            queryName
+        } else {
+            ""
+        }
         let root = Source(S(a, "repository"))
         let packages = PackageDocuments(S(a, "project"))
         let units = List[SearchUnit]()
-        for relative in Documents(root).Where(x -> x.EndsWith(".md")) {
-            let documentUnits = Units(relative, Document(root, relative))
-            units.AddRange(documentUnits.Where(x -> !x.Heading.StartsWith("# ") || documentUnits.Length == 1))
+        let documents = Documents(root)
+        for relative in documents.Where(x -> x.EndsWith(".md")) {
+            units.AddRange(Units(relative, Document(root, relative, documents)))
         }
         for entry in packages {
             units.AddRange(Units(entry.Key, entry.Value))
         }
         let frequencies = terms.ToDictionary(term -> term, term -> units.Count(x -> x.Words.ContainsKey(term)))
         let average = if units.Count > 0 {
-            Math.Max(1.0, units.Average(x -> double(x.Words.Values.Sum())))
+            Math.Max(1.0, units.Average(x -> double(x.WordTotal)))
         } else {
             1.0
         }
@@ -228,7 +280,7 @@ partial class GooServer {
             unit -> {
                 var score = 0.0
                 var matched = 0
-                let length = unit.Words.Values.Sum()
+                let length = unit.WordTotal
                 for term in terms {
                     if !unit.Words.TryGetValue(term, out var count) {
                         continue
@@ -241,18 +293,29 @@ partial class GooServer {
                     }
                 }
                 score *= Math.Pow(double(matched) / terms.Count, 2)
-                if terms.Count >= 4 && unit.Heading.StartsWith("#") && !unit.Heading.Contains('`') {
+                if terms.Count >= 2 && unit.Heading.StartsWith("#") && !unit.Heading.Contains('`') {
                     score *= 2
                 }
-                if terms.All(term -> unit.Names.Contains(term)) &&
-                    (terms.Count == 1 || Regex.IsMatch(query, "[A-Z][a-zA-Z]+[A-Z]|[.]")) {
-                    score += 12
-                }
-                return (Unit: unit, Score: score)
+                let defines = symbolQuery != "" &&
+                    unit.Symbol != "" &&
+                    (
+                    unit.Symbol == symbolQuery || unit.Symbol.Length > symbolQuery.Length && unit.Symbol.EndsWith(
+                        symbolQuery,
+                        StringComparison.Ordinal
+                    ) &&
+                        unit.Symbol[unit.Symbol.Length - symbolQuery.Length - 1] == '.' ||
+                        symbolQuery.Length > unit
+                        .Symbol
+                        .Length &&
+                        symbolQuery.EndsWith(unit.Symbol, StringComparison.Ordinal) &&
+                        symbolQuery[symbolQuery.Length - unit.Symbol.Length - 1] == '.'
+                )
+                return (Unit: unit, Score: score, Defines: defines)
             }
         )
             .Where(x -> x.Score > 0)
-            .OrderByDescending(x -> x.Score)
+            .OrderByDescending(x -> x.Defines)
+            .ThenByDescending(x -> x.Score)
             .ThenBy(x -> x.Unit.Path, StringComparer.Ordinal)
             .ThenBy(x -> x.Unit.Start)
             .ToArray()
@@ -266,9 +329,7 @@ partial class GooServer {
                     ["section"] = unit.Heading,
                     ["section_id"] = unit.Id,
                     ["line"] = unit.Start,
-                    ["endLine"] = unit.End,
-                    ["sha256"] = unit.Hash,
-                    ["summary"] = summary.Substring(0, Math.Min(180, summary.Length))
+                    ["summary"] = summary.Substring(0, Math.Min(72, summary.Length))
                 }
             )
         }
@@ -288,6 +349,11 @@ partial class GooServer {
 
     shared {
         private let CaseFolding Dictionary[int32, string] = LoadCaseFolding()
+        private let StopWords HashSet[string] = HashSet[string](
+            Words(
+                "a across an and are as at be by can do does for from get how i in into is it its my of on only or should than that the their them then this through to using when which while with without"
+            )
+        )
 
         func LoadCaseFolding() Dictionary[int32, string] {
             using let resource = Assembly.GetExecutingAssembly().GetManifestResourceStream(
@@ -360,14 +426,10 @@ partial class GooServer {
             x -> x.Count()
         )
 
-        func SearchTerms(value string) List[string] {
-            let stop = HashSet[string](
-                Words(
-                    "a across an and are as at be by can do does for from get how i in into is it its my of on only or should than that the their them then this through to using when which while with without"
-                )
-            )
-            return Words(value).Where(x -> !stop.Contains(x)).Distinct().ToList()
-        }
+        func SearchTerms(value string) List[string] -> Words(value)
+            .Where(x -> !StopWords.Contains(x))
+            .Distinct()
+            .ToList()
 
         func XmlText(element XElement?) string {
             if element == nil {

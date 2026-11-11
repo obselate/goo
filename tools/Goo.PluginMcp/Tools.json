@@ -21,7 +21,7 @@
     },
     {
       "name": "goo_search",
-      "description": "Search Goo guides and API members by task or symbol. Returns ranked section IDs, start lines, hashes and one-line summaries. Pass project to use its restored Widgets and Animations XML docs, otherwise the newest cached packages are used.",
+      "description": "Search Goo guides and API members by task or symbol. Returns ranked section IDs, start lines and short summaries. Pass project for its restored Widgets and Animations packages, otherwise the newest cached packages are used.",
       "inputSchema": {
         "properties": {
           "query": {
@@ -55,7 +55,7 @@
     },
     {
       "name": "goo_read",
-      "description": "Read the smallest section or API member by section_id from goo_search, or the unit containing line. Returns its hash and minimal parent context. max_tokens caps UTF-8 bytes as a conservative token bound. Continue with the returned offset. Explicit count selects a line range instead.",
+      "description": "Read the smallest section or API member by section_id from goo_search, or the unit containing line. Returns the document hash and minimal parent context. max_bytes caps UTF-8 bytes. Continue with the returned continuation fields. Explicit count selects a line range instead.",
       "inputSchema": {
         "properties": {
           "path": {
@@ -77,7 +77,7 @@
             "type": "string",
             "default": ""
           },
-          "max_tokens": {
+          "max_bytes": {
             "type": "integer",
             "default": 4000
           },
