@@ -119,7 +119,11 @@ shared class Verify {
             let path = document.GetValue[string]()
             hashes[path] = Hash(File.ReadAllBytes(Path.Combine(root, "reference", path)))
         }
-        Check(JsonNode.DeepEquals(hashes, provenance["files"]), "Bundle hashes differ")
+        Check(
+            S(provenance, "bundleHash") == Hash(File.ReadAllBytes(Path.Combine(root, "reference/manifest.json"))) &&
+                provenance["files"] == nil,
+            "Bundle identity differs"
+        )
         Check(
             JsonNode.DeepEquals(bundled["documents"], Strings(hashes.Select(x -> x.Key).Order(StringComparer.Ordinal))),
             bundled
@@ -127,7 +131,7 @@ shared class Verify {
         Check(S(provenance, "compilerVersion") == "0.5.212", provenance)
         let search = await Read(client, "cellSearch")
         Check(
-            S(search, "mode") == "exact" && JsonNode.DeepEquals(
+            S(search, "mode") == "ranked" && JsonNode.DeepEquals(
                 search["queryTerms"],
                 Strings([]string{"rebuild", "cell"})
             ),
@@ -141,6 +145,21 @@ shared class Verify {
             missing
         )
         await Call(client, "cellRead")
+        let memberSearch = await Read(client, "sectionSearch", JsonObject(){["query"] = "Window.MeasureText"})
+        let member = memberSearch["results"]!![0]!!
+        Check(S(member, "section").StartsWith("### `MeasureText"), memberSearch)
+        let memberRead = await Read(
+            client,
+            "sectionRead",
+            JsonObject(){["path"] = S(member, "path"), ["section_id"] = S(member, "section_id")}
+        )
+        Check(
+            B(memberRead, "complete") && S(memberRead, "text").Contains("## `Window`") && S(
+                memberRead,
+                "text"
+            ).Contains("Returns:") && !S(memberRead, "text").Contains("### `Open`"),
+            memberRead
+        )
         await Call(client, "outsideRead", rejected: true)
     }
 
@@ -156,20 +175,112 @@ shared class Verify {
         Check(JsonNode.DeepEquals(current["documents"], Strings([]string{"docs/api/new-api.md"})), current)
         Check(S(current["provenance"]!!, "kind") == "checkout", current)
         let found = await Read(client, "freshSearch", repository)
-        Check(I(found, "total") == 1, found)
+        Check(S(found["results"]!![0]!!, "path") == "docs/api/new-api.md", found)
         Check(
             S(await Read(client, "freshRead", repository), "text").Contains("AgentFreshDocument"),
             "Fresh read failed"
         )
         File.Delete(fresh)
         let deleted = await Read(client, "deletedSearch", repository)
-        Check(I(deleted, "total") == 0, deleted)
+        Check(deleted["results"]!!.AsArray().All(x -> S(x, "path") != "docs/api/new-api.md"), deleted)
         File.WriteAllText(fresh, "# Straße\n\nﬃ Σς\n\n")
         let unicode = await Read(client, "unicodeSearch", repository)
         Check(I(unicode, "total") == 1, unicode)
         let lines = await Read(client, "freshRead", repository)
         Check(I(lines, "totalLines") == 4, lines)
         File.Delete(fresh)
+        File.WriteAllText(
+            fresh,
+            "# Probe\n\n## Type\n\n### Row\n\nArrange a row.\n\n### Throw\n\nThrow an exception.\n\n### Long\n\n" +
+                String('x', 5000)
+        )
+        let row = await Read(client, "sectionSearch", JsonObject(){["repository"] = checkout, ["query"] = "row"})
+        Check(
+            S(row["results"]!![0]!!, "section") == "### Row" && row["results"]!!.AsArray().All(
+                x -> S(x, "section") != "### Throw"
+            ),
+            row
+        )
+        let rowId = S(row["results"]!![0]!!, "section_id")
+        let bounded = await Read(
+            client,
+            "sectionRead",
+            JsonObject(){
+                ["repository"] = checkout,
+                ["path"] = "docs/api/new-api.md",
+                ["line"] = 13,
+                ["max_tokens"] = 64
+            }
+        )
+        Check(
+            !B(bounded, "complete") && I(bounded, "tokenBound") <= 64 && I(bounded["continuation"]!!, "offset") > 0,
+            bounded
+        )
+        let continued = await Read(
+            client,
+            "sectionRead",
+            JsonObject(){
+                ["repository"] = checkout,
+                ["path"] = "docs/api/new-api.md",
+                ["section_id"] = S(bounded, "section_id"),
+                ["offset"] = I(bounded["continuation"]!!, "offset")
+            }
+        )
+        Check(S(continued, "text").StartsWith("x"), continued)
+        File.WriteAllText(fresh, "# Changed\n\nNo row definition.\n")
+        await Call(
+            client,
+            "sectionRead",
+            JsonObject(){["repository"] = checkout, ["path"] = "docs/api/new-api.md", ["section_id"] = rowId},
+            true
+        )
+        File.Delete(fresh)
+        let packageRoot = Path.Combine(output, "packages")
+        let packagePath = Path.Combine(packageRoot, "goo.widgets/1.0.0/lib/net10.0/Goo.Widgets.xml")
+        Directory.CreateDirectory(Path.GetDirectoryName(packagePath)!!)
+        File.WriteAllText(
+            packagePath,
+            "<doc><members><member name=\"M:Goo.Widgets.Probe.ArrangeRow\"><summary>Arrange rows without throwing.</summary><param name=\"count\">Number of rows.</param><returns>The row.</returns></member></members></doc>"
+        )
+        Directory.CreateDirectory(Path.Combine(checkout, "obj"))
+        let assets = JsonObject(){
+            ["libraries"] = JsonObject(){["Goo.Widgets/1.0.0"] = JsonObject(){["path"] = "goo.widgets/1.0.0"}},
+            ["packageFolders"] = JsonObject(){[packageRoot + Path.DirectorySeparatorChar] = JsonObject()},
+            ["targets"] = JsonObject(){
+                ["net10.0"] = JsonObject(){
+                    ["Goo.Widgets/1.0.0"] = JsonObject(){
+                        ["compile"] = JsonObject(){["lib/net10.0/Goo.Widgets.dll"] = JsonObject()}
+                    }
+                }
+            }
+        }
+        File.WriteAllText(Path.Combine(checkout, "obj/project.assets.json"), assets.ToJsonString())
+        let packageSearch = await Read(
+            client,
+            "sectionSearch",
+            JsonObject(){["repository"] = checkout, ["project"] = checkout, ["query"] = "Probe.ArrangeRow"}
+        )
+        let packageHit = packageSearch["results"]!![0]!!
+        Check(
+            S(packageHit, "path").StartsWith("packages/Goo.Widgets/1.0.0/") &&
+                S(packageSearch["packages"]!!, "Goo.Animations") == "unavailable",
+            packageSearch
+        )
+        let packageRead = await Read(
+            client,
+            "sectionRead",
+            JsonObject(){
+                ["repository"] = checkout,
+                ["project"] = checkout,
+                ["path"] = S(packageHit, "path"),
+                ["section_id"] = S(packageHit, "section_id")
+            }
+        )
+        Check(
+            B(packageRead, "complete") && S(packageRead, "text").Contains("Number of rows.") &&
+                S(packageRead, "sha256") == Hash(File.ReadAllBytes(packagePath)),
+            packageRead
+        )
         if !OperatingSystem.IsWindows() {
             let outside = Path.Combine(output, "outside.md")
             File.WriteAllText(outside, "Outside selected root")
