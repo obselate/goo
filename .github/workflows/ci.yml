@@ -193,8 +193,8 @@ jobs:
           node --check integrations/vscode/extension.js
 
   plugin:
-    needs: [changes, preflight]
-    if: needs.changes.outputs.plugin == 'true'
+    needs: [changes, preflight, linux-x64]
+    if: ${{ !cancelled() && needs.changes.outputs.plugin == 'true' && needs.preflight.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.linux-x64.result) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -207,9 +207,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y $GOO_LINUX_APT_PACKAGES
+      - name: Download release candidates
+        if: needs.changes.outputs.full == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: release-candidates
+          path: artifacts/packages
       - name: Verify Goo plugin
         run: |
           dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
+          if [ -d artifacts/packages ]; then
+            dotnet nuget add source "$PWD/artifacts/packages" --name goo-release-candidates
+          fi
           run="$RUNNER_TEMP/plugin"
           trap 'rm -rf "$run"' EXIT
           mkdir -p "$run"/{cache,config,data}
@@ -2514,7 +2523,7 @@ jobs:
 
   verify:
     if: always()
-    needs: [changes, preflight, quality, macos-native, macos-arm64, macos-checks, linux-build, linux-validation, linux-test-build, linux-packages, linux-x64, linux-fixtures, windows-native, windows-x64, android, android-native-menus, android-accessibility, android-consumer, android-nativeaot-accessibility]
+    needs: [changes, preflight, quality, plugin, macos-native, macos-arm64, macos-checks, linux-build, linux-validation, linux-test-build, linux-packages, linux-x64, linux-fixtures, windows-native, windows-x64, android, android-native-menus, android-accessibility, android-consumer, android-nativeaot-accessibility]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
