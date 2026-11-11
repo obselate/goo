@@ -39,10 +39,6 @@ internal sealed class VulkanHeadlessHost : VulkanSurfaceHost {
     public func RefreshDisplayPacing(reset bool) { }
 
     public func LoadVulkanLibrary() bool {
-        if loaderReferences > 0 {
-            loaderReferences++
-            return true
-        }
         let name = if OperatingSystem.IsWindows() {
             "vulkan-1.dll"
         } else if OperatingSystem.IsMacOS() {

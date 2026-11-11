@@ -749,7 +749,6 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
     if references == 0 {
       DisposeWithIdleState(alreadyIdle)
       if disposed {
-        if Object.ReferenceEquals(current, this) { current = nil }
         return true
       }
       return false
@@ -913,7 +912,8 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
     if let currentValidation = validation {
       currentValidation.KeepAlive()
     }
-    releaseLoader()
+    if Object.ReferenceEquals(current, this) { current = nil }
+    try { releaseLoader() } catch (cleanup Exception) { }
   }
 
   public func Dispose() {
