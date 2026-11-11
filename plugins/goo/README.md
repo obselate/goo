@@ -1,6 +1,6 @@
 # Goo agent plugin
 
-G# Goo authoring guidance and MCP tools for desktop and Android apps. Requires .NET 10, the [platform requirements](../../docs/platform-preflight.md#platforms), and Goo.DevTools 0.29.1.
+G# Goo authoring guidance and MCP tools for desktop and Android apps. Requires .NET 10, the [platform requirements](../../docs/platform-preflight.md#platforms), and Goo.DevTools 0.30.0.
 
 ## Install
 

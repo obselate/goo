@@ -8,7 +8,7 @@ cd HelloGoo
 goo dev
 ```
 
-The template restores the G# compiler from NuGet. It references Goo 0.29.1.
+The template restores the G# compiler from NuGet. It references Goo 0.30.0.
 Use `--goo-version` to select another compatible version.
 See [platform requirements](https://github.com/obselate/goo/blob/main/docs/platform-preflight.md).
 
