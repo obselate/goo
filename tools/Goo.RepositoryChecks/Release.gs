@@ -155,7 +155,6 @@ internal shared partial class Checks {
             "apps/Goo.DevTools/DiagnosticWire.gs",
             "apps/Goo.DevTools/Program.gs",
             "apps/Goo.Gallery/Program.gs",
-            "docs/devtools/protocol.md",
             "integrations/vscode/package.json",
             "templates/Goo.Templates/README.md"
         }
