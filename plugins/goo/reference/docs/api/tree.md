@@ -163,7 +163,7 @@ Set `Blob.LayoutTransition` to a `LayoutTransition(durationMs, easing)` value to
 Source takes precedence over Path. A nonempty `Image.Path` without Source throws
 when mounted. Load local assets with `ImageSourceCache.LoadAsync` and assign Source.
 
-See [image loading and ownership](https://github.com/obselate/goo/blob/main/docs/images.md) for loading, decoding, buffer
+See [image loading and ownership](../images.md) for loading, decoding, buffer
 transfer, provider lifetime and memory-pressure behavior.
 
 Provider updates keep the last-good version visible until a replacement is ready.
@@ -200,7 +200,7 @@ A custom thumb can derive content size as viewport size plus scroll range. Its l
 For custom text clients, see [custom IME positioning](input.md#position-a-custom-ime).
 
 
-For decoding, thumbnails and raster density, see [images](https://github.com/obselate/goo/blob/main/docs/images.md).
+For decoding, thumbnails and raster density, see [images](../images.md).
 
 ## `Blob`
 
@@ -966,11 +966,11 @@ Gets a rectangle within Anchor's local border-box coordinates. Nil uses the whol
 
 ### `CollisionBounds`
 
-Gets finite nonnegative collision bounds in window logical coordinates. Nil uses the viewport.
+Gets collision bounds in window logical coordinates. Nil uses the viewport. Values are finite and sizes nonnegative.
 
 ### `HideWhenAnchorClipped`
 
-Hides presentation when the anchor is clipped without unmounting content. Defaults to false.
+Hides presentation when AnchorRect is fully clipped by the anchor's ancestors. Content stays mounted. Defaults to false.
 
 ### `Placement`
 

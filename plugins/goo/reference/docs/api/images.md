@@ -2,7 +2,7 @@
 
 Source: [`Goo/Images`](https://github.com/obselate/goo/tree/main/Goo/Images)
 
-See [image loading](https://github.com/obselate/goo/blob/main/docs/images.md) and [owned sources](tree.md#owned-image-sources).
+See [image loading](../images.md) and [owned sources](tree.md#owned-image-sources).
 
 ## `ImageAssetResult`
 

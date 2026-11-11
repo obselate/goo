@@ -966,11 +966,11 @@ Gets a rectangle within Anchor's local border-box coordinates. Nil uses the whol
 
 ### `CollisionBounds`
 
-Gets finite nonnegative collision bounds in window logical coordinates. Nil uses the viewport.
+Gets collision bounds in window logical coordinates. Nil uses the viewport. Values are finite and sizes nonnegative.
 
 ### `HideWhenAnchorClipped`
 
-Hides presentation when the anchor is clipped without unmounting content. Defaults to false.
+Hides presentation when AnchorRect is fully clipped by the anchor's ancestors. Content stays mounted. Defaults to false.
 
 ### `Placement`
 

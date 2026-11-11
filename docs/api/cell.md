@@ -24,6 +24,7 @@ Guard costly arguments when the callback can be nil. Call Build-time queries dir
 Cell.Mount[Counter]()
 ```
 
+Pass a key when siblings can be inserted, removed or reordered.
 
 ```gsharp
 Cell.Mount[Counter]("counter")

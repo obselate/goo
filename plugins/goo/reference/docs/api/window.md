@@ -372,29 +372,35 @@ if created.Status == OffscreenRenderStatus.Success {
 }
 ```
 
-An app with an open window services work from its UI scheduler:
+An app with an open window starts work from an input handler:
 
 ```gsharp
-let created = window.CreateOffscreenSession()
-if created.Status == OffscreenRenderStatus.Success {
-    using let session = created.Session!!
-    let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
-    let pending = session.RenderAsync(MyPage(), options, window.Closed)
-    var timer WindowTimer? = nil
-    timer = window.SetInterval(
-        async () -> {
-            session.Service()
-            if !pending.IsCompleted {
-                return
-            }
-            timer!!.Dispose()
-            let rendered = await pending
-        },
-        1.0
-    )
-    using let service = timer!!
-    window.Run()
+func RenderPage() {
+    let created = window.CreateOffscreenSession()
+    if created.Status == OffscreenRenderStatus.Success {
+        let session = created.Session!!
+        let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
+        let pending = session.RenderAsync(MyPage(), options, window.Closed)
+        var timer WindowTimer? = nil
+        timer = window.SetInterval(
+            async () -> {
+                session.Service()
+                if !pending.IsCompleted {
+                    return
+                }
+                timer!!.Dispose()
+                try {
+                    let rendered = await pending
+                } finally {
+                    session.Dispose()
+                }
+            },
+            1.0
+        )
+    }
 }
+
+Button{OnClick: RenderPage, Text{Content: "Render page"}}
 ```
 
 Call `window.CreateOffscreenSession` on the UI thread while the window is open.

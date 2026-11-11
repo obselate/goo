@@ -51,6 +51,7 @@ func AppendCellMountGuide(text StringBuilder) {
     text.AppendLine("Cell.Mount[Counter]()")
     text.AppendLine("```")
     text.AppendLine()
+    text.AppendLine("Pass a key when siblings can be inserted, removed or reordered.")
     text.AppendLine()
     text.AppendLine("```gsharp")
     text.AppendLine("Cell.Mount[Counter](\"counter\")")

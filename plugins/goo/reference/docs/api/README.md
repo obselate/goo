@@ -12,7 +12,7 @@ Generated API reference.
 | Keep local state | [Cell](cell.md) | Goo core |
 | Set styles | [Style](style.md) | Goo core |
 | Show lists | [Virtualization](tree.md) | Goo core |
-| Load images | [Images](https://github.com/obselate/goo/blob/main/docs/images.md) | Goo core |
+| Load images | [Images](../images.md) | Goo core |
 | Apply a theme | [Themes](https://github.com/obselate/goo-widgets/blob/main/docs/usage.md#goo-theme) | Goo.Widgets |
 
 - [Accessibility](accessibility.md)

@@ -56,10 +56,10 @@ public class Portal : Blob {
   /// Nil uses the whole border box. Values must be finite and dimensions nonnegative.
   public prop AnchorRect ElementRect? { get; init; }
 
-  /// Gets finite nonnegative collision bounds in window logical coordinates. Nil uses the viewport.
+  /// Gets collision bounds in window logical coordinates. Nil uses the viewport. Values are finite and sizes nonnegative.
   public prop CollisionBounds ElementRect? { get; init; }
 
-  /// Hides presentation when the anchor is clipped without unmounting content. Defaults to false.
+  /// Hides presentation when AnchorRect is fully clipped by the anchor's ancestors. Content stays mounted. Defaults to false.
   public prop HideWhenAnchorClipped bool { get; init; }
 
   /// Initializes an empty child collection.

@@ -132,6 +132,7 @@ The CLI build includes the inspector. For a source inspector, use the target fla
 | Setting | Use |
 | --- | --- |
 | `GOO_CLI` | CLI command used by the plugin host. Point it at the built CLI for source work. |
+| `GOO_SOURCE_ROOT` | Standalone Goo checkout used by plugin source tools when `repository` is omitted. Defaults to bundled references. |
 | `GOO_DEVTOOLS_SAMPLE=1` | Inspector fixture data without a target. |
 | `GOO_DEVTOOLS_DIR` | Custom runtime descriptor directory. Set it for both the app and plugin server. |
 | `GOO_DEVTOOLS_INSPECTOR` | Custom inspector executable or DLL. The CLI uses the bundled inspector by default. |

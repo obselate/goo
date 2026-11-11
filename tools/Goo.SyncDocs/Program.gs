@@ -25,6 +25,7 @@ let paths = List[string]{
     "docs/shipping.md",
     "docs/platform-preflight.md",
     "docs/android.md",
+    "docs/images.md",
     "docs/interop.md"
 }
 let directories = List[string]{"docs/api"}

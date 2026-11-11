@@ -29,6 +29,8 @@ goo dev [options] [-- command args]
 
 Start an app with hot reload and diagnostics.
 
+`goo dev` overwrites `.goo/reload.png` after each successful hot reload and prints its path.
+
 | Option | Meaning |
 | --- | --- |
 | `--configuration NAME` | Build configuration. Not valid with a child command. |

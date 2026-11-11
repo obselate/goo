@@ -2,6 +2,8 @@
 
 Use the [DevTools guide](README.md) for launch and target selection. Use `goo help attach` for raw requests when a capability has no MCP tool.
 
+Runtime descriptors can start with a UTF-8 BOM.
+
 ## Capture and snapshot semantics
 
 - A capture with `degraded: true` rendered offscreen layers at lower resolution under GPU pressure. `layerResolutionShift` is the power-of-two reduction. Text and icons in those layers are upscaled.

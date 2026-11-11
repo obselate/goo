@@ -257,6 +257,9 @@ internal class CommandLine {
             for (name, definition) in Commands {
                 if name == "mcp" { continue }
                 text.AppendLine("\n## $name\n\n```sh\ngoo $name ${definition.Usage}\n```\n\n${definition.Summary}\n")
+                if name == "dev" {
+                    text.AppendLine("`goo dev` overwrites `.goo/reload.png` after each successful hot reload and prints its path.\n")
+                }
                 if definition.Options.Any(option -> option.Name == "pid") {
                     text.AppendLine("Use the shared [target options](#target-options).\n")
                 }
