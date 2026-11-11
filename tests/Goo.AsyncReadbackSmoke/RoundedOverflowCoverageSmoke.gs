@@ -229,10 +229,10 @@ class FocusOutlineClipCell : Cell {
   override func Build() Blob -> Container() {
     .Width: Percent(100), .Height: Percent(100), .BackgroundColor: Color.Black,
     Container() {
-      .Position: PositionType.Absolute, .Left: 16, .Top: 16, .Width: 128, .Height: 64,
-      .BorderRadius: 12, .Overflow: Overflow.Hidden, .BackgroundColor: Color.Rgb(40, 40, 40),
+      .Position: PositionType.Absolute, .Left: 16, .Top: 16, .Width: 64, .Height: 32,
+      .BorderRadius: 10, .Overflow: Overflow.Hidden, .BackgroundColor: Color.Rgb(40, 40, 40),
       Container{
-        Width: 64, Height: 32, Focusable: true,
+        Width: 64, Height: 32, BorderRadius: 6, BackgroundColor: Color.White, Focusable: true,
         Focus: Style{OutlineWidth: 2, OutlineOffset: 2, OutlineColor: Color.Rgb(255, 32, 128)},
       },
     },
@@ -240,9 +240,13 @@ class FocusOutlineClipCell : Cell {
 }
 
 func RunFocusOutlineClipSmoke() {
+  for scale in []float32{1.0F, 1.5F} { RunFocusOutlineClipScale(scale) }
+}
+
+func RunFocusOutlineClipScale(scale float32) {
   let opened = Window{
-    Title: "Goo focus outline clip gate", Width: 160, Height: 96,
-    VSync: false, Decorated: false, Root: FocusOutlineClipCell(),
+    Title: "Goo focus outline clip gate", Width: int32(160.0F * scale), Height: int32(96.0F * scale),
+    UiScale: scale, VSync: false, Decorated: false, Root: FocusOutlineClipCell(),
   }
   try {
     opened.Open()
@@ -255,16 +259,26 @@ func RunFocusOutlineClipSmoke() {
       uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
     ReadbackAwaitReadbackReady(opened, 10000)
     let frame = ReadbackTakeReadback(opened)
-    let samples = []Point{Point{X: 48, Y: 17}, Point{X: 17, Y: 32}, Point{X: 20, Y: 20}}
+    let output = Environment.GetEnvironmentVariable("GOO_FOCUS_OUTLINE_OUTPUT") ?? ""
+    if output != "" {
+      let _ = Directory.CreateDirectory(output)
+      WriteImage(frame, Path.Combine(output, "focus-outline-" + int32(scale * 100.0F).ToString() + ".ppm"))
+    }
+    let samples = []Point{
+      Point{X: 48, Y: 17}, Point{X: 17, Y: 32},
+      Point{X: 19.5, Y: 19.5}, Point{X: 76.5, Y: 19.5},
+      Point{X: 76.5, Y: 44.5}, Point{X: 19.5, Y: 44.5},
+    }
     for point in samples {
-      let pixel = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, point.X, point.Y)
+      let pixel = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics,
+        point.X * float64(scale), point.Y * float64(scale))
       Require(pixel[0] >= uint8(200) && pixel[1] <= uint8(96),
         "Rounded overflow clipped the focus outline at " + point.X.ToString() + "," + point.Y.ToString()
           + ": " + PrimitivePixelText(pixel))
     }
-    let outside = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 82, 32)
+    let outside = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 82 * float64(scale), 32 * float64(scale))
     Require(outside[0] <= uint8(64), "Clipped focus outline extends past its control: " + PrimitivePixelText(outside))
-    Console.WriteLine("focus-outline-clip-smoke: visible=3")
+    Console.WriteLine("focus-outline-clip-smoke: visible=6 scale=" + scale.ToString())
   } finally {
     if opened.IsOpen {
       opened.RequestClose()

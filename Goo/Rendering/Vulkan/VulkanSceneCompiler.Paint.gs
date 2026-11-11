@@ -805,8 +805,9 @@ internal partial class VulkanSceneCompiler {
     node Node,
     bounds ConservativeBounds,
     opacity float32,
-    transformIndex int32) {
-      var ring = OutlineBounds(node, bounds)
+    transformIndex int32,
+    inset bool = false) {
+      var ring = inset ? bounds : OutlineBounds(node, bounds)
       if ring.IsEmpty || opacity <= 0.0F {
         return
       }
@@ -833,7 +834,8 @@ internal partial class VulkanSceneCompiler {
         let outset = MathF.Min(MathF.Min(bounds.X - ring.X, bounds.Y - ring.Y),
           MathF.Min(ring.Right - bounds.Right, ring.Bottom - bounds.Bottom))
         if overshoot > 0.0F && outset > 0.0F {
-          ring = ring.Inflate(-MathF.Min(overshoot, outset))
+          PaintOutline(node, bounds, opacity, transformIndex, true)
+          return
         }
         let left = clipsX ? MathF.Max(ring.X, clip.X) : ring.X
         let top = clipsY ? MathF.Max(ring.Y, clip.Y) : ring.Y
@@ -844,18 +846,29 @@ internal partial class VulkanSceneCompiler {
         if clipsX && clipsY {
           clipTopLeft = MathF.Max(clipTopLeft, ClipCornerRadius(PaddingEdgeRadius(ancestor,
             ancestor.BorderTopLeftRadius, ancestor.BorderRadius, ancestorBounds, clip, true, true),
-            left - clip.X, top - clip.Y, Radius(node.BorderTopLeftRadius, node.BorderRadius, bounds)))
+            left - clip.X, top - clip.Y, OutlineRadius(node.BorderTopLeftRadius, node.BorderRadius,
+              bounds, MathF.Min(bounds.X - left, bounds.Y - top))))
           clipTopRight = MathF.Max(clipTopRight, ClipCornerRadius(PaddingEdgeRadius(ancestor,
             ancestor.BorderTopRightRadius, ancestor.BorderRadius, ancestorBounds, clip, false, true),
-            clip.Right - right, top - clip.Y, Radius(node.BorderTopRightRadius, node.BorderRadius, bounds)))
+            clip.Right - right, top - clip.Y, OutlineRadius(node.BorderTopRightRadius, node.BorderRadius,
+              bounds, MathF.Min(right - bounds.Right, bounds.Y - top))))
           clipBottomRight = MathF.Max(clipBottomRight, ClipCornerRadius(PaddingEdgeRadius(ancestor,
             ancestor.BorderBottomRightRadius, ancestor.BorderRadius, ancestorBounds, clip, false, false),
-            clip.Right - right, clip.Bottom - bottom, Radius(node.BorderBottomRightRadius, node.BorderRadius, bounds)))
+            clip.Right - right, clip.Bottom - bottom, OutlineRadius(node.BorderBottomRightRadius, node.BorderRadius,
+              bounds, MathF.Min(right - bounds.Right, bottom - bounds.Bottom))))
           clipBottomLeft = MathF.Max(clipBottomLeft, ClipCornerRadius(PaddingEdgeRadius(ancestor,
             ancestor.BorderBottomLeftRadius, ancestor.BorderRadius, ancestorBounds, clip, true, false),
-            left - clip.X, clip.Bottom - bottom, Radius(node.BorderBottomLeftRadius, node.BorderRadius, bounds)))
+            left - clip.X, clip.Bottom - bottom, OutlineRadius(node.BorderBottomLeftRadius, node.BorderRadius,
+              bounds, MathF.Min(bounds.X - left, bottom - bounds.Bottom))))
         }
       }
+      if !inset && (clipTopLeft > 0.0F || clipTopRight > 0.0F
+        || clipBottomRight > 0.0F || clipBottomLeft > 0.0F)
+        && (ring.X < bounds.X || ring.Y < bounds.Y
+          || ring.Right > bounds.Right || ring.Bottom > bounds.Bottom) {
+            PaintOutline(node, bounds, opacity, transformIndex, true)
+            return
+          }
       let width = OutlineWidth(node)
       let color = EffectiveColor(node.OutlineColor, opacity)
       frame.AddPerEdgeBorder(PerEdgeBorderRecord{
@@ -882,9 +895,11 @@ internal partial class VulkanSceneCompiler {
     }
 
   private func ClipCornerRadius(radius float32, x float32, y float32, own float32) float32 {
-    let centerX = radius - x - own
-    let centerY = radius - y - own
-    return centerX > 0.0F && centerY > 0.0F && centerX * centerX + centerY * centerY > radius * radius
+    let remaining = radius - own
+    let centerX = remaining - x
+    let centerY = remaining - y
+    return centerX > 0.0F && centerY > 0.0F
+      && centerX * centerX + centerY * centerY > remaining * remaining
       ? radius - MathF.Min(x, y) : 0.0F
   }
 
