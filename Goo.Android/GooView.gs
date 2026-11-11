@@ -114,9 +114,9 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
         private set;
     }
 
-    /// Gets or sets whether the Done editor action hides the software keyboard.
     private var _dismissKeyboardOnSubmit bool = true
 
+    /// Gets or sets whether the Done editor action hides the software keyboard.
     prop DismissKeyboardOnSubmit bool {
         get {
             return _dismissKeyboardOnSubmit

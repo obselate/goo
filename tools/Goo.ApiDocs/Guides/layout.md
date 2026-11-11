@@ -1,3 +1,22 @@
+## Size flexible content
+
+```gsharp
+Container{
+    FlexDirection: FlexDirection.Row,
+    Text{Content: "A long label can wrap", FlexGrow: 1, MinWidth: 0},
+    Container{FlexGrow: 1, MinWidth: 0, MinHeight: 0, OverflowY: Overflow.Scroll},
+}
+```
+
+- `FlexShrink` defaults to 1. Set it to 0 to disable shrinking.
+- An explicit `MinWidth` or `MinHeight` sets the axis minimum.
+- Without an explicit minimum, `Scroll` or `Hidden` overflow permits zero.
+- Otherwise, an authored axis size is the minimum. Without one, content sets it.
+- Wrapping Text stops shrinking at its widest word. `MinWidth: 0` permits narrower text and word breaks.
+- Use flexible regions inside a sized parent. Scroll content that cannot fit.
+
+See [Style](style.md) for the property contracts.
+
 ## Padding and margin
 
 `Padding` and `Margin` accept pixel numbers or `Edges`. Two arguments mean
@@ -53,6 +72,10 @@ those declarations participate in measurement. Normal relative child offsets sti
 apply. Custom layout owns track/gap and out-of-flow policy; all direct children
 participate. Scroll extents and layout transitions include custom placements.
 
+Arranged bounds and cached sizes remain unrounded. Absolute child rectangles snap
+to `Window.PixelScale`. Density changes rearrange children. Positive sizes and
+border widths have a one-device-pixel minimum.
+
 A context is valid only on the UI thread inside its current callback. Out-of-phase use, duplicate or
 missing arrangements, invalid sizes, reentrant window layout, and more than 64
 nested custom measurement callbacks throw. Do not mutate the UI or an algorithm's configuration
@@ -60,12 +83,8 @@ inside its callbacks. Replace a policy object when its configuration changes.
 Content, font, image, child-list, and child-style changes invalidate affected
 measurements automatically; changing available width uses a new constraint key.
 
-Each measured child keeps at most four cached sizes, invalidated with its custom
-parent when a retained child layout becomes dirty. Each callback permits at most
-`min(65536, max(32, childCount * 16))` calls to `MeasureChild`. Structural updates
-perform an O(n) child-index rebuild while retaining matching child state. Unchanged
-geometry and scroll-only updates reuse the completed arrangement. Ordinary flex
-containers allocate no custom-layout state.
+Each layout callback permits at most `min(65536, max(32, childCount * 16))`
+calls to `MeasureChild`.
 
 ```gsharp
 class VerticalLayout : LayoutAlgorithm {
@@ -100,26 +119,15 @@ class VerticalLayout : LayoutAlgorithm {
 
 ## Layout position simulations
 
-`LayoutTransition(durationMs, easing)` continues to use a timed transition.
-Set its optional `SimulationFactory` to supply a `Simulation` for each position
-axis. The factory receives the starting offset, target offset and incoming
-velocity. Interrupted transitions preserve their current visual position and
-pass the sampled velocity into the replacement simulation.
-
-Spring equations belong to Goo.Animations or an application simulation. The core
-owns layout, simulation sampling and invalidation. The simulation must settle at
-the supplied target. Reduced motion snaps to the final layout and disposes active
-transition work. Keep the same factory delegate when its policy has not changed.
+See [motion](motion.md#layout-position-simulations) for position simulations.
 
 ## Text language and user scaling
 
-`Style.Language` accepts an inherited BCP 47 language tag such as `sr` or `ja`.
-The empty string uses the shaper's default. Language applies to passive text,
-entries, editor paragraphs, styled spans, fallback glyphs, and ellipsis shaping.
-Changing it invalidates the existing text layout caches. Direction remains a
-separate style property.
+See [Style.Language](style.md#language) and
+[PlatformPreferences.TextScaleFactor](platform.md#textscalefactor).
 
-`Window.Preferences.TextScaleFactor` scales text measurement, including explicit
-font sizes and styled spans, independently of display density. The declared
-`FontSize` values remain unchanged. Changes invalidate mounted text layouts and
-flow through the normal layout and paint passes.
+## Scroll large content
+
+- Positions use float32. Placement drifts beyond 16,777,216 pixels of content.
+- `JumpTo` is immediate. `ScrollTo` animates containers and is immediate in text editors.
+- `ElementHandle.ScrollToItem(key)` jumps to a virtual row.

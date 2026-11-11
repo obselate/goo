@@ -1,3 +1,9 @@
+## Open a window
+
+```gsharp
+Window{Root: Cell{}}.Run()
+```
+
 ## Native library loading
 
 Goo loads its bundled patched SDL and shares that handle with its SDL bindings.
@@ -138,7 +144,7 @@ window from retaining the input block.
 
 ## Platform preferences
 
-`Window.Preferences` is an immutable `PlatformPreferences` snapshot.
+`Window.Preferences` is an immutable [PlatformPreferences](platform.md#platformpreferences) snapshot.
 `Theme` is `Unknown`, `Light` or `Dark`. `AccentColor`, `ReducedMotion`, `HighContrast`,
 `EventSoundsEnabled` and `TextScaleFactor` are nullable so unsupported values
 remain distinct from an explicit value. Text scale must be finite and positive and is independent
@@ -259,24 +265,16 @@ activation policy; child `State` is not a copy of owner `State`. Closing a modal
 restores the previous owner element's focus when it remains mounted and requests
 native owner activation. A compositor may deny focus or raising requests.
 
-Once the owner's `OnClosing` accepts closure, Goo tears down every owned
-descendant before destroying the owner's native window, waiting for GPU work
-without blocking the shared frame loop. Descendant `OnClosing` callbacks do not
-veto this forced teardown; put application-wide save/close policy on the owner.
-A child's normal `RequestClose` still invokes its own policy. Owned window trees
-cannot gain new children after teardown begins. Native failures establishing
-ownership/modality throw `NotSupportedException` with the SDL error and clean up
-the partially created child. Windows and macOS use the same SDL contract; native
-verification must be performed on the target desktop.
-
-Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
-
-Source: [`Goo/Window`](https://github.com/obselate/goo/tree/main/Goo/Window)
+Once the owner accepts close, descendants close first and cannot veto it.
+Put save policy on the owner. A child `RequestClose` uses its own policy.
+New children are rejected during teardown. Native ownership failures throw
+`NotSupportedException` and release the partial child.
 
 ## Native size constraints
 
-`Window.MinWidth`, `MinHeight`, `MaxWidth`, and `MaxHeight` constrain the native
-client area in logical window pixels, independently of layout-node constraints.
+`Window.MinWidth`, `MinHeight`, `MaxWidth` and `MaxHeight` use layout pixels.
+Goo multiplies them by `UiScale` for native client-area limits.
+`Width` and `Height` stay in native logical pixels.
 Zero removes a limit. Values must be nonnegative, and a nonzero maximum must be
 at least its corresponding minimum. An invalid assignment leaves the old value.
 Set these properties before `Open` or on the window's owner UI thread afterward.
@@ -338,30 +336,66 @@ present. It requires an open desktop window and does not capture a specific prio
 presentation. Embedded hosts return `Unsupported`. The application owns its
 manual clock, sampling of arbitrary scene state, frame ordering and video encoding.
 
+## Measure text
+
+```gsharp
+let width = Math.Max(
+    window.MeasureText("Save", labelStyle),
+    window.MeasureText("Save a copy", labelStyle))
+Text{BasedOn: labelStyle, Content: "Save", Width: width}
+```
+
+- Call on the window's UI thread, for example in `Cell.Build`.
+- The result is single-line width in layout units, with text scale and pixel-grid rounding.
+- Pass the same explicit style to measurement and Text. Parent styles are not inherited.
+- Line breaks are ignored.
+- Use this for a small fixed set of labels that must share the widest width.
+
 ## Render pages without presenting
+
+A batch tool can block its own thread, like `goo render`:
+
+```gsharp
+let created = OffscreenRenderSession.Create()
+if created.Status == OffscreenRenderStatus.Success {
+    using let session = created.Session!!
+    let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
+    let pending = session.RenderAsync(MyPage(), options, CancellationToken.None)
+    while !pending.IsCompleted {
+        session.Service()
+        Thread.Yield()
+    }
+    let rendered = pending.GetAwaiter().GetResult()
+}
+```
+
+An app with an open window services work from its UI scheduler:
 
 ```gsharp
 let created = window.CreateOffscreenSession()
 if created.Status == OffscreenRenderStatus.Success {
-  using let session = created.Session!!
-  let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
-  let pending = session.RenderAsync(MyPage(), options, CancellationToken.None)
-  while !pending.IsCompleted {
-    session.Service()
-    Thread.Sleep(1)
-  }
-  let rendered = pending.GetAwaiter().GetResult()
+    using let session = created.Session!!
+    let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
+    let pending = session.RenderAsync(MyPage(), options, window.Closed)
+    var timer WindowTimer? = nil
+    timer = window.SetInterval(async () -> {
+        session.Service()
+        if !pending.IsCompleted { return }
+        timer!!.Dispose()
+        let rendered = await pending
+    }, 1.0)
+    using let service = timer!!
+    window.Run()
 }
 ```
 
-Create the session on the window thread before opening native UI.
-The session keeps the shared renderer, not the native surface.
-It can render while an embedded host is paused or detached.
-Call `Service` from the host's UI scheduler until each page finishes.
-Create, render, service and dispose on the same thread.
+Call `window.CreateOffscreenSession` on the UI thread while the window is open.
+Create the lease before a native service can remove its presentation surface.
+The lease keeps the renderer, not that surface. For no open window, use static
+`OffscreenRenderSession.Create()`. Create, render, service and dispose on the same thread.
 
 Each page uses a fresh, unattached cell.
-Logical size controls layout. Pixel size controls resolution.
+Logical size sets the layout viewport. Pixel size sets resolution and the device-pixel grid used to round layout.
 `MaxBytes` bounds new GPU allocations and CPU pixels.
 Pass a previous capture to reuse its pixels at the same size.
 Do not read those pixels until the next render completes.
@@ -374,18 +408,12 @@ Closing the owner cancels pending pages.
 
 ## Render an app without a display
 
-```sh
-goo render App.gsproj --out frame.png --size 1280x800 --scale 2 --theme dark
-goo render App.gsproj --list
-goo render App.gsproj --scene incremented --out incremented.png
-goo render ./publish/App --scene incremented --out native.png
-goo diff frame.png reference.png --tolerance 2 --out difference.png
-```
+See the [render and diff commands](../devtools/cli.md) for options.
 
-`goo render` builds a project or runs an existing executable. `Window.Run` renders
-through `OffscreenRenderSession` instead of opening a window. No display or
-compositor is needed. Size defaults to the declared window size. Scale controls
-output pixels. Theme sets `Window.Preferences.Theme` before the first build.
+`goo render` builds a project or runs an existing executable. `Window.Run` uses
+`OffscreenRenderSession` without opening a window. No display or compositor is needed.
+Size defaults to the declared window size. Scale sets pixels per layout unit and
+the device-pixel grid used to round layout. Theme sets `Window.Preferences.Theme`.
 It does not replace the app's colors. Apps that ignore theme render unchanged.
 The renderer waits for GPU image, path and text uploads. It does not wait for
 app services or advance app animations.
@@ -410,13 +438,7 @@ only scene and renders `Window.Root`.
 `OffscreenRenderSession.Create()` also creates a surface-free session directly.
 Create, use and dispose it on the same thread.
 
-`goo diff` prints changed pixel count and an `x,y widthxheight` bounding box.
-Tolerance is the largest allowed RGBA channel difference, from 0 to 255.
-Pixels outside either image always count as changed. Equal images exit 0.
-Changed images exit 1. The optional PNG marks changed pixels magenta.
-
-After each successful hot reload, `goo dev` overwrites `.goo/reload.png` in
-the project directory and prints its full path. This captures the running app.
+For render, diff and hot-reload capture options, see the [CLI reference](../devtools/cli.md).
 
 
 ## Fullscreen displays
@@ -513,7 +535,7 @@ Keep the returned timer and call `Dispose` when its owner no longer needs callba
 
 ## Use the native clipboard
 
-Call `Window.GetClipboardText` and `Window.SetClipboardText` only on the open window's UI thread. Both fail deterministically after close. Reads reject text above 16 MiB of UTF-8, without truncation. An empty getter result can mean an empty clipboard, a native copy failure, or an oversized payload. Setter failures propagate. Built-in text entry and editor paste use the same limit, including supplied paste text, and leave the selection unchanged when rejected. This budget allows large source and log pastes, matches the SVG input budget, and bounds text conversion and input processing separately from the 64 MiB image budget.
+Use clipboard text methods on the open window UI thread. Reads reject more than 16 MiB of UTF-8. An empty result can mean empty data, native failure or oversize data. Set failures throw. Built-in and supplied paste share this limit and leave selection unchanged on rejection.
 
 ## Native file dialogs
 
@@ -543,14 +565,9 @@ strings that remain valid after owner close. Requests allow at most 64 filters, 
 units per path, and 1 MiB of total path code units. Invalid options throw before any
 native work; native and result-limit errors return an explicit outcome.
 
-Windows uses the SDL native chooser; macOS uses its native panel. Linux uses the
-XDG desktop FileChooser portal through Goo's bundled SDL bridge, preserving the exact
-Wayland/X11 owner and supporting `Request.Close` cancellation. A missing portal or
-an SDL payload without that bridge reports `Unsupported`. Embedded hosts report
-`Unsupported`. Normal native waiting creates no polling timer in Goo; the regular SDL event
-pump delivers completion. Windows cancellation briefly retries dismissal until SDL
-creates and closes its worker-owned chooser. Windows and macOS require runtime verification on their
-respective platforms.
+Windows and macOS use native choosers. Linux requires the XDG FileChooser portal
+and the bundled SDL bridge. Missing portal or bridge support returns `Unsupported`.
+Embedded hosts return `Unsupported`. `CancelFileDialog` requests native dismissal.
 
 ## File and image clipboard data
 
@@ -562,7 +579,6 @@ File reads support local `text/uri-list`, GNOME copied-file lists, Windows `CF_H
 
 Image reads prefer PNG, JPEG, GIF, BMP, then macOS TIFF. PNG/JPEG/GIF bytes keep their declared MIME type; a successful transfer does not validate their encoding. Windows DIB/BMP and macOS TIFF are converted to PNG. Every encoded result is limited to 64 MiB. Native bitmap conversion checks dimensions before raster decode, allowing at most 8192 pixels per dimension and 64 MiB of RGBA pixels. These are payload and raster limits, not peak temporary-memory limits. Encoded bytes can be saved directly or passed to an application image-loading workflow.
 
-Linux relies on the active SDL clipboard backend. Windows uses native file-list and DIB access; macOS uses pasteboard items and ImageIO for TIFF conversion. Backend failures are reported explicitly; native Windows/macOS execution requires validation on those systems.
 
 ## Publish multiple clipboard formats
 

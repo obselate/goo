@@ -12,20 +12,13 @@ func AppendGradientStopsGuide(text StringBuilder) {
     text.AppendLine()
     text.AppendLine("## Gradient stops")
     text.AppendLine()
-    text.AppendLine("Linear and radial gradients accept two or more ordered stops, including repeated")
-    text.AppendLine("positions for hard color edges. There is no fixed four-stop limit. Larger stop")
-    text.AppendLine("lists use Goo-owned GPU storage and remain a single gradient draw; device storage")
-    text.AppendLine("limits still apply. Interpolation uses premultiplied encoded sRGB color, including")
-    text.AppendLine("per-stop alpha and element opacity.")
+    text.AppendLine("Gradients accept two or more ordered stops. Repeated offsets create hard edges.")
+    text.AppendLine("Interpolation uses premultiplied encoded sRGB, including stop alpha and element opacity.")
 }
 
 func AppendCellInputGuide(text StringBuilder) {
     text.AppendLine()
     text.AppendLine("## Build input cells")
-    text.AppendLine()
-    text.AppendLine(
-        "Store local Cell state in ordinary fields. Goo rebuilds the Cell that authored an input element, even when another Cell renders it. Call `Rebuild()` after mutations outside Goo input dispatch."
-    )
     text.AppendLine()
     text.AppendLine(
         "Derive packaged components as `open class X : Cell<TInput>` and override `protected Build(input TInput) Blob`. Goo passes the stored immutable input snapshot. Same-assembly components can still override parameterless `Build()`. If both overloads are overridden, the typed overload wins. Override `ShouldRebuild(previous, next)` only when default structural equality does not match the rebuild policy."
@@ -54,22 +47,10 @@ func AppendCellMountGuide(text StringBuilder) {
     text.AppendLine()
     text.AppendLine("## Mount parameterless cells")
     text.AppendLine()
-    text.AppendLine(
-        "Use `Cell.Mount<TCell>()` for a fixed, unkeyed child with a parameterless constructor. Goo retains the mounted Cell by its declared type and sibling position."
-    )
-    text.AppendLine()
     text.AppendLine("```gsharp")
     text.AppendLine("Cell.Mount[Counter]()")
     text.AppendLine("```")
     text.AppendLine()
-    text.AppendLine(
-        "Use `Cell.Mount<TCell>(key)` when the child needs stable identity across insertion, removal, " +
-            "or reordering."
-    )
-    text.AppendLine(
-        "Siblings can mix keyed and unkeyed entries. Unkeyed identity uses the absolute sibling index " +
-            "and never matches a keyed entry."
-    )
     text.AppendLine()
     text.AppendLine("```gsharp")
     text.AppendLine("Cell.Mount[Counter](\"counter\")")
@@ -80,14 +61,10 @@ func AppendCellFactoryGuide(text StringBuilder) {
     text.AppendLine()
     text.AppendLine((`## Mount with a factory
 
-` + "`" + `Cell.Mount<TCell>(factory, key)` + "`" + ` accepts a ` + "`" + `System.Func<TCell>` + "`" + ` without requiring a parameterless constructor. Use it for constructor dependencies or F# object expressions. Configuration, seeding, and typed-input mounts remain available.
+` + "`" + `Cell.Mount[TCell](factory, key)` + "`" + ` mounts a Cell with constructor dependencies without a parameterless constructor.
 
 ` + "```" + `gsharp
 Cell.Mount[Counter](() -> Counter(store), "counter")
-` + "```" + `
-
-` + "```" + `csharp
-Cell.Mount(() => new Counter(store), "counter")
 ` + "```" + `
 
 A mounted Cell is retained by declared ` + "`" + `TCell` + "`" + ` and sibling key. The factory runs only for a new mount. Rebuilding the parent, replacing the delegate, or changing captured values does not recreate the Cell. Change the key for a new instance. Factories returning the base ` + "`" + `Cell` + "`" + ` type need distinct stable keys for distinct components.
@@ -96,24 +73,7 @@ Goo owns and disposes the Cell on removal. Each invocation must return a fresh, 
 
 Constructor arguments initialize the Cell. Update it through typed inputs, configuration, or an external store read by ` + "`" + `Build()` + "`" + `. Call its ` + "`" + `Rebuild()` + "`" + ` after changes outside Goo input callbacks. Read changing values from a store or getter, not a captured scalar copy. Calling ` + "`" + `Build()` + "`" + ` directly returns a Blob tree without mounting the Cell.
 
-F# can call the CLR overload directly or through a helper:
-
-` + "```" + `fsharp
-open System
-open Goo
-
-let mount key (create: unit -> Cell) =
-    Cell.Mount<Cell>(Func<Cell>(create), key)
-
-let counter (value: int ref) =
-    { new Cell() with
-        override _.Build() =
-            Text(Content = $"Count: {value.Value}") :> Blob }
-
-let value = ref 0
-let direct = Cell.Mount<Cell>(Func<Cell>(fun () -> counter value), "direct")
-let throughHelper = mount "helper" (fun () -> counter value)
-` + "```" + `
+See [language interop](../interop.md) for other languages.
 
 Capturing factories inside parent builds can allocate delegates and closures even when the Cell is reused. Cache factories with stable dependencies. Goo never invokes a factory to discover its result's runtime type.`))
 }
@@ -144,7 +104,7 @@ func AppendShaderEffectGuide(text StringBuilder) {
     text.AppendLine()
     text.AppendLine("Compositing, gradients and image samples use premultiplied display-encoded sRGB channels in UNORM attachments. Alpha is linear coverage.")
     text.AppendLine()
-    text.AppendLine("Vulkan surfaces keep the `SRGB_NONLINEAR` color-space tag. Goo uses an advertised UNORM format or a compatible UNORM view through `VK_KHR_swapchain_mutable_format`. Startup fails if neither is available. Goo does not fall back to linear-light blending.")
+    text.AppendLine("Vulkan startup requires a compatible UNORM surface. Goo does not use linear-light blending.")
     text.AppendLine()
     text.AppendLine("## Apply fragment shaders to retained elements")
     text.AppendLine()
@@ -209,11 +169,11 @@ func AppendShaderEffectGuide(text StringBuilder) {
     text.AppendLine("```")
     text.AppendLine()
     text.AppendLine(
-        "Build requires [Slang 2026.16](https://github.com/shader-slang/slang/releases/tag/v2026.16) through `SLANG_SDK` or `PATH` and SPIRV-Tools 2026.3 from [Vulkan SDK 1.4.357.0](https://vulkan.lunarg.com/sdk/home) through `VULKAN_SDK` or `PATH`. Goo compiles and validates the source during the build, writes deterministic intermediates under `obj`, and copies `Shaders/glass.goo-effect` plus `Shaders/glass.goo-effect.json` provenance to build and publish output. The program container can carry separate artifacts for multiple rendering backends. The current compiler emits Vulkan SPIR-V. Set `TargetPath` on `GooShaderEffect` to override the relative output path. Unchanged inputs skip compilation. Tool-version mismatches, compiler errors, validation errors, ABI mismatches, and unsupported capabilities fail the build."
+        "Use the shader toolchain in [platform preflight](../platform-preflight.md#custom-shaders). Build validates the source and copies the `.goo-effect` sidecar to build and publish output. `TargetPath` overrides its relative output path. Invalid sources fail the build."
     )
     text.AppendLine()
     text.AppendLine(
-        "The fixed ABI binds the isolated source at set 0, the optional backdrop at set 1, Goo primitive data at set 2, Goo clip data at set 3, optional retained effect data at set 4, and eight `vec4` values in a 128-byte fragment push block. `uv` is normalized to the visible element bounds. `source`, `backdrop` and returned colors use premultiplied display-encoded sRGB channels. Alpha is linear coverage. Images and render attachments use UNORM storage. Samples do not decode RGB. Mix authored sRGB tint values directly with sampled RGB. Source-independent effects return encoded RGB too. Goo applies retained clip coverage and element opacity after `gooEffect`. Set `backdropOutset` to the largest displacement or filter radius the shader needs beyond those bounds. When backdrop sampling is disabled, the backdrop argument aliases the source and Goo skips the target copy."
+        "`uv` is normalized to visible element bounds. Inputs and output use premultiplied encoded sRGB. Mix authored sRGB colors directly with samples. Goo applies clip coverage and opacity afterward. Set `backdropOutset` to the largest filter radius or displacement. Without backdrop sampling, `backdrop` aliases `source`."
     )
     text.AppendLine()
     text.AppendLine(
@@ -229,7 +189,7 @@ func AppendShaderEffectGuide(text StringBuilder) {
     )
     text.AppendLine()
     text.AppendLine(
-        "The compiled program stays a sidecar asset in JIT and NativeAOT builds. Goo packages the build adapter, but neither the adapter, authoring modules, nor compiler toolchains are copied to application output. Goo does not invoke a runtime shader compiler. The first use creates a backend pipeline in a device-generation cache. Warm parameter updates reuse that pipeline and the retained layer pool. One target format supports up to 32 distinct effect program identities per device generation. A non-normal `BlendMode` cannot share the same element with an ordinary source-sampling `ShaderEffect`."
+        "The compiled program remains a sidecar asset in JIT and NativeAOT output. Compiler tools are not shipped or run at runtime. A target format permits 32 effect program identities per device generation. A non-normal `BlendMode` cannot share an element with a source-sampling `ShaderEffect`."
     )
 }
 
@@ -237,7 +197,7 @@ func BuildIndex(sourceDirectories[]string, product string) string {
     let text = StringBuilder()
     text.AppendLine("# $product API")
     text.AppendLine()
-    text.AppendLine("These pages are generated from the Release `$product.xml` file.")
+    text.AppendLine("Generated API reference.")
     text.AppendLine()
     if product == "Goo" {
         text.AppendLine("| Task | API | Package |")
@@ -250,7 +210,7 @@ func BuildIndex(sourceDirectories[]string, product string) string {
         text.AppendLine("| Keep local state | [Cell](cell.md) | Goo core |")
         text.AppendLine("| Set styles | [Style](style.md) | Goo core |")
         text.AppendLine("| Show lists | [Virtualization](tree.md) | Goo core |")
-        text.AppendLine("| Load images | [Images](images.md) | Goo core |")
+        text.AppendLine("| Load images | [Images](../images.md) | Goo core |")
         text.AppendLine("| Apply a theme | [Themes](https://github.com/obselate/goo-widgets/blob/main/docs/usage.md#goo-theme) | Goo.Widgets |")
         text.AppendLine()
     }
@@ -290,6 +250,8 @@ func GenericNames(displayName string)[]string {
         System.Array.Empty[string]()
     } else {
         displayName[(open_ + 1) .. ^1].Split(',', StringSplitOptions.TrimEntries)
+            .Select((parameter string) -> parameter.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0])
+            .ToArray()
     }
 }
 
@@ -432,10 +394,6 @@ func BuildPage(
     text.AppendLine("# $directory API")
     text.AppendLine()
     text.AppendLine(
-        "Generated from `$product.xml`. Source declarations supply type ownership and XML-emitter omissions."
-    )
-    text.AppendLine()
-    text.AppendLine(
         if isRoot {
             "Source: [`$product`]($sourceLink)"
         } else {
@@ -469,30 +427,38 @@ func BuildPage(
     if directory == "Rendering" {
         AppendGradientStopsGuide(text)
     }
+    if directory == "Text" {
+        text.AppendLine()
+        text.AppendLine("Use [Window.MeasureText](window.md#measuretextstringstyle) to size content to the widest label.")
+    }
+    if directory == "Images" {
+        text.AppendLine()
+        text.AppendLine("See [image loading](../images.md) and [owned sources](tree.md#owned-image-sources).")
+    }
+    if directory == "Diagnostics" {
+        text.AppendLine()
+        text.AppendLine("See the [diagnostics protocol](../devtools/protocol.md) for counters and capture fields.")
+    }
     for type in types {
         text.AppendLine()
         text.AppendLine("## `${type.DisplayName}`")
         text.AppendLine()
-        if type.Sources.Count != 0 {
-            text.AppendLine(if type.Sources.Count == 1 { "Source:" } else { "Sources:" })
-            text.AppendLine()
-            for source in type.Sources {
-                text.AppendLine("- [`${source.FileName}`]($sourceLink/${source.RelativeFile})")
-            }
-        }
         let typeId = "T:" + type.XmlName
         let typeMember ApiMember? = members.SingleOrDefault((member ApiMember) -> member.Id == typeId)
         if typeMember != nil {
             matched.Add(typeId)
             AppendText(text, Summary(typeMember.Element))
-        } else {
+        } else if !type.IsFunction {
             AppendText(text, type.Summary)
         }
-        if type.EnumValues.Count != 0 {
+        let undocumentedValues = type.EnumValues.Where(
+            (value string) -> !members.Any((member ApiMember) -> member.Id == "F:" + type.XmlName + "." + value)
+        ).ToArray()
+        if undocumentedValues.Length != 0 {
             text.AppendLine()
             text.AppendLine("### Values")
             text.AppendLine()
-            for value in type.EnumValues {
+            for value in undocumentedValues {
                 text.AppendLine("- `$value`")
             }
         }
@@ -501,14 +467,30 @@ func BuildPage(
         ) {
             AppendImageSourceProviderMembers(text)
         }
+        let summaries = HashSet[string](StringComparer.Ordinal)
         for member in members.Where((member ApiMember) -> BelongsTo(member.Id, type.XmlName, type.IsFunction)).OrderBy(
             (member ApiMember) -> member.Id,
             StringComparer.Ordinal
         ) {
             matched.Add(member.Id)
+            let name = member.Id[(type.XmlName.Length + 3) ..]
+            if !type.IsFunction && (
+                name.StartsWith("Equals(System.Object)", StringComparison.Ordinal) ||
+                name == "GetHashCode" ||
+                name.StartsWith("op_Equality(", StringComparison.Ordinal) ||
+                name.StartsWith("op_Inequality(", StringComparison.Ordinal) ||
+                type.XmlName == "Goo.FontVariation" &&
+                    (name.StartsWith("Equals(", StringComparison.Ordinal) ||
+                     name.StartsWith("Deconstruct(", StringComparison.Ordinal) || name == "ToString")
+            ) {
+                continue
+            }
             text.AppendLine()
             text.AppendLine("### `${DisplayMember(member, type)}`")
-            AppendText(text, Summary(member.Element))
+            let summary = Summary(member.Element)
+            if summaries.Add(summary) {
+                AppendText(text, summary)
+            }
             let parameters = member.Element.Elements("typeparam").Concat(member.Element.Elements("param")).ToArray()
             if parameters.Length != 0 {
                 text.AppendLine()
@@ -519,7 +501,7 @@ func BuildPage(
                 }
             }
             let returns = Normalize(member.Element.Element(XName?("returns")!!)?.Value)
-            if returns.Length != 0 {
+            if returns.Length != 0 && returns != "This builder." {
                 text.AppendLine()
                 text.AppendLine("Returns: $returns")
             }
@@ -666,20 +648,24 @@ let documentedDirectories = sourceDirectories.Where(
 let matched = HashSet[string](StringComparer.Ordinal)
 let pages = Dictionary[string, string](StringComparer.Ordinal)
 
-for directoryPath in documentedDirectories {
-    let directory = Path.GetFileName(directoryPath)
-    let pageTypes = types.Where((type ApiType) -> type.Directory == directory).ToArray()
-    let markdown = BuildPage(
-        directory,
-        pageTypes,
-        members,
-        matched,
-        guideRoot,
-        product,
-        sourceLink,
-        directoryPath == sourceRoot
-    )
-    pages.Add(directory.ToLowerInvariant() + ".md", FormatPage(markdown))
+if product != "Goo" {
+    pages.Add("README.md", FormatPage(BuildPage(product, types, members, matched, guideRoot, product, sourceLink, true)))
+} else {
+    for directoryPath in documentedDirectories {
+        let directory = Path.GetFileName(directoryPath)
+        let pageTypes = types.Where((type ApiType) -> type.Directory == directory).ToArray()
+        let markdown = BuildPage(
+            directory,
+            pageTypes,
+            members,
+            matched,
+            guideRoot,
+            product,
+            sourceLink,
+            directoryPath == sourceRoot
+        )
+        pages.Add(directory.ToLowerInvariant() + ".md", FormatPage(markdown))
+    }
 }
 
 let unmatched = members
@@ -694,7 +680,9 @@ if unmatched.Length != 0 {
     )
 }
 
-pages.Add("README.md", FormatPage(BuildIndex(documentedDirectories, product)))
+if product == "Goo" {
+    pages.Add("README.md", FormatPage(BuildIndex(documentedDirectories, product)))
+}
 Directory.CreateDirectory(outputRoot)
 
 for stalePath in Directory.EnumerateFiles(outputRoot, "*.md") {

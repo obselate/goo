@@ -9,7 +9,8 @@ import System.Threading.Tasks
 public partial class Window {
   private var offscreenViewport Vector2?
 
-  /// Creates a renderer lease before opening native UI that can remove this window's presentation surface.
+  /// Creates a renderer lease from an open window. Returns NotReady before Open or after close.
+  /// The lease does not require the window's presentation surface to remain attached.
   /// @returns A session on Success, or an explicit renderer status.
   public func CreateOffscreenSession() OffscreenRenderSessionResult {
     requireUiThread("Window.CreateOffscreenSession")
