@@ -198,12 +198,11 @@ partial class GooServer {
     func PackageStatus(packages Dictionary[string, string]) JsonObject {
         let result = JsonObject()
         for name in[]string{"Goo.Widgets", "Goo.Animations"} {
-            let paths = packages
-                .Keys
-                .Where(x -> x.StartsWith("packages/" + name + "/", StringComparison.OrdinalIgnoreCase))
-                .ToArray()
-            result[name] = if paths.Length > 0 {
-                Strings(paths)
+            let path = packages.Keys.FirstOrDefault(
+                x -> x.StartsWith("packages/" + name + "/", StringComparison.OrdinalIgnoreCase)
+            )
+            result[name] = if path != nil {
+                JsonValue.Create(path.Split('/')[2])
             } else {
                 JsonValue.Create("unavailable")
             }

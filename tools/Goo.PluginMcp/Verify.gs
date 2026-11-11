@@ -128,12 +128,10 @@ shared class Verify {
             bundled
         )
         Check(S(provenance, "compilerVersion") == "0.5.212", provenance)
-        let search = await Read(client, "cellSearch")
+        let searchResult = await Call(client, "cellSearch")
+        let search = Data(searchResult)
         Check(
-            S(search, "mode") == "ranked" && JsonNode.DeepEquals(
-                search["queryTerms"],
-                Strings([]string{"rebuild", "cell"})
-            ),
+            searchResult.StructuredContent == nil && searchResult.Content.Count == 1 && S(search, "mode") == "ranked",
             search
         )
         let first = search["results"]!![0]!!
@@ -206,6 +204,30 @@ shared class Verify {
         Check(I(unicode, "total") == 1, unicode)
         let lines = await Read(client, "freshRead", repository)
         Check(I(lines, "totalLines") == 4, lines)
+        File.WriteAllText(
+            fresh,
+            "# Probe\n\n## `Provider`\n\nProvider for values. TypeOnlyNeedle\n\n### `Value`\n\nField summary.\n\n## Clip\n\n" +
+                String('a', 500) +
+                " DelayedSnippetTerm."
+        )
+        let typeOnly = await Read(
+            client,
+            "sectionSearch",
+            JsonObject(){["repository"] = checkout, ["query"] = "TypeOnlyNeedle"}
+        )
+        Check(
+            S(typeOnly["results"]!![0]!!, "section") == "## `Provider`" && typeOnly["results"]!!.AsArray().All(
+                x -> S(x, "path") != "docs/api/new-api.md" || S(x, "section") != "### `Value`"
+            ),
+            typeOnly
+        )
+        let clipped = await Read(
+            client,
+            "sectionSearch",
+            JsonObject(){["repository"] = checkout, ["query"] = "DelayedSnippetTerm"}
+        )
+        let excerpt = S(clipped["results"]!![0]!!, "excerpt")
+        Check(excerpt.Contains("DelayedSnippetTerm") && excerpt.Length <= 600, clipped)
         File.Delete(fresh)
         File.WriteAllText(
             fresh,

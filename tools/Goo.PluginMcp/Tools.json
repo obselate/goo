@@ -21,7 +21,7 @@
     },
     {
       "name": "goo_search",
-      "description": "Search Goo guides and API members by task or symbol. Returns ranked section IDs, start lines and short summaries. Pass project for its restored Widgets and Animations packages, otherwise the newest cached packages are used.",
+      "description": "Search Goo guides and API members by task or symbol. Returns ranked section IDs, start lines and bounded query-matched excerpts. Pass project for its restored Widgets and Animations packages, otherwise the newest cached packages are used.",
       "inputSchema": {
         "properties": {
           "query": {

@@ -84,7 +84,11 @@ partial class GooServer {
                 default: throw ArgumentException("Unknown tool: " + name)
             }
             return CallToolResult(){
-                StructuredContent = JsonSerializer.SerializeToElement(result),
+                StructuredContent = if name == "goo_search" {
+                    nil
+                } else {
+                    JsonSerializer.SerializeToElement(result)
+                },
                 Content = List[ContentBlock](){TextContentBlock(){Text = result.ToJsonString()}}
             }
         } catch (error Exception) {

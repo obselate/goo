@@ -23,9 +23,10 @@ partial class GooServer {
         Start int32,
         End int32,
         Text string,
-        Summary string,
+        IndexText string,
         Words Dictionary[string, int32],
         Names HashSet[string],
+        Name string,
         Symbol string,
         WordTotal int32
     ) { }
@@ -118,9 +119,10 @@ partial class GooServer {
                         start,
                         start + Lines(member.ToString(SaveOptions.DisableFormatting)).Length - 1,
                         text,
-                        summary,
+                        text,
                         words,
                         HashSet[string](Words(memberName)),
+                        Stem(CaseFold(memberName.Split('.').Last())),
                         CaseFold(memberName),
                         words.Values.Sum()
                     )
@@ -173,25 +175,23 @@ partial class GooServer {
                 } else {
                     ""
                 }
-                let summary = lines
-                    .Skip(start + 1)
-                    .Take(Math.Max(0, starts[i + 1] - start - 1))
-                    .FirstOrDefault(
-                    x -> x.Trim() != "" && !x.StartsWith("```") && !x.StartsWith("Source:") && !x.StartsWith(
-                        "Sources:"
-                    ) &&
-                        !x.StartsWith("- [")
-                ) ??
-                    ""
                 if heading.StartsWith("## ") {
-                    parent = heading +
-                        (
-                        if heading.StartsWith("## `") && summary != "" {
-                            "\n" + summary
-                        } else {
+                    parent = heading
+                    if heading.StartsWith("## `") {
+                        let summary = lines
+                            .Skip(start + 1)
+                            .Take(Math.Max(0, starts[i + 1] - start - 1))
+                            .FirstOrDefault(
+                            x -> x.Trim() != "" && !x.StartsWith("```") && !x.StartsWith("Source:") && !x.StartsWith(
+                                "Sources:"
+                            ) &&
+                                !x.StartsWith("- [")
+                        ) ??
                             ""
+                        if summary != "" {
+                            parent += "\n" + summary
                         }
-                    )
+                    }
                 }
                 let context = if heading.StartsWith("###") {
                     parent
@@ -200,7 +200,18 @@ partial class GooServer {
                 }
                 let text = string.Join("\n", lines.Skip(start).Take(end - start))
                 let ownText = string.Join("\n", lines.Skip(start).Take(starts[i + 1] - start))
-                let words = WordCounts(context + "\n" + ownText)
+                let contextHeading = context.Split('\n')[0]
+                let sentenceEnd = context.IndexOf(". ")
+                let indexText = (
+                    if sentenceEnd >= 0 {
+                        context.Substring(0, sentenceEnd + 1)
+                    } else {
+                        context
+                    }
+                ) +
+                    "\n" +
+                    ownText
+                let words = WordCounts(indexText)
                 let memberName = Regex.Match(heading, "^#{2,6} `([^`(]+)").Groups[1].Value.Split('<')[0]
                 let owner = Regex.Match(context, "^## `([^`< :(]+)").Groups[1].Value
                 let symbol = if memberName == "" {
@@ -220,9 +231,10 @@ partial class GooServer {
                         start + 1,
                         end,
                         text,
-                        summary,
+                        indexText,
                         words,
-                        HashSet[string](Words(context.Split('\n')[0] + "\n" + heading)),
+                        HashSet[string](Words(contextHeading + "\n" + heading)),
+                        Stem(CaseFold(memberName)),
                         CaseFold(symbol),
                         words.Values.Sum()
                     )
@@ -287,9 +299,12 @@ partial class GooServer {
                     }
                     matched++
                     let idf = Math.Log(1 + (units.Count - frequencies[term] + 0.5) / (frequencies[term] + 0.5))
-                    score += idf * count * 2.2 / (count + 1.2 * (0.25 + 0.75 * length / average))
+                    score += idf * count * 2.2 / (count + 1.2 * (0.5 + 0.5 * length / average))
                     if unit.Names.Contains(term) {
                         score += idf * 0.4
+                    }
+                    if unit.Name == term {
+                        score += idf * 2
                     }
                 }
                 score *= Math.Pow(double(matched) / terms.Count, 2)
@@ -322,20 +337,28 @@ partial class GooServer {
         let results = JsonArray()
         for item in ranked.Take(int32(limit)) {
             let unit = item.Unit
-            let summary = Regex.Replace(unit.Summary, "\\s+", " ").Trim()
+            let excerpt = Excerpt(
+                unit,
+                terms,
+                if results.Count == 0 {
+                    600
+                } else if results.Count < 3 {
+                    360
+                } else {
+                    96
+                }
+            )
             results.Add(
                 JsonObject(){
                     ["path"] = unit.Path,
                     ["section"] = unit.Heading,
                     ["section_id"] = unit.Id,
                     ["line"] = unit.Start,
-                    ["summary"] = summary.Substring(0, Math.Min(72, summary.Length))
+                    ["excerpt"] = excerpt
                 }
             )
         }
         return JsonObject(){
-            ["source"] = root,
-            ["queryTerms"] = Strings(terms),
             ["mode"] = if ranked.Length == 0 {
                 "none"
             } else {
@@ -345,6 +368,81 @@ partial class GooServer {
             ["packages"] = PackageStatus(packages),
             ["results"] = results
         }
+    }
+
+    func Excerpt(unit SearchUnit, terms List[string], cap int32) string {
+        let text = unit.IndexText
+        let width = cap - 8
+        let positions = List[(Start int32, End int32, Term int32)]()
+        for token in Regex.Matches(text, "[\\p{L}\\p{N}_]+(?:\\+\\+|#)?") {
+            for word in Words(token.Value).Distinct() {
+                let term = terms.IndexOf(word)
+                if term >= 0 {
+                    positions.Add((token.Index, token.Index + token.Length, term))
+                }
+            }
+        }
+        var start = 0
+        var best = -1
+        let counts = [terms.Count]int32
+        var first = 0
+        var last = 0
+        var covered = 0
+        var found = 0
+        for position in positions {
+            var candidate = Math.Max(0, position.Start - width / 4)
+            if candidate > 0 && !char.IsWhiteSpace(text[candidate - 1]) {
+                while candidate < position.Start && !char.IsWhiteSpace(text[candidate]) {
+                    candidate++
+                }
+            }
+            while last < positions.Count && positions[last].End <= candidate + width {
+                let term = positions[last].Term
+                if counts[term] == 0 {
+                    covered++
+                }
+                counts[term]++
+                found++
+                last++
+            }
+            while first < last && positions[first].Start < candidate {
+                let term = positions[first].Term
+                counts[term]--
+                if counts[term] == 0 {
+                    covered--
+                }
+                found--
+                first++
+            }
+            let score = covered * 100 + Math.Min(found, 20)
+            if score > best {
+                best = score
+                start = candidate
+            }
+        }
+        if start > 0 && char.IsLowSurrogate(text[start]) {
+            start--
+        }
+        var end = Math.Min(text.Length, start + width)
+        if end < text.Length && end > start && char.IsHighSurrogate(text[end - 1]) {
+            end--
+        }
+        return (
+            if start > 0 {
+                "... "
+            } else {
+                ""
+            }
+        ) +
+            Regex
+            .Replace(text.Substring(start, end - start), "\\s+", " ").Trim() +
+            (
+            if end < text.Length {
+                " ..."
+            } else {
+                ""
+            }
+        )
     }
 
     shared {
