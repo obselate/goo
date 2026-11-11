@@ -838,6 +838,11 @@ jobs:
           .github/scripts/with-headless-wayland.sh env \
             VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
             GOO_VK_DIAGNOSTICS=1 artifacts/offscreen-nativeaot/Goo.OffscreenSmoke
+          env -u DISPLAY -u WAYLAND_DISPLAY SDL_VIDEODRIVER=dummy \
+            VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
+            GOO_RENDER_OUT="$PWD/artifacts/render-command.png" GOO_RENDER_SCENE=registered \
+            artifacts/offscreen-nativeaot/Goo.OffscreenSmoke
+          test -s artifacts/render-command.png
       - name: Verify independent pages and raster PDF
         if: needs.changes.outputs.full == 'true'
         run: |

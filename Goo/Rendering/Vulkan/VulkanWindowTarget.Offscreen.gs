@@ -27,7 +27,7 @@ internal unsafe partial class VulkanWindowTarget {
 
   internal func RenderOffscreenAsync(root Cell, options OffscreenRenderOptions,
     cancellation CancellationToken, ownerClosed CancellationToken, reusable WindowCapture?,
-    foreground Color? = nil) Task[OffscreenRenderResult] {
+    renderWindow Window? = nil) Task[OffscreenRenderResult] {
       if root.contextWindow != nil {
         throw InvalidOperationException("The Cell is attached to a window. Offscreen rendering requires an unattached Cell.")
       }
@@ -48,16 +48,16 @@ internal unsafe partial class VulkanWindowTarget {
       let completion = TaskCompletionSource[OffscreenRenderResult](TaskCreationOptions.RunContinuationsAsynchronously)
       if frameBegun || queueStage != QueueStageIdle || active.QueueWorker.HasOutstandingWork {
         queuedPageResult = completion
-        queuedPage = () -> BeginPage(root, options, cancellation, ownerClosed, reusable, foreground, completion)
+        queuedPage = () -> BeginPage(root, options, cancellation, ownerClosed, reusable, renderWindow, completion)
         host.Wake()
       } else {
-        BeginPage(root, options, cancellation, ownerClosed, reusable, foreground, completion)
+        BeginPage(root, options, cancellation, ownerClosed, reusable, renderWindow, completion)
       }
       return completion.Task
     }
 
   private func BeginPage(root Cell, options OffscreenRenderOptions, cancellation CancellationToken,
-    ownerClosed CancellationToken, reusable WindowCapture?, foreground Color?,
+    ownerClosed CancellationToken, reusable WindowCapture?, renderWindow Window?,
     completion TaskCompletionSource[OffscreenRenderResult]) {
       if cancellation.IsCancellationRequested || ownerClosed.IsCancellationRequested {
         completion.TrySetResult(OffscreenRenderResult{ Status: OffscreenRenderStatus.Cancelled })
@@ -97,9 +97,8 @@ internal unsafe partial class VulkanWindowTarget {
       try {
         pageCancellation = cancellation.Register(() -> { Interlocked.Exchange(ref pageCancelled, 1) })
         pageOwnerClose = ownerClosed.Register(() -> { Interlocked.Exchange(ref pageCancelled, 1) })
-        let page = Window{ Root: root, Width: int32(Math.Ceiling(options.LogicalWidth)),
-          Height: int32(Math.Ceiling(options.LogicalHeight)), Background: options.Background,
-          Foreground: foreground ?? Color.Black }
+        let page = renderWindow ?? Window{ Root: root, Width: int32(Math.Ceiling(options.LogicalWidth)),
+          Height: int32(Math.Ceiling(options.LogicalHeight)), Background: options.Background }
         pageWindow = page
         page.PrepareOffscreenPage(options)
         let atlasBytes = ResolveTextAtlasByteSize(uint64(properties.limits.maxTexelBufferElements) * 8uL)

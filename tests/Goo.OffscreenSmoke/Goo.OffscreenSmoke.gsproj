@@ -4,4 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup><ProjectReference Include="../../Goo/Goo.gsproj" /></ItemGroup>
+  <ItemGroup>
+    <Content Include="../Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf" Link="VendSans-VariableFont_wght.ttf" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

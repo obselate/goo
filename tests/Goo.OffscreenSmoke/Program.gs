@@ -53,6 +53,12 @@ internal class SessionOwner : Cell, IDisposable {
     }
 }
 
+if Environment.GetEnvironmentVariable("GOO_RENDER_OUT") != nil
+    || Environment.GetEnvironmentVariable("GOO_RENDER_LIST") == "1" {
+    RunRenderCommandSmoke()
+    return
+}
+
 let root = SessionOwner()
 let owner = Window{Root: root, Width: 96, Height: 96, Title: "Offscreen proof"}.Open()
 
