@@ -209,7 +209,7 @@ jobs:
           sudo apt-get install -y $GOO_LINUX_APT_PACKAGES
       - name: Verify Goo plugin
         run: |
-          dotnet build apps/Goo.DevTools/Goo.DevTools.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
+          dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
           run="$RUNNER_TEMP/plugin"
           trap 'rm -rf "$run"' EXIT
           mkdir -p "$run"/{cache,config,data,runtime}
@@ -217,7 +217,7 @@ jobs:
             XDG_DATA_HOME="$run/data" XDG_RUNTIME_DIR="$run/runtime" \
             RUNNER_TEMP="$run" GOO_WAYLAND_COMPOSITOR=kwin \
             .github/scripts/with-headless-wayland.sh \
-            dotnet apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.Cli.dll \
+            dotnet tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll \
             mcp --plugin-root plugins/goo --verify
 
   macos-native:
