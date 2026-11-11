@@ -98,6 +98,7 @@ func RunFragmentCorrectnessSmoke() {
     let cell = FragmentCorrectnessCell(crtEffect)
     let opened = Window{
       Title: "Goo fragment correctness gate",
+      // Width 1024 keeps clip scale 1/512 and offset -31/32 exact, preserving the join row at y = 12.5.
       Width: 1024,
       Height: 128,
       VSync: false,
@@ -143,7 +144,6 @@ func RunFragmentCorrectnessSmoke() {
     }
     let join = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics,
       16.0 + 3.5 / scale, 16.0 + 12.5 / scale)
-    Console.WriteLine("path-contour-join: " + PrimitivePixelText(join))
     Require(join[3] >= uint8(48) && join[3] <= uint8(80),
       "Path contour join has incorrect coverage: " + PrimitivePixelText(join))
     // A rounded box with only a bottom border must not paint the border color along its other sides.
