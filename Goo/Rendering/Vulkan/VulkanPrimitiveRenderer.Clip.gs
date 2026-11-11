@@ -452,8 +452,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       let height = float32(region.ContentHeight)
       let scaleX = float32(region.ContentWidth) / float32(region.ScreenWidth)
       let scaleY = float32(region.ContentHeight) / float32(region.ScreenHeight)
-      let deltaX = -float32(region.ScreenX) * scaleX
-      let deltaY = -float32(region.ScreenY) * scaleY
       var push = ClipMaskPushConstants{}
       push.transform0_x = 2.0F * transform.A * value.ScaleX * scaleX / width
       push.transform0_y = 2.0F * transform.C * value.ScaleY * scaleX / width
@@ -498,12 +496,12 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         let inverseD = transform.A / nodeDeterminant
         push.borderTransform0_x = inverseA / scaleX
         push.borderTransform0_y = inverseC / scaleY
-        push.borderTransform0_z = -(inverseA * transform.TX + inverseC * transform.TY)
-          - inverseA * deltaX / scaleX - inverseC * deltaY / scaleY
+        push.borderTransform0_z = -(inverseA * (transform.TX - float32(region.ScreenX))
+          + inverseC * (transform.TY - float32(region.ScreenY)))
         push.borderTransform1_x = inverseB / scaleX
         push.borderTransform1_y = inverseD / scaleY
-        push.borderTransform1_z = -(inverseB * transform.TX + inverseD * transform.TY)
-          - inverseB * deltaX / scaleX - inverseD * deltaY / scaleY
+        push.borderTransform1_z = -(inverseB * (transform.TX - float32(region.ScreenX))
+          + inverseD * (transform.TY - float32(region.ScreenY)))
       } else {
         push.borderRect_z = 0.0F
         push.borderRect_w = 0.0F
