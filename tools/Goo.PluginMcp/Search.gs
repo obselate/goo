@@ -91,7 +91,7 @@ partial class GooServer {
                             }
                         )
                     ),
-                    "`[0-9]+",
+                    "`+[0-9]+",
                     ""
                 )
                 let identifier = memberName.Split('.').Last()
@@ -388,12 +388,12 @@ partial class GooServer {
             ranked[0]
             .Unit
             .Owner != "" &&
-            !queryWords
+            !terms
             .Contains(ranked[0].Unit.Name) {
             let first = ranked[0]
             let own = Array.FindIndex(
                 ranked,
-                x -> x.Unit.Path == first.Unit.Path && x.Unit.Owner == first.Unit.Owner && queryWords.Contains(
+                x -> x.Unit.Path == first.Unit.Path && x.Unit.Owner == first.Unit.Owner && terms.Contains(
                     x.Unit.Name
                 ) &&
                     Regex.IsMatch(
