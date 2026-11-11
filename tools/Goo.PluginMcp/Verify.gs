@@ -349,6 +349,55 @@ shared class Verify {
         )
         Check(S(scoped["results"]!![0]!!, "section") == "### `End()`", scoped)
         File.Delete(guide)
+        File.WriteAllText(
+            fresh,
+            "# Probe\n\n## A\n\nAn encoding stage.\n\n## B\n\nAn encoder stage.\n\n## C\n\nAn encode stage.\n\n## D\n\nThe printer runs.\n\n## E\n\nThe print runs.\n\n## F\n\nA detection stage.\n\n## G\n\nA detect stage.\n\n## H\n\nOwner keeps state.\n"
+        )
+        let forms = JsonObject(){
+            ["encoding"] = "## A",
+            ["encoder"] = "## B",
+            ["encode"] = "## C",
+            ["printer"] = "## D",
+            ["print"] = "## E"
+        }
+        for pair in forms {
+            let exact = await Read(
+                client,
+                "sectionSearch",
+                JsonObject(){["repository"] = checkout, ["project"] = checkout, ["query"] = pair.Key}
+            )
+            Check(S(exact["results"]!![0]!!, "section") == pair.Value.GetValue[string](), exact)
+        }
+        for query in[]string{"printing", "detecting"} {
+            let stemmed = await Read(
+                client,
+                "sectionSearch",
+                JsonObject(){["repository"] = checkout, ["project"] = checkout, ["query"] = query}
+            )
+            Check(I(stemmed, "total") >= 2, stemmed)
+        }
+        let shortRoot = await Read(
+            client,
+            "sectionSearch",
+            JsonObject(){["repository"] = checkout, ["project"] = checkout, ["query"] = "own"}
+        )
+        Check(I(shortRoot, "total") == 0, shortRoot)
+        File.WriteAllText(
+            fresh,
+            "# Probe\n\n## `Shape`\n\nParentOnlyMarker.\n\n### `StrokeTrim`\n\nTrim the path stroke.\n"
+        )
+        let owner = await Read(
+            client,
+            "sectionSearch",
+            JsonObject(){["repository"] = checkout, ["project"] = checkout, ["query"] = "shape stroke trim"}
+        )
+        Check(S(owner["results"]!![0]!!, "section") == "### `StrokeTrim`", owner)
+        let parentOnly = await Read(
+            client,
+            "sectionSearch",
+            JsonObject(){["repository"] = checkout, ["project"] = checkout, ["query"] = "ParentOnlyMarker"}
+        )
+        Check(I(parentOnly, "total") == 1 && S(parentOnly["results"]!![0]!!, "section") == "## `Shape`", parentOnly)
         File.Delete(fresh)
         let packageRoot = Path.Combine(output, "packages")
         let packagePath = Path.Combine(packageRoot, "goo.widgets/1.0.0/lib/net10.0/Goo.Widgets.xml")

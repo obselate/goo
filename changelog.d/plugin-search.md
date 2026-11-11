@@ -8,3 +8,4 @@
 ## Fixed
 
 - AI plugin search prefers matching API member names to sibling references and guide prose.
+- AI plugin search matches common word forms, prefers exact words and nearby terms, and excludes inherited type summaries from member matches.
