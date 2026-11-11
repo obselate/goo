@@ -190,7 +190,7 @@ float shapeMaskSpread(float2 point, float spread)
     [loop]
     for (int index = 0; index < 8; index++)
     {
-        float coverage = shapeMaskSample(point + shadowOffsets[index] * distance);
+        float coverage = shapeMaskSample(point + shadowOffsets[index] * (index < 4 ? distance : distance * 0.707106781186));
         center = spread > 0.0 ? max(center, coverage) : min(center, coverage);
     }
     return center;
