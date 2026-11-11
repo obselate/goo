@@ -37,18 +37,91 @@ the following terms:
   https://github.com/facebook/zstd/blob/dev/LICENSE
 * zlib, licensed under the terms of
   https://zlib.net/zlib_license.html
+* mimalloc, licensed under the terms of
+  https://github.com/microsoft/mimalloc/blob/v2.1.7/LICENSE
 
 
 Dependency sources
 
-libfuse 3.15.0, LGPL-2.1. The runtime applies patches/libfuse/mount.c.diff.
-https://github.com/libfuse/libfuse/releases/tag/fuse-3.15.0
+The build recipe is tools/Goo.DevTools.Cli/Packaging/AppImage-Runtime.Containerfile
+in the matching Goo release source: https://github.com/obselate/goo/releases
+It uses Alpine 3.21 x86_64 at image digest:
+sha256:2d8a11041a92082ba21e364dec73559ce44f1de69b60fa68315f6d3774e59117
 
-squashfuse 0.5.2, BSD-2-Clause.
-https://github.com/vasi/squashfuse/tree/0.5.2
+Each archive below is identified by its SHA-256.
 
-musl (MIT), zstd (BSD-3-Clause) and zlib (Zlib) come from Alpine 3.21 packages.
-Build recipe: https://github.com/AppImage/type2-runtime/blob/fedfad51acc2860b2916a1eef32ba4a500ff31ef/scripts/common/install-dependencies.sh
+AppImage type-2 runtime, MIT License:
+https://codeload.github.com/AppImage/type2-runtime/tar.gz/fedfad51acc2860b2916a1eef32ba4a500ff31ef
+e27ea3c837e9c660e1a9a2993b673ae93bbb53077330efba8654031e302d4e8e
+
+libfuse 3.15.0, "GNU Lesser General Public License, version 2.1".
+The build applies patches/libfuse/mount.c.diff from the runtime source.
+Only the libfuse library is linked. Its utilities have a separate GPL license.
+https://github.com/libfuse/libfuse/releases/download/fuse-3.15.0/fuse-3.15.0.tar.xz
+70589cfd5e1cff7ccd6ac91c86c01be340b227285c5e200baa284e401eea2ca0
+
+squashfuse 0.5.2, BSD-2-Clause:
+https://codeload.github.com/vasi/squashfuse/tar.gz/refs/tags/0.5.2
+db0238c5981dabbd80ee09ae15387f390091668ca060a7bc38047912491443d3
+
+musl 1.2.5-r12, "standard MIT license":
+https://musl.libc.org/releases/musl-1.2.5.tar.gz
+a9a118bbe84d8764da0ea0d28b3ab3fae8477fc7e4085d90102b8596fc7c75e4
+
+zstd 1.5.6-r2, "BSD License" (BSD-3-Clause, not its alternative GPL license):
+https://codeload.github.com/facebook/zstd/tar.gz/refs/tags/v1.5.6
+30f35f71c1203369dc979ecde0400ffea93c27391bfd2ac5a9715d2173d92ff7
+
+zlib 1.4-r0, Zlib license:
+https://zlib.net/fossils/zlib-1.4.tar.gz
+02dd159783677a749c04adbdd02b55b8a2bcc7e054f51b76b549199a916ad584
+
+mimalloc 2.1.7-r0 (Alpine mimalloc2), "MIT License":
+https://codeload.github.com/microsoft/mimalloc/tar.gz/refs/tags/v2.1.7
+0eed39319f139afde8515010ff59baf24de9e47ea316a315398e8027d198202d
+
+The musl, zstd, zlib and mimalloc packages use these Alpine build recipes
+and patches at commit 4357b6949db2740333bc01be2e7e8fd16052b2ad:
+https://github.com/alpinelinux/aports/tree/4357b6949db2740333bc01be2e7e8fd16052b2ad/main/musl
+https://github.com/alpinelinux/aports/tree/4357b6949db2740333bc01be2e7e8fd16052b2ad/main/zstd
+https://github.com/alpinelinux/aports/tree/4357b6949db2740333bc01be2e7e8fd16052b2ad/main/zlib
+https://github.com/alpinelinux/aports/tree/4357b6949db2740333bc01be2e7e8fd16052b2ad/community/mimalloc2
+
+
+Relinking libfuse
+
+libfuse is the only linked LGPL library. musl is not LGPL.
+The source archives above and the Goo build recipe provide the source needed
+to rebuild the runtime with a modified libfuse.
+Run this from the matching Goo release source to copy the versioned runtime
+and its relink archive. It does not build the runtime or require Docker:
+
+  bash tools/Goo.DevTools.Cli/Packaging/fetch-appimage-tools.sh ./appimage-tools
+
+The files are also included under Runtime/linux-x64 in the Goo.DevTools tool.
+Their SHA-256 hashes are:
+runtime-x86_64: eeeffb755aaac54979d752c4a9762715bcbe98ec0cd915e79595393d5c223266
+runtime-x86_64-relink.tar.gz: dfd8519d717cb44b5d14a5aa4ceff1c44979a7ffddd8218ae71812b8416fddc7
+The archive contains runtime.o, the static dependency archives, data_sections.ld,
+the runtime source, the libfuse source and its patch.
+Extract it into ./relink and replace libfuse3.a with your modified library.
+Build the compiler environment and relink:
+
+  docker build --target build -t goo-appimage-relink -f tools/Goo.DevTools.Cli/Packaging/AppImage-Runtime.Containerfile tools/Goo.DevTools.Cli/Packaging
+  docker run --rm -v "$PWD/relink:/relink" goo-appimage-relink sh -c 'cd /relink && clang -static-pie -Wl,--gc-sections -T data_sections.ld runtime.o -L. -lsquashfuse -lsquashfuse_ll -lzstd -lz -lfuse3 -lmimalloc -o runtime && strip --strip-debug --strip-unneeded runtime && printf "AI\\002" | dd of=runtime bs=1 count=3 seek=8 conv=notrunc'
+
+Use the resulting runtime as GOO_APPIMAGE_RUNTIME when packaging the application.
+These relink instructions apply to libfuse, not the permissively licensed libraries.
+
+
+Rebuild verification
+
+With Docker and Buildx installed, run this from the matching Goo release source:
+
+  docker build --no-cache --output type=local,dest=./appimage-rebuild -f tools/Goo.DevTools.Cli/Packaging/AppImage-Runtime.Containerfile tools/Goo.DevTools.Cli/Packaging && cmp ./appimage-rebuild/runtime-x86_64 tools/Goo.DevTools.Cli/Runtime/linux-x64/runtime-x86_64 && cmp ./appimage-rebuild/runtime-x86_64-relink.tar.gz tools/Goo.DevTools.Cli/Runtime/linux-x64/runtime-x86_64-relink.tar.gz
+
+This optional check requires the pinned Alpine packages to remain available.
+Normal builds and packaging use the versioned files and do not run this check.
 
 
 libfuse 3.15.0 license
@@ -591,3 +664,285 @@ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
 THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+musl 1.2.5 copyright
+
+musl as a whole is licensed under the following standard MIT license:
+
+----------------------------------------------------------------------
+Copyright © 2005-2020 Rich Felker, et al.
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+----------------------------------------------------------------------
+
+Authors/contributors include:
+
+A. Wilcox
+Ada Worcester
+Alex Dowad
+Alex Suykov
+Alexander Monakov
+Andre McCurdy
+Andrew Kelley
+Anthony G. Basile
+Aric Belsito
+Arvid Picciani
+Bartosz Brachaczek
+Benjamin Peterson
+Bobby Bingham
+Boris Brezillon
+Brent Cook
+Chris Spiegel
+Clément Vasseur
+Daniel Micay
+Daniel Sabogal
+Daurnimator
+David Carlier
+David Edelsohn
+Denys Vlasenko
+Dmitry Ivanov
+Dmitry V. Levin
+Drew DeVault
+Emil Renner Berthing
+Fangrui Song
+Felix Fietkau
+Felix Janda
+Gianluca Anzolin
+Hauke Mehrtens
+He X
+Hiltjo Posthuma
+Isaac Dunham
+Jaydeep Patil
+Jens Gustedt
+Jeremy Huntwork
+Jo-Philipp Wich
+Joakim Sindholt
+John Spencer
+Julien Ramseier
+Justin Cormack
+Kaarle Ritvanen
+Khem Raj
+Kylie McClain
+Leah Neukirchen
+Luca Barbato
+Luka Perkov
+M Farkas-Dyck (Strake)
+Mahesh Bodapati
+Markus Wichmann
+Masanori Ogino
+Michael Clark
+Michael Forney
+Mikhail Kremnyov
+Natanael Copa
+Nicholas J. Kain
+orc
+Pascal Cuoq
+Patrick Oppenlander
+Petr Hosek
+Petr Skocik
+Pierre Carrier
+Reini Urban
+Rich Felker
+Richard Pennington
+Ryan Fairfax
+Samuel Holland
+Segev Finer
+Shiz
+sin
+Solar Designer
+Stefan Kristiansson
+Stefan O'Rear
+Szabolcs Nagy
+Timo Teräs
+Trutz Behn
+Valentin Ochs
+Will Dietz
+William Haddon
+William Pitcock
+
+Portions of this software are derived from third-party works licensed
+under terms compatible with the above MIT license:
+
+The TRE regular expression implementation (src/regex/reg* and
+src/regex/tre*) is Copyright © 2001-2008 Ville Laurikari and licensed
+under a 2-clause BSD license (license text in the source files). The
+included version has been heavily modified by Rich Felker in 2012, in
+the interests of size, simplicity, and namespace cleanliness.
+
+Much of the math library code (src/math/* and src/complex/*) is
+Copyright © 1993,2004 Sun Microsystems or
+Copyright © 2003-2011 David Schultz or
+Copyright © 2003-2009 Steven G. Kargl or
+Copyright © 2003-2009 Bruce D. Evans or
+Copyright © 2008 Stephen L. Moshier or
+Copyright © 2017-2018 Arm Limited
+and labelled as such in comments in the individual source files. All
+have been licensed under extremely permissive terms.
+
+The ARM memcpy code (src/string/arm/memcpy.S) is Copyright © 2008
+The Android Open Source Project and is licensed under a two-clause BSD
+license. It was taken from Bionic libc, used on Android.
+
+The AArch64 memcpy and memset code (src/string/aarch64/*) are
+Copyright © 1999-2019, Arm Limited.
+
+The implementation of DES for crypt (src/crypt/crypt_des.c) is
+Copyright © 1994 David Burren. It is licensed under a BSD license.
+
+The implementation of blowfish crypt (src/crypt/crypt_blowfish.c) was
+originally written by Solar Designer and placed into the public
+domain. The code also comes with a fallback permissive license for use
+in jurisdictions that may not recognize the public domain.
+
+The smoothsort implementation (src/stdlib/qsort.c) is Copyright © 2011
+Valentin Ochs and is licensed under an MIT-style license.
+
+The x86_64 port was written by Nicholas J. Kain and is licensed under
+the standard MIT terms.
+
+The mips and microblaze ports were originally written by Richard
+Pennington for use in the ellcc project. The original code was adapted
+by Rich Felker for build system and code conventions during upstream
+integration. It is licensed under the standard MIT terms.
+
+The mips64 port was contributed by Imagination Technologies and is
+licensed under the standard MIT terms.
+
+The powerpc port was also originally written by Richard Pennington,
+and later supplemented and integrated by John Spencer. It is licensed
+under the standard MIT terms.
+
+All other files which have no copyright comments are original works
+produced specifically for use as part of this library, written either
+by Rich Felker, the main author of the library, or by one or more
+contibutors listed above. Details on authorship of individual files
+can be found in the git version control history of the project. The
+omission of copyright and license comments in each file is in the
+interest of source tree size.
+
+In addition, permission is hereby granted for all public header files
+(include/* and arch/*/bits/*) and crt files intended to be linked into
+applications (crt/*, ldso/dlstart.c, and arch/*/crt_arch.h) to omit
+the copyright notice and permission notice otherwise required by the
+license, and to use these files without any requirement of
+attribution. These files include substantial contributions from:
+
+Bobby Bingham
+John Spencer
+Nicholas J. Kain
+Rich Felker
+Richard Pennington
+Stefan Kristiansson
+Szabolcs Nagy
+
+all of whom have explicitly granted such permission.
+
+This file previously contained text expressing a belief that most of
+the files covered by the above exception were sufficiently trivial not
+to be subject to copyright, resulting in confusion over whether it
+negated the permissions granted in the license. In the spirit of
+permissive licensing, and of not having licensing issues being an
+obstacle to adoption, that text has been removed.
+
+
+zstd 1.5.6 license
+
+BSD License
+
+For Zstandard software
+
+Copyright (c) Meta Platforms, Inc. and affiliates. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+ * Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+ * Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+ * Neither the name Facebook, nor Meta, nor the names of its contributors may
+   be used to endorse or promote products derived from this software without
+   specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+zlib 1.4 license
+
+Copyright notice:
+
+ (C) 1995-2026 Jean-loup Gailly and Mark Adler
+
+  This software is provided 'as-is', without any express or implied
+  warranty.  In no event will the authors be held liable for any damages
+  arising from the use of this software.
+
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+
+  Jean-loup Gailly        Mark Adler
+  jloup@gzip.org          madler@alumni.caltech.edu
+
+
+mimalloc 2.1.7 license
+
+MIT License
+
+Copyright (c) 2018-2021 Microsoft Corporation, Daan Leijen
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

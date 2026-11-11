@@ -26,7 +26,7 @@ internal shared partial class PackageApplication {
     ) : IEquatable[Metadata] { }
 
     private const AppImageToolHash string = "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0"
-    private const AppImageRuntimeHash string = "617aa77314d57c8b8e4fae9c3f0b35af7b30d5529cb69e98f64f92510ed98a46"
+    private const AppImageRuntimeHash string = "eeeffb755aaac54979d752c4a9762715bcbe98ec0cd915e79595393d5c223266"
     private const MetadataProperties string = "AssemblyName,Product,Version,GooPackageId,GooPackageIcon,Company"
 
     internal async func RunAsync(commandLine CommandLine, project string) int32 {
