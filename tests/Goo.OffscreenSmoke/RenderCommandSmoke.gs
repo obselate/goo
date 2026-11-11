@@ -7,9 +7,12 @@ internal class RenderCommandPage : Cell {
 
     internal init(appearance Context[Style]) { this.appearance = appearance }
 
-    override func Build() Blob -> Container{
-        FlexGrow: 1,
-        Text{BasedOn: appearance.Read(), Content: "Registered font: WWW iii 0123"},
+    override func Build() Blob {
+        let style = appearance.TryRead(appearance.Window, out var configured) ? configured : Style{}
+        return Container{
+            FlexGrow: 1,
+            Text{BasedOn: style, Content: "Registered font: WWW iii 0123"},
+        }
     }
 }
 

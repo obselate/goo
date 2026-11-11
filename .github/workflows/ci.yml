@@ -841,8 +841,26 @@ jobs:
           env -u DISPLAY -u WAYLAND_DISPLAY SDL_VIDEODRIVER=dummy \
             VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
             GOO_RENDER_OUT="$PWD/artifacts/render-command.png" GOO_RENDER_SCENE=registered \
+            GOO_RENDER_SIZE=160x48 GOO_RENDER_SCALE=1.5 \
             artifacts/offscreen-nativeaot/Goo.OffscreenSmoke
-          test -s artifacts/render-command.png
+          python3 - <<'PY'
+          import pathlib, struct, zlib
+          png = pathlib.Path("artifacts/render-command.png").read_bytes()
+          assert png[:8] == b"\x89PNG\r\n\x1a\n"
+          assert struct.unpack(">IIBB", png[16:26]) == (240, 72, 8, 6)
+          offset, compressed = 8, bytearray()
+          while offset < len(png):
+              size = int.from_bytes(png[offset:offset + 4], "big")
+              if png[offset + 4:offset + 8] == b"IDAT":
+                  compressed.extend(png[offset + 8:offset + 8 + size])
+              offset += size + 12
+          rows = zlib.decompress(compressed)
+          assert len(rows) == 72 * 961 and all(rows[y * 961] == 0 for y in range(72))
+          assert rows[-4:] == bytes((32, 64, 96, 255)), "App background was lost"
+          assert any(min(rows[y * 961 + x:y * 961 + x + 3]) >= 240
+                     for y in range(72) for x in range(1, 961, 4)), "App text color was lost"
+          print("render-command: size=240x72 background=32,64,96 text=near-white")
+          PY
       - name: Verify independent pages and raster PDF
         if: needs.changes.outputs.full == 'true'
         run: |
