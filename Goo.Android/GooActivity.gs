@@ -25,7 +25,7 @@ abstract class GooActivity : Activity {
         private set;
     }
 
-    /// <summary>Gets the Activity-owned system document picker and content URI stream service.</summary>
+    /// Gets the Activity-owned system document picker and content URI stream service.
     public prop Documents AndroidDocuments {
         get;
         private set;
