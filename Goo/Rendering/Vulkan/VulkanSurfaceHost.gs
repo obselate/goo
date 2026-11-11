@@ -1,5 +1,7 @@
 package Goo
 
+import System
+
 internal interface VulkanSurfaceHost {
   prop LogicalWidth int32 { get; }
   prop LogicalHeight int32 { get; }
@@ -14,6 +16,7 @@ internal interface VulkanSurfaceHost {
   func Wake();
   func RefreshDisplayPacing(reset bool);
   func LoadVulkanLibrary() bool;
+  func RetainVulkanLibrary() Action;
   func GetVulkanGetInstanceProcAddr() nint;
   func UnloadVulkanLibrary();
   func GetVulkanInstanceExtensions() []string;

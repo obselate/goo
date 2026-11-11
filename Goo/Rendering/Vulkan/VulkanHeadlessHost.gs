@@ -6,6 +6,7 @@ import System.Runtime.InteropServices
 
 internal sealed class VulkanHeadlessHost : VulkanSurfaceHost {
     private var library nint
+    private var loaderReferences int32
     public prop LogicalWidth int32 {
         get -> 1
     }
@@ -45,13 +46,22 @@ internal sealed class VulkanHeadlessHost : VulkanSurfaceHost {
         } else {
             "libvulkan.so.1"
         }
-        return NativeLibrary.TryLoad(Path.Combine(AppContext.BaseDirectory, name), out library) ||
+        let loaded = NativeLibrary.TryLoad(Path.Combine(AppContext.BaseDirectory, name), out library) ||
             NativeLibrary.TryLoad(name, out library)
+        if loaded { loaderReferences = 1 }
+        return loaded
+    }
+
+    public func RetainVulkanLibrary() Action {
+        loaderReferences++
+        return () -> UnloadVulkanLibrary()
     }
 
     public func GetVulkanGetInstanceProcAddr() nint -> NativeLibrary.GetExport(library, "vkGetInstanceProcAddr")
 
     public func UnloadVulkanLibrary() {
+        loaderReferences--
+        if loaderReferences > 0 { return }
         if library != nint(0) {
             NativeLibrary.Free(library)
             library = nint(0)

@@ -31,6 +31,7 @@ internal class ThrowingQueueWakeHost : VulkanSurfaceHost {
   }
   public func RefreshDisplayPacing(reset bool) { }
   public func LoadVulkanLibrary() bool -> false
+  public func RetainVulkanLibrary() Action -> () -> { }
   public func GetVulkanGetInstanceProcAddr() nint -> nint(0)
   public func UnloadVulkanLibrary() { }
   public func GetVulkanInstanceExtensions() []string -> []string {}

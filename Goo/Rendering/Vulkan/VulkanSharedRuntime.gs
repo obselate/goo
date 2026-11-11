@@ -56,6 +56,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
   private let validationMessengerCreated bool
   private let instanceDestroyAvailable bool
   private let deviceDestroyAvailable bool
+  private let releaseLoader Action
   private let generation uint64
   private var references int32
   private var deviceLost bool
@@ -204,7 +205,8 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
       nativeInstanceDestroyAvailable bool,
       nativeDeviceDestroyAvailable bool,
       nativeObjectAccounting VulkanObjectAccounting?,
-      nativeSharedObjectAccounting VulkanObjectAccounting?) VulkanSharedLease{
+      nativeSharedObjectAccounting VulkanObjectAccounting?,
+      nativeHost VulkanSurfaceHost) VulkanSharedLease{
         if current != nil {
           throw InvalidOperationException("Vulkan shared runtime is already published")
         }
@@ -229,6 +231,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
         var pathIdentityRegistry VulkanPathIdentityRegistry? = nil
         var createdImageIdentityRegistry bool = false
         var createdPathIdentityRegistry bool = false
+        var releaseLoader Action?
         let sharedStart = if nativeDiagnostics == nil { 0uL } else { uint64(Stopwatch.GetTimestamp()) }
         try {
           let createdBudget = VulkanMemoryBudgetState(
@@ -327,6 +330,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
             created
           }
           imageIdentityRegistry = identityRegistry
+          releaseLoader = nativeHost.RetainVulkanLibrary()
           let owner = VulkanSharedRuntime(
             nativeInstance,
             nativeInstanceDispatch,
@@ -359,7 +363,8 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
             nativeDeviceDestroyAvailable,
             generationSeed,
             nativeObjectAccounting,
-            nativeSharedObjectAccounting)
+            nativeSharedObjectAccounting,
+            releaseLoader)
           if sharedStart != 0uL {
             if let current = nativeDiagnostics {
               current.RecordStage(
@@ -399,6 +404,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
           if let createdAllocator = allocator {
             try { createdAllocator.Dispose() } catch (cleanup Exception) { }
           }
+          releaseLoader?.Invoke()
           throw error
         }
       }
@@ -460,7 +466,8 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
     nativeInstanceDestroyAvailable bool,
     nativeDeviceDestroyAvailable bool, nativeGeneration uint64,
     nativeObjectAccounting VulkanObjectAccounting?,
-    nativeSharedObjectAccounting VulkanObjectAccounting?) {
+    nativeSharedObjectAccounting VulkanObjectAccounting?,
+    nativeReleaseLoader Action) {
       if nativeInstance == nint(0) || nativePhysicalDevice == nint(0) || nativeDevice == nint(0) {
         throw ArgumentException("Vulkan shared runtime handles cannot be null")
       }
@@ -530,6 +537,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
       validationMessengerCreated = nativeValidationMessengerCreated
       instanceDestroyAvailable = nativeInstanceDestroyAvailable
       deviceDestroyAvailable = nativeDeviceDestroyAvailable
+      releaseLoader = nativeReleaseLoader
       generation = nativeGeneration
       references = 1
       processExit = (_, _) -> {
@@ -741,7 +749,6 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
     if references == 0 {
       DisposeWithIdleState(alreadyIdle)
       if disposed {
-        if Object.ReferenceEquals(current, this) { current = nil }
         return true
       }
       return false
@@ -905,6 +912,8 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
     if let currentValidation = validation {
       currentValidation.KeepAlive()
     }
+    if Object.ReferenceEquals(current, this) { current = nil }
+    try { releaseLoader() } catch (cleanup Exception) { }
   }
 
   public func Dispose() {

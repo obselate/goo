@@ -24,6 +24,22 @@ internal unsafe partial class SdlHost {
     return loaded
   }
 
+  public func RetainVulkanLibrary() Action {
+    ThrowIfDisposed()
+    SdlRuntime.Acquire()
+    try {
+      if !SdlRuntime.AcquireVulkan() {
+        throw InvalidOperationException("Vulkan loader initialization failed")
+      }
+    } catch {
+      SdlRuntime.Release()
+      rethrow
+    }
+    return () -> {
+      try { SdlRuntime.ReleaseVulkan() } finally { SdlRuntime.Release() }
+    }
+  }
+
   public func GetVulkanGetInstanceProcAddr() nint {
     ThrowIfDisposed()
     return SdlRuntime.GetVulkanGetInstanceProcAddress()
