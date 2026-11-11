@@ -1,6 +1,7 @@
 package Goo.PluginMcp
 
 import System
+import System.Collections.Concurrent
 import System.Collections.Generic
 import System.Diagnostics
 import System.IO
@@ -12,6 +13,11 @@ import System.Text.Json.Nodes
 import System.Text.RegularExpressions
 
 partial class GooServer {
+    private data class IndexedAssets(Modified int64, Length int64, Value JsonNode) { }
+    private let Assets ConcurrentDictionary[string, IndexedAssets] = ConcurrentDictionary[string, IndexedAssets](
+        StringComparer.Ordinal
+    )
+
     func Source(repository string) string {
         let chosen = if repository != "" {
             repository
@@ -38,6 +44,7 @@ partial class GooServer {
             "docs/shipping.md",
             "docs/platform-preflight.md",
             "docs/android.md",
+            "docs/images.md",
             "docs/interop.md",
             "docs/devtools/README.md",
             "docs/devtools/cli.md",
@@ -60,8 +67,8 @@ partial class GooServer {
         return paths.Where(x -> File.Exists(Path.Combine(root, x))).Order(StringComparer.Ordinal).ToArray()
     }
 
-    func Document(root string, path string) string {
-        Require(Documents(root).Contains(path), "Unknown document. Use goo_context to list document paths.")
+    func Document(root string, path string, documents[]string) string {
+        Require(documents.Contains(path), "Unknown document. Use goo_context to list document paths.")
         let target = Resolve(Path.Combine(root, path))
         Require(
             target.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal),
@@ -82,7 +89,17 @@ partial class GooServer {
             }
             let path = Path.Combine(directory, "obj/project.assets.json")
             Require(File.Exists(path), "Restore the selected project before reading package API documentation.")
-            assets = JsonNode.Parse(File.ReadAllText(path))
+            let file = FileInfo(path)
+            if Assets.TryGetValue(path, out var cached) &&
+                cached.Modified == file
+                .LastWriteTimeUtc
+                .Ticks &&
+                cached.Length == file.Length {
+                assets = cached.Value
+            } else {
+                assets = JsonNode.Parse(File.ReadAllText(path))!!
+                Assets[path] = IndexedAssets(file.LastWriteTimeUtc.Ticks, file.Length, assets)
+            }
         }
         let cache = Environment.GetEnvironmentVariable("NUGET_PACKAGES") ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
@@ -318,21 +335,22 @@ partial class GooServer {
     func Read(a JsonObject) JsonObject {
         let root = Source(S(a, "repository"))
         let path = S(a, "path")
+        let documents = Documents(root)
         let packages = PackageDocuments(S(a, "project"))
         let filename = if packages.TryGetValue(path, out var packageFile) {
             packageFile
         } else {
-            Document(root, path)
+            Document(root, path, documents)
         }
         let units = Units(path, filename)
         let id = S(a, "section_id")
         let line = I(a, "line")
         let count = I(a, "count")
         let offset = I(a, "offset")
-        let cap = I(a, "max_tokens")
+        let cap = I(a, "max_bytes")
         Require(
             line >= 1 && count >= 0 && count <= 240 && offset >= 0 && cap >= 64 && cap <= 16000,
-            "Use a positive line, count 0-240, nonnegative offset and max_tokens 64-16000"
+            "Use a positive line, count 0-240, nonnegative offset and max_bytes 64-16000"
         )
         let unit = if id != "" {
             units.FirstOrDefault(x -> x.Id == id)
@@ -384,21 +402,25 @@ partial class GooServer {
             } else {
                 int64(selected.Start)
             },
-            ["endLine"] = selected.End,
+            ["endLine"] = if count > 0 {
+                Math.Min(line + count - 1, int64(units.Max(x -> x.End)))
+            } else {
+                int64(selected.End)
+            },
             ["text"] = text.Substring(int32(offset), end - int32(offset)),
             ["complete"] = end == text.Length,
             ["continuation"] = if end < text.Length {
-                JsonObject(){["section_id"] = selected.Id, ["offset"] = end}
+                JsonObject(){["section_id"] = selected.Id, ["offset"] = end, ["line"] = line, ["count"] = count}
             } else {
                 nil
             },
-            ["tokenBound"] = used
+            ["bytes"] = used
         }
         let assembly = Path.ChangeExtension(filename, ".dll")
         if path.EndsWith(".xml") && File.Exists(assembly) {
             result["assembly"] = JsonObject(){
                 ["path"] = Path.ChangeExtension(path, ".dll"),
-                ["sha256"] = Hash(File.ReadAllBytes(assembly))
+                ["sha256"] = Index[filename].AssemblyHash
             }
         }
         return result
@@ -411,6 +433,7 @@ partial class GooServer {
             "Use a simple identifier starting with an ASCII letter, up to 64 characters"
         )
         let root = Source(S(a, "repository"))
+        let documents = Documents(root)
         let files = JsonObject()
         let sourceFiles = JsonObject()
         for filename in[]string{
@@ -422,7 +445,7 @@ partial class GooServer {
             "Properties/PublishProfiles/Trimmed.pubxml"
         } {
             let relative = "templates/Goo.Templates/content/" + filename
-            let template = Document(root, relative)
+            let template = Document(root, relative, documents)
             let content = File.ReadAllText(template)
             sourceFiles[relative] = Hash(File.ReadAllBytes(template))
             files[filename.Replace("GooStarter", name)] = content.Replace("goostarter", name.ToLowerInvariant())
