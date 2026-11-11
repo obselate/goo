@@ -372,42 +372,69 @@ if created.Status == OffscreenRenderStatus.Success {
 }
 ```
 
-An app with an open window starts work from an input handler:
+An app with an open window uses a mounted Cell to own the session:
 
 ```gsharp
-func RenderPage() {
-    let created = window.CreateOffscreenSession()
-    if created.Status == OffscreenRenderStatus.Success {
-        let session = created.Session!!
-        let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
-        let pending = session.RenderAsync(MyPage(), options, window.Closed)
-        var timer WindowTimer? = nil
-        timer = window.SetInterval(
-            () -> {
-                session.Service()
-                if !pending.IsCompleted {
-                    return
-                }
-                timer!!.Dispose()
-                try {
-                    let rendered = pending.Result
-                } finally {
-                    session.Dispose()
-                }
-            },
-            1.0
-        )
+class RenderPageButton : Cell, IDisposable {
+    private let window Window
+    private var session OffscreenRenderSession?
+    private var timer WindowTimer?
+
+    init(window Window) {
+        this.window = window
+    }
+
+    override func Build() Blob ->
+    Button{OnClick: RenderPage, Text{Content: "Render page"}}
+
+    private func RenderPage() {
+        Dispose()
+        let created = window.CreateOffscreenSession()
+        if created.Status != OffscreenRenderStatus.Success {
+            return
+        }
+        let active = created.Session!!
+        session = active
+        try {
+            let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
+            let pending = active.RenderAsync(MyPage(), options, window.Closed)
+            timer = window.SetInterval(
+                () -> {
+                    try {
+                        active.Service()
+                        if !pending.IsCompleted {
+                            return
+                        }
+                        let rendered = pending.Result
+                    } catch (error Exception) {
+                        Dispose()
+                        throw error
+                    }
+                    Dispose()
+                },
+                1.0
+            )
+        } catch (error Exception) {
+            Dispose()
+            throw error
+        }
+    }
+
+    public func Dispose() {
+        timer?.Dispose()
+        timer = nil
+        session?.Dispose()
+        session = nil
     }
 }
-
-Button{OnClick: RenderPage, Text{Content: "Render page"}}
 ```
 
-The timer reads `Result` only after the task completes, so it never blocks the UI thread.
-Call `window.CreateOffscreenSession` on the UI thread while the window is open.
-Create the lease before a native service can remove its presentation surface.
-The lease keeps the renderer, not that surface. For no open window, use static
-`OffscreenRenderSession.Create()`. Create, render, service and dispose on the same thread.
+Mount `RenderPageButton(window)` in the window's tree. Goo disposes it on unmount
+or window close, releasing the timer and session on the UI thread.
+The timer reads `Result` only after completion, so it does not block for the result.
+Create, render, service and dispose on the same thread.
+The session keeps the renderer alive, not its presentation surface.
+Without an open window, use `OffscreenRenderSession.Create()`.
 
 Each page uses a fresh, unattached cell.
 Logical size sets the layout viewport. Pixel size sets resolution and the device-pixel grid used to round layout.
