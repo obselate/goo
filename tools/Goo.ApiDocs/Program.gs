@@ -354,7 +354,8 @@ func ReadTypes(directoryPath string, sourceRoot string) IEnumerable[ApiType] {
             }
             yield ApiType(
                 Path.GetFileName(directoryPath),
-                name + generic.Replace('[', '<').Replace(']', '>'),
+                if generic.Length == 0 { name }
+                    else { name + "<" + string.Join(",", GenericNames(name + generic.Replace('[', '<').Replace(']', '>'))) + ">" },
                 xmlName,
                 ReadSourceSummary(source, match.Index),
                 values,
