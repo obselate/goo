@@ -32,8 +32,9 @@ Goo selects the MIT license below.
 
 ## G# runtime support
 
-Goo's Linux bundle redistributes `Gsharp.Extensions.dll` and
-`Gsharp.Runtime.Channels.dll` from Gsharp.NET.Sdk 0.5.212.
+Goo's Linux bundle redistributes `Gsharp.Extensions.dll`,
+`Gsharp.Runtime.Channels.dll` and `Gsharp.Runtime.Values.dll`
+from Gsharp.NET.Sdk 0.5.212.
 
 - Copyright (c) 2019 David Obando.
 - License: MIT.

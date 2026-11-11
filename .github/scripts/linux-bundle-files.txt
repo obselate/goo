@@ -4,8 +4,10 @@ Goo.PackageSmoke.runtimeconfig.json
 Goo.dll
 Gsharp.Extensions.dll
 Gsharp.Runtime.Channels.dll
+Gsharp.Runtime.Values.dll
 Hexa.NET.SDL3.dll
 HexaGen.Runtime.dll
+Tmds.DBus.Protocol.dll
 Unicode.Bidi.dll
 Yoga.Net.dll
 libSDL3.so
