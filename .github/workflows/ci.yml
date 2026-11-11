@@ -2056,7 +2056,7 @@ jobs:
 
   release-goo:
     if: github.repository == 'obselate/goo' && startsWith(github.ref, 'refs/tags/v')
-    needs: [changes, quality, macos-arm64, macos-checks, linux-build, linux-test-build, linux-validation, linux-fixtures, linux-packages, linux-x64, android, android-accessibility, android-consumer, android-native-menus, windows-native, windows-x64]
+    needs: [changes, quality, plugin, macos-arm64, macos-checks, linux-build, linux-test-build, linux-validation, linux-fixtures, linux-packages, linux-x64, android, android-accessibility, android-consumer, android-native-menus, windows-native, windows-x64]
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     environment: release
