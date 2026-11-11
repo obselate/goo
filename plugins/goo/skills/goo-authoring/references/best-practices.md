@@ -126,6 +126,8 @@ class SearchView : Cell, IDisposable {
 - Create the window, set `window.Root = SearchView(window, catalog)`, then call `window.Run()`.
 - Goo disposes a mounted `IDisposable` Cell when it leaves the tree. `Dispose` increments `generation`, so results queued before unmount are dropped.
 - The input handler rebuilds its own Cell, so `Search` does not call `Rebuild()`.
+- Start `scope` only inside a `go` child, never in a handler.
+- Start one child per batch, about `Environment.ProcessorCount` batches for CPU work.
 
 | Do not write | Write |
 | --- | --- |
@@ -192,12 +194,12 @@ GOO_FRAME_PROFILE=1 goo dev --project App.gsproj
 ```
 
 - Run GUI apps only in a private headless or nested compositor. In a Goo checkout, prefix the command with `.github/scripts/with-headless-wayland.sh`.
-- Frame profiling reports `p50`, `p99` and `max` after warmup.
+- After 60 warmup frames, frame profiling reports `p50`, `p99` and `max` every 240 frames. It prints nothing when idle.
 - Load real-size data, for example 100,000 rows. Scroll the largest list, type in search, start a load. Frame `p99` stays below budget. Virtual row mount counts stay flat while you scroll.
 - Record a 10 s idle trace without input, caret, animation or changing content. Rebuild, layout, render and present stay at zero. Measure intentional activity separately.
 - For a trace, add `--inspector`, open the Profiler tab, select Record, run the workload, select Stop.
 - A high `build` phase means expensive Cell builds. A high `reconcile` phase can also come from style resolution or diff work. Check `build`, `style_resolve` and `diff` before you change the rebuild scope.
-- Verify affected editing, submit and focus interactions. Carry unchanged host and control results forward. Rerun full editing checks when editing, focus or dialog routing changes. See the [input API](../../../reference/docs/api/input.md).
+- Verify affected editing, submit and focus interactions. Carry unchanged host and control results forward. Rerun full editing checks when editing, focus or dialog routing changes: Type, Backspace, Delete, arrows, PageUp/PageDown, Home/End, Ctrl+Home/End, Ctrl+Left/Right, Ctrl+Backspace/Delete, Shift+movement, Ctrl+A/C/X/V/Z, Ctrl+Shift+Z, Ctrl+Y, Enter, KeypadEnter, Escape, Tab and Shift+Tab. Check IME, read-only, password and text direction. On macOS use Command for primary shortcuts and Option for word movement and deletion.
 
 Search for possible violations before review:
 

@@ -30,13 +30,14 @@ Goo is a retained UI framework:
 - Build immutable Blobs in `Cell.Build`. Keep local state in Cell fields. Mount fixed children with `Cell.Mount[TCell]()`. Use keys for siblings that can move. Keyed and unkeyed siblings can mix. Unkeyed identity uses the absolute sibling index and never matches a key.
 - For typed Cells consumed across assemblies, use `open class X : Cell[Input]` with `protected override func Build(input Input) Blob`.
 - Put `BasedOn` before overrides. Later style declarations win.
+- Avoid invented convenience APIs and s&box GooPanel patterns.
 - Check [platform preflight](../../reference/docs/platform-preflight.md) for runtime requirements.
 
 ## Run, inspect, iterate
 
 For desktop apps, run `goo dev --project App.gsproj` in a managed terminal session. It enables diagnostics and hot reload. For Android, follow the [Android guide](../../reference/docs/android.md).
 
-Use `goo render App.gsproj --list` to find scenes, then `goo render App.gsproj --scene NAME --out frame.png` for a display-free image. Compare with `goo diff reference.png frame.png --tolerance 2 --out difference.png`.
+Use `goo render App.gsproj --list` to find scenes, then `goo render App.gsproj --scene NAME --out frame.png` for a display-free image. Repeat with `--theme dark` and `--scale 2`, then view each PNG. Compare with `goo diff reference.png frame.png --tolerance 2 --out difference.png`.
 
 Use `goo_list` for live processes and windows. Use bounded compact `goo_snapshot` queries and `goo_capture` for images. Keep the process alive while inspecting.
 
@@ -48,4 +49,4 @@ Test the visible interactions, resize, focus and state changes. A build or hands
 
 Read [watch modes and limits](references/watch.md) for supported edits.
 
-If MCP is unavailable, read bundled `reference/docs/api` files and use the [CLI](../../reference/docs/devtools/cli.md).
+If MCP is unavailable, read bundled `reference/docs/api` files and use the [CLI](../../reference/docs/devtools/cli.md). Do not add a manual MCP command.
