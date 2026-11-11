@@ -395,29 +395,24 @@ class RenderPageButton : Cell, IDisposable {
         }
         let active = created.Session!!
         session = active
-        try {
-            let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
-            let pending = active.RenderAsync(MyPage(), options, window.Closed)
-            timer = window.SetInterval(
-                () -> {
-                    try {
-                        active.Service()
-                        if !pending.IsCompleted {
-                            return
-                        }
-                        let rendered = pending.Result
-                    } catch (error Exception) {
-                        Dispose()
-                        throw error
+        let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
+        let pending = active.RenderAsync(MyPage(), options, window.Closed)
+        timer = window.SetInterval(
+            () -> {
+                try {
+                    active.Service()
+                    if !pending.IsCompleted {
+                        return
                     }
+                    let rendered = pending.Result
+                } catch (error Exception) {
                     Dispose()
-                },
-                1.0
-            )
-        } catch (error Exception) {
-            Dispose()
-            throw error
-        }
+                    throw error
+                }
+                Dispose()
+            },
+            1.0
+        )
     }
 
     public func Dispose() {
