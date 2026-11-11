@@ -306,6 +306,50 @@ shared class Verify {
             true
         )
         File.Delete(fresh)
+        File.WriteAllText(
+            fresh,
+            "# Probe\n\n## `TransferSession`\n\nA retained transfer session.\n\n### `BeginTransfer()`\n\nBegin a transfer. Call EndTransfer to end the transfer session. EndTransfer closes the transfer session.\n\n### `EndTransfer()`\n\nEnd the transfer.\n"
+        )
+        let ending = await Read(
+            client,
+            "sectionSearch",
+            JsonObject(){["repository"] = checkout, ["project"] = checkout, ["query"] = "end transfer session"}
+        )
+        Check(S(ending["results"]!![0]!!, "section") == "### `EndTransfer()`", ending)
+        let guide = Path.Combine(checkout, "docs/api/transfer-guide.md")
+        File.WriteAllText(
+            guide,
+            "# Transfer guide\n\n## Manage retained sessions\n\nBegin transfer sessions to start retained work. End transfer sessions to close retained work. An end transfer session call completes the retained transfer session.\n"
+        )
+        for query in[]string{"end transfer session", "begin transfer session"} {
+            let matching = await Read(
+                client,
+                "sectionSearch",
+                JsonObject(){["repository"] = checkout, ["project"] = checkout, ["query"] = query}
+            )
+            Check(
+                S(matching["results"]!![0]!!, "section") == (
+                    if query.StartsWith("end") {
+                        "### `EndTransfer()`"
+                    } else {
+                        "### `BeginTransfer()`"
+                    }
+                ),
+                matching
+            )
+        }
+        File.WriteAllText(
+            fresh,
+            "# Probe\n\n## `DrawingSession`\n\nA retained drawing buffer.\n\n### `Begin()`\n\nBegin drawing. Call End to end the drawing buffer. End closes the drawing buffer.\n\n### `End()`\n\nEnd drawing.\n"
+        )
+        let scoped = await Read(
+            client,
+            "sectionSearch",
+            JsonObject(){["repository"] = checkout, ["project"] = checkout, ["query"] = "end drawing buffer"}
+        )
+        Check(S(scoped["results"]!![0]!!, "section") == "### `End()`", scoped)
+        File.Delete(guide)
+        File.Delete(fresh)
         let packageRoot = Path.Combine(output, "packages")
         let packagePath = Path.Combine(packageRoot, "goo.widgets/1.0.0/lib/net10.0/Goo.Widgets.xml")
         Directory.CreateDirectory(Path.GetDirectoryName(packagePath)!!)

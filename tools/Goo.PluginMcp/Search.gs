@@ -26,7 +26,10 @@ partial class GooServer {
         IndexText string,
         Words Dictionary[string, int32],
         Names HashSet[string],
+        Identifier string,
         Name string,
+        DefinitionNames[]string,
+        Owner string,
         Symbol string,
         WordTotal int32
     ) { }
@@ -91,6 +94,7 @@ partial class GooServer {
                     "`[0-9]+",
                     ""
                 )
+                let identifier = memberName.Split('.').Last()
                 let summary = XmlText(member.Element("summary"))
                 let declaration = if declarations.TryGetValue(name, out var signature) {
                     signature
@@ -122,7 +126,14 @@ partial class GooServer {
                         text,
                         words,
                         HashSet[string](Words(memberName)),
-                        Stem(CaseFold(memberName.Split('.').Last())),
+                        identifier,
+                        Stem(CaseFold(identifier)),
+                        DefinitionNameParts(memberName),
+                        if name.StartsWith("T:") {
+                            ""
+                        } else {
+                            CaseFold(string.Join(".", parts.Take(parts.Length - 1)))
+                        },
                         CaseFold(memberName),
                         words.Values.Sum()
                     )
@@ -234,7 +245,10 @@ partial class GooServer {
                         indexText,
                         words,
                         HashSet[string](Words(contextHeading + "\n" + heading)),
+                        memberName,
                         Stem(CaseFold(memberName)),
+                        DefinitionNameParts(symbol),
+                        CaseFold(owner),
                         CaseFold(symbol),
                         words.Values.Sum()
                     )
@@ -259,7 +273,8 @@ partial class GooServer {
 
     func Search(a JsonObject) JsonObject {
         let query = S(a, "query")
-        let terms = SearchTerms(query)
+        let queryWords = Words(query).Distinct().ToList()
+        let terms = queryWords.Where(x -> !StopWords.Contains(x)).ToList()
         let limit = I(a, "limit")
         Require(
             terms.Count > 0 && query.Length <= 256 && limit >= 1 && limit <= 20,
@@ -325,7 +340,37 @@ partial class GooServer {
                         symbolQuery.EndsWith(unit.Symbol, StringComparison.Ordinal) &&
                         symbolQuery[symbolQuery.Length - unit.Symbol.Length - 1] == '.'
                 )
-                return (Unit: unit, Score: score, Defines: defines)
+                var named = !defines && unit.DefinitionNames.Length > 1
+                var nameTerms = 0
+                if named {
+                    for part in unit.DefinitionNames {
+                        if !queryWords.Contains(part) {
+                            named = false
+                            break
+                        }
+                        if !StopWords.Contains(part) {
+                            nameTerms++
+                        }
+                    }
+                    named = named &&
+                        (
+                        if unit.Owner == "" {
+                            nameTerms == terms.Count
+                        } else {
+                            nameTerms * 3 >= terms.Count * 2 || queryWords.Contains(unit.Name) &&
+                                (
+                                unit.Identifier.Contains('_') || Regex.IsMatch(
+                                    unit.Identifier,
+                                    "[\\p{Ll}0-9]\\p{Lu}|\\p{Lu}\\p{Lu}\\p{Ll}"
+                                )
+                            )
+                        }
+                    )
+                }
+                if named {
+                    score *= 2
+                }
+                return (Unit: unit, Score: score, Defines: defines, Named: named)
             }
         )
             .Where(x -> x.Score > 0)
@@ -334,6 +379,34 @@ partial class GooServer {
             .ThenBy(x -> x.Unit.Path, StringComparer.Ordinal)
             .ThenBy(x -> x.Unit.Start)
             .ToArray()
+        if ranked.Length > 1 &&
+            !ranked[0].Defines &&
+            !ranked[0].Named &&
+            ranked[0]
+            .Unit
+            .Identifier != "" &&
+            ranked[0]
+            .Unit
+            .Owner != "" &&
+            !queryWords
+            .Contains(ranked[0].Unit.Name) {
+            let first = ranked[0]
+            let own = Array.FindIndex(
+                ranked,
+                x -> x.Unit.Path == first.Unit.Path && x.Unit.Owner == first.Unit.Owner && queryWords.Contains(
+                    x.Unit.Name
+                ) &&
+                    Regex.IsMatch(
+                    first.Unit.Text,
+                    "(?<![\\p{L}\\p{N}_])" + Regex.Escape(x.Unit.Identifier) + "(?![\\p{L}\\p{N}_])"
+                )
+            )
+            if own > 0 {
+                let selected = ranked[own]
+                Array.Copy(ranked, 0, ranked, 1, own)
+                ranked[0] = selected
+            }
+        }
         let results = JsonArray()
         for item in ranked.Take(int32(limit)) {
             let unit = item.Unit
@@ -477,18 +550,35 @@ partial class GooServer {
             return result.ToString()
         }
 
-        func Words(value string) IEnumerable[string] {
+        func DefinitionNameParts(name string)[]string {
+            if name == "" {
+                return Array.Empty[string]()
+            }
+            let segments = name.Split('.')
+            let parts = Words(segments[segments.Length - 1], false).Distinct().ToArray()
+            return if parts.Length == 1 && segments.Length > 1 {
+                Words(segments[segments.Length - 2], false).Concat(parts).Distinct().ToArray()
+            } else {
+                parts
+            }
+        }
+
+        func Words(value string, includeIdentifiers bool = true) IEnumerable[string] {
             let split = Regex.Replace(value, "(?<=[\\p{Ll}0-9])(?=\\p{Lu})|(?<=\\p{Lu})(?=\\p{Lu}\\p{Ll})", " ")
-            let identifiers = Regex
-                .Matches(value, "[\\p{L}\\p{N}_]+(?:\\+\\+|#)?")
-                .Where(
-                x -> x.Value.Contains('_') || Regex.IsMatch(x.Value, "[\\p{Ll}0-9]\\p{Lu}|\\p{Lu}\\p{Lu}\\p{Ll}")
+            let words = Regex.Matches(CaseFold(split.Replace('_', ' ')), "[\\p{L}\\p{N}]+(?:\\+\\+|#)?").Select(
+                x -> Stem(x.Value)
             )
-                .Select(x -> Stem(CaseFold(x.Value)))
-            return Regex
-                .Matches(CaseFold(split.Replace('_', ' ')), "[\\p{L}\\p{N}]+(?:\\+\\+|#)?")
-                .Select(x -> Stem(x.Value))
-                .Concat(identifiers)
+            if !includeIdentifiers {
+                return words
+            }
+            return words.Concat(
+                Regex
+                    .Matches(value, "[\\p{L}\\p{N}_]+(?:\\+\\+|#)?")
+                    .Where(
+                    x -> x.Value.Contains('_') || Regex.IsMatch(x.Value, "[\\p{Ll}0-9]\\p{Lu}|\\p{Lu}\\p{Lu}\\p{Ll}")
+                )
+                    .Select(x -> Stem(CaseFold(x.Value)))
+            )
         }
 
         func Stem(term string) string {
@@ -523,11 +613,6 @@ partial class GooServer {
             x -> x.Key,
             x -> x.Count()
         )
-
-        func SearchTerms(value string) List[string] -> Words(value)
-            .Where(x -> !StopWords.Contains(x))
-            .Distinct()
-            .ToList()
 
         func XmlText(element XElement?) string {
             if element == nil {
