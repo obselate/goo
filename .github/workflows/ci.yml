@@ -2132,6 +2132,7 @@ jobs:
               --title "Goo $GOO_VERSION" \
               --notes-file "$notes_file"
           fi
+          gh release upload "$GITHUB_REF_NAME" artifacts/packages/*.nupkg artifacts/packages/*.snupkg --clobber
 
   android:
     needs: [changes, preflight]
