@@ -8,6 +8,7 @@ internal partial class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   internal let Owner Window
   private var closing bool
   private var textInputActive bool
+  private var loaderReferences int32
 
   public event MetricsChanged Action[int32, int32, int32, int32]
   public event Moved Action[int32, int32]
@@ -116,9 +117,20 @@ internal partial class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
     Closed = nil
     closed?.Invoke()
   }
-  public func LoadVulkanLibrary() bool -> host.LoadLoader()
+  public func LoadVulkanLibrary() bool {
+    if loaderReferences == 0 && !host.LoadLoader() { return false }
+    loaderReferences++
+    return true
+  }
+  public func RetainVulkanLibrary() Action {
+    loaderReferences++
+    return () -> UnloadVulkanLibrary()
+  }
   public func GetVulkanGetInstanceProcAddr() nint -> host.LookupLoader()
-  public func UnloadVulkanLibrary() { host.UnloadLoader() }
+  public func UnloadVulkanLibrary() {
+    loaderReferences--
+    if loaderReferences == 0 { host.UnloadLoader() }
+  }
   public func GetVulkanInstanceExtensions() []string -> host.InstanceExtensions()
   public func CreateVulkanSurface(instance nint, out surface uint64) bool -> host.CreateSurface(instance, out surface)
   public func DestroyVulkanSurface(instance nint, surface uint64) { host.DestroySurface(instance, surface) }

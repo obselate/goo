@@ -41,7 +41,20 @@ internal class FailingPage : Cell {
     }
 }
 
-let owner = Window{Root: Page(), Width: 96, Height: 96, Title: "Offscreen proof"}.Open()
+internal class SessionOwner : Cell, IDisposable {
+    internal var Session OffscreenRenderSession?
+    internal var Pending Task[OffscreenRenderResult]?
+    internal var Disposed bool
+    override func Build() Blob -> Container{}
+
+    public func Dispose() {
+        Session?.Dispose()
+        Disposed = true
+    }
+}
+
+let root = SessionOwner()
+let owner = Window{Root: root, Width: 96, Height: 96, Title: "Offscreen proof"}.Open()
 
 try {
     owner.Pump(0.0)
@@ -131,6 +144,9 @@ try {
     Console.WriteLine(
         "offscreen: independent page, owner-thread service, shared runtime lease, reusable pixels, allocation limit, safe cancellation"
     )
+    root.Session = owner.CreateOffscreenSession().Session!!
+    root.Pending = root.Session!!.RenderAsync(Page(), options, CancellationToken.None)
+    Require(!root.Pending!!.IsCompleted, "close regression requires a pending page")
 } finally {
     owner.RequestClose()
     let timer = Stopwatch.StartNew()
@@ -139,3 +155,9 @@ try {
     }
     Require(!owner.IsOpen, "owner did not close")
 }
+Require(root.Disposed, "window close did not dispose its Cell")
+Require(
+    root.Pending!!.GetAwaiter().GetResult().Status == OffscreenRenderStatus.Cancelled,
+    "window close did not cancel the Cell-owned pending page"
+)
+Console.WriteLine("offscreen: pending page disposed from Cell during window close")

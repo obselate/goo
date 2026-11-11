@@ -124,7 +124,8 @@ internal unsafe partial class VulkanWindowTarget {
       instanceDestroyAvailable,
       deviceDestroyAvailable,
       objectAccounting,
-      sharedObjectAccounting)
+      sharedObjectAccounting,
+      host)
 
     CreateCommandResources()
     let width = if requestedWidth > 0 { requestedWidth } else { Math.Max(1, host.FramebufferWidth) }
