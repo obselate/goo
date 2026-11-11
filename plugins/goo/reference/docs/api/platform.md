@@ -1,14 +1,9 @@
 # Platform API
 
-Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
-
 Source: [`Goo/Platform`](https://github.com/obselate/goo/tree/main/Goo/Platform)
 
 ## `ActivationPostStatus`
 
-Source:
-
-- [`ApplicationActivation.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/ApplicationActivation.gs)
 
 Reports whether a process activation entered the owner-thread delivery queue.
 
@@ -22,9 +17,6 @@ Reports whether a process activation entered the owner-thread delivery queue.
 
 ## `ApplicationActivation`
 
-Source:
-
-- [`ApplicationActivation.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/ApplicationActivation.gs)
 
 Owns the data delivered by the process-wide application activation event. URI values do not grant access to documents and notification payloads are untrusted app data.
 
@@ -70,9 +62,6 @@ Gets the sender's working directory without changing the receiving process's dir
 
 ## `ApplicationActivationKind`
 
-Source:
-
-- [`ApplicationActivation.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/ApplicationActivation.gs)
 
 Identifies a process launch, forwarded request, URI, documents, or notification response.
 
@@ -86,9 +75,6 @@ Identifies a process launch, forwarded request, URI, documents, or notification 
 
 ## `EmbeddedWindowHost`
 
-Source:
-
-- [`EmbeddedWindowHost.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/EmbeddedWindowHost.gs)
 
 Connects a host-owned viewport and frame loop to an ordinary Goo window. All calls except RequestFrame run on the thread that attaches the window.
 
@@ -218,9 +204,6 @@ Gets the attached Goo window, or nil after disposal.
 
 ## `MessageBoxButton`
 
-Source:
-
-- [`NativeDialogs.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/NativeDialogs/NativeDialogs.gs)
 
 Describes one native message-box button.
 
@@ -246,9 +229,6 @@ Gets the native button label.
 
 ## `MessageBoxIcon`
 
-Source:
-
-- [`NativeDialogs.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/NativeDialogs/NativeDialogs.gs)
 
 Selects the native message severity.
 
@@ -260,9 +240,6 @@ Selects the native message severity.
 
 ## `MessageBoxOptions`
 
-Source:
-
-- [`NativeDialogs.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/NativeDialogs/NativeDialogs.gs)
 
 Supplies native message-box content, copied when accepted.
 
@@ -288,9 +265,6 @@ Gets the native title.
 
 ## `MessageBoxResult`
 
-Source:
-
-- [`NativeDialogs.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/NativeDialogs/NativeDialogs.gs)
 
 Contains a native message-box outcome.
 
@@ -308,9 +282,6 @@ Gets the explicit outcome.
 
 ## `MessageBoxStatus`
 
-Source:
-
-- [`NativeDialogs.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/NativeDialogs/NativeDialogs.gs)
 
 Distinguishes selection, dismissal, platform limits, owner conflicts and native failure.
 
@@ -325,9 +296,6 @@ Distinguishes selection, dismissal, platform limits, owner conflicts and native 
 
 ## `NativeDialogs`
 
-Source:
-
-- [`NativeDialogs.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/NativeDialogs/NativeDialogs.gs)
 
 Shows owned native dialogs without a managed fallback.
 
@@ -342,9 +310,6 @@ Returns: A task with a selected button or an explicit nonselection result.
 
 ## `NativeMenuBar`
 
-Source:
-
-- [`NativeMenus.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/NativeMenus/NativeMenus.gs)
 
 Owns one native bar for an open Window. Operations are owner-thread-affine.
 
@@ -372,9 +337,6 @@ Returns: Success with an empty ItemId, or an explicit platform or lifetime statu
 
 ## `NativeMenuItem`
 
-Source:
-
-- [`NativeMenus.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/NativeMenus/NativeMenus.gs)
 
 Describes one immutable native menu row. Publishing copies the complete model.
 
@@ -412,9 +374,6 @@ Gets the native row title.
 
 ## `NativeMenuResult`
 
-Source:
-
-- [`NativeMenus.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/NativeMenus/NativeMenus.gs)
 
 Contains an explicit native menu outcome.
 
@@ -432,9 +391,6 @@ Gets the operation status.
 
 ## `NativeMenuShortcut`
 
-Source:
-
-- [`NativeMenus.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/NativeMenus/NativeMenus.gs)
 
 Describes one logical printable key and its exact modifiers.
 
@@ -448,9 +404,6 @@ Gets the modifiers. Super means Command on macOS.
 
 ## `NativeMenuStatus`
 
-Source:
-
-- [`NativeMenus.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/NativeMenus/NativeMenus.gs)
 
 Reports the outcome of a native menu operation.
 
@@ -465,9 +418,6 @@ Reports the outcome of a native menu operation.
 
 ## `NativeMenus`
 
-Source:
-
-- [`NativeMenus.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/NativeMenus/NativeMenus.gs)
 
 Opens operating-system context menus. No managed-widget fallback is implicit.
 
@@ -487,17 +437,8 @@ Returns: Selection or cancellation through the task only, never a bar activation
 
 ## `NotificationActivationSupport`
 
-Source:
-
-- [`Notifications.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/Notifications/Notifications.gs)
 
 Reports the configured default-click route, not a guarantee that the user will activate it.
-
-### Values
-
-- `None`
-- `WarmOnly`
-- `WarmAndCold`
 
 ### `None`
 
@@ -513,19 +454,8 @@ The click can reach the running process only.
 
 ## `NotificationDelivery`
 
-Source:
-
-- [`Notifications.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/Notifications/Notifications.gs)
 
 Reports submission or current native notification state, not whether the user read it.
-
-### Values
-
-- `Unknown`
-- `Accepted`
-- `PresentInCenter`
-- `Removed`
-- `Failed`
 
 ### `Accepted`
 
@@ -549,9 +479,6 @@ The platform cannot report the notification's current presence.
 
 ## `NotificationMessage`
 
-Source:
-
-- [`Notifications.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/Notifications/Notifications.gs)
 
 Describes plain notification text and opaque application data for its default click.
 
@@ -577,9 +504,6 @@ Gets the plain title. The operating system controls wrapping and truncation.
 
 ## `NotificationOptions`
 
-Source:
-
-- [`Notifications.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/Notifications/Notifications.gs)
 
 Configures the platform's notification identity and channel without requesting permission.
 
@@ -605,20 +529,8 @@ Gets an Android drawable resource name for the required small icon. Other platfo
 
 ## `NotificationPermission`
 
-Source:
-
-- [`Notifications.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/Notifications/Notifications.gs)
 
 Reports the operating system's notification permission or setting.
-
-### Values
-
-- `NotDetermined`
-- `Granted`
-- `Denied`
-- `Disabled`
-- `Unknown`
-- `Unsupported`
 
 ### `Denied`
 
@@ -646,9 +558,6 @@ The platform does not support this notification service.
 
 ## `NotificationResult`
 
-Source:
-
-- [`Notifications.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/Notifications/Notifications.gs)
 
 Reports native permission, delivery and activation support for one operation.
 
@@ -678,9 +587,6 @@ Gets the operation status.
 
 ## `NotificationService`
 
-Source:
-
-- [`Notifications.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/Notifications/Notifications.gs)
 
 Owns a native notification service. Clicks use Window.ApplicationActivated with Kind Notification.
 
@@ -722,9 +628,6 @@ Returns: Accepted after native submission, or an explicit permission, identity o
 
 ## `NotificationServiceResult`
 
-Source:
-
-- [`Notifications.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/Notifications/Notifications.gs)
 
 Reports service creation. Only Success supplies an owned Service.
 
@@ -742,22 +645,8 @@ Gets service creation status.
 
 ## `NotificationStatus`
 
-Source:
-
-- [`Notifications.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/Notifications/Notifications.gs)
 
 Reports a notification operation without throwing for expected platform failures.
-
-### Values
-
-- `Success`
-- `Accepted`
-- `PermissionRequired`
-- `Denied`
-- `Disabled`
-- `MissingIdentity`
-- `Unsupported`
-- `Failed`
 
 ### `Accepted`
 
@@ -793,9 +682,6 @@ The platform or requested native operation is not supported.
 
 ## `Notifications`
 
-Source:
-
-- [`Notifications.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/Notifications/Notifications.gs)
 
 Opens optional desktop notifications without changing application lifetime or requesting permission.
 
@@ -809,11 +695,8 @@ Returns: An owned native service, or an explicit unsupported, identity or native
 
 ## `PlatformPreferences`
 
-Source:
 
-- [`PlatformPreferences.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/PlatformPreferences.gs)
-
-Holds platform preferences independently of framebuffer density. Nil values mean the host cannot report that preference.
+Holds platform preferences independently of framebuffer density. Nil values mean the host cannot report that preference. Deconstruct returns Theme, ReducedMotion, HighContrast, TextScaleFactor, EventSoundsEnabled, AccentColor, AccentLight1, AccentLight2, AccentLight3, AccentDark1, AccentDark2, AccentDark3 and PreferredLocales.
 
 ### `AccentColor`
 
@@ -869,9 +752,6 @@ Gets the preferred theme, or Unknown when unavailable.
 
 ## `SystemTheme`
 
-Source:
-
-- [`PlatformPreferences.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/PlatformPreferences.gs)
 
 Identifies the platform's preferred application color theme.
 
@@ -883,9 +763,6 @@ Identifies the platform's preferred application color theme.
 
 ## `TrayIcon`
 
-Source:
-
-- [`Tray.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/Tray/Tray.gs)
 
 Owns a native tray icon on an open desktop Window's UI thread.
 
@@ -928,9 +805,6 @@ Gets the current registration status on the owner UI thread.
 
 ## `TrayOptions`
 
-Source:
-
-- [`Tray.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/Tray/Tray.gs)
 
 Describes a tray icon. Create and Update copy the pixels and menu before returning.
 
@@ -964,9 +838,6 @@ Gets the pixel width, from 1 to 512.
 
 ## `TrayResult`
 
-Source:
-
-- [`Tray.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/Tray/Tray.gs)
 
 Reports tray creation. NoHost can return a live Icon that observes host availability.
 
@@ -984,19 +855,8 @@ Gets the creation status.
 
 ## `TrayStatus`
 
-Source:
-
-- [`Tray.gs`](https://github.com/obselate/goo/blob/main/Goo/Platform/Tray/Tray.gs)
 
 Reports native tray registration, not whether the user can see the icon.
-
-### Values
-
-- `Registered`
-- `NoHost`
-- `Unsupported`
-- `Closed`
-- `Failed`
 
 ### `Closed`
 

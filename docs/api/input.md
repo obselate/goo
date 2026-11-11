@@ -123,25 +123,6 @@ remain one character for selection, clipboard, caret, and hit testing. Single-li
 Middle-click primary-selection paste and a text context menu are not supported.
 Triple-click in a TextEntry selects its whole value, not a wrapped visual line.
 
-Qualify each shared text control and native host. Carry unchanged evidence forward.
-Rerun affected fields and dialogs after a local change. Rerun the full checklist
-when editing, focus or dialog routing changes:
-
-| Check | Inputs |
-| --- | --- |
-| Insert and delete | Type, Backspace, Delete |
-| Move | Left, Right, Up, Down, PageUp, PageDown, Home, End, Ctrl+Home, Ctrl+End |
-| Move and delete words | Ctrl+Left, Ctrl+Right, Ctrl+Backspace, Ctrl+Delete |
-| Select | Shift+movement, Ctrl+A |
-| Clipboard | Ctrl+C, Ctrl+X, Ctrl+V |
-| History | Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y |
-| Submit and cancel | Enter, KeypadEnter, Escape |
-| Focus and indent | Tab, Shift+Tab |
-
-On macOS, use Command for primary shortcuts and Option for word movement and
-deletion. Check submit versus newline and focus traversal versus indentation.
-Also check IME composition, read-only fields, password fields and text direction.
-
 Call `window.PlatformInput.MoveFocus(true)` or `MoveFocus(false)` for explicit forward or backward traversal. For buttons, `ElementHandle.Activate()` performs a click. To show a held press and activate on release, bind `Action: () -> { handle.BeginPress() }` and `OnRelease: () -> { handle.EndPress(true) }`. `EndPress(false)` cancels the press. Focus loss, removal, and a canceled or failing key release clear the pressed state.
 
 A focus transfer updates the old and new `Focused` states first, then routes `OnBlur` from the old element to its parents and `OnFocus` from the new element to its parents. These lifecycle callbacks cannot cancel the transfer. `FocusEvent.StopPropagation()` only skips the remaining ancestors. A reentrant focus request from `OnBlur` or `OnFocus` wins over the superseded transfer.

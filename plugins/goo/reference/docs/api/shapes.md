@@ -1,14 +1,9 @@
 # Shapes API
 
-Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
-
 Source: [`Goo/Shapes`](https://github.com/obselate/goo/tree/main/Goo/Shapes)
 
 ## `DashPattern`
 
-Source:
-
-- [`DashPattern.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/DashPattern.gs)
 
 Specifies logical-pixel dash intervals and their phase offset. Empty intervals produce a solid stroke. Odd interval counts repeat once.
 
@@ -29,9 +24,6 @@ Gets the finite dash phase offset in logical pixels.
 
 ## `FillRule`
 
-Source:
-
-- [`Shape.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/Shape.gs)
 
 Selects the rule for filling overlapping path regions.
 
@@ -42,11 +34,8 @@ Selects the rule for filling overlapping path regions.
 
 ## `PathBuilder`
 
-Source:
 
-- [`PathBuilder.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/PathBuilder.gs)
-
-Builds an immutable vector path from drawing commands.
+Builds an immutable vector path from drawing commands. Drawing commands and Reset return this builder.
 
 ### `new`
 
@@ -73,8 +62,6 @@ Adds an elliptical arc to a point.
 - `x`: The endpoint x coordinate.
 - `y`: The endpoint y coordinate.
 
-Returns: This builder.
-
 ### `Build`
 
 Builds an immutable snapshot while allowing further commands and builds.
@@ -84,8 +71,6 @@ Returns: The completed vector path.
 ### `Close`
 
 Closes the current contour.
-
-Returns: This builder.
 
 ### `CubicTo(float64,float64,float64,float64,float64,float64)`
 
@@ -98,16 +83,12 @@ Adds a cubic Bézier curve to a point.
 - `x`: The endpoint x coordinate.
 - `y`: The endpoint y coordinate.
 
-Returns: This builder.
-
 ### `LineTo(float64,float64)`
 
 Adds a straight line to a point.
 
 - `x`: The point x coordinate.
 - `y`: The point y coordinate.
-
-Returns: This builder.
 
 ### `MoveTo(float64,float64)`
 
@@ -116,16 +97,12 @@ Begins a new contour at a point.
 - `x`: The point x coordinate.
 - `y`: The point y coordinate.
 
-Returns: This builder.
-
 ### `Polyline(Point[],bool)`
 
 Adds a polyline contour through the specified points.
 
 - `points`: The two or more contour points.
 - `close`: Whether to close the contour.
-
-Returns: This builder.
 
 ### `QuadraticTo(float64,float64,float64,float64)`
 
@@ -136,19 +113,12 @@ Adds a quadratic Bézier curve to a point.
 - `x`: The endpoint x coordinate.
 - `y`: The endpoint y coordinate.
 
-Returns: This builder.
-
 ### `Reset`
 
 Clears the commands and contour while retaining the view box and storage for continued use. Previously built paths remain immutable. Each Build copies the commands.
 
-Returns: This builder.
-
 ## `Point`
 
-Source:
-
-- [`Point.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/Point.gs)
 
 Represents an immutable two-dimensional point.
 
@@ -162,9 +132,6 @@ Gets the y coordinate.
 
 ## `Shape`
 
-Source:
-
-- [`Shape.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/Shape.gs)
 
 Displays a vector path with fill and one uniform stroke. Side-specific border declarations apply to boxes only.
 
@@ -222,9 +189,6 @@ Gets or sets the vector effect. The default is None. NonScalingStroke keeps widt
 
 ## `ShapeFit`
 
-Source:
-
-- [`Shape.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/Shape.gs)
 
 Selects how path geometry maps into the padded layout bounds. Contain is the centered aspect-preserving default.
 
@@ -237,9 +201,6 @@ Selects how path geometry maps into the padded layout bounds. Contain is the cen
 
 ## `StrokeCap`
 
-Source:
-
-- [`Shape.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/Shape.gs)
 
 Selects the cap style for stroked paths.
 
@@ -251,9 +212,6 @@ Selects the cap style for stroked paths.
 
 ## `StrokeJoin`
 
-Source:
-
-- [`Shape.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/Shape.gs)
 
 Selects the join style for stroked paths.
 
@@ -265,9 +223,6 @@ Selects the join style for stroked paths.
 
 ## `VectorEffect`
 
-Source:
-
-- [`Shape.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/Shape.gs)
 
 Selects whether strokes scale with geometry or remain in window logical pixels.
 
@@ -278,9 +233,6 @@ Selects whether strokes scale with geometry or remain in window logical pixels.
 
 ## `VectorNode`
 
-Source:
-
-- [`VectorAssetModel.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/VectorAssetModel.gs)
 
 Describes one immutable vector node and its composed children.
 
@@ -297,8 +249,6 @@ Creates a path node with no paint or children.
 Creates a path node with immutable style options.
 
 ### `new(VectorPath,VectorNodeStyle,VectorNode[])`
-
-Creates a path node with immutable style options.
 
 ### `Children`
 
@@ -346,9 +296,6 @@ Gets this node's local transform.
 
 ## `VectorNodeStyle`
 
-Source:
-
-- [`VectorAssetModel.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/VectorAssetModel.gs)
 
 Describes immutable paint and composition options for a vector node.
 
@@ -390,9 +337,6 @@ Gets this node's local transform.
 
 ## `VectorPaint`
 
-Source:
-
-- [`VectorAssetModel.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/VectorAssetModel.gs)
 
 Describes one immutable vector fill paint.
 
@@ -414,23 +358,12 @@ Gets the gradient, or nil for a solid paint.
 
 ## `VectorPath`
 
-Source:
-
-- [`VectorPath.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/VectorPath.gs)
 
 Represents an immutable vector path in a top-left coordinate system. Coordinates increase rightward on x and downward on y.
 
 ### `Equals(VectorPath)`
 
 Tests whether another path has the same content.
-
-### `Equals(System.Object)`
-
-Tests whether an object is a path with the same content.
-
-### `GetHashCode`
-
-Gets the content hash code.
 
 ### `Empty`
 
@@ -454,9 +387,6 @@ Gets the view-box top coordinate.
 
 ## `VectorStroke`
 
-Source:
-
-- [`VectorAssetModel.gs`](https://github.com/obselate/goo/blob/main/Goo/Shapes/VectorAssetModel.gs)
 
 Describes one immutable vector stroke.
 

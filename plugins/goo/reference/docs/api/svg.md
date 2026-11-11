@@ -1,14 +1,9 @@
 # Svg API
 
-Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
-
 Source: [`Goo/Svg`](https://github.com/obselate/goo/tree/main/Goo/Svg)
 
 ## `Svg`
 
-Source:
-
-- [`Svg.gs`](https://github.com/obselate/goo/blob/main/Goo/Svg/Svg.gs)
 
 Loads SVG sources as reusable vector assets.
 
@@ -38,9 +33,6 @@ Returns: The reusable vector asset.
 
 ## `SvgParseException`
 
-Source:
-
-- [`Svg.gs`](https://github.com/obselate/goo/blob/main/Goo/Svg/Svg.gs)
 
 Reports invalid or unsupported SVG content.
 

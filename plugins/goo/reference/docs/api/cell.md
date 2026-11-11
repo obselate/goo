@@ -1,12 +1,8 @@
 # Cell API
 
-Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
-
 Source: [`Goo/Cell`](https://github.com/obselate/goo/tree/main/Goo/Cell)
 
 ## Build input cells
-
-Store local Cell state in ordinary fields. Goo rebuilds the Cell that authored an input element, even when another Cell renders it. Call `Rebuild()` after mutations outside Goo input dispatch.
 
 Derive packaged components as `open class X : Cell<TInput>` and override `protected Build(input TInput) Blob`. Goo passes the stored immutable input snapshot. Same-assembly components can still override parameterless `Build()`. If both overloads are overridden, the typed overload wins. Override `ShouldRebuild(previous, next)` only when default structural equality does not match the rebuild policy.
 
@@ -24,14 +20,10 @@ Guard costly arguments when the callback can be nil. Call Build-time queries dir
 
 ## Mount parameterless cells
 
-Use `Cell.Mount<TCell>()` for a fixed, unkeyed child with a parameterless constructor. Goo retains the mounted Cell by its declared type and sibling position.
-
 ```gsharp
 Cell.Mount[Counter]()
 ```
 
-Use `Cell.Mount<TCell>(key)` when the child needs stable identity across insertion, removal, or reordering.
-Siblings can mix keyed and unkeyed entries. Unkeyed identity uses the absolute sibling index and never matches a keyed entry.
 
 ```gsharp
 Cell.Mount[Counter]("counter")
@@ -39,14 +31,10 @@ Cell.Mount[Counter]("counter")
 
 ## Mount with a factory
 
-`Cell.Mount<TCell>(factory, key)` accepts a `System.Func<TCell>` without requiring a parameterless constructor. Use it for constructor dependencies or F# object expressions. Configuration, seeding, and typed-input mounts remain available.
+`Cell.Mount[TCell](https://github.com/obselate/goo/blob/main/docs/api/factory%2C key)` mounts a Cell with constructor dependencies without a parameterless constructor.
 
 ```gsharp
 Cell.Mount[Counter](() -> Counter(store), "counter")
-```
-
-```csharp
-Cell.Mount(() => new Counter(store), "counter")
 ```
 
 A mounted Cell is retained by declared `TCell` and sibling key. The factory runs only for a new mount. Rebuilding the parent, replacing the delegate, or changing captured values does not recreate the Cell. Change the key for a new instance. Factories returning the base `Cell` type need distinct stable keys for distinct components.
@@ -55,32 +43,12 @@ Goo owns and disposes the Cell on removal. Each invocation must return a fresh, 
 
 Constructor arguments initialize the Cell. Update it through typed inputs, configuration, or an external store read by `Build()`. Call its `Rebuild()` after changes outside Goo input callbacks. Read changing values from a store or getter, not a captured scalar copy. Calling `Build()` directly returns a Blob tree without mounting the Cell.
 
-F# can call the CLR overload directly or through a helper:
-
-```fsharp
-open System
-open Goo
-
-let mount key (create: unit -> Cell) =
-    Cell.Mount<Cell>(Func<Cell>(create), key)
-
-let counter (value: int ref) =
-    { new Cell() with
-        override _.Build() =
-            Text(Content = $"Count: {value.Value}") :> Blob }
-
-let value = ref 0
-let direct = Cell.Mount<Cell>(Func<Cell>(fun () -> counter value), "direct")
-let throughHelper = mount "helper" (fun () -> counter value)
-```
+See [language interop](https://github.com/obselate/goo/blob/main/docs/interop.md) for other languages.
 
 Capturing factories inside parent builds can allocate delegates and closures even when the Cell is reused. Cache factories with stable dependencies. Goo never invokes a factory to discover its result's runtime type.
 
 ## `Cell`
 
-Source:
-
-- [`Cell.gs`](https://github.com/obselate/goo/blob/main/Goo/Cell/Cell.gs)
 
 Defines a stateful Goo component.
 
@@ -255,15 +223,12 @@ Returns: a blob that mounts the child component
 
 Requests a rebuild of this component.
 
-## `Cell<TInput any>`
+## `Cell<TInput>`
 
-Source:
-
-- [`InputCell.gs`](https://github.com/obselate/goo/blob/main/Goo/Cell/InputCell.gs)
 
 Defines a stateful Goo component with an immutable input snapshot.
 
-### `Build(TInput any)`
+### `Build(TInput)`
 
 Builds the component tree from the current immutable input snapshot.
 
@@ -279,15 +244,11 @@ Invokes an input-time callback and rebuilds the Cell that supplied this input. A
 
 ### `InvokeInputCallback``1(System.Action{T},T)`
 
-Invokes an input-time callback and rebuilds the Cell that supplied this input. A supplying Cell already in Build needs no extra rebuild. Call Build-time queries directly. They must not change the supplying Cell's state.
-
 - `T`: callback argument type
 - `callback`: callback from the current input
 - `value`: callback argument
 
 ### `InvokeInputCallback``2(System.Action{T1,T2},T1,T2)`
-
-Invokes an input-time callback and rebuilds the Cell that supplied this input. A supplying Cell already in Build needs no extra rebuild. Call Build-time queries directly. They must not change the supplying Cell's state.
 
 - `T1`: first callback argument type
 - `T2`: second callback argument type
@@ -297,8 +258,6 @@ Invokes an input-time callback and rebuilds the Cell that supplied this input. A
 
 ### `InvokeInputCallback``2(System.Func{T,TResult},T,TResult)`
 
-Invokes an input-time callback and rebuilds the Cell that supplied this input. A supplying Cell already in Build needs no extra rebuild. Call Build-time queries directly. They must not change the supplying Cell's state.
-
 - `T`: callback argument type
 - `TResult`: callback result type
 - `callback`: callback from the current input
@@ -307,7 +266,7 @@ Invokes an input-time callback and rebuilds the Cell that supplied this input. A
 
 Returns: the callback result or fallback
 
-### `ShouldRebuild(TInput any,TInput any)`
+### `ShouldRebuild(TInput,TInput)`
 
 Decides whether a later post-mount snapshot needs a rebuild after Input stores next; default uses EqualityComparer[TInput].Default.
 
@@ -315,11 +274,8 @@ Decides whether a later post-mount snapshot needs a rebuild after Input stores n
 
 Gets the current immutable input snapshot.
 
-## `Context<T any>`
+## `Context<T>`
 
-Source:
-
-- [`Context.gs`](https://github.com/obselate/goo/blob/main/Goo/Cell/Context.gs)
 
 Identifies one retained value independently of other keys of the same type.
 
@@ -341,7 +297,7 @@ Reads only the window value without subscribing or looking up subtree providers.
 
 Returns: The window value.
 
-### `Scope(T any,System.Func{Blob})`
+### `Scope(T,System.Func{Blob})`
 
 Describes a retained, layout-transparent provider whose builder runs under its value.
 
@@ -350,14 +306,14 @@ Describes a retained, layout-transparent provider whose builder runs under its v
 
 Returns: A normal positional Cell mount declaration.
 
-### `Set(Window,T any)`
+### `Set(Window,T)`
 
 Sets the window value and queues affected owners without synchronously building them. Equal values are suppressed with EqualityComparer[T].Default.
 
 - `window`: The owner-thread window.
 - `value`: The new window value.
 
-### `TryRead(Window,T any@)`
+### `TryRead(Window,T@)`
 
 Tries to read only the window value without registering a dependency.
 

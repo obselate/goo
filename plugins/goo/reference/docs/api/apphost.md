@@ -1,14 +1,9 @@
 # AppHost API
 
-Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
-
 Source: [`Goo/AppHost`](https://github.com/obselate/goo/tree/main/Goo/AppHost)
 
 ## `ActivationArguments`
 
-Source:
-
-- [`ActivationArguments.gs`](https://github.com/obselate/goo/blob/main/Goo/AppHost/ActivationArguments.gs)
 
 Converts explicit desktop association arguments without changing the current directory.
 
@@ -23,9 +18,6 @@ Returns: An owned initial activation, or Rejected for malformed or oversized ass
 
 ## `ActivationReadResult`
 
-Source:
-
-- [`ActivationArguments.gs`](https://github.com/obselate/goo/blob/main/Goo/AppHost/ActivationArguments.gs)
 
 Contains owned startup data or an explicit rejection.
 
@@ -43,9 +35,6 @@ Gets whether the arguments formed a valid bounded request.
 
 ## `ActivationReadStatus`
 
-Source:
-
-- [`ActivationArguments.gs`](https://github.com/obselate/goo/blob/main/Goo/AppHost/ActivationArguments.gs)
 
 Reports whether desktop startup arguments form an owned activation request.
 
@@ -56,9 +45,6 @@ Reports whether desktop startup arguments form an owned activation request.
 
 ## `Placement`
 
-Source:
-
-- [`Placement.gs`](https://github.com/obselate/goo/blob/main/Goo/AppHost/Placement.gs)
 
 Restores app-owned placement against the current desktop display inventory.
 
@@ -73,9 +59,6 @@ Returns: Accepted with the applied mask, Closed, Unsupported, or Failed for inva
 
 ## `SingleInstance`
 
-Source:
-
-- [`SingleInstance.gs`](https://github.com/obselate/goo/blob/main/Goo/AppHost/SingleInstance.gs)
 
 Elects one desktop instance and forwards typed requests to its activation queue.
 
@@ -91,9 +74,6 @@ Returns: A primary lease or an explicit forwarding, timeout, unsupported, reject
 
 ## `SingleInstanceResult`
 
-Source:
-
-- [`SingleInstance.gs`](https://github.com/obselate/goo/blob/main/Goo/AppHost/SingleInstance.gs)
 
 Owns the primary lifetime or reports why a request was not forwarded.
 
@@ -111,9 +91,6 @@ Gets the election or forwarding outcome.
 
 ## `SingleInstanceStatus`
 
-Source:
-
-- [`SingleInstance.gs`](https://github.com/obselate/goo/blob/main/Goo/AppHost/SingleInstance.gs)
 
 Reports primary ownership or the outcome of forwarding to the existing instance.
 
