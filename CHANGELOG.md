@@ -1,6 +1,91 @@
 # Changelog
 
 
+## 0.30.0 - 2026-11-11
+
+### Added
+
+- Capture responses report `layerResolutionShift` and `degraded` when GPU memory pressure reduces layer resolution. Diagnostics report `layerPoolResolutionShift`. `goo capture` reports the shift on stderr and in JSON.
+- Add a PowerShell 7 section and counter sample to the interop guide.
+- Add `ElementHandle.RawBorderBox`, `ElementMetrics.RawBorderBox` and `Window.PixelScale` for pixel-aligned popup placement.
+- The Goo plugin supports Claude Code. Run `claude plugin marketplace add obselate/goo`, then `claude plugin install goo@obselate-goo`.
+- Add `Window.MeasureText(text, style)` to measure the laid-out width of single-line text without mounting it.
+
+### Changed
+
+- The F# interop guide and sample use modules, closure state and object-expression Cells with reusable callbacks.
+- Breaking: `ElementMetrics` deconstruction now has six outputs, with `RawBorderBox` last. Update positional deconstruction.
+- Breaking: `FlexShrink` now defaults to 1. Set `FlexShrink: 0` to keep the previous behavior.
+- Automatic minimum sizes are 0 for `Scroll` or `Hidden` overflow. Otherwise, they follow the declared size or content size. Set `MinWidth: 0` or `MinHeight: 0` to allow further shrinking.
+- GPU caches follow the driver memory budget. Without budget support, Goo uses half of each heap for cache growth.
+- Goo evicts unused GPU resources and retries failed allocations once. Images that do not fit are skipped. Repeated frame allocation failures wait for new work instead of keeping the render loop busy.
+- GPU diagnostics add `heapHeadroom`, `memoryEvictionCount`, `memoryAllocationRetryCount`, `memoryPressureCount` and `textAtlasPressureFailureCount`. They remove `imageByteBudget`, `textAtlasByteBudget`, `textAtlasPeakByteBudget` and `layerPoolByteBudget`.
+- AI plugin search ranks task and symbol matches and returns bounded query-matched excerpts. Reads return the selected section or API member with a byte cap and continuation.
+- Breaking: AI plugin `goo_search` returns its JSON in text content only, without `structuredContent`, `source` or `queryTerms`, and reports package versions instead of package paths.
+- AI plugin search and reads include Widgets and Animations APIs from the project's restored packages, or the newest cached packages when no project is selected. Package reads include declaration types and XML documentation.
+- AI plugin context and starter responses use one bundle hash instead of a full bundled-file hash map. Starter files keep their source and generated hashes.
+- AI plugin checkout mode lists the same documents as the bundled reference.
+- Path, stroke and clip-mask shaders share coverage code to reduce first-draw shader compilation work.
+- Rounded shapes, gradients and borders have smoother, more accurate edge coverage. Rotated and skewed rectangles also smooth their square edges.
+- Text edges have more even coverage. Light text on dark backgrounds has stronger edge contrast.
+- On Windows, `PlatformPreferences.AccentColor` is the system accent palette base. `AccentLight1`, `AccentLight2`, `AccentLight3`, `AccentDark1`, `AccentDark2` and `AccentDark3` expose its shades and are nil on other platforms.
+- Breaking: `PlatformPreferences` deconstruction now has 13 outputs, with the six accent shades inserted before `PreferredLocales`. Update positional deconstruction.
+
+### Fixed
+
+- Layout and paint use the same device-pixel widths for borders and outlines. Content and clips align with painted borders at fractional display scales.
+- Positive layout sizes and border widths stay at least one device pixel wide.
+- Window capture errors retain the failed allocation stage and Vulkan result, including through DevTools.
+- `TextEditor` no longer sends `CancelComposition` to command interceptors when no composition is active.
+- Custom layouts and anchored portals snap child and popup positions to device pixels. Custom layouts also update when display scale changes.
+- Translation-only transforms snap their combined movement to device pixels. Drawing, hit testing and element bounds use the same position.
+- Text, text-input and image boxes round their size up to the device pixel grid, regardless of their position.
+- The DevTools profiler timeline scrolls separately from its summary table. Frame and scope tooltips stay visible.
+- DevTools plots and the details pane fit the window when app zoom changes.
+- Layout-only embedded windows retain keyboard focus and focus styles without a presentation surface, while hidden desktop windows reject focus gains.
+- Rounded clips keep the correct coverage when a cached mask shrinks. Rounded clips and shape shadows stay stable when their mask moves in the atlas.
+- Goo MCP input stays usable after a rejected key press and preserves ownership of active or uncertain gestures.
+- The DevTools CLI and protocol client report the installed package version.
+- Newly uploaded glyphs appear in the same frame. Text waits for pending glyph uploads instead of presenting with missing glyphs.
+- Repaint keyed children in their new order when the first child is unkeyed. Accessibility order now follows the same order.
+- Gallery captures render without opening its window. Offscreen rendering rejects attached Cells and includes the cause in failure results.
+- Keep the source Vulkan loader alive until shared renderer teardown so window offscreen sessions can be disposed during or after window close.
+- Backdrop blur updates when content behind it is removed.
+- Apps can keep more than 4,096 image sources alive without an image-identity capacity failure.
+- Custom-layout scroll ranges no longer count padding and borders twice.
+- Scrollbars receive pointer input inside an undecorated window resize edge. Corners still resize the window.
+- Scrollbar tracks and thumbs share hover state. A vertical thumb `Width` or horizontal thumb `Height` can make it thinner than its track, with hover and transition changes applied.
+- `VirtualViewport.Child(i).Size` returns the layout size before device-pixel rounding, so measured virtual rows keep stable offsets.
+- Growing the shared path atlas no longer invalidates another window's queued frame.
+- Hidden layer-shell windows finish pending frames and close without waiting for an unavailable presentation.
+- Device recovery preserves windows that are still starting. Windows with a zero-size surface resume presenting when the surface becomes available.
+- New windows stay inside the display usable area when their minimum size fits. On Windows, this includes the title bar and borders.
+- Windows report their native size when shown and keep the latest size when the display or display scale changes.
+- Images drawn below their source size use mipmaps to reduce aliasing. Premultiplied sampling prevents dark transparent edges. Goo uses mipmaps only when GPU memory permits.
+- Apply Linux color scheme preferences when the desktop portal starts after the app and when its settings change.
+- Reduce single-line text measurement and layout cost for ASCII labels without changing shaping or measured widths.
+- Hosts without an application dependency manifest load Goo's bundled patched SDL, so native behavior matches normal .NET applications.
+- Managed single-file applications load bundled SDL from the host's native extraction directory.
+- Hiding a Wayland window no longer blocks queued presentation or other windows from closing. Visibility, input and accessibility update immediately. Showing the window cancels a pending native hide.
+- Allocation profiling keeps aggregate sample counts and sampled bytes when the runtime omits type names. DevTools marks the type breakdown as unavailable instead of showing a `NULL` type.
+- Offscreen rendering and `goo render --scale` snap layout to the requested render scale, matching window layout.
+- AI plugin search prefers matching API member names to sibling references and guide prose.
+- Attach the NuGet packages and symbol package to each GitHub release.
+- Scroll containers and `TextEditor` show the full end of their content. The maximum offset rounds up to a device pixel, adding less than one device pixel of space.
+- Box shadows have more even corner blur and less banding. Sharp shadow edges stay stable while scrolling.
+- Outer box shadows no longer darken the inside of transparent or translucent panels.
+- Inherited style changes update descendants in the same pass, so theme colors do not stay stale.
+- Text has more accurate spacing and sharper horizontal edges at fractional display scales. Fitted round glyphs keep their natural stroke thickness.
+- Text uses unfitted outlines during repeated size changes to limit glyph-cache growth.
+- `TextEditor` keeps its content height and visible text position when cached lines are released or measured.
+- `TextEditorController.ScrollTo` and caret reveal reach their target after wrapped lines are measured.
+- Caret reveal no longer hangs when the caret is larger than the editor viewport.
+- `TextEditor` line height uses `FontSize * LineHeight`, matching `Text`. It reserves space for first and last line glyphs and for inline slots.
+- Wrapping `Text` shrinks to its widest unbreakable segment. Set `MinWidth: 0` to let it shrink further and break inside words.
+- Flex items share space correctly when siblings reach their minimum or maximum size. Overflowing rows no longer grow flex items.
+- Virtual lists keep recycled row storage when their owning Cell rebuilds without changing the list state.
+- On Wayland, clipboard and primary-selection text copied before the first key, button or touch event can reach other applications.
+
 ## 0.29.1 - 2026-11-08
 
 ### Changed

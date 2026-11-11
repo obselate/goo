@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "goo",
-  "version": "0.29.1",
+  "version": "0.30.0",
   "description": "G# Goo authoring, API lookup, live UI inspection and opt-in input automation.",
   "author": {
     "name": "Xaz"
