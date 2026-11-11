@@ -1,26 +1,26 @@
 # Goo app best practices
 
-Read this before you write or review Goo app code. These app-authoring rules override threading, structure and list code in older samples. They do not replace contributor process or framework layer conventions.
+These app rules override threading, structure and list code in older samples.
 
 ## Rules
 
-| # | Rule | Pass condition |
-| --- | --- | --- |
-| 1 | Never block the UI thread. | No `.Result`, `.Wait()`, `.GetAwaiter().GetResult()`, `Thread.Sleep`, synchronous file, network or process I/O in `Build`, handlers, timers or posted actions. |
-| 2 | Use `go` and `scope` for background work. | No `Task.Run`, `Thread`, `ThreadPool` or `ContinueWith` in app code. |
-| 3 | Separate models, views and controllers. | Models hold data and domain logic. Views build Blobs from a model. The view Cell handles input and calls the model. See App structure. |
-| 4 | Put I/O and long work in services. | File, network, process, parse and heavy compute code is in `Services/` and runs in `go` children. Views and models do no I/O. |
-| 5 | Reuse components. | A visual pattern that occurs twice is one component. Use Goo.Widgets controls before you write a new control. |
-| 6 | Use theme tokens. | Views contain no color, font, radius or spacing literals. All values come from one theme. |
-| 7 | Change Cell state and call `Rebuild()` only on the UI thread. | Every background result returns through `window.Post`. |
-| 8 | Bind background work to the Cell and the window. | The Cell implements `IDisposable` and cancels its token. The token links `window.Closed`. |
-| 9 | Drop stale results. | Accept posted results only for the current request and mounted owner, using a generation number, stable request identity or an equivalent cancellation guard. |
-| 10 | Virtualize large or unbounded data lists. | Small bounded lists may use direct rows when their worst-case mount count and frame cost are measured. |
-| 11 | Keep `Build` cheap. | No sort, filter, group, parse or format of a whole collection in `Build`. |
-| 12 | Rebuild the smallest Cell that changed. | Each region is its own Cell. High-rate data is coalesced. |
-| 13 | Avoid unnecessary idle frames. | With no active caret, animation or changing content, the profile shows no rebuild, layout, render or present. Identify and measure intentional frame activity separately. |
-| 14 | Measure before you report done. | Frame `p99` stays below budget under the heaviest interaction. |
-| 15 | Use standard text controls and built-in editing keys. | Text input uses `TextField` or `TextArea`. Editing and Tab focus need no binding setup on the app root or dialogs. See Keyboard and text input. |
+| # | Rule |
+| --- | --- |
+| 1 | Never block the UI thread, including handlers, timers, posted actions and `Build`. No synchronous I/O, waits or sleeps. |
+| 2 | Use `go` and `scope`, not `Task.Run`, `Thread`, `ThreadPool` or `ContinueWith`. See Threads. |
+| 3 | Separate models, views and controllers. See App structure. |
+| 4 | Put I/O, parsing and heavy compute in services called from `go` children. |
+| 5 | Reuse a component for every repeated visual pattern. Prefer Goo.Widgets controls. |
+| 6 | Use one theme for colors, fonts, radii and spacing. No literals in views. |
+| 7 | Change Cell state and call `Rebuild()` only on the UI thread. Post background results. |
+| 8 | Bind background work to Cell disposal and `window.Closed`. |
+| 9 | Accept results only for the current request and mounted owner. See Background work. |
+| 10 | Virtualize large or unbounded data lists. Measure worst-case mounts and frame cost for small bounded lists. |
+| 11 | Do not sort, filter, group, parse or format whole collections in `Build`. See Rebuild and Build cost. |
+| 12 | Rebuild the smallest changed Cell. Coalesce high-rate data. |
+| 13 | Avoid unnecessary idle frames. See Verify. |
+| 14 | Measure the heaviest interaction. Frame `p99` must stay below budget. |
+| 15 | Use standard text controls and built-in editing keys. See Keyboard and text input. |
 
 ## App structure
 
@@ -32,10 +32,8 @@ Read this before you write or review Goo app code. These app-authoring rules ove
 | `Services/` | File, network, process, platform and persistence access, and heavy compute. | Called from `go` children. A service returns results and never touches a Cell. |
 | `Program.gs` | Window setup and the root Cell. | No view code. |
 
-- The view Cell is the controller for its region. It owns UI state such as selection and scroll, handles input, calls the model, starts `go` work and calls `Rebuild()`.
 - When a screen has many state transitions, put them in a model class with methods, for example `SearchModel.Apply(query)`. The Cell then only connects input to model calls.
 - A form model owns one `CanSubmit` value. The submit button `Disabled` state and the Enter (`OnSubmit`) handler of every field read only that value. Do not write the submit condition twice.
-- Data flow: a service result returns through `window.Post`, the model changes on the UI thread, the Cell rebuilds, the view builds from the model.
 - Pass a child view only the model values it shows, as a `data struct` input. Goo then rebuilds the child only when those values change.
 - Before you write a component, search Goo.Widgets and the app's `Components/`. Change an existing component when it is close. Do not copy it.
 
@@ -124,55 +122,13 @@ class SearchView : Cell, IDisposable {
 }
 ```
 
-- `Catalog`, `Item`, `Batch` and `Score` are app types. `SearchAsync` takes the token.
+- `Catalog` and `Item` are app types. `SearchAsync` takes the token.
 - Create the window, set `window.Root = SearchView(window, catalog)`, then call `window.Run()`.
 - Goo disposes a mounted `IDisposable` Cell when it leaves the tree. `Dispose` increments `generation`, so results queued before unmount are dropped.
 - The input handler rebuilds its own Cell, so `Search` does not call `Rebuild()`.
 
-Fan out with `scope` inside the `go` child, never in a handler:
-
-```gsharp
-private func Rank(batches IReadOnlyList[Batch], id int32) {
-    try {
-        let output = chan[Score](batches.Count)
-        scope {
-            for batch in batches {
-                go ScoreBatch(batch, output)
-            }
-        }
-        let scores = List[Score](batches.Count)
-        for i in 0 ... batches.Count {
-            scores.Add(<-output)
-        }
-        window.Post(() -> {
-            if id == generation {
-                ranked = scores
-                Rebuild()
-            }
-        })
-    } catch (error OperationCanceledException) {
-    } catch (error Exception) {
-        let message = error.Message
-        window.Post(() -> {
-            if id == generation {
-                status = message
-                Rebuild()
-            }
-        })
-    }
-}
-```
-
-Start it with `go Rank(batches, generation)`. Start one child per batch, not per item. For CPU work, use about `Environment.ProcessorCount` batches.
-
 | Do not write | Write |
 | --- | --- |
-| `await Task.Run(() -> Compute(x))` | `go ComputeAndPost(x, window)`, with `Post` inside `ComputeAndPost` |
-| `Task.Run(async () -> await LoadAsync())` | `go Load(token)` |
-| `Task.WhenAll(a, b)` | Start `go A()` and `go B()` on separate lines in a `scope` inside a `go` child |
-| `Thread(...)`, `ThreadPool.QueueUserWorkItem` | `go` |
-| `task.ContinueWith(t -> ...)` | `await` inside a `go` child, then `Post` |
-| `x.GetAwaiter().GetResult()` in UI code | `go` and post the result |
 | `Thread.Sleep(ms)` in UI code | `window.SetTimeout(callback, ms)` |
 | `System.Threading.Timer` or `tick(d)` that touches Cells | `window.SetInterval(callback, ms)` |
 
@@ -189,7 +145,7 @@ Start it with `go Rank(batches, generation)`. Start one child per batch, not per
 
 ## Keyboard and text input
 
-Goo core provides editing keys for `TextEntry` and `TextEditor`. No app-root or dialog binding setup is needed. This includes movement, selection, deletion, clipboard, undo, redo, Enter, Escape and Tab. Movement and deletion repeat. Clipboard and history do not.
+Core provides editing keys and Tab traversal, including in dialogs. Movement and deletion repeat. Clipboard and history do not.
 
 | Need | Use |
 | --- | --- |
@@ -205,7 +161,7 @@ Goo core provides editing keys for `TextEntry` and `TextEditor`. No app-root or 
 - Tab and Shift+Tab insert indentation and outdent in an editable multiline editor. Otherwise they move focus. Enter submits a single-line field and inserts a newline in an editable multiline editor. Escape cancels a drag, then composition, then a single-line edit.
 - Keyboard focus moves in tree order through enabled nodes with `TabStop`. There is no `TabIndex`. Order the tree as the user reads it.
 - `DataGrid`, `TreeView` and `ComboBox` are one Tab stop each. Arrows move inside them. Enter and Space activate.
-- Not supported: middle-click primary-selection paste, a text context menu, and line selection by triple-click in `TextField` (it selects all).
+- See the [input API](../../../reference/docs/api/input.md) for control-specific limits.
 
 ## Virtualization
 
@@ -227,8 +183,7 @@ Goo core provides editing keys for `TextEntry` and `TextEditor`. No app-root or 
 - Cap logs and history. `VirtualRows` updates in place when rows leave the start and arrive at the end.
 - Set `followEnd` from consumer state on each build. Clear it when the reader scrolls back.
 - `DataGrid` checks all array rows when the rows array changes. Keep the same array between data changes. For large sources, use the indexed inputs `RowAt`, `RowCount`, `RowIndex` and `RowVersion`.
-- Positions are `float32`. Placement drifts beyond 16,777,216 px of content.
-- `JumpTo` is immediate. `ScrollTo` animates containers and is immediate in text editors. `ElementHandle.ScrollToItem(key)` jumps to a virtual row.
+- See the [layout API](../../../reference/docs/api/layout.md) for placement limits and scroll methods.
 
 ## Verify
 
@@ -237,12 +192,12 @@ GOO_FRAME_PROFILE=1 goo dev --project App.gsproj
 ```
 
 - Run GUI apps only in a private headless or nested compositor. In a Goo checkout, prefix the command with `.github/scripts/with-headless-wayland.sh`.
-- After 60 warmup frames Goo prints `p50`, `p99` and `max` for the frame and each phase every 240 frames.
+- Frame profiling reports `p50`, `p99` and `max` after warmup.
 - Load real-size data, for example 100,000 rows. Scroll the largest list, type in search, start a load. Frame `p99` stays below budget. Virtual row mount counts stay flat while you scroll.
-- Idle prints no console report, because a report needs 240 frames. Record a 10 s trace with no input or intentional caret, animation or content activity. Rebuild, layout, render and present stay at zero in that idle state. Measure intentional frame activity separately.
+- Record a 10 s idle trace without input, caret, animation or changing content. Rebuild, layout, render and present stay at zero. Measure intentional activity separately.
 - For a trace, add `--inspector`, open the Profiler tab, select Record, run the workload, select Stop.
 - A high `build` phase means expensive Cell builds. A high `reconcile` phase can also come from style resolution or diff work. Check `build`, `style_resolve` and `diff` before you change the rebuild scope.
-- Qualify each shared text-control and native-host combination with this editing checklist, then carry unchanged evidence forward. Rerun affected fields and dialogs after a localized change, and the full checklist when editing, focus or dialog routing changes: type, Backspace, Delete, Left, Right, Up, Down, PageUp, PageDown, Ctrl+Left, Ctrl+Right, Ctrl+Backspace, Ctrl+Delete, Home, End, Ctrl+Home, Ctrl+End, Shift+movement, Ctrl+A, Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y, Enter, KeypadEnter, Escape, Tab and Shift+Tab. On macOS use Cmd for primary shortcuts and Option for word movement and deletion. Check submit versus newline and focus traversal versus indentation.
+- Verify affected editing, submit and focus interactions. Carry unchanged host and control results forward. Rerun full editing checks when editing, focus or dialog routing changes. See the [input API](../../../reference/docs/api/input.md).
 
 Search for possible violations before review:
 
@@ -252,4 +207,4 @@ rg -n --glob '**/Views/**/*.gs' 'Color\.(Rgb|Parse)|"#[0-9a-fA-F]{6}|File\.|Dire
 rg -n --glob '*.gs' 'WidgetKeyBindings\.Editing|OnKeyDown|OnTextInput'
 ```
 
-Matches are leads for semantic review, not automatic defects. Check ownership, thread context and the selected compiler before applying Background work and App structure. Review keyboard hits for redundant setup or accidental blocking of built-in editing. Keep deliberate field overrides.
+Matches are leads for semantic review, not automatic defects. Keep deliberate field overrides.
