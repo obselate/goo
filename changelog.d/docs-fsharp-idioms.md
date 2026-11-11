@@ -1,3 +1,3 @@
 ## Changed
 
-- Show F# modules, closures and object-expression Cells with reusable callbacks and direct child composition in the interop guide and sample.
+- The F# interop guide and sample use modules, closure state and object-expression Cells with reusable callbacks.

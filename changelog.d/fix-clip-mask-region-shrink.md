@@ -1,4 +1,3 @@
 ## Fixed
 
-- Rounded clip coverage no longer depends on the largest earlier size of a reused clip.
-- Rounded clip and shape-shadow coverage no longer changes when its atlas slot moves.
+- Rounded clips keep the correct coverage when a cached mask shrinks. Rounded clips and shape shadows stay stable when their mask moves in the atlas.
