@@ -212,9 +212,8 @@ jobs:
           dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
           run="$RUNNER_TEMP/plugin"
           trap 'rm -rf "$run"' EXIT
-          mkdir -p "$run"/{cache,config,data,runtime}
-          XDG_CACHE_HOME="$run/cache" XDG_CONFIG_HOME="$run/config" \
-            XDG_DATA_HOME="$run/data" XDG_RUNTIME_DIR="$run/runtime" \
+          mkdir -p "$run"/{cache,config,data}
+          XDG_CACHE_HOME="$run/cache" XDG_CONFIG_HOME="$run/config" XDG_DATA_HOME="$run/data" \
             RUNNER_TEMP="$run" GOO_WAYLAND_COMPOSITOR=kwin \
             .github/scripts/with-headless-wayland.sh \
             dotnet tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll \
