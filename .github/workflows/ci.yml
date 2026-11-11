@@ -1283,7 +1283,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ runner.temp }}/appimage-tools
-          key: appimage-tools-linux-x64-${{ hashFiles('tools/Goo.DevTools.Cli/Packaging/fetch-appimage-tools.sh', 'tools/Goo.DevTools.Cli/Packaging/AppImage-Runtime.Containerfile') }}
+          key: appimage-tools-linux-x64-${{ hashFiles('tools/Goo.DevTools.Cli/Packaging/fetch-appimage-tools.sh') }}
 
       - name: Package and run consumer AppImage
         if: needs.changes.outputs.full == 'true'

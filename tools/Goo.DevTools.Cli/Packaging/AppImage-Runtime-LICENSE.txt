@@ -93,11 +93,15 @@ Relinking libfuse
 libfuse is the only linked LGPL library. musl is not LGPL.
 The source archives above and the Goo build recipe provide the source needed
 to rebuild the runtime with a modified libfuse.
-With Docker and Buildx installed, run this from the matching Goo release source:
+Run this from the matching Goo release source to copy the versioned runtime
+and its relink archive. It does not build the runtime or require Docker:
 
   bash tools/Goo.DevTools.Cli/Packaging/fetch-appimage-tools.sh ./appimage-tools
 
-This produces runtime-x86_64 and runtime-x86_64-relink.tar.gz.
+The files are also included under Runtime/linux-x64 in the Goo.DevTools tool.
+Their SHA-256 hashes are:
+runtime-x86_64: eeeffb755aaac54979d752c4a9762715bcbe98ec0cd915e79595393d5c223266
+runtime-x86_64-relink.tar.gz: dfd8519d717cb44b5d14a5aa4ceff1c44979a7ffddd8218ae71812b8416fddc7
 The archive contains runtime.o, the static dependency archives, data_sections.ld,
 the runtime source, the libfuse source and its patch.
 Extract it into ./relink and replace libfuse3.a with your modified library.
@@ -108,6 +112,16 @@ Build the compiler environment and relink:
 
 Use the resulting runtime as GOO_APPIMAGE_RUNTIME when packaging the application.
 These relink instructions apply to libfuse, not the permissively licensed libraries.
+
+
+Rebuild verification
+
+With Docker and Buildx installed, run this from the matching Goo release source:
+
+  docker build --no-cache --output type=local,dest=./appimage-rebuild -f tools/Goo.DevTools.Cli/Packaging/AppImage-Runtime.Containerfile tools/Goo.DevTools.Cli/Packaging && cmp ./appimage-rebuild/runtime-x86_64 tools/Goo.DevTools.Cli/Runtime/linux-x64/runtime-x86_64 && cmp ./appimage-rebuild/runtime-x86_64-relink.tar.gz tools/Goo.DevTools.Cli/Runtime/linux-x64/runtime-x86_64-relink.tar.gz
+
+This optional check requires the pinned Alpine packages to remain available.
+Normal builds and packaging use the versioned files and do not run this check.
 
 
 libfuse 3.15.0 license
