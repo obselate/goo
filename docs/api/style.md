@@ -1,7 +1,5 @@
 # Style API
 
-Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
-
 Source: [`Goo/Style`](../../Goo/Style)
 
 ## Compose reusable styles
@@ -12,9 +10,6 @@ Source: [`Goo/Style`](../../Goo/Style)
 
 ## `AlignContent`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects cross-axis distribution for wrapped lines.
 
@@ -29,9 +24,6 @@ Selects cross-axis distribution for wrapped lines.
 
 ## `AlignItems`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects default cross-axis alignment for children.
 
@@ -45,9 +37,6 @@ Selects default cross-axis alignment for children.
 
 ## `AlignSelf`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects a child's cross-axis alignment.
 
@@ -62,9 +51,6 @@ Selects a child's cross-axis alignment.
 
 ## `BlendMode`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects how an element and its descendants composite with the backdrop.
 
@@ -89,9 +75,6 @@ Selects how an element and its descendants composite with the backdrop.
 
 ## `BorderStyle`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects how box border edges paint.
 
@@ -103,9 +86,6 @@ Selects how box border edges paint.
 
 ## `BoxShadow`
 
-Source:
-
-- [`BoxShadow.gs`](../../Goo/Style/BoxShadow.gs)
 
 Specifies one immutable outer or inset shadow. An outer shadow paints only outside the border box. Shapes shadow their painted fill and stroke geometry.
 
@@ -135,9 +115,6 @@ Gets the spread radius in pixels.
 
 ## `Color`
 
-Source:
-
-- [`Color.gs`](../../Goo/Style/Color.gs)
 
 Specifies an immutable normalized RGBA color.
 
@@ -243,9 +220,6 @@ Gets opaque white.
 
 ## `Cursor`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects the system pointer cursor shown over an element and its descendants.
 
@@ -274,9 +248,6 @@ Selects the system pointer cursor shown over an element and its descendants.
 
 ## `Direction`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects the inherited inline direction used by layout and logical edges. Auto keeps flex layout left-to-right and detects each text paragraph's direction.
 
@@ -288,9 +259,6 @@ Selects the inherited inline direction used by layout and logical edges. Auto ke
 
 ## `Display`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects whether an element participates in layout.
 
@@ -301,9 +269,6 @@ Selects whether an element participates in layout.
 
 ## `Easing`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects the curve that shapes transition progress; Ease curves are quadratic.
 
@@ -316,9 +281,6 @@ Selects the curve that shapes transition progress; Ease curves are quadratic.
 
 ## `Edges`
 
-Source:
-
-- [`Edges.gs`](../../Goo/Style/Edges.gs)
 
 Specifies CSS-style top, right, bottom, and left lengths. One value applies to all edges. Two values mean vertical and horizontal. Three values mean top, horizontal, and bottom.
 
@@ -386,9 +348,6 @@ Sets the top edge independently.
 
 ## `Edges<T>`
 
-Source:
-
-- [`Edges.Generic.gs`](../../Goo/Style/Edges.Generic.gs)
 
 Specifies typed values for the top, right, bottom, and left edges.
 
@@ -440,9 +399,6 @@ Sets the top edge independently.
 
 ## `FlexDirection`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects the main-axis direction of a flex container.
 
@@ -455,9 +411,6 @@ Selects the main-axis direction of a flex container.
 
 ## `FlexWrap`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects how flex children wrap.
 
@@ -469,9 +422,6 @@ Selects how flex children wrap.
 
 ## `FontStyle`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects the font slant.
 
@@ -482,9 +432,6 @@ Selects the font slant.
 
 ## `Gradient`
 
-Source:
-
-- [`Gradient.gs`](../../Goo/Style/Gradient.gs)
 
 Paints a background with interpolated color stops.
 
@@ -494,9 +441,6 @@ Gets the ordered color stops.
 
 ## `GradientStop`
 
-Source:
-
-- [`Gradient.gs`](../../Goo/Style/Gradient.gs)
 
 Specifies one immutable gradient color stop.
 
@@ -510,9 +454,6 @@ Gets the stop position from 0 through 1.
 
 ## `JustifyContent`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects main-axis child distribution.
 
@@ -527,9 +468,6 @@ Selects main-axis child distribution.
 
 ## `Length`
 
-Source:
-
-- [`Length.gs`](../../Goo/Style/Length.gs)
 
 Specifies a layout length.
 
@@ -591,9 +529,6 @@ Gets the raw numeric magnitude: pixels when IsPercent is false, percentage point
 
 ## `LinearGradient`
 
-Source:
-
-- [`Gradient.gs`](../../Goo/Style/Gradient.gs)
 
 Paints a straight-line gradient at an angle.
 
@@ -627,9 +562,6 @@ Gets the ordered color stops.
 
 ## `Overflow`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects overflow behavior.
 
@@ -641,23 +573,12 @@ Selects overflow behavior.
 
 ## `PanelTransform`
 
-Source:
-
-- [`PanelTransform.gs`](../../Goo/Style/PanelTransform.gs)
 
 Specifies one normalized 2D panel transform. Scale runs first, then skew, then rotation, then translation. Translation-only ancestor chains snap their combined translation to whole Window.PixelScale device pixels. Scale, rotation and skew retain sub-pixel precision and inherit any ancestor translation snapping.
 
 ### `Equals(PanelTransform)`
 
 Tests whether another transform has the same normalized components.
-
-### `op_Equality(PanelTransform,PanelTransform)`
-
-Tests two panel transforms for normalized component equality.
-
-### `op_Inequality(PanelTransform,PanelTransform)`
-
-Tests two panel transforms for normalized component inequality.
 
 ### `Rotate`
 
@@ -693,11 +614,6 @@ Gets or sets the vertical pixel or percentage translation. An explicit percentag
 
 ## `Percent`
 
-Source:
-
-- [`Length.gs`](../../Goo/Style/Length.gs)
-
-Creates a percentage of the available size. @param value percentage of the available size @returns a percentage length
 
 ### `Percent(float64)`
 
@@ -709,9 +625,6 @@ Returns: a percentage length
 
 ## `PositionType`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects relative, absolute, or static positioning; static ignores inset offsets.
 
@@ -723,9 +636,6 @@ Selects relative, absolute, or static positioning; static ignores inset offsets.
 
 ## `RadialGradient`
 
-Source:
-
-- [`Gradient.gs`](../../Goo/Style/Gradient.gs)
 
 Paints a circular gradient from a normalized center.
 
@@ -762,9 +672,6 @@ Gets the ordered color stops.
 
 ## `Scrollbar`
 
-Source:
-
-- [`Scrollbar.gs`](../../Goo/Style/Scrollbar.gs)
 
 Describes the presentation and interaction of one built-in scrollbar axis.
 
@@ -810,9 +717,6 @@ Gets the optional track element. It gets Hover while the pointer is over the scr
 
 ## `ScrollbarVisibility`
 
-Source:
-
-- [`Scrollbar.gs`](../../Goo/Style/Scrollbar.gs)
 
 Controls one built-in scrollbar axis.
 
@@ -824,9 +728,6 @@ Controls one built-in scrollbar axis.
 
 ## `Style`
 
-Source:
-
-- [`Style.gs`](../../Goo/Style/Style.gs)
 
 Collects ordered layout, paint, and text declarations. Use BasedOn to copy reusable declarations. G# object spread does not copy them.
 
@@ -1068,7 +969,7 @@ Sets added spacing between letters.
 
 ### `LineHeight`
 
-Sets the line-height multiplier.
+Sets line height to FontSize times LineHeight for Text and TextEditor. Font overflow remains above the first editor line and below the last. Inline slots may increase line height.
 
 ### `Margin`
 
@@ -1272,9 +1173,6 @@ Sets this element's stacking order among direct siblings.
 
 ## `TextAlign`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects horizontal text alignment. Start is the default and follows paragraph direction.
 
@@ -1288,9 +1186,6 @@ Selects horizontal text alignment. Start is the default and follows paragraph di
 
 ## `TextDecoration`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects the lines painted with text. Values can be combined.
 
@@ -1302,9 +1197,6 @@ Selects the lines painted with text. Values can be combined.
 
 ## `TextShadow`
 
-Source:
-
-- [`TextShadow.gs`](../../Goo/Style/TextShadow.gs)
 
 Specifies one immutable text shadow.
 
@@ -1326,9 +1218,6 @@ Gets the vertical offset in pixels.
 
 ## `TextTransform`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects invariant casing for static text.
 
@@ -1340,9 +1229,6 @@ Selects invariant casing for static text.
 
 ## `TextTrimming`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects how overflowing static text is trimmed.
 
@@ -1353,9 +1239,6 @@ Selects how overflowing static text is trimmed.
 
 ## `TextWrap`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects whether static text wraps at soft-wrap opportunities.
 
@@ -1366,9 +1249,6 @@ Selects whether static text wraps at soft-wrap opportunities.
 
 ## `TransitionProperty`
 
-Source:
-
-- [`TransitionProperty.gs`](../../Goo/Style/TransitionProperty.gs)
 
 Selects a style property that can interpolate during a transition.
 
@@ -1429,9 +1309,6 @@ Selects a style property that can interpolate during a transition.
 
 ## `Visibility`
 
-Source:
-
-- [`StyleEnums.gs`](../../Goo/Style/StyleEnums.gs)
 
 Selects whether an element and its descendants are visible and interactive.
 

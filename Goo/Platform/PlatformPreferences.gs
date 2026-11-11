@@ -10,6 +10,8 @@ public enum SystemTheme { Unknown; Light; Dark }
 
 /// Holds platform preferences independently of framebuffer density.
 /// Nil values mean the host cannot report that preference.
+/// Deconstruct returns Theme, ReducedMotion, HighContrast, TextScaleFactor, EventSoundsEnabled,
+/// AccentColor, AccentLight1, AccentLight2, AccentLight3, AccentDark1, AccentDark2, AccentDark3 and PreferredLocales.
 public data struct PlatformPreferences {
   private var theme SystemTheme
   private var reducedMotion bool?

@@ -65,7 +65,7 @@ It excludes the current handler itself; unrouted hover notifications report fals
 
 ## Route keyboard and focus callbacks
 
-TextEntry and TextEditor have built-in editing keys. No binding setup is needed. Tab and Shift+Tab move focus, except in an editable multiline editor, where they indent and outdent. Enter submits a single-line entry and inserts a newline in an editable multiline editor. Button activation still needs an explicit binding.
+Bind button activation explicitly. TextEntry and TextEditor provide editing keys and Tab behavior.
 
 ```gsharp
 controller.UseTabs = false
@@ -77,19 +77,12 @@ TextEditor(controller)
 
 Keys match physical `Key` values and exact `Modifiers`. Omitted modifiers mean none. The first matching binding on the nearest element wins. `Action` runs on press. `OnRelease` is paired with that press and runs only if the original target still owns focus, even if modifiers were released first. Changing focus, disabling, or removing the target cancels the pending release. `Repeat: true` repeats the action after 400 ms and then at 30 Hz while focus remains on the original target. It works on any focusable primitive and any key.
 
-Key press precedence is:
 
-1. Routed `OnKeyDown` handlers, from the focused node up to the root.
-2. `KeyBindings` on the focused node.
-3. Built-in text editing for a focused TextEntry or TextEditor.
-4. `KeyBindings` on ancestors.
-5. Built-in Tab and Shift+Tab focus traversal.
+Movement and deletion repeat. Clipboard, history, submit, Tab and Escape do not. Shift extends movement selection. Ctrl is the primary and word modifier on Windows and Linux. On macOS, Command is primary and Option moves or deletes words. Primary+A/C/X/V/Z selects all, copies, cuts, pastes and undoes. Primary+Shift+Z and Ctrl+Y redo.
 
-Any routed `OnKeyDown` handler, including an ancestor's handler, can call `PreventDefault()` to block bindings and built-in defaults. A root handler for app navigation keys must skip events while a text field has focus. Check `window.PlatformInput.Selection != nil`.
-
-An app-root Ctrl+A binding does not replace Select All in a focused text field. Override a field with its own binding or `OnKeyDown`. Existing app-root editing bindings do not run twice.
-
-Movement and deletion repeat. Clipboard, history, submit, Tab, and Escape do not. Shift extends movement selection. Ctrl is the primary and word modifier on Windows and Linux. On macOS, Command is primary and Option moves or deletes words. Primary+A/C/X/V/Z selects all, copies, cuts, pastes, and undoes. Primary+Shift+Z and Ctrl+Y redo. Escape cancels a drag, then composition, then a single-line edit.
+For a focused TextEntry or TextEditor, unmodified Escape cancels a drag, then
+composition, then a single-line edit. Other focusable controls need an explicit
+Escape binding for drag cancellation.
 
 `OnKeyDown` and `OnKeyUp` first bubble from the focused element through its parents. With no focused element they start at the root. Bindings and built-in defaults run after these callbacks. `KeyEvent.StopPropagation()` limits callbacks and binding lookup to the visited elements. `KeyEvent.PreventDefault()` skips bindings and built-in defaults and suppresses direct committed text from that key without stopping callbacks. A handled binding or default also suppresses its direct committed text. Preedit and IME commits remain text input. `KeyEvent.IsComposing` reports active preedit so callbacks can leave its keys to the IME. Bindings and defaults are skipped during preedit, except Escape can cancel it. Both controls expire after dispatch. Repeated callbacks report `Repeat: true`.
 
@@ -122,6 +115,28 @@ every affected logical line. `Outdent` removes leading mixed tab and space
 indentation through one indentation stop. A selected range ending at the next
 line's start excludes that next line. Each action is one undo step. Source tabs
 remain one character for selection, clipboard, caret, and hit testing. Single-line and read-only controls use focus traversal.
+
+Middle-click primary-selection paste and a text context menu are not supported.
+Triple-click in a TextEntry selects its whole value, not a wrapped visual line.
+
+Qualify each shared text control and native host. Carry unchanged evidence forward.
+Rerun affected fields and dialogs after a local change. Rerun the full checklist
+when editing, focus or dialog routing changes:
+
+| Check | Inputs |
+| --- | --- |
+| Insert and delete | Type, Backspace, Delete |
+| Move | Left, Right, Up, Down, PageUp, PageDown, Home, End, Ctrl+Home, Ctrl+End |
+| Move and delete words | Ctrl+Left, Ctrl+Right, Ctrl+Backspace, Ctrl+Delete |
+| Select | Shift+movement, Ctrl+A |
+| Clipboard | Ctrl+C, Ctrl+X, Ctrl+V |
+| History | Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y |
+| Submit and cancel | Enter, KeypadEnter, Escape |
+| Focus and indent | Tab, Shift+Tab |
+
+On macOS, use Command for primary shortcuts and Option for word movement and
+deletion. Check submit versus newline and focus traversal versus indentation.
+Also check IME composition, read-only fields, password fields and text direction.
 
 Call `window.PlatformInput.MoveFocus(true)` or `MoveFocus(false)` for explicit forward or backward traversal. For buttons, `ElementHandle.Activate()` performs a click. To show a held press and activate on release, bind `Action: () -> { handle.BeginPress() }` and `OnRelease: () -> { handle.EndPress(true) }`. `EndPress(false)` cancels the press. Focus loss, removal, and a canceled or failing key release clear the pressed state.
 
@@ -361,3 +376,11 @@ Keep one TransformGesture for combined pan, pinch and rotation.
 - SDL 3.4 cannot distinguish a normal trackpad end from native cancellation.
 
 
+
+## Position a custom IME
+
+A focused generic text client can call `ElementHandle.SetTextInputArea` with a
+finite, nonnegative logical-window rectangle. Goo floors the origin and ceils the
+far edge. It passes cursor offset zero to the native IME.
+The call returns false for unmounted, unfocused, built-in, closed-window,
+nonparticipating or native-IME-unavailable elements. Invalid and out-of-range rectangles throw.

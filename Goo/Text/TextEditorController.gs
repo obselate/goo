@@ -371,7 +371,7 @@ public class TextEditorController : IDisposable {
     }
   }
 
-  /// Changes the logical scroll target. The mounted editor clamps the request against measured lines at its next layout.
+  /// Requests a logical scroll target. The mounted editor retains the request until lines near the target are measured, then clamps against the measured extent.
   /// @param x The non-negative horizontal target.
   /// @param y The non-negative vertical target.
   public func ScrollTo(x float64, y float64) {

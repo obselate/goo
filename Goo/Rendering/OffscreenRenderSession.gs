@@ -32,7 +32,8 @@ public sealed class OffscreenRenderSession : IDisposable {
     threadId = Environment.CurrentManagedThreadId
   }
 
-  /// Renders a fresh page. The session remains usable while its source window has no presentation surface.
+  /// Renders a fresh page at the logical-to-pixel render scale, including fractional scales.
+  /// The session remains usable without its source window's presentation surface. Failed results retain the error detail.
   /// @param root Independent, unattached page content.
   /// @param options Logical viewport, output pixels, background and allocation limit.
   /// @param cancellation Cancels after in-flight GPU work is safe to release.

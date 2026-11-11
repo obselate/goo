@@ -130,7 +130,7 @@ Assign before Window.Open. Requires the optional Goo.Accessibility native runtim
       <summary>Gets the current image content version.</summary>
     </member>
     <member name="E:Goo.ImageSource.ContentChanged">
-      <summary>Occurs when the image content changes.</summary>
+      <summary>Never raised by immutable ImageSource. Satisfies ImageSourceProvider.</summary>
     </member>
     <member name="P:Goo.Style.ClipPathFillRule">
       <summary>Sets the fill rule used by ClipPath.</summary>
@@ -143,7 +143,7 @@ Assign before Window.Open. Requires the optional Goo.Accessibility native runtim
       <param name="program">The compiled shader effect program.</param>
       <param name="samplesBackdrop">Whether Goo copies the existing target behind the element for shader sampling.</param>
       <param name="backdropOutset">The finite nonnegative logical-pixel distance captured around the element, up to 256.</param>
-      <param name="backdropBlur">The Gaussian standard deviation in logical pixels. Positive values prefilter the backdrop at quarter resolution and capture at least three standard deviations around the element.</param>
+      <param name="backdropBlur">The finite Gaussian standard deviation in logical pixels, from 0 through 256/3. Nonzero blur requires samplesBackdrop. Positive values prefilter at quarter resolution and capture at least three standard deviations around the element.</param>
     </member>
     <member name="T:Goo.ShaderEffectProgram">
       <summary>Owns one immutable compiled shader effect program with backend-specific artifacts.</summary>

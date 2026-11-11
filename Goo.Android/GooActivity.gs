@@ -25,7 +25,7 @@ abstract class GooActivity : Activity {
         private set;
     }
 
-    /// <summary>Gets the Activity-owned system document picker and content URI stream service.</summary>
+    /// Gets the Activity-owned system document picker and content URI stream service.
     public prop Documents AndroidDocuments {
         get;
         private set;
@@ -35,9 +35,9 @@ abstract class GooActivity : Activity {
     protected prop GooView GooView -> view ??
         throw InvalidOperationException("The activity has not created its Goo view.")
 
-    /// Gets the result of forwarding the most recent Android activation.
     private var _lastActivationStatus ActivationPostStatus = ActivationPostStatus.NotInitialized
 
+    /// Gets the result of forwarding the most recent Android activation.
     prop LastActivationStatus ActivationPostStatus {
         get {
             return _lastActivationStatus

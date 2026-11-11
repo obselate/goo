@@ -4,11 +4,10 @@ import Facebook.Yoga
 
 /// Measures text without mounting nodes.
 public partial class Window {
-  /// Measures the width of a single-line Text with this content and style in this window.
-  /// The result matches the laid-out Text width: it applies the text scale preference and snaps to the window's pixel grid.
-  /// Reads FontFamily, Language, FontSize, FontWeight, FontStyle, LetterSpacing, TextTransform and Direction from style.
-  /// Unset fields use Goo defaults, not values inherited from parents. Line breaks are not applied.
-  /// Call on the window's UI thread, for example in Cell.Build. It reuses the font cache and allocates no glyph runs.
+  /// Measures single-line Text width in layout units on the window's UI thread.
+  /// Applies text scale and pixel-grid rounding. Line breaks are ignored.
+  /// Reads FontFamily, Language, FontSize, FontWeight, FontStyle, LetterSpacing, TextTransform and Direction.
+  /// Unset fields use Goo defaults, not parent inheritance.
   /// @param text The text to measure.
   /// @param style The text declarations. A Text blob is also a Style.
   /// @returns The width in layout pixels.

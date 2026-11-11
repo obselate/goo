@@ -1,7 +1,5 @@
 # Input API
 
-Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
-
 Source: [`Goo/Input`](../../Goo/Input)
 
 ## Observe window activity
@@ -71,7 +69,7 @@ It excludes the current handler itself; unrouted hover notifications report fals
 
 ## Route keyboard and focus callbacks
 
-TextEntry and TextEditor have built-in editing keys. No binding setup is needed. Tab and Shift+Tab move focus, except in an editable multiline editor, where they indent and outdent. Enter submits a single-line entry and inserts a newline in an editable multiline editor. Button activation still needs an explicit binding.
+Bind button activation explicitly. TextEntry and TextEditor provide editing keys and Tab behavior.
 
 ```gsharp
 controller.UseTabs = false
@@ -83,19 +81,12 @@ TextEditor(controller)
 
 Keys match physical `Key` values and exact `Modifiers`. Omitted modifiers mean none. The first matching binding on the nearest element wins. `Action` runs on press. `OnRelease` is paired with that press and runs only if the original target still owns focus, even if modifiers were released first. Changing focus, disabling, or removing the target cancels the pending release. `Repeat: true` repeats the action after 400 ms and then at 30 Hz while focus remains on the original target. It works on any focusable primitive and any key.
 
-Key press precedence is:
 
-1. Routed `OnKeyDown` handlers, from the focused node up to the root.
-2. `KeyBindings` on the focused node.
-3. Built-in text editing for a focused TextEntry or TextEditor.
-4. `KeyBindings` on ancestors.
-5. Built-in Tab and Shift+Tab focus traversal.
+Movement and deletion repeat. Clipboard, history, submit, Tab and Escape do not. Shift extends movement selection. Ctrl is the primary and word modifier on Windows and Linux. On macOS, Command is primary and Option moves or deletes words. Primary+A/C/X/V/Z selects all, copies, cuts, pastes and undoes. Primary+Shift+Z and Ctrl+Y redo.
 
-Any routed `OnKeyDown` handler, including an ancestor's handler, can call `PreventDefault()` to block bindings and built-in defaults. A root handler for app navigation keys must skip events while a text field has focus. Check `window.PlatformInput.Selection != nil`.
-
-An app-root Ctrl+A binding does not replace Select All in a focused text field. Override a field with its own binding or `OnKeyDown`. Existing app-root editing bindings do not run twice.
-
-Movement and deletion repeat. Clipboard, history, submit, Tab, and Escape do not. Shift extends movement selection. Ctrl is the primary and word modifier on Windows and Linux. On macOS, Command is primary and Option moves or deletes words. Primary+A/C/X/V/Z selects all, copies, cuts, pastes, and undoes. Primary+Shift+Z and Ctrl+Y redo. Escape cancels a drag, then composition, then a single-line edit.
+For a focused TextEntry or TextEditor, unmodified Escape cancels a drag, then
+composition, then a single-line edit. Other focusable controls need an explicit
+Escape binding for drag cancellation.
 
 `OnKeyDown` and `OnKeyUp` first bubble from the focused element through its parents. With no focused element they start at the root. Bindings and built-in defaults run after these callbacks. `KeyEvent.StopPropagation()` limits callbacks and binding lookup to the visited elements. `KeyEvent.PreventDefault()` skips bindings and built-in defaults and suppresses direct committed text from that key without stopping callbacks. A handled binding or default also suppresses its direct committed text. Preedit and IME commits remain text input. `KeyEvent.IsComposing` reports active preedit so callbacks can leave its keys to the IME. Bindings and defaults are skipped during preedit, except Escape can cancel it. Both controls expire after dispatch. Repeated callbacks report `Repeat: true`.
 
@@ -128,6 +119,28 @@ every affected logical line. `Outdent` removes leading mixed tab and space
 indentation through one indentation stop. A selected range ending at the next
 line's start excludes that next line. Each action is one undo step. Source tabs
 remain one character for selection, clipboard, caret, and hit testing. Single-line and read-only controls use focus traversal.
+
+Middle-click primary-selection paste and a text context menu are not supported.
+Triple-click in a TextEntry selects its whole value, not a wrapped visual line.
+
+Qualify each shared text control and native host. Carry unchanged evidence forward.
+Rerun affected fields and dialogs after a local change. Rerun the full checklist
+when editing, focus or dialog routing changes:
+
+| Check | Inputs |
+| --- | --- |
+| Insert and delete | Type, Backspace, Delete |
+| Move | Left, Right, Up, Down, PageUp, PageDown, Home, End, Ctrl+Home, Ctrl+End |
+| Move and delete words | Ctrl+Left, Ctrl+Right, Ctrl+Backspace, Ctrl+Delete |
+| Select | Shift+movement, Ctrl+A |
+| Clipboard | Ctrl+C, Ctrl+X, Ctrl+V |
+| History | Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y |
+| Submit and cancel | Enter, KeypadEnter, Escape |
+| Focus and indent | Tab, Shift+Tab |
+
+On macOS, use Command for primary shortcuts and Option for word movement and
+deletion. Check submit versus newline and focus traversal versus indentation.
+Also check IME composition, read-only fields, password fields and text direction.
 
 Call `window.PlatformInput.MoveFocus(true)` or `MoveFocus(false)` for explicit forward or backward traversal. For buttons, `ElementHandle.Activate()` performs a click. To show a held press and activate on release, bind `Action: () -> { handle.BeginPress() }` and `OnRelease: () -> { handle.EndPress(true) }`. `EndPress(false)` cancels the press. Focus loss, removal, and a canceled or failing key release clear the pressed state.
 
@@ -370,11 +383,16 @@ Keep one TransformGesture for combined pan, pinch and rotation.
 
 
 
+## Position a custom IME
+
+A focused generic text client can call `ElementHandle.SetTextInputArea` with a
+finite, nonnegative logical-window rectangle. Goo floors the origin and ceils the
+far edge. It passes cursor offset zero to the native IME.
+The call returns false for unmounted, unfocused, built-in, closed-window,
+nonparticipating or native-IME-unavailable elements. Invalid and out-of-range rectangles throw.
+
 ## `DoubleTapGesture`
 
-Source:
-
-- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
 
 Recognizes two completed direct-touch taps within 400 milliseconds and four logical units. Core defers the first ordinary click only where this recognizer is installed.
 
@@ -388,9 +406,6 @@ Creates isolated state for one routed interaction.
 
 ## `DragData`
 
-Source:
-
-- [`DragDrop.gs`](../../Goo/Input/DragDrop.gs)
 
 Holds the consumer-owned value, allowed effects and optional native representations.
 
@@ -407,7 +422,7 @@ Creates drag data with an optional native file representation.
 
 - `value`: consumer-owned payload retained for the drag lifetime
 - `allowedEffects`: effects that a target may select
-- `nativeFiles`: optional local file paths for a Wayland Copy offer when the pointer leaves the window
+- `nativeFiles`: optional absolute local file paths for a native Copy offer when the pointer leaves the window. NativeTransferCapabilities reports host support.
 
 ### `AllowedEffects`
 
@@ -427,9 +442,6 @@ Gets the consumer-owned payload.
 
 ## `DragEffect`
 
-Source:
-
-- [`DragDrop.gs`](../../Goo/Input/DragDrop.gs)
 
 Selects the effects allowed or accepted by a drag operation.
 
@@ -441,9 +453,6 @@ Selects the effects allowed or accepted by a drag operation.
 
 ## `DragEndEvent`
 
-Source:
-
-- [`DragDrop.gs`](../../Goo/Input/DragDrop.gs)
 
 Describes the terminal source callback for an in-app or native drag.
 
@@ -469,9 +478,6 @@ Gets Success for an accepted drop, Cancelled for cancellation, or the native fai
 
 ## `DragEndKind`
 
-Source:
-
-- [`DragDrop.gs`](../../Goo/Input/DragDrop.gs)
 
 Identifies how a drag operation ended.
 
@@ -482,9 +488,6 @@ Identifies how a drag operation ended.
 
 ## `DragEvent`
 
-Source:
-
-- [`DragDrop.gs`](../../Goo/Input/DragDrop.gs)
 
 Describes one callback in the lifetime of an accepting drop target.
 
@@ -530,9 +533,6 @@ Gets the pointer position in logical window coordinates.
 
 ## `DragEventKind`
 
-Source:
-
-- [`DragDrop.gs`](../../Goo/Input/DragDrop.gs)
 
 Identifies a drop-target lifecycle callback.
 
@@ -545,9 +545,6 @@ Identifies a drop-target lifecycle callback.
 
 ## `DragSource`
 
-Source:
-
-- [`DragDrop.gs`](../../Goo/Input/DragDrop.gs)
 
 Defines data creation and terminal notification for a drag source.
 
@@ -568,9 +565,6 @@ Gets the optional callback invoked after the operation terminates.
 
 ## `DragStartEvent`
 
-Source:
-
-- [`DragDrop.gs`](../../Goo/Input/DragDrop.gs)
 
 Describes the source position and input when an in-app drag begins.
 
@@ -600,9 +594,6 @@ Gets the pointer position in logical window coordinates.
 
 ## `DropTarget`
 
-Source:
-
-- [`DragDrop.gs`](../../Goo/Input/DragDrop.gs)
 
 Defines negotiation and lifecycle callbacks for an in-app drop target.
 
@@ -635,20 +626,8 @@ Gets whether this target blocks ancestor fallback when its query rejects a drag.
 
 ## `EnterAction`
 
-Source:
-
-- [`TextInputOptions.gs`](../../Goo/Input/TextInputOptions.gs)
 
 Selects the software keyboard's enter action.
-
-### Values
-
-- `Done`
-- `Go`
-- `Next`
-- `Search`
-- `Send`
-- `None`
 
 ### `Done`
 
@@ -676,9 +655,6 @@ Submits a message.
 
 ## `FocusEvent`
 
-Source:
-
-- [`KeyboardEvent.gs`](../../Goo/Input/KeyboardEvent.gs)
 
 Describes a non-cancelable focus lifecycle callback.
 
@@ -688,9 +664,6 @@ Stops this lifecycle event before the next ancestor callback. Focus has already 
 
 ## `FocusScope`
 
-Source:
-
-- [`FocusScope.gs`](../../Goo/Input/FocusScope.gs)
 
 Contains sequential keyboard focus until disposed or its root becomes unavailable. Nested scopes activate in opening order; dispose on the owning window's UI thread.
 
@@ -712,9 +685,6 @@ Gets this scope's opening order among overlapping scopes in this window.
 
 ## `FocusScopeOptions`
 
-Source:
-
-- [`FocusScope.gs`](../../Goo/Input/FocusScope.gs)
 
 Configures one mounted focus scope. The root must be focusable for empty-scope fallback.
 
@@ -736,9 +706,6 @@ Restores prior eligible focus on close unless focus has explicitly moved outside
 
 ## `FocusedEditorSnapshot`
 
-Source:
-
-- [`PlatformInput.gs`](../../Goo/Input/PlatformInput.gs)
 
 Captures FocusId, effective UTF-16 Text, SelectionStart, SelectionEnd, CompositionStart, CompositionEnd, IsPassword, IsMultiline, IsReadOnly, logical CaretArea, and optional InputOptions for one editor. Password text is available only to the trusted host, which must apply platform privacy rules.
 
@@ -748,22 +715,8 @@ Gets optional software keyboard and autofill hints.
 
 ## `GestureCancelReason`
 
-Source:
-
-- [`Gesture.gs`](../../Goo/Input/Gesture.gs)
 
 Explains why a gesture session did not complete normally.
-
-### Values
-
-- `None`
-- `LostArbitration`
-- `PointerCanceled`
-- `FocusLost`
-- `OwnerUnavailable`
-- `Replaced`
-- `Explicit`
-- `CallbackFailed`
 
 ### `CallbackFailed`
 
@@ -799,19 +752,8 @@ The owner's recognizer declarations changed.
 
 ## `GestureDecision`
 
-Source:
-
-- [`Gesture.gs`](../../Goo/Input/Gesture.gs)
 
 Selects the next arbitration operation without invoking application callbacks.
-
-### Values
-
-- `Pending`
-- `Accept`
-- `Recognize`
-- `Complete`
-- `Reject`
 
 ### `Accept`
 
@@ -835,9 +777,6 @@ Withdraws this session.
 
 ## `GestureInput`
 
-Source:
-
-- [`Gesture.gs`](../../Goo/Input/Gesture.gs)
 
 Provides callback-lifetime access to an owner's settled contact samples. Do not retain this object beyond GestureSession.Evaluate.
 
@@ -879,18 +818,8 @@ Gets the logical-window pointer anchor for a scale-only trackpad gesture.
 
 ## `GestureInputKind`
 
-Source:
-
-- [`Gesture.gs`](../../Goo/Input/Gesture.gs)
 
 Identifies the input transition evaluated by a gesture session.
-
-### Values
-
-- `Down`
-- `Move`
-- `Up`
-- `Deadline`
 
 ### `Deadline`
 
@@ -910,18 +839,8 @@ A contact was released, or a trackpad pinch ended.
 
 ## `GesturePhase`
 
-Source:
-
-- [`Gesture.gs`](../../Goo/Input/Gesture.gs)
 
 Identifies a gesture callback's lifecycle transition.
-
-### Values
-
-- `Started`
-- `Changed`
-- `Completed`
-- `Canceled`
 
 ### `Canceled`
 
@@ -941,17 +860,11 @@ The session acquired the interaction.
 
 ## `GesturePointer`
 
-Source:
-
-- [`Gesture.gs`](../../Goo/Input/Gesture.gs)
 
 Describes one contact with stable PointerId, Device, owner-local Position, logical WindowPosition and IsDown state. Up retains its contact through evaluation.
 
 ## `GestureRecognizer`
 
-Source:
-
-- [`Gesture.gs`](../../Goo/Input/Gesture.gs)
 
 Declares a reusable recognizer whose mutable state belongs to created sessions.
 
@@ -961,24 +874,13 @@ Creates a distinct session for one mounted owner and interaction.
 
 ## `GestureRotationResult`
 
-Source:
-
-- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
 
 Reports rotation Status and clockwise Radians. Read Radians only when Status is Available.
 
 ## `GestureRotationStatus`
 
-Source:
-
-- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
 
 Reports whether rotation data is available from this gesture source.
-
-### Values
-
-- `Available`
-- `Unsupported`
 
 ### `Available`
 
@@ -990,9 +892,6 @@ The platform supplies scale without rotation.
 
 ## `GestureSession`
 
-Source:
-
-- [`Gesture.gs`](../../Goo/Input/Gesture.gs)
 
 Evaluates input before core resolves ownership, then receives settled lifecycle notifications.
 
@@ -1010,16 +909,8 @@ Delivers a resolved transition. Every session receives exactly one terminal noti
 
 ## `GestureSource`
 
-Source:
-
-- [`Gesture.gs`](../../Goo/Input/Gesture.gs)
 
 Identifies whether samples are direct contacts or a scale-only trackpad gesture.
-
-### Values
-
-- `Touch`
-- `Trackpad`
 
 ### `Touch`
 
@@ -1031,22 +922,8 @@ Provides cumulative scale and a pointer anchor without contact samples.
 
 ## `InputPurpose`
 
-Source:
-
-- [`TextInputOptions.gs`](../../Goo/Input/TextInputOptions.gs)
 
 Selects the software keyboard's input purpose.
-
-### Values
-
-- `Text`
-- `Email`
-- `Url`
-- `Number`
-- `Decimal`
-- `Phone`
-- `Search`
-- `Password`
 
 ### `Decimal`
 
@@ -1082,9 +959,6 @@ Requests a URL.
 
 ## `Key`
 
-Source:
-
-- [`Key.gs`](../../Goo/Input/Key.gs)
 
 Identifies a physical keyboard key.
 
@@ -1215,9 +1089,6 @@ Identifies a physical keyboard key.
 
 ## `KeyBinding`
 
-Source:
-
-- [`KeyBinding.gs`](../../Goo/Input/KeyBinding.gs)
 
 Assigns callbacks to one exact physical key and modifier combination.
 
@@ -1243,9 +1114,6 @@ Enables repeated key downs while this key stays held and its target keeps focus.
 
 ## `KeyEvent`
 
-Source:
-
-- [`KeyboardEvent.gs`](../../Goo/Input/KeyboardEvent.gs)
 
 Describes a keyboard callback.
 
@@ -1275,9 +1143,6 @@ Reports whether this key down came from Goo key repeat.
 
 ## `KeyModifiers`
 
-Source:
-
-- [`KeyModifiers.gs`](../../Goo/Input/KeyModifiers.gs)
 
 Describes the modifier keys for one key press.
 
@@ -1299,9 +1164,6 @@ Reports whether Super is pressed.
 
 ## `LongPressGesture`
 
-Source:
-
-- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
 
 Recognizes a stationary direct-touch hold, then retains ownership until release or cancellation.
 
@@ -1315,9 +1177,6 @@ Creates isolated state for one routed interaction.
 
 ## `NativeDataDrop`
 
-Source:
-
-- [`NativeFileDrop.gs`](../../Goo/Input/NativeFileDrop.gs)
 
 Contains the allowed MIME formats and owned data for one native offer.
 
@@ -1335,9 +1194,6 @@ Gets whether final data is still unavailable.
 
 ## `NativeFileDrag`
 
-Source:
-
-- [`NativeFileDrag.gs`](../../Goo/Input/NativeFileDrag.gs)
 
 Owns local file paths for a native Copy offer while DragData.Value stays available to in-window targets.
 
@@ -1362,9 +1218,6 @@ Gets the validated, immutable local paths in their original order.
 
 ## `NativeFileDrop`
 
-Source:
-
-- [`NativeFileDrop.gs`](../../Goo/Input/NativeFileDrop.gs)
 
 Contains an owned external file list, or an empty preview before the host delivers paths.
 
@@ -1378,20 +1231,8 @@ Gets absolute file paths without reading file contents; the list survives the dr
 
 ## `NativeTransferCapabilities`
 
-Source:
-
-- [`NativeFileDrop.gs`](../../Goo/Input/NativeFileDrop.gs)
 
 Reports the native transfer operations supported by an open desktop window.
-
-### Values
-
-- `None`
-- `FileDrop`
-- `DropPreview`
-- `OutboundData`
-- `EffectNegotiation`
-- `DataDrop`
 
 ### `DataDrop`
 
@@ -1419,17 +1260,8 @@ The host can offer application data to other applications.
 
 ## `PanAxis`
 
-Source:
-
-- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
 
 Restricts pan recognition to both axes or one axis.
-
-### Values
-
-- `Both`
-- `Horizontal`
-- `Vertical`
 
 ### `Both`
 
@@ -1445,9 +1277,6 @@ Rejects predominantly horizontal movement before activation.
 
 ## `PanGesture`
 
-Source:
-
-- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
 
 Recognizes direct touch movement without adding scrolling or inertia policy.
 
@@ -1461,17 +1290,11 @@ Creates isolated state for one routed interaction.
 
 ## `PanGestureEvent`
 
-Source:
-
-- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
 
 Reports Phase, owner-local Position, WindowPosition, cumulative Translation, per-update Delta and cancellation Reason for a pan.
 
 ## `PlatformInput`
 
-Source:
-
-- [`PlatformInput.gs`](../../Goo/Input/PlatformInput.gs)
 
 Routes platform events and semantic editing through the window's existing input system. Call on the window owner thread. Use Window.Post to dispatch from another thread.
 
@@ -1591,9 +1414,6 @@ Gets the focused editor's effective selection, preserving endpoint affinities, o
 
 ## `PointerButton`
 
-Source:
-
-- [`PointerButton.gs`](../../Goo/Input/PointerButton.gs)
 
 Identifies the pointer button that changed for an input event.
 
@@ -1608,9 +1428,6 @@ Identifies the pointer button that changed for an input event.
 
 ## `PointerButtons`
 
-Source:
-
-- [`PointerButton.gs`](../../Goo/Input/PointerButton.gs)
 
 Identifies the pointer buttons held during an input event.
 
@@ -1625,9 +1442,6 @@ Identifies the pointer buttons held during an input event.
 
 ## `PointerDevice`
 
-Source:
-
-- [`PointerDevice.gs`](../../Goo/Input/PointerDevice.gs)
 
 Identifies the pointer device type that produced a pointer event.
 
@@ -1639,9 +1453,6 @@ Identifies the pointer device type that produced a pointer event.
 
 ## `PointerEvent`
 
-Source:
-
-- [`PointerEvent.gs`](../../Goo/Input/PointerEvent.gs)
 
 Describes a pointer input callback.
 
@@ -1711,41 +1522,26 @@ Gets the pointer position in logical window coordinates.
 
 ## `PressGestureEvent`
 
-Source:
-
-- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
 
 Reports Phase, owner-local Position, WindowPosition and cancellation Reason for a held press.
 
 ## `TapGestureEvent`
 
-Source:
-
-- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
 
 Reports a recognized double tap's owner-local Position and WindowPosition.
 
 ## `TextCandidateEvent`
 
-Source:
-
-- [`TextInputEvent.gs`](../../Goo/Input/TextInputEvent.gs)
 
 Describes one native IME candidate-list update with Candidates, SelectedCandidate, and Horizontal layout.
 
 ## `TextCompositionEvent`
 
-Source:
-
-- [`TextInputEvent.gs`](../../Goo/Input/TextInputEvent.gs)
 
 Describes transient IME composition Text and its selected UTF-16 SelectionStart and SelectionLength.
 
 ## `TextInputOptions`
 
-Source:
-
-- [`TextInputOptions.gs`](../../Goo/Input/TextInputOptions.gs)
 
 Supplies optional platform editing hints. Desktop hosts ignore these except entry password protection.
 
@@ -1767,9 +1563,6 @@ Gets the keyboard purpose. Defaults to Text.
 
 ## `TransformGesture`
 
-Source:
-
-- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
 
 Recognizes centroid pan, two-contact pinch and rotation as one exclusive interaction.
 
@@ -1783,17 +1576,11 @@ Creates isolated state for one routed interaction.
 
 ## `TransformGestureEvent`
 
-Source:
-
-- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
 
 Reports Phase, Source, owner-local Center, WindowCenter, cumulative Translation, cumulative Scale, typed Rotation and cancellation Reason.
 
 ## `WheelEvent`
 
-Source:
-
-- [`WheelEvent.gs`](../../Goo/Input/WheelEvent.gs)
 
 Describes a pointer wheel callback.
 

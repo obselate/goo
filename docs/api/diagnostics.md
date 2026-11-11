@@ -1,14 +1,11 @@
 # Diagnostics API
 
-Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
-
 Source: [`Goo/Diagnostics`](../../Goo/Diagnostics)
+
+See the [diagnostics protocol](../devtools/protocol.md) for counters and capture fields.
 
 ## `DevTools`
 
-Source:
-
-- [`DevTools.gs`](../../Goo/Diagnostics/DevTools.gs)
 
 Attaches Goo DevTools diagnostics to a window.
 

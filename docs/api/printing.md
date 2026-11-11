@@ -1,14 +1,9 @@
 # Printing API
 
-Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
-
 Source: [`Goo/Printing`](../../Goo/Printing)
 
 ## `IPrintDocument`
 
-Source:
-
-- [`PrintDocument.gs`](../../Goo/Printing/PrintDocument.gs)
 
 Supplies fresh page cells from a fixed document snapshot on the Goo owner thread.
 
@@ -22,25 +17,13 @@ Recomputes page breaks for paper settings. Page count must be positive on Ready.
 
 ## `PrintLayoutResult`
 
-Source:
-
-- [`PrintDocument.gs`](../../Goo/Printing/PrintDocument.gs)
 
 Pagination Status, PageCount and optional Error detail for the chosen paper settings.
 
 ## `PrintLayoutStatus`
 
-Source:
-
-- [`PrintDocument.gs`](../../Goo/Printing/PrintDocument.gs)
 
 Reports document pagination independently of export or spooler results.
-
-### Values
-
-- `Ready`
-- `Cancelled`
-- `Failed`
 
 ### `Cancelled`
 
@@ -56,39 +39,18 @@ The document can create the stated pages.
 
 ## `PrintPageSettings`
 
-Source:
-
-- [`PrintDocument.gs`](../../Goo/Printing/PrintDocument.gs)
 
 Physical WidthPoints and HeightPoints, margins LeftPoints, TopPoints, RightPoints and BottomPoints, and raster resolution DpiX and DpiY in dots per inch.
 
 ## `PrintResult`
 
-Source:
-
-- [`PrintDocument.gs`](../../Goo/Printing/PrintDocument.gs)
 
 A print Status with an optional native JobId and bounded Error detail.
 
 ## `PrintStatus`
 
-Source:
-
-- [`PrintDocument.gs`](../../Goo/Printing/PrintDocument.gs)
 
 Reports export completion or native submission. Submission does not mean physical printing finished.
-
-### Values
-
-- `Exported`
-- `Submitted`
-- `Cancelled`
-- `Unsupported`
-- `Busy`
-- `NotReady`
-- `BudgetExceeded`
-- `DeviceLost`
-- `Failed`
 
 ### `BudgetExceeded`
 
@@ -128,9 +90,6 @@ The platform print service or requested rendering is unavailable.
 
 ## `Printing`
 
-Source:
-
-- [`Printing.gs`](../../Goo/Printing/Printing.gs)
 
 Exports raster PDF pages or submits them through the platform print dialog.
 

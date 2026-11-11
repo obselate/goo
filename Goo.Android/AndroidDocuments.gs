@@ -15,51 +15,51 @@ import System.Threading
 import System.Threading.Tasks
 import AndroidUri = Android.Net.Uri
 
-/// <summary>Access requested or granted for an Android document URI.</summary>
+/// Access requested or granted for an Android document URI.
 @Flags
 public enum DocumentAccess {
-    /// <summary>No document access.</summary>
+    /// No document access.
     None = 0,
-    /// <summary>Read document contents.</summary>
+    /// Read document contents.
     Read = 1,
-    /// <summary>Replace document contents.</summary>
+    /// Replace document contents.
     Write = 2
 }
 
-/// <summary>The outcome of document stream or grant access.</summary>
+/// The outcome of document stream or grant access.
 public enum DocumentStatus {
-    /// <summary>The operation completed.</summary>
+    /// The operation completed.
     Success,
-    /// <summary>The operation was cancelled.</summary>
+    /// The operation was cancelled.
     Cancelled,
-    /// <summary>The URI or operation is not supported.</summary>
+    /// The URI or operation is not supported.
     Unsupported,
-    /// <summary>The provider denied access.</summary>
+    /// The provider denied access.
     Denied,
-    /// <summary>The document was not found.</summary>
+    /// The document was not found.
     NotFound,
-    /// <summary>The provider operation failed.</summary>
+    /// The provider operation failed.
     Failed
 }
 
-/// <summary>Hints for the Android system document picker.</summary>
+/// Hints for the Android system document picker.
 public sealed class DocumentPickerOptions {
-    /// <summary>Gets MIME filters. The default accepts all document types.</summary>
+    /// Gets MIME filters. The default accepts all document types.
     public prop MimeTypes IReadOnlyList[string] { get; init; }
 
-    /// <summary>Gets the suggested display name for a newly created document.</summary>
+    /// Gets the suggested display name for a newly created document.
     public prop SuggestedName string { get; init; }
 
-    /// <summary>Gets an optional content URI for the initial location.</summary>
+    /// Gets an optional content URI for the initial location.
     public prop InitialUri Uri? { get; init; }
 
-    /// <summary>Gets whether an open picker may return multiple documents.</summary>
+    /// Gets whether an open picker may return multiple documents.
     public prop Multiple bool { get; init; }
 
-    /// <summary>Gets requested access. The default is Read.</summary>
+    /// Gets requested access. The default is Read.
     public prop Access DocumentAccess { get; init; }
 
-    /// <summary>Creates default document picker hints.</summary>
+    /// Creates default document picker hints.
     public init() {
         MimeTypes = DefaultMimeTypes
         SuggestedName = ""
@@ -71,21 +71,21 @@ public sealed class DocumentPickerOptions {
     }
 }
 
-/// <summary>An owned URI selection and the access flags returned by the picker.</summary>
+/// An owned URI selection and the access flags returned by the picker.
 public sealed class DocumentPickerResult {
-    /// <summary>Gets the picker outcome.</summary>
+    /// Gets the picker outcome.
     public prop Status FileDialogStatus { get; }
 
-    /// <summary>Gets immutable content URI references. No filesystem paths are returned.</summary>
+    /// Gets immutable content URI references. No filesystem paths are returned.
     public prop Uris IReadOnlyList[Uri] { get; }
 
-    /// <summary>Gets returned read and write grant flags, not requested flags.</summary>
+    /// Gets returned read and write grant flags, not requested flags.
     public prop GrantedAccess DocumentAccess { get; }
 
-    /// <summary>Gets whether the returned grant supports explicit persistence.</summary>
+    /// Gets whether the returned grant supports explicit persistence.
     public prop CanPersist bool { get; }
 
-    /// <summary>Gets a bounded failure reason or an empty string.</summary>
+    /// Gets a bounded failure reason or an empty string.
     public prop Error string { get; }
 
     internal init(status FileDialogStatus, uris []?Uri = nil, access DocumentAccess = DocumentAccess.None,
@@ -103,15 +103,15 @@ public sealed class DocumentPickerResult {
     }
 }
 
-/// <summary>A caller-owned document stream or an explicit access failure.</summary>
+/// A caller-owned document stream or an explicit access failure.
 public sealed class DocumentStreamResult {
-    /// <summary>Gets the stream-open outcome.</summary>
+    /// Gets the stream-open outcome.
     public prop Status DocumentStatus { get; }
 
-    /// <summary>Gets the caller-owned stream only when Status is Success.</summary>
+    /// Gets the caller-owned stream only when Status is Success.
     public prop Stream Stream? { get; }
 
-    /// <summary>Gets a bounded failure reason or an empty string.</summary>
+    /// Gets a bounded failure reason or an empty string.
     public prop Error string { get; }
 
     internal init(status DocumentStatus, stream Stream? = nil, error string = "") {
@@ -125,12 +125,12 @@ public sealed class DocumentStreamResult {
     }
 }
 
-/// <summary>The outcome of an explicit document grant change.</summary>
+/// The outcome of an explicit document grant change.
 public sealed class DocumentOperationResult {
-    /// <summary>Gets the grant-change outcome.</summary>
+    /// Gets the grant-change outcome.
     public prop Status DocumentStatus { get; }
 
-    /// <summary>Gets a bounded failure reason or an empty string.</summary>
+    /// Gets a bounded failure reason or an empty string.
     public prop Error string { get; }
 
     internal init(status DocumentStatus, error string = "") {
@@ -143,7 +143,7 @@ public sealed class DocumentOperationResult {
     }
 }
 
-/// <summary>Owns the Activity's SAF picker, content URI streams and explicit persisted grants.</summary>
+/// Owns the Activity's SAF picker, content URI streams and explicit persisted grants.
 public sealed class AndroidDocuments {
     private let owner Activity
     private let context Context
@@ -171,11 +171,11 @@ public sealed class AndroidDocuments {
         resolver = context.ContentResolver!!
     }
 
-    /// <summary>Launches the system document picker on the Activity's main thread.</summary>
-    /// <param name="kind">OpenFile, SaveFile or Folder. SaveFile creates a new document.</param>
-    /// <param name="options">MIME filters, content URI location and requested access.</param>
-    /// <param name="cancellation">Cancels this request without persisting its URI grants.</param>
-    /// <returns>Owned URI references and the access flags actually returned by Android.</returns>
+    /// Launches the system document picker on the Activity's main thread.
+    /// @param kind OpenFile, SaveFile or Folder. SaveFile creates a new document.
+    /// @param options MIME filters, content URI location and requested access.
+    /// @param cancellation Cancels this request without persisting its URI grants.
+    /// @returns Owned URI references and the access flags actually returned by Android.
     public func ShowPickerAsync(kind FileDialogKind, options DocumentPickerOptions? = nil,
         cancellation CancellationToken = default(CancellationToken)) Task[DocumentPickerResult] {
         RequireMainThread()
@@ -296,17 +296,17 @@ public sealed class AndroidDocuments {
         handler.RemoveCallbacksAndMessages(nil)
     }
 
-    /// <summary>Opens a caller-owned content stream off the UI thread. A tree root has no byte stream.</summary>
-    /// <param name="uri">The content URI to read. No path conversion occurs.</param>
-    /// <param name="cancellation">Cancels before opening or discards a stream opened after cancellation.</param>
-    /// <returns>An explicit result and, on success, a caller-owned stream.</returns>
+    /// Opens a caller-owned content stream off the UI thread. A tree root has no byte stream.
+    /// @param uri The content URI to read. No path conversion occurs.
+    /// @param cancellation Cancels before opening or discards a stream opened after cancellation.
+    /// @returns An explicit result and, on success, a caller-owned stream.
     public func OpenReadAsync(uri Uri, cancellation CancellationToken = default(CancellationToken))
         Task[DocumentStreamResult] -> OpenAsync(uri, false, cancellation)
 
-    /// <summary>Opens whole-document replacement with truncation off the UI thread.</summary>
-    /// <param name="uri">The writable content URI. A tree root has no byte stream.</param>
-    /// <param name="cancellation">Cancels before opening or discards a stream opened after cancellation.</param>
-    /// <returns>An explicit result and, on success, a caller-owned stream.</returns>
+    /// Opens whole-document replacement with truncation off the UI thread.
+    /// @param uri The writable content URI. A tree root has no byte stream.
+    /// @param cancellation Cancels before opening or discards a stream opened after cancellation.
+    /// @returns An explicit result and, on success, a caller-owned stream.
     public func OpenWriteAsync(uri Uri, cancellation CancellationToken = default(CancellationToken))
         Task[DocumentStreamResult] -> OpenAsync(uri, true, cancellation)
 
@@ -347,17 +347,17 @@ public sealed class AndroidDocuments {
         })
     }
 
-    /// <summary>Explicitly persists URI access that the provider granted as persistable.</summary>
-    /// <param name="uri">The granted content URI.</param>
-    /// <param name="access">The returned Read and Write bits to retain.</param>
-    /// <returns>Success or an explicit grant failure. No persistence is automatic.</returns>
+    /// Explicitly persists URI access that the provider granted as persistable.
+    /// @param uri The granted content URI.
+    /// @param access The returned Read and Write bits to retain.
+    /// @returns Success or an explicit grant failure. No persistence is automatic.
     public func PersistAccess(uri Uri, access DocumentAccess) DocumentOperationResult ->
         ChangeAccess(uri, access, false)
 
-    /// <summary>Releases the specified persisted URI access without deleting the document.</summary>
-    /// <param name="uri">The persisted content URI.</param>
-    /// <param name="access">The persisted Read and Write bits to release.</param>
-    /// <returns>Success or an explicit grant failure.</returns>
+    /// Releases the specified persisted URI access without deleting the document.
+    /// @param uri The persisted content URI.
+    /// @param access The persisted Read and Write bits to release.
+    /// @returns Success or an explicit grant failure.
     public func ReleaseAccess(uri Uri, access DocumentAccess) DocumentOperationResult -> ChangeAccess(uri, access, true)
 
     private func ChangeAccess(uri Uri, access DocumentAccess, release bool) DocumentOperationResult {

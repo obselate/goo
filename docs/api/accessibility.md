@@ -1,7 +1,5 @@
 # Accessibility API
 
-Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
-
 Source: [`Goo/Accessibility`](../../Goo/Accessibility)
 
 ## Use accessibility semantics
@@ -64,15 +62,11 @@ objects; reopening the same window creates a new native binding. Replacing the
 adapter detaches it. A native replacement must be assigned while the window is
 closed. `Dispose` detaches and permanently disables the adapter. After the window
 has opened, these operations and `Update` require its owner UI thread. Embedded
-hosts supply their own adapter. Existing custom adapters remain supported.
+hosts supply their own adapter.
 
-Native callbacks copy action data and post to the window. Removed nodes, stale
-text ranges, unsupported actions, disabled controls, and modal-blocked windows
-cannot receive those actions. Native node IDs remain stable until the Goo node
-is removed. Updates emit only changed nodes, their text runs, and changed parent
-child lists. The bridge creates no native objects or per-frame work when unused.
-The native runtime remains loaded for the process lifetime because macOS installs
-focus forwarding on the host window class.
+Native actions post to the owner UI thread. Removed nodes, stale text ranges,
+unsupported actions, disabled controls and modal-blocked windows reject actions.
+Native node IDs stay stable until removal.
 
 Names, roles, states, live regions, relations, focus, numeric values, scroll
 ranges, text, selection, and caret map from the retained tree. Selected list
@@ -115,9 +109,6 @@ but do not expose them through native table interfaces.
 
 ## `Accessibility`
 
-Source:
-
-- [`Accessibility.gs`](../../Goo/Accessibility/Accessibility.gs)
 
 Defines accessibility data for a Blob without selecting a platform backend.
 
@@ -251,9 +242,6 @@ Gets the string value.
 
 ## `AccessibilityAction`
 
-Source:
-
-- [`Accessibility.gs`](../../Goo/Accessibility/Accessibility.gs)
 
 Selects a command routed from an accessibility adapter.
 
@@ -275,9 +263,6 @@ Selects a command routed from an accessibility adapter.
 
 ## `AccessibilityActionRequest`
 
-Source:
-
-- [`Accessibility.gs`](../../Goo/Accessibility/Accessibility.gs)
 
 Carries optional data for one accessibility action request.
 
@@ -345,9 +330,6 @@ Gets text supplied for SetValue.
 
 ## `AccessibilityAdapter`
 
-Source:
-
-- [`Accessibility.gs`](../../Goo/Accessibility/Accessibility.gs)
 
 Receives retained semantic-tree updates from a Window.
 
@@ -359,9 +341,6 @@ Receives the current mutable retained semantic tree on the UI thread.
 
 ## `AccessibilityChecked`
 
-Source:
-
-- [`Accessibility.gs`](../../Goo/Accessibility/Accessibility.gs)
 
 Describes a checkable widget state.
 
@@ -374,17 +353,11 @@ Describes a checkable widget state.
 
 ## `AccessibilityId`
 
-Source:
-
-- [`Accessibility.gs`](../../Goo/Accessibility/Accessibility.gs)
 
 Identifies one semantic node by its stable Value for one mounted Window lifetime.
 
 ## `AccessibilityLive`
 
-Source:
-
-- [`Accessibility.gs`](../../Goo/Accessibility/Accessibility.gs)
 
 Selects the announcement priority for a live region.
 
@@ -396,9 +369,6 @@ Selects the announcement priority for a live region.
 
 ## `AccessibilityNode`
 
-Source:
-
-- [`Accessibility.gs`](../../Goo/Accessibility/Accessibility.gs)
 
 Represents one retained semantic node. Adapters may retain this mutable view.
 
@@ -580,9 +550,6 @@ Gets the conservatively clipped window logical bounds, or nil when outside the v
 
 ## `AccessibilityOrientation`
 
-Source:
-
-- [`Accessibility.gs`](../../Goo/Accessibility/Accessibility.gs)
 
 Selects a widget orientation.
 
@@ -594,9 +561,6 @@ Selects a widget orientation.
 
 ## `AccessibilityRelationshipIds`
 
-Source:
-
-- [`Accessibility.gs`](../../Goo/Accessibility/Accessibility.gs)
 
 Reports resolved relationship IDs for one retained semantic node.
 
@@ -630,9 +594,6 @@ Gets owned targets in declaration order.
 
 ## `AccessibilityRelationships`
 
-Source:
-
-- [`Accessibility.gs`](../../Goo/Accessibility/Accessibility.gs)
 
 Defines stable mounted-element relationships for one semantic declaration.
 
@@ -670,9 +631,6 @@ Gets or sets the elements owned by this element.
 
 ## `AccessibilityRole`
 
-Source:
-
-- [`Accessibility.gs`](../../Goo/Accessibility/Accessibility.gs)
 
 Selects the semantic role exposed to an accessibility adapter.
 
@@ -715,10 +673,6 @@ Selects the semantic role exposed to an accessibility adapter.
 - `SearchBox`
 - `Status`
 - `Custom`
-- `Separator`
-- `TabPanel`
-- `Toolbar`
-- `Tooltip`
 
 ### `Separator`
 
@@ -738,9 +692,6 @@ Contextual help for another element.
 
 ## `AccessibilityScrollInfo`
 
-Source:
-
-- [`Accessibility.gs`](../../Goo/Accessibility/Accessibility.gs)
 
 Reports logical scroll offsets, targets, limits, and viewport dimensions.
 
@@ -778,9 +729,6 @@ Gets the current vertical offset.
 
 ## `AccessibilityTree`
 
-Source:
-
-- [`Accessibility.gs`](../../Goo/Accessibility/Accessibility.gs)
 
 Represents the retained semantic tree delivered to an AccessibilityAdapter.
 
@@ -794,9 +742,6 @@ Gets the monotonic version for retained-tree mutations.
 
 ## `AccessibilityValue`
 
-Source:
-
-- [`Accessibility.gs`](../../Goo/Accessibility/Accessibility.gs)
 
 Describes one range value exposed by a semantic widget.
 
@@ -822,13 +767,6 @@ Gets the localized value text, when one exists.
 
 ## `NativeAccessibilityAdapter`
 
-Sources:
-
-- [`NativeAccessibilityActions.gs`](../../Goo/Accessibility/Native/NativeAccessibilityActions.gs)
-- [`NativeAccessibilityAdapter.gs`](../../Goo/Accessibility/Native/NativeAccessibilityAdapter.gs)
-- [`NativeAccessibilityText.Geometry.gs`](../../Goo/Accessibility/Native/NativeAccessibilityText.Geometry.gs)
-- [`NativeAccessibilityText.gs`](../../Goo/Accessibility/Native/NativeAccessibilityText.gs)
-- [`NativeAccessibilityTree.gs`](../../Goo/Accessibility/Native/NativeAccessibilityTree.gs)
 
 Publishes a desktop window to AT-SPI, UI Automation, or macOS Accessibility through AccessKit. Assign before Window.Open. Requires the optional Goo.Accessibility native runtime package.
 
