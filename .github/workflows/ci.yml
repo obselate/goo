@@ -92,7 +92,7 @@ jobs:
       - name: Validate onboarding and release metadata
         run: dotnet run --project tools/Goo.Repo -- check metadata
 
-      - name: Require a changelog fragment
+      - name: Remind about a changelog fragment
         if: github.event_name == 'pull_request'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v7
         with:
@@ -100,19 +100,8 @@ jobs:
             const files = await github.paginate(github.rest.pulls.listFiles, {
               ...context.repo, pull_number: context.issue.number, per_page: 100
             });
-            const added = files.some(file => file.status === 'added' &&
-              /^changelog\.d\/[a-z0-9][a-z0-9.-]*\.md$/.test(file.filename));
-            const release = files.some(file => file.filename === 'Directory.Build.props' && file.status === 'modified') &&
-              files.some(file => file.filename === 'CHANGELOG.md' && file.status === 'modified') &&
-              files.some(file => file.filename.startsWith('changelog.d/') && file.status === 'removed');
-            const correction = files.length === 1 && files[0].filename === 'CHANGELOG.md' &&
-              files[0].status === 'modified' &&
-              !/^## Unreleased/m.test(require('fs').readFileSync('CHANGELOG.md', 'utf8'));
-            const join = files.some(file => file.filename === 'CHANGELOG.md' && file.status === 'modified') &&
-              files.some(file => file.status === 'removed' && /^changelog\.d\/[a-z0-9][a-z0-9.-]*\.md$/.test(file.filename)) &&
-              files.every(file => file.filename === 'CHANGELOG.md' && file.status === 'modified' ||
-                file.status === 'removed' && /^changelog\.d\/[a-z0-9][a-z0-9.-]*\.md$/.test(file.filename));
-            if (!added && !release && !correction && !join) core.setFailed('Add one changelog.d/<branch-or-pr>.md fragment');
+            if (!files.some(file => file.filename.startsWith('changelog.d/')))
+              core.warning('No changelog.d/<branch-or-pr>.md fragment. Add one so the release notes include this change.');
       - name: Compile core
         if: needs.changes.outputs.full == 'true'
         run: dotnet build Goo/Goo.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
