@@ -65,7 +65,8 @@ public partial class Window {
         )
         let creation = OffscreenRenderSession.Create()
         using let session = creation.Session ?? throw InvalidOperationException("Offscreen renderer: " + creation.Error)
-        session.Foreground = Foreground
+        this.root = root
+        session.RenderWindow = this
         using let cancellation = CancellationTokenSource(TimeSpan.FromSeconds(30))
         let pending = session.RenderAsync(root, options, cancellation.Token)
         while !pending.IsCompleted {

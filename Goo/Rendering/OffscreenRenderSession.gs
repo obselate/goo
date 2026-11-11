@@ -11,7 +11,7 @@ public sealed class OffscreenRenderSession : IDisposable {
   private let closed CancellationToken
   private let threadId int32
   private var disposed bool
-  internal var Foreground Color = Color.Black
+  internal var RenderWindow Window?
 
   shared {
     /// Creates a renderer without a native window or presentation surface.
@@ -45,7 +45,7 @@ public sealed class OffscreenRenderSession : IDisposable {
       requireThread()
       if root == nil { throw ArgumentNullException("root") }
       validateOffscreenOptions(options)
-      return target.RenderOffscreenAsync(root, options, cancellation, closed, reusable, Foreground)
+      return target.RenderOffscreenAsync(root, options, cancellation, closed, reusable, RenderWindow)
     }
 
   /// Consumes completed GPU work and starts a queued page without presenting a native window.
