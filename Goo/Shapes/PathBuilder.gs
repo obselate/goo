@@ -4,6 +4,7 @@ import System
 import System.Collections.Generic
 
 /// Builds an immutable vector path from drawing commands.
+/// Drawing commands and Reset return this builder.
 public class PathBuilder {
   private let commands List[VectorPathCommand]
   private let viewBoxX float64
