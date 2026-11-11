@@ -1,6 +1,7 @@
 package Goo.PluginMcp
 
 import System
+import System.Collections.Concurrent
 import System.Collections.Generic
 import System.IO
 import System.Linq
@@ -9,9 +10,194 @@ import System.Text
 import System.Text.Json
 import System.Text.Json.Nodes
 import System.Text.RegularExpressions
+import System.Xml
+import System.Xml.Linq
 
 partial class GooServer {
-    private data class SearchHit(Exact bool, Score int32, Result JsonObject) { }
+    private data class SearchUnit(
+        Path string,
+        Hash string,
+        Id string,
+        Heading string,
+        Parent string,
+        Start int32,
+        End int32,
+        Text string,
+        Summary string,
+        Words Dictionary[string, int32],
+        Names HashSet[string]
+    ) { }
+
+    private data class IndexedDocument(
+        Modified int64,
+        Length int64,
+        AssemblyModified int64,
+        AssemblyLength int64,
+        Units[]SearchUnit
+    ) { }
+    private let Index ConcurrentDictionary[string, IndexedDocument] = ConcurrentDictionary[string, IndexedDocument](
+        StringComparer.Ordinal
+    )
+
+    func Units(path string, filename string)[]SearchUnit {
+        let file = FileInfo(filename)
+        let assembly = FileInfo(Path.ChangeExtension(filename, ".dll"))
+        let assemblyModified = if assembly.Exists {
+            assembly.LastWriteTimeUtc.Ticks
+        } else {
+            0L
+        }
+        let assemblyLength = if assembly.Exists {
+            assembly.Length
+        } else {
+            0L
+        }
+        if Index.TryGetValue(filename, out var cached) &&
+            cached.Modified == file
+            .LastWriteTimeUtc
+            .Ticks &&
+            cached.Length == file.Length &&
+            cached.AssemblyModified == assemblyModified &&
+            cached.AssemblyLength == assemblyLength {
+            return cached.Units
+        }
+        let bytes = File.ReadAllBytes(filename)
+        let digest = Hash(bytes)
+        let result = List[SearchUnit]()
+        if path.EndsWith(".xml", StringComparison.Ordinal) {
+            let declarations = Declarations(filename)
+            let xml = XDocument.Parse(
+                Encoding.UTF8.GetString(bytes),
+                LoadOptions.SetLineInfo | LoadOptions.PreserveWhitespace
+            )
+            for member in xml.Descendants("member") {
+                let name = member.Attribute("name")?.Value ?? ""
+                let summary = XmlText(member.Element("summary"))
+                let declaration = if declarations.TryGetValue(name, out var signature) {
+                    signature
+                } else {
+                    "Declaration unavailable"
+                }
+                let body = StringBuilder(name + "\n\n" + declaration + "\n\n" + summary)
+                for child in member.Elements().Where(x -> x.Name.LocalName != "summary") {
+                    body.Append("\n\n").Append(child.Name.LocalName)
+                    let parameter = child.Attribute("name")?.Value ?? ""
+                    if parameter != "" {
+                        body.Append(" ").Append(parameter)
+                    }
+                    body.Append(": ").Append(XmlText(child))
+                }
+                let text = body.ToString()
+                let start = IXmlLineInfo(member).LineNumber
+                result.Add(
+                    SearchUnit(
+                        path,
+                        digest,
+                        name,
+                        name,
+                        "",
+                        start,
+                        start + Lines(member.ToString(SaveOptions.DisableFormatting)).Length - 1,
+                        text,
+                        summary,
+                        WordCounts(text),
+                        HashSet[string](Words(name))
+                    )
+                )
+            }
+        } else {
+            let lines = Lines(Encoding.UTF8.GetString(bytes))
+            let starts = List[int32](){0}
+            var fence = ""
+            for i in 0 ... lines.Length {
+                let trimmed = lines[i].TrimStart()
+                if trimmed.StartsWith("```") || trimmed.StartsWith("~~~") {
+                    let marker = trimmed.Substring(0, 3)
+                    fence = if fence == marker {
+                        ""
+                    } else if fence == "" {
+                        marker
+                    } else {
+                        fence
+                    }
+                }
+                if fence == "" && i > 0 && Regex.IsMatch(lines[i], "^#{1,6} ") {
+                    starts.Add(i)
+                }
+            }
+            starts.Add(lines.Length)
+            var parent = ""
+            for i in 0 ... (starts.Count - 1) {
+                let start = starts[i]
+                var end = starts[i + 1]
+                let depth = if start < lines.Length {
+                    Regex.Match(lines[start], "^#{1,6}(?= )").Length
+                } else {
+                    0
+                }
+                if depth == 1 {
+                    end = lines.Length
+                }
+                if depth >= 2 {
+                    for next in(i + 1) ... (starts.Count - 1) {
+                        let nextDepth = Regex.Match(lines[starts[next]], "^#{1,6}(?= )").Length
+                        if nextDepth <= depth {
+                            break
+                        }
+                        end = starts[next + 1]
+                    }
+                }
+                let heading = if start < lines.Length {
+                    lines[start]
+                } else {
+                    ""
+                }
+                if heading.StartsWith("## ") {
+                    parent = heading
+                }
+                let context = if heading.StartsWith("###") {
+                    parent
+                } else {
+                    ""
+                }
+                let text = string.Join("\n", lines.Skip(start).Take(end - start))
+                let summary = lines
+                    .Skip(start + 1)
+                    .Take(Math.Max(0, end - start - 1))
+                    .FirstOrDefault(
+                    x -> x.Trim() != "" && !x.StartsWith("```") && !x.StartsWith("Source:") && !x.StartsWith(
+                        "Sources:"
+                    ) &&
+                        !x.StartsWith("- [")
+                ) ??
+                    ""
+                result.Add(
+                    SearchUnit(
+                        path,
+                        digest,
+                        digest.Substring(0, 12) + ":" + (start + 1).ToString(),
+                        heading,
+                        context,
+                        start + 1,
+                        end,
+                        text,
+                        summary,
+                        WordCounts(context + "\n" + text),
+                        HashSet[string](Words(context + "\n" + heading))
+                    )
+                )
+            }
+        }
+        let units = result.ToArray()
+        Index[filename] = IndexedDocument(
+            file.LastWriteTimeUtc.Ticks,
+            file.Length,
+            assemblyModified,
+            assemblyLength,
+            units
+        )
+        return units
+    }
 
     func Search(a JsonObject) JsonObject {
         let query = S(a, "query")
@@ -22,105 +208,80 @@ partial class GooServer {
             "Supply a query of 1-256 characters and a limit of 1-20"
         )
         let root = Source(S(a, "repository"))
-        let matches = List[SearchHit]()
+        let packages = PackageDocuments(S(a, "project"))
+        let units = List[SearchUnit]()
         for relative in Documents(root).Where(x -> x.EndsWith(".md")) {
-            let bytes = File.ReadAllBytes(Document(root, relative))
-            let digest = Hash(bytes)
-            let lines = Lines(Encoding.UTF8.GetString(bytes))
-            let starts = List[int32](){0}
-            for i in 1 ... lines.Length {
-                if lines[i].StartsWith("## ") {
-                    starts.Add(i)
-                }
-            }
-            starts.Add(lines.Length)
-            for section in 0 ... (starts.Count - 1) {
-                let start = starts[section]
-                let end = starts[section + 1]
-                let folded = Fold(string.Join("\n", lines.Skip(start).Take(end - start)))
-                let matched = terms.Where(term -> folded.Contains(term)).ToArray()
-                if matched.Length == 0 {
-                    continue
-                }
-                let heading = if start < lines.Length {
-                    lines[start]
-                } else {
-                    ""
-                }
-                let headingFolded = Fold(heading)
-                var bestCount = -1
-                var bestWeight = -1
-                var hit = start
-                for index in start ... end {
-                    let line = Fold(lines[index])
-                    let found = matched.Where(term -> line.Contains(term)).ToArray()
-                    let weight = found.Sum(term -> terms.Count - terms.IndexOf(term))
-                    if found.Length > bestCount || found.Length == bestCount && weight > bestWeight {
-                        bestCount = found.Length
-                        bestWeight = weight
-                        hit = index
+            let documentUnits = Units(relative, Document(root, relative))
+            units.AddRange(documentUnits.Where(x -> !x.Heading.StartsWith("# ") || documentUnits.Length == 1))
+        }
+        for entry in packages {
+            units.AddRange(Units(entry.Key, entry.Value))
+        }
+        let frequencies = terms.ToDictionary(term -> term, term -> units.Count(x -> x.Words.ContainsKey(term)))
+        let average = if units.Count > 0 {
+            Math.Max(1.0, units.Average(x -> double(x.Words.Values.Sum())))
+        } else {
+            1.0
+        }
+        let ranked = units
+            .Select(
+            unit -> {
+                var score = 0.0
+                var matched = 0
+                let length = unit.Words.Values.Sum()
+                for term in terms {
+                    if !unit.Words.TryGetValue(term, out var count) {
+                        continue
+                    }
+                    matched++
+                    let idf = Math.Log(1 + (units.Count - frequencies[term] + 0.5) / (frequencies[term] + 0.5))
+                    score += idf * count * 2.2 / (count + 1.2 * (0.25 + 0.75 * length / average))
+                    if unit.Names.Contains(term) {
+                        score += idf * 0.4
                     }
                 }
-                var score = matched.Length * 100 + bestCount * 50 + matched.Count(
-                    term -> headingFolded.Contains(term)
-                ) * 20
-                for term in matched {
-                    score += Math.Min((folded.Length - folded.Replace(term, "").Length) / term.Length, 5)
+                score *= Math.Pow(double(matched) / terms.Count, 2)
+                if terms.Count >= 4 && unit.Heading.StartsWith("#") && !unit.Heading.Contains('`') {
+                    score *= 2
                 }
-                let excerpt = string.Join(
-                    "\n",
-                    lines.Skip(Math.Max(start, hit - 2)).Take(Math.Min(end, hit + 18) - Math.Max(start, hit - 2))
-                )
-                matches.Add(
-                    SearchHit(
-                        matched.Length == terms.Count,
-                        score,
-                        JsonObject(){
-                            ["path"] = relative,
-                            ["section"] = heading,
-                            ["line"] = hit + 1,
-                            ["sha256"] = digest,
-                            ["matchedTerms"] = Strings(matched),
-                            ["missingTerms"] = Strings(terms.Where(term -> !folded.Contains(term))),
-                            ["coverage"] = Math.Round(double(matched.Length) / terms.Count, 3),
-                            ["excerpt"] = excerpt.Substring(0, Math.Min(600, excerpt.Length))
-                        }
-                    )
-                )
+                if terms.All(term -> unit.Names.Contains(term)) &&
+                    (terms.Count == 1 || Regex.IsMatch(query, "[A-Z][a-zA-Z]+[A-Z]|[.]")) {
+                    score += 12
+                }
+                return (Unit: unit, Score: score)
             }
-        }
-        let exact = matches.Where(x -> x.Exact).ToArray()
-        let frequencies = terms.ToDictionary(
-            term -> term,
-            term -> matches.Count(x -> x.Result["matchedTerms"]!!.AsArray().Any(t -> t.GetValue[string]() == term))
         )
-        let selected = if exact.Length > 0 {
-            exact
-        } else {
-            matches.ToArray()
-        }
+            .Where(x -> x.Score > 0)
+            .OrderByDescending(x -> x.Score)
+            .ThenBy(x -> x.Unit.Path, StringComparer.Ordinal)
+            .ThenBy(x -> x.Unit.Start)
+            .ToArray()
         let results = JsonArray()
-        for item in selected
-            .OrderByDescending(
-            x -> x.Result["matchedTerms"]!!.AsArray().Sum(t -> 1000.0 / frequencies[t.GetValue[string]()])
-        )
-            .ThenByDescending(x -> x.Score)
-            .ThenBy(x -> S(x.Result, "path"), StringComparer.Ordinal)
-            .ThenBy(x -> I(x.Result, "line"))
-            .Take(int32(limit)) {
-            results.Add(item.Result)
+        for item in ranked.Take(int32(limit)) {
+            let unit = item.Unit
+            let summary = Regex.Replace(unit.Summary, "\\s+", " ").Trim()
+            results.Add(
+                JsonObject(){
+                    ["path"] = unit.Path,
+                    ["section"] = unit.Heading,
+                    ["section_id"] = unit.Id,
+                    ["line"] = unit.Start,
+                    ["endLine"] = unit.End,
+                    ["sha256"] = unit.Hash,
+                    ["summary"] = summary.Substring(0, Math.Min(180, summary.Length))
+                }
+            )
         }
         return JsonObject(){
             ["source"] = root,
             ["queryTerms"] = Strings(terms),
-            ["mode"] = if exact.Length > 0 {
-                "exact"
-            } else if matches.Count > 0 {
-                "relaxed"
-            } else {
+            ["mode"] = if ranked.Length == 0 {
                 "none"
+            } else {
+                "ranked"
             },
-            ["total"] = selected.Length,
+            ["total"] = ranked.Length,
+            ["packages"] = PackageStatus(packages),
             ["results"] = results
         }
     }
@@ -152,28 +313,89 @@ partial class GooServer {
             return result.ToString()
         }
 
-        func Fold(text string) string -> CaseFold(Regex.Replace(text, "(?<=[a-z0-9])(?=[A-Z])", " "))
+        func Words(value string) IEnumerable[string] {
+            let split = Regex.Replace(value, "(?<=[\\p{Ll}0-9])(?=\\p{Lu})|(?<=\\p{Lu})(?=\\p{Lu}\\p{Ll})", " ")
+            let identifiers = Regex
+                .Matches(value, "[\\p{L}\\p{N}_]+(?:\\+\\+|#)?")
+                .Where(
+                x -> x.Value.Contains('_') || Regex.IsMatch(x.Value, "[\\p{Ll}0-9]\\p{Lu}|\\p{Lu}\\p{Lu}\\p{Ll}")
+            )
+                .Select(x -> Stem(CaseFold(x.Value)))
+            return Regex
+                .Matches(CaseFold(split.Replace('_', ' ')), "[\\p{L}\\p{N}]+(?:\\+\\+|#)?")
+                .Select(x -> Stem(x.Value))
+                .Concat(identifiers)
+        }
+
+        func Stem(term string) string {
+            var result = term
+            if result.EndsWith("ies") && result.Length > 4 {
+                result = result.Substring(0, result.Length - 3) + "y"
+            } else if result.EndsWith("s") && !result.EndsWith("ss") && result.Length > 3 {
+                result = result.Substring(0, result.Length - 1)
+            }
+            if result.EndsWith("ied") && result.Length > 4 {
+                result = result.Substring(0, result.Length - 3) + "y"
+            } else if result.EndsWith("ing") && result.Length > 5 {
+                result = result.Substring(0, result.Length - 3)
+            } else if result.EndsWith("ed") && result.Length > 5 {
+                result = result.Substring(0, result.Length - 2)
+            }
+            let stem = if result.EndsWith("e") && result.Length > 4 {
+                result.Substring(0, result.Length - 1)
+            } else {
+                result
+            }
+            return switch stem {
+                case "component": "cell"
+                case "refresh": "rebuild"
+                case "typefac": "font"
+                case "screenshot": "captur"
+                default: stem
+            }
+        }
+
+        func WordCounts(value string) Dictionary[string, int32] -> Words(value).GroupBy(x -> x).ToDictionary(
+            x -> x.Key,
+            x -> x.Count()
+        )
 
         func SearchTerms(value string) List[string] {
             let stop = HashSet[string](
-                "a across an and are do does for from get how i in is of on the to with".Split(' ')
+                Words(
+                    "a across an and are as at be by can do does for from get how i in into is it its my of on only or should than that the their them then this through to using when which while with without"
+                )
             )
-            let result = List[string]()
-            for match in Regex.Matches(Fold(value), "[A-Za-z0-9_]+") {
-                var term = match.Value
-                if stop.Contains(term) {
-                    continue
-                }
-                if term.EndsWith("ies") && term.Length > 4 {
-                    term = term.Substring(0, term.Length - 3) + "y"
-                } else if term.EndsWith("s") && !term.EndsWith("ss") && term.Length > 3 {
-                    term = term.Substring(0, term.Length - 1)
-                }
-                if !result.Contains(term) {
-                    result.Add(term)
-                }
+            return Words(value).Where(x -> !stop.Contains(x)).Distinct().ToList()
+        }
+
+        func XmlText(element XElement?) string {
+            if element == nil {
+                return ""
             }
-            return result
+            let copy = XElement(element)
+            for reference in copy
+                .Descendants()
+                .Where(
+                x -> x
+                    .Name
+                    .LocalName == "see" ||
+                    x
+                    .Name
+                    .LocalName == "seealso" ||
+                    x
+                    .Name
+                    .LocalName == "paramref" ||
+                    x
+                    .Name
+                    .LocalName == "typeparamref"
+            )
+                .ToArray() {
+                reference.ReplaceWith(
+                    XText(reference.Attribute("cref")?.Value ?? reference.Attribute("name")?.Value ?? reference.Value)
+                )
+            }
+            return Regex.Replace(copy.Value, "\\s+", " ").Trim()
         }
     }
 }
