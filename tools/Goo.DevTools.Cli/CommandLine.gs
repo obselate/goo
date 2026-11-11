@@ -260,7 +260,8 @@ internal class CommandLine {
                 if name == "dev" {
                     text.AppendLine("`goo dev` overwrites `.goo/reload.png` after each successful hot reload and prints its path.\n")
                 }
-                if definition.Options.Any(option -> option.Name == "pid") {
+                let targeted = definition.Options.Any(option -> option.Name == "pid")
+                if targeted {
                     text.AppendLine("Use the shared [target options](#target-options).\n")
                 }
                 if name == "input" {
@@ -268,10 +269,9 @@ internal class CommandLine {
                     text.AppendLine("Use a fresh snapshot target. Release held pointer and key gestures with matching up events, or cancel/reset them. Run `goo help input` for events and parameters.")
                     continue
                 }
-                if name == "inspector" || name == "list" { continue }
+                if name == "inspector" { continue }
                 if name == "doctor" {
-                    text.AppendLine("Run `goo doctor --project App.gsproj` for prerequisite fixes.")
-                    continue
+                    text.AppendLine("Run `goo doctor --project App.gsproj` for prerequisite fixes.\n")
                 }
                 if name == "package" {
                     text.AppendLine("Targets: `linux`, `windows`, `macos`, `android`. See [Shipping](../shipping.md) for metadata, signing and output limits.")
@@ -285,7 +285,7 @@ internal class CommandLine {
                 }
                 text.AppendLine("| Option | Meaning |\n| --- | --- |")
                 for option in definition.Options {
-                    if Targets.Contains(option) { continue }
+                    if targeted && Targets.Contains(option) { continue }
                     text.AppendLine(
                         "| `--${option.Name}${(if option.Value == "" { "" } else { " " + option.Value.Replace("|", "\\|") })}` | ${option.Description} |"
                     )

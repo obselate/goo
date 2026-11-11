@@ -169,6 +169,6 @@ For renderer-only suppression modes, see [GPU experiments](docs/devtools/gpu-exp
 - Keep queued diagnostics connections alive when a probe disconnects.
 ```
 
-Use `Added`, `Changed`, `Fixed` or `Removed` headings and one line per bullet. `release --write` validates and joins fragments, then deletes them. Release PRs consume fragments instead of adding one.
+Use one `## Added`, `## Changed`, `## Fixed` or `## Removed` heading per fragment and one line per bullet. `release --write` validates and joins fragments, then deletes them. Release PRs consume fragments instead of adding one.
 
 AI-generated code is accepted. Write the issue in your own words and explain the behavior you understand.

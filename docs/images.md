@@ -8,7 +8,7 @@ Image{Source: logo, Width: 64, Height: 64, Fit: ImageFit.Contain}
 
 Load before building the UI. Retain the source in app state. For later loads, run work in a `go` child, then publish through `Window.Post` and rebuild the affected Cell. Never load or decode in `Build`, painting or input handlers.
 
-Copy assets with the project's content items. Paths are local files, not URLs. `Image.Path` without a source does not load an image. Use `LoadAsync`.
+Copy assets with the project's content items. Paths are local files, not URLs. A nonempty `Image.Path` without `Source` throws when mounted. Use `ImageSourceCache.LoadAsync` and assign `Image.Source`.
 
 ## Formats and limits
 

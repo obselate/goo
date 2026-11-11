@@ -33,6 +33,7 @@ Start an app with hot reload and diagnostics.
 
 | Option | Meaning |
 | --- | --- |
+| `--project PATH` | Project file or directory. |
 | `--configuration NAME` | Build configuration. Not valid with a child command. |
 | `--env NAME=VALUE` | Set a child environment variable. Repeatable. |
 | `--wait SECONDS` | Wait for the inspector target. Requires --inspector. Default: 15. |
@@ -81,6 +82,9 @@ List running Goo apps.
 
 Use the shared [target options](#target-options).
 
+| Option | Meaning |
+| --- | --- |
+| `--json` | Write success and errors as JSON on stdout. |
 
 ## snapshot
 
@@ -175,6 +179,11 @@ goo doctor [options]
 Check the SDK, project, runtime and inspector.
 
 Run `goo doctor --project App.gsproj` for prerequisite fixes.
+
+| Option | Meaning |
+| --- | --- |
+| `--project PATH` | Project file or directory. |
+| `--json` | Write success and errors as JSON on stdout. |
 
 ## package
 

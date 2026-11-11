@@ -224,9 +224,6 @@ TextEntry{ Accessibility: Accessibility{ Name: "Name" } }
 - `Accessibility.Live` sets polite or assertive live-region behavior.
 - Atomic regions send their full current text. Resume does not replay old announcements.
 
-For repository runners and evidence, see
-[Android qualification](https://github.com/obselate/goo/blob/main/CONTRIBUTING.md#android-qualification).
-
 Before release, record the Android and TalkBack versions and check:
 
 | Check | Expected result |
@@ -276,9 +273,6 @@ Goo contains HarfBuzz and hb-gpu for both Android RIDs. `Goo.Android` source bui
 create a native archive for project references. NuGet omits it and uses Goo's
 payloads to avoid duplicate libraries. The renderer adds no SDL, Skia, OpenGL,
 FreeType, or C++ runtime payload.
-
-For source payload builds and device checks, use
-[Android qualification](https://github.com/obselate/goo/blob/main/CONTRIBUTING.md#android-qualification).
 
 ## Notifications
 
