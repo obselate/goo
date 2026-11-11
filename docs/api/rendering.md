@@ -448,7 +448,7 @@ Contains Status, owned Capture pixels on Success and Error detail on failure.
 ## `OffscreenRenderSession`
 
 
-Holds a shared renderer alive without owning a native presentation surface. Create, render, service and dispose it on the creating thread. Service while awaiting page completion.
+Holds a shared renderer alive without owning a native presentation surface. Create, render, service and dispose it on the creating thread. Window-created sessions progress in the window loop. Other sessions require Service while awaiting pages.
 
 ### `Create`
 

@@ -1,6 +1,7 @@
 import Goo
 import System
 import System.Diagnostics
+import System.Reflection
 import System.Threading
 import System.Threading.Tasks
 
@@ -53,11 +54,67 @@ internal class SessionOwner : Cell, IDisposable {
     }
 }
 
+func RunAutomaticSessionSmoke() {
+    let owner = Window{Root: Page(), Width: 96, Height: 96, InitiallyVisible: false, Title: "Offscreen automatic service"}.Open()
+    using let session = owner.CreateOffscreenSession().Session!!
+    let options = OffscreenRenderOptions(240f, 180f, 480, 360, Color.White, 134217728)
+    let pending = session.RenderAsync(Page(), options, CancellationToken.None)
+    var completed = false
+    var idle = false
+    var timedOut = false
+    var closing Task[OffscreenRenderResult]?
+    let timeout = owner.SetTimeout(() -> {
+        timedOut = true
+        owner.RequestClose()
+    }, 15000.0)
+    pending.ContinueWith((result Task[OffscreenRenderResult]) -> {
+        owner.Post(() -> {
+            let rendered = result.GetAwaiter().GetResult()
+            Require(rendered.Status == OffscreenRenderStatus.Success && rendered.Capture != nil, "automatic session render failed")
+            let capture = rendered.Capture!!
+            let corner = 330 * int32(capture.RowBytes) + 450 * 4
+            Require(capture.Width == 480u && capture.Height == 360u
+                && capture.Pixels[corner + 1] > uint8(140) && capture.Pixels[corner + 2] < uint8(100),
+                "automatic session pixels are incorrect")
+            completed = true
+            timeout.Dispose()
+            owner.SetTimeout(() -> {
+                let ticks = typeof(Window).GetField("schedulerLastTicks", BindingFlags.Instance | BindingFlags.NonPublic)!!
+                let before = ticks.GetValue(owner)
+                Task.Run(() -> {
+                    Thread.Sleep(500)
+                    let after = ticks.GetValue(owner)
+                    owner.Post(() -> {
+                        Require(object.Equals(before, after), "idle offscreen session caused a scheduler pump")
+                        idle = true
+                        Console.WriteLine("offscreen: automatic completion, correct pixels, zero idle scheduler pumps over 500 ms")
+                        closing = session.RenderAsync(Page(), options, CancellationToken.None)
+                        Require(!closing.IsCompleted, "automatic close regression requires a pending page")
+                        owner.RequestClose()
+                    })
+                })
+            }, 200.0)
+        })
+    })
+    owner.Run()
+    Require(!timedOut && completed, "window-created session timed out without Service")
+    Require(idle, "idle scheduler check did not finish")
+    Require(closing != nil && closing.IsCompleted
+        && closing.GetAwaiter().GetResult().Status == OffscreenRenderStatus.Cancelled,
+        "window close did not drain the caller-owned page")
+    Require(session.RenderAsync(Page(), options, CancellationToken.None).GetAwaiter().GetResult().Status
+        == OffscreenRenderStatus.Cancelled, "closed source session was disposed instead of cancelled")
+    Console.WriteLine("offscreen: close cancelled and drained caller-owned session without disposing it")
+}
+
 if Environment.GetEnvironmentVariable("GOO_RENDER_OUT") != nil
     || Environment.GetEnvironmentVariable("GOO_RENDER_LIST") == "1" {
     RunRenderCommandSmoke()
     return
 }
+
+RunAutomaticSessionSmoke()
+if Environment.GetEnvironmentVariable("GOO_OFFSCREEN_AUTO_ONLY") == "1" { return }
 
 let root = SessionOwner()
 let owner = Window{Root: root, Width: 96, Height: 96, Title: "Offscreen proof"}.Open()

@@ -5,12 +5,14 @@ import System.Threading
 import System.Threading.Tasks
 
 /// Holds a shared renderer alive without owning a native presentation surface.
-/// Create, render, service and dispose it on the creating thread. Service while awaiting page completion.
+/// Create, render, service and dispose it on the creating thread.
+/// Window-created sessions progress in the window loop. Other sessions require Service while awaiting pages.
 public sealed class OffscreenRenderSession : IDisposable {
   private let target VulkanWindowTarget
   private let closed CancellationToken
   private let threadId int32
   private var disposed bool
+  internal var SourceWindow Window?
   internal var RenderWindow Window?
 
   shared {
@@ -45,7 +47,9 @@ public sealed class OffscreenRenderSession : IDisposable {
       requireThread()
       if root == nil { throw ArgumentNullException("root") }
       validateOffscreenOptions(options)
-      return target.RenderOffscreenAsync(root, options, cancellation, closed, reusable, RenderWindow)
+      let result = target.RenderOffscreenAsync(root, options, cancellation, closed, reusable, RenderWindow)
+      if !result.IsCompleted { SourceWindow?.RequestOffscreenService() }
+      return result
     }
 
   /// Consumes completed GPU work and starts a queued page without presenting a native window.
@@ -54,6 +58,10 @@ public sealed class OffscreenRenderSession : IDisposable {
     VulkanDeviceRecoveryCoordinator.ServiceQueueCompletions(target)
     target.PollQueueCompletion()
   }
+
+  internal prop WorkPending bool{ get -> target.QueueWorkPending }
+
+  internal func PrepareClose() bool -> target.PrepareClose()
 
   /// Cancels pending pages, waits for safe GPU cleanup and releases this session's runtime lease.
   public func Dispose() {
@@ -64,6 +72,7 @@ public sealed class OffscreenRenderSession : IDisposable {
       Thread.Yield()
     }
     target.Dispose()
+    SourceWindow?.UnregisterOffscreenSession(this)
     disposed = true
   }
 

@@ -147,10 +147,10 @@ public partial class Window {
         return 0.0
       }
     if suspended || windowTarget == nil || framebufferWidth <= 0 || framebufferHeight <= 0 {
-      return Double.PositiveInfinity
+      return nextOffscreenDeadlineSeconds()
     }
     return if hasDemand() { 0.0 } else {
-      Math.Min(nextTimerDeadlineSeconds(), input.NextTickDeadlineSeconds())
+      Math.Min(nextOffscreenDeadlineSeconds(), Math.Min(nextTimerDeadlineSeconds(), input.NextTickDeadlineSeconds()))
     }
   }
 }
