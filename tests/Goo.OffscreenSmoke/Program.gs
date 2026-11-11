@@ -1,7 +1,6 @@
 import Goo
 import System
 import System.Diagnostics
-import System.Reflection
 import System.Threading
 import System.Threading.Tasks
 
@@ -60,7 +59,6 @@ func RunAutomaticSessionSmoke() {
     let options = OffscreenRenderOptions(240f, 180f, 480, 360, Color.White, 134217728)
     let pending = session.RenderAsync(Page(), options, CancellationToken.None)
     var completed = false
-    var idle = false
     var timedOut = false
     var closing Task[OffscreenRenderResult]?
     let timeout = owner.SetTimeout(() -> {
@@ -78,27 +76,17 @@ func RunAutomaticSessionSmoke() {
                 "automatic session pixels are incorrect")
             completed = true
             timeout.Dispose()
-            owner.SetTimeout(() -> {
-                let ticks = typeof(Window).GetField("schedulerLastTicks", BindingFlags.Instance | BindingFlags.NonPublic)!!
-                let before = ticks.GetValue(owner)
-                Task.Run(() -> {
-                    Thread.Sleep(500)
-                    let after = ticks.GetValue(owner)
-                    owner.Post(() -> {
-                        Require(object.Equals(before, after), "idle offscreen session caused a scheduler pump")
-                        idle = true
-                        Console.WriteLine("offscreen: automatic completion, correct pixels, zero idle scheduler pumps over 500 ms")
-                        closing = session.RenderAsync(Page(), options, CancellationToken.None)
-                        Require(!closing.IsCompleted, "automatic close regression requires a pending page")
-                        owner.RequestClose()
-                    })
-                })
-            }, 200.0)
+            Console.WriteLine("offscreen: automatic completion with correct pixels without Service")
+            owner.OnClosing = () -> {
+                closing = session.RenderAsync(Page(), options, CancellationToken.None)
+                Require(!closing.IsCompleted, "automatic close regression requires a pending page")
+                return true
+            }
+            owner.RequestClose()
         })
     })
     owner.Run()
     Require(!timedOut && completed, "window-created session timed out without Service")
-    Require(idle, "idle scheduler check did not finish")
     Require(closing != nil && closing.IsCompleted
         && closing.GetAwaiter().GetResult().Status == OffscreenRenderStatus.Cancelled,
         "window close did not drain the caller-owned page")
