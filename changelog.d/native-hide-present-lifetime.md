@@ -1,3 +1,3 @@
 ## Fixed
 
-- Hiding a Wayland window no longer unmaps its surface during an in-flight present and blocks other windows from closing. Visibility, input and accessibility change immediately. Showing the window cancels a pending native unmap.
+- Hiding a Wayland window no longer blocks queued presentation or other windows from closing. Visibility, input and accessibility update immediately. Showing the window cancels a pending native hide.

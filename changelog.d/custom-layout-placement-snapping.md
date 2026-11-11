@@ -1,3 +1,5 @@
 ## Fixed
 
-- Children placed by a custom `LayoutAlgorithm` now land on device pixels. `ArrangeChild` offsets such as 22.8 are rounded to the device grid when the absolute rect is read, with the same rule Yoga applies to flex layout, so 1 px borders and bevels inside Grid-style layouts draw solid instead of split across two columns. Arranged bounds and cached layouts keep their unrounded values, and repeated relayouts stay identical to a fresh layout.
+- Custom layouts and anchored portals snap child and popup positions to device pixels. Custom layouts also update when display scale changes.
+- Translation-only transforms snap their combined movement to device pixels. Drawing, hit testing and element bounds use the same position.
+- Text, text-input and image boxes round their size up to the device pixel grid, regardless of their position.

@@ -1,3 +1,5 @@
 ## Fixed
 
-- `TextEditor` keeps the measured height of every laid-out line, so its content height no longer shrinks when cached lines are released, and lines measured above the viewport no longer move the visible text.
+- `TextEditor` keeps its content height and visible text position when cached lines are released or measured.
+- `TextEditorController.ScrollTo` and caret reveal reach their target after wrapped lines are measured.
+- Caret reveal no longer hangs when the caret is larger than the editor viewport.

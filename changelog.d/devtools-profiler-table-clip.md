@@ -1,3 +1,4 @@
 ## Fixed
 
-- DevTools profiler: the timeline scrolls in its own region, so the summary table keeps its rows at small window sizes such as 1024x640. Frame and scope tooltips are anchored overlays and are no longer clipped.
+- The DevTools profiler timeline scrolls separately from its summary table. Frame and scope tooltips stay visible.
+- DevTools plots and the details pane fit the window when app zoom changes.
