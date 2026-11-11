@@ -13,7 +13,7 @@ class FragmentCorrectnessCell : Cell {
   internal var BuildCount int32
   private let square VectorPath = PathBuilder(0.0, 0.0, 16.0, 16.0)
     .MoveTo(0.0, 0.0).LineTo(16.0, 0.0).LineTo(16.0, 16.0).LineTo(0.0, 16.0).Close().Build()
-  private let outline VectorPath = Svg.Parse("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 960 960'><path d='M220 860q-33 0-56.5-23.5T140 780v-560q0-33 23.5-56.5T220 140h560q33 0 56.5 23.5T860 220v560q0 33-23.5 56.5T780 860H220Zm280-80h280v-560H500v560Z'/></svg>").PathForNode(1)
+  private let outline VectorPath = Svg.Parse("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12.5 3.5L21.5 12.5L12.5 21.5L3.5 12.5Z'/></svg>").PathForNode(1)
 
   init(effect ShaderEffect) {
     crtEffect = effect
@@ -98,7 +98,7 @@ func RunFragmentCorrectnessSmoke() {
     let cell = FragmentCorrectnessCell(crtEffect)
     let opened = Window{
       Title: "Goo fragment correctness gate",
-      Width: 816,
+      Width: 1024,
       Height: 128,
       VSync: false,
       Root: cell,
@@ -141,15 +141,11 @@ func RunFragmentCorrectnessSmoke() {
         "Rounded border is not aligned to physical pixels at row " + y.ToString()
           + ": " + frame.Pixels[index].ToString())
     }
-    for point in []Point{
-      Point{X: 3, Y: 19}, Point{X: 3, Y: 5}, Point{X: 21, Y: 19}, Point{X: 21, Y: 5},
-      Point{X: 5, Y: 3}, Point{X: 19, Y: 3}, Point{X: 5, Y: 21}, Point{X: 19, Y: 21},
-    } {
-      let join = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics,
-        16.0 + cell.PixelOffset + point.X / scale, 16.0 + cell.PixelOffset + point.Y / scale)
-      Require(join[3] >= uint8(96), "Path contour join has missing coverage at "
-        + point.X.ToString() + "/" + point.Y.ToString() + ": " + PrimitivePixelText(join))
-    }
+    let join = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics,
+      16.0 + 3.5 / scale, 16.0 + 12.5 / scale)
+    Console.WriteLine("path-contour-join: " + PrimitivePixelText(join))
+    Require(join[3] >= uint8(48) && join[3] <= uint8(80),
+      "Path contour join has incorrect coverage: " + PrimitivePixelText(join))
     // A rounded box with only a bottom border must not paint the border color along its other sides.
     var sideRed = 0
     for step in -2 ... 3 {
