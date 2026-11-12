@@ -1,6 +1,17 @@
 # Changelog
 
 
+## 0.30.1 - 2026-11-12
+
+### Fixed
+
+- Ship a pinned AppImage runtime with exact dependency sources, license texts and libfuse relink material.
+- Run the shader effect and XML docs build tools on newer .NET runtimes, so apps build on machines with only .NET 11 installed.
+- Keep shape-shadow spread the same distance along axis and diagonal directions.
+- Complete window-created offscreen render sessions in the window loop without polling `Service`, and cancel pending pages before the window closes.
+- `goo render` preserves the app window's theme, context values and registered font selection.
+- Fit clipped focus outlines inside controls and follow their visible rounded corner contours.
+
 ## 0.30.0 - 2026-11-11
 
 ### Added

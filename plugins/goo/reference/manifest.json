@@ -31,7 +31,7 @@
     "docs/devtools/cli.md": "9f085adafb5b6a89c7630a5a354f08325505eece60f1b03691684040c33f7dfb",
     "docs/devtools/protocol.md": "e91c5b9e36ebb2bd309e6c96fbd62adfd9139211bcc8dd72c52ba447b9df5696",
     "templates/Goo.Templates/content/Program.gs": "e33f29f6878bf1111ab6c4706d419640df54f6677ec5a3bbc76b3b555338dc83",
-    "templates/Goo.Templates/content/GooStarter.gsproj": "35cb338ece1ae34cb69b3086ec4ba996bc6fe3dbde5e029c32916048379f5f7d",
+    "templates/Goo.Templates/content/GooStarter.gsproj": "56e8b7c06675e555c14d824e3321c34fc2964e480594f355097c5e17b3c962c9",
     "templates/Goo.Templates/content/global.json": "d65c58739783fdc75335b2fe4908c42f7f7945b4dd551bd5e9d8cb0c71e95ce1",
     "templates/Goo.Templates/content/.gitignore": "5598d29dcea35eed94c9f755e39a1021772b33433ae84b358aff3c8a14813711",
     "templates/Goo.Templates/content/Properties/PublishProfiles/NativeAot.pubxml": "2d4015815d864480fd81858f47d16dd301825527b4cbc1e8828f8ac293e3e9d0",
