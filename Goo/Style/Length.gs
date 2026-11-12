@@ -2,7 +2,7 @@ package Goo
 
 import System
 
-internal enum LengthUnit { Unset; Px; Percent; Auto; Relative; MinContent; MaxContent; FitContent }
+internal enum LengthUnit { Unset; Px; Percent; Auto; Relative; Em; Rem; Vw; Vh; MinContent; MaxContent; FitContent }
 
 /// Specifies pixels, relative units, a mixed length, or an intrinsic size.
 public struct Length {
@@ -22,6 +22,8 @@ public struct Length {
   public prop Magnitude float64 { get -> float64(Value) }
   internal prop Px float32 { get -> Unit == LengthUnit.Px ? Value : 0.0F }
   internal prop IsIntrinsic bool { get -> Unit >= LengthUnit.MinContent }
+  internal prop DependsOnContainer bool { get -> Unit == LengthUnit.Percent || Unit == LengthUnit.Vw
+    || Unit == LengthUnit.Vh || PercentPart != 0.0F || VwPart != 0.0F || VhPart != 0.0F }
   internal prop IsFinite bool { get -> Single.IsFinite(Value) && Single.IsFinite(PercentPart)
     && Single.IsFinite(EmPart) && Single.IsFinite(RemPart) && Single.IsFinite(VwPart) && Single.IsFinite(VhPart) }
 
@@ -51,22 +53,22 @@ public func Percent(value float64) Length -> Length{Unit: LengthUnit.Percent, Va
 /// Creates a multiple of the computed element font size, or the parent font size for FontSize.
 /// @param value Font size multiple.
 /// @returns An element-relative length.
-public func Em(value float64) Length -> Length{Unit: LengthUnit.Relative, EmPart: float32(value)}
+public func Em(value float64) Length -> Length{Unit: LengthUnit.Em, EmPart: float32(value)}
 
 /// Creates a multiple of the root font size.
 /// @param value Root font size multiple.
 /// @returns A root-relative length.
-public func Rem(value float64) Length -> Length{Unit: LengthUnit.Relative, RemPart: float32(value)}
+public func Rem(value float64) Length -> Length{Unit: LengthUnit.Rem, RemPart: float32(value)}
 
 /// Creates a percentage of the window layout viewport width.
 /// @param value Percentage points.
 /// @returns A viewport-relative length.
-public func Vw(value float64) Length -> Length{Unit: LengthUnit.Relative, VwPart: float32(value)}
+public func Vw(value float64) Length -> Length{Unit: LengthUnit.Vw, VwPart: float32(value)}
 
 /// Creates a percentage of the window layout viewport height.
 /// @param value Percentage points.
 /// @returns A viewport-relative length.
-public func Vh(value float64) Length -> Length{Unit: LengthUnit.Relative, VhPart: float32(value)}
+public func Vh(value float64) Length -> Length{Unit: LengthUnit.Vh, VhPart: float32(value)}
 
 /// Converts layout pixels to a length.
 /// @param value Layout pixels.
@@ -92,6 +94,12 @@ internal func normalizeLength(value Length) Length {
   if value.EmPart == 0.0F && value.RemPart == 0.0F && value.VwPart == 0.0F && value.VhPart == 0.0F {
     if value.PercentPart == 0.0F { return Length{Unit: LengthUnit.Px, Value: value.Value} }
     if value.Value == 0.0F { return Percent(float64(value.PercentPart)) }
+  }
+  if value.Value == 0.0F && value.PercentPart == 0.0F {
+    if value.RemPart == 0.0F && value.VwPart == 0.0F && value.VhPart == 0.0F { return Em(float64(value.EmPart)) }
+    if value.EmPart == 0.0F && value.VwPart == 0.0F && value.VhPart == 0.0F { return Rem(float64(value.RemPart)) }
+    if value.EmPart == 0.0F && value.RemPart == 0.0F && value.VhPart == 0.0F { return Vw(float64(value.VwPart)) }
+    if value.EmPart == 0.0F && value.RemPart == 0.0F && value.VwPart == 0.0F { return Vh(float64(value.VhPart)) }
   }
   return value
 }
@@ -121,6 +129,10 @@ public func(left Length) operator -(right Length) Length -> left + right * -1.0
 public func(value Length) operator *(scale float64) Length {
   let source = lengthParts(value)
   let factor = float32(scale)
+  if value.Unit == LengthUnit.Em { return Em(float64(value.EmPart) * scale) }
+  if value.Unit == LengthUnit.Rem { return Rem(float64(value.RemPart) * scale) }
+  if value.Unit == LengthUnit.Vw { return Vw(float64(value.VwPart) * scale) }
+  if value.Unit == LengthUnit.Vh { return Vh(float64(value.VhPart) * scale) }
   return normalizeLength(Length{Unit: LengthUnit.Relative, Value: source.Value * factor,
     PercentPart: source.PercentPart * factor, EmPart: source.EmPart * factor,
     RemPart: source.RemPart * factor, VwPart: source.VwPart * factor, VhPart: source.VhPart * factor})
