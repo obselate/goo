@@ -91,8 +91,7 @@ internal class Layout {
       YGNodeAPI.YGNodeCalculateLayout(yg, width, availableHeight, yogaDirection(root.Direction))
       FrameBuildProbe.End(901, yogaProbe)
       let rectProbe = FrameBuildProbe.Enabled && !FrameBuildProbe.CountsOnly ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L
-      readRect(root, 0.0F, 0.0F)
-      ScrollbarParts.Arrange(root)
+      readRect(root, 0.0F, 0.0F, arrangeScrollbars: true)
       FrameBuildProbe.End(902, rectProbe)
     }
     lastRoot = root
@@ -290,8 +289,7 @@ internal class Layout {
 
   internal func RefreshRects(root Node) {
     if laidOut && !root.IsPortal {
-      readRect(root, 0.0F, 0.0F)
-      ScrollbarParts.Arrange(root)
+      readRect(root, 0.0F, 0.0F, arrangeScrollbars: true)
     }
   }
 
@@ -300,8 +298,7 @@ internal class Layout {
       return
     }
     if !root.IsPortal {
-      readRect(root, 0.0F, 0.0F)
-      ScrollbarParts.Arrange(root)
+      readRect(root, 0.0F, 0.0F, arrangeScrollbars: true)
     }
     if portalLaidOut {
       placePortals(root, overlayRoot, overlayRoot.Rect.W, overlayRoot.Rect.H)
@@ -619,7 +616,8 @@ internal class Layout {
   left.X == right.X && left.Y == right.Y && left.W == right.W && left.H == right.H
 
   internal func readRect(n Node, originX float32, originY float32,
-    placementX float32 = 0.0F, placementY float32 = 0.0F, hidden bool = false) {
+    placementX float32 = 0.0F, placementY float32 = 0.0F, hidden bool = false,
+    arrangeScrollbars bool = false) {
       guard let yg = n.Yoga else {
         return
       }
@@ -647,8 +645,9 @@ internal class Layout {
       n.PlacedScrollX = n.ScrollX
       n.PlacedScrollY = n.ScrollY
       if editor {
-        readEditorSlotRects(n, hiddenSubtree)
+        readEditorSlotRects(n, hiddenSubtree, arrangeScrollbars: arrangeScrollbars)
         n.HitContained = true
+        if arrangeScrollbars { ScrollbarParts.Arrange(n, false) }
         return
       }
       if let state = custom {
@@ -657,12 +656,13 @@ internal class Layout {
         let density = YGConfigAPI.YGConfigGetPointScaleFactor(config)
         for child in state.Children {
           readRect(child.Node, x, y, snapPlacement(x, float32(child.Bounds.X), density),
-            snapPlacement(y, float32(child.Bounds.Y), density), hiddenSubtree)
+            snapPlacement(y, float32(child.Bounds.Y), density), hiddenSubtree, arrangeScrollbars)
         }
       } else {
         for i in 0 ... n.Children.Count {
           if !n.Children[i].IsPortal {
-            readRect(n.Children[i], visual.X, visual.Y, hidden: hiddenSubtree)
+            readRect(n.Children[i], visual.X, visual.Y, hidden: hiddenSubtree,
+              arrangeScrollbars: arrangeScrollbars)
           }
         }
       }
@@ -678,12 +678,14 @@ internal class Layout {
           break
         }
       }
+      if arrangeScrollbars { ScrollbarParts.Arrange(n, false) }
     }
 
   private func snapPlacement(origin float32, offset float32, density float32) float32 ->
   density > 0.0F ? MathF.Floor((origin + offset) * density + 0.5F) / density - origin : offset
 
-  private func readEditorSlotRects(n Node, hidden bool, calculate bool = true) {
+  private func readEditorSlotRects(n Node, hidden bool, calculate bool = true,
+    arrangeScrollbars bool = false) {
     let layout = TextEditorLayouts.For(n, BoxGeometry.ContentWidth(n), BoxGeometry.ContentHeight(n))
     let contentWidth = layout.ParagraphWidth
     for i in 0 ... n.Children.Count {
@@ -710,7 +712,7 @@ internal class Layout {
         || child.Rect.Y != y + YGNodeLayoutAPI.YGNodeLayoutGetTop(yoga)
         || child.Rect.W != YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga)
         || child.Rect.H != YGNodeLayoutAPI.YGNodeLayoutGetHeight(yoga) {
-          readRect(child, x, y, hidden: hidden)
+          readRect(child, x, y, hidden: hidden, arrangeScrollbars: arrangeScrollbars)
           child.MarkSceneDirty()
         }
     }
