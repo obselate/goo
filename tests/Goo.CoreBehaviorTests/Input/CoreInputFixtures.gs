@@ -229,6 +229,20 @@ internal class InputFixtures {
     nestedInput.Drain(nested, Resolver{}, 0.0, nil)
     if nestedEvents.Count != 1 || nestedEvents[0] != "5:5" { return false }
 
+    let moving = Reconciler{Res: Resolver{}}.Mount(Container() {.Width: 20,.Height: 20,
+      Container{Width: 10, Height: 10, OnClick: () -> {}}})
+    let movingChild = moving.Children[0]
+    Layout().Calculate(moving, 100.0F, 100.0F)
+    if !moving.HitContained { return false }
+    Transforming.SetTranslateX(movingChild, 5)
+    if moving.HitContained { return false }
+    Layout().Calculate(moving, 100.0F, 100.0F)
+    if moving.HitContained { return false }
+    for offset in 20 ... 41 {
+      Transforming.SetTranslateX(movingChild, offset)
+      if hitTopmost(moving, float32(offset + 5), 5.0F) != movingChild { return false }
+    }
+
     let singular = Reconciler{ Res: Resolver{} }.Mount(Container{
       Width: 20, Height: 20, Transform: PanelTransform{ Scale: 0 }, OnClick: () -> {},
     })

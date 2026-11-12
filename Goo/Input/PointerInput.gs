@@ -668,7 +668,7 @@ internal partial class PointerInput {
     current = mouse
     if !cursorValid { return false }
     let moved = HandleMove(root, resolver, cursor.X, cursor.Y)
-    return updateScrollHover(root, cursor.X, cursor.Y, resolver) || moved
+    return updateScrollHover(cursor.X, cursor.Y, resolver) || moved
   }
 
   internal func CurrentCursor() Cursor {
@@ -741,7 +741,7 @@ internal partial class PointerInput {
         current.Device == PointerDevice.Mouse && !prevented,
         isSemanticPrimary() && !prevented)
       let scrollbarHoverChanged = current.Device == PointerDevice.Mouse && !prevented
-        ? updateScrollHover(root, x, y, resolver) : false
+        ? updateScrollHover(x, y, resolver) : false
       return moved || scrollbarHoverChanged
     }
 

@@ -640,6 +640,7 @@ internal class Layout {
       n.PlacedScrollY = n.ScrollY
       if editor {
         readEditorSlotRects(n, hiddenSubtree)
+        n.HitContained = true
         return
       }
       if let state = custom {
@@ -650,11 +651,23 @@ internal class Layout {
           readRect(child.Node, x, y, snapPlacement(x, float32(child.Bounds.X), density),
             snapPlacement(y, float32(child.Bounds.Y), density), hiddenSubtree)
         }
-        return
+      } else {
+        for i in 0 ... n.Children.Count {
+          if !n.Children[i].IsPortal {
+            readRect(n.Children[i], visual.X, visual.Y, hidden: hiddenSubtree)
+          }
+        }
       }
-      for i in 0 ... n.Children.Count {
-        if !n.Children[i].IsPortal {
-          readRect(n.Children[i], visual.X, visual.Y, hidden: hiddenSubtree)
+      n.HitContained = !(n.Kind == NodeKind.Shape && n.ShapeVectorEffect == VectorEffect.NonScalingStroke)
+      for child in n.Children {
+        if child.IsPortal { continue }
+        if !child.HitContained || child.HasVisualTransform
+          || n.OverflowX == Overflow.Visible && (child.Rect.X < n.Rect.X
+            || child.Rect.X + child.Rect.W > n.Rect.X + n.Rect.W)
+          || n.OverflowY == Overflow.Visible && (child.Rect.Y < n.Rect.Y
+            || child.Rect.Y + child.Rect.H > n.Rect.Y + n.Rect.H) {
+          n.HitContained = false
+          break
         }
       }
     }
