@@ -26,7 +26,7 @@ each platform before `Open` or replace its options on the window's UI thread:
 let window = Window{
     Backdrop: WindowBackdrop.Blur,
     Background: Color.Parse("#090b10").WithAlpha(0.78),
-    BackdropFallbackColor: Color.Parse("#090b10"),
+    BackdropFallbackColor: "#090b10",
     WindowsBackdrop: WindowsBackdropOptions{Material: WindowsBackdropMaterial.Acrylic},
     MacOSBackdrop: MacOSBackdropOptions{
         Material: MacOSBackdropMaterial.UnderWindowBackground,

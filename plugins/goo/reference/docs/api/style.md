@@ -8,10 +8,6 @@ Source: [`Goo/Style`](https://github.com/obselate/goo/tree/main/Goo/Style)
 
 `BackgroundGradient: nil` is an explicit clear declaration. It removes an earlier composed or lower-state gradient while preserving `BackgroundColor`. Omitting `BackgroundGradient` leaves the earlier declaration in effect.
 
-Use `HoverStyle`, `ActiveStyle`, `FocusStyle`, and `DisabledStyle` for interaction states. Parse color strings with `Color.Parse("#fff")`.
-
-`AccessibilityName` and `AccessibilityRole` change one field without replacing the other accessibility fields. A later `Accessibility` declaration replaces the whole declaration.
-
 ## `AlignContent`
 
 
@@ -185,6 +181,14 @@ Converts a color into a uniform edge value.
 - `value`: color for every edge
 
 Returns: a uniform edge value
+
+### `op_Implicit(string)~Color`
+
+Converts a CSS color string to Color.
+
+- `value`: The CSS color string to convert.
+
+Returns: The parsed color.
 
 ### `A`
 
@@ -903,10 +907,6 @@ Sets whether the element participates in layout.
 
 Sets the inline end position offset.
 
-### `Flex`
-
-Sets grow to this factor, shrink to 1, and basis to 0. Later declarations override each part.
-
 ### `FlexBasis`
 
 Sets the initial main-axis size.
@@ -950,10 +950,6 @@ Sets the gap between rows and columns.
 ### `Height`
 
 Sets the preferred height.
-
-### `Inset`
-
-Sets all four position offsets. Later offsets override individual edges.
 
 ### `JustifyContent`
 

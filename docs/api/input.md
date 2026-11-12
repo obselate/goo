@@ -136,12 +136,12 @@ Container(){
     .Handle: owner,
     .Focusable: true,
     .FocusTarget: activeRow,
-    Container{Handle: activeRow, FocusStyle: Style{BasedOn: focusRing}},
+    Container{Handle: activeRow, Focus: Style{BasedOn: focusRing}},
 }
 ```
 
 `FocusTarget` adds the focused owner's visible focus state to one mounted,
-enabled, visible descendant. The descendant resolves its own `FocusStyle`
+enabled, visible descendant. The descendant resolves its own `Focus` style
 without becoming focusable. The owner keeps keyboard focus and its own focus
 style. Pointer focus does not show the projected style unless the owner's normal
 focus-visible rules require it.
