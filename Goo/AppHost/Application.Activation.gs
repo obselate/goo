@@ -84,12 +84,6 @@ public shared partial class Application {
         }
     }
 
-    /// Binds activation to the current UI thread and retains the initial request until a window pumps.
-    /// Call before opening the first desktop window or from the embedded host's owner thread.
-    /// After all windows close, the same owner thread may initialize a new delivery lifetime.
-    /// @param initial The initial request, copied with its IsInitial value unchanged.
-    /// @returns Accepted when retained, or Failed when the request exceeds the activation data limits.
-    /// @exception InvalidOperationException when already initialized or called from another owner thread.
     internal func InitializeActivation(initial ApplicationActivation) WindowOperationResult {
         if initial == nil {
             throw ArgumentNullException("initial")
