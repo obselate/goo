@@ -40,8 +40,9 @@ public open class Cell {
   private var mountHookQueued bool
   private var mountHookRun bool
   private var unmounting bool
+  private var callbackGeneration int64
 
-  /// Gets the owning window from the first Build until Unmounting returns.
+  /// Gets the owning window before the first InputChanged or Build until Unmounting returns.
   protected prop Host Window {
     get {
       guard let window = disposed ? nil : contextWindow else {
@@ -56,7 +57,7 @@ public open class Cell {
   protected prop Lifetime CancellationToken {
     get {
       contextWindow?.requireUiThread("Cell.Lifetime")
-      if disposed { return CancellationToken(true) }
+      if disposed || contextWindow == nil { return CancellationToken(true) }
       lifetimeSource ??= CancellationTokenSource()
       return lifetimeSource!!.Token
     }
@@ -66,7 +67,7 @@ public open class Cell {
   protected func Latest(name string) CancellationToken {
     contextWindow?.requireUiThread("Cell.Latest")
     if name == nil { throw ArgumentNullException("name") }
-    if disposed { return CancellationToken(true) }
+    if disposed || contextWindow == nil { return CancellationToken(true) }
     latestSources ??= Dictionary[string, CancellationTokenSource](StringComparer.Ordinal)
     if latestSources!!.TryGetValue(name, out var previous) {
       previous.Cancel()
@@ -78,27 +79,35 @@ public open class Cell {
   }
 
   /// Posts an action from any thread. Unmounting discards pending actions.
+  /// Scheduling during Build throws.
   protected func Post(action Action) bool {
     if action == nil { throw ArgumentNullException("action") }
+    if IsBuilding { throw InvalidOperationException("Cell.Post is not allowed during Build.") }
     var window Window?
+    var generation int64
     lock rebuildGate {
-      if disposed || unmounting || mountedNode == nil { return false }
+      if disposed || contextWindow == nil { return false }
       window = contextWindow
+      generation = callbackGeneration
     }
     guard let host = window else { return false }
     return host.Post(() -> {
-      if MountedNode() != nil { RunOwnedAction(action) }
+      if callbackGeneration == generation && MountedNode() != nil { RunOwnedAction(action) }
     })
   }
 
   /// Runs an action once after a finite, nonnegative delay in milliseconds.
+  /// Scheduling during Build throws.
   protected func After(delayMs float64, action Action) WindowTimer {
+    if IsBuilding { throw InvalidOperationException("Cell.After is not allowed during Build.") }
     if disposed { return WindowTimer.Inactive() }
     return Host.AddCellTimer(this, delayMs, action, false)
   }
 
   /// Runs an action at a finite, positive interval in milliseconds.
+  /// Scheduling during Build throws.
   protected func Every(intervalMs float64, action Action) WindowTimer {
+    if IsBuilding { throw InvalidOperationException("Cell.Every is not allowed during Build.") }
     if disposed { return WindowTimer.Inactive() }
     return Host.AddCellTimer(this, intervalMs, action, true)
   }
@@ -185,7 +194,7 @@ public open class Cell {
   internal func BindContext(frame ContextFrame?, window Window?) {
     if incomingContext == frame && contextWindow == window { return }
     incomingContext = frame
-    contextWindow = window
+    lock rebuildGate { contextWindow = window }
     outgoingContext = contextReader?.Provider ?? frame
     if let reader = contextReader {
       reader.Frame = outgoingContext
@@ -347,9 +356,12 @@ public open class Cell {
 
   internal func ReleaseMountClaim() {
     lock rebuildGate {
-      if mountedNode == nil {
-        mountType = nil
-      }
+      if mountedNode != nil { return }
+      mountType = nil
+      contextWindow = nil
+    }
+    if let error = CancelOwnedWork() {
+      System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw()
     }
   }
 
@@ -395,17 +407,9 @@ public open class Cell {
     return false
   }
 
-  internal func DisposeMounted() {
-    lock rebuildGate {
-      if disposed || unmounting { return }
-      unmounting = true
-      rebuildSubmission = nil
-    }
+  private func CancelOwnedWork() Exception? {
+    lock rebuildGate { callbackGeneration++ }
     var firstError Exception?
-    try {
-      if contextWindow != nil { RunOwnedAction(Unmounting, false) }
-    } catch (error Exception) { firstError = error }
-    disposed = true
     try { lifetimeSource?.Cancel() } catch (error Exception) { firstError ??= error }
     if let sources = latestSources {
       for (_, source) in sources {
@@ -418,6 +422,26 @@ public open class Cell {
     if let timers = ownedTimers {
       while timers.Count != 0 { timers[timers.Count - 1].Dispose() }
     }
+    lifetimeSource = nil
+    return firstError
+  }
+
+  internal func DisposeMounted() {
+    lock rebuildGate {
+      if disposed || unmounting { return }
+      unmounting = true
+      rebuildSubmission = nil
+    }
+    var firstError Exception?
+    try {
+      if contextWindow != nil { RunOwnedAction(Unmounting, false) }
+    } catch (error Exception) { firstError = error }
+    lock rebuildGate {
+      disposed = true
+      contextWindow = nil
+    }
+    let cancellationError = CancelOwnedWork()
+    firstError ??= cancellationError
     lock rebuildGate {
       motionPump = nil
       retainedMotionInvalidation = nil
@@ -431,7 +455,6 @@ public open class Cell {
     contextReader = nil
     incomingContext = nil
     outgoingContext = nil
-    contextWindow = nil
     if let list = anims {
       for i in 0 ... list.Count {
         try {
@@ -627,6 +650,9 @@ public open class Cell {
     @ThreadStatic
     internal var StateReader Cell?
     internal var StateFieldsInspected Action[Type, []FieldInfo]?
+    internal prop IsBuilding bool {
+      get -> StateReader != nil || ContextEnvironment.StateReader != nil
+    }
 
     /// Describes a child component mount created by a factory.
     /// @typeparam TCell declared child component type
@@ -664,7 +690,6 @@ public open class Cell {
       Key: key,
       CellType: typeof(TCell),
       Input: input,
-      Factory: () -> TCell(),
     }
 
     /// Describes a child mount with input and constructor dependencies.
@@ -676,7 +701,7 @@ public open class Cell {
     /// @returns a blob that mounts the child component
     public func Mount[TInput any, TCell Cell[TInput]](key string?, input TInput, factory Func[TCell]) Blob {
       if factory == nil { throw ArgumentNullException("factory") }
-      return CellInputElement[TInput, TCell]{
+      return CellFactoryInputElement[TInput, TCell]{
         Key: key,
         CellType: typeof(TCell),
         Input: input,

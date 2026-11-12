@@ -6,6 +6,9 @@ import System.Numerics
 import System.Threading
 import System.Diagnostics
 internal class CellFixtures {
+  func SchedulingPhasesAndFailedMountsContract() bool ->
+    Window{Root: SchedulingPhaseFixtureCell(), Width: 200, Height: 100}.SchedulingPhasesForTest()
+
   func LifecycleHooksAndRequestTokensContract() bool {
     let cell = LifecycleFixtureCell()
     if !cell.HostRejected() || cell.Enqueue(() -> {}) { return false }
@@ -785,7 +788,81 @@ internal class LifecycleFixtureCell : Cell, IDisposable {
     : Text{Handle: Handle, Width: Percent(100), Height: 20, Content: "initial"}
 }
 
+internal class SchedulingPhaseFixtureCell : Cell[int32] {
+  internal var Scheduled int32
+  internal var Rejected int32
+  internal var Calls int32
+  internal var Fail bool
+  internal var ReadAllowed bool
+  internal prop Token CancellationToken { get -> Lifetime }
+
+  private func Schedule() {
+    if Post(() -> { Calls++ }) { Scheduled++ }
+    if After(0.0, () -> { Calls++ }).IsActive { Scheduled++ }
+    using let timer = Every(1.0, () -> { Calls++ })
+    if timer.IsActive { Scheduled++ }
+  }
+
+  protected override func InputChanged(input int32) { Schedule() }
+  protected override func Mounted() { Schedule() }
+
+  protected override func Build(input int32) Blob {
+    ReadAllowed = Host != nil && !Lifetime.IsCancellationRequested
+    try { Post(() -> {}) } catch (_ InvalidOperationException) { Rejected++ }
+    try { After(0.0, () -> {}) } catch (_ InvalidOperationException) { Rejected++ }
+    try { Every(1.0, () -> {}) } catch (_ InvalidOperationException) { Rejected++ }
+    if Fail { throw InvalidOperationException("phase build failure") }
+    return Text{Content: input.ToString()}
+  }
+}
+
 public partial class Window {
+  internal func SchedulingPhasesForTest() bool {
+    IsOpen = true
+    let cell = cast[SchedulingPhaseFixtureCell](Root!!)
+    try {
+      cell.BindContext(nil, this)
+      cell.SetInput(1)
+      UpdateTree()
+      drainTimers(float64(Stopwatch.GetTimestamp()) + float64(Stopwatch.Frequency))
+      drainPostedActions()
+      if cell.Scheduled != 6 || cell.Rejected != 3 || cell.Calls != 4 || !cell.ReadAllowed { return false }
+      let failed = SchedulingPhaseFixtureCell{Fail: true}
+      let rec = Reconciler{Owner: this, Res: resolver}
+      try {
+        rec.Mount(Cell.Mount[int32, SchedulingPhaseFixtureCell]("failed", 1, () -> failed))
+        return false
+      } catch (error InvalidOperationException) {
+        if error.Message != "phase build failure" { return false }
+      }
+      drainTimers(float64(Stopwatch.GetTimestamp()) + float64(Stopwatch.Frequency))
+      drainPostedActions()
+      if !failed.disposed || failed.Calls != 0 || failed.Scheduled != 3 || !failed.Token.IsCancellationRequested {
+        return false
+      }
+      let retryCell = SchedulingPhaseFixtureCell{Fail: true}
+      let retry = Window{Root: retryCell, Width: 200, Height: 100}
+      retry.IsOpen = true
+      try {
+        retryCell.BindContext(nil, retry)
+        retryCell.SetInput(1)
+        let oldToken = retryCell.Token
+        try {
+          retry.UpdateTree()
+          return false
+        } catch (error InvalidOperationException) {
+          if error.Message != "phase build failure" { return false }
+        }
+        if !oldToken.IsCancellationRequested || retryCell.disposed { return false }
+        retryCell.Fail = false
+        retry.UpdateTree()
+        retry.drainTimers(float64(Stopwatch.GetTimestamp()) + float64(Stopwatch.Frequency))
+        retry.drainPostedActions()
+        return retryCell.Calls == 2 && !retryCell.Token.IsCancellationRequested
+      } finally { retry.Close() }
+    } finally { Close() }
+  }
+
   internal func CellSchedulingForTest() bool {
     IsOpen = true
     let cell = cast[LifecycleFixtureCell](Root!!)
