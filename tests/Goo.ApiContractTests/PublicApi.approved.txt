@@ -67,6 +67,7 @@ ctor|Goo.Images.ImageVariants|public|(variants:System.Collections.Generic.IReadO
 ctor|Goo.Images.ImageVariant|public|(path:System.String,pixelsPerUnit:System.Single)
 ctor|Goo.Image|public|()
 ctor|Goo.LayerWindowOptions|public|()
+ctor|Goo.LayoutSize|public|(Width:System.Double,Height:System.Double)
 ctor|Goo.LayoutTransition|public|(DurationMs:System.Double,Easing:Goo.Easing)
 ctor|Goo.LinearGradient|public|(angle:System.Double,params colors:Goo.Color[])
 ctor|Goo.LinearGradient|public|(angle:System.Double,stops:Goo.GradientStop[])
@@ -1356,7 +1357,7 @@ method|Goo.LayoutAlgorithm|Arrange|abstract|public|generic:|(context:Goo.LayoutC
 method|Goo.LayoutAlgorithm|Measure|abstract|public|generic:|(context:Goo.LayoutContext,available:Goo.LayoutSize)->Goo.LayoutSize
 method|Goo.LayoutContext|ArrangeChild|instance|public|generic:|(index:System.Int32,bounds:Goo.ElementRect)->System.Void
 method|Goo.LayoutContext|MeasureChild|instance|public|generic:|(index:System.Int32,available:Goo.LayoutSize)->Goo.LayoutSize
-method|Goo.LayoutSize|Deconstruct|instance|public|generic:|(out width:System.Double&,out height:System.Double&)->System.Void
+method|Goo.LayoutSize|Deconstruct|instance|public|generic:|(out Width:System.Double&,out Height:System.Double&)->System.Void
 method|Goo.LayoutSize|Equals|instance|public|generic:|(other:Goo.LayoutSize)->System.Boolean
 method|Goo.LayoutSize|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
 method|Goo.LayoutSize|GetHashCode|virtual|public|generic:|()->System.Int32

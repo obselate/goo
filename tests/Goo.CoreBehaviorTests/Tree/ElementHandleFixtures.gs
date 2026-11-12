@@ -1108,7 +1108,7 @@ internal class VirtualAnchorOriginFixtureState(height float64) : VirtualState {
     output.Add(VirtualItem{Key: "anchor-row", Index: 0, Y: 0, Width: 100, Height: 25,
       Content: Container(){.Width: 100,.Height: 25,.FlexDirection: FlexDirection.Row,.AlignItems: AlignItems.Center,
         Container{Key: "leaf", Width: 20, Height: height}}})
-    output.ContentSize = LayoutSize{Width: 100, Height: 200}
+    output.ContentSize = LayoutSize(100, 200)
     output.ItemCount = 1
     output.AnchorKey = "anchor-row"
   }
@@ -1208,7 +1208,7 @@ internal class VirtualFixtureState : VirtualState {
       next[key] = item
     }
     if let key = cell.Retain { output.Add(VirtualItem{ Key: key, Index: count }) }
-    output.ContentSize = LayoutSize{ Width: size.Width, Height: float64(count) * 20.0 }
+    output.ContentSize = LayoutSize(size.Width, float64(count) * 20.0)
     output.ItemCount = count
   }
 
