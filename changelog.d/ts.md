@@ -1,2 +1,0 @@
-- Added retained builder State subscription scopes with commit, rollback, nested reads and incremental retention.
-- Added internal state verification settings with debugger and DevTools defaults.
