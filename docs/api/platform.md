@@ -588,7 +588,7 @@ Gets the operation status.
 ## `NotificationService`
 
 
-Owns a native notification service. Clicks use Window.ApplicationActivated with Kind Notification.
+Owns a native notification service. Clicks use Application.Activated with Kind Notification.
 
 ### `GetPermissionAsync`
 
