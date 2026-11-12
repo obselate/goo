@@ -8,7 +8,7 @@ internal data struct StateReadFrame {
   internal var Scope StateReadScope?
 }
 
-internal sealed class StateReadScope : StateSubscriber, IDisposable {
+internal sealed class StateReadScope : IDisposable {
   private let owner Cell?
   private let invalidated Action
   private let threadId int32 = Environment.CurrentManagedThreadId

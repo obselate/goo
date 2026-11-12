@@ -7,7 +7,7 @@ import System.Reflection
 
 /// Defines a stateful Goo component.
 @DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields)
-public open class Cell : StateSubscriber {
+public open class Cell {
   private let rebuildGate object
   internal var rebuildSubmission Action[Cell]?
   internal var dirty bool
