@@ -3,7 +3,7 @@ package Goo
 import System
 import System.Collections.Generic
 
-internal enum NodeKind { Container; Button; Text; Entry; Editor; Shape; Image; Row; Column; Spacer;
+internal enum NodeKind { Container; Button; Text; Entry; Editor; Shape; Image; Spacer;
 }
 
 internal data struct Rect {

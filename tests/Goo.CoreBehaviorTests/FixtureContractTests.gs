@@ -89,6 +89,11 @@ class FixtureContractTests {
 
     shared {
         func Cases() sequence[[]object] {
+            yield Contract[StyleFixtures]("FlexAndInsetDeclarationOrderContract")
+            yield Contract[AccessibilityFixtures]("AccessibilityShorthandOrderContract")
+            yield Contract[FlexConformanceFixtures]("RowColumnSpacerContract")
+            yield Contract[FlexConformanceFixtures]("FixedFlexDirectionContract")
+            yield Contract[FlexConformanceFixtures]("KeyedFlexKindChangeContract")
             yield Contract[ApplicationActivationFixtures]("ProcessQueueOwnsStartupAndForwardedData")
             yield Contract[TreeFixtures]("NodeMountLifetimeContract")
             yield Contract[TreeFixtures]("EmptyChildrenPreserveStyleRetryRootContract")

@@ -132,7 +132,7 @@ Container() {
   .Handle: owner,
   .Focusable: true,
   .FocusTarget: activeRow,
-  Container{ Handle: activeRow, Focus: Style{ BasedOn: focusRing } },
+  Container{ Handle: activeRow, FocusStyle: Style{ BasedOn: focusRing } },
 }
 ```
 

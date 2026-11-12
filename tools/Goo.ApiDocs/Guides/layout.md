@@ -17,6 +17,19 @@ Container{
 
 See [Style](style.md) for the property contracts.
 
+## Row, column, and spacer
+
+```gsharp
+Row{Gap: 8, Text("Title"), Spacer(), Button(){Text("Close")}}
+Container{Position: PositionType.Absolute, Inset: 0}
+Text{Content: "Flexible", Flex: 1, MinWidth: 0}
+```
+
+- `Row` and `Column` fix the main axis. Setting `FlexDirection`, including through a state style, throws at mount.
+- `Spacer` defaults to grow 1, shrink 1, basis 0, and minimum size 0. It has no paint, hit test, or accessibility node.
+- `Flex: n` sets grow n, shrink 1, and basis 0. It does not change the automatic minimum. Later flex declarations override each part.
+- `Inset` sets all four position offsets. Later offsets override individual edges.
+
 ## Padding and margin
 
 `Padding` and `Margin` accept pixel numbers or `Edges`. Two arguments mean

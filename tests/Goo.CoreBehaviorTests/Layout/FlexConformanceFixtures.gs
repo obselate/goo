@@ -6,6 +6,69 @@ import System.Globalization
 import System.Text.Json
 
 internal class FlexConformanceFixtures {
+    func RowColumnSpacerContract() bool {
+        let reconciler = Reconciler{Res: Resolver{}}
+        let root = reconciler.Mount(Row{
+            Width: 100, Height: 40,
+            Container{Key: "first", Width: 10, Height: 10},
+            Spacer{Key: "space", BackgroundColor: Color.White, Focusable: true,
+                AccessibilityName: "excluded", OnClick: () -> {}},
+            Container{Key: "last", Width: 20, Height: 10},
+        })
+        try {
+            Layout().Calculate(root, 100.0F, 40.0F)
+            let spacer = root.Children[1]
+            if root.FlexDirection != FlexDirection.Row || spacer.Rect.W != 70.0F
+                || root.Children[2].Rect.X != 80.0F || !spacer.PaintInputHidden || spacer.Focusable || spacer.HitTestSelf { return false }
+            let manager = AccessibilityManager(Window{})
+            manager.CaptureForDiagnostics(root)
+            if manager.DiagnosticNodeFor(spacer) != nil { return false }
+            let retained = reconciler.Diff(root, Row{Width: 100, Height: 40,
+                Container{Key: "last", Width: 20, Height: 10}, Spacer{Key: "space"},
+                Container{Key: "first", Width: 10, Height: 10}})
+            if retained != root || retained.Children[1] != spacer { return false }
+            let column = reconciler.Diff(root, Column{Width: 100, Height: 40,
+                Container{Height: 10}, Spacer(), Container{Height: 10}})
+            Layout().Calculate(column, 100.0F, 40.0F)
+            let valid = column == root && column.FlexDirection == FlexDirection.Column
+                && column.Children[1].Rect.H == 20.0F && column.Children[2].Rect.Y == 30.0F
+            return valid
+        } finally { NodeLifecycle.DisposeTree(root) }
+    }
+
+    func KeyedFlexKindChangeContract() bool {
+        let reconciler = Reconciler{Res: Resolver{}}
+        let root = reconciler.Mount(Container(){Row{Key: "layout", Width: 100, Height: 40,
+            Container{Width: 10, Height: 10}, Container{Width: 10, Height: 10}}})
+        try {
+            let child = root.Children[0]
+            reconciler.Diff(root, Container(){Column{Key: "layout", Width: 100, Height: 40,
+                Container{Width: 10, Height: 10}, Container{Width: 10, Height: 10}}})
+            Layout().Calculate(root, 100.0F, 40.0F)
+            if root.Children[0] != child || child.Children[1].Rect.Y != 10.0F { return false }
+            reconciler.Diff(root, Container(){Container{Key: "layout", Width: 100, Height: 40,
+                FlexDirection: FlexDirection.Row,
+                Container{Width: 10, Height: 10}, Container{Width: 10, Height: 10}}})
+            Layout().Calculate(root, 100.0F, 40.0F)
+            return root.Children[0] == child && child.Children[1].Rect.X == 10.0F
+                && child.Children[1].Rect.Y == 0.0F
+        } finally { NodeLifecycle.DisposeTree(root) }
+    }
+
+    func FixedFlexDirectionContract() bool {
+        let blobs = []Blob{
+            Row{FlexDirection: FlexDirection.Row},
+            Column{BasedOn: Style{FlexDirection: FlexDirection.Column}},
+            Row{HoverStyle: Style{FlexDirection: FlexDirection.Column}},
+        }
+        for blob in blobs {
+            var rejected = false
+            try { Reconciler{Res: Resolver{}}.Mount(blob) }
+            catch (_ InvalidOperationException) { rejected = true }
+            if !rejected { return false }
+        }
+        return true
+    }
     func Run(table JsonElement, failures List[string], output Action[string]) int32 {
         var count = 0
         for test in table.GetProperty("cases").EnumerateArray() {
@@ -106,13 +169,13 @@ internal class FlexConformanceFixtures {
     if value.TryGetProperty(name, out var edge) {
         ReadLength(edge)
     } else {
-        Length.Pixels(0)
+        0
     }
 
     private func ReadLength(value JsonElement) Length -> if value.ValueKind == JsonValueKind.Number {
-        Length.Pixels(value.GetDouble())
+        value.GetDouble()
     } else {
-        Length.Percent(Double.Parse(value.GetString()!!.TrimEnd('%'), CultureInfo.InvariantCulture))
+        Percent(Double.Parse(value.GetString()!!.TrimEnd('%'), CultureInfo.InvariantCulture))
     }
 
     private func Collect(node Node, boxes List[[]float32]) {

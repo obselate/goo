@@ -65,6 +65,9 @@ open class PublicApiTests {
         Assert.True(gate.IsVirtual)
         let concreteBlobs = ApiTypes().Where((type Type) -> type != blob && blob.IsAssignableFrom(type)).ToArray()
         Assert.NotEmpty(concreteBlobs)
+        Assert.Contains(typeof(Row), concreteBlobs)
+        Assert.Contains(typeof(Column), concreteBlobs)
+        Assert.Contains(typeof(Spacer), concreteBlobs)
         Assert.All(concreteBlobs, (type Type) -> Assert.True(type.IsSealed, type.FullName))
     }
 

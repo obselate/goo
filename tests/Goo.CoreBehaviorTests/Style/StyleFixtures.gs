@@ -4,6 +4,20 @@ import System
 import System.Collections.Generic
 
 internal class StyleFixtures {
+  func FlexAndInsetDeclarationOrderContract() bool {
+    let reconciler = Reconciler{Res: Resolver{}}
+    let node = reconciler.Mount(Container{
+      FlexGrow: 9, FlexShrink: 8, FlexBasis: 7, Flex: 2,
+      Left: 9, Inset: Percent(10), Top: 3,
+    })
+    if node.FlexGrow != 2.0F || node.FlexShrink != 1.0F || node.FlexBasis.Value != 0.0F
+      || node.Left.Unit != LengthUnit.Percent || node.Left.Value != 10.0F
+      || node.Right.Value != 10.0F || node.Bottom.Value != 10.0F || node.Top.Value != 3.0F { return false }
+    reconciler.Diff(node, Container{Flex: 2, FlexGrow: 3, FlexShrink: 4, FlexBasis: 5, Inset: 0, Left: 6})
+    return node.FlexGrow == 3.0F && node.FlexShrink == 4.0F && node.FlexBasis.Value == 5.0F
+      && node.Left.Value == 6.0F && node.Top.Value == 0.0F
+      && node.Right.Value == 0.0F && node.Bottom.Value == 0.0F
+  }
   func WindowColorPairInheritanceContract() bool {
     let cell = WindowColorPairCell{}
     let window = Window{Root: cell, Width: 100, Height: 100}

@@ -1049,7 +1049,7 @@ internal class VirtualFixtureCell : Cell {
   internal func BuildItem(item VirtualFixtureItem) Blob {
     Builds.Add(item.Id)
     return Container() {.Handle: Handles[item.Id],.Accessibility: ItemAccessibility,.Focusable: !ProjectFocus,.Width: 75,.Height: RowHeight,
-      .Focus: ProjectFocus ? Style{ OutlineWidth: 2.0, OutlineColor: Color.White } : nil,
+      .FocusStyle: ProjectFocus ? Style{ OutlineWidth: 2.0, OutlineColor: Color.White } : nil,
       Text{ Content: "row ${item.Id}:${item.Revision}"},
     }
   }

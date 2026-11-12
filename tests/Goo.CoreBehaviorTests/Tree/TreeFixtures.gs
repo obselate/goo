@@ -507,7 +507,7 @@ internal class TreeFixtures {
   func ButtonSemanticPrimitiveContract() bool {
     let resolver = Resolver{}
     let reconciler = Reconciler{ Res: resolver }
-    let node = reconciler.Mount(Button() {.BackgroundColor: Color.Rgb(100, 100, 100),.Color: Color.Rgb(200, 20, 10),.Hover: Style{ BackgroundColor: Color.White },
+    let node = reconciler.Mount(Button() {.BackgroundColor: Color.Rgb(100, 100, 100),.Color: Color.Rgb(200, 20, 10),.HoverStyle: Style{ BackgroundColor: Color.White },
         Shape{ Key: "icon", Path: PathBuilder().MoveTo(0.0, 0.0).LineTo(1.0, 1.0).Build() },
         Text{ Key: "label", Content: "Hi"},
     })
@@ -557,9 +557,9 @@ internal class TreeFixtures {
       BackgroundColor: Color.Rgb(41, 41, 51),
       Color: Color.White,
       JustifyContent: JustifyContent.FlexEnd,
-      Hover: Style{ BackgroundColor: Color.Rgb(51, 51, 61) },
-      Active: Style{ BackgroundColor: Color.Rgb(31, 31, 41) },
-      Focus: Style{ OutlineWidth: 1 },
+      HoverStyle: Style{ BackgroundColor: Color.Rgb(51, 51, 61) },
+      ActiveStyle: Style{ BackgroundColor: Color.Rgb(31, 31, 41) },
+      FocusStyle: Style{ OutlineWidth: 1 },
       DisabledStyle: Style{ Opacity: 0.5 },
       Disabled: true,
       OnClick: () -> { clicked = true },
