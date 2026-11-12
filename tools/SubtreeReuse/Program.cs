@@ -8,7 +8,18 @@ var variant = args[0];
 var output = args[1];
 var recorder = FrameRecorder.Start(Guid.NewGuid(), FrameRecorder.DefaultBufferBytes)!;
 long sequence = 0;
+#if PROTOTYPE
+long priorSkipped = 0;
+#endif
 var results = new List<string>();
+var timerSamples = new long[1000];
+for (var i = 0; i < timerSamples.Length; i++)
+{
+    var start = Stopwatch.GetTimestamp();
+    timerSamples[i] = Stopwatch.GetTimestamp() - start;
+}
+Array.Sort(timerSamples);
+results.Add(FormattableString.Invariant($"{{\"variant\":\"{variant}\",\"mode\":\"noise-timer\",\"ms\":{timerSamples[500] * 1000.0 / Stopwatch.Frequency}}}"));
 using var font = new FontSource("Vend Sans", 400, false, File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf")));
 font.Register();
 foreach (var mode in new[] { "fresh-change", "fresh-equal", "same-reference" })
@@ -34,6 +45,7 @@ foreach (var mode in new[] { "fresh-change", "fresh-equal", "same-reference" })
         var trace = Drain();
         if (node.Children.Count != 20000 || node.Children[0].Key != "row-0") throw new Exception("tree identity");
         if (frame >= 30) results.Add(FormattableString.Invariant($"{{\"variant\":\"{variant}\",\"mode\":\"{mode}\",\"frame\":{frame},\"build\":{build},\"diff\":{diff},\"ms\":{build + diff},\"bytes\":{bytes},\"buildBytes\":{buildBytes},\"skipped\":{trace.skipped}}}"));
+        if (frame == 0) results.Add(FormattableString.Invariant($"{{\"variant\":\"{variant}\",\"mode\":\"cold-{mode}\",\"frame\":{frame},\"build\":{build},\"diff\":{diff},\"ms\":{build + diff},\"bytes\":{bytes},\"buildBytes\":{buildBytes},\"skipped\":{trace.skipped}}}"));
     }
     NodeLifecycle.DisposeTree(node);
 }
@@ -109,6 +121,10 @@ Console.WriteLine($"PASS {variant} {results.Count}: identity, trace, ownership a
         if (stage == FrameProfileStage.Build) build += (record.EndTicks - record.Ticks) * 1000.0 / Stopwatch.Frequency;
         if (stage == FrameProfileStage.Reconcile) reconcile += (record.EndTicks - record.Ticks) * 1000.0 / Stopwatch.Frequency;
     }
+#if PROTOTYPE
+    skipped = SubtreeReuse.SkippedNodes - priorSkipped;
+    priorSkipped = SubtreeReuse.SkippedNodes;
+#endif
     return (skipped, build, reconcile);
 }
 static double Elapsed(long start) => (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency;

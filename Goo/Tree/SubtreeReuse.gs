@@ -5,6 +5,7 @@ import System
 internal class SubtreeReuse {
   shared {
     internal let Mode int32 = Int32.Parse(Environment.GetEnvironmentVariable("GOO_SUBTREE_MODE") ?? "1")
+    internal var SkippedNodes int64
 
     internal func Count(n Node) int32 {
       if n.Fiber != nil || n.ReferenceBlob == nil || n.ReferenceBlob!!.HasElementHandle || !(n.ReferenceBlob is Container || n.ReferenceBlob is Text || n.ReferenceBlob is Button) { return 0 }
@@ -42,7 +43,8 @@ internal class SubtreeReuse {
       hash.Add(b.TransitionMs)
       hash.Add(b.TransitionDelayMs)
       hash.Add(b.TransitionEasing)
-      hash.Add(b.TransitionSelection)
+      hash.Add(b.TransitionSelection.Low)
+      hash.Add(b.TransitionSelection.High)
       if !StyleHash(b, ref hash) || !StyleHash(b.Hover, ref hash) || !StyleHash(b.Active, ref hash) || !StyleHash(b.Focus, ref hash) || !StyleHash(b.DisabledStyle, ref hash) { return }
       var count = 1
       if let text = b as Text { hash.Add(text.Content) }
@@ -50,13 +52,16 @@ internal class SubtreeReuse {
         hash.Add(c.HitTestSelf)
         hash.Add(c.HasAuthoredHitTestSelf)
         hash.Add(c.DragsWindow)
-        hash.Add(c.Children.Count)
-        for index in 0 ... c.Children.Count {
-          let child = c.Children[index]
-          Freeze(child)
-          if child.ReuseNodes == 0 { return }
-          hash.Add(child.ReuseHash)
-          count += child.ReuseNodes
+        let children = c.ReuseChildren
+        hash.Add(children?.Count ?? 0)
+        if children != nil {
+          for index in 0 ... children!!.Count {
+            let child = children!![index]
+            Freeze(child)
+            if child.ReuseNodes == 0 { return }
+            hash.Add(child.ReuseHash)
+            count += child.ReuseNodes
+          }
         }
       }
       b.ReuseHash = hash.ToHashCode()
@@ -105,15 +110,18 @@ internal class SubtreeReuse {
       if a == b { return true }
       if a.ReuseNodes == 0 || b.ReuseNodes == 0 || a.ReuseHash != b.ReuseHash || a.GetType() != b.GetType() || a.Key != b.Key || a.CallbackOwner != b.CallbackOwner { return false }
       if a.OnClick != b.OnClick || a.OnPointerDown != b.OnPointerDown || a.OnPointerMove != b.OnPointerMove || a.OnPointerUp != b.OnPointerUp || a.OnPointerCancel != b.OnPointerCancel || a.OnWheel != b.OnWheel { return false }
-      if a.Focusable != b.Focusable || a.TabStop != b.TabStop || a.Disabled != b.Disabled || a.AutoFocus != b.AutoFocus || a.TransitionMs != b.TransitionMs || a.TransitionDelayMs != b.TransitionDelayMs || a.TransitionEasing != b.TransitionEasing || a.TransitionSelection != b.TransitionSelection { return false }
+      if a.Focusable != b.Focusable || a.TabStop != b.TabStop || a.Disabled != b.Disabled || a.AutoFocus != b.AutoFocus || a.TransitionMs != b.TransitionMs || a.TransitionDelayMs != b.TransitionDelayMs || a.TransitionEasing != b.TransitionEasing || !sameTransitionSelection(a.TransitionSelection, b.TransitionSelection) { return false }
       if !StyleEqual(a, b) || !StyleEqual(a.Hover, b.Hover) || !StyleEqual(a.Active, b.Active) || !StyleEqual(a.Focus, b.Focus) || !StyleEqual(a.DisabledStyle, b.DisabledStyle) { return false }
       if a is Text && b is Text { return a.Content == b.Content }
       if a is Container && b is Container {
         let x = a
         let y = b
-        if x.HitTestSelf != y.HitTestSelf || x.HasAuthoredHitTestSelf != y.HasAuthoredHitTestSelf || x.DragsWindow != y.DragsWindow || x.Children.Count != y.Children.Count { return false }
-        for index in 0 ... x.Children.Count {
-          if !Equal(x.Children[index], y.Children[index]) { return false }
+        let left = x.ReuseChildren
+        let right = y.ReuseChildren
+        let count = left?.Count ?? 0
+        if x.HitTestSelf != y.HitTestSelf || x.HasAuthoredHitTestSelf != y.HasAuthoredHitTestSelf || x.DragsWindow != y.DragsWindow || count != (right?.Count ?? 0) { return false }
+        for index in 0 ... count {
+          if !Equal(left!![index], right!![index]) { return false }
         }
         return true
       }

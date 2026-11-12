@@ -51,6 +51,7 @@ internal partial class Reconciler {
   internal var ProfileResolveCalls int64
   private var fallbackChildScratch ChildDiffScratch?
   private var referenceVisits int64
+  private var referenceSkipped int64
   private var styleRetryRoot Node?
   private var deferredRetirement Node?
   private var pendingHandleMoves Dictionary[Node, ElementHandle]?
@@ -704,6 +705,7 @@ internal partial class Reconciler {
   internal func Diff(n Node, b Blob) Node {
     let previousDepth = enterTree(n.Parent)
     let outer = operationDepth == 0
+    if outer { referenceSkipped = 0 }
     if outer && !recyclingRow {
       rememberStyleRetryRoot(n)
     }
@@ -711,6 +713,10 @@ internal partial class Reconciler {
     var completed = false
     try {
       let result = diffCore(n, b)
+      if outer && referenceSkipped > 0 {
+        FrameRecorder.Current?.Counter("reconcile.reference_skipped_nodes", "cpu.work",
+          uint64(referenceSkipped), Stopwatch.GetTimestamp(), unit: "nodes")
+      }
       if outer && !DeferStyleFlush {
         FlushStyles()
       }
@@ -781,16 +787,16 @@ internal partial class Reconciler {
         if n.ReferenceBlob == b {
           if n.ReferenceTreeNodes == 0 { n.ReferenceTreeNodes = SubtreeReuse.Count(n) }
           if n.ReferenceTreeNodes > 0 {
-            FrameRecorder.Current?.Counter("reconcile.reference_skipped_nodes", "cpu.work",
-              uint64(n.ReferenceTreeNodes), Stopwatch.GetTimestamp(), unit: "nodes")
+            referenceSkipped += int64(n.ReferenceTreeNodes)
+            SubtreeReuse.SkippedNodes += int64(n.ReferenceTreeNodes)
             return n
           }
         }
       }
       SubtreeReuse.Freeze(b)
       if SubtreeReuse.Mode == 3 && !recyclingRow && n.Context == Context && n.Fiber == nil && b.ReuseNodes > 0 && n.ReferenceBlob != nil && SubtreeReuse.Equal(n.ReferenceBlob!!, b) {
-        FrameRecorder.Current?.Counter("reconcile.reference_skipped_nodes", "cpu.work",
-          uint64(b.ReuseNodes), Stopwatch.GetTimestamp(), unit: "nodes")
+        referenceSkipped += int64(b.ReuseNodes)
+        SubtreeReuse.SkippedNodes += int64(b.ReuseNodes)
         n.ReferenceBlob = b
         n.ReferenceTreeNodes = b.ReuseNodes
         return n

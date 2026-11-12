@@ -9,6 +9,7 @@ public class Container : Blob {
   private var children IList[Blob]?
   private var hitTestSelf bool
   private var hasAuthoredHitTestSelf bool
+  internal prop ReuseChildren IList[Blob]? { get -> children }
 
   internal override func coreBlob() {
   }
