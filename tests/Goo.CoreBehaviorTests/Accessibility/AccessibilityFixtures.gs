@@ -15,7 +15,7 @@ internal class AccessibilityFixtures {
   func PrimitiveAndExclusionContract() bool {
     let adapter = AccessibilityTestAdapter{}
     let cell = AccessibilityFixtureCell{}
-    let window = Window{ Root: cell, Width: 200, Height: 100 }
+    let window = Window{ Root: cell, Size: LayoutSize(200, 100), }
     window.AccessibilityAdapter = adapter
     window.UpdateTree()
     guard let tree = adapter.Tree, let root = tree.Root else { return false }
@@ -48,7 +48,7 @@ internal class AccessibilityFixtures {
       Anchor: TextPosition{ Offset: 1, Affinity: TextAffinity.Upstream },
       Active: TextPosition{ Offset: 4, Affinity: TextAffinity.Downstream },
     }
-    let window = Window{ Root: AccessibilityEditorCell(document, controller), Width: 200, Height: 100 }
+    let window = Window{ Root: AccessibilityEditorCell(document, controller), Size: LayoutSize(200, 100), }
     window.AccessibilityAdapter = adapter
     window.UpdateTree()
     guard let root = adapter.Tree?.Root else { return false }
@@ -77,7 +77,7 @@ internal class AccessibilityFixtures {
       actionRejected = true
     }
     let adapter = AccessibilityTestAdapter{ Failures: 2 }
-    let window = Window{ Root: AccessibilityFixtureCell{}, Width: 200, Height: 100 }
+    let window = Window{ Root: AccessibilityFixtureCell{}, Size: LayoutSize(200, 100), }
     window.AccessibilityAdapter = adapter
     window.UpdateTree()
     let firstVersion = adapter.Tree?.Version ?? -1
@@ -89,7 +89,7 @@ internal class AccessibilityFixtures {
   func RetainedIdentityAndRelationshipsContract() bool {
     let adapter = AccessibilityTestAdapter{}
     let cell = AccessibilityEquivalentCell{}
-    let window = Window{ Root: cell, Width: 200, Height: 100 }
+    let window = Window{ Root: cell, Size: LayoutSize(200, 100), }
     window.AccessibilityAdapter = adapter
     window.UpdateTree()
     guard let first = adapter.Tree, let node = first.Root else { return false }
@@ -104,7 +104,7 @@ internal class AccessibilityFixtures {
 
     let localLabel = ElementHandle{}
     let relationAdapter = AccessibilityTestAdapter{}
-    let relationWindow = Window{ Root: AccessibilityRelationshipCell(localLabel), Width: 200, Height: 100 }
+    let relationWindow = Window{ Root: AccessibilityRelationshipCell(localLabel), Size: LayoutSize(200, 100), }
     relationWindow.AccessibilityAdapter = relationAdapter
     relationWindow.UpdateTree()
     guard let relationRoot = relationAdapter.Tree?.Root else { return false }
@@ -116,11 +116,11 @@ internal class AccessibilityFixtures {
 
     let foreignLabel = ElementHandle{}
     let otherAdapter = AccessibilityTestAdapter{}
-    let otherWindow = Window{ Root: AccessibilityTargetCell(foreignLabel), Width: 200, Height: 100 }
+    let otherWindow = Window{ Root: AccessibilityTargetCell(foreignLabel), Size: LayoutSize(200, 100), }
     otherWindow.AccessibilityAdapter = otherAdapter
     otherWindow.UpdateTree()
     let crossAdapter = AccessibilityTestAdapter{}
-    let crossWindow = Window{ Root: AccessibilityExternalRelationshipCell(foreignLabel), Width: 200, Height: 100 }
+    let crossWindow = Window{ Root: AccessibilityExternalRelationshipCell(foreignLabel), Size: LayoutSize(200, 100), }
     crossWindow.AccessibilityAdapter = crossAdapter
     crossWindow.UpdateTree()
     guard let crossRoot = crossAdapter.Tree?.Root else { return false }
@@ -152,7 +152,7 @@ internal class AccessibilityFixtures {
   func FailedDiffPreservesPublishedTreeContract() bool {
     let adapter = AccessibilityTestAdapter{}
     let cell = AccessibilityTransactionalCell{}
-    let window = Window{ Root: cell, Width: 200, Height: 100 }
+    let window = Window{ Root: cell, Size: LayoutSize(200, 100), }
     window.AccessibilityAdapter = adapter
     window.UpdateTree()
     guard let prior = adapter.Tree, let priorRoot = prior.Root else { return false }
@@ -173,7 +173,7 @@ internal class AccessibilityFixtures {
   func StateAndActionCapabilityContract() bool {
     let adapter = AccessibilityTestAdapter{}
     let cell = AccessibilityActionCell{}
-    let window = Window{ Root: cell, Width: 100, Height: 40 }
+    let window = Window{ Root: cell, Size: LayoutSize(100, 40), }
     window.AccessibilityAdapter = adapter
     window.UpdateTree()
     guard let tree = adapter.Tree, let root = tree.Root else { return false }
@@ -228,7 +228,7 @@ internal class AccessibilityFixtures {
   func PayloadActionContract(setValue AccessibilityActionRequest,
     selection AccessibilityActionRequest, scroll AccessibilityActionRequest) bool{
       let adapter = AccessibilityTestAdapter{}
-      let window = Window{ Root: AccessibilityActionCell{}, Width: 100, Height: 40 }
+      let window = Window{ Root: AccessibilityActionCell{}, Size: LayoutSize(100, 40), }
       window.AccessibilityAdapter = adapter
       window.UpdateTree()
       guard let root = adapter.Tree?.Root else { return false }
@@ -247,7 +247,7 @@ internal class AccessibilityFixtures {
   func DeliveryDemandAndReplacementContract() bool {
     let adapter = AccessibilityTestAdapter{}
     let cell = AccessibilityActionCell{}
-    let window = Window{ Root: cell, Width: 100, Height: 40 }
+    let window = Window{ Root: cell, Size: LayoutSize(100, 40), }
     window.AccessibilityAdapter = adapter
     window.UpdateTree()
     window.markFrameRendered()
@@ -264,7 +264,7 @@ internal class AccessibilityFixtures {
 
     let first = AccessibilityTestAdapter{}
     let replacement = AccessibilityTestAdapter{}
-    let reentrant = Window{ Root: AccessibilityFixtureCell{}, Width: 100, Height: 40 }
+    let reentrant = Window{ Root: AccessibilityFixtureCell{}, Size: LayoutSize(100, 40), }
     first.ReplacementWindow = reentrant
     first.Replacement = replacement
     reentrant.AccessibilityAdapter = first
@@ -278,7 +278,7 @@ internal class AccessibilityFixtures {
   func DisplayAndVisibilityExclusionContract() bool {
     let adapter = AccessibilityTestAdapter{}
     let cell = AccessibilityExclusionCell{}
-    let window = Window{ Root: cell, Width: 200, Height: 100 }
+    let window = Window{ Root: cell, Size: LayoutSize(200, 100), }
     window.AccessibilityAdapter = adapter
     window.UpdateTree()
     guard let root = adapter.Tree?.Root else { return false }
@@ -292,7 +292,7 @@ internal class AccessibilityFixtures {
   func FocusLayoutAndScrollContract() bool {
     let adapter = AccessibilityTestAdapter{}
     let cell = AccessibilityGeometryCell{}
-    let window = Window{ Root: cell, Width: 200, Height: 100 }
+    let window = Window{ Root: cell, Size: LayoutSize(200, 100), }
     window.AccessibilityAdapter = adapter
     window.UpdateTree()
     guard let root = adapter.Tree?.Root else { return false }
@@ -331,7 +331,7 @@ internal class AccessibilityFixtures {
     let detached = ElementHandle{}
     let adapter = AccessibilityTestAdapter{}
     let cell = AccessibilityRelationshipTargetsCell(visible, hidden, flattened, detached)
-    let window = Window{ Root: cell, Width: 200, Height: 100 }
+    let window = Window{ Root: cell, Size: LayoutSize(200, 100), }
     window.AccessibilityAdapter = adapter
     window.UpdateTree()
     guard let root = adapter.Tree?.Root else { return false }
@@ -349,11 +349,11 @@ internal class AccessibilityFixtures {
         return false
       }
     let foreign = ElementHandle{}
-    let foreignWindow = Window{ Root: AccessibilityTargetCell(foreign), Width: 100, Height: 40 }
+    let foreignWindow = Window{ Root: AccessibilityTargetCell(foreign), Size: LayoutSize(100, 40), }
     foreignWindow.AccessibilityAdapter = AccessibilityTestAdapter{}
     foreignWindow.UpdateTree()
     let foreignAdapter = AccessibilityTestAdapter{}
-    let foreignSource = Window{ Root: AccessibilityExternalRelationshipCell(foreign), Width: 100, Height: 40 }
+    let foreignSource = Window{ Root: AccessibilityExternalRelationshipCell(foreign), Size: LayoutSize(100, 40), }
     foreignSource.AccessibilityAdapter = foreignAdapter
     foreignSource.UpdateTree()
     return foreignAdapter.Tree?.Root?.Relationships.LabelledBy.Count == 0
@@ -362,7 +362,7 @@ internal class AccessibilityFixtures {
   func SyntheticRootAndPrimitiveActionContract() bool {
     let adapter = AccessibilityTestAdapter{}
     let cell = AccessibilitySyntheticRootCell{}
-    let window = Window{ Root: cell, Width: 200, Height: 100 }
+    let window = Window{ Root: cell, Size: LayoutSize(200, 100), }
     window.AccessibilityAdapter = adapter
     window.UpdateTree()
     guard let tree = adapter.Tree, let synthetic = tree.Root else { return false }
@@ -375,7 +375,7 @@ internal class AccessibilityFixtures {
     window.UpdateTree()
     if tree.Root != nil { return false }
     let primitives = AccessibilityTestAdapter{}
-    let primitiveWindow = Window{ Root: AccessibilityPrimitiveActionCell{}, Width: 100, Height: 40 }
+    let primitiveWindow = Window{ Root: AccessibilityPrimitiveActionCell{}, Size: LayoutSize(100, 40), }
     primitiveWindow.AccessibilityAdapter = primitives
     primitiveWindow.UpdateTree()
     guard let primitiveRoot = primitives.Tree?.Root else { return false }
@@ -385,7 +385,7 @@ internal class AccessibilityFixtures {
 
   func DeclaredActionFailureContract() bool {
     let adapter = AccessibilityTestAdapter{}
-    let window = Window{ Root: AccessibilityActionFailureCell{}, Width: 100, Height: 40 }
+    let window = Window{ Root: AccessibilityActionFailureCell{}, Size: LayoutSize(100, 40), }
     window.AccessibilityAdapter = adapter
     window.UpdateTree()
     guard let root = adapter.Tree?.Root else { return false }
@@ -405,7 +405,7 @@ internal class AccessibilityFixtures {
   func AdapterDeliveryThreadContract() bool {
     let adapter = AccessibilityThreadAdapter{}
     let expected = Thread.CurrentThread.ManagedThreadId
-    let window = Window{ Root: AccessibilityFixtureCell{}, Width: 100, Height: 40 }
+    let window = Window{ Root: AccessibilityFixtureCell{}, Size: LayoutSize(100, 40), }
     window.AccessibilityAdapter = adapter
     window.UpdateTree()
     return adapter.ThreadId == expected
@@ -413,7 +413,7 @@ internal class AccessibilityFixtures {
 
   func HostExplorationAndRevealContract() bool {
     let adapter = AccessibilityTestAdapter{}
-    let window = Window{ Root: AccessibilityHostCell{}, Width: 100, Height: 100, UiScale: 2.0F }
+    let window = Window{ Root: AccessibilityHostCell{}, Size: LayoutSize(float64(100) / 2.0, float64(100) / 2.0),  UiScale: 2.0F }
     window.AccessibilityAdapter = adapter
     window.UpdateTree()
     guard let root = adapter.Tree?.Root else { return false }
@@ -436,7 +436,7 @@ internal class AccessibilityFixtures {
 
   func HostClipAndTransformContract() bool {
     let adapter = AccessibilityTestAdapter{}
-    let window = Window{ Root: AccessibilityClipCell{}, Width: 200, Height: 100 }
+    let window = Window{ Root: AccessibilityClipCell{}, Size: LayoutSize(200, 100), }
     window.AccessibilityAdapter = adapter
     window.UpdateTree()
     guard let root = adapter.Tree?.Root else { return false }
@@ -451,7 +451,7 @@ internal class AccessibilityFixtures {
   func KeyedMoveOrderContract() bool {
     let adapter = AccessibilityTestAdapter{}
     let cell = AccessibilityKeyedOrderCell{}
-    let window = Window{ Root: cell, Width: 100, Height: 100 }
+    let window = Window{ Root: cell, Size: LayoutSize(100, 100), }
     window.AccessibilityAdapter = adapter
     for order in []string{"abc", "bca", "abc", "bac"} {
       cell.Order = order

@@ -88,7 +88,7 @@ internal interface WindowHost {
   func SetState(value WindowState);
   func GetDisplays() IReadOnlyList[WindowDisplay];
   func GetCurrentDisplay() WindowDisplay?;
-  func TrySetFullscreenDisplay(display WindowDisplayId) WindowOperationResult;
+  func SetFullscreenDisplay(display WindowDisplayId) WindowOperationResult;
   func CapturePlacement() WindowPlacementResult;
   func ApplyPlacement(value WindowPlacement) WindowPlacementResult;
   func RequestActivation() WindowOperationResult;

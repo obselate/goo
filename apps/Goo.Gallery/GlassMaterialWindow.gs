@@ -462,8 +462,7 @@ public class GlassMaterialWindow {
             let initialTerminal = requested == "terminal"
             return Window{
                 Title: "Glass materials",
-                Width: 1120,
-                Height: 760,
+                Size: LayoutSize(1120, 760),
                 Resizable: true,
                 VSync: true,
                 Background: Color.Rgb(226, 239, 235),

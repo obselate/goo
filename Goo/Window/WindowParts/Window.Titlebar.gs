@@ -65,7 +65,7 @@ public partial class Window {
 
   internal func NativeTitlebarDoubleClick(px float64, py float64) bool {
     if !Double.IsFinite(px) || !Double.IsFinite(py) || px < 0.0 || py < 0.0
-      || px >= float64(Width) || py >= float64(Height)
+      || px >= float64(NativeWidth) || py >= float64(NativeHeight)
       || hitTest(int32(px), int32(py)) != WindowHitResult.Draggable{ return false }
     guard let callback = WindowTitlebarCallbacks.Get(this)?.Callback else { return false }
     let event = WindowTitlebarEvent{Position: Point{X: px, Y: py}}

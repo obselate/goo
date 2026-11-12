@@ -206,7 +206,7 @@ internal class Program {
                 {
                     using let lease = result.Lease!!
                     if OperatingSystem.IsMacOS() || nativeWayland {
-                        native = Window{ Width: 160, Height: 100, Root: Cell() }.Open()
+                        native = Window{ Size: LayoutSize(160, 100),  Root: Cell() }.Open()
                     }
                     File.WriteAllText(Path.Combine(root, "pid"), Environment.ProcessId.ToString())
                     let drain = typeof(Window).GetMethod("DrainApplicationActivations", BindingFlags.Static | BindingFlags.NonPublic)!!
@@ -237,7 +237,7 @@ internal class Program {
                 case _: WindowState.Normal
             }
             if state == WindowState.Normal {
-                let oversized = Window{ Title: "Goo placement oversized", Width: 4096, Height: 4096, MinWidth: 100, MinHeight: 100, Root: Cell() }.Open()
+                let oversized = Window{ Title: "Goo placement oversized", Size: LayoutSize(4096, 4096),  MinSize: LayoutSize(100, 100),  Root: Cell() }.Open()
                 try {
                     let usable = oversized.GetCurrentDisplay()!!.UsableBounds!!
                     for i in 0 ... 20 {
@@ -367,8 +367,8 @@ internal class Program {
         }
 
         private func RunNativeClose(root string, mode string) {
-            let main = Window{ Title: "Goo close $mode main", Width: 240, Height: 120, Root: Cell() }.Open()
-            let child = Window{ Title: "Goo close $mode child", Width: 240, Height: 120, Root: Cell(),
+            let main = Window{ Title: "Goo close $mode main", Size: LayoutSize(240, 120),  Root: Cell() }.Open()
+            let child = Window{ Title: "Goo close $mode child", Size: LayoutSize(240, 120),  Root: Cell(),
                 Owner: if mode == "visible" { main } else { nil } }.Open()
             var closing = 0
             child.OnClosing = () -> {
@@ -408,7 +408,7 @@ internal class Program {
         }
 
         private func RunClipboard(text string, root string) {
-            let window = Window{ Title: "Goo clipboard", Width: 240, Height: 120, Root: Cell() }.Open()
+            let window = Window{ Title: "Goo clipboard", Size: LayoutSize(240, 120),  Root: Cell() }.Open()
             try {
                 PumpUntil(window, () -> window.IsFocused)
                 window.SetClipboardText(text)

@@ -67,7 +67,7 @@ func CheckRichClipboard() {
     using let layer = TextPresentationLayer(controller.Document)
     layer.SetStyle("bold", TextRange(0, 7), Style{ FontWeight: 700 })
     let handle = ElementHandle()
-    let owner = Window{ Width: 240, Height: 180, Root: EditorPage(controller, layer, handle) }.Open()
+    let owner = Window{ Size: LayoutSize(240, 180),  Root: EditorPage(controller, layer, handle) }.Open()
 
     try {
         Settle(owner)
@@ -153,7 +153,7 @@ internal class Document : IPrintDocument {
 
 @STAThread
 func Main(args[]string) {
-    let window = Window{Root: Page(32, 32), Width: 96, Height: 96, Title: "Goo print check"}.Open()
+    let window = Window{Root: Page(32, 32), Size: LayoutSize(96, 96),  Title: "Goo print check"}.Open()
 
     try {
         Settle(window)

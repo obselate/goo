@@ -206,8 +206,7 @@ func VerifyNonScalingStrokePixels() {
     let root = NonScalingStrokeCell()
     let window = Window{
         Title: "Goo non-scaling stroke proof",
-        Width: 400,
-        Height: 200,
+        Size: LayoutSize(400, 200),
         VSync: false,
         Background: Color.Black,
         Root: root
@@ -450,8 +449,7 @@ func MeasureNonScalingStroke(path VectorPath, count int32, nonScaling bool) {
     let root = NonScalingStrokeBenchCell(path, count, nonScaling)
     let window = Window{
         Title: "Goo stroke zoom benchmark",
-        Width: 800,
-        Height: 600,
+        Size: LayoutSize(800, 600),
         VSync: false,
         Background: Color.Black,
         Root: root

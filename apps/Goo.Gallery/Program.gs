@@ -79,8 +79,7 @@ func Main() {
     let root = GalleryCell{}
     let window = Window{
         Title: "Goo UI gallery",
-        Width: 1440,
-        Height: 900,
+        Size: LayoutSize(1440, 900),
         Decorated: false,
         Transparent: true,
         Resizable: true,
@@ -133,8 +132,7 @@ func RunSmoke() {
     let accessibility = GallerySmokeAccessibility{}
     let window = Window{
         Title: "Goo Gallery",
-        Width: 1440,
-        Height: 900,
+        Size: LayoutSize(1440, 900),
         Decorated: false,
         Transparent: true,
         Resizable: true,
@@ -281,8 +279,7 @@ func RunBench() {
     let root = GalleryCell{}
     let window = Window{
         Title: "Goo Gallery",
-        Width: 1440,
-        Height: 900,
+        Size: LayoutSize(1440, 900),
         Resizable: true,
         VSync: false,
         Background: GalleryTheme.Background,

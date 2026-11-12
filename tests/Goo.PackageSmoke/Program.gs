@@ -174,8 +174,7 @@ func RunPrimitiveSmoke() {
     var windowMetrics WindowMetrics
     let opened = Window{
       Title: "Goo Primitive public smoke",
-      Width: 400,
-      Height: 220,
+      Size: LayoutSize(400, 220),
       VSync: false,
       Root: root,
     }
@@ -418,8 +417,7 @@ func RunDirectDriverSmoke() {
   VulkanDrivers.Direct = []string{Path.Combine(AppContext.BaseDirectory, "vulkan_lvp.dll")}
   let window = Window{
     Title: "Goo direct Vulkan driver smoke",
-    Width: 64,
-    Height: 64,
+    Size: LayoutSize(64, 64),
     VSync: false,
     Background: Color.Rgb(12, 20, 32),
     Root: Cell{},
@@ -516,22 +514,19 @@ func Main() {
     let thirdRoot = Cell{}
     let first = Window{
       Title: "Goo package smoke first",
-      Width: 160,
-      Height: 90,
+      Size: LayoutSize(160, 90),
       VSync: false,
       Root: firstRoot,
     }
     let second = Window{
       Title: "Goo package smoke second",
-      Width: 160,
-      Height: 90,
+      Size: LayoutSize(160, 90),
       VSync: false,
       Root: secondRoot,
     }
     let third = Window{
       Title: "Goo package smoke third",
-      Width: 160,
-      Height: 90,
+      Size: LayoutSize(160, 90),
       VSync: false,
       Root: thirdRoot,
     }
@@ -635,8 +630,7 @@ func Main() {
   }
   let window = Window{
     Title: "Goo package smoke test",
-    Width: 320,
-    Height: 180,
+    Size: LayoutSize(320, 180),
     VSync: false,
     Root: smokeRoot,
   }

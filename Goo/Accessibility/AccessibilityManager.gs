@@ -303,7 +303,7 @@ internal class AccessibilityManager {
 
   private func visibleBounds(n Node) ElementRect? ->
     TransformGeometry.VisibleBoundsToWindow(n, ElementHandles.BorderBox(n),
-      float64(owner.Width) / float64(owner.UiScale), float64(owner.Height) / float64(owner.UiScale))
+      owner.Size.Width, owner.Size.Height)
 
   private func resolvedRole(n Node, declaration Accessibility?) AccessibilityRole {
     if let metadata = declaration {

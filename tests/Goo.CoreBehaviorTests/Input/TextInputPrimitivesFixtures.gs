@@ -300,7 +300,7 @@ internal class TextInputPrimitivesFixtures {
 
   func ThrowingPlatformCommitSettlesEditorAndRebuildsOwner() bool {
     let cell = ThrowingEntryCallbackCell{}
-    let window = Window{ Root: cell, Width: 200, Height: 100 }
+    let window = Window{ Root: cell, Size: LayoutSize(200, 100), }
     try {
       window.UpdateTree()
       if !cell.Handle.Focus() { return false }
@@ -439,7 +439,7 @@ internal class TextInputPrimitivesFixtures {
 
   func MountedCustomContainerContract() bool {
     let cell = MountedTextClientCell{}
-    let window = Window{ Root: cell, Width: 160, Height: 90 }
+    let window = Window{ Root: cell, Size: LayoutSize(160, 90), }
     window.Open()
     try {
       window.UpdateTree()
@@ -475,7 +475,7 @@ internal class TextInputPrimitivesFixtures {
 
   func NativeTextInputLifecycleContract() bool {
     let cell = NativeTextInputLifecycleCell{}
-    let window = Window{ Root: cell, Width: 180, Height: 120 }
+    let window = Window{ Root: cell, Size: LayoutSize(180, 120), }
     window.Open()
     try {
       window.UpdateTree()

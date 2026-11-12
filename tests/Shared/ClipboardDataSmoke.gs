@@ -22,7 +22,7 @@ func RunClipboardDataSmoke() {
         return
     }
 
-    let window = Window{ Title: "Goo MIME clipboard contract", Width: 240, Height: 120, Root: Cell{} }
+    let window = Window{ Title: "Goo MIME clipboard contract", Size: LayoutSize(240, 120),  Root: Cell{} }
     let path = Environment.ProcessPath!!
     try {
         window.Open()

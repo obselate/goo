@@ -104,7 +104,7 @@ internal unsafe partial class SdlHost {
                 ObserveNormalPlacement()
             }
             if let chosen = display {
-                let result = TrySetFullscreenDisplay(chosen.Id)
+                let result = SetFullscreenDisplay(chosen.Id)
                 if result != WindowOperationResult.Accepted {
                     return WindowPlacementResult(result, appliedFields: applied, error: "Fullscreen display selection failed")
                 }

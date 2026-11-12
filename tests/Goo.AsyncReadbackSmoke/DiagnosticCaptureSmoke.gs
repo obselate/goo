@@ -49,7 +49,7 @@ internal class DiagnosticCaptureFixture {
       let root = DiagnosticCaptureCell{}
       let window = Window{
         Title: "Goo diagnostic capture Busy regression",
-        Width: 64, Height: 64, Root: root,
+        Size: LayoutSize(64, 64),  Root: root,
       }.Open()
       try {
         WindowReadbackTestFixture.ForceRender(window, 0.0)

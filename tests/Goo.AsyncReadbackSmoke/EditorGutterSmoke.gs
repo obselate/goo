@@ -44,7 +44,7 @@ func RunEditorGutterSmoke() {
   let document = TextDocument("")
   using let controller = TextEditorController(document)
   let cell = EditorGutterSmokeCell(controller)
-  let window = Window{ Title: "Goo editor gutter smoke", Width: 280, Height: 140,
+  let window = Window{ Title: "Goo editor gutter smoke", Size: LayoutSize(280, 140),
     VSync: false, Root: cell }
   window.Open()
   try {

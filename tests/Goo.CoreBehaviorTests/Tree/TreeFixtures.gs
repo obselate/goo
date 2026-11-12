@@ -90,7 +90,7 @@ internal class TreeFixtures {
   func KeyedReconciliationContract() bool {
     TreeKeyedCell.DisposedA = 0
     let parent = TreeKeyedParent{}
-    let window = Window{ Root: parent, Width: 200, Height: 100 }
+    let window = Window{ Root: parent, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     guard let first = window.Tree else { return false }
     guard let a = first.Children[0].Fiber else { return false }
@@ -162,7 +162,7 @@ internal class TreeFixtures {
 
   func PositionalReconciliationContract() bool {
     let parent = TreePositionalParent{}
-    let window = Window{ Root: parent, Width: 200, Height: 100 }
+    let window = Window{ Root: parent, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     guard let first = window.Tree else { return false }
     guard let child = first.Children[1].Fiber else { return false }
@@ -329,7 +329,7 @@ internal class TreeFixtures {
 
   func LeafDirtyUpdateContract() bool {
     let parent = TreeBuildCountingParent{}
-    let window = Window{ Root: parent, Width: 200, Height: 100 }
+    let window = Window{ Root: parent, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     let parentBuilds = parent.Builds
     guard let first = window.Tree else { return false }
@@ -345,7 +345,7 @@ internal class TreeFixtures {
 
   func DirtyAncestorContract() bool {
     let parent = TreeIncrementalParent{}
-    let window = Window{ Root: parent, Width: 200, Height: 100 }
+    let window = Window{ Root: parent, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     guard let first = window.Tree else { return false }
     guard let child = first.Children[1].Fiber else { return false }
@@ -363,7 +363,7 @@ internal class TreeFixtures {
 
   func RemovedDirtyContract() bool {
     let parent = TreeRemovedChildParent{}
-    let window = Window{ Root: parent, Width: 200, Height: 100 }
+    let window = Window{ Root: parent, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     guard let first = window.Tree else { return false }
     guard let child = first.Children[0].Fiber else { return false }
@@ -395,7 +395,7 @@ internal class TreeFixtures {
 
   func DisplayNoneFocusContract() bool {
     let cell = TreeDisplayFocusCell{}
-    let window = Window{ Width: 300, Height: 100, Root: cell }
+    let window = Window{ Size: LayoutSize(300, 100),  Root: cell }
     let input = InputCoordinator()
     let resolver = Resolver{}
     window.UpdateTree()
@@ -419,7 +419,7 @@ internal class TreeFixtures {
   func DisplayNoneLifecycleContract() bool {
     TreeDisplayRetainedCell.Disposed = false
     let parent = TreeDisplayRetainedParent{}
-    let window = Window{ Width: 200, Height: 100, Root: parent }
+    let window = Window{ Size: LayoutSize(200, 100),  Root: parent }
     window.UpdateTree()
     guard let mounted = window.Tree else { return false }
     guard let child = mounted.Children[0].Children[0].Fiber else { return false }
@@ -461,7 +461,7 @@ internal class TreeFixtures {
 
   func VisibilityFocusContract() bool {
     let cell = TreeVisibilityFocusCell{}
-    let window = Window{ Width: 300, Height: 100, Root: cell }
+    let window = Window{ Size: LayoutSize(300, 100),  Root: cell }
     let input = InputCoordinator()
     let resolver = Resolver{}
     window.UpdateTree()
@@ -485,7 +485,7 @@ internal class TreeFixtures {
   func VisibilityLifecycleContract() bool {
     TreeDisplayRetainedCell.Disposed = false
     let parent = TreeVisibilityRetainedParent{}
-    let window = Window{ Width: 200, Height: 100, Root: parent }
+    let window = Window{ Size: LayoutSize(200, 100),  Root: parent }
     window.UpdateTree()
     guard let mounted = window.Tree else { return false }
     guard let child = mounted.Children[0].Children[0].Fiber else { return false }

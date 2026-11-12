@@ -104,6 +104,8 @@ class FixtureContractTests {
             yield Contract[WindowOcclusionFixtures]("HostTransitionsNotifyOnUiThread")
             yield Contract[WindowStartupFixtures]("InitialBoundsContract")
             yield Contract[WindowStartupFixtures]("PresentModesContract")
+            yield Contract[WindowStartupFixtures]("WindowLayoutSizeContract")
+            yield Contract[WindowStartupFixtures]("SizeToContentContract")
             yield Contract[PathBuilderFixtures]("ResetPreservesPublishedPathAndClearsContour")
             yield Contract[PortalFixtures]("UiScaleLayoutInputAndAnchoredPortalContract")
             yield Contract[PortalFixtures]("AnchoredSubrectangleAndCollisionBoundsContract")

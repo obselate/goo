@@ -10,7 +10,7 @@ internal class PaintBindingFixtures {
       for field in 0 ... 4 {
         for repeat in 0 ... 2 {
           let cell = PaintSlotCell(lane, field)
-          let window = Window{ Root: cell, Width: 320, Height: 240 }
+          let window = Window{ Root: cell, Size: LayoutSize(320, 240), }
           let sink = PaintSlotProfile()
           let profiler = cast[FrameProfiler](typeof(Window).GetField("profiler", BindingFlags.Instance | BindingFlags.NonPublic)!!.GetValue(window))
           profiler.Sink = sink
@@ -66,7 +66,7 @@ internal class PaintBindingFixtures {
   func PaintSlotsPrecedenceAndRemovalContract() bool {
     let cell = PaintSlotCell(1, 0)
     cell.Duration = 1000.0
-    let window = Window{ Root: cell, Width: 320, Height: 240 }
+    let window = Window{ Root: cell, Size: LayoutSize(320, 240), }
     try {
       window.UpdateTree()
       let n = cell.Handle.AttachedNode()!!
@@ -109,7 +109,7 @@ internal class PaintBindingFixtures {
 
   func PaintSlotsWakeDisposeAndRetireContract() bool {
     let cell = PaintSlotCell(1, 0)
-    let window = Window{ Root: cell, Width: 320, Height: 240 }
+    let window = Window{ Root: cell, Size: LayoutSize(320, 240), }
     var wakes = 0
     try {
       window.UpdateTree()
@@ -139,7 +139,7 @@ internal class PaintBindingFixtures {
     }
     let source = MotionFixtureCell{}
     let target = PaintSlotCell(1, 0)
-    let host = Window{ Root: target, Width: 320, Height: 240 }
+    let host = Window{ Root: target, Size: LayoutSize(320, 240), }
     try {
       source.BindPump(host.PaintMotionPump)
       let anim = source.AnimateValue(0.5)
@@ -161,9 +161,9 @@ internal class PaintBindingFixtures {
 
   func PaintSlotsRejectOtherWindowsAndPropagateColorContract() bool {
     let source = PaintSlotCell(1, 0)
-    let first = Window{ Root: source, Width: 320, Height: 240 }
+    let first = Window{ Root: source, Size: LayoutSize(320, 240), }
     let target = PaintSlotCell(1, 0)
-    let second = Window{ Root: target, Width: 320, Height: 240 }
+    let second = Window{ Root: target, Size: LayoutSize(320, 240), }
     try {
       first.UpdateTree()
       target.Replacement = source.Number
@@ -176,7 +176,7 @@ internal class PaintBindingFixtures {
     }
     let cell = PaintSlotCell(1, 1)
     cell.InheritColor = true
-    let window = Window{ Root: cell, Width: 320, Height: 240 }
+    let window = Window{ Root: cell, Size: LayoutSize(320, 240), }
     try {
       window.UpdateTree()
       cell.Colour.Set(Color.White)
@@ -193,7 +193,7 @@ internal class PaintBindingFixtures {
 
   func PaintSlotsAcceptCustomSimulationContract() bool {
     let cell = PaintSlotCell(1, 0)
-    let window = Window{ Root: cell, Width: 320, Height: 240 }
+    let window = Window{ Root: cell, Size: LayoutSize(320, 240), }
     try {
       window.UpdateTree()
       cell.Number.To(0.25, (from float64, to float64, velocity float64) -> PaintSlotSpring(from, to, velocity))
@@ -207,7 +207,7 @@ internal class PaintBindingFixtures {
 
   func InfinitePaintSkipsClippedTicksAndResumesPhaseContract() bool {
     let cell = PaintVisibilityCell(true)
-    let window = Window{ Root: cell, Width: 240, Height: 160 }
+    let window = Window{ Root: cell, Size: LayoutSize(240, 160), }
     try {
       window.UpdateTree()
       let first = cell.Scroll.AttachedNode()!!.Children[0].Children[0].Children[0]
@@ -252,7 +252,7 @@ internal class PaintBindingFixtures {
 
   func InfinitePaintKeepsSharedVisibleTargetContract() bool {
     let cell = PaintVisibilityCell(true)
-    let window = Window{ Root: cell, Width: 240, Height: 160 }
+    let window = Window{ Root: cell, Size: LayoutSize(240, 160), }
     try {
       window.UpdateTree()
       cell.Shared = true
@@ -276,7 +276,7 @@ internal class PaintBindingFixtures {
 
   func ClippedFiniteAndUnmarkedSimulationsKeepTickingContract() bool {
     let cell = PaintVisibilityCell(false)
-    let window = Window{ Root: cell, Width: 240, Height: 160 }
+    let window = Window{ Root: cell, Size: LayoutSize(240, 160), }
     var completions = 0
     try {
       window.UpdateTree()
@@ -304,7 +304,7 @@ internal class PaintBindingFixtures {
     internal func MeasureInfiniteVisibility() {
       let marked = Environment.GetEnvironmentVariable("GOO_ANIMATION_VISIBILITY_SMOKE") != "legacy"
       let cell = PaintVisibilityCell(marked)
-      let window = Window{ Root: cell, Title: "Goo animation visibility", Width: 240, Height: 160 }.Open()
+      let window = Window{ Root: cell, Title: "Goo animation visibility", Size: LayoutSize(240, 160), }.Open()
       using let process = Process.GetCurrentProcess()
       var frames uint64
       var initialFrames uint64

@@ -647,8 +647,7 @@ func PartialRedrawScene(name string, root Cell, steps int32, advance Action,
   resizeCapacity bool = false) int32 {
   let window = Window{
     Title: "Goo partial redraw proof",
-    Width: 400,
-    Height: 190,
+    Size: LayoutSize(400, 190),
     VSync: false,
     Root: root,
   }

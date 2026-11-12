@@ -35,8 +35,7 @@ class ExplicitKeyBindingTests {
         let handle = ElementHandle()
         let primary = KeyModifiers{Ctrl: !InputPolicy.Mac, Super: InputPolicy.Mac}
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(() -> if editor {
                 cast[Blob](TextEditor(controller){Handle = handle})
             } else {
@@ -96,8 +95,7 @@ class ExplicitKeyBindingTests {
         using let controller = TextEditorController(TextDocument(""))
         let handle = ElementHandle()
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(() -> TextEditor(controller){Handle = handle})
         }
         try {
@@ -137,8 +135,7 @@ class ExplicitKeyBindingTests {
         let handle = ElementHandle()
         var value = "keep"
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> if editor {
                     cast[Blob](TextEditor(controller){Handle = handle})
@@ -214,8 +211,7 @@ class ExplicitKeyBindingTests {
         var value = content
         let adapter = AccessibilityTestAdapter()
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             AccessibilityAdapter: adapter,
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> if editor {
@@ -293,8 +289,7 @@ class ExplicitKeyBindingTests {
         var submissions = 0
         var clicks = 0
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> Container{
                     Children: []Blob{
@@ -355,8 +350,7 @@ class ExplicitKeyBindingTests {
         var failRelease = false
         let events = List[string]()
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> Container{
                     OnKeyDown: (e KeyEvent) -> {
@@ -483,8 +477,7 @@ class ExplicitKeyBindingTests {
         var firstValue = ""
         var secondValue = ""
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> Container{
                     Children: []Blob{
@@ -542,8 +535,7 @@ class ExplicitKeyBindingTests {
         var releaseModifiers = default(KeyModifiers)
         var window Window? = nil
         window = Window{
-            Width: 160,
-            Height: 80,
+            Size: LayoutSize(160, 80),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> Button{
                     Handle: handle,
@@ -635,8 +627,7 @@ class ExplicitKeyBindingTests {
         var failBlur = false
         var cancels = 0
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> Container{
                     OnFocus: (_ FocusEvent) -> parents++,
@@ -725,8 +716,7 @@ class ExplicitKeyBindingTests {
         let primary = KeyModifiers{Ctrl: !mac, Super: mac}
         let primaryShift = KeyModifiers{Ctrl: !mac, Super: mac, Shift: true}
         window = Window{
-            Width: 320,
-            Height: 160,
+            Size: LayoutSize(320, 160),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> Container{
                     KeyBindings: if legacyBindings {
@@ -840,8 +830,7 @@ class ExplicitKeyBindingTests {
         var prevent = true
         let primary = KeyModifiers{Ctrl: !InputPolicy.Mac, Super: InputPolicy.Mac}
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> TextEntry{
                     Handle: field,
@@ -913,8 +902,7 @@ class ExplicitKeyBindingTests {
             e.Cancel = true
         }
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(() -> TextEditor(controller){Handle = field})
         }
         try {

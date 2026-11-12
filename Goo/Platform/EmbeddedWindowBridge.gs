@@ -87,7 +87,7 @@ internal partial class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   public func SetState(value WindowState) { }
   public func GetDisplays() IReadOnlyList[WindowDisplay] -> Array.Empty[WindowDisplay]()
   public func GetCurrentDisplay() WindowDisplay? -> nil
-  public func TrySetFullscreenDisplay(display WindowDisplayId) WindowOperationResult -> WindowOperationResult.Unsupported
+  public func SetFullscreenDisplay(display WindowDisplayId) WindowOperationResult -> WindowOperationResult.Unsupported
   public func CapturePlacement() WindowPlacementResult -> WindowPlacementResult(WindowOperationResult.Unsupported)
   public func ApplyPlacement(value WindowPlacement) WindowPlacementResult -> WindowPlacementResult(WindowOperationResult.Unsupported)
   public func RequestActivation() WindowOperationResult -> WindowOperationResult.Unsupported

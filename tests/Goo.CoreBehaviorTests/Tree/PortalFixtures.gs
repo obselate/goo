@@ -6,7 +6,7 @@ import System.Numerics
 internal class PortalFixtures {
   func UiScaleLayoutInputAndAnchoredPortalContract() bool {
     let cell = PortalPlacementCell{}
-    let window = Window{Root: cell, Width: 300, Height: 200, UiScale: 1.25F}
+    let window = Window{Root: cell, Size: LayoutSize(float64(300) / 1.25, float64(200) / 1.25),  UiScale: 1.25F}
     window.UpdateTree()
     let popup = cell.Popup.BorderBox
     let physicalScale = float64(window.UiScale)
@@ -21,7 +21,7 @@ internal class PortalFixtures {
       PointerButton.Primary, KeyModifiers{}, 0.0F)
     if cell.Clicks != 1 { return false }
     let normal = PortalInputCell{}
-    let hitWindow = Window{Root: normal, Width: 250, Height: 125, UiScale: 1.25F}
+    let hitWindow = Window{Root: normal, Size: LayoutSize(float64(250) / 1.25, float64(125) / 1.25),  UiScale: 1.25F}
     hitWindow.UpdateTree()
     hitWindow.PlatformInput.PointerPress(0, PointerDevice.Mouse, 100.0F, 100.0F,
       PointerButton.Primary, KeyModifiers{}, 1.0F)
@@ -51,13 +51,12 @@ internal class PortalFixtures {
           if display != 1 && scale != 1.5F { continue }
           for capped in []bool{ false, true } {
             let cell = PortalRowAlignmentCell{ Padding: padding, Capped: capped }
-            let window = Window{ Root: cell, Width: 600, Height: 600 }
+            let window = Window{ Root: cell, Size: LayoutSize(600, 600), }
             window.SetDisplayScaleForTest(display)
             cell.Scale = window.PixelScale
             window.UpdateTree()
             window.UiScale = scale
-            window.Width = int32(600 * scale)
-            window.Height = int32(600 * scale)
+            window.Size = LayoutSize(600, 600)
             cell.Scale = window.PixelScale
             cell.Rebuild()
             var notifications = 0
@@ -95,7 +94,7 @@ internal class PortalFixtures {
     }
     for rotate in []bool{ false, true } {
       let cell = RawBoundsTransformCell{ Rotate: rotate }
-      let window = Window{ Root: cell, Width: 100, Height: 100 }
+      let window = Window{ Root: cell, Size: LayoutSize(100, 100), }
       window.UpdateTree()
       let actual = cell.Handle.RawBorderBox
       let expected = rotate
@@ -111,13 +110,12 @@ internal class PortalFixtures {
 
   func TranslatedWindowPointPortalSharesDeviceRowsContract() bool {
     let cell = PortalRowAlignmentCell{ Padding: 6, Translate: 6, Offset: 1 }
-    let window = Window{ Root: cell, Width: 720, Height: 520 }
+    let window = Window{ Root: cell, Size: LayoutSize(720, 520), }
     window.SetDisplayScaleForTest(1.5F)
     cell.Scale = window.PixelScale
     window.UpdateTree()
     window.UiScale = 1.5F
-    window.Width = 1080
-    window.Height = 780
+    window.Size = LayoutSize(720, 520)
     cell.Scale = window.PixelScale
     cell.Field.MetricsChanged += metrics -> {
       if !metrics.IsMounted { return }
@@ -149,7 +147,7 @@ internal class PortalFixtures {
 
   func OverlayOrderingInputAndGeometryContract() bool {
     let cell = PortalInputCell{}
-    let window = Window{ Root: cell, Width: 200, Height: 100 }
+    let window = Window{ Root: cell, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     guard let root = window.Tree else { return false }
     let source = root.Children[0]
@@ -196,7 +194,7 @@ internal class PortalFixtures {
     PortalRetainedCell.Disposals = 0
     let cell = PortalLifecycleCell{}
     let adapter = AccessibilityTestAdapter{}
-    let window = Window{ Root: cell, Width: 200, Height: 80 }
+    let window = Window{ Root: cell, Size: LayoutSize(200, 80), }
     window.AccessibilityAdapter = adapter
     window.UpdateTree()
     guard let root = window.Tree else { return false }
@@ -250,7 +248,7 @@ internal class PortalFixtures {
 
   func AnchoredPlacementTracksViewportAndGeometryContract() bool {
     let cell = PortalPlacementCell{}
-    let window = Window{ Root: cell, Width: 240, Height: 160 }
+    let window = Window{ Root: cell, Size: LayoutSize(240, 160), }
     window.UpdateTree()
     if !samePortalBox(cell.Popup.BorderBox, 150.0, 50.0, 90.0, 50.0) {
       return false
@@ -300,7 +298,7 @@ internal class PortalFixtures {
 
   func AnchoredSubrectangleAndCollisionBoundsContract() bool {
     let cell = PortalPlacementCell{}
-    let window = Window{ Root: cell, Width: 240, Height: 160 }
+    let window = Window{ Root: cell, Size: LayoutSize(240, 160), }
     window.UpdateTree()
     cell.AnchorRect = ElementRect{ X: 5, Y: 2, Width: 10, Height: 8 }
     cell.Rebuild()
@@ -352,7 +350,7 @@ internal class PortalFixtures {
 
   func AnchoredPlacementSizesToSelectedSideContract() bool {
     let cell = PortalSideSizeCell{}
-    let window = Window{ Root: cell, Width: 720, Height: 520 }
+    let window = Window{ Root: cell, Size: LayoutSize(720, 520), }
     window.UpdateTree()
     if !samePortalBox(cell.Popup.BorderBox, 270.0, 192.0, 320.0, 250.0) { return false }
     window.HandleResize(720, 320)
@@ -414,7 +412,7 @@ internal class PortalFixtures {
   func ClippedAnchorPreservesMountedEditorContract() bool {
     let cell = PortalClippedAnchorCell{}
     let adapter = AccessibilityTestAdapter{}
-    let window = Window{ Root: cell, Width: 240, Height: 160, AccessibilityAdapter: adapter }
+    let window = Window{ Root: cell, Size: LayoutSize(240, 160),  AccessibilityAdapter: adapter }
     window.UpdateTree()
     guard let root = window.Tree, let entry = cell.Editor.AttachedNode(),
       let portal = entry.Parent, let retained = entry.Fiber as PortalClippedEditorCell ? else { return false }
@@ -463,11 +461,11 @@ internal class PortalFixtures {
   func AnchoredPlacementLifecycleAndDependencyContract() bool {
     let otherAnchor = ElementHandle{}
     let other = Window{ Root: PortalForeignAnchorCell(otherAnchor),
-      Width: 40, Height: 40 }
+      Size: LayoutSize(40, 40), }
     other.UpdateTree()
     let cell = PortalAnchorLifecycleCell{}
     let adapter = AccessibilityTestAdapter{}
-    let window = Window{ Root: cell, Width: 200, Height: 120 }
+    let window = Window{ Root: cell, Size: LayoutSize(200, 120), }
     window.AccessibilityAdapter = adapter
     window.UpdateTree()
     guard let initial = window.Tree else { return false }
@@ -529,7 +527,7 @@ internal class PortalFixtures {
 
   func FocusScopeCloseRestoreContract() bool {
     let cell = FocusScopeCloseCell{}
-    let window = Window{ Root: cell, Width: 200, Height: 100 }
+    let window = Window{ Root: cell, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     for nested in []bool{ false, true } {
       for restore in []bool{ false, true } {

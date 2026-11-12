@@ -11,7 +11,7 @@ class AccessibilityTextTests {
     @Fact
     func NativeRolesAndSparseGridReachAccessKit() {
         using let adapter = NativeAccessibilityAdapter()
-        let window = Window{Width: 420, Height: 760, Root: SmokeApplication.CreateAccessibilityRoot()}
+        let window = Window{Size: LayoutSize(420, 760),  Root: SmokeApplication.CreateAccessibilityRoot()}
         window.AccessibilityAdapter = adapter
         try {
             window.UpdateTree()
@@ -30,7 +30,7 @@ class AccessibilityTextTests {
     func NativeVirtualSetIndicesReachAccessKit() {
         using let adapter = NativeAccessibilityAdapter()
         let cell = VirtualFixtureCell(1000)
-        let window = Window{Width: 100, Height: 60, Root: cell}
+        let window = Window{Size: LayoutSize(100, 60),  Root: cell}
         window.AccessibilityAdapter = adapter
         try {
             window.UpdateTree()
@@ -74,7 +74,7 @@ class AccessibilityTextTests {
     func NativeTextGeometrySurvivesWrappingBidiAndResize() {
         const content = "Hello שלום world again and again"
         using let adapter = NativeAccessibilityAdapter()
-        let window = Window{Width: 180, Height: 400, Root: TextCell(content)}
+        let window = Window{Size: LayoutSize(180, 400),  Root: TextCell(content)}
         window.AccessibilityAdapter = adapter
         try {
             window.UpdateTree()

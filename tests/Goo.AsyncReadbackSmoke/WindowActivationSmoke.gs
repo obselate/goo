@@ -46,7 +46,7 @@ internal class WindowActivationSmoke {
         using let release = ManualResetEventSlim(false)
         let child = Window{
           Title: "Goo pending startup", Root: WindowActivationCell{},
-          Width: 320, Height: 100, Owner: owner,
+          Size: LayoutSize(320, 100),  Owner: owner,
         }
         VulkanWindowTarget.SecondaryStartupForTest = () -> {
           entered.Set()
@@ -62,8 +62,7 @@ internal class WindowActivationSmoke {
             Thread.Sleep(1)
           }
           Require(entered.IsSet, "Secondary startup worker did not enter")
-          child.Width = 360
-          child.Height = 180
+          child.Size = LayoutSize(360, 180)
           child.VSync = false
           if closeEarly {
             child.RequestClose()
@@ -119,7 +118,7 @@ internal class WindowActivationSmoke {
       }
       let failed = Window{
         Title: "Goo failed startup", Root: WindowActivationCell{},
-        Width: 320, Height: 100, Owner: owner,
+        Size: LayoutSize(320, 100),  Owner: owner,
       }
       VulkanWindowTarget.SecondaryStartupForTest = () -> {
         throw InvalidOperationException("secondary-startup-failure")
@@ -147,10 +146,10 @@ internal class WindowActivationSmoke {
     internal func Run() {
       let root = WindowActivationCell{}
       let window = Window{
-        Title: "Goo activation smoke", Root: root, Width: 320, Height: 100,
+        Title: "Goo activation smoke", Root: root, Size: LayoutSize(320, 100),
         InitiallyVisible: false, Topmost: true,
       }
-      Require(window.TrySetTopmost(false) == WindowOperationResult.Closed,
+      Require(window.SetTopmost(false) == WindowOperationResult.Closed,
         "Closed window accepted a topmost request")
       Require(window.Topmost, "Topmost preference changed before native open")
       window.Open()
@@ -158,7 +157,7 @@ internal class WindowActivationSmoke {
         Require(!window.IsVisible && !window.IsFocused, "Initially hidden window was shown or focused")
         let topmostSupported =
           (window.Capabilities & WindowCapabilities.Topmost) != WindowCapabilities.None
-        let topmostResult = window.TrySetTopmost(false)
+        let topmostResult = window.SetTopmost(false)
         if topmostSupported {
           Require(topmostResult == WindowOperationResult.Accepted,
             "Supported topmost request was not accepted")
@@ -237,7 +236,7 @@ internal class WindowActivationSmoke {
         VerifyPendingStartup(window)
         let child = Window{
           Title: "Goo modal activation smoke", Root: WindowActivationCell{},
-          Width: 320, Height: 100, Owner: window, Modal: true,
+          Size: LayoutSize(320, 100),  Owner: window, Modal: true,
         }.Open()
         try {
           WindowReadbackTestFixture.ForceRender(child, 0.0, 10.0, true)

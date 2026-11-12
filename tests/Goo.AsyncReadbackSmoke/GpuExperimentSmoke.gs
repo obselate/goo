@@ -48,7 +48,7 @@ func RunGpuExperimentSmoke() {
   font.Register()
   using let image = ImageSource(1, 1, []uint8{0, 255, 0, 255})
   let window = Window{
-    Title: "Goo GPU experiment gate", Width: 240, Height: 120, VSync: false,
+    Title: "Goo GPU experiment gate", Size: LayoutSize(240, 120),  VSync: false,
     Root: GpuExperimentCell(image), Background: Color.Black,
   }
   let errors = StringWriter()

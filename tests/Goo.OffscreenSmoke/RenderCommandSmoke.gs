@@ -23,7 +23,7 @@ func RunRenderCommandSmoke() {
     font.Register()
     let appearance = Context[Style]()
     let window = Window{
-        Width: 320, Height: 96, Background: Color.Rgb(32, 64, 96),
+        Size: LayoutSize(320, 96),  Background: Color.Rgb(32, 64, 96),
         Root: RenderCommandPage(appearance),
         Scenes: System.Collections.Generic.Dictionary[string, Func[Cell]]{
             ["registered"] = () -> RenderCommandPage(appearance),

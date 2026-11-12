@@ -192,8 +192,7 @@ func RunShaderEffectSmoke() {
   try {
     let opened = Window{
       Title: "Goo Shader effect gate",
-      Width: 192,
-      Height: 128,
+      Size: LayoutSize(192, 128),
       VSync: false,
       Root: cell,
     }

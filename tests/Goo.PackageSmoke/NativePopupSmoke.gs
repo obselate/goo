@@ -18,7 +18,7 @@ class NativePopupSmokeCell : Cell {
 }
 
 func RunNativePopupSmoke(kind PopupKind = PopupKind.Tooltip) {
-  let owner = Window{ Title: "Native popup presentation", Width: 320, Height: 200, Root: Cell{} }.Open()
+  let owner = Window{ Title: "Native popup presentation", Size: LayoutSize(320, 200),  Root: Cell{} }.Open()
   let root = NativePopupSmokeCell{}
   using let popup = PopupWindow(owner, root, kind)
   var completed = false

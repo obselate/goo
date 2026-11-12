@@ -149,8 +149,7 @@ func RunImageStagingSmoke() {
   try {
     let opened = Window{
       Title: "Goo image staging growth gate",
-      Width: 96,
-      Height: 96,
+      Size: LayoutSize(96, 96),
       VSync: false,
       Root: root,
     }

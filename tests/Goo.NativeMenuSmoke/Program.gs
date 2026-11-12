@@ -152,8 +152,8 @@ internal unsafe shared class Mac {
     }
 }
 
-let first = Window{Title: "Native menu first", Width: 240, Height: 160}.Open()
-let second = Window{Title: "Native menu second", Width: 240, Height: 160}.Open()
+let first = Window{Title: "Native menu first", Size: LayoutSize(240, 160), }.Open()
+let second = Window{Title: "Native menu second", Size: LayoutSize(240, 160), }.Open()
 
 try {
     first.Pump(0.0)
@@ -177,7 +177,7 @@ try {
         throw InvalidOperationException("Duplicate identifiers accepted")
     } catch (ArgumentException) { }
     if OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() {
-        let child = Window{Owner: second, Title: "Native menu child", Width: 160, Height: 120}.Open()
+        let child = Window{Owner: second, Title: "Native menu child", Size: LayoutSize(160, 120), }.Open()
         let pending = NativeMenus.ShowContextMenuAsync(child, Point(), firstItems)
         let conflict = NativeMenus.ShowContextMenuAsync(second, Point(), secondItems)
         Check(

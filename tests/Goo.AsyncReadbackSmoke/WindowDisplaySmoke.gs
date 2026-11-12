@@ -28,9 +28,9 @@ internal class WindowDisplaySmoke {
       let missingDisplay = WindowDisplayId{ NativeValue: uint32.MaxValue }
       let window = Window{
         Title: "Goo display smoke", Root: WindowDisplaySmokeCell{},
-        Width: 320, Height: 200, InitiallyVisible: false,
+        Size: LayoutSize(320, 200),  InitiallyVisible: false,
       }
-      Require(window.TrySetFullscreenDisplay(missingDisplay) == WindowOperationResult.Closed,
+      Require(window.SetFullscreenDisplay(missingDisplay) == WindowOperationResult.Closed,
         "Closed window accepted a fullscreen display request")
       window.Open()
       try {
@@ -42,7 +42,7 @@ internal class WindowDisplaySmoke {
           "SDL display bounds are invalid")
         Require(display.ContentScale >= 0.0F,
           "SDL display scale is invalid")
-        Require(window.TrySetFullscreenDisplay(missingDisplay) == WindowOperationResult.Failed,
+        Require(window.SetFullscreenDisplay(missingDisplay) == WindowOperationResult.Failed,
           "Unknown display ID did not fail")
         Require(window.State == WindowState.Normal,
           "Failed fullscreen display request changed the window state")
@@ -62,7 +62,7 @@ internal class WindowDisplaySmoke {
           if value == WindowState.Fullscreen { observedFullscreenEvent = true }
         }
         let target = if displays.Count > 1 { displays[1] } else { display }
-        Require(window.TrySetFullscreenDisplay(target.Id) == WindowOperationResult.Accepted,
+        Require(window.SetFullscreenDisplay(target.Id) == WindowOperationResult.Accepted,
           "Fullscreen request for an inventoried display failed")
         Require(window.State == WindowState.Fullscreen,
           "Accepted fullscreen request did not update the requested state")
@@ -90,7 +90,7 @@ internal class WindowDisplaySmoke {
         let retargetId = retarget.Id.NativeValue
         let retargetDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency
         while Stopwatch.GetTimestamp() < retargetDeadline {
-          Require(window.TrySetFullscreenDisplay(retarget.Id) == WindowOperationResult.Accepted,
+          Require(window.SetFullscreenDisplay(retarget.Id) == WindowOperationResult.Accepted,
             "Retargeting an already-fullscreen window failed")
           window.Pump(0.0)
           nativeState = window.NativeDisplayStateForTest()

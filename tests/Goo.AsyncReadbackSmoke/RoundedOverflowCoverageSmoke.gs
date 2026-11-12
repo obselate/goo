@@ -102,7 +102,7 @@ func RunRoundedOverflowCoverageSmoke() {
   let replacementEffect = ShaderEffect(ShaderEffectProgram(File.ReadAllBytes(shaderPath), true), false)
   replacementEffect.SetParameter(0, Vector4(1.0F, 1.0F, 1.0F, 0.0F))
   let opened = Window{
-    Title: "Goo rounded overflow gate", Width: 608, Height: 304,
+    Title: "Goo rounded overflow gate", Size: LayoutSize(608, 304),
     VSync: false, Decorated: false, Transparent: true,
     Root: RoundedOverflowCoverageCell(replacementEffect), Background: Color.Transparent,
   }
@@ -245,7 +245,7 @@ func RunFocusOutlineClipSmoke() {
 
 func RunFocusOutlineClipScale(scale float32) {
   let opened = Window{
-    Title: "Goo focus outline clip gate", Width: int32(160.0F * scale), Height: int32(96.0F * scale),
+    Title: "Goo focus outline clip gate", Size: LayoutSize(float64(int32(160.0F * scale)) / float64(scale), float64(int32(96.0F * scale)) / float64(scale)),
     UiScale: scale, VSync: false, Decorated: false, Root: FocusOutlineClipCell(),
   }
   try {

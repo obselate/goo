@@ -8,7 +8,7 @@ internal class ContextFixtures {
         let key = Context[int32]()
         let other = Context[int32]()
         let cell = ContextTestRoot(key, other)
-        let window = Window{Root: cell, Width: 100, Height: 100}
+        let window = Window{Root: cell, Size: LayoutSize(100, 100), }
         key.Set(window, 10)
         other.Set(window, 50)
         try {
@@ -50,7 +50,7 @@ internal class ContextFixtures {
         let root = ContextVirtualRollbackRoot(key, other)
         let host = root.Host
         host.Show = false
-        let window = Window{Root: root, Width: 100, Height: 100}
+        let window = Window{Root: root, Size: LayoutSize(100, 100), }
         key.Set(window, 10)
         other.Set(window, 50)
         try {
@@ -98,7 +98,7 @@ internal class ContextFixtures {
     func QueuedStructReadBytes(read bool) int64 {
         let key = Context[ContextAllocationValue]()
         let cell = ContextAllocationCell(key, read)
-        let window = Window{Root: cell, Width: 100, Height: 100}
+        let window = Window{Root: cell, Size: LayoutSize(100, 100), }
         key.Set(
             window,
             ContextAllocationValue{
@@ -128,7 +128,7 @@ internal class ContextFixtures {
     func WindowPairDependencyContract() bool {
         let key = Context[int32]()
         let root = ContextWindowPairCell(key)
-        let window = Window{Root: root, Width: 100, Height: 100}
+        let window = Window{Root: root, Size: LayoutSize(100, 100), }
         key.Set(window, 0)
         try {
             window.UpdateTree()
@@ -156,8 +156,8 @@ internal class ContextFixtures {
         let other = Context[int32]()
         let firstCell = ContextTestRoot(key, other)
         let secondCell = ContextTestRoot(key, other)
-        let first = Window{Root: firstCell, Width: 100, Height: 100}
-        let second = Window{Root: secondCell, Width: 100, Height: 100}
+        let first = Window{Root: firstCell, Size: LayoutSize(100, 100), }
+        let second = Window{Root: secondCell, Size: LayoutSize(100, 100), }
         try {
             if key.TryRead(first, out var missing) || missing != 0 {
                 return false
@@ -208,7 +208,7 @@ internal class ContextFixtures {
         let key = Context[int32]()
         let other = Context[int32]()
         let cell = ContextTestRoot(key, other)
-        let window = Window{Root: cell, Width: 100, Height: 100}
+        let window = Window{Root: cell, Size: LayoutSize(100, 100), }
         key.Set(window, 10)
         other.Set(window, 50)
         try {
@@ -337,7 +337,7 @@ internal class ContextFixtures {
         let key = Context[int32]()
         let other = Context[int32]()
         let cell = ContextTestRoot(key, other)
-        let window = Window{Root: cell, Width: 100, Height: 100}
+        let window = Window{Root: cell, Size: LayoutSize(100, 100), }
         key.Set(window, 10)
         other.Set(window, 50)
         try {
@@ -357,7 +357,7 @@ internal class ContextFixtures {
                 return false
             }
             let next = ContextTestRoot(key, other)
-            let second = Window{Root: next, Width: 100, Height: 100}
+            let second = Window{Root: next, Size: LayoutSize(100, 100), }
             key.Set(second, 60)
             other.Set(second, 70)
             try {
@@ -397,7 +397,7 @@ internal class ContextFixtures {
             let other = Context[int32]()
             let cell = ContextVirtualRoot(key, other, portal)
             cell.State.StateOnlyRead = portal
-            let window = Window{Root: cell, Width: 100, Height: 60}
+            let window = Window{Root: cell, Size: LayoutSize(100, 60), }
             window.SmoothScrolling = false
             key.Set(window, 10)
             other.Set(window, 50)
@@ -524,7 +524,7 @@ internal class ContextFixtures {
     }
 
     private func disposedWindow(key Context[int32], other Context[int32]) WeakReference {
-        let window = Window{Root: ContextTestRoot(key, other), Width: 100, Height: 100}
+        let window = Window{Root: ContextTestRoot(key, other), Size: LayoutSize(100, 100), }
         key.Set(window, 1)
         other.Set(window, 2)
         window.UpdateTree()
@@ -641,7 +641,7 @@ internal class ContextTestRoot : Cell {
     private func scopedContent() Blob {
         let task = Task[bool](
             () -> {
-                let nested = Window{Root: ContextWindowPairCell(key), Width: 20, Height: 20}
+                let nested = Window{Root: ContextWindowPairCell(key), Size: LayoutSize(20, 20), }
                 key.Set(nested, 99)
                 try {
                     nested.UpdateTree()

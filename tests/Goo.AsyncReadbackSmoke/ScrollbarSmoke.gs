@@ -51,8 +51,7 @@ func RunScrollbarSmoke() {
     try {
         let opened = Window{
             Title: "Goo scrollbar visual interaction gate",
-            Width: 180,
-            Height: 140,
+            Size: LayoutSize(180, 140),
             VSync: false,
             Decorated: false,
             Resizable: true,
