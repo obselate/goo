@@ -9,7 +9,7 @@ module Counter =
         root.Add(Text(Content = $"Count: {count}"))
         let button =
             Button(Padding = Edges(Length.Pixels 10.), BorderRadius = Length.Pixels 10.,
-                TransitionMs = 150., Hover = Style(BackgroundColor = Color.Rgb(74, 125, 255)),
+                TransitionMs = 150., HoverStyle = Style(BackgroundColor = Color.Rgb(74, 125, 255)),
                 OnClick = increment)
         button.Add(Text(Content = "Add one"))
         root.Add(button)

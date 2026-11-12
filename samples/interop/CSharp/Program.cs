@@ -33,7 +33,7 @@ public sealed class Counter : Cell
             new Button
             {
                 Padding = 10, BorderRadius = 10,
-                TransitionMs = 150, Hover = new Style { BackgroundColor = Color.Rgb(74, 125, 255) },
+                TransitionMs = 150, HoverStyle = new Style { BackgroundColor = Color.Rgb(74, 125, 255) },
                 OnClick = () => { count++; },
                 Children = [new Text { Content = "Add one" }]
             }
