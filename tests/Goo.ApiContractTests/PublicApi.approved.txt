@@ -21,6 +21,7 @@ ctor|Goo.ApplicationActivation|public|()
 ctor|Goo.Button|public|()
 ctor|Goo.Cell`1|public|()
 ctor|Goo.Cell|public|()
+ctor|Goo.Column|public|()
 ctor|Goo.Container|public|()
 ctor|Goo.Context`1|public|()
 ctor|Goo.DashPattern|public|(intervals:System.Double[],offset:System.Double)
@@ -99,6 +100,7 @@ ctor|Goo.RadialGradient|public|(params colors:Goo.Color[])
 ctor|Goo.RichText.RichTextClipboard|public|(owner:Goo.Window,controller:Goo.TextEditorController,layer:Goo.TextPresentationLayer)
 ctor|Goo.RichText.RichTextFragment|public|(text:System.String,styles:System.Collections.Generic.IReadOnlyList`1<Goo.TextStyleSpan>)
 ctor|Goo.RichText.RichTextResult|public|(Status:Goo.RichText.RichTextStatus,Fragment:Goo.RichText.RichTextFragment,Error:System.String="")
+ctor|Goo.Row|public|()
 ctor|Goo.Scrollbar|public|()
 ctor|Goo.ShaderEffectData|public|(bytes:System.Byte[])
 ctor|Goo.ShaderEffectProgram|public|(program:System.Byte[],replacesBackdrop:System.Boolean=false)
@@ -107,6 +109,7 @@ ctor|Goo.Shape|public|()
 ctor|Goo.Simulation|public|()
 ctor|Goo.SoundSource|public|(sampleRate:System.Int32,channels:System.Int32,samples:System.Single[])
 ctor|Goo.SoundStreamSource|public|(sampleRate:System.Int32,channels:System.Int32,read:System.Func`3<System.Single[],System.Int32,System.Int32>)
+ctor|Goo.Spacer|public|()
 ctor|Goo.SpellCheck.HunspellSpellingService|public|(language:System.String,affPath:System.String,dictionaryPath:System.String)
 ctor|Goo.SpellCheck.Misspelling|public|(Range:Goo.TextRange,Word:System.String)
 ctor|Goo.SpellCheck.SpellCheckSession|public|(owner:Goo.Window,controller:Goo.TextEditorController,service:Goo.SpellCheck.ISpellingService,language:System.String)
@@ -1159,8 +1162,8 @@ method|Goo.Color|TryParse|static|public|generic:|(value:System.String)->System.N
 method|Goo.Color|WithAlpha|instance|public|generic:|(alpha:System.Double)->Goo.Color
 method|Goo.Color|op_Equality|static|public|generic:|(left:Goo.Color,right:Goo.Color)->System.Boolean
 method|Goo.Color|op_Implicit|static|public|generic:|(value:Goo.Color)->Goo.Edges`1<Goo.Color>
-method|Goo.Color|op_Implicit|static|public|generic:|(value:System.String)->Goo.Color
 method|Goo.Color|op_Inequality|static|public|generic:|(left:Goo.Color,right:Goo.Color)->System.Boolean
+method|Goo.Column|Add|instance|public|generic:|(child:Goo.Blob)->System.Void
 method|Goo.Container|Add|instance|public|generic:|(child:Goo.Blob)->System.Void
 method|Goo.Context`1|Read|instance|public|generic:|()->!0
 method|Goo.Context`1|Read|instance|public|generic:|(window:Goo.Window)->!0
@@ -1546,6 +1549,7 @@ method|Goo.RichText.RichTextResult|GetHashCode|virtual|public|generic:|()->Syste
 method|Goo.RichText.RichTextResult|ToString|virtual|public|generic:|()->System.String
 method|Goo.RichText.RichTextResult|op_Equality|static|public|generic:|(left:Goo.RichText.RichTextResult?,right:Goo.RichText.RichTextResult?)->System.Boolean
 method|Goo.RichText.RichTextResult|op_Inequality|static|public|generic:|(left:Goo.RichText.RichTextResult?,right:Goo.RichText.RichTextResult?)->System.Boolean
+method|Goo.Row|Add|instance|public|generic:|(child:Goo.Blob)->System.Void
 method|Goo.ShaderEffectData|Dispose|instance|public|generic:|()->System.Void
 method|Goo.ShaderEffectData|PublishTransferred|instance|public|generic:|(bytes:System.Byte[],released:System.Action)->System.Void
 method|Goo.ShaderEffectData|Publish|instance|public|generic:T[attrs:24,constraints:System.ValueType]|(values:System.ReadOnlySpan`1<!!0>)->System.Void
@@ -1997,19 +2001,21 @@ property|Goo.ApplicationActivation|NotificationId|System.String|instance|get:pub
 property|Goo.ApplicationActivation|Payload|System.String|instance|get:public,init:public|index:()
 property|Goo.ApplicationActivation|Target|System.Uri?|instance|get:public,init:public|index:()
 property|Goo.ApplicationActivation|WorkingDirectory|System.String|instance|get:public,init:public|index:()
+property|Goo.Blob|AccessibilityName|System.String?|instance|get:public,init:public|index:()
+property|Goo.Blob|AccessibilityRole|System.Nullable`1<Goo.AccessibilityRole>|instance|get:public,init:public|index:()
 property|Goo.Blob|Accessibility|Goo.Accessibility?|instance|get:public,init:public|index:()
-property|Goo.Blob|Active|Goo.Style?|instance|get:public,init:public|index:()
+property|Goo.Blob|ActiveStyle|Goo.Style?|instance|get:public,init:public|index:()
 property|Goo.Blob|AutoFocus|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.Blob|DisabledStyle|Goo.Style?|instance|get:public,init:public|index:()
 property|Goo.Blob|Disabled|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.Blob|DragSource|Goo.DragSource?|instance|get:public,init:public|index:()
 property|Goo.Blob|DropTarget|Goo.DropTarget?|instance|get:public,init:public|index:()
+property|Goo.Blob|FocusStyle|Goo.Style?|instance|get:public,init:public|index:()
 property|Goo.Blob|FocusTarget|Goo.ElementHandle?|instance|get:public,init:public|index:()
 property|Goo.Blob|Focusable|System.Boolean|instance|get:public,init:public|index:()
-property|Goo.Blob|Focus|Goo.Style?|instance|get:public,init:public|index:()
 property|Goo.Blob|Gestures|System.Collections.Generic.IReadOnlyList`1<Goo.GestureRecognizer>?|instance|get:public,init:public|index:()
 property|Goo.Blob|Handle|Goo.ElementHandle?|instance|get:public,init:public|index:()
-property|Goo.Blob|Hover|Goo.Style?|instance|get:public,init:public|index:()
+property|Goo.Blob|HoverStyle|Goo.Style?|instance|get:public,init:public|index:()
 property|Goo.Blob|KeyBindings|Goo.KeyBinding[]?|instance|get:public,init:public|index:()
 property|Goo.Blob|Key|System.String?|instance|get:public,init:public|index:()
 property|Goo.Blob|LayoutTransition|System.Nullable`1<Goo.LayoutTransition>|instance|get:public,init:public|index:()
@@ -2067,6 +2073,7 @@ property|Goo.Color|G|System.Single|instance|get:public|index:()
 property|Goo.Color|R|System.Single|instance|get:public|index:()
 property|Goo.Color|Transparent|Goo.Color|static|get:public|index:()
 property|Goo.Color|White|Goo.Color|static|get:public|index:()
+property|Goo.Column|Children|System.Collections.Generic.IList`1<Goo.Blob>|instance|get:public,init:public|index:()
 property|Goo.Container|Children|System.Collections.Generic.IList`1<Goo.Blob>|instance|get:public,init:public|index:()
 property|Goo.Container|HitTestSelf|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.Container|Layout|Goo.LayoutAlgorithm?|instance|get:public,init:public|index:()
@@ -2449,6 +2456,7 @@ property|Goo.RichText.RichTextFragment|Text|System.String|instance|get:public|in
 property|Goo.RichText.RichTextResult|Error|System.String|instance|get:public,init:public|index:()
 property|Goo.RichText.RichTextResult|Fragment|Goo.RichText.RichTextFragment|instance|get:public,init:public|index:()
 property|Goo.RichText.RichTextResult|Status|Goo.RichText.RichTextStatus|instance|get:public,init:public|index:()
+property|Goo.Row|Children|System.Collections.Generic.IList`1<Goo.Blob>|instance|get:public,init:public|index:()
 property|Goo.Scrollbar|FadeMs|System.Double|instance|get:public,init:public|index:()
 property|Goo.Scrollbar|HideDelayMs|System.Double|instance|get:public,init:public|index:()
 property|Goo.Scrollbar|HitThickness|System.Double|instance|get:public,init:public|index:()
@@ -2557,12 +2565,14 @@ property|Goo.Style|FlexDirection|Goo.FlexDirection|instance|init:public|index:()
 property|Goo.Style|FlexGrow|System.Double|instance|init:public|index:()
 property|Goo.Style|FlexShrink|System.Double|instance|init:public|index:()
 property|Goo.Style|FlexWrap|Goo.FlexWrap|instance|init:public|index:()
+property|Goo.Style|Flex|System.Double|instance|init:public|index:()
 property|Goo.Style|FontFamily|System.String|instance|init:public|index:()
 property|Goo.Style|FontSize|Goo.Length|instance|init:public|index:()
 property|Goo.Style|FontStyle|Goo.FontStyle|instance|init:public|index:()
 property|Goo.Style|FontWeight|System.Double|instance|init:public|index:()
 property|Goo.Style|Gap|Goo.Length|instance|init:public|index:()
 property|Goo.Style|Height|Goo.Length|instance|init:public|index:()
+property|Goo.Style|Inset|Goo.Length|instance|init:public|index:()
 property|Goo.Style|JustifyContent|Goo.JustifyContent|instance|init:public|index:()
 property|Goo.Style|Language|System.String|instance|init:public|index:()
 property|Goo.Style|Left|Goo.Length|instance|init:public|index:()
@@ -2961,6 +2971,7 @@ type|Goo.ClipboardIntent|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.ClipboardReadStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.ClipboardWriteResult|class|public|base:System.Object|interfaces:|generic:
 type|Goo.Color|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.Color>|generic:
+type|Goo.Column|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.Container|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.Context`1|sealed-class|public|base:System.Object|interfaces:|generic:T[attrs:0,constraints:]
 type|Goo.Cursor|enum|public|base:System.Enum|interfaces:|generic:
@@ -3146,6 +3157,7 @@ type|Goo.RichText.RichTextCodec|static-class|public|base:System.Object|interface
 type|Goo.RichText.RichTextFragment|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.RichText.RichTextResult|sealed-class|public|base:System.Object|interfaces:System.IEquatable`1<Goo.RichText.RichTextResult>|generic:
 type|Goo.RichText.RichTextStatus|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.Row|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.ScrollAlignment|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.ScrollbarVisibility|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Scrollbar|class|public|base:System.Object|interfaces:|generic:
@@ -3170,6 +3182,7 @@ type|Goo.SoundPlayback|sealed-class|public|base:System.Object|interfaces:System.
 type|Goo.SoundPlayer|sealed-class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.SoundSource|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.SoundStreamSource|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.Spacer|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.SpellCheck.HunspellSpellingService|sealed-class|public|base:System.Object|interfaces:Goo.SpellCheck.ISpellingService,System.IDisposable|generic:
 type|Goo.SpellCheck.ISpellingService|interface|public|base:-|interfaces:|generic:
 type|Goo.SpellCheck.Misspelling|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.SpellCheck.Misspelling>|generic:
