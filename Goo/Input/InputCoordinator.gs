@@ -123,6 +123,7 @@ internal partial class InputCoordinator {
   }
 
   private func loseFocus(root Node?, resolver Resolver) {
+    resolver.Owner?.SetInputModifiers(KeyModifiers.None)
     var failure Exception?
     try { focus.SetNativeFocus(false) }
     catch (error Exception) { failure = error }
