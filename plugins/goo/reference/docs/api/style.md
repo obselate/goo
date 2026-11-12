@@ -805,11 +805,11 @@ Sets the bottom-right border radius.
 
 ### `BorderColor`
 
-Sets box border colors in CSS top, right, bottom, left order. A uniform value also sets the Shape stroke color.
+Sets box border colors in CSS top, right, bottom, left order.
 
 ### `BorderColorAnim`
 
-Binds all border colors, including the Shape stroke.
+Binds all box border colors.
 
 ### `BorderEndColor`
 
@@ -853,7 +853,7 @@ Sets the top-right border radius.
 
 ### `BorderWidth`
 
-Sets box border widths in CSS top, right, bottom, left order. A uniform value also sets the Shape stroke width.
+Sets box border widths in CSS top, right, bottom, left order.
 
 ### `Bottom`
 
