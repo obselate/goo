@@ -84,6 +84,7 @@ internal sealed class VirtualNodeState {
   internal var DeclaringCell Cell?
   internal var CallbackOwner Cell?
   private var contextReader ContextReader?
+  private var stateReads StateReadScope?
   private var contextDirty bool
   private var contextVersion int64
   private var pendingContextVersion int64
@@ -238,6 +239,10 @@ internal sealed class VirtualNodeState {
   internal func BindContext(frame ContextFrame?, owner Window?, callbackOwner Cell?) {
     let changed = Context != frame || Owner != owner || CallbackOwner != callbackOwner
     if changed { clearRecycledRows() }
+    if Owner != owner || CallbackOwner != callbackOwner {
+      stateReads?.Dispose()
+      stateReads = nil
+    }
     let rebound = Owner != nil
     Context = frame
     Owner = owner
@@ -513,6 +518,9 @@ internal sealed class VirtualNodeState {
     let previousContext = enterContext()
     pendingContextVersion = contextVersion
     output.Bind(this)
+    stateReads ??= StateReadScope(CallbackOwner ?? DeclaringCell, () -> InvalidateContext())
+    let previousReads = stateReads!!.Enter(!contextDirty && state == current)
+    var completed = false
     try {
       state.Realize(viewport, output)
       let delta = anchorDelta(n)
@@ -546,11 +554,13 @@ internal sealed class VirtualNodeState {
         pendingTargetX = float32(Math.Max(0.0, float64(n.ScrollTargetX) + x - float64(n.ScrollX)))
         pendingTargetY = float32(Math.Max(0.0, float64(n.ScrollTargetY) + y - float64(n.ScrollY)))
       }
+      completed = true
       return children
     } catch (error Exception) {
       Cancel()
       rethrow
     } finally {
+      stateReads!!.Exit(previousReads, completed)
       output.Bind(nil)
       viewport.Bind(previous)
       ContextEnvironment.Current = previousContext
@@ -668,6 +678,8 @@ internal sealed class VirtualNodeState {
     Cancel()
     contextReader?.Dispose()
     contextReader = nil
+    stateReads?.Dispose()
+    stateReads = nil
     Context = nil
     Owner = nil
     source = nil

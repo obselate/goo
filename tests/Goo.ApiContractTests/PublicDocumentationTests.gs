@@ -385,7 +385,7 @@ class PublicDocumentationTests {
             "M:Goo.Cell.Mount``1(System.String,System.Action{``0})",
             "M:Goo.Cell.Mount``2(System.String,``0)",
             "M:Goo.Cell.Rebuild",
-            "M:Goo.Cell`1.ShouldRebuild(`0,`0)",
+            "M:Goo.Cell`1.InputChanged(`0)",
             "M:Goo.Color.FromNormalized(System.Single,System.Single,System.Single,System.Single)",
             "M:Goo.Color.Parse(System.String)",
             "M:Goo.Color.Rgb(System.Int32,System.Int32,System.Int32)",

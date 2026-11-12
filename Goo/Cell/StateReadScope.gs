@@ -82,6 +82,11 @@ internal sealed class StateReadScope : IDisposable {
 
   internal func ObserveUntrackedRead() { owner?.RegisterUntrackedScope(this) }
 
+  internal func RebuildFromState() {
+    owner?.RecordStateWrite()
+    Rebuild()
+  }
+
   public func Rebuild() {
     if !disposed { invalidated() }
   }

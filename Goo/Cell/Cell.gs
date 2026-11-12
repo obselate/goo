@@ -6,7 +6,7 @@ import System.Diagnostics.CodeAnalysis
 import System.Reflection
 
 /// Defines a stateful Goo component.
-@DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields)
+@DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.AllFields)
 public open class Cell {
   private let rebuildGate object
   internal var rebuildSubmission Action[Cell]?
@@ -33,6 +33,27 @@ public open class Cell {
   private var stateChecked bool
   private var stateDeclared bool
   private var untrackedScopes List[StateReadScope]?
+  internal var stateChanged bool
+  internal var verifyPending bool
+  internal var verificationChanged bool
+  internal var ancestorVerification bool
+
+  internal func RecordStateWrite() {
+    stateChanged = true
+    verifyPending = false
+  }
+
+  internal func RebuildFromState() {
+    RecordStateWrite()
+    Rebuild()
+  }
+
+  internal func TakeStateVerification() bool {
+    let verify = verifyPending && !stateChanged
+    verifyPending = false
+    verificationChanged = false
+    return verify
+  }
 
   internal func RegisterUntrackedScope(builderScope StateReadScope) {
     callbackFallback = true
@@ -59,15 +80,15 @@ public open class Cell {
   internal func CheckStateFields() {
     if stateChecked { return }
     stateChecked = true
-    callbackFallback = false
+    callbackFallback = untrackedScopes != nil && untrackedScopes!!.Count != 0
     CheckStateType(GetType())
   }
 
   private func CheckStateType(
-    @DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields) current Type) {
+    @DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.AllFields) current Type) {
     if current == typeof(Cell) { return }
     if !(current.IsGenericType && current.GetGenericTypeDefinition().FullName == "Goo.Cell`1") {
-      let fields = current.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
+      let fields = current.GetFields(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
       StateFieldsInspected?.Invoke(current, fields)
       for field in fields {
         if field.IsInitOnly && typeof(StateDependency).IsAssignableFrom(field.FieldType) {
@@ -77,17 +98,13 @@ public open class Cell {
           } else { callbackFallback = true }
           continue
         }
-        if !field.IsInitOnly || (!field.FieldType.IsPrimitive && !field.FieldType.IsEnum
+        if (!field.IsInitOnly && !field.IsLiteral) || (!field.FieldType.IsPrimitive && !field.FieldType.IsEnum
           && field.FieldType != typeof(string) && field.FieldType != typeof(ElementHandle)) {
           callbackFallback = true
         }
       }
     }
-    if let parent = current.BaseType {
-      if parent != typeof(Cell) && !(parent.IsGenericType && parent.GetGenericTypeDefinition().FullName == "Goo.Cell`1") {
-        callbackFallback = true
-      }
-    }
+    if let parent = current.BaseType { CheckStateType(parent) }
   }
 
   internal func EnsureContextReader() ContextReader {
@@ -140,10 +157,14 @@ public open class Cell {
   }
 
   internal func RebuildAfterCallback() {
-    if !building && (callbackFallback || (!stateDeclared && (stateReads == nil || stateReads!!.Count == 0))) {
+    if building { return }
+    if callbackFallback || (!stateDeclared && (stateReads == nil || stateReads!!.Count == 0)) {
       if let scopes = untrackedScopes {
         for index in 0 ... scopes.Count { scopes[index].Rebuild() }
       }
+      Rebuild()
+    } else if StateVerification.Enabled {
+      verifyPending = !stateChanged
       Rebuild()
     }
   }
@@ -155,6 +176,7 @@ public open class Cell {
   }
 
   internal func MarkDirtyFromInput() {
+    verifyPending = false
     lock rebuildGate {
       dirty = true
     }
@@ -284,7 +306,9 @@ public open class Cell {
     StateReader = this
     building = true
     try {
-      return BuildOutput()
+      let result = BuildOutput()
+      stateChanged = false
+      return result
     } finally {
       building = false
       StateReader = previous

@@ -68,15 +68,16 @@ public open class Cell[TInput any] : Cell {
     finally { owner?.RebuildAfterCallback() }
   }
 
-  /// Decides whether a later post-mount snapshot needs a rebuild after Input stores next; default uses EqualityComparer[TInput].Default.
-  protected open func ShouldRebuild(previous TInput, next TInput) bool ->
-  !EqualityComparer[TInput].Default.Equals(previous, next)
-
   /// Builds the component tree from the current immutable input snapshot.
   /// @param input current input snapshot
   /// @returns the root blob for this component
   protected open func Build(input TInput) Blob -> Build()
 
+  /// Derives local state from the newly stored immutable input before Build.
+  /// Runs for the first input and later inputs that differ by EqualityComparer[TInput].Default.
+  /// Reads here are not tracked. State writes are allowed and coalesce with this rebuild.
+  /// The window is already bound, so Host, Post, After, Every and Lifetime are valid.
+  /// @param input the current input snapshot, already stored in Input
   protected open func InputChanged(input TInput) { }
 
   internal override func BuildOutput() Blob -> Build(input)
@@ -89,7 +90,7 @@ public open class Cell[TInput any] : Cell {
     Cell.StateReader = nil
     hasInput = true
     try {
-      if hadInput && !ShouldRebuild(previous, value) {
+      if hadInput && EqualityComparer[TInput].Default.Equals(previous, value) {
         return false
       }
       InputChanged(value)

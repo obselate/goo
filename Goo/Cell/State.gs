@@ -50,13 +50,13 @@ public abstract class StateDependency {
     guard let cells = readers else { return }
     for index in 0 ... cells.Count {
       let reader = cells[index]
-      if reader is Cell { reader.Rebuild() }
-      else if reader is StateReadScope { reader.Rebuild() }
+      if reader is Cell { reader.RebuildFromState() }
+      else if reader is StateReadScope { reader.RebuildFromState() }
     }
   }
 }
 
-/// Holds a value that rebuilds the Cells that read it in Build when it changes.
+/// Holds a value that invalidates the Cells and retained builders that read it.
 public class State[T any] : StateDependency {
   private var current T
 
@@ -66,7 +66,9 @@ public class State[T any] : StateDependency {
   internal override func IsSafePayload() bool ->
     typeof(T).IsPrimitive || typeof(T).IsEnum || typeof(T) == typeof(string) || typeof(T) == typeof(ElementHandle)
 
-  /// Gets or sets the value. A read in Build subscribes the Cell. A write of a different value rebuilds its readers.
+  /// Gets or sets the value. Reads in Build and retained builders subscribe their owner.
+  /// Equal writes do nothing. Changed writes invalidate the subscribed readers.
+  /// Writes during Build throw. After its first reader, state requires that reader's UI thread.
   public prop Value T {
     get {
       Read()
