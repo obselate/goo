@@ -2,7 +2,6 @@ package Goo
 
 import System
 import System.Diagnostics
-import System.Runtime.CompilerServices
 
 internal class ScrollAxisActivity {
   internal var Alpha float32
@@ -23,17 +22,16 @@ internal class ScrollNodeActivity {
 
 internal class ScrollActivityStates {
   shared {
-    private let values ConditionalWeakTable[Node, ScrollNodeActivity] =
-    ConditionalWeakTable[Node, ScrollNodeActivity]()
-
     internal func Remove(n Node) {
-      values.Remove(n)
+      n.ScrollActivityState = nil
     }
 
-    internal func For(n Node) ScrollNodeActivity -> values.GetOrCreateValue(n)
+    internal func For(n Node) ScrollNodeActivity {
+      n.ScrollActivityState ??= ScrollNodeActivity()
+      return n.ScrollActivityState!!
+    }
 
-    internal func TryGet(n Node) ScrollNodeActivity? ->
-    if values.TryGetValue(n, out var state) { state } else { nil }
+    internal func TryGet(n Node) ScrollNodeActivity? -> n.ScrollActivityState
   }
 }
 
