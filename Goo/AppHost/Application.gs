@@ -73,7 +73,8 @@ public shared class Application {
         if String.IsNullOrWhiteSpace(identifier) {
             throw InvalidOperationException("Set the MSBuild GooPackageId property")
         }
-        Configure(name, version.Split('+')[0], identifier)
+        let separator = version.IndexOf('+')
+        Configure(name, if separator < 0 { version } else { version.Substring(0, separator) }, identifier)
     }
 
     /// Initializes activation and elects a primary instance before the first window opens.
