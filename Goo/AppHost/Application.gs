@@ -7,6 +7,12 @@ import System.Threading
 
 /// Configures process identity, activation delivery and the desktop event loop.
 public shared class Application {
+    private var applicationName string = ""
+    private var applicationVersion string = ""
+    private var applicationIdentifier string = ""
+    private var nativeIdentityBound bool
+    internal prop Identifier string { get -> applicationIdentifier }
+
     internal prop HasOpenedWindow bool {
         get;
         set;
@@ -16,8 +22,32 @@ public shared class Application {
     /// @param name The human-readable product name.
     /// @param version The application version.
     /// @param identifier The stable reverse-domain application identifier.
-    public func Configure(name string, version string, identifier string) ->
-    SdlRuntime.ConfigureApplication(name, version, identifier)
+    public func Configure(name string, version string, identifier string) {
+        if String.IsNullOrWhiteSpace(name) { throw ArgumentException("name") }
+        if String.IsNullOrWhiteSpace(version) { throw ArgumentException("version") }
+        if String.IsNullOrWhiteSpace(identifier) { throw ArgumentException("identifier") }
+        lock activationGate {
+            if applicationIdentifier.Length != 0 {
+                if applicationName == name && applicationVersion == version && applicationIdentifier == identifier { return }
+                throw InvalidOperationException("Goo application metadata is already configured with different values.")
+            }
+            if nativeIdentityBound {
+                throw InvalidOperationException("Goo application metadata must be configured before native initialization.")
+            }
+            applicationName = name
+            applicationVersion = version
+            applicationIdentifier = identifier
+        }
+    }
+
+    internal func ApplyNativeIdentity() {
+        lock activationGate {
+            nativeIdentityBound = true
+            if applicationIdentifier.Length != 0 {
+                SdlRuntime.ApplyApplicationIdentity(applicationName, applicationVersion, applicationIdentifier)
+            }
+        }
+    }
 
     /// Configures identity from Product, InformationalVersion and GooApplicationId assembly metadata.
     /// @param assembly The application assembly.
@@ -55,7 +85,7 @@ public shared class Application {
         if !Double.IsFinite(timeoutMs) || timeoutMs <= 0.0 || timeoutMs > float64(Int32.MaxValue) {
             throw ArgumentOutOfRangeException("timeoutMs")
         }
-        let identifier = SdlRuntime.ApplicationIdentifier
+        let identifier = Identifier
         if HasOpenedWindow {
             throw InvalidOperationException("Acquire a single instance before opening the first window")
         }
