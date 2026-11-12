@@ -354,7 +354,7 @@ public partial class Window {
       }
       using let callbackScope = CallbackScope(CallbackContext())
       let queueCompletedAtEntry = windowTarget?.PollQueueCompletion() == true
-      if native.IsClosing {
+      if callbackClosing || native.IsClosing {
         if waitForEvents {
           native.PollEvents()
         }
@@ -554,7 +554,7 @@ public partial class Window {
 
   private func firstShowPending() bool -> (host as SdlHost?)?.FirstShowPending == true
 
-  internal func SchedulerHasImmediateService() bool -> host?.HasPendingEvents == true || hasPostedActions()
+  internal func SchedulerHasImmediateService() bool -> callbackClosing || host?.HasPendingEvents == true || hasPostedActions()
     || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0
     || host?.IsClosing == true
     || Application.HasPendingActivation
