@@ -29,6 +29,7 @@ public open class Cell {
   internal var contextWindow Window?
   internal var contextReader ContextReader?
   private var stateReads List[StateDependency]?
+  private var stateReadCount int32
   private var callbackFallback bool = true
   private var stateChecked bool
   private var stateDeclared bool
@@ -65,16 +66,43 @@ public open class Cell {
 
   internal func ReadState(state StateDependency) {
     stateReads ??= List[StateDependency]()
-    if stateReads!!.Contains(state) { return }
-    if !state.IsSafePayload() { callbackFallback = true }
-    stateReads!!.Add(state)
-    state.AddReader(this)
+    let reads = stateReads!!
+    if stateReadCount < reads.Count && object.ReferenceEquals(reads[stateReadCount], state) {
+      stateReadCount++
+      return
+    }
+    var index = reads.IndexOf(state)
+    if index >= 0 && index < stateReadCount { return }
+    if index < 0 {
+      if !state.IsSafePayload() { callbackFallback = true }
+      reads.Add(state)
+      try { state.AddReader(this) } catch {
+        reads.RemoveAt(reads.Count - 1)
+        rethrow
+      }
+      index = reads.Count - 1
+    }
+    if index != stateReadCount {
+      reads[index] = reads[stateReadCount]
+      reads[stateReadCount] = state
+    }
+    stateReadCount++
   }
 
   private func ClearStateReads() {
     guard let reads = stateReads else { return }
     for index in 0 ... reads.Count { reads[index].RemoveReader(this) }
     reads.Clear()
+    stateReadCount = 0
+  }
+
+  private func CommitStateReads() {
+    guard let reads = stateReads else { return }
+    while reads.Count > stateReadCount {
+      let index = reads.Count - 1
+      reads[index].RemoveReader(this)
+      reads.RemoveAt(index)
+    }
   }
 
   internal func CheckStateFields() {
@@ -301,12 +329,13 @@ public open class Cell {
 
   internal func Render() Blob {
     CheckStateFields()
-    ClearStateReads()
+    stateReadCount = 0
     let previous = StateReader
     StateReader = this
     building = true
     try {
       let result = BuildOutput()
+      CommitStateReads()
       stateChanged = false
       return result
     } finally {
