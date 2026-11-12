@@ -153,7 +153,7 @@ public class VirtualViewport {
   public prop Size LayoutSize{
     get {
       let n = bound()
-      return LayoutSize{ Width: float64(BoxGeometry.ViewportWidth(n)), Height: float64(BoxGeometry.ViewportHeight(n)) }
+      return LayoutSize(float64(BoxGeometry.ViewportWidth(n)), float64(BoxGeometry.ViewportHeight(n)))
     }
   }
   /// Gets the device pixels per layout unit used to round layout in this window.
@@ -218,13 +218,12 @@ public class VirtualViewport {
   /// @returns The key and the last layout size of the item.
   public func Child(index int32) VirtualChild {
     let child = bound().Children[index]
-    var size = LayoutSize{ Width: float64(child.Rect.W), Height: float64(child.Rect.H) }
+    var size = LayoutSize(float64(child.Rect.W), float64(child.Rect.H))
     var measured = false
     if let yoga = child.Yoga {
-      size = LayoutSize{
-        Width: float64(YGNodeLayoutAPI.YGNodeLayoutGetRawWidth(yoga)),
-        Height: float64(YGNodeLayoutAPI.YGNodeLayoutGetRawHeight(yoga)),
-      }
+      size = LayoutSize(
+        float64(YGNodeLayoutAPI.YGNodeLayoutGetRawWidth(yoga)),
+        float64(YGNodeLayoutAPI.YGNodeLayoutGetRawHeight(yoga)))
       measured = !YGNodeAPI.YGNodeIsDirty(yoga)
     }
     return VirtualChild{ Key: child.Key ?? "", Size: size, Measured: measured }
@@ -243,7 +242,7 @@ public class VirtualOutput {
 
   internal func Bind(state VirtualNodeState?) {
     owner = state
-    contentSize = LayoutSize{}
+    contentSize = LayoutSize(0.0, 0.0)
     itemCount = 0
     scrollOffset = nil
     anchorKey = nil
