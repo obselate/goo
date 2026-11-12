@@ -8,6 +8,7 @@ internal func resolvedHitTestSelf(b Blob, focusable bool, entries StyleEntries?,
       case c is Container {
         if c.HasAuthoredHitTestSelf { return c.HitTestSelf }
         if c.DragsWindow { return true }
+        if c.OnPointerDrag != nil { return true }
       }
       case _ { }
     }

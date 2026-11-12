@@ -43,6 +43,10 @@ public class Container : Blob {
     }
   }
   internal prop HasAuthoredHitTestSelf bool{ get -> hasAuthoredHitTestSelf }
+  /// Gets the callback for a captured primary-pointer drag. Hover does not invoke it.
+  public prop OnPointerDrag((PointerDragEvent) -> void)? { get; init; }
+  /// Gets the distance in logical units before a drag starts. Zero starts on press.
+  public prop PointerDragThreshold float64 { get; init; }
 
   /// Initializes an empty child collection.
   public init() { }
