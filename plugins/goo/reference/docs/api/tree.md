@@ -299,6 +299,10 @@ Gets the callback that receives pointer cancellation.
 
 Gets the callback that receives each pointer button press.
 
+### `OnPointerDrag`
+
+Gets the callback for a captured primary-pointer drag. Hover does not invoke it. Touch drags capture on press and can prevent enclosing scroll containers from claiming the contact.
+
 ### `OnPointerEnter`
 
 Gets the non-bubbling lifecycle callback after this element enters the mouse hover route.
@@ -334,6 +338,14 @@ Gets the callback that receives committed UTF-16 text while this element has foc
 ### `OnWheel`
 
 Gets the callback that receives pointer wheel movement.
+
+### `PointerDragAxis`
+
+Gets the axis measured by the threshold. Off-axis movement alone does not start a drag.
+
+### `PointerDragThreshold`
+
+Gets the press-to-start distance in logical window units. Zero starts on press.
 
 ### `TabStop`
 

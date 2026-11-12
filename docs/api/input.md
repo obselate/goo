@@ -1432,6 +1432,76 @@ Identifies the pointer device type that produced a pointer event.
 - `Touch`
 - `Pen`
 
+## `PointerDragEvent`
+
+
+Describes a primary-pointer drag in element-local and window coordinates.
+
+### `PreventDefault`
+
+Prevents the default behavior for this input sample.
+
+### `StopPropagation`
+
+Stops further routing of this input sample.
+
+### `Delta`
+
+Gets movement from the previous sample in element-local units.
+
+### `Device`
+
+Gets the pointer device.
+
+### `IsOverTarget`
+
+Reports whether normal hit testing at the sample position includes this element. Evaluated when read. Canceled events report false.
+
+### `Modifiers`
+
+Gets the keyboard modifiers at this sample.
+
+### `Phase`
+
+Gets the drag transition.
+
+### `PointerId`
+
+Gets the stable pointer identifier.
+
+### `Position`
+
+Gets the position relative to the receiving element.
+
+### `Translation`
+
+Gets the displacement from the press position in element-local units.
+
+### `WindowPosition`
+
+Gets the position in logical window units.
+
+## `PointerDragPhase`
+
+
+Identifies a captured pointer drag transition.
+
+### `Canceled`
+
+Reports cancellation, capture loss, unmount or an unavailable target.
+
+### `Ended`
+
+Reports the matching primary-pointer release.
+
+### `Moved`
+
+Reports a sample after the drag starts and before it terminates.
+
+### `Started`
+
+Reports the press or the first sample that reaches the threshold.
+
 ## `PointerEvent`
 
 
