@@ -6,6 +6,19 @@ import System.Collections.Generic
 import System.Text
 
 internal class LayoutFixtures {
+  func CustomLayoutRetainsMixedMaximumMeasurements() bool {
+    let policy = MixedMaximumFixture()
+    let root = Reconciler{Res: Resolver{}}.Mount(Container{Width: Percent(100), Height: 200,
+      Container{Width: Percent(50), Layout: policy,
+        Container{Width: Percent(100), MaxWidth: Percent(50) + 10, Height: 24}}})
+    let layout = Layout()
+    layout.Calculate(root, 400.0F, 200.0F)
+    let child = root.Children[0].Children[0]
+    if !policy.Valid || child.Rect.W != 110.0F { return false }
+    layout.Calculate(root, 600.0F, 200.0F)
+    return policy.Valid && child == root.Children[0].Children[0] && child.Rect.W == 160.0F
+  }
+
   func CustomLayoutResolvesLengthsInItsViewport() bool {
     let policy = LengthContextFixture()
     let root = Reconciler{Res: Resolver{}}.Mount(Container{Width: 400, Height: 200, FontSize: 20,
@@ -1220,4 +1233,22 @@ internal class LengthContextFixture : LayoutAlgorithm {
   }
 
   public func Arrange(context LayoutContext, finalSize LayoutSize) { Check(context, finalSize) }
+}
+
+internal class MixedMaximumFixture : LayoutAlgorithm {
+  internal var Valid bool = true
+  private var desired LayoutSize
+
+  public func Measure(context LayoutContext, available LayoutSize) LayoutSize {
+    let first = context.MeasureChild(0, available)
+    let second = context.MeasureChild(0, available)
+    Valid = Valid && first.Width == available.Width * 0.5 + 10.0
+      && first.Width == second.Width && first.Height == second.Height
+    desired = first
+    return first
+  }
+
+  public func Arrange(context LayoutContext, finalSize LayoutSize) {
+    context.ArrangeChild(0, ElementRect{Width: desired.Width, Height: desired.Height})
+  }
 }

@@ -93,6 +93,16 @@ internal class LengthDeclarations {
       return Single.NaN
     }
 
+    internal func RestoreSizes(node Node) {
+      if let state = Get(node) {
+        for entry in state.Values {
+          if entry.Field <= StyleField.MaxHeight && entry.Value.PercentPart != 0.0F {
+            applyMixedLength(node, entry.Field, entry.Pixels, entry.Percent, entry.EdgeValue!!)
+          }
+        }
+      }
+    }
+
     internal func Set(node Node, entry StyleEntry, resolver Resolver) {
       let source = entry.Payload as LengthDeclaration
       var state = Get(node)

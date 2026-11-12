@@ -10,6 +10,10 @@ import Xunit
 
 class FixtureContractTests {
     @Fact
+    func CustomLayoutRetainsMixedMaximumMeasurements() ->
+        Assert.True(LayoutFixtures().CustomLayoutRetainsMixedMaximumMeasurements())
+
+    @Fact
     func RelativeLengthAnimationsUseMatchingUnits() ->
         Assert.True(MotionFixtures().LengthValidationContract())
 

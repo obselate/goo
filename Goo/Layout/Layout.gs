@@ -345,14 +345,7 @@ internal partial class Layout {
     markYogaStyle(portal, StyleField.MaxWidth)
     markYogaStyle(portal, StyleField.MaxHeight)
     applyMinMax(yoga, portal)
-    if let state = LengthDeclarations.Get(portal) {
-      for entry in state.Values {
-        if entry.Field <= StyleField.MaxHeight && entry.Field >= StyleField.MinWidth
-          && entry.Value.PercentPart != 0.0F {
-          applyMixedLength(portal, entry.Field, entry.Pixels, entry.Percent, entry.EdgeValue!!)
-        }
-      }
-    }
+    LengthDeclarations.RestoreSizes(portal)
   }
 
   private func portalMinimum(value NodeLength, available float32, node Node, field StyleField) float32 {
