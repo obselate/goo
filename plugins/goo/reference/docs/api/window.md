@@ -397,7 +397,8 @@ class RenderPageButton : Cell, IDisposable {
         session = active
         let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
         let pending = active.RenderAsync(MyPage(), options, window.Closed)
-        timer = window.SetInterval(
+        timer = window.Every(
+            1.0,
             () -> {
                 try {
                     if !pending.IsCompleted {
@@ -409,8 +410,7 @@ class RenderPageButton : Cell, IDisposable {
                     throw error
                 }
                 Dispose()
-            },
-            1.0
+            }
         )
     }
 
@@ -565,7 +565,7 @@ Pump removes an action before it calls the action. If it throws, Pump throws the
 
 ## Schedule window timers
 
-Call `SetTimeout(callback, delayMs)` for one callback or `SetInterval(callback, intervalMs)` for repeated callbacks. Both return a `WindowTimer`. The window must be open, and scheduling and `Dispose` must run on its UI thread. A timeout accepts a zero delay; an interval must be greater than zero. Both durations must be finite and nonnegative.
+Call `After(delayMs, action)` for one callback or `Every(intervalMs, action)` for repeated callbacks. Both return a `WindowTimer`. The window must be open, and scheduling and `Dispose` must run on its UI thread. A delay can be zero. An interval must be greater than zero. Both durations must be finite and nonnegative.
 
 Timers use the window event loop, so callbacks can update UI state directly. The window wakes for the next deadline while idle. Each pump fires due timers once. An overdue interval skips missed periods instead of calling the callback in a burst. Timers scheduled inside a callback wait until a later pump.
 
@@ -1457,6 +1457,10 @@ Borrows a native owner for one optional package dialog without exposing SDL stat
 
 Returns: A lease on Success, or an explicit host or lifecycle status.
 
+### `After(float64,System.Action)`
+
+Runs a callback once on the UI thread after the delay.
+
 ### `ApplyPlacement(WindowPlacement)`
 
 Applies supported fields on the owner thread, or stages normal size, position and state before Open. Geometry rounds to SDL integer screen units. Wayland never applies global position. Fullscreen display selection requires an open window. Unsupported fields remain absent from AppliedFields. Accepted means the request was accepted, not that the compositor granted its final geometry or state. Applying normal geometry can wait for a finite native window transition. Capture again after native configure to observe the result. Android and embedded hosts return Unsupported.
@@ -1502,6 +1506,10 @@ Marks a container subtree as a native drag region for undecorated windows. Click
 - `region`: container to mark
 
 Returns: the same container
+
+### `Every(float64,System.Action)`
+
+Runs a callback repeatedly on the UI thread at the requested interval.
 
 ### `GetClipboardFormats`
 
@@ -1647,10 +1655,6 @@ Sets the clear and inherited root text colors together on the owner thread. Expl
 - `background`: The window clear color.
 - `foreground`: The inherited root text color.
 
-### `SetInterval(System.Action,float64)`
-
-Runs a callback repeatedly on the UI thread at the requested interval.
-
 ### `SetNativeDataDropFormats(System.Collections.Generic.IReadOnlyList{string})`
 
 Enables an exact MIME allow-list for native drops on the owning UI thread.
@@ -1658,10 +1662,6 @@ Enables an exact MIME allow-list for native drops on the owning UI thread.
 - `formats`: At most 128 unique MIME names. An empty list disables MIME drops.
 
 Returns: Accepted, Closed, Unsupported or Failed without changing an unsupported host.
-
-### `SetTimeout(System.Action,float64)`
-
-Runs a callback once on the UI thread after the delay.
 
 ### `Show(bool)`
 
