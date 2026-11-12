@@ -125,6 +125,18 @@ internal partial class VulkanSceneCompiler {
       let bounds = NodeBounds(node)
       let scrollbarParts = ScrollbarParts.ActiveChildren(node)
       let hasActiveScrollbarParts = scrollbarParts.Count != 0
+      if (node.Kind == NodeKind.Container || node.Kind == NodeKind.Button)
+        && node.Children.Count == 0 && !hasActiveScrollbarParts
+        && node.BackgroundColor.A == 0.0F && !HasBorderWidth(node, bounds)
+        && RetainedCommonEligible(node, bounds, opacity, context, true) {
+          InvalidateRetainedText(owner)
+          InvalidateRetainedBox(owner)
+          IncrementSaturated(ref retainedLeaf.Total)
+          IncrementSaturated(ref retainedLeaf.Fallback)
+          frame.AppendPlaceholderChunk(ownerId, frameVersion, bounds)
+          emittedNodeCount++
+          return
+        }
       let earlyOverflowPreflight = PreflightRectOverflowClip(
         node, bounds, context.ParentAxisAligned, context.ParentRectClipDepth)
       let exactCandidate = ExactTextClipCullEligible(node, bounds,
