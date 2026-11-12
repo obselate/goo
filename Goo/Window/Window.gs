@@ -333,6 +333,7 @@ public partial class Window {
       if !Double.IsFinite(value.Width) || !Double.IsFinite(value.Height) || value.Width < 0.0 || value.Height < 0.0 {
         throw ArgumentOutOfRangeException("value")
       }
+      if Size == value { return }
       if host != nil && LayerShell != nil { throw NotSupportedException("Layer-shell sizes are configured by the compositor") }
       if host == nil {
         requestedSize = value

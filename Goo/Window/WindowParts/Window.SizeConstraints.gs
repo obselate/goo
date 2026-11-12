@@ -91,16 +91,26 @@ public partial class Window {
     let maximumHeight = if maxHeight != 0.0 { maxHeight } else { Double.PositiveInfinity }
     let availableWidth = Math.Min(maximumWidth, (area?.Width ?? Double.PositiveInfinity) / float64(UiScale))
     let availableHeight = Math.Min(maximumHeight, (area?.Height ?? Double.PositiveInfinity) / float64(UiScale))
-    let maxContentWidth = if tree.MaxWidth.Unit == LengthUnit.Px { Math.Min(availableWidth, float64(tree.MaxWidth.Value)) } else { availableWidth }
-    let maxContentHeight = if tree.MaxHeight.Unit == LengthUnit.Px { Math.Min(availableHeight, float64(tree.MaxHeight.Value)) } else { availableHeight }
+    let marginWidth = float64(YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Left)
+      + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Right))
+    let marginHeight = float64(YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Top)
+      + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Bottom))
+    let boundedWidth = Math.Max(0.0, availableWidth - marginWidth)
+    let boundedHeight = Math.Max(0.0, availableHeight - marginHeight)
+    let maxContentWidth = if tree.MaxWidth.Unit == LengthUnit.Px { Math.Min(boundedWidth, float64(tree.MaxWidth.Value)) } else { boundedWidth }
+    let maxContentHeight = if tree.MaxHeight.Unit == LengthUnit.Px { Math.Min(boundedHeight, float64(tree.MaxHeight.Value)) } else { boundedHeight }
     try {
       YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga, float32(maxContentWidth))
       YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga, float32(maxContentHeight))
       YGNodeAPI.YGNodeCalculateLayout(yoga,
         if measureWidth { Single.NaN } else { LayoutWidth },
         if measureHeight { Single.NaN } else { LayoutHeight }, yogaDirection(tree.Direction))
-      let measuredWidth = float64(YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga))
-      let measuredHeight = float64(YGNodeLayoutAPI.YGNodeLayoutGetHeight(yoga))
+      let measuredWidth = float64(YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga)
+        + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Left)
+        + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Right))
+      let measuredHeight = float64(YGNodeLayoutAPI.YGNodeLayoutGetHeight(yoga)
+        + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Top)
+        + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Bottom))
       let contentWidth = if measureWidth { Math.Max(minWidth, Math.Min(measuredWidth, availableWidth)) } else { Size.Width }
       let contentHeight = if measureHeight { Math.Max(minHeight, Math.Min(measuredHeight, availableHeight)) } else { Size.Height }
       Size = LayoutSize(contentWidth, contentHeight)

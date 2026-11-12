@@ -45,8 +45,8 @@ internal class WindowStartupFixtures {
   }
 
   func SizeToContentContract() bool {
-    for index in 0 ... 4 {
-      let root = WindowSizeCell{Percentage: index == 1,
+    for index in 0 ... 5 {
+      let root = WindowSizeCell{Percentage: index == 1, Margin: if index == 4 { 10.0 } else { 0.0 },
         ContentWidth: if index == 2 { 900.0 } else { 120.0 },
         ContentHeight: if index == 2 { 800.0 } else { 80.0 }}
       let window = Window{Root: root, InitiallyVisible: false, UiScale: 1.5F,
@@ -58,6 +58,7 @@ internal class WindowStartupFixtures {
         let expected = if index == 1 { LayoutSize(400, 80) }
           else if index == 2 { LayoutSize(240, 160) }
           else if index == 3 { LayoutSize(150, 120) }
+          else if index == 4 { LayoutSize(140, 100) }
           else { LayoutSize(120, 80) }
         if window.IsVisible || window.Size != expected { return false }
         root.ContentWidth = 200
@@ -75,8 +76,9 @@ internal class WindowSizeCell : Cell {
   internal var Percentage bool
   internal var ContentWidth float64
   internal var ContentHeight float64
+  internal var Margin float64
 
   protected override func Build() Blob -> Container{
     Width: if Percentage { Percent(100) } else { ContentWidth },
-    Height: ContentHeight}
+    Height: ContentHeight, Margin: Margin}
 }
