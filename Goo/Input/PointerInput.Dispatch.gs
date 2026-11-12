@@ -18,11 +18,13 @@ internal partial class PointerInput {
   }
 
   private func clearCapture() {
-    cancelPointerDrag()
-    current.CaptureTarget = nil
-    current.CaptureButton = PointerButton.None
-    current.CapturePath.Clear()
-    current.CapturePositions.Clear()
+    try { cancelPointerDrag() }
+    finally {
+      current.CaptureTarget = nil
+      current.CaptureButton = PointerButton.None
+      current.CapturePath.Clear()
+      current.CapturePositions.Clear()
+    }
   }
 
   private func rebuildCapturePath(root Node) bool {

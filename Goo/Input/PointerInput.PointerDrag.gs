@@ -7,7 +7,6 @@ internal class PointerDragState {
   internal var Target NodeMount
   internal var Owner Cell?
   internal var Callback((PointerDragEvent) -> void)?
-  internal var Origin Point
   internal var WindowOrigin Point
   internal var Threshold float64
   internal var Started bool
@@ -18,10 +17,10 @@ internal partial class PointerInput {
   private func dispatchPointerDrag(node Node, event PointerEvent, kind PointerEventKind,
     route List[NodeMount], index int32) {
     if kind == PointerEventKind.Press && event.Button == PointerButton.Primary
-      && current.PointerDrag == nil && node.OnPointerDrag != nil {
+      && current.PointerDrag == nil && node.OnPointerDrag != nil && !hasPointerDrag(node) {
       current.PointerDrag = PointerDragState{
         Target: NodeMount(node), Owner: CellOwnership.InRoute(route, index),
-        Callback: node.OnPointerDrag, Origin: event.Position, WindowOrigin: event.WindowPosition,
+        Callback: node.OnPointerDrag, WindowOrigin: event.WindowPosition,
         Threshold: Math.Max(0.0, node.PointerDragThreshold),
       }
       event.Capture()
@@ -30,8 +29,22 @@ internal partial class PointerInput {
     if state.Target.Current != node { return }
     if kind == PointerEventKind.Release && event.Button != PointerButton.Primary { return }
     state.Callback = node.OnPointerDrag ?? state.Callback
+    var originX = float32(state.WindowOrigin.X)
+    var originY = float32(state.WindowOrigin.Y)
+    for i in 0 ... index + 1 {
+      guard let ancestor = route[i].Current else { return }
+      if ancestor.IsPortal {
+        originX = float32(state.WindowOrigin.X)
+        originY = float32(state.WindowOrigin.Y)
+      }
+      let origin = TransformGeometry.Unmap(ancestor, originX, originY)
+      if !origin.Valid { return }
+      originX = origin.X
+      originY = origin.Y
+    }
     let translation = Point{
-      X: event.Position.X - state.Origin.X, Y: event.Position.Y - state.Origin.Y,
+      X: event.Position.X - float64(originX - node.Rect.X),
+      Y: event.Position.Y - float64(originY - node.Rect.Y),
     }
     let distanceX = event.WindowPosition.X - state.WindowOrigin.X
     let distanceY = event.WindowPosition.Y - state.WindowOrigin.Y
@@ -54,6 +67,16 @@ internal partial class PointerInput {
     state.Last = PointerDragEvent{Pointer: event, Phase: phase, Translation: translation}
     try { state.Callback?.Invoke(state.Last) }
     finally { state.Owner?.Rebuild() }
+  }
+
+  private func hasPointerDrag(node Node) bool {
+    if mouse.PointerDrag?.Target.Current == node { return true }
+    if let contacts = contacts {
+      for contact in contacts {
+        if contact.PointerDrag?.Target.Current == node { return true }
+      }
+    }
+    return false
   }
 
   private func cancelPointerDrag() {

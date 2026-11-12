@@ -612,6 +612,9 @@ internal partial class PointerInput {
       }
       return canceled
     }
+    if let drag = current.PointerDrag {
+      if drag.Target.Current?.OnPointerDrag == nil { clearCapture() }
+    }
     var routeUnavailable = false
     if current.CapturePath.Count > 0 {
       routeUnavailable = !rebuildCapturePath(tree)
