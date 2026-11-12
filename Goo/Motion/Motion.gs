@@ -268,7 +268,7 @@ internal class MotionPump {
         dispatching = false
       }
     }
-    if let error = failure { throw error }
+    if let error = failure { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw() }
   }
 
   internal func Clear() {

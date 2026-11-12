@@ -250,7 +250,7 @@ internal partial class TextShaping {
           return if let runs = runs { ShapedText(text, runs, width, ascent, descent, rightToLeft) } else { nil }
         } catch (error Exception) {
           if let runs = runs { for run in runs { run.Dispose() } }
-          throw error
+          rethrow
         } finally {
           var candidateIndex int32 = 0
           while candidateIndex < fallbackCandidates.Count {
@@ -766,7 +766,7 @@ internal partial class TextShaping {
       try { bytes = FontData.FromPath(path) }
       catch (error Exception) {
         recorder.ResourceDuration(FrameResourceKind.Font, 0uL, "font.read", start, result: -1)
-        throw error
+        rethrow
       }
       let end = Stopwatch.GetTimestamp()
       let id = recorder.ManagedResource(bytes)
@@ -836,7 +836,7 @@ internal partial class TextShaping {
           return result
         } catch (error Exception) {
           for lease in result { lease.Dispose() }
-          throw error
+          rethrow
         }
       }
 

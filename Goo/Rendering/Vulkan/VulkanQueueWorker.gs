@@ -155,7 +155,7 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
         nextGraphicsSubmissionSerial++
       } catch (error Exception) {
         mailbox.CancelSubmit()
-        throw error
+        rethrow
       }
       if let recorder = mailbox.TraceRecorder {
         recorder.Instant(VulkanDiagnosticEventIds.Submit, VulkanDiagnosticCategories.Timing,

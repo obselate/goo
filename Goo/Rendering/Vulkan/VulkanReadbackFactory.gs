@@ -19,7 +19,7 @@ internal class VulkanReadbackFactory {
         } catch (error Exception) {
           try { target.Dispose() } catch (cleanup Exception) { }
           try { lease.Release() } catch (cleanup Exception) { }
-          throw error
+          rethrow
         }
       }
   }

@@ -165,7 +165,7 @@ public sealed class ExternalImageSource : ImageSourceProvider, IDisposable {
         while callbacks.MoveNext() {
             try { callbacks.Current.Invoke() } catch (error Exception) { failure ??= error }
         }
-        if let error = failure { throw error }
+        if let error = failure { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw() }
     }
 
     /// Acquires the last complete frame. Producer work is never waited inside painting.

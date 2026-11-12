@@ -186,7 +186,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
             return target
         } catch (error Exception) {
             pool.ReleaseForReuse(target)
-            throw error
+            rethrow
         }
     }
 }

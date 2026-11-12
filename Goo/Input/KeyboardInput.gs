@@ -204,7 +204,7 @@ internal class KeyboardInput {
         return HandleRepeatedKey(root, resolver, text, pointer)
       } catch (error Exception) {
         resetRepeat()
-        throw error
+        rethrow
       }
     }
     var changed = false
@@ -215,7 +215,7 @@ internal class KeyboardInput {
         changed = HandleRepeatedKey(root, resolver, text, pointer)
       } catch (error Exception) {
         resetRepeat()
-        throw error
+        rethrow
       }
     }
     return changed

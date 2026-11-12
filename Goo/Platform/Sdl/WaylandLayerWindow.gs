@@ -59,7 +59,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     onFrame = (data nint, callback nint, time uint32) -> { framePending = false }
     try { Initialize(output) }
     catch (error Exception) { Dispose()
-      throw error }
+      rethrow }
   }
 
   private func Initialize(output nint) {
@@ -176,12 +176,12 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     if WaylandBackdrop.wl_display_dispatch_queue_pending(display, queue) < 0 {
       throw InvalidOperationException("Layer-shell event dispatch failed")
     }
-    if let error = failure { throw error }
+    if let error = failure { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw() }
   }
 
   private func Roundtrip() {
     if WaylandBackdrop.wl_display_roundtrip_queue(display, queue) < 0 { throw InvalidOperationException("Layer-shell Wayland roundtrip failed") }
-    if let error = failure { throw error }
+    if let error = failure { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw() }
   }
 
   private func Configure(data nint, proxy nint, serial uint32, width uint32, height uint32) {

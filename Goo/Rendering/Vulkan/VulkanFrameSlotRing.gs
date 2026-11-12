@@ -44,7 +44,7 @@ internal unsafe struct VulkanFrameSlotRing {
       } catch (error Exception) {
         try { createdFirst.Dispose() } catch (cleanup Exception) { }
         first = nil
-        throw error
+        rethrow
       }
       currentIndex = 0u
     }

@@ -282,7 +282,7 @@ public open class Cell {
       }
     }
     if let error = firstError {
-      throw error
+      System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw()
     }
   }
 

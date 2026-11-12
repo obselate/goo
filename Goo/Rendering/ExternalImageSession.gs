@@ -199,7 +199,7 @@ public sealed partial class ExternalImageSession : IDisposable {
         RequireOwner()
         if disposed { return }
         if Runtime.DeviceLost {
-            if let error = Close(ExternalImageStatus.DeviceLost) { throw error }
+            if let error = Close(ExternalImageStatus.DeviceLost) { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw() }
             return
         }
         var active bool
@@ -210,11 +210,11 @@ public sealed partial class ExternalImageSession : IDisposable {
                 if !frame.Ready {
                     let result = frame.ReadyResult
                     if result == VkConstants.VK_ERROR_DEVICE_LOST {
-                        if let error = Close(ExternalImageStatus.DeviceLost) { throw error }
+                        if let error = Close(ExternalImageStatus.DeviceLost) { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw() }
                         return
                     }
                     if result != VkConstants.VK_SUCCESS && result != VkConstants.VK_NOT_READY {
-                        if let error = Close(ExternalImageStatus.Failed) { throw error }
+                        if let error = Close(ExternalImageStatus.Failed) { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw() }
                         return
                     }
                     if result == VkConstants.VK_NOT_READY {
@@ -284,7 +284,7 @@ public sealed partial class ExternalImageSession : IDisposable {
         let error = callbackError
         callbackError = nil
         if let current = error {
-            if window.IsOpen && window.Post(() -> { throw current }) { return nil }
+            if window.IsOpen && window.Post(() -> { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(current).Throw() }) { return nil }
         }
         return error
     }
@@ -302,6 +302,6 @@ public sealed partial class ExternalImageSession : IDisposable {
     private func ThrowCallbackError() {
         let error = callbackError
         callbackError = nil
-        if let current = error { throw current }
+        if let current = error { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(current).Throw() }
     }
 }

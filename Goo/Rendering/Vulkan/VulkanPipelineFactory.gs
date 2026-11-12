@@ -62,7 +62,7 @@ internal unsafe class VulkanPipelineFactory {
                 try { accounting.Release() } catch (cleanup Exception) { }
               }
             }
-            throw error
+            rethrow
           }
         } finally {
           pin.Free()
@@ -118,7 +118,7 @@ internal unsafe class VulkanPipelineFactory {
               try { accounting.Release() } catch (cleanup Exception) { }
             }
           }
-          throw error
+          rethrow
         }
       }
 
@@ -254,7 +254,7 @@ internal unsafe class VulkanPipelineFactory {
                 try { accounting.Release() } catch (cleanup Exception) { }
               }
             }
-            throw error
+            rethrow
           }
         } finally {
           Marshal.FreeCoTaskMem(entryPointStorage)

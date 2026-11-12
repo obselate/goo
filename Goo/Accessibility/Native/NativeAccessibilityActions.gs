@@ -195,7 +195,7 @@ public sealed partial class NativeAccessibilityAdapter {
             let custom = AccessKitNative.CustomActionNew(100 + int32(action))
             try { SetString(custom, action == AccessibilityAction.Select ? "Select" : "Deselect", 4) }
             catch (error Exception) { AccessKitNative.CustomActionFree(custom)
-              throw error }
+              rethrow }
             AccessKitNative.NodePushCustomAction(target, custom)
           }
         }
