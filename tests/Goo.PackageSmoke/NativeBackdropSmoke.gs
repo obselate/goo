@@ -147,8 +147,7 @@ func RunNativeBackdropSmoke() {
             window.MacOSBackdrop = MacOSBackdropOptions{}
             window.WaylandBackdrop = WaylandBackdropOptions{CornerRadius: 12}
             window.Backdrop = WindowBackdrop.Blur
-            window.Width = 360 + opening * 8
-            window.Height = 220 + opening * 8
+            window.Size = LayoutSize(360 + opening * 8, 220 + opening * 8)
             BackdropPump(window)
             BackdropRequire(window.BackdropAvailable == available, "Backdrop support changed after resize")
             window.ContentUnderTitlebar = false

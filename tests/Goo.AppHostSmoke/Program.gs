@@ -264,8 +264,8 @@ internal class Program {
             try {
                 Require(window.Show() == WindowOperationResult.Accepted, "Placement window did not show")
                 PumpUntil(window, () -> window.IsVisible
-                    && ((state == WindowState.Normal && window.Width == 360 && window.Height == 240)
-                        || (state != WindowState.Normal && window.Width > 360 && window.Height > 240)))
+                    && ((state == WindowState.Normal && window.NativeWidth == 360 && window.NativeHeight == 240)
+                        || (state != WindowState.Normal && window.NativeWidth > 360 && window.NativeHeight > 240)))
                 let captured = window.CapturePlacement()
                 Require(captured.Status == WindowOperationResult.Accepted && captured.Placement != nil, captured.Error)
                 let saved = captured.Placement!!
@@ -274,9 +274,9 @@ internal class Program {
                 Require(saved.Fields.HasFlag(WindowPlacementFields.Position) == !OperatingSystem.IsLinux(), "Captured position mask changed")
                 let restored = Persist(saved, Path.Combine(root, mode + ".json"))
                 window.State = WindowState.Normal
-                PumpUntil(window, () -> window.Width == 360 && window.Height == 240)
+                PumpUntil(window, () -> window.NativeWidth == 360 && window.NativeHeight == 240)
                 window.State = WindowState.Maximized
-                PumpUntil(window, () -> window.Width > 360 && window.Height > 240)
+                PumpUntil(window, () -> window.NativeWidth > 360 && window.NativeHeight > 240)
                 window.State = WindowState.Minimized
                 for i in 0 ... 20 {
                     window.Pump(0.005)
@@ -294,13 +294,11 @@ internal class Program {
                 Require(cold.Status == WindowOperationResult.Accepted, "${cold.Status}: ${cold.Error}")
                 Require(window.Show() == WindowOperationResult.Accepted, "Restored placement window did not show")
                 PumpUntil(window, () -> window.CapturePlacement().Placement?.State == state
-                    && ((state == WindowState.Normal && window.Width == 360 && window.Height == 240)
-                        || (state != WindowState.Normal && window.Width > 360 && window.Height > 240)))
+                    && ((state == WindowState.Normal && window.NativeWidth == 360 && window.NativeHeight == 240)
+                        || (state != WindowState.Normal && window.NativeWidth > 360 && window.NativeHeight > 240)))
                 Require(window.CapturePlacement().Placement!!.NormalBounds.Width == 360, "Cold restore replaced normal size")
-                window.MinWidth = 100
-                window.MinHeight = 100
-                window.MaxWidth = 500
-                window.MaxHeight = 400
+                window.MinSize = LayoutSize(100, 100)
+                window.MaxSize = LayoutSize(500, 400)
                 let moved = Placement.Restore(window, WindowPlacement{
                     Fields: WindowPlacementFields.NormalSize | WindowPlacementFields.Position | WindowPlacementFields.State,
                     NormalBounds: ElementRect{ X: 100064, Y: 100070, Width: 100000, Height: 100000 },
@@ -310,13 +308,13 @@ internal class Program {
                 })
                 Require(moved.Status == WindowOperationResult.Accepted, "${moved.Status}: ${moved.Error}")
                 Require(moved.AppliedFields.HasFlag(WindowPlacementFields.Position) == !OperatingSystem.IsLinux(), "Restored position mask changed")
-                PumpUntil(window, () -> window.Width == 500 && window.Height == 400)
+                PumpUntil(window, () -> window.NativeWidth == 500 && window.NativeHeight == 400)
                 Require(window.CapturePlacement().Placement!!.State == WindowState.Normal, "Saved minimized state was restored")
                 let invalid = window.ApplyPlacement(WindowPlacement{
                     Fields: WindowPlacementFields.NormalSize,
                     NormalBounds: ElementRect{ Width: Double.NaN, Height: 240 },
                 })
-                Require(invalid.Status == WindowOperationResult.Failed && window.Width == 500, "Invalid placement changed geometry")
+                Require(invalid.Status == WindowOperationResult.Failed && window.NativeWidth == 500, "Invalid placement changed geometry")
                 let stateOnly = window.ApplyPlacement(WindowPlacement{ Fields: WindowPlacementFields.State, State: WindowState.Normal })
                 Require(stateOnly.Status == WindowOperationResult.Accepted && stateOnly.AppliedFields == WindowPlacementFields.State,
                     "State-only placement changed its applied mask")
@@ -428,7 +426,7 @@ internal class Program {
                 Thread.Sleep(5)
                 if Stopwatch.GetTimestamp() >= deadline { break }
             }
-            throw TimeoutException("Native placement did not reach ${condition}: ${window.Width}x${window.Height}, ${window.CapturePlacement().Placement?.State}")
+            throw TimeoutException("Native placement did not reach ${condition}: ${window.NativeWidth}x${window.NativeHeight}, ${window.CapturePlacement().Placement?.State}")
         }
 
         private func RequireFrameInside(handle nint, usable ElementRect) {

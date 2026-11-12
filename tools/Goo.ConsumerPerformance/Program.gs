@@ -70,8 +70,7 @@ func Main() {
   font.Register()
   let window = Window{
     Title: "Goo consumer performance",
-    Width: 640,
-    Height: 480,
+    Size: LayoutSize(640, 480),
     VSync: true,
     Root: ConsumerScene{},
   }

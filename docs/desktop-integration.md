@@ -30,7 +30,7 @@ func Main() {
         return
     }
     using let lease = result.Lease!!
-    let window = Window{Width: 320, Height: 200, Root: Cell{}}
+    let window = Window{Size: LayoutSize(320, 200), Root: Cell{}}
     window.Run()
 }
 ```

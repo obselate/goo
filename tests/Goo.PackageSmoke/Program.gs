@@ -729,8 +729,7 @@ func Main() {
     let beforeRoot = SmokeCell.Root.BorderBox
     let targetWidth int32 = 481
     let targetHeight int32 = 261
-    window.Width = targetWidth
-    window.Height = targetHeight
+    window.Size = LayoutSize(targetWidth, targetHeight)
     var attempts int32
     var resized bool
     while attempts < 120 && !resized {

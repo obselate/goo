@@ -149,7 +149,7 @@ try {
     )
     let capture = first.Capture!!
     Require(
-        capture.Width == uint32(480) && capture.Height == uint32(360) && owner.Width == 96,
+        capture.Width == uint32(480) && capture.Height == uint32(360) && owner.NativeWidth == 96,
         "offscreen size changed its owner"
     )
     let corner = 330 * int32(capture.RowBytes) + 450 * 4

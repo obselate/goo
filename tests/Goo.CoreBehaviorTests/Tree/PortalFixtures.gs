@@ -11,7 +11,7 @@ internal class PortalFixtures {
     let popup = cell.Popup.BorderBox
     let physicalScale = float64(window.UiScale)
     if window.Tree?.Rect.W != 240.0F || window.Tree?.Rect.H != 160.0F
-      || Math.Abs(popup.X * physicalScale - (float64(window.Width) - 113.0)) > 0.0001
+      || Math.Abs(popup.X * physicalScale - (float64(window.NativeWidth) - 113.0)) > 0.0001
       || Math.Abs(popup.Y * physicalScale - (100.0 * physicalScale - 63.0)) > 0.0001
       || Math.Abs(popup.Width * physicalScale - 113.0) > 0.0001
       || Math.Abs(popup.Height * physicalScale - 63.0) > 0.0001 { return false }
@@ -585,7 +585,7 @@ public partial class Window {
 
   internal func PortalLayoutNeedsForTest() bool {
     guard let root = node else { return false }
-    return layout.NeedsLayout(root, portalRoot, float32(Width), float32(Height))
+    return layout.NeedsLayout(root, portalRoot, float32(NativeWidth), float32(NativeHeight))
   }
 }
 

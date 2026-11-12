@@ -159,8 +159,8 @@ func Main(args[]string) {
         Settle(window)
         CheckSystemSpelling()
         CheckRichClipboard()
-        let ownerWidth = window.Width
-        let ownerHeight = window.Height
+        let ownerWidth = window.NativeWidth
+        let ownerHeight = window.NativeHeight
         let options = OffscreenRenderOptions(240f, 180f, 480, 360, Color.Rgb(255, 255, 255), 134217728)
         let first = Pump(window, window.RenderOffscreenAsync(Page(240, 180), options, CancellationToken.None))
         Require(
@@ -170,7 +170,7 @@ func Main(args[]string) {
         let capture = first.Capture!!
         Require(
             capture.Width == uint32(480) && capture.Height == uint32(360) &&
-                window.Width == ownerWidth && window.Height == ownerHeight,
+                window.NativeWidth == ownerWidth && window.NativeHeight == ownerHeight,
             "page size changed the visible window"
         )
         Pixel(capture, 450, 330, 20, 160, 60)

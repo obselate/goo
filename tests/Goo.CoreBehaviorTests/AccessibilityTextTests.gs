@@ -84,7 +84,7 @@ class AccessibilityTextTests {
             Assert.Contains(initial, (run NativeAccessibilityTextRun) -> run.Direction == uint8(1))
             let initialLines = initial.Select((run NativeAccessibilityTextRun) -> run.Bounds.Y).Distinct().Count()
             Assert.True(initialLines > 1)
-            window.Width = 110
+            window.Size = LayoutSize(110, window.Size.Height)
             window.UpdateTree()
             let resized = Encode(adapter)
             Assert.Equal(content, string.Concat(resized.Select((run NativeAccessibilityTextRun) -> run.Text)))

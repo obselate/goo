@@ -1223,8 +1223,7 @@ public partial class Window {
   }
 
   internal func DeferredCloseStopsPostsForTest() bool {
-    Width = 100
-    Height = 100
+    Size = LayoutSize(100, 100)
     let pending = DeferredCloseTarget()
     host = EmbeddedWindowBridge(ElementHandleEmbeddedHost(), this)
     windowTarget = pending

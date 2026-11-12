@@ -227,7 +227,7 @@ internal class PaintBindingFixtures {
       window.UpdateTree()
       if !window.PaintMotionPump.Active || cell.Loops[0].Samples == samples
         || Math.Abs(cell.Values[0].Value - 0.5) > 0.000001 || cell.Builds != builds { return false }
-      window.Width = 5
+      window.Size = LayoutSize(5, window.Size.Height)
       window.UpdateTree()
       if window.PaintMotionPump.Active { return false }
       var completions = 0

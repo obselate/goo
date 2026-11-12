@@ -657,8 +657,7 @@ func PartialRedrawScene(name string, root Cell, steps int32, advance Action,
     WindowReadbackTestFixture.Pump(window, 0.0)
     let metrics = WindowReadbackTestFixture.Metrics(window)
     if resizeCapacity {
-      window.Width = 560
-      window.Height = 266
+      window.Size = LayoutSize(560, 266)
       var resizeAttempt int32
       var resizedMetrics = WindowReadbackTestFixture.Metrics(window)
       while (resizedMetrics.LogicalWidth != 560 || resizedMetrics.LogicalHeight != 266)
@@ -676,8 +675,7 @@ func PartialRedrawScene(name string, root Cell, steps int32, advance Action,
         WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
       }
       let reuseCount = WindowReadbackTestFixture.DiagnosticCounters(window).layerPoolReuseCount
-      window.Width = 400
-      window.Height = 190
+      window.Size = LayoutSize(400, 190)
       resizeAttempt = 0
       resizedMetrics = WindowReadbackTestFixture.Metrics(window)
       while (resizedMetrics.LogicalWidth != 400 || resizedMetrics.LogicalHeight != 190)

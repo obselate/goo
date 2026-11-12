@@ -334,10 +334,13 @@ public partial class Window {
         throw ArgumentOutOfRangeException("value")
       }
       if host != nil && LayerShell != nil { throw NotSupportedException("Layer-shell sizes are configured by the compositor") }
-      requestedSize = if host == nil { value } else { nil }
-      width = scaledSize(value.Width)
-      height = scaledSize(value.Height)
-      pushSize()
+      if host == nil {
+        requestedSize = value
+      } else {
+        width = scaledSize(value.Width)
+        height = scaledSize(value.Height)
+        pushSize()
+      }
       MetricSubscriptions.MarkWindowDirty(this)
       requestRender()
     }

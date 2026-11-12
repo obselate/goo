@@ -2811,7 +2811,7 @@ internal class InputFixtures {
     let before = GC.GetAllocatedBytesForCurrentThread()
     let value = Window{}
     let bytes = GC.GetAllocatedBytesForCurrentThread() - before
-    return value.Width == 0 && value.Height == 0 ? bytes : -1
+    return value.NativeWidth == 0 && value.NativeHeight == 0 ? bytes : -1
   }
 
   func PointerLifecycleStablePlainDiffBytes() int64 {
