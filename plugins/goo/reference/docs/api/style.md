@@ -482,6 +482,14 @@ Selects main-axis child distribution.
 
 Specifies pixels, relative units, a mixed length, or an intrinsic size.
 
+### `Em(float64)`
+
+Creates a multiple of the computed element font size, or the parent font size for FontSize.
+
+- `value`: Font size multiple.
+
+Returns: An element-relative length.
+
 ### `FitContent(Length)`
 
 Limits the preferred content size without shrinking below its minimum content size. A percentage limit uses the owner's content constraint. In a content-sized owner, its percent part is absent during owner measurement and resolves once after that owner is fixed.
@@ -489,6 +497,46 @@ Limits the preferred content size without shrinking below its minimum content si
 - `limit`: The pixel or relative size limit.
 
 Returns: An intrinsic fit-content size.
+
+### `Percent(float64)`
+
+Creates a percentage of the available size.
+
+- `value`: percentage of the available size
+
+Returns: a percentage length
+
+### `Pixels(float64)`
+
+Creates an absolute pixel length.
+
+- `value`: length in pixels
+
+Returns: a pixel length
+
+### `Rem(float64)`
+
+Creates a multiple of the root font size.
+
+- `value`: Root font size multiple.
+
+Returns: A root-relative length.
+
+### `Vh(float64)`
+
+Creates a percentage of the window layout viewport height.
+
+- `value`: Percentage points.
+
+Returns: A viewport-relative length.
+
+### `Vw(float64)`
+
+Creates a percentage of the window layout viewport width.
+
+- `value`: Percentage points.
+
+Returns: A viewport-relative length.
 
 ### `op_Addition(Length,Length)`
 

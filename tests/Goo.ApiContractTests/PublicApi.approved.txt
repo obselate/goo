@@ -1373,7 +1373,13 @@ method|Goo.LayoutTransition|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.LayoutTransition|ToString|virtual|public|generic:|()->System.String
 method|Goo.LayoutTransition|op_Equality|static|public|generic:|(left:Goo.LayoutTransition,right:Goo.LayoutTransition)->System.Boolean
 method|Goo.LayoutTransition|op_Inequality|static|public|generic:|(left:Goo.LayoutTransition,right:Goo.LayoutTransition)->System.Boolean
+method|Goo.Length|Em|static|public|generic:|(value:System.Double)->Goo.Length
 method|Goo.Length|FitContent|static|public|generic:|(limit:Goo.Length)->Goo.Length
+method|Goo.Length|Percent|static|public|generic:|(value:System.Double)->Goo.Length
+method|Goo.Length|Pixels|static|public|generic:|(value:System.Double)->Goo.Length
+method|Goo.Length|Rem|static|public|generic:|(value:System.Double)->Goo.Length
+method|Goo.Length|Vh|static|public|generic:|(value:System.Double)->Goo.Length
+method|Goo.Length|Vw|static|public|generic:|(value:System.Double)->Goo.Length
 method|Goo.Length|op_Addition|static|public|generic:|(left:Goo.Length,right:Goo.Length)->Goo.Length
 method|Goo.Length|op_Division|static|public|generic:|(value:Goo.Length,scale:System.Double)->Goo.Length
 method|Goo.Length|op_Implicit|static|public|generic:|(value:Goo.Length)->Goo.Edges
