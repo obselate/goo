@@ -456,6 +456,7 @@ public partial class Window {
         // Pump drains each fixed Post batch here, after close decisions and before input.
         drainPostedActions()
         drainTimers(float64(Stopwatch.GetTimestamp()))
+        if nextOffscreenDeadlineSeconds() <= 0.0 { serviceOffscreenSessions() }
         if !IsOpen {
           if profiling {
             profiler.EndFrame(frameProfile, false)
@@ -636,8 +637,8 @@ public partial class Window {
   }
 
   internal func SchedulerTimedServiceDue() bool ->
-  Math.Min(nextTimerDeadlineSeconds(),
-    Math.Min(nextInputDeadlineSeconds(), nextScrollDeadlineSeconds())) <= 0.0
+  Math.Min(nextOffscreenDeadlineSeconds(), Math.Min(nextTimerDeadlineSeconds(),
+    Math.Min(nextInputDeadlineSeconds(), nextScrollDeadlineSeconds()))) <= 0.0
 
   private func nextInputDeadlineSeconds() float64 {
     let elapsed = schedulerLastTicks > 0.0
@@ -655,8 +656,8 @@ public partial class Window {
   // otherwise-idle window still blocks (near-0 CPU) instead of polling, but
   // wakes itself in time to render each blink transition.
   private func idleWaitMs() int32 {
-    let deadline = Math.Min(0.25, Math.Min(nextTimerDeadlineSeconds(),
-      Math.Min(nextInputDeadlineSeconds(), nextScrollDeadlineSeconds())))
+    let deadline = Math.Min(0.25, Math.Min(nextOffscreenDeadlineSeconds(), Math.Min(nextTimerDeadlineSeconds(),
+      Math.Min(nextInputDeadlineSeconds(), nextScrollDeadlineSeconds()))))
     let ms = int32(Math.Ceiling(deadline * 1000.0))
     return ms < 1 ? 1 : ms
   }
@@ -776,6 +777,10 @@ public partial class Window {
     if !closeNativeModal() { return }
     if !closeFileDialog() { return }
     if !closeOwnedWindows() { return }
+    if !prepareOffscreenSessionsClose() {
+      host?.Wake()
+      return
+    }
     if windowTarget?.PrepareClose() == false {
       host?.Wake()
       return

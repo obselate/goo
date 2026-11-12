@@ -150,7 +150,7 @@ public partial class Window {
       return Double.PositiveInfinity
     }
     return if hasDemand() { 0.0 } else {
-      Math.Min(nextTimerDeadlineSeconds(), input.NextTickDeadlineSeconds())
+      Math.Min(nextOffscreenDeadlineSeconds(), Math.Min(nextTimerDeadlineSeconds(), input.NextTickDeadlineSeconds()))
     }
   }
 }

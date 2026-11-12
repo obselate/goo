@@ -193,6 +193,7 @@ internal class WindowScheduler {
           hasVisibleWindow = hasVisibleWindow || window.IsVisible
           hasPendingService = hasPendingService || window.SchedulerHasImmediateService()
             || window.SchedulerHasPendingQueueWork() || window.SchedulerStartupPending()
+            || window.nextOffscreenDeadlineSeconds() != Double.PositiveInfinity
           let candidate = window.SchedulerWaitMs(now)
           if candidate < waitMs {
             waitMs = candidate

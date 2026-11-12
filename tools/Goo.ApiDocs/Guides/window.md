@@ -394,7 +394,6 @@ class RenderPageButton : Cell, IDisposable {
         let pending = active.RenderAsync(MyPage(), options, window.Closed)
         timer = window.SetInterval(() -> {
             try {
-                active.Service()
                 if !pending.IsCompleted { return }
                 let rendered = pending.Result
             } catch (error Exception) {
@@ -417,9 +416,12 @@ class RenderPageButton : Cell, IDisposable {
 Mount `RenderPageButton(window)` in the window's tree. Goo disposes it on unmount
 or window close, releasing the timer and session on the UI thread.
 The timer reads `Result` only after completion, so it does not block for the result.
-Create, render, service and dispose on the same thread.
+Window-created sessions complete in the window loop without calling `Service`.
+Create, render and dispose on the same thread.
 The session keeps the renderer alive, not its presentation surface.
-Without an open window, use `OffscreenRenderSession.Create()`.
+Without an open window, use `OffscreenRenderSession.Create()` and call `Service`
+while awaiting completion. Manual `Service` also works for window-created sessions,
+including detached or suspended embedded hosts.
 
 Each page uses a fresh, unattached cell.
 Logical size sets the layout viewport. Pixel size sets resolution and the device-pixel grid used to round layout.
