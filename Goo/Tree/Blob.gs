@@ -63,8 +63,11 @@ public open class Blob : Style {
   public prop AccessibilityName string? {
     get -> Accessibility?.Name
     init {
-      let declaration = Accessibility ?? Goo.Accessibility()
-      Accessibility = Goo.Accessibility{...declaration, Name: value ?? ""}
+      if let declaration = Accessibility {
+        Accessibility = Goo.Accessibility{...declaration, Name: value ?? ""}
+      } else {
+        Accessibility = Goo.Accessibility{Name: value ?? ""}
+      }
     }
   }
   /// Gets or sets the role without replacing other accessibility fields.
@@ -72,8 +75,11 @@ public open class Blob : Style {
   public prop AccessibilityRole Goo.AccessibilityRole? {
     get -> Accessibility?.Role
     init {
-      let declaration = Accessibility ?? Goo.Accessibility()
-      Accessibility = Goo.Accessibility{...declaration, Role: value ?? Goo.AccessibilityRole.Auto}
+      if let declaration = Accessibility {
+        Accessibility = Goo.Accessibility{...declaration, Role: value ?? Goo.AccessibilityRole.Auto}
+      } else {
+        Accessibility = Goo.Accessibility{Role: value ?? Goo.AccessibilityRole.Auto}
+      }
     }
   }
   internal prop HasAccessibility bool{ get -> (blobState & int32(128)) != 0 }
