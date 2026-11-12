@@ -1,6 +1,115 @@
 package Goo
 
+import System
+import System.Threading
+import System.Threading.Tasks
+import System.Reflection
+import System.Runtime.InteropServices
+
 internal class WindowStartupFixtures {
+  func AsyncDispatcherContract() bool {
+    let window = Window{}
+    var calls int32
+    let result = window.InvokeAsync[int32](() -> {
+      calls++
+      return 42
+    })
+    if result.IsCompleted { return false }
+    window.drainPostedActions()
+    if !result.Wait(5000) || result.Result != 42 || calls != 1 { return false }
+    let failure = window.InvokeAsync(() -> { throw InvalidOperationException("dispatch") })
+    window.drainPostedActions()
+    try { failure.GetAwaiter().GetResult()
+      return false }
+    catch (error InvalidOperationException) { if error.Message != "dispatch" { return false } }
+    let pending = window.InvokeAsync(() -> { calls++ })
+    let presentation = window.NextPresentationAsync()
+    window.Close()
+    try { pending.GetAwaiter().GetResult()
+      return false }
+    catch (_ OperationCanceledException) { }
+    try { presentation.GetAwaiter().GetResult()
+      return false }
+    catch (_ OperationCanceledException) { }
+    return calls == 1 && !window.Post(() -> { calls++ })
+  }
+
+  func AsyncOwnerContextContract() bool {
+    let owner = WindowAsyncCell()
+    let window = Window{Root: owner, Width: 100, Height: 100}
+    window.UpdateTree()
+    owner.RunOwnedAction(owner.RunHandler)
+    owner.ClearDirty()
+    if SynchronizationContext.Current != nil { return false }
+    owner.Pending.SetResult(true)
+    window.drainPostedActions()
+    if owner.Resumed != 1 || owner.ResumeThread != Environment.CurrentManagedThreadId
+      || !owner.IsDirty() { return false }
+    let host = SynchronizationContext()
+    SynchronizationContext.SetSynchronizationContext(host)
+    try {
+      let previous = owner.BeginCallback()
+      if SynchronizationContext.Current != host { return false }
+      owner.EndCallback(previous)
+      if SynchronizationContext.Current != host { return false }
+    } finally { SynchronizationContext.SetSynchronizationContext(nil) }
+    window.Close()
+    return true
+  }
+
+  func AsyncCloseDrainContract() bool {
+    let owner = WindowAsyncCell()
+    let window = Window{Root: owner, Width: 100, Height: 100}
+    window.UpdateTree()
+    owner.RunOwnedAction(owner.RunCancelled)
+    window.Close()
+    if owner.FinallyCount != 1 || owner.ResumeThread != Environment.CurrentManagedThreadId
+      || !window.Closed.IsCancellationRequested { return false }
+    let late = WindowAsyncCell()
+    let closing = Window{Root: late, Width: 100, Height: 100, CloseDrainMs: 0.0}
+    closing.UpdateTree()
+    late.RunOwnedAction(late.RunHandler)
+    closing.Close()
+    late.Pending.SetResult(true)
+    if !late.Finished.Wait(5000) { return false }
+    return late.FinallyCount == 1 && late.ResumeThread != Environment.CurrentManagedThreadId
+      && !closing.Post(() -> {}) && closing.Closed.IsCancellationRequested
+  }
+
+  func AsyncStateContinuationContract() bool {
+    let owner = WindowAsyncStateCell()
+    let window = Window{Root: owner, Width: 100, Height: 100}
+    window.UpdateTree()
+    let unchanged = TaskCompletionSource[bool]()
+    owner.RunOwnedAction(() -> owner.Resume(unchanged.Task, false))
+    owner.ClearDirty()
+    unchanged.SetResult(true)
+    window.drainPostedActions()
+    if owner.IsDirty() { return false }
+    let changed = TaskCompletionSource[bool]()
+    owner.RunOwnedAction(() -> owner.Resume(changed.Task, true))
+    changed.SetResult(true)
+    window.drainPostedActions()
+    let dirty = owner.IsDirty()
+    window.Close()
+    return dirty
+  }
+
+  func LateFileDialogCompletionContract() bool {
+    let window = Window{}
+    let dialog = NativeFileDialog(window, nint(0), FileDialogKind.Folder, FileDialogOptions())
+    let pending = dialog.Task.WaitAsync(window.PendingTaskToken())
+    window.Close()
+    let paths = Marshal.AllocHGlobal(nint.Size)
+    try {
+      Marshal.WriteIntPtr(paths, nint(0))
+      typeof(NativeFileDialog).GetMethod("Receive", BindingFlags.Instance | BindingFlags.NonPublic)!!
+        .Invoke(dialog, []object{paths, -1})
+    } finally { Marshal.FreeHGlobal(paths) }
+    window.drainPostedActions()
+    return pending.IsCanceled && dialog.NativeCompleted && dialog.Task.IsCompleted
+      && window.Closed.IsCancellationRequested && !window.Post(() -> {})
+  }
   func InitialBoundsContract() bool {
     let usable = ElementRect{ X: -1366, Y: 24, Width: 1366, Height: 720 }
     let oversized = SdlHost.ConstrainInitialBounds(ElementRect{ Width: 1824, Height: 1026 }, 0, 0, false, usable)
@@ -27,5 +136,43 @@ internal class WindowStartupFixtures {
       && VulkanPresentModeSelector.TrySelect(false, false, false, true, out selected)
       && selected == VkConstants.VK_PRESENT_MODE_FIFO_KHR
       && !VulkanPresentModeSelector.TrySelect(false, false, false, false, out selected)
+  }
+}
+
+internal class WindowAsyncCell : Cell {
+  internal let Pending TaskCompletionSource[bool] = TaskCompletionSource[bool]()
+  internal let Finished ManualResetEventSlim = ManualResetEventSlim()
+  internal var Resumed int32
+  internal var ResumeThread int32
+  internal var FinallyCount int32
+
+  internal async func RunHandler() void {
+    try {
+      await Pending.Task
+      Resumed++
+    } finally {
+      ResumeThread = Environment.CurrentManagedThreadId
+      FinallyCount++
+      Finished.Set()
+    }
+  }
+
+  internal async func RunCancelled() void {
+    try { await Task.Delay(Timeout.Infinite, Lifetime) }
+    finally {
+      ResumeThread = Environment.CurrentManagedThreadId
+      FinallyCount++
+    }
+  }
+}
+
+internal class WindowAsyncStateCell : Cell {
+  private let value State[int32] = State[int32](0)
+
+  public override func Build() Blob -> Text(value.Value.ToString())
+
+  internal async func Resume(pending Task, changed bool) void {
+    await pending
+    if changed { value.Value++ }
   }
 }

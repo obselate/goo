@@ -212,6 +212,7 @@ public partial class Window {
   }
 
   private func configureHost(native WindowHost) {
+    if let sdl = native as SdlHost? { sdl.CallbackContext = CallbackContext() }
     native.PreferencesChanged += applyPreferences
     native.PointerPressed += (id, device, px, py, button, buttons, pressure, modifiers) -> {
       DismissChildMenus(PopupDismissReason.OutsideInteraction)

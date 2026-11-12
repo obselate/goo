@@ -32,9 +32,9 @@ internal struct CallbackScope : IDisposable {
   private let previous SynchronizationContext?
   private let installed bool
 
-  internal init(context WindowCallbackContext) {
+  internal init(context WindowCallbackContext?) {
     previous = SynchronizationContext.Current
-    installed = previous == nil || previous is WindowCallbackContext
+    installed = context != nil && (previous == nil || previous is WindowCallbackContext)
     if installed { SynchronizationContext.SetSynchronizationContext(context) }
   }
 
@@ -56,6 +56,8 @@ public partial class Window {
   private var closeDrainMs float64 = 2000.0
 
   /// Gets or sets the close drain bound in milliseconds. The default is 2000. Zero skips the wait.
+  /// Closing stops UI work and cancels Cell lifetimes before draining async handlers on the UI thread.
+  /// After this bound, continuations run on a serialized background queue. They must not access UI state.
   public prop CloseDrainMs float64 {
     get -> closeDrainMs
     set {
@@ -136,8 +138,8 @@ public partial class Window {
     } else if let current = Root {
       callbackError = captureCleanupError(callbackError, () -> current.DisposeMounted())
     }
-    closeFileDialog()
     cancelPendingTasks()
+    closeFileDialog()
     callbackDeadline = float64(Stopwatch.GetTimestamp()) + CloseDrainMs * float64(Stopwatch.Frequency) / 1000.0
   }
 
