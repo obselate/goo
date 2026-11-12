@@ -240,6 +240,7 @@ enum-underlying|Goo.ScrollAlignment|System.Int32
 enum-underlying|Goo.ScrollbarVisibility|System.Int32
 enum-underlying|Goo.ShapeFit|System.Int32
 enum-underlying|Goo.SingleInstanceStatus|System.Int32
+enum-underlying|Goo.SizeToContent|System.Int32
 enum-underlying|Goo.SoundDeviceStatus|System.Int32
 enum-underlying|Goo.SoundOpenStatus|System.Int32
 enum-underlying|Goo.SoundPlayStatus|System.Int32
@@ -852,6 +853,10 @@ enum|Goo.SingleInstanceStatus|Primary|0
 enum|Goo.SingleInstanceStatus|Rejected|4
 enum|Goo.SingleInstanceStatus|TimedOut|2
 enum|Goo.SingleInstanceStatus|Unsupported|3
+enum|Goo.SizeToContent|Both|3
+enum|Goo.SizeToContent|Height|2
+enum|Goo.SizeToContent|None|0
+enum|Goo.SizeToContent|Width|1
 enum|Goo.SoundDeviceStatus|Enumerated|0
 enum|Goo.SoundDeviceStatus|NativeFailure|3
 enum|Goo.SoundDeviceStatus|SubsystemUnavailable|2
@@ -1859,14 +1864,14 @@ method|Goo.Window|RequestClose|instance|public|generic:|()->System.Void
 method|Goo.Window|Run|instance|public|generic:|()->System.Void
 method|Goo.Window|SetClipboardText|instance|public|generic:|(value:System.String)->System.Void
 method|Goo.Window|SetColors|instance|public|generic:|(background:Goo.Color,foreground:Goo.Color)->System.Void
+method|Goo.Window|SetFullscreenDisplay|instance|public|generic:|(display:Goo.WindowDisplayId)->Goo.WindowOperationResult
 method|Goo.Window|SetInterval|instance|public|generic:|(callback:System.Action,intervalMs:System.Double)->Goo.WindowTimer
 method|Goo.Window|SetNativeDataDropFormats|instance|public|generic:|(formats:System.Collections.Generic.IReadOnlyList`1<System.String>)->Goo.WindowOperationResult
 method|Goo.Window|SetTimeout|instance|public|generic:|(callback:System.Action,delayMs:System.Double)->Goo.WindowTimer
+method|Goo.Window|SetTopmost|instance|public|generic:|(value:System.Boolean)->Goo.WindowOperationResult
 method|Goo.Window|ShowFileDialogAsync|instance|public|generic:|(kind:Goo.FileDialogKind,options:Goo.FileDialogOptions?=null)->System.Threading.Tasks.Task`1<Goo.FileDialogResult>
 method|Goo.Window|Show|instance|public|generic:|(activate:System.Boolean=true)->Goo.WindowOperationResult
 method|Goo.Window|TryPost|instance|public|generic:|(action:System.Action)->System.Boolean
-method|Goo.Window|TrySetFullscreenDisplay|instance|public|generic:|(display:Goo.WindowDisplayId)->Goo.WindowOperationResult
-method|Goo.Window|TrySetTopmost|instance|public|generic:|(value:System.Boolean)->Goo.WindowOperationResult
 method|Goo.Window|WriteClipboardAsync|instance|public|generic:|(data:Goo.TransferData,intent:Goo.ClipboardIntent=Copy)->System.Threading.Tasks.Task`1<Goo.ClipboardWriteResult>
 property|Goo.AccessibilityActionRequest|Action|Goo.AccessibilityAction|instance|get:public|index:()
 property|Goo.AccessibilityActionRequest|ScrollX|System.Double|instance|get:public|index:()
@@ -2875,7 +2880,6 @@ property|Goo.Window|Foreground|Goo.Color|instance|get:public,set:public|index:()
 property|Goo.Window|ForeignParentHandle|System.String|instance|get:public,set:public|index:()
 property|Goo.Window|FramePacing|Goo.WindowFramePacing|instance|get:public,set:public|index:()
 property|Goo.Window|FrameTheme|Goo.SystemTheme|instance|get:public,set:public|index:()
-property|Goo.Window|Height|System.Int32|instance|get:public,set:public|index:()
 property|Goo.Window|IconPng|System.Byte[]?|instance|get:public,init:public|index:()
 property|Goo.Window|InitiallyVisible|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|IsFocused|System.Boolean|instance|get:public,set:private|index:()
@@ -2888,13 +2892,13 @@ property|Goo.Window|LastNativeTransferError|System.String|instance|get:public|in
 property|Goo.Window|LastNativeTransferStatus|Goo.DataTransferStatus|instance|get:public|index:()
 property|Goo.Window|LayerShell|Goo.LayerWindowOptions?|instance|get:public,init:public|index:()
 property|Goo.Window|MacOSBackdrop|Goo.MacOSBackdropOptions|instance|get:public,set:public|index:()
-property|Goo.Window|MaxHeight|System.Int32|instance|get:public,set:public|index:()
-property|Goo.Window|MaxWidth|System.Int32|instance|get:public,set:public|index:()
-property|Goo.Window|MinHeight|System.Int32|instance|get:public,set:public|index:()
-property|Goo.Window|MinWidth|System.Int32|instance|get:public,set:public|index:()
+property|Goo.Window|MaxSize|Goo.LayoutSize|instance|get:public,set:public|index:()
+property|Goo.Window|MinSize|Goo.LayoutSize|instance|get:public,set:public|index:()
 property|Goo.Window|Modal|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|NativeFileDropEnabled|System.Boolean|instance|get:public,set:public|index:()
+property|Goo.Window|NativeHeight|System.Int32|instance|get:public|index:()
 property|Goo.Window|NativeTransferCapabilities|Goo.NativeTransferCapabilities|instance|get:public|index:()
+property|Goo.Window|NativeWidth|System.Int32|instance|get:public|index:()
 property|Goo.Window|Occlusion|Goo.WindowOcclusion|instance|get:public|index:()
 property|Goo.Window|OnClosing|System.Func`1<System.Boolean>?|instance|get:public,set:public|index:()
 property|Goo.Window|Owner|Goo.Window?|instance|get:public,set:public|index:()
@@ -2907,6 +2911,8 @@ property|Goo.Window|Resizable|System.Boolean|instance|get:public,set:public|inde
 property|Goo.Window|ResizeBand|System.Single|instance|get:public,set:public|index:()
 property|Goo.Window|Root|Goo.Cell?|instance|get:public,init:public|index:()
 property|Goo.Window|Scenes|System.Collections.Generic.IReadOnlyDictionary`2<System.String,System.Func`1<Goo.Cell>>?|instance|get:public,init:public|index:()
+property|Goo.Window|SizeToContent|Goo.SizeToContent|instance|get:public,init:public|index:()
+property|Goo.Window|Size|Goo.LayoutSize|instance|get:public,set:public|index:()
 property|Goo.Window|SmoothScrolling|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|State|Goo.WindowState|instance|get:public,set:public|index:()
 property|Goo.Window|TitlebarControlsRect|System.Nullable`1<Goo.ElementRect>|instance|get:public|index:()
@@ -2917,7 +2923,6 @@ property|Goo.Window|UiScale|System.Single|instance|get:public,set:public|index:(
 property|Goo.Window|VSync|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|WaylandBackdrop|Goo.WaylandBackdropOptions|instance|get:public,set:public|index:()
 property|Goo.Window|WheelScrollScale|System.Single|instance|get:public,set:public|index:()
-property|Goo.Window|Width|System.Int32|instance|get:public,set:public|index:()
 property|Goo.Window|WindowsBackdrop|Goo.WindowsBackdropOptions|instance|get:public,set:public|index:()
 property|Goo.Window|X|System.Int32|instance|get:public,set:public|index:()
 property|Goo.Window|Y|System.Int32|instance|get:public,set:public|index:()
@@ -3158,6 +3163,7 @@ type|Goo.Simulation|abstract-class|public|base:System.Object|interfaces:|generic
 type|Goo.SingleInstanceResult|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.SingleInstanceStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.SingleInstance|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.SizeToContent|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.SoundDeviceStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.SoundOpenResult|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.SoundOpenStatus|enum|public|base:System.Enum|interfaces:|generic:
