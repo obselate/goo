@@ -66,8 +66,10 @@ internal unsafe partial class SdlRuntime {
         }
         if NativeLibrary.TryGetExport(handle, "SDL_IsMainThread", out var symbol) && symbol != nint(0) {
           LibraryLoader.LoadFrom("libSDL3", handle)
+          return true
         }
-      } else if !OperatingSystem.IsAndroid() {
+      }
+      if !OperatingSystem.IsAndroid() {
         let assembly = typeof(SdlRuntime).Assembly
         let directory = if RuntimeFeature.IsDynamicCodeSupported {
           Path.GetDirectoryName(assembly.Location) ?? AppContext.BaseDirectory
@@ -99,7 +101,8 @@ internal unsafe partial class SdlRuntime {
             + Path.Combine(directory, "runtimes", rid, "native") + ", " + Path.GetDirectoryName(path)
             + (if nativeDirectories.Length == 0 { "" } else { ", " + String.Join(", ", nativeDirectories) })
             + ". In a Goo Linux source checkout, run: "
-            + "bash .github/scripts/build-sdl-linux-x64.sh artifacts/native/libSDL3.so")
+            + "bash .github/scripts/build-sdl-linux-x64.sh artifacts/native/libSDL3.so"
+            + ". A NativeAOT source build must import Goo/Goo.targets.")
         }
         let handle = NativeLibrary.Load(path)
         NativeLibrary.SetDllImportResolver(assembly,
