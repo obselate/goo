@@ -137,7 +137,7 @@ Container() {
 ```
 
 `FocusTarget` adds the focused owner's visible focus state to one mounted,
-enabled, visible descendant. The descendant resolves its own `Focus` style
+enabled, visible descendant. The descendant resolves its own `FocusStyle`
 without becoming focusable. The owner keeps keyboard focus and its own focus
 style. Pointer focus does not show the projected style unless the owner's normal
 focus-visible rules require it.

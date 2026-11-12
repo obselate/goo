@@ -7,19 +7,22 @@ import System.Text.Json
 
 internal class FlexConformanceFixtures {
     func RowColumnSpacerContract() bool {
+        var clicks = 0
         let reconciler = Reconciler{Res: Resolver{}}
         let root = reconciler.Mount(Row{
             Width: 100, Height: 40,
             Container{Key: "first", Width: 10, Height: 10},
             Spacer{Key: "space", BackgroundColor: Color.White, Focusable: true,
-                AccessibilityName: "excluded", OnClick: () -> {}},
+                AccessibilityName: "excluded", OnClick: () -> { clicks++ }},
             Container{Key: "last", Width: 20, Height: 10},
         })
         try {
             Layout().Calculate(root, 100.0F, 40.0F)
             let spacer = root.Children[1]
             if root.FlexDirection != FlexDirection.Row || spacer.Rect.W != 70.0F
-                || root.Children[2].Rect.X != 80.0F || !spacer.PaintInputHidden || spacer.Focusable || spacer.HitTestSelf { return false }
+                || root.Children[2].Rect.X != 80.0F || !spacer.PaintInputHidden
+                || spacer.Focusable || spacer.HitTestSelf || hitActivate(root, spacer) { return false }
+            if clicks != 0 { return false }
             let manager = AccessibilityManager(Window{})
             manager.CaptureForDiagnostics(root)
             if manager.DiagnosticNodeFor(spacer) != nil { return false }

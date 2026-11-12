@@ -1000,7 +1000,7 @@ internal class Node {
 internal func canReceiveInput(n Node) bool {
   var current = n
   while true {
-    if current.Disabled || current.PaintInputState != 0 || current.PortalPlacementHidden
+    if current.Kind == NodeKind.Spacer || current.Disabled || current.PaintInputState != 0 || current.PortalPlacementHidden
       || current.PortalAnchorClipped && !n.Focused {
     return false
   }

@@ -39,7 +39,11 @@ class NativeGlassCell : Cell {
                     name = value
                 },
             },
-            Text{Content: "Text and controls stay sharp over the desktop material.", Color: Color.Parse("#9099a8"), FontSize: 12},
+            Text{
+                Content: "Text and controls stay sharp over the desktop material.",
+                Color: Color.Parse("#9099a8"),
+                FontSize: 12
+            },
         },
         Container{
             FlexDirection: FlexDirection.Row,

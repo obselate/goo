@@ -35,7 +35,7 @@ public open class Blob : Style {
     }
   }
   internal prop HasElementHandle bool{ get -> (blobState & int32(64)) != 0 }
-  /// Gets the descendant that also resolves Focus style while this owner has visible focus.
+  /// Gets the descendant that also resolves FocusStyle while this owner has visible focus.
   /// The target need not be focusable. Native focus and accessibility relationships do not change.
   public prop FocusTarget ElementHandle? {
     get -> InputCallbacks.BlobFocusTarget(this)

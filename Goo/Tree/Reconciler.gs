@@ -421,7 +421,8 @@ internal partial class Reconciler {
       validateFlexDirection(disabled, 0)
     }
     let nextDisabled = b.Disabled
-    let nextFocusable = focusable && !nextDisabled && !(b is Spacer)
+    let spacer = n.Kind == NodeKind.Spacer
+    let nextFocusable = focusable && !nextDisabled && !spacer
     let baseChanged = !sameStyleEntries(n.BaseStyle, entries)
     let hoverChanged = !sameStyleEntries(n.HoverStyle, hover)
     let activeChanged = !sameStyleEntries(n.ActiveStyle, active)
@@ -476,7 +477,7 @@ internal partial class Reconciler {
       inputChanged = true
     }
     if n.SyncPointerCallbacks(b) { inputChanged = true }
-    let nextHitTestSelf = !(b is Spacer) && resolvedHitTestSelf(b, focusable, entries, hover, active)
+    let nextHitTestSelf = !spacer && resolvedHitTestSelf(b, focusable, entries, hover, active)
     if n.HitTestSelf != nextHitTestSelf {
       n.HitTestSelf = nextHitTestSelf
       inputChanged = true
