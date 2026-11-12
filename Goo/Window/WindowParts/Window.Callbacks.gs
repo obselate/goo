@@ -74,7 +74,10 @@ public partial class Window {
     return callbackContext!!
   }
 
-  internal func WakeCallbacks() { host?.Wake() }
+  internal func WakeCallbacks() {
+    lock continuationGate { Monitor.PulseAll(continuationGate) }
+    host?.Wake()
+  }
 
   private func hasContinuations() bool {
     lock continuationGate { return (continuations?.Count ?? 0) != 0 }
@@ -139,6 +142,17 @@ public partial class Window {
       using let context = CallbackScope(work.Context)
       try { work.Callback(work.State) }
       catch (_ OperationCanceledException) { }
+    }
+  }
+
+  internal func DrainCloseCallbacks() {
+    while callbackClosing && callbackDrainReady && !callbackLate {
+      lock continuationGate {
+        if (continuations?.Count ?? 0) == 0 && Interlocked.CompareExchange(&callbackOperations, 0, 0) != 0 {
+          Monitor.Wait(continuationGate, Math.Max(1, SchedulerWaitMs(float64(Stopwatch.GetTimestamp()))))
+        }
+      }
+      Close()
     }
   }
 

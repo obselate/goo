@@ -120,6 +120,7 @@ public open class EmbeddedWindowHost : IDisposable {
     if let window = Window {
       window.DetachEmbeddedPresentation()
       window.Close()
+      window.DrainCloseCallbacks()
     }
     disposed = true
     Bridge = nil

@@ -8,6 +8,25 @@ import System.Runtime.InteropServices
 import System.Diagnostics
 
 internal class WindowStartupFixtures {
+  func EmbeddedCloseDrainsContinuationsContract() bool {
+    let previous = SynchronizationContext.Current
+    SynchronizationContext.SetSynchronizationContext(nil)
+    try {
+      let owner = WindowAsyncCell()
+      let host = EmbeddedSmokeHost()
+      host.Resize(100, 100, 100, 100)
+      let window = Window{Root: owner}.Attach(host)
+      host.RenderFrame(0.0)
+      owner.RunOwnedAction(owner.RunHandler)
+      go {
+        if owner.Closing.Wait(5000) { owner.Pending.TrySetResult(true) }
+      }
+      host.Dispose()
+      return owner.FinallyCount == 1 && owner.ResumeThread == Environment.CurrentManagedThreadId
+        && window.Closed.IsCancellationRequested && host.Window == nil
+    } finally { SynchronizationContext.SetSynchronizationContext(previous) }
+  }
+
   func AsyncDispatcherContract() bool {
     let window = Window{}
     var calls int32
@@ -183,9 +202,12 @@ internal class WindowStartupFixtures {
 internal class WindowAsyncCell : Cell {
   internal let Pending TaskCompletionSource[bool] = TaskCompletionSource[bool]()
   internal let Finished ManualResetEventSlim = ManualResetEventSlim()
+  internal let Closing ManualResetEventSlim = ManualResetEventSlim()
   internal var Resumed int32
   internal var ResumeThread int32
   internal var FinallyCount int32
+
+  protected override func Unmounting() { Closing.Set() }
 
   internal async func RunHandler() void {
     try {
