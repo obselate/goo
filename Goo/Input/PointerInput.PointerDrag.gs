@@ -172,6 +172,7 @@ internal partial class PointerInput {
         if !state.Started {
             return
         }
+        state.Callback = state.Target.Current?.OnPointerDrag ?? state.Callback
         let previous = state.Last
         let event = PointerEvent{
             Identity: previous.Pointer.Identity,
