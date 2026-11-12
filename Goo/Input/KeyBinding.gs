@@ -2,7 +2,7 @@ package Goo
 
 import System
 
-/// Assigns OnPress to one exact physical Key and Modifiers combination.
+/// Assigns OnPress to one exact physical Key and Modifiers combination, with optional OnRelease and Repeat behavior.
 public data struct KeyBinding(Key Key, Modifiers KeyModifiers, OnPress Action?) {
   /// Gets the callback invoked on key up.
   public prop OnRelease Action? { get; init; }

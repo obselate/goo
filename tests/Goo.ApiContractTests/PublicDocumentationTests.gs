@@ -940,6 +940,7 @@ class PublicDocumentationTests {
             typeof(SpellingResult),
             typeof(SpellingSuggestions),
             typeof(FocusedEditorSnapshot),
+            typeof(KeyBinding),
             typeof(GesturePointer),
             typeof(OffscreenRenderOptions),
             typeof(OffscreenRenderResult),
@@ -2211,6 +2212,8 @@ class PublicDocumentationTests {
                 .Append("P:Goo.LayoutTransition.SimulationFactory")
                 .Append("P:Goo.Cell`1.Input")
                 .Append("P:Goo.FocusedEditorSnapshot.InputOptions")
+                .Append("P:Goo.KeyBinding.OnRelease")
+                .Append("P:Goo.KeyBinding.Repeat")
                 .Append("M:Goo.Percent(System.Double)")
         }
 
