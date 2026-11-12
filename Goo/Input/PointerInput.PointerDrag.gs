@@ -15,7 +15,7 @@ internal class PointerDragState {
 
 internal partial class PointerInput {
   private func dispatchPointerDrag(node Node, event PointerEvent, kind PointerEventKind,
-    route List[NodeMount], index int32) {
+    route List[NodeMount], index int32, transformed bool) {
     if kind == PointerEventKind.Press && event.Button == PointerButton.Primary
       && current.PointerDrag == nil && node.OnPointerDrag != nil && !hasPointerDrag(node) {
       current.PointerDrag = PointerDragState{
@@ -29,23 +29,6 @@ internal partial class PointerInput {
     if state.Target.Current != node { return }
     if kind == PointerEventKind.Release && event.Button != PointerButton.Primary { return }
     state.Callback = node.OnPointerDrag ?? state.Callback
-    var originX = float32(state.WindowOrigin.X)
-    var originY = float32(state.WindowOrigin.Y)
-    for i in 0 ... index + 1 {
-      guard let ancestor = route[i].Current else { return }
-      if ancestor.IsPortal {
-        originX = float32(state.WindowOrigin.X)
-        originY = float32(state.WindowOrigin.Y)
-      }
-      let origin = TransformGeometry.Unmap(ancestor, originX, originY)
-      if !origin.Valid { return }
-      originX = origin.X
-      originY = origin.Y
-    }
-    let translation = Point{
-      X: event.Position.X - float64(originX - node.Rect.X),
-      Y: event.Position.Y - float64(originY - node.Rect.Y),
-    }
     let distanceX = event.WindowPosition.X - state.WindowOrigin.X
     let distanceY = event.WindowPosition.Y - state.WindowOrigin.Y
     var phase = PointerDragPhase.Moved
@@ -62,9 +45,52 @@ internal partial class PointerInput {
       phase = PointerDragPhase.Ended
       current.PointerDrag = nil
     }
+    var translation = Point{X: distanceX, Y: distanceY}
+    var delta = event.Delta
+    if kind == PointerEventKind.Release {
+      delta = Point{
+        X: event.WindowPosition.X - state.Last.WindowPosition.X,
+        Y: event.WindowPosition.Y - state.Last.WindowPosition.Y,
+      }
+    }
+    if transformed {
+      var originX = float32(state.WindowOrigin.X)
+      var originY = float32(state.WindowOrigin.Y)
+      var previousX = float32(state.Last.WindowPosition.X)
+      var previousY = float32(state.Last.WindowPosition.Y)
+      for i in 0 ... index + 1 {
+        guard let ancestor = route[i].Current else { return }
+        if ancestor.IsPortal {
+          originX = float32(state.WindowOrigin.X)
+          originY = float32(state.WindowOrigin.Y)
+          previousX = float32(state.Last.WindowPosition.X)
+          previousY = float32(state.Last.WindowPosition.Y)
+        }
+        let origin = TransformGeometry.Unmap(ancestor, originX, originY)
+        if !origin.Valid { return }
+        originX = origin.X
+        originY = origin.Y
+        if kind == PointerEventKind.Release {
+          let previous = TransformGeometry.Unmap(ancestor, previousX, previousY)
+          if !previous.Valid { return }
+          previousX = previous.X
+          previousY = previous.Y
+        }
+      }
+      translation = Point{
+        X: event.Position.X - float64(originX - node.Rect.X),
+        Y: event.Position.Y - float64(originY - node.Rect.Y),
+      }
+      if kind == PointerEventKind.Release {
+        delta = Point{
+          X: event.Position.X - float64(previousX - node.Rect.X),
+          Y: event.Position.Y - float64(previousY - node.Rect.Y),
+        }
+      }
+    }
     current.ClickTarget = nil
     current.LastPressNode = nil
-    state.Last = PointerDragEvent{Pointer: event, Phase: phase, Translation: translation}
+    state.Last = PointerDragEvent{Pointer: event, Phase: phase, Translation: translation, Delta: delta}
     try { state.Callback?.Invoke(state.Last) }
     finally { state.Owner?.Rebuild() }
   }
