@@ -531,6 +531,7 @@ class FixtureContractTests {
             yield Contract[VulkanSceneCompilerFixtures]("LayerPaintCoverageSurvivesViewportClipping")
             yield Contract[VulkanSceneCompilerFixtures]("ScrollOffsetRetainsCanonicalContent")
             yield Contract[VulkanSceneCompilerFixtures]("OpaqueViewportRootSkipsCoveredBackground")
+            yield Contract[VulkanSceneCompilerFixtures]("TransparentLeafChunksMatchGenericPaint")
         }
 
         private func Contract[TFixture](methodName string)[]object -> []object{typeof(TFixture), methodName}
