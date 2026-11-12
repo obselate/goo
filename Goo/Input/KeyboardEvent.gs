@@ -13,6 +13,9 @@ public struct KeyEvent {
   public prop Repeat bool{ get; init; }
   /// Reports whether platform text composition is active.
   public prop IsComposing bool{ get; init; }
+  /// Reports whether the focused target accepts text editing at dispatch.
+  public prop TargetEditsText bool { get -> targetEditsText }
+  internal var targetEditsText bool
   internal prop Control InputDispatchControl? { get; init; }
   internal prop Generation int64{ get; init; }
 
