@@ -301,7 +301,9 @@ internal partial class PointerInput {
           let callback = if kind == PointerEventKind.Press { n.OnPointerDown }
             else if kind == PointerEventKind.Move { n.OnPointerMove } else { n.OnPointerUp }
           let owner = callback != nil ? CellOwnership.InRoute(route, i - 1) : nil
-          dispatchPointerDrag(n, event, kind, route, i - 1, transformed)
+          if current.PointerDrag != nil || kind == PointerEventKind.Press && n.OnPointerDrag != nil {
+            dispatchPointerDrag(n, event, kind, route, i - 1, transformed)
+          }
           try {
             callback?.Invoke(event)
           } finally {

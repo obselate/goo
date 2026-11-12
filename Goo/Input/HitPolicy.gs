@@ -8,7 +8,6 @@ internal func resolvedHitTestSelf(b Blob, focusable bool, entries StyleEntries?,
       case c is Container {
         if c.HasAuthoredHitTestSelf { return c.HitTestSelf }
         if c.DragsWindow { return true }
-        if c.OnPointerDrag != nil { return true }
       }
       case _ { }
     }
@@ -21,6 +20,7 @@ internal func resolvedHitTestSelf(b Blob, focusable bool, entries StyleEntries?,
     if b.OnPointerMove != nil { return true }
     if b.OnPointerUp != nil { return true }
     if b.OnPointerCancel != nil { return true }
+    if b.OnPointerDrag != nil { return true }
     if b.OnPointerEnter != nil { return true }
     if b.OnPointerLeave != nil { return true }
     if b.OnWheel != nil { return true }
