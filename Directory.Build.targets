@@ -1,0 +1,3 @@
+<Project>
+  <Import Project="tools/WidgetsReferences.targets" Condition="'$(CustomAfterMicrosoftCommonTargets)' != '$(MSBuildThisFileDirectory)tools/WidgetsReferences.targets'" />
+</Project>
