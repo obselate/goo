@@ -47,6 +47,7 @@ internal unsafe partial class SdlRuntime {
     private var mainThreadId int32
     private var references int32
     private var wakeEventType uint32
+    private var wakePending int32
     private var eventModifierMask uint16
     private let cursors []SDLCursorPtr = [int32(Cursor.ResizeWest) + 1]SDLCursorPtr
     private var currentCursor Cursor = Cursor.Default
@@ -200,11 +201,11 @@ internal unsafe partial class SdlRuntime {
         if references == 0 {
           return
         }
+        if Interlocked.Exchange(&wakePending, 1) != 0 { return }
         var wakeEvent = SDLEvent{ Type: wakeEventType }
         let added = SDL.PeepEvents(&wakeEvent, 1, SDLEventAction.Addevent, 0u, 0u)
         if added != 1 {
-          throw InvalidOperationException(
-            "SDL_PeepEvents failed to enqueue wake event: " + SDL.GetErrorS())
+          Interlocked.Exchange(&wakePending, 0)
         }
       }
     }
@@ -298,6 +299,7 @@ internal unsafe partial class SdlRuntime {
             throw InvalidOperationException("SDL_RegisterEvents failed to allocate a wake event type.")
           }
           eventModifierMask = SDL.GetModState()
+          Interlocked.Exchange(&wakePending, 0)
         }
         references++
       }
@@ -351,6 +353,7 @@ internal unsafe partial class SdlRuntime {
     }
 
     internal func DispatchOne(nativeEvent SDLEvent) {
+      if nativeEvent.Type == wakeEventType { Interlocked.Exchange(&wakePending, 0) }
       let previousTimestamp = PopupInputContext.Timestamp
       PopupInputContext.Timestamp = nativeEvent.Common.Timestamp
       try { DispatchNativeEvent(nativeEvent) }
