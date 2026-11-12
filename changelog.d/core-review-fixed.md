@@ -9,3 +9,4 @@
 - Evict least-recently-used image cache entries that no returned source or mounted lease owns.
 - Drain native modal completion during close and bound event-serviced cleanup when Window.Run fails.
 - Report repeated alternating element metrics once per episode when window diagnostics are enabled.
+- Skip source-child counts when an opaque scene node does not need opacity isolation.
