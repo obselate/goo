@@ -4,6 +4,7 @@ import System
 import System.Collections.Generic
 import System.Threading
 
+/// Base type of tracked Cell state.
 public abstract class StateDependency {
   private var readers List[Cell]?
   private var threadId int32
@@ -47,14 +48,17 @@ public abstract class StateDependency {
   }
 }
 
+/// Holds a value that rebuilds the Cells that read it in Build when it changes.
 public class State[T any] : StateDependency {
   private var current T
 
+  /// Creates state with an initial value.
   public init(initial T) { current = initial }
 
   internal override func IsSafePayload() bool ->
     typeof(T).IsPrimitive || typeof(T).IsEnum || typeof(T) == typeof(string) || typeof(T) == typeof(ElementHandle)
 
+  /// Gets or sets the value. A read in Build subscribes the Cell. A write of a different value rebuilds its readers.
   public prop Value T {
     get {
       Read()
@@ -68,7 +72,9 @@ public class State[T any] : StateDependency {
     }
   }
 
+  /// Returns the text of the current value.
   public override func ToString() string -> if let text = Value?.ToString() { text } else { "" }
 
+  /// Converts state to its current value.
   public func operator implicit(value State[T]) T -> value.Value
 }
