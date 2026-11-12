@@ -233,7 +233,7 @@ class FocusOutlineClipCell : Cell {
       .BorderRadius: 10, .Overflow: Overflow.Hidden, .BackgroundColor: Color.Rgb(40, 40, 40),
       Container{
         Width: 64, Height: 32, BorderRadius: 6, BackgroundColor: Color.White, Focusable: true,
-        Focus: Style{OutlineWidth: 2, OutlineOffset: 2, OutlineColor: Color.Rgb(255, 32, 128)},
+        FocusStyle: Style{OutlineWidth: 2, OutlineOffset: 2, OutlineColor: Color.Rgb(255, 32, 128)},
       },
     },
   }

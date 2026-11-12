@@ -179,7 +179,7 @@ internal class GlassMaterialPanelCell : Cell {
             BorderWidth: 1,
             BorderColor: active ? Color.Rgba(39, 72, 82, 62): Color.Rgba(39, 72, 82, 24),
             BackgroundColor: active ? Color.Rgba(249, 253, 252, 218): Color.Rgba(249, 253, 252, 160),
-            Hover: Style{BackgroundColor: Color.Rgba(249, 253, 252, 236)},
+            HoverStyle: Style{BackgroundColor: Color.Rgba(249, 253, 252, 236)},
             OnClick: () -> {
                 selectMode(terminal)
             },

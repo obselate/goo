@@ -209,7 +209,7 @@ public class GlassTerminalCell : Cell {
         BorderWidth: 1,
         BorderColor: border,
         BackgroundColor: fill,
-        Hover: Style{BackgroundColor: hover},
+        HoverStyle: Style{BackgroundColor: hover},
         OnClick: action,
     }
 
@@ -248,7 +248,7 @@ public class GlassTerminalCell : Cell {
                 Padding: Edges{Left: 9, Right: 9, Top: 4, Bottom: 4,},
                 BorderRadius: btnRadius,
                 BackgroundColor: Color.Rgba(255, 255, 255, 14),
-                Hover: Style{BackgroundColor: Color.Rgba(255, 255, 255, 30)},
+                HoverStyle: Style{BackgroundColor: Color.Rgba(255, 255, 255, 30)},
                 OnClick: func () {
                     if cornerRadius <= 0.001F {
                         setCornerRadius(12.0F, "12px (Native)")
@@ -611,7 +611,7 @@ public class GlassTerminalCell : Cell {
             Padding: Edges{Left: 8, Right: 8, Top: 4, Bottom: 4,},
             BorderRadius: radius,
             BackgroundColor: bg,
-            Hover: Style{
+            HoverStyle: Style{
                 BackgroundColor: if active {
                     bg
                 } else {

@@ -199,8 +199,8 @@ class GalleryRange : Cell {
                 FlexDirection: FlexDirection.Row,
                 AlignItems: AlignItems.Center,
                 TransitionMs: 100.0,
-                Hover: Style{Opacity: 0.9},
-                Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong, OutlineOffset: 2,},
+                HoverStyle: Style{Opacity: 0.9},
+                FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong, OutlineOffset: 2,},
                 Accessibility: Accessibility{
                     Role: AccessibilityRole.Slider,
                     Name: Label,

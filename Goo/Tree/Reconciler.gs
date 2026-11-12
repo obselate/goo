@@ -399,9 +399,9 @@ internal partial class Reconciler {
   internal func applyStyleEntries(n Node, b Blob, entries StyleEntries?, focusable bool, initial bool) {
     n.Context = Context
     n.CallbackOwner = b.CallbackOwner
-    let hover = b.Hover?.Entries()
-    let active = b.Active?.Entries()
-    let focus = b.Focus?.Entries()
+    let hover = b.HoverStyle?.Entries()
+    let active = b.ActiveStyle?.Entries()
+    let focus = b.FocusStyle?.Entries()
     let disabled = b.DisabledStyle?.Entries()
     if b is Row || b is Column {
       validateFlexDirection(entries, 1)

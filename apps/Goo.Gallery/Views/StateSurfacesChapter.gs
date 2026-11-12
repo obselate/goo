@@ -1007,14 +1007,14 @@ class StateSurfacesChapter : Cell {
         },
         BorderRadius: 8,
         TransitionMs: 100.0,
-        Hover: Style{
+        HoverStyle: Style{
             BackgroundColor: if activeAct == act {
                 GalleryTheme.Ink
             } else {
                 GalleryTheme.Border
             }
         },
-        Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong},
+        FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong},
         Accessibility: Accessibility{Role: AccessibilityRole.Button, Name: label,},
         OnClick: () -> switchAct(act),
         Text{

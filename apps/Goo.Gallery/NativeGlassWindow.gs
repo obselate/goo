@@ -34,7 +34,7 @@ class NativeGlassCell : Cell {
                 BorderColor: Color.Parse("#6b7385"),
                 BorderWidth: 1,
                 BorderRadius: 6,
-                Focus: Style{BorderColor: Color.Parse("#6fa6de")},
+                FocusStyle: Style{BorderColor: Color.Parse("#6fa6de")},
                 OnChange: (value string) -> {
                     name = value
                 },

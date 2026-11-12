@@ -214,11 +214,11 @@ public open class Blob : Style {
   }
   internal prop HasSparseInputState bool{ get -> (blobState & int32(32)) != 0 }
   /// Gets the style that applies while the pointer hovers this element.
-  public prop Hover Style? { get; init; }
+  public prop HoverStyle Style? { get; init; }
   /// Gets the style that applies while this element is active.
-  public prop Active Style? { get; init; }
+  public prop ActiveStyle Style? { get; init; }
   /// Gets the style that applies while this element has focus.
-  public prop Focus Style? { get; init; }
+  public prop FocusStyle Style? { get; init; }
   /// Gets the style that applies while this element is disabled.
   public prop DisabledStyle Style? { get; init; }
   /// Gets the transition duration in milliseconds.
