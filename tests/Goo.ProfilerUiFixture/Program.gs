@@ -32,5 +32,5 @@ func Main() {
     let pixels = [64 * 64 * 4]uint8
     Array.Fill(pixels, uint8(255))
     using let image = ImageSource(64, 64, pixels)
-    Window{Title: "Goo profiler fixture", Width: 640, Height: 480, Root: ProfilerScene(image)}.Run()
+    Application.Run(Window{Title: "Goo profiler fixture", Width: 640, Height: 480, Root: ProfilerScene(image)})
 }

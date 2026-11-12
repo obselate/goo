@@ -690,7 +690,7 @@ public class GlassTerminalWindow {
         public func Run() {
             let window = CreateWindow()
             window.Open()
-            window.Run()
+            Application.Run(window)
         }
 
         public func VerifyGlassPipeline() {

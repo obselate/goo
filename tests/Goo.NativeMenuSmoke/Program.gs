@@ -263,8 +263,8 @@ try {
     first.RequestClose()
     second.RequestClose()
     if first.IsOpen {
-        first.Run()
+        Application.Run(first)
     } else if second.IsOpen {
-        second.Run()
+        Application.Run(second)
     }
 }

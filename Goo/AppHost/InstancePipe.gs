@@ -96,7 +96,7 @@ internal class InstancePipe : IDisposable {
             try {
                 var native []ApplicationActivation = Array.Empty[ApplicationActivation]()
                 if OperatingSystem.IsMacOS() {
-                    if Window.PrepareNativeApplicationActivation(out native) != WindowOperationResult.Accepted {
+                    if Application.PrepareNativeApplicationActivation(out native) != WindowOperationResult.Accepted {
                         return SingleInstanceResult(SingleInstanceStatus.Failed, error: "Native application activation could not initialize")
                     }
                 }

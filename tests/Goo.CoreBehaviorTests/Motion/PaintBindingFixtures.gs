@@ -329,7 +329,7 @@ internal class PaintBindingFixtures {
         if marked && count != 0 { throw InvalidOperationException("Clipped infinite paint requested frames") }
         window.RequestClose()
       }, 14000.0)
-      try { window.Run() } finally { window.Close() }
+      try { Application.Run(window) } finally { window.Close() }
     }
   }
 

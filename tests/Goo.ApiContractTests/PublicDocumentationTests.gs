@@ -222,7 +222,9 @@ class PublicDocumentationTests {
             "M:Goo.TrayIcon.Update(Goo.TrayOptions)",
             "M:Goo.TrayIcon.Dispose",
             "M:Goo.ActivationArguments.Read(System.Collections.Generic.IReadOnlyList{System.String},System.String)",
-            "M:Goo.SingleInstance.AcquireAsync(System.String,Goo.ApplicationActivation,System.Int32)",
+            "M:Goo.Application.AcquireSingleInstance(System.String[],System.Double)",
+            "M:Goo.GraphicsUnavailableException.#ctor(System.String)",
+            "M:Goo.GraphicsUnavailableException.#ctor(System.String,System.Exception)",
             "M:Goo.Placement.Restore(Goo.Window,Goo.WindowPlacement)",
             "M:Goo.NotificationOptions.#ctor",
             "M:Goo.NotificationMessage.#ctor",
@@ -268,8 +270,7 @@ class PublicDocumentationTests {
             "M:Goo.SpellCheck.SystemSpellingService.CheckAsync(Goo.TextSnapshot,Goo.TextRange,System.String,System.Threading.CancellationToken)",
             "M:Goo.SpellCheck.SystemSpellingService.SuggestAsync(Goo.TextSnapshot,Goo.TextRange,System.String,System.Threading.CancellationToken)",
             "M:Goo.ApplicationActivation.#ctor",
-            "M:Goo.Window.InitializeApplicationActivation(Goo.ApplicationActivation)",
-            "M:Goo.Window.PostApplicationActivation(Goo.ApplicationActivation)",
+            "M:Goo.Application.PostActivation(Goo.ApplicationActivation)",
             "M:Goo.WindowPlacement.#ctor",
             "M:Goo.Window.CapturePlacement",
             "M:Goo.Window.ApplyPlacement(Goo.WindowPlacement)",
@@ -673,7 +674,8 @@ class PublicDocumentationTests {
             "M:Goo.Window.#ctor",
             "M:Goo.Window.AccessibilityHitTest(System.Double,System.Double)",
             "M:Goo.Window.Attach(Goo.EmbeddedWindowHost)",
-            "M:Goo.Window.ConfigureApplication(System.String,System.String,System.String)",
+            "M:Goo.Application.Configure(System.String,System.String,System.String)",
+            "M:Goo.Application.Configure(System.Reflection.Assembly)",
             "M:Goo.Window.DragRegion(Goo.Container)",
             "M:Goo.Window.GetClipboardText",
             "M:Goo.Window.GetClipboardFormats",
@@ -686,7 +688,7 @@ class PublicDocumentationTests {
             "M:Goo.Window.Pump(System.Double)",
             "M:Goo.Window.RequestActivation",
             "M:Goo.Window.RequestClose",
-            "M:Goo.Window.Run",
+            "M:Goo.Application.Run(Goo.Window)",
             "M:Goo.Window.SetClipboardText(System.String)",
             "M:Goo.Window.SetInterval(System.Action,System.Double)",
             "M:Goo.Window.SetTimeout(System.Action,System.Double)",
@@ -964,8 +966,16 @@ class PublicDocumentationTests {
                 []string{"options"}, System.Array.Empty[string](), true),
             ["M:Goo.ActivationArguments.Read(System.Collections.Generic.IReadOnlyList{System.String},System.String)"] = DocumentationShape(
                 []string{"arguments", "workingDirectory"}, System.Array.Empty[string](), true),
-            ["M:Goo.SingleInstance.AcquireAsync(System.String,Goo.ApplicationActivation,System.Int32)"] = DocumentationShape(
-                []string{"applicationId", "activation", "timeoutMilliseconds"}, System.Array.Empty[string](), true),
+            ["M:Goo.Application.AcquireSingleInstance(System.String[],System.Double)"] = DocumentationShape(
+                []string{"arguments", "timeoutMs"}, System.Array.Empty[string](), true),
+            ["M:Goo.Application.Configure(System.Reflection.Assembly)"] = DocumentationShape(
+                []string{"assembly"}, System.Array.Empty[string](), false),
+            ["M:Goo.Application.Run(Goo.Window)"] = DocumentationShape(
+                []string{"window"}, System.Array.Empty[string](), false),
+            ["M:Goo.GraphicsUnavailableException.#ctor(System.String)"] = DocumentationShape(
+                []string{"message"}, System.Array.Empty[string](), false),
+            ["M:Goo.GraphicsUnavailableException.#ctor(System.String,System.Exception)"] = DocumentationShape(
+                []string{"message", "innerException"}, System.Array.Empty[string](), false),
             ["M:Goo.Placement.Restore(Goo.Window,Goo.WindowPlacement)"] = DocumentationShape(
                 []string{"window", "saved"}, System.Array.Empty[string](), true),
             ["M:Goo.NotificationService.GetPermissionAsync"] = DocumentationShape(
@@ -992,11 +1002,6 @@ class PublicDocumentationTests {
                 []string{"items"}, System.Array.Empty[string](), true),
             ["M:Goo.NativeMenus.ShowContextMenuAsync(Goo.Window,Goo.Point,System.Collections.Generic.IReadOnlyList{Goo.NativeMenuItem})"] = DocumentationShape(
                 []string{"owner", "point", "items"}, System.Array.Empty[string](), true),
-            ["M:Goo.Window.InitializeApplicationActivation(Goo.ApplicationActivation)"] = DocumentationShape(
-                []string{"initial"},
-                System.Array.Empty[string](),
-                true
-            ),
             ["M:Goo.Window.CreateOffscreenSession"] = DocumentationShape(
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
@@ -1021,7 +1026,7 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
-            ["M:Goo.Window.PostApplicationActivation(Goo.ApplicationActivation)"] = DocumentationShape(
+            ["M:Goo.Application.PostActivation(Goo.ApplicationActivation)"] = DocumentationShape(
                 []string{"value"},
                 System.Array.Empty[string](),
                 true
@@ -1994,7 +1999,7 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
-            ["M:Goo.Window.ConfigureApplication(System.String,System.String,System.String)"] = DocumentationShape(
+            ["M:Goo.Application.Configure(System.String,System.String,System.String)"] = DocumentationShape(
                 []string{"name", "version", "identifier"},
                 System.Array.Empty[string](),
                 false

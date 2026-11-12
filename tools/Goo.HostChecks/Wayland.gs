@@ -6,6 +6,8 @@ import System.Text.RegularExpressions
 
 internal partial class Host {
     internal func Wayland() {
+        HostChecks.Run(Command([]string{"graphics-unavailable", "org.goo.graphics.failure", "--output=" + Root}),
+            30, EnvironmentValues)
         let identity = "org.goo.token." + Guid.NewGuid().ToString("N")
         EnvironmentValues["XDG_ACTIVATION_TOKEN"] = nil
         EnvironmentValues["GOO_ACTIVATION_NATIVE_WINDOW"] = "1"

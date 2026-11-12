@@ -56,7 +56,7 @@ internal class Program {
             } finally {
                 if owner!!.IsOpen {
                     owner!!.RequestClose()
-                    owner!!.Run()
+                    Application.Run(owner!!)
                 }
             }
         }
