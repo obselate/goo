@@ -23,10 +23,11 @@ public partial class Window {
         /// The queue retains 1024 requests, with 4096 arguments or documents per request.
         /// Text is limited to 64 KiB per UTF-8 string and 1 MiB per request.
         /// Native requests outside these limits, or received before initialization or after close, are dropped.
-        public event ApplicationActivated Action[ApplicationActivation] {
+        internal event ApplicationActivated Action[ApplicationActivation] {
             add {
                 RequireActivationThread()
                 applicationActivated += value
+                scheduler.WakeForApplicationActivation()
             }
             remove {
                 RequireActivationThread()
@@ -40,7 +41,7 @@ public partial class Window {
         /// @param initial The initial request, copied with its IsInitial value unchanged.
         /// @returns Accepted when retained, or Failed when the request exceeds the activation data limits.
         /// @exception InvalidOperationException when already initialized or called from another owner thread.
-        public func InitializeApplicationActivation(initial ApplicationActivation) WindowOperationResult {
+        internal func InitializeApplicationActivation(initial ApplicationActivation) WindowOperationResult {
             if initial == nil { throw ArgumentNullException("initial") }
             RequireActivationThread()
             if !initial.TrySnapshot(out var owned) { return WindowOperationResult.Failed }
@@ -63,7 +64,7 @@ public partial class Window {
         /// Requests allow 4096 arguments and documents each, 64 KiB per UTF-8 string and 1 MiB total text.
         /// @param value The owned request data to copy. Relative URIs and null values are invalid arguments.
         /// @returns Accepted, NotInitialized, Closed, QueueFull at 1024 pending requests, or TooLarge.
-        public func PostApplicationActivation(value ApplicationActivation) ActivationPostStatus {
+        internal func PostActivation(value ApplicationActivation) ActivationPostStatus {
             if value == nil { throw ArgumentNullException("value") }
             lock activationGate {
                 let status = ActivationQueueStatus()
@@ -98,6 +99,13 @@ public partial class Window {
             }
         }
 
+        internal func EnsureApplicationActivation(initial ApplicationActivation? = nil) {
+            RequireActivationThread()
+            if activationOwnerThreadId == 0 || activationClosed {
+                InitializeApplicationActivation(initial ?? ApplicationActivation{ IsInitial: true })
+            }
+        }
+
         internal prop HasPendingApplicationActivation bool { get -> Volatile.Read(ref pendingActivationCount) != 0 }
 
         internal prop IsInitialApplicationActivation bool {
@@ -105,7 +113,7 @@ public partial class Window {
         }
 
         internal func DrainApplicationActivations() {
-            if !HasPendingApplicationActivation || deliveringActivation { return }
+            if !HasPendingApplicationActivation || deliveringActivation || applicationActivated == nil { return }
             RequireActivationThread()
             var count int32
             lock activationGate { count = pendingActivations.Count }

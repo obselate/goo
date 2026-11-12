@@ -174,7 +174,7 @@ abstract class GooActivity : Activity {
                 ""
             }
         }
-        LastActivationStatus = Goo.Window.PostApplicationActivation(activation)
+        LastActivationStatus = Goo.Application.PostActivation(activation)
         if (LastActivationStatus is ActivationPostStatus.NotInitialized or ActivationPostStatus.Closed) {
             LastActivationStatus = if Goo.Window.InitializeApplicationActivation(
                 activation
