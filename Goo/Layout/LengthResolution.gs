@@ -15,9 +15,9 @@ internal struct NodeLength {
 }
 
 internal func operator implicit(value Length) NodeLength -> NodeLength{Unit: value.Unit, Value: value.Value}
-internal func operator implicit(value int32) NodeLength -> NodeLength{Unit: LengthUnit.Px, Value: float32(value)}
-internal func operator implicit(value float32) NodeLength -> NodeLength{Unit: LengthUnit.Px, Value: value}
-internal func operator implicit(value float64) NodeLength -> NodeLength{Unit: LengthUnit.Px, Value: float32(value)}
+public func operator implicit(value int32) NodeLength -> NodeLength{Unit: LengthUnit.Px, Value: float32(value)}
+public func operator implicit(value float32) NodeLength -> NodeLength{Unit: LengthUnit.Px, Value: value}
+public func operator implicit(value float64) NodeLength -> NodeLength{Unit: LengthUnit.Px, Value: float32(value)}
 internal func operator implicit(value NodeLength) Length -> Length{Unit: value.Unit, Value: value.Value}
 
 internal class LengthDeclaration {
