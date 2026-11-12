@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <doc>
   <members>
+    <member name="P:Goo.LayoutSize.Width">
+      <summary>Gets the logical width.</summary>
+    </member>
+    <member name="P:Goo.LayoutSize.Height">
+      <summary>Gets the logical height.</summary>
+    </member>
     <member name="T:Goo.NativeAccessibilityAdapter">
       <summary>Publishes a desktop window to AT-SPI, UI Automation, or macOS Accessibility through AccessKit.
 Assign before Window.Open. Requires the optional Goo.Accessibility native runtime package.</summary>
