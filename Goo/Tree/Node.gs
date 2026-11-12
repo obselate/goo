@@ -718,8 +718,7 @@ internal class Node {
   internal func SyncPointerCallbacks(b Blob) bool {
     if pointerState == nil && b.OnClick == nil && b.OnPointerDown == nil
       && b.OnPointerMove == nil && b.OnPointerUp == nil
-      && b.OnPointerCancel == nil && b.OnPointerDrag == nil && b.OnWheel == nil
-      && b.PointerDragThreshold == 0.0 && b.PointerDragAxis == Goo.Gestures.PanAxis.Both { return false }
+      && b.OnPointerCancel == nil && b.OnPointerDrag == nil && b.OnWheel == nil { return false }
     let state = EnsurePointerState()
     let changed = (state.OnClick != nil) != (b.OnClick != nil)
       || (state.OnPointerDown != nil) != (b.OnPointerDown != nil)
