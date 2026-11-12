@@ -715,6 +715,26 @@ internal class Node {
     }
   }
 
+  internal func SyncPointerCallbacks(b Blob) bool {
+    if pointerState == nil && b.OnClick == nil && b.OnPointerDown == nil
+      && b.OnPointerMove == nil && b.OnPointerUp == nil
+      && b.OnPointerCancel == nil && b.OnWheel == nil { return false }
+    let state = EnsurePointerState()
+    let changed = (state.OnClick != nil) != (b.OnClick != nil)
+      || (state.OnPointerDown != nil) != (b.OnPointerDown != nil)
+      || (state.OnPointerMove != nil) != (b.OnPointerMove != nil)
+      || (state.OnPointerUp != nil) != (b.OnPointerUp != nil)
+      || (state.OnPointerCancel != nil) != (b.OnPointerCancel != nil)
+      || (state.OnWheel != nil) != (b.OnWheel != nil)
+    state.OnClick = b.OnClick
+    state.OnPointerDown = b.OnPointerDown
+    state.OnPointerMove = b.OnPointerMove
+    state.OnPointerUp = b.OnPointerUp
+    state.OnPointerCancel = b.OnPointerCancel
+    state.OnWheel = b.OnWheel
+    return changed
+  }
+
   internal prop OnClick Action?{
     get -> pointerState?.OnClick
     set {
