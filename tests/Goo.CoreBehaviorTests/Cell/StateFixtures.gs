@@ -94,7 +94,7 @@ internal class StateFixtures {
   }
 }
 
-internal class StateScopeFixtureCell : Cell {
+internal class StateScopeFixtureCell : Cell, IDisposable {
   internal let Value State[int32] = State[int32](0)
   internal let Other State[int32] = State[int32](0)
   internal var Invalidations int32
@@ -102,7 +102,12 @@ internal class StateScopeFixtureCell : Cell {
   internal var UseOther bool
   private let builderScope StateReadScope
 
-  init() { builderScope = StateReadScope(this, () -> { Invalidations++; Rebuild() }) }
+  init() {
+    builderScope = StateReadScope(this, () -> {
+      Invalidations++
+      Rebuild()
+    })
+  }
 
   public override func Build() Blob {
     let previous = builderScope.Enter()
@@ -119,5 +124,5 @@ internal class StateScopeFixtureCell : Cell {
     } finally { builderScope.Exit(previous, succeeded) }
   }
 
-  public override func Dispose() { builderScope.Dispose() }
+  public func Dispose() { builderScope.Dispose() }
 }
