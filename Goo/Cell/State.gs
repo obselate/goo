@@ -4,13 +4,9 @@ import System
 import System.Collections.Generic
 import System.Threading
 
-internal interface StateSubscriber {
-  func Rebuild();
-}
-
 /// Base type of tracked Cell state.
 public abstract class StateDependency {
-  private var readers List[StateSubscriber]?
+  private var readers List[object]?
   private var threadId int32
 
   internal open func IsSafePayload() bool -> false
@@ -25,18 +21,18 @@ public abstract class StateDependency {
     }
   }
 
-  internal func AddReader(reader StateSubscriber) {
+  internal func AddReader(reader object) {
     let current = Environment.CurrentManagedThreadId
     var owner = Volatile.Read(&threadId)
     if owner == 0 { owner = Interlocked.CompareExchange(&threadId, current, 0) }
     if owner != 0 && owner != current {
       throw InvalidOperationException("State cannot be read by Cells on different UI threads.")
     }
-    readers ??= List[StateSubscriber]()
+    readers ??= List[object]()
     readers!!.Add(reader)
   }
 
-  internal func RemoveReader(reader StateSubscriber) { readers?.Remove(reader) }
+  internal func RemoveReader(reader object) { readers?.Remove(reader) }
 
   internal func Read() {
     if let reader = Cell.StateReader {
@@ -52,7 +48,11 @@ public abstract class StateDependency {
 
   internal func Changed() {
     guard let cells = readers else { return }
-    for index in 0 ... cells.Count { cells[index].Rebuild() }
+    for index in 0 ... cells.Count {
+      let reader = cells[index]
+      if reader is Cell { reader.Rebuild() }
+      else if reader is StateReadScope { reader.Rebuild() }
+    }
   }
 }
 
