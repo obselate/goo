@@ -9,6 +9,7 @@ import System.Threading.Tasks
 public open class EmbeddedWindowHost : IDisposable {
   internal var Bridge EmbeddedWindowBridge?
   private var disposed bool
+  private var disposing bool
   private var logicalWidth int32
   private var logicalHeight int32
   private var framebufferWidth int32
@@ -116,15 +117,18 @@ public open class EmbeddedWindowHost : IDisposable {
   /// Closes the attached window and releases its retained and presentation resources.
   /// Pumps UI-thread continuations until the window's close drain completes or expires.
   public func Dispose() {
-    if disposed { return }
+    if disposed || disposing { return }
     RequireOwnerThread()
-    if let window = Window {
-      window.DetachEmbeddedPresentation()
-      window.Close()
-      window.DrainCloseCallbacks()
-    }
-    disposed = true
-    Bridge = nil
+    disposing = true
+    try {
+      if let window = Window {
+        window.DetachEmbeddedPresentation()
+        window.Close()
+        window.DrainCloseCallbacks()
+      }
+      disposed = true
+      Bridge = nil
+    } finally { disposing = false }
   }
 
   /// Schedules frame service on the owner thread. The framework may call this from any thread.

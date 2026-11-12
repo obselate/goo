@@ -108,6 +108,7 @@ class FixtureContractTests {
             yield Contract[WindowStartupFixtures]("AsyncOwnerContextContract")
             yield Contract[WindowStartupFixtures]("AsyncCloseDrainContract")
             yield Contract[WindowStartupFixtures]("EmbeddedCloseDrainsContinuationsContract")
+            yield Contract[WindowStartupFixtures]("EmbeddedCloseRejectsReentrantDisposalContract")
             yield Contract[WindowStartupFixtures]("AsyncStateContinuationContract")
             yield Contract[WindowStartupFixtures]("LateFileDialogCompletionContract")
             yield Contract[PathBuilderFixtures]("ResetPreservesPublishedPathAndClearsContour")

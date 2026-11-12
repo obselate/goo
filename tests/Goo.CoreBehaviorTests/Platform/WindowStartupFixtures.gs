@@ -8,6 +8,25 @@ import System.Runtime.InteropServices
 import System.Diagnostics
 
 internal class WindowStartupFixtures {
+  func EmbeddedCloseRejectsReentrantDisposalContract() bool {
+    let previous = SynchronizationContext.Current
+    SynchronizationContext.SetSynchronizationContext(nil)
+    try {
+      let owner = WindowAsyncCell()
+      let host = EmbeddedSmokeHost()
+      host.Resize(100, 100, 100, 100)
+      let window = Window{Root: owner, CloseDrainMs: 10000.0}.Attach(host)
+      host.RenderFrame(0.0)
+      owner.RunOwnedAction(() -> owner.RunDisposing(host, window))
+      owner.Pending.SetResult(true)
+      let clock = Stopwatch.StartNew()
+      host.Dispose()
+      return owner.FinallyCount == 1 && !owner.ClosedDuringReentry
+        && window.Closed.IsCancellationRequested && host.Window == nil
+        && clock.ElapsedMilliseconds < 5000
+    } finally { SynchronizationContext.SetSynchronizationContext(previous) }
+  }
+
   func EmbeddedCloseDrainsContinuationsContract() bool {
     let previous = SynchronizationContext.Current
     SynchronizationContext.SetSynchronizationContext(nil)
@@ -206,6 +225,7 @@ internal class WindowAsyncCell : Cell {
   internal var Resumed int32
   internal var ResumeThread int32
   internal var FinallyCount int32
+  internal var ClosedDuringReentry bool
 
   protected override func Unmounting() { Closing.Set() }
 
@@ -224,6 +244,15 @@ internal class WindowAsyncCell : Cell {
     try { await Task.Delay(Timeout.Infinite, Lifetime) }
     finally {
       ResumeThread = Environment.CurrentManagedThreadId
+      FinallyCount++
+    }
+  }
+
+  internal async func RunDisposing(host EmbeddedWindowHost, window Window) void {
+    try { await Pending.Task }
+    finally {
+      host.Dispose()
+      ClosedDuringReentry = window.Closed.IsCancellationRequested
       FinallyCount++
     }
   }
