@@ -290,6 +290,23 @@ failures throw and leave the corresponding configured limit unchanged.
 Embedded hosts own viewport geometry: `Attach` rejects preconfigured limits and
 changing a limit on an attached window throws `NotSupportedException`.
 
+## Size to content
+
+```gsharp
+let window = Window{
+    Root: AboutView(),
+    SizeToContent: SizeToContent.Both,
+    MinSize: LayoutSize(240, 120),
+    MaxSize: LayoutSize(640, 800),
+}
+```
+
+`SizeToContent` measures the root once before the first map. `Width` and `Height`
+measure one axis. `Both` measures both axes. The result stays within `MaxSize`
+and the display work area, unless `MinSize` requires more space.
+A root axis declared as a percentage keeps the corresponding `Size` value.
+Later content changes do not resize the window.
+
 ## Observe window metrics
 
 Subscribe to `Window.MetricsChanged` on the UI thread. Goo delivers an immutable snapshot after queued native metrics and tree layout settle. A callback can queue UI work, but it must not expect recursive layout.

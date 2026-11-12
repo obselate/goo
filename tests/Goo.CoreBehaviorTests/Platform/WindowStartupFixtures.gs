@@ -32,10 +32,10 @@ internal class WindowStartupFixtures {
   func WindowLayoutSizeContract() bool {
     let window = Window{Size: LayoutSize(101.25, 80.5), UiScale: 1.5F,
       MinSize: LayoutSize(10.25, 20.5), MaxSize: LayoutSize(400.5, 300.25)}
-    window.UpdateTree()
-    if window.NativeWidth != 152 || window.NativeHeight != 121 { return false }
-    if window.Size != LayoutSize(152.0 / 1.5, 121.0 / 1.5) { return false }
     try {
+      window.UpdateTree()
+      if window.NativeWidth != 152 || window.NativeHeight != 121 { return false }
+      if window.Size != LayoutSize(152.0 / 1.5, 121.0 / 1.5) { return false }
       window.MinSize = LayoutSize(15, 400)
       return false
     } catch (error System.ArgumentOutOfRangeException) {
