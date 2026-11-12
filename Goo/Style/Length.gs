@@ -35,6 +35,8 @@ public struct Length {
     /// Gets the content size without soft wrapping.
     public prop MaxContent Length { get -> Length{Unit: LengthUnit.MaxContent} }
     /// Limits the preferred content size without shrinking below its minimum content size.
+    /// A percentage limit uses the owner's content constraint. In a content-sized owner,
+    /// its percent part is absent during owner measurement and resolves once after that owner is fixed.
     /// @param limit The pixel or relative size limit.
     /// @returns An intrinsic fit-content size.
     public func FitContent(limit Length) Length {
@@ -108,7 +110,7 @@ internal func normalizeLength(value Length) Length {
 /// @param left The first length.
 /// @param right The second length.
 /// @returns Their mixed-unit sum.
-public func(left Length) operator +(right Length) Length {
+public func(left Length) operator + (right Length) Length {
   let a = lengthParts(left)
   let b = lengthParts(right)
   return normalizeLength(Length{Unit: LengthUnit.Relative, Value: a.Value + b.Value,
@@ -120,13 +122,13 @@ public func(left Length) operator +(right Length) Length {
 /// @param left The first length.
 /// @param right The length to subtract.
 /// @returns Their mixed-unit difference.
-public func(left Length) operator -(right Length) Length -> left + right * -1.0
+public func(left Length) operator - (right Length) Length -> left + right * -1.0
 
 /// Scales every part. Automatic and intrinsic values throw ArgumentException.
 /// @param value The length to scale.
 /// @param scale The multiplier.
 /// @returns The scaled length.
-public func(value Length) operator *(scale float64) Length {
+public func(value Length) operator * (scale float64) Length {
   let source = lengthParts(value)
   let factor = float32(scale)
   if value.Unit == LengthUnit.Em { return Em(float64(value.EmPart) * scale) }
@@ -142,4 +144,8 @@ public func(value Length) operator *(scale float64) Length {
 /// @param value The length to scale.
 /// @param scale The divisor.
 /// @returns The scaled length.
-public func(value Length) operator /(scale float64) Length -> value * (1.0 / scale)
+public func(value Length) operator / (scale float64) Length -> value * (1.0 / scale)
+
+internal func sameLength(left Length, right Length) bool -> left.Unit == right.Unit && left.Value == right.Value
+  && left.PercentPart == right.PercentPart && left.EmPart == right.EmPart && left.RemPart == right.RemPart
+  && left.VwPart == right.VwPart && left.VhPart == right.VhPart
