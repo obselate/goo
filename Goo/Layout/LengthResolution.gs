@@ -75,6 +75,7 @@ internal class LengthDeclarations {
   shared {
     private var values ConditionalWeakTable[Node, LengthNode]?
     internal var Revision int64
+    internal prop Active bool { get -> values != nil }
 
     internal func Get(node Node) LengthNode? {
       if let table = values {

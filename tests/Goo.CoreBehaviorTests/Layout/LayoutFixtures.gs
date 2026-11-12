@@ -93,6 +93,19 @@ internal class LayoutFixtures {
       layout.Calculate(root, 400.0F, 400.0F)
       if root.Children[0].Rect.W != width || root.Children[1].Rect.H != 56.0F { return false }
     }
+    for kind in []Length{Length.MinContent, Length.MaxContent, Length.FitContent(100)} {
+      let declarations = []Style{Style{Width: kind}, Style{Height: kind}, Style{MinWidth: kind},
+        Style{MinHeight: kind}, Style{MaxWidth: kind}, Style{MaxHeight: kind}, Style{FlexBasis: kind}}
+      for declaration in declarations {
+        let root = Reconciler{Res: Resolver{}}.Mount(Container{Width: 300, Height: 300,
+          AlignItems: AlignItems.FlexStart,
+          Container{BasedOn: declaration, FlexShrink: 0, Container{Width: 80, Height: 24}}})
+        Layout().Calculate(root, 300.0F, 300.0F)
+        if root.Children[0].Rect.W != 80.0F || root.Children[0].Rect.H != 24.0F {
+          throw InvalidOperationException("intrinsic property: ${root.Children[0].Rect.W}, ${root.Children[0].Rect.H}")
+        }
+      }
+    }
     return true
   }
 

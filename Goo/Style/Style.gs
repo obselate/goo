@@ -510,7 +510,9 @@ public open class Style {
         pushLength(field, value)
         return
       }
-      if !value.IsFinite { throw ArgumentOutOfRangeException(name) }
+      if !(value.Unit < LengthUnit.Relative ? Single.IsFinite(value.Value) : value.IsFinite) {
+        throw ArgumentOutOfRangeException(name)
+      }
       if value.IsIntrinsic {
         if field > StyleField.MaxHeight && field != StyleField.FlexBasis {
           throw ArgumentOutOfRangeException(name)
@@ -521,15 +523,14 @@ public open class Style {
         if !allowsPercent && (field != StyleField.FontSize || value.PercentPart != 0.0F
           || value.Unit == LengthUnit.Vw || value.Unit == LengthUnit.Vh
           || value.VwPart != 0.0F || value.VhPart != 0.0F) { throw ArgumentOutOfRangeException(name) }
+        if !allowsNegative && (value.Unit == LengthUnit.Em && value.EmPart < 0.0F
+          || value.Unit == LengthUnit.Rem && value.RemPart < 0.0F
+          || value.Unit == LengthUnit.Vw && value.VwPart < 0.0F
+          || value.Unit == LengthUnit.Vh && value.VhPart < 0.0F) { throw ArgumentOutOfRangeException(name) }
       } else if value.Unit == LengthUnit.Percent && !allowsPercent {
         throw ArgumentOutOfRangeException(name)
       }
-      if !allowsNegative && (value.Unit == LengthUnit.Px && value.Value < 0.0F
-        || value.Unit == LengthUnit.Percent && value.Value < 0.0F
-        || value.Unit == LengthUnit.Em && value.EmPart < 0.0F
-        || value.Unit == LengthUnit.Rem && value.RemPart < 0.0F
-        || value.Unit == LengthUnit.Vw && value.VwPart < 0.0F
-        || value.Unit == LengthUnit.Vh && value.VhPart < 0.0F) {
+      if !allowsNegative && value.Unit < LengthUnit.Relative && value.Value < 0.0F {
         throw ArgumentOutOfRangeException(name)
       }
       pushLength(field, value)
