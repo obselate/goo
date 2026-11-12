@@ -759,6 +759,13 @@ internal class Node {
       EnsurePointerState().PointerDragThreshold = value
     }
   }
+  internal prop PointerDragAxis Goo.Gestures.PanAxis {
+    get -> pointerState?.PointerDragAxis ?? Goo.Gestures.PanAxis.Both
+    set {
+      if pointerState == nil && value == Goo.Gestures.PanAxis.Both { return }
+      EnsurePointerState().PointerDragAxis = value
+    }
+  }
   internal prop OnWheel ((WheelEvent) -> void)?{
     get -> pointerState?.OnWheel
     set {
