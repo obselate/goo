@@ -115,6 +115,18 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - &widgets-pin
+        name: Read Goo.Widgets source pin
+        id: widgets-pin
+        shell: bash
+        run: echo "commit=$(cat .github/goo-widgets.commit)" >> "$GITHUB_OUTPUT"
+      - &widgets-checkout
+        name: Check out Goo.Widgets source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: obselate/goo-widgets
+          ref: ${{ steps.widgets-pin.outputs.commit }}
+          path: goo-widgets
       - *nuget-cache
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
         with:
@@ -199,6 +211,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - *widgets-pin
+      - *widgets-checkout
       - *nuget-cache
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
         with:
@@ -275,6 +289,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: needs.changes.outputs.full == 'true'
+      - *widgets-pin
+      - *widgets-checkout
 
       - *nuget-cache
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
@@ -794,6 +810,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: needs.changes.outputs.full == 'true'
+      - *widgets-pin
+      - *widgets-checkout
 
       - &linux-build-download
         if: needs.changes.outputs.full == 'true'
@@ -1024,6 +1042,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: needs.changes.outputs.full == 'true'
+      - *widgets-pin
+      - *widgets-checkout
       - *linux-build-download
       - *nuget-cache
       - *linux-dotnet
@@ -1866,6 +1886,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: needs.changes.outputs.full == 'true'
+      - *widgets-pin
+      - *widgets-checkout
       - *nuget-cache
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         if: needs.changes.outputs.full == 'true'
@@ -1893,7 +1915,10 @@ jobs:
       - name: Build managed direct driver consumer
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
+        env:
+          NUGET_PACKAGES: ${{ runner.temp }}/goo-windows-direct-driver-packages
         run: |
+          if (Test-Path $env:NUGET_PACKAGES) { Remove-Item $env:NUGET_PACKAGES -Recurse -Force -ErrorAction Stop }
           $version = dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo
           dotnet publish tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -c Release -r win-x64 --self-contained true -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version --configfile tests/Goo.PackageSmoke/NuGet.config -o artifacts/direct-driver-smoke
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -1960,7 +1985,10 @@ jobs:
       - name: Build NativeAOT consumer using the released G# SDK
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
+        env:
+          NUGET_PACKAGES: ${{ runner.temp }}/goo-windows-nativeaot-packages
         run: |
+          if (Test-Path $env:NUGET_PACKAGES) { Remove-Item $env:NUGET_PACKAGES -Recurse -Force -ErrorAction Stop }
           $version = dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo
           dotnet restore tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -r win-x64 -p:PublishAot=true -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version --configfile tests/Goo.PackageSmoke/NuGet.config
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -2015,7 +2043,10 @@ jobs:
       - name: Build unsigned consumer installer
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
+        env:
+          NUGET_PACKAGES: ${{ runner.temp }}/goo-windows-installer-packages
         run: |
+          if (Test-Path $env:NUGET_PACKAGES) { Remove-Item $env:NUGET_PACKAGES -Recurse -Force -ErrorAction Stop }
           $version = dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo
           $installer = & tools/Goo.DevTools.Cli/Packaging/fetch-inno-setup.ps1 "$env:RUNNER_TEMP/goo-inno"
           $inno = Join-Path $env:RUNNER_TEMP 'goo-inno/compiler'
@@ -2044,7 +2075,10 @@ jobs:
       - name: Verify packaged NativeAOT Windows menus
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
+        env:
+          NUGET_PACKAGES: ${{ runner.temp }}/goo-windows-menu-packages
         run: |
+          if (Test-Path $env:NUGET_PACKAGES) { Remove-Item $env:NUGET_PACKAGES -Recurse -Force -ErrorAction Stop }
           $version = dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo
           dotnet publish tests/Goo.NativeMenuSmoke/Goo.NativeMenuSmoke.gsproj -c Release -r win-x64 `
             -p:PublishAot=true -p:TreatWarningsAsErrors=true -p:GooMenuUsePackages=true `
@@ -2056,7 +2090,10 @@ jobs:
       - name: Check native Windows clipboard formats
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
+        env:
+          NUGET_PACKAGES: ${{ runner.temp }}/goo-windows-clipboard-packages
         run: |
+          if (Test-Path $env:NUGET_PACKAGES) { Remove-Item $env:NUGET_PACKAGES -Recurse -Force -ErrorAction Stop }
           $version = dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo
           $env:GOO_CLIPBOARD_CHILD = (Resolve-Path artifacts/windows-smoke/Goo.PackageSmoke.exe).Path
           dotnet restore tests/Goo.ApiContractTests/Goo.ApiContractTests.gsproj --configfile tests/Goo.PackageSmoke/NuGet.config -p:ImportDirectoryBuildProps=false -p:GooSmokeUsePackages=true -p:GooReleaseVersion=$version
@@ -2073,7 +2110,10 @@ jobs:
       - name: Verify packaged Windows tray lifecycle
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
+        env:
+          NUGET_PACKAGES: ${{ runner.temp }}/goo-windows-tray-packages
         run: |
+          if (Test-Path $env:NUGET_PACKAGES) { Remove-Item $env:NUGET_PACKAGES -Recurse -Force -ErrorAction Stop }
           $version = dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo
           dotnet publish tests/Goo.TraySmoke/Goo.TraySmoke.gsproj -c Release -r win-x64 -m:2 `
             -p:TreatWarningsAsErrors=true -p:GooTrayUsePackages=true `
@@ -2215,6 +2255,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: needs.changes.outputs.full == 'true'
+      - *widgets-pin
+      - *widgets-checkout
       - *nuget-cache
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         if: needs.changes.outputs.full == 'true'

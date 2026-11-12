@@ -117,7 +117,7 @@ internal class CustomLayoutState {
     try {
       let result = Algorithm.Measure(context, available)
       CustomLayouts.ValidateSize(result, false)
-      return LayoutSize{Width: Math.Min(result.Width, available.Width), Height: Math.Min(result.Height, available.Height)}
+      return LayoutSize(Math.Min(result.Width, available.Width), Math.Min(result.Height, available.Height))
     } finally { End() }
   }
 
@@ -142,10 +142,9 @@ internal class CustomLayoutState {
     YGNodeAPI.YGNodeCalculateLayout(yoga, width, height, yogaDirection(Node.Direction))
     let desiredWidth = yoga.Layout.MeasuredDimension(Dimension.Width) + CustomLayouts.MarginX(yoga)
     let desiredHeight = yoga.Layout.MeasuredDimension(Dimension.Height) + CustomLayouts.MarginY(yoga)
-    let result = LayoutSize{
-      Width: Math.Max(0.0, Math.Min(float64(desiredWidth), available.Width)),
-      Height: Math.Max(0.0, Math.Min(float64(desiredHeight), available.Height)),
-    }
+    let result = LayoutSize(
+      Math.Max(0.0, Math.Min(float64(desiredWidth), available.Width)),
+      Math.Max(0.0, Math.Min(float64(desiredHeight), available.Height)))
     CustomLayouts.ValidateSize(result, false)
     child.Cache ??= List[CustomMeasure](4)
     let cache = child.Cache!!
@@ -158,7 +157,7 @@ internal class CustomLayoutState {
     let child = Child(index)
     if !arranging { throw InvalidOperationException("${Algorithm.GetType().Name}.ArrangeChild($index) ran during Measure: call ArrangeChild only from Arrange.") }
     if child.Arranged { throw InvalidOperationException("${Algorithm.GetType().Name}.ArrangeChild($index) ran twice: arrange each child exactly once per Arrange callback.") }
-    CustomLayouts.ValidateSize(LayoutSize{Width: bounds.Width, Height: bounds.Height}, false)
+    CustomLayouts.ValidateSize(LayoutSize(bounds.Width, bounds.Height), false)
     if !Double.IsFinite(bounds.X) || !Double.IsFinite(bounds.Y) || Math.Abs(bounds.X) > float64(Single.MaxValue) || Math.Abs(bounds.Y) > float64(Single.MaxValue) {
       throw ArgumentOutOfRangeException("bounds")
     }
@@ -181,7 +180,7 @@ internal class CustomLayoutState {
     try {
       arrangedVersion = 0L
       for child in Children { child.Arranged = false }
-      Algorithm.Arrange(context, LayoutSize{Width: float64(width), Height: float64(height)})
+      Algorithm.Arrange(context, LayoutSize(float64(width), float64(height)))
       ContentWidth = 0.0F
       ContentHeight = 0.0F
       for child in Children {
@@ -275,10 +274,9 @@ internal class CustomLayouts {
       height float32, heightMode MeasureMode) YGSize{
         let node = nodeFromYoga(yoga)
         guard let state = State(node) else { throw InvalidOperationException("Custom layout policy is missing") }
-        let available = LayoutSize{
-          Width: if widthMode == MeasureMode.Undefined { Double.PositiveInfinity } else { float64(Math.Max(0.0F, width)) },
-          Height: if heightMode == MeasureMode.Undefined { Double.PositiveInfinity } else { float64(Math.Max(0.0F, height)) },
-        }
+        let available = LayoutSize(
+          if widthMode == MeasureMode.Undefined { Double.PositiveInfinity } else { float64(Math.Max(0.0F, width)) },
+          if heightMode == MeasureMode.Undefined { Double.PositiveInfinity } else { float64(Math.Max(0.0F, height)) })
         let result = state.Measure(available)
         return YGSize{Width: float32(result.Width), Height: float32(result.Height)}
       }
