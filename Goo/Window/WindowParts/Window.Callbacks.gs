@@ -43,6 +43,7 @@ internal struct CallbackScope : IDisposable {
   }
 }
 
+/// Hosts a Goo tree in a native window.
 public partial class Window {
   internal var callbackClosing bool
   internal var callbackOperations int32
