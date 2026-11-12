@@ -1368,18 +1368,19 @@ internal partial class Reconciler {
     let provisional = scratchScope.Provisional
     let retire = scratchScope.Retire
     let virtualRows = FrameRecorder.Current != nil && Virtualization.State(n) != nil
+    let orderChanged = childOrderChanged(n.Children, blobs)
     var childrenChanged = false
     var committed = false
     var i int32
     try {
-      while i < n.Children.Count {
+      while orderChanged && i < n.Children.Count {
         let child = n.Children[i]
         if let key = child.Key {
           scratchScope.Keyed.Add(key, child)
         }
         i++
       }
-      if childOrderChanged(n.Children, blobs) {
+      if orderChanged {
         markStructure()
         childrenChanged = true
       }
@@ -1387,7 +1388,7 @@ internal partial class Reconciler {
       i = 0
       while i < blobs.Count {
         let blob = blobs[i]
-        if let hit = takeMatch(scratchScope, blob, n, i) {
+        if let hit = orderChanged ? takeMatch(scratchScope, blob, n, i) : n.Children[i] {
           if canReuseNode(hit, blob) {
             var child Node
             if let cell = hit.Fiber {
@@ -1453,7 +1454,7 @@ internal partial class Reconciler {
       }
 
       i = 0
-      while i < n.Children.Count {
+      while orderChanged && i < n.Children.Count {
         let child = n.Children[i]
         if let key = child.Key {
           if scratchScope.Keyed.TryGetValue(key, out var unmatched) {
