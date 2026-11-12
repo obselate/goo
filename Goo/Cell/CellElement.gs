@@ -27,10 +27,9 @@ internal open class CellElement : Blob {
   }
 }
 
-internal class CellInputElement[TInput any, TCell Cell[TInput]init()] : CellElement {
+internal class CellInputElement[TInput any, TCell Cell[TInput]] : CellElement {
   internal prop Input TInput{ get; init; }
 
-  internal override func CreateCell() Cell -> TCell()
 
   internal override func ApplyInput(cell Cell) {
     if cell is Cell[TInput] {
