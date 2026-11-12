@@ -17,6 +17,22 @@ Container{
 
 See [Style](style.md) for the property contracts.
 
+## Relative and intrinsic lengths
+
+```gsharp
+Container{Width: Percent(100) - Rem(2), MaxHeight: Vh(25)}
+Container{Width: Length.FitContent(Em(32.5))}
+```
+
+- Numbers are layout pixels. Use `Percent(value)` instead of `Length.Percent`, and a number instead of `Length.Pixels`.
+- `Em` uses the element's computed font size. In `FontSize`, it uses the parent's font size. `Rem` uses the root font size. Platform text scale applies once.
+- `Vw` and `Vh` use percentages of the window layout viewport.
+- Add or subtract lengths, or multiply and divide them by a number. Automatic and intrinsic values cannot be operands.
+- `FontSize` accepts pixels, `Em`, and `Rem`. Properties that reject percentages also reject relative units.
+- `Length.MinContent`, `Length.MaxContent`, and `Length.FitContent(limit)` apply to width, height, their minimum and maximum bounds, and `FlexBasis`. They measure retained content without calling `Build`.
+- In a custom layout callback, `context.ResolveLength(value, LayoutAxis.Horizontal)` resolves against the available content width. `Vertical` uses height. Automatic and intrinsic values return `nil`.
+- Length animations accept one unit. Mixed lengths throw `ArgumentException`.
+
 ## Padding and margin
 
 `Padding` and `Margin` accept pixel numbers or `Edges`. Two arguments mean

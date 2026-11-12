@@ -79,8 +79,7 @@ public struct PanelTransform : IEquatable[PanelTransform] {
     let rightX = other.TranslateX
     let leftY = TranslateY
     let rightY = other.TranslateY
-    return leftX.Unit == rightX.Unit && leftX.Value == rightX.Value
-      && leftY.Unit == rightY.Unit && leftY.Value == rightY.Value
+    return sameLength(leftX, rightX) && sameLength(leftY, rightY)
       && rotate == other.rotate && scaleOffset == other.scaleOffset
       && scaleXOffset == other.scaleXOffset && scaleYOffset == other.scaleYOffset
       && skewX == other.skewX && skewY == other.skewY
@@ -97,13 +96,10 @@ internal func normalizeTransformTranslation(value Length, name string) Length {
   if value.Unit == LengthUnit.Unset {
     return Length{}
   }
-  if value.Unit == LengthUnit.Auto {
-    throw ArgumentException("PanelTransform." + name + " does not support auto", name)
-  }
-  if Double.IsNaN(float64(value.Value)) || Double.IsInfinity(float64(value.Value)) {
+  if value.Unit == LengthUnit.Auto || value.IsIntrinsic || !value.IsFinite {
     throw ArgumentOutOfRangeException(name)
   }
-  if value.Value == 0.0F && value.Unit != LengthUnit.Percent {
+  if value.Value == 0.0F && value.Unit == LengthUnit.Px {
     return Length{}
   }
   return value
@@ -124,10 +120,10 @@ internal func normalizeTransformOrigin(value Length, name string) Length {
   if value.Unit == LengthUnit.Unset {
     return Percent(50.0)
   }
-  if value.Unit == LengthUnit.Auto {
-    throw ArgumentException(name + " does not support auto", name)
+  if value.Unit == LengthUnit.Auto || value.IsIntrinsic {
+    throw ArgumentOutOfRangeException(name)
   }
-  if Double.IsNaN(float64(value.Value)) || Double.IsInfinity(float64(value.Value)) {
+  if !value.IsFinite {
     throw ArgumentOutOfRangeException(name)
   }
   return value

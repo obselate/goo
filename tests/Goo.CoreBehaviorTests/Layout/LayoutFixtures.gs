@@ -6,6 +6,76 @@ import System.Collections.Generic
 import System.Text
 
 internal class LayoutFixtures {
+  func RelativeLengthsResolveFirstLayoutAndResize() bool {
+    let resolver = Resolver{}
+    let reconciler = Reconciler{Res: resolver}
+    let scene = Container{Width: Percent(100), Height: Percent(100), FontSize: 20,
+      Container{Width: Percent(50) - Em(1), Height: Vh(25), MinWidth: 0,
+        Container{Width: Percent(50) + Rem(1), Height: Vw(10), MinWidth: 0,
+          Padding: Em(0.5), FontSize: Em(1.5)}
+      }
+    }
+    let root = reconciler.Mount(scene)
+    let layout = Layout()
+    layout.Calculate(root, 400.0F, 240.0F)
+    let parent = root.Children[0]
+    let child = parent.Children[0]
+    if parent.Rect.W != 180.0F || parent.Rect.H != 60.0F || child.Rect.W != 110.0F
+      || child.Rect.H != 40.0F || child.FontSize.Px != 30.0F
+      || YGNodeLayoutAPI.YGNodeLayoutGetPadding(child.Yoga, YGEdge.Left) != 15.0F {
+      throw InvalidOperationException("first mixed layout: ${parent.Rect.W}, ${parent.Rect.H}, ${child.Rect.W}, ${child.Rect.H}, ${child.FontSize.Px}")
+    }
+    layout.Calculate(root, 600.0F, 400.0F)
+    if parent.Rect.W != 280.0F || parent.Rect.H != 100.0F || child.Rect.W != 160.0F || child.Rect.H != 60.0F {
+      throw InvalidOperationException("resized mixed layout: ${parent.Rect.W}, ${parent.Rect.H}, ${child.Rect.W}, ${child.Rect.H}")
+    }
+    root.BaseStyle = Style{Width: Percent(100), Height: Percent(100), FontSize: 24}.Entries()
+    resolver.Invalidate(root, false)
+    resolver.Flush()
+    layout.Calculate(root, 600.0F, 400.0F)
+    return parent.Rect.W == 276.0F && child.FontSize.Px == 36.0F && child.Rect.W == 162.0F
+  }
+
+  func IntrinsicLengthsMeasureRetainedContent() bool {
+    for kind in []Length{Length.MinContent, Length.MaxContent, Length.FitContent(80)} {
+      let root = Reconciler{Res: Resolver{}}.Mount(Container{Width: 300, Height: 300, AlignItems: AlignItems.FlexStart,
+        Container{Width: kind, FlexShrink: 0,
+          Text{Content: "alpha beta gamma", FontSize: 16, TextWrap: TextWrap.Wrap}},
+        Container{Height: kind, Width: 100, FlexShrink: 0,
+          Container{Height: 24, FlexShrink: 0}, Container{Height: 32, FlexShrink: 0}}
+      })
+      let layout = Layout()
+      layout.Calculate(root, 300.0F, 300.0F)
+      let width = root.Children[0].Rect.W
+      if width <= 0.0F || !Single.IsFinite(width) || root.Children[1].Rect.H != 56.0F {
+        throw InvalidOperationException("intrinsic size: $width, ${root.Children[1].Rect.H}")
+      }
+      layout.Calculate(root, 400.0F, 400.0F)
+      if root.Children[0].Rect.W != width || root.Children[1].Rect.H != 56.0F { return false }
+    }
+    return true
+  }
+
+  func RelativeLengthsValidateAtAssignment() bool {
+    var rejected = 0
+    for value in []Length{Vw(Double.NaN), Em(Double.PositiveInfinity), Percent(20) + Rem(Double.NaN)} {
+      try { let ignored = Container{Width: value} }
+      catch (_ ArgumentOutOfRangeException) { rejected++ }
+    }
+    for value in []Length{Em(1), Rem(1), Vw(1), Percent(10) + 1} {
+      try { let ignored = Container{BorderRadius: value} }
+      catch (_ ArgumentOutOfRangeException) { rejected++ }
+    }
+    for value in []Length{Length.Auto, Length.MinContent, Length.MaxContent, Length.FitContent(10)} {
+      try { let ignored = value + 1 }
+      catch (_ ArgumentException) { rejected++ }
+    }
+    try { let ignored = BoxShadow{OffsetX: Em(1)} }
+    catch (_ ArgumentOutOfRangeException) { rejected++ }
+    return rejected == 12 && !Em(2).HasMagnitude && !Em(2).IsPercent
+      && (Percent(20) * 2).IsPercent && (cast[Length](10) + 2).Magnitude == 12
+  }
+
   func CustomLayoutRearrangesWhenPixelDensityChanges() bool {
     let root = Reconciler{ Res: Resolver{} }.Mount(Container{ Width: 100, Height: 200,
       Layout: DensityFixtureLayout(),

@@ -719,7 +719,22 @@ internal class MotionFixtures {
       let autoFails = throws(() -> {
         let ignored = cell.Animate(Length.Auto)
       })
-      return targetFails && setFails && autoFails
+      let mixedFails = throws(() -> { let ignored = cell.Animate(Percent(50) + Em(1)) })
+      for initial in []Length{Em(0), Rem(0), Vw(0), Vh(0)} {
+        let relative = cell.Animate(initial)
+        let target = switch initial.Unit {
+          case LengthUnit.Em: Em(4)
+          case LengthUnit.Rem: Rem(4)
+          case LengthUnit.Vw: Vw(4)
+          case _: Vh(4)
+        }
+        relative.To(target, clockEchoSpec)
+        pump.Sweep(0.09)
+        if relative.Value.Unit != initial.Unit || !relative.Running { return false }
+        pump.Sweep(0.09)
+        if relative.Running || !relative.Value.Equals(target) { return false }
+      }
+      return targetFails && setFails && autoFails && mixedFails
         && anim.Value.Magnitude == 10.0 && anim.Target.Magnitude == 10.0 && !anim.Running
     } finally {
       cell.DisposeMounted()

@@ -388,7 +388,9 @@ internal class TransformGeometry {
 
     private func finite(value float32) bool -> !Single.IsNaN(value) && !Single.IsInfinity(value)
 
-    private func resolve(value Length, basis float32) float32 -> value.Unit == LengthUnit.Percent ? basis * value.Value / 100.0F : value.Value
+    private func resolve(value Length, basis float32) float32 -> if value.Unit == LengthUnit.Relative {
+      value.Value + basis * value.PercentPart / 100.0F
+    } else { value.Unit == LengthUnit.Percent ? basis * value.Value / 100.0F : value.Value }
 
     internal func min4(a float32, b float32, c float32, d float32) float32 {
       var result = a < b ? a : b

@@ -38,9 +38,13 @@ public partial class Window {
         }
       }
     }
+    let fontSize = if let declaration = size.Payload as LengthDeclaration {
+      declaration.Value.Value + declaration.Value.EmPart * 16.0F +
+        declaration.Value.RemPart * (node?.FontSize.Px ?? 16.0F)
+    } else { Length{Unit: LengthUnit(int32(size.B)), Value: size.A}.Px }
     let display = TextLayouts.transformText(text, TextTransform(int32(transform.A)))
     let width = TextShaping.MeasureLineUncached(display, 0, display.Length, entryText(family) ?? "",
-      Length{ Unit: LengthUnit(int32(size.B)), Value: size.A }.Px * (preferences.TextScaleFactor ?? 1.0F),
+      fontSize * (preferences.TextScaleFactor ?? 1.0F),
       int32(weight.A), FontStyle(int32(fontStyle.A)) == FontStyle.Italic,
       Length{ Unit: LengthUnit(int32(spacing.B)), Value: spacing.A }.Px, int32(direction.A),
       entryText(language) ?? "")

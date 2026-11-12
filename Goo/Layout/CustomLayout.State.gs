@@ -35,6 +35,7 @@ internal class CustomLayoutState {
   private var arrangedDensity float32
   internal var ContentWidth float32
   internal var ContentHeight float32
+  private var availableSize LayoutSize
 
   internal init(node Node, algorithm LayoutAlgorithm) {
     Node = node
@@ -115,10 +116,23 @@ internal class CustomLayoutState {
   internal func Measure(available LayoutSize) LayoutSize {
     Begin(false)
     try {
+      availableSize = available
       let result = Algorithm.Measure(context, available)
       CustomLayouts.ValidateSize(result, false)
       return LayoutSize(Math.Min(result.Width, available.Width), Math.Min(result.Height, available.Height))
     } finally { End() }
+  }
+
+  internal func ResolveLength(value Length, axis LayoutAxis) float64? {
+    RequireActive()
+    if axis != LayoutAxis.Horizontal && axis != LayoutAxis.Vertical { throw ArgumentOutOfRangeException("axis") }
+    if value.Unit == LengthUnit.Auto || value.IsIntrinsic { return nil }
+    if !value.IsFinite { throw ArgumentOutOfRangeException("value") }
+    let basis = float32(axis == LayoutAxis.Horizontal ? availableSize.Width : availableSize.Height)
+    let percent = value.Unit == LengthUnit.Percent ? value.Value : value.PercentPart
+    return float64(LengthDeclarations.Pixels(value.Unit == LengthUnit.Percent ? Length{} : value, Node,
+      CustomLayouts.ViewportWidth, CustomLayouts.ViewportHeight, false)
+      + (percent == 0.0F ? 0.0F : percent * basis / 100.0F))
   }
 
   internal func MeasureChild(index int32, available LayoutSize) LayoutSize {
@@ -180,7 +194,8 @@ internal class CustomLayoutState {
     try {
       arrangedVersion = 0L
       for child in Children { child.Arranged = false }
-      Algorithm.Arrange(context, LayoutSize(float64(width), float64(height)))
+      availableSize = LayoutSize(float64(width), float64(height))
+      Algorithm.Arrange(context, availableSize)
       ContentWidth = 0.0F
       ContentHeight = 0.0F
       for child in Children {
@@ -208,6 +223,10 @@ internal class CustomLayouts {
     private var nodes ConditionalWeakTable[Node, CustomLayoutState]?
     @ThreadStatic
     internal var Depth int32
+    @ThreadStatic
+    internal var ViewportWidth float32
+    @ThreadStatic
+    internal var ViewportHeight float32
 
     internal func Remove(node Node) {
       Configure(node, nil)

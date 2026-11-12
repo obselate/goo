@@ -9,6 +9,18 @@ import System.Text.Json
 import Xunit
 
 class FixtureContractTests {
+    @Fact
+    func RelativeLengthsResolveFirstLayoutAndResize() ->
+        Assert.True(LayoutFixtures().RelativeLengthsResolveFirstLayoutAndResize())
+
+    @Fact
+    func IntrinsicLengthsMeasureRetainedContent() ->
+        Assert.True(LayoutFixtures().IntrinsicLengthsMeasureRetainedContent())
+
+    @Fact
+    func RelativeLengthsValidateAtAssignment() ->
+        Assert.True(LayoutFixtures().RelativeLengthsValidateAtAssignment())
+
     @Theory
     @MemberData("Cases")
     func ContractReturnsTrue(fixtureType Type, methodName string) {

@@ -70,7 +70,11 @@ public open class Style {
     addEntry(StyleEntry{ Field: f, A: a, B: b, C: c, D: d })
   }
 
-  internal func pushLength(f StyleField, v Length) { push(f, v.Value, float32(int32(v.Unit)), 0.0F, 0.0F) }
+  internal func pushLength(f StyleField, v Length) {
+    if v.Unit >= LengthUnit.Relative {
+      addEntry(StyleEntry{Field: f, B: float32(int32(v.Unit)), Payload: LengthDeclaration{Value: v}})
+    } else { push(f, v.Value, float32(int32(v.Unit)), 0.0F, 0.0F) }
+  }
   internal func pushColor(f StyleField, v Color) { push(f, v.R, v.G, v.B, v.A) }
   internal func pushScalar(f StyleField, v float64) {
     let packed = float32(v)
@@ -506,16 +510,20 @@ public open class Style {
         pushLength(field, value)
         return
       }
-      if Double.IsNaN(float64(value.Value)) || Double.IsInfinity(float64(value.Value)) {
+      if !value.IsFinite { throw ArgumentOutOfRangeException(name) }
+      if value.IsIntrinsic {
+        if field > StyleField.MaxHeight && field != StyleField.FlexBasis {
+          throw ArgumentOutOfRangeException(name)
+        }
+      } else if value.Unit == LengthUnit.Auto && !allowsAuto {
+        throw ArgumentOutOfRangeException(name)
+      } else if value.Unit >= LengthUnit.Relative {
+        if !allowsPercent && (field != StyleField.FontSize || value.PercentPart != 0.0F
+          || value.VwPart != 0.0F || value.VhPart != 0.0F) { throw ArgumentOutOfRangeException(name) }
+      } else if value.Unit == LengthUnit.Percent && !allowsPercent {
         throw ArgumentOutOfRangeException(name)
       }
-      if value.Unit == LengthUnit.Auto && !allowsAuto {
-        throw ArgumentException(name + " does not support auto", name)
-      }
-      if value.Unit == LengthUnit.Percent && !allowsPercent {
-        throw ArgumentException(name + " does not support percent", name)
-      }
-      if !allowsNegative && value.Value < 0.0F {
+      if !allowsNegative && value.Unit < LengthUnit.Relative && value.Value < 0.0F {
         throw ArgumentOutOfRangeException(name)
       }
       pushLength(field, value)

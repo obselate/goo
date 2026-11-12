@@ -511,8 +511,6 @@ class PublicDocumentationTests {
             "M:Goo.ImageSourceLease.Complete(Goo.ImageSource)",
             "M:Goo.ImageSourceLease.Dispose",
             "M:Goo.ImageSourceLease.Fail",
-            "M:Goo.Length.Percent(System.Double)",
-            "M:Goo.Length.Pixels(System.Double)",
             "M:Goo.Length.op_Implicit(Goo.Length)~Goo.Edges",
             "M:Goo.Length.op_Implicit(System.Double)~Goo.Length",
             "M:Goo.Length.op_Implicit(System.Int32)~Goo.Length",
@@ -1588,16 +1586,6 @@ class PublicDocumentationTests {
                 true
             ),
             ["M:Goo.Percent(System.Double)"] = DocumentationShape(
-                []string{"value"},
-                System.Array.Empty[string](),
-                true
-            ),
-            ["M:Goo.Length.Percent(System.Double)"] = DocumentationShape(
-                []string{"value"},
-                System.Array.Empty[string](),
-                true
-            ),
-            ["M:Goo.Length.Pixels(System.Double)"] = DocumentationShape(
                 []string{"value"},
                 System.Array.Empty[string](),
                 true

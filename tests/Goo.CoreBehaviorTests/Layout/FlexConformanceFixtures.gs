@@ -106,13 +106,13 @@ internal class FlexConformanceFixtures {
     if value.TryGetProperty(name, out var edge) {
         ReadLength(edge)
     } else {
-        Length.Pixels(0)
+        0
     }
 
     private func ReadLength(value JsonElement) Length -> if value.ValueKind == JsonValueKind.Number {
-        Length.Pixels(value.GetDouble())
+        value.GetDouble()
     } else {
-        Length.Percent(Double.Parse(value.GetString()!!.TrimEnd('%'), CultureInfo.InvariantCulture))
+        Percent(Double.Parse(value.GetString()!!.TrimEnd('%'), CultureInfo.InvariantCulture))
     }
 
     private func Collect(node Node, boxes List[[]float32]) {

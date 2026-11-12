@@ -28,7 +28,7 @@ internal class ScrollTopology {
   }
 }
 
-internal class Layout {
+internal partial class Layout {
   internal var config Facebook.Yoga.Config?
   internal var lastWidth float32
   internal var lastHeight float32
@@ -74,6 +74,8 @@ internal class Layout {
 
   private func CalculateCore(root Node, overlayRoot Node?, width float32, height float32) {
     if CustomLayouts.Depth != 0 { throw InvalidOperationException("A custom layout callback reentered window layout: use LayoutContext.MeasureChild and ArrangeChild instead of requesting window layout from Measure or Arrange.") }
+    CustomLayouts.ViewportWidth = width
+    CustomLayouts.ViewportHeight = height
     if structureDirty || root != lastRoot || root.Yoga == nil {
       syncNode(root, true)
       structureDirty = false
@@ -81,11 +83,13 @@ internal class Layout {
     guard let yg = root.Yoga else {
       return
     }
+    resolveLengths(root, width, height)
     if !root.IsPortal && (!laidOut || root != lastRoot
       || width != lastWidth || height != lastHeight || YGNodeAPI.YGNodeIsDirty(yg)) {
       let availableHeight = root.Kind == NodeKind.Entry && root.Height.Unit == LengthUnit.Unset
       ? Single.NaN : height
       YGNodeAPI.YGNodeCalculateLayout(yg, width, availableHeight, yogaDirection(root.Direction))
+      resolveFinalIntrinsic(root, width, height)
       readRect(root, 0.0F, 0.0F)
       ScrollbarParts.Arrange(root)
     }
