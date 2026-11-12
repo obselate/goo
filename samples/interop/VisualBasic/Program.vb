@@ -24,7 +24,7 @@ Module Program
             End If
             Console.WriteLine("VB interop checks passed.")
         Else
-            window.Run()
+            Application.Run(window)
         End If
     End Sub
 End Module

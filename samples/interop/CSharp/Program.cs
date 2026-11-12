@@ -19,7 +19,7 @@ if (args.Contains("--check"))
     if (Examples.List(["Ada", "Grace"]).Children.Count != 4) throw new InvalidOperationException("Spread failed.");
     Console.WriteLine("C# interop checks passed.");
 }
-else window.Run();
+else Application.Run(window);
 
 public sealed class Counter : Cell
 {
