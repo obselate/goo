@@ -114,6 +114,7 @@ public open class EmbeddedWindowHost : IDisposable {
   }
 
   /// Closes the attached window and releases its retained and presentation resources.
+  /// Pumps UI-thread continuations until the window's close drain completes or expires.
   public func Dispose() {
     if disposed { return }
     RequireOwnerThread()
