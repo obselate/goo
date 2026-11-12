@@ -12,6 +12,12 @@ public open class Blob : Style {
   private var transitionSelection StyleMask
   private var blobState int32
   internal let CallbackOwner Cell?
+  internal var ReuseNodes int32
+  internal var ReuseHash int32
+  internal prop ReuseFrozen bool {
+    get -> (blobState & int32(4096)) != 0
+    set -> blobState = value ? blobState | int32(4096) : blobState & ~int32(4096)
+  }
 
   internal init() {
     CallbackOwner = ContextEnvironment.CallbackOwner

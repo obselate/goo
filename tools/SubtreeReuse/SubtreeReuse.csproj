@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>Goo.DevTools.Cli</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <DefineConstants Condition="'$(Prototype)' == 'true'">$(DefineConstants);PROTOTYPE</DefineConstants>
+    <GooNativeAotStaticRoot>/home/xaz/.nuget/packages/goo/0.30.0/buildTransitive/native/linux-x64</GooNativeAotStaticRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(GooVariantDirectory)/*.dll" Exclude="$(GooVariantDirectory)/Goo.XmlDocsMerge.dll" />
+    <Reference Include="Goo.Widgets" HintPath="/home/xaz/scratch/RenderingCost/workloads/bin/baseline/gallery/Goo.Widgets.dll" />
+    <Content Include="../../tests/Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf" Link="VendSans-VariableFont_wght.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+  </ItemGroup>
+  <Import Project="../../Goo/Goo.targets" />
+</Project>

@@ -229,6 +229,7 @@ internal partial class Reconciler {
   private var operationDepth int32
 
   private func mountCore(b Blob) Node {
+    if SubtreeReuse.Mode >= 2 { SubtreeReuse.Freeze(b) }
     let result = switch b {
       case v is Virtual: mountVirtual(v)
       case retained is VirtualRetainedBlob: throw InvalidOperationException("Retained virtual item cannot be mounted")
@@ -775,11 +776,32 @@ internal partial class Reconciler {
   }
 
   private func diffCore(n Node, b Blob) Node {
-    referenceVisits++
-    if !recyclingRow && n.ReferenceBlob == b && n.ReferenceTreeNodes > 0 && n.Context == Context && n.Fiber == nil {
-      FrameRecorder.Current?.Counter("reconcile.reference_skipped_nodes", "cpu.work",
-        uint64(n.ReferenceTreeNodes), Stopwatch.GetTimestamp(), unit: "nodes")
-      return n
+    if SubtreeReuse.Mode >= 2 {
+      if b.ReuseFrozen && !recyclingRow && n.Context == Context && n.Fiber == nil {
+        if n.ReferenceBlob == b {
+          if n.ReferenceTreeNodes == 0 { n.ReferenceTreeNodes = SubtreeReuse.Count(n) }
+          if n.ReferenceTreeNodes > 0 {
+            FrameRecorder.Current?.Counter("reconcile.reference_skipped_nodes", "cpu.work",
+              uint64(n.ReferenceTreeNodes), Stopwatch.GetTimestamp(), unit: "nodes")
+            return n
+          }
+        }
+      }
+      SubtreeReuse.Freeze(b)
+      if SubtreeReuse.Mode == 3 && !recyclingRow && n.Context == Context && n.Fiber == nil && b.ReuseNodes > 0 && n.ReferenceBlob != nil && SubtreeReuse.Equal(n.ReferenceBlob!!, b) {
+        FrameRecorder.Current?.Counter("reconcile.reference_skipped_nodes", "cpu.work",
+          uint64(b.ReuseNodes), Stopwatch.GetTimestamp(), unit: "nodes")
+        n.ReferenceBlob = b
+        n.ReferenceTreeNodes = b.ReuseNodes
+        return n
+      }
+    } else if SubtreeReuse.Mode == 1 {
+      referenceVisits++
+      if !recyclingRow && n.ReferenceBlob == b && n.ReferenceTreeNodes > 0 && n.Context == Context && n.Fiber == nil {
+        FrameRecorder.Current?.Counter("reconcile.reference_skipped_nodes", "cpu.work",
+          uint64(n.ReferenceTreeNodes), Stopwatch.GetTimestamp(), unit: "nodes")
+        return n
+      }
     }
     if recyclingRow { n.Key = b.Key }
     if b is VirtualRetainedBlob {
@@ -821,8 +843,10 @@ internal partial class Reconciler {
   }
 
   private func retainReferenceBlob(n Node, b Blob) {
+    if SubtreeReuse.Mode == 0 { return }
     n.ReferenceBlob = b
     n.ReferenceTreeNodes = 0
+    if SubtreeReuse.Mode >= 2 { return }
     if n.Fiber != nil || b.HasElementHandle || !(b is Container || b is Text || b is Button) { return }
     var count = 1
     for index in 0 ... n.Children.Count {
