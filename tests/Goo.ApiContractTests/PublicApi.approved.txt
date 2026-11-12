@@ -112,6 +112,7 @@ ctor|Goo.SpellCheck.SpellCheckSession|public|(owner:Goo.Window,controller:Goo.Te
 ctor|Goo.SpellCheck.SpellingResult|public|(Status:Goo.SpellCheck.SpellingStatus,Version:System.Int64,Language:System.String,Errors:System.Collections.Generic.IReadOnlyList`1<Goo.SpellCheck.Misspelling>,Error:System.String="")
 ctor|Goo.SpellCheck.SpellingSuggestions|public|(Status:Goo.SpellCheck.SpellingStatus,Version:System.Int64,Language:System.String,Range:Goo.TextRange,Word:System.String,Values:System.Collections.Generic.IReadOnlyList`1<System.String>,Error:System.String="")
 ctor|Goo.SpellCheck.SystemSpellingService|public|()
+ctor|Goo.State`1|public|(initial:!0)
 ctor|Goo.Style|public|()
 ctor|Goo.Svg.SvgParseException|public|(message:System.String,innerException:System.Exception?=null)
 ctor|Goo.TextCandidateEvent|public|(Candidates:System.Collections.Generic.IReadOnlyList`1<System.String>,SelectedCandidate:System.Int32,Horizontal:System.Boolean)
@@ -1604,6 +1605,8 @@ method|Goo.SpellCheck.SpellingSuggestions|op_Equality|static|public|generic:|(le
 method|Goo.SpellCheck.SpellingSuggestions|op_Inequality|static|public|generic:|(left:Goo.SpellCheck.SpellingSuggestions?,right:Goo.SpellCheck.SpellingSuggestions?)->System.Boolean
 method|Goo.SpellCheck.SystemSpellingService|CheckAsync|instance|public|generic:|(snapshot:Goo.TextSnapshot,range:Goo.TextRange,language:System.String,cancellation:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<Goo.SpellCheck.SpellingResult>
 method|Goo.SpellCheck.SystemSpellingService|SuggestAsync|instance|public|generic:|(snapshot:Goo.TextSnapshot,range:Goo.TextRange,language:System.String,cancellation:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<Goo.SpellCheck.SpellingSuggestions>
+method|Goo.State`1|ToString|virtual|public|generic:|()->System.String
+method|Goo.State`1|op_Implicit|static|public|generic:|(value:Goo.State`1<!0>)->!0
 method|Goo.Style|TryGetTextStyle|instance|public|generic:|(out properties:Goo.TextStyleProperties&)->System.Boolean
 method|Goo.Svg.Svg|Load|static|public|generic:|(path:System.String)->Goo.VectorAsset
 method|Goo.Svg.Svg|Load|static|public|generic:|(stream:System.IO.Stream)->Goo.VectorAsset
@@ -2506,6 +2509,7 @@ property|Goo.SpellCheck.SpellingSuggestions|Status|Goo.SpellCheck.SpellingStatus
 property|Goo.SpellCheck.SpellingSuggestions|Values|System.Collections.Generic.IReadOnlyList`1<System.String>|instance|get:public,init:public|index:()
 property|Goo.SpellCheck.SpellingSuggestions|Version|System.Int64|instance|get:public,init:public|index:()
 property|Goo.SpellCheck.SpellingSuggestions|Word|System.String|instance|get:public,init:public|index:()
+property|Goo.State`1|Value|!0|instance|get:public,set:public|index:()
 property|Goo.Style|AlignContent|Goo.AlignContent|instance|init:public|index:()
 property|Goo.Style|AlignItems|Goo.AlignItems|instance|init:public|index:()
 property|Goo.Style|AlignSelf|Goo.AlignSelf|instance|init:public|index:()
@@ -3173,6 +3177,8 @@ type|Goo.SpellCheck.SpellingResult|sealed-class|public|base:System.Object|interf
 type|Goo.SpellCheck.SpellingStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.SpellCheck.SpellingSuggestions|sealed-class|public|base:System.Object|interfaces:System.IEquatable`1<Goo.SpellCheck.SpellingSuggestions>|generic:
 type|Goo.SpellCheck.SystemSpellingService|sealed-class|public|base:System.Object|interfaces:Goo.SpellCheck.ISpellingService|generic:
+type|Goo.StateDependency|abstract-class|public|base:System.Object|interfaces:|generic:
+type|Goo.State`1|sealed-class|public|base:Goo.StateDependency|interfaces:|generic:T[attrs:0,constraints:]
 type|Goo.StrokeCap|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.StrokeJoin|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Style|class|public|base:System.Object|interfaces:|generic:

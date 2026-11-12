@@ -594,6 +594,8 @@ class PublicDocumentationTests {
             "M:Goo.MotionVelocity.Add(Goo.MotionVelocity)",
             "M:Goo.MotionVelocity.Components(System.Double[])",
             "M:Goo.MotionVelocity.Uniform(System.Double)",
+            "M:Goo.State`1.#ctor(`0)",
+            "M:Goo.State`1.op_Implicit(Goo.State{`0})~`0",
             "M:Goo.SoundPlayback.Dispose",
             "M:Goo.SoundPlayback.Stop",
             "M:Goo.SoundPlayer.Dispose",
@@ -710,6 +712,7 @@ class PublicDocumentationTests {
             "M:Goo.EmbeddedWindowHost.UnloadVulkanLibrary"
         }
         private let ExpectedEqualityDocumentationIds[]string = []string{
+            "M:Goo.State`1.ToString",
             "M:Goo.VectorPath.Equals(Goo.VectorPath)",
             "M:Goo.VectorPath.Equals(System.Object)",
             "M:Goo.VectorPath.GetHashCode",
