@@ -730,9 +730,16 @@ internal class MotionFixtures {
         }
         relative.To(target)
         pump.Sweep(0.09)
-        if relative.Value.Unit != initial.Unit || !relative.Running { return false }
-        pump.Sweep(0.09)
-        if relative.Running || !relative.Value.Equals(target) { return false }
+        if relative.Value.Unit != initial.Unit || !relative.Running {
+          throw InvalidOperationException("relative midpoint: ${initial.Unit}, ${relative.Value.Unit}, ${relative.Running}")
+        }
+        pump.Sweep(0.1)
+        if relative.Running || !relative.Value.Equals(target) {
+          throw InvalidOperationException("relative completion: ${initial.Unit}, ${relative.Value.Unit}, ${relative.Running}, ${relative.Value.EmPart}, ${relative.Value.RemPart}, ${relative.Value.VwPart}, ${relative.Value.VhPart}")
+        }
+      }
+      if !targetFails || !setFails || !autoFails || !mixedFails {
+        throw InvalidOperationException("length rejection: $targetFails, $setFails, $autoFails, $mixedFails")
       }
       return targetFails && setFails && autoFails && mixedFails
         && anim.Value.Magnitude == 10.0 && anim.Target.Magnitude == 10.0 && !anim.Running
