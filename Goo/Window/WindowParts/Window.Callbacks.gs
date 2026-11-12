@@ -48,6 +48,7 @@ public partial class Window {
   internal var callbackOperations int32
   private var callbackDeadline float64
   private var callbackDrainReady bool
+  private var callbackWasVisible bool
   private var callbackLate bool
   private var callbackWorker bool
   private var callbackError Exception?
@@ -135,29 +136,21 @@ public partial class Window {
 
   private func beginCallbackClose() {
     callbackClosing = true
+    callbackWasVisible = observedVisible
     clearTimers()
     stopPosts()
-    callbackError = captureCleanupError(
-      callbackError,
-      () -> {
-        host?.Hide()
-      }
-    )
+    callbackError = captureCleanupError(callbackError, () -> { host?.Hide() })
+    callbackError = captureCleanupError(callbackError, () -> { closeOwnedWindows() })
     let tree = node
-    node = nil
     callbackError = captureCleanupError(callbackError, () -> Portals.Sync(nil, portalRoot))
     if let current = tree {
       callbackError = captureCleanupError(callbackError, () -> NodeLifecycle.DisposeTree(current))
     } else if let current = Root {
       callbackError = captureCleanupError(callbackError, () -> current.DisposeMounted())
     }
+    node = nil
     callbackError = captureCleanupError(callbackError, cancelPendingTasks)
-    callbackError = captureCleanupError(
-      callbackError,
-      () -> {
-        closeFileDialog()
-      }
-    )
+    callbackError = captureCleanupError(callbackError, () -> { closeFileDialog() })
     callbackDeadline = float64(Stopwatch.GetTimestamp()) + CloseDrainMs * float64(Stopwatch.Frequency) / 1000.0
     callbackDrainReady = true
   }

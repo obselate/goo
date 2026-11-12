@@ -80,7 +80,10 @@ public partial class Window {
     private func completeCellMounts() {
         guard let pending = pendingCellMounts else { return }
         let count = pending.Count
-        for _ in 0 ... count { pending.Dequeue().CompleteMount() }
+        for _ in 0 ... count {
+            if !pending.TryDequeue(out var cell) { return }
+            cell.CompleteMount()
+        }
     }
 
     /// Runs a callback once on the UI thread after the delay.

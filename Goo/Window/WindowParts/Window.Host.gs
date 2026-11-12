@@ -40,7 +40,7 @@ public partial class Window {
     }
 
     internal func UnregisterLiveWindow(window Window) {
-      scheduler.Unregister(window, window.observedVisible)
+      scheduler.Unregister(window, window.callbackClosing ? window.callbackWasVisible : window.observedVisible)
     }
 
     internal func RunLiveWindowScheduler() {

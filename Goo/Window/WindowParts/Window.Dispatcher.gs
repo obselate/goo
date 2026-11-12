@@ -45,13 +45,13 @@ public partial class Window {
   /// @returns the function result
   public async func InvokeAsync[T any](action Func[T], cancellationToken CancellationToken = default(CancellationToken)) Task[T] {
     if action == nil { throw ArgumentNullException("action") }
-    using let cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, PendingTaskToken())
-    let token = cancellation.Token
+    let token = PendingTaskToken()
     let completion = TaskCompletionSource[T](TaskCreationOptions.RunContinuationsAsynchronously)
-    using let registration = token.Register(() -> { completion.TrySetCanceled(token) })
-    if !token.IsCancellationRequested {
+    using let callerRegistration = cancellationToken.Register(() -> { completion.TrySetCanceled(cancellationToken) })
+    using let closeRegistration = token.Register(() -> { completion.TrySetCanceled(token) })
+    if !completion.Task.IsCompleted {
       if !Post(() -> {
-        if token.IsCancellationRequested { return }
+        if completion.Task.IsCompleted { return }
         try { completion.TrySetResult(action()) }
         catch (error OperationCanceledException) { completion.TrySetCanceled() }
         catch (error Exception) { completion.TrySetException(error) }
@@ -66,17 +66,17 @@ public partial class Window {
   /// @returns the next presentation receipt
   public async func NextPresentationAsync(cancellationToken CancellationToken = default(CancellationToken)) Task[WindowPresentationAccepted] {
     requireUiThread("Window.NextPresentationAsync")
-    using let cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, PendingTaskToken())
-    let token = cancellation.Token
+    let token = PendingTaskToken()
     let completion = TaskCompletionSource[WindowPresentationAccepted](TaskCreationOptions.RunContinuationsAsynchronously)
-    using let registration = token.Register(() -> { completion.TrySetCanceled(token) })
+    using let callerRegistration = cancellationToken.Register(() -> { completion.TrySetCanceled(cancellationToken) })
+    using let closeRegistration = token.Register(() -> { completion.TrySetCanceled(token) })
     lock cellQueueGate {
-      if !token.IsCancellationRequested {
+      if !completion.Task.IsCompleted {
         presentationWaiters ??= List[TaskCompletionSource[WindowPresentationAccepted]]()
         presentationWaiters!!.Add(completion)
       }
     }
-    if !token.IsCancellationRequested { requestRender() }
+    if !completion.Task.IsCompleted { requestRender() }
     try { return await completion.Task.ConfigureAwait(false) }
     finally {
       lock cellQueueGate { presentationWaiters?.Remove(completion) }

@@ -138,6 +138,7 @@ class FixtureContractTests {
             yield Contract[CellFixtures]("LifecycleHooksAndRequestTokensContract")
             yield Contract[CellFixtures]("CellSchedulingAndTimerValidationContract")
             yield Contract[CellFixtures]("TypedFactoryStoresInputWithoutRecreatingCellContract")
+            yield Contract[CellFixtures]("SchedulingPhasesAndFailedMountsContract")
             yield Contract[CellFixtures]("DeferredScopeAndMountFactoryCallbacksRebuildTheirAuthor")
             yield Contract[CellFixtures]("DirectChildQueuesCanonicalParentOnce")
             yield Contract[CellFixtures]("DirectCompositionAddsNoRenderNode")
