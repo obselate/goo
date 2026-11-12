@@ -68,7 +68,7 @@ public class State[T any] : StateDependency {
 
   /// Gets or sets the value. Reads in Build and retained builders subscribe their owner.
   /// Equal writes do nothing. Changed writes invalidate the subscribed readers.
-  /// Writes during Build throw. After its first reader, state requires that reader's UI thread.
+  /// Writes during Build throw. After its first reader, writes require that reader's UI thread.
   public prop Value T {
     get {
       Read()
