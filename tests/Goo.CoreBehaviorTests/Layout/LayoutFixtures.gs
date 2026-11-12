@@ -17,7 +17,7 @@ internal class LayoutFixtures {
     if root.Rect.W != 50.0F { return false }
     root = reconciler.Diff(root, Text{Content: "Unbreakable"})
     layout.Calculate(root, 20.0F, 40.0F)
-    return Single.IsNaN(YGNodeStyleAPI.YGNodeStyleGetMinWidth(root.Yoga!!).Value)
+    return YGNodeStyleAPI.YGNodeStyleGetMinWidth(root.Yoga!!).Unit == Unit.Undefined
   }
 
   func CustomLayoutRearrangesWhenPixelDensityChanges() bool {

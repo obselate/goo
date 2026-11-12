@@ -117,7 +117,9 @@ internal partial class TextInput {
     let anchor = caret == start ? end : start
     if target.Selectable {
       if end > target.Content.Length { return false }
-      return SelectableText.Set(target, anchor, caret)
+      let low = textBoundary(target.Content, start, false)
+      let high = textBoundary(target.Content, end, length != 0)
+      return SelectableText.Set(target, caret == start ? high : low, caret == start ? low : high)
     }
     if target.Kind == NodeKind.Entry {
       let starts = UnicodeGraphemes.Starts(target.Buffer)

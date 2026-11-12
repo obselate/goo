@@ -12,6 +12,8 @@ internal class TextInputPrimitivesFixtures {
     let input = InputCoordinator()
     if !input.FocusElement(resolver, root) || input.EditorSnapshot() != nil { return false }
     if !input.SetEditorSelection(root, 1, 3) || input.EditorSelection()?.Active.Offset != 3 { return false }
+    if !input.AccessibilitySetSelection(resolver, root, 2, 1, 3)
+      || root.Anchor != 1 || root.Caret != 3 { return false }
     if input.CommitEditorText(root, "changed") || root.Content != "a😀 word\nlast" { return false }
     if !input.ExecuteEditorCommand(root, resolver, TextCommand{Kind: TextCommandKind.MoveRight, ExtendSelection: true})
       || root.Anchor != 1 || root.Caret != 4 { return false }

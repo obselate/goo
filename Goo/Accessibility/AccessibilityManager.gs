@@ -401,10 +401,10 @@ internal class AccessibilityManager {
   }
 
   private func resolvedReadOnly(n Node, declaration Accessibility?) bool? {
+    if n.Selectable { return true }
     if let metadata = declaration {
       if metadata.ReadOnly != nil { return metadata.ReadOnly }
     }
-    if n.Selectable { return true }
     return n.Kind == NodeKind.Editor || n.Kind == NodeKind.Entry ? n.EditorReadOnly : nil
   }
 
