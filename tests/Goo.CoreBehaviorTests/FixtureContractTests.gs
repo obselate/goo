@@ -91,6 +91,7 @@ class FixtureContractTests {
         func Cases() sequence[[]object] {
             yield Contract[ApplicationActivationFixtures]("ProcessQueueOwnsStartupAndForwardedData")
             yield Contract[TreeFixtures]("NodeMountLifetimeContract")
+            yield Contract[TreeFixtures]("EmptyChildrenPreserveStyleRetryRootContract")
             yield Contract[RowRecyclingFixtures]("ReusesStorageAndResetsKeyScopedStateContract")
             yield Contract[RowRecyclingFixtures]("DisposesRunningAnimationBeforeStorageRebindContract")
             yield Contract[RowRecyclingFixtures]("ExcludesFocusedAndEditingRowsContract")

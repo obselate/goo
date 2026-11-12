@@ -1246,6 +1246,7 @@ internal partial class Reconciler {
 
   internal func diffChildren(n Node, blobs IList[Blob]) {
     if styleRetryRoot == nil { rememberStyleRetryRoot(n) }
+    if n.Children.Count == 0 && blobs.Count == 0 { return }
     let scratch = keyedScratch()
     let scratchScope = scratch.Rent(Math.Max(n.Children.Count, blobs.Count))
     try {
