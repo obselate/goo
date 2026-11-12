@@ -770,6 +770,20 @@ internal class Node {
       EnsurePointerState().OnPointerCancel = value
     }
   }
+  internal prop OnPointerDrag ((PointerDragEvent) -> void)? {
+    get -> pointerState?.OnPointerDrag
+    set {
+      if pointerState == nil && value == nil { return }
+      EnsurePointerState().OnPointerDrag = value
+    }
+  }
+  internal prop PointerDragThreshold float64 {
+    get -> pointerState?.PointerDragThreshold ?? 0.0
+    set {
+      if pointerState == nil && value == 0.0 { return }
+      EnsurePointerState().PointerDragThreshold = value
+    }
+  }
   internal prop OnWheel ((WheelEvent) -> void)?{
     get -> pointerState?.OnWheel
     set {
