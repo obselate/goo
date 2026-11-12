@@ -240,10 +240,7 @@ internal partial class PointerInput {
         if let descriptor = DragDropMetadata.Target(target) {
           if let event = dragEvent(session, target, DragEventKind.Move, x, y,
             modifiers, DragEffect.None) {
-              let owner = CellOwnership.Within(root, target)
-              var queried DragEffect
-              try { queried = descriptor.Query(event) }
-              finally { owner?.Rebuild() }
+              let queried = descriptor.Query(event)
               if !ensureDragSession(root, session) {
                 path.Clear()
                 return nil
@@ -282,7 +279,7 @@ internal partial class PointerInput {
         }
       guard let descriptor = DragDropMetadata.Target(target) else { return false }
       guard let event = dragEvent(session, target, kind, x, y, modifiers, effect) else { return false }
-      let owner = CellOwnership.Within(root, target)
+      let owner = kind != DragEventKind.Move ? CellOwnership.Within(root, target) : nil
       let targetMount = NodeMount(target)
       try { descriptor.Changed?.Invoke(event) }
       finally { owner?.Rebuild() }

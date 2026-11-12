@@ -189,7 +189,12 @@ internal partial class PointerInput {
     private func notifyGesture(root Node?, candidate GestureCandidate, phase GesturePhase,
         reason GestureCancelReason) {
         if phase == GesturePhase.Completed || phase == GesturePhase.Canceled { candidate.Terminal = true }
-        let owner = if let tree = root, let node = candidate.OwnerMount.Captured { CellOwnership.Within(tree, node) } else { nil }
+        var owner Cell?
+        if phase != GesturePhase.Changed {
+            if let tree = root, let node = candidate.OwnerMount.Captured {
+                owner = CellOwnership.Within(tree, node)
+            }
+        }
         try { candidate.Session.Notify(phase, reason) }
         finally { owner?.Rebuild() }
     }
