@@ -96,23 +96,17 @@ class VerticalLayout : LayoutAlgorithm {
         var width = 0.0
         var height = 0.0
         for i in 0 ... context.ChildCount {
-            let child = context.MeasureChild(
-                i,
-                LayoutSize{Width: available.Width, Height: System.Double.PositiveInfinity,}
-            )
+            let child = context.MeasureChild(i, LayoutSize(available.Width, System.Double.PositiveInfinity))
             width = System.Math.Max(width, child.Width)
             height += child.Height
         }
-        return LayoutSize{Width: width, Height: height}
+        return LayoutSize(width, height)
     }
 
     public func Arrange(context LayoutContext, finalSize LayoutSize) {
         var y = 0.0
         for i in 0 ... context.ChildCount {
-            let child = context.MeasureChild(
-                i,
-                LayoutSize{Width: finalSize.Width, Height: System.Double.PositiveInfinity,}
-            )
+            let child = context.MeasureChild(i, LayoutSize(finalSize.Width, System.Double.PositiveInfinity))
             context.ArrangeChild(i, ElementRect{Y: y, Width: finalSize.Width, Height: child.Height,})
             y += child.Height
         }
@@ -185,12 +179,4 @@ Gets the number of retained direct children. Access outside a layout callback th
 ## `LayoutSize`
 
 
-Describes a logical size, or available constraints with positive infinity on unbounded axes.
-
-### `Height`
-
-Gets the logical height.
-
-### `Width`
-
-Gets the logical width.
+Describes a logical Width and Height, with positive infinity on unbounded axes.

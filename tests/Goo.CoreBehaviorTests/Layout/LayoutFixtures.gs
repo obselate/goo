@@ -1049,7 +1049,7 @@ internal class LayoutVisibilityFixtureAlgorithm : LayoutAlgorithm {
 
   public func Arrange(context LayoutContext, finalSize LayoutSize) {
     Arranges++
-    context.MeasureChild(0, LayoutSize{ Width: Double.PositiveInfinity, Height: Double.PositiveInfinity })
+    context.MeasureChild(0, LayoutSize(Double.PositiveInfinity, Double.PositiveInfinity))
     context.MeasureChild(0, finalSize)
     context.ArrangeChild(0, ElementRect{ Width: finalSize.Width, Height: finalSize.Height })
     FinalSize = finalSize

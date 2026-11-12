@@ -288,7 +288,7 @@ internal class RecyclingRowsSource(owner RecyclingViewportCell) : VirtualState, 
         row.Item = item
         owner.Current = row
       })})
-    output.ContentSize = LayoutSize{Width: 100, Height: 2000}
+    output.ContentSize = LayoutSize(100, 2000)
     output.ItemCount = 100
   }
 

@@ -843,7 +843,7 @@ internal class ScrollbarDescriptorSwitchSource : VirtualState, VirtualSource {
         Content: Container{ Key: "row-$index" },
       })
     }
-    output.ContentSize = LayoutSize{ Width: 200, Height: 3200 }
+    output.ContentSize = LayoutSize(200, 3200)
     output.ItemCount = 100
   }
 }
@@ -884,7 +884,7 @@ internal class RetiredHoverRows(parent RetiredHoverParent) : VirtualState {
       Width: 100, Height: 20,
       Content: Cell.Mount[RetiredHoverParent, RetiredHoverRow](index.ToString(), parent),
     })
-    output.ContentSize = LayoutSize{ Width: 100, Height: 20000 }
+    output.ContentSize = LayoutSize(100, 20000)
     output.ItemCount = 1000
   }
 }
