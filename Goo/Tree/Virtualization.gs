@@ -336,31 +336,6 @@ internal sealed class VirtualNodeState {
     return realize(n, state, AccessibilityMetadata.Value(n)?.Role == AccessibilityRole.List)
   }
 
-  internal func OffsetForKey(n Node, key string) Point? {
-    guard let state = current else { return nil }
-    let previous = viewport.Bind(n)
-    let previousContext = enterContext()
-    contextReader?.Begin()
-    try {
-      let offset = state.OffsetOf(viewport, key)
-      if let value = offset {
-        if !Double.IsFinite(value.X) || !Double.IsFinite(value.Y) {
-          throw InvalidOperationException("Virtual item offset must be finite")
-        }
-      }
-      contextReader?.Commit(true)
-      return if let value = offset {
-        Point{X: Math.Max(0.0, value.X), Y: Math.Max(0.0, value.Y)}
-      } else { nil }
-    } catch (error Exception) {
-      contextReader?.Cancel()
-      rethrow
-    } finally {
-      viewport.Bind(previous)
-      ContextEnvironment.Current = previousContext
-    }
-  }
-
   internal func ScrollOffsetForKey(n Node, key string, alignment ScrollAlignment, anchor Point? = nil) Point? {
     guard let state = current else { return nil }
     let previous = viewport.Bind(n)

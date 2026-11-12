@@ -196,6 +196,7 @@ public partial class Window {
     requireUiThread("ElementHandle.ScrollIntoView")
     FlushDeferredVirtualization()
     if n.Retired { return false }
+    Virtualization.State(n)?.CancelScroll()
     ScrollState.IntoView(n)
     markDirtyAndRender()
     return true

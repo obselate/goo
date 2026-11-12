@@ -444,6 +444,8 @@ class PublicDocumentationTests {
             "M:Goo.ElementHandle.ScrollOffsetOf(System.String,Goo.ScrollAlignment)",
             "M:Goo.ElementHandle.RestoreAnchor(Goo.VirtualScrollAnchor,System.Boolean)",
             "M:Goo.ElementHandle.ScrollTo(System.Nullable{System.Double},System.Nullable{System.Double})",
+            "M:Goo.ElementHandle.ScrollToEnd",
+            "M:Goo.ElementHandle.SelectText(System.Int32,System.Int32)",
             "M:Goo.ElementHandle.SetFocusTarget(Goo.ElementHandle)",
             "M:Goo.ElementHandle.SetTextInputArea(Goo.ElementRect)",
             "M:Goo.ElementHandle.TryCopyTextRangeRects(Goo.TextRange,Goo.TextCoordinateSpace,System.Span{Goo.ElementRect},System.Int32@)",
@@ -957,6 +959,16 @@ class PublicDocumentationTests {
         private let Shapes IReadOnlyDictionary[string, DocumentationShape] = Dictionary[string, DocumentationShape](
             StringComparer.Ordinal
         ){
+            ["M:Goo.ElementHandle.ScrollToEnd"] = DocumentationShape(
+                System.Array.Empty[string](),
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.ElementHandle.SelectText(System.Int32,System.Int32)"] = DocumentationShape(
+                []string{"start", "end"},
+                System.Array.Empty[string](),
+                true
+            ),
             ["M:Goo.TrayIcon.Create(Goo.Window,Goo.TrayOptions)"] = DocumentationShape(
                 []string{"owner", "options"}, System.Array.Empty[string](), true),
             ["M:Goo.TrayIcon.Update(Goo.TrayOptions)"] = DocumentationShape(

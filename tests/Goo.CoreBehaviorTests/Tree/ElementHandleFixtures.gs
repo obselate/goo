@@ -56,7 +56,17 @@ internal class ElementHandleFixtures {
       cell.Items.Add(VirtualFixtureItem{Id: 10})
       cell.Rebuild()
       window.UpdateTree()
-      return cell.Handle.ScrollOffset.Y == 20
+      if cell.Handle.ScrollOffset.Y != 20 { return false }
+      cell.Items.Clear()
+      cell.Rebuild()
+      window.UpdateTree()
+      if !cell.Handle.ScrollToItem("row-10") || !cell.Handle.IsScrollSettling { return false }
+      window.PlatformInput.PointerWheel(5, 5, 0, -1, KeyModifiers{})
+      if cell.Handle.IsScrollSettling { return false }
+      if !cell.Handle.ScrollToItem("row-10") || !cell.Handle.ScrollIntoView() || cell.Handle.IsScrollSettling { return false }
+      if !cell.Handle.ScrollToItem("row-10") { return false }
+      window.Close()
+      return !cell.Handle.IsScrollSettling && !cell.Handle.ScrollToItem("row-10")
     } finally { window.Close() }
   }
 
