@@ -28,18 +28,6 @@ internal class Program {
             let identity = args[1]
             let root = Path.GetFullPath(args[2].Substring("--output=".Length))
             let tag = if args.Length == 4 { args[3] } else { mode }
-            Application.Configure("Goo application host smoke", "1.0", identity)
-            if mode == "graphics-unavailable" {
-                Environment.SetEnvironmentVariable("VK_DRIVER_FILES", Path.Combine(root, "missing-driver.json"))
-                let window = Window{Width: 160, Height: 100, Root: Cell()}
-                try {
-                    window.Open()
-                    throw InvalidOperationException("A missing Vulkan driver opened a window")
-                } catch (error GraphicsUnavailableException) {
-                    Require(!window.IsOpen && error.Message.Length != 0, "Graphics failure did not close the native window")
-                }
-                return 0
-            }
             if mode == "clipboard" {
                 RunClipboard(identity, root)
                 return 0
@@ -52,12 +40,24 @@ internal class Program {
                 RunPlacement(root, tag)
                 return 0
             }
+            Application.Configure("Goo application host smoke", "1.0", identity)
+            if mode == "graphics-unavailable" {
+                Environment.SetEnvironmentVariable("VK_DRIVER_FILES", Path.Combine(root, "missing-driver.json"))
+                let window = Window{Width: 160, Height: 100, Root: Cell()}
+                try {
+                    window.Open()
+                    throw InvalidOperationException("A missing Vulkan driver opened a window")
+                } catch (error GraphicsUnavailableException) {
+                    Require(!window.IsOpen && error.Message.Length != 0, "Graphics failure did not close the native window")
+                }
+                return 0
+            }
             if mode == "activated" {
-                RunActivated(identity, root, args.Skip(3).ToArray())
+                RunActivated(root, args.Skip(3).ToArray())
                 return 0
             }
             if mode == "secondary" {
-                Send(identity, root)
+                Send(root)
                 return 0
             }
             if mode == "closed" {
@@ -119,7 +119,7 @@ internal class Program {
         }
 
 
-        private func Send(identity string, root string) {
+        private func Send(root string) {
             if OperatingSystem.IsLinux() { Environment.SetEnvironmentVariable("XDG_ACTIVATION_TOKEN", NativeToken) }
             let arguments = (ExpectedArguments.Clone() as []string)!!
             let directory = Environment.CurrentDirectory
@@ -174,7 +174,7 @@ internal class Program {
             Require(Environment.CurrentDirectory == Path.Combine(root, "receiver cwd"), "Receiver directory changed")
         }
 
-        private func RunActivated(identity string, root string, arguments []string) {
+        private func RunActivated(root string, arguments []string) {
             let owner = Environment.CurrentManagedThreadId
             var count = 0
             let nativeWayland = OperatingSystem.IsLinux() && Environment.GetEnvironmentVariable("GOO_ACTIVATION_NATIVE_WINDOW") == "1"
