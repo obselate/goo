@@ -438,13 +438,12 @@ class PublicDocumentationTests {
             "M:Goo.ElementHandle.BeginPress",
             "M:Goo.ElementHandle.EndPress(System.Boolean)",
             "M:Goo.ElementHandle.Focus",
-            "M:Goo.ElementHandle.JumpTo(System.Double,System.Double)",
+            "M:Goo.ElementHandle.JumpTo(System.Nullable{System.Double},System.Nullable{System.Double})",
             "M:Goo.ElementHandle.ScrollIntoView",
-            "M:Goo.ElementHandle.ScrollToItem(System.String)",
             "M:Goo.ElementHandle.ScrollToItem(System.String,Goo.ScrollAlignment,System.Boolean)",
             "M:Goo.ElementHandle.ScrollOffsetOf(System.String,Goo.ScrollAlignment)",
             "M:Goo.ElementHandle.RestoreAnchor(Goo.VirtualScrollAnchor,System.Boolean)",
-            "M:Goo.ElementHandle.ScrollTo(System.Double,System.Double)",
+            "M:Goo.ElementHandle.ScrollTo(System.Nullable{System.Double},System.Nullable{System.Double})",
             "M:Goo.ElementHandle.SetFocusTarget(Goo.ElementHandle)",
             "M:Goo.ElementHandle.SetTextInputArea(Goo.ElementRect)",
             "M:Goo.ElementHandle.TryCopyTextRangeRects(Goo.TextRange,Goo.TextCoordinateSpace,System.Span{Goo.ElementRect},System.Int32@)",
@@ -1357,18 +1356,13 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
-            ["M:Goo.ElementHandle.JumpTo(System.Double,System.Double)"] = DocumentationShape(
+            ["M:Goo.ElementHandle.JumpTo(System.Nullable{System.Double},System.Nullable{System.Double})"] = DocumentationShape(
                 []string{"x", "y"},
                 System.Array.Empty[string](),
                 true
             ),
             ["M:Goo.ElementHandle.ScrollIntoView"] = DocumentationShape(
                 System.Array.Empty[string](),
-                System.Array.Empty[string](),
-                true
-            ),
-            ["M:Goo.ElementHandle.ScrollToItem(System.String)"] = DocumentationShape(
-                []string{"key"},
                 System.Array.Empty[string](),
                 true
             ),
@@ -1427,7 +1421,7 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 false
             ),
-            ["M:Goo.ElementHandle.ScrollTo(System.Double,System.Double)"] = DocumentationShape(
+            ["M:Goo.ElementHandle.ScrollTo(System.Nullable{System.Double},System.Nullable{System.Double})"] = DocumentationShape(
                 []string{"x", "y"},
                 System.Array.Empty[string](),
                 true

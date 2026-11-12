@@ -9,6 +9,10 @@ import System.Runtime.CompilerServices
 public class ElementHandle {
   private var node Node?
   private var window Window?
+  private var selectionStart int32
+  private var selectionEnd int32
+  private var selectionPending bool
+  private var scrollFrames int32
 
   /// Initializes an unmounted element handle.
   public init() {
@@ -79,6 +83,22 @@ public class ElementHandle {
     }
   }
 
+  /// Reports whether the horizontal offset is within one device pixel of the range end.
+  public prop IsAtEndX bool {
+    get {
+      guard let n = mountedNode(true) else { return true }
+      return atScrollEnd(float64(n.ScrollX), scrollRange(n).X, window?.RenderScale.X ?? 1.0F)
+    }
+  }
+
+  /// Reports whether the vertical offset is within one device pixel of the range end.
+  public prop IsAtEndY bool {
+    get {
+      guard let n = mountedNode(true) else { return true }
+      return atScrollEnd(float64(n.ScrollY), scrollRange(n).Y, window?.RenderScale.Y ?? 1.0F)
+    }
+  }
+
   /// Occurs after this mounted element reaches a new stable geometry or scroll state.
   /// Callbacks run on the window UI thread after reconciliation and layout.
   public event MetricsChanged Action[ElementMetrics]{
@@ -91,6 +111,23 @@ public class ElementHandle {
   public func Focus() bool {
     guard let n = mountedNode(), let owner = window else { return false }
     return owner.FocusElement(n)
+  }
+
+  /// Focuses this text control and selects UTF-16 offsets [start, end).
+  /// An unmounted handle retains one request until its next mount and layout.
+  /// @param start The selection anchor offset.
+  /// @param end The active selection offset.
+  /// @returns True when stored or applied, false for an ineligible control or invalid range.
+  public func SelectText(start int32, end int32) bool {
+    selectionPending = false
+    if start < 0 || end < 0 { return false }
+    guard let n = mountedNode(), let owner = window else {
+      selectionStart = start
+      selectionEnd = end
+      selectionPending = true
+      return true
+    }
+    return owner.SelectElementText(n, start, end)
   }
 
   /// Cancels recognizer sessions owned by this element without replaying pending input.
@@ -139,46 +176,55 @@ public class ElementHandle {
     return owner.EndElementPress(n, activate)
   }
 
-  /// Sets this element's logical scroll target.
-  /// @param x The non-negative horizontal target.
-  /// @param y The non-negative vertical target.
+  /// Sets this element's logical scroll target. A nil axis keeps its current offset.
+  /// @param x The non-negative horizontal target, or nil to keep the offset.
+  /// @param y The non-negative vertical target, or nil to keep the offset.
   /// @returns False when the handle is unmounted or the element is not scrollable.
-  public func ScrollTo(x float64, y float64) bool {
-    if !validScrollOffset(x) { throw ArgumentOutOfRangeException("x") }
-    if !validScrollOffset(y) { throw ArgumentOutOfRangeException("y") }
+  public func ScrollTo(x float64? = nil, y float64? = nil) bool {
+    if let value = x && !validScrollOffset(value) { throw ArgumentOutOfRangeException("x") }
+    if let value = y && !validScrollOffset(value) { throw ArgumentOutOfRangeException("y") }
     guard let n = mountedNode(), let owner = window else { return false }
-    return owner.ScrollElementTo(n, x, y)
-  }
-  /// Immediately sets this element's logical scroll offset.
-  /// @param x The non-negative horizontal offset.
-  /// @param y The non-negative vertical offset.
-  /// @returns False when the handle is unmounted or the element is not scrollable.
-  public func JumpTo(x float64, y float64) bool {
-    if !validScrollOffset(x) { throw ArgumentOutOfRangeException("x") }
-    if !validScrollOffset(y) { throw ArgumentOutOfRangeException("y") }
-    guard let n = mountedNode(), let owner = window else { return false }
-    return owner.JumpElementTo(n, x, y)
+    return owner.ScrollElementTo(n, x ?? float64(n.ScrollX), y ?? float64(n.ScrollY))
   }
 
-  /// Immediately scrolls a virtual collection to a stable item key, using estimates for unmeasured rows.
-  /// @param key The nonempty stable key returned by the virtual collection's itemKey callback.
-  /// @returns False for an unmounted handle, a nonvirtual element, or an unknown key.
-  public func ScrollToItem(key string) bool {
-    if String.IsNullOrEmpty(key) { throw ArgumentException("Virtual item keys must be nonempty", "key") }
-    guard let n = mountedNode(), let owner = window, let state = Virtualization.State(n), let offset = state.OffsetForKey(n, key) else { return false }
-    return owner.JumpElementTo(n, offset.X, offset.Y)
+  /// Immediately sets this element's logical scroll offset. A nil axis keeps its offset.
+  /// @param x The non-negative horizontal offset, or nil to keep the offset.
+  /// @param y The non-negative vertical offset, or nil to keep the offset.
+  /// @returns False when the handle is unmounted or the element is not scrollable.
+  public func JumpTo(x float64? = nil, y float64? = nil) bool {
+    if let value = x && !validScrollOffset(value) { throw ArgumentOutOfRangeException("x") }
+    if let value = y && !validScrollOffset(value) { throw ArgumentOutOfRangeException("y") }
+    guard let n = mountedNode(), let owner = window else { return false }
+    return owner.JumpElementTo(n, x ?? float64(n.ScrollX), y ?? float64(n.ScrollY))
   }
 
-  /// Scrolls to an item and keeps its alignment while visible rows are measured.
-  /// @param key The stable item key.
+  /// Animates this element to the range end on both scrollable axes.
+  /// @returns False when the handle is unmounted or the element is not scrollable.
+  public func ScrollToEnd() bool {
+    guard let n = mountedNode(true), let owner = window else { return false }
+    let maximum = scrollRange(n)
+    return owner.ScrollElementTo(n, maximum.X, maximum.Y)
+  }
+
+  /// Scrolls to an item and optionally corrects alignment while rows are measured.
+  /// Unknown keys are held for at most three frames. A later scroll, user scroll or unmount cancels them.
+  /// @param key The nonempty stable item key.
   /// @param alignment The item's alignment in the viewport.
-  /// @param settle Whether to correct the offset after measurement. Direct scrolling cancels it.
-  /// @returns False for an unmounted handle, a nonvirtual element, or an unknown key.
-  public func ScrollToItem(key string, alignment ScrollAlignment, settle bool = true) bool {
-    let offset = ScrollOffsetOf(key, alignment)
-    guard let target = offset, let n = mountedNode(), let owner = window, let state = Virtualization.State(n) else { return false }
-    if !owner.JumpElementTo(n, target.X, target.Y) { return false }
-    if settle { state.RequestScroll(key, alignment, nil, target) }
+  /// @param settle Whether to correct the offset after measurement.
+  /// @returns True when applied or stored, false for an unmounted or nonvirtual element.
+  public func ScrollToItem(key string, alignment ScrollAlignment = ScrollAlignment.Start, settle bool = true) bool {
+    if String.IsNullOrEmpty(key) { throw ArgumentException("Virtual item keys must be nonempty", "key") }
+    if alignment < ScrollAlignment.Start || alignment > ScrollAlignment.Nearest { throw ArgumentOutOfRangeException("alignment") }
+    guard let n = mountedNode(), let owner = window, let state = Virtualization.State(n) else { return false }
+    state.CancelScroll()
+    if let target = state.ScrollOffsetForKey(n, key, alignment) {
+      if !owner.JumpElementTo(n, target.X, target.Y) { return false }
+      if settle { state.RequestScroll(key, alignment, nil, target) }
+    } else {
+      state.RequestPendingScroll(key, alignment, settle, Point{X: float64(n.ScrollX), Y: float64(n.ScrollY)})
+      scrollFrames = 0
+      owner.QueueElementRequest(this)
+    }
     return true
   }
 
@@ -188,7 +234,7 @@ public class ElementHandle {
   /// @returns The current measured or estimated target, or nil when unavailable.
   public func ScrollOffsetOf(key string, alignment ScrollAlignment = ScrollAlignment.Start) Point? {
     if String.IsNullOrEmpty(key) { throw ArgumentException("Virtual item keys must be nonempty", "key") }
-    if alignment < ScrollAlignment.Start || alignment > ScrollAlignment.End { throw ArgumentOutOfRangeException("alignment") }
+    if alignment < ScrollAlignment.Start || alignment > ScrollAlignment.Nearest { throw ArgumentOutOfRangeException("alignment") }
     guard let n = mountedNode(), let state = Virtualization.State(n) else { return nil }
     return state.ScrollOffsetForKey(n, key, alignment)
   }
@@ -216,8 +262,9 @@ public class ElementHandle {
   public func RestoreAnchor(anchor VirtualScrollAnchor, settle bool = true) bool {
     if String.IsNullOrEmpty(anchor.Key) { throw ArgumentException("Virtual item keys must be nonempty", "anchor") }
     if !Double.IsFinite(anchor.Offset.X) || !Double.IsFinite(anchor.Offset.Y) { throw ArgumentOutOfRangeException("anchor") }
-    guard let n = mountedNode(), let owner = window, let state = Virtualization.State(n),
-      let target = state.ScrollOffsetForKey(n, anchor.Key, ScrollAlignment.Start, anchor.Offset) else { return false }
+    guard let n = mountedNode(), let owner = window, let state = Virtualization.State(n) else { return false }
+    state.CancelScroll()
+    guard let target = state.ScrollOffsetForKey(n, anchor.Key, ScrollAlignment.Start, anchor.Offset) else { return false }
     if !owner.JumpElementTo(n, target.X, target.Y) { return false }
     if settle { state.RequestScroll(anchor.Key, ScrollAlignment.Start, anchor.Offset, target) }
     return true
@@ -274,10 +321,13 @@ public class ElementHandle {
     }
     node = n
     window = owner
+    if selectionPending { owner?.QueueElementRequest(this) }
   }
 
   internal func Detach(n Node) {
     if node == n {
+      selectionPending = false
+      Virtualization.State(n)?.CancelScroll()
       node = nil
       window = nil
     }
@@ -286,6 +336,22 @@ public class ElementHandle {
   internal func AttachedNode() Node ? -> node
 
   internal func AttachedWindow() Window ? -> window
+
+  internal func FlushRequests(owner Window) bool {
+    guard let n = AttachedNodeFor(owner) else { return false }
+    if selectionPending {
+      selectionPending = false
+      owner.SelectElementText(n, selectionStart, selectionEnd)
+    }
+    guard let state = Virtualization.State(n) else { return false }
+    if !state.IsWaitingForKey { return false }
+    scrollFrames++
+    if scrollFrames >= 3 {
+      state.CancelScroll()
+      return false
+    }
+    return true
+  }
 
   internal func AttachedNodeFor(owner Window) Node? {
     if window != owner { return nil }
@@ -341,6 +407,7 @@ public data struct ElementMetrics {
   private var scrollOffset Point
   private var scrollRange Point
   private var rawBorderBox ElementRect
+  private var pixelScale Point
 
   /// Reports whether the element is mounted.
   public prop IsMounted bool{ get -> isMounted init -> isMounted = value }
@@ -356,6 +423,11 @@ public data struct ElementMetrics {
   public prop ScrollOffset Point{ get -> scrollOffset init -> scrollOffset = value }
   /// Gets the maximum legal logical scroll offset.
   public prop ScrollRange Point{ get -> scrollRange init -> scrollRange = value }
+  /// Reports whether the horizontal offset is within one device pixel of the range end.
+  public prop IsAtEndX bool { get -> atScrollEnd(scrollOffset.X, scrollRange.X, float32(pixelScale.X)) }
+  /// Reports whether the vertical offset is within one device pixel of the range end.
+  public prop IsAtEndY bool { get -> atScrollEnd(scrollOffset.Y, scrollRange.Y, float32(pixelScale.Y)) }
+  internal prop PixelScale Point { get -> pixelScale; init -> pixelScale = value }
 }
 
 /// Specifies the coordinate space used by mounted text geometry queries.
@@ -700,6 +772,7 @@ internal class MetricSubscriptions {
     }
 
     internal func Flush(owner Window) {
+      owner.FlushElementRequests()
       guard let state = windowState(owner, false) else {
         return
       }
@@ -819,6 +892,8 @@ internal class MetricSubscriptions {
         ContentBox: ElementHandles.ContentBox(node),
         ScrollOffset: Point{ X: float64(node.ScrollX), Y: float64(node.ScrollY) },
         ScrollRange: scrollRange(node),
+        PixelScale: Point{X: float64(handle.AttachedWindow()?.RenderScale.X ?? 1.0F),
+          Y: float64(handle.AttachedWindow()?.RenderScale.Y ?? 1.0F)},
       }
     }
 
@@ -927,6 +1002,7 @@ private func sameElementMetrics(left ElementMetrics, right ElementMetrics) bool 
   && sameElementRect(left.ContentBox, right.ContentBox)
   && left.ScrollOffset.X == right.ScrollOffset.X && left.ScrollOffset.Y == right.ScrollOffset.Y
   && left.ScrollRange.X == right.ScrollRange.X && left.ScrollRange.Y == right.ScrollRange.Y
+  && left.IsAtEndX == right.IsAtEndX && left.IsAtEndY == right.IsAtEndY
 
 private func sameElementRect(left ElementRect, right ElementRect) bool -> left.X == right.X && left.Y == right.Y && left.Width == right.Width && left.Height == right.Height
 
@@ -1316,3 +1392,6 @@ internal class TextGeometryQueries {
     private func windowMappingValid(n Node) bool -> TransformGeometry.NodeToWindow(n, n.Rect.X, n.Rect.Y).Valid
   }
 }
+
+private func atScrollEnd(offset float64, maximum float64, scale float32) bool ->
+  maximum == 0.0 || Math.Abs(maximum - offset) <= 1.0 / float64(scale > 0.0F ? scale : 1.0F)

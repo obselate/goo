@@ -78,6 +78,8 @@ internal sealed class VirtualNodeState {
   private var scrollAlignment ScrollAlignment
   private var scrollAnchor Point?
   private var requestedOffset Point
+  private var waitingForKey bool
+  private var settleScroll bool = true
 
   internal var Context ContextFrame?
   internal var Owner Window?
@@ -311,7 +313,7 @@ internal sealed class VirtualNodeState {
       let requested = state.NeedsRealize(viewport)
       let settling = needsScroll(n, state)
       let anchoring = Math.Abs(anchorDelta(n)) > 0.01F
-      if !requested && !settling { scrollKey = nil }
+      if !requested && !settling && !waitingForKey { scrollKey = nil }
       if !contextDirty && !requested && !settling && !anchoring { contextReader?.Commit(true) }
       return contextDirty || requested || settling || anchoring
     } catch (_ Exception) {
@@ -382,9 +384,22 @@ internal sealed class VirtualNodeState {
     scrollAlignment = alignment
     scrollAnchor = anchor
     requestedOffset = offset
+    waitingForKey = false
+    settleScroll = true
   }
 
-  internal func CancelScroll() { scrollKey = nil }
+  internal func RequestPendingScroll(key string, alignment ScrollAlignment, settle bool, offset Point) {
+    RequestScroll(key, alignment, nil, offset)
+    waitingForKey = true
+    settleScroll = settle
+  }
+
+  internal prop IsWaitingForKey bool { get -> waitingForKey && scrollKey != nil }
+
+  internal func CancelScroll() {
+    scrollKey = nil
+    waitingForKey = false
+  }
 
   internal prop IsScrollSettling bool { get -> scrollKey != nil }
 
@@ -421,8 +436,12 @@ internal sealed class VirtualNodeState {
       throw InvalidOperationException("Virtual item bounds must be finite")
     }
     let fraction = alignment == ScrollAlignment.Center ? 0.5 : alignment == ScrollAlignment.End ? 1.0 : 0.0
-    let x = bounds.X - (anchor?.X ?? (viewport.Size.Width - bounds.Width) * fraction)
-    let y = bounds.Y - (anchor?.Y ?? (viewport.Size.Height - bounds.Height) * fraction)
+    var x = bounds.X - (anchor?.X ?? (viewport.Size.Width - bounds.Width) * fraction)
+    var y = bounds.Y - (anchor?.Y ?? (viewport.Size.Height - bounds.Height) * fraction)
+    if alignment == ScrollAlignment.Nearest {
+      x = nearestOffset(float64(n.ScrollX), bounds.X, bounds.Width, viewport.Size.Width)
+      y = nearestOffset(float64(n.ScrollY), bounds.Y, bounds.Height, viewport.Size.Height)
+    }
     let size = output.ContentSize
     let width = pending == state ? size.Width : float64(extent.Width)
     let height = pending == state ? size.Height : float64(extent.Height)
@@ -430,6 +449,12 @@ internal sealed class VirtualNodeState {
       X: Math.Clamp(x, 0.0, Math.Max(0.0, width - viewport.Size.Width)),
       Y: Math.Clamp(y, 0.0, Math.Max(0.0, height - viewport.Size.Height)),
     }
+  }
+
+  private func nearestOffset(offset float64, start float64, size float64, viewport float64) float64 {
+    let end = start + size - viewport
+    if size > viewport { return Math.Clamp(offset, start, end) }
+    return Math.Clamp(offset, end, start)
   }
 
   private func needsScroll(n Node, state VirtualState) bool {
@@ -440,10 +465,10 @@ internal sealed class VirtualNodeState {
       return false
     }
     guard let target = itemOffset(n, state, key, scrollAlignment, scrollAnchor) else {
-      scrollKey = nil
+      if !waitingForKey { scrollKey = nil }
       return false
     }
-    return Math.Abs(target.X - float64(n.ScrollX)) > 0.01
+    return waitingForKey || Math.Abs(target.X - float64(n.ScrollX)) > 0.01
       || Math.Abs(target.Y - float64(n.ScrollY)) > 0.01
   }
 
@@ -519,7 +544,9 @@ internal sealed class VirtualNodeState {
       if let key = scrollKey {
         if let target = itemOffset(n, state, key, scrollAlignment, scrollAnchor) {
           output.ScrollOffset = target
-        } else { scrollKey = nil }
+          waitingForKey = false
+          if !settleScroll { scrollKey = nil }
+        } else if !waitingForKey { scrollKey = nil }
         captureAnchor(n, nil)
       } else {
         if output.AnchorKey == anchorKey && Math.Abs(delta) > 0.01F {
