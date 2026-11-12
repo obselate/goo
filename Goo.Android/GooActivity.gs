@@ -82,7 +82,7 @@ abstract class GooActivity : Activity {
     protected open override func OnNewIntent(intent Intent?) {
         base.OnNewIntent(intent)
         Intent = intent
-        ForwardActivation(intent, Goo.Window.IsInitialApplicationActivation)
+        ForwardActivation(intent, Goo.Application.IsInitialActivation)
     }
 
     /// Receives native permission results and forwards pending Goo requests.
@@ -176,7 +176,7 @@ abstract class GooActivity : Activity {
         }
         LastActivationStatus = Goo.Application.PostActivation(activation)
         if (LastActivationStatus is ActivationPostStatus.NotInitialized or ActivationPostStatus.Closed) {
-            LastActivationStatus = if Goo.Window.InitializeApplicationActivation(
+            LastActivationStatus = if Goo.Application.InitializeActivation(
                 activation
             ) == WindowOperationResult.Accepted {
                 ActivationPostStatus.Accepted

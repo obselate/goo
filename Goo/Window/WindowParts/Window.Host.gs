@@ -32,42 +32,7 @@ public partial class Window {
 
   shared {
     private let scheduler WindowScheduler = WindowScheduler()
-    private var nativeActivationHeld bool
-
-    internal func PrepareNativeApplicationActivation(out initial []ApplicationActivation) WindowOperationResult {
-      initial = Array.Empty[ApplicationActivation]()
-      RequireActivationThread()
-      if activationOwnerThreadId == 0 || activationClosed { return WindowOperationResult.Accepted }
-      SdlRuntime.RequireMainThread("Application.AcquireSingleInstance")
-      if !nativeActivationHeld {
-        try { SdlRuntime.Acquire() }
-        catch (_ InvalidOperationException) { return WindowOperationResult.Failed }
-        nativeActivationHeld = true
-      }
-      SdlRuntime.PollEvents()
-      lock activationGate {
-        var count int32 = 0
-        for value in pendingActivations {
-          if value.IsInitial && value.Kind != ApplicationActivationKind.Launch { count++ }
-        }
-        if count == 0 { return WindowOperationResult.Accepted }
-        initial = [count]ApplicationActivation
-        count = 0
-        for value in pendingActivations {
-          if value.IsInitial && value.Kind != ApplicationActivationKind.Launch {
-            initial[count] = value
-            count++
-          }
-        }
-      }
-      return WindowOperationResult.Accepted
-    }
-
-    private func ReleaseNativeApplicationActivation() {
-      if !nativeActivationHeld { return }
-      nativeActivationHeld = false
-      SdlRuntime.Release()
-    }
+    internal func WakeForApplicationActivations() -> scheduler.WakeForApplicationActivation()
 
 
     internal func RegisterLiveWindow(window Window) {
@@ -91,6 +56,8 @@ public partial class Window {
     }
 
   }
+
+  internal func WakeForApplicationActivation() { host?.Wake() }
 
   internal func requireUiThread(operation string) {
     if uiThreadBound && Environment.CurrentManagedThreadId != ownerThreadId {
@@ -425,7 +392,7 @@ public partial class Window {
         }
         checkPopupDismissal()
         if profiling { profiler.BeginFrameTrace() }
-        Window.DrainApplicationActivations()
+        Application.DrainActivations()
         let repeatStartTicks = Stopwatch.GetTimestamp()
         nativeModal?.DrainCompletion()
         if IsOpen && !native.IsClosing && drainCloseRequest() {
@@ -590,7 +557,7 @@ public partial class Window {
   internal func SchedulerHasImmediateService() bool -> host?.HasPendingEvents == true || hasPostedActions()
     || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0
     || host?.IsClosing == true
-    || Window.HasPendingApplicationActivation
+    || Application.HasPendingActivation
     || nativeModal?.HasCompletion == true
     || nativeHidePending && windowTarget?.QueueWorkPending != true
 

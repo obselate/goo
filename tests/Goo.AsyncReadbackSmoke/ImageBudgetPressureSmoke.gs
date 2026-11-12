@@ -186,14 +186,14 @@ func RunImageBudgetPressureSmoke() {
       +" retries=" + failed.memoryAllocationRetryCount.ToString()
       +" pressure=" + failed.memoryPressureCount.ToString()
     opened.RequestClose()
-    opened.Run()
+    Application.Run(opened)
     Require(!opened.IsOpen, "Image budget pressure gate window did not close")
   } finally {
     Console.SetError(originalError)
     if let active = window {
       if active.IsOpen {
         active.RequestClose()
-        active.Run()
+        Application.Run(active)
       }
     }
     for source in sources {

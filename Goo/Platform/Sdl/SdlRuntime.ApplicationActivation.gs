@@ -64,7 +64,7 @@ internal class SdlApplicationActivation {
                     break
                 }
             }
-            let initial = Window.IsInitialApplicationActivation
+            let initial = Application.IsInitialActivation
             if filesOnly {
                 Application.PostActivation(ApplicationActivation{
                     Kind: ApplicationActivationKind.OpenDocuments, IsInitial: initial, Documents: documents,

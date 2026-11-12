@@ -61,7 +61,7 @@ func WriteMemorySample(eventName string) {
 }
 
 func Main() {
-  Window.ConfigureApplication(
+  Application.Configure(
     "Goo consumer performance",
     "1.0.0",
     "io.github.obselate.goo.consumer-performance")
@@ -113,7 +113,7 @@ func Main() {
   closer.IsBackground = true
   closer.Start()
   try {
-    window.Run()
+    Application.Run(window)
   } finally {
     stopped.Set()
     closer.Join()

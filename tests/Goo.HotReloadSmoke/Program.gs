@@ -87,5 +87,5 @@ func Main() {
       }
     })
   }, nil, 100, 100)
-  first.Run()
+  Application.Run(first)
 }

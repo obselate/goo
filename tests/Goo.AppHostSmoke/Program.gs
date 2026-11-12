@@ -28,6 +28,18 @@ internal class Program {
             let identity = args[1]
             let root = Path.GetFullPath(args[2].Substring("--output=".Length))
             let tag = if args.Length == 4 { args[3] } else { mode }
+            Application.Configure("Goo application host smoke", "1.0", identity)
+            if mode == "graphics-unavailable" {
+                Environment.SetEnvironmentVariable("VK_DRIVER_FILES", Path.Combine(root, "missing-driver.json"))
+                let window = Window{Width: 160, Height: 100, Root: Cell()}
+                try {
+                    window.Open()
+                    throw InvalidOperationException("A missing Vulkan driver opened a window")
+                } catch (error GraphicsUnavailableException) {
+                    Require(!window.IsOpen && error.Message.Length != 0, "Graphics failure did not close the native window")
+                }
+                return 0
+            }
             if mode == "clipboard" {
                 RunClipboard(identity, root)
                 return 0
@@ -49,24 +61,22 @@ internal class Program {
                 return 0
             }
             if mode == "closed" {
-                Require(Acquire(identity, ApplicationActivation{}).Status == SingleInstanceStatus.Rejected, "Closed queue was accepted")
+                Require(Application.AcquireSingleInstance([]string{}).Status == SingleInstanceStatus.Rejected, "Closed queue was accepted")
                 File.WriteAllText(Path.Combine(root, "closed.done"), "passed")
                 return 0
             }
             if mode == "timeout" {
-                let result = SingleInstance.AcquireAsync(identity, ApplicationActivation{}, 200).GetAwaiter().GetResult()
+                let result = Application.AcquireSingleInstance([]string{}, 200.0)
                 Require(result.Status == SingleInstanceStatus.TimedOut && result.Lease == nil, "Timeout elected another primary")
                 return 0
             }
             if mode == "unsupported" {
                 Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", "")
-                Require(Acquire(identity, ApplicationActivation{}).Status == SingleInstanceStatus.Unsupported, "Missing runtime context was accepted")
+                Require(Application.AcquireSingleInstance([]string{}).Status == SingleInstanceStatus.Unsupported, "Missing runtime context was accepted")
                 return 0
             }
-            let initial = ApplicationActivation{ IsInitial: true, WorkingDirectory: Environment.CurrentDirectory }
-            Require(Window.InitializeApplicationActivation(initial) == WindowOperationResult.Accepted, "Initialization failed")
             if mode == "elect" { WaitFor(Path.Combine(root, "start")) }
-            let election = Acquire(identity, initial)
+            let election = Application.AcquireSingleInstance([]string{})
             let statusPath = Path.Combine(root, tag + ".status")
             let temporaryStatusPath = statusPath + ".new"
             File.WriteAllText(temporaryStatusPath, election.Status.ToString())
@@ -86,7 +96,7 @@ internal class Program {
             }
             let received = List[ApplicationActivation]()
             let owner = Environment.CurrentManagedThreadId
-            let currentToken = typeof(Window).GetProperty("CurrentActivationToken", BindingFlags.Static | BindingFlags.NonPublic)!!
+            let currentToken = typeof(Application).GetProperty("CurrentActivationToken", BindingFlags.Static | BindingFlags.NonPublic)!!
             let handler Action[ApplicationActivation] = value -> {
                 Require(Environment.CurrentManagedThreadId == owner, "Activation left the owner thread")
                 var expectedToken string? = nil
@@ -94,49 +104,41 @@ internal class Program {
                 Require((currentToken.GetValue(nil) as string?) == expectedToken, "Native activation token changed")
                 received.Add(value)
             }
-            Window.ApplicationActivated += handler
+            Application.Activated += handler
             try {
                 WaitFor(Path.Combine(root, "send.done"))
-                typeof(Window).GetMethod("DrainApplicationActivations", BindingFlags.Static | BindingFlags.NonPublic)!!.Invoke(nil, nil)
+                typeof(Application).GetMethod("DrainActivations", BindingFlags.Static | BindingFlags.NonPublic)!!.Invoke(nil, nil)
                 Require(currentToken.GetValue(nil) == nil, "Native activation token escaped its callback")
                 Verify(received, root)
-                typeof(Window).GetMethod("CloseApplicationActivations", BindingFlags.Static | BindingFlags.NonPublic)!!.Invoke(nil, nil)
+                typeof(Application).GetMethod("CloseActivations", BindingFlags.Static | BindingFlags.NonPublic)!!.Invoke(nil, nil)
                 File.WriteAllText(Path.Combine(root, "closed.ready"), "ready")
                 WaitFor(Path.Combine(root, "closed.done"))
-            } finally { Window.ApplicationActivated -= handler }
+            } finally { Application.Activated -= handler }
             File.WriteAllText(Path.Combine(root, "passed"), "passed")
             return 0
         }
 
-        private func Acquire(identity string, value ApplicationActivation) SingleInstanceResult ->
-            SingleInstance.AcquireAsync(identity, value).GetAwaiter().GetResult()
-
-        private func Parsed(arguments []string, directory string) ApplicationActivation {
-            let result = ActivationArguments.Read(arguments, directory)
-            Require(result.Status == ActivationReadStatus.Accepted && result.Activation != nil, result.Error)
-            return result.Activation!!
-        }
 
         private func Send(identity string, root string) {
             if OperatingSystem.IsLinux() { Environment.SetEnvironmentVariable("XDG_ACTIVATION_TOKEN", NativeToken) }
             let arguments = (ExpectedArguments.Clone() as []string)!!
             let directory = Environment.CurrentDirectory
-            let requests = []ApplicationActivation{
-                Parsed(arguments, directory),
-                Parsed([]string{"--goo-open-uri", Link}, directory),
-                Parsed([]string{"--goo-open-documents", "one file.txt", Document}, directory),
-                Parsed([]string{"--goo-notification", "example-private://goo-notification/activate?id=notice&action=open&data=opaque%20%CE%BB"}, directory),
+            let requests = [][]string{
+                arguments,
+                []string{"--goo-open-uri", Link},
+                []string{"--goo-open-documents", "one file.txt", Document},
+                []string{"--goo-notification", "example-private://goo-notification/activate?id=notice&action=open&data=opaque%20%CE%BB"},
             }
             for request in requests {
-                let result = Acquire(identity, request)
+                let result = Application.AcquireSingleInstance(request)
                 Require(result.Status == SingleInstanceStatus.Forwarded && result.Lease == nil, "${result.Status}: ${result.Error}")
             }
             arguments[1] = "changed after forwarding"
-            let tooLarge = Acquire(identity, ApplicationActivation{ Arguments: []string{String('x', 65537)} })
+            let tooLarge = Application.AcquireSingleInstance([]string{String('x', 65537)})
             Require(tooLarge.Status == SingleInstanceStatus.Rejected, "Oversized request was accepted")
             if OperatingSystem.IsLinux() {
                 Environment.SetEnvironmentVariable("XDG_ACTIVATION_TOKEN", String('x', 65516))
-                Require(Acquire(identity, ApplicationActivation{}).Status == SingleInstanceStatus.Rejected, "Oversized native token was accepted")
+                Require(Application.AcquireSingleInstance([]string{}).Status == SingleInstanceStatus.Rejected, "Oversized native token was accepted")
                 Environment.SetEnvironmentVariable("XDG_ACTIVATION_TOKEN", NativeToken)
             }
             let invalidArguments = [][]string{
@@ -196,11 +198,9 @@ internal class Program {
                 File.WriteAllLines(path + ".new", []string{value.Kind.ToString(), if value.IsInitial { "initial" } else { "warm" }, target})
                 File.Move(path + ".new", path)
             }
-            Window.ApplicationActivated += handler
+            Application.Activated += handler
             try {
-                let initial = Parsed(arguments, Environment.CurrentDirectory)
-                Require(Window.InitializeApplicationActivation(initial) == WindowOperationResult.Accepted, "Native initialization failed")
-                let result = Acquire(identity, initial)
+                let result = Application.AcquireSingleInstance(arguments)
                 if result.Status == SingleInstanceStatus.Forwarded { return }
                 Require(result.Status == SingleInstanceStatus.Primary && result.Lease != nil, "${result.Status}: ${result.Error}")
                 {
@@ -209,7 +209,7 @@ internal class Program {
                         native = Window{ Width: 160, Height: 100, Root: Cell() }.Open()
                     }
                     File.WriteAllText(Path.Combine(root, "pid"), Environment.ProcessId.ToString())
-                    let drain = typeof(Window).GetMethod("DrainApplicationActivations", BindingFlags.Static | BindingFlags.NonPublic)!!
+                    let drain = typeof(Application).GetMethod("DrainActivations", BindingFlags.Static | BindingFlags.NonPublic)!!
                     let stop = Path.Combine(root, "stop")
                     let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 40
                     while !File.Exists(stop) && Stopwatch.GetTimestamp() < deadline {
@@ -226,7 +226,7 @@ internal class Program {
             } catch (error Exception) {
                 File.WriteAllText(Path.Combine(root, "error"), error.ToString())
                 throw error
-            } finally { Window.ApplicationActivated -= handler }
+            } finally { Application.Activated -= handler }
         }
 
         private func RunPlacement(root string, mode string) {
@@ -398,7 +398,7 @@ internal class Program {
                 if File.Exists(Path.Combine(root, "stop")) { main.RequestClose() }
             })
             try {
-                main.Run()
+                Application.Run(main)
                 File.WriteAllText(Path.Combine(root, "exited"), "${main.IsOpen},${child.IsOpen},$closing")
             } finally {
                 tray?.Dispose()

@@ -7,6 +7,7 @@ import Xunit
 internal shared class TestApplication {
     @ModuleInitializer
     internal func Configure() {
-        Window.ConfigureApplication("Goo Tests", "0.1.0", "io.github.obselate.goo.tests")
+        Application.Configure(typeof(TestApplication).Assembly)
+        Application.Configure("Goo Tests", "0.1.0", "io.github.obselate.goo.tests")
     }
 }

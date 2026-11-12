@@ -50,9 +50,10 @@ func RunApplicationActivationSmoke(results string) {
     }
     Directory.CreateDirectory(results)
     WriteActivationResult(results, "pid.txt", Environment.ProcessId.ToString())
-    Window.ApplicationActivated += callback
-    ActivationSmokeRequire(Window.InitializeApplicationActivation(ApplicationActivation{ IsInitial: true })
-        == WindowOperationResult.Accepted, "Activation initialization failed")
+    Application.Activated += callback
+    let instance = Application.AcquireSingleInstance([]string{})
+    ActivationSmokeRequire(instance.Status == SingleInstanceStatus.Primary, "Activation initialization failed")
+    using let lease = instance.Lease
     try {
         window.Open()
         let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 30
@@ -65,7 +66,7 @@ func RunApplicationActivationSmoke(results string) {
         WriteActivationResult(results, "error.txt", error.ToString())
         throw error
     } finally {
-        Window.ApplicationActivated -= callback
+        Application.Activated -= callback
         ActivationSmokeRequire(CloseWindow(window), "Activation smoke window did not close")
     }
     WriteActivationResult(results, "passed.txt")

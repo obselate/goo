@@ -110,7 +110,7 @@ class NativeGlassWindow {
                     }
                 }
             )
-            window.Run()
+            Application.Run(window)
         }
     }
 }
