@@ -244,8 +244,8 @@ internal class Program {
                         oversized.Pump(0.005)
                         Thread.Sleep(5)
                     }
-                    Require(oversized.Width <= int32(usable.Width) && oversized.Height <= int32(usable.Height),
-                        "Oversized window left the usable bounds: ${oversized.Width}x${oversized.Height} in $usable")
+                    Require(oversized.NativeWidth <= int32(usable.Width) && oversized.NativeHeight <= int32(usable.Height),
+                        "Oversized window left the usable bounds: ${oversized.NativeWidth}x${oversized.NativeHeight} in $usable")
                     if OperatingSystem.IsWindows() { RequireFrameInside(FindWindowW(nint(0), "Goo placement oversized"), usable) }
                 } finally {
                     oversized.RequestClose()
