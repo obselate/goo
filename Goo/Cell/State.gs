@@ -4,9 +4,13 @@ import System
 import System.Collections.Generic
 import System.Threading
 
+internal interface StateSubscriber {
+  func Rebuild();
+}
+
 /// Base type of tracked Cell state.
 public abstract class StateDependency {
-  private var readers List[Cell]?
+  private var readers List[StateSubscriber]?
   private var threadId int32
 
   internal open func IsSafePayload() bool -> false
@@ -16,27 +20,31 @@ public abstract class StateDependency {
     if owner != 0 && Environment.CurrentManagedThreadId != owner {
       throw InvalidOperationException("State writes require the UI thread of its first reader.")
     }
-    if Cell.StateReader != nil || ContextEnvironment.StateReader != nil {
+    if Cell.StateReader != nil || StateReadScope.Current != nil || ContextEnvironment.StateReader != nil {
       throw InvalidOperationException("State writes are not allowed during Build.")
     }
   }
 
-  internal func AddReader(cell Cell) {
+  internal func AddReader(reader StateSubscriber) {
     let current = Environment.CurrentManagedThreadId
     var owner = Volatile.Read(&threadId)
     if owner == 0 { owner = Interlocked.CompareExchange(&threadId, current, 0) }
     if owner != 0 && owner != current {
       throw InvalidOperationException("State cannot be read by Cells on different UI threads.")
     }
-    readers ??= List[Cell]()
-    readers!!.Add(cell)
+    readers ??= List[StateSubscriber]()
+    readers!!.Add(reader)
   }
 
-  internal func RemoveReader(cell Cell) { readers?.Remove(cell) }
+  internal func RemoveReader(reader StateSubscriber) { readers?.Remove(reader) }
 
   internal func Read() {
     if let reader = Cell.StateReader {
       reader.ReadState(this)
+      return
+    }
+    if let builderScope = StateReadScope.Current {
+      builderScope.ReadState(this)
       return
     }
     ContextEnvironment.StateReader?.ReadState(this)

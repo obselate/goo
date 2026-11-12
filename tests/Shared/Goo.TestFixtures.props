@@ -7,6 +7,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Accessibility/AccessibilityFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Cell/CellFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Cell/ContextFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Cell/StateFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Input/FixtureKeyBindings.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Input/CoreInputFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Input/DragDropFixtures.gs" />
