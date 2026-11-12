@@ -47,6 +47,8 @@ public class Container : Blob {
   public prop OnPointerDrag((PointerDragEvent) -> void)? { get; init; }
   /// Gets the distance in logical units before a drag starts. Zero starts on press.
   public prop PointerDragThreshold float64 { get; init; }
+  /// Gets the axis measured by the threshold. Off-axis movement alone does not start a drag.
+  public prop PointerDragAxis Goo.Gestures.PanAxis { get; init; }
 
   /// Initializes an empty child collection.
   public init() { }

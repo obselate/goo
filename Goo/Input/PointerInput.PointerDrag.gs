@@ -9,6 +9,7 @@ internal class PointerDragState {
   internal var Callback((PointerDragEvent) -> void)?
   internal var WindowOrigin Point
   internal var Threshold float64
+  internal var Axis Goo.Gestures.PanAxis
   internal var Started bool
   internal var Last PointerDragEvent
 }
@@ -22,6 +23,7 @@ internal partial class PointerInput {
         Target: NodeMount(node), Owner: CellOwnership.InRoute(route, index),
         Callback: node.OnPointerDrag, WindowOrigin: event.WindowPosition,
         Threshold: Math.Max(0.0, node.PointerDragThreshold),
+        Axis: node.PointerDragAxis,
       }
       event.Capture()
     }
@@ -37,7 +39,9 @@ internal partial class PointerInput {
         current.PointerDrag = nil
         return
       }
-      if distanceX * distanceX + distanceY * distanceY < state.Threshold * state.Threshold { return }
+      let x = state.Axis == Goo.Gestures.PanAxis.Vertical ? 0.0 : distanceX
+      let y = state.Axis == Goo.Gestures.PanAxis.Horizontal ? 0.0 : distanceY
+      if x * x + y * y < state.Threshold * state.Threshold { return }
       state.Started = true
       phase = PointerDragPhase.Started
     } else if kind == PointerEventKind.Press { return }

@@ -55,6 +55,7 @@ internal class NodePointerState {
     internal var OnPointerCancel((PointerEvent) -> void)?
     internal var OnPointerDrag((PointerDragEvent) -> void)?
     internal var PointerDragThreshold float64
+    internal var PointerDragAxis Goo.Gestures.PanAxis
     internal var OnWheel((WheelEvent) -> void)?
 }
 
