@@ -277,16 +277,14 @@ public open class Style {
   /// Sets the bottom-right border radius.
   public prop BorderBottomRightRadius Length{ init -> pushCheckedLength(StyleField.BorderBottomRightRadius, value, "BorderBottomRightRadius", false, false, false) }
   /// Sets box border widths in CSS top, right, bottom, left order.
-  /// A uniform value also sets the Shape stroke width.
   public prop BorderWidth Edges{ init -> pushBorderWidths(value) }
   /// Sets the box border width at the inline start edge.
   public prop BorderStartWidth Length{ init -> pushCheckedLength(StyleField.BorderStartWidth, value, "BorderStartWidth", false, false, false) }
   /// Sets the box border width at the inline end edge.
   public prop BorderEndWidth Length{ init -> pushCheckedLength(StyleField.BorderEndWidth, value, "BorderEndWidth", false, false, false) }
   /// Sets box border colors in CSS top, right, bottom, left order.
-  /// A uniform value also sets the Shape stroke color.
   public prop BorderColor Edges[Color]{ init -> pushBorderColors(value) }
-  /// Binds all border colors, including the Shape stroke.
+  /// Binds all box border colors.
   public prop BorderColorAnim Anim[Color]? {
     init {
       pushPaintColor(StyleField.ShapeStrokeColor, value)

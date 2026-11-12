@@ -121,9 +121,8 @@ class PublicDocumentationTests {
     @Fact
     func ApiReferenceDocumentsUniformShapeStrokeContract() {
         let shapes = ReadApiPage("shapes.md")
-        let style = ReadApiPage("style.md")
         Assert.Contains("Displays a vector path with fill and one uniform stroke.", shapes, StringComparison.Ordinal)
-        Assert.Contains("A uniform value also sets the Shape stroke width.", style, StringComparison.Ordinal)
+        Assert.Contains("Shape paint moved to Fill and Stroke", shapes, StringComparison.Ordinal)
     }
 
     @Fact
@@ -397,8 +396,7 @@ class PublicDocumentationTests {
             "M:Goo.VectorAsset.#ctor(System.Double,System.Double,System.Double,System.Double,Goo.VectorNode[])",
             "M:Goo.VectorAsset.NodeAt(System.Int32)",
             "M:Goo.VectorAsset.PathForNode(System.Int32)",
-            "M:Goo.VectorAsset.Render",
-            "M:Goo.VectorAsset.Render(System.String)",
+            "M:Goo.VectorAsset.Render(Goo.ShapeFit,System.String)",
             "M:Goo.VectorNode.#ctor(Goo.VectorNode[])",
             "M:Goo.VectorNode.#ctor(Goo.VectorPath)",
             "M:Goo.VectorNode.#ctor(Goo.VectorPath,Goo.VectorNodeStyle)",
@@ -525,6 +523,10 @@ class PublicDocumentationTests {
             "M:Goo.PathBuilder.Build",
             "M:Goo.PathBuilder.Close",
             "M:Goo.PathBuilder.CubicTo(System.Double,System.Double,System.Double,System.Double,System.Double,System.Double)",
+            "M:Goo.PathBuilder.Ellipse(System.Double,System.Double,System.Double,System.Double)",
+            "M:Goo.PathBuilder.Rectangle(System.Double,System.Double,System.Double,System.Double)",
+            "M:Goo.PathBuilder.RoundedRectangle(System.Double,System.Double,System.Double,System.Double,System.Double)",
+            "M:Goo.VectorPath.Parse(System.String,Goo.ElementRect)",
             "M:Goo.PathBuilder.LineTo(System.Double,System.Double)",
             "M:Goo.PathBuilder.MoveTo(System.Double,System.Double)",
             "M:Goo.PathBuilder.Polyline(Goo.Point[],System.Boolean)",
@@ -1311,6 +1313,21 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
                 true
+            ),
+            ["M:Goo.PathBuilder.Ellipse(System.Double,System.Double,System.Double,System.Double)"] = DocumentationShape(
+                []string{"x", "y", "width", "height"}, System.Array.Empty[string](), true
+            ),
+            ["M:Goo.PathBuilder.Rectangle(System.Double,System.Double,System.Double,System.Double)"] = DocumentationShape(
+                []string{"x", "y", "width", "height"}, System.Array.Empty[string](), true
+            ),
+            ["M:Goo.PathBuilder.RoundedRectangle(System.Double,System.Double,System.Double,System.Double,System.Double)"] = DocumentationShape(
+                []string{"x", "y", "width", "height", "radius"}, System.Array.Empty[string](), true
+            ),
+            ["M:Goo.VectorPath.Parse(System.String,Goo.ElementRect)"] = DocumentationShape(
+                []string{"data", "viewBox"}, System.Array.Empty[string](), true
+            ),
+            ["M:Goo.VectorAsset.Render(Goo.ShapeFit,System.String)"] = DocumentationShape(
+                []string{"fit", "key"}, System.Array.Empty[string](), true
             ),
             ["M:Goo.ShaderEffectData.Publish``1(System.ReadOnlySpan{``0})"] = DocumentationShape(
                 []string{"values"},
