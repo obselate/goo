@@ -24,15 +24,25 @@ internal class TextAnalysis {
   internal prop Additional [] ? TextParagraphAnalysis{ get; set; }
   internal prop ParagraphCount int32{ get; set; }
   internal var Measurements Dictionary[int64, float32]?
+  internal var InitialWrapWidth float32?
   private var measurementGeneration uint64
 
-  internal func WidthMeasurements() Dictionary[int64, float32] {
-    if Measurements == nil { Measurements = Dictionary[int64, float32]() }
+  internal func WidthMeasurements(width float32) Dictionary[int64, float32]? {
     if measurementGeneration != FontRegistry.Generation {
       Measurements?.Clear()
+      InitialWrapWidth = nil
       measurementGeneration = FontRegistry.Generation
     }
-    return Measurements!!
+    if Measurements == nil {
+      if let initialWidth = InitialWrapWidth {
+        if initialWidth == width { return nil }
+      } else {
+        InitialWrapWidth = width
+        return nil
+      }
+      Measurements = Dictionary[int64, float32]()
+    }
+    return Measurements
   }
 
   internal init() {
@@ -527,7 +537,8 @@ internal class TextAnalyses {
         result.Italic = italic
         result.LetterSpacing = letterSpacing
         result.Direction = direction
-        result.Measurements?.Clear()
+        result.Measurements = nil
+        result.InitialWrapWidth = nil
         result.ParagraphCount = paragraphCount(snapshot.Display)
         if result.ParagraphCount > 1 {
           let required = result.ParagraphCount - 1

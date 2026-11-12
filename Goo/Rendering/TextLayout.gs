@@ -406,7 +406,7 @@ internal class TextLayouts {
           return false
         }
         whole.Shape?.Dispose()
-        let measurements Dictionary[int64, float32]? = result.Rich == nil && !FrameBuildProbe.DisableWidthCache ? analysis.WidthMeasurements() : nil
+        let measurements Dictionary[int64, float32]? = result.Rich == nil && !FrameBuildProbe.DisableWidthCache ? analysis.WidthMeasurements(maxWidth) : nil
         let elements = UnicodeGraphemes.Starts(text)
         var wordStart int32 = 0
         for element in 1 ... elements.Length + 1 {
