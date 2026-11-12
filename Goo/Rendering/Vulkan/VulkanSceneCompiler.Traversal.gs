@@ -106,7 +106,7 @@ internal partial class VulkanSceneCompiler {
         node.ShaderEffect
       } else { nil }
       let generatorEffect = if let effect = shaderEffect { effect.SourceIndependent } else { false }
-      let isolatesOpacity = Portals.SourceChildCount(node) != 0 && localOpacity < 1.0F
+      let isolatesOpacity = localOpacity < 1.0F && Portals.SourceChildCount(node) != 0
       let isolatesBlend = blendModeSupported && BlendModeSupported(node.BlendMode)
         && node.BlendMode != BlendMode.Normal
       let combinesEffectAndBlend = shaderEffect != nil && isolatesBlend
