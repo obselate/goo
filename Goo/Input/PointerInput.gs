@@ -1159,19 +1159,12 @@ internal partial class PointerInput {
   }
 
   private func nodeVisibleInTree(root Node, target Node, hidden bool) bool {
-    let nowHidden = hidden || root.PaintInputHidden
-    if root == target {
-      return !nowHidden
-    }
-    for child in root.Children {
-      if nodeVisibleInTree(child, target, nowHidden) {
-        return true
-      }
-    }
-    for child in ScrollbarParts.Children(root) {
-      if nodeVisibleInTree(child, target, nowHidden) {
-        return true
-      }
+    if hidden { return false }
+    var current Node? = target
+    while let node = current {
+      if node.Retired || node.PaintInputHidden { return false }
+      if node == root { return true }
+      current = node.Parent
     }
     return false
   }
