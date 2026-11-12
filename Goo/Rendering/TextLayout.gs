@@ -312,7 +312,7 @@ internal class TextLayouts {
       }
       for i in 0 ... analysis.ParagraphCount {
         let paragraph = analysis.Paragraph(i)
-        result.Clamped = appendParagraph(result, geometry, n, paragraph, maxWidth)
+        result.Clamped = appendParagraph(result, geometry, n, paragraph, maxWidth, analysis)
         if result.Clamped {
           break
         }
@@ -373,7 +373,7 @@ internal class TextLayouts {
     }
 
     internal func appendParagraph(result TextLayout, geometry TextLayoutGeometry?, n Node,
-      paragraph TextParagraphAnalysis, maxWidth float32) bool{
+      paragraph TextParagraphAnalysis, maxWidth float32, analysis TextAnalysis) bool{
         if lineLimitReached(result, n) {
           return true
         }
@@ -406,6 +406,7 @@ internal class TextLayouts {
           return false
         }
         whole.Shape?.Dispose()
+        let measurements Dictionary[int64, float32]? = result.Rich == nil ? analysis.WidthMeasurements(maxWidth) : nil
         let elements = UnicodeGraphemes.Starts(text)
         var wordStart int32 = 0
         for element in 1 ... elements.Length + 1 {
@@ -413,7 +414,7 @@ internal class TextLayouts {
           if breakAfter(text, index) {
             result.MinWidth = MathF.Max(result.MinWidth, if result.Rich != nil {
               measureRichRange(n, paragraph, wordStart, index)
-            } else { TextFlow.MeasureBase(paragraph, wordStart, index) })
+            } else { TextFlow.MeasureBase(paragraph, wordStart, index, measurements) })
             wordStart = index
           }
         }
@@ -429,7 +430,7 @@ internal class TextLayouts {
             let width = if result.Rich != nil {
               measureRichRange(n, paragraph, startIndex, nextIndex)
             } else {
-              TextFlow.MeasureBase(paragraph, startIndex, nextIndex)
+              TextFlow.MeasureBase(paragraph, startIndex, nextIndex, measurements)
             }
             let decision = TextFlow.Consider(cursor, fit, opportunity, overflowed, next,
               width, maxWidth, breakAfter(text, nextIndex))
