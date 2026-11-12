@@ -61,6 +61,7 @@ internal sealed class DecodedImage {
   internal prop Width int32{ get; private set; }
   internal prop Height int32{ get; private set; }
   internal prop IsValid bool{ get -> pixels != nil && !disposed }
+  internal prop CacheOnly bool{ get { lock gate { return references == 1 && !disposed } } }
 
   internal func Profile(recorder FrameRecorder, baseline bool) uint64 {
     let id = recorder.ManagedResource(this, out var first)

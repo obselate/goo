@@ -6,3 +6,4 @@
 - Allow a nested posted-action drain to consume the remaining queue without a dequeue error.
 - Preserve application stack frames when cleanup, native callbacks and deferred rendering errors are delivered.
 - Coalesce pending SDL wake events and avoid faulting GPU completion when the event queue is full.
+- Evict least-recently-used image cache entries that no returned source or mounted lease owns.

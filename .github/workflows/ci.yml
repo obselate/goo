@@ -1871,6 +1871,8 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         with:
           global-json-file: global.json
+      - name: Verify image cache path comparer
+        run: dotnet test tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.gsproj -c Release -p:TreatWarningsAsErrors=true --filter FullyQualifiedName~CacheEvictionUsesThePlatformPathComparer
       - name: Verify NativeAOT application hosting on Windows
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
