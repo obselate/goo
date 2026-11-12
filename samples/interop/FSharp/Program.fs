@@ -51,7 +51,7 @@ type EqualColumn() =
                 let child = context.MeasureChild(i, available)
                 width <- max width child.Width
                 height <- height + child.Height
-            LayoutSize(Width = min width available.Width, Height = min height available.Height)
+            LayoutSize(min width available.Width, min height available.Height)
         member _.Arrange(context, finalSize) =
             let height = if context.ChildCount = 0 then 0. else finalSize.Height / float context.ChildCount
             for i in 0 .. context.ChildCount - 1 do
