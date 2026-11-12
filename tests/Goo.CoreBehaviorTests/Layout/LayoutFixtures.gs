@@ -6,6 +6,46 @@ import System.Collections.Generic
 import System.Text
 
 internal class LayoutFixtures {
+  func CustomLayoutResolvesLengthsInItsViewport() bool {
+    let policy = LengthContextFixture()
+    let root = Reconciler{Res: Resolver{}}.Mount(Container{Width: 400, Height: 200, FontSize: 20,
+      Container{Width: 200, Height: 100, Layout: policy}})
+    Layout().Calculate(root, 400.0F, 200.0F)
+    if !policy.Valid || policy.Calls < 1 { return false }
+    try { let ignored = policy.Context!!.ResolveLength(Em(1), LayoutAxis.Horizontal) }
+    catch (_ InvalidOperationException) { return true }
+    return false
+  }
+
+  func IntrinsicLimitsUseOwnerConstraints() bool {
+    let content = (width Length) -> Container{Width: width, FlexDirection: FlexDirection.Row, FlexWrap: FlexWrap.Wrap,
+      Container{Width: 40, Height: 10, FlexShrink: 0},
+      Container{Width: 40, Height: 10, FlexShrink: 0},
+      Container{Width: 40, Height: 10, FlexShrink: 0}}
+    let definite = content(Length.FitContent(Percent(50)))
+    let mixed = content(Length.FitContent(Percent(25) + 10))
+    let cyclic = content(Length.FitContent(Percent(50)))
+    let nested = content(Length.FitContent(Percent(50)))
+    let root = Reconciler{Res: Resolver{}}.Mount(Container{Width: 400, Height: 400, AlignItems: AlignItems.FlexStart,
+      Container{Width: 160, AlignItems: AlignItems.FlexStart, definite},
+      Container{Width: 200, AlignItems: AlignItems.FlexStart, mixed},
+      Container{Width: Length.MaxContent, AlignItems: AlignItems.FlexStart, cyclic},
+      Container{Width: Length.MaxContent, AlignItems: AlignItems.FlexStart,
+        Container{Width: Length.MaxContent, AlignItems: AlignItems.FlexStart, nested}}
+    })
+    Layout().Calculate(root, 400.0F, 400.0F)
+    let a = root.Children[0].Children[0].Rect.W
+    let b = root.Children[1].Children[0].Rect.W
+    let c = root.Children[2].Children[0].Rect.W
+    let d = root.Children[3].Children[0].Children[0].Rect.W
+    if a != 80.0F || b != 60.0F || c != 60.0F || d != 60.0F
+      || root.Children[2].Rect.W != 120.0F || root.Children[3].Rect.W != 120.0F
+      || root.Children[3].Children[0].Rect.W != 120.0F {
+      throw InvalidOperationException("intrinsic owner limits: $a, $b, $c, $d")
+    }
+    return true
+  }
+
   func RelativeLengthsResolveFirstLayoutAndResize() bool {
     let resolver = Resolver{}
     let reconciler = Reconciler{Res: resolver}
@@ -1143,4 +1183,28 @@ internal class DensityFixtureLayout : LayoutAlgorithm {
   public func Arrange(context LayoutContext, finalSize LayoutSize) {
     context.ArrangeChild(0, ElementRect{ Width: finalSize.Width, Height: finalSize.Height })
   }
+}
+
+internal class LengthContextFixture : LayoutAlgorithm {
+  internal var Context LayoutContext?
+  internal var Valid bool = true
+  internal var Calls int32
+
+  private func Check(context LayoutContext, available LayoutSize) {
+    Context = context
+    Calls++
+    let horizontal = context.ResolveLength(Percent(50) + Vw(10) - Em(1), LayoutAxis.Horizontal)
+    let vertical = context.ResolveLength(Percent(25) + Vh(10), LayoutAxis.Vertical)
+    Valid = Valid && horizontal == available.Width * 0.5 + 20.0
+      && vertical == available.Height * 0.25 + 20.0
+      && context.ResolveLength(Length.Auto, LayoutAxis.Horizontal) == nil
+      && context.ResolveLength(Length.MinContent, LayoutAxis.Horizontal) == nil
+  }
+
+  public func Measure(context LayoutContext, available LayoutSize) LayoutSize {
+    Check(context, available)
+    return available
+  }
+
+  public func Arrange(context LayoutContext, finalSize LayoutSize) { Check(context, finalSize) }
 }

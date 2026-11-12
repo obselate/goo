@@ -111,6 +111,8 @@ internal func normalizeLength(value Length) Length {
 /// @param right The second length.
 /// @returns Their mixed-unit sum.
 public func(left Length) operator + (right Length) Length {
+  if left.Unit == LengthUnit.Px && right.Unit == LengthUnit.Px { return float64(left.Value + right.Value) }
+  if left.Unit == LengthUnit.Percent && right.Unit == LengthUnit.Percent { return Percent(float64(left.Value + right.Value)) }
   let a = lengthParts(left)
   let b = lengthParts(right)
   return normalizeLength(Length{Unit: LengthUnit.Relative, Value: a.Value + b.Value,
@@ -129,6 +131,8 @@ public func(left Length) operator - (right Length) Length -> left + right * -1.0
 /// @param scale The multiplier.
 /// @returns The scaled length.
 public func(value Length) operator * (scale float64) Length {
+  if value.Unit == LengthUnit.Px { return float64(value.Value) * scale }
+  if value.Unit == LengthUnit.Percent { return Percent(float64(value.Value) * scale) }
   let source = lengthParts(value)
   let factor = float32(scale)
   if value.Unit == LengthUnit.Em { return Em(float64(value.EmPart) * scale) }

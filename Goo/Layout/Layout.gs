@@ -80,6 +80,14 @@ internal partial class Layout {
       syncNode(root, true)
       structureDirty = false
     }
+    if let overlays = overlayRoot {
+      overlays.Rect = Rect{W: width, H: height}
+      if portalStructureDirty || overlays != portalRoot {
+        for portal in overlays.Children { syncNode(portal, true) }
+        portalStructureDirty = false
+        portalRoot = overlays
+      }
+    }
     guard let yg = root.Yoga else {
       return
     }
@@ -103,13 +111,6 @@ internal partial class Layout {
   }
 
   private func CalculatePortals(sourceRoot Node, overlayRoot Node, width float32, height float32) {
-    overlayRoot.Rect = Rect{ W: width, H: height }
-    if portalStructureDirty || overlayRoot != portalRoot {
-      for portal in overlayRoot.Children {
-        syncNode(portal, true)
-      }
-      portalStructureDirty = false
-    }
     let resized = !portalLaidOut || width != portalLastWidth || height != portalLastHeight
     for portal in overlayRoot.Children {
       guard let yoga = portal.Yoga else { continue }
@@ -124,6 +125,7 @@ internal partial class Layout {
       if resized || YGNodeAPI.YGNodeIsDirty(yoga) {
         YGNodeAPI.YGNodeCalculateLayout(yoga, width, height,
           yogaDirection(portal.Direction))
+        resolveFinalIntrinsic(portal, width, height)
       }
     }
     placePortals(sourceRoot, overlayRoot, width, height)
@@ -139,6 +141,7 @@ internal partial class Layout {
     structureDirty = true
     portalStructureDirty = true
     scrollListDirty = true
+    lengthRoot = nil
   }
 
   // Cached flat list of scrolling nodes so per-pump scroll work is
@@ -327,13 +330,13 @@ internal partial class Layout {
   private func applyPortalConstraints(yoga Facebook.Yoga.Node, portal Node,
     availableWidth float32, availableHeight float32) {
       YGNodeStyleAPI.YGNodeStyleSetMinWidth(yoga,
-        portalMinimum(portal.MinWidth, availableWidth))
+        portalMinimum(portal.MinWidth, availableWidth, portal, StyleField.MinWidth))
       YGNodeStyleAPI.YGNodeStyleSetMinHeight(yoga,
-        portalMinimum(portal.MinHeight, availableHeight))
+        portalMinimum(portal.MinHeight, availableHeight, portal, StyleField.MinHeight))
       YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga,
-        portalMaximum(portal.MaxWidth, availableWidth))
+        portalMaximum(portal.MaxWidth, availableWidth, portal, StyleField.MaxWidth))
       YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga,
-        portalMaximum(portal.MaxHeight, availableHeight))
+        portalMaximum(portal.MaxHeight, availableHeight, portal, StyleField.MaxHeight))
     }
 
   private func restorePortalConstraints(yoga Facebook.Yoga.Node, portal Node) {
@@ -342,20 +345,34 @@ internal partial class Layout {
     markYogaStyle(portal, StyleField.MaxWidth)
     markYogaStyle(portal, StyleField.MaxHeight)
     applyMinMax(yoga, portal)
+    if let state = LengthDeclarations.Get(portal) {
+      for entry in state.Values {
+        if entry.Field <= StyleField.MaxHeight && entry.Field >= StyleField.MinWidth
+          && entry.Value.PercentPart != 0.0F {
+          applyMixedLength(portal, entry.Field, entry.Pixels, entry.Percent, entry.EdgeValue!!)
+        }
+      }
+    }
   }
 
-  private func portalMinimum(value Length, available float32) float32 {
+  private func portalMinimum(value NodeLength, available float32, node Node, field StyleField) float32 {
     if value.Unit == LengthUnit.Px { return clampPortalSize(value.Value, available) }
     if value.Unit == LengthUnit.Percent {
       return clampPortalSize(available * value.Value / 100.0F, available)
     }
+    if value.Unit == LengthUnit.Relative {
+      return clampPortalSize(LengthDeclarations.StoredPixels(node, field, available), available)
+    }
     return Single.NaN
   }
 
-  private func portalMaximum(value Length, available float32) float32 {
+  private func portalMaximum(value NodeLength, available float32, node Node, field StyleField) float32 {
     if value.Unit == LengthUnit.Px { return clampPortalSize(value.Value, available) }
     if value.Unit == LengthUnit.Percent {
       return clampPortalSize(available * value.Value / 100.0F, available)
+    }
+    if value.Unit == LengthUnit.Relative {
+      return clampPortalSize(LengthDeclarations.StoredPixels(node, field, available), available)
     }
     return available
   }
@@ -424,14 +441,14 @@ internal partial class Layout {
           let space = portalSideSpace(placement, bounds, collision)
           if vertical {
             YGNodeStyleAPI.YGNodeStyleSetMinHeight(yoga,
-              MathF.Min(portalMinimum(portal.MinHeight, availableHeight), space))
+              MathF.Min(portalMinimum(portal.MinHeight, availableHeight, portal, StyleField.MinHeight), space))
             YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga,
-              MathF.Min(portalMaximum(portal.MaxHeight, availableHeight), space))
+              MathF.Min(portalMaximum(portal.MaxHeight, availableHeight, portal, StyleField.MaxHeight), space))
           } else {
             YGNodeStyleAPI.YGNodeStyleSetMinWidth(yoga,
-              MathF.Min(portalMinimum(portal.MinWidth, availableWidth), space))
+              MathF.Min(portalMinimum(portal.MinWidth, availableWidth, portal, StyleField.MinWidth), space))
             YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga,
-              MathF.Min(portalMaximum(portal.MaxWidth, availableWidth), space))
+              MathF.Min(portalMaximum(portal.MaxWidth, availableWidth, portal, StyleField.MaxWidth), space))
           }
           if YGNodeAPI.YGNodeIsDirty(yoga) {
             YGNodeAPI.YGNodeCalculateLayout(yoga, width, height, yogaDirection(portal.Direction))
@@ -913,7 +930,7 @@ internal func applyEdges(yg Facebook.Yoga.Node, n Node) {
 }
 
 internal func applyPaddingEdge(
-  yg Facebook.Yoga.Node, n Node, edge YGEdge, v Length, field StyleField) {
+  yg Facebook.Yoga.Node, n Node, edge YGEdge, v NodeLength, field StyleField) {
     switch v.Unit {
       case LengthUnit.Px {
         YGNodeStyleAPI.YGNodeStyleSetPadding(yg, edge, v.Value)
@@ -931,7 +948,7 @@ internal func applyPaddingEdge(
     }
   }
 
-internal func applyBorderEdge(yg Facebook.Yoga.Node, edge YGEdge, width Length) {
+internal func applyBorderEdge(yg Facebook.Yoga.Node, edge YGEdge, width NodeLength) {
   let value = width.Unit == LengthUnit.Px ? width.Value : 0.0F
   if YGNodeStyleAPI.YGNodeStyleGetBorder(yg, edge) != value {
     YGNodeStyleAPI.YGNodeStyleSetBorder(yg, edge, value)
@@ -953,7 +970,7 @@ internal func applyBorderEdges(yg Facebook.Yoga.Node, n Node) {
 }
 
 internal func applyMarginEdge(
-  yg Facebook.Yoga.Node, n Node, edge YGEdge, v Length, field StyleField) {
+  yg Facebook.Yoga.Node, n Node, edge YGEdge, v NodeLength, field StyleField) {
     switch v.Unit {
       case LengthUnit.Px {
         YGNodeStyleAPI.YGNodeStyleSetMargin(yg, edge, v.Value)
@@ -1138,7 +1155,7 @@ internal func applyFlexLayout(yg Facebook.Yoga.Node, n Node, isRoot bool) {
   }
 }
 
-internal func isSized(v Length) bool -> v.Unit == LengthUnit.Px || v.Unit == LengthUnit.Percent
+internal func isSized(v NodeLength) bool -> v.Unit == LengthUnit.Px || v.Unit == LengthUnit.Percent
 
 internal func mapAlignItems(a AlignItems) YGAlign -> switch a {
   case AlignItems.Stretch: YGAlign.Stretch
@@ -1181,7 +1198,7 @@ internal func applyPosition(yg Facebook.Yoga.Node, n Node) {
 }
 
 internal func applyPositionEdge(
-  yg Facebook.Yoga.Node, n Node, edge YGEdge, v Length, field StyleField) {
+  yg Facebook.Yoga.Node, n Node, edge YGEdge, v NodeLength, field StyleField) {
     switch v.Unit {
       case LengthUnit.Px {
         YGNodeStyleAPI.YGNodeStyleSetPosition(yg, edge, v.Value)

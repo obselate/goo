@@ -28,8 +28,6 @@ internal class ResolvedLength {
   internal var Field StyleField
   internal var Value Length
   internal var Pixels float32 = Single.NaN
-  internal var ConstraintWidth float32 = Single.NaN
-  internal var ConstraintHeight float32 = Single.NaN
   internal var Percent float32 = Single.NaN
   internal var EdgeValue StyleLength?
   internal var IntrinsicCache IntrinsicLengthCache?
@@ -85,6 +83,15 @@ internal class LengthDeclarations {
       return nil
     }
 
+    internal func StoredPixels(node Node, field StyleField, basis float32) float32 {
+      if let state = Get(node) {
+        for entry in state.Values {
+          if entry.Field == field { return entry.Pixels + entry.Value.PercentPart * basis / 100.0F }
+        }
+      }
+      return Single.NaN
+    }
+
     internal func Set(node Node, entry StyleEntry, resolver Resolver) {
       let source = entry.Payload as LengthDeclaration
       var state = Get(node)
@@ -99,6 +106,8 @@ internal class LengthDeclarations {
       for i in 0 ... list.Count {
         if list[i].Field != entry.Field { continue }
         if let declaration = source {
+          if sameLength(list[i].Value, declaration.Value) { return }
+          list[i].IntrinsicCache?.Clear()
           list[i].Value = declaration.Value
           list[i].Pixels = Single.NaN
         } else { list.RemoveAt(i) }
@@ -128,7 +137,7 @@ internal partial class Layout {
   private var lengthRevision int64 = -1L
   private var lengthRoot Node?
   private var lengthNodes List[LengthNode]?
-  private var maximumIntrinsicLevel int32
+  private var maximumIntrinsicLevel int32 = -1
   private var intrinsicPending bool
 
   private func collectLengths(node Node, level int32 = 0) {
@@ -150,7 +159,7 @@ internal partial class Layout {
   private func resolveLengths(root Node, width float32, height float32) {
     if lengthRevision != LengthDeclarations.Revision || lengthRoot != root {
       lengthNodes?.Clear()
-      maximumIntrinsicLevel = 0
+      maximumIntrinsicLevel = -1
       if LengthDeclarations.Revision != 0L { collectLengths(root) }
       lengthRevision = LengthDeclarations.Revision
       lengthRoot = root
@@ -175,8 +184,13 @@ internal partial class Layout {
         }
       }
     }
-    intrinsicPending = !laidOut || root != lastRoot || width != lastWidth || height != lastHeight
-      || root.Yoga?.IsDirty() == true
+    intrinsicPending = maximumIntrinsicLevel >= 0 && (!laidOut || root != lastRoot || width != lastWidth
+      || height != lastHeight || root.Yoga?.IsDirty() == true)
+    if maximumIntrinsicLevel >= 0 && !intrinsicPending {
+      for state in nodes {
+        if state.Node.Yoga?.IsDirty() == true { intrinsicPending = true }
+      }
+    }
     if !intrinsicPending { return }
     for state in nodes {
       if state.Node.Yoga?.IsDirty() == true {
@@ -197,6 +211,7 @@ internal partial class Layout {
     for level in 0 ... maximumIntrinsicLevel + 1 {
       for state in nodes {
         if state.IntrinsicLevel != level { continue }
+        if !belongsToLayout(state.Node, root) { continue }
         for entry in state.Values {
           if entry.Value.IsIntrinsic { resolveIntrinsic(state, entry, width, height, false) }
         }
@@ -205,6 +220,16 @@ internal partial class Layout {
         YGNodeAPI.YGNodeCalculateLayout(yoga, width, height, yogaDirection(root.Direction))
       }
     }
+  }
+
+  private func belongsToLayout(node Node, root Node) bool {
+    var current = node
+    while current != root {
+      if current.IsPortal { return false }
+      guard let parent = current.Parent else { return false }
+      current = parent
+    }
+    return true
   }
 
   private func resolveLength(state LengthNode, entry ResolvedLength, width float32, height float32) {
@@ -249,8 +274,6 @@ internal partial class Layout {
           ? maximum : MathF.Min(maximum, MathF.Max(minimum, limit))
       }
     }
-    entry.ConstraintWidth = width
-    entry.ConstraintHeight = height
     entry.Pixels = result
     writeDirectWithInvalidation(node,
       StyleEntry{Field: entry.Field, A: result, B: float32(int32(LengthUnit.Px))}, nil, state.Resolver.Owner)

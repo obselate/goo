@@ -311,7 +311,7 @@ internal class CustomLayouts {
     internal func Inset(yoga Facebook.Yoga.Node, edge YGEdge) float32 -> YGNodeLayoutAPI.YGNodeLayoutGetPadding(yoga, edge) + YGNodeLayoutAPI.YGNodeLayoutGetBorder(yoga, edge)
     internal func MarginX(yoga Facebook.Yoga.Node) float32 -> YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Left) + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Right)
     internal func MarginY(yoga Facebook.Yoga.Node) float32 -> YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Top) + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Bottom)
-    internal func Maximum(length Length, available float32, reference float32) float32 {
+    internal func Maximum(length NodeLength, available float32, reference float32) float32 {
       let authored = if length.Unit == LengthUnit.Px { length.Value } else if length.Unit == LengthUnit.Percent { length.Value * reference / 100.0F } else { Single.NaN }
       if Single.IsNaN(available) { return authored }
       return if Single.IsNaN(authored) { available } else { Math.Min(authored, available) }

@@ -10,6 +10,18 @@ import Xunit
 
 class FixtureContractTests {
     @Fact
+    func RelativeLengthAnimationsUseMatchingUnits() ->
+        Assert.True(MotionFixtures().LengthValidationContract())
+
+    @Fact
+    func CustomLayoutResolvesLengthsInItsViewport() ->
+        Assert.True(LayoutFixtures().CustomLayoutResolvesLengthsInItsViewport())
+
+    @Fact
+    func IntrinsicLimitsUseOwnerConstraints() ->
+        Assert.True(LayoutFixtures().IntrinsicLimitsUseOwnerConstraints())
+
+    @Fact
     func RelativeLengthsResolveFirstLayoutAndResize() ->
         Assert.True(LayoutFixtures().RelativeLengthsResolveFirstLayoutAndResize())
 
