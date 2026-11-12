@@ -3,14 +3,9 @@ package Goo
 import System
 
 /// Describes a logical size, or available constraints with positive infinity on unbounded axes.
-public data struct LayoutSize {
-  private var width float64
-  private var height float64
-  /// Gets the logical width.
-  public prop Width float64{ get -> width; init -> width = value }
-  /// Gets the logical height.
-  public prop Height float64{ get -> height; init -> height = value }
-}
+/// @param Width The logical width.
+/// @param Height The logical height.
+public data struct LayoutSize(Width float64, Height float64)
 
 /// Measures and arranges the existing children of a Container. Implementations must be immutable and must not mutate UI state during layout.
 public interface LayoutAlgorithm {
