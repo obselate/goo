@@ -58,7 +58,9 @@ internal class ElementHandleFixtures {
       cell.Items.RemoveAt(10)
       cell.Rebuild()
       window.UpdateTree()
-      if !cell.Handle.ScrollToItem("row-10") || !cell.Handle.JumpTo(y: 20) { return false }
+      if !cell.Handle.ScrollTo(y: 100) || !cell.Handle.ScrollToItem("row-10") { return false }
+      window.UpdateTree(0.016)
+      if !cell.Handle.IsScrollSettling || !cell.Handle.JumpTo(y: 20) { return false }
       cell.Items.Add(VirtualFixtureItem{Id: 10})
       cell.Rebuild()
       window.UpdateTree()
