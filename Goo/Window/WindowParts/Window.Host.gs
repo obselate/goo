@@ -699,13 +699,18 @@ public partial class Window {
     Open()
     try {
       Window.RunLiveWindowScheduler()
-    } finally {
-      while IsOpen {
-        Close()
-        if IsOpen {
-          Thread.Yield()
-        }
-      }
+      closeAfterRun()
+    } catch (_ Exception) {
+      try { closeAfterRun() } catch (_ Exception) { }
+      rethrow
+    }
+  }
+
+  private func closeAfterRun() {
+    let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency
+    while IsOpen && Stopwatch.GetTimestamp() < deadline {
+      Close()
+      if IsOpen { host?.WaitEvents(1) }
     }
   }
 

@@ -7,3 +7,4 @@
 - Preserve application stack frames when cleanup, native callbacks and deferred rendering errors are delivered.
 - Coalesce pending SDL wake events and avoid faulting GPU completion when the event queue is full.
 - Evict least-recently-used image cache entries that no returned source or mounted lease owns.
+- Drain native modal completion during close and bound event-serviced cleanup when Window.Run fails.
