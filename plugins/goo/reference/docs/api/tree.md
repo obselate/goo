@@ -863,7 +863,7 @@ Gets this immutable source's pixel width.
 ## `ImageSourceCache`
 
 
-Loads local PNG, JPEG, and static GIF assets outside painting and shares immutable decoded pixels. Each result is an independently disposable owner. Mounted leases survive both result and cache disposal. Paths are snapshots; create a new cache to reload.
+Loads local PNG, JPEG, and static GIF assets outside painting and shares immutable decoded pixels. Each result is an independently disposable owner. Mounted leases survive both result and cache disposal. Cache-only entries can be evicted in least-recently-used order. A later load decodes an evicted path again and can read changed file content.
 
 ### `new(int32,int32,ImageDecodeLimits)`
 

@@ -214,7 +214,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
       } catch (error Exception) {
         let freeMemory = deviceDispatch.vkFreeMemory
         freeMemory(device, memory, nil)
-        throw error
+        rethrow
       }
       allocationEvents++
       if operationLimitActive {

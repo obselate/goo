@@ -340,7 +340,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         }
         rollbackIndex++
       }
-      throw error
+      rethrow
     }
   }
 
@@ -426,7 +426,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         textFrameScaleX = 1.0F
         textFrameScaleY = 1.0F
         primitivePrepared = false
-        throw error
+        rethrow
       } finally {
         primitivePrepass = false
       }

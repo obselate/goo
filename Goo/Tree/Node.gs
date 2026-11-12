@@ -32,6 +32,22 @@ internal class Node {
   private var shapeState NodeShapeState?
   private var pointerState NodePointerState?
   private var portalState NodePortalState?
+  private var hitContained bool
+
+  internal prop HitContained bool{
+    get -> hitContained
+    set {
+      hitContained = value
+      if !value {
+        var ancestor = Parent
+        while let node = ancestor {
+          if !node.hitContained { break }
+          node.hitContained = false
+          ancestor = node.Parent
+        }
+      }
+    }
+  }
 
   private func EnsureEditingState() NodeEditingState {
     if let state = editingState { return state }
@@ -98,6 +114,7 @@ internal class Node {
     PortalAnchorClipped = false
     NeedsYogaBinding = true
     HasCustomLayout = false
+    HitContained = false
     Key = nil
     Parent = nil
     Context = nil
@@ -385,6 +402,7 @@ internal class Node {
     get -> (nodeState & int32(32)) != 0
     set {
       nodeState = value ? nodeState | int32(32) : nodeState & ~int32(32)
+      if value { if let parent = Parent { parent.HitContained = false } }
     }
   }
   internal prop HasTextShadowState bool{
@@ -807,7 +825,10 @@ internal class Node {
   }
   internal prop ShapeVectorEffect VectorEffect{
     get -> shapeState?.ShapeVectorEffect ?? VectorEffect.None
-    set -> EnsureShapeState().ShapeVectorEffect = value
+    set {
+      EnsureShapeState().ShapeVectorEffect = value
+      if value == VectorEffect.NonScalingStroke { HitContained = false }
+    }
   }
   internal prop MiterLimit float64{
     get -> shapeState?.MiterLimit ?? 4.0

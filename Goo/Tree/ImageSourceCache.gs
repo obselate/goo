@@ -9,13 +9,15 @@ import System.Threading.Tasks
 
 /// Loads local PNG, JPEG, and static GIF assets outside painting and shares immutable decoded pixels.
 /// Each result is an independently disposable owner. Mounted leases survive both
-/// result and cache disposal. Paths are snapshots; create a new cache to reload.
+/// result and cache disposal. Cache-only entries can be evicted in least-recently-used order.
+/// A later load decodes an evicted path again and can read changed file content.
 public class ImageSourceCache : IDisposable {
   private let gate object = Object()
   private let serial SemaphoreSlim = SemaphoreSlim(1, 1)
   private let shutdown CancellationTokenSource = CancellationTokenSource()
   private let stopping CancellationToken
   private let sources Dictionary[string, ImageSource]
+  private let lastUse List[string] = List[string]()
   private let maxBytes int32
   private let maxEntries int32
   private let limits ImageDecodeLimits
@@ -59,6 +61,13 @@ public class ImageSourceCache : IDisposable {
     lock gate {
       if disposed { throw ObjectDisposedException("ImageSourceCache") }
       if sources.TryGetValue(path, out var existing) {
+        for index in 0 ... lastUse.Count {
+          if sources.Comparer.Equals(lastUse[index], path) {
+            lastUse.RemoveAt(index)
+            break
+          }
+        }
+        lastUse.Add(path)
         if let recorder = FrameRecorder.Current {
           recorder.Publish(FrameTraceRecord{
             Kind: FrameTraceKind.Instant, Ticks: Stopwatch.GetTimestamp() - recorder.Origin,
@@ -69,6 +78,7 @@ public class ImageSourceCache : IDisposable {
         }
         return existing.RetainSource()
       }
+      evictUnused(0)
       if sources.Count >= maxEntries { throw InvalidOperationException("Image cache path budget is full") }
     }
     let decoded = RasterImageDecoder.Load(path, limits, token)
@@ -78,13 +88,31 @@ public class ImageSourceCache : IDisposable {
       lock gate {
         if disposed { throw ObjectDisposedException("ImageSourceCache") }
         let bytes = decoded.Width * decoded.Height * 4
+        if bytes <= maxBytes { evictUnused(bytes) }
         if bytes > maxBytes - usedBytes { throw InvalidOperationException("Image cache decoded byte budget is full") }
         sources.Add(path, decoded)
+        lastUse.Add(path)
         usedBytes += bytes
         accepted = true
         return decoded.RetainSource()
       }
     } finally { if !accepted { decoded.Dispose() } }
+  }
+
+  private func evictUnused(bytes int32) {
+    var index int32
+    while index < lastUse.Count && (sources.Count >= maxEntries || bytes > maxBytes - usedBytes) {
+      let path = lastUse[index]
+      let source = sources[path]
+      if !source.CacheOnly {
+        index++
+        continue
+      }
+      usedBytes -= source.Width * source.Height * 4
+      sources.Remove(path)
+      lastUse.RemoveAt(index)
+      source.Dispose()
+    }
   }
 
   /// Cancels queued/in-flight loads and releases cached owners. Existing returned
@@ -95,6 +123,7 @@ public class ImageSourceCache : IDisposable {
       disposed = true
       for source in sources.Values { source.Dispose() }
       sources.Clear()
+      lastUse.Clear()
       usedBytes = 0
     }
     shutdown.Cancel()

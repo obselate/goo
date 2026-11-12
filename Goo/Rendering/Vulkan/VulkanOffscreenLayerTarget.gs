@@ -332,7 +332,7 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
       UpdateDescriptor()
     } catch (error Exception) {
       Dispose()
-      throw error
+      rethrow
     }
   }
 
@@ -463,7 +463,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
         sampler = CreateSampler()
       } catch (error Exception) {
         try { Dispose() } catch (cleanup Exception) { }
-        throw error
+        rethrow
       }
     }
 
@@ -719,7 +719,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
     } catch (pressure VulkanMemoryPressureException) {
       RecordPressure(estimatedBytes, completedSerial)
       if mandatory {
-        throw pressure
+        rethrow
       }
       if width != contentWidth || height != contentHeight {
         return Acquire(contentWidth, contentHeight, completedSerial, reservationIndex, mandatory)
@@ -729,7 +729,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
       return nil
     } catch (error Exception) {
       RecordFailure(estimatedBytes, uint64(index))
-      throw error
+      rethrow
     } finally {
       if !mandatory {
         allocator.EndCacheGrowth()
@@ -1034,7 +1034,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
       inFrame = previousInFrame
       reserved = previousReserved
       descriptorSets = previousDescriptorSets
-      throw error
+      rethrow
     }
   }
 
@@ -1099,7 +1099,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
       } catch (error Exception) {
         let destroySampler = dispatch.vkDestroySampler
         destroySampler(device, result, nil)
-        throw error
+        rethrow
       }
     }
     return result

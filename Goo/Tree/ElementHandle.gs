@@ -541,6 +541,9 @@ internal open class MetricSubscription[T] {
 
 internal class ElementMetricSubscription : MetricSubscription[ElementMetrics] {
   internal var HasLast bool
+  internal var Previous ElementMetrics
+  internal var HasPrevious bool
+  internal var Alternations int32
   internal var Registration ElementMetricRegistration?
 }
 
@@ -779,6 +782,23 @@ internal class MetricSubscriptions {
       let notify = !state.HasLast || !sameElementMetrics(state.Last, next)
       if !notify {
         return
+      }
+      if handle.AttachedWindow()?.DiagnosticsSession != nil {
+        if state.HasPrevious && sameElementMetrics(state.Previous, next) {
+          if state.Alternations < 9 { state.Alternations++ }
+          if state.Alternations == 8 {
+            let first = state.Last.BorderBox
+            let second = next.BorderBox
+            Console.Error.WriteLine("Goo diagnostics: element '${handle.AttachedNode()?.Key ?? "<unkeyed>"}' metrics alternate between ${first.Width}x${first.Height} and ${second.Width}x${second.Height}.")
+          }
+        } else {
+          state.Alternations = 0
+        }
+        state.Previous = state.Last
+        state.HasPrevious = state.HasLast
+      } else {
+        state.HasPrevious = false
+        state.Alternations = 0
       }
       state.Last = next
       state.HasLast = true

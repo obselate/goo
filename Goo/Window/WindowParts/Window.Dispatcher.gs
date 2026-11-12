@@ -93,7 +93,7 @@ public partial class Window {
         var action Action
         lock cellQueueGate {
           guard let queue = postedActions else { return }
-          action = queue.Dequeue()
+          if !queue.TryDequeue(out action) { return }
         }
         action()
       }

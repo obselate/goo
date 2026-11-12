@@ -260,7 +260,7 @@ internal unsafe partial class VulkanWindowTarget {
     frameBegun = false
     if let error = externalCloseError {
       externalCloseError = nil
-      throw error
+      System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw()
     }
   }
 

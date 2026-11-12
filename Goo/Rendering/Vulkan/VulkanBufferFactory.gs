@@ -76,7 +76,7 @@ internal unsafe class VulkanBufferFactory {
           if let createdAllocation = allocation {
             try { allocator.Release(createdAllocation) } catch (cleanup Exception) { }
           }
-          throw error
+          rethrow
         }
       }
 
@@ -111,7 +111,7 @@ internal unsafe class VulkanBufferFactory {
             try { accounting.Release() } catch (cleanup Exception) { }
           }
           try { allocator.Release(creation.Allocation) } catch (cleanup Exception) { }
-          throw error
+          rethrow
         }
       }
   }

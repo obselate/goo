@@ -99,7 +99,7 @@ public partial class Window {
 
   }
 
-  private func requireUiThread(operation string) {
+  internal func requireUiThread(operation string) {
     if uiThreadBound && Environment.CurrentManagedThreadId != ownerThreadId {
       throw InvalidOperationException("$operation ran on thread ${Environment.CurrentManagedThreadId} instead of window owner thread $ownerThreadId: use Window.Post to change Cell state and call Rebuild on the UI thread (Goo best practices rule 7).")
     }
@@ -202,7 +202,7 @@ public partial class Window {
       return this
     } catch (e Exception) {
       try { Close() } catch (cleanup Exception) { }
-      throw e
+      rethrow
     }
   }
 
@@ -699,13 +699,18 @@ public partial class Window {
     Open()
     try {
       Window.RunLiveWindowScheduler()
-    } finally {
-      while IsOpen {
-        Close()
-        if IsOpen {
-          Thread.Yield()
-        }
-      }
+      closeAfterRun()
+    } catch (_ Exception) {
+      try { closeAfterRun() } catch (_ Exception) { }
+      rethrow
+    }
+  }
+
+  private func closeAfterRun() {
+    let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency
+    while IsOpen && Stopwatch.GetTimestamp() < deadline {
+      Close()
+      if IsOpen { host?.WaitEvents(1) }
     }
   }
 
@@ -768,7 +773,7 @@ public partial class Window {
       firstError = captureCleanupError(firstError, () -> completeClose())
     }
     if let error = firstError {
-      throw error
+      System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw()
     }
   }
 
@@ -835,7 +840,7 @@ public partial class Window {
     }
     popup?.CompleteDismissal()
     if let error = firstError {
-      throw error
+      System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw()
     }
   }
 

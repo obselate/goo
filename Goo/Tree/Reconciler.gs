@@ -1308,7 +1308,7 @@ internal partial class Reconciler {
       Stacking.InvalidateStructure(n)
     }
     if let error = disposeTrees(retire) {
-      throw error
+      System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw()
     }
   }
 
@@ -1487,7 +1487,7 @@ internal partial class Reconciler {
         disposeTrees(retire)
       }
       if let error = error {
-        throw error
+        System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw()
       }
     } catch (_ Exception) {
       if !committed {

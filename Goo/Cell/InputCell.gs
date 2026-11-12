@@ -90,7 +90,7 @@ public open class Cell[TInput any] : Cell {
       }
     } catch (error Exception) {
       MarkDirtyFromInput()
-      throw error
+      rethrow
     }
     MarkDirtyFromInput()
     return true

@@ -372,7 +372,7 @@ internal unsafe partial class VulkanWindowTarget {
       }
     } catch (error Exception) {
       try { host.DestroyVulkanSurface(instance, createdSurface) } catch (cleanup Exception) { }
-      throw error
+      rethrow
     }
     surface = createdSurface
     surfaceCreated = true
@@ -397,7 +397,7 @@ internal unsafe partial class VulkanWindowTarget {
         try { completed = pending.GetAwaiter().GetResult() }
         catch (error Exception) {
           startupState = VulkanWindowStartupState.None
-          throw error
+          rethrow
         }
         next = completed.Generation
         if startupWidth == width && startupHeight == height && startupVsync == vsync {

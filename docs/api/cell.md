@@ -222,7 +222,7 @@ Returns: a blob that mounts the child component
 
 ### `Rebuild`
 
-Requests a rebuild of this component.
+Requests a rebuild of this component. Mounted cells must use their window's UI thread. Post background results with Window.Post.
 
 ## `Cell<TInput>`
 

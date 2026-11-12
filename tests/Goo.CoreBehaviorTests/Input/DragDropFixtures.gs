@@ -240,6 +240,7 @@ internal class DragDropFixtures {
     input.AfterTreeUpdated(root, resolver, true)
 
     beginDrag(input, root, resolver, 10.0F, 90.0F)
+    root.Children[1].Parent = nil
     root.Children.RemoveAt(1)
     input.AfterTreeUpdated(root, resolver, true)
     input.QueuePointerRelease(90.0F, 10.0F)
@@ -295,6 +296,7 @@ internal class DragDropFixtures {
     let detachedInput = InputCoordinator()
     detachedInput.AfterTreeUpdated(detachedRoot, resolver, true)
     beginDrag(detachedInput, detachedRoot, resolver, 10.0F, 90.0F)
+    detachedRoot.Children[0].Parent = nil
     detachedRoot.Children.RemoveAt(0)
     detachedInput.AfterTreeUpdated(detachedRoot, resolver, true)
     detachedInput.QueuePointerRelease(90.0F, 10.0F)

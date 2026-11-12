@@ -161,7 +161,7 @@ public sealed partial class NativeAccessibilityAdapter {
       }
       return result
     } catch (error Exception) { AccessKitNative.NodeFree(result)
-      throw error }
+      rethrow }
   }
 
   shared {

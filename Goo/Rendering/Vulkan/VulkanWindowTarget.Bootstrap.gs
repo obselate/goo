@@ -151,7 +151,7 @@ internal unsafe partial class VulkanWindowTarget {
       }
     } catch (error Exception) {
       try { host.DestroyVulkanSurface(instance, createdSurface) } catch (cleanup Exception) { }
-      throw error
+      rethrow
     }
     surface = createdSurface
     surfaceCreated = true
@@ -366,7 +366,7 @@ internal unsafe partial class VulkanWindowTarget {
           let destroyInstanceFunction = destroyInstance
           destroyInstanceFunction(createdInstance, nil)
         }
-        throw error
+        rethrow
       }
       instance = createdInstance
       if let currentValidation = validation {
@@ -537,7 +537,7 @@ internal unsafe partial class VulkanWindowTarget {
       let destroyMessenger = instanceDispatch.vkDestroyDebugUtilsMessengerEXT
       destroyMessenger(instance, validationMessenger, nil)
       validationMessenger = 0uL
-      throw error
+      rethrow
     }
     validationMessengerCreated = true
     currentValidation.KeepAlive()
@@ -701,7 +701,7 @@ internal unsafe partial class VulkanWindowTarget {
       startupFirstSwapchainRecorded = false
       startupFirstRendererRecorded = false
       if surfaceLost || (error is ExternalException && error.ErrorCode == int32(VkConstants.VK_ERROR_SURFACE_LOST_KHR)) {
-        throw error
+        rethrow
       }
       return error.Message
     }
@@ -955,7 +955,7 @@ internal unsafe partial class VulkanWindowTarget {
           let destroyDeviceFunction = destroyDevice
           destroyDeviceFunction(createdDevice, nil)
         }
-        throw error
+        rethrow
       }
       device = createdDevice
     } finally {

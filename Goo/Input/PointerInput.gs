@@ -668,7 +668,7 @@ internal partial class PointerInput {
     current = mouse
     if !cursorValid { return false }
     let moved = HandleMove(root, resolver, cursor.X, cursor.Y)
-    return updateScrollHover(root, cursor.X, cursor.Y, resolver) || moved
+    return updateScrollHover(cursor.X, cursor.Y, resolver) || moved
   }
 
   internal func CurrentCursor() Cursor {
@@ -741,7 +741,7 @@ internal partial class PointerInput {
         current.Device == PointerDevice.Mouse && !prevented,
         isSemanticPrimary() && !prevented)
       let scrollbarHoverChanged = current.Device == PointerDevice.Mouse && !prevented
-        ? updateScrollHover(root, x, y, resolver) : false
+        ? updateScrollHover(x, y, resolver) : false
       return moved || scrollbarHoverChanged
     }
 
@@ -1159,19 +1159,12 @@ internal partial class PointerInput {
   }
 
   private func nodeVisibleInTree(root Node, target Node, hidden bool) bool {
-    let nowHidden = hidden || root.PaintInputHidden
-    if root == target {
-      return !nowHidden
-    }
-    for child in root.Children {
-      if nodeVisibleInTree(child, target, nowHidden) {
-        return true
-      }
-    }
-    for child in ScrollbarParts.Children(root) {
-      if nodeVisibleInTree(child, target, nowHidden) {
-        return true
-      }
+    if hidden { return false }
+    var current Node? = target
+    while let node = current {
+      if node.Retired || node.PaintInputHidden { return false }
+      if node == root { return true }
+      current = node.Parent
     }
     return false
   }
