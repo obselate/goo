@@ -681,8 +681,8 @@ public partial class Window {
   }
 
   private func closeAfterRun() {
-    let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency
-    while IsOpen && Stopwatch.GetTimestamp() < deadline {
+    let deadline = float64(Stopwatch.GetTimestamp()) + (CloseDrainMs / 1000.0 + 1.0) * float64(Stopwatch.Frequency)
+    while IsOpen && float64(Stopwatch.GetTimestamp()) < deadline {
       Close()
       if IsOpen { host?.WaitEvents(1) }
     }
@@ -754,7 +754,11 @@ public partial class Window {
   internal func Close() {
     requireUiThread("Window.Close")
     using let callbackScope = CallbackScope(CallbackContext())
-    if !callbackClosing { beginCallbackClose() }
+    if !callbackClosing { beginCallbackClose()
+    }
+    if !callbackDrainReady {
+      return
+    }
     if !finishCallbackDrain() { return }
     if !closeNativeModal() { return }
     if !closeFileDialog() { return }

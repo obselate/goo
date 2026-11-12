@@ -47,6 +47,7 @@ public partial class Window {
   internal var callbackClosing bool
   internal var callbackOperations int32
   private var callbackDeadline float64
+  private var callbackDrainReady bool
   private var callbackLate bool
   private var callbackWorker bool
   private var callbackError Exception?
@@ -93,8 +94,15 @@ public partial class Window {
 
   internal func DrainContinuations() {
     var count int32
-    lock continuationGate { count = continuations?.Count ?? 0 }
+    lock continuationGate {
+      if callbackLate {
+        return
+      }
+      count = continuations?.Count ?? 0 }
     for i in 0 ... count {
+      if callbackClosing && float64(Stopwatch.GetTimestamp()) >= callbackDeadline {
+        return
+      }
       var work CallbackWork
       lock continuationGate { work = continuations!!.Dequeue() }
       using let context = CallbackScope(work.Context)
@@ -129,18 +137,29 @@ public partial class Window {
     callbackClosing = true
     clearTimers()
     stopPosts()
-    host?.Hide()
+    callbackError = captureCleanupError(
+      callbackError,
+      () -> {
+        host?.Hide()
+      }
+    )
     let tree = node
     node = nil
-    Portals.Sync(nil, portalRoot)
+    callbackError = captureCleanupError(callbackError, () -> Portals.Sync(nil, portalRoot))
     if let current = tree {
       callbackError = captureCleanupError(callbackError, () -> NodeLifecycle.DisposeTree(current))
     } else if let current = Root {
       callbackError = captureCleanupError(callbackError, () -> current.DisposeMounted())
     }
-    cancelPendingTasks()
-    closeFileDialog()
+    callbackError = captureCleanupError(callbackError, cancelPendingTasks)
+    callbackError = captureCleanupError(
+      callbackError,
+      () -> {
+        closeFileDialog()
+      }
+    )
     callbackDeadline = float64(Stopwatch.GetTimestamp()) + CloseDrainMs * float64(Stopwatch.Frequency) / 1000.0
+    callbackDrainReady = true
   }
 
   private func finishCallbackDrain() bool {

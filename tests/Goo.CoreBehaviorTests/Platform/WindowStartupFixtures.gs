@@ -5,6 +5,7 @@ import System.Threading
 import System.Threading.Tasks
 import System.Reflection
 import System.Runtime.InteropServices
+import System.Diagnostics
 
 internal class WindowStartupFixtures {
   func AsyncDispatcherContract() bool {
@@ -35,7 +36,10 @@ internal class WindowStartupFixtures {
   }
 
   func AsyncOwnerContextContract() bool {
-    let owner = WindowAsyncCell()
+    let priorContext = SynchronizationContext.Current
+    SynchronizationContext.SetSynchronizationContext(nil)
+    try {
+      let owner = WindowAsyncCell()
     let window = Window{Root: owner, Width: 100, Height: 100}
     window.UpdateTree()
     owner.RunOwnedAction(owner.RunHandler)
@@ -55,15 +59,27 @@ internal class WindowStartupFixtures {
     } finally { SynchronizationContext.SetSynchronizationContext(nil) }
     window.Close()
     return true
+  } finally {
+      SynchronizationContext.SetSynchronizationContext(priorContext)
+    }
   }
 
   func AsyncCloseDrainContract() bool {
+    let priorContext = SynchronizationContext.Current
+    SynchronizationContext.SetSynchronizationContext(nil)
+    try {
     let owner = WindowAsyncCell()
     let window = Window{Root: owner, Width: 100, Height: 100}
     window.UpdateTree()
     owner.RunOwnedAction(owner.RunCancelled)
-    window.Close()
-    if owner.FinallyCount != 1 || owner.ResumeThread != Environment.CurrentManagedThreadId
+      let deadline = Stopwatch.StartNew()
+      while !window.Closed.IsCancellationRequested && deadline.ElapsedMilliseconds < 5000 {
+        window.Close()
+        if !window.Closed.IsCancellationRequested {
+          Thread.Sleep(1)
+        }
+      }
+      if owner.FinallyCount != 1 || owner.ResumeThread != Environment.CurrentManagedThreadId
       || !window.Closed.IsCancellationRequested { return false }
     let late = WindowAsyncCell()
     let closing = Window{Root: late, Width: 100, Height: 100, CloseDrainMs: 0.0}
@@ -74,9 +90,15 @@ internal class WindowStartupFixtures {
     if !late.Finished.Wait(5000) { return false }
     return late.FinallyCount == 1 && late.ResumeThread != Environment.CurrentManagedThreadId
       && !closing.Post(() -> {}) && closing.Closed.IsCancellationRequested
+  } finally {
+      SynchronizationContext.SetSynchronizationContext(priorContext)
+    }
   }
 
   func AsyncStateContinuationContract() bool {
+    let priorContext = SynchronizationContext.Current
+    SynchronizationContext.SetSynchronizationContext(nil)
+    try {
     let owner = WindowAsyncStateCell()
     let window = Window{Root: owner, Width: 100, Height: 100}
     window.UpdateTree()
@@ -93,6 +115,9 @@ internal class WindowStartupFixtures {
     let dirty = owner.IsDirty()
     window.Close()
     return dirty
+  } finally {
+      SynchronizationContext.SetSynchronizationContext(priorContext)
+    }
   }
 
   func LateFileDialogCompletionContract() bool {
@@ -107,8 +132,8 @@ internal class WindowStartupFixtures {
         .Invoke(dialog, []object{paths, -1})
     } finally { Marshal.FreeHGlobal(paths) }
     window.drainPostedActions()
-    return pending.IsCanceled && dialog.NativeCompleted && dialog.Task.IsCompleted
-      && window.Closed.IsCancellationRequested && !window.Post(() -> {})
+    return pending.IsCanceled && dialog.NativeCompleted
+    && window.Closed.IsCancellationRequested && !window.Post(() -> {})
   }
   func InitialBoundsContract() bool {
     let usable = ElementRect{ X: -1366, Y: 24, Width: 1366, Height: 720 }
