@@ -132,7 +132,7 @@ and returns `Unsupported` while a native chooser blocks the owner.
 the owner thread afterward. Nonfocusable windows never request activation when
 shown. Unsupported `Focusable` assignments throw before changing the configured
 value. `Topmost` is a requested preference, so unsupported hosts retain it without
-changing stacking or failing `Open`. Call `TrySetTopmost(value)` to distinguish
+changing stacking or failing `Open`. Call `SetTopmost(value)` to distinguish
 `Accepted`, `Unsupported`, `Closed` and `Failed` on an open window.
 `Capabilities` reports operations supported by the current host, or `None` before
 opening. Windows, macOS and X11 expose visibility, passive show, focusability and
@@ -251,8 +251,14 @@ viewports explicitly reject these relationships. Self-ownership and cycles are
 rejected before native creation. Existing independent windows remain the default.
 
 ```gsharp
-let owner = Window{Title: "Main", Width: 800, Height: 600, Root: MainCell{}}.Open()
-let dialog = Window{Title: "Settings", Width: 420, Height: 280, Owner: owner, Modal: true, Root: SettingsCell{}}.Open()
+let owner = Window{Title: "Main", Size: LayoutSize(800, 600), Root: MainCell{}}.Open()
+let dialog = Window{
+    Title: "Settings",
+    Size: LayoutSize(420, 280),
+    Owner: owner,
+    Modal: true,
+    Root: SettingsCell{}
+}.Open()
 owner.Run()
 ```
 
@@ -277,23 +283,40 @@ New children are rejected during teardown. Native ownership failures throw
 
 ## Native size constraints
 
-`Window.MinWidth`, `MinHeight`, `MaxWidth` and `MaxHeight` use layout pixels.
-Goo multiplies them by `UiScale` for native client-area limits.
-`Width` and `Height` stay in native logical pixels.
+`Window.Size`, `MinSize` and `MaxSize` use layout units.
+Goo multiplies them by `UiScale` and rounds once at the native boundary.
+`NativeWidth` and `NativeHeight` report native logical units.
 Zero removes a limit. Values must be nonnegative, and a nonzero maximum must be
 at least its corresponding minimum. An invalid assignment leaves the old value.
 Set these properties before `Open` or on the window's owner UI thread afterward.
 When moving a bounded interval, widen or clear the old bound before crossing it.
 
-`Open` clamps the requested initial size. Later `Width`/`Height` requests are also
-clamped. Changing native limits asks SDL to resize an out-of-range client area;
-`Width`, `Height`, and `MetricsChanged` reflect the compositor's resulting size
-when its queued metrics settle. Limits constrain normal resizing; fullscreen and
+`Open` clamps the requested initial size. Later `Size` requests are also
+clamped. Changing native limits asks SDL to resize an out-of-range client area.
+`Size` and `MetricsChanged` reflect the compositor's resulting size when its
+queued metrics settle. Limits constrain normal resizing. Fullscreen and
 window-manager-controlled states remain subject to platform policy. Native
 failures throw and leave the corresponding configured limit unchanged.
 
 Embedded hosts own viewport geometry: `Attach` rejects preconfigured limits and
 changing a limit on an attached window throws `NotSupportedException`.
+
+## Size to content
+
+```gsharp
+let window = Window{
+    Root: AboutView(),
+    SizeToContent: SizeToContent.Both,
+    MinSize: LayoutSize(240, 120),
+    MaxSize: LayoutSize(640, 800),
+}
+```
+
+`SizeToContent` measures the root once before the first map. `Width` and `Height`
+measure one axis. `Both` measures both axes. The result stays within `MaxSize`
+and the display work area, unless `MinSize` requires more space.
+A root axis declared as a percentage keeps the corresponding `Size` value.
+Later content changes do not resize the window.
 
 ## Observe window metrics
 
@@ -486,7 +509,7 @@ expected content scale. Content scale is separate from the current window's
 framebuffer scale. IDs can become stale after hotplug or SDL teardown. Embedded
 hosts return an empty inventory.
 
-`TrySetFullscreenDisplay(id)` requests borderless fullscreen on that display,
+`SetFullscreenDisplay(id)` requests borderless fullscreen on that display,
 including output changes for an existing fullscreen window. It returns `Accepted`, `Closed`,
 `Unsupported` or `Failed`. `Accepted` means SDL accepted the request, not that
 the compositor moved the window. A compositor may keep the current output when
@@ -496,7 +519,7 @@ before showing it.
 
 KWin 6.7.5 can ignore an output change while fullscreen. To request another
 output there, set `State` to `Normal`, wait for `StateChanged` to report
-`Normal`, then call `TrySetFullscreenDisplay(id)` again. The app must wait for
+`Normal`, then call `SetFullscreenDisplay(id)` again. The app must wait for
 the native state event before sending the next request.
 
 Wayland supports fullscreen output selection while normal windowed placement
@@ -1326,6 +1349,18 @@ No rendering device is available.
 
 A virtual GPU.
 
+## `SizeToContent`
+
+
+Selects the client axes measured from the root before the first map.
+
+### Values
+
+- `None`
+- `Width`
+- `Height`
+- `Both`
+
 ## `TransferData`
 
 
@@ -1647,6 +1682,10 @@ Sets the clear and inherited root text colors together on the owner thread. Expl
 - `background`: The window clear color.
 - `foreground`: The inherited root text color.
 
+### `SetFullscreenDisplay(WindowDisplayId)`
+
+Requests borderless fullscreen on the selected display, including retargeting an already-fullscreen window. This must run on the window's UI thread. Returns Closed before Open or after close, Unsupported for embedded hosts, Failed for a stale ID or native failure, and Accepted when SDL accepts the request. Acceptance does not guarantee compositor placement. The compositor may keep the current display when retargeting fullscreen.
+
 ### `SetInterval(System.Action,float64)`
 
 Runs a callback repeatedly on the UI thread at the requested interval.
@@ -1662,6 +1701,12 @@ Returns: Accepted, Closed, Unsupported or Failed without changing an unsupported
 ### `SetTimeout(System.Action,float64)`
 
 Runs a callback once on the UI thread after the delay.
+
+### `SetTopmost(bool)`
+
+Attempts to submit a topmost request to the current native host. Accepted means the host accepted the request; desktop policy still controls observed stacking.
+
+Returns: Closed, Unsupported, Accepted, or Failed for the host operation.
 
 ### `Show(bool)`
 
@@ -1681,16 +1726,6 @@ Returns: A task completed on the UI thread with owned paths and an explicit outc
 - `action`: action to run during a later Pump
 
 Returns: True when the action was accepted into the queue.
-
-### `TrySetFullscreenDisplay(WindowDisplayId)`
-
-Requests borderless fullscreen on the selected display, including retargeting an already-fullscreen window. This must run on the window's UI thread. Returns Closed before Open or after close, Unsupported for embedded hosts, Failed for a stale ID or native failure, and Accepted when SDL accepts the request. Acceptance does not guarantee compositor placement. The compositor may keep the current display when retargeting fullscreen.
-
-### `TrySetTopmost(bool)`
-
-Attempts to submit a topmost request to the current native host. Accepted means the host accepted the request; desktop policy still controls observed stacking.
-
-Returns: Closed, Unsupported, Accepted, or Failed for the host operation.
 
 ### `WriteClipboardAsync(TransferData,ClipboardIntent)`
 
@@ -1765,10 +1800,6 @@ Gets or sets the frame pacing used by Window.Run. Uncapped still honors GPU queu
 
 Gets or sets the native frame and material appearance. Unknown follows the system. Applies immediately on Windows and macOS. Other platforms ignore it.
 
-### `Height`
-
-Gets or sets the window height.
-
 ### `IconPng`
 
 Configures PNG bytes for the native window icon in the Window initializer before Open. The icon is decoded when opening, has a 1024 pixel edge limit, and requires no external file.
@@ -1817,21 +1848,13 @@ Configures this window as a Wayland layer-shell surface before Open. Unsupported
 
 Gets or sets macOS-only material, activation, emphasis and mask options. Changes apply immediately. The native view samples behind the window. Use Style.ShaderEffect to sample Goo content within it.
 
-### `MaxHeight`
+### `MaxSize`
 
-Gets or sets the client maximum height in layout pixels, multiplied by UiScale for the native limit; zero removes the limit. Must be nonnegative and, when nonzero, no smaller than MinHeight. Embedded hosts are unsupported.
+Gets or sets the client maximum size in layout units. Zero removes an axis limit. Each axis must be finite, nonnegative and no smaller than its minimum. Embedded hosts are unsupported.
 
-### `MaxWidth`
+### `MinSize`
 
-Gets or sets the client maximum width in layout pixels, multiplied by UiScale for the native limit; zero removes the limit. Must be nonnegative and, when nonzero, no smaller than MinWidth. Embedded hosts are unsupported.
-
-### `MinHeight`
-
-Gets or sets the client minimum height in layout pixels, multiplied by UiScale. Zero removes the limit. Must be nonnegative and no greater than a nonzero MaxHeight. Embedded hosts are unsupported.
-
-### `MinWidth`
-
-Gets or sets the client minimum width in layout pixels, multiplied by UiScale. Zero removes the limit. Must be nonnegative and no greater than a nonzero MaxWidth. Embedded hosts are unsupported.
+Gets or sets the client minimum size in layout units. Zero removes an axis limit. Each axis must be finite, nonnegative and no greater than its nonzero maximum. Embedded hosts are unsupported.
 
 ### `Modal`
 
@@ -1841,9 +1864,17 @@ Gets or sets whether this window is modal to Owner or ForeignParentHandle. Confi
 
 Enables native file-drop ingress before Open or on the owning UI thread; disabled by default. Unsupported hosts reject enabling. Disabling cancels any active preview.
 
+### `NativeHeight`
+
+Gets the observed client height in native logical units.
+
 ### `NativeTransferCapabilities`
 
 Gets the current native transfer capabilities; closed and embedded windows return None.
+
+### `NativeWidth`
+
+Gets the observed client width in native logical units.
 
 ### `Occlusion`
 
@@ -1893,6 +1924,14 @@ Gets the root cell.
 
 Gets named, unattached Cell factories registered for display-free rendering.
 
+### `Size`
+
+Gets or sets the client size in layout units. Native assignments multiply by UiScale and round once. The native host's observed size is authoritative after Open.
+
+### `SizeToContent`
+
+Measures the selected root axes once before the first map, within MaxSize and the display work area and at least MinSize. A root axis declared as a percentage keeps Size on that axis. Later resizing belongs to the user.
+
 ### `SmoothScrolling`
 
 Enables animated scrolling and touch momentum. The default is true.
@@ -1919,7 +1958,7 @@ Gets or sets next-open per-pixel alpha. An open window is unchanged. Transparenc
 
 ### `UiScale`
 
-Gets or sets the layout and rendering scale, clamped to 0.5 through 3. The default is 1, or the owner's scale when not explicitly set. Width and Height remain native logical sizes. Layout uses those sizes divided by UiScale, and rendering multiplies the display scale by UiScale.
+Gets or sets the layout and rendering scale, clamped to 0.5 through 3. The default is 1, or the owner's scale when not explicitly set. Size and its limits use layout units. NativeWidth and NativeHeight report the unscaled native logical size.
 
 ### `VSync`
 
@@ -1932,10 +1971,6 @@ Gets or sets Wayland-only blur region options. Changes apply on the next surface
 ### `WheelScrollScale`
 
 Scales the platform wheel distance for this window. The default is 1.
-
-### `Width`
-
-Gets or sets the window width.
 
 ### `WindowsBackdrop`
 
