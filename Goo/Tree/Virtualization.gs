@@ -434,8 +434,8 @@ internal sealed class VirtualNodeState {
 
   private func needsScroll(n Node, state VirtualState) bool {
     guard let key = scrollKey else { return false }
-    if Math.Abs(float64(n.ScrollX) - requestedOffset.X) > 0.01
-      || Math.Abs(float64(n.ScrollY) - requestedOffset.Y) > 0.01 {
+    if !waitingForKey && (Math.Abs(float64(n.ScrollX) - requestedOffset.X) > 0.01
+      || Math.Abs(float64(n.ScrollY) - requestedOffset.Y) > 0.01) {
       scrollKey = nil
       return false
     }

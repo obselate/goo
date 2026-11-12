@@ -29,11 +29,17 @@ internal class ElementHandleFixtures {
 
   func PendingItemAndNearestContract() bool {
     let cell = VirtualFixtureCell(10)
+    cell.Items.RemoveAt(9)
     let window = Window{Root: cell, Width: 100, Height: 60}
     try {
       window.UpdateTree()
+      if !cell.Handle.ScrollToItem("row-9") { return false }
       if !cell.Handle.ScrollToItem("row-10", ScrollAlignment.End, false) { return false }
       window.UpdateTree()
+      cell.Items.Add(VirtualFixtureItem{Id: 9})
+      cell.Rebuild()
+      window.UpdateTree()
+      if cell.Handle.ScrollOffset.Y != 0 { return false }
       cell.Items.Add(VirtualFixtureItem{Id: 10})
       cell.Rebuild()
       window.UpdateTree()
