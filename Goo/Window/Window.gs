@@ -597,7 +597,7 @@ public partial class Window {
   private let pendingCells List[DirtyCellSubmission]
   private let deferredCells List[DirtyCellSubmission]
   private let cellBatch List[DirtyCellSubmission]
-  private let fiberBatch List[Cell]
+  private let fiberBatch List[DirtyFiber]
   private let childDiffScratch ChildDiffScratch
   private var cellTransactionActive bool
   private var renderDirty bool
@@ -690,7 +690,7 @@ public partial class Window {
     pendingCells = List[DirtyCellSubmission]()
     deferredCells = List[DirtyCellSubmission]()
     cellBatch = List[DirtyCellSubmission]()
-    fiberBatch = List[Cell]()
+    fiberBatch = List[DirtyFiber]()
     childDiffScratch = ChildDiffScratch()
     portalRoot = Node{Kind: NodeKind.Container, HitTestSelf: false}
     layout = Layout()
