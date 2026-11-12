@@ -1,57 +1,133 @@
 package Goo
 
-internal enum LengthUnit { Unset; Px; Percent; Auto }
+import System
 
-/// Specifies a layout length.
+internal enum LengthUnit { Unset; Px; Percent; Auto; Relative; MinContent; MaxContent; FitContent }
+
+/// Specifies pixels, relative units, a mixed length, or an intrinsic size.
 public struct Length {
   internal var Unit LengthUnit
   internal var Value float32
+  internal var PercentPart float32
+  internal var EmPart float32
+  internal var RemPart float32
+  internal var VwPart float32
+  internal var VhPart float32
 
-  /// Gets whether this length is a percentage of the available size, as
-  /// opposed to an absolute pixel value.
-  public prop IsPercent bool{ get -> Unit == LengthUnit.Percent }
-
-  /// Gets whether this length has a concrete magnitude (pixels or percent),
-  /// as opposed to `Auto` or an unset default. `Magnitude` is only defined
-  /// when this is true.
-  public prop HasMagnitude bool{ get -> Unit == LengthUnit.Px || Unit == LengthUnit.Percent }
-
-  /// Gets the raw numeric magnitude: pixels when `IsPercent` is false,
-  /// percentage points (0-100) when true. Undefined for `Auto`/unset lengths;
-  /// check `HasMagnitude` first.
-  public prop Magnitude float64{ get -> float64(Value) }
-
-  internal prop Px float32{ get -> Unit == LengthUnit.Px ? Value : 0.0F }
+  /// Gets whether this value is a single percentage.
+  public prop IsPercent bool { get -> Unit == LengthUnit.Percent }
+  /// Gets whether Magnitude describes a single pixel or percentage value.
+  public prop HasMagnitude bool { get -> Unit == LengthUnit.Px || Unit == LengthUnit.Percent }
+  /// Gets pixels or percentage points for a value with HasMagnitude.
+  public prop Magnitude float64 { get -> float64(Value) }
+  internal prop Px float32 { get -> Unit == LengthUnit.Px ? Value : 0.0F }
+  internal prop IsIntrinsic bool { get -> Unit >= LengthUnit.MinContent }
+  internal prop IsFinite bool { get -> Single.IsFinite(Value) && Single.IsFinite(PercentPart)
+    && Single.IsFinite(EmPart) && Single.IsFinite(RemPart) && Single.IsFinite(VwPart) && Single.IsFinite(VhPart) }
 
   shared {
-    /// Creates an absolute pixel length.
-    /// @param value length in pixels
-    /// @returns a pixel length
-    public func Pixels(value float64) Length -> Length { Unit: LengthUnit.Px, Value: float32(value) }
-
-    /// Creates a percentage of the available size.
-    /// @param value percentage of the available size
-    /// @returns a percentage length
-    public func Percent(value float64) Length -> Length { Unit: LengthUnit.Percent, Value: float32(value) }
-
     /// Gets an automatic layout length.
-    public prop Auto Length{
-      get -> Length { Unit: LengthUnit.Auto }
+    public prop Auto Length { get -> Length{Unit: LengthUnit.Auto} }
+    /// Gets the smallest size without avoidable content overflow.
+    public prop MinContent Length { get -> Length{Unit: LengthUnit.MinContent} }
+    /// Gets the content size without soft wrapping.
+    public prop MaxContent Length { get -> Length{Unit: LengthUnit.MaxContent} }
+    /// Limits the preferred content size without shrinking below its minimum content size.
+    /// @param limit The pixel or relative size limit.
+    /// @returns An intrinsic fit-content size.
+    public func FitContent(limit Length) Length {
+      var result = lengthParts(limit)
+      result.Unit = LengthUnit.FitContent
+      return result
     }
   }
 }
 
 /// Creates a percentage of the available size.
-/// @param value percentage of the available size
-/// @returns a percentage length
-public func Percent(value float64) Length -> Length { Unit: LengthUnit.Percent, Value: float32(value) }
+/// @param value Percentage points.
+/// @returns A percentage length.
+public func Percent(value float64) Length -> Length{Unit: LengthUnit.Percent, Value: float32(value)}
 
-/// Converts a pixel value to a length.
-/// @param value length in pixels
-/// @returns a pixel length
-public func operator implicit (value float64) Length -> Length { Unit: LengthUnit.Px, Value: float32(value) }
+/// Creates a multiple of the computed element font size, or the parent font size for FontSize.
+/// @param value Font size multiple.
+/// @returns An element-relative length.
+public func Em(value float64) Length -> Length{Unit: LengthUnit.Relative, EmPart: float32(value)}
 
-/// Converts an integer pixel value to a length.
-/// @param value length in pixels
-/// @returns a pixel length
-public func operator implicit (value int32) Length -> Length { Unit: LengthUnit.Px, Value: float32(value) }
+/// Creates a multiple of the root font size.
+/// @param value Root font size multiple.
+/// @returns A root-relative length.
+public func Rem(value float64) Length -> Length{Unit: LengthUnit.Relative, RemPart: float32(value)}
+
+/// Creates a percentage of the window layout viewport width.
+/// @param value Percentage points.
+/// @returns A viewport-relative length.
+public func Vw(value float64) Length -> Length{Unit: LengthUnit.Relative, VwPart: float32(value)}
+
+/// Creates a percentage of the window layout viewport height.
+/// @param value Percentage points.
+/// @returns A viewport-relative length.
+public func Vh(value float64) Length -> Length{Unit: LengthUnit.Relative, VhPart: float32(value)}
+
+/// Converts layout pixels to a length.
+/// @param value Layout pixels.
+/// @returns A pixel length.
+public func operator implicit(value float64) Length -> Length{Unit: LengthUnit.Px, Value: float32(value)}
+
+/// Converts integer layout pixels to a length.
+/// @param value Layout pixels.
+/// @returns A pixel length.
+public func operator implicit(value int32) Length -> Length{Unit: LengthUnit.Px, Value: float32(value)}
+
+internal func lengthParts(value Length) Length {
+  if value.Unit == LengthUnit.Auto || value.IsIntrinsic {
+    throw ArgumentException("Automatic and intrinsic lengths cannot be operands", "value")
+  }
+  if value.Unit == LengthUnit.Percent { return Length{Unit: LengthUnit.Relative, PercentPart: value.Value} }
+  var result = value
+  result.Unit = LengthUnit.Relative
+  return result
+}
+
+internal func normalizeLength(value Length) Length {
+  if value.EmPart == 0.0F && value.RemPart == 0.0F && value.VwPart == 0.0F && value.VhPart == 0.0F {
+    if value.PercentPart == 0.0F { return Length{Unit: LengthUnit.Px, Value: value.Value} }
+    if value.Value == 0.0F { return Percent(float64(value.PercentPart)) }
+  }
+  return value
+}
+
+/// Adds the pixel and relative parts. Automatic and intrinsic values throw ArgumentException.
+/// @param left The first length.
+/// @param right The second length.
+/// @returns Their mixed-unit sum.
+public func operator +(left Length, right Length) Length {
+  let a = lengthParts(left)
+  let b = lengthParts(right)
+  return normalizeLength(Length{Unit: LengthUnit.Relative, Value: a.Value + b.Value,
+    PercentPart: a.PercentPart + b.PercentPart, EmPart: a.EmPart + b.EmPart,
+    RemPart: a.RemPart + b.RemPart, VwPart: a.VwPart + b.VwPart, VhPart: a.VhPart + b.VhPart})
+}
+
+/// Subtracts the pixel and relative parts. Automatic and intrinsic values throw ArgumentException.
+/// @param left The first length.
+/// @param right The length to subtract.
+/// @returns Their mixed-unit difference.
+public func operator -(left Length, right Length) Length -> left + right * -1.0
+
+/// Scales every part. Automatic and intrinsic values throw ArgumentException.
+/// @param value The length to scale.
+/// @param scale The multiplier.
+/// @returns The scaled length.
+public func operator *(value Length, scale float64) Length {
+  let source = lengthParts(value)
+  let factor = float32(scale)
+  return normalizeLength(Length{Unit: LengthUnit.Relative, Value: source.Value * factor,
+    PercentPart: source.PercentPart * factor, EmPart: source.EmPart * factor,
+    RemPart: source.RemPart * factor, VwPart: source.VwPart * factor, VhPart: source.VhPart * factor})
+}
+
+/// Divides every part. Automatic and intrinsic values throw ArgumentException.
+/// @param value The length to scale.
+/// @param scale The divisor.
+/// @returns The scaled length.
+public func operator /(value Length, scale float64) Length -> value * (1.0 / scale)
