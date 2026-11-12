@@ -209,6 +209,7 @@ enum-underlying|Goo.JustifyContent|System.Int32
 enum-underlying|Goo.Key|System.Int32
 enum-underlying|Goo.LayerWindowAnchor|System.Int32
 enum-underlying|Goo.LayerWindowKeyboardInteractivity|System.Int32
+enum-underlying|Goo.LayoutAxis|System.Int32
 enum-underlying|Goo.MacOSBackdropMaterial|System.Int32
 enum-underlying|Goo.MacOSBackdropState|System.Int32
 enum-underlying|Goo.MessageBoxIcon|System.Int32
@@ -679,6 +680,8 @@ enum|Goo.LayerWindowAnchor|Top|1
 enum|Goo.LayerWindowKeyboardInteractivity|Exclusive|1
 enum|Goo.LayerWindowKeyboardInteractivity|None|0
 enum|Goo.LayerWindowKeyboardInteractivity|OnDemand|2
+enum|Goo.LayoutAxis|Horizontal|0
+enum|Goo.LayoutAxis|Vertical|1
 enum|Goo.MacOSBackdropMaterial|ContentBackground|18
 enum|Goo.MacOSBackdropMaterial|FullScreenUI|15
 enum|Goo.MacOSBackdropMaterial|HeaderView|10
@@ -1355,6 +1358,7 @@ method|Goo.LayoutAlgorithm|Arrange|abstract|public|generic:|(context:Goo.LayoutC
 method|Goo.LayoutAlgorithm|Measure|abstract|public|generic:|(context:Goo.LayoutContext,available:Goo.LayoutSize)->Goo.LayoutSize
 method|Goo.LayoutContext|ArrangeChild|instance|public|generic:|(index:System.Int32,bounds:Goo.ElementRect)->System.Void
 method|Goo.LayoutContext|MeasureChild|instance|public|generic:|(index:System.Int32,available:Goo.LayoutSize)->Goo.LayoutSize
+method|Goo.LayoutContext|ResolveLength|instance|public|generic:|(value:Goo.Length,axis:Goo.LayoutAxis)->System.Nullable`1<System.Double>
 method|Goo.LayoutSize|Deconstruct|instance|public|generic:|(out Width:System.Double&,out Height:System.Double&)->System.Void
 method|Goo.LayoutSize|Equals|instance|public|generic:|(other:Goo.LayoutSize)->System.Boolean
 method|Goo.LayoutSize|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
@@ -1369,11 +1373,14 @@ method|Goo.LayoutTransition|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.LayoutTransition|ToString|virtual|public|generic:|()->System.String
 method|Goo.LayoutTransition|op_Equality|static|public|generic:|(left:Goo.LayoutTransition,right:Goo.LayoutTransition)->System.Boolean
 method|Goo.LayoutTransition|op_Inequality|static|public|generic:|(left:Goo.LayoutTransition,right:Goo.LayoutTransition)->System.Boolean
-method|Goo.Length|Percent|static|public|generic:|(value:System.Double)->Goo.Length
-method|Goo.Length|Pixels|static|public|generic:|(value:System.Double)->Goo.Length
+method|Goo.Length|FitContent|static|public|generic:|(limit:Goo.Length)->Goo.Length
+method|Goo.Length|op_Addition|static|public|generic:|(left:Goo.Length,right:Goo.Length)->Goo.Length
+method|Goo.Length|op_Division|static|public|generic:|(value:Goo.Length,scale:System.Double)->Goo.Length
 method|Goo.Length|op_Implicit|static|public|generic:|(value:Goo.Length)->Goo.Edges
 method|Goo.Length|op_Implicit|static|public|generic:|(value:System.Double)->Goo.Length
 method|Goo.Length|op_Implicit|static|public|generic:|(value:System.Int32)->Goo.Length
+method|Goo.Length|op_Multiply|static|public|generic:|(value:Goo.Length,scale:System.Double)->Goo.Length
+method|Goo.Length|op_Subtraction|static|public|generic:|(left:Goo.Length,right:Goo.Length)->Goo.Length
 method|Goo.MacOSBackdropOptions|Deconstruct|instance|public|generic:|(out material:Goo.MacOSBackdropMaterial&,out state:Goo.MacOSBackdropState&,out emphasized:System.Boolean&,out mask:Goo.WindowBackdropMask?&)->System.Void
 method|Goo.MacOSBackdropOptions|Equals|instance|public|generic:|(other:Goo.MacOSBackdropOptions)->System.Boolean
 method|Goo.MacOSBackdropOptions|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
@@ -2303,6 +2310,8 @@ property|Goo.Length|Auto|Goo.Length|static|get:public|index:()
 property|Goo.Length|HasMagnitude|System.Boolean|instance|get:public|index:()
 property|Goo.Length|IsPercent|System.Boolean|instance|get:public|index:()
 property|Goo.Length|Magnitude|System.Double|instance|get:public|index:()
+property|Goo.Length|MaxContent|Goo.Length|static|get:public|index:()
+property|Goo.Length|MinContent|Goo.Length|static|get:public|index:()
 property|Goo.LinearGradient|Angle|System.Double|instance|get:public|index:()
 property|Goo.LinearGradient|Stops|System.Collections.Generic.IReadOnlyList`1<Goo.GradientStop>|instance|get:public|index:()
 property|Goo.MacOSBackdropOptions|Emphasized|System.Boolean|instance|get:public,init:public|index:()
@@ -3064,6 +3073,7 @@ type|Goo.LayerWindowAnchor|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.LayerWindowKeyboardInteractivity|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.LayerWindowOptions|class|public|base:System.Object|interfaces:|generic:
 type|Goo.LayoutAlgorithm|interface|public|base:-|interfaces:|generic:
+type|Goo.LayoutAxis|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.LayoutContext|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.LayoutSize|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.LayoutSize>|generic:
 type|Goo.LayoutTransition|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.LayoutTransition>|generic:
