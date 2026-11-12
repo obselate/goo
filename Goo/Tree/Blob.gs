@@ -58,6 +58,24 @@ public open class Blob : Style {
       blobState = value != nil ? blobState | int32(128) : blobState & ~int32(128)
     }
   }
+  /// Gets or sets the name without replacing other accessibility fields.
+  /// A later Accessibility declaration replaces all fields.
+  public prop AccessibilityName string? {
+    get -> Accessibility?.Name
+    init {
+      let declaration = Accessibility ?? Goo.Accessibility()
+      Accessibility = Goo.Accessibility{...declaration, Name: value ?? ""}
+    }
+  }
+  /// Gets or sets the role without replacing other accessibility fields.
+  /// Nil restores the automatic role. A later Accessibility declaration replaces all fields.
+  public prop AccessibilityRole Goo.AccessibilityRole? {
+    get -> Accessibility?.Role
+    init {
+      let declaration = Accessibility ?? Goo.Accessibility()
+      Accessibility = Goo.Accessibility{...declaration, Role: value ?? Goo.AccessibilityRole.Auto}
+    }
+  }
   internal prop HasAccessibility bool{ get -> (blobState & int32(128)) != 0 }
   internal prop HasPassiveTextRanges bool{
     get -> (blobState & int32(256)) != 0

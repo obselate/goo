@@ -230,6 +230,9 @@ internal partial class Reconciler {
       case p is Portal: mountPortal(p)
       case bt is Button: mountButton(bt)
       case c is Container: mountContainer(c)
+      case r is Row: mountFlex(r, r.Children, NodeKind.Row)
+      case c is Column: mountFlex(c, c.Children, NodeKind.Column)
+      case s is Spacer: mountFlex(s, nil, NodeKind.Spacer)
       case t is Text: mountText(t)
       case t is TextEntry: mountEntry(t)
       case t is TextEditor: mountEditor(t)
@@ -272,6 +275,32 @@ internal partial class Reconciler {
     applyContainer(n, c, true)
     mountChildren(n, c.Children)
     return n
+  }
+
+  private func mountFlex(b Blob, children IList[Blob]?, kind NodeKind) Node {
+    let n = Node{Kind: kind, Key: b.Key}
+    applyStyle(n, b, b.Focusable, true)
+    if let values = children { mountChildren(n, values) }
+    return n
+  }
+
+  private func diffFlex(n Node, b Blob, children IList[Blob]?, kind NodeKind) Node {
+    if n.Fiber != nil || n.Kind != kind || n.Key != b.Key { return replace(n, b) }
+    applyStyle(n, b, b.Focusable, false)
+    if let values = children { diffChildren(n, values) }
+    return n
+  }
+
+  private func validateFlexDirection(entries StyleEntries?, allowed int32) {
+    guard let values = entries else { return }
+    var remaining = allowed
+    var cursor = values.Cursor()
+    while cursor.MoveNext() {
+      if cursor.Current.Field == StyleField.FlexDirection {
+        if remaining == 0 { throw InvalidOperationException("Row and Column have a fixed FlexDirection.") }
+        remaining--
+      }
+    }
   }
 
   internal func mountPortal(p Portal) Node {
@@ -374,6 +403,13 @@ internal partial class Reconciler {
     let active = b.Active?.Entries()
     let focus = b.Focus?.Entries()
     let disabled = b.DisabledStyle?.Entries()
+    if b is Row || b is Column {
+      validateFlexDirection(entries, 1)
+      validateFlexDirection(hover, 0)
+      validateFlexDirection(active, 0)
+      validateFlexDirection(focus, 0)
+      validateFlexDirection(disabled, 0)
+    }
     let nextDisabled = b.Disabled
     let nextFocusable = focusable && !nextDisabled
     let baseChanged = !sameStyleEntries(n.BaseStyle, entries)
@@ -776,6 +812,9 @@ internal partial class Reconciler {
       case p is Portal: diffPortal(n, p)
       case bt is Button: diffButton(n, bt)
       case c is Container: diffContainer(n, c)
+      case r is Row: diffFlex(n, r, r.Children, NodeKind.Row)
+      case c is Column: diffFlex(n, c, c.Children, NodeKind.Column)
+      case s is Spacer: diffFlex(n, s, nil, NodeKind.Spacer)
       case t is Text: diffText(n, t)
       case t is TextEntry: diffEntry(n, t)
       case t is TextEditor: diffEditor(n, t)
@@ -1328,6 +1367,15 @@ internal partial class Reconciler {
       case container is Container {
         return n.Fiber == nil && n.Kind == NodeKind.Container && !n.IsPortal && n.Key == b.Key
           && Virtualization.State(n) == nil
+      }
+      case row is Row {
+        return n.Fiber == nil && n.Kind == NodeKind.Row && n.Key == b.Key
+      }
+      case column is Column {
+        return n.Fiber == nil && n.Kind == NodeKind.Column && n.Key == b.Key
+      }
+      case spacer is Spacer {
+        return n.Fiber == nil && n.Kind == NodeKind.Spacer && n.Key == b.Key
       }
       case text is Text {
         return n.Fiber == nil && n.Kind == NodeKind.Text && n.Key == b.Key
