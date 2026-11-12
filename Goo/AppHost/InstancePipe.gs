@@ -69,7 +69,7 @@ internal class InstancePipe : IDisposable {
         let buffer = ArrayPool[uint8].Shared.Rent(length)
         try {
             await pipe.ReadExactlyAsync(buffer.AsMemory(0, length), deadline.Token).ConfigureAwait(false)
-            try { header[0] = uint8(Window.PostApplicationActivation(ActivationWire.Decode(buffer, length))) }
+            try { header[0] = uint8(Application.PostActivation(ActivationWire.Decode(buffer, length))) }
             catch (error Exception) {
                 if error is not ArgumentException && error is not InvalidDataException { rethrow }
                 header[0] = 255

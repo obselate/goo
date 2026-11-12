@@ -256,7 +256,7 @@ internal class MacNotificationService : NotificationService {
                     let request = Send(notification, Sel("request"))
                     let content = Send(request, Sel("content"))
                     let data = Send(content, Sel("userInfo"))
-                    Window.PostApplicationActivation(ApplicationActivation {
+                    Application.PostActivation(ApplicationActivation {
                         Kind: ApplicationActivationKind.Notification, IsInitial: Window.IsInitialApplicationActivation,
                         NotificationId: ReadText(Send(data, Sel("objectForKey:"), Text("Goo.NotificationId"))),
                         Payload: ReadText(Send(data, Sel("objectForKey:"), Text("Goo.Payload"))),
