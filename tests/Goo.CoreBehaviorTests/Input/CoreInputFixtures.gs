@@ -3004,14 +3004,12 @@ internal class InputFixtures {
 
   func PointerDragTouchCaptureMatchesRawCaptureContract() bool {
     for automatic in []bool{false, true} {
-      let child = Container{Width: 200, Height: 80, FlexShrink: 0}
-      if automatic {
-        child.OnPointerDrag = (_ PointerDragEvent) -> {}
-        child.PointerDragThreshold = 8
-        child.PointerDragAxis = Goo.Gestures.PanAxis.Horizontal
-      } else {
-        child.OnPointerDown = (e PointerEvent) -> e.Capture()
-      }
+      let child = automatic
+        ? Container{Width: 200, Height: 80, FlexShrink: 0,
+          OnPointerDrag: (_ PointerDragEvent) -> {}, PointerDragThreshold: 8,
+          PointerDragAxis: Goo.Gestures.PanAxis.Horizontal}
+        : Container{Width: 200, Height: 80, FlexShrink: 0,
+          OnPointerDown: (e PointerEvent) -> e.Capture()}
       let resolver = Resolver{}
       let root = Reconciler{Res: resolver}.Mount(Container{
         Width: 200, Height: 100, OverflowY: Overflow.Scroll,

@@ -452,18 +452,15 @@ internal class DragDropFixtures {
     for automatic in []bool{false, true} {
       var capturedCreates int32
       var samples int32
-      let captured = Container{
-        Width: 100, Height: 50,
-        DragSource: DragSource((e DragStartEvent) -> {
-          capturedCreates++
-          return DragData("captured", DragEffect.Move)
-        }),
-      }
-      if automatic {
-        captured.OnPointerDrag = (_ PointerDragEvent) -> { samples++ }
-      } else {
-        captured.OnPointerDown = (e PointerEvent) -> e.Capture()
-      }
+      let source = DragSource((e DragStartEvent) -> {
+        capturedCreates++
+        return DragData("captured", DragEffect.Move)
+      })
+      let captured = automatic
+        ? Container{Width: 100, Height: 50, DragSource: source,
+          OnPointerDrag: (_ PointerDragEvent) -> { samples++ }}
+        : Container{Width: 100, Height: 50, DragSource: source,
+          OnPointerDown: (e PointerEvent) -> e.Capture()}
       let capturedRoot = Reconciler{Res: Resolver{}}.Mount(captured)
       Layout().Calculate(capturedRoot, 100.0F, 50.0F)
       let capturedInput = InputCoordinator()
