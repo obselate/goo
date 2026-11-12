@@ -55,6 +55,7 @@ public partial class Window {
   private var callbackContext WindowCallbackContext?
   private let continuationGate object = Object()
   private var continuations Queue[CallbackWork]?
+  private var continuationDrain Action?
   private var closeDrainMs float64 = 2000.0
 
   /// Gets or sets the close drain bound in milliseconds. The default is 2000. Zero skips the wait.
@@ -81,31 +82,38 @@ public partial class Window {
 
   internal func QueueContinuation(work CallbackWork) {
     var launch bool
+    var dispatch Action?
     lock continuationGate {
       continuations ??= Queue[CallbackWork]()
       continuations!!.Enqueue(work)
       if callbackLate && !callbackWorker {
         callbackWorker = true
         launch = true
+      } else if !callbackLate && !callbackClosing {
+        continuationDrain ??= () -> DrainContinuations(1)
+        dispatch = continuationDrain
       }
     }
     if launch { go drainLateContinuations() }
-    else { WakeCallbacks() }
+    else if let action = dispatch {
+      if !Post(action) { WakeCallbacks() }
+    } else { WakeCallbacks() }
   }
 
-  internal func DrainContinuations() {
+  internal func DrainContinuations(countLimit int32 = Int32.MaxValue) {
     var count int32
     lock continuationGate {
-      if callbackLate {
-        return
-      }
-      count = continuations?.Count ?? 0 }
+      if callbackLate { return }
+      count = Math.Min(continuations?.Count ?? 0, countLimit)
+    }
     for i in 0 ... count {
       if callbackClosing && float64(Stopwatch.GetTimestamp()) >= callbackDeadline {
         return
       }
       var work CallbackWork
-      lock continuationGate { work = continuations!!.Dequeue() }
+      lock continuationGate {
+        if callbackLate || !continuations!!.TryDequeue(out work) { return }
+      }
       using let context = CallbackScope(work.Context)
       try { work.Callback(work.State) }
       catch (_ OperationCanceledException) { }

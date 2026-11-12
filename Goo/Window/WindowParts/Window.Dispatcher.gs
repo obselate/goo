@@ -148,7 +148,6 @@ public partial class Window {
 
   internal func drainPostedActions() {
     using let context = CallbackScope(CallbackContext())
-    DrainContinuations()
     var count int32
     var hasBatch bool
     lock cellQueueGate {

@@ -210,6 +210,7 @@ public open class Cell {
   internal func BindContext(frame ContextFrame?, window Window?) {
     if incomingContext == frame && contextWindow == window { return }
     incomingContext = frame
+    if contextWindow != window { callbackContext = nil }
     lock rebuildGate { contextWindow = window }
     outgoingContext = contextReader?.Provider ?? frame
     if let reader = contextReader {
@@ -707,24 +708,6 @@ public open class Cell {
       Key: key,
       CellType: typeof(TCell),
       Input: input,
-      Factory: () -> TCell(),
-    }
-
-    /// Describes a child mount with input and constructor dependencies.
-    /// @typeparam TInput component input type
-    /// @typeparam TCell declared child component type
-    /// @param key stable sibling key, or nil for positional identity
-    /// @param input input snapshot stored on every parent diff
-    /// @param factory creates a fresh component only for a new mount
-    /// @returns a blob that mounts the child component
-    public func Mount[TInput any, TCell Cell[TInput]](key string?, input TInput, factory Func[TCell]) Blob {
-      if factory == nil { throw ArgumentNullException("factory") }
-      return CellInputElement[TInput, TCell]{
-        Key: key,
-        CellType: typeof(TCell),
-        Input: input,
-        Factory: factory as Func[Cell]?,
-      }
     }
 
     /// Describes a child mount with input and constructor dependencies.

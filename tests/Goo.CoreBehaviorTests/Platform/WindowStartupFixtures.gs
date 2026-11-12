@@ -23,6 +23,22 @@ internal class WindowStartupFixtures {
     try { failure.GetAwaiter().GetResult()
       return false }
     catch (error InvalidOperationException) { if error.Message != "dispatch" { return false } }
+    var continuations int32
+    let context = window.CallbackContext()
+    context.Post(_ -> {
+      continuations++
+      window.drainPostedActions()
+    }, nil)
+    context.Post(_ -> { continuations++ }, nil)
+    window.drainPostedActions()
+    if continuations != 2 { return false }
+    var order = ""
+    window.Post(() -> { order += "A" })
+    context.Post(_ -> { order += "B" }, nil)
+    window.Post(() -> { order += "C" })
+    context.Post(_ -> { order += "D" }, nil)
+    window.drainPostedActions()
+    if order != "ABCD" { return false }
     let pending = window.InvokeAsync(() -> { calls++ })
     let presentation = window.NextPresentationAsync()
     window.Close()
