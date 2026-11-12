@@ -69,7 +69,9 @@ internal partial class PointerInput {
       }
     }
     if let requested = control.CaptureTarget {
-      if current.CaptureTarget != nil && current.CaptureTarget != requested { cancelPointerDrag() }
+      if let drag = current.PointerDrag {
+        if drag.Target.Current != requested { cancelPointerDrag() }
+      }
       if requested != current.LastPressNode { current.LastPressNode = nil }
       current.CapturePath.Clear()
       current.CaptureTarget = requested
@@ -299,7 +301,7 @@ internal partial class PointerInput {
           let callback = if kind == PointerEventKind.Press { n.OnPointerDown }
             else if kind == PointerEventKind.Move { n.OnPointerMove } else { n.OnPointerUp }
           let owner = callback != nil ? CellOwnership.InRoute(route, i - 1) : nil
-          dispatchPointerDrag(n, event, kind, route, i - 1)
+          dispatchPointerDrag(n, event, kind, route, i - 1, transformed)
           try {
             callback?.Invoke(event)
           } finally {

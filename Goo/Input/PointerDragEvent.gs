@@ -20,7 +20,7 @@ public struct PointerDragEvent {
   /// Gets the displacement from the press position in element-local units.
   public prop Translation Point { get; init; }
   /// Gets movement from the previous sample in element-local units.
-  public prop Delta Point { get -> Pointer.Delta }
+  public prop Delta Point { get; init; }
   /// Gets the keyboard modifiers at this sample.
   public prop Modifiers KeyModifiers { get -> Pointer.Modifiers }
   /// Gets the pointer device.
