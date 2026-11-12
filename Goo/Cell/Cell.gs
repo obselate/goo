@@ -44,7 +44,7 @@ public open class Cell {
   /// Gets the owning window from the first Build until Unmounting returns.
   protected prop Host Window {
     get {
-      guard let window = contextWindow else {
+      guard let window = disposed ? nil : contextWindow else {
         throw InvalidOperationException("${GetType().Name}.Host requires a mounted Cell.")
       }
       window.requireUiThread("Cell.Host")
@@ -81,15 +81,13 @@ public open class Cell {
   protected func Post(action Action) bool {
     if action == nil { throw ArgumentNullException("action") }
     var window Window?
-    var generation int64
     lock rebuildGate {
       if disposed || unmounting || mountedNode == nil { return false }
       window = contextWindow
-      generation = mountGeneration
     }
     guard let host = window else { return false }
     return host.Post(() -> {
-      if MountedNodeFor(generation) != nil { RunOwnedAction(action) }
+      if MountedNode() != nil { RunOwnedAction(action) }
     })
   }
 
@@ -111,15 +109,15 @@ public open class Cell {
   /// Runs once before elements are removed and Lifetime is cancelled.
   protected open func Unmounting() {}
 
-  internal func RunOwnedAction(action Action) {
+  internal func RunOwnedAction(action Action, rebuild bool = true) {
     if disposed { return }
-    try { action() } finally { RebuildAfterCallback() }
+    try { action() } finally { if rebuild { RebuildAfterCallback() } }
   }
 
   internal func CompleteMount() {
     if disposed || mountHookRun || mountedNode == nil { return }
     mountHookRun = true
-    RunOwnedAction(Mounted)
+    RunOwnedAction(Mounted, false)
   }
 
   internal func OwnTimer(timer WindowTimer) {
@@ -405,7 +403,7 @@ public open class Cell {
     }
     var firstError Exception?
     try {
-      if contextWindow != nil { RunOwnedAction(Unmounting) }
+      if contextWindow != nil { RunOwnedAction(Unmounting, false) }
     } catch (error Exception) { firstError = error }
     disposed = true
     try { lifetimeSource?.Cancel() } catch (error Exception) { firstError ??= error }
@@ -632,8 +630,8 @@ public open class Cell {
 
     /// Describes a child component mount created by a factory.
     /// @typeparam TCell declared child component type
-    /// @param factory creates a fresh child component when the mount has no retained instance
     /// @param key stable sibling key, or nil for positional identity
+    /// @param factory creates a fresh child component when the mount has no retained instance
     /// @returns a blob that mounts the child component
     public func Mount[TCell Cell](key string?, factory Func[TCell]) Blob {
       if factory == nil { throw ArgumentNullException("factory") }
