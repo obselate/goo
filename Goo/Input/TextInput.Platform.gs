@@ -344,10 +344,11 @@ internal partial class TextInput {
           n.EntryHistory!!.Record(before, entryCompositionBefore, false)
         }
         let owner = changed ? CellOwnership.Within(root, n) : nil
+        let previousContext = owner?.BeginCallback()
         try {
           if changed { n.OnChange?.Invoke(committed) }
         } finally {
-          owner?.RebuildAfterCallback()
+          owner?.EndCallback(previousContext)
           if snapshot.FocusId == focus.Generation { updateTextInputArea(n) }
         }
         return true
@@ -456,8 +457,9 @@ internal partial class TextInput {
       case TextCommandKind.Paste { after = edit.Insert(before, sanitize(command.Text ?? "")) }
       case TextCommandKind.Submit {
         let owner = CellOwnership.Within(root, n)
+        let previousContext = owner?.BeginCallback()
         try { n.OnSubmit?.Invoke(n.Buffer) }
-        finally { owner?.RebuildAfterCallback() }
+        finally { owner?.EndCallback(previousContext) }
         return true
       }
       case _ { return false }

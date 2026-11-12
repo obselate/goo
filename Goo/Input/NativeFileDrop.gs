@@ -158,8 +158,12 @@ internal class NativeDropRouter {
               if let event = Event(session, target, DragEventKind.Move, DragEffect.None) {
                 let owner = CellOwnership.Within(root, target)
                 var accepted DragEffect
+                let previousContext = owner?.BeginCallback()
                 try { accepted = acceptedDragEffect(descriptor.Query(event), session.Data.AllowedEffects) }
-                finally { Rebuild(owner) }
+                finally {
+                  owner?.EndCallback(previousContext)
+                  invalidate()
+                }
                 if current != session || !canReceive() || mount.Current == nil { return }
                 if DragTargetRouting.Available(root, target) {
                   if accepted != DragEffect.None { selected = target
@@ -203,11 +207,11 @@ internal class NativeDropRouter {
   private func Notify(root Node, session NativeDropSession, target Node, kind DragEventKind, effect DragEffect) {
     guard let descriptor = DragDropMetadata.Target(target), let event = Event(session, target, kind, effect) else { return }
     let owner = CellOwnership.Within(root, target)
+    let previousContext = owner?.BeginCallback()
     try { descriptor.Changed?.Invoke(event) }
-    finally { Rebuild(owner) }
-  }
-  private func Rebuild(owner Cell?) {
-    owner?.RebuildAfterCallback()
-    invalidate()
+    finally {
+      owner?.EndCallback(previousContext)
+      invalidate()
+    }
   }
 }

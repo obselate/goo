@@ -40,6 +40,7 @@ public open class Cell {
   private var mountHookQueued bool
   private var mountHookRun bool
   private var unmounting bool
+  private var callbackContext WindowCallbackContext?
 
   /// Gets the owning window from the first Build until Unmounting returns.
   protected prop Host Window {
@@ -111,15 +112,30 @@ public open class Cell {
   /// Runs once before elements are removed and Lifetime is cancelled.
   protected open func Unmounting() {}
 
-  internal func RunOwnedAction(action Action) {
+  internal func BeginCallback() SynchronizationContext? {
+    let previous = SynchronizationContext.Current
+    if (previous == nil || previous is WindowCallbackContext) && contextWindow != nil {
+      callbackContext ??= WindowCallbackContext(contextWindow!!, this)
+      SynchronizationContext.SetSynchronizationContext(callbackContext)
+    }
+    return previous
+  }
+
+  internal func EndCallback(previous SynchronizationContext?, rebuild bool = true) {
+    SynchronizationContext.SetSynchronizationContext(previous)
+    if rebuild { RebuildAfterCallback() }
+  }
+
+  internal func RunOwnedAction(action Action, rebuild bool = true) {
     if disposed { return }
-    try { action() } finally { RebuildAfterCallback() }
+    let previous = BeginCallback()
+    try { action() } finally { EndCallback(previous, rebuild) }
   }
 
   internal func CompleteMount() {
     if disposed || mountHookRun || mountedNode == nil { return }
     mountHookRun = true
-    RunOwnedAction(Mounted)
+    RunOwnedAction(Mounted, false)
   }
 
   internal func OwnTimer(timer WindowTimer) {
@@ -210,7 +226,7 @@ public open class Cell {
   /// Requests a rebuild of this component.
   /// Mounted cells must use their window's UI thread. Post background results with Window.Post.
   public func Rebuild() {
-    if disposed || unmounting { return }
+    if disposed || unmounting || contextWindow?.callbackClosing == true { return }
     contextWindow?.requireUiThread("Cell.Rebuild")
     if building {
       throw InvalidOperationException("${GetType().Name}.Rebuild was called during Build: change state in an input handler or Window.Post callback instead of Build.")
@@ -405,7 +421,7 @@ public open class Cell {
     }
     var firstError Exception?
     try {
-      if contextWindow != nil { RunOwnedAction(Unmounting) }
+      if contextWindow != nil { RunOwnedAction(Unmounting, false) }
     } catch (error Exception) { firstError = error }
     disposed = true
     try { lifetimeSource?.Cancel() } catch (error Exception) { firstError ??= error }
