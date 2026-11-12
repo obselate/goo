@@ -705,7 +705,7 @@ internal class ContextVirtualRoot : Cell {
 
     private func content() Blob {
         if !Show { return Container{Width: 100, Height: 60} }
-        let viewport = Virtual(ContextVirtualSource(this)){Handle = Handle, Width = 100, Height = 60}
+        let viewport = Virtual(){Source = ContextVirtualSource(this), Handle = Handle, Width = 100, Height = 60}
         return portal ? Portal(){viewport}: viewport
     }
 }

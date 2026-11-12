@@ -4,6 +4,39 @@ import System
 import System.Collections.Generic
 
 internal class TextInputPrimitivesFixtures {
+  func SelectableTextUsesSelectionWithoutEditingOrIme() bool {
+    let resolver = Resolver{}
+    let reconciler = Reconciler{Res: resolver}
+    let root = reconciler.Mount(Text{Content: "a😀 word\nlast", Selectable: true, Width: 200, FontSize: 16})
+    Layout().Calculate(root, 200.0F, 100.0F)
+    let input = InputCoordinator()
+    if !input.FocusElement(resolver, root) || input.EditorSnapshot() != nil { return false }
+    if !input.SetEditorSelection(root, 1, 3) || input.EditorSelection()?.Active.Offset != 3 { return false }
+    if input.CommitEditorText(root, "changed") || root.Content != "a😀 word\nlast" { return false }
+    if !input.ExecuteEditorCommand(root, resolver, TextCommand{Kind: TextCommandKind.MoveRight, ExtendSelection: true})
+      || root.Anchor != 1 || root.Caret != 4 { return false }
+    if !input.ExecuteEditorCommand(root, resolver, TextCommand{Kind: TextCommandKind.SelectAll})
+      || root.Anchor != 0 || root.Caret != root.Content.Length { return false }
+    if !SelectableText.Pointer(root, 10.0F, 5.0F, false, 3, nil)
+      || root.Anchor != 0 || root.Caret != 8 { return false }
+    reconciler.Diff(root, Text{Content: "a", Selectable: true})
+    if root.Anchor > 1 || root.Caret > 1 { return false }
+    reconciler.Diff(root, Text{Content: "a"})
+    return !root.Selectable && !root.Focusable && root.Anchor == 0 && root.Caret == 0
+  }
+
+  func EditorAndVirtualRequireDeclarationMembersAtMount() bool {
+    let reconciler = Reconciler{Res: Resolver{}}
+    var rejected = 0
+    try { reconciler.Mount(TextEditor{}) } catch (_ InvalidOperationException) { rejected++ }
+    try { reconciler.Mount(Virtual{}) } catch (_ InvalidOperationException) { rejected++ }
+    using let controller = TextEditorController(TextDocument("text"))
+    using let layer = TextPresentationLayer(controller.Document)
+    let editor = TextEditor{Layers: []TextPresentationLayer{layer}, Controller: controller}
+    let root = reconciler.Mount(editor)
+    return rejected == 2 && root.EditorController == controller
+  }
+
   func EntryUndoDropsOldestGroupsAtCountAndByteLimits() bool {
     for length in []int32{ 4, 32768 } {
       let limit = length == 4 ? 1000 : 512
@@ -682,7 +715,7 @@ internal class NativeTextInputLifecycleCell : Cell {
       OnTextInput: (value string) -> {},
     })
     root.Children.Add(TextEntry{ Key: "entry", Handle: Entry, Width: 80, Height: 20 })
-    let editor = TextEditor(Controller) {
+    let editor = TextEditor(){ Controller = Controller,
       Key = "editor", Handle = Editor, Width = 80, Height = 20,
     }
     root.Children.Add(editor)

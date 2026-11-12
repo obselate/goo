@@ -11,7 +11,7 @@ public partial class Window {
   /// @param text The text to measure.
   /// @param style The text declarations. A Text blob is also a Style.
   /// @returns The width in layout pixels.
-  public func MeasureText(text string, style Style) float32 {
+  public func MeasureText(text string, style Style) float64 {
     requireUiThread("Window.MeasureText")
     var family = StyleFields.Default(StyleField.FontFamily)
     var language = StyleFields.Default(StyleField.Language)
@@ -44,6 +44,6 @@ public partial class Window {
       int32(weight.A), FontStyle(int32(fontStyle.A)) == FontStyle.Italic,
       Length{ Unit: LengthUnit(int32(spacing.B)), Value: spacing.A }.Px, int32(direction.A),
       entryText(language) ?? "")
-    return PixelGrid.RoundValueToPixelGrid(width, RenderScale.X, true, false)
+    return float64(PixelGrid.RoundValueToPixelGrid(width, RenderScale.X, true, false))
   }
 }

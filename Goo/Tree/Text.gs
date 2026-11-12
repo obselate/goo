@@ -1,5 +1,15 @@
 package Goo
 
+import System.Text
+
+/// Defines displayed Text and an optional inline Style for one text part.
+public data struct TextSpan(Text string, Style Style?)
+
+/// Converts plain text to an unstyled text span.
+/// @param value The displayed text.
+/// @returns An unstyled text span.
+public func operator implicit(value string) TextSpan -> TextSpan(value, nil)
+
 /// Defines a text element.
 public class Text : Blob {
   internal override func coreBlob() {
@@ -7,6 +17,8 @@ public class Text : Blob {
 
   /// Gets the displayed text.
   public prop Content string{ get; init; }
+  /// Gets whether the text supports selection and copy without editing or a caret.
+  public prop Selectable bool{ get; init; }
   /// Gets ordered passive inline styles in UTF-16 source offsets.
   /// A cluster uses the style at its logical start. Later ranges override earlier fields.
   public prop StyleRanges []TextStyleRange{
@@ -26,5 +38,29 @@ public class Text : Blob {
   /// @param content The displayed text.
   public init(content string) {
     Content = content
+  }
+
+  /// Initializes text by concatenating plain and styled spans.
+  /// @param spans The ordered text parts.
+  public init(spans ...TextSpan) {
+    let content = StringBuilder()
+    var count = 0
+    for span in spans {
+      content.Append(span.Text)
+      if span.Style != nil { count++ }
+    }
+    Content = content.ToString()
+    if count == 0 { return }
+    let ranges = [count]TextStyleRange
+    var index = 0
+    var offset = 0
+    for span in spans {
+      if let style = span.Style {
+        ranges[index] = TextStyleRange(TextRange(offset, span.Text.Length), style)
+        index++
+      }
+      offset += span.Text.Length
+    }
+    StyleRanges = ranges
   }
 }

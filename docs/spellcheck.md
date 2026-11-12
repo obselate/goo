@@ -3,7 +3,7 @@
 ```cs
 var service = new SystemSpellingService();
 using var spelling = new SpellCheckSession(window, controller, service, "en-US");
-var editor = new TextEditor(controller, [spelling.Layer]);
+var editor = new TextEditor { Controller = controller, Layers = [spelling.Layer] };
 var result = await spelling.CheckAsync(new TextRange(0, controller.Document.Length));
 ```
 

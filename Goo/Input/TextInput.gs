@@ -115,6 +115,10 @@ internal partial class TextInput {
     let end = start + length
     if end < start || (caret != start && caret != end) { return false }
     let anchor = caret == start ? end : start
+    if target.Selectable {
+      if end > target.Content.Length { return false }
+      return SelectableText.Set(target, anchor, caret)
+    }
     if target.Kind == NodeKind.Entry {
       let starts = UnicodeGraphemes.Starts(target.Buffer)
       let semanticLength = target.Password ? starts.Length : target.Buffer.Length

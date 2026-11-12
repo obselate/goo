@@ -6,7 +6,7 @@ import Goo.RichText
 
 using let formatting = TextPresentationLayer(controller.Document)
 using let clipboard = RichTextClipboard(window, controller, formatting)
-let editor = TextEditor(controller, []TextPresentationLayer{formatting})
+let editor = TextEditor{Controller: controller, Layers: []TextPresentationLayer{formatting}}
 clipboard.Completed += result -> ShowStatus(result.Status)
 ```
 

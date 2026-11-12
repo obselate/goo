@@ -92,7 +92,7 @@ internal shared class FontScrollGate {
 internal class FontScrollCell : Cell {
     internal let Handle ElementHandle = ElementHandle{}
     private let source FontScrollSource = FontScrollSource()
-    override func Build() Blob -> Virtual(source){Handle = Handle, Width = 384, Height = 72}
+    override func Build() Blob -> Virtual(){Source = source, Handle = Handle, Width = 384, Height = 72}
 }
 
 internal class FontScrollSource : VirtualSource {
