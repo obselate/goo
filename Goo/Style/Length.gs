@@ -28,6 +28,36 @@ public struct Length {
     && Single.IsFinite(EmPart) && Single.IsFinite(RemPart) && Single.IsFinite(VwPart) && Single.IsFinite(VhPart) }
 
   shared {
+    /// Creates an absolute pixel length.
+    /// @param value length in pixels
+    /// @returns a pixel length
+    public func Pixels(value float64) Length -> Length { Unit: LengthUnit.Px, Value: float32(value) }
+
+    /// Creates a percentage of the available size.
+    /// @param value percentage of the available size
+    /// @returns a percentage length
+    public func Percent(value float64) Length -> Length { Unit: LengthUnit.Percent, Value: float32(value) }
+
+    /// Creates a multiple of the computed element font size, or the parent font size for FontSize.
+    /// @param value Font size multiple.
+    /// @returns An element-relative length.
+    public func Em(value float64) Length -> Length{Unit: LengthUnit.Em, EmPart: float32(value)}
+
+    /// Creates a multiple of the root font size.
+    /// @param value Root font size multiple.
+    /// @returns A root-relative length.
+    public func Rem(value float64) Length -> Length{Unit: LengthUnit.Rem, RemPart: float32(value)}
+
+    /// Creates a percentage of the window layout viewport width.
+    /// @param value Percentage points.
+    /// @returns A viewport-relative length.
+    public func Vw(value float64) Length -> Length{Unit: LengthUnit.Vw, VwPart: float32(value)}
+
+    /// Creates a percentage of the window layout viewport height.
+    /// @param value Percentage points.
+    /// @returns A viewport-relative length.
+    public func Vh(value float64) Length -> Length{Unit: LengthUnit.Vh, VhPart: float32(value)}
+
     /// Gets an automatic layout length.
     public prop Auto Length { get -> Length{Unit: LengthUnit.Auto} }
     /// Gets the smallest size without avoidable content overflow.

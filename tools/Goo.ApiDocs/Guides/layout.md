@@ -24,7 +24,7 @@ Container{Width: Percent(100) - Rem(2), MaxHeight: Vh(25)}
 Container{Width: Length.FitContent(Em(32.5))}
 ```
 
-- Numbers are layout pixels. Use `Percent(value)` instead of `Length.Percent`, and a number instead of `Length.Pixels`.
+- Numbers are layout pixels. G# uses `Percent`, `Em`, `Rem`, `Vw` and `Vh`. Other .NET languages can use `Length.Pixels`, `Length.Percent`, `Length.Em`, `Length.Rem`, `Length.Vw` and `Length.Vh`.
 - `Em` uses the element's computed font size. In `FontSize`, it uses the parent's font size. `Rem` uses the root font size. Platform text scale applies once.
 - `Vw` and `Vh` use percentages of the window layout viewport.
 - Add or subtract lengths, or multiply and divide them by a number. Automatic and intrinsic values cannot be operands.

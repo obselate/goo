@@ -512,6 +512,12 @@ class PublicDocumentationTests {
             "M:Goo.ImageSourceLease.Dispose",
             "M:Goo.ImageSourceLease.Fail",
             "M:Goo.LayoutContext.ResolveLength(Goo.Length,Goo.LayoutAxis)",
+            "M:Goo.Length.Pixels(System.Double)",
+            "M:Goo.Length.Percent(System.Double)",
+            "M:Goo.Length.Em(System.Double)",
+            "M:Goo.Length.Rem(System.Double)",
+            "M:Goo.Length.Vw(System.Double)",
+            "M:Goo.Length.Vh(System.Double)",
             "M:Goo.Length.FitContent(Goo.Length)",
             "M:Goo.Length.op_Addition(Goo.Length,Goo.Length)",
             "M:Goo.Length.op_Subtraction(Goo.Length,Goo.Length)",
@@ -1605,6 +1611,12 @@ class PublicDocumentationTests {
             ["M:Goo.LayoutContext.ResolveLength(Goo.Length,Goo.LayoutAxis)"] =
                 DocumentationShape([]string{"value", "axis"}, System.Array.Empty[string](), true),
             ["M:Goo.Length.FitContent(Goo.Length)"] = DocumentationShape([]string{"limit"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.Pixels(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.Percent(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.Em(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.Rem(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.Vw(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.Vh(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
             ["M:Goo.Length.op_Addition(Goo.Length,Goo.Length)"] =
                 DocumentationShape([]string{"left", "right"}, System.Array.Empty[string](), true),
             ["M:Goo.Length.op_Subtraction(Goo.Length,Goo.Length)"] =
