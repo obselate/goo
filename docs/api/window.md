@@ -607,11 +607,26 @@ Windows and macOS use native choosers. Linux requires the XDG FileChooser portal
 and the bundled SDL bridge. Missing portal or bridge support returns `Unsupported`.
 Embedded hosts return `Unsupported`. `CancelFileDialog` requests native dismissal.
 
+## Ownerless platform services
+
+```gsharp
+let result = await Platform.OpenAsync("/absolute/path", token)
+if result.Status == PlatformOpenStatus.Failed {
+    Console.Error.WriteLine(result.Error)
+}
+```
+
+`Platform.OpenAsync` starts the system handler on a `go` child. `Success` means the handler started, not that it opened the target. Relative paths throw `ArgumentException`. Cancellation stops a launch that has not started.
+
+Use `NativeDialogs.ShowError(title, message)` before any window opens or after the last window closes. It blocks the caller and returns `MessageBoxStatus`. Linux returns `Unsupported`. Write the message to standard error when no native box is supported.
+
 ## File and image clipboard data
 
-`GetClipboardFormats()` returns an owned MIME list plus `HasFiles` and `HasImage` without copying image payloads or opening listed files. `ReadClipboardFiles()` and `ReadClipboardImage()` return owned data and an explicit `ClipboardReadStatus`: `Success`, `Empty`, `Unsupported`, `TooLarge`, or `Failed`. `Error` explains failures and exceeded limits. Each call reads the current clipboard; a query and later read are not an atomic snapshot. Applications choose which representation to prefer when both files and images are offered.
+`window.Clipboard.GetFormats()` returns an owned MIME list plus `HasFiles` and `HasImage` without copying image payloads or opening listed files. `ReadFiles()` and `ReadImage()` return owned data and an explicit `ClipboardReadStatus`: `Success`, `Empty`, `Unsupported`, `TooLarge`, or `Failed`. `Error` explains failures and exceeded limits. Each call reads the current clipboard. A query and later read are not an atomic snapshot.
 
 Call these methods on the open window's UI thread. Calls before open, after close, or on another thread throw. Embedded windows report `Unsupported` because their clipboard belongs to the host. Clipboard contents are never modified by these methods. Returned paths and bytes survive later clipboard changes and window close and need no disposal.
+
+`window.Clipboard.ReadText()` returns `ClipboardTextResult` with `Status`, `Text`, and `Error`. `ClipboardTextStatus` distinguishes `Success`, `Empty`, `Unsupported`, `TooLarge`, and `Failed`. Text is limited to 16 MiB of UTF-8. `WriteText(value)` returns `ClipboardWriteResult`. Native read and write failures do not throw.
 
 File reads support local `text/uri-list`, GNOME copied-file lists, Windows `CF_HDROP`, and macOS pasteboard file URLs. Paths retain clipboard order; Goo does not read their contents. URI lists reject remote hosts, relative paths, and NUL characters. Limits are 4096 paths, 32768 UTF-16 units per path, and 1048576 total path units; MIME file-list payloads are limited to 1 MiB.
 
@@ -630,14 +645,14 @@ let data = TransferData(
     },
     []Uri{}
 )
-let result = await window.WriteClipboardAsync(data)
+let result = await window.Clipboard.WriteAsync(data)
 ```
 
 Start clipboard calls on the open window's UI thread. Check `result.Status`.
 
 | Contract | Behavior |
 | --- | --- |
-| Read | `ReadClipboardDataAsync(types)` copies requested formats from one offer. Include `text/uri-list` for document references. |
+| Read | `window.Clipboard.ReadDataAsync(types)` copies requested formats from one offer. Include `text/uri-list` for document references. |
 | Owned data | Byte snapshots and URI values stay unchanged after replacement or window close. Caller changes cannot alter published bytes. |
 | Text and images | Plain text and HTML use UTF-8 without a terminator. RTF and encoded images keep their bytes. |
 | Files | Put references in `Uris`, not a second URI-list representation. Goo does not open the files. Desktop references must be local file URIs. |
@@ -756,6 +771,36 @@ Requests a deferred file move where the native clipboard supports that intent.
 
 
 Reports a native clipboard query/read outcome independently of payload contents.
+
+### Values
+
+- `Success`
+- `Empty`
+- `Unsupported`
+- `TooLarge`
+- `Failed`
+
+## `ClipboardTextResult`
+
+
+Contains owned clipboard text and an explicit native outcome.
+
+### `Error`
+
+Gets native failure detail, or an empty string.
+
+### `Status`
+
+Gets the read outcome.
+
+### `Text`
+
+Gets the copied text, or an empty string outside Success.
+
+## `ClipboardTextStatus`
+
+
+Reports a plain-text clipboard read outcome.
 
 ### Values
 
@@ -1503,16 +1548,6 @@ Marks a container subtree as a native drag region for undecorated windows. Click
 
 Returns: the same container
 
-### `GetClipboardFormats`
-
-Queries MIME availability without reading image bytes or file contents.
-
-Returns: An owned format list and explicit query status.
-
-### `GetClipboardText`
-
-Gets the current native clipboard text on the window UI thread. An empty result can mean an empty clipboard, native copy failure, or text exceeding 16 MiB of UTF-8.
-
 ### `GetCurrentDisplay`
 
 Gets this window's current display, or nil for an embedded host or unavailable SDL display. Open the window first and call on its UI thread.
@@ -1585,26 +1620,6 @@ Processes one frame with the specified elapsed time.
 
 - `dt`: elapsed seconds since the previous frame
 
-### `ReadClipboardDataAsync(System.Collections.Generic.IReadOnlyList{string})`
-
-Copies requested available MIME alternatives and URI references from one native clipboard offer.
-
-- `contentTypes`: Exact MIME types to read, including text/uri-list for document references.
-
-Returns: Owned data and explicit status, with no partial payload on a native read failure.
-
-### `ReadClipboardFiles`
-
-Reads at most 4096 absolute paths and 1048576 UTF-16 path units from the current clipboard.
-
-Returns: Owned paths and explicit read status; the clipboard may have changed since a format query.
-
-### `ReadClipboardImage`
-
-Reads at most 64 MiB of encoded image data; native bitmap conversion also limits decoded RGBA to 64 MiB.
-
-Returns: Owned encoded bytes with a MIME type and explicit read status.
-
 ### `RenderOffscreenAsync(Cell,OffscreenRenderOptions,System.Threading.CancellationToken,WindowCapture)`
 
 Renders a fresh, unattached cell at a separate layout size without resizing or presenting this window. Keep pumping the owner until completion. Pixels and new GPU allocations share MaxBytes.
@@ -1635,10 +1650,6 @@ Queues an idempotent close request. This is safe from any thread.
 ### `Run`
 
 Opens the window and processes frames until all open Goo windows close.
-
-### `SetClipboardText(string)`
-
-Sets the native clipboard text on the window UI thread. Native set failures throw.
 
 ### `SetColors(Color,Color)`
 
@@ -1692,15 +1703,6 @@ Attempts to submit a topmost request to the current native host. Accepted means 
 
 Returns: Closed, Unsupported, Accepted, or Failed for the host operation.
 
-### `WriteClipboardAsync(TransferData,ClipboardIntent)`
-
-Publishes every MIME alternative and URI reference in one native clipboard publication.
-
-- `data`: The immutable selection to publish without opening referenced documents.
-- `intent`: Copy or a supported deferred file-cut hint, never an instruction to delete source files.
-
-Returns: Explicit publication status. Success does not confirm that a paste occurred.
-
 ### `AccessibilityAdapter`
 
 Gets or sets the adapter that receives this window's retained semantic tree.
@@ -1728,6 +1730,10 @@ Reports whether programmatic window movement is available.
 ### `Capabilities`
 
 Gets supported native lifecycle operations, or None before Open or Attach.
+
+### `Clipboard`
+
+Gets clipboard services for this window's UI thread.
 
 ### `Closed`
 
@@ -2043,6 +2049,60 @@ Reports whether an asynchronous window capture request was accepted.
 - `Failed`
 - `DeviceLost`
 - `Unsupported`
+
+## `WindowClipboard`
+
+
+Reads and writes clipboard data on an open window's UI thread.
+
+### `GetFormats`
+
+Queries MIME availability without reading image bytes or file contents.
+
+Returns: An owned format list and explicit query status.
+
+### `ReadDataAsync(System.Collections.Generic.IReadOnlyList{string})`
+
+Copies requested available MIME alternatives and URI references from one native clipboard offer.
+
+- `contentTypes`: Exact MIME types to read, including text/uri-list for document references.
+
+Returns: Owned data and explicit status, with no partial payload on a native read failure.
+
+### `ReadFiles`
+
+Reads at most 4096 absolute paths and 1048576 UTF-16 path units from the current clipboard.
+
+Returns: Owned paths and explicit read status; the clipboard may have changed since a format query.
+
+### `ReadImage`
+
+Reads at most 64 MiB of encoded image data; native bitmap conversion also limits decoded RGBA to 64 MiB.
+
+Returns: Owned encoded bytes with a MIME type and explicit read status.
+
+### `ReadText`
+
+Reads bounded plain text with an explicit native outcome.
+
+Returns: Owned text and status. Native failures do not throw.
+
+### `WriteAsync(TransferData,ClipboardIntent)`
+
+Publishes every MIME alternative and URI reference in one native clipboard publication.
+
+- `data`: The immutable selection to publish without opening referenced documents.
+- `intent`: Copy or a supported deferred file-cut hint, never an instruction to delete source files.
+
+Returns: Explicit publication status. Success does not confirm that a paste occurred.
+
+### `WriteText(string)`
+
+Publishes plain text without throwing for native failures.
+
+- `value`: The text to publish.
+
+Returns: The native publication outcome.
 
 ## `WindowDisplay`
 

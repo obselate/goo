@@ -299,6 +299,15 @@ Distinguishes selection, dismissal, platform limits, owner conflicts and native 
 
 Shows owned native dialogs without a managed fallback.
 
+### `ShowError(string,string)`
+
+Shows a synchronous ownerless platform error box before or after window use. Blocks the calling thread. Do not call while Goo windows are open. Linux returns Unsupported. Write the message to standard error when unsupported.
+
+- `title`: The native title.
+- `message`: The plain-text error message.
+
+Returns: Success, Unsupported when no simple message box exists, or Failed.
+
 ### `ShowMessageBoxAsync(Window,MessageBoxOptions)`
 
 Queues an owned native message box from the open owner's UI thread. Desktop SDL display blocks Goo rendering, timers and posted actions until dismissal. Wayland returns Unsupported. Android supports up to three buttons without Return/Escape defaults.
@@ -692,6 +701,44 @@ Uses the configured desktop application ID and installed native activation route
 - `options`: Platform identity and channel configuration.
 
 Returns: An owned native service, or an explicit unsupported, identity or native failure.
+
+## `Platform`
+
+
+Provides operating-system services without a window owner.
+
+### `OpenAsync(string,System.Threading.CancellationToken)`
+
+Starts the system handler for an absolute path or URI on a background child.
+
+- `target`: An absolute path or URI. Relative paths are rejected.
+- `cancellationToken`: Cancels launch before the handler is started.
+
+Returns: Success when the handler starts, or an explicit platform failure.
+
+## `PlatformOpenResult`
+
+
+Contains a system-handler launch outcome.
+
+### `Error`
+
+Gets native failure detail, or an empty string.
+
+### `Status`
+
+Gets the launch outcome, not confirmation that the target was opened.
+
+## `PlatformOpenStatus`
+
+
+Reports whether the system handler was started.
+
+### Values
+
+- `Success`
+- `Unsupported`
+- `Failed`
 
 ## `PlatformPreferences`
 
