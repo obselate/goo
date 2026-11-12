@@ -341,8 +341,7 @@ func RunShaderEffectSmoke() {
         && finalBounds.Height == initialBounds.Height,
       "Shader effect changed control layout")
 
-    opened.Width = 176
-    opened.Height = 120
+    opened.Size = LayoutSize(176, 120)
     var resizeAttempt int32
     var resizedMetrics = WindowReadbackTestFixture.Metrics(opened)
     while (resizedMetrics.LogicalWidth != 176 || resizedMetrics.LogicalHeight != 120)
