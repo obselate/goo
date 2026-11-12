@@ -56,7 +56,9 @@ public open class Cell {
   public open func Build() Blob -> Container {}
 
   /// Requests a rebuild of this component.
+  /// Mounted cells must use their window's UI thread. Post background results with Window.Post.
   public func Rebuild() {
+    contextWindow?.requireUiThread("Cell.Rebuild")
     if building {
       throw InvalidOperationException("${GetType().Name}.Rebuild was called during Build: change state in an input handler or Window.Post callback instead of Build.")
     }
