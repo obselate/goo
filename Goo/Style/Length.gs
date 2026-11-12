@@ -100,7 +100,7 @@ internal func normalizeLength(value Length) Length {
 /// @param left The first length.
 /// @param right The second length.
 /// @returns Their mixed-unit sum.
-public func operator +(left Length, right Length) Length {
+public func(left Length) operator +(right Length) Length {
   let a = lengthParts(left)
   let b = lengthParts(right)
   return normalizeLength(Length{Unit: LengthUnit.Relative, Value: a.Value + b.Value,
@@ -112,13 +112,13 @@ public func operator +(left Length, right Length) Length {
 /// @param left The first length.
 /// @param right The length to subtract.
 /// @returns Their mixed-unit difference.
-public func operator -(left Length, right Length) Length -> left + right * -1.0
+public func(left Length) operator -(right Length) Length -> left + right * -1.0
 
 /// Scales every part. Automatic and intrinsic values throw ArgumentException.
 /// @param value The length to scale.
 /// @param scale The multiplier.
 /// @returns The scaled length.
-public func operator *(value Length, scale float64) Length {
+public func(value Length) operator *(scale float64) Length {
   let source = lengthParts(value)
   let factor = float32(scale)
   return normalizeLength(Length{Unit: LengthUnit.Relative, Value: source.Value * factor,
@@ -130,4 +130,4 @@ public func operator *(value Length, scale float64) Length {
 /// @param value The length to scale.
 /// @param scale The divisor.
 /// @returns The scaled length.
-public func operator /(value Length, scale float64) Length -> value * (1.0 / scale)
+public func(value Length) operator /(scale float64) Length -> value * (1.0 / scale)
