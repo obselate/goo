@@ -430,11 +430,10 @@ internal partial class Reconciler {
       inputChanged = true
     }
     if n.SyncPointerCallbacks(b) { inputChanged = true }
-    let container = b as Container?
-    if (n.OnPointerDrag != nil) != (container?.OnPointerDrag != nil) { inputChanged = true }
-    n.OnPointerDrag = container?.OnPointerDrag
-    n.PointerDragThreshold = container?.PointerDragThreshold ?? 0.0
-    n.PointerDragAxis = container?.PointerDragAxis ?? Goo.Gestures.PanAxis.Both
+    if (n.OnPointerDrag != nil) != (b.OnPointerDrag != nil) { inputChanged = true }
+    n.OnPointerDrag = b.OnPointerDrag
+    n.PointerDragThreshold = b.PointerDragThreshold
+    n.PointerDragAxis = b.PointerDragAxis
     let nextHitTestSelf = resolvedHitTestSelf(b, focusable, entries, hover, active)
     if n.HitTestSelf != nextHitTestSelf {
       n.HitTestSelf = nextHitTestSelf
