@@ -143,6 +143,10 @@ class PublicDocumentationTests {
         Assert.Contains("first bubble from the focused element through its parents", input, StringComparison.Ordinal)
         Assert.Contains("updates the old and new `Focused` states first", input, StringComparison.Ordinal)
         Assert.Contains("depth-first tree order and wrap at the ends", input, StringComparison.Ordinal)
+        Assert.Contains("`KeyBinding(key, modifiers, onPress)`", input, StringComparison.Ordinal)
+        Assert.Contains("`KeyEvent.TargetEditsText`", input, StringComparison.Ordinal)
+        Assert.Contains("`window.Focus.EditsText`", input, StringComparison.Ordinal)
+        Assert.Contains("`window.Modifiers`", input, StringComparison.Ordinal)
     }
 
     @Fact
@@ -279,7 +283,7 @@ class PublicDocumentationTests {
             "M:Goo.GestureSession.Evaluate(Goo.GestureInput)",
             "M:Goo.GestureSession.NextDeadlineSeconds",
             "M:Goo.GestureSession.Notify(Goo.GesturePhase,Goo.GestureCancelReason)",
-            "M:Goo.PlatformInput.SetSelection(Goo.TextSelection)",
+            "M:Goo.WindowFocus.SetSelection(Goo.TextSelection)",
             "M:Goo.Accessibility.#ctor",
             "M:Goo.Window.CreateOffscreenSession",
             "M:Goo.Window.RenderOffscreenAsync(Goo.Cell,Goo.OffscreenRenderOptions,System.Threading.CancellationToken,Goo.WindowCapture)",
@@ -540,10 +544,10 @@ class PublicDocumentationTests {
             "M:Goo.PathBuilder.Polyline(Goo.Point[],System.Boolean)",
             "M:Goo.PathBuilder.QuadraticTo(System.Double,System.Double,System.Double,System.Double)",
             "M:Goo.PlatformInput.CancelComposition",
-            "M:Goo.PlatformInput.ClearFocus",
+            "M:Goo.WindowFocus.Clear",
             "M:Goo.PlatformInput.CommitText(System.String)",
             "M:Goo.PlatformInput.DeleteSurroundingText(System.Int32,System.Int32)",
-            "M:Goo.PlatformInput.Execute(Goo.TextCommand)",
+            "M:Goo.WindowFocus.Execute(Goo.TextCommand)",
             "M:Goo.PlatformInput.FinishComposition",
             "M:Goo.PlatformInput.FocusLost",
             "M:Goo.PlatformInput.CancelDrag",
@@ -553,7 +557,7 @@ class PublicDocumentationTests {
             "M:Goo.PlatformInput.KeyPress(Goo.Key,Goo.KeyModifiers)",
             "M:Goo.PlatformInput.KeyRelease(Goo.Key)",
             "M:Goo.PlatformInput.KeyRelease(Goo.Key,Goo.KeyModifiers)",
-            "M:Goo.PlatformInput.MoveFocus(System.Boolean)",
+            "M:Goo.WindowFocus.Move(System.Boolean)",
             "M:Goo.PlatformInput.PointerCancel(System.Int64,Goo.PointerDevice)",
             "M:Goo.PlatformInput.PointerMove(System.Int64,Goo.PointerDevice,System.Single,System.Single,Goo.KeyModifiers,System.Single)",
             "M:Goo.PlatformInput.PointerPress(System.Int64,Goo.PointerDevice,System.Single,System.Single,Goo.PointerButton,Goo.KeyModifiers,System.Single)",
@@ -561,7 +565,7 @@ class PublicDocumentationTests {
             "M:Goo.PlatformInput.PointerWheel(System.Single,System.Single,System.Single,System.Single,Goo.KeyModifiers)",
             "M:Goo.PlatformInput.SetComposition(System.String,System.Int32,System.Int32)",
             "M:Goo.PlatformInput.SetCompositionRange(System.Int32,System.Int32)",
-            "M:Goo.PlatformInput.SetSelection(System.Int32,System.Int32)",
+            "M:Goo.WindowFocus.SetSelection(System.Int32,System.Int32)",
             "M:Goo.PointerEvent.Capture",
             "M:Goo.PointerEvent.PreventDefault",
             "M:Goo.PointerEvent.ReleaseCapture",
@@ -948,6 +952,7 @@ class PublicDocumentationTests {
             typeof(SpellingResult),
             typeof(SpellingSuggestions),
             typeof(FocusedEditorSnapshot),
+            typeof(KeyBinding),
             typeof(GesturePointer),
             typeof(OffscreenRenderOptions),
             typeof(OffscreenRenderResult),
@@ -2230,6 +2235,8 @@ class PublicDocumentationTests {
                 .Append("P:Goo.LayoutTransition.SimulationFactory")
                 .Append("P:Goo.Cell`1.Input")
                 .Append("P:Goo.FocusedEditorSnapshot.InputOptions")
+                .Append("P:Goo.KeyBinding.OnRelease")
+                .Append("P:Goo.KeyBinding.Repeat")
                 .Append("M:Goo.Percent(System.Double)")
                 .Append("M:Goo.Em(System.Double)")
                 .Append("M:Goo.Rem(System.Double)")

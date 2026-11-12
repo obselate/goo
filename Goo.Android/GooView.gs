@@ -444,7 +444,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
         }
         if e.ActionMasked == MotionEventActions.Up {
             PerformClick()
-            if Input.Editor is {IsReadOnly: false} {
+            if Window.Focus.Editor is {IsReadOnly: false} {
                 inputMethod.ShowSoftInput(this, ShowFlags.Implicit)
             }
         }
@@ -522,13 +522,13 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
         return true
     }
 
-    override func OnCheckIsTextEditor() bool -> Input.Editor is {IsReadOnly: false}
+    override func OnCheckIsTextEditor() bool -> Window.Focus.Editor is {IsReadOnly: false}
 
     override func OnCreateInputConnection(outAttrs EditorInfo?) IInputConnection? {
         if disposed || outAttrs == nil {
             return nil
         }
-        guard let editor = Input.Editor else {
+        guard let editor = Window.Focus.Editor else {
             return nil
         }
         if editor.IsReadOnly {
@@ -612,7 +612,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             int32((float32((y + height)) * Density))
         )
         RequestRectangleOnScreen(area)
-        let editor FocusedEditorSnapshot? = Input.Editor
+        let editor FocusedEditorSnapshot? = Window.Focus.Editor
         if editor == nil {
             return false
         }
@@ -742,7 +742,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
         }
     }
 
-    override prop AutofillType AutofillType -> if Input.Editor is {IsReadOnly: false} {
+    override prop AutofillType AutofillType -> if Window.Focus.Editor is {IsReadOnly: false} {
         AutofillType.Text
     } else {
         AutofillType.None
@@ -750,7 +750,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
 
     override prop AutofillValue AutofillValue? {
         get {
-            let __spill0 = Input.Editor
+            let __spill0 = Window.Focus.Editor
             var editor FocusedEditorSnapshot
             return if __spill0 != nil && {
                 editor = __spill0!!
@@ -764,10 +764,10 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
     }
 
     override func Autofill(value AutofillValue?) {
-        if !(value != nil && value.IsText == true) || Input.Editor is not{IsReadOnly: false} {
+        if !(value != nil && value.IsText == true) || Window.Focus.Editor is not{IsReadOnly: false} {
             return
         }
-        Input.Execute(TextCommand(TextCommandKind.SelectAll, "", false))
+        Window.Focus.Execute(TextCommand(TextCommandKind.SelectAll, "", false))
         Input.CommitText(value.TextValue?.ToString() ?? "")
     }
 
