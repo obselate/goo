@@ -2645,6 +2645,35 @@ internal class InputFixtures {
     wheel(WheelEvent{})
     if directCalls != 10 { return false }
 
+    let callbacks = (increment int32) -> Container{
+      Width: 10, Height: 10,
+      OnClick: () -> { directCalls += increment },
+      OnPointerDown: (_ PointerEvent) -> { directCalls += increment },
+      OnPointerMove: (_ PointerEvent) -> { directCalls += increment },
+      OnPointerUp: (_ PointerEvent) -> { directCalls += increment },
+      OnPointerCancel: (_ PointerEvent) -> { directCalls += increment },
+      OnWheel: (_ WheelEvent) -> { directCalls += increment },
+    }
+    let batchAdded = Reconciler{ Res: Resolver{} }
+    batchAdded.Diff(direct, callbacks(1))
+    if (int32(batchAdded.Effects) & int32(ReconcileEffects.Input)) == 0 { return false }
+    let batchReplaced = Reconciler{ Res: Resolver{} }
+    batchReplaced.Diff(direct, callbacks(10))
+    if (int32(batchReplaced.Effects) & int32(ReconcileEffects.Input)) != 0 { return false }
+    directCalls = 0
+    direct.OnClick?.Invoke()
+    direct.OnPointerDown?.Invoke(PointerEvent{})
+    direct.OnPointerMove?.Invoke(PointerEvent{})
+    direct.OnPointerUp?.Invoke(PointerEvent{})
+    direct.OnPointerCancel?.Invoke(PointerEvent{})
+    direct.OnWheel?.Invoke(WheelEvent{})
+    if directCalls != 60 { return false }
+    let batchRemoved = Reconciler{ Res: Resolver{} }
+    batchRemoved.Diff(direct, Container{ Width: 10, Height: 10 })
+    if (int32(batchRemoved.Effects) & int32(ReconcileEffects.Input)) == 0
+      || direct.OnClick != nil || direct.OnPointerDown != nil || direct.OnPointerMove != nil
+      || direct.OnPointerUp != nil || direct.OnPointerCancel != nil || direct.OnWheel != nil { return false }
+
     let directPresence = Reconciler{ Res: Resolver{} }.Mount(Container{ Width: 10, Height: 10 })
     let directAdded = Reconciler{ Res: Resolver{} }
     directAdded.Diff(directPresence, Container{ Width: 10, Height: 10, OnPointerDown: (e PointerEvent) -> {} })

@@ -429,18 +429,7 @@ internal partial class Reconciler {
       n.AutoFocus = nextAutoFocus
       inputChanged = true
     }
-    if (n.OnClick != nil) != (b.OnClick != nil) { inputChanged = true }
-    n.OnClick = b.OnClick
-    if (n.OnPointerDown != nil) != (b.OnPointerDown != nil) { inputChanged = true }
-    n.OnPointerDown = b.OnPointerDown
-    if (n.OnPointerMove != nil) != (b.OnPointerMove != nil) { inputChanged = true }
-    n.OnPointerMove = b.OnPointerMove
-    if (n.OnPointerUp != nil) != (b.OnPointerUp != nil) { inputChanged = true }
-    n.OnPointerUp = b.OnPointerUp
-    if (n.OnPointerCancel != nil) != (b.OnPointerCancel != nil) { inputChanged = true }
-    n.OnPointerCancel = b.OnPointerCancel
-    if (n.OnWheel != nil) != (b.OnWheel != nil) { inputChanged = true }
-    n.OnWheel = b.OnWheel
+    if n.SyncPointerCallbacks(b) { inputChanged = true }
     let nextHitTestSelf = resolvedHitTestSelf(b, focusable, entries, hover, active)
     if n.HitTestSelf != nextHitTestSelf {
       n.HitTestSelf = nextHitTestSelf
