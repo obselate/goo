@@ -928,6 +928,7 @@ class PublicDocumentationTests {
             "F:Goo.PopupDismissReason.PlatformDismissed"
         }
         private let SynthesizedPrimaryDataTypes HashSet[Type] = HashSet[Type]{
+            typeof(LayoutSize),
             typeof(Goo.RichText.RichTextResult),
             typeof(PanGestureEvent),
             typeof(GestureRotationResult),
