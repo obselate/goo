@@ -279,6 +279,7 @@ class FixtureContractTests {
             yield Contract[InputFixtures]("PointerDragCaptureCoordinatesAndHitContract")
             yield Contract[InputFixtures]("PointerDragUsesTrackedCallbackRebuildContract")
             yield Contract[InputFixtures]("PointerDragTouchCaptureMatchesRawCaptureContract")
+            yield Contract[InputFixtures]("PointerDragCancelUsesNewestCallbackContract")
             yield Contract[InputFixtures]("PointerPrimaryAndPressureContract")
             yield Contract[InputFixtures]("PointerReacquiresHoverAfterRebuild")
             yield Contract[InputFixtures]("PointerResetStartsTheNextTouchSequence")

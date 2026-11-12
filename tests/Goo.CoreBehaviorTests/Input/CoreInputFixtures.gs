@@ -3027,6 +3027,28 @@ internal class InputFixtures {
     return true
   }
 
+  func PointerDragCancelUsesNewestCallbackContract() bool {
+    var calls int32
+    let declaration = (increment int32) -> Container{
+      Width: 50, Height: 40, OnPointerDrag: (e PointerDragEvent) -> {
+        if e.Phase == PointerDragPhase.Canceled { calls += increment }
+      },
+    }
+    let resolver = Resolver{}
+    let root = Reconciler{Res: resolver}.Mount(declaration(1))
+    Layout().Calculate(root, 50.0F, 40.0F)
+    let input = InputCoordinator()
+    input.QueuePointerPress(10.0F, 10.0F)
+    input.Drain(root, resolver, 0.0, nil)
+    let replacement = Reconciler{Res: resolver}
+    replacement.Diff(root, declaration(10))
+    if (int32(replacement.Effects) & int32(ReconcileEffects.Input)) != 0 { return false }
+    input.AfterTreeUpdated(root, resolver, false)
+    input.QueuePointerCancel(0, PointerDevice.Mouse)
+    input.Drain(root, resolver, 0.0, nil)
+    return calls == 10
+  }
+
 }
 
 internal class InputTrackedDragCell : Cell {
