@@ -70,17 +70,17 @@ public sealed class WindowTimer : IDisposable {
 public partial class Window {
     private let timers List[WindowTimer] = List[WindowTimer]()
     private let timerBatch List[WindowTimer] = List[WindowTimer]()
-    private var pendingCellMounts List[Cell]?
+    private var pendingCellMounts Queue[Cell]?
 
     internal func QueueCellMount(cell Cell) {
-        pendingCellMounts ??= List[Cell]()
-        pendingCellMounts!!.Add(cell)
+        pendingCellMounts ??= Queue[Cell]()
+        pendingCellMounts!!.Enqueue(cell)
     }
 
     private func completeCellMounts() {
         guard let pending = pendingCellMounts else { return }
-        pendingCellMounts = nil
-        for cell in pending { cell.CompleteMount() }
+        let count = pending.Count
+        for _ in 0 ... count { pending.Dequeue().CompleteMount() }
     }
 
     /// Runs a callback once on the UI thread after the delay.
@@ -103,8 +103,9 @@ public partial class Window {
         return timer
     }
     private func validateTimer(callback Action, milliseconds float64, repeating bool) {
+        if !acceptingPosts { return }
         requireUiThread("Window timer")
-        if !IsOpen && acceptingPosts {
+        if !IsOpen {
             throw InvalidOperationException("Window timers require an open window")
         }
         if callback == nil {
@@ -170,6 +171,7 @@ public partial class Window {
     }
 
     private func clearTimers() {
+        pendingCellMounts?.Clear()
         for i in 0 ... timers.Count {
             timers[i].Cancel()
         }

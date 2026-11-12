@@ -3,7 +3,54 @@ package Goo
 import System
 import System.Numerics
 
+import System.Threading
+import System.Diagnostics
 internal class CellFixtures {
+  func LifecycleHooksAndRequestTokensContract() bool {
+    let cell = LifecycleFixtureCell()
+    if !cell.HostRejected() || cell.Enqueue(() -> {}) { return false }
+    let window = Window{Root: cell, Width: 200, Height: 100}
+    window.UpdateTree()
+    let lifetime = cell.Token
+    let first = cell.Request("load")
+    let other = cell.Request("other")
+    let latest = cell.Request("load")
+    if cell.Mounts != 1 || !cell.MountGeometry || cell.Owner != window
+      || !first.IsCancellationRequested || latest.IsCancellationRequested
+      || other.IsCancellationRequested || lifetime.IsCancellationRequested { return false }
+    cell.Replace = true
+    cell.Rebuild()
+    if !cell.Enqueue(() -> { cell.Calls++ }) { return false }
+    window.UpdateTree()
+    window.drainPostedActions()
+    if cell.Calls != 1 || cell.Mounts != 1 || !cell.IsDirty() { return false }
+    window.Close()
+    return cell.Unmounts == 1 && cell.UnmountGeometry && cell.Disposals == 1
+      && lifetime.IsCancellationRequested && latest.IsCancellationRequested && other.IsCancellationRequested
+      && cell.HostRejected() && !cell.Enqueue(() -> { cell.Calls++ })
+      && !cell.Delay(0.0, () -> {}).IsActive && !cell.Repeat(1.0, () -> {}).IsActive
+  }
+
+  func CellSchedulingAndTimerValidationContract() bool ->
+    Window{Root: LifecycleFixtureCell(), Width: 200, Height: 100}.CellSchedulingForTest()
+
+  func TypedFactoryStoresInputWithoutRecreatingCellContract() bool {
+    let window = Window{}
+    let rec = Reconciler{Res: Resolver{}, Owner: window}
+    var calls int32
+    let node = rec.Mount(Cell.Mount[int32, TypedFactoryFixtureCell]("page", 1, () -> {
+      calls++
+      return TypedFactoryFixtureCell("value")
+    }))
+    let cell = node.Fiber
+    let updated = rec.Diff(node, Cell.Mount[int32, TypedFactoryFixtureCell]("page", 2, () -> {
+      calls++
+      return TypedFactoryFixtureCell("unused")
+    }))
+    let retained = updated.Fiber == cell && updated.Content == "value:2" && calls == 1
+    NodeLifecycle.DisposeTree(updated)
+    return retained
+  }
   func ControlledEditorValueDuringBuildDoesNotRebuildOwner() bool {
     let document = TextDocument("initial")
     using let controller = TextEditorController(document)
@@ -562,24 +609,24 @@ internal class CellFixtures {
     let second = FactorySubtypeCell("second")
     let rec = Reconciler{ Res: Resolver{} }
     var root = rec.Mount(Container() {
-      Cell.Mount[FactoryBaseCell](() -> {
+      Cell.Mount[FactoryBaseCell]("first", () -> {
         FactorySubtypeCell.InitialFactoryCalls++
         return first
-      }, "first"),
-      Cell.Mount[FactoryBaseCell](() -> {
+      }),
+      Cell.Mount[FactoryBaseCell]("second", () -> {
         FactorySubtypeCell.InitialFactoryCalls++
         return second
-      }, "second"),
+      }),
     })
     root = rec.Diff(root, Container() {
-      Cell.Mount[FactoryBaseCell](() -> {
+      Cell.Mount[FactoryBaseCell]("second", () -> {
         FactorySubtypeCell.ReplacementFactoryCalls++
         return FactorySubtypeCell("unused")
-      }, "second"),
-      Cell.Mount[FactoryBaseCell](() -> {
+      }),
+      Cell.Mount[FactoryBaseCell]("first", () -> {
         FactorySubtypeCell.ReplacementFactoryCalls++
         return FactorySubtypeCell("unused")
-      }, "first"),
+      }),
       })
     if FactorySubtypeCell.InitialFactoryCalls != 2
       || FactorySubtypeCell.ReplacementFactoryCalls != 0
@@ -598,9 +645,9 @@ internal class CellFixtures {
   func FactoryKeyChangeRemountsAndDisposes() bool {
     FactorySubtypeCell.Reset()
     let rec = Reconciler{ Res: Resolver{} }
-    var node = rec.Mount(Cell.Mount[FactoryBaseCell](() -> FactorySubtypeCell("first"), "first"))
+    var node = rec.Mount(Cell.Mount[FactoryBaseCell]("first", () -> FactorySubtypeCell("first")))
     let first = node.Fiber
-    node = rec.Diff(node, Cell.Mount[FactoryBaseCell](() -> FactorySubtypeCell("second"), "second"))
+    node = rec.Diff(node, Cell.Mount[FactoryBaseCell]("second", () -> FactorySubtypeCell("second")))
     return first != node.Fiber
       && node.Content == "second:0"
       && FactorySubtypeCell.Disposals == 1
@@ -610,10 +657,10 @@ internal class CellFixtures {
     FactorySubtypeCell.Reset()
     let rec = Reconciler{ Res: Resolver{} }
     let shared = FactorySubtypeCell("shared")
-    let mounted = rec.Mount(Cell.Mount[FactoryBaseCell](() -> shared, "shared"))
+    let mounted = rec.Mount(Cell.Mount[FactoryBaseCell]("shared", () -> shared))
     var reusedRejected = false
     try {
-      rec.Mount(Cell.Mount[FactoryBaseCell](() -> shared, "other"))
+      rec.Mount(Cell.Mount[FactoryBaseCell]("other", () -> shared))
     } catch (error InvalidOperationException) {
       reusedRejected = true
     }
@@ -626,7 +673,7 @@ internal class CellFixtures {
     }
     var disposedRejected = false
     try {
-      rec.Mount(Cell.Mount[FactoryBaseCell](() -> shared, "disposed"))
+      rec.Mount(Cell.Mount[FactoryBaseCell]("disposed", () -> shared))
     } catch (error InvalidOperationException) {
       disposedRejected = true
     }
@@ -638,10 +685,10 @@ internal class CellFixtures {
     FactoryThrowCell.Disposals = 0
     let rec = Reconciler{ Res: Resolver{} }
     let prior = FactorySubtypeCell("prior")
-    let node = rec.Mount(Cell.Mount[FactoryBaseCell](() -> prior, "prior"))
+    let node = rec.Mount(Cell.Mount[FactoryBaseCell]("prior", () -> prior))
     var threw = false
     try {
-      rec.Diff(node, Cell.Mount[FactoryBaseCell](() -> FactoryThrowCell{}, "replacement"))
+      rec.Diff(node, Cell.Mount[FactoryBaseCell]("replacement", () -> FactoryThrowCell{}))
     } catch (error InvalidOperationException) {
       threw = error.Message == "factory build failure"
         && error.StackTrace?.Contains("FactoryThrowCell.Build") == true
@@ -688,6 +735,94 @@ internal class CellFixtures {
       }
     }
     return failures == 2 && root.Builds == 2 && !root.disposed && window.Tree == nil
+  }
+}
+
+internal class TypedFactoryFixtureCell : Cell[int32] {
+  private let prefix string
+  init(prefix string) { this.prefix = prefix }
+  protected override func Build(input int32) Blob -> Text{Content: "$prefix:$input"}
+}
+
+internal class LifecycleFixtureCell : Cell, IDisposable {
+  internal let Handle ElementHandle = ElementHandle()
+  internal var Mounts int32
+  internal var Unmounts int32
+  internal var Disposals int32
+  internal var Calls int32
+  internal var MountGeometry bool
+  internal var UnmountGeometry bool
+  internal var Replace bool
+
+  internal prop Owner Window { get -> Host }
+  internal prop Token CancellationToken { get -> Lifetime }
+  internal func Request(name string) CancellationToken -> Latest(name)
+  internal func Enqueue(action Action) bool -> Post(action)
+  internal func Delay(milliseconds float64, action Action) WindowTimer -> After(milliseconds, action)
+  internal func Repeat(milliseconds float64, action Action) WindowTimer -> Every(milliseconds, action)
+
+  internal func HostRejected() bool {
+    try { let owner = Host } catch (error InvalidOperationException) {
+      return error.Message.Contains("LifecycleFixtureCell")
+    }
+    return false
+  }
+
+  protected override func Mounted() {
+    Mounts++
+    MountGeometry = Handle.IsMounted && Handle.BorderBox.Width == 200 && Host.Root == this
+  }
+
+  protected override func Unmounting() {
+    Unmounts++
+    UnmountGeometry = Handle.IsMounted && !Lifetime.IsCancellationRequested && Host.Root == this
+  }
+
+  func Dispose() { Disposals++ }
+
+  override func Build() Blob -> Replace
+    ? Container{Handle: Handle, Width: Percent(100), Height: 20, Text("changed")}
+    : Text{Handle: Handle, Width: Percent(100), Height: 20, Content: "initial"}
+}
+
+public partial class Window {
+  internal func CellSchedulingForTest() bool {
+    IsOpen = true
+    let cell = cast[LifecycleFixtureCell](Root!!)
+    try {
+      UpdateTree()
+      for value in []float64{Double.NaN, Double.PositiveInfinity, -1.0} {
+        var rejected int32
+        try { After(value, () -> {}) } catch (_ ArgumentOutOfRangeException) { rejected++ }
+        try { Every(value, () -> {}) } catch (_ ArgumentOutOfRangeException) { rejected++ }
+        if rejected != 2 { return false }
+      }
+      try {
+        Every(0.0, () -> {})
+        return false
+      } catch (_ ArgumentOutOfRangeException) {}
+      let once = cell.Delay(0.0, () -> { cell.Calls++ })
+      let repeating = cell.Repeat(1.0, () -> { cell.Calls++ })
+      drainTimers(float64(Stopwatch.GetTimestamp()) + float64(Stopwatch.Frequency))
+      if once.IsActive || !repeating.IsActive || cell.Calls != 2 || !cell.IsDirty() { return false }
+      repeating.Dispose()
+      cell.ClearDirty()
+      let throwing = cell.Delay(0.0, () -> { throw InvalidOperationException("timer failure") })
+      var threw = false
+      try {
+        drainTimers(float64(Stopwatch.GetTimestamp()) + float64(Stopwatch.Frequency))
+      } catch (error InvalidOperationException) { threw = error.Message == "timer failure" }
+      if !threw || throwing.IsActive || !cell.IsDirty() { return false }
+      let pending = cell.Delay(0.0, () -> { cell.Calls++ })
+      if !cell.Enqueue(() -> { cell.Calls++ }) { return false }
+      NodeLifecycle.DisposeTree(node!!)
+      drainTimers(float64(Stopwatch.GetTimestamp()) + float64(Stopwatch.Frequency))
+      drainPostedActions()
+      if pending.IsActive || cell.Calls != 2 { return false }
+      Close()
+      drainPostedActions()
+      return !pending.IsActive && cell.Calls == 2 && !After(0.0, () -> {}).IsActive
+    } finally { Close() }
   }
 }
 
@@ -751,7 +886,7 @@ internal class FactoryRecursiveRootCell : FactoryBaseCell {
 
   override func Build() Blob {
     Builds++
-    return Cell.Mount[FactoryBaseCell](() -> this, nil)
+    return Cell.Mount[FactoryBaseCell](nil, () -> this)
   }
 }
 
@@ -1067,7 +1202,7 @@ internal class DirectCallbackParent : Cell {
 
   init(child Cell) { this.child = child }
 
-  override func Build() Blob -> Cell.Mount[Cell](() -> child, nil)
+  override func Build() Blob -> Cell.Mount[Cell](nil, () -> child)
 }
 
 internal class DirectCallbackCell : Cell {
@@ -1102,9 +1237,9 @@ internal class KeyedRollbackParent : Cell {
     return Container() {
       Cell.Mount[bool, KeyedRollbackChangingCell]("replacement", true),
       Text{ Key: "moved", Handle: Handle, Content: "moved" },
-      Cell.Mount[KeyedRollbackDisposableCell](() -> First, "first"),
-      Cell.Mount[KeyedRollbackDisposableCell](() -> Second, "second"),
-      Cell.Mount[KeyedRollbackFailureCell](() -> KeyedRollbackFailureCell(Failure), "failure"),
+      Cell.Mount[KeyedRollbackDisposableCell]("first", () -> First),
+      Cell.Mount[KeyedRollbackDisposableCell]("second", () -> Second),
+      Cell.Mount[KeyedRollbackFailureCell]("failure", () -> KeyedRollbackFailureCell(Failure)),
     }
   }
 }
@@ -1117,7 +1252,7 @@ internal class KeyedRollbackChangingCell : Cell[bool] {
     if !Input { return Text{ Handle: Handle, Content: "original" } }
     return Container{
       Handle: Handle,
-      Cell.Mount[KeyedRollbackDisposableCell](() -> Child, nil),
+      Cell.Mount[KeyedRollbackDisposableCell](nil, () -> Child),
     }
   }
 }
@@ -1387,10 +1522,10 @@ internal class DeferredCallbackHost : Cell {
   override func Build() Blob {
     Builds++
     let content = switch mode {
-      case "factory": Cell.Mount[DeferredCallbackContent](() -> DeferredCallbackContent(Content()), nil)
+      case "factory": Cell.Mount[DeferredCallbackContent](nil, () -> DeferredCallbackContent(Content()))
       case "configure": Cell.Mount[DeferredCallbackContent](nil,
         (child DeferredCallbackContent) -> { child.Content = Content() })
-      case "child": key.Scope(Count, () -> Cell.Mount[DirectCallbackCell](() -> Child, nil))
+      case "child": key.Scope(Count, () -> Cell.Mount[DirectCallbackCell](nil, () -> Child))
       case _: key.Scope(Count, () -> mode == "nested" ? key.Scope(key.Read(), Content) : Content())
     }
     return Container() {
