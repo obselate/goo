@@ -33,6 +33,29 @@ internal sealed class AndroidClipboard : IDisposable {
 
     public func Dispose() -> Volatile.Write(ref disposed, true)
 
+    internal func ReadText() ClipboardTextResult {
+        try {
+            if Volatile.Read(ref disposed) || !view.HasWindowFocus {
+                return ClipboardTextResult(ClipboardTextStatus.Failed, error: "Clipboard reads require a focused Goo view")
+            }
+            using let clip = Manager.PrimaryClip
+            using let text = if clip != nil && clip.ItemCount > 0 {
+                clip.GetItemAt(0)?.CoerceToTextFormatted(context)
+            } else { nil }
+            if text == nil { return ClipboardTextResult(ClipboardTextStatus.Empty) }
+            if text.Length() > ClipboardTransfer.MaxTextBytes {
+                return ClipboardTextResult(ClipboardTextStatus.TooLarge, error: "Clipboard text exceeds 16 MiB")
+            }
+            let value = text.ToString()
+            if !ClipboardTransfer.TextFits(value) {
+                return ClipboardTextResult(ClipboardTextStatus.TooLarge, error: "Clipboard text exceeds 16 MiB")
+            }
+            return ClipboardTextResult(if value.Length == 0 { ClipboardTextStatus.Empty } else { ClipboardTextStatus.Success }, value)
+        } catch (error Exception) {
+            return ClipboardTextResult(ClipboardTextStatus.Failed, error: error.Message)
+        }
+    }
+
     internal func Query() ClipboardFormats {
         try {
             let snapshot = Capture(false)

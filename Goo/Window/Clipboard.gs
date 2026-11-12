@@ -75,39 +75,76 @@ public class ClipboardImage {
   }
 }
 
-/// Reads bounded native clipboard data on the window's owning UI thread.
-public partial class Window {
+/// Reports a plain-text clipboard read outcome.
+public enum ClipboardTextStatus { Success; Empty; Unsupported; TooLarge; Failed }
+
+/// Contains owned clipboard text and an explicit native outcome.
+public sealed class ClipboardTextResult {
+  /// Gets the read outcome.
+  public prop Status ClipboardTextStatus { get; }
+  /// Gets the copied text, or an empty string outside Success.
+  public prop Text string { get; }
+  /// Gets native failure detail, or an empty string.
+  public prop Error string { get; }
+  internal init(status ClipboardTextStatus, text string = "", error string = "") {
+    Status = status
+    Text = text
+    Error = error
+  }
+}
+
+/// Reads and writes clipboard data on an open window's UI thread.
+public sealed class WindowClipboard {
+  private let owner Window
+  internal init(owner Window) { this.owner = owner }
+
+  /// Reads bounded plain text with an explicit native outcome.
+  /// @returns Owned text and status. Native failures do not throw.
+  public func ReadText() ClipboardTextResult {
+    owner.RequireClipboardThread("WindowClipboard.ReadText")
+    return owner.ClipboardHost.GetClipboardText()
+  }
+
+  /// Publishes plain text without throwing for native failures.
+  /// @param value The text to publish.
+  /// @returns The native publication outcome.
+  public func WriteText(value string) ClipboardWriteResult {
+    owner.RequireClipboardThread("WindowClipboard.WriteText")
+    if value == nil { throw ArgumentNullException("value") }
+    return owner.ClipboardHost.SetClipboardText(value)
+  }
+
   /// Queries MIME availability without reading image bytes or file contents.
   /// @returns An owned format list and explicit query status.
-  public func GetClipboardFormats() ClipboardFormats {
-    requireClipboardThread("Window.GetClipboardFormats")
-    if let embedded = embeddedHost { return embedded.QueryClipboardFormats() }
+  public func GetFormats() ClipboardFormats {
+    owner.RequireClipboardThread("WindowClipboard.GetFormats")
+    if let embedded = owner.ClipboardEmbeddedHost { return embedded.QueryClipboardFormats() }
     return ClipboardTransfer.Query()
   }
 
   /// Reads at most 4096 absolute paths and 1048576 UTF-16 path units from the current clipboard.
   /// @returns Owned paths and explicit read status; the clipboard may have changed since a format query.
-  public func ReadClipboardFiles() ClipboardFiles {
-    requireClipboardThread("Window.ReadClipboardFiles")
-    if embeddedHost != nil { return ClipboardFiles(ClipboardReadStatus.Unsupported, []string{}, "Embedded clipboard data is host-owned") }
+  public func ReadFiles() ClipboardFiles {
+    owner.RequireClipboardThread("WindowClipboard.ReadFiles")
+    if owner.ClipboardEmbeddedHost != nil { return ClipboardFiles(ClipboardReadStatus.Unsupported, []string{}, "Embedded clipboard data is host-owned") }
     return ClipboardTransfer.ReadFiles()
   }
 
   /// Reads at most 64 MiB of encoded image data; native bitmap conversion also limits decoded RGBA to 64 MiB.
   /// @returns Owned encoded bytes with a MIME type and explicit read status.
-  public func ReadClipboardImage() ClipboardImage {
-    requireClipboardThread("Window.ReadClipboardImage")
-    if embeddedHost != nil { return ClipboardImage(ClipboardReadStatus.Unsupported, error: "Embedded clipboard data is host-owned") }
+  public func ReadImage() ClipboardImage {
+    owner.RequireClipboardThread("WindowClipboard.ReadImage")
+    if owner.ClipboardEmbeddedHost != nil { return ClipboardImage(ClipboardReadStatus.Unsupported, error: "Embedded clipboard data is host-owned") }
     return ClipboardTransfer.ReadImage()
   }
 
   /// Copies requested available MIME alternatives and URI references from one native clipboard offer.
   /// @param contentTypes Exact MIME types to read, including text/uri-list for document references.
   /// @returns Owned data and explicit status, with no partial payload on a native read failure.
-  public func ReadClipboardDataAsync(contentTypes IReadOnlyList[string]) Task[ClipboardDataResult] {
-    requireClipboardThread("Window.ReadClipboardDataAsync")
+  public func ReadDataAsync(contentTypes IReadOnlyList[string]) Task[ClipboardDataResult] {
+    owner.RequireClipboardThread("WindowClipboard.ReadDataAsync")
     let types = ClipboardTransfer.ValidateTypes(contentTypes)
-    if let embedded = embeddedHost { return embedded.ReadClipboardDataAsync(types) }
+    if let embedded = owner.ClipboardEmbeddedHost { return embedded.ReadClipboardDataAsync(types) }
     return Task.FromResult(ClipboardTransfer.ReadTransfer(types))
   }
 
@@ -115,17 +152,23 @@ public partial class Window {
   /// @param data The immutable selection to publish without opening referenced documents.
   /// @param intent Copy or a supported deferred file-cut hint, never an instruction to delete source files.
   /// @returns Explicit publication status. Success does not confirm that a paste occurred.
-  public func WriteClipboardAsync(data TransferData, intent ClipboardIntent = ClipboardIntent.Copy) Task[ClipboardWriteResult] {
-    requireClipboardThread("Window.WriteClipboardAsync")
+  public func WriteAsync(data TransferData, intent ClipboardIntent = ClipboardIntent.Copy) Task[ClipboardWriteResult] {
+    owner.RequireClipboardThread("WindowClipboard.WriteAsync")
     if data == nil { throw ArgumentNullException("data") }
     if intent != ClipboardIntent.Copy && intent != ClipboardIntent.Cut { throw ArgumentOutOfRangeException("intent") }
     if intent == ClipboardIntent.Cut && data.Uris.Count == 0 { throw ArgumentException("Cut requires document references", "intent") }
     if data.Representations.Count == 0 && data.Uris.Count == 0 { throw ArgumentException("Clipboard publication requires data", "data") }
-    if let embedded = embeddedHost { return embedded.WriteClipboardAsync(data, intent) }
+    if let embedded = owner.ClipboardEmbeddedHost { return embedded.WriteClipboardAsync(data, intent) }
     return Task.FromResult(ClipboardTransfer.WriteTransfer(data, intent))
   }
 
-  private func requireClipboardThread(operation string) {
+}
+
+/// Provides clipboard services on the window's owning UI thread.
+public partial class Window {
+  internal prop ClipboardHost WindowHost { get -> host!! }
+  internal prop ClipboardEmbeddedHost EmbeddedWindowHost? { get -> embeddedHost }
+  internal func RequireClipboardThread(operation string) {
     requireUiThread(operation)
     if !IsOpen || host == nil || host?.IsClosing == true {
       throw InvalidOperationException("Clipboard access requires an open window")

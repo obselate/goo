@@ -3,6 +3,7 @@ package Goo
 import System
 import System.Collections.Generic
 import System.Threading.Tasks
+import Hexa.NET.SDL3
 
 /// Selects the native message severity.
 public enum MessageBoxIcon { Information; Warning; Error }
@@ -62,6 +63,30 @@ public sealed class NativeDialogs {
     private init() { }
 
     shared {
+        /// Shows a synchronous ownerless platform error box before or after window use.
+        /// Blocks the calling thread. Do not call while Goo windows are open.
+        /// Linux returns Unsupported. Write the message to standard error when unsupported.
+        /// @param title The native title.
+        /// @param message The plain-text error message.
+        /// @returns Success, Unsupported when no simple message box exists, or Failed.
+        public func ShowError(title string, message string) MessageBoxStatus {
+            ValidateText(title, "title")
+            ValidateText(message, "message")
+            if !OperatingSystem.IsWindows() && !OperatingSystem.IsMacOS() {
+                return MessageBoxStatus.Unsupported
+            }
+            try {
+                SdlRuntime.EnsureLibrary()
+                return if SDL.ShowSimpleMessageBox(uint32(SDLMessageBoxFlags.Error), title, message, SDLWindowPtr.Null) {
+                    MessageBoxStatus.Success
+                } else { MessageBoxStatus.Failed }
+            } catch (_ DllNotFoundException) { return MessageBoxStatus.Unsupported }
+            catch (_ EntryPointNotFoundException) { return MessageBoxStatus.Unsupported }
+            catch (error TypeInitializationException) when (error.InnerException is DllNotFoundException || error.InnerException is EntryPointNotFoundException) {
+                return MessageBoxStatus.Unsupported
+            }
+        }
+
         /// Queues an owned native message box from the open owner's UI thread.
         /// Desktop SDL display blocks Goo rendering, timers and posted actions until dismissal.
         /// Wayland returns Unsupported. Android supports up to three buttons without Return/Escape defaults.

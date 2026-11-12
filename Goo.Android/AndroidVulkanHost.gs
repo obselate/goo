@@ -67,7 +67,7 @@ internal class AndroidVulkanHost(view GooView) : EmbeddedWindowHost {
         cursor int32
     ) bool -> view.SetImeArea(x, y, width, height)
 
-    protected override func GetClipboardText() string -> view.GetClipboardText()
+    internal override func ClipboardText() ClipboardTextResult -> view.Clipboard.ReadText()
 
     protected override func SetClipboardText(value string) -> view.SetClipboardText(value)
 

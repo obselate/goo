@@ -3,9 +3,83 @@ package Goo.CoreBehaviorTests
 import Goo
 import System
 import System.Collections.Generic
+import System.IO
+import System.Threading.Tasks
 import Xunit
 
 class ExplicitKeyBindingTests {
+    @Fact
+    async func PlatformOpenReportsHandlerLaunchAndFailure() Task {
+        if !OperatingSystem.IsLinux() { return }
+        let directory = Path.Combine(AppContext.BaseDirectory, "platform-open-" + Guid.NewGuid().ToString("N"))
+        let path = Environment.GetEnvironmentVariable("PATH")
+        Directory.CreateDirectory(directory)
+        try {
+            let handler = Path.Combine(directory, "xdg-open")
+            File.CreateSymbolicLink(handler, "/usr/bin/true")
+            Environment.SetEnvironmentVariable("PATH", directory)
+            let started = await Platform.OpenAsync("https://example.invalid/")
+            Assert.Equal(PlatformOpenStatus.Success, started.Status)
+            File.Delete(handler)
+            let failed = await Platform.OpenAsync("/absolute/missing/path")
+            Assert.Equal(PlatformOpenStatus.Failed, failed.Status)
+            Assert.NotEmpty(failed.Error)
+        } finally {
+            Environment.SetEnvironmentVariable("PATH", path)
+            Directory.Delete(directory, true)
+        }
+    }
+
+    @Fact
+    func ClipboardTextDistinguishesEmptySuccessAndLimits() {
+        using let host = TestClipboardHost{Text: ""}
+        let window = Window()
+        host.Resize(100, 40, 100, 40)
+        window.Attach(host)
+        Assert.Equal(ClipboardTextStatus.Empty, window.Clipboard.ReadText().Status)
+        Assert.Equal(DataTransferStatus.Success, window.Clipboard.WriteText("copied text").Status)
+        let read = window.Clipboard.ReadText()
+        Assert.Equal(ClipboardTextStatus.Success, read.Status)
+        Assert.Equal("copied text", read.Text)
+        host.Text = String(char(0x0800), ClipboardTransfer.MaxTextBytes / 3 + 1)
+        Assert.Equal(ClipboardTextStatus.TooLarge, window.Clipboard.ReadText().Status)
+        window.RequestClose()
+    }
+
+    @Fact
+    func ClipboardTextReportsUnsupportedEmbeddedServices() {
+        using let host = ElementHandleEmbeddedHost()
+        let window = Window()
+        host.Resize(100, 40, 100, 40)
+        window.Attach(host)
+        Assert.Equal(ClipboardTextStatus.Unsupported, window.Clipboard.ReadText().Status)
+        Assert.Equal(DataTransferStatus.Unsupported, window.Clipboard.WriteText("value").Status)
+        window.RequestClose()
+    }
+
+    @Fact
+    func ClipboardTextReportsNativeFailureAndRequiresOpenOwner() {
+        using let host = TestClipboardHost()
+        let window = Window()
+        let clipboard = window.Clipboard
+        Assert.Same(clipboard, window.Clipboard)
+        Assert.Throws[InvalidOperationException](() -> clipboard.ReadText())
+        host.Resize(100, 40, 100, 40)
+        window.Attach(host)
+        let read = clipboard.ReadText()
+        Assert.Equal(ClipboardTextStatus.Failed, read.Status)
+        Assert.Equal("", read.Text)
+        Assert.Equal("Clipboard read unavailable", read.Error)
+        let written = clipboard.WriteText("value")
+        Assert.Equal(DataTransferStatus.Failed, written.Status)
+        Assert.Equal("Clipboard write unavailable", written.Error)
+        Assert.Throws[ArgumentNullException](() -> clipboard.WriteText(nil))
+        Assert.Equal(1, host.Reads)
+        Assert.Equal(1, host.Writes)
+        host.Dispose()
+        Assert.Throws[InvalidOperationException](() -> clipboard.ReadText())
+    }
+
     @Fact
     func LayoutOnlyEmbeddedHostKeepsKeyboardFocusVisible() {
         using let host = ElementHandleEmbeddedHost()
@@ -31,7 +105,7 @@ class ExplicitKeyBindingTests {
     @InlineData(true, true)
     func ClipboardFailuresPreserveSelectionAndInput(editor bool, native bool) {
         using let controller = TextEditorController(TextDocument("keep"))
-        using let host = FailingClipboardHost()
+        using let host = TestClipboardHost()
         let handle = ElementHandle()
         let primary = KeyModifiers{Ctrl: !InputPolicy.Mac, Super: InputPolicy.Mac}
         let window = Window{
@@ -55,12 +129,9 @@ class ExplicitKeyBindingTests {
             Assert.True(input.SetSelection(4, 0))
             var writable = false
             if native {
-                try {
-                    window.SetClipboardText("keep")
-                    writable = true
-                } catch (error InvalidOperationException) {
-                    Assert.DoesNotContain("zwp_text_input_v3", error.Message)
-                }
+                let written = window.Clipboard.WriteText("keep")
+                writable = written.Status == DataTransferStatus.Success
+                Assert.DoesNotContain("zwp_text_input_v3", written.Error)
             }
             let commands = List[TextCommandKind]()
             controller.OnCommand = (e TextCommandEvent) -> commands.Add(e.Command.Kind)
@@ -1035,15 +1106,21 @@ class ExplicitKeyBindingTests {
     }
     }
 
-    private class FailingClipboardHost : EmbeddedWindowHost {
+    private class TestClipboardHost : EmbeddedWindowHost {
         internal var Writes int32
         internal var Reads int32
+        internal var Text string?
         protected override func GetClipboardText() string {
             Reads++
+            if let text = Text { return text }
             throw InvalidOperationException("Clipboard read unavailable")
         }
         protected override func SetClipboardText(value string) {
             Writes++
+            if Text != nil {
+                Text = value
+                return
+            }
             throw InvalidOperationException("Clipboard write unavailable")
         }
         protected override func RequestFrame() { }

@@ -99,7 +99,7 @@ func CheckRichClipboard() {
             let data = RichTextCodec.Write(RichTextFragment("only",
                 []TextStyleSpan{ TextStyleSpan("only", TextRange(0, 4), Style{ FontWeight: 700 }) }))
             let representation = data.Representations.Single(item -> item.ContentType == contentType)
-            let written = Pump(owner, owner.WriteClipboardAsync(
+            let written = Pump(owner, owner.Clipboard.WriteAsync(
                 TransferData([]TransferRepresentation{ representation }, []Uri{})))
             Require(written.Status == DataTransferStatus.Success, "single-format publication failed")
             controller.Selection = TextSelection(TextPosition(0, TextAffinity.Upstream), TextPosition(7, TextAffinity.Downstream))
