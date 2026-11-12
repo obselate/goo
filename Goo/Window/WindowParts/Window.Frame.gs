@@ -12,6 +12,12 @@ internal data struct DirtyCellSubmission {
   internal var Generation int64
 }
 
+internal data struct DirtyFiber {
+  internal var Cell Cell
+  internal var Depth int32
+  internal var Order int32
+}
+
 internal class WindowDefaultTitle {
   shared {
     private var value string?
@@ -493,16 +499,25 @@ public partial class Window {
       guard let fiber = mounted.Fiber else {
         continue
       }
-      addFiber(fiber)
+      var depth int32
+      var current = mounted
+      while let parent = current.Parent {
+        depth++
+        current = parent
+      }
+      fiberBatch.Add(DirtyFiber{Cell: fiber, Depth: depth, Order: fiberBatch.Count})
     }
     cellBatch.Clear()
 
-    sortFibersParentFirst()
+    fiberBatch.Sort((left, right) -> {
+      let depth = left.Depth.CompareTo(right.Depth)
+      return depth != 0 ? depth : left.Order.CompareTo(right.Order)
+    })
     var nextFiber int32 = 0
     try {
       for i in 0 ... fiberBatch.Count {
         nextFiber = i + 1
-        let fiber = fiberBatch[i]
+        let fiber = fiberBatch[i].Cell
         guard let mounted = fiber.MountedNode() else {
           continue
         }
@@ -515,7 +530,7 @@ public partial class Window {
     } catch (error Exception) {
       try {
         while nextFiber < fiberBatch.Count {
-          let fiber = fiberBatch[nextFiber]
+          let fiber = fiberBatch[nextFiber].Cell
           nextFiber = nextFiber + 1
           guard let mounted = fiber.MountedNode() else {
             continue
@@ -531,38 +546,6 @@ public partial class Window {
     } finally {
       fiberBatch.Clear()
     }
-  }
-
-  private func addFiber(fiber Cell) {
-    fiberBatch.Add(fiber)
-  }
-
-  private func sortFibersParentFirst() {
-    var i int32 = 1
-    while i < fiberBatch.Count {
-      let fiber = fiberBatch[i]
-      let depth = fiberDepth(fiber)
-      var j = i
-      while j > 0 && fiberDepth(fiberBatch[j - 1]) > depth {
-        fiberBatch[j] = fiberBatch[j - 1]
-        j--
-      }
-      fiberBatch[j] = fiber
-      i++
-    }
-  }
-
-  private func fiberDepth(fiber Cell) int32 {
-    guard let mounted = fiber.MountedNode() else {
-      return Int32.MaxValue
-    }
-    var depth int32
-    var current Node = mounted
-    while current.Parent != nil {
-      depth++
-      current = current.Parent!!
-    }
-    return depth
   }
 
   private func replaceFiberRoot(previous Node, replacement Node) {
