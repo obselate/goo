@@ -144,7 +144,7 @@ public sealed class WindowClipboard {
   public func ReadDataAsync(contentTypes IReadOnlyList[string]) Task[ClipboardDataResult] {
     owner.RequireClipboardThread("WindowClipboard.ReadDataAsync")
     let types = ClipboardTransfer.ValidateTypes(contentTypes)
-    if let embedded = owner.ClipboardEmbeddedHost { return embedded.ReadClipboardDataAsync(types) }
+    if let embedded = owner.ClipboardEmbeddedHost { return embedded.ReadClipboardDataAsync(types).WaitAsync(owner.Closed) }
     return Task.FromResult(ClipboardTransfer.ReadTransfer(types))
   }
 
@@ -158,7 +158,7 @@ public sealed class WindowClipboard {
     if intent != ClipboardIntent.Copy && intent != ClipboardIntent.Cut { throw ArgumentOutOfRangeException("intent") }
     if intent == ClipboardIntent.Cut && data.Uris.Count == 0 { throw ArgumentException("Cut requires document references", "intent") }
     if data.Representations.Count == 0 && data.Uris.Count == 0 { throw ArgumentException("Clipboard publication requires data", "data") }
-    if let embedded = owner.ClipboardEmbeddedHost { return embedded.WriteClipboardAsync(data, intent) }
+    if let embedded = owner.ClipboardEmbeddedHost { return embedded.WriteClipboardAsync(data, intent).WaitAsync(owner.Closed) }
     return Task.FromResult(ClipboardTransfer.WriteTransfer(data, intent))
   }
 

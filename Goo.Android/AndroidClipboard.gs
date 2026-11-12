@@ -240,6 +240,7 @@ internal sealed class AndroidClipboard : IDisposable {
             return ClipboardWriteResult(DataTransferStatus.TooLarge, "Clipboard exceeds 4096 items")
         }
         let generation = Interlocked.Increment(ref writeGeneration)
+        let cancellation = view.Window.Closed
         var publication string?
         try {
             if data.Representations.Count > 0 {
@@ -268,7 +269,8 @@ internal sealed class AndroidClipboard : IDisposable {
                 TaskCompletionSource[ClipboardWriteResult](TaskCreationOptions.RunContinuationsAsynchronously)
             if !Main.Post(() -> {
                 try {
-                    if Volatile.Read(ref disposed) || generation != Interlocked.Read(ref writeGeneration) {
+                    if cancellation.IsCancellationRequested || Volatile.Read(ref disposed)
+                        || generation != Interlocked.Read(ref writeGeneration) {
                         if let staged = publication { GooClipboardProvider.Discard(context, staged) }
                         completion.SetResult(ClipboardWriteResult(DataTransferStatus.Cancelled,
                             "Clipboard publication was superseded"))
