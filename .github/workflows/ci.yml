@@ -115,6 +115,18 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - &widgets-pin
+        name: Read Goo.Widgets source pin
+        id: widgets-pin
+        shell: bash
+        run: echo "commit=$(cat .github/goo-widgets.commit)" >> "$GITHUB_OUTPUT"
+      - &widgets-checkout
+        name: Check out Goo.Widgets source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: obselate/goo-widgets
+          ref: ${{ steps.widgets-pin.outputs.commit }}
+          path: goo-widgets
       - *nuget-cache
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
         with:
@@ -199,6 +211,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - *widgets-pin
+      - *widgets-checkout
       - *nuget-cache
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
         with:
@@ -275,6 +289,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: needs.changes.outputs.full == 'true'
+      - *widgets-pin
+      - *widgets-checkout
 
       - *nuget-cache
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
@@ -794,6 +810,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: needs.changes.outputs.full == 'true'
+      - *widgets-pin
+      - *widgets-checkout
 
       - &linux-build-download
         if: needs.changes.outputs.full == 'true'
@@ -1024,6 +1042,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: needs.changes.outputs.full == 'true'
+      - *widgets-pin
+      - *widgets-checkout
       - *linux-build-download
       - *nuget-cache
       - *linux-dotnet
@@ -1866,6 +1886,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: needs.changes.outputs.full == 'true'
+      - *widgets-pin
+      - *widgets-checkout
       - *nuget-cache
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         if: needs.changes.outputs.full == 'true'
@@ -2233,6 +2255,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: needs.changes.outputs.full == 'true'
+      - *widgets-pin
+      - *widgets-checkout
       - *nuget-cache
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         if: needs.changes.outputs.full == 'true'
