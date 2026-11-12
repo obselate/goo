@@ -407,20 +407,24 @@ public struct VectorPath {
     /// @param data The SVG path commands.
     /// @param viewBox The finite view box with positive width and height.
     /// @returns The immutable vector path.
-    /// @exception SvgParseException when path data is invalid, with its character position.
+    /// @exception SvgParseException when path data is invalid, with its UTF-16 character position.
     public func Parse(data string, viewBox ElementRect) VectorPath {
       ArgumentNullException.ThrowIfNull(data, paramName: "data")
       let builder = PathBuilder(viewBox.X, viewBox.Y, viewBox.Width, viewBox.Height)
       let parsed = SvgPathParser.Parse(data, XElement(XName.Get("path")))
-      for contour in parsed.Contours {
-        if contour.Curves.Count == 0 { continue }
-        builder.MoveTo(contour.Curves[0].X0, contour.Curves[0].Y0)
-        for curve in contour.Curves {
-          builder.QuadraticTo(curve.CX, curve.CY, curve.X1, curve.Y1)
+      try {
+        for contour in parsed.Contours {
+          if contour.Curves.Count == 0 { continue }
+          builder.MoveTo(contour.Curves[0].X0, contour.Curves[0].Y0)
+          for curve in contour.Curves {
+            builder.QuadraticTo(curve.CX, curve.CY, curve.X1, curve.Y1)
+          }
+          if contour.Closed { builder.Close() }
         }
-        if contour.Closed { builder.Close() }
+        return builder.Build()
+      } catch (error ArgumentOutOfRangeException) {
+        throw SvgParseException("character position ${data.Length}: ${error.Message}", error)
       }
-      return builder.Build()
     }
 
     internal func Create(commands []VectorPathCommand,
