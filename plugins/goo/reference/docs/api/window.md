@@ -5,7 +5,7 @@ Source: [`Goo/Window`](https://github.com/obselate/goo/tree/main/Goo/Window)
 ## Open a window
 
 ```gsharp
-Window{Root: Cell{}}.Run()
+Application.Run(Window{Root: Cell{}})
 ```
 
 ## Native library loading
@@ -57,27 +57,26 @@ content within the window, use `Style.ShaderEffect`.
 
 ```gs
 let window = Window{}
-Window.ApplicationActivated += activation -> {
+Application.Activated += activation -> {
     if activation.Kind == ApplicationActivationKind.OpenUri {
         window.Title = activation.Target!!.AbsoluteUri
     }
 }
-let status = Window.InitializeApplicationActivation(
-    ApplicationActivation{IsInitial: true})
+Application.Run(window)
 ```
 
-Subscribe before opening the first window. Check the returned status.
+Call `Application.Configure` before startup. Use `Application.AcquireSingleInstance(arguments)` before `Run` when the app needs one primary instance. Keep its primary lease until shutdown.
 
 - One process event reaches the UI thread during `Pump`, an embedded frame or `Run`.
 - The app chooses the target window and validates notification data.
-- `PostApplicationActivation` copies requests from any thread.
+- `Application.PostActivation` copies requests from any thread.
 - Arguments keep their boundaries, empty values and sender directory.
 - Documents remain URIs, including Android `content:` values.
 - A document URI does not grant access to its data.
 - An initial native request replaces a sole pending synthetic Launch.
 - Other requests use FIFO order, with callback posts deferred to the next batch.
 - Closing the last window clears pending requests.
-- The same owner thread can initialize a new delivery lifetime.
+- Requests wait until an activation handler is added.
 - Hosts and optional packages own native associations, IPC and notifications.
 - macOS cold and warm file or URL opens use this event.
 - Native document batches stay separate from drag/drop into a window.
@@ -86,7 +85,7 @@ Subscribe before opening the first window. Check the returned status.
 | Post status | Meaning |
 | --- | --- |
 | Accepted | The queue owns the request. |
-| NotInitialized | Call InitializeApplicationActivation first. |
+| NotInitialized | Call `Application.AcquireSingleInstance` or `Application.Run` first. |
 | Closed | All windows closed. |
 | QueueFull | 1024 requests are pending. |
 | TooLarge | More than 4096 arguments or documents, 64 KiB per UTF-8 string, or 1 MiB total text. |
@@ -253,7 +252,7 @@ rejected before native creation. Existing independent windows remain the default
 ```gsharp
 let owner = Window{Title: "Main", Width: 800, Height: 600, Root: MainCell{}}.Open()
 let dialog = Window{Title: "Settings", Width: 420, Height: 280, Owner: owner, Modal: true, Root: SettingsCell{}}.Open()
-owner.Run()
+Application.Run(owner)
 ```
 
 `Owner` and `Modal` cannot change while open. One direct modal child may be open
@@ -313,7 +312,7 @@ Equal snapshots do not notify. A listener added after another listener has alrea
 ## Frame pacing and manual capture
 
 `VSync` selects the preferred native presentation mode. `FramePacing` separately
-controls `Window.Run`: `Display` is the default and `Uncapped` schedules demanded
+controls `Application.Run`: `Display` is the default and `Uncapped` schedules demanded
 frames as soon as the native queue is ready. Uncapped mode does not override a
 compositor's presentation policy or render hidden and unavailable windows.
 
@@ -449,7 +448,7 @@ Closing the owner cancels pending pages.
 
 See the [render and diff commands](../devtools/cli.md) for options.
 
-`goo render` builds a project or runs an existing executable. `Window.Run` uses
+`goo render` builds a project or runs an existing executable. `Application.Run` uses
 `OffscreenRenderSession` without opening a window. No display or compositor is needed.
 Size defaults to the declared window size. Scale sets pixels per layout unit and
 the device-pixel grid used to round layout. Theme sets `Window.Preferences.Theme`.
@@ -460,10 +459,12 @@ app services or advance app animations.
 Register named states in the window initializer:
 
 ```gsharp
-Window{
-    Root: Counter(),
-    Scenes: Dictionary[string, Func[Cell]]{["default"] = () -> Counter(), ["incremented"] = () -> Counter(5)}
-}.Run()
+Application.Run(
+    Window{
+        Root: Counter(),
+        Scenes: Dictionary[string, Func[Cell]]{["default"] = () -> Counter(), ["incremented"] = () -> Counter(5)}
+    }
+)
 ```
 
 `Scenes` is a read-only map of names to factories that return fresh, unattached
@@ -515,7 +516,7 @@ let saved = WindowPlacement{
 let window = Window{Root: Cell{}}
 let result = window.ApplyPlacement(saved)
 if result.Status == WindowOperationResult.Accepted {
-    window.Run()
+    Application.Run(window)
 }
 ```
 
@@ -562,6 +563,46 @@ earlier and can discard an accepted action. Link asynchronous package work to th
 Cancellation callbacks must not throw or use torn-down UI state.
 
 Pump removes an action before it calls the action. If it throws, Pump throws the same exception and later queued actions remain for the next direct `Pump`. `Run` propagates the exception, then closes the window and discards queued work. Accessibility adapters can use `Post` before calling Window accessibility APIs.
+
+## Await UI work
+
+```gsharp
+async func Load() void {
+    let result = await service.LoadAsync(Lifetime)
+    Apply(result)
+}
+```
+
+In a Goo callback, an incomplete `await` resumes on the window's UI thread. A
+completed task continues inline. `ConfigureAwait(false)` opts out. An existing
+embedded host context stays current. A `go` child has no UI context.
+
+After each continuation, Goo applies the owning Cell's callback rebuild rule.
+State-only Cells do not rebuild when nothing changed. Unmounted Cells do not rebuild.
+
+Use `window.InvokeAsync(action, token)` from any thread to await dispatch. The
+generic overload returns the function result. Both propagate action exceptions.
+Cancellation, rejected posts and discarded accepted posts cancel the task.
+
+Use `await window.NextPresentationAsync(token)` on the UI thread to request one
+frame and await its accepted presentation receipt. It works on an idle window.
+The receipt is a queue handoff, not display scanout.
+
+| Close phase | Behavior |
+| --- | --- |
+| Stop | Hide the window. Reject posts, rebuilds and timers. Stop input, layout and paint. |
+| Unmount | Run `Unmounting`, then cancel `Lifetime`, `Latest` and pending window tasks. |
+| Drain | Keep async handlers on the UI thread until they finish or `CloseDrainMs` expires. Other windows keep running. |
+| Late queue | After the bound, serialize continuations for this window on a background thread. Do not access UI state. |
+
+`CloseDrainMs` defaults to 2000 ms. Zero skips the wait. A task that never
+completes cannot run its handler's `finally`. Pending work does not survive process
+exit. Pass `Lifetime` to every awaited operation that accepts cancellation.
+
+An escaped async handler exception is rethrown from the pump. Cancellation is
+ignored. During the close drain, the first other exception is saved until drain
+completion. An unhandled late-queue exception stops the process.
+
 
 ## Schedule window timers
 
@@ -1384,10 +1425,6 @@ Gets a surface-local rectangle in logical pixels, or nil for the whole window. C
 
 Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread.
 
-### `ApplicationActivated`
-
-Occurs once per application activation on the process UI thread, not once per open window. Subscribe before initializing activation. Handlers own validation and window selection. The queue retains 1024 requests, with 4096 arguments or documents per request. Text is limited to 64 KiB per UTF-8 string and 1 MiB per request. Native requests outside these limits, or received before initialization or after close, are dropped.
-
 ### `DisplayChanged`
 
 Occurs on the UI thread when this window changes display or native display scale.
@@ -1485,14 +1522,6 @@ Captures normal client bounds and restorable state from the open native window. 
 
 Returns: Accepted with owned placement, Closed without an open window, or an explicit host failure.
 
-### `ConfigureApplication(string,string,string)`
-
-Configures process-wide application identity before SDL initialization.
-
-- `name`: human-readable application name
-- `version`: application version
-- `identifier`: unique reverse-domain identifier
-
 ### `CreateOffscreenSession`
 
 Creates a renderer lease from an open window. Returns NotReady before Open or after close. The lease does not require the window's presentation surface to remain attached. Pages complete in the window loop without calling Service while the window is open.
@@ -1535,13 +1564,24 @@ Gets an immutable snapshot of the current host's displays. Open the window first
 
 Hides an open desktop window and cancels transient input without destroying its tree. Releases the swapchain and clip atlas after pending GPU work completes. Show recreates them. Modal windows and owners blocked by a modal child or chooser cannot be hidden. Visibility and input change immediately. Regular desktop unmapping can be deferred until pending queue calls complete.
 
-### `InitializeApplicationActivation(ApplicationActivation)`
+### `InvokeAsync(System.Action,System.Threading.CancellationToken)`
 
-Binds activation to the current UI thread and retains the initial request until a window pumps. Call before opening the first desktop window or from the embedded host's owner thread. After all windows close, the same owner thread may initialize a new delivery lifetime.
+Queues an action on the UI thread and awaits its result or exception.
 
-- `initial`: The initial request, copied with its IsInitial value unchanged.
+- `action`: action to run
+- `cancellationToken`: cancels pending dispatch
 
-Returns: Accepted when retained, or Failed when the request exceeds the activation data limits.
+Returns: the pending dispatch task
+
+### `InvokeAsync``1(System.Func{T},System.Threading.CancellationToken)`
+
+Queues a function on the UI thread and awaits its result or exception.
+
+- `T`: result type
+- `action`: function to run
+- `cancellationToken`: cancels pending dispatch
+
+Returns: the function result
 
 ### `MeasureText(string,Style)`
 
@@ -1551,6 +1591,14 @@ Measures single-line Text width in layout units on the window's UI thread. Appli
 - `style`: The text declarations. A Text blob is also a Style.
 
 Returns: The width in layout pixels.
+
+### `NextPresentationAsync(System.Threading.CancellationToken)`
+
+Requests a frame and awaits its next accepted presentation, not display scanout. Call this on the UI thread. Closing the window cancels the task.
+
+- `cancellationToken`: cancels the wait
+
+Returns: the next presentation receipt
 
 ### `Open`
 
@@ -1578,14 +1626,6 @@ Attempts to queue an action for the UI thread. A successful enqueue can still be
 - `action`: action to run during a later Pump
 
 Returns: True when the action was accepted into the queue.
-
-### `PostApplicationActivation(ApplicationActivation)`
-
-Copies and queues a request from any thread for the process-wide activation event. Accepted confirms queue ownership, not handler completion, document access, or focus. Requests allow 4096 arguments and documents each, 64 KiB per UTF-8 string and 1 MiB total text.
-
-- `value`: The owned request data to copy. Relative URIs and null values are invalid arguments.
-
-Returns: Accepted, NotInitialized, Closed, QueueFull at 1024 pending requests, or TooLarge.
 
 ### `Pump(float64)`
 
@@ -1640,10 +1680,6 @@ Reuses a previous capture's caller-owned pixels when its size matches. Do not ac
 
 Queues an idempotent close request. This is safe from any thread.
 
-### `Run`
-
-Opens the window and processes frames until all open Goo windows close.
-
 ### `SetClipboardText(string)`
 
 Sets the native clipboard text on the window UI thread. Native set failures throw.
@@ -1675,12 +1711,6 @@ Starts one owner-modal chooser on the open window's UI thread; other windows con
 - `options`: Optional title, initial path, filters, and multiple-selection hints copied before launch.
 
 Returns: A task completed on the UI thread with owned paths and an explicit outcome. Await continuations follow normal .NET context rules.
-
-### `TryPost(System.Action)`
-
-- `action`: action to run during a later Pump
-
-Returns: True when the action was accepted into the queue.
 
 ### `TrySetFullscreenDisplay(WindowDisplayId)`
 
@@ -1729,6 +1759,10 @@ Reports whether programmatic window movement is available.
 
 Gets supported native lifecycle operations, or None before Open or Attach.
 
+### `CloseDrainMs`
+
+Gets or sets the close drain bound in milliseconds. The default is 2000. Zero skips the wait. Closing stops UI work and cancels Cell lifetimes before draining async handlers on the UI thread. After this bound, continuations run on a serialized background queue. They must not access UI state.
+
 ### `Closed`
 
 Gets a token cancelled after this window's native teardown finishes or fails. Posted work stops earlier and can be discarded while the window is closing.
@@ -1759,7 +1793,7 @@ Gets or sets a portal parent identifier before Open, such as wayland: followed b
 
 ### `FramePacing`
 
-Gets or sets the frame pacing used by Window.Run. Uncapped still honors GPU queue readiness and the selected presentation mode.
+Gets or sets the frame pacing used by Application.Run. Uncapped still honors GPU queue readiness and the selected presentation mode.
 
 ### `FrameTheme`
 
@@ -1923,7 +1957,7 @@ Gets or sets the layout and rendering scale, clamped to 0.5 through 3. The defau
 
 ### `VSync`
 
-Gets or sets per-window GPU presentation synchronization. True selects FIFO. False prefers Immediate, then Mailbox, then FIFO on every device. Window.Run pacing is controlled separately by FramePacing.
+Gets or sets per-window GPU presentation synchronization. True selects FIFO. False prefers Immediate, then Mailbox, then FIFO on every device. Application.Run pacing is controlled separately by FramePacing.
 
 ### `WaylandBackdrop`
 
@@ -2077,7 +2111,7 @@ Identifies one SDL display in the current process. The value can become stale af
 ## `WindowFramePacing`
 
 
-Controls how Window.Run schedules frames that have visual demand.
+Controls how Application.Run schedules frames that have visual demand.
 
 ### Values
 
