@@ -1,4 +1,8 @@
 ## Changed
 
 - `Length` supports `Em`, `Rem`, `Vw`, `Vh`, mixed arithmetic, intrinsic sizes, and `LayoutContext.ResolveLength`. Use `Length.MinContent`, `Length.MaxContent`, or `Length.FitContent(limit)` on size declarations, and keep animations in one unit.
-- Other .NET languages can use `Length.Em`, `Length.Rem`, `Length.Vw` and `Length.Vh` beside the existing `Length.Pixels` and `Length.Percent` factories.
+- L6 is withdrawn. Keep `Length.Pixels` and `Length.Percent` for other .NET languages.
+
+## Added
+
+- `Length.Em`, `Length.Rem`, `Length.Vw` and `Length.Vh` factories for other .NET languages.
