@@ -230,7 +230,9 @@ internal partial class Reconciler {
   private var operationDepth int32
 
   private func mountCore(b Blob) Node {
-    if SubtreeReuse.Mode >= 2 { SubtreeReuse.Freeze(b) }
+    let wasFrozen = b.ReuseFrozen
+    if SubtreeReuse.Mode == 2 { b.ReuseFrozen = true }
+    else if SubtreeReuse.Mode == 3 { SubtreeReuse.Freeze(b) }
     let result = switch b {
       case v is Virtual: mountVirtual(v)
       case retained is VirtualRetainedBlob: throw InvalidOperationException("Retained virtual item cannot be mounted")
@@ -254,7 +256,7 @@ internal partial class Reconciler {
       rethrow
     }
     markMounted()
-    retainReferenceBlob(result, b)
+    retainReferenceBlob(result, b, wasFrozen)
     return result
   }
 
@@ -782,18 +784,18 @@ internal partial class Reconciler {
   }
 
   private func diffCore(n Node, b Blob) Node {
+    let wasFrozen = b.ReuseFrozen
     if SubtreeReuse.Mode >= 2 {
-      if b.ReuseFrozen && !recyclingRow && n.Context == Context && n.Fiber == nil {
-        if n.ReferenceBlob == b {
+      if wasFrozen && n.ReferenceBlob == b && !recyclingRow && n.Context == Context && n.Fiber == nil {
           if n.ReferenceTreeNodes == 0 { n.ReferenceTreeNodes = SubtreeReuse.Count(n) }
           if n.ReferenceTreeNodes > 0 {
             referenceSkipped += int64(n.ReferenceTreeNodes)
             SubtreeReuse.SkippedNodes += int64(n.ReferenceTreeNodes)
             return n
           }
-        }
       }
-      SubtreeReuse.Freeze(b)
+      if SubtreeReuse.Mode == 2 { b.ReuseFrozen = true }
+      else { SubtreeReuse.Freeze(b) }
       if SubtreeReuse.Mode == 3 && !recyclingRow && n.Context == Context && n.Fiber == nil && b.ReuseNodes > 0 && n.ReferenceBlob != nil && SubtreeReuse.Equal(n.ReferenceBlob!!, b) {
         referenceSkipped += int64(b.ReuseNodes)
         SubtreeReuse.SkippedNodes += int64(b.ReuseNodes)
@@ -844,12 +846,19 @@ internal partial class Reconciler {
       }
       markStructure()
     }
-    retainReferenceBlob(result, b)
+    retainReferenceBlob(result, b, wasFrozen)
     return result
   }
 
-  private func retainReferenceBlob(n Node, b Blob) {
+  private func retainReferenceBlob(n Node, b Blob, wasFrozen bool) {
     if SubtreeReuse.Mode == 0 { return }
+    if SubtreeReuse.Mode == 2 {
+      if wasFrozen || n.ReferenceBlob != nil {
+        n.ReferenceBlob = wasFrozen ? b : nil
+        n.ReferenceTreeNodes = 0
+      }
+      return
+    }
     n.ReferenceBlob = b
     n.ReferenceTreeNodes = 0
     if SubtreeReuse.Mode >= 2 { return }

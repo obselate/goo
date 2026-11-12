@@ -33,7 +33,7 @@ foreach (var mode in new[] { "fresh-change", "fresh-equal", "same-reference" })
         var start = Stopwatch.GetTimestamp();
         var blob = mode == "same-reference" ? initial : Make(20000, mode == "fresh-change" && frame % 2 == 0);
 #if PROTOTYPE
-        if (SubtreeReuse.Mode >= 2) SubtreeReuse.Freeze(blob);
+        if (SubtreeReuse.Mode == 3) SubtreeReuse.Freeze(blob);
 #endif
         var build = Elapsed(start);
         var buildBytes = GC.GetAllocatedBytesForCurrentThread() - before;
