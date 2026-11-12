@@ -1,7 +1,6 @@
 package Goo
 
 import System
-import System.Runtime.CompilerServices
 
 /// Controls one built-in scrollbar axis.
 public enum ScrollbarVisibility {
@@ -93,88 +92,77 @@ internal class ScrollbarNodeValues {
 
 internal class ScrollbarStyles {
     shared {
-        private let values ConditionalWeakTable[Node, ScrollbarNodeValues] =
-        ConditionalWeakTable[Node, ScrollbarNodeValues]()
-
         internal func Remove(n Node) {
-            values.Remove(n)
+            n.ScrollbarStyleState = nil
         }
 
-        internal func GetX(n Node) Scrollbar? -> if values.TryGetValue(n, out var value) {
-            value.X
-        } else {
-            nil
-        }
+        internal func GetX(n Node) Scrollbar? -> n.ScrollbarStyleState?.X
 
-        internal func GetY(n Node) Scrollbar? -> if values.TryGetValue(n, out var value) {
-            value.Y
-        } else {
-            nil
-        }
+        internal func GetY(n Node) Scrollbar? -> n.ScrollbarStyleState?.Y
 
         internal func GetVisibilityX(n Node) ScrollbarVisibility ->
-        if values.TryGetValue(n, out var value) {
+        if let value = n.ScrollbarStyleState {
             value.VisibilityX
         } else {
             ScrollbarVisibility.Auto
         }
 
         internal func GetVisibilityY(n Node) ScrollbarVisibility ->
-        if values.TryGetValue(n, out var value) {
+        if let value = n.ScrollbarStyleState {
             value.VisibilityY
         } else {
             ScrollbarVisibility.Auto
         }
 
         internal func SetVisibilityX(n Node, value ScrollbarVisibility) {
-            if values.TryGetValue(n, out var existing) {
+            if let existing = n.ScrollbarStyleState {
                 existing.VisibilityX = value
                 if existing.X == nil && existing.Y == nil
                 && existing.VisibilityX == ScrollbarVisibility.Auto
                 && existing.VisibilityY == ScrollbarVisibility.Auto {
-                    values.Remove(n)
+                    n.ScrollbarStyleState = nil
                 }
             } else if value != ScrollbarVisibility.Auto {
-                values.Add(n, ScrollbarNodeValues{VisibilityX: value})
+                n.ScrollbarStyleState = ScrollbarNodeValues{VisibilityX: value}
             }
         }
 
         internal func SetVisibilityY(n Node, value ScrollbarVisibility) {
-            if values.TryGetValue(n, out var existing) {
+            if let existing = n.ScrollbarStyleState {
                 existing.VisibilityY = value
                 if existing.X == nil && existing.Y == nil
                 && existing.VisibilityX == ScrollbarVisibility.Auto
                 && existing.VisibilityY == ScrollbarVisibility.Auto {
-                    values.Remove(n)
+                    n.ScrollbarStyleState = nil
                 }
             } else if value != ScrollbarVisibility.Auto {
-                values.Add(n, ScrollbarNodeValues{VisibilityY: value})
+                n.ScrollbarStyleState = ScrollbarNodeValues{VisibilityY: value}
             }
         }
 
         internal func SetX(n Node, value Scrollbar?) {
-            if values.TryGetValue(n, out var existing) {
+            if let existing = n.ScrollbarStyleState {
                 existing.X = value
                 if existing.X == nil && existing.Y == nil
                 && existing.VisibilityX == ScrollbarVisibility.Auto
                 && existing.VisibilityY == ScrollbarVisibility.Auto {
-                    values.Remove(n)
+                    n.ScrollbarStyleState = nil
                 }
             } else if let next = value {
-                values.Add(n, ScrollbarNodeValues{X: next})
+                n.ScrollbarStyleState = ScrollbarNodeValues{X: next}
             }
         }
 
         internal func SetY(n Node, value Scrollbar?) {
-            if values.TryGetValue(n, out var existing) {
+            if let existing = n.ScrollbarStyleState {
                 existing.Y = value
                 if existing.X == nil && existing.Y == nil
                 && existing.VisibilityX == ScrollbarVisibility.Auto
                 && existing.VisibilityY == ScrollbarVisibility.Auto {
-                    values.Remove(n)
+                    n.ScrollbarStyleState = nil
                 }
             } else if let next = value {
-                values.Add(n, ScrollbarNodeValues{Y: next})
+                n.ScrollbarStyleState = ScrollbarNodeValues{Y: next}
             }
         }
     }

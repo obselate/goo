@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.Collections.Generic
+import System.Diagnostics
 
 internal partial class Reconciler {
   shared {
@@ -49,6 +50,7 @@ internal partial class Reconciler {
   internal var ProfileResolveBytes int64
   internal var ProfileResolveCalls int64
   private var fallbackChildScratch ChildDiffScratch?
+  private var referenceVisits int64
   private var styleRetryRoot Node?
   private var deferredRetirement Node?
   private var pendingHandleMoves Dictionary[Node, ElementHandle]?
@@ -135,6 +137,9 @@ internal partial class Reconciler {
   }
 
   internal func FlushStyles() {
+    FrameRecorder.Current?.Counter("reconcile.reference_visits", "cpu.work",
+      uint64(referenceVisits), Stopwatch.GetTimestamp(), unit: "nodes")
+    referenceVisits = 0
     let profiler = Profiler
     guard let value = profiler else {
       flushStylesCore()
@@ -247,6 +252,7 @@ internal partial class Reconciler {
       rethrow
     }
     markMounted()
+    retainReferenceBlob(result, b)
     return result
   }
 
@@ -769,6 +775,12 @@ internal partial class Reconciler {
   }
 
   private func diffCore(n Node, b Blob) Node {
+    referenceVisits++
+    if !recyclingRow && n.ReferenceBlob == b && n.ReferenceTreeNodes > 0 && n.Context == Context && n.Fiber == nil {
+      FrameRecorder.Current?.Counter("reconcile.reference_skipped_nodes", "cpu.work",
+        uint64(n.ReferenceTreeNodes), Stopwatch.GetTimestamp(), unit: "nodes")
+      return n
+    }
     if recyclingRow { n.Key = b.Key }
     if b is VirtualRetainedBlob {
       if n.Retired || n.Key != b.Key {
@@ -804,7 +816,21 @@ internal partial class Reconciler {
       }
       markStructure()
     }
+    retainReferenceBlob(result, b)
     return result
+  }
+
+  private func retainReferenceBlob(n Node, b Blob) {
+    n.ReferenceBlob = b
+    n.ReferenceTreeNodes = 0
+    if n.Fiber != nil || b.HasElementHandle || !(b is Container || b is Text || b is Button) { return }
+    var count = 1
+    for index in 0 ... n.Children.Count {
+      let child = n.Children[index]
+      if child.Fiber != nil || child.ReferenceTreeNodes == 0 { return }
+      count += child.ReferenceTreeNodes
+    }
+    n.ReferenceTreeNodes = count
   }
 
   private func reconcileSparseState(n Node, b Blob) {
@@ -1246,6 +1272,7 @@ internal partial class Reconciler {
 
   internal func diffChildren(n Node, blobs IList[Blob]) {
     if styleRetryRoot == nil { rememberStyleRetryRoot(n) }
+    if n.Children.Count == 0 && blobs.Count == 0 { return }
     let scratch = keyedScratch()
     let scratchScope = scratch.Rent(Math.Max(n.Children.Count, blobs.Count))
     try {
@@ -1367,18 +1394,19 @@ internal partial class Reconciler {
     let provisional = scratchScope.Provisional
     let retire = scratchScope.Retire
     let virtualRows = FrameRecorder.Current != nil && Virtualization.State(n) != nil
+    let orderChanged = childOrderChanged(n.Children, blobs)
     var childrenChanged = false
     var committed = false
     var i int32
     try {
-      while i < n.Children.Count {
+      while orderChanged && i < n.Children.Count {
         let child = n.Children[i]
         if let key = child.Key {
           scratchScope.Keyed.Add(key, child)
         }
         i++
       }
-      if childOrderChanged(n.Children, blobs) {
+      if orderChanged {
         markStructure()
         childrenChanged = true
       }
@@ -1386,7 +1414,7 @@ internal partial class Reconciler {
       i = 0
       while i < blobs.Count {
         let blob = blobs[i]
-        if let hit = takeMatch(scratchScope, blob, n, i) {
+        if let hit = orderChanged ? takeMatch(scratchScope, blob, n, i) : n.Children[i] {
           if canReuseNode(hit, blob) {
             var child Node
             if let cell = hit.Fiber {
@@ -1452,7 +1480,7 @@ internal partial class Reconciler {
       }
 
       i = 0
-      while i < n.Children.Count {
+      while orderChanged && i < n.Children.Count {
         let child = n.Children[i]
         if let key = child.Key {
           if scratchScope.Keyed.TryGetValue(key, out var unmatched) {

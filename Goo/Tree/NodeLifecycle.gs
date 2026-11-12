@@ -42,6 +42,8 @@ internal class NodeLifecycle {
         }
       }
       n.Retired = true
+      n.ReferenceBlob = nil
+      n.ReferenceTreeNodes = 0
       n.PaintBindingResolver?.ForgetPaintBindings(n)
       n.Context = nil
       ElementHandles.Detach(n)

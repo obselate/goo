@@ -32,6 +32,13 @@ internal class Node {
   private var shapeState NodeShapeState?
   private var pointerState NodePointerState?
   private var portalState NodePortalState?
+  internal var ScrollbarStyleState ScrollbarNodeValues?
+  internal var ScrollActivityState ScrollNodeActivity?
+  internal var ScrollbarPartState ScrollbarPartState?
+  internal var RetainedLayoutTransition LayoutTransitionState?
+  internal var RetainedVirtualState VirtualNodeState?
+  internal var ReferenceBlob Blob?
+  internal var ReferenceTreeNodes int32
 
   private func EnsureEditingState() NodeEditingState {
     if let state = editingState { return state }
@@ -84,6 +91,8 @@ internal class Node {
     shapeState = nil
     pointerState = nil
     portalState = nil
+    ReferenceBlob = nil
+    ReferenceTreeNodes = 0
     nodeState = 0
     AutoFocus = false
     HasFocusScopes = false
