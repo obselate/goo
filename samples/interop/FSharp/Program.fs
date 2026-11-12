@@ -102,7 +102,7 @@ type Examples(sample: string) =
             root.Add(button)
             root.Add(Cell.Mount<ModalDialog, ModalDialogHost>("dialog", dialog))
             root
-        | _ -> Cell.Mount<Cell>(counterFactory, "counter")
+        | _ -> Cell.Mount<Cell>("counter", counterFactory)
 
 let hitTest (handle: ElementHandle) point =
     match handle.TryGetTextPositionAt(point, TextCoordinateSpace.Window) with
