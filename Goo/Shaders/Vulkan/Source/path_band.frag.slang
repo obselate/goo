@@ -530,17 +530,64 @@ struct RayAccumulator {
     bool overflow;
 };
 
-float2 axisCoverage(float2 point, float2 pixelsPerPath, AnalyticBand band, bool vertical)
+float2 nonZeroAxisCoverage(float2 point, float2 pixelsPerPath, AnalyticBand band, bool vertical)
 {
     bool forward = rayCoordinate(point, vertical) < band.split;
-    bool evenOdd = pc.params.y == 1u;
+    uint indices = indexBase(vertical);
+    uint start = forward ? band.forwardStart : band.reverseStart;
+    uint count = forward ? band.forwardCount : band.reverseCount;
+    float value = 0.0;
+    float weight = 0.0;
+    float oppositeValue = 0.0;
+    float oppositeWeight = 0.0;
+    for (uint index = 0u; index < count; ++index)
+    {
+        uint curveIndex = pathWord(indices + start + index);
+        if (curveIndex >= curveCount())
+        {
+            continue;
+        }
+        QuadraticCurve curve = curveAt(curveIndex);
+        AxisRoots roots = solveRoots(curve, point, vertical);
+        for (uint slot = 0u; slot < 2u; ++slot)
+        {
+            float root;
+            if (rootAt(roots, slot, root) && rootInRange(root))
+            {
+                float direction = endpointDirection(curve, root, vertical);
+                if (!(abs(direction) <= directionTolerance(curve, vertical)))
+                {
+                    accumulateRootDirections(
+                        rayDistance(curve, point, root, forward, vertical) * rayCoordinate(pixelsPerPath, vertical),
+                        (vertical ? direction < 0.0 : direction > 0.0) ? 1.0 : -1.0,
+                        value, weight, oppositeValue, oppositeWeight);
+                }
+            }
+        }
+    }
+    float2 primary = float2(forward ? value : -value, weight);
+    float2 opposite = float2(forward ? -oppositeValue : oppositeValue, oppositeWeight);
+    if (opposite.y > primary.y
+        || (opposite.y == primary.y && abs(opposite.x) > abs(primary.x)))
+    {
+        return float2(opposite.x, max(primary.y, opposite.y));
+    }
+    return float2(primary.x, max(primary.y, opposite.y));
+}
+
+float2 axisCoverage(float2 point, float2 pixelsPerPath, AnalyticBand band, bool vertical)
+{
+    if (pc.params.y != 1u)
+    {
+        return nonZeroAxisCoverage(point, pixelsPerPath, band, vertical);
+    }
+    bool forward = rayCoordinate(point, vertical) < band.split;
     uint indices = indexBase(vertical);
     float distances[64] = {};
     RayAccumulator forwardRay = { 0.0, 0.0, 0u, 0u, false };
     RayAccumulator reverseRay = { 0.0, 0.0, 0u, 0u, false };
-    bool traverseForward = evenOdd || forward;
-    uint start = traverseForward ? band.forwardStart : band.reverseStart;
-    uint count = traverseForward ? band.forwardCount : band.reverseCount;
+    uint start = band.forwardStart;
+    uint count = band.forwardCount;
     for (uint index = 0u; index < count; ++index)
     {
         uint curveIndex = pathWord(indices + start + index);
@@ -569,39 +616,31 @@ float2 axisCoverage(float2 point, float2 pixelsPerPath, AnalyticBand band, bool 
                 }
                 RayAccumulator ray = forwardSide ? forwardRay : reverseRay;
                 ray.weight = max(ray.weight, clamp(1.0 - abs(distancePixels) * 2.0, 0.0, 1.0));
-                if (!evenOdd)
+                ray.parity ^= 1u;
+                if (distancePixels < 0.5)
                 {
-                    float rootSign = (vertical ? direction < 0.0 : direction > 0.0) ? 1.0 : -1.0;
-                    ray.value += rootSign * clamp(distancePixels + 0.5, 0.0, 1.0);
-                }
-                else
-                {
-                    ray.parity ^= 1u;
-                    if (distancePixels < 0.5)
+                    if (ray.count == MaxFractionalRoots)
                     {
-                        if (ray.count == MaxFractionalRoots)
+                        ray.overflow = true;
+                    }
+                    else
+                    {
+                        uint base = forwardSide ? 0u : MaxFractionalRoots;
+                        uint insert = ray.count;
+                        for (uint existing = 0u; existing < ray.count; ++existing)
                         {
-                            ray.overflow = true;
+                            if (distancePixels < distances[base + existing])
+                            {
+                                insert = existing;
+                                break;
+                            }
                         }
-                        else
+                        for (uint move = ray.count; move > insert; --move)
                         {
-                            uint base = forwardSide ? 0u : MaxFractionalRoots;
-                            uint insert = ray.count;
-                            for (uint existing = 0u; existing < ray.count; ++existing)
-                            {
-                                if (distancePixels < distances[base + existing])
-                                {
-                                    insert = existing;
-                                    break;
-                                }
-                            }
-                            for (uint move = ray.count; move > insert; --move)
-                            {
-                                distances[base + move] = distances[base + move - 1u];
-                            }
-                            distances[base + insert] = distancePixels;
-                            ray.count++;
+                            distances[base + move] = distances[base + move - 1u];
                         }
+                        distances[base + insert] = distancePixels;
+                        ray.count++;
                     }
                 }
                 if (forwardSide)
@@ -616,7 +655,7 @@ float2 axisCoverage(float2 point, float2 pixelsPerPath, AnalyticBand band, bool 
         }
     }
 
-    [unroll] for (uint side = 0u; side < 2u && evenOdd; ++side)
+    [unroll] for (uint side = 0u; side < 2u; ++side)
     {
         bool forwardSide = side == 0u;
         RayAccumulator ray = forwardSide ? forwardRay : reverseRay;
