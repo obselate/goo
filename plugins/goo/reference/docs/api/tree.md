@@ -17,20 +17,6 @@ let content = Container{Gap: 12.0, Text("First"), ...rows, Button{OnClick: () ->
 - After a constructor or factory call, unmarked `key: value` calls `Add(key, value)`.
 - `Children: existingList` assigns the list. A spread copies its contents.
 
-## Compose and select text
-
-```gsharp
-Text("Plain ", TextSpan("styled", Style{FontWeight: 700}), " text")
-Text{Content: "Copy this text", Selectable: true}
-TextEditor{Controller: controller, Layers: layers}
-```
-
-- `Text` concatenates spans. Plain strings use inherited style. Each styled span adds one UTF-16 `TextStyleRange`.
-- `Content` and `StyleRanges` remain available for indexed styles.
-- `Selectable` supports pointer selection, word and line selection, Shift plus movement, Select All and Copy. It adds focus and accessibility selection, but no caret, editing or IME.
-- Set `TextEditor.Controller` and `Virtual.Source` before mounting. Missing values throw at mount. Editor layers must use the controller's document.
-- Ellipsis text has automatic minimum width zero. An explicit `MinWidth` still wins.
-
 ## Present content above the normal tree
 
 Use `Portal` for popups, menus, tooltips, and other content that must escape its
@@ -127,7 +113,7 @@ handles, input callbacks, and focus scopes.
 
 ## Virtualize large collections
 
-`Virtual{Source: source}` is a scrolling element that mounts only the items that its source places. Goo has no list or grid policy of its own. Goo.Widgets supplies `VirtualItems` for items of one size and `VirtualRows` for rows of measured height. Write a policy when neither fits.
+`Virtual(source)` is a scrolling element that mounts only the items that its source places. Goo has no list or grid policy of its own. Goo.Widgets supplies `VirtualItems` for items of one size and `VirtualRows` for rows of measured height. Write a policy when neither fits.
 
 A policy has two parts:
 
@@ -1063,12 +1049,6 @@ Defines a text element.
 
 Initializes a text element with empty content.
 
-### `new(TextSpan[])`
-
-Initializes text by concatenating plain and styled spans.
-
-- `spans`: The ordered text parts.
-
 ### `new(string)`
 
 Initializes a text element with the displayed content.
@@ -1078,10 +1058,6 @@ Initializes a text element with the displayed content.
 ### `Content`
 
 Gets the displayed text.
-
-### `Selectable`
-
-Gets whether the text supports selection and copy without editing or a caret.
 
 ### `StyleRanges`
 
@@ -1103,9 +1079,18 @@ Specifies the coordinate space used by mounted text geometry queries.
 
 Defines a retained multiline text editor.
 
-### `new`
+### `new(TextEditorController)`
 
-Creates an editor. Controller must be set before mounting.
+Creates an editor without presentation layers.
+
+- `controller`: The per-view controller that owns the edited document.
+
+### `new(TextEditorController,TextPresentationLayer[])`
+
+Creates an editor with ordered presentation layers.
+
+- `controller`: The per-view controller that owns the edited document.
+- `layers`: The ordered presentation layers.
 
 ### `CaretColor`
 
@@ -1113,7 +1098,7 @@ Gets the caret color.
 
 ### `Controller`
 
-Gets the required per-view editing controller. Set it before mounting.
+Gets the per-view editing controller.
 
 ### `CurrentLineColor`
 
@@ -1212,31 +1197,16 @@ Gets the selection highlight color.
 
 Gets the value used while unfocused, or also while focused when Controlled is true.
 
-## `TextSpan`
-
-
-Defines displayed Text and an optional inline Style for one text part.
-
-### `op_Implicit(string)~TextSpan`
-
-Converts plain text to an unstyled text span.
-
-- `value`: The displayed text.
-
-Returns: An unstyled text span.
-
 ## `Virtual`
 
 
 Mounts the items placed by a VirtualSource. It scrolls content coordinates. Overriding the list role or clearing Accessibility forwards item position to content.
 
-### `new`
+### `new(VirtualSource)`
 
-Initializes a list element that scrolls on both axes. Source must be set before mounting.
+Initializes a list element that scrolls on both axes.
 
-### `Source`
-
-Gets the required item policy. Set a new immutable source on each build.
+- `source`: The item policy. Create a new source on each build to supply new inputs.
 
 ## `VirtualChild`
 
