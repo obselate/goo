@@ -541,7 +541,7 @@ internal partial class PointerInput {
         let owner = owners[i - 1]
         try { callback(hoverEvent(n, x, y)) }
         catch (error Exception) { failure ??= error }
-        finally { owner?.Rebuild() }
+        finally { owner?.RebuildAfterCallback() }
       }
       if generation != hoverGeneration { break }
     }
@@ -557,7 +557,7 @@ internal partial class PointerInput {
         let owner = owners[i]
         try { callback(hoverEvent(n, x, y)) }
         catch (error Exception) { failure ??= error }
-        finally { owner?.Rebuild() }
+        finally { owner?.RebuildAfterCallback() }
       }
       if generation != hoverGeneration || route[i].Current == nil { break }
     }

@@ -238,7 +238,7 @@ internal func hasActivation(n Node) bool -> n.OnClick != nil
 private func hitFire(n Node, owner Cell?) bool {
   if let handler = n.OnClick {
     try { handler() }
-    finally { owner?.Rebuild() }
+    finally { owner?.RebuildAfterCallback() }
     return true
   }
   return false
