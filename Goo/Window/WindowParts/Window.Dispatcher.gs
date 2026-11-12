@@ -71,6 +71,7 @@ public partial class Window {
   private func hasPostedActions() bool -> Interlocked.CompareExchange(&pendingPostedActions, 0, 0) != 0
 
   internal func drainPostedActions() {
+    using let context = CallbackScope(CallbackContext())
     var count int32
     var hasBatch bool
     lock cellQueueGate {

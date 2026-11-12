@@ -207,6 +207,7 @@ public partial class Window {
   }
 
   private func configureHost(native WindowHost) {
+    if let sdl = native as SdlHost? { sdl.CallbackContext = CallbackContext() }
     native.PreferencesChanged += applyPreferences
     native.PointerPressed += (id, device, px, py, button, buttons, pressure, modifiers) -> {
       DismissChildMenus(PopupDismissReason.OutsideInteraction)
@@ -378,6 +379,7 @@ public partial class Window {
       guard let native = host else {
         return
       }
+      using let callbackScope = CallbackScope(CallbackContext())
       let queueCompletedAtEntry = windowTarget?.PollQueueCompletion() == true
       if native.IsClosing {
         if waitForEvents {

@@ -4,6 +4,7 @@ import System
 import System.Collections.Generic
 import System.Diagnostics.CodeAnalysis
 import System.Reflection
+import System.Threading
 
 /// Defines a stateful Goo component.
 @DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields)
@@ -32,6 +33,21 @@ public open class Cell {
   private var callbackFallback bool = true
   private var stateChecked bool
   private var stateDeclared bool
+  private var callbackContext WindowCallbackContext?
+
+  internal func BeginCallback() SynchronizationContext? {
+    let previous = SynchronizationContext.Current
+    if (previous == nil || previous is WindowCallbackContext) && contextWindow != nil {
+      callbackContext ??= WindowCallbackContext(contextWindow!!, this)
+      SynchronizationContext.SetSynchronizationContext(callbackContext)
+    }
+    return previous
+  }
+
+  internal func EndCallback(previous SynchronizationContext?) {
+    SynchronizationContext.SetSynchronizationContext(previous)
+    RebuildAfterCallback()
+  }
 
   internal func ReadState(state StateDependency) {
     stateReads ??= List[StateDependency]()
