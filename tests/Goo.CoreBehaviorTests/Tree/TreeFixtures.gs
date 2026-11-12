@@ -4,6 +4,18 @@ import System
 import System.Collections.Generic
 
 internal class TreeFixtures {
+  func EmptyChildrenPreserveStyleRetryRootContract() bool {
+    let rec = Reconciler{Res: Resolver{}}
+    let node = rec.Mount(Container{})
+    try {
+      rec.FlushStyles()
+      if node.StylePendingSelf { return false }
+      rec.diffChildren(node, []Blob{})
+      rec.DiscardStyles()
+      return node.StylePendingSelf
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
   func NodeMountLifetimeContract() bool {
     let rec = Reconciler{Res: Resolver{}}
     let node = rec.Mount(Text{Content: "old"})

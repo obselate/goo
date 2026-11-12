@@ -33,6 +33,11 @@ internal class Node {
   private var pointerState NodePointerState?
   private var portalState NodePortalState?
   private var hitContained bool
+  internal var ScrollbarStyleState ScrollbarNodeValues?
+  internal var ScrollActivityState ScrollNodeActivity?
+  internal var ScrollbarPartState ScrollbarPartState?
+  internal var RetainedLayoutTransition LayoutTransitionState?
+  internal var RetainedVirtualState VirtualNodeState?
 
   internal prop HitContained bool{
     get -> hitContained
