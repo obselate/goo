@@ -8,3 +8,4 @@
 - Coalesce pending SDL wake events and avoid faulting GPU completion when the event queue is full.
 - Evict least-recently-used image cache entries that no returned source or mounted lease owns.
 - Drain native modal completion during close and bound event-serviced cleanup when Window.Run fails.
+- Report repeated alternating element metrics once per episode when window diagnostics are enabled.
