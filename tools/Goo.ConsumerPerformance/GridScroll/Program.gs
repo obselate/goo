@@ -59,8 +59,9 @@ func Main(args []string) {
   let window = Window{Root: scene, Width: 1200, Height: 800, SmoothScrolling: false}
   let jumps = []float64{0.0, 0.7, 0.25, 0.95, 0.5, 0.1, 0.85, 0.35}
   var position = 2000.0
-  for frame in 0 ... 1240 {
-    let sample = frame >= 240
+  let countsOnly = Environment.GetEnvironmentVariable("GOO_FRAME_BUILD_COUNTS_ONLY") == "1"
+  for frame in 0 ... (countsOnly ? 96 : 1240) {
+    let sample = frame >= (countsOnly ? 16 : 240)
     if pattern.StartsWith("thumb") {
       position = jumps[(pattern == "thumb-service" ? frame : frame / 7) % jumps.Length] * float64(count * 32 - 800)
     } else {

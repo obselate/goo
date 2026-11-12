@@ -35,6 +35,7 @@ internal partial class FrameRecorder {
         lock gate {
             if complete { return }
             if pendingGpu.Count >= MaximumResourceIdentities {
+                if FrameBuildProbe.Enabled { FrameBuildProbe.DropGpuMetadata++ }
                 lost++
                 return
             }
@@ -71,6 +72,7 @@ internal partial class FrameRecorder {
         lock gate {
             if managedResources.TryGetValue(value, out var found) { return found }
             if managedIdentityCount >= MaximumResourceIdentities {
+                if FrameBuildProbe.Enabled { FrameBuildProbe.DropManagedIdentity++ }
                 lost++
                 return nil
             }
@@ -97,6 +99,7 @@ internal partial class FrameRecorder {
                 return identity
             }
             if nativeResources.Count >= MaximumResourceIdentities {
+                if FrameBuildProbe.Enabled { FrameBuildProbe.DropNativeIdentity++ }
                 lost++
                 return 0uL
             }

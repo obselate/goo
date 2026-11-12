@@ -156,6 +156,7 @@ internal class FrameProfiler {
 
   internal prop Active bool{
     get {
+      if FrameBuildProbe.Enabled && !FrameBuildProbe.CountsOnly { return true }
       if enabled {
         return true
       }
@@ -197,7 +198,7 @@ internal class FrameProfiler {
 
   internal func Start() FrameProfilePoint {
     let current = FrameRecorder.Current
-    if current == nil && !enabled && sink?.Active != true { return FrameProfilePoint{} }
+    if current == nil && !enabled && sink?.Active != true && !FrameBuildProbe.Enabled { return FrameProfilePoint{} }
     if current != nil && activeTraceId != current.TraceId { BeginPump() }
     return FrameProfilePoint{
       Ticks: Stopwatch.GetTimestamp(),
@@ -215,6 +216,7 @@ internal class FrameProfiler {
     let end = Start()
     let ticks = end.Ticks - start.Ticks
     let bytes = end.Bytes - start.Bytes
+    FrameBuildProbe.Record(int32(stage), ticks, bytes)
     if enabled {
       Add(stage, ticks, bytes, 1, end.PauseTicks - start.PauseTicks)
     }
@@ -258,7 +260,11 @@ internal class FrameProfiler {
       let diffTicks = elapsed.Ticks - buildTicks - resolveTicks
       let diffBytes = elapsed.Bytes - buildBytes - resolveBytes
       let safeDiffTicks = diffTicks < 0 ? 0 : diffTicks
+      FrameBuildProbe.Record(int32(FrameProfileStage.Build), buildTicks, buildBytes)
+      FrameBuildProbe.Record(int32(FrameProfileStage.StyleResolve), resolveTicks, resolveBytes)
       let safeDiffBytes = diffBytes < 0 ? 0 : diffBytes
+      FrameBuildProbe.Record(int32(FrameProfileStage.Diff), safeDiffTicks, safeDiffBytes)
+      FrameBuildProbe.Record(int32(FrameProfileStage.Reconcile), elapsed.Ticks, elapsed.Bytes)
       if enabled {
         Add(FrameProfileStage.Reconcile, elapsed.Ticks, elapsed.Bytes, 1, end.PauseTicks - start.PauseTicks)
         Add(FrameProfileStage.Build, buildTicks, buildBytes, buildCalls)
@@ -291,7 +297,7 @@ internal class FrameProfiler {
   }
 
   internal func EndFrame(start FrameProfilePoint, didRender bool, deferred bool = false) {
-    if !enabled && FrameRecorder.Current == nil { return }
+    if !enabled && FrameRecorder.Current == nil && !FrameBuildProbe.Enabled { return }
     Record(FrameProfileStage.Frame, start, if didRender { 1 } else if deferred { 2 } else { 0 })
     if let current = FrameRecorder.Current {
       if activeTraceId == current.TraceId {

@@ -208,6 +208,13 @@ internal partial class FrameRecorder {
             }
             flushGap()
             if count >= records.Length - 2 {
+                if FrameBuildProbe.Enabled {
+                    FrameBuildProbe.DropBuffer++
+                    if FrameBuildProbe.FirstDroppedSource == nil {
+                        FrameBuildProbe.FirstDroppedSource = value.Source ?? ""
+                        FrameBuildProbe.FirstDroppedEvent = value.EventId
+                    }
+                }
                 lost++
                 return
             }

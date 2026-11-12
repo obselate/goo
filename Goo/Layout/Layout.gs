@@ -75,7 +75,9 @@ internal class Layout {
   private func CalculateCore(root Node, overlayRoot Node?, width float32, height float32) {
     if CustomLayouts.Depth != 0 { throw InvalidOperationException("A custom layout callback reentered window layout: use LayoutContext.MeasureChild and ArrangeChild instead of requesting window layout from Measure or Arrange.") }
     if structureDirty || root != lastRoot || root.Yoga == nil {
+      let probe = FrameBuildProbe.Enabled && !FrameBuildProbe.CountsOnly ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L
       syncNode(root, true)
+      FrameBuildProbe.End(900, probe)
       structureDirty = false
     }
     guard let yg = root.Yoga else {
@@ -85,9 +87,13 @@ internal class Layout {
       || width != lastWidth || height != lastHeight || YGNodeAPI.YGNodeIsDirty(yg)) {
       let availableHeight = root.Kind == NodeKind.Entry && root.Height.Unit == LengthUnit.Unset
       ? Single.NaN : height
+      let yogaProbe = FrameBuildProbe.Enabled && !FrameBuildProbe.CountsOnly ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L
       YGNodeAPI.YGNodeCalculateLayout(yg, width, availableHeight, yogaDirection(root.Direction))
+      FrameBuildProbe.End(901, yogaProbe)
+      let rectProbe = FrameBuildProbe.Enabled && !FrameBuildProbe.CountsOnly ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L
       readRect(root, 0.0F, 0.0F)
       ScrollbarParts.Arrange(root)
+      FrameBuildProbe.End(902, rectProbe)
     }
     lastRoot = root
     lastWidth = width
@@ -143,7 +149,9 @@ internal class Layout {
     let version = ScrollTopology.Version(root)
     if scrollListDirty || scrollRoot != root || scrollSeen != version {
       scrollNodes.Clear()
+      let probe = FrameBuildProbe.Enabled && !FrameBuildProbe.CountsOnly ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L
       collectScroll(root)
+      FrameBuildProbe.End(904, probe)
       scrollListDirty = false
       scrollRoot = root
       scrollSeen = version

@@ -185,7 +185,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func DiagnosticTimestamp() uint64 {
-    if diagnostics == nil && TraceRecorder == nil {
+    if diagnostics == nil && TraceRecorder == nil && !FrameBuildProbe.Enabled {
       return 0uL
     }
     return uint64(Stopwatch.GetTimestamp())
@@ -517,6 +517,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func RecordDiagnosticTiming(eventId uint64, category uint64, start uint64) {
+    FrameBuildProbe.End(int32(eventId), int64(start))
     if diagnostics == nil && TraceRecorder == nil { return }
     if start == 0uL {
       return
@@ -743,6 +744,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func RecordDiagnosticUpload(start uint64, bytes uint64) {
+    FrameBuildProbe.End(316, int64(start))
     if let recorder = TraceRecorder {
       recorder.Duration(VulkanDiagnosticEventIds.UploadStage, VulkanDiagnosticCategories.Timing,
         TraceContext(), int64(start), Stopwatch.GetTimestamp(), source: "upload.prepare")
@@ -762,6 +764,7 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func RecordDiagnosticRecord(start uint64, frame SceneFrame,
     recordResult VulkanPrimitiveRecordResult) {
+      FrameBuildProbe.End(317, int64(start))
       if let recorder = TraceRecorder {
         recorder.Duration(VulkanDiagnosticEventIds.CommandRecord, VulkanDiagnosticCategories.Timing,
           TraceContext(), int64(start), Stopwatch.GetTimestamp(), source: "command.record")
@@ -797,6 +800,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
 
   private func RecordDiagnosticSubmit(start uint64) {
+    FrameBuildProbe.End(321, int64(start))
     if let recorder = TraceRecorder {
       recorder.Duration(VulkanDiagnosticEventIds.Submit, VulkanDiagnosticCategories.Timing,
         TraceContext(), int64(start), Stopwatch.GetTimestamp(), source: "submit.prepare-to-observed")
@@ -821,6 +825,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func RecordDiagnosticPresent(start uint64) {
+    FrameBuildProbe.End(123, int64(start))
     if let recorder = TraceRecorder {
       recorder.Duration(VulkanDiagnosticEventIds.SwapchainPresent, VulkanDiagnosticCategories.Timing,
         TraceContext(), int64(start), Stopwatch.GetTimestamp(), source: "present.prepare-to-observed")
