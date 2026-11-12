@@ -1101,7 +1101,6 @@ method|Goo.AccessibilityScrollInfo|op_Equality|static|public|generic:|(left:Goo.
 method|Goo.AccessibilityScrollInfo|op_Inequality|static|public|generic:|(left:Goo.AccessibilityScrollInfo,right:Goo.AccessibilityScrollInfo)->System.Boolean
 method|Goo.ActivationArguments|Read|static|public|generic:|(arguments:System.Collections.Generic.IReadOnlyList`1<System.String>,workingDirectory:System.String)->Goo.ActivationReadResult
 method|Goo.Anim`1|Pause|instance|public|generic:|()->System.Void
-method|Goo.Anim`1|Play|instance|public|generic:|(from:!0,to:!0,spec:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>,params specs:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>[])->System.Void
 method|Goo.Anim`1|Resume|instance|public|generic:|()->System.Void
 method|Goo.Anim`1|Seek|instance|public|generic:|(elapsedMs:System.Double)->System.Void
 method|Goo.Anim`1|Set|instance|public|generic:|(value:!0)->System.Void
@@ -1384,7 +1383,6 @@ method|Goo.MacOSBackdropOptions|op_Inequality|static|public|generic:|(left:Goo.M
 method|Goo.MotionVelocity|Add|instance|public|generic:|(other:Goo.MotionVelocity)->Goo.MotionVelocity
 method|Goo.MotionVelocity|Components|static|public|generic:|(params values:System.Double[])->Goo.MotionVelocity
 method|Goo.MotionVelocity|Uniform|static|public|generic:|(value:System.Double)->Goo.MotionVelocity
-method|Goo.Motion|Delay|static|public|generic:|(delayMs:System.Double,spec:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>)->System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>
 method|Goo.Motion|Tween|static|public|generic:|(durationMs:System.Double,easing:Goo.Easing=Linear)->System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>
 method|Goo.NativeAccessibilityAdapter|Dispose|instance|public|generic:|()->System.Void
 method|Goo.NativeAccessibilityAdapter|Update|instance|public|generic:|(tree:Goo.AccessibilityTree)->System.Void
