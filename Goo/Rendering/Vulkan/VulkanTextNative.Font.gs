@@ -130,7 +130,7 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
           current.ResourceDuration(FrameResourceKind.FontFace, 0uL, "font.face.create", profileStart, result: -1)
         }
         Dispose()
-        throw error
+        rethrow
       }
     }
 

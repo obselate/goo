@@ -202,7 +202,7 @@ public partial class Window {
       return this
     } catch (e Exception) {
       try { Close() } catch (cleanup Exception) { }
-      throw e
+      rethrow
     }
   }
 
@@ -768,7 +768,7 @@ public partial class Window {
       firstError = captureCleanupError(firstError, () -> completeClose())
     }
     if let error = firstError {
-      throw error
+      System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw()
     }
   }
 
@@ -835,7 +835,7 @@ public partial class Window {
     }
     popup?.CompleteDismissal()
     if let error = firstError {
-      throw error
+      System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw()
     }
   }
 

@@ -128,7 +128,7 @@ internal unsafe partial class SdlRuntime {
           vulkanLoaded = false
           vulkanSnapshot = nil
           vulkanReferenceCount = 0
-          throw error
+          rethrow
         }
       }
     }

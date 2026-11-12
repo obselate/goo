@@ -78,7 +78,7 @@ internal partial class PointerInput {
           dispatchCancel()
         } catch (error Exception) {
           clearTouchPan()
-          throw error
+          rethrow
         } finally {
           clearPressChain(resolver)
           current.ClickTarget = nil

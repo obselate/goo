@@ -72,7 +72,7 @@ public partial class Window {
     try { callback(event) }
     catch (error Exception) {
       // Surface user callback failures from managed dispatch, never through a native ABI.
-      Post(() -> { throw error })
+      Post(() -> { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw() })
       return true
     }
     return event.Handled

@@ -265,7 +265,7 @@ internal partial class ScrollbarParts {
             state.VerticalThumb = nil
             state.Parts.Clear()
             state.Active.Clear()
-            if let error = failure { throw error }
+            if let error = failure { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw() }
         }
 
         private func disposePart(root Node?, failure Exception?) Exception? {

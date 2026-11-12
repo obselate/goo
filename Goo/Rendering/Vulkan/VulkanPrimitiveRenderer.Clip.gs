@@ -114,7 +114,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         if !usageBatchEnded {
           try { atlas.AbortUsageBatch() } catch (cleanup Exception) { }
         }
-        throw error
+        rethrow
       }
     }
 

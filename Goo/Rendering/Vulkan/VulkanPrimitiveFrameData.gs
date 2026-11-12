@@ -89,7 +89,7 @@ internal unsafe sealed class VulkanPrimitiveFrameSlot : IDisposable {
       }
     } catch (error Exception) {
       InvalidateHistory()
-      throw error
+      rethrow
     }
   }
 
@@ -289,7 +289,7 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
       } catch (error Exception) {
         DestroyDescriptorResources()
         DisposeSlots()
-        throw error
+        rethrow
       }
     }
 

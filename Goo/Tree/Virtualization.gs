@@ -353,7 +353,7 @@ internal sealed class VirtualNodeState {
       } else { nil }
     } catch (error Exception) {
       contextReader?.Cancel()
-      throw error
+      rethrow
     } finally {
       viewport.Bind(previous)
       ContextEnvironment.Current = previousContext
@@ -371,7 +371,7 @@ internal sealed class VirtualNodeState {
       return result
     } catch (error Exception) {
       contextReader?.Cancel()
-      throw error
+      rethrow
     } finally {
       viewport.Bind(previous)
       ContextEnvironment.Current = previousContext
@@ -550,7 +550,7 @@ internal sealed class VirtualNodeState {
       return children
     } catch (error Exception) {
       Cancel()
-      throw error
+      rethrow
     } finally {
       output.Bind(nil)
       viewport.Bind(previous)
@@ -744,7 +744,7 @@ internal class Virtualization {
         return true
       } catch (error Exception) {
         state.Cancel()
-        throw error
+        rethrow
       } finally { rec.Context = previousContext }
     }
 

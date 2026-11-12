@@ -86,7 +86,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         RefreshDisplayPacing(true)
       } catch (e Exception) {
         Dispose()
-        throw e
+        rethrow
       }
     }
 

@@ -52,7 +52,7 @@ public sealed partial class NativeAccessibilityAdapter {
           if !visible { AccessKitNative.NodeSetHidden(root) }
           if let child = currentRoot { AccessKitNative.NodePushChild(root, NodeId(child.Id)) }
         } catch (error Exception) { AccessKitNative.NodeFree(root)
-          throw error }
+          rethrow }
         AccessKitNative.TreeUpdatePushNode(update, 1uL, root)
       }
       if complete {
@@ -61,7 +61,7 @@ public sealed partial class NativeAccessibilityAdapter {
           SetString(info, "Goo", 5)
           SetString(info, typeof(Window).Assembly.GetName().Version?.ToString() ?? "", 6)
         } catch (error Exception) { AccessKitNative.TreeInfoFree(info)
-          throw error }
+          rethrow }
         // The update consumes the allocation; never use info after this call.
         AccessKitNative.TreeUpdateSetTreeInfo(update, info)
       }
@@ -83,7 +83,7 @@ public sealed partial class NativeAccessibilityAdapter {
       full = false
       return update
     } catch (error Exception) { AccessKitNative.TreeUpdateFree(update)
-      throw error }
+      rethrow }
   }
 
   private func EncodeNode(update nint, node AccessibilityNode, all bool, ref focus uint64,
@@ -129,7 +129,7 @@ public sealed partial class NativeAccessibilityAdapter {
         for i in 0 ... retained.Runs.Count { AccessKitNative.NodePushChild(nativeNode, retained.Runs[i].Id) }
         EncodeSelection(nativeNode, node, retained)
       } catch (error Exception) { AccessKitNative.NodeFree(nativeNode)
-        throw error }
+        rethrow }
       AccessKitNative.TreeUpdatePushNode(update, NodeId(node.Id), nativeNode)
       retained.Revision = revision
       retained.ScrollX = scrollX

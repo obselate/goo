@@ -7,7 +7,7 @@ internal class NodeLifecycle {
     internal func DisposeTree(n Node) {
       let firstError = disposeTree(n)
       if let error = firstError {
-        throw error
+        System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw()
       }
     }
 

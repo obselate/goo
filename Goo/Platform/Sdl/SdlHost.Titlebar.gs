@@ -52,7 +52,7 @@ internal unsafe partial class SdlTitlebarHooks {
             throw InvalidOperationException("Unable to register native titlebar callbacks")
           }
       } catch (error Exception) { Unbind(host)
-        throw error }
+        rethrow }
     }
     internal func Unbind(host SdlHost) {
       guard let values = bindings else { return }

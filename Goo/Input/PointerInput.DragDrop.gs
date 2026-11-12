@@ -514,7 +514,7 @@ internal partial class PointerInput {
       if dragSession == session {
         terminateDrag(tree, DragEndKind.Canceled, DragEffect.None, true, error)
       }
-      throw error
+      rethrow
     }
   }
 
