@@ -552,6 +552,8 @@ class PublicDocumentationTests {
             "M:Goo.PlatformInput.SetComposition(System.String,System.Int32,System.Int32)",
             "M:Goo.PlatformInput.SetCompositionRange(System.Int32,System.Int32)",
             "M:Goo.PlatformInput.SetSelection(System.Int32,System.Int32)",
+            "M:Goo.PointerDragEvent.PreventDefault",
+            "M:Goo.PointerDragEvent.StopPropagation",
             "M:Goo.PointerEvent.Capture",
             "M:Goo.PointerEvent.PreventDefault",
             "M:Goo.PointerEvent.ReleaseCapture",
@@ -728,6 +730,10 @@ class PublicDocumentationTests {
             "M:Goo.PanelTransform.op_Inequality(Goo.PanelTransform,Goo.PanelTransform)"
         }
         private let ExpectedEnumFieldIds[]string = []string{
+            "F:Goo.PointerDragPhase.Started",
+            "F:Goo.PointerDragPhase.Moved",
+            "F:Goo.PointerDragPhase.Ended",
+            "F:Goo.PointerDragPhase.Canceled",
             "F:Goo.AccessibilityRole.Separator",
             "F:Goo.AccessibilityRole.TabPanel",
             "F:Goo.AccessibilityRole.Toolbar",

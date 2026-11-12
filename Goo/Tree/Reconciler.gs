@@ -430,10 +430,6 @@ internal partial class Reconciler {
       inputChanged = true
     }
     if n.SyncPointerCallbacks(b) { inputChanged = true }
-    if (n.OnPointerDrag != nil) != (b.OnPointerDrag != nil) { inputChanged = true }
-    n.OnPointerDrag = b.OnPointerDrag
-    n.PointerDragThreshold = b.PointerDragThreshold
-    n.PointerDragAxis = b.PointerDragAxis
     let nextHitTestSelf = resolvedHitTestSelf(b, focusable, entries, hover, active)
     if n.HitTestSelf != nextHitTestSelf {
       n.HitTestSelf = nextHitTestSelf

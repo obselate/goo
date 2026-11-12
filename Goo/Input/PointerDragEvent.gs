@@ -2,9 +2,13 @@ package Goo
 
 /// Identifies a captured pointer drag transition.
 public enum PointerDragPhase {
+    /// Reports the press or the first sample that reaches the threshold.
     Started = 0;
+    /// Reports a sample after the drag starts and before it terminates.
     Moved = 1;
+    /// Reports the matching primary-pointer release.
     Ended = 2;
+    /// Reports cancellation, capture loss, unmount or an unavailable target.
     Canceled = 3;
 }
 

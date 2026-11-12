@@ -130,7 +130,7 @@ internal partial class PointerInput {
         try {
             state.Callback?.Invoke(state.Last)
         } finally {
-            state.Owner?.Rebuild()
+            state.Owner?.RebuildAfterCallback()
         }
     }
 
@@ -185,7 +185,7 @@ internal partial class PointerInput {
                 PointerDragEvent{Pointer: event, Phase: PointerDragPhase.Canceled, Translation: previous.Translation,}
             )
         } finally {
-            state.Owner?.Rebuild()
+            state.Owner?.RebuildAfterCallback()
         }
     }
 }

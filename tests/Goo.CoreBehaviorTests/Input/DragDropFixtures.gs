@@ -449,24 +449,31 @@ internal class DragDropFixtures {
     preventedInput.Drain(preventedRoot, resolver, 0.0, nil)
     if preventedCreates != 0 { return false }
 
-    var capturedCreates int32
-    let capturedRoot = Reconciler{ Res: Resolver{} }.Mount(Container{
-      Width: 100,
-      Height: 50,
-      OnPointerDown: (e PointerEvent) -> e.Capture(),
-      DragSource: DragSource((e DragStartEvent) -> {
-        capturedCreates++
-        return DragData("captured", DragEffect.Move)
-      }),
-    })
-    Layout().Calculate(capturedRoot, 100.0F, 50.0F)
-    let capturedInput = InputCoordinator()
-    capturedInput.AfterTreeUpdated(capturedRoot, resolver, true)
-    capturedInput.QueuePointerPress(10.0F, 10.0F)
-    capturedInput.QueuePointerMove(20.0F, 10.0F)
-    capturedInput.QueuePointerRelease(20.0F, 10.0F)
-    capturedInput.Drain(capturedRoot, resolver, 0.0, nil)
-    if capturedCreates != 0 { return false }
+    for automatic in []bool{false, true} {
+      var capturedCreates int32
+      var samples int32
+      let captured = Container{
+        Width: 100, Height: 50,
+        DragSource: DragSource((e DragStartEvent) -> {
+          capturedCreates++
+          return DragData("captured", DragEffect.Move)
+        }),
+      }
+      if automatic {
+        captured.OnPointerDrag = (_ PointerDragEvent) -> { samples++ }
+      } else {
+        captured.OnPointerDown = (e PointerEvent) -> e.Capture()
+      }
+      let capturedRoot = Reconciler{Res: Resolver{}}.Mount(captured)
+      Layout().Calculate(capturedRoot, 100.0F, 50.0F)
+      let capturedInput = InputCoordinator()
+      capturedInput.AfterTreeUpdated(capturedRoot, resolver, true)
+      capturedInput.QueuePointerPress(10.0F, 10.0F)
+      capturedInput.QueuePointerMove(20.0F, 10.0F)
+      capturedInput.QueuePointerRelease(20.0F, 10.0F)
+      capturedInput.Drain(capturedRoot, resolver, 0.0, nil)
+      if capturedCreates != 0 || automatic && samples != 3 { return false }
+    }
 
     var captureAfterStart bool
     var capturedMoves int32
