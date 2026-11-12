@@ -299,7 +299,7 @@ internal partial class PointerInput {
             callback?.Invoke(event)
           } finally {
             control.ClearCurrentTarget(generation)
-            owner?.Rebuild()
+            owner?.RebuildAfterCallback()
           }
           if current != contact || route.Count != routeCount || mount.Current == nil
             || !route[i - 1].Equals(mount) {
@@ -421,7 +421,7 @@ internal partial class PointerInput {
           }
         } finally {
           control.ClearCurrentTarget(generation)
-          owner?.Rebuild()
+          owner?.RebuildAfterCallback()
         }
         if current != contact || route.Count != routeCount || mount.Current == nil
           || !route[i - 1].Equals(mount) { return }

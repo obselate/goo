@@ -347,7 +347,7 @@ internal partial class TextInput {
         try {
           if changed { n.OnChange?.Invoke(committed) }
         } finally {
-          owner?.Rebuild()
+          owner?.RebuildAfterCallback()
           if snapshot.FocusId == focus.Generation { updateTextInputArea(n) }
         }
         return true
@@ -457,7 +457,7 @@ internal partial class TextInput {
       case TextCommandKind.Submit {
         let owner = CellOwnership.Within(root, n)
         try { n.OnSubmit?.Invoke(n.Buffer) }
-        finally { owner?.Rebuild() }
+        finally { owner?.RebuildAfterCallback() }
         return true
       }
       case _ { return false }
