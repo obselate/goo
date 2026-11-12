@@ -207,6 +207,7 @@ public open class Cell {
   }
 
   internal func Render() Blob {
+    if FrameBuildProbe.Enabled { FrameBuildProbe.CellBuilds++ }
     building = true
     try {
       return BuildOutput()

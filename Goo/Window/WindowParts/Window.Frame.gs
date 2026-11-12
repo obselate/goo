@@ -251,7 +251,9 @@ public partial class Window {
     if let n = node {
       layout.SetPixelDensity(RenderScale.X)
       if hasEffect(effects, ReconcileEffects.Structure) {
+        let probe = FrameBuildProbe.Enabled && !FrameBuildProbe.CountsOnly ? Stopwatch.GetTimestamp() : 0L
         Portals.Sync(n, portalRoot)
+        FrameBuildProbe.End(905, probe)
       }
       let viewW = LayoutWidth
       let viewH = LayoutHeight
