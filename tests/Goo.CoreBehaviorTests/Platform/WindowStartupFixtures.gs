@@ -21,6 +21,7 @@ internal class WindowStartupFixtures {
         && !owner.Handle.IsMounted && owner.Cancelled
     } finally { window.Close() }
   }
+
   func HostedContextOperationCountingContract() bool {
     let previous = SynchronizationContext.Current
     let host = WindowCountingContext()
