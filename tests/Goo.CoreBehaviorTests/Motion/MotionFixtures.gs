@@ -805,7 +805,29 @@ internal class MotionFixtures {
       let autoFails = throws(() -> {
         let ignored = cell.Animate(Length.Auto)
       })
-      return targetFails && setFails && autoFails
+      let mixedFails = throws(() -> { let ignored = cell.Animate(Percent(50) + Em(1)) })
+      for initial in []Length{Em(0), Rem(0), Vw(0), Vh(0)} {
+        let relative = cell.Animate(initial)
+        let target = switch initial.Unit {
+          case LengthUnit.Em: Em(4)
+          case LengthUnit.Rem: Rem(4)
+          case LengthUnit.Vw: Vw(4)
+          case _: Vh(4)
+        }
+        relative.To(target)
+        pump.Sweep(0.09)
+        if relative.Value.Unit != initial.Unit || !relative.Running {
+          throw InvalidOperationException("relative midpoint: ${initial.Unit}, ${relative.Value.Unit}, ${relative.Running}")
+        }
+        pump.Sweep(0.1)
+        if relative.Running || !relative.Value.Equals(target) {
+          throw InvalidOperationException("relative completion: ${initial.Unit}, ${relative.Value.Unit}, ${relative.Running}, ${relative.Value.EmPart}, ${relative.Value.RemPart}, ${relative.Value.VwPart}, ${relative.Value.VhPart}")
+        }
+      }
+      if !targetFails || !setFails || !autoFails || !mixedFails {
+        throw InvalidOperationException("length rejection: $targetFails, $setFails, $autoFails, $mixedFails")
+      }
+      return targetFails && setFails && autoFails && mixedFails
         && anim.Value.Magnitude == 10.0 && anim.Target.Magnitude == 10.0 && !anim.Running
     } finally {
       cell.DisposeMounted()

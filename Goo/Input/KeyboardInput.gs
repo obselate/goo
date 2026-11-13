@@ -314,6 +314,7 @@ internal class KeyboardInput {
   }
 
   private func HandleRepeatedKey(root Node?, resolver Resolver, text TextInput, pointer PointerInput) bool {
+    resolver.Owner?.SetInputModifiers(heldModifiers)
     let dispatch = DispatchKeyDown(heldTarget, heldKey, heldModifiers, true, root, resolver, text, pointer)
     if !dispatch.Repeat { resetRepeat() }
     return dispatch.Handled
@@ -327,6 +328,7 @@ internal class KeyboardInput {
     down bool, root Node?, resolver Resolver, text TextInput, pointer PointerInput) KeyboardDispatchResult{
       var result KeyboardDispatchResult
       guard let start = target else { return result }
+      let targetEditsText = WindowFocus.TargetEditsText(focus.FocusedNode())
       let startMount = NodeMount(start)
       if !canReceiveInput(start) {
         return result
@@ -348,7 +350,7 @@ internal class KeyboardInput {
             let owner = CellOwnership.ForCallback(node)
             try {
               handler(KeyEvent{ Key: key, Modifiers: modifiers, Repeat: repeat,
-                IsComposing: compositionActive, Control: control, Generation: generation })
+                IsComposing: compositionActive, targetEditsText: targetEditsText, Control: control, Generation: generation })
             } finally { owner?.RebuildAfterCallback() }
           }
           if nodeMount.Current == nil { return result }
@@ -382,14 +384,14 @@ internal class KeyboardInput {
             if let bindings = InputCallbacks.Bindings(node) {
               for binding in bindings {
                 if binding.Key != key || binding.Modifiers != modifiers { continue }
-                if binding.Action == nil && binding.OnRelease == nil { continue }
+                if binding.OnPress == nil && binding.OnRelease == nil { continue }
                 result.Handled = true
                 result.SuppressTextInput = true
                 result.Repeat = binding.Repeat
                 if !repeat || binding.Repeat {
                   let owner = CellOwnership.ForCallback(node)
                   try {
-                    binding.Action?.Invoke()
+                    binding.OnPress?.Invoke()
                     if !repeat && startMount.Current != nil && nodeMount.Current != nil {
                       if let release = binding.OnRelease {
                         releases[key] = PendingKeyRelease{ Target: startMount, Owner: nodeMount, Action: release, Generation: focusGeneration }

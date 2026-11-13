@@ -317,14 +317,14 @@ internal class TextInputPrimitivesFixtures {
       var threw = false
       try { input.CommitText("x") }
       catch (error Exception) { threw = error.Message == "observer" }
-      if !threw || cell.Value != "x" || input.Editor?.Text != "x"
+      if !threw || cell.Value != "x" || window.Focus.Editor?.Text != "x"
         || changes != 1 || published != "x" || !window.RenderPending() { return false }
       window.UpdateTree()
       if window.Tree?.Children[1].Content != "mirror:x" { return false }
       cell.ThrowOnChange = false
       if !input.CommitText("y") { return false }
       window.UpdateTree()
-      return cell.Value == "xy" && input.Editor?.Text == "xy"
+      return cell.Value == "xy" && window.Focus.Editor?.Text == "xy"
         && window.Tree?.Children[1].Content == "mirror:xy" && published == "xy"
     } finally { window.Close() }
   }
