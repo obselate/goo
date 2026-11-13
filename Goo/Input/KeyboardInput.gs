@@ -351,10 +351,11 @@ internal class KeyboardInput {
           let callback = down ? InputCallbacks.KeyDown(node) : InputCallbacks.KeyUp(node)
           if let handler = callback {
             let owner = CellOwnership.ForCallback(node)
+            let previousContext = owner?.BeginCallback()
             try {
               handler(KeyEvent{ Key: key, Modifiers: modifiers, Repeat: repeat,
                 IsComposing: compositionActive, targetEditsText: targetEditsText, Control: control, Generation: generation })
-            } finally { owner?.RebuildAfterCallback() }
+            } finally { owner?.EndCallback(previousContext) }
           }
           if nodeMount.Current == nil { return result }
           last = node
@@ -379,8 +380,9 @@ internal class KeyboardInput {
             && pending.Target.Current == start && pending.Owner.Current == node && pending.Generation == focus.Generation {
               result.Handled = true
               let owner = CellOwnership.ForCallback(node)
+              let previousContext = owner?.BeginCallback()
               try { pending.Action() }
-              finally { owner?.RebuildAfterCallback() }
+              finally { owner?.EndCallback(previousContext) }
               return result
             }
           if down {
@@ -393,6 +395,7 @@ internal class KeyboardInput {
                 result.Repeat = binding.Repeat
                 if !repeat || binding.Repeat {
                   let owner = CellOwnership.ForCallback(node)
+                  let previousContext = owner?.BeginCallback()
                   try {
                     binding.OnPress?.Invoke()
                     if !repeat && startMount.Current != nil && nodeMount.Current != nil {
@@ -400,7 +403,7 @@ internal class KeyboardInput {
                         releases[key] = PendingKeyRelease{ Target: startMount, Owner: nodeMount, Action: release, Generation: focusGeneration }
                       }
                     }
-                  } finally { owner?.RebuildAfterCallback() }
+                  } finally { owner?.EndCallback(previousContext) }
                 }
                 return result
               }

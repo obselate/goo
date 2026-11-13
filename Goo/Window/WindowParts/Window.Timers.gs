@@ -88,12 +88,14 @@ public partial class Window {
 
     /// Runs a callback once on the UI thread after the delay.
     public func After(delayMs float64, action Action) WindowTimer {
+        if !acceptingPosts { return WindowTimer.Inactive() }
         validateTimer(action, delayMs, false)
         return addTimer(action, delayMs, 0.0)
     }
 
     /// Runs a callback repeatedly on the UI thread at the requested interval.
     public func Every(intervalMs float64, action Action) WindowTimer {
+        if !acceptingPosts { return WindowTimer.Inactive() }
         validateTimer(action, intervalMs, true)
         return addTimer(action, intervalMs, intervalMs)
     }
