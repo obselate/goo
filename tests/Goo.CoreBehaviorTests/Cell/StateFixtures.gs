@@ -3,6 +3,7 @@ package Goo
 import System
 import System.Diagnostics
 import System.Collections.Generic
+import System.Threading
 import System.Threading.Tasks
 
 internal class StateFixtures {
@@ -23,11 +24,13 @@ internal class StateFixtures {
     let window = Window{Root: cell, Size: LayoutSize(200, 100)}
     try {
       window.UpdateTree()
-      let rejected = Task.Run(() -> {
+      var rejected = false
+      let worker = Thread(() -> {
         try { cell.Value.Value = 1 }
-        catch (error InvalidOperationException) { return error.Message.Contains("UI thread") }
-        return false
-      }).GetAwaiter().GetResult()
+        catch (error InvalidOperationException) { rejected = error.Message.Contains("UI thread") }
+      })
+      worker.Start()
+      worker.Join()
       if !rejected || cell.Value.Value != 0 || cell.IsDirty() { return false }
       cell.Value.Value = 2
       window.UpdateTree()
