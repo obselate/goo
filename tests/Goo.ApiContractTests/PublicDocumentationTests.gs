@@ -212,6 +212,13 @@ class PublicDocumentationTests {
     shared {
         private const PublicDeclared BindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly
         private let ExpectedMethodIds[]string = []string{
+            "M:Goo.AsyncImageSource.#ctor(System.Func{System.Threading.CancellationToken,System.Threading.Tasks.Task{Goo.ImageSource}})",
+            "M:Goo.AsyncImageSource.Acquire",
+            "M:Goo.AsyncImageSource.Dispose",
+            "M:Goo.Assets.Open(System.Reflection.Assembly,System.String)",
+            "M:Goo.Assets.ReadAllBytes(System.Reflection.Assembly,System.String)",
+            "M:Goo.ShaderEffectProgram.Load(System.Reflection.Assembly,System.String)",
+            "M:Goo.Blob.Sized(System.Func{Goo.LayoutSize,Goo.Blob})",
             "M:Goo.Blob.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})",
             "M:Goo.Platform.OpenAsync(System.String,System.Threading.CancellationToken)",
             "M:Goo.NativeDialogs.ShowError(System.String,System.String)",
@@ -404,7 +411,6 @@ class PublicDocumentationTests {
             "M:Goo.Cell.Mounted",
             "M:Goo.Cell.Unmounting",
             "M:Goo.Cell.Rebuild",
-            "M:Goo.Cell`1.ShouldRebuild(`0,`0)",
             "M:Goo.Color.FromNormalized(System.Single,System.Single,System.Single,System.Single)",
             "M:Goo.Color.Parse(System.String)",
             "M:Goo.Color.Rgb(System.Int32,System.Int32,System.Int32)",
@@ -508,7 +514,7 @@ class PublicDocumentationTests {
             "M:Goo.ImageSourceCache.LoadAsync(System.String)",
             "M:Goo.ImageSourceCache.LoadAsync(System.String,System.Threading.CancellationToken)",
             "M:Goo.ImageSourceCache.Dispose",
-            "M:Goo.Images.ImageVariant.#ctor(System.String,System.Single)",
+            "M:Goo.Images.ImageVariant.#ctor(System.String,System.Double)",
             "M:Goo.Images.ImageVariants.#ctor(System.Collections.Generic.IReadOnlyList{Goo.Images.ImageVariant},Goo.ImageDecodeLimits)",
             "M:Goo.Images.ImageVariants.LoadAsync(Goo.WindowMetrics,System.Threading.CancellationToken)",
             "M:Goo.Images.ImageVariants.Dispose",
@@ -598,8 +604,8 @@ class PublicDocumentationTests {
             "M:Goo.Portal.Add(Goo.Blob)",
             "M:Goo.PopupWindow.#ctor(Goo.Window,Goo.Cell,Goo.PopupKind)",
             "M:Goo.PopupWindow.#ctor(Goo.PopupWindow,Goo.Cell,Goo.PopupKind)",
-            "M:Goo.PopupWindow.Open(Goo.ElementRect,System.Int32,System.Int32,Goo.PortalPlacement)",
-            "M:Goo.PopupWindow.UpdatePlacement(Goo.ElementRect,System.Int32,System.Int32,Goo.PortalPlacement)",
+            "M:Goo.PopupWindow.Open(Goo.ElementRect,System.Nullable{Goo.LayoutSize},System.Nullable{Goo.LayoutSize},Goo.PortalPlacement)",
+            "M:Goo.PopupWindow.UpdatePlacement(Goo.ElementRect,System.Nullable{Goo.LayoutSize},System.Nullable{Goo.LayoutSize},Goo.PortalPlacement)",
             "M:Goo.PopupWindow.Close",
             "M:Goo.PopupWindow.Dispose",
             "M:Goo.KeyEvent.PreventDefault",
@@ -1008,6 +1014,10 @@ class PublicDocumentationTests {
         private let Shapes IReadOnlyDictionary[string, DocumentationShape] = Dictionary[string, DocumentationShape](
             StringComparer.Ordinal
         ){
+            ["M:Goo.Blob.Sized(System.Func{Goo.LayoutSize,Goo.Blob})"] =
+                DocumentationShape([]string{"build"}, Array.Empty[string](), true),
+            ["M:Goo.Sized(System.Func{Goo.LayoutSize,Goo.Blob})"] =
+                DocumentationShape([]string{"build"}, Array.Empty[string](), true),
             ["M:Goo.ElementHandle.ScrollToEnd"] = DocumentationShape(
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
@@ -1322,6 +1332,8 @@ class PublicDocumentationTests {
             ),
             ["M:Goo.Cell.Build"] = DocumentationShape(System.Array.Empty[string](), System.Array.Empty[string](), true),
             ["M:Goo.Cell`1.Build(`0)"] = DocumentationShape([]string{"input"}, System.Array.Empty[string](), true),
+            ["M:Goo.Cell`1.InputChanged(`0)"] =
+                DocumentationShape([]string{"input"}, Array.Empty[string](), false),
             ["P:Goo.Cell.Lifetime"] = DocumentationShape(System.Array.Empty[string](), System.Array.Empty[string](), true),
             ["M:Goo.Cell.Latest(System.String)"] = DocumentationShape([]string{"name"}, System.Array.Empty[string](), true),
             ["M:Goo.Cell.Post(System.Action)"] = DocumentationShape([]string{"action"}, System.Array.Empty[string](), true),
@@ -1333,8 +1345,7 @@ class PublicDocumentationTests {
                 []string{"delayMs", "action"}, System.Array.Empty[string](), true),
             ["M:Goo.Window.Every(System.Double,System.Action)"] = DocumentationShape(
                 []string{"intervalMs", "action"}, System.Array.Empty[string](), true),
-            ["M:Goo.Cell`1.InputChanged(`0)"] =
-                DocumentationShape([]string{"input"}, Array.Empty[string](), false),
+
             ["M:Goo.Cell`1.InvokeInputCallback(System.Action)"] = DocumentationShape(
                 []string{"callback"}, System.Array.Empty[string](), false),
             ["M:Goo.Cell`1.InvokeInputCallback``1(System.Action{``0},``0)"] = DocumentationShape(
@@ -1616,7 +1627,7 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
-            ["M:Goo.Images.ImageVariant.#ctor(System.String,System.Single)"] = DocumentationShape(
+            ["M:Goo.Images.ImageVariant.#ctor(System.String,System.Double)"] = DocumentationShape(
                 []string{"path", "pixelsPerUnit"},
                 System.Array.Empty[string](),
                 false
@@ -2255,16 +2266,16 @@ class PublicDocumentationTests {
                 false
             ),
             [
-                "M:Goo.PopupWindow.Open(Goo.ElementRect,System.Int32,System.Int32,Goo.PortalPlacement)"
+                "M:Goo.PopupWindow.Open(Goo.ElementRect,System.Nullable{Goo.LayoutSize},System.Nullable{Goo.LayoutSize},Goo.PortalPlacement)"
             ] = DocumentationShape(
-                []string{"anchor", "width", "height", "placement"},
+                []string{"anchor", "size", "maximum", "placement"},
                 System.Array.Empty[string](),
                 true
             ),
             [
-                "M:Goo.PopupWindow.UpdatePlacement(Goo.ElementRect,System.Int32,System.Int32,Goo.PortalPlacement)"
+                "M:Goo.PopupWindow.UpdatePlacement(Goo.ElementRect,System.Nullable{Goo.LayoutSize},System.Nullable{Goo.LayoutSize},Goo.PortalPlacement)"
             ] = DocumentationShape(
-                []string{"anchor", "width", "height", "placement"},
+                []string{"anchor", "size", "maximum", "placement"},
                 System.Array.Empty[string](),
                 true
             )
@@ -2334,6 +2345,7 @@ class PublicDocumentationTests {
                 .Append("P:Goo.KeyBinding.Repeat")
                 .Append("M:Goo.Percent(System.Double)")
                 .Append("M:Goo.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})")
+                .Append("M:Goo.Sized(System.Func{Goo.LayoutSize,Goo.Blob})")
                 .Append("M:Goo.Em(System.Double)")
                 .Append("M:Goo.Rem(System.Double)")
                 .Append("M:Goo.Vw(System.Double)")

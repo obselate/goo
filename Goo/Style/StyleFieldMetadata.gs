@@ -212,8 +212,6 @@ private func createStyleFieldInfo() []StyleFieldInfo {
       logical | lerp | shapeExcluded),
     styleFieldInfo(StyleField.BorderEndColor, FieldKind.KColor, ReconcileEffects.Paint,
       logical | lerp | shapeExcluded),
-    styleFieldInfo(StyleField.BackgroundImage, FieldKind.KString, ReconcileEffects.Paint,
-      StyleFieldFlags.None, StyleEntry{ Field: StyleField.BackgroundImage, Payload: "" }),
     styleFieldInfo(StyleField.BackgroundImageFit, FieldKind.KEnum, ReconcileEffects.Paint,
       StyleFieldFlags.None, StyleEntry{ Field: StyleField.BackgroundImageFit,
         A: float32(int32(ImageFit.Cover)) }),

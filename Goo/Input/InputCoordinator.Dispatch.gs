@@ -46,6 +46,11 @@ internal partial class InputCoordinator {
         if !e.IsPointer && e.Keyboard.TextFocusGeneration >= ingressFocusGeneration {
           e.Keyboard.TextFocusGeneration = focus.Generation
         }
+        if e.IsPointer && e.Pointer.Kind == PointerEventKind.Press
+          && Portals.Dismiss(currentRoot, PopupDismissReason.OutsideInteraction, e.Pointer.X, e.Pointer.Y) {
+          changed = true
+          continue
+        }
         let dispatched = if let frame = e.PointerFrame {
             pointer.DispatchFrame(frame, e.PointerFrameCount, currentRoot, resolver, timeS, text)
           } else if e.IsPointer { pointer.Dispatch(e.Pointer, currentRoot, resolver, timeS, text) }

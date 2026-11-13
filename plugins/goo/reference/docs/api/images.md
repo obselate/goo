@@ -4,6 +4,19 @@ Source: [`Goo/Images`](https://github.com/obselate/goo/tree/main/Goo/Images)
 
 See [image loading](../images.md) and [owned sources](tree.md#owned-image-sources).
 
+## `Assets`
+
+
+Resolves embedded assets before files beside the application. Results are not cached.
+
+### `Open(System.Reflection.Assembly,string)`
+
+Opens an exact manifest resource name, then a file under AppContext.BaseDirectory. The caller disposes the stream. Missing assets report both locations.
+
+### `ReadAllBytes(System.Reflection.Assembly,string)`
+
+Reads an exact manifest resource name or an application-relative file.
+
 ## `ImageAssetResult`
 
 
@@ -46,7 +59,7 @@ Distinguishes a loaded variant from unavailable metrics, cancellation and file o
 
 Identifies one local image and the number of source pixels per logical unit.
 
-### `new(string,float32)`
+### `new(string,float64)`
 
 Creates a variant such as logo@2x.png with density 2.
 

@@ -71,7 +71,9 @@ class FixtureContractTests {
     func ForeignHostContextRebuildsOwner() {
         Assert.True(WindowStartupFixtures().HostedOwnerContextContract().GetAwaiter().GetResult())
         if System.Threading.SynchronizationContext.Current is Xunit.Sdk.AsyncTestSyncContext context {
-            Assert.Null(context.WaitForCompletionAsync().GetAwaiter().GetResult())
+            System.Threading.SynchronizationContext.SetSynchronizationContext(nil)
+            try { Assert.Null(context.WaitForCompletionAsync().GetAwaiter().GetResult()) }
+            finally { System.Threading.SynchronizationContext.SetSynchronizationContext(context) }
         }
     }
 
@@ -142,6 +144,16 @@ class FixtureContractTests {
 
     shared {
         func Cases() sequence[[]object] {
+            yield Contract[LayoutFixtures]("SizedScrollExtentUsesContentContract")
+            yield Contract[LayoutFixtures]("SizedNestedPortalUsesFinalSizeContract")
+            yield Contract[LayoutFixtures]("SizedContentResolvesLengthsInSameFrameContract")
+            yield Contract[LayoutFixtures]("SizedAllottedSizeAndLayoutPassesContract")
+            yield Contract[LayoutFixtures]("SizedNestedAndMountedGeometryContract")
+            yield Contract[LayoutFixtures]("SizedZeroAndUnboundedAxesContract")
+            yield Contract[TreeFixtures]("SizedStateAndContextContract")
+            yield Contract[TreeFixtures]("SizedCallbackOwnershipAndVerificationContract")
+            yield Contract[TreeFixtures]("SizedBuildRejectsStateWritesContract")
+            yield Contract[TreeFixtures]("SizedFailedBuildRetainsSubscriptionsContract")
             yield Contract[StyleFixtures]("FlexAndInsetDeclarationOrderContract")
             yield Contract[AccessibilityFixtures]("AccessibilityShorthandOrderContract")
             yield Contract[AccessibilityFixtures]("AccessibilityShorthandRoundTripContract")
@@ -186,6 +198,13 @@ class FixtureContractTests {
             yield Contract[PathBuilderFixtures]("ResetPreservesPublishedPathAndClearsContour")
             yield Contract[PathBuilderFixtures]("PrimitivesAppendClosedContoursInViewBoxCoordinates")
             yield Contract[PortalFixtures]("UiScaleLayoutInputAndAnchoredPortalContract")
+            yield Contract[PortalFixtures]("DeclarativeModalFocusTrapContract")
+            yield Contract[PortalFixtures]("DeclarativePortalRestoreFocusContract")
+            yield Contract[PortalFixtures]("DeclarativePortalInitialFocusContract")
+            yield Contract[PortalFixtures]("DeclarativePortalDismissalContract")
+            yield Contract[PortalFixtures]("NonmodalPortalDismissesEscapeWithOutsideFocusContract")
+            yield Contract[PortalFixtures]("PopupMeasuredPlacementContract")
+            yield Contract[AccessibilityFixtures]("DeclarativePortalModalFlagContract")
             yield Contract[PortalFixtures]("AnchoredSubrectangleAndCollisionBoundsContract")
             yield Contract[PortalFixtures]("AnchoredPlacementSizesToSelectedSideContract")
             yield Contract[PortalFixtures]("WindowPointPortalSharesDevicePixelRowsWithTreeContract")
@@ -217,6 +236,12 @@ class FixtureContractTests {
             yield Contract[StateFixtures]("BuilderScopeDependencyTransactionContract")
             yield Contract[StateFixtures]("BuilderScopeIncrementalAndNestedContract")
             yield Contract[StateFixtures]("VerificationSettingContract")
+            yield Contract[StateFixtures]("VerificationRejectsExternalReadsContract")
+            yield Contract[StateFixtures]("VerificationAcceptsTrackedAndEqualContract")
+            yield Contract[StateFixtures]("VirtualRetainedStateContract")
+            yield Contract[StateFixtures]("VirtualWriteDoesNotMaskVerificationWhenEnabledLaterContract")
+            yield Contract[StateFixtures]("VirtualWriteDoesNotMaskVerificationWhenEnabledContract")
+            yield Contract[StateFixtures]("VirtualTrackedWritePassesVerificationContract")
             yield Contract[CellFixtures]("DeferredScopeAndMountFactoryCallbacksRebuildTheirAuthor")
             yield Contract[CellFixtures]("DirectChildQueuesCanonicalParentOnce")
             yield Contract[CellFixtures]("DirectCompositionAddsNoRenderNode")
@@ -240,10 +265,10 @@ class FixtureContractTests {
             yield Contract[CellFixtures]("RemovedQueuedCellIsNotRebuiltAndDisposesOnce")
             yield Contract[CellFixtures]("RepeatedRebuildRequestsCoalesce")
             yield Contract[CellFixtures]("RootMountRetriesAfterInitialBuildFailure")
-            yield Contract[CellFixtures]("SemanticInputEquivalenceKeepsNewestCallback")
+            yield Contract[CellFixtures]("InputEqualityRebuildsForNewCallback")
             yield Contract[CellFixtures]("ScopeMountedChildCallbacksKeepTheirOwner")
             yield Contract[CellFixtures]("SlottedAndForwardedCallbacksRebuildOnlyTheirAuthor")
-            yield Contract[CellFixtures]("ThrowingInputEquivalenceRetriesSameSnapshot")
+            yield Contract[CellFixtures]("InputEqualityFailureRetriesSameSnapshot")
             yield Contract[CellFixtures]("PostReportsQueueAcceptance")
             yield Contract[CellFixtures]("WindowCloseCompletesAfterCleanupFailures")
             yield Contract[ClickSequenceFixtures]("DragRegionIgnoresFocusableAncestorsButPreservesControls")
@@ -266,6 +291,11 @@ class FixtureContractTests {
             yield Contract[ClipPathInputFixtures]("TransformedClipPathUsesMappedCoordinates")
             yield Contract[ContextFixtures]("FailedBuildRetryAndDisposalContract")
             yield Contract[ContextFixtures]("FailedPassRetriesNewDependenciesContract")
+            yield Contract[ContextFixtures]("TrackedWindowGettersContract")
+            yield Contract[ContextFixtures]("TrackedWindowRetainedScopeContract")
+            yield Contract[ContextFixtures]("WindowReadDoesNotOptInToTrackedStateContract")
+            yield Contract[ContextFixtures]("InputCarriedStateOptsInToTrackedStateContract")
+            yield Contract[ContextFixtures]("UntrackedWindowGetterKeepsCallbackFallbackContract")
             yield Contract[ContextFixtures]("QueuedStructReadAllocationContract")
             yield Contract[ContextFixtures]("RetainedDirectCleanPortalAndShadowingContract")
             yield Contract[ContextFixtures]("VirtualRetentionVersionAndFailureContract")

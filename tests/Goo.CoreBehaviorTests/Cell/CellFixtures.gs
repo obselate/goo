@@ -199,10 +199,9 @@ internal class CellFixtures {
     return CellInputFixtureCell.Builds == 2
   }
 
-  func SemanticInputEquivalenceKeepsNewestCallback() bool {
+  func InputEqualityRebuildsForNewCallback() bool {
     CellCallbackInputFixtureCell.Builds = 0
     CellCallbackInputFixtureCell.Callback = ""
-    CellCallbackInputFixtureCell.SnapshotWasStored = false
     let rec = Reconciler{ Res: Resolver{} }
     let first = CellCallbackInputFixtureValue{
       Label: "same",
@@ -218,7 +217,7 @@ internal class CellFixtures {
     }
     var node = rec.Mount(cellCallbackInputFixture(first))
     node = rec.Diff(node, cellCallbackInputFixture(second))
-    if CellCallbackInputFixtureCell.Builds != 1 || !CellCallbackInputFixtureCell.SnapshotWasStored {
+    if CellCallbackInputFixtureCell.Builds != 2 {
       return false
     }
     guard let action = node.OnClick else { return false }
@@ -229,11 +228,11 @@ internal class CellFixtures {
     node = rec.Diff(node, cellCallbackInputFixture(changed))
     guard let changedAction = node.OnClick else { return false }
     changedAction()
-    return CellCallbackInputFixtureCell.Builds == 2
+    return CellCallbackInputFixtureCell.Builds == 3
       && CellCallbackInputFixtureCell.Callback == "changed"
   }
 
-  func ThrowingInputEquivalenceRetriesSameSnapshot() bool {
+  func InputEqualityFailureRetriesSameSnapshot() bool {
     CellThrowingInputFixtureCell.Builds = 0
     CellThrowingInputFixtureCell.ThrowOnce = false
     let rec = Reconciler{ Res: Resolver{} }
@@ -1042,13 +1041,8 @@ internal open class CellCallbackInputFixtureCell : Cell[CellCallbackInputFixture
   shared {
     internal var Builds int32
     internal var Callback string
-    internal var SnapshotWasStored bool
   }
 
-  protected override func ShouldRebuild(previous CellCallbackInputFixtureValue, next CellCallbackInputFixtureValue) bool {
-    SnapshotWasStored = Input.Label == next.Label
-    return previous.Label != next.Label
-  }
 
   override func Build() Blob {
     Builds = Builds + 1
@@ -1056,8 +1050,16 @@ internal open class CellCallbackInputFixtureCell : Cell[CellCallbackInputFixture
   }
 }
 
-internal data struct CellThrowingInputFixtureValue {
+internal struct CellThrowingInputFixtureValue : IEquatable[CellThrowingInputFixtureValue] {
   internal var Label string
+
+  public func Equals(other CellThrowingInputFixtureValue) bool {
+    if CellThrowingInputFixtureCell.ThrowOnce {
+      CellThrowingInputFixtureCell.ThrowOnce = false
+      throw InvalidOperationException("throw once")
+    }
+    return Label == other.Label
+  }
 }
 
 internal func cellThrowingInputFixture(input CellThrowingInputFixtureValue) Blob -> Cell.Mount[CellThrowingInputFixtureValue, CellThrowingInputFixtureCell](nil, input)
@@ -1068,13 +1070,6 @@ internal open class CellThrowingInputFixtureCell : Cell[CellThrowingInputFixture
     internal var ThrowOnce bool
   }
 
-  protected override func ShouldRebuild(previous CellThrowingInputFixtureValue, next CellThrowingInputFixtureValue) bool {
-    if ThrowOnce {
-      ThrowOnce = false
-      throw InvalidOperationException("throw once")
-    }
-    return previous.Label != next.Label
-  }
 
   override func Build() Blob {
     Builds = Builds + 1

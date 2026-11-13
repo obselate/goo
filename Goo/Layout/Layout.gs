@@ -34,6 +34,8 @@ internal partial class Layout {
   internal var lastHeight float32
   internal var lastRoot Node?
   internal var laidOut bool
+  internal var PopupMeasuredWidth float32?
+  internal var PopupMeasuredHeight float32?
   internal var structureDirty bool
   internal var scrollNodes List[Node]
   internal var scrollListDirty bool
@@ -92,6 +94,12 @@ internal partial class Layout {
       return
     }
     resolveLengths(root, width, height)
+    if root.Width.Unit == LengthUnit.Percent && PopupMeasuredWidth is {} measuredWidth {
+      YGNodeStyleAPI.YGNodeStyleSetWidth(yg, measuredWidth)
+    }
+    if root.Height.Unit == LengthUnit.Percent && PopupMeasuredHeight is {} measuredHeight {
+      YGNodeStyleAPI.YGNodeStyleSetHeight(yg, measuredHeight)
+    }
     if !root.IsPortal && (!laidOut || root != lastRoot
       || width != lastWidth || height != lastHeight || YGNodeAPI.YGNodeIsDirty(yg)) {
       let availableHeight = root.Kind == NodeKind.Entry && root.Height.Unit == LengthUnit.Unset
@@ -142,6 +150,7 @@ internal partial class Layout {
     portalStructureDirty = true
     scrollListDirty = true
     lengthRoot = nil
+    sizedListDirty = true
   }
 
   // Cached flat list of scrolling nodes so per-pump scroll work is
@@ -233,6 +242,13 @@ internal partial class Layout {
     if n.Kind == NodeKind.Image {
       ImageLayouts.Refresh(n)
     }
+    if n.RetainedSizedState != nil {
+      YGNodeAPI.YGNodeSetMeasureFunc(yg, SizedNodeState.Measure)
+      for child in n.Children {
+        if !child.IsPortal { syncNode(child, true) }
+      }
+      return
+    }
     if let custom = CustomLayouts.State(n) {
       if YGNodeAPI.YGNodeGetChildCount(yg) != nuint(0) { YGNodeAPI.YGNodeSetChildrenRetaining(yg, []Facebook.Yoga.Node{}) }
       YGNodeAPI.YGNodeSetContext(yg, n)
@@ -242,6 +258,12 @@ internal partial class Layout {
         if !child.IsPortal { syncNode(child, true) }
       }
       custom.SyncChildren()
+      return
+    }
+    if n.Kind == NodeKind.Image {
+      for child in n.Children {
+        if !child.IsPortal { syncNode(child, true) }
+      }
       return
     }
     // Measured editors cannot own Yoga children; slot roots are calculated in readRect.
@@ -657,6 +679,17 @@ internal partial class Layout {
         n.HitContained = true
         return
       }
+      if n.Kind == NodeKind.Image {
+        for child in n.Children {
+          if child.IsPortal { continue }
+          if let yoga = child.Yoga {
+            YGNodeAPI.YGNodeCalculateLayout(yoga, n.Rect.W, n.Rect.H, yogaDirection(n.Direction))
+            readRect(child, visual.X, visual.Y, hidden: hiddenSubtree)
+          }
+        }
+        n.HitContained = false
+        return
+      }
       if let state = custom {
         let x = visual.X + CustomLayouts.Inset(yg, YGEdge.Left)
         let y = visual.Y + CustomLayouts.Inset(yg, YGEdge.Top)
@@ -665,6 +698,8 @@ internal partial class Layout {
           readRect(child.Node, x, y, snapPlacement(x, float32(child.Bounds.X), density),
             snapPlacement(y, float32(child.Bounds.Y), density), hiddenSubtree)
         }
+      } else if n.RetainedSizedState != nil {
+        arrangeSized(n, hiddenSubtree)
       } else {
         for i in 0 ... n.Children.Count {
           if !n.Children[i].IsPortal {
@@ -734,8 +769,8 @@ internal partial class Layout {
       cw = extent.Width
       ch = extent.Height
     } else {
-      let insetX = CustomLayouts.Inset(yoga, YGEdge.Left)
-      let insetY = CustomLayouts.Inset(yoga, YGEdge.Top)
+      let insetX = n.RetainedSizedState != nil ? 0.0F : CustomLayouts.Inset(yoga, YGEdge.Left)
+      let insetY = n.RetainedSizedState != nil ? 0.0F : CustomLayouts.Inset(yoga, YGEdge.Top)
       for i in 0 ... n.Children.Count {
         if n.Children[i].IsPortal { continue }
         guard let cy = n.Children[i].Yoga else {

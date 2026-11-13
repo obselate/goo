@@ -6,6 +6,149 @@ import System.Collections.Generic
 import System.Text
 
 internal class LayoutFixtures {
+  func SizedScrollExtentUsesContentContract() bool {
+    let handle = ElementHandle()
+    let content = ElementHandle()
+    let window = Window{Size: LayoutSize(200, 100), SmoothScrolling: false,
+      Root: SizedRootFixture(() -> Sized(size -> Container{Handle: content, Width: 300, Height: 500}){
+        .Handle: handle, .Padding: 10, .OverflowY: Overflow.Scroll})}
+    try {
+      window.UpdateTree()
+      let root = window.Tree!!
+      if root.Rect.H != 100 || root.ContentH != 500 {
+        throw InvalidOperationException("Sized scroll extent: height=${root.Rect.H}, content=${root.ContentH}")
+      }
+      if !handle.ScrollTo(0, 50) { return false }
+      window.UpdateTree(1.0)
+      if root.ScrollY != 50 || content.BorderBox.Y != -40 {
+        throw InvalidOperationException("Sized scroll position: offset=${root.ScrollY}, content=${content.BorderBox.Y}")
+      }
+      window.Size = LayoutSize(220, 100)
+      window.UpdateTree()
+      if content.BorderBox.Y != -40 { return false }
+      return true
+    } finally { window.Close() }
+  }
+
+  func SizedNestedPortalUsesFinalSizeContract() bool {
+    var builds = 0
+    var received LayoutSize
+    let window = Window{Size: LayoutSize(200, 100), Root: SizedRootFixture(() -> Sized(size ->
+      Portal{Width: 120, Height: 60, Sized(nested -> {
+        builds++
+        received = nested
+        return Text("portal")
+      }){.FlexGrow: 1}}))}
+    try {
+      window.UpdateTree()
+      return builds == 1 && received == LayoutSize(120, 60)
+    } finally { window.Close() }
+  }
+
+  func SizedContentResolvesLengthsInSameFrameContract() bool {
+    let window = Window{Size: LayoutSize(200, 100), Root: SizedRootFixture(() -> Sized(size ->
+      Container{Width: Vw(50), Height: Length.MaxContent,
+        Container{Width: Em(2), Height: Rem(1), FontSize: 20}}))}
+    try {
+      window.UpdateTree()
+      let content = window.Tree!!.Children[0]
+      if content.Rect.W != 100 || content.Rect.H <= 0 || content.Children[0].Rect.W != 40 { return false }
+      let height = content.Rect.H
+      window.UpdateTree()
+      return content.Rect.W == 100 && content.Rect.H == height && content.Children[0].Rect.W == 40
+    } finally { window.Close() }
+  }
+
+  func SizedAllottedSizeAndLayoutPassesContract() bool {
+    var builds = 0
+    var received LayoutSize
+    let window = Window{Size: LayoutSize(200, 100), Root: SizedRootFixture(() -> Sized(size -> {
+      builds++
+      received = size
+      return Container{Width: 2000, Height: 2000}
+    }))}
+    let passes = Dictionary[Facebook.Yoga.Node, int32]()
+    let subscriber Event.Subscriber = (node Facebook.Yoga.Node?, kind EventType, data Event.Data) -> {
+      if kind == EventType.LayoutPassStart && node != nil {
+        passes[node] = passes.GetValueOrDefault(node) + 1
+      }
+    }
+    Event.Subscribe(subscriber)
+    try {
+      window.UpdateTree()
+      let root = window.Tree!!
+      let yoga = root.Yoga!!
+      let initial = passes.GetValueOrDefault(yoga)
+      if builds != 1 || received != LayoutSize(200, 100) || root.Rect.W != 200 || root.Rect.H != 100
+        || initial != 1 || passes.Count != 2 { return false }
+      let child = root.Children[0]
+      passes.Clear()
+      window.UpdateTree()
+      if builds != 1 || passes.Count != 0 { return false }
+      window.Size = LayoutSize(240, 120)
+      window.UpdateTree()
+      let resized = passes.GetValueOrDefault(yoga)
+      if builds != 2 || received != LayoutSize(240, 120) || root.Children[0] != child
+        || resized != 1 { return false }
+      passes.Clear()
+      window.UpdateTree()
+      Console.WriteLine("Sized layout passes: initial full=$initial, resize full=$resized, stable full=${passes.GetValueOrDefault(yoga)}, stable total=${passes.Count}")
+      return builds == 2 && passes.Count == 0
+    } finally {
+      Event.Unsubscribe(subscriber)
+      window.Close()
+    }
+  }
+
+  func SizedNestedAndMountedGeometryContract() bool {
+    var outer = 0
+    var inner = 0
+    var innerSize LayoutSize
+    SizedMountedFixture.Ready = false
+    let window = Window{Size: LayoutSize(180, 90), Root: SizedRootFixture(() -> Sized(size -> {
+      outer++
+      return Container{Padding: 10, Width: Percent(100), Height: Percent(100),
+        Sized(nested -> {
+          inner++
+          innerSize = nested
+          return Cell.Mount[SizedMountedFixture]()
+        }){.FlexGrow: 1, .MinHeight: 0}}
+    }))}
+    try {
+      window.UpdateTree()
+      if outer != 1 || inner != 1 || innerSize != LayoutSize(160, 70) || !SizedMountedFixture.Ready { return false }
+      window.UpdateTree()
+      return outer == 1 && inner == 1
+    } finally { window.Close() }
+  }
+
+  func SizedZeroAndUnboundedAxesContract() bool {
+    for available in []LayoutSize{LayoutSize(0, 0), LayoutSize(Double.NaN, 80), LayoutSize(120, Double.NaN)} {
+      var received LayoutSize
+      var builds = 0
+      let rec = Reconciler{Res: Resolver{}}
+      let root = rec.Mount(Blob.Sized(size -> {
+        received = size
+        builds++
+        return Container{Width: 500, Height: 500}
+      }))
+      let layout = Layout()
+      try {
+        layout.Calculate(root, float32(available.Width), float32(available.Height))
+        layout.RefreshSized(root, rec)
+        let expected = LayoutSize(Double.IsNaN(available.Width) ? 0 : available.Width,
+          Double.IsNaN(available.Height) ? 0 : available.Height)
+        if builds != 1 || received != expected || root.Rect.W != expected.Width || root.Rect.H != expected.Height {
+          return false
+        }
+        layout.Calculate(root, float32(available.Width), float32(available.Height))
+        layout.RefreshSized(root, rec)
+        if builds != 1 { return false }
+      } finally { NodeLifecycle.DisposeTree(root) }
+    }
+    return true
+  }
+
   func EllipsisMinimumWidthCanShrinkAndExplicitMinimumWins() bool {
     let reconciler = Reconciler{Res: Resolver{}}
     var root = reconciler.Mount(Text{Content: "Unbreakable", TextTrimming: TextTrimming.Ellipsis})

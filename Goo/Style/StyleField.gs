@@ -36,7 +36,7 @@ internal enum StyleField {
   Start; End;
   BorderStartWidth; BorderEndWidth;
   BorderStartColor; BorderEndColor;
-  BackgroundImage; BackgroundImageFit;
+  BackgroundImageFit;
   ClipPath; ClipPathFit;
   BorderStyle; BlendMode;
   TransformScaleX; TransformScaleY; TransformSkewX; TransformSkewY;

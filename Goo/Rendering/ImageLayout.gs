@@ -10,7 +10,8 @@ internal open class ImageSourceBinding {
   internal var Lease ImageSourceLease?
   internal var SourceCompletion ImageSourceCompletion?
   internal var Fallback ImageSourceBindingToken?
-  internal var PixelsPerUnit float32 = 1.0F
+  internal var PixelsPerUnit float64 = 1.0
+  internal var Declaration Image?
   private var sourceChangedRegistration Action?
   private var sourceChangedHandler Action?
   private var contentVersionSnapshot uint64
@@ -198,18 +199,10 @@ internal class ImageLayouts {
       return false
     }
 
-    internal func ApplyPath(n Node, path string, fit ImageFit) {
-      n.ImageFit = fit
-      if path == "" {
-        Dispose(n)
-        return
-      }
-      throw NotSupportedException("Image.Path does not decode files. Await ImageSourceCache.LoadAsync(path) outside Build and assign the result to Image.Source.")
-    }
 
     internal func ApplySource(n Node, source ImageSourceProvider, fit ImageFit,
       completed((Node, object) -> void)?,
-      owner Window?, pixelsPerUnit float32 = 1.0F) {
+      owner Window?, pixelsPerUnit float64 = 1.0) {
         n.ImageFit = fit
         let prior = sourceState(n)
         if prior?.Source == source {
@@ -230,7 +223,7 @@ internal class ImageLayouts {
           if let current = value.Mount.Current { ImageLayouts.refreshSource(current, value, completed) }
         })
         value.BindSource(source, owner)
-        value.Fallback = fallback
+        value.Fallback = if value.Lease?.IsComplete == true { fallback } else { nil }
         if sourceValues == nil { sourceValues = ConditionalWeakTable[Node, ImageSourceBinding]() }
         sourceValues?.Add(n, value)
         n.HasDirectImageSourceState = true
@@ -248,11 +241,11 @@ internal class ImageLayouts {
       let decoded = value.CompletedResult()
       let external = lease.ExternalResult()
       let width = if let image = decoded {
-        image.IsValid && image.Width > 0 ? float32(image.Width) / value.PixelsPerUnit : 0.0F
-      } else { float32(external?.Width ?? 0) / value.PixelsPerUnit }
+        image.IsValid && image.Width > 0 ? float32(float64(image.Width) / value.PixelsPerUnit) : 0.0F
+      } else { float32(float64(external?.Width ?? 0) / value.PixelsPerUnit) }
       let height = if let image = decoded {
-        image.IsValid && image.Height > 0 ? float32(image.Height) / value.PixelsPerUnit : 0.0F
-      } else { float32(external?.Height ?? 0) / value.PixelsPerUnit }
+        image.IsValid && image.Height > 0 ? float32(float64(image.Height) / value.PixelsPerUnit) : 0.0F
+      } else { float32(float64(external?.Height ?? 0) / value.PixelsPerUnit) }
       if n.DecodedImage == decoded
         && n.ImageIntrinsicWidth == width
         && n.ImageIntrinsicHeight == height{

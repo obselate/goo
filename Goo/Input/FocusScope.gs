@@ -35,6 +35,7 @@ public class FocusScope : IDisposable {
   /// Restoration occurs at the next stable input/tree update.
   public func Dispose(restoreFocus bool) { stack?.Remove(this, restoreFocus) }
   internal func Closed() { stack = nil }
+  internal func Update(options FocusScopeOptions) { stack?.Update(this, options) }
 }
 
 internal class FocusScopeEntry {
@@ -149,6 +150,17 @@ internal class FocusScopeStack {
     bind(root)
     owner.FocusScopeChanged()
     return registration
+  }
+
+  internal func Update(registration FocusScope, options FocusScopeOptions) {
+    for entry in entries {
+      if entry.Scope != registration { continue }
+      if entry.Modal == options.Modal && entry.Restore == options.RestoreFocus { return }
+      entry.Modal = options.Modal
+      entry.Restore = options.RestoreFocus
+      owner.FocusScopeChanged()
+      return
+    }
   }
 
   internal func Remove(registration FocusScope, restoreFocus bool = true) {

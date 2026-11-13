@@ -207,7 +207,7 @@ how to apply locale tags to language and direction styles.
 
 ```gsharp
 using let popup = PopupWindow(window, TooltipCell{}, PopupKind.Tooltip)
-let result = popup.Open(anchor.BorderBox, 240, 120, PortalPlacement.BottomStart)
+let result = popup.Open(anchor.BorderBox, maximum: LayoutSize(240, 120))
 ```
 
 A popup hosts a new Cell root outside its owner's bounds. Portal and widgets
@@ -215,12 +215,13 @@ Menu keep their current in-window behavior.
 
 | Operation | Contract |
 | --- | --- |
-| `Open` | Call once per instance on the owner thread. Use parent-content layout units. Size follows the owner's UiScale. |
+| `Open` | Call once per instance on the owner thread. Use parent-content layout units. `size: LayoutSize(width, height)` sets an explicit size. Nil measures the root once within `maximum` and the display work area. Size follows the owner's UiScale. |
+| Percent root axes | Measured percentages use the smaller of `maximum` and the display work area as their basis. The popup takes the resolved size, so 50% uses half that basis and 100% fills it. |
 | `PopupKind.Menu` | Receives input. Wayland needs the native button, key or touch event being handled, or a parent popup grab. |
 | `PopupKind.Tooltip` | Receives no input. It needs no grab. |
 | `PopupResult.Status` | `Opened`, `Closed`, `Unsupported`, `RequiresUserAction`, `Busy` or `Failed`. |
 | `Metrics` | Actual logical and framebuffer sizes. Native display bounds can change placement and size. |
-| `UpdatePlacement` | Updates the parent-local anchor and size. Wayland anchors must stay inside the parent. Older compositors can return `Unsupported`. |
+| `UpdatePlacement` | Updates the parent-local anchor and size. Nil `size` measures the current root again with the same limits as `Open`. Wayland anchors must stay inside the parent. Older compositors can return `Unsupported`. |
 | `Dismissed` | Runs once after descendants and pending GPU work close. The owner hide/close, Escape, outside input or focus loss dismisses the chain. |
 | `Close`, `Dispose` | Request dismissal. The host retires pending GPU work before disposal. |
 
@@ -1370,24 +1371,24 @@ Requests descendant-first dismissal. GPU retirement can defer native destruction
 
 Requests dismissal and prevents this instance from reopening.
 
-### `Open(ElementRect,int32,int32,PortalPlacement)`
+### `Open(ElementRect,System.Nullable{LayoutSize},System.Nullable{LayoutSize},PortalPlacement)`
 
 Opens a native popup relative to its parent's content rectangle in layout units. Wayland menus must open from native input or an active parent popup grab.
 
 - `anchor`: The finite parent-content anchor rectangle.
-- `width`: Requested positive content width in layout units.
-- `height`: Requested positive content height in layout units.
+- `size`: Positive content size in layout units. Nil measures the root once.
+- `maximum`: Positive measurement limits in layout units. The display work area also bounds measurement.
 - `placement`: Preferred side and alignment before native display constraints.
 
 Returns: An explicit native creation result, never a top-level-window fallback.
 
-### `UpdatePlacement(ElementRect,int32,int32,PortalPlacement)`
+### `UpdatePlacement(ElementRect,System.Nullable{LayoutSize},System.Nullable{LayoutSize},PortalPlacement)`
 
 Updates requested size and parent-local placement without changing the root.
 
 - `anchor`: The finite parent-content anchor rectangle.
-- `width`: Requested positive content width in layout units.
-- `height`: Requested positive content height in layout units.
+- `size`: Positive content size in layout units. Nil measures the root once again.
+- `maximum`: Positive measurement limits in layout units. The display work area also bounds measurement.
 - `placement`: Preferred side and alignment before native display constraints.
 
 Returns: Accepted, Closed, Unsupported or Failed from the native operation.
@@ -1510,7 +1511,7 @@ Gets a surface-local rectangle in logical pixels, or nil for the whole window. C
 ## `Window`
 
 
-Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread.
+Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread. State, IsFocused, Size, NativeWidth, NativeHeight, UiScale, Preferences and Modifiers track reads in Build and retained builders. Other mutable window getters keep automatic callback rebuilding.
 
 ### `DisplayChanged`
 
