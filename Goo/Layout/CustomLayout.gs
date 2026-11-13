@@ -38,9 +38,10 @@ public class LayoutContext {
   /// @returns The child's desired margin-box size under these constraints.
   public func MeasureChild(index int32, available LayoutSize) LayoutSize -> state.MeasureChild(index, available)
   /// Resolves a length to layout pixels during the current callback.
+  /// Em uses this container's font size. Percent uses the available size of the current callback.
   /// @param value The pixel or relative length.
   /// @param axis The available content axis for percentages.
-  /// @returns Layout pixels, or nil for automatic and intrinsic values.
+  /// @returns Layout pixels, or nil for automatic or intrinsic values, or a nonzero percentage part without a finite basis.
   public func ResolveLength(value Length, axis LayoutAxis) float64? -> state.ResolveLength(value, axis)
   /// Places a child margin box relative to the container's content origin. Every child must be placed exactly once per arrange callback.
   /// @param index The zero-based child index.

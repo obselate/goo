@@ -5,6 +5,8 @@ import System.Collections.Generic
 /// Defines a vertical flex container. Setting FlexDirection throws when mounted.
 public class Column : Blob {
   private var children IList[Blob]?
+  private var hitTestSelf bool
+  private var hasAuthoredHitTestSelf bool
 
   internal override func coreBlob() { }
 
@@ -16,6 +18,17 @@ public class Column : Blob {
     }
     init -> children = value.IsReadOnly ? List[Blob](value) : value
   }
+
+  /// Overrides whether this container participates in pointer hit testing.
+  /// When omitted, Goo derives the value from authored interaction behavior.
+  public prop HitTestSelf bool {
+    get -> hitTestSelf
+    init {
+      hitTestSelf = value
+      hasAuthoredHitTestSelf = true
+    }
+  }
+  internal prop HasAuthoredHitTestSelf bool { get -> hasAuthoredHitTestSelf }
 
   /// Initializes an empty vertical flex container.
   public init() {

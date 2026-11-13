@@ -27,6 +27,16 @@ internal class AccessibilityFixtures {
     return findPortalAccessibility(adapter.Tree?.Root, "dialog")?.Modal != true
   }
   func AccessibilityShorthandOrderContract() bool {
+    let blobs = []Blob{Container{AccessibilityName: ""}, Container{AccessibilityRole: AccessibilityRole.Auto}}
+    for blob in blobs {
+      let root = Reconciler{Res: Resolver{}}.Mount(Container(){blob})
+      try {
+        let manager = AccessibilityManager(Window{})
+        manager.CaptureForDiagnostics(root)
+        if AccessibilityMetadata.Value(root.Children[0]) != nil
+          || manager.DiagnosticNodeFor(root.Children[0]) != nil { return false }
+      } finally { NodeLifecycle.DisposeTree(root) }
+    }
     let source = Accessibility{Name: "original", Role: AccessibilityRole.Button, Expanded: true}
     let reconciler = Reconciler{Res: Resolver{}}
     let node = reconciler.Mount(Container{
@@ -41,6 +51,17 @@ internal class AccessibilityFixtures {
     })
     guard let replaced = AccessibilityMetadata.Value(node) else { return false }
     return replaced.Name == "replacement" && replaced.Role == AccessibilityRole.Auto && replaced.Expanded == nil
+  }
+
+  func AccessibilityShorthandRoundTripContract() bool {
+    let empty = Container{}
+    if empty.AccessibilityName != "" || empty.AccessibilityRole != AccessibilityRole.Auto { return false }
+    let named = Container{AccessibilityName: "named", AccessibilityRole: AccessibilityRole.Group}
+    if named.AccessibilityName != "named" || named.AccessibilityRole != AccessibilityRole.Group { return false }
+    let source = Accessibility{Name: "original", Role: AccessibilityRole.Button, Expanded: true}
+    let cleared = Container{Accessibility: source, AccessibilityName: "", AccessibilityRole: AccessibilityRole.Auto}
+    return cleared.AccessibilityName == "" && cleared.AccessibilityRole == AccessibilityRole.Auto
+      && cleared.Accessibility?.Expanded == true && source.Name == "original" && source.Role == AccessibilityRole.Button
   }
   func PrimitiveAndExclusionContract() bool {
     let adapter = AccessibilityTestAdapter{}

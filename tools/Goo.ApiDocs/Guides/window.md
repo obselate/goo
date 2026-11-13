@@ -304,7 +304,8 @@ let window = Window{
 `SizeToContent` measures the root once before the first map. `Width` and `Height`
 measure one axis. `Both` measures both axes. The result stays within `MaxSize`
 and the display work area, unless `MinSize` requires more space.
-A root axis declared as a percentage keeps the corresponding `Size` value.
+A root axis with a percentage, `Vw`, `Vh`, or mixed container-dependent size keeps the corresponding `Size` value.
+Descendant `Vw` and `Vh` use the declared `Size` during this measure.
 Later content changes do not resize the window.
 
 ## Observe window metrics

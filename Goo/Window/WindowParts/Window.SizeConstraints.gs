@@ -47,7 +47,8 @@ public partial class Window {
   }
 
   /// Measures the selected root axes once before the first map, within MaxSize and the display work area and at least MinSize.
-  /// A root axis declared as a percentage keeps Size on that axis. Later resizing belongs to the user.
+  /// A root axis with a percentage or viewport-relative part keeps Size on that axis.
+  /// Descendant viewport units use the declared Size during this measure. Later resizing belongs to the user.
   public prop SizeToContent SizeToContent{ get; init; }
 
   private func validateSizeLimit(value float64, other float64, minimum bool) {
@@ -77,6 +78,7 @@ public partial class Window {
     if SizeToContent == SizeToContent.None { return }
     if LayerShell != nil { throw NotSupportedException("Layer-shell sizes are configured by the compositor") }
     guard let native = host else { return }
+
     let display = native.GetCurrentDisplay()
     let area = display?.UsableBounds ?? display?.Bounds
     let maximum = LayoutSize(
@@ -95,8 +97,16 @@ public partial class Window {
     percentageSize LayoutSize? = nil) LayoutSize {
     UpdateTree()
     guard let tree = node, let yoga = tree.Yoga else { return Size }
-    let measureWidth = widthAxis && (percentageSize != nil || tree.Width.Unit != LengthUnit.Percent)
-    let measureHeight = heightAxis && (percentageSize != nil || tree.Height.Unit != LengthUnit.Percent)
+    var dependsOnWidth = tree.Width.Unit == LengthUnit.Percent
+    var dependsOnHeight = tree.Height.Unit == LengthUnit.Percent
+    if let declarations = LengthDeclarations.Get(tree) {
+      for entry in declarations.Values {
+        if entry.Field == StyleField.Width { dependsOnWidth = entry.Value.DependsOnContainer }
+        if entry.Field == StyleField.Height { dependsOnHeight = entry.Value.DependsOnContainer }
+      }
+    }
+    let measureWidth = widthAxis && (percentageSize != nil || !dependsOnWidth)
+    let measureHeight = heightAxis && (percentageSize != nil || !dependsOnHeight)
     if !measureWidth && !measureHeight { return Size }
     let availableWidth = maximum.Width
     let availableHeight = maximum.Height
