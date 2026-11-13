@@ -187,8 +187,17 @@ public class Anim[T] {
       retargetRequired(target, MotionVelocity{}, false, spec, specs)
     }
 
+  /// Snaps to the start value, then animates with Motion.Default.
+  /// Restarts on every call. Call it from an event, Mounted or a callback, not unconditionally in Build.
+  /// @param from value to start from
+  /// @param to value to animate toward
+  public func Play(from T, to T) {
+    Snap(from)
+    To(to)
+  }
+
   /// Snaps to the start value, then animates toward the target.
-  /// Safe during Build, like Snap. The initial value does not invalidate the owner.
+  /// Restarts on every call. Call it from an event, Mounted or a callback, not unconditionally in Build.
   /// @param from value to start from
   /// @param to value to animate toward
   /// @param spec first specification

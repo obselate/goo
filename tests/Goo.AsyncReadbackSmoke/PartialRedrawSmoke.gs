@@ -489,11 +489,11 @@ class PartialBackdropCell : Cell {
 
 func PartialRedrawLayerCell() PartialLayerCell {
   let control = ShaderEffect(ShaderEffectProgram.Load(
-      Path.Combine(AppContext.BaseDirectory, "control_effect.frag.goo-effect")), true, 20.0F)
+      Path.Combine(AppContext.BaseDirectory, "control_effect.frag.goo-effect")), true, 20.0)
   control.SetData(0, ShaderEffectData(BitConverter.GetBytes(1.0F)))
   control.SetParameter(0, Vector4(1.0F, 0.25F, 0.25F, 0.0F))
   let glass = ShaderEffect(ShaderEffectProgram.Load(
-      Path.Combine(AppContext.BaseDirectory, "liquid_glass.frag.goo-effect")), true, 24.0F)
+      Path.Combine(AppContext.BaseDirectory, "liquid_glass.frag.goo-effect")), true, 24.0)
   glass.SetParameter(2, Vector4(0.0F, 0.0F, 0.0F, -1.0F))
   glass.SetParameter(3, Vector4(0.0F, 0.0F, 0.0F, 0.78F))
   glass.SetParameter(4, Vector4(0.0F, 0.0F, 0.0F, 1.0F))

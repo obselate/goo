@@ -165,8 +165,8 @@ func RunShaderEffectSmoke() {
   Require(File.Exists(shaderPath), "Shader effect asset is missing")
   let program = ShaderEffectProgram.Load(shaderPath)
   VulkanProofFixture.VerifyLayerEffectCoordinates(program)
-  let effect = ShaderEffect(program, true, 20.0F)
-  let replacementEffect = ShaderEffect(program, true, 20.0F)
+  let effect = ShaderEffect(program, true, 20.0)
+  let replacementEffect = ShaderEffect(program, true, 20.0)
   var transferReleaseCount int32
   let data = ShaderEffectData.Transfer(BitConverter.GetBytes(1.0F),
     func() { transferReleaseCount++ })

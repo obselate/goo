@@ -59,26 +59,26 @@ public open class Blob : Style {
     }
   }
   /// Gets or sets the name without replacing other accessibility fields.
-  /// A later Accessibility declaration replaces all fields.
-  public prop AccessibilityName string? {
-    get -> Accessibility?.Name
+  /// An empty name is the default and leaves an absent declaration unset. A later Accessibility declaration replaces all fields.
+  public prop AccessibilityName string {
+    get -> Accessibility?.Name ?? ""
     init {
       if let declaration = Accessibility {
-        Accessibility = Goo.Accessibility{...declaration, Name: value ?? ""}
-      } else {
-        Accessibility = Goo.Accessibility{Name: value ?? ""}
+        Accessibility = Goo.Accessibility{...declaration, Name: value}
+      } else if value != "" {
+        Accessibility = Goo.Accessibility{Name: value}
       }
     }
   }
   /// Gets or sets the role without replacing other accessibility fields.
-  /// Nil restores the automatic role. A later Accessibility declaration replaces all fields.
-  public prop AccessibilityRole Goo.AccessibilityRole? {
-    get -> Accessibility?.Role
+  /// Auto is the default and leaves an absent declaration unset. A later Accessibility declaration replaces all fields.
+  public prop AccessibilityRole Goo.AccessibilityRole {
+    get -> Accessibility?.Role ?? Goo.AccessibilityRole.Auto
     init {
       if let declaration = Accessibility {
-        Accessibility = Goo.Accessibility{...declaration, Role: value ?? Goo.AccessibilityRole.Auto}
-      } else {
-        Accessibility = Goo.Accessibility{Role: value ?? Goo.AccessibilityRole.Auto}
+        Accessibility = Goo.Accessibility{...declaration, Role: value}
+      } else if value != Goo.AccessibilityRole.Auto {
+        Accessibility = Goo.Accessibility{Role: value}
       }
     }
   }

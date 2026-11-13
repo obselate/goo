@@ -21,6 +21,7 @@ internal class WindowStartupFixtures {
         && !owner.Handle.IsMounted && owner.Cancelled
     } finally { window.Close() }
   }
+
   func HostedContextOperationCountingContract() bool {
     let previous = SynchronizationContext.Current
     let host = WindowCountingContext()
@@ -389,6 +390,22 @@ internal class WindowStartupFixtures {
     }
     return true
   }
+
+  func RelativeSizeToContentContract() bool {
+    let widths = []Length{Vw(50), Length.Auto, Percent(100) - Rem(2), Em(2), Length.Auto}
+    let heights = []Length{Length.Auto, Vh(50), Vh(50) + Em(1), Rem(3), Length.Auto}
+    let expected = []LayoutSize{LayoutSize(400, 80), LayoutSize(120, 300), LayoutSize(400, 300),
+      LayoutSize(32, 48), LayoutSize(200, 150)}
+    for index in 0 ... widths.Length {
+      let window = Window{Root: RelativeWindowSizeCell(widths[index], heights[index], index == 4),
+        InitiallyVisible: false, Size: LayoutSize(400, 300), SizeToContent: SizeToContent.Both}
+      try {
+        window.Open()
+        if window.Size != expected[index] { return false }
+      } finally { window.Close() }
+    }
+    return true
+  }
 }
 
 internal class WindowDragCloseCell : Cell {
@@ -418,6 +435,10 @@ internal class WindowSizeCell : Cell {
     Height: ContentHeight, Margin: Margin}
 }
 
+internal class RelativeWindowSizeCell(width Length, height Length, descendant bool) : Cell {
+  public override func Build() Blob -> Container{Width: width, Height: height,
+    Container{Width: descendant ? Vw(50) : 120, Height: descendant ? Vh(50) : 80}}
+}
 internal class WindowAsyncCell : Cell {
   internal let Pending TaskCompletionSource[bool] = TaskCompletionSource[bool]()
   internal let Finished ManualResetEventSlim = ManualResetEventSlim()
