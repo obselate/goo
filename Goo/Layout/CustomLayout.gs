@@ -2,43 +2,8 @@ package Goo
 
 import System
 
-/// Describes a logical size, with positive infinity on unbounded axes.
-public struct LayoutSize : IEquatable[LayoutSize] {
-  private var width float64
-  private var height float64
-  /// Gets the logical width.
-  public prop Width float64{ get -> width; init -> width = value }
-  /// Gets the logical height.
-  public prop Height float64{ get -> height; init -> height = value }
-  /// Creates a logical size.
-  /// @param Width The logical width.
-  /// @param Height The logical height.
-  public init(Width float64, Height float64) {
-    width = Width
-    height = Height
-  }
-  /// Returns the logical width and height.
-  /// @param width The logical width.
-  /// @param height The logical height.
-  public func Deconstruct(out width float64, out height float64) {
-    width = Width
-    height = Height
-  }
-  /// Tests the logical width and height for equality.
-  public func Equals(other LayoutSize) bool -> width.Equals(other.width) && height.Equals(other.height)
-  /// Tests a boxed logical size for equality.
-  public override func Equals(obj object?) bool -> obj is LayoutSize other && Equals(other)
-  /// Gets a hash for the logical width and height.
-  public override func GetHashCode() int32 -> HashCode.Combine(width, height)
-  /// Describes the logical width and height.
-  public override func ToString() string -> "LayoutSize { Width = $Width, Height = $Height }"
-}
-
-/// Tests two logical sizes for equality.
-public func(left LayoutSize) operator == (right LayoutSize) bool -> left.Equals(right)
-
-/// Tests two logical sizes for inequality.
-public func(left LayoutSize) operator != (right LayoutSize) bool -> !left.Equals(right)
+/// Describes a logical Width and Height, with positive infinity on unbounded axes.
+public data struct LayoutSize(Width float64, Height float64)
 
 /// Measures and arranges the existing children of a Container. Implementations must be immutable and must not mutate UI state during layout.
 public interface LayoutAlgorithm {
@@ -72,11 +37,11 @@ public class LayoutContext {
   /// @param available Maximum width and height; positive infinity means unconstrained.
   /// @returns The child's desired margin-box size under these constraints.
   public func MeasureChild(index int32, available LayoutSize) LayoutSize -> state.MeasureChild(index, available)
-  /// Resolves a length to layout units during the current callback.
+  /// Resolves a length to layout pixels during the current callback.
   /// Em uses this container's font size. Percent uses the available size of the current callback.
   /// @param value The pixel or relative length.
   /// @param axis The available content axis for percentages.
-  /// @returns Layout units, or nil for automatic or intrinsic values, or a nonzero percentage part without a finite basis.
+  /// @returns Layout pixels, or nil for automatic or intrinsic values, or a nonzero percentage part without a finite basis.
   public func ResolveLength(value Length, axis LayoutAxis) float64? -> state.ResolveLength(value, axis)
   /// Places a child margin box relative to the container's content origin. Every child must be placed exactly once per arrange callback.
   /// @param index The zero-based child index.
