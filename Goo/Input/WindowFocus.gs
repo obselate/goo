@@ -3,7 +3,7 @@ package Goo
 import System
 
 /// Provides owner-thread focus state, selection, and text commands for one window.
-public sealed class WindowFocus {
+public class WindowFocus {
   private let owner Window
   private let input InputCoordinator
   private let resolver Resolver

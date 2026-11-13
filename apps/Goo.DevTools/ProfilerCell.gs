@@ -24,7 +24,20 @@ internal class ProfilerTableRow {
     }
 }
 
-internal partial class ProfilerCell : Cell, IDisposable {
+internal data struct ProfilerInput {
+    var Session DiagnosticSession
+    var Owner Window?
+    var Width float64
+    var Revision int32
+}
+
+internal partial class ProfilerCell : Cell[ProfilerInput], IDisposable {
+    protected override func InputChanged(input ProfilerInput) {
+        session = input.Session
+        owner = input.Owner
+        Refresh(input.Width)
+    }
+
     private const Pad float64 = 8.0
     private const Span float64 = 1000.0
     internal var session DiagnosticSession

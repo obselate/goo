@@ -113,6 +113,8 @@ internal class PaintBindingFixtures {
     var wakes = 0
     try {
       window.UpdateTree()
+      window.UpdateTree()
+      let builds = cell.Builds
       let n = cell.Handle.AttachedNode()!!
       let wake = window.PaintMotionPump.PaintWake
       window.PaintMotionPump.PaintWake = () -> {
@@ -123,7 +125,7 @@ internal class PaintBindingFixtures {
       if wakes != 1 || cast[int32](typeof(Window).GetField("pendingRetainedInvalidation",
         BindingFlags.Instance | BindingFlags.NonPublic)!!.GetValue(window)) != 1 { return false }
       window.UpdateTree()
-      if Math.Abs(n.Opacity - 0.4F) > 0.00001F || cell.Builds != 1 { return false }
+      if Math.Abs(n.Opacity - 0.4F) > 0.00001F || cell.Builds != builds { return false }
       cell.Number.Snap(0.3)
       if wakes != 2 { return false }
       window.UpdateTree()
@@ -179,13 +181,15 @@ internal class PaintBindingFixtures {
     let window = Window{ Root: cell, Size: LayoutSize(320, 240), }
     try {
       window.UpdateTree()
+      window.UpdateTree()
+      let builds = cell.Builds
       cell.Colour.Set(Color.White)
       window.UpdateTree()
       let n = cell.Handle.AttachedNode()!!
       let style = Style{ ColorAnim: cell.Colour }
       if style.TryGetTextStyle(out var properties) { return false }
       return n.Color == Color.White && n.Children[0].Color == Color.White
-        && n.Children[1].Color == Color.Black && cell.Builds == 1
+        && n.Children[1].Color == Color.Black && cell.Builds == builds
     } finally {
       window.Close()
     }
@@ -196,13 +200,15 @@ internal class PaintBindingFixtures {
     let window = Window{ Root: cell, Size: LayoutSize(320, 240), }
     try {
       window.UpdateTree()
+      window.UpdateTree()
+      let builds = cell.Builds
       cell.Number.Play(0.75, 0.25, Motion.Delay(500.0,
         (from float64, to float64, velocity float64) -> PaintSlotSpring(from, to, velocity)))
       window.UpdateTree(0.25)
       if cell.Number.Value != 0.75 || cell.Handle.AttachedNode()!!.Opacity != 0.75F { return false }
       window.UpdateTree(0.25)
       for tick in 0 ... 120 { window.UpdateTree(1.0 / 64.0) }
-      return cell.Builds == 1 && cell.Number.Value == 0.25
+      return cell.Builds == builds && cell.Number.Value == 0.25
         && cell.Handle.AttachedNode()!!.Opacity == 0.25F
     } finally {
       window.Close()
