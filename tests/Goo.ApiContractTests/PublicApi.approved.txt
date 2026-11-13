@@ -864,6 +864,7 @@ enum|Goo.RichText.RichTextStatus|UnsupportedContent|3
 enum|Goo.RichText.RichTextStatus|Unsupported|2
 enum|Goo.ScrollAlignment|Center|1
 enum|Goo.ScrollAlignment|End|2
+enum|Goo.ScrollAlignment|Nearest|3
 enum|Goo.ScrollAlignment|Start|0
 enum|Goo.ScrollbarVisibility|Always|1
 enum|Goo.ScrollbarVisibility|Auto|0
@@ -1226,19 +1227,20 @@ method|Goo.ElementHandle|Blur|instance|public|generic:|()->System.Boolean
 method|Goo.ElementHandle|CancelGestures|instance|public|generic:|()->System.Boolean
 method|Goo.ElementHandle|EndPress|instance|public|generic:|(activate:System.Boolean)->System.Boolean
 method|Goo.ElementHandle|Focus|instance|public|generic:|()->System.Boolean
-method|Goo.ElementHandle|JumpTo|instance|public|generic:|(x:System.Double,y:System.Double)->System.Boolean
+method|Goo.ElementHandle|JumpTo|instance|public|generic:|(x:System.Nullable`1<System.Double>=null,y:System.Nullable`1<System.Double>=null)->System.Boolean
 method|Goo.ElementHandle|RestoreAnchor|instance|public|generic:|(anchor:Goo.VirtualScrollAnchor,settle:System.Boolean=true)->System.Boolean
 method|Goo.ElementHandle|ScrollIntoView|instance|public|generic:|()->System.Boolean
 method|Goo.ElementHandle|ScrollOffsetOf|instance|public|generic:|(key:System.String,alignment:Goo.ScrollAlignment=Start)->System.Nullable`1<Goo.Point>
-method|Goo.ElementHandle|ScrollToItem|instance|public|generic:|(key:System.String)->System.Boolean
-method|Goo.ElementHandle|ScrollToItem|instance|public|generic:|(key:System.String,alignment:Goo.ScrollAlignment,settle:System.Boolean=true)->System.Boolean
-method|Goo.ElementHandle|ScrollTo|instance|public|generic:|(x:System.Double,y:System.Double)->System.Boolean
+method|Goo.ElementHandle|ScrollToEnd|instance|public|generic:|()->System.Boolean
+method|Goo.ElementHandle|ScrollToItem|instance|public|generic:|(key:System.String,alignment:Goo.ScrollAlignment=Start,settle:System.Boolean=true)->System.Boolean
+method|Goo.ElementHandle|ScrollTo|instance|public|generic:|(x:System.Nullable`1<System.Double>=null,y:System.Nullable`1<System.Double>=null)->System.Boolean
+method|Goo.ElementHandle|SelectText|instance|public|generic:|(start:System.Int32,end:System.Int32)->System.Boolean
 method|Goo.ElementHandle|SetFocusTarget|instance|public|generic:|(target:Goo.ElementHandle?)->System.Boolean
 method|Goo.ElementHandle|SetTextInputArea|instance|public|generic:|(area:Goo.ElementRect)->System.Boolean
 method|Goo.ElementHandle|TryCopyTextRangeRects|instance|public|generic:|(textRange:Goo.TextRange,space:Goo.TextCoordinateSpace,destination:System.Span`1<Goo.ElementRect>,out required:System.Int32&)->System.Boolean
 method|Goo.ElementHandle|TryGetTextCaretRect|instance|public|generic:|(position:Goo.TextPosition,space:Goo.TextCoordinateSpace,out rect:Goo.ElementRect&)->System.Boolean
 method|Goo.ElementHandle|TryGetTextPositionAt|instance|public|generic:|(point:Goo.Point,space:Goo.TextCoordinateSpace,out position:Goo.TextPosition&)->System.Boolean
-method|Goo.ElementMetrics|Deconstruct|instance|public|generic:|(out isMounted:System.Boolean&,out borderBox:Goo.ElementRect&,out contentBox:Goo.ElementRect&,out scrollOffset:Goo.Point&,out scrollRange:Goo.Point&,out rawBorderBox:Goo.ElementRect&)->System.Void
+method|Goo.ElementMetrics|Deconstruct|instance|public|generic:|(out isMounted:System.Boolean&,out borderBox:Goo.ElementRect&,out contentBox:Goo.ElementRect&,out scrollOffset:Goo.Point&,out scrollRange:Goo.Point&,out rawBorderBox:Goo.ElementRect&,out isAtEndX:System.Boolean&,out isAtEndY:System.Boolean&)->System.Void
 method|Goo.ElementMetrics|Equals|instance|public|generic:|(other:Goo.ElementMetrics)->System.Boolean
 method|Goo.ElementMetrics|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
 method|Goo.ElementMetrics|GetHashCode|virtual|public|generic:|()->System.Int32
@@ -2203,6 +2205,8 @@ property|Goo.Edges|Right|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.Edges|Top|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.ElementHandle|BorderBox|Goo.ElementRect|instance|get:public|index:()
 property|Goo.ElementHandle|ContentBox|Goo.ElementRect|instance|get:public|index:()
+property|Goo.ElementHandle|IsAtEndX|System.Boolean|instance|get:public|index:()
+property|Goo.ElementHandle|IsAtEndY|System.Boolean|instance|get:public|index:()
 property|Goo.ElementHandle|IsFocusVisible|System.Boolean|instance|get:public|index:()
 property|Goo.ElementHandle|IsMounted|System.Boolean|instance|get:public|index:()
 property|Goo.ElementHandle|IsScrollSettling|System.Boolean|instance|get:public|index:()
@@ -2212,6 +2216,8 @@ property|Goo.ElementHandle|ScrollRange|Goo.Point|instance|get:public|index:()
 property|Goo.ElementHandle|VisibleAnchor|System.Nullable`1<Goo.VirtualScrollAnchor>|instance|get:public|index:()
 property|Goo.ElementMetrics|BorderBox|Goo.ElementRect|instance|get:public,init:public|index:()
 property|Goo.ElementMetrics|ContentBox|Goo.ElementRect|instance|get:public,init:public|index:()
+property|Goo.ElementMetrics|IsAtEndX|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.ElementMetrics|IsAtEndY|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.ElementMetrics|IsMounted|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.ElementMetrics|RawBorderBox|Goo.ElementRect|instance|get:public,init:public|index:()
 property|Goo.ElementMetrics|ScrollOffset|Goo.Point|instance|get:public,init:public|index:()
