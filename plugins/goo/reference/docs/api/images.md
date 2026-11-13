@@ -11,11 +11,11 @@ Resolves embedded assets before files beside the application. Results are not ca
 
 ### `Open(System.Reflection.Assembly,string)`
 
-Opens an exact manifest resource name, then a file under AppContext.BaseDirectory. The caller disposes the stream. Missing assets report both locations.
+Opens a manifest resource, then a file under AppContext.BaseDirectory. Both slash forms are accepted. The caller disposes the stream. Rooted names and parent segments throw ArgumentException.
 
 ### `ReadAllBytes(System.Reflection.Assembly,string)`
 
-Reads an exact manifest resource name or an application-relative file.
+Reads an application-relative resource or file. Both slash forms are accepted. Rooted names and parent segments throw ArgumentException.
 
 ## `ImageAssetResult`
 
