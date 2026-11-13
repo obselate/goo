@@ -41,7 +41,7 @@ public class AsyncImageSource : ImageSourceProvider, IDisposable {
         pending = start
       }
     }
-    if let cancellation = start { go run(cancellation) }
+    if let cancellation = start { Task.Run(Func[Task](() -> run(cancellation))) }
     return lease
   }
 
@@ -57,7 +57,7 @@ public class AsyncImageSource : ImageSourceProvider, IDisposable {
     try { cancellation?.Cancel() } catch (error ObjectDisposedException) { }
   }
 
-  private async func run(cancellation CancellationTokenSource) void {
+  private async func run(cancellation CancellationTokenSource) Task {
     var image ImageSource?
     try {
       image = await load(cancellation.Token).ConfigureAwait(false)
