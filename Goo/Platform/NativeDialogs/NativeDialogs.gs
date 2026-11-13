@@ -65,7 +65,7 @@ public sealed class NativeDialogs {
     shared {
         /// Shows a synchronous ownerless platform error box before or after window use.
         /// Blocks the calling thread. Do not call while Goo windows are open.
-        /// Linux returns Unsupported. Write the message to standard error when unsupported.
+        /// Linux and Android return Unsupported. Write the message to standard error when unsupported.
         /// @param title The native title.
         /// @param message The plain-text error message.
         /// @returns Success, Unsupported when no simple message box exists, or Failed.

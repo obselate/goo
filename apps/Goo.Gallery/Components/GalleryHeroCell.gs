@@ -4,7 +4,19 @@ import Goo
 import System
 import System.Numerics
 
-class HeroCell : Cell {
+internal data struct HeroInput {
+    var Programs GalleryShaderPrograms?
+    var Compact bool
+    var Active bool
+}
+
+class HeroCell : Cell[HeroInput] {
+    protected override func InputChanged(input HeroInput) {
+        Programs = input.Programs
+        Compact = input.Compact
+        Active = input.Active
+    }
+
     /// Gets or sets the compiled shader program suite.
     public var Programs GalleryShaderPrograms?
     /// Gets or sets whether the hero renders in compact layout.

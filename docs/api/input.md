@@ -1133,6 +1133,10 @@ Reports whether Alt is pressed.
 
 Reports whether Ctrl is pressed.
 
+### `HasPrimary`
+
+Reports whether Super on macOS or Ctrl on other systems is held, regardless of other modifiers.
+
 ### `None`
 
 Gets a value with no modifier keys pressed.
@@ -1289,10 +1293,6 @@ Reports Phase, owner-local Position, WindowPosition, cumulative Translation, per
 
 Routes platform events and composition through the window's existing input system. Call on the window owner thread. Use Window.Post to dispatch from another thread.
 
-### `EditorChanged`
-
-Reports settled focus, text, selection, composition, and caret-area changes.
-
 ### `BeginDrag(ElementHandle,KeyModifiers)`
 
 Starts an in-app drag from a mounted source, using its center as the event position. Uses the source's DragSource callback without pressing or capturing a pointer.
@@ -1345,21 +1345,21 @@ Releases a physical key with the modifiers still held after the release.
 
 Cancels one pointer, releasing capture without generating a click.
 
-### `PointerMove(System.Int64,PointerDevice,float32,float32,KeyModifiers,float32)`
+### `PointerMove(System.Int64,PointerDevice,float64,float64,KeyModifiers,float32)`
 
-Moves a platform pointer in window logical coordinates.
+Moves a platform pointer in native logical window coordinates.
 
-### `PointerPress(System.Int64,PointerDevice,float32,float32,PointerButton,KeyModifiers,float32)`
+### `PointerPress(System.Int64,PointerDevice,float64,float64,PointerButton,KeyModifiers,float32)`
 
-Presses a platform pointer in window logical coordinates.
+Presses a platform pointer in native logical window coordinates.
 
-### `PointerRelease(System.Int64,PointerDevice,float32,float32,PointerButton,KeyModifiers,float32)`
+### `PointerRelease(System.Int64,PointerDevice,float64,float64,PointerButton,KeyModifiers,float32)`
 
-Releases a platform pointer in window logical coordinates.
+Releases a platform pointer in native logical window coordinates.
 
-### `PointerWheel(float32,float32,float32,float32,KeyModifiers)`
+### `PointerWheel(float64,float64,float64,float64,KeyModifiers)`
 
-Dispatches wheel deltas at a window logical position.
+Dispatches wheel deltas at a native logical window position.
 
 ### `SetComposition(string,int32,int32)`
 
@@ -1455,34 +1455,17 @@ Gets the stable pointer identifier.
 
 Gets the position relative to the receiving element.
 
+### `Reason`
+
+Gets why the drag was canceled, or None for other transitions.
+
 ### `Translation`
 
 Gets the displacement from the press position in element-local units.
 
 ### `WindowPosition`
 
-Gets the position in logical window units.
-
-## `PointerDragPhase`
-
-
-Identifies a captured pointer drag transition.
-
-### `Canceled`
-
-Reports cancellation, capture loss, unmount or an unavailable target.
-
-### `Ended`
-
-Reports the matching primary-pointer release.
-
-### `Moved`
-
-Reports a sample after the drag starts and before it terminates.
-
-### `Started`
-
-Reports the press or the first sample that reaches the threshold.
+Gets the position in layout units.
 
 ## `PointerEvent`
 
@@ -1645,6 +1628,10 @@ Gets the wheel position in logical window coordinates.
 
 
 Provides owner-thread focus state, selection, and text commands for one window.
+
+### `EditorChanged`
+
+Reports settled focus, text, selection, composition, and caret-area changes.
 
 ### `Clear`
 

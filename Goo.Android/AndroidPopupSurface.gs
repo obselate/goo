@@ -87,7 +87,7 @@ internal class AndroidPopupSurface(
             width,
             height,
             placement,
-            owner.Window.UiScale * owner.Density
+            float32(owner.Window.UiScale * owner.Density)
         )
         return (int32(point.X), checked(int32(point.Y) - owner.Height))
     }

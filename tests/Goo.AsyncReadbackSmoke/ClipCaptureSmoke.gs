@@ -83,7 +83,7 @@ func RunClipCaptureSmoke() {
       }
     Require(WindowReadbackTestFixture.SubmissionReadyForReconcile(opened),
       "Clip capture offscreen submit did not complete before reconciliation")
-    Require(WindowReadbackTestFixture.Resize(opened, metrics.LogicalWidth, metrics.LogicalHeight,
+    Require(WindowReadbackTestFixture.Resize(opened, metrics.NativeWidth, metrics.NativeHeight,
         metrics.FramebufferWidth + 1, metrics.FramebufferHeight + 1),
       "Clip capture resize did not reconcile the pending submission")
 
@@ -330,7 +330,7 @@ func RunHiddenDeviceRecoverySmoke() {
     AwaitHiddenResources(hiddenWindow)
     VulkanSharedRuntime.FailNextGraphicsSubmissionForTest()
     let pending = hiddenWindow.RenderOffscreenAsync(ReadbackSmokeCell{},
-      OffscreenRenderOptions(64.0F, 64.0F, 64u, 64u, Color.Black, 16777216L),
+      OffscreenRenderOptions(LayoutSize(64.0F, 64.0F), 64u, 64u, Color.Black, 16777216L),
       CancellationToken.None)
     let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
     while !pending.IsCompleted && Stopwatch.GetTimestamp() < deadline {

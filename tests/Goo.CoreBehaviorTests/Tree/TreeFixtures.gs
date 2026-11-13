@@ -201,7 +201,7 @@ internal class TreeFixtures {
   internal func freshSubtreeOnCellReplacement() bool {
     let rec = Reconciler{ Res: Resolver{} }
     let root = rec.Mount(Container() {
-      Cell.Mount[TreeContainerCell]("slot", nil),})
+      Cell.Mount[TreeContainerCell]("slot"),})
     let entry = root.Children[0].Children[0]
     entry.Focused = true
     entry.Buffer = "typed"
@@ -299,7 +299,7 @@ internal class TreeFixtures {
     ElementHandleRollbackCell.Target = handle
     let rec = Reconciler{ Res: Resolver{}, Owner: Window{} }
     let root = rec.Mount(Container() {
-      Cell.Mount[ElementHandleRollbackCell]("a", nil),
+      Cell.Mount[ElementHandleRollbackCell]("a"),
       Text("plain"),
     })
     let original = root.Children[0]
@@ -895,7 +895,7 @@ internal class TreeDisplayRetainedParent : Cell {
 
   override func Build() Blob -> Container() {.Width: 200.0,.Height: 100.0,
     Container() {.Key: "wrapper",.Display: Hidden ? Display.None : Display.Flex,
-      Cell.Mount[TreeDisplayRetainedCell]("retained", nil),
+      Cell.Mount[TreeDisplayRetainedCell]("retained"),
     },
   }
 }
@@ -938,7 +938,7 @@ internal class TreeVisibilityRetainedParent : Cell {
 
   override func Build() Blob -> Container() {.Width: 200.0,.Height: 100.0,
     Container() {.Key: "wrapper",.Visibility: Hidden ? Visibility.Hidden : Visibility.Visible,
-      Cell.Mount[TreeDisplayRetainedCell]("retained", nil),
+      Cell.Mount[TreeDisplayRetainedCell]("retained"),
     },
   }
 }

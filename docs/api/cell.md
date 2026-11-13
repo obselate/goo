@@ -72,7 +72,12 @@ Creates a component.
 
 ### `After(float64,System.Action)`
 
-Runs an action once after a finite, nonnegative delay in milliseconds. Scheduling during Build throws.
+Runs an action once on the UI thread after a delay. Call on the UI thread. Unmounting cancels the timer. Goo applies the normal callback rebuild rule after the action.
+
+- `delayMs`: finite, nonnegative delay in milliseconds
+- `action`: callback to run once
+
+Returns: a timer to cancel on the UI thread, or an inactive timer before window binding, after unmount, or when the window rejects work
 
 ### `Animate(Color)`
 
@@ -191,11 +196,20 @@ Returns: the root blob for this component
 
 ### `Every(float64,System.Action)`
 
-Runs an action at a finite, positive interval in milliseconds. Scheduling during Build throws.
+Runs an action repeatedly on the UI thread. Call on the UI thread. Missed ticks are skipped. Unmounting cancels the timer. Goo applies the normal callback rebuild rule after each action.
+
+- `intervalMs`: finite, positive interval in milliseconds
+- `action`: callback to run at each interval
+
+Returns: a timer to cancel on the UI thread, or an inactive timer before window binding, after unmount, or when the window rejects work
 
 ### `Latest(string)`
 
-Cancels the previous request with this name and links a new token to Lifetime.
+Cancels the previous request with this name and links a new token to Lifetime. Call on the UI thread.
+
+- `name`: case-sensitive request name
+
+Returns: a new request token, or a cancelled token after unmount
 
 ### `Mount``1(string)`
 
@@ -203,16 +217,6 @@ Describes a child component mount.
 
 - `TCell`: child component type
 - `key`: stable sibling key, or nil for positional identity
-
-Returns: a blob that mounts the child component
-
-### `Mount``1(string,System.Action{TCell})`
-
-Describes a child component mount. Put one-time initialization in the factory or constructor, not configure, which runs on every parent diff.
-
-- `TCell`: child component type
-- `key`: stable sibling key, or nil for positional identity
-- `configure`: configuration applied during each parent diff; prefer stable named or cached delegates
 
 Returns: a blob that mounts the child component
 
@@ -251,11 +255,15 @@ Returns: a blob that mounts the child component
 
 ### `Mounted`
 
-Runs once after the first layout and before paint. Handles have geometry.
+Runs once on the UI thread after the first layout and before paint. Handles have geometry. Goo applies the normal callback rebuild rule after an override, including when it throws. The base implementation does nothing and need not be called. A Cell whose override calls base.Mounted() is not rebuilt after Mounted returns.
 
 ### `Post(System.Action)`
 
-Posts an action from any thread. Unmounting discards pending actions. Scheduling during Build throws.
+Posts an action from any thread. Unmounting discards pending actions. Goo applies the normal callback rebuild rule after the action, even if it throws.
+
+- `action`: callback to run on the UI thread
+
+Returns: true when accepted, or false before window binding, after unmount, or when the window rejects posts
 
 ### `Rebuild`
 
@@ -263,15 +271,17 @@ Requests a rebuild of this component. Mounted cells must use their window's UI t
 
 ### `Unmounting`
 
-Runs once before elements are removed and Lifetime is cancelled.
+Runs once on the UI thread before elements are removed and Lifetime is cancelled, parent before child. May run without Mounted when mounting fails. Does not request a rebuild.
 
 ### `Host`
 
-Gets the owning window before the first InputChanged or Build until Unmounting returns.
+Gets the owning window on its UI thread from binding until Unmounting returns.
 
 ### `Lifetime`
 
-Gets a token cancelled after Unmounting returns.
+Gets a token on the UI thread, valid from window binding and cancelled after Unmounting returns.
+
+Returns: the Cell lifetime token, or a cancelled token after unmount
 
 ## `Cell<TInput>`
 
@@ -285,6 +295,12 @@ Builds the component tree from the current immutable input snapshot.
 - `input`: current input snapshot
 
 Returns: the root blob for this component
+
+### `InputChanged(TInput)`
+
+Derives local state from the newly stored immutable input before Build. Runs for the first input and later inputs that differ by EqualityComparer[TInput].Default. Reads here are not tracked. State writes are allowed and coalesce with this rebuild. The window is already bound, so Host, Post, After, Every and Lifetime are valid.
+
+- `input`: the current input snapshot, already stored in Input
 
 ### `InvokeInputCallback(System.Action)`
 

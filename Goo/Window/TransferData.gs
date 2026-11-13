@@ -144,7 +144,10 @@ public sealed class ClipboardWriteResult {
     /// Gets a bounded native failure explanation, or an empty string.
     public prop Error string { get; }
 
-    internal init(status DataTransferStatus, error string = "") {
+    /// Creates a host clipboard publication result.
+    /// @param status The native publication outcome.
+    /// @param error Native failure detail, bounded to 1024 characters.
+    public init(status DataTransferStatus, error string = "") {
         Status = status
         Error = if error.Length > 1024 { error.Substring(0, 1024) } else { error }
     }

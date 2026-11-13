@@ -62,7 +62,7 @@ public partial class Window {
       host = bridge
       prepare()
       configureHost(bridge)
-      input.SetUiScale(UiScale)
+      input.SetUiScale(float32(UiScale))
       input.Attach(bridge)
       IsOpen = true
       Application.HasOpenedWindow = true
