@@ -2977,28 +2977,28 @@ internal class InputFixtures {
   }
 
   func PointerDragUsesTrackedCallbackRebuildContract() bool {
-    InputTrackedDragCell.Builds = 0
+    InputTrackedDragBuilds.Count = 0
     let driver = InputFixtureDriver(InputTrackedDragCell{}, 100, 100)
     try {
-      let initial = InputTrackedDragCell.Builds
+      let initial = InputTrackedDragBuilds.Count
       driver.Input.QueuePointerMove(20.0F, 20.0F)
       driver.Input.QueuePointerPress(20.0F, 20.0F)
       driver.Input.QueuePointerMove(25.0F, 20.0F)
       driver.Drain()
-      if InputTrackedDragCell.Builds != initial { return false }
+      if InputTrackedDragBuilds.Count != initial { return false }
       driver.Input.QueuePointerMove(35.0F, 20.0F)
       driver.Drain()
-      if InputTrackedDragCell.Builds != initial + 1 || driver.Window.Tree?.Children[0].Content != "1" {
+      if InputTrackedDragBuilds.Count != initial + 1 || driver.Window.Tree?.Children[0].Content != "1" {
         return false
       }
       driver.Input.QueuePointerMove(40.0F, 20.0F)
       driver.Input.QueuePointerCancel(0, PointerDevice.Mouse)
       driver.Drain()
-      if InputTrackedDragCell.Builds != initial + 1 { return false }
+      if InputTrackedDragBuilds.Count != initial + 1 { return false }
       driver.Input.QueuePointerPress(20.0F, 20.0F)
       driver.Input.QueuePointerRelease(20.0F, 20.0F)
       driver.Drain()
-      return InputTrackedDragCell.Builds == initial + 1
+      return InputTrackedDragBuilds.Count == initial + 1
     } finally { driver.Window.Close() }
   }
 
@@ -3088,13 +3088,15 @@ internal class InputFixtures {
 
 }
 
+internal class InputTrackedDragBuilds {
+  shared { internal var Count int32 }
+}
+
 internal class InputTrackedDragCell : Cell {
   private let value State[int32] = State[int32](0)
 
-  shared { internal var Builds int32 }
-
   override func Build() Blob {
-    Builds++
+    InputTrackedDragBuilds.Count++
     return Button{Width: 80, Height: 40, OnPointerDrag: Drag, Text{Content: value.Value.ToString()}}
   }
 

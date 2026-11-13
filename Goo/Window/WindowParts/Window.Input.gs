@@ -9,7 +9,7 @@ public partial class Window {
   private var modifiers KeyModifiers
 
   /// Gets the modifiers of the current input event, or the last known state outside dispatch.
-  public prop Modifiers KeyModifiers { get -> modifiers }
+  public prop Modifiers KeyModifiers { get -> TrackWindowValue(&trackedModifiers, modifiers) }
 
   /// Gets the owner-thread focus and text editing operations.
   public prop Focus WindowFocus {
@@ -22,14 +22,17 @@ public partial class Window {
     }
   }
 
-  internal func SetInputModifiers(value KeyModifiers) { modifiers = value }
+  internal func SetInputModifiers(value KeyModifiers) {
+    modifiers = value
+    trackedModifiers?.Sync(value)
+  }
   private var wheelScrollScale float64 = 1.0F
   private var dragStartDistance float64 = 8.0F
   private var smoothScrolling bool = true
 
   /// Enables animated scrolling and touch momentum. The default is true.
   public prop SmoothScrolling bool {
-    get -> smoothScrolling
+    get -> ReadUntrackedWindowValue(smoothScrolling)
     set(value) {
       requireUiThread("Window.SmoothScrolling")
       if smoothScrolling == value { return }
@@ -40,7 +43,7 @@ public partial class Window {
 
   /// Scales the platform wheel distance for this window. The default is 1.
   public prop WheelScrollScale float64 {
-    get -> wheelScrollScale
+    get -> ReadUntrackedWindowValue(wheelScrollScale)
     set(value) {
       requireUiThread("Window.WheelScrollScale")
       if !Double.IsFinite(value) || value <= 0.0F || value > 10.0F { throw ArgumentOutOfRangeException("value") }
@@ -52,7 +55,7 @@ public partial class Window {
   /// Sets the Euclidean distance in layout units a pressed mouse or pen pointer must move before a drag source starts a drag.
   /// Touch contacts start at 4 layout units. The default is 8.
   public prop DragStartDistance float64 {
-    get -> dragStartDistance
+    get -> ReadUntrackedWindowValue(dragStartDistance)
     set(value) {
       requireUiThread("Window.DragStartDistance")
       if !Double.IsFinite(value) || value <= 0.0F { throw ArgumentOutOfRangeException("value") }

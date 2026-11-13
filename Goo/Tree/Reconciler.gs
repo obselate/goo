@@ -55,6 +55,7 @@ internal partial class Reconciler {
   internal var Context ContextFrame?
   private var contextCommits ContextReader?
   private var expandingCell Cell?
+  private var verifyingCell Cell?
 
   private func trackContext(cell Cell, preserve bool = false) {
     guard let reader = cell.contextReader else { return }
@@ -77,6 +78,7 @@ internal partial class Reconciler {
   private func configureCell(cell Cell, declaration CellElement) {
     cell.BindContext(Context, Owner)
     cell.contextReader?.Begin()
+    cell.ancestorVerification = verifyingCell != nil && (!cell.IsDirty() || cell.verifyPending)
     let previous = ContextEnvironment.Enter(ContextEnvironment{Window: Owner, Frame: cell.incomingContext,
       Cell: cell, Reader: cell.contextReader, CallbackCell: declaration.CallbackOwner})
     try {
@@ -121,6 +123,9 @@ internal partial class Reconciler {
 
   internal func MarkEffects(e ReconcileEffects) {
     Effects = ReconcileEffects(int32(Effects) | int32(e))
+    if e != ReconcileEffects.None {
+      if let verifying = verifyingCell { verifying.verificationChanged = true }
+    }
   }
 
   private func markMounted() {
@@ -348,8 +353,10 @@ internal partial class Reconciler {
     let state = applyVirtual(n, b, false)
     let extent = state.Extent()
     let count = state.ItemCount()
+    let previousVerifier = verifyingCell
     try {
       let children = state.Prepare(n, b.Source, b.Accessibility?.Role == AccessibilityRole.List)
+      if verifyingCell != nil && state.HasStateChanges { verifyingCell = nil }
       diffChildren(n, children)
       state.Commit()
       // Items added or removed out of view leave the children unchanged, but the scroll extent and the
@@ -365,6 +372,8 @@ internal partial class Reconciler {
     } catch (_ Exception) {
       state.Cancel()
       rethrow
+    } finally {
+      verifyingCell = previousVerifier
     }
   }
 
@@ -917,6 +926,9 @@ internal partial class Reconciler {
 
   internal func expandCellAt(existing Node?, e CellElement, prior Cell?, owner Cell?) Node {
     let reused Cell? = if let old = prior && mountType(old) == e.CellType && old.mountKey == e.Key && !old.disposed { old } else { nil }
+    if reused == nil && existing != nil {
+      if let verifying = verifyingCell { verifying.verificationChanged = true }
+    }
 
     if let cell = reused {
       if let pump = Pump {
@@ -975,6 +987,12 @@ internal partial class Reconciler {
     let previousContext = Context
     let previousCell = expandingCell
     expandingCell = cell
+    let previousVerifier = verifyingCell
+    let verify = cell.TakeStateVerification()
+    let verificationActive = verify || previousVerifier != nil
+    if verificationActive {
+      verifyingCell = verify ? cell : cell.ancestorVerification && !cell.stateChanged ? previousVerifier : nil
+    }
 
     cell.ClearDirty()
     var completed = false
@@ -1014,9 +1032,15 @@ internal partial class Reconciler {
       if let retained = result.Fiber {
         retained.RefreshDirectMounts(result)
       }
+      if verify && !cell.stateChanged && cell.verificationChanged {
+        throw InvalidOperationException("${cell.GetType().Name}.Build changed its tree without a tracked State write.")
+      }
       completed = true
       return result
     } finally {
+      if verificationActive {
+        verifyingCell = previousVerifier
+      }
       Context = previousContext
       expandingCell = previousCell
       treeDepth = previousDepth
