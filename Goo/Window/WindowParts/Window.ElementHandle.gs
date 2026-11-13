@@ -1,9 +1,45 @@
 package Goo
 
 import System
+import System.Collections.Generic
 
 /// Hosts supported element-handle operations on the UI thread.
 public partial class Window {
+  private var elementRequests List[ElementHandle]?
+  private var flushingElementRequests bool
+
+  internal func QueueElementRequest(handle ElementHandle) {
+    elementRequests ??= List[ElementHandle]()
+    if !elementRequests!!.Contains(handle) { elementRequests!!.Add(handle) }
+    markDirtyAndRender()
+  }
+
+  internal func FlushElementRequests() {
+    guard let requests = elementRequests else { return }
+    if flushingElementRequests { return }
+    flushingElementRequests = true
+    try {
+      var i = 0
+      while i < requests.Count {
+        if requests[i].FlushRequests(this) { i++ }
+        else { requests.RemoveAt(i) }
+      }
+      if requests.Count > 0 { markDirtyAndRender() }
+    } finally { flushingElementRequests = false }
+  }
+
+  internal func SelectElementText(n Node, start int32, end int32) bool {
+    requireUiThread("ElementHandle.SelectText")
+    FlushDeferredVirtualization()
+    if IsInputBlocked || n.Retired || (n.Kind != NodeKind.Entry && n.Kind != NodeKind.Editor && n.Kind != NodeKind.Text) { return false }
+    if !input.FocusElement(resolver, n) { return false }
+    let result = input.SetEditorSelection(node, start, end)
+    if result {
+      markDirtyAndRender()
+      RefreshPlatformInput()
+    }
+    return result
+  }
   internal func SyncControlledEntry(n Node, value string) bool -> input.SyncControlledEntry(n, value)
 
   internal func RequireElementHandleThread(operation string) {
@@ -165,6 +201,7 @@ public partial class Window {
     requireUiThread("ElementHandle.ScrollIntoView")
     FlushDeferredVirtualization()
     if n.Retired { return false }
+    Virtualization.State(n)?.CancelScroll()
     ScrollState.IntoView(n)
     markDirtyAndRender()
     return true
