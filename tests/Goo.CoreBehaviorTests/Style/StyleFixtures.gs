@@ -14,9 +14,12 @@ internal class StyleFixtures {
       || node.Left.Unit != LengthUnit.Percent || node.Left.Value != 10.0F
       || node.Right.Value != 10.0F || node.Bottom.Value != 10.0F || node.Top.Value != 3.0F { return false }
     reconciler.Diff(node, Container{Flex: 2, FlexGrow: 3, FlexShrink: 4, FlexBasis: 5, Inset: 0, Left: 6})
-    return node.FlexGrow == 3.0F && node.FlexShrink == 4.0F && node.FlexBasis.Value == 5.0F
-      && node.Left.Value == 6.0F && node.Top.Value == 0.0F
-      && node.Right.Value == 0.0F && node.Bottom.Value == 0.0F
+    if node.FlexGrow != 3.0F || node.FlexShrink != 4.0F || node.FlexBasis.Value != 5.0F
+      || node.Left.Value != 6.0F || node.Top.Value != 0.0F
+      || node.Right.Value != 0.0F || node.Bottom.Value != 0.0F { return false }
+    reconciler.Diff(node, Container{BasedOn: Style{Inset: Edges(1, 2, 3, 4)}, Top: 5, Inset: Edges{Left: 6}})
+    return node.Top.Value == 5.0F && node.Right.Value == 2.0F
+      && node.Bottom.Value == 3.0F && node.Left.Value == 6.0F
   }
   func WindowColorPairInheritanceContract() bool {
     let cell = WindowColorPairCell{}
