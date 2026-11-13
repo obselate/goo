@@ -10,7 +10,7 @@ public partial class Window {
   /// Unset fields use Goo defaults, not parent inheritance.
   /// @param text The text to measure.
   /// @param style The text declarations. A Text blob is also a Style.
-  /// @returns The width in layout pixels.
+  /// @returns The width in layout units.
   public func MeasureText(text string, style Style) float64 {
     requireUiThread("Window.MeasureText")
     var family = StyleFields.Default(StyleField.FontFamily)

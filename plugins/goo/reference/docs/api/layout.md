@@ -216,12 +216,12 @@ Returns: The child's desired margin-box size under these constraints.
 
 ### `ResolveLength(Length,LayoutAxis)`
 
-Resolves a length to layout pixels during the current callback. Em uses this container's font size. Percent uses the available size of the current callback.
+Resolves a length to layout units during the current callback. Em uses this container's font size. Percent uses the available size of the current callback.
 
 - `value`: The pixel or relative length.
 - `axis`: The available content axis for percentages.
 
-Returns: Layout pixels, or nil for automatic or intrinsic values, or a nonzero percentage part without a finite basis.
+Returns: Layout units, or nil for automatic or intrinsic values, or a nonzero percentage part without a finite basis.
 
 ### `ChildCount`
 

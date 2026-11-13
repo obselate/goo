@@ -1,6 +1,7 @@
 package Goo.CoreBehaviorTests
 
 import Goo
+import Goo.Gestures
 import System
 import System.Collections.Generic
 import System.IO
@@ -55,6 +56,7 @@ class ExplicitKeyBindingTests {
     @InlineData(2, false)
     @InlineData(3, true)
     @InlineData(4, false)
+    @InlineData(5, false)
     func FocusAndKeyEventsReportTextEditing(kind int32, editsText bool) {
         using let controller = TextEditorController(TextDocument("text"))
         let handle = ElementHandle()
@@ -68,7 +70,7 @@ class ExplicitKeyBindingTests {
                 calls++
             },
             Children: []Blob{
-                if kind == 0 { cast[Blob](TextEntry{Handle: handle, Value: "text"}) }
+                if kind == 0 || kind == 5 { cast[Blob](TextEntry{Handle: handle, Value: "text", ReadOnly: kind == 5}) }
                 else if kind == 1 || kind == 2 {
                     cast[Blob](TextEditor(){Controller = controller, Handle = handle, ReadOnly = kind == 2})
                 } else if kind == 3 {
@@ -87,6 +89,83 @@ class ExplicitKeyBindingTests {
             Assert.False(window.Focus.EditsText)
             Assert.Null(window.Focus.Editor)
             Assert.Null(window.Focus.Selection)
+        } finally { window.Close() }
+    }
+
+    @Fact
+    func PointerDragDeclarationsRejectInvalidValues() {
+        let blob = Container{}
+        for threshold in []float64{-1, Double.NaN, Double.PositiveInfinity, Double.NegativeInfinity} {
+            let error = Assert.Throws[ArgumentOutOfRangeException](() -> { blob.PointerDragThreshold = threshold })
+            Assert.Equal("PointerDragThreshold", error.ParamName)
+        }
+        for axis in []LayoutAxis{LayoutAxis(-1), LayoutAxis(2)} {
+            let error = Assert.Throws[ArgumentOutOfRangeException](() -> { blob.PointerDragAxis = axis })
+            Assert.Equal("PointerDragAxis", error.ParamName)
+        }
+        for threshold in []float64{0, 8, Double.MaxValue} {
+            blob.PointerDragThreshold = threshold
+            Assert.Equal(threshold, blob.PointerDragThreshold)
+        }
+        for axis in []LayoutAxis?{nil, LayoutAxis.Horizontal, LayoutAxis.Vertical} {
+            blob.PointerDragAxis = axis
+            Assert.Equal(axis, blob.PointerDragAxis)
+        }
+    }
+
+    @Fact
+    func InputDeclarationsStayFixedAfterHandOff() {
+        let handle = ElementHandle()
+        var presses = 0
+        let bindings = []KeyBinding{KeyBinding(Key.F1, KeyModifiers.None, () -> { presses++ })}
+        let pan = PanGesture((_ PanGestureEvent) -> {})
+        let gestures = List[GestureRecognizer](){pan}
+        let source = DragSource((_ DragStartEvent) -> DragData("payload", DragEffect.Copy))
+        let target = DropTarget((_ DragEvent) -> DragEffect.Copy)
+        let blob = Container{Handle: handle, Focusable: true, KeyBindings: bindings,
+            LayoutTransition: LayoutTransition(100, Easing.Linear),
+            DragSource: source, DropTarget: target, Gestures: gestures}
+        let window = Window{Root: ExplicitKeyBindingTests.BuildCell(() -> blob)}
+        try {
+            window.UpdateTree()
+            bindings[0] = KeyBinding(Key.F1, KeyModifiers.None, () -> { presses += 10 })
+            blob.KeyBindings!![0] = bindings[0]
+            gestures.Clear()
+            Assert.Same(pan, Assert.Single(blob.Gestures!!))
+            Assert.Throws[NotSupportedException](() -> (blob.Gestures as IList[GestureRecognizer])!!.Clear())
+            for change in []Action{
+                () -> { blob.KeyBindings = bindings },
+                () -> { blob.LayoutTransition = LayoutTransition(200, Easing.Linear) },
+                () -> { blob.DragSource = nil }, () -> { blob.DropTarget = nil },
+                () -> { blob.Gestures = nil },
+            } {
+                Assert.Contains("modified after it was returned to Goo", Assert.Throws[InvalidOperationException](change).Message)
+            }
+            Assert.True(handle.Focus())
+            ExplicitKeyBindingTests.Press(window.PlatformInput, Key.F1)
+            Assert.Equal(1, presses)
+            Assert.Equal(100.0, blob.LayoutTransition!!.DurationMs)
+            Assert.Same(source, blob.DragSource)
+            Assert.Same(target, blob.DropTarget)
+        } finally { window.Close() }
+    }
+
+    @Fact
+    func CloseDrainBoundRequiresOwnerThread() {
+        using let host = TestClipboardHost()
+        let window = Window()
+        host.Resize(100, 40, 100, 40)
+        window.Attach(host)
+        try {
+            window.CloseDrainMs = 25
+            var failure Exception?
+            let worker = Thread(() -> {
+                try { window.CloseDrainMs = 0 } catch (error Exception) { failure = error }
+            })
+            worker.Start()
+            Assert.True(worker.Join(TimeSpan.FromSeconds(5)))
+            Assert.Contains("Window.CloseDrainMs", Assert.IsType[InvalidOperationException](failure).Message)
+            Assert.Equal(25.0, window.CloseDrainMs)
         } finally { window.Close() }
     }
 

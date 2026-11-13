@@ -77,18 +77,20 @@ internal class ContextFixtures {
         try {
             for verify in []bool{false, true} {
                 StateVerification.Enabled = verify
-                WindowReadFixtureValues.Builds = []int32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+                WindowReadFixtureValues.Builds = []int32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
                 let root = WindowReadFixtureRoot()
                 let window = Window{Root: root, Size: LayoutSize(200, 400)}
                 try {
                     window.UpdateTree()
                     if !ChangeWindowValues(window, () -> {
-                        for index in 0 ... 11 { window.Tree!!.Children[index + 1].Fiber!!.RebuildAfterCallback() }
-                    }, verify ? []int32{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10} : []int32{}) { return false }
+                        for index in 0 ... 12 { window.Tree!!.Children[index + 1].Fiber!!.RebuildAfterCallback() }
+                    }, verify ? []int32{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11} : []int32{}) { return false }
                     if !ChangeWindowValues(window, () -> { window.State = WindowState.Maximized }, []int32{0}) { return false }
                     if !ChangeWindowValues(window, () -> { window.State = WindowState.Maximized }, []int32{}) { return false }
                     if !ChangeWindowValues(window, () -> { window.Size = LayoutSize(240, 440) }, []int32{2, 3, 4}) { return false }
-                    if !ChangeWindowValues(window, () -> { window.UiScale = 2.0F }, []int32{2, 5}) { return false }
+                    if !ChangeWindowValues(window, () -> { window.UiScale = 2.0F }, []int32{2, 5, 11}) { return false }
+                    if !ChangeWindowValues(window, () -> window.SetWindowReadFixtureScale(2), []int32{11}) { return false }
+                    if !ChangeWindowValues(window, () -> window.SetWindowReadFixtureScale(2), []int32{}) { return false }
                     if !ChangeWindowValues(window, () -> window.SetWindowReadFixtureFocus(true), []int32{1}) { return false }
                     if !ChangeWindowValues(window, () -> window.SetWindowReadFixturePreferences(
                         PlatformPreferences{Theme: SystemTheme.Dark}), []int32{6}) { return false }
@@ -1010,6 +1012,9 @@ internal class ContextVirtualRollbackRoot(key Context[int32], other Context[int3
 public partial class Window {
     internal func SetWindowReadFixtureFocus(value bool) { IsFocused = value }
     internal func SetWindowReadFixturePreferences(value PlatformPreferences) { applyPreferences(value) }
+    internal func SetWindowReadFixtureScale(value int32) {
+        dpi = DpiScale(width, height, width * value, height * value)
+    }
 }
 
 internal class WindowReadFixtureValues {
@@ -1029,7 +1034,7 @@ internal class WindowReadFixtureRoot : Cell {
 
     override func Build() Blob {
         let content = Container{Width: 200, Height: 400, TextEntry{Handle: Entry, Value: "hello", Height: 20}}
-        for index in 0 ... 11 {
+        for index in 0 ... 12 {
             let kind = index
             content.Add(Cell.Mount[WindowReadFixtureCell]("value-$kind", () -> WindowReadFixtureCell(kind)))
         }
@@ -1056,7 +1061,8 @@ internal class WindowReadFixtureCell : Cell {
             case 7: Host.Modifiers.ToString()
             case 8: Host.Focus.EditsText.ToString()
             case 9: Host.Focus.Editor?.ToString() ?? "none"
-            default: Host.Focus.Selection?.ToString() ?? "none"
+            case 10: Host.Focus.Selection?.ToString() ?? "none"
+            default: Host.PixelScale.ToString()
         }
         return Text{Content: value ?? "", Height: 20}
     }

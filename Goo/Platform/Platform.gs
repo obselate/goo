@@ -24,9 +24,12 @@ public class PlatformOpenResult {
 /// Provides operating-system services without a window owner.
 public shared class Platform {
   /// Starts the system handler for an absolute path or URI on a background child.
+  /// Do not pass untrusted targets. The system handler can run executable content.
   /// @param target An absolute path or URI. Relative paths are rejected.
   /// @param cancellationToken Cancels launch before the handler is started.
   /// @returns Success when the handler starts, or an explicit platform failure.
+  /// @exception ArgumentNullException The target is nil.
+  /// @exception ArgumentException The target is not an absolute path or URI.
   public func OpenAsync(target string, cancellationToken CancellationToken = default(CancellationToken)) Task[PlatformOpenResult] {
     if target == nil { throw ArgumentNullException("target") }
     var uri Uri?

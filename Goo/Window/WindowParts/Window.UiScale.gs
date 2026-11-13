@@ -27,7 +27,8 @@ public partial class Window {
   }
 
   /// Gets the display scale multiplied by UiScale, the factor used to snap layout positions and translation-only transforms to device pixels on both axes.
-  public prop PixelScale float64 { get -> ReadUntrackedWindowValue(float64(dpi.X) * EffectiveUiScale) }
+  /// Reads in Build and retained builders track display-scale and UiScale changes.
+  public prop PixelScale float64 { get -> TrackWindowValue(&trackedPixelScale, float64(dpi.X) * EffectiveUiScale) }
 
   internal prop LayoutWidth float32 { get -> offscreenViewport?.X ?? float32(float64(host?.LogicalWidth ?? width) / EffectiveUiScale) }
   internal prop LayoutHeight float32 { get -> offscreenViewport?.Y ?? float32(float64(host?.LogicalHeight ?? height) / EffectiveUiScale) }

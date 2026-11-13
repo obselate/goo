@@ -668,7 +668,7 @@ if result.Status == PlatformOpenStatus.Failed {
 
 `Platform.OpenAsync` starts the system handler on a `go` child. `Success` means the handler started, not that it opened the target. Relative paths throw `ArgumentException`. Cancellation stops a launch that has not started.
 
-Use `NativeDialogs.ShowError(title, message)` before any window opens or after the last window closes. It blocks the caller and returns `MessageBoxStatus`. Linux returns `Unsupported`. Write the message to standard error when no native box is supported.
+Use `NativeDialogs.ShowError(title, message)` on the main thread before any window opens or after the last window closes. It blocks the caller and returns `MessageBoxResult` with `Status` and native `Error` detail. Linux and Android return `Unsupported`. Write the message to standard error when no native box is supported.
 
 ## File and image clipboard data
 

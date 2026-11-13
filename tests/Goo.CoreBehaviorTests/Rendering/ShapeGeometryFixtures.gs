@@ -9,13 +9,12 @@ internal class ShapeGeometryFixtures {
     let stroke = VectorStroke(3.0, blue){
       .Cap: StrokeCap.Round, .Join: StrokeJoin.Bevel, .MiterLimit: 2.0, .Dashes: dashes,
       .VectorEffect: VectorEffect.NonScalingStroke}
-    let legacy = Style{BackgroundGradient: nil, BackgroundColor: red, BorderWidth: 30, BorderColor: red, Opacity: 0.5}
+    let stateStyle = Style{Opacity: 0.5}
     let resolver = Resolver{}
     let reconciler = Reconciler{Res: resolver}
     let node = reconciler.Mount(Shape{
       Fill: VectorPaint(gradient), Stroke: stroke,
-      BackgroundColor: red, BorderWidth: 20, BorderColor: red,
-      HoverStyle: legacy, ActiveStyle: legacy, FocusStyle: legacy, DisabledStyle: legacy,
+      HoverStyle: stateStyle, ActiveStyle: stateStyle, FocusStyle: stateStyle, DisabledStyle: stateStyle,
       StrokeStart: 0.25, StrokeEnd: 0.75,
     })
     if node.BackgroundGradient != gradient || node.BackgroundColor.A != 0.0F
@@ -35,7 +34,7 @@ internal class ShapeGeometryFixtures {
       if node.BackgroundGradient != gradient || node.BorderLeftWidth.Px != 3.0F
         || !node.BorderLeftColor.Equals(blue) || node.Opacity != 0.5 { return false }
     }
-    reconciler.Diff(node, Shape{BackgroundGradient: gradient, Fill: VectorPaint(red)})
+    reconciler.Diff(node, Shape{Fill: VectorPaint(red)})
     if !node.BackgroundColor.Equals(red) || node.BackgroundGradient != nil
       || node.BorderLeftWidth.Px != 0.0F || node.BorderLeftColor.A != 0.0F { return false }
     reconciler.Diff(node, Shape{})
@@ -46,17 +45,22 @@ internal class ShapeGeometryFixtures {
   func ShapeRejectsLegacyPaintAndGradientStroke() bool {
     let gradient = LinearGradient(Color.White, Color.Transparent)
     let hover = Style{BackgroundColor: Color.White}
-    for legacy in []Shape{
-      Shape{BackgroundColor: Color.White}, Shape{BackgroundGradient: gradient},
-      Shape{BorderWidth: 2}, Shape{BorderColor: Color.White},
-      Shape{HoverStyle: hover},
-    } {
-      var rejected = false
-      try { Reconciler{Res: Resolver{}}.Mount(legacy) }
-      catch (error InvalidOperationException) {
-        rejected = error.Message == "Shape paint moved to Fill and Stroke"
+    for paint in 0 ... 3 {
+      for legacy in []Shape{
+        Shape{BackgroundColor: Color.White}, Shape{BackgroundGradient: gradient},
+        Shape{BorderWidth: 2}, Shape{BorderColor: Color.White},
+        Shape{HoverStyle: hover}, Shape{ActiveStyle: hover},
+        Shape{FocusStyle: hover}, Shape{DisabledStyle: hover},
+      } {
+        if paint == 1 { legacy.Fill = VectorPaint(Color.White) }
+        if paint == 2 { legacy.Stroke = VectorStroke(1, Color.White) }
+        var rejected = false
+        try { Reconciler{Res: Resolver{}}.Mount(legacy) }
+        catch (error InvalidOperationException) {
+          rejected = error.Message == "Shape paint moved to Fill and Stroke"
+        }
+        if !rejected { return false }
       }
-      if !rejected { return false }
     }
     try {
       Reconciler{Res: Resolver{}}.Mount(Shape{Stroke: VectorStroke(2, VectorPaint(gradient))})

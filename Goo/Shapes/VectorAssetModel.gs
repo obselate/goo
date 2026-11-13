@@ -31,7 +31,7 @@ public class VectorPaint {
 
 }
 
-/// Describes one immutable vector stroke.
+/// Describes one vector stroke. Goo freezes it when a Shape or VectorNode receives it.
 public class VectorStroke {
   private var frozenOwner Type?
   private var declarationCap StrokeCap
@@ -45,8 +45,8 @@ public class VectorStroke {
   }
 
   private func CheckMutable() {
-    if let owner = frozenOwner {
-      throw InvalidOperationException(owner.Name + " modified after it was returned to Goo")
+    if frozenOwner != nil {
+      throw InvalidOperationException("VectorStroke modified after it was returned to Goo")
     }
   }
   private let width float64
@@ -57,7 +57,7 @@ public class VectorStroke {
   public prop Width float64{ get -> width }
   /// Gets the stroke paint.
   public prop Paint VectorPaint{ get -> paint }
-  /// Gets the line cap style.
+  /// Gets or sets the line cap style.
   public prop Cap StrokeCap {
     get -> declarationCap
     set {
@@ -65,7 +65,7 @@ public class VectorStroke {
       declarationCap = value
     }
   }
-  /// Gets the line join style.
+  /// Gets or sets the line join style.
   public prop Join StrokeJoin {
     get -> declarationJoin
     set {
@@ -73,7 +73,7 @@ public class VectorStroke {
       declarationJoin = value
     }
   }
-  /// Gets the non-negative finite miter limit.
+  /// Gets or sets the non-negative finite miter limit.
   public prop MiterLimit float64{
     get -> miterLimit
     set {
@@ -84,7 +84,7 @@ public class VectorStroke {
       miterLimit = value
     }
   }
-  /// Gets the optional dash pattern.
+  /// Gets or sets the optional dash pattern.
   /// NonScalingStroke measures dash lengths in window logical pixels.
   public prop Dashes DashPattern? {
     get -> declarationDashes
@@ -93,7 +93,7 @@ public class VectorStroke {
       declarationDashes = value
     }
   }
-  /// Gets the vector effect. The default is None.
+  /// Gets or sets the vector effect. The default is None.
   public prop VectorEffect VectorEffect {
     get -> declarationVectorEffect
     set {
@@ -220,12 +220,13 @@ public class VectorNode {
     init(path, style, []VectorNode{})
   }
 
-  /// Creates a path node with immutable style options.
+  /// Creates a path node with immutable style options and freezes its stroke.
   public init(path VectorPath, style VectorNodeStyle, children []VectorNode) {
     this.key = style.Key
     this.path = path
     this.fill = style.Fill
     this.stroke = style.Stroke
+    stroke?.Freeze(typeof(VectorNode))
     this.transform = style.Transform
     this.opacity = style.Opacity
     this.clipPath = style.ClipPath
