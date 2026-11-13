@@ -110,6 +110,7 @@ class FixtureContractTests {
             yield Contract[WindowStartupFixtures]("InitialBoundsContract")
             yield Contract[WindowStartupFixtures]("PresentModesContract")
             yield Contract[WindowStartupFixtures]("AsyncDispatcherContract")
+            yield Contract[WindowStartupFixtures]("AsyncTaskDispatcherContract")
             yield Contract[WindowStartupFixtures]("AsyncOwnerContextContract")
             yield Contract[WindowStartupFixtures]("AsyncCloseDrainContract")
             yield Contract[WindowStartupFixtures]("EmbeddedCloseDrainsContinuationsContract")

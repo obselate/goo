@@ -8,6 +8,35 @@ import System.Runtime.InteropServices
 import System.Diagnostics
 
 internal class WindowStartupFixtures {
+  func AsyncTaskDispatcherContract() bool {
+    let previous = SynchronizationContext.Current
+    SynchronizationContext.SetSynchronizationContext(nil)
+    let window = Window{}
+    try {
+      let pending = TaskCompletionSource[bool]()
+      let pendingTask Task = pending.Task
+      var calls int32
+      let action = window.InvokeAsync(async () -> {
+        await pending.Task
+        calls++
+      })
+      let forwarded = window.InvokeAsync(() -> pendingTask)
+      window.drainPostedActions()
+      if action.IsCompleted || forwarded.IsCompleted || calls != 0 { return false }
+      pending.SetResult(true)
+      window.drainPostedActions()
+      if !Task.WaitAll([]Task{action, forwarded}, 5000) || calls != 1 { return false }
+      let never Task = TaskCompletionSource[bool]().Task
+      let cancelled = window.InvokeAsync(() -> never)
+      window.drainPostedActions()
+      window.Close()
+      Task.WhenAny(cancelled, Task.Delay(5000)).GetAwaiter().GetResult()
+      return cancelled.IsCanceled
+    } finally {
+      window.Close()
+      SynchronizationContext.SetSynchronizationContext(previous)
+    }
+  }
 
   async func HostedOwnerContextContract() Task[bool] {
     let hostContext = SynchronizationContext.Current

@@ -60,6 +60,29 @@ public partial class Window {
     return await completion.Task.ConfigureAwait(false)
   }
 
+  /// Queues an async action on the UI thread and awaits its work or exception.
+  /// @param action async action to run
+  /// @param cancellationToken cancels dispatch or the wait for its work
+  /// @returns the task that completes after the action's work
+  public func InvokeAsync(action Func[Task], cancellationToken CancellationToken = default(CancellationToken)) Task {
+    if action == nil { throw ArgumentNullException("action") }
+    let close = PendingTaskToken()
+    let work = TaskExtensions.Unwrap(InvokeAsync[Task](action, cancellationToken))
+    return work.WaitAsync(cancellationToken).WaitAsync(close)
+  }
+
+  /// Queues an async function on the UI thread and awaits its result or exception.
+  /// @typeparam T result type
+  /// @param action async function to run
+  /// @param cancellationToken cancels dispatch or the wait for its work
+  /// @returns the result after the function's work completes
+  public async func InvokeAsync[T any](action Func[Task[T]], cancellationToken CancellationToken = default(CancellationToken)) Task[T] {
+    if action == nil { throw ArgumentNullException("action") }
+    let close = PendingTaskToken()
+    let work = await InvokeAsync[Task[T]](action, cancellationToken).ConfigureAwait(false)
+    return await work.WaitAsync(cancellationToken).WaitAsync(close).ConfigureAwait(false)
+  }
+
   /// Requests a frame and awaits its next accepted presentation, not display scanout.
   /// Call this on the UI thread. Closing the window cancels the task.
   /// @param cancellationToken cancels the wait

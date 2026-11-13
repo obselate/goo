@@ -569,9 +569,10 @@ continuations to an existing embedded host context. A `go` child has no UI conte
 After each continuation, Goo applies the owning Cell's callback rebuild rule.
 State-only Cells do not rebuild when nothing changed. Unmounted Cells do not rebuild.
 
-Use `window.InvokeAsync(action, token)` from any thread to await dispatch. The
-generic overload returns the function result. Both propagate action exceptions.
-Cancellation, rejected posts and discarded accepted posts cancel the task.
+Use `window.InvokeAsync(action, token)` from any thread to await dispatch. It accepts
+synchronous or Task-returning callbacks and awaits all their work. Generic overloads
+return the function result. Exceptions propagate. Cancellation, closing the window,
+rejected posts and discarded accepted posts cancel the wait.
 
 Use `await window.NextPresentationAsync(token)` on the UI thread to request one
 frame and await its accepted presentation receipt. It works on an idle window.
