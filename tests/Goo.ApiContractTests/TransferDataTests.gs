@@ -19,7 +19,10 @@ public sealed class TransferDataTests {
     public func ErrorBoxRejectsInvalidNativeTextBeforeLaunch() {
         Assert.Throws[ArgumentException](() -> NativeDialogs.ShowError(nil, "message"))
         if OperatingSystem.IsLinux() {
-            Assert.Equal(MessageBoxStatus.Unsupported, NativeDialogs.ShowError("title", "message"))
+            let result = NativeDialogs.ShowError("title", "message")
+            Assert.Equal(MessageBoxStatus.Unsupported, result.Status)
+            Assert.Equal(-1, result.ButtonId)
+            Assert.Equal("", result.Error)
         }
         Assert.Throws[ArgumentException](() -> NativeDialogs.ShowError("title", "bad" + char(0)))
     }

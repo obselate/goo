@@ -47,7 +47,7 @@ public class MessageBoxOptions {
 public class MessageBoxResult {
     /// Gets the explicit outcome.
     public prop Status MessageBoxStatus { get; }
-    /// Gets the selected identifier, or -1 outside Success.
+    /// Gets the selected application button identifier, or -1 when no application button was selected.
     public prop ButtonId int32 { get; }
     /// Gets copied failure detail, or an empty string.
     public prop Error string { get; }
@@ -68,22 +68,22 @@ public class NativeDialogs {
         /// Linux and Android return Unsupported. Write the message to standard error when unsupported.
         /// @param title The native title.
         /// @param message The plain-text error message.
-        /// @returns Success, Unsupported when no simple message box exists, or Failed.
-        public func ShowError(title string, message string) MessageBoxStatus {
+        /// @returns Success, Unsupported when no simple message box exists, or Failed with native Error detail. ButtonId is -1.
+        public func ShowError(title string, message string) MessageBoxResult {
             ValidateText(title, "title")
             ValidateText(message, "message")
             if !OperatingSystem.IsWindows() && !OperatingSystem.IsMacOS() {
-                return MessageBoxStatus.Unsupported
+                return MessageBoxResult(MessageBoxStatus.Unsupported)
             }
             try {
                 SdlRuntime.EnsureLibrary()
                 return if SDL.ShowSimpleMessageBox(uint32(SDLMessageBoxFlags.Error), title, message, SDLWindowPtr.Null) {
-                    MessageBoxStatus.Success
-                } else { MessageBoxStatus.Failed }
-            } catch (_ DllNotFoundException) { return MessageBoxStatus.Unsupported }
-            catch (_ EntryPointNotFoundException) { return MessageBoxStatus.Unsupported }
+                    MessageBoxResult(MessageBoxStatus.Success)
+                } else { MessageBoxResult(MessageBoxStatus.Failed, error: SDL.GetErrorS() ?? "SDL error box failed") }
+            } catch (error DllNotFoundException) { return MessageBoxResult(MessageBoxStatus.Unsupported, error: error.Message) }
+            catch (error EntryPointNotFoundException) { return MessageBoxResult(MessageBoxStatus.Unsupported, error: error.Message) }
             catch (error TypeInitializationException) when (error.InnerException is DllNotFoundException || error.InnerException is EntryPointNotFoundException) {
-                return MessageBoxStatus.Unsupported
+                return MessageBoxResult(MessageBoxStatus.Unsupported, error: error.InnerException!!.Message)
             }
         }
 
