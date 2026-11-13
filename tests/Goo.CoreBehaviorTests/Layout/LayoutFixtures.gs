@@ -6,6 +6,58 @@ import System.Collections.Generic
 import System.Text
 
 internal class LayoutFixtures {
+  func RelativeLengthsResolveAfterLateMountContract() bool {
+    let cell = RelativeLateMountFixtureCell()
+    let window = Window{Root: cell, Size: LayoutSize(400, 100)}
+    try {
+      window.UpdateTree()
+      let root = window.Tree!!
+      if root.Children.Count != 0 { return false }
+      window.Size = LayoutSize(600, 100)
+      window.UpdateTree()
+      cell.Visible.Value = true
+      window.UpdateTree()
+      let child = root.Children[0]
+      if child.Rect.W != 300 || child.Children[0].Rect.X - child.Rect.X != 20
+        || child.Children[0].Rect.Y - child.Rect.Y != 20 { return false }
+      window.Size = LayoutSize(800, 100)
+      window.UpdateTree()
+      return window.Tree == root && root.Children[0] == child && child.Rect.W == 400
+        && child.Children[0].Rect.X - child.Rect.X == 20 && child.Children[0].Rect.Y - child.Rect.Y == 20
+    } finally { window.Close() }
+  }
+
+  func RelativeDeclarationsUpdateMountedNodesContract() bool {
+    let cell = RelativeRigorFixtureCell()
+    let window = Window{Root: cell, Size: LayoutSize(400, 100)}
+    try {
+      window.UpdateTree()
+      let node = window.Tree!!.Children[0]
+      if node.Rect.W != 20 || Transforming.TranslateX(node).Value != 20 { return false }
+      cell.Units = 2
+      cell.Rebuild()
+      window.UpdateTree()
+      return window.Tree!!.Children[0] == node && node.Rect.W == 40 && Transforming.TranslateX(node).Value == 40
+    } finally { window.Close() }
+  }
+
+  func RetiredRelativeNodesStopResolvingContract() bool {
+    let cell = RelativeRigorFixtureCell()
+    let window = Window{Root: cell, Size: LayoutSize(400, 100)}
+    try {
+      window.UpdateTree()
+      let retired = window.Tree!!.Children[1]
+      if retired.Width.Px != 200 { return false }
+      cell.Show = false
+      cell.Rebuild()
+      window.UpdateTree()
+      if !retired.Retired { return false }
+      window.Size = LayoutSize(800, 100)
+      window.UpdateTree()
+      return retired.Width.Px == 200 && window.Tree!!.Children.Count == 1
+    } finally { window.Close() }
+  }
+
   func SizedScrollExtentUsesContentContract() bool {
     let handle = ElementHandle()
     let content = ElementHandle()
@@ -1438,5 +1490,30 @@ internal class UnboundedLengthContextFixture : LayoutAlgorithm {
 
   public func Arrange(context LayoutContext, finalSize LayoutSize) {
     context.ArrangeChild(0, ElementRect{Width: 10, Height: 10})
+  }
+}
+
+internal class RelativeRigorFixtureCell : Cell {
+  internal var Units int32 = 1
+  internal var Show bool = true
+
+  public override func Build() Blob {
+    let result = Container{Width: Percent(100), Height: Percent(100),
+      Container{Width: Em(Units), Height: 20, FontSize: 20, Transform: PanelTransform{TranslateX: Em(Units)}}}
+    if Show { result.Add(Container{Width: Vw(50), Height: 20}) }
+    return result
+  }
+}
+
+internal class RelativeLateMountFixtureCell : Cell {
+  internal let Visible State[bool] = State[bool](false)
+
+  public override func Build() Blob {
+    let result = Container{Width: Percent(100), Height: Percent(100)}
+    if Visible.Value {
+      result.Add(Container{Padding: Em(1), FontSize: 20, Width: Vw(50), Height: 80,
+        Container{Width: 10, Height: 10}})
+    }
+    return result
   }
 }

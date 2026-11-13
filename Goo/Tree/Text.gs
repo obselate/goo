@@ -3,6 +3,7 @@ package Goo
 import System.Text
 
 /// Defines displayed Text and an optional inline Style for one text part.
+/// Goo freezes the Style when the containing Text is returned from Build.
 public data struct TextSpan(Text string, Style Style?)
 
 /// Converts plain text to an unstyled text span.
@@ -45,6 +46,7 @@ public class Text : Blob {
   }
   /// Gets ordered passive inline styles in UTF-16 source offsets.
   /// A cluster uses the style at its logical start. Later ranges override earlier fields.
+  /// Goo freezes each range Style when this Text is returned from Build.
   public prop StyleRanges []TextStyleRange{
     get -> PassiveTextRangeBlobs.Read(this)
     set {

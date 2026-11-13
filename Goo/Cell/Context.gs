@@ -481,6 +481,7 @@ internal sealed class ContextReader {
 
     internal func Invalidate() {
         if let cell = Cell {
+            cell.verifyPending = false
             if !cell.building {
                 cell.RestoreDirtyAndSubmit()
             }

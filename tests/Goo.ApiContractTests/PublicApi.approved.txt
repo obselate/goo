@@ -2095,7 +2095,7 @@ property|Goo.ApplicationActivation|NotificationId|System.String|instance|get:pub
 property|Goo.ApplicationActivation|Payload|System.String|instance|get:public,init:public|index:()
 property|Goo.ApplicationActivation|Target|System.Uri?|instance|get:public,init:public|index:()
 property|Goo.ApplicationActivation|WorkingDirectory|System.String|instance|get:public,init:public|index:()
-property|Goo.Application|VerifyState|System.Boolean|static|get:public,set:public|index:()
+property|Goo.Application|VerifyState|System.Nullable`1<System.Boolean>|static|get:public,set:public|index:()
 property|Goo.AsyncImageSource|ContentVersion|System.UInt64|instance|get:public|index:()
 property|Goo.Blob|AccessibilityName|System.String|instance|get:public,set:public|index:()
 property|Goo.Blob|AccessibilityRole|Goo.AccessibilityRole|instance|get:public,set:public|index:()

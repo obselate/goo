@@ -26,7 +26,7 @@ public class ElementHandle {
     }
   }
 
-  /// Reports whether this mounted element resolves Focus style through direct focus or projection.
+  /// Reports whether this mounted element resolves FocusStyle through direct focus or projection.
   public prop IsFocusVisible bool {
     get {
       Cell.ObserveUntrackedRead()
@@ -34,7 +34,7 @@ public class ElementHandle {
     }
   }
 
-  /// Sets the descendant that also resolves Focus style while this owner has visible focus.
+  /// Sets the descendant that also resolves FocusStyle while this owner has visible focus.
   /// An unmounted target is retained for remounting. The next rebuild restores Blob.FocusTarget.
   /// @param target The descendant handle, or nil to clear projection.
   /// @returns False when this owner is unmounted.

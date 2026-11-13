@@ -182,6 +182,7 @@ internal class Portals {
         if let old = state.Scrim { NodeLifecycle.DisposeTree(old) }
         state.Scrim = scrim
       }
+      if options == nil && dismiss == nil && scrim == nil { states.Remove(n) }
     }
 
     internal func Dismiss(root Node?, reason PopupDismissReason, x float32 = 0.0F, y float32 = 0.0F) bool {

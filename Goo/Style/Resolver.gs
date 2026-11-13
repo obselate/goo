@@ -419,7 +419,10 @@ internal partial class Resolver {
   // are off; otherwise starts (or retargets) a lerp from the displayed value.
   internal func writeField(n Node, e StyleEntry, initial bool) {
     if e.Payload is LengthDeclaration {
-      LengthDeclarations.Set(n, e, this)
+      if LengthDeclarations.Set(n, e, this) {
+        recordResolvedChange(e.Field)
+        pendingEffects = pendingEffects | ReconcileEffects.Layout
+      }
       finishTransition(n, e.Field)
       return
     }

@@ -65,6 +65,11 @@ public open class Blob : Style {
         value.Placeholder?.Freeze(true, depth + 1)
         value.Fallback?.Freeze(true, depth + 1)
       }
+      case value is Text {
+        if let ranges = value.StyleRangeValues {
+          for entry in ranges { entry.Style.FreezeStyle(owner, depth) }
+        }
+      }
       case value is TextEntry { value.InputOptions?.Freeze(owner) }
       case value is TextEditor { value.InputOptions?.Freeze(owner) }
       case value is Shape { value.Stroke?.Freeze(owner) }
