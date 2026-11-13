@@ -1328,8 +1328,6 @@ class PublicDocumentationTests {
             ),
             ["M:Goo.Cell.Build"] = DocumentationShape(System.Array.Empty[string](), System.Array.Empty[string](), true),
             ["M:Goo.Cell`1.Build(`0)"] = DocumentationShape([]string{"input"}, System.Array.Empty[string](), true),
-            ["M:Goo.Cell`1.InputChanged(`0)"] =
-                DocumentationShape([]string{"input"}, Array.Empty[string](), false),
             ["P:Goo.Cell.Lifetime"] = DocumentationShape(System.Array.Empty[string](), System.Array.Empty[string](), true),
             ["M:Goo.Cell.Latest(System.String)"] = DocumentationShape([]string{"name"}, System.Array.Empty[string](), true),
             ["M:Goo.Cell.Post(System.Action)"] = DocumentationShape([]string{"action"}, System.Array.Empty[string](), true),
@@ -1341,6 +1339,8 @@ class PublicDocumentationTests {
                 []string{"delayMs", "action"}, System.Array.Empty[string](), true),
             ["M:Goo.Window.Every(System.Double,System.Action)"] = DocumentationShape(
                 []string{"intervalMs", "action"}, System.Array.Empty[string](), true),
+            ["M:Goo.Cell`1.InputChanged(`0)"] =
+                DocumentationShape([]string{"input"}, Array.Empty[string](), false),
             ["M:Goo.Cell`1.InvokeInputCallback(System.Action)"] = DocumentationShape(
                 []string{"callback"}, System.Array.Empty[string](), false),
             ["M:Goo.Cell`1.InvokeInputCallback``1(System.Action{``0},``0)"] = DocumentationShape(
