@@ -12,10 +12,8 @@ public shared class Assets {
     if Object.ReferenceEquals(assembly, nil) { throw ArgumentNullException("assembly") }
     if String.IsNullOrWhiteSpace(name) { throw ArgumentException("An asset name is required", "name") }
     let normalized = name.Replace('\\', '/')
-    if Path.IsPathRooted(normalized) || normalized.StartsWith("/", StringComparison.Ordinal)
-      || (normalized.Length >= 2 && normalized[1] == ':')
-      || normalized == ".." || normalized.StartsWith("../", StringComparison.Ordinal)
-      || normalized.EndsWith("/..", StringComparison.Ordinal) || normalized.Contains("/../") {
+    if Path.IsPathRooted(normalized) || (normalized.Length >= 2 && normalized[1] == ':')
+      || ("/" + normalized + "/").Contains("/../") {
       throw ArgumentException("Asset names must be application-relative without parent segments", "name")
     }
     if let resource = assembly.GetManifestResourceStream(normalized) { return resource }
