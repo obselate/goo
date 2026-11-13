@@ -207,6 +207,17 @@ For decoding, thumbnails and raster density, see [images](../images.md).
 
 Defines the common surface for Goo-owned declarative elements.
 
+### `Each``1(System.Collections.Generic.IReadOnlyList{T},System.Func{T,string},System.Func{T,Blob})`
+
+Builds one child per item. Children without a key get the item's key. Explicit keys stay unchanged.
+
+- `T`: The item type.
+- `items`: The items in child order.
+- `itemKey`: Selects a stable, unique sibling key from an item.
+- `itemBuilder`: Builds the child for an item.
+
+Returns: Children to spread into a container. Duplicate sibling keys are rejected during reconciliation.
+
 ### `Accessibility`
 
 Gets the platform-neutral accessibility declaration for this element.
@@ -400,6 +411,20 @@ Overrides whether this container participates in pointer hit testing. When omitt
 ### `Layout`
 
 Gets the optional retained measure/arrange policy. Nil uses the normal flex layout; replace the immutable policy when its configuration changes.
+
+## `Each<T>`
+
+
+### `Each<T>(System.Collections.Generic.IReadOnlyList{T},System.Func{T,string},System.Func{T,Blob})`
+
+Builds one child per item. Children without a key get the item's key. Explicit keys stay unchanged.
+
+- `T`: The item type.
+- `items`: The items in child order.
+- `itemKey`: Selects a stable, unique sibling key from an item.
+- `itemBuilder`: Builds the child for an item.
+
+Returns: Children to spread into a container. Duplicate sibling keys are rejected during reconciliation.
 
 ## `ElementHandle`
 

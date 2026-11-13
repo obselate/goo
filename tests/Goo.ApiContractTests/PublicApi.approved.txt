@@ -1084,6 +1084,7 @@ event|Goo.Window|PreviewKeyPressed|System.Func`3<Goo.Key,Goo.KeyModifiers,System
 event|Goo.Window|StateChanged|System.Action`1<Goo.WindowState>|instance|add:public,remove:public
 event|Goo.Window|TitlebarDoubleClicked|System.Action`1<Goo.WindowTitlebarEvent>|instance|add:public,remove:public
 event|Goo.Window|VisibilityChanged|System.Action`1<System.Boolean>|instance|add:public,remove:public
+function|Goo|Each|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob[]
 function|Goo|Percent|public|generic:|(value:System.Double)->Goo.Length
 method|Goo.AccessibilityActionRequest|Scroll|static|public|generic:|(x:System.Double,y:System.Double)->Goo.AccessibilityActionRequest
 method|Goo.AccessibilityActionRequest|SetSelection|static|public|generic:|(start:System.Int32,length:System.Int32)->Goo.AccessibilityActionRequest
@@ -1115,6 +1116,7 @@ method|Goo.Anim`1|To|instance|public|generic:|(target:!0)->System.Void
 method|Goo.Anim`1|To|instance|public|generic:|(target:!0,spec:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>,params specs:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>[])->System.Void
 method|Goo.Anim`1|To|instance|public|generic:|(target:!0,velocity:Goo.MotionVelocity)->System.Void
 method|Goo.Anim`1|To|instance|public|generic:|(target:!0,velocity:Goo.MotionVelocity,spec:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>,params specs:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>[])->System.Void
+method|Goo.Blob|Each|static|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob[]
 method|Goo.BoxShadow|Deconstruct|instance|public|generic:|(out offsetX:Goo.Length&,out offsetY:Goo.Length&,out blur:Goo.Length&,out spread:Goo.Length&,out color:Goo.Color&,out inset:System.Boolean&)->System.Void
 method|Goo.BoxShadow|Equals|instance|public|generic:|(other:Goo.BoxShadow)->System.Boolean
 method|Goo.BoxShadow|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
