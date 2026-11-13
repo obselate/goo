@@ -61,7 +61,7 @@ class ExplicitKeyBindingTests {
             Children: []Blob{
                 if kind == 0 { cast[Blob](TextEntry{Handle: handle, Value: "text"}) }
                 else if kind == 1 || kind == 2 {
-                    cast[Blob](TextEditor(controller){Handle = handle, ReadOnly = kind == 2})
+                    cast[Blob](TextEditor(){Controller = controller, Handle = handle, ReadOnly = kind == 2})
                 } else if kind == 3 {
                     cast[Blob](Container{Handle: handle, Focusable: true, OnTextInput: (_ string) -> {}})
                 } else { cast[Blob](Button{Handle: handle}) }
@@ -218,7 +218,7 @@ class ExplicitKeyBindingTests {
             Width: 320,
             Height: 120,
             Root: ExplicitKeyBindingTests.BuildCell(() -> if editor {
-                cast[Blob](TextEditor(controller){Handle = handle})
+                cast[Blob](TextEditor(){Controller = controller, Handle = handle})
             } else {
                 cast[Blob](TextEntry{Value: "keep", Handle: handle})
             })
@@ -275,7 +275,7 @@ class ExplicitKeyBindingTests {
         let window = Window{
             Width: 320,
             Height: 120,
-            Root: ExplicitKeyBindingTests.BuildCell(() -> TextEditor(controller){Handle = handle})
+            Root: ExplicitKeyBindingTests.BuildCell(() -> TextEditor(){Controller = controller, Handle = handle})
         }
         try {
             window.UpdateTree()
@@ -318,7 +318,7 @@ class ExplicitKeyBindingTests {
             Height: 120,
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> if editor {
-                    cast[Blob](TextEditor(controller){Handle = handle})
+                    cast[Blob](TextEditor(){Controller = controller, Handle = handle})
                 } else {
                     cast[Blob](
                         TextEntry{
@@ -396,7 +396,7 @@ class ExplicitKeyBindingTests {
             AccessibilityAdapter: adapter,
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> if editor {
-                    cast[Blob](TextEditor(controller){Handle = handle})
+                    cast[Blob](TextEditor(){Controller = controller, Handle = handle})
                 } else {
                     cast[Blob](
                         TextEntry{
@@ -913,7 +913,7 @@ class ExplicitKeyBindingTests {
                     },
                     Children: []Blob{
                         if editor {
-                            cast[Blob](TextEditor(controller){Handle = field, Height = 60})
+                            cast[Blob](TextEditor(){Controller = controller, Handle = field, Height = 60})
                         } else {
                             cast[Blob](TextEntry{
                                 Handle: field,
@@ -1092,7 +1092,7 @@ class ExplicitKeyBindingTests {
         let window = Window{
             Width: 320,
             Height: 120,
-            Root: ExplicitKeyBindingTests.BuildCell(() -> TextEditor(controller){Handle = field})
+            Root: ExplicitKeyBindingTests.BuildCell(() -> TextEditor(){Controller = controller, Handle = field})
         }
         try {
             window.UpdateTree()

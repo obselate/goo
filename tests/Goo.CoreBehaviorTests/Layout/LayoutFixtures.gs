@@ -6,6 +6,20 @@ import System.Collections.Generic
 import System.Text
 
 internal class LayoutFixtures {
+  func EllipsisMinimumWidthCanShrinkAndExplicitMinimumWins() bool {
+    let reconciler = Reconciler{Res: Resolver{}}
+    var root = reconciler.Mount(Text{Content: "Unbreakable", TextTrimming: TextTrimming.Ellipsis})
+    let layout = Layout()
+    layout.Calculate(root, 20.0F, 40.0F)
+    if YGNodeStyleAPI.YGNodeStyleGetMinWidth(root.Yoga!!).Value != 0.0F { return false }
+    root = reconciler.Diff(root, Text{Content: "Unbreakable", TextTrimming: TextTrimming.Ellipsis, MinWidth: 50})
+    layout.Calculate(root, 20.0F, 40.0F)
+    if root.Rect.W != 50.0F { return false }
+    root = reconciler.Diff(root, Text{Content: "Unbreakable"})
+    layout.Calculate(root, 20.0F, 40.0F)
+    return YGNodeStyleAPI.YGNodeStyleGetMinWidth(root.Yoga!!).Unit == Unit.Undefined
+  }
+
   func CustomLayoutRetainsMixedMaximumMeasurements() bool {
     let policy = MixedMaximumFixture()
     let root = Reconciler{Res: Resolver{}}.Mount(Container{Width: Percent(100), Height: 200,

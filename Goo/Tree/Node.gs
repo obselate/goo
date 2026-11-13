@@ -147,6 +147,7 @@ internal class Node {
     PaintBindingResolver = nil
     TextLayout = nil
     TextLayoutCache = nil
+    Selectable = false
     StyleQueuedPass = 0
     StyleResolvedPass = 0
     StylePendingSelf = false
@@ -435,6 +436,7 @@ internal class Node {
   internal var TextScaleFactor float32 = 1.0F
   internal prop TextMaxLines int32{ get; set; }
   internal prop TextLayout TextLayout? { get; set; }
+  internal var Selectable bool
   internal prop TextLayoutCache List[TextLayout]? { get; set; }
   internal prop EntryShape EntryShapeState?{
     get -> editingState?.EntryShape
