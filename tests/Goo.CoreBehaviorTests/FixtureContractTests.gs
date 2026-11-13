@@ -144,6 +144,7 @@ class FixtureContractTests {
         func Cases() sequence[[]object] {
             yield Contract[StyleFixtures]("FlexAndInsetDeclarationOrderContract")
             yield Contract[AccessibilityFixtures]("AccessibilityShorthandOrderContract")
+            yield Contract[AccessibilityFixtures]("AccessibilityShorthandRoundTripContract")
             yield Contract[FlexConformanceFixtures]("RowColumnSpacerContract")
             yield Contract[FlexConformanceFixtures]("FixedFlexDirectionContract")
             yield Contract[FlexConformanceFixtures]("KeyedFlexKindChangeContract")
@@ -179,6 +180,8 @@ class FixtureContractTests {
             yield Contract[WindowStartupFixtures]("ApplicationStateVerificationContract")
             yield Contract[WindowStartupFixtures]("WindowLayoutSizeContract")
             yield Contract[WindowStartupFixtures]("SizeToContentContract")
+            yield Contract[WindowStartupFixtures]("RelativeSizeToContentContract")
+            yield Contract[LayoutFixtures]("CustomLayoutLeavesUnboundedPercentUnresolved")
             yield Contract[PathBuilderFixtures]("ResetPreservesPublishedPathAndClearsContour")
             yield Contract[PathBuilderFixtures]("PrimitivesAppendClosedContoursInViewBoxCoordinates")
             yield Contract[PortalFixtures]("UiScaleLayoutInputAndAnchoredPortalContract")
