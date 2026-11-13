@@ -1914,7 +1914,7 @@ method|Goo.Window|CapturePlacement|instance|public|generic:|()->Goo.WindowPlacem
 method|Goo.Window|ConfigureApplication|static|public|generic:|(name:System.String,version:System.String,identifier:System.String)->System.Void
 method|Goo.Window|CreateOffscreenSession|instance|public|generic:|()->Goo.OffscreenRenderSessionResult
 method|Goo.Window|DragRegion|static|public|generic:|(region:Goo.Container)->Goo.Container
-
+method|Goo.Window|Every|instance|public|generic:|(intervalMs:System.Double,action:System.Action)->Goo.WindowTimer
 method|Goo.Window|GetCurrentDisplay|instance|public|generic:|()->Goo.WindowDisplay?
 method|Goo.Window|GetDisplays|instance|public|generic:|()->System.Collections.Generic.IReadOnlyList`1<Goo.WindowDisplay>
 method|Goo.Window|Hide|instance|public|generic:|()->Goo.WindowOperationResult
@@ -1934,9 +1934,7 @@ method|Goo.Window|RequestClose|instance|public|generic:|()->System.Void
 method|Goo.Window|Run|instance|public|generic:|()->System.Void
 method|Goo.Window|SetColors|instance|public|generic:|(background:Goo.Color,foreground:Goo.Color)->System.Void
 method|Goo.Window|SetFullscreenDisplay|instance|public|generic:|(display:Goo.WindowDisplayId)->Goo.WindowOperationResult
-method|Goo.Window|SetInterval|instance|public|generic:|(callback:System.Action,intervalMs:System.Double)->Goo.WindowTimer
 method|Goo.Window|SetNativeDataDropFormats|instance|public|generic:|(formats:System.Collections.Generic.IReadOnlyList`1<System.String>)->Goo.WindowOperationResult
-method|Goo.Window|SetTimeout|instance|public|generic:|(callback:System.Action,delayMs:System.Double)->Goo.WindowTimer
 method|Goo.Window|SetTopmost|instance|public|generic:|(value:System.Boolean)->Goo.WindowOperationResult
 method|Goo.Window|ShowFileDialogAsync|instance|public|generic:|(kind:Goo.FileDialogKind,options:Goo.FileDialogOptions?=null)->System.Threading.Tasks.Task`1<Goo.FileDialogResult>
 method|Goo.Window|Show|instance|public|generic:|(activate:System.Boolean=true)->Goo.WindowOperationResult
