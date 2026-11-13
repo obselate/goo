@@ -4,20 +4,33 @@ import System
 import System.Collections.Generic
 import System.Threading
 
-/// Base type of tracked Cell state.
-public abstract class StateDependency {
+internal class StateDependency {
   private var readers List[object]?
   private var threadId int32
+  private let safePayload bool
 
-  internal open func IsSafePayload() bool -> false
+  internal init(safePayload bool) { this.safePayload = safePayload }
 
-  internal func CheckWrite() {
-    let owner = Volatile.Read(&threadId)
-    if owner != 0 && Environment.CurrentManagedThreadId != owner {
-      throw InvalidOperationException("State writes require the UI thread of its first reader.")
+  internal func IsSafePayload() bool -> safePayload
+
+  shared {
+    internal func SafePayload(type Type) bool ->
+      type.IsPrimitive || type.IsEnum || type == typeof(string) || type == typeof(ElementHandle)
+
+    internal func Reader() object? {
+      if let cell = Cell.StateReader { return cell }
+      if let builderScope = StateReadScope.Current { return builderScope }
+      return ContextEnvironment.StateReader
     }
-    if Cell.StateReader != nil || StateReadScope.Current != nil || ContextEnvironment.StateReader != nil {
-      throw InvalidOperationException("State writes are not allowed during Build.")
+
+    internal func CheckWrite(dependency StateDependency?) {
+      let owner = if let value = dependency { Volatile.Read(&value.threadId) } else { 0 }
+      if owner != 0 && Environment.CurrentManagedThreadId != owner {
+        throw InvalidOperationException("State writes require the UI thread of its first reader.")
+      }
+      if Cell.StateReader != nil || StateReadScope.Current != nil || ContextEnvironment.StateReader != nil {
+        throw InvalidOperationException("State writes are not allowed during Build.")
+      }
     }
   }
 
@@ -34,49 +47,49 @@ public abstract class StateDependency {
 
   internal func RemoveReader(reader object) { readers?.Remove(reader) }
 
-  internal func Read() {
-    if let reader = Cell.StateReader {
-      reader.ReadState(this)
-      return
-    }
-    if let builderScope = StateReadScope.Current {
-      builderScope.ReadState(this)
-      return
-    }
-    ContextEnvironment.StateReader?.ReadState(this)
+  internal func Read(reader object) {
+    if reader is Cell { reader.ReadState(this) }
+    else if reader is StateReadScope { reader.ReadState(this) }
   }
 
   internal func Changed() {
     guard let cells = readers else { return }
     for index in 0 ... cells.Count {
       let reader = cells[index]
-      if reader is Cell { reader.Rebuild() }
-      else if reader is StateReadScope { reader.Rebuild() }
+      if reader is Cell { reader.RebuildFromState() }
+      else if reader is StateReadScope { reader.RebuildFromState() }
     }
   }
 }
 
-/// Holds a value that rebuilds the Cells that read it in Build when it changes.
-public class State[T any] : StateDependency {
+/// Holds a value that invalidates the Cells and retained builders that read it.
+public class State[T any] {
   private var current T
+  private var dependency StateDependency?
 
   /// Creates state with an initial value.
   public init(initial T) { current = initial }
 
-  internal override func IsSafePayload() bool ->
-    typeof(T).IsPrimitive || typeof(T).IsEnum || typeof(T) == typeof(string) || typeof(T) == typeof(ElementHandle)
-
-  /// Gets or sets the value. A read in Build subscribes the Cell. A write of a different value rebuilds its readers.
+  /// Gets or sets the value. Reads in Build and retained builders subscribe their owner.
+  /// Equal writes do nothing. Changed writes invalidate the subscribed readers.
+  /// Writes during Build throw. After its first reader, writes require that reader's UI thread.
   public prop Value T {
     get {
-      Read()
+      if let reader = StateDependency.Reader() {
+        var tracked = Volatile.Read(&dependency)
+        if tracked == nil {
+          let created = StateDependency(StateDependency.SafePayload(typeof(T)))
+          tracked = Interlocked.CompareExchange(&dependency, created, nil) ?? created
+        }
+        tracked.Read(reader)
+      }
       return current
     }
     set {
-      CheckWrite()
+      StateDependency.CheckWrite(Volatile.Read(&dependency))
       if EqualityComparer[T].Default.Equals(current, value) { return }
       current = value
-      Changed()
+      dependency?.Changed()
     }
   }
 
