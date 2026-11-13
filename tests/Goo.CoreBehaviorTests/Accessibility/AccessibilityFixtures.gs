@@ -213,7 +213,6 @@ internal class AccessibilityFixtures {
     let window = Window{ Root: cell, Size: LayoutSize(100, 40), }
     window.AccessibilityAdapter = adapter
     window.UpdateTree()
-    window.UpdateTree()
     guard let tree = adapter.Tree, let root = tree.Root else { return false }
     if root.Children.Count != 3 { return false }
     let disabled = root.Children[0]
