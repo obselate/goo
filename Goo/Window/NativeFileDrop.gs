@@ -94,7 +94,7 @@ public partial class Window {
 
   private func GetNativeDropState() NativeDropState {
     if let state = family?.NativeDrop { return state }
-    let state = NativeDropState(() -> node, () -> CanReceiveNativeDrop(), () -> requestRender(), () -> UiScale)
+    let state = NativeDropState(() -> node, () -> CanReceiveNativeDrop(), () -> requestRender(), () -> float32(UiScale))
     family ??= WindowFamily()
     family!!.NativeDrop = state
     if let native = host as SdlHost? { state.Bind(native) }

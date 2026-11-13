@@ -44,7 +44,7 @@ public partial class Window {
     } else { Length{Unit: LengthUnit(int32(size.B)), Value: size.A}.Px }
     let display = TextLayouts.transformText(text, TextTransform(int32(transform.A)))
     let width = TextShaping.MeasureLineUncached(display, 0, display.Length, entryText(family) ?? "",
-      fontSize * (preferences.TextScaleFactor ?? 1.0F),
+      fontSize * float32(preferences.TextScaleFactor ?? 1.0),
       int32(weight.A), FontStyle(int32(fontStyle.A)) == FontStyle.Italic,
       Length{ Unit: LengthUnit(int32(spacing.B)), Value: spacing.A }.Px, int32(direction.A),
       entryText(language) ?? "")

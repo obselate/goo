@@ -97,8 +97,8 @@ public shared class Printing {
         if width > uint32.MaxValue || height > uint32.MaxValue || width * height > MaxPageBytes / 12.0 {
             return OffscreenRenderResult{Status: OffscreenRenderStatus.BudgetExceeded, Error: "The page exceeds 128 MiB."}
         }
-        let options = OffscreenRenderOptions(float32(resolved.WidthPoints * LogicalUnitsPerInch / PointsPerInch),
-            float32(resolved.HeightPoints * LogicalUnitsPerInch / PointsPerInch),
+        let options = OffscreenRenderOptions(LayoutSize(resolved.WidthPoints * LogicalUnitsPerInch / PointsPerInch,
+            resolved.HeightPoints * LogicalUnitsPerInch / PointsPerInch),
             checked(uint32(Math.Ceiling(width))), checked(uint32(Math.Ceiling(height))), Color.Rgb(255, 255, 255), MaxPageBytes)
         let pending = await OnOwnerAsync(owner, () -> {
             let page = document.CreatePage(index, resolved)

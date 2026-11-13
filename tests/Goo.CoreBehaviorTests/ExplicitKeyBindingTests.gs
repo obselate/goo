@@ -4,6 +4,8 @@ import Goo
 import System
 import System.Collections.Generic
 import System.IO
+import System.Threading
+import System.Threading.Tasks
 import Xunit
 
 class ExplicitKeyBindingTests {
@@ -26,6 +28,11 @@ class ExplicitKeyBindingTests {
             Assert.Equal(KeyModifiers{}, KeyModifiers.None)
             Assert.Equal(KeyModifiers{Ctrl: !mac, Super: mac}, KeyModifiers.Primary)
             Assert.Equal(KeyModifiers{Ctrl: !mac, Super: mac, Shift: true}, KeyModifiers.PrimaryShift)
+            Assert.False(KeyModifiers.None.HasPrimary)
+            Assert.True(KeyModifiers.Primary.HasPrimary)
+            Assert.True(KeyModifiers.PrimaryShift.HasPrimary)
+            Assert.True(KeyModifiers{Ctrl: true, Super: true, Alt: true, Shift: true}.HasPrimary)
+            Assert.False(KeyModifiers{Ctrl: mac, Super: !mac, Shift: true}.HasPrimary)
             window.UpdateTree()
             Assert.True(handle.Focus())
             ExplicitKeyBindingTests.Press(window.PlatformInput, Key.S, KeyModifiers.Primary)
@@ -34,6 +41,8 @@ class ExplicitKeyBindingTests {
             Assert.Equal(11, presses)
             InputPolicy.Mac = !mac
             Assert.Equal(KeyModifiers{Ctrl: mac, Super: !mac}, KeyModifiers.Primary)
+            Assert.Equal(mac, KeyModifiers{Ctrl: true}.HasPrimary)
+            Assert.Equal(!mac, KeyModifiers{Super: true}.HasPrimary)
         } finally {
             window.Close()
             InputPolicy.Mac = saved
@@ -137,18 +146,114 @@ class ExplicitKeyBindingTests {
     }
 
     @Fact
+    func WindowScalarsKeepDoublePrecisionAndResizeInLayoutUnits() {
+        let value = 1.234567890123
+        let preferences = PlatformPreferences{TextScaleFactor: value}
+        Assert.Equal(value, preferences.TextScaleFactor!!)
+        let display = WindowDisplay(WindowDisplayId{}, "display", ElementRect{}, nil, value)
+        Assert.Equal(value, display.ContentScale)
+        var position = Point{}
+        let window = Window{Size: LayoutSize(100, 40), Decorated: false, UiScale: value,
+            Root: ExplicitKeyBindingTests.BuildCell(() -> Container{OnPointerDown: (e PointerEvent) -> { position = e.WindowPosition }})}
+        try {
+            window.WheelScrollScale = value
+            window.DragStartDistance = value
+            window.ResizeBand = 8.123456789012
+            window.UpdateTree()
+            Assert.Equal(value, window.UiScale)
+            Assert.Equal(value, window.PixelScale)
+            Assert.Equal(value, window.WheelScrollScale)
+            Assert.Equal(value, window.DragStartDistance)
+            Assert.Equal(8.123456789012, window.ResizeBand)
+            Assert.Equal(WindowHitResult.Left, window.hitTest(9, 20))
+            Assert.Equal(WindowHitResult.Normal, window.hitTest(11, 20))
+            window.UiScale = 1.25
+            window.UpdateTree()
+            window.PlatformInput.PointerPress(0, PointerDevice.Mouse, 1.25000007, 6.25,
+                PointerButton.Primary, KeyModifiers.None, 1.0F)
+            Assert.Equal(1.0, position.X)
+            window.PlatformInput.PointerRelease(0, PointerDevice.Mouse, 1.25000007, 6.25,
+                PointerButton.Primary, KeyModifiers.None, 0.0F)
+        } finally { window.Close() }
+    }
+
+    @Theory
+    @InlineData(0, GestureCancelReason.PointerCanceled)
+    @InlineData(1, GestureCancelReason.FocusLost)
+    @InlineData(2, GestureCancelReason.OwnerUnavailable)
+    @InlineData(3, GestureCancelReason.OwnerUnavailable)
+    @InlineData(4, GestureCancelReason.Explicit)
+    func PointerDragReportsCancellationReason(mode int32, reason GestureCancelReason) {
+        let events = List[PointerDragEvent]()
+        var available = true
+        let window = Window{Size: LayoutSize(100, 40), Root: ExplicitKeyBindingTests.BuildCell(() ->
+            if mode == 2 && !available { cast[Blob](Text{Content: "removed"}) }
+            else { cast[Blob](Container{
+                Width: 100, Height: 40, Disabled: mode == 3 && !available,
+                OnPointerMove: (e PointerEvent) -> { if mode == 4 { e.ReleaseCapture() } },
+                OnPointerDrag: (e PointerDragEvent) -> events.Add(e)
+            }) }
+        )}
+        try {
+            window.UpdateTree()
+            let input = window.PlatformInput
+            input.PointerPress(0, PointerDevice.Mouse, 5, 5, PointerButton.Primary, KeyModifiers.None, 1)
+            Assert.Single(events)
+            Assert.Equal(GesturePhase.Started, events[0].Phase)
+            Assert.Equal(GestureCancelReason.None, events[0].Reason)
+            if mode == 0 { input.PointerCancel(0, PointerDevice.Mouse) }
+            else if mode == 1 { input.FocusLost() }
+            else if mode == 4 { input.PointerMove(0, PointerDevice.Mouse, 10, 5, KeyModifiers.None, 1) }
+            else {
+                available = false
+                window.Root!!.Rebuild()
+                window.UpdateTree()
+            }
+            Assert.Equal(GesturePhase.Canceled, events[events.Count - 1].Phase)
+            Assert.Equal(reason, events[events.Count - 1].Reason)
+        } finally { window.Close() }
+    }
+
+    @Theory
+    @InlineData(false)
+    @InlineData(true)
+    func ClipboardCancellationDropsLateNativeResults(preCanceled bool) {
+        using let host = TestClipboardHost()
+        using let cancellation = CancellationTokenSource()
+        let window = Window()
+        host.Resize(100, 40, 100, 40)
+        window.Attach(host)
+        try {
+            if preCanceled { cancellation.Cancel() }
+            let read = window.Clipboard.ReadDataAsync([]string{"text/plain"}, cancellation.Token)
+            let write = window.Clipboard.WriteAsync(TransferData([]TransferRepresentation{}, []Uri{Uri("file:///clipboard")}), cancellationToken: cancellation.Token)
+            cancellation.Cancel()
+            Assert.ThrowsAny[OperationCanceledException](() -> { read.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult() })
+            Assert.ThrowsAny[OperationCanceledException](() -> { write.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult() })
+            Assert.True(read.IsCanceled)
+            Assert.True(write.IsCanceled)
+            host.PendingRead.SetResult(ClipboardDataResult(ClipboardReadStatus.Success, TransferData.Empty))
+            host.PendingWrite.SetResult(ClipboardWriteResult(DataTransferStatus.Success))
+            Assert.True(read.IsCanceled)
+            Assert.True(write.IsCanceled)
+            Assert.Equal(preCanceled ? 0 : 1, host.DataReads)
+            Assert.Equal(preCanceled ? 0 : 1, host.DataWrites)
+        } finally { window.Close() }
+    }
+
+    @Fact
     func ClipboardTextDistinguishesEmptySuccessAndLimits() {
         using let host = TestClipboardHost{Text: ""}
         let window = Window()
         host.Resize(100, 40, 100, 40)
         window.Attach(host)
-        Assert.Equal(ClipboardTextStatus.Empty, window.Clipboard.ReadText().Status)
+        Assert.Equal(ClipboardReadStatus.Empty, window.Clipboard.ReadText().Status)
         Assert.Equal(DataTransferStatus.Success, window.Clipboard.WriteText("copied text").Status)
         let read = window.Clipboard.ReadText()
-        Assert.Equal(ClipboardTextStatus.Success, read.Status)
+        Assert.Equal(ClipboardReadStatus.Success, read.Status)
         Assert.Equal("copied text", read.Text)
         host.Text = String(char(0x0800), ClipboardTransfer.MaxTextBytes / 3 + 1)
-        Assert.Equal(ClipboardTextStatus.TooLarge, window.Clipboard.ReadText().Status)
+        Assert.Equal(ClipboardReadStatus.TooLarge, window.Clipboard.ReadText().Status)
         window.RequestClose()
     }
 
@@ -158,7 +263,7 @@ class ExplicitKeyBindingTests {
         let window = Window()
         host.Resize(100, 40, 100, 40)
         window.Attach(host)
-        Assert.Equal(ClipboardTextStatus.Unsupported, window.Clipboard.ReadText().Status)
+        Assert.Equal(ClipboardReadStatus.Unsupported, window.Clipboard.ReadText().Status)
         Assert.Equal(DataTransferStatus.Unsupported, window.Clipboard.WriteText("value").Status)
         window.RequestClose()
     }
@@ -173,7 +278,7 @@ class ExplicitKeyBindingTests {
         host.Resize(100, 40, 100, 40)
         window.Attach(host)
         let read = clipboard.ReadText()
-        Assert.Equal(ClipboardTextStatus.Failed, read.Status)
+        Assert.Equal(ClipboardReadStatus.Failed, read.Status)
         Assert.Equal("", read.Text)
         Assert.Equal("Clipboard read unavailable", read.Error)
         let written = clipboard.WriteText("value")
@@ -622,8 +727,8 @@ class ExplicitKeyBindingTests {
             input.PointerPress(
                 0,
                 PointerDevice.Mouse,
-                float32(bounds.X) + float32(5.0F),
-                float32(bounds.Y) + float32(5.0F),
+                bounds.X + 5.0,
+                bounds.Y + 5.0,
                 PointerButton.Primary,
                 default(KeyModifiers),
                 0.0F
@@ -634,8 +739,8 @@ class ExplicitKeyBindingTests {
             input.PointerRelease(
                 0,
                 PointerDevice.Mouse,
-                float32(bounds.X) + float32(5.0F),
-                float32(bounds.Y) + float32(5.0F),
+                bounds.X + 5.0,
+                bounds.Y + 5.0,
                 PointerButton.Primary,
                 default(KeyModifiers),
                 0.0F
@@ -845,8 +950,8 @@ class ExplicitKeyBindingTests {
             input.PointerPress(
                 0,
                 PointerDevice.Mouse,
-                float32(bounds.X) + float32(5.0F),
-                float32(bounds.Y) + float32(5.0F),
+                bounds.X + 5.0,
+                bounds.Y + 5.0,
                 PointerButton.Primary,
                 default(KeyModifiers),
                 0.0F
@@ -860,8 +965,8 @@ class ExplicitKeyBindingTests {
             input.PointerRelease(
                 0,
                 PointerDevice.Mouse,
-                float32(bounds.X) + float32(5.0F),
-                float32(bounds.Y) + float32(5.0F),
+                bounds.X + 5.0,
+                bounds.Y + 5.0,
                 PointerButton.Primary,
                 default(KeyModifiers),
                 0.0F
@@ -1204,16 +1309,28 @@ class ExplicitKeyBindingTests {
         internal var Writes int32
         internal var Reads int32
         internal var Text string?
-        protected override func GetClipboardText() string {
+        internal var DataReads int32
+        internal var DataWrites int32
+        internal let PendingRead TaskCompletionSource[ClipboardDataResult] = TaskCompletionSource[ClipboardDataResult](TaskCreationOptions.RunContinuationsAsynchronously)
+        internal let PendingWrite TaskCompletionSource[ClipboardWriteResult] = TaskCompletionSource[ClipboardWriteResult](TaskCreationOptions.RunContinuationsAsynchronously)
+        internal override func ReadClipboardDataAsync(contentTypes IReadOnlyList[string]) Task[ClipboardDataResult] {
+            DataReads++
+            return PendingRead.Task
+        }
+        internal override func WriteClipboardAsync(data TransferData, intent ClipboardIntent) Task[ClipboardWriteResult] {
+            DataWrites++
+            return PendingWrite.Task
+        }
+        protected override func ReadClipboardText() ClipboardTextResult {
             Reads++
-            if let text = Text { return text }
+            if let text = Text { return ClipboardTextResult(text.Length == 0 ? ClipboardReadStatus.Empty : ClipboardReadStatus.Success, text) }
             throw InvalidOperationException("Clipboard read unavailable")
         }
-        protected override func SetClipboardText(value string) {
+        protected override func WriteClipboardText(value string) ClipboardWriteResult {
             Writes++
             if Text != nil {
                 Text = value
-                return
+                return ClipboardWriteResult(DataTransferStatus.Success)
             }
             throw InvalidOperationException("Clipboard write unavailable")
         }

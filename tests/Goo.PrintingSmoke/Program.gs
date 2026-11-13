@@ -161,7 +161,7 @@ func Main(args[]string) {
         CheckRichClipboard()
         let ownerWidth = window.NativeWidth
         let ownerHeight = window.NativeHeight
-        let options = OffscreenRenderOptions(240f, 180f, 480, 360, Color.Rgb(255, 255, 255), 134217728)
+        let options = OffscreenRenderOptions(LayoutSize(240f, 180f), 480, 360, Color.Rgb(255, 255, 255), 134217728)
         let first = Pump(window, window.RenderOffscreenAsync(Page(240, 180), options, CancellationToken.None))
         Require(
             first.Status == OffscreenRenderStatus.Success && first.Capture != nil,
@@ -199,7 +199,7 @@ func Main(args[]string) {
             window,
             window.RenderOffscreenAsync(
                 Page(240, 180),
-                OffscreenRenderOptions(240f, 180f, 480, 360, Color.Rgb(255, 255, 255), 1024),
+                OffscreenRenderOptions(LayoutSize(240f, 180f), 480, 360, Color.Rgb(255, 255, 255), 1024),
                 CancellationToken.None
             )
         )

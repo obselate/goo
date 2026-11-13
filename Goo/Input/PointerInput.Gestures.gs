@@ -138,7 +138,7 @@ internal partial class PointerInput {
             try {
                 if let group = group { cancelGestureGroup(root, group, GestureCancelReason.CallbackFailed) }
             } finally {
-                try { cancelInteraction(root, resolver) }
+                try { cancelInteraction(root, resolver, GestureCancelReason.CallbackFailed) }
                 finally { ExceptionDispatchInfo.Capture(error).Throw() }
             }
         }
@@ -218,7 +218,7 @@ internal partial class PointerInput {
                     let contact = contacts[i]
                     if gestureGroupFor(contact.Id) != group { continue }
                     current = contact
-                    try { cancelInteraction(root, resolver) }
+                    try { cancelInteraction(root, resolver, GestureCancelReason.CallbackFailed) }
                     catch (error Exception) { if failure == nil { failure = error } }
                 }
             }
@@ -290,10 +290,8 @@ internal partial class PointerInput {
                 && dragThresholdCrossed(x, y, threshold) { return true }
         }
         if let pan = current.TouchPan {
-            let dx = x - pan.StartX
-            let dy = y - pan.StartY
             if let target = pan.Target && target != owner && containsPath(owner, target)
-                && dx * dx + dy * dy >= 64.0F { return true }
+                && touchPanReady(pan, x, y) { return true }
         }
         return false
     }

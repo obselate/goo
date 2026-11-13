@@ -344,7 +344,7 @@ internal class TextInputPrimitivesFixtures {
       input.Refresh()
       var changes int32
       var published = ""
-      input.EditorChanged += (snapshot FocusedEditorSnapshot?) -> {
+      window.Focus.EditorChanged += (snapshot FocusedEditorSnapshot?) -> {
         changes++
         published = snapshot?.Text ?? ""
       }
