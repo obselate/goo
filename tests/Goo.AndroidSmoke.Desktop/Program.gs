@@ -10,5 +10,5 @@ func Main() {
     window.Root = SmokeApplication.CreateAccessibilityRoot()
     window.AccessibilityAdapter = NativeAccessibilityAdapter()
   }
-  window.Run()
+  Application.Run(window)
 }

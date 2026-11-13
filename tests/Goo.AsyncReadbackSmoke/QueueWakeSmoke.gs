@@ -93,7 +93,7 @@ func RunQueueWakeSmoke() {
       worker?.Join()
       if window.IsOpen {
         window.RequestClose()
-        window.Run()
+        Application.Run(window)
       }
     }
   }
