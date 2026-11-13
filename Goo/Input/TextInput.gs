@@ -421,7 +421,7 @@ internal partial class TextInput {
     try {
       if let native = host {
         let result = native.GetClipboardText()
-        if result.Status != ClipboardTextStatus.Success && result.Status != ClipboardTextStatus.Empty {
+        if result.Status != ClipboardReadStatus.Success && result.Status != ClipboardReadStatus.Empty {
           Console.Error.WriteLine("Goo clipboard read failed: " + result.Error)
         }
         return result.Text

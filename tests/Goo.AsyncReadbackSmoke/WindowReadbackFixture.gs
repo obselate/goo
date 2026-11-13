@@ -770,8 +770,8 @@ public partial class Window {
       SdlRuntime.PumpEvents(Int32.MaxValue)
       consumeNativeMetrics()
       let current = CurrentWindowMetrics()
-      let changed = current.LogicalWidth != prior.LogicalWidth
-        || current.LogicalHeight != prior.LogicalHeight
+      let changed = current.NativeWidth != prior.NativeWidth
+        || current.NativeHeight != prior.NativeHeight
         || current.FramebufferWidth != prior.FramebufferWidth
         || current.FramebufferHeight != prior.FramebufferHeight
       let now = Stopwatch.GetTimestamp()
@@ -1429,7 +1429,7 @@ internal class WindowReadbackTestFixture {
       }
       let metrics = treeWindow.CurrentWindowMetricsForTest()
       return target.CompilePathProbeForTest(treeWindow.PathProbeNodeForTest(),
-        float32(metrics.LogicalWidth), float32(metrics.LogicalHeight))
+        float32(metrics.NativeWidth), float32(metrics.NativeHeight))
     }
 
     internal func SubmissionReadyForReconcile(window Window) bool -> window.ReadbackSubmissionReadyForReconcileForTest()

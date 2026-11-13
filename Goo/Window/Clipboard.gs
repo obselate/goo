@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.Collections.Generic
+import System.Threading
 import System.Threading.Tasks
 
 /// Reports a native clipboard query/read outcome independently of payload contents.
@@ -75,18 +76,19 @@ public class ClipboardImage {
   }
 }
 
-/// Reports a plain-text clipboard read outcome.
-public enum ClipboardTextStatus { Success; Empty; Unsupported; TooLarge; Failed }
-
 /// Contains owned clipboard text and an explicit native outcome.
 public sealed class ClipboardTextResult {
   /// Gets the read outcome.
-  public prop Status ClipboardTextStatus { get; }
+  public prop Status ClipboardReadStatus { get; }
   /// Gets the copied text, or an empty string outside Success.
   public prop Text string { get; }
   /// Gets native failure detail, or an empty string.
   public prop Error string { get; }
-  internal init(status ClipboardTextStatus, text string = "", error string = "") {
+  /// Creates a host clipboard text result.
+  /// @param status The native read outcome.
+  /// @param text Owned text, or an empty string outside Success.
+  /// @param error Native failure detail, or an empty string.
+  public init(status ClipboardReadStatus, text string = "", error string = "") {
     Status = status
     Text = text
     Error = error
@@ -140,26 +142,41 @@ public sealed class WindowClipboard {
 
   /// Copies requested available MIME alternatives and URI references from one native clipboard offer.
   /// @param contentTypes Exact MIME types to read, including text/uri-list for document references.
+  /// @param cancellationToken Cancels the wait and discards a late native result.
   /// @returns Owned data and explicit status, with no partial payload on a native read failure.
-  public func ReadDataAsync(contentTypes IReadOnlyList[string]) Task[ClipboardDataResult] {
+  public func ReadDataAsync(contentTypes IReadOnlyList[string], cancellationToken CancellationToken = default(CancellationToken)) Task[ClipboardDataResult] {
     owner.RequireClipboardThread("WindowClipboard.ReadDataAsync")
     let types = ClipboardTransfer.ValidateTypes(contentTypes)
-    if let embedded = owner.ClipboardEmbeddedHost { return embedded.ReadClipboardDataAsync(types).WaitAsync(owner.Closed) }
-    return Task.FromResult(ClipboardTransfer.ReadTransfer(types))
+    if cancellationToken.IsCancellationRequested { return Task.FromCanceled[ClipboardDataResult](cancellationToken) }
+    if let embedded = owner.ClipboardEmbeddedHost {
+      return waitForClipboard(embedded.ReadClipboardDataAsync(types), cancellationToken)
+    }
+    let result = ClipboardTransfer.ReadTransfer(types)
+    return if cancellationToken.IsCancellationRequested { Task.FromCanceled[ClipboardDataResult](cancellationToken) } else { Task.FromResult(result) }
   }
 
   /// Publishes every MIME alternative and URI reference in one native clipboard publication.
   /// @param data The immutable selection to publish without opening referenced documents.
   /// @param intent Copy or a supported deferred file-cut hint, never an instruction to delete source files.
+  /// @param cancellationToken Cancels the wait and discards a late native result.
   /// @returns Explicit publication status. Success does not confirm that a paste occurred.
-  public func WriteAsync(data TransferData, intent ClipboardIntent = ClipboardIntent.Copy) Task[ClipboardWriteResult] {
+  public func WriteAsync(data TransferData, intent ClipboardIntent = ClipboardIntent.Copy, cancellationToken CancellationToken = default(CancellationToken)) Task[ClipboardWriteResult] {
     owner.RequireClipboardThread("WindowClipboard.WriteAsync")
     if data == nil { throw ArgumentNullException("data") }
     if intent != ClipboardIntent.Copy && intent != ClipboardIntent.Cut { throw ArgumentOutOfRangeException("intent") }
     if intent == ClipboardIntent.Cut && data.Uris.Count == 0 { throw ArgumentException("Cut requires document references", "intent") }
     if data.Representations.Count == 0 && data.Uris.Count == 0 { throw ArgumentException("Clipboard publication requires data", "data") }
-    if let embedded = owner.ClipboardEmbeddedHost { return embedded.WriteClipboardAsync(data, intent).WaitAsync(owner.Closed) }
-    return Task.FromResult(ClipboardTransfer.WriteTransfer(data, intent))
+    if cancellationToken.IsCancellationRequested { return Task.FromCanceled[ClipboardWriteResult](cancellationToken) }
+    if let embedded = owner.ClipboardEmbeddedHost {
+      return waitForClipboard(embedded.WriteClipboardAsync(data, intent), cancellationToken)
+    }
+    let result = ClipboardTransfer.WriteTransfer(data, intent)
+    return if cancellationToken.IsCancellationRequested { Task.FromCanceled[ClipboardWriteResult](cancellationToken) } else { Task.FromResult(result) }
+  }
+
+  private async func waitForClipboard[T](pending Task[T], cancellationToken CancellationToken) T {
+    using let lifetime = CancellationTokenSource.CreateLinkedTokenSource(owner.Closed, cancellationToken)
+    return await pending.WaitAsync(lifetime.Token).ConfigureAwait(false)
   }
 
 }

@@ -15,7 +15,7 @@ public sealed class WindowDisplay {
   private let name string
   private let bounds ElementRect
   private let usableBounds ElementRect?
-  private let contentScale float32
+  private let contentScale float64
 
   /// Gets the opaque process-local display ID.
   public prop Id WindowDisplayId{ get -> id }
@@ -26,10 +26,10 @@ public sealed class WindowDisplay {
   /// Gets usable non-fullscreen bounds, or nil if SDL could not provide them.
   public prop UsableBounds ElementRect?{ get -> usableBounds }
   /// Gets SDL's expected content scale for the display, or zero if SDL cannot provide it. A window scale can differ.
-  public prop ContentScale float32{ get -> contentScale }
+  public prop ContentScale float64{ get -> contentScale }
 
   internal init(id WindowDisplayId, name string, bounds ElementRect,
-    usableBounds ElementRect?, contentScale float32) {
+    usableBounds ElementRect?, contentScale float64) {
     this.id = id
     this.name = name
     this.bounds = bounds

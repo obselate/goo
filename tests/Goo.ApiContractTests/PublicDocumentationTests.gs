@@ -215,6 +215,8 @@ class PublicDocumentationTests {
             "M:Goo.Blob.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})",
             "M:Goo.Platform.OpenAsync(System.String,System.Threading.CancellationToken)",
             "M:Goo.NativeDialogs.ShowError(System.String,System.String)",
+            "M:Goo.ClipboardTextResult.#ctor(Goo.ClipboardReadStatus,System.String,System.String)",
+            "M:Goo.ClipboardWriteResult.#ctor(Goo.DataTransferStatus,System.String)",
             "M:Goo.RichText.RichTextClipboard.#ctor(Goo.Window,Goo.TextEditorController,Goo.TextPresentationLayer)",
             "M:Goo.RichText.RichTextClipboard.CopyAsync(System.Threading.CancellationToken)",
             "M:Goo.RichText.RichTextClipboard.CutAsync(System.Threading.CancellationToken)",
@@ -305,8 +307,8 @@ class PublicDocumentationTests {
             "M:Goo.TransferRepresentation.#ctor(System.String,System.ReadOnlyMemory{System.Byte})",
             "M:Goo.TransferData.#ctor(System.Collections.Generic.IReadOnlyList{Goo.TransferRepresentation},"
                 + "System.Collections.Generic.IReadOnlyList{System.Uri})",
-            "M:Goo.WindowClipboard.ReadDataAsync(System.Collections.Generic.IReadOnlyList{System.String})",
-            "M:Goo.WindowClipboard.WriteAsync(Goo.TransferData,Goo.ClipboardIntent)",
+            "M:Goo.WindowClipboard.ReadDataAsync(System.Collections.Generic.IReadOnlyList{System.String},System.Threading.CancellationToken)",
+            "M:Goo.WindowClipboard.WriteAsync(Goo.TransferData,Goo.ClipboardIntent,System.Threading.CancellationToken)",
             "M:Goo.Window.SetNativeDataDropFormats(System.Collections.Generic.IReadOnlyList{System.String})",
             "M:Goo.AccessibilityActionRequest.#ctor(Goo.AccessibilityAction)",
             "M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)",
@@ -385,6 +387,7 @@ class PublicDocumentationTests {
             "M:Goo.Cell.AnimateValue``1(``0,Goo.MotionConverter{``0})",
             "M:Goo.Cell.Build",
             "M:Goo.Cell`1.Build(`0)",
+            "M:Goo.Cell`1.InputChanged(`0)",
             "M:Goo.Cell`1.InvokeInputCallback(System.Action)",
             "M:Goo.Cell`1.InvokeInputCallback``1(System.Action{``0},``0)",
             "M:Goo.Cell`1.InvokeInputCallback``2(System.Action{``0,``1},``0,``1)",
@@ -579,10 +582,10 @@ class PublicDocumentationTests {
             "M:Goo.PlatformInput.KeyRelease(Goo.Key,Goo.KeyModifiers)",
             "M:Goo.WindowFocus.Move(System.Boolean)",
             "M:Goo.PlatformInput.PointerCancel(System.Int64,Goo.PointerDevice)",
-            "M:Goo.PlatformInput.PointerMove(System.Int64,Goo.PointerDevice,System.Single,System.Single,Goo.KeyModifiers,System.Single)",
-            "M:Goo.PlatformInput.PointerPress(System.Int64,Goo.PointerDevice,System.Single,System.Single,Goo.PointerButton,Goo.KeyModifiers,System.Single)",
-            "M:Goo.PlatformInput.PointerRelease(System.Int64,Goo.PointerDevice,System.Single,System.Single,Goo.PointerButton,Goo.KeyModifiers,System.Single)",
-            "M:Goo.PlatformInput.PointerWheel(System.Single,System.Single,System.Single,System.Single,Goo.KeyModifiers)",
+            "M:Goo.PlatformInput.PointerMove(System.Int64,Goo.PointerDevice,System.Double,System.Double,Goo.KeyModifiers,System.Single)",
+            "M:Goo.PlatformInput.PointerPress(System.Int64,Goo.PointerDevice,System.Double,System.Double,Goo.PointerButton,Goo.KeyModifiers,System.Single)",
+            "M:Goo.PlatformInput.PointerRelease(System.Int64,Goo.PointerDevice,System.Double,System.Double,Goo.PointerButton,Goo.KeyModifiers,System.Single)",
+            "M:Goo.PlatformInput.PointerWheel(System.Double,System.Double,System.Double,System.Double,Goo.KeyModifiers)",
             "M:Goo.PlatformInput.SetComposition(System.String,System.Int32,System.Int32)",
             "M:Goo.PlatformInput.SetCompositionRange(System.Int32,System.Int32)",
             "M:Goo.WindowFocus.SetSelection(System.Int32,System.Int32)",
@@ -740,14 +743,14 @@ class PublicDocumentationTests {
             "M:Goo.EmbeddedWindowHost.AllowInheritedCompositeAlpha",
             "M:Goo.EmbeddedWindowHost.CreateVulkanSurface(System.IntPtr,System.UInt64@)",
             "M:Goo.EmbeddedWindowHost.DestroyVulkanSurface(System.IntPtr,System.UInt64)",
-            "M:Goo.EmbeddedWindowHost.GetClipboardText",
+            "M:Goo.EmbeddedWindowHost.ReadClipboardText",
             "M:Goo.EmbeddedWindowHost.GetNativeHandle",
             "M:Goo.EmbeddedWindowHost.GetVulkanGetInstanceProcAddr",
             "M:Goo.EmbeddedWindowHost.GetVulkanInstanceExtensions",
             "M:Goo.EmbeddedWindowHost.LoadVulkanLibrary",
             "M:Goo.EmbeddedWindowHost.PreferRequestedFramebufferExtent",
             "M:Goo.EmbeddedWindowHost.RequestFrame",
-            "M:Goo.EmbeddedWindowHost.SetClipboardText(System.String)",
+            "M:Goo.EmbeddedWindowHost.WriteClipboardText(System.String)",
             "M:Goo.EmbeddedWindowHost.SetCursor(Goo.Cursor)",
             "M:Goo.EmbeddedWindowHost.SetImeArea(System.Int32,System.Int32,System.Int32,System.Int32,System.Int32)",
             "M:Goo.EmbeddedWindowHost.StartTextInput",
@@ -771,10 +774,6 @@ class PublicDocumentationTests {
             "M:Goo.PanelTransform.op_Inequality(Goo.PanelTransform,Goo.PanelTransform)"
         }
         private let ExpectedEnumFieldIds[]string = []string{
-            "F:Goo.PointerDragPhase.Started",
-            "F:Goo.PointerDragPhase.Moved",
-            "F:Goo.PointerDragPhase.Ended",
-            "F:Goo.PointerDragPhase.Canceled",
             "F:Goo.LayoutAxis.Horizontal",
             "F:Goo.LayoutAxis.Vertical",
             "F:Goo.AccessibilityRole.Separator",
@@ -1032,6 +1031,10 @@ class PublicDocumentationTests {
                 DocumentationShape(Array.Empty[string](), Array.Empty[string](), true),
             ["M:Goo.WindowClipboard.WriteText(System.String)"] =
                 DocumentationShape([]string{"value"}, Array.Empty[string](), true),
+            ["M:Goo.ClipboardTextResult.#ctor(Goo.ClipboardReadStatus,System.String,System.String)"] =
+                DocumentationShape([]string{"status", "text", "error"}, Array.Empty[string](), false),
+            ["M:Goo.ClipboardWriteResult.#ctor(Goo.DataTransferStatus,System.String)"] =
+                DocumentationShape([]string{"status", "error"}, Array.Empty[string](), false),
             ["M:Goo.TrayIcon.Create(Goo.Window,Goo.TrayOptions)"] = DocumentationShape(
                 []string{"owner", "options"}, System.Array.Empty[string](), true),
             ["M:Goo.TrayIcon.Update(Goo.TrayOptions)"] = DocumentationShape(
@@ -1137,10 +1140,10 @@ class PublicDocumentationTests {
             ["M:Goo.TransferData.#ctor(System.Collections.Generic.IReadOnlyList{Goo.TransferRepresentation},"
                 + "System.Collections.Generic.IReadOnlyList{System.Uri})"] =
                 DocumentationShape([]string{"representations", "uris"}, Array.Empty[string](), false),
-            ["M:Goo.WindowClipboard.ReadDataAsync(System.Collections.Generic.IReadOnlyList{System.String})"] =
-                DocumentationShape([]string{"contentTypes"}, Array.Empty[string](), true),
-            ["M:Goo.WindowClipboard.WriteAsync(Goo.TransferData,Goo.ClipboardIntent)"] =
-                DocumentationShape([]string{"data", "intent"}, Array.Empty[string](), true),
+            ["M:Goo.WindowClipboard.ReadDataAsync(System.Collections.Generic.IReadOnlyList{System.String},System.Threading.CancellationToken)"] =
+                DocumentationShape([]string{"contentTypes", "cancellationToken"}, Array.Empty[string](), true),
+            ["M:Goo.WindowClipboard.WriteAsync(Goo.TransferData,Goo.ClipboardIntent,System.Threading.CancellationToken)"] =
+                DocumentationShape([]string{"data", "intent", "cancellationToken"}, Array.Empty[string](), true),
             ["M:Goo.Window.SetNativeDataDropFormats(System.Collections.Generic.IReadOnlyList{System.String})"] =
                 DocumentationShape([]string{"formats"}, Array.Empty[string](), true),
             ["M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)"] = DocumentationShape(
@@ -1319,6 +1322,8 @@ class PublicDocumentationTests {
             ),
             ["M:Goo.Cell.Build"] = DocumentationShape(System.Array.Empty[string](), System.Array.Empty[string](), true),
             ["M:Goo.Cell`1.Build(`0)"] = DocumentationShape([]string{"input"}, System.Array.Empty[string](), true),
+            ["M:Goo.Cell`1.InputChanged(`0)"] =
+                DocumentationShape([]string{"input"}, Array.Empty[string](), false),
             ["M:Goo.Cell`1.InvokeInputCallback(System.Action)"] = DocumentationShape(
                 []string{"callback"}, System.Array.Empty[string](), false),
             ["M:Goo.Cell`1.InvokeInputCallback``1(System.Action{``0},``0)"] = DocumentationShape(
@@ -2290,7 +2295,7 @@ class PublicDocumentationTests {
                 ) &&
                     !abstractTypes.Contains(parts[1]) || parts[0] == "method" && !generatedNames.Contains(parts[2])
             )
-            Assert.Equal(count, ExpectedMethodIds.Length)
+            Assert.Equal(count, ExpectedMethodIds.Length + ExpectedProtectedMethodIds.Length)
         }
 
         private func ExpectedDocumentationIds() IEnumerable[string] {

@@ -202,7 +202,7 @@ func RunShaderEffectSmoke() {
     WindowReadbackTestFixture.ForceRender(opened, 0.0, waitForPresentation: true)
     WindowReadbackTestFixture.ForceRender(opened, 0.0166666666666667)
     let metrics = WindowReadbackTestFixture.Metrics(opened)
-    Require(metrics.LogicalWidth == 192 && metrics.LogicalHeight == 128,
+    Require(metrics.NativeWidth == 192 && metrics.NativeHeight == 128,
       "Shader effect window metrics are incorrect")
     Require(ShaderEffectCell.Target.IsMounted,
       "Shader effect button did not mount")
@@ -344,14 +344,14 @@ func RunShaderEffectSmoke() {
     opened.Size = LayoutSize(176, 120)
     var resizeAttempt int32
     var resizedMetrics = WindowReadbackTestFixture.Metrics(opened)
-    while (resizedMetrics.LogicalWidth != 176 || resizedMetrics.LogicalHeight != 120)
+    while (resizedMetrics.NativeWidth != 176 || resizedMetrics.NativeHeight != 120)
       && resizeAttempt < 1000 {
         WindowReadbackTestFixture.PumpNativeEvents()
         WindowReadbackTestFixture.Pump(opened, 0.0)
         resizedMetrics = WindowReadbackTestFixture.Metrics(opened)
         resizeAttempt++
       }
-    Require(resizedMetrics.LogicalWidth == 176 && resizedMetrics.LogicalHeight == 120,
+    Require(resizedMetrics.NativeWidth == 176 && resizedMetrics.NativeHeight == 120,
       "Shader effect window did not resize")
     displayScaleX = resizedMetrics.DisplayScaleX
     Require(displayScaleX > 0.0 && resizedMetrics.DisplayScaleY > 0.0,

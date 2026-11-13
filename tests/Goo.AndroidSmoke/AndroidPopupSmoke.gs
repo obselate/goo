@@ -63,8 +63,8 @@ internal shared class AndroidPopupSmoke {
                 let metrics = current.Metrics
                 if stage == 0 {
                     Require(
-                        metrics.LogicalWidth == Logical(180) &&
-                            metrics.LogicalHeight == Logical(120) &&
+                        metrics.NativeWidth == Logical(180) &&
+                            metrics.NativeHeight == Logical(120) &&
                             metrics.FramebufferWidth > 0 &&
                             !shown.IsFocused,
                         "Tooltip scale or passive rendering failed."
@@ -76,7 +76,7 @@ internal shared class AndroidPopupSmoke {
                     )
                     return
                 }
-                if metrics.LogicalWidth != Logical(240) || metrics.LogicalHeight != Logical(135) {
+                if metrics.NativeWidth != Logical(240) || metrics.NativeHeight != Logical(135) {
                     return
                 }
                 stage = 2

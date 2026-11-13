@@ -438,7 +438,7 @@ Returns: Success, InvalidData, Unsupported for LUT or incompatible profiles, or 
 ## `OffscreenRenderOptions`
 
 
-Specifies LogicalWidth, LogicalHeight, PixelWidth, PixelHeight, Background and the MaxBytes allocation limit.
+Specifies Size in layout units, PixelWidth, PixelHeight, Background and the MaxBytes allocation limit.
 
 ## `OffscreenRenderResult`
 
