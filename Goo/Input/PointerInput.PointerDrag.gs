@@ -130,10 +130,11 @@ internal partial class PointerInput {
             HitRoot: route[0],
             HitTarget: state.Target,
         }
+        let previousContext = state.Owner?.BeginCallback()
         try {
             state.Callback?.Invoke(state.Last)
         } finally {
-            state.Owner?.RebuildAfterCallback()
+            state.Owner?.EndCallback(previousContext)
         }
     }
 
@@ -184,6 +185,7 @@ internal partial class PointerInput {
             WindowPosition: previous.WindowPosition,
             Modifiers: previous.Modifiers,
         }
+        let previousContext = state.Owner?.BeginCallback()
         try {
             state.Callback?.Invoke(
                 PointerDragEvent{
@@ -194,7 +196,7 @@ internal partial class PointerInput {
                 }
             )
         } finally {
-            state.Owner?.RebuildAfterCallback()
+            state.Owner?.EndCallback(previousContext)
         }
     }
 }

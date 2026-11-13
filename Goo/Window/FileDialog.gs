@@ -97,7 +97,7 @@ public partial class Window {
     state.Dialog = dialog
     dialog.Start()
     DrainFileDialog()
-    return dialog.Task
+    return dialog.Task.WaitAsync(PendingTaskToken())
   }
 
   /// Cancels delivery of a pending chooser result on the UI thread and requests native dismissal where available.

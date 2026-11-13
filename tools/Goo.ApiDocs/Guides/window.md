@@ -570,6 +570,47 @@ Cancellation callbacks must not throw or use torn-down UI state.
 
 Pump removes an action before it calls the action. If it throws, Pump throws the same exception and later queued actions remain for the next direct `Pump`. `Run` propagates the exception, then closes the window and discards queued work. Accessibility adapters can use `Post` before calling Window accessibility APIs.
 
+## Await UI work
+
+```gsharp
+async func Load() void {
+    let result = await service.LoadAsync(Lifetime)
+    Apply(result)
+}
+```
+
+In a Goo callback, an incomplete `await` resumes on the window's UI thread. A
+completed task continues inline. `ConfigureAwait(false)` opts out. Goo forwards
+continuations to an existing embedded host context. A `go` child has no UI context.
+
+After each continuation, Goo applies the owning Cell's callback rebuild rule.
+State-only Cells do not rebuild when nothing changed. Unmounted Cells do not rebuild.
+
+Use `window.InvokeAsync(action, token)` from any thread to await dispatch. It accepts
+synchronous or Task-returning callbacks and awaits all their work. Generic overloads
+return the function result. Exceptions propagate. Cancellation, closing the window,
+rejected posts and discarded accepted posts cancel the wait.
+
+Use `await window.NextPresentationAsync(token)` on the UI thread to request one
+frame and await its accepted presentation receipt. It works on an idle window.
+The receipt is a queue handoff, not display scanout.
+
+| Close phase | Behavior |
+| --- | --- |
+| Stop | Hide the window. Reject posts, rebuilds and timers. Stop input, layout and paint. |
+| Unmount | Run `Unmounting`, then cancel `Lifetime`, `Latest` and pending window tasks. |
+| Drain | Keep async handlers on the UI thread until they finish or `CloseDrainMs` expires. Other windows keep running. |
+| Late queue | After the bound, serialize continuations for this window on a background thread. Do not access UI state. |
+
+`CloseDrainMs` defaults to 2000 ms. Zero skips the wait. A task that never
+completes cannot run its handler's `finally`. Pending work does not survive process
+exit. Pass `Lifetime` to every awaited operation that accepts cancellation.
+
+An escaped async handler exception is rethrown from the pump. Cancellation is
+ignored. During the close drain, the first other exception is saved until drain
+completion. An unhandled late-queue exception stops the process.
+
+
 ## Schedule window timers
 
 Call `After(delayMs, action)` for one callback or `Every(intervalMs, action)` for repeated callbacks. Both return a `WindowTimer`. The window must be open, and scheduling and `Dispose` must run on its UI thread. A delay can be zero. An interval must be greater than zero. Both durations must be finite and nonnegative.
