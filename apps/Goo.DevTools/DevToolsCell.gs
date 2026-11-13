@@ -169,7 +169,6 @@ class DevToolsCell : Cell {
                 Content: "Connect",
                 OnClick: () -> {
                     session.ToggleConnection()
-                    Rebuild()
                 },
             }
             connect.Key = "connection-toggle"
@@ -218,7 +217,6 @@ class DevToolsCell : Cell {
                 Disabled: session.State != DiagnosticConnectionState.Connected,
                 OnClick: () -> {
                     session.ToggleInspect()
-                    Rebuild()
                 },
             }
             pick.Key = "inspect-toggle"
@@ -303,7 +301,6 @@ class DevToolsCell : Cell {
             Active: active,
             OnClick: () -> {
                 action()
-                Rebuild()
             },
         }
         button.Key = key
@@ -477,7 +474,6 @@ class DevToolsCell : Cell {
                 Content: showDefaults ? "Hide defaults": "Show defaults",
                 OnClick: () -> {
                     showDefaults = !showDefaults
-                    Rebuild()
                 },
             }
         )

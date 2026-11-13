@@ -85,7 +85,7 @@ Use `KeyBinding(key, modifiers, onPress)` or set `OnPress` in a literal. `OnRele
 
 `window.Modifiers` reports the event being dispatched, including pointer and keyboard clicks. Outside dispatch, including accessibility activation, it reports the last known state.
 
-`window.Focus.EditsText` reports a focused TextEntry, editable TextEditor, or generic `OnTextInput` client. `KeyEvent.TargetEditsText` captures that state at dispatch. Root navigation handlers must skip text-editing targets. Use `window.Focus.Editor` for the editor snapshot, `Selection` and `SetSelection` for selection, `Execute` for text commands, `Move` for traversal, and `Clear` to blur. Host injection and composition remain on `window.PlatformInput`.
+`window.Focus.EditsText` reports a focused editable TextEntry, editable TextEditor, or generic `OnTextInput` client. `KeyEvent.TargetEditsText` captures that state at dispatch. Root navigation handlers must skip text-editing targets. Use `window.Focus.Editor` for the editor snapshot, `Selection` and `SetSelection` for selection, `Execute` for text commands, `Move` for traversal, and `Clear` to blur. Host injection and composition remain on `window.PlatformInput`.
 
 
 Movement and deletion repeat. Clipboard, history, submit, Tab and Escape do not. Shift extends movement selection. Ctrl is the primary and word modifier on Windows and Linux. On macOS, Command is primary and Option moves or deletes words. Primary+A/C/X/V/Z selects all, copies, cuts, pastes and undoes. Primary+Shift+Z and Ctrl+Y redo.
@@ -201,6 +201,8 @@ A focusable `Blob` can opt into `OnTextInput`, `OnTextComposition`, `OnTextCompo
 Callbacks run only for the currently focused, enabled, visible client. Queued text is bound to the focus generation that received it, so it is discarded after a focus transfer, including a transfer back to the original element. `TextEntry` and `TextEditor` retain their existing default behavior before these observers run. Goo provides no candidate UI; applications own candidate presentation.
 
 ## Receive pointer lifecycle and pressure input
+
+`PointerDragEvent.Delta` is the change from the previous pointer sample. On `GesturePhase.Started`, it excludes movement before the threshold was crossed. `Translation` includes movement from the press position.
 
 `OnPointerEnter` and `OnPointerLeave` are sparse, non-bubbling lifecycle callbacks. They run only for mouse hover-route changes. Goo sends leaves from the old route leaf to root, then enters from the new route root to leaf. Shared route ancestors receive neither callback. Removal, disable, hidden state, focus loss, and transformed hit routes use the same order.
 

@@ -562,17 +562,17 @@ Returns: a uniform edge value
 
 ### `op_Implicit(float64)~Length`
 
-Converts layout pixels to a length.
+Converts layout units to a length.
 
-- `value`: Layout pixels.
+- `value`: Layout units.
 
 Returns: A pixel length.
 
 ### `op_Implicit(int32)~Length`
 
-Converts integer layout pixels to a length.
+Converts integer layout units to a length.
 
-- `value`: Layout pixels.
+- `value`: Layout units.
 
 Returns: A pixel length.
 

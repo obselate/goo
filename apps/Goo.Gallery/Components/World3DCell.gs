@@ -328,7 +328,6 @@ class World3DCell : Cell[World3D] {
                         simulation.TryFire()
                     }
                 }
-                Rebuild()
             },
             OnPointerMove: func (e PointerEvent) {
                 if dragging && !state.IsTerminal() {
@@ -338,21 +337,18 @@ class World3DCell : Cell[World3D] {
                 pointerX = Math.Clamp(e.Position.X / Math.Max(bounds.Width, 1.0), 0.0, 1.0)
                 pointerY = Math.Clamp(e.Position.Y / Math.Max(bounds.Height, 1.0), 0.0, 1.0)
                 pointerPressure = e.Pressure
-                Rebuild()
             },
             OnPointerUp: func (e PointerEvent) {
                 dragging = false
                 pointerDown = false
                 pointerPressure = 0.0
                 e.ReleaseCapture()
-                Rebuild()
             },
             OnPointerCancel: func (e PointerEvent) {
                 dragging = false
                 pointerDown = false
                 pointerPressure = 0.0
                 e.ReleaseCapture()
-                Rebuild()
             },
             OnKeyDown: func (e KeyEvent) {
                 if keyHandled(e.Key) {
@@ -367,7 +363,6 @@ class World3DCell : Cell[World3D] {
                     } else {
                         setKey(e.Key, true)
                     }
-                    Rebuild()
                 }
             },
             OnKeyUp: func (e KeyEvent) {

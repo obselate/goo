@@ -392,7 +392,6 @@ class HeroCell : Cell[Hero] {
                         pointerDown = true
                         draggingAnchor = hit
                         pullMaterial()
-                        Rebuild()
                     }
                 },
                 OnPointerMove: (e PointerEvent) -> {
@@ -400,7 +399,6 @@ class HeroCell : Cell[Hero] {
                     if pointerDown {
                         pullMaterial()
                     }
-                    Rebuild()
                 },
                 OnPointerUp: (e PointerEvent) -> {
                     if pointerDown {
@@ -410,7 +408,6 @@ class HeroCell : Cell[Hero] {
                         pressure = 0.0
                         draggingAnchor = -1
                         returnToFrame()
-                        Rebuild()
                     }
                 },
                 OnPointerCancel: (e PointerEvent) -> {
@@ -420,7 +417,6 @@ class HeroCell : Cell[Hero] {
                         pressure = 0.0
                         draggingAnchor = -1
                         returnToFrame()
-                        Rebuild()
                     }
                 },
                 Text{
