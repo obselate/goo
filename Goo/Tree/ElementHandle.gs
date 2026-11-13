@@ -426,7 +426,8 @@ public data struct ElementMetrics {
   private var scrollOffset Point
   private var scrollRange Point
   private var rawBorderBox ElementRect
-  private var pixelScale Point
+  private var isAtEndX bool
+  private var isAtEndY bool
 
   /// Reports whether the element is mounted.
   public prop IsMounted bool{ get -> isMounted init -> isMounted = value }
@@ -443,10 +444,9 @@ public data struct ElementMetrics {
   /// Gets the maximum legal logical scroll offset.
   public prop ScrollRange Point{ get -> scrollRange init -> scrollRange = value }
   /// Reports whether the horizontal offset is within one device pixel of the range end.
-  public prop IsAtEndX bool { get -> atScrollEnd(scrollOffset.X, scrollRange.X, float32(pixelScale.X)) }
+  public prop IsAtEndX bool { get -> scrollRange.X == 0.0 || isAtEndX; init -> isAtEndX = value }
   /// Reports whether the vertical offset is within one device pixel of the range end.
-  public prop IsAtEndY bool { get -> atScrollEnd(scrollOffset.Y, scrollRange.Y, float32(pixelScale.Y)) }
-  internal prop PixelScale Point { get -> pixelScale; init -> pixelScale = value }
+  public prop IsAtEndY bool { get -> scrollRange.Y == 0.0 || isAtEndY; init -> isAtEndY = value }
 }
 
 /// Specifies the coordinate space used by mounted text geometry queries.
@@ -904,15 +904,16 @@ internal class MetricSubscriptions {
       if node.Retired || !ElementHandles.Owns(node, handle) {
         return ElementMetrics{}
       }
+      let maximum = scrollRange(node)
       return ElementMetrics{
         IsMounted: true,
         BorderBox: ElementHandles.BorderBox(node),
         RawBorderBox: ElementHandles.RawBorderBox(node),
         ContentBox: ElementHandles.ContentBox(node),
         ScrollOffset: Point{ X: float64(node.ScrollX), Y: float64(node.ScrollY) },
-        ScrollRange: scrollRange(node),
-        PixelScale: Point{X: float64(handle.AttachedWindow()?.RenderScale.X ?? 1.0F),
-          Y: float64(handle.AttachedWindow()?.RenderScale.Y ?? 1.0F)},
+        ScrollRange: maximum,
+        IsAtEndX: atScrollEnd(float64(node.ScrollX), maximum.X, handle.AttachedWindow()?.RenderScale.X ?? 1.0F),
+        IsAtEndY: atScrollEnd(float64(node.ScrollY), maximum.Y, handle.AttachedWindow()?.RenderScale.Y ?? 1.0F),
       }
     }
 
