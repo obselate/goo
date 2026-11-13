@@ -34,7 +34,7 @@ internal data struct Profiler {
 
 internal func operator implicit(value Profiler) Blob -> Cell.Mount[Profiler, ProfilerCell](value.Key, value)
 
-internal partial class ProfilerCell : Cell[Profiler], IDisposable {
+internal partial class ProfilerCell : Cell[Profiler] {
     protected override func InputChanged(input Profiler) {
         session = input.Session
         owner = input.Owner
@@ -452,7 +452,6 @@ internal partial class ProfilerCell : Cell[Profiler], IDisposable {
             OnPointerUp: (e PointerEvent) -> {
                 selecting = false
                 e.ReleaseCapture()
-                Rebuild()
             },
             OnPointerCancel: (e PointerEvent) -> {
                 selecting = false
@@ -530,13 +529,11 @@ internal partial class ProfilerCell : Cell[Profiler], IDisposable {
                 hoverX = e.Position.X
                 if frame != hovered {
                     hovered = frame
-                    Rebuild()
                 }
             },
             OnPointerLeave: (e PointerEvent) -> {
                 if hovered >= 0 {
                     hovered = -1
-                    Rebuild()
                 }
             },
             OnPointerUp: (e PointerEvent) -> {
@@ -555,7 +552,6 @@ internal partial class ProfilerCell : Cell[Profiler], IDisposable {
                     }
                 }
                 tableKey = ""
-                Rebuild()
             },
             OnPointerCancel: (e PointerEvent) -> {
                 selecting = false
@@ -945,28 +941,24 @@ internal partial class ProfilerCell : Cell[Profiler], IDisposable {
         OnPointerMove: (e PointerEvent) -> {
             if resizing && e.PointerId == resizePointer {
                 detailsWidth = resizeStartWidth + resizeStartX - e.WindowPosition.X
-                Rebuild()
             }
         },
         OnPointerUp: (e PointerEvent) -> {
             if e.PointerId == resizePointer {
                 e.ReleaseCapture()
                 resizing = false
-                Rebuild()
             }
         },
         OnPointerCancel: (e PointerEvent) -> {
             if e.PointerId == resizePointer {
                 e.ReleaseCapture()
                 resizing = false
-                Rebuild()
             }
         },
         OnKeyDown: (e KeyEvent) -> {
             if e.Key == Key.Left || e.Key == Key.Right {
                 detailsWidth = DetailsWidth() + (e.Key == Key.Left ? 16.0: -16.0)
                 e.PreventDefault()
-                Rebuild()
             }
         },
     }

@@ -147,26 +147,22 @@ private func Save() {
     if !model.CanSave { return }
     let document = model.BeginSave()
     PublishMenu()
-    go SaveDocument(document, lifetime.Token)
+    go SaveDocument(document, Lifetime)
 }
 
 private func SaveDocument(document DocumentSnapshot, token CancellationToken) {
     try {
         await storage.SaveAsync(document, token)
-        window.Post(() -> {
-            if token.IsCancellationRequested { return }
+        Post(() -> {
             model.CompleteSave(document)
             PublishMenu()
-            Rebuild()
         })
     } catch (error OperationCanceledException) {
     } catch (error Exception) {
         let message = error.Message
-        window.Post(() -> {
-            if token.IsCancellationRequested { return }
+        Post(() -> {
             model.FailSave(message)
             PublishMenu()
-            Rebuild()
         })
     }
 }
@@ -174,7 +170,7 @@ private func SaveDocument(document DocumentSnapshot, token CancellationToken) {
 
 - Create `bar = NativeMenuBar(window)` on the open owner's UI thread. Subscribe once with `bar.Activated += id -> { if id == "save" { Save() } }`.
 - `model`, `storage` and `DocumentSnapshot` are app types. Model methods change domain state. The storage service performs I/O.
-- Link `lifetime` to `window.Closed`. Cancel it when the Cell is disposed. Dispose the bar on the UI thread. The token guard drops results after disposal.
+- `Lifetime` cancels at Cell unmount or window close. `Post` drops results after unmount and applies Goo's callback rebuild rule. Dispose the bar on the UI thread.
 - Call `PublishMenu()` after edits or any other change to `model.CanSave`. Goo has no `Command` type.
 - Publish a complete snapshot with unique IDs and shortcuts. A separator has an empty ID, no children and no shortcut.
 - Bar activation uses the Goo UI queue. Context selection completes its task. Context points use owner-content layout units.

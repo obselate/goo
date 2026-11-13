@@ -5,6 +5,7 @@ import Goo.Widgets
 import System
 import System.Collections.Generic
 import System.Globalization
+import System.Threading
 
 internal data struct ProfilerBar {
     var Record int32
@@ -26,7 +27,6 @@ internal partial class ProfilerCell {
     private var nestRevision int32 = -1
     private var nestScanned int32
     private var nestBusy bool
-    private var nestGeneration int32
     private var hoveredBar int32 = -1
     private var hoverY float64
     private let framesHandle ElementHandle = ElementHandle{}
@@ -430,12 +430,8 @@ internal partial class ProfilerCell {
     }
 
     private func Nest(trace ProfilerTrace) {
-        guard let window = owner else {
-            return
-        }
         if nestTrace != trace.Id {
             nestTrace = trace.Id
-            nestGeneration++
             nestBusy = false
             nestRevision = -1
             nestScanned = 0
@@ -470,37 +466,34 @@ internal partial class ProfilerCell {
         nestScanned = count
         nestBusy = true
         let snapshot = scopes.ToArray()
-        let generation = nestGeneration
-        let token = lifetime.Token
-        go {
-            try {
-                token.ThrowIfCancellationRequested()
-                let result = ProfilerNesting(snapshot, count)
-                window.Post(
-                    () -> {
-                        if generation != nestGeneration {
-                            return
-                        }
+        let token = Latest("nesting")
+        go CompleteNesting(snapshot, count, token)
+    }
+
+    private func CompleteNesting(snapshot[]ProfilerScope, count int32, token CancellationToken) {
+        try {
+            token.ThrowIfCancellationRequested()
+            let result = ProfilerNesting(snapshot, count)
+            Post(
+                () -> {
+                    if !token.IsCancellationRequested {
                         nesting = result
                         nestBusy = false
                         paths.Clear()
                         tableKey = ""
-                        Rebuild()
                     }
-                )
-            } catch (error OperationCanceledException) { } catch (error Exception) {
-                let message = error.Message
-                window.Post(
-                    () -> {
-                        if generation != nestGeneration {
-                            return
-                        }
+                }
+            )
+        } catch (error OperationCanceledException) { } catch (error Exception) {
+            let message = error.Message
+            Post(
+                () -> {
+                    if !token.IsCancellationRequested {
                         nestBusy = false
                         fileStatus = message
-                        Rebuild()
                     }
-                )
-            }
+                }
+            )
         }
     }
 
