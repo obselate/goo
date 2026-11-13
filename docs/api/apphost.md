@@ -43,6 +43,74 @@ Reports whether desktop startup arguments form an owned activation request.
 - `Accepted`
 - `Rejected`
 
+## `Application`
+
+
+Configures process identity, activation delivery and the desktop event loop.
+
+### `Activated`
+
+Occurs once per application activation on the process UI thread, not once per open window. Subscribe before initializing activation. Handlers own validation and window selection. The queue retains 1024 requests, with 4096 arguments or documents per request. Text is limited to 64 KiB per UTF-8 string and 1 MiB per request. Native requests outside these limits, or received before initialization or after close, are dropped.
+
+### `AcquireSingleInstance(string[],float64)`
+
+Initializes activation and elects a primary instance before the first window opens. Keep the returned primary lease until shutdown. Forwarded confirms queue ownership only.
+
+- `arguments`: The startup arguments, without the executable name.
+- `timeoutMs`: The positive connection and acknowledgement deadline in milliseconds.
+
+Returns: A primary lease or the explicit forwarding or failure result.
+
+### `Configure(System.Reflection.Assembly)`
+
+Configures identity from Product, InformationalVersion and GooApplicationId assembly metadata.
+
+- `assembly`: The application assembly.
+
+### `Configure(string,string,string)`
+
+Configures application identity before native initialization.
+
+- `name`: The human-readable product name.
+- `version`: The application version.
+- `identifier`: The stable reverse-domain application identifier.
+
+### `PostActivation(ApplicationActivation)`
+
+Copies and queues a request from any thread for the process-wide activation event. Accepted confirms queue ownership, not handler completion, document access, or focus. Requests allow 4096 arguments and documents each, 64 KiB per UTF-8 string and 1 MiB total text.
+
+- `value`: The owned request data to copy. Relative URIs and null values are invalid arguments.
+
+Returns: Accepted, NotInitialized, Closed, QueueFull at 1024 pending requests, or TooLarge.
+
+### `Run(Window)`
+
+Opens the window and runs the UI event loop until all Goo windows close.
+
+- `window`: The first window, which may already be open.
+
+### `VerifyState`
+
+Gets or sets tracked-state verification. Defaults to true when a debugger is attached or a DevTools session is registered.
+
+## `GraphicsUnavailableException`
+
+
+Reports that a window has no usable Vulkan device, surface or required graphics feature.
+
+### `new(string)`
+
+Creates a graphics startup failure with its native detail.
+
+- `message`: The graphics failure detail.
+
+### `new(string,System.Exception)`
+
+Creates a graphics startup failure that retains the underlying error.
+
+- `message`: The graphics failure detail.
+- `innerException`: The underlying renderer initialization error.
+
 ## `Placement`
 
 
@@ -56,21 +124,6 @@ Matches display hints and clamps normal geometry to current usable bounds and si
 - `saved`: App-owned saved geometry, state and display hints.
 
 Returns: Accepted with the applied mask, Closed, Unsupported, or Failed for invalid data or host failure.
-
-## `SingleInstance`
-
-
-Elects one desktop instance and forwards typed requests to its activation queue.
-
-### `AcquireAsync(string,ApplicationActivation,int32)`
-
-Acquires a primary lease or forwards to the current user's existing desktop instance. Initialize Window application activation on the UI thread before calling this method. macOS captures native launch requests before election and forwards each retained request. On Wayland, RequestActivation inside the receiving handler uses the forwarded activation token. Keep the primary lease until shutdown. Forwarded confirms queue ownership, not handler completion. A timeout never elects a second primary and does not prove that an unacknowledged request was unused. Android and other non-desktop targets return Unsupported.
-
-- `applicationId`: A stable application identity shared by both processes.
-- `activation`: The request to forward. Launch becomes Arguments and IsInitial becomes false.
-- `timeoutMilliseconds`: The positive connection and acknowledgement deadline in milliseconds.
-
-Returns: A primary lease or an explicit forwarding, timeout, unsupported, rejection, or failure result.
 
 ## `SingleInstanceResult`
 
