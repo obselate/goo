@@ -211,6 +211,7 @@ class PublicDocumentationTests {
     shared {
         private const PublicDeclared BindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly
         private let ExpectedMethodIds[]string = []string{
+            "M:Goo.Blob.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})",
             "M:Goo.RichText.RichTextClipboard.#ctor(Goo.Window,Goo.TextEditorController,Goo.TextPresentationLayer)",
             "M:Goo.RichText.RichTextClipboard.CopyAsync(System.Threading.CancellationToken)",
             "M:Goo.RichText.RichTextClipboard.CutAsync(System.Threading.CancellationToken)",
@@ -978,6 +979,10 @@ class PublicDocumentationTests {
         private let Shapes IReadOnlyDictionary[string, DocumentationShape] = Dictionary[string, DocumentationShape](
             StringComparer.Ordinal
         ){
+            ["M:Goo.Blob.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})"] =
+                DocumentationShape([]string{"items", "itemKey", "itemBuilder"}, []string{"T"}, true),
+            ["M:Goo.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})"] =
+                DocumentationShape([]string{"items", "itemKey", "itemBuilder"}, []string{"T"}, true),
             ["M:Goo.TrayIcon.Create(Goo.Window,Goo.TrayOptions)"] = DocumentationShape(
                 []string{"owner", "options"}, System.Array.Empty[string](), true),
             ["M:Goo.TrayIcon.Update(Goo.TrayOptions)"] = DocumentationShape(
@@ -2246,6 +2251,7 @@ class PublicDocumentationTests {
                 .Append("P:Goo.KeyBinding.OnRelease")
                 .Append("P:Goo.KeyBinding.Repeat")
                 .Append("M:Goo.Percent(System.Double)")
+                .Append("M:Goo.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})")
                 .Append("M:Goo.Em(System.Double)")
                 .Append("M:Goo.Rem(System.Double)")
                 .Append("M:Goo.Vw(System.Double)")
