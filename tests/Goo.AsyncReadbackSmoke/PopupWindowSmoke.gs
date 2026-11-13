@@ -6,10 +6,12 @@ import System.Threading
 
 internal class PopupSmokeCell : Cell {
   internal var Host Window?
+  internal var Percentage float64 = 100
+  internal let Handle ElementHandle = ElementHandle()
 
   override func Build() Blob {
     Host = ContextEnvironment.OwnedWindow()
-    return Container{ Width: Percent(100), Height: Percent(100), BackgroundColor: Color.Rgb(40, 160, 80) }
+    return Container{ Handle: Handle, Width: Percent(Percentage), Height: Percent(Percentage), BackgroundColor: Color.Rgb(40, 160, 80) }
   }
 }
 
@@ -38,7 +40,7 @@ internal class PopupWindowSmoke {
     internal func Run() {
       let ownerRoot = PopupSmokeCell{}
       let owner = Window{ Title: "Goo native popup smoke", Root: ownerRoot, Size: LayoutSize(float64(320) / 1.5, float64(200) / 1.5),  UiScale: 1.5F }.Open()
-      let root = PopupSmokeCell{}
+      let root = PopupSmokeCell{ Percentage: 50 }
       using let popup = PopupWindow(owner, root, PopupKind.Tooltip)
       var dismissed = 0
       var dismissReason = PopupDismissReason.Programmatic
@@ -54,7 +56,8 @@ internal class PopupWindowSmoke {
           Require(denied.Status == PopupStatus.RequiresUserAction && !noInput.IsOpen,
             "Wayland menu without native input did not return RequiresUserAction")
         }
-        let result = popup.Open(ElementRect{ X: 190.0, Y: 110.0, Width: 20.0, Height: 20.0 }, LayoutSize(100, 80))
+        let result = popup.Open(ElementRect{ X: 190.0, Y: 110.0, Width: 20.0, Height: 20.0 },
+          maximum: LayoutSize(200, 160))
         Require(result.Status == PopupStatus.Opened, "Tooltip open failed: " + result.Error)
         if SdlHost.IsWayland() {
           Require(!popup.HostedWindowForTest.SdlHostForTest()!!.PrepareFirstPresent(),
@@ -65,9 +68,15 @@ internal class PopupWindowSmoke {
         WindowReadbackTestFixture.ForceRender(root.Host!!, 0.0, 15.0)
         Require(popup.Metrics.LogicalWidth == 150 && popup.Metrics.LogicalHeight == 120
           && popup.Metrics.FramebufferWidth > 0, "Native popup did not apply the owner's UI scale")
-        let update = popup.UpdatePlacement(ElementRect{ X: 10.0, Y: 10.0, Width: 20.0, Height: 20.0 }, LayoutSize(120, 90))
+        root.Host!!.UpdateTree()
+        Require(root.Handle.BorderBox.Width == 100 && root.Handle.BorderBox.Height == 80,
+          "Measured 50 percent root shrank on its second layout")
+        let update = popup.UpdatePlacement(ElementRect{ X: 10.0, Y: 10.0, Width: 20.0, Height: 20.0 },
+          maximum: LayoutSize(240, 180))
         Require(update == WindowOperationResult.Accepted, "Native popup reposition failed")
         WindowReadbackTestFixture.ForceRender(root.Host!!, 0.0, 15.0)
+        Require(root.Handle.BorderBox.Width == 120 && root.Handle.BorderBox.Height == 90,
+          "Measured 50 percent root did not retain its updated placement size")
         let childRoot = PopupSmokeCell{}
         using let child = PopupWindow(popup, childRoot, PopupKind.Tooltip)
         let nested = child.Open(ElementRect{ X: 20.0, Y: 20.0, Width: 10.0, Height: 10.0 }, LayoutSize(60, 40),

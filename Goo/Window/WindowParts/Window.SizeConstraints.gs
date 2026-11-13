@@ -95,9 +95,9 @@ public partial class Window {
     percentageSize LayoutSize? = nil) LayoutSize {
     UpdateTree()
     guard let tree = node, let yoga = tree.Yoga else { return Size }
-    let measureWidth = widthAxis && tree.Width.Unit != LengthUnit.Percent
-    let measureHeight = heightAxis && tree.Height.Unit != LengthUnit.Percent
-    if !measureWidth && !measureHeight { return percentageSize ?? Size }
+    let measureWidth = widthAxis && (percentageSize != nil || tree.Width.Unit != LengthUnit.Percent)
+    let measureHeight = heightAxis && (percentageSize != nil || tree.Height.Unit != LengthUnit.Percent)
+    if !measureWidth && !measureHeight { return Size }
     let availableWidth = maximum.Width
     let availableHeight = maximum.Height
     let marginWidth = float64(YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Left)
@@ -111,22 +111,42 @@ public partial class Window {
     try {
       YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga, float32(maxContentWidth))
       YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga, float32(maxContentHeight))
+      if percentageSize != nil {
+        if tree.Width.Unit == LengthUnit.Percent { YGNodeStyleAPI.YGNodeStyleSetWidthPercent(yoga, tree.Width.Value) }
+        if tree.Height.Unit == LengthUnit.Percent { YGNodeStyleAPI.YGNodeStyleSetHeightPercent(yoga, tree.Height.Value) }
+      }
       YGNodeAPI.YGNodeCalculateLayout(yoga,
-        if measureWidth { Single.NaN } else { float32(percentageSize?.Width ?? float64(LayoutWidth)) },
-        if measureHeight { Single.NaN } else { float32(percentageSize?.Height ?? float64(LayoutHeight)) }, yogaDirection(tree.Direction))
+        if measureWidth && (percentageSize == nil || tree.Width.Unit != LengthUnit.Percent) { Single.NaN }
+          else { float32(percentageSize?.Width ?? float64(LayoutWidth)) },
+        if measureHeight && (percentageSize == nil || tree.Height.Unit != LengthUnit.Percent) { Single.NaN }
+          else { float32(percentageSize?.Height ?? float64(LayoutHeight)) }, yogaDirection(tree.Direction))
       let measuredWidth = float64(YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga)
         + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Left)
         + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Right))
       let measuredHeight = float64(YGNodeLayoutAPI.YGNodeLayoutGetHeight(yoga)
         + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Top)
         + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Bottom))
-      let contentWidth = if measureWidth { Math.Max(minWidth, Math.Min(measuredWidth, availableWidth)) } else { percentageSize?.Width ?? Size.Width }
-      let contentHeight = if measureHeight { Math.Max(minHeight, Math.Min(measuredHeight, availableHeight)) } else { percentageSize?.Height ?? Size.Height }
+      let contentWidth = if measureWidth { Math.Max(minWidth, Math.Min(measuredWidth, availableWidth)) } else { Size.Width }
+      let contentHeight = if measureHeight { Math.Max(minHeight, Math.Min(measuredHeight, availableHeight)) } else { Size.Height }
+      if percentageSize != nil {
+        layout.PopupMeasuredWidth = tree.Width.Unit == LengthUnit.Percent ? float32(contentWidth - marginWidth) : nil
+        layout.PopupMeasuredHeight = tree.Height.Unit == LengthUnit.Percent ? float32(contentHeight - marginHeight) : nil
+      }
       return LayoutSize(contentWidth, contentHeight)
     } finally {
       markYogaStyle(tree, StyleField.MaxWidth)
       markYogaStyle(tree, StyleField.MaxHeight)
       applyMinMax(yoga, tree)
+      layout.laidOut = false
+    }
+  }
+
+  internal func ClearPopupMeasurement() {
+    layout.PopupMeasuredWidth = nil
+    layout.PopupMeasuredHeight = nil
+    if let tree = node, let yoga = tree.Yoga {
+      if tree.Width.Unit == LengthUnit.Percent { YGNodeStyleAPI.YGNodeStyleSetWidthPercent(yoga, tree.Width.Value) }
+      if tree.Height.Unit == LengthUnit.Percent { YGNodeStyleAPI.YGNodeStyleSetHeightPercent(yoga, tree.Height.Value) }
       layout.laidOut = false
     }
   }

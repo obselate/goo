@@ -107,6 +107,24 @@ internal class PortalFixtures {
     if explicitSize != LayoutSize(250.5, 160.25) { return false }
     owner.PopupAvailableSize = () -> LayoutSize(80, 50)
     if popup.ResolveSizeForTest(nil, LayoutSize(100, 60)) != LayoutSize(80, 50) { return false }
+    for percentage in []float64{ 50, 100 } {
+      owner.PopupAvailableSize = () -> LayoutSize(200, 100)
+      using let relative = PopupWindow(owner, PopupPercentageCell{ Percentage: percentage })
+      let expected = LayoutSize(200 * percentage / 100, 100 * percentage / 100)
+      let first = relative.ResolveSizeForTest(nil, nil)
+      if first != expected { throw InvalidOperationException("percentage ${percentage} first ${first}, expected ${expected}") }
+      relative.LayoutForTest(expected)
+      if relative.RootSizeForTest != expected { throw InvalidOperationException("percentage ${percentage} layout ${relative.RootSizeForTest}, expected ${expected}") }
+      let updated = relative.ResolveSizeForTest(nil, nil)
+      if updated != expected { throw InvalidOperationException("percentage ${percentage} update ${updated}, expected ${expected}") }
+      relative.LayoutForTest(expected)
+      if relative.RootSizeForTest != expected { throw InvalidOperationException("percentage ${percentage} updated layout ${relative.RootSizeForTest}, expected ${expected}") }
+      relative.ResolveSizeForTest(expected, nil)
+      relative.LayoutForTest(expected)
+      if relative.RootSizeForTest != LayoutSize(expected.Width * percentage / 100, expected.Height * percentage / 100) {
+        throw InvalidOperationException("percentage ${percentage} explicit layout ${relative.RootSizeForTest}")
+      }
+    }
     for size in []LayoutSize{ LayoutSize(0, 1), LayoutSize(Double.NaN, 1), LayoutSize(1, Double.PositiveInfinity) } {
       var rejected = false
       try { PopupWindow.ValidatePlacement(ElementRect{}, size, nil, PortalPlacement.BottomStart) }
@@ -526,6 +544,7 @@ internal class PortalFixtures {
     window.UpdateTree()
     guard let root = window.Tree, let entry = cell.Editor.AttachedNode(),
       let portal = entry.Parent, let retained = entry.Fiber as PortalClippedEditorCell ? else { return false }
+    guard let focusScope = Portals.State(portal)?.Scope else { return false }
     if !cell.Editor.Focus() { return false }
     window.QueueCompositionForTest("pending", 1, 2)
     window.DrainTextInputForTest()
@@ -666,10 +685,20 @@ internal class PortalFixtures {
 
 public sealed partial class PopupWindow {
   internal func ResolveSizeForTest(size LayoutSize?, maximum LayoutSize?) LayoutSize -> resolveSize(size, maximum)
+  internal prop RootSizeForTest LayoutSize { get -> LayoutSize(float64(window.Tree?.Rect.W ?? 0), float64(window.Tree?.Rect.H ?? 0)) }
+  internal func LayoutForTest(size LayoutSize) {
+    window.Size = size
+    window.UpdateTree()
+  }
 }
 
 internal class PopupMeasurementCell : Cell {
   override func Build() Blob -> Container{ Width: 120.5, Height: 80.25 }
+}
+
+internal class PopupPercentageCell : Cell {
+  internal var Percentage float64
+  override func Build() Blob -> Container{ Width: Percent(Percentage), Height: Percent(Percentage) }
 }
 
 internal class DeclarativePortalCell : Cell {

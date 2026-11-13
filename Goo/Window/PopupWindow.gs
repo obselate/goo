@@ -199,7 +199,10 @@ public sealed partial class PopupWindow : IDisposable {
   }
 
   private func resolveSize(size LayoutSize?, maximum LayoutSize?) LayoutSize {
-    if let explicitSize = size { return explicitSize }
+    if let explicitSize = size {
+      window.ClearPopupMeasurement()
+      return explicitSize
+    }
     let area = owner.PopupMaximum
     let bounds = LayoutSize(Math.Min(maximum?.Width ?? area.Width, area.Width),
       Math.Min(maximum?.Height ?? area.Height, area.Height))
