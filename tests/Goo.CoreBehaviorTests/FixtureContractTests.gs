@@ -9,6 +9,34 @@ import System.Text.Json
 import Xunit
 
 class FixtureContractTests {
+    @Fact
+    func CustomLayoutRetainsMixedMaximumMeasurements() ->
+        Assert.True(LayoutFixtures().CustomLayoutRetainsMixedMaximumMeasurements())
+
+    @Fact
+    func RelativeLengthAnimationsUseMatchingUnits() ->
+        Assert.True(MotionFixtures().LengthValidationContract())
+
+    @Fact
+    func CustomLayoutResolvesLengthsInItsViewport() ->
+        Assert.True(LayoutFixtures().CustomLayoutResolvesLengthsInItsViewport())
+
+    @Fact
+    func IntrinsicLimitsUseOwnerConstraints() ->
+        Assert.True(LayoutFixtures().IntrinsicLimitsUseOwnerConstraints())
+
+    @Fact
+    func RelativeLengthsResolveFirstLayoutAndResize() ->
+        Assert.True(LayoutFixtures().RelativeLengthsResolveFirstLayoutAndResize())
+
+    @Fact
+    func IntrinsicLengthsMeasureRetainedContent() ->
+        Assert.True(LayoutFixtures().IntrinsicLengthsMeasureRetainedContent())
+
+    @Fact
+    func RelativeLengthsValidateAtAssignment() ->
+        Assert.True(LayoutFixtures().RelativeLengthsValidateAtAssignment())
+
     @Theory
     @MemberData("Cases")
     func ContractReturnsTrue(fixtureType Type, methodName string) {
@@ -130,6 +158,9 @@ class FixtureContractTests {
             yield Contract[AccessibilityFixtures]("SyntheticRootAndPrimitiveActionContract")
             yield Contract[AccessibilityFixtures]("ValidationAndRetryContract")
             yield Contract[CellFixtures]("ControlledEditorValueDuringBuildDoesNotRebuildOwner")
+            yield Contract[StateFixtures]("BuilderScopeDependencyTransactionContract")
+            yield Contract[StateFixtures]("BuilderScopeIncrementalAndNestedContract")
+            yield Contract[StateFixtures]("VerificationSettingContract")
             yield Contract[CellFixtures]("DeferredScopeAndMountFactoryCallbacksRebuildTheirAuthor")
             yield Contract[CellFixtures]("DirectChildQueuesCanonicalParentOnce")
             yield Contract[CellFixtures]("DirectCompositionAddsNoRenderNode")
@@ -352,6 +383,9 @@ class FixtureContractTests {
             yield Contract[MotionFixtures]("MotionVelocityAdditionPreservesShapeContract")
             yield Contract[MotionFixtures]("MotionVelocityRoutingContract")
             yield Contract[MotionFixtures]("PauseResumeSeekContract")
+            yield Contract[MotionFixtures]("PlayRestartsAndRoutesSpecificationsContract")
+            yield Contract[MotionFixtures]("DelayHoldsAndOffsetsSimulationContract")
+            yield Contract[MotionFixtures]("DelayedAnimationCompletesAndSkipsDisabledMotionContract")
             yield Contract[MotionFixtures]("PausedSimulationAndForcedCompletionContract")
             yield Contract[MotionFixtures]("PointRetargetCarriesIndependentVelocityContract")
             yield Contract[MotionFixtures]("PointSpecRoutingContract")
