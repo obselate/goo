@@ -370,10 +370,16 @@ internal partial class Reconciler {
   internal func applyStyleEntries(n Node, b Blob, entries StyleEntries?, focusable bool, initial bool) {
     n.Context = Context
     n.CallbackOwner = b.CallbackOwner
-    let hover = b.Hover?.Entries()
-    let active = b.Active?.Entries()
-    let focus = b.Focus?.Entries()
-    let disabled = b.DisabledStyle?.Entries()
+    var hover = b.Hover?.Entries()
+    var active = b.Active?.Entries()
+    var focus = b.Focus?.Entries()
+    var disabled = b.DisabledStyle?.Entries()
+    if b is Shape {
+      hover = b.FilterPaintEntries(hover)
+      active = b.FilterPaintEntries(active)
+      focus = b.FilterPaintEntries(focus)
+      disabled = b.FilterPaintEntries(disabled)
+    }
     let nextDisabled = b.Disabled
     let nextFocusable = focusable && !nextDisabled
     let baseChanged = !sameStyleEntries(n.BaseStyle, entries)
@@ -1023,7 +1029,15 @@ internal partial class Reconciler {
     if s.StrokeStart > s.StrokeEnd {
       throw ArgumentOutOfRangeException("StrokeStart")
     }
-    applyStyle(n, s, s.Focusable, initial)
+    if s.Stroke?.Paint.Gradient != nil {
+      throw NotSupportedException("Gradient Shape strokes are not supported")
+    }
+    applyStyleEntries(n, s, s.PaintEntries(), s.Focusable, initial)
+    let cap = s.Stroke?.Cap ?? StrokeCap.Butt
+    let join = s.Stroke?.Join ?? StrokeJoin.Miter
+    let effect = s.Stroke?.VectorEffect ?? VectorEffect.None
+    let miterLimit = s.Stroke?.MiterLimit ?? 4.0
+    let dashes = s.Stroke?.Dashes
     var contentChanged = false
     var layoutChanged = false
     var paintChanged = false
@@ -1050,23 +1064,23 @@ internal partial class Reconciler {
       n.ShapeUseCurrentColor = s.UseCurrentColor
       paintChanged = true
     }
-    if n.ShapeStrokeCap != s.StrokeCap {
-      n.ShapeStrokeCap = s.StrokeCap
+    if n.ShapeStrokeCap != cap {
+      n.ShapeStrokeCap = cap
       paintChanged = true
       hitGeometryChanged = true
     }
-    if n.ShapeStrokeJoin != s.StrokeJoin {
-      n.ShapeStrokeJoin = s.StrokeJoin
+    if n.ShapeStrokeJoin != join {
+      n.ShapeStrokeJoin = join
       paintChanged = true
       hitGeometryChanged = true
     }
-    if n.ShapeVectorEffect != s.VectorEffect {
-      n.ShapeVectorEffect = s.VectorEffect
+    if n.ShapeVectorEffect != effect {
+      n.ShapeVectorEffect = effect
       paintChanged = true
       hitGeometryChanged = true
     }
-    if n.MiterLimit != s.MiterLimit {
-      n.MiterLimit = s.MiterLimit
+    if n.MiterLimit != miterLimit {
+      n.MiterLimit = miterLimit
       paintChanged = true
       hitGeometryChanged = true
     }
@@ -1086,8 +1100,8 @@ internal partial class Reconciler {
       paintChanged = true
       hitGeometryChanged = true
     }
-    if !sameDashPattern(n.Dashes, s.Dashes) {
-      n.Dashes = s.Dashes
+    if !sameDashPattern(n.Dashes, dashes) {
+      n.Dashes = dashes
       paintChanged = true
       hitGeometryChanged = true
     }

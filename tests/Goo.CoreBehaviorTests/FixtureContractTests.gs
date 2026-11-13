@@ -10,6 +10,15 @@ import Xunit
 
 class FixtureContractTests {
     @Fact
+    func KeyedListsFromData() {
+        let fixture = TreeFixtures()
+        Assert.True(fixture.EachAssignsDataKeysContract())
+        Assert.True(fixture.EachPreservesExplicitKeysContract())
+        Assert.True(fixture.EachReorderRetainsIdentityContract())
+        Assert.True(fixture.EachDuplicateKeysThrowContract())
+    }
+
+    @Fact
     func CustomLayoutRetainsMixedMaximumMeasurements() ->
         Assert.True(LayoutFixtures().CustomLayoutRetainsMixedMaximumMeasurements())
 
@@ -120,6 +129,10 @@ class FixtureContractTests {
             yield Contract[ApplicationActivationFixtures]("ProcessQueueOwnsStartupAndForwardedData")
             yield Contract[TreeFixtures]("NodeMountLifetimeContract")
             yield Contract[TreeFixtures]("EmptyChildrenPreserveStyleRetryRootContract")
+            yield Contract[TreeFixtures]("EachAssignsDataKeysContract")
+            yield Contract[TreeFixtures]("EachPreservesExplicitKeysContract")
+            yield Contract[TreeFixtures]("EachReorderRetainsIdentityContract")
+            yield Contract[TreeFixtures]("EachDuplicateKeysThrowContract")
             yield Contract[RowRecyclingFixtures]("ReusesStorageAndResetsKeyScopedStateContract")
             yield Contract[RowRecyclingFixtures]("DisposesRunningAnimationBeforeStorageRebindContract")
             yield Contract[RowRecyclingFixtures]("ExcludesFocusedAndEditingRowsContract")
@@ -133,6 +146,7 @@ class FixtureContractTests {
             yield Contract[WindowStartupFixtures]("InitialBoundsContract")
             yield Contract[WindowStartupFixtures]("PresentModesContract")
             yield Contract[PathBuilderFixtures]("ResetPreservesPublishedPathAndClearsContour")
+            yield Contract[PathBuilderFixtures]("PrimitivesAppendClosedContoursInViewBoxCoordinates")
             yield Contract[PortalFixtures]("UiScaleLayoutInputAndAnchoredPortalContract")
             yield Contract[PortalFixtures]("AnchoredSubrectangleAndCollisionBoundsContract")
             yield Contract[PortalFixtures]("AnchoredPlacementSizesToSelectedSideContract")
@@ -440,6 +454,9 @@ class FixtureContractTests {
             yield Contract[ScrollbarFixtures]("PartDisposalContinuesAfterCallbackFailure")
             yield Contract[ScrollbarFixtures]("PublicMetricsAndJumpContract")
             yield Contract[ShapeGeometryFixtures]("LargeStrokeConstructionHasBoundedAllocation")
+            yield Contract[ShapeGeometryFixtures]("ShapePaintUsesOnlyFillAndStroke")
+            yield Contract[ShapeGeometryFixtures]("ShapeRejectsLegacyPaintAndGradientStroke")
+            yield Contract[ShapeGeometryFixtures]("VectorAssetRenderFitsDocumentViewBox")
             yield Contract[ShapeGeometryFixtures]("ArcSubdivisionIsTranslationInvariant")
             yield Contract[ShapeGeometryFixtures]("LoneMoveToContoursPreserveOtherStrokes")
             yield Contract[ShapeGeometryFixtures]("ReturningQuadraticStrokePreservesExcursionAndTrim")

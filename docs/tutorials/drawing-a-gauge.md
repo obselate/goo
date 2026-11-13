@@ -45,9 +45,7 @@ class Example : Cell {
         Width: Percent(100),
         Height: Percent(100),
         Position: PositionType.Absolute,
-        BorderWidth: theme.Spacing * 2,
-        BorderColor: color,
-        StrokeCap: StrokeCap.Round,
+        Stroke: VectorStroke(theme.Spacing * 2, VectorPaint(color), StrokeCap.Round, StrokeJoin.Miter, 4.0, nil),
         StrokeEnd: end,
     }
 }

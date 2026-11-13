@@ -121,9 +121,8 @@ class PublicDocumentationTests {
     @Fact
     func ApiReferenceDocumentsUniformShapeStrokeContract() {
         let shapes = ReadApiPage("shapes.md")
-        let style = ReadApiPage("style.md")
         Assert.Contains("Displays a vector path with fill and one uniform stroke.", shapes, StringComparison.Ordinal)
-        Assert.Contains("A uniform value also sets the Shape stroke width.", style, StringComparison.Ordinal)
+        Assert.Contains("Shape paint moved to Fill and Stroke", shapes, StringComparison.Ordinal)
     }
 
     @Fact
@@ -211,6 +210,7 @@ class PublicDocumentationTests {
     shared {
         private const PublicDeclared BindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly
         private let ExpectedMethodIds[]string = []string{
+            "M:Goo.Blob.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})",
             "M:Goo.Platform.OpenAsync(System.String,System.Threading.CancellationToken)",
             "M:Goo.NativeDialogs.ShowError(System.String,System.String)",
             "M:Goo.RichText.RichTextClipboard.#ctor(Goo.Window,Goo.TextEditorController,Goo.TextPresentationLayer)",
@@ -404,8 +404,7 @@ class PublicDocumentationTests {
             "M:Goo.VectorAsset.#ctor(System.Double,System.Double,System.Double,System.Double,Goo.VectorNode[])",
             "M:Goo.VectorAsset.NodeAt(System.Int32)",
             "M:Goo.VectorAsset.PathForNode(System.Int32)",
-            "M:Goo.VectorAsset.Render",
-            "M:Goo.VectorAsset.Render(System.String)",
+            "M:Goo.VectorAsset.Render(Goo.ShapeFit,System.String)",
             "M:Goo.VectorNode.#ctor(Goo.VectorNode[])",
             "M:Goo.VectorNode.#ctor(Goo.VectorPath)",
             "M:Goo.VectorNode.#ctor(Goo.VectorPath,Goo.VectorNodeStyle)",
@@ -542,6 +541,10 @@ class PublicDocumentationTests {
             "M:Goo.PathBuilder.Build",
             "M:Goo.PathBuilder.Close",
             "M:Goo.PathBuilder.CubicTo(System.Double,System.Double,System.Double,System.Double,System.Double,System.Double)",
+            "M:Goo.PathBuilder.Ellipse(System.Double,System.Double,System.Double,System.Double)",
+            "M:Goo.PathBuilder.Rectangle(System.Double,System.Double,System.Double,System.Double)",
+            "M:Goo.PathBuilder.RoundedRectangle(System.Double,System.Double,System.Double,System.Double,System.Double)",
+            "M:Goo.VectorPath.Parse(System.String,Goo.ElementRect)",
             "M:Goo.PathBuilder.LineTo(System.Double,System.Double)",
             "M:Goo.PathBuilder.MoveTo(System.Double,System.Double)",
             "M:Goo.PathBuilder.Polyline(Goo.Point[],System.Boolean)",
@@ -982,6 +985,10 @@ class PublicDocumentationTests {
         private let Shapes IReadOnlyDictionary[string, DocumentationShape] = Dictionary[string, DocumentationShape](
             StringComparer.Ordinal
         ){
+            ["M:Goo.Blob.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})"] =
+                DocumentationShape([]string{"items", "itemKey", "itemBuilder"}, []string{"T"}, true),
+            ["M:Goo.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})"] =
+                DocumentationShape([]string{"items", "itemKey", "itemBuilder"}, []string{"T"}, true),
             ["M:Goo.Platform.OpenAsync(System.String,System.Threading.CancellationToken)"] =
                 DocumentationShape([]string{"target", "cancellationToken"}, Array.Empty[string](), true),
             ["M:Goo.NativeDialogs.ShowError(System.String,System.String)"] =
@@ -1346,6 +1353,21 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
                 true
+            ),
+            ["M:Goo.PathBuilder.Ellipse(System.Double,System.Double,System.Double,System.Double)"] = DocumentationShape(
+                []string{"x", "y", "width", "height"}, System.Array.Empty[string](), true
+            ),
+            ["M:Goo.PathBuilder.Rectangle(System.Double,System.Double,System.Double,System.Double)"] = DocumentationShape(
+                []string{"x", "y", "width", "height"}, System.Array.Empty[string](), true
+            ),
+            ["M:Goo.PathBuilder.RoundedRectangle(System.Double,System.Double,System.Double,System.Double,System.Double)"] = DocumentationShape(
+                []string{"x", "y", "width", "height", "radius"}, System.Array.Empty[string](), true
+            ),
+            ["M:Goo.VectorPath.Parse(System.String,Goo.ElementRect)"] = DocumentationShape(
+                []string{"data", "viewBox"}, System.Array.Empty[string](), true
+            ),
+            ["M:Goo.VectorAsset.Render(Goo.ShapeFit,System.String)"] = DocumentationShape(
+                []string{"fit", "key"}, System.Array.Empty[string](), true
             ),
             ["M:Goo.ShaderEffectData.Publish``1(System.ReadOnlySpan{``0})"] = DocumentationShape(
                 []string{"values"},
@@ -2247,6 +2269,7 @@ class PublicDocumentationTests {
                 .Append("P:Goo.KeyBinding.OnRelease")
                 .Append("P:Goo.KeyBinding.Repeat")
                 .Append("M:Goo.Percent(System.Double)")
+                .Append("M:Goo.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})")
                 .Append("M:Goo.Em(System.Double)")
                 .Append("M:Goo.Rem(System.Double)")
                 .Append("M:Goo.Vw(System.Double)")
