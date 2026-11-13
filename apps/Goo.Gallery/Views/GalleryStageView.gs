@@ -27,11 +27,23 @@ internal class GalleryStageView {
                 case 1: Container{Key: "showcase-surfaces-placeholder", Display: Display.None}
                 case 2: Cell.Mount[MotionChapterInput, MotionChapter](
                     "showcase-motion",
-                    MotionChapterInput{Assets: assets, Programs: programs, Compact: compact, Showcase: showcase.Local, Active: true}
+                    MotionChapterInput{
+                        Assets: assets,
+                        Programs: programs,
+                        Compact: compact,
+                        Showcase: showcase.Local,
+                        Active: true
+                    }
                 )
                 case 3: Cell.Mount[ShaderLabInput, ShaderLabCell](
                     "showcase-shaders",
-                    ShaderLabInput{Assets: assets, Programs: programs, Compact: false, Showcase: showcase.Local, Active: true}
+                    ShaderLabInput{
+                        Assets: assets,
+                        Programs: programs,
+                        Compact: false,
+                        Showcase: showcase.Local,
+                        Active: true
+                    }
                 )
                 default: Container{Key: "showcase-empty", Display: Display.None}
             }

@@ -121,6 +121,7 @@ ctor|Goo.SpellCheck.SpellCheckSession|public|(owner:Goo.Window,controller:Goo.Te
 ctor|Goo.SpellCheck.SpellingResult|public|(Status:Goo.SpellCheck.SpellingStatus,Version:System.Int64,Language:System.String,Errors:System.Collections.Generic.IReadOnlyList`1<Goo.SpellCheck.Misspelling>,Error:System.String="")
 ctor|Goo.SpellCheck.SpellingSuggestions|public|(Status:Goo.SpellCheck.SpellingStatus,Version:System.Int64,Language:System.String,Range:Goo.TextRange,Word:System.String,Values:System.Collections.Generic.IReadOnlyList`1<System.String>,Error:System.String="")
 ctor|Goo.SpellCheck.SystemSpellingService|public|()
+ctor|Goo.StateDependency|protected|()
 ctor|Goo.State`1|public|(initial:!0)
 ctor|Goo.Style|public|()
 ctor|Goo.Svg.SvgParseException|public|(message:System.String,innerException:System.Exception?=null)

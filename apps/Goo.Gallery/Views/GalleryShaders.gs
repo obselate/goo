@@ -1020,9 +1020,7 @@ class ShaderLabCell : Cell[ShaderLabInput] {
         Width: Percent(100),
         Cell.Mount[GalleryRangeInput, GalleryRange](
             key,
-            GalleryRangeInput{
-                Label: label, MinValue: min, MaxValue: max, Value: value, Step: 0.01, OnChange: change,
-            }
+            GalleryRangeInput{Label: label, MinValue: min, MaxValue: max, Value: value, Step: 0.01, OnChange: change,}
         ),
     }
 
