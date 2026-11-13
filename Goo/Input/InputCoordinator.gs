@@ -80,6 +80,20 @@ internal partial class InputCoordinator {
   }
 
   internal func AfterTreeUpdated(root Node?, resolver Resolver, rebuilt bool) {
+    if let tree = root, let owner = resolver.Owner, let overlay = Portals.Overlay(tree) {
+      for portal in overlay.Children {
+        guard let state = Portals.State(portal) else { continue }
+        if state.Scope?.IsActive != true { state.Scope = nil }
+        if let options = state.Options {
+          if state.Scope == nil && Portals.Presented(portal, true) && portal.Focusable {
+            state.Scope = BeginFocusScope(owner, tree, portal, options)
+          }
+        } else {
+          state.Scope?.Dispose()
+          state.Scope = nil
+        }
+      }
+    }
     refreshScopes(root, resolver)
     if !rebuilt {
       return

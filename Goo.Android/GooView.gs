@@ -84,6 +84,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             kind PopupKind,
             dismissed(PopupDismissReason) -> void
         ) -> AndroidPopupSurface(this, popup, kind, dismissed)
+        window.PopupAvailableSize = () -> AndroidPopupSurface.AvailableSize(this)
         window.NativeMessageBox = AndroidMessageBox.Show
         window.NativeContextMenu = (owner, point, snapshot) -> AndroidMenuBridge.Show(owner, point, snapshot)
         RefreshPreferences()
@@ -799,6 +800,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             }
             NativeContextMenu?.OwnerClosed()
             this.Window.EmbeddedPopupFactory = nil
+            this.Window.PopupAvailableSize = nil
             this.Window.NativeMessageBox = nil
             this.Window.NativeContextMenu = nil
             Window.DismissChildPopups(PopupDismissReason.OwnerClosed)

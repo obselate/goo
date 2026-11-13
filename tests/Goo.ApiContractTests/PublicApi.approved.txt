@@ -1111,6 +1111,7 @@ function|Goo|Each|public|generic:T[attrs:0,constraints:]|(items:System.Collectio
 function|Goo|Em|public|generic:|(value:System.Double)->Goo.Length
 function|Goo|Percent|public|generic:|(value:System.Double)->Goo.Length
 function|Goo|Rem|public|generic:|(value:System.Double)->Goo.Length
+function|Goo|Sized|public|generic:|(build:System.Func`2<Goo.LayoutSize,Goo.Blob>)->Goo.Blob
 function|Goo|Vh|public|generic:|(value:System.Double)->Goo.Length
 function|Goo|Vw|public|generic:|(value:System.Double)->Goo.Length
 method|Goo.AccessibilityActionRequest|Scroll|static|public|generic:|(x:System.Double,y:System.Double)->Goo.AccessibilityActionRequest
@@ -1154,6 +1155,7 @@ method|Goo.Assets|ReadAllBytes|static|public|generic:|(assembly:System.Reflectio
 method|Goo.AsyncImageSource|Acquire|instance|public|generic:|()->Goo.ImageSourceLease
 method|Goo.AsyncImageSource|Dispose|instance|public|generic:|()->System.Void
 method|Goo.Blob|Each|static|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob[]
+method|Goo.Blob|Sized|static|public|generic:|(build:System.Func`2<Goo.LayoutSize,Goo.Blob>)->Goo.Blob
 method|Goo.BoxShadow|Deconstruct|instance|public|generic:|(out offsetX:Goo.Length&,out offsetY:Goo.Length&,out blur:Goo.Length&,out spread:Goo.Length&,out color:Goo.Color&,out inset:System.Boolean&)->System.Void
 method|Goo.BoxShadow|Equals|instance|public|generic:|(other:Goo.BoxShadow)->System.Boolean
 method|Goo.BoxShadow|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
@@ -1581,8 +1583,8 @@ method|Goo.Point|op_Equality|static|public|generic:|(left:Goo.Point,right:Goo.Po
 method|Goo.Point|op_Inequality|static|public|generic:|(left:Goo.Point,right:Goo.Point)->System.Boolean
 method|Goo.PopupWindow|Close|instance|public|generic:|()->System.Void
 method|Goo.PopupWindow|Dispose|instance|public|generic:|()->System.Void
-method|Goo.PopupWindow|Open|instance|public|generic:|(anchor:Goo.ElementRect,width:System.Int32,height:System.Int32,placement:Goo.PortalPlacement=BottomStart)->Goo.PopupResult
-method|Goo.PopupWindow|UpdatePlacement|instance|public|generic:|(anchor:Goo.ElementRect,width:System.Int32,height:System.Int32,placement:Goo.PortalPlacement=BottomStart)->Goo.WindowOperationResult
+method|Goo.PopupWindow|Open|instance|public|generic:|(anchor:Goo.ElementRect,size:System.Nullable`1<Goo.LayoutSize>=null,maximum:System.Nullable`1<Goo.LayoutSize>=null,placement:Goo.PortalPlacement=BottomStart)->Goo.PopupResult
+method|Goo.PopupWindow|UpdatePlacement|instance|public|generic:|(anchor:Goo.ElementRect,size:System.Nullable`1<Goo.LayoutSize>=null,maximum:System.Nullable`1<Goo.LayoutSize>=null,placement:Goo.PortalPlacement=BottomStart)->Goo.WindowOperationResult
 method|Goo.Portal|Add|instance|public|generic:|(child:Goo.Blob)->System.Void
 method|Goo.Printing.IPrintDocument|CreatePage|abstract|public|generic:|(index:System.Int32,settings:Goo.Printing.PrintPageSettings)->Goo.Cell
 method|Goo.Printing.IPrintDocument|Paginate|abstract|public|generic:|(settings:Goo.Printing.PrintPageSettings)->Goo.Printing.PrintLayoutResult
@@ -2556,8 +2558,11 @@ property|Goo.PopupWindow|Metrics|Goo.WindowMetrics|instance|get:public|index:()
 property|Goo.Portal|AnchorRect|System.Nullable`1<Goo.ElementRect>|instance|get:public,init:public|index:()
 property|Goo.Portal|Anchor|Goo.ElementHandle?|instance|get:public,init:public|index:()
 property|Goo.Portal|CollisionBounds|System.Nullable`1<Goo.ElementRect>|instance|get:public,init:public|index:()
+property|Goo.Portal|FocusScope|Goo.FocusScopeOptions?|instance|get:public,init:public|index:()
 property|Goo.Portal|HideWhenAnchorClipped|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.Portal|OnDismiss|System.Action`1<Goo.PopupDismissReason>?|instance|get:public,init:public|index:()
 property|Goo.Portal|Placement|Goo.PortalPlacement|instance|get:public,init:public|index:()
+property|Goo.Portal|Scrim|System.Nullable`1<Goo.Color>|instance|get:public,init:public|index:()
 property|Goo.Printing.PrintLayoutResult|Error|System.String|instance|get:public,init:public|index:()
 property|Goo.Printing.PrintLayoutResult|PageCount|System.Int32|instance|get:public,init:public|index:()
 property|Goo.Printing.PrintLayoutResult|Status|Goo.Printing.PrintLayoutStatus|instance|get:public,init:public|index:()

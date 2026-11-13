@@ -1,5 +1,6 @@
 package Goo
 
+import System
 import System.Collections.Generic
 import System.Runtime.CompilerServices
 
@@ -62,6 +63,15 @@ public class Portal : Blob {
   /// Hides presentation when AnchorRect is fully clipped by the anchor's ancestors. Content stays mounted. Defaults to false.
   public prop HideWhenAnchorClipped bool { get; init; }
 
+  /// Gets the focus scope options. OnDismiss alone opens a nonmodal scope with default options.
+  public prop FocusScope FocusScopeOptions? { get; init; }
+
+  /// Gets the full-window scrim color. Modal scopes use a transparent scrim when nil.
+  public prop Scrim Color? { get; init; }
+
+  /// Handles Escape outside composition and presses outside the content. Remove the Portal to close it.
+  public prop OnDismiss ((PopupDismissReason) -> void)? { get; init; }
+
   /// Initializes an empty child collection.
   public init() { }
 
@@ -83,12 +93,62 @@ internal class Portals {
   shared {
     private let roots ConditionalWeakTable[Node, Node] = ConditionalWeakTable[Node, Node]()
     private let overlays ConditionalWeakTable[Node, Node] = ConditionalWeakTable[Node, Node]()
+    private let states ConditionalWeakTable[Node, PortalState] = ConditionalWeakTable[Node, PortalState]()
+    internal let DefaultScopeOptions FocusScopeOptions = FocusScopeOptions()
+
+    internal func State(n Node) PortalState? -> states.TryGetValue(n, out var state) ? state : nil
+
+    internal func Configure(n Node, options FocusScopeOptions?, dismiss ((PopupDismissReason) -> void)?,
+      scrim Node?) {
+      if options == nil && dismiss == nil && scrim == nil && State(n) == nil { return }
+      let state = states.GetValue(n, _ -> PortalState())
+      if let value = options {
+        state.Scope?.Update(value)
+      } else {
+        state.Scope?.Dispose()
+        state.Scope = nil
+      }
+      state.Options = options
+      state.Dismiss = dismiss
+      if state.Scrim != scrim {
+        if let old = state.Scrim { NodeLifecycle.DisposeTree(old) }
+        state.Scrim = scrim
+      }
+    }
+
+    internal func Dismiss(root Node?, reason PopupDismissReason, x float32 = 0.0F, y float32 = 0.0F) bool {
+      guard let tree = root, let overlay = Overlay(tree) else { return false }
+      let target = reason == PopupDismissReason.OutsideInteraction ? hitTopmost(tree, x, y) : nil
+      let children = Stacking.Children(overlay)
+      for var i = children.Count - 1; i >= 0; i-- {
+        let portal = children[i]
+        guard let state = State(portal) else { continue }
+        if !Presented(portal, true) || !FocusScopes.Allows(tree, portal) { continue }
+        if reason == PopupDismissReason.OutsideInteraction && target != state.Scrim
+          && FocusScopes.Contains(portal, target) { return false }
+        guard let callback = state.Dismiss else {
+          if state.Options?.Modal == true { return false }
+          continue
+        }
+        let owner = CellOwnership.ForCallback(portal)
+        let previous = owner?.BeginCallback()
+        try { callback(reason) }
+        finally { owner?.EndCallback(previous) }
+        return true
+      }
+      return false
+    }
     private let sources ConditionalWeakTable[Node, PortalSource] = ConditionalWeakTable[Node, PortalSource]()
 
     internal func Remove(n Node) {
       roots.Remove(n)
       overlays.Remove(n)
       sources.Remove(n)
+      if let state = State(n) {
+        state.Scope?.Dispose()
+        if let scrim = state.Scrim { NodeLifecycle.DisposeTree(scrim) }
+        states.Remove(n)
+      }
     }
 
     internal func Sync(root Node?, overlayRoot Node) {
@@ -111,6 +171,11 @@ internal class Portals {
 
     private func Collect(node Node, overlayRoot Node) {
       if node.IsPortal {
+        if let scrim = State(node)?.Scrim {
+          scrim.Parent = node
+          scrim.ZIndex = node.ZIndex
+          overlayRoot.Children.Add(scrim)
+        }
         overlayRoot.Children.Add(node)
         roots.Add(node, overlayRoot)
       }
@@ -127,10 +192,10 @@ internal class Portals {
 
     internal func Overlay(root Node) Node? -> overlays.TryGetValue(root, out var overlay) ? overlay : nil
 
-    internal func Presented(node Node) bool {
+    internal func Presented(node Node, requireEnabled bool = false) bool {
       var current = node
       while true {
-        if current.Retired || current.PaintInputHidden { return false }
+        if current.Retired || current.PaintInputHidden || requireEnabled && current.Disabled { return false }
         guard let parent = current.Parent else { return true }
         current = parent
       }
@@ -150,4 +215,11 @@ internal class Portals {
 
 internal class PortalSource {
   internal var Root Node?
+}
+
+internal class PortalState {
+  internal var Options FocusScopeOptions?
+  internal var Scope FocusScope?
+  internal var Dismiss ((PopupDismissReason) -> void)?
+  internal var Scrim Node?
 }

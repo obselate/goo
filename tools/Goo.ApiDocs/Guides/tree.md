@@ -18,6 +18,22 @@ let content = Container{
 - After a constructor or factory call, unmarked `key: value` calls `Add(key, value)`.
 - `Children: existingList` assigns the list. A spread copies its contents.
 
+## Build content from its allotted size
+
+```gsharp
+Sized(size -> size.Width < 600 ? CompactView() : WideView()){
+    .FlexGrow: 1, .MinWidth: 0, .MinHeight: 0,
+}
+```
+
+- `Sized(build)` and `Blob.Sized(build)` pass the border-box `LayoutSize` in layout units.
+- Give the element space through its parent or its own style. It has no intrinsic size. Its content cannot enlarge it.
+- Goo builds before paint in the same frame, after the element gets its size. New content is laid out before `Mounted`.
+- Stable device-pixel sizes do not rebuild content. Changed inputs, observed `State`, context values, and pixel density also refresh it.
+- A zero-size element still builds. An unbounded axis with no authored size, minimum, or padding resolves to zero. The callback never receives infinity.
+- Read state in the builder, but do not write it. Input callbacks belong to the declaring Cell. Returned children keep normal keyed and positional identity.
+- Use `Container.Layout` to place existing children. Use `Sized` to choose or build different content.
+
 ## Compose and select text
 
 ```gsharp
@@ -121,9 +137,19 @@ opacity, overflow clipping, and transforms do not constrain presented geometry.
 Portal children do not participate in their source container's Yoga or custom
 layout and do not enlarge its scroll extent. Apply size, position, transform,
 overflow, and paint styles to the Portal itself when the overlay needs those
-semantics. Goo does not infer an anchor from the declaration parent and does not
-provide automatic dismissal or a named layer system; compose those policies with
-handles, input callbacks, and focus scopes.
+semantics. Goo does not infer an anchor from the declaration parent.
+
+Set `FocusScope: FocusScopeOptions{Modal: true}` for a modal overlay. After its
+first layout, `InitialFocus`, then `AutoFocus`, then the first tab stop receives
+focus. An empty scope focuses the Portal. Closing restores eligible prior focus
+unless `RestoreFocus` is false or focus has moved outside.
+
+`OnDismiss` receives `PopupDismissReason.Escape` outside text composition and
+`OutsideInteraction` on an outside press. Remove the Portal to close it.
+`OnDismiss` alone opens a nonmodal focus scope. Nil `FocusScope` and `OnDismiss`
+leave focus unchanged. `Scrim` paints a full-window layer behind the content.
+A modal scope uses a transparent scrim when `Scrim` is nil and sets the
+accessibility modal flag. Use `AccessibilityRole` and `AccessibilityName` on the Portal.
 
 ## Virtualize large collections
 
