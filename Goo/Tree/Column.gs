@@ -10,20 +10,29 @@ public class Column : Blob {
 
   internal override func coreBlob() { }
 
+  internal func FreezeChildren() IList[Blob] {
+    children = FrozenChildren(GetType(), children)
+    return children!!
+  }
+
   /// Gets the ordered child collection. Read-only lists are copied.
   public prop Children IList[Blob] {
     get {
       children ??= List[Blob]()
       return children!!
     }
-    init -> children = value.IsReadOnly ? List[Blob](value) : value
+    set {
+      CheckMutable()
+      children = value.IsReadOnly ? List[Blob](value) : value
+    }
   }
 
   /// Overrides whether this container participates in pointer hit testing.
   /// When omitted, Goo derives the value from authored interaction behavior.
   public prop HitTestSelf bool {
     get -> hitTestSelf
-    init {
+    set {
+      CheckMutable()
       hitTestSelf = value
       hasAuthoredHitTestSelf = true
     }

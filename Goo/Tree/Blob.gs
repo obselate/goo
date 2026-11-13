@@ -12,6 +12,19 @@ public open class Blob : Style {
   private var transitionSelection StyleMask
   private var blobState int32
   internal let CallbackOwner Cell?
+  private var declarationOnClick Action?
+  private var declarationOnPointerDown ((PointerEvent) -> void)?
+  private var declarationOnPointerMove ((PointerEvent) -> void)?
+  private var declarationOnPointerUp ((PointerEvent) -> void)?
+  private var declarationOnPointerCancel ((PointerEvent) -> void)?
+  private var declarationOnPointerDrag ((PointerDragEvent) -> void)?
+  private var declarationPointerDragThreshold float64
+  private var declarationPointerDragAxis LayoutAxis?
+  private var declarationOnWheel ((WheelEvent) -> void)?
+  private var declarationHoverStyle Style?
+  private var declarationActiveStyle Style?
+  private var declarationFocusStyle Style?
+  private var declarationDisabledStyle Style?
 
   internal init() {
     CallbackOwner = ContextEnvironment.CallbackOwner
@@ -20,15 +33,53 @@ public open class Blob : Style {
 
   internal open func coreBlob();
 
+  internal prop IsFrozen bool { get -> (blobState & int32(4096)) != 0 }
+
+  internal func Freeze(descendants bool = false, depth int32 = 0) {
+    if IsFrozen { return }
+    Reconciler.CheckTreeDepth(depth)
+    blobState = blobState | int32(4096)
+    let owner = GetType()
+    FreezeStyle(owner)
+    HoverStyle?.FreezeStyle(owner)
+    ActiveStyle?.FreezeStyle(owner)
+    FocusStyle?.FreezeStyle(owner)
+    DisabledStyle?.FreezeStyle(owner)
+    Accessibility?.Freeze(owner)
+    let children IList[Blob]? = switch this {
+      case value is Container: value.FreezeChildren()
+      case value is Button: value.FreezeChildren()
+      case value is Row: value.FreezeChildren()
+      case value is Column: value.FreezeChildren()
+      case value is Portal: value.FreezeChildren()
+      case _: nil
+    }
+    if descendants {
+      if let children = children {
+        for child in children { child.Freeze(true, depth + 1) }
+      }
+    }
+    if this is Image image {
+      image.Placeholder?.Freeze(true, depth + 1)
+      image.Fallback?.Freeze(true, depth + 1)
+    }
+  }
+
   /// Gets the stable key within the sibling list.
-  public prop Key string? { get -> authoredKey; init -> authoredKey = value }
-  internal func SetVirtualKey(value string) { authoredKey = value }
+  public prop Key string? {
+    get -> authoredKey
+    set {
+      CheckMutable()
+      authoredKey = value
+    }
+  }
   /// Gets the consumer-owned handle attached while this element is mounted.
   public prop Handle ElementHandle? {
     get {
       return HasElementHandle ? ElementHandles.BlobHandle(this) : nil
     }
-    init{
+    set {
+      CheckMutable()
       ElementHandles.SetBlobHandle(this, value)
       blobState = value != nil ? blobState | int32(64) : blobState & ~int32(64)
       updateSparseInputState()
@@ -39,7 +90,8 @@ public open class Blob : Style {
   /// The target need not be focusable. Native focus and accessibility relationships do not change.
   public prop FocusTarget ElementHandle? {
     get -> InputCallbacks.BlobFocusTarget(this)
-    init {
+    set {
+      CheckMutable()
       InputCallbacks.SetBlobFocusTarget(this, value)
       updateSparseInputState()
     }
@@ -53,7 +105,8 @@ public open class Blob : Style {
   /// Gets the platform-neutral accessibility declaration for this element.
   public prop Accessibility Accessibility? {
     get -> AccessibilityMetadata.BlobValue(this)
-    init{
+    set {
+      CheckMutable()
       AccessibilityMetadata.SetBlobValue(this, value)
       blobState = value != nil ? blobState | int32(128) : blobState & ~int32(128)
     }
@@ -62,7 +115,8 @@ public open class Blob : Style {
   /// An empty name is the default and leaves an absent declaration unset. A later Accessibility declaration replaces all fields.
   public prop AccessibilityName string {
     get -> Accessibility?.Name ?? ""
-    init {
+    set {
+      CheckMutable()
       if let declaration = Accessibility {
         Accessibility = Goo.Accessibility{...declaration, Name: value}
       } else if value != "" {
@@ -74,7 +128,8 @@ public open class Blob : Style {
   /// Auto is the default and leaves an absent declaration unset. A later Accessibility declaration replaces all fields.
   public prop AccessibilityRole Goo.AccessibilityRole {
     get -> Accessibility?.Role ?? Goo.AccessibilityRole.Auto
-    init {
+    set {
+      CheckMutable()
       if let declaration = Accessibility {
         Accessibility = Goo.Accessibility{...declaration, Role: value}
       } else if value != Goo.AccessibilityRole.Auto {
@@ -92,28 +147,77 @@ public open class Blob : Style {
     set -> blobState = value ? blobState | int32(2048) : blobState & ~int32(2048)
   }
   /// Gets the action that runs when the element is clicked.
-  public prop OnClick Action? { get; init; }
+  public prop OnClick Action? {
+    get -> declarationOnClick
+    set {
+      CheckMutable()
+      declarationOnClick = value
+    }
+  }
   /// Gets the callback that receives each pointer button press.
-  public prop OnPointerDown((PointerEvent) -> void)? { get; init; }
+  public prop OnPointerDown((PointerEvent) -> void)? {
+    get -> declarationOnPointerDown
+    set {
+      CheckMutable()
+      declarationOnPointerDown = value
+    }
+  }
   /// Gets the callback that receives each pointer movement.
-  public prop OnPointerMove((PointerEvent) -> void)? { get; init; }
+  public prop OnPointerMove((PointerEvent) -> void)? {
+    get -> declarationOnPointerMove
+    set {
+      CheckMutable()
+      declarationOnPointerMove = value
+    }
+  }
   /// Gets the callback that receives each pointer button release.
-  public prop OnPointerUp((PointerEvent) -> void)? { get; init; }
+  public prop OnPointerUp((PointerEvent) -> void)? {
+    get -> declarationOnPointerUp
+    set {
+      CheckMutable()
+      declarationOnPointerUp = value
+    }
+  }
   /// Gets the callback that receives pointer cancellation.
-  public prop OnPointerCancel((PointerEvent) -> void)? { get; init; }
+  public prop OnPointerCancel((PointerEvent) -> void)? {
+    get -> declarationOnPointerCancel
+    set {
+      CheckMutable()
+      declarationOnPointerCancel = value
+    }
+  }
   /// Gets the callback for a captured primary-pointer drag. Hover does not invoke it.
   /// Touch drags wait for movement in PointerDragAxis. An enclosing scroller claims movement along its scroll axis first.
   /// After a drag starts, the press does not produce OnClick.
-  public prop OnPointerDrag((PointerDragEvent) -> void)? { get; init; }
+  public prop OnPointerDrag((PointerDragEvent) -> void)? {
+    get -> declarationOnPointerDrag
+    set {
+      CheckMutable()
+      declarationOnPointerDrag = value
+    }
+  }
   /// Gets the Euclidean press-to-start distance in layout units, measured on PointerDragAxis.
   /// Zero starts on press for mouse and pen, or on the first nonzero touch movement.
-  public prop PointerDragThreshold float64 { get; init; }
+  public prop PointerDragThreshold float64 {
+    get -> declarationPointerDragThreshold
+    set {
+      CheckMutable()
+      declarationPointerDragThreshold = value
+    }
+  }
   /// Gets the axis measured by the threshold. Nil measures both axes. Off-axis movement alone does not start a drag.
-  public prop PointerDragAxis LayoutAxis? { get; init; }
+  public prop PointerDragAxis LayoutAxis? {
+    get -> declarationPointerDragAxis
+    set {
+      CheckMutable()
+      declarationPointerDragAxis = value
+    }
+  }
   /// Gets the non-bubbling lifecycle callback after this element enters the mouse hover route.
   public prop OnPointerEnter((PointerEvent) -> void)? {
     get -> InputCallbacks.BlobPointerEnter(this)
-    init{
+    set {
+      CheckMutable()
       InputCallbacks.SetBlobPointerEnter(this, value)
       updateSparseInputState()
     }
@@ -121,17 +225,25 @@ public open class Blob : Style {
   /// Gets the non-bubbling lifecycle callback after this element leaves the mouse hover route.
   public prop OnPointerLeave((PointerEvent) -> void)? {
     get -> InputCallbacks.BlobPointerLeave(this)
-    init{
+    set {
+      CheckMutable()
       InputCallbacks.SetBlobPointerLeave(this, value)
       updateSparseInputState()
     }
   }
   /// Gets the callback that receives pointer wheel movement.
-  public prop OnWheel((WheelEvent) -> void)? { get; init; }
+  public prop OnWheel((WheelEvent) -> void)? {
+    get -> declarationOnWheel
+    set {
+      CheckMutable()
+      declarationOnWheel = value
+    }
+  }
   /// Gets key-down callbacks routed from this focused element or a focused descendant.
   public prop OnKeyDown((KeyEvent) -> void)? {
     get -> InputCallbacks.BlobKeyDown(this)
-    init{
+    set {
+      CheckMutable()
       InputCallbacks.SetBlobKeyDown(this, value)
       updateSparseInputState()
     }
@@ -139,7 +251,8 @@ public open class Blob : Style {
   /// Gets key-up callbacks routed from this focused element or a focused descendant.
   public prop OnKeyUp((KeyEvent) -> void)? {
     get -> InputCallbacks.BlobKeyUp(this)
-    init{
+    set {
+      CheckMutable()
       InputCallbacks.SetBlobKeyUp(this, value)
       updateSparseInputState()
     }
@@ -147,7 +260,8 @@ public open class Blob : Style {
   /// Gets the non-cancelable callback routed after this element or a descendant gains focus.
   public prop OnFocus((FocusEvent) -> void)? {
     get -> InputCallbacks.BlobFocus(this)
-    init{
+    set {
+      CheckMutable()
       InputCallbacks.SetBlobFocus(this, value)
       updateSparseInputState()
     }
@@ -155,7 +269,8 @@ public open class Blob : Style {
   /// Gets the non-cancelable callback routed after this element or a descendant loses focus.
   public prop OnBlur((FocusEvent) -> void)? {
     get -> InputCallbacks.BlobBlur(this)
-    init{
+    set {
+      CheckMutable()
       InputCallbacks.SetBlobBlur(this, value)
       updateSparseInputState()
     }
@@ -163,7 +278,8 @@ public open class Blob : Style {
   /// Gets the callback that receives committed UTF-16 text while this element has focus.
   public prop OnTextInput Action[string]? {
     get -> TextInputCallbacks.BlobTextInput(this)
-    init{
+    set {
+      CheckMutable()
       TextInputCallbacks.SetBlobTextInput(this, value)
       updateSparseInputState()
     }
@@ -171,7 +287,8 @@ public open class Blob : Style {
   /// Gets the callback that receives transient IME composition updates while this element has focus.
   public prop OnTextComposition((TextCompositionEvent) -> void)? {
     get -> TextInputCallbacks.BlobTextComposition(this)
-    init{
+    set {
+      CheckMutable()
       TextInputCallbacks.SetBlobTextComposition(this, value)
       updateSparseInputState()
     }
@@ -179,7 +296,8 @@ public open class Blob : Style {
   /// Gets the callback that receives native IME composition cancellation while this element has focus.
   public prop OnTextCompositionCancel Action? {
     get -> TextInputCallbacks.BlobTextCompositionCancel(this)
-    init{
+    set {
+      CheckMutable()
       TextInputCallbacks.SetBlobTextCompositionCancel(this, value)
       updateSparseInputState()
     }
@@ -187,7 +305,8 @@ public open class Blob : Style {
   /// Gets the callback that receives native IME candidate updates while this element has focus.
   public prop OnTextCandidates((TextCandidateEvent) -> void)? {
     get -> TextInputCallbacks.BlobTextCandidates(this)
-    init{
+    set {
+      CheckMutable()
       TextInputCallbacks.SetBlobTextCandidates(this, value)
       updateSparseInputState()
     }
@@ -195,7 +314,8 @@ public open class Blob : Style {
   /// Gets the optional in-app drag source descriptor.
   public prop DragSource DragSource? {
     get -> DragDropMetadata.BlobSource(this)
-    init{
+    set {
+      CheckMutable()
       DragDropMetadata.SetBlobSource(this, value)
       updateSparseInputState()
     }
@@ -203,7 +323,8 @@ public open class Blob : Style {
   /// Gets the optional in-app drop target descriptor.
   public prop DropTarget DropTarget? {
     get -> DragDropMetadata.BlobTarget(this)
-    init{
+    set {
+      CheckMutable()
       DragDropMetadata.SetBlobTarget(this, value)
       updateSparseInputState()
     }
@@ -213,7 +334,8 @@ public open class Blob : Style {
   /// Keep declaration instances stable across rebuilds to preserve active sessions.
   public prop Gestures IReadOnlyList[GestureRecognizer]? {
     get -> GestureMetadata.Get(this)
-    init {
+    set {
+      CheckMutable()
       GestureMetadata.Set(this, value)
       updateSparseInputState()
     }
@@ -222,24 +344,50 @@ public open class Blob : Style {
   /// Gets explicit key bindings. Focused-element bindings override built-in text editing keys.
   public prop KeyBindings ([]KeyBinding)? {
     get -> InputCallbacks.BlobBindings(this)
-    init {
+    set {
+      CheckMutable()
       InputCallbacks.SetBlobBindings(this, value)
       updateSparseInputState()
     }
   }
   internal prop HasSparseInputState bool{ get -> (blobState & int32(32)) != 0 }
   /// Gets the style that applies while the pointer hovers this element.
-  public prop HoverStyle Style? { get; init; }
+  public prop HoverStyle Style? {
+    get -> declarationHoverStyle
+    set {
+      CheckMutable()
+      declarationHoverStyle = value
+    }
+  }
   /// Gets the style that applies while this element is active.
-  public prop ActiveStyle Style? { get; init; }
+  public prop ActiveStyle Style? {
+    get -> declarationActiveStyle
+    set {
+      CheckMutable()
+      declarationActiveStyle = value
+    }
+  }
   /// Gets the style that applies while this element has focus.
-  public prop FocusStyle Style? { get; init; }
+  public prop FocusStyle Style? {
+    get -> declarationFocusStyle
+    set {
+      CheckMutable()
+      declarationFocusStyle = value
+    }
+  }
   /// Gets the style that applies while this element is disabled.
-  public prop DisabledStyle Style? { get; init; }
+  public prop DisabledStyle Style? {
+    get -> declarationDisabledStyle
+    set {
+      CheckMutable()
+      declarationDisabledStyle = value
+    }
+  }
   /// Gets the transition duration in milliseconds.
   public prop TransitionMs float64{
     get -> float64(transitionMs)
-    init{
+    set {
+      CheckMutable()
       if !motionFinite(value) {
         throw ArgumentOutOfRangeException("TransitionMs")
       }
@@ -250,7 +398,8 @@ public open class Blob : Style {
   /// Gets the easing curve applied to transition progress.
   public prop TransitionEasing Easing{
     get -> Easing(blobState & int32(3))
-    init{
+    set {
+      CheckMutable()
       let ordinal = int32(value)
       if ordinal < 0 || ordinal > 3 {
         throw ArgumentOutOfRangeException("TransitionEasing")
@@ -261,7 +410,8 @@ public open class Blob : Style {
   /// Gets the delay before a transition starts, in milliseconds.
   public prop TransitionDelayMs float64{
     get -> float64(transitionDelayMs)
-    init{
+    set {
+      CheckMutable()
       if !motionFinite(value) {
         throw ArgumentOutOfRangeException("TransitionDelayMs")
       }
@@ -273,13 +423,17 @@ public open class Blob : Style {
   /// All interpolable properties are selected when this property is omitted.
   public prop TransitionProperties []TransitionProperty{
     get -> transitionSelectionProperties(transitionSelection)
-    init -> transitionSelection = makeTransitionSelection(value)
+    set {
+      CheckMutable()
+      transitionSelection = makeTransitionSelection(value)
+    }
   }
   internal prop TransitionSelection StyleMask{ get -> transitionSelection }
   /// Gets the opt-in transition for computed layout position changes.
   public prop LayoutTransition LayoutTransition? {
     get -> LayoutTransitionBlobs.Get(this)
-    init{
+    set {
+      CheckMutable()
       if let next = value {
         if !validLayoutTransition(next) {
           throw ArgumentOutOfRangeException("LayoutTransition")
@@ -291,7 +445,8 @@ public open class Blob : Style {
   /// Reports whether this element can receive keyboard focus.
   public prop Focusable bool{
     get -> (blobState & int32(4)) != 0
-    init{
+    set {
+      CheckMutable()
       blobState = value ? blobState | int32(4) : blobState & ~int32(4)
     }
   }
@@ -299,19 +454,24 @@ public open class Blob : Style {
   /// False preserves pointer, programmatic, and accessibility focus for composite widgets.
   public prop TabStop bool{
     get -> (blobState & int32(512)) == 0
-    init -> blobState = value ? blobState & ~int32(512) : blobState | int32(512)
+    set {
+      CheckMutable()
+      blobState = value ? blobState & ~int32(512) : blobState | int32(512)
+    }
   }
   /// Reports whether this element and its descendants reject input.
   public prop Disabled bool{
     get -> (blobState & int32(8)) != 0
-    init{
+    set {
+      CheckMutable()
       blobState = value ? blobState | int32(8) : blobState & ~int32(8)
     }
   }
   /// Requests keyboard focus after mounting while nothing else holds focus.
   public prop AutoFocus bool{
     get -> (blobState & int32(16)) != 0
-    init{
+    set {
+      CheckMutable()
       blobState = value ? blobState | int32(16) : blobState & ~int32(16)
     }
   }

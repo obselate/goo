@@ -5,7 +5,7 @@ import System.Collections.Generic
 
 internal sealed class VirtualRetainedBlob : Blob {
   internal init(key string) {
-    SetVirtualKey(key)
+    Key = key
   }
 
   internal override func coreBlob() {
@@ -722,12 +722,11 @@ left.Index == right.Index && left.X == right.X && left.Y == right.Y
   && left.Item == right.Item
 
 internal func virtualItem(item Blob, key string) Blob {
+  item.Freeze()
   if let authored = item.Key {
     if authored != key {
       throw InvalidOperationException("Virtual item '$key' has ${item.GetType().Name} content keyed '$authored': remove the content key or make it equal to the VirtualItem key.")
     }
-  } else {
-    item.SetVirtualKey(key)
   }
   return item
 }

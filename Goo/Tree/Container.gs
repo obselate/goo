@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.Collections.Generic
+import System.Collections.ObjectModel
 import System.Runtime.CompilerServices
 
 /// Defines an element that contains child blobs.
@@ -13,6 +14,11 @@ public class Container : Blob {
   internal override func coreBlob() {
   }
 
+  internal func FreezeChildren() IList[Blob] {
+    children = FrozenChildren(GetType(), children)
+    return children!!
+  }
+
   /// Gets the mutable child list. Read-only lists supplied during initialization are copied.
   /// Siblings can mix keyed and unkeyed entries. Keyed children match by key; unkeyed children match only at the same absolute sibling index.
   public prop Children IList[Blob]{
@@ -20,16 +26,25 @@ public class Container : Blob {
       children ??= List[Blob]()
       return children!!
     }
-    init -> children = value.IsReadOnly ? List[Blob](value) : value
+    set {
+      CheckMutable()
+      children = value.IsReadOnly ? List[Blob](value) : value
+    }
   }
   /// Gets the optional retained measure/arrange policy. Nil uses the normal flex layout; replace the immutable policy when its configuration changes.
   public prop Layout LayoutAlgorithm? {
     get -> CustomLayouts.BlobValue(this)
-    init -> CustomLayouts.SetBlobValue(this, value)
+    set {
+      CheckMutable()
+      CustomLayouts.SetBlobValue(this, value)
+    }
   }
   internal prop VectorViewport VectorViewport? {
     get -> ContainerVectorViewports.Get(this)
-    init -> ContainerVectorViewports.Set(this, value)
+    set {
+      CheckMutable()
+      ContainerVectorViewports.Set(this, value)
+    }
   }
   // Window-domain marker; authored through WindowDragRegion, not directly.
   internal prop DragsWindow bool{ get; set }
@@ -37,7 +52,8 @@ public class Container : Blob {
   /// When omitted, Goo derives the value from authored interaction behavior.
   public prop HitTestSelf bool{
     get -> hitTestSelf
-    init{
+    set {
+      CheckMutable()
       hitTestSelf = value
       hasAuthoredHitTestSelf = true
     }
@@ -51,6 +67,24 @@ public class Container : Blob {
   /// @param child The child to add.
   public func Add(child Blob) {
     Children.Add(child)
+  }
+}
+
+internal sealed class FrozenChildren : Collection[Blob] {
+  private let owner Type
+
+  internal init(owner Type, values IList[Blob]?) : base(
+    if let values = values { List[Blob](values) } else { List[Blob]() }) {
+    this.owner = owner
+  }
+
+  protected override func ClearItems() { modified() }
+  protected override func InsertItem(index int32, item Blob) { modified() }
+  protected override func RemoveItem(index int32) { modified() }
+  protected override func SetItem(index int32, item Blob) { modified() }
+
+  private func modified() {
+    throw InvalidOperationException(owner.Name + " modified after it was returned to Goo")
   }
 }
 

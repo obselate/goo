@@ -18,6 +18,8 @@ let content = Container{
 - After a constructor or factory call, unmarked `key: value` calls `Add(key, value)`.
 - `Children: existingList` assigns the list. A spread copies its contents.
 
+Goo may keep the mounted result of a Blob it has already received and not read that Blob again. Returning the same Blob again does not refresh it.
+
 ## Build content from its allotted size
 
 ```gsharp

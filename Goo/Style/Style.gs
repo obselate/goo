@@ -7,6 +7,15 @@ import System.Collections.Generic
 /// Use BasedOn to copy reusable declarations. G# object spread does not copy them.
 public open class Style {
   internal var entries StyleEntries?
+  private var frozenOwner Type?
+
+  internal func FreezeStyle(owner Type) { frozenOwner ??= owner }
+
+  internal func CheckMutable() {
+    if let owner = frozenOwner {
+      throw InvalidOperationException(owner.Name + " modified after it was returned to Goo")
+    }
+  }
 
   /// Creates an empty write-only style declaration sink.
   public init() {
@@ -22,7 +31,8 @@ public open class Style {
   /// Copies another style's ordered declarations at this declaration position.
   /// The copy does not retain the source Style. Declarations written later take precedence.
   public prop BasedOn Style? {
-    init{
+    set {
+      CheckMutable()
       guard let style = value else { return }
       guard let source = style.Entries() else { return }
       if entries == nil { entries = StyleEntries{} }
@@ -126,68 +136,200 @@ public open class Style {
   }
 
   /// Sets the preferred width.
-  public prop Width Length{ init -> pushCheckedLength(StyleField.Width, value, "Width", false, true, true) }
+  public prop Width Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.Width, value, "Width", false, true, true)
+    }
+  }
   /// Sets the preferred height.
-  public prop Height Length{ init -> pushCheckedLength(StyleField.Height, value, "Height", false, true, true) }
+  public prop Height Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.Height, value, "Height", false, true, true)
+    }
+  }
   /// Sets the minimum width. When unset, a shrinking flex item stops at 0 if its overflow is Scroll or Hidden, else at its Width, else at its content width. Set 0 to let any item shrink further.
-  public prop MinWidth Length{ init -> pushCheckedLength(StyleField.MinWidth, value, "MinWidth", false, true, false) }
+  public prop MinWidth Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.MinWidth, value, "MinWidth", false, true, false)
+    }
+  }
   /// Sets the minimum height. When unset, a shrinking flex item stops at 0 if its overflow is Scroll or Hidden, else at its Height, else at its content height. Set 0 to let any item shrink further.
-  public prop MinHeight Length{ init -> pushCheckedLength(StyleField.MinHeight, value, "MinHeight", false, true, false) }
+  public prop MinHeight Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.MinHeight, value, "MinHeight", false, true, false)
+    }
+  }
   /// Sets the maximum width.
-  public prop MaxWidth Length{ init -> pushCheckedLength(StyleField.MaxWidth, value, "MaxWidth", false, true, false) }
+  public prop MaxWidth Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.MaxWidth, value, "MaxWidth", false, true, false)
+    }
+  }
   /// Sets the maximum height.
-  public prop MaxHeight Length{ init -> pushCheckedLength(StyleField.MaxHeight, value, "MaxHeight", false, true, false) }
+  public prop MaxHeight Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.MaxHeight, value, "MaxHeight", false, true, false)
+    }
+  }
   /// Sets the preferred width-to-height ratio.
-  public prop AspectRatio float64{ init -> pushScalar(StyleField.AspectRatio, checkedNonNegative(value, "AspectRatio")) }
+  public prop AspectRatio float64 {
+    set {
+      CheckMutable()
+      pushScalar(StyleField.AspectRatio, checkedNonNegative(value, "AspectRatio"))
+    }
+  }
   /// Sets padding in CSS top, right, bottom, left order.
-  public prop Padding Edges{ init -> pushEdges(value, true) }
+  public prop Padding Edges {
+    set {
+      CheckMutable()
+      pushEdges(value, true)
+    }
+  }
   /// Sets padding at the inline start edge.
-  public prop PaddingStart Length{ init -> pushCheckedLength(StyleField.PaddingStart, value, "PaddingStart", false, true, false) }
+  public prop PaddingStart Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.PaddingStart, value, "PaddingStart", false, true, false)
+    }
+  }
   /// Sets padding at the inline end edge.
-  public prop PaddingEnd Length{ init -> pushCheckedLength(StyleField.PaddingEnd, value, "PaddingEnd", false, true, false) }
+  public prop PaddingEnd Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.PaddingEnd, value, "PaddingEnd", false, true, false)
+    }
+  }
   /// Sets margins in CSS top, right, bottom, left order.
-  public prop Margin Edges{ init -> pushEdges(value, false) }
+  public prop Margin Edges {
+    set {
+      CheckMutable()
+      pushEdges(value, false)
+    }
+  }
   /// Sets the margin at the inline start edge.
-  public prop MarginStart Length{ init -> pushCheckedLength(StyleField.MarginStart, value, "MarginStart", true, true, false) }
+  public prop MarginStart Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.MarginStart, value, "MarginStart", true, true, false)
+    }
+  }
   /// Sets the margin at the inline end edge.
-  public prop MarginEnd Length{ init -> pushCheckedLength(StyleField.MarginEnd, value, "MarginEnd", true, true, false) }
+  public prop MarginEnd Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.MarginEnd, value, "MarginEnd", true, true, false)
+    }
+  }
   /// Sets the gap between rows and columns.
-  public prop Gap Length{ init -> pushCheckedLength(StyleField.Gap, value, "Gap", false, true, false) }
+  public prop Gap Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.Gap, value, "Gap", false, true, false)
+    }
+  }
   /// Sets the gap between rows.
-  public prop RowGap Length{ init -> pushCheckedLength(StyleField.RowGap, value, "RowGap", false, true, false) }
+  public prop RowGap Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.RowGap, value, "RowGap", false, true, false)
+    }
+  }
   /// Sets the gap between columns.
-  public prop ColumnGap Length{ init -> pushCheckedLength(StyleField.ColumnGap, value, "ColumnGap", false, true, false) }
+  public prop ColumnGap Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.ColumnGap, value, "ColumnGap", false, true, false)
+    }
+  }
   /// Sets the main-axis direction.
-  public prop FlexDirection FlexDirection{ init -> pushEnumOrdinal(StyleField.FlexDirection, int32(value)) }
+  public prop FlexDirection FlexDirection {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.FlexDirection, int32(value))
+    }
+  }
   /// Sets whether items wrap onto multiple lines.
-  public prop FlexWrap FlexWrap{ init -> pushEnumOrdinal(StyleField.FlexWrap, int32(value)) }
+  public prop FlexWrap FlexWrap {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.FlexWrap, int32(value))
+    }
+  }
   /// Sets main-axis item distribution.
-  public prop JustifyContent JustifyContent{ init -> pushEnumOrdinal(StyleField.JustifyContent, int32(value)) }
+  public prop JustifyContent JustifyContent {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.JustifyContent, int32(value))
+    }
+  }
   /// Sets cross-axis alignment for child items.
-  public prop AlignItems AlignItems{ init -> pushEnumOrdinal(StyleField.AlignItems, int32(value)) }
+  public prop AlignItems AlignItems {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.AlignItems, int32(value))
+    }
+  }
   /// Sets this item's cross-axis alignment.
-  public prop AlignSelf AlignSelf{ init -> pushEnumOrdinal(StyleField.AlignSelf, int32(value)) }
+  public prop AlignSelf AlignSelf {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.AlignSelf, int32(value))
+    }
+  }
   /// Sets cross-axis line distribution.
-  public prop AlignContent AlignContent{ init -> pushEnumOrdinal(StyleField.AlignContent, int32(value)) }
+  public prop AlignContent AlignContent {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.AlignContent, int32(value))
+    }
+  }
   /// Sets grow to this factor, shrink to 1, and basis to 0. Later declarations override each part.
   public prop Flex float64 {
-    init {
+    set {
+      CheckMutable()
       pushScalar(StyleField.FlexGrow, checkedNonNegative(value, "Flex"))
       pushScalar(StyleField.FlexShrink, 1.0)
       pushLength(StyleField.FlexBasis, 0)
     }
   }
   /// Sets the flex grow factor.
-  public prop FlexGrow float64{ init -> pushScalar(StyleField.FlexGrow, checkedNonNegative(value, "FlexGrow")) }
+  public prop FlexGrow float64 {
+    set {
+      CheckMutable()
+      pushScalar(StyleField.FlexGrow, checkedNonNegative(value, "FlexGrow"))
+    }
+  }
   /// Sets the flex shrink factor. The default is 1. Set 0 to keep an item at its base size when its container is too small.
-  public prop FlexShrink float64{ init -> pushScalar(StyleField.FlexShrink, checkedNonNegative(value, "FlexShrink")) }
+  public prop FlexShrink float64 {
+    set {
+      CheckMutable()
+      pushScalar(StyleField.FlexShrink, checkedNonNegative(value, "FlexShrink"))
+    }
+  }
   /// Sets the initial main-axis size.
-  public prop FlexBasis Length{ init -> pushCheckedLength(StyleField.FlexBasis, value, "FlexBasis", false, true, true) }
+  public prop FlexBasis Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.FlexBasis, value, "FlexBasis", false, true, true)
+    }
+  }
   /// Sets relative, absolute, or static positioning.
-  public prop Position PositionType{ init -> pushEnumOrdinal(StyleField.Position, int32(value)) }
+  public prop Position PositionType {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.Position, int32(value))
+    }
+  }
   /// Sets position offsets in CSS top, right, bottom, left order. Later offsets override individual edges.
   public prop Inset Edges {
-    init {
+    set {
+      CheckMutable()
       if value.Uniform || value.HasTop { pushCheckedLength(StyleField.Top, value.Top, "Inset.Top", true, true, false) }
       if value.Uniform || value.HasRight { pushCheckedLength(StyleField.Right, value.Right, "Inset.Right", true, true, false) }
       if value.Uniform || value.HasBottom { pushCheckedLength(StyleField.Bottom, value.Bottom, "Inset.Bottom", true, true, false) }
@@ -195,85 +337,189 @@ public open class Style {
     }
   }
   /// Sets the left position offset.
-  public prop Left Length{ init -> pushCheckedLength(StyleField.Left, value, "Left", true, true, false) }
+  public prop Left Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.Left, value, "Left", true, true, false)
+    }
+  }
   /// Sets the inline start position offset.
-  public prop Start Length{ init -> pushCheckedLength(StyleField.Start, value, "Start", true, true, false) }
+  public prop Start Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.Start, value, "Start", true, true, false)
+    }
+  }
   /// Sets the top position offset.
-  public prop Top Length{ init -> pushCheckedLength(StyleField.Top, value, "Top", true, true, false) }
+  public prop Top Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.Top, value, "Top", true, true, false)
+    }
+  }
   /// Sets the right position offset.
-  public prop Right Length{ init -> pushCheckedLength(StyleField.Right, value, "Right", true, true, false) }
+  public prop Right Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.Right, value, "Right", true, true, false)
+    }
+  }
   /// Sets the inline end position offset.
-  public prop End Length{ init -> pushCheckedLength(StyleField.End, value, "End", true, true, false) }
+  public prop End Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.End, value, "End", true, true, false)
+    }
+  }
   /// Sets the bottom position offset.
-  public prop Bottom Length{ init -> pushCheckedLength(StyleField.Bottom, value, "Bottom", true, true, false) }
+  public prop Bottom Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.Bottom, value, "Bottom", true, true, false)
+    }
+  }
   /// Sets whether the element participates in layout.
-  public prop Display Display{ init -> pushEnumOrdinal(StyleField.Display, int32(value)) }
+  public prop Display Display {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.Display, int32(value))
+    }
+  }
   /// Sets the inherited inline direction used by layout and logical edges.
-  public prop Direction Direction{ init -> pushEnumOrdinal(StyleField.Direction, int32(value)) }
+  public prop Direction Direction {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.Direction, int32(value))
+    }
+  }
   /// Sets whether this element and its descendants paint and receive input.
   /// Hidden elements remain in layout and retain their state.
-  public prop Visibility Visibility{ init -> pushEnumOrdinal(StyleField.Visibility, int32(value)) }
+  public prop Visibility Visibility {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.Visibility, int32(value))
+    }
+  }
   /// Sets this element's stacking order among direct siblings.
-  public prop ZIndex int32{ init -> pushInt32(StyleField.ZIndex, value) }
+  public prop ZIndex int32 {
+    set {
+      CheckMutable()
+      pushInt32(StyleField.ZIndex, value)
+    }
+  }
   /// Sets overflow handling on both axes.
   public prop Overflow Overflow{
-    init{
+    set {
+      CheckMutable()
       pushEnumOrdinal(StyleField.OverflowX, int32(value))
       pushEnumOrdinal(StyleField.OverflowY, int32(value))
     }
   }
   /// Sets horizontal overflow handling.
-  public prop OverflowX Overflow{ init -> pushEnumOrdinal(StyleField.OverflowX, int32(value)) }
+  public prop OverflowX Overflow {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.OverflowX, int32(value))
+    }
+  }
   /// Sets vertical overflow handling.
-  public prop OverflowY Overflow{ init -> pushEnumOrdinal(StyleField.OverflowY, int32(value)) }
+  public prop OverflowY Overflow {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.OverflowY, int32(value))
+    }
+  }
   /// Sets scrollbar visibility on both axes.
   public prop ScrollbarVisibility ScrollbarVisibility{
-    init{
+    set {
+      CheckMutable()
       pushEnumOrdinal(StyleField.ScrollbarVisibilityX, int32(value))
       pushEnumOrdinal(StyleField.ScrollbarVisibilityY, int32(value))
     }
   }
   /// Sets horizontal scrollbar visibility.
   public prop ScrollbarVisibilityX ScrollbarVisibility{
-    init -> pushEnumOrdinal(StyleField.ScrollbarVisibilityX, int32(value))
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.ScrollbarVisibilityX, int32(value))
+    }
   }
   /// Sets vertical scrollbar visibility.
   public prop ScrollbarVisibilityY ScrollbarVisibility{
-    init -> pushEnumOrdinal(StyleField.ScrollbarVisibilityY, int32(value))
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.ScrollbarVisibilityY, int32(value))
+    }
   }
   /// Sets scrollbar presentation on both axes.
   public prop Scrollbar Scrollbar?{
-    init{
+    set {
+      CheckMutable()
       pushScrollbar(StyleField.ScrollbarX, value)
       pushScrollbar(StyleField.ScrollbarY, value)
     }
   }
   /// Sets horizontal scrollbar presentation.
   public prop ScrollbarX Scrollbar?{
-    init -> pushScrollbar(StyleField.ScrollbarX, value)
+    set {
+      CheckMutable()
+      pushScrollbar(StyleField.ScrollbarX, value)
+    }
   }
   /// Sets vertical scrollbar presentation.
   public prop ScrollbarY Scrollbar?{
-    init -> pushScrollbar(StyleField.ScrollbarY, value)
+    set {
+      CheckMutable()
+      pushScrollbar(StyleField.ScrollbarY, value)
+    }
   }
   /// Sets the inherited system pointer cursor.
-  public prop Cursor Cursor{ init -> pushEnumOrdinal(StyleField.Cursor, int32(value)) }
+  public prop Cursor Cursor {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.Cursor, int32(value))
+    }
+  }
   /// Sets the background color.
-  public prop BackgroundColor Color{ init -> pushColor(StyleField.BackgroundColor, value) }
+  public prop BackgroundColor Color {
+    set {
+      CheckMutable()
+      pushColor(StyleField.BackgroundColor, value)
+    }
+  }
   /// Binds the background color without rebuilding or changing layout.
-  public prop BackgroundColorAnim Anim[Color]? { init -> pushPaintColor(StyleField.BackgroundColor, value) }
+  public prop BackgroundColorAnim Anim[Color]? {
+    set {
+      CheckMutable()
+      pushPaintColor(StyleField.BackgroundColor, value)
+    }
+  }
   /// Sets or explicitly clears the background gradient.
   /// A non-nil gradient wins over BackgroundColor when both apply.
-  public prop BackgroundGradient Gradient? { init -> pushGradient(StyleField.BackgroundGradient, value) }
+  public prop BackgroundGradient Gradient? {
+    set {
+      CheckMutable()
+      pushGradient(StyleField.BackgroundGradient, value)
+    }
+  }
   /// Sets the owned or provider-backed background source.
   public prop BackgroundImageSource ImageSourceProvider? {
-    init -> pushImageSource(StyleField.BackgroundImageSource, value)
+    set {
+      CheckMutable()
+      pushImageSource(StyleField.BackgroundImageSource, value)
+    }
   }
   /// Sets how the background image fits its border box. The default is Cover.
-  public prop BackgroundImageFit ImageFit{ init -> pushEnumOrdinal(StyleField.BackgroundImageFit, int32(value)) }
+  public prop BackgroundImageFit ImageFit {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.BackgroundImageFit, int32(value))
+    }
+  }
   /// Sets a vector path with a contour that clips this element and its descendants.
   public prop ClipPath VectorPath{
-    init{
+    set {
+      CheckMutable()
       if value.CommandCount != 0 && !PathGeometry.For(value).HasFillContour {
         throw ArgumentException("ClipPath must contain a non-empty contour", "ClipPath")
       }
@@ -281,31 +527,85 @@ public open class Style {
     }
   }
   /// Sets how ClipPath maps into the element border box. The default is Fill.
-  public prop ClipPathFit ShapeFit{ init -> pushEnumOrdinal(StyleField.ClipPathFit, int32(value)) }
+  public prop ClipPathFit ShapeFit {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.ClipPathFit, int32(value))
+    }
+  }
   public prop ClipPathFillRule FillRule{
-    init -> pushEnumOrdinal(StyleField.ClipPathFillRule, int32(value))
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.ClipPathFillRule, int32(value))
+    }
   }
   /// Sets the radius of all border corners.
-  public prop BorderRadius Length{ init -> pushCheckedLength(StyleField.BorderRadius, value, "BorderRadius", false, false, false) }
+  public prop BorderRadius Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.BorderRadius, value, "BorderRadius", false, false, false)
+    }
+  }
   /// Sets the top-left border radius.
-  public prop BorderTopLeftRadius Length{ init -> pushCheckedLength(StyleField.BorderTopLeftRadius, value, "BorderTopLeftRadius", false, false, false) }
+  public prop BorderTopLeftRadius Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.BorderTopLeftRadius, value, "BorderTopLeftRadius", false, false, false)
+    }
+  }
   /// Sets the top-right border radius.
-  public prop BorderTopRightRadius Length{ init -> pushCheckedLength(StyleField.BorderTopRightRadius, value, "BorderTopRightRadius", false, false, false) }
+  public prop BorderTopRightRadius Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.BorderTopRightRadius, value, "BorderTopRightRadius", false, false, false)
+    }
+  }
   /// Sets the bottom-left border radius.
-  public prop BorderBottomLeftRadius Length{ init -> pushCheckedLength(StyleField.BorderBottomLeftRadius, value, "BorderBottomLeftRadius", false, false, false) }
+  public prop BorderBottomLeftRadius Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.BorderBottomLeftRadius, value, "BorderBottomLeftRadius", false, false, false)
+    }
+  }
   /// Sets the bottom-right border radius.
-  public prop BorderBottomRightRadius Length{ init -> pushCheckedLength(StyleField.BorderBottomRightRadius, value, "BorderBottomRightRadius", false, false, false) }
+  public prop BorderBottomRightRadius Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.BorderBottomRightRadius, value, "BorderBottomRightRadius", false, false, false)
+    }
+  }
   /// Sets box border widths in CSS top, right, bottom, left order.
-  public prop BorderWidth Edges{ init -> pushBorderWidths(value) }
+  public prop BorderWidth Edges {
+    set {
+      CheckMutable()
+      pushBorderWidths(value)
+    }
+  }
   /// Sets the box border width at the inline start edge.
-  public prop BorderStartWidth Length{ init -> pushCheckedLength(StyleField.BorderStartWidth, value, "BorderStartWidth", false, false, false) }
+  public prop BorderStartWidth Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.BorderStartWidth, value, "BorderStartWidth", false, false, false)
+    }
+  }
   /// Sets the box border width at the inline end edge.
-  public prop BorderEndWidth Length{ init -> pushCheckedLength(StyleField.BorderEndWidth, value, "BorderEndWidth", false, false, false) }
+  public prop BorderEndWidth Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.BorderEndWidth, value, "BorderEndWidth", false, false, false)
+    }
+  }
   /// Sets box border colors in CSS top, right, bottom, left order.
-  public prop BorderColor Edges[Color]{ init -> pushBorderColors(value) }
+  public prop BorderColor Edges[Color] {
+    set {
+      CheckMutable()
+      pushBorderColors(value)
+    }
+  }
   /// Binds all box border colors.
   public prop BorderColorAnim Anim[Color]? {
-    init {
+    set {
+      CheckMutable()
       pushPaintColor(StyleField.ShapeStrokeColor, value)
       pushPaintColor(StyleField.BorderTopColor, value)
       pushPaintColor(StyleField.BorderRightColor, value)
@@ -313,43 +613,117 @@ public open class Style {
     }
   }
   /// Sets the box border color at the inline start edge.
-  public prop BorderStartColor Color{ init -> pushColor(StyleField.BorderStartColor, value) }
+  public prop BorderStartColor Color {
+    set {
+      CheckMutable()
+      pushColor(StyleField.BorderStartColor, value)
+    }
+  }
   /// Binds the border color at the inline start edge.
-  public prop BorderStartColorAnim Anim[Color]? { init -> pushPaintColor(StyleField.BorderStartColor, value) }
+  public prop BorderStartColorAnim Anim[Color]? {
+    set {
+      CheckMutable()
+      pushPaintColor(StyleField.BorderStartColor, value)
+    }
+  }
   /// Sets the box border color at the inline end edge.
-  public prop BorderEndColor Color{ init -> pushColor(StyleField.BorderEndColor, value) }
+  public prop BorderEndColor Color {
+    set {
+      CheckMutable()
+      pushColor(StyleField.BorderEndColor, value)
+    }
+  }
   /// Binds the border color at the inline end edge.
-  public prop BorderEndColorAnim Anim[Color]? { init -> pushPaintColor(StyleField.BorderEndColor, value) }
+  public prop BorderEndColorAnim Anim[Color]? {
+    set {
+      CheckMutable()
+      pushPaintColor(StyleField.BorderEndColor, value)
+    }
+  }
   /// Sets how box border edges paint. Dashed and Dotted stroke one ring
   /// using the top border width and color. Shape strokes are unchanged.
-  public prop BorderStyle BorderStyle{ init -> pushEnumOrdinal(StyleField.BorderStyle, int32(value)) }
+  public prop BorderStyle BorderStyle {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.BorderStyle, int32(value))
+    }
+  }
   /// Sets the non-negative pixel thickness of the box outline.
   /// Shape does not paint box outlines.
-  public prop OutlineWidth Length{ init -> pushCheckedLength(StyleField.OutlineWidth, value, "OutlineWidth", false, false, false) }
+  public prop OutlineWidth Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.OutlineWidth, value, "OutlineWidth", false, false, false)
+    }
+  }
   /// Sets the color of the box outline.
-  public prop OutlineColor Color{ init -> pushColor(StyleField.OutlineColor, value) }
+  public prop OutlineColor Color {
+    set {
+      CheckMutable()
+      pushColor(StyleField.OutlineColor, value)
+    }
+  }
   /// Binds the outline color without rebuilding or changing layout.
-  public prop OutlineColorAnim Anim[Color]? { init -> pushPaintColor(StyleField.OutlineColor, value) }
+  public prop OutlineColorAnim Anim[Color]? {
+    set {
+      CheckMutable()
+      pushPaintColor(StyleField.OutlineColor, value)
+    }
+  }
   /// Sets the signed pixel offset from the border edge. Positive values move the outline outward.
-  public prop OutlineOffset Length{ init -> pushCheckedLength(StyleField.OutlineOffset, value, "OutlineOffset", true, false, false) }
+  public prop OutlineOffset Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.OutlineOffset, value, "OutlineOffset", true, false, false)
+    }
+  }
   /// Sets opacity from 0 through 1.
-  public prop Opacity float64{ init -> pushScalar(StyleField.Opacity, normalizeOpacity(value)) }
+  public prop Opacity float64 {
+    set {
+      CheckMutable()
+      pushScalar(StyleField.Opacity, normalizeOpacity(value))
+    }
+  }
   /// Binds opacity. The animation wins over Opacity and TransitionMs until removed.
-  public prop OpacityAnim Anim[float64]? { init -> pushPaintNumber(StyleField.Opacity, value) }
+  public prop OpacityAnim Anim[float64]? {
+    set {
+      CheckMutable()
+      pushPaintNumber(StyleField.Opacity, value)
+    }
+  }
   /// Sets the Gaussian blur radius, from 0 through 64 pixels, applied to the window
   /// content behind the border box. BorderRadius, clips and Opacity apply to the blur.
-  public prop BackdropBlur float64{ init -> pushScalar(StyleField.BackdropBlur, normalizeBackdropBlur(value)) }
+  public prop BackdropBlur float64 {
+    set {
+      CheckMutable()
+      pushScalar(StyleField.BackdropBlur, normalizeBackdropBlur(value))
+    }
+  }
   /// Sets how this element and its descendants composite with the backdrop.
-  public prop BlendMode BlendMode{ init -> pushEnumOrdinal(StyleField.BlendMode, int32(value)) }
+  public prop BlendMode BlendMode {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.BlendMode, int32(value))
+    }
+  }
   public prop ShaderEffect ShaderEffect? {
-    init -> pushShaderEffect(StyleField.ShaderEffect, value)
+    set {
+      CheckMutable()
+      pushShaderEffect(StyleField.ShaderEffect, value)
+    }
   }
   /// Sets a layout-neutral 2D transform for this element and its descendants.
   /// Components interpolate only when their length units match.
-  public prop Transform PanelTransform{ init -> pushTransform(value) }
+  public prop Transform PanelTransform {
+    set {
+      CheckMutable()
+      pushTransform(value)
+    }
+  }
   /// Binds translation in pixels without changing layout. Other Transform components remain declared.
   public prop TranslateAnim Anim[Point]? {
-    init {
+    set {
+      CheckMutable()
       if let source = value {
         addEntry(StyleEntry{ Field: StyleField.TransformTranslateX,
           Payload: PaintBinding(StyleField.TransformTranslateX, translation: source) })
@@ -359,71 +733,158 @@ public open class Style {
     }
   }
   /// Binds the uniform scale factor without changing layout.
-  public prop ScaleAnim Anim[float64]? { init -> pushPaintNumber(StyleField.TransformScale, value) }
+  public prop ScaleAnim Anim[float64]? {
+    set {
+      CheckMutable()
+      pushPaintNumber(StyleField.TransformScale, value)
+    }
+  }
   /// Sets the horizontal transform origin. The default is 50 percent.
   public prop TransformOriginX Length{
-    init -> pushLength(StyleField.TransformOriginX, normalizeTransformOrigin(value, "TransformOriginX"))
+    set {
+      CheckMutable()
+      pushLength(StyleField.TransformOriginX, normalizeTransformOrigin(value, "TransformOriginX"))
+    }
   }
   /// Sets the vertical transform origin. The default is 50 percent.
   public prop TransformOriginY Length{
-    init -> pushLength(StyleField.TransformOriginY, normalizeTransformOrigin(value, "TransformOriginY"))
+    set {
+      CheckMutable()
+      pushLength(StyleField.TransformOriginY, normalizeTransformOrigin(value, "TransformOriginY"))
+    }
   }
   /// Sets one outer or inset shadow as a one-item shadow stack.
   /// Shapes shadow their painted fill and stroke geometry.
   public prop BoxShadow BoxShadow{
-    init -> pushBoxShadowStack(singleBoxShadow(value))
+    set {
+      CheckMutable()
+      pushBoxShadowStack(singleBoxShadow(value))
+    }
   }
   /// Sets the defensively copied front-to-back shadow stack. An empty array clears state-layer shadows.
   /// Shape shadows follow painted fill and stroke geometry.
-  public prop BoxShadows []BoxShadow{ init -> pushBoxShadowStack(copyBoxShadows(value)) }
+  public prop BoxShadows []BoxShadow {
+    set {
+      CheckMutable()
+      pushBoxShadowStack(copyBoxShadows(value))
+    }
+  }
   /// Sets one inherited text shadow as a one-item shadow stack.
-  public prop TextShadow TextShadow{ init -> pushTextShadowStack(singleTextShadow(value)) }
+  public prop TextShadow TextShadow {
+    set {
+      CheckMutable()
+      pushTextShadowStack(singleTextShadow(value))
+    }
+  }
   /// Sets the defensively copied inherited front-to-back text shadow stack.
   /// An empty array clears inherited text shadows.
-  public prop TextShadows []TextShadow{ init -> pushTextShadowStack(copyTextShadows(value)) }
+  public prop TextShadows []TextShadow {
+    set {
+      CheckMutable()
+      pushTextShadowStack(copyTextShadows(value))
+    }
+  }
   /// Sets preferred font family names, never file paths. Register files with FontSource.FromPath.
-  public prop FontFamily string{ init -> pushText(StyleField.FontFamily, value) }
+  public prop FontFamily string {
+    set {
+      CheckMutable()
+      pushText(StyleField.FontFamily, value)
+    }
+  }
 
   /// Sets the inherited BCP 47 language used for text shaping. Empty uses the shaper default.
   public prop Language string{
-    init {
+    set {
+      CheckMutable()
       if value == nil { throw ArgumentNullException("Language") }
       if value.Length > 64 || value.IndexOf('\0') >= 0 { throw ArgumentException("Language must fit a 64-character language tag", "Language") }
       pushText(StyleField.Language, value)
     }
   }
   /// Sets the font size.
-  public prop FontSize Length{ init -> pushCheckedLength(StyleField.FontSize, value, "FontSize", false, false, false) }
+  public prop FontSize Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.FontSize, value, "FontSize", false, false, false)
+    }
+  }
   /// Sets the text color.
-  public prop Color Color{ init -> pushColor(StyleField.Color, value) }
+  public prop Color Color {
+    set {
+      CheckMutable()
+      pushColor(StyleField.Color, value)
+    }
+  }
   /// Binds the inherited text color without rebuilding or changing layout.
-  public prop ColorAnim Anim[Color]? { init -> pushPaintColor(StyleField.Color, value) }
+  public prop ColorAnim Anim[Color]? {
+    set {
+      CheckMutable()
+      pushPaintColor(StyleField.Color, value)
+    }
+  }
   /// Sets the inherited non-negative pixel width of the glyph stroke.
   /// The stroke is paint-only, outlines glyphs only, and snaps during transitions.
   public prop TextStrokeWidth Length{
-    init{
+    set {
+      CheckMutable()
       let normalized = value.Unit == LengthUnit.Px && value.Value == 0.0F ? Length{} : value
       pushCheckedLength(StyleField.TextStrokeWidth, normalized, "TextStrokeWidth", false, false, false)
     }
   }
   /// Sets the inherited glyph stroke color without changing text layout.
-  public prop TextStrokeColor Color{ init -> pushColor(StyleField.TextStrokeColor, value) }
+  public prop TextStrokeColor Color {
+    set {
+      CheckMutable()
+      pushColor(StyleField.TextStrokeColor, value)
+    }
+  }
   /// Binds the inherited glyph stroke color without changing text layout.
-  public prop TextStrokeColorAnim Anim[Color]? { init -> pushPaintColor(StyleField.TextStrokeColor, value) }
+  public prop TextStrokeColorAnim Anim[Color]? {
+    set {
+      CheckMutable()
+      pushPaintColor(StyleField.TextStrokeColor, value)
+    }
+  }
   /// Sets the font weight.
-  public prop FontWeight float64{ init -> pushScalar(StyleField.FontWeight, checkedNonNegative(value, "FontWeight")) }
+  public prop FontWeight float64 {
+    set {
+      CheckMutable()
+      pushScalar(StyleField.FontWeight, checkedNonNegative(value, "FontWeight"))
+    }
+  }
   /// Sets the font style.
-  public prop FontStyle FontStyle{ init -> pushEnumOrdinal(StyleField.FontStyle, int32(value)) }
+  public prop FontStyle FontStyle {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.FontStyle, int32(value))
+    }
+  }
   /// Sets added spacing between letters.
-  public prop LetterSpacing Length{ init -> pushCheckedLength(StyleField.LetterSpacing, value, "LetterSpacing", true, false, false) }
+  public prop LetterSpacing Length {
+    set {
+      CheckMutable()
+      pushCheckedLength(StyleField.LetterSpacing, value, "LetterSpacing", true, false, false)
+    }
+  }
   /// Sets line height to FontSize times LineHeight for Text and TextEditor.
   /// Font overflow remains above the first editor line and below the last. Inline slots may increase line height.
-  public prop LineHeight float64{ init -> pushScalar(StyleField.LineHeight, checkedNonNegative(value, "LineHeight")) }
+  public prop LineHeight float64 {
+    set {
+      CheckMutable()
+      pushScalar(StyleField.LineHeight, checkedNonNegative(value, "LineHeight"))
+    }
+  }
   /// Sets horizontal text alignment.
-  public prop TextAlign TextAlign{ init -> pushEnumOrdinal(StyleField.TextAlign, int32(value)) }
+  public prop TextAlign TextAlign {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.TextAlign, int32(value))
+    }
+  }
   /// Sets the inherited lines painted with text. Values can be combined.
   public prop TextDecoration TextDecoration{
-    init{
+    set {
+      CheckMutable()
       let bits = int32(value)
       if (bits & ~int32(3)) != 0 {
         throw ArgumentOutOfRangeException("TextDecoration")
@@ -432,19 +893,35 @@ public open class Style {
     }
   }
   /// Sets whether static text wraps at soft-wrap opportunities.
-  public prop TextWrap TextWrap{ init -> pushEnumOrdinal(StyleField.TextWrap, int32(value)) }
+  public prop TextWrap TextWrap {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.TextWrap, int32(value))
+    }
+  }
   /// Sets how overflowing static text is trimmed.
-  public prop TextTrimming TextTrimming{ init -> pushEnumOrdinal(StyleField.TextTrimming, int32(value)) }
+  public prop TextTrimming TextTrimming {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.TextTrimming, int32(value))
+    }
+  }
   /// Caps visual lines in static Text. Zero keeps all lines; negative values throw ArgumentOutOfRangeException.
   /// It does not inherit, change TextEntry, or interpolate through transitions.
   public prop TextMaxLines int32{
-    init{
+    set {
+      CheckMutable()
       if value < 0 { throw ArgumentOutOfRangeException("TextMaxLines") }
       pushInt32(StyleField.TextMaxLines, value)
     }
   }
   /// Sets inherited invariant casing for static Text. TextEntry is unchanged.
-  public prop TextTransform TextTransform{ init -> pushEnumOrdinal(StyleField.TextTransform, int32(value)) }
+  public prop TextTransform TextTransform {
+    set {
+      CheckMutable()
+      pushEnumOrdinal(StyleField.TextTransform, int32(value))
+    }
+  }
 
   internal func pushPaintNumber(field StyleField, value Anim[float64]?) {
     if let source = value {

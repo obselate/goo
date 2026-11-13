@@ -228,6 +228,7 @@ internal partial class Reconciler {
   private var operationDepth int32
 
   private func mountCore(b Blob) Node {
+    b.Freeze()
     let result = switch b {
       case s is SizedBlob: mountSized(s)
       case v is Virtual: mountVirtual(v)
@@ -845,6 +846,7 @@ internal partial class Reconciler {
   }
 
   private func diffCore(n Node, b Blob) Node {
+    b.Freeze()
     if recyclingRow { n.Key = b.Key }
     if b is VirtualRetainedBlob {
       if n.Retired || n.Key != b.Key {

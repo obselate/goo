@@ -16,7 +16,10 @@ internal func eachCore[T any](items IReadOnlyList[T], itemKey(T) -> string, item
   for index in 0 ... result.Length {
     let item = items[index]
     let child = itemBuilder(item)
-    if child.Key == nil { child.SetVirtualKey(itemKey(item)) }
+    if child.Key == nil {
+      child.CheckMutable()
+      child.Key = itemKey(item)
+    }
     result[index] = child
   }
   return result

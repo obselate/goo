@@ -4,6 +4,100 @@ import System
 import System.Collections.Generic
 
 internal class TreeFixtures {
+  func BlobAssignmentAfterHandOffContract() bool {
+    let blob = Text("before")
+    let node = Reconciler{Res: Resolver{}}.Mount(blob)
+    try {
+      try { blob.Content = "after" } catch (error InvalidOperationException) {
+        return error.Message.Contains("Text") && error.Message.Contains("modified after it was returned to Goo")
+          && node.Content == "before"
+      }
+      return false
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func AccessibilityAssignmentAfterHandOffContract() bool {
+    let declaration = Accessibility{Name: "before", Range: AccessibilityValue{Now: 1},
+      Relationships: AccessibilityRelationships{}}
+    let blob = Container{Accessibility: declaration}
+    let node = Reconciler{Res: Resolver{}}.Mount(blob)
+    try {
+      let changes = []Action{() -> { declaration.Name = "after" },
+        () -> { declaration.Range!!.Now = 2 },
+        () -> { declaration.Relationships!!.ActiveDescendant = ElementHandle() }}
+      for change in changes {
+        var rejected = false
+        try { change() } catch (error InvalidOperationException) {
+          rejected = error.Message.Contains("Container") && error.Message.Contains("modified after it was returned to Goo")
+        }
+        if !rejected { return false }
+      }
+      return declaration.Name == "before" && declaration.Range!!.Now == 1
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func ChildrenMutationAfterHandOffContract() bool {
+    let blob = Container(){Text("before")}
+    let node = Reconciler{Res: Resolver{}}.Mount(blob)
+    try {
+      let changes = []Action{() -> blob.Add(Text("after")), () -> blob.Children.Add(Text("after")),
+        () -> blob.Children.Clear(), () -> blob.Children.RemoveAt(0),
+        () -> blob.Children.Insert(0, Text("after")), () -> { blob.Children[0] = Text("after") }}
+      for change in changes {
+        var rejected = false
+        try { change() } catch (error InvalidOperationException) {
+          rejected = error.Message.Contains("Container") && error.Message.Contains("modified after it was returned to Goo")
+        }
+        if !rejected { return false }
+      }
+      return node.Children.Count == 1 && node.Children[0].Content == "before"
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func ChildrenConstructionBeforeHandOffContract() bool {
+    let blob = Row(){Text("brace")}
+    blob.Add(Text("add"))
+    blob.Children.Add(Text("list"))
+    let node = Reconciler{Res: Resolver{}}.Mount(blob)
+    try {
+      return node.Children.Count == 3 && node.Children[0].Content == "brace"
+        && node.Children[1].Content == "add" && node.Children[2].Content == "list"
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func SharedChildrenCopiedAtHandOffContract() bool {
+    for kind in 0 ... 4 {
+      let children = List[Blob](){Text("before")}
+      let blob Blob = switch kind {
+        case 0: Container{Children: children}
+        case 1: Row{Children: children}
+        case 2: Column{Children: children}
+        case _: Button{Children: children}
+      }
+      let reconciler = Reconciler{Res: Resolver{}}
+      let node = reconciler.Mount(blob)
+      try {
+        children[0] = Text("after")
+        children.Add(Text("extra"))
+        reconciler.Diff(node, blob)
+        if node.Children.Count != 1 || node.Children[0].Content != "before" { return false }
+      } finally { NodeLifecycle.DisposeTree(node) }
+    }
+    return true
+  }
+
+  func EachFrozenKeylessBlobThrowsContract() bool {
+    let blob = Text("frozen")
+    let node = Reconciler{Res: Resolver{}}.Mount(blob)
+    try {
+      try {
+        Each([]string{"key"}, item -> throw ArgumentException("Must reject before selecting a key"), item -> blob)
+      } catch (error InvalidOperationException) {
+        return error.Message.Contains("Text") && blob.Key == nil
+      }
+      return false
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
   func SizedStateAndContextContract() bool {
     let previous = StateVerification.Override
     StateVerification.Enabled = false

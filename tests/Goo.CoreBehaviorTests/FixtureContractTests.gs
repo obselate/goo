@@ -142,6 +142,14 @@ class FixtureContractTests {
 
     shared {
         func Cases() sequence[[]object] {
+            yield Contract[TreeFixtures]("BlobAssignmentAfterHandOffContract")
+            yield Contract[TreeFixtures]("AccessibilityAssignmentAfterHandOffContract")
+            yield Contract[TreeFixtures]("ChildrenMutationAfterHandOffContract")
+            yield Contract[TreeFixtures]("ChildrenConstructionBeforeHandOffContract")
+            yield Contract[TreeFixtures]("SharedChildrenCopiedAtHandOffContract")
+            yield Contract[TreeFixtures]("EachFrozenKeylessBlobThrowsContract")
+            yield Contract[StyleFixtures]("StyleAssignmentAfterHandOffContract")
+            yield Contract[StyleFixtures]("StateStylesFreezeAtHandOffContract")
             yield Contract[LayoutFixtures]("SizedScrollExtentUsesContentContract")
             yield Contract[LayoutFixtures]("SizedNestedPortalUsesFinalSizeContract")
             yield Contract[LayoutFixtures]("SizedContentResolvesLengthsInSameFrameContract")

@@ -8,6 +8,11 @@ public class Button : Blob {
   internal override func coreBlob() {
   }
 
+  internal func FreezeChildren() IList[Blob] {
+    children = FrozenChildren(GetType(), children)
+    return children!!
+  }
+
   /// Gets the mutable child list. Read-only lists supplied during initialization are copied.
   /// Siblings can mix keyed and unkeyed entries. Keyed children match by key; unkeyed children match only at the same absolute sibling index.
   public prop Children IList[Blob]{
@@ -15,7 +20,10 @@ public class Button : Blob {
       children ??= List[Blob]()
       return children!!
     }
-    init -> children = value.IsReadOnly ? List[Blob](value) : value
+    set {
+      CheckMutable()
+      children = value.IsReadOnly ? List[Blob](value) : value
+    }
   }
 
   /// Initializes an empty button.
