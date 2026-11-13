@@ -18,7 +18,7 @@ class Example : Cell {
 
     override func Build() Blob {
         let theme = Theme.Read()
-        return Container{
+        return Column{
             BasedOn: theme.CanvasStyle,
             Width: Percent(100),
             Height: Percent(100),
@@ -37,7 +37,7 @@ class Example : Cell {
                         Padding: theme.Spacing * 3,
                         Text{Content: "Navigation"},
                     },
-                    Second: Container{
+                    Second: Column{
                         Width: Percent(100),
                         Height: Percent(100),
                         Padding: theme.Spacing * 3,
@@ -57,9 +57,9 @@ class Example : Cell {
 }
 
 func Main() {
-    Window.ConfigureApplication("A resizable panel", "1.0.0", "com.example.tutorial")
-    let window = Window{Title: "A resizable panel", Width: 600, Height: 320, Root: Example{}}
+    Application.Configure("A resizable panel", "1.0.0", "com.example.tutorial")
+    let window = Window{Title: "A resizable panel", Size: LayoutSize(600, 320), Root: Example{}}
     Theme.Attach(window, Theme.Default)
-    window.Run()
+    Application.Run(window)
 }
 ```

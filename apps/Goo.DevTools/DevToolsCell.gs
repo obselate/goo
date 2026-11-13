@@ -91,11 +91,10 @@ class DevToolsCell : Cell {
         } else {
             BuildElements(theme)
         }
-        return Container{
+        return Column{
             Key: "devtools-root",
             Width: Percent(100),
             Height: Percent(100),
-            FlexDirection: FlexDirection.Column,
             BorderRadius: theme.PanelRadius!!,
             BorderWidth: theme.BorderWidth,
             BorderColor: theme.BorderColor,
@@ -107,7 +106,7 @@ class DevToolsCell : Cell {
             Color: theme.TextColor,
             Container{
                 Key: "chrome",
-                WindowChrome{Host: window, EnableDoubleClick: true, LeadingContent: BuildMainTabs()}.Build(),
+                WindowChrome{Host: window, EnableDoubleClick: true, LeadingContent: BuildMainTabs()},
             },
             body,
         }
@@ -130,12 +129,15 @@ class DevToolsCell : Cell {
         }
     )
 
-    private func BuildProfiler() Blob -> Cell.Mount[ProfilerInput, ProfilerCell](
-        "profiler",
-        ProfilerInput{Session: session, Owner: window, Width: layoutWidth, Revision: session.Profiler?.Revision ?? -1}
-    )
+    private func BuildProfiler() Blob -> Profiler{
+        Key: "profiler",
+        Session: session,
+        Owner: window,
+        Width: layoutWidth,
+        Revision: session.Profiler?.Revision ?? -1,
+    }
 
-    private func BuildElements(theme Theme) Container {
+    private func BuildElements(theme Theme) Blob {
         UpdateTree()
         let tree = BuildTree(theme)
         let panes Blob = if detailsHidden {
@@ -163,20 +165,20 @@ class DevToolsCell : Cell {
         let state = session.State
         if !session.IsSample && state != DiagnosticConnectionState.Connected
         && state != DiagnosticConnectionState.Connecting {
-            let connect = ActionButton{
+            let connect Blob = ActionButton{
                 Content: "Connect",
                 OnClick: () -> {
                     session.ToggleConnection()
                     Rebuild()
                 },
-            }.Build()
+            }
             connect.Key = "connection-toggle"
-            let banner = Banner{
+            let banner Blob = Banner{
                 Tone: state == DiagnosticConnectionState.Faulted ? Tone.Danger: Tone.Warning,
                 Content: state == DiagnosticConnectionState.Faulted ? "Connection failed": state.ToString(),
                 Action: state == DiagnosticConnectionState.Reconnecting ? nil: connect,
                 BorderRadius: 0.0,
-            }.Build()
+            }
             banner.Key = "connection-banner"
             children.Add(banner)
         }
@@ -184,18 +186,17 @@ class DevToolsCell : Cell {
         if showActivity {
             children.Add(BuildActivity(theme))
         }
-        return Container{
+        return Column{
             Key: "elements",
             Width: Percent(100),
             Height: 0,
             MinHeight: 0,
             FlexGrow: 1.0,
-            FlexDirection: FlexDirection.Column,
             Children: children,
         }
     }
 
-    private func BuildToolbar(theme Theme) Container {
+    private func BuildToolbar(theme Theme) Blob {
         let windows = List[ComboBoxOption]()
         for target in session.Windows {
             windows.Add(ComboBoxOption{Id: target.Id, Label: target.Title})
@@ -217,7 +218,7 @@ class DevToolsCell : Cell {
             )
         )
         if !session.IsSample {
-            let pick = ActionButton{
+            let pick Blob = ActionButton{
                 Content: session.Inspecting ? "Stop picking": "Pick element",
                 Leading: MaterialIcons.Create("arrow_selector_tool", 18.0),
                 Pressed: session.Inspecting,
@@ -226,7 +227,7 @@ class DevToolsCell : Cell {
                     session.ToggleInspect()
                     Rebuild()
                 },
-            }.Build()
+            }
             pick.Key = "inspect-toggle"
             children.Add(pick)
             if session.State == DiagnosticConnectionState.Connected {
@@ -255,7 +256,7 @@ class DevToolsCell : Cell {
                         collapsed.Clear()
                         Rebuild()
                     },
-                }.Build(),
+                },
             }
         )
         children.Add(
@@ -288,10 +289,9 @@ class DevToolsCell : Cell {
                 }
             )
         )
-        return Container{
+        return Row{
             Key: "toolbar",
             Width: Percent(100),
-            FlexDirection: FlexDirection.Row,
             AlignItems: AlignItems.Center,
             Gap: theme.ControlGap,
             Padding: theme.Spacing * 2.0,
@@ -304,7 +304,7 @@ class DevToolsCell : Cell {
 
     private func ToolButton(key string, icon string, name string, active bool, action Action) Blob {
         let theme = Theme.Read()
-        let button = IconButton{
+        let button Blob = IconButton{
             Icon: MaterialIcons.Create(icon, 18.0, active ? theme.LinkColor: theme.MutedTextColor),
             AccessibilityName: name,
             Active: active,
@@ -312,7 +312,7 @@ class DevToolsCell : Cell {
                 action()
                 Rebuild()
             },
-        }.Build()
+        }
         button.Key = key
         return Cell.Mount[TooltipInput, Tooltip](
             key + "-tooltip",
@@ -365,7 +365,7 @@ class DevToolsCell : Cell {
 
     private func BuildTree(theme Theme) Blob {
         if treeNodes.Length == 0 {
-            return EmptyState{Title: session.Query == "" ? "No elements": "No matches"}.Build()
+            return EmptyState{Title: session.Query == "" ? "No elements": "No matches"}
         }
         return Cell.Mount[TreeViewInput, TreeView](
             "element-tree",
@@ -393,8 +393,7 @@ class DevToolsCell : Cell {
                     if !typeNames.TryGetValue(row.Node.Id!!, out var typeName) {
                         return label
                     }
-                    return Container{
-                        FlexDirection: FlexDirection.Row,
+                    return Row{
                         AlignItems: AlignItems.Center,
                         Gap: theme.ControlGap,
                         label,
@@ -420,7 +419,7 @@ class DevToolsCell : Cell {
     private func BuildInspector(theme Theme) Blob {
         let node = session.SelectedNode()
         if node.Id == "" {
-            return EmptyState{Title: "No root"}.Build()
+            return EmptyState{Title: "No root"}
         }
         let fields = Fields(node)
         let items = List[PropertyGridItem]()
@@ -478,7 +477,7 @@ class DevToolsCell : Cell {
                     }
                     Rebuild()
                 },
-            }.Build()
+            }
         )
         details.Add(
             ActionButton{
@@ -487,19 +486,17 @@ class DevToolsCell : Cell {
                     showDefaults = !showDefaults
                     Rebuild()
                 },
-            }.Build()
+            }
         )
         details.Add(BuildOverrides(theme))
-        return Container{
+        return Column{
             Key: "inspector",
             Width: Percent(100),
             Height: Percent(100),
-            FlexDirection: FlexDirection.Column,
             BackgroundColor: theme.PanelColor,
-            Container{
+            Row{
                 Key: "inspector-header",
                 Width: Percent(100),
-                FlexDirection: FlexDirection.Row,
                 AlignItems: AlignItems.Center,
                 Gap: theme.ControlGap,
                 Padding: Edges{
@@ -517,24 +514,23 @@ class DevToolsCell : Cell {
                         Variant: TextVariant.H6,
                         MaxLines: 1,
                         Trimming: TextTrimming.Ellipsis,
-                    }.Build(),
+                    },
                     Typography{
                         Content: Subtitle(node),
                         Variant: TextVariant.Caption,
                         Color: theme.MutedTextColor,
                         MaxLines: 1,
                         Trimming: TextTrimming.Ellipsis,
-                    }.Build(),
+                    },
                 },
             },
-            Container{
+            Column{
                 Key: "details-viewport",
                 Width: Percent(100),
                 Height: 0,
                 FlexGrow: 1.0,
                 MinHeight: 0,
                 Padding: Edges{Left: theme.PanelPadding, Right: theme.PanelPadding, Bottom: theme.PanelPadding},
-                FlexDirection: FlexDirection.Column,
                 Gap: theme.ControlGap * 2.0,
                 OverflowY: Overflow.Scroll,
                 OverflowX: Overflow.Hidden,
@@ -787,7 +783,7 @@ class DevToolsCell : Cell {
     }
 
     private func BuildOverrides(theme Theme) Blob {
-        let entry = TextField{
+        let entry Blob = TextField{
             Value: session.OverrideText,
             Controlled: true,
             Placeholder: "BackgroundColor = #18212A",
@@ -797,26 +793,26 @@ class DevToolsCell : Cell {
                 session.SetOverrideText(value)
                 Rebuild()
             },
-        }.Build()
+        }
         entry.Key = "override-entry"
-        let apply = ActionButton{
+        let apply Blob = ActionButton{
             Content: "Apply",
             Disabled: session.OverrideText == "" || !session.IsSample && !session.Capabilities.RuntimeOverrides,
             OnClick: () -> {
                 session.ApplyOverride()
                 Rebuild()
             },
-        }.Build()
+        }
         apply.Key = "override-apply"
-        let reset = ActionButton{
+        let reset Blob = ActionButton{
             Content: "Reset",
             OnClick: () -> {
                 session.ResetOverride()
                 Rebuild()
             },
-        }.Build()
+        }
         reset.Key = "override-reset"
-        let overrides = Disclosure{
+        let overrides Blob = Disclosure{
             Label: "Edit style",
             Expanded: showOverrides,
             OnExpandedChange: (value bool) -> {
@@ -827,20 +823,19 @@ class DevToolsCell : Cell {
             Content: Container{
                 Gap: theme.ControlGap,
                 entry,
-                Container{
+                Row{
                     Key: "override-actions",
-                    FlexDirection: FlexDirection.Row,
                     Gap: theme.ControlGap,
                     apply,
                     reset
                 },
             },
-        }.Build()
+        }
         overrides.Key = "overrides"
         return overrides
     }
 
-    private func BuildActivity(theme Theme) Container {
+    private func BuildActivity(theme Theme) Blob {
         let header = List[Blob]()
         header.Add(
             Cell.Mount[ToggleGroupInput, ToggleGroup](
@@ -861,18 +856,18 @@ class DevToolsCell : Cell {
         )
         header.Add(Container{Key: "activity-space", FlexGrow: 1.0})
         if !showCaptures {
-            let clear = ActionButton{
+            let clear Blob = ActionButton{
                 Content: "Clear",
                 Leading: MaterialIcons.Create("clear_all", 18.0),
                 OnClick: () -> {
                     session.ClearLogs()
                     Rebuild()
                 },
-            }.Build()
+            }
             clear.Key = "clear-logs"
             header.Add(clear)
         }
-        let capture = ActionButton{
+        let capture Blob = ActionButton{
             Content: "Capture",
             Leading: MaterialIcons.Create("screenshot_monitor", 18.0),
             Disabled: !session.IsSample && session.State != DiagnosticConnectionState.Connected,
@@ -880,7 +875,7 @@ class DevToolsCell : Cell {
                 session.CaptureScreenshot()
                 Rebuild()
             },
-        }.Build()
+        }
         capture.Key = "capture-bottom"
         header.Add(capture)
         let rows = if showCaptures {
@@ -908,25 +903,23 @@ class DevToolsCell : Cell {
                 FlexGrow: 1.0,
                 AlignItems: AlignItems.Center,
                 JustifyContent: JustifyContent.Center,
-                EmptyState{Title: "No captures", Description: "Select Capture to record the selected window."}.Build(),
+                EmptyState{Title: "No captures", Description: "Select Capture to record the selected window."},
             }
         } else {
             rows
         }
-        return Container{
+        return Column{
             Key: "activity",
             Width: Percent(100),
             Height: 0,
             MinHeight: 0,
             FlexGrow: 3.0,
-            FlexDirection: FlexDirection.Column,
             BackgroundColor: theme.PanelColor,
             BorderWidth: Edges{Top: theme.BorderWidth},
             BorderColor: Edges[Color]{Top: theme.BorderColor},
-            Container{
+            Row{
                 Key: "activity-header",
                 Width: Percent(100),
-                FlexDirection: FlexDirection.Row,
                 AlignItems: AlignItems.Center,
                 Gap: theme.ControlGap,
                 Padding: theme.Spacing * 2.0,
@@ -947,9 +940,8 @@ class DevToolsCell : Cell {
         } else {
             Tone.Neutral
         }
-        return Container{
+        return Row{
             Width: Percent(100),
-            FlexDirection: FlexDirection.Row,
             AlignItems: AlignItems.Center,
             Gap: theme.ControlGap,
             Padding: Edges{
@@ -971,7 +963,7 @@ class DevToolsCell : Cell {
                 Width: theme.ControlHeight * 2.0,
                 FlexShrink: 0.0,
                 AlignItems: AlignItems.FlexStart,
-                Badge{Content: entry.Level.ToUpperInvariant(), Tone: tone}.Build(),
+                Badge{Content: entry.Level.ToUpperInvariant(), Tone: tone},
             },
             Text{
                 Key: "log-source",
@@ -996,9 +988,8 @@ class DevToolsCell : Cell {
 
     private func BuildCaptureRow(capture DiagnosticScreenshot) Blob {
         let theme = Theme.Read()
-        return Container{
+        return Row{
             Width: Percent(100),
-            FlexDirection: FlexDirection.Row,
             AlignItems: AlignItems.Center,
             Gap: theme.ControlGap,
             Padding: Edges{

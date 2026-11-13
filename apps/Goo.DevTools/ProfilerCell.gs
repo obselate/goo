@@ -24,15 +24,18 @@ internal class ProfilerTableRow {
     }
 }
 
-internal data struct ProfilerInput {
+internal data struct Profiler {
+    var Key string?
     var Session DiagnosticSession
     var Owner Window?
     var Width float64
     var Revision int32
 }
 
-internal partial class ProfilerCell : Cell[ProfilerInput], IDisposable {
-    protected override func InputChanged(input ProfilerInput) {
+internal func operator implicit(value Profiler) Blob -> Cell.Mount[Profiler, ProfilerCell](value.Key, value)
+
+internal partial class ProfilerCell : Cell[Profiler], IDisposable {
+    protected override func InputChanged(input Profiler) {
         session = input.Session
         owner = input.Owner
         Refresh(input.Width)
@@ -112,7 +115,7 @@ internal partial class ProfilerCell : Cell[ProfilerInput], IDisposable {
                     Key: "profiler-file-status",
                     FlexShrink: 0.0,
                     Padding: Edges{Left: Pad, Right: Pad, Top: 4},
-                    Banner{Tone: Tone.Danger, Content: fileStatus, Live: true}.Build()
+                    Banner{Tone: Tone.Danger, Content: fileStatus, Live: true}
                 }
             )
         }
@@ -123,7 +126,7 @@ internal partial class ProfilerCell : Cell[ProfilerInput], IDisposable {
                     Key: "profiler-problem",
                     FlexShrink: 0.0,
                     Padding: Edges{Left: Pad, Right: Pad, Top: 4},
-                    Banner{Tone: Tone.Warning, Content: problem, Live: false}.Build()
+                    Banner{Tone: Tone.Warning, Content: problem, Live: false}
                 }
             )
         }
@@ -139,7 +142,7 @@ internal partial class ProfilerCell : Cell[ProfilerInput], IDisposable {
                         Illustration: MaterialIcons.Create("monitoring", 32.0, theme.FaintTextColor),
                         Title: "No trace",
                         Description: "Select Record, use the app, then select Stop."
-                    }.Build()
+                    }
                 }
             )
             return Column(children)
@@ -156,7 +159,7 @@ internal partial class ProfilerCell : Cell[ProfilerInput], IDisposable {
         let active = trace?.Active == true
         let idle = !active && !fileBusy
         let controls = List[Blob]()
-        let record = ActionButton{
+        let record Blob = ActionButton{
             Content: active ? "Stop": "Record",
             Leading: MaterialIcons.Create(active ? "stop": "fiber_manual_record", 18.0, theme.DangerColor),
             Disabled: fileBusy ||
@@ -165,7 +168,7 @@ internal partial class ProfilerCell : Cell[ProfilerInput], IDisposable {
                 .Capabilities
                 .ProfilerTrace,
             OnClick: () -> ToggleRecording(active),
-        }.Build()
+        }
         record.Key = "profiler-record"
         controls.Add(record)
         controls.Add(
@@ -273,7 +276,7 @@ internal partial class ProfilerCell : Cell[ProfilerInput], IDisposable {
         active bool = false
     ) Blob {
         let theme = Theme.Read()
-        let button = IconButton{
+        let button Blob = IconButton{
             Icon: MaterialIcons.Create(icon, 18.0, active ? theme.LinkColor: theme.MutedTextColor),
             AccessibilityName: tip,
             Disabled: !enabled,
@@ -282,7 +285,7 @@ internal partial class ProfilerCell : Cell[ProfilerInput], IDisposable {
                 action()
                 Rebuild()
             },
-        }.Build()
+        }
         button.Key = key
         guard let window = owner else {
             return button
@@ -861,7 +864,7 @@ internal partial class ProfilerCell : Cell[ProfilerInput], IDisposable {
                         EmptyContent: tab == "Types" ? EmptyState{
                             Title: "No allocation samples",
                             Description: "Turn on Allocation types in the toolbar, then record."
-                        }.Build(): nil,
+                        }: nil,
                         Density: Density.Compact,
                         Height: Length.Auto,
                         AccessibilityName: tab,

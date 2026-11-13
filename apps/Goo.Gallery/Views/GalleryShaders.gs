@@ -5,7 +5,8 @@ import System
 import System.Collections.Generic
 import System.Numerics
 
-internal data struct ShaderLabInput {
+internal data struct ShaderLab {
+    var Key string?
     var Assets GalleryMathAssets?
     var Programs GalleryShaderPrograms?
     var Compact bool
@@ -13,8 +14,10 @@ internal data struct ShaderLabInput {
     var Active bool
 }
 
-class ShaderLabCell : Cell[ShaderLabInput] {
-    protected override func InputChanged(input ShaderLabInput) {
+internal func operator implicit(value ShaderLab) Blob -> Cell.Mount[ShaderLab, ShaderLabCell](value.Key, value)
+
+class ShaderLabCell : Cell[ShaderLab] {
+    protected override func InputChanged(input ShaderLab) {
         Assets = input.Assets
         Programs = input.Programs
         Compact = input.Compact
@@ -1018,12 +1021,10 @@ class ShaderLabCell : Cell[ShaderLabInput] {
     ) Container -> Container{
         Key: "control-" + key,
         Width: Percent(100),
-        Cell.Mount[GalleryRangeInput, GalleryRange](
-            key,
-            GalleryRangeInput{
-                Label: label, MinValue: min, MaxValue: max, Value: value, Step: 0.01, OnChange: change,
-            }
-        ),
+        GalleryRange{
+            Key: key,
+            Label: label, MinValue: min, MaxValue: max, Value: value, Step: 0.01, OnChange: change,
+        },
     }
 
     private func selectedSpecimen(programs GalleryShaderPrograms, time float64, out name string, out hint string) Blob {
@@ -1036,10 +1037,7 @@ class ShaderLabCell : Cell[ShaderLabInput] {
                 BackgroundColor: GalleryTheme.SurfaceRaised,
             }
             if effectsReady() {
-                wolf = Cell.Mount[World3DInput, World3DCell](
-                    "world-3d-live",
-                    World3DInput{Effect: programs.Lab(0), Fov: fov, Contrast: contrast, Fog: fog, Playing: true}
-                )
+                wolf = World3D{Key: "world-3d-live", Effect: programs.Lab(0), Fov: fov, Contrast: contrast, Fog: fog, Playing: true}
             }
             return wolf
         }

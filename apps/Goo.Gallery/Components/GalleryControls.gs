@@ -3,7 +3,8 @@ package GooGallery
 import Goo
 import System
 
-internal data struct GalleryRangeInput {
+internal data struct GalleryRange {
+    var Key string?
     var Label string
     var MinValue float64
     var MaxValue float64
@@ -12,8 +13,10 @@ internal data struct GalleryRangeInput {
     var OnChange Action[float64]?
 }
 
-class GalleryRange : Cell[GalleryRangeInput] {
-    protected override func InputChanged(input GalleryRangeInput) {
+internal func operator implicit(value GalleryRange) Blob -> Cell.Mount[GalleryRange, GalleryRangeCell](value.Key, value)
+
+class GalleryRangeCell : Cell[GalleryRange] {
+    protected override func InputChanged(input GalleryRange) {
         Label = input.Label
         MinValue = input.MinValue
         MaxValue = input.MaxValue
@@ -189,12 +192,10 @@ class GalleryRange : Cell[GalleryRangeInput] {
 
     override func Build() Blob {
         let percent = fraction() * 100.0
-        return Container{
-            FlexDirection: FlexDirection.Column,
+        return Column{
             Gap: 8,
-            Container{
+            Row{
                 Key: "head",
-                FlexDirection: FlexDirection.Row,
                 JustifyContent: JustifyContent.SpaceBetween,
                 Text{
                     Key: "label",
@@ -207,14 +208,13 @@ class GalleryRange : Cell[GalleryRangeInput] {
                 },
                 Text{Key: "value", Content: valueText(), FontSize: 12, Color: GalleryTheme.InkMuted,},
             },
-            Container{
+            Row{
                 Key: "track",
                 Handle: Track,
                 Focusable: true,
                 Cursor: Cursor.Pointer,
                 Height: 24,
                 MinWidth: 120,
-                FlexDirection: FlexDirection.Row,
                 AlignItems: AlignItems.Center,
                 TransitionMs: 100.0,
                 HoverStyle: Style{Opacity: 0.9},

@@ -5,7 +5,8 @@ import System
 import System.Collections.Generic
 import System.Numerics
 
-internal data struct MotionChapterInput {
+internal data struct MotionChapter {
+    var Key string?
     var Assets GalleryMathAssets?
     var Programs GalleryShaderPrograms?
     var Compact bool
@@ -13,8 +14,10 @@ internal data struct MotionChapterInput {
     var Active bool
 }
 
-class MotionChapter : Cell[MotionChapterInput] {
-    protected override func InputChanged(input MotionChapterInput) {
+internal func operator implicit(value MotionChapter) Blob -> Cell.Mount[MotionChapter, MotionChapterCell](value.Key, value)
+
+class MotionChapterCell : Cell[MotionChapter] {
+    protected override func InputChanged(input MotionChapter) {
         Assets = input.Assets
         Programs = input.Programs
         Compact = input.Compact
