@@ -273,8 +273,8 @@ internal partial class Reconciler {
       cell.SetRebuildSubmission(CellInvalidated)
       cell.mountKey = nil
       return rebuildMounted(nil, cell, nil)
-    } catch (_ Exception) {
-      cell.ReleaseMountClaim()
+    } catch (error Exception) {
+      cell.ReleaseMountClaim(error)
       rethrow
     }
   }
@@ -322,9 +322,9 @@ internal partial class Reconciler {
     }
   }
 
-  internal func mountPortal(p Portal) Node {
+  internal func mountPortal(p Portal, hitTestSelf bool = false) Node {
     let n = Node{ Kind: NodeKind.Container, Key: p.Key, IsPortal: true }
-    applyPortal(n, p, true)
+    applyPortal(n, p, true, hitTestSelf)
     mountChildren(n, p.Children)
     return n
   }
@@ -415,11 +415,13 @@ internal partial class Reconciler {
     return n
   }
 
-  internal func applyStyle(n Node, b Blob, focusable bool, initial bool) {
-    applyStyleEntries(n, b, b.Entries(), focusable, initial)
+  internal func applyStyle(n Node, b Blob, focusable bool, initial bool,
+    hitTestSelf bool? = nil, tabStop bool? = nil) {
+    applyStyleEntries(n, b, b.Entries(), focusable, initial, hitTestSelf, tabStop)
   }
 
-  internal func applyStyleEntries(n Node, b Blob, entries StyleEntries?, focusable bool, initial bool) {
+  internal func applyStyleEntries(n Node, b Blob, entries StyleEntries?, focusable bool, initial bool,
+    hitTestSelf bool? = nil, tabStop bool? = nil) {
     n.Context = Context
     n.CallbackOwner = b.CallbackOwner
     var hover = b.HoverStyle?.Entries()
@@ -482,8 +484,9 @@ internal partial class Reconciler {
       MarkEffects(ReconcileEffects.Style)
     }
     var inputChanged = disabledChanged
-    if n.TabStop != b.TabStop {
-      n.TabStop = b.TabStop
+    let nextTabStop = tabStop ?? b.TabStop
+    if n.TabStop != nextTabStop {
+      n.TabStop = nextTabStop
       inputChanged = true
     }
     if n.Focusable != nextFocusable {
@@ -496,7 +499,7 @@ internal partial class Reconciler {
       inputChanged = true
     }
     if n.SyncPointerCallbacks(b) { inputChanged = true }
-    let nextHitTestSelf = !spacer && resolvedHitTestSelf(b, focusable, entries, hover, active)
+    let nextHitTestSelf = hitTestSelf ?? (!spacer && resolvedHitTestSelf(b, focusable, entries, hover, active))
     if n.HitTestSelf != nextHitTestSelf {
       n.HitTestSelf = nextHitTestSelf
       inputChanged = true
@@ -1311,7 +1314,7 @@ internal partial class Reconciler {
     return n
   }
 
-  private func applyPortal(n Node, p Portal, initial bool) {
+  private func applyPortal(n Node, p Portal, initial bool, hitTestSelf bool = false) {
     if !validPortalPlacement(p.Placement) {
       throw ArgumentOutOfRangeException("Placement")
     }
@@ -1322,27 +1325,30 @@ internal partial class Reconciler {
       if !validPortalRect(rect) { throw ArgumentOutOfRangeException("CollisionBounds") }
     }
     let options = p.FocusScope ?? (p.OnDismiss != nil ? Portals.DefaultScopeOptions : nil)
-    applyStyle(n, p, p.Focusable || options != nil, initial)
-    n.HitTestSelf = false
-    if options != nil { n.TabStop = false }
+    let previous = Portals.State(n)
+    let scopeChanged = (previous?.Options == nil) != (options == nil)
+      || previous?.Options?.Modal != options?.Modal
+      || previous?.Options?.RestoreFocus != options?.RestoreFocus
+      || previous?.Options?.InitialFocus != options?.InitialFocus
+      || (previous?.Dismiss != nil) != (p.OnDismiss != nil)
+    applyStyle(n, p, p.Focusable || options != nil, initial, hitTestSelf, options == nil && p.TabStop)
     let needsScrim = p.Scrim != nil || options?.Modal == true
     var scrim = Portals.State(n)?.Scrim
     if needsScrim {
       let declaration = Portal{ Width: Percent(100), Height: Percent(100),
         BackgroundColor: p.Scrim ?? Color.Transparent, Focusable: false, ZIndex: n.ZIndex }
       if let current = scrim {
-        diffPortal(current, declaration)
+        applyPortal(current, declaration, false, true)
       } else {
-        scrim = mountPortal(declaration)
+        scrim = mountPortal(declaration, true)
         MarkEffects(ReconcileEffects.Structure)
       }
     } else if scrim != nil {
       scrim = nil
       MarkEffects(ReconcileEffects.Structure)
     }
-    if let backdrop = scrim { backdrop.HitTestSelf = true }
     Portals.Configure(n, options, p.OnDismiss, scrim)
-    if !initial && (options != nil || p.Scrim != nil || Portals.State(n) != nil) {
+    if !initial && scopeChanged {
       MarkEffects(ReconcileEffects.Input | ReconcileEffects.Accessibility)
     }
     if n.PortalAnchor != p.Anchor || n.PortalPlacement != p.Placement

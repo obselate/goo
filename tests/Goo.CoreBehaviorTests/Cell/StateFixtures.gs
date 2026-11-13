@@ -2,8 +2,179 @@ package Goo
 
 import System
 import System.Diagnostics
+import System.Collections.Generic
+import System.Threading.Tasks
 
 internal class StateFixtures {
+  func CellBuildRejectsStateWritesContract() bool {
+    let cell = StateRigorFixtureCell("build-write")
+    let window = Window{Root: cell, Size: LayoutSize(200, 100)}
+    try {
+      try { window.UpdateTree() }
+      catch (error InvalidOperationException) {
+        return error.Message.Contains("State writes are not allowed during Build") && cell.Value.Value == 0
+      }
+      return false
+    } finally { window.Close() }
+  }
+
+  func StateWritesRequireReaderThreadContract() bool {
+    let cell = StateRigorFixtureCell("plain")
+    let window = Window{Root: cell, Size: LayoutSize(200, 100)}
+    try {
+      window.UpdateTree()
+      let rejected = Task.Run(() -> {
+        try { cell.Value.Value = 1 }
+        catch (error InvalidOperationException) { return error.Message.Contains("UI thread") }
+        return false
+      }).GetAwaiter().GetResult()
+      if !rejected || cell.Value.Value != 0 || cell.IsDirty() { return false }
+      cell.Value.Value = 2
+      window.UpdateTree()
+      return window.Tree?.Content == "2"
+    } finally { window.Close() }
+  }
+
+  func StateOnlySchedulingAndMountedContract() bool {
+    let previous = Application.VerifyState
+    Application.VerifyState = false
+    try {
+      for mode in []string{"mounted-no-write", "mounted-write"} {
+        StateRigorProbe.Builds = 0
+        let window = Window{Root: StateRigorFixtureCell(mode), Size: LayoutSize(200, 100)}
+        try {
+          window.UpdateTree()
+          window.UpdateTree()
+          let expected = mode == "mounted-write" ? 2 : 1
+          if StateRigorProbe.Builds != expected || window.Tree?.Content != (expected - 1).ToString() { return false }
+        } finally { window.Close() }
+      }
+      return Window{Root: StateRigorFixtureCell("plain"), Size: LayoutSize(200, 100)}.StateOnlySchedulingForTest()
+    } finally { Application.VerifyState = previous }
+  }
+
+  func InputChangedTracksOnlyBuildReadsContract() bool {
+    let previous = Application.VerifyState
+    Application.VerifyState = false
+    StateRigorProbe.Builds = 0
+    StateRigorProbe.Inputs = 0
+    let child = StateInputRigorCell()
+    let parent = StateInputRigorParent(child)
+    let window = Window{Root: parent, Size: LayoutSize(200, 100)}
+    try {
+      window.UpdateTree()
+      window.UpdateTree()
+      if StateRigorProbe.Inputs != 1 || StateRigorProbe.Builds != 1 || window.Tree?.Content != "1:1" { return false }
+      parent.Rebuild()
+      window.UpdateTree()
+      if StateRigorProbe.Inputs != 1 || StateRigorProbe.Builds != 1 { return false }
+      parent.InputValue = 2
+      parent.Rebuild()
+      window.UpdateTree()
+      window.UpdateTree()
+      if StateRigorProbe.Inputs != 2 || StateRigorProbe.Builds != 2 || window.Tree?.Content != "2:2" { return false }
+      child.Untracked.Value = 7
+      window.UpdateTree()
+      return StateRigorProbe.Inputs == 2 && StateRigorProbe.Builds == 2 && !parent.IsDirty() && !child.IsDirty()
+    } finally {
+      window.Close()
+      Application.VerifyState = previous
+    }
+  }
+
+  func UnsafeStatePayloadFallbackStaysPermanentContract() bool {
+    let previous = Application.VerifyState
+    Application.VerifyState = false
+    StateRigorProbe.Builds = 0
+    let cell = StateUnsafeRigorCell()
+    let window = Window{Root: cell, Size: LayoutSize(200, 100)}
+    try {
+      window.UpdateTree()
+      cell.RunOwnedAction(() -> cell.Values.Value.Add(7))
+      window.UpdateTree()
+      if StateRigorProbe.Builds != 2 || window.Tree?.Content != "1" { return false }
+      cell.ReadUnsafe.Value = false
+      window.UpdateTree()
+      cell.ClearDirty()
+      cell.RunOwnedAction(() -> {})
+      window.UpdateTree()
+      return StateRigorProbe.Builds == 4 && window.Tree?.Content == "safe"
+    } finally {
+      window.Close()
+      Application.VerifyState = previous
+    }
+  }
+
+  func PortalVerificationAcceptsUnchangedDeclarationsContract() bool {
+    let previous = Application.VerifyState
+    Application.VerifyState = true
+    try {
+      for mode in []string{"scope", "dismiss", "scrim"} {
+        let cell = StateRigorFixtureCell(mode)
+        let window = Window{Root: cell, Size: LayoutSize(200, 100)}
+        try {
+          window.UpdateTree()
+          window.UpdateTree()
+          cell.RunOwnedAction(() -> {})
+          window.UpdateTree()
+          if !window.Tree!!.IsPortal { return false }
+        } finally { window.Close() }
+      }
+      return true
+    } finally { Application.VerifyState = previous }
+  }
+
+  func ContextChangeClearsPendingVerificationContract() bool {
+    let previous = Application.VerifyState
+    Application.VerifyState = true
+    let cell = StateRigorFixtureCell("context")
+    let window = Window{Root: cell, Size: LayoutSize(200, 100)}
+    StateRigorProbe.Context.Set(window, 1)
+    try {
+      window.UpdateTree()
+      window.UpdateTree()
+      cell.RunOwnedAction(() -> {})
+      StateRigorProbe.Context.Set(window, 2)
+      window.UpdateTree()
+      return window.Tree?.Content == "2"
+    } finally {
+      window.Close()
+      Application.VerifyState = previous
+    }
+  }
+  func ProviderChangeClearsPendingVerificationContract() bool {
+    let previous = Application.VerifyState
+    Application.VerifyState = true
+    let child = StateRigorFixtureCell("context")
+    let parent = StateContextRigorParent(child)
+    let window = Window{Root: parent, Size: LayoutSize(200, 100)}
+    try {
+      window.UpdateTree()
+      window.UpdateTree()
+      child.RunOwnedAction(() -> { parent.Value.Value = 2 })
+      window.UpdateTree()
+      return window.Tree?.Content == "2"
+    } finally {
+      window.Close()
+      Application.VerifyState = previous
+    }
+  }
+
+  func FailedRootMountClearsReadsAndKeepsBuildErrorContract() bool {
+    let cell = StateRigorFixtureCell("mount-failure")
+    let window = Window{Root: cell, Size: LayoutSize(200, 100)}
+    try {
+      try { window.UpdateTree() }
+      catch (error InvalidOperationException) {
+        if error.Message != "Build failure" || !(error.Data["Goo.Cell.CancellationError"] is AggregateException) { return false }
+        cell.ClearDirty()
+        cell.Value.Value = 1
+        return !cell.IsDirty()
+      }
+      return false
+    } finally { window.Close() }
+  }
+
   func BuilderScopeDependencyTransactionContract() bool {
     let cell = StateScopeFixtureCell()
     let window = Window{Root: cell, Size: LayoutSize(200, 100)}
@@ -79,14 +250,15 @@ internal class StateFixtures {
     let previous = StateVerification.Override
     let window = Window{Root: Cell(), Size: LayoutSize(200, 100)}
     try {
-      StateVerification.Override = nil
+      Application.VerifyState = nil
       if !DevTools.HasSessions && StateVerification.Enabled != Debugger.IsAttached { return false }
       using let diagnostics = DevTools.Attach(window)
-      if !StateVerification.Enabled { return false }
+      if !StateVerification.Enabled || Application.VerifyState != nil { return false }
       StateVerification.Enabled = false
       if StateVerification.Enabled { return false }
       StateVerification.Enabled = true
-      return StateVerification.Enabled
+      Application.VerifyState = nil
+      return StateVerification.Enabled && Application.VerifyState == nil
     } finally {
       window.Close()
       StateVerification.Override = previous
@@ -224,6 +396,105 @@ internal class StateFixtures {
       if containsText(node.Children[index], text) { return true }
     }
     return false
+  }
+}
+
+internal class StateRigorProbe {
+  shared {
+    internal var Builds int32
+    internal var Inputs int32
+    internal let Context Goo.Context[int32] = Goo.Context[int32]()
+  }
+}
+
+internal class StateRigorFixtureCell : Cell {
+  internal let Value State[int32] = State[int32](0)
+  private let mode string
+
+  internal init(mode string) { this.mode = mode }
+  internal func Enqueue(action Action) bool -> Post(action)
+  internal func Delay(action Action) WindowTimer -> After(0, action)
+  internal func Repeat(action Action) WindowTimer -> Every(1, action)
+
+  protected override func Mounted() {
+    if mode == "mounted-write" { Value.Value = 1 }
+  }
+
+  public override func Build() Blob {
+    StateRigorProbe.Builds++
+    let value = Value.Value
+    if mode == "build-write" { Value.Value = 1 }
+    if mode == "mount-failure" {
+      Lifetime.Register(() -> { throw InvalidOperationException("Cancellation failure") })
+      throw InvalidOperationException("Build failure")
+    }
+    if mode == "scope" { return Portal{FocusScope: FocusScopeOptions{Modal: true}, Text("scope")} }
+    if mode == "dismiss" { return Portal{OnDismiss: _ -> {}, Text("dismiss")} }
+    if mode == "scrim" { return Portal{Scrim: Color.Black, Text("scrim")} }
+    return Text(mode == "context" ? StateRigorProbe.Context.Read().ToString() : value.ToString())
+  }
+}
+
+internal class StateInputRigorCell : Cell[int32] {
+  internal let Untracked State[int32] = State[int32](0)
+  private let value State[int32] = State[int32](0)
+
+  protected override func InputChanged(input int32) {
+    StateRigorProbe.Inputs++
+    let ignored = Untracked.Value
+    value.Value = input
+  }
+
+  protected override func Build(input int32) Blob {
+    StateRigorProbe.Builds++
+    return Text("$input:${value.Value}")
+  }
+}
+
+internal class StateInputRigorParent : Cell {
+  private let child StateInputRigorCell
+  internal var InputValue int32 = 1
+  internal init(child StateInputRigorCell) { this.child = child }
+  public override func Build() Blob -> Cell.Mount[int32, StateInputRigorCell](nil, InputValue, () -> child)
+}
+
+internal class StateUnsafeRigorCell : Cell {
+  internal let ReadUnsafe State[bool] = State[bool](true)
+  internal prop Values State[List[int32]] { get -> StateUnsafeRigorValues.Values }
+  public override func Build() Blob {
+    StateRigorProbe.Builds++
+    return Text(ReadUnsafe.Value ? Values.Value.Count.ToString() : "safe")
+  }
+}
+
+internal class StateUnsafeRigorValues {
+  shared { internal let Values State[List[int32]] = State[List[int32]](List[int32]()) }
+}
+
+public partial class Window {
+  internal func StateOnlySchedulingForTest() bool {
+    IsOpen = true
+    StateRigorProbe.Builds = 0
+    let cell = cast[StateRigorFixtureCell](Root!!)
+    try {
+      UpdateTree()
+      if !cell.Enqueue(() -> {}) { return false }
+      drainPostedActions()
+      UpdateTree()
+      if StateRigorProbe.Builds != 1 { return false }
+      using let once = cell.Delay(() -> {})
+      drainTimers(float64(Stopwatch.GetTimestamp()) + float64(Stopwatch.Frequency))
+      UpdateTree()
+      if StateRigorProbe.Builds != 1 || once.IsActive { return false }
+      using let repeat = cell.Repeat(() -> {})
+      drainTimers(float64(Stopwatch.GetTimestamp()) + float64(Stopwatch.Frequency))
+      UpdateTree()
+      if StateRigorProbe.Builds != 1 || !repeat.IsActive { return false }
+      cell.Enqueue(() -> { cell.Value.Value = 1 })
+      drainPostedActions()
+      UpdateTree()
+      return StateRigorProbe.Builds == 2 && Tree?.Content == "1"
+    } finally { Close() }
   }
 }
 
@@ -376,4 +647,12 @@ internal class StateScopeHistoryRows(value State[int32]) : VirtualState {
   }
 
   public override func NeedsRealize(viewport VirtualViewport) bool -> false
+}
+
+internal class StateContextRigorParent : Cell {
+  internal let Value State[int32] = State[int32](1)
+  private let child StateRigorFixtureCell
+  internal init(child StateRigorFixtureCell) { this.child = child }
+  public override func Build() Blob ->
+    StateRigorProbe.Context.Scope(Value.Value, () -> Cell.Mount[StateRigorFixtureCell](nil, () -> child))
 }

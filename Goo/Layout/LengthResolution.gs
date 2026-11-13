@@ -37,6 +37,7 @@ internal class LengthNode {
   internal var Node Node
   internal var Resolver Resolver
   internal var IntrinsicLevel int32
+  internal var Layout Layout?
   internal let Values List[ResolvedLength] = List[ResolvedLength]()
 }
 
@@ -71,10 +72,14 @@ internal class IntrinsicLengthCache {
   }
 }
 
+internal class LengthRevision {
+  internal var Value int64
+}
+
 internal class LengthDeclarations {
   shared {
     private var values ConditionalWeakTable[Node, LengthNode]?
-    internal var Revision int64
+    private let revisions ConditionalWeakTable[Node, LengthRevision] = ConditionalWeakTable[Node, LengthRevision]()
     internal prop Active bool { get -> values != nil }
 
     internal func Get(node Node) LengthNode? {
@@ -82,6 +87,26 @@ internal class LengthDeclarations {
         if table.TryGetValue(node, out var result) { return result }
       }
       return nil
+    }
+    private func Root(node Node) Node {
+      var root = node
+      while let parent = root.Parent { root = parent }
+      return root
+    }
+
+    internal func Revision(root Node) int64 ->
+      revisions.TryGetValue(root, out var revision) ? revision.Value : 0L
+
+    private func Invalidate(node Node) {
+      let revision = revisions.GetOrCreateValue(Root(node))
+      revision.Value++
+    }
+
+    internal func Remove(node Node) {
+      guard let state = Get(node) else { return }
+      state.Layout?.RemoveLengths(state)
+      values?.Remove(node)
+      Invalidate(node)
     }
 
     internal func StoredPixels(node Node, field StyleField, basis float32) float32 {
@@ -103,32 +128,33 @@ internal class LengthDeclarations {
       }
     }
 
-    internal func Set(node Node, entry StyleEntry, resolver Resolver) {
+    internal func Set(node Node, entry StyleEntry, resolver Resolver) bool {
       let source = entry.Payload as LengthDeclaration
       var state = Get(node)
-      if state == nil && source == nil { return }
+      if state == nil && source == nil { return false }
       if state == nil {
         state = LengthNode{Node: node, Resolver: resolver}
         values ??= ConditionalWeakTable[Node, LengthNode]()
         values!!.Add(node, state)
-        Revision++
       }
       let list = state.Values
       for i in 0 ... list.Count {
         if list[i].Field != entry.Field { continue }
         if let declaration = source {
-          if sameLength(list[i].Value, declaration.Value) { return }
+          if sameLength(list[i].Value, declaration.Value) { return false }
           list[i].IntrinsicCache?.Clear()
           list[i].Value = declaration.Value
           list[i].Pixels = Single.NaN
         } else { list.RemoveAt(i) }
-        Revision++
-        return
+        Invalidate(node)
+        return true
       }
       if let declaration = source {
         list.Add(ResolvedLength{Field: entry.Field, Value: declaration.Value})
-        Revision++
+        Invalidate(node)
+        return true
       }
+      return false
     }
 
     internal func Pixels(value Length, node Node, width float32, height float32, fontSize bool) float32 {
@@ -150,10 +176,15 @@ internal partial class Layout {
   private var lengthNodes List[LengthNode]?
   private var maximumIntrinsicLevel int32 = -1
   private var intrinsicPending bool
+  internal func RemoveLengths(state LengthNode) {
+    lengthNodes?.Remove(state)
+    state.Layout = nil
+  }
 
   private func collectLengths(node Node, level int32 = 0) {
     var nextLevel = level
     if let state = LengthDeclarations.Get(node) {
+      state.Layout = this
       state.IntrinsicLevel = level
       var intrinsic = false
       for entry in state.Values { if entry.Value.IsIntrinsic { intrinsic = true } }
@@ -168,11 +199,12 @@ internal partial class Layout {
   }
 
   private func resolveLengths(root Node, width float32, height float32) {
-    if lengthRevision != LengthDeclarations.Revision || lengthRoot != root {
+    let revision = LengthDeclarations.Revision(root)
+    if lengthRevision != revision || lengthRoot != root {
       lengthNodes?.Clear()
       maximumIntrinsicLevel = -1
-      if LengthDeclarations.Revision != 0L { collectLengths(root) }
-      lengthRevision = LengthDeclarations.Revision
+      if LengthDeclarations.Active { collectLengths(root) }
+      lengthRevision = revision
       lengthRoot = root
     }
     guard let nodes = lengthNodes else { return }

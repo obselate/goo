@@ -25,6 +25,7 @@ internal class NodeLifecycle {
       ScrollbarStyles.Remove(n)
       ScrollActivityStates.Remove(n)
       CustomLayouts.Remove(n)
+      LengthDeclarations.Remove(n)
       Stacking.Remove(n)
       Portals.Remove(n)
       n.ResetForReuse()
@@ -49,6 +50,7 @@ internal class NodeLifecycle {
         }
       }
       n.Retired = true
+      LengthDeclarations.Remove(n)
       n.PaintBindingResolver?.ForgetPaintBindings(n)
       n.Context = nil
       ElementHandles.Detach(n)

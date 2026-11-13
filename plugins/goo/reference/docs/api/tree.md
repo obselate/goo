@@ -690,7 +690,7 @@ Returns: True when stored or applied, false for an ineligible control or invalid
 
 ### `SetFocusTarget(ElementHandle)`
 
-Sets the descendant that also resolves Focus style while this owner has visible focus. An unmounted target is retained for remounting. The next rebuild restores Blob.FocusTarget.
+Sets the descendant that also resolves FocusStyle while this owner has visible focus. An unmounted target is retained for remounting. The next rebuild restores Blob.FocusTarget.
 
 - `target`: The descendant handle, or nil to clear projection.
 
@@ -740,7 +740,7 @@ Reports whether the vertical offset is within one device pixel of the range end.
 
 ### `IsFocusVisible`
 
-Reports whether this mounted element resolves Focus style through direct focus or projection.
+Reports whether this mounted element resolves FocusStyle through direct focus or projection.
 
 ### `IsMounted`
 
@@ -1319,7 +1319,7 @@ Gets the selection highlight color.
 
 ### `StyleRanges`
 
-Gets ordered passive inline styles in UTF-16 source offsets. A cluster uses the style at its logical start. Later ranges override earlier fields.
+Gets ordered passive inline styles in UTF-16 source offsets. A cluster uses the style at its logical start. Later ranges override earlier fields. Goo freezes each range Style when this Text is returned from Build.
 
 ## `TextCoordinateSpace`
 
@@ -1449,7 +1449,7 @@ Gets the value used while unfocused, or also while focused when Controlled is tr
 ## `TextSpan`
 
 
-Defines displayed Text and an optional inline Style for one text part.
+Defines displayed Text and an optional inline Style for one text part. Goo freezes the Style when the containing Text is returned from Build.
 
 ### `op_Implicit(string)~TextSpan`
 

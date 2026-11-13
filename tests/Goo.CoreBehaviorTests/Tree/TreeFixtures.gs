@@ -4,6 +4,63 @@ import System
 import System.Collections.Generic
 
 internal class TreeFixtures {
+  func TextRangeStylesFreezeAtHandOffContract() bool {
+    for spans in []bool{false, true} {
+      let style = Style{Color: Color.Black}
+      let text = spans ? Text(TextSpan("text", style))
+        : Text{Content: "text", StyleRanges: []TextStyleRange{TextStyleRange(TextRange(0, 4), style)}}
+      let node = Reconciler{Res: Resolver{}}.Mount(text)
+      try {
+        try { style.Color = Color.White }
+        catch (error InvalidOperationException) {
+          if !error.Message.Contains("Text") { return false }
+          continue
+        }
+        return false
+      } finally { NodeLifecycle.DisposeTree(node) }
+    }
+    let source = Style{Color: Color.Black}
+    let fragment = Goo.RichText.RichTextFragment("text",
+      []TextStyleSpan{TextStyleSpan("style", TextRange(0, 4), source)})
+    source.Width = 10
+    let copy = fragment.Styles[0].Style
+    let node = Reconciler{Res: Resolver{}}.Mount(Text(TextSpan(fragment.Text, copy)))
+    try {
+      source.Color = Color.White
+      try { copy.Color = Color.White }
+      catch (_ InvalidOperationException) { return true }
+      return false
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func FrozenChildrenCanInitializeMutableContainersContract() bool {
+    for empty in []bool{false, true} {
+      let children = List[Blob]()
+      if !empty { children.Add(Text("before")) }
+      let declaration = Container{Children: children}
+      let node = Reconciler{Res: Resolver{}}.Mount(declaration)
+      try {
+        if !declaration.Children.IsReadOnly { return false }
+        let copy = Container{Children: declaration.Children}
+        copy.Add(Text("after"))
+        if copy.Children.Count != children.Count + 1 || declaration.Children.Count != children.Count { return false }
+      } finally { NodeLifecycle.DisposeTree(node) }
+    }
+    return true
+  }
+
+  func SizedReadEntryFailureRestoresContextContract() bool {
+    let owner = Cell()
+    let previous = ContextEnvironment.Enter(ContextEnvironment{CallbackCell: owner})
+    using let state = SizedNodeState(SizedBlob(_ -> Text("unused")), nil, nil, nil, nil)
+    state.Reads.Dispose()
+    try {
+      try { state.Build(LayoutSize(10, 10)) }
+      catch (_ InvalidOperationException) { return Text("after").CallbackOwner == owner }
+      return false
+    } finally { ContextEnvironment.Current = previous }
+  }
+
   func BuildReturnFreezesBeforeNestedCellContract() bool {
     let cell = FreezeBuildReturnCell()
     let node = Reconciler{Res: Resolver{}}.MountRoot(cell)

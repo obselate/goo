@@ -3,7 +3,6 @@ package Goo
 import System
 import System.Collections
 import System.Collections.Generic
-import System.Collections.ObjectModel
 import System.Runtime.CompilerServices
 
 /// Defines an element that contains child blobs.
@@ -78,22 +77,36 @@ public class Container : Blob {
   }
 }
 
-internal sealed class FrozenChildren : Collection[Blob] {
+internal sealed class FrozenChildren : IList[Blob] {
   private let owner Type
+  private let values IList[Blob]
 
-  internal init(owner Type, values IList[Blob]?) : base(
-    if let values = values { List[Blob](values) } else { List[Blob]() }) {
+  internal init(owner Type, source IList[Blob]?) {
     this.owner = owner
+    let copy = (source?.Count ?? 0) == 0 ? Array.Empty[Blob]() : [source!!.Count]Blob
+    source?.CopyTo(copy, 0)
+    values = copy
   }
 
-  protected override func ClearItems() { modified() }
-  protected override func InsertItem(index int32, item Blob) { modified() }
-  protected override func RemoveItem(index int32) { modified() }
-  protected override func SetItem(index int32, item Blob) { modified() }
+  private func modified() Exception ->
+    InvalidOperationException(owner.Name + " modified after it was returned to Goo")
 
-  private func modified() {
-    throw InvalidOperationException(owner.Name + " modified after it was returned to Goo")
+  public prop Count int32 { get -> values.Count }
+  public prop IsReadOnly bool { get -> true }
+  public prop this[index int32] Blob {
+    get -> values[index]
+    set { throw modified() }
   }
+  public func Add(item Blob) { throw modified() }
+  public func Clear() { throw modified() }
+  public func Insert(index int32, item Blob) { throw modified() }
+  public func Remove(item Blob) bool { throw modified() }
+  public func RemoveAt(index int32) { throw modified() }
+  public func Contains(item Blob) bool -> values.Contains(item)
+  public func IndexOf(item Blob) int32 -> values.IndexOf(item)
+  public func CopyTo(array []Blob, index int32) { values.CopyTo(array, index) }
+  public func GetEnumerator() IEnumerator[Blob] -> values.GetEnumerator()
+  func (IEnumerable) GetEnumerator() IEnumerator -> GetEnumerator()
 }
 
 internal sealed class OwnedChildren : IList[Blob] {

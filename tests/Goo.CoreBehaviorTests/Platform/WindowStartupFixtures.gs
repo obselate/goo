@@ -294,9 +294,9 @@ internal class WindowStartupFixtures {
     let previous = StateVerification.Override
     try {
       StateVerification.Enabled = true
-      if !Application.VerifyState { return false }
+      if Application.VerifyState != true { return false }
       Application.VerifyState = false
-      if StateVerification.Enabled || Application.VerifyState { return false }
+      if StateVerification.Enabled || Application.VerifyState != false { return false }
       Application.VerifyState = true
       return StateVerification.Enabled
     } finally { StateVerification.Override = previous }

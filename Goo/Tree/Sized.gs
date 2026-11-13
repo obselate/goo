@@ -60,9 +60,9 @@ internal sealed class SizedNodeState : IDisposable {
 
   internal func Build(size LayoutSize) Blob {
     ContextReads.Begin()
+    let previousReads = Reads.Enter()
     let previousContext = ContextEnvironment.Enter(ContextEnvironment{
       Window: Owner, Frame: Context, Reader: ContextReads, CallbackCell: CallbackOwner})
-    let previousReads = Reads.Enter()
     var succeeded = false
     try {
       let content = Builder(size)
