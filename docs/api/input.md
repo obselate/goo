@@ -1627,7 +1627,7 @@ Gets the wheel position in logical window coordinates.
 ## `WindowFocus`
 
 
-Provides owner-thread focus state, selection, and text commands for one window.
+Provides owner-thread focus state, selection, and text commands for one window. Getter reads in Build and retained builders subscribe to changes.
 
 ### `EditorChanged`
 
