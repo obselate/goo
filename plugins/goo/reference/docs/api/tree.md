@@ -236,7 +236,15 @@ Returns: Children to spread into a container. Duplicate sibling keys are rejecte
 
 Gets the platform-neutral accessibility declaration for this element.
 
-### `Active`
+### `AccessibilityName`
+
+Gets or sets the name without replacing other accessibility fields. A later Accessibility declaration replaces all fields.
+
+### `AccessibilityRole`
+
+Gets or sets the role without replacing other accessibility fields. Nil restores the automatic role. A later Accessibility declaration replaces all fields.
+
+### `ActiveStyle`
 
 Gets the style that applies while this element is active.
 
@@ -260,13 +268,13 @@ Gets the optional in-app drag source descriptor.
 
 Gets the optional in-app drop target descriptor.
 
-### `Focus`
+### `FocusStyle`
 
 Gets the style that applies while this element has focus.
 
 ### `FocusTarget`
 
-Gets the descendant that also resolves Focus style while this owner has visible focus. The target need not be focusable. Native focus and accessibility relationships do not change.
+Gets the descendant that also resolves FocusStyle while this owner has visible focus. The target need not be focusable. Native focus and accessibility relationships do not change.
 
 ### `Focusable`
 
@@ -280,7 +288,7 @@ Gets reusable touch recognizers in same-owner arbitration order. Keep declaratio
 
 Gets the consumer-owned handle attached while this element is mounted.
 
-### `Hover`
+### `HoverStyle`
 
 Gets the style that applies while the pointer hovers this element.
 
@@ -398,6 +406,25 @@ Adds a child to the end of the ordered child collection.
 ### `Children`
 
 Gets the mutable child list. Read-only lists supplied during initialization are copied. Siblings can mix keyed and unkeyed entries. Keyed children match by key; unkeyed children match only at the same absolute sibling index.
+
+## `Column`
+
+
+Defines a vertical flex container. Setting FlexDirection throws when mounted.
+
+### `new`
+
+Initializes an empty vertical flex container.
+
+### `Add(Blob)`
+
+Adds a child to the ordered child collection.
+
+- `child`: The child to add.
+
+### `Children`
+
+Gets the ordered child collection. Read-only lists are copied.
 
 ## `Container`
 
@@ -1068,6 +1095,25 @@ Places the Portal above its anchor and aligns their inline-end edges.
 
 Places the Portal above its anchor and aligns their inline-start edges.
 
+## `Row`
+
+
+Defines a horizontal flex container. Setting FlexDirection throws when mounted.
+
+### `new`
+
+Initializes an empty horizontal flex container.
+
+### `Add(Blob)`
+
+Adds a child to the ordered child collection.
+
+- `child`: The child to add.
+
+### `Children`
+
+Gets the ordered child collection. Read-only lists are copied.
+
 ## `ScrollAlignment`
 
 
@@ -1078,6 +1124,15 @@ Selects an item's alignment in the viewport.
 - `Start`
 - `Center`
 - `End`
+
+## `Spacer`
+
+
+Takes free main-axis space without paint, input, or accessibility output.
+
+### `new`
+
+Initializes a spacer with grow 1, shrink 1, basis 0, and minimum size 0.
 
 ## `Text`
 
