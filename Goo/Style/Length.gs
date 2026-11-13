@@ -102,13 +102,13 @@ public func Vw(value float64) Length -> Length{Unit: LengthUnit.Vw, VwPart: floa
 /// @returns A viewport-relative length.
 public func Vh(value float64) Length -> Length{Unit: LengthUnit.Vh, VhPart: float32(value)}
 
-/// Converts layout pixels to a length.
-/// @param value Layout pixels.
+/// Converts layout units to a length.
+/// @param value Layout units.
 /// @returns A pixel length.
 public func operator implicit(value float64) Length -> Length{Unit: LengthUnit.Px, Value: float32(value)}
 
-/// Converts integer layout pixels to a length.
-/// @param value Layout pixels.
+/// Converts integer layout units to a length.
+/// @param value Layout units.
 /// @returns A pixel length.
 public func operator implicit(value int32) Length -> Length{Unit: LengthUnit.Px, Value: float32(value)}
 
