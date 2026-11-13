@@ -126,6 +126,16 @@ class FixtureContractTests {
 
     shared {
         func Cases() sequence[[]object] {
+            yield Contract[LayoutFixtures]("SizedScrollExtentUsesContentContract")
+            yield Contract[LayoutFixtures]("SizedNestedPortalUsesFinalSizeContract")
+            yield Contract[LayoutFixtures]("SizedContentResolvesLengthsInSameFrameContract")
+            yield Contract[LayoutFixtures]("SizedAllottedSizeAndLayoutPassesContract")
+            yield Contract[LayoutFixtures]("SizedNestedAndMountedGeometryContract")
+            yield Contract[LayoutFixtures]("SizedZeroAndUnboundedAxesContract")
+            yield Contract[TreeFixtures]("SizedStateAndContextContract")
+            yield Contract[TreeFixtures]("SizedCallbackOwnershipAndVerificationContract")
+            yield Contract[TreeFixtures]("SizedBuildRejectsStateWritesContract")
+            yield Contract[TreeFixtures]("SizedFailedBuildRetainsSubscriptionsContract")
             yield Contract[StyleFixtures]("FlexAndInsetDeclarationOrderContract")
             yield Contract[AccessibilityFixtures]("AccessibilityShorthandOrderContract")
             yield Contract[FlexConformanceFixtures]("RowColumnSpacerContract")

@@ -212,6 +212,7 @@ class PublicDocumentationTests {
     shared {
         private const PublicDeclared BindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly
         private let ExpectedMethodIds[]string = []string{
+            "M:Goo.Blob.Sized(System.Func{Goo.LayoutSize,Goo.Blob})",
             "M:Goo.Blob.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})",
             "M:Goo.Platform.OpenAsync(System.String,System.Threading.CancellationToken)",
             "M:Goo.NativeDialogs.ShowError(System.String,System.String)",
@@ -1005,6 +1006,10 @@ class PublicDocumentationTests {
         private let Shapes IReadOnlyDictionary[string, DocumentationShape] = Dictionary[string, DocumentationShape](
             StringComparer.Ordinal
         ){
+            ["M:Goo.Blob.Sized(System.Func{Goo.LayoutSize,Goo.Blob})"] =
+                DocumentationShape([]string{"build"}, Array.Empty[string](), true),
+            ["M:Goo.Sized(System.Func{Goo.LayoutSize,Goo.Blob})"] =
+                DocumentationShape([]string{"build"}, Array.Empty[string](), true),
             ["M:Goo.Blob.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})"] =
                 DocumentationShape([]string{"items", "itemKey", "itemBuilder"}, []string{"T"}, true),
             ["M:Goo.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})"] =
@@ -2293,6 +2298,7 @@ class PublicDocumentationTests {
                 .Append("P:Goo.KeyBinding.Repeat")
                 .Append("M:Goo.Percent(System.Double)")
                 .Append("M:Goo.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})")
+                .Append("M:Goo.Sized(System.Func{Goo.LayoutSize,Goo.Blob})")
                 .Append("M:Goo.Em(System.Double)")
                 .Append("M:Goo.Rem(System.Double)")
                 .Append("M:Goo.Vw(System.Double)")

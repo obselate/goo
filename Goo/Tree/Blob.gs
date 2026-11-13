@@ -319,6 +319,11 @@ public open class Blob : Style {
   }
 
   shared {
+    /// Builds content from the element's allotted size in layout units. See Sized.
+    /// @param build Builds content without changing State.
+    /// @returns A retained element with no intrinsic size.
+    public func Sized(build (LayoutSize) -> Blob) Blob -> SizedBlob(build)
+
     /// Builds one child per item. Children without a key get the item's key. Explicit keys stay unchanged.
     /// @typeparam T The item type.
     /// @param items The items in child order.

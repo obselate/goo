@@ -38,6 +38,7 @@ internal class Node {
   internal var ScrollbarPartState ScrollbarPartState?
   internal var RetainedLayoutTransition LayoutTransitionState?
   internal var RetainedVirtualState VirtualNodeState?
+  internal var RetainedSizedState SizedNodeState?
 
   internal prop HitContained bool{
     get -> hitContained

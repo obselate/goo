@@ -69,6 +69,8 @@ internal class NodeLifecycle {
       } catch (error Exception) {
         firstError ??= error
       }
+      n.RetainedSizedState?.Dispose()
+      n.RetainedSizedState = nil
       TextLayouts.Dispose(n)
       if let editor = n.EditorBinding {
         n.EditorBinding = nil
