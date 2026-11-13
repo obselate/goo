@@ -221,7 +221,7 @@ func RunPrimitiveSmoke() {
     opened.Pump(0.05)
     let afterOffset = PrimitiveSmokeCell.ScrollViewport.ScrollOffset.X
     let after = PrimitiveSmokeCell.ScrollLeaf.BorderBox
-    let density = float32(windowMetrics.DisplayScaleX) * windowMetrics.UiScale
+    let density = float32(windowMetrics.DisplayScaleX) * float32(windowMetrics.UiScale)
     let offsetShift = float64((MathF.Round(float32(afterOffset) * density)
       - MathF.Round(float32(beforeOffset) * density)) / density)
     let borderShift = before.X - after.X
