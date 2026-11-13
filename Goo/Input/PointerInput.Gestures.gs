@@ -190,8 +190,9 @@ internal partial class PointerInput {
         reason GestureCancelReason) {
         if phase == GesturePhase.Completed || phase == GesturePhase.Canceled { candidate.Terminal = true }
         let owner = if let tree = root, let node = candidate.OwnerMount.Captured { CellOwnership.Within(tree, node) } else { nil }
+        let previousContext = owner?.BeginCallback()
         try { candidate.Session.Notify(phase, reason) }
-        finally { owner?.RebuildAfterCallback() }
+        finally { owner?.EndCallback(previousContext) }
     }
 
     private func cancelGestureGroup(root Node?, group GestureGroup, reason GestureCancelReason) {
