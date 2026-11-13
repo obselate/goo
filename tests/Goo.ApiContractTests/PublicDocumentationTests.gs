@@ -218,6 +218,7 @@ class PublicDocumentationTests {
             "M:Goo.Assets.Open(System.Reflection.Assembly,System.String)",
             "M:Goo.Assets.ReadAllBytes(System.Reflection.Assembly,System.String)",
             "M:Goo.ShaderEffectProgram.Load(System.Reflection.Assembly,System.String)",
+            "M:Goo.LayoutSize.#ctor(System.Double,System.Double)",
             "M:Goo.Blob.Sized(System.Func{Goo.LayoutSize,Goo.Blob})",
             "M:Goo.Blob.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})",
             "M:Goo.Platform.OpenAsync(System.String,System.Threading.CancellationToken)",
@@ -763,6 +764,13 @@ class PublicDocumentationTests {
             "M:Goo.EmbeddedWindowHost.UnloadVulkanLibrary"
         }
         private let ExpectedEqualityDocumentationIds[]string = []string{
+            "M:Goo.LayoutSize.Deconstruct(System.Double@,System.Double@)",
+            "M:Goo.LayoutSize.Equals(Goo.LayoutSize)",
+            "M:Goo.LayoutSize.Equals(System.Object)",
+            "M:Goo.LayoutSize.GetHashCode",
+            "M:Goo.LayoutSize.ToString",
+            "M:Goo.LayoutSize.op_Equality(Goo.LayoutSize,Goo.LayoutSize)",
+            "M:Goo.LayoutSize.op_Inequality(Goo.LayoutSize,Goo.LayoutSize)",
             "M:Goo.State`1.ToString",
             "M:Goo.VectorPath.Equals(Goo.VectorPath)",
             "M:Goo.VectorPath.Equals(System.Object)",
@@ -975,7 +983,6 @@ class PublicDocumentationTests {
             "F:Goo.PopupDismissReason.PlatformDismissed"
         }
         private let SynthesizedPrimaryDataTypes HashSet[Type] = HashSet[Type]{
-            typeof(LayoutSize),
             typeof(Goo.RichText.RichTextResult),
             typeof(PanGestureEvent),
             typeof(GestureRotationResult),
@@ -1014,6 +1021,10 @@ class PublicDocumentationTests {
         private let Shapes IReadOnlyDictionary[string, DocumentationShape] = Dictionary[string, DocumentationShape](
             StringComparer.Ordinal
         ){
+            ["M:Goo.LayoutSize.#ctor(System.Double,System.Double)"] =
+                DocumentationShape([]string{"Width", "Height"}, Array.Empty[string](), false),
+            ["M:Goo.LayoutSize.Deconstruct(System.Double@,System.Double@)"] =
+                DocumentationShape([]string{"width", "height"}, Array.Empty[string](), false),
             ["M:Goo.Blob.Sized(System.Func{Goo.LayoutSize,Goo.Blob})"] =
                 DocumentationShape([]string{"build"}, Array.Empty[string](), true),
             ["M:Goo.Sized(System.Func{Goo.LayoutSize,Goo.Blob})"] =
