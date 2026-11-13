@@ -37,7 +37,7 @@ public open class Blob : Style {
 
   internal func Freeze(descendants bool = false, depth int32 = 0) {
     if IsFrozen { return }
-    Reconciler.CheckTreeDepth(depth)
+    if descendants { Reconciler.CheckTreeDepth(depth) }
     blobState = blobState | int32(4096)
     let owner = GetType()
     FreezeStyle(owner, depth)
@@ -45,7 +45,7 @@ public open class Blob : Style {
     ActiveStyle?.FreezeStyle(owner, depth)
     FocusStyle?.FreezeStyle(owner, depth)
     DisabledStyle?.FreezeStyle(owner, depth)
-    Accessibility?.Freeze(owner)
+    if HasAccessibility { Accessibility?.Freeze(owner) }
     if this is Portal portal { portal.FocusScope?.Freeze(owner) }
     if this is TextEntry entry { entry.InputOptions?.Freeze(owner) }
     if this is TextEditor editor { editor.InputOptions?.Freeze(owner) }

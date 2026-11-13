@@ -153,16 +153,19 @@ internal class StyleEntries {
   private var spillLast StyleEntryBlock?
   private var count int32
 
-  internal prop Count int32{ get -> count }
+  internal prop Count int32{ get -> count & Int32.MaxValue }
+  internal prop HasScrollbar bool { get -> count < 0 }
+  internal func MarkScrollbar() { count = count | Int32.MinValue }
 
   internal func Add(value StyleEntry) {
-    switch count {
+    let index = Count
+    switch index {
       case 0 { first = value }
       case 1 { second = value }
       case 2 { third = value }
       case 3 { fourth = value }
       default {
-        let slot = (count - 4) % 4
+        let slot = (index - 4) % 4
         if slot == 0 {
           let block = StyleEntryBlock{}
           if spillLast == nil {
@@ -181,16 +184,17 @@ internal class StyleEntries {
   }
 
   internal func AddRange(values StyleEntries) {
+    if values.HasScrollbar { MarkScrollbar() }
     var cursor = values.Cursor()
     while cursor.MoveNext() { Add(cursor.Current) }
   }
 
   internal func Cursor() StyleEntryCursor -> StyleEntryCursor{
-    Entries: this, Block: spillLast?.Next, Count: count,
+    Entries: this, Block: spillLast?.Next, Count: Count,
   }
 
   internal func At(index int32) StyleEntry {
-    if index < 0 || index >= count { throw ArgumentOutOfRangeException("index") }
+    if index < 0 || index >= Count { throw ArgumentOutOfRangeException("index") }
     switch index {
       case 0 { return first }
       case 1 { return second }

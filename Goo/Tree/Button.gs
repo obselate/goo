@@ -13,6 +13,9 @@ public class Button : Blob {
   }
 
   internal func FreezeChildren() IList[Blob] {
+    if let owned = children as OwnedChildren {
+      if owned.Owner == this { return owned }
+    }
     children = (children?.Count ?? 0) == 0 ? Button.emptyChildren : FrozenChildren(GetType(), children)
     return children!!
   }
@@ -21,7 +24,7 @@ public class Button : Blob {
   /// Siblings can mix keyed and unkeyed entries. Keyed children match by key; unkeyed children match only at the same absolute sibling index.
   public prop Children IList[Blob]{
     get {
-      children ??= List[Blob]()
+      children ??= OwnedChildren(this)
       return children!!
     }
     set {

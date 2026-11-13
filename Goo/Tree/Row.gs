@@ -15,6 +15,9 @@ public class Row : Blob {
   internal override func coreBlob() { }
 
   internal func FreezeChildren() IList[Blob] {
+    if let owned = children as OwnedChildren {
+      if owned.Owner == this { return owned }
+    }
     children = (children?.Count ?? 0) == 0 ? Row.emptyChildren : FrozenChildren(GetType(), children)
     return children!!
   }
@@ -22,7 +25,7 @@ public class Row : Blob {
   /// Gets the ordered child collection. Read-only lists are copied.
   public prop Children IList[Blob] {
     get {
-      children ??= List[Blob]()
+      children ??= OwnedChildren(this)
       return children!!
     }
     set {

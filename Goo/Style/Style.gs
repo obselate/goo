@@ -13,6 +13,7 @@ public open class Style {
     if frozenOwner != nil { return }
     frozenOwner = owner
     if let entries = entries {
+      if !entries.HasScrollbar { return }
       var cursor = entries.Cursor()
       while cursor.MoveNext() {
         if cursor.Current.Payload is Scrollbar scrollbar { scrollbar.Freeze(owner, depth) }
@@ -131,6 +132,7 @@ public open class Style {
   }
   internal func pushScrollbar(f StyleField, value Scrollbar?) {
     addEntry(StyleEntry{ Field: f, Payload: value })
+    if value != nil { entries?.MarkScrollbar() }
   }
 
   internal func pushTransform(value PanelTransform) {

@@ -160,7 +160,15 @@ internal class TreeFixtures {
         if node.Children.Count != 1 || node.Children[0].Content != "before" { return false }
       } finally { NodeLifecycle.DisposeTree(node) }
     }
-    return true
+    let owner = Container(){Text("before")}
+    let blob = Container{Children: owner.Children}
+    let reconciler = Reconciler{Res: Resolver{}}
+    let node = reconciler.Mount(blob)
+    try {
+      owner.Add(Text("after"))
+      reconciler.Diff(node, blob)
+      return node.Children.Count == 1 && node.Children[0].Content == "before"
+    } finally { NodeLifecycle.DisposeTree(node) }
   }
 
   func EachFrozenKeylessBlobThrowsContract() bool {

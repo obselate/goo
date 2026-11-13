@@ -19,6 +19,9 @@ public class Container : Blob {
   }
 
   internal func FreezeChildren() IList[Blob] {
+    if let owned = children as OwnedChildren {
+      if owned.Owner == this { return owned }
+    }
     children = (children?.Count ?? 0) == 0 ? Container.emptyChildren : FrozenChildren(GetType(), children)
     return children!!
   }
@@ -27,7 +30,7 @@ public class Container : Blob {
   /// Siblings can mix keyed and unkeyed entries. Keyed children match by key; unkeyed children match only at the same absolute sibling index.
   public prop Children IList[Blob]{
     get {
-      children ??= List[Blob]()
+      children ??= OwnedChildren(this)
       return children!!
     }
     set {
@@ -89,6 +92,33 @@ internal sealed class FrozenChildren : Collection[Blob] {
 
   private func modified() {
     throw InvalidOperationException(owner.Name + " modified after it was returned to Goo")
+  }
+}
+
+internal sealed class OwnedChildren : Collection[Blob] {
+  private let owner Blob
+  internal prop Owner Blob { get -> owner }
+
+  internal init(owner Blob) { this.owner = owner }
+
+  protected override func ClearItems() {
+    owner.CheckMutable()
+    base.ClearItems()
+  }
+
+  protected override func InsertItem(index int32, item Blob) {
+    owner.CheckMutable()
+    base.InsertItem(index, item)
+  }
+
+  protected override func RemoveItem(index int32) {
+    owner.CheckMutable()
+    base.RemoveItem(index)
+  }
+
+  protected override func SetItem(index int32, item Blob) {
+    owner.CheckMutable()
+    base.SetItem(index, item)
   }
 }
 

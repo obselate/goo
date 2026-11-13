@@ -49,7 +49,7 @@ public class Portal : Blob {
   private var declarationAnchorRect ElementRect?
   private var declarationCollisionBounds ElementRect?
   private var declarationHideWhenAnchorClipped bool
-  private var children IList[Blob] = List[Blob]()
+  private var children IList[Blob]
   private var declarationFocusScope FocusScopeOptions?
   private var declarationScrim Color?
   private var declarationOnDismiss ((PopupDismissReason) -> void)?
@@ -58,6 +58,9 @@ public class Portal : Blob {
   }
 
   internal func FreezeChildren() IList[Blob] {
+    if let owned = children as OwnedChildren {
+      if owned.Owner == this { return owned }
+    }
     children = (children?.Count ?? 0) == 0 ? Portal.emptyChildren : FrozenChildren(GetType(), children)
     return children
   }
@@ -138,7 +141,7 @@ public class Portal : Blob {
   }
 
   /// Initializes an empty child collection.
-  public init() { }
+  public init() { children = OwnedChildren(this) }
 
   /// Adds a child for mixed composite initialization. Siblings can mix keyed and unkeyed entries.
   /// Keyed children match by key; unkeyed children match only at the same absolute sibling index.
