@@ -35,7 +35,7 @@ public interface VirtualSource {
 }
 
 /// Selects an item's alignment in the viewport.
-public enum ScrollAlignment { Start; Center; End }
+public enum ScrollAlignment { Start; Center; End; Nearest }
 
 /// Stores a visible virtual item's key and signed position inside the viewport.
 public data struct VirtualScrollAnchor {

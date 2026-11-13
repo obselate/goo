@@ -200,7 +200,7 @@ Provider updates keep the last-good version visible until a replacement is ready
 
 ## Observe mounted element metrics
 
-Subscribe to `ElementHandle.MetricsChanged` on the UI thread. The immutable snapshot contains `IsMounted`, `BorderBox`, `ContentBox`, `ScrollOffset`, `ScrollRange` and `RawBorderBox`, in that positional deconstruction order. `RawBorderBox` is the transformed layout box before device-pixel snapping. Other boxes describe painted geometry in window logical coordinates.
+Subscribe to `ElementHandle.MetricsChanged` on the UI thread. The immutable snapshot contains `IsMounted`, `BorderBox`, `ContentBox`, `ScrollOffset`, `ScrollRange`, `RawBorderBox`, `IsAtEndX` and `IsAtEndY`, in that positional deconstruction order. `RawBorderBox` is the transformed layout box before device-pixel snapping. Other boxes describe painted geometry in window logical coordinates.
 
 Goo calls listeners after reconciliation, layout, rect refresh, and scroll stepping settle. Detach produces one final `IsMounted = false` snapshot after tree disposal. A detach followed by reattach in the same update reports only the final mounted state.
 
@@ -218,8 +218,12 @@ let saved = viewport.VisibleAnchor
 if let anchor = saved { viewport.RestoreAnchor(anchor) }
 ```
 
-`ScrollToItem(key)` moves immediately. The aligned overload and `RestoreAnchor` settle while visible items are measured. Set `settle: false` for one immediate move. Direct scrolling cancels settlement. `ScrollOffsetOf` returns the current measured or estimated target for `ScrollTo` or a consumer animation. `VisibleAnchor` stores the first visible item key and its signed viewport offset.
+`ScrollToItem(key, alignment: ScrollAlignment.Start, settle: true)` moves immediately and settles while visible items are measured. `Nearest` moves only enough to reveal the item. An unknown key on a mounted virtual element is held for up to three frames and applied at the first realization that knows it. A later scroll call, user scroll or unmount cancels the request. Set `settle: false` for one immediate move. `RestoreAnchor` also settles while items are measured. `ScrollOffsetOf` returns the measured or estimated target for `ScrollTo` or an animation. `VisibleAnchor` stores the first visible item key and its signed viewport offset.
 `IsScrollSettling` reports whether measurement is still correcting the request.
+
+`ScrollTo(y: 0.0)` and `JumpTo(y: 0.0)` keep the horizontal offset. `ScrollToEnd()` animates both scrollable axes to their range ends. `IsAtEndX` and `IsAtEndY` on a handle or metrics snapshot are true when the range is zero or the offset is within one device pixel of its end.
+
+`handle.SelectText(start, end)` focuses a text control and selects UTF-16 offsets `[start, end)`. Before mount, it retains one request until the next mount and layout. A later request replaces it. Unmount clears it. A mounted non-text control returns false.
 
 `ScrollbarVisibility.Auto` shows the built-in Vulkan thumb during wheel, programmatic or drag interaction and then fades it. `Always` keeps it visible and draggable without idle frames. `Hidden` hides only the built-in thumb.
 

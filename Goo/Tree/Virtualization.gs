@@ -78,6 +78,8 @@ internal sealed class VirtualNodeState {
   private var scrollAlignment ScrollAlignment
   private var scrollAnchor Point?
   private var requestedOffset Point
+  private var waitingForKey bool
+  private var settleScroll bool = true
 
   internal var Context ContextFrame?
   internal var Owner Window?
@@ -317,7 +319,7 @@ internal sealed class VirtualNodeState {
       let requested = state.NeedsRealize(viewport)
       let settling = needsScroll(n, state)
       let anchoring = Math.Abs(anchorDelta(n)) > 0.01F
-      if !requested && !settling { scrollKey = nil }
+      if !requested && !settling && !waitingForKey { scrollKey = nil }
       if !contextDirty && !requested && !settling && !anchoring { contextReader?.Commit(true) }
       return contextDirty || requested || settling || anchoring
     } catch (_ Exception) {
@@ -338,31 +340,6 @@ internal sealed class VirtualNodeState {
     }
     Cancel(true)
     return realize(n, state, AccessibilityMetadata.Value(n)?.Role == AccessibilityRole.List)
-  }
-
-  internal func OffsetForKey(n Node, key string) Point? {
-    guard let state = current else { return nil }
-    let previous = viewport.Bind(n)
-    let previousContext = enterContext()
-    contextReader?.Begin()
-    try {
-      let offset = state.OffsetOf(viewport, key)
-      if let value = offset {
-        if !Double.IsFinite(value.X) || !Double.IsFinite(value.Y) {
-          throw InvalidOperationException("Virtual item offset must be finite")
-        }
-      }
-      contextReader?.Commit(true)
-      return if let value = offset {
-        Point{X: Math.Max(0.0, value.X), Y: Math.Max(0.0, value.Y)}
-      } else { nil }
-    } catch (error Exception) {
-      contextReader?.Cancel()
-      rethrow
-    } finally {
-      viewport.Bind(previous)
-      ContextEnvironment.Current = previousContext
-    }
   }
 
   internal func ScrollOffsetForKey(n Node, key string, alignment ScrollAlignment, anchor Point? = nil) Point? {
@@ -388,9 +365,22 @@ internal sealed class VirtualNodeState {
     scrollAlignment = alignment
     scrollAnchor = anchor
     requestedOffset = offset
+    waitingForKey = false
+    settleScroll = true
   }
 
-  internal func CancelScroll() { scrollKey = nil }
+  internal func RequestPendingScroll(key string, alignment ScrollAlignment, settle bool, offset Point) {
+    RequestScroll(key, alignment, nil, offset)
+    waitingForKey = true
+    settleScroll = settle
+  }
+
+  internal prop IsWaitingForKey bool { get -> waitingForKey && scrollKey != nil }
+
+  internal func CancelScroll() {
+    scrollKey = nil
+    waitingForKey = false
+  }
 
   internal prop IsScrollSettling bool { get -> scrollKey != nil }
 
@@ -427,8 +417,12 @@ internal sealed class VirtualNodeState {
       throw InvalidOperationException("Virtual item bounds must be finite")
     }
     let fraction = alignment == ScrollAlignment.Center ? 0.5 : alignment == ScrollAlignment.End ? 1.0 : 0.0
-    let x = bounds.X - (anchor?.X ?? (viewport.Size.Width - bounds.Width) * fraction)
-    let y = bounds.Y - (anchor?.Y ?? (viewport.Size.Height - bounds.Height) * fraction)
+    var x = bounds.X - (anchor?.X ?? (viewport.Size.Width - bounds.Width) * fraction)
+    var y = bounds.Y - (anchor?.Y ?? (viewport.Size.Height - bounds.Height) * fraction)
+    if alignment == ScrollAlignment.Nearest {
+      x = nearestOffset(float64(n.ScrollX), bounds.X, bounds.Width, viewport.Size.Width)
+      y = nearestOffset(float64(n.ScrollY), bounds.Y, bounds.Height, viewport.Size.Height)
+    }
     let size = output.ContentSize
     let width = pending == state ? size.Width : float64(extent.Width)
     let height = pending == state ? size.Height : float64(extent.Height)
@@ -438,18 +432,24 @@ internal sealed class VirtualNodeState {
     }
   }
 
+  private func nearestOffset(offset float64, start float64, size float64, viewport float64) float64 {
+    let end = start + size - viewport
+    if size > viewport { return Math.Clamp(offset, start, end) }
+    return Math.Clamp(offset, end, start)
+  }
+
   private func needsScroll(n Node, state VirtualState) bool {
     guard let key = scrollKey else { return false }
-    if Math.Abs(float64(n.ScrollX) - requestedOffset.X) > 0.01
-      || Math.Abs(float64(n.ScrollY) - requestedOffset.Y) > 0.01 {
+    if !waitingForKey && (Math.Abs(float64(n.ScrollX) - requestedOffset.X) > 0.01
+      || Math.Abs(float64(n.ScrollY) - requestedOffset.Y) > 0.01) {
       scrollKey = nil
       return false
     }
     guard let target = itemOffset(n, state, key, scrollAlignment, scrollAnchor) else {
-      scrollKey = nil
+      if !waitingForKey { scrollKey = nil }
       return false
     }
-    return Math.Abs(target.X - float64(n.ScrollX)) > 0.01
+    return waitingForKey || Math.Abs(target.X - float64(n.ScrollX)) > 0.01
       || Math.Abs(target.Y - float64(n.ScrollY)) > 0.01
   }
 
@@ -528,7 +528,9 @@ internal sealed class VirtualNodeState {
       if let key = scrollKey {
         if let target = itemOffset(n, state, key, scrollAlignment, scrollAnchor) {
           output.ScrollOffset = target
-        } else { scrollKey = nil }
+          waitingForKey = false
+          if !settleScroll { scrollKey = nil }
+        } else if !waitingForKey { scrollKey = nil }
         captureAnchor(n, nil)
       } else {
         if output.AnchorKey == anchorKey && Math.Abs(delta) > 0.01F {

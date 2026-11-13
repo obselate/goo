@@ -7,6 +7,7 @@ import System.Reflection
 import System.Threading
 
 /// Defines a stateful Goo component.
+/// A mutable static field on a Cell type or its base types makes that Cell rebuild after every callback.
 @DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.AllFields)
 public open class Cell {
   private let rebuildGate object
