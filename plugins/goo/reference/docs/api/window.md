@@ -1724,6 +1724,7 @@ Sets the clear and inherited root text colors together on the owner thread. Expl
 ### `SetFullscreenDisplay(WindowDisplayId)`
 
 Requests borderless fullscreen on the selected display, including retargeting an already-fullscreen window. This must run on the window's UI thread. Returns Closed before Open or after close, Unsupported for embedded hosts, Failed for a stale ID or native failure, and Accepted when SDL accepts the request. Acceptance does not guarantee compositor placement. The compositor may keep the current display when retargeting fullscreen.
+
 ### `SetNativeDataDropFormats(System.Collections.Generic.IReadOnlyList{string})`
 
 Enables an exact MIME allow-list for native drops on the owning UI thread.
@@ -1737,6 +1738,7 @@ Returns: Accepted, Closed, Unsupported or Failed without changing an unsupported
 Attempts to submit a topmost request to the current native host. Accepted means the host accepted the request; desktop policy still controls observed stacking.
 
 Returns: Closed, Unsupported, Accepted, or Failed for the host operation.
+
 ### `Show(bool)`
 
 Shows an open desktop window, optionally requesting activation. The mounted tree survives Hide. Activation follows RequestActivation, including modal child routing. Nonfocusable windows show passively. Embedded hosts return Unsupported.

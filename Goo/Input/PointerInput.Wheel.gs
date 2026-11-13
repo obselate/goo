@@ -81,6 +81,7 @@ internal partial class PointerInput {
     var remainingY = horizontal ? 0.0F : -dy
     for var i = chain.Count; i > 0; i-- {
       guard let n = chain[i - 1].Current else { break }
+      if remainingX != 0.0F || remainingY != 0.0F { Virtualization.State(n)?.CancelScroll() }
       let unitX = InputPolicy.WheelUnit(false, scrollViewportWidth(n)) * WheelScrollScale
       let unitY = InputPolicy.WheelUnit(true, scrollViewportHeight(n)) * WheelScrollScale
       let x = maxScrollX(n) > 0.0F ? remainingX * unitX : 0.0F
