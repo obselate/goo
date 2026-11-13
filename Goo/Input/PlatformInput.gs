@@ -199,6 +199,7 @@ public class PlatformInput {
     if input.IsDispatching { return }
     let current = input.EditorSnapshot()
     let selection = input.EditorSelection()
+    owner.SyncWindowFocus(current, selection)
     var selectionChanged = (publishedSelection == nil) != (selection == nil)
     if let prior = publishedSelection, let next = selection {
       selectionChanged = prior.Anchor.Offset != next.Anchor.Offset || prior.Active.Offset != next.Active.Offset

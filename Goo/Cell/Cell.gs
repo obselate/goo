@@ -8,6 +8,8 @@ import System.Threading
 
 /// Defines a stateful Goo component.
 /// A mutable static field on a Cell type or its base types makes that Cell rebuild after every callback.
+/// With safe fields, declaring State or reading State in Build enables tracked callback rebuilding.
+/// Reading window values or contexts alone keeps automatic callback rebuilding.
 @DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.AllFields)
 public open class Cell {
   private let rebuildGate object
@@ -34,6 +36,7 @@ public open class Cell {
   private var stateReadCount int32
   private var callbackFallback bool = true
   private var stateChecked bool
+  private var stateValueRead bool
   private var stateDeclared bool
   private var untrackedScopes List[StateReadScope]?
   internal var stateChanged bool
@@ -211,6 +214,7 @@ public open class Cell {
   }
 
   private func ClearStateReads() {
+    stateValueRead = false
     guard let reads = stateReads else { return }
     for index in 0 ... reads.Count { reads[index].RemoveReader(this) }
     reads.Clear()
@@ -218,11 +222,19 @@ public open class Cell {
   }
 
   private func CommitStateReads() {
+    stateValueRead = false
     guard let reads = stateReads else { return }
     while reads.Count > stateReadCount {
       let index = reads.Count - 1
       reads[index].RemoveReader(this)
       reads.RemoveAt(index)
+    }
+    if callbackFallback || stateDeclared { return }
+    for index in 0 ... reads.Count {
+      if reads[index].IsStateValue {
+        stateValueRead = true
+        break
+      }
     }
   }
 
@@ -310,7 +322,7 @@ public open class Cell {
 
   internal func RebuildAfterCallback() {
     if building { return }
-    if callbackFallback || (!stateDeclared && (stateReads == nil || stateReads!!.Count == 0)) {
+    if callbackFallback || (!stateDeclared && !stateValueRead) {
       if let scopes = untrackedScopes {
         for index in 0 ... scopes.Count { scopes[index].Rebuild() }
       }

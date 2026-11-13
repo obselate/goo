@@ -4,6 +4,56 @@ import System
 import System.Threading.Tasks
 
 internal class ContextFixtures {
+    func WindowReadDoesNotOptInToTrackedStateContract() bool {
+        let previous = StateVerification.Override
+        try {
+            for verify in []bool{false, true} {
+                StateVerification.Enabled = verify
+                WindowReadFixtureValues.External = 0
+                let window = Window{Root: WindowReadFieldlessCell(), Size: LayoutSize(100, 100)}
+                try {
+                    window.UpdateTree()
+                    if !WindowReadFixtureValues.FieldlessHandle.Activate() { return false }
+                    window.UpdateTree()
+                    if window.Tree?.Children[0].Content != "100:1" { return false }
+                } finally { window.Close() }
+            }
+            return true
+        } finally { StateVerification.Override = previous }
+    }
+
+    func InputCarriedStateOptsInToTrackedStateContract() bool {
+        let previous = StateVerification.Override
+        StateVerification.Enabled = false
+        WindowReadFixtureValues.InputBuilds = 0
+        let state = State[int32](7)
+        let root = WindowInputStateRoot(state)
+        let window = Window{Root: root, Size: LayoutSize(100, 100)}
+        try {
+            window.UpdateTree()
+            if WindowReadFixtureValues.InputBuilds != 1 { return false }
+            if !WindowReadFixtureValues.InputHandle.Activate() { return false }
+            window.UpdateTree()
+            if WindowReadFixtureValues.InputBuilds != 1 { return false }
+            state.Value = 8
+            window.UpdateTree()
+            if WindowReadFixtureValues.InputBuilds != 2 || window.Tree?.Children[0].Content != "8" { return false }
+            root.Tracked.Value = false
+            window.UpdateTree()
+            if !WindowReadFixtureValues.InputHandle.Activate() { return false }
+            window.UpdateTree()
+            if WindowReadFixtureValues.InputBuilds != 4 { return false }
+            root.Tracked.Value = true
+            window.UpdateTree()
+            if !WindowReadFixtureValues.InputHandle.Activate() { return false }
+            window.UpdateTree()
+            return WindowReadFixtureValues.InputBuilds == 5
+        } finally {
+            window.Close()
+            StateVerification.Override = previous
+        }
+    }
+
     func TrackedWindowGettersContract() bool {
         let previous = StateVerification.Override
         try {
@@ -942,7 +992,13 @@ public partial class Window {
 }
 
 internal class WindowReadFixtureValues {
-    shared { internal var Builds []int32 = []int32{} }
+    shared {
+        internal var Builds []int32 = []int32{}
+        internal var External int32
+        internal let FieldlessHandle ElementHandle = ElementHandle()
+        internal var InputBuilds int32
+        internal let InputHandle ElementHandle = ElementHandle()
+    }
 }
 
 internal class WindowReadFixtureRoot : Cell {
@@ -977,5 +1033,32 @@ internal class WindowReadFixtureCell(kind int32) : Cell {
             default: Host.Focus.Selection?.ToString() ?? "none"
         }
         return Text{Content: value ?? "", Height: 20}
+    }
+}
+
+internal class WindowReadFieldlessCell : Cell {
+    override func Build() Blob -> Button{
+        Handle: WindowReadFixtureValues.FieldlessHandle, Width: 100, Height: 40,
+        OnClick: () -> { WindowReadFixtureValues.External++ },
+        Text{Content: "${Host.Size.Width}:${WindowReadFixtureValues.External}"},
+    }
+}
+
+internal class WindowInputStateRoot(value State[int32]) : Cell {
+    private let state State[int32] = value
+    internal let Tracked State[bool] = State[bool](true)
+    override func Build() Blob ->
+        Cell.Mount[WindowInputStateValue, WindowInputStateCell](nil, WindowInputStateValue(Tracked.Value, state))
+}
+
+internal data struct WindowInputStateValue(Tracked bool, Value State[int32]) { }
+
+internal class WindowInputStateCell : Cell[WindowInputStateValue] {
+    protected override func Build(input WindowInputStateValue) Blob {
+        WindowReadFixtureValues.InputBuilds++
+        return Button{
+            Handle: WindowReadFixtureValues.InputHandle, Width: 100, Height: 40,
+            OnClick: () -> {}, Text{Content: input.Tracked ? input.Value.Value.ToString() : "untracked"},
+        }
     }
 }

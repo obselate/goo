@@ -8,8 +8,12 @@ internal class StateDependency {
   private var readers List[object]?
   private var threadId int32
   private let safePayload bool
+  internal let IsStateValue bool
 
-  internal init(safePayload bool) { this.safePayload = safePayload }
+  internal init(safePayload bool, isStateValue bool = true) {
+    this.safePayload = safePayload
+    IsStateValue = isStateValue
+  }
 
   internal func IsSafePayload() bool -> safePayload
 

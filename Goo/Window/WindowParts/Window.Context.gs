@@ -38,11 +38,15 @@ public partial class Window {
     }
 
     private func SyncWindowFocus() {
-        trackedEditsText?.Sync(WindowFocus.TargetEditsText(input.FocusedNode()))
-        trackedEditor?.Sync(input.EditorSnapshot())
-        trackedSelection?.Sync(input.EditorSelection())
+        SyncWindowFocus(if trackedEditor != nil { input.EditorSnapshot() } else { nil },
+            if trackedSelection != nil { input.EditorSelection() } else { nil })
     }
 
+    internal func SyncWindowFocus(editor FocusedEditorSnapshot?, selection TextSelection?) {
+        trackedEditsText?.Sync(WindowFocus.TargetEditsText(input.FocusedNode()))
+        trackedEditor?.Sync(editor)
+        trackedSelection?.Sync(selection)
+    }
 
     internal func RequireContextThread() {
         requireUiThread("Context")

@@ -570,7 +570,7 @@ internal sealed class ContextProvider : Cell {
 
 internal class WindowDependency[T any](value T) {
     private var current T = value
-    private let dependency StateDependency = StateDependency(true)
+    private let dependency StateDependency = StateDependency(true, false)
 
     internal func Read(reader object) { dependency.Read(reader) }
 

@@ -262,6 +262,8 @@ class FixtureContractTests {
             yield Contract[ContextFixtures]("FailedPassRetriesNewDependenciesContract")
             yield Contract[ContextFixtures]("TrackedWindowGettersContract")
             yield Contract[ContextFixtures]("TrackedWindowRetainedScopeContract")
+            yield Contract[ContextFixtures]("WindowReadDoesNotOptInToTrackedStateContract")
+            yield Contract[ContextFixtures]("InputCarriedStateOptsInToTrackedStateContract")
             yield Contract[ContextFixtures]("QueuedStructReadAllocationContract")
             yield Contract[ContextFixtures]("RetainedDirectCleanPortalAndShadowingContract")
             yield Contract[ContextFixtures]("VirtualRetentionVersionAndFailureContract")

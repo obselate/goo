@@ -84,7 +84,6 @@ public partial class Window {
 
   internal func RefreshPlatformInput() {
     platformInput?.Refresh()
-    SyncWindowFocus()
   }
 
   internal func InvalidatePlatformInput() {
