@@ -55,7 +55,6 @@ internal class ContextFixtures {
         other.Set(window, 50)
         try {
             window.UpdateTree()
-            window.UpdateTree()
             let later = windowReader(window, 1)
             host.Show = true
             host.Value = 21
@@ -177,8 +176,6 @@ internal class ContextFixtures {
             other.Set(first, 50)
             other.Set(second, 70)
             first.UpdateTree()
-            first.UpdateTree()
-            second.UpdateTree()
             second.UpdateTree()
             let reader = windowReader(first)
             let otherReader = windowReader(first, 2)
@@ -215,7 +212,6 @@ internal class ContextFixtures {
         key.Set(window, 10)
         other.Set(window, 50)
         try {
-            window.UpdateTree()
             window.UpdateTree()
             let direct = scopedReader(window)
             let portal = portalReader(window)
@@ -406,7 +402,6 @@ internal class ContextFixtures {
             key.Set(window, 10)
             other.Set(window, 50)
             try {
-                window.UpdateTree()
                 window.UpdateTree()
                 guard let node = cell.Handle.AttachedNode() else {
                     return false

@@ -24,7 +24,6 @@ internal class StyleFixtures {
     try {
       if window.Background != Color.White || window.Foreground != Color.Black { return false }
       window.UpdateTree()
-      window.UpdateTree()
       guard let root = window.Tree else { return false }
       if root.Color != Color.Black || root.Children[0].Color != Color.Black
         || root.Children[1].Children[0].Color != Color.Black { return false }
