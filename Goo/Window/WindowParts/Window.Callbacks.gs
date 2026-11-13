@@ -78,6 +78,7 @@ public partial class Window {
   private var continuations Queue[CallbackWork]?
   private var continuationDrain Action?
   private var hostContinuationDrain SendOrPostCallback?
+  private var lateContinuationDrain WaitCallback?
   private var closeDrainMs float64 = 2000.0
 
   /// Gets or sets the close drain bound in milliseconds. The default is 2000. Zero skips the wait.
@@ -127,7 +128,7 @@ public partial class Window {
         }
       }
     }
-    if launch { go drainLateContinuations() }
+    if launch { ThreadPool.QueueUserWorkItem(lateContinuationDrain ??= _ -> drainLateContinuations()) }
     else if let action = dispatch {
       if !Post(action) { WakeCallbacks() }
       else if let callback = hostDispatch { work.Context.HostContext!!.Post(callback, work.Context) }
@@ -195,6 +196,7 @@ public partial class Window {
     callbackError = captureCleanupError(callbackError, () -> { host?.Hide() })
     callbackError = captureCleanupError(callbackError, () -> { closeOwnedWindows() })
     let tree = node
+    callbackError = captureCleanupError(callbackError, () -> input.Reset(tree, resolver))
     callbackError = captureCleanupError(callbackError, () -> Portals.Sync(nil, portalRoot))
     if let current = tree {
       callbackError = captureCleanupError(callbackError, () -> NodeLifecycle.DisposeTree(current))
@@ -223,7 +225,7 @@ public partial class Window {
         launch = true
       }
     }
-    if launch { go drainLateContinuations() }
+    if launch { ThreadPool.QueueUserWorkItem(lateContinuationDrain ??= _ -> drainLateContinuations()) }
     return true
   }
 }
