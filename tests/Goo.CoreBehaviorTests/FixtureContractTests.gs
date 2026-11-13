@@ -182,6 +182,7 @@ class FixtureContractTests {
             yield Contract[WindowStartupFixtures]("HostedContextOperationCountingContract")
             yield Contract[WindowStartupFixtures]("AsyncOwnerContextContract")
             yield Contract[WindowStartupFixtures]("AsyncCloseDrainContract")
+            yield Contract[WindowStartupFixtures]("CloseCancelsDragBeforeUnmountContract")
             yield Contract[WindowStartupFixtures]("EmbeddedCloseDrainsContinuationsContract")
             yield Contract[WindowStartupFixtures]("EmbeddedCloseRejectsReentrantDisposalContract")
             yield Contract[WindowStartupFixtures]("AsyncStateContinuationContract")
