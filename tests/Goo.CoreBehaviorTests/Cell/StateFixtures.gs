@@ -119,17 +119,24 @@ internal class StateFixtures {
   func VerificationAcceptsTrackedAndEqualContract() bool {
     let previous = StateVerification.Override
     try {
-      StateVerification.Enabled = true
-      for mode in []string{"tracked", "equal"} {
-        StateFixtureExternal.Value = 0
-        let window = Window{Root: StateVerificationFixtureCell(mode), Size: LayoutSize(200, 100)}
-        try {
-          window.UpdateTree()
-          window.PlatformInput.PointerMove(0, PointerDevice.Mouse, 10, 10, KeyModifiers{}, 0)
-          window.UpdateTree()
-          let expected = mode == "tracked" ? "1" : "0"
-          if window.Tree?.Children[0].Content != expected { return false }
-        } finally { window.Close() }
+      for verification in []bool{true, false} {
+        StateVerification.Enabled = verification
+        for mode in []string{"tracked", "equal"} {
+          StateFixtureExternal.Value = 0
+          let cell = StateVerificationFixtureCell(mode)
+          let window = Window{Root: cell, Size: LayoutSize(200, 100)}
+          try {
+            StateFixtureExternal.Builds = 0
+            window.UpdateTree()
+            let builds = StateFixtureExternal.Builds
+            window.PlatformInput.PointerMove(0, PointerDevice.Mouse, 10, 10, KeyModifiers{}, 0)
+            if mode == "equal" && !verification && cell.IsDirty() { return false }
+            window.UpdateTree()
+            let expected = mode == "tracked" ? "1" : "0"
+            if window.Tree?.Children[0].Content != expected { return false }
+            if mode == "equal" && !verification && StateFixtureExternal.Builds != builds { return false }
+          } finally { window.Close() }
+        }
       }
       return true
     } finally { StateVerification.Override = previous }
@@ -261,7 +268,10 @@ internal class StateScopeFixtureCell : Cell, IDisposable {
 }
 
 internal class StateFixtureExternal {
-  shared { internal var Value int32 }
+  shared {
+    internal var Value int32
+    internal var Builds int32
+  }
 }
 
 internal class StateVerificationFixtureCell : Cell {
@@ -272,6 +282,7 @@ internal class StateVerificationFixtureCell : Cell {
   init(mode string) { this.mode = mode }
 
   override func Build() Blob {
+    StateFixtureExternal.Builds++
     let text = mode == "clock" ? Stopwatch.GetTimestamp().ToString()
       : (value.Value + StateFixtureExternal.Value).ToString()
     let result = Container{Width: 200, Height: 100, OnPointerMove: Move}
@@ -283,6 +294,7 @@ internal class StateVerificationFixtureCell : Cell {
     if mode == "external" || mode == "unread" { StateFixtureExternal.Value++ }
     if mode == "unread" { unread.Value++ }
     if mode == "tracked" { value.Value++ }
+    if mode == "equal" { value.Value = value.Value }
   }
 }
 

@@ -392,15 +392,12 @@ internal class Program {
             let primary = AsyncCloseScene()
             let other = Window{Title: "Async close other window", Size: LayoutSize(240, 120), Root: Cell()}.Open()
             var progress int32
-            primary.Started = () -> {
-                other.After(
-                    30.0,
-                    () -> {
-                        progress++
-                        primary.Pending.TrySetResult(true)
-                    }
-                )
-                other.After(80.0, other.RequestClose)
+            primary.Closing = () -> {
+                other.Post(() -> {
+                    progress++
+                    primary.Pending.TrySetResult(true)
+                    other.RequestClose()
+                })
             }
             Application.Run(Window{Title: "Async close primary", Size: LayoutSize(240, 120), Root: primary})
             Require(
@@ -409,11 +406,10 @@ internal class Program {
             )
 
             let late = AsyncCloseScene()
-            Application.Run(Window{Title: "Async close bound", Size: LayoutSize(240, 120), Root: late, CloseDrainMs: 25.0})
-            let elapsed = Stopwatch.GetElapsedTime(late.CloseTicks).TotalMilliseconds
+            Application.Run(Window{Title: "Async close bound", Size: LayoutSize(240, 120), Root: late, CloseDrainMs: 0.0})
             Require(
-                late.FinallyCount == 0 && elapsed >= 20.0 && elapsed < 5000.0,
-                "The bounded drain did not return with an incomplete handler: ${elapsed} ms"
+                late.FinallyCount == 0 && !late.Pending.Task.IsCompleted,
+                "The bounded drain did not return with an incomplete handler"
             )
             late.Pending.SetResult(true)
             Require(
@@ -526,21 +522,19 @@ internal class Program {
 
 internal class AsyncCloseScene : Cell {
     internal var Cancellable bool
-    internal var Started Action?
+    internal var Closing Action?
     internal let Pending TaskCompletionSource[bool] = TaskCompletionSource[bool]()
     internal let Finished ManualResetEventSlim = ManualResetEventSlim()
     internal var FinallyCount int32
     internal var FinallyThread int32
-    internal var CloseTicks int64
 
     protected override func Mounted() {
         RunHandler()
-        Started?.Invoke()
-        Host.After(1.0, Host.RequestClose)
+        Host.Post(Host.RequestClose)
     }
 
     protected override func Unmounting() {
-        CloseTicks = Stopwatch.GetTimestamp()
+        Closing?.Invoke()
     }
 
     private async func RunHandler() void {

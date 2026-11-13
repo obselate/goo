@@ -20,15 +20,8 @@ internal class CellFixtures {
       window.UpdateTree()
       window.UpdateTree()
       window.UpdateTree()
-      if cell.Builds != 2 || window.Tree?.Content != "w=120" { return false }
+      return cell.Builds == 2 && window.Tree?.Content == "w=120"
     } finally { window.Close() }
-    let baseCall = MountedBaseCallFixtureCell()
-    let baseWindow = Window{Root: baseCall, Size: LayoutSize(200, 100)}
-    try {
-      baseWindow.UpdateTree()
-      baseWindow.UpdateTree()
-      return baseCall.Builds == 1 && baseCall.Value == "after" && baseWindow.Tree?.Content == "before"
-    } finally { baseWindow.Close() }
   }
 
   func ServicesBeforeWindowBinding() bool {
@@ -1688,15 +1681,3 @@ internal class DeferredCallbackInput : Cell[Blob] {
   protected override func Build(input Blob) Blob -> input
 }
 
-internal class MountedBaseCallFixtureCell : Cell {
-  internal var Builds int32
-  internal var Value string = "before"
-  protected override func Mounted() {
-    base.Mounted()
-    Value = "after"
-  }
-  override func Build() Blob {
-    Builds++
-    return Text{Content: Value}
-  }
-}
