@@ -705,7 +705,7 @@ internal class ContextVirtualRoot : Cell {
 
     private func content() Blob {
         if !Show { return Container{Width: 100, Height: 60} }
-        let viewport = Virtual(ContextVirtualSource(this)){Handle = Handle, Width = 100, Height = 60}
+        let viewport = Virtual(){Source = ContextVirtualSource(this), Handle = Handle, Width = 100, Height = 60}
         return portal ? Portal(){viewport}: viewport
     }
 }
@@ -774,7 +774,7 @@ internal class ContextVirtualState : VirtualState {
                 VirtualItem{Key: key, Index: index, Y: float64(index) * 20.0, Width: 100, Height: 20, Content: content}
             )
         }
-        output.ContentSize = LayoutSize{Width: 100, Height: 20000}
+        output.ContentSize = LayoutSize(100, 20000)
         output.ItemCount = 1000
     }
 

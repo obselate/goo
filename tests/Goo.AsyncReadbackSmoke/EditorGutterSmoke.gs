@@ -11,7 +11,7 @@ class EditorGutterSmokeCell : Cell {
     this.controller = controller
   }
 
-  override func Build() Blob -> TextEditor(controller) {
+  override func Build() Blob -> TextEditor(){ Controller = controller,
     Width = 240,
     Height = 100,
     FontSize = 20,

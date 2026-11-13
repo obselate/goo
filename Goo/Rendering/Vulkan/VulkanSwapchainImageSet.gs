@@ -65,7 +65,7 @@ internal unsafe class VulkanSwapchainImageSet {
         Create(swapchain, format)
       } catch (error Exception) {
         try { DisposeAfterDeviceLoss() } catch (cleanup Exception) { }
-        throw error
+        rethrow
       }
     }
 

@@ -545,30 +545,9 @@ public partial class Window {
     }
   }
 
-  /// Gets the current native clipboard text on the window UI thread.
-  /// An empty result can mean an empty clipboard, native copy failure, or text exceeding 16 MiB of UTF-8.
-  /// @exception InvalidOperationException when the window is not open.
-  public func GetClipboardText() string {
-    requireUiThread("Window.GetClipboardText")
-    if !IsOpen { throw InvalidOperationException("Clipboard access requires an open window") }
-    guard let native = host else {
-      throw InvalidOperationException("Clipboard access requires an open window")
-    }
-    return native.GetClipboardText()
-  }
-
-  /// Sets the native clipboard text on the window UI thread.
-  /// Native set failures throw.
-  /// @exception InvalidOperationException when the window is not open.
-  public func SetClipboardText(value string) {
-    requireUiThread("Window.SetClipboardText")
-    if value == nil { throw ArgumentNullException("value") }
-    if !IsOpen { throw InvalidOperationException("Clipboard access requires an open window") }
-    guard let native = host else {
-      throw InvalidOperationException("Clipboard access requires an open window")
-    }
-    native.SetClipboardText(value)
-  }
+  /// Gets clipboard services for this window's UI thread.
+  public prop Clipboard WindowClipboard { get -> clipboard ??= WindowClipboard(this) }
+  private var clipboard WindowClipboard?
 
   /// Reports whether programmatic window movement is available.
   public prop CanMove bool{
@@ -597,7 +576,7 @@ public partial class Window {
   private let pendingCells List[DirtyCellSubmission]
   private let deferredCells List[DirtyCellSubmission]
   private let cellBatch List[DirtyCellSubmission]
-  private let fiberBatch List[Cell]
+  private let fiberBatch List[DirtyFiber]
   private let childDiffScratch ChildDiffScratch
   private var cellTransactionActive bool
   private var renderDirty bool
@@ -690,7 +669,7 @@ public partial class Window {
     pendingCells = List[DirtyCellSubmission]()
     deferredCells = List[DirtyCellSubmission]()
     cellBatch = List[DirtyCellSubmission]()
-    fiberBatch = List[Cell]()
+    fiberBatch = List[DirtyFiber]()
     childDiffScratch = ChildDiffScratch()
     portalRoot = Node{Kind: NodeKind.Container, HitTestSelf: false}
     layout = Layout()
@@ -800,7 +779,7 @@ public partial class Window {
     captureFailed = false
     captureOwner = WindowCaptureOwner.None
     reusableCapture = nil
-    throw windowTarget?.CaptureFailure ?? InvalidOperationException("Goo capture readback failed")
+    System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(windowTarget?.CaptureFailure ?? InvalidOperationException("Goo capture readback failed")).Throw()
   }
 
   /// Takes a completed capture, or returns nil while it is pending.
@@ -820,7 +799,7 @@ public partial class Window {
     let reusable = reusableCapture
     reusableCapture = nil
     if status == WindowReadbackPollStatus.Failed {
-      throw target.CaptureFailure ?? InvalidOperationException("Goo capture readback failed")
+      System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(target.CaptureFailure ?? InvalidOperationException("Goo capture readback failed")).Throw()
     }
     guard let result = target.TakeCaptureResult() else {
       throw InvalidOperationException("Goo capture result was unavailable")
@@ -843,7 +822,7 @@ public partial class Window {
     guard let target = windowTarget else { return WindowReadbackRequestStatus.NotReady }
     let status = startCapture(target, WindowCaptureOwner.Diagnostics)
     if status == WindowReadbackRequestStatus.Failed {
-      throw target.CaptureFailure ?? InvalidOperationException("Goo capture readback failed")
+      System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(target.CaptureFailure ?? InvalidOperationException("Goo capture readback failed")).Throw()
     }
     return status
   }
@@ -856,7 +835,7 @@ public partial class Window {
     if result == WindowReadbackPollStatus.NotReady { return nil }
     captureOwner = WindowCaptureOwner.None
     if result == WindowReadbackPollStatus.Failed {
-      throw target.CaptureFailure ?? InvalidOperationException("Goo capture readback failed")
+      System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(target.CaptureFailure ?? InvalidOperationException("Goo capture readback failed")).Throw()
     }
     guard let capture = target.TakeCaptureResult() else {
       throw InvalidOperationException("Goo capture result was unavailable")

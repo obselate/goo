@@ -105,7 +105,7 @@ internal partial class PointerInput {
               Y: float64(mapped.Y - source.Rect.Y) },
             WindowPosition: Point{ X: float64(x), Y: float64(y) },
           })
-        } finally { owner?.Rebuild() }
+        } finally { owner?.RebuildAfterCallback() }
       } catch (error Exception) {
         if isPointer { current.ClickTarget = nil }
         ExceptionDispatchInfo.Capture(error).Throw()
@@ -243,7 +243,7 @@ internal partial class PointerInput {
               let owner = CellOwnership.Within(root, target)
               var queried DragEffect
               try { queried = descriptor.Query(event) }
-              finally { owner?.Rebuild() }
+              finally { owner?.RebuildAfterCallback() }
               if !ensureDragSession(root, session) {
                 path.Clear()
                 return nil
@@ -285,7 +285,7 @@ internal partial class PointerInput {
       let owner = CellOwnership.Within(root, target)
       let targetMount = NodeMount(target)
       try { descriptor.Changed?.Invoke(event) }
-      finally { owner?.Rebuild() }
+      finally { owner?.RebuildAfterCallback() }
       if terminalLeave {
         return dragSession == session && targetMount.Current != nil && DragTargetRouting.Available(root, target)
       }
@@ -365,7 +365,7 @@ internal partial class PointerInput {
       let owner = CellOwnership.Within(root, target)
       try {
         try { descriptor.Changed?.Invoke(event) }
-        finally { owner?.Rebuild() }
+        finally { owner?.RebuildAfterCallback() }
       } catch (error Exception) { failure = error }
       completeDrag(root, session, failure == nil ? DragEndKind.Dropped : DragEndKind.Canceled,
         failure == nil ? effect : DragEffect.None, false, failure)
@@ -423,7 +423,7 @@ internal partial class PointerInput {
                       Error: session.NativeCompletion?.Error ?? "",
                       SourceRemovalRequired: effect == DragEffect.Move && (session.NativeCompletion?.SourceRemovalRequired ?? true)
                     }) }
-                    finally { owner?.Rebuild() }
+                    finally { owner?.RebuildAfterCallback() }
                   } catch (error Exception) {
                     if failure == nil { failure = error }
                   }
@@ -514,7 +514,7 @@ internal partial class PointerInput {
       if dragSession == session {
         terminateDrag(tree, DragEndKind.Canceled, DragEffect.None, true, error)
       }
-      throw error
+      rethrow
     }
   }
 

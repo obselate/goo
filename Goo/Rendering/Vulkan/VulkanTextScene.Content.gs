@@ -13,6 +13,23 @@ internal unsafe sealed partial class VulkanTextScene {
     ref complete bool) bool{
       if opacity <= 0.0F { return true }
       let layout = RequestTextLayout(node, BoxGeometry.ContentWidth(node))
+      if node.Selectable && node.Anchor != node.Caret {
+        TextGeometryQueries.Prepare(node)
+        let selectedRange = TextRange(Math.Min(node.Anchor, node.Caret), Math.Abs(node.Caret - node.Anchor))
+        let local = stackalloc[64]ElementRect
+        if TextGeometryQueries.CopyRangeRects(node, selectedRange, TextCoordinateSpace.Element, local, out var required) {
+          let rects Span[ElementRect] = required > local.Length ? [required]ElementRect : local
+          if required > local.Length {
+            TextGeometryQueries.CopyRangeRects(node, selectedRange, TextCoordinateSpace.Element, rects, out required)
+          }
+          for i in 0 ... required {
+            let rect = rects[i]
+            AddSolid(frame, ConservativeBounds{X: node.Rect.X + float32(rect.X),
+              Y: node.Rect.Y + float32(rect.Y), Width: float32(rect.Width), Height: float32(rect.Height)},
+              defaultSelectionColor(), opacity, parentTransformIndex)
+          }
+        }
+      }
 
       let contentX = BoxGeometry.ContentLeft(node)
       let contentY = BoxGeometry.ContentTop(node)

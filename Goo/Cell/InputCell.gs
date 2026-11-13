@@ -77,20 +77,27 @@ public open class Cell[TInput any] : Cell {
   /// @returns the root blob for this component
   protected open func Build(input TInput) Blob -> Build()
 
+  protected open func InputChanged(input TInput) { }
+
   internal override func BuildOutput() Blob -> Build(input)
 
   internal func SetInput(value TInput) bool {
     let previous = input
     let hadInput = hasInput
     input = value
+    let reader = Cell.StateReader
+    Cell.StateReader = nil
     hasInput = true
     try {
       if hadInput && !ShouldRebuild(previous, value) {
         return false
       }
+      InputChanged(value)
     } catch (error Exception) {
       MarkDirtyFromInput()
-      throw error
+      rethrow
+    } finally {
+      Cell.StateReader = reader
     }
     MarkDirtyFromInput()
     return true

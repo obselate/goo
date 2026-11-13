@@ -92,7 +92,7 @@ public partial class Window {
           native.Wake()
         }
       }
-      throw error
+      rethrow
     } finally {
       imageCompletionBatch.Clear()
     }

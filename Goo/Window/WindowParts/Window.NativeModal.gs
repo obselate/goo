@@ -138,6 +138,8 @@ public partial class Window {
                 lease.Closing?.Invoke()
             }
             if family?.Dialog != nil { closeFileDialog() }
+            host?.PollEvents()
+            lease.DrainCompletion()
             return false
         }
         let closing = NativeWindowClosing

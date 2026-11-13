@@ -429,18 +429,7 @@ internal partial class Reconciler {
       n.AutoFocus = nextAutoFocus
       inputChanged = true
     }
-    if (n.OnClick != nil) != (b.OnClick != nil) { inputChanged = true }
-    n.OnClick = b.OnClick
-    if (n.OnPointerDown != nil) != (b.OnPointerDown != nil) { inputChanged = true }
-    n.OnPointerDown = b.OnPointerDown
-    if (n.OnPointerMove != nil) != (b.OnPointerMove != nil) { inputChanged = true }
-    n.OnPointerMove = b.OnPointerMove
-    if (n.OnPointerUp != nil) != (b.OnPointerUp != nil) { inputChanged = true }
-    n.OnPointerUp = b.OnPointerUp
-    if (n.OnPointerCancel != nil) != (b.OnPointerCancel != nil) { inputChanged = true }
-    n.OnPointerCancel = b.OnPointerCancel
-    if (n.OnWheel != nil) != (b.OnWheel != nil) { inputChanged = true }
-    n.OnWheel = b.OnWheel
+    if n.SyncPointerCallbacks(b) { inputChanged = true }
     let nextHitTestSelf = resolvedHitTestSelf(b, focusable, entries, hover, active)
     if n.HitTestSelf != nextHitTestSelf {
       n.HitTestSelf = nextHitTestSelf
@@ -466,7 +455,17 @@ internal partial class Reconciler {
   }
 
   internal func applyText(n Node, t Text, initial bool) {
-    applyStyle(n, t, t.Focusable, initial)
+    applyStyle(n, t, t.Focusable || t.Selectable, initial)
+    if n.Selectable != t.Selectable {
+      n.Selectable = t.Selectable
+      if n.Anchor != 0 { n.Anchor = 0 }
+      if n.Caret != 0 { n.Caret = 0 }
+      n.BumpScenePaintVersion()
+      MarkEffects(ReconcileEffects.Input)
+      MarkEffects(ReconcileEffects.Paint)
+    }
+    if n.Anchor > t.Content.Length { n.Anchor = t.Content.Length }
+    if n.Caret > t.Content.Length { n.Caret = t.Content.Length }
     let rangeChange = PassiveTextPresentations.Apply(n, t.Content, t.StyleRangeValues)
     let contentChanged = n.Content != t.Content
     if contentChanged || rangeChange.Changed {
@@ -1246,6 +1245,7 @@ internal partial class Reconciler {
 
   internal func diffChildren(n Node, blobs IList[Blob]) {
     if styleRetryRoot == nil { rememberStyleRetryRoot(n) }
+    if n.Children.Count == 0 && blobs.Count == 0 { return }
     let scratch = keyedScratch()
     let scratchScope = scratch.Rent(Math.Max(n.Children.Count, blobs.Count))
     try {
@@ -1308,7 +1308,7 @@ internal partial class Reconciler {
       Stacking.InvalidateStructure(n)
     }
     if let error = disposeTrees(retire) {
-      throw error
+      System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw()
     }
   }
 
@@ -1367,18 +1367,19 @@ internal partial class Reconciler {
     let provisional = scratchScope.Provisional
     let retire = scratchScope.Retire
     let virtualRows = FrameRecorder.Current != nil && Virtualization.State(n) != nil
+    let orderChanged = childOrderChanged(n.Children, blobs)
     var childrenChanged = false
     var committed = false
     var i int32
     try {
-      while i < n.Children.Count {
+      while orderChanged && i < n.Children.Count {
         let child = n.Children[i]
         if let key = child.Key {
           scratchScope.Keyed.Add(key, child)
         }
         i++
       }
-      if childOrderChanged(n.Children, blobs) {
+      if orderChanged {
         markStructure()
         childrenChanged = true
       }
@@ -1386,7 +1387,7 @@ internal partial class Reconciler {
       i = 0
       while i < blobs.Count {
         let blob = blobs[i]
-        if let hit = takeMatch(scratchScope, blob, n, i) {
+        if let hit = orderChanged ? takeMatch(scratchScope, blob, n, i) : n.Children[i] {
           if canReuseNode(hit, blob) {
             var child Node
             if let cell = hit.Fiber {
@@ -1452,7 +1453,7 @@ internal partial class Reconciler {
       }
 
       i = 0
-      while i < n.Children.Count {
+      while orderChanged && i < n.Children.Count {
         let child = n.Children[i]
         if let key = child.Key {
           if scratchScope.Keyed.TryGetValue(key, out var unmatched) {
@@ -1487,7 +1488,7 @@ internal partial class Reconciler {
         disposeTrees(retire)
       }
       if let error = error {
-        throw error
+        System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw()
       }
     } catch (_ Exception) {
       if !committed {

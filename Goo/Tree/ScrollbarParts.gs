@@ -3,7 +3,6 @@ package Goo
 import Facebook.Yoga
 import System
 import System.Collections.Generic
-import System.Runtime.CompilerServices
 
 internal class ScrollbarPartState {
     internal var HorizontalTrack Node?
@@ -22,8 +21,6 @@ internal class ScrollbarPartState {
 
 internal partial class ScrollbarParts {
     shared {
-        private let states ConditionalWeakTable[Node, ScrollbarPartState] =
-        ConditionalWeakTable[Node, ScrollbarPartState]()
         private let empty List[Node] = List[Node]()
         private let partLayout Layout = Layout()
         private var layoutDepth int32
@@ -33,7 +30,7 @@ internal partial class ScrollbarParts {
                 return
             }
             state.Queued = false
-            states.Remove(owner)
+            owner.ScrollbarPartState = nil
             disposeParts(state)
         }
 
@@ -243,14 +240,14 @@ internal partial class ScrollbarParts {
         }
 
         private func stateFor(owner Node, create bool = true) ScrollbarPartState? {
-            if states.TryGetValue(owner, out var state) {
+            if let state = owner.ScrollbarPartState {
                 return state
             }
             if !create {
                 return nil
             }
             let next = ScrollbarPartState()
-            states.Add(owner, next)
+            owner.ScrollbarPartState = next
             return next
         }
 
@@ -265,7 +262,7 @@ internal partial class ScrollbarParts {
             state.VerticalThumb = nil
             state.Parts.Clear()
             state.Active.Clear()
-            if let error = failure { throw error }
+            if let error = failure { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw() }
         }
 
         private func disposePart(root Node?, failure Exception?) Exception? {
@@ -290,6 +287,7 @@ internal partial class ScrollbarParts {
         }
 
         private func layoutPart(root Node, bounds Rect) {
+            root.HitContained = false
             if bounds.W <= 0.0F || bounds.H <= 0.0F {
                 root.Rect = bounds
                 return
@@ -316,6 +314,7 @@ internal partial class ScrollbarParts {
             let origin = root.Rect
             offset(root, bounds.X - origin.X, bounds.Y - origin.Y)
             root.Rect = bounds
+            root.HitContained = false
         }
 
         private func offset(node Node, x float32, y float32) {

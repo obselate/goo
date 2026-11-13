@@ -32,6 +32,27 @@ internal class Node {
   private var shapeState NodeShapeState?
   private var pointerState NodePointerState?
   private var portalState NodePortalState?
+  private var hitContained bool
+  internal var ScrollbarStyleState ScrollbarNodeValues?
+  internal var ScrollActivityState ScrollNodeActivity?
+  internal var ScrollbarPartState ScrollbarPartState?
+  internal var RetainedLayoutTransition LayoutTransitionState?
+  internal var RetainedVirtualState VirtualNodeState?
+
+  internal prop HitContained bool{
+    get -> hitContained
+    set {
+      hitContained = value
+      if !value {
+        var ancestor = Parent
+        while let node = ancestor {
+          if !node.hitContained { break }
+          node.hitContained = false
+          ancestor = node.Parent
+        }
+      }
+    }
+  }
 
   private func EnsureEditingState() NodeEditingState {
     if let state = editingState { return state }
@@ -98,6 +119,7 @@ internal class Node {
     PortalAnchorClipped = false
     NeedsYogaBinding = true
     HasCustomLayout = false
+    HitContained = false
     Key = nil
     Parent = nil
     Context = nil
@@ -125,6 +147,7 @@ internal class Node {
     PaintBindingResolver = nil
     TextLayout = nil
     TextLayoutCache = nil
+    Selectable = false
     StyleQueuedPass = 0
     StyleResolvedPass = 0
     StylePendingSelf = false
@@ -273,26 +296,26 @@ internal class Node {
   }
   internal prop Yoga Facebook.Yoga.Node? { get; set; }
   internal prop YogaStyleMask StyleMask{ get; set; }
-  internal prop Width Length{ get; set; }
-  internal prop Height Length{ get; set; }
-  internal prop MinWidth Length{ get; set; }
-  internal prop MinHeight Length{ get; set; }
-  internal prop MaxWidth Length{ get; set; }
-  internal prop MaxHeight Length{ get; set; }
+  internal prop Width NodeLength{ get; set; }
+  internal prop Height NodeLength{ get; set; }
+  internal prop MinWidth NodeLength{ get; set; }
+  internal prop MinHeight NodeLength{ get; set; }
+  internal prop MaxWidth NodeLength{ get; set; }
+  internal prop MaxHeight NodeLength{ get; set; }
   internal prop AspectRatio float64{ get; set; }
-  internal prop Padding Length{ get; set; }
-  internal prop PaddingLeft Length{ get; set; }
-  internal prop PaddingTop Length{ get; set; }
-  internal prop PaddingRight Length{ get; set; }
-  internal prop PaddingBottom Length{ get; set; }
-  internal prop Margin Length{ get; set; }
-  internal prop MarginLeft Length{ get; set; }
-  internal prop MarginTop Length{ get; set; }
-  internal prop MarginRight Length{ get; set; }
-  internal prop MarginBottom Length{ get; set; }
-  internal prop Gap Length{ get; set; }
-  internal prop RowGap Length{ get; set; }
-  internal prop ColumnGap Length{ get; set; }
+  internal prop Padding NodeLength{ get; set; }
+  internal prop PaddingLeft NodeLength{ get; set; }
+  internal prop PaddingTop NodeLength{ get; set; }
+  internal prop PaddingRight NodeLength{ get; set; }
+  internal prop PaddingBottom NodeLength{ get; set; }
+  internal prop Margin NodeLength{ get; set; }
+  internal prop MarginLeft NodeLength{ get; set; }
+  internal prop MarginTop NodeLength{ get; set; }
+  internal prop MarginRight NodeLength{ get; set; }
+  internal prop MarginBottom NodeLength{ get; set; }
+  internal prop Gap NodeLength{ get; set; }
+  internal prop RowGap NodeLength{ get; set; }
+  internal prop ColumnGap NodeLength{ get; set; }
   internal prop FlexDirection FlexDirection{ get; set; }
   internal prop FlexWrap FlexWrap{ get; set; }
   internal prop JustifyContent JustifyContent{ get; set; }
@@ -301,12 +324,12 @@ internal class Node {
   internal prop AlignContent AlignContent{ get; set; }
   internal prop FlexGrow float64{ get; set; }
   internal prop FlexShrink float64{ get; set; }
-  internal prop FlexBasis Length{ get; set; }
+  internal prop FlexBasis NodeLength{ get; set; }
   internal prop Position PositionType{ get; set; }
-  internal prop Left Length{ get; set; }
-  internal prop Top Length{ get; set; }
-  internal prop Right Length{ get; set; }
-  internal prop Bottom Length{ get; set; }
+  internal prop Left NodeLength{ get; set; }
+  internal prop Top NodeLength{ get; set; }
+  internal prop Right NodeLength{ get; set; }
+  internal prop Bottom NodeLength{ get; set; }
   internal prop Display Display{
     get -> (nodeState & int32(1)) != 0 ? Display.None : Display.Flex
     set {
@@ -324,15 +347,15 @@ internal class Node {
   internal prop OverflowY Overflow{ get; set; }
   internal prop BackgroundColor Color{ get; set; }
   internal prop BackgroundGradient Gradient? { get; set; }
-  internal prop BorderRadius Length{ get; set; }
-  internal prop BorderTopLeftRadius Length{ get; set; }
-  internal prop BorderTopRightRadius Length{ get; set; }
-  internal prop BorderBottomLeftRadius Length{ get; set; }
-  internal prop BorderBottomRightRadius Length{ get; set; }
-  internal prop BorderLeftWidth Length{ get; set; }
-  internal prop BorderTopWidth Length{ get; set; }
-  internal prop BorderRightWidth Length{ get; set; }
-  internal prop BorderBottomWidth Length{ get; set; }
+  internal prop BorderRadius NodeLength{ get; set; }
+  internal prop BorderTopLeftRadius NodeLength{ get; set; }
+  internal prop BorderTopRightRadius NodeLength{ get; set; }
+  internal prop BorderBottomLeftRadius NodeLength{ get; set; }
+  internal prop BorderBottomRightRadius NodeLength{ get; set; }
+  internal prop BorderLeftWidth NodeLength{ get; set; }
+  internal prop BorderTopWidth NodeLength{ get; set; }
+  internal prop BorderRightWidth NodeLength{ get; set; }
+  internal prop BorderBottomWidth NodeLength{ get; set; }
   internal prop BorderLeftColor Color{ get; set; }
   internal prop BorderTopColor Color{ get; set; }
   internal prop BorderRightColor Color{ get; set; }
@@ -356,11 +379,11 @@ internal class Node {
     get -> TextShadowing.Get(this)
     set -> TextShadowing.Set(this, value)
   }
-  internal prop FontSize Length{ get; set; }
+  internal prop FontSize NodeLength{ get; set; }
   internal prop Color Color{ get; set; }
   internal prop FontWeight float64{ get; set; }
   internal prop FontStyle FontStyle{ get; set; }
-  internal prop LetterSpacing Length{ get; set; }
+  internal prop LetterSpacing NodeLength{ get; set; }
   internal prop LineHeight float64{ get; set; }
   internal prop TextAlign TextAlign{ get; set; }
   internal prop TextDecoration TextDecoration{
@@ -385,6 +408,7 @@ internal class Node {
     get -> (nodeState & int32(32)) != 0
     set {
       nodeState = value ? nodeState | int32(32) : nodeState & ~int32(32)
+      if value { if let parent = Parent { parent.HitContained = false } }
     }
   }
   internal prop HasTextShadowState bool{
@@ -412,6 +436,7 @@ internal class Node {
   internal var TextScaleFactor float32 = 1.0F
   internal prop TextMaxLines int32{ get; set; }
   internal prop TextLayout TextLayout? { get; set; }
+  internal var Selectable bool
   internal prop TextLayoutCache List[TextLayout]? { get; set; }
   internal prop EntryShape EntryShapeState?{
     get -> editingState?.EntryShape
@@ -692,6 +717,26 @@ internal class Node {
     }
   }
 
+  internal func SyncPointerCallbacks(b Blob) bool {
+    if pointerState == nil && b.OnClick == nil && b.OnPointerDown == nil
+      && b.OnPointerMove == nil && b.OnPointerUp == nil
+      && b.OnPointerCancel == nil && b.OnWheel == nil { return false }
+    let state = EnsurePointerState()
+    let changed = (state.OnClick != nil) != (b.OnClick != nil)
+      || (state.OnPointerDown != nil) != (b.OnPointerDown != nil)
+      || (state.OnPointerMove != nil) != (b.OnPointerMove != nil)
+      || (state.OnPointerUp != nil) != (b.OnPointerUp != nil)
+      || (state.OnPointerCancel != nil) != (b.OnPointerCancel != nil)
+      || (state.OnWheel != nil) != (b.OnWheel != nil)
+    state.OnClick = b.OnClick
+    state.OnPointerDown = b.OnPointerDown
+    state.OnPointerMove = b.OnPointerMove
+    state.OnPointerUp = b.OnPointerUp
+    state.OnPointerCancel = b.OnPointerCancel
+    state.OnWheel = b.OnWheel
+    return changed
+  }
+
   internal prop OnClick Action?{
     get -> pointerState?.OnClick
     set {
@@ -807,7 +852,10 @@ internal class Node {
   }
   internal prop ShapeVectorEffect VectorEffect{
     get -> shapeState?.ShapeVectorEffect ?? VectorEffect.None
-    set -> EnsureShapeState().ShapeVectorEffect = value
+    set {
+      EnsureShapeState().ShapeVectorEffect = value
+      if value == VectorEffect.NonScalingStroke { HitContained = false }
+    }
   }
   internal prop MiterLimit float64{
     get -> shapeState?.MiterLimit ?? 4.0

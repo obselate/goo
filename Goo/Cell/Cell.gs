@@ -2,8 +2,11 @@ package Goo
 
 import System
 import System.Collections.Generic
+import System.Diagnostics.CodeAnalysis
+import System.Reflection
 
 /// Defines a stateful Goo component.
+@DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields)
 public open class Cell {
   private let rebuildGate object
   internal var rebuildSubmission Action[Cell]?
@@ -25,6 +28,67 @@ public open class Cell {
   internal var outgoingContext ContextFrame?
   internal var contextWindow Window?
   internal var contextReader ContextReader?
+  private var stateReads List[StateDependency]?
+  private var callbackFallback bool = true
+  private var stateChecked bool
+  private var stateDeclared bool
+  private var untrackedScopes List[StateReadScope]?
+
+  internal func RegisterUntrackedScope(builderScope StateReadScope) {
+    callbackFallback = true
+    untrackedScopes ??= List[StateReadScope]()
+    if !untrackedScopes!!.Contains(builderScope) { untrackedScopes!!.Add(builderScope) }
+  }
+
+  internal func UnregisterUntrackedScope(builderScope StateReadScope) { untrackedScopes?.Remove(builderScope) }
+
+  internal func ReadState(state StateDependency) {
+    stateReads ??= List[StateDependency]()
+    if stateReads!!.Contains(state) { return }
+    if !state.IsSafePayload() { callbackFallback = true }
+    stateReads!!.Add(state)
+    state.AddReader(this)
+  }
+
+  private func ClearStateReads() {
+    guard let reads = stateReads else { return }
+    for index in 0 ... reads.Count { reads[index].RemoveReader(this) }
+    reads.Clear()
+  }
+
+  internal func CheckStateFields() {
+    if stateChecked { return }
+    stateChecked = true
+    callbackFallback = false
+    CheckStateType(GetType())
+  }
+
+  private func CheckStateType(
+    @DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields) current Type) {
+    if current == typeof(Cell) { return }
+    if !(current.IsGenericType && current.GetGenericTypeDefinition().FullName == "Goo.Cell`1") {
+      let fields = current.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
+      StateFieldsInspected?.Invoke(current, fields)
+      for field in fields {
+        if field.IsInitOnly && typeof(StateDependency).IsAssignableFrom(field.FieldType) {
+          stateDeclared = true
+          if let state = field.GetValue(this) as StateDependency? {
+            if !state.IsSafePayload() { callbackFallback = true }
+          } else { callbackFallback = true }
+          continue
+        }
+        if !field.IsInitOnly || (!field.FieldType.IsPrimitive && !field.FieldType.IsEnum
+          && field.FieldType != typeof(string) && field.FieldType != typeof(ElementHandle)) {
+          callbackFallback = true
+        }
+      }
+    }
+    if let parent = current.BaseType {
+      if parent != typeof(Cell) && !(parent.IsGenericType && parent.GetGenericTypeDefinition().FullName == "Goo.Cell`1") {
+        callbackFallback = true
+      }
+    }
+  }
 
   internal func EnsureContextReader() ContextReader {
     contextReader ??= ContextReader{Window: contextWindow, Frame: incomingContext, Cell: this}
@@ -56,7 +120,9 @@ public open class Cell {
   public open func Build() Blob -> Container {}
 
   /// Requests a rebuild of this component.
+  /// Mounted cells must use their window's UI thread. Post background results with Window.Post.
   public func Rebuild() {
+    contextWindow?.requireUiThread("Cell.Rebuild")
     if building {
       throw InvalidOperationException("${GetType().Name}.Rebuild was called during Build: change state in an input handler or Window.Post callback instead of Build.")
     }
@@ -74,7 +140,12 @@ public open class Cell {
   }
 
   internal func RebuildAfterCallback() {
-    if !building { Rebuild() }
+    if !building && (callbackFallback || (!stateDeclared && (stateReads == nil || stateReads!!.Count == 0))) {
+      if let scopes = untrackedScopes {
+        for index in 0 ... scopes.Count { scopes[index].Rebuild() }
+      }
+      Rebuild()
+    }
   }
 
   internal func SetRebuildSubmission(h Action[Cell]?) {
@@ -207,11 +278,16 @@ public open class Cell {
   }
 
   internal func Render() Blob {
+    CheckStateFields()
+    ClearStateReads()
+    let previous = StateReader
+    StateReader = this
     building = true
     try {
       return BuildOutput()
     } finally {
       building = false
+      StateReader = previous
     }
   }
 
@@ -245,6 +321,7 @@ public open class Cell {
       mountGeneration++
       queuedBy = nil
     }
+    ClearStateReads()
     contextReader?.Dispose()
     contextReader = nil
     incomingContext = nil
@@ -282,7 +359,7 @@ public open class Cell {
       }
     }
     if let error = firstError {
-      throw error
+      System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw()
     }
   }
 
@@ -443,6 +520,14 @@ public open class Cell {
   }
 
   shared {
+    @ThreadStatic
+    internal var StateReader Cell?
+    internal var StateFieldsInspected Action[Type, []FieldInfo]?
+
+    internal func ObserveUntrackedRead() {
+      if let cell = StateReader { cell.callbackFallback = true }
+      StateReadScope.Current?.ObserveUntrackedRead()
+    }
     /// Describes an unkeyed child component mount using positional identity.
     /// @typeparam TCell child component type
     /// @returns a blob that mounts the child component

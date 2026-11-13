@@ -97,6 +97,7 @@ private func hitWithinMapped(n Node, x float32, y float32) bool {
 
 private func hitCanTraverseMapped(n Node, x float32, y float32) bool {
   if n.Retired || n.PaintInputHidden { return false }
+  if n.HitContained && !n.Rect.Contains(x, y) { return false }
   if n.HasClipPath && !ClipPathGeometry.Contains(n, x, y) { return false }
   if n.OverflowX != Overflow.Visible && (x < n.Rect.X || x >= n.Rect.X + n.Rect.W) {
     return false
@@ -237,7 +238,7 @@ internal func hasActivation(n Node) bool -> n.OnClick != nil
 private func hitFire(n Node, owner Cell?) bool {
   if let handler = n.OnClick {
     try { handler() }
-    finally { owner?.Rebuild() }
+    finally { owner?.RebuildAfterCallback() }
     return true
   }
   return false

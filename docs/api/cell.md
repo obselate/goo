@@ -222,7 +222,7 @@ Returns: a blob that mounts the child component
 
 ### `Rebuild`
 
-Requests a rebuild of this component.
+Requests a rebuild of this component. Mounted cells must use their window's UI thread. Post background results with Window.Post.
 
 ## `Cell<TInput>`
 
@@ -326,3 +326,29 @@ Returns: True when the window has a value for this key.
 ### `Window`
 
 Gets the owner window during a Cell build or retained virtual callback. Access outside an owned build or callback throws InvalidOperationException.
+
+## `State<T>`
+
+
+Holds a value that rebuilds the Cells that read it in Build when it changes.
+
+### `new(T)`
+
+Creates state with an initial value.
+
+### `ToString`
+
+Returns the text of the current value.
+
+### `op_Implicit(State{T})~T`
+
+Converts state to its current value.
+
+### `Value`
+
+Gets or sets the value. A read in Build subscribes the Cell. A write of a different value rebuilds its readers.
+
+## `StateDependency`
+
+
+Base type of tracked Cell state.

@@ -357,7 +357,9 @@ internal class CellFixtures {
     window.drainPostedActions()
     if calls != 1 { return false }
     window.Close()
-    return !window.Post(() -> { calls++ }) && calls == 1 && Window{}.DeferredCloseStopsPostsForTest()
+    return !window.Post(() -> { calls++ }) && calls == 1
+      && Window{}.DeferredCloseStopsPostsForTest() && Window{}.NativeModalCloseDrainsCompletionForTest(false)
+      && Window{}.NativeModalCloseDrainsCompletionForTest(true)
   }
 
   func EmbeddedDetachWaitsForClosePreparation() bool ->
@@ -1201,6 +1203,25 @@ internal class WindowCleanupParent : Cell {
   } }
 
 public partial class Window {
+  internal func NativeModalCloseDrainsCompletionForTest(scheduled bool) bool {
+    host = EmbeddedWindowBridge(ElementHandleEmbeddedHost(), this)
+    IsOpen = true
+    let lease = NativeModalLease(this, nint(0))
+    nativeModal = lease
+    var completed = false
+    lease.Closing = () -> lease.PostCompletion(() -> {
+      completed = true
+      lease.Dispose()
+    })
+    if scheduled {
+      host!!.BeginClose()
+      PumpScheduled(0.0)
+    } else {
+      Close()
+    }
+    return completed && !IsOpen
+  }
+
   internal func DeferredCloseStopsPostsForTest() bool {
     Width = 100
     Height = 100
@@ -1346,7 +1367,7 @@ internal class ControlledEditorValueCell : Cell {
     if document.GetText() != Value {
       document.Apply(TextChange(TextRange(0, document.Length), Value))
     }
-    return TextEditor(controller) {
+    return TextEditor(){ Controller = controller,
       Width = 200,
       Height = 100,
       OnChange = change -> { Changes++ },

@@ -84,7 +84,7 @@ internal unsafe data struct VulkanFrameBuffers {
         return true
       } catch (error Exception) {
         Destroy()
-        throw error
+        rethrow
       }
     }
 

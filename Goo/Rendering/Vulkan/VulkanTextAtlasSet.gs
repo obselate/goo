@@ -276,7 +276,7 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
       atlasCount = atlasCount - 1
       residentByteSize = residentByteSize - atlasByteSize
       currentAtlasIndex = FindCurrentIndex()
-      throw error
+      rethrow
     }
     identities[index] = identity
     lastUseSerial[index] = 0uL

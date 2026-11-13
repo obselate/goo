@@ -99,12 +99,12 @@ func CheckRichClipboard() {
             let data = RichTextCodec.Write(RichTextFragment("only",
                 []TextStyleSpan{ TextStyleSpan("only", TextRange(0, 4), Style{ FontWeight: 700 }) }))
             let representation = data.Representations.Single(item -> item.ContentType == contentType)
-            let written = Pump(owner, owner.WriteClipboardAsync(
+            let written = Pump(owner, owner.Clipboard.WriteAsync(
                 TransferData([]TransferRepresentation{ representation }, []Uri{})))
             Require(written.Status == DataTransferStatus.Success, "single-format publication failed")
             controller.Selection = TextSelection(TextPosition(0, TextAffinity.Upstream), TextPosition(7, TextAffinity.Downstream))
             completed = TaskCompletionSource[RichTextResult](TaskCreationOptions.RunContinuationsAsynchronously)
-            Require(!owner.PlatformInput.Execute(TextCommand{ Kind: TextCommandKind.Paste }), "rich paste was not intercepted")
+            Require(!owner.Focus.Execute(TextCommand{ Kind: TextCommandKind.Paste }), "rich paste was not intercepted")
             let result = Pump(owner, completed.Task)
             Require(result.Status == RichTextStatus.Success && controller.Document.GetText() == "only",
                 "single-format paste failed: $contentType")
@@ -112,7 +112,7 @@ func CheckRichClipboard() {
         }
 
         controller.Selection = TextSelection(TextPosition(7, TextAffinity.Upstream), TextPosition(7, TextAffinity.Downstream))
-        Require(owner.PlatformInput.Execute(TextCommand(TextCommandKind.Paste, "literal", false))
+        Require(owner.Focus.Execute(TextCommand(TextCommandKind.Paste, "literal", false))
             && controller.Document.GetText() == "rich 😀literal", "supplied paste text read the clipboard")
         Require(controller.Document.Undo(), "supplied paste undo failed")
         controller.Selection = TextSelection(TextPosition(0, TextAffinity.Upstream), TextPosition(7, TextAffinity.Downstream))
@@ -129,7 +129,7 @@ func CheckRichClipboard() {
 }
 
 internal class EditorPage(controller TextEditorController, layer TextPresentationLayer, handle ElementHandle) : Cell {
-    override func Build() Blob -> TextEditor(controller, []TextPresentationLayer{ layer }) { Handle = handle }
+    override func Build() Blob -> TextEditor(){ Controller = controller, Layers = []TextPresentationLayer{ layer }, Handle = handle }
 }
 
 internal class Page(width int32, height int32) : Cell {

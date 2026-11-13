@@ -45,11 +45,54 @@ public class Motion {
       LinearTimed(duration, from, to, easing)
     }
 
+    /// Holds the start value before running a scalar simulation factory.
+    /// Position stays at the start value, velocity is zero, and Done is false during
+    /// the delay. The simulation then receives elapsed seconds minus the delay.
+    /// Reduced motion and TimeScale at zero or below skip the delay.
+    /// @param delayMs finite, nonnegative delay in milliseconds
+    /// @param spec simulation factory to run after the delay
+    /// @returns a reusable factory with the delay applied
+    public func Delay(delayMs float64, spec(float64, float64, float64) -> Simulation)(float64, float64, float64) -> Simulation {
+      if !motionFinite(delayMs) || delayMs < 0.0 {
+        throw ArgumentOutOfRangeException("delayMs")
+      }
+      if spec == nil {
+        throw ArgumentNullException("spec")
+      }
+      if delayMs == 0.0 { return spec }
+      let delay = delayMs / 1000.0
+      return (from float64, to float64, velocity float64) ->
+        DelayedSimulation(delay, from, spec(from, to, velocity))
+    }
+
     init{
       TimeScale = 1.0
       Default = Tween(180.0)
     }
   }
+}
+
+internal class DelayedSimulation : Simulation {
+  private let delay float64
+  private let from float64
+  private let simulation Simulation
+
+  internal init(delay float64, from float64, simulation Simulation) {
+    if simulation == nil {
+      throw InvalidOperationException("motion specification returned nil")
+    }
+    this.delay = delay
+    this.from = from
+    this.simulation = simulation
+  }
+
+  public override prop IsInfinite bool { get -> simulation.IsInfinite }
+  public override func Position(elapsed float64) float64 ->
+    if elapsed < delay { from } else { simulation.Position(elapsed - delay) }
+  public override func Velocity(elapsed float64) float64 ->
+    if elapsed < delay { 0.0 } else { simulation.Velocity(elapsed - delay) }
+  public override func Done(elapsed float64) bool ->
+    elapsed >= delay && simulation.Done(elapsed - delay)
 }
 
 /// Identifies why an animation reached its terminal value. Finished means all
@@ -268,7 +311,7 @@ internal class MotionPump {
         dispatching = false
       }
     }
-    if let error = failure { throw error }
+    if let error = failure { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw() }
   }
 
   internal func Clear() {

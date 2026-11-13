@@ -302,6 +302,34 @@ class ImageSourceCacheTests : IDisposable {
     }
 
     @Fact
+    async func ReleasedCacheEntriesCanBeEvictedAndDecodedAgain() {
+        let first = Write("first.png", Png(1, 1, 8, 6, []uint8{0, 1, 2, 3, 255}))
+        let second = Write("second.png", Png(1, 1, 8, 6, []uint8{0, 4, 5, 6, 255}))
+        using let cache = ImageSourceCache(4, 1)
+        let source = await cache.LoadAsync(first)
+        source.Dispose()
+        let replacement = await cache.LoadAsync(second)
+        replacement.Dispose()
+        Write("first.png", Png(1, 1, 8, 6, []uint8{0, 7, 8, 9, 255}))
+        using let reloaded = await cache.LoadAsync(first)
+        using let lease = reloaded.Acquire()
+        Assert.Equal([]uint8{7, 8, 9, 255}, lease.Result()!!.Pixels())
+    }
+
+    @Fact
+    async func CacheEvictionUsesThePlatformPathComparer() {
+        let png = Png(1, 1, 8, 6, []uint8{0, 1, 2, 3, 255})
+        let paths = []string{Write("case.png", png), Write("CASE.png", png),
+            Write("second.png", png), Write("third.png", png)}
+        using let cache = ImageSourceCache(4, 1)
+        for path in paths {
+            using let source = await cache.LoadAsync(path)
+            Assert.Equal(1, source.Width)
+            Assert.False(source.IsDisposed)
+        }
+    }
+
+    @Fact
     async func CancellationAndCacheDisposalDoNotInvalidateReturnedSources() {
         let path = Write("cancel.png", Png(1, 1, 8, 6, []uint8{uint8(0), uint8(1), uint8(2), uint8(3), uint8(255)}))
         using let cache = ImageSourceCache()

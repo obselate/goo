@@ -2,7 +2,6 @@ package Goo
 
 import System
 import System.Collections.Generic
-import System.Runtime.CompilerServices
 
 internal sealed class VirtualRetainedBlob : Blob {
   internal init(key string) {
@@ -353,7 +352,7 @@ internal sealed class VirtualNodeState {
       } else { nil }
     } catch (error Exception) {
       contextReader?.Cancel()
-      throw error
+      rethrow
     } finally {
       viewport.Bind(previous)
       ContextEnvironment.Current = previousContext
@@ -371,7 +370,7 @@ internal sealed class VirtualNodeState {
       return result
     } catch (error Exception) {
       contextReader?.Cancel()
-      throw error
+      rethrow
     } finally {
       viewport.Bind(previous)
       ContextEnvironment.Current = previousContext
@@ -550,7 +549,7 @@ internal sealed class VirtualNodeState {
       return children
     } catch (error Exception) {
       Cancel()
-      throw error
+      rethrow
     } finally {
       output.Bind(nil)
       viewport.Bind(previous)
@@ -719,15 +718,12 @@ internal func virtualItem(item Blob, key string) Blob {
 
 internal class Virtualization {
   shared {
-    private let values ConditionalWeakTable[Node, VirtualNodeState] =
-    ConditionalWeakTable[Node, VirtualNodeState]()
-
-    internal func State(n Node) VirtualNodeState? -> if values.TryGetValue(n, out var state) { state } else { nil }
+    internal func State(n Node) VirtualNodeState? -> n.RetainedVirtualState
 
     internal func Configure(n Node) VirtualNodeState {
       if let state = State(n) { return state }
       let created = VirtualNodeState()
-      values.Add(n, created)
+      n.RetainedVirtualState = created
       return created
     }
 
@@ -744,7 +740,7 @@ internal class Virtualization {
         return true
       } catch (error Exception) {
         state.Cancel()
-        throw error
+        rethrow
       } finally { rec.Context = previousContext }
     }
 
@@ -767,7 +763,7 @@ internal class Virtualization {
 
     internal func Dispose(n Node) {
       if let state = State(n) {
-        values.Remove(n)
+        n.RetainedVirtualState = nil
         state.Dispose()
       }
     }

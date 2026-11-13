@@ -265,7 +265,7 @@ internal class RecyclingViewportCell : Cell {
   override func Build() Blob {
     var source VirtualSource = Source
     if FreshSource { source = RecyclingContinuingSource(Source) }
-    return Virtual(source){Handle = Viewport, Width = 100, Height = 20}
+    return Virtual(){Source = source, Handle = Viewport, Width = 100, Height = 20}
   }
 }
 
@@ -288,7 +288,7 @@ internal class RecyclingRowsSource(owner RecyclingViewportCell) : VirtualState, 
         row.Item = item
         owner.Current = row
       })})
-    output.ContentSize = LayoutSize{Width: 100, Height: 2000}
+    output.ContentSize = LayoutSize(100, 2000)
     output.ItemCount = 100
   }
 

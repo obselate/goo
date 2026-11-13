@@ -28,7 +28,7 @@ internal class ScrollTopology {
   }
 }
 
-internal class Layout {
+internal partial class Layout {
   internal var config Facebook.Yoga.Config?
   internal var lastWidth float32
   internal var lastHeight float32
@@ -74,18 +74,30 @@ internal class Layout {
 
   private func CalculateCore(root Node, overlayRoot Node?, width float32, height float32) {
     if CustomLayouts.Depth != 0 { throw InvalidOperationException("A custom layout callback reentered window layout: use LayoutContext.MeasureChild and ArrangeChild instead of requesting window layout from Measure or Arrange.") }
+    CustomLayouts.ViewportWidth = width
+    CustomLayouts.ViewportHeight = height
     if structureDirty || root != lastRoot || root.Yoga == nil {
       syncNode(root, true)
       structureDirty = false
     }
+    if let overlays = overlayRoot {
+      overlays.Rect = Rect{W: width, H: height}
+      if portalStructureDirty || overlays != portalRoot {
+        for portal in overlays.Children { syncNode(portal, true) }
+        portalStructureDirty = false
+        portalRoot = overlays
+      }
+    }
     guard let yg = root.Yoga else {
       return
     }
+    resolveLengths(root, width, height)
     if !root.IsPortal && (!laidOut || root != lastRoot
       || width != lastWidth || height != lastHeight || YGNodeAPI.YGNodeIsDirty(yg)) {
       let availableHeight = root.Kind == NodeKind.Entry && root.Height.Unit == LengthUnit.Unset
       ? Single.NaN : height
       YGNodeAPI.YGNodeCalculateLayout(yg, width, availableHeight, yogaDirection(root.Direction))
+      resolveFinalIntrinsic(root, width, height)
       readRect(root, 0.0F, 0.0F)
       ScrollbarParts.Arrange(root)
     }
@@ -99,13 +111,6 @@ internal class Layout {
   }
 
   private func CalculatePortals(sourceRoot Node, overlayRoot Node, width float32, height float32) {
-    overlayRoot.Rect = Rect{ W: width, H: height }
-    if portalStructureDirty || overlayRoot != portalRoot {
-      for portal in overlayRoot.Children {
-        syncNode(portal, true)
-      }
-      portalStructureDirty = false
-    }
     let resized = !portalLaidOut || width != portalLastWidth || height != portalLastHeight
     for portal in overlayRoot.Children {
       guard let yoga = portal.Yoga else { continue }
@@ -120,6 +125,7 @@ internal class Layout {
       if resized || YGNodeAPI.YGNodeIsDirty(yoga) {
         YGNodeAPI.YGNodeCalculateLayout(yoga, width, height,
           yogaDirection(portal.Direction))
+        resolveFinalIntrinsic(portal, width, height)
       }
     }
     placePortals(sourceRoot, overlayRoot, width, height)
@@ -135,6 +141,7 @@ internal class Layout {
     structureDirty = true
     portalStructureDirty = true
     scrollListDirty = true
+    lengthRoot = nil
   }
 
   // Cached flat list of scrolling nodes so per-pump scroll work is
@@ -323,13 +330,13 @@ internal class Layout {
   private func applyPortalConstraints(yoga Facebook.Yoga.Node, portal Node,
     availableWidth float32, availableHeight float32) {
       YGNodeStyleAPI.YGNodeStyleSetMinWidth(yoga,
-        portalMinimum(portal.MinWidth, availableWidth))
+        portalMinimum(portal.MinWidth, availableWidth, portal, StyleField.MinWidth))
       YGNodeStyleAPI.YGNodeStyleSetMinHeight(yoga,
-        portalMinimum(portal.MinHeight, availableHeight))
+        portalMinimum(portal.MinHeight, availableHeight, portal, StyleField.MinHeight))
       YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga,
-        portalMaximum(portal.MaxWidth, availableWidth))
+        portalMaximum(portal.MaxWidth, availableWidth, portal, StyleField.MaxWidth))
       YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga,
-        portalMaximum(portal.MaxHeight, availableHeight))
+        portalMaximum(portal.MaxHeight, availableHeight, portal, StyleField.MaxHeight))
     }
 
   private func restorePortalConstraints(yoga Facebook.Yoga.Node, portal Node) {
@@ -338,20 +345,27 @@ internal class Layout {
     markYogaStyle(portal, StyleField.MaxWidth)
     markYogaStyle(portal, StyleField.MaxHeight)
     applyMinMax(yoga, portal)
+    LengthDeclarations.RestoreSizes(portal)
   }
 
-  private func portalMinimum(value Length, available float32) float32 {
+  private func portalMinimum(value NodeLength, available float32, node Node, field StyleField) float32 {
     if value.Unit == LengthUnit.Px { return clampPortalSize(value.Value, available) }
     if value.Unit == LengthUnit.Percent {
       return clampPortalSize(available * value.Value / 100.0F, available)
     }
+    if value.Unit == LengthUnit.Relative {
+      return clampPortalSize(LengthDeclarations.StoredPixels(node, field, available), available)
+    }
     return Single.NaN
   }
 
-  private func portalMaximum(value Length, available float32) float32 {
+  private func portalMaximum(value NodeLength, available float32, node Node, field StyleField) float32 {
     if value.Unit == LengthUnit.Px { return clampPortalSize(value.Value, available) }
     if value.Unit == LengthUnit.Percent {
       return clampPortalSize(available * value.Value / 100.0F, available)
+    }
+    if value.Unit == LengthUnit.Relative {
+      return clampPortalSize(LengthDeclarations.StoredPixels(node, field, available), available)
     }
     return available
   }
@@ -420,14 +434,14 @@ internal class Layout {
           let space = portalSideSpace(placement, bounds, collision)
           if vertical {
             YGNodeStyleAPI.YGNodeStyleSetMinHeight(yoga,
-              MathF.Min(portalMinimum(portal.MinHeight, availableHeight), space))
+              MathF.Min(portalMinimum(portal.MinHeight, availableHeight, portal, StyleField.MinHeight), space))
             YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga,
-              MathF.Min(portalMaximum(portal.MaxHeight, availableHeight), space))
+              MathF.Min(portalMaximum(portal.MaxHeight, availableHeight, portal, StyleField.MaxHeight), space))
           } else {
             YGNodeStyleAPI.YGNodeStyleSetMinWidth(yoga,
-              MathF.Min(portalMinimum(portal.MinWidth, availableWidth), space))
+              MathF.Min(portalMinimum(portal.MinWidth, availableWidth, portal, StyleField.MinWidth), space))
             YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga,
-              MathF.Min(portalMaximum(portal.MaxWidth, availableWidth), space))
+              MathF.Min(portalMaximum(portal.MaxWidth, availableWidth, portal, StyleField.MaxWidth), space))
           }
           if YGNodeAPI.YGNodeIsDirty(yoga) {
             YGNodeAPI.YGNodeCalculateLayout(yoga, width, height, yogaDirection(portal.Direction))
@@ -640,6 +654,7 @@ internal class Layout {
       n.PlacedScrollY = n.ScrollY
       if editor {
         readEditorSlotRects(n, hiddenSubtree)
+        n.HitContained = true
         return
       }
       if let state = custom {
@@ -650,11 +665,23 @@ internal class Layout {
           readRect(child.Node, x, y, snapPlacement(x, float32(child.Bounds.X), density),
             snapPlacement(y, float32(child.Bounds.Y), density), hiddenSubtree)
         }
-        return
+      } else {
+        for i in 0 ... n.Children.Count {
+          if !n.Children[i].IsPortal {
+            readRect(n.Children[i], visual.X, visual.Y, hidden: hiddenSubtree)
+          }
+        }
       }
-      for i in 0 ... n.Children.Count {
-        if !n.Children[i].IsPortal {
-          readRect(n.Children[i], visual.X, visual.Y, hidden: hiddenSubtree)
+      n.HitContained = !(n.Kind == NodeKind.Shape && n.ShapeVectorEffect == VectorEffect.NonScalingStroke)
+      for child in n.Children {
+        if child.IsPortal { continue }
+        if !child.HitContained || child.HasVisualTransform
+          || n.OverflowX == Overflow.Visible && (child.Rect.X < n.Rect.X
+            || child.Rect.X + child.Rect.W > n.Rect.X + n.Rect.W)
+          || n.OverflowY == Overflow.Visible && (child.Rect.Y < n.Rect.Y
+            || child.Rect.Y + child.Rect.H > n.Rect.Y + n.Rect.H) {
+          n.HitContained = false
+          break
         }
       }
     }
@@ -771,6 +798,7 @@ internal func syncYogaField(n Node, f StyleField) {
     case StyleField.MinHeight { applyMinMax(yg, n) }
     case StyleField.MaxWidth { applyMinMax(yg, n) }
     case StyleField.MaxHeight { applyMinMax(yg, n) }
+    case StyleField.TextTrimming { applyMinMax(yg, n) }
     case StyleField.AspectRatio { applyFlexLayout(yg, n, n.Parent == nil) }
     case StyleField.Padding { applyEdges(yg, n) }
     case StyleField.PaddingLeft { applyEdges(yg, n) }
@@ -896,7 +924,7 @@ internal func applyEdges(yg Facebook.Yoga.Node, n Node) {
 }
 
 internal func applyPaddingEdge(
-  yg Facebook.Yoga.Node, n Node, edge YGEdge, v Length, field StyleField) {
+  yg Facebook.Yoga.Node, n Node, edge YGEdge, v NodeLength, field StyleField) {
     switch v.Unit {
       case LengthUnit.Px {
         YGNodeStyleAPI.YGNodeStyleSetPadding(yg, edge, v.Value)
@@ -914,7 +942,7 @@ internal func applyPaddingEdge(
     }
   }
 
-internal func applyBorderEdge(yg Facebook.Yoga.Node, edge YGEdge, width Length) {
+internal func applyBorderEdge(yg Facebook.Yoga.Node, edge YGEdge, width NodeLength) {
   let value = width.Unit == LengthUnit.Px ? width.Value : 0.0F
   if YGNodeStyleAPI.YGNodeStyleGetBorder(yg, edge) != value {
     YGNodeStyleAPI.YGNodeStyleSetBorder(yg, edge, value)
@@ -936,7 +964,7 @@ internal func applyBorderEdges(yg Facebook.Yoga.Node, n Node) {
 }
 
 internal func applyMarginEdge(
-  yg Facebook.Yoga.Node, n Node, edge YGEdge, v Length, field StyleField) {
+  yg Facebook.Yoga.Node, n Node, edge YGEdge, v NodeLength, field StyleField) {
     switch v.Unit {
       case LengthUnit.Px {
         YGNodeStyleAPI.YGNodeStyleSetMargin(yg, edge, v.Value)
@@ -989,7 +1017,10 @@ internal func applyMinMax(yg Facebook.Yoga.Node, n Node) {
       markYogaStyle(n, StyleField.MinWidth)
     }
     default {
-      if clearYogaStyle(n, StyleField.MinWidth) {
+      if n.Kind == NodeKind.Text && n.TextTrimming == TextTrimming.Ellipsis {
+        YGNodeStyleAPI.YGNodeStyleSetMinWidth(yg, 0.0F)
+        markYogaStyle(n, StyleField.MinWidth)
+      } else if clearYogaStyle(n, StyleField.MinWidth) {
         YGNodeStyleAPI.YGNodeStyleSetMinWidth(yg, YogaValue.YGValueUndefined.Value)
       }
     }
@@ -1121,7 +1152,7 @@ internal func applyFlexLayout(yg Facebook.Yoga.Node, n Node, isRoot bool) {
   }
 }
 
-internal func isSized(v Length) bool -> v.Unit == LengthUnit.Px || v.Unit == LengthUnit.Percent
+internal func isSized(v NodeLength) bool -> v.Unit == LengthUnit.Px || v.Unit == LengthUnit.Percent
 
 internal func mapAlignItems(a AlignItems) YGAlign -> switch a {
   case AlignItems.Stretch: YGAlign.Stretch
@@ -1164,7 +1195,7 @@ internal func applyPosition(yg Facebook.Yoga.Node, n Node) {
 }
 
 internal func applyPositionEdge(
-  yg Facebook.Yoga.Node, n Node, edge YGEdge, v Length, field StyleField) {
+  yg Facebook.Yoga.Node, n Node, edge YGEdge, v NodeLength, field StyleField) {
     switch v.Unit {
       case LengthUnit.Px {
         YGNodeStyleAPI.YGNodeStyleSetPosition(yg, edge, v.Value)

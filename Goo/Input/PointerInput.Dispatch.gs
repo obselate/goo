@@ -43,15 +43,18 @@ internal partial class PointerInput {
   }
 
   private func appendPath(root Node, target Node, path List[NodeMount]) bool {
-    path.Add(NodeMount(root))
-    if root == target { return true }
-    for child in root.Children {
-      if appendPath(child, target, path) { return true }
+    let start = path.Count
+    var current Node? = target
+    while let node = current {
+      if node.Retired { break }
+      path.Add(NodeMount(node))
+      if node == root {
+        path.Reverse(start, path.Count - start)
+        return true
+      }
+      current = node.Parent
     }
-    for child in ScrollbarParts.Children(root) {
-      if appendPath(child, target, path) { return true }
-    }
-    path.RemoveAt(path.Count - 1)
+    path.RemoveRange(start, path.Count - start)
     return false
   }
 
@@ -296,7 +299,7 @@ internal partial class PointerInput {
             callback?.Invoke(event)
           } finally {
             control.ClearCurrentTarget(generation)
-            owner?.Rebuild()
+            owner?.RebuildAfterCallback()
           }
           if current != contact || route.Count != routeCount || mount.Current == nil
             || !route[i - 1].Equals(mount) {
@@ -418,7 +421,7 @@ internal partial class PointerInput {
           }
         } finally {
           control.ClearCurrentTarget(generation)
-          owner?.Rebuild()
+          owner?.RebuildAfterCallback()
         }
         if current != contact || route.Count != routeCount || mount.Current == nil
           || !route[i - 1].Equals(mount) { return }
@@ -431,12 +434,11 @@ internal partial class PointerInput {
 }
 
 internal func containsPath(root Node, target Node) bool {
-  if root == target { return true }
-  for child in root.Children {
-    if containsPath(child, target) { return true }
-  }
-  for child in ScrollbarParts.Children(root) {
-    if containsPath(child, target) { return true }
+  var current Node? = target
+  while let node = current {
+    if node.Retired { return false }
+    if node == root { return true }
+    current = node.Parent
   }
   return false
 }

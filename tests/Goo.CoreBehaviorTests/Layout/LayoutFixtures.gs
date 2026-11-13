@@ -6,6 +6,156 @@ import System.Collections.Generic
 import System.Text
 
 internal class LayoutFixtures {
+  func EllipsisMinimumWidthCanShrinkAndExplicitMinimumWins() bool {
+    let reconciler = Reconciler{Res: Resolver{}}
+    var root = reconciler.Mount(Text{Content: "Unbreakable", TextTrimming: TextTrimming.Ellipsis})
+    let layout = Layout()
+    layout.Calculate(root, 20.0F, 40.0F)
+    if YGNodeStyleAPI.YGNodeStyleGetMinWidth(root.Yoga!!).Value != 0.0F { return false }
+    root = reconciler.Diff(root, Text{Content: "Unbreakable", TextTrimming: TextTrimming.Ellipsis, MinWidth: 50})
+    layout.Calculate(root, 20.0F, 40.0F)
+    if root.Rect.W != 50.0F { return false }
+    root = reconciler.Diff(root, Text{Content: "Unbreakable"})
+    layout.Calculate(root, 20.0F, 40.0F)
+    return YGNodeStyleAPI.YGNodeStyleGetMinWidth(root.Yoga!!).Unit == Unit.Undefined
+  }
+
+  func CustomLayoutRetainsMixedMaximumMeasurements() bool {
+    let policy = MixedMaximumFixture()
+    let root = Reconciler{Res: Resolver{}}.Mount(Container{Width: Percent(100), Height: 200,
+      Container{Width: Percent(50), Layout: policy,
+        Container{Width: Percent(100), MaxWidth: Percent(50) + 10, Height: 24}}})
+    let layout = Layout()
+    layout.Calculate(root, 400.0F, 200.0F)
+    let child = root.Children[0].Children[0]
+    if !policy.Valid || child.Rect.W != 110.0F { return false }
+    layout.Calculate(root, 600.0F, 200.0F)
+    return policy.Valid && child == root.Children[0].Children[0] && child.Rect.W == 160.0F
+  }
+
+  func CustomLayoutResolvesLengthsInItsViewport() bool {
+    let policy = LengthContextFixture()
+    let root = Reconciler{Res: Resolver{}}.Mount(Container{Width: 400, Height: 200, FontSize: 20,
+      Container{Width: 200, Height: 100, Layout: policy}})
+    Layout().Calculate(root, 400.0F, 200.0F)
+    if !policy.Valid || policy.Calls < 1 { return false }
+    try { let ignored = policy.Context!!.ResolveLength(Em(1), LayoutAxis.Horizontal) }
+    catch (_ InvalidOperationException) { return true }
+    return false
+  }
+
+  func IntrinsicLimitsUseOwnerConstraints() bool {
+    let content = (width Length) -> Container{Width: width, FlexDirection: FlexDirection.Row, FlexWrap: FlexWrap.Wrap,
+      Container{Width: 40, Height: 10, FlexShrink: 0},
+      Container{Width: 40, Height: 10, FlexShrink: 0},
+      Container{Width: 40, Height: 10, FlexShrink: 0}}
+    let definite = content(Length.FitContent(Percent(50)))
+    let mixed = content(Length.FitContent(Percent(25) + 10))
+    let cyclic = content(Length.FitContent(Percent(50)))
+    let nested = content(Length.FitContent(Percent(50)))
+    let root = Reconciler{Res: Resolver{}}.Mount(Container{Width: 400, Height: 400, AlignItems: AlignItems.FlexStart,
+      Container{Width: 160, AlignItems: AlignItems.FlexStart, definite},
+      Container{Width: 200, AlignItems: AlignItems.FlexStart, mixed},
+      Container{Width: Length.MaxContent, AlignItems: AlignItems.FlexStart, cyclic},
+      Container{Width: Length.MaxContent, AlignItems: AlignItems.FlexStart,
+        Container{Width: Length.MaxContent, AlignItems: AlignItems.FlexStart, nested}}
+    })
+    Layout().Calculate(root, 400.0F, 400.0F)
+    let a = root.Children[0].Children[0].Rect.W
+    let b = root.Children[1].Children[0].Rect.W
+    let c = root.Children[2].Children[0].Rect.W
+    let d = root.Children[3].Children[0].Children[0].Rect.W
+    if a != 80.0F || b != 60.0F || c != 60.0F || d != 60.0F
+      || root.Children[2].Rect.W != 120.0F || root.Children[3].Rect.W != 120.0F
+      || root.Children[3].Children[0].Rect.W != 120.0F {
+      throw InvalidOperationException("intrinsic owner limits: $a, $b, $c, $d")
+    }
+    return true
+  }
+
+  func RelativeLengthsResolveFirstLayoutAndResize() bool {
+    let resolver = Resolver{}
+    let reconciler = Reconciler{Res: resolver}
+    let scene = Container{Width: Percent(100), Height: Percent(100), FontSize: 20,
+      Container{Width: Percent(50) - Em(1), Height: Vh(25), MinWidth: 0,
+        Container{Width: Percent(50) + Rem(1), Height: Vw(10), MinWidth: 0,
+          Padding: Em(0.5), FontSize: Em(1.5)}
+      }
+    }
+    let root = reconciler.Mount(scene)
+    let layout = Layout()
+    layout.Calculate(root, 400.0F, 240.0F)
+    let parent = root.Children[0]
+    let child = parent.Children[0]
+    if parent.Rect.W != 180.0F || parent.Rect.H != 60.0F || child.Rect.W != 110.0F
+      || child.Rect.H != 40.0F || child.FontSize.Px != 30.0F
+      || YGNodeLayoutAPI.YGNodeLayoutGetPadding(child.Yoga, YGEdge.Left) != 15.0F {
+      throw InvalidOperationException("first mixed layout: ${parent.Rect.W}, ${parent.Rect.H}, ${child.Rect.W}, ${child.Rect.H}, ${child.FontSize.Px}")
+    }
+    layout.Calculate(root, 600.0F, 400.0F)
+    if parent.Rect.W != 280.0F || parent.Rect.H != 100.0F || child.Rect.W != 160.0F || child.Rect.H != 60.0F {
+      throw InvalidOperationException("resized mixed layout: ${parent.Rect.W}, ${parent.Rect.H}, ${child.Rect.W}, ${child.Rect.H}")
+    }
+    root.BaseStyle = Style{Width: Percent(100), Height: Percent(100), FontSize: 24}.Entries()
+    resolver.Invalidate(root, false)
+    resolver.Flush()
+    layout.Calculate(root, 600.0F, 400.0F)
+    return parent.Rect.W == 276.0F && child.FontSize.Px == 36.0F && child.Rect.W == 162.0F
+  }
+
+  func IntrinsicLengthsMeasureRetainedContent() bool {
+    for kind in []Length{Length.MinContent, Length.MaxContent, Length.FitContent(80)} {
+      let root = Reconciler{Res: Resolver{}}.Mount(Container{Width: 300, Height: 300, AlignItems: AlignItems.FlexStart,
+        Container{Width: kind, FlexShrink: 0,
+          Text{Content: "alpha beta gamma", FontSize: 16, TextWrap: TextWrap.Wrap}},
+        Container{Height: kind, Width: 100, FlexShrink: 0,
+          Container{Height: 24, FlexShrink: 0}, Container{Height: 32, FlexShrink: 0}}
+      })
+      let layout = Layout()
+      layout.Calculate(root, 300.0F, 300.0F)
+      let width = root.Children[0].Rect.W
+      if width <= 0.0F || !Single.IsFinite(width) || root.Children[1].Rect.H != 56.0F {
+        throw InvalidOperationException("intrinsic size: $width, ${root.Children[1].Rect.H}")
+      }
+      layout.Calculate(root, 400.0F, 400.0F)
+      if root.Children[0].Rect.W != width || root.Children[1].Rect.H != 56.0F { return false }
+    }
+    for kind in []Length{Length.MinContent, Length.MaxContent, Length.FitContent(100)} {
+      let declarations = []Style{Style{Width: kind}, Style{Height: kind}, Style{MinWidth: kind},
+        Style{MinHeight: kind}, Style{MaxWidth: kind}, Style{MaxHeight: kind}, Style{FlexBasis: kind}}
+      for declaration in declarations {
+        let root = Reconciler{Res: Resolver{}}.Mount(Container{Width: 300, Height: 300,
+          AlignItems: AlignItems.FlexStart,
+          Container{BasedOn: declaration, FlexShrink: 0, Container{Width: 80, Height: 24}}})
+        Layout().Calculate(root, 300.0F, 300.0F)
+        if root.Children[0].Rect.W != 80.0F || root.Children[0].Rect.H != 24.0F {
+          throw InvalidOperationException("intrinsic property: ${root.Children[0].Rect.W}, ${root.Children[0].Rect.H}")
+        }
+      }
+    }
+    return true
+  }
+
+  func RelativeLengthsValidateAtAssignment() bool {
+    var rejected = 0
+    for value in []Length{Vw(Double.NaN), Em(Double.PositiveInfinity), Percent(20) + Rem(Double.NaN)} {
+      try { let ignored = Container{Width: value} }
+      catch (_ ArgumentOutOfRangeException) { rejected++ }
+    }
+    for value in []Length{Em(1), Rem(1), Vw(1), Percent(10) + 1} {
+      try { let ignored = Container{BorderRadius: value} }
+      catch (_ ArgumentOutOfRangeException) { rejected++ }
+    }
+    for value in []Length{Length.Auto, Length.MinContent, Length.MaxContent, Length.FitContent(10)} {
+      try { let ignored = value + 1 }
+      catch (_ ArgumentException) { rejected++ }
+    }
+    try { let ignored = BoxShadow{OffsetX: Em(1)} }
+    catch (_ ArgumentOutOfRangeException) { rejected++ }
+    return rejected == 12 && !Em(2).HasMagnitude && !Em(2).IsPercent
+      && (Percent(20) * 2).IsPercent && (cast[Length](10) + 2).Magnitude == 12
+  }
+
   func CustomLayoutRearrangesWhenPixelDensityChanges() bool {
     let root = Reconciler{ Res: Resolver{} }.Mount(Container{ Width: 100, Height: 200,
       Layout: DensityFixtureLayout(),
@@ -1035,7 +1185,7 @@ internal class LayoutVisibilityFixtureAlgorithm : LayoutAlgorithm {
 
   public func Arrange(context LayoutContext, finalSize LayoutSize) {
     Arranges++
-    context.MeasureChild(0, LayoutSize{ Width: Double.PositiveInfinity, Height: Double.PositiveInfinity })
+    context.MeasureChild(0, LayoutSize(Double.PositiveInfinity, Double.PositiveInfinity))
     context.MeasureChild(0, finalSize)
     context.ArrangeChild(0, ElementRect{ Width: finalSize.Width, Height: finalSize.Height })
     FinalSize = finalSize
@@ -1072,5 +1222,47 @@ internal class DensityFixtureLayout : LayoutAlgorithm {
   public func Measure(context LayoutContext, available LayoutSize) LayoutSize -> available
   public func Arrange(context LayoutContext, finalSize LayoutSize) {
     context.ArrangeChild(0, ElementRect{ Width: finalSize.Width, Height: finalSize.Height })
+  }
+}
+
+internal class LengthContextFixture : LayoutAlgorithm {
+  internal var Context LayoutContext?
+  internal var Valid bool = true
+  internal var Calls int32
+
+  private func Check(context LayoutContext, available LayoutSize) {
+    Context = context
+    Calls++
+    let horizontal = context.ResolveLength(Percent(50) + Vw(10) - Em(1), LayoutAxis.Horizontal)
+    let vertical = context.ResolveLength(Percent(25) + Vh(10), LayoutAxis.Vertical)
+    Valid = Valid && horizontal == available.Width * 0.5 + 20.0
+      && vertical == available.Height * 0.25 + 20.0
+      && context.ResolveLength(Length.Auto, LayoutAxis.Horizontal) == nil
+      && context.ResolveLength(Length.MinContent, LayoutAxis.Horizontal) == nil
+  }
+
+  public func Measure(context LayoutContext, available LayoutSize) LayoutSize {
+    Check(context, available)
+    return available
+  }
+
+  public func Arrange(context LayoutContext, finalSize LayoutSize) { Check(context, finalSize) }
+}
+
+internal class MixedMaximumFixture : LayoutAlgorithm {
+  internal var Valid bool = true
+  private var desired LayoutSize
+
+  public func Measure(context LayoutContext, available LayoutSize) LayoutSize {
+    let first = context.MeasureChild(0, available)
+    let second = context.MeasureChild(0, available)
+    Valid = Valid && first.Width == available.Width * 0.5 + 10.0
+      && first.Width == second.Width && first.Height == second.Height
+    desired = first
+    return first
+  }
+
+  public func Arrange(context LayoutContext, finalSize LayoutSize) {
+    context.ArrangeChild(0, ElementRect{Width: desired.Width, Height: desired.Height})
   }
 }

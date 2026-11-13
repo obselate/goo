@@ -94,7 +94,7 @@ internal unsafe sealed class VulkanTextFrameSlot : IDisposable {
       }
     } catch (error Exception) {
       InvalidateHistory()
-      throw error
+      rethrow
     }
   }
 
@@ -314,7 +314,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
       } catch (error Exception) {
         DestroyDescriptorResources()
         DisposeSlots()
-        throw error
+        rethrow
       }
     }
 
