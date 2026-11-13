@@ -1170,7 +1170,7 @@ internal class InputFixtures {
       Button{ Width: 50, Height: 40, Focus: Style{ Opacity: 0.5 } },
       Button{ Width: 50, Height: 40, Focus: Style{ Opacity: 0.5 } },
       TextEntry{ Width: 50, Height: 40, Focus: Style{ Opacity: 0.5 } },
-      TextEditor(controller){ Width = 50, Height = 40, Focus = Style{ Opacity: 0.5 } },
+      TextEditor(){ Controller = controller, Width = 50, Height = 40, Focus = Style{ Opacity: 0.5 } },
     })
     Layout().Calculate(root, 200.0F, 40.0F)
     FixtureKeyBindings.Install(root, input, resolver)

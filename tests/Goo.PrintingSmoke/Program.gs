@@ -99,7 +99,7 @@ func CheckRichClipboard() {
             let data = RichTextCodec.Write(RichTextFragment("only",
                 []TextStyleSpan{ TextStyleSpan("only", TextRange(0, 4), Style{ FontWeight: 700 }) }))
             let representation = data.Representations.Single(item -> item.ContentType == contentType)
-            let written = Pump(owner, owner.WriteClipboardAsync(
+            let written = Pump(owner, owner.Clipboard.WriteAsync(
                 TransferData([]TransferRepresentation{ representation }, []Uri{})))
             Require(written.Status == DataTransferStatus.Success, "single-format publication failed")
             controller.Selection = TextSelection(TextPosition(0, TextAffinity.Upstream), TextPosition(7, TextAffinity.Downstream))
@@ -129,7 +129,7 @@ func CheckRichClipboard() {
 }
 
 internal class EditorPage(controller TextEditorController, layer TextPresentationLayer, handle ElementHandle) : Cell {
-    override func Build() Blob -> TextEditor(controller, []TextPresentationLayer{ layer }) { Handle = handle }
+    override func Build() Blob -> TextEditor(){ Controller = controller, Layers = []TextPresentationLayer{ layer }, Handle = handle }
 }
 
 internal class Page(width int32, height int32) : Cell {
