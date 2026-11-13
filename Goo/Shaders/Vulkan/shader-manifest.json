@@ -424,9 +424,9 @@
       "output": "hb_gpu_paint.frag.spv",
       "entryPoint": "main",
       "assembly": "hb_gpu_paint_fragment",
-      "sourceSha256": "553cda15767acdde24abd61c5285b4f5f61283688c4f0b6ea4e00b0618bb479a",
-      "outputSha256": "040c5452f8df1c82ec0abf3e42d184cd2ef16613dc299cc84df993f402b1458d",
-      "outputBytes": 284160,
+      "sourceSha256": "60f977bc5cd770fd96d1c2c4b02ed9ef4bc94ac996ce0f77f5e4e9e006c7143e",
+      "outputSha256": "621fe0cb8609f9dede6e43a85bca736e35819f2a8935395266bc9e90a4a84d9a",
+      "outputBytes": 155396,
       "capabilities": [
         1,
         46
