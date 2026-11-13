@@ -1751,6 +1751,10 @@ Gets or sets whether the system draws window decorations.
 
 Sets the logical pixels a pressed mouse or pen pointer must move on either axis before a drag source starts a drag. Touch contacts start at 4. The default is 8.
 
+### `Focus`
+
+Gets the owner-thread focus and text editing operations.
+
 ### `Focusable`
 
 Gets or sets whether the desktop window may receive keyboard focus. Unsupported hosts throw before changing the requested value. Modal windows must remain focusable.
@@ -1843,6 +1847,10 @@ Gets or sets the client minimum width in layout pixels, multiplied by UiScale. Z
 
 Gets or sets whether this window is modal to Owner or ForeignParentHandle. Configure before Open. One direct modal child may be open per owner. Nested dialogs use the active modal child as their owner.
 
+### `Modifiers`
+
+Gets the modifiers of the current input event, or the last known state outside dispatch.
+
 ### `NativeFileDropEnabled`
 
 Enables native file-drop ingress before Open or on the owning UI thread; disabled by default. Unsupported hosts reject enabling. Disabling cancels any active preview.
@@ -1869,7 +1877,7 @@ Gets the display scale multiplied by UiScale, the factor used to snap layout pos
 
 ### `PlatformInput`
 
-Gets the owner-thread platform input and focused-editor contract.
+Gets the owner-thread host input and composition operations.
 
 ### `Preferences`
 

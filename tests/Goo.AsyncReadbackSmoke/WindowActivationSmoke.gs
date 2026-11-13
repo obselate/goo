@@ -186,7 +186,7 @@ internal class WindowActivationSmoke {
         }
         WindowReadbackTestFixture.ForceRender(window, 0.0)
         Require(root.Entry.Focus(), "Activation smoke editor did not focus")
-        guard let editor = window.PlatformInput.Editor else {
+        guard let editor = window.Focus.Editor else {
           throw InvalidOperationException("Activation smoke editor state is missing")
         }
         var notifications = 0
@@ -198,7 +198,7 @@ internal class WindowActivationSmoke {
             "Native activation request was not accepted")
           Require(window.IsFocused == focused && notifications == events,
             "Activation request synthesized native focus")
-          guard let current = window.PlatformInput.Editor else {
+          guard let current = window.Focus.Editor else {
             throw InvalidOperationException("Activation request lost the focused editor")
           }
           Require(current.FocusId == editor.FocusId && current.Text == editor.Text

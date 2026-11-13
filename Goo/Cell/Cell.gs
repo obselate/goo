@@ -32,6 +32,15 @@ public open class Cell {
   private var callbackFallback bool = true
   private var stateChecked bool
   private var stateDeclared bool
+  private var untrackedScopes List[StateReadScope]?
+
+  internal func RegisterUntrackedScope(builderScope StateReadScope) {
+    callbackFallback = true
+    untrackedScopes ??= List[StateReadScope]()
+    if !untrackedScopes!!.Contains(builderScope) { untrackedScopes!!.Add(builderScope) }
+  }
+
+  internal func UnregisterUntrackedScope(builderScope StateReadScope) { untrackedScopes?.Remove(builderScope) }
 
   internal func ReadState(state StateDependency) {
     stateReads ??= List[StateDependency]()
@@ -132,6 +141,9 @@ public open class Cell {
 
   internal func RebuildAfterCallback() {
     if !building && (callbackFallback || (!stateDeclared && (stateReads == nil || stateReads!!.Count == 0))) {
+      if let scopes = untrackedScopes {
+        for index in 0 ... scopes.Count { scopes[index].Rebuild() }
+      }
       Rebuild()
     }
   }
@@ -511,6 +523,11 @@ public open class Cell {
     @ThreadStatic
     internal var StateReader Cell?
     internal var StateFieldsInspected Action[Type, []FieldInfo]?
+
+    internal func ObserveUntrackedRead() {
+      if let cell = StateReader { cell.callbackFallback = true }
+      StateReadScope.Current?.ObserveUntrackedRead()
+    }
     /// Describes an unkeyed child component mount using positional identity.
     /// @typeparam TCell child component type
     /// @returns a blob that mounts the child component
