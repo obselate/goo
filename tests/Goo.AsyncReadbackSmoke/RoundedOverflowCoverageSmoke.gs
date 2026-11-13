@@ -117,7 +117,7 @@ func RunRoundedOverflowCoverageSmoke() {
     ReadbackAwaitReadbackReady(opened, 10000)
     let frame = ReadbackTakeReadback(opened)
     PrimitiveValidateResult(frame, metrics)
-    let scale = float64(metrics.FramebufferWidth) / float64(metrics.LogicalWidth)
+    let scale = float64(metrics.FramebufferWidth) / float64(metrics.NativeWidth)
     let output = Environment.GetEnvironmentVariable("GOO_ROUNDED_OVERFLOW_OUTPUT") ?? ""
     if output != "" {
       let _ = Directory.CreateDirectory(output)

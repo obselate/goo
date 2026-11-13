@@ -25,7 +25,7 @@ public partial class Window {
     if preferences == value { return }
     let previous = preferences
     preferences = value
-    if (previous.TextScaleFactor ?? 1.0F) != (value.TextScaleFactor ?? 1.0F) { textScaleChanged() }
+    if (previous.TextScaleFactor ?? 1.0) != (value.TextScaleFactor ?? 1.0) { textScaleChanged() }
     if (previous.ReducedMotion == true) != (value.ReducedMotion == true) {
       motionPump.ReducedMotion = value.ReducedMotion == true
       requestRender()

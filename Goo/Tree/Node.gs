@@ -790,10 +790,10 @@ internal class Node {
       EnsurePointerState().PointerDragThreshold = value
     }
   }
-  internal prop PointerDragAxis Goo.Gestures.PanAxis {
-    get -> pointerState?.PointerDragAxis ?? Goo.Gestures.PanAxis.Both
+  internal prop PointerDragAxis LayoutAxis? {
+    get -> pointerState?.PointerDragAxis
     set {
-      if pointerState == nil && value == Goo.Gestures.PanAxis.Both { return }
+      if pointerState == nil && value == nil { return }
       EnsurePointerState().PointerDragAxis = value
     }
   }
