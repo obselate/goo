@@ -4,7 +4,6 @@ import Goo
 import System
 import System.Collections.Generic
 import System.IO
-import System.Threading.Tasks
 import Xunit
 
 class ExplicitKeyBindingTests {
@@ -116,7 +115,7 @@ class ExplicitKeyBindingTests {
     }
 
     @Fact
-    async func PlatformOpenReportsHandlerLaunchAndFailure() Task {
+    func PlatformOpenReportsHandlerLaunchAndFailure() {
         if !OperatingSystem.IsLinux() { return }
         let directory = Path.Combine(AppContext.BaseDirectory, "platform-open-" + Guid.NewGuid().ToString("N"))
         let path = Environment.GetEnvironmentVariable("PATH")
@@ -125,10 +124,10 @@ class ExplicitKeyBindingTests {
             let handler = Path.Combine(directory, "xdg-open")
             File.CreateSymbolicLink(handler, "/usr/bin/true")
             Environment.SetEnvironmentVariable("PATH", directory)
-            let started = await Platform.OpenAsync("https://example.invalid/")
+            let started = Platform.OpenAsync("https://example.invalid/").GetAwaiter().GetResult()
             Assert.Equal(PlatformOpenStatus.Success, started.Status)
             File.Delete(handler)
-            let failed = await Platform.OpenAsync("/absolute/missing/path")
+            let failed = Platform.OpenAsync("/absolute/missing/path").GetAwaiter().GetResult()
             Assert.Equal(PlatformOpenStatus.Failed, failed.Status)
             Assert.NotEmpty(failed.Error)
         } finally {
