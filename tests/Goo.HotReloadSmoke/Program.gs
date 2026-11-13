@@ -58,8 +58,8 @@ func NativeHandle(window Window) string {
 
 func Main() {
   let directory = Environment.GetEnvironmentVariable("GOO_HOTRELOAD_EVIDENCE")!!
-  let first = Window{ Title: "Hot reload first", Width: 360, Height: 220, Root: Shell{} }
-  let second = Window{ Title: "Hot reload second", Width: 360, Height: 220, Root: Shell{} }
+  let first = Window{ Title: "Hot reload first", Size: LayoutSize(360, 220),  Root: Shell{} }
+  let second = Window{ Title: "Hot reload second", Size: LayoutSize(360, 220),  Root: Shell{} }
   first.Open()
   second.Open()
   let firstHandle = NativeHandle(first)

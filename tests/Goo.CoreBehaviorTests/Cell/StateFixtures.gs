@@ -6,7 +6,7 @@ import System.Diagnostics
 internal class StateFixtures {
   func BuilderScopeDependencyTransactionContract() bool {
     let cell = StateScopeFixtureCell()
-    let window = Window{Root: cell, Width: 200, Height: 100}
+    let window = Window{Root: cell, Size: LayoutSize(200, 100)}
     try {
       window.UpdateTree()
       cell.Value.Value = 1
@@ -43,7 +43,7 @@ internal class StateFixtures {
 
   func BuilderScopeIncrementalAndNestedContract() bool {
     let cell = StateScopeFixtureCell()
-    let window = Window{Root: cell, Width: 200, Height: 100}
+    let window = Window{Root: cell, Size: LayoutSize(200, 100)}
     using let outer = StateReadScope(cell, () -> cell.Rebuild())
     using let inner = StateReadScope(cell, () -> cell.Rebuild())
     let first = State[int32](0)
@@ -77,7 +77,7 @@ internal class StateFixtures {
 
   func VerificationSettingContract() bool {
     let previous = StateVerification.Override
-    let window = Window{Root: Cell(), Width: 200, Height: 100}
+    let window = Window{Root: Cell(), Size: LayoutSize(200, 100)}
     try {
       StateVerification.Override = nil
       if !DevTools.HasSessions && StateVerification.Enabled != Debugger.IsAttached { return false }

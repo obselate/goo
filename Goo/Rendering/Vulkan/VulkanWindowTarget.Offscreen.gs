@@ -97,8 +97,8 @@ internal unsafe partial class VulkanWindowTarget {
       try {
         pageCancellation = cancellation.Register(() -> { Interlocked.Exchange(ref pageCancelled, 1) })
         pageOwnerClose = ownerClosed.Register(() -> { Interlocked.Exchange(ref pageCancelled, 1) })
-        let page = renderWindow ?? Window{ Root: root, Width: int32(Math.Ceiling(options.LogicalWidth)),
-          Height: int32(Math.Ceiling(options.LogicalHeight)), Background: options.Background }
+        let page = renderWindow ?? Window{ Root: root,
+          Size: LayoutSize(options.LogicalWidth, options.LogicalHeight), Background: options.Background }
         pageWindow = page
         page.PrepareOffscreenPage(options)
         let atlasBytes = ResolveTextAtlasByteSize(uint64(properties.limits.maxTexelBufferElements) * 8uL)

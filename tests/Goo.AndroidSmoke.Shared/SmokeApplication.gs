@@ -13,8 +13,7 @@ public class SmokeApplication {
       let scene = SmokeCell{}
       let window = Window{
         Title: "Goo Vulkan Android smoke",
-        Width: 420,
-        Height: 760,
+        Size: LayoutSize(420, 760),
         Background: Color.Rgb(17, 24, 39),
         Root: scene,
       }

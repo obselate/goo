@@ -84,8 +84,7 @@ func RunImageBudgetPressureSmoke() {
     let cell = ImageBudgetPressureCell(pooled[0..32])
     let opened = Window{
       Title: "Goo image budget pressure gate",
-      Width: 960,
-      Height: 720,
+      Size: LayoutSize(960, 720),
       VSync: false,
       Root: cell,
     }

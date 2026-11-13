@@ -885,7 +885,7 @@ internal class LayoutFixtures {
             "\u05D0\u05D1\u05D2 abc", "\u0645\u0631\u062D\u0628\u0627",
             "\u0915\u094D\u0937\u093F", "\u65E5\u672C\u8A9E" } {
             let window = Window{ Root: LayoutTextFixtureCell(Text{ BasedOn: style, Content: label }, start),
-              Width: 600, Height: 100, UiScale: scale }
+              Size: LayoutSize(float64(600) / float64(scale), float64(100) / float64(scale)),  UiScale: scale }
             window.UpdateTree()
             guard let text = window.Tree?.Children[0] else { return false }
             let measured = window.MeasureText(label, style)

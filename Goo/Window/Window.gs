@@ -324,37 +324,34 @@ public partial class Window {
     }
   }
 
-  /// Gets or sets the window width.
-  public prop Width int32{
-    get -> width
-    set(v) {
-      requireUiThread("Window.Width")
-      if width == v {
-        return
+  /// Gets or sets the client size in layout units. Native assignments multiply by UiScale and round once.
+  /// The native host's observed size is authoritative after Open.
+  public prop Size LayoutSize{
+    get -> requestedSize ?? LayoutSize(float64(NativeWidth) / float64(UiScale), float64(NativeHeight) / float64(UiScale))
+    set(value) {
+      requireUiThread("Window.Size")
+      if !Double.IsFinite(value.Width) || !Double.IsFinite(value.Height) || value.Width < 0.0 || value.Height < 0.0 {
+        throw ArgumentOutOfRangeException("value")
       }
+      if Size == value { return }
       if host != nil && LayerShell != nil { throw NotSupportedException("Layer-shell sizes are configured by the compositor") }
-      width = v
-      pushSize()
+      if host == nil {
+        requestedSize = value
+      } else {
+        width = scaledSize(value.Width)
+        height = scaledSize(value.Height)
+        pushSize()
+      }
       MetricSubscriptions.MarkWindowDirty(this)
       requestRender()
     }
   }
 
-  /// Gets or sets the window height.
-  public prop Height int32{
-    get -> height
-    set(v) {
-      requireUiThread("Window.Height")
-      if height == v {
-        return
-      }
-      if host != nil && LayerShell != nil { throw NotSupportedException("Layer-shell sizes are configured by the compositor") }
-      height = v
-      pushSize()
-      MetricSubscriptions.MarkWindowDirty(this)
-      requestRender()
-    }
-  }
+  /// Gets the observed client width in native logical units.
+  public prop NativeWidth int32{ get -> host?.LogicalWidth ?? width }
+
+  /// Gets the observed client height in native logical units.
+  public prop NativeHeight int32{ get -> host?.LogicalHeight ?? height }
 
   // positionSet distinguishes an explicit (0,0) request.
   /// Gets or sets the requested horizontal position.

@@ -189,6 +189,7 @@ public partial class Window {
       if let adapter = accessibility?.Adapter as NativeAccessibilityAdapter? { adapter.Bind(native) }
       registerOwnership()
       applyPreferences(native.Preferences)
+      measureInitialContent()
       if initiallyVisible {
         let shown = Show()
         if shown != WindowOperationResult.Accepted {

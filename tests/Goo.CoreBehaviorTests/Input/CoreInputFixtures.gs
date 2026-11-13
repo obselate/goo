@@ -2102,7 +2102,7 @@ internal class InputFixtures {
 
   func DisabledWheelReachesEnabledAncestorsWithoutCrossingModalScope() bool {
     let cell = InputDisabledWheelCell{}
-    let window = Window{ Root: cell, Width: 100, Height: 100 }
+    let window = Window{ Root: cell, Size: LayoutSize(100, 100), }
     window.UpdateTree()
     guard let root = window.Tree, let scroller = cell.ScopeHandle.AttachedNode() else { return false }
     if maxScrollY(root) <= 0.0F || maxScrollY(scroller) <= 0.0F { return false }
@@ -2112,7 +2112,7 @@ internal class InputFixtures {
       || scroller.ScrollTargetY <= 0.0F || root.ScrollTargetY != 0.0F { return false }
 
     let disabledCell = InputDisabledWheelCell{}
-    let disabledWindow = Window{ Root: disabledCell, Width: 100, Height: 100 }
+    let disabledWindow = Window{ Root: disabledCell, Size: LayoutSize(100, 100), }
     disabledWindow.UpdateTree()
     guard let disabledRoot = disabledWindow.Tree,
       let disabledScroller = disabledCell.ScopeHandle.AttachedNode() else { return false }
@@ -2124,7 +2124,7 @@ internal class InputFixtures {
       || disabledRoot.ScrollTargetY <= 0.0F { return false }
 
     let modalCell = InputDisabledWheelCell{}
-    let modalWindow = Window{ Root: modalCell, Width: 100, Height: 100 }
+    let modalWindow = Window{ Root: modalCell, Size: LayoutSize(100, 100), }
     modalWindow.UpdateTree()
     guard let modalRoot = modalWindow.Tree,
       let modalScroller = modalCell.ScopeHandle.AttachedNode() else { return false }
@@ -2139,7 +2139,7 @@ internal class InputFixtures {
   }
 
   func UnhandledWheelStaysPresentationIdle() bool {
-    let window = Window{ Root: InputWheelQuietCell{}, Width: 100, Height: 100 }
+    let window = Window{ Root: InputWheelQuietCell{}, Size: LayoutSize(100, 100), }
     window.UpdateTree()
     let input = InputCoordinator()
     let resolver = Resolver{}
@@ -2281,7 +2281,7 @@ internal class InputFixtures {
   private func hitKey(root Node, x float32, y float32) string -> hitTopmost(root, x, y)?.Key ?? ""
 
   private func zIndexRuntimeHits() []string {
-    let window = Window{ Root: ZIndexRuntimeRootCell{}, Width: 40, Height: 40 }
+    let window = Window{ Root: ZIndexRuntimeRootCell{}, Size: LayoutSize(40, 40), }
     window.UpdateTree()
     guard let root = window.Tree else { return []string{ "", "" } }
     let before = hitKey(root, 20.0F, 20.0F)
@@ -2811,7 +2811,7 @@ internal class InputFixtures {
     let before = GC.GetAllocatedBytesForCurrentThread()
     let value = Window{}
     let bytes = GC.GetAllocatedBytesForCurrentThread() - before
-    return value.Width == 0 && value.Height == 0 ? bytes : -1
+    return value.NativeWidth == 0 && value.NativeHeight == 0 ? bytes : -1
   }
 
   func PointerLifecycleStablePlainDiffBytes() int64 {
@@ -2828,7 +2828,7 @@ internal class InputFixtures {
 
   func RoutedKeyCallbackRebuildStaysPresentationIdle() bool {
     let cell = InputRoutedCallbackCell{}
-    let window = Window{ Root: cell, Width: 100, Height: 30 }
+    let window = Window{ Root: cell, Size: LayoutSize(100, 30), }
     window.UpdateTree()
     guard let root = window.Tree else { return false }
     let input = InputCoordinator()
@@ -2842,7 +2842,7 @@ internal class InputFixtures {
 
   func GenericTextCallbackRebuildStaysPresentationIdle() bool {
     let cell = InputGenericTextCallbackCell{}
-    let window = Window{ Root: cell, Width: 100, Height: 30 }
+    let window = Window{ Root: cell, Size: LayoutSize(100, 30), }
     window.UpdateTree()
     guard let root = window.Tree else { return false }
     let input = InputCoordinator()
@@ -2991,7 +2991,7 @@ internal class InputFixtureDriver {
   private var bindings bool
 
   init(root Cell, width int32, height int32) {
-    Window = Window{ Width: width, Height: height, Root: root }
+    Window = Window{ Size: LayoutSize(width, height),  Root: root }
     Input = Window.InputForTest
     Resolver = Window.ResolverForTest
     Window.UpdateTree()

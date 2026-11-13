@@ -6,7 +6,7 @@ import System.Collections.Generic
 internal class StyleFixtures {
   func WindowColorPairInheritanceContract() bool {
     let cell = WindowColorPairCell{}
-    let window = Window{Root: cell, Width: 100, Height: 100}
+    let window = Window{Root: cell, Size: LayoutSize(100, 100), }
     try {
       if window.Background != Color.White || window.Foreground != Color.Black { return false }
       window.UpdateTree()
@@ -84,7 +84,7 @@ internal class StyleFixtures {
     let effect = ShaderEffect(program)
     effect.SetData(0, data)
     let cell = MetricShaderEffectCell(effect)
-    let window = Window{ Width: 100, Height: 60, Root: cell }
+    let window = Window{ Size: LayoutSize(100, 60),  Root: cell }
     var publications = 0
     cell.Target.MetricsChanged += (metrics ElementMetrics) -> {
       publications++

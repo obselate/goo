@@ -166,7 +166,7 @@ func RetainedEqualityCompare(expected[]uint8, actual[]uint8, width int32, height
 }
 
 func RetainedEqualityOpen(root RetainedEqualityCell, host EmbeddedSmokeHost, width int32, height int32) Window {
-    let window = Window{Title: "Goo retained frame equality", Width: width, Height: height, Root: root, VSync: false}
+    let window = Window{Title: "Goo retained frame equality", Size: LayoutSize(width, height),  Root: root, VSync: false}
     host.Resize(width, height, root.GeometryOnly ? width: width * 5 / 4, root.GeometryOnly ? height: height * 3 / 2)
     window.Attach(host)
     host.RenderFrame(0.0)

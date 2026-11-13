@@ -166,7 +166,7 @@ class GestureTests {
         }
 
         private func Mount(content Blob) Window {
-            let window = Window{Root: SurfaceCell(content), Width: 200, Height: 200}
+            let window = Window{Root: SurfaceCell(content), Size: LayoutSize(200, 200), }
             typeof(Window).GetMethod(
                 "UpdateTree",
                 BindingFlags.Instance | BindingFlags.NonPublic,
