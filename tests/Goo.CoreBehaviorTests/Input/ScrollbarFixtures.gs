@@ -801,7 +801,7 @@ internal class ScrollbarHoverCell(handle ElementHandle) : Cell {
   override func Build() Blob -> Container{
     Width: 100, Height: 100, OverflowY: Overflow.Scroll,
     ScrollbarVisibilityY: ScrollbarVisibility.Always,
-    Hover: Style{ ScrollbarY: Scrollbar{ Thumb: Container{ Handle: handle } } },
+    HoverStyle: Style{ ScrollbarY: Scrollbar{ Thumb: Container{ Handle: handle } } },
     Container{ Width: 100, Height: 300, FlexShrink: 0 },
   }
 }
@@ -812,8 +812,8 @@ internal class ThinThumbCell(track ElementHandle, thumb ElementHandle) : Cell {
     ScrollbarVisibilityY: ScrollbarVisibility.Always,
     ScrollbarY: Scrollbar{
       Thickness: 8, Inset: 0,
-      Track: Container{ Handle: track, Hover: Style{ BackgroundColor: Color.Rgb(20, 30, 40) } },
-      Thumb: Container{ Handle: thumb, Width: 4, Hover: Style{ Width: 8 } },
+      Track: Container{ Handle: track, HoverStyle: Style{ BackgroundColor: Color.Rgb(20, 30, 40) } },
+      Thumb: Container{ Handle: thumb, Width: 4, HoverStyle: Style{ Width: 8 } },
     },
     Container{ Width: 100, Height: 300, FlexShrink: 0 },
   }

@@ -3,7 +3,7 @@ package Goo
 import System
 import System.Collections.Generic
 
-internal enum NodeKind { Container; Button; Text; Entry; Editor; Shape; Image;
+internal enum NodeKind { Container; Button; Text; Entry; Editor; Shape; Image; Spacer;
 }
 
 internal data struct Rect {
@@ -612,7 +612,7 @@ internal class Node {
     }
   }
   internal prop PaintInputState int32{ get -> nodeState & int32(3) }
-  internal prop PaintInputHidden bool{ get -> (nodeState & int32(3)) != 0 || PortalPlacementHidden || PortalAnchorClipped }
+  internal prop PaintInputHidden bool{ get -> Kind == NodeKind.Spacer || (nodeState & int32(3)) != 0 || PortalPlacementHidden || PortalAnchorClipped }
   internal prop StackingChildren bool{
     get -> (nodeState & (int32(1) << 24)) != 0
     set {
@@ -1002,7 +1002,7 @@ internal class Node {
 internal func canReceiveInput(n Node) bool {
   var current = n
   while true {
-    if current.Disabled || current.PaintInputState != 0 || current.PortalPlacementHidden
+    if current.Kind == NodeKind.Spacer || current.Disabled || current.PaintInputState != 0 || current.PortalPlacementHidden
       || current.PortalAnchorClipped && !n.Focused {
     return false
   }

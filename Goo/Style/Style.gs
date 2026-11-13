@@ -169,6 +169,14 @@ public open class Style {
   public prop AlignSelf AlignSelf{ init -> pushEnumOrdinal(StyleField.AlignSelf, int32(value)) }
   /// Sets cross-axis line distribution.
   public prop AlignContent AlignContent{ init -> pushEnumOrdinal(StyleField.AlignContent, int32(value)) }
+  /// Sets grow to this factor, shrink to 1, and basis to 0. Later declarations override each part.
+  public prop Flex float64 {
+    init {
+      pushScalar(StyleField.FlexGrow, checkedNonNegative(value, "Flex"))
+      pushScalar(StyleField.FlexShrink, 1.0)
+      pushLength(StyleField.FlexBasis, 0)
+    }
+  }
   /// Sets the flex grow factor.
   public prop FlexGrow float64{ init -> pushScalar(StyleField.FlexGrow, checkedNonNegative(value, "FlexGrow")) }
   /// Sets the flex shrink factor. The default is 1. Set 0 to keep an item at its base size when its container is too small.
@@ -177,6 +185,15 @@ public open class Style {
   public prop FlexBasis Length{ init -> pushCheckedLength(StyleField.FlexBasis, value, "FlexBasis", false, true, true) }
   /// Sets relative, absolute, or static positioning.
   public prop Position PositionType{ init -> pushEnumOrdinal(StyleField.Position, int32(value)) }
+  /// Sets all four position offsets. Later offsets override individual edges.
+  public prop Inset Length {
+    init {
+      pushCheckedLength(StyleField.Left, value, "Inset", true, true, false)
+      pushCheckedLength(StyleField.Top, value, "Inset", true, true, false)
+      pushCheckedLength(StyleField.Right, value, "Inset", true, true, false)
+      pushCheckedLength(StyleField.Bottom, value, "Inset", true, true, false)
+    }
+  }
   /// Sets the left position offset.
   public prop Left Length{ init -> pushCheckedLength(StyleField.Left, value, "Left", true, true, false) }
   /// Sets the inline start position offset.

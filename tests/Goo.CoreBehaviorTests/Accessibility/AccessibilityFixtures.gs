@@ -12,6 +12,22 @@ internal func countNodes(n Node) int32 {
 }
 
 internal class AccessibilityFixtures {
+  func AccessibilityShorthandOrderContract() bool {
+    let source = Accessibility{Name: "original", Role: AccessibilityRole.Button, Expanded: true}
+    let reconciler = Reconciler{Res: Resolver{}}
+    let node = reconciler.Mount(Container{
+      Accessibility: source, AccessibilityName: "renamed", AccessibilityRole: AccessibilityRole.Group,
+    })
+    guard let declaration = AccessibilityMetadata.Value(node) else { return false }
+    if declaration.Name != "renamed" || declaration.Role != AccessibilityRole.Group
+      || declaration.Expanded != true || source.Name != "original" || source.Role != AccessibilityRole.Button { return false }
+    reconciler.Diff(node, Container{
+      AccessibilityName: "discarded", AccessibilityRole: AccessibilityRole.Button,
+      Accessibility: Accessibility{Name: "replacement"},
+    })
+    guard let replaced = AccessibilityMetadata.Value(node) else { return false }
+    return replaced.Name == "replacement" && replaced.Role == AccessibilityRole.Auto && replaced.Expanded == nil
+  }
   func PrimitiveAndExclusionContract() bool {
     let adapter = AccessibilityTestAdapter{}
     let cell = AccessibilityFixtureCell{}

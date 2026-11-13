@@ -4,6 +4,20 @@ import System
 import System.Collections.Generic
 
 internal class StyleFixtures {
+  func FlexAndInsetDeclarationOrderContract() bool {
+    let reconciler = Reconciler{Res: Resolver{}}
+    let node = reconciler.Mount(Container{
+      FlexGrow: 9, FlexShrink: 8, FlexBasis: 7, Flex: 2,
+      Left: 9, Inset: Percent(10), Top: 3,
+    })
+    if node.FlexGrow != 2.0F || node.FlexShrink != 1.0F || node.FlexBasis.Value != 0.0F
+      || node.Left.Unit != LengthUnit.Percent || node.Left.Value != 10.0F
+      || node.Right.Value != 10.0F || node.Bottom.Value != 10.0F || node.Top.Value != 3.0F { return false }
+    reconciler.Diff(node, Container{Flex: 2, FlexGrow: 3, FlexShrink: 4, FlexBasis: 5, Inset: 0, Left: 6})
+    return node.FlexGrow == 3.0F && node.FlexShrink == 4.0F && node.FlexBasis.Value == 5.0F
+      && node.Left.Value == 6.0F && node.Top.Value == 0.0F
+      && node.Right.Value == 0.0F && node.Bottom.Value == 0.0F
+  }
   func WindowColorPairInheritanceContract() bool {
     let cell = WindowColorPairCell{}
     let window = Window{Root: cell, Size: LayoutSize(100, 100), }
@@ -161,7 +175,7 @@ internal class StyleFixtures {
     let resolver = Resolver{}
     let root = Reconciler{ Res: resolver }.Mount(Container{
       ClipPath: path, TransitionMs: 100.0,
-      Hover: Style{ ClipPathFit: ShapeFit.Contain },
+      HoverStyle: Style{ ClipPathFit: ShapeFit.Contain },
     })
     guard let initial = ClipPaths.Get(root) else { return false }
     if !root.HasClipPath || !samePath(initial.Path, path) || initial.Fit != ShapeFit.Fill
@@ -583,7 +597,7 @@ internal class StyleFixtures {
     let resolver = Resolver{}
     let stateNode = Reconciler{ Res: resolver }.Mount(Container{
       BasedOn: baseStyle,
-      Hover: Style{ BackgroundGradient: nil },
+      HoverStyle: Style{ BackgroundGradient: nil },
     })
     if stateNode.BackgroundGradient == nil { return false }
     stateNode.Hovered = true
@@ -599,15 +613,15 @@ internal class StyleFixtures {
   func StateStyleRetentionAndEqualityContract() bool {
     let resolver = Resolver{}
     let reconciler = Reconciler{ Res: resolver }
-    let node = reconciler.Mount(Container{ Hover: Style{ Opacity: 0.25 } })
+    let node = reconciler.Mount(Container{ HoverStyle: Style{ Opacity: 0.25 } })
     guard let retained = node.HoverStyle else { return false }
-    reconciler.Diff(node, Container{ Hover: Style{ Opacity: 0.25 } })
+    reconciler.Diff(node, Container{ HoverStyle: Style{ Opacity: 0.25 } })
     if node.HoverStyle != retained { return false }
     node.Hovered = true
     resolver.Invalidate(node, false)
     resolver.Flush()
     if node.Opacity != 0.25 { return false }
-    reconciler.Diff(node, Container{ Hover: Style{ Opacity: 0.5 } })
+    reconciler.Diff(node, Container{ HoverStyle: Style{ Opacity: 0.5 } })
     return node.HoverStyle != retained && node.Opacity == 0.5
   }
 
@@ -744,7 +758,7 @@ internal class StyleFixtures {
     let root = Reconciler{ Res: resolver }.Mount(Container() {.TextShadows: []TextShadow{
         TextShadow{ OffsetX: 2, Color: red },
         TextShadow{ OffsetY: 3, Blur: 4, Color: blue },
-      },.TransitionMs: 100.0,.Hover: Style{ TextShadow: TextShadow{ OffsetX: 8, Color: blue } },
+      },.TransitionMs: 100.0,.HoverStyle: Style{ TextShadow: TextShadow{ OffsetX: 8, Color: blue } },
         Text{ Content: "inherited" },
         TextEntry{ Value: "entry" },
         Container() {.TextShadows: []TextShadow{}, Text{ Content: "cleared"},
@@ -811,7 +825,7 @@ internal class StyleFixtures {
     if zero.HasTextStrokeState || TextStroking.Visible(zero) != nil { return false }
 
     let resolver = Resolver{}
-    let root = Reconciler{ Res: resolver }.Mount(Container() {.TextStrokeWidth: 2,.TextStrokeColor: red,.TransitionMs: 100.0,.Hover: Style{ TextStrokeWidth: 4, TextStrokeColor: blue },
+    let root = Reconciler{ Res: resolver }.Mount(Container() {.TextStrokeWidth: 2,.TextStrokeColor: red,.TransitionMs: 100.0,.HoverStyle: Style{ TextStrokeWidth: 4, TextStrokeColor: blue },
         Text{ Content: "inherited" },
         TextEntry{ Value: "entry" },
         Text{ Content: "width-clear", TextStrokeWidth: 0 },
@@ -1109,7 +1123,7 @@ internal class StyleFixtures {
 
   func TypographyInheritanceContract() bool {
     let resolver = Resolver{}
-    let root = Reconciler{ Res: resolver }.Mount(Container() {.Color: Color.Rgb(255, 0, 0),.FontFamily: "base",.TextAlign: TextAlign.Right,.Hover: Style{
+    let root = Reconciler{ Res: resolver }.Mount(Container() {.Color: Color.Rgb(255, 0, 0),.FontFamily: "base",.TextAlign: TextAlign.Right,.HoverStyle: Style{
         Color: Color.Rgb(0, 255, 0), FontFamily: "hover", TextAlign: TextAlign.Center,
       },
         Text{ Content: "inherited" },
@@ -1135,7 +1149,7 @@ internal class StyleFixtures {
     if defaults.TextTransform != TextTransform.None { return false }
 
     let resolver = Resolver{}
-    let root = Reconciler{ Res: resolver }.Mount(Container() {.TextTransform: TextTransform.Uppercase,.TransitionMs: 100.0,.Hover: Style{ TextTransform: TextTransform.Lowercase },
+    let root = Reconciler{ Res: resolver }.Mount(Container() {.TextTransform: TextTransform.Uppercase,.TransitionMs: 100.0,.HoverStyle: Style{ TextTransform: TextTransform.Lowercase },
         Text{ Content: "i I" },
         Text{ Content: "local", TextTransform: TextTransform.None },
         TextEntry{ Value: "entry"},
@@ -1178,7 +1192,7 @@ internal class StyleFixtures {
     }
 
     let resolver = Resolver{}
-    let root = Reconciler{ Res: resolver }.Mount(Container() {.TextWrap: TextWrap.NoWrap,.TextTrimming: TextTrimming.Ellipsis,.TransitionMs: 100.0,.Hover: Style{ TextWrap: TextWrap.Wrap, TextTrimming: TextTrimming.None },
+    let root = Reconciler{ Res: resolver }.Mount(Container() {.TextWrap: TextWrap.NoWrap,.TextTrimming: TextTrimming.Ellipsis,.TransitionMs: 100.0,.HoverStyle: Style{ TextWrap: TextWrap.Wrap, TextTrimming: TextTrimming.None },
         Text{ Content: "inherited" },
         Text{ Content: "local", TextWrap: TextWrap.Wrap, TextTrimming: TextTrimming.Ellipsis},
     })
@@ -1229,7 +1243,7 @@ internal class StyleFixtures {
       Content: "one\ntwo\nthree",
       TextMaxLines: 1,
       TransitionMs: 100.0,
-      Hover: Style{ TextMaxLines: 2 },
+      HoverStyle: Style{ TextMaxLines: 2 },
     })
     resolver.FlushEffects()
     let retained = TextLayouts.For(n, 100.0F)
@@ -1264,7 +1278,7 @@ internal class StyleFixtures {
       }
 
     let resolver = Resolver{}
-    let root = Reconciler{ Res: resolver }.Mount(Container() {.OutlineWidth: 2,.OutlineColor: Color.Rgb(255, 0, 0),.OutlineOffset: 1,.TransitionMs: 100.0,.Focus: Style{
+    let root = Reconciler{ Res: resolver }.Mount(Container() {.OutlineWidth: 2,.OutlineColor: Color.Rgb(255, 0, 0),.OutlineOffset: 1,.TransitionMs: 100.0,.FocusStyle: Style{
         OutlineWidth: 4,
         OutlineColor: Color.Rgb(0, 0, 255),
         OutlineOffset: -2,
@@ -1322,7 +1336,7 @@ internal class StyleFixtures {
     if combined.PaintInputHidden { return false }
 
     let resolver = Resolver{}
-    let root = Reconciler{ Res: resolver }.Mount(Container() {.Visibility: Visibility.Visible,.TransitionMs: 100.0,.Hover: Style{ Visibility: Visibility.Hidden },
+    let root = Reconciler{ Res: resolver }.Mount(Container() {.Visibility: Visibility.Visible,.TransitionMs: 100.0,.HoverStyle: Style{ Visibility: Visibility.Hidden },
         Container{},
     })
     let child = root.Children[0]
@@ -1356,7 +1370,7 @@ internal class StyleFixtures {
     }
 
     let resolver = Resolver{}
-    let root = Reconciler{ Res: resolver }.Mount(Container() {.TextDecoration: TextDecoration.Underline,.TransitionMs: 100.0,.Hover: Style{ TextDecoration: TextDecoration.LineThrough },
+    let root = Reconciler{ Res: resolver }.Mount(Container() {.TextDecoration: TextDecoration.Underline,.TransitionMs: 100.0,.HoverStyle: Style{ TextDecoration: TextDecoration.LineThrough },
         Text{ Content: "inherited" },
         TextEntry{ Value: "entry" },
         Text{ Content: "clear", TextDecoration: TextDecoration.None},
@@ -1394,7 +1408,7 @@ internal class StyleFixtures {
 
   func CursorInheritanceAndResetContract() bool {
     let resolver = Resolver{}
-    let root = Reconciler{ Res: resolver }.Mount(Container() {.Cursor: Cursor.Move,.TransitionMs: 100.0,.Hover: Style{ Cursor: Cursor.Crosshair },
+    let root = Reconciler{ Res: resolver }.Mount(Container() {.Cursor: Cursor.Move,.TransitionMs: 100.0,.HoverStyle: Style{ Cursor: Cursor.Crosshair },
         Text{ Content: "inherited" },
         Container{ Cursor: Cursor.Pointer},
     })
@@ -1427,7 +1441,7 @@ internal class StyleFixtures {
   func ZIndexRangeStateAndResetContract() bool {
     let resolver = Resolver{}
     let root = Reconciler{ Res: resolver }.Mount(Container() {.ZIndex: 20,
-        Container{ ZIndex: Int32.MinValue, Hover: Style{ ZIndex: Int32.MaxValue } },
+        Container{ ZIndex: Int32.MinValue, HoverStyle: Style{ ZIndex: Int32.MaxValue } },
         Container{},
     })
     let child = root.Children[0]
@@ -1637,7 +1651,7 @@ internal class StyleFixtures {
       TransitionMs: 100,
       TransitionEasing: Easing.EaseIn,
       Opacity: 0.0,
-      Hover: Style{ Opacity: 1.0 },
+      HoverStyle: Style{ Opacity: 1.0 },
     })
     root.Hovered = true
     resolver.Invalidate(root, false)
@@ -1790,7 +1804,7 @@ internal class StyleFixtures {
       BoxShadow: BoxShadow{ OffsetX: 0, Color: Color.Black },
       TransitionMs: 100.0,
       TransitionEasing: Easing.Linear,
-      Hover: Style{
+      HoverStyle: Style{
         Opacity: 1.0,
         BoxShadow: BoxShadow{ OffsetX: 10, Color: Color.White },
       },
@@ -1810,7 +1824,7 @@ internal class StyleFixtures {
       TransitionMs: 1000.0,
       TransitionDelayMs: 1000.0,
       TransitionEasing: Easing.EaseIn,
-      Hover: Style{
+      HoverStyle: Style{
         Opacity: 1.0,
         BoxShadow: BoxShadow{ OffsetX: 10, Color: Color.White },
       },

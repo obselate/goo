@@ -134,6 +134,8 @@ class PublicDocumentationTests {
             StringComparison.Ordinal
         )
         Assert.Contains("`BackgroundGradient: nil` is an explicit clear declaration", style, StringComparison.Ordinal)
+        Assert.Contains("`HoverStyle`, `ActiveStyle`, `FocusStyle`, and `DisabledStyle`", style, StringComparison.Ordinal)
+        Assert.Contains("`AccessibilityName` and `AccessibilityRole`", style, StringComparison.Ordinal)
     }
 
     @Fact
@@ -400,7 +402,6 @@ class PublicDocumentationTests {
             "M:Goo.Color.TryParse(System.String)",
             "M:Goo.Color.WithAlpha(System.Double)",
             "M:Goo.Color.op_Implicit(Goo.Color)~Goo.Edges{Goo.Color}",
-            "M:Goo.Color.op_Implicit(System.String)~Goo.Color",
             "M:Goo.VectorAsset.#ctor(System.Double,System.Double,System.Double,System.Double,Goo.VectorNode[])",
             "M:Goo.VectorAsset.NodeAt(System.Int32)",
             "M:Goo.VectorAsset.PathForNode(System.Int32)",
@@ -419,6 +420,11 @@ class PublicDocumentationTests {
             "M:Goo.DevTools.Attach(Goo.Window,System.Boolean)",
             "M:Goo.Container.#ctor",
             "M:Goo.Container.Add(Goo.Blob)",
+            "M:Goo.Row.#ctor",
+            "M:Goo.Row.Add(Goo.Blob)",
+            "M:Goo.Column.#ctor",
+            "M:Goo.Column.Add(Goo.Blob)",
+            "M:Goo.Spacer.#ctor",
             "M:Goo.DashPattern.#ctor(System.Double[],System.Double)",
             "M:Goo.DragData.#ctor(System.Object,Goo.DragEffect)",
             "M:Goo.DragData.#ctor(System.Object,Goo.DragEffect,Goo.NativeFileDrag)",
@@ -1339,16 +1345,13 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
-            ["M:Goo.Color.op_Implicit(System.String)~Goo.Color"] = DocumentationShape(
-                []string{"value"},
-                System.Array.Empty[string](),
-                true
-            ),
             ["M:Goo.Container.Add(Goo.Blob)"] = DocumentationShape(
                 []string{"child"},
                 System.Array.Empty[string](),
                 false
             ),
+            ["M:Goo.Row.Add(Goo.Blob)"] = DocumentationShape([]string{"child"}, System.Array.Empty[string](), false),
+            ["M:Goo.Column.Add(Goo.Blob)"] = DocumentationShape([]string{"child"}, System.Array.Empty[string](), false),
             ["M:Goo.PathBuilder.Reset"] = DocumentationShape(
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),

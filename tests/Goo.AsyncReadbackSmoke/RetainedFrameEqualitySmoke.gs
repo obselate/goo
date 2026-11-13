@@ -77,7 +77,7 @@ class RetainedEqualityCell(seed int32, source ImageSourceProvider) : Cell {
                     Height: 24,
                     Handle: HoverTarget,
                     BackgroundColor: Color.Rgb(40, 80, 120),
-                    Hover: Style{BackgroundColor: Color.Rgb(180, 100, 60)},
+                    HoverStyle: Style{BackgroundColor: Color.Rgb(180, 100, 60)},
                     OnKeyDown: (event KeyEvent) -> {
                         if event.Key == Key.E {
                             Step = 4
