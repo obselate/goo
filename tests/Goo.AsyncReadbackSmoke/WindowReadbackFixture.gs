@@ -1149,8 +1149,8 @@ internal class WindowReadbackTestFixture {
         try {
           window.Open()
           if attempts < 2 { throw InvalidOperationException("candidate fallback was not exercised") }
-        } catch (error InvalidOperationException) {
-          if attempts != 1 || !error.Message.Contains("injected candidate startup failure") { throw error }
+        } catch (error GraphicsUnavailableException) {
+          if attempts != 1 || error.InnerException is not InvalidOperationException || !error.Message.Contains("injected candidate startup failure") { throw error }
         }
       } finally {
         VulkanWindowTarget.CandidateStartupForTest = nil

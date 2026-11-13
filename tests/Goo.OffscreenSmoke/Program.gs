@@ -85,7 +85,7 @@ func RunAutomaticSessionSmoke() {
             owner.RequestClose()
         })
     })
-    owner.Run()
+    Application.Run(owner)
     Require(!timedOut && completed, "window-created session timed out without Service")
     Require(closing != nil && closing.IsCompleted
         && closing.GetAwaiter().GetResult().Status == OffscreenRenderStatus.Cancelled,

@@ -461,7 +461,7 @@ func RunDirectDriverSmoke() {
 }
 
 func Main() {
-  Window.ConfigureApplication("Goo package smoke", "0.1.0", "io.github.obselate.goo.smoke")
+  Application.Configure("Goo package smoke", "0.1.0", "io.github.obselate.goo.smoke")
   let arguments = Environment.GetCommandLineArgs()
   if arguments.Length == 3 && arguments[1] == "--application-activation-smoke" {
     RunApplicationActivationSmoke(Path.GetFullPath(arguments[2]))
@@ -573,7 +573,7 @@ func Main() {
     })
     watchdog.IsBackground = true
     watchdog.Start()
-    first.Run()
+    Application.Run(first)
     watchdog.Join()
     if Interlocked.CompareExchange(&secondScheduled, 0, 0) == 0
       || Interlocked.CompareExchange(&thirdScheduled, 0, 0) == 0 {

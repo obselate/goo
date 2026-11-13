@@ -1,4 +1,7 @@
 <Project>
+  <ItemGroup Condition="'$(GooPackageId)' != ''">
+    <AssemblyMetadata Include="GooApplicationId" Value="$(GooPackageId)" />
+  </ItemGroup>
   <PropertyGroup Condition="'$(PublishAot)' == 'true'">
     <IlcFoldIdenticalMethodBodies Condition="'$(IlcFoldIdenticalMethodBodies)' == ''">true</IlcFoldIdenticalMethodBodies>
   </PropertyGroup>

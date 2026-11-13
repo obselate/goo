@@ -9,6 +9,7 @@ import Goo
 import Goo.Android
 import GooAndroidSmoke
 import GooWindow = Goo.Window
+import GooApplication = Goo.Application
 import System
 import System.Threading
 import System.Threading.Tasks
@@ -24,7 +25,7 @@ sealed class NotificationActivity : GooActivity {
     }
 
     protected override func CreateWindow() Goo.Window {
-        GooWindow.ApplicationActivated += OnActivation
+        GooApplication.Activated += OnActivation
         return SmokeApplication.CreateWindow()
     }
 
@@ -43,7 +44,7 @@ sealed class NotificationActivity : GooActivity {
     }
 
     protected override func OnDestroy() {
-        GooWindow.ApplicationActivated -= OnActivation
+        GooApplication.Activated -= OnActivation
         base.OnDestroy()
     }
 }

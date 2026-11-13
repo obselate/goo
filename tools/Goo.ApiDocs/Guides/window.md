@@ -1,7 +1,7 @@
 ## Open a window
 
 ```gsharp
-Window{Root: Cell{}}.Run()
+Application.Run(Window{Root: Cell{}})
 ```
 
 ## Native library loading
@@ -53,27 +53,26 @@ content within the window, use `Style.ShaderEffect`.
 
 ```gs
 let window = Window{}
-Window.ApplicationActivated += activation -> {
+Application.Activated += activation -> {
     if activation.Kind == ApplicationActivationKind.OpenUri {
         window.Title = activation.Target!!.AbsoluteUri
     }
 }
-let status = Window.InitializeApplicationActivation(
-    ApplicationActivation{IsInitial: true})
+Application.Run(window)
 ```
 
-Subscribe before opening the first window. Check the returned status.
+Call `Application.Configure` before startup. Use `Application.AcquireSingleInstance(arguments)` before `Run` when the app needs one primary instance. Keep its primary lease until shutdown.
 
 - One process event reaches the UI thread during `Pump`, an embedded frame or `Run`.
 - The app chooses the target window and validates notification data.
-- `PostApplicationActivation` copies requests from any thread.
+- `Application.PostActivation` copies requests from any thread.
 - Arguments keep their boundaries, empty values and sender directory.
 - Documents remain URIs, including Android `content:` values.
 - A document URI does not grant access to its data.
 - An initial native request replaces a sole pending synthetic Launch.
 - Other requests use FIFO order, with callback posts deferred to the next batch.
 - Closing the last window clears pending requests.
-- The same owner thread can initialize a new delivery lifetime.
+- Requests wait until an activation handler is added.
 - Hosts and optional packages own native associations, IPC and notifications.
 - macOS cold and warm file or URL opens use this event.
 - Native document batches stay separate from drag/drop into a window.
@@ -82,7 +81,7 @@ Subscribe before opening the first window. Check the returned status.
 | Post status | Meaning |
 | --- | --- |
 | Accepted | The queue owns the request. |
-| NotInitialized | Call InitializeApplicationActivation first. |
+| NotInitialized | Call `Application.AcquireSingleInstance` or `Application.Run` first. |
 | Closed | All windows closed. |
 | QueueFull | 1024 requests are pending. |
 | TooLarge | More than 4096 arguments or documents, 64 KiB per UTF-8 string, or 1 MiB total text. |
@@ -248,7 +247,7 @@ rejected before native creation. Existing independent windows remain the default
 let owner = Window{Title: "Main", Size: LayoutSize(800, 600),  Root: MainCell{}}.Open()
 let dialog = Window{Title: "Settings", Size: LayoutSize(420, 280),
   Owner: owner, Modal: true, Root: SettingsCell{}}.Open()
-owner.Run()
+Application.Run(owner)
 ```
 
 `Owner` and `Modal` cannot change while open. One direct modal child may be open
@@ -325,7 +324,7 @@ Equal snapshots do not notify. A listener added after another listener has alrea
 ## Frame pacing and manual capture
 
 `VSync` selects the preferred native presentation mode. `FramePacing` separately
-controls `Window.Run`: `Display` is the default and `Uncapped` schedules demanded
+controls `Application.Run`: `Display` is the default and `Uncapped` schedules demanded
 frames as soon as the native queue is ready. Uncapped mode does not override a
 compositor's presentation policy or render hidden and unavailable windows.
 
@@ -456,7 +455,7 @@ Closing the owner cancels pending pages.
 
 See the [render and diff commands](../devtools/cli.md) for options.
 
-`goo render` builds a project or runs an existing executable. `Window.Run` uses
+`goo render` builds a project or runs an existing executable. `Application.Run` uses
 `OffscreenRenderSession` without opening a window. No display or compositor is needed.
 Size defaults to the declared window size. Scale sets pixels per layout unit and
 the device-pixel grid used to round layout. Theme sets `Window.Preferences.Theme`.
@@ -467,13 +466,13 @@ app services or advance app animations.
 Register named states in the window initializer:
 
 ```gsharp
-Window{
+Application.Run(Window{
   Root: Counter(),
   Scenes: Dictionary[string, Func[Cell]]{
     ["default"] = () -> Counter(),
     ["incremented"] = () -> Counter(5)
   }
-}.Run()
+})
 ```
 
 `Scenes` is a read-only map of names to factories that return fresh, unattached
@@ -524,7 +523,7 @@ let saved = WindowPlacement{
 }
 let window = Window{Root: Cell{}}
 let result = window.ApplyPlacement(saved)
-if result.Status == WindowOperationResult.Accepted { window.Run() }
+if result.Status == WindowOperationResult.Accepted { Application.Run(window) }
 ```
 
 Call `CapturePlacement()` on the open window's UI thread before teardown.

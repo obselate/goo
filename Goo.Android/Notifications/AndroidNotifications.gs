@@ -21,7 +21,7 @@ public class AndroidNotifications {
         /// @param owner The Goo activity that receives permission results and notification taps.
         /// @param options The channel ID, channel name and installed drawable small-icon resource name.
         /// @returns An owned service on Success, or an identity or native failure.
-        /// @remarks Subscribe to Window.ApplicationActivated before the activity finishes CreateWindow.
+        /// @remarks Subscribe to Application.Activated before the activity finishes CreateWindow.
         /// The service closes when the activity is destroyed. Existing notifications remain in the system.
         /// Activity launch and task policy remain under application control.
         public func Open(owner GooActivity, options NotificationOptions) NotificationServiceResult {

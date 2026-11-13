@@ -1,6 +1,40 @@
 package Goo
 
+import System
+
 internal class WindowStartupFixtures {
+  func ApplicationStateVerificationContract() bool {
+    let previous = StateVerification.Override
+    try {
+      StateVerification.Enabled = true
+      if !Application.VerifyState { return false }
+      Application.VerifyState = false
+      if StateVerification.Enabled || Application.VerifyState { return false }
+      Application.VerifyState = true
+      return StateVerification.Enabled
+    } finally { StateVerification.Override = previous }
+  }
+
+  func SingleInstanceRejectsAttachedWindowContract() bool {
+    using let host = ElementHandleEmbeddedHost()
+    let window = Window{}
+    let previous = Application.HasOpenedWindow
+    Application.HasOpenedWindow = false
+    try {
+      window.Attach(host)
+      try {
+        let result = Application.AcquireSingleInstance([]string{})
+        result.Lease?.Dispose()
+        return false
+      } catch (error InvalidOperationException) {
+        return error.Message == "Acquire a single instance before opening the first window"
+      }
+    } finally {
+      window.Close()
+      Application.HasOpenedWindow = previous
+    }
+  }
+
   func InitialBoundsContract() bool {
     let usable = ElementRect{ X: -1366, Y: 24, Width: 1366, Height: 720 }
     let oversized = SdlHost.ConstrainInitialBounds(ElementRect{ Width: 1824, Height: 1026 }, 0, 0, false, usable)

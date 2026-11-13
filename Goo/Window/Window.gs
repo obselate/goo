@@ -7,7 +7,7 @@ import System.Numerics
 /// Identifies the requested state of a window.
 public enum WindowState { Normal; Minimized; Maximized; Fullscreen }
 
-/// Controls how Window.Run schedules frames that have visual demand.
+/// Controls how Application.Run schedules frames that have visual demand.
 public enum WindowFramePacing { Display; Uncapped }
 
 /// Identifies input received by a window before routing.
@@ -268,7 +268,7 @@ public partial class Window {
   internal prop DiagnosticsSession DevToolsSession? { get -> diagnosticsSession }
   /// Gets or sets per-window GPU presentation synchronization.
   /// True selects FIFO. False prefers Immediate, then Mailbox, then FIFO on every device.
-  /// Window.Run pacing is controlled separately by FramePacing.
+  /// Application.Run pacing is controlled separately by FramePacing.
   public prop VSync bool{
     get -> vsync
     set(v) {
@@ -284,7 +284,7 @@ public partial class Window {
     }
   }
 
-  /// Gets or sets the frame pacing used by Window.Run. Uncapped still honors
+  /// Gets or sets the frame pacing used by Application.Run. Uncapped still honors
   /// GPU queue readiness and the selected presentation mode.
   public prop FramePacing WindowFramePacing{
     get -> framePacing

@@ -52,9 +52,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       let driver = SDL.GetCurrentVideoDriverS()
       occlusionSupported = driver == "wayland" || driver == "cocoa" || driver == "x11"
       try {
-        if !SdlRuntime.AcquireVulkan() {
-          ThrowSdl("SDL_Vulkan_LoadLibrary")
-        }
+        SdlRuntime.AcquireVulkan()
         vulkanOwned = true
         if let parent = popupParent {
           CreatePopup(parent, width, height, popupKind, popupTimestamp, popupAnchor, popupPlacement, popupScale)
@@ -323,9 +321,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       VisibilityChanged?.Invoke()
       return WindowOperationResult.Accepted
     }
-    if OperatingSystem.IsLinux() && Window.CurrentActivationToken != nil {
+    if OperatingSystem.IsLinux() && Application.CurrentActivationToken != nil {
       if !SDL.SetStringProperty(SDL.GetWindowProperties(window), "Goo.Wayland.ActivationToken.1",
-        Window.CurrentActivationToken!!) { return WindowOperationResult.Failed }
+        Application.CurrentActivationToken!!) { return WindowOperationResult.Failed }
     }
     if deferFirstShow {
       firstShowRequested = true

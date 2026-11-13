@@ -5,7 +5,7 @@ Source: [`Goo/Window`](https://github.com/obselate/goo/tree/main/Goo/Window)
 ## Open a window
 
 ```gsharp
-Window{Root: Cell{}}.Run()
+Application.Run(Window{Root: Cell{}})
 ```
 
 ## Native library loading
@@ -57,27 +57,26 @@ content within the window, use `Style.ShaderEffect`.
 
 ```gs
 let window = Window{}
-Window.ApplicationActivated += activation -> {
+Application.Activated += activation -> {
     if activation.Kind == ApplicationActivationKind.OpenUri {
         window.Title = activation.Target!!.AbsoluteUri
     }
 }
-let status = Window.InitializeApplicationActivation(
-    ApplicationActivation{IsInitial: true})
+Application.Run(window)
 ```
 
-Subscribe before opening the first window. Check the returned status.
+Call `Application.Configure` before startup. Use `Application.AcquireSingleInstance(arguments)` before `Run` when the app needs one primary instance. Keep its primary lease until shutdown.
 
 - One process event reaches the UI thread during `Pump`, an embedded frame or `Run`.
 - The app chooses the target window and validates notification data.
-- `PostApplicationActivation` copies requests from any thread.
+- `Application.PostActivation` copies requests from any thread.
 - Arguments keep their boundaries, empty values and sender directory.
 - Documents remain URIs, including Android `content:` values.
 - A document URI does not grant access to its data.
 - An initial native request replaces a sole pending synthetic Launch.
 - Other requests use FIFO order, with callback posts deferred to the next batch.
 - Closing the last window clears pending requests.
-- The same owner thread can initialize a new delivery lifetime.
+- Requests wait until an activation handler is added.
 - Hosts and optional packages own native associations, IPC and notifications.
 - macOS cold and warm file or URL opens use this event.
 - Native document batches stay separate from drag/drop into a window.
@@ -86,7 +85,7 @@ Subscribe before opening the first window. Check the returned status.
 | Post status | Meaning |
 | --- | --- |
 | Accepted | The queue owns the request. |
-| NotInitialized | Call InitializeApplicationActivation first. |
+| NotInitialized | Call `Application.AcquireSingleInstance` or `Application.Run` first. |
 | Closed | All windows closed. |
 | QueueFull | 1024 requests are pending. |
 | TooLarge | More than 4096 arguments or documents, 64 KiB per UTF-8 string, or 1 MiB total text. |
@@ -259,7 +258,7 @@ let dialog = Window{
     Modal: true,
     Root: SettingsCell{}
 }.Open()
-owner.Run()
+Application.Run(owner)
 ```
 
 `Owner` and `Modal` cannot change while open. One direct modal child may be open
@@ -336,7 +335,7 @@ Equal snapshots do not notify. A listener added after another listener has alrea
 ## Frame pacing and manual capture
 
 `VSync` selects the preferred native presentation mode. `FramePacing` separately
-controls `Window.Run`: `Display` is the default and `Uncapped` schedules demanded
+controls `Application.Run`: `Display` is the default and `Uncapped` schedules demanded
 frames as soon as the native queue is ready. Uncapped mode does not override a
 compositor's presentation policy or render hidden and unavailable windows.
 
@@ -472,7 +471,7 @@ Closing the owner cancels pending pages.
 
 See the [render and diff commands](../devtools/cli.md) for options.
 
-`goo render` builds a project or runs an existing executable. `Window.Run` uses
+`goo render` builds a project or runs an existing executable. `Application.Run` uses
 `OffscreenRenderSession` without opening a window. No display or compositor is needed.
 Size defaults to the declared window size. Scale sets pixels per layout unit and
 the device-pixel grid used to round layout. Theme sets `Window.Preferences.Theme`.
@@ -483,10 +482,12 @@ app services or advance app animations.
 Register named states in the window initializer:
 
 ```gsharp
-Window{
-    Root: Counter(),
-    Scenes: Dictionary[string, Func[Cell]]{["default"] = () -> Counter(), ["incremented"] = () -> Counter(5)}
-}.Run()
+Application.Run(
+    Window{
+        Root: Counter(),
+        Scenes: Dictionary[string, Func[Cell]]{["default"] = () -> Counter(), ["incremented"] = () -> Counter(5)}
+    }
+)
 ```
 
 `Scenes` is a read-only map of names to factories that return fresh, unattached
@@ -538,7 +539,7 @@ let saved = WindowPlacement{
 let window = Window{Root: Cell{}}
 let result = window.ApplyPlacement(saved)
 if result.Status == WindowOperationResult.Accepted {
-    window.Run()
+    Application.Run(window)
 }
 ```
 
@@ -1469,10 +1470,6 @@ Gets a surface-local rectangle in logical pixels, or nil for the whole window. C
 
 Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread.
 
-### `ApplicationActivated`
-
-Occurs once per application activation on the process UI thread, not once per open window. Subscribe before initializing activation. Handlers own validation and window selection. The queue retains 1024 requests, with 4096 arguments or documents per request. Text is limited to 64 KiB per UTF-8 string and 1 MiB per request. Native requests outside these limits, or received before initialization or after close, are dropped.
-
 ### `DisplayChanged`
 
 Occurs on the UI thread when this window changes display or native display scale.
@@ -1570,14 +1567,6 @@ Captures normal client bounds and restorable state from the open native window. 
 
 Returns: Accepted with owned placement, Closed without an open window, or an explicit host failure.
 
-### `ConfigureApplication(string,string,string)`
-
-Configures process-wide application identity before SDL initialization.
-
-- `name`: human-readable application name
-- `version`: application version
-- `identifier`: unique reverse-domain identifier
-
 ### `CreateOffscreenSession`
 
 Creates a renderer lease from an open window. Returns NotReady before Open or after close. The lease does not require the window's presentation surface to remain attached. Pages complete in the window loop without calling Service while the window is open.
@@ -1609,14 +1598,6 @@ Gets an immutable snapshot of the current host's displays. Open the window first
 ### `Hide`
 
 Hides an open desktop window and cancels transient input without destroying its tree. Releases the swapchain and clip atlas after pending GPU work completes. Show recreates them. Modal windows and owners blocked by a modal child or chooser cannot be hidden. Visibility and input change immediately. Regular desktop unmapping can be deferred until pending queue calls complete.
-
-### `InitializeApplicationActivation(ApplicationActivation)`
-
-Binds activation to the current UI thread and retains the initial request until a window pumps. Call before opening the first desktop window or from the embedded host's owner thread. After all windows close, the same owner thread may initialize a new delivery lifetime.
-
-- `initial`: The initial request, copied with its IsInitial value unchanged.
-
-Returns: Accepted when retained, or Failed when the request exceeds the activation data limits.
 
 ### `MeasureText(string,Style)`
 
@@ -1654,14 +1635,6 @@ Attempts to queue an action for the UI thread. A successful enqueue can still be
 
 Returns: True when the action was accepted into the queue.
 
-### `PostApplicationActivation(ApplicationActivation)`
-
-Copies and queues a request from any thread for the process-wide activation event. Accepted confirms queue ownership, not handler completion, document access, or focus. Requests allow 4096 arguments and documents each, 64 KiB per UTF-8 string and 1 MiB total text.
-
-- `value`: The owned request data to copy. Relative URIs and null values are invalid arguments.
-
-Returns: Accepted, NotInitialized, Closed, QueueFull at 1024 pending requests, or TooLarge.
-
 ### `Pump(float64)`
 
 Processes one frame with the specified elapsed time.
@@ -1694,10 +1667,6 @@ Reuses a previous capture's caller-owned pixels when its size matches. Do not ac
 ### `RequestClose`
 
 Queues an idempotent close request. This is safe from any thread.
-
-### `Run`
-
-Opens the window and processes frames until all open Goo windows close.
 
 ### `SetColors(Color,Color)`
 
@@ -1809,7 +1778,7 @@ Gets or sets a portal parent identifier before Open, such as wayland: followed b
 
 ### `FramePacing`
 
-Gets or sets the frame pacing used by Window.Run. Uncapped still honors GPU queue readiness and the selected presentation mode.
+Gets or sets the frame pacing used by Application.Run. Uncapped still honors GPU queue readiness and the selected presentation mode.
 
 ### `FrameTheme`
 
@@ -1981,7 +1950,7 @@ Gets or sets the layout and rendering scale, clamped to 0.5 through 3. The defau
 
 ### `VSync`
 
-Gets or sets per-window GPU presentation synchronization. True selects FIFO. False prefers Immediate, then Mailbox, then FIFO on every device. Window.Run pacing is controlled separately by FramePacing.
+Gets or sets per-window GPU presentation synchronization. True selects FIFO. False prefers Immediate, then Mailbox, then FIFO on every device. Application.Run pacing is controlled separately by FramePacing.
 
 ### `WaylandBackdrop`
 
@@ -2187,7 +2156,7 @@ Identifies one SDL display in the current process. The value can become stale af
 ## `WindowFramePacing`
 
 
-Controls how Window.Run schedules frames that have visual demand.
+Controls how Application.Run schedules frames that have visual demand.
 
 ### Values
 
