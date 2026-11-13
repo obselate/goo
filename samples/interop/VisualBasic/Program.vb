@@ -9,7 +9,7 @@ Imports Goo.Widgets.Layout
 Module Program
     Sub Main(args As String())
         Dim sample = If(args.FirstOrDefault(), "counter")
-        Dim window = New Window With {.Title = "VB interop", .Width = 640, .Height = 480, .Root = New Examples(sample)}
+        Dim window = New Window With {.Title = "VB interop", .Size = New LayoutSize(640, 480), .Root = New Examples(sample)}
         Dim focused As Action(Of Boolean) = Sub(value) Console.WriteLine($"Focused: {value}")
         AddHandler window.FocusChanged, focused
         RemoveHandler window.FocusChanged, focused

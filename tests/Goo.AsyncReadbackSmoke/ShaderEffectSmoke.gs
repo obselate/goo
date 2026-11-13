@@ -192,8 +192,7 @@ func RunShaderEffectSmoke() {
   try {
     let opened = Window{
       Title: "Goo Shader effect gate",
-      Width: 192,
-      Height: 128,
+      Size: LayoutSize(192, 128),
       VSync: false,
       Root: cell,
     }
@@ -342,8 +341,7 @@ func RunShaderEffectSmoke() {
         && finalBounds.Height == initialBounds.Height,
       "Shader effect changed control layout")
 
-    opened.Width = 176
-    opened.Height = 120
+    opened.Size = LayoutSize(176, 120)
     var resizeAttempt int32
     var resizedMetrics = WindowReadbackTestFixture.Metrics(opened)
     while (resizedMetrics.LogicalWidth != 176 || resizedMetrics.LogicalHeight != 120)

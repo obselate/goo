@@ -147,8 +147,7 @@ func RunPortalCaptureSmoke() {
     let cell = PortalCaptureCell{}
     let opened = Window{
       Title: "Goo Portal capture gate",
-      Width: 280,
-      Height: 180,
+      Size: LayoutSize(280, 180),
       VSync: false,
       Root: cell,
     }
@@ -266,7 +265,7 @@ func RequireWindowColorInk(frame VulkanReadbackResult, metrics WindowMetrics,
 
 func RunWindowColorCaptureSmoke() {
   let cell = WindowColorCaptureCell{}
-  let window = Window{Title: "Goo window color pair", Width: 180, Height: 140,
+  let window = Window{Title: "Goo window color pair", Size: LayoutSize(180, 140),
     VSync: false, Root: cell}
   try {
     window.Open()
@@ -304,7 +303,7 @@ func RunWindowColorCaptureSmoke() {
 
 func RunUiScaleTextCaptureSmoke() {
   let cell = WindowColorCaptureCell{Replace: true}
-  let window = Window{Title: "Goo UI scale text", Width: 240, Height: 120,
+  let window = Window{Title: "Goo UI scale text", Size: LayoutSize(float64(240) / 1.25, float64(120) / 1.25),
     UiScale: 1.25F, VSync: false, Root: cell}
   try {
     window.Open()

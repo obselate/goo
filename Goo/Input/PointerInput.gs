@@ -911,13 +911,17 @@ internal partial class PointerInput {
           FollowCaret(entry)
           text.RefreshInputArea(entry)
           current.DragEntry = entry
-        } else if entry.Kind == NodeKind.Editor {
+        } else if entry.Kind == NodeKind.Editor || entry.Selectable {
           let point = TransformGeometry.WindowToNode(entry, x, y)
           if !point.Valid { return false }
           if TextEditorInputAdapter.SelectAt(entry, point.X - entry.Rect.X, point.Y - entry.Rect.Y,
             modifiers.Shift, current.LastPressCount) {
               text.RefreshInputArea(entry)
               current.DragEditor = entry
+              if entry.Selectable {
+                current.DragSelectionOrigin = TextRange(Math.Min(entry.Anchor, entry.Caret),
+                  Math.Abs(entry.Anchor - entry.Caret))
+              }
               if let selected = entry.EditorController?.Selection {
                 current.DragSelectionOrigin = TextRange{
                   Start: Math.Min(selected.Anchor.Offset, selected.Active.Offset),

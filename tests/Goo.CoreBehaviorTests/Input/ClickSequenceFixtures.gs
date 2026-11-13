@@ -5,7 +5,7 @@ import System.Collections.Generic
 
 internal class ClickSequenceFixtures {
   func DragRegionIgnoresFocusableAncestorsButPreservesControls() bool {
-    let window = Window{Root: DragRegionHitCell{}, Width: 300, Height: 90, Decorated: false, Resizable: false}
+    let window = Window{Root: DragRegionHitCell{}, Size: LayoutSize(300, 90),  Decorated: false, Resizable: false}
     window.UpdateTree()
     return window.hitTest(10, 30) == WindowHitResult.Draggable
       && window.hitTest(110, 30) == WindowHitResult.Normal
@@ -14,7 +14,7 @@ internal class ClickSequenceFixtures {
   }
 
   func EdgeScrollbarTakesUndecoratedResizeBand() bool {
-    let window = Window{Root: EdgeScrollbarCell{}, Width: 200, Height: 100, Decorated: false, Resizable: true}
+    let window = Window{Root: EdgeScrollbarCell{}, Size: LayoutSize(200, 100),  Decorated: false, Resizable: true}
     window.UpdateTree()
     return window.hitTest(196, 50) == WindowHitResult.Normal
       && window.hitTest(4, 50) == WindowHitResult.Left

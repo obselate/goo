@@ -141,10 +141,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     if clipMaskPipelineLayout == 0uL {
       throw NotSupportedException("Vulkan clip mask pipeline layout is unavailable")
     }
-    let selectedPipeline = primitiveState.ClipMaskPipelineFor(atlas.Format)
-    if selectedPipeline == 0uL {
-      throw NotSupportedException("Vulkan clip mask pipeline is unavailable")
-    }
+    var selectedPipeline VkPipeline = 0uL
     pathDescriptorBound = false
     strokeDescriptorBound = false
     boundDescriptorLayout = 0uL
@@ -158,6 +155,12 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     while maskIndex < frame.ClipMaskCount {
       let region = clipRegions[maskIndex]
       if region.Dirty {
+        if selectedPipeline == 0uL {
+          selectedPipeline = primitiveState.ClipMaskPipelineFor(atlas.Format)
+          if selectedPipeline == 0uL {
+            throw NotSupportedException("Vulkan clip mask pipeline is unavailable")
+          }
+        }
         let dirty = VulkanClipMaskDirtyRegion{
           Key: region.Key,
           Generation: region.Generation,

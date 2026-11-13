@@ -47,7 +47,7 @@ class DevToolsCell : Cell {
 
     internal func AttachWindow(window Window) {
         this.window = window
-        layoutWidth = float64(window.Width) / float64(window.UiScale)
+        layoutWidth = window.Size.Width
         window.MetricsChanged += (metrics WindowMetrics) -> {
             let nextWidth = float64(metrics.LogicalWidth) / float64(metrics.UiScale)
             if nextWidth != layoutWidth {

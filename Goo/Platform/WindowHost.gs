@@ -88,7 +88,7 @@ internal interface WindowHost {
   func SetState(value WindowState);
   func GetDisplays() IReadOnlyList[WindowDisplay];
   func GetCurrentDisplay() WindowDisplay?;
-  func TrySetFullscreenDisplay(display WindowDisplayId) WindowOperationResult;
+  func SetFullscreenDisplay(display WindowDisplayId) WindowOperationResult;
   func CapturePlacement() WindowPlacementResult;
   func ApplyPlacement(value WindowPlacement) WindowPlacementResult;
   func RequestActivation() WindowOperationResult;
@@ -102,8 +102,8 @@ internal interface WindowHost {
   func StartTextInput() bool;
   func StopTextInput();
   func SetImeArea(x int32, y int32, width int32, height int32, cursor int32) bool;
-  func GetClipboardText() string;
-  func SetClipboardText(value string);
+  func GetClipboardText() ClipboardTextResult;
+  func SetClipboardText(value string) ClipboardWriteResult;
   func BeginClose();
   func Dispose();
 }

@@ -88,10 +88,8 @@ class NativeGlassWindow {
             let root = NativeGlassCell{}
             let window = Window{
                 Title: "Goo Ink - native desktop glass",
-                Width: 660,
-                Height: 430,
-                MinWidth: 520,
-                MinHeight: 400,
+                Size: LayoutSize(660, 430),
+                MinSize: LayoutSize(520, 400),
                 Backdrop: WindowBackdrop.Blur,
                 BackdropFallbackColor: "#090b10",
                 Background: Color.Parse("#090b10").WithAlpha(0.78),

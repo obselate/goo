@@ -1144,7 +1144,7 @@ internal class WindowReadbackTestFixture {
         attempts = attempts + 1
         if attempts == 1 { throw InvalidOperationException("injected candidate startup failure") }
       }
-      let window = Window{Title: "Vulkan startup rollback", Width: 64, Height: 64, VSync: false, Root: root}
+      let window = Window{Title: "Vulkan startup rollback", Size: LayoutSize(64, 64),  VSync: false, Root: root}
       try {
         try {
           window.Open()
@@ -1295,7 +1295,7 @@ internal class WindowReadbackTestFixture {
     internal func VerifyPreventedKeyRepeat() {
       let cell = PreventedKeyRepeatCell{}
       let window = Window{
-        Title: "Goo prevented key repeat", Width: 200, Height: 100, Root: cell,
+        Title: "Goo prevented key repeat", Size: LayoutSize(200, 100),  Root: cell,
       }.Open()
       try {
         let ready = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10

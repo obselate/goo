@@ -35,13 +35,13 @@ internal class AndroidClipboardSmoke {
                     representations[i] = TransferRepresentation(Types[i], ReadOnlyMemory[uint8](expected[i]))
                 }
                 let data = TransferData(representations, Array.Empty[Uri]())
-                var result = await view.Window.WriteClipboardAsync(data)
+                var result = await view.Window.Clipboard.WriteAsync(data)
                 Require(result.Status == DataTransferStatus.Success,
                     "MIME write: ${result.Status} ${result.Error}")
-                let formats = view.Window.GetClipboardFormats()
+                let formats = view.Window.Clipboard.GetFormats()
                 Require(formats.Status == ClipboardReadStatus.Success, "Format query: ${formats.Status}")
                 for type in Types { Require(formats.Formats.Contains(type), "Missing MIME format " + type) }
-                let snapshot = await view.Window.ReadClipboardDataAsync(Types)
+                let snapshot = await view.Window.Clipboard.ReadDataAsync(Types)
                 Require(snapshot.Status == ClipboardReadStatus.Success,
                     "MIME read: ${snapshot.Status} ${snapshot.Error}")
                 for item in snapshot.Data.Representations {
@@ -61,18 +61,18 @@ internal class AndroidClipboardSmoke {
                 let reference = Uri(uri.ToString()!!, UriKind.Absolute)
                 await Task.Run(() -> VerifyNative(view.Context!!, uri))
                 let files = TransferData(Array.Empty[TransferRepresentation](), []Uri{reference})
-                result = await view.Window.WriteClipboardAsync(files)
+                result = await view.Window.Clipboard.WriteAsync(files)
                 Require(result.Status == DataTransferStatus.Success, "URI write: ${result.Status} ${result.Error}")
-                let references = await view.Window.ReadClipboardDataAsync([]string{UriList})
+                let references = await view.Window.Clipboard.ReadDataAsync([]string{UriList})
                 Require(references.Status == ClipboardReadStatus.Success && references.Data.Uris.Count == 1
                     && references.Data.Uris[0] == reference, "URI reference changed")
-                let image = await view.Window.ReadClipboardDataAsync([]string{ImageType})
+                let image = await view.Window.Clipboard.ReadDataAsync([]string{ImageType})
                 Require(image.Status == ClipboardReadStatus.Success
                     && image.Data.Representations.Single().Bytes.Span.SequenceEqual(Image),
                     "Referenced image stream was retired")
-                result = await view.Window.WriteClipboardAsync(files, ClipboardIntent.Cut)
+                result = await view.Window.Clipboard.WriteAsync(files, ClipboardIntent.Cut)
                 Require(result.Status == DataTransferStatus.Unsupported, "Android Cut did not report Unsupported")
-                result = await view.Window.WriteClipboardAsync(TransferData(Array.Empty[TransferRepresentation](),
+                result = await view.Window.Clipboard.WriteAsync(TransferData(Array.Empty[TransferRepresentation](),
                     []Uri{Uri("file:///clipboard-check.png")}))
                 Require(result.Status == DataTransferStatus.Unsupported,
                     "A filesystem path was accepted as an Android document")
@@ -82,10 +82,10 @@ internal class AndroidClipboardSmoke {
                 Array.Fill(metadata, uint8('a'))
                 let inline = TransferRepresentation("text/html", ReadOnlyMemory[uint8](metadata))
                 Require(inline.Bytes.Length == InlineBytes, "Inline metadata fixture was not retained")
-                result = await view.Window.WriteClipboardAsync(TransferData([]TransferRepresentation{inline}, repeated))
+                result = await view.Window.Clipboard.WriteAsync(TransferData([]TransferRepresentation{inline}, repeated))
                 Require(result.Status == DataTransferStatus.TooLarge,
                     "Large Binder metadata: ${result.Status} ${result.Error}")
-                result = await view.Window.WriteClipboardAsync(data)
+                result = await view.Window.Clipboard.WriteAsync(data)
                 Require(result.Status == DataTransferStatus.Success,
                     "Final MIME write: ${result.Status} ${result.Error}")
                 cast[IDisposable](view).Dispose()

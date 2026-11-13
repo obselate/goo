@@ -240,6 +240,10 @@ internal func sameStyleEntry(left StyleEntry, right StyleEntry) bool {
     return binding.Same(right.Payload as PaintBinding?)
   }
   if right.Payload is PaintBinding { return false }
+  if left.Payload is LengthDeclaration || right.Payload is LengthDeclaration {
+    return left.Payload is LengthDeclaration && right.Payload is LengthDeclaration
+      && sameLength((left.Payload as LengthDeclaration)!!.Value, (right.Payload as LengthDeclaration)!!.Value)
+  }
   if left.A != right.A || left.B != right.B || left.C != right.C || left.D != right.D {
     return false
   }

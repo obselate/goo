@@ -13,7 +13,7 @@ public data struct FocusedEditorSnapshot(FocusId int64, Text string, SelectionSt
   public prop InputOptions TextInputOptions? { get; init; }
 }
 
-/// Routes platform events and semantic editing through the window's existing input system.
+/// Routes platform events and composition through the window's existing input system.
 /// Call on the window owner thread. Use Window.Post to dispatch from another thread.
 public class PlatformInput {
   private let owner Window
@@ -27,22 +27,6 @@ public class PlatformInput {
     this.owner = owner
     this.input = input
     this.resolver = resolver
-  }
-
-  /// Gets a current immutable snapshot, or nil when no text editor has focus.
-  public prop Editor FocusedEditorSnapshot? {
-    get {
-      requireThread()
-      return input.EditorSnapshot()
-    }
-  }
-
-  /// Gets the focused editor's effective selection, preserving endpoint affinities, or nil without an editor.
-  public prop Selection TextSelection? {
-    get {
-      requireThread()
-      return input.EditorSelection()
-    }
   }
 
   /// Reports settled focus, text, selection, composition, and caret-area changes.
@@ -166,20 +150,6 @@ public class PlatformInput {
     finally { drain() }
   }
 
-  /// Removes editor focus and cancels transient composition.
-  public func ClearFocus() {
-    requireThread()
-    try { input.ClearEditorFocus(resolver) }
-    finally { finish() }
-  }
-
-  /// Moves focus in the retained focus order, independent of editor indentation.
-  public func MoveFocus(forward bool) bool {
-    requireInput()
-    try { return input.MoveEditorFocus(owner.Tree, resolver, forward) }
-    finally { finish() }
-  }
-
   /// Replaces editor selection or preedit, or delivers text to a focused generic text client.
   public func CommitText(value string) bool {
     requireInput()
@@ -217,35 +187,11 @@ public class PlatformInput {
     finally { finish() }
   }
 
-  /// Selects effective UTF-16 offsets. Goo expands ranges to whole grapheme clusters.
-  /// Selection direction and composing ranges remain independent.
-  public func SetSelection(start int32, end int32) bool {
-    requireInput()
-    try { return input.SetEditorSelection(owner.Tree, start, end) }
-    finally { finish() }
-  }
-
-  /// Selects effective UTF-16 positions while preserving both endpoint affinities.
-  /// Grapheme normalization and composition use the same rules as the offset-only overload.
-  public func SetSelection(selection TextSelection) bool {
-    requireInput()
-    try { return input.SetEditorSelection(owner.Tree, selection) }
-    finally { finish() }
-  }
-
   /// Deletes UTF-16 lengths outside the union of selection and composition, retaining both.
   /// Deletion expands to whole grapheme clusters without committing preedit.
   public func DeleteSurroundingText(beforeLength int32, afterLength int32) bool {
     requireInput()
     try { return input.DeleteEditorSurroundingText(owner.Tree, beforeLength, afterLength) }
-    finally { finish() }
-  }
-
-  /// Executes shared semantic navigation, editing, clipboard, submit, or entry CancelEdit behavior.
-  /// Paste without Text reads the clipboard. Supplied paste text retains Paste interception and undo grouping.
-  public func Execute(command TextCommand) bool {
-    requireInput()
-    try { return input.ExecuteEditorCommand(owner.Tree, resolver, command) }
     finally { finish() }
   }
 
@@ -267,12 +213,12 @@ public class PlatformInput {
     editorChanged?.Invoke(current)
   }
 
-  private func requireThread(flush bool = true) {
+  internal func requireThread(flush bool = true) {
     owner.RequireElementHandleThread("Window.PlatformInput")
     if flush { owner.FlushDeferredVirtualization() }
   }
 
-  private func requireInput(flush bool = true) {
+  internal func requireInput(flush bool = true) {
     requireThread(flush)
     if owner.IsInputBlocked { throw InvalidOperationException("Window input is blocked by its modal child") }
   }
@@ -286,7 +232,7 @@ public class PlatformInput {
     } finally { finish(changed) }
   }
 
-  private func finish(invalidate bool = true) {
+  internal func finish(invalidate bool = true) {
     if input.IsDispatching { return }
     resolver.Flush()
     if invalidate { owner.InvalidatePlatformInput() }

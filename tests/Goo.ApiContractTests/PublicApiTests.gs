@@ -144,7 +144,7 @@ open class PublicApiTests {
                 .GetTypes()
                 .Where(IsPackageContainer)
                 .SelectMany((type Type) -> type.GetMethods(PublicDeclared))
-            for name in[]string{"Percent"} {
+            for name in[]string{"Percent", "Each"} {
                 let method = Assert.Single(packageMethods, (method MethodInfo) -> method.Name == name)
                 records.Add(
                     "function|Goo|$name|${PublicApiTests.Visibility(method)}|generic:${DescribeGenericParameters(method.GetGenericArguments())}|(${DescribeParameters(method.GetParameters())})->${TypeIdentity(method.ReturnType, Nullability.Create(method.ReturnParameter))}"

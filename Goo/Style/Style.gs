@@ -70,7 +70,11 @@ public open class Style {
     addEntry(StyleEntry{ Field: f, A: a, B: b, C: c, D: d })
   }
 
-  internal func pushLength(f StyleField, v Length) { push(f, v.Value, float32(int32(v.Unit)), 0.0F, 0.0F) }
+  internal func pushLength(f StyleField, v Length) {
+    if v.Unit >= LengthUnit.Relative {
+      addEntry(StyleEntry{Field: f, B: float32(int32(v.Unit)), Payload: LengthDeclaration{Value: v}})
+    } else { push(f, v.Value, float32(int32(v.Unit)), 0.0F, 0.0F) }
+  }
   internal func pushColor(f StyleField, v Color) { push(f, v.R, v.G, v.B, v.A) }
   internal func pushScalar(f StyleField, v float64) {
     let packed = float32(v)
@@ -277,16 +281,14 @@ public open class Style {
   /// Sets the bottom-right border radius.
   public prop BorderBottomRightRadius Length{ init -> pushCheckedLength(StyleField.BorderBottomRightRadius, value, "BorderBottomRightRadius", false, false, false) }
   /// Sets box border widths in CSS top, right, bottom, left order.
-  /// A uniform value also sets the Shape stroke width.
   public prop BorderWidth Edges{ init -> pushBorderWidths(value) }
   /// Sets the box border width at the inline start edge.
   public prop BorderStartWidth Length{ init -> pushCheckedLength(StyleField.BorderStartWidth, value, "BorderStartWidth", false, false, false) }
   /// Sets the box border width at the inline end edge.
   public prop BorderEndWidth Length{ init -> pushCheckedLength(StyleField.BorderEndWidth, value, "BorderEndWidth", false, false, false) }
   /// Sets box border colors in CSS top, right, bottom, left order.
-  /// A uniform value also sets the Shape stroke color.
   public prop BorderColor Edges[Color]{ init -> pushBorderColors(value) }
-  /// Binds all border colors, including the Shape stroke.
+  /// Binds all box border colors.
   public prop BorderColorAnim Anim[Color]? {
     init {
       pushPaintColor(StyleField.ShapeStrokeColor, value)
@@ -506,16 +508,27 @@ public open class Style {
         pushLength(field, value)
         return
       }
-      if Double.IsNaN(float64(value.Value)) || Double.IsInfinity(float64(value.Value)) {
+      if !(value.Unit < LengthUnit.Relative ? Single.IsFinite(value.Value) : value.IsFinite) {
         throw ArgumentOutOfRangeException(name)
       }
-      if value.Unit == LengthUnit.Auto && !allowsAuto {
-        throw ArgumentException(name + " does not support auto", name)
+      if value.IsIntrinsic {
+        if field > StyleField.MaxHeight && field != StyleField.FlexBasis {
+          throw ArgumentOutOfRangeException(name)
+        }
+      } else if value.Unit == LengthUnit.Auto && !allowsAuto {
+        throw ArgumentOutOfRangeException(name)
+      } else if value.Unit >= LengthUnit.Relative {
+        if !allowsPercent && (field != StyleField.FontSize || value.PercentPart != 0.0F
+          || value.Unit == LengthUnit.Vw || value.Unit == LengthUnit.Vh
+          || value.VwPart != 0.0F || value.VhPart != 0.0F) { throw ArgumentOutOfRangeException(name) }
+        if !allowsNegative && (value.Unit == LengthUnit.Em && value.EmPart < 0.0F
+          || value.Unit == LengthUnit.Rem && value.RemPart < 0.0F
+          || value.Unit == LengthUnit.Vw && value.VwPart < 0.0F
+          || value.Unit == LengthUnit.Vh && value.VhPart < 0.0F) { throw ArgumentOutOfRangeException(name) }
+      } else if value.Unit == LengthUnit.Percent && !allowsPercent {
+        throw ArgumentOutOfRangeException(name)
       }
-      if value.Unit == LengthUnit.Percent && !allowsPercent {
-        throw ArgumentException(name + " does not support percent", name)
-      }
-      if !allowsNegative && value.Value < 0.0F {
+      if !allowsNegative && value.Unit < LengthUnit.Relative && value.Value < 0.0F {
         throw ArgumentOutOfRangeException(name)
       }
       pushLength(field, value)

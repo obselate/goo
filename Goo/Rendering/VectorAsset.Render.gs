@@ -139,11 +139,13 @@ public sealed class VectorAsset {
 
   internal func PlayerDashValueAt(index int32) float32 -> motion().DashValues[index]
 
-  public func Render(key string?) Blob ->
-  Cell.Mount[VectorAssetRenderInput, VectorAssetDisplayCell](key,
-    VectorAssetRenderInput{ Asset: this, Fit: ShapeFit.Contain })
-
-  public func Render() Blob -> Render(nil)
+  /// Builds a retained display of this document.
+  /// @param fit The fit applied to the document view box. The default is Contain.
+  /// @param key The optional retained display key.
+  /// @returns The vector display declaration.
+  public func Render(fit ShapeFit = ShapeFit.Contain, key string? = nil) Blob ->
+    Cell.Mount[VectorAssetRenderInput, VectorAssetDisplayCell](key,
+      VectorAssetRenderInput{ Asset: this, Fit: fit })
 
   internal func BuildStaticTree() Container -> BuildStaticTree(ShapeFit.Contain)
 
@@ -227,32 +229,17 @@ public sealed class VectorAsset {
     fit ShapeFit) {
       guard let paint = node.Fill else { return }
       if node.Path.CommandCount == 0 { return }
-      let shape = if let gradient = paint.Gradient {
-        Shape{
-          Key: "fill-" + index.ToString(),
-          Path: node.Path,
-          Fit: fit,
-          FillRule: node.FillRule,
-          Width: Percent(100.0),
-          Height: Percent(100.0),
-          Position: PositionType.Absolute,
-          Left: 0.0,
-          Top: 0.0,
-          BackgroundGradient: gradient,
-        }
-      } else {
-        Shape{
-          Key: "fill-" + index.ToString(),
-          Path: node.Path,
-          Fit: fit,
-          FillRule: node.FillRule,
-          Width: Percent(100.0),
-          Height: Percent(100.0),
-          Position: PositionType.Absolute,
-          Left: 0.0,
-          Top: 0.0,
-          BackgroundColor: paint.Color,
-        }
+      let shape = Shape{
+        Key: "fill-" + index.ToString(),
+        Path: node.Path,
+        Fit: fit,
+        FillRule: node.FillRule,
+        Width: Percent(100.0),
+        Height: Percent(100.0),
+        Position: PositionType.Absolute,
+        Left: 0.0,
+        Top: 0.0,
+        Fill: paint,
       }
       result.Children.Add(shape)
     }
@@ -281,30 +268,20 @@ public sealed class VectorAsset {
       if node.Path.CommandCount == 0 || !visible {
         return
       }
-      guard let gradient = stroke.Paint.Gradient else {
-        let shape = Shape{
-          Key: "stroke-" + index.ToString(),
-          Path: node.Path,
-          Fit: fit,
-          FillRule: node.FillRule,
-          StrokeCap: stroke.Cap,
-          StrokeJoin: stroke.Join,
-          VectorEffect: stroke.VectorEffect,
-          MiterLimit: stroke.MiterLimit,
-          Dashes: stroke.Dashes,
-          BorderWidth: stroke.Width,
-          BorderColor: stroke.Paint.Color,
-          Width: Percent(100.0),
-          Height: Percent(100.0),
-          Position: PositionType.Absolute,
-          Left: 0.0,
-          Top: 0.0,
-          BackgroundColor: Color.Transparent,
-          StrokeInset: false,
-        }
-        result.Children.Add(shape)
-        return
+      let shape = Shape{
+        Key: "stroke-" + index.ToString(),
+        Path: node.Path,
+        Fit: fit,
+        FillRule: node.FillRule,
+        Stroke: stroke,
+        Width: Percent(100.0),
+        Height: Percent(100.0),
+        Position: PositionType.Absolute,
+        Left: 0.0,
+        Top: 0.0,
+        StrokeInset: false,
       }
+      result.Children.Add(shape)
     }
 
   private func WrapClip(index int32, content Container, fit ShapeFit,

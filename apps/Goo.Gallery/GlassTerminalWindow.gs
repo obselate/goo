@@ -674,8 +674,7 @@ public class GlassTerminalWindow {
             let cell = GlassTerminalCell(effect)
             let window = Window{
                 Title: "Glass Terminal",
-                Width: 960,
-                Height: 600,
+                Size: LayoutSize(960, 600),
                 Decorated: false,
                 Transparent: true,
                 Resizable: true,
