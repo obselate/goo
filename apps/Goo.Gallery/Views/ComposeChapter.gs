@@ -294,18 +294,18 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
             MinHeight: 0,
             FlexDirection: FlexDirection.Column,
             Gap: 14,
-            Cell.Mount[GalleryRange](
+            Cell.Mount[GalleryRangeInput, GalleryRange](
                 "poster-width",
-                func (slider GalleryRange) {
-                    slider.Label = "Poster width"
-                    slider.MinValue = 380.0
-                    slider.MaxValue = 1120.0
-                    slider.Value = posterWidth
-                    slider.Step = 10.0
-                    slider.OnChange = (value float64) -> {
+                GalleryRangeInput{
+                    Label: "Poster width",
+                    MinValue: 380.0,
+                    MaxValue: 1120.0,
+                    Value: posterWidth,
+                    Step: 10.0,
+                    OnChange: (value float64) -> {
                         posterWidth = value
                         Rebuild()
-                    }
+                    },
                 }
             ),
             Container{

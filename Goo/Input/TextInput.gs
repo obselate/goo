@@ -41,6 +41,7 @@ internal partial class TextInput {
   }
 
   private func beforeBlur(n Node) {
+    if n.Selectable { SelectableText.Set(n, 0, 0) }
     if let history = n.EntryHistory { history.Typing = false }
     cancelEntryComposition(n)
     blurEditor(n)
@@ -421,7 +422,7 @@ internal partial class TextInput {
     try {
       if let native = host {
         let result = native.GetClipboardText()
-        if result.Status != ClipboardTextStatus.Success && result.Status != ClipboardTextStatus.Empty {
+        if result.Status != ClipboardReadStatus.Success && result.Status != ClipboardReadStatus.Empty {
           Console.Error.WriteLine("Goo clipboard read failed: " + result.Error)
         }
         return result.Text

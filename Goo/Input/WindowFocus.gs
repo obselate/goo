@@ -1,11 +1,16 @@
 package Goo
 
+import System
+
 /// Provides owner-thread focus state, selection, and text commands for one window.
 /// Getter reads in Build and retained builders subscribe to changes.
-public sealed class WindowFocus {
+public class WindowFocus {
   private let owner Window
   private let input InputCoordinator
   private let resolver Resolver
+  private var published FocusedEditorSnapshot?
+  private var publishedSelection TextSelection?
+  private var editorChanged Action[FocusedEditorSnapshot?]?
 
   internal init(owner Window, input InputCoordinator, resolver Resolver) {
     this.owner = owner
@@ -34,6 +39,18 @@ public sealed class WindowFocus {
     get {
       owner.PlatformInput.requireThread()
       return owner.TrackWindowValue(&owner.trackedSelection, input.EditorSelection())
+    }
+  }
+
+  /// Reports settled focus, text, selection, composition, and caret-area changes.
+  public event EditorChanged Action[FocusedEditorSnapshot?]{
+    add{
+      owner.PlatformInput.requireThread()
+      editorChanged = Delegate.Combine(editorChanged, value) as Action[FocusedEditorSnapshot?]?
+    }
+    remove{
+      owner.PlatformInput.requireThread()
+      editorChanged = Delegate.Remove(editorChanged, value) as Action[FocusedEditorSnapshot?]?
     }
   }
 
@@ -73,6 +90,25 @@ public sealed class WindowFocus {
     owner.PlatformInput.requireThread()
     try { input.ClearEditorFocus(resolver) }
     finally { owner.PlatformInput.finish() }
+  }
+
+  internal func Refresh() {
+    if input.IsDispatching { return }
+    let current = input.EditorSnapshot()
+    let selection = input.EditorSelection()
+    owner.SyncWindowFocus(current, selection)
+    var selectionChanged = (publishedSelection == nil) != (selection == nil)
+    if let prior = publishedSelection, let next = selection {
+      selectionChanged = prior.Anchor.Offset != next.Anchor.Offset || prior.Active.Offset != next.Active.Offset
+        || prior.Anchor.Affinity != next.Anchor.Affinity || prior.Active.Affinity != next.Active.Affinity
+    }
+    if published == nil && current == nil { return }
+    if let prior = published, let next = current {
+      if prior.Equals(next) && !selectionChanged && prior.InputOptions == next.InputOptions { return }
+    }
+    published = current
+    publishedSelection = selection
+    editorChanged?.Invoke(current)
   }
 
   shared {

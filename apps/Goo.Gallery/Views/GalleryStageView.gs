@@ -13,13 +13,9 @@ internal class GalleryStageView {
             window Window?
         ) Blob {
             if currentShowcase == 0 {
-                return Cell.Mount[HeroCell](
+                return Cell.Mount[HeroInput, HeroCell](
                     "showcase-hero",
-                    (c HeroCell) -> {
-                        c.Programs = programs
-                        c.Compact = compact
-                        c.Active = true
-                    }
+                    HeroInput{Programs: programs, Compact: compact, Active: true}
                 )
             }
             let showcase = catalog.Showcases[currentShowcase]
@@ -29,24 +25,24 @@ internal class GalleryStageView {
                     ComposeChapterInput{Showcase: showcase.Local, Window: window}
                 )
                 case 1: Container{Key: "showcase-surfaces-placeholder", Display: Display.None}
-                case 2: Cell.Mount[MotionChapter](
+                case 2: Cell.Mount[MotionChapterInput, MotionChapter](
                     "showcase-motion",
-                    (c MotionChapter) -> {
-                        c.Assets = assets
-                        c.Programs = programs
-                        c.Compact = compact
-                        c.Showcase = showcase.Local
-                        c.Active = true
+                    MotionChapterInput{
+                        Assets: assets,
+                        Programs: programs,
+                        Compact: compact,
+                        Showcase: showcase.Local,
+                        Active: true
                     }
                 )
-                case 3: Cell.Mount[ShaderLabCell](
+                case 3: Cell.Mount[ShaderLabInput, ShaderLabCell](
                     "showcase-shaders",
-                    (c ShaderLabCell) -> {
-                        c.Assets = assets
-                        c.Programs = programs
-                        c.Compact = false
-                        c.Showcase = showcase.Local
-                        c.Active = true
+                    ShaderLabInput{
+                        Assets: assets,
+                        Programs: programs,
+                        Compact: false,
+                        Showcase: showcase.Local,
+                        Active: true
                     }
                 )
                 default: Container{Key: "showcase-empty", Display: Display.None}
@@ -85,12 +81,9 @@ internal class GalleryStageView {
                     Bottom: 0,
                     AlignItems: AlignItems.Center,
                     JustifyContent: JustifyContent.Center,
-                    Cell.Mount[StateSurfacesChapter](
+                    Cell.Mount[StateSurfacesInput, StateSurfacesChapter](
                         "showcase-surfaces",
-                        (c StateSurfacesChapter) -> {
-                            c.Compact = compact
-                            c.Active = surfacesActive
-                        }
+                        StateSurfacesInput{Compact: compact, Active: surfacesActive}
                     ),
                 },
                 Container{

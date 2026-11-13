@@ -5,7 +5,23 @@ import System
 import System.Collections.Generic
 import System.Numerics
 
-class MotionChapter : Cell {
+internal data struct MotionChapterInput {
+    var Assets GalleryMathAssets?
+    var Programs GalleryShaderPrograms?
+    var Compact bool
+    var Showcase int32
+    var Active bool
+}
+
+class MotionChapter : Cell[MotionChapterInput] {
+    protected override func InputChanged(input MotionChapterInput) {
+        Assets = input.Assets
+        Programs = input.Programs
+        Compact = input.Compact
+        Showcase = input.Showcase
+        Active = input.Active
+    }
+
     /// Gets or sets the pre-generated mathematical vector and image assets.
     public var Assets GalleryMathAssets?
     /// Gets or sets the compiled shader program suite.

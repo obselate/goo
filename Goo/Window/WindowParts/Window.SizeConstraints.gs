@@ -47,7 +47,8 @@ public partial class Window {
   }
 
   /// Measures the selected root axes once before the first map, within MaxSize and the display work area and at least MinSize.
-  /// A root axis declared as a percentage keeps Size on that axis. Later resizing belongs to the user.
+  /// A root axis with a percentage or viewport-relative part keeps Size on that axis.
+  /// Descendant viewport units use the declared Size during this measure. Later resizing belongs to the user.
   public prop SizeToContent SizeToContent{ get; init; }
 
   private func validateSizeLimit(value float64, other float64, minimum bool) {
@@ -80,10 +81,18 @@ public partial class Window {
     UpdateTree()
     guard let tree = node else { return }
     guard let yoga = tree.Yoga else { return }
+    var dependsOnWidth = tree.Width.Unit == LengthUnit.Percent
+    var dependsOnHeight = tree.Height.Unit == LengthUnit.Percent
+    if let declarations = LengthDeclarations.Get(tree) {
+      for entry in declarations.Values {
+        if entry.Field == StyleField.Width { dependsOnWidth = entry.Value.DependsOnContainer }
+        if entry.Field == StyleField.Height { dependsOnHeight = entry.Value.DependsOnContainer }
+      }
+    }
     let measureWidth = (SizeToContent == SizeToContent.Width || SizeToContent == SizeToContent.Both)
-      && tree.Width.Unit != LengthUnit.Percent
+      && !dependsOnWidth
     let measureHeight = (SizeToContent == SizeToContent.Height || SizeToContent == SizeToContent.Both)
-      && tree.Height.Unit != LengthUnit.Percent
+      && !dependsOnHeight
     if !measureWidth && !measureHeight { return }
     let display = native.GetCurrentDisplay()
     let area = display?.UsableBounds ?? display?.Bounds

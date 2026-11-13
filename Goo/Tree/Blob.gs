@@ -59,26 +59,26 @@ public open class Blob : Style {
     }
   }
   /// Gets or sets the name without replacing other accessibility fields.
-  /// A later Accessibility declaration replaces all fields.
-  public prop AccessibilityName string? {
-    get -> Accessibility?.Name
+  /// An empty name is the default and leaves an absent declaration unset. A later Accessibility declaration replaces all fields.
+  public prop AccessibilityName string {
+    get -> Accessibility?.Name ?? ""
     init {
       if let declaration = Accessibility {
-        Accessibility = Goo.Accessibility{...declaration, Name: value ?? ""}
-      } else {
-        Accessibility = Goo.Accessibility{Name: value ?? ""}
+        Accessibility = Goo.Accessibility{...declaration, Name: value}
+      } else if value != "" {
+        Accessibility = Goo.Accessibility{Name: value}
       }
     }
   }
   /// Gets or sets the role without replacing other accessibility fields.
-  /// Nil restores the automatic role. A later Accessibility declaration replaces all fields.
-  public prop AccessibilityRole Goo.AccessibilityRole? {
-    get -> Accessibility?.Role
+  /// Auto is the default and leaves an absent declaration unset. A later Accessibility declaration replaces all fields.
+  public prop AccessibilityRole Goo.AccessibilityRole {
+    get -> Accessibility?.Role ?? Goo.AccessibilityRole.Auto
     init {
       if let declaration = Accessibility {
-        Accessibility = Goo.Accessibility{...declaration, Role: value ?? Goo.AccessibilityRole.Auto}
-      } else {
-        Accessibility = Goo.Accessibility{Role: value ?? Goo.AccessibilityRole.Auto}
+        Accessibility = Goo.Accessibility{...declaration, Role: value}
+      } else if value != Goo.AccessibilityRole.Auto {
+        Accessibility = Goo.Accessibility{Role: value}
       }
     }
   }
@@ -102,12 +102,14 @@ public open class Blob : Style {
   /// Gets the callback that receives pointer cancellation.
   public prop OnPointerCancel((PointerEvent) -> void)? { get; init; }
   /// Gets the callback for a captured primary-pointer drag. Hover does not invoke it.
-  /// Touch drags capture on press and can prevent enclosing scroll containers from claiming the contact.
+  /// Touch drags wait for movement in PointerDragAxis. An enclosing scroller claims movement along its scroll axis first.
+  /// After a drag starts, the press does not produce OnClick.
   public prop OnPointerDrag((PointerDragEvent) -> void)? { get; init; }
-  /// Gets the press-to-start distance in logical window units. Zero starts on press.
+  /// Gets the Euclidean press-to-start distance in layout units, measured on PointerDragAxis.
+  /// Zero starts on press for mouse and pen, or on the first nonzero touch movement.
   public prop PointerDragThreshold float64 { get; init; }
-  /// Gets the axis measured by the threshold. Off-axis movement alone does not start a drag.
-  public prop PointerDragAxis Goo.Gestures.PanAxis { get; init; }
+  /// Gets the axis measured by the threshold. Nil measures both axes. Off-axis movement alone does not start a drag.
+  public prop PointerDragAxis LayoutAxis? { get; init; }
   /// Gets the non-bubbling lifecycle callback after this element enters the mouse hover route.
   public prop OnPointerEnter((PointerEvent) -> void)? {
     get -> InputCallbacks.BlobPointerEnter(this)

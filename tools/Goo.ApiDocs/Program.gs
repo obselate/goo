@@ -142,7 +142,7 @@ func AppendShaderEffectGuide(text StringBuilder) {
     text.AppendLine("let program = ShaderEffectProgram.Load(path)")
     text.AppendLine("let effect = ShaderEffect(program,")
     text.AppendLine("  samplesBackdrop: true,")
-    text.AppendLine("  backdropOutset: 24.0F)")
+    text.AppendLine("  backdropOutset: 24.0)")
     text.AppendLine("effect.SetParameter(0, Vector4(0.18F, 0.65F, 0.9F, 1.0F))")
     text.AppendLine("let data = ShaderEffectData(BitConverter.GetBytes(1.0F))")
     text.AppendLine("effect.SetData(0, data)")

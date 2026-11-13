@@ -242,11 +242,11 @@ Gets the platform-neutral accessibility declaration for this element.
 
 ### `AccessibilityName`
 
-Gets or sets the name without replacing other accessibility fields. A later Accessibility declaration replaces all fields.
+Gets or sets the name without replacing other accessibility fields. An empty name is the default and leaves an absent declaration unset. A later Accessibility declaration replaces all fields.
 
 ### `AccessibilityRole`
 
-Gets or sets the role without replacing other accessibility fields. Nil restores the automatic role. A later Accessibility declaration replaces all fields.
+Gets or sets the role without replacing other accessibility fields. Auto is the default and leaves an absent declaration unset. A later Accessibility declaration replaces all fields.
 
 ### `ActiveStyle`
 
@@ -338,7 +338,7 @@ Gets the callback that receives each pointer button press.
 
 ### `OnPointerDrag`
 
-Gets the callback for a captured primary-pointer drag. Hover does not invoke it. Touch drags capture on press and can prevent enclosing scroll containers from claiming the contact.
+Gets the callback for a captured primary-pointer drag. Hover does not invoke it. Touch drags wait for movement in PointerDragAxis. An enclosing scroller claims movement along its scroll axis first. After a drag starts, the press does not produce OnClick.
 
 ### `OnPointerEnter`
 
@@ -378,11 +378,11 @@ Gets the callback that receives pointer wheel movement.
 
 ### `PointerDragAxis`
 
-Gets the axis measured by the threshold. Off-axis movement alone does not start a drag.
+Gets the axis measured by the threshold. Nil measures both axes. Off-axis movement alone does not start a drag.
 
 ### `PointerDragThreshold`
 
-Gets the press-to-start distance in logical window units. Zero starts on press.
+Gets the Euclidean press-to-start distance in layout units, measured on PointerDragAxis. Zero starts on press for mouse and pen, or on the first nonzero touch movement.
 
 ### `TabStop`
 
@@ -441,6 +441,10 @@ Adds a child to the ordered child collection.
 ### `Children`
 
 Gets the ordered child collection. Read-only lists are copied.
+
+### `HitTestSelf`
+
+Overrides whether this container participates in pointer hit testing. When omitted, Goo derives the value from authored interaction behavior.
 
 ## `Container`
 
@@ -1153,6 +1157,10 @@ Adds a child to the ordered child collection.
 
 Gets the ordered child collection. Read-only lists are copied.
 
+### `HitTestSelf`
+
+Overrides whether this container participates in pointer hit testing. When omitted, Goo derives the value from authored interaction behavior.
+
 ## `ScrollAlignment`
 
 
@@ -1202,6 +1210,10 @@ Gets the displayed text.
 ### `Selectable`
 
 Gets whether the text supports selection and copy without editing or a caret.
+
+### `SelectionColor`
+
+Gets the selection highlight color.
 
 ### `StyleRanges`
 

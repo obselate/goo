@@ -73,21 +73,11 @@ public partial class Window {
     }
   }
 
-  /// Gets or sets the requested desktop topmost preference.
-  /// Unsupported hosts retain the request without changing native stacking.
-  /// Desktop policy controls the final stacking order.
+  /// Gets or initializes the desktop topmost preference before Open.
+  /// Use SetTopmost to change it at runtime. Desktop policy controls the final stacking order.
   public prop Topmost bool {
     get -> ReadUntrackedWindowValue(topmost)
-    set(value) {
-      requireUiThread("Window.Topmost")
-      if topmost == value { return }
-      if let native = host {
-        if (native.Capabilities & WindowCapabilities.Topmost) != WindowCapabilities.None {
-          native.SetTopmost(value)
-        }
-      }
-      topmost = value
-    }
+    init -> topmost = value
   }
 
   /// Attempts to submit a topmost request to the current native host.

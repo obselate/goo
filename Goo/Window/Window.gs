@@ -131,12 +131,12 @@ public data struct WindowMetrics {
   private var framebufferHeight int32
   private var displayScaleX float64
   private var displayScaleY float64
-  private var uiScale float32
+  private var uiScale float64
 
-  /// Gets the reported logical width.
-  public prop LogicalWidth int32{ get -> logicalWidth init -> logicalWidth = value }
-  /// Gets the reported logical height.
-  public prop LogicalHeight int32{ get -> logicalHeight init -> logicalHeight = value }
+  /// Gets the reported native logical width.
+  public prop NativeWidth int32{ get -> logicalWidth init -> logicalWidth = value }
+  /// Gets the reported native logical height.
+  public prop NativeHeight int32{ get -> logicalHeight init -> logicalHeight = value }
   /// Gets the reported framebuffer width.
   public prop FramebufferWidth int32{ get -> framebufferWidth init -> framebufferWidth = value }
   /// Gets the reported framebuffer height.
@@ -146,7 +146,7 @@ public data struct WindowMetrics {
   /// Gets the vertical framebuffer-to-logical scale.
   public prop DisplayScaleY float64{ get -> displayScaleY init -> displayScaleY = value }
   /// Gets the retained UI scale. A default snapshot uses 1.
-  public prop UiScale float32{ get -> uiScale == 0.0F ? 1.0F : uiScale init -> uiScale = value }
+  public prop UiScale float64{ get -> uiScale == 0.0F ? 1.0F : uiScale init -> uiScale = value }
 }
 
 internal struct WindowNotifications {
@@ -447,13 +447,13 @@ public partial class Window {
     }
   }
 
-  /// Gets or sets the undecorated edge resize band in logical pixels.
+  /// Gets or sets the undecorated edge resize band in layout units.
   /// A scrollbar under an edge band takes the pointer. Corners always resize.
-  public prop ResizeBand float32{
+  public prop ResizeBand float64{
     get -> ReadUntrackedWindowValue(resizeBand)
     set(v) {
       requireUiThread("Window.ResizeBand")
-      if !Single.IsFinite(v) || v < 0.0F {
+      if !Double.IsFinite(v) || v < 0.0F {
         throw ArgumentOutOfRangeException("value")
       }
       resizeBand = v
@@ -651,7 +651,7 @@ public partial class Window {
   private var decorated bool
   private var resizable bool
   private var transparent bool
-  private var resizeBand float32
+  private var resizeBand float64
   private var closeRequested int32
   private var postedActions Queue[Action]?
   private var pendingPostedActions int32

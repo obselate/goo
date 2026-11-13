@@ -8,7 +8,7 @@ internal partial class Resolver {
   }
 
   private func ApplyTextScale(n Node) {
-    let scale = Owner?.Preferences.TextScaleFactor ?? 1.0F
+    let scale = float32(Owner?.Preferences.TextScaleFactor ?? 1.0)
     if n.TextScaleFactor == scale { return }
     n.TextScaleFactor = scale
     if n.Kind == NodeKind.Editor { TextEditorLayouts.Invalidate(n) }

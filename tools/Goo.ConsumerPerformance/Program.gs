@@ -77,7 +77,7 @@ func Main() {
   window.MetricsChanged += (metrics WindowMetrics) -> {
     let scaleX = metrics.DisplayScaleX.ToString("R", CultureInfo.InvariantCulture)
     let scaleY = metrics.DisplayScaleY.ToString("R", CultureInfo.InvariantCulture)
-    Console.WriteLine("{\"kind\":\"fixture\",\"event\":\"metrics\",\"ticks\":${Stopwatch.GetTimestamp()},\"frequency\":${Stopwatch.Frequency},\"logicalWidth\":${metrics.LogicalWidth},\"logicalHeight\":${metrics.LogicalHeight},\"framebufferWidth\":${metrics.FramebufferWidth},\"framebufferHeight\":${metrics.FramebufferHeight},\"displayScaleX\":${scaleX},\"displayScaleY\":${scaleY}}")
+    Console.WriteLine("{\"kind\":\"fixture\",\"event\":\"metrics\",\"ticks\":${Stopwatch.GetTimestamp()},\"frequency\":${Stopwatch.Frequency},\"logicalWidth\":${metrics.NativeWidth},\"logicalHeight\":${metrics.NativeHeight},\"framebufferWidth\":${metrics.FramebufferWidth},\"framebufferHeight\":${metrics.FramebufferHeight},\"displayScaleX\":${scaleX},\"displayScaleY\":${scaleY}}")
     Console.Out.Flush()
   }
   let readyDelayMs = Milliseconds("GOO_CONSUMER_READY_DELAY_MS", 750)

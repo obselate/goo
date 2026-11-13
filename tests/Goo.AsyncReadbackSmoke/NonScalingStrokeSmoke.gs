@@ -75,11 +75,12 @@ class NonScalingStrokeCell : Cell {
         Position: PositionType.Absolute,
         Left: 0,
         Top: 0,
-        Stroke: VectorStroke(Style == 3 ? 8.0: 6.0, VectorPaint(Color.White),
-          Style == 3 ? StrokeCap.Square: StrokeCap(Style),
-          Style == 1 ? StrokeJoin.Round: (Style == 2 ? StrokeJoin.Bevel: StrokeJoin.Miter),
-          Style == 3 ? 1.0: 4.0,
-          Style == 0 ? default(DashPattern?): (Style == 1 ? dash: (Style == 2 ? dots: odd))){.VectorEffect: effect},
+        Stroke: VectorStroke(Style == 3 ? 8.0: 6.0, Color.White){
+          .Cap: Style == 3 ? StrokeCap.Square: StrokeCap(Style),
+          .Join: Style == 1 ? StrokeJoin.Round: (Style == 2 ? StrokeJoin.Bevel: StrokeJoin.Miter),
+          .MiterLimit: Style == 3 ? 1.0: 4.0,
+          .Dashes: Style == 0 ? default(DashPattern?): (Style == 1 ? dash: (Style == 2 ? dots: odd)),
+          .VectorEffect: effect},
         StrokeStart: Style == 1 ? 0.1: (Style == 3 ? 0.2: 0.0),
         StrokeEnd: Style == 1 ? 0.85: (Style == 3 ? 0.9: 1.0),
         StrokeInset: false,
@@ -126,8 +127,8 @@ class NonScalingStrokeBenchCell : Cell {
                     Left: (index % 40) * 18,
                     Top: (index / 40) * 18,
                     Fill: VectorPaint(Color.Rgb(64, 192, 128)),
-                    Stroke: VectorStroke(NonScaling ? 1.0: 1.0 / Zoom, VectorPaint(StrokeColor),
-                      StrokeCap.Round, StrokeJoin.Round, 4.0, pattern){
+                    Stroke: VectorStroke(NonScaling ? 1.0: 1.0 / Zoom, StrokeColor){
+                      .Cap: StrokeCap.Round, .Join: StrokeJoin.Round, .Dashes: pattern,
                       .VectorEffect: NonScaling ? VectorEffect.NonScalingStroke: VectorEffect.None},
                     StrokeInset: false,
                 }
@@ -306,8 +307,7 @@ func RenderNonScalingStrokePair(
         ShadowOffset: source.ShadowOffset,
     }
     let options = OffscreenRenderOptions(
-        400.0F,
-        200.0F,
+        LayoutSize(400, 200),
         uint32(400.0 * dpi),
         uint32(200.0 * dpi),
         Color.Black,

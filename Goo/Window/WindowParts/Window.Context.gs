@@ -10,7 +10,7 @@ public partial class Window {
     private var trackedSize WindowDependency[LayoutSize]?
     private var trackedWidth WindowDependency[int32]?
     private var trackedHeight WindowDependency[int32]?
-    private var trackedScale WindowDependency[float32]?
+    private var trackedScale WindowDependency[float64]?
     private var trackedPreferences WindowDependency[PlatformPreferences]?
     private var trackedModifiers WindowDependency[KeyModifiers]?
     internal var trackedEditsText WindowDependency[bool]?

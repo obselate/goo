@@ -74,11 +74,13 @@ public open class Cell {
   private var ownedTimers List[WindowTimer]?
   private var mountHookQueued bool
   private var mountHookRun bool
+  private var defaultMountedRan bool
   private var unmounting bool
   private var callbackGeneration int64
   private var callbackContext WindowCallbackContext?
 
-  /// Gets the owning window before the first InputChanged or Build until Unmounting returns.
+  /// Gets the owning window on its UI thread from binding until Unmounting returns.
+  /// @exception InvalidOperationException before window binding, after unmount, or off the UI thread
   protected prop Host Window {
     get {
       guard let window = disposed ? nil : contextWindow else {
@@ -89,21 +91,29 @@ public open class Cell {
     }
   }
 
-  /// Gets a token cancelled after Unmounting returns.
+  /// Gets a token on the UI thread, valid from window binding and cancelled after Unmounting returns.
+  /// @returns the Cell lifetime token, or a cancelled token after unmount
+  /// @exception InvalidOperationException before window binding or off the UI thread
   protected prop Lifetime CancellationToken {
     get {
       contextWindow?.requireUiThread("Cell.Lifetime")
-      if disposed || contextWindow == nil { return CancellationToken(true) }
+      if disposed { return CancellationToken(true) }
+      if contextWindow == nil { throw InvalidOperationException("${GetType().Name}.Lifetime requires window binding.") }
       lifetimeSource ??= CancellationTokenSource()
       return lifetimeSource!!.Token
     }
   }
 
-  /// Cancels the previous request with this name and links a new token to Lifetime.
+  /// Cancels the previous request with this name and links a new token to Lifetime. Call on the UI thread.
+  /// @param name case-sensitive request name
+  /// @returns a new request token, or a cancelled token after unmount
+  /// @exception InvalidOperationException before window binding or off the UI thread
+  /// @exception ArgumentNullException when name is nil
   protected func Latest(name string) CancellationToken {
     contextWindow?.requireUiThread("Cell.Latest")
     if name == nil { throw ArgumentNullException("name") }
-    if disposed || contextWindow == nil { return CancellationToken(true) }
+    if disposed { return CancellationToken(true) }
+    if contextWindow == nil { throw InvalidOperationException("${GetType().Name}.Latest requires window binding.") }
     latestSources ??= Dictionary[string, CancellationTokenSource](StringComparer.Ordinal)
     if latestSources!!.TryGetValue(name, out var previous) {
       previous.Cancel()
@@ -115,7 +125,11 @@ public open class Cell {
   }
 
   /// Posts an action from any thread. Unmounting discards pending actions.
-  /// Scheduling during Build throws.
+  /// Goo applies the normal callback rebuild rule after the action, even if it throws.
+  /// @param action callback to run on the UI thread
+  /// @returns true when accepted, or false before window binding, after unmount, or when the window rejects posts
+  /// @exception InvalidOperationException when called during Build
+  /// @exception ArgumentNullException when action is nil
   protected func Post(action Action) bool {
     if action == nil { throw ArgumentNullException("action") }
     if IsBuilding { throw InvalidOperationException("Cell.Post is not allowed during Build.") }
@@ -132,26 +146,42 @@ public open class Cell {
     })
   }
 
-  /// Runs an action once after a finite, nonnegative delay in milliseconds.
-  /// Scheduling during Build throws.
+  /// Runs an action once on the UI thread after a delay. Call on the UI thread.
+  /// Unmounting cancels the timer. Goo applies the normal callback rebuild rule after the action.
+  /// @param delayMs finite, nonnegative delay in milliseconds
+  /// @param action callback to run once
+  /// @returns a timer to cancel on the UI thread, or an inactive timer before window binding, after unmount, or when the window rejects work
+  /// @exception InvalidOperationException during Build, off the UI thread, or before the bound window opens
+  /// @exception ArgumentNullException when action is nil and the Cell and window accept work
+  /// @exception ArgumentOutOfRangeException when delayMs is invalid and the Cell and window accept work
   protected func After(delayMs float64, action Action) WindowTimer {
     if IsBuilding { throw InvalidOperationException("Cell.After is not allowed during Build.") }
-    if disposed { return WindowTimer.Inactive() }
+    if disposed || contextWindow == nil { return WindowTimer.Inactive() }
     return Host.AddCellTimer(this, delayMs, action, false)
   }
 
-  /// Runs an action at a finite, positive interval in milliseconds.
-  /// Scheduling during Build throws.
+  /// Runs an action repeatedly on the UI thread. Call on the UI thread. Missed ticks are skipped.
+  /// Unmounting cancels the timer. Goo applies the normal callback rebuild rule after each action.
+  /// @param intervalMs finite, positive interval in milliseconds
+  /// @param action callback to run at each interval
+  /// @returns a timer to cancel on the UI thread, or an inactive timer before window binding, after unmount, or when the window rejects work
+  /// @exception InvalidOperationException during Build, off the UI thread, or before the bound window opens
+  /// @exception ArgumentNullException when action is nil and the Cell and window accept work
+  /// @exception ArgumentOutOfRangeException when intervalMs is invalid and the Cell and window accept work
   protected func Every(intervalMs float64, action Action) WindowTimer {
     if IsBuilding { throw InvalidOperationException("Cell.Every is not allowed during Build.") }
-    if disposed { return WindowTimer.Inactive() }
+    if disposed || contextWindow == nil { return WindowTimer.Inactive() }
     return Host.AddCellTimer(this, intervalMs, action, true)
   }
 
-  /// Runs once after the first layout and before paint. Handles have geometry.
-  protected open func Mounted() {}
+  /// Runs once on the UI thread after the first layout and before paint. Handles have geometry.
+  /// Goo applies the normal callback rebuild rule after an override, including when it throws.
+  /// The base implementation does nothing and need not be called.
+  /// A Cell whose override calls base.Mounted() is not rebuilt after Mounted returns.
+  protected open func Mounted() { defaultMountedRan = true }
 
-  /// Runs once before elements are removed and Lifetime is cancelled.
+  /// Runs once on the UI thread before elements are removed and Lifetime is cancelled, parent before child.
+  /// May run without Mounted when mounting fails. Does not request a rebuild.
   protected open func Unmounting() {}
 
   internal func BeginCallback() SynchronizationContext? {
@@ -177,7 +207,9 @@ public open class Cell {
   internal func CompleteMount() {
     if disposed || mountHookRun || mountedNode == nil { return }
     mountHookRun = true
-    RunOwnedAction(Mounted, false)
+    defaultMountedRan = false
+    try { RunOwnedAction(Mounted, false) }
+    finally { if !defaultMountedRan { RebuildAfterCallback() } }
   }
 
   internal func OwnTimer(timer WindowTimer) {
@@ -813,28 +845,6 @@ public open class Cell {
       }
     }
 
-    /// Describes a child component mount.
-    /// Put one-time initialization in the factory or constructor, not configure, which runs on every parent diff.
-    /// @typeparam TCell child component type
-    /// @param key stable sibling key, or nil for positional identity
-    /// @param configure configuration applied during each parent diff; prefer stable named or cached delegates
-    /// @returns a blob that mounts the child component
-    public func Mount[TCell Cell init()](key string?, configure Action[TCell]?) Blob ->
-    CellElement{
-      Key: key,
-      CellType: typeof(TCell),
-      Factory: () -> TCell(),
-      Configure: wrapAction[TCell](configure),
-    }
-
-    internal func wrapAction[TCell Cell](action Action[TCell]?) Action[Cell]? {
-      guard let typed = action else { return nil }
-      return (c Cell) -> {
-        if c is TCell {
-          typed(c)
-        }
-      }
-    }
   }
 
 }

@@ -489,11 +489,11 @@ class PartialBackdropCell : Cell {
 
 func PartialRedrawLayerCell() PartialLayerCell {
   let control = ShaderEffect(ShaderEffectProgram.Load(
-      Path.Combine(AppContext.BaseDirectory, "control_effect.frag.goo-effect")), true, 20.0F)
+      Path.Combine(AppContext.BaseDirectory, "control_effect.frag.goo-effect")), true, 20.0)
   control.SetData(0, ShaderEffectData(BitConverter.GetBytes(1.0F)))
   control.SetParameter(0, Vector4(1.0F, 0.25F, 0.25F, 0.0F))
   let glass = ShaderEffect(ShaderEffectProgram.Load(
-      Path.Combine(AppContext.BaseDirectory, "liquid_glass.frag.goo-effect")), true, 24.0F)
+      Path.Combine(AppContext.BaseDirectory, "liquid_glass.frag.goo-effect")), true, 24.0)
   glass.SetParameter(2, Vector4(0.0F, 0.0F, 0.0F, -1.0F))
   glass.SetParameter(3, Vector4(0.0F, 0.0F, 0.0F, 0.78F))
   glass.SetParameter(4, Vector4(0.0F, 0.0F, 0.0F, 1.0F))
@@ -660,14 +660,14 @@ func PartialRedrawScene(name string, root Cell, steps int32, advance Action,
       window.Size = LayoutSize(560, 266)
       var resizeAttempt int32
       var resizedMetrics = WindowReadbackTestFixture.Metrics(window)
-      while (resizedMetrics.LogicalWidth != 560 || resizedMetrics.LogicalHeight != 266)
+      while (resizedMetrics.NativeWidth != 560 || resizedMetrics.NativeHeight != 266)
         && resizeAttempt < 1000 {
         WindowReadbackTestFixture.PumpNativeEvents()
         WindowReadbackTestFixture.Pump(window, 0.0)
         resizedMetrics = WindowReadbackTestFixture.Metrics(window)
         resizeAttempt++
       }
-      Require(resizedMetrics.LogicalWidth == 560 && resizedMetrics.LogicalHeight == 266,
+      Require(resizedMetrics.NativeWidth == 560 && resizedMetrics.NativeHeight == 266,
         "Partial redraw capacity seed resize failed")
       WindowReadbackTestFixture.SetForceFullRedraw(window, true)
       for frameIndex in 0 ... 3 {
@@ -678,14 +678,14 @@ func PartialRedrawScene(name string, root Cell, steps int32, advance Action,
       window.Size = LayoutSize(400, 190)
       resizeAttempt = 0
       resizedMetrics = WindowReadbackTestFixture.Metrics(window)
-      while (resizedMetrics.LogicalWidth != 400 || resizedMetrics.LogicalHeight != 190)
+      while (resizedMetrics.NativeWidth != 400 || resizedMetrics.NativeHeight != 190)
         && resizeAttempt < 1000 {
         WindowReadbackTestFixture.PumpNativeEvents()
         WindowReadbackTestFixture.Pump(window, 0.0)
         resizedMetrics = WindowReadbackTestFixture.Metrics(window)
         resizeAttempt++
       }
-      Require(resizedMetrics.LogicalWidth == 400 && resizedMetrics.LogicalHeight == 190,
+      Require(resizedMetrics.NativeWidth == 400 && resizedMetrics.NativeHeight == 190,
         "Partial redraw capacity recovery resize failed")
       WindowReadbackTestFixture.ForceRender(window, 0.0)
       WindowReadbackTestFixture.DrainWindowQueue(window, 10000)

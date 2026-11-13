@@ -127,19 +127,12 @@ internal class GlassMaterialPanelCell : Cell {
     private var liquidEffect ShaderEffect?
     private var terminalEffect ShaderEffect?
     private var terminalMode bool
-    private var configured bool
 
-    public init() {
+    internal init(liquid ShaderEffect, terminal ShaderEffect, initialTerminal bool) {
         surfaceHandle = ElementHandle{}
-    }
-
-    internal func Configure(liquid ShaderEffect, terminal ShaderEffect, initialTerminal bool) {
         liquidEffect = liquid
         terminalEffect = terminal
-        if !configured {
-            terminalMode = initialTerminal
-            configured = true
-        }
+        terminalMode = initialTerminal
     }
 
     private func selectedEffect() ShaderEffect? -> terminalMode ? terminalEffect: liquidEffect
@@ -421,9 +414,7 @@ internal class GlassMaterialRootCell : Cell {
         Cell.Mount[GlassMaterialBackdropCell]("glass-material-backdrop"),
         Cell.Mount[GlassMaterialPanelCell](
             "glass-material-panel",
-            (cell GlassMaterialPanelCell) -> {
-                cell.Configure(liquidEffect, terminalEffect, initialTerminal)
-            }
+            () -> GlassMaterialPanelCell(liquidEffect, terminalEffect, initialTerminal)
         ),
     }
 }
@@ -451,8 +442,8 @@ public class GlassMaterialWindow {
             let terminalProgram = ShaderEffectProgram.Load(
                 Path.Combine(AppContext.BaseDirectory, "Shaders", "terminal_glass.goo-effect")
             )
-            let liquidEffect = ShaderEffect(liquidProgram, samplesBackdrop: true, backdropOutset: 24.0F)
-            let terminalEffect = ShaderEffect(terminalProgram, samplesBackdrop: true, backdropOutset: 24.0F)
+            let liquidEffect = ShaderEffect(liquidProgram, samplesBackdrop: true, backdropOutset: 24.0)
+            let terminalEffect = ShaderEffect(terminalProgram, samplesBackdrop: true, backdropOutset: 24.0)
             configureLiquid(liquidEffect)
             configureTerminal(terminalEffect)
             let requested = Environment.GetEnvironmentVariable("GOO_GLASS_MATERIAL")

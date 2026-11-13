@@ -19,9 +19,6 @@ public class PlatformInput {
   private let owner Window
   private let input InputCoordinator
   private let resolver Resolver
-  private var published FocusedEditorSnapshot?
-  private var publishedSelection TextSelection?
-  private var editorChanged Action[FocusedEditorSnapshot?]?
 
   internal init(owner Window, input InputCoordinator, resolver Resolver) {
     this.owner = owner
@@ -29,45 +26,33 @@ public class PlatformInput {
     this.resolver = resolver
   }
 
-  /// Reports settled focus, text, selection, composition, and caret-area changes.
-  public event EditorChanged Action[FocusedEditorSnapshot?]{
-    add{
-      requireThread()
-      editorChanged = Delegate.Combine(editorChanged, value) as Action[FocusedEditorSnapshot?]?
-    }
-    remove{
-      requireThread()
-      editorChanged = Delegate.Remove(editorChanged, value) as Action[FocusedEditorSnapshot?]?
-    }
-  }
-
-  /// Moves a platform pointer in window logical coordinates.
-  public func PointerMove(pointerId int64, device PointerDevice, x float32, y float32,
+  /// Moves a platform pointer in native logical window coordinates.
+  public func PointerMove(pointerId int64, device PointerDevice, x float64, y float64,
     modifiers KeyModifiers, pressure float32) {
       requireInput()
-      input.QueuePointerMove(pointerId, device, x / owner.UiScale, y / owner.UiScale, modifiers, pressure)
+      input.QueuePointerMove(pointerId, device, float32(x / owner.UiScale), float32(y / owner.UiScale), modifiers, pressure)
       drain()
     }
 
-  /// Presses a platform pointer in window logical coordinates.
-  public func PointerPress(pointerId int64, device PointerDevice, x float32, y float32,
+  /// Presses a platform pointer in native logical window coordinates.
+  public func PointerPress(pointerId int64, device PointerDevice, x float64, y float64,
     button PointerButton, modifiers KeyModifiers, pressure float32) {
       requireInput()
-      input.QueuePointerPress(pointerId, device, x / owner.UiScale, y / owner.UiScale, button, modifiers, pressure)
+      input.QueuePointerPress(pointerId, device, float32(x / owner.UiScale), float32(y / owner.UiScale), button, modifiers, pressure)
       drain()
     }
 
-  /// Releases a platform pointer in window logical coordinates.
-  public func PointerRelease(pointerId int64, device PointerDevice, x float32, y float32,
+  /// Releases a platform pointer in native logical window coordinates.
+  public func PointerRelease(pointerId int64, device PointerDevice, x float64, y float64,
     button PointerButton, modifiers KeyModifiers, pressure float32) {
       requireInput()
-      input.QueuePointerRelease(pointerId, device, x / owner.UiScale, y / owner.UiScale, button, modifiers, pressure)
+      input.QueuePointerRelease(pointerId, device, float32(x / owner.UiScale), float32(y / owner.UiScale), button, modifiers, pressure)
       drain()
     }
 
   internal func PointerMotionFrame(samples ReadOnlySpan[QueuedPointerEvent]) {
     requireInput()
-    input.QueuePointerFrame(samples, owner.UiScale)
+    input.QueuePointerFrame(samples, float32(owner.UiScale))
     drain()
   }
 
@@ -116,11 +101,11 @@ public class PlatformInput {
     finally { finish() }
   }
 
-  /// Dispatches wheel deltas at a window logical position.
-  public func PointerWheel(x float32, y float32, deltaX float32, deltaY float32,
+  /// Dispatches wheel deltas at a native logical window position.
+  public func PointerWheel(x float64, y float64, deltaX float64, deltaY float64,
     modifiers KeyModifiers) {
       requireInput(false)
-      input.QueuePointerWheel(x / owner.UiScale, y / owner.UiScale, deltaX, deltaY, modifiers)
+      input.QueuePointerWheel(float32(x / owner.UiScale), float32(y / owner.UiScale), float32(deltaX), float32(deltaY), modifiers)
       drain(false)
     }
 
@@ -195,24 +180,7 @@ public class PlatformInput {
     finally { finish() }
   }
 
-  internal func Refresh() {
-    if input.IsDispatching { return }
-    let current = input.EditorSnapshot()
-    let selection = input.EditorSelection()
-    owner.SyncWindowFocus(current, selection)
-    var selectionChanged = (publishedSelection == nil) != (selection == nil)
-    if let prior = publishedSelection, let next = selection {
-      selectionChanged = prior.Anchor.Offset != next.Anchor.Offset || prior.Active.Offset != next.Active.Offset
-        || prior.Anchor.Affinity != next.Anchor.Affinity || prior.Active.Affinity != next.Active.Affinity
-    }
-    if published == nil && current == nil { return }
-    if let prior = published, let next = current {
-      if prior.Equals(next) && !selectionChanged && prior.InputOptions == next.InputOptions { return }
-    }
-    published = current
-    publishedSelection = selection
-    editorChanged?.Invoke(current)
-  }
+  internal func Refresh() { owner.Focus.Refresh() }
 
   internal func requireThread(flush bool = true) {
     owner.RequireElementHandleThread("Window.PlatformInput")

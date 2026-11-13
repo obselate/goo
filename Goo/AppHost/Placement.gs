@@ -61,7 +61,7 @@ public class Placement {
                 Fields: saved.Fields,
                 NormalBounds: ElementRect{ X: x, Y: y, Width: width, Height: height },
                 State: if saved.State == WindowState.Minimized { WindowState.Normal } else { saved.State },
-                DisplayName: display.Name, DisplayBounds: display.Bounds, DisplayScale: float64(display.ContentScale),
+                DisplayName: display.Name, DisplayBounds: display.Bounds, DisplayScale: display.ContentScale,
             })
         }
 
@@ -83,7 +83,7 @@ public class Placement {
                 let y = display.Bounds.Y + display.Bounds.Height / 2.0 - saved.DisplayBounds.Y - saved.DisplayBounds.Height / 2.0
                 let distance = if saved.DisplayBounds.Width > 0.0 && saved.DisplayBounds.Height > 0.0 { x * x + y * y }
                     else { 0.0 }
-                let scale = if saved.DisplayScale > 0.0 { Math.Abs(float64(display.ContentScale) - saved.DisplayScale) }
+                let scale = if saved.DisplayScale > 0.0 { Math.Abs(display.ContentScale - saved.DisplayScale) }
                     else { 0.0 }
                 if (sameName && !matchedName) || (sameName == matchedName
                     && (distance < bestDistance || (distance == bestDistance && scale < bestScale))) {

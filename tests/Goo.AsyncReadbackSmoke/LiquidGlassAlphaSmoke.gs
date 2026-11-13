@@ -46,7 +46,7 @@ func RunLiquidGlassAlphaSmoke() {
     "GOO_VK_DIAGNOSTICS=1 is required")
   let shaderPath = Path.Combine(AppContext.BaseDirectory, "liquid_glass.frag.goo-effect")
   Require(File.Exists(shaderPath), "Liquid glass effect asset is missing")
-  let effect = ShaderEffect(ShaderEffectProgram.Load(shaderPath), true, 24.0F)
+  let effect = ShaderEffect(ShaderEffectProgram.Load(shaderPath), true, 24.0)
   effect.SetParameter(2, Vector4(0.0F, 0.0F, 0.0F, -1.0F))
   effect.SetParameter(3, Vector4(0.0F, 0.0F, 0.0F, 0.78F))
   effect.SetParameter(4, Vector4(0.0F, 0.0F, 0.0F, 1.0F))
