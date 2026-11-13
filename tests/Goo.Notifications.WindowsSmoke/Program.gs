@@ -5,7 +5,6 @@ import System
 import System.Diagnostics
 import System.IO
 import System.Linq
-import System.Reflection
 import System.Text
 import System.Threading.Tasks
 import System.Xml.Linq
@@ -27,7 +26,7 @@ async func Run(args []string) Task {
         let instance = Application.AcquireSingleInstance(args)
         Require(instance.Status == SingleInstanceStatus.Primary, "Activation initialization failed")
         using let lease = instance.Lease
-        typeof(Application).GetMethod("DrainActivations", BindingFlags.NonPublic | BindingFlags.Static)!!.Invoke(nil, nil)
+        Application.DrainActivations()
         Require(received?.Kind == ApplicationActivationKind.Notification, "Protocol did not raise notification activation")
         let activationOutput = Output(Uri(args[1]).Scheme)
         let activation = received!!
