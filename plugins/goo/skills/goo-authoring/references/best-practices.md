@@ -112,8 +112,8 @@ class SearchView : Cell {
 
 - `Build` runs on every rebuild. Treat it as the hot path.
 - Keep state that `Build` reads in `State` fields: `private let count State[int32] = State[int32](0)`. Write `count.Value = next`. Never call `Rebuild()` for a `State` change.
-- Goo can skip unchanged callback builds when the Cell declares a `State` field or its last `Build` read a `State` value, and its instance and static fields are all immutable states, primitive numbers, `bool`, enums or strings.
-- A mutable field, collection, delegate field or model reference keeps rebuild-after-every-callback behavior. A Cell declared with a primary constructor always rebuilds after callbacks. Use an explicit `init(...)` with `let` fields.
+- Goo can skip unchanged callback builds when the Cell declares a `State` field or its last `Build` read a `State` value, and every instance and static field is read-only. Supported fields and `State` values are primitives, enums, strings and `ElementHandle`.
+- A mutable field, collection, delegate field, model reference or unsupported `State` value keeps rebuild-after-every-callback behavior. A Cell declared with a primary constructor always rebuilds after callbacks. Use an explicit `init(...)` with `let` fields.
 - A typed child rebuilds when its input differs by equality. Derive state in `InputChanged(input)`. Do not write a rebuild policy.
 - Read `Host.State`, `Host.IsFocused`, `Host.Size`, `Host.UiScale` and `Host.Preferences` in `Build`. Goo tracks those reads. Do not add listeners or call `Rebuild()` for them. Window and context reads alone do not make a Cell state-only.
 - A `State` write during `Build` throws. Replace changed collections rather than changing them in place. Reads in retained builders, including virtual rows and `Sized`, also subscribe their owner.
