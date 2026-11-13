@@ -22,6 +22,11 @@ class FixtureContractTests {
         Assert.True((cast[Func[bool]](method!!.CreateDelegate(typeof(() -> bool), fixture)))())
     }
 
+    @Fact
+    async func ForeignHostContextRebuildsOwner() System.Threading.Tasks.Task {
+        Assert.True(await WindowStartupFixtures().HostedOwnerContextContract())
+    }
+
     @Theory
     @InlineData("mount-duplicate")
     @InlineData("diff-duplicate")

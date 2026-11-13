@@ -8,6 +8,26 @@ import System.Runtime.InteropServices
 import System.Diagnostics
 
 internal class WindowStartupFixtures {
+
+  async func HostedOwnerContextContract() Task[bool] {
+    let hostContext = SynchronizationContext.Current
+    if hostContext == nil || hostContext is WindowCallbackContext { return false }
+    let owner = WindowAsyncCell()
+    let window = Window{Root: owner, Width: 100, Height: 100}
+    try {
+      window.UpdateTree()
+      owner.RunOwnedAction(owner.RunHandler)
+      owner.ClearDirty()
+      if SynchronizationContext.Current != hostContext { return false }
+      owner.Pending.SetResult(true)
+      let clock = Stopwatch.StartNew()
+      while !owner.IsDirty() && clock.ElapsedMilliseconds < 5000 { await Task.Delay(1) }
+      if !owner.IsDirty() || owner.Resumed != 1 { return false }
+      window.UpdateTree()
+      return window.Tree?.Content == "1"
+    } finally { window.Close() }
+  }
+
   func EmbeddedCloseRejectsReentrantDisposalContract() bool {
     let previous = SynchronizationContext.Current
     SynchronizationContext.SetSynchronizationContext(nil)
@@ -107,7 +127,9 @@ internal class WindowStartupFixtures {
     SynchronizationContext.SetSynchronizationContext(host)
     try {
       let previous = owner.BeginCallback()
-      if SynchronizationContext.Current != host { return false }
+      let current = SynchronizationContext.Current
+      if current is not WindowCallbackContext { return false }
+      if current.HostContext != host { return false }
       owner.EndCallback(previous)
       if SynchronizationContext.Current != host { return false }
     } finally { SynchronizationContext.SetSynchronizationContext(nil) }
@@ -226,6 +248,8 @@ internal class WindowAsyncCell : Cell {
   internal var ResumeThread int32
   internal var FinallyCount int32
   internal var ClosedDuringReentry bool
+
+  public override func Build() Blob -> Text(Resumed.ToString())
 
   protected override func Unmounting() { Closing.Set() }
 

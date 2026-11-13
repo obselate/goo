@@ -121,9 +121,9 @@ public open class Cell {
 
   internal func BeginCallback() SynchronizationContext? {
     let previous = SynchronizationContext.Current
-    if (previous == nil || previous is WindowCallbackContext) && contextWindow != nil {
+    if contextWindow != nil {
       callbackContext ??= WindowCallbackContext(contextWindow!!, this)
-      SynchronizationContext.SetSynchronizationContext(callbackContext)
+      SynchronizationContext.SetSynchronizationContext(callbackContext!!.ForHost(previous))
     }
     return previous
   }

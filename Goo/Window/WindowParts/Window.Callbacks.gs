@@ -10,21 +10,37 @@ internal data struct CallbackWork(Context WindowCallbackContext, Callback SendOr
 internal sealed class WindowCallbackContext : SynchronizationContext {
   internal let Window Window
   internal let Owner Cell?
+  internal let HostContext SynchronizationContext?
+  private var hostedContext WindowCallbackContext?
 
-  internal init(window Window, owner Cell?) {
+  internal init(window Window, owner Cell?, hostContext SynchronizationContext? = nil) {
     Window = window
     Owner = owner
+    HostContext = hostContext
   }
 
   public override func CreateCopy() SynchronizationContext -> this
+
+  internal func ForHost(previous SynchronizationContext?) WindowCallbackContext {
+    if HostContext != nil { return this }
+    let host = if previous is WindowCallbackContext current { current.HostContext } else { previous }
+    if host == nil { return this }
+    if hostedContext?.HostContext != host { hostedContext = WindowCallbackContext(Window, Owner, host) }
+    return hostedContext!!
+  }
+
   public override func Post(callback SendOrPostCallback, state object?) {
     if callback == nil { throw ArgumentNullException("callback") }
     Window.QueueContinuation(CallbackWork(this, callback, state))
   }
-  public override func OperationStarted() { Interlocked.Increment(&Window.callbackOperations) }
+  public override func OperationStarted() {
+    Interlocked.Increment(&Window.callbackOperations)
+    HostContext?.OperationStarted()
+  }
   public override func OperationCompleted() {
     Interlocked.Decrement(&Window.callbackOperations)
     Window.WakeCallbacks()
+    HostContext?.OperationCompleted()
   }
 }
 
@@ -34,8 +50,8 @@ internal struct CallbackScope : IDisposable {
 
   internal init(context WindowCallbackContext?) {
     previous = SynchronizationContext.Current
-    installed = context != nil && (previous == nil || previous is WindowCallbackContext)
-    if installed { SynchronizationContext.SetSynchronizationContext(context) }
+    installed = context != nil
+    if installed { SynchronizationContext.SetSynchronizationContext(context!!.ForHost(previous)) }
   }
 
   public func Dispose() {
@@ -57,6 +73,7 @@ public partial class Window {
   private let continuationGate object = Object()
   private var continuations Queue[CallbackWork]?
   private var continuationDrain Action?
+  private var hostContinuationDrain SendOrPostCallback?
   private var closeDrainMs float64 = 2000.0
 
   /// Gets or sets the close drain bound in milliseconds. The default is 2000. Zero skips the wait.
@@ -87,6 +104,7 @@ public partial class Window {
   internal func QueueContinuation(work CallbackWork) {
     var launch bool
     var dispatch Action?
+    var hostDispatch SendOrPostCallback?
     lock continuationGate {
       continuations ??= Queue[CallbackWork]()
       continuations!!.Enqueue(work)
@@ -96,11 +114,19 @@ public partial class Window {
       } else if !callbackLate && !callbackClosing {
         continuationDrain ??= () -> DrainContinuations(1)
         dispatch = continuationDrain
+        if work.Context.HostContext != nil {
+          hostContinuationDrain ??= state -> {
+            using let context = CallbackScope(CallbackContext().ForHost(cast[WindowCallbackContext](state)))
+            drainPostedActions()
+          }
+          hostDispatch = hostContinuationDrain
+        }
       }
     }
     if launch { go drainLateContinuations() }
     else if let action = dispatch {
       if !Post(action) { WakeCallbacks() }
+      else if let callback = hostDispatch { work.Context.HostContext!!.Post(callback, work.Context) }
     } else { WakeCallbacks() }
   }
 

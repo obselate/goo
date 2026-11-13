@@ -563,8 +563,8 @@ async func Load() void {
 ```
 
 In a Goo callback, an incomplete `await` resumes on the window's UI thread. A
-completed task continues inline. `ConfigureAwait(false)` opts out. An existing
-embedded host context stays current. A `go` child has no UI context.
+completed task continues inline. `ConfigureAwait(false)` opts out. Goo forwards
+continuations to an existing embedded host context. A `go` child has no UI context.
 
 After each continuation, Goo applies the owning Cell's callback rebuild rule.
 State-only Cells do not rebuild when nothing changed. Unmounted Cells do not rebuild.
