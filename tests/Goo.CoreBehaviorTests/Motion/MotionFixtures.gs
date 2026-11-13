@@ -1468,8 +1468,16 @@ internal class WindowSiblingParent : Cell {
   internal var Later WindowSiblingRetainedCell?
 
   override func Build() Blob -> Container() {
-    Cell.Mount[WindowSiblingThrowingCell]("first", (child WindowSiblingThrowingCell) -> { First = child }),
-    Cell.Mount[WindowSiblingRetainedCell]("later", (child WindowSiblingRetainedCell) -> { Later = child })
+    Cell.Mount[WindowSiblingThrowingCell]("first", () -> {
+      let child = WindowSiblingThrowingCell()
+      First = child
+      return child
+    }),
+    Cell.Mount[WindowSiblingRetainedCell]("later", () -> {
+      let child = WindowSiblingRetainedCell()
+      Later = child
+      return child
+    })
   }
 }
 

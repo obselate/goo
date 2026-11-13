@@ -81,7 +81,6 @@ internal partial class Reconciler {
       Cell: cell, Reader: cell.contextReader, CallbackCell: declaration.CallbackOwner})
     try {
       declaration.ApplyInput(cell)
-      if let configure = declaration.Configure { configure(cell) }
     } catch (_ Exception) {
       cell.contextReader?.Cancel()
       cell.SetRebuildSubmission(CellInvalidated)
@@ -897,8 +896,6 @@ internal partial class Reconciler {
     }
   }
 
-  // Reuse-or-replace the fiber, seed once, configure every time; detach the
-  // hook before recursing so an inner kind-change teardown can't touch it.
   internal func expandCell(existing Node?, e CellElement) Node ->
   expandCellAt(existing, e, existing?.Fiber, nil)
 

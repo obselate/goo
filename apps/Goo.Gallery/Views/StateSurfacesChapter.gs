@@ -4,7 +4,17 @@ import Goo
 import System
 import System.Collections.Generic
 
-class StateSurfacesChapter : Cell {
+internal data struct StateSurfacesInput {
+    var Compact bool
+    var Active bool
+}
+
+class StateSurfacesChapter : Cell[StateSurfacesInput] {
+    protected override func InputChanged(input StateSurfacesInput) {
+        Compact = input.Compact
+        Active = input.Active
+    }
+
     /// Gets or sets whether this chapter uses compact sizing.
     public var Compact bool
     internal prop Active bool {
