@@ -409,7 +409,8 @@ internal class Program {
             let window = Window{ Title: "Goo clipboard", Size: LayoutSize(240, 120),  Root: Cell() }.Open()
             try {
                 PumpUntil(window, () -> window.IsFocused)
-                window.SetClipboardText(text)
+                let written = window.Clipboard.WriteText(text)
+                if written.Status != DataTransferStatus.Success { throw InvalidOperationException(written.Error) }
                 File.WriteAllText(Path.Combine(root, "ready"), "ready")
                 PumpUntil(window, () -> File.Exists(Path.Combine(root, "stop")))
             } finally {

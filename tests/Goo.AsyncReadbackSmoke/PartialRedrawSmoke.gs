@@ -338,7 +338,7 @@ class PartialPaintCell : Cell {
       Width: 56,
       Height: 56,
       Path: PartialPaintCell.Star,
-      BackgroundColor: Step >= 5 ? Color.Rgb(72, 128, 224) : Color.Rgb(236, 196, 72),
+      Fill: VectorPaint(Step >= 5 ? Color.Rgb(72, 128, 224) : Color.Rgb(236, 196, 72)),
     },
     Container{
       Position: PositionType.Absolute,

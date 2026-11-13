@@ -17,7 +17,7 @@ class PrimitiveActionTests {
             Root: PrimitiveActionTests.BuildCell(
                 () -> Container{
                     Children: []Blob{
-                        TextEditor(controller){Handle = editor, Height = 100, FontFamily = "monospace", FontSize = 16},
+                        TextEditor(){Controller = controller, Handle = editor, Height = 100, FontFamily = "monospace", FontSize = 16},
                         TextEntry{
                             Handle: entry,
                             Value: "foo_bar  !!",
@@ -33,12 +33,12 @@ class PrimitiveActionTests {
             window.UpdateTree()
             Assert.True(editor.Focus())
             let input = window.PlatformInput
-            Assert.True(input.Execute(TextCommand{Kind: TextCommandKind.SelectWord, Position: Position(2)}))
+            Assert.True(window.Focus.Execute(TextCommand{Kind: TextCommandKind.SelectWord, Position: Position(2)}))
             Assert.Equal("foo_bar", controller.Copy())
             controller.OnCommand = (e TextCommandEvent) -> {
                 e.Cancel = e.Command.Kind == TextCommandKind.SelectWord
             }
-            Assert.False(input.Execute(TextCommand{Kind: TextCommandKind.SelectWord, Position: Position(10)}))
+            Assert.False(window.Focus.Execute(TextCommand{Kind: TextCommandKind.SelectWord, Position: Position(10)}))
             Assert.Equal("foo_bar", controller.Copy())
             controller.OnCommand = nil
             Click(window, editor, 7, 2, 0.0, dx: -1)
@@ -61,21 +61,21 @@ class PrimitiveActionTests {
             Release(window, PointAt(editor, 3), 6.4)
             Assert.True(entry.Focus())
             Click(window, entry, 7, 2, 7.0, dx: -1)
-            Assert.Equal(0, input.Editor!!.SelectionStart)
-            Assert.Equal(7, input.Editor!!.SelectionEnd)
+            Assert.Equal(0, window.Focus.Editor!!.SelectionStart)
+            Assert.Equal(7, window.Focus.Editor!!.SelectionEnd)
             Click(window, entry, 2, 2, 8.0, releaseLast: false)
             Move(window, PointAt(entry, 2, 0.1), 8.15)
-            Assert.Equal(0, input.Editor!!.SelectionStart)
-            Assert.Equal(7, input.Editor!!.SelectionEnd)
+            Assert.Equal(0, window.Focus.Editor!!.SelectionStart)
+            Assert.Equal(7, window.Focus.Editor!!.SelectionEnd)
             Move(window, PointAt(entry, 10), 8.2)
-            Assert.Equal(11, input.Editor!!.SelectionEnd)
+            Assert.Equal(11, window.Focus.Editor!!.SelectionEnd)
             Release(window, PointAt(entry, 10), 8.3)
             Click(window, entry, 2, 3, 9.0)
-            Assert.Equal(0, input.Editor!!.SelectionStart)
-            Assert.Equal(11, input.Editor!!.SelectionEnd)
-            Assert.True(input.Execute(TextCommand{Kind: TextCommandKind.SelectWord, Position: Position(10)}))
-            Assert.Equal(9, input.Editor!!.SelectionStart)
-            Assert.Equal(11, input.Editor!!.SelectionEnd)
+            Assert.Equal(0, window.Focus.Editor!!.SelectionStart)
+            Assert.Equal(11, window.Focus.Editor!!.SelectionEnd)
+            Assert.True(window.Focus.Execute(TextCommand{Kind: TextCommandKind.SelectWord, Position: Position(10)}))
+            Assert.Equal(9, window.Focus.Editor!!.SelectionStart)
+            Assert.Equal(11, window.Focus.Editor!!.SelectionEnd)
         } finally {
             window.Close()
         }
@@ -90,19 +90,19 @@ ef`))
         let window = Window{
             Size: LayoutSize(420, 160),
             Root: PrimitiveActionTests.BuildCell(
-                () -> TextEditor(controller){
+                () -> TextEditor(){Controller = controller,
                     Handle = handle,
                     FontFamily = "monospace",
                     FontSize = 16,
                     KeyBindings = []KeyBinding{
                         KeyBinding{
                             Key: Key.Tab,
-                            Action: () -> controller.Execute(TextCommand{Kind: TextCommandKind.InsertTab})
+                            OnPress: () -> controller.Execute(TextCommand{Kind: TextCommandKind.InsertTab})
                         },
                         KeyBinding{
                             Key: Key.Tab,
                             Modifiers: KeyModifiers{Shift: true},
-                            Action: () -> controller.Execute(TextCommand{Kind: TextCommandKind.Outdent})
+                            OnPress: () -> controller.Execute(TextCommand{Kind: TextCommandKind.Outdent})
                         }
                     }
                 }
@@ -173,19 +173,19 @@ ef`)){UseTabs = false, IndentWidth = 2, TabWidth = 8}
         let window = Window{
             Size: LayoutSize(420, 160),
             Root: PrimitiveActionTests.BuildCell(
-                () -> TextEditor(controller){
+                () -> TextEditor(){Controller = controller,
                     Handle = handle,
                     FontFamily = "monospace",
                     FontSize = 16,
                     KeyBindings = []KeyBinding{
                         KeyBinding{
                             Key: Key.Tab,
-                            Action: () -> controller.Execute(TextCommand{Kind: TextCommandKind.InsertTab})
+                            OnPress: () -> controller.Execute(TextCommand{Kind: TextCommandKind.InsertTab})
                         },
                         KeyBinding{
                             Key: Key.Tab,
                             Modifiers: KeyModifiers{Shift: true},
-                            Action: () -> controller.Execute(TextCommand{Kind: TextCommandKind.Outdent})
+                            OnPress: () -> controller.Execute(TextCommand{Kind: TextCommandKind.Outdent})
                         }
                     }
                 }
@@ -289,9 +289,9 @@ ef`, controller.Document.GetText())
         let cell = PrimitiveActionTests.BuildCell(
             () -> Container{
                 KeyBindings: []KeyBinding{
-                    KeyBinding{Key: Key.G, Action: () -> window!!.PlatformInput.BeginDrag(source)},
-                    KeyBinding{Key: Key.T, Action: () -> window!!.PlatformInput.UpdateDrag(target)},
-                    KeyBinding{Key: Key.Enter, Action: () -> window!!.PlatformInput.DropDrag()}
+                    KeyBinding{Key: Key.G, OnPress: () -> window!!.PlatformInput.BeginDrag(source)},
+                    KeyBinding{Key: Key.T, OnPress: () -> window!!.PlatformInput.UpdateDrag(target)},
+                    KeyBinding{Key: Key.Enter, OnPress: () -> window!!.PlatformInput.DropDrag()}
                 },
                 Children: []Blob{
                     Container{

@@ -427,7 +427,7 @@ internal class ElementHandleFixtures {
     if !entry.IsMounted { return false }
     NodeLifecycle.DisposeTree(node)
     let document = TextDocument{}
-    node = mount(rec, owner, TextEditor(TextEditorController(document)) {
+    node = mount(rec, owner, TextEditor(){ Controller = TextEditorController(document),
       Handle = editor,
     })
     if !editor.IsMounted { return false }
@@ -991,7 +991,7 @@ internal data struct VirtualFixtureItem {
 internal class VirtualAnchorOriginFixtureCell : Cell {
   internal let Handle ElementHandle = ElementHandle{}
   internal var LeafHeight float64 = 23
-  override func Build() Blob -> Virtual(VirtualAnchorOriginFixtureSource(LeafHeight)) {
+  override func Build() Blob -> Virtual(){ Source = VirtualAnchorOriginFixtureSource(LeafHeight),
     Handle = Handle, Width = 100, Height = 40,
   }
 }
@@ -1039,7 +1039,7 @@ internal class VirtualFixtureCell : Cell {
     for i in 0 ... count + 1 { Handles.Add(ElementHandle{}) }
   }
 
-  override func Build() Blob -> Virtual(VirtualFixtureSource(this)) {
+  override func Build() Blob -> Virtual(){ Source = VirtualFixtureSource(this),
     Handle = Handle, Width = 100, Height = 60, Padding = Inset,
     Focusable = ProjectFocus, FocusTarget = Target,
     Accessibility = Accessibility{ Role: Role, Relationships: ProjectFocus ?

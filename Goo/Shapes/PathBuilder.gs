@@ -155,6 +155,65 @@ public class PathBuilder {
     return this
   }
 
+  /// Appends a closed ellipse in view-box coordinates.
+  /// @param x The left coordinate.
+  /// @param y The top coordinate.
+  /// @param width The non-negative width.
+  /// @param height The non-negative height.
+  /// @returns This builder.
+  public func Ellipse(x float64, y float64, width float64, height float64) PathBuilder {
+    validateFinite(x, "x")
+    validateFinite(y, "y")
+    validateRadius(width, "width")
+    validateRadius(height, "height")
+    let radiusX = width / 2.0
+    let radiusY = height / 2.0
+    return MoveTo(x, y + radiusY)
+      .ArcTo(radiusX, radiusY, 0.0, false, true, x + width, y + radiusY)
+      .ArcTo(radiusX, radiusY, 0.0, false, true, x, y + radiusY).Close()
+  }
+
+  /// Appends a closed rectangle in view-box coordinates.
+  /// @param x The left coordinate.
+  /// @param y The top coordinate.
+  /// @param width The non-negative width.
+  /// @param height The non-negative height.
+  /// @returns This builder.
+  public func Rectangle(x float64, y float64, width float64, height float64) PathBuilder {
+    validateFinite(x, "x")
+    validateFinite(y, "y")
+    validateRadius(width, "width")
+    validateRadius(height, "height")
+    return MoveTo(x, y).LineTo(x + width, y).LineTo(x + width, y + height)
+      .LineTo(x, y + height).Close()
+  }
+
+  /// Appends a closed rounded rectangle in view-box coordinates.
+  /// The radius is clamped to half the smaller dimension.
+  /// @param x The left coordinate.
+  /// @param y The top coordinate.
+  /// @param width The non-negative width.
+  /// @param height The non-negative height.
+  /// @param radius The non-negative corner radius.
+  /// @returns This builder.
+  public func RoundedRectangle(x float64, y float64, width float64, height float64,
+    radius float64) PathBuilder {
+      validateFinite(x, "x")
+      validateFinite(y, "y")
+      validateRadius(width, "width")
+      validateRadius(height, "height")
+      validateRadius(radius, "radius")
+      let r = Math.Min(radius, Math.Min(width, height) / 2.0)
+      if r == 0.0 { return Rectangle(x, y, width, height) }
+      return MoveTo(x + r, y).LineTo(x + width - r, y)
+        .ArcTo(r, r, 0.0, false, true, x + width, y + r)
+        .LineTo(x + width, y + height - r)
+        .ArcTo(r, r, 0.0, false, true, x + width - r, y + height)
+        .LineTo(x + r, y + height)
+        .ArcTo(r, r, 0.0, false, true, x, y + height - r)
+        .LineTo(x, y + r).ArcTo(r, r, 0.0, false, true, x + r, y).Close()
+    }
+
   /// Closes the current contour.
   /// @returns This builder.
   public func Close() PathBuilder {

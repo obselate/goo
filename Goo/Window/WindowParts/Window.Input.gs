@@ -5,6 +5,24 @@ import System
 /// Hosts supported platform input operations on the UI thread.
 public partial class Window {
   private var platformInput PlatformInput?
+  private var windowFocus WindowFocus?
+  private var modifiers KeyModifiers
+
+  /// Gets the modifiers of the current input event, or the last known state outside dispatch.
+  public prop Modifiers KeyModifiers { get -> modifiers }
+
+  /// Gets the owner-thread focus and text editing operations.
+  public prop Focus WindowFocus {
+    get {
+      requireUiThread("Window.Focus")
+      if let existing = windowFocus { return existing }
+      let created = WindowFocus(this, input, resolver)
+      windowFocus = created
+      return created
+    }
+  }
+
+  internal func SetInputModifiers(value KeyModifiers) { modifiers = value }
   private var wheelScrollScale float32 = 1.0F
   private var dragStartDistance float32 = 8.0F
   private var smoothScrolling bool = true
@@ -42,7 +60,7 @@ public partial class Window {
     }
   }
 
-  /// Gets the owner-thread platform input and focused-editor contract.
+  /// Gets the owner-thread host input and composition operations.
   public prop PlatformInput PlatformInput{
     get {
       requireUiThread("Window.PlatformInput")

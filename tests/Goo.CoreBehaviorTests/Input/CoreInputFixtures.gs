@@ -76,8 +76,8 @@ internal class InputFixtures {
       Focusable: true,
       KeyBindings: []KeyBinding{
         KeyBinding{ Key: Key.Backspace, Modifiers: KeyModifiers{ Ctrl: true },
-          Repeat: true, Action: () -> { words++ } },
-        KeyBinding{ Key: Key.Backspace, Repeat: true, Action: () -> { characters++ } },
+          Repeat: true, OnPress: () -> { words++ } },
+        KeyBinding{ Key: Key.Backspace, Repeat: true, OnPress: () -> { characters++ } },
       },
     })
     focus.SetFocus(resolver, root)
@@ -138,7 +138,7 @@ internal class InputFixtures {
     var releases int32
     let root = reconciler.Mount(Container(){.Width: 100,.Height: 100,
       Button{Width: 50, Height: 40, OnPointerDown: (event PointerEvent) -> { event.Capture() },
-        KeyBindings: []KeyBinding{KeyBinding{Key: Key.Down, Action: () -> {}, OnRelease: () -> { releases++ }}}}})
+        KeyBindings: []KeyBinding{KeyBinding{Key: Key.Down, OnPress: () -> {}, OnRelease: () -> { releases++ }}}}})
     Layout().Calculate(root, 100.0F, 100.0F)
     let node = root.Children[0]
     let input = InputCoordinator()
@@ -157,7 +157,7 @@ internal class InputFixtures {
       OnPointerLeave: (_ PointerEvent) -> { incomingEvents++ },
       OnPointerMove: (_ PointerEvent) -> { incomingEvents++ },
       OnPointerUp: (_ PointerEvent) -> { incomingEvents++ },
-      KeyBindings: []KeyBinding{KeyBinding{Key: Key.Down, Action: () -> { incomingEvents++ },
+      KeyBindings: []KeyBinding{KeyBinding{Key: Key.Down, OnPress: () -> { incomingEvents++ },
         OnRelease: () -> { incomingEvents++ }}}}) != node { return false }
     if input.FocusedNode() != nil || input.CurrentCursor() != Cursor.Default
       || entry.Root != nil || entry.Previous != nil || entry.Initial != nil { return false }
@@ -363,8 +363,8 @@ internal class InputFixtures {
 
   private func inputShape(path VectorPath, cap StrokeCap, join StrokeJoin,
     miterLimit float64, dashes DashPattern?, color Color) Shape -> Shape{
-      Width: 100, Height: 100, Path: path, BorderWidth: 8, BorderColor: color,
-      StrokeCap: cap, StrokeJoin: join, MiterLimit: miterLimit, Dashes: dashes,
+      Width: 100, Height: 100, Path: path,
+      Stroke: VectorStroke(8, VectorPaint(color), cap, join, miterLimit, dashes),
     }
 
   private func shapeDiffHasInput(before Shape, after Shape) bool {
@@ -475,7 +475,7 @@ internal class InputFixtures {
     let root = Reconciler{ Res: Resolver{} }.Mount(Container{
       Focusable: true,
       KeyBindings: []KeyBinding{
-        KeyBinding{Key: Key.Down, Repeat: true, Action: () -> { presses++ }},
+        KeyBinding{Key: Key.Down, Repeat: true, OnPress: () -> { presses++ }},
       },
     })
     let resolver = Resolver{}
@@ -507,7 +507,7 @@ internal class InputFixtures {
         event.PreventDefault()
       },
       KeyBindings: []KeyBinding{
-        KeyBinding{Key: Key.Down, Repeat: true, Action: () -> { defaults++ }},
+        KeyBinding{Key: Key.Down, Repeat: true, OnPress: () -> { defaults++ }},
       },
     })
     let resolver = Resolver{}
@@ -1170,7 +1170,7 @@ internal class InputFixtures {
       Button{ Width: 50, Height: 40, Focus: Style{ Opacity: 0.5 } },
       Button{ Width: 50, Height: 40, Focus: Style{ Opacity: 0.5 } },
       TextEntry{ Width: 50, Height: 40, Focus: Style{ Opacity: 0.5 } },
-      TextEditor(controller){ Width = 50, Height = 40, Focus = Style{ Opacity: 0.5 } },
+      TextEditor(){ Controller = controller, Width = 50, Height = 40, Focus = Style{ Opacity: 0.5 } },
     })
     Layout().Calculate(root, 200.0F, 40.0F)
     FixtureKeyBindings.Install(root, input, resolver)
@@ -1461,7 +1461,7 @@ internal class InputFixtures {
   func TextEntryUndoRestoresSelectionAndGroupsTyping() bool {
     let cell = InputEntryCell{ value: "abc", writeBack: true }
     let driver = entryDriver(cell)
-    let input = driver.Window.PlatformInput
+    let input = driver.Window.Focus
     if !input.SetSelection(3, 1) { return false }
     driver.Char("x")
     driver.Update()
@@ -1522,7 +1522,7 @@ internal class InputFixtures {
     cell.value = "external"
     cell.Rebuild()
     driver.Update()
-    let input = driver.Window.PlatformInput
+    let input = driver.Window.Focus
     if input.Execute(TextCommand{ Kind: TextCommandKind.Undo })
       || input.Execute(TextCommand{ Kind: TextCommandKind.Redo })
       || entry(driver).Buffer != "external" || cell.changed != "ab" { return false }
@@ -2424,7 +2424,7 @@ internal class InputFixtures {
   func KeyboardCallbacksBubbleStopAndRepeat() bool {
     let events = List[string]()
     var stale KeyEvent
-    let root = Reconciler{ Res: Resolver{} }.Mount(Container() {.KeyBindings: []KeyBinding{ KeyBinding{ Key: Key.Left, Repeat: true, Action: () -> {} } },.Width: 100,.Height: 30,.OnFocus: (e FocusEvent) -> { events.Add("focus:root") },.OnBlur: (e FocusEvent) -> { events.Add("blur:root") },.OnKeyDown: (e KeyEvent) -> {
+    let root = Reconciler{ Res: Resolver{} }.Mount(Container() {.KeyBindings: []KeyBinding{ KeyBinding{ Key: Key.Left, Repeat: true, OnPress: () -> {} } },.Width: 100,.Height: 30,.OnFocus: (e FocusEvent) -> { events.Add("focus:root") },.OnBlur: (e FocusEvent) -> { events.Add("blur:root") },.OnKeyDown: (e KeyEvent) -> {
         events.Add("down:root:" + e.Key.ToString() + ":" + (e.Modifiers.Ctrl ? "1" : "0")
           +":" + (e.Repeat ? "1" : "0"))
       },.OnKeyUp: (e KeyEvent) -> {
@@ -2530,7 +2530,7 @@ internal class InputFixtures {
     let received = List[string]()
     let root = Reconciler{ Res: Resolver{} }.Mount(Container{
       Focusable: true,
-      KeyBindings: []KeyBinding{ KeyBinding{ Key: Key.B, Action: () -> { bindings++ } } },
+      KeyBindings: []KeyBinding{ KeyBinding{ Key: Key.B, OnPress: () -> { bindings++ } } },
       OnKeyDown: (e KeyEvent) -> {
         if e.IsComposing { composingKeys++ }
         else if e.Key == Key.P {
@@ -2607,7 +2607,7 @@ internal class InputFixtures {
 
     var repeatThrows = true
     let repeatRoot = Reconciler{ Res: Resolver{} }.Mount(Container{
-      KeyBindings: []KeyBinding{ KeyBinding{ Key: Key.Left, Repeat: true, Action: () -> {} } },
+      KeyBindings: []KeyBinding{ KeyBinding{ Key: Key.Left, Repeat: true, OnPress: () -> {} } },
       Width: 100, Height: 30, Focusable: true,
       OnKeyDown: (e KeyEvent) -> {
         if e.Repeat && repeatThrows {
@@ -3667,7 +3667,7 @@ internal class InputSyntheticRepeatCell : Cell {
   override func Build() Blob -> Container {
     Width: 100, Height: 30, Focusable: true, AutoFocus: true,
     KeyBindings: []KeyBinding{
-      KeyBinding{Key: Key.Down, Repeat: true, Action: () -> {
+      KeyBinding{Key: Key.Down, Repeat: true, OnPress: () -> {
         Presses++
         Rebuild()
       }},

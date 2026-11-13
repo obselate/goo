@@ -17,7 +17,7 @@ class PathAtlasGrowthCell : Cell {
         Height: Percent(100),
         Path: PendingPathReadinessCell.CoveredPath,
         Fit: ShapeFit.Fill,
-        BackgroundColor: Color.White,
+        Fill: VectorPaint(Color.White),
       },
     }
     for index in 0 ... Boxes {

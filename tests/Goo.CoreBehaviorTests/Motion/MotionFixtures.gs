@@ -65,6 +65,92 @@ internal class MotionFixtures {
       && instant.Velocity(0.0) == 0.0
   }
 
+  func PlayRestartsAndRoutesSpecificationsContract() bool {
+    let cell = MotionFixtureCell{}
+    cell.BindPump(pump)
+    var changes = 0
+    let scalar = cell.Animate(0.0, (value float64) -> { changes++ })
+    let point = cell.Animate(Point{})
+    try {
+      scalar.Play(2.0, 10.0, Motion.Tween(1000.0))
+      point.Play(Point{X: 2.0, Y: 4.0}, Point{X: 10.0, Y: 12.0},
+        Motion.Tween(1000.0), Motion.Tween(2000.0))
+      if changes != 0 || scalar.Value != 2.0 || scalar.Target != 10.0 || !scalar.Running { return false }
+      pump.Sweep(0.5)
+      if scalar.Value != 6.0 || point.Value.X != 6.0 || point.Value.Y != 6.0 { return false }
+      scalar.Pause()
+      cell.ClearDirty()
+      scalar.Play(4.0, 8.0, Motion.Tween(1000.0))
+      if changes != 1 || cell.HasDirty() || scalar.Value != 4.0 || scalar.IsPaused { return false }
+      pump.Sweep(1.0)
+      return scalar.Value == 8.0 && !scalar.Running && changes == 2
+        && point.Value.X == 10.0 && point.Value.Y == 10.0
+    } finally {
+      cell.DisposeMounted()
+    }
+  }
+
+  func DelayHoldsAndOffsetsSimulationContract() bool {
+    let spec = Motion.Delay(500.0, Motion.Tween(1000.0))
+    let simulation = spec(2.0, 10.0, 99.0)
+    let zero = Motion.Delay(0.0, Motion.Tween(0.0))
+    let instant = Motion.Delay(500.0, Motion.Tween(0.0))
+    let immediate = zero(2.0, 10.0, 0.0)
+    let delayed = instant(2.0, 10.0, 0.0)
+    return simulation.Position(0.25) == 2.0 && simulation.Velocity(0.25) == 0.0
+      && !simulation.Done(0.25) && simulation.Position(0.5) == 2.0
+      && simulation.Velocity(0.5) == 8.0 && !simulation.Done(0.5)
+      && simulation.Position(1.0) == 6.0 && simulation.Velocity(1.0) == 8.0
+      && !simulation.Done(1.499) && simulation.Done(1.5)
+      && simulation.Position(1.5) == 10.0 && simulation.Velocity(1.5) == 0.0
+      && immediate.Done(0.0) && immediate.Position(0.0) == 10.0
+      && !delayed.Done(0.499) && delayed.Done(0.5) && delayed.Position(0.5) == 10.0
+      && throws(() -> { let ignored = Motion.Delay(-1.0, Motion.Tween(1.0)) })
+      && throws(() -> { let ignored = Motion.Delay(Double.NaN, Motion.Tween(1.0)) })
+      && throws(() -> { let ignored = Motion.Delay(Double.PositiveInfinity, Motion.Tween(1.0)) })
+  }
+
+  func DelayedAnimationCompletesAndSkipsDisabledMotionContract() bool {
+    let originalScale = Motion.TimeScale
+    let cell = MotionFixtureCell{}
+    cell.BindPump(pump)
+    var changes = 0
+    var finished = 0
+    var reduced = 0
+    var disabled = 0
+    let anim = cell.Animate(0.0, (value float64) -> { changes++ })
+    anim.Completed += reason -> {
+      if reason == MotionCompletionReason.Finished { finished++ }
+      if reason == MotionCompletionReason.ReducedMotion { reduced++ }
+      if reason == MotionCompletionReason.Disabled { disabled++ }
+    }
+    try {
+      Motion.TimeScale = 2.0
+      anim.Play(2.0, 10.0, Motion.Delay(500.0, Motion.Tween(1000.0)))
+      pump.Sweep(0.125)
+      if anim.Value != 2.0 || changes != 0 || !anim.Running { return false }
+      pump.Sweep(0.375)
+      if anim.Value != 6.0 || changes != 1 { return false }
+      pump.Sweep(0.25)
+      if anim.Value != 10.0 || finished != 1 || anim.Running { return false }
+      anim.Play(0.0, 1.0, Motion.Delay(10000.0, Motion.Tween(1000.0)))
+      pump.ReducedMotion = true
+      pump.Sweep(0.0)
+      if anim.Value != 1.0 || reduced != 1 || anim.Running { return false }
+      pump.ReducedMotion = false
+      for scale in []float64{0.0, -1.0} {
+        Motion.TimeScale = scale
+        anim.Play(0.0, 1.0, Motion.Delay(10000.0, Motion.Tween(1000.0)))
+        pump.Sweep(0.0)
+        if anim.Value != 1.0 || anim.Running { return false }
+      }
+      return disabled == 2 && !pump.Active
+    } finally {
+      Motion.TimeScale = originalScale
+      cell.DisposeMounted()
+    }
+  }
+
   func PauseResumeSeekContract() bool {
     let cell = MotionFixtureCell{}
     cell.BindPump(pump)
@@ -719,7 +805,29 @@ internal class MotionFixtures {
       let autoFails = throws(() -> {
         let ignored = cell.Animate(Length.Auto)
       })
-      return targetFails && setFails && autoFails
+      let mixedFails = throws(() -> { let ignored = cell.Animate(Percent(50) + Em(1)) })
+      for initial in []Length{Em(0), Rem(0), Vw(0), Vh(0)} {
+        let relative = cell.Animate(initial)
+        let target = switch initial.Unit {
+          case LengthUnit.Em: Em(4)
+          case LengthUnit.Rem: Rem(4)
+          case LengthUnit.Vw: Vw(4)
+          case _: Vh(4)
+        }
+        relative.To(target)
+        pump.Sweep(0.09)
+        if relative.Value.Unit != initial.Unit || !relative.Running {
+          throw InvalidOperationException("relative midpoint: ${initial.Unit}, ${relative.Value.Unit}, ${relative.Running}")
+        }
+        pump.Sweep(0.1)
+        if relative.Running || !relative.Value.Equals(target) {
+          throw InvalidOperationException("relative completion: ${initial.Unit}, ${relative.Value.Unit}, ${relative.Running}, ${relative.Value.EmPart}, ${relative.Value.RemPart}, ${relative.Value.VwPart}, ${relative.Value.VhPart}")
+        }
+      }
+      if !targetFails || !setFails || !autoFails || !mixedFails {
+        throw InvalidOperationException("length rejection: $targetFails, $setFails, $autoFails, $mixedFails")
+      }
+      return targetFails && setFails && autoFails && mixedFails
         && anim.Value.Magnitude == 10.0 && anim.Target.Magnitude == 10.0 && !anim.Running
     } finally {
       cell.DisposeMounted()
@@ -846,11 +954,16 @@ internal class MotionFixtures {
     guard let anim = cell.anim else {
       return false
     }
-    let threw = throws(() -> {
+    try {
       let ignored = cell.Render()
-    })
-    cell.DisposeMounted()
-    return !threw && anim.Value == 1.0 && anim.Target == 1.0 && !anim.Running
+      if anim.Value != 1.0 || anim.Target != 1.0 || anim.Running { return false }
+      cell.Play = true
+      cell.ClearDirty()
+      let played = cell.Render()
+      return anim.Value == 0.0 && anim.Target == 1.0 && anim.Running && !cell.HasDirty()
+    } finally {
+      cell.DisposeMounted()
+    }
   }
 
   func SnapStopsRunningAnimationWithoutInvalidateContract() bool {
@@ -1417,6 +1530,7 @@ internal class SetDuringBuildFixtureCell : Cell {
 
 internal class SnapDuringBuildFixtureCell : Cell {
   internal var anim Anim[float64]?
+  internal var Play bool
 
   init() {
     anim = Animate(0.0)
@@ -1424,7 +1538,7 @@ internal class SnapDuringBuildFixtureCell : Cell {
 
   public override func Build() Blob {
     if let value = anim {
-      value.Snap(1.0)
+      if Play { value.Play(0.0, 1.0, Motion.Tween(1000.0)) } else { value.Snap(1.0) }
     }
     return Container{}
   }

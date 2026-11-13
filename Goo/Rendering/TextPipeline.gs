@@ -349,7 +349,7 @@ internal class TextResolvedStyles {
         let current = ranges[i]
         let end = current.Range.Start + current.Range.Length
         if offset < current.Range.Start || offset >= end { continue }
-        Apply(result, current.Style)
+        Apply(result, current.Style, n)
       }
       return result
     }
@@ -370,7 +370,8 @@ internal class TextResolvedStyles {
       || left.LetterSpacing != right.LetterSpacing || left.Direction != right.Direction
       || left.Transform != right.Transform
 
-    internal func Apply(result TextResolvedStyle, style Style) {
+    internal func Apply(result TextResolvedStyle, style Style, n Node) {
+      let parentFont = result.FontSize
       if let entries = style.Entries() {
         var cursor = entries.Cursor()
         while cursor.MoveNext() {
@@ -383,6 +384,14 @@ internal class TextResolvedStyles {
             case StyleField.FontFamily { result.FontFamily = entryText(entry) ?? result.FontFamily }
             case StyleField.FontSize {
               if LengthUnit(int32(entry.B)) == LengthUnit.Px { result.FontSize = entry.A * result.TextScaleFactor }
+              if let declaration = entry.Payload as LengthDeclaration {
+                let value = declaration.Value
+                var root = n
+                while let parent = root.Parent { root = parent }
+                let rootFont = root.FontSize.Px * result.TextScaleFactor
+                result.FontSize = value.Value * result.TextScaleFactor +
+                  value.EmPart * parentFont + value.RemPart * rootFont
+              }
             }
             case StyleField.FontWeight { result.FontWeight = float64(entry.A) }
             case StyleField.FontStyle { result.FontStyle = FontStyle(int32(entry.A)) }
