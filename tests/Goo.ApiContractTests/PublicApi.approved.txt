@@ -1109,6 +1109,7 @@ function|Goo|Each|public|generic:T[attrs:0,constraints:]|(items:System.Collectio
 function|Goo|Em|public|generic:|(value:System.Double)->Goo.Length
 function|Goo|Percent|public|generic:|(value:System.Double)->Goo.Length
 function|Goo|Rem|public|generic:|(value:System.Double)->Goo.Length
+function|Goo|Sized|public|generic:|(build:System.Func`2<Goo.LayoutSize,Goo.Blob>)->Goo.Blob
 function|Goo|Vh|public|generic:|(value:System.Double)->Goo.Length
 function|Goo|Vw|public|generic:|(value:System.Double)->Goo.Length
 method|Goo.AccessibilityActionRequest|Scroll|static|public|generic:|(x:System.Double,y:System.Double)->Goo.AccessibilityActionRequest
@@ -1148,6 +1149,7 @@ method|Goo.Application|Configure|static|public|generic:|(name:System.String,vers
 method|Goo.Application|PostActivation|static|public|generic:|(value:Goo.ApplicationActivation)->Goo.ActivationPostStatus
 method|Goo.Application|Run|static|public|generic:|(window:Goo.Window)->System.Void
 method|Goo.Blob|Each|static|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob[]
+method|Goo.Blob|Sized|static|public|generic:|(build:System.Func`2<Goo.LayoutSize,Goo.Blob>)->Goo.Blob
 method|Goo.BoxShadow|Deconstruct|instance|public|generic:|(out offsetX:Goo.Length&,out offsetY:Goo.Length&,out blur:Goo.Length&,out spread:Goo.Length&,out color:Goo.Color&,out inset:System.Boolean&)->System.Void
 method|Goo.BoxShadow|Equals|instance|public|generic:|(other:Goo.BoxShadow)->System.Boolean
 method|Goo.BoxShadow|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
