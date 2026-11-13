@@ -1225,6 +1225,10 @@ Gets the displayed text.
 
 Gets whether the text supports selection and copy without editing or a caret.
 
+### `SelectionColor`
+
+Gets the selection highlight color.
+
 ### `StyleRanges`
 
 Gets ordered passive inline styles in UTF-16 source offsets. A cluster uses the style at its logical start. Later ranges override earlier fields.

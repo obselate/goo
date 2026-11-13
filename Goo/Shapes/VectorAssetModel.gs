@@ -35,24 +35,29 @@ public sealed class VectorPaint {
 public sealed class VectorStroke {
   private let width float64
   private let paint VectorPaint
-  private let cap StrokeCap
-  private let join StrokeJoin
-  private let miterLimit float64
-  private let dashes DashPattern?
+  private var miterLimit float64
 
   /// Gets the non-negative stroke width in view-box units, or window logical pixels for NonScalingStroke.
   public prop Width float64{ get -> width }
   /// Gets the stroke paint.
   public prop Paint VectorPaint{ get -> paint }
   /// Gets the line cap style.
-  public prop Cap StrokeCap{ get -> cap }
+  public prop Cap StrokeCap{ get; init; }
   /// Gets the line join style.
-  public prop Join StrokeJoin{ get -> join }
-  /// Gets the finite miter limit.
-  public prop MiterLimit float64{ get -> miterLimit }
+  public prop Join StrokeJoin{ get; init; }
+  /// Gets the non-negative finite miter limit.
+  public prop MiterLimit float64{
+    get -> miterLimit
+    init{
+      if !finiteVectorValue(value) || value < 0.0 {
+        throw ArgumentOutOfRangeException("MiterLimit")
+      }
+      miterLimit = value
+    }
+  }
   /// Gets the optional dash pattern.
   /// NonScalingStroke measures dash lengths in window logical pixels.
-  public prop Dashes DashPattern? { get -> dashes }
+  public prop Dashes DashPattern? { get; init; }
   /// Gets the vector effect. The default is None.
   public prop VectorEffect VectorEffect{ get; init; }
 
@@ -66,36 +71,16 @@ public sealed class VectorStroke {
     }
     this.width = width
     this.paint = paint
-    cap = StrokeCap.Butt
-    join = StrokeJoin.Miter
+    Cap = StrokeCap.Butt
+    Join = StrokeJoin.Miter
     miterLimit = 4.0
-    dashes = nil
+    Dashes = nil
   }
 
   /// Creates a solid-color stroke with default cap, join, and miter settings.
   public convenience init(width float64, color Color) {
     init(width, VectorPaint(color))
   }
-
-  /// Creates a fully specified immutable stroke.
-  public init(width float64, paint VectorPaint, cap StrokeCap, join StrokeJoin,
-    miterLimit float64, dashes DashPattern?) {
-      if !finiteVectorValue(width) || width < 0.0 {
-        throw ArgumentOutOfRangeException("width")
-      }
-      if Object.ReferenceEquals(paint, nil) {
-        throw ArgumentNullException("paint")
-      }
-      if !finiteVectorValue(miterLimit) || miterLimit < 0.0 {
-        throw ArgumentOutOfRangeException("miterLimit")
-      }
-      this.width = width
-      this.paint = paint
-      this.cap = cap
-      this.join = join
-      this.miterLimit = miterLimit
-      this.dashes = dashes
-    }
 }
 
 /// Describes immutable paint and composition options for a vector node.

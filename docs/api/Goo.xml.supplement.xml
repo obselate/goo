@@ -132,12 +132,12 @@ Assign before Window.Open. Requires the optional Goo.Accessibility native runtim
     <member name="T:Goo.ShaderEffect">
       <summary>Owns retained parameter state for one backend-neutral shader effect program.</summary>
     </member>
-    <member name="M:Goo.ShaderEffect.#ctor(Goo.ShaderEffectProgram,System.Boolean,System.Single,System.Single)">
+    <member name="M:Goo.ShaderEffect.#ctor(Goo.ShaderEffectProgram,System.Boolean,System.Double,System.Double)">
       <summary>Creates a retained fragment effect with optional bounded backdrop sampling.</summary>
       <param name="program">The compiled shader effect program.</param>
       <param name="samplesBackdrop">Whether Goo copies the existing target behind the element for shader sampling.</param>
-      <param name="backdropOutset">The finite nonnegative logical-pixel distance captured around the element, up to 256.</param>
-      <param name="backdropBlur">The finite Gaussian standard deviation in logical pixels, from 0 through 256/3. Nonzero blur requires samplesBackdrop. Positive values prefilter at quarter resolution and capture at least three standard deviations around the element.</param>
+      <param name="backdropOutset">The finite nonnegative distance captured around the element in layout units, up to 256.</param>
+      <param name="backdropBlur">The finite Gaussian standard deviation in layout units, from 0 through 256/3. Nonzero blur requires samplesBackdrop. Positive values prefilter at quarter resolution and capture at least three standard deviations around the element.</param>
     </member>
     <member name="T:Goo.ShaderEffectProgram">
       <summary>Owns one immutable compiled shader effect program with backend-specific artifacts.</summary>
