@@ -1,6 +1,8 @@
 using Goo;
 using Goo.Widgets.Data;
 using Goo.Widgets.Layout;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 
 var window = new Window
 {
@@ -22,6 +24,15 @@ if (args.Contains("--check"))
     if (((Text)((Container)counter.Build()).Children[0]).Content != "Count: 1")
         throw new InvalidOperationException("Counter failed.");
     if (Examples.List(["Ada", "Grace"]).Children.Count != 4) throw new InvalidOperationException("Spread failed.");
+    foreach (var path in Directory.GetFiles(AppContext.BaseDirectory, "Goo*.dll"))
+    {
+        using var stream = File.OpenRead(path);
+        using var assembly = new PEReader(stream);
+        var metadata = assembly.GetMetadataReader();
+        if (metadata.AssemblyReferences.Any(reference =>
+                metadata.GetString(metadata.GetAssemblyReference(reference).Name) == "Gsharp.Runtime.Channels"))
+            throw new InvalidOperationException($"{Path.GetFileName(path)} references an SDK-internal channel runtime.");
+    }
     CheckAsyncDispatcher();
     Console.WriteLine("C# interop checks passed.");
 }
