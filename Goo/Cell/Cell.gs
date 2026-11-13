@@ -71,6 +71,7 @@ public open class Cell {
   private var ownedTimers List[WindowTimer]?
   private var mountHookQueued bool
   private var mountHookRun bool
+  private var defaultMountedRan bool
   private var unmounting bool
   private var callbackGeneration int64
   private var callbackContext WindowCallbackContext?
@@ -171,8 +172,10 @@ public open class Cell {
   }
 
   /// Runs once on the UI thread after the first layout and before paint. Handles have geometry.
-  /// Goo applies the normal callback rebuild rule after this hook, including when it throws.
-  protected open func Mounted() {}
+  /// Goo applies the normal callback rebuild rule after an override, including when it throws.
+  /// The base implementation does nothing and need not be called.
+  /// A Cell whose override calls base.Mounted() is not rebuilt after Mounted returns.
+  protected open func Mounted() { defaultMountedRan = true }
 
   /// Runs once on the UI thread before elements are removed and Lifetime is cancelled, parent before child.
   /// May run without Mounted when mounting fails. Does not request a rebuild.
@@ -201,7 +204,9 @@ public open class Cell {
   internal func CompleteMount() {
     if disposed || mountHookRun || mountedNode == nil { return }
     mountHookRun = true
-    RunOwnedAction(Mounted)
+    defaultMountedRan = false
+    try { RunOwnedAction(Mounted, false) }
+    finally { if !defaultMountedRan { RebuildAfterCallback() } }
   }
 
   internal func OwnTimer(timer WindowTimer) {
