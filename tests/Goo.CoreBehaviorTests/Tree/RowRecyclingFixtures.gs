@@ -6,6 +6,7 @@ import System.Runtime.CompilerServices
 
 internal class RowRecyclingFixtures {
   func VirtualKeysKeepAuthoredBlobsUnchangedContract() bool {
+    if VirtualRetainedBlob.Unkeyed.CallbackOwner != nil { return false }
     for frozenBefore in []bool{false, true} {
       let content = Text("row")
       let reconciler = Reconciler{Res: Resolver{}}

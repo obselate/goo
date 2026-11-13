@@ -4,6 +4,13 @@ import System
 import System.Collections.Generic
 
 internal class TreeFixtures {
+  func BuildReturnFreezesBeforeNestedCellContract() bool {
+    let cell = FreezeBuildReturnCell()
+    let node = Reconciler{Res: Resolver{}}.MountRoot(cell)
+    try { return cell.Rejected && cell.Declaration?.Key == nil }
+    finally { NodeLifecycle.DisposeTree(node) }
+  }
+
   func InputOptionsFreezeAtHandOffContract() bool {
     let hints = []string{"before"}
     let options = TextInputOptions{AutofillHints: hints}
@@ -1324,5 +1331,18 @@ internal class SizedVerificationFixtureCell : Cell {
     if SizedFixtureProbe.Mode == 0 { value.Value++ }
     else if SizedFixtureProbe.Mode == 1 { SizedFixtureProbe.Inside++ }
     else { SizedFixtureProbe.Outside++ }
+  }
+}
+
+internal class FreezeBuildReturnCell : Cell {
+  internal var Declaration Blob?
+  internal var Rejected bool
+
+  override func Build() Blob {
+    let result = Cell.Mount[TreeDepthCell](nil, _ -> {
+      try { Declaration!!.Key = "changed" } catch (_ InvalidOperationException) { Rejected = true }
+    })
+    Declaration = result
+    return result
   }
 }

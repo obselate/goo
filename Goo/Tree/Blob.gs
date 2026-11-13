@@ -31,6 +31,11 @@ public open class Blob : Style {
     transitionSelection = allTransitionSelection()
   }
 
+  internal init(callbackOwner Cell?) {
+    CallbackOwner = callbackOwner
+    transitionSelection = allTransitionSelection()
+  }
+
   internal open func coreBlob();
 
   internal prop IsFrozen bool { get -> (blobState & int32(4096)) != 0 }

@@ -96,12 +96,15 @@ internal partial class Reconciler {
       Frame: cell.incomingContext, Cell: cell, Reader: cell.contextReader})
     try {
       guard let profiler = Profiler else {
-        return cell.Render()
+        let result = cell.Render()
+        result.Freeze()
+        return result
       }
       let start = profiler.Start()
       var completed = false
       try {
         let result = cell.Render()
+        result.Freeze()
         completed = true
         return result
       } finally {

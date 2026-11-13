@@ -264,7 +264,8 @@ public class Accessibility {
   private var declarationOnAction ((AccessibilityActionRequest) -> bool)?
 
   internal func Freeze(owner Type) {
-    frozenOwner ??= owner
+    if frozenOwner != nil { return }
+    frozenOwner = owner
     Range?.Freeze(owner)
     Relationships?.Freeze(owner)
   }

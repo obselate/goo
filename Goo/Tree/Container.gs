@@ -150,7 +150,7 @@ internal sealed class OwnedChildren : IList[Blob] {
   public func IndexOf(item Blob) int32 -> values.IndexOf(item)
   public func CopyTo(array []Blob, index int32) { values.CopyTo(array, index) }
   public func GetEnumerator() IEnumerator[Blob] -> values.GetEnumerator()
-  func IEnumerable.GetEnumerator() IEnumerator -> GetEnumerator()
+  func (IEnumerable) GetEnumerator() IEnumerator -> GetEnumerator()
 }
 
 internal class ContainerVectorViewports {

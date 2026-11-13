@@ -8,7 +8,7 @@ internal sealed class VirtualRetainedBlob : Blob {
     internal let Unkeyed VirtualRetainedBlob = VirtualRetainedBlob(nil)
   }
 
-  internal init(key string?) {
+  internal init(key string?) : base(nil) {
     Key = key
   }
 

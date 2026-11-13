@@ -67,6 +67,7 @@ internal sealed class SizedNodeState : IDisposable {
     try {
       let content = Builder(size)
       if content == nil { throw InvalidOperationException("Sized builder returned nil.") }
+      content.Freeze()
       succeeded = true
       return content
     } finally {
