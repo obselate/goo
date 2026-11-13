@@ -411,7 +411,6 @@ class PublicDocumentationTests {
             "M:Goo.Cell.Mounted",
             "M:Goo.Cell.Unmounting",
             "M:Goo.Cell.Rebuild",
-            "M:Goo.Cell`1.InputChanged(`0)",
             "M:Goo.Color.FromNormalized(System.Single,System.Single,System.Single,System.Single)",
             "M:Goo.Color.Parse(System.String)",
             "M:Goo.Color.Rgb(System.Int32,System.Int32,System.Int32)",
