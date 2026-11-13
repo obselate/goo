@@ -214,6 +214,7 @@ internal struct WindowNotifications {
 
 /// Hosts a Goo tree on one process-wide UI thread.
 /// After Open or Attach, only Post and RequestClose are safe from another thread.
+/// State, IsFocused, Size, NativeWidth, NativeHeight, UiScale, Preferences and Modifiers track reads in Build and retained builders.
 public partial class Window {
   /// Configures this window as a Wayland layer-shell surface before Open.
   /// Unsupported platforms and compositors fail without a normal-window fallback.

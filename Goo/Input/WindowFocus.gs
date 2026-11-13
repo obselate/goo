@@ -1,6 +1,7 @@
 package Goo
 
 /// Provides owner-thread focus state, selection, and text commands for one window.
+/// Getter reads in Build and retained builders subscribe to changes.
 public sealed class WindowFocus {
   private let owner Window
   private let input InputCoordinator
