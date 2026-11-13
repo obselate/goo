@@ -604,6 +604,10 @@ Loads and validates a compiled shader effect program from memory.
 - `program`: The complete Goo shader effect program bytes.
 - `replacesBackdrop`: Whether the shader replaces the target instead of source-over compositing. Use GOO_REPLACES_BACKDROP in the shader to retain clip coverage when replacing a transparent backdrop.
 
+### `Load(System.Reflection.Assembly,string)`
+
+Loads a compiled effect by asset name without the .goo-effect extension.
+
 ### `Load(string)`
 
 Loads and validates a compiled shader effect program from a file.

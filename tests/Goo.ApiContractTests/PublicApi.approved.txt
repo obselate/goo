@@ -18,6 +18,7 @@ ctor|Goo.AccessibilityRelationships|public|()
 ctor|Goo.AccessibilityValue|public|()
 ctor|Goo.Accessibility|public|()
 ctor|Goo.ApplicationActivation|public|()
+ctor|Goo.AsyncImageSource|public|(load:System.Func`2<System.Threading.CancellationToken,System.Threading.Tasks.Task`1<Goo.ImageSource>>)
 ctor|Goo.Button|public|()
 ctor|Goo.Cell`1|public|()
 ctor|Goo.Cell|public|()
@@ -67,7 +68,7 @@ ctor|Goo.ImageSourceCache|public|(maxDecodedBytes:System.Int32=67108864,maxEntri
 ctor|Goo.ImageSourceLease|public|()
 ctor|Goo.ImageSource|public|(width:System.Int32,height:System.Int32,pixels:System.Byte[])
 ctor|Goo.Images.ImageVariants|public|(variants:System.Collections.Generic.IReadOnlyList`1<Goo.Images.ImageVariant>,limits:Goo.ImageDecodeLimits?=null)
-ctor|Goo.Images.ImageVariant|public|(path:System.String,pixelsPerUnit:System.Single)
+ctor|Goo.Images.ImageVariant|public|(path:System.String,pixelsPerUnit:System.Double)
 ctor|Goo.Image|public|()
 ctor|Goo.KeyBinding|public|(Key:Goo.Key,Modifiers:Goo.KeyModifiers,OnPress:System.Action?)
 ctor|Goo.LayerWindowOptions|public|()
@@ -1083,6 +1084,7 @@ enum|Goo.WindowsBackdropMaterial|MicaAlt|3
 enum|Goo.WindowsBackdropMaterial|Mica|2
 event|Goo.Anim`1|Completed|System.Action`1<Goo.MotionCompletionReason>|instance|add:public,remove:public
 event|Goo.Application|Activated|System.Action`1<Goo.ApplicationActivation>|static|add:public,remove:public
+event|Goo.AsyncImageSource|ContentChanged|System.Action|virtual|add:public,remove:public
 event|Goo.ElementHandle|MetricsChanged|System.Action`1<Goo.ElementMetrics>|instance|add:public,remove:public
 event|Goo.ExternalImageSession|Invalidated|System.Action`1<Goo.ExternalImageStatus>|instance|add:public,remove:public
 event|Goo.ExternalImageSource|ContentChanged|System.Action|virtual|add:public,remove:public
@@ -1147,6 +1149,10 @@ method|Goo.Application|Configure|static|public|generic:|(assembly:System.Reflect
 method|Goo.Application|Configure|static|public|generic:|(name:System.String,version:System.String,identifier:System.String)->System.Void
 method|Goo.Application|PostActivation|static|public|generic:|(value:Goo.ApplicationActivation)->Goo.ActivationPostStatus
 method|Goo.Application|Run|static|public|generic:|(window:Goo.Window)->System.Void
+method|Goo.Assets|Open|static|public|generic:|(assembly:System.Reflection.Assembly,name:System.String)->System.IO.Stream
+method|Goo.Assets|ReadAllBytes|static|public|generic:|(assembly:System.Reflection.Assembly,name:System.String)->System.Byte[]
+method|Goo.AsyncImageSource|Acquire|instance|public|generic:|()->Goo.ImageSourceLease
+method|Goo.AsyncImageSource|Dispose|instance|public|generic:|()->System.Void
 method|Goo.Blob|Each|static|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob[]
 method|Goo.BoxShadow|Deconstruct|instance|public|generic:|(out offsetX:Goo.Length&,out offsetY:Goo.Length&,out blur:Goo.Length&,out spread:Goo.Length&,out color:Goo.Color&,out inset:System.Boolean&)->System.Void
 method|Goo.BoxShadow|Equals|instance|public|generic:|(other:Goo.BoxShadow)->System.Boolean
@@ -1616,6 +1622,7 @@ method|Goo.ShaderEffectData|PublishTransferred|instance|public|generic:|(bytes:S
 method|Goo.ShaderEffectData|Publish|instance|public|generic:T[attrs:24,constraints:System.ValueType]|(values:System.ReadOnlySpan`1<!!0>)->System.Void
 method|Goo.ShaderEffectData|Publish|instance|public|generic:|(bytes:System.Byte[])->System.Void
 method|Goo.ShaderEffectData|Transfer|static|public|generic:|(bytes:System.Byte[],released:System.Action)->Goo.ShaderEffectData
+method|Goo.ShaderEffectProgram|Load|static|public|generic:|(assembly:System.Reflection.Assembly,name:System.String)->Goo.ShaderEffectProgram
 method|Goo.ShaderEffectProgram|Load|static|public|generic:|(path:System.String)->Goo.ShaderEffectProgram
 method|Goo.ShaderEffect|SetData|instance|public|generic:|(slot:System.Int32,value:Goo.ShaderEffectData?)->System.Boolean
 method|Goo.ShaderEffect|SetParameter|instance|public|generic:|(slot:System.Int32,value:System.Numerics.Vector4)->System.Boolean
@@ -2071,6 +2078,7 @@ property|Goo.ApplicationActivation|Payload|System.String|instance|get:public,ini
 property|Goo.ApplicationActivation|Target|System.Uri?|instance|get:public,init:public|index:()
 property|Goo.ApplicationActivation|WorkingDirectory|System.String|instance|get:public,init:public|index:()
 property|Goo.Application|VerifyState|System.Boolean|static|get:public,set:public|index:()
+property|Goo.AsyncImageSource|ContentVersion|System.UInt64|instance|get:public|index:()
 property|Goo.Blob|AccessibilityName|System.String?|instance|get:public,init:public|index:()
 property|Goo.Blob|AccessibilityRole|System.Nullable`1<Goo.AccessibilityRole>|instance|get:public,init:public|index:()
 property|Goo.Blob|Accessibility|Goo.Accessibility?|instance|get:public,init:public|index:()
@@ -2344,14 +2352,15 @@ property|Goo.ImageSource|Height|System.Int32|instance|get:public|index:()
 property|Goo.ImageSource|IsDisposed|System.Boolean|instance|get:public|index:()
 property|Goo.ImageSource|Width|System.Int32|instance|get:public|index:()
 property|Goo.Images.ImageAssetResult|Detail|System.String|instance|get:public|index:()
-property|Goo.Images.ImageAssetResult|PixelsPerUnit|System.Single|instance|get:public|index:()
+property|Goo.Images.ImageAssetResult|PixelsPerUnit|System.Double|instance|get:public|index:()
 property|Goo.Images.ImageAssetResult|Source|Goo.ImageSource?|instance|get:public|index:()
 property|Goo.Images.ImageAssetResult|Status|Goo.Images.ImageAssetStatus|instance|get:public|index:()
 property|Goo.Images.ImageVariant|Path|System.String|instance|get:public|index:()
-property|Goo.Images.ImageVariant|PixelsPerUnit|System.Single|instance|get:public|index:()
+property|Goo.Images.ImageVariant|PixelsPerUnit|System.Double|instance|get:public|index:()
+property|Goo.Image|Fallback|Goo.Blob?|instance|get:public,init:public|index:()
 property|Goo.Image|Fit|Goo.ImageFit|instance|get:public,init:public|index:()
-property|Goo.Image|Path|System.String|instance|get:public,init:public|index:()
-property|Goo.Image|PixelsPerUnit|System.Single|instance|get:public,init:public|index:()
+property|Goo.Image|PixelsPerUnit|System.Double|instance|get:public,init:public|index:()
+property|Goo.Image|Placeholder|Goo.Blob?|instance|get:public,init:public|index:()
 property|Goo.Image|Source|Goo.ImageSourceProvider?|instance|get:public,init:public|index:()
 property|Goo.KeyBinding|Key|Goo.Key|instance|get:public,init:public|index:()
 property|Goo.KeyBinding|Modifiers|Goo.KeyModifiers|instance|get:public,init:public|index:()
@@ -2619,7 +2628,6 @@ property|Goo.Style|BackgroundColor|Goo.Color|instance|init:public|index:()
 property|Goo.Style|BackgroundGradient|Goo.Gradient?|instance|init:public|index:()
 property|Goo.Style|BackgroundImageFit|Goo.ImageFit|instance|init:public|index:()
 property|Goo.Style|BackgroundImageSource|Goo.ImageSourceProvider?|instance|init:public|index:()
-property|Goo.Style|BackgroundImage|System.String|instance|init:public|index:()
 property|Goo.Style|BasedOn|Goo.Style?|instance|init:public|index:()
 property|Goo.Style|BlendMode|Goo.BlendMode|instance|init:public|index:()
 property|Goo.Style|BorderBottomLeftRadius|Goo.Length|instance|init:public|index:()
@@ -3057,6 +3065,8 @@ type|Goo.Anim`1|sealed-class|public|base:System.Object|interfaces:|generic:T[att
 type|Goo.ApplicationActivationKind|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.ApplicationActivation|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.Application|static-class|public|base:System.Object|interfaces:|generic:
+type|Goo.Assets|static-class|public|base:System.Object|interfaces:|generic:
+type|Goo.AsyncImageSource|sealed-class|public|base:System.Object|interfaces:Goo.ImageSourceProvider,System.IDisposable|generic:
 type|Goo.BlendMode|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Blob|abstract-class|public|base:Goo.Style|interfaces:|generic:
 type|Goo.BorderStyle|enum|public|base:System.Enum|interfaces:|generic:

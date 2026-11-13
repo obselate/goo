@@ -174,13 +174,28 @@ Set `Blob.LayoutTransition` to a `LayoutTransition(durationMs, easing)` value to
 ## Owned image sources
 
 `Image.Source` and `Style.BackgroundImageSource` accept an `ImageSourceProvider`.
-Source takes precedence over Path. A nonempty `Image.Path` without Source throws
-when mounted. Load local assets with `ImageSourceCache.LoadAsync` and assign Source.
+Use an `ImageSource` for ready pixels. For deferred work, keep an `AsyncImageSource`
+in a field or model. Its loader returns `Task[ImageSource]`. Wrap synchronous loaders
+with `Task.FromResult`. Goo cancels the load when its last pending lease is released,
+including when an image unmounts or changes source.
+
+`Image.Placeholder` and `Image.Fallback` fill and clip to the image box while the
+source is pending or failed. They do not set its measured size. Completion updates
+the image on the UI thread without an app rebuild call.
+
+`Assets.Open(assembly, name)` and `Assets.ReadAllBytes(assembly, name)` first resolve
+the exact manifest resource name, then a file under `AppContext.BaseDirectory`.
+The caller disposes an opened stream. `<GooAsset Include="assets/**" />` copies files
+for normal builds and embeds them for single-file or NativeAOT builds.
+
+`<GooShaderEffect Include="background.slang" Embed="true" />` embeds
+`background.goo-effect`. Load it with `ShaderEffectProgram.Load(assembly, "background")`.
 
 See [image loading and ownership](../images.md) for loading, decoding, buffer
 transfer, provider lifetime and memory-pressure behavior.
 
-Provider updates keep the last-good version visible until a replacement is ready.
+Provider version updates keep the last-good version visible until a replacement is ready.
+Changing to a pending source clears the previous image.
 
 ## Observe mounted element metrics
 
@@ -215,6 +230,31 @@ For custom text clients, see [custom IME positioning](input.md#position-a-custom
 
 
 For decoding, thumbnails and raster density, see [images](../images.md).
+
+## `AsyncImageSource`
+
+
+Shares a deferred image across mounted leases. Keep this source in a field or model.
+
+### `ContentChanged`
+
+Never raised. Completion is delivered through each lease.
+
+### `new(System.Func{System.Threading.CancellationToken,System.Threading.Tasks.Task{ImageSource}})`
+
+Creates a source whose Task-returning loader runs off the UI thread. The source owns the returned image. The last pending lease cancels the load.
+
+### `Acquire`
+
+Acquires the shared result or starts a load. Failed loads can be retried.
+
+### `Dispose`
+
+Cancels pending work and releases the cached image. Existing completed leases stay valid.
+
+### `ContentVersion`
+
+Gets the fixed version of this source.
 
 ## `Blob`
 
@@ -725,23 +765,27 @@ Defines a local bitmap image element.
 
 ### `new`
 
-Initializes an image with an empty path and contained fit mode.
+Initializes an image with contained fit mode.
+
+### `Fallback`
+
+Gets content shown inside the image box when its source fails.
 
 ### `Fit`
 
 Gets the image fit mode.
 
-### `Path`
-
-Legacy path metadata. A nonempty path without Source throws when mounted. Load local PNG assets with ImageSourceCache.LoadAsync and set Source instead.
-
 ### `PixelsPerUnit`
 
 Gets source pixels per logical layout unit. Positive and finite, default 1. A 128-pixel image at density 2 has a natural width of 64 logical units.
 
+### `Placeholder`
+
+Gets content shown inside the image box while its source is pending.
+
 ### `Source`
 
-Gets the owned or provider-backed image source. It wins over Path when set.
+Gets the owned or provider-backed image source.
 
 ## `ImageDecodeLimits`
 
