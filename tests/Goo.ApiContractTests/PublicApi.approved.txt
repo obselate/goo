@@ -1229,7 +1229,7 @@ method|Goo.ElementHandle|SetTextInputArea|instance|public|generic:|(area:Goo.Ele
 method|Goo.ElementHandle|TryCopyTextRangeRects|instance|public|generic:|(textRange:Goo.TextRange,space:Goo.TextCoordinateSpace,destination:System.Span`1<Goo.ElementRect>,out required:System.Int32&)->System.Boolean
 method|Goo.ElementHandle|TryGetTextCaretRect|instance|public|generic:|(position:Goo.TextPosition,space:Goo.TextCoordinateSpace,out rect:Goo.ElementRect&)->System.Boolean
 method|Goo.ElementHandle|TryGetTextPositionAt|instance|public|generic:|(point:Goo.Point,space:Goo.TextCoordinateSpace,out position:Goo.TextPosition&)->System.Boolean
-method|Goo.ElementMetrics|Deconstruct|instance|public|generic:|(out isMounted:System.Boolean&,out borderBox:Goo.ElementRect&,out contentBox:Goo.ElementRect&,out scrollOffset:Goo.Point&,out scrollRange:Goo.Point&,out rawBorderBox:Goo.ElementRect&,out pixelScale:Goo.Point&)->System.Void
+method|Goo.ElementMetrics|Deconstruct|instance|public|generic:|(out isMounted:System.Boolean&,out borderBox:Goo.ElementRect&,out contentBox:Goo.ElementRect&,out scrollOffset:Goo.Point&,out scrollRange:Goo.Point&,out rawBorderBox:Goo.ElementRect&,out isAtEndX:System.Boolean&,out isAtEndY:System.Boolean&)->System.Void
 method|Goo.ElementMetrics|Equals|instance|public|generic:|(other:Goo.ElementMetrics)->System.Boolean
 method|Goo.ElementMetrics|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
 method|Goo.ElementMetrics|GetHashCode|virtual|public|generic:|()->System.Int32
@@ -2208,8 +2208,8 @@ property|Goo.ElementHandle|ScrollRange|Goo.Point|instance|get:public|index:()
 property|Goo.ElementHandle|VisibleAnchor|System.Nullable`1<Goo.VirtualScrollAnchor>|instance|get:public|index:()
 property|Goo.ElementMetrics|BorderBox|Goo.ElementRect|instance|get:public,init:public|index:()
 property|Goo.ElementMetrics|ContentBox|Goo.ElementRect|instance|get:public,init:public|index:()
-property|Goo.ElementMetrics|IsAtEndX|System.Boolean|instance|get:public|index:()
-property|Goo.ElementMetrics|IsAtEndY|System.Boolean|instance|get:public|index:()
+property|Goo.ElementMetrics|IsAtEndX|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.ElementMetrics|IsAtEndY|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.ElementMetrics|IsMounted|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.ElementMetrics|RawBorderBox|Goo.ElementRect|instance|get:public,init:public|index:()
 property|Goo.ElementMetrics|ScrollOffset|Goo.Point|instance|get:public,init:public|index:()

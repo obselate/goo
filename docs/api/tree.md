@@ -184,7 +184,7 @@ Provider updates keep the last-good version visible until a replacement is ready
 
 ## Observe mounted element metrics
 
-Subscribe to `ElementHandle.MetricsChanged` on the UI thread. The immutable snapshot contains `IsMounted`, `BorderBox`, `ContentBox`, `ScrollOffset`, `ScrollRange` and `RawBorderBox`, in that positional deconstruction order. `RawBorderBox` is the transformed layout box before device-pixel snapping. Other boxes describe painted geometry in window logical coordinates.
+Subscribe to `ElementHandle.MetricsChanged` on the UI thread. The immutable snapshot contains `IsMounted`, `BorderBox`, `ContentBox`, `ScrollOffset`, `ScrollRange`, `RawBorderBox`, `IsAtEndX` and `IsAtEndY`, in that positional deconstruction order. `RawBorderBox` is the transformed layout box before device-pixel snapping. Other boxes describe painted geometry in window logical coordinates.
 
 Goo calls listeners after reconciliation, layout, rect refresh, and scroll stepping settle. Detach produces one final `IsMounted = false` snapshot after tree disposal. A detach followed by reattach in the same update reports only the final mounted state.
 
