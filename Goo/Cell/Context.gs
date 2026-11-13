@@ -568,9 +568,11 @@ internal sealed class ContextProvider : Cell {
     }
 }
 
-internal class WindowDependency[T any](value T) {
-    private var current T = value
+internal class WindowDependency[T any] {
+    private var current T
     private let dependency StateDependency = StateDependency(true, false)
+
+    internal init(value T) { current = value }
 
     internal func Read(reader object) { dependency.Read(reader) }
 
