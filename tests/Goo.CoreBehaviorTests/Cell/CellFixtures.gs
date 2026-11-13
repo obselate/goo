@@ -1367,7 +1367,7 @@ internal class ControlledEditorValueCell : Cell {
     if document.GetText() != Value {
       document.Apply(TextChange(TextRange(0, document.Length), Value))
     }
-    return TextEditor(controller) {
+    return TextEditor(){ Controller = controller,
       Width = 200,
       Height = 100,
       OnChange = change -> { Changes++ },

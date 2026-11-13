@@ -153,9 +153,9 @@ public open class EmbeddedWindowHost : IDisposable {
   /// Updates the text caret area in logical viewport units.
   protected open func SetImeArea(x int32, y int32, width int32, height int32, cursor int32) bool -> false
   /// Gets plain text from the platform clipboard.
-  protected open func GetClipboardText() string -> ""
+  protected open func GetClipboardText() string -> throw NotSupportedException("The embedded host does not provide clipboard text")
   /// Stores plain text in the platform clipboard.
-  protected open func SetClipboardText(value string) { }
+  protected open func SetClipboardText(value string) { throw NotSupportedException("The embedded host does not publish clipboard text") }
   /// Updates the pointer cursor when the platform supports one.
   protected open func SetCursor(value Cursor) { }
 
@@ -202,10 +202,28 @@ public open class EmbeddedWindowHost : IDisposable {
   internal func EndTextInput() { StopTextInput() }
   internal func SetTextArea(x int32, y int32, width int32, height int32, cursor int32) bool ->
   SetImeArea(x, y, width, height, cursor)
-  internal func ClipboardText() string {
-    let value = GetClipboardText()
-    return ClipboardTransfer.TextFits(value) ? value : ""
+  internal open func ClipboardText() ClipboardTextResult {
+    try {
+      let value = GetClipboardText()
+      if !ClipboardTransfer.TextFits(value) {
+        return ClipboardTextResult(ClipboardTextStatus.TooLarge, error: "Clipboard text exceeds 16 MiB")
+      }
+      return ClipboardTextResult(if value.Length == 0 { ClipboardTextStatus.Empty } else { ClipboardTextStatus.Success }, value)
+    } catch (error NotSupportedException) {
+      return ClipboardTextResult(ClipboardTextStatus.Unsupported, error: error.Message)
+    } catch (error Exception) {
+      return ClipboardTextResult(ClipboardTextStatus.Failed, error: error.Message)
+    }
   }
-  internal func CopyText(value string) { SetClipboardText(value) }
+  internal open func CopyText(value string) ClipboardWriteResult {
+    try {
+      SetClipboardText(value)
+      return ClipboardWriteResult(DataTransferStatus.Success)
+    } catch (error NotSupportedException) {
+      return ClipboardWriteResult(DataTransferStatus.Unsupported, error.Message)
+    } catch (error Exception) {
+      return ClipboardWriteResult(DataTransferStatus.Failed, error.Message)
+    }
+  }
   internal func ChangeCursor(value Cursor) { SetCursor(value) }
 }

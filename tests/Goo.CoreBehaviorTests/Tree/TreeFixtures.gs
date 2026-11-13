@@ -4,6 +4,58 @@ import System
 import System.Collections.Generic
 
 internal class TreeFixtures {
+  func EachAssignsDataKeysContract() bool {
+    let items = []string{"a", "b"}
+    let children = Each(items, item -> item, item -> Text(item))
+    let interop = Blob.Each[string](items, (item string) -> item, (item string) -> Text(item))
+    let rec = Reconciler{Res: Resolver{}}
+    let root = rec.Mount(Container(){...children})
+    try {
+      return root.Children.Count == 2 && root.Children[0].Key == "a" && root.Children[1].Key == "b"
+        && root.Children[0].Content == "a" && root.Children[1].Content == "b"
+        && interop.Length == 2 && interop[0].Key == "a" && interop[1].Key == "b"
+        && Each([]string{}, item -> item, item -> Text(item)).Length == 0
+    } finally { NodeLifecycle.DisposeTree(root) }
+  }
+
+  func EachPreservesExplicitKeysContract() bool {
+    let children = Each([]string{"a", "b"},
+      item -> throw InvalidOperationException("An explicit key must skip the selector."),
+      item -> Text{Key: "explicit-" + item, Content: item})
+    return children.Length == 2 && children[0].Key == "explicit-a" && children[1].Key == "explicit-b"
+  }
+
+  func EachReorderRetainsIdentityContract() bool {
+    let rec = Reconciler{Res: Resolver{}}
+    let root = rec.Mount(Container(){
+      ...Each([]string{"a", "b"}, item -> item, item -> Cell.Mount[string, TreeKeyedCell](nil, item)),
+    })
+    try {
+      let a = root.Children[0]
+      let b = root.Children[1]
+      guard let cell = a.Fiber as TreeKeyedCell else { return false }
+      cell.Value = "kept"
+      cell.Rebuild()
+      rec.Diff(root, Container(){
+        ...Each([]string{"b", "a"}, item -> item, item -> Cell.Mount[string, TreeKeyedCell](nil, item)),
+      })
+      return root.Children[0] == b && root.Children[1] == a && a.Fiber == cell && a.Content == "a:kept"
+    } finally { NodeLifecycle.DisposeTree(root) }
+  }
+
+  func EachDuplicateKeysThrowContract() bool {
+    let rec = Reconciler{Res: Resolver{}}
+    let root = rec.Mount(Container(){...Each([]string{"a"}, item -> item, item -> Text(item))})
+    try {
+      try {
+        rec.Diff(root, Container(){...Each([]string{"a", "a"}, item -> item, item -> Text(item))})
+        return false
+      } catch (error NotSupportedException) {
+        return error.Message.Contains("Duplicate key 'a'", StringComparison.Ordinal)
+      }
+    } finally { NodeLifecycle.DisposeTree(root) }
+  }
+
   func EmptyChildrenPreserveStyleRetryRootContract() bool {
     let rec = Reconciler{Res: Resolver{}}
     let node = rec.Mount(Container{})

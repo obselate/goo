@@ -569,7 +569,7 @@ internal class AccessibilityFixtureCell : Cell {
 }
 
 internal class AccessibilityEditorCell(document TextDocument, controller TextEditorController) : Cell {
-  override func Build() Blob -> TextEditor(controller) {}
+  override func Build() Blob -> TextEditor{Controller: controller}
 }
 
 internal class AccessibilityEquivalentCell : Cell {

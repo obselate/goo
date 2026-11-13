@@ -13,6 +13,11 @@ window.FocusChanged -= focused;
 if (args.Contains("--check"))
 {
     var counter = new Counter();
+    var percent = Length.Percent(25);
+    var relative = Length.Em(2);
+    var zero = relative * 3 - Length.Em(6);
+    if (!percent.IsPercent || percent.Magnitude != 25 || relative.HasMagnitude || !zero.HasMagnitude || zero.Magnitude != 0)
+        throw new InvalidOperationException("Length interop failed.");
     ((Button)((Container)counter.Build()).Children[1]).OnClick!();
     if (((Text)((Container)counter.Build()).Children[0]).Content != "Count: 1")
         throw new InvalidOperationException("Counter failed.");

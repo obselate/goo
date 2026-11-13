@@ -714,7 +714,7 @@ internal class ScrollbarFixtures {
 
 internal class ScrollbarEditorCell(controller TextEditorController, padded bool = false,
   readOnly bool = true) : Cell {
-  override func Build() Blob -> TextEditor(controller) {
+  override func Build() Blob -> TextEditor(){ Controller = controller,
     Width = 100,
     Height = 100,
     Padding = if padded { Edges{Left: 10, Right: 10, Top: 10, Bottom: 10} } else { Edges{} },
@@ -825,7 +825,7 @@ internal class ScrollbarDescriptorSwitchCell : Cell {
   internal var Descriptor Scrollbar? = Scrollbar{ Thumb: Container{} }
   private let source ScrollbarDescriptorSwitchSource = ScrollbarDescriptorSwitchSource()
 
-  override func Build() Blob -> Virtual(source){
+  override func Build() Blob -> Virtual(){Source = source,
     Handle = Viewport, Width = 200, Height = 160,
     ScrollbarY = Descriptor, ScrollbarVisibilityY = Visibility,
   }
@@ -851,7 +851,7 @@ internal class ScrollbarDescriptorSwitchSource : VirtualState, VirtualSource {
 internal class ScrollbarVirtualDragCell : Cell {
   internal let Rows VirtualFixtureCell = VirtualFixtureCell(50)
 
-  override func Build() Blob -> Virtual(VirtualFixtureSource(Rows)){
+  override func Build() Blob -> Virtual(){Source = VirtualFixtureSource(Rows),
     Width = 75, Height = 60,
     ScrollbarY = Scrollbar{ Thickness: 4, Inset: 0, MinThumbLength: 24, Thumb: Container{} },
     ScrollbarVisibilityY = ScrollbarVisibility.Always,
@@ -866,7 +866,7 @@ internal class RetiredHoverParent : Cell, VirtualSource {
 
   override func Build() Blob {
     Builds++
-    return Virtual(this){ Handle = Handle, Width = 100, Height = 20 }
+    return Virtual(){Source = this, Handle = Handle, Width = 100, Height = 20 }
   }
 
   public func State(current VirtualState?) VirtualState -> current ?? RetiredHoverRows(this)

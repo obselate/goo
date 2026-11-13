@@ -37,7 +37,7 @@ open class Leaf : Cell[LeafInput] {
     LastLabel = "Before " + input.Label
     return Container() {.Padding: 20,.Gap: 12,.Width: Percent(100),.Height: Percent(100),.BackgroundColor: Color.Rgb(20, 27, 39),
       Text{ Content: LastLabel + ": " + Counter.ToString(), FontSize: 24, Color: Color.White },
-        TextEditor(Editor) { Height = 80, Width = Percent(100), FontSize = 18, Color = Color.White },
+        TextEditor(){ Controller = Editor, Height = 80, Width = Percent(100), FontSize = 18, Color = Color.White },
       }
   }
 }

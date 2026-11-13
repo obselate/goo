@@ -18,6 +18,20 @@ let content = Container{
 - After a constructor or factory call, unmarked `key: value` calls `Add(key, value)`.
 - `Children: existingList` assigns the list. A spread copies its contents.
 
+## Compose and select text
+
+```gsharp
+Text("Plain ", TextSpan("styled", Style{FontWeight: 700}), " text")
+Text{Content: "Copy this text", Selectable: true}
+TextEditor{Controller: controller, Layers: layers}
+```
+
+- `Text` concatenates spans. Plain strings use inherited style. Each styled span adds one UTF-16 `TextStyleRange`.
+- `Content` and `StyleRanges` remain available for indexed styles.
+- `Selectable` supports pointer selection, word and line selection, Shift plus movement, Select All and Copy. It adds focus and accessibility selection, but no caret, editing or IME.
+- Set `TextEditor.Controller` and `Virtual.Source` before mounting. Missing values throw at mount. Editor layers must use the controller's document.
+- Ellipsis text has automatic minimum width zero. An explicit `MinWidth` still wins.
+
 ## Present content above the normal tree
 
 Use `Portal` for popups, menus, tooltips, and other content that must escape its
@@ -113,7 +127,7 @@ handles, input callbacks, and focus scopes.
 
 ## Virtualize large collections
 
-`Virtual(source)` is a scrolling element that mounts only the items that its source places. Goo has no list or grid policy of its own. Goo.Widgets supplies `VirtualItems` for items of one size and `VirtualRows` for rows of measured height. Write a policy when neither fits.
+`Virtual{Source: source}` is a scrolling element that mounts only the items that its source places. Goo has no list or grid policy of its own. Goo.Widgets supplies `VirtualItems` for items of one size and `VirtualRows` for rows of measured height. Write a policy when neither fits.
 
 A policy has two parts:
 

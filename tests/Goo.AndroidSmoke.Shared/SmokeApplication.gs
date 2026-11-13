@@ -18,7 +18,7 @@ public class SmokeApplication {
         Background: Color.Rgb(17, 24, 39),
         Root: scene,
       }
-      scene.Input = window.PlatformInput
+      scene.Input = window.Focus
       return window
     }
 
@@ -67,7 +67,7 @@ class AccessibilitySmokeCell : Cell {
 }
 
 class SmokeCell : Cell, IDisposable {
-  internal prop Input PlatformInput? { get; set; }
+  internal prop Input WindowFocus? { get; set; }
   private let font FontSource
   private let entryOptions TextInputOptions = TextInputOptions{
     Purpose: InputPurpose.Email, EnterAction: EnterAction.Next,
@@ -95,7 +95,7 @@ class SmokeCell : Cell, IDisposable {
 
   override func Build() Blob -> Container() {.Width: Percent(100),.Height: Percent(100),.Overflow: Overflow.Scroll,.Padding: 20,.Gap: 14,
     .KeyBindings: []KeyBinding{
-      KeyBinding{ Key: Key.Backspace, Repeat: true, Action: () -> {
+      KeyBinding{ Key: Key.Backspace, Repeat: true, OnPress: () -> {
         Input?.Execute(TextCommand{ Kind: TextCommandKind.DeleteBackward })
       } },
     },
@@ -132,7 +132,7 @@ class SmokeCell : Cell, IDisposable {
         BackgroundColor: Color.Rgb(31, 41, 55),
         OnChange: (value string) -> { secret = value },
       },
-      TextEditor(controller) {
+      TextEditor(){ Controller = controller,
         Accessibility = Accessibility{ Name: "Notes" },
         Height = 150,
         Padding = 10,

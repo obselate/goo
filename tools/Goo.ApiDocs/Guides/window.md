@@ -598,11 +598,26 @@ Windows and macOS use native choosers. Linux requires the XDG FileChooser portal
 and the bundled SDL bridge. Missing portal or bridge support returns `Unsupported`.
 Embedded hosts return `Unsupported`. `CancelFileDialog` requests native dismissal.
 
+## Ownerless platform services
+
+```gsharp
+let result = await Platform.OpenAsync("/absolute/path", token)
+if result.Status == PlatformOpenStatus.Failed {
+  Console.Error.WriteLine(result.Error)
+}
+```
+
+`Platform.OpenAsync` starts the system handler on a `go` child. `Success` means the handler started, not that it opened the target. Relative paths throw `ArgumentException`. Cancellation stops a launch that has not started.
+
+Use `NativeDialogs.ShowError(title, message)` before any window opens or after the last window closes. It blocks the caller and returns `MessageBoxStatus`. Linux returns `Unsupported`. Write the message to standard error when no native box is supported.
+
 ## File and image clipboard data
 
-`GetClipboardFormats()` returns an owned MIME list plus `HasFiles` and `HasImage` without copying image payloads or opening listed files. `ReadClipboardFiles()` and `ReadClipboardImage()` return owned data and an explicit `ClipboardReadStatus`: `Success`, `Empty`, `Unsupported`, `TooLarge`, or `Failed`. `Error` explains failures and exceeded limits. Each call reads the current clipboard; a query and later read are not an atomic snapshot. Applications choose which representation to prefer when both files and images are offered.
+`window.Clipboard.GetFormats()` returns an owned MIME list plus `HasFiles` and `HasImage` without copying image payloads or opening listed files. `ReadFiles()` and `ReadImage()` return owned data and an explicit `ClipboardReadStatus`: `Success`, `Empty`, `Unsupported`, `TooLarge`, or `Failed`. `Error` explains failures and exceeded limits. Each call reads the current clipboard. A query and later read are not an atomic snapshot.
 
 Call these methods on the open window's UI thread. Calls before open, after close, or on another thread throw. Embedded windows report `Unsupported` because their clipboard belongs to the host. Clipboard contents are never modified by these methods. Returned paths and bytes survive later clipboard changes and window close and need no disposal.
+
+`window.Clipboard.ReadText()` returns `ClipboardTextResult` with `Status`, `Text`, and `Error`. `ClipboardTextStatus` distinguishes `Success`, `Empty`, `Unsupported`, `TooLarge`, and `Failed`. Text is limited to 16 MiB of UTF-8. `WriteText(value)` returns `ClipboardWriteResult`. Native read and write failures do not throw.
 
 File reads support local `text/uri-list`, GNOME copied-file lists, Windows `CF_HDROP`, and macOS pasteboard file URLs. Paths retain clipboard order; Goo does not read their contents. URI lists reject remote hosts, relative paths, and NUL characters. Limits are 4096 paths, 32768 UTF-16 units per path, and 1048576 total path units; MIME file-list payloads are limited to 1 MiB.
 
@@ -618,14 +633,14 @@ let data = TransferData([]TransferRepresentation{
   TransferRepresentation("text/plain", ReadOnlyMemory[uint8](plain)),
   TransferRepresentation("text/html", ReadOnlyMemory[uint8](html))
 }, []Uri{})
-let result = await window.WriteClipboardAsync(data)
+let result = await window.Clipboard.WriteAsync(data)
 ```
 
 Start clipboard calls on the open window's UI thread. Check `result.Status`.
 
 | Contract | Behavior |
 | --- | --- |
-| Read | `ReadClipboardDataAsync(types)` copies requested formats from one offer. Include `text/uri-list` for document references. |
+| Read | `window.Clipboard.ReadDataAsync(types)` copies requested formats from one offer. Include `text/uri-list` for document references. |
 | Owned data | Byte snapshots and URI values stay unchanged after replacement or window close. Caller changes cannot alter published bytes. |
 | Text and images | Plain text and HTML use UTF-8 without a terminator. RTF and encoded images keep their bytes. |
 | Files | Put references in `Uris`, not a second URI-list representation. Goo does not open the files. Desktop references must be local file URIs. |

@@ -1649,7 +1649,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
             Height: Percent(100),
             Path: path,
             Fit: ShapeFit.Fill,
-            BackgroundColor: color,
+            Fill: VectorPaint(color),
         }
 
         private func Rect(path PathBuilder, x float64, y float64, width float64, height float64) {

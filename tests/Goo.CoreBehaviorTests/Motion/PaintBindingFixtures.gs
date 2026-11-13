@@ -196,7 +196,11 @@ internal class PaintBindingFixtures {
     let window = Window{ Root: cell, Width: 320, Height: 240 }
     try {
       window.UpdateTree()
-      cell.Number.To(0.25, (from float64, to float64, velocity float64) -> PaintSlotSpring(from, to, velocity))
+      cell.Number.Play(0.75, 0.25, Motion.Delay(500.0,
+        (from float64, to float64, velocity float64) -> PaintSlotSpring(from, to, velocity)))
+      window.UpdateTree(0.25)
+      if cell.Number.Value != 0.75 || cell.Handle.AttachedNode()!!.Opacity != 0.75F { return false }
+      window.UpdateTree(0.25)
       for tick in 0 ... 120 { window.UpdateTree(1.0 / 64.0) }
       return cell.Builds == 1 && cell.Number.Value == 0.25
         && cell.Handle.AttachedNode()!!.Opacity == 0.25F
