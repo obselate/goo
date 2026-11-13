@@ -424,6 +424,22 @@ internal class WindowDragCloseCell : Cell {
     })}
 }
 
+internal class WindowDragCloseCell : Cell {
+  internal let Handle ElementHandle = ElementHandle()
+  internal var EndCount int32
+  internal var EndedMounted bool
+  internal var EndedCancelled bool
+  internal prop Cancelled bool { get -> Lifetime.IsCancellationRequested }
+
+  override func Build() Blob -> Container{
+    Handle: Handle, Width: 100, Height: 100,
+    DragSource: DragSource(_ -> DragData("payload", DragEffect.Copy), e -> {
+      EndCount++
+      EndedMounted = Handle.IsMounted && !Lifetime.IsCancellationRequested
+      EndedCancelled = e.Kind == DragEndKind.Canceled && e.Status == DataTransferStatus.Cancelled
+    })}
+}
+
 internal class WindowSizeCell : Cell {
   internal var Percentage bool
   internal var ContentWidth float64
@@ -439,7 +455,6 @@ internal class RelativeWindowSizeCell(width Length, height Length, descendant bo
   public override func Build() Blob -> Container{Width: width, Height: height,
     Container{Width: descendant ? Vw(50) : 120, Height: descendant ? Vh(50) : 80}}
 }
-
 internal class WindowAsyncCell : Cell {
   internal let Pending TaskCompletionSource[bool] = TaskCompletionSource[bool]()
   internal let Finished ManualResetEventSlim = ManualResetEventSlim()
