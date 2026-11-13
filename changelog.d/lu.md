@@ -6,3 +6,7 @@
 ## Added
 
 - `Length.Em`, `Length.Rem`, `Length.Vw` and `Length.Vh` factories for other .NET languages.
+
+## Fixed
+
+- Keep pixel and percentage layout values compact without per-frame allocation overhead.
