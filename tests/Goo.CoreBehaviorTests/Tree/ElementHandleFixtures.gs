@@ -4,6 +4,17 @@ import System
 import System.Collections.Generic
 
 internal class ElementHandleFixtures {
+  func MutableHandleReadRebuildContract() bool {
+    let cell = ElementHandleStateReadCell()
+    let window = Window{Root: cell, Width: 100, Height: 120}
+    try {
+      window.UpdateTree()
+      if !cell.ButtonHandle.Activate() || !cell.IsDirty() { return false }
+      window.UpdateTree()
+      return window.Tree?.Children[1].Content == "0:40"
+    } finally { window.Close() }
+  }
+
   func DeferredSelectionContract() bool {
     let handle = ElementHandle()
     if !handle.SelectText(0, 1) || !handle.SelectText(1, 3) { return false }
@@ -1280,5 +1291,19 @@ internal class ThrowingVirtualFixtureState : VirtualState {
   public override func Dispose() {
     Disposals++
     if Fail { throw Failure }
+  }
+}
+
+internal class ElementHandleStateReadCell : Cell {
+  internal let Handle ElementHandle = ElementHandle()
+  internal let ButtonHandle ElementHandle = ElementHandle()
+  private let value State[int32] = State[int32](0)
+
+  override func Build() Blob -> Container(){
+    Button{Handle: ButtonHandle, Height: 20, OnClick: () -> { Handle.JumpTo(y: 40) }},
+    Text{Content: "${value.Value}:${Handle.ScrollOffset.Y}"},
+    Container{Handle: Handle, Height: 60, OverflowY: Overflow.Scroll,
+      Container{Height: 200, FlexShrink: 0},
+    },
   }
 }

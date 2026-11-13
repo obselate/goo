@@ -211,6 +211,7 @@ class FixtureContractTests {
             yield Contract[DragDropFixtures]("DragStartDistanceSettingAndTouchContract")
             yield Contract[DragDropFixtures]("DropMutationAndPayloadOwnershipContract")
             yield Contract[DragDropFixtures]("RemovalDisableAndResetContract")
+            yield Contract[ElementHandleFixtures]("MutableHandleReadRebuildContract")
             yield Contract[DragDropFixtures]("SlippedDoubleClickStillClicksContract")
             yield Contract[DragDropFixtures]("ThresholdNegotiationTargetingAndClickContract")
             yield Contract[ElementHandleFixtures]("DuplicateAndCellContract")

@@ -20,12 +20,18 @@ public class ElementHandle {
 
   /// Reports whether this handle is attached to an element.
   public prop IsMounted bool{
-    get -> mountedNode() != nil
+    get {
+      Cell.ObserveUntrackedRead()
+      return mountedNode() != nil
+    }
   }
 
   /// Reports whether this mounted element resolves Focus style through direct focus or projection.
   public prop IsFocusVisible bool {
-    get -> mountedNode(true)?.FocusVisible ?? false
+    get {
+      Cell.ObserveUntrackedRead()
+      return mountedNode(true)?.FocusVisible ?? false
+    }
   }
 
   /// Sets the descendant that also resolves Focus style while this owner has visible focus.
@@ -41,6 +47,7 @@ public class ElementHandle {
   /// An unmounted handle returns an empty rectangle.
   public prop BorderBox ElementRect{
     get {
+      Cell.ObserveUntrackedRead()
       guard let n = mountedNode(true) else { return ElementRect{} }
       return ElementHandles.BorderBox(n)
     }
@@ -52,6 +59,7 @@ public class ElementHandle {
   /// An unmounted handle returns an empty rectangle.
   public prop RawBorderBox ElementRect{
     get {
+      Cell.ObserveUntrackedRead()
       guard let n = mountedNode(true) else { return ElementRect{} }
       return ElementHandles.RawBorderBox(n)
     }
@@ -61,6 +69,7 @@ public class ElementHandle {
   /// An unmounted handle returns an empty rectangle.
   public prop ContentBox ElementRect{
     get {
+      Cell.ObserveUntrackedRead()
       guard let n = mountedNode(true) else { return ElementRect{} }
       return ElementHandles.ContentBox(n)
     }
@@ -70,6 +79,7 @@ public class ElementHandle {
   /// An unmounted handle returns the origin.
   public prop ScrollOffset Point{
     get {
+      Cell.ObserveUntrackedRead()
       guard let n = mountedNode(true) else { return Point{} }
       return Point{ X: float64(n.ScrollX), Y: float64(n.ScrollY) }
     }
@@ -78,6 +88,7 @@ public class ElementHandle {
   /// An unmounted handle returns the origin.
   public prop ScrollRange Point{
     get {
+      Cell.ObserveUntrackedRead()
       guard let n = mountedNode(true) else { return Point{} }
       return scrollRange(n)
     }
@@ -86,6 +97,7 @@ public class ElementHandle {
   /// Reports whether the horizontal offset is within one device pixel of the range end.
   public prop IsAtEndX bool {
     get {
+      Cell.ObserveUntrackedRead()
       guard let n = mountedNode(true) else { return true }
       return atScrollEnd(float64(n.ScrollX), scrollRange(n).X, window?.RenderScale.X ?? 1.0F)
     }
@@ -94,6 +106,7 @@ public class ElementHandle {
   /// Reports whether the vertical offset is within one device pixel of the range end.
   public prop IsAtEndY bool {
     get {
+      Cell.ObserveUntrackedRead()
       guard let n = mountedNode(true) else { return true }
       return atScrollEnd(float64(n.ScrollY), scrollRange(n).Y, window?.RenderScale.Y ?? 1.0F)
     }
@@ -233,6 +246,7 @@ public class ElementHandle {
   /// @param alignment The item's alignment in the viewport.
   /// @returns The current measured or estimated target, or nil when unavailable.
   public func ScrollOffsetOf(key string, alignment ScrollAlignment = ScrollAlignment.Start) Point? {
+    Cell.ObserveUntrackedRead()
     if String.IsNullOrEmpty(key) { throw ArgumentException("Virtual item keys must be nonempty", "key") }
     if alignment < ScrollAlignment.Start || alignment > ScrollAlignment.Nearest { throw ArgumentOutOfRangeException("alignment") }
     guard let n = mountedNode(), let state = Virtualization.State(n) else { return nil }
@@ -242,6 +256,7 @@ public class ElementHandle {
   /// Gets the first visible virtual item's key and signed position inside the viewport.
   public prop VisibleAnchor VirtualScrollAnchor? {
     get {
+      Cell.ObserveUntrackedRead()
       guard let n = mountedNode(), let state = Virtualization.State(n) else { return nil }
       return state.VisibleAnchor(n)
     }
@@ -250,6 +265,7 @@ public class ElementHandle {
   /// Gets whether a virtual item request is still being corrected after layout.
   public prop IsScrollSettling bool {
     get {
+      Cell.ObserveUntrackedRead()
       guard let n = mountedNode() else { return false }
       return Virtualization.State(n)?.IsScrollSettling ?? false
     }
@@ -289,6 +305,7 @@ public class ElementHandle {
   /// @returns False when this is unmounted, not a text primitive, or has no current retained layout.
   public func TryGetTextPositionAt(point Point, space TextCoordinateSpace,
     out position TextPosition) bool{
+      Cell.ObserveUntrackedRead()
       position = TextPosition{}
       guard let n = mountedNode(true) else { return false }
       return TextGeometryQueries.PositionAt(n, point, space, out position)
@@ -298,6 +315,7 @@ public class ElementHandle {
   /// @returns False when this is unmounted, not a text primitive, or the position is not retained.
   public func TryGetTextCaretRect(position TextPosition, space TextCoordinateSpace,
     out rect ElementRect) bool{
+      Cell.ObserveUntrackedRead()
       rect = ElementRect{}
       guard let n = mountedNode(true) else { return false }
       return TextGeometryQueries.CaretRect(n, position, space, out rect)
@@ -308,6 +326,7 @@ public class ElementHandle {
   /// @returns False when this is unmounted, not a text primitive, the range is invalid, or no current retained layout exists.
   public func TryCopyTextRangeRects(textRange TextRange, space TextCoordinateSpace,
     destination Span[ElementRect], out required int32) bool{
+      Cell.ObserveUntrackedRead()
       required = 0
       guard let n = mountedNode(true) else { return false }
       return TextGeometryQueries.CopyRangeRects(n, textRange, space, destination, out required)
