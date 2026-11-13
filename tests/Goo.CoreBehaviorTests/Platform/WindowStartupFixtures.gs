@@ -3,6 +3,18 @@ package Goo
 import System
 
 internal class WindowStartupFixtures {
+  func ApplicationStateVerificationContract() bool {
+    let previous = StateVerification.Override
+    try {
+      StateVerification.Enabled = true
+      if !Application.VerifyState { return false }
+      Application.VerifyState = false
+      if StateVerification.Enabled || Application.VerifyState { return false }
+      Application.VerifyState = true
+      return StateVerification.Enabled
+    } finally { StateVerification.Override = previous }
+  }
+
   func SingleInstanceRejectsAttachedWindowContract() bool {
     using let host = ElementHandleEmbeddedHost()
     let window = Window{}

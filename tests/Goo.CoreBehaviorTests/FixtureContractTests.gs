@@ -105,6 +105,7 @@ class FixtureContractTests {
             yield Contract[WindowStartupFixtures]("InitialBoundsContract")
             yield Contract[WindowStartupFixtures]("PresentModesContract")
             yield Contract[WindowStartupFixtures]("SingleInstanceRejectsAttachedWindowContract")
+            yield Contract[WindowStartupFixtures]("ApplicationStateVerificationContract")
             yield Contract[PathBuilderFixtures]("ResetPreservesPublishedPathAndClearsContour")
             yield Contract[PortalFixtures]("UiScaleLayoutInputAndAnchoredPortalContract")
             yield Contract[PortalFixtures]("AnchoredSubrectangleAndCollisionBoundsContract")

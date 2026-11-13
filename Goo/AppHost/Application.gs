@@ -18,6 +18,13 @@ public shared class Application {
         set;
     }
 
+    /// Gets or sets tracked-state verification.
+    /// Defaults to true when a debugger is attached or a DevTools session is registered.
+    public prop VerifyState bool {
+        get -> StateVerification.Enabled
+        set -> StateVerification.Enabled = value
+    }
+
     /// Configures application identity before native initialization.
     /// @param name The human-readable product name.
     /// @param version The application version.
