@@ -62,6 +62,9 @@ class FixtureContractTests {
     @Fact
     func ForeignHostContextRebuildsOwner() {
         Assert.True(WindowStartupFixtures().HostedOwnerContextContract().GetAwaiter().GetResult())
+        if System.Threading.SynchronizationContext.Current is Xunit.Sdk.AsyncTestSyncContext context {
+            Assert.Null(context.WaitForCompletionAsync().GetAwaiter().GetResult())
+        }
     }
 
     @Theory
@@ -157,6 +160,7 @@ class FixtureContractTests {
             yield Contract[WindowStartupFixtures]("PresentModesContract")
             yield Contract[WindowStartupFixtures]("AsyncDispatcherContract")
             yield Contract[WindowStartupFixtures]("AsyncTaskDispatcherContract")
+            yield Contract[WindowStartupFixtures]("HostedContextOperationCountingContract")
             yield Contract[WindowStartupFixtures]("AsyncOwnerContextContract")
             yield Contract[WindowStartupFixtures]("AsyncCloseDrainContract")
             yield Contract[WindowStartupFixtures]("EmbeddedCloseDrainsContinuationsContract")

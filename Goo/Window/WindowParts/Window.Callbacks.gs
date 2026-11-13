@@ -19,7 +19,11 @@ internal sealed class WindowCallbackContext : SynchronizationContext {
     HostContext = hostContext
   }
 
-  public override func CreateCopy() SynchronizationContext -> this
+  public override func CreateCopy() SynchronizationContext {
+    guard let host = HostContext else { return this }
+    let copy = host.CreateCopy()
+    return copy == host ? this : WindowCallbackContext(Window, Owner, copy)
+  }
 
   internal func ForHost(previous SynchronizationContext?) WindowCallbackContext {
     if HostContext != nil { return this }

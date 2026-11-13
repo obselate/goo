@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Collections.Generic
 import System.Threading
 import System.Threading.Tasks
 import System.Reflection
@@ -8,6 +9,42 @@ import System.Runtime.InteropServices
 import System.Diagnostics
 
 internal class WindowStartupFixtures {
+  func HostedContextOperationCountingContract() bool {
+    let previous = SynchronizationContext.Current
+    let host = WindowCountingContext()
+    SynchronizationContext.SetSynchronizationContext(host)
+    let owner = WindowAsyncCell()
+    let window = Window{Root: owner, Size: LayoutSize(100, 100)}
+    try {
+      window.UpdateTree()
+      var captured SynchronizationContext?
+      owner.RunOwnedAction(() -> {
+        captured = SynchronizationContext.Current
+        owner.RunHandler()
+      })
+      if host.Started != 1 || host.Completed != 0 { return false }
+      let copy = captured!!.CreateCopy()
+      guard let copyHost = host.LastCopy else { return false }
+      if copy is not WindowCallbackContext { return false }
+      if copy.Owner != owner || copy.Window != window || copy.HostContext != copyHost { return false }
+      copy.OperationStarted()
+      copy.OperationCompleted()
+      var posted int32
+      copy.Post(_ -> { posted++ }, nil)
+      copyHost.Drain()
+      if host.Copies != 1 || copyHost.Started != 1 || copyHost.Completed != 1
+        || copyHost.Posts != 1 || posted != 1 { return false }
+      owner.ClearDirty()
+      owner.Pending.SetResult(true)
+      host.Drain()
+      return host.Started == 1 && host.Completed == 1 && host.Posts == 1
+        && owner.Resumed == 1 && owner.IsDirty() && window.callbackOperations == 0
+    } finally {
+      window.Close()
+      SynchronizationContext.SetSynchronizationContext(previous)
+    }
+  }
+
   func AsyncTaskDispatcherContract() bool {
     let previous = SynchronizationContext.Current
     SynchronizationContext.SetSynchronizationContext(nil)
@@ -403,5 +440,33 @@ internal class WindowAsyncStateCell : Cell {
   internal async func Resume(pending Task, changed bool) void {
     await pending
     if changed { value.Value++ }
+  }
+}
+
+internal class WindowCountingContext : SynchronizationContext {
+  internal var Started int32
+  internal var Completed int32
+  internal var Copies int32
+  internal var Posts int32
+  internal var LastCopy WindowCountingContext?
+  private let callbacks Queue[Action] = Queue[Action]()
+
+  public override func OperationStarted() { Started++ }
+  public override func OperationCompleted() { Completed++ }
+  public override func CreateCopy() SynchronizationContext {
+    Copies++
+    LastCopy = WindowCountingContext()
+    return LastCopy!!
+  }
+  public override func Post(callback SendOrPostCallback, state object?) {
+    Posts++
+    callbacks.Enqueue(() -> callback(state))
+  }
+  internal func Drain() {
+    let previous = SynchronizationContext.Current
+    SynchronizationContext.SetSynchronizationContext(this)
+    try {
+      while callbacks.TryDequeue(out var callback) { callback() }
+    } finally { SynchronizationContext.SetSynchronizationContext(previous) }
   }
 }
