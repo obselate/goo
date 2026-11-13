@@ -267,8 +267,9 @@ internal class FocusManager {
         let callback = received ? InputCallbacks.Focus(node) : InputCallbacks.Blur(node)
         if let handler = callback {
           let owner = CellOwnership.ForCallback(node)
+          let previousContext = owner?.BeginCallback()
           try { handler(FocusEvent{Control: control, Generation: generation}) }
-          finally { owner?.RebuildAfterCallback() }
+          finally { owner?.EndCallback(previousContext) }
         }
         if current.Captured == nil { break }
         if control.PropagationStopped || node.FocusScopeBoundary {

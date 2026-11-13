@@ -539,9 +539,10 @@ internal partial class PointerInput {
       guard let n = route[i - 1].Captured else { continue }
       if let callback = InputCallbacks.PointerLeave(n) {
         let owner = owners[i - 1]
+        let previousContext = owner?.BeginCallback()
         try { callback(hoverEvent(n, x, y)) }
         catch (error Exception) { failure ??= error }
-        finally { owner?.RebuildAfterCallback() }
+        finally { owner?.EndCallback(previousContext) }
       }
       if generation != hoverGeneration { break }
     }
@@ -555,9 +556,10 @@ internal partial class PointerInput {
       guard let n = route[i].Current else { continue }
       if let callback = InputCallbacks.PointerEnter(n) {
         let owner = owners[i]
+        let previousContext = owner?.BeginCallback()
         try { callback(hoverEvent(n, x, y)) }
         catch (error Exception) { failure ??= error }
-        finally { owner?.RebuildAfterCallback() }
+        finally { owner?.EndCallback(previousContext) }
       }
       if generation != hoverGeneration || route[i].Current == nil { break }
     }
