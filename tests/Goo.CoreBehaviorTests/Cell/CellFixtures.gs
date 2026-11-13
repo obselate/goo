@@ -868,6 +868,15 @@ public partial class Window {
     let cell = cast[LifecycleFixtureCell](Root!!)
     try {
       UpdateTree()
+      using let buildScope = StateReadScope(cell, () -> {})
+      let previous = buildScope.Enter()
+      var scopeRejections int32
+      try {
+        try { cell.Enqueue(() -> {}) } catch (_ InvalidOperationException) { scopeRejections++ }
+        try { cell.Delay(0.0, () -> {}) } catch (_ InvalidOperationException) { scopeRejections++ }
+        try { cell.Repeat(1.0, () -> {}) } catch (_ InvalidOperationException) { scopeRejections++ }
+      } finally { buildScope.Exit(previous, true) }
+      if scopeRejections != 3 { return false }
       for value in []float64{Double.NaN, Double.PositiveInfinity, -1.0} {
         var rejected int32
         try { After(value, () -> {}) } catch (_ ArgumentOutOfRangeException) { rejected++ }
