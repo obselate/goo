@@ -34,7 +34,16 @@ internal class ElementHandleFixtures {
       cell.Content = Container{Handle: handle}
       cell.Rebuild()
       window.UpdateTree()
-      return !handle.SelectText(0, 0)
+      if handle.SelectText(0, 0) { return false }
+      let closingHandle = ElementHandle()
+      if !closingHandle.SelectText(0, 0) { return false }
+      let closingCell = DeferredCallbackContent()
+      let closingWindow = Window{Root: closingCell, Size: LayoutSize(100, 40)}
+      closingCell.Content = TextEntry{Handle: closingHandle, OnFocus: _ -> closingWindow.Close()}
+      try {
+        closingWindow.UpdateTree()
+        return !closingHandle.IsMounted
+      } finally { closingWindow.Close() }
     } finally { window.Close() }
   }
 

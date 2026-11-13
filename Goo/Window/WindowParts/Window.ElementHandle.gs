@@ -6,6 +6,7 @@ import System.Collections.Generic
 /// Hosts supported element-handle operations on the UI thread.
 public partial class Window {
   private var elementRequests List[ElementHandle]?
+  private var flushingElementRequests bool
 
   internal func QueueElementRequest(handle ElementHandle) {
     elementRequests ??= List[ElementHandle]()
@@ -15,12 +16,16 @@ public partial class Window {
 
   internal func FlushElementRequests() {
     guard let requests = elementRequests else { return }
-    var i = 0
-    while i < requests.Count {
-      if requests[i].FlushRequests(this) { i++ }
-      else { requests.RemoveAt(i) }
-    }
-    if requests.Count > 0 { markDirtyAndRender() }
+    if flushingElementRequests { return }
+    flushingElementRequests = true
+    try {
+      var i = 0
+      while i < requests.Count {
+        if requests[i].FlushRequests(this) { i++ }
+        else { requests.RemoveAt(i) }
+      }
+      if requests.Count > 0 { markDirtyAndRender() }
+    } finally { flushingElementRequests = false }
   }
 
   internal func SelectElementText(n Node, start int32, end int32) bool {
