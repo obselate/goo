@@ -14,7 +14,7 @@ internal class ShapeGeometryFixtures {
     let node = reconciler.Mount(Shape{
       Fill: VectorPaint(gradient), Stroke: stroke,
       BackgroundColor: red, BorderWidth: 20, BorderColor: red,
-      Hover: legacy, Active: legacy, Focus: legacy, DisabledStyle: legacy,
+      HoverStyle: legacy, ActiveStyle: legacy, FocusStyle: legacy, DisabledStyle: legacy,
       StrokeStart: 0.25, StrokeEnd: 0.75,
     })
     if node.BackgroundGradient != gradient || node.BackgroundColor.A != 0.0F
@@ -48,7 +48,7 @@ internal class ShapeGeometryFixtures {
     for legacy in []Shape{
       Shape{BackgroundColor: Color.White}, Shape{BackgroundGradient: gradient},
       Shape{BorderWidth: 2}, Shape{BorderColor: Color.White},
-      Shape{Hover: hover},
+      Shape{HoverStyle: hover},
     } {
       var rejected = false
       try { Reconciler{Res: Resolver{}}.Mount(legacy) }

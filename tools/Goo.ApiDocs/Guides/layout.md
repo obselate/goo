@@ -29,6 +29,7 @@ Text{Content: "Flexible", Flex: 1, MinWidth: 0}
 - `Spacer` defaults to grow 1, shrink 1, basis 0, and minimum size 0. It has no paint, hit test, or accessibility node.
 - `Flex: n` sets grow n, shrink 1, and basis 0. It does not change the automatic minimum. Later flex declarations override each part.
 - `Inset` sets all four position offsets. Later offsets override individual edges.
+
 ## Relative and intrinsic lengths
 
 ```gsharp
