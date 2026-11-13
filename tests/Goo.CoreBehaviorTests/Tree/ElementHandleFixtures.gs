@@ -22,15 +22,15 @@ internal class ElementHandleFixtures {
     let window = Window{Root: cell, Width: 100, Height: 40}
     try {
       window.UpdateTree()
-      if window.PlatformInput.Selection?.Anchor.Offset != 1 || window.PlatformInput.Selection?.Active.Offset != 3 { return false }
-      if !handle.SelectText(4, 4) || window.PlatformInput.Selection?.Active.Offset != 4 { return false }
+      if window.Focus.Selection?.Anchor.Offset != 1 || window.Focus.Selection?.Active.Offset != 3 { return false }
+      if !handle.SelectText(4, 4) || window.Focus.Selection?.Active.Offset != 4 { return false }
       cell.Content = Container{}
       cell.Rebuild()
       window.UpdateTree()
       cell.Content = TextEntry{Handle: handle, Value: "next"}
       cell.Rebuild()
       window.UpdateTree()
-      if window.PlatformInput.Selection != nil { return false }
+      if window.Focus.Selection != nil { return false }
       cell.Content = Container{Handle: handle}
       cell.Rebuild()
       window.UpdateTree()
