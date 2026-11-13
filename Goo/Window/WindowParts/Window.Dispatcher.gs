@@ -118,6 +118,7 @@ public partial class Window {
   /// Posted work stops earlier and can be discarded while the window is closing.
   public prop Closed CancellationToken{
     get {
+      Cell.ObserveUntrackedRead()
       lock cellQueueGate {
         if nativeClosed { return CancellationToken(true) }
         closedSource ??= CancellationTokenSource()

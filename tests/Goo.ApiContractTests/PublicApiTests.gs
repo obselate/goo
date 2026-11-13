@@ -268,6 +268,7 @@ open class PublicApiTests {
                 .Where(
                 (method MethodInfo) -> !method.IsSpecialName || method.Name.StartsWith("op_", StringComparison.Ordinal)
             )
+
             for method in methods {
                 yield "method|$owner|${method.Name}|${Scope(method)}|${PublicApiTests.Visibility(method)}|generic:${DescribeGenericParameters(method.GetGenericArguments())}|(${DescribeParameters(method.GetParameters())})->${TypeIdentity(method.ReturnType, Nullability.Create(method.ReturnParameter))}"
             }
