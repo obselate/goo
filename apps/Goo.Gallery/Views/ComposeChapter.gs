@@ -198,15 +198,7 @@ open class ComposeChapterCell : Cell[ComposeChapter], IDisposable {
             JustifyContent: JustifyContent.Center,
             spiral,
         }
-        return Column{
-            Width: Percent(100),
-            FlexGrow: 1.0,
-            FlexShrink: 1.0,
-            MinHeight: 0,
-            Gap: 14,
-            controls,
-            grid,
-        }
+        return Column{Width: Percent(100), FlexGrow: 1.0, FlexShrink: 1.0, MinHeight: 0, Gap: 14, controls, grid,}
     }
 
     private func buildTiles() List[Blob] {
@@ -294,7 +286,11 @@ open class ComposeChapterCell : Cell[ComposeChapter], IDisposable {
             Gap: 14,
             GalleryRange{
                 Key: "poster-width",
-                Label: "Poster width", MinValue: 380.0, MaxValue: 1120.0, Value: posterWidth, Step: 10.0,
+                Label: "Poster width",
+                MinValue: 380.0,
+                MaxValue: 1120.0,
+                Value: posterWidth,
+                Step: 10.0,
                 OnChange: (value float64) -> {
                     posterWidth = value
                     Rebuild()

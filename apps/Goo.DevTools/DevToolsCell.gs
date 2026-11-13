@@ -186,14 +186,7 @@ class DevToolsCell : Cell {
         if showActivity {
             children.Add(BuildActivity(theme))
         }
-        return Column{
-            Key: "elements",
-            Width: Percent(100),
-            Height: 0,
-            MinHeight: 0,
-            FlexGrow: 1.0,
-            Children: children,
-        }
+        return Column{Key: "elements", Width: Percent(100), Height: 0, MinHeight: 0, FlexGrow: 1.0, Children: children,}
     }
 
     private func BuildToolbar(theme Theme) Blob {
@@ -823,12 +816,7 @@ class DevToolsCell : Cell {
             Content: Container{
                 Gap: theme.ControlGap,
                 entry,
-                Row{
-                    Key: "override-actions",
-                    Gap: theme.ControlGap,
-                    apply,
-                    reset
-                },
+                Row{Key: "override-actions", Gap: theme.ControlGap, apply, reset},
             },
         }
         overrides.Key = "overrides"

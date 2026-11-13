@@ -145,13 +145,13 @@ internal partial class ProfilerCell : Cell[Profiler], IDisposable {
                     }
                 }
             )
-            return Column(children)
+            return BuildPanel(children)
         }
         children.Add(Ruler(trace, theme))
         children.Add(Timing(trace, theme))
         children.Add(Legend(trace, theme))
         children.Add(Analysis(trace, theme))
-        return Column(children)
+        return BuildPanel(children)
     }
 
     private func Toolbar(theme Theme) Container {
@@ -1620,13 +1620,12 @@ internal partial class ProfilerCell : Cell[Profiler], IDisposable {
             TextWrap: TextWrap.NoWrap
         }
 
-        private func Column(children List[Blob]) Container -> Container{
+        private func BuildPanel(children List[Blob]) Blob -> Column{
             Key: "profiler-panel",
             Width: Percent(100),
             Height: 0,
             MinHeight: 0,
             FlexGrow: 1.0,
-            FlexDirection: FlexDirection.Column,
             Children: children
         }
 

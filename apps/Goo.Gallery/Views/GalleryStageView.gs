@@ -19,8 +19,26 @@ internal class GalleryStageView {
             return switch showcase.Chapter {
                 case 0: Blob(ComposeChapter{Key: "showcase-compose", Showcase: showcase.Local, Window: window})
                 case 1: Container{Key: "showcase-surfaces-placeholder", Display: Display.None}
-                case 2: Blob(MotionChapter{Key: "showcase-motion", Assets: assets, Programs: programs, Compact: compact, Showcase: showcase.Local, Active: true})
-                case 3: Blob(ShaderLab{Key: "showcase-shaders", Assets: assets, Programs: programs, Compact: false, Showcase: showcase.Local, Active: true})
+                case 2: Blob(
+                    MotionChapter{
+                        Key: "showcase-motion",
+                        Assets: assets,
+                        Programs: programs,
+                        Compact: compact,
+                        Showcase: showcase.Local,
+                        Active: true
+                    }
+                )
+                case 3: Blob(
+                    ShaderLab{
+                        Key: "showcase-shaders",
+                        Assets: assets,
+                        Programs: programs,
+                        Compact: false,
+                        Showcase: showcase.Local,
+                        Active: true
+                    }
+                )
                 default: Container{Key: "showcase-empty", Display: Display.None}
             }
         }

@@ -789,7 +789,11 @@ class StudioCell : Cell {
                 FlexShrink: 1.0,
                 GalleryRange{
                     Key: "studio-c0",
-                    Label: firstLabel(), MinValue: firstMin(), MaxValue: firstMax(), Value: c0, Step: firstStep(),
+                    Label: firstLabel(),
+                    MinValue: firstMin(),
+                    MaxValue: firstMax(),
+                    Value: c0,
+                    Step: firstStep(),
                     OnChange: (value float64) -> {
                         c0 = value
                         Rebuild()
@@ -809,7 +813,11 @@ class StudioCell : Cell {
                 FlexShrink: 1.0,
                 GalleryRange{
                     Key: "studio-c1",
-                    Label: secondLabel(), MinValue: secondMin(), MaxValue: secondMax(), Value: c1, Step: secondStep(),
+                    Label: secondLabel(),
+                    MinValue: secondMin(),
+                    MaxValue: secondMax(),
+                    Value: c1,
+                    Step: secondStep(),
                     OnChange: (value float64) -> {
                         c1 = value
                         Rebuild()
@@ -829,7 +837,11 @@ class StudioCell : Cell {
                 FlexShrink: 1.0,
                 GalleryRange{
                     Key: "studio-c2",
-                    Label: thirdLabel(), MinValue: thirdMin(), MaxValue: thirdMax(), Value: c2, Step: thirdStep(),
+                    Label: thirdLabel(),
+                    MinValue: thirdMin(),
+                    MaxValue: thirdMax(),
+                    Value: c2,
+                    Step: thirdStep(),
                     OnChange: (value float64) -> {
                         c2 = value
                         Rebuild()

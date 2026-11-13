@@ -14,7 +14,10 @@ internal data struct MotionChapter {
     var Active bool
 }
 
-internal func operator implicit(value MotionChapter) Blob -> Cell.Mount[MotionChapter, MotionChapterCell](value.Key, value)
+internal func operator implicit(value MotionChapter) Blob -> Cell.Mount[MotionChapter, MotionChapterCell](
+    value.Key,
+    value
+)
 
 class MotionChapterCell : Cell[MotionChapter] {
     protected override func InputChanged(input MotionChapter) {

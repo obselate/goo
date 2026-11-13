@@ -8,4 +8,7 @@ internal data struct ComposeChapter {
     internal var Window Window?
 }
 
-internal func operator implicit(value ComposeChapter) Blob -> Cell.Mount[ComposeChapter, ComposeChapterCell](value.Key, value)
+internal func operator implicit(value ComposeChapter) Blob -> Cell.Mount[ComposeChapter, ComposeChapterCell](
+    value.Key,
+    value
+)

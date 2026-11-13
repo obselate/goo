@@ -10,7 +10,10 @@ internal data struct StateSurfacesChapter {
     var Active bool
 }
 
-internal func operator implicit(value StateSurfacesChapter) Blob -> Cell.Mount[StateSurfacesChapter, StateSurfacesChapterCell](value.Key, value)
+internal func operator implicit(value StateSurfacesChapter) Blob -> Cell.Mount[
+    StateSurfacesChapter,
+    StateSurfacesChapterCell
+](value.Key, value)
 
 class StateSurfacesChapterCell : Cell[StateSurfacesChapter] {
     protected override func InputChanged(input StateSurfacesChapter) {

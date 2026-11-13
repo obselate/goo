@@ -1021,10 +1021,7 @@ class ShaderLabCell : Cell[ShaderLab] {
     ) Container -> Container{
         Key: "control-" + key,
         Width: Percent(100),
-        GalleryRange{
-            Key: key,
-            Label: label, MinValue: min, MaxValue: max, Value: value, Step: 0.01, OnChange: change,
-        },
+        GalleryRange{Key: key, Label: label, MinValue: min, MaxValue: max, Value: value, Step: 0.01, OnChange: change,},
     }
 
     private func selectedSpecimen(programs GalleryShaderPrograms, time float64, out name string, out hint string) Blob {
@@ -1037,7 +1034,14 @@ class ShaderLabCell : Cell[ShaderLab] {
                 BackgroundColor: GalleryTheme.SurfaceRaised,
             }
             if effectsReady() {
-                wolf = World3D{Key: "world-3d-live", Effect: programs.Lab(0), Fov: fov, Contrast: contrast, Fog: fog, Playing: true}
+                wolf = World3D{
+                    Key: "world-3d-live",
+                    Effect: programs.Lab(0),
+                    Fov: fov,
+                    Contrast: contrast,
+                    Fog: fog,
+                    Playing: true
+                }
             }
             return wolf
         }
