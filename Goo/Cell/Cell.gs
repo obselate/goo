@@ -337,7 +337,7 @@ public open class Cell {
     if disposed || unmounting || contextWindow?.callbackClosing == true { return }
     contextWindow?.requireUiThread("Cell.Rebuild")
     if building {
-      throw InvalidOperationException("${GetType().Name}.Rebuild was called during Build: change state in an input handler or Window.Post callback instead of Build.")
+      throw InvalidOperationException("${GetType().Name}.Rebuild was called during Build: change state in an input handler or Cell.Post callback instead of Build.")
     }
     var submit Action[Cell]?
     lock rebuildGate {
@@ -681,13 +681,13 @@ public open class Cell {
   registerCallbackAnim[Color](initial, MotionConverters.Color, onChange)
 
   /// Creates a fixed-unit length animated by this component.
-  /// @param initial pixel or percentage initial value
+  /// @param initial initial fixed-unit length
   /// @returns an animation bridge owned by this component
   public func Animate(initial Length) Anim[Length] ->
   registerAnim[Length](Anim[Length](initial, MotionConverters.ForLength(initial), Rebuild, nil))
 
   /// Creates a fixed-unit length animation that reports values without rebuilding this component.
-  /// @param initial pixel or percentage initial value
+  /// @param initial initial fixed-unit length
   /// @param onChange receives values from Set and each motion tick
   /// @returns an animation bridge owned by this component
   public func Animate(initial Length, onChange Action[Length]) Anim[Length] ->
