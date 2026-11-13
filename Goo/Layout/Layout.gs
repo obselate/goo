@@ -244,6 +244,12 @@ internal partial class Layout {
       custom.SyncChildren()
       return
     }
+    if n.Kind == NodeKind.Image {
+      for child in n.Children {
+        if !child.IsPortal { syncNode(child, true) }
+      }
+      return
+    }
     // Measured editors cannot own Yoga children; slot roots are calculated in readRect.
     if n.Kind == NodeKind.Editor {
       for i in 0 ... n.Children.Count {
@@ -655,6 +661,17 @@ internal partial class Layout {
       if editor {
         readEditorSlotRects(n, hiddenSubtree)
         n.HitContained = true
+        return
+      }
+      if n.Kind == NodeKind.Image {
+        for child in n.Children {
+          if child.IsPortal { continue }
+          if let yoga = child.Yoga {
+            YGNodeAPI.YGNodeCalculateLayout(yoga, n.Rect.W, n.Rect.H, yogaDirection(n.Direction))
+            readRect(child, visual.X, visual.Y, hidden: hiddenSubtree)
+          }
+        }
+        n.HitContained = false
         return
       }
       if let state = custom {

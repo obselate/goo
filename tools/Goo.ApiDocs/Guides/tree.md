@@ -174,13 +174,28 @@ Set `Blob.LayoutTransition` to a `LayoutTransition(durationMs, easing)` value to
 ## Owned image sources
 
 `Image.Source` and `Style.BackgroundImageSource` accept an `ImageSourceProvider`.
-Source takes precedence over Path. A nonempty `Image.Path` without Source throws
-when mounted. Load local assets with `ImageSourceCache.LoadAsync` and assign Source.
+Use an `ImageSource` for ready pixels. For deferred work, keep an `AsyncImageSource`
+in a field or model. Its loader returns `Task[ImageSource]`. Wrap synchronous loaders
+with `Task.FromResult`. Goo cancels the load when its last pending lease is released,
+including when an image unmounts or changes source.
+
+`Image.Placeholder` and `Image.Fallback` fill and clip to the image box while the
+source is pending or failed. They do not set its measured size. Completion updates
+the image on the UI thread without an app rebuild call.
+
+`Assets.Open(assembly, name)` and `Assets.ReadAllBytes(assembly, name)` first resolve
+the exact manifest resource name, then a file under `AppContext.BaseDirectory`.
+The caller disposes an opened stream. `<GooAsset Include="assets/**" />` copies files
+for normal builds and embeds them for single-file or NativeAOT builds.
+
+`<GooShaderEffect Include="background.slang" Embed="true" />` embeds
+`background.goo-effect`. Load it with `ShaderEffectProgram.Load(assembly, "background")`.
 
 See [image loading and ownership](../images.md) for loading, decoding, buffer
 transfer, provider lifetime and memory-pressure behavior.
 
-Provider updates keep the last-good version visible until a replacement is ready.
+Provider version updates keep the last-good version visible until a replacement is ready.
+Changing to a pending source clears the previous image.
 
 ## Observe mounted element metrics
 

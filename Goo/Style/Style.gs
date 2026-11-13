@@ -265,9 +265,7 @@ public open class Style {
   /// Sets or explicitly clears the background gradient.
   /// A non-nil gradient wins over BackgroundColor when both apply.
   public prop BackgroundGradient Gradient? { init -> pushGradient(StyleField.BackgroundGradient, value) }
-  /// Sets the local image path painted over the background fill.
-  public prop BackgroundImage string{ init -> pushText(StyleField.BackgroundImage, value) }
-  /// Sets the owned or provider-backed background source. It wins over BackgroundImage when set.
+  /// Sets the owned or provider-backed background source.
   public prop BackgroundImageSource ImageSourceProvider? {
     init -> pushImageSource(StyleField.BackgroundImageSource, value)
   }

@@ -1,9 +1,153 @@
 import Goo
 import System
 import System.Threading
+import System.IO
+import System.Threading.Tasks
 import Xunit
 
 class ImagePublicationTests {
+    @Theory
+    @InlineData(false)
+    @InlineData(true)
+    func AsyncCompletionUpdatesContentWithoutCellRebuild(failed bool) {
+        let completion = TaskCompletionSource[ImageSource](TaskCreationOptions.RunContinuationsAsynchronously)
+        using let source = AsyncImageSource(token -> completion.Task)
+        let root = DeferredImageRoot(source)
+        let window = Window{Root: root, Size: LayoutSize(100, 100)}
+        try {
+            window.UpdateTree()
+            using let probe = source.Acquire()
+            using let ready = ManualResetEventSlim()
+            using let registration = probe.OnCompleted(() -> ready.Set())
+            Assert.Equal(Color.Rgb(255, 0, 0), window.Tree!!.Children[0].Children[0].BackgroundColor)
+            if failed { completion.SetException(InvalidOperationException("load failed")) }
+            else { completion.SetResult(ImageSource(1, 1, []uint8{0, 0, 255, 255})) }
+            Assert.True(ready.Wait(5000))
+            window.markFrameRendered()
+            window.drainPostedActions()
+            window.UpdateTree()
+            Assert.True(window.RenderPending())
+            Assert.Equal(1, root.Builds)
+            if failed {
+                Assert.True(window.Tree!!.ImageLease!!.IsFailed)
+                Assert.Equal(Color.Rgb(0, 0, 255), window.Tree!!.Children[0].Children[0].BackgroundColor)
+            } else {
+                Assert.Empty(window.Tree!!.Children)
+                Assert.Equal([]uint8{0, 0, 255, 255}, window.Tree!!.DecodedImage!!.Pixels())
+            }
+        } finally { window.Close() }
+    }
+
+    @Theory
+    @InlineData(false)
+    @InlineData(true)
+    func PendingLoadCancelsWhenUnmountedOrReplaced(replace bool) {
+        let completion = TaskCompletionSource[ImageSource](TaskCreationOptions.RunContinuationsAsynchronously)
+        using let started = ManualResetEventSlim()
+        using let cancelled = ManualResetEventSlim()
+        using let source = AsyncImageSource(token -> {
+            token.Register(() -> cancelled.Set())
+            started.Set()
+            return completion.Task
+        })
+        using let replacement = ImageSource(1, 1, []uint8{0, 255, 0, 255})
+        let root = DeferredImageRoot(source)
+        let window = Window{Root: root, Size: LayoutSize(100, 100)}
+        try {
+            window.UpdateTree()
+            Assert.True(started.Wait(5000))
+            if replace {
+                root.Source = replacement
+                root.Rebuild()
+                window.UpdateTree()
+            } else { window.Close() }
+            Assert.True(cancelled.Wait(5000))
+            using let released = ManualResetEventSlim()
+            let late = ImageSource.Transfer(1, 1, []uint8{255, 0, 0, 255}, () -> released.Set())
+            completion.SetResult(late)
+            Assert.True(released.Wait(5000))
+            if replace {
+                window.UpdateTree()
+                Assert.Equal([]uint8{0, 255, 0, 255}, window.Tree!!.DecodedImage!!.Pixels())
+            }
+        } finally { window.Close() }
+    }
+
+    @Fact
+    func AsyncSourceSharesSuccessAndRetriesFailure() {
+        var calls int32 = 0
+        using let source = AsyncImageSource(token -> {
+            if Interlocked.Increment(ref calls) == 1 {
+                return Task.FromException[ImageSource](InvalidOperationException("first load"))
+            }
+            return Task.FromResult(ImageSource(1, 1, [4]uint8))
+        })
+        using let failed = source.Acquire()
+        using let ready = ManualResetEventSlim()
+        using let registration = failed.OnCompleted(() -> ready.Set())
+        Assert.True(ready.Wait(5000))
+        Assert.True(failed.IsFailed)
+        using let success = source.Acquire()
+        using let loaded = ManualResetEventSlim()
+        using let successRegistration = success.OnCompleted(() -> loaded.Set())
+        Assert.True(loaded.Wait(5000))
+        using let shared = source.Acquire()
+        Assert.True(shared.IsComplete)
+        Assert.False(shared.IsFailed)
+        Assert.Equal(2, calls)
+        source.Dispose()
+        Assert.True(shared.Result()!!.IsValid)
+    }
+
+    @Fact
+    func AssetsResolveExactResourcesBeforeFiles() {
+        let assembly = typeof(ImagePublicationTests).Assembly
+        let name = "Assets/local-rgb.jpg"
+        let expected = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, name))
+        Assert.Equal(expected, Assets.ReadAllBytes(assembly, name))
+        using let resource = assembly.GetManifestResourceStream("embedded-image")
+        Assert.NotNull(resource)
+        using let resolved = Assets.Open(assembly, "embedded-image")
+        Assert.Equal(resource!!.Length, resolved.Length)
+        let error = Assert.Throws[FileNotFoundException](() -> Assets.Open(assembly, "missing-image"))
+        Assert.Contains(assembly.FullName!!, error.Message)
+        Assert.Contains(Path.Combine(AppContext.BaseDirectory, "missing-image"), error.Message)
+    }
+
+    private class DeferredImageRoot(source ImageSourceProvider) : Cell {
+        var Source ImageSourceProvider = source
+        var Builds int32
+        override func Build() Blob {
+            Builds++
+            return Image{Source: Source, Width: 80, Height: 40,
+                Placeholder: Container{BackgroundColor: Color.Rgb(255, 0, 0)},
+                Fallback: Container{BackgroundColor: Color.Rgb(0, 0, 255)}}
+        }
+    }
+
+    @Fact
+    func PlaceholderDoesNotChangeExplicitImageSize() {
+        let completion = TaskCompletionSource[ImageSource](TaskCreationOptions.RunContinuationsAsynchronously)
+        using let source = AsyncImageSource(token -> completion.Task)
+        let window = Window{Root: ExplicitImageRoot(source), Size: LayoutSize(300, 200)}
+        try {
+            window.UpdateTree()
+            Assert.Equal(80.0F, window.Tree!!.Children[0].Rect.W)
+            Assert.Equal(40.0F, window.Tree!!.Children[0].Rect.H)
+            Assert.Equal(80.0F, window.Tree!!.Children[0].Children[0].Rect.W)
+            Assert.Equal(40.0F, window.Tree!!.Children[0].Children[0].Rect.H)
+        } finally {
+            window.Close()
+            completion.TrySetCanceled()
+        }
+    }
+
+    private class ExplicitImageRoot(source ImageSourceProvider) : Cell {
+        override func Build() Blob -> Container{AlignItems: AlignItems.FlexStart,
+            Image{Source: source, Width: 80, Height: 40, Placeholder: Container{Width: 500, Height: 500}}
+        }
+    }
+
     @Fact
     func ImageIdentityRegistryGrowsAndPreservesLiveIdentities() {
         using let registry = VulkanImageIdentityRegistry(2)
