@@ -77,7 +77,7 @@ public class ClipboardImage {
 }
 
 /// Contains owned clipboard text and an explicit native outcome.
-public sealed class ClipboardTextResult {
+public class ClipboardTextResult {
   /// Gets the read outcome.
   public prop Status ClipboardReadStatus { get; }
   /// Gets the copied text, or an empty string outside Success.
@@ -96,7 +96,7 @@ public sealed class ClipboardTextResult {
 }
 
 /// Reads and writes clipboard data on an open window's UI thread.
-public sealed class WindowClipboard {
+public class WindowClipboard {
   private let owner Window
   internal init(owner Window) { this.owner = owner }
 

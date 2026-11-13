@@ -127,19 +127,12 @@ internal class GlassMaterialPanelCell : Cell {
     private var liquidEffect ShaderEffect?
     private var terminalEffect ShaderEffect?
     private var terminalMode bool
-    private var configured bool
 
-    public init() {
+    internal init(liquid ShaderEffect, terminal ShaderEffect, initialTerminal bool) {
         surfaceHandle = ElementHandle{}
-    }
-
-    internal func Configure(liquid ShaderEffect, terminal ShaderEffect, initialTerminal bool) {
         liquidEffect = liquid
         terminalEffect = terminal
-        if !configured {
-            terminalMode = initialTerminal
-            configured = true
-        }
+        terminalMode = initialTerminal
     }
 
     private func selectedEffect() ShaderEffect? -> terminalMode ? terminalEffect: liquidEffect
@@ -421,9 +414,7 @@ internal class GlassMaterialRootCell : Cell {
         Cell.Mount[GlassMaterialBackdropCell]("glass-material-backdrop"),
         Cell.Mount[GlassMaterialPanelCell](
             "glass-material-panel",
-            (cell GlassMaterialPanelCell) -> {
-                cell.Configure(liquidEffect, terminalEffect, initialTerminal)
-            }
+            () -> GlassMaterialPanelCell(liquidEffect, terminalEffect, initialTerminal)
         ),
     }
 }

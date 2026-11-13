@@ -7,6 +7,7 @@ internal class InputFixtures {
   func WindowInputActivityObservesConsumedAndModalInputWithoutRebuilding() bool {
     let cell = InputActivityCell{}
     let driver = InputFixtureDriver(cell, 100, 100)
+    driver.Update()
     let observed = List[WindowInputKind]()
     let handler Action[WindowInputKind] = (kind WindowInputKind) -> { observed.Add(kind) }
     var previewCalls int32

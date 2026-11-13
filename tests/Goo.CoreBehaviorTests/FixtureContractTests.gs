@@ -10,6 +10,14 @@ import Xunit
 
 class FixtureContractTests {
     @Fact
+    func MountedPlainFieldWritesRebuildContract() ->
+        Assert.True(CellFixtures().MountedPlainFieldWritesRebuild())
+
+    @Fact
+    func ServicesBeforeWindowBindingContract() ->
+        Assert.True(CellFixtures().ServicesBeforeWindowBinding())
+
+    @Fact
     func KeyedListsFromData() {
         let fixture = TreeFixtures()
         Assert.True(fixture.EachAssignsDataKeysContract())
