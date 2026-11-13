@@ -597,15 +597,16 @@ async func Load() void {
 ```
 
 In a Goo callback, an incomplete `await` resumes on the window's UI thread. A
-completed task continues inline. `ConfigureAwait(false)` opts out. An existing
-embedded host context stays current. A `go` child has no UI context.
+completed task continues inline. `ConfigureAwait(false)` opts out. Goo forwards
+continuations to an existing embedded host context. A `go` child has no UI context.
 
 After each continuation, Goo applies the owning Cell's callback rebuild rule.
 State-only Cells do not rebuild when nothing changed. Unmounted Cells do not rebuild.
 
-Use `window.InvokeAsync(action, token)` from any thread to await dispatch. The
-generic overload returns the function result. Both propagate action exceptions.
-Cancellation, rejected posts and discarded accepted posts cancel the task.
+Use `window.InvokeAsync(action, token)` from any thread to await dispatch. It accepts
+synchronous or Task-returning callbacks and awaits all their work. Generic overloads
+return the function result. Exceptions propagate. Cancellation, closing the window,
+rejected posts and discarded accepted posts cancel the wait.
 
 Use `await window.NextPresentationAsync(token)` on the UI thread to request one
 frame and await its accepted presentation receipt. It works on an idle window.
@@ -1618,7 +1619,6 @@ Returns: the same container
 
 ### `Every(float64,System.Action)`
 
-
 Runs a callback repeatedly on the UI thread at the requested interval.
 
 ### `GetCurrentDisplay`
@@ -1635,6 +1635,43 @@ Gets an immutable snapshot of the current host's displays. Open the window first
 
 Hides an open desktop window and cancels transient input without destroying its tree. Releases the swapchain and clip atlas after pending GPU work completes. Show recreates them. Modal windows and owners blocked by a modal child or chooser cannot be hidden. Visibility and input change immediately. Regular desktop unmapping can be deferred until pending queue calls complete.
 
+### `InvokeAsync(System.Action,System.Threading.CancellationToken)`
+
+Queues an action on the UI thread and awaits its result or exception.
+
+- `action`: action to run
+- `cancellationToken`: cancels pending dispatch
+
+Returns: the pending dispatch task
+
+### `InvokeAsync(System.Func{System.Threading.Tasks.Task},System.Threading.CancellationToken)`
+
+Queues an async action on the UI thread and awaits its work or exception.
+
+- `action`: async action to run
+- `cancellationToken`: cancels dispatch or the wait for its work
+
+Returns: the task that completes after the action's work
+
+### `InvokeAsync``1(System.Func{System.Threading.Tasks.Task{T}},System.Threading.CancellationToken)`
+
+Queues an async function on the UI thread and awaits its result or exception.
+
+- `T`: result type
+- `action`: async function to run
+- `cancellationToken`: cancels dispatch or the wait for its work
+
+Returns: the result after the function's work completes
+
+### `InvokeAsync``1(System.Func{T},System.Threading.CancellationToken)`
+
+Queues a function on the UI thread and awaits its result or exception.
+
+- `T`: result type
+- `action`: function to run
+- `cancellationToken`: cancels pending dispatch
+
+Returns: the function result
 
 ### `MeasureText(string,Style)`
 
@@ -1713,7 +1750,6 @@ Reuses a previous capture's caller-owned pixels when its size matches. Do not ac
 
 Queues an idempotent close request. This is safe from any thread.
 
-
 ### `SetColors(Color,Color)`
 
 Sets the clear and inherited root text colors together on the owner thread. Explicit element colors take precedence over the inherited foreground.
@@ -1752,12 +1788,6 @@ Starts one owner-modal chooser on the open window's UI thread; other windows con
 
 Returns: A task completed on the UI thread with owned paths and an explicit outcome. Await continuations follow normal .NET context rules.
 
-### `TryPost(System.Action)`
-
-- `action`: action to run during a later Pump
-
-Returns: True when the action was accepted into the queue.
-
 ### `AccessibilityAdapter`
 
 Gets or sets the adapter that receives this window's retained semantic tree.
@@ -1789,6 +1819,10 @@ Gets supported native lifecycle operations, or None before Open or Attach.
 ### `Clipboard`
 
 Gets clipboard services for this window's UI thread.
+
+### `CloseDrainMs`
+
+Gets or sets the close drain bound in milliseconds. The default is 2000. Zero skips the wait. Closing stops UI work and cancels Cell lifetimes before draining async handlers on the UI thread. After this bound, continuations run on a serialized background queue. They must not access UI state.
 
 ### `Closed`
 
