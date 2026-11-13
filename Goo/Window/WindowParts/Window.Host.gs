@@ -40,7 +40,7 @@ public partial class Window {
     }
 
     internal func UnregisterLiveWindow(window Window) {
-      scheduler.Unregister(window, window.observedVisible)
+      scheduler.Unregister(window, window.callbackClosing ? window.callbackWasVisible : window.observedVisible)
     }
 
     internal func RunLiveWindowScheduler() {
@@ -180,6 +180,7 @@ public partial class Window {
   }
 
   private func configureHost(native WindowHost) {
+    if let sdl = native as SdlHost? { sdl.CallbackContext = CallbackContext() }
     native.PreferencesChanged += applyPreferences
     native.PointerPressed += (id, device, px, py, button, buttons, pressure, modifiers) -> {
       DismissChildMenus(PopupDismissReason.OutsideInteraction)
@@ -225,11 +226,12 @@ public partial class Window {
     let callback Action[int64] = (ticks int64) -> {
       if !IsOpen { return }
       acceptedFrameIndex++
-      if !notifications.HasPresentationAcceptedCallbacks { return }
       let receipt = WindowPresentationAccepted{
         FrameIndex: acceptedFrameIndex,
         AcceptedTicks: ticks,
       }
+      completePresentationWaiters(receipt)
+      if !notifications.HasPresentationAcceptedCallbacks { return }
       Post(() -> {
         if IsOpen { notifications.RaisePresentationAccepted(receipt) }
       })
@@ -351,14 +353,11 @@ public partial class Window {
       guard let native = host else {
         return
       }
+      using let callbackScope = CallbackScope(CallbackContext())
       let queueCompletedAtEntry = windowTarget?.PollQueueCompletion() == true
-      if native.IsClosing {
+      if callbackClosing || native.IsClosing {
         if waitForEvents {
           native.PollEvents()
-        }
-        if windowTarget?.PrepareClose() == false {
-          native.Wake()
-          return
         }
         Close()
         return
@@ -398,7 +397,6 @@ public partial class Window {
         let repeatStartTicks = Stopwatch.GetTimestamp()
         nativeModal?.DrainCompletion()
         if IsOpen && !native.IsClosing && drainCloseRequest() {
-          stopPosts()
           native.BeginClose()
         }
         if native.IsClosing || !IsOpen {
@@ -557,7 +555,7 @@ public partial class Window {
 
   private func firstShowPending() bool -> (host as SdlHost?)?.FirstShowPending == true
 
-  internal func SchedulerHasImmediateService() bool -> host?.HasPendingEvents == true || hasPostedActions()
+  internal func SchedulerHasImmediateService() bool -> callbackClosing || host?.HasPendingEvents == true || hasPostedActions()
     || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0
     || host?.IsClosing == true
     || Application.HasPendingActivation
@@ -580,6 +578,11 @@ public partial class Window {
   }
 
   internal func SchedulerWaitMs(nowTicks float64) int32 {
+    if callbackClosing {
+      if hasContinuations() || Interlocked.CompareExchange(&callbackOperations, 0, 0) == 0 { return 0 }
+      return Math.Max(1, int32(Math.Ceiling(Math.Min(250.0,
+        Math.Max(0.0, callbackDeadline - nowTicks) * 1000.0 / float64(Stopwatch.Frequency)))))
+    }
     if SchedulerHasImmediateService() {
       return 0
     }
@@ -679,8 +682,8 @@ public partial class Window {
   }
 
   private func closeAfterRun() {
-    let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency
-    while IsOpen && Stopwatch.GetTimestamp() < deadline {
+    let deadline = float64(Stopwatch.GetTimestamp()) + (CloseDrainMs / 1000.0 + 1.0) * float64(Stopwatch.Frequency)
+    while IsOpen && float64(Stopwatch.GetTimestamp()) < deadline {
       Close()
       if IsOpen { host?.WaitEvents(1) }
     }
@@ -751,6 +754,13 @@ public partial class Window {
 
   internal func Close() {
     requireUiThread("Window.Close")
+    using let callbackScope = CallbackScope(CallbackContext())
+    if !callbackClosing { beginCallbackClose()
+    }
+    if !callbackDrainReady {
+      return
+    }
+    if !finishCallbackDrain() { return }
     if !closeNativeModal() { return }
     if !closeFileDialog() { return }
     if !closeOwnedWindows() { return }
@@ -763,7 +773,8 @@ public partial class Window {
       return
     }
     Window.UnregisterLiveWindow(this)
-    var firstError = family?.CloseError
+    var firstError = callbackError ?? family?.CloseError
+    callbackError = nil
     if let state = family { state.CloseError = nil }
     firstError = captureCleanupError(firstError, () -> clearTimers())
     firstError = captureCleanupError(firstError, () -> stopPosts())
@@ -775,14 +786,6 @@ public partial class Window {
     firstError = captureCleanupError(firstError, () -> teardownNative())
     firstError = captureCleanupError(firstError, () -> unregisterOwnership())
 
-    let tree = node
-    node = nil
-    Portals.Sync(nil, portalRoot)
-    if let current = tree {
-      firstError = captureCleanupError(firstError, () -> NodeLifecycle.DisposeTree(current))
-    } else if let current = Root {
-      firstError = captureCleanupError(firstError, () -> current.DisposeMounted())
-    }
     retiredVirtualStates.Clear()
     ClearContextValues()
     firstError = captureCleanupError(firstError, () -> MetricSubscriptions.Flush(this))

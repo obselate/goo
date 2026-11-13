@@ -95,6 +95,7 @@ public partial class Window {
     /// @exception ArgumentNullException when action is nil and the window accepts work
     /// @exception ArgumentOutOfRangeException when delayMs is invalid and the window accepts work
     public func After(delayMs float64, action Action) WindowTimer {
+        if !acceptingPosts { return WindowTimer.Inactive() }
         validateTimer(action, delayMs, false)
         return addTimer(action, delayMs, 0.0)
     }
@@ -108,6 +109,7 @@ public partial class Window {
     /// @exception ArgumentNullException when action is nil and the window accepts work
     /// @exception ArgumentOutOfRangeException when intervalMs is invalid and the window accepts work
     public func Every(intervalMs float64, action Action) WindowTimer {
+        if !acceptingPosts { return WindowTimer.Inactive() }
         validateTimer(action, intervalMs, true)
         return addTimer(action, intervalMs, intervalMs)
     }

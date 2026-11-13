@@ -587,6 +587,47 @@ Cancellation callbacks must not throw or use torn-down UI state.
 
 Pump removes an action before it calls the action. If it throws, Pump throws the same exception and later queued actions remain for the next direct `Pump`. `Run` propagates the exception, then closes the window and discards queued work. Accessibility adapters can use `Post` before calling Window accessibility APIs.
 
+## Await UI work
+
+```gsharp
+async func Load() void {
+    let result = await service.LoadAsync(Lifetime)
+    Apply(result)
+}
+```
+
+In a Goo callback, an incomplete `await` resumes on the window's UI thread. A
+completed task continues inline. `ConfigureAwait(false)` opts out. Goo forwards
+continuations to an existing embedded host context. A `go` child has no UI context.
+
+After each continuation, Goo applies the owning Cell's callback rebuild rule.
+State-only Cells do not rebuild when nothing changed. Unmounted Cells do not rebuild.
+
+Use `window.InvokeAsync(action, token)` from any thread to await dispatch. It accepts
+synchronous or Task-returning callbacks and awaits all their work. Generic overloads
+return the function result. Exceptions propagate. Cancellation, closing the window,
+rejected posts and discarded accepted posts cancel the wait.
+
+Use `await window.NextPresentationAsync(token)` on the UI thread to request one
+frame and await its accepted presentation receipt. It works on an idle window.
+The receipt is a queue handoff, not display scanout.
+
+| Close phase | Behavior |
+| --- | --- |
+| Stop | Hide the window. Reject posts, rebuilds and timers. Stop input, layout and paint. |
+| Unmount | Run `Unmounting`, then cancel `Lifetime`, `Latest` and pending window tasks. |
+| Drain | Keep async handlers on the UI thread until they finish or `CloseDrainMs` expires. Other windows keep running. |
+| Late queue | After the bound, serialize continuations for this window on a background thread. Do not access UI state. |
+
+`CloseDrainMs` defaults to 2000 ms. Zero skips the wait. A task that never
+completes cannot run its handler's `finally`. Pending work does not survive process
+exit. Pass `Lifetime` to every awaited operation that accepts cancellation.
+
+An escaped async handler exception is rethrown from the pump. Cancellation is
+ignored. During the close drain, the first other exception is saved until drain
+completion. An unhandled late-queue exception stops the process.
+
+
 ## Schedule window timers
 
 Call `After(delayMs, action)` for one callback or `Every(intervalMs, action)` for repeated callbacks. Both return a `WindowTimer`. The window must be open, and scheduling and `Dispose` must run on its UI thread. A delay can be zero. An interval must be greater than zero. Both durations must be finite and nonnegative.
@@ -1604,6 +1645,44 @@ Gets an immutable snapshot of the current host's displays. Open the window first
 
 Hides an open desktop window and cancels transient input without destroying its tree. Releases the swapchain and clip atlas after pending GPU work completes. Show recreates them. Modal windows and owners blocked by a modal child or chooser cannot be hidden. Visibility and input change immediately. Regular desktop unmapping can be deferred until pending queue calls complete.
 
+### `InvokeAsync(System.Action,System.Threading.CancellationToken)`
+
+Queues an action on the UI thread and awaits its result or exception.
+
+- `action`: action to run
+- `cancellationToken`: cancels pending dispatch
+
+Returns: the pending dispatch task
+
+### `InvokeAsync(System.Func{System.Threading.Tasks.Task},System.Threading.CancellationToken)`
+
+Queues an async action on the UI thread and awaits its work or exception.
+
+- `action`: async action to run
+- `cancellationToken`: cancels dispatch or the wait for its work
+
+Returns: the task that completes after the action's work
+
+### `InvokeAsync``1(System.Func{System.Threading.Tasks.Task{T}},System.Threading.CancellationToken)`
+
+Queues an async function on the UI thread and awaits its result or exception.
+
+- `T`: result type
+- `action`: async function to run
+- `cancellationToken`: cancels dispatch or the wait for its work
+
+Returns: the result after the function's work completes
+
+### `InvokeAsync``1(System.Func{T},System.Threading.CancellationToken)`
+
+Queues a function on the UI thread and awaits its result or exception.
+
+- `T`: result type
+- `action`: function to run
+- `cancellationToken`: cancels pending dispatch
+
+Returns: the function result
+
 ### `MeasureText(string,Style)`
 
 Measures single-line Text width in layout units on the window's UI thread. Applies text scale and pixel-grid rounding. Line breaks are ignored. Reads FontFamily, Language, FontSize, FontWeight, FontStyle, LetterSpacing, TextTransform and Direction. Unset fields use Goo defaults, not parent inheritance.
@@ -1612,6 +1691,14 @@ Measures single-line Text width in layout units on the window's UI thread. Appli
 - `style`: The text declarations. A Text blob is also a Style.
 
 Returns: The width in layout pixels.
+
+### `NextPresentationAsync(System.Threading.CancellationToken)`
+
+Requests a frame and awaits its next accepted presentation, not display scanout. Call this on the UI thread. Closing the window cancels the task.
+
+- `cancellationToken`: cancels the wait
+
+Returns: the next presentation receipt
 
 ### `Open`
 
@@ -1711,12 +1798,6 @@ Starts one owner-modal chooser on the open window's UI thread; other windows con
 
 Returns: A task completed on the UI thread with owned paths and an explicit outcome. Await continuations follow normal .NET context rules.
 
-### `TryPost(System.Action)`
-
-- `action`: action to run during a later Pump
-
-Returns: True when the action was accepted into the queue.
-
 ### `AccessibilityAdapter`
 
 Gets or sets the adapter that receives this window's retained semantic tree.
@@ -1748,6 +1829,10 @@ Gets supported native lifecycle operations, or None before Open or Attach.
 ### `Clipboard`
 
 Gets clipboard services for this window's UI thread.
+
+### `CloseDrainMs`
+
+Gets or sets the close drain bound in milliseconds. The default is 2000. Zero skips the wait. Closing stops UI work and cancels Cell lifetimes before draining async handlers on the UI thread. After this bound, continuations run on a serialized background queue. They must not access UI state.
 
 ### `Closed`
 
