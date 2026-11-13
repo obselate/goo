@@ -54,7 +54,7 @@ public partial class Window {
     return SdlHost(Title, NativeWidth, NativeHeight, x, y, positionSet, State, decorated, resizable,
       transparent || backdrop == WindowBackdrop.Blur, VSync,
       (px int32, py int32) -> hitTest(px, py), parent, popup?.Kind ?? PopupKind.Menu,
-      popup?.NativeTimestamp ?? 0uL, popupAnchor, popupPlacement, UiScale, LayerShell,
+      popup?.NativeTimestamp ?? 0uL, popupAnchor, popupPlacement, float32(UiScale), LayerShell,
       scaledSize(minWidth), scaledSize(minHeight))
   }
 
@@ -74,7 +74,7 @@ public partial class Window {
       return embedded.UpdatePlacement(anchor, width, height, popupPlacement)
     }
     guard let native = host as SdlHost? else { return WindowOperationResult.Closed }
-    return native.UpdatePopup(anchor, Math.Max(1, scaledSize(size.Width)), Math.Max(1, scaledSize(size.Height)), popupPlacement, UiScale)
+    return native.UpdatePopup(anchor, Math.Max(1, scaledSize(size.Width)), Math.Max(1, scaledSize(size.Height)), popupPlacement, float32(UiScale))
   }
 
   private func resolvePopupPlacement(placement PortalPlacement) PortalPlacement {

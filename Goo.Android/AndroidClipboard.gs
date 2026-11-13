@@ -36,23 +36,23 @@ internal sealed class AndroidClipboard : IDisposable {
     internal func ReadText() ClipboardTextResult {
         try {
             if Volatile.Read(ref disposed) || !view.HasWindowFocus {
-                return ClipboardTextResult(ClipboardTextStatus.Failed, error: "Clipboard reads require a focused Goo view")
+                return ClipboardTextResult(ClipboardReadStatus.Failed, error: "Clipboard reads require a focused Goo view")
             }
             using let clip = Manager.PrimaryClip
             using let text = if clip != nil && clip.ItemCount > 0 {
                 clip.GetItemAt(0)?.CoerceToTextFormatted(context)
             } else { nil }
-            if text == nil { return ClipboardTextResult(ClipboardTextStatus.Empty) }
+            if text == nil { return ClipboardTextResult(ClipboardReadStatus.Empty) }
             if text.Length() > ClipboardTransfer.MaxTextBytes {
-                return ClipboardTextResult(ClipboardTextStatus.TooLarge, error: "Clipboard text exceeds 16 MiB")
+                return ClipboardTextResult(ClipboardReadStatus.TooLarge, error: "Clipboard text exceeds 16 MiB")
             }
             let value = text.ToString()
             if !ClipboardTransfer.TextFits(value) {
-                return ClipboardTextResult(ClipboardTextStatus.TooLarge, error: "Clipboard text exceeds 16 MiB")
+                return ClipboardTextResult(ClipboardReadStatus.TooLarge, error: "Clipboard text exceeds 16 MiB")
             }
-            return ClipboardTextResult(if value.Length == 0 { ClipboardTextStatus.Empty } else { ClipboardTextStatus.Success }, value)
+            return ClipboardTextResult(if value.Length == 0 { ClipboardReadStatus.Empty } else { ClipboardReadStatus.Success }, value)
         } catch (error Exception) {
-            return ClipboardTextResult(ClipboardTextStatus.Failed, error: error.Message)
+            return ClipboardTextResult(ClipboardReadStatus.Failed, error: error.Message)
         }
     }
 
