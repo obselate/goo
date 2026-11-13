@@ -20,8 +20,9 @@ public open class Cell[TInput any] : Cell {
   protected func InvokeInputCallback(callback Action?) {
     guard let callback = callback else { return }
     let owner = inputOwner
+    let previousContext = owner?.BeginCallback()
     try { callback() }
-    finally { owner?.RebuildAfterCallback() }
+    finally { owner?.EndCallback(previousContext) }
   }
 
   /// Invokes an input-time callback and rebuilds the Cell that supplied this input.
@@ -33,8 +34,9 @@ public open class Cell[TInput any] : Cell {
   protected func InvokeInputCallback[T any](callback Action[T]?, value T) {
     guard let callback = callback else { return }
     let owner = inputOwner
+    let previousContext = owner?.BeginCallback()
     try { callback(value) }
-    finally { owner?.RebuildAfterCallback() }
+    finally { owner?.EndCallback(previousContext) }
   }
 
   /// Invokes an input-time callback and rebuilds the Cell that supplied this input.
@@ -48,8 +50,9 @@ public open class Cell[TInput any] : Cell {
   protected func InvokeInputCallback[T1 any, T2 any](callback Action[T1, T2]?, first T1, second T2) {
     guard let callback = callback else { return }
     let owner = inputOwner
+    let previousContext = owner?.BeginCallback()
     try { callback(first, second) }
-    finally { owner?.RebuildAfterCallback() }
+    finally { owner?.EndCallback(previousContext) }
   }
 
   /// Invokes an input-time callback and rebuilds the Cell that supplied this input.
@@ -64,8 +67,9 @@ public open class Cell[TInput any] : Cell {
   protected func InvokeInputCallback[T any, TResult any](callback Func[T, TResult]?, value T, fallback TResult) TResult {
     guard let callback = callback else { return fallback }
     let owner = inputOwner
+    let previousContext = owner?.BeginCallback()
     try { return callback(value) }
-    finally { owner?.RebuildAfterCallback() }
+    finally { owner?.EndCallback(previousContext) }
   }
 
   /// Builds the component tree from the current immutable input snapshot.

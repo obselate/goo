@@ -59,6 +59,14 @@ class FixtureContractTests {
         Assert.True((cast[Func[bool]](method!!.CreateDelegate(typeof(() -> bool), fixture)))())
     }
 
+    @Fact
+    func ForeignHostContextRebuildsOwner() {
+        Assert.True(WindowStartupFixtures().HostedOwnerContextContract().GetAwaiter().GetResult())
+        if System.Threading.SynchronizationContext.Current is Xunit.Sdk.AsyncTestSyncContext context {
+            Assert.Null(context.WaitForCompletionAsync().GetAwaiter().GetResult())
+        }
+    }
+
     @Theory
     @InlineData("mount-duplicate")
     @InlineData("diff-duplicate")
@@ -160,6 +168,15 @@ class FixtureContractTests {
             yield Contract[WindowOcclusionFixtures]("HostTransitionsNotifyOnUiThread")
             yield Contract[WindowStartupFixtures]("InitialBoundsContract")
             yield Contract[WindowStartupFixtures]("PresentModesContract")
+            yield Contract[WindowStartupFixtures]("AsyncDispatcherContract")
+            yield Contract[WindowStartupFixtures]("AsyncTaskDispatcherContract")
+            yield Contract[WindowStartupFixtures]("HostedContextOperationCountingContract")
+            yield Contract[WindowStartupFixtures]("AsyncOwnerContextContract")
+            yield Contract[WindowStartupFixtures]("AsyncCloseDrainContract")
+            yield Contract[WindowStartupFixtures]("EmbeddedCloseDrainsContinuationsContract")
+            yield Contract[WindowStartupFixtures]("EmbeddedCloseRejectsReentrantDisposalContract")
+            yield Contract[WindowStartupFixtures]("AsyncStateContinuationContract")
+            yield Contract[WindowStartupFixtures]("LateFileDialogCompletionContract")
             yield Contract[WindowStartupFixtures]("SingleInstanceRejectsAttachedWindowContract")
             yield Contract[WindowStartupFixtures]("ApplicationStateVerificationContract")
             yield Contract[WindowStartupFixtures]("WindowLayoutSizeContract")

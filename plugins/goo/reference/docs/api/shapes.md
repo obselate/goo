@@ -423,10 +423,6 @@ Creates a solid-color stroke with default cap, join, and miter settings.
 
 Creates a stroke with default cap, join, and miter settings.
 
-### `new(float64,VectorPaint,StrokeCap,StrokeJoin,float64,DashPattern)`
-
-Creates a fully specified immutable stroke.
-
 ### `Cap`
 
 Gets the line cap style.
@@ -441,7 +437,7 @@ Gets the line join style.
 
 ### `MiterLimit`
 
-Gets the finite miter limit.
+Gets the non-negative finite miter limit.
 
 ### `Paint`
 

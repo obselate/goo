@@ -73,6 +73,7 @@ public open class Cell {
   private var mountHookRun bool
   private var unmounting bool
   private var callbackGeneration int64
+  private var callbackContext WindowCallbackContext?
 
   /// Gets the owning window before the first InputChanged or Build until Unmounting returns.
   protected prop Host Window {
@@ -150,9 +151,24 @@ public open class Cell {
   /// Runs once before elements are removed and Lifetime is cancelled.
   protected open func Unmounting() {}
 
+  internal func BeginCallback() SynchronizationContext? {
+    let previous = SynchronizationContext.Current
+    if contextWindow != nil {
+      callbackContext ??= WindowCallbackContext(contextWindow!!, this)
+      SynchronizationContext.SetSynchronizationContext(callbackContext!!.ForHost(previous))
+    }
+    return previous
+  }
+
+  internal func EndCallback(previous SynchronizationContext?, rebuild bool = true) {
+    SynchronizationContext.SetSynchronizationContext(previous)
+    if rebuild { RebuildAfterCallback() }
+  }
+
   internal func RunOwnedAction(action Action, rebuild bool = true) {
     if disposed { return }
-    try { action() } finally { if rebuild { RebuildAfterCallback() } }
+    let previous = BeginCallback()
+    try { action() } finally { EndCallback(previous, rebuild) }
   }
 
   internal func CompleteMount() {
@@ -250,6 +266,7 @@ public open class Cell {
   internal func BindContext(frame ContextFrame?, window Window?) {
     if incomingContext == frame && contextWindow == window { return }
     incomingContext = frame
+    if contextWindow != window { callbackContext = nil }
     lock rebuildGate { contextWindow = window }
     outgoingContext = contextReader?.Provider ?? frame
     if let reader = contextReader {
@@ -273,7 +290,7 @@ public open class Cell {
   /// Requests a rebuild of this component.
   /// Mounted cells must use their window's UI thread. Post background results with Window.Post.
   public func Rebuild() {
-    if disposed || unmounting { return }
+    if disposed || unmounting || contextWindow?.callbackClosing == true { return }
     contextWindow?.requireUiThread("Cell.Rebuild")
     if building {
       throw InvalidOperationException("${GetType().Name}.Rebuild was called during Build: change state in an input handler or Window.Post callback instead of Build.")
@@ -423,6 +440,7 @@ public open class Cell {
       if mountedNode != nil { return }
       mountType = nil
       contextWindow = nil
+      callbackContext = nil
     }
     if let error = CancelOwnedWork() {
       System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw()
@@ -506,6 +524,7 @@ public open class Cell {
     lock rebuildGate {
       disposed = true
       contextWindow = nil
+      callbackContext = nil
     }
     let cancellationError = CancelOwnedWork()
     firstError ??= cancellationError
@@ -522,6 +541,7 @@ public open class Cell {
     contextReader = nil
     incomingContext = nil
     outgoingContext = nil
+
     if let list = anims {
       for i in 0 ... list.Count {
         try {

@@ -304,11 +304,12 @@ internal partial class PointerInput {
           if current.PointerDrag != nil || kind == PointerEventKind.Press && n.OnPointerDrag != nil {
             dispatchPointerDrag(n, event, kind, route, i - 1, transformed)
           }
+          let previousContext = owner?.BeginCallback()
           try {
             callback?.Invoke(event)
           } finally {
             control.ClearCurrentTarget(generation)
-            owner?.RebuildAfterCallback()
+            owner?.EndCallback(previousContext)
           }
           if current != contact || route.Count != routeCount || mount.Current == nil
             || !route[i - 1].Equals(mount) {
@@ -425,13 +426,14 @@ internal partial class PointerInput {
         }
         control.SetCurrentTarget(generation, n)
         let owner = n.OnPointerCancel != nil ? CellOwnership.InRoute(route, i - 1) : nil
+        let previousContext = owner?.BeginCallback()
         try {
           if let callback = n.OnPointerCancel {
             callback(event)
           }
         } finally {
           control.ClearCurrentTarget(generation)
-          owner?.RebuildAfterCallback()
+          owner?.EndCallback(previousContext)
         }
         if current != contact || route.Count != routeCount || mount.Current == nil
           || !route[i - 1].Equals(mount) { return }

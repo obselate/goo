@@ -41,6 +41,7 @@ internal partial class TextInput {
   }
 
   private func beforeBlur(n Node) {
+    if n.Selectable { SelectableText.Set(n, 0, 0) }
     if let history = n.EntryHistory { history.Typing = false }
     cancelEntryComposition(n)
     blurEditor(n)
@@ -235,10 +236,11 @@ internal partial class TextInput {
       let selectedCandidate = selected >= 0 && selected < values.Count ? selected : -1
       if let callback = TextInputCallbacks.TextCandidates(n) {
         let owner = CellOwnership.ForCallback(n)
+        let previousContext = owner?.BeginCallback()
         try {
           callback(TextCandidateEvent{ Candidates: values, SelectedCandidate: selectedCandidate,
             Horizontal: horizontal })
-        } finally { owner?.RebuildAfterCallback() }
+        } finally { owner?.EndCallback(previousContext) }
       }
     }
 
@@ -263,24 +265,27 @@ internal partial class TextInput {
   private func dispatchTextInput(n Node, value string) {
     if let callback = TextInputCallbacks.TextInput(n) {
       let owner = CellOwnership.ForCallback(n)
+      let previousContext = owner?.BeginCallback()
       try { callback(value) }
-      finally { owner?.RebuildAfterCallback() }
+      finally { owner?.EndCallback(previousContext) }
     }
   }
 
   private func dispatchTextComposition(n Node, value TextCompositionEvent) {
     if let callback = TextInputCallbacks.TextComposition(n) {
       let owner = CellOwnership.ForCallback(n)
+      let previousContext = owner?.BeginCallback()
       try { callback(value) }
-      finally { owner?.RebuildAfterCallback() }
+      finally { owner?.EndCallback(previousContext) }
     }
   }
 
   private func dispatchTextCompositionCancel(n Node) {
     if let callback = TextInputCallbacks.TextCompositionCancel(n) {
       let owner = CellOwnership.ForCallback(n)
+      let previousContext = owner?.BeginCallback()
       try { callback() }
-      finally { owner?.RebuildAfterCallback() }
+      finally { owner?.EndCallback(previousContext) }
     }
   }
 
@@ -370,9 +375,10 @@ internal partial class TextInput {
     let generation = focus.Generation
     let callback = after.Text != before.Text ? n.OnChange : nil
     let owner = callback != nil ? CellOwnership.Within(root, n) : nil
+    let previousContext = owner?.BeginCallback()
     try { callback?.Invoke(after.Text) }
     finally {
-      owner?.RebuildAfterCallback()
+      owner?.EndCallback(previousContext)
       if generation == focus.Generation {
         FollowCaret(n)
         updateTextInputArea(n)

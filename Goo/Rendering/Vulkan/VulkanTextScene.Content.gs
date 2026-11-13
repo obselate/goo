@@ -26,7 +26,7 @@ internal unsafe sealed partial class VulkanTextScene {
             let rect = rects[i]
             AddSolid(frame, ConservativeBounds{X: node.Rect.X + float32(rect.X),
               Y: node.Rect.Y + float32(rect.Y), Width: float32(rect.Width), Height: float32(rect.Height)},
-              defaultSelectionColor(), opacity, parentTransformIndex)
+              node.SelectionColor, opacity, parentTransformIndex)
           }
         }
       }

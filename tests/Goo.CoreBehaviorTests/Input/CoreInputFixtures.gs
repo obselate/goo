@@ -364,7 +364,7 @@ internal class InputFixtures {
   private func inputShape(path VectorPath, cap StrokeCap, join StrokeJoin,
     miterLimit float64, dashes DashPattern?, color Color) Shape -> Shape{
       Width: 100, Height: 100, Path: path,
-      Stroke: VectorStroke(8, VectorPaint(color), cap, join, miterLimit, dashes),
+      Stroke: VectorStroke(8, color){.Cap: cap, .Join: join, .MiterLimit: miterLimit, .Dashes: dashes},
     }
 
   private func shapeDiffHasInput(before Shape, after Shape) bool {
