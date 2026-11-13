@@ -29,7 +29,7 @@ TextEditor{Controller: controller, Layers: layers}
 - `Text` concatenates spans. Plain strings use inherited style. Each styled span adds one UTF-16 `TextStyleRange`.
 - `Content` and `StyleRanges` remain available for indexed styles.
 - `Selectable` supports pointer selection, word and line selection, Shift plus movement, Select All and Copy. It adds focus and accessibility selection, but no caret, editing or IME.
-- Set `TextEditor.Controller` and `Virtual.Source` before mounting. Missing values throw at mount. Editor layers must use the controller's document.
+- Set `TextEditor.Controller` and `Virtual.Source` before mounting. Missing values compile but throw `InvalidOperationException` at mount. Editor layers must use the controller's document.
 - Ellipsis text has automatic minimum width zero. An explicit `MinWidth` still wins.
 
 ## Present content above the normal tree

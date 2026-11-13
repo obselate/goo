@@ -65,7 +65,7 @@ Restart `goo dev`. Click the first button three times and the second once. The f
 
 The conversion calls `Mount`, which retains each child and its fields at its sibling position. Set `Key` when siblings can move, be inserted or be removed. Use `Name(){children}` when there are no member assignments, or `Name{Gap: 8, children}` when there are.
 
-Goo rebuilds the Cell that authored a callback, even when a child renders it. Use `State[T]` for shared state that Cells read. See [Cell inputs, identity and lifetime](api/cell.md).
+Goo handles rebuilds after its input, Cell post, timer and async callbacks, even when a child renders the callback. A changed `State[T]` value rebuilds the Cells that read it in `Build`. Call `Rebuild()` only for plain state changed outside Goo. See [Cell inputs, identity and lifetime](api/cell.md).
 
 ## State
 

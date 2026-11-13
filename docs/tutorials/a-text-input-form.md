@@ -15,8 +15,8 @@ import Goo.Widgets.Actions
 import Goo.Widgets.Inputs
 
 class Example : Cell {
-    private let name State[string] = State[string]("Ada")
-    private let greeting State[string] = State[string]("Enter a name and select Save.")
+    private var name string = "Ada"
+    private var greeting string = "Enter a name and select Save."
 
     override func Build() Blob {
         let theme = Theme.Read()
@@ -29,16 +29,16 @@ class Example : Cell {
             TextField{
                 Width: Percent(100),
                 Label: "Name",
-                Value: name.Value,
+                Value: name,
                 OnChange: (value string) -> {
-                    name.Value = value
+                    name = value
                 },
                 OnSubmit: (value string) -> {
-                    greeting.Value = "Hello, $value"
+                    greeting = "Hello, $value"
                 },
             },
-            ActionButton{Content: "Save", OnClick: () -> { greeting.Value = "Hello, ${name.Value}" }},
-            Text{Content: greeting.Value},
+            ActionButton{Content: "Save", OnClick: () -> { greeting = "Hello, $name" }},
+            Text{Content: greeting},
         }
     }
 }

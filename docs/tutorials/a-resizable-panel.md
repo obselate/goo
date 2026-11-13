@@ -14,7 +14,7 @@ import Goo.Widgets.Actions
 import Goo.Widgets.Layout
 
 class Example : Cell {
-    private let ratio State[float64] = State[float64](.35)
+    private var ratio float64 = .35
 
     override func Build() Blob {
         let theme = Theme.Read()
@@ -27,7 +27,7 @@ class Example : Cell {
             Cell.Mount[SplitPaneInput, SplitPane](
                 "panes",
                 SplitPaneInput{
-                    Value: ratio.Value,
+                    Value: ratio,
                     MinimumFirst: theme.ControlHeight * 3,
                     MinimumSecond: theme.ControlHeight * 3,
                     First: Container{
@@ -44,11 +44,11 @@ class Example : Cell {
                         Text{Content: "Workspace"},
                         ActionButton{
                             Content: "Reset split",
-                            OnClick: () -> { ratio.Value = .35 },
+                            OnClick: () -> { ratio = .35 },
                         },
                     },
                     OnChange: (value float64) -> {
-                        ratio.Value = value
+                        ratio = value
                     },
                 }
             ),
