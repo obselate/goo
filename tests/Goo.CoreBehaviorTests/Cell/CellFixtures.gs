@@ -1656,8 +1656,10 @@ internal class DeferredCallbackHost : Cell {
   }
 }
 
-internal class DeferredCallbackContent(content Blob) : Cell {
-  override func Build() Blob -> content
+internal class DeferredCallbackContent : Cell {
+  internal var Content Blob?
+  init(content Blob? = nil) { Content = content }
+  override func Build() Blob -> Content!!
 }
 
 internal class MountedMeasurementFixtureCell : Cell {
