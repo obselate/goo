@@ -455,8 +455,8 @@ class StudioCell : Cell {
             BorderRadius: 8,
             Focusable: true,
             TransitionMs: 100.0,
-            Hover: Style{BackgroundColor: GalleryTheme.Border},
-            Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong},
+            HoverStyle: Style{BackgroundColor: GalleryTheme.Border},
+            FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong},
             Accessibility: Accessibility{Role: AccessibilityRole.Button, Name: label, Selected: selectedStyle,},
             OnClick: func () {
                 SelectProgram(index)
@@ -514,8 +514,8 @@ class StudioCell : Cell {
             BorderRadius: 8,
             Focusable: true,
             TransitionMs: 100.0,
-            Hover: Style{BackgroundColor: GalleryTheme.Border},
-            Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong},
+            HoverStyle: Style{BackgroundColor: GalleryTheme.Border},
+            FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong},
             Accessibility: Accessibility{Role: AccessibilityRole.Radio, Name: label, Selected: selectedStyle,},
             OnClick: func () {
                 palette = index
@@ -915,7 +915,7 @@ class StudioCell : Cell {
                         BorderWidth: 1,
                         BorderColor: GalleryTheme.Border,
                         SelectionColor: GalleryTheme.BorderStrong,
-                        Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong,},
+                        FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong,},
                         OnChange: func (value string) {
                             title = value
                             Rebuild()

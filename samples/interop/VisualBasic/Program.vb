@@ -39,7 +39,7 @@ Public NotInheritable Class Counter
                 New Text With {.Content = $"Count: {count}"},
                 New Button With {
                     .Padding = 10, .BorderRadius = 10,
-                    .TransitionMs = 150, .Hover = New Style With {.BackgroundColor = Color.Rgb(74, 125, 255)},
+                    .TransitionMs = 150, .HoverStyle = New Style With {.BackgroundColor = Color.Rgb(74, 125, 255)},
                     .OnClick = AddressOf Increment,
                     .Children = New List(Of Blob) From {New Text With {.Content = "Add one"}}
                 }

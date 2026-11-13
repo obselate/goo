@@ -61,7 +61,7 @@ class FragmentCorrectnessCell : Cell {
     },
     Container{
       Position: PositionType.Absolute, Left: 16, Top: 100, Width: 112, Height: 24,
-      Color: Color.Rgb(0, 0, 255), Hover: Style{Color: Color.Rgb(255, 0, 0)},
+      Color: Color.Rgb(0, 0, 255), HoverStyle: Style{Color: Color.Rgb(255, 0, 0)},
       Shape{
         Position: PositionType.Absolute, Left: 0, Width: 20, Height: 20,
         Path: square, UseCurrentColor: true,

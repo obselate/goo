@@ -90,6 +90,10 @@ func AppendStyleCompositionGuide(text StringBuilder) {
     text.AppendLine(
         "`BackgroundGradient: nil` is an explicit clear declaration. It removes an earlier composed or lower-state gradient while preserving `BackgroundColor`. Omitting `BackgroundGradient` leaves the earlier declaration in effect."
     )
+    text.AppendLine()
+    text.AppendLine("Use `HoverStyle`, `ActiveStyle`, `FocusStyle`, and `DisabledStyle` for interaction states. Parse color strings with `Color.Parse(\"#fff\")`.")
+    text.AppendLine()
+    text.AppendLine("`AccessibilityName` and `AccessibilityRole` change one field without replacing the other accessibility fields. A later `Accessibility` declaration replaces the whole declaration.")
 }
 
 func AppendImageSourceProviderMembers(text StringBuilder) {

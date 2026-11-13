@@ -230,6 +230,9 @@ internal partial class Reconciler {
       case p is Portal: mountPortal(p)
       case bt is Button: mountButton(bt)
       case c is Container: mountContainer(c)
+      case r is Row: mountFlex(r, r.Children, NodeKind.Container)
+      case c is Column: mountFlex(c, c.Children, NodeKind.Container)
+      case s is Spacer: mountFlex(s, nil, NodeKind.Spacer)
       case t is Text: mountText(t)
       case t is TextEntry: mountEntry(t)
       case t is TextEditor: mountEditor(t)
@@ -272,6 +275,42 @@ internal partial class Reconciler {
     applyContainer(n, c, true)
     mountChildren(n, c.Children)
     return n
+  }
+
+  private func mountFlex(b Blob, children IList[Blob]?, kind NodeKind) Node {
+    let n = Node{Kind: kind, Key: b.Key}
+    applyStyle(n, b, b.Focusable, true)
+    if let values = children { mountChildren(n, values) }
+    return n
+  }
+
+  private func diffFlex(n Node, b Blob, children IList[Blob]?) Node {
+    if !canReuseNode(n, b) { return replace(n, b) }
+    if CustomLayouts.Configure(n, nil) { MarkEffects(ReconcileEffects.Layout) }
+    if Transforming.GetVectorViewport(n) != nil {
+      Transforming.SetVectorViewport(n, nil)
+      n.BumpScenePaintVersion()
+      MarkEffects(ReconcileEffects.Paint | ReconcileEffects.Input)
+    }
+    if n.DragsWindow {
+      n.DragsWindow = false
+      MarkEffects(ReconcileEffects.Input)
+    }
+    applyStyle(n, b, b.Focusable, false)
+    if let values = children { diffChildren(n, values) }
+    return n
+  }
+
+  private func validateFlexDirection(entries StyleEntries?, allowed int32) {
+    guard let values = entries else { return }
+    var remaining = allowed
+    var cursor = values.Cursor()
+    while cursor.MoveNext() {
+      if cursor.Current.Field == StyleField.FlexDirection {
+        if remaining == 0 { throw InvalidOperationException("Row and Column have a fixed FlexDirection.") }
+        remaining--
+      }
+    }
   }
 
   internal func mountPortal(p Portal) Node {
@@ -370,9 +409,9 @@ internal partial class Reconciler {
   internal func applyStyleEntries(n Node, b Blob, entries StyleEntries?, focusable bool, initial bool) {
     n.Context = Context
     n.CallbackOwner = b.CallbackOwner
-    var hover = b.Hover?.Entries()
-    var active = b.Active?.Entries()
-    var focus = b.Focus?.Entries()
+    var hover = b.HoverStyle?.Entries()
+    var active = b.ActiveStyle?.Entries()
+    var focus = b.FocusStyle?.Entries()
     var disabled = b.DisabledStyle?.Entries()
     if b is Shape {
       hover = b.FilterPaintEntries(hover)
@@ -380,8 +419,16 @@ internal partial class Reconciler {
       focus = b.FilterPaintEntries(focus)
       disabled = b.FilterPaintEntries(disabled)
     }
+    if b is Row || b is Column {
+      validateFlexDirection(entries, 1)
+      validateFlexDirection(hover, 0)
+      validateFlexDirection(active, 0)
+      validateFlexDirection(focus, 0)
+      validateFlexDirection(disabled, 0)
+    }
     let nextDisabled = b.Disabled
-    let nextFocusable = focusable && !nextDisabled
+    let spacer = n.Kind == NodeKind.Spacer
+    let nextFocusable = focusable && !nextDisabled && !spacer
     let baseChanged = !sameStyleEntries(n.BaseStyle, entries)
     let hoverChanged = !sameStyleEntries(n.HoverStyle, hover)
     let activeChanged = !sameStyleEntries(n.ActiveStyle, active)
@@ -436,7 +483,7 @@ internal partial class Reconciler {
       inputChanged = true
     }
     if n.SyncPointerCallbacks(b) { inputChanged = true }
-    let nextHitTestSelf = resolvedHitTestSelf(b, focusable, entries, hover, active)
+    let nextHitTestSelf = !spacer && resolvedHitTestSelf(b, focusable, entries, hover, active)
     if n.HitTestSelf != nextHitTestSelf {
       n.HitTestSelf = nextHitTestSelf
       inputChanged = true
@@ -792,6 +839,9 @@ internal partial class Reconciler {
       case p is Portal: diffPortal(n, p)
       case bt is Button: diffButton(n, bt)
       case c is Container: diffContainer(n, c)
+      case r is Row: diffFlex(n, r, r.Children)
+      case c is Column: diffFlex(n, c, c.Children)
+      case s is Spacer: diffFlex(n, s, nil)
       case t is Text: diffText(n, t)
       case t is TextEntry: diffEntry(n, t)
       case t is TextEditor: diffEditor(n, t)
@@ -1352,6 +1402,17 @@ internal partial class Reconciler {
       case container is Container {
         return n.Fiber == nil && n.Kind == NodeKind.Container && !n.IsPortal && n.Key == b.Key
           && Virtualization.State(n) == nil
+      }
+      case row is Row {
+        return n.Fiber == nil && n.Kind == NodeKind.Container && !n.IsPortal && n.Key == b.Key
+          && Virtualization.State(n) == nil
+      }
+      case column is Column {
+        return n.Fiber == nil && n.Kind == NodeKind.Container && !n.IsPortal && n.Key == b.Key
+          && Virtualization.State(n) == nil
+      }
+      case spacer is Spacer {
+        return n.Fiber == nil && n.Kind == NodeKind.Spacer && n.Key == b.Key
       }
       case text is Text {
         return n.Fiber == nil && n.Kind == NodeKind.Text && n.Key == b.Key
