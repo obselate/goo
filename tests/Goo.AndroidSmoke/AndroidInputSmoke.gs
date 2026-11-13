@@ -14,7 +14,7 @@ import System.Linq
 
 internal shared class AndroidInputSmoke {
     internal func TryRun(view GooView) bool {
-        let input = view.Window.PlatformInput
+        let input = view.Window.Focus
         if !Focus(input, (editor FocusedEditorSnapshot) -> !editor.IsPassword && !editor.IsMultiline) {
             return false
         }
@@ -167,7 +167,7 @@ Yb`, 5, 5, -1, -1)
     }
 
     private func VerifyIncompleteKeySequence(view GooView) {
-        let input = view.Window.PlatformInput
+        let input = view.Window.Focus
         Require(
             Focus(input, (editor FocusedEditorSnapshot) -> !editor.IsPassword && !editor.IsMultiline),
             "Key-repeat editor did not focus."
@@ -191,7 +191,7 @@ Yb`, 5, 5, -1, -1)
                         view.PostDelayed(
                             () -> {
                                 AssertEditor(input, "abc", 3, 3, -1, -1)
-                                input.ClearFocus()
+                                input.Clear()
                                 Log.Info(
                                     "GooInputSmoke",
                                     "PASS physical_printable sanitized_cursor region_bounds composition_deletion code_points context batches password stale_focus multiline incomplete_key_sequence native_key_repeat"
@@ -219,7 +219,7 @@ Yb`, 5, 5, -1, -1)
         Require(view.OnKeyDown(key.KeyCode, key), "Backspace down was not handled.")
     }
 
-    private func VerifyComposingDeletion(input PlatformInput, connection IInputConnection) {
+    private func VerifyComposingDeletion(input WindowFocus, connection IInputConnection) {
         SetText(input, connection, "abcdef")
         Require(connection.SetSelection(2, 4), "Composition deletion selection failed.")
         {
@@ -243,19 +243,19 @@ Yb`, 5, 5, -1, -1)
         Require(connection.FinishComposingText(), "Code point preedit finish failed.")
     }
 
-    private func SetText(input PlatformInput, connection IInputConnection, text string) {
+    private func SetText(input WindowFocus, connection IInputConnection, text string) {
         Require(connection.FinishComposingText(), "Reset preedit failed.")
         Require(connection.SetSelection(0, input.Editor!!.Text.Length), "Reset selection failed.")
         using let value = JavaString(text)
         Require(connection.CommitText(value, 1), "Reset text failed.")
     }
 
-    private func Focus(input PlatformInput, accepts(FocusedEditorSnapshot) -> bool) bool {
+    private func Focus(input WindowFocus, accepts(FocusedEditorSnapshot) -> bool) bool {
         for var attempt = 0; attempt < 10; attempt++ {
             if input.Editor is {} editor && accepts(editor) {
                 return true
             }
-            if !input.MoveFocus(true) {
+            if !input.Move(true) {
                 return false
             }
         }
@@ -263,7 +263,7 @@ Yb`, 5, 5, -1, -1)
     }
 
     private func AssertEditor(
-        input PlatformInput,
+        input WindowFocus,
         text string,
         start int32,
         end int32,
