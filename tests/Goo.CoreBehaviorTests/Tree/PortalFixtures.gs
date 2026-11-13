@@ -607,7 +607,7 @@ internal func findPortalAccessibility(node AccessibilityNode?, name string) Acce
 internal class PortalFixtureLayout : LayoutAlgorithm {
   public func Measure(context LayoutContext, available LayoutSize) LayoutSize {
     let child = context.MeasureChild(0, available)
-    return LayoutSize{ Width: child.Width, Height: child.Height }
+    return LayoutSize(child.Width, child.Height)
   }
 
   public func Arrange(context LayoutContext, finalSize LayoutSize) {

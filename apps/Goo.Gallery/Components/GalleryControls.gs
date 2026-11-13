@@ -5,18 +5,42 @@ import System
 
 class GalleryRange : Cell {
     /// Gets or sets the descriptive label for this slider.
-    public var Label string
+    private let labelState State[string] = State[string]("")
+    public prop Label string {
+        get -> labelState.Value
+        set -> labelState.Value = value
+    }
     /// Gets or sets the minimum value for this slider.
-    public var MinValue float64
+    private let minValueState State[float64] = State[float64](0.0)
+    public prop MinValue float64 {
+        get -> minValueState.Value
+        set -> minValueState.Value = value
+    }
     /// Gets or sets the maximum value for this slider.
-    public var MaxValue float64
+    private let maxValueState State[float64] = State[float64](1.0)
+    public prop MaxValue float64 {
+        get -> maxValueState.Value
+        set -> maxValueState.Value = value
+    }
     /// Gets or sets the current value for this slider.
-    public var Value float64
+    private let valueState State[float64] = State[float64](0.5)
+    public prop Value float64 {
+        get -> valueState.Value
+        set -> valueState.Value = value
+    }
     /// Gets or sets the quantization step size for this slider.
-    public var Step float64
+    private let stepState State[float64] = State[float64](0.0)
+    public prop Step float64 {
+        get -> stepState.Value
+        set -> stepState.Value = value
+    }
     /// Gets or sets the callback invoked when the slider value changes.
-    public var OnChange Action[float64]?
-    private var dragging bool
+    private let onChangeState State[Action[float64]?] = State[Action[float64]?](nil)
+    public prop OnChange Action[float64]? {
+        get -> onChangeState.Value
+        set -> onChangeState.Value = value
+    }
+    private let dragging State[bool] = State[bool](false)
     private let Track ElementHandle
 
     public init() {
@@ -26,7 +50,7 @@ class GalleryRange : Cell {
         Value = 0.5
         Step = 0.0
         OnChange = nil
-        dragging = false
+        dragging.Value = false
         Track = ElementHandle{}
     }
 
@@ -129,18 +153,15 @@ class GalleryRange : Cell {
     private func handleAction(request AccessibilityActionRequest) bool {
         if request.Action == AccessibilityAction.Increment {
             SetValue(Value + stride())
-            Rebuild()
             return true
         }
         if request.Action == AccessibilityAction.Decrement {
             SetValue(Value - stride())
-            Rebuild()
             return true
         }
         if request.Action == AccessibilityAction.SetValue {
             if Double.TryParse(request.Value, out var parsed) {
                 SetValue(parsed)
-                Rebuild()
                 return true
             }
             return false
@@ -198,21 +219,21 @@ class GalleryRange : Cell {
                 OnPointerDown: func (e PointerEvent) {
                     e.Capture()
                     e.PreventDefault()
-                    dragging = true
+                    dragging.Value = true
                     SetValue(valueFromPointer(e))
                 },
                 OnPointerMove: func (e PointerEvent) {
-                    if dragging {
+                    if dragging.Value {
                         SetValue(valueFromPointer(e))
                     }
                 },
                 OnPointerUp: func (e PointerEvent) {
                     e.ReleaseCapture()
-                    dragging = false
+                    dragging.Value = false
                 },
                 OnPointerCancel: func (e PointerEvent) {
                     e.ReleaseCapture()
-                    dragging = false
+                    dragging.Value = false
                 },
                 OnWheel: func (e WheelEvent) {
                     e.PreventDefault()

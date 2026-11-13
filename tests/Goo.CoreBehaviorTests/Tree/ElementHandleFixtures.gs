@@ -427,7 +427,7 @@ internal class ElementHandleFixtures {
     if !entry.IsMounted { return false }
     NodeLifecycle.DisposeTree(node)
     let document = TextDocument{}
-    node = mount(rec, owner, TextEditor(TextEditorController(document)) {
+    node = mount(rec, owner, TextEditor(){ Controller = TextEditorController(document),
       Handle = editor,
     })
     if !editor.IsMounted { return false }
@@ -991,7 +991,7 @@ internal data struct VirtualFixtureItem {
 internal class VirtualAnchorOriginFixtureCell : Cell {
   internal let Handle ElementHandle = ElementHandle{}
   internal var LeafHeight float64 = 23
-  override func Build() Blob -> Virtual(VirtualAnchorOriginFixtureSource(LeafHeight)) {
+  override func Build() Blob -> Virtual(){ Source = VirtualAnchorOriginFixtureSource(LeafHeight),
     Handle = Handle, Width = 100, Height = 40,
   }
 }
@@ -1005,7 +1005,7 @@ internal class VirtualAnchorOriginFixtureState(height float64) : VirtualState {
     output.Add(VirtualItem{Key: "anchor-row", Index: 0, Y: 0, Width: 100, Height: 25,
       Content: Container(){.Width: 100,.Height: 25,.FlexDirection: FlexDirection.Row,.AlignItems: AlignItems.Center,
         Container{Key: "leaf", Width: 20, Height: height}}})
-    output.ContentSize = LayoutSize{Width: 100, Height: 200}
+    output.ContentSize = LayoutSize(100, 200)
     output.ItemCount = 1
     output.AnchorKey = "anchor-row"
   }
@@ -1039,7 +1039,7 @@ internal class VirtualFixtureCell : Cell {
     for i in 0 ... count + 1 { Handles.Add(ElementHandle{}) }
   }
 
-  override func Build() Blob -> Virtual(VirtualFixtureSource(this)) {
+  override func Build() Blob -> Virtual(){ Source = VirtualFixtureSource(this),
     Handle = Handle, Width = 100, Height = 60, Padding = Inset,
     Focusable = ProjectFocus, FocusTarget = Target,
     Accessibility = Accessibility{ Role: Role, Relationships: ProjectFocus ?
@@ -1105,7 +1105,7 @@ internal class VirtualFixtureState : VirtualState {
       next[key] = item
     }
     if let key = cell.Retain { output.Add(VirtualItem{ Key: key, Index: count }) }
-    output.ContentSize = LayoutSize{ Width: size.Width, Height: float64(count) * 20.0 }
+    output.ContentSize = LayoutSize(size.Width, float64(count) * 20.0)
     output.ItemCount = count
   }
 

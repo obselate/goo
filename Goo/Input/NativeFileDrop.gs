@@ -207,7 +207,7 @@ internal class NativeDropRouter {
     finally { Rebuild(owner) }
   }
   private func Rebuild(owner Cell?) {
-    owner?.Rebuild()
+    owner?.RebuildAfterCallback()
     invalidate()
   }
 }

@@ -541,7 +541,7 @@ internal partial class PointerInput {
         let owner = owners[i - 1]
         try { callback(hoverEvent(n, x, y)) }
         catch (error Exception) { failure ??= error }
-        finally { owner?.Rebuild() }
+        finally { owner?.RebuildAfterCallback() }
       }
       if generation != hoverGeneration { break }
     }
@@ -557,7 +557,7 @@ internal partial class PointerInput {
         let owner = owners[i]
         try { callback(hoverEvent(n, x, y)) }
         catch (error Exception) { failure ??= error }
-        finally { owner?.Rebuild() }
+        finally { owner?.RebuildAfterCallback() }
       }
       if generation != hoverGeneration || route[i].Current == nil { break }
     }
@@ -908,13 +908,17 @@ internal partial class PointerInput {
           FollowCaret(entry)
           text.RefreshInputArea(entry)
           current.DragEntry = entry
-        } else if entry.Kind == NodeKind.Editor {
+        } else if entry.Kind == NodeKind.Editor || entry.Selectable {
           let point = TransformGeometry.WindowToNode(entry, x, y)
           if !point.Valid { return false }
           if TextEditorInputAdapter.SelectAt(entry, point.X - entry.Rect.X, point.Y - entry.Rect.Y,
             modifiers.Shift, current.LastPressCount) {
               text.RefreshInputArea(entry)
               current.DragEditor = entry
+              if entry.Selectable {
+                current.DragSelectionOrigin = TextRange(Math.Min(entry.Anchor, entry.Caret),
+                  Math.Abs(entry.Anchor - entry.Caret))
+              }
               if let selected = entry.EditorController?.Selection {
                 current.DragSelectionOrigin = TextRange{
                   Start: Math.Min(selected.Anchor.Offset, selected.Active.Offset),

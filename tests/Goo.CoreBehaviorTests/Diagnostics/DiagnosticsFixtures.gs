@@ -446,6 +446,6 @@ internal class DiagnosticsSemanticsCell(secret string, controller TextEditorCont
     TextEntry{Key: "password", Width: 180, Height: 32, Value: secret, Password: true,
       Accessibility: Accessibility{Value: secret, Name: "Password"}},
     Button() {.Key: "button",.Width: 100,.Height: 32, Text{Content: "Save"}},
-    TextEditor(controller) {.Key: "editor",.Width: 300,.Height: 100},
+    TextEditor{Controller: controller, Key: "editor", Width: 300, Height: 100},
   }
 }
