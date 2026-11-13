@@ -3104,7 +3104,7 @@ type|Goo.ClipboardFormats|sealed-class|public|base:System.Object|interfaces:|gen
 type|Goo.ClipboardImage|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.ClipboardIntent|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.ClipboardReadStatus|enum|public|base:System.Enum|interfaces:|generic:
-type|Goo.ClipboardTextResult|class|public|base:System.Object|interfaces:|generic:
+type|Goo.ClipboardTextResult|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.ClipboardWriteResult|class|public|base:System.Object|interfaces:|generic:
 type|Goo.Color|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.Color>|generic:
 type|Goo.Column|sealed-class|public|base:Goo.Blob|interfaces:|generic:
