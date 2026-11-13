@@ -1915,7 +1915,6 @@ method|Goo.Window|ConfigureApplication|static|public|generic:|(name:System.Strin
 method|Goo.Window|CreateOffscreenSession|instance|public|generic:|()->Goo.OffscreenRenderSessionResult
 method|Goo.Window|DragRegion|static|public|generic:|(region:Goo.Container)->Goo.Container
 method|Goo.Window|Every|instance|public|generic:|(intervalMs:System.Double,action:System.Action)->Goo.WindowTimer
-
 method|Goo.Window|GetCurrentDisplay|instance|public|generic:|()->Goo.WindowDisplay?
 method|Goo.Window|GetDisplays|instance|public|generic:|()->System.Collections.Generic.IReadOnlyList`1<Goo.WindowDisplay>
 method|Goo.Window|Hide|instance|public|generic:|()->Goo.WindowOperationResult
