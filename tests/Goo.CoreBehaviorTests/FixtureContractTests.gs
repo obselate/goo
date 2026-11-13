@@ -263,6 +263,7 @@ class FixtureContractTests {
             yield Contract[TreeFixtures]("SizedReadEntryFailureRestoresContextContract")
             yield Contract[LayoutFixtures]("RelativeDeclarationsUpdateMountedNodesContract")
             yield Contract[LayoutFixtures]("RetiredRelativeNodesStopResolvingContract")
+            yield Contract[LayoutFixtures]("RelativeLengthsResolveAfterLateMountContract")
             yield Contract[StateFixtures]("BuilderScopeIncrementalAndNestedContract")
             yield Contract[StateFixtures]("VerificationSettingContract")
             yield Contract[StateFixtures]("VerificationRejectsExternalReadsContract")

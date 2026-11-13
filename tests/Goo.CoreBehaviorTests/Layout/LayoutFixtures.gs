@@ -6,6 +6,27 @@ import System.Collections.Generic
 import System.Text
 
 internal class LayoutFixtures {
+  func RelativeLengthsResolveAfterLateMountContract() bool {
+    let cell = RelativeLateMountFixtureCell()
+    let window = Window{Root: cell, Size: LayoutSize(400, 100)}
+    try {
+      window.UpdateTree()
+      let root = window.Tree!!
+      if root.Children.Count != 0 { return false }
+      window.Size = LayoutSize(600, 100)
+      window.UpdateTree()
+      cell.Visible.Value = true
+      window.UpdateTree()
+      let child = root.Children[0]
+      if child.Rect.W != 300 || child.Children[0].Rect.X - child.Rect.X != 20
+        || child.Children[0].Rect.Y - child.Rect.Y != 20 { return false }
+      window.Size = LayoutSize(800, 100)
+      window.UpdateTree()
+      return window.Tree == root && root.Children[0] == child && child.Rect.W == 400
+        && child.Children[0].Rect.X - child.Rect.X == 20 && child.Children[0].Rect.Y - child.Rect.Y == 20
+    } finally { window.Close() }
+  }
+
   func RelativeDeclarationsUpdateMountedNodesContract() bool {
     let cell = RelativeRigorFixtureCell()
     let window = Window{Root: cell, Size: LayoutSize(400, 100)}
@@ -1480,6 +1501,19 @@ internal class RelativeRigorFixtureCell : Cell {
     let result = Container{Width: Percent(100), Height: Percent(100),
       Container{Width: Em(Units), Height: 20, FontSize: 20, Transform: PanelTransform{TranslateX: Em(Units)}}}
     if Show { result.Add(Container{Width: Vw(50), Height: 20}) }
+    return result
+  }
+}
+
+internal class RelativeLateMountFixtureCell : Cell {
+  internal let Visible State[bool] = State[bool](false)
+
+  public override func Build() Blob {
+    let result = Container{Width: Percent(100), Height: Percent(100)}
+    if Visible.Value {
+      result.Add(Container{Padding: Em(1), FontSize: 20, Width: Vw(50), Height: 80,
+        Container{Width: 10, Height: 10}})
+    }
     return result
   }
 }
