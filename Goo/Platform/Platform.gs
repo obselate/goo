@@ -37,7 +37,7 @@ public class Platform {
         throw ArgumentException("The target must be an absolute path or URI", "target")
       }
       let completion = TaskCompletionSource[PlatformOpenResult](TaskCreationOptions.RunContinuationsAsynchronously)
-      go Open(target, cancellationToken, completion)
+      Task.Run(() -> Open(target, cancellationToken, completion))
       return completion.Task
     }
 

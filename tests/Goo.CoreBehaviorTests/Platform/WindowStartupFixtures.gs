@@ -9,6 +9,19 @@ import System.Runtime.InteropServices
 import System.Diagnostics
 
 internal class WindowStartupFixtures {
+  func CloseCancelsDragBeforeUnmountContract() bool {
+    let owner = WindowDragCloseCell()
+    let window = Window{Root: owner, Size: LayoutSize(100, 100)}
+    try {
+      window.UpdateTree()
+      guard let tree = window.Tree else { return false }
+      if !window.InputForTest.BeginDrag(tree, window.ResolverForTest, tree, default(KeyModifiers)) { return false }
+      window.Close()
+      return owner.EndCount == 1 && owner.EndedMounted && owner.EndedCancelled
+        && !owner.Handle.IsMounted && owner.Cancelled
+    } finally { window.Close() }
+  }
+
   func HostedContextOperationCountingContract() bool {
     let previous = SynchronizationContext.Current
     let host = WindowCountingContext()
@@ -393,6 +406,22 @@ internal class WindowStartupFixtures {
     }
     return true
   }
+}
+
+internal class WindowDragCloseCell : Cell {
+  internal let Handle ElementHandle = ElementHandle()
+  internal var EndCount int32
+  internal var EndedMounted bool
+  internal var EndedCancelled bool
+  internal prop Cancelled bool { get -> Lifetime.IsCancellationRequested }
+
+  override func Build() Blob -> Container{
+    Handle: Handle, Width: 100, Height: 100,
+    DragSource: DragSource(_ -> DragData("payload", DragEffect.Copy), e -> {
+      EndCount++
+      EndedMounted = Handle.IsMounted && !Lifetime.IsCancellationRequested
+      EndedCancelled = e.Kind == DragEndKind.Canceled && e.Status == DataTransferStatus.Cancelled
+    })}
 }
 
 internal class WindowSizeCell : Cell {
