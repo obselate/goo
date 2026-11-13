@@ -4,6 +4,49 @@ import System
 import System.Collections.Generic
 
 internal class TreeFixtures {
+  func InputOptionsFreezeAtHandOffContract() bool {
+    let hints = []string{"before"}
+    let options = TextInputOptions{AutofillHints: hints}
+    let view = options.AutofillHints
+    let node = Reconciler{Res: Resolver{}}.Mount(TextEntry{InputOptions: options})
+    try {
+      hints[0] = "after"
+      if options.AutofillHints[0] != "before" || !Object.ReferenceEquals(view, options.AutofillHints) { return false }
+      try { options.Purpose = InputPurpose.Email } catch (error InvalidOperationException) {
+        return error.Message.Contains("TextEntry") && error.Message.Contains("modified after it was returned to Goo")
+      }
+      return false
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func ScrollbarDeclarationsFreezeAtHandOffContract() bool {
+    let content = Text("track")
+    let scrollbar = Scrollbar{Track: Container(){content}, Thumb: Container{}}
+    let node = Reconciler{Res: Resolver{}}.Mount(Container{ScrollbarY: scrollbar})
+    try {
+      let changes = []Action{() -> { scrollbar.Thickness = 8 }, () -> { content.Content = "changed" },
+        () -> scrollbar.Thumb!!.Add(Text("extra"))}
+      for change in changes {
+        var rejected = false
+        try { change() } catch (error InvalidOperationException) {
+          rejected = error.Message.Contains("modified after it was returned to Goo")
+        }
+        if !rejected { return false }
+      }
+      return true
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func VectorStrokeFreezeAtHandOffContract() bool {
+    let stroke = VectorStroke(1, Color.Black)
+    let node = Reconciler{Res: Resolver{}}.Mount(Shape{Stroke: stroke})
+    try {
+      try { stroke.Cap = StrokeCap.Round } catch (error InvalidOperationException) {
+        return error.Message.Contains("Shape") && error.Message.Contains("modified after it was returned to Goo")
+      }
+      return false
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
   func RetainedImageBranchesFreezeAtHandOffContract() bool {
     let placeholder = Text("pending")
     let fallback = Text("failed")
@@ -22,11 +65,11 @@ internal class TreeFixtures {
   }
 
   func OverlayDeclarationsFreezeAtHandOffContract() bool {
-    let scope = FocusScopeOptions{}
-    let portal = Portal{FocusScope: scope, Text("content")}
+    let scopeOptions = FocusScopeOptions{}
+    let portal = Portal{FocusScope: scopeOptions, Text("content")}
     let node = Reconciler{Res: Resolver{}}.Mount(portal)
     try {
-      let changes = []Action{() -> { scope.Modal = true }, () -> { portal.Scrim = Color.Black },
+      let changes = []Action{() -> { scopeOptions.Modal = true }, () -> { portal.Scrim = Color.Black },
         () -> { portal.FocusScope = nil }, () -> portal.Add(Text("extra"))}
       for change in changes {
         var rejected = false

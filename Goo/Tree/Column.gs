@@ -4,6 +4,10 @@ import System.Collections.Generic
 
 /// Defines a vertical flex container. Setting FlexDirection throws when mounted.
 public class Column : Blob {
+  shared {
+    private let emptyChildren IList[Blob] = FrozenChildren(typeof(Column), nil)
+  }
+
   private var children IList[Blob]?
   private var hitTestSelf bool
   private var hasAuthoredHitTestSelf bool
@@ -11,7 +15,7 @@ public class Column : Blob {
   internal override func coreBlob() { }
 
   internal func FreezeChildren() IList[Blob] {
-    children = FrozenChildren(GetType(), children)
+    children = (children?.Count ?? 0) == 0 ? Column.emptyChildren : FrozenChildren(GetType(), children)
     return children!!
   }
 

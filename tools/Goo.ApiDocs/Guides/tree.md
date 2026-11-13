@@ -19,6 +19,7 @@ let content = Container{
 - `Children: existingList` assigns the list. A spread copies its contents.
 
 Goo may keep the mounted result of a Blob it has already received and not read that Blob again. Returning the same Blob again does not refresh it.
+Declarations can be changed while you build them and throw once Goo has received them.
 
 ## Build content from its allotted size
 

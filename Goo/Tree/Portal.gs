@@ -40,6 +40,10 @@ internal func validPortalPlacement(value PortalPlacement) bool {
 
 /// Presents a logical child subtree in the window overlay while retaining declaration-site ownership.
 public class Portal : Blob {
+  shared {
+    private let emptyChildren IList[Blob] = FrozenChildren(typeof(Portal), nil)
+  }
+
   private var declarationAnchor ElementHandle?
   private var declarationPlacement PortalPlacement
   private var declarationAnchorRect ElementRect?
@@ -54,7 +58,7 @@ public class Portal : Blob {
   }
 
   internal func FreezeChildren() IList[Blob] {
-    children = FrozenChildren(GetType(), children)
+    children = (children?.Count ?? 0) == 0 ? Portal.emptyChildren : FrozenChildren(GetType(), children)
     return children
   }
 

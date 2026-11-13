@@ -7,6 +7,10 @@ import System.Runtime.CompilerServices
 
 /// Defines an element that contains child blobs.
 public class Container : Blob {
+  shared {
+    private let emptyChildren IList[Blob] = FrozenChildren(typeof(Container), nil)
+  }
+
   private var children IList[Blob]?
   private var hitTestSelf bool
   private var hasAuthoredHitTestSelf bool
@@ -15,7 +19,7 @@ public class Container : Blob {
   }
 
   internal func FreezeChildren() IList[Blob] {
-    children = FrozenChildren(GetType(), children)
+    children = (children?.Count ?? 0) == 0 ? Container.emptyChildren : FrozenChildren(GetType(), children)
     return children!!
   }
 

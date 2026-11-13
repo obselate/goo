@@ -9,7 +9,16 @@ public open class Style {
   internal var entries StyleEntries?
   private var frozenOwner Type?
 
-  internal func FreezeStyle(owner Type) { frozenOwner ??= owner }
+  internal func FreezeStyle(owner Type, depth int32 = 0) {
+    if frozenOwner != nil { return }
+    frozenOwner = owner
+    if let entries = entries {
+      var cursor = entries.Cursor()
+      while cursor.MoveNext() {
+        if cursor.Current.Payload is Scrollbar scrollbar { scrollbar.Freeze(owner, depth) }
+      }
+    }
+  }
 
   internal func CheckMutable() {
     if let owner = frozenOwner {

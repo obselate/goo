@@ -40,13 +40,16 @@ public open class Blob : Style {
     Reconciler.CheckTreeDepth(depth)
     blobState = blobState | int32(4096)
     let owner = GetType()
-    FreezeStyle(owner)
-    HoverStyle?.FreezeStyle(owner)
-    ActiveStyle?.FreezeStyle(owner)
-    FocusStyle?.FreezeStyle(owner)
-    DisabledStyle?.FreezeStyle(owner)
+    FreezeStyle(owner, depth)
+    HoverStyle?.FreezeStyle(owner, depth)
+    ActiveStyle?.FreezeStyle(owner, depth)
+    FocusStyle?.FreezeStyle(owner, depth)
+    DisabledStyle?.FreezeStyle(owner, depth)
     Accessibility?.Freeze(owner)
     if this is Portal portal { portal.FocusScope?.Freeze(owner) }
+    if this is TextEntry entry { entry.InputOptions?.Freeze(owner) }
+    if this is TextEditor editor { editor.InputOptions?.Freeze(owner) }
+    if this is Shape shape { shape.Stroke?.Freeze(owner) }
     let children IList[Blob]? = switch this {
       case value is Container: value.FreezeChildren()
       case value is Button: value.FreezeChildren()

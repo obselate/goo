@@ -142,6 +142,9 @@ class FixtureContractTests {
 
     shared {
         func Cases() sequence[[]object] {
+            yield Contract[TreeFixtures]("InputOptionsFreezeAtHandOffContract")
+            yield Contract[TreeFixtures]("ScrollbarDeclarationsFreezeAtHandOffContract")
+            yield Contract[TreeFixtures]("VectorStrokeFreezeAtHandOffContract")
             yield Contract[TreeFixtures]("RetainedImageBranchesFreezeAtHandOffContract")
             yield Contract[TreeFixtures]("OverlayDeclarationsFreezeAtHandOffContract")
             yield Contract[TreeFixtures]("BlobAssignmentAfterHandOffContract")
