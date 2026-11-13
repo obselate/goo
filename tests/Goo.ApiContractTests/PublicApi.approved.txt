@@ -60,6 +60,8 @@ ctor|Goo.Gestures.PressGestureEvent|public|(Phase:Goo.GesturePhase,Position:Goo.
 ctor|Goo.Gestures.TapGestureEvent|public|(Position:Goo.Point,WindowPosition:Goo.Point)
 ctor|Goo.Gestures.TransformGestureEvent|public|(Phase:Goo.GesturePhase,Source:Goo.GestureSource,Center:Goo.Point,WindowCenter:Goo.Point,Translation:Goo.Point,Scale:System.Double,Rotation:Goo.Gestures.GestureRotationResult,Reason:Goo.GestureCancelReason)
 ctor|Goo.Gestures.TransformGesture|public|(changed:System.Action`1<Goo.Gestures.TransformGestureEvent>)
+ctor|Goo.GraphicsUnavailableException|public|(message:System.String)
+ctor|Goo.GraphicsUnavailableException|public|(message:System.String,innerException:System.Exception)
 ctor|Goo.ImageDecodeLimits|public|()
 ctor|Goo.ImageSourceCache|public|(maxDecodedBytes:System.Int32=67108864,maxEntries:System.Int32=128,limits:Goo.ImageDecodeLimits?=null)
 ctor|Goo.ImageSourceLease|public|()
@@ -1080,6 +1082,7 @@ enum|Goo.WindowsBackdropMaterial|Automatic|1
 enum|Goo.WindowsBackdropMaterial|MicaAlt|3
 enum|Goo.WindowsBackdropMaterial|Mica|2
 event|Goo.Anim`1|Completed|System.Action`1<Goo.MotionCompletionReason>|instance|add:public,remove:public
+event|Goo.Application|Activated|System.Action`1<Goo.ApplicationActivation>|static|add:public,remove:public
 event|Goo.ElementHandle|MetricsChanged|System.Action`1<Goo.ElementMetrics>|instance|add:public,remove:public
 event|Goo.ExternalImageSession|Invalidated|System.Action`1<Goo.ExternalImageStatus>|instance|add:public,remove:public
 event|Goo.ExternalImageSource|ContentChanged|System.Action|virtual|add:public,remove:public
@@ -1095,7 +1098,6 @@ event|Goo.TextDocument|Changed|System.Action`1<Goo.TextDocumentChange>|instance|
 event|Goo.TrayIcon|Activated|System.Action|instance|add:public,remove:public
 event|Goo.TrayIcon|CommandActivated|System.Action`1<System.String>|instance|add:public,remove:public
 event|Goo.TrayIcon|StatusChanged|System.Action`1<Goo.TrayStatus>|instance|add:public,remove:public
-event|Goo.Window|ApplicationActivated|System.Action`1<Goo.ApplicationActivation>|static|add:public,remove:public
 event|Goo.Window|DisplayChanged|System.Action|instance|add:public,remove:public
 event|Goo.Window|FocusChanged|System.Action`1<System.Boolean>|instance|add:public,remove:public
 event|Goo.Window|InputActivity|System.Action`1<Goo.WindowInputKind>|instance|add:public,remove:public
@@ -1140,6 +1142,11 @@ method|Goo.Anim`1|To|instance|public|generic:|(target:!0)->System.Void
 method|Goo.Anim`1|To|instance|public|generic:|(target:!0,spec:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>,params specs:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>[])->System.Void
 method|Goo.Anim`1|To|instance|public|generic:|(target:!0,velocity:Goo.MotionVelocity)->System.Void
 method|Goo.Anim`1|To|instance|public|generic:|(target:!0,velocity:Goo.MotionVelocity,spec:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>,params specs:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>[])->System.Void
+method|Goo.Application|AcquireSingleInstance|static|public|generic:|(arguments:System.String[],timeoutMs:System.Double=3000)->Goo.SingleInstanceResult
+method|Goo.Application|Configure|static|public|generic:|(assembly:System.Reflection.Assembly)->System.Void
+method|Goo.Application|Configure|static|public|generic:|(name:System.String,version:System.String,identifier:System.String)->System.Void
+method|Goo.Application|PostActivation|static|public|generic:|(value:Goo.ApplicationActivation)->Goo.ActivationPostStatus
+method|Goo.Application|Run|static|public|generic:|(window:Goo.Window)->System.Void
 method|Goo.Blob|Each|static|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob[]
 method|Goo.BoxShadow|Deconstruct|instance|public|generic:|(out offsetX:Goo.Length&,out offsetY:Goo.Length&,out blur:Goo.Length&,out spread:Goo.Length&,out color:Goo.Color&,out inset:System.Boolean&)->System.Void
 method|Goo.BoxShadow|Equals|instance|public|generic:|(other:Goo.BoxShadow)->System.Boolean
@@ -1614,7 +1621,6 @@ method|Goo.ShaderEffect|SetParameter|instance|public|generic:|(slot:System.Int32
 method|Goo.Simulation|Done|abstract|public|generic:|(elapsed:System.Double)->System.Boolean
 method|Goo.Simulation|Position|abstract|public|generic:|(elapsed:System.Double)->System.Double
 method|Goo.Simulation|Velocity|abstract|public|generic:|(elapsed:System.Double)->System.Double
-method|Goo.SingleInstance|AcquireAsync|static|public|generic:|(applicationId:System.String,activation:Goo.ApplicationActivation,timeoutMilliseconds:System.Int32=3000)->System.Threading.Tasks.Task`1<Goo.SingleInstanceResult>
 method|Goo.SoundOutputDevices|Dispose|instance|public|generic:|()->System.Void
 method|Goo.SoundPlayback|Dispose|instance|public|generic:|()->System.Void
 method|Goo.SoundPlayback|Pause|instance|public|generic:|()->System.Void
@@ -1910,19 +1916,16 @@ method|Goo.Window|ApplyPlacement|instance|public|generic:|(value:Goo.WindowPlace
 method|Goo.Window|Attach|instance|public|generic:|(externalHost:Goo.EmbeddedWindowHost)->Goo.Window
 method|Goo.Window|CancelFileDialog|instance|public|generic:|()->System.Boolean
 method|Goo.Window|CapturePlacement|instance|public|generic:|()->Goo.WindowPlacementResult
-method|Goo.Window|ConfigureApplication|static|public|generic:|(name:System.String,version:System.String,identifier:System.String)->System.Void
 method|Goo.Window|CreateOffscreenSession|instance|public|generic:|()->Goo.OffscreenRenderSessionResult
 method|Goo.Window|DragRegion|static|public|generic:|(region:Goo.Container)->Goo.Container
 method|Goo.Window|Every|instance|public|generic:|(intervalMs:System.Double,action:System.Action)->Goo.WindowTimer
 method|Goo.Window|GetCurrentDisplay|instance|public|generic:|()->Goo.WindowDisplay?
 method|Goo.Window|GetDisplays|instance|public|generic:|()->System.Collections.Generic.IReadOnlyList`1<Goo.WindowDisplay>
 method|Goo.Window|Hide|instance|public|generic:|()->Goo.WindowOperationResult
-method|Goo.Window|InitializeApplicationActivation|static|public|generic:|(initial:Goo.ApplicationActivation)->Goo.WindowOperationResult
 method|Goo.Window|MeasureText|instance|public|generic:|(text:System.String,style:Goo.Style)->System.Double
 method|Goo.Window|Open|instance|public|generic:|()->Goo.Window
 method|Goo.Window|PerformAccessibilityAction|instance|public|generic:|(id:Goo.AccessibilityId,request:Goo.AccessibilityActionRequest)->System.Boolean
 method|Goo.Window|PollCapture|instance|public|generic:|()->Goo.WindowCapture?
-method|Goo.Window|PostApplicationActivation|static|public|generic:|(value:Goo.ApplicationActivation)->Goo.ActivationPostStatus
 method|Goo.Window|Post|instance|public|generic:|(action:System.Action)->System.Boolean
 method|Goo.Window|Pump|instance|public|generic:|(dt:System.Double)->System.Void
 method|Goo.Window|RenderOffscreenAsync|instance|public|generic:|(root:Goo.Cell,options:Goo.OffscreenRenderOptions,cancellation:System.Threading.CancellationToken,reusable:Goo.WindowCapture?=null)->System.Threading.Tasks.Task`1<Goo.OffscreenRenderResult>
@@ -1930,7 +1933,6 @@ method|Goo.Window|RequestActivation|instance|public|generic:|()->Goo.WindowOpera
 method|Goo.Window|RequestCapture|instance|public|generic:|()->Goo.WindowCaptureRequestStatus
 method|Goo.Window|RequestCapture|instance|public|generic:|(reusable:Goo.WindowCapture?)->Goo.WindowCaptureRequestStatus
 method|Goo.Window|RequestClose|instance|public|generic:|()->System.Void
-method|Goo.Window|Run|instance|public|generic:|()->System.Void
 method|Goo.Window|SetColors|instance|public|generic:|(background:Goo.Color,foreground:Goo.Color)->System.Void
 method|Goo.Window|SetFullscreenDisplay|instance|public|generic:|(display:Goo.WindowDisplayId)->Goo.WindowOperationResult
 method|Goo.Window|SetNativeDataDropFormats|instance|public|generic:|(formats:System.Collections.Generic.IReadOnlyList`1<System.String>)->Goo.WindowOperationResult
@@ -2067,6 +2069,7 @@ property|Goo.ApplicationActivation|NotificationId|System.String|instance|get:pub
 property|Goo.ApplicationActivation|Payload|System.String|instance|get:public,init:public|index:()
 property|Goo.ApplicationActivation|Target|System.Uri?|instance|get:public,init:public|index:()
 property|Goo.ApplicationActivation|WorkingDirectory|System.String|instance|get:public,init:public|index:()
+property|Goo.Application|VerifyState|System.Boolean|static|get:public,set:public|index:()
 property|Goo.Blob|AccessibilityName|System.String?|instance|get:public,init:public|index:()
 property|Goo.Blob|AccessibilityRole|System.Nullable`1<Goo.AccessibilityRole>|instance|get:public,init:public|index:()
 property|Goo.Blob|Accessibility|Goo.Accessibility?|instance|get:public,init:public|index:()
@@ -3052,6 +3055,7 @@ type|Goo.AlignSelf|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Anim`1|sealed-class|public|base:System.Object|interfaces:|generic:T[attrs:0,constraints:]
 type|Goo.ApplicationActivationKind|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.ApplicationActivation|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.Application|static-class|public|base:System.Object|interfaces:|generic:
 type|Goo.BlendMode|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Blob|abstract-class|public|base:Goo.Style|interfaces:|generic:
 type|Goo.BorderStyle|enum|public|base:System.Enum|interfaces:|generic:
@@ -3148,6 +3152,7 @@ type|Goo.Gestures.TransformGestureEvent|struct|public|base:System.ValueType|inte
 type|Goo.Gestures.TransformGesture|class|public|base:Goo.GestureRecognizer|interfaces:|generic:
 type|Goo.GradientStop|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.GradientStop>|generic:
 type|Goo.Gradient|interface|public|base:-|interfaces:|generic:
+type|Goo.GraphicsUnavailableException|sealed-class|public|base:System.Exception|interfaces:|generic:
 type|Goo.ImageColorProfile|class|public|base:System.Object|interfaces:|generic:
 type|Goo.ImageDecodeLimits|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.ImageDecodeResult|class|public|base:System.Object|interfaces:|generic:
@@ -3273,7 +3278,6 @@ type|Goo.Shape|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.Simulation|abstract-class|public|base:System.Object|interfaces:|generic:
 type|Goo.SingleInstanceResult|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.SingleInstanceStatus|enum|public|base:System.Enum|interfaces:|generic:
-type|Goo.SingleInstance|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.SizeToContent|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.SoundDeviceStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.SoundOpenResult|sealed-class|public|base:System.Object|interfaces:|generic:

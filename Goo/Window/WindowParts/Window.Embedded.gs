@@ -65,6 +65,7 @@ public partial class Window {
       input.SetUiScale(UiScale)
       input.Attach(bridge)
       IsOpen = true
+      Application.HasOpenedWindow = true
       registerOwnership()
       applyPreferences(bridge.Preferences)
       queueNativeMetrics(bridge.LogicalWidth, bridge.LogicalHeight,
