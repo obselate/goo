@@ -75,7 +75,13 @@ controller.TabWidth = 8
 TextEditor(controller)
 ```
 
-Keys match physical `Key` values and exact `Modifiers`. Omitted modifiers mean none. The first matching binding on the nearest element wins. `Action` runs on press. `OnRelease` is paired with that press and runs only if the original target still owns focus, even if modifiers were released first. Changing focus, disabling, or removing the target cancels the pending release. `Repeat: true` repeats the action after 400 ms and then at 30 Hz while focus remains on the original target. It works on any focusable primitive and any key.
+Keys match physical `Key` values and exact `Modifiers`. Omitted modifiers mean none. The first matching binding on the nearest element wins. `OnPress` runs on press. `OnRelease` is paired with that press and runs only if the original target still owns focus, even if modifiers were released first. Changing focus, disabling, or removing the target cancels the pending release. `Repeat: true` repeats the action after 400 ms and then at 30 Hz while focus remains on the original target. It works on any focusable primitive and any key.
+
+Use `KeyBinding(key, modifiers, onPress)` or set `OnPress` in a literal. `OnRelease` and `Repeat` remain named members. `KeyModifiers.None` has no modifiers. `KeyModifiers.Primary` reads Super on macOS and Ctrl elsewhere. `PrimaryShift` adds Shift. Bindings still match modifiers exactly.
+
+`window.Modifiers` reports the event being dispatched, including pointer and keyboard clicks. Outside dispatch, including accessibility activation, it reports the last known state.
+
+`window.Focus.EditsText` reports a focused TextEntry, editable TextEditor, or generic `OnTextInput` client. `KeyEvent.TargetEditsText` captures that state at dispatch. Root navigation handlers must skip text-editing targets. Use `window.Focus.Editor` for the editor snapshot, `Selection` and `SetSelection` for selection, `Execute` for text commands, `Move` for traversal, and `Clear` to blur. Host injection and composition remain on `window.PlatformInput`.
 
 
 Movement and deletion repeat. Clipboard, history, submit, Tab and Escape do not. Shift extends movement selection. Ctrl is the primary and word modifier on Windows and Linux. On macOS, Command is primary and Option moves or deletes words. Primary+A/C/X/V/Z selects all, copies, cuts, pastes and undoes. Primary+Shift+Z and Ctrl+Y redo.
@@ -96,10 +102,10 @@ after an asynchronous continuation. A failing callback propagates its exception
 after terminal pointer, drag, or focus cleanup, and its input event is not replayed.
 `PlatformInput.KeyRelease(key, modifiers)` preserves modifiers still held on release.
 
-Use `window.PlatformInput.Execute(TextCommand)` for focused text actions and clipboard access. `Paste` without `Text` reads the clipboard. Supplied paste text keeps `Paste` command interception and its separate undo group. `CancelEdit` restores a TextEntry's value from when it gained focus, reports the change, and blurs it. `CancelComposition` remains a separate action. A TextEditor controller accepts document commands directly.
+Use `window.Focus.Execute(TextCommand)` for focused text actions and clipboard access. `Paste` without `Text` reads the clipboard. Supplied paste text keeps `Paste` command interception and its separate undo group. `CancelEdit` restores a TextEntry's value from when it gained focus, reports the change, and blurs it. `CancelComposition` remains a separate action. A TextEditor controller accepts document commands directly.
 
 `SelectWord` and `SelectLine` act at the caret, or at an explicit `TextCommand.Position`.
-They work through `PlatformInput.Execute` for either text primitive and through
+They work through `Focus.Execute` for either text primitive and through
 `TextEditorController.Execute` for an editor. `ExtendSelection` preserves the anchor.
 Mouse selection uses the same core operations.
 
@@ -119,11 +125,11 @@ remain one character for selection, clipboard, caret, and hit testing. Single-li
 Middle-click primary-selection paste and a text context menu are not supported.
 Triple-click in a TextEntry selects its whole value, not a wrapped visual line.
 
-Call `window.PlatformInput.MoveFocus(true)` or `MoveFocus(false)` for explicit forward or backward traversal. For buttons, `ElementHandle.Activate()` performs a click. To show a held press and activate on release, bind `Action: () -> { handle.BeginPress() }` and `OnRelease: () -> { handle.EndPress(true) }`. `EndPress(false)` cancels the press. Focus loss, removal, and a canceled or failing key release clear the pressed state.
+Call `window.Focus.Move(true)` or `Move(false)` for explicit forward or backward traversal. For buttons, `ElementHandle.Activate()` performs a click. To show a held press and activate on release, bind `OnPress: () -> { handle.BeginPress() }` and `OnRelease: () -> { handle.EndPress(true) }`. `EndPress(false)` cancels the press. Focus loss, removal, and a canceled or failing key release clear the pressed state.
 
 A focus transfer updates the old and new `Focused` states first, then routes `OnBlur` from the old element to its parents and `OnFocus` from the new element to its parents. These lifecycle callbacks cannot cancel the transfer. `FocusEvent.StopPropagation()` only skips the remaining ancestors. A reentrant focus request from `OnBlur` or `OnFocus` wins over the superseded transfer.
 
-Set `Focusable: true` on a generic Blob. `Button`, `TextEntry`, and `TextEditor` are focusable by default; explicitly setting `Focusable: false` removes them from keyboard focus. During a rebuilt tree update, `AutoFocus` selects the first eligible element only when nothing else holds focus. Calls to `PlatformInput.MoveFocus` visit enabled, visible focusables in depth-first tree order and wrap at the ends. An unprevented primary pointer press focuses the deepest focusable element in its hit route. `ElementHandle.Focus()` and `ElementHandle.Blur()` use the same mounted, visible, enabled eligibility rules.
+Set `Focusable: true` on a generic Blob. `Button`, `TextEntry`, and `TextEditor` are focusable by default; explicitly setting `Focusable: false` removes them from keyboard focus. During a rebuilt tree update, `AutoFocus` selects the first eligible element only when nothing else holds focus. Calls to `Focus.Move` visit enabled, visible focusables in depth-first tree order and wrap at the ends. An unprevented primary pointer press focuses the deepest focusable element in its hit route. `ElementHandle.Focus()` and `ElementHandle.Blur()` use the same mounted, visible, enabled eligibility rules.
 
 ## Project visible focus to a descendant
 
@@ -326,7 +332,7 @@ Core creates one session for each owner and interaction.
 | Explicit cancel | `ElementHandle.CancelGestures()` cancels its sessions without replay. |
 | Touch editor | Defer caret placement until an unclaimed tap release. Mouse selection stays unchanged. |
 
-Use `PlatformInput.Selection` to read effective positions and affinities.
+Use `Focus.Selection` to read effective positions and affinities.
 Use `SetSelection(TextSelection)` to preserve affinities and normalize grapheme boundaries.
 
 ## Use shared recognizers
