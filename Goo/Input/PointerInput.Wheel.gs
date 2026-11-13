@@ -61,8 +61,9 @@ internal partial class PointerInput {
           }
           if let callback = n.OnWheel {
             let owner = CellOwnership.InRoute(route, i - 1)
+            let previousContext = owner?.BeginCallback()
             try { callback(event) }
-            finally { owner?.RebuildAfterCallback() }
+            finally { owner?.EndCallback(previousContext) }
           }
           if mount.Current == nil { return true }
           if wheelControl.PropagationStopped || n.FocusScopeBoundary { break }

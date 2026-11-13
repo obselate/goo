@@ -476,7 +476,7 @@ internal partial class ProfilerCell {
             try {
                 token.ThrowIfCancellationRequested()
                 let result = ProfilerNesting(snapshot, count)
-                window.TryPost(
+                window.Post(
                     () -> {
                         if generation != nestGeneration {
                             return
@@ -490,7 +490,7 @@ internal partial class ProfilerCell {
                 )
             } catch (error OperationCanceledException) { } catch (error Exception) {
                 let message = error.Message
-                window.TryPost(
+                window.Post(
                     () -> {
                         if generation != nestGeneration {
                             return
