@@ -314,7 +314,8 @@ let window = Window{
 `SizeToContent` measures the root once before the first map. `Width` and `Height`
 measure one axis. `Both` measures both axes. The result stays within `MaxSize`
 and the display work area, unless `MinSize` requires more space.
-A root axis declared as a percentage keeps the corresponding `Size` value.
+A root axis with a percentage, `Vw`, `Vh`, or mixed container-dependent size keeps the corresponding `Size` value.
+Descendant `Vw` and `Vh` use the declared `Size` during this measure.
 Later content changes do not resize the window.
 
 ## Observe window metrics
@@ -1998,7 +1999,7 @@ Gets or sets the client size in layout units. Native assignments multiply by UiS
 
 ### `SizeToContent`
 
-Measures the selected root axes once before the first map, within MaxSize and the display work area and at least MinSize. A root axis declared as a percentage keeps Size on that axis. Later resizing belongs to the user.
+Measures the selected root axes once before the first map, within MaxSize and the display work area and at least MinSize. A root axis with a percentage or viewport-relative part keeps Size on that axis. Descendant viewport units use the declared Size during this measure. Later resizing belongs to the user.
 
 ### `SmoothScrolling`
 

@@ -185,13 +185,13 @@ public open class Style {
   public prop FlexBasis Length{ init -> pushCheckedLength(StyleField.FlexBasis, value, "FlexBasis", false, true, true) }
   /// Sets relative, absolute, or static positioning.
   public prop Position PositionType{ init -> pushEnumOrdinal(StyleField.Position, int32(value)) }
-  /// Sets all four position offsets. Later offsets override individual edges.
-  public prop Inset Length {
+  /// Sets position offsets in CSS top, right, bottom, left order. Later offsets override individual edges.
+  public prop Inset Edges {
     init {
-      pushCheckedLength(StyleField.Left, value, "Inset", true, true, false)
-      pushCheckedLength(StyleField.Top, value, "Inset", true, true, false)
-      pushCheckedLength(StyleField.Right, value, "Inset", true, true, false)
-      pushCheckedLength(StyleField.Bottom, value, "Inset", true, true, false)
+      if value.Uniform || value.HasTop { pushCheckedLength(StyleField.Top, value.Top, "Inset.Top", true, true, false) }
+      if value.Uniform || value.HasRight { pushCheckedLength(StyleField.Right, value.Right, "Inset.Right", true, true, false) }
+      if value.Uniform || value.HasBottom { pushCheckedLength(StyleField.Bottom, value.Bottom, "Inset.Bottom", true, true, false) }
+      if value.Uniform || value.HasLeft { pushCheckedLength(StyleField.Left, value.Left, "Inset.Left", true, true, false) }
     }
   }
   /// Sets the left position offset.

@@ -187,6 +187,16 @@ internal class LayoutFixtures {
     return false
   }
 
+  func CustomLayoutLeavesUnboundedPercentUnresolved() bool {
+    let policy = UnboundedLengthContextFixture()
+    let root = Reconciler{Res: Resolver{}}.Mount(Container{Width: 400, Height: 200, OverflowY: Overflow.Scroll,
+      Container{Layout: policy, Width: 100, Container{Width: 10, Height: 10}}})
+    try {
+      Layout().Calculate(root, 400.0F, 200.0F)
+      return policy.Checked && policy.Valid
+    } finally { NodeLifecycle.DisposeTree(root) }
+  }
+
   func IntrinsicLimitsUseOwnerConstraints() bool {
     let content = (width Length) -> Container{Width: width, FlexDirection: FlexDirection.Row, FlexWrap: FlexWrap.Wrap,
       Container{Width: 40, Height: 10, FlexShrink: 0},
@@ -1407,5 +1417,26 @@ internal class MixedMaximumFixture : LayoutAlgorithm {
 
   public func Arrange(context LayoutContext, finalSize LayoutSize) {
     context.ArrangeChild(0, ElementRect{Width: desired.Width, Height: desired.Height})
+  }
+}
+
+internal class UnboundedLengthContextFixture : LayoutAlgorithm {
+  internal var Checked bool
+  internal var Valid bool = true
+
+  public func Measure(context LayoutContext, available LayoutSize) LayoutSize {
+    if Double.IsPositiveInfinity(available.Height) {
+      Checked = true
+      Valid = Valid && context.ResolveLength(Percent(50), LayoutAxis.Vertical) == nil
+        && context.ResolveLength(Percent(50) + Em(1), LayoutAxis.Vertical) == nil
+        && context.ResolveLength(Em(1), LayoutAxis.Vertical) == 16.0
+        && context.ResolveLength(Length.Pixels(10), LayoutAxis.Vertical) == 10.0
+    }
+    let child = context.MeasureChild(0, available)
+    return LayoutSize(available.Width, child.Height)
+  }
+
+  public func Arrange(context LayoutContext, finalSize LayoutSize) {
+    context.ArrangeChild(0, ElementRect{Width: 10, Height: 10})
   }
 }
