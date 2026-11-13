@@ -101,6 +101,13 @@ public open class Blob : Style {
   public prop OnPointerUp((PointerEvent) -> void)? { get; init; }
   /// Gets the callback that receives pointer cancellation.
   public prop OnPointerCancel((PointerEvent) -> void)? { get; init; }
+  /// Gets the callback for a captured primary-pointer drag. Hover does not invoke it.
+  /// Touch drags capture on press and can prevent enclosing scroll containers from claiming the contact.
+  public prop OnPointerDrag((PointerDragEvent) -> void)? { get; init; }
+  /// Gets the press-to-start distance in logical window units. Zero starts on press.
+  public prop PointerDragThreshold float64 { get; init; }
+  /// Gets the axis measured by the threshold. Off-axis movement alone does not start a drag.
+  public prop PointerDragAxis Goo.Gestures.PanAxis { get; init; }
   /// Gets the non-bubbling lifecycle callback after this element enters the mouse hover route.
   public prop OnPointerEnter((PointerEvent) -> void)? {
     get -> InputCallbacks.BlobPointerEnter(this)
