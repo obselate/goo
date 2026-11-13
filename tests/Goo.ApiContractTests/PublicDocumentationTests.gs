@@ -1315,6 +1315,8 @@ class PublicDocumentationTests {
             ),
             ["M:Goo.Cell.Build"] = DocumentationShape(System.Array.Empty[string](), System.Array.Empty[string](), true),
             ["M:Goo.Cell`1.Build(`0)"] = DocumentationShape([]string{"input"}, System.Array.Empty[string](), true),
+            ["M:Goo.Cell`1.InputChanged(`0)"] =
+                DocumentationShape([]string{"input"}, Array.Empty[string](), false),
             ["M:Goo.Cell`1.InvokeInputCallback(System.Action)"] = DocumentationShape(
                 []string{"callback"}, System.Array.Empty[string](), false),
             ["M:Goo.Cell`1.InvokeInputCallback``1(System.Action{``0},``0)"] = DocumentationShape(
