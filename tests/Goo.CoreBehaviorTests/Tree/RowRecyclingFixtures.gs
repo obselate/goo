@@ -8,7 +8,7 @@ internal class RowRecyclingFixtures {
   func ReusesStorageAndResetsKeyScopedStateContract() bool {
     let cell = RecyclingViewportCell()
     let adapter = AccessibilityTestAdapter()
-    let window = Window{Root: cell, Width: 100, Height: 20}
+    let window = Window{Root: cell, Size: LayoutSize(100, 20), }
     window.AccessibilityAdapter = adapter
     try {
       window.UpdateTree()
@@ -63,7 +63,7 @@ internal class RowRecyclingFixtures {
 
   func DisposesRunningAnimationBeforeStorageRebindContract() bool {
     let cell = RecyclingViewportCell()
-    let window = Window{Root: cell, Width: 100, Height: 20}
+    let window = Window{Root: cell, Size: LayoutSize(100, 20), }
     try {
       window.UpdateTree()
       guard let initial = cell.Current?.Inner, let body = cell.Handles[0].AttachedNode() else { return false }
@@ -91,7 +91,7 @@ internal class RowRecyclingFixtures {
   func ExcludesFocusedAndEditingRowsContract() bool {
     for editing in []bool{false, true} {
       let cell = RecyclingViewportCell{Editing: editing}
-      let window = Window{Root: cell, Width: 100, Height: 20}
+      let window = Window{Root: cell, Size: LayoutSize(100, 20), }
       try {
         window.UpdateTree()
         guard let first = cell.Handles[0].AttachedNode() else { return false }
@@ -120,7 +120,7 @@ internal class RowRecyclingFixtures {
 
   func ReconcilesChangedShapeAndDrainsSourcePoolContract() bool {
     let cell = RecyclingViewportCell{DifferentShape: true}
-    let window = Window{Root: cell, Width: 100, Height: 20}
+    let window = Window{Root: cell, Size: LayoutSize(100, 20), }
     try {
       window.UpdateTree()
       guard let first = cell.Handles[0].AttachedNode(), let wrapper = first.Parent,
@@ -147,7 +147,7 @@ internal class RowRecyclingFixtures {
 
   func KeepsStorageAcrossOwnerRebuildWithContinuingStateContract() bool {
     let cell = RecyclingViewportCell{FreshSource: true}
-    let window = Window{Root: cell, Width: 100, Height: 20}
+    let window = Window{Root: cell, Size: LayoutSize(100, 20), }
     try {
       window.UpdateTree()
       guard let body = cell.Handles[0].AttachedNode(),
@@ -165,7 +165,7 @@ internal class RowRecyclingFixtures {
 
   func DiscardsFailedRebindAndReleasesRetiredDataContract() bool {
     let cell = RecyclingViewportCell()
-    let window = Window{Root: cell, Width: 100, Height: 20}
+    let window = Window{Root: cell, Size: LayoutSize(100, 20), }
     try {
       window.UpdateTree()
       guard let initial = cell.Handles[0].AttachedNode(), let wrapper = initial.Parent,
@@ -192,8 +192,8 @@ internal class RowRecyclingFixtures {
     for offset in []int32{0, 2} {
       let recycled = RecyclingViewportCell{DetailedText: true, DataOffset: offset}
       let fresh = RecyclingViewportCell{DetailedText: true, DataOffset: offset}
-      let recycledWindow = Window{Root: recycled, Width: 100, Height: 20}
-      let freshWindow = Window{Root: fresh, Width: 100, Height: 20}
+      let recycledWindow = Window{Root: recycled, Size: LayoutSize(100, 20), }
+      let freshWindow = Window{Root: fresh, Size: LayoutSize(100, 20), }
       try {
         recycledWindow.UpdateTree()
         freshWindow.UpdateTree()
@@ -265,7 +265,7 @@ internal class RecyclingViewportCell : Cell {
   override func Build() Blob {
     var source VirtualSource = Source
     if FreshSource { source = RecyclingContinuingSource(Source) }
-    return Virtual(source){Handle = Viewport, Width = 100, Height = 20}
+    return Virtual(){Source = source, Handle = Viewport, Width = 100, Height = 20}
   }
 }
 

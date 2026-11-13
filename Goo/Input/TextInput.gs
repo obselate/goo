@@ -115,6 +115,12 @@ internal partial class TextInput {
     let end = start + length
     if end < start || (caret != start && caret != end) { return false }
     let anchor = caret == start ? end : start
+    if target.Selectable {
+      if end > target.Content.Length { return false }
+      let low = textBoundary(target.Content, start, false)
+      let high = textBoundary(target.Content, end, length != 0)
+      return SelectableText.Set(target, caret == start ? high : low, caret == start ? low : high)
+    }
     if target.Kind == NodeKind.Entry {
       let starts = UnicodeGraphemes.Starts(target.Buffer)
       let semanticLength = target.Password ? starts.Length : target.Buffer.Length
@@ -407,7 +413,16 @@ internal partial class TextInput {
   private func editState(n Node) EditState -> EditState { Text: n.Buffer, Caret: n.Caret, Anchor: n.Anchor }
 
   private func clipboardGet() string {
-    try { return if let native = host { native.GetClipboardText() } else { clipFallback } }
+    try {
+      if let native = host {
+        let result = native.GetClipboardText()
+        if result.Status != ClipboardTextStatus.Success && result.Status != ClipboardTextStatus.Empty {
+          Console.Error.WriteLine("Goo clipboard read failed: " + result.Error)
+        }
+        return result.Text
+      }
+      return clipFallback
+    }
     catch (error Exception) {
       Console.Error.WriteLine("Goo clipboard read failed: " + error.Message)
       return ""
@@ -416,7 +431,13 @@ internal partial class TextInput {
 
   private func clipboardSet(value string) bool {
     try {
-      if let native = host { native.SetClipboardText(value) }
+      if let native = host {
+        let result = native.SetClipboardText(value)
+        if result.Status != DataTransferStatus.Success {
+          Console.Error.WriteLine("Goo clipboard write failed: " + result.Error)
+          return false
+        }
+      }
       else { clipFallback = value }
       return true
     } catch (error Exception) {

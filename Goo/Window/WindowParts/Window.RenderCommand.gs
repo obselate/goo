@@ -44,8 +44,8 @@ public partial class Window {
         } else if scene != "" && scene != "default" {
             throw ArgumentException("Unknown scene '$scene'. Available scenes: default")
         }
-        var renderWidth = Width
-        var renderHeight = Height
+        var renderWidth = NativeWidth
+        var renderHeight = NativeHeight
         if let size = Environment.GetEnvironmentVariable("GOO_RENDER_SIZE") {
             let parts = size.Split('x')
             renderWidth = Int32.Parse(parts[0], CultureInfo.InvariantCulture)

@@ -1,76 +1,63 @@
 package Goo
 
+import Facebook.Yoga
 import System
 
-/// Configures native client-area size limits on the owning UI thread.
+/// Selects the client axes measured from the root before the first map.
+public enum SizeToContent { None; Width; Height; Both }
+
+/// Configures client-area sizes in layout units on the owning UI thread.
 public partial class Window {
-  private var minWidth int32
-  private var minHeight int32
-  private var maxWidth int32
-  private var maxHeight int32
+  private var minWidth float64
+  private var minHeight float64
+  private var maxWidth float64
+  private var maxHeight float64
   private var nativeMinWidth int32
   private var nativeMinHeight int32
+  private var requestedSize LayoutSize?
 
-  /// Gets or sets the client minimum width in layout pixels, multiplied by UiScale.
-  /// Zero removes the limit. Must be nonnegative and no greater than a nonzero MaxWidth. Embedded hosts are unsupported.
-  public prop MinWidth int32{
-    get -> minWidth
-    set(v) {
-      requireUiThread("Window.MinWidth")
-      validateSizeLimit(v, maxWidth, true)
-      if minWidth == v { return }
-      applyMinimumSize(v, minHeight)
-      minWidth = v
+  /// Gets or sets the client minimum size in layout units. Zero removes an axis limit.
+  /// Each axis must be finite, nonnegative and no greater than its nonzero maximum. Embedded hosts are unsupported.
+  public prop MinSize LayoutSize{
+    get -> LayoutSize(minWidth, minHeight)
+    set(value) {
+      requireUiThread("Window.MinSize")
+      validateSizeLimit(value.Width, maxWidth, true)
+      validateSizeLimit(value.Height, maxHeight, true)
+      if MinSize == value { return }
+      applyMinimumSize(value.Width, value.Height)
+      minWidth = value.Width
+      minHeight = value.Height
     }
   }
 
-  /// Gets or sets the client minimum height in layout pixels, multiplied by UiScale.
-  /// Zero removes the limit. Must be nonnegative and no greater than a nonzero MaxHeight. Embedded hosts are unsupported.
-  public prop MinHeight int32{
-    get -> minHeight
-    set(v) {
-      requireUiThread("Window.MinHeight")
-      validateSizeLimit(v, maxHeight, true)
-      if minHeight == v { return }
-      applyMinimumSize(minWidth, v)
-      minHeight = v
+  /// Gets or sets the client maximum size in layout units. Zero removes an axis limit.
+  /// Each axis must be finite, nonnegative and no smaller than its minimum. Embedded hosts are unsupported.
+  public prop MaxSize LayoutSize{
+    get -> LayoutSize(maxWidth, maxHeight)
+    set(value) {
+      requireUiThread("Window.MaxSize")
+      validateSizeLimit(value.Width, minWidth, false)
+      validateSizeLimit(value.Height, minHeight, false)
+      if MaxSize == value { return }
+      host?.SetMaximumSize(scaledSize(value.Width), scaledSize(value.Height))
+      maxWidth = value.Width
+      maxHeight = value.Height
     }
   }
 
-  /// Gets or sets the client maximum width in layout pixels, multiplied by UiScale for the native limit; zero removes the limit.
-  /// Must be nonnegative and, when nonzero, no smaller than MinWidth. Embedded hosts are unsupported.
-  public prop MaxWidth int32{
-    get -> maxWidth
-    set(v) {
-      requireUiThread("Window.MaxWidth")
-      validateSizeLimit(v, minWidth, false)
-      if maxWidth == v { return }
-      host?.SetMaximumSize(scaledSize(v), scaledSize(maxHeight))
-      maxWidth = v
-    }
-  }
+  /// Measures the selected root axes once before the first map, within MaxSize and the display work area and at least MinSize.
+  /// A root axis declared as a percentage keeps Size on that axis. Later resizing belongs to the user.
+  public prop SizeToContent SizeToContent{ get; init; }
 
-  /// Gets or sets the client maximum height in layout pixels, multiplied by UiScale for the native limit; zero removes the limit.
-  /// Must be nonnegative and, when nonzero, no smaller than MinHeight. Embedded hosts are unsupported.
-  public prop MaxHeight int32{
-    get -> maxHeight
-    set(v) {
-      requireUiThread("Window.MaxHeight")
-      validateSizeLimit(v, minHeight, false)
-      if maxHeight == v { return }
-      host?.SetMaximumSize(scaledSize(maxWidth), scaledSize(v))
-      maxHeight = v
-    }
-  }
-
-  private func validateSizeLimit(value int32, other int32, minimum bool) {
-    if value < 0 || (minimum && other != 0 && value > other)
-      || (!minimum && value != 0 && value < other) {
-        throw ArgumentOutOfRangeException("value", "Size limits must be nonnegative with minimum <= nonzero maximum")
+  private func validateSizeLimit(value float64, other float64, minimum bool) {
+    if !Double.IsFinite(value) || value < 0.0 || (minimum && other != 0.0 && value > other)
+      || (!minimum && value != 0.0 && value < other) {
+        throw ArgumentOutOfRangeException("value", "Size limits must be finite and nonnegative with minimum <= nonzero maximum")
       }
   }
 
-  private func applyMinimumSize(minimumWidth int32, minimumHeight int32) {
+  private func applyMinimumSize(minimumWidth float64, minimumHeight float64) {
     let scaledWidth = scaledSize(minimumWidth)
     let scaledHeight = scaledSize(minimumHeight)
     host?.SetMinimumSize(scaledWidth, scaledHeight)
@@ -82,7 +69,58 @@ public partial class Window {
     if embeddedHost == nil { applyMinimumSize(minWidth, minHeight) }
     width = Math.Max(width, nativeMinWidth)
     height = Math.Max(height, nativeMinHeight)
-    if maxWidth != 0 { width = Math.Min(width, scaledSize(maxWidth)) }
-    if maxHeight != 0 { height = Math.Min(height, scaledSize(maxHeight)) }
+    if maxWidth != 0.0 { width = Math.Min(width, scaledSize(maxWidth)) }
+    if maxHeight != 0.0 { height = Math.Min(height, scaledSize(maxHeight)) }
+  }
+
+  private func measureInitialContent() {
+    if SizeToContent == SizeToContent.None { return }
+    if LayerShell != nil { throw NotSupportedException("Layer-shell sizes are configured by the compositor") }
+    guard let native = host else { return }
+    UpdateTree()
+    guard let tree = node else { return }
+    guard let yoga = tree.Yoga else { return }
+    let measureWidth = (SizeToContent == SizeToContent.Width || SizeToContent == SizeToContent.Both)
+      && tree.Width.Unit != LengthUnit.Percent
+    let measureHeight = (SizeToContent == SizeToContent.Height || SizeToContent == SizeToContent.Both)
+      && tree.Height.Unit != LengthUnit.Percent
+    if !measureWidth && !measureHeight { return }
+    let display = native.GetCurrentDisplay()
+    let area = display?.UsableBounds ?? display?.Bounds
+    let maximumWidth = if maxWidth != 0.0 { maxWidth } else { Double.PositiveInfinity }
+    let maximumHeight = if maxHeight != 0.0 { maxHeight } else { Double.PositiveInfinity }
+    let availableWidth = Math.Min(maximumWidth, (area?.Width ?? Double.PositiveInfinity) / float64(UiScale))
+    let availableHeight = Math.Min(maximumHeight, (area?.Height ?? Double.PositiveInfinity) / float64(UiScale))
+    let marginWidth = float64(YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Left)
+      + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Right))
+    let marginHeight = float64(YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Top)
+      + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Bottom))
+    let boundedWidth = Math.Max(0.0, availableWidth - marginWidth)
+    let boundedHeight = Math.Max(0.0, availableHeight - marginHeight)
+    let maxContentWidth = if tree.MaxWidth.Unit == LengthUnit.Px { Math.Min(boundedWidth, float64(tree.MaxWidth.Value)) } else { boundedWidth }
+    let maxContentHeight = if tree.MaxHeight.Unit == LengthUnit.Px { Math.Min(boundedHeight, float64(tree.MaxHeight.Value)) } else { boundedHeight }
+    try {
+      YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga, float32(maxContentWidth))
+      YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga, float32(maxContentHeight))
+      YGNodeAPI.YGNodeCalculateLayout(yoga,
+        if measureWidth { Single.NaN } else { LayoutWidth },
+        if measureHeight { Single.NaN } else { LayoutHeight }, yogaDirection(tree.Direction))
+      let measuredWidth = float64(YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga)
+        + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Left)
+        + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Right))
+      let measuredHeight = float64(YGNodeLayoutAPI.YGNodeLayoutGetHeight(yoga)
+        + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Top)
+        + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Bottom))
+      let contentWidth = if measureWidth { Math.Max(minWidth, Math.Min(measuredWidth, availableWidth)) } else { Size.Width }
+      let contentHeight = if measureHeight { Math.Max(minHeight, Math.Min(measuredHeight, availableHeight)) } else { Size.Height }
+      Size = LayoutSize(contentWidth, contentHeight)
+    } finally {
+      markYogaStyle(tree, StyleField.MaxWidth)
+      markYogaStyle(tree, StyleField.MaxHeight)
+      applyMinMax(yoga, tree)
+      layout.laidOut = false
+    }
+    native.RefreshMetricsIfChanged()
+    consumeNativeMetrics()
   }
 }

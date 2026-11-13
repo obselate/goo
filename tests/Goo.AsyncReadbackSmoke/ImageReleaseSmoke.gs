@@ -52,8 +52,7 @@ func RunImageReleaseSmoke() {
   try {
     let opened = Window{
       Title: "Goo image release gate",
-      Width: 96,
-      Height: 96,
+      Size: LayoutSize(96, 96),
       VSync: false,
       Root: root,
     }

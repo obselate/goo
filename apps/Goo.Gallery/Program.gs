@@ -79,8 +79,7 @@ func Main() {
     let root = GalleryCell{}
     let window = Window{
         Title: "Goo UI gallery",
-        Width: 1440,
-        Height: 900,
+        Size: LayoutSize(1440, 900),
         Decorated: false,
         Transparent: true,
         Resizable: true,
@@ -133,8 +132,7 @@ func RunSmoke() {
     let accessibility = GallerySmokeAccessibility{}
     let window = Window{
         Title: "Goo Gallery",
-        Width: 1440,
-        Height: 900,
+        Size: LayoutSize(1440, 900),
         Decorated: false,
         Transparent: true,
         Resizable: true,
@@ -154,8 +152,7 @@ func RunSmoke() {
     let sizes = []int32{1440, 900, 960, 720}
     var sizeIndex int32 = 0
     while sizeIndex < 4 {
-        window.Width = sizes[sizeIndex]
-        window.Height = sizes[sizeIndex + 1]
+        window.Size = LayoutSize(sizes[sizeIndex], sizes[sizeIndex + 1])
         PumpFrames(window, 12)
         let rootView = root.RootView()
         let showcase = root.ShowcaseView()
@@ -182,8 +179,7 @@ func RunSmoke() {
         sizeIndex = sizeIndex + 2
     }
 
-    window.Width = 1440
-    window.Height = 900
+    window.Size = LayoutSize(1440, 900)
     PumpFrames(window, 8)
     let windowId = GallerySdlWindowId()
     guard let composeButton = accessibility.FindExact("Compose") else {
@@ -281,8 +277,7 @@ func RunBench() {
     let root = GalleryCell{}
     let window = Window{
         Title: "Goo Gallery",
-        Width: 1440,
-        Height: 900,
+        Size: LayoutSize(1440, 900),
         Resizable: true,
         VSync: false,
         Background: GalleryTheme.Background,

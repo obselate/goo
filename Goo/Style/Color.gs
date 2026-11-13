@@ -99,11 +99,6 @@ public data struct Color {
   }
 }
 
-/// Converts a CSS color string to Color.
-/// @param value The CSS color string to convert.
-/// @returns The parsed color.
-public func operator implicit (value string) Color -> Color.Parse (value)
-
 internal func clampByte(value int32) int32 {
   if value < 0 { return 0 }
   return if value > 255 { 255 } else { value }

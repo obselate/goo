@@ -18,8 +18,8 @@ public partial class Window {
     if let reported = MetricSubscriptions.ReportedWindowMetrics(this) {
       return WindowMetrics{...reported, UiScale: UiScale}
     }
-    var logicalWidth = Width
-    var logicalHeight = Height
+    var logicalWidth = NativeWidth
+    var logicalHeight = NativeHeight
     var nativeWidth = framebufferWidth
     var nativeHeight = framebufferHeight
     if let native = host {

@@ -22,7 +22,7 @@ each platform before `Open` or replace its options on the window's UI thread:
 let window = Window{
     Backdrop: WindowBackdrop.Blur,
     Background: Color.Parse("#090b10").WithAlpha(0.78),
-    BackdropFallbackColor: "#090b10",
+    BackdropFallbackColor: Color.Parse("#090b10"),
     WindowsBackdrop: WindowsBackdropOptions{Material: WindowsBackdropMaterial.Acrylic},
     MacOSBackdrop: MacOSBackdropOptions{
         Material: MacOSBackdropMaterial.UnderWindowBackground,
@@ -127,7 +127,7 @@ and returns `Unsupported` while a native chooser blocks the owner.
 the owner thread afterward. Nonfocusable windows never request activation when
 shown. Unsupported `Focusable` assignments throw before changing the configured
 value. `Topmost` is a requested preference, so unsupported hosts retain it without
-changing stacking or failing `Open`. Call `TrySetTopmost(value)` to distinguish
+changing stacking or failing `Open`. Call `SetTopmost(value)` to distinguish
 `Accepted`, `Unsupported`, `Closed` and `Failed` on an open window.
 `Capabilities` reports operations supported by the current host, or `None` before
 opening. Windows, macOS and X11 expose visibility, passive show, focusability and
@@ -244,8 +244,8 @@ viewports explicitly reject these relationships. Self-ownership and cycles are
 rejected before native creation. Existing independent windows remain the default.
 
 ```gsharp
-let owner = Window{Title: "Main", Width: 800, Height: 600, Root: MainCell{}}.Open()
-let dialog = Window{Title: "Settings", Width: 420, Height: 280,
+let owner = Window{Title: "Main", Size: LayoutSize(800, 600),  Root: MainCell{}}.Open()
+let dialog = Window{Title: "Settings", Size: LayoutSize(420, 280),
   Owner: owner, Modal: true, Root: SettingsCell{}}.Open()
 Application.Run(owner)
 ```
@@ -271,23 +271,40 @@ New children are rejected during teardown. Native ownership failures throw
 
 ## Native size constraints
 
-`Window.MinWidth`, `MinHeight`, `MaxWidth` and `MaxHeight` use layout pixels.
-Goo multiplies them by `UiScale` for native client-area limits.
-`Width` and `Height` stay in native logical pixels.
+`Window.Size`, `MinSize` and `MaxSize` use layout units.
+Goo multiplies them by `UiScale` and rounds once at the native boundary.
+`NativeWidth` and `NativeHeight` report native logical units.
 Zero removes a limit. Values must be nonnegative, and a nonzero maximum must be
 at least its corresponding minimum. An invalid assignment leaves the old value.
 Set these properties before `Open` or on the window's owner UI thread afterward.
 When moving a bounded interval, widen or clear the old bound before crossing it.
 
-`Open` clamps the requested initial size. Later `Width`/`Height` requests are also
-clamped. Changing native limits asks SDL to resize an out-of-range client area;
-`Width`, `Height`, and `MetricsChanged` reflect the compositor's resulting size
-when its queued metrics settle. Limits constrain normal resizing; fullscreen and
+`Open` clamps the requested initial size. Later `Size` requests are also
+clamped. Changing native limits asks SDL to resize an out-of-range client area.
+`Size` and `MetricsChanged` reflect the compositor's resulting size when its
+queued metrics settle. Limits constrain normal resizing. Fullscreen and
 window-manager-controlled states remain subject to platform policy. Native
 failures throw and leave the corresponding configured limit unchanged.
 
 Embedded hosts own viewport geometry: `Attach` rejects preconfigured limits and
 changing a limit on an attached window throws `NotSupportedException`.
+
+## Size to content
+
+```gsharp
+let window = Window{
+    Root: AboutView(),
+    SizeToContent: SizeToContent.Both,
+    MinSize: LayoutSize(240, 120),
+    MaxSize: LayoutSize(640, 800),
+}
+```
+
+`SizeToContent` measures the root once before the first map. `Width` and `Height`
+measure one axis. `Both` measures both axes. The result stays within `MaxSize`
+and the display work area, unless `MinSize` requires more space.
+A root axis declared as a percentage keeps the corresponding `Size` value.
+Later content changes do not resize the window.
 
 ## Observe window metrics
 
@@ -478,7 +495,7 @@ expected content scale. Content scale is separate from the current window's
 framebuffer scale. IDs can become stale after hotplug or SDL teardown. Embedded
 hosts return an empty inventory.
 
-`TrySetFullscreenDisplay(id)` requests borderless fullscreen on that display,
+`SetFullscreenDisplay(id)` requests borderless fullscreen on that display,
 including output changes for an existing fullscreen window. It returns `Accepted`, `Closed`,
 `Unsupported` or `Failed`. `Accepted` means SDL accepted the request, not that
 the compositor moved the window. A compositor may keep the current output when
@@ -488,7 +505,7 @@ before showing it.
 
 KWin 6.7.5 can ignore an output change while fullscreen. To request another
 output there, set `State` to `Normal`, wait for `StateChanged` to report
-`Normal`, then call `TrySetFullscreenDisplay(id)` again. The app must wait for
+`Normal`, then call `SetFullscreenDisplay(id)` again. The app must wait for
 the native state event before sending the next request.
 
 Wayland supports fullscreen output selection while normal windowed placement
@@ -597,11 +614,26 @@ Windows and macOS use native choosers. Linux requires the XDG FileChooser portal
 and the bundled SDL bridge. Missing portal or bridge support returns `Unsupported`.
 Embedded hosts return `Unsupported`. `CancelFileDialog` requests native dismissal.
 
+## Ownerless platform services
+
+```gsharp
+let result = await Platform.OpenAsync("/absolute/path", token)
+if result.Status == PlatformOpenStatus.Failed {
+  Console.Error.WriteLine(result.Error)
+}
+```
+
+`Platform.OpenAsync` starts the system handler on a `go` child. `Success` means the handler started, not that it opened the target. Relative paths throw `ArgumentException`. Cancellation stops a launch that has not started.
+
+Use `NativeDialogs.ShowError(title, message)` before any window opens or after the last window closes. It blocks the caller and returns `MessageBoxStatus`. Linux returns `Unsupported`. Write the message to standard error when no native box is supported.
+
 ## File and image clipboard data
 
-`GetClipboardFormats()` returns an owned MIME list plus `HasFiles` and `HasImage` without copying image payloads or opening listed files. `ReadClipboardFiles()` and `ReadClipboardImage()` return owned data and an explicit `ClipboardReadStatus`: `Success`, `Empty`, `Unsupported`, `TooLarge`, or `Failed`. `Error` explains failures and exceeded limits. Each call reads the current clipboard; a query and later read are not an atomic snapshot. Applications choose which representation to prefer when both files and images are offered.
+`window.Clipboard.GetFormats()` returns an owned MIME list plus `HasFiles` and `HasImage` without copying image payloads or opening listed files. `ReadFiles()` and `ReadImage()` return owned data and an explicit `ClipboardReadStatus`: `Success`, `Empty`, `Unsupported`, `TooLarge`, or `Failed`. `Error` explains failures and exceeded limits. Each call reads the current clipboard. A query and later read are not an atomic snapshot.
 
 Call these methods on the open window's UI thread. Calls before open, after close, or on another thread throw. Embedded windows report `Unsupported` because their clipboard belongs to the host. Clipboard contents are never modified by these methods. Returned paths and bytes survive later clipboard changes and window close and need no disposal.
+
+`window.Clipboard.ReadText()` returns `ClipboardTextResult` with `Status`, `Text`, and `Error`. `ClipboardTextStatus` distinguishes `Success`, `Empty`, `Unsupported`, `TooLarge`, and `Failed`. Text is limited to 16 MiB of UTF-8. `WriteText(value)` returns `ClipboardWriteResult`. Native read and write failures do not throw.
 
 File reads support local `text/uri-list`, GNOME copied-file lists, Windows `CF_HDROP`, and macOS pasteboard file URLs. Paths retain clipboard order; Goo does not read their contents. URI lists reject remote hosts, relative paths, and NUL characters. Limits are 4096 paths, 32768 UTF-16 units per path, and 1048576 total path units; MIME file-list payloads are limited to 1 MiB.
 
@@ -617,14 +649,14 @@ let data = TransferData([]TransferRepresentation{
   TransferRepresentation("text/plain", ReadOnlyMemory[uint8](plain)),
   TransferRepresentation("text/html", ReadOnlyMemory[uint8](html))
 }, []Uri{})
-let result = await window.WriteClipboardAsync(data)
+let result = await window.Clipboard.WriteAsync(data)
 ```
 
 Start clipboard calls on the open window's UI thread. Check `result.Status`.
 
 | Contract | Behavior |
 | --- | --- |
-| Read | `ReadClipboardDataAsync(types)` copies requested formats from one offer. Include `text/uri-list` for document references. |
+| Read | `window.Clipboard.ReadDataAsync(types)` copies requested formats from one offer. Include `text/uri-list` for document references. |
 | Owned data | Byte snapshots and URI values stay unchanged after replacement or window close. Caller changes cannot alter published bytes. |
 | Text and images | Plain text and HTML use UTF-8 without a terminator. RTF and encoded images keep their bytes. |
 | Files | Put references in `Uris`, not a second URI-list representation. Goo does not open the files. Desktop references must be local file URIs. |

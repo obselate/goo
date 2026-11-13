@@ -93,8 +93,8 @@ public partial class Window {
   /// Attempts to submit a topmost request to the current native host.
   /// Accepted means the host accepted the request; desktop policy still controls observed stacking.
   /// @returns Closed, Unsupported, Accepted, or Failed for the host operation.
-  public func TrySetTopmost(value bool) WindowOperationResult {
-    requireUiThread("Window.TrySetTopmost")
+  public func SetTopmost(value bool) WindowOperationResult {
+    requireUiThread("Window.SetTopmost")
     guard let native = host else { return WindowOperationResult.Closed }
     if !IsOpen || native.IsClosing { return WindowOperationResult.Closed }
     if (native.Capabilities & WindowCapabilities.Topmost) == WindowCapabilities.None {

@@ -2,6 +2,8 @@ package Goo
 
 import System
 import System.Collections.Generic
+import System.Xml.Linq
+import Goo.Svg
 
 internal enum VectorPathCommandKind {
   MoveTo; LineTo; QuadraticTo; CubicTo; ArcTo; Close
@@ -400,6 +402,31 @@ public struct VectorPath {
     }
 
   shared {
+    /// Parses SVG path data in the supplied view box.
+    /// Parse once outside Build and retain the result.
+    /// @param data The SVG path commands.
+    /// @param viewBox The finite view box with positive width and height.
+    /// @returns The immutable vector path.
+    /// @exception SvgParseException when path data is invalid, with its UTF-16 character position.
+    public func Parse(data string, viewBox ElementRect) VectorPath {
+      ArgumentNullException.ThrowIfNull(data, paramName: "data")
+      let builder = PathBuilder(viewBox.X, viewBox.Y, viewBox.Width, viewBox.Height)
+      let parsed = SvgPathParser.Parse(data, XElement(XName.Get("path")))
+      try {
+        for contour in parsed.Contours {
+          if contour.Curves.Count == 0 { continue }
+          builder.MoveTo(contour.Curves[0].X0, contour.Curves[0].Y0)
+          for curve in contour.Curves {
+            builder.QuadraticTo(curve.CX, curve.CY, curve.X1, curve.Y1)
+          }
+          if contour.Closed { builder.Close() }
+        }
+        return builder.Build()
+      } catch (error ArgumentOutOfRangeException) {
+        throw SvgParseException("character position ${data.Length}: ${error.Message}", error)
+      }
+    }
+
     internal func Create(commands []VectorPathCommand,
       viewBoxX float64, viewBoxY float64, viewBoxWidth float64, viewBoxHeight float64) VectorPath{
         let storedWidth = viewBoxWidth == 1.0 ? 0.0 : viewBoxWidth

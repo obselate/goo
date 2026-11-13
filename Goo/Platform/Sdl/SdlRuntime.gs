@@ -53,6 +53,10 @@ internal unsafe partial class SdlRuntime {
     private var currentCursor Cursor = Cursor.Default
     private var applicationConfigured bool
 
+    internal func EnsureLibrary() {
+      if !libraryConfigured { throw InvalidOperationException("Goo could not configure SDL3 symbols.") }
+    }
+
     private func ConfigureLibrary() bool {
       if OperatingSystem.IsLinux() && !RuntimeFeature.IsDynamicCodeSupported {
         let handle = OpenMainModule(nint(0), 2)

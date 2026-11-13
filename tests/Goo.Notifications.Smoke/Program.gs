@@ -28,7 +28,7 @@ internal class Program {
             Require(opened.Status == NotificationStatus.Success && opened.Service != nil,
                 "Notification service did not open: ${opened.Status}: ${opened.Error}")
             using let service = opened.Service!!
-            let window = Window{ Width: 160, Height: 100, InitiallyVisible: false, Root: Cell() }.Open()
+            let window = Window{ Size: LayoutSize(160, 100),  InitiallyVisible: false, Root: Cell() }.Open()
             let owner = Environment.CurrentManagedThreadId
             var received = false
             let callback Action[ApplicationActivation] = activation -> {

@@ -403,7 +403,7 @@ internal class KeyboardInput {
               }
             }
             if node == start && start == focus.FocusedNode()
-              && (start.Kind == NodeKind.Entry || start.Kind == NodeKind.Editor) {
+              && (start.Kind == NodeKind.Entry || start.Kind == NodeKind.Editor || start.Selectable) {
                 result = dispatchTextDefault(start, key, modifiers, repeat, root, resolver, text, pointer)
                 if result.Handled { return result }
               }

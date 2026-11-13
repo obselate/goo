@@ -9,7 +9,7 @@ public partial class Window {
   private var uiScaleSet bool
 
   /// Gets or sets the layout and rendering scale, clamped to 0.5 through 3. The default is 1, or the owner's scale when not explicitly set.
-  /// Width and Height remain native logical sizes. Layout uses those sizes divided by UiScale, and rendering multiplies the display scale by UiScale.
+  /// Size and its limits use layout units. NativeWidth and NativeHeight report the unscaled native logical size.
   public prop UiScale float32 {
     get -> if uiScaleSet { uiScale } else { Owner?.UiScale ?? 1.0F }
     set(value) {
@@ -25,8 +25,8 @@ public partial class Window {
   /// Gets the display scale multiplied by UiScale, the factor used to snap layout positions and translation-only transforms to device pixels on both axes.
   public prop PixelScale float32 { get -> RenderScale.X }
 
-  internal prop LayoutWidth float32 { get -> offscreenViewport?.X ?? float32(Width) / UiScale }
-  internal prop LayoutHeight float32 { get -> offscreenViewport?.Y ?? float32(Height) / UiScale }
+  internal prop LayoutWidth float32 { get -> offscreenViewport?.X ?? float32(NativeWidth) / UiScale }
+  internal prop LayoutHeight float32 { get -> offscreenViewport?.Y ?? float32(NativeHeight) / UiScale }
   internal prop RenderScale Vector2 { get -> dpi * UiScale }
 
   private func invalidateUiScale() {
@@ -50,5 +50,5 @@ public partial class Window {
     host?.Wake()
   }
 
-  private func scaledSize(value int32) int32 -> int32(Math.Min(float64(Int32.MaxValue), Math.Ceiling(float64(value) * float64(UiScale))))
+  private func scaledSize(value float64) int32 -> int32(Math.Min(float64(Int32.MaxValue), Math.Round(value * float64(UiScale))))
 }

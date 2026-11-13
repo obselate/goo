@@ -12,12 +12,12 @@ class NativeGlassCell : Cell {
         Height: Percent(100),
         Padding: 28,
         Gap: 18,
-        Color: "#eceded",
+        Color: Color.Parse("#eceded"),
         FontFamily: GalleryTheme.ElementFontFamily,
         FontSize: 14,
-        Text{Content: "GOO / INK", Color: "#b8bfc9", FontSize: 12},
+        Text{Content: "GOO / INK", Color: Color.Parse("#b8bfc9"), FontSize: 12},
         Text{Content: "Desktop glass", FontFamily: GalleryTheme.GalleryFontFamily, FontSize: 28},
-        Text{Content: "Move this window over another app to see the native blur.", Color: "#b8bfc9"},
+        Text{Content: "Move this window over another app to see the native blur.", Color: Color.Parse("#b8bfc9")},
         Container{
             Padding: 20,
             Gap: 12,
@@ -30,16 +30,20 @@ class NativeGlassCell : Cell {
                 Value: name,
                 Height: 34,
                 Padding: Edges{Left: 10, Right: 10},
-                BackgroundColor: "#090b10",
+                BackgroundColor: Color.Parse("#090b10"),
                 BorderColor: Color.Parse("#6b7385"),
                 BorderWidth: 1,
                 BorderRadius: 6,
-                Focus: Style{BorderColor: Color.Parse("#6fa6de")},
+                FocusStyle: Style{BorderColor: Color.Parse("#6fa6de")},
                 OnChange: (value string) -> {
                     name = value
                 },
             },
-            Text{Content: "Text and controls stay sharp over the desktop material.", Color: "#9099a8", FontSize: 12},
+            Text{
+                Content: "Text and controls stay sharp over the desktop material.",
+                Color: Color.Parse("#9099a8"),
+                FontSize: 12
+            },
         },
         Container{
             FlexDirection: FlexDirection.Row,
@@ -48,8 +52,8 @@ class NativeGlassCell : Cell {
                 Height: 34,
                 Padding: Edges{Left: 14, Right: 14},
                 BorderRadius: 6,
-                BackgroundColor: "#478ad1",
-                Color: "#090b10",
+                BackgroundColor: Color.Parse("#478ad1"),
+                Color: Color.Parse("#090b10"),
                 OnClick: () -> SetSolid(false),
                 Text{Content: "Native glass", FontWeight: 600},
             },
@@ -59,7 +63,7 @@ class NativeGlassCell : Cell {
                 BorderRadius: 6,
                 BorderWidth: 1,
                 BorderColor: Color.Parse("#6b7385"),
-                BackgroundColor: "#11141b",
+                BackgroundColor: Color.Parse("#11141b"),
                 OnClick: () -> SetSolid(true),
                 Text{Content: "Solid surface", FontWeight: 600},
             },
@@ -68,7 +72,7 @@ class NativeGlassCell : Cell {
             Content: solid ? "Solid Ink surface": (
                 Window?.BackdropAvailable == true ? "Native compositor blur available": "Native blur unavailable. Solid fallback active."
             ),
-            Color: "#b8bfc9",
+            Color: Color.Parse("#b8bfc9"),
             FontSize: 12,
         },
     }
@@ -88,12 +92,10 @@ class NativeGlassWindow {
             let root = NativeGlassCell{}
             let window = Window{
                 Title: "Goo Ink - native desktop glass",
-                Width: 660,
-                Height: 430,
-                MinWidth: 520,
-                MinHeight: 400,
+                Size: LayoutSize(660, 430),
+                MinSize: LayoutSize(520, 400),
                 Backdrop: WindowBackdrop.Blur,
-                BackdropFallbackColor: "#090b10",
+                BackdropFallbackColor: Color.Parse("#090b10"),
                 Background: Color.Parse("#090b10").WithAlpha(0.78),
                 Root: root,
             }

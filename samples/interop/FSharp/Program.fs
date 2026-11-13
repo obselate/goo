@@ -9,7 +9,7 @@ module Counter =
         root.Add(Text(Content = $"Count: {count}"))
         let button =
             Button(Padding = Edges(Length.Pixels 10.), BorderRadius = Length.Pixels 10.,
-                TransitionMs = 150., Hover = Style(BackgroundColor = Color.Rgb(74, 125, 255)),
+                TransitionMs = 150., HoverStyle = Style(BackgroundColor = Color.Rgb(74, 125, 255)),
                 OnClick = increment)
         button.Add(Text(Content = "Add one"))
         root.Add(button)
@@ -117,7 +117,7 @@ let pickFile (window: Window) = task {
 [<EntryPoint>]
 let main args =
     let sample = args |> Array.tryHead |> Option.defaultValue "counter"
-    let window = Window(Title = "F# interop", Width = 640, Height = 480, Root = Examples(sample))
+    let window = Window(Title = "F# interop", Size = LayoutSize(640., 480.), Root = Examples(sample))
     let focused = Action<bool>(fun value -> printfn "Focused: %b" value)
     window.add_FocusChanged focused
     window.remove_FocusChanged focused

@@ -23,7 +23,7 @@ func RunTransparentWindowSmoke() {
   Require(Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1",
     "GOO_VK_DIAGNOSTICS=1 is required")
   let root = TransparentWindowCell()
-  let window = Window{ Title: "Goo transparent window gate", Width: 96, Height: 96,
+  let window = Window{ Title: "Goo transparent window gate", Size: LayoutSize(96, 96),
     VSync: false, Transparent: true, Background: Color.Transparent, Root: root }
   let capturedError = StringWriter()
   let originalError = Console.Error

@@ -75,13 +75,13 @@ class MainActivity : GooActivity {
         controller.Selection = TextSelection(TextPosition(0, TextAffinity.Upstream), TextPosition(7, TextAffinity.Downstream))
         let copied = await clipboard.CopyAsync(cancellation)
         Require(copied.Status == RichTextStatus.Success, "Android rich Copy: " + copied.Status.ToString() + " " + copied.Error)
-        let data = await GooView.Window.ReadClipboardDataAsync([]string{"text/html", "text/rtf", "text/plain;charset=utf-8"})
+        let data = await GooView.Window.Clipboard.ReadDataAsync([]string{"text/html", "text/rtf", "text/plain;charset=utf-8"})
         Require(data.Status == ClipboardReadStatus.Success && data.Data.Representations.Count == 3,
             "Android native clipboard lost rich alternatives")
         Require(controller.Execute(TextCommand(TextCommandKind.Insert, "before", false)), "Android editor did not replace selection")
         for contentType in []string{"text/html", "text/rtf"} {
             let representation = data.Data.Representations.Single(item -> item.ContentType == contentType)
-            let written = await GooView.Window.WriteClipboardAsync(TransferData([]TransferRepresentation{representation}, []Uri{}), ClipboardIntent.Copy)
+            let written = await GooView.Window.Clipboard.WriteAsync(TransferData([]TransferRepresentation{representation}, []Uri{}), ClipboardIntent.Copy)
             Require(written.Status == DataTransferStatus.Success, "Android " + contentType + " publication failed: " + written.Error)
             controller.Selection = TextSelection(TextPosition(0, TextAffinity.Upstream),
                 TextPosition(controller.Document.Length, TextAffinity.Downstream))

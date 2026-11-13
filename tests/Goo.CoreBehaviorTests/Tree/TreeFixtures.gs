@@ -4,6 +4,58 @@ import System
 import System.Collections.Generic
 
 internal class TreeFixtures {
+  func EachAssignsDataKeysContract() bool {
+    let items = []string{"a", "b"}
+    let children = Each(items, item -> item, item -> Text(item))
+    let interop = Blob.Each[string](items, (item string) -> item, (item string) -> Text(item))
+    let rec = Reconciler{Res: Resolver{}}
+    let root = rec.Mount(Container(){...children})
+    try {
+      return root.Children.Count == 2 && root.Children[0].Key == "a" && root.Children[1].Key == "b"
+        && root.Children[0].Content == "a" && root.Children[1].Content == "b"
+        && interop.Length == 2 && interop[0].Key == "a" && interop[1].Key == "b"
+        && Each([]string{}, item -> item, item -> Text(item)).Length == 0
+    } finally { NodeLifecycle.DisposeTree(root) }
+  }
+
+  func EachPreservesExplicitKeysContract() bool {
+    let children = Each([]string{"a", "b"},
+      item -> throw InvalidOperationException("An explicit key must skip the selector."),
+      item -> Text{Key: "explicit-" + item, Content: item})
+    return children.Length == 2 && children[0].Key == "explicit-a" && children[1].Key == "explicit-b"
+  }
+
+  func EachReorderRetainsIdentityContract() bool {
+    let rec = Reconciler{Res: Resolver{}}
+    let root = rec.Mount(Container(){
+      ...Each([]string{"a", "b"}, item -> item, item -> Cell.Mount[string, TreeKeyedCell](nil, item)),
+    })
+    try {
+      let a = root.Children[0]
+      let b = root.Children[1]
+      guard let cell = a.Fiber as TreeKeyedCell else { return false }
+      cell.Value = "kept"
+      cell.Rebuild()
+      rec.Diff(root, Container(){
+        ...Each([]string{"b", "a"}, item -> item, item -> Cell.Mount[string, TreeKeyedCell](nil, item)),
+      })
+      return root.Children[0] == b && root.Children[1] == a && a.Fiber == cell && a.Content == "a:kept"
+    } finally { NodeLifecycle.DisposeTree(root) }
+  }
+
+  func EachDuplicateKeysThrowContract() bool {
+    let rec = Reconciler{Res: Resolver{}}
+    let root = rec.Mount(Container(){...Each([]string{"a"}, item -> item, item -> Text(item))})
+    try {
+      try {
+        rec.Diff(root, Container(){...Each([]string{"a", "a"}, item -> item, item -> Text(item))})
+        return false
+      } catch (error NotSupportedException) {
+        return error.Message.Contains("Duplicate key 'a'", StringComparison.Ordinal)
+      }
+    } finally { NodeLifecycle.DisposeTree(root) }
+  }
+
   func EmptyChildrenPreserveStyleRetryRootContract() bool {
     let rec = Reconciler{Res: Resolver{}}
     let node = rec.Mount(Container{})
@@ -90,7 +142,7 @@ internal class TreeFixtures {
   func KeyedReconciliationContract() bool {
     TreeKeyedCell.DisposedA = 0
     let parent = TreeKeyedParent{}
-    let window = Window{ Root: parent, Width: 200, Height: 100 }
+    let window = Window{ Root: parent, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     guard let first = window.Tree else { return false }
     guard let a = first.Children[0].Fiber else { return false }
@@ -162,7 +214,7 @@ internal class TreeFixtures {
 
   func PositionalReconciliationContract() bool {
     let parent = TreePositionalParent{}
-    let window = Window{ Root: parent, Width: 200, Height: 100 }
+    let window = Window{ Root: parent, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     guard let first = window.Tree else { return false }
     guard let child = first.Children[1].Fiber else { return false }
@@ -329,7 +381,7 @@ internal class TreeFixtures {
 
   func LeafDirtyUpdateContract() bool {
     let parent = TreeBuildCountingParent{}
-    let window = Window{ Root: parent, Width: 200, Height: 100 }
+    let window = Window{ Root: parent, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     let parentBuilds = parent.Builds
     guard let first = window.Tree else { return false }
@@ -345,7 +397,7 @@ internal class TreeFixtures {
 
   func DirtyAncestorContract() bool {
     let parent = TreeIncrementalParent{}
-    let window = Window{ Root: parent, Width: 200, Height: 100 }
+    let window = Window{ Root: parent, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     guard let first = window.Tree else { return false }
     guard let child = first.Children[1].Fiber else { return false }
@@ -363,7 +415,7 @@ internal class TreeFixtures {
 
   func RemovedDirtyContract() bool {
     let parent = TreeRemovedChildParent{}
-    let window = Window{ Root: parent, Width: 200, Height: 100 }
+    let window = Window{ Root: parent, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     guard let first = window.Tree else { return false }
     guard let child = first.Children[0].Fiber else { return false }
@@ -395,7 +447,7 @@ internal class TreeFixtures {
 
   func DisplayNoneFocusContract() bool {
     let cell = TreeDisplayFocusCell{}
-    let window = Window{ Width: 300, Height: 100, Root: cell }
+    let window = Window{ Size: LayoutSize(300, 100),  Root: cell }
     let input = InputCoordinator()
     let resolver = Resolver{}
     window.UpdateTree()
@@ -419,7 +471,7 @@ internal class TreeFixtures {
   func DisplayNoneLifecycleContract() bool {
     TreeDisplayRetainedCell.Disposed = false
     let parent = TreeDisplayRetainedParent{}
-    let window = Window{ Width: 200, Height: 100, Root: parent }
+    let window = Window{ Size: LayoutSize(200, 100),  Root: parent }
     window.UpdateTree()
     guard let mounted = window.Tree else { return false }
     guard let child = mounted.Children[0].Children[0].Fiber else { return false }
@@ -461,7 +513,7 @@ internal class TreeFixtures {
 
   func VisibilityFocusContract() bool {
     let cell = TreeVisibilityFocusCell{}
-    let window = Window{ Width: 300, Height: 100, Root: cell }
+    let window = Window{ Size: LayoutSize(300, 100),  Root: cell }
     let input = InputCoordinator()
     let resolver = Resolver{}
     window.UpdateTree()
@@ -485,7 +537,7 @@ internal class TreeFixtures {
   func VisibilityLifecycleContract() bool {
     TreeDisplayRetainedCell.Disposed = false
     let parent = TreeVisibilityRetainedParent{}
-    let window = Window{ Width: 200, Height: 100, Root: parent }
+    let window = Window{ Size: LayoutSize(200, 100),  Root: parent }
     window.UpdateTree()
     guard let mounted = window.Tree else { return false }
     guard let child = mounted.Children[0].Children[0].Fiber else { return false }
@@ -507,7 +559,7 @@ internal class TreeFixtures {
   func ButtonSemanticPrimitiveContract() bool {
     let resolver = Resolver{}
     let reconciler = Reconciler{ Res: resolver }
-    let node = reconciler.Mount(Button() {.BackgroundColor: Color.Rgb(100, 100, 100),.Color: Color.Rgb(200, 20, 10),.Hover: Style{ BackgroundColor: Color.White },
+    let node = reconciler.Mount(Button() {.BackgroundColor: Color.Rgb(100, 100, 100),.Color: Color.Rgb(200, 20, 10),.HoverStyle: Style{ BackgroundColor: Color.White },
         Shape{ Key: "icon", Path: PathBuilder().MoveTo(0.0, 0.0).LineTo(1.0, 1.0).Build() },
         Text{ Key: "label", Content: "Hi"},
     })
@@ -557,9 +609,9 @@ internal class TreeFixtures {
       BackgroundColor: Color.Rgb(41, 41, 51),
       Color: Color.White,
       JustifyContent: JustifyContent.FlexEnd,
-      Hover: Style{ BackgroundColor: Color.Rgb(51, 51, 61) },
-      Active: Style{ BackgroundColor: Color.Rgb(31, 31, 41) },
-      Focus: Style{ OutlineWidth: 1 },
+      HoverStyle: Style{ BackgroundColor: Color.Rgb(51, 51, 61) },
+      ActiveStyle: Style{ BackgroundColor: Color.Rgb(31, 31, 41) },
+      FocusStyle: Style{ OutlineWidth: 1 },
       DisabledStyle: Style{ Opacity: 0.5 },
       Disabled: true,
       OnClick: () -> { clicked = true },

@@ -26,7 +26,7 @@ each platform before `Open` or replace its options on the window's UI thread:
 let window = Window{
     Backdrop: WindowBackdrop.Blur,
     Background: Color.Parse("#090b10").WithAlpha(0.78),
-    BackdropFallbackColor: "#090b10",
+    BackdropFallbackColor: Color.Parse("#090b10"),
     WindowsBackdrop: WindowsBackdropOptions{Material: WindowsBackdropMaterial.Acrylic},
     MacOSBackdrop: MacOSBackdropOptions{
         Material: MacOSBackdropMaterial.UnderWindowBackground,
@@ -132,7 +132,7 @@ and returns `Unsupported` while a native chooser blocks the owner.
 the owner thread afterward. Nonfocusable windows never request activation when
 shown. Unsupported `Focusable` assignments throw before changing the configured
 value. `Topmost` is a requested preference, so unsupported hosts retain it without
-changing stacking or failing `Open`. Call `TrySetTopmost(value)` to distinguish
+changing stacking or failing `Open`. Call `SetTopmost(value)` to distinguish
 `Accepted`, `Unsupported`, `Closed` and `Failed` on an open window.
 `Capabilities` reports operations supported by the current host, or `None` before
 opening. Windows, macOS and X11 expose visibility, passive show, focusability and
@@ -251,8 +251,14 @@ viewports explicitly reject these relationships. Self-ownership and cycles are
 rejected before native creation. Existing independent windows remain the default.
 
 ```gsharp
-let owner = Window{Title: "Main", Width: 800, Height: 600, Root: MainCell{}}.Open()
-let dialog = Window{Title: "Settings", Width: 420, Height: 280, Owner: owner, Modal: true, Root: SettingsCell{}}.Open()
+let owner = Window{Title: "Main", Size: LayoutSize(800, 600), Root: MainCell{}}.Open()
+let dialog = Window{
+    Title: "Settings",
+    Size: LayoutSize(420, 280),
+    Owner: owner,
+    Modal: true,
+    Root: SettingsCell{}
+}.Open()
 owner.Run()
 ```
 
@@ -277,23 +283,40 @@ New children are rejected during teardown. Native ownership failures throw
 
 ## Native size constraints
 
-`Window.MinWidth`, `MinHeight`, `MaxWidth` and `MaxHeight` use layout pixels.
-Goo multiplies them by `UiScale` for native client-area limits.
-`Width` and `Height` stay in native logical pixels.
+`Window.Size`, `MinSize` and `MaxSize` use layout units.
+Goo multiplies them by `UiScale` and rounds once at the native boundary.
+`NativeWidth` and `NativeHeight` report native logical units.
 Zero removes a limit. Values must be nonnegative, and a nonzero maximum must be
 at least its corresponding minimum. An invalid assignment leaves the old value.
 Set these properties before `Open` or on the window's owner UI thread afterward.
 When moving a bounded interval, widen or clear the old bound before crossing it.
 
-`Open` clamps the requested initial size. Later `Width`/`Height` requests are also
-clamped. Changing native limits asks SDL to resize an out-of-range client area;
-`Width`, `Height`, and `MetricsChanged` reflect the compositor's resulting size
-when its queued metrics settle. Limits constrain normal resizing; fullscreen and
+`Open` clamps the requested initial size. Later `Size` requests are also
+clamped. Changing native limits asks SDL to resize an out-of-range client area.
+`Size` and `MetricsChanged` reflect the compositor's resulting size when its
+queued metrics settle. Limits constrain normal resizing. Fullscreen and
 window-manager-controlled states remain subject to platform policy. Native
 failures throw and leave the corresponding configured limit unchanged.
 
 Embedded hosts own viewport geometry: `Attach` rejects preconfigured limits and
 changing a limit on an attached window throws `NotSupportedException`.
+
+## Size to content
+
+```gsharp
+let window = Window{
+    Root: AboutView(),
+    SizeToContent: SizeToContent.Both,
+    MinSize: LayoutSize(240, 120),
+    MaxSize: LayoutSize(640, 800),
+}
+```
+
+`SizeToContent` measures the root once before the first map. `Width` and `Height`
+measure one axis. `Both` measures both axes. The result stays within `MaxSize`
+and the display work area, unless `MinSize` requires more space.
+A root axis declared as a percentage keeps the corresponding `Size` value.
+Later content changes do not resize the window.
 
 ## Observe window metrics
 
@@ -486,7 +509,7 @@ expected content scale. Content scale is separate from the current window's
 framebuffer scale. IDs can become stale after hotplug or SDL teardown. Embedded
 hosts return an empty inventory.
 
-`TrySetFullscreenDisplay(id)` requests borderless fullscreen on that display,
+`SetFullscreenDisplay(id)` requests borderless fullscreen on that display,
 including output changes for an existing fullscreen window. It returns `Accepted`, `Closed`,
 `Unsupported` or `Failed`. `Accepted` means SDL accepted the request, not that
 the compositor moved the window. A compositor may keep the current output when
@@ -496,7 +519,7 @@ before showing it.
 
 KWin 6.7.5 can ignore an output change while fullscreen. To request another
 output there, set `State` to `Normal`, wait for `StateChanged` to report
-`Normal`, then call `TrySetFullscreenDisplay(id)` again. The app must wait for
+`Normal`, then call `SetFullscreenDisplay(id)` again. The app must wait for
 the native state event before sending the next request.
 
 Wayland supports fullscreen output selection while normal windowed placement
@@ -607,11 +630,26 @@ Windows and macOS use native choosers. Linux requires the XDG FileChooser portal
 and the bundled SDL bridge. Missing portal or bridge support returns `Unsupported`.
 Embedded hosts return `Unsupported`. `CancelFileDialog` requests native dismissal.
 
+## Ownerless platform services
+
+```gsharp
+let result = await Platform.OpenAsync("/absolute/path", token)
+if result.Status == PlatformOpenStatus.Failed {
+    Console.Error.WriteLine(result.Error)
+}
+```
+
+`Platform.OpenAsync` starts the system handler on a `go` child. `Success` means the handler started, not that it opened the target. Relative paths throw `ArgumentException`. Cancellation stops a launch that has not started.
+
+Use `NativeDialogs.ShowError(title, message)` before any window opens or after the last window closes. It blocks the caller and returns `MessageBoxStatus`. Linux returns `Unsupported`. Write the message to standard error when no native box is supported.
+
 ## File and image clipboard data
 
-`GetClipboardFormats()` returns an owned MIME list plus `HasFiles` and `HasImage` without copying image payloads or opening listed files. `ReadClipboardFiles()` and `ReadClipboardImage()` return owned data and an explicit `ClipboardReadStatus`: `Success`, `Empty`, `Unsupported`, `TooLarge`, or `Failed`. `Error` explains failures and exceeded limits. Each call reads the current clipboard; a query and later read are not an atomic snapshot. Applications choose which representation to prefer when both files and images are offered.
+`window.Clipboard.GetFormats()` returns an owned MIME list plus `HasFiles` and `HasImage` without copying image payloads or opening listed files. `ReadFiles()` and `ReadImage()` return owned data and an explicit `ClipboardReadStatus`: `Success`, `Empty`, `Unsupported`, `TooLarge`, or `Failed`. `Error` explains failures and exceeded limits. Each call reads the current clipboard. A query and later read are not an atomic snapshot.
 
 Call these methods on the open window's UI thread. Calls before open, after close, or on another thread throw. Embedded windows report `Unsupported` because their clipboard belongs to the host. Clipboard contents are never modified by these methods. Returned paths and bytes survive later clipboard changes and window close and need no disposal.
+
+`window.Clipboard.ReadText()` returns `ClipboardTextResult` with `Status`, `Text`, and `Error`. `ClipboardTextStatus` distinguishes `Success`, `Empty`, `Unsupported`, `TooLarge`, and `Failed`. Text is limited to 16 MiB of UTF-8. `WriteText(value)` returns `ClipboardWriteResult`. Native read and write failures do not throw.
 
 File reads support local `text/uri-list`, GNOME copied-file lists, Windows `CF_HDROP`, and macOS pasteboard file URLs. Paths retain clipboard order; Goo does not read their contents. URI lists reject remote hosts, relative paths, and NUL characters. Limits are 4096 paths, 32768 UTF-16 units per path, and 1048576 total path units; MIME file-list payloads are limited to 1 MiB.
 
@@ -630,14 +668,14 @@ let data = TransferData(
     },
     []Uri{}
 )
-let result = await window.WriteClipboardAsync(data)
+let result = await window.Clipboard.WriteAsync(data)
 ```
 
 Start clipboard calls on the open window's UI thread. Check `result.Status`.
 
 | Contract | Behavior |
 | --- | --- |
-| Read | `ReadClipboardDataAsync(types)` copies requested formats from one offer. Include `text/uri-list` for document references. |
+| Read | `window.Clipboard.ReadDataAsync(types)` copies requested formats from one offer. Include `text/uri-list` for document references. |
 | Owned data | Byte snapshots and URI values stay unchanged after replacement or window close. Caller changes cannot alter published bytes. |
 | Text and images | Plain text and HTML use UTF-8 without a terminator. RTF and encoded images keep their bytes. |
 | Files | Put references in `Uris`, not a second URI-list representation. Goo does not open the files. Desktop references must be local file URIs. |
@@ -756,6 +794,36 @@ Requests a deferred file move where the native clipboard supports that intent.
 
 
 Reports a native clipboard query/read outcome independently of payload contents.
+
+### Values
+
+- `Success`
+- `Empty`
+- `Unsupported`
+- `TooLarge`
+- `Failed`
+
+## `ClipboardTextResult`
+
+
+Contains owned clipboard text and an explicit native outcome.
+
+### `Error`
+
+Gets native failure detail, or an empty string.
+
+### `Status`
+
+Gets the read outcome.
+
+### `Text`
+
+Gets the copied text, or an empty string outside Success.
+
+## `ClipboardTextStatus`
+
+
+Reports a plain-text clipboard read outcome.
 
 ### Values
 
@@ -1326,6 +1394,18 @@ No rendering device is available.
 
 A virtual GPU.
 
+## `SizeToContent`
+
+
+Selects the client axes measured from the root before the first map.
+
+### Values
+
+- `None`
+- `Width`
+- `Height`
+- `Both`
+
 ## `TransferData`
 
 
@@ -1503,16 +1583,6 @@ Marks a container subtree as a native drag region for undecorated windows. Click
 
 Returns: the same container
 
-### `GetClipboardFormats`
-
-Queries MIME availability without reading image bytes or file contents.
-
-Returns: An owned format list and explicit query status.
-
-### `GetClipboardText`
-
-Gets the current native clipboard text on the window UI thread. An empty result can mean an empty clipboard, native copy failure, or text exceeding 16 MiB of UTF-8.
-
 ### `GetCurrentDisplay`
 
 Gets this window's current display, or nil for an embedded host or unavailable SDL display. Open the window first and call on its UI thread.
@@ -1585,26 +1655,6 @@ Processes one frame with the specified elapsed time.
 
 - `dt`: elapsed seconds since the previous frame
 
-### `ReadClipboardDataAsync(System.Collections.Generic.IReadOnlyList{string})`
-
-Copies requested available MIME alternatives and URI references from one native clipboard offer.
-
-- `contentTypes`: Exact MIME types to read, including text/uri-list for document references.
-
-Returns: Owned data and explicit status, with no partial payload on a native read failure.
-
-### `ReadClipboardFiles`
-
-Reads at most 4096 absolute paths and 1048576 UTF-16 path units from the current clipboard.
-
-Returns: Owned paths and explicit read status; the clipboard may have changed since a format query.
-
-### `ReadClipboardImage`
-
-Reads at most 64 MiB of encoded image data; native bitmap conversion also limits decoded RGBA to 64 MiB.
-
-Returns: Owned encoded bytes with a MIME type and explicit read status.
-
 ### `RenderOffscreenAsync(Cell,OffscreenRenderOptions,System.Threading.CancellationToken,WindowCapture)`
 
 Renders a fresh, unattached cell at a separate layout size without resizing or presenting this window. Keep pumping the owner until completion. Pixels and new GPU allocations share MaxBytes.
@@ -1636,16 +1686,16 @@ Queues an idempotent close request. This is safe from any thread.
 
 Opens the window and processes frames until all open Goo windows close.
 
-### `SetClipboardText(string)`
-
-Sets the native clipboard text on the window UI thread. Native set failures throw.
-
 ### `SetColors(Color,Color)`
 
 Sets the clear and inherited root text colors together on the owner thread. Explicit element colors take precedence over the inherited foreground.
 
 - `background`: The window clear color.
 - `foreground`: The inherited root text color.
+
+### `SetFullscreenDisplay(WindowDisplayId)`
+
+Requests borderless fullscreen on the selected display, including retargeting an already-fullscreen window. This must run on the window's UI thread. Returns Closed before Open or after close, Unsupported for embedded hosts, Failed for a stale ID or native failure, and Accepted when SDL accepts the request. Acceptance does not guarantee compositor placement. The compositor may keep the current display when retargeting fullscreen.
 
 ### `SetInterval(System.Action,float64)`
 
@@ -1662,6 +1712,12 @@ Returns: Accepted, Closed, Unsupported or Failed without changing an unsupported
 ### `SetTimeout(System.Action,float64)`
 
 Runs a callback once on the UI thread after the delay.
+
+### `SetTopmost(bool)`
+
+Attempts to submit a topmost request to the current native host. Accepted means the host accepted the request; desktop policy still controls observed stacking.
+
+Returns: Closed, Unsupported, Accepted, or Failed for the host operation.
 
 ### `Show(bool)`
 
@@ -1681,25 +1737,6 @@ Returns: A task completed on the UI thread with owned paths and an explicit outc
 - `action`: action to run during a later Pump
 
 Returns: True when the action was accepted into the queue.
-
-### `TrySetFullscreenDisplay(WindowDisplayId)`
-
-Requests borderless fullscreen on the selected display, including retargeting an already-fullscreen window. This must run on the window's UI thread. Returns Closed before Open or after close, Unsupported for embedded hosts, Failed for a stale ID or native failure, and Accepted when SDL accepts the request. Acceptance does not guarantee compositor placement. The compositor may keep the current display when retargeting fullscreen.
-
-### `TrySetTopmost(bool)`
-
-Attempts to submit a topmost request to the current native host. Accepted means the host accepted the request; desktop policy still controls observed stacking.
-
-Returns: Closed, Unsupported, Accepted, or Failed for the host operation.
-
-### `WriteClipboardAsync(TransferData,ClipboardIntent)`
-
-Publishes every MIME alternative and URI reference in one native clipboard publication.
-
-- `data`: The immutable selection to publish without opening referenced documents.
-- `intent`: Copy or a supported deferred file-cut hint, never an instruction to delete source files.
-
-Returns: Explicit publication status. Success does not confirm that a paste occurred.
 
 ### `AccessibilityAdapter`
 
@@ -1728,6 +1765,10 @@ Reports whether programmatic window movement is available.
 ### `Capabilities`
 
 Gets supported native lifecycle operations, or None before Open or Attach.
+
+### `Clipboard`
+
+Gets clipboard services for this window's UI thread.
 
 ### `Closed`
 
@@ -1768,10 +1809,6 @@ Gets or sets the frame pacing used by Window.Run. Uncapped still honors GPU queu
 ### `FrameTheme`
 
 Gets or sets the native frame and material appearance. Unknown follows the system. Applies immediately on Windows and macOS. Other platforms ignore it.
-
-### `Height`
-
-Gets or sets the window height.
 
 ### `IconPng`
 
@@ -1821,21 +1858,13 @@ Configures this window as a Wayland layer-shell surface before Open. Unsupported
 
 Gets or sets macOS-only material, activation, emphasis and mask options. Changes apply immediately. The native view samples behind the window. Use Style.ShaderEffect to sample Goo content within it.
 
-### `MaxHeight`
+### `MaxSize`
 
-Gets or sets the client maximum height in layout pixels, multiplied by UiScale for the native limit; zero removes the limit. Must be nonnegative and, when nonzero, no smaller than MinHeight. Embedded hosts are unsupported.
+Gets or sets the client maximum size in layout units. Zero removes an axis limit. Each axis must be finite, nonnegative and no smaller than its minimum. Embedded hosts are unsupported.
 
-### `MaxWidth`
+### `MinSize`
 
-Gets or sets the client maximum width in layout pixels, multiplied by UiScale for the native limit; zero removes the limit. Must be nonnegative and, when nonzero, no smaller than MinWidth. Embedded hosts are unsupported.
-
-### `MinHeight`
-
-Gets or sets the client minimum height in layout pixels, multiplied by UiScale. Zero removes the limit. Must be nonnegative and no greater than a nonzero MaxHeight. Embedded hosts are unsupported.
-
-### `MinWidth`
-
-Gets or sets the client minimum width in layout pixels, multiplied by UiScale. Zero removes the limit. Must be nonnegative and no greater than a nonzero MaxWidth. Embedded hosts are unsupported.
+Gets or sets the client minimum size in layout units. Zero removes an axis limit. Each axis must be finite, nonnegative and no greater than its nonzero maximum. Embedded hosts are unsupported.
 
 ### `Modal`
 
@@ -1849,9 +1878,17 @@ Gets the modifiers of the current input event, or the last known state outside d
 
 Enables native file-drop ingress before Open or on the owning UI thread; disabled by default. Unsupported hosts reject enabling. Disabling cancels any active preview.
 
+### `NativeHeight`
+
+Gets the observed client height in native logical units.
+
 ### `NativeTransferCapabilities`
 
 Gets the current native transfer capabilities; closed and embedded windows return None.
+
+### `NativeWidth`
+
+Gets the observed client width in native logical units.
 
 ### `Occlusion`
 
@@ -1901,6 +1938,14 @@ Gets the root cell.
 
 Gets named, unattached Cell factories registered for display-free rendering.
 
+### `Size`
+
+Gets or sets the client size in layout units. Native assignments multiply by UiScale and round once. The native host's observed size is authoritative after Open.
+
+### `SizeToContent`
+
+Measures the selected root axes once before the first map, within MaxSize and the display work area and at least MinSize. A root axis declared as a percentage keeps Size on that axis. Later resizing belongs to the user.
+
 ### `SmoothScrolling`
 
 Enables animated scrolling and touch momentum. The default is true.
@@ -1927,7 +1972,7 @@ Gets or sets next-open per-pixel alpha. An open window is unchanged. Transparenc
 
 ### `UiScale`
 
-Gets or sets the layout and rendering scale, clamped to 0.5 through 3. The default is 1, or the owner's scale when not explicitly set. Width and Height remain native logical sizes. Layout uses those sizes divided by UiScale, and rendering multiplies the display scale by UiScale.
+Gets or sets the layout and rendering scale, clamped to 0.5 through 3. The default is 1, or the owner's scale when not explicitly set. Size and its limits use layout units. NativeWidth and NativeHeight report the unscaled native logical size.
 
 ### `VSync`
 
@@ -1940,10 +1985,6 @@ Gets or sets Wayland-only blur region options. Changes apply on the next surface
 ### `WheelScrollScale`
 
 Scales the platform wheel distance for this window. The default is 1.
-
-### `Width`
-
-Gets or sets the window width.
 
 ### `WindowsBackdrop`
 
@@ -2051,6 +2092,60 @@ Reports whether an asynchronous window capture request was accepted.
 - `Failed`
 - `DeviceLost`
 - `Unsupported`
+
+## `WindowClipboard`
+
+
+Reads and writes clipboard data on an open window's UI thread.
+
+### `GetFormats`
+
+Queries MIME availability without reading image bytes or file contents.
+
+Returns: An owned format list and explicit query status.
+
+### `ReadDataAsync(System.Collections.Generic.IReadOnlyList{string})`
+
+Copies requested available MIME alternatives and URI references from one native clipboard offer.
+
+- `contentTypes`: Exact MIME types to read, including text/uri-list for document references.
+
+Returns: Owned data and explicit status, with no partial payload on a native read failure.
+
+### `ReadFiles`
+
+Reads at most 4096 absolute paths and 1048576 UTF-16 path units from the current clipboard.
+
+Returns: Owned paths and explicit read status; the clipboard may have changed since a format query.
+
+### `ReadImage`
+
+Reads at most 64 MiB of encoded image data; native bitmap conversion also limits decoded RGBA to 64 MiB.
+
+Returns: Owned encoded bytes with a MIME type and explicit read status.
+
+### `ReadText`
+
+Reads bounded plain text with an explicit native outcome.
+
+Returns: Owned text and status. Native failures do not throw.
+
+### `WriteAsync(TransferData,ClipboardIntent)`
+
+Publishes every MIME alternative and URI reference in one native clipboard publication.
+
+- `data`: The immutable selection to publish without opening referenced documents.
+- `intent`: Copy or a supported deferred file-cut hint, never an instruction to delete source files.
+
+Returns: Explicit publication status. Success does not confirm that a paste occurred.
+
+### `WriteText(string)`
+
+Publishes plain text without throwing for native failures.
+
+- `value`: The text to publish.
+
+Returns: The native publication outcome.
 
 ## `WindowDisplay`
 

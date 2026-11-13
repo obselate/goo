@@ -37,5 +37,5 @@ class Counter : Cell {
 
 func Main() {
     Application.Configure("Goo starter", "1.0.0", "com.example.goostarter")
-    Application.Run(Window{Title: "Goo starter", Width: 360, Height: 220, Root: Counter{}})
+    Application.Run(Window{Title: "Goo starter", Size: LayoutSize(360, 220), Root: Counter{}})
 }

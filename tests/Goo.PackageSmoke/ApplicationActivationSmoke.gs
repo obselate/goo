@@ -18,7 +18,7 @@ private func WriteActivationResult(results string, name string, content string =
 
 func RunApplicationActivationSmoke(results string) {
     let owner = Environment.CurrentManagedThreadId
-    let window = Window{ Width: 180, Height: 100, Root: Cell{} }
+    let window = Window{ Size: LayoutSize(180, 100),  Root: Cell{} }
     let one = Path.Combine(results, "one document.gooactivation")
     let two = Path.Combine(results, "two document.gooactivation")
     var cold = false

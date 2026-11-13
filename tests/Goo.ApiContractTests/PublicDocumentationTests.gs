@@ -121,9 +121,8 @@ class PublicDocumentationTests {
     @Fact
     func ApiReferenceDocumentsUniformShapeStrokeContract() {
         let shapes = ReadApiPage("shapes.md")
-        let style = ReadApiPage("style.md")
         Assert.Contains("Displays a vector path with fill and one uniform stroke.", shapes, StringComparison.Ordinal)
-        Assert.Contains("A uniform value also sets the Shape stroke width.", style, StringComparison.Ordinal)
+        Assert.Contains("Shape paint moved to Fill and Stroke", shapes, StringComparison.Ordinal)
     }
 
     @Fact
@@ -135,6 +134,8 @@ class PublicDocumentationTests {
             StringComparison.Ordinal
         )
         Assert.Contains("`BackgroundGradient: nil` is an explicit clear declaration", style, StringComparison.Ordinal)
+        Assert.Contains("`HoverStyle`, `ActiveStyle`, `FocusStyle`, and `DisabledStyle`", style, StringComparison.Ordinal)
+        Assert.Contains("`AccessibilityName` and `AccessibilityRole`", style, StringComparison.Ordinal)
     }
 
     @Fact
@@ -211,6 +212,9 @@ class PublicDocumentationTests {
     shared {
         private const PublicDeclared BindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly
         private let ExpectedMethodIds[]string = []string{
+            "M:Goo.Blob.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})",
+            "M:Goo.Platform.OpenAsync(System.String,System.Threading.CancellationToken)",
+            "M:Goo.NativeDialogs.ShowError(System.String,System.String)",
             "M:Goo.RichText.RichTextClipboard.#ctor(Goo.Window,Goo.TextEditorController,Goo.TextPresentationLayer)",
             "M:Goo.RichText.RichTextClipboard.CopyAsync(System.Threading.CancellationToken)",
             "M:Goo.RichText.RichTextClipboard.CutAsync(System.Threading.CancellationToken)",
@@ -301,8 +305,8 @@ class PublicDocumentationTests {
             "M:Goo.TransferRepresentation.#ctor(System.String,System.ReadOnlyMemory{System.Byte})",
             "M:Goo.TransferData.#ctor(System.Collections.Generic.IReadOnlyList{Goo.TransferRepresentation},"
                 + "System.Collections.Generic.IReadOnlyList{System.Uri})",
-            "M:Goo.Window.ReadClipboardDataAsync(System.Collections.Generic.IReadOnlyList{System.String})",
-            "M:Goo.Window.WriteClipboardAsync(Goo.TransferData,Goo.ClipboardIntent)",
+            "M:Goo.WindowClipboard.ReadDataAsync(System.Collections.Generic.IReadOnlyList{System.String})",
+            "M:Goo.WindowClipboard.WriteAsync(Goo.TransferData,Goo.ClipboardIntent)",
             "M:Goo.Window.SetNativeDataDropFormats(System.Collections.Generic.IReadOnlyList{System.String})",
             "M:Goo.AccessibilityActionRequest.#ctor(Goo.AccessibilityAction)",
             "M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)",
@@ -316,6 +320,7 @@ class PublicDocumentationTests {
             "M:Goo.AccessibilityRelationships.#ctor",
             "M:Goo.AccessibilityValue.#ctor",
             "M:Goo.Anim`1.Pause",
+            "M:Goo.Anim`1.Play(`0,`0,System.Func{System.Double,System.Double,System.Double,Goo.Simulation},System.Func{System.Double,System.Double,System.Double,Goo.Simulation}[])",
             "M:Goo.Anim`1.Resume",
             "M:Goo.Anim`1.Seek(System.Double)",
             "M:Goo.Anim`1.Set(`0)",
@@ -332,8 +337,8 @@ class PublicDocumentationTests {
             "M:Goo.WindowBackdropMask.#ctor(System.Int32,System.Int32,System.Byte[])",
             "M:Goo.Window.GetDisplays",
             "M:Goo.Window.GetCurrentDisplay",
-            "M:Goo.Window.TrySetFullscreenDisplay(Goo.WindowDisplayId)",
-            "M:Goo.Window.TrySetTopmost(System.Boolean)",
+            "M:Goo.Window.SetFullscreenDisplay(Goo.WindowDisplayId)",
+            "M:Goo.Window.SetTopmost(System.Boolean)",
             "M:Goo.Window.RequestCapture",
             "M:Goo.Window.RequestCapture(Goo.WindowCapture)",
             "M:Goo.Window.PollCapture",
@@ -343,7 +348,7 @@ class PublicDocumentationTests {
             "M:Goo.LayoutAlgorithm.Arrange(Goo.LayoutContext,Goo.LayoutSize)",
             "M:Goo.LayoutContext.MeasureChild(System.Int32,Goo.LayoutSize)",
             "M:Goo.LayoutContext.ArrangeChild(System.Int32,Goo.ElementRect)",
-            "M:Goo.Virtual.#ctor(Goo.VirtualSource)",
+            "M:Goo.Virtual.#ctor",
             "M:Goo.VirtualSource.State(Goo.VirtualState)",
             "M:Goo.VirtualState.Realize(Goo.VirtualViewport,Goo.VirtualOutput)",
             "M:Goo.VirtualState.NeedsRealize(Goo.VirtualViewport)",
@@ -398,12 +403,10 @@ class PublicDocumentationTests {
             "M:Goo.Color.TryParse(System.String)",
             "M:Goo.Color.WithAlpha(System.Double)",
             "M:Goo.Color.op_Implicit(Goo.Color)~Goo.Edges{Goo.Color}",
-            "M:Goo.Color.op_Implicit(System.String)~Goo.Color",
             "M:Goo.VectorAsset.#ctor(System.Double,System.Double,System.Double,System.Double,Goo.VectorNode[])",
             "M:Goo.VectorAsset.NodeAt(System.Int32)",
             "M:Goo.VectorAsset.PathForNode(System.Int32)",
-            "M:Goo.VectorAsset.Render",
-            "M:Goo.VectorAsset.Render(System.String)",
+            "M:Goo.VectorAsset.Render(Goo.ShapeFit,System.String)",
             "M:Goo.VectorNode.#ctor(Goo.VectorNode[])",
             "M:Goo.VectorNode.#ctor(Goo.VectorPath)",
             "M:Goo.VectorNode.#ctor(Goo.VectorPath,Goo.VectorNodeStyle)",
@@ -418,6 +421,11 @@ class PublicDocumentationTests {
             "M:Goo.DevTools.Attach(Goo.Window,System.Boolean)",
             "M:Goo.Container.#ctor",
             "M:Goo.Container.Add(Goo.Blob)",
+            "M:Goo.Row.#ctor",
+            "M:Goo.Row.Add(Goo.Blob)",
+            "M:Goo.Column.#ctor",
+            "M:Goo.Column.Add(Goo.Blob)",
+            "M:Goo.Spacer.#ctor",
             "M:Goo.DashPattern.#ctor(System.Double[],System.Double)",
             "M:Goo.DragData.#ctor(System.Object,Goo.DragEffect)",
             "M:Goo.DragData.#ctor(System.Object,Goo.DragEffect,Goo.NativeFileDrag)",
@@ -516,8 +524,18 @@ class PublicDocumentationTests {
             "M:Goo.ImageSourceLease.Complete(Goo.ImageSource)",
             "M:Goo.ImageSourceLease.Dispose",
             "M:Goo.ImageSourceLease.Fail",
-            "M:Goo.Length.Percent(System.Double)",
+            "M:Goo.LayoutContext.ResolveLength(Goo.Length,Goo.LayoutAxis)",
             "M:Goo.Length.Pixels(System.Double)",
+            "M:Goo.Length.Percent(System.Double)",
+            "M:Goo.Length.Em(System.Double)",
+            "M:Goo.Length.Rem(System.Double)",
+            "M:Goo.Length.Vw(System.Double)",
+            "M:Goo.Length.Vh(System.Double)",
+            "M:Goo.Length.FitContent(Goo.Length)",
+            "M:Goo.Length.op_Addition(Goo.Length,Goo.Length)",
+            "M:Goo.Length.op_Subtraction(Goo.Length,Goo.Length)",
+            "M:Goo.Length.op_Multiply(Goo.Length,System.Double)",
+            "M:Goo.Length.op_Division(Goo.Length,System.Double)",
             "M:Goo.Length.op_Implicit(Goo.Length)~Goo.Edges",
             "M:Goo.Length.op_Implicit(System.Double)~Goo.Length",
             "M:Goo.Length.op_Implicit(System.Int32)~Goo.Length",
@@ -530,6 +548,10 @@ class PublicDocumentationTests {
             "M:Goo.PathBuilder.Build",
             "M:Goo.PathBuilder.Close",
             "M:Goo.PathBuilder.CubicTo(System.Double,System.Double,System.Double,System.Double,System.Double,System.Double)",
+            "M:Goo.PathBuilder.Ellipse(System.Double,System.Double,System.Double,System.Double)",
+            "M:Goo.PathBuilder.Rectangle(System.Double,System.Double,System.Double,System.Double)",
+            "M:Goo.PathBuilder.RoundedRectangle(System.Double,System.Double,System.Double,System.Double,System.Double)",
+            "M:Goo.VectorPath.Parse(System.String,Goo.ElementRect)",
             "M:Goo.PathBuilder.LineTo(System.Double,System.Double)",
             "M:Goo.PathBuilder.MoveTo(System.Double,System.Double)",
             "M:Goo.PathBuilder.Polyline(Goo.Point[],System.Boolean)",
@@ -557,6 +579,8 @@ class PublicDocumentationTests {
             "M:Goo.PlatformInput.SetComposition(System.String,System.Int32,System.Int32)",
             "M:Goo.PlatformInput.SetCompositionRange(System.Int32,System.Int32)",
             "M:Goo.WindowFocus.SetSelection(System.Int32,System.Int32)",
+            "M:Goo.PointerDragEvent.PreventDefault",
+            "M:Goo.PointerDragEvent.StopPropagation",
             "M:Goo.PointerEvent.Capture",
             "M:Goo.PointerEvent.PreventDefault",
             "M:Goo.PointerEvent.ReleaseCapture",
@@ -596,6 +620,7 @@ class PublicDocumentationTests {
             "M:Goo.Simulation.Velocity(System.Double)",
             "M:Goo.MotionConverter`1.#ctor(System.Int32,System.Action{`0,System.Double[]},System.Func{System.Double[],`0})",
             "M:Goo.Motion.Tween(System.Double,Goo.Easing)",
+            "M:Goo.Motion.Delay(System.Double,System.Func{System.Double,System.Double,System.Double,Goo.Simulation})",
             "M:Goo.MotionVelocity.Add(Goo.MotionVelocity)",
             "M:Goo.MotionVelocity.Components(System.Double[])",
             "M:Goo.MotionVelocity.Uniform(System.Double)",
@@ -627,6 +652,8 @@ class PublicDocumentationTests {
             "M:Goo.ShaderEffectData.Publish``1(System.ReadOnlySpan{``0})",
             "M:Goo.Text.#ctor",
             "M:Goo.Text.#ctor(System.String)",
+            "M:Goo.Text.#ctor(Goo.TextSpan[])",
+            "M:Goo.TextSpan.op_Implicit(System.String)~Goo.TextSpan",
             "M:Goo.TextDocument.#ctor",
             "M:Goo.TextDocument.#ctor(System.String)",
             "M:Goo.TextDocument.Apply(Goo.TextChange)",
@@ -642,8 +669,7 @@ class PublicDocumentationTests {
             "M:Goo.TextDocument.Redo",
             "M:Goo.TextDocument.Snapshot",
             "M:Goo.TextDocument.Undo",
-            "M:Goo.TextEditor.#ctor(Goo.TextEditorController)",
-            "M:Goo.TextEditor.#ctor(Goo.TextEditorController,Goo.TextPresentationLayer[])",
+            "M:Goo.TextEditor.#ctor",
             "M:Goo.TextEditorController.#ctor(Goo.TextDocument)",
             "M:Goo.TextEditorController.Blur",
             "M:Goo.TextEditorController.BreakUndoGroup",
@@ -681,10 +707,10 @@ class PublicDocumentationTests {
             "M:Goo.Application.Configure(System.String,System.String,System.String)",
             "M:Goo.Application.Configure(System.Reflection.Assembly)",
             "M:Goo.Window.DragRegion(Goo.Container)",
-            "M:Goo.Window.GetClipboardText",
-            "M:Goo.Window.GetClipboardFormats",
-            "M:Goo.Window.ReadClipboardFiles",
-            "M:Goo.Window.ReadClipboardImage",
+            "M:Goo.WindowClipboard.ReadText",
+            "M:Goo.WindowClipboard.GetFormats",
+            "M:Goo.WindowClipboard.ReadFiles",
+            "M:Goo.WindowClipboard.ReadImage",
             "M:Goo.Window.PerformAccessibilityAction(Goo.AccessibilityId,Goo.AccessibilityActionRequest)",
             "M:Goo.Window.Post(System.Action)",
             "M:Goo.Window.MeasureText(System.String,Goo.Style)",
@@ -693,7 +719,7 @@ class PublicDocumentationTests {
             "M:Goo.Window.RequestActivation",
             "M:Goo.Window.RequestClose",
             "M:Goo.Application.Run(Goo.Window)",
-            "M:Goo.Window.SetClipboardText(System.String)",
+            "M:Goo.WindowClipboard.WriteText(System.String)",
             "M:Goo.Window.SetInterval(System.Action,System.Double)",
             "M:Goo.Window.SetTimeout(System.Action,System.Double)",
             "M:Goo.Window.TryPost(System.Action)",
@@ -734,6 +760,12 @@ class PublicDocumentationTests {
             "M:Goo.PanelTransform.op_Inequality(Goo.PanelTransform,Goo.PanelTransform)"
         }
         private let ExpectedEnumFieldIds[]string = []string{
+            "F:Goo.PointerDragPhase.Started",
+            "F:Goo.PointerDragPhase.Moved",
+            "F:Goo.PointerDragPhase.Ended",
+            "F:Goo.PointerDragPhase.Canceled",
+            "F:Goo.LayoutAxis.Horizontal",
+            "F:Goo.LayoutAxis.Vertical",
             "F:Goo.AccessibilityRole.Separator",
             "F:Goo.AccessibilityRole.TabPanel",
             "F:Goo.AccessibilityRole.Toolbar",
@@ -961,11 +993,24 @@ class PublicDocumentationTests {
             typeof(TextRange),
             typeof(TextSelection),
             typeof(TextStyleRange),
+            typeof(TextSpan),
             typeof(TextStyleSpan)
         }
         private let Shapes IReadOnlyDictionary[string, DocumentationShape] = Dictionary[string, DocumentationShape](
             StringComparer.Ordinal
         ){
+            ["M:Goo.Blob.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})"] =
+                DocumentationShape([]string{"items", "itemKey", "itemBuilder"}, []string{"T"}, true),
+            ["M:Goo.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})"] =
+                DocumentationShape([]string{"items", "itemKey", "itemBuilder"}, []string{"T"}, true),
+            ["M:Goo.Platform.OpenAsync(System.String,System.Threading.CancellationToken)"] =
+                DocumentationShape([]string{"target", "cancellationToken"}, Array.Empty[string](), true),
+            ["M:Goo.NativeDialogs.ShowError(System.String,System.String)"] =
+                DocumentationShape([]string{"title", "message"}, Array.Empty[string](), true),
+            ["M:Goo.WindowClipboard.ReadText"] =
+                DocumentationShape(Array.Empty[string](), Array.Empty[string](), true),
+            ["M:Goo.WindowClipboard.WriteText(System.String)"] =
+                DocumentationShape([]string{"value"}, Array.Empty[string](), true),
             ["M:Goo.TrayIcon.Create(Goo.Window,Goo.TrayOptions)"] = DocumentationShape(
                 []string{"owner", "options"}, System.Array.Empty[string](), true),
             ["M:Goo.TrayIcon.Update(Goo.TrayOptions)"] = DocumentationShape(
@@ -1071,9 +1116,9 @@ class PublicDocumentationTests {
             ["M:Goo.TransferData.#ctor(System.Collections.Generic.IReadOnlyList{Goo.TransferRepresentation},"
                 + "System.Collections.Generic.IReadOnlyList{System.Uri})"] =
                 DocumentationShape([]string{"representations", "uris"}, Array.Empty[string](), false),
-            ["M:Goo.Window.ReadClipboardDataAsync(System.Collections.Generic.IReadOnlyList{System.String})"] =
+            ["M:Goo.WindowClipboard.ReadDataAsync(System.Collections.Generic.IReadOnlyList{System.String})"] =
                 DocumentationShape([]string{"contentTypes"}, Array.Empty[string](), true),
-            ["M:Goo.Window.WriteClipboardAsync(Goo.TransferData,Goo.ClipboardIntent)"] =
+            ["M:Goo.WindowClipboard.WriteAsync(Goo.TransferData,Goo.ClipboardIntent)"] =
                 DocumentationShape([]string{"data", "intent"}, Array.Empty[string](), true),
             ["M:Goo.Window.SetNativeDataDropFormats(System.Collections.Generic.IReadOnlyList{System.String})"] =
                 DocumentationShape([]string{"formats"}, Array.Empty[string](), true),
@@ -1174,6 +1219,9 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
+            [
+                "M:Goo.Anim`1.Play(`0,`0,System.Func{System.Double,System.Double,System.Double,Goo.Simulation},System.Func{System.Double,System.Double,System.Double,Goo.Simulation}[])"
+            ] = DocumentationShape([]string{"from", "to", "spec", "specs"}, System.Array.Empty[string](), false),
             ["M:Goo.Anim`1.Seek(System.Double)"] = DocumentationShape(
                 []string{"elapsedMs"},
                 System.Array.Empty[string](),
@@ -1308,27 +1356,39 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
-            ["M:Goo.Color.op_Implicit(System.String)~Goo.Color"] = DocumentationShape(
-                []string{"value"},
-                System.Array.Empty[string](),
-                true
-            ),
             ["M:Goo.Container.Add(Goo.Blob)"] = DocumentationShape(
                 []string{"child"},
                 System.Array.Empty[string](),
                 false
             ),
+            ["M:Goo.Row.Add(Goo.Blob)"] = DocumentationShape([]string{"child"}, System.Array.Empty[string](), false),
+            ["M:Goo.Column.Add(Goo.Blob)"] = DocumentationShape([]string{"child"}, System.Array.Empty[string](), false),
             ["M:Goo.PathBuilder.Reset"] = DocumentationShape(
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
                 true
+            ),
+            ["M:Goo.PathBuilder.Ellipse(System.Double,System.Double,System.Double,System.Double)"] = DocumentationShape(
+                []string{"x", "y", "width", "height"}, System.Array.Empty[string](), true
+            ),
+            ["M:Goo.PathBuilder.Rectangle(System.Double,System.Double,System.Double,System.Double)"] = DocumentationShape(
+                []string{"x", "y", "width", "height"}, System.Array.Empty[string](), true
+            ),
+            ["M:Goo.PathBuilder.RoundedRectangle(System.Double,System.Double,System.Double,System.Double,System.Double)"] = DocumentationShape(
+                []string{"x", "y", "width", "height", "radius"}, System.Array.Empty[string](), true
+            ),
+            ["M:Goo.VectorPath.Parse(System.String,Goo.ElementRect)"] = DocumentationShape(
+                []string{"data", "viewBox"}, System.Array.Empty[string](), true
+            ),
+            ["M:Goo.VectorAsset.Render(Goo.ShapeFit,System.String)"] = DocumentationShape(
+                []string{"fit", "key"}, System.Array.Empty[string](), true
             ),
             ["M:Goo.ShaderEffectData.Publish``1(System.ReadOnlySpan{``0})"] = DocumentationShape(
                 []string{"values"},
                 []string{"T"},
                 false
             ),
-            ["M:Goo.Window.TrySetTopmost(System.Boolean)"] = DocumentationShape(
+            ["M:Goo.Window.SetTopmost(System.Boolean)"] = DocumentationShape(
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
                 true
@@ -1397,11 +1457,6 @@ class PublicDocumentationTests {
                 []string{"anchor", "settle"},
                 System.Array.Empty[string](),
                 true
-            ),
-            ["M:Goo.Virtual.#ctor(Goo.VirtualSource)"] = DocumentationShape(
-                []string{"source"},
-                System.Array.Empty[string](),
-                false
             ),
             ["M:Goo.VirtualSource.State(Goo.VirtualState)"] = DocumentationShape(
                 []string{"current"},
@@ -1602,16 +1657,27 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
-            ["M:Goo.Length.Percent(System.Double)"] = DocumentationShape(
-                []string{"value"},
-                System.Array.Empty[string](),
-                true
-            ),
-            ["M:Goo.Length.Pixels(System.Double)"] = DocumentationShape(
-                []string{"value"},
-                System.Array.Empty[string](),
-                true
-            ),
+            ["M:Goo.Em(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Rem(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Vw(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Vh(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.LayoutContext.ResolveLength(Goo.Length,Goo.LayoutAxis)"] =
+                DocumentationShape([]string{"value", "axis"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.FitContent(Goo.Length)"] = DocumentationShape([]string{"limit"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.Pixels(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.Percent(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.Em(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.Rem(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.Vw(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.Vh(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.op_Addition(Goo.Length,Goo.Length)"] =
+                DocumentationShape([]string{"left", "right"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.op_Subtraction(Goo.Length,Goo.Length)"] =
+                DocumentationShape([]string{"left", "right"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.op_Multiply(Goo.Length,System.Double)"] =
+                DocumentationShape([]string{"value", "scale"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.op_Division(Goo.Length,System.Double)"] =
+                DocumentationShape([]string{"value", "scale"}, System.Array.Empty[string](), true),
             ["M:Goo.Length.op_Implicit(Goo.Length)~Goo.Edges"] = DocumentationShape(
                 []string{"value"},
                 System.Array.Empty[string](),
@@ -1779,6 +1845,10 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 false
             ),
+            ["M:Goo.Text.#ctor(Goo.TextSpan[])"] = DocumentationShape(
+                []string{"spans"}, System.Array.Empty[string](), false),
+            ["M:Goo.TextSpan.op_Implicit(System.String)~Goo.TextSpan"] = DocumentationShape(
+                []string{"value"}, System.Array.Empty[string](), true),
             ["M:Goo.TextDocument.#ctor(System.String)"] = DocumentationShape(
                 []string{"text"},
                 System.Array.Empty[string](),
@@ -1833,16 +1903,6 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
                 true
-            ),
-            ["M:Goo.TextEditor.#ctor(Goo.TextEditorController)"] = DocumentationShape(
-                []string{"controller"},
-                System.Array.Empty[string](),
-                false
-            ),
-            ["M:Goo.TextEditor.#ctor(Goo.TextEditorController,Goo.TextPresentationLayer[])"] = DocumentationShape(
-                []string{"controller", "layers"},
-                System.Array.Empty[string](),
-                false
             ),
             ["M:Goo.TextEditorController.#ctor(Goo.TextDocument)"] = DocumentationShape(
                 []string{"document"},
@@ -1985,6 +2045,9 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
+            [
+                "M:Goo.Motion.Delay(System.Double,System.Func{System.Double,System.Double,System.Double,Goo.Simulation})"
+            ] = DocumentationShape([]string{"delayMs", "spec"}, System.Array.Empty[string](), true),
             ["M:Goo.MotionVelocity.Add(Goo.MotionVelocity)"] = DocumentationShape(
                 []string{"other"},
                 System.Array.Empty[string](),
@@ -2028,7 +2091,7 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
-            ["M:Goo.Window.GetClipboardFormats"] = DocumentationShape(
+            ["M:Goo.WindowClipboard.GetFormats"] = DocumentationShape(
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
                 true
@@ -2073,12 +2136,12 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 false
             ),
-            ["M:Goo.Window.ReadClipboardFiles"] = DocumentationShape(
+            ["M:Goo.WindowClipboard.ReadFiles"] = DocumentationShape(
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
                 true
             ),
-            ["M:Goo.Window.ReadClipboardImage"] = DocumentationShape(
+            ["M:Goo.WindowClipboard.ReadImage"] = DocumentationShape(
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
                 true
@@ -2220,6 +2283,11 @@ class PublicDocumentationTests {
                 .Append("P:Goo.KeyBinding.OnRelease")
                 .Append("P:Goo.KeyBinding.Repeat")
                 .Append("M:Goo.Percent(System.Double)")
+                .Append("M:Goo.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})")
+                .Append("M:Goo.Em(System.Double)")
+                .Append("M:Goo.Rem(System.Double)")
+                .Append("M:Goo.Vw(System.Double)")
+                .Append("M:Goo.Vh(System.Double)")
         }
 
         private func ApiTypes() IEnumerable[Type] -> []Assembly{

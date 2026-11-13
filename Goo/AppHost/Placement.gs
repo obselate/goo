@@ -44,8 +44,8 @@ public class Placement {
             var height = bounds.Height
             if size {
                 let scale = float64(window.UiScale)
-                width = ClampSize(width, window.MinWidth, window.MaxWidth, area.Width, scale)
-                height = ClampSize(height, window.MinHeight, window.MaxHeight, area.Height, scale)
+                width = ClampSize(width, window.MinSize.Width, window.MaxSize.Width, area.Width, scale)
+                height = ClampSize(height, window.MinSize.Height, window.MaxSize.Height, area.Height, scale)
             }
             var x = bounds.X
             var y = bounds.Y
@@ -65,7 +65,7 @@ public class Placement {
             })
         }
 
-        private func ClampSize(value float64, minimum int32, maximum int32, available float64, scale float64) float64 {
+        private func ClampSize(value float64, minimum float64, maximum float64, available float64, scale float64) float64 {
             let lower = Math.Min(available, Math.Max(1.0, Math.Ceiling(float64(minimum) * scale)))
             let upper = if maximum == 0 { available } else { Math.Min(available, Math.Ceiling(float64(maximum) * scale)) }
             return Math.Clamp(value, Math.Min(lower, upper), upper)
