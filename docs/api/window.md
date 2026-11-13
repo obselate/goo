@@ -216,6 +216,7 @@ Menu keep their current in-window behavior.
 | Operation | Contract |
 | --- | --- |
 | `Open` | Call once per instance on the owner thread. Use parent-content layout units. `size: LayoutSize(width, height)` sets an explicit size. Nil measures the root once within `maximum` and the display work area. Size follows the owner's UiScale. |
+| Percent root axes | Measured percentages use the smaller of `maximum` and the display work area as their basis. The popup takes the resolved size, so 50% uses half that basis and 100% fills it. |
 | `PopupKind.Menu` | Receives input. Wayland needs the native button, key or touch event being handled, or a parent popup grab. |
 | `PopupKind.Tooltip` | Receives no input. It needs no grab. |
 | `PopupResult.Status` | `Opened`, `Closed`, `Unsupported`, `RequiresUserAction`, `Busy` or `Failed`. |
