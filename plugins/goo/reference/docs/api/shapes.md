@@ -83,15 +83,6 @@ Adds a cubic Bézier curve to a point.
 - `x`: The endpoint x coordinate.
 - `y`: The endpoint y coordinate.
 
-### `Ellipse(float64,float64,float64,float64)`
-
-Appends a closed ellipse in view-box coordinates.
-
-- `x`: The left coordinate.
-- `y`: The top coordinate.
-- `width`: The non-negative width.
-- `height`: The non-negative height.
-
 ### `LineTo(float64,float64)`
 
 Adds a straight line to a point.
@@ -122,28 +113,9 @@ Adds a quadratic Bézier curve to a point.
 - `x`: The endpoint x coordinate.
 - `y`: The endpoint y coordinate.
 
-### `Rectangle(float64,float64,float64,float64)`
-
-Appends a closed rectangle in view-box coordinates.
-
-- `x`: The left coordinate.
-- `y`: The top coordinate.
-- `width`: The non-negative width.
-- `height`: The non-negative height.
-
 ### `Reset`
 
 Clears the commands and contour while retaining the view box and storage for continued use. Previously built paths remain immutable. Each Build copies the commands.
-
-### `RoundedRectangle(float64,float64,float64,float64,float64)`
-
-Appends a closed rounded rectangle in view-box coordinates. The radius is clamped to half the smaller dimension.
-
-- `x`: The left coordinate.
-- `y`: The top coordinate.
-- `width`: The non-negative width.
-- `height`: The non-negative height.
-- `radius`: The non-negative corner radius.
 
 ## `Point`
 
@@ -161,7 +133,7 @@ Gets the y coordinate.
 ## `Shape`
 
 
-Displays a vector path with fill and one uniform stroke. Use Fill and Stroke for path paint. Legacy paint without either throws: "Shape paint moved to Fill and Stroke".
+Displays a vector path with fill and one uniform stroke. Side-specific border declarations apply to boxes only.
 
 ### `new`
 
@@ -171,9 +143,9 @@ Creates a shape with default paint options.
 
 Gets or sets the non-negative finite corner radius in logical pixels.
 
-### `Fill`
+### `Dashes`
 
-Gets or sets the optional path fill. A gradient takes priority over UseCurrentColor.
+Gets or sets the stroke dash pattern.
 
 ### `FillRule`
 
@@ -183,17 +155,25 @@ Gets or sets the fill rule. The default is NonZero.
 
 Gets or sets the geometry fit. Cover clips, Fill stretches, and None preserves view-box units.
 
+### `MiterLimit`
+
+Gets or sets the non-negative finite miter limit. The default is 4.
+
 ### `Path`
 
 Gets or sets the vector path to display. Reuse one path and position instances with Transform to share encoded geometry.
 
-### `Stroke`
+### `StrokeCap`
 
-Gets or sets the complete stroke paint and options. Gradient strokes are not supported.
+Gets or sets the stroke cap style. The default is Butt.
 
 ### `StrokeEnd`
 
-Gets or sets the stroke end in [0, 1]. Equal bounds omit the stroke; fill remains unchanged. Trim precedes dashes, whose phase starts at each trimmed contour. Trim preserves fully included closed contours; partial contours use the stroke's Cap at their open ends.
+Gets or sets the stroke end in [0, 1]. Equal bounds omit the stroke; fill remains unchanged. Trim precedes dashes, whose phase starts at each trimmed contour. Trim preserves fully included closed contours; partial contours use StrokeCap at their open ends.
+
+### `StrokeJoin`
+
+Gets or sets the stroke join style. The default is Miter.
 
 ### `StrokeStart`
 
@@ -201,7 +181,11 @@ Gets or sets the stroke start in [0, 1], summed across contours in path order. N
 
 ### `UseCurrentColor`
 
-Uses the inherited Color for solid fill when true. The default is false. A gradient Fill and the Stroke paint are unchanged.
+Uses the inherited Color for solid fill when true. The default is false. BackgroundGradient and stroke colors are unchanged.
+
+### `VectorEffect`
+
+Gets or sets the vector effect. The default is None. NonScalingStroke keeps widths and dash lengths in window logical pixels. The stroke stays centered on the path.
 
 ## `ShapeFit`
 
@@ -380,15 +364,6 @@ Represents an immutable vector path in a top-left coordinate system. Coordinates
 ### `Equals(VectorPath)`
 
 Tests whether another path has the same content.
-
-### `Parse(string,ElementRect)`
-
-Parses SVG path data in the supplied view box. Parse once outside Build and retain the result.
-
-- `data`: The SVG path commands.
-- `viewBox`: The finite view box with positive width and height.
-
-Returns: The immutable vector path.
 
 ### `Empty`
 
