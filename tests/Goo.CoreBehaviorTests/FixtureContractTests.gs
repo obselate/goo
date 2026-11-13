@@ -150,6 +150,8 @@ class FixtureContractTests {
             yield Contract[WindowOcclusionFixtures]("HostTransitionsNotifyOnUiThread")
             yield Contract[WindowStartupFixtures]("InitialBoundsContract")
             yield Contract[WindowStartupFixtures]("PresentModesContract")
+            yield Contract[WindowStartupFixtures]("SingleInstanceRejectsAttachedWindowContract")
+            yield Contract[WindowStartupFixtures]("ApplicationStateVerificationContract")
             yield Contract[WindowStartupFixtures]("WindowLayoutSizeContract")
             yield Contract[WindowStartupFixtures]("SizeToContentContract")
             yield Contract[PathBuilderFixtures]("ResetPreservesPublishedPathAndClearsContour")

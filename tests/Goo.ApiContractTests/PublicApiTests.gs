@@ -46,6 +46,15 @@ open class PublicApiTests {
     }
 
     @Fact
+    func ApplicationRejectsMissingIdentityAndInvalidTimeouts() {
+        let missing = Assert.Throws[InvalidOperationException](() -> Application.Configure(typeof(object).Assembly))
+        Assert.Contains("GooPackageId", missing.Message)
+        for timeout in []float64{0.0, -1.0, Double.NaN, Double.PositiveInfinity, float64(Int32.MaxValue) + 1.0} {
+            Assert.Throws[ArgumentOutOfRangeException](() -> Application.AcquireSingleInstance([]string{}, timeout))
+        }
+    }
+
+    @Fact
     func PublicSignaturesDoNotLeakSubstrate() {
         let gooAssembly = typeof(Window).Assembly
         let violations = ApiTypes()

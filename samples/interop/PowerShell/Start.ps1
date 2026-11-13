@@ -17,4 +17,4 @@ if ($Arguments -contains '--check') {
     return
 }
 $window = [Goo.Window]@{ Title = 'PowerShell interop'; Size = [Goo.LayoutSize]::new(400, 240); Root = $counter }
-$window.Run()
+[Goo.Application]::Run($window)
