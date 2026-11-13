@@ -49,6 +49,7 @@ public partial class Window {
   /// Measures the selected root axes once before the first map, within MaxSize and the display work area and at least MinSize.
   /// A root axis with a percentage or viewport-relative part keeps Size on that axis.
   /// Descendant viewport units use the declared Size during this measure. Later resizing belongs to the user.
+  /// Ignored on embedded and Android hosts, which control the client size.
   public prop SizeToContent SizeToContent{ get; init; }
 
   private func validateSizeLimit(value float64, other float64, minimum bool) {

@@ -13,7 +13,7 @@ public open class Cell[TInput any] : Cell {
   /// Gets the current immutable input snapshot.
   protected prop Input TInput{ get -> input }
 
-  /// Invokes an input-time callback and rebuilds the Cell that supplied this input.
+  /// Invokes an input-time callback with the supplying Cell's normal callback rebuild rule.
   /// A supplying Cell already in Build needs no extra rebuild.
   /// Call Build-time queries directly. They must not change the supplying Cell's state.
   /// @param callback callback from the current input
@@ -25,7 +25,7 @@ public open class Cell[TInput any] : Cell {
     finally { owner?.EndCallback(previousContext) }
   }
 
-  /// Invokes an input-time callback and rebuilds the Cell that supplied this input.
+  /// Invokes an input-time callback with the supplying Cell's normal callback rebuild rule.
   /// A supplying Cell already in Build needs no extra rebuild.
   /// Call Build-time queries directly. They must not change the supplying Cell's state.
   /// @typeparam T callback argument type
@@ -39,7 +39,7 @@ public open class Cell[TInput any] : Cell {
     finally { owner?.EndCallback(previousContext) }
   }
 
-  /// Invokes an input-time callback and rebuilds the Cell that supplied this input.
+  /// Invokes an input-time callback with the supplying Cell's normal callback rebuild rule.
   /// A supplying Cell already in Build needs no extra rebuild.
   /// Call Build-time queries directly. They must not change the supplying Cell's state.
   /// @typeparam T1 first callback argument type
@@ -55,7 +55,7 @@ public open class Cell[TInput any] : Cell {
     finally { owner?.EndCallback(previousContext) }
   }
 
-  /// Invokes an input-time callback and rebuilds the Cell that supplied this input.
+  /// Invokes an input-time callback with the supplying Cell's normal callback rebuild rule.
   /// A supplying Cell already in Build needs no extra rebuild.
   /// Call Build-time queries directly. They must not change the supplying Cell's state.
   /// @typeparam T callback argument type

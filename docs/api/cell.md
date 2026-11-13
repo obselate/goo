@@ -100,7 +100,7 @@ Returns: an animation bridge owned by this component
 
 Creates a fixed-unit length animated by this component.
 
-- `initial`: pixel or percentage initial value
+- `initial`: initial fixed-unit length
 
 Returns: an animation bridge owned by this component
 
@@ -108,7 +108,7 @@ Returns: an animation bridge owned by this component
 
 Creates a fixed-unit length animation that reports values without rebuilding this component.
 
-- `initial`: pixel or percentage initial value
+- `initial`: initial fixed-unit length
 - `onChange`: receives values from Set and each motion tick
 
 Returns: an animation bridge owned by this component
@@ -304,7 +304,7 @@ Derives local state from the newly stored immutable input before Build. Runs for
 
 ### `InvokeInputCallback(System.Action)`
 
-Invokes an input-time callback and rebuilds the Cell that supplied this input. A supplying Cell already in Build needs no extra rebuild. Call Build-time queries directly. They must not change the supplying Cell's state.
+Invokes an input-time callback with the supplying Cell's normal callback rebuild rule. A supplying Cell already in Build needs no extra rebuild. Call Build-time queries directly. They must not change the supplying Cell's state.
 
 - `callback`: callback from the current input
 

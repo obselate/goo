@@ -1,7 +1,6 @@
 package Goo
 
 import System
-import System.Collections.Generic
 
 /// Selects how path geometry maps into the padded layout bounds.
 /// Contain is the centered aspect-preserving default.
@@ -20,7 +19,7 @@ public enum StrokeJoin { Miter; Round; Bevel }
 public enum VectorEffect { None; NonScalingStroke }
 
 /// Displays a vector path with fill and one uniform stroke.
-/// Use Fill and Stroke for path paint. Legacy paint without either throws:
+/// Use Fill and Stroke for path paint. Legacy paint always throws:
 /// "Shape paint moved to Fill and Stroke".
 public class Shape : Blob {
   private var declarationPath VectorPath
@@ -33,7 +32,6 @@ public class Shape : Blob {
   private var strokeStart float64
   private var strokeEnd float64
   private var paintEntries StyleEntries?
-  private var filteredStyles Dictionary[StyleEntries, StyleEntries]?
 
   internal override func coreBlob() {
   }
@@ -148,31 +146,15 @@ public class Shape : Blob {
 
   internal func FilterPaintEntries(source StyleEntries?) StyleEntries? {
     guard let entries = source else { return nil }
-    if let cache = filteredStyles {
-      if cache.TryGetValue(entries, out var filtered) { return filtered }
-    }
     var cursor = entries.Cursor()
-    var legacy = false
     while cursor.MoveNext() {
       let field = cursor.Current.Field
       if field is StyleField.BackgroundColor or StyleField.BackgroundGradient
-        or StyleField.ShapeStrokeWidth or StyleField.ShapeStrokeColor { legacy = true }
+        or StyleField.ShapeStrokeWidth or StyleField.ShapeStrokeColor {
+        throw InvalidOperationException("Shape paint moved to Fill and Stroke")
+      }
     }
-    if !legacy { return source }
-    if Fill == nil && Stroke == nil {
-      throw InvalidOperationException("Shape paint moved to Fill and Stroke")
-    }
-    let result = StyleEntries{}
-    cursor = entries.Cursor()
-    while cursor.MoveNext() {
-      let field = cursor.Current.Field
-      if field is StyleField.BackgroundColor or StyleField.BackgroundGradient
-        or StyleField.ShapeStrokeWidth or StyleField.ShapeStrokeColor { continue }
-      result.Add(cursor.Current)
-    }
-    if filteredStyles == nil { filteredStyles = Dictionary[StyleEntries, StyleEntries]() }
-    filteredStyles?.Add(entries, result)
-    return result
+    return source
   }
 
   /// Creates a shape with default paint options.

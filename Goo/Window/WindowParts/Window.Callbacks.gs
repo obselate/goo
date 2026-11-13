@@ -81,12 +81,13 @@ public partial class Window {
   private var lateContinuationDrain WaitCallback?
   private var closeDrainMs float64 = 2000.0
 
-  /// Gets or sets the close drain bound in milliseconds. The default is 2000. Zero skips the wait.
+  /// Gets or sets the close drain bound in milliseconds on the owning UI thread. The default is 2000. Zero skips the wait.
   /// Closing stops UI work and cancels Cell lifetimes before draining async handlers on the UI thread.
   /// After this bound, continuations run on a serialized background queue. They must not access UI state.
   public prop CloseDrainMs float64 {
     get -> ReadUntrackedWindowValue(closeDrainMs)
     set {
+      requireUiThread("Window.CloseDrainMs")
       if !Double.IsFinite(value) || value < 0.0 { throw ArgumentOutOfRangeException("value") }
       closeDrainMs = value
     }

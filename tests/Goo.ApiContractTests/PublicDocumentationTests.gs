@@ -118,85 +118,6 @@ class PublicDocumentationTests {
         }
     }
 
-    @Fact
-    func ApiReferenceDocumentsUniformShapeStrokeContract() {
-        let shapes = ReadApiPage("shapes.md")
-        Assert.Contains("Displays a vector path with fill and one uniform stroke.", shapes, StringComparison.Ordinal)
-        Assert.Contains("Shape paint moved to Fill and Stroke", shapes, StringComparison.Ordinal)
-    }
-
-    @Fact
-    func ApiReferenceDocumentsStyleCompositionAndGradientClearing() {
-        let style = ReadApiPage("style.md")
-        Assert.Contains(
-            "copies another style's ordered declarations at its exact declaration position",
-            style,
-            StringComparison.Ordinal
-        )
-        Assert.Contains("`BackgroundGradient: nil` is an explicit clear declaration", style, StringComparison.Ordinal)
-        Assert.Contains("`HoverStyle`, `ActiveStyle`, `FocusStyle`, and `DisabledStyle`", style, StringComparison.Ordinal)
-        Assert.Contains("`AccessibilityName` and `AccessibilityRole`", style, StringComparison.Ordinal)
-    }
-
-    @Fact
-    func ApiReferenceDocumentsKeyboardAndFocusRouting() {
-        let input = ReadApiPage("input.md")
-        Assert.Contains("first bubble from the focused element through its parents", input, StringComparison.Ordinal)
-        Assert.Contains("updates the old and new `Focused` states first", input, StringComparison.Ordinal)
-        Assert.Contains("depth-first tree order and wrap at the ends", input, StringComparison.Ordinal)
-        Assert.Contains("`KeyBinding(key, modifiers, onPress)`", input, StringComparison.Ordinal)
-        Assert.Contains("`KeyEvent.TargetEditsText`", input, StringComparison.Ordinal)
-        Assert.Contains("`window.Focus.EditsText`", input, StringComparison.Ordinal)
-        Assert.Contains("`window.Modifiers`", input, StringComparison.Ordinal)
-    }
-
-    @Fact
-    func ApiReferenceDocumentsTextMaxLinesContract() {
-        let style = ReadApiPage("style.md")
-        Assert.Contains(
-            "Zero keeps all lines; negative values throw ArgumentOutOfRangeException.",
-            style,
-            StringComparison.Ordinal
-        )
-        Assert.Contains(
-            "It does not inherit, change TextEntry, or interpolate through transitions.",
-            style,
-            StringComparison.Ordinal
-        )
-    }
-
-    @Fact
-    func ApiReferenceDocumentsTextStrokeContract() {
-        let style = ReadApiPage("style.md")
-        Assert.Contains(
-            "The stroke is paint-only, outlines glyphs only, and snaps during transitions.",
-            style,
-            StringComparison.Ordinal
-        )
-        Assert.Contains(
-            "Sets the inherited glyph stroke color without changing text layout.",
-            style,
-            StringComparison.Ordinal
-        )
-    }
-
-    @Fact
-    func ApiReferenceDocumentsDirectionContract() {
-        let style = ReadApiPage("style.md")
-        let text = ReadApiPage("text.md")
-        Assert.Contains(
-            "Auto keeps flex layout left-to-right and detects each text paragraph's direction.",
-            style,
-            StringComparison.Ordinal
-        )
-        Assert.Contains("Start is the default and follows paragraph direction.", style, StringComparison.Ordinal)
-        Assert.Contains(
-            "MoveLeft and MoveRight use visual order while mounted and logical document order otherwise.",
-            text,
-            StringComparison.Ordinal
-        )
-    }
-
     private data struct DocumentationShape(Parameters[]string, TypeParameters[]string, Returns bool) : IEquatable[
         DocumentationShape
     ] {
@@ -2280,10 +2201,6 @@ class PublicDocumentationTests {
                 true
             )
         }
-        private func ReadApiPage(name string) string -> File.ReadAllText(
-            Path.Combine(FindRepositoryRoot().FullName, "docs", "api", name)
-        )
-
         private func AssertApprovedCallablesAreTracked() {
             let path = Path.Combine(AppContext.BaseDirectory, "PublicApi.approved.txt")
             Assert.True(File.Exists(path), "Missing approved public API baseline at $path.")

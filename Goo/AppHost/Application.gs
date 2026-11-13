@@ -18,11 +18,11 @@ public shared class Application {
         set;
     }
 
-    /// Gets or sets tracked-state verification.
-    /// Defaults to true when a debugger is attached or a DevTools session is registered.
-    public prop VerifyState bool {
-        get -> StateVerification.Enabled
-        set -> StateVerification.Enabled = value
+    /// Gets or sets tracked-state verification. Nil selects automatic verification.
+    /// Automatic verification is enabled with an attached debugger or a registered DevTools session.
+    public prop VerifyState bool? {
+        get -> StateVerification.Override
+        set -> StateVerification.Override = value
     }
 
     /// Configures application identity before native initialization.

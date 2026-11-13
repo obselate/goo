@@ -732,26 +732,22 @@ class StudioCell : Cell {
                 if selected == 4 {
                     addStudioRipple(pointerX, pointerY)
                 }
-                Rebuild()
             },
             OnPointerMove: func (e PointerEvent) {
                 let bounds = Canvas.BorderBox
                 pointerX = Math.Clamp(e.Position.X / Math.Max(bounds.Width, 1.0), 0.0, 1.0)
                 pointerY = Math.Clamp(e.Position.Y / Math.Max(bounds.Height, 1.0), 0.0, 1.0)
                 pointerPressure = e.Pressure
-                Rebuild()
             },
             OnPointerUp: func (e PointerEvent) {
                 pointerDown = false
                 pointerPressure = 0.0
                 e.ReleaseCapture()
-                Rebuild()
             },
             OnPointerCancel: func (e PointerEvent) {
                 pointerDown = false
                 pointerPressure = 0.0
                 e.ReleaseCapture()
-                Rebuild()
             },
             Children: content,
         }

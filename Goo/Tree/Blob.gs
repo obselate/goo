@@ -65,6 +65,11 @@ public open class Blob : Style {
         value.Placeholder?.Freeze(true, depth + 1)
         value.Fallback?.Freeze(true, depth + 1)
       }
+      case value is Text {
+        if let ranges = value.StyleRangeValues {
+          for entry in ranges { entry.Style.FreezeStyle(owner, depth) }
+        }
+      }
       case value is TextEntry { value.InputOptions?.Freeze(owner) }
       case value is TextEditor { value.InputOptions?.Freeze(owner) }
       case value is Shape { value.Stroke?.Freeze(owner) }
@@ -207,20 +212,26 @@ public open class Blob : Style {
       declarationOnPointerDrag = value
     }
   }
-  /// Gets the Euclidean press-to-start distance in layout units, measured on PointerDragAxis.
+  /// Gets or sets the finite, non-negative Euclidean press-to-start distance in layout units, measured on PointerDragAxis.
   /// Zero starts on press for mouse and pen, or on the first nonzero touch movement.
+  /// @exception ArgumentOutOfRangeException The value is non-finite or negative.
   public prop PointerDragThreshold float64 {
     get -> declarationPointerDragThreshold
     set {
       CheckMutable()
+      if !Double.IsFinite(value) || value < 0.0 { throw ArgumentOutOfRangeException("PointerDragThreshold") }
       declarationPointerDragThreshold = value
     }
   }
-  /// Gets the axis measured by the threshold. Nil measures both axes. Off-axis movement alone does not start a drag.
+  /// Gets or sets the axis measured by the threshold. Nil measures both axes. Off-axis movement alone does not start a drag.
+  /// @exception ArgumentOutOfRangeException The value is not nil or a defined LayoutAxis.
   public prop PointerDragAxis LayoutAxis? {
     get -> declarationPointerDragAxis
     set {
       CheckMutable()
+      if let axis = value {
+        if !Enum.IsDefined(axis) { throw ArgumentOutOfRangeException("PointerDragAxis") }
+      }
       declarationPointerDragAxis = value
     }
   }

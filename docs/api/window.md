@@ -685,7 +685,7 @@ if result.Status == PlatformOpenStatus.Failed {
 
 `Platform.OpenAsync` starts the system handler on a `go` child. `Success` means the handler started, not that it opened the target. Relative paths throw `ArgumentException`. Cancellation stops a launch that has not started.
 
-Use `NativeDialogs.ShowError(title, message)` before any window opens or after the last window closes. It blocks the caller and returns `MessageBoxStatus`. Linux returns `Unsupported`. Write the message to standard error when no native box is supported.
+Use `NativeDialogs.ShowError(title, message)` on the main thread before any window opens or after the last window closes. It blocks the caller and returns `MessageBoxResult` with `Status` and native `Error` detail. Linux and Android return `Unsupported`. Write the message to standard error when no native box is supported.
 
 ## File and image clipboard data
 
@@ -1511,7 +1511,7 @@ Gets a surface-local rectangle in logical pixels, or nil for the whole window. C
 ## `Window`
 
 
-Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread. State, IsFocused, Size, NativeWidth, NativeHeight, UiScale, Preferences and Modifiers track reads in Build and retained builders. Other mutable window getters keep automatic callback rebuilding.
+Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread. State, IsFocused, Size, NativeWidth, NativeHeight, UiScale, PixelScale, Preferences and Modifiers track reads in Build and retained builders. Other mutable window getters keep automatic callback rebuilding.
 
 ### `DisplayChanged`
 
@@ -1697,7 +1697,7 @@ Measures single-line Text width in layout units on the window's UI thread. Appli
 - `text`: The text to measure.
 - `style`: The text declarations. A Text blob is also a Style.
 
-Returns: The width in layout pixels.
+Returns: The width in layout units.
 
 ### `NextPresentationAsync(System.Threading.CancellationToken)`
 
@@ -1839,7 +1839,7 @@ Gets clipboard services for this window's UI thread.
 
 ### `CloseDrainMs`
 
-Gets or sets the close drain bound in milliseconds. The default is 2000. Zero skips the wait. Closing stops UI work and cancels Cell lifetimes before draining async handlers on the UI thread. After this bound, continuations run on a serialized background queue. They must not access UI state.
+Gets or sets the close drain bound in milliseconds on the owning UI thread. The default is 2000. Zero skips the wait. Closing stops UI work and cancels Cell lifetimes before draining async handlers on the UI thread. After this bound, continuations run on a serialized background queue. They must not access UI state.
 
 ### `Closed`
 
@@ -1975,7 +1975,7 @@ Gets or sets the native owner before Open. The owner must be an open desktop win
 
 ### `PixelScale`
 
-Gets the display scale multiplied by UiScale, the factor used to snap layout positions and translation-only transforms to device pixels on both axes.
+Gets the display scale multiplied by UiScale, the factor used to snap layout positions and translation-only transforms to device pixels on both axes. Reads in Build and retained builders track display-scale and UiScale changes.
 
 ### `PlatformInput`
 
@@ -2015,7 +2015,7 @@ Gets or sets the client size in layout units. Native assignments multiply by UiS
 
 ### `SizeToContent`
 
-Measures the selected root axes once before the first map, within MaxSize and the display work area and at least MinSize. A root axis with a percentage or viewport-relative part keeps Size on that axis. Descendant viewport units use the declared Size during this measure. Later resizing belongs to the user.
+Measures the selected root axes once before the first map, within MaxSize and the display work area and at least MinSize. A root axis with a percentage or viewport-relative part keeps Size on that axis. Descendant viewport units use the declared Size during this measure. Later resizing belongs to the user. Ignored on embedded and Android hosts, which control the client size.
 
 ### `SmoothScrolling`
 

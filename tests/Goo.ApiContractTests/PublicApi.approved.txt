@@ -1477,7 +1477,7 @@ method|Goo.NativeDialogOwnerResult|GetHashCode|virtual|public|generic:|()->Syste
 method|Goo.NativeDialogOwnerResult|ToString|virtual|public|generic:|()->System.String
 method|Goo.NativeDialogOwnerResult|op_Equality|static|public|generic:|(left:Goo.NativeDialogOwnerResult,right:Goo.NativeDialogOwnerResult)->System.Boolean
 method|Goo.NativeDialogOwnerResult|op_Inequality|static|public|generic:|(left:Goo.NativeDialogOwnerResult,right:Goo.NativeDialogOwnerResult)->System.Boolean
-method|Goo.NativeDialogs|ShowError|static|public|generic:|(title:System.String,message:System.String)->Goo.MessageBoxStatus
+method|Goo.NativeDialogs|ShowError|static|public|generic:|(title:System.String,message:System.String)->Goo.MessageBoxResult
 method|Goo.NativeDialogs|ShowMessageBoxAsync|static|public|generic:|(owner:Goo.Window,options:Goo.MessageBoxOptions)->System.Threading.Tasks.Task`1<Goo.MessageBoxResult>
 method|Goo.NativeFileDrag|TryCreate|static|public|generic:|(values:System.Collections.Generic.IReadOnlyList`1<System.String>,out result:Goo.NativeFileDrag?&)->System.Boolean
 method|Goo.NativeMenuBar|Dispose|instance|public|generic:|()->System.Void
@@ -2095,7 +2095,7 @@ property|Goo.ApplicationActivation|NotificationId|System.String|instance|get:pub
 property|Goo.ApplicationActivation|Payload|System.String|instance|get:public,init:public|index:()
 property|Goo.ApplicationActivation|Target|System.Uri?|instance|get:public,init:public|index:()
 property|Goo.ApplicationActivation|WorkingDirectory|System.String|instance|get:public,init:public|index:()
-property|Goo.Application|VerifyState|System.Boolean|static|get:public,set:public|index:()
+property|Goo.Application|VerifyState|System.Nullable`1<System.Boolean>|static|get:public,set:public|index:()
 property|Goo.AsyncImageSource|ContentVersion|System.UInt64|instance|get:public|index:()
 property|Goo.Blob|AccessibilityName|System.String|instance|get:public,set:public|index:()
 property|Goo.Blob|AccessibilityRole|Goo.AccessibilityRole|instance|get:public,set:public|index:()

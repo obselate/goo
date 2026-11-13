@@ -24,6 +24,9 @@
   that drops as items freeze at their maximum size.
 - Snap a positive border width to at least one whole device pixel
   (`round half away from zero` of `width * pointScaleFactor`) when the style resolves it.
+- Resolve mixed pixel and percentage lengths with pooled mixed values and percentage tracking (#789).
+- Measure intrinsic minimum and maximum sizes in `Algorithm/IntrinsicSize.cs` (#789).
+- Store processed width and height as separate fields in `Node/Node.cs` (#794).
 
 The vendored tree contains only the source needed to build Goo. Focused Goo tests
 cover the local behavior changes; upstream Yoga tests remain in the upstream

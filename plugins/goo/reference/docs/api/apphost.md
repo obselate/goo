@@ -91,7 +91,7 @@ Opens the window and runs the UI event loop until all Goo windows close.
 
 ### `VerifyState`
 
-Gets or sets tracked-state verification. Defaults to true when a debugger is attached or a DevTools session is registered.
+Gets or sets tracked-state verification. Nil selects automatic verification. Automatic verification is enabled with an attached debugger or a registered DevTools session.
 
 ## `GraphicsUnavailableException`
 

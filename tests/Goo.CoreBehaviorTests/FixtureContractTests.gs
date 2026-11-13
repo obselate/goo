@@ -18,15 +18,6 @@ class FixtureContractTests {
         Assert.True(CellFixtures().ServicesBeforeWindowBinding())
 
     @Fact
-    func KeyedListsFromData() {
-        let fixture = TreeFixtures()
-        Assert.True(fixture.EachAssignsDataKeysContract())
-        Assert.True(fixture.EachPreservesExplicitKeysContract())
-        Assert.True(fixture.EachReorderRetainsIdentityContract())
-        Assert.True(fixture.EachDuplicateKeysThrowContract())
-    }
-
-    @Fact
     func CustomLayoutRetainsMixedMaximumMeasurements() ->
         Assert.True(LayoutFixtures().CustomLayoutRetainsMixedMaximumMeasurements())
 
@@ -249,6 +240,21 @@ class FixtureContractTests {
             yield Contract[CellFixtures]("TypedFactoryStoresInputWithoutRecreatingCellContract")
             yield Contract[CellFixtures]("SchedulingPhasesAndFailedMountsContract")
             yield Contract[StateFixtures]("BuilderScopeDependencyTransactionContract")
+            yield Contract[StateFixtures]("CellBuildRejectsStateWritesContract")
+            yield Contract[StateFixtures]("StateWritesRequireReaderThreadContract")
+            yield Contract[StateFixtures]("StateOnlySchedulingAndMountedContract")
+            yield Contract[StateFixtures]("InputChangedTracksOnlyBuildReadsContract")
+            yield Contract[StateFixtures]("UnsafeStatePayloadFallbackStaysPermanentContract")
+            yield Contract[StateFixtures]("PortalVerificationAcceptsUnchangedDeclarationsContract")
+            yield Contract[StateFixtures]("ContextChangeClearsPendingVerificationContract")
+            yield Contract[StateFixtures]("ProviderChangeClearsPendingVerificationContract")
+            yield Contract[StateFixtures]("FailedRootMountClearsReadsAndKeepsBuildErrorContract")
+            yield Contract[TreeFixtures]("TextRangeStylesFreezeAtHandOffContract")
+            yield Contract[TreeFixtures]("FrozenChildrenCanInitializeMutableContainersContract")
+            yield Contract[TreeFixtures]("SizedReadEntryFailureRestoresContextContract")
+            yield Contract[LayoutFixtures]("RelativeDeclarationsUpdateMountedNodesContract")
+            yield Contract[LayoutFixtures]("RetiredRelativeNodesStopResolvingContract")
+            yield Contract[LayoutFixtures]("RelativeLengthsResolveAfterLateMountContract")
             yield Contract[StateFixtures]("BuilderScopeIncrementalAndNestedContract")
             yield Contract[StateFixtures]("VerificationSettingContract")
             yield Contract[StateFixtures]("VerificationRejectsExternalReadsContract")

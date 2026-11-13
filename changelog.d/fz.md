@@ -1,65 +1,25 @@
-### Breaking changes
+## Changed
 
-- Blob and Style declarations can be changed while you build them. Once Goo receives a Blob, property assignments, `Add`, and child-list mutations throw `InvalidOperationException`. State styles and retained declaration objects freeze with their Blob. Shared child lists are copied at hand-off.
-- Return a new Blob when its declaration changes. Returning the same Blob does not refresh it. Virtual items no longer write keys into authored content. `Each` rejects a previously handed-off Blob that has no key. Set its key before hand-off or return a new Blob.
-- `TextInputOptions.AutofillHints` remains `[]string`. Assignment and reads copy the values. Changing a returned array does not change the stored hints.
-- `WindowMetrics.Deconstruct` uses `width` and `height` out parameters. `Platform` is now static. The `LongPressGesture` duration parameter is now `durationMs`. Update named arguments.
-- Public classes that are not designed for inheritance are now sealed.
-
-The following properties change from `init` to guarded `set`:
-
-- `Style`: `BasedOn`, `Width`, `Height`, `MinWidth`, `MinHeight`, `MaxWidth`, `MaxHeight`,
-  `AspectRatio`, `Padding`, `PaddingStart`, `PaddingEnd`, `Margin`, `MarginStart`, `MarginEnd`,
-  `Gap`, `RowGap`, `ColumnGap`, `FlexDirection`, `FlexWrap`, `JustifyContent`, `AlignItems`,
-  `AlignSelf`, `AlignContent`, `Flex`, `FlexGrow`, `FlexShrink`, `FlexBasis`, `Position`, `Inset`,
-  `Left`, `Start`, `Top`, `Right`, `End`, `Bottom`, `Display`, `Direction`, `Visibility`, `ZIndex`,
-  `Overflow`, `OverflowX`, `OverflowY`, `ScrollbarVisibility`, `ScrollbarVisibilityX`,
-  `ScrollbarVisibilityY`, `Scrollbar`, `ScrollbarX`, `ScrollbarY`, `Cursor`, `BackgroundColor`,
-  `BackgroundColorAnim`, `BackgroundGradient`, `BackgroundImageSource`, `BackgroundImageFit`,
-  `ClipPath`, `ClipPathFit`, `ClipPathFillRule`, `BorderRadius`, `BorderTopLeftRadius`,
-  `BorderTopRightRadius`, `BorderBottomLeftRadius`, `BorderBottomRightRadius`, `BorderWidth`,
-  `BorderStartWidth`, `BorderEndWidth`, `BorderColor`, `BorderColorAnim`, `BorderStartColor`,
-  `BorderStartColorAnim`, `BorderEndColor`, `BorderEndColorAnim`, `BorderStyle`, `OutlineWidth`,
-  `OutlineColor`, `OutlineColorAnim`, `OutlineOffset`, `Opacity`, `OpacityAnim`, `BackdropBlur`,
-  `BlendMode`, `ShaderEffect`, `Transform`, `TranslateAnim`, `ScaleAnim`, `TransformOriginX`,
-  `TransformOriginY`, `BoxShadow`, `BoxShadows`, `TextShadow`, `TextShadows`, `FontFamily`,
-  `Language`, `FontSize`, `Color`, `ColorAnim`, `TextStrokeWidth`, `TextStrokeColor`,
-  `TextStrokeColorAnim`, `FontWeight`, `FontStyle`, `LetterSpacing`, `LineHeight`, `TextAlign`,
-  `TextDecoration`, `TextWrap`, `TextTrimming`, `TextMaxLines`, `TextTransform`.
-- `Blob`: `Key`, `Handle`, `FocusTarget`, `Accessibility`, `AccessibilityName`,
-  `AccessibilityRole`, `OnClick`, `OnPointerDown`, `OnPointerMove`, `OnPointerUp`,
-  `OnPointerCancel`, `OnPointerDrag`, `PointerDragThreshold`, `PointerDragAxis`, `OnPointerEnter`,
-  `OnPointerLeave`, `OnWheel`, `OnKeyDown`, `OnKeyUp`, `OnFocus`, `OnBlur`, `OnTextInput`,
-  `OnTextComposition`, `OnTextCompositionCancel`, `OnTextCandidates`, `DragSource`, `DropTarget`,
-  `Gestures`, `KeyBindings`, `HoverStyle`, `ActiveStyle`, `FocusStyle`, `DisabledStyle`,
-  `TransitionMs`, `TransitionEasing`, `TransitionDelayMs`, `TransitionProperties`,
-  `LayoutTransition`, `Focusable`, `TabStop`, `Disabled`, `AutoFocus`.
-- `AccessibilityValue`: `Now`, `Minimum`, `Maximum`, `Text`.
-- `AccessibilityRelationships`: `LabelledBy`, `DescribedBy`, `Controls`, `Owns`, `FlowTo`,
-  `ErrorMessage`, `ActiveDescendant`.
-- `Accessibility`: `Role`, `CustomRole`, `Name`, `Description`, `Value`, `Range`, `Checked`,
-  `Selected`, `Expanded`, `ReadOnly`, `Required`, `Invalid`, `Busy`, `Level`, `PositionInSet`,
-  `SizeOfSet`, `RowIndex`, `ColumnIndex`, `RowCount`, `ColumnCount`, `Orientation`, `Modal`,
-  `Multiline`, `MultiSelectable`, `HasPopup`, `Live`, `Atomic`, `Relationships`, `Hidden`,
-  `Actions`, `OnAction`.
-- `Container`: `Children`, `Layout`, `HitTestSelf`.
-- `Button`: `Children`.
-- `Row`: `Children`, `HitTestSelf`.
-- `Column`: `Children`, `HitTestSelf`.
-- `Image`: `Source`, `Fit`, `Placeholder`, `Fallback`, `PixelsPerUnit`.
-- `Text`: `Content`, `Selectable`, `SelectionColor`, `StyleRanges`.
-- `TextEntry`: `Value`, `Controlled`, `ReadOnly`, `Placeholder`, `PlaceholderColor`, `Password`,
-  `InputOptions`, `OnChange`, `OnSubmit`, `SelectionColor`.
-- `TextEditor`: `Controller`, `Layers`, `ReadOnly`, `Placeholder`, `PlaceholderColor`,
-  `InputOptions`, `SelectionColor`, `CaretColor`, `ShowLineNumbers`, `LineNumberColor`,
-  `CurrentLineColor`, `OverscanLines`, `OnChange`, `OnSubmit`.
-- `Shape`: `Path`, `Fit`, `Fill`, `Stroke`, `FillRule`, `UseCurrentColor`, `CornerRadius`,
-  `StrokeStart`, `StrokeEnd`.
-- `Portal`: `Anchor`, `Placement`, `AnchorRect`, `CollisionBounds`, `HideWhenAnchorClipped`,
-  `FocusScope`, `Scrim`, `OnDismiss`.
-- `Virtual`: `Source`.
-- `FocusScopeOptions`: `Modal`, `RestoreFocus`, `InitialFocus`.
-- `TextInputOptions`: `Purpose`, `EnterAction`, `AutofillHints`.
-- `Scrollbar`: `Thickness`, `HitThickness`, `Inset`, `MinThumbLength`, `HideDelayMs`, `FadeMs`,
-  `ReserveSpace`, `Track`, `Thumb`.
-- `VectorStroke`: `Cap`, `Join`, `MiterLimit`, `Dashes`, `VectorEffect`.
+- Breaking: Blob and Style declarations can be changed while you build them. Once Goo receives a Blob, property assignments, `Add`, and child-list mutations throw `InvalidOperationException`. State styles and retained declaration objects freeze with their Blob. Shared child lists are copied at hand-off.
+- Breaking: Return a new Blob when its declaration changes. Returning the same Blob does not refresh it. Virtual items no longer write keys into authored content. `Each` rejects a previously handed-off Blob that has no key. Set its key before hand-off or return a new Blob.
+- Breaking: `TextInputOptions.AutofillHints` remains `[]string`. Assignment and reads copy the values. Changing a returned array does not change the stored hints.
+- Breaking: `WindowMetrics.Deconstruct` uses `width` and `height` out parameters instead of `logicalWidth` and `logicalHeight`. The `LongPressGesture` duration parameter is now `durationMs` instead of `durationMilliseconds`. Update named arguments.
+- Breaking: These 56 public classes are now sealed in CLR metadata: `Goo.ClipboardDataResult`, `Goo.ClipboardWriteResult`, `Goo.DashPattern`, `Goo.DragData`, `Goo.DragSource`, `Goo.DropTarget`, `Goo.ExternalFrameResult`, `Goo.ExternalImageResult`, `Goo.ExternalImageSessionResult`, `Goo.ExternalImageSession`, `Goo.ExternalImageSource`, `Goo.ExternalImageSync`, `Goo.ExternalImageWindowsDevice`, `Goo.ExternalImage`, `Goo.FontSource`, `Goo.GestureInput`, `Goo.Gestures.DoubleTapGesture`, `Goo.Gestures.LongPressGesture`, `Goo.Gestures.PanGesture`, `Goo.Gestures.TransformGesture`, `Goo.ImageColorProfile`, `Goo.ImageDecodeResult`, `Goo.Images.ImageAssetResult`, `Goo.Images.ImageVariants`, `Goo.Images.ImageVariant`, `Goo.LayerWindowOptions`, `Goo.MessageBoxButton`, `Goo.MessageBoxOptions`, `Goo.MessageBoxResult`, `Goo.NativeAccessibilityAdapter`, `Goo.NativeDataDrop`, `Goo.NativeDialogOwnerLease`, `Goo.NativeDialogs`, `Goo.NativeFileDrag`, `Goo.NativeFileDrop`, `Goo.NativeMenuBar`, `Goo.NativeMenuItem`, `Goo.NativeMenuResult`, `Goo.NativeMenus`, `Goo.OffscreenRenderSession`, `Goo.PopupResult`, `Goo.PopupWindow`, `Goo.Scrollbar`, `Goo.ShaderEffectData`, `Goo.ShaderEffectProgram`, `Goo.ShaderEffect`, `Goo.TransferData`, `Goo.TransferRepresentation`, `Goo.VectorAsset`, `Goo.VectorNode`, `Goo.VectorPaint`, `Goo.VectorStroke`, `Goo.VulkanExternalImageDescription`, `Goo.WindowCapture`, `Goo.WindowDisplay`, `Goo.WindowTimer`. Compose these types instead of subclassing them. For custom gestures, derive from `GestureRecognizer` instead of `DoubleTapGesture`, `LongPressGesture`, `PanGesture` or `TransformGesture`.
+- Breaking: `AccessibilityRelationships` changes these declaration properties from `init` to guarded `set`: `ActiveDescendant`, `Controls`, `DescribedBy`, `ErrorMessage`, `FlowTo`, `LabelledBy`, `Owns`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `AccessibilityValue` changes these declaration properties from `init` to guarded `set`: `Maximum`, `Minimum`, `Now`, `Text`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Accessibility` changes these declaration properties from `init` to guarded `set`: `Actions`, `Atomic`, `Busy`, `Checked`, `ColumnCount`, `ColumnIndex`, `CustomRole`, `Description`, `Expanded`, `HasPopup`, `Hidden`, `Invalid`, `Level`, `Live`, `Modal`, `MultiSelectable`, `Multiline`, `Name`, `OnAction`, `Orientation`, `PositionInSet`, `Range`, `ReadOnly`, `Relationships`, `Required`, `Role`, `RowCount`, `RowIndex`, `Selected`, `SizeOfSet`, `Value`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Blob` changes these declaration properties from `init` to guarded `set`: `Accessibility`, `AutoFocus`, `DisabledStyle`, `Disabled`, `DragSource`, `DropTarget`, `FocusTarget`, `Focusable`, `Gestures`, `Handle`, `KeyBindings`, `Key`, `LayoutTransition`, `OnBlur`, `OnClick`, `OnFocus`, `OnKeyDown`, `OnKeyUp`, `OnPointerCancel`, `OnPointerDown`, `OnPointerEnter`, `OnPointerLeave`, `OnPointerMove`, `OnPointerUp`, `OnTextCandidates`, `OnTextCompositionCancel`, `OnTextComposition`, `OnTextInput`, `OnWheel`, `TabStop`, `TransitionDelayMs`, `TransitionEasing`, `TransitionMs`, `TransitionProperties`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Button` changes these declaration properties from `init` to guarded `set`: `Children`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Container` changes these declaration properties from `init` to guarded `set`: `Children`, `HitTestSelf`, `Layout`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `FocusScopeOptions` changes these declaration properties from `init` to guarded `set`: `InitialFocus`, `Modal`, `RestoreFocus`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Image` changes these declaration properties from `init` to guarded `set`: `Fit`, `PixelsPerUnit`, `Source`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Portal` changes these declaration properties from `init` to guarded `set`: `AnchorRect`, `Anchor`, `CollisionBounds`, `HideWhenAnchorClipped`, `Placement`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Scrollbar` changes these declaration properties from `init` to guarded `set`: `FadeMs`, `HideDelayMs`, `HitThickness`, `Inset`, `MinThumbLength`, `ReserveSpace`, `Thickness`, `Thumb`, `Track`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Shape` changes these declaration properties from `init` to guarded `set`: `CornerRadius`, `FillRule`, `Fit`, `Path`, `StrokeEnd`, `StrokeStart`, `UseCurrentColor`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Style` changes these declaration properties from `init` to guarded `set`: `AlignContent`, `AlignItems`, `AlignSelf`, `AspectRatio`, `BackdropBlur`, `BackgroundColorAnim`, `BackgroundColor`, `BackgroundGradient`, `BackgroundImageFit`, `BackgroundImageSource`, `BasedOn`, `BlendMode`, `BorderBottomLeftRadius`, `BorderBottomRightRadius`, `BorderColorAnim`, `BorderColor`, `BorderEndColorAnim`, `BorderEndColor`, `BorderEndWidth`, `BorderRadius`, `BorderStartColorAnim`, `BorderStartColor`, `BorderStartWidth`, `BorderStyle`, `BorderTopLeftRadius`, `BorderTopRightRadius`, `BorderWidth`, `Bottom`, `BoxShadows`, `BoxShadow`, `ClipPathFillRule`, `ClipPathFit`, `ClipPath`, `ColorAnim`, `Color`, `ColumnGap`, `Cursor`, `Direction`, `Display`, `End`, `FlexBasis`, `FlexDirection`, `FlexGrow`, `FlexShrink`, `FlexWrap`, `FontFamily`, `FontSize`, `FontStyle`, `FontWeight`, `Gap`, `Height`, `JustifyContent`, `Language`, `Left`, `LetterSpacing`, `LineHeight`, `MarginEnd`, `MarginStart`, `Margin`, `MaxHeight`, `MaxWidth`, `MinHeight`, `MinWidth`, `OpacityAnim`, `Opacity`, `OutlineColorAnim`, `OutlineColor`, `OutlineOffset`, `OutlineWidth`, `OverflowX`, `OverflowY`, `Overflow`, `PaddingEnd`, `PaddingStart`, `Padding`, `Position`, `Right`, `RowGap`, `ScaleAnim`, `ScrollbarVisibilityX`, `ScrollbarVisibilityY`, `ScrollbarVisibility`, `ScrollbarX`, `ScrollbarY`, `Scrollbar`, `ShaderEffect`, `Start`, `TextAlign`, `TextDecoration`, `TextMaxLines`, `TextShadows`, `TextShadow`, `TextStrokeColorAnim`, `TextStrokeColor`, `TextStrokeWidth`, `TextTransform`, `TextTrimming`, `TextWrap`, `Top`, `TransformOriginX`, `TransformOriginY`, `Transform`, `TranslateAnim`, `Visibility`, `Width`, `ZIndex`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `TextEditor` changes these declaration properties from `init` to guarded `set`: `CaretColor`, `CurrentLineColor`, `InputOptions`, `Layers`, `LineNumberColor`, `OnChange`, `OnSubmit`, `OverscanLines`, `PlaceholderColor`, `Placeholder`, `ReadOnly`, `SelectionColor`, `ShowLineNumbers`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `TextEntry` changes these declaration properties from `init` to guarded `set`: `Controlled`, `InputOptions`, `OnChange`, `OnSubmit`, `Password`, `PlaceholderColor`, `Placeholder`, `ReadOnly`, `SelectionColor`, `Value`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `TextInputOptions` changes these declaration properties from `init` to guarded `set`: `AutofillHints`, `EnterAction`, `Purpose`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Text` changes these declaration properties from `init` to guarded `set`: `Content`, `StyleRanges`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `VectorStroke` changes these declaration properties from `init` to guarded `set`: `VectorEffect`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- `VectorStroke` adds guarded setters for the formerly get-only `Cap`, `Join`, `MiterLimit` and `Dashes` properties.

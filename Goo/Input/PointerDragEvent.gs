@@ -51,6 +51,7 @@ public struct PointerDragEvent {
         internal init;
     }
     /// Gets movement from the previous sample in element-local units.
+    /// Started excludes movement before the threshold-crossing sample. Use Translation for total movement from the press.
     public prop Delta Point {
         get;
         internal init;

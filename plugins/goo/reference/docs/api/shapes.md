@@ -161,7 +161,7 @@ Gets the y coordinate.
 ## `Shape`
 
 
-Displays a vector path with fill and one uniform stroke. Use Fill and Stroke for path paint. Legacy paint without either throws: "Shape paint moved to Fill and Stroke".
+Displays a vector path with fill and one uniform stroke. Use Fill and Stroke for path paint. Legacy paint always throws: "Shape paint moved to Fill and Stroke".
 
 ### `new`
 
@@ -265,6 +265,8 @@ Creates a path node with no paint or children.
 Creates a path node with immutable style options.
 
 ### `new(VectorPath,VectorNodeStyle,VectorNode[])`
+
+Creates a path node with immutable style options and freezes its stroke.
 
 ### `Children`
 
@@ -413,7 +415,7 @@ Gets the view-box top coordinate.
 ## `VectorStroke`
 
 
-Describes one immutable vector stroke.
+Describes one vector stroke. Goo freezes it when a Shape or VectorNode receives it.
 
 ### `new(float64,Color)`
 
@@ -425,19 +427,19 @@ Creates a stroke with default cap, join, and miter settings.
 
 ### `Cap`
 
-Gets the line cap style.
+Gets or sets the line cap style.
 
 ### `Dashes`
 
-Gets the optional dash pattern. NonScalingStroke measures dash lengths in window logical pixels.
+Gets or sets the optional dash pattern. NonScalingStroke measures dash lengths in window logical pixels.
 
 ### `Join`
 
-Gets the line join style.
+Gets or sets the line join style.
 
 ### `MiterLimit`
 
-Gets the non-negative finite miter limit.
+Gets or sets the non-negative finite miter limit.
 
 ### `Paint`
 
@@ -445,7 +447,7 @@ Gets the stroke paint.
 
 ### `VectorEffect`
 
-Gets the vector effect. The default is None.
+Gets or sets the vector effect. The default is None.
 
 ### `Width`
 
