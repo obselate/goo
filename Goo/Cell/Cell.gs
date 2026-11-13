@@ -388,6 +388,7 @@ public open class Cell {
       if mountedNode != nil { return }
       mountType = nil
       contextWindow = nil
+      callbackContext = nil
     }
     if let error = CancelOwnedWork() {
       System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw()
@@ -468,6 +469,7 @@ public open class Cell {
     lock rebuildGate {
       disposed = true
       contextWindow = nil
+      callbackContext = nil
     }
     let cancellationError = CancelOwnedWork()
     firstError ??= cancellationError

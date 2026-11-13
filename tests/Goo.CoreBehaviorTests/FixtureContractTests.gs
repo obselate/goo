@@ -60,8 +60,8 @@ class FixtureContractTests {
     }
 
     @Fact
-    async func ForeignHostContextRebuildsOwner() System.Threading.Tasks.Task {
-        Assert.True(await WindowStartupFixtures().HostedOwnerContextContract())
+    func ForeignHostContextRebuildsOwner() {
+        Assert.True(WindowStartupFixtures().HostedOwnerContextContract().GetAwaiter().GetResult())
     }
 
     @Theory
