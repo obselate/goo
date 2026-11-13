@@ -479,7 +479,7 @@ internal class MotionFixtures {
 
   func CompletionCanCloseOwningWindowContract() bool {
     let cell = MotionFixtureCell{}
-    let window = Window{ Width: 100, Height: 100, Root: cell }
+    let window = Window{ Size: LayoutSize(100, 100),  Root: cell }
     let anim = cell.Animate(0.0)
     var completed = 0
     anim.Completed += (reason MotionCompletionReason) -> {
@@ -568,7 +568,7 @@ internal class MotionFixtures {
   func FinishLandsExactlyOnTargetContract() bool {
     let cell = CountingMotionFixtureCell{}
     let anim = cell.anim
-    let window = Window{ Width: 100, Height: 100, Root: cell }
+    let window = Window{ Size: LayoutSize(100, 100),  Root: cell }
     try {
       window.UpdateTree()
       anim.To(100.0)
@@ -1073,8 +1073,8 @@ internal class MotionFixtures {
   func WindowOwnsMotionClockContract() bool {
     let firstCell = MotionFixtureCell{}
     let secondCell = MotionFixtureCell{}
-    let firstWindow = Window{ Width: 100, Height: 100, Root: firstCell }
-    let secondWindow = Window{ Width: 100, Height: 100, Root: secondCell }
+    let firstWindow = Window{ Size: LayoutSize(100, 100),  Root: firstCell }
+    let secondWindow = Window{ Size: LayoutSize(100, 100),  Root: secondCell }
     let first = firstCell.Animate(0.0)
     let second = secondCell.Animate(0.0)
     try {
@@ -1093,8 +1093,8 @@ internal class MotionFixtures {
   func CloseIsolatesWindowPumpContract() bool {
     let firstCell = MotionFixtureCell{}
     let secondCell = MotionFixtureCell{}
-    let firstWindow = Window{ Width: 100, Height: 100, Root: firstCell }
-    let secondWindow = Window{ Width: 100, Height: 100, Root: secondCell }
+    let firstWindow = Window{ Size: LayoutSize(100, 100),  Root: firstCell }
+    let secondWindow = Window{ Size: LayoutSize(100, 100),  Root: secondCell }
     let first = firstCell.Animate(0.0)
     let second = secondCell.Animate(0.0)
     try {
@@ -1113,7 +1113,7 @@ internal class MotionFixtures {
 
   func WindowCloseContinuesAfterAnimationFailureContract() bool {
     let cell = MotionFixtureCell{}
-    let window = Window{ Width: 100, Height: 100, Root: cell }
+    let window = Window{ Size: LayoutSize(100, 100),  Root: cell }
     let first = cell.Animate(0.0)
     let second = cell.Animate(0.0)
     let firstSimulation = ThrowingPositionSimulation()
@@ -1138,7 +1138,7 @@ internal class MotionFixtures {
   func WindowCloseTraversesSiblingCellsContract() bool {
     WindowSiblingRetainedCell.Disposals = 0
     let parent = WindowSiblingParent{}
-    let window = Window{ Width: 100, Height: 100, Root: parent }
+    let window = Window{ Size: LayoutSize(100, 100),  Root: parent }
     window.UpdateTree()
     guard let first = parent.First, let later = parent.Later else {
       window.Close()
@@ -1169,8 +1169,8 @@ internal class MotionFixtures {
     let unattached = MotionFixtureCell{}
     let other = MotionFixtureCell{}
     let anim = unattached.Animate(0.0)
-    let otherWindow = Window{ Width: 100, Height: 100, Root: other }
-    let attachingWindow = Window{ Width: 100, Height: 100, Root: unattached }
+    let otherWindow = Window{ Size: LayoutSize(100, 100),  Root: other }
+    let attachingWindow = Window{ Size: LayoutSize(100, 100),  Root: unattached }
     try {
       anim.To(1.0, clockEchoSpec)
       otherWindow.UpdateTree()

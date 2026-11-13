@@ -4,7 +4,7 @@ using Goo.Widgets.Layout;
 
 var window = new Window
 {
-    Title = "C# interop", Width = 640, Height = 480,
+    Title = "C# interop", Size = new LayoutSize(640, 480),
     Root = new Examples(args.FirstOrDefault() ?? "counter")
 };
 Action<bool> focused = value => Console.WriteLine($"Focused: {value}");

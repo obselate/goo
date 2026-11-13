@@ -68,8 +68,7 @@ func RunBackdropBlurSmoke() {
   try {
     let opened = Window{
       Title: "Goo backdrop blur gate",
-      Width: 192,
-      Height: 192,
+      Size: LayoutSize(192, 192),
       VSync: false,
       Root: BackdropBlurCell{},
       Background: Color.Transparent,

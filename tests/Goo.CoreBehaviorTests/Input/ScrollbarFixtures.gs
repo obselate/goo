@@ -8,7 +8,7 @@ import System.Text
 internal class ScrollbarFixtures {
   func DescriptorChangesArrangeMountedVirtualPartsContract() bool {
     let cell = ScrollbarDescriptorSwitchCell()
-    let window = Window{ Root: cell, Width: 200, Height: 160 }
+    let window = Window{ Root: cell, Size: LayoutSize(200, 160), }
     try {
       window.UpdateTree()
       let viewport = window.Tree!!
@@ -154,7 +154,7 @@ internal class ScrollbarFixtures {
   func VirtualThumbDragSurvivesRowRetirementContract() bool {
     for deferred in []bool{ false, true } {
       let cell = ScrollbarVirtualDragCell()
-      let window = Window{ Root: cell, Width: 75, Height: 60 }
+      let window = Window{ Root: cell, Size: LayoutSize(75, 60), }
       try {
         window.UpdateTree()
         let root = window.Tree!!
@@ -189,7 +189,7 @@ internal class ScrollbarFixtures {
 
   func RetiredVirtualRowHoverKeepsCellOwnerContract() bool {
     let parent = RetiredHoverParent()
-    let window = Window{ Root: parent, Width: 100, Height: 20 }
+    let window = Window{ Root: parent, Size: LayoutSize(100, 20), }
     try {
       window.UpdateTree()
       let row = NodeMount(window.Tree!!.Children[0])
@@ -240,7 +240,7 @@ internal class ScrollbarFixtures {
 
   func AutoHoverAndFadeContract() bool {
     let descriptor = fadingScrollbar()
-    let window = Window{ Root: ScrollbarFadeCell(descriptor), Width: 100, Height: 100 }
+    let window = Window{ Root: ScrollbarFadeCell(descriptor), Size: LayoutSize(100, 100), }
     window.UpdateTree()
     guard let root = window.Tree else { return false }
     if root.ScrollBarAlpha != 0.0F || ScrollbarParts.ActiveChildren(root).Count != 0 {
@@ -280,7 +280,7 @@ internal class ScrollbarFixtures {
   }
 
   func SmoothScrollingWindowPolicyContract() bool {
-    let window = Window{ Root: ScrollbarFadeCell(fadingScrollbar()), Width: 100, Height: 100 }
+    let window = Window{ Root: ScrollbarFadeCell(fadingScrollbar()), Size: LayoutSize(100, 100), }
     window.UpdateTree()
     guard let root = window.Tree else { return false }
     window.InputForTest.QueuePointerWheel(50.0F, 50.0F, 0.0F, -1.0F)
@@ -307,7 +307,7 @@ internal class ScrollbarFixtures {
   }
 
   func IdleCaretDeadlineAndTouchMomentumContract() bool {
-    let caretWindow = Window{ Root: ScrollIdleCaretCell{}, Width: 100, Height: 30 }
+    let caretWindow = Window{ Root: ScrollIdleCaretCell{}, Size: LayoutSize(100, 30), }
     caretWindow.UpdateTree()
     guard let caret = caretWindow.Tree else { return false }
     caretWindow.SchedulerIdleElapsedForTest(0.6)
@@ -318,7 +318,7 @@ internal class ScrollbarFixtures {
 
     for capture in []bool{ false, true } {
       let cell = ScrollTouchCell{ Capture: capture }
-      let window = Window{ Root: cell, Width: 220, Height: 220 }
+      let window = Window{ Root: cell, Size: LayoutSize(220, 220), }
       window.UpdateTree()
       guard let root = window.Tree else { return false }
       let input = window.InputForTest
@@ -544,9 +544,9 @@ internal class ScrollbarFixtures {
 
   func HoverPartsRemainOwnedByTheirWindow() bool {
     let handle = ElementHandle{}
-    let first = Window{ Root: ScrollbarHoverCell(handle), Width: 100, Height: 100 }
+    let first = Window{ Root: ScrollbarHoverCell(handle), Size: LayoutSize(100, 100), }
     let otherRoot = Cell{}
-    let other = Window{ Root: otherRoot, Width: 100, Height: 100 }
+    let other = Window{ Root: otherRoot, Size: LayoutSize(100, 100), }
     try {
       first.UpdateTree()
       other.UpdateTree()
@@ -568,7 +568,7 @@ internal class ScrollbarFixtures {
   func ThumbHoverCoversScrollbarAndNarrowsInTrack() bool {
     let track = ElementHandle{}
     let thumb = ElementHandle{}
-    let window = Window{ Root: ThinThumbCell(track, thumb), Width: 100, Height: 100 }
+    let window = Window{ Root: ThinThumbCell(track, thumb), Size: LayoutSize(100, 100), }
     try {
       window.UpdateTree()
       guard let trackNode = track.AttachedNode(), let thumbNode = thumb.AttachedNode() else { return false }
@@ -594,7 +594,7 @@ internal class ScrollbarFixtures {
       Track: Container(){ Cell.Mount[string, RetirementDisposableCell]("first", "first"), },
       Thumb: Container(){ Cell.Mount[string, RetirementDisposableCell]("later", "later"), },
     }
-    let window = Window{ Root: ScrollbarFadeCell(descriptor), Width: 100, Height: 100 }
+    let window = Window{ Root: ScrollbarFadeCell(descriptor), Size: LayoutSize(100, 100), }
     window.UpdateTree()
     guard let root = window.Tree else { return false }
     var threw bool
@@ -634,7 +634,7 @@ internal class ScrollbarFixtures {
   func PublicMetricsAndJumpContract() bool {
     let handle = ElementHandle{}
     let cell = ScrollbarPublicCell(handle)
-    let window = Window{ Root: cell, Width: 100, Height: 100 }
+    let window = Window{ Root: cell, Size: LayoutSize(100, 100), }
     var latest ElementMetrics
     handle.MetricsChanged += func(metrics ElementMetrics) { latest = metrics }
     window.UpdateTree()

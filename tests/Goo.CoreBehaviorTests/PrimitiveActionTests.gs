@@ -13,8 +13,7 @@ class PrimitiveActionTests {
         let editor = ElementHandle()
         let entry = ElementHandle()
         let window = Window{
-            Width: 420,
-            Height: 180,
+            Size: LayoutSize(420, 180),
             Root: PrimitiveActionTests.BuildCell(
                 () -> Container{
                     Children: []Blob{
@@ -89,8 +88,7 @@ cd
 ef`))
         let handle = ElementHandle()
         let window = Window{
-            Width: 420,
-            Height: 160,
+            Size: LayoutSize(420, 160),
             Root: PrimitiveActionTests.BuildCell(
                 () -> TextEditor(){Controller = controller,
                     Handle = handle,
@@ -173,8 +171,7 @@ ef`, controller.Document.GetText())
 ef`)){UseTabs = false, IndentWidth = 2, TabWidth = 8}
         let handle = ElementHandle()
         let window = Window{
-            Width: 420,
-            Height: 160,
+            Size: LayoutSize(420, 160),
             Root: PrimitiveActionTests.BuildCell(
                 () -> TextEditor(){Controller = controller,
                     Handle = handle,
@@ -357,7 +354,7 @@ ef`, controller.Document.GetText())
                 }
             }
         )
-        window = Window{Width: 320, Height: 160, Root: cell}
+        window = Window{Size: LayoutSize(320, 160),  Root: cell}
         try {
             window.UpdateTree()
             Assert.True(source.Focus())

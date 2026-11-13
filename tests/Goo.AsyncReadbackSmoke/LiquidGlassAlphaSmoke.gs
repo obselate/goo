@@ -56,8 +56,7 @@ func RunLiquidGlassAlphaSmoke() {
   try {
     let opened = Window{
       Title: "Goo liquid glass alpha gate",
-      Width: 192,
-      Height: 128,
+      Size: LayoutSize(192, 128),
       VSync: false,
       Root: LiquidGlassAlphaCell(effect),
       Background: Color.Transparent,

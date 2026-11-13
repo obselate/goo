@@ -4,7 +4,7 @@ import Goo
 import System
 
 func RunNativeDialogsSmoke() {
-    let owner = Window{ Title: "Native dialog owner", Width: 160, Height: 90, Root: Cell{} }
+    let owner = Window{ Title: "Native dialog owner", Size: LayoutSize(160, 90),  Root: Cell{} }
     let options = MessageBoxOptions{ Title: "Native dialog smoke", Buttons: []MessageBoxButton{
         MessageBoxButton{ Id: 7, Text: "Accept", Default: true },
         MessageBoxButton{ Id: 9, Text: "Cancel", Cancel: true },

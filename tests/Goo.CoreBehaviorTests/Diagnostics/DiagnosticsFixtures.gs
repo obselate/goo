@@ -8,7 +8,7 @@ import System.Threading
 
 internal class DiagnosticsFixtures {
   func QueuedPipeConnectionsSurviveProbeDisconnectContract() bool {
-    let window = Window{Root: DiagnosticsOverrideCell{}, Width: 200, Height: 100}
+    let window = Window{Root: DiagnosticsOverrideCell{}, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     using let session = window.AttachDiagnostics()
     for index in 0 ... 32 {
@@ -40,7 +40,7 @@ internal class DiagnosticsFixtures {
   }
 
   func SnapshotWithNonFiniteGeometryUsesValidJsonContract() bool {
-    let window = Window{Root: DiagnosticsOverrideCell{}, Width: 200, Height: 100}
+    let window = Window{Root: DiagnosticsOverrideCell{}, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     guard let root = window.Tree else { return false }
     root.Rect = Rect{X: Single.NaN, Y: Single.PositiveInfinity, W: Single.NegativeInfinity, H: 100.0F}
@@ -72,7 +72,7 @@ internal class DiagnosticsFixtures {
   }
 
   func IdlePipeConnectionKeepsSnapshotAvailableContract() bool {
-    let window = Window{Root: DiagnosticsOverrideCell{}, Width: 200, Height: 100}
+    let window = Window{Root: DiagnosticsOverrideCell{}, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     using let session = window.AttachDiagnostics()
     using let client = NamedPipeClientStream(".", session.Endpoint.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous)
@@ -154,7 +154,7 @@ internal class DiagnosticsFixtures {
 
   func IdleFramesDeferSnapshotsUntilRequestedContract() bool {
     let root = DevToolsInputCell{}
-    let window = Window{Root: root, Width: 320, Height: 220}
+    let window = Window{Root: root, Size: LayoutSize(320, 220), }
     window.UpdateTree()
     let session = window.AttachDiagnostics()
     try {
@@ -275,7 +275,7 @@ internal class DiagnosticsFixtures {
       Anchor: TextPosition{Offset: 3, Affinity: TextAffinity.Upstream},
       Active: TextPosition{Offset: 9, Affinity: TextAffinity.Downstream},
     }
-    let window = Window{Root: DiagnosticsSemanticsCell(secret, controller), Width: 420, Height: 260}
+    let window = Window{Root: DiagnosticsSemanticsCell(secret, controller), Size: LayoutSize(420, 260), }
     window.UpdateTree()
     let session = window.AttachDiagnostics()
     try {
@@ -309,7 +309,7 @@ internal class DiagnosticsFixtures {
   }
 
   func InspectClickAndEscapeContract() bool {
-    let window = Window{ Root: DiagnosticsInteractionCell{}, Width: 200, Height: 100 }
+    let window = Window{ Root: DiagnosticsInteractionCell{}, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     let session = window.AttachDiagnostics()
     try {
@@ -352,7 +352,7 @@ internal class DiagnosticsFixtures {
   func RuntimeOverrideInheritanceAndResetContract() bool {
     let originalColor = Color.Rgb(210, 48, 42)
     let overrideColor = Color.Rgb(25, 210, 120)
-    let window = Window{ Root: DiagnosticsOverrideCell{}, Width: 200, Height: 100 }
+    let window = Window{ Root: DiagnosticsOverrideCell{}, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     let session = window.AttachDiagnostics()
     try {
@@ -405,7 +405,7 @@ internal class DiagnosticsFixtures {
     let previousEnabled = Environment.GetEnvironmentVariable("GOO_DEVTOOLS")
     let previousDirectory = Environment.GetEnvironmentVariable("GOO_DEVTOOLS_DIR")
     let directory = Path.Combine(Path.GetTempPath(), "goo-devtools-auto-" + Guid.NewGuid().ToString("N"))
-    let window = Window{ Root: DiagnosticsInteractionCell{}, Width: 200, Height: 100 }
+    let window = Window{ Root: DiagnosticsInteractionCell{}, Size: LayoutSize(200, 100), }
     try {
       Directory.CreateDirectory(directory)
       Environment.SetEnvironmentVariable("GOO_DEVTOOLS", "1")

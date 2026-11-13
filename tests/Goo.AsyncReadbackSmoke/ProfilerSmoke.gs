@@ -167,7 +167,7 @@ internal class ProfilerSmoke {
             using let cache = ImageSourceCache()
             using let cached = cache.LoadAsync(Path.Combine(AppContext.BaseDirectory, "local-rgba.png")).GetAwaiter().GetResult()
             let root = ProfilerSmokeCell{}
-            let window = Window{Title: "Goo profiler pipe smoke", Width: 64, Height: 64, VSync: false, Root: root}.Open()
+            let window = Window{Title: "Goo profiler pipe smoke", Size: LayoutSize(64, 64),  VSync: false, Root: root}.Open()
             WindowReadbackTestFixture.ForceRender(window, 0.0, 2.0, true)
             using let session = window.AttachDiagnostics()
             if Environment.GetEnvironmentVariable("GOO_FRAME_PROFILE") == "1" {
@@ -429,7 +429,7 @@ internal class ProfilerSmoke {
         private func VerifyCaptures() {
             let diagnostics = Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS")
             Environment.SetEnvironmentVariable("GOO_VK_DIAGNOSTICS", nil)
-            let window = Window{Title: "Goo profiler capture smoke", Width: 63, Height: 61,
+            let window = Window{Title: "Goo profiler capture smoke", Size: LayoutSize(63, 61),
                 VSync: false, Root: ProfilerSmokeCell{Frame: 12}}
             var recording FrameRecorder?
             try {

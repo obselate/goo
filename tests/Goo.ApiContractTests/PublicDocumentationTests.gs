@@ -336,8 +336,8 @@ class PublicDocumentationTests {
             "M:Goo.WindowBackdropMask.#ctor(System.Int32,System.Int32,System.Byte[])",
             "M:Goo.Window.GetDisplays",
             "M:Goo.Window.GetCurrentDisplay",
-            "M:Goo.Window.TrySetFullscreenDisplay(Goo.WindowDisplayId)",
-            "M:Goo.Window.TrySetTopmost(System.Boolean)",
+            "M:Goo.Window.SetFullscreenDisplay(Goo.WindowDisplayId)",
+            "M:Goo.Window.SetTopmost(System.Boolean)",
             "M:Goo.Window.RequestCapture",
             "M:Goo.Window.RequestCapture(Goo.WindowCapture)",
             "M:Goo.Window.PollCapture",
@@ -1377,7 +1377,7 @@ class PublicDocumentationTests {
                 []string{"T"},
                 false
             ),
-            ["M:Goo.Window.TrySetTopmost(System.Boolean)"] = DocumentationShape(
+            ["M:Goo.Window.SetTopmost(System.Boolean)"] = DocumentationShape(
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
                 true

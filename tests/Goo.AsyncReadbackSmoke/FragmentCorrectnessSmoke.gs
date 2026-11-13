@@ -99,8 +99,7 @@ func RunFragmentCorrectnessSmoke() {
     let opened = Window{
       Title: "Goo fragment correctness gate",
       // Width 1024 keeps clip scale 1/512 and offset -31/32 exact, preserving the join row at y = 12.5.
-      Width: 1024,
-      Height: 128,
+      Size: LayoutSize(1024, 128),
       VSync: false,
       Root: cell,
       Background: Color.Transparent,

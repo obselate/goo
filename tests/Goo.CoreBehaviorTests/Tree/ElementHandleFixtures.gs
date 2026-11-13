@@ -10,7 +10,7 @@ internal class ElementHandleFixtures {
     cell.ItemAccessibility = Accessibility{ Role: AccessibilityRole.ListItem }
     cell.Target = cell.Handles[0]
     let adapter = AccessibilityTestAdapter{}
-    let window = Window{ Root: cell, Width: 100, Height: 60 }
+    let window = Window{ Root: cell, Size: LayoutSize(100, 60), }
     window.AccessibilityAdapter = adapter
     try {
       window.UpdateTree()
@@ -57,7 +57,7 @@ internal class ElementHandleFixtures {
   func VirtualDescendantAnchoringSuppressesOrigin() bool {
     for offset in []float64{0.0, 5.0} {
       let cell = VirtualAnchorOriginFixtureCell{}
-      let window = Window{Root: cell, Width: 100, Height: 40}
+      let window = Window{Root: cell, Size: LayoutSize(100, 40), }
       try {
         window.UpdateTree()
         if !cell.Handle.JumpTo(0.0, offset) { return false }
@@ -85,7 +85,7 @@ internal class ElementHandleFixtures {
     let cell = VirtualFixtureCell(100)
     cell.ProjectFocus = true
     cell.Target = cell.Handles[0]
-    let window = Window{ Root: cell, Width: 100, Height: 60 }
+    let window = Window{ Root: cell, Size: LayoutSize(100, 60), }
     try {
       window.UpdateTree()
       window.PlatformInput.KeyPress(Key.Tab, KeyModifiers{})
@@ -127,7 +127,7 @@ internal class ElementHandleFixtures {
 
   func DeferredVirtualScrollContract() bool {
     let cell = VirtualFixtureCell(1000)
-    let window = Window{Root: cell, Width: 100, Height: 60}
+    let window = Window{Root: cell, Size: LayoutSize(100, 60), }
     try {
       window.UpdateTree()
       cell.Builds.Clear()
@@ -468,7 +468,7 @@ internal class ElementHandleFixtures {
 
   func MetricsContract() bool {
     let cell = ElementMetricsFixtureCell{}
-    let window = Window{ Root: cell, Width: 100, Height: 60 }
+    let window = Window{ Root: cell, Size: LayoutSize(100, 60), }
     let snapshots = List[ElementMetrics]()
     cell.Handle.MetricsChanged += func(value ElementMetrics) {
       snapshots.Add(value)
@@ -507,7 +507,7 @@ internal class ElementHandleFixtures {
 
   func MetricsScrollFollowerUpdatesRectsInSameFrame() bool {
     let cell = SynchronizedScrollFixtureCell()
-    let window = Window{ Root: cell, Width: 120, Height: 60 }
+    let window = Window{ Root: cell, Size: LayoutSize(120, 60), }
     cell.Leader.MetricsChanged += (value ElementMetrics) -> {
       if value.IsMounted { cell.Follower.JumpTo(value.ScrollOffset.X, 0) }
     }
@@ -537,7 +537,7 @@ internal class ElementHandleFixtures {
 
   func MetricsTailFollowContract() bool {
     let cell = ElementMetricsFixtureCell{}
-    let window = Window{ Root: cell, Width: 100, Height: 60 }
+    let window = Window{ Root: cell, Size: LayoutSize(100, 60), }
     var follow = true
     var lastRange = -1.0
     cell.Handle.MetricsChanged += value -> {
@@ -576,7 +576,7 @@ internal class ElementHandleFixtures {
 
   func MetricsCallbackRebuildAndBatchContract() bool {
     let cell = ElementMetricsPairCell{}
-    let window = Window{ Root: cell, Width: 100, Height: 60 }
+    let window = Window{ Root: cell, Size: LayoutSize(100, 60), }
     var firstCount int32
     var secondCount int32
     var subscribed bool
@@ -601,7 +601,7 @@ internal class ElementHandleFixtures {
 
   func MetricsCloseContract() bool {
     let cell = ElementMetricsFixtureCell{}
-    let window = Window{ Root: cell, Width: 100, Height: 60 }
+    let window = Window{ Root: cell, Size: LayoutSize(100, 60), }
     let snapshots = List[ElementMetrics]()
     cell.Handle.MetricsChanged += func(value ElementMetrics) {
       snapshots.Add(value)
@@ -614,7 +614,7 @@ internal class ElementHandleFixtures {
   func VirtualContract() bool {
     let cell = VirtualFixtureCell(1000)
     let semantics = AccessibilityTestAdapter{}
-    let window = Window{ Root: cell, Width: 100, Height: 60 }
+    let window = Window{ Root: cell, Size: LayoutSize(100, 60), }
     window.AccessibilityAdapter = semantics
     window.UpdateTree()
     guard let root = window.Tree else { return false }
@@ -670,7 +670,7 @@ internal class ElementHandleFixtures {
     cell.Inset = 10
     cell.Measure = true
     cell.Jump = Point{ X: 0, Y: 19960 }
-    let window = Window{ Root: cell, Width: 100, Height: 60 }
+    let window = Window{ Root: cell, Size: LayoutSize(100, 60), }
     window.SmoothScrolling = false
     window.UpdateTree()
     // Content coordinates start at the content box, so padding is not part of the scroll range.
@@ -714,7 +714,7 @@ internal class ElementHandleFixtures {
 
   func VirtualTransactionContract() bool {
     let cell = VirtualFixtureCell(10)
-    let window = Window{ Root: cell, Width: 100, Height: 60 }
+    let window = Window{ Root: cell, Size: LayoutSize(100, 60), }
     window.UpdateTree()
 
     // A repeated key fails the build and cancels the state.
@@ -758,7 +758,7 @@ internal class ElementHandleFixtures {
 
   func HandleNoSubscriptionFrameBytes() int64 {
     let cell = ElementMetricsFixtureCell{}
-    let window = Window{ Root: cell, Width: 100, Height: 60 }
+    let window = Window{ Root: cell, Size: LayoutSize(100, 60), }
     window.UpdateTree()
     let before = GC.GetAllocatedBytesForCurrentThread()
     window.UpdateTree()
@@ -769,7 +769,7 @@ internal class ElementHandleFixtures {
 
   func MetricsNotificationBytes() int64 {
     let cell = ElementMetricsFixtureCell{}
-    let window = Window{ Root: cell, Width: 100, Height: 60 }
+    let window = Window{ Root: cell, Size: LayoutSize(100, 60), }
     cell.Handle.MetricsChanged += func(value ElementMetrics) {
     }
     window.UpdateTree()
