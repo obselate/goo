@@ -143,7 +143,7 @@ public sealed partial class PopupWindow : IDisposable {
       if let factory = owner.EmbeddedPopupFactory {
         let surface = factory(window, kind, Dismiss)
         embeddedSurface = surface
-        let result = surface.Open(anchor, window.Width, window.Height, window.NativePopupPlacement)
+        let result = surface.Open(anchor, window.NativeWidth, window.NativeHeight, window.NativePopupPlacement)
         if result.Status != PopupStatus.Opened {
           surface.Dispose()
           embeddedSurface = nil

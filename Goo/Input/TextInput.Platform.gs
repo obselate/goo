@@ -141,6 +141,12 @@ internal partial class TextInput {
   internal func EditorSelection() TextSelection? {
     guard let n = focus.FocusedNode() else { return nil }
     if !canReceiveInput(n) { return nil }
+    if n.Selectable {
+      return TextSelection{
+        Anchor: TextPosition(n.Anchor, n.AnchorAffinity),
+        Active: TextPosition(n.Caret, n.CaretAffinity),
+      }
+    }
     if n.Kind == NodeKind.Entry {
       return entryComposition?.EffectiveSelection ?? TextSelection{
         Anchor: TextPosition{ Offset: n.Anchor, Affinity: n.AnchorAffinity },
@@ -159,6 +165,14 @@ internal partial class TextInput {
   }
 
   internal func SetEditorSelection(root Node?, start int32, end int32, selection TextSelection? = nil) bool {
+    if let target = focus.FocusedNode() && target.Selectable && canReceiveInput(target) {
+      if start < 0 || end < 0 || start > target.Content.Length || end > target.Content.Length { return false }
+      let low = textBoundary(target.Content, Math.Min(start, end), false)
+      let high = textBoundary(target.Content, Math.Max(start, end), start != end)
+      target.AnchorAffinity = selection?.Anchor.Affinity ?? TextAffinity.Upstream
+      target.CaretAffinity = selection?.Active.Affinity ?? TextAffinity.Downstream
+      return SelectableText.Set(target, start <= end ? low : high, start <= end ? high : low)
+    }
     guard let snapshot = EditorSnapshot(), let n = focus.FocusedNode() else { return false }
     if start < 0 || end < 0 || start > snapshot.Text.Length || end > snapshot.Text.Length {
       return false
@@ -361,6 +375,13 @@ internal partial class TextInput {
     var command = requested
     guard let n = focus.FocusedNode() else { return false }
     if !canReceiveInput(n) { return false }
+    if n.Selectable {
+      if command.Kind == TextCommandKind.Copy {
+        let value = n.Content.Substring(Math.Min(n.Anchor, n.Caret), Math.Abs(n.Anchor - n.Caret))
+        return value == "" || clipboardSet(value)
+      }
+      return SelectableText.Execute(n, command)
+    }
     if n.Kind == NodeKind.Entry && n.EditorReadOnly && !readOnlyCommand(command.Kind) { return false }
     if command.Kind == TextCommandKind.CancelEdit {
       if n.Kind != NodeKind.Entry { return false }

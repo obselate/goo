@@ -37,7 +37,7 @@ public sealed class WaylandDataTransferTests {
         private func Run(outgoing bool, effect DragEffect, inputPath string, peerPath string,
             rejectFinal bool = false) {
             let scene = TransferScene(outgoing, effect, rejectFinal)
-            let window = Window{Title: "Goo native transfer checks", Width: 480, Height: 160, Root: scene}.Open()
+            let window = Window{Title: "Goo native transfer checks", Size: LayoutSize(480, 160),  Root: scene}.Open()
             try {
                 PumpUntil(window, () -> window.IsVisible)
                 Assert.True((window.NativeTransferCapabilities & NativeTransferCapabilities.DataDrop)

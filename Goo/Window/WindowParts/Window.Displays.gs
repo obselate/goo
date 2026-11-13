@@ -84,11 +84,11 @@ public partial class Window {
   /// This must run on the window's UI thread. Returns Closed before Open or after close, Unsupported for embedded
   /// hosts, Failed for a stale ID or native failure, and Accepted when SDL accepts the request. Acceptance does not
   /// guarantee compositor placement. The compositor may keep the current display when retargeting fullscreen.
-  public func TrySetFullscreenDisplay(display WindowDisplayId) WindowOperationResult {
-    requireUiThread("Window.TrySetFullscreenDisplay")
+  public func SetFullscreenDisplay(display WindowDisplayId) WindowOperationResult {
+    requireUiThread("Window.SetFullscreenDisplay")
     guard let native = host else { return WindowOperationResult.Closed }
     if !IsOpen || native.IsClosing { return WindowOperationResult.Closed }
-    let result = native.TrySetFullscreenDisplay(display)
+    let result = native.SetFullscreenDisplay(display)
     if result == WindowOperationResult.Accepted {
       state = WindowState.Fullscreen
     }

@@ -107,14 +107,14 @@ public partial class Window {
         if timer.IsActive { timer.SetCellOwner(cell) }
         return timer
     }
-    private func validateTimer(callback Action, milliseconds float64, repeating bool) {
+    private func validateTimer(action Action, milliseconds float64, repeating bool) {
         if !acceptingPosts { return }
         requireUiThread("Window timer")
         if !IsOpen {
             throw InvalidOperationException("Window timers require an open window")
         }
-        if callback == nil {
-            throw ArgumentNullException("callback")
+        if action == nil {
+            throw ArgumentNullException("action")
         }
         if !Double.IsFinite(milliseconds) || milliseconds < 0.0 || (repeating && milliseconds == 0.0) {
             throw ArgumentOutOfRangeException("milliseconds")

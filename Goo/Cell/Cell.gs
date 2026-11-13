@@ -33,6 +33,15 @@ public open class Cell {
   private var callbackFallback bool = true
   private var stateChecked bool
   private var stateDeclared bool
+  private var untrackedScopes List[StateReadScope]?
+
+  internal func RegisterUntrackedScope(builderScope StateReadScope) {
+    callbackFallback = true
+    untrackedScopes ??= List[StateReadScope]()
+    if !untrackedScopes!!.Contains(builderScope) { untrackedScopes!!.Add(builderScope) }
+  }
+
+  internal func UnregisterUntrackedScope(builderScope StateReadScope) { untrackedScopes?.Remove(builderScope) }
 
   private var lifetimeSource CancellationTokenSource?
   private var latestSources Dictionary[string, CancellationTokenSource]?
@@ -254,6 +263,9 @@ public open class Cell {
 
   internal func RebuildAfterCallback() {
     if !building && (callbackFallback || (!stateDeclared && (stateReads == nil || stateReads!!.Count == 0))) {
+      if let scopes = untrackedScopes {
+        for index in 0 ... scopes.Count { scopes[index].Rebuild() }
+      }
       Rebuild()
     }
   }
@@ -669,7 +681,12 @@ public open class Cell {
     internal var StateReader Cell?
     internal var StateFieldsInspected Action[Type, []FieldInfo]?
     internal prop IsBuilding bool {
-      get -> StateReader != nil || ContextEnvironment.StateReader != nil
+      get -> StateReader != nil || StateReadScope.Current != nil || ContextEnvironment.StateReader != nil
+    }
+
+    internal func ObserveUntrackedRead() {
+      if let cell = StateReader { cell.callbackFallback = true }
+      StateReadScope.Current?.ObserveUntrackedRead()
     }
 
     /// Describes a child component mount created by a factory.

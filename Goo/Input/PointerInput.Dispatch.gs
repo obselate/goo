@@ -18,10 +18,13 @@ internal partial class PointerInput {
   }
 
   private func clearCapture() {
-    current.CaptureTarget = nil
-    current.CaptureButton = PointerButton.None
-    current.CapturePath.Clear()
-    current.CapturePositions.Clear()
+    try { cancelPointerDrag() }
+    finally {
+      current.CaptureTarget = nil
+      current.CaptureButton = PointerButton.None
+      current.CapturePath.Clear()
+      current.CapturePositions.Clear()
+    }
   }
 
   private func rebuildCapturePath(root Node) bool {
@@ -66,6 +69,9 @@ internal partial class PointerInput {
       }
     }
     if let requested = control.CaptureTarget {
+      if let drag = current.PointerDrag {
+        if drag.Target.Current != requested { cancelPointerDrag() }
+      }
       if requested != current.LastPressNode { current.LastPressNode = nil }
       current.CapturePath.Clear()
       current.CaptureTarget = requested
@@ -295,6 +301,9 @@ internal partial class PointerInput {
           let callback = if kind == PointerEventKind.Press { n.OnPointerDown }
             else if kind == PointerEventKind.Move { n.OnPointerMove } else { n.OnPointerUp }
           let owner = callback != nil ? CellOwnership.InRoute(route, i - 1) : nil
+          if current.PointerDrag != nil || kind == PointerEventKind.Press && n.OnPointerDrag != nil {
+            dispatchPointerDrag(n, event, kind, route, i - 1, transformed)
+          }
           let previousContext = owner?.BeginCallback()
           try {
             callback?.Invoke(event)
@@ -384,6 +393,7 @@ internal partial class PointerInput {
   }
 
   private func dispatchCancel() {
+    cancelPointerDrag()
     let captured = current.CapturePath.Count > 0
     let route = captured ? current.CapturePath : current.ActivePath
     let positions = captured ? current.CapturePositions : current.ActivePositions

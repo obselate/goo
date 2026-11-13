@@ -115,10 +115,8 @@ private func RunWindow(descriptor DiscoveryDescriptor?, sample bool) int32 {
     let root = DevToolsCell(session)
     let window = Window{
         Title: "Goo DevTools",
-        Width: 1540,
-        Height: 960,
-        MinWidth: 800,
-        MinHeight: 560,
+        Size: LayoutSize(1540, 960),
+        MinSize: LayoutSize(800, 560),
         Transparent: true,
         ResizeBand: 8.0F,
         Resizable: true,

@@ -21,6 +21,35 @@ Container{
 
 See [Style](style.md) for the property contracts.
 
+## Row, column, and spacer
+
+```gsharp
+Row{Gap: 8, Text("Title"), Spacer(), Button(){Text("Close")}}
+Container{Position: PositionType.Absolute, Inset: 0}
+Text{Content: "Flexible", Flex: 1, MinWidth: 0}
+```
+
+- `Row` and `Column` fix the main axis. Setting `FlexDirection`, including through a state style, throws at mount.
+- `Spacer` defaults to grow 1, shrink 1, basis 0, and minimum size 0. It has no paint, hit test, or accessibility node.
+- `Flex: n` sets grow n, shrink 1, and basis 0. It does not change the automatic minimum. Later flex declarations override each part.
+- `Inset` sets all four position offsets. Later offsets override individual edges.
+
+## Relative and intrinsic lengths
+
+```gsharp
+Container{Width: Percent(100) - Rem(2), MaxHeight: Vh(25)}
+Container{Width: Length.FitContent(Em(32.5))}
+```
+
+- Numbers are layout pixels. G# uses `Percent`, `Em`, `Rem`, `Vw` and `Vh`. Other .NET languages can use `Length.Pixels`, `Length.Percent`, `Length.Em`, `Length.Rem`, `Length.Vw` and `Length.Vh`.
+- `Em` uses the element's computed font size. In `FontSize`, it uses the parent's font size. `Rem` uses the root font size. Platform text scale applies once.
+- `Vw` and `Vh` use percentages of the window layout viewport.
+- Add or subtract lengths, or multiply and divide them by a number. Automatic and intrinsic values cannot be operands.
+- `FontSize` accepts pixels, `Em`, and `Rem`. Properties that reject percentages also reject relative units.
+- `Length.MinContent`, `Length.MaxContent`, and `Length.FitContent(limit)` apply to width, height, their minimum and maximum bounds, and `FlexBasis`. They measure retained content without calling `Build`.
+- In a custom layout callback, `context.ResolveLength(value, LayoutAxis.Horizontal)` resolves against the available content width. `Vertical` uses height. Automatic and intrinsic values return `nil`.
+- Length animations accept one unit. Mixed lengths throw `ArgumentException`.
+
 ## Padding and margin
 
 `Padding` and `Margin` accept pixel numbers or `Edges`. Two arguments mean
@@ -151,6 +180,19 @@ Returns the desired content size under the available constraints, excluding the 
 
 Returns: A finite, nonnegative desired content size, clamped by the parent constraints.
 
+## `LayoutAxis`
+
+
+Selects a horizontal or vertical length reference.
+
+### `Horizontal`
+
+Uses the available content width.
+
+### `Vertical`
+
+Uses the available content height.
+
 ## `LayoutContext`
 
 
@@ -171,6 +213,15 @@ Measures a retained child subtree without rebuilding it. Root margins are includ
 - `available`: Maximum width and height; positive infinity means unconstrained.
 
 Returns: The child's desired margin-box size under these constraints.
+
+### `ResolveLength(Length,LayoutAxis)`
+
+Resolves a length to layout pixels during the current callback.
+
+- `value`: The pixel or relative length.
+- `axis`: The available content axis for percentages.
+
+Returns: Layout pixels, or nil for automatic and intrinsic values.
 
 ### `ChildCount`
 

@@ -228,7 +228,7 @@ public class Notifications {
             ArgumentNullException.ThrowIfNull(options)
             if OperatingSystem.IsAndroid() || (!OperatingSystem.IsWindows() && !OperatingSystem.IsMacOS()
                 && !OperatingSystem.IsLinux()) { return NotificationServiceResult(NotificationStatus.Unsupported) }
-            let identifier = SdlRuntime.ApplicationIdentifier
+            let identifier = Application.Identifier
             if string.IsNullOrEmpty(identifier) {
                 return NotificationServiceResult(NotificationStatus.MissingIdentity,
                     error: "Call Application.Configure with the installed application identifier first")

@@ -53,9 +53,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       let driver = SDL.GetCurrentVideoDriverS()
       occlusionSupported = driver == "wayland" || driver == "cocoa" || driver == "x11"
       try {
-        if !SdlRuntime.AcquireVulkan() {
-          throw GraphicsUnavailableException("SDL_Vulkan_LoadLibrary failed: " + SDL.GetErrorS())
-        }
+        SdlRuntime.AcquireVulkan()
         vulkanOwned = true
         if let parent = popupParent {
           CreatePopup(parent, width, height, popupKind, popupTimestamp, popupAnchor, popupPlacement, popupScale)
@@ -404,21 +402,27 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     return SDL.SetTextInputArea(window, &area, cursor)
   }
 
-  public func GetClipboardText() string {
-    ThrowIfDisposed()
-    let native = SDL.GetClipboardText()
-    try { return ClipboardTransfer.BoundedUtf8(nint(native), ClipboardTransfer.MaxTextBytes) }
-    catch (_ ClipboardLimitException) { return "" }
-    finally { SDL.Free(native) }
-  }
-
-  public func SetClipboardText(value string) {
+  public func GetClipboardText() ClipboardTextResult {
     ThrowIfDisposed()
     SDL.ClearError()
-    if !SDL.SetClipboardText(value) {
+    let native = SDL.GetClipboardText()
+    try {
       let error = SDL.GetErrorS()
-      throw InvalidOperationException("SDL_SetClipboardText failed" + if String.IsNullOrEmpty(error) { "" } else { ": " + error })
-    }
+      if !String.IsNullOrEmpty(error) { return ClipboardTextResult(ClipboardTextStatus.Failed, error: error) }
+      let text = ClipboardTransfer.BoundedUtf8(nint(native), ClipboardTransfer.MaxTextBytes)
+      return ClipboardTextResult(if text.Length == 0 { ClipboardTextStatus.Empty } else { ClipboardTextStatus.Success }, text)
+    } catch (error ClipboardLimitException) {
+      return ClipboardTextResult(ClipboardTextStatus.TooLarge, error: error.Message)
+    } catch (error Exception) {
+      return ClipboardTextResult(ClipboardTextStatus.Failed, error: error.Message)
+    } finally { SDL.Free(native) }
+  }
+
+  public func SetClipboardText(value string) ClipboardWriteResult {
+    ThrowIfDisposed()
+    SDL.ClearError()
+    return if SDL.SetClipboardText(value) { ClipboardWriteResult(DataTransferStatus.Success) }
+      else { ClipboardWriteResult(DataTransferStatus.Failed, SDL.GetErrorS()) }
   }
 
   public func BeginClose() {

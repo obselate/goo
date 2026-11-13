@@ -74,6 +74,9 @@ open class PublicApiTests {
         Assert.True(gate.IsVirtual)
         let concreteBlobs = ApiTypes().Where((type Type) -> type != blob && blob.IsAssignableFrom(type)).ToArray()
         Assert.NotEmpty(concreteBlobs)
+        Assert.Contains(typeof(Row), concreteBlobs)
+        Assert.Contains(typeof(Column), concreteBlobs)
+        Assert.Contains(typeof(Spacer), concreteBlobs)
         Assert.All(concreteBlobs, (type Type) -> Assert.True(type.IsSealed, type.FullName))
     }
 
@@ -153,7 +156,7 @@ open class PublicApiTests {
                 .GetTypes()
                 .Where(IsPackageContainer)
                 .SelectMany((type Type) -> type.GetMethods(PublicDeclared))
-            for name in[]string{"Percent"} {
+            for name in[]string{"Percent", "Each"} {
                 let method = Assert.Single(packageMethods, (method MethodInfo) -> method.Name == name)
                 records.Add(
                     "function|Goo|$name|${PublicApiTests.Visibility(method)}|generic:${DescribeGenericParameters(method.GetGenericArguments())}|(${DescribeParameters(method.GetParameters())})->${TypeIdentity(method.ReturnType, Nullability.Create(method.ReturnParameter))}"

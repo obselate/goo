@@ -7,11 +7,12 @@ import System.Threading
 import System.Diagnostics
 internal class CellFixtures {
   func SchedulingPhasesAndFailedMountsContract() bool ->
-    Window{Root: SchedulingPhaseFixtureCell(), Width: 200, Height: 100}.SchedulingPhasesForTest()
+    Window{Root: SchedulingPhaseFixtureCell(), Size: LayoutSize(200, 100)}.SchedulingPhasesForTest()
+
   func LifecycleHooksAndRequestTokensContract() bool {
     let cell = LifecycleFixtureCell()
     if !cell.HostRejected() || cell.Enqueue(() -> {}) { return false }
-    let window = Window{Root: cell, Width: 200, Height: 100}
+    let window = Window{Root: cell, Size: LayoutSize(200, 100)}
     window.UpdateTree()
     let lifetime = cell.Token
     let first = cell.Request("load")
@@ -34,7 +35,7 @@ internal class CellFixtures {
   }
 
   func CellSchedulingAndTimerValidationContract() bool ->
-    Window{Root: LifecycleFixtureCell(), Width: 200, Height: 100}.CellSchedulingForTest()
+    Window{Root: LifecycleFixtureCell(), Size: LayoutSize(200, 100)}.CellSchedulingForTest()
 
   func TypedFactoryStoresInputWithoutRecreatingCellContract() bool {
     let window = Window{}
@@ -57,7 +58,7 @@ internal class CellFixtures {
     let document = TextDocument("initial")
     using let controller = TextEditorController(document)
     let cell = ControlledEditorValueCell(controller)
-    let window = Window{ Root: cell, Width: 200, Height: 100 }
+    let window = Window{ Root: cell, Size: LayoutSize(200, 100), }
     try {
       window.UpdateTree()
       cell.Value = "controlled"
@@ -220,7 +221,7 @@ internal class CellFixtures {
 
   func DirtySiblingsRebuildOnceInOneUpdate() bool {
     let parent = CellSchedulingSiblingsParent{}
-    let window = Window{ Root: parent, Width: 200, Height: 100 }
+    let window = Window{ Root: parent, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     guard let first = window.Tree else { return false }
     guard let left = first.Children[0].Fiber else { return false }
@@ -240,7 +241,7 @@ internal class CellFixtures {
   func DirtySiblingFailureResubmitsRemaining() bool {
     CellSchedulingRecoveryFirst.ThrowOnce = false
     let parent = CellSchedulingRecoveryParent{}
-    let window = Window{ Root: parent, Width: 200, Height: 100 }
+    let window = Window{ Root: parent, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     guard let first = window.Tree else { return false }
     guard let left = first.Children[0].Fiber else { return false }
@@ -274,7 +275,7 @@ internal class CellFixtures {
 
   func RepeatedRebuildRequestsCoalesce() bool {
     let parent = CellSchedulingSiblingsParent{}
-    let window = Window{ Root: parent, Width: 200, Height: 100 }
+    let window = Window{ Root: parent, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     guard let first = window.Tree else { return false }
     guard let child = first.Children[0].Fiber else { return false }
@@ -291,7 +292,7 @@ internal class CellFixtures {
   func DirectChildQueuesCanonicalParentOnce() bool {
     CellSchedulingDirectChild.Last = nil
     let parent = CellSchedulingDirectParent{}
-    let window = Window{ Root: parent, Width: 100, Height: 100 }
+    let window = Window{ Root: parent, Size: LayoutSize(100, 100), }
     window.UpdateTree()
     guard let child = CellSchedulingDirectChild.Last else { return false }
     let owner = Object()
@@ -307,7 +308,7 @@ internal class CellFixtures {
   func FailedDirectChildRebuildResubmitsCanonicalParent() bool {
     CellSchedulingDirectChild.Last = nil
     let parent = CellSchedulingDirectParent{}
-    let window = Window{ Root: parent, Width: 100, Height: 100 }
+    let window = Window{ Root: parent, Size: LayoutSize(100, 100), }
     window.UpdateTree()
     guard let child = CellSchedulingDirectChild.Last else { return false }
     let parentBefore = parent.Builds
@@ -333,7 +334,7 @@ internal class CellFixtures {
   func DirtyParentRunsBeforeAndSubsumesDirtyChild() bool {
     CellSchedulingOrderParent.Trace = ""
     let parent = CellSchedulingOrderParent{}
-    let window = Window{ Root: parent, Width: 200, Height: 100 }
+    let window = Window{ Root: parent, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     guard let first = window.Tree else { return false }
     guard let child = first.Children[0].Fiber else { return false }
@@ -356,7 +357,7 @@ internal class CellFixtures {
   func RemovedQueuedCellIsNotRebuiltAndDisposesOnce() bool {
     CellSchedulingRemovalChild.Disposals = 0
     let parent = CellSchedulingRemovalParent{}
-    let window = Window{ Root: parent, Width: 200, Height: 100 }
+    let window = Window{ Root: parent, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     guard let first = window.Tree else { return false }
     guard let child = first.Children[0].Fiber else { return false }
@@ -378,7 +379,7 @@ internal class CellFixtures {
   func RebuildRequestedDuringTransactionRunsOnNextUpdate() bool {
     CellSchedulingDeferredSecond.Last = nil
     let parent = CellSchedulingDeferredParent{}
-    let window = Window{ Root: parent, Width: 200, Height: 100 }
+    let window = Window{ Root: parent, Size: LayoutSize(200, 100), }
     window.UpdateTree()
     guard let first = window.Tree else { return false }
     guard let source = first.Children[0].Fiber else { return false }
@@ -416,7 +417,7 @@ internal class CellFixtures {
 
   func DirectCompositionAddsNoRenderNode() bool {
     DirectChildCell.Last = nil
-    let window = Window{ Root: DirectParentCell{}, Width: 100, Height: 100 }
+    let window = Window{ Root: DirectParentCell{}, Size: LayoutSize(100, 100), }
     window.UpdateTree()
     guard let node = window.Tree else { return false }
     guard let child = DirectChildCell.Last else { return false }
@@ -434,7 +435,7 @@ internal class CellFixtures {
   func DirectCompositionCallbacksRebuildRenderingCell() bool {
     let child = DirectCallbackCell{}
     let root = DirectCallbackParent(DirectCallbackParent(child))
-    let window = Window{ Root: root, Width: 100, Height: 100 }
+    let window = Window{ Root: root, Size: LayoutSize(100, 100), }
     try {
       window.UpdateTree()
       guard let node = window.Tree else { return false }
@@ -481,7 +482,7 @@ internal class CellFixtures {
     replacement = rec.Diff(replacement, Cell.Mount[ReplacementOtherCell]("same"))
 
     let root = WindowDisposableCell{}
-    let window = Window{ Root: root, Width: 100, Height: 100 }
+    let window = Window{ Root: root, Size: LayoutSize(100, 100), }
     window.UpdateTree()
     window.Close()
     window.Close()
@@ -516,7 +517,7 @@ internal class CellFixtures {
 
   func KeyedRollbackContinuesAfterDisposeFailures() bool {
     let root = KeyedRollbackParent{}
-    let window = Window{ Root: root, Width: 100, Height: 100 }
+    let window = Window{ Root: root, Size: LayoutSize(100, 100), }
     try {
       window.UpdateTree()
       let original = root.Handle.AttachedNode()
@@ -568,7 +569,7 @@ internal class CellFixtures {
 
   func WindowCloseCompletesAfterCleanupFailures() bool {
     RetirementDisposableCell.Reset()
-    let window = Window{ Root: WindowCleanupParent{}, Width: 100, Height: 100 }
+    let window = Window{ Root: WindowCleanupParent{}, Size: LayoutSize(100, 100), }
     window.UpdateTree()
     var metricCalls int32
     window.MetricsChanged += func(metrics WindowMetrics) {
@@ -710,7 +711,7 @@ internal class CellFixtures {
 
   func RootMountRetriesAfterInitialBuildFailure() bool {
     let root = FactoryRootRetryCell{}
-    let window = Window{ Root: root, Width: 100, Height: 100 }
+    let window = Window{ Root: root, Size: LayoutSize(100, 100), }
     var threw = false
     try {
       window.UpdateTree()
@@ -725,7 +726,7 @@ internal class CellFixtures {
 
   func FactoryRejectsCurrentlyBuildingRootWithoutCorruption() bool {
     let root = FactoryRecursiveRootCell{}
-    let window = Window{ Root: root, Width: 100, Height: 100 }
+    let window = Window{ Root: root, Size: LayoutSize(100, 100), }
     var failures int32
     for _ in 0 ... 2 {
       try {
@@ -840,7 +841,7 @@ public partial class Window {
         return false
       }
       let retryCell = SchedulingPhaseFixtureCell{Fail: true}
-      let retry = Window{Root: retryCell, Width: 200, Height: 100}
+      let retry = Window{Root: retryCell, Size: LayoutSize(200, 100)}
       retry.IsOpen = true
       try {
         retryCell.BindContext(nil, retry)
@@ -861,11 +862,21 @@ public partial class Window {
       } finally { retry.Close() }
     } finally { Close() }
   }
+
   internal func CellSchedulingForTest() bool {
     IsOpen = true
     let cell = cast[LifecycleFixtureCell](Root!!)
     try {
       UpdateTree()
+      using let buildScope = StateReadScope(cell, () -> {})
+      let previous = buildScope.Enter()
+      var scopeRejections int32
+      try {
+        try { cell.Enqueue(() -> {}) } catch (_ InvalidOperationException) { scopeRejections++ }
+        try { cell.Delay(0.0, () -> {}) } catch (_ InvalidOperationException) { scopeRejections++ }
+        try { cell.Repeat(1.0, () -> {}) } catch (_ InvalidOperationException) { scopeRejections++ }
+      } finally { buildScope.Exit(previous, true) }
+      if scopeRejections != 3 { return false }
       for value in []float64{Double.NaN, Double.PositiveInfinity, -1.0} {
         var rejected int32
         try { After(value, () -> {}) } catch (_ ArgumentOutOfRangeException) { rejected++ }
@@ -1433,8 +1444,7 @@ public partial class Window {
   }
 
   internal func DeferredCloseStopsPostsForTest() bool {
-    Width = 100
-    Height = 100
+    Size = LayoutSize(100, 100)
     let pending = DeferredCloseTarget()
     host = EmbeddedWindowBridge(ElementHandleEmbeddedHost(), this)
     windowTarget = pending
@@ -1577,7 +1587,7 @@ internal class ControlledEditorValueCell : Cell {
     if document.GetText() != Value {
       document.Apply(TextChange(TextRange(0, document.Length), Value))
     }
-    return TextEditor(controller) {
+    return TextEditor(){ Controller = controller,
       Width = 200,
       Height = 100,
       OnChange = change -> { Changes++ },

@@ -32,7 +32,7 @@ internal class Program {
             Application.Configure("Goo application host smoke", "1.0", identity)
             if mode == "graphics-unavailable" {
                 Environment.SetEnvironmentVariable("VK_DRIVER_FILES", Path.Combine(root, "missing-driver.json"))
-                let window = Window{Width: 160, Height: 100, Root: Cell()}
+                let window = Window{Size: LayoutSize(160, 100), Root: Cell()}
                 try {
                     window.Open()
                     throw InvalidOperationException("A missing Vulkan driver opened a window")
@@ -57,12 +57,23 @@ internal class Program {
                 RunPlacement(root, tag)
                 return 0
             }
+            Application.Configure("Goo application host smoke", "1.0", identity)
+            if mode == "graphics-unavailable" {
+                let window = Window{Size: LayoutSize(160, 100), Root: Cell()}
+                try {
+                    window.Open()
+                    throw InvalidOperationException("A missing Vulkan driver opened a window")
+                } catch (error GraphicsUnavailableException) {
+                    Require(!window.IsOpen && error.Message.Length != 0 && error.InnerException != nil, "Graphics failure did not close the native window or retain its cause")
+                }
+                return 0
+            }
             if mode == "activated" {
-                RunActivated(identity, root, args.Skip(3).ToArray())
+                RunActivated(root, args.Skip(3).ToArray())
                 return 0
             }
             if mode == "secondary" {
-                Send(identity, root)
+                Send(root)
                 return 0
             }
             if mode == "closed" {
@@ -124,7 +135,7 @@ internal class Program {
         }
 
 
-        private func Send(identity string, root string) {
+        private func Send(root string) {
             if OperatingSystem.IsLinux() { Environment.SetEnvironmentVariable("XDG_ACTIVATION_TOKEN", NativeToken) }
             let arguments = (ExpectedArguments.Clone() as []string)!!
             let directory = Environment.CurrentDirectory
@@ -179,7 +190,7 @@ internal class Program {
             Require(Environment.CurrentDirectory == Path.Combine(root, "receiver cwd"), "Receiver directory changed")
         }
 
-        private func RunActivated(identity string, root string, arguments []string) {
+        private func RunActivated(root string, arguments []string) {
             let owner = Environment.CurrentManagedThreadId
             var count = 0
             let nativeWayland = OperatingSystem.IsLinux() && Environment.GetEnvironmentVariable("GOO_ACTIVATION_NATIVE_WINDOW") == "1"
@@ -211,7 +222,7 @@ internal class Program {
                 {
                     using let lease = result.Lease!!
                     if OperatingSystem.IsMacOS() || nativeWayland {
-                        native = Window{ Width: 160, Height: 100, Root: Cell() }.Open()
+                        native = Window{ Size: LayoutSize(160, 100),  Root: Cell() }.Open()
                     }
                     File.WriteAllText(Path.Combine(root, "pid"), Environment.ProcessId.ToString())
                     let drain = typeof(Application).GetMethod("DrainActivations", BindingFlags.Static | BindingFlags.NonPublic)!!
@@ -242,15 +253,15 @@ internal class Program {
                 case _: WindowState.Normal
             }
             if state == WindowState.Normal {
-                let oversized = Window{ Title: "Goo placement oversized", Width: 4096, Height: 4096, MinWidth: 100, MinHeight: 100, Root: Cell() }.Open()
+                let oversized = Window{ Title: "Goo placement oversized", Size: LayoutSize(4096, 4096),  MinSize: LayoutSize(100, 100),  Root: Cell() }.Open()
                 try {
                     let usable = oversized.GetCurrentDisplay()!!.UsableBounds!!
                     for i in 0 ... 20 {
                         oversized.Pump(0.005)
                         Thread.Sleep(5)
                     }
-                    Require(oversized.Width <= int32(usable.Width) && oversized.Height <= int32(usable.Height),
-                        "Oversized window left the usable bounds: ${oversized.Width}x${oversized.Height} in $usable")
+                    Require(oversized.NativeWidth <= int32(usable.Width) && oversized.NativeHeight <= int32(usable.Height),
+                        "Oversized window left the usable bounds: ${oversized.NativeWidth}x${oversized.NativeHeight} in $usable")
                     if OperatingSystem.IsWindows() { RequireFrameInside(FindWindowW(nint(0), "Goo placement oversized"), usable) }
                 } finally {
                     oversized.RequestClose()
@@ -269,8 +280,8 @@ internal class Program {
             try {
                 Require(window.Show() == WindowOperationResult.Accepted, "Placement window did not show")
                 PumpUntil(window, () -> window.IsVisible
-                    && ((state == WindowState.Normal && window.Width == 360 && window.Height == 240)
-                        || (state != WindowState.Normal && window.Width > 360 && window.Height > 240)))
+                    && ((state == WindowState.Normal && window.NativeWidth == 360 && window.NativeHeight == 240)
+                        || (state != WindowState.Normal && window.NativeWidth > 360 && window.NativeHeight > 240)))
                 let captured = window.CapturePlacement()
                 Require(captured.Status == WindowOperationResult.Accepted && captured.Placement != nil, captured.Error)
                 let saved = captured.Placement!!
@@ -279,9 +290,9 @@ internal class Program {
                 Require(saved.Fields.HasFlag(WindowPlacementFields.Position) == !OperatingSystem.IsLinux(), "Captured position mask changed")
                 let restored = Persist(saved, Path.Combine(root, mode + ".json"))
                 window.State = WindowState.Normal
-                PumpUntil(window, () -> window.Width == 360 && window.Height == 240)
+                PumpUntil(window, () -> window.NativeWidth == 360 && window.NativeHeight == 240)
                 window.State = WindowState.Maximized
-                PumpUntil(window, () -> window.Width > 360 && window.Height > 240)
+                PumpUntil(window, () -> window.NativeWidth > 360 && window.NativeHeight > 240)
                 window.State = WindowState.Minimized
                 for i in 0 ... 20 {
                     window.Pump(0.005)
@@ -299,13 +310,11 @@ internal class Program {
                 Require(cold.Status == WindowOperationResult.Accepted, "${cold.Status}: ${cold.Error}")
                 Require(window.Show() == WindowOperationResult.Accepted, "Restored placement window did not show")
                 PumpUntil(window, () -> window.CapturePlacement().Placement?.State == state
-                    && ((state == WindowState.Normal && window.Width == 360 && window.Height == 240)
-                        || (state != WindowState.Normal && window.Width > 360 && window.Height > 240)))
+                    && ((state == WindowState.Normal && window.NativeWidth == 360 && window.NativeHeight == 240)
+                        || (state != WindowState.Normal && window.NativeWidth > 360 && window.NativeHeight > 240)))
                 Require(window.CapturePlacement().Placement!!.NormalBounds.Width == 360, "Cold restore replaced normal size")
-                window.MinWidth = 100
-                window.MinHeight = 100
-                window.MaxWidth = 500
-                window.MaxHeight = 400
+                window.MinSize = LayoutSize(100, 100)
+                window.MaxSize = LayoutSize(500, 400)
                 let moved = Placement.Restore(window, WindowPlacement{
                     Fields: WindowPlacementFields.NormalSize | WindowPlacementFields.Position | WindowPlacementFields.State,
                     NormalBounds: ElementRect{ X: 100064, Y: 100070, Width: 100000, Height: 100000 },
@@ -315,13 +324,13 @@ internal class Program {
                 })
                 Require(moved.Status == WindowOperationResult.Accepted, "${moved.Status}: ${moved.Error}")
                 Require(moved.AppliedFields.HasFlag(WindowPlacementFields.Position) == !OperatingSystem.IsLinux(), "Restored position mask changed")
-                PumpUntil(window, () -> window.Width == 500 && window.Height == 400)
+                PumpUntil(window, () -> window.NativeWidth == 500 && window.NativeHeight == 400)
                 Require(window.CapturePlacement().Placement!!.State == WindowState.Normal, "Saved minimized state was restored")
                 let invalid = window.ApplyPlacement(WindowPlacement{
                     Fields: WindowPlacementFields.NormalSize,
                     NormalBounds: ElementRect{ Width: Double.NaN, Height: 240 },
                 })
-                Require(invalid.Status == WindowOperationResult.Failed && window.Width == 500, "Invalid placement changed geometry")
+                Require(invalid.Status == WindowOperationResult.Failed && window.NativeWidth == 500, "Invalid placement changed geometry")
                 let stateOnly = window.ApplyPlacement(WindowPlacement{ Fields: WindowPlacementFields.State, State: WindowState.Normal })
                 Require(stateOnly.Status == WindowOperationResult.Accepted && stateOnly.AppliedFields == WindowPlacementFields.State,
                     "State-only placement changed its applied mask")
@@ -374,14 +383,14 @@ internal class Program {
         private func RunAsyncClose() {
             let ui = Environment.CurrentManagedThreadId
             let cancelled = AsyncCloseScene{Cancellable: true}
-            Application.Run(Window{Title: "Async close cancellation", Width: 240, Height: 120, Root: cancelled})
+            Application.Run(Window{Title: "Async close cancellation", Size: LayoutSize(240, 120), Root: cancelled})
             Require(
                 cancelled.FinallyCount == 1 && cancelled.FinallyThread == ui,
                 "Lifetime cancellation did not finish on the UI thread"
             )
 
             let primary = AsyncCloseScene()
-            let other = Window{Title: "Async close other window", Width: 240, Height: 120, Root: Cell()}.Open()
+            let other = Window{Title: "Async close other window", Size: LayoutSize(240, 120), Root: Cell()}.Open()
             var progress int32
             primary.Started = () -> {
                 other.After(
@@ -393,14 +402,14 @@ internal class Program {
                 )
                 other.After(80.0, other.RequestClose)
             }
-            Application.Run(Window{Title: "Async close primary", Width: 240, Height: 120, Root: primary})
+            Application.Run(Window{Title: "Async close primary", Size: LayoutSize(240, 120), Root: primary})
             Require(
                 progress == 1 && primary.FinallyCount == 1 && primary.FinallyThread == ui,
                 "The close drain blocked another window"
             )
 
             let late = AsyncCloseScene()
-            Application.Run(Window{Title: "Async close bound", Width: 240, Height: 120, Root: late, CloseDrainMs: 25.0})
+            Application.Run(Window{Title: "Async close bound", Size: LayoutSize(240, 120), Root: late, CloseDrainMs: 25.0})
             let elapsed = Stopwatch.GetElapsedTime(late.CloseTicks).TotalMilliseconds
             Require(
                 late.FinallyCount == 0 && elapsed >= 20.0 && elapsed < 5000.0,
@@ -415,8 +424,8 @@ internal class Program {
         }
 
         private func RunNativeClose(root string, mode string) {
-            let main = Window{ Title: "Goo close $mode main", Width: 240, Height: 120, Root: Cell() }.Open()
-            let child = Window{ Title: "Goo close $mode child", Width: 240, Height: 120, Root: Cell(),
+            let main = Window{ Title: "Goo close $mode main", Size: LayoutSize(240, 120),  Root: Cell() }.Open()
+            let child = Window{ Title: "Goo close $mode child", Size: LayoutSize(240, 120),  Root: Cell(),
                 Owner: if mode == "visible" { main } else { nil } }.Open()
             var closing = 0
             child.OnClosing = () -> {
@@ -456,10 +465,11 @@ internal class Program {
         }
 
         private func RunClipboard(text string, root string) {
-            let window = Window{ Title: "Goo clipboard", Width: 240, Height: 120, Root: Cell() }.Open()
+            let window = Window{ Title: "Goo clipboard", Size: LayoutSize(240, 120),  Root: Cell() }.Open()
             try {
                 PumpUntil(window, () -> window.IsFocused)
-                window.SetClipboardText(text)
+                let written = window.Clipboard.WriteText(text)
+                if written.Status != DataTransferStatus.Success { throw InvalidOperationException(written.Error) }
                 File.WriteAllText(Path.Combine(root, "ready"), "ready")
                 PumpUntil(window, () -> File.Exists(Path.Combine(root, "stop")))
             } finally {
@@ -476,7 +486,7 @@ internal class Program {
                 Thread.Sleep(5)
                 if Stopwatch.GetTimestamp() >= deadline { break }
             }
-            throw TimeoutException("Native placement did not reach ${condition}: ${window.Width}x${window.Height}, ${window.CapturePlacement().Placement?.State}")
+            throw TimeoutException("Native placement did not reach ${condition}: ${window.NativeWidth}x${window.NativeHeight}, ${window.CapturePlacement().Placement?.State}")
         }
 
         private func RequireFrameInside(handle nint, usable ElementRect) {

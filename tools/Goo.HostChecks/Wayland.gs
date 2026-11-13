@@ -6,8 +6,10 @@ import System.Text.RegularExpressions
 
 internal partial class Host {
     internal func Wayland() {
+        let graphicsEnvironment = Dictionary[string, string?](EnvironmentValues)
+        graphicsEnvironment["VK_DRIVER_FILES"] = Path.Combine(Root, "missing-driver.json")
         HostChecks.Run(Command([]string{"graphics-unavailable", "org.goo.graphics.failure", "--output=" + Root}),
-            30, EnvironmentValues)
+            30, graphicsEnvironment)
         let identity = "org.goo.token." + Guid.NewGuid().ToString("N")
         EnvironmentValues["XDG_ACTIVATION_TOKEN"] = nil
         EnvironmentValues["GOO_ACTIVATION_NATIVE_WINDOW"] = "1"

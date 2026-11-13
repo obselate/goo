@@ -7,17 +7,54 @@ import System.Threading
 
 /// Configures process identity, activation delivery and the desktop event loop.
 public shared class Application {
+    private var applicationName string = ""
+    private var applicationVersion string = ""
+    private var applicationIdentifier string = ""
+    private var nativeIdentityBound bool
+    internal prop Identifier string { get -> applicationIdentifier }
+
     internal prop HasOpenedWindow bool {
         get;
         set;
+    }
+
+    /// Gets or sets tracked-state verification.
+    /// Defaults to true when a debugger is attached or a DevTools session is registered.
+    public prop VerifyState bool {
+        get -> StateVerification.Enabled
+        set -> StateVerification.Enabled = value
     }
 
     /// Configures application identity before native initialization.
     /// @param name The human-readable product name.
     /// @param version The application version.
     /// @param identifier The stable reverse-domain application identifier.
-    public func Configure(name string, version string, identifier string) ->
-    SdlRuntime.ConfigureApplication(name, version, identifier)
+    public func Configure(name string, version string, identifier string) {
+        if String.IsNullOrWhiteSpace(name) { throw ArgumentException("name") }
+        if String.IsNullOrWhiteSpace(version) { throw ArgumentException("version") }
+        if String.IsNullOrWhiteSpace(identifier) { throw ArgumentException("identifier") }
+        lock activationGate {
+            if applicationIdentifier.Length != 0 {
+                if applicationName == name && applicationVersion == version && applicationIdentifier == identifier { return }
+                throw InvalidOperationException("Goo application metadata is already configured with different values.")
+            }
+            if nativeIdentityBound {
+                throw InvalidOperationException("Goo application metadata must be configured before native initialization.")
+            }
+            applicationName = name
+            applicationVersion = version
+            applicationIdentifier = identifier
+        }
+    }
+
+    internal func ApplyNativeIdentity() {
+        lock activationGate {
+            nativeIdentityBound = true
+            if applicationIdentifier.Length != 0 {
+                SdlRuntime.ApplyApplicationIdentity(applicationName, applicationVersion, applicationIdentifier)
+            }
+        }
+    }
 
     /// Configures identity from Product, InformationalVersion and GooApplicationId assembly metadata.
     /// @param assembly The application assembly.
@@ -43,7 +80,8 @@ public shared class Application {
         if String.IsNullOrWhiteSpace(identifier) {
             throw InvalidOperationException("Set the MSBuild GooPackageId property")
         }
-        Configure(name, version.Split('+')[0], identifier)
+        let separator = version.IndexOf('+')
+        Configure(name, if separator < 0 { version } else { version.Substring(0, separator) }, identifier)
     }
 
     /// Initializes activation and elects a primary instance before the first window opens.
@@ -55,7 +93,7 @@ public shared class Application {
         if !Double.IsFinite(timeoutMs) || timeoutMs <= 0.0 || timeoutMs > float64(Int32.MaxValue) {
             throw ArgumentOutOfRangeException("timeoutMs")
         }
-        let identifier = SdlRuntime.ApplicationIdentifier
+        let identifier = Identifier
         if HasOpenedWindow {
             throw InvalidOperationException("Acquire a single instance before opening the first window")
         }
@@ -143,7 +181,7 @@ public shared class Application {
     }
 
     /// Occurs once per application activation on the process UI thread, not once per open window.
-    /// Subscribe before initializing activation. Handlers own validation and window selection.
+    /// Subscribe before <see cref="AcquireSingleInstance"/> or <see cref="Run"/>. Handlers own validation and window selection.
     /// The queue retains 1024 requests, with 4096 arguments or documents per request.
     /// Text is limited to 64 KiB per UTF-8 string and 1 MiB per request.
     /// Native requests outside these limits, or received before initialization or after close, are dropped.

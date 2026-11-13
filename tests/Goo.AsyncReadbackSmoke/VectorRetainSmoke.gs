@@ -133,7 +133,7 @@ internal class VectorRetainSmoke {
         internal func Measure(asset VectorAsset, count int32, markers bool) {
             let root = VectorRetainCell(asset, count, markers)
             let window = Window{
-                Title: "Goo retained vector zoom", Width: 800, Height: 600,
+                Title: "Goo retained vector zoom", Size: LayoutSize(800, 600),
                 VSync: false, Background: Color.Black, Root: root,
             }
             try {
