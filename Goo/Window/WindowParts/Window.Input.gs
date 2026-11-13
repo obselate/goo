@@ -9,7 +9,7 @@ public partial class Window {
   private var modifiers KeyModifiers
 
   /// Gets the modifiers of the current input event, or the last known state outside dispatch.
-  public prop Modifiers KeyModifiers { get -> modifiers }
+  public prop Modifiers KeyModifiers { get -> TrackWindowValue(&trackedModifiers, modifiers) }
 
   /// Gets the owner-thread focus and text editing operations.
   public prop Focus WindowFocus {
@@ -22,7 +22,10 @@ public partial class Window {
     }
   }
 
-  internal func SetInputModifiers(value KeyModifiers) { modifiers = value }
+  internal func SetInputModifiers(value KeyModifiers) {
+    modifiers = value
+    trackedModifiers?.Sync(value)
+  }
   private var wheelScrollScale float32 = 1.0F
   private var dragStartDistance float32 = 8.0F
   private var smoothScrolling bool = true
@@ -81,6 +84,7 @@ public partial class Window {
 
   internal func RefreshPlatformInput() {
     platformInput?.Refresh()
+    SyncWindowFocus()
   }
 
   internal func InvalidatePlatformInput() {

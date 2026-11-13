@@ -16,7 +16,7 @@ public sealed class WindowFocus {
   public prop EditsText bool {
     get {
       owner.PlatformInput.requireThread()
-      return TargetEditsText(input.FocusedNode())
+      return owner.TrackWindowValue(&owner.trackedEditsText, TargetEditsText(input.FocusedNode()))
     }
   }
 
@@ -24,7 +24,7 @@ public sealed class WindowFocus {
   public prop Editor FocusedEditorSnapshot? {
     get {
       owner.PlatformInput.requireThread()
-      return input.EditorSnapshot()
+      return owner.TrackWindowValue(&owner.trackedEditor, input.EditorSnapshot())
     }
   }
 
@@ -32,7 +32,7 @@ public sealed class WindowFocus {
   public prop Selection TextSelection? {
     get {
       owner.PlatformInput.requireThread()
-      return input.EditorSelection()
+      return owner.TrackWindowValue(&owner.trackedSelection, input.EditorSelection())
     }
   }
 

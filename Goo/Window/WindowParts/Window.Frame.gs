@@ -154,6 +154,7 @@ public partial class Window {
     virtualRefreshDeferred = false
     timeS = timeS + wallDt
     prepare()
+    SyncWindowValues()
     let profiling = profiler.Active
     let motionProfile = profiling ? profiler.Start() : FrameProfilePoint{}
     let motionVersion = motionPump.ClearVersion

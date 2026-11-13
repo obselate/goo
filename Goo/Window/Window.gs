@@ -327,7 +327,9 @@ public partial class Window {
   /// Gets or sets the client size in layout units. Native assignments multiply by UiScale and round once.
   /// The native host's observed size is authoritative after Open.
   public prop Size LayoutSize{
-    get -> requestedSize ?? LayoutSize(float64(NativeWidth) / float64(UiScale), float64(NativeHeight) / float64(UiScale))
+    get -> TrackWindowValue(&trackedSize,
+      requestedSize ?? LayoutSize(float64(host?.LogicalWidth ?? width) / float64(EffectiveUiScale),
+        float64(host?.LogicalHeight ?? height) / float64(EffectiveUiScale)))
     set(value) {
       requireUiThread("Window.Size")
       if !Double.IsFinite(value.Width) || !Double.IsFinite(value.Height) || value.Width < 0.0 || value.Height < 0.0 {
@@ -348,10 +350,10 @@ public partial class Window {
   }
 
   /// Gets the observed client width in native logical units.
-  public prop NativeWidth int32{ get -> host?.LogicalWidth ?? width }
+  public prop NativeWidth int32{ get -> TrackWindowValue(&trackedWidth, host?.LogicalWidth ?? width) }
 
   /// Gets the observed client height in native logical units.
-  public prop NativeHeight int32{ get -> host?.LogicalHeight ?? height }
+  public prop NativeHeight int32{ get -> TrackWindowValue(&trackedHeight, host?.LogicalHeight ?? height) }
 
   // positionSet distinguishes an explicit (0,0) request.
   /// Gets or sets the requested horizontal position.
@@ -384,7 +386,7 @@ public partial class Window {
 
   /// Gets or sets the window state.
   public prop State WindowState{
-    get -> state
+    get -> TrackWindowValue(&trackedState, state)
     set(v) {
       requireUiThread("Window.State")
       if state == v {
@@ -394,6 +396,7 @@ public partial class Window {
         native.SetState(v)
       }
       state = v
+      trackedState?.Sync(v)
     }
   }
 
@@ -451,7 +454,15 @@ public partial class Window {
   }
 
   /// Reports whether the window holds native input focus.
-  public prop IsFocused bool{ get; private set; }
+  public prop IsFocused bool{
+    get -> TrackWindowValue(&trackedFocus, isFocused)
+    private set(value) {
+      isFocused = value
+      trackedFocus?.Sync(value)
+    }
+  }
+
+  private var isFocused bool
 
   /// Occurs after the native window reports a new window state.
   public event StateChanged Action[WindowState]{

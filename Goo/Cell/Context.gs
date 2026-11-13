@@ -567,3 +567,16 @@ internal sealed class ContextProvider : Cell {
         }
     }
 }
+
+internal class WindowDependency[T any](value T) {
+    private var current T = value
+    private let dependency StateDependency = StateDependency(true)
+
+    internal func Read(reader object) { dependency.Read(reader) }
+
+    internal func Sync(value T) {
+        if EqualityComparer[T].Default.Equals(current, value) { return }
+        current = value
+        dependency.Changed()
+    }
+}

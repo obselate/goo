@@ -8,10 +8,14 @@ public partial class Window {
   private var uiScale float32 = 1.0F
   private var uiScaleSet bool
 
+  private prop EffectiveUiScale float32 {
+    get -> if uiScaleSet { uiScale } else { Owner?.EffectiveUiScale ?? 1.0F }
+  }
+
   /// Gets or sets the layout and rendering scale, clamped to 0.5 through 3. The default is 1, or the owner's scale when not explicitly set.
   /// Size and its limits use layout units. NativeWidth and NativeHeight report the unscaled native logical size.
   public prop UiScale float32 {
-    get -> if uiScaleSet { uiScale } else { Owner?.UiScale ?? 1.0F }
+    get -> TrackWindowValue(&trackedScale, EffectiveUiScale)
     set(value) {
       requireUiThread("Window.UiScale")
       if !Single.IsFinite(value) { throw ArgumentOutOfRangeException("value") }

@@ -243,6 +243,8 @@ class FixtureContractTests {
             yield Contract[ClipPathInputFixtures]("TransformedClipPathUsesMappedCoordinates")
             yield Contract[ContextFixtures]("FailedBuildRetryAndDisposalContract")
             yield Contract[ContextFixtures]("FailedPassRetriesNewDependenciesContract")
+            yield Contract[ContextFixtures]("TrackedWindowGettersContract")
+            yield Contract[ContextFixtures]("TrackedWindowRetainedScopeContract")
             yield Contract[ContextFixtures]("QueuedStructReadAllocationContract")
             yield Contract[ContextFixtures]("RetainedDirectCleanPortalAndShadowingContract")
             yield Contract[ContextFixtures]("VirtualRetentionVersionAndFailureContract")
