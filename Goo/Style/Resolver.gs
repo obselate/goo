@@ -791,7 +791,6 @@ internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Acti
     }
     case StyleField.BackgroundColor { n.BackgroundColor = Color.FromNormalized(e.A, e.B, e.C, e.D) }
     case StyleField.BackgroundGradient { n.BackgroundGradient = entryGradient(e) }
-    case StyleField.BackgroundImage { BackgroundImageLayouts.SetPath(n, entryText(e) ?? "", invalidated) }
     case StyleField.BackgroundImageSource { BackgroundImageLayouts.SetSource(n, entryImageSource(e), invalidated, owner) }
     case StyleField.ShaderEffect { ShaderEffectStyles.Set(n, entryShaderEffect(e), invalidated) }
     case StyleField.BackgroundImageFit { n.BackgroundImageFit = ImageFit(int32(e.A)) }
@@ -930,7 +929,6 @@ internal func readField(n Node, f StyleField) StyleEntry {
     case StyleField.OverflowY { return StyleEntry{ Field: f, A: float32(int32(n.OverflowY)) } }
     case StyleField.BackgroundColor { return StyleEntry{ Field: f, A: n.BackgroundColor.R, B: n.BackgroundColor.G, C: n.BackgroundColor.B, D: n.BackgroundColor.A } }
     case StyleField.BackgroundGradient { return StyleEntry{ Field: f, Payload: n.BackgroundGradient } }
-    case StyleField.BackgroundImage { return StyleEntry{ Field: f, Payload: BackgroundImageLayouts.Path(n) } }
     case StyleField.BackgroundImageSource { return StyleEntry{ Field: f, Payload: BackgroundImageLayouts.Source(n) } }
     case StyleField.ShaderEffect { return StyleEntry{ Field: f, Payload: n.ShaderEffect } }
     case StyleField.BackgroundImageFit { return StyleEntry{ Field: f, A: float32(int32(n.BackgroundImageFit)) } }

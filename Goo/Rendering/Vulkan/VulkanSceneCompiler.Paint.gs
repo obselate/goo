@@ -65,18 +65,12 @@ internal partial class VulkanSceneCompiler {
 
   private func RecordUnsupportedFields(node Node, bounds ConservativeBounds) {
     if node.HasBackgroundImageState {
-      let path = BackgroundImageLayouts.Path(node)
       let source = BackgroundImageLayouts.Source(node)
-      if path != "" && source == nil {
-        RecordUnsupportedDetail(node, VulkanSceneUnsupportedField.BackgroundImage,
-          VulkanSceneUnsupportedPrimitive.BackgroundImage)
-      } else if source != nil && imageScene == nil {
+      if source != nil && imageScene == nil {
         RecordUnsupportedDetail(node, VulkanSceneUnsupportedField.BackgroundImageSource,
           VulkanSceneUnsupportedPrimitive.BackgroundImage)
       }
-      if ((path != "" && source == nil)
-          || (source != nil && imageScene == nil))
-        && node.BackgroundImageFit != ImageFit.Cover{
+      if source != nil && imageScene == nil && node.BackgroundImageFit != ImageFit.Cover {
           RecordUnsupportedDetail(node, VulkanSceneUnsupportedField.BackgroundImageFit,
             VulkanSceneUnsupportedPrimitive.BackgroundImage)
         }
@@ -393,8 +387,7 @@ internal partial class VulkanSceneCompiler {
     shapePaintClip bool,
     shapePaintParentChainId int32) {
       let hasBackgroundImage = node.HasBackgroundImageState
-        && (BackgroundImageLayouts.Path(node) != ""
-            || BackgroundImageLayouts.Source(node) != nil)
+        && BackgroundImageLayouts.Source(node) != nil
       let fillColor = node.ShapeUseCurrentColor ? node.Color : node.BackgroundColor
       let fillVisible = fillColor.A > 0.0F
         || node.BackgroundGradient != nil

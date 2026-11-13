@@ -16,32 +16,32 @@ public enum ImageFit {
 
 /// Defines a local bitmap image element.
 public class Image : Blob {
-  private var pixelsPerUnit float32 = 1.0F
+  private var pixelsPerUnit float64 = 1.0
 
   internal override func coreBlob() {
   }
 
-  /// Legacy path metadata. A nonempty path without Source throws when mounted.
-  /// Load local PNG assets with ImageSourceCache.LoadAsync and set Source instead.
-  public prop Path string{ get; init; }
-  /// Gets the owned or provider-backed image source. It wins over Path when set.
+  /// Gets the owned or provider-backed image source.
   public prop Source ImageSourceProvider? { get; init; }
   /// Gets the image fit mode.
   public prop Fit ImageFit{ get; init; }
+  /// Gets content shown inside the image box while its source is pending.
+  public prop Placeholder Blob? { get; init; }
+  /// Gets content shown inside the image box when its source fails.
+  public prop Fallback Blob? { get; init; }
 
   /// Gets source pixels per logical layout unit. Positive and finite, default 1.
   /// A 128-pixel image at density 2 has a natural width of 64 logical units.
-  public prop PixelsPerUnit float32 {
+  public prop PixelsPerUnit float64 {
     get -> pixelsPerUnit
     init {
-      if !Single.IsFinite(value) || value <= 0.0F { throw ArgumentOutOfRangeException("PixelsPerUnit") }
+      if !Double.IsFinite(value) || value <= 0.0 { throw ArgumentOutOfRangeException("PixelsPerUnit") }
       pixelsPerUnit = value
     }
   }
 
-  /// Initializes an image with an empty path and contained fit mode.
+  /// Initializes an image with contained fit mode.
   public init() {
-    Path = ""
     Fit = ImageFit.Contain
   }
 }

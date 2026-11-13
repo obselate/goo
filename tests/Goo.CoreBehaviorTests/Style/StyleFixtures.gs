@@ -2201,7 +2201,6 @@ internal class StyleFixtures {
       case StyleField.BorderEndWidth { return Style{ BorderEndWidth: 7 } }
       case StyleField.BorderStartColor { return Style{ BorderStartColor: Color.White } }
       case StyleField.BorderEndColor { return Style{ BorderEndColor: Color.White } }
-      case StyleField.BackgroundImage { return Style{ BackgroundImage: "style-field-contract" } }
       case StyleField.BackgroundImageFit { return Style{ BackgroundImageFit: ImageFit.Fill } }
       case StyleField.ClipPath { return Style{ ClipPath: styleFieldContractPath() } }
       case StyleField.ClipPathFillRule {

@@ -811,7 +811,7 @@ internal class AccessibilityPrimitiveActionCell : Cell, IDisposable {
   public func Dispose() { image.Dispose() }
   override func Build() Blob -> Container() {.Accessibility: Accessibility{ Role: AccessibilityRole.None },
     Button() { Text{ Content: "Run"} },
-    Image{ Path: "images/nonempty-name-must-not-leak.png", Source: image} }
+    Image{Source: image} }
 }
 
 internal class AccessibilityActionFailureCell : Cell {
