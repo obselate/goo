@@ -240,12 +240,13 @@ Before release, record the Android and TalkBack versions and check:
 
 ```gsharp
 using let popup = PopupWindow(window, TooltipCell{}, PopupKind.Tooltip)
-let result = popup.Open(anchor.BorderBox, 240, 120, PortalPlacement.BottomStart)
+let result = popup.Open(anchor.BorderBox, maximum: LayoutSize(240, 120))
 ```
 
 - Uses Android `PopupWindow` with a separate GooView and Vulkan surface.
 - A menu receives focus and dismisses on Back or outside input. A tooltip receives no input.
 - Coordinates use owner-content layout units. Size follows the owner's UiScale and display density.
+- Omit `size` to measure the root once, within `maximum` and the visible display area. `UpdatePlacement` can measure it again.
 - The native window may extend beyond its owner view. Android clips it to the app's display bounds.
 - Pause, surface loss, view detach and owner disposal dismiss the popup chain.
 - A missing live owner view returns `Unsupported`. Native window failure returns `Failed`.
