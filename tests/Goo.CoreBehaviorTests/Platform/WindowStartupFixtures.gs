@@ -78,7 +78,7 @@ internal class WindowSizeCell : Cell {
   internal var ContentHeight float64
   internal var Margin float64
 
-  protected override func Build() Blob -> Container{
+  public override func Build() Blob -> Container{
     Width: if Percentage { Percent(100) } else { ContentWidth },
     Height: ContentHeight, Margin: Margin}
 }
