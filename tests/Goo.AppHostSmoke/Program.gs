@@ -42,8 +42,7 @@ internal class Program {
             }
             Application.Configure("Goo application host smoke", "1.0", identity)
             if mode == "graphics-unavailable" {
-                Environment.SetEnvironmentVariable("VK_DRIVER_FILES", Path.Combine(root, "missing-driver.json"))
-                let window = Window{Width: 160, Height: 100, Root: Cell()}
+                let window = Window{Size: LayoutSize(160, 100), Root: Cell()}
                 try {
                     window.Open()
                     throw InvalidOperationException("A missing Vulkan driver opened a window")
