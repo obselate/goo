@@ -46,6 +46,7 @@ public open class Blob : Style {
     FocusStyle?.FreezeStyle(owner)
     DisabledStyle?.FreezeStyle(owner)
     Accessibility?.Freeze(owner)
+    if this is Portal portal { portal.FocusScope?.Freeze(owner) }
     let children IList[Blob]? = switch this {
       case value is Container: value.FreezeChildren()
       case value is Button: value.FreezeChildren()

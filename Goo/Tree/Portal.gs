@@ -46,6 +46,9 @@ public class Portal : Blob {
   private var declarationCollisionBounds ElementRect?
   private var declarationHideWhenAnchorClipped bool
   private var children IList[Blob] = List[Blob]()
+  private var declarationFocusScope FocusScopeOptions?
+  private var declarationScrim Color?
+  private var declarationOnDismiss ((PopupDismissReason) -> void)?
 
   internal override func coreBlob() {
   }
@@ -104,13 +107,31 @@ public class Portal : Blob {
   }
 
   /// Gets the focus scope options. OnDismiss alone opens a nonmodal scope with default options.
-  public prop FocusScope FocusScopeOptions? { get; init; }
+  public prop FocusScope FocusScopeOptions? {
+    get -> declarationFocusScope
+    set {
+      CheckMutable()
+      declarationFocusScope = value
+    }
+  }
 
   /// Gets the full-window scrim color. Modal scopes use a transparent scrim when nil.
-  public prop Scrim Color? { get; init; }
+  public prop Scrim Color? {
+    get -> declarationScrim
+    set {
+      CheckMutable()
+      declarationScrim = value
+    }
+  }
 
   /// Handles Escape outside composition and presses outside the content. Remove the Portal to close it.
-  public prop OnDismiss ((PopupDismissReason) -> void)? { get; init; }
+  public prop OnDismiss ((PopupDismissReason) -> void)? {
+    get -> declarationOnDismiss
+    set {
+      CheckMutable()
+      declarationOnDismiss = value
+    }
+  }
 
   /// Initializes an empty child collection.
   public init() { }

@@ -4,6 +4,40 @@ import System
 import System.Collections.Generic
 
 internal class TreeFixtures {
+  func RetainedImageBranchesFreezeAtHandOffContract() bool {
+    let placeholder = Text("pending")
+    let fallback = Text("failed")
+    let image = Image{Placeholder: Container(){placeholder}, Fallback: Container(){fallback}}
+    let node = Reconciler{Res: Resolver{}}.Mount(image)
+    try {
+      for content in []Text{placeholder, fallback} {
+        var rejected = false
+        try { content.Content = "changed" } catch (error InvalidOperationException) {
+          rejected = error.Message.Contains("Text") && error.Message.Contains("modified after it was returned to Goo")
+        }
+        if !rejected { return false }
+      }
+      return true
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func OverlayDeclarationsFreezeAtHandOffContract() bool {
+    let scope = FocusScopeOptions{}
+    let portal = Portal{FocusScope: scope, Text("content")}
+    let node = Reconciler{Res: Resolver{}}.Mount(portal)
+    try {
+      let changes = []Action{() -> { scope.Modal = true }, () -> { portal.Scrim = Color.Black },
+        () -> { portal.FocusScope = nil }, () -> portal.Add(Text("extra"))}
+      for change in changes {
+        var rejected = false
+        try { change() } catch (error InvalidOperationException) {
+          rejected = error.Message.Contains("Portal") && error.Message.Contains("modified after it was returned to Goo")
+        }
+        if !rejected { return false }
+      }
+      return true
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
   func BlobAssignmentAfterHandOffContract() bool {
     let blob = Text("before")
     let node = Reconciler{Res: Resolver{}}.Mount(blob)
