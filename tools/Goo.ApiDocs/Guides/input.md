@@ -162,7 +162,7 @@ An active descendant alone does not enable projection.
 
 ## Mounted focus scopes
 
-Use `Portal{Modal: true, ...}` for modal overlays. For a custom scope, call
+Use `Portal{FocusScope: FocusScopeOptions{Modal: true}, ...}` for modal overlays. For a custom scope, call
 `ElementHandle.BeginFocusScope(FocusScopeOptions)` in `Mounted` and dispose
 the returned scope in `Unmounting`. The visible, enabled root must be focusable. On the next stable
 input/tree update, Goo uses the eligible `InitialFocus` handle, an `AutoFocus`

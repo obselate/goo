@@ -69,6 +69,8 @@ internal class NodeLifecycle {
       } catch (error Exception) {
         firstError ??= error
       }
+      n.RetainedSizedState?.Dispose()
+      n.RetainedSizedState = nil
       TextLayouts.Dispose(n)
       if let editor = n.EditorBinding {
         n.EditorBinding = nil
@@ -81,6 +83,7 @@ internal class NodeLifecycle {
       ShaderEffectStyles.Dispose(n)
       LayoutTransitions.Dispose(n)
       VulkanSceneCompiler.RetireNode(n)
+      Portals.Remove(n)
       for i in 0 ... n.Children.Count {
         if let error = disposeTree(n.Children[i]) {
           if firstError == nil {

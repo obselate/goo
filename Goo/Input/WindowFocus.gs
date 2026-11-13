@@ -3,6 +3,7 @@ package Goo
 import System
 
 /// Provides owner-thread focus state, selection, and text commands for one window.
+/// Getter reads in Build and retained builders subscribe to changes.
 public class WindowFocus {
   private let owner Window
   private let input InputCoordinator
@@ -21,7 +22,7 @@ public class WindowFocus {
   public prop EditsText bool {
     get {
       owner.PlatformInput.requireThread()
-      return TargetEditsText(input.FocusedNode())
+      return owner.TrackWindowValue(&owner.trackedEditsText, TargetEditsText(input.FocusedNode()))
     }
   }
 
@@ -29,7 +30,7 @@ public class WindowFocus {
   public prop Editor FocusedEditorSnapshot? {
     get {
       owner.PlatformInput.requireThread()
-      return input.EditorSnapshot()
+      return owner.TrackWindowValue(&owner.trackedEditor, input.EditorSnapshot())
     }
   }
 
@@ -37,7 +38,7 @@ public class WindowFocus {
   public prop Selection TextSelection? {
     get {
       owner.PlatformInput.requireThread()
-      return input.EditorSelection()
+      return owner.TrackWindowValue(&owner.trackedSelection, input.EditorSelection())
     }
   }
 
@@ -95,6 +96,7 @@ public class WindowFocus {
     if input.IsDispatching { return }
     let current = input.EditorSnapshot()
     let selection = input.EditorSelection()
+    owner.SyncWindowFocus(current, selection)
     var selectionChanged = (publishedSelection == nil) != (selection == nil)
     if let prior = publishedSelection, let next = selection {
       selectionChanged = prior.Anchor.Offset != next.Anchor.Offset || prior.Active.Offset != next.Active.Offset

@@ -12,6 +12,20 @@ internal func countNodes(n Node) int32 {
 }
 
 internal class AccessibilityFixtures {
+  func DeclarativePortalModalFlagContract() bool {
+    let cell = DeclarativePortalCell{ Options: FocusScopeOptions{ Modal: true } }
+    let adapter = AccessibilityTestAdapter()
+    let window = Window{ Root: cell, Size: LayoutSize(200, 100), AccessibilityAdapter: adapter }
+    window.UpdateTree()
+    cell.Open = true
+    cell.Rebuild()
+    window.UpdateTree()
+    if findPortalAccessibility(adapter.Tree?.Root, "dialog")?.Modal != true { return false }
+    cell.Options = FocusScopeOptions()
+    cell.Rebuild()
+    window.UpdateTree()
+    return findPortalAccessibility(adapter.Tree?.Root, "dialog")?.Modal != true
+  }
   func AccessibilityShorthandOrderContract() bool {
     let blobs = []Blob{Container{AccessibilityName: ""}, Container{AccessibilityRole: AccessibilityRole.Auto}}
     for blob in blobs {
@@ -810,7 +824,7 @@ internal class AccessibilityPrimitiveActionCell : Cell, IDisposable {
   public func Dispose() { image.Dispose() }
   override func Build() Blob -> Container() {.Accessibility: Accessibility{ Role: AccessibilityRole.None },
     Button() { Text{ Content: "Run"} },
-    Image{ Path: "images/nonempty-name-must-not-leak.png", Source: image} }
+    Image{Source: image} }
 }
 
 internal class AccessibilityActionFailureCell : Cell {

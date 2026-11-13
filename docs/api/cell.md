@@ -4,7 +4,7 @@ Source: [`Goo/Cell`](../../Goo/Cell)
 
 ## Build input cells
 
-Derive packaged components as `open class X : Cell<TInput>` and override `protected Build(input TInput) Blob`. Goo passes the stored immutable input snapshot. Same-assembly components can still override parameterless `Build()`. If both overloads are overridden, the typed overload wins. A child rebuilds when its input differs by equality. Derive state from the input in `InputChanged(input)`.
+Derive packaged components as `open class X : Cell<TInput>` and override `protected Build(input TInput) Blob`. Goo passes the stored immutable input snapshot. Same-assembly components can still override parameterless `Build()`. If both overloads are overridden, the typed overload wins. Input equality decides whether the child rebuilds. Derive input-dependent state in `InputChanged(input)`, before Build.
 
 ## Forward input callbacks
 
@@ -42,7 +42,7 @@ A mounted Cell is retained by declared `TCell` and sibling key. The factory runs
 
 Goo owns and disposes the Cell on removal. Each invocation must return a fresh, unmounted, undisposed instance. Do not share an instance across mounts or return a disposed instance. A null factory or result is rejected.
 
-Constructor arguments initialize the Cell. Update it through typed inputs, configuration, or an external store read by `Build()`. A changed `State<T>` rebuilds its readers. Goo handles rebuilds after its input, Cell post, timer and async callbacks. Call `Rebuild()` only for plain state changed outside Goo. Await in Goo callbacks to resume on the UI thread. Use `Cell.Post` for background results. Read changing values from a store or getter, not a captured scalar copy. Calling `Build()` directly returns a Blob tree without mounting the Cell.
+Constructor arguments initialize the Cell. Update it through typed inputs, configuration, or an external store read by `Build()`. Call its `Rebuild()` after changes outside Goo input callbacks. Read changing values from a store or getter, not a captured scalar copy. Calling `Build()` directly returns a Blob tree without mounting the Cell.
 
 See [language interop](../interop.md) for other languages.
 
@@ -64,7 +64,7 @@ Pass `Lifetime` to cancellable work. For replaceable requests, call `Latest("loa
 ## `Cell`
 
 
-Defines a stateful Goo component.
+Defines a stateful Goo component. A mutable static field on a Cell type or its base types makes that Cell rebuild after every callback. With safe fields, declaring State or reading State in Build enables tracked callback rebuilding. Reading window values or contexts alone keeps automatic callback rebuilding.
 
 ### `new`
 
@@ -267,7 +267,7 @@ Returns: true when accepted, or false before window binding, after unmount, or w
 
 ### `Rebuild`
 
-Requests a rebuild of this component. Mounted cells must use their window's UI thread. Use Cell.Post for background results. State changes and Goo callbacks handle rebuilds automatically. Use this for plain state changed outside Goo.
+Requests a rebuild of this component. Mounted cells must use their window's UI thread. Post background results with Window.Post.
 
 ### `Unmounting`
 
@@ -332,10 +332,6 @@ Invokes an input-time callback and rebuilds the Cell that supplied this input. A
 
 Returns: the callback result or fallback
 
-### `ShouldRebuild(TInput,TInput)`
-
-Decides whether a later post-mount snapshot needs a rebuild after Input stores next; default uses EqualityComparer[TInput].Default.
-
 ### `Input`
 
 Gets the current immutable input snapshot.
@@ -395,7 +391,7 @@ Gets the owner window during a Cell build or retained virtual callback. Access o
 ## `State<T>`
 
 
-Holds a value that rebuilds the Cells that read it in Build when it changes. A Cell declared with a primary constructor always rebuilds after callbacks.
+Holds a value that invalidates the Cells and retained builders that read it. In-place changes and reads of mutable global or service state are not tracked. Keep values read by Build in State. Verification reports tree changes without a tracked write.
 
 ### `new(T)`
 
@@ -411,9 +407,4 @@ Converts state to its current value.
 
 ### `Value`
 
-Gets or sets the value. A read in Build subscribes the Cell. A write of a different value rebuilds its readers.
-
-## `StateDependency`
-
-
-Base type of tracked Cell state.
+Gets or sets the value. Reads in Build and retained builders subscribe their owner. Equal writes do nothing. Changed writes invalidate the subscribed readers. Writes during Build throw. After its first reader, writes require that reader's UI thread.

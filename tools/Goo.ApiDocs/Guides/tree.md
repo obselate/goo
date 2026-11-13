@@ -18,6 +18,25 @@ let content = Container{
 - After a constructor or factory call, unmarked `key: value` calls `Add(key, value)`.
 - `Children: existingList` assigns the list. A spread copies its contents.
 
+Goo may keep the mounted result of a Blob it has already received and not read that Blob again. Returning the same Blob again does not refresh it.
+Declarations can be changed while you build them and throw once Goo has received them.
+
+## Build content from its allotted size
+
+```gsharp
+Sized(size -> size.Width < 600 ? CompactView() : WideView()){
+    .FlexGrow: 1, .MinWidth: 0, .MinHeight: 0,
+}
+```
+
+- `Sized(build)` and `Blob.Sized(build)` pass the border-box `LayoutSize` in layout units.
+- Give the element space through its parent or its own style. It has no intrinsic size. Its content cannot enlarge it.
+- Goo builds before paint in the same frame, after the element gets its size. New content is laid out before `Mounted`.
+- Stable device-pixel sizes do not rebuild content. Changed inputs, observed `State`, context values, and pixel density also refresh it.
+- A zero-size element still builds. An unbounded axis with no authored size, minimum, or padding resolves to zero. The callback never receives infinity.
+- Read state in the builder, but do not write it. Input callbacks belong to the declaring Cell. Returned children keep normal keyed and positional identity.
+- Use `Container.Layout` to place existing children. Use `Sized` to choose or build different content.
+
 ## Compose and select text
 
 ```gsharp
@@ -121,9 +140,19 @@ opacity, overflow clipping, and transforms do not constrain presented geometry.
 Portal children do not participate in their source container's Yoga or custom
 layout and do not enlarge its scroll extent. Apply size, position, transform,
 overflow, and paint styles to the Portal itself when the overlay needs those
-semantics. Goo does not infer an anchor from the declaration parent and does not
-provide automatic dismissal or a named layer system; compose those policies with
-handles, input callbacks, and focus scopes.
+semantics. Goo does not infer an anchor from the declaration parent.
+
+Set `FocusScope: FocusScopeOptions{Modal: true}` for a modal overlay. After its
+first layout, `InitialFocus`, then `AutoFocus`, then the first tab stop receives
+focus. An empty scope focuses the Portal. Closing restores eligible prior focus
+unless `RestoreFocus` is false or focus has moved outside.
+
+`OnDismiss` receives `PopupDismissReason.Escape` outside text composition and
+`OutsideInteraction` on an outside press. Remove the Portal to close it.
+`OnDismiss` alone opens a nonmodal focus scope. Nil `FocusScope` and `OnDismiss`
+leave focus unchanged. `Scrim` paints a full-window layer behind the content.
+A modal scope uses a transparent scrim when `Scrim` is nil and sets the
+accessibility modal flag. Use `AccessibilityRole` and `AccessibilityName` on the Portal.
 
 ## Virtualize large collections
 
@@ -174,13 +203,28 @@ Set `Blob.LayoutTransition` to a `LayoutTransition(durationMs, easing)` value to
 ## Owned image sources
 
 `Image.Source` and `Style.BackgroundImageSource` accept an `ImageSourceProvider`.
-Source takes precedence over Path. A nonempty `Image.Path` without Source throws
-when mounted. Load local assets with `ImageSourceCache.LoadAsync` and assign Source.
+Use an `ImageSource` for ready pixels. For deferred work, keep an `AsyncImageSource`
+in a field or model. Its loader returns `Task[ImageSource]`. Wrap synchronous loaders
+with `Task.FromResult`. Goo cancels the load when its last pending lease is released,
+including when an image unmounts or changes source.
+
+`Image.Placeholder` and `Image.Fallback` fill and clip to the image box while the
+source is pending or failed. They do not set its measured size. Completion updates
+the image on the UI thread without an app rebuild call.
+
+`Assets.Open(assembly, name)` and `Assets.ReadAllBytes(assembly, name)` first resolve
+the exact manifest resource name, then a file under `AppContext.BaseDirectory`.
+The caller disposes an opened stream. `<GooAsset Include="assets/**" />` copies files
+for normal builds and embeds them for single-file or NativeAOT builds.
+
+`<GooShaderEffect Include="background.slang" Embed="true" />` embeds
+`background.goo-effect`. Load it with `ShaderEffectProgram.Load(assembly, "background")`.
 
 See [image loading and ownership](../images.md) for loading, decoding, buffer
 transfer, provider lifetime and memory-pressure behavior.
 
-Provider updates keep the last-good version visible until a replacement is ready.
+Provider version updates keep the last-good version visible until a replacement is ready.
+Changing to a pending source clears the previous image.
 
 ## Observe mounted element metrics
 

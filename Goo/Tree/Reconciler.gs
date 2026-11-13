@@ -55,6 +55,7 @@ internal partial class Reconciler {
   internal var Context ContextFrame?
   private var contextCommits ContextReader?
   private var expandingCell Cell?
+  private var verifyingCell Cell?
 
   private func trackContext(cell Cell, preserve bool = false) {
     guard let reader = cell.contextReader else { return }
@@ -77,6 +78,7 @@ internal partial class Reconciler {
   private func configureCell(cell Cell, declaration CellElement) {
     cell.BindContext(Context, Owner)
     cell.contextReader?.Begin()
+    cell.ancestorVerification = verifyingCell != nil && (!cell.IsDirty() || cell.verifyPending)
     let previous = ContextEnvironment.Enter(ContextEnvironment{Window: Owner, Frame: cell.incomingContext,
       Cell: cell, Reader: cell.contextReader, CallbackCell: declaration.CallbackOwner})
     try {
@@ -94,12 +96,15 @@ internal partial class Reconciler {
       Frame: cell.incomingContext, Cell: cell, Reader: cell.contextReader})
     try {
       guard let profiler = Profiler else {
-        return cell.Render()
+        let result = cell.Render()
+        result.Freeze()
+        return result
       }
       let start = profiler.Start()
       var completed = false
       try {
         let result = cell.Render()
+        result.Freeze()
         completed = true
         return result
       } finally {
@@ -121,6 +126,9 @@ internal partial class Reconciler {
 
   internal func MarkEffects(e ReconcileEffects) {
     Effects = ReconcileEffects(int32(Effects) | int32(e))
+    if e != ReconcileEffects.None {
+      if let verifying = verifyingCell { verifying.verificationChanged = true }
+    }
   }
 
   private func markMounted() {
@@ -223,7 +231,9 @@ internal partial class Reconciler {
   private var operationDepth int32
 
   private func mountCore(b Blob) Node {
+    b.Freeze()
     let result = switch b {
+      case s is SizedBlob: mountSized(s)
       case v is Virtual: mountVirtual(v)
       case retained is VirtualRetainedBlob: throw InvalidOperationException("Retained virtual item cannot be mounted")
       case p is Portal: mountPortal(p)
@@ -348,8 +358,10 @@ internal partial class Reconciler {
     let state = applyVirtual(n, b, false)
     let extent = state.Extent()
     let count = state.ItemCount()
+    let previousVerifier = verifyingCell
     try {
       let children = state.Prepare(n, b.Source, b.Accessibility?.Role == AccessibilityRole.List)
+      if verifyingCell != nil && state.HasStateChanges { verifyingCell = nil }
       diffChildren(n, children)
       state.Commit()
       // Items added or removed out of view leave the children unchanged, but the scroll extent and the
@@ -365,6 +377,8 @@ internal partial class Reconciler {
     } catch (_ Exception) {
       state.Cancel()
       rethrow
+    } finally {
+      verifyingCell = previousVerifier
     }
   }
 
@@ -813,6 +827,14 @@ internal partial class Reconciler {
       n.Context = Context
       if ScrollbarParts.Children(n).Count > 0 { Res.Scrollbars.Queue(n) }
       Virtualization.State(n)?.BindContext(Context, Owner, n.CallbackOwner)
+      if let sized = n.RetainedSizedState {
+        if sized.Context != Context {
+          sized.Context = Context
+          sized.ContextReads.Frame = Context
+          sized.ContextReads.Refresh()
+          sized.Invalidate()
+        }
+      }
       for index in 0 ... n.Children.Count {
         let old = n.Children[index]
         let child = rebindRetainedContext(old)
@@ -827,6 +849,7 @@ internal partial class Reconciler {
   }
 
   private func diffCore(n Node, b Blob) Node {
+    b.Freeze()
     if recyclingRow { n.Key = b.Key }
     if b is VirtualRetainedBlob {
       if n.Retired || n.Key != b.Key {
@@ -841,6 +864,7 @@ internal partial class Reconciler {
       return replacement
     }
     let result = switch b {
+      case s is SizedBlob: diffSized(n, s)
       case v is Virtual: diffVirtual(n, v)
       case p is Portal: diffPortal(n, p)
       case bt is Button: diffButton(n, bt)
@@ -917,6 +941,9 @@ internal partial class Reconciler {
 
   internal func expandCellAt(existing Node?, e CellElement, prior Cell?, owner Cell?) Node {
     let reused Cell? = if let old = prior && mountType(old) == e.CellType && old.mountKey == e.Key && !old.disposed { old } else { nil }
+    if reused == nil && existing != nil {
+      if let verifying = verifyingCell { verifying.verificationChanged = true }
+    }
 
     if let cell = reused {
       if let pump = Pump {
@@ -975,6 +1002,12 @@ internal partial class Reconciler {
     let previousContext = Context
     let previousCell = expandingCell
     expandingCell = cell
+    let previousVerifier = verifyingCell
+    let verify = cell.TakeStateVerification()
+    let verificationActive = verify || previousVerifier != nil
+    if verificationActive {
+      verifyingCell = verify ? cell : cell.ancestorVerification && !cell.stateChanged ? previousVerifier : nil
+    }
 
     cell.ClearDirty()
     var completed = false
@@ -1014,9 +1047,15 @@ internal partial class Reconciler {
       if let retained = result.Fiber {
         retained.RefreshDirectMounts(result)
       }
+      if verify && !cell.stateChanged && cell.verificationChanged {
+        throw InvalidOperationException("${cell.GetType().Name}.Build changed its tree without a tracked State write.")
+      }
       completed = true
       return result
     } finally {
+      if verificationActive {
+        verifyingCell = previousVerifier
+      }
       Context = previousContext
       expandingCell = previousCell
       treeDepth = previousDepth
@@ -1190,11 +1229,7 @@ internal partial class Reconciler {
 
   internal func applyImage(n Node, i Image, initial bool) {
     applyStyle(n, i, i.Focusable, initial)
-    let sourceChanged = if let source = i.Source {
-      initial || n.ImageSource != source
-    } else {
-      initial || ImageLayouts.Source(n) != nil || i.Path != ""
-    }
+    let sourceChanged = initial || n.ImageSource != i.Source
     let fitChanged = n.ImageFit != i.Fit
     if !sourceChanged {
       if let binding = ImageLayouts.Binding(n) {
@@ -1209,7 +1244,7 @@ internal partial class Reconciler {
       if let source = i.Source {
         ImageLayouts.ApplySource(n, source, i.Fit, ImageCompleted, Owner, i.PixelsPerUnit)
       } else {
-        ImageLayouts.ApplyPath(n, i.Path, i.Fit)
+        ImageLayouts.Dispose(n)
       }
       n.BumpScenePaintVersion()
       MarkEffects(ReconcileEffects.Content)
@@ -1223,6 +1258,30 @@ internal partial class Reconciler {
       MarkEffects(ReconcileEffects.Content)
       MarkEffects(ReconcileEffects.Layout)
       MarkEffects(ReconcileEffects.Paint)
+    }
+    if let binding = ImageLayouts.Binding(n) { binding.Declaration = i }
+    let content = if n.ImageLease?.IsFailed == true { i.Fallback }
+      else if n.ImageLease?.IsComplete == false { i.Placeholder } else { nil }
+    if let child = content {
+      diffChildren(n, []Blob{Container{Width: Percent(100), Height: Percent(100),
+        OverflowX: Overflow.Hidden, OverflowY: Overflow.Hidden, child}})
+    } else if n.Children.Count > 0 {
+      diffChildren(n, Array.Empty[Blob]())
+    }
+  }
+
+  internal func RefreshImageContent(n Node, image Image) {
+    let previousDepth = enterTree(n.Parent)
+    operationDepth++
+    var completed = false
+    try {
+      applyImage(n, image, false)
+      FlushStyles()
+      completed = true
+    } finally {
+      operationDepth--
+      treeDepth = previousDepth
+      if !completed { DiscardStyles() }
     }
   }
 
@@ -1262,8 +1321,30 @@ internal partial class Reconciler {
     if let rect = p.CollisionBounds {
       if !validPortalRect(rect) { throw ArgumentOutOfRangeException("CollisionBounds") }
     }
-    applyStyle(n, p, p.Focusable, initial)
+    let options = p.FocusScope ?? (p.OnDismiss != nil ? Portals.DefaultScopeOptions : nil)
+    applyStyle(n, p, p.Focusable || options != nil, initial)
     n.HitTestSelf = false
+    if options != nil { n.TabStop = false }
+    let needsScrim = p.Scrim != nil || options?.Modal == true
+    var scrim = Portals.State(n)?.Scrim
+    if needsScrim {
+      let declaration = Portal{ Width: Percent(100), Height: Percent(100),
+        BackgroundColor: p.Scrim ?? Color.Transparent, Focusable: false, ZIndex: n.ZIndex }
+      if let current = scrim {
+        diffPortal(current, declaration)
+      } else {
+        scrim = mountPortal(declaration)
+        MarkEffects(ReconcileEffects.Structure)
+      }
+    } else if scrim != nil {
+      scrim = nil
+      MarkEffects(ReconcileEffects.Structure)
+    }
+    if let backdrop = scrim { backdrop.HitTestSelf = true }
+    Portals.Configure(n, options, p.OnDismiss, scrim)
+    if !initial && (options != nil || p.Scrim != nil || Portals.State(n) != nil) {
+      MarkEffects(ReconcileEffects.Input | ReconcileEffects.Accessibility)
+    }
     if n.PortalAnchor != p.Anchor || n.PortalPlacement != p.Placement
       || n.PortalBounds?.AnchorRect != p.AnchorRect
       || n.PortalBounds?.CollisionBounds != p.CollisionBounds
@@ -1382,6 +1463,9 @@ internal partial class Reconciler {
 
   private func canReuseNode(n Node, b Blob) bool {
     switch b {
+      case sized is SizedBlob {
+        return n.Fiber == nil && n.RetainedSizedState != nil && n.Key == b.Key
+      }
       case retained is VirtualRetainedBlob {
         return !n.Retired && n.Key == b.Key
       }
@@ -1405,15 +1489,15 @@ internal partial class Reconciler {
       }
       case container is Container {
         return n.Fiber == nil && n.Kind == NodeKind.Container && !n.IsPortal && n.Key == b.Key
-          && Virtualization.State(n) == nil
+          && Virtualization.State(n) == nil && n.RetainedSizedState == nil
       }
       case row is Row {
         return n.Fiber == nil && n.Kind == NodeKind.Container && !n.IsPortal && n.Key == b.Key
-          && Virtualization.State(n) == nil
+          && Virtualization.State(n) == nil && n.RetainedSizedState == nil
       }
       case column is Column {
         return n.Fiber == nil && n.Kind == NodeKind.Container && !n.IsPortal && n.Key == b.Key
-          && Virtualization.State(n) == nil
+          && Virtualization.State(n) == nil && n.RetainedSizedState == nil
       }
       case spacer is Spacer {
         return n.Fiber == nil && n.Kind == NodeKind.Spacer && n.Key == b.Key

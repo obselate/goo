@@ -17,6 +17,23 @@ let content = Container{Gap: 12.0, Text("First"), ...rows, Button{OnClick: () ->
 - After a constructor or factory call, unmarked `key: value` calls `Add(key, value)`.
 - `Children: existingList` assigns the list. A spread copies its contents.
 
+Goo may keep the mounted result of a Blob it has already received and not read that Blob again. Returning the same Blob again does not refresh it.
+Declarations can be changed while you build them and throw once Goo has received them.
+
+## Build content from its allotted size
+
+```gsharp
+Sized(size -> size.Width < 600 ? CompactView(): WideView()){.FlexGrow: 1, .MinWidth: 0, .MinHeight: 0,}
+```
+
+- `Sized(build)` and `Blob.Sized(build)` pass the border-box `LayoutSize` in layout units.
+- Give the element space through its parent or its own style. It has no intrinsic size. Its content cannot enlarge it.
+- Goo builds before paint in the same frame, after the element gets its size. New content is laid out before `Mounted`.
+- Stable device-pixel sizes do not rebuild content. Changed inputs, observed `State`, context values, and pixel density also refresh it.
+- A zero-size element still builds. An unbounded axis with no authored size, minimum, or padding resolves to zero. The callback never receives infinity.
+- Read state in the builder, but do not write it. Input callbacks belong to the declaring Cell. Returned children keep normal keyed and positional identity.
+- Use `Container.Layout` to place existing children. Use `Sized` to choose or build different content.
+
 ## Compose and select text
 
 ```gsharp
@@ -121,9 +138,19 @@ opacity, overflow clipping, and transforms do not constrain presented geometry.
 Portal children do not participate in their source container's Yoga or custom
 layout and do not enlarge its scroll extent. Apply size, position, transform,
 overflow, and paint styles to the Portal itself when the overlay needs those
-semantics. Goo does not infer an anchor from the declaration parent and does not
-provide automatic dismissal or a named layer system; compose those policies with
-handles, input callbacks, and focus scopes.
+semantics. Goo does not infer an anchor from the declaration parent.
+
+Set `FocusScope: FocusScopeOptions{Modal: true}` for a modal overlay. After its
+first layout, `InitialFocus`, then `AutoFocus`, then the first tab stop receives
+focus. An empty scope focuses the Portal. Closing restores eligible prior focus
+unless `RestoreFocus` is false or focus has moved outside.
+
+`OnDismiss` receives `PopupDismissReason.Escape` outside text composition and
+`OutsideInteraction` on an outside press. Remove the Portal to close it.
+`OnDismiss` alone opens a nonmodal focus scope. Nil `FocusScope` and `OnDismiss`
+leave focus unchanged. `Scrim` paints a full-window layer behind the content.
+A modal scope uses a transparent scrim when `Scrim` is nil and sets the
+accessibility modal flag. Use `AccessibilityRole` and `AccessibilityName` on the Portal.
 
 ## Virtualize large collections
 
@@ -174,13 +201,28 @@ Set `Blob.LayoutTransition` to a `LayoutTransition(durationMs, easing)` value to
 ## Owned image sources
 
 `Image.Source` and `Style.BackgroundImageSource` accept an `ImageSourceProvider`.
-Source takes precedence over Path. A nonempty `Image.Path` without Source throws
-when mounted. Load local assets with `ImageSourceCache.LoadAsync` and assign Source.
+Use an `ImageSource` for ready pixels. For deferred work, keep an `AsyncImageSource`
+in a field or model. Its loader returns `Task[ImageSource]`. Wrap synchronous loaders
+with `Task.FromResult`. Goo cancels the load when its last pending lease is released,
+including when an image unmounts or changes source.
+
+`Image.Placeholder` and `Image.Fallback` fill and clip to the image box while the
+source is pending or failed. They do not set its measured size. Completion updates
+the image on the UI thread without an app rebuild call.
+
+`Assets.Open(assembly, name)` and `Assets.ReadAllBytes(assembly, name)` first resolve
+the exact manifest resource name, then a file under `AppContext.BaseDirectory`.
+The caller disposes an opened stream. `<GooAsset Include="assets/**" />` copies files
+for normal builds and embeds them for single-file or NativeAOT builds.
+
+`<GooShaderEffect Include="background.slang" Embed="true" />` embeds
+`background.goo-effect`. Load it with `ShaderEffectProgram.Load(assembly, "background")`.
 
 See [image loading and ownership](../images.md) for loading, decoding, buffer
 transfer, provider lifetime and memory-pressure behavior.
 
-Provider updates keep the last-good version visible until a replacement is ready.
+Provider version updates keep the last-good version visible until a replacement is ready.
+Changing to a pending source clears the previous image.
 
 ## Observe mounted element metrics
 
@@ -220,6 +262,31 @@ For custom text clients, see [custom IME positioning](input.md#position-a-custom
 
 For decoding, thumbnails and raster density, see [images](../images.md).
 
+## `AsyncImageSource`
+
+
+Shares a deferred image across mounted leases. Keep this source in a field or model.
+
+### `ContentChanged`
+
+Never raised. Completion is delivered through each lease.
+
+### `new(System.Func{System.Threading.CancellationToken,System.Threading.Tasks.Task{ImageSource}})`
+
+Creates a source whose Task-returning loader runs off the UI thread. The source owns the returned image. The last pending lease cancels the load.
+
+### `Acquire`
+
+Acquires the shared result or starts a load. Failed loads can be retried.
+
+### `Dispose`
+
+Cancels pending work and releases the cached image. Existing completed leases stay valid.
+
+### `ContentVersion`
+
+Gets the fixed version of this source.
+
 ## `Blob`
 
 
@@ -235,6 +302,14 @@ Builds one child per item. Children without a key get the item's key. Explicit k
 - `itemBuilder`: Builds the child for an item.
 
 Returns: Children to spread into a container. Duplicate sibling keys are rejected during reconciliation.
+
+### `Sized(System.Func{LayoutSize,Blob})`
+
+Builds content from the element's allotted size in layout units. See Sized.
+
+- `build`: Builds content without changing State.
+
+Returns: A retained element with no intrinsic size.
 
 ### `Accessibility`
 
@@ -756,23 +831,27 @@ Defines a local bitmap image element.
 
 ### `new`
 
-Initializes an image with an empty path and contained fit mode.
+Initializes an image with contained fit mode.
+
+### `Fallback`
+
+Gets content shown inside the image box when its source fails.
 
 ### `Fit`
 
 Gets the image fit mode.
 
-### `Path`
-
-Legacy path metadata. A nonempty path without Source throws when mounted. Load local PNG assets with ImageSourceCache.LoadAsync and set Source instead.
-
 ### `PixelsPerUnit`
 
 Gets source pixels per logical layout unit. Positive and finite, default 1. A 128-pixel image at density 2 has a natural width of 64 logical units.
 
+### `Placeholder`
+
+Gets content shown inside the image box while its source is pending.
+
 ### `Source`
 
-Gets the owned or provider-backed image source. It wins over Path when set.
+Gets the owned or provider-backed image source.
 
 ## `ImageDecodeLimits`
 
@@ -1077,13 +1156,25 @@ Gets a rectangle within Anchor's local border-box coordinates. Nil uses the whol
 
 Gets collision bounds in window logical coordinates. Nil uses the viewport. Values are finite and sizes nonnegative.
 
+### `FocusScope`
+
+Gets the focus scope options. OnDismiss alone opens a nonmodal scope with default options.
+
 ### `HideWhenAnchorClipped`
 
 Hides presentation when AnchorRect is fully clipped by the anchor's ancestors. Content stays mounted. Defaults to false.
 
+### `OnDismiss`
+
+Handles Escape outside composition and presses outside the content. Remove the Portal to close it.
+
 ### `Placement`
 
 Gets the preferred side and alignment. Defaults to BottomStart. Placement flips and clamps to collision bounds.
+
+### `Scrim`
+
+Gets the full-window scrim color. Modal scopes use a transparent scrim when nil.
 
 ## `PortalPlacement`
 
@@ -1172,6 +1263,17 @@ Selects an item's alignment in the viewport.
 - `Center`
 - `End`
 - `Nearest`
+
+## `Sized`
+
+
+### `Sized(System.Func{LayoutSize,Blob})`
+
+Builds content from the element's allotted border-box size in layout units. The element has no intrinsic size. Content cannot change its size. The builder runs before paint when the rounded device-pixel size, inputs, or observed state changes. Zero-sized elements still build. An unbounded axis with no authored size, minimum, or padding resolves to zero. The builder must not write State. Content keeps normal keyed and positional identity.
+
+- `build`: Builds content. Input callbacks belong to the declaring Cell.
+
+Returns: A retained size-dependent element. Set its size through layout, not through its content.
 
 ## `Spacer`
 

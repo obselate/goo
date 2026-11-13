@@ -4,6 +4,36 @@ import System
 import System.Collections.Generic
 
 internal class StyleFixtures {
+  func StyleAssignmentAfterHandOffContract() bool {
+    let blob = Container{Width: 10}
+    let node = Reconciler{Res: Resolver{}}.Mount(blob)
+    try {
+      try { blob.Width = 20 } catch (error InvalidOperationException) {
+        return error.Message.Contains("Container") && error.Message.Contains("modified after it was returned to Goo")
+          && node.Width.Value == 10.0F
+      }
+      return false
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func StateStylesFreezeAtHandOffContract() bool {
+    let hover = Style{Opacity: 0.5}
+    let active = Style{}
+    let focus = Style{}
+    let disabled = Style{}
+    let blob = Container{HoverStyle: hover, ActiveStyle: active, FocusStyle: focus, DisabledStyle: disabled}
+    let node = Reconciler{Res: Resolver{}}.Mount(blob)
+    try {
+      for style in []Style{hover, active, focus, disabled} {
+        var rejected = false
+        try { style.Opacity = 0.1 } catch (error InvalidOperationException) {
+          rejected = error.Message.Contains("Container") && error.Message.Contains("modified after it was returned to Goo")
+        }
+        if !rejected { return false }
+      }
+      return true
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
   func FlexAndInsetDeclarationOrderContract() bool {
     let reconciler = Reconciler{Res: Resolver{}}
     let node = reconciler.Mount(Container{
@@ -2200,7 +2230,6 @@ internal class StyleFixtures {
       case StyleField.BorderEndWidth { return Style{ BorderEndWidth: 7 } }
       case StyleField.BorderStartColor { return Style{ BorderStartColor: Color.White } }
       case StyleField.BorderEndColor { return Style{ BorderEndColor: Color.White } }
-      case StyleField.BackgroundImage { return Style{ BackgroundImage: "style-field-contract" } }
       case StyleField.BackgroundImageFit { return Style{ BackgroundImageFit: ImageFit.Fill } }
       case StyleField.ClipPath { return Style{ ClipPath: styleFieldContractPath() } }
       case StyleField.ClipPathFillRule {

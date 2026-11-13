@@ -2,6 +2,22 @@
   <ItemGroup Condition="'$(GooPackageId)' != ''">
     <AssemblyMetadata Include="GooApplicationId" Value="$(GooPackageId)" />
   </ItemGroup>
+  <Target Name="_RegisterGooAssets" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <_GooAsset Include="@(GooAsset)">
+        <AssetPath Condition="'%(Link)' != ''">%(Link)</AssetPath>
+        <AssetPath Condition="'%(Link)' == ''">%(Identity)</AssetPath>
+      </_GooAsset>
+      <EmbeddedResource Include="@(_GooAsset)"
+                        LogicalName="%(_GooAsset.AssetPath)"
+                        Condition="'$(PublishSingleFile)' == 'true' or '$(PublishAot)' == 'true'" />
+      <Content Include="@(_GooAsset)"
+               TargetPath="%(_GooAsset.AssetPath)"
+               CopyToOutputDirectory="PreserveNewest"
+               CopyToPublishDirectory="PreserveNewest"
+               Condition="'$(PublishSingleFile)' != 'true' and '$(PublishAot)' != 'true'" />
+    </ItemGroup>
+  </Target>
   <PropertyGroup Condition="'$(PublishAot)' == 'true'">
     <IlcFoldIdenticalMethodBodies Condition="'$(IlcFoldIdenticalMethodBodies)' == ''">true</IlcFoldIdenticalMethodBodies>
   </PropertyGroup>
@@ -119,11 +135,16 @@
           DependsOnTargets="GooCompileShaderEffects"
           Condition="'@(_GooShaderEffect)' != '' and '$(DesignTimeBuild)' != 'true'">
     <ItemGroup>
+      <EmbeddedResource Include="%(_GooShaderEffect.ProgramPath)"
+                        LogicalName="%(_GooShaderEffect.OutputTargetPath)"
+                        Condition="'%(_GooShaderEffect.Embed)' == 'true'" />
       <Content Include="%(_GooShaderEffect.ProgramPath)"
+               Condition="'%(_GooShaderEffect.Embed)' != 'true'"
                TargetPath="%(_GooShaderEffect.OutputTargetPath)"
                CopyToOutputDirectory="PreserveNewest"
                CopyToPublishDirectory="Always" />
       <Content Include="%(_GooShaderEffect.ManifestPath)"
+               Condition="'%(_GooShaderEffect.Embed)' != 'true'"
                TargetPath="%(_GooShaderEffect.OutputTargetPath).json"
                CopyToOutputDirectory="PreserveNewest"
                CopyToPublishDirectory="Always" />

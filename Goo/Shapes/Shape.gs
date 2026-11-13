@@ -23,6 +23,12 @@ public enum VectorEffect { None; NonScalingStroke }
 /// Use Fill and Stroke for path paint. Legacy paint without either throws:
 /// "Shape paint moved to Fill and Stroke".
 public class Shape : Blob {
+  private var declarationPath VectorPath
+  private var declarationFit ShapeFit
+  private var declarationFill VectorPaint?
+  private var declarationStroke VectorStroke?
+  private var declarationFillRule FillRule
+  private var declarationUseCurrentColor bool
   private var cornerRadius float64
   private var strokeStart float64
   private var strokeEnd float64
@@ -34,22 +40,59 @@ public class Shape : Blob {
 
   /// Gets or sets the vector path to display.
   /// Reuse one path and position instances with Transform to share encoded geometry.
-  public prop Path VectorPath{ get; init; }
+  public prop Path VectorPath {
+    get -> declarationPath
+    set {
+      CheckMutable()
+      declarationPath = value
+    }
+  }
   /// Gets or sets the geometry fit. Cover clips, Fill stretches, and None preserves view-box units.
-  public prop Fit ShapeFit{ get; init; }
+  public prop Fit ShapeFit {
+    get -> declarationFit
+    set {
+      CheckMutable()
+      declarationFit = value
+    }
+  }
   /// Gets or sets the optional path fill. A gradient takes priority over UseCurrentColor.
-  public prop Fill VectorPaint? { get; init; }
+  public prop Fill VectorPaint? {
+    get -> declarationFill
+    set {
+      CheckMutable()
+      declarationFill = value
+    }
+  }
   /// Gets or sets the complete stroke paint and options. Gradient strokes are not supported.
-  public prop Stroke VectorStroke? { get; init; }
+  public prop Stroke VectorStroke? {
+    get -> declarationStroke
+    set {
+      CheckMutable()
+      declarationStroke = value
+    }
+  }
   /// Gets or sets the fill rule. The default is NonZero.
-  public prop FillRule FillRule{ get; init; }
+  public prop FillRule FillRule {
+    get -> declarationFillRule
+    set {
+      CheckMutable()
+      declarationFillRule = value
+    }
+  }
   /// Uses the inherited Color for solid fill when true. The default is false.
   /// A gradient Fill and the Stroke paint are unchanged.
-  public prop UseCurrentColor bool{ get; init; }
+  public prop UseCurrentColor bool {
+    get -> declarationUseCurrentColor
+    set {
+      CheckMutable()
+      declarationUseCurrentColor = value
+    }
+  }
   /// Gets or sets the non-negative finite corner radius in logical pixels.
   public prop CornerRadius float64{
     get -> cornerRadius
-    init{
+    set {
+      CheckMutable()
       if !motionFiniteFloat32(value) || value < 0.0 {
         throw ArgumentOutOfRangeException("CornerRadius")
       }
@@ -62,7 +105,8 @@ public class Shape : Blob {
   /// On mount, StrokeStart must not exceed StrokeEnd.
   public prop StrokeStart float64{
     get -> strokeStart
-    init{
+    set {
+      CheckMutable()
       if !motionFiniteFloat32(value) || value < 0.0 || value > 1.0 {
         throw ArgumentOutOfRangeException("StrokeStart")
       }
@@ -75,7 +119,8 @@ public class Shape : Blob {
   /// contours use the stroke's Cap at their open ends.
   public prop StrokeEnd float64{
     get -> strokeEnd
-    init{
+    set {
+      CheckMutable()
       if !motionFiniteFloat32(value) || value < 0.0 || value > 1.0 {
         throw ArgumentOutOfRangeException("StrokeEnd")
       }

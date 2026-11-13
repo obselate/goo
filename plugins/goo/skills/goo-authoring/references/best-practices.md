@@ -115,6 +115,9 @@ class SearchView : Cell {
 - Goo can skip unchanged callback builds when the Cell declares a `State` field or its last `Build` read a `State` value, and its instance and static fields are all immutable states, primitive numbers, `bool`, enums or strings.
 - A mutable field, collection, delegate field or model reference keeps rebuild-after-every-callback behavior. A Cell declared with a primary constructor always rebuilds after callbacks. Use an explicit `init(...)` with `let` fields.
 - A typed child rebuilds when its input differs by equality. Derive state in `InputChanged(input)`. Do not write a rebuild policy.
+- Read `Host.State`, `Host.IsFocused`, `Host.Size`, `Host.UiScale` and `Host.Preferences` in `Build`. Goo tracks those reads. Do not add listeners or call `Rebuild()` for them. Window and context reads alone do not make a Cell state-only.
+- A `State` write during `Build` throws. Replace changed collections rather than changing them in place. Reads in retained builders, including virtual rows and `Sized`, also subscribe their owner.
+- A Blob and its reachable declarations freeze when Goo receives them. Finish changes before returning the tree. Later changes throw. Returning the same Blob does not refresh it.
 - Mount each region as its own Cell. A change rebuilds only that Cell.
 - Compute sorted, filtered or grouped data when the source changes. Store it in a field. Compute large results in a `go` child.
 - Replace a changed list. Do not mutate it in place. Typed inputs do not see in-place changes.
@@ -135,6 +138,7 @@ Core provides editing keys and Tab traversal, including in dialogs. Movement and
 | App shortcuts, for example Ctrl+S | `KeyBinding` on the root or the region that owns the command |
 | Submit on Enter | `OnSubmit` of a single-line field. It reads the form `CanSubmit`. |
 
+- Use `Portal{FocusScope: FocusScopeOptions{Modal: true}, ...}` for modal overlays. `Scrim` paints the background layer. `OnDismiss` receives a `PopupDismissReason`. Remove the Portal to close it.
 - Never build a text input from `Text`, `Label` or a `Container` with `OnKeyDown` or `OnTextInput`. It loses selection, clipboard, undo, IME and screen reader support.
 - Key press order: routed `OnKeyDown` handlers from the focused node up to the root, focused-node `KeyBindings`, built-in text editing, ancestor `KeyBindings`, then Tab focus traversal. Any routed handler can call `PreventDefault()` to block bindings and built-in defaults.
 - A root `OnKeyDown` handler for app navigation keys must skip events while `event.TargetEditsText` is true. Use a field's own `KeyBindings` to override editing. App-root Ctrl+A does not replace Select All. Existing root editing bindings do not run twice.

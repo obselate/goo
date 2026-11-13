@@ -4,6 +4,143 @@ import System
 import System.Threading.Tasks
 
 internal class ContextFixtures {
+    func UntrackedWindowGetterKeepsCallbackFallbackContract() bool {
+        let previous = StateVerification.Override
+        try {
+            for verify in []bool{false, true} {
+                StateVerification.Enabled = verify
+                WindowReadFixtureValues.FallbackBuilds = 0
+                let window = Window{Root: WindowVisibilityFallbackCell(), Size: LayoutSize(100, 100)}
+                try {
+                    window.UpdateTree()
+                    if !WindowReadFixtureValues.FallbackHandle.Activate() { return false }
+                    window.UpdateTree()
+                    if WindowReadFixtureValues.FallbackBuilds != 2 { return false }
+                } finally { window.Close() }
+            }
+            return true
+        } finally { StateVerification.Override = previous }
+    }
+
+    func WindowReadDoesNotOptInToTrackedStateContract() bool {
+        let previous = StateVerification.Override
+        try {
+            for verify in []bool{false, true} {
+                StateVerification.Enabled = verify
+                WindowReadFixtureValues.External = 0
+                let window = Window{Root: WindowReadFieldlessCell(), Size: LayoutSize(100, 100)}
+                try {
+                    window.UpdateTree()
+                    if !WindowReadFixtureValues.FieldlessHandle.Activate() { return false }
+                    window.UpdateTree()
+                    if window.Tree?.Children[0].Content != "100:1" { return false }
+                } finally { window.Close() }
+            }
+            return true
+        } finally { StateVerification.Override = previous }
+    }
+
+    func InputCarriedStateOptsInToTrackedStateContract() bool {
+        let previous = StateVerification.Override
+        StateVerification.Enabled = false
+        WindowReadFixtureValues.InputBuilds = 0
+        let state = State[int32](7)
+        let root = WindowInputStateRoot(state)
+        let window = Window{Root: root, Size: LayoutSize(100, 100)}
+        try {
+            window.UpdateTree()
+            if WindowReadFixtureValues.InputBuilds != 1 { return false }
+            if !WindowReadFixtureValues.InputHandle.Activate() { return false }
+            window.UpdateTree()
+            if WindowReadFixtureValues.InputBuilds != 1 { return false }
+            state.Value = 8
+            window.UpdateTree()
+            if WindowReadFixtureValues.InputBuilds != 2 || window.Tree?.Children[0].Content != "8" { return false }
+            root.Tracked.Value = false
+            window.UpdateTree()
+            if !WindowReadFixtureValues.InputHandle.Activate() { return false }
+            window.UpdateTree()
+            if WindowReadFixtureValues.InputBuilds != 4 { return false }
+            root.Tracked.Value = true
+            window.UpdateTree()
+            if !WindowReadFixtureValues.InputHandle.Activate() { return false }
+            window.UpdateTree()
+            return WindowReadFixtureValues.InputBuilds == 5
+        } finally {
+            window.Close()
+            StateVerification.Override = previous
+        }
+    }
+
+    func TrackedWindowGettersContract() bool {
+        let previous = StateVerification.Override
+        try {
+            for verify in []bool{false, true} {
+                StateVerification.Enabled = verify
+                WindowReadFixtureValues.Builds = []int32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+                let root = WindowReadFixtureRoot()
+                let window = Window{Root: root, Size: LayoutSize(200, 400)}
+                try {
+                    window.UpdateTree()
+                    if !ChangeWindowValues(window, () -> {
+                        for index in 0 ... 11 { window.Tree!!.Children[index + 1].Fiber!!.RebuildAfterCallback() }
+                    }, verify ? []int32{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10} : []int32{}) { return false }
+                    if !ChangeWindowValues(window, () -> { window.State = WindowState.Maximized }, []int32{0}) { return false }
+                    if !ChangeWindowValues(window, () -> { window.State = WindowState.Maximized }, []int32{}) { return false }
+                    if !ChangeWindowValues(window, () -> { window.Size = LayoutSize(240, 440) }, []int32{2, 3, 4}) { return false }
+                    if !ChangeWindowValues(window, () -> { window.UiScale = 2.0F }, []int32{2, 5}) { return false }
+                    if !ChangeWindowValues(window, () -> window.SetWindowReadFixtureFocus(true), []int32{1}) { return false }
+                    if !ChangeWindowValues(window, () -> window.SetWindowReadFixturePreferences(
+                        PlatformPreferences{Theme: SystemTheme.Dark}), []int32{6}) { return false }
+                    if !ChangeWindowValues(window, () -> window.SetInputModifiers(KeyModifiers{Shift: true}), []int32{7}) { return false }
+                    if !ChangeWindowValues(window, () -> { root.Entry.Focus() }, []int32{8, 9, 10}) { return false }
+                    if !ChangeWindowValues(window, () -> { window.Focus.SetSelection(1, 3) }, []int32{9, 10}) { return false }
+                    if !ChangeWindowValues(window, () -> window.Focus.Clear(), []int32{8, 9, 10}) { return false }
+                } finally { window.Close() }
+            }
+            return true
+        } finally { StateVerification.Override = previous }
+    }
+
+    private func ChangeWindowValues(window Window, change Action, changed []int32) bool {
+        let before = (WindowReadFixtureValues.Builds.Clone() as []int32)!!
+        change()
+        window.UpdateTree()
+        for index in 0 ... before.Length {
+            let expected = before[index] + (Array.IndexOf(changed, index) >= 0 ? 1 : 0)
+            if WindowReadFixtureValues.Builds[index] != expected {
+                throw InvalidOperationException("Window getter $index built ${WindowReadFixtureValues.Builds[index]} times, expected $expected.")
+            }
+        }
+        return true
+    }
+
+    func TrackedWindowRetainedScopeContract() bool {
+        let cell = Cell()
+        let window = Window{Root: cell, Size: LayoutSize(100, 100)}
+        var invalidations = 0
+        let builderScope = StateReadScope(cell, () -> { invalidations++ })
+        try {
+            window.UpdateTree()
+            let frame = builderScope.Enter()
+            let size = window.Size
+            builderScope.Exit(frame, true)
+            window.State = WindowState.Maximized
+            window.UpdateTree()
+            if invalidations != 0 { return false }
+            window.Size = LayoutSize(200, 100)
+            window.UpdateTree()
+            if invalidations != 1 || cell.IsDirty() || !builderScope.StateChanged { return false }
+            builderScope.Dispose()
+            window.Size = LayoutSize(300, 100)
+            window.UpdateTree()
+            return invalidations == 1 && size.Width == 100
+        } finally {
+            builderScope.Dispose()
+            window.Close()
+        }
+    }
+
     func FailedPassRetriesNewDependenciesContract() bool {
         let key = Context[int32]()
         let other = Context[int32]()
@@ -867,5 +1004,98 @@ internal class ContextVirtualRollbackRoot(key Context[int32], other Context[int3
     override func Build() Blob -> Container(){
         Cell.Mount[ContextVirtualRoot]("host", () -> Host),
         Cell.Mount[ContextReadInput, ContextReadCell]("later", ContextReadInput{Key: other, Other: key}),
+    }
+}
+
+public partial class Window {
+    internal func SetWindowReadFixtureFocus(value bool) { IsFocused = value }
+    internal func SetWindowReadFixturePreferences(value PlatformPreferences) { applyPreferences(value) }
+}
+
+internal class WindowReadFixtureValues {
+    shared {
+        internal var Builds []int32 = []int32{}
+        internal var External int32
+        internal let FieldlessHandle ElementHandle = ElementHandle()
+        internal var InputBuilds int32
+        internal let InputHandle ElementHandle = ElementHandle()
+        internal var FallbackBuilds int32
+        internal let FallbackHandle ElementHandle = ElementHandle()
+    }
+}
+
+internal class WindowReadFixtureRoot : Cell {
+    internal let Entry ElementHandle = ElementHandle()
+
+    override func Build() Blob {
+        let content = Container{Width: 200, Height: 400, TextEntry{Handle: Entry, Value: "hello", Height: 20}}
+        for index in 0 ... 11 {
+            let kind = index
+            content.Add(Cell.Mount[WindowReadFixtureCell]("value-$kind", () -> WindowReadFixtureCell(kind)))
+        }
+        return content
+    }
+}
+
+internal class WindowReadFixtureCell : Cell {
+    private let key int32
+    private let declared State[int32] = State[int32](0)
+
+    init(kind int32) { key = kind }
+
+    override func Build() Blob {
+        WindowReadFixtureValues.Builds[key]++
+        let value = switch key {
+            case 0: Host.State.ToString()
+            case 1: Host.IsFocused.ToString()
+            case 2: Host.Size.ToString()
+            case 3: Host.NativeWidth.ToString()
+            case 4: Host.NativeHeight.ToString()
+            case 5: Host.UiScale.ToString()
+            case 6: Host.Preferences.ToString()
+            case 7: Host.Modifiers.ToString()
+            case 8: Host.Focus.EditsText.ToString()
+            case 9: Host.Focus.Editor?.ToString() ?? "none"
+            default: Host.Focus.Selection?.ToString() ?? "none"
+        }
+        return Text{Content: value ?? "", Height: 20}
+    }
+}
+
+internal class WindowReadFieldlessCell : Cell {
+    override func Build() Blob -> Button{
+        Handle: WindowReadFixtureValues.FieldlessHandle, Width: 100, Height: 40,
+        OnClick: () -> { WindowReadFixtureValues.External++ },
+        Text{Content: "${Host.Size.Width}:${WindowReadFixtureValues.External}"},
+    }
+}
+
+internal class WindowInputStateRoot(value State[int32]) : Cell {
+    private let state State[int32] = value
+    internal let Tracked State[bool] = State[bool](true)
+    override func Build() Blob ->
+        Cell.Mount[WindowInputStateValue, WindowInputStateCell](nil, WindowInputStateValue(Tracked.Value, state))
+}
+
+internal data struct WindowInputStateValue(Tracked bool, Value State[int32]) { }
+
+internal class WindowInputStateCell : Cell[WindowInputStateValue] {
+    protected override func Build(input WindowInputStateValue) Blob {
+        WindowReadFixtureValues.InputBuilds++
+        return Button{
+            Handle: WindowReadFixtureValues.InputHandle, Width: 100, Height: 40,
+            OnClick: () -> {}, Text{Content: input.Tracked ? input.Value.Value.ToString() : "untracked"},
+        }
+    }
+}
+
+internal class WindowVisibilityFallbackCell : Cell {
+    private let declared State[int32] = State[int32](0)
+    override func Build() Blob {
+        WindowReadFixtureValues.FallbackBuilds++
+        return Button{
+            Handle: WindowReadFixtureValues.FallbackHandle, Width: 100, Height: 40,
+            OnClick: () -> {}, Text{Content: Host.IsVisible.ToString()},
+        }
     }
 }

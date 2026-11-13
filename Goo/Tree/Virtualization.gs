@@ -4,8 +4,12 @@ import System
 import System.Collections.Generic
 
 internal sealed class VirtualRetainedBlob : Blob {
-  internal init(key string) {
-    SetVirtualKey(key)
+  shared {
+    internal let Unkeyed VirtualRetainedBlob = VirtualRetainedBlob(nil)
+  }
+
+  internal init(key string?) : base(nil) {
+    Key = key
   }
 
   internal override func coreBlob() {
@@ -21,6 +25,7 @@ internal data struct VirtualPlacement {
   internal var HasW bool
   internal var HasH bool
   internal var Item bool
+  internal var ContentKeyed bool
 }
 
 internal data struct VirtualExtent {
@@ -86,6 +91,7 @@ internal sealed class VirtualNodeState {
   internal var DeclaringCell Cell?
   internal var CallbackOwner Cell?
   private var contextReader ContextReader?
+  private var stateReads StateReadScope?
   private var contextDirty bool
   private var contextVersion int64
   private var pendingContextVersion int64
@@ -105,6 +111,7 @@ internal sealed class VirtualNodeState {
   internal prop RecycledRowCount int32 { get -> recycledRows.Count }
   internal prop RecycledNodeCount int32 { get -> recycledNodes }
   internal prop RecycledStorageBytes int32 { get -> recycledBytes }
+  internal prop HasStateChanges bool { get -> stateReads?.StateChanged ?? false }
 
   private func clearRecycledRows() {
     recycledRows.Clear()
@@ -240,6 +247,10 @@ internal sealed class VirtualNodeState {
   internal func BindContext(frame ContextFrame?, owner Window?, callbackOwner Cell?) {
     let changed = Context != frame || Owner != owner || CallbackOwner != callbackOwner
     if changed { clearRecycledRows() }
+    if Owner != owner || CallbackOwner != callbackOwner {
+      stateReads?.Dispose()
+      stateReads = nil
+    }
     let rebound = Owner != nil
     Context = frame
     Owner = owner
@@ -513,6 +524,9 @@ internal sealed class VirtualNodeState {
     let previousContext = enterContext()
     pendingContextVersion = contextVersion
     output.Bind(this)
+    stateReads ??= StateReadScope(CallbackOwner ?? DeclaringCell, () -> InvalidateContext())
+    let previousReads = stateReads!!.Enter(!contextDirty && state == current)
+    var completed = false
     try {
       state.Realize(viewport, output)
       let delta = anchorDelta(n)
@@ -548,11 +562,13 @@ internal sealed class VirtualNodeState {
         pendingTargetX = float32(Math.Max(0.0, float64(n.ScrollTargetX) + x - float64(n.ScrollX)))
         pendingTargetY = float32(Math.Max(0.0, float64(n.ScrollTargetY) + y - float64(n.ScrollY)))
       }
+      completed = true
       return children
     } catch (error Exception) {
       Cancel()
       rethrow
     } finally {
+      stateReads!!.Exit(previousReads, completed)
       output.Bind(nil)
       viewport.Bind(previous)
       ContextEnvironment.Current = previousContext
@@ -591,12 +607,14 @@ internal sealed class VirtualNodeState {
     var componentType Type?
     if let content = item.Content {
       componentType = if content is CellElement { content.CellType } else { content.GetType() }
+      placement.ContentKeyed = content.Key != nil
     }
     var same = false
     if mounted.TryGetValue(key, out var previous) {
       marker = previous.Marker
       same = sameVirtualPlacement(previous.Placement, placement)
       componentType ??= previous.ComponentType
+      if item.Content == nil { placement.ContentKeyed = previous.Placement.ContentKeyed }
     } else {
       if item.Content == nil { throw InvalidOperationException("Virtual item '$key' at index ${item.Index} in ${pending?.GetType().Name}.Realize has no mounted content: supply Content when the key is first realized.") }
       marker = VirtualRetainedBlob(key)
@@ -607,7 +625,7 @@ internal sealed class VirtualNodeState {
     } else if same {
       children.Add(marker)
     } else {
-      children.Add(virtualWrapper(key, marker, placement))
+      children.Add(virtualWrapper(key, placement.ContentKeyed ? marker : VirtualRetainedBlob.Unkeyed, placement))
     }
   }
 
@@ -648,6 +666,7 @@ internal sealed class VirtualNodeState {
     if let previous = previous {
       if previous != state { previous.Dispose() }
     }
+    if let reads = stateReads { reads.StateChanged = false }
   }
 
   internal func Cancel(preserveReads bool = false) {
@@ -670,6 +689,8 @@ internal sealed class VirtualNodeState {
     Cancel()
     contextReader?.Dispose()
     contextReader = nil
+    stateReads?.Dispose()
+    stateReads = nil
     Context = nil
     Owner = nil
     source = nil
@@ -708,12 +729,11 @@ left.Index == right.Index && left.X == right.X && left.Y == right.Y
   && left.Item == right.Item
 
 internal func virtualItem(item Blob, key string) Blob {
+  item.Freeze()
   if let authored = item.Key {
     if authored != key {
       throw InvalidOperationException("Virtual item '$key' has ${item.GetType().Name} content keyed '$authored': remove the content key or make it equal to the VirtualItem key.")
     }
-  } else {
-    item.SetVirtualKey(key)
   }
   return item
 }

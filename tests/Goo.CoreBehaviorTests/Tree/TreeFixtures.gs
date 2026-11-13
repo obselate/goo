@@ -4,6 +4,316 @@ import System
 import System.Collections.Generic
 
 internal class TreeFixtures {
+  func BuildReturnFreezesBeforeNestedCellContract() bool {
+    let cell = FreezeBuildReturnCell()
+    let node = Reconciler{Res: Resolver{}}.MountRoot(cell)
+    try { return cell.Rejected && cell.Declaration?.Key == nil }
+    finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func InputOptionsFreezeAtHandOffContract() bool {
+    let hints = []string{"before"}
+    let options = TextInputOptions{AutofillHints: hints}
+    let view = options.AutofillHints
+    let node = Reconciler{Res: Resolver{}}.Mount(TextEntry{InputOptions: options})
+    try {
+      hints[0] = "after"
+      if options.AutofillHints[0] != "before" || !Object.ReferenceEquals(view, options.AutofillHints) { return false }
+      try { options.Purpose = InputPurpose.Email } catch (error InvalidOperationException) {
+        return error.Message.Contains("TextEntry") && error.Message.Contains("modified after it was returned to Goo")
+      }
+      return false
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func ScrollbarDeclarationsFreezeAtHandOffContract() bool {
+    let content = Text("track")
+    let scrollbar = Scrollbar{Track: Container(){content}, Thumb: Container{}}
+    let node = Reconciler{Res: Resolver{}}.Mount(Container{ScrollbarY: scrollbar})
+    try {
+      let changes = []Action{() -> { scrollbar.Thickness = 8 }, () -> { content.Content = "changed" },
+        () -> scrollbar.Thumb!!.Add(Text("extra"))}
+      for change in changes {
+        var rejected = false
+        try { change() } catch (error InvalidOperationException) {
+          rejected = error.Message.Contains("modified after it was returned to Goo")
+        }
+        if !rejected { return false }
+      }
+      return true
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func VectorStrokeFreezeAtHandOffContract() bool {
+    let stroke = VectorStroke(1, Color.Black)
+    let node = Reconciler{Res: Resolver{}}.Mount(Shape{Stroke: stroke})
+    try {
+      try { stroke.Cap = StrokeCap.Round } catch (error InvalidOperationException) {
+        return error.Message.Contains("Shape") && error.Message.Contains("modified after it was returned to Goo")
+      }
+      return false
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+  func RetainedImageBranchesFreezeAtHandOffContract() bool {
+    let placeholder = Text("pending")
+    let fallback = Text("failed")
+    let image = Image{Placeholder: Container(){placeholder}, Fallback: Container(){fallback}}
+    let node = Reconciler{Res: Resolver{}}.Mount(image)
+    try {
+      for content in []Text{placeholder, fallback} {
+        var rejected = false
+        try { content.Content = "changed" } catch (error InvalidOperationException) {
+          rejected = error.Message.Contains("Text") && error.Message.Contains("modified after it was returned to Goo")
+        }
+        if !rejected { return false }
+      }
+      return true
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func OverlayDeclarationsFreezeAtHandOffContract() bool {
+    let scopeOptions = FocusScopeOptions{}
+    let portal = Portal{FocusScope: scopeOptions, Text("content")}
+    let node = Reconciler{Res: Resolver{}}.Mount(portal)
+    try {
+      let changes = []Action{() -> { scopeOptions.Modal = true }, () -> { portal.Scrim = Color.Black },
+        () -> { portal.FocusScope = nil }, () -> portal.Add(Text("extra"))}
+      for change in changes {
+        var rejected = false
+        try { change() } catch (error InvalidOperationException) {
+          rejected = error.Message.Contains("Portal") && error.Message.Contains("modified after it was returned to Goo")
+        }
+        if !rejected { return false }
+      }
+      return true
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+  func BlobAssignmentAfterHandOffContract() bool {
+    let blob = Text("before")
+    let node = Reconciler{Res: Resolver{}}.Mount(blob)
+    try {
+      try { blob.Content = "after" } catch (error InvalidOperationException) {
+        return error.Message.Contains("Text") && error.Message.Contains("modified after it was returned to Goo")
+          && node.Content == "before"
+      }
+      return false
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func AccessibilityAssignmentAfterHandOffContract() bool {
+    let declaration = Accessibility{Name: "before", Range: AccessibilityValue{Now: 1},
+      Relationships: AccessibilityRelationships{}}
+    let blob = Container{Accessibility: declaration}
+    let node = Reconciler{Res: Resolver{}}.Mount(blob)
+    try {
+      let changes = []Action{() -> { declaration.Name = "after" },
+        () -> { declaration.Range!!.Now = 2 },
+        () -> { declaration.Relationships!!.ActiveDescendant = ElementHandle() }}
+      for change in changes {
+        var rejected = false
+        try { change() } catch (error InvalidOperationException) {
+          rejected = error.Message.Contains("Container") && error.Message.Contains("modified after it was returned to Goo")
+        }
+        if !rejected { return false }
+      }
+      return declaration.Name == "before" && declaration.Range!!.Now == 1
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func ChildrenMutationAfterHandOffContract() bool {
+    let blob = Container(){Text("before")}
+    let node = Reconciler{Res: Resolver{}}.Mount(blob)
+    try {
+      let changes = []Action{() -> blob.Add(Text("after")), () -> blob.Children.Add(Text("after")),
+        () -> blob.Children.Clear(), () -> blob.Children.RemoveAt(0),
+        () -> blob.Children.Insert(0, Text("after")), () -> { blob.Children[0] = Text("after") }}
+      for change in changes {
+        var rejected = false
+        try { change() } catch (error InvalidOperationException) {
+          rejected = error.Message.Contains("Container") && error.Message.Contains("modified after it was returned to Goo")
+        }
+        if !rejected { return false }
+      }
+      return node.Children.Count == 1 && node.Children[0].Content == "before"
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func ChildrenConstructionBeforeHandOffContract() bool {
+    let blob = Row(){Text("brace")}
+    blob.Add(Text("add"))
+    blob.Children.Add(Text("list"))
+    let node = Reconciler{Res: Resolver{}}.Mount(blob)
+    try {
+      return node.Children.Count == 3 && node.Children[0].Content == "brace"
+        && node.Children[1].Content == "add" && node.Children[2].Content == "list"
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func SharedChildrenCopiedAtHandOffContract() bool {
+    for kind in 0 ... 4 {
+      let children = List[Blob](){Text("before")}
+      let blob Blob = switch kind {
+        case 0: Container{Children: children}
+        case 1: Row{Children: children}
+        case 2: Column{Children: children}
+        case _: Button{Children: children}
+      }
+      let reconciler = Reconciler{Res: Resolver{}}
+      let node = reconciler.Mount(blob)
+      try {
+        children[0] = Text("after")
+        children.Add(Text("extra"))
+        reconciler.Diff(node, blob)
+        if node.Children.Count != 1 || node.Children[0].Content != "before" { return false }
+      } finally { NodeLifecycle.DisposeTree(node) }
+    }
+    let owner = Container(){Text("before")}
+    let blob = Container{Children: owner.Children}
+    let reconciler = Reconciler{Res: Resolver{}}
+    let node = reconciler.Mount(blob)
+    try {
+      owner.Add(Text("after"))
+      reconciler.Diff(node, blob)
+      return node.Children.Count == 1 && node.Children[0].Content == "before"
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func EachFrozenKeylessBlobThrowsContract() bool {
+    let blob = Text("frozen")
+    let node = Reconciler{Res: Resolver{}}.Mount(blob)
+    try {
+      try {
+        Each([]string{"key"}, item -> throw ArgumentException("Must reject before selecting a key"), item -> blob)
+      } catch (error InvalidOperationException) {
+        return error.Message.Contains("Text") && blob.Key == nil
+      }
+      return false
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+  func SizedStateAndContextContract() bool {
+    let previous = StateVerification.Override
+    StateVerification.Enabled = false
+    SizedFixtureProbe.OwnerBuilds = 0
+    SizedFixtureProbe.ContentBuilds = 0
+    let cell = SizedStateFixtureCell()
+    let window = Window{Root: cell, Size: LayoutSize(200, 100)}
+    SizedFixtureProbe.Context.Set(window, 10)
+    try {
+      window.UpdateTree()
+      let root = window.Tree!!
+      let sibling = root.Children[0]
+      let sized = root.Children[1]
+      let content = sized.Children[0]
+      cell.Value.Value = 1
+      window.UpdateTree()
+      if SizedFixtureProbe.OwnerBuilds != 1 || SizedFixtureProbe.ContentBuilds != 2
+        || sized.Children[0] != content || root.Children[0] != sibling
+        || content.Children[0].Content != "1:10" { return false }
+      SizedFixtureProbe.Context.Set(window, 11)
+      window.UpdateTree()
+      if SizedFixtureProbe.OwnerBuilds != 1 || SizedFixtureProbe.ContentBuilds != 3
+        || content.Children[0].Content != "1:11" { return false }
+      cell.UseOther.Value = true
+      window.UpdateTree()
+      let builds = SizedFixtureProbe.ContentBuilds
+      cell.Value.Value = 2
+      window.UpdateTree()
+      if SizedFixtureProbe.ContentBuilds != builds { return false }
+      cell.Other.Value = 7
+      window.UpdateTree()
+      return SizedFixtureProbe.ContentBuilds == builds + 1 && content.Children[0].Content == "7:11"
+        && !sized.RetainedSizedState!!.Reads.StateChanged
+    } finally {
+      window.Close()
+      StateVerification.Override = previous
+    }
+  }
+
+  func SizedCallbackOwnershipAndVerificationContract() bool {
+    let previous = StateVerification.Override
+    try {
+      StateVerification.Enabled = true
+      for mode in []int32{0, 1, 2} {
+        SizedFixtureProbe.Mode = 0
+        SizedFixtureProbe.Inside = 0
+        SizedFixtureProbe.Outside = 0
+        let cell = SizedVerificationFixtureCell()
+        let window = Window{Root: cell, Size: LayoutSize(200, 100)}
+        try {
+          window.UpdateTree()
+          window.PlatformInput.PointerMove(0, PointerDevice.Mouse, 10, 30, KeyModifiers.None, 0)
+          window.UpdateTree()
+          let sized = window.Tree!!.Children[1]
+          if sized.Children[0].Children[0].Content != "1:0" || cell.stateChanged
+            || sized.RetainedSizedState!!.Reads.StateChanged { return false }
+          if mode == 0 { continue }
+          SizedFixtureProbe.Mode = mode
+          var rejected = false
+          try {
+            window.PlatformInput.PointerMove(0, PointerDevice.Mouse, 11, 30, KeyModifiers.None, 0)
+            window.UpdateTree()
+          } catch (error InvalidOperationException) {
+            rejected = error.Message.Contains("SizedVerificationFixtureCell")
+              && error.Message.Contains("without a tracked State write")
+          }
+          if !rejected { return false }
+        } finally { window.Close() }
+      }
+      return true
+    } finally { StateVerification.Override = previous }
+  }
+
+  func SizedBuildRejectsStateWritesContract() bool {
+    let value = State[int32](0)
+    let window = Window{Size: LayoutSize(100, 100), Root: SizedRootFixture(() -> Sized(size -> {
+      value.Value++
+      return Text("invalid")
+    }))}
+    try {
+      try { window.UpdateTree() }
+      catch (error InvalidOperationException) {
+        return error.Message.Contains("State writes are not allowed during Build")
+          && StateReadScope.Current == nil && Cell.StateReader == nil
+      }
+      return false
+    } finally { window.Close() }
+  }
+
+  func SizedFailedBuildRetainsSubscriptionsContract() bool {
+    let previous = StateVerification.Override
+    StateVerification.Enabled = false
+    SizedFixtureProbe.Fail = false
+    let cell = SizedStateFixtureCell()
+    let window = Window{Root: cell, Size: LayoutSize(200, 100)}
+    SizedFixtureProbe.Context.Set(window, 0)
+    var reads StateReadScope?
+    try {
+      window.UpdateTree()
+      let state = window.Tree!!.Children[1].RetainedSizedState!!
+      reads = state.Reads
+      SizedFixtureProbe.Fail = true
+      cell.Rebuild()
+      var failed = false
+      try { window.UpdateTree() }
+      catch (error InvalidOperationException) { failed = error.Message == "Sized fixture failure." }
+      if !failed || StateReadScope.Current != nil { return false }
+      cell.Other.Value = 4
+      if state.Reads.StateChanged { return false }
+      cell.Value.Value = 2
+      if !state.Reads.StateChanged { return false }
+      SizedFixtureProbe.Fail = false
+      window.UpdateTree()
+      return window.Tree!!.Children[1].Children[0].Children[0].Content == "2:0"
+        && !state.Reads.StateChanged
+    } finally {
+      window.Close()
+      cell.Value.Value = 3
+      if reads?.StateChanged == true { throw InvalidOperationException("Disposed Sized retained a State subscription.") }
+      SizedFixtureProbe.Fail = false
+      StateVerification.Override = previous
+    }
+  }
+
   func EachAssignsDataKeysContract() bool {
     let items = []string{"a", "b"}
     let children = Each(items, item -> item, item -> Text(item))
@@ -957,3 +1267,83 @@ internal class TreeDisplayRetainedCell : Cell, IDisposable {
   func Dispose() { Disposed = true }
 
   override func Build() Blob -> Container() { Text{ Content: "${Count}" },} }
+
+internal class SizedRootFixture(builder Func[Blob]) : Cell {
+  override func Build() Blob -> builder()
+}
+
+internal class SizedMountedFixture : Cell {
+  private let handle ElementHandle = ElementHandle()
+  shared { internal var Ready bool }
+  override func Build() Blob -> Container{Handle: handle, Width: Percent(100), Height: Percent(100)}
+  protected override func Mounted() {
+    Ready = handle.BorderBox.Width == 160 && handle.BorderBox.Height == 70
+  }
+}
+
+internal class SizedFixtureProbe {
+  shared {
+    internal let Context Goo.Context[int32] = Goo.Context[int32]()
+    internal var OwnerBuilds int32
+    internal var Fail bool
+    internal var ContentBuilds int32
+    internal var Mode int32
+    internal var Inside int32
+    internal var Outside int32
+  }
+}
+
+internal class SizedStateFixtureCell : Cell {
+  internal let Value State[int32] = State[int32](0)
+  internal let Other State[int32] = State[int32](0)
+  internal let UseOther State[bool] = State[bool](false)
+
+  override func Build() Blob {
+    SizedFixtureProbe.OwnerBuilds++
+    return Container{Width: Percent(100), Height: Percent(100),
+      Text{Content: "sibling", Height: 20}, Sized(BuildContent){.FlexGrow: 1, .MinHeight: 0}}
+  }
+
+  private func BuildContent(size LayoutSize) Blob {
+    if SizedFixtureProbe.Fail {
+      let ignored = Other.Value
+      throw InvalidOperationException("Sized fixture failure.")
+    }
+    SizedFixtureProbe.ContentBuilds++
+    let value = UseOther.Value ? Other.Value : Value.Value
+    let context = SizedFixtureProbe.Context.Read()
+    return Container{Key: "content", Width: Percent(100), Height: Percent(100), Text("$value:$context")}
+  }
+}
+
+internal class SizedVerificationFixtureCell : Cell {
+  private let value State[int32] = State[int32](0)
+
+  override func Build() Blob -> Container{Width: Percent(100), Height: Percent(100),
+    Text{Content: SizedFixtureProbe.Outside.ToString(), Height: 20},
+    Sized(BuildContent){.FlexGrow: 1, .MinHeight: 0}}
+
+  private func BuildContent(size LayoutSize) Blob ->
+    Container{Width: Percent(100), Height: Percent(100), OnPointerMove: Move,
+      Text("${value.Value}:${SizedFixtureProbe.Inside}")}
+
+  private func Move(event PointerEvent) {
+    if SizedFixtureProbe.Mode == 0 { value.Value++ }
+    else if SizedFixtureProbe.Mode == 1 { SizedFixtureProbe.Inside++ }
+    else { SizedFixtureProbe.Outside++ }
+  }
+}
+
+internal class FreezeBuildReturnCell : Cell {
+  internal var Declaration Blob?
+  internal var Rejected bool
+
+  override func Build() Blob {
+    let result = Cell.Mount[TreeDepthCell](nil, () -> {
+      try { Declaration!!.Key = "changed" } catch (_ InvalidOperationException) { Rejected = true }
+      return TreeDepthCell()
+    })
+    Declaration = result
+    return result
+  }
+}

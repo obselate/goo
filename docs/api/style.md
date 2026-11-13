@@ -877,17 +877,13 @@ Binds the background color without rebuilding or changing layout.
 
 Sets or explicitly clears the background gradient. A non-nil gradient wins over BackgroundColor when both apply.
 
-### `BackgroundImage`
-
-Sets the local image path painted over the background fill.
-
 ### `BackgroundImageFit`
 
 Sets how the background image fits its border box. The default is Cover.
 
 ### `BackgroundImageSource`
 
-Sets the owned or provider-backed background source. It wins over BackgroundImage when set.
+Sets the owned or provider-backed background source.
 
 ### `BasedOn`
 
