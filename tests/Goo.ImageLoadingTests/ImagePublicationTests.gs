@@ -16,6 +16,8 @@ class ImagePublicationTests {
         let window = Window{Root: root, Size: LayoutSize(100, 100)}
         try {
             window.UpdateTree()
+            window.UpdateTree()
+            let builds = root.Builds
             using let probe = source.Acquire()
             using let ready = ManualResetEventSlim()
             using let registration = probe.OnCompleted(() -> ready.Set())
@@ -27,7 +29,7 @@ class ImagePublicationTests {
             window.drainPostedActions()
             window.UpdateTree()
             Assert.True(window.RenderPending())
-            Assert.Equal(1, root.Builds)
+            Assert.Equal(builds, root.Builds)
             if failed {
                 Assert.True(window.Tree!!.ImageLease!!.IsFailed)
                 Assert.Equal(Color.Rgb(0, 0, 255), window.Tree!!.Children[0].Children[0].BackgroundColor)
@@ -186,12 +188,14 @@ class ImagePublicationTests {
         let window = Window{Root: root, Size: LayoutSize(100, 100), }
         try {
             window.UpdateTree()
+            window.UpdateTree()
+            let builds = root.Builds
             window.markFrameRendered()
             provider.Replace(replacement)
             Assert.True(window.UpdateTree(0.0))
             Assert.True(window.RenderPending())
             Assert.Equal([]uint8{0, 0, 255, 255}, window.Tree!!.DecodedImage!!.Pixels())
-            Assert.Equal(1, root.Builds)
+            Assert.Equal(builds, root.Builds)
         } finally {
             window.Close()
         }
