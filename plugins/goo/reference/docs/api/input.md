@@ -1633,6 +1633,10 @@ Provides owner-thread focus state, selection, and text commands for one window. 
 
 Reports settled focus, text, selection, composition, and caret-area changes.
 
+### `EditorChanged`
+
+Reports settled focus, text, selection, composition, and caret-area changes.
+
 ### `Clear`
 
 Clears focus and cancels transient composition.
