@@ -406,6 +406,7 @@ public partial class Window {
         }
       }
     }
+    completeCellMounts()
     if hasEffect(effects, ReconcileEffects.Paint) {
       changed = true
     }
