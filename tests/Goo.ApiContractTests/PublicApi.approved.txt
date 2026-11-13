@@ -1185,7 +1185,6 @@ method|Goo.Cell|Every|instance|protected|generic:|(intervalMs:System.Double,acti
 method|Goo.Cell|Latest|instance|protected|generic:|(name:System.String)->System.Threading.CancellationToken
 method|Goo.Cell|Mounted|virtual|protected|generic:|()->System.Void
 method|Goo.Cell|Mount|static|public|generic:TCell[attrs:0,constraints:Goo.Cell]|(key:System.String?,factory:System.Func`1<!!0>)->Goo.Blob
-method|Goo.Cell|Mount|static|public|generic:TCell[attrs:16,constraints:Goo.Cell]|(key:System.String?,configure:System.Action`1<!!0>?)->Goo.Blob
 method|Goo.Cell|Mount|static|public|generic:TCell[attrs:16,constraints:Goo.Cell]|(key:System.String?=null)->Goo.Blob
 method|Goo.Cell|Mount|static|public|generic:TInput[attrs:0,constraints:];TCell[attrs:0,constraints:Goo.Cell`1<!!0>]|(key:System.String?,input:!!0,factory:System.Func`1<!!1>)->Goo.Blob
 method|Goo.Cell|Mount|static|public|generic:TInput[attrs:0,constraints:];TCell[attrs:16,constraints:Goo.Cell`1<!!0>]|(key:System.String?,input:!!0)->Goo.Blob
@@ -3102,7 +3101,7 @@ type|Goo.ClipboardFormats|sealed-class|public|base:System.Object|interfaces:|gen
 type|Goo.ClipboardImage|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.ClipboardIntent|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.ClipboardReadStatus|enum|public|base:System.Enum|interfaces:|generic:
-type|Goo.ClipboardTextResult|class|public|base:System.Object|interfaces:|generic:
+type|Goo.ClipboardTextResult|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.ClipboardWriteResult|class|public|base:System.Object|interfaces:|generic:
 type|Goo.Color|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.Color>|generic:
 type|Goo.Column|sealed-class|public|base:Goo.Blob|interfaces:|generic:
@@ -3264,10 +3263,10 @@ type|Goo.PanelTransform|struct|public|base:System.ValueType|interfaces:System.IE
 type|Goo.PathBuilder|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.Placement|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.PlatformInput|sealed-class|public|base:System.Object|interfaces:|generic:
-type|Goo.PlatformOpenResult|class|public|base:System.Object|interfaces:|generic:
+type|Goo.PlatformOpenResult|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.PlatformOpenStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.PlatformPreferences|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.PlatformPreferences>|generic:
-type|Goo.Platform|class|public|base:System.Object|interfaces:|generic:
+type|Goo.Platform|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.PointerButtons|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.PointerButton|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.PointerDevice|enum|public|base:System.Enum|interfaces:|generic:
@@ -3405,10 +3404,10 @@ type|Goo.WindowBackdrop|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowCapabilities|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowCaptureRequestStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowCapture|class|public|base:System.Object|interfaces:|generic:
-type|Goo.WindowClipboard|class|public|base:System.Object|interfaces:|generic:
+type|Goo.WindowClipboard|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.WindowDisplayId|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.WindowDisplayId>|generic:
 type|Goo.WindowDisplay|class|public|base:System.Object|interfaces:|generic:
-type|Goo.WindowFocus|class|public|base:System.Object|interfaces:|generic:
+type|Goo.WindowFocus|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.WindowFramePacing|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowInputKind|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowLayer|enum|public|base:System.Enum|interfaces:|generic:

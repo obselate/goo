@@ -14,7 +14,6 @@ internal open class CellElement : Blob {
     init -> cellType = value
   }
   internal prop Factory Func[Cell]? { get; init; }
-  internal prop Configure Action[Cell]? { get; init; }
 
   internal open func CreateCell() Cell {
     guard let factory = Factory else {

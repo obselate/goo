@@ -253,6 +253,7 @@ internal class ElementHandleFixtures {
     let window = Window{Root: cell, Size: LayoutSize(100, 60), }
     try {
       window.UpdateTree()
+      window.UpdateTree()
       cell.Builds.Clear()
       for offset in []float64{4000.0, 8000.0, 4000.0} {
         cell.Handle.JumpTo(0.0, offset)
@@ -527,7 +528,7 @@ internal class ElementHandleFixtures {
     let nested = ElementHandle{}
     ElementHandleNestedCell.Target = nested
     let root = mount(rec, owner, Container() {
-      Cell.Mount[ElementHandleNestedCell]("nested", nil),
+      Cell.Mount[ElementHandleNestedCell]("nested"),
     })
     let retained = nested.IsMounted
     NodeLifecycle.DisposeTree(root)
@@ -912,7 +913,7 @@ internal class ElementHandleFixtures {
     let owner = Window{}
     let rec = Reconciler{ Res: Resolver{} }
     let root = mount(rec, owner, Container() {
-      Cell.Mount[ElementHandleRollbackCell]("a", nil),
+      Cell.Mount[ElementHandleRollbackCell]("a"),
       Text{ Key: "b", Content: "stable" },})
     if !handle.IsMounted { return false }
     var rejected = false
