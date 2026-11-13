@@ -1111,7 +1111,11 @@ event|Goo.Window|StateChanged|System.Action`1<Goo.WindowState>|instance|add:publ
 event|Goo.Window|TitlebarDoubleClicked|System.Action`1<Goo.WindowTitlebarEvent>|instance|add:public,remove:public
 event|Goo.Window|VisibilityChanged|System.Action`1<System.Boolean>|instance|add:public,remove:public
 function|Goo|Each|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob[]
+function|Goo|Em|public|generic:|(value:System.Double)->Goo.Length
 function|Goo|Percent|public|generic:|(value:System.Double)->Goo.Length
+function|Goo|Rem|public|generic:|(value:System.Double)->Goo.Length
+function|Goo|Vh|public|generic:|(value:System.Double)->Goo.Length
+function|Goo|Vw|public|generic:|(value:System.Double)->Goo.Length
 method|Goo.AccessibilityActionRequest|Scroll|static|public|generic:|(x:System.Double,y:System.Double)->Goo.AccessibilityActionRequest
 method|Goo.AccessibilityActionRequest|SetSelection|static|public|generic:|(start:System.Int32,length:System.Int32)->Goo.AccessibilityActionRequest
 method|Goo.AccessibilityActionRequest|SetSelection|static|public|generic:|(start:System.Int32,length:System.Int32,caret:System.Int32)->Goo.AccessibilityActionRequest
@@ -2077,8 +2081,8 @@ property|Goo.ApplicationActivation|Payload|System.String|instance|get:public,ini
 property|Goo.ApplicationActivation|Target|System.Uri?|instance|get:public,init:public|index:()
 property|Goo.ApplicationActivation|WorkingDirectory|System.String|instance|get:public,init:public|index:()
 property|Goo.Application|VerifyState|System.Boolean|static|get:public,set:public|index:()
-property|Goo.Blob|AccessibilityName|System.String?|instance|get:public,init:public|index:()
-property|Goo.Blob|AccessibilityRole|System.Nullable`1<Goo.AccessibilityRole>|instance|get:public,init:public|index:()
+property|Goo.Blob|AccessibilityName|System.String|instance|get:public,init:public|index:()
+property|Goo.Blob|AccessibilityRole|Goo.AccessibilityRole|instance|get:public,init:public|index:()
 property|Goo.Blob|Accessibility|Goo.Accessibility?|instance|get:public,init:public|index:()
 property|Goo.Blob|ActiveStyle|Goo.Style?|instance|get:public,init:public|index:()
 property|Goo.Blob|AutoFocus|System.Boolean|instance|get:public,init:public|index:()
@@ -2158,6 +2162,7 @@ property|Goo.Color|R|System.Single|instance|get:public|index:()
 property|Goo.Color|Transparent|Goo.Color|static|get:public|index:()
 property|Goo.Color|White|Goo.Color|static|get:public|index:()
 property|Goo.Column|Children|System.Collections.Generic.IList`1<Goo.Blob>|instance|get:public,init:public|index:()
+property|Goo.Column|HitTestSelf|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.Container|Children|System.Collections.Generic.IList`1<Goo.Blob>|instance|get:public,init:public|index:()
 property|Goo.Container|HitTestSelf|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.Container|Layout|Goo.LayoutAlgorithm?|instance|get:public,init:public|index:()
@@ -2560,6 +2565,7 @@ property|Goo.RichText.RichTextResult|Error|System.String|instance|get:public,ini
 property|Goo.RichText.RichTextResult|Fragment|Goo.RichText.RichTextFragment|instance|get:public,init:public|index:()
 property|Goo.RichText.RichTextResult|Status|Goo.RichText.RichTextStatus|instance|get:public,init:public|index:()
 property|Goo.Row|Children|System.Collections.Generic.IList`1<Goo.Blob>|instance|get:public,init:public|index:()
+property|Goo.Row|HitTestSelf|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.Scrollbar|FadeMs|System.Double|instance|get:public,init:public|index:()
 property|Goo.Scrollbar|HideDelayMs|System.Double|instance|get:public,init:public|index:()
 property|Goo.Scrollbar|HitThickness|System.Double|instance|get:public,init:public|index:()
@@ -2672,7 +2678,7 @@ property|Goo.Style|FontStyle|Goo.FontStyle|instance|init:public|index:()
 property|Goo.Style|FontWeight|System.Double|instance|init:public|index:()
 property|Goo.Style|Gap|Goo.Length|instance|init:public|index:()
 property|Goo.Style|Height|Goo.Length|instance|init:public|index:()
-property|Goo.Style|Inset|Goo.Length|instance|init:public|index:()
+property|Goo.Style|Inset|Goo.Edges|instance|init:public|index:()
 property|Goo.Style|JustifyContent|Goo.JustifyContent|instance|init:public|index:()
 property|Goo.Style|Language|System.String|instance|init:public|index:()
 property|Goo.Style|Left|Goo.Length|instance|init:public|index:()

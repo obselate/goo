@@ -1059,7 +1059,7 @@ Sets the preferred height.
 
 ### `Inset`
 
-Sets all four position offsets. Later offsets override individual edges.
+Sets position offsets in CSS top, right, bottom, left order. Later offsets override individual edges.
 
 ### `JustifyContent`
 
