@@ -7,7 +7,7 @@ import System.Numerics
 /// Identifies the requested state of a window.
 public enum WindowState { Normal; Minimized; Maximized; Fullscreen }
 
-/// Controls how Window.Run schedules frames that have visual demand.
+/// Controls how Application.Run schedules frames that have visual demand.
 public enum WindowFramePacing { Display; Uncapped }
 
 /// Identifies input received by a window before routing.
@@ -268,7 +268,7 @@ public partial class Window {
   internal prop DiagnosticsSession DevToolsSession? { get -> diagnosticsSession }
   /// Gets or sets per-window GPU presentation synchronization.
   /// True selects FIFO. False prefers Immediate, then Mailbox, then FIFO on every device.
-  /// Window.Run pacing is controlled separately by FramePacing.
+  /// Application.Run pacing is controlled separately by FramePacing.
   public prop VSync bool{
     get -> vsync
     set(v) {
@@ -284,7 +284,7 @@ public partial class Window {
     }
   }
 
-  /// Gets or sets the frame pacing used by Window.Run. Uncapped still honors
+  /// Gets or sets the frame pacing used by Application.Run. Uncapped still honors
   /// GPU queue readiness and the selected presentation mode.
   public prop FramePacing WindowFramePacing{
     get -> framePacing
@@ -324,37 +324,34 @@ public partial class Window {
     }
   }
 
-  /// Gets or sets the window width.
-  public prop Width int32{
-    get -> width
-    set(v) {
-      requireUiThread("Window.Width")
-      if width == v {
-        return
+  /// Gets or sets the client size in layout units. Native assignments multiply by UiScale and round once.
+  /// The native host's observed size is authoritative after Open.
+  public prop Size LayoutSize{
+    get -> requestedSize ?? LayoutSize(float64(NativeWidth) / float64(UiScale), float64(NativeHeight) / float64(UiScale))
+    set(value) {
+      requireUiThread("Window.Size")
+      if !Double.IsFinite(value.Width) || !Double.IsFinite(value.Height) || value.Width < 0.0 || value.Height < 0.0 {
+        throw ArgumentOutOfRangeException("value")
       }
+      if Size == value { return }
       if host != nil && LayerShell != nil { throw NotSupportedException("Layer-shell sizes are configured by the compositor") }
-      width = v
-      pushSize()
+      if host == nil {
+        requestedSize = value
+      } else {
+        width = scaledSize(value.Width)
+        height = scaledSize(value.Height)
+        pushSize()
+      }
       MetricSubscriptions.MarkWindowDirty(this)
       requestRender()
     }
   }
 
-  /// Gets or sets the window height.
-  public prop Height int32{
-    get -> height
-    set(v) {
-      requireUiThread("Window.Height")
-      if height == v {
-        return
-      }
-      if host != nil && LayerShell != nil { throw NotSupportedException("Layer-shell sizes are configured by the compositor") }
-      height = v
-      pushSize()
-      MetricSubscriptions.MarkWindowDirty(this)
-      requestRender()
-    }
-  }
+  /// Gets the observed client width in native logical units.
+  public prop NativeWidth int32{ get -> host?.LogicalWidth ?? width }
+
+  /// Gets the observed client height in native logical units.
+  public prop NativeHeight int32{ get -> host?.LogicalHeight ?? height }
 
   // positionSet distinguishes an explicit (0,0) request.
   /// Gets or sets the requested horizontal position.
@@ -545,30 +542,9 @@ public partial class Window {
     }
   }
 
-  /// Gets the current native clipboard text on the window UI thread.
-  /// An empty result can mean an empty clipboard, native copy failure, or text exceeding 16 MiB of UTF-8.
-  /// @exception InvalidOperationException when the window is not open.
-  public func GetClipboardText() string {
-    requireUiThread("Window.GetClipboardText")
-    if !IsOpen { throw InvalidOperationException("Clipboard access requires an open window") }
-    guard let native = host else {
-      throw InvalidOperationException("Clipboard access requires an open window")
-    }
-    return native.GetClipboardText()
-  }
-
-  /// Sets the native clipboard text on the window UI thread.
-  /// Native set failures throw.
-  /// @exception InvalidOperationException when the window is not open.
-  public func SetClipboardText(value string) {
-    requireUiThread("Window.SetClipboardText")
-    if value == nil { throw ArgumentNullException("value") }
-    if !IsOpen { throw InvalidOperationException("Clipboard access requires an open window") }
-    guard let native = host else {
-      throw InvalidOperationException("Clipboard access requires an open window")
-    }
-    native.SetClipboardText(value)
-  }
+  /// Gets clipboard services for this window's UI thread.
+  public prop Clipboard WindowClipboard { get -> clipboard ??= WindowClipboard(this) }
+  private var clipboard WindowClipboard?
 
   /// Reports whether programmatic window movement is available.
   public prop CanMove bool{

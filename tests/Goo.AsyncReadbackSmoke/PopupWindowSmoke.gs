@@ -37,7 +37,7 @@ internal class PopupWindowSmoke {
 
     internal func Run() {
       let ownerRoot = PopupSmokeCell{}
-      let owner = Window{ Title: "Goo native popup smoke", Root: ownerRoot, Width: 320, Height: 200, UiScale: 1.5F }.Open()
+      let owner = Window{ Title: "Goo native popup smoke", Root: ownerRoot, Size: LayoutSize(float64(320) / 1.5, float64(200) / 1.5),  UiScale: 1.5F }.Open()
       let root = PopupSmokeCell{}
       using let popup = PopupWindow(owner, root, PopupKind.Tooltip)
       var dismissed = 0

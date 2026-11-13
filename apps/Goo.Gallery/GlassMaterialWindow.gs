@@ -179,7 +179,7 @@ internal class GlassMaterialPanelCell : Cell {
             BorderWidth: 1,
             BorderColor: active ? Color.Rgba(39, 72, 82, 62): Color.Rgba(39, 72, 82, 24),
             BackgroundColor: active ? Color.Rgba(249, 253, 252, 218): Color.Rgba(249, 253, 252, 160),
-            Hover: Style{BackgroundColor: Color.Rgba(249, 253, 252, 236)},
+            HoverStyle: Style{BackgroundColor: Color.Rgba(249, 253, 252, 236)},
             OnClick: () -> {
                 selectMode(terminal)
             },
@@ -462,8 +462,7 @@ public class GlassMaterialWindow {
             let initialTerminal = requested == "terminal"
             return Window{
                 Title: "Glass materials",
-                Width: 1120,
-                Height: 760,
+                Size: LayoutSize(1120, 760),
                 Resizable: true,
                 VSync: true,
                 Background: Color.Rgb(226, 239, 235),
@@ -474,7 +473,7 @@ public class GlassMaterialWindow {
         public func Run() {
             let window = CreateWindow()
             window.Open()
-            window.Run()
+            Application.Run(window)
         }
     }
 }

@@ -6,7 +6,7 @@ import System.Diagnostics
 internal class StateFixtures {
   func BuilderScopeDependencyTransactionContract() bool {
     let cell = StateScopeFixtureCell()
-    let window = Window{Root: cell, Width: 200, Height: 100}
+    let window = Window{Root: cell, Size: LayoutSize(200, 100)}
     try {
       window.UpdateTree()
       cell.Value.Value = 1
@@ -43,7 +43,7 @@ internal class StateFixtures {
 
   func BuilderScopeIncrementalAndNestedContract() bool {
     let cell = StateScopeFixtureCell()
-    let window = Window{Root: cell, Width: 200, Height: 100}
+    let window = Window{Root: cell, Size: LayoutSize(200, 100)}
     using let outer = StateReadScope(cell, () -> cell.Rebuild())
     using let inner = StateReadScope(cell, () -> cell.Rebuild())
     let first = State[int32](0)
@@ -77,7 +77,7 @@ internal class StateFixtures {
 
   func VerificationSettingContract() bool {
     let previous = StateVerification.Override
-    let window = Window{Root: Cell(), Width: 200, Height: 100}
+    let window = Window{Root: Cell(), Size: LayoutSize(200, 100)}
     try {
       StateVerification.Override = nil
       if !DevTools.HasSessions && StateVerification.Enabled != Debugger.IsAttached { return false }
@@ -98,7 +98,7 @@ internal class StateFixtures {
       StateVerification.Enabled = true
       for mode in []string{"external", "unread", "clock"} {
         StateFixtureExternal.Value = 0
-        let window = Window{Root: StateVerificationFixtureCell(mode), Width: 200, Height: 100}
+        let window = Window{Root: StateVerificationFixtureCell(mode), Size: LayoutSize(200, 100)}
         try {
           window.UpdateTree()
           var rejected = false
@@ -122,7 +122,7 @@ internal class StateFixtures {
       StateVerification.Enabled = true
       for mode in []string{"tracked", "equal"} {
         StateFixtureExternal.Value = 0
-        let window = Window{Root: StateVerificationFixtureCell(mode), Width: 200, Height: 100}
+        let window = Window{Root: StateVerificationFixtureCell(mode), Size: LayoutSize(200, 100)}
         try {
           window.UpdateTree()
           window.PlatformInput.PointerMove(0, PointerDevice.Mouse, 10, 10, KeyModifiers{}, 0)
@@ -136,7 +136,7 @@ internal class StateFixtures {
   }
   func VirtualRetainedStateContract() bool {
     let cell = StateVirtualFixtureCell()
-    let window = Window{Root: cell, Width: 200, Height: 100, SmoothScrolling: false}
+    let window = Window{Root: cell, Size: LayoutSize(200, 100), SmoothScrolling: false}
     try {
       window.UpdateTree()
       window.UpdateTree()
@@ -175,7 +175,7 @@ internal class StateFixtures {
     StateScopeHistoryValues.Tracked = true
     StateVerification.Enabled = alreadyEnabled
     let cell = StateScopeHistoryCell()
-    let window = Window{Root: cell, Width: 200, Height: 100}
+    let window = Window{Root: cell, Size: LayoutSize(200, 100)}
     try {
       window.UpdateTree()
       window.UpdateTree()
@@ -205,7 +205,7 @@ internal class StateFixtures {
     StateScopeHistoryValues.Value = 0
     StateScopeHistoryValues.Tracked = true
     StateVerification.Enabled = true
-    let window = Window{Root: StateScopeHistoryCell(), Width: 200, Height: 100}
+    let window = Window{Root: StateScopeHistoryCell(), Size: LayoutSize(200, 100)}
     try {
       window.UpdateTree()
       window.UpdateTree()
@@ -293,7 +293,7 @@ internal class StateVirtualFixtureCell : Cell {
 
   override func Build() Blob {
     Builds++
-    return Virtual(StateVirtualFixtureSource(Rows)){Handle = Handle, Width = 200, Height = 60}
+    return Virtual{Source: StateVirtualFixtureSource(Rows), Handle: Handle, Width: 200, Height: 60}
   }
 }
 
@@ -353,7 +353,7 @@ internal class StateScopeHistoryCell : Cell {
   override func Build() Blob {
     let result = Container{Width: 200, Height: 100, OnPointerMove: Move}
     result.Add(Text{Content: StateScopeHistoryValues.Value.ToString()})
-    result.Add(Virtual(StateScopeHistorySource(value)){Width = 200, Height = 20})
+    result.Add(Virtual{Source: StateScopeHistorySource(value), Width: 200, Height: 20})
     return result
   }
 

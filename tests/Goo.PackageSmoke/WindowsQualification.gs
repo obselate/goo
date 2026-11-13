@@ -43,8 +43,7 @@ func RunWindowsQualification() {
   let root = SmokeCell{}
   let window = Window{
     Title: "Goo Windows qualification",
-    Width: 1280,
-    Height: 720,
+    Size: LayoutSize(1280, 720),
     VSync: false,
     Root: root,
   }

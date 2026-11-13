@@ -85,7 +85,7 @@ func Main() int32 {
 }
 
 private func RunWindow(descriptor DiscoveryDescriptor?, sample bool) int32 {
-    Window.ConfigureApplication("Goo DevTools", "0.30.0", "io.github.obselate.goo.devtools")
+    Application.Configure("Goo DevTools", "0.30.0", "io.github.obselate.goo.devtools")
     using let sansRegular = RegisterFont("Vend Sans", "VendSans-VariableFont_wght.ttf", 400)
     using let sansMedium = RegisterFont("Vend Sans", "VendSans-VariableFont_wght.ttf", 500)
     using let sansSemibold = RegisterFont("Vend Sans", "VendSans-VariableFont_wght.ttf", 600)
@@ -115,10 +115,8 @@ private func RunWindow(descriptor DiscoveryDescriptor?, sample bool) int32 {
     let root = DevToolsCell(session)
     let window = Window{
         Title: "Goo DevTools",
-        Width: 1540,
-        Height: 960,
-        MinWidth: 800,
-        MinHeight: 560,
+        Size: LayoutSize(1540, 960),
+        MinSize: LayoutSize(800, 560),
         Transparent: true,
         ResizeBand: 8.0F,
         Resizable: true,
@@ -133,7 +131,7 @@ private func RunWindow(descriptor DiscoveryDescriptor?, sample bool) int32 {
         session.Connect()
         session.Pump()
     }
-    window.Run()
+    Application.Run(window)
     return 0
 }
 

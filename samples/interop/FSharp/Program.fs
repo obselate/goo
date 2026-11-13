@@ -9,7 +9,7 @@ module Counter =
         root.Add(Text(Content = $"Count: {count}"))
         let button =
             Button(Padding = Edges(Length.Pixels 10.), BorderRadius = Length.Pixels 10.,
-                TransitionMs = 150., Hover = Style(BackgroundColor = Color.Rgb(74, 125, 255)),
+                TransitionMs = 150., HoverStyle = Style(BackgroundColor = Color.Rgb(74, 125, 255)),
                 OnClick = increment)
         button.Add(Text(Content = "Add one"))
         root.Add(button)
@@ -51,7 +51,7 @@ type EqualColumn() =
                 let child = context.MeasureChild(i, available)
                 width <- max width child.Width
                 height <- height + child.Height
-            LayoutSize(Width = min width available.Width, Height = min height available.Height)
+            LayoutSize(min width available.Width, min height available.Height)
         member _.Arrange(context, finalSize) =
             let height = if context.ChildCount = 0 then 0. else finalSize.Height / float context.ChildCount
             for i in 0 .. context.ChildCount - 1 do
@@ -102,7 +102,7 @@ type Examples(sample: string) =
             root.Add(button)
             root.Add(Cell.Mount<ModalDialog, ModalDialogHost>("dialog", dialog))
             root
-        | _ -> Cell.Mount<Cell>(counterFactory, "counter")
+        | _ -> Cell.Mount<Cell>("counter", counterFactory)
 
 let hitTest (handle: ElementHandle) point =
     match handle.TryGetTextPositionAt(point, TextCoordinateSpace.Window) with
@@ -117,7 +117,7 @@ let pickFile (window: Window) = task {
 [<EntryPoint>]
 let main args =
     let sample = args |> Array.tryHead |> Option.defaultValue "counter"
-    let window = Window(Title = "F# interop", Width = 640, Height = 480, Root = Examples(sample))
+    let window = Window(Title = "F# interop", Size = LayoutSize(640., 480.), Root = Examples(sample))
     let focused = Action<bool>(fun value -> printfn "Focused: %b" value)
     window.add_FocusChanged focused
     window.remove_FocusChanged focused
@@ -131,5 +131,5 @@ let main args =
         if (list.Children[1] :?> Text).Key <> "Ada" then invalidOp "Row key failed."
         if (list.Children[3] :?> Button).Children.Count <> 1 then invalidOp "Button children failed."
         printfn "F# interop checks passed."
-    else window.Run()
+    else Application.Run(window)
     0

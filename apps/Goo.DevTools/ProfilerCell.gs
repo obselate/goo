@@ -496,7 +496,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
             BackgroundColor: theme.SunkenColor,
             BorderRadius: theme.RadiusSm!!,
             Focusable: true,
-            Focus: Style{OutlineWidth: 1, OutlineColor: theme.FocusColor},
+            FocusStyle: Style{OutlineWidth: 1, OutlineColor: theme.FocusColor},
             Accessibility: Accessibility{Role: AccessibilityRole.Group, Name: "Frames"},
             OnWheel: (e WheelEvent) -> Wheel(e, w),
             OnPointerDown: (e PointerEvent) -> {
@@ -908,10 +908,10 @@ internal partial class ProfilerCell : Cell, IDisposable {
         Height: Percent(100),
         FlexShrink: 0.0,
         Focusable: true,
-        Focus: Style{OutlineWidth: 1, OutlineColor: theme.FocusColor},
+        FocusStyle: Style{OutlineWidth: 1, OutlineColor: theme.FocusColor},
         Cursor: Cursor.ResizeHorizontal,
         BackgroundColor: resizing ? theme.AccentColor: theme.PanelColor,
-        Hover: Style{BackgroundColor: theme.StrongBorderColor},
+        HoverStyle: Style{BackgroundColor: theme.StrongBorderColor},
         BorderWidth: Edges{Left: 1},
         BorderColor: theme.BorderColor,
         Accessibility: Accessibility{Role: AccessibilityRole.Group, Name: "Resize details"},
@@ -1649,7 +1649,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
             Height: Percent(100),
             Path: path,
             Fit: ShapeFit.Fill,
-            BackgroundColor: color,
+            Fill: VectorPaint(color),
         }
 
         private func Rect(path PathBuilder, x float64, y float64, width float64, height float64) {

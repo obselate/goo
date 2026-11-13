@@ -52,11 +52,10 @@ internal unsafe partial class SdlRuntime {
     private let cursors []SDLCursorPtr = [int32(Cursor.ResizeWest) + 1]SDLCursorPtr
     private var currentCursor Cursor = Cursor.Default
     private var applicationConfigured bool
-    private var applicationName string?
-    private var applicationVersion string?
-    private var applicationIdentifier string?
 
-    internal prop ApplicationIdentifier string { get -> applicationIdentifier ?? "" }
+    internal func EnsureLibrary() {
+      if !libraryConfigured { throw InvalidOperationException("Goo could not configure SDL3 symbols.") }
+    }
 
     private func ConfigureLibrary() bool {
       if OperatingSystem.IsLinux() && !RuntimeFeature.IsDynamicCodeSupported {
@@ -112,35 +111,16 @@ internal unsafe partial class SdlRuntime {
       return true
     }
 
-    internal func ConfigureApplication(name string, version string, identifier string) {
-      if String.IsNullOrWhiteSpace(name) {
-        throw ArgumentException("name")
-      }
-      if String.IsNullOrWhiteSpace(version) {
-        throw ArgumentException("version")
-      }
-      if String.IsNullOrWhiteSpace(identifier) {
-        throw ArgumentException("identifier")
-      }
-
+    internal func ApplyApplicationIdentity(name string, version string, identifier string) {
       lock (sync) {
-        if applicationConfigured {
-          if applicationName == name && applicationVersion == version && applicationIdentifier == identifier {
-            return
-          }
-          throw InvalidOperationException(
-            "Goo application metadata is already configured with different values.")
-        }
-        if mainThreadId != 0 || SDL.WasInit(0u) != 0u {
+        if applicationConfigured { return }
+        if SDL.WasInit(0u) != 0u {
           throw InvalidOperationException(
             "Goo application metadata must be configured before SDL initialization.")
         }
         if !SDL.SetAppMetadata(name, version, identifier) {
           throw InvalidOperationException("SDL_SetAppMetadata failed: " + SDL.GetErrorS())
         }
-        applicationName = name
-        applicationVersion = version
-        applicationIdentifier = identifier
         applicationConfigured = true
       }
     }
@@ -270,6 +250,7 @@ internal unsafe partial class SdlRuntime {
       lock (sync) {
         RequireMainThreadLocked("Window.Open")
         if references == 0 {
+          Application.ApplyNativeIdentity()
           let requiresWayland = OperatingSystem.IsLinux()
           if requiresWayland && !SDL.SetHintWithPriority(
             SDL.SDL_HINT_VIDEO_DRIVER, "wayland", SDLHintPriority.Override) {

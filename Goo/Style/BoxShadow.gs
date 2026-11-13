@@ -163,10 +163,10 @@ internal func validateShadowGeometry(typeName string, value Length, name string)
   if value.Unit == LengthUnit.Unset {
     return 0
   }
-  if value.Unit == LengthUnit.Auto || value.Unit == LengthUnit.Percent {
-    throw ArgumentException(typeName + "." + name + " must use pixel units", name)
+  if value.Unit != LengthUnit.Px {
+    throw ArgumentOutOfRangeException(name, typeName + "." + name + " accepts pixel units only")
   }
-  if Double.IsNaN(float64(value.Value)) || Double.IsInfinity(float64(value.Value)) {
+  if !value.IsFinite {
     throw ArgumentOutOfRangeException(name)
   }
   return value

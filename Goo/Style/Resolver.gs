@@ -418,6 +418,14 @@ internal partial class Resolver {
   // Direct write on initial resolve, non-animatable fields, or when transitions
   // are off; otherwise starts (or retargets) a lerp from the displayed value.
   internal func writeField(n Node, e StyleEntry, initial bool) {
+    if e.Payload is LengthDeclaration {
+      LengthDeclarations.Set(n, e, this)
+      finishTransition(n, e.Field)
+      return
+    }
+    if LengthDeclarations.Active && fieldKind(e.Field) == FieldKind.KLength {
+      LengthDeclarations.Set(n, e, this)
+    }
     if hasPaintBinding(n, e.Field) {
       finishTransition(n, e.Field)
       return

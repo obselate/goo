@@ -338,7 +338,7 @@ class PartialPaintCell : Cell {
       Width: 56,
       Height: 56,
       Path: PartialPaintCell.Star,
-      BackgroundColor: Step >= 5 ? Color.Rgb(72, 128, 224) : Color.Rgb(236, 196, 72),
+      Fill: VectorPaint(Step >= 5 ? Color.Rgb(72, 128, 224) : Color.Rgb(236, 196, 72)),
     },
     Container{
       Position: PositionType.Absolute,
@@ -647,8 +647,7 @@ func PartialRedrawScene(name string, root Cell, steps int32, advance Action,
   resizeCapacity bool = false) int32 {
   let window = Window{
     Title: "Goo partial redraw proof",
-    Width: 400,
-    Height: 190,
+    Size: LayoutSize(400, 190),
     VSync: false,
     Root: root,
   }
@@ -658,8 +657,7 @@ func PartialRedrawScene(name string, root Cell, steps int32, advance Action,
     WindowReadbackTestFixture.Pump(window, 0.0)
     let metrics = WindowReadbackTestFixture.Metrics(window)
     if resizeCapacity {
-      window.Width = 560
-      window.Height = 266
+      window.Size = LayoutSize(560, 266)
       var resizeAttempt int32
       var resizedMetrics = WindowReadbackTestFixture.Metrics(window)
       while (resizedMetrics.LogicalWidth != 560 || resizedMetrics.LogicalHeight != 266)
@@ -677,8 +675,7 @@ func PartialRedrawScene(name string, root Cell, steps int32, advance Action,
         WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
       }
       let reuseCount = WindowReadbackTestFixture.DiagnosticCounters(window).layerPoolReuseCount
-      window.Width = 400
-      window.Height = 190
+      window.Size = LayoutSize(400, 190)
       resizeAttempt = 0
       resizedMetrics = WindowReadbackTestFixture.Metrics(window)
       while (resizedMetrics.LogicalWidth != 400 || resizedMetrics.LogicalHeight != 190)

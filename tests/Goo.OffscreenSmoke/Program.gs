@@ -54,17 +54,17 @@ internal class SessionOwner : Cell, IDisposable {
 }
 
 func RunAutomaticSessionSmoke() {
-    let owner = Window{Root: Page(), Width: 96, Height: 96, InitiallyVisible: false, Title: "Offscreen automatic service"}.Open()
+    let owner = Window{Root: Page(), Size: LayoutSize(96, 96),  InitiallyVisible: false, Title: "Offscreen automatic service"}.Open()
     using let session = owner.CreateOffscreenSession().Session!!
     let options = OffscreenRenderOptions(240f, 180f, 480, 360, Color.White, 134217728)
     let pending = session.RenderAsync(Page(), options, CancellationToken.None)
     var completed = false
     var timedOut = false
     var closing Task[OffscreenRenderResult]?
-    let timeout = owner.SetTimeout(() -> {
+    let timeout = owner.After(15000.0, () -> {
         timedOut = true
         owner.RequestClose()
-    }, 15000.0)
+    })
     pending.ContinueWith((result Task[OffscreenRenderResult]) -> {
         owner.Post(() -> {
             let rendered = result.GetAwaiter().GetResult()
@@ -85,7 +85,7 @@ func RunAutomaticSessionSmoke() {
             owner.RequestClose()
         })
     })
-    owner.Run()
+    Application.Run(owner)
     Require(!timedOut && completed, "window-created session timed out without Service")
     Require(closing != nil && closing.IsCompleted
         && closing.GetAwaiter().GetResult().Status == OffscreenRenderStatus.Cancelled,
@@ -105,7 +105,7 @@ RunAutomaticSessionSmoke()
 if Environment.GetEnvironmentVariable("GOO_OFFSCREEN_AUTO_ONLY") == "1" { return }
 
 let root = SessionOwner()
-let owner = Window{Root: root, Width: 96, Height: 96, Title: "Offscreen proof"}.Open()
+let owner = Window{Root: root, Size: LayoutSize(96, 96),  Title: "Offscreen proof"}.Open()
 
 try {
     owner.Pump(0.0)
@@ -149,7 +149,7 @@ try {
     )
     let capture = first.Capture!!
     Require(
-        capture.Width == uint32(480) && capture.Height == uint32(360) && owner.Width == 96,
+        capture.Width == uint32(480) && capture.Height == uint32(360) && owner.NativeWidth == 96,
         "offscreen size changed its owner"
     )
     let corner = 330 * int32(capture.RowBytes) + 450 * 4

@@ -22,7 +22,7 @@ func RunClipboardDataSmoke() {
         return
     }
 
-    let window = Window{ Title: "Goo MIME clipboard contract", Width: 240, Height: 120, Root: Cell{} }
+    let window = Window{ Title: "Goo MIME clipboard contract", Size: LayoutSize(240, 120),  Root: Cell{} }
     let path = Environment.ProcessPath!!
     try {
         window.Open()
@@ -38,14 +38,14 @@ func RunClipboardDataSmoke() {
         let data = TransferData([]TransferRepresentation{plain, html, rtf, png, empty, zero, secondEmpty}, []Uri{Uri(path)})
         source[0] = uint8(120)
         let intent = if OperatingSystem.IsMacOS() { ClipboardIntent.Copy } else { ClipboardIntent.Cut }
-        let written = window.WriteClipboardAsync(data, intent).GetAwaiter().GetResult()
+        let written = window.Clipboard.WriteAsync(data, intent).GetAwaiter().GetResult()
         ClipboardDataRequire(written.Status == DataTransferStatus.Success, "MIME clipboard publication failed: " + written.Error)
         if OperatingSystem.IsMacOS() {
-            let cut = window.WriteClipboardAsync(data, ClipboardIntent.Cut).GetAwaiter().GetResult()
+            let cut = window.Clipboard.WriteAsync(data, ClipboardIntent.Cut).GetAwaiter().GetResult()
             ClipboardDataRequire(cut.Status == DataTransferStatus.Unsupported, "macOS file Cut was not reported Unsupported")
         }
         let types = []string{"text/plain;charset=utf-8", "text/html", "text/rtf", "image/png", "application/x-goo-empty", "application/x-goo-zero", "application/x-goo-empty-two", "text/uri-list"}
-        let read = window.ReadClipboardDataAsync(types).GetAwaiter().GetResult()
+        let read = window.Clipboard.ReadDataAsync(types).GetAwaiter().GetResult()
         ClipboardDataRequire(read.Status == ClipboardReadStatus.Success, "MIME clipboard read failed: " + read.Error)
         ClipboardDataRequire(read.Intent == intent && read.Data.Uris.Count == 1 && read.Data.Uris[0].LocalPath == path,
             "Clipboard file selection or intent changed")
@@ -59,11 +59,12 @@ func RunClipboardDataSmoke() {
         ClipboardDataRequire(Encoding.UTF8.GetString(read.Data.Representations[0].Bytes.Span) == "clipboard plain",
             "Caller mutation changed published clipboard bytes")
         if Environment.GetEnvironmentVariable("GOO_CLIPBOARD_PRESERVE") != "1" {
-            window.SetClipboardText("replacement")
+            ClipboardDataRequire(window.Clipboard.WriteText("replacement").Status == DataTransferStatus.Success,
+                "Clipboard text replacement failed")
             ClipboardDataRequire(Encoding.UTF8.GetString(read.Data.Representations[0].Bytes.Span) == "clipboard plain",
                 "Clipboard replacement invalidated owned snapshot bytes")
         }
-        let missing = window.ReadClipboardDataAsync([]string{"application/x-goo-missing"}).GetAwaiter().GetResult()
+        let missing = window.Clipboard.ReadDataAsync([]string{"application/x-goo-missing"}).GetAwaiter().GetResult()
         ClipboardDataRequire(missing.Status == ClipboardReadStatus.Empty && missing.Data.Representations.Count == 0,
             "An absent MIME type was not reported Empty")
         Console.WriteLine("Clipboard MIME alternatives, PNG, file intent, empty representation and owned snapshot passed")

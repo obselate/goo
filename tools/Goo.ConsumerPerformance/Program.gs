@@ -61,7 +61,7 @@ func WriteMemorySample(eventName string) {
 }
 
 func Main() {
-  Window.ConfigureApplication(
+  Application.Configure(
     "Goo consumer performance",
     "1.0.0",
     "io.github.obselate.goo.consumer-performance")
@@ -70,8 +70,7 @@ func Main() {
   font.Register()
   let window = Window{
     Title: "Goo consumer performance",
-    Width: 640,
-    Height: 480,
+    Size: LayoutSize(640, 480),
     VSync: true,
     Root: ConsumerScene{},
   }
@@ -113,7 +112,7 @@ func Main() {
   closer.IsBackground = true
   closer.Start()
   try {
-    window.Run()
+    Application.Run(window)
   } finally {
     stopped.Set()
     closer.Join()

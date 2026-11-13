@@ -6,19 +6,29 @@ import System.Diagnostics
 
 /// A cancellable callback scheduled on a Window's UI thread.
 public sealed class WindowTimer : IDisposable {
-    private let owner Window
+    private let owner Window?
     private let callback Action
     private let periodTicks float64
     internal var DueTicks float64
     private var active bool
+    private var cellOwner Cell?
 
-    internal init(window Window, action Action, delayMs float64, intervalMs float64) {
+    internal init(window Window?, action Action, delayMs float64, intervalMs float64, scheduled bool = true) {
         owner = window
         callback = action
         periodTicks = intervalMs * float64(Stopwatch.Frequency) / 1000.0
         DueTicks = float64(Stopwatch.GetTimestamp())
         + delayMs * float64(Stopwatch.Frequency) / 1000.0
-        active = true
+        active = scheduled
+    }
+
+    shared {
+        internal func Inactive() WindowTimer -> WindowTimer(nil, () -> {}, 0.0, 0.0, false)
+    }
+
+    internal func SetCellOwner(cell Cell) {
+        cellOwner = cell
+        cell.OwnTimer(this)
     }
 
     /// Reports whether the callback remains scheduled.
@@ -31,25 +41,28 @@ public sealed class WindowTimer : IDisposable {
         if !active {
             return
         }
-        active = false
-        owner.RemoveTimer(this)
+        owner?.RemoveTimer(this)
+        Cancel()
     }
 
     internal func Cancel() {
         active = false
+        cellOwner?.ReleaseTimer(this)
+        cellOwner = nil
     }
 
     internal func Fire(nowTicks float64) {
         if !active {
             return
         }
+        let cell = cellOwner
         if periodTicks <= 0.0 {
-            active = false
+            Cancel()
         } else {
             let elapsed = Math.Max(0.0, nowTicks - DueTicks)
             DueTicks = DueTicks + (Math.Floor(elapsed / periodTicks) + 1.0) * periodTicks
         }
-        callback()
+        if let owner = cell { owner.RunOwnedAction(callback) } else { callback() }
     }
 }
 
@@ -57,26 +70,49 @@ public sealed class WindowTimer : IDisposable {
 public partial class Window {
     private let timers List[WindowTimer] = List[WindowTimer]()
     private let timerBatch List[WindowTimer] = List[WindowTimer]()
+    private var pendingCellMounts Queue[Cell]?
+
+    internal func QueueCellMount(cell Cell) {
+        pendingCellMounts ??= Queue[Cell]()
+        pendingCellMounts!!.Enqueue(cell)
+    }
+
+    private func completeCellMounts() {
+        guard let pending = pendingCellMounts else { return }
+        let count = pending.Count
+        for _ in 0 ... count {
+            if !pending.TryDequeue(out var cell) { return }
+            cell.CompleteMount()
+        }
+    }
 
     /// Runs a callback once on the UI thread after the delay.
-    public func SetTimeout(callback Action, delayMs float64) WindowTimer {
-        validateTimer(callback, delayMs, false)
-        return addTimer(callback, delayMs, 0.0)
+    public func After(delayMs float64, action Action) WindowTimer {
+        validateTimer(action, delayMs, false)
+        return addTimer(action, delayMs, 0.0)
     }
 
     /// Runs a callback repeatedly on the UI thread at the requested interval.
-    public func SetInterval(callback Action, intervalMs float64) WindowTimer {
-        validateTimer(callback, intervalMs, true)
-        return addTimer(callback, intervalMs, intervalMs)
+    public func Every(intervalMs float64, action Action) WindowTimer {
+        validateTimer(action, intervalMs, true)
+        return addTimer(action, intervalMs, intervalMs)
     }
 
-    private func validateTimer(callback Action, milliseconds float64, repeating bool) {
+
+    internal func AddCellTimer(cell Cell, milliseconds float64, action Action, repeating bool) WindowTimer {
+        validateTimer(action, milliseconds, repeating)
+        let timer = addTimer(action, milliseconds, repeating ? milliseconds : 0.0)
+        if timer.IsActive { timer.SetCellOwner(cell) }
+        return timer
+    }
+    private func validateTimer(action Action, milliseconds float64, repeating bool) {
+        if !acceptingPosts { return }
         requireUiThread("Window timer")
         if !IsOpen {
             throw InvalidOperationException("Window timers require an open window")
         }
-        if callback == nil {
-            throw ArgumentNullException("callback")
+        if action == nil {
+            throw ArgumentNullException("action")
         }
         if !Double.IsFinite(milliseconds) || milliseconds < 0.0 || (repeating && milliseconds == 0.0) {
             throw ArgumentOutOfRangeException("milliseconds")
@@ -84,6 +120,7 @@ public partial class Window {
     }
 
     private func addTimer(callback Action, delayMs float64, intervalMs float64) WindowTimer {
+        if !acceptingPosts { return WindowTimer.Inactive() }
         let timer = WindowTimer(this, callback, delayMs, intervalMs)
         timers.Add(timer)
         host?.Wake()
@@ -137,6 +174,7 @@ public partial class Window {
     }
 
     private func clearTimers() {
+        pendingCellMounts?.Clear()
         for i in 0 ... timers.Count {
             timers[i].Cancel()
         }

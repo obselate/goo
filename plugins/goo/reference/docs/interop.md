@@ -53,7 +53,7 @@ Use `open System` and `open Goo`. Create callbacks outside `Build()`. Assign `Co
 
 ```fsharp
 let counterFactory = Func<Cell>(Counter.create)
-let counter = Cell.Mount<Cell>(counterFactory, "counter")
+let counter = Cell.Mount<Cell>("counter", counterFactory)
 ```
 
 - `Add` accepts derived Blobs. An annotated `Blob` return upcasts a `Container`.
@@ -135,7 +135,7 @@ Keep native assets in the build output. For `Cell[T]`, dot-source the input type
 | Init-only properties | Set them in a hashtable cast, such as `[Goo.Style]@{ Padding = 10 }`. |
 | Structs | Read a copy, construct a changed value, then assign it back. A nested struct edit does not update its owner. |
 | Numeric overloads | Use explicit types, such as `[Math]::Clamp([double]0.7, [double]0, [double]1)`. |
-| Async | PowerShell has no `await`. Load resources before `Run()`. Do not block in `Build()` or handlers. |
+| Async | PowerShell has no `await`. Load resources before `[Goo.Application]::Run($window)`. Do not block in `Build()` or handlers. |
 | Names | Names are case-insensitive. Do not use names that differ only by case or a Cell field named `build`. |
 | Callback output | Use `$null = $handle.Activate()` to keep `Action` handlers free of pipeline output. |
 

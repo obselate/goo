@@ -28,7 +28,7 @@ internal class StateDependency {
       if owner != 0 && Environment.CurrentManagedThreadId != owner {
         throw InvalidOperationException("State writes require the UI thread of its first reader.")
       }
-      if Cell.StateReader != nil || StateReadScope.Current != nil || ContextEnvironment.StateReader != nil {
+      if Cell.IsBuilding {
         throw InvalidOperationException("State writes are not allowed during Build.")
       }
     }

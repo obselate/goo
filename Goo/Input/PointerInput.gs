@@ -612,6 +612,9 @@ internal partial class PointerInput {
       }
       return canceled
     }
+    if let drag = current.PointerDrag {
+      if drag.Target.Current?.OnPointerDrag == nil { clearCapture() }
+    }
     var routeUnavailable = false
     if current.CapturePath.Count > 0 {
       routeUnavailable = !rebuildCapturePath(tree)
@@ -908,13 +911,17 @@ internal partial class PointerInput {
           FollowCaret(entry)
           text.RefreshInputArea(entry)
           current.DragEntry = entry
-        } else if entry.Kind == NodeKind.Editor {
+        } else if entry.Kind == NodeKind.Editor || entry.Selectable {
           let point = TransformGeometry.WindowToNode(entry, x, y)
           if !point.Valid { return false }
           if TextEditorInputAdapter.SelectAt(entry, point.X - entry.Rect.X, point.Y - entry.Rect.Y,
             modifiers.Shift, current.LastPressCount) {
               text.RefreshInputArea(entry)
               current.DragEditor = entry
+              if entry.Selectable {
+                current.DragSelectionOrigin = TextRange(Math.Min(entry.Anchor, entry.Caret),
+                  Math.Abs(entry.Anchor - entry.Caret))
+              }
               if let selected = entry.EditorController?.Selection {
                 current.DragSelectionOrigin = TextRange{
                   Start: Math.Min(selected.Anchor.Offset, selected.Active.Offset),
@@ -1222,6 +1229,7 @@ internal class PointerContact {
   internal var HeldButtons PointerButtons
   internal var CanceledButtons PointerButtons
   internal var Canceling bool
+  internal var PointerDrag PointerDragState?
   private var captureTargetMount NodeMount
   internal prop CaptureTarget Node? {
     get -> captureTargetMount.Current

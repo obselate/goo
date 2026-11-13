@@ -7,35 +7,24 @@ import Goo
 import System
 
 func Main() {
-    Window.ConfigureApplication("Example", "1.0", "org.example.App")
-    Window.ApplicationActivated += request -> {
+    Application.Configure("Example", "1.0", "org.example.App")
+    Application.Activated += request -> {
         Console.WriteLine(String.Join(" | ", request.Arguments))
     }
     let arguments = Environment.GetCommandLineArgs()
-    let parsed = ActivationArguments.Read(
-        ArraySegment[string](arguments, 1, arguments.Length - 1), Environment.CurrentDirectory)
-    if parsed.Status != ActivationReadStatus.Accepted {
-        Console.Error.WriteLine(parsed.Error)
-        return
-    }
-    let initial = parsed.Activation!!
-    if Window.InitializeApplicationActivation(initial) != WindowOperationResult.Accepted {
-        Console.Error.WriteLine("Initial activation exceeds its limits")
-        return
-    }
-    let result = SingleInstance.AcquireAsync("org.example.App", initial).GetAwaiter().GetResult()
+    let result = Application.AcquireSingleInstance(arguments[1..])
     if result.Status == SingleInstanceStatus.Forwarded { return }
     if result.Status != SingleInstanceStatus.Primary {
         Console.Error.WriteLine(result.Status.ToString() + ": " + result.Error)
         return
     }
     using let lease = result.Lease!!
-    let window = Window{Width: 320, Height: 200, Root: Cell{}}
-    window.Run()
+    let window = Window{Size: LayoutSize(320, 200), Root: Cell{}}
+    Application.Run(window)
 }
 ```
 
-Reference `Goo`. Subscribe and initialize activation on the UI thread before acquisition. Block on acquisition only before a window exists, as shown. Keep the primary lease until shutdown.
+Reference `Goo`. Configure identity and acquire on the UI thread before opening a window. `AcquireSingleInstance` parses the startup arguments and starts activation delivery. Keep the primary lease until shutdown.
 
 | Result | Action |
 | --- | --- |
@@ -78,7 +67,7 @@ Quote the executable and each substituted argument. Do not use a command shell. 
 - Declare schemes in `CFBundleURLTypes`.
 - Declare document types and UTIs in `CFBundleDocumentTypes` and `UTExportedTypeDeclarations`.
 - Use the stable application ID as `CFBundleIdentifier`.
-- LaunchServices delivers cold launches and document batches through `Window.ApplicationActivated`. Do not parse a second copy from CLI arguments.
+- LaunchServices delivers cold launches and document batches through `Application.Activated`. Do not parse a second copy from CLI arguments.
 
 ### Linux Wayland
 
@@ -237,7 +226,7 @@ if opened.Status != NotificationStatus.Success {
 using let notifications = opened.Service!!
 ```
 
-Configure the installed application ID and initialize `Window.ApplicationActivated` first. Open and dispose on the UI thread. On macOS, open before `SingleInstance.AcquireAsync` and before the first window opens.
+Configure the installed application ID and subscribe to `Application.Activated` first. Open and dispose on the UI thread. On macOS, open before `Application.AcquireSingleInstance` and before the first window opens.
 
 Request permission from an explicit user action. `ShowAsync` never requests it:
 
@@ -264,7 +253,7 @@ async func Send(service NotificationService) Task[NotificationResult] {
 
 Reusing an ID replaces that app notification. `RemoveAsync` removes it where the OS permits. Await without blocking and post later window changes through the UI queue.
 
-Clicks use `Window.ApplicationActivated` with `Kind == ApplicationActivationKind.Notification`. Read `NotificationId`, `ActionId` and `Payload`. Default clicks have an empty `ActionId`. Validate payloads before use.
+Clicks use `Application.Activated` with `Kind == ApplicationActivationKind.Notification`. Read `NotificationId`, `ActionId` and `Payload`. Default clicks have an empty `ActionId`. Validate payloads before use.
 
 - Windows needs a Start-menu shortcut with the configured AUMID, a stub toast-activator CLSID and a private protocol registered with `--goo-notification`. No COM activator server is required.
 - The private URI is `example-notification://activate?notificationId=...&actionId=...&payload=...`. Escape each field as URI data. All fields are required and may be empty. Use the [association route](#file-associations), not `--goo-open-uri`.
@@ -286,7 +275,7 @@ func RunSaved(saved WindowPlacement) {
         return
     }
     window.Show()
-    window.Run()
+    Application.Run(window)
 }
 ```
 

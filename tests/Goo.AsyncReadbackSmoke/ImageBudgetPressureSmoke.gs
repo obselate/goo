@@ -84,8 +84,7 @@ func RunImageBudgetPressureSmoke() {
     let cell = ImageBudgetPressureCell(pooled[0..32])
     let opened = Window{
       Title: "Goo image budget pressure gate",
-      Width: 960,
-      Height: 720,
+      Size: LayoutSize(960, 720),
       VSync: false,
       Root: cell,
     }
@@ -186,14 +185,14 @@ func RunImageBudgetPressureSmoke() {
       +" retries=" + failed.memoryAllocationRetryCount.ToString()
       +" pressure=" + failed.memoryPressureCount.ToString()
     opened.RequestClose()
-    opened.Run()
+    Application.Run(opened)
     Require(!opened.IsOpen, "Image budget pressure gate window did not close")
   } finally {
     Console.SetError(originalError)
     if let active = window {
       if active.IsOpen {
         active.RequestClose()
-        active.Run()
+        Application.Run(active)
       }
     }
     for source in sources {

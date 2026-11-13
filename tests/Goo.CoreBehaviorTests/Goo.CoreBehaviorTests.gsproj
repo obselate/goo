@@ -5,6 +5,9 @@
     <IsPackable>false</IsPackable>
     <AssemblyName>Goo.CoreBehaviorTests</AssemblyName>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Product>Goo Tests</Product>
+    <InformationalVersion>0.1.0+application-contract</InformationalVersion>
+    <GooPackageId>io.github.obselate.goo.tests</GooPackageId>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="*.gs" />
@@ -32,4 +35,5 @@
     <Copy SourceFiles="$(GooLinuxSdlPath)"
           DestinationFiles="$(TargetDir)libSDL3.so" />
   </Target>
+  <Import Project="../../Goo/Goo.targets" />
 </Project>
