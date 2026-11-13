@@ -148,8 +148,13 @@ class ExplicitKeyBindingTests {
     @Fact
     func WindowScalarsKeepDoublePrecisionAndResizeInLayoutUnits() {
         let value = 1.234567890123
+        let preferences = PlatformPreferences{TextScaleFactor: value}
+        Assert.Equal(value, preferences.TextScaleFactor!!)
+        let display = WindowDisplay(WindowDisplayId{}, "display", ElementRect{}, nil, value)
+        Assert.Equal(value, display.ContentScale)
+        var position = Point{}
         let window = Window{Size: LayoutSize(100, 40), Decorated: false, UiScale: value,
-            Root: ExplicitKeyBindingTests.BuildCell(() -> Container{})}
+            Root: ExplicitKeyBindingTests.BuildCell(() -> Container{OnPointerDown: (e PointerEvent) -> { position = e.WindowPosition }})}
         try {
             window.WheelScrollScale = value
             window.DragStartDistance = value
@@ -162,6 +167,13 @@ class ExplicitKeyBindingTests {
             Assert.Equal(8.123456789012, window.ResizeBand)
             Assert.Equal(WindowHitResult.Left, window.hitTest(9, 20))
             Assert.Equal(WindowHitResult.Normal, window.hitTest(11, 20))
+            window.UiScale = 1.25
+            window.UpdateTree()
+            window.PlatformInput.PointerPress(0, PointerDevice.Mouse, 1.25000007, 6.25,
+                PointerButton.Primary, KeyModifiers.None, 1.0F)
+            Assert.Equal(1.0, position.X)
+            window.PlatformInput.PointerRelease(0, PointerDevice.Mouse, 1.25000007, 6.25,
+                PointerButton.Primary, KeyModifiers.None, 0.0F)
         } finally { window.Close() }
     }
 
@@ -715,8 +727,8 @@ class ExplicitKeyBindingTests {
             input.PointerPress(
                 0,
                 PointerDevice.Mouse,
-                float32(bounds.X) + float32(5.0F),
-                float32(bounds.Y) + float32(5.0F),
+                bounds.X + 5.0,
+                bounds.Y + 5.0,
                 PointerButton.Primary,
                 default(KeyModifiers),
                 0.0F
@@ -727,8 +739,8 @@ class ExplicitKeyBindingTests {
             input.PointerRelease(
                 0,
                 PointerDevice.Mouse,
-                float32(bounds.X) + float32(5.0F),
-                float32(bounds.Y) + float32(5.0F),
+                bounds.X + 5.0,
+                bounds.Y + 5.0,
                 PointerButton.Primary,
                 default(KeyModifiers),
                 0.0F
@@ -938,8 +950,8 @@ class ExplicitKeyBindingTests {
             input.PointerPress(
                 0,
                 PointerDevice.Mouse,
-                float32(bounds.X) + float32(5.0F),
-                float32(bounds.Y) + float32(5.0F),
+                bounds.X + 5.0,
+                bounds.Y + 5.0,
                 PointerButton.Primary,
                 default(KeyModifiers),
                 0.0F
@@ -953,8 +965,8 @@ class ExplicitKeyBindingTests {
             input.PointerRelease(
                 0,
                 PointerDevice.Mouse,
-                float32(bounds.X) + float32(5.0F),
-                float32(bounds.Y) + float32(5.0F),
+                bounds.X + 5.0,
+                bounds.Y + 5.0,
                 PointerButton.Primary,
                 default(KeyModifiers),
                 0.0F

@@ -195,7 +195,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
                         }
                     )
                 },
-                TextScaleFactor: configuration?.FontScale,
+                TextScaleFactor: if let scale = configuration?.FontScale { float64(scale) } else { nil },
                 PreferredLocales: preferredLocales,
                 ReducedMotion: !ValueAnimator.AreAnimatorsEnabled(),
                 AccentColor: accentColor,
@@ -424,8 +424,8 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             for var i = first; i < count; i++ {
                 let id = e.GetPointerId(i)
                 let device = Device(e.GetToolType(i))
-                let x = e.GetX(i) / Density
-                let y = e.GetY(i) / Density
+                let x = float64(e.GetX(i)) / Density
+                let y = float64(e.GetY(i)) / Density
                 switch e.ActionMasked {
                     case MotionEventActions.Down, MotionEventActions.PointerDown {
                         Input.PointerPress(id, device, x, y, PointerButton.Primary, modifiers, e.GetPressure(i))
@@ -462,8 +462,8 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
         }
         if e.ActionMasked == MotionEventActions.Scroll {
             Input.PointerWheel(
-                e.GetX() / Density,
-                e.GetY() / Density,
+                float64(e.GetX()) / Density,
+                float64(e.GetY()) / Density,
                 e.GetAxisValue(Axis.Hscroll),
                 e.GetAxisValue(Axis.Vscroll),
                 Modifiers(e.MetaState)
@@ -472,8 +472,8 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             Input.PointerMove(
                 e.GetPointerId(0),
                 Device(e.GetToolType(0)),
-                e.GetX() / Density,
-                e.GetY() / Density,
+                float64(e.GetX()) / Density,
+                float64(e.GetY()) / Density,
                 Modifiers(e.MetaState),
                 e.GetPressure(0)
             )

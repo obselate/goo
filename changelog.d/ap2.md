@@ -5,6 +5,7 @@
 - Window scalar settings and `WindowMetrics.UiScale` now use `float64`. Remove casts to `float64` when reading `UiScale`, `PixelScale`, `DragStartDistance`, `WheelScrollScale`, or `ResizeBand`.
 - Replace `WindowMetrics.LogicalWidth` and `LogicalHeight` with `NativeWidth` and `NativeHeight`. Replace the first two `OffscreenRenderOptions` arguments with `LayoutSize(width, height)` in layout units.
 - `DragStartDistance` now uses Euclidean distance in layout units, matching `PointerDragThreshold`. Diagonal movement can start a drag sooner than the old per-axis test. The defaults remain 8 for mouse and pen and 4 for touch.
+- Platform input coordinates and wheel deltas, `WindowDisplay.ContentScale`, and `PlatformPreferences.TextScaleFactor` now use `float64`. Remove `float32` coordinate casts before calling `PlatformInput`. Pointer pressure remains `float32`.
 
 ## Added
 - `Window.SizeToContent` measures selected root axes once before the first map. Set `SizeToContent.Width`, `Height` or `Both`, with optional `MinSize` and `MaxSize` bounds.
