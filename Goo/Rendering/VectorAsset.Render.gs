@@ -76,10 +76,10 @@ public sealed class VectorAsset {
       }
       this.animation = animation
   }
-  public prop ViewBoxX float32{ get -> float32(document.ViewBoxX) }
-  public prop ViewBoxY float32{ get -> float32(document.ViewBoxY) }
-  public prop ViewBoxWidth float32{ get -> float32(document.ViewBoxWidth) }
-  public prop ViewBoxHeight float32{ get -> float32(document.ViewBoxHeight) }
+  public prop ViewBoxX float64{ get -> document.ViewBoxX }
+  public prop ViewBoxY float64{ get -> document.ViewBoxY }
+  public prop ViewBoxWidth float64{ get -> document.ViewBoxWidth }
+  public prop ViewBoxHeight float64{ get -> document.ViewBoxHeight }
   public prop Nodes IReadOnlyList[VectorNode]{ get -> document.PublicNodes }
   public prop NodeCount int32{ get -> document.Nodes.Length }
   public prop ContourCount int32{ get -> document.ContourCount }

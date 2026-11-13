@@ -610,7 +610,7 @@ class PublicDocumentationTests {
             "M:Goo.RadialGradient.#ctor(Goo.Color[])",
             "M:Goo.RadialGradient.#ctor(System.Double,System.Double,System.Double,Goo.GradientStop[])",
             "M:Goo.Scrollbar.#ctor",
-            "M:Goo.ShaderEffect.#ctor(Goo.ShaderEffectProgram,System.Boolean,System.Single,System.Single)",
+            "M:Goo.ShaderEffect.#ctor(Goo.ShaderEffectProgram,System.Boolean,System.Double,System.Double)",
             "M:Goo.ShaderEffect.SetParameter(System.Int32,System.Numerics.Vector4)",
             "M:Goo.ShaderEffect.SetData(System.Int32,Goo.ShaderEffectData)",
             "M:Goo.ShaderEffectProgram.#ctor(System.Byte[],System.Boolean)",
@@ -1777,7 +1777,7 @@ class PublicDocumentationTests {
                 false
             ),
             [
-                "M:Goo.ShaderEffect.#ctor(Goo.ShaderEffectProgram,System.Boolean,System.Single,System.Single)"
+                "M:Goo.ShaderEffect.#ctor(Goo.ShaderEffectProgram,System.Boolean,System.Double,System.Double)"
             ] = DocumentationShape(
                 []string{"program", "samplesBackdrop", "backdropOutset", "backdropBlur"},
                 System.Array.Empty[string](),
