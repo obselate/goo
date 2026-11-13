@@ -53,11 +53,11 @@ internal class PortalFixtures {
             let cell = PortalRowAlignmentCell{ Padding: padding, Capped: capped }
             let window = Window{ Root: cell, Size: LayoutSize(600, 600), }
             window.SetDisplayScaleForTest(display)
-            cell.Scale = window.PixelScale
+            cell.Scale = float32(window.PixelScale)
             window.UpdateTree()
             window.UiScale = scale
             window.Size = LayoutSize(600, 600)
-            cell.Scale = window.PixelScale
+            cell.Scale = float32(window.PixelScale)
             cell.Rebuild()
             var notifications = 0
             cell.Field.MetricsChanged += metrics -> {
@@ -112,11 +112,11 @@ internal class PortalFixtures {
     let cell = PortalRowAlignmentCell{ Padding: 6, Translate: 6, Offset: 1 }
     let window = Window{ Root: cell, Size: LayoutSize(720, 520), }
     window.SetDisplayScaleForTest(1.5F)
-    cell.Scale = window.PixelScale
+    cell.Scale = float32(window.PixelScale)
     window.UpdateTree()
     window.UiScale = 1.5F
     window.Size = LayoutSize(720, 520)
-    cell.Scale = window.PixelScale
+    cell.Scale = float32(window.PixelScale)
     cell.Field.MetricsChanged += metrics -> {
       if !metrics.IsMounted { return }
       cell.FieldBox = metrics.RawBorderBox

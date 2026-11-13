@@ -56,8 +56,7 @@ public partial class Window {
             CultureInfo.InvariantCulture
         )
         let options = OffscreenRenderOptions(
-            float32(renderWidth),
-            float32(renderHeight),
+            LayoutSize(renderWidth, renderHeight),
             checked(uint32(Math.Ceiling(renderWidth * scale))),
             checked(uint32(Math.Ceiling(renderHeight * scale))),
             Background,

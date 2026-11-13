@@ -1026,7 +1026,7 @@ private func sameElementMetrics(left ElementMetrics, right ElementMetrics) bool 
 
 private func sameElementRect(left ElementRect, right ElementRect) bool -> left.X == right.X && left.Y == right.Y && left.Width == right.Width && left.Height == right.Height
 
-private func sameWindowMetrics(left WindowMetrics, right WindowMetrics) bool -> left.LogicalWidth == right.LogicalWidth && left.LogicalHeight == right.LogicalHeight
+private func sameWindowMetrics(left WindowMetrics, right WindowMetrics) bool -> left.NativeWidth == right.NativeWidth && left.NativeHeight == right.NativeHeight
   && left.FramebufferWidth == right.FramebufferWidth && left.FramebufferHeight == right.FramebufferHeight
   && left.DisplayScaleX == right.DisplayScaleX && left.DisplayScaleY == right.DisplayScaleY
   && left.UiScale == right.UiScale
