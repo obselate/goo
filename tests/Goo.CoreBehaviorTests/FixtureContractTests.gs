@@ -10,6 +10,15 @@ import Xunit
 
 class FixtureContractTests {
     @Fact
+    func KeyedListsFromData() {
+        let fixture = TreeFixtures()
+        Assert.True(fixture.EachAssignsDataKeysContract())
+        Assert.True(fixture.EachPreservesExplicitKeysContract())
+        Assert.True(fixture.EachReorderRetainsIdentityContract())
+        Assert.True(fixture.EachDuplicateKeysThrowContract())
+    }
+
+    @Fact
     func CustomLayoutRetainsMixedMaximumMeasurements() ->
         Assert.True(LayoutFixtures().CustomLayoutRetainsMixedMaximumMeasurements())
 
@@ -120,6 +129,10 @@ class FixtureContractTests {
             yield Contract[ApplicationActivationFixtures]("ProcessQueueOwnsStartupAndForwardedData")
             yield Contract[TreeFixtures]("NodeMountLifetimeContract")
             yield Contract[TreeFixtures]("EmptyChildrenPreserveStyleRetryRootContract")
+            yield Contract[TreeFixtures]("EachAssignsDataKeysContract")
+            yield Contract[TreeFixtures]("EachPreservesExplicitKeysContract")
+            yield Contract[TreeFixtures]("EachReorderRetainsIdentityContract")
+            yield Contract[TreeFixtures]("EachDuplicateKeysThrowContract")
             yield Contract[RowRecyclingFixtures]("ReusesStorageAndResetsKeyScopedStateContract")
             yield Contract[RowRecyclingFixtures]("DisposesRunningAnimationBeforeStorageRebindContract")
             yield Contract[RowRecyclingFixtures]("ExcludesFocusedAndEditingRowsContract")
