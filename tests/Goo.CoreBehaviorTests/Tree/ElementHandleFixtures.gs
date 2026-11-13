@@ -253,7 +253,6 @@ internal class ElementHandleFixtures {
     let window = Window{Root: cell, Size: LayoutSize(100, 60), }
     try {
       window.UpdateTree()
-      window.UpdateTree()
       cell.Builds.Clear()
       for offset in []float64{4000.0, 8000.0, 4000.0} {
         cell.Handle.JumpTo(0.0, offset)
