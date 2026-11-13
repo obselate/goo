@@ -1925,7 +1925,12 @@ method|Goo.Window|Every|instance|public|generic:|(intervalMs:System.Double,actio
 method|Goo.Window|GetCurrentDisplay|instance|public|generic:|()->Goo.WindowDisplay?
 method|Goo.Window|GetDisplays|instance|public|generic:|()->System.Collections.Generic.IReadOnlyList`1<Goo.WindowDisplay>
 method|Goo.Window|Hide|instance|public|generic:|()->Goo.WindowOperationResult
+method|Goo.Window|InvokeAsync|instance|public|generic:T[attrs:0,constraints:]|(action:System.Func`1<!!0>,cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<!!0>
+method|Goo.Window|InvokeAsync|instance|public|generic:T[attrs:0,constraints:]|(action:System.Func`1<System.Threading.Tasks.Task`1<!!0>>,cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<!!0>
+method|Goo.Window|InvokeAsync|instance|public|generic:|(action:System.Action,cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task
+method|Goo.Window|InvokeAsync|instance|public|generic:|(action:System.Func`1<System.Threading.Tasks.Task>,cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task
 method|Goo.Window|MeasureText|instance|public|generic:|(text:System.String,style:Goo.Style)->System.Double
+method|Goo.Window|NextPresentationAsync|instance|public|generic:|(cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<Goo.WindowPresentationAccepted>
 method|Goo.Window|Open|instance|public|generic:|()->Goo.Window
 method|Goo.Window|PerformAccessibilityAction|instance|public|generic:|(id:Goo.AccessibilityId,request:Goo.AccessibilityActionRequest)->System.Boolean
 method|Goo.Window|PollCapture|instance|public|generic:|()->Goo.WindowCapture?
@@ -1942,7 +1947,6 @@ method|Goo.Window|SetNativeDataDropFormats|instance|public|generic:|(formats:Sys
 method|Goo.Window|SetTopmost|instance|public|generic:|(value:System.Boolean)->Goo.WindowOperationResult
 method|Goo.Window|ShowFileDialogAsync|instance|public|generic:|(kind:Goo.FileDialogKind,options:Goo.FileDialogOptions?=null)->System.Threading.Tasks.Task`1<Goo.FileDialogResult>
 method|Goo.Window|Show|instance|public|generic:|(activate:System.Boolean=true)->Goo.WindowOperationResult
-method|Goo.Window|TryPost|instance|public|generic:|(action:System.Action)->System.Boolean
 property|Goo.AccessibilityActionRequest|Action|Goo.AccessibilityAction|instance|get:public|index:()
 property|Goo.AccessibilityActionRequest|ScrollX|System.Double|instance|get:public|index:()
 property|Goo.AccessibilityActionRequest|ScrollY|System.Double|instance|get:public|index:()
@@ -2980,6 +2984,7 @@ property|Goo.Window|Background|Goo.Color|instance|get:public,set:public|index:()
 property|Goo.Window|CanMove|System.Boolean|instance|get:public|index:()
 property|Goo.Window|Capabilities|Goo.WindowCapabilities|instance|get:public|index:()
 property|Goo.Window|Clipboard|Goo.WindowClipboard|instance|get:public|index:()
+property|Goo.Window|CloseDrainMs|System.Double|instance|get:public,set:public|index:()
 property|Goo.Window|Closed|System.Threading.CancellationToken|instance|get:public|index:()
 property|Goo.Window|ContentUnderTitlebar|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|Decorated|System.Boolean|instance|get:public,set:public|index:()

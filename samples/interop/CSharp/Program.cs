@@ -1,6 +1,9 @@
 using Goo;
 using Goo.Widgets.Data;
 using Goo.Widgets.Layout;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
+using Blob = Goo.Blob;
 
 var window = new Window
 {
@@ -22,9 +25,59 @@ if (args.Contains("--check"))
     if (((Text)((Container)counter.Build()).Children[0]).Content != "Count: 1")
         throw new InvalidOperationException("Counter failed.");
     if (Examples.List(["Ada", "Grace"]).Children.Count != 4) throw new InvalidOperationException("Spread failed.");
+    foreach (var path in Directory.GetFiles(AppContext.BaseDirectory, "Goo*.dll"))
+    {
+        using var stream = File.OpenRead(path);
+        using var assembly = new PEReader(stream);
+        var metadata = assembly.GetMetadataReader();
+        if (metadata.AssemblyReferences.Any(reference =>
+                metadata.GetString(metadata.GetAssemblyReference(reference).Name) == "Gsharp.Runtime.Channels"))
+            throw new InvalidOperationException($"{Path.GetFileName(path)} references an SDK-internal channel runtime.");
+    }
+    CheckAsyncDispatcher();
     Console.WriteLine("C# interop checks passed.");
 }
 else Application.Run(window);
+
+static void CheckAsyncDispatcher()
+{
+    using var host = new DispatcherCheckHost();
+    host.Resize(100, 100, 100, 100);
+    var dispatcher = new Window().Attach(host);
+    var pending = new TaskCompletionSource<bool>();
+    var value = new TaskCompletionSource<int>();
+    var requestCount = host.RequestCount;
+    Task<int> result = dispatcher.InvokeAsync(async () =>
+    {
+        await pending.Task;
+        return 42;
+    });
+    Task<int> forwarded = dispatcher.InvokeAsync(() => value.Task);
+    host.RenderFrame(0);
+    if (host.RequestCount <= requestCount)
+        throw new InvalidOperationException("Async dispatch did not request frame service.");
+    if (result.IsCompleted || forwarded.IsCompleted)
+        throw new InvalidOperationException("Async dispatch completed before its work.");
+    pending.SetResult(true);
+    value.SetResult(43);
+    host.RenderFrame(0);
+    if (!Task.WaitAll([result, forwarded], TimeSpan.FromSeconds(5))
+        || result.Result != 42 || forwarded.Result != 43)
+        throw new InvalidOperationException("Async dispatch did not await its result.");
+}
+
+file sealed class DispatcherCheckHost : EmbeddedWindowHost
+{
+    private int requests;
+    internal int RequestCount => Volatile.Read(ref requests);
+    protected override void RequestFrame() => Interlocked.Increment(ref requests);
+    protected override bool LoadVulkanLibrary() => throw new NotSupportedException();
+    protected override nint GetVulkanGetInstanceProcAddr() => throw new NotSupportedException();
+    protected override void UnloadVulkanLibrary() => throw new NotSupportedException();
+    protected override string[] GetVulkanInstanceExtensions() => throw new NotSupportedException();
+    protected override bool CreateVulkanSurface(nint instance, out ulong surface) => throw new NotSupportedException();
+    protected override void DestroyVulkanSurface(nint instance, ulong surface) => throw new NotSupportedException();
+}
 
 public sealed class Counter : Cell
 {

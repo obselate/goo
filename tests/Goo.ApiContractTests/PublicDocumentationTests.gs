@@ -729,7 +729,11 @@ class PublicDocumentationTests {
             "M:Goo.WindowClipboard.WriteText(System.String)",
             "M:Goo.Window.Every(System.Double,System.Action)",
             "M:Goo.Window.After(System.Double,System.Action)",
-            "M:Goo.Window.TryPost(System.Action)",
+            "M:Goo.Window.InvokeAsync(System.Action,System.Threading.CancellationToken)",
+            "M:Goo.Window.InvokeAsync``1(System.Func{``0},System.Threading.CancellationToken)",
+            "M:Goo.Window.InvokeAsync(System.Func{System.Threading.Tasks.Task},System.Threading.CancellationToken)",
+            "M:Goo.Window.InvokeAsync``1(System.Func{System.Threading.Tasks.Task{``0}},System.Threading.CancellationToken)",
+            "M:Goo.Window.NextPresentationAsync(System.Threading.CancellationToken)",
             "M:Goo.WindowTimer.Dispose"
         }
         private let ExpectedProtectedMethodIds[]string = []string{
@@ -2169,8 +2173,28 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 false
             ),
-            ["M:Goo.Window.TryPost(System.Action)"] = DocumentationShape(
-                []string{"action"},
+            ["M:Goo.Window.InvokeAsync(System.Action,System.Threading.CancellationToken)"] = DocumentationShape(
+                []string{"action", "cancellationToken"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.Window.InvokeAsync``1(System.Func{``0},System.Threading.CancellationToken)"] = DocumentationShape(
+                []string{"action", "cancellationToken"},
+                []string{"T"},
+                true
+            ),
+            ["M:Goo.Window.InvokeAsync(System.Func{System.Threading.Tasks.Task},System.Threading.CancellationToken)"] = DocumentationShape(
+                []string{"action", "cancellationToken"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.Window.InvokeAsync``1(System.Func{System.Threading.Tasks.Task{``0}},System.Threading.CancellationToken)"] = DocumentationShape(
+                []string{"action", "cancellationToken"},
+                []string{"T"},
+                true
+            ),
+            ["M:Goo.Window.NextPresentationAsync(System.Threading.CancellationToken)"] = DocumentationShape(
+                []string{"cancellationToken"},
                 System.Array.Empty[string](),
                 true
             ),
