@@ -35,6 +35,17 @@ open class PublicApiTests {
     }
 
     @Fact
+    func ElementMetricsDeconstructionContainsOnlyPublicValues() {
+        let properties = typeof(ElementMetrics).GetProperties(PublicDeclared)
+        let method = typeof(ElementMetrics).GetMethod("Deconstruct", BindingFlags.Public | BindingFlags.Instance)!!
+        for parameter in method.GetParameters() {
+            Assert.Contains(properties, (property PropertyInfo) ->
+                string.Equals(property.Name, parameter.Name, StringComparison.OrdinalIgnoreCase)
+                    && property.PropertyType == parameter.ParameterType.GetElementType())
+        }
+    }
+
+    @Fact
     func ApplicationRejectsMissingIdentityAndInvalidTimeouts() {
         let missing = Assert.Throws[InvalidOperationException](() -> Application.Configure(typeof(object).Assembly))
         Assert.Contains("GooPackageId", missing.Message)
