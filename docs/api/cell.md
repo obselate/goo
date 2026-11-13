@@ -64,7 +64,7 @@ Pass `Lifetime` to cancellable work. For replaceable requests, call `Latest("loa
 ## `Cell`
 
 
-Defines a stateful Goo component.
+Defines a stateful Goo component. A mutable static field on a Cell type or its base types makes that Cell rebuild after every callback.
 
 ### `new`
 
