@@ -3,7 +3,28 @@ package GooGallery
 import Goo
 import System
 
-class GalleryRange : Cell {
+internal data struct GalleryRange {
+    var Key string?
+    var Label string
+    var MinValue float64
+    var MaxValue float64
+    var Value float64
+    var Step float64
+    var OnChange Action[float64]?
+}
+
+internal func operator implicit(value GalleryRange) Blob -> Cell.Mount[GalleryRange, GalleryRangeCell](value.Key, value)
+
+class GalleryRangeCell : Cell[GalleryRange] {
+    protected override func InputChanged(input GalleryRange) {
+        Label = input.Label
+        MinValue = input.MinValue
+        MaxValue = input.MaxValue
+        Value = input.Value
+        Step = input.Step
+        OnChange = input.OnChange
+    }
+
     /// Gets or sets the descriptive label for this slider.
     private let labelState State[string] = State[string]("")
     public prop Label string {
@@ -171,12 +192,10 @@ class GalleryRange : Cell {
 
     override func Build() Blob {
         let percent = fraction() * 100.0
-        return Container{
-            FlexDirection: FlexDirection.Column,
+        return Column{
             Gap: 8,
-            Container{
+            Row{
                 Key: "head",
-                FlexDirection: FlexDirection.Row,
                 JustifyContent: JustifyContent.SpaceBetween,
                 Text{
                     Key: "label",
@@ -189,14 +208,13 @@ class GalleryRange : Cell {
                 },
                 Text{Key: "value", Content: valueText(), FontSize: 12, Color: GalleryTheme.InkMuted,},
             },
-            Container{
+            Row{
                 Key: "track",
                 Handle: Track,
                 Focusable: true,
                 Cursor: Cursor.Pointer,
                 Height: 24,
                 MinWidth: 120,
-                FlexDirection: FlexDirection.Row,
                 AlignItems: AlignItems.Center,
                 TransitionMs: 100.0,
                 HoverStyle: Style{Opacity: 0.9},

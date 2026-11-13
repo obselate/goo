@@ -16,7 +16,7 @@ public data struct PlatformPreferences {
   private var theme SystemTheme
   private var reducedMotion bool?
   private var highContrast bool?
-  private var textScaleFactor float32?
+  private var textScaleFactor float64?
   private var eventSoundsEnabled bool?
   private var accentColor Color?
   private var accentLight1 Color?
@@ -56,11 +56,11 @@ public data struct PlatformPreferences {
       else if let locales = value { PreferredLocaleList(locales) } else { nil }
   }
   /// Gets the positive user text scale, independently of display density, or nil when unavailable.
-  public prop TextScaleFactor float32? {
+  public prop TextScaleFactor float64? {
     get -> textScaleFactor
     init {
       if let scale = value {
-        if !Single.IsFinite(scale) || scale <= 0.0F { throw ArgumentOutOfRangeException("value") }
+        if !Double.IsFinite(scale) || scale <= 0.0 { throw ArgumentOutOfRangeException("value") }
       }
       textScaleFactor = value
     }

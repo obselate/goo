@@ -10,6 +10,14 @@ import Xunit
 
 class FixtureContractTests {
     @Fact
+    func MountedPlainFieldWritesRebuildContract() ->
+        Assert.True(CellFixtures().MountedPlainFieldWritesRebuild())
+
+    @Fact
+    func ServicesBeforeWindowBindingContract() ->
+        Assert.True(CellFixtures().ServicesBeforeWindowBinding())
+
+    @Fact
     func KeyedListsFromData() {
         let fixture = TreeFixtures()
         Assert.True(fixture.EachAssignsDataKeysContract())
@@ -363,7 +371,8 @@ class FixtureContractTests {
             yield Contract[InputFixtures]("PointerLifecycleBubblesStopsAndReportsAllMouseButtons")
             yield Contract[InputFixtures]("PointerDragCaptureCoordinatesAndHitContract")
             yield Contract[InputFixtures]("PointerDragUsesTrackedCallbackRebuildContract")
-            yield Contract[InputFixtures]("PointerDragTouchCaptureMatchesRawCaptureContract")
+            yield Contract[InputFixtures]("PointerDragTouchScrollArbitrationContract")
+            yield Contract[InputFixtures]("PointerDragMouseCaptureBeforeThresholdContract")
             yield Contract[InputFixtures]("PointerDragCancelUsesNewestCallbackContract")
             yield Contract[InputFixtures]("PointerPrimaryAndPressureContract")
             yield Contract[InputFixtures]("PointerReacquiresHoverAfterRebuild")

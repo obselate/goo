@@ -4,7 +4,22 @@ import Goo
 import System
 import System.Numerics
 
-class HeroCell : Cell {
+internal data struct Hero {
+    var Key string?
+    var Programs GalleryShaderPrograms?
+    var Compact bool
+    var Active bool
+}
+
+internal func operator implicit(value Hero) Blob -> Cell.Mount[Hero, HeroCell](value.Key, value)
+
+class HeroCell : Cell[Hero] {
+    protected override func InputChanged(input Hero) {
+        Programs = input.Programs
+        Compact = input.Compact
+        Active = input.Active
+    }
+
     /// Gets or sets the compiled shader program suite.
     public var Programs GalleryShaderPrograms?
     /// Gets or sets whether the hero renders in compact layout.

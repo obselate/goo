@@ -37,7 +37,7 @@ class Example : Cell {
                         Padding: theme.Spacing * 3,
                         Text{Content: "Navigation"},
                     },
-                    Second: Container{
+                    Second: Column{
                         Width: Percent(100),
                         Height: Percent(100),
                         Padding: theme.Spacing * 3,

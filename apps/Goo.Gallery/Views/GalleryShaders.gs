@@ -5,7 +5,26 @@ import System
 import System.Collections.Generic
 import System.Numerics
 
-class ShaderLabCell : Cell {
+internal data struct ShaderLab {
+    var Key string?
+    var Assets GalleryMathAssets?
+    var Programs GalleryShaderPrograms?
+    var Compact bool
+    var Showcase int32
+    var Active bool
+}
+
+internal func operator implicit(value ShaderLab) Blob -> Cell.Mount[ShaderLab, ShaderLabCell](value.Key, value)
+
+class ShaderLabCell : Cell[ShaderLab] {
+    protected override func InputChanged(input ShaderLab) {
+        Assets = input.Assets
+        Programs = input.Programs
+        Compact = input.Compact
+        Showcase = input.Showcase
+        Active = input.Active
+    }
+
     /// Gets or sets the pre-generated mathematical vector and image assets.
     public var Assets GalleryMathAssets?
     /// Gets or sets the compiled shader program suite.
@@ -1002,17 +1021,7 @@ class ShaderLabCell : Cell {
     ) Container -> Container{
         Key: "control-" + key,
         Width: Percent(100),
-        Cell.Mount[GalleryRange](
-            key,
-            func (slider GalleryRange) {
-                slider.Label = label
-                slider.MinValue = min
-                slider.MaxValue = max
-                slider.Value = value
-                slider.Step = 0.01
-                slider.OnChange = change
-            }
-        ),
+        GalleryRange{Key: key, Label: label, MinValue: min, MaxValue: max, Value: value, Step: 0.01, OnChange: change,},
     }
 
     private func selectedSpecimen(programs GalleryShaderPrograms, time float64, out name string, out hint string) Blob {
@@ -1025,16 +1034,14 @@ class ShaderLabCell : Cell {
                 BackgroundColor: GalleryTheme.SurfaceRaised,
             }
             if effectsReady() {
-                wolf = Cell.Mount[World3DCell](
-                    "world-3d-live",
-                    func (cell World3DCell) {
-                        cell.Effect = programs.Lab(0)
-                        cell.Fov = fov
-                        cell.Contrast = contrast
-                        cell.Fog = fog
-                        cell.Playing = true
-                    }
-                )
+                wolf = World3D{
+                    Key: "world-3d-live",
+                    Effect: programs.Lab(0),
+                    Fov: fov,
+                    Contrast: contrast,
+                    Fog: fog,
+                    Playing: true
+                }
             }
             return wolf
         }

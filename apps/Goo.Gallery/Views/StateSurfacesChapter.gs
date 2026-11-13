@@ -4,7 +4,23 @@ import Goo
 import System
 import System.Collections.Generic
 
-class StateSurfacesChapter : Cell {
+internal data struct StateSurfacesChapter {
+    var Key string?
+    var Compact bool
+    var Active bool
+}
+
+internal func operator implicit(value StateSurfacesChapter) Blob -> Cell.Mount[
+    StateSurfacesChapter,
+    StateSurfacesChapterCell
+](value.Key, value)
+
+class StateSurfacesChapterCell : Cell[StateSurfacesChapter] {
+    protected override func InputChanged(input StateSurfacesChapter) {
+        Compact = input.Compact
+        Active = input.Active
+    }
+
     /// Gets or sets whether this chapter uses compact sizing.
     public var Compact bool
     internal prop Active bool {

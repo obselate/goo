@@ -123,12 +123,12 @@ windows, restoring minimized windows and requesting focus without changing the
 focused Goo element synchronously. Activation redirects to an active modal child
 and returns `Unsupported` while a native chooser blocks the owner.
 
-`Focusable` defaults to true and `Topmost` to false. Set them before `Open` or on
-the owner thread afterward. Nonfocusable windows never request activation when
-shown. Unsupported `Focusable` assignments throw before changing the configured
-value. `Topmost` is a requested preference, so unsupported hosts retain it without
-changing stacking or failing `Open`. Call `SetTopmost(value)` to distinguish
-`Accepted`, `Unsupported`, `Closed` and `Failed` on an open window.
+`Focusable` defaults to true and `Topmost` to false. Initialize `Topmost` before
+`Open`. Use `SetTopmost(value)` at runtime and handle `Accepted`, `Unsupported`,
+`Closed` or `Failed`. Desktop policy controls observed stacking.
+Set `Focusable` before `Open` or on the owner thread afterward. Nonfocusable windows
+never request activation when shown. Unsupported `Focusable` assignments throw
+before changing the configured value.
 `Capabilities` reports operations supported by the current host, or `None` before
 opening. Windows, macOS and X11 expose visibility, passive show, focusability and
 topmost requests. Wayland exposes visibility but reports the other three as
@@ -376,7 +376,7 @@ A batch tool can block its own thread, like `goo render`:
 let created = OffscreenRenderSession.Create()
 if created.Status == OffscreenRenderStatus.Success {
     using let session = created.Session!!
-    let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
+    let options = OffscreenRenderOptions(LayoutSize(240.0F, 180.0F), 480u, 360u, Color.White, 134217728L)
     let pending = session.RenderAsync(MyPage(), options, CancellationToken.None)
     while !pending.IsCompleted {
         session.Service()
@@ -407,7 +407,7 @@ class RenderPageButton : Cell, IDisposable {
         if created.Status != OffscreenRenderStatus.Success { return }
         let active = created.Session!!
         session = active
-        let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
+        let options = OffscreenRenderOptions(LayoutSize(240.0F, 180.0F), 480u, 360u, Color.White, 134217728L)
         let pending = active.RenderAsync(MyPage(), options, window.Closed)
         timer = window.Every(1.0, () -> {
             try {
@@ -675,7 +675,7 @@ Use `NativeDialogs.ShowError(title, message)` before any window opens or after t
 
 Call these methods on the open window's UI thread. Calls before open, after close, or on another thread throw. Embedded windows report `Unsupported` because their clipboard belongs to the host. Clipboard contents are never modified by these methods. Returned paths and bytes survive later clipboard changes and window close and need no disposal.
 
-`window.Clipboard.ReadText()` returns `ClipboardTextResult` with `Status`, `Text`, and `Error`. `ClipboardTextStatus` distinguishes `Success`, `Empty`, `Unsupported`, `TooLarge`, and `Failed`. Text is limited to 16 MiB of UTF-8. `WriteText(value)` returns `ClipboardWriteResult`. Native read and write failures do not throw.
+`window.Clipboard.ReadText()` returns `ClipboardTextResult` with `Status`, `Text`, and `Error`. `ClipboardReadStatus` distinguishes `Success`, `Empty`, `Unsupported`, `TooLarge`, and `Failed`. Text is limited to 16 MiB of UTF-8. `WriteText(value)` returns `ClipboardWriteResult`. Native read and write failures do not throw.
 
 File reads support local `text/uri-list`, GNOME copied-file lists, Windows `CF_HDROP`, and macOS pasteboard file URLs. Paths retain clipboard order; Goo does not read their contents. URI lists reject remote hosts, relative paths, and NUL characters. Limits are 4096 paths, 32768 UTF-16 units per path, and 1048576 total path units; MIME file-list payloads are limited to 1 MiB.
 
@@ -695,6 +695,9 @@ let result = await window.Clipboard.WriteAsync(data)
 ```
 
 Start clipboard calls on the open window's UI thread. Check `result.Status`.
+Pass a trailing `CancellationToken` to `ReadDataAsync` or `WriteAsync` to cancel the
+wait. Cancellation completes the task as canceled and discards a late native
+result. Closing the window also cancels the wait.
 
 | Contract | Behavior |
 | --- | --- |

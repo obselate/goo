@@ -102,10 +102,6 @@ Releases presentation resources and waits for submitted GPU work to finish. The 
 
 Closes the attached window and releases its retained and presentation resources. Pumps UI-thread continuations until the window's close drain completes or expires.
 
-### `GetClipboardText`
-
-Gets plain text from the platform clipboard.
-
 ### `GetNativeHandle`
 
 Returns the native viewport handle used for diagnostics.
@@ -126,6 +122,10 @@ Loads or retains the platform Vulkan loader.
 
 Uses the requested framebuffer extent when the native WSI permits scaling.
 
+### `ReadClipboardText`
+
+Reads bounded plain text with an explicit native outcome.
+
 ### `RenderFrame(float64)`
 
 Processes queued work and one externally timed frame without polling native events. The first frame after idle preserves wall time but does not advance animation time.
@@ -145,10 +145,6 @@ Resumes frame service without applying elapsed background time to animations.
 ### `ServicePendingSubmission`
 
 Advances a completed graphics submission into presentation without simulating, rendering, or consuming presentation completion. Returns true when a completed submission was consumed.
-
-### `SetClipboardText(string)`
-
-Stores plain text in the platform clipboard.
 
 ### `SetCursor(Cursor)`
 
@@ -181,6 +177,10 @@ Releases the loader reference acquired by LoadVulkanLibrary.
 ### `UpdatePreferences(PlatformPreferences)`
 
 Updates platform preferences on the owner thread, before or after attaching a window.
+
+### `WriteClipboardText(string)`
+
+Publishes plain text with an explicit native outcome.
 
 ### `IsPresentationAttached`
 
@@ -301,7 +301,7 @@ Shows owned native dialogs without a managed fallback.
 
 ### `ShowError(string,string)`
 
-Shows a synchronous ownerless platform error box before or after window use. Blocks the calling thread. Do not call while Goo windows are open. Linux returns Unsupported. Write the message to standard error when unsupported.
+Shows a synchronous ownerless platform error box before or after window use. Blocks the calling thread. Do not call while Goo windows are open. Linux and Android return Unsupported. Write the message to standard error when unsupported.
 
 - `title`: The native title.
 - `message`: The plain-text error message.

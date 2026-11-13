@@ -5,7 +5,26 @@ import System
 import System.Collections.Generic
 import System.Numerics
 
-class World3DCell : Cell {
+internal data struct World3D {
+    var Key string?
+    var Effect ShaderEffect?
+    var Fov float64
+    var Contrast float64
+    var Fog float64
+    var Playing bool
+}
+
+internal func operator implicit(value World3D) Blob -> Cell.Mount[World3D, World3DCell](value.Key, value)
+
+class World3DCell : Cell[World3D] {
+    protected override func InputChanged(input World3D) {
+        Effect = input.Effect
+        Fov = input.Fov
+        Contrast = input.Contrast
+        Fog = input.Fog
+        Playing = input.Playing
+    }
+
     private let Canvas ElementHandle
     private let clock Anim[float64]
     private let state World3DState

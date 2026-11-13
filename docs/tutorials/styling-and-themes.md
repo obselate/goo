@@ -12,7 +12,7 @@ import Goo.Widgets
 import Goo.Widgets.Actions
 
 class Example : Cell {
-    private let dark State[bool] = State[bool](false)
+    private var dark bool
 
     override func Build() Blob {
         let theme = Theme.Read()
@@ -30,8 +30,8 @@ class Example : Cell {
             ActionButton{
                 Content: "Switch theme",
                 OnClick: () -> {
-                    dark.Value = !dark.Value
-                    Theme.SetMode(Host, if dark.Value { ThemeMode.Dark } else { ThemeMode.Light })
+                    dark = !dark
+                    Theme.SetMode(Host, if dark { ThemeMode.Dark } else { ThemeMode.Light })
                 },
             },
         }
