@@ -3,6 +3,7 @@ using Goo.Widgets.Data;
 using Goo.Widgets.Layout;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
+using Blob = Goo.Blob;
 
 var window = new Window
 {
