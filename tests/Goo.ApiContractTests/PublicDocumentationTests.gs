@@ -317,6 +317,7 @@ class PublicDocumentationTests {
             "M:Goo.AccessibilityRelationships.#ctor",
             "M:Goo.AccessibilityValue.#ctor",
             "M:Goo.Anim`1.Pause",
+            "M:Goo.Anim`1.Play(`0,`0,System.Func{System.Double,System.Double,System.Double,Goo.Simulation},System.Func{System.Double,System.Double,System.Double,Goo.Simulation}[])",
             "M:Goo.Anim`1.Resume",
             "M:Goo.Anim`1.Seek(System.Double)",
             "M:Goo.Anim`1.Set(`0)",
@@ -607,6 +608,7 @@ class PublicDocumentationTests {
             "M:Goo.Simulation.Velocity(System.Double)",
             "M:Goo.MotionConverter`1.#ctor(System.Int32,System.Action{`0,System.Double[]},System.Func{System.Double[],`0})",
             "M:Goo.Motion.Tween(System.Double,Goo.Easing)",
+            "M:Goo.Motion.Delay(System.Double,System.Func{System.Double,System.Double,System.Double,Goo.Simulation})",
             "M:Goo.MotionVelocity.Add(Goo.MotionVelocity)",
             "M:Goo.MotionVelocity.Components(System.Double[])",
             "M:Goo.MotionVelocity.Uniform(System.Double)",
@@ -1191,6 +1193,9 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
+            [
+                "M:Goo.Anim`1.Play(`0,`0,System.Func{System.Double,System.Double,System.Double,Goo.Simulation},System.Func{System.Double,System.Double,System.Double,Goo.Simulation}[])"
+            ] = DocumentationShape([]string{"from", "to", "spec", "specs"}, System.Array.Empty[string](), false),
             ["M:Goo.Anim`1.Seek(System.Double)"] = DocumentationShape(
                 []string{"elapsedMs"},
                 System.Array.Empty[string](),
@@ -2013,6 +2018,9 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
+            [
+                "M:Goo.Motion.Delay(System.Double,System.Func{System.Double,System.Double,System.Double,Goo.Simulation})"
+            ] = DocumentationShape([]string{"delayMs", "spec"}, System.Array.Empty[string](), true),
             ["M:Goo.MotionVelocity.Add(Goo.MotionVelocity)"] = DocumentationShape(
                 []string{"other"},
                 System.Array.Empty[string](),
