@@ -132,7 +132,7 @@ class SmokeCell : Cell, IDisposable {
         BackgroundColor: Color.Rgb(31, 41, 55),
         OnChange: (value string) -> { secret = value },
       },
-      TextEditor(controller) {
+      TextEditor(){ Controller = controller,
         Accessibility = Accessibility{ Name: "Notes" },
         Height = 150,
         Padding = 10,

@@ -343,7 +343,7 @@ class PublicDocumentationTests {
             "M:Goo.LayoutAlgorithm.Arrange(Goo.LayoutContext,Goo.LayoutSize)",
             "M:Goo.LayoutContext.MeasureChild(System.Int32,Goo.LayoutSize)",
             "M:Goo.LayoutContext.ArrangeChild(System.Int32,Goo.ElementRect)",
-            "M:Goo.Virtual.#ctor(Goo.VirtualSource)",
+            "M:Goo.Virtual.#ctor",
             "M:Goo.VirtualSource.State(Goo.VirtualState)",
             "M:Goo.VirtualState.Realize(Goo.VirtualViewport,Goo.VirtualOutput)",
             "M:Goo.VirtualState.NeedsRealize(Goo.VirtualViewport)",
@@ -638,6 +638,8 @@ class PublicDocumentationTests {
             "M:Goo.ShaderEffectData.Publish``1(System.ReadOnlySpan{``0})",
             "M:Goo.Text.#ctor",
             "M:Goo.Text.#ctor(System.String)",
+            "M:Goo.Text.#ctor(Goo.TextSpan[])",
+            "M:Goo.TextSpan.op_Implicit(System.String)~Goo.TextSpan",
             "M:Goo.TextDocument.#ctor",
             "M:Goo.TextDocument.#ctor(System.String)",
             "M:Goo.TextDocument.Apply(Goo.TextChange)",
@@ -653,8 +655,7 @@ class PublicDocumentationTests {
             "M:Goo.TextDocument.Redo",
             "M:Goo.TextDocument.Snapshot",
             "M:Goo.TextDocument.Undo",
-            "M:Goo.TextEditor.#ctor(Goo.TextEditorController)",
-            "M:Goo.TextEditor.#ctor(Goo.TextEditorController,Goo.TextPresentationLayer[])",
+            "M:Goo.TextEditor.#ctor",
             "M:Goo.TextEditorController.#ctor(Goo.TextDocument)",
             "M:Goo.TextEditorController.Blur",
             "M:Goo.TextEditorController.BreakUndoGroup",
@@ -973,6 +974,7 @@ class PublicDocumentationTests {
             typeof(TextRange),
             typeof(TextSelection),
             typeof(TextStyleRange),
+            typeof(TextSpan),
             typeof(TextStyleSpan)
         }
         private let Shapes IReadOnlyDictionary[string, DocumentationShape] = Dictionary[string, DocumentationShape](
@@ -1410,11 +1412,6 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
-            ["M:Goo.Virtual.#ctor(Goo.VirtualSource)"] = DocumentationShape(
-                []string{"source"},
-                System.Array.Empty[string](),
-                false
-            ),
             ["M:Goo.VirtualSource.State(Goo.VirtualState)"] = DocumentationShape(
                 []string{"current"},
                 System.Array.Empty[string](),
@@ -1802,6 +1799,10 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 false
             ),
+            ["M:Goo.Text.#ctor(Goo.TextSpan[])"] = DocumentationShape(
+                []string{"spans"}, System.Array.Empty[string](), false),
+            ["M:Goo.TextSpan.op_Implicit(System.String)~Goo.TextSpan"] = DocumentationShape(
+                []string{"value"}, System.Array.Empty[string](), true),
             ["M:Goo.TextDocument.#ctor(System.String)"] = DocumentationShape(
                 []string{"text"},
                 System.Array.Empty[string](),
@@ -1856,16 +1857,6 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
                 true
-            ),
-            ["M:Goo.TextEditor.#ctor(Goo.TextEditorController)"] = DocumentationShape(
-                []string{"controller"},
-                System.Array.Empty[string](),
-                false
-            ),
-            ["M:Goo.TextEditor.#ctor(Goo.TextEditorController,Goo.TextPresentationLayer[])"] = DocumentationShape(
-                []string{"controller", "layers"},
-                System.Array.Empty[string](),
-                false
             ),
             ["M:Goo.TextEditorController.#ctor(Goo.TextDocument)"] = DocumentationShape(
                 []string{"document"},

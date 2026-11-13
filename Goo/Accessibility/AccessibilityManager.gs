@@ -401,6 +401,7 @@ internal class AccessibilityManager {
   }
 
   private func resolvedReadOnly(n Node, declaration Accessibility?) bool? {
+    if n.Selectable { return true }
     if let metadata = declaration {
       if metadata.ReadOnly != nil { return metadata.ReadOnly }
     }
@@ -424,7 +425,7 @@ internal class AccessibilityManager {
       if role == AccessibilityRole.Button || n.OnClick != nil {
         result = result | actionBit(AccessibilityAction.Activate)
       }
-      if n.Kind == NodeKind.Entry || n.Kind == NodeKind.Editor {
+      if n.Kind == NodeKind.Entry || n.Kind == NodeKind.Editor || n.Selectable {
         result = result | actionBit(AccessibilityAction.SetSelection)
         if resolvedReadOnly(n, declaration) != true { result = result | actionBit(AccessibilityAction.SetValue) }
       }
@@ -438,7 +439,7 @@ internal class AccessibilityManager {
     }
 
   private func textStateFor(n Node) AccessibilityTextState {
-    if n.Kind == NodeKind.Entry {
+    if n.Kind == NodeKind.Entry || n.Selectable {
       let start = n.Anchor < n.Caret ? n.Anchor : n.Caret
       let end = n.Anchor < n.Caret ? n.Caret : n.Anchor
       if n.Password {
