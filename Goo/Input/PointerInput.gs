@@ -698,6 +698,11 @@ internal partial class PointerInput {
           PointerButton.None, modifiers)
         return prevented || updateScrollDrag(root, x, y)
       }
+      if current.Device == PointerDevice.Touch && current.PointerDrag?.Started == false
+        && updateTouchPan(root, resolver, x, y, false) {
+        cancelCurrentGestures(root, GestureCancelReason.LostArbitration)
+        return true
+      }
       var prevented bool
       try {
         prevented = dispatchPointer(root, PointerEventKind.Move, x, y, delta.X, delta.Y,
@@ -779,7 +784,8 @@ internal partial class PointerInput {
             current.DragEntry = nil
             return changed
           }
-          if !current.DragSelectionStarted && dragThresholdCrossed(x, y, 4.0F) {
+          if !current.DragSelectionStarted
+            && (MathF.Abs(x - current.LastPressX) >= 4.0F || MathF.Abs(y - current.LastPressY) >= 4.0F) {
             current.DragSelectionStarted = true
           }
           if !current.DragSelectionStarted { return changed }

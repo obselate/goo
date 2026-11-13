@@ -239,7 +239,15 @@ internal partial class PointerInput {
         captured = true
       } else {
         scratchChain.Clear()
-        hitChainInto(tree, x, y, scratchChain)
+        if kind != PointerEventKind.Press && current.Device == PointerDevice.Touch && current.PointerDrag?.Started == false {
+          guard let target = current.PointerDrag?.Target.Current else { return false }
+          if !canReceiveInput(target) || !appendPath(tree, target, scratchChain) {
+            clearCapture(GestureCancelReason.OwnerUnavailable)
+            return false
+          }
+        } else {
+          hitChainInto(tree, x, y, scratchChain)
+        }
         if chainDisabled(scratchChain) {
           if kind == PointerEventKind.Press { resetClickSequence() }
           scratchChain.Clear()

@@ -3002,29 +3002,66 @@ internal class InputFixtures {
     } finally { driver.Window.Close() }
   }
 
-  func PointerDragTouchCaptureMatchesRawCaptureContract() bool {
-    for automatic in []bool{false, true} {
-      let child = automatic
-        ? Container{Width: 200, Height: 80, FlexShrink: 0,
-          OnPointerDrag: (_ PointerDragEvent) -> {}, PointerDragThreshold: 8,
-          PointerDragAxis: LayoutAxis.Horizontal}
-        : Container{Width: 200, Height: 80, FlexShrink: 0,
-          OnPointerDown: (e PointerEvent) -> e.Capture()}
-      let resolver = Resolver{}
-      let root = Reconciler{Res: resolver}.Mount(Container{
-        Width: 200, Height: 100, OverflowY: Overflow.Scroll,
-        child, Container{Width: 200, Height: 300, FlexShrink: 0},
-      })
-      Layout().Calculate(root, 200.0F, 100.0F)
-      if maxScrollY(root) <= 0.0F { return false }
-      let input = InputCoordinator()
-      input.QueuePointerPress(101, PointerDevice.Touch, 25.0F, 60.0F, PointerButton.Primary, KeyModifiers{})
-      input.QueuePointerMove(101, PointerDevice.Touch, 25.0F, 20.0F, KeyModifiers{})
-      input.QueuePointerRelease(101, PointerDevice.Touch, 25.0F, 20.0F, PointerButton.Primary, KeyModifiers{})
-      input.Drain(root, resolver, 0.0, nil)
-      if root.ScrollY != 0.0F { return false }
+  func PointerDragTouchScrollArbitrationContract() bool {
+    for threshold in []float64{0.0, 8.0} {
+      for horizontal in []bool{false, true} {
+        let events = List[PointerDragEvent]()
+        let resolver = Resolver{}
+        let root = Reconciler{Res: resolver}.Mount(Container{
+          Width: 200, Height: 100, OverflowY: Overflow.Scroll,
+          Container{Width: 200, Height: 80, FlexShrink: 0,
+            OnPointerDrag: (e PointerDragEvent) -> events.Add(e),
+            PointerDragThreshold: threshold, PointerDragAxis: LayoutAxis.Horizontal},
+          Container{Width: 200, Height: 300, FlexShrink: 0},
+        })
+        Layout().Calculate(root, 200.0F, 100.0F)
+        let input = InputCoordinator()
+        input.QueuePointerPress(101, PointerDevice.Touch, 25.0F, 60.0F, PointerButton.Primary, KeyModifiers{})
+        input.QueuePointerMove(101, PointerDevice.Touch, 25.0F, 60.0F, KeyModifiers{})
+        input.Drain(root, resolver, 0.0, nil)
+        if events.Count != 0 || root.ScrollY != 0.0F { return false }
+        if !horizontal || threshold > 0.0 {
+          input.QueuePointerMove(101, PointerDevice.Touch, horizontal ? 31.0F : 25.0F,
+            horizontal ? 60.0F : 54.0F, KeyModifiers{})
+          input.Drain(root, resolver, 0.0, nil)
+          if events.Count != 0 || root.ScrollY != 0.0F { return false }
+        }
+        input.QueuePointerMove(101, PointerDevice.Touch, horizontal ? 235.0F : 25.0F,
+          horizontal ? 60.0F : 20.0F, KeyModifiers{})
+        input.QueuePointerMove(101, PointerDevice.Touch, 235.0F, 20.0F, KeyModifiers{})
+        input.QueuePointerRelease(101, PointerDevice.Touch, 235.0F, 20.0F, PointerButton.Primary, KeyModifiers{})
+        input.Drain(root, resolver, 0.0, nil)
+        if horizontal {
+          if root.ScrollY != 0.0F || events.Count != 3
+            || events[0].Phase != GesturePhase.Started || events[1].Phase != GesturePhase.Changed
+            || events[2].Phase != GesturePhase.Completed { return false }
+        } else if events.Count != 0 || root.ScrollY != 40.0F { return false }
+      }
     }
     return true
+  }
+
+  func PointerDragMouseCaptureBeforeThresholdContract() bool {
+    let events = List[PointerDragEvent]()
+    let resolver = Resolver{}
+    let root = Reconciler{Res: resolver}.Mount(Container{
+      Width: 200, Height: 100, OverflowY: Overflow.Scroll,
+      Container{Width: 200, Height: 80, FlexShrink: 0,
+        OnPointerDrag: (e PointerDragEvent) -> events.Add(e),
+        PointerDragThreshold: 8, PointerDragAxis: LayoutAxis.Horizontal},
+      Container{Width: 200, Height: 300, FlexShrink: 0},
+    })
+    Layout().Calculate(root, 200.0F, 100.0F)
+    let input = InputCoordinator()
+    input.QueuePointerPress(25.0F, 60.0F)
+    input.QueuePointerMove(25.0F, 20.0F)
+    input.Drain(root, resolver, 0.0, nil)
+    if events.Count != 0 || root.ScrollY != 0.0F { return false }
+    input.QueuePointerMove(235.0F, 20.0F)
+    input.QueuePointerRelease(235.0F, 20.0F)
+    input.Drain(root, resolver, 0.0, nil)
+    return root.ScrollY == 0.0F && events.Count == 2
+      && events[0].Phase == GesturePhase.Started && events[1].Phase == GesturePhase.Completed
   }
 
   func PointerDragCancelUsesNewestCallbackContract() bool {

@@ -49,7 +49,8 @@ public partial class Window {
     }
   }
 
-  /// Sets the layout units a pressed mouse or pen pointer must move on either axis before a drag source starts a drag. Touch contacts start at 4. The default is 8.
+  /// Sets the Euclidean distance in layout units a pressed mouse or pen pointer must move before a drag source starts a drag.
+  /// Touch contacts start at 4 layout units. The default is 8.
   public prop DragStartDistance float64 {
     get -> dragStartDistance
     set(value) {

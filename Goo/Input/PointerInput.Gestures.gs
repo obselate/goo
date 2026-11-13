@@ -289,10 +289,8 @@ internal partial class PointerInput {
                 && dragThresholdCrossed(x, y, threshold) { return true }
         }
         if let pan = current.TouchPan {
-            let dx = x - pan.StartX
-            let dy = y - pan.StartY
             if let target = pan.Target && target != owner && containsPath(owner, target)
-                && dx * dx + dy * dy >= 64.0F { return true }
+                && touchPanReady(pan, x, y) { return true }
         }
         return false
     }
