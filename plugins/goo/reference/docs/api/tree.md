@@ -438,6 +438,10 @@ Adds a child to the ordered child collection.
 
 Gets the ordered child collection. Read-only lists are copied.
 
+### `HitTestSelf`
+
+Overrides whether this container participates in pointer hit testing. When omitted, Goo derives the value from authored interaction behavior.
+
 ## `Container`
 
 
@@ -1125,6 +1129,10 @@ Adds a child to the ordered child collection.
 ### `Children`
 
 Gets the ordered child collection. Read-only lists are copied.
+
+### `HitTestSelf`
+
+Overrides whether this container participates in pointer hit testing. When omitted, Goo derives the value from authored interaction behavior.
 
 ## `ScrollAlignment`
 

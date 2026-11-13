@@ -13,6 +13,16 @@ internal func countNodes(n Node) int32 {
 
 internal class AccessibilityFixtures {
   func AccessibilityShorthandOrderContract() bool {
+    let blobs = []Blob{Container{AccessibilityName: nil}, Container{AccessibilityRole: nil}}
+    for blob in blobs {
+      let root = Reconciler{Res: Resolver{}}.Mount(Container(){blob})
+      try {
+        let manager = AccessibilityManager(Window{})
+        manager.CaptureForDiagnostics(root)
+        if AccessibilityMetadata.Value(root.Children[0]) != nil
+          || manager.DiagnosticNodeFor(root.Children[0]) != nil { return false }
+      } finally { NodeLifecycle.DisposeTree(root) }
+    }
     let source = Accessibility{Name: "original", Role: AccessibilityRole.Button, Expanded: true}
     let reconciler = Reconciler{Res: Resolver{}}
     let node = reconciler.Mount(Container{

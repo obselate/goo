@@ -65,8 +65,8 @@ public open class Blob : Style {
     init {
       if let declaration = Accessibility {
         Accessibility = Goo.Accessibility{...declaration, Name: value ?? ""}
-      } else {
-        Accessibility = Goo.Accessibility{Name: value ?? ""}
+      } else if value != nil {
+        Accessibility = Goo.Accessibility{Name: value}
       }
     }
   }
@@ -77,8 +77,8 @@ public open class Blob : Style {
     init {
       if let declaration = Accessibility {
         Accessibility = Goo.Accessibility{...declaration, Role: value ?? Goo.AccessibilityRole.Auto}
-      } else {
-        Accessibility = Goo.Accessibility{Role: value ?? Goo.AccessibilityRole.Auto}
+      } else if value != nil {
+        Accessibility = Goo.Accessibility{Role: value}
       }
     }
   }

@@ -152,6 +152,8 @@ class FixtureContractTests {
             yield Contract[WindowStartupFixtures]("PresentModesContract")
             yield Contract[WindowStartupFixtures]("WindowLayoutSizeContract")
             yield Contract[WindowStartupFixtures]("SizeToContentContract")
+            yield Contract[WindowStartupFixtures]("RelativeSizeToContentContract")
+            yield Contract[LayoutFixtures]("CustomLayoutLeavesUnboundedPercentUnresolved")
             yield Contract[PathBuilderFixtures]("ResetPreservesPublishedPathAndClearsContour")
             yield Contract[PathBuilderFixtures]("PrimitivesAppendClosedContoursInViewBoxCoordinates")
             yield Contract[PortalFixtures]("UiScaleLayoutInputAndAnchoredPortalContract")
