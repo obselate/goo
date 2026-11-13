@@ -86,7 +86,7 @@ class ExplicitKeyBindingTests {
         let handle = ElementHandle()
         let seen = List[KeyModifiers]()
         var window Window?
-        window = Window{Width: 100, Height: 40, Root: ExplicitKeyBindingTests.BuildCell(() -> Button{
+        window = Window{Size: LayoutSize(100, 40), Root: ExplicitKeyBindingTests.BuildCell(() -> Button{
             Handle: handle, Width: 100, Height: 40,
             OnClick: () -> seen.Add(window!!.Modifiers),
             OnKeyDown: (e KeyEvent) -> Assert.Equal(e.Modifiers, window!!.Modifiers),
