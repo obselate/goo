@@ -7,13 +7,28 @@ import System.Threading
 import System.Diagnostics
 internal class CellFixtures {
   func MountedPlainFieldWritesRebuild() bool {
+    let plain = MountedDefaultFixtureCell()
+    let plainWindow = Window{Root: plain, Size: LayoutSize(200, 100)}
+    try {
+      plainWindow.UpdateTree()
+      plainWindow.UpdateTree()
+      if plain.Builds != 1 { return false }
+    } finally { plainWindow.Close() }
     let cell = MountedMeasurementFixtureCell()
     let window = Window{Root: cell, Size: LayoutSize(200, 100)}
     try {
       window.UpdateTree()
       window.UpdateTree()
-      return window.Tree?.Content == "w=120"
+      window.UpdateTree()
+      if cell.Builds != 2 || window.Tree?.Content != "w=120" { return false }
     } finally { window.Close() }
+    let baseCall = MountedBaseCallFixtureCell()
+    let baseWindow = Window{Root: baseCall, Size: LayoutSize(200, 100)}
+    try {
+      baseWindow.UpdateTree()
+      baseWindow.UpdateTree()
+      return baseCall.Builds == 1 && baseCall.Value == "after" && baseWindow.Tree?.Content == "before"
+    } finally { baseWindow.Close() }
   }
 
   func ServicesBeforeWindowBinding() bool {
@@ -120,17 +135,14 @@ internal class CellFixtures {
   func ScopeMountedChildCallbacksKeepTheirOwner() bool {
     let host = DeferredCallbackHost("child")
     let driver = InputFixtureDriver(host, 200, 150)
-    driver.Update()
-    let hostBuilds = host.Builds
-    let childBuilds = host.Child.Builds
     try {
       guard let tree = driver.Window.Tree else { return false }
       let target = tree.Children[1]
       driver.Press(target.Rect.X + 5, target.Rect.Y + 5)
       driver.Release(target.Rect.X + 5, target.Rect.Y + 5)
       driver.Update()
-      return host.Builds == hostBuilds && host.Count == 0
-        && host.Child.Builds == childBuilds + 1 && host.Child.Count == 1
+      return host.Builds == 1 && host.Count == 0
+        && host.Child.Builds == 2 && host.Child.Count == 1
         && driver.Window.Tree?.Children[1].Children[0].Content == "clicked:1"
     } finally {
       driver.Window.Close()
@@ -141,7 +153,6 @@ internal class CellFixtures {
     for cached in []bool{false, true} {
       let host = CallbackOriginHost{CacheContent: cached}
       let driver = InputFixtureDriver(host, 200, 150)
-      driver.Update()
       for pass in 0 ... 2 {
         for index in 1 ... 3 {
           guard let tree = driver.Window.Tree else { return false }
@@ -161,7 +172,6 @@ internal class CellFixtures {
         }
         host.MountKey = "remounted"
         host.Rebuild()
-        driver.Update()
         driver.Update()
       }
     }
@@ -338,7 +348,6 @@ internal class CellFixtures {
     let parent = CellSchedulingDirectParent{}
     let window = Window{ Root: parent, Size: LayoutSize(100, 100), }
     window.UpdateTree()
-    window.UpdateTree()
     guard let child = CellSchedulingDirectChild.Last else { return false }
     let parentBefore = parent.Builds
     let childBefore = child.Builds
@@ -409,7 +418,6 @@ internal class CellFixtures {
     CellSchedulingDeferredSecond.Last = nil
     let parent = CellSchedulingDeferredParent{}
     let window = Window{ Root: parent, Size: LayoutSize(200, 100), }
-    window.UpdateTree()
     window.UpdateTree()
     guard let first = window.Tree else { return false }
     guard let source = first.Children[0].Fiber else { return false }
@@ -1657,13 +1665,38 @@ internal class DeferredCallbackContent : Cell {
   override func Build() Blob -> Content!!
 }
 
+internal class MountedDefaultFixtureCell : Cell {
+  internal var Builds int32
+  override func Build() Blob {
+    Builds++
+    return Text{Content: "plain"}
+  }
+}
+
 internal class MountedMeasurementFixtureCell : Cell {
   private let handle ElementHandle = ElementHandle()
   private var width float64 = -1.0
+  internal var Builds int32
   protected override func Mounted() { width = handle.BorderBox.Width }
-  override func Build() Blob -> Text{Handle: handle, Width: 120, Height: 20, Content: "w=$width"}
+  override func Build() Blob {
+    Builds++
+    return Text{Handle: handle, Width: 120, Height: 20, Content: "w=$width"}
+  }
 }
 
 internal class DeferredCallbackInput : Cell[Blob] {
   protected override func Build(input Blob) Blob -> input
+}
+
+internal class MountedBaseCallFixtureCell : Cell {
+  internal var Builds int32
+  internal var Value string = "before"
+  protected override func Mounted() {
+    base.Mounted()
+    Value = "after"
+  }
+  override func Build() Blob {
+    Builds++
+    return Text{Content: Value}
+  }
 }

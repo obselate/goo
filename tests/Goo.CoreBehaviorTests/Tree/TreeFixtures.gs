@@ -635,7 +635,6 @@ internal class TreeFixtures {
     let parent = TreeBuildCountingParent{}
     let window = Window{ Root: parent, Size: LayoutSize(200, 100), }
     window.UpdateTree()
-    window.UpdateTree()
     let parentBuilds = parent.Builds
     guard let first = window.Tree else { return false }
     guard let child = first.Children[1].Fiber else { return false }
