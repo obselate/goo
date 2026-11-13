@@ -128,6 +128,7 @@ class FixtureContractTests {
         func Cases() sequence[[]object] {
             yield Contract[StyleFixtures]("FlexAndInsetDeclarationOrderContract")
             yield Contract[AccessibilityFixtures]("AccessibilityShorthandOrderContract")
+            yield Contract[AccessibilityFixtures]("AccessibilityShorthandRoundTripContract")
             yield Contract[FlexConformanceFixtures]("RowColumnSpacerContract")
             yield Contract[FlexConformanceFixtures]("FixedFlexDirectionContract")
             yield Contract[FlexConformanceFixtures]("KeyedFlexKindChangeContract")
