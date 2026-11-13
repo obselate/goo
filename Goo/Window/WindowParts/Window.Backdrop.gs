@@ -187,7 +187,7 @@ public partial class Window {
   /// Gets or sets the native frame and material appearance. Unknown follows the system.
   /// Applies immediately on Windows and macOS. Other platforms ignore it.
   public prop FrameTheme SystemTheme {
-    get -> frameTheme
+    get -> ReadUntrackedWindowValue(frameTheme)
     set(value) {
       requireUiThread("Window.FrameTheme")
       if !Enum.IsDefined[SystemTheme](value) { throw ArgumentOutOfRangeException("value") }
@@ -201,7 +201,7 @@ public partial class Window {
   /// Gets or sets whether macOS content extends under the transparent titlebar. Defaults to false.
   /// Keeps native window controls. Other platforms ignore it.
   public prop ContentUnderTitlebar bool {
-    get -> contentUnderTitlebar
+    get -> ReadUntrackedWindowValue(contentUnderTitlebar)
     set(value) {
       requireUiThread("Window.ContentUnderTitlebar")
       if contentUnderTitlebar == value { return }
@@ -214,12 +214,12 @@ public partial class Window {
   /// Gets the macOS window controls' bounds in top-left window logical pixels, including titlebar height.
   /// Returns nil without overlapping native controls, including fullscreen and other platforms.
   public prop TitlebarControlsRect ElementRect? {
-    get -> (host as SdlHost?)?.TitlebarControlsRect
+    get -> ReadUntrackedWindowValue((host as SdlHost?)?.TitlebarControlsRect)
   }
 
   /// Gets or sets Windows-only material options. Changes apply to an open window immediately.
   public prop WindowsBackdrop WindowsBackdropOptions {
-    get -> windowsBackdrop
+    get -> ReadUntrackedWindowValue(windowsBackdrop)
     set(value) {
       requireUiThread("Window.WindowsBackdrop")
       if windowsBackdrop == value { return }
@@ -234,7 +234,7 @@ public partial class Window {
   /// Gets or sets macOS-only material, activation, emphasis and mask options. Changes apply immediately.
   /// The native view samples behind the window. Use Style.ShaderEffect to sample Goo content within it.
   public prop MacOSBackdrop MacOSBackdropOptions {
-    get -> macOSBackdrop
+    get -> ReadUntrackedWindowValue(macOSBackdrop)
     set(value) {
       requireUiThread("Window.MacOSBackdrop")
       if macOSBackdrop == value { return }
@@ -248,7 +248,7 @@ public partial class Window {
 
   /// Gets or sets Wayland-only blur region options. Changes apply on the next surface commit.
   public prop WaylandBackdrop WaylandBackdropOptions {
-    get -> waylandBackdrop
+    get -> ReadUntrackedWindowValue(waylandBackdrop)
     set(value) {
       requireUiThread("Window.WaylandBackdrop")
       if waylandBackdrop == value { return }
@@ -264,7 +264,7 @@ public partial class Window {
   /// Enable transparency before opening a window that will toggle blur at runtime.
   /// Native policy controls the appearance. Unsupported hosts use BackdropFallbackColor.
   public prop Backdrop WindowBackdrop {
-    get -> backdrop
+    get -> ReadUntrackedWindowValue(backdrop)
     set(value) {
       requireUiThread("Window.Backdrop")
       if value != WindowBackdrop.None && value != WindowBackdrop.Blur {
@@ -285,13 +285,13 @@ public partial class Window {
   /// Reports whether the open native host accepts blur and advertises support.
   /// The compositor can still vary or suppress its material according to system policy.
   public prop BackdropAvailable bool {
-    get -> backdrop == WindowBackdrop.Blur && (host as SdlHost?)?.BackdropAvailable == true
+    get -> ReadUntrackedWindowValue(backdrop == WindowBackdrop.Blur && (host as SdlHost?)?.BackdropAvailable == true)
   }
 
   /// Gets or sets the opaque window background used when requested blur is unavailable.
   /// Defaults to black. Foreground content is rendered over this color normally.
   public prop BackdropFallbackColor Color {
-    get -> backdropFallbackColor
+    get -> ReadUntrackedWindowValue(backdropFallbackColor)
     set(value) {
       requireUiThread("Window.BackdropFallbackColor")
       if value.A != 1.0F { throw ArgumentException("Backdrop fallback must be opaque", "value") }

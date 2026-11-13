@@ -19,6 +19,7 @@ public partial class Window {
   public prop AccessibilityAdapter AccessibilityAdapter? {
     get {
       requireUiThread("Window.AccessibilityAdapter")
+      Cell.ObserveUntrackedRead()
       return accessibility?.Adapter
     }
     set(v) {
@@ -40,6 +41,7 @@ public partial class Window {
   public prop LastAccessibilityError Exception? {
     get {
       requireUiThread("Window.LastAccessibilityError")
+      Cell.ObserveUntrackedRead()
       return accessibility?.LastError
     }
   }

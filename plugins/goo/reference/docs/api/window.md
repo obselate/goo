@@ -1510,7 +1510,7 @@ Gets a surface-local rectangle in logical pixels, or nil for the whole window. C
 ## `Window`
 
 
-Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread.
+Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread. State, IsFocused, Size, NativeWidth, NativeHeight, UiScale, Preferences and Modifiers track reads in Build and retained builders. Other mutable window getters keep automatic callback rebuilding.
 
 ### `DisplayChanged`
 
