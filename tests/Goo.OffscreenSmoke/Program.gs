@@ -61,10 +61,10 @@ func RunAutomaticSessionSmoke() {
     var completed = false
     var timedOut = false
     var closing Task[OffscreenRenderResult]?
-    let timeout = owner.SetTimeout(() -> {
+    let timeout = owner.After(15000.0, () -> {
         timedOut = true
         owner.RequestClose()
-    }, 15000.0)
+    })
     pending.ContinueWith((result Task[OffscreenRenderResult]) -> {
         owner.Post(() -> {
             let rendered = result.GetAwaiter().GetResult()

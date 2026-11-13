@@ -752,7 +752,7 @@ internal class TreeFixtures {
 internal class TreeDepthCell : Cell {
   internal var Depth int32
   override func Build() Blob -> if Depth == 0 { Text{} }
-    else { Cell.Mount[TreeDepthCell](() -> TreeDepthCell{Depth: Depth - 1}, nil) }
+    else { Cell.Mount[TreeDepthCell](nil, () -> TreeDepthCell{Depth: Depth - 1}) }
 }
 
 internal class TreeKeyedParent : Cell {

@@ -62,10 +62,10 @@ func AppendCellFactoryGuide(text StringBuilder) {
     text.AppendLine()
     text.AppendLine((`## Mount with a factory
 
-` + "`" + `Cell.Mount[TCell](factory, key)` + "`" + ` mounts a Cell with constructor dependencies without a parameterless constructor.
+` + "`" + `Cell.Mount[TCell](key, factory)` + "`" + ` mounts a Cell with constructor dependencies without a parameterless constructor.
 
 ` + "```" + `gsharp
-Cell.Mount[Counter](() -> Counter(store), "counter")
+Cell.Mount[Counter]("counter", () -> Counter(store))
 ` + "```" + `
 
 A mounted Cell is retained by declared ` + "`" + `TCell` + "`" + ` and sibling key. The factory runs only for a new mount. Rebuilding the parent, replacing the delegate, or changing captured values does not recreate the Cell. Change the key for a new instance. Factories returning the base ` + "`" + `Cell` + "`" + ` type need distinct stable keys for distinct components.
@@ -77,6 +77,19 @@ Constructor arguments initialize the Cell. Update it through typed inputs, confi
 See [language interop](../interop.md) for other languages.
 
 Capturing factories inside parent builds can allocate delegates and closures even when the Cell is reused. Cache factories with stable dependencies. Goo never invokes a factory to discover its result's runtime type.`))
+    text.AppendLine()
+    text.AppendLine("With constructor dependencies and typed input, use `Cell.Mount[Input, Page](\"page\", input, () -> Page(service))`. The input is stored on every parent diff. The factory still runs only for a new mount.")
+    text.AppendLine()
+    text.AppendLine("## Own work for the mounted Cell")
+    text.AppendLine()
+    text.AppendLine("`Host` is the owning window. It is valid from window binding, before the first `InputChanged` or `Build`, until `Unmounting` returns. Reading it in a constructor or after unmount throws with the Cell type name.")
+    text.AppendLine()
+    text.AppendLine("Override `Mounted()` for work that needs mounted handles and the first layout. It runs once before paint. Override `Unmounting()` for cleanup before elements are removed. `Lifetime` is cancelled after that hook returns, then Goo calls `IDisposable.Dispose` when implemented.")
+    text.AppendLine()
+    text.AppendLine("Use `Post(action)` from any thread to update the Cell on its UI thread. It returns false when the Cell is not mounted or the window rejects posts. Use `After(delayMs, action)` or `Every(intervalMs, action)` on the UI thread for owned timers. Pending actions and timers stop at unmount or close. Goo applies the normal callback rebuild rule after each action, including one that throws. Use `Host.Every` for work that does not change the Cell.")
+    text.AppendLine("Scheduling with `Post`, `After` or `Every` during `Build` throws. Schedule from `InputChanged`, `Mounted`, callbacks or continuations. `Host` and `Lifetime` can be read during `Build`.")
+    text.AppendLine()
+    text.AppendLine("Pass `Lifetime` to cancellable work. For replaceable requests, call `Latest(\"load\")` on the UI thread. It cancels the previous token for that name and returns a new token linked to `Lifetime`. Before applying a result, check `token.IsCancellationRequested` on the UI thread.")
 }
 
 func AppendStyleCompositionGuide(text StringBuilder) {

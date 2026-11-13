@@ -103,14 +103,14 @@ class NativeGlassWindow {
             window.Open()
             root.Rebuild()
             var available = window.BackdropAvailable
-            window.SetInterval(
+            window.Every(
+                1000.0,
                 () -> {
                     if available != window.BackdropAvailable {
                         available = window.BackdropAvailable
                         root.Rebuild()
                     }
-                },
-                1000.0
+                }
             )
             Application.Run(window)
         }

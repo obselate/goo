@@ -375,7 +375,7 @@ internal class Program {
             }
             var ready = false
             var tray TrayIcon? = nil
-            main.SetInterval(() -> {
+            main.Every(20, () -> {
                 if !ready && main.IsVisible && child.IsVisible {
                     if mode == "tray" {
                         let result = TrayIcon.Create(main, TrayOptions{
@@ -394,7 +394,7 @@ internal class Program {
                     File.WriteAllText(Path.Combine(root, "child.closed"), main.IsOpen.ToString())
                 }
                 if File.Exists(Path.Combine(root, "stop")) { main.RequestClose() }
-            }, 20)
+            })
             try {
                 Application.Run(main)
                 File.WriteAllText(Path.Combine(root, "exited"), "${main.IsOpen},${child.IsOpen},$closing")

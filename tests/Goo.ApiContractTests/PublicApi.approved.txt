@@ -1155,6 +1155,7 @@ method|Goo.Cell`1|InvokeInputCallback|instance|protected|generic:T[attrs:0,const
 method|Goo.Cell`1|InvokeInputCallback|instance|protected|generic:T[attrs:0,constraints:]|(callback:System.Action`1<!!0>?,value:!!0)->System.Void
 method|Goo.Cell`1|InvokeInputCallback|instance|protected|generic:|(callback:System.Action?)->System.Void
 method|Goo.Cell`1|ShouldRebuild|virtual|protected|generic:|(previous:!0,next:!0)->System.Boolean
+method|Goo.Cell|After|instance|protected|generic:|(delayMs:System.Double,action:System.Action)->Goo.WindowTimer
 method|Goo.Cell|AnimateValue|instance|public|generic:T[attrs:0,constraints:]|(initial:!!0,converter:Goo.MotionConverter`1<!!0>)->Goo.Anim`1<!!0>
 method|Goo.Cell|AnimateValue|instance|public|generic:|(initial:Goo.Color)->Goo.Anim`1<Goo.Color>
 method|Goo.Cell|AnimateValue|instance|public|generic:|(initial:Goo.Length)->Goo.Anim`1<Goo.Length>
@@ -1171,12 +1172,17 @@ method|Goo.Cell|Animate|instance|public|generic:|(initial:Goo.Point,onChange:Sys
 method|Goo.Cell|Animate|instance|public|generic:|(initial:System.Double)->Goo.Anim`1<System.Double>
 method|Goo.Cell|Animate|instance|public|generic:|(initial:System.Double,onChange:System.Action`1<System.Double>)->Goo.Anim`1<System.Double>
 method|Goo.Cell|Build|virtual|public|generic:|()->Goo.Blob
-method|Goo.Cell|Mount|static|public|generic:TCell[attrs:0,constraints:Goo.Cell]|(factory:System.Func`1<!!0>,key:System.String?)->Goo.Blob
-method|Goo.Cell|Mount|static|public|generic:TCell[attrs:16,constraints:Goo.Cell]|()->Goo.Blob
-method|Goo.Cell|Mount|static|public|generic:TCell[attrs:16,constraints:Goo.Cell]|(key:System.String?)->Goo.Blob
+method|Goo.Cell|Every|instance|protected|generic:|(intervalMs:System.Double,action:System.Action)->Goo.WindowTimer
+method|Goo.Cell|Latest|instance|protected|generic:|(name:System.String)->System.Threading.CancellationToken
+method|Goo.Cell|Mounted|virtual|protected|generic:|()->System.Void
+method|Goo.Cell|Mount|static|public|generic:TCell[attrs:0,constraints:Goo.Cell]|(key:System.String?,factory:System.Func`1<!!0>)->Goo.Blob
 method|Goo.Cell|Mount|static|public|generic:TCell[attrs:16,constraints:Goo.Cell]|(key:System.String?,configure:System.Action`1<!!0>?)->Goo.Blob
+method|Goo.Cell|Mount|static|public|generic:TCell[attrs:16,constraints:Goo.Cell]|(key:System.String?=null)->Goo.Blob
+method|Goo.Cell|Mount|static|public|generic:TInput[attrs:0,constraints:];TCell[attrs:0,constraints:Goo.Cell`1<!!0>]|(key:System.String?,input:!!0,factory:System.Func`1<!!1>)->Goo.Blob
 method|Goo.Cell|Mount|static|public|generic:TInput[attrs:0,constraints:];TCell[attrs:16,constraints:Goo.Cell`1<!!0>]|(key:System.String?,input:!!0)->Goo.Blob
+method|Goo.Cell|Post|instance|protected|generic:|(action:System.Action)->System.Boolean
 method|Goo.Cell|Rebuild|instance|public|generic:|()->System.Void
+method|Goo.Cell|Unmounting|virtual|protected|generic:|()->System.Void
 method|Goo.Color|Deconstruct|instance|public|generic:|(out r:System.Single&,out g:System.Single&,out b:System.Single&,out a:System.Single&)->System.Void
 method|Goo.Color|Equals|instance|public|generic:|(other:Goo.Color)->System.Boolean
 method|Goo.Color|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
@@ -1900,6 +1906,7 @@ method|Goo.WindowsBackdropOptions|op_Equality|static|public|generic:|(left:Goo.W
 method|Goo.WindowsBackdropOptions|op_Inequality|static|public|generic:|(left:Goo.WindowsBackdropOptions,right:Goo.WindowsBackdropOptions)->System.Boolean
 method|Goo.Window|AccessibilityHitTest|instance|public|generic:|(x:System.Double,y:System.Double)->System.Nullable`1<Goo.AccessibilityId>
 method|Goo.Window|AcquireNativeDialogOwnerAsync|instance|public|generic:|(cancellation:System.Threading.CancellationToken)->System.Threading.Tasks.Task`1<Goo.NativeDialogOwnerResult>
+method|Goo.Window|After|instance|public|generic:|(delayMs:System.Double,action:System.Action)->Goo.WindowTimer
 method|Goo.Window|ApplyPlacement|instance|public|generic:|(value:Goo.WindowPlacement)->Goo.WindowPlacementResult
 method|Goo.Window|Attach|instance|public|generic:|(externalHost:Goo.EmbeddedWindowHost)->Goo.Window
 method|Goo.Window|CancelFileDialog|instance|public|generic:|()->System.Boolean
@@ -1907,6 +1914,7 @@ method|Goo.Window|CapturePlacement|instance|public|generic:|()->Goo.WindowPlacem
 method|Goo.Window|ConfigureApplication|static|public|generic:|(name:System.String,version:System.String,identifier:System.String)->System.Void
 method|Goo.Window|CreateOffscreenSession|instance|public|generic:|()->Goo.OffscreenRenderSessionResult
 method|Goo.Window|DragRegion|static|public|generic:|(region:Goo.Container)->Goo.Container
+method|Goo.Window|Every|instance|public|generic:|(intervalMs:System.Double,action:System.Action)->Goo.WindowTimer
 method|Goo.Window|GetCurrentDisplay|instance|public|generic:|()->Goo.WindowDisplay?
 method|Goo.Window|GetDisplays|instance|public|generic:|()->System.Collections.Generic.IReadOnlyList`1<Goo.WindowDisplay>
 method|Goo.Window|Hide|instance|public|generic:|()->Goo.WindowOperationResult
@@ -1926,9 +1934,7 @@ method|Goo.Window|RequestClose|instance|public|generic:|()->System.Void
 method|Goo.Window|Run|instance|public|generic:|()->System.Void
 method|Goo.Window|SetColors|instance|public|generic:|(background:Goo.Color,foreground:Goo.Color)->System.Void
 method|Goo.Window|SetFullscreenDisplay|instance|public|generic:|(display:Goo.WindowDisplayId)->Goo.WindowOperationResult
-method|Goo.Window|SetInterval|instance|public|generic:|(callback:System.Action,intervalMs:System.Double)->Goo.WindowTimer
 method|Goo.Window|SetNativeDataDropFormats|instance|public|generic:|(formats:System.Collections.Generic.IReadOnlyList`1<System.String>)->Goo.WindowOperationResult
-method|Goo.Window|SetTimeout|instance|public|generic:|(callback:System.Action,delayMs:System.Double)->Goo.WindowTimer
 method|Goo.Window|SetTopmost|instance|public|generic:|(value:System.Boolean)->Goo.WindowOperationResult
 method|Goo.Window|ShowFileDialogAsync|instance|public|generic:|(kind:Goo.FileDialogKind,options:Goo.FileDialogOptions?=null)->System.Threading.Tasks.Task`1<Goo.FileDialogResult>
 method|Goo.Window|Show|instance|public|generic:|(activate:System.Boolean=true)->Goo.WindowOperationResult
@@ -2112,6 +2118,8 @@ property|Goo.BoxShadow|OffsetY|Goo.Length|instance|get:public,init:public|index:
 property|Goo.BoxShadow|Spread|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.Button|Children|System.Collections.Generic.IList`1<Goo.Blob>|instance|get:public,init:public|index:()
 property|Goo.Cell`1|Input|!0|instance|get:protected|index:()
+property|Goo.Cell|Host|Goo.Window|instance|get:protected|index:()
+property|Goo.Cell|Lifetime|System.Threading.CancellationToken|instance|get:protected|index:()
 property|Goo.ClipboardDataResult|Data|Goo.TransferData|instance|get:public|index:()
 property|Goo.ClipboardDataResult|Error|System.String|instance|get:public|index:()
 property|Goo.ClipboardDataResult|Intent|Goo.ClipboardIntent|instance|get:public|index:()

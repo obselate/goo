@@ -315,14 +315,14 @@ internal class PaintBindingFixtures {
       var initialCpu float64
       var initialTime int64
       window.PresentationAccepted += receipt -> { frames = receipt.FrameIndex }
-      window.SetTimeout(() -> { cell.Scroll.JumpTo(0.0, 200.0) }, 2000.0)
-      window.SetTimeout(() -> {
+      window.After(2000.0, () -> { cell.Scroll.JumpTo(0.0, 200.0) })
+      window.After(4000.0, () -> {
         process.Refresh()
         initialCpu = process.TotalProcessorTime.TotalMilliseconds
         initialFrames = frames
         initialTime = Stopwatch.GetTimestamp()
-      }, 4000.0)
-      window.SetTimeout(() -> {
+      })
+      window.After(14000.0, () -> {
         process.Refresh()
         let elapsed = float64(Stopwatch.GetTimestamp() - initialTime) / float64(Stopwatch.Frequency)
         let cpu = process.TotalProcessorTime.TotalMilliseconds - initialCpu
@@ -332,7 +332,7 @@ internal class PaintBindingFixtures {
           + " cpu_ms=" + cpu.ToString("F3") + " cpu_percent=" + (cpu / (elapsed * 10.0)).ToString("F3"))
         if marked && count != 0 { throw InvalidOperationException("Clipped infinite paint requested frames") }
         window.RequestClose()
-      }, 14000.0)
+      })
       try { Application.Run(window) } finally { window.Close() }
     }
   }

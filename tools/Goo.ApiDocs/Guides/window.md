@@ -408,7 +408,7 @@ class RenderPageButton : Cell, IDisposable {
         session = active
         let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
         let pending = active.RenderAsync(MyPage(), options, window.Closed)
-        timer = window.SetInterval(() -> {
+        timer = window.Every(1.0, () -> {
             try {
                 if !pending.IsCompleted { return }
                 let rendered = pending.Result
@@ -417,7 +417,7 @@ class RenderPageButton : Cell, IDisposable {
                 throw error
             }
             Dispose()
-        }, 1.0)
+        })
     }
 
     public func Dispose() {
@@ -572,7 +572,7 @@ Pump removes an action before it calls the action. If it throws, Pump throws the
 
 ## Schedule window timers
 
-Call `SetTimeout(callback, delayMs)` for one callback or `SetInterval(callback, intervalMs)` for repeated callbacks. Both return a `WindowTimer`. The window must be open, and scheduling and `Dispose` must run on its UI thread. A timeout accepts a zero delay; an interval must be greater than zero. Both durations must be finite and nonnegative.
+Call `After(delayMs, action)` for one callback or `Every(intervalMs, action)` for repeated callbacks. Both return a `WindowTimer`. The window must be open, and scheduling and `Dispose` must run on its UI thread. A delay can be zero. An interval must be greater than zero. Both durations must be finite and nonnegative.
 
 Timers use the window event loop, so callbacks can update UI state directly. The window wakes for the next deadline while idle. Each pump fires due timers once. An overdue interval skips missed periods instead of calling the callback in a burst. Timers scheduled inside a callback wait until a later pump.
 

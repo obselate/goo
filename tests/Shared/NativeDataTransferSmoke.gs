@@ -188,10 +188,10 @@ func RunNativeDataTransferSmoke() {
             let other = Window{Title: "Goo transfer animation", Size: LayoutSize(240, 120),  Root: counter}
             sibling = other
             other.Open()
-            other.SetInterval(() -> counter.Advance(), 16.0)
+            other.Every(16.0, () -> counter.Advance())
             scene.OnStart = () -> {
                 startTicks = counter.Ticks
-                other.SetTimeout(() -> window.RequestClose(), 600.0)
+                other.After(600.0, () -> window.RequestClose())
             }
             scene.OnEnd = () -> {
                 NativeTransferRequire(counter.Ticks - startTicks >= 5, "Stationary native tracking stopped sibling animation")

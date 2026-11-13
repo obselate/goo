@@ -213,6 +213,10 @@ open class PublicApiTests {
                     type.GetProperties(ProtectedDeclared).Where((property PropertyInfo) -> property.Name == "Input")
                 )
             }
+            if type == typeof(Cell) {
+                properties = properties.Concat(type.GetProperties(ProtectedDeclared).Where(
+                    (property PropertyInfo) -> property.GetMethod?.IsFamily == true))
+            }
             for property in properties {
                 let accessor = property.GetMethod ?? property.SetMethod!!
                 yield "property|$owner|${property.Name}|${TypeIdentity(property.PropertyType, Nullability.Create(property))}|${Scope(accessor)}|${PropertyAccess(property)}|index:(${DescribeParameters(property.GetIndexParameters())})"
@@ -263,6 +267,10 @@ open class PublicApiTests {
                         (method MethodInfo) -> (method.Name is "Build" or "ShouldRebuild" or "InvokeInputCallback")
                     )
                 )
+            }
+            if type == typeof(Cell) {
+                methods = methods.Concat(type.GetMethods(ProtectedDeclared).Where(
+                    (method MethodInfo) -> method.IsFamily && !method.IsSpecialName))
             }
             for method in methods {
                 yield "method|$owner|${method.Name}|${Scope(method)}|${PublicApiTests.Visibility(method)}|generic:${DescribeGenericParameters(method.GetGenericArguments())}|(${DescribeParameters(method.GetParameters())})->${TypeIdentity(method.ReturnType, Nullability.Create(method.ReturnParameter))}"

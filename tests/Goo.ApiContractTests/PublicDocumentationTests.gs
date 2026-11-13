@@ -389,11 +389,17 @@ class PublicDocumentationTests {
             "M:Goo.Cell`1.InvokeInputCallback``1(System.Action{``0},``0)",
             "M:Goo.Cell`1.InvokeInputCallback``2(System.Action{``0,``1},``0,``1)",
             "M:Goo.Cell`1.InvokeInputCallback``2(System.Func{``0,``1},``0,``1)",
-            "M:Goo.Cell.Mount``1",
-            "M:Goo.Cell.Mount``1(System.Func{``0},System.String)",
+            "M:Goo.Cell.Mount``1(System.String,System.Func{``0})",
             "M:Goo.Cell.Mount``1(System.String)",
             "M:Goo.Cell.Mount``1(System.String,System.Action{``0})",
             "M:Goo.Cell.Mount``2(System.String,``0)",
+            "M:Goo.Cell.Mount``2(System.String,``0,System.Func{``1})",
+            "M:Goo.Cell.After(System.Double,System.Action)",
+            "M:Goo.Cell.Every(System.Double,System.Action)",
+            "M:Goo.Cell.Post(System.Action)",
+            "M:Goo.Cell.Latest(System.String)",
+            "M:Goo.Cell.Mounted",
+            "M:Goo.Cell.Unmounting",
             "M:Goo.Cell.Rebuild",
             "M:Goo.Cell`1.ShouldRebuild(`0,`0)",
             "M:Goo.Color.FromNormalized(System.Single,System.Single,System.Single,System.Single)",
@@ -720,8 +726,8 @@ class PublicDocumentationTests {
             "M:Goo.Window.RequestClose",
             "M:Goo.Application.Run(Goo.Window)",
             "M:Goo.WindowClipboard.WriteText(System.String)",
-            "M:Goo.Window.SetInterval(System.Action,System.Double)",
-            "M:Goo.Window.SetTimeout(System.Action,System.Double)",
+            "M:Goo.Window.Every(System.Double,System.Action)",
+            "M:Goo.Window.After(System.Double,System.Action)",
             "M:Goo.Window.TryPost(System.Action)",
             "M:Goo.WindowTimer.Dispose"
         }
@@ -1306,12 +1312,13 @@ class PublicDocumentationTests {
                 []string{"callback", "first", "second"}, []string{"T1", "T2"}, false),
             ["M:Goo.Cell`1.InvokeInputCallback``2(System.Func{``0,``1},``0,``1)"] = DocumentationShape(
                 []string{"callback", "value", "fallback"}, []string{"T", "TResult"}, true),
-            ["M:Goo.Cell.Mount``1"] = DocumentationShape(System.Array.Empty[string](), []string{"TCell"}, true),
-            ["M:Goo.Cell.Mount``1(System.Func{``0},System.String)"] = DocumentationShape(
-                []string{"factory", "key"},
+            ["M:Goo.Cell.Mount``1(System.String,System.Func{``0})"] = DocumentationShape(
+                []string{"key", "factory"},
                 []string{"TCell"},
                 true
             ),
+            ["M:Goo.Cell.Mount``2(System.String,``0,System.Func{``1})"] = DocumentationShape(
+                []string{"key", "input", "factory"}, []string{"TInput", "TCell"}, true),
             ["M:Goo.Cell.Mount``1(System.String)"] = DocumentationShape([]string{"key"}, []string{"TCell"}, true),
             ["M:Goo.Cell.Mount``1(System.String,System.Action{``0})"] = DocumentationShape(
                 []string{"key", "configure"},
@@ -2279,6 +2286,8 @@ class PublicDocumentationTests {
                 .Concat(eventIds)
                 .Append("P:Goo.LayoutTransition.SimulationFactory")
                 .Append("P:Goo.Cell`1.Input")
+                .Append("P:Goo.Cell.Host")
+                .Append("P:Goo.Cell.Lifetime")
                 .Append("P:Goo.FocusedEditorSnapshot.InputOptions")
                 .Append("P:Goo.KeyBinding.OnRelease")
                 .Append("P:Goo.KeyBinding.Repeat")

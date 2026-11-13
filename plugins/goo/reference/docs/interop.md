@@ -53,7 +53,7 @@ Use `open System` and `open Goo`. Create callbacks outside `Build()`. Assign `Co
 
 ```fsharp
 let counterFactory = Func<Cell>(Counter.create)
-let counter = Cell.Mount<Cell>(counterFactory, "counter")
+let counter = Cell.Mount<Cell>("counter", counterFactory)
 ```
 
 - `Add` accepts derived Blobs. An annotated `Blob` return upcasts a `Container`.
