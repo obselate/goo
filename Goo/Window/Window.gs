@@ -215,6 +215,7 @@ internal struct WindowNotifications {
 /// Hosts a Goo tree on one process-wide UI thread.
 /// After Open or Attach, only Post and RequestClose are safe from another thread.
 /// State, IsFocused, Size, NativeWidth, NativeHeight, UiScale, Preferences and Modifiers track reads in Build and retained builders.
+/// Other mutable window getters keep automatic callback rebuilding.
 public partial class Window {
   /// Configures this window as a Wayland layer-shell surface before Open.
   /// Unsupported platforms and compositors fail without a normal-window fallback.
@@ -222,17 +223,17 @@ public partial class Window {
 
   /// Gets the selected rendering device, or Unknown with an empty name before Open or when unavailable.
   public prop RenderingDevice RenderingDeviceInfo{
-    get -> (windowTarget as VulkanWindowTarget?)?.RenderingDevice ?? default(RenderingDeviceInfo)
+    get -> ReadUntrackedWindowValue((windowTarget as VulkanWindowTarget?)?.RenderingDevice ?? default(RenderingDeviceInfo))
   }
 
   /// Gets or sets the window clear color. The default is white.
   public prop Background Color{
-    get -> background
+    get -> ReadUntrackedWindowValue(background)
     set(v) -> SetColors(v, foreground)
   }
   /// Gets or sets the inherited root text color. The default is black.
   public prop Foreground Color{
-    get -> foreground
+    get -> ReadUntrackedWindowValue(foreground)
     set(v) -> SetColors(background, v)
   }
   /// Sets the clear and inherited root text colors together on the owner thread.
@@ -260,18 +261,19 @@ public partial class Window {
   /// Configures PNG bytes for the native window icon in the Window initializer before Open.
   /// The icon is decoded when opening, has a 1024 pixel edge limit, and requires no external file.
   public prop IconPng [] ? uint8 {
-    get -> iconPng
+    get -> ReadUntrackedWindowValue(iconPng)
     init -> iconPng = value
   }
   /// Reports whether the window is open.
-  public prop IsOpen bool{ get; private set; }
+  public prop IsOpen bool{ get -> ReadUntrackedWindowValue(isOpen); private set -> isOpen = value }
+  private var isOpen bool
   internal prop Tree Node? { get -> node }
   internal prop DiagnosticsSession DevToolsSession? { get -> diagnosticsSession }
   /// Gets or sets per-window GPU presentation synchronization.
   /// True selects FIFO. False prefers Immediate, then Mailbox, then FIFO on every device.
   /// Application.Run pacing is controlled separately by FramePacing.
   public prop VSync bool{
-    get -> vsync
+    get -> ReadUntrackedWindowValue(vsync)
     set(v) {
       requireUiThread("Window.VSync")
       if vsync == v {
@@ -288,7 +290,7 @@ public partial class Window {
   /// Gets or sets the frame pacing used by Application.Run. Uncapped still honors
   /// GPU queue readiness and the selected presentation mode.
   public prop FramePacing WindowFramePacing{
-    get -> framePacing
+    get -> ReadUntrackedWindowValue(framePacing)
     set(v) {
       requireUiThread("Window.FramePacing")
       if v != WindowFramePacing.Display && v != WindowFramePacing.Uncapped {
@@ -305,13 +307,14 @@ public partial class Window {
   public prop QueueWorkPending bool{
     get {
       requireUiThread("Window.QueueWorkPending")
+      Cell.ObserveUntrackedRead()
       return windowTarget?.QueueWorkPending == true
     }
   }
 
   /// Gets or sets the window title.
   public prop Title string{
-    get -> title
+    get -> ReadUntrackedWindowValue(title)
     set(v) {
       requireUiThread("Window.Title")
       if title == v {
@@ -328,15 +331,13 @@ public partial class Window {
   /// Gets or sets the client size in layout units. Native assignments multiply by UiScale and round once.
   /// The native host's observed size is authoritative after Open.
   public prop Size LayoutSize{
-    get -> TrackWindowValue(&trackedSize,
-      requestedSize ?? LayoutSize(float64(host?.LogicalWidth ?? width) / float64(EffectiveUiScale),
-        float64(host?.LogicalHeight ?? height) / float64(EffectiveUiScale)))
+    get -> TrackWindowValue(&trackedSize, CurrentSize)
     set(value) {
       requireUiThread("Window.Size")
       if !Double.IsFinite(value.Width) || !Double.IsFinite(value.Height) || value.Width < 0.0 || value.Height < 0.0 {
         throw ArgumentOutOfRangeException("value")
       }
-      if Size == value { return }
+      if CurrentSize == value { return }
       if host != nil && LayerShell != nil { throw NotSupportedException("Layer-shell sizes are configured by the compositor") }
       if host == nil {
         requestedSize = value
@@ -350,6 +351,11 @@ public partial class Window {
     }
   }
 
+  private prop CurrentSize LayoutSize {
+    get -> requestedSize ?? LayoutSize(float64(host?.LogicalWidth ?? width) / float64(EffectiveUiScale),
+      float64(host?.LogicalHeight ?? height) / float64(EffectiveUiScale))
+  }
+
   /// Gets the observed client width in native logical units.
   public prop NativeWidth int32{ get -> TrackWindowValue(&trackedWidth, host?.LogicalWidth ?? width) }
 
@@ -359,7 +365,7 @@ public partial class Window {
   // positionSet distinguishes an explicit (0,0) request.
   /// Gets or sets the requested horizontal position.
   public prop X int32{
-    get -> x
+    get -> ReadUntrackedWindowValue(x)
     set(v) {
       requireUiThread("Window.X")
       positionSet = true
@@ -373,7 +379,7 @@ public partial class Window {
 
   /// Gets or sets the requested vertical position.
   public prop Y int32{
-    get -> y
+    get -> ReadUntrackedWindowValue(y)
     set(v) {
       requireUiThread("Window.Y")
       positionSet = true
@@ -404,7 +410,7 @@ public partial class Window {
   /// Gets or sets next-open per-pixel alpha. An open window is unchanged.
   /// Transparency requires the GPU renderer.
   public prop Transparent bool{
-    get -> transparent
+    get -> ReadUntrackedWindowValue(transparent)
     set(v) {
       requireUiThread("Window.Transparent")
       transparent = v
@@ -413,7 +419,7 @@ public partial class Window {
 
   /// Gets or sets whether the system draws window decorations.
   public prop Decorated bool{
-    get -> decorated
+    get -> ReadUntrackedWindowValue(decorated)
     set(v) {
       requireUiThread("Window.Decorated")
       if decorated == v {
@@ -428,7 +434,7 @@ public partial class Window {
 
   /// Gets or sets whether the user can resize the window.
   public prop Resizable bool{
-    get -> resizable
+    get -> ReadUntrackedWindowValue(resizable)
     set(v) {
       requireUiThread("Window.Resizable")
       if resizable == v {
@@ -444,7 +450,7 @@ public partial class Window {
   /// Gets or sets the undecorated edge resize band in logical pixels.
   /// A scrollbar under an edge band takes the pointer. Corners always resize.
   public prop ResizeBand float32{
-    get -> resizeBand
+    get -> ReadUntrackedWindowValue(resizeBand)
     set(v) {
       requireUiThread("Window.ResizeBand")
       if !Single.IsFinite(v) || v < 0.0F {
@@ -515,7 +521,7 @@ public partial class Window {
   /// OS termination bypasses this handler.
   /// Accepted requests do not invoke the handler again while teardown finishes.
   public prop OnClosing(() -> bool)? {
-    get -> onClosing
+    get -> ReadUntrackedWindowValue(onClosing)
     set(v) {
       requireUiThread("Window.OnClosing")
       onClosing = v
@@ -562,6 +568,7 @@ public partial class Window {
   public prop CanMove bool{
     get {
       requireUiThread("Window.CanMove")
+      Cell.ObserveUntrackedRead()
       return if let native = host { native.CanMove } else { false }
     }
   }

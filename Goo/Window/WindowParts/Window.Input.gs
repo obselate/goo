@@ -32,7 +32,7 @@ public partial class Window {
 
   /// Enables animated scrolling and touch momentum. The default is true.
   public prop SmoothScrolling bool {
-    get -> smoothScrolling
+    get -> ReadUntrackedWindowValue(smoothScrolling)
     set(value) {
       requireUiThread("Window.SmoothScrolling")
       if smoothScrolling == value { return }
@@ -43,7 +43,7 @@ public partial class Window {
 
   /// Scales the platform wheel distance for this window. The default is 1.
   public prop WheelScrollScale float32 {
-    get -> wheelScrollScale
+    get -> ReadUntrackedWindowValue(wheelScrollScale)
     set(value) {
       requireUiThread("Window.WheelScrollScale")
       if !Single.IsFinite(value) || value <= 0.0F || value > 10.0F { throw ArgumentOutOfRangeException("value") }
@@ -54,7 +54,7 @@ public partial class Window {
 
   /// Sets the logical pixels a pressed mouse or pen pointer must move on either axis before a drag source starts a drag. Touch contacts start at 4. The default is 8.
   public prop DragStartDistance float32 {
-    get -> dragStartDistance
+    get -> ReadUntrackedWindowValue(dragStartDistance)
     set(value) {
       requireUiThread("Window.DragStartDistance")
       if !Single.IsFinite(value) || value <= 0.0F { throw ArgumentOutOfRangeException("value") }

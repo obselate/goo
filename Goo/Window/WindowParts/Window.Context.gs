@@ -25,13 +25,18 @@ public partial class Window {
         return value
     }
 
+    private func ReadUntrackedWindowValue[T any](value T) T {
+        Cell.ObserveUntrackedRead()
+        return value
+    }
+
     private func SyncWindowValues() {
         trackedState?.Sync(state)
-        trackedFocus?.Sync(IsFocused)
-        trackedSize?.Sync(Size)
-        trackedWidth?.Sync(NativeWidth)
-        trackedHeight?.Sync(NativeHeight)
-        trackedScale?.Sync(UiScale)
+        trackedFocus?.Sync(isFocused)
+        trackedSize?.Sync(CurrentSize)
+        trackedWidth?.Sync(host?.LogicalWidth ?? width)
+        trackedHeight?.Sync(host?.LogicalHeight ?? height)
+        trackedScale?.Sync(EffectiveUiScale)
         trackedPreferences?.Sync(preferences)
         trackedModifiers?.Sync(modifiers)
         SyncWindowFocus()

@@ -84,7 +84,7 @@ public partial class Window {
   /// Closing stops UI work and cancels Cell lifetimes before draining async handlers on the UI thread.
   /// After this bound, continuations run on a serialized background queue. They must not access UI state.
   public prop CloseDrainMs float64 {
-    get -> closeDrainMs
+    get -> ReadUntrackedWindowValue(closeDrainMs)
     set {
       if !Double.IsFinite(value) || value < 0.0 { throw ArgumentOutOfRangeException("value") }
       closeDrainMs = value

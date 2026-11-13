@@ -4,6 +4,24 @@ import System
 import System.Threading.Tasks
 
 internal class ContextFixtures {
+    func UntrackedWindowGetterKeepsCallbackFallbackContract() bool {
+        let previous = StateVerification.Override
+        try {
+            for verify in []bool{false, true} {
+                StateVerification.Enabled = verify
+                WindowReadFixtureValues.FallbackBuilds = 0
+                let window = Window{Root: WindowVisibilityFallbackCell(), Size: LayoutSize(100, 100)}
+                try {
+                    window.UpdateTree()
+                    if !WindowReadFixtureValues.FallbackHandle.Activate() { return false }
+                    window.UpdateTree()
+                    if WindowReadFixtureValues.FallbackBuilds != 2 { return false }
+                } finally { window.Close() }
+            }
+            return true
+        } finally { StateVerification.Override = previous }
+    }
+
     func WindowReadDoesNotOptInToTrackedStateContract() bool {
         let previous = StateVerification.Override
         try {
@@ -64,6 +82,9 @@ internal class ContextFixtures {
                 let window = Window{Root: root, Size: LayoutSize(200, 400)}
                 try {
                     window.UpdateTree()
+                    if !ChangeWindowValues(window, () -> {
+                        for index in 0 ... 11 { window.Tree!!.Children[index + 1].Fiber!!.RebuildAfterCallback() }
+                    }, verify ? []int32{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10} : []int32{}) { return false }
                     if !ChangeWindowValues(window, () -> { window.State = WindowState.Maximized }, []int32{0}) { return false }
                     if !ChangeWindowValues(window, () -> { window.State = WindowState.Maximized }, []int32{}) { return false }
                     if !ChangeWindowValues(window, () -> { window.Size = LayoutSize(240, 440) }, []int32{2, 3, 4}) { return false }
@@ -998,6 +1019,8 @@ internal class WindowReadFixtureValues {
         internal let FieldlessHandle ElementHandle = ElementHandle()
         internal var InputBuilds int32
         internal let InputHandle ElementHandle = ElementHandle()
+        internal var FallbackBuilds int32
+        internal let FallbackHandle ElementHandle = ElementHandle()
     }
 }
 
@@ -1014,8 +1037,11 @@ internal class WindowReadFixtureRoot : Cell {
     }
 }
 
-internal class WindowReadFixtureCell(kind int32) : Cell {
-    private let key int32 = kind
+internal class WindowReadFixtureCell : Cell {
+    private let key int32
+    private let declared State[int32] = State[int32](0)
+
+    init(kind int32) { key = kind }
 
     override func Build() Blob {
         WindowReadFixtureValues.Builds[key]++
@@ -1059,6 +1085,17 @@ internal class WindowInputStateCell : Cell[WindowInputStateValue] {
         return Button{
             Handle: WindowReadFixtureValues.InputHandle, Width: 100, Height: 40,
             OnClick: () -> {}, Text{Content: input.Tracked ? input.Value.Value.ToString() : "untracked"},
+        }
+    }
+}
+
+internal class WindowVisibilityFallbackCell : Cell {
+    private let declared State[int32] = State[int32](0)
+    override func Build() Blob {
+        WindowReadFixtureValues.FallbackBuilds++
+        return Button{
+            Handle: WindowReadFixtureValues.FallbackHandle, Width: 100, Height: 40,
+            OnClick: () -> {}, Text{Content: Host.IsVisible.ToString()},
         }
     }
 }

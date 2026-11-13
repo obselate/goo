@@ -149,6 +149,20 @@ public partial class Window {
     UpdateTreeCore(wallDt, simDt, realizeVirtual)
 
   private func UpdateTreeCore(wallDt float64, simDt float64, realizeVirtual bool = true) bool {
+    let previousCell = Cell.StateReader
+    let previousScope = StateReadScope.Current
+    let previousContext = ContextEnvironment.Enter(ContextEnvironment{})
+    Cell.StateReader = nil
+    StateReadScope.Current = nil
+    try { return UpdateTreeFrame(wallDt, simDt, realizeVirtual) }
+    finally {
+      Cell.StateReader = previousCell
+      StateReadScope.Current = previousScope
+      ContextEnvironment.Current = previousContext
+    }
+  }
+
+  private func UpdateTreeFrame(wallDt float64, simDt float64, realizeVirtual bool) bool {
     validateDelta(wallDt, "wallDt")
     validateDelta(simDt, "simDt")
     virtualRefreshDeferred = false

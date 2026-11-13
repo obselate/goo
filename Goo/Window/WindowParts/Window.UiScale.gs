@@ -9,7 +9,7 @@ public partial class Window {
   private var uiScaleSet bool
 
   private prop EffectiveUiScale float32 {
-    get -> if uiScaleSet { uiScale } else { Owner?.EffectiveUiScale ?? 1.0F }
+    get -> if uiScaleSet { uiScale } else { family?.Owner?.EffectiveUiScale ?? 1.0F }
   }
 
   /// Gets or sets the layout and rendering scale, clamped to 0.5 through 3. The default is 1, or the owner's scale when not explicitly set.
@@ -19,22 +19,22 @@ public partial class Window {
     set(value) {
       requireUiThread("Window.UiScale")
       if !Single.IsFinite(value) { throw ArgumentOutOfRangeException("value") }
-      let previous = UiScale
+      let previous = EffectiveUiScale
       uiScale = Math.Clamp(value, 0.5F, 3.0F)
       uiScaleSet = true
-      if previous != UiScale { invalidateUiScale() }
+      if previous != EffectiveUiScale { invalidateUiScale() }
     }
   }
 
   /// Gets the display scale multiplied by UiScale, the factor used to snap layout positions and translation-only transforms to device pixels on both axes.
-  public prop PixelScale float32 { get -> RenderScale.X }
+  public prop PixelScale float32 { get -> ReadUntrackedWindowValue(RenderScale.X) }
 
-  internal prop LayoutWidth float32 { get -> offscreenViewport?.X ?? float32(NativeWidth) / UiScale }
-  internal prop LayoutHeight float32 { get -> offscreenViewport?.Y ?? float32(NativeHeight) / UiScale }
-  internal prop RenderScale Vector2 { get -> dpi * UiScale }
+  internal prop LayoutWidth float32 { get -> offscreenViewport?.X ?? float32(host?.LogicalWidth ?? width) / EffectiveUiScale }
+  internal prop LayoutHeight float32 { get -> offscreenViewport?.Y ?? float32(host?.LogicalHeight ?? height) / EffectiveUiScale }
+  internal prop RenderScale Vector2 { get -> dpi * EffectiveUiScale }
 
   private func invalidateUiScale() {
-    input.ChangeUiScale(node, resolver, UiScale)
+    input.ChangeUiScale(node, resolver, EffectiveUiScale)
     pendingReconcileEffects = combineEffects(pendingReconcileEffects,
       ReconcileEffects.Layout | ReconcileEffects.Paint | ReconcileEffects.Input | ReconcileEffects.Accessibility)
     accessibility?.MarkDirty()
@@ -54,5 +54,5 @@ public partial class Window {
     host?.Wake()
   }
 
-  private func scaledSize(value float64) int32 -> int32(Math.Min(float64(Int32.MaxValue), Math.Round(value * float64(UiScale))))
+  private func scaledSize(value float64) int32 -> int32(Math.Min(float64(Int32.MaxValue), Math.Round(value * float64(EffectiveUiScale))))
 }
