@@ -68,11 +68,10 @@ namespace Facebook.Yoga
         }
 
         public static StyleLength Mixed(float pixels, float percent) =>
-            new StyleLength(new FloatOptional(percent), Unit.Percent, pixels);
+            pixels == 0 ? new StyleLength(new FloatOptional(percent), Unit.Percent) : new MixedStyleLength(pixels, percent);
 
-        public float Offset => _offset;
-        public bool IsMixed => _offset != 0;
-
+        public float Offset => this is MixedStyleLength mixed ? mixed.Pixels : 0;
+        public bool IsMixed => this is MixedStyleLength;
         public bool IsAuto() => _unit == Unit.Auto;
 
         public bool IsUndefined() => _unit == Unit.Undefined;
@@ -92,7 +91,7 @@ namespace Facebook.Yoga
                 case Unit.Point:
                     return _value;
                 case Unit.Percent:
-                    return new FloatOptional(_offset + _value.Unwrap() * referenceLength * 0.01f);
+                    return new FloatOptional(Offset + _value.Unwrap() * referenceLength * 0.01f);
                 default:
                     return FloatOptional.Undefined;
             }
@@ -111,12 +110,12 @@ namespace Facebook.Yoga
         public bool Equals(StyleLength? other)
         {
             if (other is null) return false;
-            return _value.Equals(other._value) && _unit == other._unit && _offset == other._offset;
+            return _value.Equals(other._value) && _unit == other._unit && Offset == other.Offset;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(_value, _unit, _offset);
+            return HashCode.Combine(_value, _unit, Offset);
         }
 
         public static bool operator ==(StyleLength? left, StyleLength? right)
@@ -132,20 +131,29 @@ namespace Facebook.Yoga
 
         public bool InexactEquals(StyleLength other)
         {
-            return _unit == other._unit && _offset == other._offset &&
+            return _unit == other._unit && Offset == other.Offset &&
                 InexactEquals(_value, other._value);
         }
 
-        private StyleLength(FloatOptional value, Unit unit, float offset = 0)
+        private StyleLength(FloatOptional value, Unit unit)
         {
             _value = value;
             _unit = unit;
-            _offset = offset;
         }
 
         private readonly FloatOptional _value;
         private readonly Unit _unit = Unit.Undefined;
-        private readonly float _offset;
+
+        private sealed class MixedStyleLength : StyleLength
+        {
+            internal readonly float Pixels;
+
+            internal MixedStyleLength(float pixels, float percent)
+                : base(new FloatOptional(percent), Unit.Percent)
+            {
+                Pixels = pixels;
+            }
+        }
 
         private static bool IsUndefined(float value)
         {
