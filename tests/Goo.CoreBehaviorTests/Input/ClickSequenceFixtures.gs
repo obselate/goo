@@ -170,12 +170,12 @@ internal class ClickSequenceFixtures {
   }
   func PointerDragThresholdAndSuppressedClickContract() bool {
     var clicks int32
-    let phases = List[PointerDragPhase]()
+    let phases = List[GesturePhase]()
     let resolver = Resolver{}
     let reconciler = Reconciler{Res: resolver}
     let root = reconciler.Mount(Button{
       Width: 100, Height: 80, PointerDragThreshold: 8,
-      PointerDragAxis: Goo.Gestures.PanAxis.Horizontal,
+      PointerDragAxis: LayoutAxis.Horizontal,
       OnClick: () -> { clicks++ },
       OnPointerDrag: (e PointerDragEvent) -> { phases.Add(e.Phase) },
     })
@@ -191,7 +191,7 @@ internal class ClickSequenceFixtures {
     input.QueuePointerRelease(30.0F, 20.0F)
     input.Drain(root, resolver, 1.0, nil)
     return clicks == 1 && phases.Count == 2
-      && phases[0] == PointerDragPhase.Started && phases[1] == PointerDragPhase.Ended
+      && phases[0] == GesturePhase.Started && phases[1] == GesturePhase.Completed
   }
 
 }

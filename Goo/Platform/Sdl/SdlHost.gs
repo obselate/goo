@@ -408,13 +408,13 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     let native = SDL.GetClipboardText()
     try {
       let error = SDL.GetErrorS()
-      if !String.IsNullOrEmpty(error) { return ClipboardTextResult(ClipboardTextStatus.Failed, error: error) }
+      if !String.IsNullOrEmpty(error) { return ClipboardTextResult(ClipboardReadStatus.Failed, error: error) }
       let text = ClipboardTransfer.BoundedUtf8(nint(native), ClipboardTransfer.MaxTextBytes)
-      return ClipboardTextResult(if text.Length == 0 { ClipboardTextStatus.Empty } else { ClipboardTextStatus.Success }, text)
+      return ClipboardTextResult(if text.Length == 0 { ClipboardReadStatus.Empty } else { ClipboardReadStatus.Success }, text)
     } catch (error ClipboardLimitException) {
-      return ClipboardTextResult(ClipboardTextStatus.TooLarge, error: error.Message)
+      return ClipboardTextResult(ClipboardReadStatus.TooLarge, error: error.Message)
     } catch (error Exception) {
-      return ClipboardTextResult(ClipboardTextStatus.Failed, error: error.Message)
+      return ClipboardTextResult(ClipboardReadStatus.Failed, error: error.Message)
     } finally { SDL.Free(native) }
   }
 

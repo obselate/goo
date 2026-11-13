@@ -63,7 +63,7 @@ internal class PopupWindowSmoke {
         WindowReadbackTestFixture.ForceRender(owner, 0.0, 15.0)
         PumpUntil(owner, popup, () -> root.Host?.IsVisible == true)
         WindowReadbackTestFixture.ForceRender(root.Host!!, 0.0, 15.0)
-        Require(popup.Metrics.LogicalWidth == 150 && popup.Metrics.LogicalHeight == 120
+        Require(popup.Metrics.NativeWidth == 150 && popup.Metrics.NativeHeight == 120
           && popup.Metrics.FramebufferWidth > 0, "Native popup did not apply the owner's UI scale")
         let update = popup.UpdatePlacement(ElementRect{ X: 10.0, Y: 10.0, Width: 20.0, Height: 20.0 }, 120, 90)
         Require(update == WindowOperationResult.Accepted, "Native popup reposition failed")

@@ -145,7 +145,7 @@ public partial class Window {
       initializingGraphics = false
       x = native.X
       y = native.Y
-      input.SetUiScale(UiScale)
+      input.SetUiScale(float32(UiScale))
       native.TransferPost = Post
       native.NativeDragPost = postNativeDragStart
       input.Attach(native)
@@ -893,8 +893,8 @@ internal func ResolveWindowMetrics(width int32, height int32, fbWidth int32, fbH
       scaleY = float64(displayScale)
     }
   return WindowMetrics{
-    LogicalWidth: width,
-    LogicalHeight: height,
+    NativeWidth: width,
+    NativeHeight: height,
     FramebufferWidth: fbWidth,
     FramebufferHeight: fbHeight,
     DisplayScaleX: scaleX,

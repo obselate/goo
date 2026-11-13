@@ -58,8 +58,8 @@ VulkanReadbackResult{
 func RoundedResizeRequireFirstFrame(result VulkanReadbackResult,
   metrics WindowMetrics, iteration int32) {
     PrimitiveRequirePixelNear(result.Pixels, result.Width, metrics,
-      float64(metrics.LogicalWidth) * 0.5,
-      float64(metrics.LogicalHeight) * 0.5,
+      float64(metrics.NativeWidth) * 0.5,
+      float64(metrics.NativeHeight) * 0.5,
       uint8(48), uint8(208), uint8(112), 8,
       "rounded_resize_child_" + iteration.ToString())
     PrimitiveRequirePixelNear(result.Pixels, result.Width, metrics,
@@ -219,7 +219,7 @@ func RunRoundedResizeFirstFrameSmoke() {
         "Rounded resize synthetic resize failed at " + iteration.ToString())
       WindowReadbackTestFixture.UpdateTreeOnly(opened, 0.0)
       let metrics = WindowReadbackTestFixture.Metrics(opened)
-      Require(metrics.LogicalWidth == width && metrics.LogicalHeight == height
+      Require(metrics.NativeWidth == width && metrics.NativeHeight == height
           && metrics.FramebufferWidth == pixelWidth && metrics.FramebufferHeight == pixelHeight,
         "Rounded resize metrics were incorrect at " + iteration.ToString())
       let result = RoundedResizeCaptureFirstFrame(opened, metrics)

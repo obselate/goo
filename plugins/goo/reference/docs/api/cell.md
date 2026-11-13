@@ -296,6 +296,12 @@ Builds the component tree from the current immutable input snapshot.
 
 Returns: the root blob for this component
 
+### `InputChanged(TInput)`
+
+Derives local state from the newly stored immutable input before Build. Runs for the first input and later inputs that differ by EqualityComparer[TInput].Default. Reads here are not tracked. State writes are allowed and coalesce with this rebuild. The window is already bound, so Host, Post, After, Every and Lifetime are valid.
+
+- `input`: the current input snapshot, already stored in Input
+
 ### `InvokeInputCallback(System.Action)`
 
 Invokes an input-time callback and rebuilds the Cell that supplied this input. A supplying Cell already in Build needs no extra rebuild. Call Build-time queries directly. They must not change the supplying Cell's state.
