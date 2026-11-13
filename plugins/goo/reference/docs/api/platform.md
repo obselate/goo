@@ -102,7 +102,6 @@ Releases presentation resources and waits for submitted GPU work to finish. The 
 
 Closes the attached window and releases its retained and presentation resources. Pumps UI-thread continuations until the window's close drain completes or expires.
 
-
 ### `GetNativeHandle`
 
 Returns the native viewport handle used for diagnostics.
