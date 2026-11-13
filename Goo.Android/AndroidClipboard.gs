@@ -33,6 +33,29 @@ internal sealed class AndroidClipboard : IDisposable {
 
     public func Dispose() -> Volatile.Write(ref disposed, true)
 
+    internal func ReadText() ClipboardTextResult {
+        try {
+            if Volatile.Read(ref disposed) || !view.HasWindowFocus {
+                return ClipboardTextResult(ClipboardTextStatus.Failed, error: "Clipboard reads require a focused Goo view")
+            }
+            using let clip = Manager.PrimaryClip
+            using let text = if clip != nil && clip.ItemCount > 0 {
+                clip.GetItemAt(0)?.CoerceToTextFormatted(context)
+            } else { nil }
+            if text == nil { return ClipboardTextResult(ClipboardTextStatus.Empty) }
+            if text.Length() > ClipboardTransfer.MaxTextBytes {
+                return ClipboardTextResult(ClipboardTextStatus.TooLarge, error: "Clipboard text exceeds 16 MiB")
+            }
+            let value = text.ToString()
+            if !ClipboardTransfer.TextFits(value) {
+                return ClipboardTextResult(ClipboardTextStatus.TooLarge, error: "Clipboard text exceeds 16 MiB")
+            }
+            return ClipboardTextResult(if value.Length == 0 { ClipboardTextStatus.Empty } else { ClipboardTextStatus.Success }, value)
+        } catch (error Exception) {
+            return ClipboardTextResult(ClipboardTextStatus.Failed, error: error.Message)
+        }
+    }
+
     internal func Query() ClipboardFormats {
         try {
             let snapshot = Capture(false)
@@ -217,6 +240,7 @@ internal sealed class AndroidClipboard : IDisposable {
             return ClipboardWriteResult(DataTransferStatus.TooLarge, "Clipboard exceeds 4096 items")
         }
         let generation = Interlocked.Increment(ref writeGeneration)
+        let cancellation = view.Window.Closed
         var publication string?
         try {
             if data.Representations.Count > 0 {
@@ -245,7 +269,8 @@ internal sealed class AndroidClipboard : IDisposable {
                 TaskCompletionSource[ClipboardWriteResult](TaskCreationOptions.RunContinuationsAsynchronously)
             if !Main.Post(() -> {
                 try {
-                    if Volatile.Read(ref disposed) || generation != Interlocked.Read(ref writeGeneration) {
+                    if cancellation.IsCancellationRequested || Volatile.Read(ref disposed)
+                        || generation != Interlocked.Read(ref writeGeneration) {
                         if let staged = publication { GooClipboardProvider.Discard(context, staged) }
                         completion.SetResult(ClipboardWriteResult(DataTransferStatus.Cancelled,
                             "Clipboard publication was superseded"))
