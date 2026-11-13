@@ -60,7 +60,7 @@ class ExplicitKeyBindingTests {
             Children: []Blob{
                 if kind == 0 { cast[Blob](TextEntry{Handle: handle, Value: "text"}) }
                 else if kind == 1 || kind == 2 {
-                    cast[Blob](TextEditor(controller){Handle = handle, ReadOnly = kind == 2})
+                    cast[Blob](TextEditor(){Controller = controller, Handle = handle, ReadOnly = kind == 2})
                 } else if kind == 3 {
                     cast[Blob](Container{Handle: handle, Focusable: true, OnTextInput: (_ string) -> {}})
                 } else { cast[Blob](Button{Handle: handle}) }
