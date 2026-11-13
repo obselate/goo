@@ -1133,6 +1133,10 @@ Reports whether Alt is pressed.
 
 Reports whether Ctrl is pressed.
 
+### `HasPrimary`
+
+Reports whether Super on macOS or Ctrl on other systems is held, regardless of other modifiers.
+
 ### `None`
 
 Gets a value with no modifier keys pressed.
@@ -1288,10 +1292,6 @@ Reports Phase, owner-local Position, WindowPosition, cumulative Translation, per
 
 
 Routes platform events and composition through the window's existing input system. Call on the window owner thread. Use Window.Post to dispatch from another thread.
-
-### `EditorChanged`
-
-Reports settled focus, text, selection, composition, and caret-area changes.
 
 ### `BeginDrag(ElementHandle,KeyModifiers)`
 
@@ -1455,34 +1455,17 @@ Gets the stable pointer identifier.
 
 Gets the position relative to the receiving element.
 
+### `Reason`
+
+Gets why the drag was canceled, or None for other transitions.
+
 ### `Translation`
 
 Gets the displacement from the press position in element-local units.
 
 ### `WindowPosition`
 
-Gets the position in logical window units.
-
-## `PointerDragPhase`
-
-
-Identifies a captured pointer drag transition.
-
-### `Canceled`
-
-Reports cancellation, capture loss, unmount or an unavailable target.
-
-### `Ended`
-
-Reports the matching primary-pointer release.
-
-### `Moved`
-
-Reports a sample after the drag starts and before it terminates.
-
-### `Started`
-
-Reports the press or the first sample that reaches the threshold.
+Gets the position in layout units.
 
 ## `PointerEvent`
 
@@ -1645,6 +1628,10 @@ Gets the wheel position in logical window coordinates.
 
 
 Provides owner-thread focus state, selection, and text commands for one window.
+
+### `EditorChanged`
+
+Reports settled focus, text, selection, composition, and caret-area changes.
 
 ### `Clear`
 
