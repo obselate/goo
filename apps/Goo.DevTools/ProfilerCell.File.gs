@@ -80,7 +80,8 @@ internal partial class ProfilerCell {
                 }
             )
             fileBusy = true
-            go CompleteBrowse(task, Lifetime)
+            let token = Lifetime
+            go CompleteBrowse(task, token)
         } catch (error Exception) {
             fileBusy = false
             fileStatus = error.Message
@@ -124,7 +125,8 @@ internal partial class ProfilerCell {
             }
             fileBusy = true
             fileStatus = ""
-            go CompleteFile(path, importing, trace, Lifetime)
+            let token = Lifetime
+            go CompleteFile(path, importing, trace, token)
         } catch (error Exception) {
             fileBusy = false
             fileStatus = error.Message
