@@ -612,6 +612,9 @@ internal partial class PointerInput {
       }
       return canceled
     }
+    if let drag = current.PointerDrag {
+      if drag.Target.Current?.OnPointerDrag == nil { clearCapture() }
+    }
     var routeUnavailable = false
     if current.CapturePath.Count > 0 {
       routeUnavailable = !rebuildCapturePath(tree)
@@ -1226,6 +1229,7 @@ internal class PointerContact {
   internal var HeldButtons PointerButtons
   internal var CanceledButtons PointerButtons
   internal var Canceling bool
+  internal var PointerDrag PointerDragState?
   private var captureTargetMount NodeMount
   internal prop CaptureTarget Node? {
     get -> captureTargetMount.Current

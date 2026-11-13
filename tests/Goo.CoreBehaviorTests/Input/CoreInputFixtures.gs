@@ -2948,6 +2948,122 @@ internal class InputFixtures {
     return nil
   }
 
+  func PointerDragCaptureCoordinatesAndHitContract() bool {
+    let events = List[PointerDragEvent]()
+    let hits = List[bool]()
+    let resolver = Resolver{}
+    let root = Reconciler{Res: resolver}.Mount(Container{
+      Width: 200, Height: 100,
+      Button{Width: 50, Height: 40, OnPointerDrag: (e PointerDragEvent) -> {
+        events.Add(e)
+        hits.Add(e.IsOverTarget)
+      }},
+    })
+    Layout().Calculate(root, 200.0F, 100.0F)
+    let input = InputCoordinator()
+    input.QueuePointerMove(10.0F, 10.0F)
+    input.Drain(root, resolver, 0.0, nil)
+    if events.Count != 0 { return false }
+    input.QueuePointerPress(10.0F, 10.0F)
+    input.QueuePointerMove(75.0F, 10.0F)
+    input.QueuePointerRelease(80.0F, 10.0F)
+    input.QueuePointerCancel(0, PointerDevice.Mouse)
+    input.Drain(root, resolver, 0.0, nil)
+    return events.Count == 3 && events[0].Phase == PointerDragPhase.Started
+      && events[1].Phase == PointerDragPhase.Moved && events[2].Phase == PointerDragPhase.Ended
+      && events[1].Position.X == 75.0 && events[1].Translation.X == 65.0
+      && events[1].Delta.X == 65.0 && events[2].Delta.X == 5.0
+      && hits[0] && !hits[1] && !hits[2]
+  }
+
+  func PointerDragUsesTrackedCallbackRebuildContract() bool {
+    InputTrackedDragCell.Builds = 0
+    let driver = InputFixtureDriver(InputTrackedDragCell{}, 100, 100)
+    try {
+      let initial = InputTrackedDragCell.Builds
+      driver.Input.QueuePointerMove(20.0F, 20.0F)
+      driver.Input.QueuePointerPress(20.0F, 20.0F)
+      driver.Input.QueuePointerMove(25.0F, 20.0F)
+      driver.Drain()
+      if InputTrackedDragCell.Builds != initial { return false }
+      driver.Input.QueuePointerMove(35.0F, 20.0F)
+      driver.Drain()
+      if InputTrackedDragCell.Builds != initial + 1 || driver.Window.Tree?.Children[0].Content != "1" {
+        return false
+      }
+      driver.Input.QueuePointerMove(40.0F, 20.0F)
+      driver.Input.QueuePointerCancel(0, PointerDevice.Mouse)
+      driver.Drain()
+      if InputTrackedDragCell.Builds != initial + 1 { return false }
+      driver.Input.QueuePointerPress(20.0F, 20.0F)
+      driver.Input.QueuePointerRelease(20.0F, 20.0F)
+      driver.Drain()
+      return InputTrackedDragCell.Builds == initial + 1
+    } finally { driver.Window.Close() }
+  }
+
+  func PointerDragTouchCaptureMatchesRawCaptureContract() bool {
+    for automatic in []bool{false, true} {
+      let child = automatic
+        ? Container{Width: 200, Height: 80, FlexShrink: 0,
+          OnPointerDrag: (_ PointerDragEvent) -> {}, PointerDragThreshold: 8,
+          PointerDragAxis: Goo.Gestures.PanAxis.Horizontal}
+        : Container{Width: 200, Height: 80, FlexShrink: 0,
+          OnPointerDown: (e PointerEvent) -> e.Capture()}
+      let resolver = Resolver{}
+      let root = Reconciler{Res: resolver}.Mount(Container{
+        Width: 200, Height: 100, OverflowY: Overflow.Scroll,
+        child, Container{Width: 200, Height: 300, FlexShrink: 0},
+      })
+      Layout().Calculate(root, 200.0F, 100.0F)
+      if maxScrollY(root) <= 0.0F { return false }
+      let input = InputCoordinator()
+      input.QueuePointerPress(101, PointerDevice.Touch, 25.0F, 60.0F, PointerButton.Primary, KeyModifiers{})
+      input.QueuePointerMove(101, PointerDevice.Touch, 25.0F, 20.0F, KeyModifiers{})
+      input.QueuePointerRelease(101, PointerDevice.Touch, 25.0F, 20.0F, PointerButton.Primary, KeyModifiers{})
+      input.Drain(root, resolver, 0.0, nil)
+      if root.ScrollY != 0.0F { return false }
+    }
+    return true
+  }
+
+  func PointerDragCancelUsesNewestCallbackContract() bool {
+    var calls int32
+    let declaration = (increment int32) -> Container{
+      Width: 50, Height: 40, OnPointerDrag: (e PointerDragEvent) -> {
+        if e.Phase == PointerDragPhase.Canceled { calls += increment }
+      },
+    }
+    let resolver = Resolver{}
+    let root = Reconciler{Res: resolver}.Mount(declaration(1))
+    Layout().Calculate(root, 50.0F, 40.0F)
+    let input = InputCoordinator()
+    input.QueuePointerPress(10.0F, 10.0F)
+    input.Drain(root, resolver, 0.0, nil)
+    let replacement = Reconciler{Res: resolver}
+    replacement.Diff(root, declaration(10))
+    if (int32(replacement.Effects) & int32(ReconcileEffects.Input)) != 0 { return false }
+    input.AfterTreeUpdated(root, resolver, false)
+    input.QueuePointerCancel(0, PointerDevice.Mouse)
+    input.Drain(root, resolver, 0.0, nil)
+    return calls == 10
+  }
+
+}
+
+internal class InputTrackedDragCell : Cell {
+  private let value State[int32] = State[int32](0)
+
+  shared { internal var Builds int32 }
+
+  override func Build() Blob {
+    Builds++
+    return Button{Width: 80, Height: 40, OnPointerDrag: Drag, Text{Content: value.Value.ToString()}}
+  }
+
+  private func Drag(e PointerDragEvent) {
+    if e.Phase == PointerDragPhase.Moved && e.Translation.X >= 10.0 { value.Value = 1 }
+  }
 }
 
 internal class InputActivityCell : Cell {

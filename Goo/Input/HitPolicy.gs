@@ -20,6 +20,7 @@ internal func resolvedHitTestSelf(b Blob, focusable bool, entries StyleEntries?,
     if b.OnPointerMove != nil { return true }
     if b.OnPointerUp != nil { return true }
     if b.OnPointerCancel != nil { return true }
+    if b.OnPointerDrag != nil { return true }
     if b.OnPointerEnter != nil { return true }
     if b.OnPointerLeave != nil { return true }
     if b.OnWheel != nil { return true }

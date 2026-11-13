@@ -720,19 +720,23 @@ internal class Node {
   internal func SyncPointerCallbacks(b Blob) bool {
     if pointerState == nil && b.OnClick == nil && b.OnPointerDown == nil
       && b.OnPointerMove == nil && b.OnPointerUp == nil
-      && b.OnPointerCancel == nil && b.OnWheel == nil { return false }
+      && b.OnPointerCancel == nil && b.OnPointerDrag == nil && b.OnWheel == nil { return false }
     let state = EnsurePointerState()
     let changed = (state.OnClick != nil) != (b.OnClick != nil)
       || (state.OnPointerDown != nil) != (b.OnPointerDown != nil)
       || (state.OnPointerMove != nil) != (b.OnPointerMove != nil)
       || (state.OnPointerUp != nil) != (b.OnPointerUp != nil)
       || (state.OnPointerCancel != nil) != (b.OnPointerCancel != nil)
+      || (state.OnPointerDrag != nil) != (b.OnPointerDrag != nil)
       || (state.OnWheel != nil) != (b.OnWheel != nil)
     state.OnClick = b.OnClick
     state.OnPointerDown = b.OnPointerDown
     state.OnPointerMove = b.OnPointerMove
     state.OnPointerUp = b.OnPointerUp
     state.OnPointerCancel = b.OnPointerCancel
+    state.OnPointerDrag = b.OnPointerDrag
+    state.PointerDragThreshold = b.PointerDragThreshold
+    state.PointerDragAxis = b.PointerDragAxis
     state.OnWheel = b.OnWheel
     return changed
   }
@@ -770,6 +774,27 @@ internal class Node {
     set {
       if pointerState == nil && value == nil { return }
       EnsurePointerState().OnPointerCancel = value
+    }
+  }
+  internal prop OnPointerDrag ((PointerDragEvent) -> void)? {
+    get -> pointerState?.OnPointerDrag
+    set {
+      if pointerState == nil && value == nil { return }
+      EnsurePointerState().OnPointerDrag = value
+    }
+  }
+  internal prop PointerDragThreshold float64 {
+    get -> pointerState?.PointerDragThreshold ?? 0.0
+    set {
+      if pointerState == nil && value == 0.0 { return }
+      EnsurePointerState().PointerDragThreshold = value
+    }
+  }
+  internal prop PointerDragAxis Goo.Gestures.PanAxis {
+    get -> pointerState?.PointerDragAxis ?? Goo.Gestures.PanAxis.Both
+    set {
+      if pointerState == nil && value == Goo.Gestures.PanAxis.Both { return }
+      EnsurePointerState().PointerDragAxis = value
     }
   }
   internal prop OnWheel ((WheelEvent) -> void)?{

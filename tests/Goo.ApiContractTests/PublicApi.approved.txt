@@ -235,6 +235,7 @@ enum-underlying|Goo.PlatformOpenStatus|System.Int32
 enum-underlying|Goo.PointerButtons|System.Int32
 enum-underlying|Goo.PointerButton|System.Int32
 enum-underlying|Goo.PointerDevice|System.Int32
+enum-underlying|Goo.PointerDragPhase|System.Int32
 enum-underlying|Goo.PopupDismissReason|System.Int32
 enum-underlying|Goo.PopupKind|System.Int32
 enum-underlying|Goo.PopupStatus|System.Int32
@@ -797,6 +798,10 @@ enum|Goo.PointerButton|Secondary|2
 enum|Goo.PointerDevice|Mouse|0
 enum|Goo.PointerDevice|Pen|2
 enum|Goo.PointerDevice|Touch|1
+enum|Goo.PointerDragPhase|Canceled|3
+enum|Goo.PointerDragPhase|Ended|2
+enum|Goo.PointerDragPhase|Moved|1
+enum|Goo.PointerDragPhase|Started|0
 enum|Goo.PopupDismissReason|Escape|1
 enum|Goo.PopupDismissReason|FocusLost|3
 enum|Goo.PopupDismissReason|OutsideInteraction|2
@@ -1532,6 +1537,8 @@ method|Goo.PlatformPreferences|ToString|virtual|public|generic:|()->System.Strin
 method|Goo.PlatformPreferences|op_Equality|static|public|generic:|(left:Goo.PlatformPreferences,right:Goo.PlatformPreferences)->System.Boolean
 method|Goo.PlatformPreferences|op_Inequality|static|public|generic:|(left:Goo.PlatformPreferences,right:Goo.PlatformPreferences)->System.Boolean
 method|Goo.Platform|OpenAsync|static|public|generic:|(target:System.String,cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<Goo.PlatformOpenResult>
+method|Goo.PointerDragEvent|PreventDefault|instance|public|generic:|()->System.Void
+method|Goo.PointerDragEvent|StopPropagation|instance|public|generic:|()->System.Void
 method|Goo.PointerEvent|Capture|instance|public|generic:|()->System.Void
 method|Goo.PointerEvent|PreventDefault|instance|public|generic:|()->System.Void
 method|Goo.PointerEvent|ReleaseCapture|instance|public|generic:|()->System.Void
@@ -2088,6 +2095,7 @@ property|Goo.Blob|OnKeyDown|System.Action`1<Goo.KeyEvent>?|instance|get:public,i
 property|Goo.Blob|OnKeyUp|System.Action`1<Goo.KeyEvent>?|instance|get:public,init:public|index:()
 property|Goo.Blob|OnPointerCancel|System.Action`1<Goo.PointerEvent>?|instance|get:public,init:public|index:()
 property|Goo.Blob|OnPointerDown|System.Action`1<Goo.PointerEvent>?|instance|get:public,init:public|index:()
+property|Goo.Blob|OnPointerDrag|System.Action`1<Goo.PointerDragEvent>?|instance|get:public,init:public|index:()
 property|Goo.Blob|OnPointerEnter|System.Action`1<Goo.PointerEvent>?|instance|get:public,init:public|index:()
 property|Goo.Blob|OnPointerLeave|System.Action`1<Goo.PointerEvent>?|instance|get:public,init:public|index:()
 property|Goo.Blob|OnPointerMove|System.Action`1<Goo.PointerEvent>?|instance|get:public,init:public|index:()
@@ -2097,6 +2105,8 @@ property|Goo.Blob|OnTextCompositionCancel|System.Action?|instance|get:public,ini
 property|Goo.Blob|OnTextComposition|System.Action`1<Goo.TextCompositionEvent>?|instance|get:public,init:public|index:()
 property|Goo.Blob|OnTextInput|System.Action`1<System.String>?|instance|get:public,init:public|index:()
 property|Goo.Blob|OnWheel|System.Action`1<Goo.WheelEvent>?|instance|get:public,init:public|index:()
+property|Goo.Blob|PointerDragAxis|Goo.Gestures.PanAxis|instance|get:public,init:public|index:()
+property|Goo.Blob|PointerDragThreshold|System.Double|instance|get:public,init:public|index:()
 property|Goo.Blob|TabStop|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.Blob|TransitionDelayMs|System.Double|instance|get:public,init:public|index:()
 property|Goo.Blob|TransitionEasing|Goo.Easing|instance|get:public,init:public|index:()
@@ -2480,6 +2490,15 @@ property|Goo.PlatformPreferences|PreferredLocales|System.Collections.Generic.IRe
 property|Goo.PlatformPreferences|ReducedMotion|System.Nullable`1<System.Boolean>|instance|get:public,init:public|index:()
 property|Goo.PlatformPreferences|TextScaleFactor|System.Nullable`1<System.Single>|instance|get:public,init:public|index:()
 property|Goo.PlatformPreferences|Theme|Goo.SystemTheme|instance|get:public,init:public|index:()
+property|Goo.PointerDragEvent|Delta|Goo.Point|instance|get:public,init:public|index:()
+property|Goo.PointerDragEvent|Device|Goo.PointerDevice|instance|get:public|index:()
+property|Goo.PointerDragEvent|IsOverTarget|System.Boolean|instance|get:public|index:()
+property|Goo.PointerDragEvent|Modifiers|Goo.KeyModifiers|instance|get:public|index:()
+property|Goo.PointerDragEvent|Phase|Goo.PointerDragPhase|instance|get:public,init:public|index:()
+property|Goo.PointerDragEvent|PointerId|System.Int64|instance|get:public|index:()
+property|Goo.PointerDragEvent|Position|Goo.Point|instance|get:public|index:()
+property|Goo.PointerDragEvent|Translation|Goo.Point|instance|get:public,init:public|index:()
+property|Goo.PointerDragEvent|WindowPosition|Goo.Point|instance|get:public|index:()
 property|Goo.PointerEvent|Buttons|Goo.PointerButtons|instance|get:public,init:public|index:()
 property|Goo.PointerEvent|Button|Goo.PointerButton|instance|get:public,init:public|index:()
 property|Goo.PointerEvent|ClickCount|System.Int32|instance|get:public,init:public|index:()
@@ -3218,6 +3237,8 @@ type|Goo.Platform|class|public|base:System.Object|interfaces:|generic:
 type|Goo.PointerButtons|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.PointerButton|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.PointerDevice|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.PointerDragEvent|struct|public|base:System.ValueType|interfaces:|generic:
+type|Goo.PointerDragPhase|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.PointerEvent|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.Point|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.Point>|generic:
 type|Goo.PopupDismissReason|enum|public|base:System.Enum|interfaces:|generic:
