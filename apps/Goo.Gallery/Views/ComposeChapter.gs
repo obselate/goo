@@ -297,7 +297,11 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
             Cell.Mount[GalleryRangeInput, GalleryRange](
                 "poster-width",
                 GalleryRangeInput{
-                    Label: "Poster width", MinValue: 380.0, MaxValue: 1120.0, Value: posterWidth, Step: 10.0,
+                    Label: "Poster width",
+                    MinValue: 380.0,
+                    MaxValue: 1120.0,
+                    Value: posterWidth,
+                    Step: 10.0,
                     OnChange: (value float64) -> {
                         posterWidth = value
                         Rebuild()

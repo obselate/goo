@@ -790,7 +790,11 @@ class StudioCell : Cell {
                 Cell.Mount[GalleryRangeInput, GalleryRange](
                     "studio-c0",
                     GalleryRangeInput{
-                        Label: firstLabel(), MinValue: firstMin(), MaxValue: firstMax(), Value: c0, Step: firstStep(),
+                        Label: firstLabel(),
+                        MinValue: firstMin(),
+                        MaxValue: firstMax(),
+                        Value: c0,
+                        Step: firstStep(),
                         OnChange: (value float64) -> {
                             c0 = value
                             Rebuild()
@@ -812,7 +816,11 @@ class StudioCell : Cell {
                 Cell.Mount[GalleryRangeInput, GalleryRange](
                     "studio-c1",
                     GalleryRangeInput{
-                        Label: secondLabel(), MinValue: secondMin(), MaxValue: secondMax(), Value: c1, Step: secondStep(),
+                        Label: secondLabel(),
+                        MinValue: secondMin(),
+                        MaxValue: secondMax(),
+                        Value: c1,
+                        Step: secondStep(),
                         OnChange: (value float64) -> {
                             c1 = value
                             Rebuild()
@@ -834,7 +842,11 @@ class StudioCell : Cell {
                 Cell.Mount[GalleryRangeInput, GalleryRange](
                     "studio-c2",
                     GalleryRangeInput{
-                        Label: thirdLabel(), MinValue: thirdMin(), MaxValue: thirdMax(), Value: c2, Step: thirdStep(),
+                        Label: thirdLabel(),
+                        MinValue: thirdMin(),
+                        MaxValue: thirdMax(),
+                        Value: c2,
+                        Step: thirdStep(),
                         OnChange: (value float64) -> {
                             c2 = value
                             Rebuild()
