@@ -218,10 +218,8 @@ internal partial class Layout {
     guard let yoga = node.Yoga else { return }
     let width = BoxGeometry.ContentWidth(node)
     let height = BoxGeometry.ContentHeight(node)
-    let scrollX = node.ScrollX
-    let scrollY = node.ScrollY
-    let x = node.Rect.X + CustomLayouts.Inset(yoga, YGEdge.Left) - node.ScrollX
-    let y = node.Rect.Y + CustomLayouts.Inset(yoga, YGEdge.Top) - node.ScrollY
+    let x = node.Rect.X + CustomLayouts.Inset(yoga, YGEdge.Left)
+    let y = node.Rect.Y + CustomLayouts.Inset(yoga, YGEdge.Top)
     let state = node.RetainedSizedState!!
     let resized = state.ContentWidth != width || state.ContentHeight != height
     let moved = state.ContentX != x || state.ContentY != y || state.Hidden != hidden
@@ -243,7 +241,6 @@ internal partial class Layout {
     state.Hidden = hidden
     if node.OverflowX == Overflow.Scroll || node.OverflowY == Overflow.Scroll {
       measureScrollExtent(node, yoga)
-      if node.ScrollX != scrollX || node.ScrollY != scrollY { arrangeSized(node, hidden) }
     }
   }
 }

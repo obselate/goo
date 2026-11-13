@@ -8,8 +8,9 @@ import System.Text
 internal class LayoutFixtures {
   func SizedScrollExtentUsesContentContract() bool {
     let handle = ElementHandle()
+    let content = ElementHandle()
     let window = Window{Size: LayoutSize(200, 100), SmoothScrolling: false,
-      Root: SizedRootFixture(() -> Sized(size -> Container{Width: 300, Height: 500}){
+      Root: SizedRootFixture(() -> Sized(size -> Container{Handle: content, Width: 300, Height: 500}){
         .Handle: handle, .Padding: 10, .OverflowY: Overflow.Scroll})}
     try {
       window.UpdateTree()
@@ -19,9 +20,12 @@ internal class LayoutFixtures {
       }
       if !handle.ScrollTo(0, 50) { return false }
       window.UpdateTree(1.0)
-      if root.ScrollY != 50 || root.Children[0].Rect.Y != -40 {
-        throw InvalidOperationException("Sized scroll position: offset=${root.ScrollY}, child=${root.Children[0].Rect.Y}")
+      if root.ScrollY != 50 || content.BorderBox.Y != -40 {
+        throw InvalidOperationException("Sized scroll position: offset=${root.ScrollY}, content=${content.BorderBox.Y}")
       }
+      window.Size = LayoutSize(220, 100)
+      window.UpdateTree()
+      if content.BorderBox.Y != -40 { return false }
       return true
     } finally { window.Close() }
   }
