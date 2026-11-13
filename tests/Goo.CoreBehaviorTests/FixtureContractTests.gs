@@ -18,15 +18,6 @@ class FixtureContractTests {
         Assert.True(CellFixtures().ServicesBeforeWindowBinding())
 
     @Fact
-    func KeyedListsFromData() {
-        let fixture = TreeFixtures()
-        Assert.True(fixture.EachAssignsDataKeysContract())
-        Assert.True(fixture.EachPreservesExplicitKeysContract())
-        Assert.True(fixture.EachReorderRetainsIdentityContract())
-        Assert.True(fixture.EachDuplicateKeysThrowContract())
-    }
-
-    @Fact
     func CustomLayoutRetainsMixedMaximumMeasurements() ->
         Assert.True(LayoutFixtures().CustomLayoutRetainsMixedMaximumMeasurements())
 

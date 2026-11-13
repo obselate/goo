@@ -282,6 +282,7 @@ internal class TreeFixtures {
 
   func SizedFailedBuildRetainsSubscriptionsContract() bool {
     let previous = StateVerification.Override
+    let previousFailure = SizedFixtureProbe.Fail
     StateVerification.Enabled = false
     SizedFixtureProbe.Fail = false
     let cell = SizedStateFixtureCell()
@@ -307,11 +308,11 @@ internal class TreeFixtures {
       return window.Tree!!.Children[1].Children[0].Children[0].Content == "2:0"
         && !state.Reads.StateChanged
     } finally {
+      SizedFixtureProbe.Fail = previousFailure
+      StateVerification.Override = previous
       window.Close()
       cell.Value.Value = 3
       if reads?.StateChanged == true { throw InvalidOperationException("Disposed Sized retained a State subscription.") }
-      SizedFixtureProbe.Fail = false
-      StateVerification.Override = previous
     }
   }
 
