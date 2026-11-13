@@ -147,8 +147,8 @@ Core `Goo.Button` has no default activation keys. Goo.Widgets buttons bind Enter
 | --- | --- |
 | Child collections | Assign a fresh writable list or add to a new Blob. Do not mutate a retained tree. |
 | State and identity | Mount child Cells. Keep keys stable when siblings move. See [Cell](api/cell.md) and [tree](api/tree.md). |
-| Events | Goo rebuilds the Cell that authored an input callback. Other state changes need `Rebuild()` on the UI thread. |
-| Background work | Return window changes through `Window.Post`. Goo installs no UI synchronization context. |
+| Events | Goo handles rebuilds after its callbacks. A changed `State<T>` rebuilds the Cells that read it in `Build`. Call `Rebuild()` only for plain state changed outside Goo. |
+| Background work | Await in Goo callbacks to resume on the UI thread. Use `Cell.Post` or `Window.InvokeAsync` from background work. Pass `Lifetime` or `Latest(name)` to cancellable work. |
 | Layout and style | See [layout](api/layout.md) and [style](api/style.md). |
 | Virtual rows | Use a bounded viewport, immutable row values, stable keys and a retained builder delegate. |
 | Dialogs | Mount `ModalDialogHost`. Do not dispose it inside `Build()`. |

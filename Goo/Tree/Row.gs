@@ -4,26 +4,42 @@ import System.Collections.Generic
 
 /// Defines a horizontal flex container. Setting FlexDirection throws when mounted.
 public class Row : Blob {
+  shared {
+    private let emptyChildren IList[Blob] = FrozenChildren(typeof(Row), nil)
+  }
+
   private var children IList[Blob]?
   private var hitTestSelf bool
   private var hasAuthoredHitTestSelf bool
 
   internal override func coreBlob() { }
 
+  internal func FreezeChildren() IList[Blob] {
+    if let owned = children as OwnedChildren {
+      if owned.Owner == this { return owned }
+    }
+    children = (children?.Count ?? 0) == 0 ? Row.emptyChildren : FrozenChildren(GetType(), children)
+    return children!!
+  }
+
   /// Gets the ordered child collection. Read-only lists are copied.
   public prop Children IList[Blob] {
     get {
-      children ??= List[Blob]()
+      children ??= OwnedChildren(this)
       return children!!
     }
-    init -> children = value.IsReadOnly ? List[Blob](value) : value
+    set {
+      CheckMutable()
+      children = value.IsReadOnly ? OwnedChildren(this, value) : value
+    }
   }
 
   /// Overrides whether this container participates in pointer hit testing.
   /// When omitted, Goo derives the value from authored interaction behavior.
   public prop HitTestSelf bool {
     get -> hitTestSelf
-    init {
+    set {
+      CheckMutable()
       hitTestSelf = value
       hasAuthoredHitTestSelf = true
     }

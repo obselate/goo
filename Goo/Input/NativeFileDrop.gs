@@ -22,7 +22,7 @@ public enum NativeTransferCapabilities {
 }
 
 /// Contains an owned external file list, or an empty preview before the host delivers paths.
-public sealed class NativeFileDrop {
+public class NativeFileDrop {
   private let paths IReadOnlyList[string]
   /// Gets absolute file paths without reading file contents; the list survives the drag and window lifetime.
   public prop Paths IReadOnlyList[string]{ get -> paths }
@@ -35,7 +35,7 @@ public sealed class NativeFileDrop {
 }
 
 /// Contains the allowed MIME formats and owned data for one native offer.
-public sealed class NativeDataDrop {
+public class NativeDataDrop {
   /// Gets the offered formats that match the window's exact allow-list.
   public prop Formats IReadOnlyList[string] { get; }
   /// Gets captured bytes and URI references, or empty data during preview.

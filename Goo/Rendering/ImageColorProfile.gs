@@ -6,7 +6,7 @@ import System.IO
 import System.Threading
 
 /// Converts consumer-decoded straight RGBA samples from bounded ICC profiles to SDR sRGB.
-public sealed class ImageColorProfile {
+public class ImageColorProfile {
   private init() { }
 
   shared {

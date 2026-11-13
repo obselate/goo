@@ -73,6 +73,14 @@ public partial class Window {
           effects = combineEffects(effects, ReconcileEffects.Layout)
           effects = combineEffects(effects, ReconcileEffects.Paint)
         }
+        if let declaration = sourceDeclaration(n) {
+          let rec = Reconciler{Owner: this, CellInvalidated: cellHook,
+            ImageCompleted: imageCompletionHook, RetainedInvalidated: retainedInvalidationHook,
+            Res: resolver, ChildScratch: childDiffScratch, Pump: motionPump, Context: n.Context}
+          rec.RefreshImageContent(n, declaration)
+          effects = combineEffects(effects, rec.Effects)
+          if hasEffect(rec.Effects, ReconcileEffects.Structure) { layout.MarkStructureDirty() }
+        }
       }
     } catch (error Exception) {
       var wake = false
@@ -97,5 +105,10 @@ public partial class Window {
       imageCompletionBatch.Clear()
     }
     return effects
+  }
+
+  private func sourceDeclaration(n Node) Image? {
+    let declaration = ImageLayouts.Binding(n)?.Declaration
+    return if declaration?.Placeholder != nil || declaration?.Fallback != nil { declaration } else { nil }
   }
 }

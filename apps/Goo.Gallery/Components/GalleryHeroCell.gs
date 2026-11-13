@@ -4,14 +4,17 @@ import Goo
 import System
 import System.Numerics
 
-internal data struct HeroInput {
+internal data struct Hero {
+    var Key string?
     var Programs GalleryShaderPrograms?
     var Compact bool
     var Active bool
 }
 
-class HeroCell : Cell[HeroInput] {
-    protected override func InputChanged(input HeroInput) {
+internal func operator implicit(value Hero) Blob -> Cell.Mount[Hero, HeroCell](value.Key, value)
+
+class HeroCell : Cell[Hero] {
+    protected override func InputChanged(input Hero) {
         Programs = input.Programs
         Compact = input.Compact
         Active = input.Active

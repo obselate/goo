@@ -162,12 +162,12 @@ An active descendant alone does not enable projection.
 
 ## Mounted focus scopes
 
-Call `ElementHandle.BeginFocusScope(FocusScopeOptions)` after the element mounts,
-for example from `MetricsChanged`, and dispose the returned `FocusScope` when an
-overlay closes. The visible, enabled root must be focusable. On the next stable
+Use `Portal{FocusScope: FocusScopeOptions{Modal: true}, ...}` for modal overlays. For a custom scope, call
+`ElementHandle.BeginFocusScope(FocusScopeOptions)` in `Mounted` and dispose
+the returned scope in `Unmounting`. The visible, enabled root must be focusable. On the next stable
 input/tree update, Goo uses the eligible `InitialFocus` handle, an `AutoFocus`
 descendant, the first descendant tab stop, or the root when no child accepts
-focus. Tab and explicit `MoveFocus` calls wrap within the top scope and skip the scope
+focus. Tab and explicit `Window.Focus.Move(forward)` calls wrap within the top scope and skip the scope
 root unless it is the fallback. Editable multiline editors keep Tab for indentation.
 
 `Modal: true` blocks input and accessibility outside the latest modal scope and

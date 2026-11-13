@@ -4,7 +4,7 @@ import System
 import System.Collections.Generic
 
 /// Owns local file paths for a native Copy offer while DragData.Value stays available to in-window targets.
-public sealed class NativeFileDrag {
+public class NativeFileDrag {
   private let paths IReadOnlyList[string]
   /// Gets the validated, immutable local paths in their original order.
   public prop Paths IReadOnlyList[string]{ get -> paths }

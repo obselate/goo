@@ -659,11 +659,11 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             editorFocus = focus
             editorConfiguration = configuration
             editorOptions = editor?.InputOptions
-            SetAutofillHints(editorOptions?.AutofillHints ?? System.Array.Empty[string]())
+            SetAutofillHints(editorOptions?.AutofillHintValues ?? System.Array.Empty[string]())
             ImportantForAutofill = if editor != nil &&
                 editor!!.IsReadOnly == false &&
                 editorOptions
-                ?.AutofillHints
+                ?.AutofillHintValues
                 .Length > 0 {
                 ImportantForAutofill.Yes
             } else {
@@ -890,9 +890,9 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             left.Purpose == right.Purpose &&
             left.EnterAction == right.EnterAction &&
             left
-            .AutofillHints
+            .AutofillHintValues
             .AsSpan()
-            .SequenceEqual(right.AutofillHints)
+            .SequenceEqual(right.AutofillHintValues)
 
         private func Device(tool MotionEventToolType) PointerDevice -> switch tool {
             case MotionEventToolType.Finger: PointerDevice.Touch

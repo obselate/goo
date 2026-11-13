@@ -161,9 +161,7 @@ func RunShaderEffectSmoke() {
   WindowReadbackTestFixture.ShaderEffectVerifyPresentationRetirement()
   Require(Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1",
     "GOO_VK_DIAGNOSTICS=1 is required")
-  let shaderPath = Path.Combine(AppContext.BaseDirectory, "control_effect.frag.goo-effect")
-  Require(File.Exists(shaderPath), "Shader effect asset is missing")
-  let program = ShaderEffectProgram.Load(shaderPath)
+  let program = ShaderEffectProgram.Load(System.Reflection.Assembly.GetExecutingAssembly(), "embedded-control")
   VulkanProofFixture.VerifyLayerEffectCoordinates(program)
   let effect = ShaderEffect(program, true, 20.0)
   let replacementEffect = ShaderEffect(program, true, 20.0)

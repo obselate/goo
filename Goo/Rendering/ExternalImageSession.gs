@@ -5,7 +5,7 @@ import System.Collections.Generic
 import System.Threading
 
 /// Imports GPU images for one device generation. Open, import and Dispose require the window owner thread.
-public sealed partial class ExternalImageSession : IDisposable {
+public partial class ExternalImageSession : IDisposable {
     internal const FrameCapacity int32 = 64
     internal let Gate object = Object()
     internal let Runtime VulkanSharedLease

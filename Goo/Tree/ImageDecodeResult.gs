@@ -8,7 +8,7 @@ import System.Threading
 public enum ImageDecodeStatus { Success; InvalidData; LimitExceeded; Unsupported; Cancelled }
 
 /// Contains the owned image on success and a bounded explanation on failure.
-public sealed class ImageDecodeResult {
+public class ImageDecodeResult {
   private let status ImageDecodeStatus
   private let source ImageSource?
   private let detail string

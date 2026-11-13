@@ -10,7 +10,7 @@ public data struct WindowDisplayId {
 }
 
 /// Describes one display from an immutable SDL inventory snapshot.
-public sealed class WindowDisplay {
+public class WindowDisplay {
   private let id WindowDisplayId
   private let name string
   private let bounds ElementRect

@@ -19,7 +19,7 @@ internal class NativeAccessibilityRequest {
   internal var FocusIndex uint64
 }
 
-public sealed partial class NativeAccessibilityAdapter {
+public partial class NativeAccessibilityAdapter {
   private func DispatchAction(expected int64, nativeRequest NativeAccessibilityRequest) {
     if binding != expected || native == nint(0) { return }
     guard let window = owner else { return }

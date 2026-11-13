@@ -787,20 +787,18 @@ class StudioCell : Cell {
                 },
                 FlexGrow: 0.0,
                 FlexShrink: 1.0,
-                Cell.Mount[GalleryRangeInput, GalleryRange](
-                    "studio-c0",
-                    GalleryRangeInput{
-                        Label: firstLabel(),
-                        MinValue: firstMin(),
-                        MaxValue: firstMax(),
-                        Value: c0,
-                        Step: firstStep(),
-                        OnChange: (value float64) -> {
-                            c0 = value
-                            Rebuild()
-                        },
-                    }
-                ),
+                GalleryRange{
+                    Key: "studio-c0",
+                    Label: firstLabel(),
+                    MinValue: firstMin(),
+                    MaxValue: firstMax(),
+                    Value: c0,
+                    Step: firstStep(),
+                    OnChange: (value float64) -> {
+                        c0 = value
+                        Rebuild()
+                    },
+                },
             }
         )
         controls.Add(
@@ -813,20 +811,18 @@ class StudioCell : Cell {
                 },
                 FlexGrow: 0.0,
                 FlexShrink: 1.0,
-                Cell.Mount[GalleryRangeInput, GalleryRange](
-                    "studio-c1",
-                    GalleryRangeInput{
-                        Label: secondLabel(),
-                        MinValue: secondMin(),
-                        MaxValue: secondMax(),
-                        Value: c1,
-                        Step: secondStep(),
-                        OnChange: (value float64) -> {
-                            c1 = value
-                            Rebuild()
-                        },
-                    }
-                ),
+                GalleryRange{
+                    Key: "studio-c1",
+                    Label: secondLabel(),
+                    MinValue: secondMin(),
+                    MaxValue: secondMax(),
+                    Value: c1,
+                    Step: secondStep(),
+                    OnChange: (value float64) -> {
+                        c1 = value
+                        Rebuild()
+                    },
+                },
             }
         )
         controls.Add(
@@ -839,20 +835,18 @@ class StudioCell : Cell {
                 },
                 FlexGrow: 0.0,
                 FlexShrink: 1.0,
-                Cell.Mount[GalleryRangeInput, GalleryRange](
-                    "studio-c2",
-                    GalleryRangeInput{
-                        Label: thirdLabel(),
-                        MinValue: thirdMin(),
-                        MaxValue: thirdMax(),
-                        Value: c2,
-                        Step: thirdStep(),
-                        OnChange: (value float64) -> {
-                            c2 = value
-                            Rebuild()
-                        },
-                    }
-                ),
+                GalleryRange{
+                    Key: "studio-c2",
+                    Label: thirdLabel(),
+                    MinValue: thirdMin(),
+                    MaxValue: thirdMax(),
+                    Value: c2,
+                    Step: thirdStep(),
+                    OnChange: (value float64) -> {
+                        c2 = value
+                        Rebuild()
+                    },
+                },
             }
         )
 

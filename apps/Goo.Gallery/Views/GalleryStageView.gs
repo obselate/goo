@@ -13,21 +13,15 @@ internal class GalleryStageView {
             window Window?
         ) Blob {
             if currentShowcase == 0 {
-                return Cell.Mount[HeroInput, HeroCell](
-                    "showcase-hero",
-                    HeroInput{Programs: programs, Compact: compact, Active: true}
-                )
+                return Hero{Key: "showcase-hero", Programs: programs, Compact: compact, Active: true}
             }
             let showcase = catalog.Showcases[currentShowcase]
             return switch showcase.Chapter {
-                case 0: Cell.Mount[ComposeChapterInput, ComposeChapter](
-                    "showcase-compose",
-                    ComposeChapterInput{Showcase: showcase.Local, Window: window}
-                )
+                case 0: Blob(ComposeChapter{Key: "showcase-compose", Showcase: showcase.Local, Window: window})
                 case 1: Container{Key: "showcase-surfaces-placeholder", Display: Display.None}
-                case 2: Cell.Mount[MotionChapterInput, MotionChapter](
-                    "showcase-motion",
-                    MotionChapterInput{
+                case 2: Blob(
+                    MotionChapter{
+                        Key: "showcase-motion",
                         Assets: assets,
                         Programs: programs,
                         Compact: compact,
@@ -35,9 +29,9 @@ internal class GalleryStageView {
                         Active: true
                     }
                 )
-                case 3: Cell.Mount[ShaderLabInput, ShaderLabCell](
-                    "showcase-shaders",
-                    ShaderLabInput{
+                case 3: Blob(
+                    ShaderLab{
+                        Key: "showcase-shaders",
                         Assets: assets,
                         Programs: programs,
                         Compact: false,
@@ -81,10 +75,7 @@ internal class GalleryStageView {
                     Bottom: 0,
                     AlignItems: AlignItems.Center,
                     JustifyContent: JustifyContent.Center,
-                    Cell.Mount[StateSurfacesInput, StateSurfacesChapter](
-                        "showcase-surfaces",
-                        StateSurfacesInput{Compact: compact, Active: surfacesActive}
-                    ),
+                    StateSurfacesChapter{Key: "showcase-surfaces", Compact: compact, Active: surfacesActive},
                 },
                 Container{
                     Key: "transient-showcase-host",

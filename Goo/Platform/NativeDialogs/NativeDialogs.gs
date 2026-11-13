@@ -12,7 +12,7 @@ public enum MessageBoxIcon { Information; Warning; Error }
 public enum MessageBoxStatus { Success; Cancelled; Unsupported; Busy; OwnerClosed; Failed }
 
 /// Describes one native message-box button.
-public sealed class MessageBoxButton {
+public class MessageBoxButton {
     /// Gets the unique nonnegative application identifier.
     public prop Id int32 { get; init; }
     /// Gets the native button label.
@@ -26,7 +26,7 @@ public sealed class MessageBoxButton {
 }
 
 /// Supplies native message-box content, copied when accepted.
-public sealed class MessageBoxOptions {
+public class MessageBoxOptions {
     /// Gets the native title.
     public prop Title string { get; init; }
     /// Gets the plain-text message.
@@ -44,7 +44,7 @@ public sealed class MessageBoxOptions {
 }
 
 /// Contains a native message-box outcome.
-public sealed class MessageBoxResult {
+public class MessageBoxResult {
     /// Gets the explicit outcome.
     public prop Status MessageBoxStatus { get; }
     /// Gets the selected identifier, or -1 outside Success.
@@ -59,7 +59,7 @@ public sealed class MessageBoxResult {
 }
 
 /// Shows owned native dialogs without a managed fallback.
-public sealed class NativeDialogs {
+public class NativeDialogs {
     private init() { }
 
     shared {

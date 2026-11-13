@@ -14,7 +14,10 @@ public class Virtual : Blob {
   /// Gets the required item policy. Set a new immutable source on each build.
   public prop Source VirtualSource{
     get -> source ?? throw InvalidOperationException("Virtual.Source is required")
-    init -> source = value
+    set {
+      CheckMutable()
+      source = value
+    }
   }
 
   /// Initializes a list element that scrolls on both axes. Source must be set before mounting.

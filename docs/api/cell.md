@@ -42,7 +42,7 @@ A mounted Cell is retained by declared `TCell` and sibling key. The factory runs
 
 Goo owns and disposes the Cell on removal. Each invocation must return a fresh, unmounted, undisposed instance. Do not share an instance across mounts or return a disposed instance. A null factory or result is rejected.
 
-Constructor arguments initialize the Cell. Update it through typed inputs, configuration, or an external store read by `Build()`. Call its `Rebuild()` after changes outside Goo input callbacks. Read changing values from a store or getter, not a captured scalar copy. Calling `Build()` directly returns a Blob tree without mounting the Cell.
+Constructor arguments initialize the Cell. Update it through typed inputs, configuration, or an external store read by `Build()`. A changed `State<T>` rebuilds its readers. Goo handles rebuilds after its input, Cell post, timer and async callbacks. Call `Rebuild()` only for plain state changed outside Goo. Await in Goo callbacks to resume on the UI thread. Use `Cell.Post` for background results. Read changing values from a store or getter, not a captured scalar copy. Calling `Build()` directly returns a Blob tree without mounting the Cell.
 
 See [language interop](../interop.md) for other languages.
 
@@ -255,7 +255,7 @@ Returns: a blob that mounts the child component
 
 ### `Mounted`
 
-Runs once on the UI thread after the first layout and before paint. Handles have geometry. Goo applies the normal callback rebuild rule after an override, including when it throws. The base implementation does nothing and need not be called. A Cell whose override calls base.Mounted() is not rebuilt after Mounted returns.
+Runs once on the UI thread after the first layout and before paint. Handles have geometry. Goo applies the normal callback rebuild rule after an override, including when it throws. Do not call base.Mounted().
 
 ### `Post(System.Action)`
 
@@ -267,7 +267,7 @@ Returns: true when accepted, or false before window binding, after unmount, or w
 
 ### `Rebuild`
 
-Requests a rebuild of this component. Mounted cells must use their window's UI thread. Post background results with Window.Post.
+Requests a rebuild of this component. Mounted cells must use their window's UI thread. Use Cell.Post for background results. State changes and Goo callbacks handle rebuilds automatically. Use this for plain state changed outside Goo.
 
 ### `Unmounting`
 
@@ -391,7 +391,7 @@ Gets the owner window during a Cell build or retained virtual callback. Access o
 ## `State<T>`
 
 
-Holds a value that invalidates the Cells and retained builders that read it. In-place changes and reads of mutable global or service state are not tracked. Keep values read by Build in State. Verification reports tree changes without a tracked write.
+Holds a value that invalidates the Cells and retained builders that read it. In-place changes and reads of mutable global or service state are not tracked. Keep values read by Build in State. Verification reports tree changes without a tracked write. A Cell declared with a primary constructor always rebuilds after callbacks.
 
 ### `new(T)`
 

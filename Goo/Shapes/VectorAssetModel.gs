@@ -5,7 +5,7 @@ import System.Collections.Generic
 import System.Collections.ObjectModel
 
 /// Describes one immutable vector fill paint.
-public sealed class VectorPaint {
+public class VectorPaint {
   private let color Color
   private let gradient Gradient?
 
@@ -32,7 +32,23 @@ public sealed class VectorPaint {
 }
 
 /// Describes one immutable vector stroke.
-public sealed class VectorStroke {
+public class VectorStroke {
+  private var frozenOwner Type?
+  private var declarationCap StrokeCap
+  private var declarationJoin StrokeJoin
+  private var declarationDashes DashPattern?
+  private var declarationVectorEffect VectorEffect
+
+  internal func Freeze(owner Type) {
+    if frozenOwner != nil { return }
+    frozenOwner = owner
+  }
+
+  private func CheckMutable() {
+    if let owner = frozenOwner {
+      throw InvalidOperationException(owner.Name + " modified after it was returned to Goo")
+    }
+  }
   private let width float64
   private let paint VectorPaint
   private var miterLimit float64
@@ -42,13 +58,26 @@ public sealed class VectorStroke {
   /// Gets the stroke paint.
   public prop Paint VectorPaint{ get -> paint }
   /// Gets the line cap style.
-  public prop Cap StrokeCap{ get; init; }
+  public prop Cap StrokeCap {
+    get -> declarationCap
+    set {
+      CheckMutable()
+      declarationCap = value
+    }
+  }
   /// Gets the line join style.
-  public prop Join StrokeJoin{ get; init; }
+  public prop Join StrokeJoin {
+    get -> declarationJoin
+    set {
+      CheckMutable()
+      declarationJoin = value
+    }
+  }
   /// Gets the non-negative finite miter limit.
   public prop MiterLimit float64{
     get -> miterLimit
-    init{
+    set {
+      CheckMutable()
       if !finiteVectorValue(value) || value < 0.0 {
         throw ArgumentOutOfRangeException("MiterLimit")
       }
@@ -57,9 +86,21 @@ public sealed class VectorStroke {
   }
   /// Gets the optional dash pattern.
   /// NonScalingStroke measures dash lengths in window logical pixels.
-  public prop Dashes DashPattern? { get; init; }
+  public prop Dashes DashPattern? {
+    get -> declarationDashes
+    set {
+      CheckMutable()
+      declarationDashes = value
+    }
+  }
   /// Gets the vector effect. The default is None.
-  public prop VectorEffect VectorEffect{ get; init; }
+  public prop VectorEffect VectorEffect {
+    get -> declarationVectorEffect
+    set {
+      CheckMutable()
+      declarationVectorEffect = value
+    }
+  }
 
   /// Creates a stroke with default cap, join, and miter settings.
   public init(width float64, paint VectorPaint) {
@@ -125,7 +166,7 @@ public struct VectorNodeStyle {
 }
 
 /// Describes one immutable vector node and its composed children.
-public sealed class VectorNode {
+public class VectorNode {
   private let key string?
   private let path VectorPath
   private let fill VectorPaint?

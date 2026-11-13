@@ -7,7 +7,7 @@ import System.Collections.Generic
 import System.Numerics
 import System.Threading
 
-open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
+open class ComposeChapterCell : Cell[ComposeChapter], IDisposable {
     private let tiles List[GallerySpecimenTile]
     private var rotation float64
     private var posterWidth float64
@@ -198,16 +198,7 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
             JustifyContent: JustifyContent.Center,
             spiral,
         }
-        return Container{
-            Width: Percent(100),
-            FlexGrow: 1.0,
-            FlexShrink: 1.0,
-            MinHeight: 0,
-            FlexDirection: FlexDirection.Column,
-            Gap: 14,
-            controls,
-            grid,
-        }
+        return Column{Width: Percent(100), FlexGrow: 1.0, FlexShrink: 1.0, MinHeight: 0, Gap: 14, controls, grid,}
     }
 
     private func buildTiles() List[Blob] {
@@ -287,27 +278,24 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
         let flowOffset = posterFlowReflow.Offset
         let gapOffset = posterGapReflow.Offset
         let wrapOffset = posterWrapReflow.Offset
-        return Container{
+        return Column{
             Width: Percent(100),
             FlexGrow: 1.0,
             FlexShrink: 1.0,
             MinHeight: 0,
-            FlexDirection: FlexDirection.Column,
             Gap: 14,
-            Cell.Mount[GalleryRangeInput, GalleryRange](
-                "poster-width",
-                GalleryRangeInput{
-                    Label: "Poster width",
-                    MinValue: 380.0,
-                    MaxValue: 1120.0,
-                    Value: posterWidth,
-                    Step: 10.0,
-                    OnChange: (value float64) -> {
-                        posterWidth = value
-                        Rebuild()
-                    },
-                }
-            ),
+            GalleryRange{
+                Key: "poster-width",
+                Label: "Poster width",
+                MinValue: 380.0,
+                MaxValue: 1120.0,
+                Value: posterWidth,
+                Step: 10.0,
+                OnChange: (value float64) -> {
+                    posterWidth = value
+                    Rebuild()
+                },
+            },
             Container{
                 Key: "poster-stage",
                 Width: Percent(100),
@@ -653,7 +641,7 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
         }
     }
 
-    protected override func Build(input ComposeChapterInput) Blob -> if input.Showcase == 0 {
+    protected override func Build(input ComposeChapter) Blob -> if input.Showcase == 0 {
         GallerySpecimen(
             "Keyed Fibonacci tiles",
             "Reorient, rotate, shuffle, swap, or race workers while keyed identity survives.",

@@ -4,8 +4,12 @@ import System
 import System.Collections.Generic
 
 internal sealed class VirtualRetainedBlob : Blob {
-  internal init(key string) {
-    SetVirtualKey(key)
+  shared {
+    internal let Unkeyed VirtualRetainedBlob = VirtualRetainedBlob(nil)
+  }
+
+  internal init(key string?) : base(nil) {
+    Key = key
   }
 
   internal override func coreBlob() {
@@ -21,6 +25,7 @@ internal data struct VirtualPlacement {
   internal var HasW bool
   internal var HasH bool
   internal var Item bool
+  internal var ContentKeyed bool
 }
 
 internal data struct VirtualExtent {
@@ -602,12 +607,14 @@ internal sealed class VirtualNodeState {
     var componentType Type?
     if let content = item.Content {
       componentType = if content is CellElement { content.CellType } else { content.GetType() }
+      placement.ContentKeyed = content.Key != nil
     }
     var same = false
     if mounted.TryGetValue(key, out var previous) {
       marker = previous.Marker
       same = sameVirtualPlacement(previous.Placement, placement)
       componentType ??= previous.ComponentType
+      if item.Content == nil { placement.ContentKeyed = previous.Placement.ContentKeyed }
     } else {
       if item.Content == nil { throw InvalidOperationException("Virtual item '$key' at index ${item.Index} in ${pending?.GetType().Name}.Realize has no mounted content: supply Content when the key is first realized.") }
       marker = VirtualRetainedBlob(key)
@@ -618,7 +625,7 @@ internal sealed class VirtualNodeState {
     } else if same {
       children.Add(marker)
     } else {
-      children.Add(virtualWrapper(key, marker, placement))
+      children.Add(virtualWrapper(key, placement.ContentKeyed ? marker : VirtualRetainedBlob.Unkeyed, placement))
     }
   }
 
@@ -722,12 +729,11 @@ left.Index == right.Index && left.X == right.X && left.Y == right.Y
   && left.Item == right.Item
 
 internal func virtualItem(item Blob, key string) Blob {
+  item.Freeze()
   if let authored = item.Key {
     if authored != key {
       throw InvalidOperationException("Virtual item '$key' has ${item.GetType().Name} content keyed '$authored': remove the content key or make it equal to the VirtualItem key.")
     }
-  } else {
-    item.SetVirtualKey(key)
   }
   return item
 }

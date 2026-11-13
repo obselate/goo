@@ -59,5 +59,5 @@ let result = await clipboard.PastePlainTextAsync()
 - A stale Cut leaves the text intact. The clipboard can already contain the copied selection.
 
 Plain-text paste is a separate user action. Start `clipboard.PastePlainTextAsync()`
-on the window's owner thread. Goo installs no UI synchronization context.
+on the window's owner thread. Await it in a Goo callback to resume on the UI thread.
 See the [text API](api/text.md) for result and publication contracts.

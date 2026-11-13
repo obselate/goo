@@ -5,7 +5,7 @@ import System.Runtime.InteropServices
 import System.Threading
 
 /// Owns one imported GPU allocation. Dispose retires it after its last frame lease.
-public sealed class ExternalImage : IDisposable {
+public class ExternalImage : IDisposable {
     internal let Native VulkanExternalImage
     internal var Session ExternalImageSession?
 
@@ -76,7 +76,7 @@ internal sealed class ExternalFrameLease {
 }
 
 /// Supplies a bounded latest external frame to Image.Source. Callbacks run on the session window owner thread.
-public sealed class ExternalImageSource : ImageSourceProvider, IDisposable {
+public class ExternalImageSource : ImageSourceProvider, IDisposable {
     internal let Session ExternalImageSession
     private var current ExternalFrameLease?
     private var pending ExternalFrameLease?

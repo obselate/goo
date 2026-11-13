@@ -5,6 +5,26 @@ import System.Collections.Generic
 import System.Runtime.CompilerServices
 
 internal class RowRecyclingFixtures {
+  func VirtualKeysKeepAuthoredBlobsUnchangedContract() bool {
+    if VirtualRetainedBlob.Unkeyed.CallbackOwner != nil { return false }
+    for frozenBefore in []bool{false, true} {
+      let content = Text("row")
+      let reconciler = Reconciler{Res: Resolver{}}
+      if frozenBefore { NodeLifecycle.DisposeTree(reconciler.Mount(content)) }
+      let source = FrozenVirtualSource(content)
+      let node = reconciler.Mount(Virtual{Source: source})
+      try {
+        let mounted = node.Children[0].Children[0]
+        if content.Key != nil || !source.RejectedMutation || node.Children[0].Key != "row" { return false }
+        source.Offset = 10
+        reconciler.Diff(node, Virtual{Source: source})
+        if node.Children[0].Children[0] != mounted || content.Key != nil || mounted.Content != "row"
+          || node.Children[0].Left.Value != 10.0F { return false }
+      } finally { NodeLifecycle.DisposeTree(node) }
+    }
+    return true
+  }
+
   func ReusesStorageAndResetsKeyScopedStateContract() bool {
     let cell = RecyclingViewportCell()
     let adapter = AccessibilityTestAdapter()
@@ -360,4 +380,24 @@ internal class RecyclingInnerCell : Cell[RecyclingRowData], IDisposable {
           Content: detailed ? item.Index == 2 ? "مرحبا" : "مرحبا بالنص المختلف الأطول الذي يمتد على أسطر متعددة" : "${item.Index}:${outer.Local}:$Local"},
     }
   }
+}
+
+internal class FrozenVirtualSource(content Text) : VirtualState, VirtualSource {
+  internal var Offset float64
+  internal var RejectedMutation bool
+  private var committed bool
+
+  public func State(current VirtualState?) VirtualState -> this
+
+  public override func NeedsRealize(viewport VirtualViewport) bool -> false
+
+  public override func Realize(viewport VirtualViewport, output VirtualOutput) {
+    output.Add(VirtualItem{Key: "row", X: Offset, Width: 100, Height: 20, Content: committed ? nil : content})
+    if !committed {
+      try { content.Content = "changed" } catch (_ InvalidOperationException) { RejectedMutation = true }
+    }
+    output.ContentSize = LayoutSize(100, 20)
+  }
+
+  public override func Commit() { committed = true }
 }

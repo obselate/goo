@@ -21,7 +21,7 @@ class Example : Cell {
 
     override func Build() Blob {
         let theme = Theme.Read()
-        return Container{
+        return Column{
             BasedOn: theme.CanvasStyle,
             Width: Percent(100),
             Height: Percent(100),
@@ -36,7 +36,7 @@ class Example : Cell {
             ActionButton{
                 Content: "Change value",
                 OnClick: () -> { value = if value > .5 { .35 } else { .72 } },
-            }.Build(),
+            },
         }
     }
 
@@ -45,15 +45,15 @@ class Example : Cell {
         Width: Percent(100),
         Height: Percent(100),
         Position: PositionType.Absolute,
-        Stroke: VectorStroke(theme.Spacing * 2, color){.Cap: StrokeCap.Round},
+        Stroke: VectorStroke(theme.Spacing * 2, color){Cap = StrokeCap.Round},
         StrokeEnd: end,
     }
 }
 
 func Main() {
-    Window.ConfigureApplication("Drawing a gauge", "1.0.0", "com.example.tutorial")
-    let window = Window{Title: "Drawing a gauge", Width: 480, Height: 380, Root: Example{}}
+    Application.Configure("Drawing a gauge", "1.0.0", "com.example.tutorial")
+    let window = Window{Title: "Drawing a gauge", Size: LayoutSize(480, 380), Root: Example{}}
     Theme.Attach(window, Theme.Default)
-    window.Run()
+    Application.Run(window)
 }
 ```

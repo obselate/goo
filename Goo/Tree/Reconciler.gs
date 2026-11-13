@@ -96,12 +96,15 @@ internal partial class Reconciler {
       Frame: cell.incomingContext, Cell: cell, Reader: cell.contextReader})
     try {
       guard let profiler = Profiler else {
-        return cell.Render()
+        let result = cell.Render()
+        result.Freeze()
+        return result
       }
       let start = profiler.Start()
       var completed = false
       try {
         let result = cell.Render()
+        result.Freeze()
         completed = true
         return result
       } finally {
@@ -228,6 +231,7 @@ internal partial class Reconciler {
   private var operationDepth int32
 
   private func mountCore(b Blob) Node {
+    b.Freeze()
     let result = switch b {
       case s is SizedBlob: mountSized(s)
       case v is Virtual: mountVirtual(v)
@@ -845,6 +849,7 @@ internal partial class Reconciler {
   }
 
   private func diffCore(n Node, b Blob) Node {
+    b.Freeze()
     if recyclingRow { n.Key = b.Key }
     if b is VirtualRetainedBlob {
       if n.Retired || n.Key != b.Key {
@@ -1224,11 +1229,7 @@ internal partial class Reconciler {
 
   internal func applyImage(n Node, i Image, initial bool) {
     applyStyle(n, i, i.Focusable, initial)
-    let sourceChanged = if let source = i.Source {
-      initial || n.ImageSource != source
-    } else {
-      initial || ImageLayouts.Source(n) != nil || i.Path != ""
-    }
+    let sourceChanged = initial || n.ImageSource != i.Source
     let fitChanged = n.ImageFit != i.Fit
     if !sourceChanged {
       if let binding = ImageLayouts.Binding(n) {
@@ -1243,7 +1244,7 @@ internal partial class Reconciler {
       if let source = i.Source {
         ImageLayouts.ApplySource(n, source, i.Fit, ImageCompleted, Owner, i.PixelsPerUnit)
       } else {
-        ImageLayouts.ApplyPath(n, i.Path, i.Fit)
+        ImageLayouts.Dispose(n)
       }
       n.BumpScenePaintVersion()
       MarkEffects(ReconcileEffects.Content)
@@ -1257,6 +1258,30 @@ internal partial class Reconciler {
       MarkEffects(ReconcileEffects.Content)
       MarkEffects(ReconcileEffects.Layout)
       MarkEffects(ReconcileEffects.Paint)
+    }
+    if let binding = ImageLayouts.Binding(n) { binding.Declaration = i }
+    let content = if n.ImageLease?.IsFailed == true { i.Fallback }
+      else if n.ImageLease?.IsComplete == false { i.Placeholder } else { nil }
+    if let child = content {
+      diffChildren(n, []Blob{Container{Width: Percent(100), Height: Percent(100),
+        OverflowX: Overflow.Hidden, OverflowY: Overflow.Hidden, child}})
+    } else if n.Children.Count > 0 {
+      diffChildren(n, Array.Empty[Blob]())
+    }
+  }
+
+  internal func RefreshImageContent(n Node, image Image) {
+    let previousDepth = enterTree(n.Parent)
+    operationDepth++
+    var completed = false
+    try {
+      applyImage(n, image, false)
+      FlushStyles()
+      completed = true
+    } finally {
+      operationDepth--
+      treeDepth = previousDepth
+      if !completed { DiscardStyles() }
     }
   }
 

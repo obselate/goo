@@ -11,6 +11,8 @@
   <ItemGroup>
     <GooShaderEffect Include="Shaders/control_effect.frag.slang"
                      TargetPath="control_effect.frag.goo-effect" />
+    <GooShaderEffect Include="Shaders/control_effect.frag.slang"
+                     Embed="true" TargetPath="embedded-control.goo-effect" />
     <GooShaderEffect Include="Shaders/generator_effect.frag.slang"
                      TargetPath="generator_effect.frag.goo-effect"
                      SourceIndependent="true" />

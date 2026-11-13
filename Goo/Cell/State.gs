@@ -69,6 +69,7 @@ internal class StateDependency {
 /// Holds a value that invalidates the Cells and retained builders that read it.
 /// In-place changes and reads of mutable global or service state are not tracked.
 /// Keep values read by Build in State. Verification reports tree changes without a tracked write.
+/// A Cell declared with a primary constructor always rebuilds after callbacks.
 public class State[T any] {
   private var current T
   private var dependency StateDependency?

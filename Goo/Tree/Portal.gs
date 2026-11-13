@@ -40,40 +40,108 @@ internal func validPortalPlacement(value PortalPlacement) bool {
 
 /// Presents a logical child subtree in the window overlay while retaining declaration-site ownership.
 public class Portal : Blob {
-  private let children IList[Blob] = List[Blob]()
+  shared {
+    private let emptyChildren IList[Blob] = FrozenChildren(typeof(Portal), nil)
+  }
+
+  private var declarationAnchor ElementHandle?
+  private var declarationPlacement PortalPlacement
+  private var declarationAnchorRect ElementRect?
+  private var declarationCollisionBounds ElementRect?
+  private var declarationHideWhenAnchorClipped bool
+  private var children IList[Blob]
+  private var declarationFocusScope FocusScopeOptions?
+  private var declarationScrim Color?
+  private var declarationOnDismiss ((PopupDismissReason) -> void)?
 
   internal override func coreBlob() {
+  }
+
+  internal func FreezeChildren() IList[Blob] {
+    if let owned = children as OwnedChildren {
+      if owned.Owner == this { return owned }
+    }
+    children = (children?.Count ?? 0) == 0 ? Portal.emptyChildren : FrozenChildren(GetType(), children)
+    return children
   }
 
   internal prop Children IList[Blob]{ get -> children }
 
   /// Gets the mounted anchor handle. Invalid anchor relationships suppress presentation.
-  public prop Anchor ElementHandle? { get; init; }
+  public prop Anchor ElementHandle? {
+    get -> declarationAnchor
+    set {
+      CheckMutable()
+      declarationAnchor = value
+    }
+  }
 
   /// Gets the preferred side and alignment. Defaults to BottomStart. Placement flips and clamps to collision bounds.
-  public prop Placement PortalPlacement{ get; init; }
+  public prop Placement PortalPlacement {
+    get -> declarationPlacement
+    set {
+      CheckMutable()
+      declarationPlacement = value
+    }
+  }
 
   /// Gets a rectangle within Anchor's local border-box coordinates.
   /// Nil uses the whole border box. Values must be finite and dimensions nonnegative.
-  public prop AnchorRect ElementRect? { get; init; }
+  public prop AnchorRect ElementRect? {
+    get -> declarationAnchorRect
+    set {
+      CheckMutable()
+      declarationAnchorRect = value
+    }
+  }
 
   /// Gets collision bounds in window logical coordinates. Nil uses the viewport. Values are finite and sizes nonnegative.
-  public prop CollisionBounds ElementRect? { get; init; }
+  public prop CollisionBounds ElementRect? {
+    get -> declarationCollisionBounds
+    set {
+      CheckMutable()
+      declarationCollisionBounds = value
+    }
+  }
 
   /// Hides presentation when AnchorRect is fully clipped by the anchor's ancestors. Content stays mounted. Defaults to false.
-  public prop HideWhenAnchorClipped bool { get; init; }
+  public prop HideWhenAnchorClipped bool {
+    get -> declarationHideWhenAnchorClipped
+    set {
+      CheckMutable()
+      declarationHideWhenAnchorClipped = value
+    }
+  }
 
   /// Gets the focus scope options. OnDismiss alone opens a nonmodal scope with default options.
-  public prop FocusScope FocusScopeOptions? { get; init; }
+  public prop FocusScope FocusScopeOptions? {
+    get -> declarationFocusScope
+    set {
+      CheckMutable()
+      declarationFocusScope = value
+    }
+  }
 
   /// Gets the full-window scrim color. Modal scopes use a transparent scrim when nil.
-  public prop Scrim Color? { get; init; }
+  public prop Scrim Color? {
+    get -> declarationScrim
+    set {
+      CheckMutable()
+      declarationScrim = value
+    }
+  }
 
   /// Handles Escape outside composition and presses outside the content. Remove the Portal to close it.
-  public prop OnDismiss ((PopupDismissReason) -> void)? { get; init; }
+  public prop OnDismiss ((PopupDismissReason) -> void)? {
+    get -> declarationOnDismiss
+    set {
+      CheckMutable()
+      declarationOnDismiss = value
+    }
+  }
 
   /// Initializes an empty child collection.
-  public init() { }
+  public init() { children = OwnedChildren(this) }
 
   /// Adds a child for mixed composite initialization. Siblings can mix keyed and unkeyed entries.
   /// Keyed children match by key; unkeyed children match only at the same absolute sibling index.
