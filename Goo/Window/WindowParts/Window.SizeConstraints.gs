@@ -19,7 +19,7 @@ public partial class Window {
   /// Gets or sets the client minimum size in layout units. Zero removes an axis limit.
   /// Each axis must be finite, nonnegative and no greater than its nonzero maximum. Embedded hosts are unsupported.
   public prop MinSize LayoutSize{
-    get -> LayoutSize(minWidth, minHeight)
+    get -> ReadUntrackedWindowValue(LayoutSize(minWidth, minHeight))
     set(value) {
       requireUiThread("Window.MinSize")
       validateSizeLimit(value.Width, maxWidth, true)
@@ -34,7 +34,7 @@ public partial class Window {
   /// Gets or sets the client maximum size in layout units. Zero removes an axis limit.
   /// Each axis must be finite, nonnegative and no smaller than its minimum. Embedded hosts are unsupported.
   public prop MaxSize LayoutSize{
-    get -> LayoutSize(maxWidth, maxHeight)
+    get -> ReadUntrackedWindowValue(LayoutSize(maxWidth, maxHeight))
     set(value) {
       requireUiThread("Window.MaxSize")
       validateSizeLimit(value.Width, minWidth, false)

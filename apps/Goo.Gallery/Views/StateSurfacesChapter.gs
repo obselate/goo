@@ -4,13 +4,19 @@ import Goo
 import System
 import System.Collections.Generic
 
-internal data struct StateSurfacesInput {
+internal data struct StateSurfacesChapter {
+    var Key string?
     var Compact bool
     var Active bool
 }
 
-class StateSurfacesChapter : Cell[StateSurfacesInput] {
-    protected override func InputChanged(input StateSurfacesInput) {
+internal func operator implicit(value StateSurfacesChapter) Blob -> Cell.Mount[
+    StateSurfacesChapter,
+    StateSurfacesChapterCell
+](value.Key, value)
+
+class StateSurfacesChapterCell : Cell[StateSurfacesChapter] {
+    protected override func InputChanged(input StateSurfacesChapter) {
         Compact = input.Compact
         Active = input.Active
     }

@@ -29,7 +29,7 @@ public partial class Window {
 
   /// Gets or sets whether Open shows the desktop window. Configure before Open.
   public prop InitiallyVisible bool {
-    get -> initiallyVisible
+    get -> ReadUntrackedWindowValue(initiallyVisible)
     set(value) {
       requireUiThread("Window.InitiallyVisible")
       if IsOpen { throw InvalidOperationException("Initial visibility must be configured before Open") }
@@ -38,11 +38,11 @@ public partial class Window {
   }
 
   /// Gets whether the host reports a visible viewport and no accepted Hide is pending. This does not imply focus or lack of occlusion.
-  public prop IsVisible bool { get -> IsOpen && !nativeHidePending && host?.IsVisible == true }
+  public prop IsVisible bool { get -> ReadUntrackedWindowValue(isOpen && !nativeHidePending && host?.IsVisible == true) }
   internal prop NativeInputSuppressed bool { get -> nativeHidePending }
 
   /// Gets occlusion on macOS, Wayland suspended surfaces and X11 hidden windows. Windows, embedded, Android and unreported states are Unknown.
-  public prop Occlusion WindowOcclusion { get -> IsOpen ? observedOcclusion : WindowOcclusion.Unknown }
+  public prop Occlusion WindowOcclusion { get -> ReadUntrackedWindowValue(isOpen ? observedOcclusion : WindowOcclusion.Unknown) }
 
   /// Reports observed occlusion changes on the UI thread.
   public event OcclusionChanged Action[WindowOcclusion] {
@@ -57,12 +57,12 @@ public partial class Window {
   }
 
   /// Gets supported native lifecycle operations, or None before Open or Attach.
-  public prop Capabilities WindowCapabilities { get -> host?.Capabilities ?? WindowCapabilities.None }
+  public prop Capabilities WindowCapabilities { get -> ReadUntrackedWindowValue(host?.Capabilities ?? WindowCapabilities.None) }
 
   /// Gets or sets whether the desktop window may receive keyboard focus.
   /// Unsupported hosts throw before changing the requested value. Modal windows must remain focusable.
   public prop Focusable bool {
-    get -> focusable
+    get -> ReadUntrackedWindowValue(focusable)
     set(value) {
       requireUiThread("Window.Focusable")
       if focusable == value { return }
@@ -76,7 +76,7 @@ public partial class Window {
   /// Gets or initializes the desktop topmost preference before Open.
   /// Use SetTopmost to change it at runtime. Desktop policy controls the final stacking order.
   public prop Topmost bool {
-    get -> topmost
+    get -> ReadUntrackedWindowValue(topmost)
     init -> topmost = value
   }
 

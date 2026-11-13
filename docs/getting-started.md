@@ -2,10 +2,9 @@
 
 Create the [starter counter](../README.md#use) first. See [platform requirements](platform-preflight.md) if it does not start.
 
-## 1. Extract a function
+## 1. Extract a component
 
-A function can return a `Blob`, just like `Build`. Use one to name a piece of
-UI that does not need its own state. Replace `Program.gs` with this complete program:
+A component is a `data struct` with a conversion to `Blob`. A stateless component returns its tree. Replace `Program.gs` with this complete program:
 
 ```gsharp
 package LearnGoo
@@ -13,64 +12,64 @@ package LearnGoo
 import Goo
 import System
 
-func ActionButton(count int32, onAdd Action) Blob -> Button{
-    OnClick: onAdd,
-    Text{Content: "Add one (count: $count)"},
-}
-
-class Counter : Cell {
-    private var count int32
-
-    override func Build() Blob -> Container{
-        Width: Percent(100),
-        Text{Content: "Count: $count"},
-        ActionButton(count, () -> { count++ }),
+data struct CounterButton {
+    var Count int32
+    var OnAdd Action
+    func Build() Blob -> Button{
+        OnClick: OnAdd,
+        Text{Content: "Add one (count: $Count)"},
     }
 }
 
+func operator implicit(value CounterButton) Blob -> value.Build()
+
+data struct Counter {
+    var Key string?
+}
+
+class CounterCell : Cell[Counter] {
+    private var count int32
+
+    protected override func Build(input Counter) Blob -> Column{
+        Width: Percent(100),
+        Text{Content: "Count: $count"},
+        CounterButton{Count: count, OnAdd: () -> { count++ }},
+    }
+}
+
+func operator implicit(value Counter) Blob -> Cell.Mount[Counter, CounterCell](value.Key, value)
+
 func Main() {
-    Window.ConfigureApplication("Goo learning", "1.0.0", "com.example.goolearning")
-    Window{Title: "Goo learning", Width: 360, Height: 220, Root: Counter{}}.Run()
+    Application.Configure("Goo learning", "1.0.0", "com.example.goolearning")
+    Application.Run(Window{Title: "Goo learning", Size: LayoutSize(360, 220), Root: CounterCell{}})
 }
 ```
 
-The function receives the count and a callback. The `Counter` still owns the
-state and the button's input callback. Goo rebuilds it after the callback, so
-both labels update without a manual `Rebuild()`.
+`CounterButton` receives the count and callback. `CounterCell` owns the state. Goo rebuilds it after the callback, so both labels update.
 
-Restart `goo dev` after this structural edit. Click three times. Both labels
-must show `3`.
+Restart `goo dev` after this structural edit. Click three times. Both labels must show `3`.
 
-## 2. Mount a child when it needs state
+## 2. Compose children with their own state
 
-Keep `ActionButton` and `Counter`. Add this parent:
+Keep the component types. Add this parent:
 
 ```gsharp
 class Counters : Cell {
-    override func Build() Blob -> Container{
-        Width: Percent(100),
-        Cell.Mount[Counter](),
-        Cell.Mount[Counter](),
-    }
+    override func Build() Blob -> Column(){Counter{}, Counter{}}
 }
 ```
 
 Change the window's `Root` to `Counters{}`.
 
-Restart `goo dev`. Click the first button three times and the second once.
-The first counter must show `3` and the second `1`.
+Restart `goo dev`. Click the first button three times and the second once. The first counter must show `3` and the second `1`.
 
-`Mount` retains each child and its fields at its sibling position across builds.
-Call `Mount`, not the child's `Build`, to use a child Cell. Use a key when
-children can be inserted, removed or reordered.
+The conversion calls `Mount`, which retains each child and its fields at its sibling position. Set `Key` when siblings can move, be inserted or be removed. Use `Name(){children}` when there are no member assignments, or `Name{Gap: 8, children}` when there are.
 
-Goo rebuilds the Cell that authored an input callback, even when a child renders it.
-State changed outside input callbacks needs `Rebuild()` on the UI thread.
-See [Cell inputs, identity and lifetime](api/cell.md) for those cases.
+Goo rebuilds the Cell that authored a callback, even when a child renders it. Use `State[T]` for shared state that Cells read. See [Cell inputs, identity and lifetime](api/cell.md).
 
 ## State
 
-Both actions can change the same Cell field. Add this child beside `ActionButton` in `Counter.Build`:
+Both actions can change the same Cell field. Add this child beside `CounterButton` in `CounterCell.Build`:
 
 ```gsharp
 Button{

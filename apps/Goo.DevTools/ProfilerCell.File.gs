@@ -34,11 +34,10 @@ internal partial class ProfilerCell {
         Rebuild()
     }
 
-    private func FilePanel() Container -> Container{
+    private func FilePanel() Blob -> Row{
         Key: "profiler-file-panel",
         Width: Percent(100),
         FlexShrink: 0.0,
-        FlexDirection: FlexDirection.Row,
         AlignItems: AlignItems.Center,
         Gap: 4,
         Padding: Edges{Left: Pad, Right: Pad, Top: 4},
@@ -55,7 +54,7 @@ internal partial class ProfilerCell {
                 OnChange: (value string) -> {
                     filePath = value
                 },
-            }.Build()
+            }
         },
         FileButton("profiler-file-browse", "Browse…", () -> BrowseFile()),
         FileButton("profiler-file-apply", fileBusy ? "Working…": fileAction, () -> ApplyFile()),
@@ -70,7 +69,7 @@ internal partial class ProfilerCell {
     }
 
     private func FileButton(key string, text string, action Action) Blob {
-        let button = ActionButton{Content: text, Disabled: fileBusy, OnClick: action}.Build()
+        let button Blob = ActionButton{Content: text, Disabled: fileBusy, OnClick: action}
         button.Key = key
         return button
     }

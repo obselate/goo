@@ -8,8 +8,12 @@ internal class StateDependency {
   private var readers List[object]?
   private var threadId int32
   private let safePayload bool
+  internal let IsStateValue bool
 
-  internal init(safePayload bool) { this.safePayload = safePayload }
+  internal init(safePayload bool, isStateValue bool = true) {
+    this.safePayload = safePayload
+    IsStateValue = isStateValue
+  }
 
   internal func IsSafePayload() bool -> safePayload
 
@@ -63,6 +67,8 @@ internal class StateDependency {
 }
 
 /// Holds a value that invalidates the Cells and retained builders that read it.
+/// In-place changes and reads of mutable global or service state are not tracked.
+/// Keep values read by Build in State. Verification reports tree changes without a tracked write.
 public class State[T any] {
   private var current T
   private var dependency StateDependency?

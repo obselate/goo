@@ -212,13 +212,13 @@ class PublicDocumentationTests {
     shared {
         private const PublicDeclared BindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly
         private let ExpectedMethodIds[]string = []string{
-            "M:Goo.Blob.Sized(System.Func{Goo.LayoutSize,Goo.Blob})",
             "M:Goo.AsyncImageSource.#ctor(System.Func{System.Threading.CancellationToken,System.Threading.Tasks.Task{Goo.ImageSource}})",
             "M:Goo.AsyncImageSource.Acquire",
             "M:Goo.AsyncImageSource.Dispose",
             "M:Goo.Assets.Open(System.Reflection.Assembly,System.String)",
             "M:Goo.Assets.ReadAllBytes(System.Reflection.Assembly,System.String)",
             "M:Goo.ShaderEffectProgram.Load(System.Reflection.Assembly,System.String)",
+            "M:Goo.Blob.Sized(System.Func{Goo.LayoutSize,Goo.Blob})",
             "M:Goo.Blob.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})",
             "M:Goo.Platform.OpenAsync(System.String,System.Threading.CancellationToken)",
             "M:Goo.NativeDialogs.ShowError(System.String,System.String)",
@@ -1345,6 +1345,7 @@ class PublicDocumentationTests {
                 []string{"delayMs", "action"}, System.Array.Empty[string](), true),
             ["M:Goo.Window.Every(System.Double,System.Action)"] = DocumentationShape(
                 []string{"intervalMs", "action"}, System.Array.Empty[string](), true),
+
             ["M:Goo.Cell`1.InvokeInputCallback(System.Action)"] = DocumentationShape(
                 []string{"callback"}, System.Array.Empty[string](), false),
             ["M:Goo.Cell`1.InvokeInputCallback``1(System.Action{``0},``0)"] = DocumentationShape(
