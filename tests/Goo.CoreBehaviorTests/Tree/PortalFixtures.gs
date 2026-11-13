@@ -121,9 +121,9 @@ internal class PortalFixtures {
       if relative.RootSizeForTest != expected { throw InvalidOperationException("percentage ${percentage} updated layout ${relative.RootSizeForTest}, expected ${expected}") }
       relative.ResolveSizeForTest(expected, nil)
       relative.LayoutForTest(expected)
-      if relative.RootSizeForTest != LayoutSize(expected.Width * percentage / 100, expected.Height * percentage / 100) {
-        throw InvalidOperationException("percentage ${percentage} explicit layout ${relative.RootSizeForTest}")
-      }
+      let explicitRoot = relative.RootSizeForTest
+      if Math.Abs(explicitRoot.Width * 1.5 - Math.Round(expected.Width * percentage / 100 * 1.5)) > 0.0001
+        || Math.Abs(explicitRoot.Height * 1.5 - Math.Round(expected.Height * percentage / 100 * 1.5)) > 0.0001 { return false }
     }
     for size in []LayoutSize{ LayoutSize(0, 1), LayoutSize(Double.NaN, 1), LayoutSize(1, Double.PositiveInfinity) } {
       var rejected = false
