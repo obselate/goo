@@ -121,7 +121,6 @@ ctor|Goo.SpellCheck.SpellCheckSession|public|(owner:Goo.Window,controller:Goo.Te
 ctor|Goo.SpellCheck.SpellingResult|public|(Status:Goo.SpellCheck.SpellingStatus,Version:System.Int64,Language:System.String,Errors:System.Collections.Generic.IReadOnlyList`1<Goo.SpellCheck.Misspelling>,Error:System.String="")
 ctor|Goo.SpellCheck.SpellingSuggestions|public|(Status:Goo.SpellCheck.SpellingStatus,Version:System.Int64,Language:System.String,Range:Goo.TextRange,Word:System.String,Values:System.Collections.Generic.IReadOnlyList`1<System.String>,Error:System.String="")
 ctor|Goo.SpellCheck.SystemSpellingService|public|()
-ctor|Goo.StateDependency|protected|()
 ctor|Goo.State`1|public|(initial:!0)
 ctor|Goo.Style|public|()
 ctor|Goo.Svg.SvgParseException|public|(message:System.String,innerException:System.Exception?=null)
@@ -1109,7 +1108,10 @@ field|Goo.PopupWindow|Dismissed|System.Action`1<Goo.PopupDismissReason>|instance
 function|Goo|Each|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob[]
 function|Goo|Em|public|generic:|(value:System.Double)->Goo.Length
 function|Goo|Percent|public|generic:|(value:System.Double)->Goo.Length
+function|Goo|Rem|public|generic:|(value:System.Double)->Goo.Length
 function|Goo|Sized|public|generic:|(build:System.Func`2<Goo.LayoutSize,Goo.Blob>)->Goo.Blob
+function|Goo|Vh|public|generic:|(value:System.Double)->Goo.Length
+function|Goo|Vw|public|generic:|(value:System.Double)->Goo.Length
 method|Goo.AccessibilityActionRequest|Scroll|static|public|generic:|(x:System.Double,y:System.Double)->Goo.AccessibilityActionRequest
 method|Goo.AccessibilityActionRequest|SetSelection|static|public|generic:|(start:System.Int32,length:System.Int32)->Goo.AccessibilityActionRequest
 method|Goo.AccessibilityActionRequest|SetSelection|static|public|generic:|(start:System.Int32,length:System.Int32,caret:System.Int32)->Goo.AccessibilityActionRequest
@@ -3099,7 +3101,7 @@ type|Goo.ClipboardFormats|sealed-class|public|base:System.Object|interfaces:|gen
 type|Goo.ClipboardImage|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.ClipboardIntent|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.ClipboardReadStatus|enum|public|base:System.Enum|interfaces:|generic:
-type|Goo.ClipboardTextResult|class|public|base:System.Object|interfaces:|generic:
+type|Goo.ClipboardTextResult|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.ClipboardWriteResult|class|public|base:System.Object|interfaces:|generic:
 type|Goo.Color|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.Color>|generic:
 type|Goo.Column|sealed-class|public|base:Goo.Blob|interfaces:|generic:
