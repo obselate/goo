@@ -20,12 +20,6 @@ Assign before Window.Open. Requires the optional Goo.Accessibility native runtim
     <member name="M:Goo.VectorAsset.PathForNode(System.Int32)">
       <summary>Returns a node path in the document coordinate space.</summary>
     </member>
-    <member name="M:Goo.VectorAsset.Render">
-      <summary>Creates a retained vector display fitted within its parent.</summary>
-    </member>
-    <member name="M:Goo.VectorAsset.Render(System.String)">
-      <summary>Creates a keyed retained vector display fitted within its parent.</summary>
-    </member>
     <member name="P:Goo.VectorAsset.ViewBoxX"><summary>Gets the view-box x origin.</summary></member>
     <member name="P:Goo.VectorAsset.ViewBoxY"><summary>Gets the view-box y origin.</summary></member>
     <member name="P:Goo.VectorAsset.ViewBoxWidth"><summary>Gets the view-box width.</summary></member>
