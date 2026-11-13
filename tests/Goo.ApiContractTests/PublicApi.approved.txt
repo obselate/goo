@@ -121,7 +121,6 @@ ctor|Goo.SpellCheck.SpellCheckSession|public|(owner:Goo.Window,controller:Goo.Te
 ctor|Goo.SpellCheck.SpellingResult|public|(Status:Goo.SpellCheck.SpellingStatus,Version:System.Int64,Language:System.String,Errors:System.Collections.Generic.IReadOnlyList`1<Goo.SpellCheck.Misspelling>,Error:System.String="")
 ctor|Goo.SpellCheck.SpellingSuggestions|public|(Status:Goo.SpellCheck.SpellingStatus,Version:System.Int64,Language:System.String,Range:Goo.TextRange,Word:System.String,Values:System.Collections.Generic.IReadOnlyList`1<System.String>,Error:System.String="")
 ctor|Goo.SpellCheck.SystemSpellingService|public|()
-ctor|Goo.StateDependency|protected|()
 ctor|Goo.State`1|public|(initial:!0)
 ctor|Goo.Style|public|()
 ctor|Goo.Svg.SvgParseException|public|(message:System.String,innerException:System.Exception?=null)
@@ -1110,6 +1109,7 @@ function|Goo|Each|public|generic:T[attrs:0,constraints:]|(items:System.Collectio
 function|Goo|Em|public|generic:|(value:System.Double)->Goo.Length
 function|Goo|Percent|public|generic:|(value:System.Double)->Goo.Length
 function|Goo|Rem|public|generic:|(value:System.Double)->Goo.Length
+function|Goo|Sized|public|generic:|(build:System.Func`2<Goo.LayoutSize,Goo.Blob>)->Goo.Blob
 function|Goo|Vh|public|generic:|(value:System.Double)->Goo.Length
 function|Goo|Vw|public|generic:|(value:System.Double)->Goo.Length
 method|Goo.AccessibilityActionRequest|Scroll|static|public|generic:|(x:System.Double,y:System.Double)->Goo.AccessibilityActionRequest
@@ -1149,6 +1149,7 @@ method|Goo.Application|Configure|static|public|generic:|(name:System.String,vers
 method|Goo.Application|PostActivation|static|public|generic:|(value:Goo.ApplicationActivation)->Goo.ActivationPostStatus
 method|Goo.Application|Run|static|public|generic:|(window:Goo.Window)->System.Void
 method|Goo.Blob|Each|static|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob[]
+method|Goo.Blob|Sized|static|public|generic:|(build:System.Func`2<Goo.LayoutSize,Goo.Blob>)->Goo.Blob
 method|Goo.BoxShadow|Deconstruct|instance|public|generic:|(out offsetX:Goo.Length&,out offsetY:Goo.Length&,out blur:Goo.Length&,out spread:Goo.Length&,out color:Goo.Color&,out inset:System.Boolean&)->System.Void
 method|Goo.BoxShadow|Equals|instance|public|generic:|(other:Goo.BoxShadow)->System.Boolean
 method|Goo.BoxShadow|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
@@ -1163,7 +1164,6 @@ method|Goo.Cell`1|InvokeInputCallback|instance|protected|generic:T1[attrs:0,cons
 method|Goo.Cell`1|InvokeInputCallback|instance|protected|generic:T[attrs:0,constraints:];TResult[attrs:0,constraints:]|(callback:System.Func`2<!!0,!!1>?,value:!!0,fallback:!!1)->!!1
 method|Goo.Cell`1|InvokeInputCallback|instance|protected|generic:T[attrs:0,constraints:]|(callback:System.Action`1<!!0>?,value:!!0)->System.Void
 method|Goo.Cell`1|InvokeInputCallback|instance|protected|generic:|(callback:System.Action?)->System.Void
-method|Goo.Cell`1|ShouldRebuild|virtual|protected|generic:|(previous:!0,next:!0)->System.Boolean
 method|Goo.Cell|After|instance|protected|generic:|(delayMs:System.Double,action:System.Action)->Goo.WindowTimer
 method|Goo.Cell|AnimateValue|instance|public|generic:T[attrs:0,constraints:]|(initial:!!0,converter:Goo.MotionConverter`1<!!0>)->Goo.Anim`1<!!0>
 method|Goo.Cell|AnimateValue|instance|public|generic:|(initial:Goo.Color)->Goo.Anim`1<Goo.Color>
@@ -3330,8 +3330,7 @@ type|Goo.SpellCheck.SpellingResult|sealed-class|public|base:System.Object|interf
 type|Goo.SpellCheck.SpellingStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.SpellCheck.SpellingSuggestions|sealed-class|public|base:System.Object|interfaces:System.IEquatable`1<Goo.SpellCheck.SpellingSuggestions>|generic:
 type|Goo.SpellCheck.SystemSpellingService|sealed-class|public|base:System.Object|interfaces:Goo.SpellCheck.ISpellingService|generic:
-type|Goo.StateDependency|abstract-class|public|base:System.Object|interfaces:|generic:
-type|Goo.State`1|sealed-class|public|base:Goo.StateDependency|interfaces:|generic:T[attrs:0,constraints:]
+type|Goo.State`1|sealed-class|public|base:System.Object|interfaces:|generic:T[attrs:0,constraints:]
 type|Goo.StrokeCap|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.StrokeJoin|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Style|class|public|base:System.Object|interfaces:|generic:

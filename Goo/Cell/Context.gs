@@ -398,6 +398,7 @@ internal sealed class ContextReader {
     internal var Provider ContextFrame?
     internal var Cell Cell?
     internal var Virtual VirtualNodeState?
+    internal var Invalidated Action?
     internal var Preserve bool
     internal var Queued bool
     internal var NextCommit ContextReader?
@@ -485,6 +486,7 @@ internal sealed class ContextReader {
             }
         }
         Virtual?.InvalidateContext()
+        Invalidated?.Invoke()
     }
 
     internal func Dispose() {
@@ -500,6 +502,7 @@ internal sealed class ContextReader {
         Window = nil
         Cell = nil
         Virtual = nil
+        Invalidated = nil
     }
 }
 

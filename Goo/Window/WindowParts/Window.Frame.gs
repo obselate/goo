@@ -37,6 +37,7 @@ internal class WindowDefaultTitle {
 /// Hosts a Goo tree in a native window.
 public partial class Window {
   private var virtualRefreshDeferred bool
+  private var sizedEffects ReconcileEffects
 
   internal func FlushDeferredVirtualization() {
     if virtualRefreshDeferred {
@@ -152,6 +153,7 @@ public partial class Window {
     validateDelta(wallDt, "wallDt")
     validateDelta(simDt, "simDt")
     virtualRefreshDeferred = false
+    sizedEffects = ReconcileEffects.None
     timeS = timeS + wallDt
     prepare()
     let profiling = profiler.Active
@@ -277,6 +279,8 @@ public partial class Window {
         accessibilityLayout = true
         metricsChanged = true
       }
+      if !shouldLayout { refreshSized(n) }
+      effects = combineEffects(effects, sizedEffects)
       let deferVirtual = mayDeferVirtual && !layoutChanged
         && !hasEffect(effects, ReconcileEffects.Structure)
         && !hasEffect(effects, ReconcileEffects.Layout)
@@ -308,6 +312,7 @@ public partial class Window {
         metricsChanged = true
         virtualPass++
       }
+      effects = combineEffects(effects, sizedEffects)
       if hasEffect(effects, ReconcileEffects.Structure)
         || hasEffect(effects, ReconcileEffects.Input)
         || hasEffect(effects, ReconcileEffects.Content)
@@ -406,6 +411,12 @@ public partial class Window {
         }
       }
     }
+    effects = combineEffects(effects, sizedEffects)
+    if sizedEffects != ReconcileEffects.None {
+      layoutChanged = true
+      accessibilityLayout = true
+      metricsChanged = true
+    }
     completeCellMounts()
     if hasEffect(effects, ReconcileEffects.Paint) {
       changed = true
@@ -475,16 +486,42 @@ public partial class Window {
   private func calculateLayout(n Node, width float32, height float32) {
     if !profiler.Active {
       layout.Calculate(n, portalRoot, width, height)
+      refreshSized(n)
       return
     }
     let point = profiler.Start()
     var completed = false
     try {
       layout.Calculate(n, portalRoot, width, height)
+      refreshSized(n)
       completed = true
     } finally {
       profiler.Record(FrameProfileStage.Layout, point, if completed { 0 } else { -1 })
     }
+  }
+
+  private func refreshSized(n Node) {
+    if !layout.NeedsSizedRefresh(n) { return }
+    let rec = Reconciler{Owner: this, CellInvalidated: cellHook,
+      ImageCompleted: imageCompletionHook, RetainedInvalidated: retainedInvalidationHook,
+      Res: resolver, ChildScratch: childDiffScratch, DeferStyleFlush: true, Pump: motionPump}
+    try {
+      layout.RefreshSized(n, rec)
+    } catch (_ Exception) {
+      pendingReconcileEffects = combineEffects(pendingReconcileEffects, rec.Effects)
+      rec.DiscardStyles()
+      rethrow
+    }
+    if rec.Effects == ReconcileEffects.None { return }
+    sizedEffects = combineEffects(sizedEffects, rec.Effects)
+    if hasEffect(rec.Effects, ReconcileEffects.Structure) {
+      Portals.Sync(n, portalRoot)
+      layout.MarkPortalStructureDirty()
+      layout.Calculate(n, portalRoot, LayoutWidth, LayoutHeight)
+      refreshSized(n)
+    }
+    layout.RefreshRects(n, portalRoot)
+    input.AfterTreeUpdated(n, resolver, true)
   }
 
   private func drain(rec Reconciler) {

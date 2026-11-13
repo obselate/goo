@@ -4,6 +4,130 @@ import System
 import System.Collections.Generic
 
 internal class TreeFixtures {
+  func SizedStateAndContextContract() bool {
+    let previous = StateVerification.Override
+    StateVerification.Enabled = false
+    SizedFixtureProbe.OwnerBuilds = 0
+    SizedFixtureProbe.ContentBuilds = 0
+    let cell = SizedStateFixtureCell()
+    let window = Window{Root: cell, Size: LayoutSize(200, 100)}
+    SizedFixtureProbe.Context.Set(window, 10)
+    try {
+      window.UpdateTree()
+      let root = window.Tree!!
+      let sibling = root.Children[0]
+      let sized = root.Children[1]
+      let content = sized.Children[0]
+      cell.Value.Value = 1
+      window.UpdateTree()
+      if SizedFixtureProbe.OwnerBuilds != 1 || SizedFixtureProbe.ContentBuilds != 2
+        || sized.Children[0] != content || root.Children[0] != sibling
+        || content.Children[0].Content != "1:10" { return false }
+      SizedFixtureProbe.Context.Set(window, 11)
+      window.UpdateTree()
+      if SizedFixtureProbe.OwnerBuilds != 1 || SizedFixtureProbe.ContentBuilds != 3
+        || content.Children[0].Content != "1:11" { return false }
+      cell.UseOther.Value = true
+      window.UpdateTree()
+      let builds = SizedFixtureProbe.ContentBuilds
+      cell.Value.Value = 2
+      window.UpdateTree()
+      if SizedFixtureProbe.ContentBuilds != builds { return false }
+      cell.Other.Value = 7
+      window.UpdateTree()
+      return SizedFixtureProbe.ContentBuilds == builds + 1 && content.Children[0].Content == "7:11"
+        && !sized.RetainedSizedState!!.Reads.StateChanged
+    } finally {
+      window.Close()
+      StateVerification.Override = previous
+    }
+  }
+
+  func SizedCallbackOwnershipAndVerificationContract() bool {
+    let previous = StateVerification.Override
+    try {
+      StateVerification.Enabled = true
+      for mode in []int32{0, 1, 2} {
+        SizedFixtureProbe.Mode = 0
+        SizedFixtureProbe.Inside = 0
+        SizedFixtureProbe.Outside = 0
+        let cell = SizedVerificationFixtureCell()
+        let window = Window{Root: cell, Size: LayoutSize(200, 100)}
+        try {
+          window.UpdateTree()
+          window.PlatformInput.PointerMove(0, PointerDevice.Mouse, 10, 30, KeyModifiers.None, 0)
+          window.UpdateTree()
+          let sized = window.Tree!!.Children[1]
+          if sized.Children[0].Children[0].Content != "1:0" || cell.stateChanged
+            || sized.RetainedSizedState!!.Reads.StateChanged { return false }
+          if mode == 0 { continue }
+          SizedFixtureProbe.Mode = mode
+          var rejected = false
+          try {
+            window.PlatformInput.PointerMove(0, PointerDevice.Mouse, 11, 30, KeyModifiers.None, 0)
+            window.UpdateTree()
+          } catch (error InvalidOperationException) {
+            rejected = error.Message.Contains("SizedVerificationFixtureCell")
+              && error.Message.Contains("without a tracked State write")
+          }
+          if !rejected { return false }
+        } finally { window.Close() }
+      }
+      return true
+    } finally { StateVerification.Override = previous }
+  }
+
+  func SizedBuildRejectsStateWritesContract() bool {
+    let value = State[int32](0)
+    let window = Window{Size: LayoutSize(100, 100), Root: SizedRootFixture(() -> Sized(size -> {
+      value.Value++
+      return Text("invalid")
+    }))}
+    try {
+      try { window.UpdateTree() }
+      catch (error InvalidOperationException) {
+        return error.Message.Contains("State writes are not allowed during Build")
+          && StateReadScope.Current == nil && Cell.StateReader == nil
+      }
+      return false
+    } finally { window.Close() }
+  }
+
+  func SizedFailedBuildRetainsSubscriptionsContract() bool {
+    let previous = StateVerification.Override
+    StateVerification.Enabled = false
+    SizedFixtureProbe.Fail = false
+    let cell = SizedStateFixtureCell()
+    let window = Window{Root: cell, Size: LayoutSize(200, 100)}
+    SizedFixtureProbe.Context.Set(window, 0)
+    var reads StateReadScope?
+    try {
+      window.UpdateTree()
+      let state = window.Tree!!.Children[1].RetainedSizedState!!
+      reads = state.Reads
+      SizedFixtureProbe.Fail = true
+      cell.Rebuild()
+      var failed = false
+      try { window.UpdateTree() }
+      catch (error InvalidOperationException) { failed = error.Message == "Sized fixture failure." }
+      if !failed || StateReadScope.Current != nil { return false }
+      cell.Other.Value = 4
+      if state.Reads.StateChanged { return false }
+      cell.Value.Value = 2
+      if !state.Reads.StateChanged { return false }
+      SizedFixtureProbe.Fail = false
+      window.UpdateTree()
+      return window.Tree!!.Children[1].Children[0].Children[0].Content == "2:0"
+        && !state.Reads.StateChanged
+    } finally {
+      window.Close()
+      cell.Value.Value = 3
+      if reads?.StateChanged == true { throw InvalidOperationException("Disposed Sized retained a State subscription.") }
+      SizedFixtureProbe.Fail = false
+      StateVerification.Override = previous
+    }
+  }
+
   func EachAssignsDataKeysContract() bool {
     let items = []string{"a", "b"}
     let children = Each(items, item -> item, item -> Text(item))
@@ -958,3 +1082,69 @@ internal class TreeDisplayRetainedCell : Cell, IDisposable {
   func Dispose() { Disposed = true }
 
   override func Build() Blob -> Container() { Text{ Content: "${Count}" },} }
+
+internal class SizedRootFixture(builder Func[Blob]) : Cell {
+  override func Build() Blob -> builder()
+}
+
+internal class SizedMountedFixture : Cell {
+  private let handle ElementHandle = ElementHandle()
+  shared { internal var Ready bool }
+  override func Build() Blob -> Container{Handle: handle, Width: Percent(100), Height: Percent(100)}
+  protected override func Mounted() {
+    Ready = handle.BorderBox.Width == 160 && handle.BorderBox.Height == 70
+  }
+}
+
+internal class SizedFixtureProbe {
+  shared {
+    internal let Context Goo.Context[int32] = Goo.Context[int32]()
+    internal var OwnerBuilds int32
+    internal var Fail bool
+    internal var ContentBuilds int32
+    internal var Mode int32
+    internal var Inside int32
+    internal var Outside int32
+  }
+}
+
+internal class SizedStateFixtureCell : Cell {
+  internal let Value State[int32] = State[int32](0)
+  internal let Other State[int32] = State[int32](0)
+  internal let UseOther State[bool] = State[bool](false)
+
+  override func Build() Blob {
+    SizedFixtureProbe.OwnerBuilds++
+    return Container{Width: Percent(100), Height: Percent(100),
+      Text{Content: "sibling", Height: 20}, Sized(BuildContent){.FlexGrow: 1, .MinHeight: 0}}
+  }
+
+  private func BuildContent(size LayoutSize) Blob {
+    if SizedFixtureProbe.Fail {
+      let ignored = Other.Value
+      throw InvalidOperationException("Sized fixture failure.")
+    }
+    SizedFixtureProbe.ContentBuilds++
+    let value = UseOther.Value ? Other.Value : Value.Value
+    let context = SizedFixtureProbe.Context.Read()
+    return Container{Key: "content", Width: Percent(100), Height: Percent(100), Text("$value:$context")}
+  }
+}
+
+internal class SizedVerificationFixtureCell : Cell {
+  private let value State[int32] = State[int32](0)
+
+  override func Build() Blob -> Container{Width: Percent(100), Height: Percent(100),
+    Text{Content: SizedFixtureProbe.Outside.ToString(), Height: 20},
+    Sized(BuildContent){.FlexGrow: 1, .MinHeight: 0}}
+
+  private func BuildContent(size LayoutSize) Blob ->
+    Container{Width: Percent(100), Height: Percent(100), OnPointerMove: Move,
+      Text("${value.Value}:${SizedFixtureProbe.Inside}")}
+
+  private func Move(event PointerEvent) {
+    if SizedFixtureProbe.Mode == 0 { value.Value++ }
+    else if SizedFixtureProbe.Mode == 1 { SizedFixtureProbe.Inside++ }
+    else { SizedFixtureProbe.Outside++ }
+  }
+}

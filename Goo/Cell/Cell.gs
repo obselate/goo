@@ -7,7 +7,8 @@ import System.Reflection
 import System.Threading
 
 /// Defines a stateful Goo component.
-@DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields)
+/// A mutable static field on a Cell type or its base types makes that Cell rebuild after every callback.
+@DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.AllFields)
 public open class Cell {
   private let rebuildGate object
   internal var rebuildSubmission Action[Cell]?
@@ -30,10 +31,32 @@ public open class Cell {
   internal var contextWindow Window?
   internal var contextReader ContextReader?
   private var stateReads List[StateDependency]?
+  private var stateReadCount int32
   private var callbackFallback bool = true
   private var stateChecked bool
   private var stateDeclared bool
   private var untrackedScopes List[StateReadScope]?
+  internal var stateChanged bool
+  internal var verifyPending bool
+  internal var verificationChanged bool
+  internal var ancestorVerification bool
+
+  internal func RecordStateWrite() {
+    stateChanged = true
+    verifyPending = false
+  }
+
+  internal func RebuildFromState() {
+    RecordStateWrite()
+    Rebuild()
+  }
+
+  internal func TakeStateVerification() bool {
+    let verify = verifyPending && !stateChanged
+    verifyPending = false
+    verificationChanged = false
+    return verify
+  }
 
   internal func RegisterUntrackedScope(builderScope StateReadScope) {
     callbackFallback = true
@@ -191,50 +214,74 @@ public open class Cell {
   }
   internal func ReadState(state StateDependency) {
     stateReads ??= List[StateDependency]()
-    if stateReads!!.Contains(state) { return }
-    if !state.IsSafePayload() { callbackFallback = true }
-    stateReads!!.Add(state)
-    state.AddReader(this)
+    let reads = stateReads!!
+    if stateReadCount < reads.Count && object.ReferenceEquals(reads[stateReadCount], state) {
+      stateReadCount++
+      return
+    }
+    var index = reads.IndexOf(state)
+    if index >= 0 && index < stateReadCount { return }
+    if index < 0 {
+      if !state.IsSafePayload() { callbackFallback = true }
+      reads.Add(state)
+      try { state.AddReader(this) } catch {
+        reads.RemoveAt(reads.Count - 1)
+        rethrow
+      }
+      index = reads.Count - 1
+    }
+    if index != stateReadCount {
+      reads[index] = reads[stateReadCount]
+      reads[stateReadCount] = state
+    }
+    stateReadCount++
   }
 
   private func ClearStateReads() {
     guard let reads = stateReads else { return }
     for index in 0 ... reads.Count { reads[index].RemoveReader(this) }
     reads.Clear()
+    stateReadCount = 0
+  }
+
+  private func CommitStateReads() {
+    guard let reads = stateReads else { return }
+    while reads.Count > stateReadCount {
+      let index = reads.Count - 1
+      reads[index].RemoveReader(this)
+      reads.RemoveAt(index)
+    }
   }
 
   internal func CheckStateFields() {
     if stateChecked { return }
     stateChecked = true
-    callbackFallback = false
+    callbackFallback = untrackedScopes != nil && untrackedScopes!!.Count != 0
     CheckStateType(GetType())
   }
 
   private func CheckStateType(
-    @DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields) current Type) {
+    @DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.AllFields) current Type) {
     if current == typeof(Cell) { return }
     if !(current.IsGenericType && current.GetGenericTypeDefinition().FullName == "Goo.Cell`1") {
-      let fields = current.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
+      let fields = current.GetFields(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
       StateFieldsInspected?.Invoke(current, fields)
       for field in fields {
-        if field.IsInitOnly && typeof(StateDependency).IsAssignableFrom(field.FieldType) {
+        if field.IsInitOnly && field.FieldType.IsGenericType
+          && field.FieldType.GetGenericTypeDefinition().FullName == "Goo.State`1" {
           stateDeclared = true
-          if let state = field.GetValue(this) as StateDependency? {
-            if !state.IsSafePayload() { callbackFallback = true }
-          } else { callbackFallback = true }
+          if !StateDependency.SafePayload(field.FieldType.GetGenericArguments()[0]) || field.GetValue(this) == nil {
+            callbackFallback = true
+          }
           continue
         }
-        if !field.IsInitOnly || (!field.FieldType.IsPrimitive && !field.FieldType.IsEnum
+        if (!field.IsInitOnly && !field.IsLiteral) || (!field.FieldType.IsPrimitive && !field.FieldType.IsEnum
           && field.FieldType != typeof(string) && field.FieldType != typeof(ElementHandle)) {
           callbackFallback = true
         }
       }
     }
-    if let parent = current.BaseType {
-      if parent != typeof(Cell) && !(parent.IsGenericType && parent.GetGenericTypeDefinition().FullName == "Goo.Cell`1") {
-        callbackFallback = true
-      }
-    }
+    if let parent = current.BaseType { CheckStateType(parent) }
   }
 
   internal func EnsureContextReader() ContextReader {
@@ -289,10 +336,14 @@ public open class Cell {
   }
 
   internal func RebuildAfterCallback() {
-    if !building && (callbackFallback || (!stateDeclared && (stateReads == nil || stateReads!!.Count == 0))) {
+    if building { return }
+    if callbackFallback || (!stateDeclared && (stateReads == nil || stateReads!!.Count == 0)) {
       if let scopes = untrackedScopes {
         for index in 0 ... scopes.Count { scopes[index].Rebuild() }
       }
+      Rebuild()
+    } else if StateVerification.Enabled {
+      verifyPending = !stateChanged
       Rebuild()
     }
   }
@@ -304,6 +355,7 @@ public open class Cell {
   }
 
   internal func MarkDirtyFromInput() {
+    verifyPending = false
     lock rebuildGate {
       dirty = true
     }
@@ -436,12 +488,15 @@ public open class Cell {
 
   internal func Render() Blob {
     CheckStateFields()
-    ClearStateReads()
+    stateReadCount = 0
     let previous = StateReader
     StateReader = this
     building = true
     try {
-      return BuildOutput()
+      let result = BuildOutput()
+      CommitStateReads()
+      stateChanged = false
+      return result
     } finally {
       building = false
       StateReader = previous

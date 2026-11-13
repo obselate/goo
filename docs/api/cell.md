@@ -4,7 +4,7 @@ Source: [`Goo/Cell`](../../Goo/Cell)
 
 ## Build input cells
 
-Derive packaged components as `open class X : Cell<TInput>` and override `protected Build(input TInput) Blob`. Goo passes the stored immutable input snapshot. Same-assembly components can still override parameterless `Build()`. If both overloads are overridden, the typed overload wins. Override `ShouldRebuild(previous, next)` only when default structural equality does not match the rebuild policy.
+Derive packaged components as `open class X : Cell<TInput>` and override `protected Build(input TInput) Blob`. Goo passes the stored immutable input snapshot. Same-assembly components can still override parameterless `Build()`. If both overloads are overridden, the typed overload wins. Input equality decides whether the child rebuilds. Derive input-dependent state in `InputChanged(input)`, before Build.
 
 ## Forward input callbacks
 
@@ -64,7 +64,7 @@ Pass `Lifetime` to cancellable work. For replaceable requests, call `Latest("loa
 ## `Cell`
 
 
-Defines a stateful Goo component.
+Defines a stateful Goo component. A mutable static field on a Cell type or its base types makes that Cell rebuild after every callback.
 
 ### `new`
 
@@ -332,10 +332,6 @@ Invokes an input-time callback and rebuilds the Cell that supplied this input. A
 
 Returns: the callback result or fallback
 
-### `ShouldRebuild(TInput,TInput)`
-
-Decides whether a later post-mount snapshot needs a rebuild after Input stores next; default uses EqualityComparer[TInput].Default.
-
 ### `Input`
 
 Gets the current immutable input snapshot.
@@ -395,7 +391,7 @@ Gets the owner window during a Cell build or retained virtual callback. Access o
 ## `State<T>`
 
 
-Holds a value that rebuilds the Cells that read it in Build when it changes.
+Holds a value that invalidates the Cells and retained builders that read it.
 
 ### `new(T)`
 
@@ -411,9 +407,4 @@ Converts state to its current value.
 
 ### `Value`
 
-Gets or sets the value. A read in Build subscribes the Cell. A write of a different value rebuilds its readers.
-
-## `StateDependency`
-
-
-Base type of tracked Cell state.
+Gets or sets the value. Reads in Build and retained builders subscribe their owner. Equal writes do nothing. Changed writes invalidate the subscribed readers. Writes during Build throw. After its first reader, writes require that reader's UI thread.
