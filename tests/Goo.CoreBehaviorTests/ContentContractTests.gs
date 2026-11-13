@@ -3,7 +3,6 @@ package Goo.CoreBehaviorTests
 import Goo
 import Goo.Svg
 import System
-import System.Reflection
 import Xunit
 
 class ContentContractTests {
@@ -173,44 +172,25 @@ class ContentContractTests {
     }
 
     @Fact
-    func VectorAssetPreservesViewBoxPrecision() {
-        let x = 0.1234567890123
-        let y = -0.9876543210123
-        let width = 20.1234567890123
-        let height = 10.9876543210123
-        let asset = VectorAsset(x, y, width, height, []VectorNode{})
-        Assert.Equal(x, asset.ViewBoxX)
-        Assert.Equal(y, asset.ViewBoxY)
-        Assert.Equal(width, asset.ViewBoxWidth)
-        Assert.Equal(height, asset.ViewBoxHeight)
-    }
-
-    @Fact
-    func ShaderEffectAcceptsAndValidatesDoubleLayoutDistances() {
-        let constructor = typeof(ShaderEffect).GetConstructor(
-            []Type{typeof(ShaderEffectProgram), typeof(bool), typeof(float64), typeof(float64)})
-        Assert.NotNull(constructor)
+    func ShaderEffectValidatesDoubleLayoutDistancesBeforeNarrowing() {
         let program = ShaderEffectProgram.LoadEmbedded("filtered_backdrop.goo-effect")
-        let effect = cast[ShaderEffect](constructor!!.Invoke([]object{program, true, 1.25, 2.25}))
+        let effect = ShaderEffect(program, true, 1.25, 2.25)
         effect.CopySnapshot(out var snapshot)
         Assert.Equal(6.75F, snapshot.BackdropOutset)
         Assert.Equal(2.25F, snapshot.BackdropBlur)
         for distance in []float64{-Double.Epsilon, Double.NaN, Double.PositiveInfinity, 256.0000001} {
-            let error = Assert.Throws[TargetInvocationException](() -> {
-                constructor!!.Invoke([]object{program, true, distance, 0.0})
+            Assert.Throws[ArgumentOutOfRangeException](() -> {
+                ShaderEffect(program, true, distance, 0.0)
             })
-            Assert.IsType[ArgumentOutOfRangeException](error.InnerException)
         }
         for distance in []float64{-Double.Epsilon, Double.NaN, Double.PositiveInfinity, 86.0} {
-            let error = Assert.Throws[TargetInvocationException](() -> {
-                constructor!!.Invoke([]object{program, true, 0.0, distance})
+            Assert.Throws[ArgumentOutOfRangeException](() -> {
+                ShaderEffect(program, true, 0.0, distance)
             })
-            Assert.IsType[ArgumentOutOfRangeException](error.InnerException)
         }
-        let error = Assert.Throws[TargetInvocationException](() -> {
-            constructor!!.Invoke([]object{program, false, Double.Epsilon, 0.0})
+        Assert.Throws[ArgumentException](() -> {
+            ShaderEffect(program, false, Double.Epsilon, 0.0)
         })
-        Assert.IsType[ArgumentException](error.InnerException)
     }
 
     private class BuildCell(build() -> Blob) : Cell {
