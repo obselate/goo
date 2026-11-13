@@ -690,7 +690,7 @@ Returns: True when stored or applied, false for an ineligible control or invalid
 
 ### `SetFocusTarget(ElementHandle)`
 
-Sets the descendant that also resolves Focus style while this owner has visible focus. An unmounted target is retained for remounting. The next rebuild restores Blob.FocusTarget.
+Sets the descendant that also resolves FocusStyle while this owner has visible focus. An unmounted target is retained for remounting. The next rebuild restores Blob.FocusTarget.
 
 - `target`: The descendant handle, or nil to clear projection.
 
@@ -740,7 +740,7 @@ Reports whether the vertical offset is within one device pixel of the range end.
 
 ### `IsFocusVisible`
 
-Reports whether this mounted element resolves Focus style through direct focus or projection.
+Reports whether this mounted element resolves FocusStyle through direct focus or projection.
 
 ### `IsMounted`
 
