@@ -126,19 +126,20 @@ ctor|Goo.TextDocumentChange|public|(BeforeVersion:System.Int64,AfterVersion:Syst
 ctor|Goo.TextDocument|public|()
 ctor|Goo.TextDocument|public|(text:System.String)
 ctor|Goo.TextEditorController|public|(document:Goo.TextDocument)
-ctor|Goo.TextEditor|public|(controller:Goo.TextEditorController)
-ctor|Goo.TextEditor|public|(controller:Goo.TextEditorController,layers:Goo.TextPresentationLayer[])
+ctor|Goo.TextEditor|public|()
 ctor|Goo.TextEntry|public|()
 ctor|Goo.TextInputOptions|public|()
 ctor|Goo.TextPosition|public|(Offset:System.Int32,Affinity:Goo.TextAffinity)
 ctor|Goo.TextPresentationLayer|public|(document:Goo.TextDocument)
 ctor|Goo.TextRange|public|(Start:System.Int32,Length:System.Int32)
 ctor|Goo.TextSelection|public|(Anchor:Goo.TextPosition,Active:Goo.TextPosition)
+ctor|Goo.TextSpan|public|(Text:System.String,Style:Goo.Style?)
 ctor|Goo.TextStyleProperties|public|(FontFamily:System.String?,FontSize:System.Nullable`1<System.Double>,FontWeight:System.Nullable`1<System.Double>,FontStyle:System.Nullable`1<Goo.FontStyle>,Color:System.Nullable`1<Goo.Color>,TextDecoration:System.Nullable`1<Goo.TextDecoration>)
 ctor|Goo.TextStyleRange|public|(Range:Goo.TextRange,Style:Goo.Style)
 ctor|Goo.TextStyleSpan|public|(Key:System.String,Range:Goo.TextRange,Style:Goo.Style)
 ctor|Goo.Text|public|()
 ctor|Goo.Text|public|(content:System.String)
+ctor|Goo.Text|public|(params spans:Goo.TextSpan[])
 ctor|Goo.TransferData|public|(representations:System.Collections.Generic.IReadOnlyList`1<Goo.TransferRepresentation>,uris:System.Collections.Generic.IReadOnlyList`1<System.Uri>)
 ctor|Goo.TransferRepresentation|public|(contentType:System.String,bytes:System.ReadOnlyMemory`1<System.Byte>)
 ctor|Goo.TrayOptions|public|()
@@ -154,7 +155,7 @@ ctor|Goo.VectorStroke|public|(width:System.Double,color:Goo.Color)
 ctor|Goo.VectorStroke|public|(width:System.Double,paint:Goo.VectorPaint)
 ctor|Goo.VectorStroke|public|(width:System.Double,paint:Goo.VectorPaint,cap:Goo.StrokeCap,join:Goo.StrokeJoin,miterLimit:System.Double,dashes:Goo.DashPattern?)
 ctor|Goo.VirtualState|public|()
-ctor|Goo.Virtual|public|(source:Goo.VirtualSource)
+ctor|Goo.Virtual|public|()
 ctor|Goo.VulkanExternalImageDescription|public|()
 ctor|Goo.WindowBackdropMask|public|(width:System.Int32,height:System.Int32,alpha:System.Byte[])
 ctor|Goo.WindowPlacement|public|()
@@ -1744,6 +1745,14 @@ method|Goo.TextSnapshot|GetLineRange|instance|public|generic:|(line:System.Int32
 method|Goo.TextSnapshot|GetLineText|instance|public|generic:|(line:System.Int32)->System.String
 method|Goo.TextSnapshot|GetText|instance|public|generic:|()->System.String
 method|Goo.TextSnapshot|GetText|instance|public|generic:|(textRange:Goo.TextRange)->System.String
+method|Goo.TextSpan|Deconstruct|instance|public|generic:|(out Text:System.String&,out Style:Goo.Style?&)->System.Void
+method|Goo.TextSpan|Equals|instance|public|generic:|(other:Goo.TextSpan)->System.Boolean
+method|Goo.TextSpan|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
+method|Goo.TextSpan|GetHashCode|virtual|public|generic:|()->System.Int32
+method|Goo.TextSpan|ToString|virtual|public|generic:|()->System.String
+method|Goo.TextSpan|op_Equality|static|public|generic:|(left:Goo.TextSpan,right:Goo.TextSpan)->System.Boolean
+method|Goo.TextSpan|op_Implicit|static|public|generic:|(value:System.String)->Goo.TextSpan
+method|Goo.TextSpan|op_Inequality|static|public|generic:|(left:Goo.TextSpan,right:Goo.TextSpan)->System.Boolean
 method|Goo.TextStyleProperties|Deconstruct|instance|public|generic:|(out FontFamily:System.String?&,out FontSize:System.Nullable`1<System.Double>&,out FontWeight:System.Nullable`1<System.Double>&,out FontStyle:System.Nullable`1<Goo.FontStyle>&,out Color:System.Nullable`1<Goo.Color>&,out TextDecoration:System.Nullable`1<Goo.TextDecoration>&)->System.Void
 method|Goo.TextStyleProperties|Equals|instance|public|generic:|(other:Goo.TextStyleProperties)->System.Boolean
 method|Goo.TextStyleProperties|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
@@ -1864,7 +1873,7 @@ method|Goo.Window|GetCurrentDisplay|instance|public|generic:|()->Goo.WindowDispl
 method|Goo.Window|GetDisplays|instance|public|generic:|()->System.Collections.Generic.IReadOnlyList`1<Goo.WindowDisplay>
 method|Goo.Window|Hide|instance|public|generic:|()->Goo.WindowOperationResult
 method|Goo.Window|InitializeApplicationActivation|static|public|generic:|(initial:Goo.ApplicationActivation)->Goo.WindowOperationResult
-method|Goo.Window|MeasureText|instance|public|generic:|(text:System.String,style:Goo.Style)->System.Single
+method|Goo.Window|MeasureText|instance|public|generic:|(text:System.String,style:Goo.Style)->System.Double
 method|Goo.Window|Open|instance|public|generic:|()->Goo.Window
 method|Goo.Window|PerformAccessibilityAction|instance|public|generic:|(id:Goo.AccessibilityId,request:Goo.AccessibilityActionRequest)->System.Boolean
 method|Goo.Window|PollCapture|instance|public|generic:|()->Goo.WindowCapture?
@@ -2685,7 +2694,7 @@ property|Goo.TextEditorController|Selection|Goo.TextSelection|instance|get:publi
 property|Goo.TextEditorController|TabWidth|System.Int32|instance|get:public,set:public|index:()
 property|Goo.TextEditorController|UseTabs|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.TextEditor|CaretColor|Goo.Color|instance|get:public,init:public|index:()
-property|Goo.TextEditor|Controller|Goo.TextEditorController|instance|get:public|index:()
+property|Goo.TextEditor|Controller|Goo.TextEditorController|instance|get:public,init:public|index:()
 property|Goo.TextEditor|CurrentLineColor|Goo.Color|instance|get:public,init:public|index:()
 property|Goo.TextEditor|InputOptions|Goo.TextInputOptions?|instance|get:public,init:public|index:()
 property|Goo.TextEditor|Layers|Goo.TextPresentationLayer[]|instance|get:public,init:public|index:()
@@ -2726,6 +2735,8 @@ property|Goo.TextShadow|OffsetY|Goo.Length|instance|get:public,init:public|index
 property|Goo.TextSnapshot|Length|System.Int32|instance|get:public|index:()
 property|Goo.TextSnapshot|LineCount|System.Int32|instance|get:public|index:()
 property|Goo.TextSnapshot|Version|System.Int64|instance|get:public|index:()
+property|Goo.TextSpan|Style|Goo.Style?|instance|get:public,init:public|index:()
+property|Goo.TextSpan|Text|System.String|instance|get:public,init:public|index:()
 property|Goo.TextStyleProperties|Color|System.Nullable`1<Goo.Color>|instance|get:public,init:public|index:()
 property|Goo.TextStyleProperties|FontFamily|System.String?|instance|get:public,init:public|index:()
 property|Goo.TextStyleProperties|FontSize|System.Nullable`1<System.Double>|instance|get:public,init:public|index:()
@@ -2738,6 +2749,7 @@ property|Goo.TextStyleSpan|Key|System.String|instance|get:public,init:public|ind
 property|Goo.TextStyleSpan|Range|Goo.TextRange|instance|get:public,init:public|index:()
 property|Goo.TextStyleSpan|Style|Goo.Style|instance|get:public,init:public|index:()
 property|Goo.Text|Content|System.String|instance|get:public,init:public|index:()
+property|Goo.Text|Selectable|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.Text|StyleRanges|Goo.TextStyleRange[]|instance|get:public,init:public|index:()
 property|Goo.TransferData|Representations|System.Collections.Generic.IReadOnlyList`1<Goo.TransferRepresentation>|instance|get:public|index:()
 property|Goo.TransferData|Uris|System.Collections.Generic.IReadOnlyList`1<System.Uri>|instance|get:public|index:()
@@ -2824,6 +2836,7 @@ property|Goo.VirtualViewport|ScrollOffset|Goo.Point|instance|get:public|index:()
 property|Goo.VirtualViewport|Size|Goo.LayoutSize|instance|get:public|index:()
 property|Goo.VirtualViewport|VisibleAnchor|System.Nullable`1<Goo.VirtualScrollAnchor>|instance|get:public|index:()
 property|Goo.VirtualViewport|Wrap|Goo.FlexWrap|instance|get:public|index:()
+property|Goo.Virtual|Source|Goo.VirtualSource|instance|get:public,init:public|index:()
 property|Goo.VulkanDrivers|Direct|System.String[]|static|get:public,set:public|index:()
 property|Goo.VulkanDrivers|Exclusive|System.Boolean|static|get:public,set:public|index:()
 property|Goo.VulkanExternalImageDescription|AllocationSize|System.UInt64|instance|get:public,init:public|index:()
@@ -3245,6 +3258,7 @@ type|Goo.TextRange|struct|public|base:System.ValueType|interfaces:System.IEquata
 type|Goo.TextSelection|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.TextSelection>|generic:
 type|Goo.TextShadow|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.TextShadow>|generic:
 type|Goo.TextSnapshot|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.TextSpan|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.TextSpan>|generic:
 type|Goo.TextStyleProperties|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.TextStyleProperties>|generic:
 type|Goo.TextStyleRange|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.TextStyleRange>|generic:
 type|Goo.TextStyleSpan|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.TextStyleSpan>|generic:
