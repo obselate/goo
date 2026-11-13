@@ -171,6 +171,28 @@ class ContentContractTests {
         }
     }
 
+    @Fact
+    func ShaderEffectValidatesDoubleLayoutDistancesBeforeNarrowing() {
+        let program = ShaderEffectProgram.LoadEmbedded("filtered_backdrop.goo-effect")
+        let effect = ShaderEffect(program, true, 1.25, 2.25)
+        effect.CopySnapshot(out var snapshot)
+        Assert.Equal(6.75F, snapshot.BackdropOutset)
+        Assert.Equal(2.25F, snapshot.BackdropBlur)
+        for distance in []float64{-Double.Epsilon, Double.NaN, Double.PositiveInfinity, 256.0000001} {
+            Assert.Throws[ArgumentOutOfRangeException](() -> {
+                ShaderEffect(program, true, distance, 0.0)
+            })
+        }
+        for distance in []float64{-Double.Epsilon, Double.NaN, Double.PositiveInfinity, 86.0} {
+            Assert.Throws[ArgumentOutOfRangeException](() -> {
+                ShaderEffect(program, true, 0.0, distance)
+            })
+        }
+        Assert.Throws[ArgumentException](() -> {
+            ShaderEffect(program, false, Double.Epsilon, 0.0)
+        })
+    }
+
     private class BuildCell(build() -> Blob) : Cell {
         override func Build() Blob -> build()
     }

@@ -139,12 +139,14 @@ internal partial class ScrollState {
     }
 
     internal func To(n Node, x float32, y float32, immediate bool = false, activity bool = true) bool {
+      Virtualization.State(n)?.CancelScroll()
       StopMomentum(n)
       SyncEditor(n)
       return setTarget(n, x, y, immediate, activity)
     }
 
     internal func By(n Node, dx float32, dy float32, immediate bool = false) Point {
+      Virtualization.State(n)?.CancelScroll()
       StopMomentum(n)
       SyncEditor(n)
       let previousX = immediate ? n.ScrollX : n.ScrollTargetX

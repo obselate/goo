@@ -12,6 +12,7 @@ import System.Runtime.CompilerServices
 import System.Runtime.InteropServices
 import System.Text.Json
 import System.Threading
+import System.Threading.Tasks
 
 internal class Program {
     shared {
@@ -28,8 +29,24 @@ internal class Program {
             let identity = args[1]
             let root = Path.GetFullPath(args[2].Substring("--output=".Length))
             let tag = if args.Length == 4 { args[3] } else { mode }
+            Application.Configure("Goo application host smoke", "1.0", identity)
+            if mode == "graphics-unavailable" {
+                Environment.SetEnvironmentVariable("VK_DRIVER_FILES", Path.Combine(root, "missing-driver.json"))
+                let window = Window{Size: LayoutSize(160, 100), Root: Cell()}
+                try {
+                    window.Open()
+                    throw InvalidOperationException("A missing Vulkan driver opened a window")
+                } catch (error GraphicsUnavailableException) {
+                    Require(!window.IsOpen && error.Message.Length != 0, "Graphics failure did not close the native window")
+                }
+                return 0
+            }
             if mode == "clipboard" {
                 RunClipboard(identity, root)
+                return 0
+            }
+            if mode == "async-close" {
+                RunAsyncClose()
                 return 0
             }
             if mode == "native-close" {
@@ -363,6 +380,49 @@ internal class Program {
             }
         }
 
+        private func RunAsyncClose() {
+            let ui = Environment.CurrentManagedThreadId
+            let cancelled = AsyncCloseScene{Cancellable: true}
+            Application.Run(Window{Title: "Async close cancellation", Size: LayoutSize(240, 120), Root: cancelled})
+            Require(
+                cancelled.FinallyCount == 1 && cancelled.FinallyThread == ui,
+                "Lifetime cancellation did not finish on the UI thread"
+            )
+
+            let primary = AsyncCloseScene()
+            let other = Window{Title: "Async close other window", Size: LayoutSize(240, 120), Root: Cell()}.Open()
+            var progress int32
+            primary.Started = () -> {
+                other.After(
+                    30.0,
+                    () -> {
+                        progress++
+                        primary.Pending.TrySetResult(true)
+                    }
+                )
+                other.After(80.0, other.RequestClose)
+            }
+            Application.Run(Window{Title: "Async close primary", Size: LayoutSize(240, 120), Root: primary})
+            Require(
+                progress == 1 && primary.FinallyCount == 1 && primary.FinallyThread == ui,
+                "The close drain blocked another window"
+            )
+
+            let late = AsyncCloseScene()
+            Application.Run(Window{Title: "Async close bound", Size: LayoutSize(240, 120), Root: late, CloseDrainMs: 25.0})
+            let elapsed = Stopwatch.GetElapsedTime(late.CloseTicks).TotalMilliseconds
+            Require(
+                late.FinallyCount == 0 && elapsed >= 20.0 && elapsed < 5000.0,
+                "The bounded drain did not return with an incomplete handler: ${elapsed} ms"
+            )
+            late.Pending.SetResult(true)
+            Require(
+                late.Finished.Wait(5000) && late.FinallyCount == 1 && late.FinallyThread != ui,
+                "The late continuation did not finish on the background queue"
+            )
+            Console.WriteLine("async-close: cancellation, multi-window drain and late completion passed")
+        }
+
         private func RunNativeClose(root string, mode string) {
             let main = Window{ Title: "Goo close $mode main", Size: LayoutSize(240, 120),  Root: Cell() }.Open()
             let child = Window{ Title: "Goo close $mode child", Size: LayoutSize(240, 120),  Root: Cell(),
@@ -460,6 +520,40 @@ internal class Program {
 
         private func Require(value bool, message string) {
             if !value { throw InvalidOperationException(message) }
+        }
+    }
+}
+
+internal class AsyncCloseScene : Cell {
+    internal var Cancellable bool
+    internal var Started Action?
+    internal let Pending TaskCompletionSource[bool] = TaskCompletionSource[bool]()
+    internal let Finished ManualResetEventSlim = ManualResetEventSlim()
+    internal var FinallyCount int32
+    internal var FinallyThread int32
+    internal var CloseTicks int64
+
+    protected override func Mounted() {
+        RunHandler()
+        Started?.Invoke()
+        Host.After(1.0, Host.RequestClose)
+    }
+
+    protected override func Unmounting() {
+        CloseTicks = Stopwatch.GetTimestamp()
+    }
+
+    private async func RunHandler() void {
+        try {
+            if Cancellable {
+                await Task.Delay(Timeout.Infinite, Lifetime)
+            } else {
+                await Pending.Task
+            }
+        } finally {
+            FinallyThread = Environment.CurrentManagedThreadId
+            FinallyCount++
+            Finished.Set()
         }
     }
 }
