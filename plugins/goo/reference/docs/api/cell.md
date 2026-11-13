@@ -64,7 +64,7 @@ Pass `Lifetime` to cancellable work. For replaceable requests, call `Latest("loa
 ## `Cell`
 
 
-Defines a stateful Goo component. A mutable static field on a Cell type or its base types makes that Cell rebuild after every callback.
+Defines a stateful Goo component. A mutable static field on a Cell type or its base types makes that Cell rebuild after every callback. With safe fields, declaring State or reading State in Build enables tracked callback rebuilding. Reading window values or contexts alone keeps automatic callback rebuilding.
 
 ### `new`
 
@@ -391,7 +391,7 @@ Gets the owner window during a Cell build or retained virtual callback. Access o
 ## `State<T>`
 
 
-Holds a value that invalidates the Cells and retained builders that read it.
+Holds a value that invalidates the Cells and retained builders that read it. In-place changes and reads of mutable global or service state are not tracked. Keep values read by Build in State. Verification reports tree changes without a tracked write.
 
 ### `new(T)`
 
