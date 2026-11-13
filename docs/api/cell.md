@@ -255,7 +255,7 @@ Returns: a blob that mounts the child component
 
 ### `Mounted`
 
-Runs once on the UI thread after the first layout and before paint. Handles have geometry. Goo applies the normal callback rebuild rule after an override, including when it throws. The base implementation does nothing and need not be called. A Cell whose override calls base.Mounted() is not rebuilt after Mounted returns.
+Runs once on the UI thread after the first layout and before paint. Handles have geometry. Goo applies the normal callback rebuild rule after an override, including when it throws. Do not call base.Mounted().
 
 ### `Post(System.Action)`
 

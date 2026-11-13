@@ -265,7 +265,7 @@ For decoding, thumbnails and raster density, see [images](../images.md).
 ## `AsyncImageSource`
 
 
-Shares a deferred image across mounted leases. Keep this source in a field or model.
+Shares a deferred image across mounted leases. Keep this source in a field or model. Keeping the source in a Cell field makes that Cell rebuild after every callback.
 
 ### `ContentChanged`
 
