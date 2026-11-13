@@ -131,8 +131,9 @@ internal class Portals {
           continue
         }
         let owner = CellOwnership.ForCallback(portal)
+        let previous = owner?.BeginCallback()
         try { callback(reason) }
-        finally { owner?.RebuildAfterCallback() }
+        finally { owner?.EndCallback(previous) }
         return true
       }
       return false
