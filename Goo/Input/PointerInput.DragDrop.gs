@@ -95,6 +95,7 @@ internal partial class PointerInput {
       let owner = CellOwnership.Within(tree, source)
       creatingDrag = true
       try {
+        let previousContext = owner?.BeginCallback()
         try {
           data = descriptor.Create(DragStartEvent{
             IsPointer: isPointer,
@@ -105,7 +106,7 @@ internal partial class PointerInput {
               Y: float64(mapped.Y - source.Rect.Y) },
             WindowPosition: Point{ X: float64(x), Y: float64(y) },
           })
-        } finally { owner?.RebuildAfterCallback() }
+        } finally { owner?.EndCallback(previousContext) }
       } catch (error Exception) {
         if isPointer { current.ClickTarget = nil }
         ExceptionDispatchInfo.Capture(error).Throw()
@@ -242,8 +243,9 @@ internal partial class PointerInput {
             modifiers, DragEffect.None) {
               let owner = CellOwnership.Within(root, target)
               var queried DragEffect
+              let previousContext = owner?.BeginCallback()
               try { queried = descriptor.Query(event) }
-              finally { owner?.RebuildAfterCallback() }
+              finally { owner?.EndCallback(previousContext) }
               if !ensureDragSession(root, session) {
                 path.Clear()
                 return nil
@@ -284,8 +286,9 @@ internal partial class PointerInput {
       guard let event = dragEvent(session, target, kind, x, y, modifiers, effect) else { return false }
       let owner = CellOwnership.Within(root, target)
       let targetMount = NodeMount(target)
+      let previousContext = owner?.BeginCallback()
       try { descriptor.Changed?.Invoke(event) }
-      finally { owner?.RebuildAfterCallback() }
+      finally { owner?.EndCallback(previousContext) }
       if terminalLeave {
         return dragSession == session && targetMount.Current != nil && DragTargetRouting.Available(root, target)
       }
@@ -364,8 +367,9 @@ internal partial class PointerInput {
       var failure Exception?
       let owner = CellOwnership.Within(root, target)
       try {
+        let previousContext = owner?.BeginCallback()
         try { descriptor.Changed?.Invoke(event) }
-        finally { owner?.RebuildAfterCallback() }
+        finally { owner?.EndCallback(previousContext) }
       } catch (error Exception) { failure = error }
       completeDrag(root, session, failure == nil ? DragEndKind.Dropped : DragEndKind.Canceled,
         failure == nil ? effect : DragEffect.None, false, failure)
@@ -417,13 +421,14 @@ internal partial class PointerInput {
                 if let callback = source.End {
                   let owner = CellOwnership.Within(tree, sourceNode)
                   try {
+                    let previousContext = owner?.BeginCallback()
                     try { callback(DragEndEvent{
                       Kind: kind, Effect: effect,
                       Status: session.NativeCompletion?.Status ?? (kind == DragEndKind.Dropped ? DataTransferStatus.Success : DataTransferStatus.Cancelled),
                       Error: session.NativeCompletion?.Error ?? "",
                       SourceRemovalRequired: effect == DragEffect.Move && (session.NativeCompletion?.SourceRemovalRequired ?? true)
                     }) }
-                    finally { owner?.RebuildAfterCallback() }
+                    finally { owner?.EndCallback(previousContext) }
                   } catch (error Exception) {
                     if failure == nil { failure = error }
                   }

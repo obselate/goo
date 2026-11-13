@@ -326,6 +326,7 @@ class PublicDocumentationTests {
             "M:Goo.AccessibilityRelationships.#ctor",
             "M:Goo.AccessibilityValue.#ctor",
             "M:Goo.Anim`1.Pause",
+            "M:Goo.Anim`1.Play(`0,`0)",
             "M:Goo.Anim`1.Play(`0,`0,System.Func{System.Double,System.Double,System.Double,Goo.Simulation},System.Func{System.Double,System.Double,System.Double,Goo.Simulation}[])",
             "M:Goo.Anim`1.Resume",
             "M:Goo.Anim`1.Seek(System.Double)",
@@ -428,7 +429,6 @@ class PublicDocumentationTests {
             "M:Goo.VectorPaint.#ctor(Goo.Gradient)",
             "M:Goo.VectorStroke.#ctor(System.Double,Goo.Color)",
             "M:Goo.VectorStroke.#ctor(System.Double,Goo.VectorPaint)",
-            "M:Goo.VectorStroke.#ctor(System.Double,Goo.VectorPaint,Goo.StrokeCap,Goo.StrokeJoin,System.Double,Goo.DashPattern)",
             "M:Goo.DevTools.Attach(Goo.Window)",
             "M:Goo.DevTools.Attach(Goo.Window,System.Boolean)",
             "M:Goo.Container.#ctor",
@@ -463,13 +463,14 @@ class PublicDocumentationTests {
             "M:Goo.ElementHandle.BeginPress",
             "M:Goo.ElementHandle.EndPress(System.Boolean)",
             "M:Goo.ElementHandle.Focus",
-            "M:Goo.ElementHandle.JumpTo(System.Double,System.Double)",
+            "M:Goo.ElementHandle.JumpTo(System.Nullable{System.Double},System.Nullable{System.Double})",
             "M:Goo.ElementHandle.ScrollIntoView",
-            "M:Goo.ElementHandle.ScrollToItem(System.String)",
             "M:Goo.ElementHandle.ScrollToItem(System.String,Goo.ScrollAlignment,System.Boolean)",
             "M:Goo.ElementHandle.ScrollOffsetOf(System.String,Goo.ScrollAlignment)",
             "M:Goo.ElementHandle.RestoreAnchor(Goo.VirtualScrollAnchor,System.Boolean)",
-            "M:Goo.ElementHandle.ScrollTo(System.Double,System.Double)",
+            "M:Goo.ElementHandle.ScrollTo(System.Nullable{System.Double},System.Nullable{System.Double})",
+            "M:Goo.ElementHandle.ScrollToEnd",
+            "M:Goo.ElementHandle.SelectText(System.Int32,System.Int32)",
             "M:Goo.ElementHandle.SetFocusTarget(Goo.ElementHandle)",
             "M:Goo.ElementHandle.SetTextInputArea(Goo.ElementRect)",
             "M:Goo.ElementHandle.TryCopyTextRangeRects(Goo.TextRange,Goo.TextCoordinateSpace,System.Span{Goo.ElementRect},System.Int32@)",
@@ -616,7 +617,7 @@ class PublicDocumentationTests {
             "M:Goo.RadialGradient.#ctor(Goo.Color[])",
             "M:Goo.RadialGradient.#ctor(System.Double,System.Double,System.Double,Goo.GradientStop[])",
             "M:Goo.Scrollbar.#ctor",
-            "M:Goo.ShaderEffect.#ctor(Goo.ShaderEffectProgram,System.Boolean,System.Single,System.Single)",
+            "M:Goo.ShaderEffect.#ctor(Goo.ShaderEffectProgram,System.Boolean,System.Double,System.Double)",
             "M:Goo.ShaderEffect.SetParameter(System.Int32,System.Numerics.Vector4)",
             "M:Goo.ShaderEffect.SetData(System.Int32,Goo.ShaderEffectData)",
             "M:Goo.ShaderEffectProgram.#ctor(System.Byte[],System.Boolean)",
@@ -734,7 +735,11 @@ class PublicDocumentationTests {
             "M:Goo.WindowClipboard.WriteText(System.String)",
             "M:Goo.Window.Every(System.Double,System.Action)",
             "M:Goo.Window.After(System.Double,System.Action)",
-            "M:Goo.Window.TryPost(System.Action)",
+            "M:Goo.Window.InvokeAsync(System.Action,System.Threading.CancellationToken)",
+            "M:Goo.Window.InvokeAsync``1(System.Func{``0},System.Threading.CancellationToken)",
+            "M:Goo.Window.InvokeAsync(System.Func{System.Threading.Tasks.Task},System.Threading.CancellationToken)",
+            "M:Goo.Window.InvokeAsync``1(System.Func{System.Threading.Tasks.Task{``0}},System.Threading.CancellationToken)",
+            "M:Goo.Window.NextPresentationAsync(System.Threading.CancellationToken)",
             "M:Goo.WindowTimer.Dispose"
         }
         private let ExpectedProtectedMethodIds[]string = []string{
@@ -1011,6 +1016,16 @@ class PublicDocumentationTests {
         private let Shapes IReadOnlyDictionary[string, DocumentationShape] = Dictionary[string, DocumentationShape](
             StringComparer.Ordinal
         ){
+            ["M:Goo.ElementHandle.ScrollToEnd"] = DocumentationShape(
+                System.Array.Empty[string](),
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.ElementHandle.SelectText(System.Int32,System.Int32)"] = DocumentationShape(
+                []string{"start", "end"},
+                System.Array.Empty[string](),
+                true
+            ),
             ["M:Goo.Blob.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})"] =
                 DocumentationShape([]string{"items", "itemKey", "itemBuilder"}, []string{"T"}, true),
             ["M:Goo.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})"] =
@@ -1231,6 +1246,7 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
+            ["M:Goo.Anim`1.Play(`0,`0)"] = DocumentationShape([]string{"from", "to"}, System.Array.Empty[string](), false),
             [
                 "M:Goo.Anim`1.Play(`0,`0,System.Func{System.Double,System.Double,System.Double,Goo.Simulation},System.Func{System.Double,System.Double,System.Double,Goo.Simulation}[])"
             ] = DocumentationShape([]string{"from", "to", "spec", "specs"}, System.Array.Empty[string](), false),
@@ -1441,18 +1457,13 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
-            ["M:Goo.ElementHandle.JumpTo(System.Double,System.Double)"] = DocumentationShape(
+            ["M:Goo.ElementHandle.JumpTo(System.Nullable{System.Double},System.Nullable{System.Double})"] = DocumentationShape(
                 []string{"x", "y"},
                 System.Array.Empty[string](),
                 true
             ),
             ["M:Goo.ElementHandle.ScrollIntoView"] = DocumentationShape(
                 System.Array.Empty[string](),
-                System.Array.Empty[string](),
-                true
-            ),
-            ["M:Goo.ElementHandle.ScrollToItem(System.String)"] = DocumentationShape(
-                []string{"key"},
                 System.Array.Empty[string](),
                 true
             ),
@@ -1506,7 +1517,7 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 false
             ),
-            ["M:Goo.ElementHandle.ScrollTo(System.Double,System.Double)"] = DocumentationShape(
+            ["M:Goo.ElementHandle.ScrollTo(System.Nullable{System.Double},System.Nullable{System.Double})"] = DocumentationShape(
                 []string{"x", "y"},
                 System.Array.Empty[string](),
                 true
@@ -1782,7 +1793,7 @@ class PublicDocumentationTests {
                 false
             ),
             [
-                "M:Goo.ShaderEffect.#ctor(Goo.ShaderEffectProgram,System.Boolean,System.Single,System.Single)"
+                "M:Goo.ShaderEffect.#ctor(Goo.ShaderEffectProgram,System.Boolean,System.Double,System.Double)"
             ] = DocumentationShape(
                 []string{"program", "samplesBackdrop", "backdropOutset", "backdropBlur"},
                 System.Array.Empty[string](),
@@ -2169,8 +2180,28 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 false
             ),
-            ["M:Goo.Window.TryPost(System.Action)"] = DocumentationShape(
-                []string{"action"},
+            ["M:Goo.Window.InvokeAsync(System.Action,System.Threading.CancellationToken)"] = DocumentationShape(
+                []string{"action", "cancellationToken"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.Window.InvokeAsync``1(System.Func{``0},System.Threading.CancellationToken)"] = DocumentationShape(
+                []string{"action", "cancellationToken"},
+                []string{"T"},
+                true
+            ),
+            ["M:Goo.Window.InvokeAsync(System.Func{System.Threading.Tasks.Task},System.Threading.CancellationToken)"] = DocumentationShape(
+                []string{"action", "cancellationToken"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.Window.InvokeAsync``1(System.Func{System.Threading.Tasks.Task{``0}},System.Threading.CancellationToken)"] = DocumentationShape(
+                []string{"action", "cancellationToken"},
+                []string{"T"},
+                true
+            ),
+            ["M:Goo.Window.NextPresentationAsync(System.Threading.CancellationToken)"] = DocumentationShape(
+                []string{"cancellationToken"},
                 System.Array.Empty[string](),
                 true
             ),

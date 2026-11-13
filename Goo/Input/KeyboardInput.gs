@@ -348,10 +348,11 @@ internal class KeyboardInput {
           let callback = down ? InputCallbacks.KeyDown(node) : InputCallbacks.KeyUp(node)
           if let handler = callback {
             let owner = CellOwnership.ForCallback(node)
+            let previousContext = owner?.BeginCallback()
             try {
               handler(KeyEvent{ Key: key, Modifiers: modifiers, Repeat: repeat,
                 IsComposing: compositionActive, targetEditsText: targetEditsText, Control: control, Generation: generation })
-            } finally { owner?.RebuildAfterCallback() }
+            } finally { owner?.EndCallback(previousContext) }
           }
           if nodeMount.Current == nil { return result }
           last = node
@@ -376,8 +377,9 @@ internal class KeyboardInput {
             && pending.Target.Current == start && pending.Owner.Current == node && pending.Generation == focus.Generation {
               result.Handled = true
               let owner = CellOwnership.ForCallback(node)
+              let previousContext = owner?.BeginCallback()
               try { pending.Action() }
-              finally { owner?.RebuildAfterCallback() }
+              finally { owner?.EndCallback(previousContext) }
               return result
             }
           if down {
@@ -390,6 +392,7 @@ internal class KeyboardInput {
                 result.Repeat = binding.Repeat
                 if !repeat || binding.Repeat {
                   let owner = CellOwnership.ForCallback(node)
+                  let previousContext = owner?.BeginCallback()
                   try {
                     binding.OnPress?.Invoke()
                     if !repeat && startMount.Current != nil && nodeMount.Current != nil {
@@ -397,7 +400,7 @@ internal class KeyboardInput {
                         releases[key] = PendingKeyRelease{ Target: startMount, Owner: nodeMount, Action: release, Generation: focusGeneration }
                       }
                     }
-                  } finally { owner?.RebuildAfterCallback() }
+                  } finally { owner?.EndCallback(previousContext) }
                 }
                 return result
               }
@@ -458,11 +461,11 @@ internal class KeyboardInput {
         }
         return result
       }
-      if key == Key.Enter || key == Key.KeypadEnter {
+      if !target.Selectable && (key == Key.Enter || key == Key.KeypadEnter) {
         kind = target.Kind == NodeKind.Editor && !target.EditorReadOnly
           ? TextCommandKind.Insert : TextCommandKind.Submit
       }
-      if key == Key.Escape && !modifiers.Shift {
+      if !target.Selectable && key == Key.Escape && !modifiers.Shift {
         result.Handled = true
         result.SuppressTextInput = true
         if !repeat && !pointer.CancelDrag(root) && !text.HandleCompositionCancel(root) {
@@ -496,8 +499,7 @@ internal class KeyboardInput {
     }
     if key == Key.Y && modifiers == KeyModifiers{ Ctrl: true } { kind = TextCommandKind.Redo }
     guard let command = kind else { return result }
-    result.Handled = true
-    result.SuppressTextInput = true
+    result.Handled = !target.Selectable
     result.Repeat = command == TextCommandKind.MoveLeft || command == TextCommandKind.MoveRight
       || command == TextCommandKind.MoveUp || command == TextCommandKind.MoveDown
       || command == TextCommandKind.PageUp || command == TextCommandKind.PageDown
@@ -507,10 +509,12 @@ internal class KeyboardInput {
       || command == TextCommandKind.DeleteBackward || command == TextCommandKind.DeleteForward
       || command == TextCommandKind.DeleteWordBackward || command == TextCommandKind.DeleteWordForward
     if !repeat || result.Repeat {
-      text.ExecuteEditorCommand(root, resolver, command == TextCommandKind.Insert
+      let handled = text.ExecuteEditorCommand(root, resolver, command == TextCommandKind.Insert
         ? TextCommand{ Kind: command, Text: "\n" }
         : TextCommand{ Kind: command, ExtendSelection: modifiers.Shift })
+      if target.Selectable { result.Handled = handled }
     }
+    result.SuppressTextInput = result.Handled
     return result
   }
 

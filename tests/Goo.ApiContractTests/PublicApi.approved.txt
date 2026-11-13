@@ -108,7 +108,7 @@ ctor|Goo.Row|public|()
 ctor|Goo.Scrollbar|public|()
 ctor|Goo.ShaderEffectData|public|(bytes:System.Byte[])
 ctor|Goo.ShaderEffectProgram|public|(program:System.Byte[],replacesBackdrop:System.Boolean=false)
-ctor|Goo.ShaderEffect|public|(program:Goo.ShaderEffectProgram,samplesBackdrop:System.Boolean=false,backdropOutset:System.Single=0,backdropBlur:System.Single=0)
+ctor|Goo.ShaderEffect|public|(program:Goo.ShaderEffectProgram,samplesBackdrop:System.Boolean=false,backdropOutset:System.Double=0,backdropBlur:System.Double=0)
 ctor|Goo.Shape|public|()
 ctor|Goo.Simulation|public|()
 ctor|Goo.SoundSource|public|(sampleRate:System.Int32,channels:System.Int32,samples:System.Single[])
@@ -159,7 +159,6 @@ ctor|Goo.VectorPaint|public|(color:Goo.Color)
 ctor|Goo.VectorPaint|public|(gradient:Goo.Gradient)
 ctor|Goo.VectorStroke|public|(width:System.Double,color:Goo.Color)
 ctor|Goo.VectorStroke|public|(width:System.Double,paint:Goo.VectorPaint)
-ctor|Goo.VectorStroke|public|(width:System.Double,paint:Goo.VectorPaint,cap:Goo.StrokeCap,join:Goo.StrokeJoin,miterLimit:System.Double,dashes:Goo.DashPattern?)
 ctor|Goo.VirtualState|public|()
 ctor|Goo.Virtual|public|()
 ctor|Goo.VulkanExternalImageDescription|public|()
@@ -865,6 +864,7 @@ enum|Goo.RichText.RichTextStatus|UnsupportedContent|3
 enum|Goo.RichText.RichTextStatus|Unsupported|2
 enum|Goo.ScrollAlignment|Center|1
 enum|Goo.ScrollAlignment|End|2
+enum|Goo.ScrollAlignment|Nearest|3
 enum|Goo.ScrollAlignment|Start|0
 enum|Goo.ScrollbarVisibility|Always|1
 enum|Goo.ScrollbarVisibility|Auto|0
@@ -1135,6 +1135,7 @@ method|Goo.AccessibilityScrollInfo|op_Equality|static|public|generic:|(left:Goo.
 method|Goo.AccessibilityScrollInfo|op_Inequality|static|public|generic:|(left:Goo.AccessibilityScrollInfo,right:Goo.AccessibilityScrollInfo)->System.Boolean
 method|Goo.ActivationArguments|Read|static|public|generic:|(arguments:System.Collections.Generic.IReadOnlyList`1<System.String>,workingDirectory:System.String)->Goo.ActivationReadResult
 method|Goo.Anim`1|Pause|instance|public|generic:|()->System.Void
+method|Goo.Anim`1|Play|instance|public|generic:|(from:!0,to:!0)->System.Void
 method|Goo.Anim`1|Play|instance|public|generic:|(from:!0,to:!0,spec:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>,params specs:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>[])->System.Void
 method|Goo.Anim`1|Resume|instance|public|generic:|()->System.Void
 method|Goo.Anim`1|Seek|instance|public|generic:|(elapsedMs:System.Double)->System.Void
@@ -1228,19 +1229,20 @@ method|Goo.ElementHandle|Blur|instance|public|generic:|()->System.Boolean
 method|Goo.ElementHandle|CancelGestures|instance|public|generic:|()->System.Boolean
 method|Goo.ElementHandle|EndPress|instance|public|generic:|(activate:System.Boolean)->System.Boolean
 method|Goo.ElementHandle|Focus|instance|public|generic:|()->System.Boolean
-method|Goo.ElementHandle|JumpTo|instance|public|generic:|(x:System.Double,y:System.Double)->System.Boolean
+method|Goo.ElementHandle|JumpTo|instance|public|generic:|(x:System.Nullable`1<System.Double>=null,y:System.Nullable`1<System.Double>=null)->System.Boolean
 method|Goo.ElementHandle|RestoreAnchor|instance|public|generic:|(anchor:Goo.VirtualScrollAnchor,settle:System.Boolean=true)->System.Boolean
 method|Goo.ElementHandle|ScrollIntoView|instance|public|generic:|()->System.Boolean
 method|Goo.ElementHandle|ScrollOffsetOf|instance|public|generic:|(key:System.String,alignment:Goo.ScrollAlignment=Start)->System.Nullable`1<Goo.Point>
-method|Goo.ElementHandle|ScrollToItem|instance|public|generic:|(key:System.String)->System.Boolean
-method|Goo.ElementHandle|ScrollToItem|instance|public|generic:|(key:System.String,alignment:Goo.ScrollAlignment,settle:System.Boolean=true)->System.Boolean
-method|Goo.ElementHandle|ScrollTo|instance|public|generic:|(x:System.Double,y:System.Double)->System.Boolean
+method|Goo.ElementHandle|ScrollToEnd|instance|public|generic:|()->System.Boolean
+method|Goo.ElementHandle|ScrollToItem|instance|public|generic:|(key:System.String,alignment:Goo.ScrollAlignment=Start,settle:System.Boolean=true)->System.Boolean
+method|Goo.ElementHandle|ScrollTo|instance|public|generic:|(x:System.Nullable`1<System.Double>=null,y:System.Nullable`1<System.Double>=null)->System.Boolean
+method|Goo.ElementHandle|SelectText|instance|public|generic:|(start:System.Int32,end:System.Int32)->System.Boolean
 method|Goo.ElementHandle|SetFocusTarget|instance|public|generic:|(target:Goo.ElementHandle?)->System.Boolean
 method|Goo.ElementHandle|SetTextInputArea|instance|public|generic:|(area:Goo.ElementRect)->System.Boolean
 method|Goo.ElementHandle|TryCopyTextRangeRects|instance|public|generic:|(textRange:Goo.TextRange,space:Goo.TextCoordinateSpace,destination:System.Span`1<Goo.ElementRect>,out required:System.Int32&)->System.Boolean
 method|Goo.ElementHandle|TryGetTextCaretRect|instance|public|generic:|(position:Goo.TextPosition,space:Goo.TextCoordinateSpace,out rect:Goo.ElementRect&)->System.Boolean
 method|Goo.ElementHandle|TryGetTextPositionAt|instance|public|generic:|(point:Goo.Point,space:Goo.TextCoordinateSpace,out position:Goo.TextPosition&)->System.Boolean
-method|Goo.ElementMetrics|Deconstruct|instance|public|generic:|(out isMounted:System.Boolean&,out borderBox:Goo.ElementRect&,out contentBox:Goo.ElementRect&,out scrollOffset:Goo.Point&,out scrollRange:Goo.Point&,out rawBorderBox:Goo.ElementRect&)->System.Void
+method|Goo.ElementMetrics|Deconstruct|instance|public|generic:|(out isMounted:System.Boolean&,out borderBox:Goo.ElementRect&,out contentBox:Goo.ElementRect&,out scrollOffset:Goo.Point&,out scrollRange:Goo.Point&,out rawBorderBox:Goo.ElementRect&,out isAtEndX:System.Boolean&,out isAtEndY:System.Boolean&)->System.Void
 method|Goo.ElementMetrics|Equals|instance|public|generic:|(other:Goo.ElementMetrics)->System.Boolean
 method|Goo.ElementMetrics|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
 method|Goo.ElementMetrics|GetHashCode|virtual|public|generic:|()->System.Int32
@@ -1930,7 +1932,12 @@ method|Goo.Window|Every|instance|public|generic:|(intervalMs:System.Double,actio
 method|Goo.Window|GetCurrentDisplay|instance|public|generic:|()->Goo.WindowDisplay?
 method|Goo.Window|GetDisplays|instance|public|generic:|()->System.Collections.Generic.IReadOnlyList`1<Goo.WindowDisplay>
 method|Goo.Window|Hide|instance|public|generic:|()->Goo.WindowOperationResult
+method|Goo.Window|InvokeAsync|instance|public|generic:T[attrs:0,constraints:]|(action:System.Func`1<!!0>,cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<!!0>
+method|Goo.Window|InvokeAsync|instance|public|generic:T[attrs:0,constraints:]|(action:System.Func`1<System.Threading.Tasks.Task`1<!!0>>,cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<!!0>
+method|Goo.Window|InvokeAsync|instance|public|generic:|(action:System.Action,cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task
+method|Goo.Window|InvokeAsync|instance|public|generic:|(action:System.Func`1<System.Threading.Tasks.Task>,cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task
 method|Goo.Window|MeasureText|instance|public|generic:|(text:System.String,style:Goo.Style)->System.Double
+method|Goo.Window|NextPresentationAsync|instance|public|generic:|(cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<Goo.WindowPresentationAccepted>
 method|Goo.Window|Open|instance|public|generic:|()->Goo.Window
 method|Goo.Window|PerformAccessibilityAction|instance|public|generic:|(id:Goo.AccessibilityId,request:Goo.AccessibilityActionRequest)->System.Boolean
 method|Goo.Window|PollCapture|instance|public|generic:|()->Goo.WindowCapture?
@@ -1947,7 +1954,6 @@ method|Goo.Window|SetNativeDataDropFormats|instance|public|generic:|(formats:Sys
 method|Goo.Window|SetTopmost|instance|public|generic:|(value:System.Boolean)->Goo.WindowOperationResult
 method|Goo.Window|ShowFileDialogAsync|instance|public|generic:|(kind:Goo.FileDialogKind,options:Goo.FileDialogOptions?=null)->System.Threading.Tasks.Task`1<Goo.FileDialogResult>
 method|Goo.Window|Show|instance|public|generic:|(activate:System.Boolean=true)->Goo.WindowOperationResult
-method|Goo.Window|TryPost|instance|public|generic:|(action:System.Action)->System.Boolean
 property|Goo.AccessibilityActionRequest|Action|Goo.AccessibilityAction|instance|get:public|index:()
 property|Goo.AccessibilityActionRequest|ScrollX|System.Double|instance|get:public|index:()
 property|Goo.AccessibilityActionRequest|ScrollY|System.Double|instance|get:public|index:()
@@ -2206,6 +2212,8 @@ property|Goo.Edges|Right|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.Edges|Top|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.ElementHandle|BorderBox|Goo.ElementRect|instance|get:public|index:()
 property|Goo.ElementHandle|ContentBox|Goo.ElementRect|instance|get:public|index:()
+property|Goo.ElementHandle|IsAtEndX|System.Boolean|instance|get:public|index:()
+property|Goo.ElementHandle|IsAtEndY|System.Boolean|instance|get:public|index:()
 property|Goo.ElementHandle|IsFocusVisible|System.Boolean|instance|get:public|index:()
 property|Goo.ElementHandle|IsMounted|System.Boolean|instance|get:public|index:()
 property|Goo.ElementHandle|IsScrollSettling|System.Boolean|instance|get:public|index:()
@@ -2215,6 +2223,8 @@ property|Goo.ElementHandle|ScrollRange|Goo.Point|instance|get:public|index:()
 property|Goo.ElementHandle|VisibleAnchor|System.Nullable`1<Goo.VirtualScrollAnchor>|instance|get:public|index:()
 property|Goo.ElementMetrics|BorderBox|Goo.ElementRect|instance|get:public,init:public|index:()
 property|Goo.ElementMetrics|ContentBox|Goo.ElementRect|instance|get:public,init:public|index:()
+property|Goo.ElementMetrics|IsAtEndX|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.ElementMetrics|IsAtEndY|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.ElementMetrics|IsMounted|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.ElementMetrics|RawBorderBox|Goo.ElementRect|instance|get:public,init:public|index:()
 property|Goo.ElementMetrics|ScrollOffset|Goo.Point|instance|get:public,init:public|index:()
@@ -2822,6 +2832,7 @@ property|Goo.TextStyleSpan|Range|Goo.TextRange|instance|get:public,init:public|i
 property|Goo.TextStyleSpan|Style|Goo.Style|instance|get:public,init:public|index:()
 property|Goo.Text|Content|System.String|instance|get:public,init:public|index:()
 property|Goo.Text|Selectable|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.Text|SelectionColor|Goo.Color|instance|get:public,init:public|index:()
 property|Goo.Text|StyleRanges|Goo.TextStyleRange[]|instance|get:public,init:public|index:()
 property|Goo.TransferData|Representations|System.Collections.Generic.IReadOnlyList`1<Goo.TransferRepresentation>|instance|get:public|index:()
 property|Goo.TransferData|Uris|System.Collections.Generic.IReadOnlyList`1<System.Uri>|instance|get:public|index:()
@@ -2844,10 +2855,10 @@ property|Goo.VectorAsset|NodeCount|System.Int32|instance|get:public|index:()
 property|Goo.VectorAsset|Nodes|System.Collections.Generic.IReadOnlyList`1<Goo.VectorNode>|instance|get:public|index:()
 property|Goo.VectorAsset|PaintCount|System.Int32|instance|get:public|index:()
 property|Goo.VectorAsset|StrokeCount|System.Int32|instance|get:public|index:()
-property|Goo.VectorAsset|ViewBoxHeight|System.Single|instance|get:public|index:()
-property|Goo.VectorAsset|ViewBoxWidth|System.Single|instance|get:public|index:()
-property|Goo.VectorAsset|ViewBoxX|System.Single|instance|get:public|index:()
-property|Goo.VectorAsset|ViewBoxY|System.Single|instance|get:public|index:()
+property|Goo.VectorAsset|ViewBoxHeight|System.Double|instance|get:public|index:()
+property|Goo.VectorAsset|ViewBoxWidth|System.Double|instance|get:public|index:()
+property|Goo.VectorAsset|ViewBoxX|System.Double|instance|get:public|index:()
+property|Goo.VectorAsset|ViewBoxY|System.Double|instance|get:public|index:()
 property|Goo.VectorNodeStyle|ClipPathFillRule|Goo.FillRule|instance|get:public,init:public|index:()
 property|Goo.VectorNodeStyle|ClipPath|Goo.VectorPath|instance|get:public,init:public|index:()
 property|Goo.VectorNodeStyle|FillRule|Goo.FillRule|instance|get:public,init:public|index:()
@@ -2874,10 +2885,10 @@ property|Goo.VectorPath|ViewBoxHeight|System.Double|instance|get:public|index:()
 property|Goo.VectorPath|ViewBoxWidth|System.Double|instance|get:public|index:()
 property|Goo.VectorPath|ViewBoxX|System.Double|instance|get:public|index:()
 property|Goo.VectorPath|ViewBoxY|System.Double|instance|get:public|index:()
-property|Goo.VectorStroke|Cap|Goo.StrokeCap|instance|get:public|index:()
-property|Goo.VectorStroke|Dashes|Goo.DashPattern?|instance|get:public|index:()
-property|Goo.VectorStroke|Join|Goo.StrokeJoin|instance|get:public|index:()
-property|Goo.VectorStroke|MiterLimit|System.Double|instance|get:public|index:()
+property|Goo.VectorStroke|Cap|Goo.StrokeCap|instance|get:public,init:public|index:()
+property|Goo.VectorStroke|Dashes|Goo.DashPattern?|instance|get:public,init:public|index:()
+property|Goo.VectorStroke|Join|Goo.StrokeJoin|instance|get:public,init:public|index:()
+property|Goo.VectorStroke|MiterLimit|System.Double|instance|get:public,init:public|index:()
 property|Goo.VectorStroke|Paint|Goo.VectorPaint|instance|get:public|index:()
 property|Goo.VectorStroke|VectorEffect|Goo.VectorEffect|instance|get:public,init:public|index:()
 property|Goo.VectorStroke|Width|System.Double|instance|get:public|index:()
@@ -2982,6 +2993,7 @@ property|Goo.Window|Background|Goo.Color|instance|get:public,set:public|index:()
 property|Goo.Window|CanMove|System.Boolean|instance|get:public|index:()
 property|Goo.Window|Capabilities|Goo.WindowCapabilities|instance|get:public|index:()
 property|Goo.Window|Clipboard|Goo.WindowClipboard|instance|get:public|index:()
+property|Goo.Window|CloseDrainMs|System.Double|instance|get:public,set:public|index:()
 property|Goo.Window|Closed|System.Threading.CancellationToken|instance|get:public|index:()
 property|Goo.Window|ContentUnderTitlebar|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|Decorated|System.Boolean|instance|get:public,set:public|index:()

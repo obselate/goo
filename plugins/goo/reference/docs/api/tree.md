@@ -199,7 +199,7 @@ Changing to a pending source clears the previous image.
 
 ## Observe mounted element metrics
 
-Subscribe to `ElementHandle.MetricsChanged` on the UI thread. The immutable snapshot contains `IsMounted`, `BorderBox`, `ContentBox`, `ScrollOffset`, `ScrollRange` and `RawBorderBox`, in that positional deconstruction order. `RawBorderBox` is the transformed layout box before device-pixel snapping. Other boxes describe painted geometry in window logical coordinates.
+Subscribe to `ElementHandle.MetricsChanged` on the UI thread. The immutable snapshot contains `IsMounted`, `BorderBox`, `ContentBox`, `ScrollOffset`, `ScrollRange`, `RawBorderBox`, `IsAtEndX` and `IsAtEndY`, in that positional deconstruction order. `RawBorderBox` is the transformed layout box before device-pixel snapping. Other boxes describe painted geometry in window logical coordinates.
 
 Goo calls listeners after reconciliation, layout, rect refresh, and scroll stepping settle. Detach produces one final `IsMounted = false` snapshot after tree disposal. A detach followed by reattach in the same update reports only the final mounted state.
 
@@ -219,8 +219,12 @@ if let anchor = saved {
 }
 ```
 
-`ScrollToItem(key)` moves immediately. The aligned overload and `RestoreAnchor` settle while visible items are measured. Set `settle: false` for one immediate move. Direct scrolling cancels settlement. `ScrollOffsetOf` returns the current measured or estimated target for `ScrollTo` or a consumer animation. `VisibleAnchor` stores the first visible item key and its signed viewport offset.
+`ScrollToItem(key, alignment: ScrollAlignment.Start, settle: true)` moves immediately and settles while visible items are measured. `Nearest` moves only enough to reveal the item. An unknown key on a mounted virtual element is held for up to three frames and applied at the first realization that knows it. A later scroll call, user scroll or unmount cancels the request. Set `settle: false` for one immediate move. `RestoreAnchor` also settles while items are measured. `ScrollOffsetOf` returns the measured or estimated target for `ScrollTo` or an animation. `VisibleAnchor` stores the first visible item key and its signed viewport offset.
 `IsScrollSettling` reports whether measurement is still correcting the request.
+
+`ScrollTo(y: 0.0)` and `JumpTo(y: 0.0)` keep the horizontal offset. `ScrollToEnd()` animates both scrollable axes to their range ends. `IsAtEndX` and `IsAtEndY` on a handle or metrics snapshot are true when the range is zero or the offset is within one device pixel of its end.
+
+`handle.SelectText(start, end)` focuses a text control and selects UTF-16 offsets `[start, end)`. Before mount, it retains one request until the next mount and layout. A later request replaces it. Unmount clears it. A mounted non-text control returns false.
 
 `ScrollbarVisibility.Auto` shows the built-in Vulkan thumb during wheel, programmatic or drag interaction and then fades it. `Always` keeps it visible and draggable without idle frames. `Hidden` hides only the built-in thumb.
 
@@ -578,12 +582,12 @@ Moves keyboard focus to this focusable mounted element.
 
 Returns: False when the handle is unmounted or the element cannot receive focus.
 
-### `JumpTo(float64,float64)`
+### `JumpTo(System.Nullable{float64},System.Nullable{float64})`
 
-Immediately sets this element's logical scroll offset.
+Immediately sets this element's logical scroll offset. A nil axis keeps its offset.
 
-- `x`: The non-negative horizontal offset.
-- `y`: The non-negative vertical offset.
+- `x`: The non-negative horizontal offset, or nil to keep the offset.
+- `y`: The non-negative vertical offset, or nil to keep the offset.
 
 Returns: False when the handle is unmounted or the element is not scrollable.
 
@@ -611,32 +615,39 @@ Returns a clamped item target for ScrollTo or a consumer animation.
 
 Returns: The current measured or estimated target, or nil when unavailable.
 
-### `ScrollTo(float64,float64)`
+### `ScrollTo(System.Nullable{float64},System.Nullable{float64})`
 
-Sets this element's logical scroll target.
+Sets this element's logical scroll target. A nil axis keeps its current offset.
 
-- `x`: The non-negative horizontal target.
-- `y`: The non-negative vertical target.
+- `x`: The non-negative horizontal target, or nil to keep the offset.
+- `y`: The non-negative vertical target, or nil to keep the offset.
 
 Returns: False when the handle is unmounted or the element is not scrollable.
 
-### `ScrollToItem(string)`
+### `ScrollToEnd`
 
-Immediately scrolls a virtual collection to a stable item key, using estimates for unmeasured rows.
+Animates this element to the range end on both scrollable axes.
 
-- `key`: The nonempty stable key returned by the virtual collection's itemKey callback.
-
-Returns: False for an unmounted handle, a nonvirtual element, or an unknown key.
+Returns: False when the handle is unmounted or the element is not scrollable.
 
 ### `ScrollToItem(string,ScrollAlignment,bool)`
 
-Scrolls to an item and keeps its alignment while visible rows are measured.
+Scrolls to an item and optionally corrects alignment while rows are measured. Unknown keys are held for at most three frames. A later scroll, user scroll or unmount cancels them.
 
-- `key`: The stable item key.
+- `key`: The nonempty stable item key.
 - `alignment`: The item's alignment in the viewport.
-- `settle`: Whether to correct the offset after measurement. Direct scrolling cancels it.
+- `settle`: Whether to correct the offset after measurement.
 
-Returns: False for an unmounted handle, a nonvirtual element, or an unknown key.
+Returns: True when applied or stored, false for an unmounted or nonvirtual element.
+
+### `SelectText(int32,int32)`
+
+Focuses this text control and selects UTF-16 offsets [start, end). An unmounted handle retains one request until its next mount and layout.
+
+- `start`: The selection anchor offset.
+- `end`: The active selection offset.
+
+Returns: True when stored or applied, false for an ineligible control or invalid range.
 
 ### `SetFocusTarget(ElementHandle)`
 
@@ -680,6 +691,14 @@ Gets the transformed border box in window logical coordinates. An unmounted hand
 
 Gets the transformed content box in window logical coordinates. An unmounted handle returns an empty rectangle.
 
+### `IsAtEndX`
+
+Reports whether the horizontal offset is within one device pixel of the range end.
+
+### `IsAtEndY`
+
+Reports whether the vertical offset is within one device pixel of the range end.
+
 ### `IsFocusVisible`
 
 Reports whether this mounted element resolves Focus style through direct focus or projection.
@@ -720,6 +739,14 @@ Gets the transformed border box in window logical coordinates.
 ### `ContentBox`
 
 Gets the transformed content box in window logical coordinates.
+
+### `IsAtEndX`
+
+Reports whether the horizontal offset is within one device pixel of the range end.
+
+### `IsAtEndY`
+
+Reports whether the vertical offset is within one device pixel of the range end.
 
 ### `IsMounted`
 
@@ -1180,6 +1207,7 @@ Selects an item's alignment in the viewport.
 - `Start`
 - `Center`
 - `End`
+- `Nearest`
 
 ## `Spacer`
 
@@ -1218,6 +1246,10 @@ Gets the displayed text.
 ### `Selectable`
 
 Gets whether the text supports selection and copy without editing or a caret.
+
+### `SelectionColor`
+
+Gets the selection highlight color.
 
 ### `StyleRanges`
 

@@ -100,9 +100,16 @@ Reports completion once after the owning motion pump settles, on its UI thread. 
 
 Holds the current value until Resume, retargeting, or forced completion.
 
+### `Play(T,T)`
+
+Snaps to the start value, then animates with Motion.Default. Restarts on every call. Call it from an event, Mounted or a callback, not unconditionally in Build.
+
+- `from`: value to start from
+- `to`: value to animate toward
+
 ### `Play(T,T,System.Func{float64,float64,float64,Simulation},System.Func{float64,float64,float64,Simulation}[])`
 
-Snaps to the start value, then animates toward the target. Safe during Build, like Snap. The initial value does not invalidate the owner.
+Snaps to the start value, then animates toward the target. Restarts on every call. Call it from an event, Mounted or a callback, not unconditionally in Build.
 
 - `from`: value to start from
 - `to`: value to animate toward

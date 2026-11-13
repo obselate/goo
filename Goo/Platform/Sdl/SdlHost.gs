@@ -7,6 +7,7 @@ import System.Diagnostics
 import System.Runtime.InteropServices
 
 internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHost, NativeDragHost, PinchInputHost {
+  internal var CallbackContext WindowCallbackContext?
   private const MousePointerId int64 = 0L
   private const TouchMouseId uint32 = uint32.MaxValue
   private const PenMouseId uint32 = uint32.MaxValue - 1u

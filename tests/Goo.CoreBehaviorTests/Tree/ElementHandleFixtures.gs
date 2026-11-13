@@ -4,6 +4,129 @@ import System
 import System.Collections.Generic
 
 internal class ElementHandleFixtures {
+  func MutableHandleReadRebuildContract() bool {
+    let cell = ElementHandleStateReadCell()
+    let window = Window{Root: cell, Size: LayoutSize(100, 120)}
+    try {
+      window.UpdateTree()
+      if !cell.ButtonHandle.Activate() || !cell.IsDirty() { return false }
+      window.UpdateTree()
+      return window.Tree?.Children[1].Content == "0:40"
+    } finally { window.Close() }
+  }
+
+  func DeferredSelectionContract() bool {
+    let handle = ElementHandle()
+    if !handle.SelectText(0, 1) || !handle.SelectText(1, 3) { return false }
+    let cell = DeferredCallbackContent(TextEntry{Handle: handle, Value: "a😀b"})
+    let window = Window{Root: cell, Size: LayoutSize(100, 40)}
+    try {
+      window.UpdateTree()
+      if window.Focus.Selection?.Anchor.Offset != 1 || window.Focus.Selection?.Active.Offset != 3 { return false }
+      if !handle.SelectText(4, 4) || window.Focus.Selection?.Active.Offset != 4 { return false }
+      cell.Content = Container{}
+      cell.Rebuild()
+      window.UpdateTree()
+      cell.Content = TextEntry{Handle: handle, Value: "next"}
+      cell.Rebuild()
+      window.UpdateTree()
+      if window.Focus.Selection != nil { return false }
+      cell.Content = Container{Handle: handle}
+      cell.Rebuild()
+      window.UpdateTree()
+      if handle.SelectText(0, 0) { return false }
+      let closingHandle = ElementHandle()
+      if !closingHandle.SelectText(0, 0) { return false }
+      let closingCell = DeferredCallbackContent()
+      let closingWindow = Window{Root: closingCell, Size: LayoutSize(100, 40)}
+      closingCell.Content = TextEntry{Handle: closingHandle, OnFocus: _ -> closingWindow.Close()}
+      try {
+        closingWindow.UpdateTree()
+        return !closingHandle.IsMounted
+      } finally { closingWindow.Close() }
+    } finally { window.Close() }
+  }
+
+  func PendingItemAndNearestContract() bool {
+    let cell = VirtualFixtureCell(10)
+    cell.Items.RemoveAt(9)
+    let window = Window{Root: cell, Size: LayoutSize(100, 60)}
+    try {
+      window.UpdateTree()
+      if !cell.Handle.ScrollToItem("row-9") { return false }
+      if !cell.Handle.ScrollToItem("row-10", ScrollAlignment.End, false) { return false }
+      window.UpdateTree()
+      cell.Items.Add(VirtualFixtureItem{Id: 9})
+      cell.Rebuild()
+      window.UpdateTree()
+      if cell.Handle.ScrollOffset.Y != 0 { return false }
+      cell.Items.Add(VirtualFixtureItem{Id: 10})
+      cell.Rebuild()
+      window.UpdateTree()
+      if cell.Handle.ScrollOffset.Y != 160 || !cell.Handles[10].IsMounted { return false }
+      if !cell.Handle.ScrollToItem("row-10", ScrollAlignment.Nearest) || cell.Handle.ScrollOffset.Y != 160 { return false }
+      if !cell.Handle.ScrollToItem("row-0", ScrollAlignment.Nearest) || cell.Handle.ScrollOffset.Y != 0 { return false }
+      cell.Items.RemoveAt(10)
+      cell.Rebuild()
+      window.UpdateTree()
+      if !cell.Handle.ScrollToItem("row-10") { return false }
+      for frame in 0 ... 3 { window.UpdateTree() }
+      cell.Items.Add(VirtualFixtureItem{Id: 10})
+      cell.Rebuild()
+      window.UpdateTree()
+      if cell.Handle.ScrollOffset.Y != 0 { return false }
+      cell.Items.RemoveAt(10)
+      cell.Rebuild()
+      window.UpdateTree()
+      if !cell.Handle.ScrollTo(y: 100) || !cell.Handle.ScrollToItem("row-10") { return false }
+      window.UpdateTree(0.016)
+      if !cell.Handle.IsScrollSettling || !cell.Handle.JumpTo(y: 20) { return false }
+      cell.Items.Add(VirtualFixtureItem{Id: 10})
+      cell.Rebuild()
+      window.UpdateTree()
+      if cell.Handle.ScrollOffset.Y != 20 { return false }
+      cell.Items.Clear()
+      cell.Rebuild()
+      window.UpdateTree()
+      if !cell.Handle.ScrollToItem("row-10") || !cell.Handle.IsScrollSettling { return false }
+      window.PlatformInput.PointerWheel(5, 5, 0, -1, KeyModifiers{})
+      if cell.Handle.IsScrollSettling { return false }
+      if !cell.Handle.ScrollToItem("row-10") || !cell.Handle.ScrollIntoView() || cell.Handle.IsScrollSettling { return false }
+      if !cell.Handle.ScrollToItem("row-10") { return false }
+      window.Close()
+      return !cell.Handle.IsScrollSettling && !cell.Handle.ScrollToItem("row-10")
+    } finally { window.Close() }
+  }
+
+  func OptionalAxesAndEndContract() bool {
+    let handle = ElementHandle()
+    let snapshots = List[ElementMetrics]()
+    handle.MetricsChanged += value -> snapshots.Add(value)
+    let cell = DeferredCallbackContent(Container{
+      Handle: handle, Overflow: Overflow.Scroll,
+      Container{Width: 300, Height: 200, FlexShrink: 0},
+    })
+    let window = Window{Root: cell, Size: LayoutSize(100, 60)}
+    window.UiScale = 2.0F
+    try {
+      window.UpdateTree()
+      if !handle.JumpTo(20, 30) || !handle.JumpTo(y: 40) || handle.ScrollOffset.X != 20 { return false }
+      if !handle.ScrollTo(x: 50) { return false }
+      window.UpdateTree(1)
+      if handle.ScrollOffset.X != 50 || handle.ScrollOffset.Y != 40 { return false }
+      let maximum = handle.ScrollRange
+      handle.JumpTo(maximum.X - 0.75, maximum.Y - 0.75)
+      window.UpdateTree()
+      if handle.IsAtEndX || handle.IsAtEndY || snapshots[^1].IsAtEndX || snapshots[^1].IsAtEndY { return false }
+      handle.JumpTo(maximum.X - 0.25, maximum.Y - 0.25)
+      window.UpdateTree()
+      if !handle.IsAtEndX || !handle.IsAtEndY || !snapshots[^1].IsAtEndX || !snapshots[^1].IsAtEndY { return false }
+      if !handle.ScrollToEnd() { return false }
+      window.UpdateTree(1)
+      return handle.ScrollOffset.X == maximum.X && handle.ScrollOffset.Y == maximum.Y
+    } finally { window.Close() }
+  }
+
   func FocusProjectionContract() bool {
     let cell = VirtualFixtureCell(100)
     cell.ProjectFocus = true
@@ -545,7 +668,7 @@ internal class ElementHandleFixtures {
       if follow && lastRange != value.ScrollRange.Y {
         cell.Handle.JumpTo(0, value.ScrollRange.Y)
       } else {
-        follow = value.ScrollOffset.Y >= value.ScrollRange.Y - 0.5
+        follow = value.IsAtEndY
       }
       lastRange = value.ScrollRange.Y
     }
@@ -649,7 +772,7 @@ internal class ElementHandleFixtures {
     window.UpdateTree()
     if cell.Handle.ScrollRange.Y != 19960.0 || semantics.Tree?.Root?.SizeOfSet != 1001 { return false }
 
-    if !cell.Handle.ScrollToItem("row-900") || cell.Handle.ScrollToItem("row-missing") { return false }
+    if !cell.Handle.ScrollToItem("row-900") || !cell.Handle.ScrollToItem("row-missing") { return false }
     window.UpdateTree()
     if cell.Handle.ScrollOffset.Y != 18000.0 || !cell.Handles[900].IsMounted { return false }
 
@@ -1124,6 +1247,11 @@ internal class VirtualFixtureState : VirtualState {
     return nil
   }
 
+  public override func BoundsOf(viewport VirtualViewport, key string) ElementRect? {
+    guard let offset = OffsetOf(viewport, key) else { return nil }
+    return ElementRect{X: offset.X, Y: offset.Y, Width: viewport.Size.Width, Height: 20}
+  }
+
   public override func Commit() {
     let old = current
     current = next
@@ -1172,5 +1300,19 @@ internal class ThrowingVirtualFixtureState : VirtualState {
   public override func Dispose() {
     Disposals++
     if Fail { throw Failure }
+  }
+}
+
+internal class ElementHandleStateReadCell : Cell {
+  internal let Handle ElementHandle = ElementHandle()
+  internal let ButtonHandle ElementHandle = ElementHandle()
+  private let value State[int32] = State[int32](0)
+
+  override func Build() Blob -> Container(){
+    Button{Handle: ButtonHandle, Height: 20, OnClick: () -> { Handle.JumpTo(y: 40) }},
+    Text{Content: "${value.Value}:${Handle.ScrollOffset.Y}"},
+    Container{Handle: Handle, Height: 60, OverflowY: Overflow.Scroll,
+      Container{Height: 200, FlexShrink: 0},
+    },
   }
 }

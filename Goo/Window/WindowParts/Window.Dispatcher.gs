@@ -3,11 +3,116 @@ package Goo
 import System
 import System.Collections.Generic
 import System.Threading
+import System.Threading.Tasks
 
 /// Hosts a Goo tree in a native window.
 public partial class Window {
   private var closedSource CancellationTokenSource?
   private var nativeClosed bool
+  private var pendingTaskSource CancellationTokenSource?
+  private var presentationWaiters List[TaskCompletionSource[WindowPresentationAccepted]]?
+
+  internal func PendingTaskToken() CancellationToken {
+    lock cellQueueGate {
+      if !acceptingPosts { return CancellationToken(true) }
+      pendingTaskSource ??= CancellationTokenSource()
+      return pendingTaskSource!!.Token
+    }
+  }
+
+  private func cancelPendingTasks() {
+    var source CancellationTokenSource?
+    lock cellQueueGate { source = pendingTaskSource }
+    source?.Cancel()
+  }
+
+  /// Queues an action on the UI thread and awaits its result or exception.
+  /// @param action action to run
+  /// @param cancellationToken cancels pending dispatch
+  /// @returns the pending dispatch task
+  public func InvokeAsync(action Action, cancellationToken CancellationToken = default(CancellationToken)) Task {
+    if action == nil { throw ArgumentNullException("action") }
+    return InvokeAsync[bool](() -> {
+      action()
+      return true
+    }, cancellationToken)
+  }
+
+  /// Queues a function on the UI thread and awaits its result or exception.
+  /// @typeparam T result type
+  /// @param action function to run
+  /// @param cancellationToken cancels pending dispatch
+  /// @returns the function result
+  public async func InvokeAsync[T any](action Func[T], cancellationToken CancellationToken = default(CancellationToken)) Task[T] {
+    if action == nil { throw ArgumentNullException("action") }
+    let token = PendingTaskToken()
+    let completion = TaskCompletionSource[T](TaskCreationOptions.RunContinuationsAsynchronously)
+    using let callerRegistration = cancellationToken.Register(() -> { completion.TrySetCanceled(cancellationToken) })
+    using let closeRegistration = token.Register(() -> { completion.TrySetCanceled(token) })
+    if !completion.Task.IsCompleted {
+      if !Post(() -> {
+        if completion.Task.IsCompleted { return }
+        try { completion.TrySetResult(action()) }
+        catch (error OperationCanceledException) { completion.TrySetCanceled() }
+        catch (error Exception) { completion.TrySetException(error) }
+      }) { completion.TrySetCanceled() }
+    }
+    return await completion.Task.ConfigureAwait(false)
+  }
+
+  /// Queues an async action on the UI thread and awaits its work or exception.
+  /// @param action async action to run
+  /// @param cancellationToken cancels dispatch or the wait for its work
+  /// @returns the task that completes after the action's work
+  public func InvokeAsync(action Func[Task], cancellationToken CancellationToken = default(CancellationToken)) Task {
+    if action == nil { throw ArgumentNullException("action") }
+    let close = PendingTaskToken()
+    let work = TaskExtensions.Unwrap(InvokeAsync[Task](action, cancellationToken))
+    return work.WaitAsync(cancellationToken).WaitAsync(close)
+  }
+
+  /// Queues an async function on the UI thread and awaits its result or exception.
+  /// @typeparam T result type
+  /// @param action async function to run
+  /// @param cancellationToken cancels dispatch or the wait for its work
+  /// @returns the result after the function's work completes
+  public async func InvokeAsync[T any](action Func[Task[T]], cancellationToken CancellationToken = default(CancellationToken)) Task[T] {
+    if action == nil { throw ArgumentNullException("action") }
+    let close = PendingTaskToken()
+    let work = await InvokeAsync[Task[T]](action, cancellationToken).ConfigureAwait(false)
+    return await work.WaitAsync(cancellationToken).WaitAsync(close).ConfigureAwait(false)
+  }
+
+  /// Requests a frame and awaits its next accepted presentation, not display scanout.
+  /// Call this on the UI thread. Closing the window cancels the task.
+  /// @param cancellationToken cancels the wait
+  /// @returns the next presentation receipt
+  public async func NextPresentationAsync(cancellationToken CancellationToken = default(CancellationToken)) Task[WindowPresentationAccepted] {
+    requireUiThread("Window.NextPresentationAsync")
+    let token = PendingTaskToken()
+    let completion = TaskCompletionSource[WindowPresentationAccepted](TaskCreationOptions.RunContinuationsAsynchronously)
+    using let callerRegistration = cancellationToken.Register(() -> { completion.TrySetCanceled(cancellationToken) })
+    using let closeRegistration = token.Register(() -> { completion.TrySetCanceled(token) })
+    lock cellQueueGate {
+      if !completion.Task.IsCompleted {
+        presentationWaiters ??= List[TaskCompletionSource[WindowPresentationAccepted]]()
+        presentationWaiters!!.Add(completion)
+      }
+    }
+    if !completion.Task.IsCompleted { requestRender() }
+    try { return await completion.Task.ConfigureAwait(false) }
+    finally {
+      lock cellQueueGate { presentationWaiters?.Remove(completion) }
+    }
+  }
+
+  private func completePresentationWaiters(receipt WindowPresentationAccepted) {
+    lock cellQueueGate {
+      guard let waiters = presentationWaiters else { return }
+      for waiter in waiters { waiter.TrySetResult(receipt) }
+      waiters.Clear()
+    }
+  }
 
   /// Gets a token cancelled after this window's native teardown finishes or fails.
   /// Posted work stops earlier and can be discarded while the window is closing.
@@ -25,13 +130,7 @@ public partial class Window {
   /// A successful enqueue can still be discarded if teardown begins before the action runs.
   /// @param action action to run during a later Pump
   /// @returns True when the action was accepted into the queue.
-  public func Post(action Action) bool -> TryPost(action)
-
-  /// Attempts to queue an action for the UI thread.
-  /// A successful enqueue can still be discarded if teardown begins before the action runs.
-  /// @param action action to run during a later Pump
-  /// @returns True when the action was accepted into the queue.
-  public func TryPost(action Action) bool {
+  public func Post(action Action) bool {
     if action == nil { throw ArgumentNullException("action") }
     var wake = false
     lock cellQueueGate {
@@ -68,9 +167,10 @@ public partial class Window {
     cancellation?.Cancel()
   }
 
-  private func hasPostedActions() bool -> Interlocked.CompareExchange(&pendingPostedActions, 0, 0) != 0
+  private func hasPostedActions() bool -> Interlocked.CompareExchange(&pendingPostedActions, 0, 0) != 0 || hasContinuations()
 
   internal func drainPostedActions() {
+    using let context = CallbackScope(CallbackContext())
     var count int32
     var hasBatch bool
     lock cellQueueGate {
