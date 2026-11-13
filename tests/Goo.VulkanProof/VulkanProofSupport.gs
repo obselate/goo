@@ -15,8 +15,7 @@ internal class VulkanProductionProofCell : Cell {
 internal func OpenVulkanProductionProofWindow() Window {
   let window = Window{
     Title: "Goo Vulkan production proof",
-    Width: 64,
-    Height: 64,
+    Size: LayoutSize(64, 64),
     VSync: false,
     Root: VulkanProductionProofCell{},
   }

@@ -67,7 +67,7 @@ func CheckRichClipboard() {
     using let layer = TextPresentationLayer(controller.Document)
     layer.SetStyle("bold", TextRange(0, 7), Style{ FontWeight: 700 })
     let handle = ElementHandle()
-    let owner = Window{ Width: 240, Height: 180, Root: EditorPage(controller, layer, handle) }.Open()
+    let owner = Window{ Size: LayoutSize(240, 180),  Root: EditorPage(controller, layer, handle) }.Open()
 
     try {
         Settle(owner)
@@ -99,7 +99,7 @@ func CheckRichClipboard() {
             let data = RichTextCodec.Write(RichTextFragment("only",
                 []TextStyleSpan{ TextStyleSpan("only", TextRange(0, 4), Style{ FontWeight: 700 }) }))
             let representation = data.Representations.Single(item -> item.ContentType == contentType)
-            let written = Pump(owner, owner.WriteClipboardAsync(
+            let written = Pump(owner, owner.Clipboard.WriteAsync(
                 TransferData([]TransferRepresentation{ representation }, []Uri{})))
             Require(written.Status == DataTransferStatus.Success, "single-format publication failed")
             controller.Selection = TextSelection(TextPosition(0, TextAffinity.Upstream), TextPosition(7, TextAffinity.Downstream))
@@ -129,7 +129,7 @@ func CheckRichClipboard() {
 }
 
 internal class EditorPage(controller TextEditorController, layer TextPresentationLayer, handle ElementHandle) : Cell {
-    override func Build() Blob -> TextEditor(controller, []TextPresentationLayer{ layer }) { Handle = handle }
+    override func Build() Blob -> TextEditor(){ Controller = controller, Layers = []TextPresentationLayer{ layer }, Handle = handle }
 }
 
 internal class Page(width int32, height int32) : Cell {
@@ -153,14 +153,14 @@ internal class Document : IPrintDocument {
 
 @STAThread
 func Main(args[]string) {
-    let window = Window{Root: Page(32, 32), Width: 96, Height: 96, Title: "Goo print check"}.Open()
+    let window = Window{Root: Page(32, 32), Size: LayoutSize(96, 96),  Title: "Goo print check"}.Open()
 
     try {
         Settle(window)
         CheckSystemSpelling()
         CheckRichClipboard()
-        let ownerWidth = window.Width
-        let ownerHeight = window.Height
+        let ownerWidth = window.NativeWidth
+        let ownerHeight = window.NativeHeight
         let options = OffscreenRenderOptions(240f, 180f, 480, 360, Color.Rgb(255, 255, 255), 134217728)
         let first = Pump(window, window.RenderOffscreenAsync(Page(240, 180), options, CancellationToken.None))
         Require(
@@ -170,7 +170,7 @@ func Main(args[]string) {
         let capture = first.Capture!!
         Require(
             capture.Width == uint32(480) && capture.Height == uint32(360) &&
-                window.Width == ownerWidth && window.Height == ownerHeight,
+                window.NativeWidth == ownerWidth && window.NativeHeight == ownerHeight,
             "page size changed the visible window"
         )
         Pixel(capture, 450, 330, 20, 160, 60)

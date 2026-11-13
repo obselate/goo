@@ -103,7 +103,7 @@ internal shared class AndroidPopupSmoke {
             }
         }
         view.Window.UiScale = 1.5f
-        view.Window.SetTimeout(() -> Require(completed, "Android popup lifecycle timed out."), 15000.0)
+        view.Window.After(15000.0, () -> Require(completed, "Android popup lifecycle timed out."))
         tooltip = PopupWindow(view.Window, SmokeApplication.CreatePopupRoot(AttachTooltip), PopupKind.Tooltip)
         tooltip.Dismissed += (reason PopupDismissReason) -> {
             Require(

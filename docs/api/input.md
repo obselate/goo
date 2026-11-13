@@ -76,7 +76,7 @@ controller.UseTabs = false
 controller.IndentWidth = 2
 controller.TabWidth = 8
 
-TextEditor(controller)
+TextEditor{Controller: controller}
 ```
 
 Keys match physical `Key` values and exact `Modifiers`. Omitted modifiers mean none. The first matching binding on the nearest element wins. `OnPress` runs on press. `OnRelease` is paired with that press and runs only if the original target still owns focus, even if modifiers were released first. Changing focus, disabling, or removing the target cancels the pending release. `Repeat: true` repeats the action after 400 ms and then at 30 Hz while focus remains on the original target. It works on any focusable primitive and any key.
@@ -142,12 +142,12 @@ Container(){
     .Handle: owner,
     .Focusable: true,
     .FocusTarget: activeRow,
-    Container{Handle: activeRow, Focus: Style{BasedOn: focusRing}},
+    Container{Handle: activeRow, FocusStyle: Style{BasedOn: focusRing}},
 }
 ```
 
 `FocusTarget` adds the focused owner's visible focus state to one mounted,
-enabled, visible descendant. The descendant resolves its own `Focus` style
+enabled, visible descendant. The descendant resolves its own `FocusStyle`
 without becoming focusable. The owner keeps keyboard focus and its own focus
 style. Pointer focus does not show the projected style unless the owner's normal
 focus-visible rules require it.
@@ -1413,6 +1413,76 @@ Identifies the pointer device type that produced a pointer event.
 - `Mouse`
 - `Touch`
 - `Pen`
+
+## `PointerDragEvent`
+
+
+Describes a primary-pointer drag in element-local and window coordinates.
+
+### `PreventDefault`
+
+Prevents the default behavior for this input sample.
+
+### `StopPropagation`
+
+Stops further routing of this input sample.
+
+### `Delta`
+
+Gets movement from the previous sample in element-local units.
+
+### `Device`
+
+Gets the pointer device.
+
+### `IsOverTarget`
+
+Reports whether normal hit testing at the sample position includes this element. Evaluated when read. Canceled events report false.
+
+### `Modifiers`
+
+Gets the keyboard modifiers at this sample.
+
+### `Phase`
+
+Gets the drag transition.
+
+### `PointerId`
+
+Gets the stable pointer identifier.
+
+### `Position`
+
+Gets the position relative to the receiving element.
+
+### `Translation`
+
+Gets the displacement from the press position in element-local units.
+
+### `WindowPosition`
+
+Gets the position in logical window units.
+
+## `PointerDragPhase`
+
+
+Identifies a captured pointer drag transition.
+
+### `Canceled`
+
+Reports cancellation, capture loss, unmount or an unavailable target.
+
+### `Ended`
+
+Reports the matching primary-pointer release.
+
+### `Moved`
+
+Reports a sample after the drag starts and before it terminates.
+
+### `Started`
+
+Reports the press or the first sample that reaches the threshold.
 
 ## `PointerEvent`
 

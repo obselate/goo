@@ -27,7 +27,7 @@ func RunSvgCorpusSmoke() {
     for name in []string{"s13-representative.svg", "s13-animated.svg", "s13-morph.svg"} {
         let asset = Svg.Load(Path.Combine(AppContext.BaseDirectory, "SvgCorpus", name))
         let window = Window{
-            Title: "Goo SVG corpus", Width: 256, Height: 256,
+            Title: "Goo SVG corpus", Size: LayoutSize(256, 256),
             VSync: false, Background: Color.White, Root: SvgCorpusCell(asset),
         }
         try {

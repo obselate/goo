@@ -10,7 +10,7 @@ internal class PaintBindingFixtures {
       for field in 0 ... 4 {
         for repeat in 0 ... 2 {
           let cell = PaintSlotCell(lane, field)
-          let window = Window{ Root: cell, Width: 320, Height: 240 }
+          let window = Window{ Root: cell, Size: LayoutSize(320, 240), }
           let sink = PaintSlotProfile()
           let profiler = cast[FrameProfiler](typeof(Window).GetField("profiler", BindingFlags.Instance | BindingFlags.NonPublic)!!.GetValue(window))
           profiler.Sink = sink
@@ -66,7 +66,7 @@ internal class PaintBindingFixtures {
   func PaintSlotsPrecedenceAndRemovalContract() bool {
     let cell = PaintSlotCell(1, 0)
     cell.Duration = 1000.0
-    let window = Window{ Root: cell, Width: 320, Height: 240 }
+    let window = Window{ Root: cell, Size: LayoutSize(320, 240), }
     try {
       window.UpdateTree()
       let n = cell.Handle.AttachedNode()!!
@@ -109,7 +109,7 @@ internal class PaintBindingFixtures {
 
   func PaintSlotsWakeDisposeAndRetireContract() bool {
     let cell = PaintSlotCell(1, 0)
-    let window = Window{ Root: cell, Width: 320, Height: 240 }
+    let window = Window{ Root: cell, Size: LayoutSize(320, 240), }
     var wakes = 0
     try {
       window.UpdateTree()
@@ -139,7 +139,7 @@ internal class PaintBindingFixtures {
     }
     let source = MotionFixtureCell{}
     let target = PaintSlotCell(1, 0)
-    let host = Window{ Root: target, Width: 320, Height: 240 }
+    let host = Window{ Root: target, Size: LayoutSize(320, 240), }
     try {
       source.BindPump(host.PaintMotionPump)
       let anim = source.AnimateValue(0.5)
@@ -161,9 +161,9 @@ internal class PaintBindingFixtures {
 
   func PaintSlotsRejectOtherWindowsAndPropagateColorContract() bool {
     let source = PaintSlotCell(1, 0)
-    let first = Window{ Root: source, Width: 320, Height: 240 }
+    let first = Window{ Root: source, Size: LayoutSize(320, 240), }
     let target = PaintSlotCell(1, 0)
-    let second = Window{ Root: target, Width: 320, Height: 240 }
+    let second = Window{ Root: target, Size: LayoutSize(320, 240), }
     try {
       first.UpdateTree()
       target.Replacement = source.Number
@@ -176,7 +176,7 @@ internal class PaintBindingFixtures {
     }
     let cell = PaintSlotCell(1, 1)
     cell.InheritColor = true
-    let window = Window{ Root: cell, Width: 320, Height: 240 }
+    let window = Window{ Root: cell, Size: LayoutSize(320, 240), }
     try {
       window.UpdateTree()
       cell.Colour.Set(Color.White)
@@ -193,10 +193,14 @@ internal class PaintBindingFixtures {
 
   func PaintSlotsAcceptCustomSimulationContract() bool {
     let cell = PaintSlotCell(1, 0)
-    let window = Window{ Root: cell, Width: 320, Height: 240 }
+    let window = Window{ Root: cell, Size: LayoutSize(320, 240), }
     try {
       window.UpdateTree()
-      cell.Number.To(0.25, (from float64, to float64, velocity float64) -> PaintSlotSpring(from, to, velocity))
+      cell.Number.Play(0.75, 0.25, Motion.Delay(500.0,
+        (from float64, to float64, velocity float64) -> PaintSlotSpring(from, to, velocity)))
+      window.UpdateTree(0.25)
+      if cell.Number.Value != 0.75 || cell.Handle.AttachedNode()!!.Opacity != 0.75F { return false }
+      window.UpdateTree(0.25)
       for tick in 0 ... 120 { window.UpdateTree(1.0 / 64.0) }
       return cell.Builds == 1 && cell.Number.Value == 0.25
         && cell.Handle.AttachedNode()!!.Opacity == 0.25F
@@ -207,7 +211,7 @@ internal class PaintBindingFixtures {
 
   func InfinitePaintSkipsClippedTicksAndResumesPhaseContract() bool {
     let cell = PaintVisibilityCell(true)
-    let window = Window{ Root: cell, Width: 240, Height: 160 }
+    let window = Window{ Root: cell, Size: LayoutSize(240, 160), }
     try {
       window.UpdateTree()
       let first = cell.Scroll.AttachedNode()!!.Children[0].Children[0].Children[0]
@@ -227,7 +231,7 @@ internal class PaintBindingFixtures {
       window.UpdateTree()
       if !window.PaintMotionPump.Active || cell.Loops[0].Samples == samples
         || Math.Abs(cell.Values[0].Value - 0.5) > 0.000001 || cell.Builds != builds { return false }
-      window.Width = 5
+      window.Size = LayoutSize(5, window.Size.Height)
       window.UpdateTree()
       if window.PaintMotionPump.Active { return false }
       var completions = 0
@@ -252,7 +256,7 @@ internal class PaintBindingFixtures {
 
   func InfinitePaintKeepsSharedVisibleTargetContract() bool {
     let cell = PaintVisibilityCell(true)
-    let window = Window{ Root: cell, Width: 240, Height: 160 }
+    let window = Window{ Root: cell, Size: LayoutSize(240, 160), }
     try {
       window.UpdateTree()
       cell.Shared = true
@@ -276,7 +280,7 @@ internal class PaintBindingFixtures {
 
   func ClippedFiniteAndUnmarkedSimulationsKeepTickingContract() bool {
     let cell = PaintVisibilityCell(false)
-    let window = Window{ Root: cell, Width: 240, Height: 160 }
+    let window = Window{ Root: cell, Size: LayoutSize(240, 160), }
     var completions = 0
     try {
       window.UpdateTree()
@@ -304,21 +308,21 @@ internal class PaintBindingFixtures {
     internal func MeasureInfiniteVisibility() {
       let marked = Environment.GetEnvironmentVariable("GOO_ANIMATION_VISIBILITY_SMOKE") != "legacy"
       let cell = PaintVisibilityCell(marked)
-      let window = Window{ Root: cell, Title: "Goo animation visibility", Width: 240, Height: 160 }.Open()
+      let window = Window{ Root: cell, Title: "Goo animation visibility", Size: LayoutSize(240, 160), }.Open()
       using let process = Process.GetCurrentProcess()
       var frames uint64
       var initialFrames uint64
       var initialCpu float64
       var initialTime int64
       window.PresentationAccepted += receipt -> { frames = receipt.FrameIndex }
-      window.SetTimeout(() -> { cell.Scroll.JumpTo(0.0, 200.0) }, 2000.0)
-      window.SetTimeout(() -> {
+      window.After(2000.0, () -> { cell.Scroll.JumpTo(0.0, 200.0) })
+      window.After(4000.0, () -> {
         process.Refresh()
         initialCpu = process.TotalProcessorTime.TotalMilliseconds
         initialFrames = frames
         initialTime = Stopwatch.GetTimestamp()
-      }, 4000.0)
-      window.SetTimeout(() -> {
+      })
+      window.After(14000.0, () -> {
         process.Refresh()
         let elapsed = float64(Stopwatch.GetTimestamp() - initialTime) / float64(Stopwatch.Frequency)
         let cpu = process.TotalProcessorTime.TotalMilliseconds - initialCpu
@@ -328,7 +332,7 @@ internal class PaintBindingFixtures {
           + " cpu_ms=" + cpu.ToString("F3") + " cpu_percent=" + (cpu / (elapsed * 10.0)).ToString("F3"))
         if marked && count != 0 { throw InvalidOperationException("Clipped infinite paint requested frames") }
         window.RequestClose()
-      }, 14000.0)
+      })
       try { window.Run() } finally { window.Close() }
     }
   }

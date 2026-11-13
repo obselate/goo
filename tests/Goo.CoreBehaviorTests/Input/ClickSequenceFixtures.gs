@@ -5,7 +5,7 @@ import System.Collections.Generic
 
 internal class ClickSequenceFixtures {
   func DragRegionIgnoresFocusableAncestorsButPreservesControls() bool {
-    let window = Window{Root: DragRegionHitCell{}, Width: 300, Height: 90, Decorated: false, Resizable: false}
+    let window = Window{Root: DragRegionHitCell{}, Size: LayoutSize(300, 90),  Decorated: false, Resizable: false}
     window.UpdateTree()
     return window.hitTest(10, 30) == WindowHitResult.Draggable
       && window.hitTest(110, 30) == WindowHitResult.Normal
@@ -14,7 +14,7 @@ internal class ClickSequenceFixtures {
   }
 
   func EdgeScrollbarTakesUndecoratedResizeBand() bool {
-    let window = Window{Root: EdgeScrollbarCell{}, Width: 200, Height: 100, Decorated: false, Resizable: true}
+    let window = Window{Root: EdgeScrollbarCell{}, Size: LayoutSize(200, 100),  Decorated: false, Resizable: true}
     window.UpdateTree()
     return window.hitTest(196, 50) == WindowHitResult.Normal
       && window.hitTest(4, 50) == WindowHitResult.Left
@@ -168,6 +168,32 @@ internal class ClickSequenceFixtures {
     }
     return counts.Count == 4 && counts[0] == 1 && counts[1] == 1 && counts[2] == 1 && counts[3] == 2
   }
+  func PointerDragThresholdAndSuppressedClickContract() bool {
+    var clicks int32
+    let phases = List[PointerDragPhase]()
+    let resolver = Resolver{}
+    let reconciler = Reconciler{Res: resolver}
+    let root = reconciler.Mount(Button{
+      Width: 100, Height: 80, PointerDragThreshold: 8,
+      PointerDragAxis: Goo.Gestures.PanAxis.Horizontal,
+      OnClick: () -> { clicks++ },
+      OnPointerDrag: (e PointerDragEvent) -> { phases.Add(e.Phase) },
+    })
+    Layout().Calculate(root, 100.0F, 80.0F)
+    let input = InputCoordinator()
+    input.QueuePointerPress(20.0F, 20.0F)
+    input.QueuePointerMove(20.0F, 30.0F)
+    input.QueuePointerRelease(20.0F, 30.0F)
+    input.Drain(root, resolver, 0.0, nil)
+    if clicks != 1 || phases.Count != 0 { return false }
+    input.QueuePointerPress(20.0F, 20.0F)
+    input.QueuePointerMove(30.0F, 20.0F)
+    input.QueuePointerRelease(30.0F, 20.0F)
+    input.Drain(root, resolver, 1.0, nil)
+    return clicks == 1 && phases.Count == 2
+      && phases[0] == PointerDragPhase.Started && phases[1] == PointerDragPhase.Ended
+  }
+
 }
 
 internal class DragRegionHitCell : Cell {

@@ -49,7 +49,7 @@ internal class DiagnosticCaptureFixture {
       let root = DiagnosticCaptureCell{}
       let window = Window{
         Title: "Goo diagnostic capture Busy regression",
-        Width: 64, Height: 64, Root: root,
+        Size: LayoutSize(64, 64),  Root: root,
       }.Open()
       try {
         WindowReadbackTestFixture.ForceRender(window, 0.0)
@@ -161,8 +161,7 @@ internal class DiagnosticCaptureFixture {
           && Math.Abs(int32(reused.Pixels[at]) - 123) <= 2,
           "A reused capture did not update the caller-owned pixels"
         )
-        window.Width = 1824
-        window.Height = 1026
+        window.Size = LayoutSize(1824, 1026)
         window.Pump(0.0)
         WindowReadbackTestFixture.ForceRender(window, 0.016, waitForPresentation: true)
         WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
@@ -223,8 +222,7 @@ internal class DiagnosticCaptureFixture {
             "capture-allocation: reused=true sample=$sample pixels=${captured.Pixels.Length} bytes=$bytes"
           )
         }
-        window.Width = 64
-        window.Height = 64
+        window.Size = LayoutSize(64, 64)
         window.Pump(0.0)
         Require(accepted > 0uL, "No native presentation acceptance was reported")
         let diagnosticDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10

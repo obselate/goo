@@ -46,8 +46,8 @@ internal class DevToolsInputFixtures {
   func OpaqueTargetsRejectOtherWindowsAndRemounts() bool {
     let firstRoot = DevToolsInputCell{}
     let secondRoot = DevToolsInputCell{}
-    let firstWindow = Window{Root: firstRoot, Width: 320, Height: 220}
-    let secondWindow = Window{Root: secondRoot, Width: 320, Height: 220}
+    let firstWindow = Window{Root: firstRoot, Size: LayoutSize(320, 220), }
+    let secondWindow = Window{Root: secondRoot, Size: LayoutSize(320, 220), }
     firstWindow.Open()
     secondWindow.Open()
     let first = firstWindow.AttachDiagnostics(true)
@@ -80,7 +80,7 @@ internal class DevToolsInputFixtures {
 
   func OptInRoutingSettlementAndStaleTargets() bool {
     let root = DevToolsInputCell{}
-    let window = Window{Root: root, Width: 320, Height: 220}
+    let window = Window{Root: root, Size: LayoutSize(320, 220)}
     root.Backspace = () -> { window.Focus.Execute(TextCommand{ Kind: TextCommandKind.DeleteBackward }) }
     window.Open()
     let session = window.AttachDiagnostics()
@@ -125,7 +125,7 @@ internal class DevToolsInputFixtures {
 
   func CaptureCancelAndValidation() bool {
     let root = DevToolsInputCell{}
-    let window = Window{Root: root, Width: 320, Height: 220}
+    let window = Window{Root: root, Size: LayoutSize(320, 220), }
     window.Open()
     let session = window.AttachDiagnostics(true)
     try {
@@ -169,7 +169,7 @@ internal class DevToolsInputFixtures {
     let root = DevToolsInputCell{}
     var keyPresses int32
     root.Backspace = () -> { keyPresses++ }
-    let window = Window{Root: root, Width: 320, Height: 220}
+    let window = Window{Root: root, Size: LayoutSize(320, 220), }
     window.Open()
     let session = window.AttachDiagnostics(true)
     try {

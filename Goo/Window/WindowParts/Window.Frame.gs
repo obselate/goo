@@ -46,12 +46,13 @@ public partial class Window {
   }
 
   private func prepare() {
-    if Width == 0 {
-      Width = 1280
+    if let size = requestedSize {
+      width = scaledSize(size.Width)
+      height = scaledSize(size.Height)
+      requestedSize = nil
     }
-    if Height == 0 {
-      Height = 720
-    }
+    if width == 0 { width = scaledSize(1280.0) }
+    if height == 0 { height = scaledSize(720.0) }
     if Title == "" {
       Title = WindowDefaultTitle.Value()
     }
@@ -405,6 +406,7 @@ public partial class Window {
         }
       }
     }
+    completeCellMounts()
     if hasEffect(effects, ReconcileEffects.Paint) {
       changed = true
     }

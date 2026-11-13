@@ -32,10 +32,10 @@ Cell.Mount[Counter]("counter")
 
 ## Mount with a factory
 
-`Cell.Mount[TCell](https://github.com/obselate/goo/blob/main/docs/api/factory%2C key)` mounts a Cell with constructor dependencies without a parameterless constructor.
+`Cell.Mount[TCell](https://github.com/obselate/goo/blob/main/docs/api/key%2C factory)` mounts a Cell with constructor dependencies without a parameterless constructor.
 
 ```gsharp
-Cell.Mount[Counter](() -> Counter(store), "counter")
+Cell.Mount[Counter]("counter", () -> Counter(store))
 ```
 
 A mounted Cell is retained by declared `TCell` and sibling key. The factory runs only for a new mount. Rebuilding the parent, replacing the delegate, or changing captured values does not recreate the Cell. Change the key for a new instance. Factories returning the base `Cell` type need distinct stable keys for distinct components.
@@ -48,6 +48,19 @@ See [language interop](../interop.md) for other languages.
 
 Capturing factories inside parent builds can allocate delegates and closures even when the Cell is reused. Cache factories with stable dependencies. Goo never invokes a factory to discover its result's runtime type.
 
+With constructor dependencies and typed input, use `Cell.Mount[Input, Page]("page", input, () -> Page(service))`. The input is stored on every parent diff. The factory still runs only for a new mount.
+
+## Own work for the mounted Cell
+
+`Host` is the owning window. It is valid from window binding, before the first `InputChanged` or `Build`, until `Unmounting` returns. Reading it in a constructor or after unmount throws with the Cell type name.
+
+Override `Mounted()` for work that needs mounted handles and the first layout. It runs once before paint. Override `Unmounting()` for cleanup before elements are removed. `Lifetime` is cancelled after that hook returns, then Goo calls `IDisposable.Dispose` when implemented.
+
+Use `Post(action)` from any thread to update the Cell on its UI thread. It returns false when the Cell is not mounted or the window rejects posts. Use `After(delayMs, action)` or `Every(intervalMs, action)` on the UI thread for owned timers. Pending actions and timers stop at unmount or close. Goo applies the normal callback rebuild rule after each action, including one that throws. Use `Host.Every` for work that does not change the Cell.
+Scheduling with `Post`, `After` or `Every` during `Build` throws. Schedule from `InputChanged`, `Mounted`, callbacks or continuations. `Host` and `Lifetime` can be read during `Build`.
+
+Pass `Lifetime` to cancellable work. For replaceable requests, call `Latest("load")` on the UI thread. It cancels the previous token for that name and returns a new token linked to `Lifetime`. Before applying a result, check `token.IsCancellationRequested` on the UI thread.
+
 ## `Cell`
 
 
@@ -56,6 +69,10 @@ Defines a stateful Goo component.
 ### `new`
 
 Creates a component.
+
+### `After(float64,System.Action)`
+
+Runs an action once after a finite, nonnegative delay in milliseconds. Scheduling during Build throws.
 
 ### `Animate(Color)`
 
@@ -172,23 +189,13 @@ Builds the component tree.
 
 Returns: the root blob for this component
 
-### `Mount``1`
+### `Every(float64,System.Action)`
 
-Describes an unkeyed child component mount using positional identity.
+Runs an action at a finite, positive interval in milliseconds. Scheduling during Build throws.
 
-- `TCell`: child component type
+### `Latest(string)`
 
-Returns: a blob that mounts the child component
-
-### `Mount``1(System.Func{TCell},string)`
-
-Describes a child component mount created by a factory.
-
-- `TCell`: declared child component type
-- `factory`: creates a fresh child component when the mount has no retained instance
-- `key`: stable sibling key, or nil for positional identity
-
-Returns: a blob that mounts the child component
+Cancels the previous request with this name and links a new token to Lifetime.
 
 ### `Mount``1(string)`
 
@@ -209,6 +216,16 @@ Describes a child component mount. Put one-time initialization in the factory or
 
 Returns: a blob that mounts the child component
 
+### `Mount``1(string,System.Func{TCell})`
+
+Describes a child component mount created by a factory.
+
+- `TCell`: declared child component type
+- `key`: stable sibling key, or nil for positional identity
+- `factory`: creates a fresh child component when the mount has no retained instance
+
+Returns: a blob that mounts the child component
+
 ### `Mount``2(string,TInput)`
 
 Describes a child component mount with an immutable input snapshot.
@@ -220,9 +237,41 @@ Describes a child component mount with an immutable input snapshot.
 
 Returns: a blob that mounts the child component
 
+### `Mount``2(string,TInput,System.Func{TCell})`
+
+Describes a child mount with input and constructor dependencies.
+
+- `TInput`: component input type
+- `TCell`: declared child component type
+- `key`: stable sibling key, or nil for positional identity
+- `input`: input snapshot stored on every parent diff
+- `factory`: creates a fresh component only for a new mount
+
+Returns: a blob that mounts the child component
+
+### `Mounted`
+
+Runs once after the first layout and before paint. Handles have geometry.
+
+### `Post(System.Action)`
+
+Posts an action from any thread. Unmounting discards pending actions. Scheduling during Build throws.
+
 ### `Rebuild`
 
 Requests a rebuild of this component. Mounted cells must use their window's UI thread. Post background results with Window.Post.
+
+### `Unmounting`
+
+Runs once before elements are removed and Lifetime is cancelled.
+
+### `Host`
+
+Gets the owning window before the first InputChanged or Build until Unmounting returns.
+
+### `Lifetime`
+
+Gets a token cancelled after Unmounting returns.
 
 ## `Cell<TInput>`
 

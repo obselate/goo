@@ -8,6 +8,10 @@ Source: [`Goo/Style`](../../Goo/Style)
 
 `BackgroundGradient: nil` is an explicit clear declaration. It removes an earlier composed or lower-state gradient while preserving `BackgroundColor`. Omitting `BackgroundGradient` leaves the earlier declaration in effect.
 
+Use `HoverStyle`, `ActiveStyle`, `FocusStyle`, and `DisabledStyle` for interaction states. Parse color strings with `Color.Parse("#fff")`.
+
+`AccessibilityName` and `AccessibilityRole` change one field without replacing the other accessibility fields. A later `Accessibility` declaration replaces the whole declaration.
+
 ## `AlignContent`
 
 
@@ -181,14 +185,6 @@ Converts a color into a uniform edge value.
 - `value`: color for every edge
 
 Returns: a uniform edge value
-
-### `op_Implicit(string)~Color`
-
-Converts a CSS color string to Color.
-
-- `value`: The CSS color string to convert.
-
-Returns: The parsed color.
 
 ### `A`
 
@@ -397,6 +393,17 @@ Sets the right edge independently.
 
 Sets the top edge independently.
 
+## `Em`
+
+
+### `Em(float64)`
+
+Creates a multiple of the computed element font size, or the parent font size for FontSize.
+
+- `value`: Font size multiple.
+
+Returns: An element-relative length.
+
 ## `FlexDirection`
 
 
@@ -469,7 +476,23 @@ Selects main-axis child distribution.
 ## `Length`
 
 
-Specifies a layout length.
+Specifies pixels, relative units, a mixed length, or an intrinsic size.
+
+### `Em(float64)`
+
+Creates a multiple of the computed element font size, or the parent font size for FontSize.
+
+- `value`: Font size multiple.
+
+Returns: An element-relative length.
+
+### `FitContent(Length)`
+
+Limits the preferred content size without shrinking below its minimum content size. A percentage limit uses the owner's content constraint. In a content-sized owner, its percent part is absent during owner measurement and resolves once after that owner is fixed.
+
+- `limit`: The pixel or relative size limit.
+
+Returns: An intrinsic fit-content size.
 
 ### `Percent(float64)`
 
@@ -487,6 +510,48 @@ Creates an absolute pixel length.
 
 Returns: a pixel length
 
+### `Rem(float64)`
+
+Creates a multiple of the root font size.
+
+- `value`: Root font size multiple.
+
+Returns: A root-relative length.
+
+### `Vh(float64)`
+
+Creates a percentage of the window layout viewport height.
+
+- `value`: Percentage points.
+
+Returns: A viewport-relative length.
+
+### `Vw(float64)`
+
+Creates a percentage of the window layout viewport width.
+
+- `value`: Percentage points.
+
+Returns: A viewport-relative length.
+
+### `op_Addition(Length,Length)`
+
+Adds the pixel and relative parts. Automatic and intrinsic values throw ArgumentException.
+
+- `left`: The first length.
+- `right`: The second length.
+
+Returns: Their mixed-unit sum.
+
+### `op_Division(Length,float64)`
+
+Divides every part. Automatic and intrinsic values throw ArgumentException.
+
+- `value`: The length to scale.
+- `scale`: The divisor.
+
+Returns: The scaled length.
+
 ### `op_Implicit(Length)~Edges`
 
 Converts a length into a uniform edge value.
@@ -497,19 +562,37 @@ Returns: a uniform edge value
 
 ### `op_Implicit(float64)~Length`
 
-Converts a pixel value to a length.
+Converts layout pixels to a length.
 
-- `value`: length in pixels
+- `value`: Layout pixels.
 
-Returns: a pixel length
+Returns: A pixel length.
 
 ### `op_Implicit(int32)~Length`
 
-Converts an integer pixel value to a length.
+Converts integer layout pixels to a length.
 
-- `value`: length in pixels
+- `value`: Layout pixels.
 
-Returns: a pixel length
+Returns: A pixel length.
+
+### `op_Multiply(Length,float64)`
+
+Scales every part. Automatic and intrinsic values throw ArgumentException.
+
+- `value`: The length to scale.
+- `scale`: The multiplier.
+
+Returns: The scaled length.
+
+### `op_Subtraction(Length,Length)`
+
+Subtracts the pixel and relative parts. Automatic and intrinsic values throw ArgumentException.
+
+- `left`: The first length.
+- `right`: The length to subtract.
+
+Returns: Their mixed-unit difference.
 
 ### `Auto`
 
@@ -517,15 +600,23 @@ Gets an automatic layout length.
 
 ### `HasMagnitude`
 
-Gets whether this length has a concrete magnitude (pixels or percent), as opposed to Auto or an unset default. Magnitude is only defined when this is true.
+Gets whether Magnitude describes a single pixel or percentage value.
 
 ### `IsPercent`
 
-Gets whether this length is a percentage of the available size, as opposed to an absolute pixel value.
+Gets whether this value is a single percentage.
 
 ### `Magnitude`
 
-Gets the raw numeric magnitude: pixels when IsPercent is false, percentage points (0-100) when true. Undefined for Auto/unset lengths; check HasMagnitude first.
+Gets pixels or percentage points for a value with HasMagnitude.
+
+### `MaxContent`
+
+Gets the content size without soft wrapping.
+
+### `MinContent`
+
+Gets the smallest size without avoidable content overflow.
 
 ## `LinearGradient`
 
@@ -619,9 +710,9 @@ Gets or sets the vertical pixel or percentage translation. An explicit percentag
 
 Creates a percentage of the available size.
 
-- `value`: percentage of the available size
+- `value`: Percentage points.
 
-Returns: a percentage length
+Returns: A percentage length.
 
 ## `PositionType`
 
@@ -669,6 +760,17 @@ Gets the normalized radius above 0 and at most 1.
 ### `Stops`
 
 Gets the ordered color stops.
+
+## `Rem`
+
+
+### `Rem(float64)`
+
+Creates a multiple of the root font size.
+
+- `value`: Root font size multiple.
+
+Returns: A root-relative length.
 
 ## `Scrollbar`
 
@@ -805,11 +907,11 @@ Sets the bottom-right border radius.
 
 ### `BorderColor`
 
-Sets box border colors in CSS top, right, bottom, left order. A uniform value also sets the Shape stroke color.
+Sets box border colors in CSS top, right, bottom, left order.
 
 ### `BorderColorAnim`
 
-Binds all border colors, including the Shape stroke.
+Binds all box border colors.
 
 ### `BorderEndColor`
 
@@ -853,7 +955,7 @@ Sets the top-right border radius.
 
 ### `BorderWidth`
 
-Sets box border widths in CSS top, right, bottom, left order. A uniform value also sets the Shape stroke width.
+Sets box border widths in CSS top, right, bottom, left order.
 
 ### `Bottom`
 
@@ -907,6 +1009,10 @@ Sets whether the element participates in layout.
 
 Sets the inline end position offset.
 
+### `Flex`
+
+Sets grow to this factor, shrink to 1, and basis to 0. Later declarations override each part.
+
 ### `FlexBasis`
 
 Sets the initial main-axis size.
@@ -950,6 +1056,10 @@ Sets the gap between rows and columns.
 ### `Height`
 
 Sets the preferred height.
+
+### `Inset`
+
+Sets all four position offsets. Later offsets override individual edges.
 
 ### `JustifyContent`
 
@@ -1307,6 +1417,17 @@ Selects a style property that can interpolate during a transition.
 - `LineHeight`
 - `Transform`
 
+## `Vh`
+
+
+### `Vh(float64)`
+
+Creates a percentage of the window layout viewport height.
+
+- `value`: Percentage points.
+
+Returns: A viewport-relative length.
+
 ## `Visibility`
 
 
@@ -1316,3 +1437,14 @@ Selects whether an element and its descendants are visible and interactive.
 
 - `Visible`
 - `Hidden`
+
+## `Vw`
+
+
+### `Vw(float64)`
+
+Creates a percentage of the window layout viewport width.
+
+- `value`: Percentage points.
+
+Returns: A viewport-relative length.
