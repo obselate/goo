@@ -1345,21 +1345,21 @@ Releases a physical key with the modifiers still held after the release.
 
 Cancels one pointer, releasing capture without generating a click.
 
-### `PointerMove(System.Int64,PointerDevice,float32,float32,KeyModifiers,float32)`
+### `PointerMove(System.Int64,PointerDevice,float64,float64,KeyModifiers,float32)`
 
-Moves a platform pointer in window logical coordinates.
+Moves a platform pointer in native logical window coordinates.
 
-### `PointerPress(System.Int64,PointerDevice,float32,float32,PointerButton,KeyModifiers,float32)`
+### `PointerPress(System.Int64,PointerDevice,float64,float64,PointerButton,KeyModifiers,float32)`
 
-Presses a platform pointer in window logical coordinates.
+Presses a platform pointer in native logical window coordinates.
 
-### `PointerRelease(System.Int64,PointerDevice,float32,float32,PointerButton,KeyModifiers,float32)`
+### `PointerRelease(System.Int64,PointerDevice,float64,float64,PointerButton,KeyModifiers,float32)`
 
-Releases a platform pointer in window logical coordinates.
+Releases a platform pointer in native logical window coordinates.
 
-### `PointerWheel(float32,float32,float32,float32,KeyModifiers)`
+### `PointerWheel(float64,float64,float64,float64,KeyModifiers)`
 
-Dispatches wheel deltas at a window logical position.
+Dispatches wheel deltas at a native logical window position.
 
 ### `SetComposition(string,int32,int32)`
 

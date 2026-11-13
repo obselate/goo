@@ -1542,14 +1542,14 @@ method|Goo.PlatformInput|KeyPress|instance|public|generic:|(key:Goo.Key,modifier
 method|Goo.PlatformInput|KeyRelease|instance|public|generic:|(key:Goo.Key)->System.Void
 method|Goo.PlatformInput|KeyRelease|instance|public|generic:|(key:Goo.Key,modifiers:Goo.KeyModifiers)->System.Void
 method|Goo.PlatformInput|PointerCancel|instance|public|generic:|(pointerId:System.Int64,device:Goo.PointerDevice)->System.Void
-method|Goo.PlatformInput|PointerMove|instance|public|generic:|(pointerId:System.Int64,device:Goo.PointerDevice,x:System.Single,y:System.Single,modifiers:Goo.KeyModifiers,pressure:System.Single)->System.Void
-method|Goo.PlatformInput|PointerPress|instance|public|generic:|(pointerId:System.Int64,device:Goo.PointerDevice,x:System.Single,y:System.Single,button:Goo.PointerButton,modifiers:Goo.KeyModifiers,pressure:System.Single)->System.Void
-method|Goo.PlatformInput|PointerRelease|instance|public|generic:|(pointerId:System.Int64,device:Goo.PointerDevice,x:System.Single,y:System.Single,button:Goo.PointerButton,modifiers:Goo.KeyModifiers,pressure:System.Single)->System.Void
-method|Goo.PlatformInput|PointerWheel|instance|public|generic:|(x:System.Single,y:System.Single,deltaX:System.Single,deltaY:System.Single,modifiers:Goo.KeyModifiers)->System.Void
+method|Goo.PlatformInput|PointerMove|instance|public|generic:|(pointerId:System.Int64,device:Goo.PointerDevice,x:System.Double,y:System.Double,modifiers:Goo.KeyModifiers,pressure:System.Single)->System.Void
+method|Goo.PlatformInput|PointerPress|instance|public|generic:|(pointerId:System.Int64,device:Goo.PointerDevice,x:System.Double,y:System.Double,button:Goo.PointerButton,modifiers:Goo.KeyModifiers,pressure:System.Single)->System.Void
+method|Goo.PlatformInput|PointerRelease|instance|public|generic:|(pointerId:System.Int64,device:Goo.PointerDevice,x:System.Double,y:System.Double,button:Goo.PointerButton,modifiers:Goo.KeyModifiers,pressure:System.Single)->System.Void
+method|Goo.PlatformInput|PointerWheel|instance|public|generic:|(x:System.Double,y:System.Double,deltaX:System.Double,deltaY:System.Double,modifiers:Goo.KeyModifiers)->System.Void
 method|Goo.PlatformInput|SetCompositionRange|instance|public|generic:|(start:System.Int32,end:System.Int32)->System.Boolean
 method|Goo.PlatformInput|SetComposition|instance|public|generic:|(value:System.String,selectionStart:System.Int32,selectionLength:System.Int32)->System.Boolean
 method|Goo.PlatformInput|UpdateDrag|instance|public|generic:|(target:Goo.ElementHandle,modifiers:Goo.KeyModifiers=null)->System.Boolean
-method|Goo.PlatformPreferences|Deconstruct|instance|public|generic:|(out theme:Goo.SystemTheme&,out reducedMotion:System.Nullable`1<System.Boolean>&,out highContrast:System.Nullable`1<System.Boolean>&,out textScaleFactor:System.Nullable`1<System.Single>&,out eventSoundsEnabled:System.Nullable`1<System.Boolean>&,out accentColor:System.Nullable`1<Goo.Color>&,out accentLight1:System.Nullable`1<Goo.Color>&,out accentLight2:System.Nullable`1<Goo.Color>&,out accentLight3:System.Nullable`1<Goo.Color>&,out accentDark1:System.Nullable`1<Goo.Color>&,out accentDark2:System.Nullable`1<Goo.Color>&,out accentDark3:System.Nullable`1<Goo.Color>&,out preferredLocales:System.Collections.Generic.IReadOnlyList`1<System.String>?&)->System.Void
+method|Goo.PlatformPreferences|Deconstruct|instance|public|generic:|(out theme:Goo.SystemTheme&,out reducedMotion:System.Nullable`1<System.Boolean>&,out highContrast:System.Nullable`1<System.Boolean>&,out textScaleFactor:System.Nullable`1<System.Double>&,out eventSoundsEnabled:System.Nullable`1<System.Boolean>&,out accentColor:System.Nullable`1<Goo.Color>&,out accentLight1:System.Nullable`1<Goo.Color>&,out accentLight2:System.Nullable`1<Goo.Color>&,out accentLight3:System.Nullable`1<Goo.Color>&,out accentDark1:System.Nullable`1<Goo.Color>&,out accentDark2:System.Nullable`1<Goo.Color>&,out accentDark3:System.Nullable`1<Goo.Color>&,out preferredLocales:System.Collections.Generic.IReadOnlyList`1<System.String>?&)->System.Void
 method|Goo.PlatformPreferences|Equals|instance|public|generic:|(other:Goo.PlatformPreferences)->System.Boolean
 method|Goo.PlatformPreferences|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
 method|Goo.PlatformPreferences|GetHashCode|virtual|public|generic:|()->System.Int32
@@ -2502,7 +2502,7 @@ property|Goo.PlatformPreferences|EventSoundsEnabled|System.Nullable`1<System.Boo
 property|Goo.PlatformPreferences|HighContrast|System.Nullable`1<System.Boolean>|instance|get:public,init:public|index:()
 property|Goo.PlatformPreferences|PreferredLocales|System.Collections.Generic.IReadOnlyList`1<System.String>?|instance|get:public,init:public|index:()
 property|Goo.PlatformPreferences|ReducedMotion|System.Nullable`1<System.Boolean>|instance|get:public,init:public|index:()
-property|Goo.PlatformPreferences|TextScaleFactor|System.Nullable`1<System.Single>|instance|get:public,init:public|index:()
+property|Goo.PlatformPreferences|TextScaleFactor|System.Nullable`1<System.Double>|instance|get:public,init:public|index:()
 property|Goo.PlatformPreferences|Theme|Goo.SystemTheme|instance|get:public,init:public|index:()
 property|Goo.PointerDragEvent|Delta|Goo.Point|instance|get:public,init:internal|index:()
 property|Goo.PointerDragEvent|Device|Goo.PointerDevice|instance|get:public|index:()
@@ -2950,7 +2950,7 @@ property|Goo.WindowCapture|RowBytes|System.UInt32|instance|get:public|index:()
 property|Goo.WindowCapture|SrgbEncoded|System.Boolean|instance|get:public|index:()
 property|Goo.WindowCapture|Width|System.UInt32|instance|get:public|index:()
 property|Goo.WindowDisplay|Bounds|Goo.ElementRect|instance|get:public|index:()
-property|Goo.WindowDisplay|ContentScale|System.Single|instance|get:public|index:()
+property|Goo.WindowDisplay|ContentScale|System.Double|instance|get:public|index:()
 property|Goo.WindowDisplay|Id|Goo.WindowDisplayId|instance|get:public|index:()
 property|Goo.WindowDisplay|Name|System.String|instance|get:public|index:()
 property|Goo.WindowDisplay|UsableBounds|System.Nullable`1<Goo.ElementRect>|instance|get:public|index:()
