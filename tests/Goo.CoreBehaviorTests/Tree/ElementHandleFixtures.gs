@@ -6,7 +6,7 @@ import System.Collections.Generic
 internal class ElementHandleFixtures {
   func MutableHandleReadRebuildContract() bool {
     let cell = ElementHandleStateReadCell()
-    let window = Window{Root: cell, Width: 100, Height: 120}
+    let window = Window{Root: cell, Size: LayoutSize(100, 120)}
     try {
       window.UpdateTree()
       if !cell.ButtonHandle.Activate() || !cell.IsDirty() { return false }
@@ -19,7 +19,7 @@ internal class ElementHandleFixtures {
     let handle = ElementHandle()
     if !handle.SelectText(0, 1) || !handle.SelectText(1, 3) { return false }
     let cell = DeferredCallbackContent(TextEntry{Handle: handle, Value: "a😀b"})
-    let window = Window{Root: cell, Width: 100, Height: 40}
+    let window = Window{Root: cell, Size: LayoutSize(100, 40)}
     try {
       window.UpdateTree()
       if window.Focus.Selection?.Anchor.Offset != 1 || window.Focus.Selection?.Active.Offset != 3 { return false }
@@ -41,7 +41,7 @@ internal class ElementHandleFixtures {
   func PendingItemAndNearestContract() bool {
     let cell = VirtualFixtureCell(10)
     cell.Items.RemoveAt(9)
-    let window = Window{Root: cell, Width: 100, Height: 60}
+    let window = Window{Root: cell, Size: LayoutSize(100, 60)}
     try {
       window.UpdateTree()
       if !cell.Handle.ScrollToItem("row-9") { return false }
@@ -97,7 +97,7 @@ internal class ElementHandleFixtures {
       Handle: handle, Overflow: Overflow.Scroll,
       Container{Width: 300, Height: 200, FlexShrink: 0},
     })
-    let window = Window{Root: cell, Width: 100, Height: 60}
+    let window = Window{Root: cell, Size: LayoutSize(100, 60)}
     window.UiScale = 2.0F
     try {
       window.UpdateTree()
