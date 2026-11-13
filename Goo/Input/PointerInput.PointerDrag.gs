@@ -30,7 +30,7 @@ internal partial class PointerInput {
                 Owner: CellOwnership.InRoute(route, index),
                 Callback: node.OnPointerDrag,
                 WindowOrigin: event.WindowPosition,
-                Threshold: Math.Max(0.0, node.PointerDragThreshold),
+                Threshold: node.PointerDragThreshold,
                 Axis: node.PointerDragAxis,
             }
             if current.Device != PointerDevice.Touch { event.Capture() }

@@ -114,9 +114,8 @@ public class WindowFocus {
   shared {
     internal func TargetEditsText(target Node?) bool {
       guard let node = target else { return false }
-      return canReceiveInput(node) && (node.Kind == NodeKind.Entry
-        || node.Kind == NodeKind.Editor && !node.EditorReadOnly
-        || node.Kind != NodeKind.Editor && TextInputCallbacks.TextInput(node) != nil)
+      return canReceiveInput(node) && ((node.Kind == NodeKind.Entry || node.Kind == NodeKind.Editor) && !node.EditorReadOnly
+        || node.Kind != NodeKind.Entry && node.Kind != NodeKind.Editor && TextInputCallbacks.TextInput(node) != nil)
     }
   }
 }

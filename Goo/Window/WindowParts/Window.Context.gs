@@ -11,6 +11,7 @@ public partial class Window {
     private var trackedWidth WindowDependency[int32]?
     private var trackedHeight WindowDependency[int32]?
     private var trackedScale WindowDependency[float64]?
+    private var trackedPixelScale WindowDependency[float64]?
     private var trackedPreferences WindowDependency[PlatformPreferences]?
     private var trackedModifiers WindowDependency[KeyModifiers]?
     internal var trackedEditsText WindowDependency[bool]?
@@ -37,6 +38,7 @@ public partial class Window {
         trackedWidth?.Sync(host?.LogicalWidth ?? width)
         trackedHeight?.Sync(host?.LogicalHeight ?? height)
         trackedScale?.Sync(EffectiveUiScale)
+        trackedPixelScale?.Sync(float64(dpi.X) * EffectiveUiScale)
         trackedPreferences?.Sync(preferences)
         trackedModifiers?.Sync(modifiers)
         SyncWindowFocus()

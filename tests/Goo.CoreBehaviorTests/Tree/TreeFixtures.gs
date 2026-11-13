@@ -46,14 +46,25 @@ internal class TreeFixtures {
   }
 
   func VectorStrokeFreezeAtHandOffContract() bool {
-    let stroke = VectorStroke(1, Color.Black)
-    let node = Reconciler{Res: Resolver{}}.Mount(Shape{Stroke: stroke})
-    try {
-      try { stroke.Cap = StrokeCap.Round } catch (error InvalidOperationException) {
-        return error.Message.Contains("Shape") && error.Message.Contains("modified after it was returned to Goo")
-      }
-      return false
-    } finally { NodeLifecycle.DisposeTree(node) }
+    for kind in 0 ... 3 {
+      let stroke = VectorStroke(1, Color.Black)
+      var node Node?
+      if kind == 0 { node = Reconciler{Res: Resolver{}}.Mount(Shape{Stroke: stroke}) }
+      else if kind == 1 { let vector = VectorNode(VectorPath.Empty, VectorNodeStyle{Stroke: stroke}) }
+      else { let vector = VectorNode(VectorPath.Empty, VectorNodeStyle{Stroke: stroke}, []VectorNode{}) }
+      try {
+        for change in []Action{() -> { stroke.Cap = StrokeCap.Round }, () -> { stroke.Join = StrokeJoin.Bevel },
+          () -> { stroke.MiterLimit = 2 }, () -> { stroke.Dashes = nil },
+          () -> { stroke.VectorEffect = VectorEffect.NonScalingStroke }} {
+          var rejected = false
+          try { change() } catch (error InvalidOperationException) {
+            rejected = error.Message == "VectorStroke modified after it was returned to Goo"
+          }
+          if !rejected { return false }
+        }
+      } finally { if let node = node { NodeLifecycle.DisposeTree(node) } }
+    }
+    return true
   }
   func RetainedImageBranchesFreezeAtHandOffContract() bool {
     let placeholder = Text("pending")
