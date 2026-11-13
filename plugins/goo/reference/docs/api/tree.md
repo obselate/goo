@@ -238,11 +238,11 @@ Gets the platform-neutral accessibility declaration for this element.
 
 ### `AccessibilityName`
 
-Gets or sets the name without replacing other accessibility fields. A later Accessibility declaration replaces all fields.
+Gets or sets the name without replacing other accessibility fields. An empty name is the default and leaves an absent declaration unset. A later Accessibility declaration replaces all fields.
 
 ### `AccessibilityRole`
 
-Gets or sets the role without replacing other accessibility fields. Nil restores the automatic role. A later Accessibility declaration replaces all fields.
+Gets or sets the role without replacing other accessibility fields. Auto is the default and leaves an absent declaration unset. A later Accessibility declaration replaces all fields.
 
 ### `ActiveStyle`
 
