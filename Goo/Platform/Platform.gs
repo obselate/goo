@@ -10,7 +10,7 @@ import System.Threading.Tasks
 public enum PlatformOpenStatus { Success; Unsupported; Failed }
 
 /// Contains a system-handler launch outcome.
-public sealed class PlatformOpenResult {
+public class PlatformOpenResult {
   /// Gets the launch outcome, not confirmation that the target was opened.
   public prop Status PlatformOpenStatus { get; }
   /// Gets native failure detail, or an empty string.
@@ -22,7 +22,7 @@ public sealed class PlatformOpenResult {
 }
 
 /// Provides operating-system services without a window owner.
-public sealed class Platform {
+public class Platform {
   private init() { }
 
   shared {

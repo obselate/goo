@@ -3,7 +3,25 @@ package GooGallery
 import Goo
 import System
 
-class GalleryRange : Cell {
+internal data struct GalleryRangeInput {
+    var Label string
+    var MinValue float64
+    var MaxValue float64
+    var Value float64
+    var Step float64
+    var OnChange Action[float64]?
+}
+
+class GalleryRange : Cell[GalleryRangeInput] {
+    protected override func InputChanged(input GalleryRangeInput) {
+        Label = input.Label
+        MinValue = input.MinValue
+        MaxValue = input.MaxValue
+        Value = input.Value
+        Step = input.Step
+        OnChange = input.OnChange
+    }
+
     /// Gets or sets the descriptive label for this slider.
     private let labelState State[string] = State[string]("")
     public prop Label string {

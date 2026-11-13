@@ -130,13 +130,9 @@ class DevToolsCell : Cell {
         }
     )
 
-    private func BuildProfiler() Blob -> Cell.Mount[ProfilerCell](
+    private func BuildProfiler() Blob -> Cell.Mount[ProfilerInput, ProfilerCell](
         "profiler",
-        (panel ProfilerCell) -> {
-            panel.session = session
-            panel.owner = window
-            panel.Refresh(layoutWidth)
-        }
+        ProfilerInput{Session: session, Owner: window, Width: layoutWidth, Revision: session.Profiler?.Revision ?? -1}
     )
 
     private func BuildElements(theme Theme) Container {

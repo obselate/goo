@@ -86,13 +86,27 @@ public partial class Window {
         }
     }
 
-    /// Runs a callback once on the UI thread after the delay.
+    /// Runs an action once on the UI thread after a delay. Call on the UI thread while the window is open.
+    /// Does not rebuild a Cell. Closing the window cancels pending timers.
+    /// @param delayMs finite, nonnegative delay in milliseconds
+    /// @param action callback to run once
+    /// @returns a timer to cancel on the UI thread, or an inactive timer when the window rejects work
+    /// @exception InvalidOperationException when called off the UI thread or before opening the window
+    /// @exception ArgumentNullException when action is nil and the window accepts work
+    /// @exception ArgumentOutOfRangeException when delayMs is invalid and the window accepts work
     public func After(delayMs float64, action Action) WindowTimer {
         validateTimer(action, delayMs, false)
         return addTimer(action, delayMs, 0.0)
     }
 
-    /// Runs a callback repeatedly on the UI thread at the requested interval.
+    /// Runs an action repeatedly on the UI thread. Call on the UI thread while the window is open.
+    /// Skips missed ticks. Does not rebuild a Cell. Closing the window cancels pending timers.
+    /// @param intervalMs finite, positive interval in milliseconds
+    /// @param action callback to run at each interval
+    /// @returns a timer to cancel on the UI thread, or an inactive timer when the window rejects work
+    /// @exception InvalidOperationException when called off the UI thread or before opening the window
+    /// @exception ArgumentNullException when action is nil and the window accepts work
+    /// @exception ArgumentOutOfRangeException when intervalMs is invalid and the window accepts work
     public func Every(intervalMs float64, action Action) WindowTimer {
         validateTimer(action, intervalMs, true)
         return addTimer(action, intervalMs, intervalMs)

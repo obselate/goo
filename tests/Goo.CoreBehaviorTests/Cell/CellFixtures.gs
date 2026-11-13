@@ -6,6 +6,30 @@ import System.Numerics
 import System.Threading
 import System.Diagnostics
 internal class CellFixtures {
+  func MountedPlainFieldWritesRebuild() bool {
+    let cell = MountedMeasurementFixtureCell()
+    let window = Window{Root: cell, Size: LayoutSize(200, 100)}
+    try {
+      window.UpdateTree()
+      window.UpdateTree()
+      return window.Tree?.Content == "w=120"
+    } finally { window.Close() }
+  }
+
+  func ServicesBeforeWindowBinding() bool {
+    let cell = LifecycleFixtureCell()
+    var rejected int32
+    try { let token = cell.Token } catch (_ InvalidOperationException) { rejected++ }
+    try { cell.Request("load") } catch (_ InvalidOperationException) { rejected++ }
+    if rejected != 2 || !cell.HostRejected() || cell.Enqueue(() -> {})
+      || cell.Delay(0.0, () -> {}).IsActive || cell.Repeat(1.0, () -> {}).IsActive { return false }
+    let window = Window{Root: cell, Size: LayoutSize(200, 100)}
+    try {
+      window.UpdateTree()
+      return !cell.Token.IsCancellationRequested && !cell.Request("load").IsCancellationRequested
+    } finally { window.Close() }
+  }
+
   func SchedulingPhasesAndFailedMountsContract() bool ->
     Window{Root: SchedulingPhaseFixtureCell(), Size: LayoutSize(200, 100)}.SchedulingPhasesForTest()
 
@@ -73,7 +97,7 @@ internal class CellFixtures {
   }
 
   func DeferredScopeAndMountFactoryCallbacksRebuildTheirAuthor() bool {
-    for mode in []string{"scope", "nested", "factory", "configure"} {
+    for mode in []string{"scope", "nested", "factory", "input"} {
       let host = DeferredCallbackHost(mode)
       let driver = InputFixtureDriver(host, 200, 150)
       try {
@@ -96,14 +120,17 @@ internal class CellFixtures {
   func ScopeMountedChildCallbacksKeepTheirOwner() bool {
     let host = DeferredCallbackHost("child")
     let driver = InputFixtureDriver(host, 200, 150)
+    driver.Update()
+    let hostBuilds = host.Builds
+    let childBuilds = host.Child.Builds
     try {
       guard let tree = driver.Window.Tree else { return false }
       let target = tree.Children[1]
       driver.Press(target.Rect.X + 5, target.Rect.Y + 5)
       driver.Release(target.Rect.X + 5, target.Rect.Y + 5)
       driver.Update()
-      return host.Builds == 1 && host.Count == 0
-        && host.Child.Builds == 2 && host.Child.Count == 1
+      return host.Builds == hostBuilds && host.Count == 0
+        && host.Child.Builds == childBuilds + 1 && host.Child.Count == 1
         && driver.Window.Tree?.Children[1].Children[0].Content == "clicked:1"
     } finally {
       driver.Window.Close()
@@ -114,6 +141,7 @@ internal class CellFixtures {
     for cached in []bool{false, true} {
       let host = CallbackOriginHost{CacheContent: cached}
       let driver = InputFixtureDriver(host, 200, 150)
+      driver.Update()
       for pass in 0 ... 2 {
         for index in 1 ... 3 {
           guard let tree = driver.Window.Tree else { return false }
@@ -133,6 +161,7 @@ internal class CellFixtures {
         }
         host.MountKey = "remounted"
         host.Rebuild()
+        driver.Update()
         driver.Update()
       }
     }
@@ -310,6 +339,7 @@ internal class CellFixtures {
     let parent = CellSchedulingDirectParent{}
     let window = Window{ Root: parent, Size: LayoutSize(100, 100), }
     window.UpdateTree()
+    window.UpdateTree()
     guard let child = CellSchedulingDirectChild.Last else { return false }
     let parentBefore = parent.Builds
     let childBefore = child.Builds
@@ -380,6 +410,7 @@ internal class CellFixtures {
     CellSchedulingDeferredSecond.Last = nil
     let parent = CellSchedulingDeferredParent{}
     let window = Window{ Root: parent, Size: LayoutSize(200, 100), }
+    window.UpdateTree()
     window.UpdateTree()
     guard let first = window.Tree else { return false }
     guard let source = first.Children[0].Fiber else { return false }
@@ -1045,8 +1076,8 @@ internal open class CellThrowingInputFixtureCell : Cell[CellThrowingInputFixture
 
 internal class CellSchedulingSiblingsParent : Cell {
   override func Build() Blob -> Container() {
-    Cell.Mount[CellSchedulingLeft]("left", nil),
-    Cell.Mount[CellSchedulingRight]("right", nil),
+    Cell.Mount[CellSchedulingLeft]("left"),
+    Cell.Mount[CellSchedulingRight]("right"),
   }
 }
 
@@ -1113,8 +1144,8 @@ internal class CellSchedulingDirectChild : Cell {
 
 internal class CellSchedulingRecoveryParent : Cell {
   override func Build() Blob -> Container() {
-    Cell.Mount[CellSchedulingRecoveryFirst]("first", nil),
-    Cell.Mount[CellSchedulingRecoverySecond]("second", nil),
+    Cell.Mount[CellSchedulingRecoveryFirst]("first"),
+    Cell.Mount[CellSchedulingRecoverySecond]("second"),
   }
 }
 
@@ -1197,7 +1228,7 @@ internal class CellSchedulingRemovalParent : Cell {
   override func Build() Blob {
     if showChild {
       return Container() {
-        Cell.Mount[CellSchedulingRemovalChild](nil, nil),
+        Cell.Mount[CellSchedulingRemovalChild](),
       } }
     return Container() { Text{ Content: "removed" },}
   }
@@ -1223,8 +1254,8 @@ internal class CellSchedulingRemovalChild : Cell, IDisposable {
 
 internal class CellSchedulingDeferredParent : Cell {
   override func Build() Blob -> Container() {
-    Cell.Mount[CellSchedulingDeferredFirst]("first", nil),
-    Cell.Mount[CellSchedulingDeferredSecond]("second", nil),
+    Cell.Mount[CellSchedulingDeferredFirst]("first"),
+    Cell.Mount[CellSchedulingDeferredSecond]("second"),
   }
 }
 
@@ -1608,8 +1639,7 @@ internal class DeferredCallbackHost : Cell {
     Builds++
     let content = switch mode {
       case "factory": Cell.Mount[DeferredCallbackContent](nil, () -> DeferredCallbackContent(Content()))
-      case "configure": Cell.Mount[DeferredCallbackContent](nil,
-        (child DeferredCallbackContent) -> { child.Content = Content() })
+      case "input": Cell.Mount[Blob, DeferredCallbackInput](nil, Content())
       case "child": key.Scope(Count, () -> Cell.Mount[DirectCallbackCell](nil, () -> Child))
       case _: key.Scope(Count, () -> mode == "nested" ? key.Scope(key.Read(), Content) : Content())
     }
@@ -1621,16 +1651,22 @@ internal class DeferredCallbackHost : Cell {
 
   private func Content() Blob -> Button{
     Width: 100,
-    Height: 30 + (mode == "factory" || mode == "configure" ? Count : key.Read()),
+    Height: 30 + (mode == "factory" || mode == "input" ? Count : key.Read()),
     OnClick: () -> { Count++ },
   }
 }
 
-internal class DeferredCallbackContent : Cell {
-  internal var Content Blob?
+internal class DeferredCallbackContent(content Blob) : Cell {
+  override func Build() Blob -> content
+}
 
-  init() {}
-  init(content Blob) { Content = content }
+internal class MountedMeasurementFixtureCell : Cell {
+  private let handle ElementHandle = ElementHandle()
+  private var width float64 = -1.0
+  protected override func Mounted() { width = handle.BorderBox.Width }
+  override func Build() Blob -> Text{Handle: handle, Width: 120, Height: 20, Content: "w=$width"}
+}
 
-  override func Build() Blob -> Content!!
+internal class DeferredCallbackInput : Cell[Blob] {
+  protected override func Build(input Blob) Blob -> input
 }
