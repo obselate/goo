@@ -424,22 +424,6 @@ internal class WindowDragCloseCell : Cell {
     })}
 }
 
-internal class WindowDragCloseCell : Cell {
-  internal let Handle ElementHandle = ElementHandle()
-  internal var EndCount int32
-  internal var EndedMounted bool
-  internal var EndedCancelled bool
-  internal prop Cancelled bool { get -> Lifetime.IsCancellationRequested }
-
-  override func Build() Blob -> Container{
-    Handle: Handle, Width: 100, Height: 100,
-    DragSource: DragSource(_ -> DragData("payload", DragEffect.Copy), e -> {
-      EndCount++
-      EndedMounted = Handle.IsMounted && !Lifetime.IsCancellationRequested
-      EndedCancelled = e.Kind == DragEndKind.Canceled && e.Status == DataTransferStatus.Cancelled
-    })}
-}
-
 internal class WindowSizeCell : Cell {
   internal var Percentage bool
   internal var ContentWidth float64
