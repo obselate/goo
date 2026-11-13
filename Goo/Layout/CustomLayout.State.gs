@@ -35,6 +35,7 @@ internal class CustomLayoutState {
   private var arrangedDensity float32
   internal var ContentWidth float32
   internal var ContentHeight float32
+  private var availableSize LayoutSize
 
   internal init(node Node, algorithm LayoutAlgorithm) {
     Node = node
@@ -115,10 +116,23 @@ internal class CustomLayoutState {
   internal func Measure(available LayoutSize) LayoutSize {
     Begin(false)
     try {
+      availableSize = available
       let result = Algorithm.Measure(context, available)
       CustomLayouts.ValidateSize(result, false)
       return LayoutSize(Math.Min(result.Width, available.Width), Math.Min(result.Height, available.Height))
     } finally { End() }
+  }
+
+  internal func ResolveLength(value Length, axis LayoutAxis) float64? {
+    RequireActive()
+    if axis != LayoutAxis.Horizontal && axis != LayoutAxis.Vertical { throw ArgumentOutOfRangeException("axis") }
+    if value.Unit == LengthUnit.Auto || value.IsIntrinsic { return nil }
+    if !value.IsFinite { throw ArgumentOutOfRangeException("value") }
+    let basis = float32(axis == LayoutAxis.Horizontal ? availableSize.Width : availableSize.Height)
+    let percent = value.Unit == LengthUnit.Percent ? value.Value : value.PercentPart
+    return float64(LengthDeclarations.Pixels(value.Unit == LengthUnit.Percent ? Length{} : value, Node,
+      CustomLayouts.ViewportWidth, CustomLayouts.ViewportHeight, false)
+      + (percent == 0.0F ? 0.0F : percent * basis / 100.0F))
   }
 
   internal func MeasureChild(index int32, available LayoutSize) LayoutSize {
@@ -137,8 +151,8 @@ internal class CustomLayoutState {
     CustomLayouts.RestoreSize(n)
     let width = CustomLayouts.Constraint(available.Width)
     let height = CustomLayouts.Constraint(available.Height)
-    YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga, CustomLayouts.Maximum(n.MaxWidth, width, width))
-    YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga, CustomLayouts.Maximum(n.MaxHeight, height, height))
+    YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga, CustomLayouts.Maximum(n.MaxWidth, width, width, n, StyleField.MaxWidth))
+    YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga, CustomLayouts.Maximum(n.MaxHeight, height, height, n, StyleField.MaxHeight))
     YGNodeAPI.YGNodeCalculateLayout(yoga, width, height, yogaDirection(Node.Direction))
     let desiredWidth = yoga.Layout.MeasuredDimension(Dimension.Width) + CustomLayouts.MarginX(yoga)
     let desiredHeight = yoga.Layout.MeasuredDimension(Dimension.Height) + CustomLayouts.MarginY(yoga)
@@ -180,7 +194,8 @@ internal class CustomLayoutState {
     try {
       arrangedVersion = 0L
       for child in Children { child.Arranged = false }
-      Algorithm.Arrange(context, LayoutSize(float64(width), float64(height)))
+      availableSize = LayoutSize(float64(width), float64(height))
+      Algorithm.Arrange(context, availableSize)
       ContentWidth = 0.0F
       ContentHeight = 0.0F
       for child in Children {
@@ -208,6 +223,10 @@ internal class CustomLayouts {
     private var nodes ConditionalWeakTable[Node, CustomLayoutState]?
     @ThreadStatic
     internal var Depth int32
+    @ThreadStatic
+    internal var ViewportWidth float32
+    @ThreadStatic
+    internal var ViewportHeight float32
 
     internal func Remove(node Node) {
       Configure(node, nil)
@@ -292,8 +311,11 @@ internal class CustomLayouts {
     internal func Inset(yoga Facebook.Yoga.Node, edge YGEdge) float32 -> YGNodeLayoutAPI.YGNodeLayoutGetPadding(yoga, edge) + YGNodeLayoutAPI.YGNodeLayoutGetBorder(yoga, edge)
     internal func MarginX(yoga Facebook.Yoga.Node) float32 -> YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Left) + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Right)
     internal func MarginY(yoga Facebook.Yoga.Node) float32 -> YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Top) + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Bottom)
-    internal func Maximum(length Length, available float32, reference float32) float32 {
-      let authored = if length.Unit == LengthUnit.Px { length.Value } else if length.Unit == LengthUnit.Percent { length.Value * reference / 100.0F } else { Single.NaN }
+    internal func Maximum(length NodeLength, available float32, reference float32, node Node, field StyleField) float32 {
+      let authored = if length.Unit == LengthUnit.Px { length.Value }
+        else if length.Unit == LengthUnit.Percent { length.Value * reference / 100.0F }
+        else if length.Unit == LengthUnit.Relative { LengthDeclarations.StoredPixels(node, field, reference) }
+        else { Single.NaN }
       if Single.IsNaN(available) { return authored }
       return if Single.IsNaN(authored) { available } else { Math.Min(authored, available) }
     }
@@ -309,6 +331,7 @@ internal class CustomLayouts {
       YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga, Single.NaN)
       applySize(yoga, node)
       applyMinMax(yoga, node)
+      LengthDeclarations.RestoreSizes(node)
     }
 
     internal func ArrangeRoot(node Node, bounds ElementRect, direction Direction) {

@@ -515,8 +515,18 @@ class PublicDocumentationTests {
             "M:Goo.ImageSourceLease.Complete(Goo.ImageSource)",
             "M:Goo.ImageSourceLease.Dispose",
             "M:Goo.ImageSourceLease.Fail",
-            "M:Goo.Length.Percent(System.Double)",
+            "M:Goo.LayoutContext.ResolveLength(Goo.Length,Goo.LayoutAxis)",
             "M:Goo.Length.Pixels(System.Double)",
+            "M:Goo.Length.Percent(System.Double)",
+            "M:Goo.Length.Em(System.Double)",
+            "M:Goo.Length.Rem(System.Double)",
+            "M:Goo.Length.Vw(System.Double)",
+            "M:Goo.Length.Vh(System.Double)",
+            "M:Goo.Length.FitContent(Goo.Length)",
+            "M:Goo.Length.op_Addition(Goo.Length,Goo.Length)",
+            "M:Goo.Length.op_Subtraction(Goo.Length,Goo.Length)",
+            "M:Goo.Length.op_Multiply(Goo.Length,System.Double)",
+            "M:Goo.Length.op_Division(Goo.Length,System.Double)",
             "M:Goo.Length.op_Implicit(Goo.Length)~Goo.Edges",
             "M:Goo.Length.op_Implicit(System.Double)~Goo.Length",
             "M:Goo.Length.op_Implicit(System.Int32)~Goo.Length",
@@ -732,6 +742,8 @@ class PublicDocumentationTests {
             "M:Goo.PanelTransform.op_Inequality(Goo.PanelTransform,Goo.PanelTransform)"
         }
         private let ExpectedEnumFieldIds[]string = []string{
+            "F:Goo.LayoutAxis.Horizontal",
+            "F:Goo.LayoutAxis.Vertical",
             "F:Goo.AccessibilityRole.Separator",
             "F:Goo.AccessibilityRole.TabPanel",
             "F:Goo.AccessibilityRole.Toolbar",
@@ -1597,16 +1609,27 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
-            ["M:Goo.Length.Percent(System.Double)"] = DocumentationShape(
-                []string{"value"},
-                System.Array.Empty[string](),
-                true
-            ),
-            ["M:Goo.Length.Pixels(System.Double)"] = DocumentationShape(
-                []string{"value"},
-                System.Array.Empty[string](),
-                true
-            ),
+            ["M:Goo.Em(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Rem(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Vw(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Vh(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.LayoutContext.ResolveLength(Goo.Length,Goo.LayoutAxis)"] =
+                DocumentationShape([]string{"value", "axis"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.FitContent(Goo.Length)"] = DocumentationShape([]string{"limit"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.Pixels(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.Percent(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.Em(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.Rem(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.Vw(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.Vh(System.Double)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.op_Addition(Goo.Length,Goo.Length)"] =
+                DocumentationShape([]string{"left", "right"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.op_Subtraction(Goo.Length,Goo.Length)"] =
+                DocumentationShape([]string{"left", "right"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.op_Multiply(Goo.Length,System.Double)"] =
+                DocumentationShape([]string{"value", "scale"}, System.Array.Empty[string](), true),
+            ["M:Goo.Length.op_Division(Goo.Length,System.Double)"] =
+                DocumentationShape([]string{"value", "scale"}, System.Array.Empty[string](), true),
             ["M:Goo.Length.op_Implicit(Goo.Length)~Goo.Edges"] = DocumentationShape(
                 []string{"value"},
                 System.Array.Empty[string](),
@@ -2215,6 +2238,10 @@ class PublicDocumentationTests {
                 .Append("P:Goo.KeyBinding.OnRelease")
                 .Append("P:Goo.KeyBinding.Repeat")
                 .Append("M:Goo.Percent(System.Double)")
+                .Append("M:Goo.Em(System.Double)")
+                .Append("M:Goo.Rem(System.Double)")
+                .Append("M:Goo.Vw(System.Double)")
+                .Append("M:Goo.Vh(System.Double)")
         }
 
         private func ApiTypes() IEnumerable[Type] -> []Assembly{

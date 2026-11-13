@@ -9,6 +9,34 @@ import System.Text.Json
 import Xunit
 
 class FixtureContractTests {
+    @Fact
+    func CustomLayoutRetainsMixedMaximumMeasurements() ->
+        Assert.True(LayoutFixtures().CustomLayoutRetainsMixedMaximumMeasurements())
+
+    @Fact
+    func RelativeLengthAnimationsUseMatchingUnits() ->
+        Assert.True(MotionFixtures().LengthValidationContract())
+
+    @Fact
+    func CustomLayoutResolvesLengthsInItsViewport() ->
+        Assert.True(LayoutFixtures().CustomLayoutResolvesLengthsInItsViewport())
+
+    @Fact
+    func IntrinsicLimitsUseOwnerConstraints() ->
+        Assert.True(LayoutFixtures().IntrinsicLimitsUseOwnerConstraints())
+
+    @Fact
+    func RelativeLengthsResolveFirstLayoutAndResize() ->
+        Assert.True(LayoutFixtures().RelativeLengthsResolveFirstLayoutAndResize())
+
+    @Fact
+    func IntrinsicLengthsMeasureRetainedContent() ->
+        Assert.True(LayoutFixtures().IntrinsicLengthsMeasureRetainedContent())
+
+    @Fact
+    func RelativeLengthsValidateAtAssignment() ->
+        Assert.True(LayoutFixtures().RelativeLengthsValidateAtAssignment())
+
     @Theory
     @MemberData("Cases")
     func ContractReturnsTrue(fixtureType Type, methodName string) {
