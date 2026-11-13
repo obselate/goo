@@ -165,6 +165,59 @@ internal class StateFixtures {
     } finally { window.Close() }
   }
 
+  func VirtualWriteDoesNotMaskVerificationWhenEnabledLaterContract() bool -> verifyScopeHistory(false)
+
+  func VirtualWriteDoesNotMaskVerificationWhenEnabledContract() bool -> verifyScopeHistory(true)
+
+  private func verifyScopeHistory(alreadyEnabled bool) bool {
+    let previous = StateVerification.Override
+    StateScopeHistoryValues.Value = 0
+    StateScopeHistoryValues.Tracked = true
+    StateVerification.Enabled = alreadyEnabled
+    let cell = StateScopeHistoryCell()
+    let window = Window{Root: cell, Width: 200, Height: 100}
+    try {
+      window.UpdateTree()
+      window.UpdateTree()
+      if alreadyEnabled { cell.WriteOutsideCallback() }
+      else { window.PlatformInput.PointerMove(0, PointerDevice.Mouse, 10, 10, KeyModifiers{}, 0) }
+      window.UpdateTree()
+      let ownerTracked = cell.stateChanged
+      StateVerification.Enabled = true
+      StateScopeHistoryValues.Tracked = false
+      var rejected = false
+      try {
+        window.PlatformInput.PointerMove(0, PointerDevice.Mouse, 11, 10, KeyModifiers{}, 0)
+        window.UpdateTree()
+      } catch (error InvalidOperationException) {
+        rejected = error.Message.Contains("StateScopeHistoryCell")
+          && error.Message.Contains("without a tracked State write")
+      }
+      return rejected && !ownerTracked
+    } finally {
+      window.Close()
+      StateVerification.Override = previous
+    }
+  }
+
+  func VirtualTrackedWritePassesVerificationContract() bool {
+    let previous = StateVerification.Override
+    StateScopeHistoryValues.Value = 0
+    StateScopeHistoryValues.Tracked = true
+    StateVerification.Enabled = true
+    let window = Window{Root: StateScopeHistoryCell(), Width: 200, Height: 100}
+    try {
+      window.UpdateTree()
+      window.UpdateTree()
+      window.PlatformInput.PointerMove(0, PointerDevice.Mouse, 10, 10, KeyModifiers{}, 0)
+      window.UpdateTree()
+      return containsText(window.Tree!!, "row:1")
+    } finally {
+      window.Close()
+      StateVerification.Override = previous
+    }
+  }
+
   private func containsText(node Node, text string) bool {
     if node.Content == text { return true }
     for index in 0 ... node.Children.Count {
@@ -283,4 +336,44 @@ internal class StateVirtualFixtureRows : VirtualState {
     first = nextFirst
     version = nextVersion
   }
+}
+
+internal class StateScopeHistoryValues {
+  shared {
+    internal var Value int32
+    internal var Tracked bool
+  }
+}
+
+internal class StateScopeHistoryCell : Cell {
+  private let value State[int32] = State[int32](0)
+
+  internal func WriteOutsideCallback() { value.Value++ }
+
+  override func Build() Blob {
+    let result = Container{Width: 200, Height: 100, OnPointerMove: Move}
+    result.Add(Text{Content: StateScopeHistoryValues.Value.ToString()})
+    result.Add(Virtual(StateScopeHistorySource(value)){Width = 200, Height = 20})
+    return result
+  }
+
+  private func Move(event PointerEvent) {
+    if StateScopeHistoryValues.Tracked { value.Value++ }
+    else { StateScopeHistoryValues.Value++ }
+  }
+}
+
+internal class StateScopeHistorySource(value State[int32]) : VirtualSource {
+  public func State(current VirtualState?) VirtualState -> current ?? StateScopeHistoryRows(value)
+}
+
+internal class StateScopeHistoryRows(value State[int32]) : VirtualState {
+  public override func Realize(viewport VirtualViewport, output VirtualOutput) {
+    output.Add(VirtualItem{Key: "row", Index: 0, Width: 200, Height: 20,
+      Content: Text{Content: "row:${value.Value}"}})
+    output.ContentSize = LayoutSize(200, 20)
+    output.ItemCount = 1
+  }
+
+  public override func NeedsRealize(viewport VirtualViewport) bool -> false
 }

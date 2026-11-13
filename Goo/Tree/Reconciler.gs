@@ -315,8 +315,10 @@ internal partial class Reconciler {
     let state = applyVirtual(n, b, false)
     let extent = state.Extent()
     let count = state.ItemCount()
+    let previousVerifier = verifyingCell
     try {
       let children = state.Prepare(n, b.Source, b.Accessibility?.Role == AccessibilityRole.List)
+      if verifyingCell != nil && state.HasStateChanges { verifyingCell = nil }
       diffChildren(n, children)
       state.Commit()
       // Items added or removed out of view leave the children unchanged, but the scroll extent and the
@@ -332,6 +334,8 @@ internal partial class Reconciler {
     } catch (_ Exception) {
       state.Cancel()
       rethrow
+    } finally {
+      verifyingCell = previousVerifier
     }
   }
 

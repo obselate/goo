@@ -17,6 +17,7 @@ internal sealed class StateReadScope : IDisposable {
   private var preserving bool
   private var reading bool
   private var disposed bool
+  internal var StateChanged bool
 
   internal init(owner Cell?, invalidated Action) {
     this.owner = owner
@@ -83,7 +84,7 @@ internal sealed class StateReadScope : IDisposable {
   internal func ObserveUntrackedRead() { owner?.RegisterUntrackedScope(this) }
 
   internal func RebuildFromState() {
-    owner?.RecordStateWrite()
+    StateChanged = true
     Rebuild()
   }
 

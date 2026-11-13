@@ -104,6 +104,7 @@ internal sealed class VirtualNodeState {
   internal prop RecycledRowCount int32 { get -> recycledRows.Count }
   internal prop RecycledNodeCount int32 { get -> recycledNodes }
   internal prop RecycledStorageBytes int32 { get -> recycledBytes }
+  internal prop HasStateChanges bool { get -> stateReads?.StateChanged ?? false }
 
   private func clearRecycledRows() {
     recycledRows.Clear()
@@ -656,6 +657,7 @@ internal sealed class VirtualNodeState {
     if let previous = previous {
       if previous != state { previous.Dispose() }
     }
+    if let reads = stateReads { reads.StateChanged = false }
   }
 
   internal func Cancel(preserveReads bool = false) {
