@@ -267,16 +267,16 @@ class ImagePublicationTests {
     }
 
     @Theory
-    @InlineData(0f)
-    @InlineData(-1f)
-    @InlineData(System.Single.NaN)
-    @InlineData(System.Single.PositiveInfinity)
-    func ImageRejectsInvalidDensity(density float32) -> Assert.Throws[ArgumentOutOfRangeException](
+    @InlineData(0.0)
+    @InlineData(-1.0)
+    @InlineData(System.Double.NaN)
+    @InlineData(System.Double.PositiveInfinity)
+    func ImageRejectsInvalidDensity(density float64) -> Assert.Throws[ArgumentOutOfRangeException](
         () -> Image{PixelsPerUnit: density}
     )
 
     private class DensityRoot(source ImageSource) : Cell {
-        var Density float32 = 2.0F
+        var Density float64 = 2.0
         override func Build() Blob -> Image{Source: source, PixelsPerUnit: Density}
     }
 

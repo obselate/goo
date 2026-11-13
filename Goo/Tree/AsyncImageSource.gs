@@ -29,10 +29,11 @@ public class AsyncImageSource : ImageSourceProvider, IDisposable {
   /// Acquires the shared result or starts a load. Failed loads can be retried.
   public func Acquire() ImageSourceLease {
     var start CancellationTokenSource?
-    let lease = ImageSourceLease()
+    var lease ImageSourceLease
     lock gate {
       if disposed { throw ObjectDisposedException("AsyncImageSource") }
       if let image = result { return image.Acquire() }
+      lease = ImageSourceLease()
       leases.Add(lease)
       lease.Released += () -> release(lease)
       if pending == nil {

@@ -212,6 +212,12 @@ class PublicDocumentationTests {
     shared {
         private const PublicDeclared BindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly
         private let ExpectedMethodIds[]string = []string{
+            "M:Goo.AsyncImageSource.#ctor(System.Func{System.Threading.CancellationToken,System.Threading.Tasks.Task{Goo.ImageSource}})",
+            "M:Goo.AsyncImageSource.Acquire",
+            "M:Goo.AsyncImageSource.Dispose",
+            "M:Goo.Assets.Open(System.Reflection.Assembly,System.String)",
+            "M:Goo.Assets.ReadAllBytes(System.Reflection.Assembly,System.String)",
+            "M:Goo.ShaderEffectProgram.Load(System.Reflection.Assembly,System.String)",
             "M:Goo.Blob.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})",
             "M:Goo.Platform.OpenAsync(System.String,System.Threading.CancellationToken)",
             "M:Goo.NativeDialogs.ShowError(System.String,System.String)",
@@ -505,7 +511,7 @@ class PublicDocumentationTests {
             "M:Goo.ImageSourceCache.LoadAsync(System.String)",
             "M:Goo.ImageSourceCache.LoadAsync(System.String,System.Threading.CancellationToken)",
             "M:Goo.ImageSourceCache.Dispose",
-            "M:Goo.Images.ImageVariant.#ctor(System.String,System.Single)",
+            "M:Goo.Images.ImageVariant.#ctor(System.String,System.Double)",
             "M:Goo.Images.ImageVariants.#ctor(System.Collections.Generic.IReadOnlyList{Goo.Images.ImageVariant},Goo.ImageDecodeLimits)",
             "M:Goo.Images.ImageVariants.LoadAsync(Goo.WindowMetrics,System.Threading.CancellationToken)",
             "M:Goo.Images.ImageVariants.Dispose",
@@ -1595,7 +1601,7 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
-            ["M:Goo.Images.ImageVariant.#ctor(System.String,System.Single)"] = DocumentationShape(
+            ["M:Goo.Images.ImageVariant.#ctor(System.String,System.Double)"] = DocumentationShape(
                 []string{"path", "pixelsPerUnit"},
                 System.Array.Empty[string](),
                 false

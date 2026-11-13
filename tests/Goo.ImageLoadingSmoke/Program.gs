@@ -10,6 +10,7 @@ import System.Threading.Tasks
 using let asset = ImageSource.Decode(Assets.ReadAllBytes(
   System.Reflection.Assembly.GetExecutingAssembly(), "Resources/local-rgba.png"))
 if asset.Width != 2 || asset.Height != 2 { throw InvalidOperationException("GooAsset lookup failed") }
+let effect = ShaderEffectProgram.Load(System.Reflection.Assembly.GetExecutingAssembly(), "image-effect")
 using let deferred = AsyncImageSource(token -> Task.FromResult(ImageSource(1, 1, [4]uint8)))
 using let binding = deferred.Acquire()
 for attempt in 0 ... 500 {

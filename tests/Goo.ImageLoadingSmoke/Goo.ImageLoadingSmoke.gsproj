@@ -8,6 +8,8 @@
     <ProjectReference Include="../../Goo/Goo.gsproj" Condition="'$(GooImageUsePackages)' != 'true'" />
     <PackageReference Include="Goo" Version="$(GooReleaseVersion)" Condition="'$(GooImageUsePackages)' == 'true'" />
     <GooAsset Include="../Shared/Assets/local-rgba.png" Link="Resources/local-rgba.png" />
+    <GooShaderEffect Include="../Goo.AsyncReadbackSmoke/Shaders/control_effect.frag.slang"
+                     Embed="true" TargetPath="image-effect.goo-effect" />
     <Content Include="../Shared/Assets/local-rgba.png" Link="Assets/local-rgba.png"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../Shared/Assets/local-profile.png" Link="Assets/local-profile.png"
