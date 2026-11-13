@@ -21,7 +21,7 @@ func AppendCellInputGuide(text StringBuilder) {
     text.AppendLine("## Build input cells")
     text.AppendLine()
     text.AppendLine(
-        "Derive packaged components as `open class X : Cell<TInput>` and override `protected Build(input TInput) Blob`. Goo passes the stored immutable input snapshot. Same-assembly components can still override parameterless `Build()`. If both overloads are overridden, the typed overload wins. Override `ShouldRebuild(previous, next)` only when default structural equality does not match the rebuild policy."
+        "Derive packaged components as `open class X : Cell<TInput>` and override `protected Build(input TInput) Blob`. Goo passes the stored immutable input snapshot. Same-assembly components can still override parameterless `Build()`. If both overloads are overridden, the typed overload wins. A child rebuilds when its input differs by equality. Derive state from the input in `InputChanged(input)`."
     )
     text.AppendLine()
     text.AppendLine("## Forward input callbacks")
@@ -72,7 +72,7 @@ A mounted Cell is retained by declared ` + "`" + `TCell` + "`" + ` and sibling k
 
 Goo owns and disposes the Cell on removal. Each invocation must return a fresh, unmounted, undisposed instance. Do not share an instance across mounts or return a disposed instance. A null factory or result is rejected.
 
-Constructor arguments initialize the Cell. Update it through typed inputs, configuration, or an external store read by ` + "`" + `Build()` + "`" + `. Call its ` + "`" + `Rebuild()` + "`" + ` after changes outside Goo input callbacks. Read changing values from a store or getter, not a captured scalar copy. Calling ` + "`" + `Build()` + "`" + ` directly returns a Blob tree without mounting the Cell.
+Constructor arguments initialize the Cell. Update it through typed inputs, configuration, or an external store read by ` + "`" + `Build()` + "`" + `. A changed ` + "`" + `State<T>` + "`" + ` rebuilds its readers. Goo handles rebuilds after its input, Cell post, timer and async callbacks. Call ` + "`" + `Rebuild()` + "`" + ` only for plain state changed outside Goo. Await in Goo callbacks to resume on the UI thread. Use ` + "`" + `Cell.Post` + "`" + ` for background results. Read changing values from a store or getter, not a captured scalar copy. Calling ` + "`" + `Build()` + "`" + ` directly returns a Blob tree without mounting the Cell.
 
 See [language interop](../interop.md) for other languages.
 

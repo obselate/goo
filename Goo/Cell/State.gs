@@ -57,6 +57,7 @@ public abstract class StateDependency {
 }
 
 /// Holds a value that rebuilds the Cells that read it in Build when it changes.
+/// A Cell declared with a primary constructor always rebuilds after callbacks.
 public class State[T any] : StateDependency {
   private var current T
 

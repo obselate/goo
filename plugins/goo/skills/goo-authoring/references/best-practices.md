@@ -12,12 +12,12 @@ These app rules override threading, structure and list code in older samples.
 | 4 | Put I/O, parsing and heavy compute in services called from `go` children. |
 | 5 | Reuse a component for every repeated visual pattern. Prefer Goo.Widgets controls. |
 | 6 | Use one theme for colors, fonts, radii and spacing. No literals in views. |
-| 7 | Change Cell state and call `Rebuild()` only on the UI thread. Post background results. |
-| 8 | Bind background work to Cell disposal and `window.Closed`. |
-| 9 | Accept results only for the current request and mounted owner. See Background work. |
+| 7 | Change Cell state only on the UI thread. Use `Cell.Post` for background results. |
+| 8 | Pass `Lifetime` or a `Latest(name)` token to background work. Goo cancels it at unmount or window close. |
+| 9 | After an `await`, return when the `Latest(name)` token is cancelled. Do not keep a request counter. |
 | 10 | Virtualize large or unbounded data lists. Measure worst-case mounts and frame cost for small bounded lists. |
 | 11 | Do not sort, filter, group, parse or format whole collections in `Build`. See Rebuild and Build cost. |
-| 12 | Rebuild the smallest changed Cell. Coalesce high-rate data. |
+| 12 | Split views into Cells for independent regions. Coalesce high-rate data. |
 | 13 | Avoid unnecessary idle frames. See Verify. |
 | 14 | Measure the heaviest interaction. Frame `p99` must stay below budget. |
 | 15 | Use standard text controls and built-in editing keys. See Keyboard and text input. |
@@ -42,13 +42,14 @@ These app rules override threading, structure and list code in older samples.
 | Runs on the UI thread | No UI-thread guarantee |
 | --- | --- |
 | `Build`, input handlers, layout, render | `go f()`, `go { ... }` |
-| `window.Post` actions | Code after `await` |
-| `window.SetTimeout` and `window.SetInterval` callbacks | G# `after(d)` and `tick(d)` |
+| Cell and window `Post` actions, continuations awaited in Goo callbacks | Work started outside Goo callbacks |
+| Cell and window `After` and `Every` callbacks | G# `after(d)` and `tick(d)` |
 | `Anim.Completed` callbacks | |
 
 - Frame budget is `1000 / refresh rate` ms: 16.7 ms at 60 Hz, 6.9 ms at 144 Hz. All UI-thread work in a frame shares it.
-- Goo installs no `SynchronizationContext`. Code after `await` can run on any thread. Post UI changes through `window.Post`.
-- Check the bool returned by `window.Post` when work must not be lost and handle rejection. Queue acceptance does not guarantee execution if teardown starts later.
+- In a Goo callback, code after `await` runs on the UI thread. Write handlers as `async func Name() void`. A `go` child has no UI thread. Use `Cell.Post` or `Host.InvokeAsync` from there.
+- Pass `Lifetime` or `Latest(name)` to cancellable work. At unmount or window close, Goo cancels the token. `finally` and `using` still run. Do not touch UI state after cancellation.
+- Check the bool returned by `window.Post` when work must not be lost and handle rejection. Queue acceptance does not guarantee execution if teardown starts later. `Cell.Post` returns false when the Cell is not mounted.
 - `Rebuild()` does not switch threads. It throws if called during `Build`.
 - `scope` waits for its children at its end. Normal exit does not cancel them. Pass a token.
 - A function that contains `scope` becomes suspending. A call from a synchronous boundary blocks and reports `GS0558`. Never join child work in a UI callback.
@@ -57,90 +58,67 @@ These app rules override threading, structure and list code in older samples.
 ## Background work
 
 ```gsharp
-class SearchView : Cell, IDisposable {
-    private let window Window
+class SearchView : Cell {
     private let catalog Catalog
-    private let lifetime CancellationTokenSource = CancellationTokenSource()
     private let buildRow (Item) -> Blob
-    private var search CancellationTokenSource?
-    private var generation int32
     private var rows IReadOnlyList[Item] = []Item{}
     private var status string = ""
 
-    init(window Window, catalog Catalog) {
-        this.window = window
+    init(catalog Catalog) {
         this.catalog = catalog
-        buildRow = item -> Text{Content: item.Name}
+        buildRow = item -> Text(item.Name)
     }
 
-    private func Search(query string) {
-        search?.Cancel()
-        search?.Dispose()
-        let current = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, window.Closed)
-        search = current
-        generation++
+    private async func Search(query string) void {
+        let token = Latest("search")
         status = "Searching"
-        go Load(query, generation, current.Token)
-    }
-
-    private func Load(query string, id int32, token CancellationToken) {
         try {
             let found = await catalog.SearchAsync(query, token)
-            let sorted = found.OrderBy(item -> item.Name).ToArray()
-            window.Post(() -> {
-                if id == generation {
-                    rows = sorted
-                    status = ""
-                    Rebuild()
-                }
-            })
+            if token.IsCancellationRequested {
+                return
+            }
+            rows = found
+            status = ""
         } catch (error OperationCanceledException) {
         } catch (error Exception) {
-            let message = error.Message
-            window.Post(() -> {
-                if id == generation {
-                    status = message
-                    Rebuild()
-                }
-            })
+            if !token.IsCancellationRequested {
+                status = error.Message
+            }
         }
     }
 
-    public func Dispose() {
-        generation++
-        lifetime.Cancel()
-        search?.Dispose()
-        lifetime.Dispose()
-    }
-
-    override func Build() Blob -> Container{
+    override func Build() Blob -> Column{
         Height: Percent(100),
-        Button{OnClick: () -> Search("goo"), Text{Content: "Search"}},
-        Text{Content: status},
-        Container{FlexGrow: 1.0, VirtualRows(rows, 32.0, item -> item.Id, buildRow)},
+        Button{OnClick: () -> Search("goo"), Text("Search")},
+        Text(status),
+        Container{Flex: 1, VirtualRows(rows, 32.0, item -> item.Id, buildRow)},
     }
 }
 ```
 
-- `Catalog` and `Item` are app types. `SearchAsync` takes the token.
-- Create the window, set `window.Root = SearchView(window, catalog)`, then call `window.Run()`.
-- Goo disposes a mounted `IDisposable` Cell when it leaves the tree. `Dispose` increments `generation`, so results queued before unmount are dropped.
-- The input handler rebuilds its own Cell, so `Search` does not call `Rebuild()`.
+- `Catalog` and `Item` are app types. `SearchAsync` returns sorted items and does its work off the UI thread. Import `Goo`, `Goo.Widgets.Data`, `System` and `System.Collections.Generic`.
+- Create `Window{Root: SearchView(catalog)}` and call `Application.Run(window)`.
+- Goo cancels `Lifetime` and drops Cell timers and posts when the Cell leaves the tree. Implement `IDisposable` only for resources the Cell owns.
+- Goo handles rebuilds after input, Cell posts, timers and async continuations. A `State` change rebuilds its readers. Call `Rebuild()` only for plain state changed outside Goo, such as a model event or an unforwarded child delegate.
 - Start `scope` only inside a `go` child, never in a handler.
 - Start one child per batch, about `Environment.ProcessorCount` batches for CPU work.
 
 | Do not write | Write |
 | --- | --- |
-| `Thread.Sleep(ms)` in UI code | `window.SetTimeout(callback, ms)` |
-| `System.Threading.Timer` or `tick(d)` that touches Cells | `window.SetInterval(callback, ms)` |
+| `Thread.Sleep(ms)` in UI code | `After(ms, action)` or `window.After(ms, action)` |
+| `System.Threading.Timer` or `tick(d)` that touches Cells | `Every(ms, action)` |
 
 ## Rebuild and Build cost
 
 - `Build` runs on every rebuild. Treat it as the hot path.
+- Keep state that `Build` reads in `State` fields: `private let count State[int32] = State[int32](0)`. Write `count.Value = next`. Never call `Rebuild()` for a `State` change.
+- Goo can skip unchanged callback builds when the Cell declares a `State` field or its last `Build` read a `State` value, and its instance and static fields are all immutable states, primitive numbers, `bool`, enums or strings.
+- A mutable field, collection, delegate field or model reference keeps rebuild-after-every-callback behavior. A Cell declared with a primary constructor always rebuilds after callbacks. Use an explicit `init(...)` with `let` fields.
+- A typed child rebuilds when its input differs by equality. Derive state in `InputChanged(input)`. Do not write a rebuild policy.
 - Mount each region as its own Cell. A change rebuilds only that Cell.
 - Compute sorted, filtered or grouped data when the source changes. Store it in a field. Compute large results in a `go` child.
 - Replace a changed list. Do not mutate it in place. Typed inputs do not see in-place changes.
-- Store the row builder in a field, as in `buildRow` above. A lambda that captures only `this` stays equal across builds, but a new closure over locals or parameters makes rows build again.
+- Store the row builder in a field, as in `buildRow` above. A lambda that captures only `this` stays equal across builds, but a new closure over locals or parameters makes rows build again. A method group such as `OnSelect: Select` needs no field.
 - For high-rate sources (sockets, progress, logs), store the latest value and apply it at a measured interval that meets the latency and frame budgets. Start at 10 Hz when that is adequate. Dispose the timer when the source is idle.
 - Animate paint with `AnimateValue`. It skips `Build` and layout. `Animate(initial)` rebuilds the Cell on every tick.
 - Stop intervals when their sources are idle and cap continuous shader redraw rates. Preserve useful keyboard focus, caret behavior and active animations. Measure their intentional activity separately from idle work.
@@ -159,13 +137,13 @@ Core provides editing keys and Tab traversal, including in dialogs. Movement and
 
 - Never build a text input from `Text`, `Label` or a `Container` with `OnKeyDown` or `OnTextInput`. It loses selection, clipboard, undo, IME and screen reader support.
 - Key press order: routed `OnKeyDown` handlers from the focused node up to the root, focused-node `KeyBindings`, built-in text editing, ancestor `KeyBindings`, then Tab focus traversal. Any routed handler can call `PreventDefault()` to block bindings and built-in defaults.
-- A root `OnKeyDown` handler for app navigation keys must skip events while a text field has focus. Check `window.PlatformInput.Selection != nil`. Use a field's own `KeyBindings` to override editing. App-root Ctrl+A does not replace Select All. Existing root editing bindings do not run twice.
+- A root `OnKeyDown` handler for app navigation keys must skip events while `event.TargetEditsText` is true. Use a field's own `KeyBindings` to override editing. App-root Ctrl+A does not replace Select All. Existing root editing bindings do not run twice.
 - Tab and Shift+Tab insert indentation and outdent in an editable multiline editor. Otherwise they move focus. Enter submits a single-line field and inserts a newline in an editable multiline editor. Escape cancels a drag, then composition, then a single-line edit.
 - Keyboard focus moves in tree order through enabled nodes with `TabStop`. There is no `TabIndex`. Order the tree as the user reads it.
 - `DataGrid`, `TreeView` and `ComboBox` are one Tab stop each. Arrows move inside them. Enter and Space activate.
 - See the [input API](../../../reference/docs/api/input.md) for control-specific limits.
 
-## Virtualization
+## Virtualization (Goo.Widgets)
 
 | Data | Use |
 | --- | --- |
@@ -175,7 +153,9 @@ Core provides editing keys and Tab traversal, including in dialogs. Movement and
 | Hierarchy | `TreeView` (keep `Virtualize` true) |
 | Filtered pick list | `SearchList`, `ComboBox` |
 | Log or stream tail | `VirtualRows(items, h, key, builder, followEnd: following)` |
-| Custom 2D placement | `Virtual(source)` with your own `VirtualSource` |
+| Custom 2D placement (core) | `Virtual{Source: source}` with your own `VirtualSource` |
+
+`Virtual.Source` and `TextEditor.Controller` must be set. `Virtual{}` and `TextEditor{}` compile but throw `InvalidOperationException` at mount.
 
 - Use a plain `for` loop for small author-time fixed sets or measured small bounded data sets. Virtualize large or unbounded data lists.
 - The key is a stable domain ID. Never use the list index.
@@ -207,6 +187,8 @@ Search for possible violations before review:
 rg -n --glob '*.gs' 'Task\.Run|Thread\(|ThreadPool|ContinueWith|GetAwaiter\(\)\.GetResult|\.Wait\(\)|Thread\.Sleep|System\.Threading\.Timer'
 rg -n --glob '**/Views/**/*.gs' 'Color\.(Rgb|Parse)|"#[0-9a-fA-F]{6}|File\.|Directory\.|HttpClient|Process\.Start'
 rg -n --glob '*.gs' 'WidgetKeyBindings\.Editing|OnKeyDown|OnTextInput'
+rg -n --glob '*.gs' 'ConfigureApplication|\.Run\(\)|SetTimeout|SetInterval|ShouldRebuild|PlatformInput\.(Selection|Editor|Execute|MoveFocus|ClearFocus)|Virtual\(|TextEditor\('
+rg -n --glob '*.gs' 'Rebuild\(\)|CancellationTokenSource|generation|\.Build\(\)|Cell\.Mount'
 ```
 
 Matches are leads for semantic review, not automatic defects. Keep deliberate field overrides.

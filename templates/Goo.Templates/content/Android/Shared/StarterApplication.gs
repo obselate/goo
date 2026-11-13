@@ -20,21 +20,21 @@ public class StarterApplication {
 }
 
 class Counter : Cell {
-    private var count int32
+    private let count State[int32] = State[int32](0)
 
-    override func Build() Blob -> Container{
+    override func Build() Blob -> Column{
         Width: Percent(100),
         Height: Percent(100),
         Padding: StarterTheme.Padding,
         Gap: StarterTheme.Gap,
         BackgroundColor: StarterTheme.Background,
-        Text{Content: "Count: $count", FontSize: StarterTheme.FontSize, Color: StarterTheme.Foreground},
+        Text{Content: "Count: ${count.Value}", FontSize: StarterTheme.FontSize, Color: StarterTheme.Foreground},
         Button{
             Padding: StarterTheme.ButtonPadding,
             BorderRadius: StarterTheme.Radius,
             BackgroundColor: StarterTheme.Accent,
             OnClick: () -> {
-                count++
+                count.Value++
             },
             Text{Content: "Add one", Color: StarterTheme.Foreground},
         },

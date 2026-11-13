@@ -241,7 +241,8 @@ public open class Cell {
   public open func Build() Blob -> Container {}
 
   /// Requests a rebuild of this component.
-  /// Mounted cells must use their window's UI thread. Post background results with Window.Post.
+  /// Mounted cells must use their window's UI thread. Use Cell.Post for background results.
+  /// State changes and Goo callbacks handle rebuilds automatically. Use this for plain state changed outside Goo.
   public func Rebuild() {
     if disposed || unmounting || contextWindow?.callbackClosing == true { return }
     contextWindow?.requireUiThread("Cell.Rebuild")

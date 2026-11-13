@@ -15,12 +15,12 @@ import Goo.Widgets.Actions
 import Goo.Widgets.Inputs
 
 class Example : Cell {
-    private var name string = "Ada"
-    private var greeting string = "Enter a name and select Save."
+    private let name State[string] = State[string]("Ada")
+    private let greeting State[string] = State[string]("Enter a name and select Save.")
 
     override func Build() Blob {
         let theme = Theme.Read()
-        return Container{
+        return Column{
             BasedOn: theme.CanvasStyle,
             Width: Percent(100),
             Height: Percent(100),
@@ -29,24 +29,24 @@ class Example : Cell {
             TextField{
                 Width: Percent(100),
                 Label: "Name",
-                Value: name,
+                Value: name.Value,
                 OnChange: (value string) -> {
-                    name = value
+                    name.Value = value
                 },
                 OnSubmit: (value string) -> {
-                    greeting = "Hello, $value"
+                    greeting.Value = "Hello, $value"
                 },
             },
-            ActionButton{Content: "Save", OnClick: () -> { greeting = "Hello, $name" }},
-            Text{Content: greeting},
+            ActionButton{Content: "Save", OnClick: () -> { greeting.Value = "Hello, ${name.Value}" }},
+            Text{Content: greeting.Value},
         }
     }
 }
 
 func Main() {
-    Window.ConfigureApplication("A text input form", "1.0.0", "com.example.tutorial")
-    let window = Window{Title: "A text input form", Width: 400, Height: 240, Root: Example{}}
+    Application.Configure("A text input form", "1.0.0", "com.example.tutorial")
+    let window = Window{Title: "A text input form", Size: LayoutSize(400, 240), Root: Example{}}
     Theme.Attach(window, Theme.Default)
-    window.Run()
+    Application.Run(window)
 }
 ```
