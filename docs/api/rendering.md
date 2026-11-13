@@ -639,14 +639,13 @@ Returns the immutable node at a flattened document index.
 
 Returns a node path in the document coordinate space.
 
-### `Render(ShapeFit,string)`
+### `Render`
 
-Builds a retained display of this document.
+Creates a retained vector display fitted within its parent.
 
-- `fit`: The fit applied to the document view box. The default is Contain.
-- `key`: The optional retained display key.
+### `Render(string)`
 
-Returns: The vector display declaration.
+Creates a keyed retained vector display fitted within its parent.
 
 ### `ClipCount`
 
