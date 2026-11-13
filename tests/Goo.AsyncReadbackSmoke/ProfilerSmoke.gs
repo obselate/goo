@@ -582,7 +582,7 @@ internal class ProfilerSmoke {
                     let cache = sourceCache
                     root.Source = cache.LoadAsync(Path.Combine(AppContext.BaseDirectory, "local-rgba.png")).GetAwaiter().GetResult()
                     root.Effect = ShaderEffect(ShaderEffectProgram.Load(
-                        Path.Combine(AppContext.BaseDirectory, "control_effect.frag.goo-effect")), true, 2.0F)
+                        Path.Combine(AppContext.BaseDirectory, "control_effect.frag.goo-effect")), true, 2.0)
                     root.Frame++
                     root.Rebuild()
                 }

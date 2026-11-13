@@ -41,6 +41,7 @@ internal partial class TextInput {
   }
 
   private func beforeBlur(n Node) {
+    if n.Selectable { SelectableText.Set(n, 0, 0) }
     if let history = n.EntryHistory { history.Typing = false }
     cancelEntryComposition(n)
     blurEditor(n)

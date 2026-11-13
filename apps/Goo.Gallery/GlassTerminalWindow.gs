@@ -668,7 +668,7 @@ public class GlassTerminalWindow {
         public func CreateWindow() Window {
             let programPath = Path.Combine(AppContext.BaseDirectory, "Shaders", "terminal_glass.goo-effect")
             let program = ShaderEffectProgram.Load(programPath)
-            let effect = ShaderEffect(program, samplesBackdrop: true, backdropOutset: 24.0F)
+            let effect = ShaderEffect(program, samplesBackdrop: true, backdropOutset: 24.0)
             effect.Playing = false
 
             let cell = GlassTerminalCell(effect)

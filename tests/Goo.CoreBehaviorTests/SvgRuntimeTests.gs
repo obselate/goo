@@ -31,7 +31,7 @@ class SvgRuntimeTests {
     @InlineData("M0 0 X1 1", "character position 6")
     @InlineData("", "character position 0")
     @InlineData("M0 0 L1e 1", "character position 8")
-    @InlineData("M0 0 L1e300 1", "character position 13")
+    @InlineData("M0 0 L1e300 1", "character position 11")
     func RawPathReportsCharacterPosition(data string, position string) {
         let error = Assert.Throws[SvgParseException](
             () -> VectorPath.Parse(data, ElementRect{Width: 20, Height: 20})
@@ -65,8 +65,8 @@ class SvgRuntimeTests {
     @Fact
     func ParseProducesVectorAsset() {
         let asset = Svg.Parse(BasicSvg)
-        Assert.Equal(float32(20.0), asset.ViewBoxWidth)
-        Assert.Equal(float32(10.0), asset.ViewBoxHeight)
+        Assert.Equal(20.0, asset.ViewBoxWidth)
+        Assert.Equal(10.0, asset.ViewBoxHeight)
         Assert.Equal(2, asset.NodeCount)
         Assert.Equal(1, asset.ContourCount)
         Assert.Equal(3, asset.CurveCount)

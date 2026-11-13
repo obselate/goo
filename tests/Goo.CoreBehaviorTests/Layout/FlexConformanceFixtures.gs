@@ -7,6 +7,17 @@ import System.Text.Json
 
 internal class FlexConformanceFixtures {
     func RowColumnSpacerContract() bool {
+        let blobs = []Blob{Row{}, Column{}, Row{HitTestSelf: true}, Column{HitTestSelf: true},
+            Row{HitTestSelf: false, OnClick: () -> {}}, Column{HitTestSelf: false, OnClick: () -> {}},
+            Row{OnClick: () -> {}}, Column{OnClick: () -> {}}}
+        for index in 0 ... blobs.Length {
+            let node = Reconciler{Res: Resolver{}}.Mount(blobs[index])
+            try {
+                Layout().Calculate(node, 100.0F, 40.0F)
+                let expected = index == 2 || index == 3 || index >= 6
+                if node.HitTestSelf != expected { return false }
+            } finally { NodeLifecycle.DisposeTree(node) }
+        }
         var clicks = 0
         let reconciler = Reconciler{Res: Resolver{}}
         let root = reconciler.Mount(Row{

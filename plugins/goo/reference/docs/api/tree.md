@@ -242,11 +242,11 @@ Gets the platform-neutral accessibility declaration for this element.
 
 ### `AccessibilityName`
 
-Gets or sets the name without replacing other accessibility fields. A later Accessibility declaration replaces all fields.
+Gets or sets the name without replacing other accessibility fields. An empty name is the default and leaves an absent declaration unset. A later Accessibility declaration replaces all fields.
 
 ### `AccessibilityRole`
 
-Gets or sets the role without replacing other accessibility fields. Nil restores the automatic role. A later Accessibility declaration replaces all fields.
+Gets or sets the role without replacing other accessibility fields. Auto is the default and leaves an absent declaration unset. A later Accessibility declaration replaces all fields.
 
 ### `ActiveStyle`
 
@@ -441,6 +441,10 @@ Adds a child to the ordered child collection.
 ### `Children`
 
 Gets the ordered child collection. Read-only lists are copied.
+
+### `HitTestSelf`
+
+Overrides whether this container participates in pointer hit testing. When omitted, Goo derives the value from authored interaction behavior.
 
 ## `Container`
 
@@ -1153,6 +1157,10 @@ Adds a child to the ordered child collection.
 
 Gets the ordered child collection. Read-only lists are copied.
 
+### `HitTestSelf`
+
+Overrides whether this container participates in pointer hit testing. When omitted, Goo derives the value from authored interaction behavior.
+
 ## `ScrollAlignment`
 
 
@@ -1202,6 +1210,10 @@ Gets the displayed text.
 ### `Selectable`
 
 Gets whether the text supports selection and copy without editing or a caret.
+
+### `SelectionColor`
+
+Gets the selection highlight color.
 
 ### `StyleRanges`
 

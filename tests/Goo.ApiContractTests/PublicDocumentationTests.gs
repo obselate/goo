@@ -320,6 +320,7 @@ class PublicDocumentationTests {
             "M:Goo.AccessibilityRelationships.#ctor",
             "M:Goo.AccessibilityValue.#ctor",
             "M:Goo.Anim`1.Pause",
+            "M:Goo.Anim`1.Play(`0,`0)",
             "M:Goo.Anim`1.Play(`0,`0,System.Func{System.Double,System.Double,System.Double,Goo.Simulation},System.Func{System.Double,System.Double,System.Double,Goo.Simulation}[])",
             "M:Goo.Anim`1.Resume",
             "M:Goo.Anim`1.Seek(System.Double)",
@@ -422,7 +423,6 @@ class PublicDocumentationTests {
             "M:Goo.VectorPaint.#ctor(Goo.Gradient)",
             "M:Goo.VectorStroke.#ctor(System.Double,Goo.Color)",
             "M:Goo.VectorStroke.#ctor(System.Double,Goo.VectorPaint)",
-            "M:Goo.VectorStroke.#ctor(System.Double,Goo.VectorPaint,Goo.StrokeCap,Goo.StrokeJoin,System.Double,Goo.DashPattern)",
             "M:Goo.DevTools.Attach(Goo.Window)",
             "M:Goo.DevTools.Attach(Goo.Window,System.Boolean)",
             "M:Goo.Container.#ctor",
@@ -611,7 +611,7 @@ class PublicDocumentationTests {
             "M:Goo.RadialGradient.#ctor(Goo.Color[])",
             "M:Goo.RadialGradient.#ctor(System.Double,System.Double,System.Double,Goo.GradientStop[])",
             "M:Goo.Scrollbar.#ctor",
-            "M:Goo.ShaderEffect.#ctor(Goo.ShaderEffectProgram,System.Boolean,System.Single,System.Single)",
+            "M:Goo.ShaderEffect.#ctor(Goo.ShaderEffectProgram,System.Boolean,System.Double,System.Double)",
             "M:Goo.ShaderEffect.SetParameter(System.Int32,System.Numerics.Vector4)",
             "M:Goo.ShaderEffect.SetData(System.Int32,Goo.ShaderEffectData)",
             "M:Goo.ShaderEffectProgram.#ctor(System.Byte[],System.Boolean)",
@@ -1240,6 +1240,7 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
+            ["M:Goo.Anim`1.Play(`0,`0)"] = DocumentationShape([]string{"from", "to"}, System.Array.Empty[string](), false),
             [
                 "M:Goo.Anim`1.Play(`0,`0,System.Func{System.Double,System.Double,System.Double,Goo.Simulation},System.Func{System.Double,System.Double,System.Double,Goo.Simulation}[])"
             ] = DocumentationShape([]string{"from", "to", "spec", "specs"}, System.Array.Empty[string](), false),
@@ -1786,7 +1787,7 @@ class PublicDocumentationTests {
                 false
             ),
             [
-                "M:Goo.ShaderEffect.#ctor(Goo.ShaderEffectProgram,System.Boolean,System.Single,System.Single)"
+                "M:Goo.ShaderEffect.#ctor(Goo.ShaderEffectProgram,System.Boolean,System.Double,System.Double)"
             ] = DocumentationShape(
                 []string{"program", "samplesBackdrop", "backdropOutset", "backdropBlur"},
                 System.Array.Empty[string](),

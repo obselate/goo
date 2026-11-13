@@ -6,7 +6,8 @@ internal class ShapeGeometryFixtures {
     let red = Color.Rgb(255, 0, 0)
     let gradient = LinearGradient(red, blue)
     let dashes = DashPattern([]float64{2.0, 3.0}, 1.0)
-    let stroke = VectorStroke(3.0, VectorPaint(blue), StrokeCap.Round, StrokeJoin.Bevel, 2.0, dashes){
+    let stroke = VectorStroke(3.0, blue){
+      .Cap: StrokeCap.Round, .Join: StrokeJoin.Bevel, .MiterLimit: 2.0, .Dashes: dashes,
       .VectorEffect: VectorEffect.NonScalingStroke}
     let legacy = Style{BackgroundGradient: nil, BackgroundColor: red, BorderWidth: 30, BorderColor: red, Opacity: 0.5}
     let resolver = Resolver{}
