@@ -119,11 +119,12 @@ public open class Cell {
       let fields = current.GetFields(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
       StateFieldsInspected?.Invoke(current, fields)
       for field in fields {
-        if field.IsInitOnly && typeof(StateDependency).IsAssignableFrom(field.FieldType) {
+        if field.IsInitOnly && field.FieldType.IsGenericType
+          && field.FieldType.GetGenericTypeDefinition().FullName == "Goo.State`1" {
           stateDeclared = true
-          if let state = field.GetValue(this) as StateDependency? {
-            if !state.IsSafePayload() { callbackFallback = true }
-          } else { callbackFallback = true }
+          if !StateDependency.SafePayload(field.FieldType.GetGenericArguments()[0]) || field.GetValue(this) == nil {
+            callbackFallback = true
+          }
           continue
         }
         if (!field.IsInitOnly && !field.IsLiteral) || (!field.FieldType.IsPrimitive && !field.FieldType.IsEnum
