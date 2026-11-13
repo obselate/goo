@@ -158,7 +158,6 @@ ctor|Goo.VectorPaint|public|(color:Goo.Color)
 ctor|Goo.VectorPaint|public|(gradient:Goo.Gradient)
 ctor|Goo.VectorStroke|public|(width:System.Double,color:Goo.Color)
 ctor|Goo.VectorStroke|public|(width:System.Double,paint:Goo.VectorPaint)
-ctor|Goo.VectorStroke|public|(width:System.Double,paint:Goo.VectorPaint,cap:Goo.StrokeCap,join:Goo.StrokeJoin,miterLimit:System.Double,dashes:Goo.DashPattern?)
 ctor|Goo.VirtualState|public|()
 ctor|Goo.Virtual|public|()
 ctor|Goo.VulkanExternalImageDescription|public|()
@@ -1133,6 +1132,7 @@ method|Goo.AccessibilityScrollInfo|op_Equality|static|public|generic:|(left:Goo.
 method|Goo.AccessibilityScrollInfo|op_Inequality|static|public|generic:|(left:Goo.AccessibilityScrollInfo,right:Goo.AccessibilityScrollInfo)->System.Boolean
 method|Goo.ActivationArguments|Read|static|public|generic:|(arguments:System.Collections.Generic.IReadOnlyList`1<System.String>,workingDirectory:System.String)->Goo.ActivationReadResult
 method|Goo.Anim`1|Pause|instance|public|generic:|()->System.Void
+method|Goo.Anim`1|Play|instance|public|generic:|(from:!0,to:!0)->System.Void
 method|Goo.Anim`1|Play|instance|public|generic:|(from:!0,to:!0,spec:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>,params specs:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>[])->System.Void
 method|Goo.Anim`1|Resume|instance|public|generic:|()->System.Void
 method|Goo.Anim`1|Seek|instance|public|generic:|(elapsedMs:System.Double)->System.Void
@@ -2813,6 +2813,7 @@ property|Goo.TextStyleSpan|Range|Goo.TextRange|instance|get:public,init:public|i
 property|Goo.TextStyleSpan|Style|Goo.Style|instance|get:public,init:public|index:()
 property|Goo.Text|Content|System.String|instance|get:public,init:public|index:()
 property|Goo.Text|Selectable|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.Text|SelectionColor|Goo.Color|instance|get:public,init:public|index:()
 property|Goo.Text|StyleRanges|Goo.TextStyleRange[]|instance|get:public,init:public|index:()
 property|Goo.TransferData|Representations|System.Collections.Generic.IReadOnlyList`1<Goo.TransferRepresentation>|instance|get:public|index:()
 property|Goo.TransferData|Uris|System.Collections.Generic.IReadOnlyList`1<System.Uri>|instance|get:public|index:()
@@ -2865,10 +2866,10 @@ property|Goo.VectorPath|ViewBoxHeight|System.Double|instance|get:public|index:()
 property|Goo.VectorPath|ViewBoxWidth|System.Double|instance|get:public|index:()
 property|Goo.VectorPath|ViewBoxX|System.Double|instance|get:public|index:()
 property|Goo.VectorPath|ViewBoxY|System.Double|instance|get:public|index:()
-property|Goo.VectorStroke|Cap|Goo.StrokeCap|instance|get:public|index:()
-property|Goo.VectorStroke|Dashes|Goo.DashPattern?|instance|get:public|index:()
-property|Goo.VectorStroke|Join|Goo.StrokeJoin|instance|get:public|index:()
-property|Goo.VectorStroke|MiterLimit|System.Double|instance|get:public|index:()
+property|Goo.VectorStroke|Cap|Goo.StrokeCap|instance|get:public,init:public|index:()
+property|Goo.VectorStroke|Dashes|Goo.DashPattern?|instance|get:public,init:public|index:()
+property|Goo.VectorStroke|Join|Goo.StrokeJoin|instance|get:public,init:public|index:()
+property|Goo.VectorStroke|MiterLimit|System.Double|instance|get:public,init:public|index:()
 property|Goo.VectorStroke|Paint|Goo.VectorPaint|instance|get:public|index:()
 property|Goo.VectorStroke|VectorEffect|Goo.VectorEffect|instance|get:public,init:public|index:()
 property|Goo.VectorStroke|Width|System.Double|instance|get:public|index:()

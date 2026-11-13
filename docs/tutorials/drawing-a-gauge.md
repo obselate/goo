@@ -45,7 +45,7 @@ class Example : Cell {
         Width: Percent(100),
         Height: Percent(100),
         Position: PositionType.Absolute,
-        Stroke: VectorStroke(theme.Spacing * 2, color){Cap: StrokeCap.Round},
+        Stroke: VectorStroke(theme.Spacing * 2, color){.Cap: StrokeCap.Round},
         StrokeEnd: end,
     }
 }

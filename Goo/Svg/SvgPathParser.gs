@@ -531,6 +531,9 @@ internal class PathScanner {
             !float64.IsFinite(result) {
             throw SvgParser.Fail(owner, "path contains a non-finite number")
         }
+        if result < -float64(float32.MaxValue) || result > float64(float32.MaxValue) {
+            throw SvgParser.Fail(owner, "path number exceeds the float32 range")
+        }
         return result
     }
 

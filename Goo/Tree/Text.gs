@@ -12,6 +12,8 @@ public func operator implicit(value string) TextSpan -> TextSpan(value, nil)
 
 /// Defines a text element.
 public class Text : Blob {
+  private var selectionColor Color = defaultSelectionColor()
+
   internal override func coreBlob() {
   }
 
@@ -19,6 +21,8 @@ public class Text : Blob {
   public prop Content string{ get; init; }
   /// Gets whether the text supports selection and copy without editing or a caret.
   public prop Selectable bool{ get; init; }
+  /// Gets the selection highlight color.
+  public prop SelectionColor Color{ get -> selectionColor; init -> selectionColor = value }
   /// Gets ordered passive inline styles in UTF-16 source offsets.
   /// A cluster uses the style at its logical start. Later ranges override earlier fields.
   public prop StyleRanges []TextStyleRange{

@@ -407,7 +407,7 @@ public struct VectorPath {
     /// @param data The SVG path commands.
     /// @param viewBox The finite view box with positive width and height.
     /// @returns The immutable vector path.
-    /// @exception SvgParseException when path data is invalid, with its UTF-16 character position.
+    /// @exception SvgParseException when path data is invalid. Invalid input numbers report their UTF-16 scanner position.
     public func Parse(data string, viewBox ElementRect) VectorPath {
       ArgumentNullException.ThrowIfNull(data, paramName: "data")
       let builder = PathBuilder(viewBox.X, viewBox.Y, viewBox.Width, viewBox.Height)
@@ -423,7 +423,7 @@ public struct VectorPath {
         }
         return builder.Build()
       } catch (error ArgumentOutOfRangeException) {
-        throw SvgParseException("character position ${data.Length}: ${error.Message}", error)
+        throw SvgParseException(error.Message, error)
       }
     }
 

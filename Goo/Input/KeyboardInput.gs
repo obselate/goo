@@ -458,11 +458,11 @@ internal class KeyboardInput {
         }
         return result
       }
-      if key == Key.Enter || key == Key.KeypadEnter {
+      if !target.Selectable && (key == Key.Enter || key == Key.KeypadEnter) {
         kind = target.Kind == NodeKind.Editor && !target.EditorReadOnly
           ? TextCommandKind.Insert : TextCommandKind.Submit
       }
-      if key == Key.Escape && !modifiers.Shift {
+      if !target.Selectable && key == Key.Escape && !modifiers.Shift {
         result.Handled = true
         result.SuppressTextInput = true
         if !repeat && !pointer.CancelDrag(root) && !text.HandleCompositionCancel(root) {
@@ -496,8 +496,7 @@ internal class KeyboardInput {
     }
     if key == Key.Y && modifiers == KeyModifiers{ Ctrl: true } { kind = TextCommandKind.Redo }
     guard let command = kind else { return result }
-    result.Handled = true
-    result.SuppressTextInput = true
+    result.Handled = !target.Selectable
     result.Repeat = command == TextCommandKind.MoveLeft || command == TextCommandKind.MoveRight
       || command == TextCommandKind.MoveUp || command == TextCommandKind.MoveDown
       || command == TextCommandKind.PageUp || command == TextCommandKind.PageDown
@@ -507,10 +506,12 @@ internal class KeyboardInput {
       || command == TextCommandKind.DeleteBackward || command == TextCommandKind.DeleteForward
       || command == TextCommandKind.DeleteWordBackward || command == TextCommandKind.DeleteWordForward
     if !repeat || result.Repeat {
-      text.ExecuteEditorCommand(root, resolver, command == TextCommandKind.Insert
+      let handled = text.ExecuteEditorCommand(root, resolver, command == TextCommandKind.Insert
         ? TextCommand{ Kind: command, Text: "\n" }
         : TextCommand{ Kind: command, ExtendSelection: modifiers.Shift })
+      if target.Selectable { result.Handled = handled }
     }
+    result.SuppressTextInput = result.Handled
     return result
   }
 
