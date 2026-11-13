@@ -2101,8 +2101,8 @@ property|Goo.ApplicationActivation|Target|System.Uri?|instance|get:public,init:p
 property|Goo.ApplicationActivation|WorkingDirectory|System.String|instance|get:public,init:public|index:()
 property|Goo.Application|VerifyState|System.Boolean|static|get:public,set:public|index:()
 property|Goo.AsyncImageSource|ContentVersion|System.UInt64|instance|get:public|index:()
-property|Goo.Blob|AccessibilityName|System.String?|instance|get:public,init:public|index:()
-property|Goo.Blob|AccessibilityRole|System.Nullable`1<Goo.AccessibilityRole>|instance|get:public,init:public|index:()
+property|Goo.Blob|AccessibilityName|System.String|instance|get:public,init:public|index:()
+property|Goo.Blob|AccessibilityRole|Goo.AccessibilityRole|instance|get:public,init:public|index:()
 property|Goo.Blob|Accessibility|Goo.Accessibility?|instance|get:public,init:public|index:()
 property|Goo.Blob|ActiveStyle|Goo.Style?|instance|get:public,init:public|index:()
 property|Goo.Blob|AutoFocus|System.Boolean|instance|get:public,init:public|index:()
@@ -3111,7 +3111,7 @@ type|Goo.ClipboardFormats|sealed-class|public|base:System.Object|interfaces:|gen
 type|Goo.ClipboardImage|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.ClipboardIntent|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.ClipboardReadStatus|enum|public|base:System.Enum|interfaces:|generic:
-type|Goo.ClipboardTextResult|class|public|base:System.Object|interfaces:|generic:
+type|Goo.ClipboardTextResult|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.ClipboardWriteResult|class|public|base:System.Object|interfaces:|generic:
 type|Goo.Color|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.Color>|generic:
 type|Goo.Column|sealed-class|public|base:Goo.Blob|interfaces:|generic:
