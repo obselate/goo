@@ -3,7 +3,7 @@ package Goo
 import System
 import System.Collections.Generic
 
-public sealed partial class NativeAccessibilityAdapter {
+public partial class NativeAccessibilityAdapter {
   private func TextPartitionLayout(source Node?) object? {
     guard let n = source else { return nil }
     return switch n.Kind {

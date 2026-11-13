@@ -2,7 +2,7 @@ package Goo
 
 import System
 
-public unsafe sealed partial class ExternalImageSession {
+public unsafe partial class ExternalImageSession {
     private func ImportMetalReady(frame ExternalFrameLease) ExternalImageStatus {
         if !OperatingSystem.IsMacOS() || !Runtime.Dispatch.MetalObjects || !frame.Sync.Timeline {
             return ExternalImageStatus.UnsupportedSynchronization

@@ -5,7 +5,7 @@ import System.Diagnostics
 import System.Numerics
 import System.Runtime.CompilerServices
 
-public sealed class ShaderEffect {
+public class ShaderEffect {
   private const MaximumBackdropOutset float64 = 256.0
   private const ParameterCount int32 = 8
   private const DataInputCount int32 = 4

@@ -55,7 +55,7 @@ internal sealed class VectorRadialGradient : Gradient {
     }
 }
 
-public sealed class VectorAsset {
+public class VectorAsset {
   private const MaxRenderDepth int32 = 1024
   private let document VectorAssetDocument
   private let animation VectorAssetAnimation?

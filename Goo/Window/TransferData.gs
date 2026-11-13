@@ -29,7 +29,7 @@ public enum DataTransferStatus {
 }
 
 /// Owns immutable bytes for one exact MIME representation of a selection.
-public sealed class TransferRepresentation {
+public class TransferRepresentation {
     private let contentType string
     private let bytes []uint8
     /// Gets the exact MIME type offered to native consumers.
@@ -67,7 +67,7 @@ public sealed class TransferRepresentation {
 }
 
 /// Owns MIME alternatives and an ordered document URI selection without reading document contents.
-public sealed class TransferData {
+public class TransferData {
     private let representations IReadOnlyList[TransferRepresentation]
     private let uris IReadOnlyList[Uri]
     /// Gets immutable MIME alternatives for the same logical selection.
@@ -119,7 +119,7 @@ public sealed class TransferData {
 }
 
 /// Contains an owned multi-format clipboard snapshot and its file-transfer intent.
-public sealed class ClipboardDataResult {
+public class ClipboardDataResult {
     /// Gets the snapshot outcome, independently of individual representation lengths.
     public prop Status ClipboardReadStatus { get; }
     /// Gets owned MIME bytes and URI references, or an empty payload on failure.
@@ -138,7 +138,7 @@ public sealed class ClipboardDataResult {
 }
 
 /// Reports whether all requested clipboard representations were published.
-public sealed class ClipboardWriteResult {
+public class ClipboardWriteResult {
     /// Gets the publication outcome, not confirmation that another application pasted it.
     public prop Status DataTransferStatus { get; }
     /// Gets a bounded native failure explanation, or an empty string.

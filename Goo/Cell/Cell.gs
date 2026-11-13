@@ -176,8 +176,7 @@ public open class Cell {
 
   /// Runs once on the UI thread after the first layout and before paint. Handles have geometry.
   /// Goo applies the normal callback rebuild rule after an override, including when it throws.
-  /// The base implementation does nothing and need not be called.
-  /// A Cell whose override calls base.Mounted() is not rebuilt after Mounted returns.
+  /// Do not call base.Mounted().
   protected open func Mounted() { defaultMountedRan = true }
 
   /// Runs once on the UI thread before elements are removed and Lifetime is cancelled, parent before child.

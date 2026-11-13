@@ -10,7 +10,7 @@ public enum ScrollbarVisibility {
 }
 
 /// Describes the presentation and interaction of one built-in scrollbar axis.
-public sealed class Scrollbar {
+public class Scrollbar {
   private var frozenOwner Type?
 
   internal func Freeze(owner Type, depth int32) {

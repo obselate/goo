@@ -2,7 +2,9 @@
 
 - Blob and Style declarations can be changed while you build them. Once Goo receives a Blob, property assignments, `Add`, and child-list mutations throw `InvalidOperationException`. State styles and retained declaration objects freeze with their Blob. Shared child lists are copied at hand-off.
 - Return a new Blob when its declaration changes. Returning the same Blob does not refresh it. Virtual items no longer write keys into authored content. `Each` rejects a previously handed-off Blob that has no key. Set its key before hand-off or return a new Blob.
-- `TextInputOptions.AutofillHints` is now `IReadOnlyList[string]`. Assignment copies the supplied values once. The returned list cannot change the stored hints.
+- `TextInputOptions.AutofillHints` remains `[]string`. Assignment and reads copy the values. Changing a returned array does not change the stored hints.
+- `WindowMetrics.Deconstruct` uses `width` and `height` out parameters. `Platform` is now static. The `LongPressGesture` duration parameter is now `durationMs`. Update named arguments.
+- Public classes that are not designed for inheritance are now sealed.
 
 The following properties change from `init` to guarded `set`:
 

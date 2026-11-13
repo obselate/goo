@@ -5,7 +5,7 @@ import System.Collections.Generic
 
 public data struct FontVariation(Tag string, Value float32) { }
 
-public sealed class FontSource : IDisposable {
+public class FontSource : IDisposable {
   shared {
     private const MaxVariations int32 = 16
 

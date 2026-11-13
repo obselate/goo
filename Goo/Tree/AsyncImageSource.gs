@@ -6,6 +6,7 @@ import System.Threading
 import System.Threading.Tasks
 
 /// Shares a deferred image across mounted leases. Keep this source in a field or model.
+/// Keeping the source in a Cell field makes that Cell rebuild after every callback.
 public class AsyncImageSource : ImageSourceProvider, IDisposable {
   private let gate object = Object()
   private let load (CancellationToken) -> Task[ImageSource]

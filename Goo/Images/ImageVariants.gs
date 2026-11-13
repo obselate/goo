@@ -8,7 +8,7 @@ import System.Threading
 import System.Threading.Tasks
 
 /// Identifies one local image and the number of source pixels per logical unit.
-public sealed class ImageVariant {
+public class ImageVariant {
   /// Gets the local image path.
   public prop Path string { get; }
 
@@ -30,7 +30,7 @@ public sealed class ImageVariant {
 public enum ImageAssetStatus { Success; NotReady; NotFound; InvalidData; LimitExceeded; Unsupported; Cancelled; Failed }
 
 /// Contains an independently disposable image owner and its selected density on success.
-public sealed class ImageAssetResult {
+public class ImageAssetResult {
   /// Gets the load outcome.
   public prop Status ImageAssetStatus { get; }
 
@@ -52,7 +52,7 @@ public sealed class ImageAssetResult {
 }
 
 /// Selects and caches explicit local raster variants from stable window metrics.
-public sealed class ImageVariants : IDisposable {
+public class ImageVariants : IDisposable {
   private const MaxVariants int32 = 64
   private let variants []ImageVariant
   private let cache ImageSourceCache

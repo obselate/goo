@@ -45,7 +45,7 @@ public enum PopupDismissReason {
 }
 
 /// Contains a native popup creation outcome and owned failure detail.
-public sealed class PopupResult {
+public class PopupResult {
   /// Gets the native creation outcome.
   public prop Status PopupStatus { get; private set; }
 
@@ -60,7 +60,7 @@ public sealed class PopupResult {
 
 /// Hosts one new Goo root in a transient native surface outside its owner's bounds.
 /// Create a new root and PopupWindow for each opening. Portal ownership is unchanged.
-public sealed partial class PopupWindow : IDisposable {
+public partial class PopupWindow : IDisposable {
   private let owner Window
   private let window Window
   private let kind PopupKind

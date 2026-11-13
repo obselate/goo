@@ -23,7 +23,7 @@ internal class NativeAccessibilityNodeCache {
   internal let Runs List[NativeAccessibilityTextRun] = List[NativeAccessibilityTextRun]()
 }
 
-public sealed partial class NativeAccessibilityAdapter {
+public partial class NativeAccessibilityAdapter {
   private var scaleX float64 = 1.0
   private var scaleY float64 = 1.0
 

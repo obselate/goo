@@ -5,7 +5,7 @@ import System.Collections.Generic
 import System.Collections.ObjectModel
 
 /// Describes one immutable vector fill paint.
-public sealed class VectorPaint {
+public class VectorPaint {
   private let color Color
   private let gradient Gradient?
 
@@ -32,7 +32,7 @@ public sealed class VectorPaint {
 }
 
 /// Describes one immutable vector stroke.
-public sealed class VectorStroke {
+public class VectorStroke {
   private var frozenOwner Type?
   private var declarationCap StrokeCap
   private var declarationJoin StrokeJoin
@@ -166,7 +166,7 @@ public struct VectorNodeStyle {
 }
 
 /// Describes one immutable vector node and its composed children.
-public sealed class VectorNode {
+public class VectorNode {
   private let key string?
   private let path VectorPath
   private let fill VectorPaint?

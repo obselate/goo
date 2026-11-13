@@ -18,7 +18,8 @@ internal class TreeFixtures {
     let node = Reconciler{Res: Resolver{}}.Mount(TextEntry{InputOptions: options})
     try {
       hints[0] = "after"
-      if options.AutofillHints[0] != "before" || !Object.ReferenceEquals(view, options.AutofillHints) { return false }
+      view[0] = "readback"
+      if options.AutofillHints[0] != "before" { return false }
       try { options.Purpose = InputPurpose.Email } catch (error InvalidOperationException) {
         return error.Message.Contains("TextEntry") && error.Message.Contains("modified after it was returned to Goo")
       }

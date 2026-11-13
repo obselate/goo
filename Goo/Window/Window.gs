@@ -80,7 +80,7 @@ public enum WindowCaptureRequestStatus {
 }
 
 /// Owns RGBA8, sRGB, premultiplied pixels copied from a completed scene capture.
-public sealed class WindowCapture {
+public class WindowCapture {
   private let pixels []uint8
   private let width uint32
   private let height uint32
@@ -125,8 +125,8 @@ internal enum WindowCaptureOwner { None; Public; Diagnostics }
 
 /// Describes one stable window size and display-scale snapshot.
 public data struct WindowMetrics {
-  private var logicalWidth int32
-  private var logicalHeight int32
+  private var width int32
+  private var height int32
   private var framebufferWidth int32
   private var framebufferHeight int32
   private var displayScaleX float64
@@ -134,9 +134,9 @@ public data struct WindowMetrics {
   private var uiScale float64
 
   /// Gets the reported native logical width.
-  public prop NativeWidth int32{ get -> logicalWidth init -> logicalWidth = value }
+  public prop NativeWidth int32{ get -> width init -> width = value }
   /// Gets the reported native logical height.
-  public prop NativeHeight int32{ get -> logicalHeight init -> logicalHeight = value }
+  public prop NativeHeight int32{ get -> height init -> height = value }
   /// Gets the reported framebuffer width.
   public prop FramebufferWidth int32{ get -> framebufferWidth init -> framebufferWidth = value }
   /// Gets the reported framebuffer height.

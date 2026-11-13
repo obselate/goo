@@ -8,7 +8,7 @@ import System.Threading
 
 /// Publishes a desktop window to AT-SPI, UI Automation, or macOS Accessibility through AccessKit.
 /// Assign before Window.Open. Requires the optional Goo.Accessibility native runtime package.
-public sealed partial class NativeAccessibilityAdapter : AccessibilityAdapter, IDisposable {
+public partial class NativeAccessibilityAdapter : AccessibilityAdapter, IDisposable {
   private var owner Window?
   private var native nint
   private var binding int64

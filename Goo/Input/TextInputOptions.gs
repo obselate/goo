@@ -1,7 +1,6 @@
 package Goo
 
 import System
-import System.Collections.Generic
 
 /// Selects the software keyboard's input purpose.
 public enum InputPurpose {
@@ -45,7 +44,6 @@ public class TextInputOptions {
   private var purpose InputPurpose
   private var enterAction EnterAction
   private var autofillHints []string
-  private var autofillHintView IReadOnlyList[string] = Array.Empty[string]()
 
   internal prop AutofillHintValues []string { get -> autofillHints }
 
@@ -76,14 +74,17 @@ public class TextInputOptions {
   }
 
   /// Gets platform autofill hint names, such as username, password or emailAddress.
-  public prop AutofillHints IReadOnlyList[string] {
-    get -> autofillHintView
+  public prop AutofillHints []string {
+    get {
+      let copy = [autofillHints.Length]string
+      Array.Copy(autofillHints, copy, autofillHints.Length)
+      return copy
+    }
     set {
       CheckMutable()
-      let copy = [value.Count]string
-      for index in 0 ... value.Count { copy[index] = value[index] }
+      let copy = [value.Length]string
+      Array.Copy(value, copy, value.Length)
       autofillHints = copy
-      autofillHintView = Array.AsReadOnly[string](copy)
     }
   }
 

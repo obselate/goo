@@ -5,7 +5,7 @@ import System.Collections.Generic
 import System.Diagnostics
 
 /// A cancellable callback scheduled on a Window's UI thread.
-public sealed class WindowTimer : IDisposable {
+public class WindowTimer : IDisposable {
     private let owner Window?
     private let callback Action
     private let periodTicks float64
