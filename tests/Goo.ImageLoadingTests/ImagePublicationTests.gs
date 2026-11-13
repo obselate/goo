@@ -105,13 +105,34 @@ class ImagePublicationTests {
         let name = "Assets/local-rgb.jpg"
         let expected = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, name))
         Assert.Equal(expected, Assets.ReadAllBytes(assembly, name))
-        using let resource = assembly.GetManifestResourceStream("embedded-image")
-        Assert.NotNull(resource)
-        using let resolved = Assets.Open(assembly, "embedded-image")
-        Assert.Equal(resource!!.Length, resolved.Length)
+        let path = Path.Combine(AppContext.BaseDirectory, "Assets/embedded-image")
+        File.WriteAllBytes(path, []uint8{1, 2, 3})
+        try {
+            using let resource = assembly.GetManifestResourceStream("Assets/embedded-image")
+            using let expectedResource = MemoryStream()
+            resource!!.CopyTo(expectedResource)
+            Assert.Equal(expectedResource.ToArray(), Assets.ReadAllBytes(assembly, "Assets/embedded-image"))
+            Assert.Equal(expectedResource.ToArray(), Assets.ReadAllBytes(assembly, "Assets\\embedded-image"))
+        } finally { File.Delete(path) }
         let error = Assert.Throws[FileNotFoundException](() -> Assets.Open(assembly, "missing-image"))
         Assert.Contains(assembly.FullName!!, error.Message)
         Assert.Contains(Path.Combine(AppContext.BaseDirectory, "missing-image"), error.Message)
+    }
+
+    @Theory
+    @InlineData("/rooted.png")
+    @InlineData("\\rooted.png")
+    @InlineData("C:\\rooted.png")
+    @InlineData("C:relative.png")
+    @InlineData("../outside.png")
+    @InlineData("assets/../outside.png")
+    @InlineData("assets\\..\\outside.png")
+    @InlineData("assets/..")
+    @InlineData("..")
+    func AssetsRejectRootedAndParentNames(name string) {
+        let assembly = typeof(ImagePublicationTests).Assembly
+        Assert.Throws[ArgumentException](() -> Assets.Open(assembly, name))
+        Assert.Throws[ArgumentException](() -> Assets.ReadAllBytes(assembly, name))
     }
 
     private class DeferredImageRoot(source ImageSourceProvider) : Cell {
