@@ -131,5 +131,5 @@ let main args =
         if (list.Children[1] :?> Text).Key <> "Ada" then invalidOp "Row key failed."
         if (list.Children[3] :?> Button).Children.Count <> 1 then invalidOp "Button children failed."
         printfn "F# interop checks passed."
-    else window.Run()
+    else Application.Run(window)
     0

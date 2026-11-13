@@ -46,89 +46,94 @@ internal unsafe partial class SdlRuntime {
         if vulkanLoaded || vulkanSnapshot != nil {
           throw InvalidOperationException("SDL Vulkan loader state is invalid.")
         }
-        VulkanDrivers.Freeze()
-        if VulkanDrivers.Enabled {
-          if directLoader == nint(0) {
-            let local = Path.Combine(AppContext.BaseDirectory, "vulkan-1.dll")
-            if !NativeLibrary.TryLoad(local, out directLoader) {
-              directLoader = NativeLibrary.Load(Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.System), "vulkan-1.dll"))
-            }
-          }
-          let address = NativeLibrary.GetExport(directLoader, "vkGetInstanceProcAddr")
-          vulkanSnapshot = SdlVulkanInstanceSnapshot(address,
-            []string{"VK_KHR_surface", "VK_KHR_win32_surface"})
-          vulkanLoaded = true
-          vulkanReferenceCount = 1
-          return true
-        }
-
-        var pathStorage nint = nint(0)
-        if OperatingSystem.IsMacOS() {
-          let bundledPath = Path.Combine(AppContext.BaseDirectory, "libMoltenVK.dylib")
-          if File.Exists(bundledPath) {
-            pathStorage = Marshal.StringToCoTaskMemUTF8(bundledPath)
-          }
-        }
         try {
-          let path = if pathStorage == nint(0) { nil } else { *uint8(pathStorage) }
-          if !SDL.VulkanLoadLibrary(path) {
-            let error = SDL.GetErrorS()
-            if NoVulkanDevices() {
-              throw InvalidOperationException(VulkanWindowTarget.NoUsableDriverMessage())
+          VulkanDrivers.Freeze()
+          if VulkanDrivers.Enabled {
+            if directLoader == nint(0) {
+              let local = Path.Combine(AppContext.BaseDirectory, "vulkan-1.dll")
+              if !NativeLibrary.TryLoad(local, out directLoader) {
+                directLoader = NativeLibrary.Load(Path.Combine(
+                  Environment.GetFolderPath(Environment.SpecialFolder.System), "vulkan-1.dll"))
+              }
             }
-            throw InvalidOperationException("SDL Vulkan loader initialization failed: " + error)
-          }
-        } finally {
-          if pathStorage != nint(0) {
-            Marshal.FreeCoTaskMem(pathStorage)
-          }
-        }
-
-        try {
-          let getInstanceProcAddress = SDL_Vulkan_GetVkGetInstanceProcAddrRaw()
-          if getInstanceProcAddress == nint(0) {
-            throw InvalidOperationException("SDL Vulkan instance procedure lookup failed.")
+            let address = NativeLibrary.GetExport(directLoader, "vkGetInstanceProcAddr")
+            vulkanSnapshot = SdlVulkanInstanceSnapshot(address,
+              []string{"VK_KHR_surface", "VK_KHR_win32_surface"})
+            vulkanLoaded = true
+            vulkanReferenceCount = 1
+            return true
           }
 
-          var count uint32 = 0u
-          let raw = SDL.VulkanGetInstanceExtensions(&count)
-          if raw == nil || count == 0u || count > uint32(Int32.MaxValue) {
-            throw InvalidOperationException("SDL Vulkan instance extension lookup failed: " + SDL.GetErrorS())
-          }
-
-          let pointers = *SdlVulkanExtensionPointer(raw)
-          let values = [int32(count)]string
-          var index uint32 = 0u
-          var validCount int32 = 0
-          while index < count {
-            let value = Marshal.PtrToStringUTF8(nint(pointers[index].Value)) ?? ""
-            if value.Length != 0 {
-              values[validCount] = value
-              validCount++
+          var pathStorage nint = nint(0)
+          if OperatingSystem.IsMacOS() {
+            let bundledPath = Path.Combine(AppContext.BaseDirectory, "libMoltenVK.dylib")
+            if File.Exists(bundledPath) {
+              pathStorage = Marshal.StringToCoTaskMemUTF8(bundledPath)
             }
-            index++
           }
-          if validCount == 0 {
-            throw InvalidOperationException("SDL returned no Vulkan instance extensions.")
+          try {
+            let path = if pathStorage == nint(0) { nil } else { *uint8(pathStorage) }
+            if !SDL.VulkanLoadLibrary(path) {
+              let error = SDL.GetErrorS()
+              if NoVulkanDevices() {
+                throw InvalidOperationException(VulkanWindowTarget.NoUsableDriverMessage())
+              }
+              throw InvalidOperationException("SDL Vulkan loader initialization failed: " + error)
+            }
+          } finally {
+            if pathStorage != nint(0) {
+              Marshal.FreeCoTaskMem(pathStorage)
+            }
           }
 
-          let extensions = [validCount]string
-          var extensionIndex int32 = 0
-          while extensionIndex < validCount {
-            extensions[extensionIndex] = values[extensionIndex]
-            extensionIndex++
+          try {
+            let getInstanceProcAddress = SDL_Vulkan_GetVkGetInstanceProcAddrRaw()
+            if getInstanceProcAddress == nint(0) {
+              throw InvalidOperationException("SDL Vulkan instance procedure lookup failed.")
+            }
+
+            var count uint32 = 0u
+            let raw = SDL.VulkanGetInstanceExtensions(&count)
+            if raw == nil || count == 0u || count > uint32(Int32.MaxValue) {
+              throw InvalidOperationException("SDL Vulkan instance extension lookup failed: " + SDL.GetErrorS())
+            }
+
+            let pointers = *SdlVulkanExtensionPointer(raw)
+            let values = [int32(count)]string
+            var index uint32 = 0u
+            var validCount int32 = 0
+            while index < count {
+              let value = Marshal.PtrToStringUTF8(nint(pointers[index].Value)) ?? ""
+              if value.Length != 0 {
+                values[validCount] = value
+                validCount++
+              }
+              index++
+            }
+            if validCount == 0 {
+              throw InvalidOperationException("SDL returned no Vulkan instance extensions.")
+            }
+
+            let extensions = [validCount]string
+            var extensionIndex int32 = 0
+            while extensionIndex < validCount {
+              extensions[extensionIndex] = values[extensionIndex]
+              extensionIndex++
+            }
+            vulkanSnapshot = SdlVulkanInstanceSnapshot(getInstanceProcAddress, extensions)
+            vulkanLoaded = true
+            vulkanReferenceCount = 1
+            return true
+          } catch (error Exception) {
+            SDL.VulkanUnloadLibrary()
+            vulkanLoaded = false
+            vulkanSnapshot = nil
+            vulkanReferenceCount = 0
+            rethrow
           }
-          vulkanSnapshot = SdlVulkanInstanceSnapshot(getInstanceProcAddress, extensions)
-          vulkanLoaded = true
-          vulkanReferenceCount = 1
-          return true
-        } catch (error Exception) {
-          SDL.VulkanUnloadLibrary()
-          vulkanLoaded = false
-          vulkanSnapshot = nil
-          vulkanReferenceCount = 0
-          rethrow
+        } catch (error Exception) when (error is InvalidOperationException || error is DllNotFoundException
+          || error is EntryPointNotFoundException || error is BadImageFormatException) {
+          throw GraphicsUnavailableException(error.Message, error)
         }
       }
     }

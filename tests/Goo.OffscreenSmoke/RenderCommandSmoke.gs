@@ -30,5 +30,5 @@ func RunRenderCommandSmoke() {
         },
     }
     appearance.Set(window, Style{FontFamily: "Render command font", FontSize: 20, Color: Color.White})
-    window.Run()
+    Application.Run(window)
 }

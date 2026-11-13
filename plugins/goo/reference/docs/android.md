@@ -18,7 +18,7 @@ dotnet build HelloGoo/HelloGoo.gsproj -c Release
 ## Shared application
 
 Put application Cells and a Window factory in a shared `net10.0` G# library.
-Desktop calls `window.Run()`. Android returns the same Window from
+Desktop calls `Application.Run(window)`. Android returns the same Window from
 `GooActivity.CreateWindow()`:
 
 ```csharp
@@ -49,7 +49,7 @@ protected override Goo.Window CreateWindow()
 {
     if (!subscribed)
     {
-        Goo.Window.ApplicationActivated += activation =>
+        Goo.Application.Activated += activation =>
             Android.Util.Log.Info("Goo", activation.Kind.ToString());
         subscribed = true;
     }
@@ -102,7 +102,7 @@ sizing the SurfaceView. Framebuffer and input coordinates share that content rec
 In a native activity, construct `new GooView(context, window)` on the Android
 main thread. Add it to the native layout and call `Pause()`, `Resume()`, and
 `Dispose()` from the matching activity callbacks. Size it inside safe and keyboard
-insets. Do not call `Window.Run()` or `Window.Pump()` or attach the Window to another view.
+insets. Do not call `Application.Run(window)` or `Window.Pump()` or attach the Window to another view.
 
 Surface replacement keeps the Window and mounted Cells. Activity destruction
 closes the Window. Store process-recreation data in app state.
