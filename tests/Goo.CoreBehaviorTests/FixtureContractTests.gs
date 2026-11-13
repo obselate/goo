@@ -142,6 +142,7 @@ class FixtureContractTests {
 
     shared {
         func Cases() sequence[[]object] {
+            yield Contract[RowRecyclingFixtures]("VirtualKeysKeepAuthoredBlobsUnchangedContract")
             yield Contract[TreeFixtures]("InputOptionsFreezeAtHandOffContract")
             yield Contract[TreeFixtures]("ScrollbarDeclarationsFreezeAtHandOffContract")
             yield Contract[TreeFixtures]("VectorStrokeFreezeAtHandOffContract")
