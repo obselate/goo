@@ -69,7 +69,7 @@ internal class InstancePipe : IDisposable {
         let buffer = ArrayPool[uint8].Shared.Rent(length)
         try {
             await pipe.ReadExactlyAsync(buffer.AsMemory(0, length), deadline.Token).ConfigureAwait(false)
-            try { header[0] = uint8(Window.PostApplicationActivation(ActivationWire.Decode(buffer, length))) }
+            try { header[0] = uint8(Application.PostActivation(ActivationWire.Decode(buffer, length))) }
             catch (error Exception) {
                 if error is not ArgumentException && error is not InvalidDataException { rethrow }
                 header[0] = 255
@@ -96,7 +96,7 @@ internal class InstancePipe : IDisposable {
             try {
                 var native []ApplicationActivation = Array.Empty[ApplicationActivation]()
                 if OperatingSystem.IsMacOS() {
-                    if Window.PrepareNativeApplicationActivation(out native) != WindowOperationResult.Accepted {
+                    if Application.PrepareNativeApplicationActivation(out native) != WindowOperationResult.Accepted {
                         return SingleInstanceResult(SingleInstanceStatus.Failed, error: "Native application activation could not initialize")
                     }
                 }

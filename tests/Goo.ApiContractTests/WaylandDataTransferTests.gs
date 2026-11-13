@@ -18,7 +18,7 @@ public sealed class WaylandDataTransferTests {
         if inputPath == nil || peerPath == nil { return }
         Assert.True(OperatingSystem.IsLinux())
         Assert.Equal("1", Environment.GetEnvironmentVariable("GOO_HEADLESS_WAYLAND"))
-        Window.ConfigureApplication("Goo native transfer checks", "1.0", "io.github.obselate.goo.transfer-checks")
+        Application.Configure("Goo native transfer checks", "1.0", "io.github.obselate.goo.transfer-checks")
         for effect in []DragEffect{DragEffect.Copy, DragEffect.Move} {
             Run(false, effect, inputPath, peerPath)
             Run(true, effect, inputPath, peerPath)

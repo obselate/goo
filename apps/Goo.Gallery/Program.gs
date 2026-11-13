@@ -7,7 +7,7 @@ import System.IO
 import System.Threading
 
 func Main() {
-    Window.ConfigureApplication("Goo Gallery", "0.30.0", "io.github.obselate.goo.gallery")
+    Application.Configure("Goo Gallery", "0.30.0", "io.github.obselate.goo.gallery")
     let iconPath = Path.Combine(AppContext.BaseDirectory, "MaterialSymbolsRounded.ttf")
     using let iconFont = FontSource(GalleryTheme.IconFamily, 400, false, File.ReadAllBytes(iconPath))
     iconFont.Register()
@@ -102,7 +102,7 @@ func Main() {
             throw ArgumentOutOfRangeException("GOO_GALLERY_SHOWCASE")
         }
     }
-    window.Run()
+    Application.Run(window)
 }
 
 func PumpFrames(window Window, count int32) {
