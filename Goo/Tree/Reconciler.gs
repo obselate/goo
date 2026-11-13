@@ -229,6 +229,7 @@ internal partial class Reconciler {
 
   private func mountCore(b Blob) Node {
     let result = switch b {
+      case s is SizedBlob: mountSized(s)
       case v is Virtual: mountVirtual(v)
       case retained is VirtualRetainedBlob: throw InvalidOperationException("Retained virtual item cannot be mounted")
       case p is Portal: mountPortal(p)
@@ -822,6 +823,14 @@ internal partial class Reconciler {
       n.Context = Context
       if ScrollbarParts.Children(n).Count > 0 { Res.Scrollbars.Queue(n) }
       Virtualization.State(n)?.BindContext(Context, Owner, n.CallbackOwner)
+      if let sized = n.RetainedSizedState {
+        if sized.Context != Context {
+          sized.Context = Context
+          sized.ContextReads.Frame = Context
+          sized.ContextReads.Refresh()
+          sized.Invalidate()
+        }
+      }
       for index in 0 ... n.Children.Count {
         let old = n.Children[index]
         let child = rebindRetainedContext(old)
@@ -850,6 +859,7 @@ internal partial class Reconciler {
       return replacement
     }
     let result = switch b {
+      case s is SizedBlob: diffSized(n, s)
       case v is Virtual: diffVirtual(n, v)
       case p is Portal: diffPortal(n, p)
       case bt is Button: diffButton(n, bt)
@@ -1428,6 +1438,9 @@ internal partial class Reconciler {
 
   private func canReuseNode(n Node, b Blob) bool {
     switch b {
+      case sized is SizedBlob {
+        return n.Fiber == nil && n.RetainedSizedState != nil && n.Key == b.Key
+      }
       case retained is VirtualRetainedBlob {
         return !n.Retired && n.Key == b.Key
       }
@@ -1451,15 +1464,15 @@ internal partial class Reconciler {
       }
       case container is Container {
         return n.Fiber == nil && n.Kind == NodeKind.Container && !n.IsPortal && n.Key == b.Key
-          && Virtualization.State(n) == nil
+          && Virtualization.State(n) == nil && n.RetainedSizedState == nil
       }
       case row is Row {
         return n.Fiber == nil && n.Kind == NodeKind.Container && !n.IsPortal && n.Key == b.Key
-          && Virtualization.State(n) == nil
+          && Virtualization.State(n) == nil && n.RetainedSizedState == nil
       }
       case column is Column {
         return n.Fiber == nil && n.Kind == NodeKind.Container && !n.IsPortal && n.Key == b.Key
-          && Virtualization.State(n) == nil
+          && Virtualization.State(n) == nil && n.RetainedSizedState == nil
       }
       case spacer is Spacer {
         return n.Fiber == nil && n.Kind == NodeKind.Spacer && n.Key == b.Key

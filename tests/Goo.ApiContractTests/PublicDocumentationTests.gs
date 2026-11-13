@@ -212,6 +212,7 @@ class PublicDocumentationTests {
     shared {
         private const PublicDeclared BindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly
         private let ExpectedMethodIds[]string = []string{
+            "M:Goo.Blob.Sized(System.Func{Goo.LayoutSize,Goo.Blob})",
             "M:Goo.Blob.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})",
             "M:Goo.Platform.OpenAsync(System.String,System.Threading.CancellationToken)",
             "M:Goo.NativeDialogs.ShowError(System.String,System.String)",
@@ -1007,6 +1008,10 @@ class PublicDocumentationTests {
         private let Shapes IReadOnlyDictionary[string, DocumentationShape] = Dictionary[string, DocumentationShape](
             StringComparer.Ordinal
         ){
+            ["M:Goo.Blob.Sized(System.Func{Goo.LayoutSize,Goo.Blob})"] =
+                DocumentationShape([]string{"build"}, Array.Empty[string](), true),
+            ["M:Goo.Sized(System.Func{Goo.LayoutSize,Goo.Blob})"] =
+                DocumentationShape([]string{"build"}, Array.Empty[string](), true),
             ["M:Goo.ElementHandle.ScrollToEnd"] = DocumentationShape(
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
@@ -1321,6 +1326,8 @@ class PublicDocumentationTests {
             ),
             ["M:Goo.Cell.Build"] = DocumentationShape(System.Array.Empty[string](), System.Array.Empty[string](), true),
             ["M:Goo.Cell`1.Build(`0)"] = DocumentationShape([]string{"input"}, System.Array.Empty[string](), true),
+            ["M:Goo.Cell`1.InputChanged(`0)"] =
+                DocumentationShape([]string{"input"}, Array.Empty[string](), false),
             ["P:Goo.Cell.Lifetime"] = DocumentationShape(System.Array.Empty[string](), System.Array.Empty[string](), true),
             ["M:Goo.Cell.Latest(System.String)"] = DocumentationShape([]string{"name"}, System.Array.Empty[string](), true),
             ["M:Goo.Cell.Post(System.Action)"] = DocumentationShape([]string{"action"}, System.Array.Empty[string](), true),
@@ -1332,8 +1339,6 @@ class PublicDocumentationTests {
                 []string{"delayMs", "action"}, System.Array.Empty[string](), true),
             ["M:Goo.Window.Every(System.Double,System.Action)"] = DocumentationShape(
                 []string{"intervalMs", "action"}, System.Array.Empty[string](), true),
-            ["M:Goo.Cell`1.InputChanged(`0)"] =
-                DocumentationShape([]string{"input"}, Array.Empty[string](), false),
             ["M:Goo.Cell`1.InvokeInputCallback(System.Action)"] = DocumentationShape(
                 []string{"callback"}, System.Array.Empty[string](), false),
             ["M:Goo.Cell`1.InvokeInputCallback``1(System.Action{``0},``0)"] = DocumentationShape(
@@ -2333,6 +2338,7 @@ class PublicDocumentationTests {
                 .Append("P:Goo.KeyBinding.Repeat")
                 .Append("M:Goo.Percent(System.Double)")
                 .Append("M:Goo.Each``1(System.Collections.Generic.IReadOnlyList{``0},System.Func{``0,System.String},System.Func{``0,Goo.Blob})")
+                .Append("M:Goo.Sized(System.Func{Goo.LayoutSize,Goo.Blob})")
                 .Append("M:Goo.Em(System.Double)")
                 .Append("M:Goo.Rem(System.Double)")
                 .Append("M:Goo.Vw(System.Double)")

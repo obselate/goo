@@ -150,6 +150,7 @@ internal partial class Layout {
     portalStructureDirty = true
     scrollListDirty = true
     lengthRoot = nil
+    sizedListDirty = true
   }
 
   // Cached flat list of scrolling nodes so per-pump scroll work is
@@ -240,6 +241,13 @@ internal partial class Layout {
     }
     if n.Kind == NodeKind.Image {
       ImageLayouts.Refresh(n)
+    }
+    if n.RetainedSizedState != nil {
+      YGNodeAPI.YGNodeSetMeasureFunc(yg, SizedNodeState.Measure)
+      for child in n.Children {
+        if !child.IsPortal { syncNode(child, true) }
+      }
+      return
     }
     if let custom = CustomLayouts.State(n) {
       if YGNodeAPI.YGNodeGetChildCount(yg) != nuint(0) { YGNodeAPI.YGNodeSetChildrenRetaining(yg, []Facebook.Yoga.Node{}) }
@@ -673,6 +681,8 @@ internal partial class Layout {
           readRect(child.Node, x, y, snapPlacement(x, float32(child.Bounds.X), density),
             snapPlacement(y, float32(child.Bounds.Y), density), hiddenSubtree)
         }
+      } else if n.RetainedSizedState != nil {
+        arrangeSized(n, hiddenSubtree)
       } else {
         for i in 0 ... n.Children.Count {
           if !n.Children[i].IsPortal {
@@ -742,8 +752,8 @@ internal partial class Layout {
       cw = extent.Width
       ch = extent.Height
     } else {
-      let insetX = CustomLayouts.Inset(yoga, YGEdge.Left)
-      let insetY = CustomLayouts.Inset(yoga, YGEdge.Top)
+      let insetX = n.RetainedSizedState != nil ? 0.0F : CustomLayouts.Inset(yoga, YGEdge.Left)
+      let insetY = n.RetainedSizedState != nil ? 0.0F : CustomLayouts.Inset(yoga, YGEdge.Top)
       for i in 0 ... n.Children.Count {
         if n.Children[i].IsPortal { continue }
         guard let cy = n.Children[i].Yoga else {
