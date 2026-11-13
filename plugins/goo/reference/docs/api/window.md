@@ -1539,7 +1539,12 @@ Returns: A lease on Success, or an explicit host or lifecycle status.
 
 ### `After(float64,System.Action)`
 
-Runs a callback once on the UI thread after the delay.
+Runs an action once on the UI thread after a delay. Call on the UI thread while the window is open. Does not rebuild a Cell. Closing the window cancels pending timers.
+
+- `delayMs`: finite, nonnegative delay in milliseconds
+- `action`: callback to run once
+
+Returns: a timer to cancel on the UI thread, or an inactive timer when the window rejects work
 
 ### `ApplyPlacement(WindowPlacement)`
 
@@ -1589,7 +1594,12 @@ Returns: the same container
 
 ### `Every(float64,System.Action)`
 
-Runs a callback repeatedly on the UI thread at the requested interval.
+Runs an action repeatedly on the UI thread. Call on the UI thread while the window is open. Skips missed ticks. Does not rebuild a Cell. Closing the window cancels pending timers.
+
+- `intervalMs`: finite, positive interval in milliseconds
+- `action`: callback to run at each interval
+
+Returns: a timer to cancel on the UI thread, or an inactive timer when the window rejects work
 
 ### `GetCurrentDisplay`
 
