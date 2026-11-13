@@ -130,6 +130,7 @@ internal class CustomLayoutState {
     if !value.IsFinite { throw ArgumentOutOfRangeException("value") }
     let basis = float32(axis == LayoutAxis.Horizontal ? availableSize.Width : availableSize.Height)
     let percent = value.Unit == LengthUnit.Percent ? value.Value : value.PercentPart
+    if percent != 0.0F && !Single.IsFinite(basis) { return nil }
     return float64(LengthDeclarations.Pixels(value.Unit == LengthUnit.Percent ? Length{} : value, Node,
       CustomLayouts.ViewportWidth, CustomLayouts.ViewportHeight, false)
       + (percent == 0.0F ? 0.0F : percent * basis / 100.0F))

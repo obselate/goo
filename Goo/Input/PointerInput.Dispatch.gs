@@ -17,8 +17,8 @@ internal partial class PointerInput {
     return delta
   }
 
-  private func clearCapture() {
-    try { cancelPointerDrag() }
+  private func clearCapture(reason GestureCancelReason = GestureCancelReason.LostArbitration) {
+    try { cancelPointerDrag(reason) }
     finally {
       current.CaptureTarget = nil
       current.CaptureButton = PointerButton.None
@@ -64,13 +64,13 @@ internal partial class PointerInput {
   private func applyCaptureRequests(button PointerButton, route List[NodeMount]) {
     if let requested = control.ReleaseTarget {
       if let owner = current.CaptureTarget {
-        if owner == requested { clearCapture()
+        if owner == requested { clearCapture(GestureCancelReason.Explicit)
           current.LastPressNode = nil }
       }
     }
     if let requested = control.CaptureTarget {
       if let drag = current.PointerDrag {
-        if drag.Target.Current != requested { cancelPointerDrag() }
+        if drag.Target.Current != requested { cancelPointerDrag(GestureCancelReason.LostArbitration) }
       }
       if requested != current.LastPressNode { current.LastPressNode = nil }
       current.CapturePath.Clear()
@@ -233,13 +233,21 @@ internal partial class PointerInput {
       if (kind == PointerEventKind.Move || kind == PointerEventKind.Release) && current.CaptureTarget != nil {
         if !rebuildCapturePath(tree) {
           resetClickSequence()
-          clearCapture()
+          clearCapture(GestureCancelReason.OwnerUnavailable)
           return false
         }
         captured = true
       } else {
         scratchChain.Clear()
-        hitChainInto(tree, x, y, scratchChain)
+        if kind != PointerEventKind.Press && current.Device == PointerDevice.Touch && current.PointerDrag?.Started == false {
+          guard let target = current.PointerDrag?.Target.Current else { return false }
+          if !canReceiveInput(target) || !appendPath(tree, target, scratchChain) {
+            clearCapture(GestureCancelReason.OwnerUnavailable)
+            return false
+          }
+        } else {
+          hitChainInto(tree, x, y, scratchChain)
+        }
         if chainDisabled(scratchChain) {
           if kind == PointerEventKind.Press { resetClickSequence() }
           scratchChain.Clear()
@@ -328,7 +336,7 @@ internal partial class PointerInput {
       return prevented
     }
 
-  private func cancelInteraction(root Node?, resolver Resolver) bool {
+  private func cancelInteraction(root Node?, resolver Resolver, reason GestureCancelReason = GestureCancelReason.PointerCanceled) bool {
     if current.Canceling { return false }
     let hadInteraction = current.HeldButtons != PointerButtons.None || current.PressChain.Count > 0
       || current.DragEntry != nil || current.DragEditor != nil || hasScrollDrag()
@@ -342,12 +350,12 @@ internal partial class PointerInput {
     var failure Exception?
     try {
       try {
-        cancelCurrentGestures(root, GestureCancelReason.PointerCanceled)
+        cancelCurrentGestures(root, reason)
       } catch (error Exception) {
         failure = error
       }
       try {
-        dispatchCancel()
+        dispatchCancel(reason)
       } catch (error Exception) {
         if failure == nil { failure = error }
       }
@@ -392,8 +400,8 @@ internal partial class PointerInput {
     return true
   }
 
-  private func dispatchCancel() {
-    cancelPointerDrag()
+  private func dispatchCancel(reason GestureCancelReason = GestureCancelReason.LostArbitration) {
+    cancelPointerDrag(reason)
     let captured = current.CapturePath.Count > 0
     let route = captured ? current.CapturePath : current.ActivePath
     let positions = captured ? current.CapturePositions : current.ActivePositions

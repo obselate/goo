@@ -516,14 +516,21 @@ internal partial class Reconciler {
       MarkEffects(ReconcileEffects.Input)
       MarkEffects(ReconcileEffects.Paint)
     }
-    if n.Anchor > t.Content.Length { n.Anchor = t.Content.Length }
-    if n.Caret > t.Content.Length { n.Caret = t.Content.Length }
+    if t.Selectable && !n.SelectionColor.Equals(t.SelectionColor) {
+      n.SelectionColor = t.SelectionColor
+      n.BumpScenePaintVersion()
+      MarkEffects(ReconcileEffects.Paint)
+    }
     let rangeChange = PassiveTextPresentations.Apply(n, t.Content, t.StyleRangeValues)
     let contentChanged = n.Content != t.Content
     if contentChanged || rangeChange.Changed {
       n.BumpScenePaintVersion()
     }
     if contentChanged {
+      if n.Selectable && !t.Content.StartsWith(n.Content, StringComparison.Ordinal) {
+        n.Anchor = 0
+        n.Caret = 0
+      }
       n.Content = t.Content
       TextLayouts.Invalidate(n)
       MarkEffects(ReconcileEffects.Content)

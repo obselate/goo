@@ -442,8 +442,8 @@ public class GlassMaterialWindow {
             let terminalProgram = ShaderEffectProgram.Load(
                 Path.Combine(AppContext.BaseDirectory, "Shaders", "terminal_glass.goo-effect")
             )
-            let liquidEffect = ShaderEffect(liquidProgram, samplesBackdrop: true, backdropOutset: 24.0F)
-            let terminalEffect = ShaderEffect(terminalProgram, samplesBackdrop: true, backdropOutset: 24.0F)
+            let liquidEffect = ShaderEffect(liquidProgram, samplesBackdrop: true, backdropOutset: 24.0)
+            let terminalEffect = ShaderEffect(terminalProgram, samplesBackdrop: true, backdropOutset: 24.0)
             configureLiquid(liquidEffect)
             configureTerminal(terminalEffect)
             let requested = Environment.GetEnvironmentVariable("GOO_GLASS_MATERIAL")

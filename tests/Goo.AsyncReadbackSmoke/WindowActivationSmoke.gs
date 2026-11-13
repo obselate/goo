@@ -166,9 +166,9 @@ internal class WindowActivationSmoke {
             "Unsupported topmost request did not report its capability")
         }
         Require(!window.Topmost, "Topmost request was not retained")
-        window.Topmost = true
+        window.SetTopmost(true)
         Require(window.Topmost, "Topmost property did not retain its preference")
-        window.Topmost = false
+        window.SetTopmost(false)
         window.Pump(0.0)
         let mounted = window.Tree
         var visibility = 0

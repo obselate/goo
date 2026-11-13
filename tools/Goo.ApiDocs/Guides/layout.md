@@ -28,7 +28,7 @@ Text{Content: "Flexible", Flex: 1, MinWidth: 0}
 - `Row` and `Column` fix the main axis. Setting `FlexDirection`, including through a state style, throws at mount.
 - `Spacer` defaults to grow 1, shrink 1, basis 0, and minimum size 0. It has no paint, hit test, or accessibility node.
 - `Flex: n` sets grow n, shrink 1, and basis 0. It does not change the automatic minimum. Later flex declarations override each part.
-- `Inset` sets all four position offsets. Later offsets override individual edges.
+- `Inset` accepts `Edges` in top, right, bottom, left order. A uniform length sets every edge. Later offsets override individual edges.
 
 ## Relative and intrinsic lengths
 
@@ -43,7 +43,7 @@ Container{Width: Length.FitContent(Em(32.5))}
 - Add or subtract lengths, or multiply and divide them by a number. Automatic and intrinsic values cannot be operands.
 - `FontSize` accepts pixels, `Em`, and `Rem`. Properties that reject percentages also reject relative units.
 - `Length.MinContent`, `Length.MaxContent`, and `Length.FitContent(limit)` apply to width, height, their minimum and maximum bounds, and `FlexBasis`. They measure retained content without calling `Build`.
-- In a custom layout callback, `context.ResolveLength(value, LayoutAxis.Horizontal)` resolves against the available content width. `Vertical` uses height. Automatic and intrinsic values return `nil`.
+- In a custom layout callback, `context.ResolveLength(value, LayoutAxis.Horizontal)` resolves percentages against the available content width. `Vertical` uses height. `Em` uses the custom-layout container's font size. Automatic and intrinsic values return `nil`. A nonzero percentage part without a finite basis also returns `nil`.
 - Length animations accept one unit. Mixed lengths throw `ArgumentException`.
 
 ## Padding and margin

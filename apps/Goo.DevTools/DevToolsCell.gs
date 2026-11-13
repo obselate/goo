@@ -49,7 +49,7 @@ class DevToolsCell : Cell {
         this.window = window
         layoutWidth = window.Size.Width
         window.MetricsChanged += (metrics WindowMetrics) -> {
-            let nextWidth = float64(metrics.LogicalWidth) / float64(metrics.UiScale)
+            let nextWidth = float64(metrics.NativeWidth) / float64(metrics.UiScale)
             if nextWidth != layoutWidth {
                 layoutWidth = nextWidth
                 Rebuild()

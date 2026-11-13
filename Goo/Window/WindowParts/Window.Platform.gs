@@ -37,7 +37,7 @@ public partial class Window {
       }
     }
     if !decorated && resizable && state == WindowState.Normal {
-      let band = resizeBand
+      let band = resizeBand * UiScale
       let logicalWidth = float32(NativeWidth)
       let logicalHeight = float32(NativeHeight)
       let left = px < band
@@ -57,7 +57,7 @@ public partial class Window {
       if bottom && right {
         return WindowHitResult.BottomRight
       }
-      if (top || bottom || left || right) && !input.ScrollbarAt(n, px / UiScale, py / UiScale) {
+      if (top || bottom || left || right) && !input.ScrollbarAt(n, float32(float64(px) / UiScale), float32(float64(py) / UiScale)) {
         if top {
           return WindowHitResult.Top
         }
@@ -67,7 +67,7 @@ public partial class Window {
         return left ? WindowHitResult.Left : WindowHitResult.Right
       }
     }
-    let info = input.HitInfo(n, px / UiScale, py / UiScale)
+    let info = input.HitInfo(n, float32(float64(px) / UiScale), float32(float64(py) / UiScale))
     if info.HasContent {
       return WindowHitResult.Normal
     }

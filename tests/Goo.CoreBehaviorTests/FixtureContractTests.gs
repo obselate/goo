@@ -71,7 +71,9 @@ class FixtureContractTests {
     func ForeignHostContextRebuildsOwner() {
         Assert.True(WindowStartupFixtures().HostedOwnerContextContract().GetAwaiter().GetResult())
         if System.Threading.SynchronizationContext.Current is Xunit.Sdk.AsyncTestSyncContext context {
-            Assert.Null(context.WaitForCompletionAsync().GetAwaiter().GetResult())
+            System.Threading.SynchronizationContext.SetSynchronizationContext(nil)
+            try { Assert.Null(context.WaitForCompletionAsync().GetAwaiter().GetResult()) }
+            finally { System.Threading.SynchronizationContext.SetSynchronizationContext(context) }
         }
     }
 
@@ -144,6 +146,7 @@ class FixtureContractTests {
         func Cases() sequence[[]object] {
             yield Contract[StyleFixtures]("FlexAndInsetDeclarationOrderContract")
             yield Contract[AccessibilityFixtures]("AccessibilityShorthandOrderContract")
+            yield Contract[AccessibilityFixtures]("AccessibilityShorthandRoundTripContract")
             yield Contract[FlexConformanceFixtures]("RowColumnSpacerContract")
             yield Contract[FlexConformanceFixtures]("FixedFlexDirectionContract")
             yield Contract[FlexConformanceFixtures]("KeyedFlexKindChangeContract")
@@ -180,6 +183,8 @@ class FixtureContractTests {
             yield Contract[WindowStartupFixtures]("ApplicationStateVerificationContract")
             yield Contract[WindowStartupFixtures]("WindowLayoutSizeContract")
             yield Contract[WindowStartupFixtures]("SizeToContentContract")
+            yield Contract[WindowStartupFixtures]("RelativeSizeToContentContract")
+            yield Contract[LayoutFixtures]("CustomLayoutLeavesUnboundedPercentUnresolved")
             yield Contract[PathBuilderFixtures]("ResetPreservesPublishedPathAndClearsContour")
             yield Contract[PathBuilderFixtures]("PrimitivesAppendClosedContoursInViewBoxCoordinates")
             yield Contract[PortalFixtures]("UiScaleLayoutInputAndAnchoredPortalContract")
@@ -366,7 +371,8 @@ class FixtureContractTests {
             yield Contract[InputFixtures]("PointerLifecycleBubblesStopsAndReportsAllMouseButtons")
             yield Contract[InputFixtures]("PointerDragCaptureCoordinatesAndHitContract")
             yield Contract[InputFixtures]("PointerDragUsesTrackedCallbackRebuildContract")
-            yield Contract[InputFixtures]("PointerDragTouchCaptureMatchesRawCaptureContract")
+            yield Contract[InputFixtures]("PointerDragTouchScrollArbitrationContract")
+            yield Contract[InputFixtures]("PointerDragMouseCaptureBeforeThresholdContract")
             yield Contract[InputFixtures]("PointerDragCancelUsesNewestCallbackContract")
             yield Contract[InputFixtures]("PointerPrimaryAndPressureContract")
             yield Contract[InputFixtures]("PointerReacquiresHoverAfterRebuild")

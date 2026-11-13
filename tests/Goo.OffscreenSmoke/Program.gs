@@ -56,7 +56,7 @@ internal class SessionOwner : Cell, IDisposable {
 func RunAutomaticSessionSmoke() {
     let owner = Window{Root: Page(), Size: LayoutSize(96, 96),  InitiallyVisible: false, Title: "Offscreen automatic service"}.Open()
     using let session = owner.CreateOffscreenSession().Session!!
-    let options = OffscreenRenderOptions(240f, 180f, 480, 360, Color.White, 134217728)
+    let options = OffscreenRenderOptions(LayoutSize(240f, 180f), 480, 360, Color.White, 134217728)
     let pending = session.RenderAsync(Page(), options, CancellationToken.None)
     var completed = false
     var timedOut = false
@@ -109,7 +109,7 @@ let owner = Window{Root: root, Size: LayoutSize(96, 96),  Title: "Offscreen proo
 
 try {
     owner.Pump(0.0)
-    let options = OffscreenRenderOptions(240f, 180f, 480, 360, Color.White, 134217728)
+    let options = OffscreenRenderOptions(LayoutSize(240f, 180f), 480, 360, Color.White, 134217728)
     let creation = owner.CreateOffscreenSession()
     Require(creation.Status == OffscreenRenderStatus.Success && creation.Session != nil, "session creation failed")
     using let session = creation.Session!!
@@ -117,7 +117,7 @@ try {
     try {
         let _ = session.RenderAsync(
             Page(),
-            OffscreenRenderOptions(float32(int32.MaxValue), 180f, 480, 360, Color.White, 134217728),
+            OffscreenRenderOptions(LayoutSize(float32(int32.MaxValue), 180f), 480, 360, Color.White, 134217728),
             CancellationToken.None
         )
     } catch (ArgumentOutOfRangeException) {
@@ -159,7 +159,7 @@ try {
     )
     let edges = Pump(
         session,
-        session.RenderAsync(EdgePage(), OffscreenRenderOptions(100f, 60f, 150, 90, Color.White, 134217728), CancellationToken.None)
+        session.RenderAsync(EdgePage(), OffscreenRenderOptions(LayoutSize(100f, 60f), 150, 90, Color.White, 134217728), CancellationToken.None)
     )
     Require(edges.Status == OffscreenRenderStatus.Success && edges.Capture != nil, "fractional scale render failed")
     let edgeRow = 25 * int32(edges.Capture!!.RowBytes)
@@ -180,7 +180,7 @@ try {
         session,
         session.RenderAsync(
             Page(),
-            OffscreenRenderOptions(240f, 180f, 480, 360, Color.White, 1024),
+            OffscreenRenderOptions(LayoutSize(240f, 180f), 480, 360, Color.White, 1024),
             CancellationToken.None
         )
     )

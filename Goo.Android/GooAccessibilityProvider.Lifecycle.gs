@@ -47,28 +47,8 @@ ViewTreeObserver
         get {
             var metrics = view.Window.CurrentWindowMetrics()
             return (
-                float32(
-                    (
-                        if metrics.DisplayScaleX > float64(0.0) {
-                            metrics.DisplayScaleX
-                        } else {
-                            float64(view.Density)
-                        }
-                    )
-                ) * view
-                    .Window
-                    .UiScale,
-                float32(
-                    (
-                        if metrics.DisplayScaleY > float64(0.0) {
-                            metrics.DisplayScaleY
-                        } else {
-                            float64(view.Density)
-                        }
-                    )
-                ) * view
-                    .Window
-                    .UiScale
+                float32((metrics.DisplayScaleX > 0.0 ? metrics.DisplayScaleX : float64(view.Density)) * view.Window.UiScale),
+                float32((metrics.DisplayScaleY > 0.0 ? metrics.DisplayScaleY : float64(view.Density)) * view.Window.UiScale)
             )
         }
     }
