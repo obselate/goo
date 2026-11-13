@@ -1339,8 +1339,9 @@ internal class FreezeBuildReturnCell : Cell {
   internal var Rejected bool
 
   override func Build() Blob {
-    let result = Cell.Mount[TreeDepthCell](nil, _ -> {
+    let result = Cell.Mount[TreeDepthCell](nil, () -> {
       try { Declaration!!.Key = "changed" } catch (_ InvalidOperationException) { Rejected = true }
+      return TreeDepthCell()
     })
     Declaration = result
     return result
