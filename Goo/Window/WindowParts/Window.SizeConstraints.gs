@@ -78,9 +78,25 @@ public partial class Window {
     if SizeToContent == SizeToContent.None { return }
     if LayerShell != nil { throw NotSupportedException("Layer-shell sizes are configured by the compositor") }
     guard let native = host else { return }
+
+    let display = native.GetCurrentDisplay()
+    let area = display?.UsableBounds ?? display?.Bounds
+    let maximum = LayoutSize(
+      Math.Min(if maxWidth != 0.0 { maxWidth } else { Double.PositiveInfinity },
+        (area?.Width ?? Double.PositiveInfinity) / float64(UiScale)),
+      Math.Min(if maxHeight != 0.0 { maxHeight } else { Double.PositiveInfinity },
+        (area?.Height ?? Double.PositiveInfinity) / float64(UiScale)))
+    Size = MeasureContentSize(maximum,
+      SizeToContent == SizeToContent.Width || SizeToContent == SizeToContent.Both,
+      SizeToContent == SizeToContent.Height || SizeToContent == SizeToContent.Both)
+    native.RefreshMetricsIfChanged()
+    consumeNativeMetrics()
+  }
+
+  internal func MeasureContentSize(maximum LayoutSize, widthAxis bool = true, heightAxis bool = true,
+    percentageSize LayoutSize? = nil) LayoutSize {
     UpdateTree()
-    guard let tree = node else { return }
-    guard let yoga = tree.Yoga else { return }
+    guard let tree = node, let yoga = tree.Yoga else { return Size }
     var dependsOnWidth = tree.Width.Unit == LengthUnit.Percent
     var dependsOnHeight = tree.Height.Unit == LengthUnit.Percent
     if let declarations = LengthDeclarations.Get(tree) {
@@ -89,17 +105,11 @@ public partial class Window {
         if entry.Field == StyleField.Height { dependsOnHeight = entry.Value.DependsOnContainer }
       }
     }
-    let measureWidth = (SizeToContent == SizeToContent.Width || SizeToContent == SizeToContent.Both)
-      && !dependsOnWidth
-    let measureHeight = (SizeToContent == SizeToContent.Height || SizeToContent == SizeToContent.Both)
-      && !dependsOnHeight
-    if !measureWidth && !measureHeight { return }
-    let display = native.GetCurrentDisplay()
-    let area = display?.UsableBounds ?? display?.Bounds
-    let maximumWidth = if maxWidth != 0.0 { maxWidth } else { Double.PositiveInfinity }
-    let maximumHeight = if maxHeight != 0.0 { maxHeight } else { Double.PositiveInfinity }
-    let availableWidth = Math.Min(maximumWidth, (area?.Width ?? Double.PositiveInfinity) / float64(UiScale))
-    let availableHeight = Math.Min(maximumHeight, (area?.Height ?? Double.PositiveInfinity) / float64(UiScale))
+    let measureWidth = widthAxis && (percentageSize != nil || !dependsOnWidth)
+    let measureHeight = heightAxis && (percentageSize != nil || !dependsOnHeight)
+    if !measureWidth && !measureHeight { return Size }
+    let availableWidth = maximum.Width
+    let availableHeight = maximum.Height
     let marginWidth = float64(YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Left)
       + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Right))
     let marginHeight = float64(YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Top)
@@ -111,9 +121,15 @@ public partial class Window {
     try {
       YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga, float32(maxContentWidth))
       YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga, float32(maxContentHeight))
+      if percentageSize != nil {
+        if tree.Width.Unit == LengthUnit.Percent { YGNodeStyleAPI.YGNodeStyleSetWidthPercent(yoga, tree.Width.Value) }
+        if tree.Height.Unit == LengthUnit.Percent { YGNodeStyleAPI.YGNodeStyleSetHeightPercent(yoga, tree.Height.Value) }
+      }
       YGNodeAPI.YGNodeCalculateLayout(yoga,
-        if measureWidth { Single.NaN } else { LayoutWidth },
-        if measureHeight { Single.NaN } else { LayoutHeight }, yogaDirection(tree.Direction))
+        if measureWidth && (percentageSize == nil || tree.Width.Unit != LengthUnit.Percent) { Single.NaN }
+          else { float32(percentageSize?.Width ?? float64(LayoutWidth)) },
+        if measureHeight && (percentageSize == nil || tree.Height.Unit != LengthUnit.Percent) { Single.NaN }
+          else { float32(percentageSize?.Height ?? float64(LayoutHeight)) }, yogaDirection(tree.Direction))
       let measuredWidth = float64(YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga)
         + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Left)
         + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Right))
@@ -122,14 +138,26 @@ public partial class Window {
         + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Bottom))
       let contentWidth = if measureWidth { Math.Max(minWidth, Math.Min(measuredWidth, availableWidth)) } else { Size.Width }
       let contentHeight = if measureHeight { Math.Max(minHeight, Math.Min(measuredHeight, availableHeight)) } else { Size.Height }
-      Size = LayoutSize(contentWidth, contentHeight)
+      if percentageSize != nil {
+        layout.PopupMeasuredWidth = tree.Width.Unit == LengthUnit.Percent ? float32(contentWidth - marginWidth) : nil
+        layout.PopupMeasuredHeight = tree.Height.Unit == LengthUnit.Percent ? float32(contentHeight - marginHeight) : nil
+      }
+      return LayoutSize(contentWidth, contentHeight)
     } finally {
       markYogaStyle(tree, StyleField.MaxWidth)
       markYogaStyle(tree, StyleField.MaxHeight)
       applyMinMax(yoga, tree)
       layout.laidOut = false
     }
-    native.RefreshMetricsIfChanged()
-    consumeNativeMetrics()
+  }
+
+  internal func ClearPopupMeasurement() {
+    layout.PopupMeasuredWidth = nil
+    layout.PopupMeasuredHeight = nil
+    if let tree = node, let yoga = tree.Yoga {
+      if tree.Width.Unit == LengthUnit.Percent { YGNodeStyleAPI.YGNodeStyleSetWidthPercent(yoga, tree.Width.Value) }
+      if tree.Height.Unit == LengthUnit.Percent { YGNodeStyleAPI.YGNodeStyleSetHeightPercent(yoga, tree.Height.Value) }
+      layout.laidOut = false
+    }
   }
 }

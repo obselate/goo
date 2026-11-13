@@ -139,9 +139,19 @@ opacity, overflow clipping, and transforms do not constrain presented geometry.
 Portal children do not participate in their source container's Yoga or custom
 layout and do not enlarge its scroll extent. Apply size, position, transform,
 overflow, and paint styles to the Portal itself when the overlay needs those
-semantics. Goo does not infer an anchor from the declaration parent and does not
-provide automatic dismissal or a named layer system; compose those policies with
-handles, input callbacks, and focus scopes.
+semantics. Goo does not infer an anchor from the declaration parent.
+
+Set `FocusScope: FocusScopeOptions{Modal: true}` for a modal overlay. After its
+first layout, `InitialFocus`, then `AutoFocus`, then the first tab stop receives
+focus. An empty scope focuses the Portal. Closing restores eligible prior focus
+unless `RestoreFocus` is false or focus has moved outside.
+
+`OnDismiss` receives `PopupDismissReason.Escape` outside text composition and
+`OutsideInteraction` on an outside press. Remove the Portal to close it.
+`OnDismiss` alone opens a nonmodal focus scope. Nil `FocusScope` and `OnDismiss`
+leave focus unchanged. `Scrim` paints a full-window layer behind the content.
+A modal scope uses a transparent scrim when `Scrim` is nil and sets the
+accessibility modal flag. Use `AccessibilityRole` and `AccessibilityName` on the Portal.
 
 ## Virtualize large collections
 

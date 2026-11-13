@@ -1583,8 +1583,8 @@ method|Goo.Point|op_Equality|static|public|generic:|(left:Goo.Point,right:Goo.Po
 method|Goo.Point|op_Inequality|static|public|generic:|(left:Goo.Point,right:Goo.Point)->System.Boolean
 method|Goo.PopupWindow|Close|instance|public|generic:|()->System.Void
 method|Goo.PopupWindow|Dispose|instance|public|generic:|()->System.Void
-method|Goo.PopupWindow|Open|instance|public|generic:|(anchor:Goo.ElementRect,width:System.Int32,height:System.Int32,placement:Goo.PortalPlacement=BottomStart)->Goo.PopupResult
-method|Goo.PopupWindow|UpdatePlacement|instance|public|generic:|(anchor:Goo.ElementRect,width:System.Int32,height:System.Int32,placement:Goo.PortalPlacement=BottomStart)->Goo.WindowOperationResult
+method|Goo.PopupWindow|Open|instance|public|generic:|(anchor:Goo.ElementRect,size:System.Nullable`1<Goo.LayoutSize>=null,maximum:System.Nullable`1<Goo.LayoutSize>=null,placement:Goo.PortalPlacement=BottomStart)->Goo.PopupResult
+method|Goo.PopupWindow|UpdatePlacement|instance|public|generic:|(anchor:Goo.ElementRect,size:System.Nullable`1<Goo.LayoutSize>=null,maximum:System.Nullable`1<Goo.LayoutSize>=null,placement:Goo.PortalPlacement=BottomStart)->Goo.WindowOperationResult
 method|Goo.Portal|Add|instance|public|generic:|(child:Goo.Blob)->System.Void
 method|Goo.Printing.IPrintDocument|CreatePage|abstract|public|generic:|(index:System.Int32,settings:Goo.Printing.PrintPageSettings)->Goo.Cell
 method|Goo.Printing.IPrintDocument|Paginate|abstract|public|generic:|(settings:Goo.Printing.PrintPageSettings)->Goo.Printing.PrintLayoutResult
@@ -2558,8 +2558,11 @@ property|Goo.PopupWindow|Metrics|Goo.WindowMetrics|instance|get:public|index:()
 property|Goo.Portal|AnchorRect|System.Nullable`1<Goo.ElementRect>|instance|get:public,init:public|index:()
 property|Goo.Portal|Anchor|Goo.ElementHandle?|instance|get:public,init:public|index:()
 property|Goo.Portal|CollisionBounds|System.Nullable`1<Goo.ElementRect>|instance|get:public,init:public|index:()
+property|Goo.Portal|FocusScope|Goo.FocusScopeOptions?|instance|get:public,init:public|index:()
 property|Goo.Portal|HideWhenAnchorClipped|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.Portal|OnDismiss|System.Action`1<Goo.PopupDismissReason>?|instance|get:public,init:public|index:()
 property|Goo.Portal|Placement|Goo.PortalPlacement|instance|get:public,init:public|index:()
+property|Goo.Portal|Scrim|System.Nullable`1<Goo.Color>|instance|get:public,init:public|index:()
 property|Goo.Printing.PrintLayoutResult|Error|System.String|instance|get:public,init:public|index:()
 property|Goo.Printing.PrintLayoutResult|PageCount|System.Int32|instance|get:public,init:public|index:()
 property|Goo.Printing.PrintLayoutResult|Status|Goo.Printing.PrintLayoutStatus|instance|get:public,init:public|index:()
