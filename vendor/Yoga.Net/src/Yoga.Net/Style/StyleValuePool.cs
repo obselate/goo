@@ -29,6 +29,10 @@ namespace Facebook.Yoga
                 InvalidateIndexedLength(handle);
                 handle.SetType(StyleValueHandle.HandleTypeEnum.Auto);
             }
+            else if (length.IsMixed)
+            {
+                StoreMixed(ref handle, length.Offset, length.Value().Unwrap());
+            }
             else
             {
                 var type = length.IsPoints() ? StyleValueHandle.HandleTypeEnum.Point : StyleValueHandle.HandleTypeEnum.Percent;
@@ -61,6 +65,10 @@ namespace Facebook.Yoga
             else if (sizeValue.IsFitContent())
             {
                 StoreKeyword(ref handle, StyleValueHandle.KeywordEnum.FitContent);
+            }
+            else if (sizeValue.IsMixed)
+            {
+                StoreMixed(ref handle, sizeValue.Offset, sizeValue.Value().Unwrap());
             }
             else
             {
@@ -99,7 +107,8 @@ namespace Facebook.Yoga
             {
                 System.Diagnostics.Debug.Assert(
                     handle.HandleType == StyleValueHandle.HandleTypeEnum.Point ||
-                    handle.HandleType == StyleValueHandle.HandleTypeEnum.Percent);
+                    handle.HandleType == StyleValueHandle.HandleTypeEnum.Percent ||
+                    handle.HandleType == StyleValueHandle.HandleTypeEnum.Mixed);
 
                 return handle.IsValueIndexed()
                     ? GetIndexedLength(handle)
@@ -128,6 +137,12 @@ namespace Facebook.Yoga
             else if (handle.IsKeyword(StyleValueHandle.KeywordEnum.Stretch))
             {
                 return StyleSizeLength.OfStretch();
+            }
+            else if (handle.HandleType == StyleValueHandle.HandleTypeEnum.Mixed)
+            {
+                var value = buffer_.Get64(handle.GetValue());
+                return StyleSizeLength.Mixed(BitConverter.Int32BitsToSingle((int)(uint)value),
+                    BitConverter.Int32BitsToSingle((int)(uint)(value >> 32)));
             }
             else
             {
@@ -159,6 +174,18 @@ namespace Facebook.Yoga
                     : UnpackInlineInteger(handle.GetValue());
                 return new FloatOptional(value);
             }
+        }
+
+        private void StoreMixed(ref StyleValueHandle handle, float pixels, float percent)
+        {
+            ulong value = (uint)BitConverter.SingleToInt32Bits(pixels) |
+                ((ulong)(uint)BitConverter.SingleToInt32Bits(percent) << 32);
+            InvalidateIndexedLength(handle);
+            var index = handle.IsValueIndexed()
+                ? buffer_.Replace(handle.GetValue(), value) : buffer_.Push(value);
+            handle.SetType(StyleValueHandle.HandleTypeEnum.Mixed);
+            handle.SetValue(index);
+            handle.SetValueIsIndexed();
         }
 
         private void StoreValue(ref StyleValueHandle handle, float value, StyleValueHandle.HandleTypeEnum type)
@@ -253,8 +280,18 @@ namespace Facebook.Yoga
                 return cached;
             }
 
-            float value = BitConverter.Int32BitsToSingle((int)buffer_.Get32(index));
-            var created = CreateLength(handle.HandleType, value);
+            StyleLength created;
+            if (handle.HandleType == StyleValueHandle.HandleTypeEnum.Mixed)
+            {
+                var value = buffer_.Get64(index);
+                created = StyleLength.Mixed(BitConverter.Int32BitsToSingle((int)(uint)value),
+                    BitConverter.Int32BitsToSingle((int)(uint)(value >> 32)));
+            }
+            else
+            {
+                float value = BitConverter.Int32BitsToSingle((int)buffer_.Get32(index));
+                created = CreateLength(handle.HandleType, value);
+            }
             if (cache is null)
             {
                 var newCache = new ConcurrentDictionary<ushort, StyleLength>();
@@ -284,8 +321,8 @@ namespace Facebook.Yoga
             StyleValueHandle.HandleTypeEnum newType)
         {
             buffer_.UpdatePercentageLengthCount(
-                oldType == StyleValueHandle.HandleTypeEnum.Percent,
-                newType == StyleValueHandle.HandleTypeEnum.Percent);
+                oldType == StyleValueHandle.HandleTypeEnum.Percent || oldType == StyleValueHandle.HandleTypeEnum.Mixed,
+                newType == StyleValueHandle.HandleTypeEnum.Percent || newType == StyleValueHandle.HandleTypeEnum.Mixed);
         }
 
         public StyleValuePool Clone()

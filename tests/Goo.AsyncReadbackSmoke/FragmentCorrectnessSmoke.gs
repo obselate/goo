@@ -24,7 +24,7 @@ class FragmentCorrectnessCell : Cell {
     return Container() {.Width: Percent(100),.Height: Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Transparent,
     Shape{
       Position: PositionType.Absolute, Left: 16, Top: 16, Width: IconSize, Height: IconSize,
-      Path: outline, BackgroundColor: Color.White,
+      Path: outline, Fill: VectorPaint(Color.White),
     },
     Container{
       Position: PositionType.Absolute,
@@ -61,23 +61,23 @@ class FragmentCorrectnessCell : Cell {
     },
     Container{
       Position: PositionType.Absolute, Left: 16, Top: 100, Width: 112, Height: 24,
-      Color: Color.Rgb(0, 0, 255), Hover: Style{Color: Color.Rgb(255, 0, 0)},
+      Color: Color.Rgb(0, 0, 255), HoverStyle: Style{Color: Color.Rgb(255, 0, 0)},
       Shape{
         Position: PositionType.Absolute, Left: 0, Width: 20, Height: 20,
-        Path: square, UseCurrentColor: true, BackgroundColor: Color.Transparent,
+        Path: square, UseCurrentColor: true,
       },
       Shape{
         Position: PositionType.Absolute, Left: 28, Width: 20, Height: 20,
-        Path: square, UseCurrentColor: false, BackgroundColor: Color.White,
+        Path: square, UseCurrentColor: false, Fill: VectorPaint(Color.White),
       },
       Shape{
         Position: PositionType.Absolute, Left: 56, Width: 20, Height: 20,
         Path: square, UseCurrentColor: true,
-        BackgroundGradient: LinearGradient(Color.Rgb(0, 255, 0), Color.Rgb(0, 255, 0)),
+        Fill: VectorPaint(LinearGradient(Color.Rgb(0, 255, 0), Color.Rgb(0, 255, 0))),
       },
       Shape{
         Position: PositionType.Absolute, Left: 84, Width: 20, Height: 20,
-        Path: square, UseCurrentColor: true, BorderWidth: 2, BorderColor: Color.Rgb(0, 255, 0),
+        Path: square, UseCurrentColor: true, Stroke: VectorStroke(2, Color.Rgb(0, 255, 0)),
       },
     },
     }
@@ -99,8 +99,7 @@ func RunFragmentCorrectnessSmoke() {
     let opened = Window{
       Title: "Goo fragment correctness gate",
       // Width 1024 keeps clip scale 1/512 and offset -31/32 exact, preserving the join row at y = 12.5.
-      Width: 1024,
-      Height: 128,
+      Size: LayoutSize(1024, 128),
       VSync: false,
       Root: cell,
       Background: Color.Transparent,

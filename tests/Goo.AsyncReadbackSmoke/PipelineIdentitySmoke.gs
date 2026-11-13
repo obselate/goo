@@ -116,8 +116,7 @@ func RunPipelineIdentitySmoke() {
 
   let window = Window{
     Title: "Goo pipeline identity",
-    Width: 192,
-    Height: 120,
+    Size: LayoutSize(192, 120),
     VSync: false,
     Root: PipelineIdentityCell(first, second),
     Background: Color.Transparent,
@@ -213,8 +212,7 @@ func RunPipelineIdentitySmoke() {
     first.SetParameter(0, Vector4(1.0F, 0.15F, 0.15F, 0.0F))
     let reopened = Window{
       Title: "Goo pipeline identity recreation",
-      Width: 192,
-      Height: 120,
+      Size: LayoutSize(192, 120),
       VSync: false,
       Root: PipelineIdentityCell(first, second),
       Background: Color.Transparent,

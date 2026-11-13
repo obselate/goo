@@ -16,5 +16,5 @@ if ($Arguments -contains '--check') {
     'PowerShell interop --check passed'
     return
 }
-$window = [Goo.Window]@{ Title = 'PowerShell interop'; Width = 400; Height = 240; Root = $counter }
+$window = [Goo.Window]@{ Title = 'PowerShell interop'; Size = [Goo.LayoutSize]::new(400, 240); Root = $counter }
 $window.Run()

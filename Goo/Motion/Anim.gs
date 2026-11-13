@@ -187,6 +187,21 @@ public class Anim[T] {
       retargetRequired(target, MotionVelocity{}, false, spec, specs)
     }
 
+  /// Snaps to the start value, then animates toward the target.
+  /// Safe during Build, like Snap. The initial value does not invalidate the owner.
+  /// @param from value to start from
+  /// @param to value to animate toward
+  /// @param spec first specification
+  /// @param specs remaining specifications, empty for shared behavior
+  public func Play(
+    from T,
+    to T,
+    spec(float64, float64, float64) -> Simulation,
+    specs ... ((float64, float64, float64) -> Simulation)) {
+      Snap(from)
+      To(to, spec, specs)
+    }
+
   /// Animates toward target with an explicit initial converter-coordinate velocity.
   /// @param target value to animate toward
   /// @param velocity uniform or dimension-ordered initial velocity

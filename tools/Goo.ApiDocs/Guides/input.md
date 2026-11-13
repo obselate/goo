@@ -72,7 +72,7 @@ controller.UseTabs = false
 controller.IndentWidth = 2
 controller.TabWidth = 8
 
-TextEditor(controller)
+TextEditor{Controller: controller}
 ```
 
 Keys match physical `Key` values and exact `Modifiers`. Omitted modifiers mean none. The first matching binding on the nearest element wins. `OnPress` runs on press. `OnRelease` is paired with that press and runs only if the original target still owns focus, even if modifiers were released first. Changing focus, disabling, or removing the target cancels the pending release. `Repeat: true` repeats the action after 400 ms and then at 30 Hz while focus remains on the original target. It works on any focusable primitive and any key.
@@ -138,12 +138,12 @@ Container() {
   .Handle: owner,
   .Focusable: true,
   .FocusTarget: activeRow,
-  Container{ Handle: activeRow, Focus: Style{ BasedOn: focusRing } },
+  Container{ Handle: activeRow, FocusStyle: Style{ BasedOn: focusRing } },
 }
 ```
 
 `FocusTarget` adds the focused owner's visible focus state to one mounted,
-enabled, visible descendant. The descendant resolves its own `Focus` style
+enabled, visible descendant. The descendant resolves its own `FocusStyle`
 without becoming focusable. The owner keeps keyboard focus and its own focus
 style. Pointer focus does not show the projected style unless the owner's normal
 focus-visible rules require it.

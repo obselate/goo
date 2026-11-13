@@ -39,7 +39,7 @@ class ImagePublicationTests {
         using let replacement = ImageSource(1, 1, []uint8{0, 0, 255, 255})
         let provider = ReplaceableProvider(first)
         let root = ImageRoot(provider, false)
-        let window = Window{Root: root, Width: 100, Height: 100}
+        let window = Window{Root: root, Size: LayoutSize(100, 100), }
         try {
             window.UpdateTree()
             window.markFrameRendered()
@@ -62,7 +62,7 @@ class ImagePublicationTests {
         using let first = ImageSource(1, 1, []uint8{255, 0, 0, 255})
         using let replacement = ImageSource(1, 1, []uint8{0, 0, 255, 255})
         let provider = AdvancingProvider(first, replacement, duringAcquire)
-        let window = Window{Root: ImageRoot(provider, background), Width: 100, Height: 100}
+        let window = Window{Root: ImageRoot(provider, background), Size: LayoutSize(100, 100), }
         try {
             window.UpdateTree()
             let node = window.Tree!!
@@ -83,7 +83,7 @@ class ImagePublicationTests {
     func DensityKeepsNaturalSizeAndUpdatesWithTheSameSource() {
         using let source = ImageSource(128, 64, [128 * 64 * 4]uint8)
         let root = DensityRoot(source)
-        let window = Window{Root: root, Width: 300, Height: 200}
+        let window = Window{Root: root, Size: LayoutSize(300, 200), }
         try {
             window.UpdateTree()
             Assert.Equal(float32(64.0), window.Tree!!.ImageIntrinsicWidth)

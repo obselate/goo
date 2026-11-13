@@ -35,7 +35,7 @@ public open class Blob : Style {
     }
   }
   internal prop HasElementHandle bool{ get -> (blobState & int32(64)) != 0 }
-  /// Gets the descendant that also resolves Focus style while this owner has visible focus.
+  /// Gets the descendant that also resolves FocusStyle while this owner has visible focus.
   /// The target need not be focusable. Native focus and accessibility relationships do not change.
   public prop FocusTarget ElementHandle? {
     get -> InputCallbacks.BlobFocusTarget(this)
@@ -56,6 +56,30 @@ public open class Blob : Style {
     init{
       AccessibilityMetadata.SetBlobValue(this, value)
       blobState = value != nil ? blobState | int32(128) : blobState & ~int32(128)
+    }
+  }
+  /// Gets or sets the name without replacing other accessibility fields.
+  /// A later Accessibility declaration replaces all fields.
+  public prop AccessibilityName string? {
+    get -> Accessibility?.Name
+    init {
+      if let declaration = Accessibility {
+        Accessibility = Goo.Accessibility{...declaration, Name: value ?? ""}
+      } else {
+        Accessibility = Goo.Accessibility{Name: value ?? ""}
+      }
+    }
+  }
+  /// Gets or sets the role without replacing other accessibility fields.
+  /// Nil restores the automatic role. A later Accessibility declaration replaces all fields.
+  public prop AccessibilityRole Goo.AccessibilityRole? {
+    get -> Accessibility?.Role
+    init {
+      if let declaration = Accessibility {
+        Accessibility = Goo.Accessibility{...declaration, Role: value ?? Goo.AccessibilityRole.Auto}
+      } else {
+        Accessibility = Goo.Accessibility{Role: value ?? Goo.AccessibilityRole.Auto}
+      }
     }
   }
   internal prop HasAccessibility bool{ get -> (blobState & int32(128)) != 0 }
@@ -196,11 +220,11 @@ public open class Blob : Style {
   }
   internal prop HasSparseInputState bool{ get -> (blobState & int32(32)) != 0 }
   /// Gets the style that applies while the pointer hovers this element.
-  public prop Hover Style? { get; init; }
+  public prop HoverStyle Style? { get; init; }
   /// Gets the style that applies while this element is active.
-  public prop Active Style? { get; init; }
+  public prop ActiveStyle Style? { get; init; }
   /// Gets the style that applies while this element has focus.
-  public prop Focus Style? { get; init; }
+  public prop FocusStyle Style? { get; init; }
   /// Gets the style that applies while this element is disabled.
   public prop DisabledStyle Style? { get; init; }
   /// Gets the transition duration in milliseconds.
@@ -285,5 +309,16 @@ public open class Blob : Style {
 
   internal func updateSparseInputState() {
     blobState = InputMetadata.HasState(this) ? blobState | int32(32) : blobState & ~int32(32)
+  }
+
+  shared {
+    /// Builds one child per item. Children without a key get the item's key. Explicit keys stay unchanged.
+    /// @typeparam T The item type.
+    /// @param items The items in child order.
+    /// @param itemKey Selects a stable, unique sibling key from an item.
+    /// @param itemBuilder Builds the child for an item.
+    /// @returns Children to spread into a container. Duplicate sibling keys are rejected during reconciliation.
+    public func Each[T any](items IReadOnlyList[T], itemKey(T) -> string, itemBuilder(T) -> Blob)[]Blob ->
+      eachCore[T](items, itemKey, itemBuilder)
   }
 }

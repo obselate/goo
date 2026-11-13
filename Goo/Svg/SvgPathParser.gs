@@ -10,6 +10,14 @@ internal class SvgPathParser {
 
         internal func Parse(value string, owner XElement) SvgPath {
             let scanner = PathScanner(value, owner)
+            try {
+                return ParseCore(scanner, owner)
+            } catch (error SvgParseException) {
+                throw SvgParseException("character position ${scanner.Position}: ${error.Message}", error)
+            }
+        }
+
+        private func ParseCore(scanner PathScanner, owner XElement) SvgPath {
             let path = SvgPath()
             var curveCount = 0
             var contour SvgContour? = nil
@@ -463,6 +471,8 @@ internal class PathScanner {
         this.text = text
         this.owner = owner
     }
+
+    internal prop Position int32{ get -> index }
 
     internal func TryReadCommandOrNumber(out token char, out tokenIsCommand bool) bool {
         SkipSeparators()

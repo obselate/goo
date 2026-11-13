@@ -3,7 +3,7 @@ package Goo
 import System
 import System.Collections.Generic
 
-internal enum NodeKind { Container; Button; Text; Entry; Editor; Shape; Image;
+internal enum NodeKind { Container; Button; Text; Entry; Editor; Shape; Image; Spacer;
 }
 
 internal data struct Rect {
@@ -147,6 +147,7 @@ internal class Node {
     PaintBindingResolver = nil
     TextLayout = nil
     TextLayoutCache = nil
+    Selectable = false
     StyleQueuedPass = 0
     StyleResolvedPass = 0
     StylePendingSelf = false
@@ -295,26 +296,26 @@ internal class Node {
   }
   internal prop Yoga Facebook.Yoga.Node? { get; set; }
   internal prop YogaStyleMask StyleMask{ get; set; }
-  internal prop Width Length{ get; set; }
-  internal prop Height Length{ get; set; }
-  internal prop MinWidth Length{ get; set; }
-  internal prop MinHeight Length{ get; set; }
-  internal prop MaxWidth Length{ get; set; }
-  internal prop MaxHeight Length{ get; set; }
+  internal prop Width NodeLength{ get; set; }
+  internal prop Height NodeLength{ get; set; }
+  internal prop MinWidth NodeLength{ get; set; }
+  internal prop MinHeight NodeLength{ get; set; }
+  internal prop MaxWidth NodeLength{ get; set; }
+  internal prop MaxHeight NodeLength{ get; set; }
   internal prop AspectRatio float64{ get; set; }
-  internal prop Padding Length{ get; set; }
-  internal prop PaddingLeft Length{ get; set; }
-  internal prop PaddingTop Length{ get; set; }
-  internal prop PaddingRight Length{ get; set; }
-  internal prop PaddingBottom Length{ get; set; }
-  internal prop Margin Length{ get; set; }
-  internal prop MarginLeft Length{ get; set; }
-  internal prop MarginTop Length{ get; set; }
-  internal prop MarginRight Length{ get; set; }
-  internal prop MarginBottom Length{ get; set; }
-  internal prop Gap Length{ get; set; }
-  internal prop RowGap Length{ get; set; }
-  internal prop ColumnGap Length{ get; set; }
+  internal prop Padding NodeLength{ get; set; }
+  internal prop PaddingLeft NodeLength{ get; set; }
+  internal prop PaddingTop NodeLength{ get; set; }
+  internal prop PaddingRight NodeLength{ get; set; }
+  internal prop PaddingBottom NodeLength{ get; set; }
+  internal prop Margin NodeLength{ get; set; }
+  internal prop MarginLeft NodeLength{ get; set; }
+  internal prop MarginTop NodeLength{ get; set; }
+  internal prop MarginRight NodeLength{ get; set; }
+  internal prop MarginBottom NodeLength{ get; set; }
+  internal prop Gap NodeLength{ get; set; }
+  internal prop RowGap NodeLength{ get; set; }
+  internal prop ColumnGap NodeLength{ get; set; }
   internal prop FlexDirection FlexDirection{ get; set; }
   internal prop FlexWrap FlexWrap{ get; set; }
   internal prop JustifyContent JustifyContent{ get; set; }
@@ -323,12 +324,12 @@ internal class Node {
   internal prop AlignContent AlignContent{ get; set; }
   internal prop FlexGrow float64{ get; set; }
   internal prop FlexShrink float64{ get; set; }
-  internal prop FlexBasis Length{ get; set; }
+  internal prop FlexBasis NodeLength{ get; set; }
   internal prop Position PositionType{ get; set; }
-  internal prop Left Length{ get; set; }
-  internal prop Top Length{ get; set; }
-  internal prop Right Length{ get; set; }
-  internal prop Bottom Length{ get; set; }
+  internal prop Left NodeLength{ get; set; }
+  internal prop Top NodeLength{ get; set; }
+  internal prop Right NodeLength{ get; set; }
+  internal prop Bottom NodeLength{ get; set; }
   internal prop Display Display{
     get -> (nodeState & int32(1)) != 0 ? Display.None : Display.Flex
     set {
@@ -346,15 +347,15 @@ internal class Node {
   internal prop OverflowY Overflow{ get; set; }
   internal prop BackgroundColor Color{ get; set; }
   internal prop BackgroundGradient Gradient? { get; set; }
-  internal prop BorderRadius Length{ get; set; }
-  internal prop BorderTopLeftRadius Length{ get; set; }
-  internal prop BorderTopRightRadius Length{ get; set; }
-  internal prop BorderBottomLeftRadius Length{ get; set; }
-  internal prop BorderBottomRightRadius Length{ get; set; }
-  internal prop BorderLeftWidth Length{ get; set; }
-  internal prop BorderTopWidth Length{ get; set; }
-  internal prop BorderRightWidth Length{ get; set; }
-  internal prop BorderBottomWidth Length{ get; set; }
+  internal prop BorderRadius NodeLength{ get; set; }
+  internal prop BorderTopLeftRadius NodeLength{ get; set; }
+  internal prop BorderTopRightRadius NodeLength{ get; set; }
+  internal prop BorderBottomLeftRadius NodeLength{ get; set; }
+  internal prop BorderBottomRightRadius NodeLength{ get; set; }
+  internal prop BorderLeftWidth NodeLength{ get; set; }
+  internal prop BorderTopWidth NodeLength{ get; set; }
+  internal prop BorderRightWidth NodeLength{ get; set; }
+  internal prop BorderBottomWidth NodeLength{ get; set; }
   internal prop BorderLeftColor Color{ get; set; }
   internal prop BorderTopColor Color{ get; set; }
   internal prop BorderRightColor Color{ get; set; }
@@ -378,11 +379,11 @@ internal class Node {
     get -> TextShadowing.Get(this)
     set -> TextShadowing.Set(this, value)
   }
-  internal prop FontSize Length{ get; set; }
+  internal prop FontSize NodeLength{ get; set; }
   internal prop Color Color{ get; set; }
   internal prop FontWeight float64{ get; set; }
   internal prop FontStyle FontStyle{ get; set; }
-  internal prop LetterSpacing Length{ get; set; }
+  internal prop LetterSpacing NodeLength{ get; set; }
   internal prop LineHeight float64{ get; set; }
   internal prop TextAlign TextAlign{ get; set; }
   internal prop TextDecoration TextDecoration{
@@ -435,6 +436,7 @@ internal class Node {
   internal var TextScaleFactor float32 = 1.0F
   internal prop TextMaxLines int32{ get; set; }
   internal prop TextLayout TextLayout? { get; set; }
+  internal var Selectable bool
   internal prop TextLayoutCache List[TextLayout]? { get; set; }
   internal prop EntryShape EntryShapeState?{
     get -> editingState?.EntryShape
@@ -610,7 +612,7 @@ internal class Node {
     }
   }
   internal prop PaintInputState int32{ get -> nodeState & int32(3) }
-  internal prop PaintInputHidden bool{ get -> (nodeState & int32(3)) != 0 || PortalPlacementHidden || PortalAnchorClipped }
+  internal prop PaintInputHidden bool{ get -> Kind == NodeKind.Spacer || (nodeState & int32(3)) != 0 || PortalPlacementHidden || PortalAnchorClipped }
   internal prop StackingChildren bool{
     get -> (nodeState & (int32(1) << 24)) != 0
     set {
@@ -1000,7 +1002,7 @@ internal class Node {
 internal func canReceiveInput(n Node) bool {
   var current = n
   while true {
-    if current.Disabled || current.PaintInputState != 0 || current.PortalPlacementHidden
+    if current.Kind == NodeKind.Spacer || current.Disabled || current.PaintInputState != 0 || current.PortalPlacementHidden
       || current.PortalAnchorClipped && !n.Focused {
     return false
   }

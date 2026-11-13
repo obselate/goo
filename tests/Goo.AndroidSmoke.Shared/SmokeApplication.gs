@@ -13,8 +13,7 @@ public class SmokeApplication {
       let scene = SmokeCell{}
       let window = Window{
         Title: "Goo Vulkan Android smoke",
-        Width: 420,
-        Height: 760,
+        Size: LayoutSize(420, 760),
         Background: Color.Rgb(17, 24, 39),
         Root: scene,
       }
@@ -132,7 +131,7 @@ class SmokeCell : Cell, IDisposable {
         BackgroundColor: Color.Rgb(31, 41, 55),
         OnChange: (value string) -> { secret = value },
       },
-      TextEditor(controller) {
+      TextEditor(){ Controller = controller,
         Accessibility = Accessibility{ Name: "Notes" },
         Height = 150,
         Padding = 10,

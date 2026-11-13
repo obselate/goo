@@ -11,7 +11,7 @@ func Require(value bool, message string) {
 
 let events = List[TransformGestureEvent]()
 let recognizer = TransformGesture(events.Add)
-let window = Window{Root: GestureScene(recognizer), Width: 300, Height: 300, Title: "Goo gesture check"}.Open()
+let window = Window{Root: GestureScene(recognizer), Size: LayoutSize(300, 300),  Title: "Goo gesture check"}.Open()
 try {
   window.Pump(0)
   let input = window.PlatformInput

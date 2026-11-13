@@ -38,8 +38,8 @@ public partial class Window {
     }
     if !decorated && resizable && state == WindowState.Normal {
       let band = resizeBand
-      let logicalWidth = float32(Width)
-      let logicalHeight = float32(Height)
+      let logicalWidth = float32(NativeWidth)
+      let logicalHeight = float32(NativeHeight)
       let left = px < band
       let right = px > logicalWidth - band
       let top = py < band

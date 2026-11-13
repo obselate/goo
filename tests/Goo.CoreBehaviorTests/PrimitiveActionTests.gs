@@ -13,12 +13,11 @@ class PrimitiveActionTests {
         let editor = ElementHandle()
         let entry = ElementHandle()
         let window = Window{
-            Width: 420,
-            Height: 180,
+            Size: LayoutSize(420, 180),
             Root: PrimitiveActionTests.BuildCell(
                 () -> Container{
                     Children: []Blob{
-                        TextEditor(controller){Handle = editor, Height = 100, FontFamily = "monospace", FontSize = 16},
+                        TextEditor(){Controller = controller, Handle = editor, Height = 100, FontFamily = "monospace", FontSize = 16},
                         TextEntry{
                             Handle: entry,
                             Value: "foo_bar  !!",
@@ -89,10 +88,9 @@ cd
 ef`))
         let handle = ElementHandle()
         let window = Window{
-            Width: 420,
-            Height: 160,
+            Size: LayoutSize(420, 160),
             Root: PrimitiveActionTests.BuildCell(
-                () -> TextEditor(controller){
+                () -> TextEditor(){Controller = controller,
                     Handle = handle,
                     FontFamily = "monospace",
                     FontSize = 16,
@@ -173,10 +171,9 @@ ef`, controller.Document.GetText())
 ef`)){UseTabs = false, IndentWidth = 2, TabWidth = 8}
         let handle = ElementHandle()
         let window = Window{
-            Width: 420,
-            Height: 160,
+            Size: LayoutSize(420, 160),
             Root: PrimitiveActionTests.BuildCell(
-                () -> TextEditor(controller){
+                () -> TextEditor(){Controller = controller,
                     Handle = handle,
                     FontFamily = "monospace",
                     FontSize = 16,
@@ -357,7 +354,7 @@ ef`, controller.Document.GetText())
                 }
             }
         )
-        window = Window{Width: 320, Height: 160, Root: cell}
+        window = Window{Size: LayoutSize(320, 160),  Root: cell}
         try {
             window.UpdateTree()
             Assert.True(source.Focus())

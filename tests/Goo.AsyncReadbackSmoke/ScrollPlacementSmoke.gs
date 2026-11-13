@@ -149,8 +149,7 @@ class ScrollPlacementCell : Cell {
 func ScrollPlacementOpen(cell ScrollPlacementCell, scale float64) Window {
     let window = Window{
         Title: "Goo canonical scroll placement gate",
-        Width: int32(320.0 * scale),
-        Height: int32(288.0 * scale),
+        Size: LayoutSize(float64(int32(320.0 * scale)) / float64(float32(scale)), float64(int32(288.0 * scale)) / float64(float32(scale))),
         UiScale: float32(scale),
         VSync: false,
         Decorated: false,
@@ -373,8 +372,7 @@ func RunScrollImagePlacementSmoke() {
         let host EmbeddedSmokeHost? = variant == 2 ? EmbeddedSmokeHost() : nil
         let window = Window{
             Title: "Goo retained scroll image gate",
-            Width: int32(96.0F * scale),
-            Height: int32(96.0F * scale),
+            Size: LayoutSize(float64(int32(96.0F * scale)) / float64(scale), float64(int32(96.0F * scale)) / float64(scale)),
             UiScale: scale,
             VSync: false,
             Root: root,

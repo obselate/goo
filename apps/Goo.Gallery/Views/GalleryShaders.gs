@@ -615,7 +615,7 @@ class ShaderLabCell : Cell {
                             Padding: Edges{Left: 8, Right: 8, Top: 3, Bottom: 3,},
                             BorderRadius: 4,
                             BackgroundColor: Color.Rgba(56, 189, 248, 38),
-                            Hover: Style{BackgroundColor: Color.Rgba(56, 189, 248, 80)},
+                            HoverStyle: Style{BackgroundColor: Color.Rgba(56, 189, 248, 80)},
                             OnClick: func () {
                                 let glassWin = GlassTerminalWindow.CreateWindow()
                                 glassWin.Open()
@@ -766,7 +766,7 @@ class ShaderLabCell : Cell {
         AlignItems: AlignItems.Center,
         JustifyContent: JustifyContent.Center,
         TransitionMs: 100.0,
-        Hover: Style{
+        HoverStyle: Style{
             BackgroundColor: if selected {
                 GalleryTheme.Accent
             } else {
@@ -778,7 +778,7 @@ class ShaderLabCell : Cell {
                 GalleryTheme.BorderStrong
             },
         },
-        Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+        FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
         OnClick: onClick,
         Text{
             Content: label,

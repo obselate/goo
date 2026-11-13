@@ -3,6 +3,7 @@ package Goo.CoreBehaviorTests
 import Goo
 import System
 import System.Collections.Generic
+import System.IO
 import Xunit
 
 class ExplicitKeyBindingTests {
@@ -60,7 +61,7 @@ class ExplicitKeyBindingTests {
             Children: []Blob{
                 if kind == 0 { cast[Blob](TextEntry{Handle: handle, Value: "text"}) }
                 else if kind == 1 || kind == 2 {
-                    cast[Blob](TextEditor(controller){Handle = handle, ReadOnly = kind == 2})
+                    cast[Blob](TextEditor(){Controller = controller, Handle = handle, ReadOnly = kind == 2})
                 } else if kind == 3 {
                     cast[Blob](Container{Handle: handle, Focusable: true, OnTextInput: (_ string) -> {}})
                 } else { cast[Blob](Button{Handle: handle}) }
@@ -85,7 +86,7 @@ class ExplicitKeyBindingTests {
         let handle = ElementHandle()
         let seen = List[KeyModifiers]()
         var window Window?
-        window = Window{Width: 100, Height: 40, Root: ExplicitKeyBindingTests.BuildCell(() -> Button{
+        window = Window{Size: LayoutSize(100, 40), Root: ExplicitKeyBindingTests.BuildCell(() -> Button{
             Handle: handle, Width: 100, Height: 40,
             OnClick: () -> seen.Add(window!!.Modifiers),
             OnKeyDown: (e KeyEvent) -> Assert.Equal(e.Modifiers, window!!.Modifiers),
@@ -114,6 +115,78 @@ class ExplicitKeyBindingTests {
     }
 
     @Fact
+    func PlatformOpenReportsHandlerLaunchAndFailure() {
+        if !OperatingSystem.IsLinux() { return }
+        let directory = Path.Combine(AppContext.BaseDirectory, "platform-open-" + Guid.NewGuid().ToString("N"))
+        let path = Environment.GetEnvironmentVariable("PATH")
+        Directory.CreateDirectory(directory)
+        try {
+            let handler = Path.Combine(directory, "xdg-open")
+            File.CreateSymbolicLink(handler, "/usr/bin/true")
+            Environment.SetEnvironmentVariable("PATH", directory)
+            let started = Platform.OpenAsync("https://example.invalid/").GetAwaiter().GetResult()
+            Assert.Equal(PlatformOpenStatus.Success, started.Status)
+            File.Delete(handler)
+            let failed = Platform.OpenAsync("/absolute/missing/path").GetAwaiter().GetResult()
+            Assert.Equal(PlatformOpenStatus.Failed, failed.Status)
+            Assert.NotEmpty(failed.Error)
+        } finally {
+            Environment.SetEnvironmentVariable("PATH", path)
+            Directory.Delete(directory, true)
+        }
+    }
+
+    @Fact
+    func ClipboardTextDistinguishesEmptySuccessAndLimits() {
+        using let host = TestClipboardHost{Text: ""}
+        let window = Window()
+        host.Resize(100, 40, 100, 40)
+        window.Attach(host)
+        Assert.Equal(ClipboardTextStatus.Empty, window.Clipboard.ReadText().Status)
+        Assert.Equal(DataTransferStatus.Success, window.Clipboard.WriteText("copied text").Status)
+        let read = window.Clipboard.ReadText()
+        Assert.Equal(ClipboardTextStatus.Success, read.Status)
+        Assert.Equal("copied text", read.Text)
+        host.Text = String(char(0x0800), ClipboardTransfer.MaxTextBytes / 3 + 1)
+        Assert.Equal(ClipboardTextStatus.TooLarge, window.Clipboard.ReadText().Status)
+        window.RequestClose()
+    }
+
+    @Fact
+    func ClipboardTextReportsUnsupportedEmbeddedServices() {
+        using let host = ElementHandleEmbeddedHost()
+        let window = Window()
+        host.Resize(100, 40, 100, 40)
+        window.Attach(host)
+        Assert.Equal(ClipboardTextStatus.Unsupported, window.Clipboard.ReadText().Status)
+        Assert.Equal(DataTransferStatus.Unsupported, window.Clipboard.WriteText("value").Status)
+        window.RequestClose()
+    }
+
+    @Fact
+    func ClipboardTextReportsNativeFailureAndRequiresOpenOwner() {
+        using let host = TestClipboardHost()
+        let window = Window()
+        let clipboard = window.Clipboard
+        Assert.Same(clipboard, window.Clipboard)
+        Assert.Throws[InvalidOperationException](() -> clipboard.ReadText())
+        host.Resize(100, 40, 100, 40)
+        window.Attach(host)
+        let read = clipboard.ReadText()
+        Assert.Equal(ClipboardTextStatus.Failed, read.Status)
+        Assert.Equal("", read.Text)
+        Assert.Equal("Clipboard read unavailable", read.Error)
+        let written = clipboard.WriteText("value")
+        Assert.Equal(DataTransferStatus.Failed, written.Status)
+        Assert.Equal("Clipboard write unavailable", written.Error)
+        Assert.Throws[ArgumentNullException](() -> clipboard.WriteText(nil))
+        Assert.Equal(1, host.Reads)
+        Assert.Equal(1, host.Writes)
+        host.Dispose()
+        Assert.Throws[InvalidOperationException](() -> clipboard.ReadText())
+    }
+
+    @Fact
     func LayoutOnlyEmbeddedHostKeepsKeyboardFocusVisible() {
         using let host = ElementHandleEmbeddedHost()
         let handle = ElementHandle()
@@ -138,14 +211,13 @@ class ExplicitKeyBindingTests {
     @InlineData(true, true)
     func ClipboardFailuresPreserveSelectionAndInput(editor bool, native bool) {
         using let controller = TextEditorController(TextDocument("keep"))
-        using let host = FailingClipboardHost()
+        using let host = TestClipboardHost()
         let handle = ElementHandle()
         let primary = KeyModifiers{Ctrl: !InputPolicy.Mac, Super: InputPolicy.Mac}
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(() -> if editor {
-                cast[Blob](TextEditor(controller){Handle = handle})
+                cast[Blob](TextEditor(){Controller = controller, Handle = handle})
             } else {
                 cast[Blob](TextEntry{Value: "keep", Handle: handle})
             })
@@ -162,12 +234,9 @@ class ExplicitKeyBindingTests {
             Assert.True(window.Focus.SetSelection(4, 0))
             var writable = false
             if native {
-                try {
-                    window.SetClipboardText("keep")
-                    writable = true
-                } catch (error InvalidOperationException) {
-                    Assert.DoesNotContain("zwp_text_input_v3", error.Message)
-                }
+                let written = window.Clipboard.WriteText("keep")
+                writable = written.Status == DataTransferStatus.Success
+                Assert.DoesNotContain("zwp_text_input_v3", written.Error)
             }
             let commands = List[TextCommandKind]()
             controller.OnCommand = (e TextCommandEvent) -> commands.Add(e.Command.Kind)
@@ -203,9 +272,8 @@ class ExplicitKeyBindingTests {
         using let controller = TextEditorController(TextDocument(""))
         let handle = ElementHandle()
         let window = Window{
-            Width: 320,
-            Height: 120,
-            Root: ExplicitKeyBindingTests.BuildCell(() -> TextEditor(controller){Handle = handle})
+            Size: LayoutSize(320, 120),
+            Root: ExplicitKeyBindingTests.BuildCell(() -> TextEditor(){Controller = controller, Handle = handle})
         }
         try {
             window.UpdateTree()
@@ -244,11 +312,10 @@ class ExplicitKeyBindingTests {
         let handle = ElementHandle()
         var value = "keep"
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> if editor {
-                    cast[Blob](TextEditor(controller){Handle = handle})
+                    cast[Blob](TextEditor(){Controller = controller, Handle = handle})
                 } else {
                     cast[Blob](
                         TextEntry{
@@ -321,12 +388,11 @@ class ExplicitKeyBindingTests {
         var value = content
         let adapter = AccessibilityTestAdapter()
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             AccessibilityAdapter: adapter,
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> if editor {
-                    cast[Blob](TextEditor(controller){Handle = handle})
+                    cast[Blob](TextEditor(){Controller = controller, Handle = handle})
                 } else {
                     cast[Blob](
                         TextEntry{
@@ -400,8 +466,7 @@ class ExplicitKeyBindingTests {
         var submissions = 0
         var clicks = 0
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> Container{
                     Children: []Blob{
@@ -462,8 +527,7 @@ class ExplicitKeyBindingTests {
         var failRelease = false
         let events = List[string]()
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> Container{
                     OnKeyDown: (e KeyEvent) -> {
@@ -590,8 +654,7 @@ class ExplicitKeyBindingTests {
         var firstValue = ""
         var secondValue = ""
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> Container{
                     Children: []Blob{
@@ -649,8 +712,7 @@ class ExplicitKeyBindingTests {
         var releaseModifiers = default(KeyModifiers)
         var window Window? = nil
         window = Window{
-            Width: 160,
-            Height: 80,
+            Size: LayoutSize(160, 80),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> Button{
                     Handle: handle,
@@ -742,8 +804,7 @@ class ExplicitKeyBindingTests {
         var failBlur = false
         var cancels = 0
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> Container{
                     OnFocus: (_ FocusEvent) -> parents++,
@@ -832,8 +893,7 @@ class ExplicitKeyBindingTests {
         let primary = KeyModifiers{Ctrl: !mac, Super: mac}
         let primaryShift = KeyModifiers{Ctrl: !mac, Super: mac, Shift: true}
         window = Window{
-            Width: 320,
-            Height: 160,
+            Size: LayoutSize(320, 160),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> Container{
                     KeyBindings: if legacyBindings {
@@ -843,7 +903,7 @@ class ExplicitKeyBindingTests {
                     },
                     Children: []Blob{
                         if editor {
-                            cast[Blob](TextEditor(controller){Handle = field, Height = 60})
+                            cast[Blob](TextEditor(){Controller = controller, Handle = field, Height = 60})
                         } else {
                             cast[Blob](TextEntry{
                                 Handle: field,
@@ -947,8 +1007,7 @@ class ExplicitKeyBindingTests {
         var prevent = true
         let primary = KeyModifiers{Ctrl: !InputPolicy.Mac, Super: InputPolicy.Mac}
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> TextEntry{
                     Handle: field,
@@ -1020,9 +1079,8 @@ class ExplicitKeyBindingTests {
             e.Cancel = true
         }
         let window = Window{
-            Width: 320,
-            Height: 120,
-            Root: ExplicitKeyBindingTests.BuildCell(() -> TextEditor(controller){Handle = field})
+            Size: LayoutSize(320, 120),
+            Root: ExplicitKeyBindingTests.BuildCell(() -> TextEditor(){Controller = controller, Handle = field})
         }
         try {
             window.UpdateTree()
@@ -1142,15 +1200,21 @@ class ExplicitKeyBindingTests {
     }
     }
 
-    private class FailingClipboardHost : EmbeddedWindowHost {
+    private class TestClipboardHost : EmbeddedWindowHost {
         internal var Writes int32
         internal var Reads int32
+        internal var Text string?
         protected override func GetClipboardText() string {
             Reads++
+            if let text = Text { return text }
             throw InvalidOperationException("Clipboard read unavailable")
         }
         protected override func SetClipboardText(value string) {
             Writes++
+            if Text != nil {
+                Text = value
+                return
+            }
             throw InvalidOperationException("Clipboard write unavailable")
         }
         protected override func RequestFrame() { }
