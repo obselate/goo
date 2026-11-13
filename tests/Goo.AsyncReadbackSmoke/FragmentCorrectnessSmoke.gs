@@ -110,7 +110,7 @@ func RunFragmentCorrectnessSmoke() {
     WindowReadbackTestFixture.ForceRender(opened, 0.0, 10.0)
     WindowReadbackTestFixture.ForceRender(opened, 0.0166666666666667, 10.0)
     let metrics = WindowReadbackTestFixture.Metrics(opened)
-    let scale = float64(metrics.FramebufferWidth) / float64(metrics.LogicalWidth)
+    let scale = float64(metrics.FramebufferWidth) / float64(metrics.NativeWidth)
     cell.PixelOffset = 0.5 / scale
     cell.IconSize = 24.0 / scale
     cell.Rebuild()

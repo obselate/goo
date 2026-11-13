@@ -23,8 +23,8 @@ public partial class Window {
   }
 
   internal func SetInputModifiers(value KeyModifiers) { modifiers = value }
-  private var wheelScrollScale float32 = 1.0F
-  private var dragStartDistance float32 = 8.0F
+  private var wheelScrollScale float64 = 1.0F
+  private var dragStartDistance float64 = 8.0F
   private var smoothScrolling bool = true
 
   /// Enables animated scrolling and touch momentum. The default is true.
@@ -39,24 +39,24 @@ public partial class Window {
   }
 
   /// Scales the platform wheel distance for this window. The default is 1.
-  public prop WheelScrollScale float32 {
+  public prop WheelScrollScale float64 {
     get -> wheelScrollScale
     set(value) {
       requireUiThread("Window.WheelScrollScale")
-      if !Single.IsFinite(value) || value <= 0.0F || value > 10.0F { throw ArgumentOutOfRangeException("value") }
+      if !Double.IsFinite(value) || value <= 0.0F || value > 10.0F { throw ArgumentOutOfRangeException("value") }
       wheelScrollScale = value
-      input.SetWheelScrollScale(value)
+      input.SetWheelScrollScale(float32(value))
     }
   }
 
-  /// Sets the logical pixels a pressed mouse or pen pointer must move on either axis before a drag source starts a drag. Touch contacts start at 4. The default is 8.
-  public prop DragStartDistance float32 {
+  /// Sets the layout units a pressed mouse or pen pointer must move on either axis before a drag source starts a drag. Touch contacts start at 4. The default is 8.
+  public prop DragStartDistance float64 {
     get -> dragStartDistance
     set(value) {
       requireUiThread("Window.DragStartDistance")
-      if !Single.IsFinite(value) || value <= 0.0F { throw ArgumentOutOfRangeException("value") }
+      if !Double.IsFinite(value) || value <= 0.0F { throw ArgumentOutOfRangeException("value") }
       dragStartDistance = value
-      input.SetDragStartDistance(value)
+      input.SetDragStartDistance(float32(value))
     }
   }
 

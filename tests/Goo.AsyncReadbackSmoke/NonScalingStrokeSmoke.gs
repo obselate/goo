@@ -306,8 +306,7 @@ func RenderNonScalingStrokePair(
         ShadowOffset: source.ShadowOffset,
     }
     let options = OffscreenRenderOptions(
-        400.0F,
-        200.0F,
+        LayoutSize(400, 200),
         uint32(400.0 * dpi),
         uint32(200.0 * dpi),
         Color.Black,

@@ -138,7 +138,7 @@ internal partial class PointerInput {
             try {
                 if let group = group { cancelGestureGroup(root, group, GestureCancelReason.CallbackFailed) }
             } finally {
-                try { cancelInteraction(root, resolver) }
+                try { cancelInteraction(root, resolver, GestureCancelReason.CallbackFailed) }
                 finally { ExceptionDispatchInfo.Capture(error).Throw() }
             }
         }
@@ -217,7 +217,7 @@ internal partial class PointerInput {
                     let contact = contacts[i]
                     if gestureGroupFor(contact.Id) != group { continue }
                     current = contact
-                    try { cancelInteraction(root, resolver) }
+                    try { cancelInteraction(root, resolver, GestureCancelReason.CallbackFailed) }
                     catch (error Exception) { if failure == nil { failure = error } }
                 }
             }

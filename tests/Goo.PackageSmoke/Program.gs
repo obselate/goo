@@ -734,8 +734,8 @@ func Main() {
     var resized bool
     while attempts < 120 && !resized {
       window.Pump(0.016)
-      resized = latestMetrics.LogicalWidth == targetWidth
-        && latestMetrics.LogicalHeight == targetHeight
+      resized = latestMetrics.NativeWidth == targetWidth
+        && latestMetrics.NativeHeight == targetHeight
         && latestMetrics.FramebufferWidth > 0
         && latestMetrics.FramebufferHeight > 0
       attempts = attempts + 1
@@ -743,9 +743,9 @@ func Main() {
     let scaleConsistent = latestMetrics.DisplayScaleX > 0.0
       && latestMetrics.DisplayScaleY > 0.0
       && Math.Abs(float64(latestMetrics.FramebufferWidth)
-        -float64(latestMetrics.LogicalWidth) * latestMetrics.DisplayScaleX) < 1.0
+        -float64(latestMetrics.NativeWidth) * latestMetrics.DisplayScaleX) < 1.0
       && Math.Abs(float64(latestMetrics.FramebufferHeight)
-        -float64(latestMetrics.LogicalHeight) * latestMetrics.DisplayScaleY) < 1.0
+        -float64(latestMetrics.NativeHeight) * latestMetrics.DisplayScaleY) < 1.0
       && latestMetrics.DisplayScaleX == beforeMetrics.DisplayScaleX
       && latestMetrics.DisplayScaleY == beforeMetrics.DisplayScaleY
     let finalRoot = SmokeCell.Root.BorderBox
@@ -758,8 +758,8 @@ func Main() {
       && latestMetrics.FramebufferHeight == beforeMetrics.FramebufferHeight{
         throw InvalidOperationException("Native smoke resize metrics or layout did not settle")
       }
-    Console.WriteLine("native-resize: logical=" + latestMetrics.LogicalWidth.ToString()
-      + "x" + latestMetrics.LogicalHeight.ToString()
+    Console.WriteLine("native-resize: logical=" + latestMetrics.NativeWidth.ToString()
+      + "x" + latestMetrics.NativeHeight.ToString()
       + " framebuffer=" + latestMetrics.FramebufferWidth.ToString()
       + "x" + latestMetrics.FramebufferHeight.ToString()
       + " scale=" + latestMetrics.DisplayScaleX.ToString()
@@ -804,9 +804,9 @@ func Main() {
       let scaleY = latestMetrics.DisplayScaleY
       let scaleConsistent = scaleX > 0.0 && scaleY > 0.0
         && Math.Abs(float64(latestMetrics.FramebufferWidth)
-          -float64(latestMetrics.LogicalWidth) * scaleX) < 1.0
+          -float64(latestMetrics.NativeWidth) * scaleX) < 1.0
         && Math.Abs(float64(latestMetrics.FramebufferHeight)
-          -float64(latestMetrics.LogicalHeight) * scaleY) < 1.0
+          -float64(latestMetrics.NativeHeight) * scaleY) < 1.0
       restored = window.State == WindowState.Normal
         && latestMetrics.FramebufferWidth > 0
         && latestMetrics.FramebufferHeight > 0
@@ -815,8 +815,8 @@ func Main() {
     }
     let restoredRoot = SmokeCell.Root.BorderBox
     if !window.IsOpen || !restored || window.State != WindowState.Normal
-      || restoredRoot.Width != float64(latestMetrics.LogicalWidth)
-      || restoredRoot.Height != float64(latestMetrics.LogicalHeight)
+      || restoredRoot.Width != float64(latestMetrics.NativeWidth)
+      || restoredRoot.Height != float64(latestMetrics.NativeHeight)
       || latestRootMetrics.BorderBox.Width != restoredRoot.Width
       || latestRootMetrics.BorderBox.Height != restoredRoot.Height{
         throw InvalidOperationException("Native smoke window did not restore metrics or layout")

@@ -2969,8 +2969,8 @@ internal class InputFixtures {
     input.QueuePointerRelease(80.0F, 10.0F)
     input.QueuePointerCancel(0, PointerDevice.Mouse)
     input.Drain(root, resolver, 0.0, nil)
-    return events.Count == 3 && events[0].Phase == PointerDragPhase.Started
-      && events[1].Phase == PointerDragPhase.Moved && events[2].Phase == PointerDragPhase.Ended
+    return events.Count == 3 && events[0].Phase == GesturePhase.Started
+      && events[1].Phase == GesturePhase.Changed && events[2].Phase == GesturePhase.Completed
       && events[1].Position.X == 75.0 && events[1].Translation.X == 65.0
       && events[1].Delta.X == 65.0 && events[2].Delta.X == 5.0
       && hits[0] && !hits[1] && !hits[2]
@@ -3007,7 +3007,7 @@ internal class InputFixtures {
       let child = automatic
         ? Container{Width: 200, Height: 80, FlexShrink: 0,
           OnPointerDrag: (_ PointerDragEvent) -> {}, PointerDragThreshold: 8,
-          PointerDragAxis: Goo.Gestures.PanAxis.Horizontal}
+          PointerDragAxis: LayoutAxis.Horizontal}
         : Container{Width: 200, Height: 80, FlexShrink: 0,
           OnPointerDown: (e PointerEvent) -> e.Capture()}
       let resolver = Resolver{}
@@ -3031,7 +3031,7 @@ internal class InputFixtures {
     var calls int32
     let declaration = (increment int32) -> Container{
       Width: 50, Height: 40, OnPointerDrag: (e PointerDragEvent) -> {
-        if e.Phase == PointerDragPhase.Canceled { calls += increment }
+        if e.Phase == GesturePhase.Canceled { calls += increment }
       },
     }
     let resolver = Resolver{}
@@ -3062,7 +3062,7 @@ internal class InputTrackedDragCell : Cell {
   }
 
   private func Drag(e PointerDragEvent) {
-    if e.Phase == PointerDragPhase.Moved && e.Translation.X >= 10.0 { value.Value = 1 }
+    if e.Phase == GesturePhase.Changed && e.Translation.X >= 10.0 { value.Value = 1 }
   }
 }
 

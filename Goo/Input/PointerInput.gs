@@ -434,7 +434,7 @@ internal partial class PointerInput {
     }
     current = mouse
     try {
-      cancelInteraction(root, resolver)
+      cancelInteraction(root, resolver, focus.NativeFocusAllowed ? GestureCancelReason.Explicit : GestureCancelReason.FocusLost)
     } catch (error Exception) {
       if failure == nil { failure = error }
     }
@@ -442,7 +442,7 @@ internal partial class PointerInput {
       for i in 0 ... values.Count {
         current = values[i]
         try {
-          cancelInteraction(root, resolver)
+          cancelInteraction(root, resolver, focus.NativeFocusAllowed ? GestureCancelReason.Explicit : GestureCancelReason.FocusLost)
         } catch (error Exception) {
           if failure == nil { failure = error }
         }
@@ -605,7 +605,7 @@ internal partial class PointerInput {
 
   private func afterTreeUpdatedCurrent(root Node?, resolver Resolver) bool {
     guard let tree = root else {
-      let canceled = cancelInteraction(root, resolver)
+      let canceled = cancelInteraction(root, resolver, GestureCancelReason.OwnerUnavailable)
       if current.Device == PointerDevice.Mouse {
         clearHover(resolver)
         cursorValid = false
@@ -613,7 +613,7 @@ internal partial class PointerInput {
       return canceled
     }
     if let drag = current.PointerDrag {
-      if drag.Target.Current?.OnPointerDrag == nil { clearCapture() }
+      if drag.Target.Current?.OnPointerDrag == nil { clearCapture(GestureCancelReason.OwnerUnavailable) }
     }
     var routeUnavailable = false
     if current.CapturePath.Count > 0 {
@@ -622,7 +622,7 @@ internal partial class PointerInput {
       routeUnavailable = !rebuildActivePath(tree)
     }
     if routeUnavailable {
-      cancelInteraction(root, resolver)
+      cancelInteraction(root, resolver, GestureCancelReason.OwnerUnavailable)
       return true
     }
     if let d = current.DragEntry {
@@ -639,7 +639,7 @@ internal partial class PointerInput {
     if let pan = current.TouchPan {
       let target = pan.Target
       if target == nil || !nodeVisibleInTree(tree, target, false) || !canReceiveInput(target) {
-        cancelInteraction(root, resolver)
+        cancelInteraction(root, resolver, GestureCancelReason.OwnerUnavailable)
         return true
       }
     }
@@ -957,7 +957,7 @@ internal partial class PointerInput {
         return false
       }
       if current.Device == PointerDevice.Touch && nativePinch?.Claimed == true {
-        return cancelInteraction(root, resolver)
+        return cancelInteraction(root, resolver, GestureCancelReason.LostArbitration)
       }
       beginGestures(root, resolver, x, y)
       if semantic {

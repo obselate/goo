@@ -98,7 +98,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             false,
             preferenceObserver
         )
-        window.PlatformInput.EditorChanged += OnEditorChanged
+        window.Focus.EditorChanged += OnEditorChanged
     }
 
     prop Window Goo.Window {
@@ -804,7 +804,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             Window.DismissChildPopups(PopupDismissReason.OwnerClosed)
             CancelFrames()
             Clipboard.Dispose()
-            Window.PlatformInput.EditorChanged -= OnEditorChanged
+            Window.Focus.EditorChanged -= OnEditorChanged
             Context!!.ContentResolver!!.UnregisterContentObserver(preferenceObserver)
             preferenceObserver.Dispose()
             IDisposable(accessibility).Dispose()

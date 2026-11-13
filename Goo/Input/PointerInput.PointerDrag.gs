@@ -9,7 +9,7 @@ internal class PointerDragState {
     internal var Callback((PointerDragEvent) -> void)?
     internal var WindowOrigin Point
     internal var Threshold float64
-    internal var Axis Goo.Gestures.PanAxis
+    internal var Axis LayoutAxis?
     internal var Started bool
     internal var Last PointerDragEvent
 }
@@ -47,24 +47,24 @@ internal partial class PointerInput {
         state.Callback = node.OnPointerDrag ?? state.Callback
         let distanceX = event.WindowPosition.X - state.WindowOrigin.X
         let distanceY = event.WindowPosition.Y - state.WindowOrigin.Y
-        var phase = PointerDragPhase.Moved
+        var phase = GesturePhase.Changed
         if !state.Started {
             if kind == PointerEventKind.Release {
                 current.PointerDrag = nil
                 return
             }
-            let x = state.Axis == Goo.Gestures.PanAxis.Vertical ? 0.0: distanceX
-            let y = state.Axis == Goo.Gestures.PanAxis.Horizontal ? 0.0: distanceY
+            let x = state.Axis == LayoutAxis.Vertical ? 0.0: distanceX
+            let y = state.Axis == LayoutAxis.Horizontal ? 0.0: distanceY
             if x * x + y * y < state.Threshold * state.Threshold {
                 return
             }
             state.Started = true
-            phase = PointerDragPhase.Started
+            phase = GesturePhase.Started
         } else if kind == PointerEventKind.Press {
             return
         }
         if kind == PointerEventKind.Release {
-            phase = PointerDragPhase.Ended
+            phase = GesturePhase.Completed
             current.PointerDrag = nil
         }
         var translation = Point{X: distanceX, Y: distanceY}
@@ -164,7 +164,7 @@ internal partial class PointerInput {
         return false
     }
 
-    private func cancelPointerDrag() {
+    private func cancelPointerDrag(reason GestureCancelReason) {
         guard let state = current.PointerDrag else {
             return
         }
@@ -183,7 +183,12 @@ internal partial class PointerInput {
         }
         try {
             state.Callback?.Invoke(
-                PointerDragEvent{Pointer: event, Phase: PointerDragPhase.Canceled, Translation: previous.Translation,}
+                PointerDragEvent{
+                    Pointer: event,
+                    Phase: GesturePhase.Canceled,
+                    Reason: reason,
+                    Translation: previous.Translation,
+                }
             )
         } finally {
             state.Owner?.RebuildAfterCallback()
