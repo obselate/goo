@@ -1477,7 +1477,7 @@ method|Goo.NativeDialogOwnerResult|GetHashCode|virtual|public|generic:|()->Syste
 method|Goo.NativeDialogOwnerResult|ToString|virtual|public|generic:|()->System.String
 method|Goo.NativeDialogOwnerResult|op_Equality|static|public|generic:|(left:Goo.NativeDialogOwnerResult,right:Goo.NativeDialogOwnerResult)->System.Boolean
 method|Goo.NativeDialogOwnerResult|op_Inequality|static|public|generic:|(left:Goo.NativeDialogOwnerResult,right:Goo.NativeDialogOwnerResult)->System.Boolean
-method|Goo.NativeDialogs|ShowError|static|public|generic:|(title:System.String,message:System.String)->Goo.MessageBoxStatus
+method|Goo.NativeDialogs|ShowError|static|public|generic:|(title:System.String,message:System.String)->Goo.MessageBoxResult
 method|Goo.NativeDialogs|ShowMessageBoxAsync|static|public|generic:|(owner:Goo.Window,options:Goo.MessageBoxOptions)->System.Threading.Tasks.Task`1<Goo.MessageBoxResult>
 method|Goo.NativeFileDrag|TryCreate|static|public|generic:|(values:System.Collections.Generic.IReadOnlyList`1<System.String>,out result:Goo.NativeFileDrag?&)->System.Boolean
 method|Goo.NativeMenuBar|Dispose|instance|public|generic:|()->System.Void

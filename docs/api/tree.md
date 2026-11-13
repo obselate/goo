@@ -453,11 +453,11 @@ Gets the callback that receives pointer wheel movement.
 
 ### `PointerDragAxis`
 
-Gets the axis measured by the threshold. Nil measures both axes. Off-axis movement alone does not start a drag.
+Gets or sets the axis measured by the threshold. Nil measures both axes. Off-axis movement alone does not start a drag.
 
 ### `PointerDragThreshold`
 
-Gets the Euclidean press-to-start distance in layout units, measured on PointerDragAxis. Zero starts on press for mouse and pen, or on the first nonzero touch movement.
+Gets or sets the finite, non-negative Euclidean press-to-start distance in layout units, measured on PointerDragAxis. Zero starts on press for mouse and pen, or on the first nonzero touch movement.
 
 ### `TabStop`
 

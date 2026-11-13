@@ -270,7 +270,7 @@ Contains a native message-box outcome.
 
 ### `ButtonId`
 
-Gets the selected identifier, or -1 outside Success.
+Gets the selected application button identifier, or -1 when no application button was selected.
 
 ### `Error`
 
@@ -301,12 +301,12 @@ Shows owned native dialogs without a managed fallback.
 
 ### `ShowError(string,string)`
 
-Shows a synchronous ownerless platform error box before or after window use. Blocks the calling thread. Do not call while Goo windows are open. Linux and Android return Unsupported. Write the message to standard error when unsupported.
+Shows a synchronous ownerless platform error box before or after window use. Call on the main thread. Blocks the calling thread. Do not call while Goo windows are open. Linux and Android return Unsupported. Write the message to standard error when unsupported.
 
 - `title`: The native title.
 - `message`: The plain-text error message.
 
-Returns: Success, Unsupported when no simple message box exists, or Failed.
+Returns: Success, Unsupported when no simple message box exists, or Failed with native Error detail. ButtonId is -1.
 
 ### `ShowMessageBoxAsync(Window,MessageBoxOptions)`
 
@@ -709,7 +709,7 @@ Provides operating-system services without a window owner.
 
 ### `OpenAsync(string,System.Threading.CancellationToken)`
 
-Starts the system handler for an absolute path or URI on a background child.
+Starts the system handler for an absolute path or URI on a background child. Do not pass untrusted targets. The system handler can run executable content.
 
 - `target`: An absolute path or URI. Relative paths are rejected.
 - `cancellationToken`: Cancels launch before the handler is started.

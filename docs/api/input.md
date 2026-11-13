@@ -1429,7 +1429,7 @@ Stops further routing of this input sample.
 
 ### `Delta`
 
-Gets movement from the previous sample in element-local units.
+Gets movement from the previous sample in element-local units. Started excludes movement before the threshold-crossing sample. Use Translation for total movement from the press.
 
 ### `Device`
 
