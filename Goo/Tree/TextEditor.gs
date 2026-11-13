@@ -4,20 +4,29 @@ import System
 
 /// Defines a retained multiline text editor.
 public class TextEditor : Blob {
-  private let controller TextEditorController
+  private var controller TextEditorController?
   private var layers []TextPresentationLayer
   private var overscanLines int32
 
   internal override func coreBlob() {
   }
 
-  /// Gets the per-view editing controller.
-  public prop Controller TextEditorController{ get -> controller }
+  /// Gets the required per-view editing controller. Set it before mounting.
+  public prop Controller TextEditorController{
+    get -> controller ?? throw InvalidOperationException("TextEditor.Controller is required")
+    init{
+      if value != nil { validateEditorLayers(value.Document, layers) }
+      controller = value
+    }
+  }
   /// Gets the ordered presentation layers.
   public prop Layers []TextPresentationLayer{
     get -> copyEditorLayers(layers)
     init{
-      validateEditorLayers(controller.Document, value)
+      for layer in value {
+        if layer == nil { throw ArgumentNullException("Layers") }
+      }
+      if let current = controller { validateEditorLayers(current.Document, value) }
       layers = copyEditorLayers(value)
     }
   }
@@ -53,20 +62,9 @@ public class TextEditor : Blob {
   /// Gets the callback invoked by an accepted submit command.
   public prop OnSubmit Action? { get; init; }
 
-  /// Creates an editor without presentation layers.
-  /// @param controller The per-view controller that owns the edited document.
-  public convenience init(controller TextEditorController) {
-    init(controller, []TextPresentationLayer{})
-  }
-
-  /// Creates an editor with ordered presentation layers.
-  /// @param controller The per-view controller that owns the edited document.
-  /// @param layers The ordered presentation layers.
-  public init(controller TextEditorController, layers []TextPresentationLayer) {
-    if controller == nil { throw ArgumentNullException("controller") }
-    this.controller = controller
-    validateEditorLayers(controller.Document, layers)
-    this.layers = copyEditorLayers(layers)
+  /// Creates an editor. Controller must be set before mounting.
+  public init() {
+    layers = []TextPresentationLayer{}
     Placeholder = ""
     SelectionColor = defaultSelectionColor()
     CaretColor = Color.White

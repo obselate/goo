@@ -798,6 +798,7 @@ internal func syncYogaField(n Node, f StyleField) {
     case StyleField.MinHeight { applyMinMax(yg, n) }
     case StyleField.MaxWidth { applyMinMax(yg, n) }
     case StyleField.MaxHeight { applyMinMax(yg, n) }
+    case StyleField.TextTrimming { applyMinMax(yg, n) }
     case StyleField.AspectRatio { applyFlexLayout(yg, n, n.Parent == nil) }
     case StyleField.Padding { applyEdges(yg, n) }
     case StyleField.PaddingLeft { applyEdges(yg, n) }
@@ -1016,7 +1017,10 @@ internal func applyMinMax(yg Facebook.Yoga.Node, n Node) {
       markYogaStyle(n, StyleField.MinWidth)
     }
     default {
-      if clearYogaStyle(n, StyleField.MinWidth) {
+      if n.Kind == NodeKind.Text && n.TextTrimming == TextTrimming.Ellipsis {
+        YGNodeStyleAPI.YGNodeStyleSetMinWidth(yg, 0.0F)
+        markYogaStyle(n, StyleField.MinWidth)
+      } else if clearYogaStyle(n, StyleField.MinWidth) {
         YGNodeStyleAPI.YGNodeStyleSetMinWidth(yg, YogaValue.YGValueUndefined.Value)
       }
     }

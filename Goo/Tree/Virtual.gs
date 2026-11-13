@@ -6,18 +6,19 @@ import Facebook.Yoga
 /// Mounts the items placed by a VirtualSource. It scrolls content coordinates.
 /// Overriding the list role or clearing Accessibility forwards item position to content.
 public class Virtual : Blob {
-  private let source VirtualSource
+  private var source VirtualSource?
 
   internal override func coreBlob() {
   }
 
-  internal prop Source VirtualSource{ get -> source }
+  /// Gets the required item policy. Set a new immutable source on each build.
+  public prop Source VirtualSource{
+    get -> source ?? throw InvalidOperationException("Virtual.Source is required")
+    init -> source = value
+  }
 
-  /// Initializes a list element that scrolls on both axes.
-  /// @param source The item policy. Create a new source on each build to supply new inputs.
-  public init(source VirtualSource) {
-    if source == nil { throw ArgumentNullException("source") }
-    this.source = source
+  /// Initializes a list element that scrolls on both axes. Source must be set before mounting.
+  public init() {
     Accessibility = Accessibility{ Role: AccessibilityRole.List }
     Position = PositionType.Relative
     OverflowX = Overflow.Scroll

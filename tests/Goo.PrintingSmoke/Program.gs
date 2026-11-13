@@ -129,7 +129,7 @@ func CheckRichClipboard() {
 }
 
 internal class EditorPage(controller TextEditorController, layer TextPresentationLayer, handle ElementHandle) : Cell {
-    override func Build() Blob -> TextEditor(controller, []TextPresentationLayer{ layer }) { Handle = handle }
+    override func Build() Blob -> TextEditor(){ Controller = controller, Layers = []TextPresentationLayer{ layer }, Handle = handle }
 }
 
 internal class Page(width int32, height int32) : Cell {

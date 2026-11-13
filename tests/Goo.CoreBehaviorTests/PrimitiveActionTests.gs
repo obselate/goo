@@ -18,7 +18,7 @@ class PrimitiveActionTests {
             Root: PrimitiveActionTests.BuildCell(
                 () -> Container{
                     Children: []Blob{
-                        TextEditor(controller){Handle = editor, Height = 100, FontFamily = "monospace", FontSize = 16},
+                        TextEditor(){Controller = controller, Handle = editor, Height = 100, FontFamily = "monospace", FontSize = 16},
                         TextEntry{
                             Handle: entry,
                             Value: "foo_bar  !!",
@@ -92,7 +92,7 @@ ef`))
             Width: 420,
             Height: 160,
             Root: PrimitiveActionTests.BuildCell(
-                () -> TextEditor(controller){
+                () -> TextEditor(){Controller = controller,
                     Handle = handle,
                     FontFamily = "monospace",
                     FontSize = 16,
@@ -176,7 +176,7 @@ ef`)){UseTabs = false, IndentWidth = 2, TabWidth = 8}
             Width: 420,
             Height: 160,
             Root: PrimitiveActionTests.BuildCell(
-                () -> TextEditor(controller){
+                () -> TextEditor(){Controller = controller,
                     Handle = handle,
                     FontFamily = "monospace",
                     FontSize = 16,

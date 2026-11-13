@@ -461,7 +461,17 @@ internal partial class Reconciler {
   }
 
   internal func applyText(n Node, t Text, initial bool) {
-    applyStyle(n, t, t.Focusable, initial)
+    applyStyle(n, t, t.Focusable || t.Selectable, initial)
+    if n.Selectable != t.Selectable {
+      n.Selectable = t.Selectable
+      if n.Anchor != 0 { n.Anchor = 0 }
+      if n.Caret != 0 { n.Caret = 0 }
+      n.BumpScenePaintVersion()
+      MarkEffects(ReconcileEffects.Input)
+      MarkEffects(ReconcileEffects.Paint)
+    }
+    if n.Anchor > t.Content.Length { n.Anchor = t.Content.Length }
+    if n.Caret > t.Content.Length { n.Caret = t.Content.Length }
     let rangeChange = PassiveTextPresentations.Apply(n, t.Content, t.StyleRangeValues)
     let contentChanged = n.Content != t.Content
     if contentChanged || rangeChange.Changed {
