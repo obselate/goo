@@ -7,12 +7,12 @@ import System.Threading
 import System.Diagnostics
 internal class CellFixtures {
   func SchedulingPhasesAndFailedMountsContract() bool ->
-    Window{Root: SchedulingPhaseFixtureCell(), Width: 200, Height: 100}.SchedulingPhasesForTest()
+    Window{Root: SchedulingPhaseFixtureCell(), Size: LayoutSize(200, 100)}.SchedulingPhasesForTest()
 
   func LifecycleHooksAndRequestTokensContract() bool {
     let cell = LifecycleFixtureCell()
     if !cell.HostRejected() || cell.Enqueue(() -> {}) { return false }
-    let window = Window{Root: cell, Width: 200, Height: 100}
+    let window = Window{Root: cell, Size: LayoutSize(200, 100)}
     window.UpdateTree()
     let lifetime = cell.Token
     let first = cell.Request("load")
@@ -35,7 +35,7 @@ internal class CellFixtures {
   }
 
   func CellSchedulingAndTimerValidationContract() bool ->
-    Window{Root: LifecycleFixtureCell(), Width: 200, Height: 100}.CellSchedulingForTest()
+    Window{Root: LifecycleFixtureCell(), Size: LayoutSize(200, 100)}.CellSchedulingForTest()
 
   func TypedFactoryStoresInputWithoutRecreatingCellContract() bool {
     let window = Window{}
@@ -841,7 +841,7 @@ public partial class Window {
         return false
       }
       let retryCell = SchedulingPhaseFixtureCell{Fail: true}
-      let retry = Window{Root: retryCell, Width: 200, Height: 100}
+      let retry = Window{Root: retryCell, Size: LayoutSize(200, 100)}
       retry.IsOpen = true
       try {
         retryCell.BindContext(nil, retry)
