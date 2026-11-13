@@ -210,6 +210,8 @@ class PublicDocumentationTests {
     shared {
         private const PublicDeclared BindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly
         private let ExpectedMethodIds[]string = []string{
+            "M:Goo.Platform.OpenAsync(System.String,System.Threading.CancellationToken)",
+            "M:Goo.NativeDialogs.ShowError(System.String,System.String)",
             "M:Goo.RichText.RichTextClipboard.#ctor(Goo.Window,Goo.TextEditorController,Goo.TextPresentationLayer)",
             "M:Goo.RichText.RichTextClipboard.CopyAsync(System.Threading.CancellationToken)",
             "M:Goo.RichText.RichTextClipboard.CutAsync(System.Threading.CancellationToken)",
@@ -299,8 +301,8 @@ class PublicDocumentationTests {
             "M:Goo.TransferRepresentation.#ctor(System.String,System.ReadOnlyMemory{System.Byte})",
             "M:Goo.TransferData.#ctor(System.Collections.Generic.IReadOnlyList{Goo.TransferRepresentation},"
                 + "System.Collections.Generic.IReadOnlyList{System.Uri})",
-            "M:Goo.Window.ReadClipboardDataAsync(System.Collections.Generic.IReadOnlyList{System.String})",
-            "M:Goo.Window.WriteClipboardAsync(Goo.TransferData,Goo.ClipboardIntent)",
+            "M:Goo.WindowClipboard.ReadDataAsync(System.Collections.Generic.IReadOnlyList{System.String})",
+            "M:Goo.WindowClipboard.WriteAsync(Goo.TransferData,Goo.ClipboardIntent)",
             "M:Goo.Window.SetNativeDataDropFormats(System.Collections.Generic.IReadOnlyList{System.String})",
             "M:Goo.AccessibilityActionRequest.#ctor(Goo.AccessibilityAction)",
             "M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)",
@@ -694,10 +696,10 @@ class PublicDocumentationTests {
             "M:Goo.Window.Attach(Goo.EmbeddedWindowHost)",
             "M:Goo.Window.ConfigureApplication(System.String,System.String,System.String)",
             "M:Goo.Window.DragRegion(Goo.Container)",
-            "M:Goo.Window.GetClipboardText",
-            "M:Goo.Window.GetClipboardFormats",
-            "M:Goo.Window.ReadClipboardFiles",
-            "M:Goo.Window.ReadClipboardImage",
+            "M:Goo.WindowClipboard.ReadText",
+            "M:Goo.WindowClipboard.GetFormats",
+            "M:Goo.WindowClipboard.ReadFiles",
+            "M:Goo.WindowClipboard.ReadImage",
             "M:Goo.Window.PerformAccessibilityAction(Goo.AccessibilityId,Goo.AccessibilityActionRequest)",
             "M:Goo.Window.Post(System.Action)",
             "M:Goo.Window.MeasureText(System.String,Goo.Style)",
@@ -706,7 +708,7 @@ class PublicDocumentationTests {
             "M:Goo.Window.RequestActivation",
             "M:Goo.Window.RequestClose",
             "M:Goo.Window.Run",
-            "M:Goo.Window.SetClipboardText(System.String)",
+            "M:Goo.WindowClipboard.WriteText(System.String)",
             "M:Goo.Window.SetInterval(System.Action,System.Double)",
             "M:Goo.Window.SetTimeout(System.Action,System.Double)",
             "M:Goo.Window.TryPost(System.Action)",
@@ -982,6 +984,14 @@ class PublicDocumentationTests {
         private let Shapes IReadOnlyDictionary[string, DocumentationShape] = Dictionary[string, DocumentationShape](
             StringComparer.Ordinal
         ){
+            ["M:Goo.Platform.OpenAsync(System.String,System.Threading.CancellationToken)"] =
+                DocumentationShape([]string{"target", "cancellationToken"}, Array.Empty[string](), true),
+            ["M:Goo.NativeDialogs.ShowError(System.String,System.String)"] =
+                DocumentationShape([]string{"title", "message"}, Array.Empty[string](), true),
+            ["M:Goo.WindowClipboard.ReadText"] =
+                DocumentationShape(Array.Empty[string](), Array.Empty[string](), true),
+            ["M:Goo.WindowClipboard.WriteText(System.String)"] =
+                DocumentationShape([]string{"value"}, Array.Empty[string](), true),
             ["M:Goo.TrayIcon.Create(Goo.Window,Goo.TrayOptions)"] = DocumentationShape(
                 []string{"owner", "options"}, System.Array.Empty[string](), true),
             ["M:Goo.TrayIcon.Update(Goo.TrayOptions)"] = DocumentationShape(
@@ -1084,9 +1094,9 @@ class PublicDocumentationTests {
             ["M:Goo.TransferData.#ctor(System.Collections.Generic.IReadOnlyList{Goo.TransferRepresentation},"
                 + "System.Collections.Generic.IReadOnlyList{System.Uri})"] =
                 DocumentationShape([]string{"representations", "uris"}, Array.Empty[string](), false),
-            ["M:Goo.Window.ReadClipboardDataAsync(System.Collections.Generic.IReadOnlyList{System.String})"] =
+            ["M:Goo.WindowClipboard.ReadDataAsync(System.Collections.Generic.IReadOnlyList{System.String})"] =
                 DocumentationShape([]string{"contentTypes"}, Array.Empty[string](), true),
-            ["M:Goo.Window.WriteClipboardAsync(Goo.TransferData,Goo.ClipboardIntent)"] =
+            ["M:Goo.WindowClipboard.WriteAsync(Goo.TransferData,Goo.ClipboardIntent)"] =
                 DocumentationShape([]string{"data", "intent"}, Array.Empty[string](), true),
             ["M:Goo.Window.SetNativeDataDropFormats(System.Collections.Generic.IReadOnlyList{System.String})"] =
                 DocumentationShape([]string{"formats"}, Array.Empty[string](), true),
@@ -2062,7 +2072,7 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
-            ["M:Goo.Window.GetClipboardFormats"] = DocumentationShape(
+            ["M:Goo.WindowClipboard.GetFormats"] = DocumentationShape(
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
                 true
@@ -2107,12 +2117,12 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 false
             ),
-            ["M:Goo.Window.ReadClipboardFiles"] = DocumentationShape(
+            ["M:Goo.WindowClipboard.ReadFiles"] = DocumentationShape(
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
                 true
             ),
-            ["M:Goo.Window.ReadClipboardImage"] = DocumentationShape(
+            ["M:Goo.WindowClipboard.ReadImage"] = DocumentationShape(
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
                 true
