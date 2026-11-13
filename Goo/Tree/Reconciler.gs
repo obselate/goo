@@ -1296,8 +1296,30 @@ internal partial class Reconciler {
     if let rect = p.CollisionBounds {
       if !validPortalRect(rect) { throw ArgumentOutOfRangeException("CollisionBounds") }
     }
-    applyStyle(n, p, p.Focusable, initial)
+    let options = p.FocusScope ?? (p.OnDismiss != nil ? Portals.DefaultScopeOptions : nil)
+    applyStyle(n, p, p.Focusable || options != nil, initial)
     n.HitTestSelf = false
+    if options != nil { n.TabStop = false }
+    let needsScrim = p.Scrim != nil || options?.Modal == true
+    var scrim = Portals.State(n)?.Scrim
+    if needsScrim {
+      let declaration = Portal{ Width: Percent(100), Height: Percent(100),
+        BackgroundColor: p.Scrim ?? Color.Transparent, Focusable: false, ZIndex: n.ZIndex }
+      if let current = scrim {
+        diffPortal(current, declaration)
+      } else {
+        scrim = mountPortal(declaration)
+        MarkEffects(ReconcileEffects.Structure)
+      }
+    } else if scrim != nil {
+      scrim = nil
+      MarkEffects(ReconcileEffects.Structure)
+    }
+    if let backdrop = scrim { backdrop.HitTestSelf = true }
+    Portals.Configure(n, options, p.OnDismiss, scrim)
+    if !initial && (options != nil || p.Scrim != nil || Portals.State(n) != nil) {
+      MarkEffects(ReconcileEffects.Input | ReconcileEffects.Accessibility)
+    }
     if n.PortalAnchor != p.Anchor || n.PortalPlacement != p.Placement
       || n.PortalBounds?.AnchorRect != p.AnchorRect
       || n.PortalBounds?.CollisionBounds != p.CollisionBounds

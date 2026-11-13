@@ -40,7 +40,7 @@ func RunNativePopupSmoke(kind PopupKind = PopupKind.Tooltip) {
   owner.PresentationAccepted += _ -> {
     if opened { return }
     opened = true
-    let result = popup.Open(ElementRect{ X: 290.0, Y: 170.0, Width: 20.0, Height: 20.0 }, 120, 80)
+    let result = popup.Open(ElementRect{ X: 290.0, Y: 170.0, Width: 20.0, Height: 20.0 }, LayoutSize(120, 80))
     if result.Status != PopupStatus.Opened { throw InvalidOperationException("Native popup failed: " + result.Error) }
   }
   owner.After(15000.0, () -> { throw InvalidOperationException("Native popup presentation timed out") })

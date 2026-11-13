@@ -34,6 +34,8 @@ internal partial class Layout {
   internal var lastHeight float32
   internal var lastRoot Node?
   internal var laidOut bool
+  internal var PopupMeasuredWidth float32?
+  internal var PopupMeasuredHeight float32?
   internal var structureDirty bool
   internal var scrollNodes List[Node]
   internal var scrollListDirty bool
@@ -92,6 +94,12 @@ internal partial class Layout {
       return
     }
     resolveLengths(root, width, height)
+    if root.Width.Unit == LengthUnit.Percent && PopupMeasuredWidth is {} measuredWidth {
+      YGNodeStyleAPI.YGNodeStyleSetWidth(yg, measuredWidth)
+    }
+    if root.Height.Unit == LengthUnit.Percent && PopupMeasuredHeight is {} measuredHeight {
+      YGNodeStyleAPI.YGNodeStyleSetHeight(yg, measuredHeight)
+    }
     if !root.IsPortal && (!laidOut || root != lastRoot
       || width != lastWidth || height != lastHeight || YGNodeAPI.YGNodeIsDirty(yg)) {
       let availableHeight = root.Kind == NodeKind.Entry && root.Height.Unit == LengthUnit.Unset
