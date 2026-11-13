@@ -46,26 +46,28 @@ public open class Blob : Style {
     FocusStyle?.FreezeStyle(owner, depth)
     DisabledStyle?.FreezeStyle(owner, depth)
     if HasAccessibility { Accessibility?.Freeze(owner) }
-    if this is Portal portal { portal.FocusScope?.Freeze(owner) }
-    if this is TextEntry entry { entry.InputOptions?.Freeze(owner) }
-    if this is TextEditor editor { editor.InputOptions?.Freeze(owner) }
-    if this is Shape shape { shape.Stroke?.Freeze(owner) }
-    let children IList[Blob]? = switch this {
-      case value is Container: value.FreezeChildren()
-      case value is Button: value.FreezeChildren()
-      case value is Row: value.FreezeChildren()
-      case value is Column: value.FreezeChildren()
-      case value is Portal: value.FreezeChildren()
-      case _: nil
+    var children IList[Blob]?
+    switch this {
+      case value is Container { children = value.FreezeChildren() }
+      case value is Row { children = value.FreezeChildren() }
+      case value is Column { children = value.FreezeChildren() }
+      case value is Button { children = value.FreezeChildren() }
+      case value is Portal {
+        value.FocusScope?.Freeze(owner)
+        children = value.FreezeChildren()
+      }
+      case value is Image {
+        value.Placeholder?.Freeze(true, depth + 1)
+        value.Fallback?.Freeze(true, depth + 1)
+      }
+      case value is TextEntry { value.InputOptions?.Freeze(owner) }
+      case value is TextEditor { value.InputOptions?.Freeze(owner) }
+      case value is Shape { value.Stroke?.Freeze(owner) }
     }
     if descendants {
       if let children = children {
         for child in children { child.Freeze(true, depth + 1) }
       }
-    }
-    if this is Image image {
-      image.Placeholder?.Freeze(true, depth + 1)
-      image.Fallback?.Freeze(true, depth + 1)
     }
   }
 

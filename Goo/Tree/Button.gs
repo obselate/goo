@@ -29,7 +29,7 @@ public class Button : Blob {
     }
     set {
       CheckMutable()
-      children = value.IsReadOnly ? List[Blob](value) : value
+      children = value.IsReadOnly ? OwnedChildren(this, value) : value
     }
   }
 

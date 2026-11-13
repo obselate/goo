@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Collections
 import System.Collections.Generic
 import System.Collections.ObjectModel
 import System.Runtime.CompilerServices
@@ -35,7 +36,7 @@ public class Container : Blob {
     }
     set {
       CheckMutable()
-      children = value.IsReadOnly ? List[Blob](value) : value
+      children = value.IsReadOnly ? OwnedChildren(this, value) : value
     }
   }
   /// Gets the optional retained measure/arrange policy. Nil uses the normal flex layout; replace the immutable policy when its configuration changes.
@@ -95,31 +96,61 @@ internal sealed class FrozenChildren : Collection[Blob] {
   }
 }
 
-internal sealed class OwnedChildren : Collection[Blob] {
+internal sealed class OwnedChildren : IList[Blob] {
   private let owner Blob
+  private let values List[Blob]
   internal prop Owner Blob { get -> owner }
 
-  internal init(owner Blob) { this.owner = owner }
-
-  protected override func ClearItems() {
-    owner.CheckMutable()
-    base.ClearItems()
+  internal init(owner Blob) {
+    this.owner = owner
+    values = List[Blob]()
   }
 
-  protected override func InsertItem(index int32, item Blob) {
-    owner.CheckMutable()
-    base.InsertItem(index, item)
+  internal init(owner Blob, source IList[Blob]) {
+    this.owner = owner
+    values = List[Blob](source)
   }
 
-  protected override func RemoveItem(index int32) {
-    owner.CheckMutable()
-    base.RemoveItem(index)
+  public prop Count int32 { get -> values.Count }
+  public prop IsReadOnly bool { get -> owner.IsFrozen }
+  public prop this[index int32] Blob {
+    get -> values[index]
+    set {
+      owner.CheckMutable()
+      values[index] = value
+    }
   }
 
-  protected override func SetItem(index int32, item Blob) {
+  public func Add(item Blob) {
     owner.CheckMutable()
-    base.SetItem(index, item)
+    values.Add(item)
   }
+
+  public func Clear() {
+    owner.CheckMutable()
+    values.Clear()
+  }
+
+  public func Insert(index int32, item Blob) {
+    owner.CheckMutable()
+    values.Insert(index, item)
+  }
+
+  public func Remove(item Blob) bool {
+    owner.CheckMutable()
+    return values.Remove(item)
+  }
+
+  public func RemoveAt(index int32) {
+    owner.CheckMutable()
+    values.RemoveAt(index)
+  }
+
+  public func Contains(item Blob) bool -> values.Contains(item)
+  public func IndexOf(item Blob) int32 -> values.IndexOf(item)
+  public func CopyTo(array []Blob, index int32) { values.CopyTo(array, index) }
+  public func GetEnumerator() IEnumerator[Blob] -> values.GetEnumerator()
+  func IEnumerable.GetEnumerator() IEnumerator -> GetEnumerator()
 }
 
 internal class ContainerVectorViewports {
