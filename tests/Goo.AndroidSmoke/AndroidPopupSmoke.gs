@@ -48,7 +48,7 @@ internal shared class AndroidPopupSmoke {
                     "PASS tooltip_render scale placement nested_close menu_focus owner_pause teardown"
                 )
             }
-            Require(menu.Open(Anchor(8.0), 120, 80).Status == PopupStatus.Opened, "Native menu popup did not open.")
+            Require(menu.Open(Anchor(8.0), LayoutSize(120, 80)).Status == PopupStatus.Opened, "Native menu popup did not open.")
         }
         var tooltip PopupWindow? = nil
         var nested PopupWindow? = nil
@@ -71,7 +71,7 @@ internal shared class AndroidPopupSmoke {
                     )
                     stage = 1
                     Require(
-                        current.UpdatePlacement(Anchor(12.0), 160, 90) == WindowOperationResult.Accepted,
+                        current.UpdatePlacement(Anchor(12.0), LayoutSize(160, 90)) == WindowOperationResult.Accepted,
                         "Popup placement update failed."
                     )
                     return
@@ -99,7 +99,7 @@ internal shared class AndroidPopupSmoke {
                     Require(reason == PopupDismissReason.Programmatic, "Nested popup lost its dismissal reason.")
                     nestedClosed = true
                 }
-                Require(nested.Open(Anchor(4.0), 60, 40).Status == PopupStatus.Opened, "Nested tooltip did not open.")
+                Require(nested.Open(Anchor(4.0), LayoutSize(60, 40)).Status == PopupStatus.Opened, "Nested tooltip did not open.")
             }
         }
         view.Window.UiScale = 1.5f
@@ -114,7 +114,7 @@ internal shared class AndroidPopupSmoke {
             tooltip!!.Dispose()
             OpenMenu()
         }
-        Require(tooltip.Open(Anchor(8.0), 120, 80).Status == PopupStatus.Opened, "Tooltip did not open.")
+        Require(tooltip.Open(Anchor(8.0), LayoutSize(120, 80)).Status == PopupStatus.Opened, "Tooltip did not open.")
         return true
     }
 

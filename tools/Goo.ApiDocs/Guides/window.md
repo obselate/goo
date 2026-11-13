@@ -201,7 +201,7 @@ how to apply locale tags to language and direction styles.
 
 ```gsharp
 using let popup = PopupWindow(window, TooltipCell{}, PopupKind.Tooltip)
-let result = popup.Open(anchor.BorderBox, 240, 120, PortalPlacement.BottomStart)
+let result = popup.Open(anchor.BorderBox, maximum: LayoutSize(240, 120))
 ```
 
 A popup hosts a new Cell root outside its owner's bounds. Portal and widgets
@@ -209,12 +209,12 @@ Menu keep their current in-window behavior.
 
 | Operation | Contract |
 | --- | --- |
-| `Open` | Call once per instance on the owner thread. Use parent-content layout units. Size follows the owner's UiScale. |
+| `Open` | Call once per instance on the owner thread. Use parent-content layout units. `size: LayoutSize(width, height)` sets an explicit size. Nil measures the root once within `maximum` and the display work area. Size follows the owner's UiScale. |
 | `PopupKind.Menu` | Receives input. Wayland needs the native button, key or touch event being handled, or a parent popup grab. |
 | `PopupKind.Tooltip` | Receives no input. It needs no grab. |
 | `PopupResult.Status` | `Opened`, `Closed`, `Unsupported`, `RequiresUserAction`, `Busy` or `Failed`. |
 | `Metrics` | Actual logical and framebuffer sizes. Native display bounds can change placement and size. |
-| `UpdatePlacement` | Updates the parent-local anchor and size. Wayland anchors must stay inside the parent. Older compositors can return `Unsupported`. |
+| `UpdatePlacement` | Updates the parent-local anchor and size. Nil `size` measures the current root again with the same limits as `Open`. Wayland anchors must stay inside the parent. Older compositors can return `Unsupported`. |
 | `Dismissed` | Runs once after descendants and pending GPU work close. The owner hide/close, Escape, outside input or focus loss dismisses the chain. |
 | `Close`, `Dispose` | Request dismissal. The host retires pending GPU work before disposal. |
 

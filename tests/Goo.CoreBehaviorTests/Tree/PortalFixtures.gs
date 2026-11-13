@@ -4,6 +4,117 @@ import System
 import System.Numerics
 
 internal class PortalFixtures {
+  func DeclarativeModalFocusTrapContract() bool {
+    let cell = DeclarativePortalCell{ Options: FocusScopeOptions{ Modal: true } }
+    let window = Window{ Root: cell, Size: LayoutSize(200, 100) }
+    window.UpdateTree()
+    if !cell.Trigger.Focus() { return false }
+    cell.Open = true
+    cell.Rebuild()
+    window.UpdateTree()
+    if cell.First.AttachedNode()?.Focused != true || cell.Trigger.Focus() { return false }
+    window.InputForTest.QueueKeyPress(Key.Tab, KeyModifiers.None)
+    window.DrainQueuedInputForTest()
+    if cell.Initial.AttachedNode()?.Focused != true { return false }
+    window.InputForTest.QueueKeyPress(Key.Tab, KeyModifiers.None)
+    window.DrainQueuedInputForTest()
+    return cell.First.AttachedNode()?.Focused == true
+  }
+
+  func DeclarativePortalRestoreFocusContract() bool {
+    for restore in []bool{ false, true } {
+      let cell = DeclarativePortalCell{ Options: FocusScopeOptions{ Modal: true, RestoreFocus: restore } }
+      let window = Window{ Root: cell, Size: LayoutSize(200, 100) }
+      window.UpdateTree()
+      if !cell.Trigger.Focus() { return false }
+      cell.Open = true
+      cell.Rebuild()
+      window.UpdateTree()
+      cell.Options = FocusScopeOptions{ RestoreFocus: restore }
+      cell.Rebuild()
+      window.UpdateTree()
+      cell.Open = false
+      cell.Rebuild()
+      window.UpdateTree()
+      if cell.Trigger.AttachedNode()?.Focused != restore { return false }
+    }
+    return true
+  }
+
+  func DeclarativePortalInitialFocusContract() bool {
+    let cell = DeclarativePortalCell{}
+    cell.Options = FocusScopeOptions{ Modal: true, InitialFocus: cell.Initial }
+    let window = Window{ Root: cell, Size: LayoutSize(200, 100) }
+    window.UpdateTree()
+    cell.Open = true
+    cell.Rebuild()
+    window.UpdateTree()
+    return cell.Initial.AttachedNode()?.Focused == true && cell.First.AttachedNode()?.Focused == false
+  }
+
+  func DeclarativePortalDismissalContract() bool {
+    let cell = DeclarativePortalCell{ Options: FocusScopeOptions{ Modal: true }, Dismissable: true }
+    let window = Window{ Root: cell, Size: LayoutSize(200, 100) }
+    window.UpdateTree()
+    cell.Open = true
+    cell.Rebuild()
+    window.UpdateTree()
+    guard let tree = window.Tree, let scrim = Portals.Overlay(tree)?.Children[0] else { return false }
+    if scrim.Rect.W != 200 || scrim.Rect.H != 100 || scrim.BackgroundColor != Color.Transparent { return false }
+    if !cell.Initial.Focus() { return false }
+    window.QueueCompositionForTest("pending", 0, 1)
+    window.DrainTextInputForTest()
+    window.InputForTest.QueueKeyPress(Key.Escape, KeyModifiers.None)
+    window.DrainQueuedInputForTest()
+    if cell.Dismissals != 0 { return false }
+    window.InputForTest.QueueKeyPress(Key.Escape, KeyModifiers.None)
+    window.DrainQueuedInputForTest()
+    if cell.Dismissals != 1 || cell.Reason != PopupDismissReason.Escape { return false }
+    window.InputForTest.QueuePointerPress(180.0F, 80.0F)
+    window.InputForTest.QueuePointerRelease(180.0F, 80.0F)
+    window.DrainQueuedInputForTest()
+    return cell.Dismissals == 2 && cell.Reason == PopupDismissReason.OutsideInteraction && cell.Clicks == 0
+  }
+
+  func NonmodalPortalDismissesEscapeWithOutsideFocusContract() bool {
+    let cell = DeclarativePortalCell{ Dismissable: true }
+    let window = Window{ Root: cell, Size: LayoutSize(200, 100) }
+    window.UpdateTree()
+    cell.Open = true
+    cell.Rebuild()
+    window.UpdateTree()
+    if !cell.Trigger.Focus() || cell.Trigger.AttachedNode()?.Focused != true { return false }
+    window.InputForTest.QueueKeyPress(Key.Escape, KeyModifiers.None)
+    window.DrainQueuedInputForTest()
+    if cell.Dismissals != 1 || cell.Reason != PopupDismissReason.Escape || !cell.Trigger.Focus() { return false }
+    cell.Dismissable = false
+    cell.Rebuild()
+    window.UpdateTree()
+    guard let root = window.Tree else { return false }
+    return cell.Trigger.AttachedNode()?.Focused == true && FocusScopes.TraversalRoot(root) == root
+  }
+
+  func PopupMeasuredPlacementContract() bool {
+    let owner = Window{ Size: LayoutSize(200, 100), UiScale: 1.5F }
+    owner.UpdateTree()
+    using let popup = PopupWindow(owner, PopupMeasurementCell{})
+    let measured = popup.ResolveSizeForTest(nil, LayoutSize(100, 60))
+    if measured != LayoutSize(100, 60) { throw InvalidOperationException("bounded popup size: ${measured}") }
+    let natural = popup.ResolveSizeForTest(nil, nil)
+    if Math.Abs(natural.Width * 1.5 - Math.Round(120.5 * 1.5)) > 0.0001
+      || Math.Abs(natural.Height * 1.5 - Math.Round(80.25 * 1.5)) > 0.0001 { return false }
+    let explicitSize = popup.ResolveSizeForTest(LayoutSize(250.5, 160.25), LayoutSize(100, 60))
+    if explicitSize != LayoutSize(250.5, 160.25) { return false }
+    owner.PopupAvailableSize = () -> LayoutSize(80, 50)
+    if popup.ResolveSizeForTest(nil, LayoutSize(100, 60)) != LayoutSize(80, 50) { return false }
+    for size in []LayoutSize{ LayoutSize(0, 1), LayoutSize(Double.NaN, 1), LayoutSize(1, Double.PositiveInfinity) } {
+      var rejected = false
+      try { PopupWindow.ValidatePlacement(ElementRect{}, size, nil, PortalPlacement.BottomStart) }
+      catch (ArgumentOutOfRangeException) { rejected = true }
+      if !rejected { return false }
+    }
+    return true
+  }
   func UiScaleLayoutInputAndAnchoredPortalContract() bool {
     let cell = PortalPlacementCell{}
     let window = Window{Root: cell, Size: LayoutSize(float64(300) / 1.25, float64(200) / 1.25),  UiScale: 1.25F}
@@ -204,7 +315,6 @@ internal class PortalFixtures {
     guard let retained = target.Fiber as PortalRetainedCell ? else { return false }
     guard let semantic = findPortalAccessibility(adapter.Tree?.Root, "portal target") else { return false }
     let semanticId = semantic.Id
-    using let focusScope = cell.ScopeHandle.BeginFocusScope()
     if !cell.TargetHandle.Focus() || !target.Focused { return false }
     window.QueueAccessibilityKeyForTest(Key.A)
     window.DrainQueuedInputForTest()
@@ -416,7 +526,6 @@ internal class PortalFixtures {
     window.UpdateTree()
     guard let root = window.Tree, let entry = cell.Editor.AttachedNode(),
       let portal = entry.Parent, let retained = entry.Fiber as PortalClippedEditorCell ? else { return false }
-    using let focusScope = cell.Popup.BeginFocusScope()
     if !cell.Editor.Focus() { return false }
     window.QueueCompositionForTest("pending", 1, 2)
     window.DrainTextInputForTest()
@@ -555,6 +664,45 @@ internal class PortalFixtures {
   }
 }
 
+public sealed partial class PopupWindow {
+  internal func ResolveSizeForTest(size LayoutSize?, maximum LayoutSize?) LayoutSize -> resolveSize(size, maximum)
+}
+
+internal class PopupMeasurementCell : Cell {
+  override func Build() Blob -> Container{ Width: 120.5, Height: 80.25 }
+}
+
+internal class DeclarativePortalCell : Cell {
+  internal let Trigger ElementHandle = ElementHandle()
+  internal let First ElementHandle = ElementHandle()
+  internal let Initial ElementHandle = ElementHandle()
+  internal var Options FocusScopeOptions?
+  internal var Open bool
+  internal var Dismissable bool
+  internal var Dismissals int32
+  internal var Clicks int32
+  internal var Reason PopupDismissReason
+
+  override func Build() Blob {
+    let root = Container{ Width: Percent(100), Height: Percent(100),
+      Button{ Handle: Trigger, Width: Percent(100), Height: Percent(100), OnClick: () -> { Clicks++ } } }
+    if Open {
+      root.Add(Portal{ Key: "dialog", Width: 100, Height: 60,
+        FocusScope: Options, AccessibilityRole: AccessibilityRole.Dialog, AccessibilityName: "dialog",
+        OnDismiss: Dismissable ? Dismiss : nil,
+        Button{ Handle: First, AutoFocus: true, Height: 20 },
+        TextEntry{ Handle: Initial, Height: 20 },
+      })
+    }
+    return root
+  }
+
+  private func Dismiss(reason PopupDismissReason) {
+    Dismissals++
+    Reason = reason
+  }
+}
+
 internal class FocusScopeCloseCell : Cell {
   internal let Trigger ElementHandle = ElementHandle{}
   internal let Outer ElementHandle = ElementHandle{}
@@ -679,14 +827,12 @@ internal class PortalRetainedCell : Cell[PortalRetainedInput], IDisposable {
 }
 
 internal class PortalLifecycleCell : Cell {
-  internal let ScopeHandle ElementHandle = ElementHandle{}
   internal let TargetHandle ElementHandle = ElementHandle{}
   internal var Reversed bool
   internal var ShowPortal bool = true
 
   override func Build() Blob {
     let root = Container{
-      Handle: ScopeHandle,
       Width: 200,
       Height: 80,
       Focusable: true,
@@ -698,6 +844,7 @@ internal class PortalLifecycleCell : Cell {
       return root
     }
     let portal = Portal{Key: "portal", ZIndex: 5, Width: 40, Height: 40, Transform: PanelTransform{ TranslateX: 40 }, TransformOriginX: Percent(0), TransformOriginY: Percent(0),
+      FocusScope: FocusScopeOptions(),
       Cell.Mount[PortalRetainedInput, PortalRetainedCell]("retained",
         PortalRetainedInput(TargetHandle)),
     }
@@ -827,7 +974,7 @@ internal class PortalClippedAnchorCell : Cell {
             Left: 10, Top: 60, Width: 30, Height: 30 },
           Portal{ Handle: Popup, Anchor: Anchor, HideWhenAnchorClipped: HideWhenClipped,
             AnchorRect: ElementRect{ X: 0, Y: 5, Width: 30, Height: 10 },
-            Width: 120, Height: 30, Focusable: true,
+            Width: 120, Height: 30, FocusScope: FocusScopeOptions(),
             Cell.Mount[PortalRetainedInput, PortalClippedEditorCell]("editor", PortalRetainedInput(Editor)),
           },
         },

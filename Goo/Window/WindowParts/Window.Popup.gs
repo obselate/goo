@@ -9,6 +9,17 @@ public partial class Window {
   private var popupPlacement PortalPlacement
   private var pendingPopupFocus WeakReference?
   internal var EmbeddedPopupFactory Func[Window, PopupKind, Action[PopupDismissReason], EmbeddedPopupSurface]?
+  internal var PopupAvailableSize Func[LayoutSize]?
+
+  internal prop PopupMaximum LayoutSize {
+    get {
+      if let available = PopupAvailableSize { return available() }
+      let display = host?.GetCurrentDisplay()
+      let area = display?.UsableBounds ?? display?.Bounds
+      return LayoutSize((area?.Width ?? float64(NativeWidth)) / float64(UiScale),
+        (area?.Height ?? float64(NativeHeight)) / float64(UiScale))
+    }
+  }
   internal prop NativePopupPlacement PortalPlacement { get -> popupPlacement }
 
   internal prop PopupOwnerOpen bool { get -> IsOpen && !NativeOwnerClosing }
@@ -27,12 +38,12 @@ public partial class Window {
 
   internal func ConfigurePopup(value PopupWindow) { popup = value }
 
-  internal func SetPopupPlacement(anchor ElementRect, contentWidth int32, contentHeight int32,
+  internal func SetPopupPlacement(anchor ElementRect, size LayoutSize,
     placement PortalPlacement) {
     popupAnchor = anchor
     popupPlacement = resolvePopupPlacement(placement)
-    width = scaledSize(contentWidth)
-    height = scaledSize(contentHeight)
+    width = Math.Max(1, scaledSize(size.Width))
+    height = Math.Max(1, scaledSize(size.Height))
     x = 0
     y = 0
     positionSet = true
@@ -53,17 +64,17 @@ public partial class Window {
     observeVisibility()
   }
 
-  internal func UpdateNativePopup(anchor ElementRect, contentWidth int32, contentHeight int32,
+  internal func UpdateNativePopup(anchor ElementRect, size LayoutSize,
     placement PortalPlacement, surface EmbeddedPopupSurface? = nil) WindowOperationResult {
     popupAnchor = anchor
     popupPlacement = resolvePopupPlacement(placement)
     if let embedded = surface {
-      width = scaledSize(contentWidth)
-      height = scaledSize(contentHeight)
+      width = Math.Max(1, scaledSize(size.Width))
+      height = Math.Max(1, scaledSize(size.Height))
       return embedded.UpdatePlacement(anchor, width, height, popupPlacement)
     }
     guard let native = host as SdlHost? else { return WindowOperationResult.Closed }
-    return native.UpdatePopup(anchor, scaledSize(contentWidth), scaledSize(contentHeight), popupPlacement, UiScale)
+    return native.UpdatePopup(anchor, Math.Max(1, scaledSize(size.Width)), Math.Max(1, scaledSize(size.Height)), popupPlacement, UiScale)
   }
 
   private func resolvePopupPlacement(placement PortalPlacement) PortalPlacement {

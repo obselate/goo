@@ -17,6 +17,15 @@ internal class AndroidPopupSurface(
     private var view GooView?
     private var disposed bool
 
+    shared {
+        internal func AvailableSize(owner GooView) LayoutSize {
+            using let frame = Android.Graphics.Rect()
+            owner.GetWindowVisibleDisplayFrame(frame)
+            let scale = float64(owner.Density * owner.Window.UiScale)
+            return LayoutSize(float64(frame.Width()) / scale, float64(frame.Height()) / scale)
+        }
+    }
+
     func Open(anchor ElementRect, width int32, height int32, placement PortalPlacement) PopupResult {
         if !object.ReferenceEquals(GooView.TryGetNativeOwner(owner.Window), owner) {
             return PopupResult(PopupStatus.Unsupported)

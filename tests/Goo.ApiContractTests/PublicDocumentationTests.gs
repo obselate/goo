@@ -595,8 +595,8 @@ class PublicDocumentationTests {
             "M:Goo.Portal.Add(Goo.Blob)",
             "M:Goo.PopupWindow.#ctor(Goo.Window,Goo.Cell,Goo.PopupKind)",
             "M:Goo.PopupWindow.#ctor(Goo.PopupWindow,Goo.Cell,Goo.PopupKind)",
-            "M:Goo.PopupWindow.Open(Goo.ElementRect,System.Int32,System.Int32,Goo.PortalPlacement)",
-            "M:Goo.PopupWindow.UpdatePlacement(Goo.ElementRect,System.Int32,System.Int32,Goo.PortalPlacement)",
+            "M:Goo.PopupWindow.Open(Goo.ElementRect,System.Nullable{Goo.LayoutSize},System.Nullable{Goo.LayoutSize},Goo.PortalPlacement)",
+            "M:Goo.PopupWindow.UpdatePlacement(Goo.ElementRect,System.Nullable{Goo.LayoutSize},System.Nullable{Goo.LayoutSize},Goo.PortalPlacement)",
             "M:Goo.PopupWindow.Close",
             "M:Goo.PopupWindow.Dispose",
             "M:Goo.KeyEvent.PreventDefault",
@@ -2214,16 +2214,16 @@ class PublicDocumentationTests {
                 false
             ),
             [
-                "M:Goo.PopupWindow.Open(Goo.ElementRect,System.Int32,System.Int32,Goo.PortalPlacement)"
+                "M:Goo.PopupWindow.Open(Goo.ElementRect,System.Nullable{Goo.LayoutSize},System.Nullable{Goo.LayoutSize},Goo.PortalPlacement)"
             ] = DocumentationShape(
-                []string{"anchor", "width", "height", "placement"},
+                []string{"anchor", "size", "maximum", "placement"},
                 System.Array.Empty[string](),
                 true
             ),
             [
-                "M:Goo.PopupWindow.UpdatePlacement(Goo.ElementRect,System.Int32,System.Int32,Goo.PortalPlacement)"
+                "M:Goo.PopupWindow.UpdatePlacement(Goo.ElementRect,System.Nullable{Goo.LayoutSize},System.Nullable{Goo.LayoutSize},Goo.PortalPlacement)"
             ] = DocumentationShape(
-                []string{"anchor", "width", "height", "placement"},
+                []string{"anchor", "size", "maximum", "placement"},
                 System.Array.Empty[string](),
                 true
             )

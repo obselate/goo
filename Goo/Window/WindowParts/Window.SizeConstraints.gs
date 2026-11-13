@@ -77,20 +77,29 @@ public partial class Window {
     if SizeToContent == SizeToContent.None { return }
     if LayerShell != nil { throw NotSupportedException("Layer-shell sizes are configured by the compositor") }
     guard let native = host else { return }
-    UpdateTree()
-    guard let tree = node else { return }
-    guard let yoga = tree.Yoga else { return }
-    let measureWidth = (SizeToContent == SizeToContent.Width || SizeToContent == SizeToContent.Both)
-      && tree.Width.Unit != LengthUnit.Percent
-    let measureHeight = (SizeToContent == SizeToContent.Height || SizeToContent == SizeToContent.Both)
-      && tree.Height.Unit != LengthUnit.Percent
-    if !measureWidth && !measureHeight { return }
     let display = native.GetCurrentDisplay()
     let area = display?.UsableBounds ?? display?.Bounds
-    let maximumWidth = if maxWidth != 0.0 { maxWidth } else { Double.PositiveInfinity }
-    let maximumHeight = if maxHeight != 0.0 { maxHeight } else { Double.PositiveInfinity }
-    let availableWidth = Math.Min(maximumWidth, (area?.Width ?? Double.PositiveInfinity) / float64(UiScale))
-    let availableHeight = Math.Min(maximumHeight, (area?.Height ?? Double.PositiveInfinity) / float64(UiScale))
+    let maximum = LayoutSize(
+      Math.Min(if maxWidth != 0.0 { maxWidth } else { Double.PositiveInfinity },
+        (area?.Width ?? Double.PositiveInfinity) / float64(UiScale)),
+      Math.Min(if maxHeight != 0.0 { maxHeight } else { Double.PositiveInfinity },
+        (area?.Height ?? Double.PositiveInfinity) / float64(UiScale)))
+    Size = MeasureContentSize(maximum,
+      SizeToContent == SizeToContent.Width || SizeToContent == SizeToContent.Both,
+      SizeToContent == SizeToContent.Height || SizeToContent == SizeToContent.Both)
+    native.RefreshMetricsIfChanged()
+    consumeNativeMetrics()
+  }
+
+  internal func MeasureContentSize(maximum LayoutSize, widthAxis bool = true, heightAxis bool = true,
+    percentageSize LayoutSize? = nil) LayoutSize {
+    UpdateTree()
+    guard let tree = node, let yoga = tree.Yoga else { return Size }
+    let measureWidth = widthAxis && tree.Width.Unit != LengthUnit.Percent
+    let measureHeight = heightAxis && tree.Height.Unit != LengthUnit.Percent
+    if !measureWidth && !measureHeight { return percentageSize ?? Size }
+    let availableWidth = maximum.Width
+    let availableHeight = maximum.Height
     let marginWidth = float64(YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Left)
       + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Right))
     let marginHeight = float64(YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Top)
@@ -103,24 +112,22 @@ public partial class Window {
       YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga, float32(maxContentWidth))
       YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga, float32(maxContentHeight))
       YGNodeAPI.YGNodeCalculateLayout(yoga,
-        if measureWidth { Single.NaN } else { LayoutWidth },
-        if measureHeight { Single.NaN } else { LayoutHeight }, yogaDirection(tree.Direction))
+        if measureWidth { Single.NaN } else { float32(percentageSize?.Width ?? float64(LayoutWidth)) },
+        if measureHeight { Single.NaN } else { float32(percentageSize?.Height ?? float64(LayoutHeight)) }, yogaDirection(tree.Direction))
       let measuredWidth = float64(YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga)
         + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Left)
         + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Right))
       let measuredHeight = float64(YGNodeLayoutAPI.YGNodeLayoutGetHeight(yoga)
         + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Top)
         + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Bottom))
-      let contentWidth = if measureWidth { Math.Max(minWidth, Math.Min(measuredWidth, availableWidth)) } else { Size.Width }
-      let contentHeight = if measureHeight { Math.Max(minHeight, Math.Min(measuredHeight, availableHeight)) } else { Size.Height }
-      Size = LayoutSize(contentWidth, contentHeight)
+      let contentWidth = if measureWidth { Math.Max(minWidth, Math.Min(measuredWidth, availableWidth)) } else { percentageSize?.Width ?? Size.Width }
+      let contentHeight = if measureHeight { Math.Max(minHeight, Math.Min(measuredHeight, availableHeight)) } else { percentageSize?.Height ?? Size.Height }
+      return LayoutSize(contentWidth, contentHeight)
     } finally {
       markYogaStyle(tree, StyleField.MaxWidth)
       markYogaStyle(tree, StyleField.MaxHeight)
       applyMinMax(yoga, tree)
       layout.laidOut = false
     }
-    native.RefreshMetricsIfChanged()
-    consumeNativeMetrics()
   }
 }
