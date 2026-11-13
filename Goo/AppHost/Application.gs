@@ -181,7 +181,7 @@ public shared class Application {
     }
 
     /// Occurs once per application activation on the process UI thread, not once per open window.
-    /// Subscribe before initializing activation. Handlers own validation and window selection.
+    /// Subscribe before <see cref="AcquireSingleInstance"/> or <see cref="Run"/>. Handlers own validation and window selection.
     /// The queue retains 1024 requests, with 4096 arguments or documents per request.
     /// Text is limited to 64 KiB per UTF-8 string and 1 MiB per request.
     /// Native requests outside these limits, or received before initialization or after close, are dropped.

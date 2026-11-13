@@ -52,9 +52,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       let driver = SDL.GetCurrentVideoDriverS()
       occlusionSupported = driver == "wayland" || driver == "cocoa" || driver == "x11"
       try {
-        if !SdlRuntime.AcquireVulkan() {
-          throw GraphicsUnavailableException("SDL_Vulkan_LoadLibrary failed: " + SDL.GetErrorS())
-        }
+        SdlRuntime.AcquireVulkan()
         vulkanOwned = true
         if let parent = popupParent {
           CreatePopup(parent, width, height, popupKind, popupTimestamp, popupAnchor, popupPlacement, popupScale)

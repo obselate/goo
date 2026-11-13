@@ -47,7 +47,7 @@ internal class Program {
                     window.Open()
                     throw InvalidOperationException("A missing Vulkan driver opened a window")
                 } catch (error GraphicsUnavailableException) {
-                    Require(!window.IsOpen && error.Message.Length != 0, "Graphics failure did not close the native window")
+                    Require(!window.IsOpen && error.Message.Length != 0 && error.InnerException != nil, "Graphics failure did not close the native window or retain its cause")
                 }
                 return 0
             }
