@@ -56,14 +56,14 @@ internal shared class AndroidInputSmoke {
             using let replacement = JavaString("x\ny")
             Require(entry.CommitText(replacement, 1), "Sanitized entry commit failed.")
         }
-        AssertEditor(input, "axycd", 3, 3, -1, -1)
+        AssertEditor(input, "ax ycd", 4, 4, -1, -1)
         SetText(input, entry, "abcd")
         Require(entry.SetSelection(1, 2), "Entry composing selection failed.")
         {
             using let replacement = JavaString("x\ny")
             Require(entry.SetComposingText(replacement, 1), "Sanitized preedit failed.")
         }
-        AssertEditor(input, "axycd", 3, 3, 1, 3)
+        AssertEditor(input, "ax ycd", 4, 4, 1, 4)
         Require(entry.FinishComposingText(), "Preedit finish failed.")
         SetText(input, entry, "abcdef")
         Require(entry.SetSelection(5, 5), "Composing-region cursor setup failed.")
