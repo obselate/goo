@@ -136,6 +136,58 @@ internal class TextInputPrimitivesFixtures {
     return true
   }
 
+  func TextChangesSnapCaretToGraphemeBoundaries() bool {
+    for kind in []TextCommandKind{ TextCommandKind.Insert, TextCommandKind.Paste,
+      TextCommandKind.CommitComposition } {
+      using let controller = TextEditorController(TextDocument("x"))
+      controller.Execute(TextCommand{ Kind: TextCommandKind.SelectAll })
+      controller.Execute(TextCommand{ Kind: TextCommandKind.Insert, Text: "\u0301" })
+      controller.Execute(TextCommand{ Kind: TextCommandKind.MoveDocumentStart })
+      if kind == TextCommandKind.CommitComposition {
+        controller.UpdateComposition("a", 1, 0)
+        controller.CommitComposition()
+      } else {
+        controller.Execute(TextCommand{ Kind: kind, Text: "a" })
+      }
+      if controller.Document.GetText() != "a\u0301" || controller.Selection.Anchor.Offset != 2
+        || controller.Selection.Active.Offset != 2 { return false }
+      controller.Execute(TextCommand{ Kind: TextCommandKind.MoveLeft })
+      if controller.Selection.Active.Offset != 0 { return false }
+      controller.Execute(TextCommand{ Kind: TextCommandKind.MoveRight })
+      if controller.Selection.Active.Offset != 2 { return false }
+    }
+    return true
+  }
+
+  func RichReplacementSnapsCaretToGraphemeBoundaries() bool {
+    using let controller = TextEditorController(TextDocument("\u0301"))
+    using let layer = TextPresentationLayer(controller.Document)
+    controller.ReplaceSelection(layer, "a", Array.Empty[TextStyleSpan]())
+    if controller.Document.GetText() != "a\u0301" || controller.Selection.Anchor.Offset != 2
+      || controller.Selection.Active.Offset != 2 { return false }
+    controller.Execute(TextCommand{ Kind: TextCommandKind.MoveLeft })
+    if controller.Selection.Active.Offset != 0 { return false }
+    controller.Execute(TextCommand{ Kind: TextCommandKind.MoveRight })
+    return controller.Selection.Active.Offset == 2
+  }
+
+  func DeletionSnapsCaretAfterJoiningCrLf() bool {
+    for kind in []TextCommandKind{ TextCommandKind.DeleteBackward, TextCommandKind.DeleteForward,
+      TextCommandKind.DeleteWordBackward, TextCommandKind.DeleteWordForward, TextCommandKind.Cut } {
+      using let controller = TextEditorController(TextDocument("a\rX\nb"))
+      controller.Selection = TextSelection(
+        TextPosition(2, TextAffinity.Upstream), TextPosition(3, TextAffinity.Downstream))
+      controller.Execute(TextCommand{ Kind: kind })
+      if controller.Document.GetText() != "a\r\nb" || controller.Selection.Anchor.Offset != 3
+        || controller.Selection.Active.Offset != 3 { return false }
+      controller.Execute(TextCommand{ Kind: TextCommandKind.MoveLeft })
+      if controller.Selection.Active.Offset != 1 { return false }
+      controller.Execute(TextCommand{ Kind: TextCommandKind.MoveRight })
+      if controller.Selection.Active.Offset != 3 { return false }
+    }
+    return true
+  }
+
   func WordCommandsUseSelectionWordBoundaries() bool {
     for value in []string{ "foo_bar", "a\u0301_b", "\u0301_ab" } {
       let document = TextDocument(value + ", next")

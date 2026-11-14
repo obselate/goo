@@ -461,7 +461,7 @@ Releases document subscriptions held by this controller.
 
 ### `Execute(TextCommand)`
 
-Dispatches and performs a semantic text-editor command. MoveLeft and MoveRight use visual order while mounted and logical document order otherwise.
+Dispatches and performs a semantic text-editor command. MoveLeft and MoveRight use visual order while mounted and logical document order otherwise. Text edits snap the caret downstream to a grapheme boundary.
 
 - `command`: The command to dispatch.
 
@@ -473,7 +473,7 @@ Marks this controller focused.
 
 ### `ReplaceSelection(TextPresentationLayer,string,System.Collections.Generic.IReadOnlyList{TextStyleSpan})`
 
-Replaces the selection with source text and persistent fragment-relative styles as one undoable edit.
+Replaces the selection with source text and persistent fragment-relative styles as one undoable edit. Snaps the resulting caret downstream to a grapheme boundary.
 
 - `layer`: The persistent formatting layer bound to this controller's document.
 - `text`: The replacement source text.
