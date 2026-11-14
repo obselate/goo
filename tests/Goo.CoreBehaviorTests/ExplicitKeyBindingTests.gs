@@ -269,7 +269,7 @@ class ExplicitKeyBindingTests {
             if mode == 2 && !available { cast[Blob](Text{Content: "removed"}) }
             else { cast[Blob](Container{
                 Width: 100, Height: 40, Disabled: mode == 3 && !available,
-                OnPointerMove: (e PointerEvent) -> { if mode == 4 { e.ReleaseCapture() } },
+                OnPointerMove: (e PointerEvent) -> { if mode == 4 && e.WindowPosition.X >= 10 { e.ReleaseCapture() } },
                 OnPointerDrag: (e PointerDragEvent) -> events.Add(e)
             }) }
         )}
@@ -277,6 +277,7 @@ class ExplicitKeyBindingTests {
             window.UpdateTree()
             let input = window.PlatformInput
             input.PointerPress(0, PointerDevice.Mouse, 5, 5, PointerButton.Primary, KeyModifiers.None, 1)
+            input.PointerMove(0, PointerDevice.Mouse, 6, 5, KeyModifiers.None, 1)
             Assert.Single(events)
             Assert.Equal(GesturePhase.Started, events[0].Phase)
             Assert.Equal(GestureCancelReason.None, events[0].Reason)

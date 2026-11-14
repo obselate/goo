@@ -203,8 +203,8 @@ public open class Blob : Style {
     }
   }
   /// Gets the callback for a captured primary-pointer drag. Hover does not invoke it.
-  /// Touch drags wait for movement in PointerDragAxis. An enclosing scroller claims movement along its scroll axis first.
-  /// After a drag starts, the press does not produce OnClick.
+  /// Drags wait for movement in PointerDragAxis. An enclosing scroller claims touch movement along its scroll axis first.
+  /// Child clicks remain available until the drag starts. Starting captures the pointer and suppresses OnClick.
   public prop OnPointerDrag((PointerDragEvent) -> void)? {
     get -> declarationOnPointerDrag
     set {
@@ -213,7 +213,7 @@ public open class Blob : Style {
     }
   }
   /// Gets or sets the finite, non-negative Euclidean press-to-start distance in layout units, measured on PointerDragAxis.
-  /// Zero starts on press for mouse and pen, or on the first nonzero touch movement.
+  /// Zero starts on the first nonzero movement, not on press.
   /// @exception ArgumentOutOfRangeException The value is non-finite or negative.
   public prop PointerDragThreshold float64 {
     get -> declarationPointerDragThreshold
