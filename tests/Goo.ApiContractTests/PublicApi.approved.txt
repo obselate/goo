@@ -1103,6 +1103,11 @@ event|Goo.Window|PreviewKeyPressed|System.Func`3<Goo.Key,Goo.KeyModifiers,System
 event|Goo.Window|StateChanged|System.Action`1<Goo.WindowState>|instance|add:public,remove:public
 event|Goo.Window|TitlebarDoubleClicked|System.Action`1<Goo.WindowTitlebarEvent>|instance|add:public,remove:public
 event|Goo.Window|VisibilityChanged|System.Action`1<System.Boolean>|instance|add:public,remove:public
+field|Goo.AccessibilityAttachment|Content|Goo.Blob|instance|public|mutable
+field|Goo.AccessibilityAttachment|Invalid|System.Nullable`1<System.Boolean>|instance|public|mutable
+field|Goo.AccessibilityAttachment|Relationships|Goo.AccessibilityRelationships?|instance|public|mutable
+field|Goo.AccessibilityAttachment|Required|System.Nullable`1<System.Boolean>|instance|public|mutable
+field|Goo.AccessibilityAttachment|Target|Goo.ElementHandle?|instance|public|mutable
 function|Goo|Each|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob[]
 function|Goo|Em|public|generic:|(value:System.Double)->Goo.Length
 function|Goo|Percent|public|generic:|(value:System.Double)->Goo.Length
@@ -1115,6 +1120,15 @@ method|Goo.AccessibilityActionRequest|SetSelection|static|public|generic:|(start
 method|Goo.AccessibilityActionRequest|SetSelection|static|public|generic:|(start:System.Int32,length:System.Int32,caret:System.Int32)->Goo.AccessibilityActionRequest
 method|Goo.AccessibilityActionRequest|SetValue|static|public|generic:|(value:System.String)->Goo.AccessibilityActionRequest
 method|Goo.AccessibilityAdapter|Update|abstract|public|generic:|(tree:Goo.AccessibilityTree)->System.Void
+method|Goo.AccessibilityAttachment|Build|instance|public|generic:|()->Goo.Blob
+method|Goo.AccessibilityAttachment|Deconstruct|instance|public|generic:|(out Content:Goo.Blob&,out Target:Goo.ElementHandle?&,out Relationships:Goo.AccessibilityRelationships?&,out Required:System.Nullable`1<System.Boolean>&,out Invalid:System.Nullable`1<System.Boolean>&)->System.Void
+method|Goo.AccessibilityAttachment|Equals|instance|public|generic:|(other:Goo.AccessibilityAttachment)->System.Boolean
+method|Goo.AccessibilityAttachment|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
+method|Goo.AccessibilityAttachment|GetHashCode|virtual|public|generic:|()->System.Int32
+method|Goo.AccessibilityAttachment|ToString|virtual|public|generic:|()->System.String
+method|Goo.AccessibilityAttachment|op_Equality|static|public|generic:|(left:Goo.AccessibilityAttachment,right:Goo.AccessibilityAttachment)->System.Boolean
+method|Goo.AccessibilityAttachment|op_Implicit|static|public|generic:|(value:Goo.AccessibilityAttachment)->Goo.Blob
+method|Goo.AccessibilityAttachment|op_Inequality|static|public|generic:|(left:Goo.AccessibilityAttachment,right:Goo.AccessibilityAttachment)->System.Boolean
 method|Goo.AccessibilityId|Deconstruct|instance|public|generic:|(out Value:System.Int64&)->System.Void
 method|Goo.AccessibilityId|Equals|instance|public|generic:|(other:Goo.AccessibilityId)->System.Boolean
 method|Goo.AccessibilityId|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
@@ -1939,7 +1953,6 @@ method|Goo.Window|Attach|instance|public|generic:|(externalHost:Goo.EmbeddedWind
 method|Goo.Window|CancelFileDialog|instance|public|generic:|()->System.Boolean
 method|Goo.Window|CapturePlacement|instance|public|generic:|()->Goo.WindowPlacementResult
 method|Goo.Window|CreateOffscreenSession|instance|public|generic:|()->Goo.OffscreenRenderSessionResult
-method|Goo.Window|DragRegion|static|public|generic:|(region:Goo.Container)->Goo.Container
 method|Goo.Window|Every|instance|public|generic:|(intervalMs:System.Double,action:System.Action)->Goo.WindowTimer
 method|Goo.Window|GetCurrentDisplay|instance|public|generic:|()->Goo.WindowDisplay?
 method|Goo.Window|GetDisplays|instance|public|generic:|()->System.Collections.Generic.IReadOnlyList`1<Goo.WindowDisplay>
@@ -1966,6 +1979,7 @@ method|Goo.Window|SetNativeDataDropFormats|instance|public|generic:|(formats:Sys
 method|Goo.Window|SetTopmost|instance|public|generic:|(value:System.Boolean)->Goo.WindowOperationResult
 method|Goo.Window|ShowFileDialogAsync|instance|public|generic:|(kind:Goo.FileDialogKind,options:Goo.FileDialogOptions?=null)->System.Threading.Tasks.Task`1<Goo.FileDialogResult>
 method|Goo.Window|Show|instance|public|generic:|(activate:System.Boolean=true)->Goo.WindowOperationResult
+method|Goo.Window|WithDragRegion|static|public|generic:|(content:Goo.Blob)->Goo.Blob
 property|Goo.AccessibilityActionRequest|Action|Goo.AccessibilityAction|instance|get:public|index:()
 property|Goo.AccessibilityActionRequest|ScrollX|System.Double|instance|get:public|index:()
 property|Goo.AccessibilityActionRequest|ScrollY|System.Double|instance|get:public|index:()
@@ -3072,6 +3086,7 @@ property|Goo.Window|Y|System.Int32|instance|get:public,set:public|index:()
 type|Goo.AccessibilityActionRequest|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.AccessibilityAction|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.AccessibilityAdapter|interface|public|base:-|interfaces:|generic:
+type|Goo.AccessibilityAttachment|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.AccessibilityAttachment>|generic:
 type|Goo.AccessibilityChecked|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.AccessibilityId|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.AccessibilityId>|generic:
 type|Goo.AccessibilityLive|enum|public|base:System.Enum|interfaces:|generic:
