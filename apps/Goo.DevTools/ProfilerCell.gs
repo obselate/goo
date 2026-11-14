@@ -864,10 +864,9 @@ internal partial class ProfilerCell : Cell[Profiler] {
                         Density: Density.Compact,
                         Height: Length.Auto,
                         AccessibilityName: tab,
-                        CreateRoot: (input DataGridInput, root Container) -> {
+                        ConfigureRoot: (input DataGridInput, root Container) -> {
                             root.FlexGrow = 1
                             root.FlexBasis = 0
-                            return root
                         },
                     }
                 ),

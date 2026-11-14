@@ -396,11 +396,10 @@ class DevToolsCell : Cell {
                         },
                     }
                 },
-                CreateRow: (input TreeViewInput, row TreeViewRow, root Container) -> {
+                ConfigureRow: (input TreeViewInput, row TreeViewRow, root Container) -> {
                     if !row.Selected && row.Node.Id == session.HoveredNodeId {
                         root.BackgroundColor = theme.HoverColor
                     }
-                    return root
                 },
             }
         )
