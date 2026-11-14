@@ -72,6 +72,7 @@ func Check(input[]uint8, target string, current string) {
                     _ ArgumentOutOfRangeException
                 ) { }
             }
+            case "text" { TextFuzz.Run(input) }
             case _ {
                 throw ArgumentException("Unknown managed input target")
             }
