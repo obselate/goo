@@ -23,6 +23,8 @@ public data struct AccessibilityAttachment {
 }
 
 /// Creates a transparent retained accessibility attachment.
+/// @param value The attachment declaration.
+/// @returns A transparent declaration that applies the attachment at each mount.
 public func operator implicit(value AccessibilityAttachment) Blob -> value.Build()
 
 internal class AccessibilityAttachmentElement : CellElement {
@@ -45,7 +47,7 @@ internal class AccessibilityAttachmentElement : CellElement {
   }
 }
 
-internal sealed class AccessibilityAttachmentCell : Goo.Cell, IDisposable {
+internal sealed class AccessibilityAttachmentCell : Cell, IDisposable {
   internal var Declaration AccessibilityAttachment
   internal var TargetNode Node?
   internal var Queued bool
@@ -86,6 +88,8 @@ internal sealed class AccessibilityAttachmentCell : Goo.Cell, IDisposable {
   }
 
   public func Dispose() {
+    registry?.Pending.Remove(this)
+    Queued = false
     handle?.AccessibilityAttachments?.Remove(this)
     handle = nil
     if let value = registry { AccessibilityMetadata.MoveAttachment(this, nil, value) }
@@ -127,6 +131,7 @@ internal class AccessibilityAttachmentRegistry {
   }
 }
 
+/// Hosts a Goo tree in a native window.
 public partial class Window {
   internal var SemanticAttachments AccessibilityAttachmentRegistry?
 }

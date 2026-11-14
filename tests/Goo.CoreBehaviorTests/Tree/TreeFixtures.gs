@@ -254,7 +254,7 @@ internal class TreeFixtures {
     var list Node?
     try {
       let children = Each([]string{"key"}, item -> item, item -> blob)
-      list = reconciler.Mount(Container{...children})
+      list = reconciler.Mount(Container(){...children})
       return blob.Key == nil && list.Children.Count == 1
         && list.Children[0].Key == "key" && list.Children[0].Content == "frozen"
     } finally {

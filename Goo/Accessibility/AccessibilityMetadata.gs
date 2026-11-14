@@ -46,7 +46,8 @@ internal class AccessibilityMetadata {
       return true
     }
 
-    private func mergeAttachment(prior Accessibility?, attachment AccessibilityAttachment) Accessibility {
+    private func mergeAttachment(prior Accessibility?, attachment AccessibilityAttachment) Accessibility? {
+      if attachment.Relationships == nil && attachment.Required == nil && attachment.Invalid == nil { return prior }
       let next = if let prior = prior { Accessibility{...prior} } else { Accessibility{} }
       if let additions = attachment.Relationships {
         let existing = prior?.Relationships ?? AccessibilityRelationships{}
@@ -105,6 +106,7 @@ internal class AccessibilityMetadata {
     }
 
     internal func Remove(n Node) {
+      if attachmentSources.TryGetValue(n, out var source) { source.Registry.Nodes.Remove(n) }
       attachmentSources.Remove(n)
       if !n.HasAccessibilityDeclaration {
         return

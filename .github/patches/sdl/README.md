@@ -49,7 +49,7 @@ The [foreign-parent runner](../../../tools/Goo.Investigation/ForeignParent.gs) o
 
 Use a private compositor and the patched `GooLinuxSdlPath`:
 
-1. Open an undecorated resizable window with `Window.DragRegion` and a `MetricsChanged` listener.
+1. Open an undecorated resizable window with `Window.WithDragRegion` and a `MetricsChanged` listener.
 2. Let it idle. Double-click the titlebar to maximize and restore.
 3. Hold a resize edge. Verify multiple metric changes and a capture with relaid-out content before releasing the button.
 4. Repeat with interactive titlebar children and fixed-size windows.
