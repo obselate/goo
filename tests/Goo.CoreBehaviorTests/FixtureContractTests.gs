@@ -422,7 +422,7 @@ class FixtureContractTests {
             yield Contract[InputFixtures]("PointerDragCaptureCoordinatesAndHitContract")
             yield Contract[InputFixtures]("PointerDragUsesTrackedCallbackRebuildContract")
             yield Contract[InputFixtures]("PointerDragTouchScrollArbitrationContract")
-            yield Contract[InputFixtures]("PointerDragMouseCaptureBeforeThresholdContract")
+            yield Contract[InputFixtures]("PointerDragMouseRetainsPressRouteBeforeThresholdContract")
             yield Contract[InputFixtures]("PointerDragCancelUsesNewestCallbackContract")
             yield Contract[InputFixtures]("PointerPrimaryAndPressureContract")
             yield Contract[InputFixtures]("PointerReacquiresHoverAfterRebuild")

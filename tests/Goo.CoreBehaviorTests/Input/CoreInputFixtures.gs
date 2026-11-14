@@ -3042,7 +3042,7 @@ internal class InputFixtures {
     return true
   }
 
-  func PointerDragMouseCaptureBeforeThresholdContract() bool {
+  func PointerDragMouseRetainsPressRouteBeforeThresholdContract() bool {
     let events = List[PointerDragEvent]()
     let resolver = Resolver{}
     let root = Reconciler{Res: resolver}.Mount(Container{
