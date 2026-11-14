@@ -151,7 +151,7 @@ class FixtureContractTests {
             yield Contract[AccessibilityAttachmentFixtures]("RetainedFieldContract")
             yield Contract[AccessibilityAttachmentFixtures]("NestedTargetContract")
             yield Contract[AccessibilityAttachmentFixtures]("IndependentMountsAndPrecedenceContract")
-            yield Contract[AccessibilityAttachmentFixtures]("DragWrapperContract")
+            yield Contract[AccessibilityAttachmentFixtures]("DragRegionOwnershipContract")
             yield Contract[StyleFixtures]("StyleAssignmentAfterHandOffContract")
             yield Contract[StyleFixtures]("StateStylesFreezeAtHandOffContract")
             yield Contract[LayoutFixtures]("SizedScrollExtentUsesContentContract")

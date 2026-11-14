@@ -191,7 +191,7 @@ internal class GalleryNavigationView {
             compact bool,
             window Window?,
             onSelect Action[int32]
-        ) Blob {
+        ) Container {
             let currentChapter = catalog.Showcases[currentShowcase].Chapter
             let tabs = List[Blob]()
             let overview = catalog.FirstShowcase(-1)
@@ -277,7 +277,7 @@ internal class GalleryNavigationView {
                     ),
                 },
             }
-            return Window.WithDragRegion(bar)
+            return Window.DragRegion(bar)
         }
 
         internal func Rail(

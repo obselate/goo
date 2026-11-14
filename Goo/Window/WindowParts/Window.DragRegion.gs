@@ -3,10 +3,15 @@ package Goo
 /// Hosts a Goo tree in a native window.
 public partial class Window {
   shared {
-    /// Wraps content in a native drag region for undecorated windows without changing the content.
+    /// Marks a container subtree as a native drag region for undecorated windows.
     /// Clickable or focusable descendants still win their own pointer input.
-    /// @param content The declaration to wrap.
-    /// @returns A fresh drag-region container.
-    public func WithDragRegion(content Blob) Blob -> Container{DragsWindow: true, content}
+    /// Call on a container you created, before returning it. A received container throws.
+    /// @param region container to mark
+    /// @returns the same container
+    public func DragRegion(region Container) Container {
+      region.CheckMutable()
+      region.DragsWindow = true
+      return region
+    }
   }
 }

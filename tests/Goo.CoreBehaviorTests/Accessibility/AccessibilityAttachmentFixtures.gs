@@ -85,18 +85,16 @@ internal class AccessibilityAttachmentFixtures {
     }
   }
 
-  func DragWrapperContract() bool {
-    let content = Container{Width: 100, Height: 24}
-    let reconciler = Reconciler{Res: Resolver{}}
-    let original = reconciler.Mount(content)
-    let wrapper = reconciler.Mount(Window.WithDragRegion(content))
+  func DragRegionOwnershipContract() bool {
+    let fresh = Container{Width: 100, Height: 24}
+    if Window.DragRegion(fresh) != fresh || !fresh.DragsWindow { return false }
+    let frozen = Container{Width: 100, Height: 24}
+    let original = Reconciler{Res: Resolver{}}.Mount(frozen)
     try {
-      return wrapper.DragsWindow && !original.DragsWindow && !wrapper.Children[0].DragsWindow
-        && !content.DragsWindow && wrapper.Children.Count == 1
-    } finally {
-      NodeLifecycle.DisposeTree(wrapper)
-      NodeLifecycle.DisposeTree(original)
-    }
+      try { Window.DragRegion(frozen) }
+      catch (_ InvalidOperationException) { return !frozen.DragsWindow && !original.DragsWindow }
+      return false
+    } finally { NodeLifecycle.DisposeTree(original) }
   }
 }
 
