@@ -1621,6 +1621,14 @@ Creates a renderer lease from an open window. Returns NotReady before Open or af
 
 Returns: A session on Success, or an explicit renderer status.
 
+### `DragRegion(Container)`
+
+Marks a container subtree as a native drag region for undecorated windows. Clickable or focusable descendants still win their own pointer input. Call on a container you created, before returning it. A received container throws.
+
+- `region`: container to mark
+
+Returns: the same container
+
 ### `Every(float64,System.Action)`
 
 Runs an action repeatedly on the UI thread. Call on the UI thread while the window is open. Skips missed ticks. Does not rebuild a Cell. Closing the window cancels pending timers.
@@ -1796,14 +1804,6 @@ Starts one owner-modal chooser on the open window's UI thread; other windows con
 - `options`: Optional title, initial path, filters, and multiple-selection hints copied before launch.
 
 Returns: A task completed on the UI thread with owned paths and an explicit outcome. Await continuations follow normal .NET context rules.
-
-### `WithDragRegion(Blob)`
-
-Wraps content in a native drag region for undecorated windows without changing the content. Clickable or focusable descendants still win their own pointer input.
-
-- `content`: The declaration to wrap.
-
-Returns: A fresh drag-region container.
 
 ### `AccessibilityAdapter`
 
