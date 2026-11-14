@@ -230,6 +230,7 @@ internal partial class PointerInput {
     dx float64, dy float64, button PointerButton, modifiers KeyModifiers, timeS float64 = 0.0) bool{
       guard let tree = root else { return false }
       var captured = false
+      let pendingDrag = kind != PointerEventKind.Press && current.PointerDrag?.Started == false
       if (kind == PointerEventKind.Move || kind == PointerEventKind.Release) && current.CaptureTarget != nil {
         if !rebuildCapturePath(tree) {
           resetClickSequence()
@@ -237,38 +238,35 @@ internal partial class PointerInput {
           return false
         }
         captured = true
+      } else if pendingDrag {
+        if !rebuildActivePath(tree) {
+          clearCapture(GestureCancelReason.OwnerUnavailable)
+          return false
+        }
       } else {
         scratchChain.Clear()
-        if kind != PointerEventKind.Press && current.Device == PointerDevice.Touch && current.PointerDrag?.Started == false {
-          guard let target = current.PointerDrag?.Target.Current else { return false }
-          if !canReceiveInput(target) || !appendPath(tree, target, scratchChain) {
-            clearCapture(GestureCancelReason.OwnerUnavailable)
-            return false
-          }
-        } else {
-          hitChainInto(tree, x, y, scratchChain)
-        }
+        hitChainInto(tree, x, y, scratchChain)
         if chainDisabled(scratchChain) {
           if kind == PointerEventKind.Press { resetClickSequence() }
           scratchChain.Clear()
           return false
         }
       }
-      let route = captured ? current.CapturePath : scratchChain
+      let route = captured ? current.CapturePath : pendingDrag ? current.ActivePath : scratchChain
       if kind == PointerEventKind.Press {
         beginClickSequence(route, timeS, x, y, button)
         rememberActiveRoute(route)
       } else {
         invalidateMovedClickSequence(x, y)
         if kind == PointerEventKind.Release && button == current.LastPressButton {
-          if captured {
+          if captured || pendingDrag {
             scratchChain.Clear()
             hitChainInto(tree, x, y, scratchChain)
           }
           if chainDisabled(scratchChain) || clickSequenceTarget(scratchChain) != current.LastPressNode {
             current.LastPressNode = nil
           }
-          if captured { scratchChain.Clear() }
+          if captured || pendingDrag { scratchChain.Clear() }
         }
       }
       let transformed = routeHasTransform(route)

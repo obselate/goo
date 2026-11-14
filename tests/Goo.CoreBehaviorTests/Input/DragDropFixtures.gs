@@ -472,7 +472,7 @@ internal class DragDropFixtures {
       capturedInput.QueuePointerMove(20.0F, 10.0F)
       capturedInput.QueuePointerRelease(20.0F, 10.0F)
       capturedInput.Drain(capturedRoot, resolver, 0.0, nil)
-      if capturedCreates != 0 || automatic && samples != 3 { return false }
+      if capturedCreates != 0 || automatic && samples != 2 { return false }
     }
 
     var captureAfterStart bool
