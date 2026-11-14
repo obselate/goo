@@ -96,14 +96,14 @@ internal partial class Reconciler {
       Frame: cell.incomingContext, Cell: cell, Reader: cell.contextReader})
     try {
       guard let profiler = Profiler else {
-        let result = cell.Render()
+        let result = if let attachment = cell as AccessibilityAttachmentCell { attachment.RenderAttachment() } else { cell.Render() }
         result.Freeze()
         return result
       }
       let start = profiler.Start()
       var completed = false
       try {
-        let result = cell.Render()
+        let result = if let attachment = cell as AccessibilityAttachmentCell { attachment.RenderAttachment() } else { cell.Render() }
         result.Freeze()
         completed = true
         return result
@@ -187,6 +187,7 @@ internal partial class Reconciler {
       }
       if !parts {
         flushHandleMoves()
+        applySemanticAttachments()
         return nodes
       }
     }
@@ -1047,6 +1048,7 @@ internal partial class Reconciler {
         result.Key = cell.mountKey
       }
       cell.AttachMount(result, owner)
+      if let attachment = cell as AccessibilityAttachmentCell { attachment.Register(attachmentRegistry()) }
       if let retained = result.Fiber {
         retained.RefreshDirectMounts(result)
       }

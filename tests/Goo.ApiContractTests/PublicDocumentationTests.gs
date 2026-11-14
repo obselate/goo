@@ -249,6 +249,8 @@ class PublicDocumentationTests {
             "M:Goo.AccessibilityAdapter.Update(Goo.AccessibilityTree)",
             "M:Goo.AccessibilityRelationships.#ctor",
             "M:Goo.AccessibilityValue.#ctor",
+            "M:Goo.AccessibilityAttachment.Build",
+            "M:Goo.AccessibilityAttachment.op_Implicit(Goo.AccessibilityAttachment)~Goo.Blob",
             "M:Goo.Anim`1.Pause",
             "M:Goo.Anim`1.Play(`0,`0)",
             "M:Goo.Anim`1.Play(`0,`0,System.Func{System.Double,System.Double,System.Double,Goo.Simulation},System.Func{System.Double,System.Double,System.Double,Goo.Simulation}[])",
@@ -1513,6 +1515,16 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
+            ["M:Goo.AccessibilityAttachment.op_Implicit(Goo.AccessibilityAttachment)~Goo.Blob"] = DocumentationShape(
+                []string{"value"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.AccessibilityAttachment.Build"] = DocumentationShape(
+                System.Array.Empty[string](),
+                System.Array.Empty[string](),
+                true
+            ),
             ["M:Goo.Edges.op_Implicit(System.Int32)~Goo.Edges"] = DocumentationShape(
                 []string{"value"},
                 System.Array.Empty[string](),
@@ -2246,6 +2258,13 @@ class PublicDocumentationTests {
                 )
             )
             return ExpectedMethodIds
+                .Concat([]string{
+                    "F:Goo.AccessibilityAttachment.Content",
+                    "F:Goo.AccessibilityAttachment.Target",
+                    "F:Goo.AccessibilityAttachment.Relationships",
+                    "F:Goo.AccessibilityAttachment.Required",
+                    "F:Goo.AccessibilityAttachment.Invalid",
+                })
                 .Concat(ExpectedProtectedMethodIds)
                 .Concat(ExpectedEqualityDocumentationIds)
                 .Concat(ExpectedEnumFieldIds)

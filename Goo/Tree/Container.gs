@@ -53,7 +53,6 @@ public class Container : Blob {
       ContainerVectorViewports.Set(this, value)
     }
   }
-  // Window-domain marker; authored through WindowDragRegion, not directly.
   internal prop DragsWindow bool{ get; set }
   /// Overrides whether this container participates in pointer hit testing.
   /// When omitted, Goo derives the value from authored interaction behavior.
