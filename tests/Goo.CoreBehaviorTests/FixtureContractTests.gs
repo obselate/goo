@@ -147,7 +147,7 @@ class FixtureContractTests {
             yield Contract[TreeFixtures]("ChildrenMutationAfterHandOffContract")
             yield Contract[TreeFixtures]("ChildrenConstructionBeforeHandOffContract")
             yield Contract[TreeFixtures]("SharedChildrenCopiedAtHandOffContract")
-            yield Contract[TreeFixtures]("EachFrozenKeylessBlobThrowsContract")
+            yield Contract[TreeFixtures]("EachFrozenKeylessBlobContract")
             yield Contract[StyleFixtures]("StyleAssignmentAfterHandOffContract")
             yield Contract[StyleFixtures]("StateStylesFreezeAtHandOffContract")
             yield Contract[LayoutFixtures]("SizedScrollExtentUsesContentContract")

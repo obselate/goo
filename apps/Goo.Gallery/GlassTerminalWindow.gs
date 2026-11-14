@@ -142,7 +142,7 @@ public class GlassTerminalCell : Cell {
         }
     }
 
-    private func buildWindowChrome() Container {
+    private func buildWindowChrome() Blob {
         let titleBar = Container{
             Key: "custom-titlebar",
             Width: Percent(100),
@@ -157,7 +157,7 @@ public class GlassTerminalCell : Cell {
             buildTitleInfo(),
             buildQuickCornerToggle(),
         }
-        return Window.DragRegion(titleBar)
+        return Window.WithDragRegion(titleBar)
     }
 
     private func buildTrafficLights() Container -> Container{

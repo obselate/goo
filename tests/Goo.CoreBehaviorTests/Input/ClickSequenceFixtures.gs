@@ -201,7 +201,7 @@ internal class DragRegionHitCell : Cell {
     Width: 300,
     Height: 90,
     Focusable: true,
-    Window.DragRegion(Container{
+    Window.WithDragRegion(Container{
       Height: 60,
       FlexDirection: FlexDirection.Row,
       Container{Width: 100, Height: 60},

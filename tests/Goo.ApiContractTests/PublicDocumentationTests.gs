@@ -642,7 +642,7 @@ class PublicDocumentationTests {
             "M:Goo.Window.Attach(Goo.EmbeddedWindowHost)",
             "M:Goo.Application.Configure(System.String,System.String,System.String)",
             "M:Goo.Application.Configure(System.Reflection.Assembly)",
-            "M:Goo.Window.DragRegion(Goo.Container)",
+            "M:Goo.Window.WithDragRegion(Goo.Blob)",
             "M:Goo.WindowClipboard.ReadText",
             "M:Goo.WindowClipboard.GetFormats",
             "M:Goo.WindowClipboard.ReadFiles",
@@ -2033,8 +2033,8 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 false
             ),
-            ["M:Goo.Window.DragRegion(Goo.Container)"] = DocumentationShape(
-                []string{"region"},
+            ["M:Goo.Window.WithDragRegion(Goo.Blob)"] = DocumentationShape(
+                []string{"content"},
                 System.Array.Empty[string](),
                 true
             ),
