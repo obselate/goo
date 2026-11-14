@@ -500,6 +500,7 @@ public open class Cell {
         mountGeneration++
       }
     }
+    if let attachment = this as AccessibilityAttachmentCell { attachment.Invalidate() }
     if let child = directChild {
       child.RefreshDirectMounts(n)
     }

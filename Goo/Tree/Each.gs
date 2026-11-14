@@ -15,12 +15,19 @@ internal func eachCore[T any](items IReadOnlyList[T], itemKey(T) -> string, item
   let result = [items.Count]Blob
   for index in 0 ... result.Length {
     let item = items[index]
-    let child = itemBuilder(item)
+    var child = itemBuilder(item)
     if child.Key == nil {
-      child.CheckMutable()
-      child.Key = itemKey(item)
+      if child.IsFrozen {
+        child = Cell.Mount[Blob, EachContentCell](itemKey(item), child)
+      } else {
+        child.Key = itemKey(item)
+      }
     }
     result[index] = child
   }
   return result
+}
+
+internal sealed class EachContentCell : Cell[Blob] {
+  protected override func Build(input Blob) Blob -> input
 }

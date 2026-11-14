@@ -359,8 +359,8 @@
 [IL]: Error [StackByRef]: [Goo.dll : Goo.MacTrayBackend::CreateImage([Goo]Goo.TrayContent, [S.P.CoreLib]System.Collections.Generic.IReadOnlyList`1<uint8>)][offset 0x000000E9][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.SdlHost::ReadPreferredLocales()][offset 0x00000178][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.SpellCheck.HunspellSpellingService::Decode(native int)][offset 0x0000003A][found Native Int] Expected ByRef on the stack.
-[IL]: Error [StackByRef]: [Goo.dll : Goo.SpellCheck.WindowsSpelling+<closure_<lambda2>_3>::Invoke(native int)][offset 0x00000039][found Native Int] Expected ByRef on the stack.
-[IL]: Error [StackByRef]: [Goo.dll : Goo.SpellCheck.WindowsSpelling+<closure_<lambda2>_68>::Invoke(native int)][offset 0x00000039][found Native Int] Expected ByRef on the stack.
+[IL]: Error [StackByRef]: [Goo.dll : Goo.SpellCheck.WindowsSpelling+<closure_<lambda2>_ordinal>::Invoke(native int)][offset 0x00000039][found Native Int] Expected ByRef on the stack.
+[IL]: Error [StackByRef]: [Goo.dll : Goo.SpellCheck.WindowsSpelling+<closure_<lambda2>_ordinal>::Invoke(native int)][offset 0x00000039][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.SpellCheck.WindowsSpelling::Release(native int)][offset 0x00000021][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.SpellCheck.WindowsSpelling::Table(native int)][offset 0x00000026][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanClipMaskAtlas::PackedLayerCount(uint32, uint32, uint32, uint32, uint32, bool, bool)][offset 0x00000029][found Native Int] Expected ByRef on the stack.
@@ -388,6 +388,7 @@
 [IL]: Error [StackUnexpected]: [Goo.Audio.dll : Goo.AndroidSoundRuntime::Play([Goo.Audio]Goo.SoundPlayer, int32, int32, float32[], [S.P.CoreLib]System.Func`3<float32[],int32,int32>, float32)][offset 0x000000E4][found address of IntPtr][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.Audio.dll : Goo.SoundRuntime::EnumerateOutputs()][offset 0x00000080][found address of Int32][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.Audio.dll : Goo.SystemSoundRuntime::Play([Goo.Audio]Goo.SystemSound)][offset 0x000000BF][found address of IntPtr][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.PackageSmoke.dll : GooPackageSmoke.<Program>::RunApplicationQuitSmoke()][offset 0x000001AA][found address of '[Hexa.NET.SDL3]Hexa.NET.SDL3.SDLEvent'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.ClipboardTransfer::Query()][offset 0x00000058][found address of UIntPtr][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.ClipboardTransfer::ReadData(string, int32)][offset 0x0000004C][found address of UIntPtr][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.ExternalImageSession::ImportMetalReady([Goo]Goo.ExternalFrameLease)][offset 0x00000136][found address of '[Goo]Goo.VkSemaphoreTypeCreateInfo'][expected Native Int] Unexpected type on the stack.
@@ -408,25 +409,36 @@
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.Printing.PortalPrinting+Connection::Variant([Goo]Goo.Printing.PortalPrinting+Connection+Iter&, string, bool)][offset 0x00000035][found address of Int32][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.RasterImageDecoder::ReadPngProfile([S.P.CoreLib]System.ReadOnlySpan`1<uint8>, [S.P.CoreLib]System.Threading.CancellationToken, bool&)][offset 0x000001D4][found Native Int][expected address of Byte] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::ConstrainFrame([Goo]Goo.ElementRect, int32, int32, bool, [Goo]Goo.ElementRect)][offset 0x00000016][found address of Int32][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::ConstrainFrame([Goo]Goo.ElementRect, int32, int32, bool, [Goo]Goo.ElementRect)][offset 0x00000016][found address of Int32][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::ConstrainFrame([Goo]Goo.ElementRect, int32, int32, bool, [Goo]Goo.ElementRect)][offset 0x00000016][found address of Int32][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::ConstrainFrame([Goo]Goo.ElementRect, int32, int32, bool, [Goo]Goo.ElementRect)][offset 0x00000016][found address of Int32][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::CreateWindow(string, int32, int32, int32, int32, bool, int32, int32, bool, bool, [Goo]Goo.LayerWindowOptions)][offset 0x0000023A][found address of '[Hexa.NET.SDL3]Hexa.NET.SDL3.SDLRect'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::DispatchPinch([Hexa.NET.SDL3]Hexa.NET.SDL3.SDLEvent)][offset 0x00000034][found address of Single][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::DispatchPinch([Hexa.NET.SDL3]Hexa.NET.SDL3.SDLEvent)][offset 0x00000034][found address of Single][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::DispatchWindow([Hexa.NET.SDL3]Hexa.NET.SDL3.SDLEventType, [Hexa.NET.SDL3]Hexa.NET.SDL3.SDLWindowEvent)][offset 0x0000041E][found address of Single][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::DispatchWindow([Hexa.NET.SDL3]Hexa.NET.SDL3.SDLEventType, [Hexa.NET.SDL3]Hexa.NET.SDL3.SDLWindowEvent)][offset 0x0000041E][found address of Single][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::HasDisplay(uint32)][offset 0x00000006][found address of Int32][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::HitTest(native int, native int, native int)][offset 0x00000042][found Native Int][expected address of '[Goo]Goo.SdlHostPoint'] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::HitTest(native int, native int, native int)][offset 0x00000048][found Native Int][expected address of '[Goo]Goo.SdlHostPoint'] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::ObserveNormalPlacement()][offset 0x00000031][found address of Int32][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::ObserveNormalPlacement()][offset 0x00000031][found address of Int32][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::ObserveNormalPlacement()][offset 0x0000004B][found address of Int32][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::ObserveNormalPlacement()][offset 0x0000004B][found address of Int32][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::ReadDisplay(uint32)][offset 0x0000001D][found address of '[Hexa.NET.SDL3]Hexa.NET.SDL3.SDLRect'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::ReadDisplays()][offset 0x00000006][found address of Int32][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::RefreshFramebuffer()][offset 0x0000000F][found address of Int32][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::RefreshFramebuffer()][offset 0x0000000F][found address of Int32][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::RefreshLogical()][offset 0x0000000F][found address of Int32][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::RefreshLogical()][offset 0x0000000F][found address of Int32][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::RefreshPosition()][offset 0x0000000F][found address of Int32][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::RefreshPosition()][offset 0x0000000F][found address of Int32][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::SetImeArea(int32, int32, int32, int32, int32)][offset 0x00000029][found address of '[Hexa.NET.SDL3]Hexa.NET.SDL3.SDLRect'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlHost::StartMacNativeDrag([Goo]Goo.NativeDragBinding)][offset 0x000000A7][found address of '[Goo]Goo.MacNativeDragOffer'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlRuntime::PumpEvents(int32)][offset 0x00000049][found address of '[Hexa.NET.SDL3]Hexa.NET.SDL3.SDLEvent'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlRuntime::WaitEventsBounded(int32, int32)][offset 0x00000041][found address of '[Hexa.NET.SDL3]Hexa.NET.SDL3.SDLEvent'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SdlRuntime::Wake()][offset 0x0000005A][found address of '[Hexa.NET.SDL3]Hexa.NET.SDL3.SDLEvent'][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.SpellCheck.MacSpelling+<lambda_host_<lambda1>_137>::Invoke([S.P.CoreLib]System.Span`1<char>, native int)][offset 0x00000052][found Native Int][expected address of Char] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.SpellCheck.MacSpelling+<lambda_host_<lambda1>_ordinal>::Invoke([S.P.CoreLib]System.Span`1<char>, native int)][offset 0x00000052][found Native Int][expected address of Char] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.SpellCheck.WindowsSpelling::Run(string, [S.P.CoreLib]System.Action`1<native int>, string&)][offset 0x00000048][found address of '[S.P.CoreLib]System.Guid'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SpellCheck.WindowsSpelling::Run(string, [S.P.CoreLib]System.Action`1<native int>, string&)][offset 0x00000048][found address of '[S.P.CoreLib]System.Guid'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SpellCheck.WindowsSpelling::Run(string, [S.P.CoreLib]System.Action`1<native int>, string&)][offset 0x00000048][found address of IntPtr][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanDescriptorFactory::CreateSingleBindingLayout(native int, [Goo]Goo.VkDeviceDispatch, [Goo]Goo.VulkanObjectAccounting, int32, uint32)][offset 0x0000003A][found address of '[Goo]Goo.VkDescriptorSetLayoutBinding'][expected Native Int] Unexpected type on the stack.
@@ -449,6 +461,7 @@
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanOffscreenLayerPool::CreateDescriptorResources(int32, int32)][offset 0x00000111][found address of '[Goo]Goo.VkDescriptorPoolSize'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanOffscreenTarget::BeginRendering([Goo]Goo.VkClearColorValue, [Goo]Goo.VkRect2D)][offset 0x0000012A][found address of '[Goo]Goo.VkRenderingAttachmentInfo'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPathAtlas::CreateDescriptorResources()][offset 0x00000056][found address of '[Goo]Goo.VkDescriptorPoolSize'][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPathAtlas::CreateDescriptorResources()][offset 0x00000056][found address of UInt64][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPathAtlas::CreateDescriptorResources()][offset 0x00000056][found address of UInt64][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPathStrokeFrameData::CreateDescriptors()][offset 0x0000011F][found address of '[Goo]Goo.VkDescriptorPoolSize'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveFrameData::CreateDescriptorResources()][offset 0x00000106][found address of '[Goo]Goo.VkDescriptorPoolSize'][expected Native Int] Unexpected type on the stack.
@@ -513,6 +526,7 @@
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanSharedRuntime::WaitGraphicsSubmission(uint64, uint64)][offset 0x00000084][found address of UInt64][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanSharedRuntime::WaitGraphicsSubmission(uint64, uint64)][offset 0x0000008D][found address of UInt64][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanTextAtlas::CreateDescriptorResources()][offset 0x00000077][found address of '[Goo]Goo.VkDescriptorPoolSize'][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanTextAtlas::CreateDescriptorResources()][offset 0x00000077][found address of UInt64][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanTextAtlas::CreateDescriptorResources()][offset 0x00000077][found address of UInt64][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanTextFont::ApplyVariations(native int, [Goo]Goo.VulkanTextVariation[], [S.P.CoreLib]System.Nullable`1<int32>)][offset 0x0000005B][found address of '[Goo]Goo.VulkanTextVariation'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanTextFrameData::CopySegmentRecords([Goo]Goo.VulkanTextFrameSlot, [Goo]Goo.VulkanRetainedTextSegment, int32, int32, int32)][offset 0x000000E1][found Native Int][expected address of '[Goo]Goo.HbGpuTextInstanceRecord'] Unexpected type on the stack.
@@ -615,7 +629,7 @@
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SpellCheck.HunspellSpellingService::Initialize()][offset 0x0000018A] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SpellCheck.HunspellSpellingService::Initialize()][offset 0x0000018C] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SpellCheck.HunspellSpellingService::Suggest([Goo]Goo.TextSnapshot, [Goo]Goo.TextRange, string, [S.P.CoreLib]System.Threading.CancellationToken)][offset 0x000000C1] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SpellCheck.MacSpelling+<lambda_host_<lambda1>_137>::Invoke([S.P.CoreLib]System.Span`1<char>, native int)][offset 0x0000001C] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SpellCheck.MacSpelling+<lambda_host_<lambda1>_ordinal>::Invoke([S.P.CoreLib]System.Span`1<char>, native int)][offset 0x0000001C] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SpellCheck.MacSpelling::String(string)][offset 0x00000041] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SpellCheck.WindowsSpelling::Table(native int)][offset 0x0000001F] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanClipMaskAtlas::PackedLayerCount(uint32, uint32, uint32, uint32, uint32, bool, bool)][offset 0x00000010] Unmanaged pointers are not a verifiable type.
@@ -1016,4 +1030,3 @@
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::ValidateSharedPresentationSupport()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::WaitDeviceIdleResult()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.WindowsDropTarget::OwnData(native int)] ImportCalli not implemented
-[IL]: Error [StackUnexpected]: [Goo.PackageSmoke.dll : GooPackageSmoke.<Program>::RunApplicationQuitSmoke()][offset 0x000001AA][found address of '[Hexa.NET.SDL3]Hexa.NET.SDL3.SDLEvent'][expected Native Int] Unexpected type on the stack.

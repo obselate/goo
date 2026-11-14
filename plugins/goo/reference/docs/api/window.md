@@ -1623,7 +1623,7 @@ Returns: A session on Success, or an explicit renderer status.
 
 ### `DragRegion(Container)`
 
-Marks a container subtree as a native drag region for undecorated windows. Clickable or focusable descendants still win their own pointer input.
+Marks a container subtree as a native drag region for undecorated windows. Clickable or focusable descendants still win their own pointer input. Call on a container you created, before returning it. A received container throws.
 
 - `region`: container to mark
 

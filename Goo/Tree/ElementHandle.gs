@@ -13,6 +13,7 @@ public class ElementHandle {
   private var selectionEnd int32
   private var selectionPending bool
   private var scrollFrames int32
+  internal var AccessibilityAttachments List[AccessibilityAttachmentCell]?
 
   /// Initializes an unmounted element handle.
   public init() {
@@ -341,6 +342,9 @@ public class ElementHandle {
     node = n
     window = owner
     if selectionPending { owner?.QueueElementRequest(this) }
+    if let attachments = AccessibilityAttachments {
+      for attachment in attachments { attachment.Invalidate() }
+    }
   }
 
   internal func Detach(n Node) {
@@ -349,6 +353,9 @@ public class ElementHandle {
       Virtualization.State(n)?.CancelScroll()
       node = nil
       window = nil
+      if let attachments = AccessibilityAttachments {
+        for attachment in attachments { attachment.Invalidate() }
+      }
     }
   }
 

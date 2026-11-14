@@ -247,18 +247,22 @@ internal class TreeFixtures {
     } finally { NodeLifecycle.DisposeTree(node) }
   }
 
-  func EachFrozenKeylessBlobThrowsContract() bool {
+  func EachFrozenKeylessBlobContract() bool {
     let blob = Text("frozen")
-    let node = Reconciler{Res: Resolver{}}.Mount(blob)
+    let reconciler = Reconciler{Res: Resolver{}}
+    let node = reconciler.Mount(blob)
+    var list Node?
     try {
-      try {
-        Each([]string{"key"}, item -> throw ArgumentException("Must reject before selecting a key"), item -> blob)
-      } catch (error InvalidOperationException) {
-        return error.Message.Contains("Text") && blob.Key == nil
-      }
-      return false
-    } finally { NodeLifecycle.DisposeTree(node) }
+      let children = Each([]string{"key"}, item -> item, item -> blob)
+      list = reconciler.Mount(Container(){...children})
+      return blob.Key == nil && list.Children.Count == 1
+        && list.Children[0].Key == "key" && list.Children[0].Content == "frozen"
+    } finally {
+      if let root = list { NodeLifecycle.DisposeTree(root) }
+      NodeLifecycle.DisposeTree(node)
+    }
   }
+
   func SizedStateAndContextContract() bool {
     let previous = StateVerification.Override
     StateVerification.Enabled = false
