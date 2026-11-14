@@ -33,7 +33,6 @@ internal partial class PointerInput {
                 Threshold: node.PointerDragThreshold,
                 Axis: node.PointerDragAxis,
             }
-            if current.Device != PointerDevice.Touch { event.Capture() }
         }
         guard let state = current.PointerDrag else {
             return
@@ -49,19 +48,17 @@ internal partial class PointerInput {
         let distanceY = event.WindowPosition.Y - state.WindowOrigin.Y
         var phase = GesturePhase.Changed
         if !state.Started {
-            if current.Device == PointerDevice.Touch && kind == PointerEventKind.Press { return }
             if kind == PointerEventKind.Release {
                 current.PointerDrag = nil
                 return
             }
             let x = state.Axis == LayoutAxis.Vertical ? 0.0: distanceX
             let y = state.Axis == LayoutAxis.Horizontal ? 0.0: distanceY
-            if x * x + y * y < state.Threshold * state.Threshold
-                || current.Device == PointerDevice.Touch && x == 0.0 && y == 0.0 {
+            if x * x + y * y < state.Threshold * state.Threshold || x == 0.0 && y == 0.0 {
                 return
             }
             state.Started = true
-            if current.Device == PointerDevice.Touch { event.Capture() }
+            event.Capture()
             phase = GesturePhase.Started
         } else if kind == PointerEventKind.Press {
             return

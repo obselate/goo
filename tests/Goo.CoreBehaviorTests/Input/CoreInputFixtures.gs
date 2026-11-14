@@ -2966,14 +2966,15 @@ internal class InputFixtures {
     if events.Count != 0 { return false }
     input.QueuePointerPress(10.0F, 10.0F)
     input.QueuePointerMove(75.0F, 10.0F)
+    input.QueuePointerMove(78.0F, 10.0F)
     input.QueuePointerRelease(80.0F, 10.0F)
     input.QueuePointerCancel(0, PointerDevice.Mouse)
     input.Drain(root, resolver, 0.0, nil)
     return events.Count == 3 && events[0].Phase == GesturePhase.Started
       && events[1].Phase == GesturePhase.Changed && events[2].Phase == GesturePhase.Completed
-      && events[1].Position.X == 75.0 && events[1].Translation.X == 65.0
-      && events[1].Delta.X == 65.0 && events[2].Delta.X == 5.0
-      && hits[0] && !hits[1] && !hits[2]
+      && events[1].Position.X == 78.0 && events[1].Translation.X == 68.0
+      && events[1].Delta.X == 3.0 && events[2].Delta.X == 2.0
+      && !hits[0] && !hits[1] && !hits[2]
   }
 
   func PointerDragUsesTrackedCallbackRebuildContract() bool {
@@ -3041,7 +3042,7 @@ internal class InputFixtures {
     return true
   }
 
-  func PointerDragMouseCaptureBeforeThresholdContract() bool {
+  func PointerDragMouseRetainsPressRouteBeforeThresholdContract() bool {
     let events = List[PointerDragEvent]()
     let resolver = Resolver{}
     let root = Reconciler{Res: resolver}.Mount(Container{
@@ -3076,6 +3077,7 @@ internal class InputFixtures {
     Layout().Calculate(root, 50.0F, 40.0F)
     let input = InputCoordinator()
     input.QueuePointerPress(10.0F, 10.0F)
+    input.QueuePointerMove(15.0F, 10.0F)
     input.Drain(root, resolver, 0.0, nil)
     let replacement = Reconciler{Res: resolver}
     replacement.Diff(root, declaration(10))
