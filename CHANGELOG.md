@@ -1,6 +1,164 @@
 # Changelog
 
 
+## 0.31.0 - 2026-11-14
+
+### Added
+
+- Read process identity with `Application.Configure(assembly)`. Set the MSBuild `Product`, `InformationalVersion` and `GooPackageId` properties.
+- Set `Application.VerifyState` to enable or disable tracked-state verification. Its default follows debugger and DevTools sessions.
+- `Window.SizeToContent` measures selected root axes once before the first map. Set `SizeToContent.Width`, `Height` or `Both`, with optional `MinSize` and `MaxSize` bounds.
+- `SizeToContent` keeps the declared `Size` on root axes with percentage, viewport-relative or mixed container-dependent sizes. Descendant `Vw` and `Vh` resolve against that declared size during measurement. Remove container-dependent root sizes to measure those axes from content.
+- Add `NativeDialogs.ShowError(title, message)` for a synchronous ownerless error box before any window or after the last window closes. It returns `MessageBoxResult`. Check `Status` and native failure detail in `Error`.
+- Add `Platform.OpenAsync(target, cancellationToken)` to start the system handler for an absolute path or URI. Check `PlatformOpenResult.Status` and `Error`.
+- Use `Cell.Mount<TInput, TCell>(key, input, factory)` to combine typed input with constructor dependencies. Goo stores new input on each parent diff and calls the factory only for a new mount.
+- Consume window-owned `WindowFocus` and `WindowClipboard` services. `ClipboardTextResult` has a public constructor for embedded host overrides. `Platform` is a static service.
+- Use protected `Cell.Host`, `Mounted()` and `Unmounting()` instead of passing the window into each Cell or scheduling mount-time work with a timer. `Mounted()` runs after the first layout and before paint. Its overrides apply the normal callback rebuild rule unless they call `base.Mounted()`. The default hook does not request a rebuild. `Unmounting()` runs before handles detach and does not request a rebuild.
+- Use protected `Cell.Post(action)`, `After(delayMs, action)` and `Every(intervalMs, action)` for Cell-owned callbacks. Goo drops pending work at unmount and applies its callback rebuild rule after each action.
+- `Cell.Post`, `After` and `Every` throw during `Build`. Schedule from `InputChanged`, `Mounted`, callbacks or continuations instead.
+- Pass `Cell.Lifetime` to cancellable work and use `Cell.Latest(name)` for replaceable requests. Read them after window binding, not in constructors, where they throw `InvalidOperationException`. Goo cancels these tokens after `Unmounting()` returns and before `IDisposable.Dispose`.
+- Before window binding, `Cell.Post` returns false and `Cell.After` and `Cell.Every` return inactive timers. Start owned work after binding, from `InputChanged`, `Mounted`, callbacks or continuations.
+- Use `ElementHandle.SelectText(start, end)` to focus and select UTF-16 offsets, including one request made before mount.
+- Use `IsAtEndX` and `IsAtEndY` on handles or metrics snapshots instead of an application epsilon. Use `ScrollToEnd()` to animate to the range end.
+- Add `AsyncImageSource` with a Task-returning loader. Keep the source in a field or model. Loads share their result. Releasing the last pending lease cancels its token. Failed loads retry on the next acquire. Goo updates the image on its UI thread without an app rebuild call.
+- Add `Image.Placeholder` and `Image.Fallback`. Their content fills and clips to the image box without changing its measured size.
+- Add `Assets.Open(assembly, name)` and `Assets.ReadAllBytes(assembly, name)`. Exact manifest resource names take priority over files beside the application.
+- Add `GooAsset` build items. Files copy to output for normal builds and embed for single-file or NativeAOT builds. Add `Embed="true"` to `GooShaderEffect` to embed its compiled program. Load it with `ShaderEffectProgram.Load(assembly, name)` without the `.goo-effect` extension.
+- `LayoutSize` has a positional constructor. Use `LayoutSize(width, height)` to create a layout size.
+- Add `Each(items, itemKey, itemBuilder)` and `Blob.Each` to build keyed children from data. Explicit child keys take precedence. Spread the result into a container.
+- `Length` supports `Em`, `Rem`, `Vw`, `Vh`, mixed arithmetic, intrinsic sizes, and `LayoutContext.ResolveLength`. Use `Length.MinContent`, `Length.MaxContent`, or `Length.FitContent(limit)` on size declarations, and keep animations in one unit.
+- `LayoutContext.ResolveLength` returns `nil` when a nonzero percentage has no finite basis. `Em` uses the custom-layout container's font size.
+- `Length.Em`, `Length.Rem`, `Length.Vw` and `Length.Vh` factories for other .NET languages.
+- Use `Row` and `Column` for fixed-axis flex containers and `Spacer()` for free space. Set their axis through the Blob type, not `FlexDirection` in declarations or state styles.
+- Use `Flex: n` for grow n, shrink 1 and basis 0. `Inset` accepts `Edges` in top, right, bottom, left order. Uniform lengths also work. Later declarations override individual parts.
+- `AccessibilityName` and `AccessibilityRole` use non-null `string` and `AccessibilityRole` values. Use `""` or `AccessibilityRole.Auto` for defaults and coalesce optional inputs. A later `Accessibility` declaration replaces all fields.
+- `Row.HitTestSelf` and `Column.HitTestSelf` override automatic pointer hit testing, like `Container.HitTestSelf`.
+- Use `Anim.Play(from, to)` with `Motion.Default`, or `Anim.Play(from, to, spec, specs ...)`, instead of `Snap(from)` followed by `To(to, ...)`. Each call restarts the animation without invalidating the owner. Call from an event, `Mounted` or a callback, not unconditionally in `Build`.
+- Use `Motion.Delay(delayMs, spec)` to hold an animation's start value before running its simulation, with the delay in milliseconds and no delay when motion is reduced or disabled.
+- `OnPointerDrag` captures primary-pointer drags without hover callbacks. Events provide local position, translation, per-sample delta and lifecycle phases. Threshold and axis properties control when a drag starts.
+- Replace drag-only press, move, release and cancel handlers with `OnPointerDrag`. Remove pointer-id and dragging fields, manual capture and manual rebuild calls.
+- Use `GesturePhase.Started`, `Changed`, `Completed` and `Canceled` for drag phases. Read `Reason` for cancellation. `Delta` on `Started` excludes pre-threshold movement. Goo supplies drag events and their init accessors are internal.
+- Set `PointerDragAxis` to `LayoutAxis.Horizontal` or `Vertical`. Use nil for both axes. Thresholds and coordinates use layout units. After a drag starts, the press does not produce `OnClick`.
+- Drags wait for nonzero movement past `PointerDragThreshold` in `PointerDragAxis`. Child clicks remain available until the drag starts. An enclosing scroller claims touch movement along its scroll axis first. Keep horizontal drag handles inside vertical scrollers on `LayoutAxis.Horizontal`.
+- Add `AccessibilityAttachment` to attach field relationships and validation state without changing supplied elements or layout.
+- Add `Sized(build)` and `Blob.Sized(build)` for content that depends on its allotted size. Replace size listeners and whole-Cell rebuilds with a builder that reads `LayoutSize` in layout units. Give the element space through layout. Its content has no effect on its own size. State and context reads refresh only the retained content.
+- `State[T]` tracks reads in Cell builds and retained builders. Changed values invalidate their readers. Equal writes do nothing.
+- `Window.State`, `IsFocused`, `Size`, `NativeWidth`, `NativeHeight`, `UiScale`, `PixelScale`, `Preferences`, `Modifiers`, `Focus.EditsText`, `Focus.Editor` and `Focus.Selection` track their Cell and retained-builder readers. Changes rebuild only readers of the changed value.
+- Compose inline text with `Text("plain", TextSpan("styled", style))`. Plain strings convert to unstyled spans. Use `Selectable: true` for text selection and copy without editing. Set `Text.SelectionColor` to change the highlight color.
+- Parse SVG path data with `VectorPath.Parse(data, viewBox)` and append closed contours with `PathBuilder.Ellipse`, `Rectangle`, and `RoundedRectangle`.
+
+### Changed
+
+- Breaking: Move process startup and activation to static `Application`. Replace `Window.ConfigureApplication` with `Application.Configure`, `Window.ApplicationActivated` with `Application.Activated`, `Window.PostApplicationActivation` with `Application.PostActivation`, and `window.Run()` with `Application.Run(window)`.
+- Breaking: Replace `Window.InitializeApplicationActivation` and `SingleInstance.AcquireAsync` with synchronous `Application.AcquireSingleInstance(arguments, timeoutMs)` before opening a window. Configure the identity first and retain the primary lease until shutdown.
+- Breaking: `Window.Open()` throws `GraphicsUnavailableException` when no usable Vulkan device, surface or required feature exists. Catch this type for graphics startup failures. Other startup errors keep their exception types.
+- Breaking: Replace `Window.Width` and `Height` with `Size`, `MinWidth` and `MinHeight` with `MinSize`, and `MaxWidth` and `MaxHeight` with `MaxSize`. Each pair uses `LayoutSize(width, height)` in layout units. Read `NativeWidth` or `NativeHeight` for native logical units.
+- Breaking: `SetTopmost` and `SetFullscreenDisplay` replace `TrySetTopmost` and `TrySetFullscreenDisplay`. Rename calls and keep handling `WindowOperationResult`.
+- Breaking: Initialize `Topmost` before `Open`. Replace runtime property assignments with `SetTopmost(value)` and handle the result.
+- Breaking: Window scalar settings and `WindowMetrics.UiScale` now use `float64`. Remove casts to `float64` when reading `UiScale`, `PixelScale`, `DragStartDistance`, `WheelScrollScale`, or `ResizeBand`.
+- Breaking: Replace `WindowMetrics.LogicalWidth` and `LogicalHeight` with `NativeWidth` and `NativeHeight`. Replace the first two `OffscreenRenderOptions` constructor arguments with `LayoutSize(width, height)` in layout units. Read `Size.Width` and `Size.Height` instead of `LogicalWidth` and `LogicalHeight`. Its deconstruction now returns one `Size` output instead of two scalar size outputs.
+- Breaking: `DragStartDistance` now uses Euclidean distance in layout units, matching `PointerDragThreshold`. Diagonal movement can start a drag sooner than the old per-axis test. The defaults remain 8 for mouse and pen and 4 for touch.
+- Breaking: Platform input coordinates and wheel deltas, `WindowDisplay.ContentScale`, and `PlatformPreferences.TextScaleFactor` now use `float64`. Remove `float32` coordinate casts before calling `PlatformInput`. Pointer pressure remains `float32`.
+- Breaking: Move window clipboard calls to `window.Clipboard`: `GetClipboardText()` -> `ReadText()` (`string` -> `ClipboardTextResult`), `SetClipboardText(value)` -> `WriteText(value)` (`void` -> `ClipboardWriteResult`), `GetClipboardFormats()` -> `GetFormats()`, `ReadClipboardFiles()` -> `ReadFiles()`, `ReadClipboardImage()` -> `ReadImage()`, `ReadClipboardDataAsync(types)` -> `ReadDataAsync(types)`, and `WriteClipboardAsync(data, intent)` -> `WriteAsync(data, intent)`. Check result status before reading text or assuming a write succeeded.
+- Breaking: Replace protected `EmbeddedWindowHost.GetClipboardText() string` and `SetClipboardText(value)` overrides with `ReadClipboardText() ClipboardTextResult` and `WriteClipboardText(value) ClipboardWriteResult`. Construct results with explicit status, text and optional error. The defaults return `Unsupported`.
+- `WindowClipboard.ReadDataAsync` and `WriteAsync` accept a trailing optional `CancellationToken`. Pass a token to cancel the wait and discard a late native result.
+- Breaking: Replace `Cell.Mount<TCell>(factory, key)` with `Cell.Mount<TCell>(key, factory)`. The parameterless mount now uses one optional key parameter.
+- Breaking: Replace `Window.SetTimeout(action, delayMs)` with `Window.After(delayMs, action)` and `Window.SetInterval(action, intervalMs)` with `Window.Every(intervalMs, action)`. These window timers do not rebuild a Cell.
+- Breaking: Replace `Cell.Mount<TCell>(key, configure)` with typed input through `Cell.Mount<TInput, TCell>(key, input, factory)`. Put one-time setup in the constructor or factory.
+- The getting-started guide and tutorials use `Row`, `Column`, `Application.Run`, `Window.Size`, and `Cell.Host`. Use `Name(){children}` for a child-only container. Put changing child values in a typed input, not a mount configuration callback.
+- Reduce text-paint shader compilation cost and skip clip pipeline creation when no clip region is dirty.
+- Breaking: `Rebuild` on a mounted Cell throws when called off its window's UI thread. Use `Cell.Post` to apply background results. Goo handles callback rebuilds.
+- Reduce pointer callback work when reconciling unchanged elements.
+- Breaking: `ElementHandle.ScrollToItem(key, alignment = ScrollAlignment.Start, settle = true)` replaces both overloads and holds one unknown-key request for up to three frames. Remove delayed reveal timers and call it directly. Use `ScrollAlignment.Nearest` for minimal movement.
+- Breaking: `ElementHandle.ScrollTo` and `JumpTo` accept optional axes. Use `ScrollTo(y: value)` or `JumpTo(y: value)` to keep the horizontal offset.
+- Breaking: `ElementMetrics` positional deconstruction adds `IsAtEndX` and `IsAtEndY` after `RawBorderBox`. Add both outputs or read the named properties instead.
+- Reduce scene compilation work for transparent leaf containers and buttons.
+- Reuse exact plain-text width measurements after the wrap width changes.
+- Breaking: Blob and Style declarations can be changed while you build them. Once Goo receives a Blob, property assignments, `Add`, and child-list mutations throw `InvalidOperationException`. State styles and retained declaration objects freeze with their Blob. Shared child lists are copied at hand-off.
+- Breaking: Return a new Blob when its declaration changes. Returning the same Blob does not refresh it. Virtual items no longer write keys into authored content. `Each` rejects a previously handed-off Blob that has no key. Set its key before hand-off or return a new Blob.
+- Breaking: `TextInputOptions.AutofillHints` remains `[]string`. Assignment and reads copy the values. Changing a returned array does not change the stored hints.
+- Breaking: `WindowMetrics.Deconstruct` uses `width` and `height` out parameters instead of `logicalWidth` and `logicalHeight`. The `LongPressGesture` duration parameter is now `durationMs` instead of `durationMilliseconds`. Update named arguments.
+- Breaking: These 56 public classes are now sealed in CLR metadata: `Goo.ClipboardDataResult`, `Goo.ClipboardWriteResult`, `Goo.DashPattern`, `Goo.DragData`, `Goo.DragSource`, `Goo.DropTarget`, `Goo.ExternalFrameResult`, `Goo.ExternalImageResult`, `Goo.ExternalImageSessionResult`, `Goo.ExternalImageSession`, `Goo.ExternalImageSource`, `Goo.ExternalImageSync`, `Goo.ExternalImageWindowsDevice`, `Goo.ExternalImage`, `Goo.FontSource`, `Goo.GestureInput`, `Goo.Gestures.DoubleTapGesture`, `Goo.Gestures.LongPressGesture`, `Goo.Gestures.PanGesture`, `Goo.Gestures.TransformGesture`, `Goo.ImageColorProfile`, `Goo.ImageDecodeResult`, `Goo.Images.ImageAssetResult`, `Goo.Images.ImageVariants`, `Goo.Images.ImageVariant`, `Goo.LayerWindowOptions`, `Goo.MessageBoxButton`, `Goo.MessageBoxOptions`, `Goo.MessageBoxResult`, `Goo.NativeAccessibilityAdapter`, `Goo.NativeDataDrop`, `Goo.NativeDialogOwnerLease`, `Goo.NativeDialogs`, `Goo.NativeFileDrag`, `Goo.NativeFileDrop`, `Goo.NativeMenuBar`, `Goo.NativeMenuItem`, `Goo.NativeMenuResult`, `Goo.NativeMenus`, `Goo.OffscreenRenderSession`, `Goo.PopupResult`, `Goo.PopupWindow`, `Goo.Scrollbar`, `Goo.ShaderEffectData`, `Goo.ShaderEffectProgram`, `Goo.ShaderEffect`, `Goo.TransferData`, `Goo.TransferRepresentation`, `Goo.VectorAsset`, `Goo.VectorNode`, `Goo.VectorPaint`, `Goo.VectorStroke`, `Goo.VulkanExternalImageDescription`, `Goo.WindowCapture`, `Goo.WindowDisplay`, `Goo.WindowTimer`. Compose these types instead of subclassing them. For custom gestures, derive from `GestureRecognizer` instead of `DoubleTapGesture`, `LongPressGesture`, `PanGesture` or `TransformGesture`.
+- Breaking: `AccessibilityRelationships` changes these declaration properties from `init` to guarded `set`: `ActiveDescendant`, `Controls`, `DescribedBy`, `ErrorMessage`, `FlowTo`, `LabelledBy`, `Owns`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `AccessibilityValue` changes these declaration properties from `init` to guarded `set`: `Maximum`, `Minimum`, `Now`, `Text`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Accessibility` changes these declaration properties from `init` to guarded `set`: `Actions`, `Atomic`, `Busy`, `Checked`, `ColumnCount`, `ColumnIndex`, `CustomRole`, `Description`, `Expanded`, `HasPopup`, `Hidden`, `Invalid`, `Level`, `Live`, `Modal`, `MultiSelectable`, `Multiline`, `Name`, `OnAction`, `Orientation`, `PositionInSet`, `Range`, `ReadOnly`, `Relationships`, `Required`, `Role`, `RowCount`, `RowIndex`, `Selected`, `SizeOfSet`, `Value`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Blob` changes these declaration properties from `init` to guarded `set`: `Accessibility`, `AutoFocus`, `DisabledStyle`, `Disabled`, `DragSource`, `DropTarget`, `FocusTarget`, `Focusable`, `Gestures`, `Handle`, `KeyBindings`, `Key`, `LayoutTransition`, `OnBlur`, `OnClick`, `OnFocus`, `OnKeyDown`, `OnKeyUp`, `OnPointerCancel`, `OnPointerDown`, `OnPointerEnter`, `OnPointerLeave`, `OnPointerMove`, `OnPointerUp`, `OnTextCandidates`, `OnTextCompositionCancel`, `OnTextComposition`, `OnTextInput`, `OnWheel`, `TabStop`, `TransitionDelayMs`, `TransitionEasing`, `TransitionMs`, `TransitionProperties`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Button` changes these declaration properties from `init` to guarded `set`: `Children`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Container` changes these declaration properties from `init` to guarded `set`: `Children`, `HitTestSelf`, `Layout`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `FocusScopeOptions` changes these declaration properties from `init` to guarded `set`: `InitialFocus`, `Modal`, `RestoreFocus`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Image` changes these declaration properties from `init` to guarded `set`: `Fit`, `PixelsPerUnit`, `Source`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Portal` changes these declaration properties from `init` to guarded `set`: `AnchorRect`, `Anchor`, `CollisionBounds`, `HideWhenAnchorClipped`, `Placement`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Scrollbar` changes these declaration properties from `init` to guarded `set`: `FadeMs`, `HideDelayMs`, `HitThickness`, `Inset`, `MinThumbLength`, `ReserveSpace`, `Thickness`, `Thumb`, `Track`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Shape` changes these declaration properties from `init` to guarded `set`: `CornerRadius`, `FillRule`, `Fit`, `Path`, `StrokeEnd`, `StrokeStart`, `UseCurrentColor`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Style` changes these declaration properties from `init` to guarded `set`: `AlignContent`, `AlignItems`, `AlignSelf`, `AspectRatio`, `BackdropBlur`, `BackgroundColorAnim`, `BackgroundColor`, `BackgroundGradient`, `BackgroundImageFit`, `BackgroundImageSource`, `BasedOn`, `BlendMode`, `BorderBottomLeftRadius`, `BorderBottomRightRadius`, `BorderColorAnim`, `BorderColor`, `BorderEndColorAnim`, `BorderEndColor`, `BorderEndWidth`, `BorderRadius`, `BorderStartColorAnim`, `BorderStartColor`, `BorderStartWidth`, `BorderStyle`, `BorderTopLeftRadius`, `BorderTopRightRadius`, `BorderWidth`, `Bottom`, `BoxShadows`, `BoxShadow`, `ClipPathFillRule`, `ClipPathFit`, `ClipPath`, `ColorAnim`, `Color`, `ColumnGap`, `Cursor`, `Direction`, `Display`, `End`, `FlexBasis`, `FlexDirection`, `FlexGrow`, `FlexShrink`, `FlexWrap`, `FontFamily`, `FontSize`, `FontStyle`, `FontWeight`, `Gap`, `Height`, `JustifyContent`, `Language`, `Left`, `LetterSpacing`, `LineHeight`, `MarginEnd`, `MarginStart`, `Margin`, `MaxHeight`, `MaxWidth`, `MinHeight`, `MinWidth`, `OpacityAnim`, `Opacity`, `OutlineColorAnim`, `OutlineColor`, `OutlineOffset`, `OutlineWidth`, `OverflowX`, `OverflowY`, `Overflow`, `PaddingEnd`, `PaddingStart`, `Padding`, `Position`, `Right`, `RowGap`, `ScaleAnim`, `ScrollbarVisibilityX`, `ScrollbarVisibilityY`, `ScrollbarVisibility`, `ScrollbarX`, `ScrollbarY`, `Scrollbar`, `ShaderEffect`, `Start`, `TextAlign`, `TextDecoration`, `TextMaxLines`, `TextShadows`, `TextShadow`, `TextStrokeColorAnim`, `TextStrokeColor`, `TextStrokeWidth`, `TextTransform`, `TextTrimming`, `TextWrap`, `Top`, `TransformOriginX`, `TransformOriginY`, `Transform`, `TranslateAnim`, `Visibility`, `Width`, `ZIndex`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `TextEditor` changes these declaration properties from `init` to guarded `set`: `CaretColor`, `CurrentLineColor`, `InputOptions`, `Layers`, `LineNumberColor`, `OnChange`, `OnSubmit`, `OverscanLines`, `PlaceholderColor`, `Placeholder`, `ReadOnly`, `SelectionColor`, `ShowLineNumbers`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `TextEntry` changes these declaration properties from `init` to guarded `set`: `Controlled`, `InputOptions`, `OnChange`, `OnSubmit`, `Password`, `PlaceholderColor`, `Placeholder`, `ReadOnly`, `SelectionColor`, `Value`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `TextInputOptions` changes these declaration properties from `init` to guarded `set`: `AutofillHints`, `EnterAction`, `Purpose`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `Text` changes these declaration properties from `init` to guarded `set`: `Content`, `StyleRanges`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- Breaking: `VectorStroke` changes these declaration properties from `init` to guarded `set`: `VectorEffect`. Rebuild binary consumers and finish declarations before handing them to Goo.
+- `VectorStroke` adds guarded setters for the formerly get-only `Cap`, `Join`, `MiterLimit` and `Dashes` properties.
+- Breaking: Remove `Image.Path` and `Style.BackgroundImage`. Use `Image.Source` and `Style.BackgroundImageSource` with an `ImageSource` or provider.
+- Breaking: Change `Image.PixelsPerUnit`, `ImageVariant.PixelsPerUnit`, its constructor density, and `ImageAssetResult.PixelsPerUnit` to `float64`.
+- Breaking: Construct shortcuts with `KeyBinding(key, modifiers, onPress)` or rename literal `Action` to `OnPress`. Use `KeyModifiers.None`, `Primary`, and `PrimaryShift` for common exact modifier combinations.
+- Read click and input modifiers from `Window.Modifiers`. Use `KeyEvent.TargetEditsText` or `Window.Focus.EditsText` to keep navigation shortcuts out of text editing.
+- Breaking: Move `PlatformInput.Editor`, `Selection`, `SetSelection`, and `Execute` calls to `Window.Focus`. Replace `PlatformInput.MoveFocus` with `Window.Focus.Move` and `PlatformInput.ClearFocus` with `Window.Focus.Clear`. Keep host injection and composition on `PlatformInput`.
+- Breaking: Move `PlatformInput.EditorChanged` subscriptions to `Window.Focus.EditorChanged`.
+- Use `KeyModifiers.HasPrimary` when other modifiers may also be held. It tests Super on macOS and Ctrl elsewhere.
+- Breaking: `LayoutSize.Deconstruct` names its out parameters `Width` and `Height` instead of `width` and `height`. Update named `Deconstruct` calls and named positional patterns to use the capitalized names.
+- `HasMagnitude` is false for font-relative, viewport-relative and mixed lengths. Do not derive pixels from `Magnitude` for these values. Use `LayoutContext.ResolveLength` in custom layout callbacks.
+- Breaking: Replace `Hover`, `Active` and `Focus` Blob declarations with `HoverStyle`, `ActiveStyle` and `FocusStyle`.
+- Breaking: Replace implicit string-to-Color conversion with `Color.Parse(value)`.
+- Breaking: `Portal.FocusScope` owns the overlay focus scope. Set `FocusScopeOptions{Modal: true}` for a modal dialog. `InitialFocus` selects the first target and `RestoreFocus` controls focus restoration. Remove matching manual `BeginFocusScope` registrations. `OnDismiss` receives `PopupDismissReason.Escape` or `OutsideInteraction`. Remove the Portal to close it. `OnDismiss` alone opens a nonmodal scope. `Scrim` paints behind the content, and modal scopes set the accessibility modal flag.
+- Breaking: `PopupWindow.Open` and `UpdatePlacement` take `size: LayoutSize(width, height)` instead of integer width and height arguments. Pass `placement` by name when omitting `maximum`. Omit `size` to measure the root once within `maximum` and the display work area. `UpdatePlacement` measures the current root again when `size` is omitted.
+- Reduce reconciliation cost for empty children and stable keyed order, and keep scroll, layout transition and virtual state on each node.
+- Document the migration paths from 0.30.0, supported relative Style lengths, pointer-drag deltas and Cell-owned background callbacks.
+- Cells with safe tracked State fields can skip unchanged callbacks, including inherited Cells. Virtual rows track State through their retained element and refresh all realized rows when a dependency changes.
+- `Application.VerifyState` rebuilds eligible Cells and reports untracked tree changes. It defaults to enabled under a debugger or DevTools. Mutable instance or static fields and observed mutable ElementHandle values retain automatic callback rebuilding.
+- Breaking: removed `Cell[TInput].ShouldRebuild`. Input equality now decides child rebuilds. Remove those overrides and derive input-dependent state in `InputChanged(input)` before `Build`.
+- Breaking: Replace `TextEditor(controller)` and `TextEditor(controller, layers)` with `TextEditor{Controller: controller, Layers: layers}`. Omit `Layers` when unused. Replace `Virtual(source)` with `Virtual{Source: source}`. The controller and source are required at mount.
+- Breaking: `Window.MeasureText` now returns `float64` layout units. Update variables and delegates that require `float32`.
+- Ellipsis text now has automatic minimum width zero. Set `MinWidth` when a nonzero minimum is needed.
+- Selectable text leaves unsupported keys to ancestor handlers and bindings. Selection clears on blur and content replacement. Appending content preserves selection.
+- Goo callbacks now resume after `await` on their window's UI thread, including embedded host dispatchers, and rebuild their owning Cell through tracked-state rules. Use `async func Handler() void` and pass `Lifetime` to cancellable work.
+- Window close now cancels Cell lifetimes and pending window tasks before a bounded continuation drain. Set `CloseDrainMs` to change the 2000 ms bound. Continuations after the bound run on a serialized background queue and must not access UI state.
+- `EmbeddedWindowHost.Dispose` now pumps pending window continuations on the calling thread until the same close drain completes or expires.
+- Use `Window.InvokeAsync` for awaitable dispatch of synchronous or Task-returning work and `Window.NextPresentationAsync` for the next accepted presentation receipt.
+- Breaking: Shape path paint uses `Fill: VectorPaint(...)` and `Stroke: VectorStroke(...)` instead of background and border declarations. Legacy paint without either new member throws at mount.
+- Breaking: `VectorAsset.Render` accepts `fit` and `key`, with `ShapeFit.Contain` as the default. Replace `asset.Render("key")` with `asset.Render(key: "key")`.
+- Breaking: Shape state-style background and border paint, including `BackgroundColorAnim` and `BorderColorAnim`, no longer apply. For fill, use `UseCurrentColor: true` with state-style `Color` or `ColorAnim`.
+- Out-of-range path numbers report their scanner position instead of the end of the string.
+- Breaking: `VectorAsset.ViewBoxX`, `ViewBoxY`, `ViewBoxWidth`, `ViewBoxHeight`, and the `ShaderEffect` constructor's `backdropOutset` and `backdropBlur` use `float64`. Update `float32` variables and delegates to `float64`. Backdrop distances are in layout units.
+
+### Fixed
+
+- Linux NativeAOT apps without static SDL now load bundled SDL or report a missing library instead of silently loading system SDL.
+- Ship a pinned AppImage runtime with exact dependency sources, license texts and libfuse relink material.
+- Run the shader effect and XML docs build tools on newer .NET runtimes, so apps build on machines with only .NET 11 installed.
+- Keep vector path coverage stable at contour joins across Vulkan drivers.
+- Reject contained hit-test subtrees early and reuse the committed hover route for scrollbar hover.
+- Check known input targets through their parent links instead of scanning the whole tree.
+- Compute dirty fiber depths once and keep parent-first rebuild order with a stable tie order.
+- Allow a nested posted-action drain to consume the remaining queue without a dequeue error.
+- Preserve application stack frames when cleanup, native callbacks and deferred rendering errors are delivered.
+- Coalesce pending SDL wake events and avoid faulting GPU completion when the event queue is full.
+- Evict least-recently-used image cache entries that no returned source or mounted lease owns.
+- Drain native modal completion during close and bound event-serviced cleanup when Window.Run fails.
+- Report repeated alternating element metrics once per episode when window diagnostics are enabled.
+- Skip source-child counts when an opaque scene node does not need opacity isolation.
+- Reuse child reconciliation scratch for sibling lists up to 32,768 elements to avoid repeated collection allocation.
+- Keep shape-shadow spread the same distance along axis and diagonal directions.
+- Complete window-created offscreen render sessions in the window loop without polling `Service`, and cancel pending pages before the window closes.
+- Restore small-path GPU performance while retaining lower first-draw path shader compile cost.
+- `goo render` preserves the app window's theme, context values and registered font selection.
+- Shader effect output names use forward slashes on every platform and cannot escape the application output directory.
+- `TextEditorController` keeps the caret on a grapheme boundary after text changes and rich-text replacement.
+- Fit clipped focus outlines inside controls and follow their visible rounded corner contours.
+
+### Removed
+
+- Breaking: Removed `Window.TryPost`. Use `Window.Post` and check its Boolean result.
+- Breaking: Replace `Shape.StrokeCap`, `StrokeJoin`, `MiterLimit`, `Dashes`, and `VectorEffect` with the matching guarded `VectorStroke` properties. Replace the six-argument constructor with `VectorStroke(width, paint){.Cap: cap, .Join: join, .MiterLimit: limit, .Dashes: dashes}`. Keep trim bounds on `Shape.StrokeStart` and `StrokeEnd`.
+
 ## 0.30.0 - 2026-11-11
 
 ### Added

@@ -1,5 +1,0 @@
-## Changed
-
-- Breaking: Move window clipboard calls to `window.Clipboard`: `GetClipboardText()` -> `ReadText()` (`string` -> `ClipboardTextResult`), `SetClipboardText(value)` -> `WriteText(value)` (`void` -> `ClipboardWriteResult`), `GetClipboardFormats()` -> `GetFormats()`, `ReadClipboardFiles()` -> `ReadFiles()`, `ReadClipboardImage()` -> `ReadImage()`, `ReadClipboardDataAsync(types)` -> `ReadDataAsync(types)`, and `WriteClipboardAsync(data, intent)` -> `WriteAsync(data, intent)`. Check result status before reading text or assuming a write succeeded.
-- Breaking: Replace protected `EmbeddedWindowHost.GetClipboardText() string` and `SetClipboardText(value)` overrides with `ReadClipboardText() ClipboardTextResult` and `WriteClipboardText(value) ClipboardWriteResult`. Construct results with explicit status, text and optional error. The defaults return `Unsupported`.
-- `WindowClipboard.ReadDataAsync` and `WriteAsync` accept a trailing optional `CancellationToken`. Pass a token to cancel the wait and discard a late native result.
