@@ -299,6 +299,7 @@ class FixtureContractTests {
             yield Contract[ClickSequenceFixtures]("TextSelectionUsesTheRoutedCountAndCaptureDoesNotCreateFalseClicks")
             yield Contract[ClickSequenceFixtures]("TouchCountsArePerContactAndPenSequencesAreIndependent")
             yield Contract[ClickSequenceFixtures]("PointerDragThresholdAndSuppressedClickContract")
+            yield Contract[ClickSequenceFixtures]("PointerDragArbitratesChildClicksAndMovementContract")
             yield Contract[GestureFixtures]("RoutedWinnerSuppressesClickScrollAndLosingRecognizer")
             yield Contract[GestureFixtures]("DeadlineAndExplicitCancelHaveOneTerminalNotification")
             yield Contract[GestureFixtures]("CaptureAndNativeCancelDoNotLeakRecognition")

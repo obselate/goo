@@ -194,6 +194,49 @@ internal class ClickSequenceFixtures {
       && phases[0] == GesturePhase.Started && phases[1] == GesturePhase.Completed
   }
 
+  func PointerDragArbitratesChildClicksAndMovementContract() bool {
+    for device in []PointerDevice{PointerDevice.Mouse, PointerDevice.Pen, PointerDevice.Touch} {
+      for threshold in []float64{0, 8} {
+        var clicks int32
+        let events = List[PointerDragEvent]()
+        let resolver = Resolver{}
+        let root = Reconciler{Res: resolver}.Mount(Container{
+          Width: 200, Height: 80, PointerDragThreshold: threshold,
+          OnPointerDrag: (e PointerDragEvent) -> events.Add(e),
+          Button{Width: 100, Height: 40, OnClick: () -> { clicks++ }},
+        })
+        Layout().Calculate(root, 200.0F, 80.0F)
+        let input = InputCoordinator()
+        input.QueuePointerPress(42, device, 150, 20, PointerButton.Primary, KeyModifiers{})
+        input.QueuePointerRelease(42, device, 150, 20, PointerButton.Primary, KeyModifiers{})
+        input.Drain(root, resolver, 0, nil)
+        if clicks != 0 || events.Count != 0 { return false }
+        for x in []float32{20, 150} {
+          input.QueuePointerPress(42, device, x, 20, PointerButton.Primary, KeyModifiers{})
+          input.QueuePointerMove(42, device, x, 20, KeyModifiers{})
+          input.QueuePointerRelease(42, device, x, 20, PointerButton.Primary, KeyModifiers{})
+          input.Drain(root, resolver, 0, nil)
+          if clicks != 1 || events.Count != 0 { return false }
+        }
+        for x in []float32{20, 150} {
+          input.QueuePointerPress(42, device, x, 20, PointerButton.Primary, KeyModifiers{})
+          let movement = float32(threshold == 0 ? 1 : threshold)
+          input.QueuePointerMove(42, device, x + movement, 20, KeyModifiers{})
+          input.QueuePointerRelease(42, device, x + movement, 20, PointerButton.Primary, KeyModifiers{})
+          input.Drain(root, resolver, 1, nil)
+          if clicks != 1 || events.Count != 2
+            || events[0].Phase != GesturePhase.Started || events[1].Phase != GesturePhase.Completed
+            || events[0].WindowPosition.X != float64(x + movement)
+            || events[0].Position.X != float64(x + movement)
+            || events[0].Translation.X != float64(movement)
+            || events[0].Delta.X != float64(movement) { return false }
+          events.Clear()
+        }
+      }
+    }
+    return true
+  }
+
 }
 
 internal class DragRegionHitCell : Cell {
