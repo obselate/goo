@@ -21,10 +21,12 @@ internal shared partial class Checks {
             }
         }
         Require(assemblies.Count > 0, "Expected at least one assembly")
-        let baseline = HashSet[string](
-            File.ReadAllLines(Path.Combine(Root, "tools/Goo.RepositoryChecks/ilverify-baseline.txt")),
-            StringComparer.Ordinal
-        )
+        let generatedOrdinal = Regex(`(?<=[.+])(<(?:[^<>]|<[^<>]*>)*_)\d+>`)
+        let baseline = File
+            .ReadAllLines(Path.Combine(Root, "tools/Goo.RepositoryChecks/ilverify-baseline.txt"))
+            .Select(line -> generatedOrdinal.Replace(line, "$1ordinal>"))
+            .GroupBy(line -> line, StringComparer.Ordinal)
+            .ToDictionary(group -> group.Key, group -> group.Count(), StringComparer.Ordinal)
         let started = Stopwatch.StartNew()
         var newDiagnostics = 0
         for assembly in assemblies {
@@ -147,9 +149,14 @@ internal shared partial class Checks {
                 if line.StartsWith("[IL]: Error [", StringComparison.Ordinal) {
                     let prefix = "[" + assembly + " : "
                     Require(line.Contains(prefix), "Unrecognized ILVerify diagnostic: " + line)
-                    let diagnostic = line.Replace(prefix, "[" + Path.GetFileName(assembly) + " : ")
+                    let diagnostic = generatedOrdinal.Replace(
+                        line.Replace(prefix, "[" + Path.GetFileName(assembly) + " : "),
+                        "$1ordinal>"
+                    )
                     diagnosticCount++
-                    if !baseline.Contains(diagnostic) {
+                    if baseline.GetValueOrDefault(diagnostic) > 0 {
+                        baseline[diagnostic]--
+                    } else {
                         Console.Error.WriteLine(diagnostic)
                         newDiagnostics++
                     }
