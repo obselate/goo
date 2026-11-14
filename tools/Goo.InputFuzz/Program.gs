@@ -16,7 +16,7 @@ func Main(args[]string) {
     if seeds.Length == 0 {
         throw InvalidOperationException("No seed fixtures")
     }
-    let random = Random(0)
+    let random = Random(int32.Parse(Environment.GetEnvironmentVariable("INPUT_SEED") ?? "0"))
     let clock = Stopwatch.StartNew()
     var count int64 = 0
     for seed in seeds {
