@@ -12,9 +12,6 @@ func Main(args[]string) {
         throw InvalidOperationException("INPUT_TARGET is required")
     let current = Environment.GetEnvironmentVariable("INPUT_CURRENT") ??
         throw InvalidOperationException("INPUT_CURRENT is required")
-    if target is not("svg" or "raster" or "wav") {
-        throw ArgumentException("Unknown managed input target")
-    }
     let seeds = Directory.GetFiles(args[0]).Select(File.ReadAllBytes).ToArray()
     if seeds.Length == 0 {
         throw InvalidOperationException("No seed fixtures")
@@ -74,6 +71,9 @@ func Check(input[]uint8, target string, current string) {
                 } catch (_ InvalidDataException) { } catch (_ NotSupportedException) { } catch (
                     _ ArgumentOutOfRangeException
                 ) { }
+            }
+            case _ {
+                throw ArgumentException("Unknown managed input target")
             }
         }
     } catch {

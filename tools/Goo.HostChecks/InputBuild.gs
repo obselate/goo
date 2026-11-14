@@ -24,7 +24,7 @@ class InputBuild {
             Directory.CreateDirectory(corpus)
             Seed(target, corpus)
             HostChecks.Require(Directory.EnumerateFileSystemEntries(corpus).Any(), "No seed fixtures for $target")
-            if target == "svg" || target == "raster" || target == "wav" {
+            if target is not("native-image" or "font") {
                 HostChecks.Run(
                     []string{
                         "dotnet",
@@ -59,6 +59,15 @@ class InputBuild {
                 "tests/Goo.VulkanProof/Assets/Text/*.otc"
             }
             patterns["wav"] = []string{"tests/**/*.wav"}
+            if !patterns.ContainsKey(target) {
+                let random = Random(0)
+                for index in 0 ... 8 {
+                    let input = [random.Next(16, 1024)]uint8
+                    random.NextBytes(input)
+                    File.WriteAllBytes(Path.Combine(corpus, "random-$index.bin"), input)
+                }
+                return
+            }
             for pattern in patterns[target] {
                 let recursive = pattern.Contains("**/")
                 let directory = Path.Combine(HostChecks.Root, Path.GetDirectoryName(pattern.Replace("**/", ""))!!)

@@ -12,15 +12,14 @@ export INPUT_TARGET="$target"
 export INPUT_CURRENT="$work/current-$target"
 status=0
 case "$target" in
-  svg|raster|wav)
+  native-image|font)
+    "$work/$target" "${options[@]}" "$work/corpus/$target" || status=$?
+    ;;
+  *)
     dotnet "$work/managed-target/Goo.InputFuzz.dll" "$work/corpus/$target" || status=$?
     if [[ "$status" != 0 && -f "$INPUT_CURRENT" ]]; then
       cp "$INPUT_CURRENT" "$failures/current-input"
     fi
     ;;
-  native-image|font)
-    "$work/$target" "${options[@]}" "$work/corpus/$target" || status=$?
-    ;;
-  *) exit 2 ;;
 esac
 exit "$status"
