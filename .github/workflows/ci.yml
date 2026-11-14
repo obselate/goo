@@ -1937,7 +1937,7 @@ jobs:
           Remove-Item Env:GOO_DIRECT_DRIVER_SMOKE, Env:GOO_VK_DIAGNOSTICS
       - name: Install software Vulkan for native Windows checks
         if: needs.changes.outputs.full == 'true'
-        uses: jakoch/install-vulkan-sdk-action@d17de7e2f5e50efb5d2123efed18497d3c58c533 # v1
+        uses: jakoch/install-vulkan-sdk-action@7fe84289ddbf750f7eff9f8e4588e600e1dd06c8 # v1
         with:
           vulkan_version: 1.4.357.0
           install_runtime: true
