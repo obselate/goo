@@ -1455,7 +1455,7 @@ Gets the stable pointer identifier.
 
 ### `Position`
 
-Gets the position relative to the receiving element.
+Gets the current sample position relative to the receiving element. Started reports the threshold-crossing sample, not the press position.
 
 ### `Reason`
 
@@ -1463,7 +1463,7 @@ Gets why the drag was canceled, or None for other transitions.
 
 ### `Translation`
 
-Gets the displacement from the press position in element-local units.
+Gets the displacement from the press position in element-local units. The press position is Position minus Translation, including on Started.
 
 ### `WindowPosition`
 

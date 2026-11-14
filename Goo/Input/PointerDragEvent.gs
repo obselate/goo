@@ -37,7 +37,8 @@ public struct PointerDragEvent {
         get;
         internal init;
     }
-    /// Gets the position relative to the receiving element.
+    /// Gets the current sample position relative to the receiving element.
+    /// Started reports the threshold-crossing sample, not the press position.
     public prop Position Point {
         get -> Pointer.Position
     }
@@ -46,6 +47,7 @@ public struct PointerDragEvent {
         get -> Pointer.WindowPosition
     }
     /// Gets the displacement from the press position in element-local units.
+    /// The press position is Position minus Translation, including on Started.
     public prop Translation Point {
         get;
         internal init;
