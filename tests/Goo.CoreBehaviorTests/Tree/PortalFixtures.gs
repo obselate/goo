@@ -4,6 +4,43 @@ import System
 import System.Numerics
 
 internal class PortalFixtures {
+  func PortalScrollbarPartsUseFinalBoundsContract() bool {
+    for anchored in []bool{false, true} {
+      let anchor = ElementHandle()
+      let viewport = ElementHandle()
+      let thumb = ElementHandle()
+      let root = Container(){
+        Container{Handle: anchor, Width: 40, Height: 20},
+        Portal{
+          Anchor: anchored ? anchor: nil,
+          Container{
+            Handle: viewport, Width: 120, Height: 100, OverflowY: Overflow.Scroll,
+            ScrollbarVisibilityY: ScrollbarVisibility.Always,
+            ScrollbarY: Scrollbar{
+              Thickness: 8, Inset: 0, MinThumbLength: 20,
+              Thumb: Container{Handle: thumb},
+            },
+            Container{Height: 300, FlexShrink: 0},
+          },
+        },
+      }
+      let window = Window{Size: LayoutSize(300, 240), Root: SizedRootFixture(() -> root)}
+      try {
+        window.UpdateTree()
+        let bounds = thumb.BorderBox
+        let panel = viewport.ContentBox
+        if !thumb.IsMounted || bounds.Width != 8 || bounds.Height <= 0
+          || bounds.X != panel.X + panel.Width - 8 || bounds.Y != panel.Y {
+          return false
+        }
+        if !viewport.JumpTo(0, 100) { return false }
+        window.UpdateTree()
+        if thumb.BorderBox.Y <= bounds.Y { return false }
+      } finally { window.Close() }
+    }
+    return true
+  }
+
   func DeclarativeModalFocusTrapContract() bool {
     let cell = DeclarativePortalCell{ Options: FocusScopeOptions{ Modal: true } }
     let window = Window{ Root: cell, Size: LayoutSize(200, 100) }

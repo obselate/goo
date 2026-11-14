@@ -10,6 +10,10 @@ import Xunit
 
 class FixtureContractTests {
     @Fact
+    func PortalScrollbarPartsUseFinalBounds() ->
+        Assert.True(PortalFixtures().PortalScrollbarPartsUseFinalBoundsContract())
+
+    @Fact
     func MountedPlainFieldWritesRebuildContract() ->
         Assert.True(CellFixtures().MountedPlainFieldWritesRebuild())
 
