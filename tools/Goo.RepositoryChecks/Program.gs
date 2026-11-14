@@ -21,10 +21,11 @@ internal shared partial class Checks {
                 "  onboarding\n" +
                 "  accessibility PACKAGE\n" +
                 "  android APK_OR_AAB\n" +
+                "  ilverify ASSEMBLY... [--assets PROJECT_ASSETS_JSON]\n" +
                 "  text-rebuild RECORDED_JSON REBUILT_JSON")
             return
         }
-        Require(arguments.Length > 0, "Expected release, onboarding, accessibility, android or text-rebuild")
+        Require(arguments.Length > 0, "Expected release, onboarding, accessibility, android, ilverify or text-rebuild")
         let rest = arguments.Skip(1).ToArray()
         if arguments[0] == "release" {
             Release(rest)
@@ -35,6 +36,8 @@ internal shared partial class Checks {
             Accessibility(rest)
         } else if arguments[0] == "android" {
             Android(rest)
+        } else if arguments[0] == "ilverify" {
+            VerifyIl(rest)
         } else if arguments[0] == "text-rebuild" {
             TextRebuild(rest)
         } else {

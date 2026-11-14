@@ -13,15 +13,12 @@ public data struct FocusedEditorSnapshot(FocusId int64, Text string, SelectionSt
   public prop InputOptions TextInputOptions? { get; init; }
 }
 
-/// Routes platform events and semantic editing through the window's existing input system.
+/// Routes platform events and composition through the window's existing input system.
 /// Call on the window owner thread. Use Window.Post to dispatch from another thread.
 public class PlatformInput {
   private let owner Window
   private let input InputCoordinator
   private let resolver Resolver
-  private var published FocusedEditorSnapshot?
-  private var publishedSelection TextSelection?
-  private var editorChanged Action[FocusedEditorSnapshot?]?
 
   internal init(owner Window, input InputCoordinator, resolver Resolver) {
     this.owner = owner
@@ -29,61 +26,33 @@ public class PlatformInput {
     this.resolver = resolver
   }
 
-  /// Gets a current immutable snapshot, or nil when no text editor has focus.
-  public prop Editor FocusedEditorSnapshot? {
-    get {
-      requireThread()
-      return input.EditorSnapshot()
-    }
-  }
-
-  /// Gets the focused editor's effective selection, preserving endpoint affinities, or nil without an editor.
-  public prop Selection TextSelection? {
-    get {
-      requireThread()
-      return input.EditorSelection()
-    }
-  }
-
-  /// Reports settled focus, text, selection, composition, and caret-area changes.
-  public event EditorChanged Action[FocusedEditorSnapshot?]{
-    add{
-      requireThread()
-      editorChanged = Delegate.Combine(editorChanged, value) as Action[FocusedEditorSnapshot?]?
-    }
-    remove{
-      requireThread()
-      editorChanged = Delegate.Remove(editorChanged, value) as Action[FocusedEditorSnapshot?]?
-    }
-  }
-
-  /// Moves a platform pointer in window logical coordinates.
-  public func PointerMove(pointerId int64, device PointerDevice, x float32, y float32,
+  /// Moves a platform pointer in native logical window coordinates.
+  public func PointerMove(pointerId int64, device PointerDevice, x float64, y float64,
     modifiers KeyModifiers, pressure float32) {
       requireInput()
-      input.QueuePointerMove(pointerId, device, x / owner.UiScale, y / owner.UiScale, modifiers, pressure)
+      input.QueuePointerMove(pointerId, device, float32(x / owner.UiScale), float32(y / owner.UiScale), modifiers, pressure)
       drain()
     }
 
-  /// Presses a platform pointer in window logical coordinates.
-  public func PointerPress(pointerId int64, device PointerDevice, x float32, y float32,
+  /// Presses a platform pointer in native logical window coordinates.
+  public func PointerPress(pointerId int64, device PointerDevice, x float64, y float64,
     button PointerButton, modifiers KeyModifiers, pressure float32) {
       requireInput()
-      input.QueuePointerPress(pointerId, device, x / owner.UiScale, y / owner.UiScale, button, modifiers, pressure)
+      input.QueuePointerPress(pointerId, device, float32(x / owner.UiScale), float32(y / owner.UiScale), button, modifiers, pressure)
       drain()
     }
 
-  /// Releases a platform pointer in window logical coordinates.
-  public func PointerRelease(pointerId int64, device PointerDevice, x float32, y float32,
+  /// Releases a platform pointer in native logical window coordinates.
+  public func PointerRelease(pointerId int64, device PointerDevice, x float64, y float64,
     button PointerButton, modifiers KeyModifiers, pressure float32) {
       requireInput()
-      input.QueuePointerRelease(pointerId, device, x / owner.UiScale, y / owner.UiScale, button, modifiers, pressure)
+      input.QueuePointerRelease(pointerId, device, float32(x / owner.UiScale), float32(y / owner.UiScale), button, modifiers, pressure)
       drain()
     }
 
   internal func PointerMotionFrame(samples ReadOnlySpan[QueuedPointerEvent]) {
     requireInput()
-    input.QueuePointerFrame(samples, owner.UiScale)
+    input.QueuePointerFrame(samples, float32(owner.UiScale))
     drain()
   }
 
@@ -132,11 +101,11 @@ public class PlatformInput {
     finally { finish() }
   }
 
-  /// Dispatches wheel deltas at a window logical position.
-  public func PointerWheel(x float32, y float32, deltaX float32, deltaY float32,
+  /// Dispatches wheel deltas at a native logical window position.
+  public func PointerWheel(x float64, y float64, deltaX float64, deltaY float64,
     modifiers KeyModifiers) {
       requireInput(false)
-      input.QueuePointerWheel(x / owner.UiScale, y / owner.UiScale, deltaX, deltaY, modifiers)
+      input.QueuePointerWheel(float32(x / owner.UiScale), float32(y / owner.UiScale), float32(deltaX), float32(deltaY), modifiers)
       drain(false)
     }
 
@@ -164,20 +133,6 @@ public class PlatformInput {
     requireThread()
     try { input.FocusLost(owner.Tree, resolver) }
     finally { drain() }
-  }
-
-  /// Removes editor focus and cancels transient composition.
-  public func ClearFocus() {
-    requireThread()
-    try { input.ClearEditorFocus(resolver) }
-    finally { finish() }
-  }
-
-  /// Moves focus in the retained focus order, independent of editor indentation.
-  public func MoveFocus(forward bool) bool {
-    requireInput()
-    try { return input.MoveEditorFocus(owner.Tree, resolver, forward) }
-    finally { finish() }
   }
 
   /// Replaces editor selection or preedit, or delivers text to a focused generic text client.
@@ -217,22 +172,6 @@ public class PlatformInput {
     finally { finish() }
   }
 
-  /// Selects effective UTF-16 offsets. Goo expands ranges to whole grapheme clusters.
-  /// Selection direction and composing ranges remain independent.
-  public func SetSelection(start int32, end int32) bool {
-    requireInput()
-    try { return input.SetEditorSelection(owner.Tree, start, end) }
-    finally { finish() }
-  }
-
-  /// Selects effective UTF-16 positions while preserving both endpoint affinities.
-  /// Grapheme normalization and composition use the same rules as the offset-only overload.
-  public func SetSelection(selection TextSelection) bool {
-    requireInput()
-    try { return input.SetEditorSelection(owner.Tree, selection) }
-    finally { finish() }
-  }
-
   /// Deletes UTF-16 lengths outside the union of selection and composition, retaining both.
   /// Deletion expands to whole grapheme clusters without committing preedit.
   public func DeleteSurroundingText(beforeLength int32, afterLength int32) bool {
@@ -241,38 +180,14 @@ public class PlatformInput {
     finally { finish() }
   }
 
-  /// Executes shared semantic navigation, editing, clipboard, submit, or entry CancelEdit behavior.
-  /// Paste without Text reads the clipboard. Supplied paste text retains Paste interception and undo grouping.
-  public func Execute(command TextCommand) bool {
-    requireInput()
-    try { return input.ExecuteEditorCommand(owner.Tree, resolver, command) }
-    finally { finish() }
-  }
+  internal func Refresh() { owner.Focus.Refresh() }
 
-  internal func Refresh() {
-    if input.IsDispatching { return }
-    let current = input.EditorSnapshot()
-    let selection = input.EditorSelection()
-    var selectionChanged = (publishedSelection == nil) != (selection == nil)
-    if let prior = publishedSelection, let next = selection {
-      selectionChanged = prior.Anchor.Offset != next.Anchor.Offset || prior.Active.Offset != next.Active.Offset
-        || prior.Anchor.Affinity != next.Anchor.Affinity || prior.Active.Affinity != next.Active.Affinity
-    }
-    if published == nil && current == nil { return }
-    if let prior = published, let next = current {
-      if prior.Equals(next) && !selectionChanged && prior.InputOptions == next.InputOptions { return }
-    }
-    published = current
-    publishedSelection = selection
-    editorChanged?.Invoke(current)
-  }
-
-  private func requireThread(flush bool = true) {
+  internal func requireThread(flush bool = true) {
     owner.RequireElementHandleThread("Window.PlatformInput")
     if flush { owner.FlushDeferredVirtualization() }
   }
 
-  private func requireInput(flush bool = true) {
+  internal func requireInput(flush bool = true) {
     requireThread(flush)
     if owner.IsInputBlocked { throw InvalidOperationException("Window input is blocked by its modal child") }
   }
@@ -286,7 +201,7 @@ public class PlatformInput {
     } finally { finish(changed) }
   }
 
-  private func finish(invalidate bool = true) {
+  internal func finish(invalidate bool = true) {
     if input.IsDispatching { return }
     resolver.Flush()
     if invalidate { owner.InvalidatePlatformInput() }

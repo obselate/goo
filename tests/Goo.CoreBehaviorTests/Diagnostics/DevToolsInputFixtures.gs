@@ -16,7 +16,7 @@ internal class DevToolsInputCell : Cell {
     if Show { Button() {.Key: "action",.Width: 100,.Height: 40,.OnClick: () -> { Clicks++ },
         Text{Content: "Count " + Clicks.ToString()}} } else { Container{Key: "placeholder"} },
     TextEntry{Key: "entry", KeyBindings: []KeyBinding{
-      KeyBinding{ Key: Key.Backspace, Repeat: true, Action: () -> { Backspace?.Invoke() } } }, Width: 200, Height: 40, Value: Value, OnChange: (value string) -> { Value = value }},
+      KeyBinding{ Key: Key.Backspace, Repeat: true, OnPress: () -> { Backspace?.Invoke() } } }, Width: 200, Height: 40, Value: Value, OnChange: (value string) -> { Value = value }},
     Container{Key: "drag", Width: 100, Height: 40,
       OnPointerDown: (event PointerEvent) -> { event.Capture() },
       OnPointerMove: (event PointerEvent) -> { if event.Buttons != PointerButtons.None { Moves++ } },
@@ -46,8 +46,8 @@ internal class DevToolsInputFixtures {
   func OpaqueTargetsRejectOtherWindowsAndRemounts() bool {
     let firstRoot = DevToolsInputCell{}
     let secondRoot = DevToolsInputCell{}
-    let firstWindow = Window{Root: firstRoot, Width: 320, Height: 220}
-    let secondWindow = Window{Root: secondRoot, Width: 320, Height: 220}
+    let firstWindow = Window{Root: firstRoot, Size: LayoutSize(320, 220), }
+    let secondWindow = Window{Root: secondRoot, Size: LayoutSize(320, 220), }
     firstWindow.Open()
     secondWindow.Open()
     let first = firstWindow.AttachDiagnostics(true)
@@ -80,8 +80,8 @@ internal class DevToolsInputFixtures {
 
   func OptInRoutingSettlementAndStaleTargets() bool {
     let root = DevToolsInputCell{}
-    let window = Window{Root: root, Width: 320, Height: 220}
-    root.Backspace = () -> { window.PlatformInput.Execute(TextCommand{ Kind: TextCommandKind.DeleteBackward }) }
+    let window = Window{Root: root, Size: LayoutSize(320, 220)}
+    root.Backspace = () -> { window.Focus.Execute(TextCommand{ Kind: TextCommandKind.DeleteBackward }) }
     window.Open()
     let session = window.AttachDiagnostics()
     try {
@@ -125,7 +125,7 @@ internal class DevToolsInputFixtures {
 
   func CaptureCancelAndValidation() bool {
     let root = DevToolsInputCell{}
-    let window = Window{Root: root, Width: 320, Height: 220}
+    let window = Window{Root: root, Size: LayoutSize(320, 220), }
     window.Open()
     let session = window.AttachDiagnostics(true)
     try {
@@ -169,7 +169,7 @@ internal class DevToolsInputFixtures {
     let root = DevToolsInputCell{}
     var keyPresses int32
     root.Backspace = () -> { keyPresses++ }
-    let window = Window{Root: root, Width: 320, Height: 220}
+    let window = Window{Root: root, Size: LayoutSize(320, 220), }
     window.Open()
     let session = window.AttachDiagnostics(true)
     try {

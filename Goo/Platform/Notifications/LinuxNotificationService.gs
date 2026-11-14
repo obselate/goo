@@ -191,7 +191,7 @@ internal class LinuxNotificationService : NotificationService {
         if signal.Text != "default" { return }
         lock gate {
             if disposed || !nativeEntries.TryGetValue(signal.Id, out let entry) { return }
-            let posted = Window.PostApplicationActivation(ApplicationActivation {
+            let posted = Application.PostActivation(ApplicationActivation {
                 Kind: ApplicationActivationKind.Notification, NotificationId: entry.Message.Id,
                 Payload: entry.Message.Payload, NativeActivationToken: entry.Token,
             })

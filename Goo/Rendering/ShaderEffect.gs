@@ -5,8 +5,8 @@ import System.Diagnostics
 import System.Numerics
 import System.Runtime.CompilerServices
 
-public sealed class ShaderEffect {
-  private const MaximumBackdropOutset float32 = 256.0F
+public class ShaderEffect {
+  private const MaximumBackdropOutset float64 = 256.0
   private const ParameterCount int32 = 8
   private const DataInputCount int32 = 4
   private let gate object
@@ -25,19 +25,19 @@ public sealed class ShaderEffect {
   private var playbackTimestamp int64
 
   public init(program ShaderEffectProgram, samplesBackdrop bool = false,
-    backdropOutset float32 = 0.0F, backdropBlur float32 = 0.0F) {
+    backdropOutset float64 = 0.0, backdropBlur float64 = 0.0) {
       if Object.ReferenceEquals(program, nil) { throw ArgumentNullException("program") }
-      if !finite(backdropOutset) || backdropOutset < 0.0F
+      if !float64.IsFinite(backdropOutset) || backdropOutset < 0.0
         || backdropOutset > MaximumBackdropOutset{
           throw ArgumentOutOfRangeException("backdropOutset")
         }
-      if !samplesBackdrop && backdropOutset != 0.0F {
+      if !samplesBackdrop && backdropOutset != 0.0 {
         throw ArgumentException("Backdrop outset requires backdrop sampling", "backdropOutset")
       }
-      if !finite(backdropBlur) || backdropBlur < 0.0F || backdropBlur > MaximumBackdropOutset / 3.0F {
+      if !float64.IsFinite(backdropBlur) || backdropBlur < 0.0 || backdropBlur > MaximumBackdropOutset / 3.0 {
         throw ArgumentOutOfRangeException("backdropBlur")
       }
-      if !samplesBackdrop && backdropBlur != 0.0F {
+      if !samplesBackdrop && backdropBlur != 0.0 {
         throw ArgumentException("Backdrop blur requires backdrop sampling", "backdropBlur")
       }
       if program.SourceIndependent && samplesBackdrop {
@@ -51,8 +51,8 @@ public sealed class ShaderEffect {
       dataChanged = () -> { OnDataChanged() }
       programId = program.ProgramId
       this.samplesBackdrop = samplesBackdrop
-      this.backdropOutset = MathF.Max(backdropOutset, backdropBlur * 3.0F)
-      this.backdropBlur = backdropBlur
+      this.backdropOutset = float32(Math.Max(backdropOutset, backdropBlur * 3.0))
+      this.backdropBlur = float32(backdropBlur)
       version = 1uL
     }
 

@@ -141,6 +141,10 @@ internal data struct ContextEnvironment {
             get -> current.CallbackCell ?? current.Cell ?? current.Virtual?.CallbackOwner
         }
 
+        internal prop StateReader Cell? {
+            get -> current.StateCallback ? nil : current.Virtual?.CallbackOwner
+        }
+
         internal func Enter(environment ContextEnvironment) ContextEnvironment {
             let previous = current
             current = environment
@@ -394,6 +398,7 @@ internal sealed class ContextReader {
     internal var Provider ContextFrame?
     internal var Cell Cell?
     internal var Virtual VirtualNodeState?
+    internal var Invalidated Action?
     internal var Preserve bool
     internal var Queued bool
     internal var NextCommit ContextReader?
@@ -476,11 +481,13 @@ internal sealed class ContextReader {
 
     internal func Invalidate() {
         if let cell = Cell {
+            cell.verifyPending = false
             if !cell.building {
                 cell.RestoreDirtyAndSubmit()
             }
         }
         Virtual?.InvalidateContext()
+        Invalidated?.Invoke()
     }
 
     internal func Dispose() {
@@ -496,6 +503,7 @@ internal sealed class ContextReader {
         Window = nil
         Cell = nil
         Virtual = nil
+        Invalidated = nil
     }
 }
 
@@ -561,5 +569,20 @@ internal sealed class ContextProvider : Cell {
         } finally {
             ContextEnvironment.Current = previous
         }
+    }
+}
+
+internal class WindowDependency[T any] {
+    private var current T
+    private let dependency StateDependency = StateDependency(true, false)
+
+    internal init(value T) { current = value }
+
+    internal func Read(reader object) { dependency.Read(reader) }
+
+    internal func Sync(value T) {
+        if EqualityComparer[T].Default.Equals(current, value) { return }
+        current = value
+        dependency.Changed()
     }
 }

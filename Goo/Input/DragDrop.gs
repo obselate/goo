@@ -18,7 +18,7 @@ public enum DragEventKind { Enter; Move; Leave; Drop }
 public enum DragEndKind { Dropped; Canceled }
 
 /// Holds the consumer-owned value, allowed effects and optional native representations.
-public sealed class DragData {
+public class DragData {
   private let value object
   private let allowedEffects DragEffect
   private let nativeFiles NativeFileDrag?
@@ -120,7 +120,7 @@ public struct DragEndEvent {
 }
 
 /// Defines data creation and terminal notification for a drag source.
-public sealed class DragSource {
+public class DragSource {
   private let create((DragStartEvent) -> DragData?)
   private let end Action[DragEndEvent]?
   /// Gets the callback invoked at the pointer threshold or by PlatformInput.BeginDrag.
@@ -139,7 +139,7 @@ public sealed class DragSource {
 }
 
 /// Defines negotiation and lifecycle callbacks for an in-app drop target.
-public sealed class DropTarget {
+public class DropTarget {
   private let query((DragEvent) -> DragEffect)
   private let changed Action[DragEvent]?
   private let stopAncestorRouting bool

@@ -15,9 +15,10 @@ internal class Program {
         private const Payload string = "opaque|report-42|α"
 
         internal func Run(arguments []string) {
-            Window.ConfigureApplication("Goo notification smoke", "1.0", Identity)
-            Require(Window.InitializeApplicationActivation(ApplicationActivation{ IsInitial: true }) == WindowOperationResult.Accepted,
-                "Activation initialization failed")
+            Application.Configure("Goo notification smoke", "1.0", Identity)
+            let instance = Application.AcquireSingleInstance([]string{})
+            Require(instance.Status == SingleInstanceStatus.Primary, "Activation initialization failed")
+            using let lease = instance.Lease
             let opened = Notifications.Open(NotificationOptions{})
             if arguments[0] == "missing" {
                 Require(opened.Status == NotificationStatus.MissingIdentity, "An unbundled macOS process claimed identity")
@@ -27,7 +28,7 @@ internal class Program {
             Require(opened.Status == NotificationStatus.Success && opened.Service != nil,
                 "Notification service did not open: ${opened.Status}: ${opened.Error}")
             using let service = opened.Service!!
-            let window = Window{ Width: 160, Height: 100, InitiallyVisible: false, Root: Cell() }.Open()
+            let window = Window{ Size: LayoutSize(160, 100),  InitiallyVisible: false, Root: Cell() }.Open()
             let owner = Environment.CurrentManagedThreadId
             var received = false
             let callback Action[ApplicationActivation] = activation -> {
@@ -38,7 +39,7 @@ internal class Program {
                 Require(!activation.IsInitial, "A warm notification became a cold activation")
                 received = true
             }
-            Window.ApplicationActivated += callback
+            Application.Activated += callback
             try {
                 let permission = Complete(service.GetPermissionAsync(), window)
                 Require(permission.Status == NotificationStatus.Success || permission.Status == NotificationStatus.Denied
@@ -63,7 +64,7 @@ internal class Program {
                         window.Pump(0.01)
                         Thread.Sleep(1)
                     }
-                    Require(received, "The native daemon action did not reach ApplicationActivated")
+                    Require(received, "The native daemon action did not reach Application.Activated")
                     Require(Complete(service.ShowAsync(message), window).Delivery == NotificationDelivery.Accepted,
                         "Native notification could not be resubmitted after activation")
                 } else {
@@ -81,7 +82,7 @@ internal class Program {
                     "Native removal was not accepted")
                 Console.WriteLine("notifications: native permission, submission, presence and removal checks passed")
             } finally {
-                Window.ApplicationActivated -= callback
+                Application.Activated -= callback
                 window.RequestClose()
                 window.Pump(0)
             }

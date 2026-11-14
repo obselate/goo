@@ -126,6 +126,9 @@ internal class KeyboardInput {
       if let hook = diagnosticsHook {
         if hook(e.Key, e.Modifiers) { return true }
       }
+      if e.Key == Key.Escape && !compositionActive && Portals.Dismiss(root, PopupDismissReason.Escape) {
+        return true
+      }
       if resolver.Owner?.PreviewKeyPress(e.Key, e.Modifiers) == true { return true }
       if root == nil || FocusScopes.ModalRoot(root) == nil {
         onKeyPress?.Invoke(e.Key, e.Modifiers)
@@ -314,6 +317,7 @@ internal class KeyboardInput {
   }
 
   private func HandleRepeatedKey(root Node?, resolver Resolver, text TextInput, pointer PointerInput) bool {
+    resolver.Owner?.SetInputModifiers(heldModifiers)
     let dispatch = DispatchKeyDown(heldTarget, heldKey, heldModifiers, true, root, resolver, text, pointer)
     if !dispatch.Repeat { resetRepeat() }
     return dispatch.Handled
@@ -327,6 +331,7 @@ internal class KeyboardInput {
     down bool, root Node?, resolver Resolver, text TextInput, pointer PointerInput) KeyboardDispatchResult{
       var result KeyboardDispatchResult
       guard let start = target else { return result }
+      let targetEditsText = WindowFocus.TargetEditsText(focus.FocusedNode())
       let startMount = NodeMount(start)
       if !canReceiveInput(start) {
         return result
@@ -346,10 +351,11 @@ internal class KeyboardInput {
           let callback = down ? InputCallbacks.KeyDown(node) : InputCallbacks.KeyUp(node)
           if let handler = callback {
             let owner = CellOwnership.ForCallback(node)
+            let previousContext = owner?.BeginCallback()
             try {
               handler(KeyEvent{ Key: key, Modifiers: modifiers, Repeat: repeat,
-                IsComposing: compositionActive, Control: control, Generation: generation })
-            } finally { owner?.RebuildAfterCallback() }
+                IsComposing: compositionActive, targetEditsText: targetEditsText, Control: control, Generation: generation })
+            } finally { owner?.EndCallback(previousContext) }
           }
           if nodeMount.Current == nil { return result }
           last = node
@@ -374,34 +380,36 @@ internal class KeyboardInput {
             && pending.Target.Current == start && pending.Owner.Current == node && pending.Generation == focus.Generation {
               result.Handled = true
               let owner = CellOwnership.ForCallback(node)
+              let previousContext = owner?.BeginCallback()
               try { pending.Action() }
-              finally { owner?.RebuildAfterCallback() }
+              finally { owner?.EndCallback(previousContext) }
               return result
             }
           if down {
             if let bindings = InputCallbacks.Bindings(node) {
               for binding in bindings {
                 if binding.Key != key || binding.Modifiers != modifiers { continue }
-                if binding.Action == nil && binding.OnRelease == nil { continue }
+                if binding.OnPress == nil && binding.OnRelease == nil { continue }
                 result.Handled = true
                 result.SuppressTextInput = true
                 result.Repeat = binding.Repeat
                 if !repeat || binding.Repeat {
                   let owner = CellOwnership.ForCallback(node)
+                  let previousContext = owner?.BeginCallback()
                   try {
-                    binding.Action?.Invoke()
+                    binding.OnPress?.Invoke()
                     if !repeat && startMount.Current != nil && nodeMount.Current != nil {
                       if let release = binding.OnRelease {
                         releases[key] = PendingKeyRelease{ Target: startMount, Owner: nodeMount, Action: release, Generation: focusGeneration }
                       }
                     }
-                  } finally { owner?.RebuildAfterCallback() }
+                  } finally { owner?.EndCallback(previousContext) }
                 }
                 return result
               }
             }
             if node == start && start == focus.FocusedNode()
-              && (start.Kind == NodeKind.Entry || start.Kind == NodeKind.Editor) {
+              && (start.Kind == NodeKind.Entry || start.Kind == NodeKind.Editor || start.Selectable) {
                 result = dispatchTextDefault(start, key, modifiers, repeat, root, resolver, text, pointer)
                 if result.Handled { return result }
               }
@@ -456,11 +464,11 @@ internal class KeyboardInput {
         }
         return result
       }
-      if key == Key.Enter || key == Key.KeypadEnter {
+      if !target.Selectable && (key == Key.Enter || key == Key.KeypadEnter) {
         kind = target.Kind == NodeKind.Editor && !target.EditorReadOnly
           ? TextCommandKind.Insert : TextCommandKind.Submit
       }
-      if key == Key.Escape && !modifiers.Shift {
+      if !target.Selectable && key == Key.Escape && !modifiers.Shift {
         result.Handled = true
         result.SuppressTextInput = true
         if !repeat && !pointer.CancelDrag(root) && !text.HandleCompositionCancel(root) {
@@ -494,8 +502,7 @@ internal class KeyboardInput {
     }
     if key == Key.Y && modifiers == KeyModifiers{ Ctrl: true } { kind = TextCommandKind.Redo }
     guard let command = kind else { return result }
-    result.Handled = true
-    result.SuppressTextInput = true
+    result.Handled = !target.Selectable
     result.Repeat = command == TextCommandKind.MoveLeft || command == TextCommandKind.MoveRight
       || command == TextCommandKind.MoveUp || command == TextCommandKind.MoveDown
       || command == TextCommandKind.PageUp || command == TextCommandKind.PageDown
@@ -505,10 +512,12 @@ internal class KeyboardInput {
       || command == TextCommandKind.DeleteBackward || command == TextCommandKind.DeleteForward
       || command == TextCommandKind.DeleteWordBackward || command == TextCommandKind.DeleteWordForward
     if !repeat || result.Repeat {
-      text.ExecuteEditorCommand(root, resolver, command == TextCommandKind.Insert
+      let handled = text.ExecuteEditorCommand(root, resolver, command == TextCommandKind.Insert
         ? TextCommand{ Kind: command, Text: "\n" }
         : TextCommand{ Kind: command, ExtendSelection: modifiers.Shift })
+      if target.Selectable { result.Handled = handled }
     }
+    result.SuppressTextInput = result.Handled
     return result
   }
 

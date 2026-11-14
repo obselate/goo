@@ -83,6 +83,15 @@ Adds a cubic Bézier curve to a point.
 - `x`: The endpoint x coordinate.
 - `y`: The endpoint y coordinate.
 
+### `Ellipse(float64,float64,float64,float64)`
+
+Appends a closed ellipse in view-box coordinates.
+
+- `x`: The left coordinate.
+- `y`: The top coordinate.
+- `width`: The non-negative width.
+- `height`: The non-negative height.
+
 ### `LineTo(float64,float64)`
 
 Adds a straight line to a point.
@@ -113,9 +122,28 @@ Adds a quadratic Bézier curve to a point.
 - `x`: The endpoint x coordinate.
 - `y`: The endpoint y coordinate.
 
+### `Rectangle(float64,float64,float64,float64)`
+
+Appends a closed rectangle in view-box coordinates.
+
+- `x`: The left coordinate.
+- `y`: The top coordinate.
+- `width`: The non-negative width.
+- `height`: The non-negative height.
+
 ### `Reset`
 
 Clears the commands and contour while retaining the view box and storage for continued use. Previously built paths remain immutable. Each Build copies the commands.
+
+### `RoundedRectangle(float64,float64,float64,float64,float64)`
+
+Appends a closed rounded rectangle in view-box coordinates. The radius is clamped to half the smaller dimension.
+
+- `x`: The left coordinate.
+- `y`: The top coordinate.
+- `width`: The non-negative width.
+- `height`: The non-negative height.
+- `radius`: The non-negative corner radius.
 
 ## `Point`
 
@@ -133,7 +161,7 @@ Gets the y coordinate.
 ## `Shape`
 
 
-Displays a vector path with fill and one uniform stroke. Side-specific border declarations apply to boxes only.
+Displays a vector path with fill and one uniform stroke. Use Fill and Stroke for path paint. Legacy paint always throws: "Shape paint moved to Fill and Stroke".
 
 ### `new`
 
@@ -143,9 +171,9 @@ Creates a shape with default paint options.
 
 Gets or sets the non-negative finite corner radius in logical pixels.
 
-### `Dashes`
+### `Fill`
 
-Gets or sets the stroke dash pattern.
+Gets or sets the optional path fill. A gradient takes priority over UseCurrentColor.
 
 ### `FillRule`
 
@@ -155,25 +183,17 @@ Gets or sets the fill rule. The default is NonZero.
 
 Gets or sets the geometry fit. Cover clips, Fill stretches, and None preserves view-box units.
 
-### `MiterLimit`
-
-Gets or sets the non-negative finite miter limit. The default is 4.
-
 ### `Path`
 
 Gets or sets the vector path to display. Reuse one path and position instances with Transform to share encoded geometry.
 
-### `StrokeCap`
+### `Stroke`
 
-Gets or sets the stroke cap style. The default is Butt.
+Gets or sets the complete stroke paint and options. Gradient strokes are not supported.
 
 ### `StrokeEnd`
 
-Gets or sets the stroke end in [0, 1]. Equal bounds omit the stroke; fill remains unchanged. Trim precedes dashes, whose phase starts at each trimmed contour. Trim preserves fully included closed contours; partial contours use StrokeCap at their open ends.
-
-### `StrokeJoin`
-
-Gets or sets the stroke join style. The default is Miter.
+Gets or sets the stroke end in [0, 1]. Equal bounds omit the stroke; fill remains unchanged. Trim precedes dashes, whose phase starts at each trimmed contour. Trim preserves fully included closed contours; partial contours use the stroke's Cap at their open ends.
 
 ### `StrokeStart`
 
@@ -181,11 +201,7 @@ Gets or sets the stroke start in [0, 1], summed across contours in path order. N
 
 ### `UseCurrentColor`
 
-Uses the inherited Color for solid fill when true. The default is false. BackgroundGradient and stroke colors are unchanged.
-
-### `VectorEffect`
-
-Gets or sets the vector effect. The default is None. NonScalingStroke keeps widths and dash lengths in window logical pixels. The stroke stays centered on the path.
+Uses the inherited Color for solid fill when true. The default is false. A gradient Fill and the Stroke paint are unchanged.
 
 ## `ShapeFit`
 
@@ -249,6 +265,8 @@ Creates a path node with no paint or children.
 Creates a path node with immutable style options.
 
 ### `new(VectorPath,VectorNodeStyle,VectorNode[])`
+
+Creates a path node with immutable style options and freezes its stroke.
 
 ### `Children`
 
@@ -365,6 +383,15 @@ Represents an immutable vector path in a top-left coordinate system. Coordinates
 
 Tests whether another path has the same content.
 
+### `Parse(string,ElementRect)`
+
+Parses SVG path data in the supplied view box. Parse once outside Build and retain the result.
+
+- `data`: The SVG path commands.
+- `viewBox`: The finite view box with positive width and height.
+
+Returns: The immutable vector path.
+
 ### `Empty`
 
 Gets an empty path with a unit view box.
@@ -388,7 +415,7 @@ Gets the view-box top coordinate.
 ## `VectorStroke`
 
 
-Describes one immutable vector stroke.
+Describes one vector stroke. Goo freezes it when a Shape or VectorNode receives it.
 
 ### `new(float64,Color)`
 
@@ -398,25 +425,21 @@ Creates a solid-color stroke with default cap, join, and miter settings.
 
 Creates a stroke with default cap, join, and miter settings.
 
-### `new(float64,VectorPaint,StrokeCap,StrokeJoin,float64,DashPattern)`
-
-Creates a fully specified immutable stroke.
-
 ### `Cap`
 
-Gets the line cap style.
+Gets or sets the line cap style.
 
 ### `Dashes`
 
-Gets the optional dash pattern. NonScalingStroke measures dash lengths in window logical pixels.
+Gets or sets the optional dash pattern. NonScalingStroke measures dash lengths in window logical pixels.
 
 ### `Join`
 
-Gets the line join style.
+Gets or sets the line join style.
 
 ### `MiterLimit`
 
-Gets the finite miter limit.
+Gets or sets the non-negative finite miter limit.
 
 ### `Paint`
 
@@ -424,7 +447,7 @@ Gets the stroke paint.
 
 ### `VectorEffect`
 
-Gets the vector effect. The default is None.
+Gets or sets the vector effect. The default is None.
 
 ### `Width`
 

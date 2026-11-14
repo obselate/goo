@@ -10,6 +10,14 @@ internal class SvgPathParser {
 
         internal func Parse(value string, owner XElement) SvgPath {
             let scanner = PathScanner(value, owner)
+            try {
+                return ParseCore(scanner, owner)
+            } catch (error SvgParseException) {
+                throw SvgParseException("character position ${scanner.Position}: ${error.Message}", error)
+            }
+        }
+
+        private func ParseCore(scanner PathScanner, owner XElement) SvgPath {
             let path = SvgPath()
             var curveCount = 0
             var contour SvgContour? = nil
@@ -464,6 +472,8 @@ internal class PathScanner {
         this.owner = owner
     }
 
+    internal prop Position int32{ get -> index }
+
     internal func TryReadCommandOrNumber(out token char, out tokenIsCommand bool) bool {
         SkipSeparators()
         if index >= text.Length {
@@ -520,6 +530,9 @@ internal class PathScanner {
         if !float64.TryParse(text[start .. index], NumberStyles.Float, CultureInfo.InvariantCulture, out var result) ||
             !float64.IsFinite(result) {
             throw SvgParser.Fail(owner, "path contains a non-finite number")
+        }
+        if result < -float64(float32.MaxValue) || result > float64(float32.MaxValue) {
+            throw SvgParser.Fail(owner, "path number exceeds the float32 range")
         }
         return result
     }

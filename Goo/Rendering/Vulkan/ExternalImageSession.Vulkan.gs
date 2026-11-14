@@ -4,7 +4,7 @@ import System
 import System.Threading
 
 /// Imports GPU images for one device generation. Open, import and Dispose require the window owner thread.
-public unsafe sealed partial class ExternalImageSession {
+public unsafe partial class ExternalImageSession {
     private var commandPool VkCommandPool
     private let releaseCommands []VkCommandBuffer = [FrameCapacity]VkCommandBuffer
     private let releaseMailboxes []VulkanQueueMailbox? = [FrameCapacity]VulkanQueueMailbox?

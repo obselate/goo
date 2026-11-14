@@ -44,8 +44,8 @@ public partial class Window {
         } else if scene != "" && scene != "default" {
             throw ArgumentException("Unknown scene '$scene'. Available scenes: default")
         }
-        var renderWidth = Width
-        var renderHeight = Height
+        var renderWidth = NativeWidth
+        var renderHeight = NativeHeight
         if let size = Environment.GetEnvironmentVariable("GOO_RENDER_SIZE") {
             let parts = size.Split('x')
             renderWidth = Int32.Parse(parts[0], CultureInfo.InvariantCulture)
@@ -56,8 +56,7 @@ public partial class Window {
             CultureInfo.InvariantCulture
         )
         let options = OffscreenRenderOptions(
-            float32(renderWidth),
-            float32(renderHeight),
+            LayoutSize(renderWidth, renderHeight),
             checked(uint32(Math.Ceiling(renderWidth * scale))),
             checked(uint32(Math.Ceiling(renderHeight * scale))),
             Background,

@@ -22,7 +22,7 @@ public enum NativeTransferCapabilities {
 }
 
 /// Contains an owned external file list, or an empty preview before the host delivers paths.
-public sealed class NativeFileDrop {
+public class NativeFileDrop {
   private let paths IReadOnlyList[string]
   /// Gets absolute file paths without reading file contents; the list survives the drag and window lifetime.
   public prop Paths IReadOnlyList[string]{ get -> paths }
@@ -35,7 +35,7 @@ public sealed class NativeFileDrop {
 }
 
 /// Contains the allowed MIME formats and owned data for one native offer.
-public sealed class NativeDataDrop {
+public class NativeDataDrop {
   /// Gets the offered formats that match the window's exact allow-list.
   public prop Formats IReadOnlyList[string] { get; }
   /// Gets captured bytes and URI references, or empty data during preview.
@@ -158,8 +158,12 @@ internal class NativeDropRouter {
               if let event = Event(session, target, DragEventKind.Move, DragEffect.None) {
                 let owner = CellOwnership.Within(root, target)
                 var accepted DragEffect
+                let previousContext = owner?.BeginCallback()
                 try { accepted = acceptedDragEffect(descriptor.Query(event), session.Data.AllowedEffects) }
-                finally { Rebuild(owner) }
+                finally {
+                  owner?.EndCallback(previousContext)
+                  invalidate()
+                }
                 if current != session || !canReceive() || mount.Current == nil { return }
                 if DragTargetRouting.Available(root, target) {
                   if accepted != DragEffect.None { selected = target
@@ -203,11 +207,11 @@ internal class NativeDropRouter {
   private func Notify(root Node, session NativeDropSession, target Node, kind DragEventKind, effect DragEffect) {
     guard let descriptor = DragDropMetadata.Target(target), let event = Event(session, target, kind, effect) else { return }
     let owner = CellOwnership.Within(root, target)
+    let previousContext = owner?.BeginCallback()
     try { descriptor.Changed?.Invoke(event) }
-    finally { Rebuild(owner) }
-  }
-  private func Rebuild(owner Cell?) {
-    owner?.Rebuild()
-    invalidate()
+    finally {
+      owner?.EndCallback(previousContext)
+      invalidate()
+    }
   }
 }

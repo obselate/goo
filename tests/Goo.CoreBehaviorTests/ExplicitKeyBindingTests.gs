@@ -1,11 +1,376 @@
 package Goo.CoreBehaviorTests
 
 import Goo
+import Goo.Gestures
 import System
 import System.Collections.Generic
+import System.IO
+import System.Threading
+import System.Threading.Tasks
 import Xunit
 
 class ExplicitKeyBindingTests {
+    @Theory
+    @InlineData(false)
+    @InlineData(true)
+    func PrimaryBindingsUseExactPlatformModifiers(mac bool) {
+        let saved = InputPolicy.Mac
+        InputPolicy.Mac = mac
+        let handle = ElementHandle()
+        var presses = 0
+        let window = Window{Root: ExplicitKeyBindingTests.BuildCell(() -> Container{
+            Handle: handle, Focusable: true,
+            KeyBindings: []KeyBinding{
+                KeyBinding(Key.S, KeyModifiers.Primary, () -> presses++),
+                KeyBinding(Key.Z, KeyModifiers.PrimaryShift, () -> presses += 10)
+            }
+        })}
+        try {
+            Assert.Equal(KeyModifiers{}, KeyModifiers.None)
+            Assert.Equal(KeyModifiers{Ctrl: !mac, Super: mac}, KeyModifiers.Primary)
+            Assert.Equal(KeyModifiers{Ctrl: !mac, Super: mac, Shift: true}, KeyModifiers.PrimaryShift)
+            Assert.False(KeyModifiers.None.HasPrimary)
+            Assert.True(KeyModifiers.Primary.HasPrimary)
+            Assert.True(KeyModifiers.PrimaryShift.HasPrimary)
+            Assert.True(KeyModifiers{Ctrl: true, Super: true, Alt: true, Shift: true}.HasPrimary)
+            Assert.False(KeyModifiers{Ctrl: mac, Super: !mac, Shift: true}.HasPrimary)
+            window.UpdateTree()
+            Assert.True(handle.Focus())
+            ExplicitKeyBindingTests.Press(window.PlatformInput, Key.S, KeyModifiers.Primary)
+            ExplicitKeyBindingTests.Press(window.PlatformInput, Key.S, KeyModifiers.PrimaryShift)
+            ExplicitKeyBindingTests.Press(window.PlatformInput, Key.Z, KeyModifiers.PrimaryShift)
+            Assert.Equal(11, presses)
+            InputPolicy.Mac = !mac
+            Assert.Equal(KeyModifiers{Ctrl: mac, Super: !mac}, KeyModifiers.Primary)
+            Assert.Equal(mac, KeyModifiers{Ctrl: true}.HasPrimary)
+            Assert.Equal(!mac, KeyModifiers{Super: true}.HasPrimary)
+        } finally {
+            window.Close()
+            InputPolicy.Mac = saved
+        }
+    }
+
+    @Theory
+    @InlineData(0, true)
+    @InlineData(1, true)
+    @InlineData(2, false)
+    @InlineData(3, true)
+    @InlineData(4, false)
+    @InlineData(5, false)
+    func FocusAndKeyEventsReportTextEditing(kind int32, editsText bool) {
+        using let controller = TextEditorController(TextDocument("text"))
+        let handle = ElementHandle()
+        var observed = false
+        var calls = 0
+        var window Window?
+        window = Window{Root: ExplicitKeyBindingTests.BuildCell(() -> Container{
+            OnKeyDown: (e KeyEvent) -> {
+                observed = e.TargetEditsText
+                Assert.Equal(e.TargetEditsText, window!!.Focus.EditsText)
+                calls++
+            },
+            Children: []Blob{
+                if kind == 0 || kind == 5 { cast[Blob](TextEntry{Handle: handle, Value: "text", ReadOnly: kind == 5}) }
+                else if kind == 1 || kind == 2 {
+                    cast[Blob](TextEditor(){Controller = controller, Handle = handle, ReadOnly = kind == 2})
+                } else if kind == 3 {
+                    cast[Blob](Container{Handle: handle, Focusable: true, OnTextInput: (_ string) -> {}})
+                } else { cast[Blob](Button{Handle: handle}) }
+            }
+        })}
+        try {
+            window.UpdateTree()
+            Assert.True(handle.Focus())
+            Assert.Equal(editsText, window.Focus.EditsText)
+            ExplicitKeyBindingTests.Press(window.PlatformInput, Key.F1)
+            Assert.Equal(1, calls)
+            Assert.Equal(editsText, observed)
+            window.Focus.Clear()
+            Assert.False(window.Focus.EditsText)
+            Assert.Null(window.Focus.Editor)
+            Assert.Null(window.Focus.Selection)
+        } finally { window.Close() }
+    }
+
+    @Fact
+    func PointerDragDeclarationsRejectInvalidValues() {
+        let blob = Container{}
+        for threshold in []float64{-1, Double.NaN, Double.PositiveInfinity, Double.NegativeInfinity} {
+            let error = Assert.Throws[ArgumentOutOfRangeException](() -> { blob.PointerDragThreshold = threshold })
+            Assert.Equal("PointerDragThreshold", error.ParamName)
+        }
+        for axis in []LayoutAxis{LayoutAxis(-1), LayoutAxis(2)} {
+            let error = Assert.Throws[ArgumentOutOfRangeException](() -> { blob.PointerDragAxis = axis })
+            Assert.Equal("PointerDragAxis", error.ParamName)
+        }
+        for threshold in []float64{0, 8, Double.MaxValue} {
+            blob.PointerDragThreshold = threshold
+            Assert.Equal(threshold, blob.PointerDragThreshold)
+        }
+        for axis in []LayoutAxis?{nil, LayoutAxis.Horizontal, LayoutAxis.Vertical} {
+            blob.PointerDragAxis = axis
+            Assert.Equal(axis, blob.PointerDragAxis)
+        }
+    }
+
+    @Fact
+    func InputDeclarationsStayFixedAfterHandOff() {
+        let handle = ElementHandle()
+        var presses = 0
+        let bindings = []KeyBinding{KeyBinding(Key.F1, KeyModifiers.None, () -> { presses++ })}
+        let pan = PanGesture((_ PanGestureEvent) -> {})
+        let gestures = List[GestureRecognizer](){pan}
+        let source = DragSource((_ DragStartEvent) -> DragData("payload", DragEffect.Copy))
+        let target = DropTarget((_ DragEvent) -> DragEffect.Copy)
+        let blob = Container{Handle: handle, Focusable: true, KeyBindings: bindings,
+            LayoutTransition: LayoutTransition(100, Easing.Linear),
+            DragSource: source, DropTarget: target, Gestures: gestures}
+        let window = Window{Root: ExplicitKeyBindingTests.BuildCell(() -> blob)}
+        try {
+            window.UpdateTree()
+            bindings[0] = KeyBinding(Key.F1, KeyModifiers.None, () -> { presses += 10 })
+            blob.KeyBindings!![0] = bindings[0]
+            gestures.Clear()
+            Assert.Same(pan, Assert.Single(blob.Gestures!!))
+            Assert.Throws[NotSupportedException](() -> (blob.Gestures as IList[GestureRecognizer])!!.Clear())
+            for change in []Action{
+                () -> { blob.KeyBindings = bindings },
+                () -> { blob.LayoutTransition = LayoutTransition(200, Easing.Linear) },
+                () -> { blob.DragSource = nil }, () -> { blob.DropTarget = nil },
+                () -> { blob.Gestures = nil },
+            } {
+                Assert.Contains("modified after it was returned to Goo", Assert.Throws[InvalidOperationException](change).Message)
+            }
+            Assert.True(handle.Focus())
+            ExplicitKeyBindingTests.Press(window.PlatformInput, Key.F1)
+            Assert.Equal(1, presses)
+            Assert.Equal(100.0, blob.LayoutTransition!!.DurationMs)
+            Assert.Same(source, blob.DragSource)
+            Assert.Same(target, blob.DropTarget)
+        } finally { window.Close() }
+    }
+
+    @Fact
+    func CloseDrainBoundRequiresOwnerThread() {
+        using let host = TestClipboardHost()
+        let window = Window()
+        host.Resize(100, 40, 100, 40)
+        window.Attach(host)
+        try {
+            window.CloseDrainMs = 25
+            var failure Exception?
+            let worker = Thread(() -> {
+                try { window.CloseDrainMs = 0 } catch (error Exception) { failure = error }
+            })
+            worker.Start()
+            Assert.True(worker.Join(TimeSpan.FromSeconds(5)))
+            Assert.Contains("Window.CloseDrainMs", Assert.IsType[InvalidOperationException](failure).Message)
+            Assert.Equal(25.0, window.CloseDrainMs)
+        } finally { window.Close() }
+    }
+
+    @Fact
+    func WindowModifiersFollowDispatchAndRetainLastStateForActivation() {
+        let handle = ElementHandle()
+        let seen = List[KeyModifiers]()
+        var window Window?
+        window = Window{Size: LayoutSize(100, 40), Root: ExplicitKeyBindingTests.BuildCell(() -> Button{
+            Handle: handle, Width: 100, Height: 40,
+            OnClick: () -> seen.Add(window!!.Modifiers),
+            OnKeyDown: (e KeyEvent) -> Assert.Equal(e.Modifiers, window!!.Modifiers),
+            OnPointerMove: (e PointerEvent) -> Assert.Equal(e.Modifiers, window!!.Modifiers),
+            KeyBindings: []KeyBinding{KeyBinding(Key.Enter, KeyModifiers.Primary, () -> { handle.Activate() })}
+        })}
+        try {
+            window.UpdateTree()
+            Assert.True(handle.Focus())
+            let input = window.PlatformInput
+            input.KeyPress(Key.Enter, KeyModifiers.Primary)
+            input.KeyRelease(Key.Enter, KeyModifiers{Shift: true})
+            Assert.Equal(KeyModifiers{Shift: true}, window.Modifiers)
+            Assert.True(handle.Activate())
+            input.PointerPress(0, PointerDevice.Mouse, 5, 5, PointerButton.Primary, KeyModifiers{Alt: true}, 1)
+            input.PointerRelease(0, PointerDevice.Mouse, 5, 5, PointerButton.Primary, KeyModifiers{Alt: true}, 0)
+            input.PointerMotionFrame([]QueuedPointerEvent{
+                QueuedPointerEvent{PointerId: 0, Device: PointerDevice.Mouse, X: 5, Y: 5, Modifiers: KeyModifiers.Primary},
+                QueuedPointerEvent{PointerId: 0, Device: PointerDevice.Mouse, X: 6, Y: 5, Modifiers: KeyModifiers.PrimaryShift}
+            })
+            Assert.Equal(KeyModifiers.PrimaryShift, window.Modifiers)
+            Assert.Equal([]KeyModifiers{KeyModifiers.Primary, KeyModifiers{Shift: true}, KeyModifiers{Alt: true}}, seen)
+            input.FocusLost()
+            Assert.Equal(KeyModifiers.None, window.Modifiers)
+        } finally { window.Close() }
+    }
+
+    @Fact
+    func PlatformOpenReportsHandlerLaunchAndFailure() {
+        if !OperatingSystem.IsLinux() { return }
+        let directory = Path.Combine(AppContext.BaseDirectory, "platform-open-" + Guid.NewGuid().ToString("N"))
+        let path = Environment.GetEnvironmentVariable("PATH")
+        Directory.CreateDirectory(directory)
+        try {
+            let handler = Path.Combine(directory, "xdg-open")
+            File.CreateSymbolicLink(handler, "/usr/bin/true")
+            Environment.SetEnvironmentVariable("PATH", directory)
+            let started = Platform.OpenAsync("https://example.invalid/").GetAwaiter().GetResult()
+            Assert.Equal(PlatformOpenStatus.Success, started.Status)
+            File.Delete(handler)
+            let failed = Platform.OpenAsync("/absolute/missing/path").GetAwaiter().GetResult()
+            Assert.Equal(PlatformOpenStatus.Failed, failed.Status)
+            Assert.NotEmpty(failed.Error)
+        } finally {
+            Environment.SetEnvironmentVariable("PATH", path)
+            Directory.Delete(directory, true)
+        }
+    }
+
+    @Fact
+    func WindowScalarsKeepDoublePrecisionAndResizeInLayoutUnits() {
+        let value = 1.234567890123
+        let preferences = PlatformPreferences{TextScaleFactor: value}
+        Assert.Equal(value, preferences.TextScaleFactor!!)
+        let display = WindowDisplay(WindowDisplayId{}, "display", ElementRect{}, nil, value)
+        Assert.Equal(value, display.ContentScale)
+        var position = Point{}
+        let window = Window{Size: LayoutSize(100, 40), Decorated: false, UiScale: value,
+            Root: ExplicitKeyBindingTests.BuildCell(() -> Container{OnPointerDown: (e PointerEvent) -> { position = e.WindowPosition }})}
+        try {
+            window.WheelScrollScale = value
+            window.DragStartDistance = value
+            window.ResizeBand = 8.123456789012
+            window.UpdateTree()
+            Assert.Equal(value, window.UiScale)
+            Assert.Equal(value, window.PixelScale)
+            Assert.Equal(value, window.WheelScrollScale)
+            Assert.Equal(value, window.DragStartDistance)
+            Assert.Equal(8.123456789012, window.ResizeBand)
+            Assert.Equal(WindowHitResult.Left, window.hitTest(9, 20))
+            Assert.Equal(WindowHitResult.Normal, window.hitTest(11, 20))
+            window.UiScale = 1.25
+            window.UpdateTree()
+            window.PlatformInput.PointerPress(0, PointerDevice.Mouse, 1.25000007, 6.25,
+                PointerButton.Primary, KeyModifiers.None, 1.0F)
+            Assert.Equal(1.0, position.X)
+            window.PlatformInput.PointerRelease(0, PointerDevice.Mouse, 1.25000007, 6.25,
+                PointerButton.Primary, KeyModifiers.None, 0.0F)
+        } finally { window.Close() }
+    }
+
+    @Theory
+    @InlineData(0, GestureCancelReason.PointerCanceled)
+    @InlineData(1, GestureCancelReason.FocusLost)
+    @InlineData(2, GestureCancelReason.OwnerUnavailable)
+    @InlineData(3, GestureCancelReason.OwnerUnavailable)
+    @InlineData(4, GestureCancelReason.Explicit)
+    func PointerDragReportsCancellationReason(mode int32, reason GestureCancelReason) {
+        let events = List[PointerDragEvent]()
+        var available = true
+        let window = Window{Size: LayoutSize(100, 40), Root: ExplicitKeyBindingTests.BuildCell(() ->
+            if mode == 2 && !available { cast[Blob](Text{Content: "removed"}) }
+            else { cast[Blob](Container{
+                Width: 100, Height: 40, Disabled: mode == 3 && !available,
+                OnPointerMove: (e PointerEvent) -> { if mode == 4 && e.WindowPosition.X >= 10 { e.ReleaseCapture() } },
+                OnPointerDrag: (e PointerDragEvent) -> events.Add(e)
+            }) }
+        )}
+        try {
+            window.UpdateTree()
+            let input = window.PlatformInput
+            input.PointerPress(0, PointerDevice.Mouse, 5, 5, PointerButton.Primary, KeyModifiers.None, 1)
+            input.PointerMove(0, PointerDevice.Mouse, 6, 5, KeyModifiers.None, 1)
+            Assert.Single(events)
+            Assert.Equal(GesturePhase.Started, events[0].Phase)
+            Assert.Equal(GestureCancelReason.None, events[0].Reason)
+            if mode == 0 { input.PointerCancel(0, PointerDevice.Mouse) }
+            else if mode == 1 { input.FocusLost() }
+            else if mode == 4 { input.PointerMove(0, PointerDevice.Mouse, 10, 5, KeyModifiers.None, 1) }
+            else {
+                available = false
+                window.Root!!.Rebuild()
+                window.UpdateTree()
+            }
+            Assert.Equal(GesturePhase.Canceled, events[events.Count - 1].Phase)
+            Assert.Equal(reason, events[events.Count - 1].Reason)
+        } finally { window.Close() }
+    }
+
+    @Theory
+    @InlineData(false)
+    @InlineData(true)
+    func ClipboardCancellationDropsLateNativeResults(preCanceled bool) {
+        using let host = TestClipboardHost()
+        using let cancellation = CancellationTokenSource()
+        let window = Window()
+        host.Resize(100, 40, 100, 40)
+        window.Attach(host)
+        try {
+            if preCanceled { cancellation.Cancel() }
+            let read = window.Clipboard.ReadDataAsync([]string{"text/plain"}, cancellation.Token)
+            let write = window.Clipboard.WriteAsync(TransferData([]TransferRepresentation{}, []Uri{Uri("file:///clipboard")}), cancellationToken: cancellation.Token)
+            cancellation.Cancel()
+            Assert.ThrowsAny[OperationCanceledException](() -> { read.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult() })
+            Assert.ThrowsAny[OperationCanceledException](() -> { write.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult() })
+            Assert.True(read.IsCanceled)
+            Assert.True(write.IsCanceled)
+            host.PendingRead.SetResult(ClipboardDataResult(ClipboardReadStatus.Success, TransferData.Empty))
+            host.PendingWrite.SetResult(ClipboardWriteResult(DataTransferStatus.Success))
+            Assert.True(read.IsCanceled)
+            Assert.True(write.IsCanceled)
+            Assert.Equal(preCanceled ? 0 : 1, host.DataReads)
+            Assert.Equal(preCanceled ? 0 : 1, host.DataWrites)
+        } finally { window.Close() }
+    }
+
+    @Fact
+    func ClipboardTextDistinguishesEmptySuccessAndLimits() {
+        using let host = TestClipboardHost{Text: ""}
+        let window = Window()
+        host.Resize(100, 40, 100, 40)
+        window.Attach(host)
+        Assert.Equal(ClipboardReadStatus.Empty, window.Clipboard.ReadText().Status)
+        Assert.Equal(DataTransferStatus.Success, window.Clipboard.WriteText("copied text").Status)
+        let read = window.Clipboard.ReadText()
+        Assert.Equal(ClipboardReadStatus.Success, read.Status)
+        Assert.Equal("copied text", read.Text)
+        host.Text = String(char(0x0800), ClipboardTransfer.MaxTextBytes / 3 + 1)
+        Assert.Equal(ClipboardReadStatus.TooLarge, window.Clipboard.ReadText().Status)
+        window.RequestClose()
+    }
+
+    @Fact
+    func ClipboardTextReportsUnsupportedEmbeddedServices() {
+        using let host = ElementHandleEmbeddedHost()
+        let window = Window()
+        host.Resize(100, 40, 100, 40)
+        window.Attach(host)
+        Assert.Equal(ClipboardReadStatus.Unsupported, window.Clipboard.ReadText().Status)
+        Assert.Equal(DataTransferStatus.Unsupported, window.Clipboard.WriteText("value").Status)
+        window.RequestClose()
+    }
+
+    @Fact
+    func ClipboardTextReportsNativeFailureAndRequiresOpenOwner() {
+        using let host = TestClipboardHost()
+        let window = Window()
+        let clipboard = window.Clipboard
+        Assert.Same(clipboard, window.Clipboard)
+        Assert.Throws[InvalidOperationException](() -> clipboard.ReadText())
+        host.Resize(100, 40, 100, 40)
+        window.Attach(host)
+        let read = clipboard.ReadText()
+        Assert.Equal(ClipboardReadStatus.Failed, read.Status)
+        Assert.Equal("", read.Text)
+        Assert.Equal("Clipboard read unavailable", read.Error)
+        let written = clipboard.WriteText("value")
+        Assert.Equal(DataTransferStatus.Failed, written.Status)
+        Assert.Equal("Clipboard write unavailable", written.Error)
+        Assert.Throws[ArgumentNullException](() -> clipboard.WriteText(nil))
+        Assert.Equal(1, host.Reads)
+        Assert.Equal(1, host.Writes)
+        host.Dispose()
+        Assert.Throws[InvalidOperationException](() -> clipboard.ReadText())
+    }
+
     @Fact
     func LayoutOnlyEmbeddedHostKeepsKeyboardFocusVisible() {
         using let host = ElementHandleEmbeddedHost()
@@ -31,14 +396,13 @@ class ExplicitKeyBindingTests {
     @InlineData(true, true)
     func ClipboardFailuresPreserveSelectionAndInput(editor bool, native bool) {
         using let controller = TextEditorController(TextDocument("keep"))
-        using let host = FailingClipboardHost()
+        using let host = TestClipboardHost()
         let handle = ElementHandle()
         let primary = KeyModifiers{Ctrl: !InputPolicy.Mac, Super: InputPolicy.Mac}
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(() -> if editor {
-                cast[Blob](TextEditor(controller){Handle = handle})
+                cast[Blob](TextEditor(){Controller = controller, Handle = handle})
             } else {
                 cast[Blob](TextEntry{Value: "keep", Handle: handle})
             })
@@ -52,15 +416,12 @@ class ExplicitKeyBindingTests {
             window.UpdateTree()
             Assert.True(handle.Focus())
             let input = window.PlatformInput
-            Assert.True(input.SetSelection(4, 0))
+            Assert.True(window.Focus.SetSelection(4, 0))
             var writable = false
             if native {
-                try {
-                    window.SetClipboardText("keep")
-                    writable = true
-                } catch (error InvalidOperationException) {
-                    Assert.DoesNotContain("zwp_text_input_v3", error.Message)
-                }
+                let written = window.Clipboard.WriteText("keep")
+                writable = written.Status == DataTransferStatus.Success
+                Assert.DoesNotContain("zwp_text_input_v3", written.Error)
             }
             let commands = List[TextCommandKind]()
             controller.OnCommand = (e TextCommandEvent) -> commands.Add(e.Command.Kind)
@@ -68,11 +429,11 @@ class ExplicitKeyBindingTests {
                 ExplicitKeyBindingTests.Press(input, key, primary)
                 Assert.True(window.IsOpen)
                 if key == Key.C || !writable {
-                    Assert.Equal("keep", input.Editor!!.Text)
-                    Assert.Equal(4, input.Editor!!.SelectionStart)
-                    Assert.Equal(0, input.Editor!!.SelectionEnd)
+                    Assert.Equal("keep", window.Focus.Editor!!.Text)
+                    Assert.Equal(4, window.Focus.Editor!!.SelectionStart)
+                    Assert.Equal(0, window.Focus.Editor!!.SelectionEnd)
                 } else {
-                    Assert.Equal(if key == Key.X { "" } else { "keep" }, input.Editor!!.Text)
+                    Assert.Equal(if key == Key.X { "" } else { "keep" }, window.Focus.Editor!!.Text)
                 }
             }
             if editor {
@@ -81,10 +442,10 @@ class ExplicitKeyBindingTests {
             if !native {
                 Assert.Equal(2, host.Writes)
                 Assert.Equal(1, host.Reads)
-                Assert.False(input.Execute(TextCommand{Kind: TextCommandKind.Undo}))
+                Assert.False(window.Focus.Execute(TextCommand{Kind: TextCommandKind.Undo}))
             }
             input.CommitText("active")
-            Assert.Equal(if writable { "keepactive" } else { "active" }, input.Editor!!.Text)
+            Assert.Equal(if writable { "keepactive" } else { "active" }, window.Focus.Editor!!.Text)
             if native { Console.WriteLine("Native clipboard copy, cut and paste passed, writable=" + writable.ToString()) }
         } finally {
             window.Close()
@@ -96,9 +457,8 @@ class ExplicitKeyBindingTests {
         using let controller = TextEditorController(TextDocument(""))
         let handle = ElementHandle()
         let window = Window{
-            Width: 320,
-            Height: 120,
-            Root: ExplicitKeyBindingTests.BuildCell(() -> TextEditor(controller){Handle = handle})
+            Size: LayoutSize(320, 120),
+            Root: ExplicitKeyBindingTests.BuildCell(() -> TextEditor(){Controller = controller, Handle = handle})
         }
         try {
             window.UpdateTree()
@@ -109,10 +469,10 @@ class ExplicitKeyBindingTests {
             let seen = List[TextCommandKind]()
             controller.OnCommand = (e TextCommandEvent) -> seen.Add(e.Command.Kind)
             window.InputForTest.SetClipboardFallback("b")
-            Assert.True(input.Execute(TextCommand{Kind: TextCommandKind.Paste}))
+            Assert.True(window.Focus.Execute(TextCommand{Kind: TextCommandKind.Paste}))
             Assert.Equal([]TextCommandKind{TextCommandKind.Paste}, seen)
             Assert.Equal("ab", controller.Document.GetText())
-            input.Execute(TextCommand{Kind: TextCommandKind.Undo})
+            window.Focus.Execute(TextCommand{Kind: TextCommandKind.Undo})
             Assert.Equal("a", controller.Document.GetText())
             input.SetComposition("preedit", 0, 0)
             controller.OnCommand = (e TextCommandEvent) -> {
@@ -120,7 +480,7 @@ class ExplicitKeyBindingTests {
                     e.Cancel = true
                 }
             }
-            Assert.False(input.Execute(TextCommand{Kind: TextCommandKind.Paste, Text: "rejected"}))
+            Assert.False(window.Focus.Execute(TextCommand{Kind: TextCommandKind.Paste, Text: "rejected"}))
             Assert.Equal("a", controller.Document.GetText())
             Assert.NotNull(controller.Composition)
             Assert.Equal("preedit", controller.Composition!!.Text)
@@ -137,11 +497,10 @@ class ExplicitKeyBindingTests {
         let handle = ElementHandle()
         var value = "keep"
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> if editor {
-                    cast[Blob](TextEditor(controller){Handle = handle})
+                    cast[Blob](TextEditor(){Controller = controller, Handle = handle})
                 } else {
                     cast[Blob](
                         TextEntry{
@@ -159,7 +518,7 @@ class ExplicitKeyBindingTests {
             window.UpdateTree()
             Assert.True(handle.Focus())
             let input = window.PlatformInput
-            input.Execute(TextCommand{Kind: TextCommandKind.SelectAll})
+            window.Focus.Execute(TextCommand{Kind: TextCommandKind.SelectAll})
             var intercepted = 0
             if editor {
                 controller.OnCommand = (e TextCommandEvent) -> {
@@ -170,8 +529,8 @@ class ExplicitKeyBindingTests {
             for text in[]string{String('\t', 16777217), String('é', 8388609)} {
                 window.InputForTest.SetClipboardFallback(text)
                 let before = intercepted
-                Assert.False(input.Execute(TextCommand{Kind: TextCommandKind.Paste}))
-                Assert.False(input.Execute(TextCommand{Kind: TextCommandKind.Paste, Text: text}))
+                Assert.False(window.Focus.Execute(TextCommand{Kind: TextCommandKind.Paste}))
+                Assert.False(window.Focus.Execute(TextCommand{Kind: TextCommandKind.Paste, Text: text}))
                 Assert.Equal(before + (if editor { 1 } else { 0 }), intercepted)
                 Assert.Equal(
                     "keep",
@@ -184,7 +543,7 @@ class ExplicitKeyBindingTests {
             }
             window.InputForTest.SetClipboardFallback("ok")
             controller.OnCommand = nil
-            Assert.True(input.Execute(TextCommand{Kind: TextCommandKind.Paste}))
+            Assert.True(window.Focus.Execute(TextCommand{Kind: TextCommandKind.Paste}))
             Assert.Equal(
                 "ok",
                 if editor {
@@ -214,12 +573,11 @@ class ExplicitKeyBindingTests {
         var value = content
         let adapter = AccessibilityTestAdapter()
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             AccessibilityAdapter: adapter,
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> if editor {
-                    cast[Blob](TextEditor(controller){Handle = handle})
+                    cast[Blob](TextEditor(){Controller = controller, Handle = handle})
                 } else {
                     cast[Blob](
                         TextEntry{
@@ -269,9 +627,9 @@ class ExplicitKeyBindingTests {
                 }
             }
             let input = window.PlatformInput
-            Assert.True(input.Execute(TextCommand{Kind: TextCommandKind.Copy}))
-            Assert.True(input.Execute(TextCommand{Kind: TextCommandKind.SelectAll}))
-            Assert.True(input.Execute(TextCommand{Kind: TextCommandKind.Paste}))
+            Assert.True(window.Focus.Execute(TextCommand{Kind: TextCommandKind.Copy}))
+            Assert.True(window.Focus.Execute(TextCommand{Kind: TextCommandKind.SelectAll}))
+            Assert.True(window.Focus.Execute(TextCommand{Kind: TextCommandKind.Paste}))
             Assert.Equal(
                 content.Substring(1, end - 1),
                 if editor {
@@ -293,8 +651,7 @@ class ExplicitKeyBindingTests {
         var submissions = 0
         var clicks = 0
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> Container{
                     Children: []Blob{
@@ -316,7 +673,7 @@ class ExplicitKeyBindingTests {
             window.UpdateTree()
             Assert.True(entry.Focus())
             let input = window.PlatformInput
-            input.Execute(TextCommand{Kind: TextCommandKind.MoveDocumentEnd})
+            window.Focus.Execute(TextCommand{Kind: TextCommandKind.MoveDocumentEnd})
             input.CommitText("X")
             for key in[]Key{Key.Backspace, Key.Enter, Key.Tab, Key.Escape} {
                 input.KeyPress(key, default(KeyModifiers))
@@ -324,13 +681,13 @@ class ExplicitKeyBindingTests {
             }
             Assert.Equal("original", value)
             Assert.Equal(1, submissions)
-            Assert.Null(input.Editor)
+            Assert.Null(window.Focus.Editor)
             Assert.True(entry.Focus())
             input.CommitText("X")
             input.KeyPress(Key.Escape, default(KeyModifiers))
             input.KeyRelease(Key.Escape)
             Assert.Equal("original", value)
-            Assert.Null(input.Editor)
+            Assert.Null(window.Focus.Editor)
             Assert.True(button.Focus())
             for key in[]Key{Key.Enter, Key.Space} {
                 input.KeyPress(key, default(KeyModifiers))
@@ -355,8 +712,7 @@ class ExplicitKeyBindingTests {
         var failRelease = false
         let events = List[string]()
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> Container{
                     OnKeyDown: (e KeyEvent) -> {
@@ -381,7 +737,7 @@ class ExplicitKeyBindingTests {
                                 KeyBinding{
                                     Key: Key.H,
                                     Repeat: true,
-                                    Action: () -> {
+                                    OnPress: () -> {
                                         presses++
                                         events.Add("action")
                                     }
@@ -389,7 +745,7 @@ class ExplicitKeyBindingTests {
                                 KeyBinding{
                                     Key: Key.J,
                                     Modifiers: KeyModifiers{Ctrl: true},
-                                    Action: () -> handle.BeginPress(),
+                                    OnPress: () -> handle.BeginPress(),
                                     OnRelease: () -> {
                                         releases++
                                         handle.EndPress(true)
@@ -451,8 +807,8 @@ class ExplicitKeyBindingTests {
             input.PointerPress(
                 0,
                 PointerDevice.Mouse,
-                float32(bounds.X) + float32(5.0F),
-                float32(bounds.Y) + float32(5.0F),
+                bounds.X + 5.0,
+                bounds.Y + 5.0,
                 PointerButton.Primary,
                 default(KeyModifiers),
                 0.0F
@@ -463,8 +819,8 @@ class ExplicitKeyBindingTests {
             input.PointerRelease(
                 0,
                 PointerDevice.Mouse,
-                float32(bounds.X) + float32(5.0F),
-                float32(bounds.Y) + float32(5.0F),
+                bounds.X + 5.0,
+                bounds.Y + 5.0,
                 PointerButton.Primary,
                 default(KeyModifiers),
                 0.0F
@@ -483,8 +839,7 @@ class ExplicitKeyBindingTests {
         var firstValue = ""
         var secondValue = ""
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> Container{
                     Children: []Blob{
@@ -542,8 +897,7 @@ class ExplicitKeyBindingTests {
         var releaseModifiers = default(KeyModifiers)
         var window Window? = nil
         window = Window{
-            Width: 160,
-            Height: 80,
+            Size: LayoutSize(160, 80),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> Button{
                     Handle: handle,
@@ -571,8 +925,8 @@ class ExplicitKeyBindingTests {
                         }
                     },
                     KeyBindings: []KeyBinding{
-                        KeyBinding{Key: Key.A, Action: () -> actions++},
-                        KeyBinding{Key: Key.C, Repeat: true, Action: () -> { }}
+                        KeyBinding{Key: Key.A, OnPress: () -> actions++},
+                        KeyBinding{Key: Key.C, Repeat: true, OnPress: () -> { }}
                     },
                     OnPointerDown: (e PointerEvent) -> {
                         var e = e
@@ -635,8 +989,7 @@ class ExplicitKeyBindingTests {
         var failBlur = false
         var cancels = 0
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> Container{
                     OnFocus: (_ FocusEvent) -> parents++,
@@ -677,8 +1030,8 @@ class ExplicitKeyBindingTests {
             input.PointerPress(
                 0,
                 PointerDevice.Mouse,
-                float32(bounds.X) + float32(5.0F),
-                float32(bounds.Y) + float32(5.0F),
+                bounds.X + 5.0,
+                bounds.Y + 5.0,
                 PointerButton.Primary,
                 default(KeyModifiers),
                 0.0F
@@ -692,8 +1045,8 @@ class ExplicitKeyBindingTests {
             input.PointerRelease(
                 0,
                 PointerDevice.Mouse,
-                float32(bounds.X) + float32(5.0F),
-                float32(bounds.Y) + float32(5.0F),
+                bounds.X + 5.0,
+                bounds.Y + 5.0,
                 PointerButton.Primary,
                 default(KeyModifiers),
                 0.0F
@@ -725,18 +1078,17 @@ class ExplicitKeyBindingTests {
         let primary = KeyModifiers{Ctrl: !mac, Super: mac}
         let primaryShift = KeyModifiers{Ctrl: !mac, Super: mac, Shift: true}
         window = Window{
-            Width: 320,
-            Height: 160,
+            Size: LayoutSize(320, 160),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> Container{
                     KeyBindings: if legacyBindings {
-                        ExplicitKeyBindingTests.EditingBindings(window!!.PlatformInput, () -> rootActions++)
+                        ExplicitKeyBindingTests.EditingBindings(window!!, () -> rootActions++)
                     } else {
-                        []KeyBinding{KeyBinding{Key: Key.A, Modifiers: primary, Action: () -> rootActions++}}
+                        []KeyBinding{KeyBinding{Key: Key.A, Modifiers: primary, OnPress: () -> rootActions++}}
                     },
                     Children: []Blob{
                         if editor {
-                            cast[Blob](TextEditor(controller){Handle = field, Height = 60})
+                            cast[Blob](TextEditor(){Controller = controller, Handle = field, Height = 60})
                         } else {
                             cast[Blob](TextEntry{
                                 Handle: field,
@@ -755,75 +1107,75 @@ class ExplicitKeyBindingTests {
             window.UpdateTree()
             Assert.True(field.Focus())
             let input = window.PlatformInput
-            input.SetSelection(4, 4)
+            window.Focus.SetSelection(4, 4)
             ExplicitKeyBindingTests.Press(input, Key.Backspace)
-            Assert.Equal("abc", input.Editor!!.Text)
+            Assert.Equal("abc", window.Focus.Editor!!.Text)
             ExplicitKeyBindingTests.Press(input, Key.Home)
             ExplicitKeyBindingTests.Press(input, Key.Delete)
-            Assert.Equal("bc", input.Editor!!.Text)
+            Assert.Equal("bc", window.Focus.Editor!!.Text)
             ExplicitKeyBindingTests.Press(input, Key.Right)
-            Assert.Equal(1, input.Editor!!.SelectionEnd)
+            Assert.Equal(1, window.Focus.Editor!!.SelectionEnd)
             ExplicitKeyBindingTests.Press(input, Key.Right, KeyModifiers{Shift: true})
-            Assert.Equal(1, input.Editor!!.SelectionStart)
-            Assert.Equal(2, input.Editor!!.SelectionEnd)
+            Assert.Equal(1, window.Focus.Editor!!.SelectionStart)
+            Assert.Equal(2, window.Focus.Editor!!.SelectionEnd)
             ExplicitKeyBindingTests.Press(input, Key.Left)
-            Assert.Equal(1, input.Editor!!.SelectionEnd)
+            Assert.Equal(1, window.Focus.Editor!!.SelectionEnd)
             ExplicitKeyBindingTests.Press(input, Key.A, primary)
-            Assert.Equal(0, input.Editor!!.SelectionStart)
-            Assert.Equal(2, input.Editor!!.SelectionEnd)
+            Assert.Equal(0, window.Focus.Editor!!.SelectionStart)
+            Assert.Equal(2, window.Focus.Editor!!.SelectionEnd)
             ExplicitKeyBindingTests.Press(input, Key.C, primary)
             ExplicitKeyBindingTests.Press(input, Key.End)
             ExplicitKeyBindingTests.Press(input, Key.V, primary)
-            Assert.Equal("bcbc", input.Editor!!.Text)
+            Assert.Equal("bcbc", window.Focus.Editor!!.Text)
             ExplicitKeyBindingTests.Press(input, Key.Z, primary)
-            Assert.Equal("bc", input.Editor!!.Text)
+            Assert.Equal("bc", window.Focus.Editor!!.Text)
             ExplicitKeyBindingTests.Press(input, Key.Z, primaryShift)
-            Assert.Equal("bcbc", input.Editor!!.Text)
+            Assert.Equal("bcbc", window.Focus.Editor!!.Text)
             ExplicitKeyBindingTests.Press(input, Key.A, primary)
             ExplicitKeyBindingTests.Press(input, Key.X, primary)
-            Assert.Equal("", input.Editor!!.Text)
+            Assert.Equal("", window.Focus.Editor!!.Text)
             ExplicitKeyBindingTests.Press(input, Key.Z, primary)
-            Assert.Equal("bcbc", input.Editor!!.Text)
+            Assert.Equal("bcbc", window.Focus.Editor!!.Text)
             ExplicitKeyBindingTests.Press(input, Key.Y, KeyModifiers{Ctrl: true})
-            Assert.Equal("", input.Editor!!.Text)
+            Assert.Equal("", window.Focus.Editor!!.Text)
             ExplicitKeyBindingTests.Press(input, Key.V, primary)
             ExplicitKeyBindingTests.Press(input, Key.Enter)
-            Assert.Equal(editor ? "bcbc\n" : "bcbc", input.Editor!!.Text)
+            Assert.Equal(editor ? "bcbc\n" : "bcbc", window.Focus.Editor!!.Text)
             Assert.Equal(editor ? 0 : 1, submissions)
             ExplicitKeyBindingTests.Press(input, Key.KeypadEnter, KeyModifiers{Shift: true})
-            Assert.Equal(editor ? "bcbc\n\n" : "bcbc", input.Editor!!.Text)
+            Assert.Equal(editor ? "bcbc\n\n" : "bcbc", window.Focus.Editor!!.Text)
             Assert.Equal(editor ? 0 : 2, submissions)
             ExplicitKeyBindingTests.Press(input, Key.Tab)
             if editor {
-                Assert.Equal("bcbc\n\n\t", input.Editor!!.Text)
+                Assert.Equal("bcbc\n\n\t", window.Focus.Editor!!.Text)
                 ExplicitKeyBindingTests.Press(input, Key.Tab, KeyModifiers{Shift: true})
-                Assert.Equal("bcbc\n\n", input.Editor!!.Text)
+                Assert.Equal("bcbc\n\n", window.Focus.Editor!!.Text)
             } else {
-                Assert.Null(input.Editor)
+                Assert.Null(window.Focus.Editor)
                 Assert.True(button.AttachedNode()!!.Focused)
                 ExplicitKeyBindingTests.Press(input, Key.Tab, KeyModifiers{Shift: true})
-                Assert.NotNull(input.Editor)
+                Assert.NotNull(window.Focus.Editor)
             }
-            let before = input.Editor!!.Text
+            let before = window.Focus.Editor!!.Text
             window.InputForTest.QueueComposition("preedit", 0, 0)
             input.KeyRelease(Key.Unknown)
-            Assert.True(input.Editor!!.CompositionStart >= 0)
+            Assert.True(window.Focus.Editor!!.CompositionStart >= 0)
             ExplicitKeyBindingTests.Press(input, Key.Escape)
-            Assert.Equal(before, input.Editor!!.Text)
-            Assert.Equal(-1, input.Editor!!.CompositionStart)
+            Assert.Equal(before, window.Focus.Editor!!.Text)
+            Assert.Equal(-1, window.Focus.Editor!!.CompositionStart)
             ExplicitKeyBindingTests.Press(input, Key.Escape)
             if editor {
-                Assert.Equal(before, input.Editor!!.Text)
+                Assert.Equal(before, window.Focus.Editor!!.Text)
             } else {
                 Assert.Equal(before, value)
-                Assert.Null(input.Editor)
+                Assert.Null(window.Focus.Editor)
             }
             Assert.Equal(legacyBindings && !editor ? 1 : 0, rootActions)
             rootActions = 0
             Assert.True(button.Focus())
             ExplicitKeyBindingTests.Press(input, Key.A, primary)
             Assert.Equal(1, rootActions)
-            input.ClearFocus()
+            window.Focus.Clear()
             ExplicitKeyBindingTests.Press(input, Key.Tab)
             Assert.True(field.AttachedNode()!!.Focused)
         } finally {
@@ -840,8 +1192,7 @@ class ExplicitKeyBindingTests {
         var prevent = true
         let primary = KeyModifiers{Ctrl: !InputPolicy.Mac, Super: InputPolicy.Mac}
         let window = Window{
-            Width: 320,
-            Height: 120,
+            Size: LayoutSize(320, 120),
             Root: ExplicitKeyBindingTests.BuildCell(
                 () -> TextEntry{
                     Handle: field,
@@ -851,7 +1202,7 @@ class ExplicitKeyBindingTests {
                         if prevent { e.PreventDefault() }
                     },
                     KeyBindings: []KeyBinding{
-                        KeyBinding{Key: Key.A, Modifiers: primary, Action: () -> overrideCalls++}
+                        KeyBinding{Key: Key.A, Modifiers: primary, OnPress: () -> overrideCalls++}
                     }
                 }
             )
@@ -860,7 +1211,7 @@ class ExplicitKeyBindingTests {
             window.UpdateTree()
             Assert.True(field.Focus())
             let input = window.PlatformInput
-            input.SetSelection(4, 4)
+            window.Focus.SetSelection(4, 4)
             ExplicitKeyBindingTests.Press(input, Key.Backspace)
             ExplicitKeyBindingTests.Press(input, Key.A, primary)
             Assert.Equal("abcd", value)
@@ -868,14 +1219,14 @@ class ExplicitKeyBindingTests {
             prevent = false
             ExplicitKeyBindingTests.Press(input, Key.A, primary)
             Assert.Equal(1, overrideCalls)
-            Assert.Equal(4, input.Editor!!.SelectionStart)
+            Assert.Equal(4, window.Focus.Editor!!.SelectionStart)
             input.KeyPress(Key.Backspace, default(KeyModifiers))
             window.InputForTest.Step(window.Tree, Resolver(), 0.5)
             Assert.Equal("ab", value)
             input.KeyRelease(Key.Backspace)
             input.KeyPress(Key.Left, default(KeyModifiers))
             window.InputForTest.Step(window.Tree, Resolver(), 0.5)
-            Assert.Equal(0, input.Editor!!.SelectionEnd)
+            Assert.Equal(0, window.Focus.Editor!!.SelectionEnd)
             input.KeyRelease(Key.Left)
             input.KeyPress(Key.Delete, default(KeyModifiers))
             window.InputForTest.Step(window.Tree, Resolver(), 0.5)
@@ -913,9 +1264,8 @@ class ExplicitKeyBindingTests {
             e.Cancel = true
         }
         let window = Window{
-            Width: 320,
-            Height: 120,
-            Root: ExplicitKeyBindingTests.BuildCell(() -> TextEditor(controller){Handle = field})
+            Size: LayoutSize(320, 120),
+            Root: ExplicitKeyBindingTests.BuildCell(() -> TextEditor(){Controller = controller, Handle = field})
         }
         try {
             window.UpdateTree()
@@ -970,7 +1320,7 @@ class ExplicitKeyBindingTests {
         input.KeyRelease(key, modifiers)
     }
 
-    private func EditingBindings(input PlatformInput, action() -> void) []KeyBinding {
+    private func EditingBindings(window Window, action() -> void) []KeyBinding {
         let result = List[KeyBinding]()
         for shift in []bool{false, true} {
             let plain = KeyModifiers{Shift: shift}
@@ -999,51 +1349,69 @@ class ExplicitKeyBindingTests {
                 (Key.V, TextCommandKind.Paste, primary, false),
                 (Key.Z, shift ? TextCommandKind.Redo : TextCommandKind.Undo, primary, false)
             } {
-                result.Add(KeyBinding{Key: key, Modifiers: modifiers, Repeat: repeat, Action: () -> {
+                result.Add(KeyBinding{Key: key, Modifiers: modifiers, Repeat: repeat, OnPress: () -> {
                     action()
-                    input.Execute(TextCommand{Kind: kind, ExtendSelection: modifiers.Shift})
+                    window.Focus.Execute(TextCommand{Kind: kind, ExtendSelection: modifiers.Shift})
                 }})
             }
-            result.Add(KeyBinding{Key: Key.Tab, Modifiers: plain, Action: () -> {
+            result.Add(KeyBinding{Key: Key.Tab, Modifiers: plain, OnPress: () -> {
                 action()
-                if input.Editor?.IsMultiline == true && input.Editor?.IsReadOnly == false {
-                    input.Execute(TextCommand{Kind: shift ? TextCommandKind.Outdent : TextCommandKind.InsertTab})
-                } else { input.MoveFocus(!shift) }
+                if window.Focus.Editor?.IsMultiline == true && window.Focus.Editor?.IsReadOnly == false {
+                    window.Focus.Execute(TextCommand{Kind: shift ? TextCommandKind.Outdent : TextCommandKind.InsertTab})
+                } else { window.Focus.Move(!shift) }
             }})
             for key in []Key{Key.Enter, Key.KeypadEnter} {
-                result.Add(KeyBinding{Key: key, Modifiers: plain, Action: () -> {
+                result.Add(KeyBinding{Key: key, Modifiers: plain, OnPress: () -> {
                     action()
-                    input.Execute(TextCommand{
-                        Kind: input.Editor?.IsMultiline == true && input.Editor?.IsReadOnly == false
+                    window.Focus.Execute(TextCommand{
+                        Kind: window.Focus.Editor?.IsMultiline == true && window.Focus.Editor?.IsReadOnly == false
                             ? TextCommandKind.Insert : TextCommandKind.Submit,
                         Text: "\n"
                     })
                 }})
             }
         }
-        result.Add(KeyBinding{Key: Key.Y, Modifiers: KeyModifiers{Ctrl: true}, Action: () -> {
+        result.Add(KeyBinding{Key: Key.Y, Modifiers: KeyModifiers{Ctrl: true}, OnPress: () -> {
             action()
-            input.Execute(TextCommand{Kind: TextCommandKind.Redo})
+            window.Focus.Execute(TextCommand{Kind: TextCommandKind.Redo})
         }})
-        result.Add(KeyBinding{Key: Key.Escape, Action: () -> {
+        result.Add(KeyBinding{Key: Key.Escape, OnPress: () -> {
             action()
-            if !input.CancelDrag() && !input.CancelComposition() {
-                input.Execute(TextCommand{Kind: TextCommandKind.CancelEdit})
+            if !window.PlatformInput.CancelDrag() && !window.PlatformInput.CancelComposition() {
+                window.Focus.Execute(TextCommand{Kind: TextCommandKind.CancelEdit})
             }
         }})
         return result.ToArray()
     }
     }
 
-    private class FailingClipboardHost : EmbeddedWindowHost {
+    private class TestClipboardHost : EmbeddedWindowHost {
         internal var Writes int32
         internal var Reads int32
-        protected override func GetClipboardText() string {
+        internal var Text string?
+        internal var DataReads int32
+        internal var DataWrites int32
+        internal let PendingRead TaskCompletionSource[ClipboardDataResult] = TaskCompletionSource[ClipboardDataResult](TaskCreationOptions.RunContinuationsAsynchronously)
+        internal let PendingWrite TaskCompletionSource[ClipboardWriteResult] = TaskCompletionSource[ClipboardWriteResult](TaskCreationOptions.RunContinuationsAsynchronously)
+        internal override func ReadClipboardDataAsync(contentTypes IReadOnlyList[string]) Task[ClipboardDataResult] {
+            DataReads++
+            return PendingRead.Task
+        }
+        internal override func WriteClipboardAsync(data TransferData, intent ClipboardIntent) Task[ClipboardWriteResult] {
+            DataWrites++
+            return PendingWrite.Task
+        }
+        protected override func ReadClipboardText() ClipboardTextResult {
             Reads++
+            if let text = Text { return ClipboardTextResult(text.Length == 0 ? ClipboardReadStatus.Empty : ClipboardReadStatus.Success, text) }
             throw InvalidOperationException("Clipboard read unavailable")
         }
-        protected override func SetClipboardText(value string) {
+        protected override func WriteClipboardText(value string) ClipboardWriteResult {
             Writes++
+            if Text != nil {
+                Text = value
+                return ClipboardWriteResult(DataTransferStatus.Success)
+            }
             throw InvalidOperationException("Clipboard write unavailable")
         }
         protected override func RequestFrame() { }

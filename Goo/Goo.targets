@@ -1,4 +1,28 @@
 <Project>
+  <ItemGroup Condition="'$(GooPackageId)' != ''">
+    <AssemblyMetadata Include="GooApplicationId" Value="$(GooPackageId)" />
+  </ItemGroup>
+  <Target Name="_RegisterGooAssets" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <_GooAsset Include="@(GooAsset)">
+        <AssetPath Condition="'%(Link)' != ''">$([System.String]::Copy('%(Link)').Replace('\', '/'))</AssetPath>
+        <AssetPath Condition="'%(Link)' == ''">$([System.String]::Copy('%(Identity)').Replace('\', '/'))</AssetPath>
+      </_GooAsset>
+    </ItemGroup>
+    <Error Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(_GooAsset.AssetPath)', '^(/|[A-Za-z]:)|(^|/)\.\.(/|$)'))"
+           Text="GooAsset '%(_GooAsset.Identity)' requires a project-relative name without '..'. Use Link for files outside the project." />
+    <ItemGroup>
+      <EmbeddedResource Include="@(_GooAsset)"
+                        LogicalName="%(_GooAsset.AssetPath)"
+                        WithCulture="false"
+                        Condition="'$(PublishSingleFile)' == 'true' or '$(PublishAot)' == 'true'" />
+      <Content Include="@(_GooAsset)"
+               TargetPath="%(_GooAsset.AssetPath)"
+               CopyToOutputDirectory="PreserveNewest"
+               CopyToPublishDirectory="PreserveNewest"
+               Condition="'$(PublishSingleFile)' != 'true' and '$(PublishAot)' != 'true'" />
+    </ItemGroup>
+  </Target>
   <PropertyGroup Condition="'$(PublishAot)' == 'true'">
     <IlcFoldIdenticalMethodBodies Condition="'$(IlcFoldIdenticalMethodBodies)' == ''">true</IlcFoldIdenticalMethodBodies>
   </PropertyGroup>
@@ -69,8 +93,8 @@
     <_GooShaderEffect Include="@(GooShaderEffect)">
       <ProgramPath>$(GooShaderEffectIntermediateRoot)/$([MSBuild]::StableStringHash('%(FullPath)', 'Sha256'))/%(SourceIndependent)/%(Filename).goo-effect</ProgramPath>
       <ManifestPath>$(GooShaderEffectIntermediateRoot)/$([MSBuild]::StableStringHash('%(FullPath)', 'Sha256'))/%(SourceIndependent)/%(Filename).goo-effect.json</ManifestPath>
-      <OutputTargetPath Condition="'%(TargetPath)' != ''">%(TargetPath)</OutputTargetPath>
-      <OutputTargetPath Condition="'%(TargetPath)' == ''">%(RelativeDir)%(Filename).goo-effect</OutputTargetPath>
+      <OutputTargetPath Condition="'%(TargetPath)' != ''">$([System.String]::Copy('%(TargetPath)').Replace('\', '/'))</OutputTargetPath>
+      <OutputTargetPath Condition="'%(TargetPath)' == ''">$([System.String]::Copy('%(RelativeDir)%(Filename).goo-effect').Replace('\', '/'))</OutputTargetPath>
     </_GooShaderEffect>
   </ItemGroup>
 
@@ -115,12 +139,20 @@
           BeforeTargets="AssignTargetPaths"
           DependsOnTargets="GooCompileShaderEffects"
           Condition="'@(_GooShaderEffect)' != '' and '$(DesignTimeBuild)' != 'true'">
+    <Error Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(_GooShaderEffect.OutputTargetPath)', '^(/|[A-Za-z]:)|(^|/)\.\.(/|$)'))"
+           Text="GooShaderEffect '%(_GooShaderEffect.Identity)' requires a project-relative TargetPath without '..'." />
     <ItemGroup>
+      <EmbeddedResource Include="%(_GooShaderEffect.ProgramPath)"
+                        LogicalName="%(_GooShaderEffect.OutputTargetPath)"
+                        WithCulture="false"
+                        Condition="'%(_GooShaderEffect.Embed)' == 'true'" />
       <Content Include="%(_GooShaderEffect.ProgramPath)"
+               Condition="'%(_GooShaderEffect.Embed)' != 'true'"
                TargetPath="%(_GooShaderEffect.OutputTargetPath)"
                CopyToOutputDirectory="PreserveNewest"
                CopyToPublishDirectory="Always" />
       <Content Include="%(_GooShaderEffect.ManifestPath)"
+               Condition="'%(_GooShaderEffect.Embed)' != 'true'"
                TargetPath="%(_GooShaderEffect.OutputTargetPath).json"
                CopyToOutputDirectory="PreserveNewest"
                CopyToPublishDirectory="Always" />

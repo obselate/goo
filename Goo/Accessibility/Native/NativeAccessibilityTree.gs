@@ -23,7 +23,7 @@ internal class NativeAccessibilityNodeCache {
   internal let Runs List[NativeAccessibilityTextRun] = List[NativeAccessibilityTextRun]()
 }
 
-public sealed partial class NativeAccessibilityAdapter {
+public partial class NativeAccessibilityAdapter {
   private var scaleX float64 = 1.0
   private var scaleY float64 = 1.0
 
@@ -41,8 +41,8 @@ public sealed partial class NativeAccessibilityAdapter {
       let currentRoot = tree?.Root
       let currentId = currentRoot?.Id.Value ?? -1
       let title = owner?.Title ?? "Goo"
-      let width = owner?.Width ?? 0
-      let height = owner?.Height ?? 0
+      let width = owner?.NativeWidth ?? 0
+      let height = owner?.NativeHeight ?? 0
       let visible = owner?.IsVisible == true
       if complete || rootId != currentId || rootTitle != title || rootWidth != width || rootHeight != height || rootVisible != visible {
         let root = AccessKitNative.NodeNew(AccessKitSchema.Window)

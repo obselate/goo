@@ -18,7 +18,7 @@ internal shared class FontScrollGate {
         using let eviction = FontSource("GooFontScrollEviction", 400, false, File.ReadAllBytes(fontPath))
         eviction.Register()
         let cell = FontScrollCell()
-        let window = Window{Root: cell, Width: 384, Height: 72}
+        let window = Window{Root: cell, Size: LayoutSize(384, 72), }
         window.SmoothScrolling = false
         let retained = List[ShapedText]()
         try {
@@ -92,7 +92,7 @@ internal shared class FontScrollGate {
 internal class FontScrollCell : Cell {
     internal let Handle ElementHandle = ElementHandle{}
     private let source FontScrollSource = FontScrollSource()
-    override func Build() Blob -> Virtual(source){Handle = Handle, Width = 384, Height = 72}
+    override func Build() Blob -> Virtual(){Source = source, Handle = Handle, Width = 384, Height = 72}
 }
 
 internal class FontScrollSource : VirtualSource {
@@ -110,7 +110,7 @@ internal class FontScrollState : VirtualState {
                 Width: 384, Height: 24, Content: Text{Content: "备注 😀 " + index.ToString(),
                     FontFamily: "NotoSansCJK-Regular, NotoColorEmoji", FontSize: 16, FontWeight: 400 + index % 8}})
         }
-        output.ContentSize = LayoutSize{Width: 384, Height: 576}
+        output.ContentSize = LayoutSize(384, 576)
         output.ItemCount = 24
     }
     public override func NeedsRealize(viewport VirtualViewport) bool -> int32(viewport.ScrollOffset.Y / 24.0) != first

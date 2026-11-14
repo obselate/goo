@@ -9,6 +9,7 @@ public partial class Window {
   /// Gets the current native transfer capabilities; closed and embedded windows return None.
   public prop NativeTransferCapabilities NativeTransferCapabilities{
     get {
+      Cell.ObserveUntrackedRead()
       requireUiThread("Window.NativeTransferCapabilities")
       if !IsOpen { return Goo.NativeTransferCapabilities.None }
       if let native = host as SdlHost? { return native.TransferCapabilities() }
@@ -20,6 +21,7 @@ public partial class Window {
   /// Unsupported hosts reject enabling. Disabling cancels any active preview.
   public prop NativeFileDropEnabled bool{
     get { requireUiThread("Window.NativeFileDropEnabled")
+      Cell.ObserveUntrackedRead()
       return family?.NativeDrop?.FileEnabled == true }
     set(value) {
       requireUiThread("Window.NativeFileDropEnabled")
@@ -45,6 +47,7 @@ public partial class Window {
   /// Gets the most recent rejected native file-list explanation, cleared when the next offer begins.
   public prop LastNativeFileDropError string? {
     get { requireUiThread("Window.LastNativeFileDropError")
+      Cell.ObserveUntrackedRead()
       return family?.NativeDrop?.LastError }
   }
 
@@ -83,18 +86,20 @@ public partial class Window {
   /// Gets the latest native drop capture status.
   public prop LastNativeTransferStatus DataTransferStatus {
     get { requireUiThread("Window.LastNativeTransferStatus")
+      Cell.ObserveUntrackedRead()
       return family?.NativeDrop?.LastStatus ?? DataTransferStatus.Unsupported }
   }
 
   /// Gets the latest native drop explanation, bounded to 1024 characters.
   public prop LastNativeTransferError string {
     get { requireUiThread("Window.LastNativeTransferError")
+      Cell.ObserveUntrackedRead()
       return family?.NativeDrop?.LastTransferError ?? "" }
   }
 
   private func GetNativeDropState() NativeDropState {
     if let state = family?.NativeDrop { return state }
-    let state = NativeDropState(() -> node, () -> CanReceiveNativeDrop(), () -> requestRender(), () -> UiScale)
+    let state = NativeDropState(() -> node, () -> CanReceiveNativeDrop(), () -> requestRender(), () -> float32(UiScale))
     family ??= WindowFamily()
     family!!.NativeDrop = state
     if let native = host as SdlHost? { state.Bind(native) }

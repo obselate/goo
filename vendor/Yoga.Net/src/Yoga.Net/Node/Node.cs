@@ -41,7 +41,8 @@ namespace Facebook.Yoga
         private List<Node> _children = new List<Node>();
         
         private Config? _config;
-        private StyleSizeLength[] _processedDimensions = new StyleSizeLength[] { StyleSizeLength.Undefined(), StyleSizeLength.Undefined() };
+        private StyleSizeLength _processedWidth = StyleSizeLength.Undefined();
+        private StyleSizeLength _processedHeight = StyleSizeLength.Undefined();
 
         // Public properties for external access
         public Config Config => _config!;
@@ -88,7 +89,8 @@ namespace Facebook.Yoga
             _owner = other._owner;
             _children = new List<Node>(other._children);
             _config = other._config;
-            _processedDimensions = (StyleSizeLength[])other._processedDimensions.Clone();
+            _processedWidth = other._processedWidth;
+            _processedHeight = other._processedHeight;
         }
 
         // Getters
@@ -190,7 +192,12 @@ namespace Facebook.Yoga
         public Config? GetConfig() => _config;
         public bool IsDirty() => _isDirty;
 
-        public StyleSizeLength GetProcessedDimension(Dimension dimension) => _processedDimensions[(int)dimension];
+        public StyleSizeLength GetProcessedDimension(Dimension dimension) => dimension switch
+        {
+            Dimension.Width => _processedWidth,
+            Dimension.Height => _processedHeight,
+            _ => throw new IndexOutOfRangeException()
+        };
 
         public FloatOptional GetResolvedDimension(Direction direction, Dimension dimension, float referenceLength, float ownerWidth)
         {
@@ -292,7 +299,7 @@ namespace Facebook.Yoga
 
         public void SetLayoutDirection(Direction direction) => _layout.SetDirection(direction);
         
-        public StyleSizeLength ProcessedDimension(Dimension dimension) => _processedDimensions[(int)dimension];
+        public StyleSizeLength ProcessedDimension(Dimension dimension) => GetProcessedDimension(dimension);
         
         public void MarkChildrenWithDisplayNone()
         {
@@ -398,14 +405,15 @@ namespace Facebook.Yoga
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ProcessSingleDimension(Dimension dim)
         {
+            ref var processed = ref (dim == Dimension.Width ? ref _processedWidth : ref _processedHeight);
             if (_style.MaxDimension(dim).IsDefined() &&
                 _style.MaxDimension(dim).InexactEquals(_style.MinDimension(dim)))
             {
-                _processedDimensions[(int)dim] = _style.MaxDimension(dim);
+                processed = _style.MaxDimension(dim);
             }
             else
             {
-                _processedDimensions[(int)dim] = _style.Dimension(dim);
+                processed = _style.Dimension(dim);
             }
         }
 
@@ -581,7 +589,8 @@ namespace Facebook.Yoga
             _contentsChildrenCount = 0;
             _owner = null;
             _children.Clear();
-            _processedDimensions = new StyleSizeLength[] { StyleSizeLength.Undefined(), StyleSizeLength.Undefined() };
+            _processedWidth = StyleSizeLength.Undefined();
+            _processedHeight = StyleSizeLength.Undefined();
 
             if (_config!.UseWebDefaults())
             {

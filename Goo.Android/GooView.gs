@@ -84,6 +84,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             kind PopupKind,
             dismissed(PopupDismissReason) -> void
         ) -> AndroidPopupSurface(this, popup, kind, dismissed)
+        window.PopupAvailableSize = () -> AndroidPopupSurface.AvailableSize(this)
         window.NativeMessageBox = AndroidMessageBox.Show
         window.NativeContextMenu = (owner, point, snapshot) -> AndroidMenuBridge.Show(owner, point, snapshot)
         RefreshPreferences()
@@ -98,7 +99,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             false,
             preferenceObserver
         )
-        window.PlatformInput.EditorChanged += OnEditorChanged
+        window.Focus.EditorChanged += OnEditorChanged
     }
 
     prop Window Goo.Window {
@@ -195,7 +196,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
                         }
                     )
                 },
-                TextScaleFactor: configuration?.FontScale,
+                TextScaleFactor: if let scale = configuration?.FontScale { float64(scale) } else { nil },
                 PreferredLocales: preferredLocales,
                 ReducedMotion: !ValueAnimator.AreAnimatorsEnabled(),
                 AccentColor: accentColor,
@@ -424,8 +425,8 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             for var i = first; i < count; i++ {
                 let id = e.GetPointerId(i)
                 let device = Device(e.GetToolType(i))
-                let x = e.GetX(i) / Density
-                let y = e.GetY(i) / Density
+                let x = float64(e.GetX(i)) / Density
+                let y = float64(e.GetY(i)) / Density
                 switch e.ActionMasked {
                     case MotionEventActions.Down, MotionEventActions.PointerDown {
                         Input.PointerPress(id, device, x, y, PointerButton.Primary, modifiers, e.GetPressure(i))
@@ -444,7 +445,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
         }
         if e.ActionMasked == MotionEventActions.Up {
             PerformClick()
-            if Input.Editor is {IsReadOnly: false} {
+            if Window.Focus.Editor is {IsReadOnly: false} {
                 inputMethod.ShowSoftInput(this, ShowFlags.Implicit)
             }
         }
@@ -462,8 +463,8 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
         }
         if e.ActionMasked == MotionEventActions.Scroll {
             Input.PointerWheel(
-                e.GetX() / Density,
-                e.GetY() / Density,
+                float64(e.GetX()) / Density,
+                float64(e.GetY()) / Density,
                 e.GetAxisValue(Axis.Hscroll),
                 e.GetAxisValue(Axis.Vscroll),
                 Modifiers(e.MetaState)
@@ -472,8 +473,8 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             Input.PointerMove(
                 e.GetPointerId(0),
                 Device(e.GetToolType(0)),
-                e.GetX() / Density,
-                e.GetY() / Density,
+                float64(e.GetX()) / Density,
+                float64(e.GetY()) / Density,
                 Modifiers(e.MetaState),
                 e.GetPressure(0)
             )
@@ -522,13 +523,13 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
         return true
     }
 
-    override func OnCheckIsTextEditor() bool -> Input.Editor is {IsReadOnly: false}
+    override func OnCheckIsTextEditor() bool -> Window.Focus.Editor is {IsReadOnly: false}
 
     override func OnCreateInputConnection(outAttrs EditorInfo?) IInputConnection? {
         if disposed || outAttrs == nil {
             return nil
         }
-        guard let editor = Input.Editor else {
+        guard let editor = Window.Focus.Editor else {
             return nil
         }
         if editor.IsReadOnly {
@@ -612,7 +613,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             int32((float32((y + height)) * Density))
         )
         RequestRectangleOnScreen(area)
-        let editor FocusedEditorSnapshot? = Input.Editor
+        let editor FocusedEditorSnapshot? = Window.Focus.Editor
         if editor == nil {
             return false
         }
@@ -658,11 +659,11 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             editorFocus = focus
             editorConfiguration = configuration
             editorOptions = editor?.InputOptions
-            SetAutofillHints(editorOptions?.AutofillHints ?? System.Array.Empty[string]())
+            SetAutofillHints(editorOptions?.AutofillHintValues ?? System.Array.Empty[string]())
             ImportantForAutofill = if editor != nil &&
                 editor!!.IsReadOnly == false &&
                 editorOptions
-                ?.AutofillHints
+                ?.AutofillHintValues
                 .Length > 0 {
                 ImportantForAutofill.Yes
             } else {
@@ -742,7 +743,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
         }
     }
 
-    override prop AutofillType AutofillType -> if Input.Editor is {IsReadOnly: false} {
+    override prop AutofillType AutofillType -> if Window.Focus.Editor is {IsReadOnly: false} {
         AutofillType.Text
     } else {
         AutofillType.None
@@ -750,7 +751,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
 
     override prop AutofillValue AutofillValue? {
         get {
-            let __spill0 = Input.Editor
+            let __spill0 = Window.Focus.Editor
             var editor FocusedEditorSnapshot
             return if __spill0 != nil && {
                 editor = __spill0!!
@@ -764,10 +765,10 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
     }
 
     override func Autofill(value AutofillValue?) {
-        if !(value != nil && value.IsText == true) || Input.Editor is not{IsReadOnly: false} {
+        if !(value != nil && value.IsText == true) || Window.Focus.Editor is not{IsReadOnly: false} {
             return
         }
-        Input.Execute(TextCommand(TextCommandKind.SelectAll, "", false))
+        Window.Focus.Execute(TextCommand(TextCommandKind.SelectAll, "", false))
         Input.CommitText(value.TextValue?.ToString() ?? "")
     }
 
@@ -799,12 +800,13 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             }
             NativeContextMenu?.OwnerClosed()
             this.Window.EmbeddedPopupFactory = nil
+            this.Window.PopupAvailableSize = nil
             this.Window.NativeMessageBox = nil
             this.Window.NativeContextMenu = nil
             Window.DismissChildPopups(PopupDismissReason.OwnerClosed)
             CancelFrames()
             Clipboard.Dispose()
-            Window.PlatformInput.EditorChanged -= OnEditorChanged
+            Window.Focus.EditorChanged -= OnEditorChanged
             Context!!.ContentResolver!!.UnregisterContentObserver(preferenceObserver)
             preferenceObserver.Dispose()
             IDisposable(accessibility).Dispose()
@@ -888,9 +890,9 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             left.Purpose == right.Purpose &&
             left.EnterAction == right.EnterAction &&
             left
-            .AutofillHints
+            .AutofillHintValues
             .AsSpan()
-            .SequenceEqual(right.AutofillHints)
+            .SequenceEqual(right.AutofillHintValues)
 
         private func Device(tool MotionEventToolType) PointerDevice -> switch tool {
             case MotionEventToolType.Finger: PointerDevice.Touch

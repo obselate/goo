@@ -5,7 +5,26 @@ import System
 import System.Collections.Generic
 import System.Numerics
 
-class World3DCell : Cell {
+internal data struct World3D {
+    var Key string?
+    var Effect ShaderEffect?
+    var Fov float64
+    var Contrast float64
+    var Fog float64
+    var Playing bool
+}
+
+internal func operator implicit(value World3D) Blob -> Cell.Mount[World3D, World3DCell](value.Key, value)
+
+class World3DCell : Cell[World3D] {
+    protected override func InputChanged(input World3D) {
+        Effect = input.Effect
+        Fov = input.Fov
+        Contrast = input.Contrast
+        Fog = input.Fog
+        Playing = input.Playing
+    }
+
     private let Canvas ElementHandle
     private let clock Anim[float64]
     private let state World3DState
@@ -309,7 +328,6 @@ class World3DCell : Cell {
                         simulation.TryFire()
                     }
                 }
-                Rebuild()
             },
             OnPointerMove: func (e PointerEvent) {
                 if dragging && !state.IsTerminal() {
@@ -319,21 +337,18 @@ class World3DCell : Cell {
                 pointerX = Math.Clamp(e.Position.X / Math.Max(bounds.Width, 1.0), 0.0, 1.0)
                 pointerY = Math.Clamp(e.Position.Y / Math.Max(bounds.Height, 1.0), 0.0, 1.0)
                 pointerPressure = e.Pressure
-                Rebuild()
             },
             OnPointerUp: func (e PointerEvent) {
                 dragging = false
                 pointerDown = false
                 pointerPressure = 0.0
                 e.ReleaseCapture()
-                Rebuild()
             },
             OnPointerCancel: func (e PointerEvent) {
                 dragging = false
                 pointerDown = false
                 pointerPressure = 0.0
                 e.ReleaseCapture()
-                Rebuild()
             },
             OnKeyDown: func (e KeyEvent) {
                 if keyHandled(e.Key) {
@@ -348,7 +363,6 @@ class World3DCell : Cell {
                     } else {
                         setKey(e.Key, true)
                     }
-                    Rebuild()
                 }
             },
             OnKeyUp: func (e KeyEvent) {

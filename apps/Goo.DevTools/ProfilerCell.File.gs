@@ -15,15 +15,6 @@ internal partial class ProfilerCell {
     private var filePath string = ""
     private var fileStatus string = ""
     private var fileBusy bool
-    private let lifetime CancellationTokenSource = CancellationTokenSource()
-    private var fileGeneration int32
-
-    public func Dispose() {
-        fileGeneration++
-        nestGeneration++
-        lifetime.Cancel()
-        lifetime.Dispose()
-    }
 
     private func ShowFile(action string) {
         fileAction = action
@@ -31,14 +22,12 @@ internal partial class ProfilerCell {
         if filePath == "" {
             filePath = Path.Combine(Environment.CurrentDirectory, "goo-trace.json")
         }
-        Rebuild()
     }
 
-    private func FilePanel() Container -> Container{
+    private func FilePanel() Blob -> Row{
         Key: "profiler-file-panel",
         Width: Percent(100),
         FlexShrink: 0.0,
-        FlexDirection: FlexDirection.Row,
         AlignItems: AlignItems.Center,
         Gap: 4,
         Padding: Edges{Left: Pad, Right: Pad, Top: 4},
@@ -55,7 +44,7 @@ internal partial class ProfilerCell {
                 OnChange: (value string) -> {
                     filePath = value
                 },
-            }.Build()
+            }
         },
         FileButton("profiler-file-browse", "Browse…", () -> BrowseFile()),
         FileButton("profiler-file-apply", fileBusy ? "Working…": fileAction, () -> ApplyFile()),
@@ -64,13 +53,12 @@ internal partial class ProfilerCell {
             "Cancel",
             () -> {
                 fileAction = ""
-                Rebuild()
             }
         ),
     }
 
     private func FileButton(key string, text string, action Action) Blob {
-        let button = ActionButton{Content: text, Disabled: fileBusy, OnClick: action}.Build()
+        let button Blob = ActionButton{Content: text, Disabled: fileBusy, OnClick: action}
         button.Key = key
         return button
     }
@@ -92,55 +80,39 @@ internal partial class ProfilerCell {
                 }
             )
             fileBusy = true
-            Rebuild()
-            fileGeneration++
-            let generation = fileGeneration
-            let token = lifetime.Token
-            go CompleteBrowse(task, window, generation, token)
+            let token = Lifetime
+            go CompleteBrowse(task, token)
         } catch (error Exception) {
             fileBusy = false
             fileStatus = error.Message
-            Rebuild()
         }
     }
 
-    private func CompleteBrowse(task Task[FileDialogResult], window Window, generation int32, token CancellationToken) {
+    private func CompleteBrowse(task Task[FileDialogResult], token CancellationToken) {
         try {
-            using let cancellation = CancellationTokenSource.CreateLinkedTokenSource(token, window.Closed)
-            let result = await task.WaitAsync(cancellation.Token)
-            window.Post(
+            let result = await task.WaitAsync(token)
+            Post(
                 () -> {
-                    if generation != fileGeneration {
-                        return
-                    }
                     fileBusy = false
                     if result.Status == FileDialogStatus.Success && result.Paths.Count == 1 {
                         filePath = result.Paths[0]
                     } else if result.Status != FileDialogStatus.Cancelled {
                         fileStatus = result.Error == "" ? "File chooser unavailable. Enter a path directly.": result.Error
                     }
-                    Rebuild()
                 }
             )
         } catch (error OperationCanceledException) { } catch (error Exception) {
             let message = error.GetBaseException().Message
-            window.Post(
+            Post(
                 () -> {
-                    if generation != fileGeneration {
-                        return
-                    }
                     fileBusy = false
                     fileStatus = message
-                    Rebuild()
                 }
             )
         }
     }
 
     private func ApplyFile() {
-        guard let window = owner else {
-            return
-        }
         if fileBusy || session.Profiler?.Active == true {
             return
         }
@@ -153,78 +125,64 @@ internal partial class ProfilerCell {
             }
             fileBusy = true
             fileStatus = ""
-            Rebuild()
-            fileGeneration++
-            let generation = fileGeneration
-            let token = lifetime.Token
-            go {
-                try {
-                    using let cancellation = CancellationTokenSource.CreateLinkedTokenSource(token, window.Closed)
-                    cancellation.Token.ThrowIfCancellationRequested()
-                    var loaded ProfilerTrace? = nil
-                    var failure string = ""
-                    try {
-                        if importing {
-                            loaded = ProfilerTrace.LoadFile(path)
-                        } else if let current = trace {
-                            current.SaveFile(path)
-                        }
-                    } catch (error Exception) {
-                        failure = error.Message
-                    }
-                    cancellation.Token.ThrowIfCancellationRequested()
-                    window.Post(
-                        () -> {
-                            if generation != fileGeneration {
-                                return
-                            }
-                            fileBusy = false
-                            if loaded != nil && session.Profiler?.Active == true {
-                                fileStatus = "Import ignored because a recording started."
-                                fileAction = ""
-                                Rebuild()
-                                return
-                            }
-                            if failure != "" {
-                                fileStatus = failure
-                            } else {
-                                if let current = loaded {
-                                    session.Profiler = current
-                                    Select(-1)
-                                    selectionStart = 0L
-                                    selectionEnd = 0L
-                                    filterWindow = ""
-                                    follow = false
-                                    paths.Clear()
-                                    tableKey = ""
-                                    revision = current.Revision
-                                    start = 0L
-                                    end = Math.Max(1L, current.End)
-                                }
-                                fileStatus = importing ? "": "Exported " + Path.GetFileName(path)
-                                fileAction = ""
-                            }
-                            Rebuild()
-                        }
-                    )
-                } catch (error OperationCanceledException) { } catch (error Exception) {
-                    let message = error.Message
-                    window.Post(
-                        () -> {
-                            if generation != fileGeneration {
-                                return
-                            }
-                            fileBusy = false
-                            fileStatus = message
-                            Rebuild()
-                        }
-                    )
-                }
-            }
+            let token = Lifetime
+            go CompleteFile(path, importing, trace, token)
         } catch (error Exception) {
             fileBusy = false
             fileStatus = error.Message
-            Rebuild()
+        }
+    }
+
+    private func CompleteFile(path string, importing bool, trace ProfilerTrace?, token CancellationToken) {
+        try {
+            token.ThrowIfCancellationRequested()
+            var loaded ProfilerTrace? = nil
+            var failure string = ""
+            try {
+                if importing {
+                    loaded = ProfilerTrace.LoadFile(path)
+                } else if let current = trace {
+                    current.SaveFile(path)
+                }
+            } catch (error Exception) {
+                failure = error.Message
+            }
+            token.ThrowIfCancellationRequested()
+            Post(
+                () -> {
+                    fileBusy = false
+                    if loaded != nil && session.Profiler?.Active == true {
+                        fileStatus = "Import ignored because a recording started."
+                        fileAction = ""
+                    } else if failure != "" {
+                        fileStatus = failure
+                    } else {
+                        if let current = loaded {
+                            session.Profiler = current
+                            Select(-1)
+                            selectionStart = 0L
+                            selectionEnd = 0L
+                            filterWindow = ""
+                            follow = false
+                            paths.Clear()
+                            tableKey = ""
+                            revision = current.Revision
+                            start = 0L
+                            end = Math.Max(1L, current.End)
+                        }
+                        fileStatus = importing ? "": "Exported " + Path.GetFileName(path)
+                        fileAction = ""
+                    }
+                }
+            )
+        } catch (error OperationCanceledException) { } catch (error Exception) {
+            let message = error.Message
+            Post(
+                () -> {
+                    fileBusy = false
+                    fileStatus = message
+                }
+            )
         }
     }
 }

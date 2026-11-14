@@ -5,7 +5,7 @@ Source: [`Goo/Window`](../../Goo/Window)
 ## Open a window
 
 ```gsharp
-Window{Root: Cell{}}.Run()
+Application.Run(Window{Root: Cell{}})
 ```
 
 ## Native library loading
@@ -26,7 +26,7 @@ each platform before `Open` or replace its options on the window's UI thread:
 let window = Window{
     Backdrop: WindowBackdrop.Blur,
     Background: Color.Parse("#090b10").WithAlpha(0.78),
-    BackdropFallbackColor: "#090b10",
+    BackdropFallbackColor: Color.Parse("#090b10"),
     WindowsBackdrop: WindowsBackdropOptions{Material: WindowsBackdropMaterial.Acrylic},
     MacOSBackdrop: MacOSBackdropOptions{
         Material: MacOSBackdropMaterial.UnderWindowBackground,
@@ -57,27 +57,26 @@ content within the window, use `Style.ShaderEffect`.
 
 ```gs
 let window = Window{}
-Window.ApplicationActivated += activation -> {
+Application.Activated += activation -> {
     if activation.Kind == ApplicationActivationKind.OpenUri {
         window.Title = activation.Target!!.AbsoluteUri
     }
 }
-let status = Window.InitializeApplicationActivation(
-    ApplicationActivation{IsInitial: true})
+Application.Run(window)
 ```
 
-Subscribe before opening the first window. Check the returned status.
+Call `Application.Configure` before startup. Use `Application.AcquireSingleInstance(arguments)` before `Run` when the app needs one primary instance. Keep its primary lease until shutdown.
 
 - One process event reaches the UI thread during `Pump`, an embedded frame or `Run`.
 - The app chooses the target window and validates notification data.
-- `PostApplicationActivation` copies requests from any thread.
+- `Application.PostActivation` copies requests from any thread.
 - Arguments keep their boundaries, empty values and sender directory.
 - Documents remain URIs, including Android `content:` values.
 - A document URI does not grant access to its data.
 - An initial native request replaces a sole pending synthetic Launch.
 - Other requests use FIFO order, with callback posts deferred to the next batch.
 - Closing the last window clears pending requests.
-- The same owner thread can initialize a new delivery lifetime.
+- Requests wait until an activation handler is added.
 - Hosts and optional packages own native associations, IPC and notifications.
 - macOS cold and warm file or URL opens use this event.
 - Native document batches stay separate from drag/drop into a window.
@@ -86,7 +85,7 @@ Subscribe before opening the first window. Check the returned status.
 | Post status | Meaning |
 | --- | --- |
 | Accepted | The queue owns the request. |
-| NotInitialized | Call InitializeApplicationActivation first. |
+| NotInitialized | Call `Application.AcquireSingleInstance` or `Application.Run` first. |
 | Closed | All windows closed. |
 | QueueFull | 1024 requests are pending. |
 | TooLarge | More than 4096 arguments or documents, 64 KiB per UTF-8 string, or 1 MiB total text. |
@@ -128,12 +127,12 @@ windows, restoring minimized windows and requesting focus without changing the
 focused Goo element synchronously. Activation redirects to an active modal child
 and returns `Unsupported` while a native chooser blocks the owner.
 
-`Focusable` defaults to true and `Topmost` to false. Set them before `Open` or on
-the owner thread afterward. Nonfocusable windows never request activation when
-shown. Unsupported `Focusable` assignments throw before changing the configured
-value. `Topmost` is a requested preference, so unsupported hosts retain it without
-changing stacking or failing `Open`. Call `TrySetTopmost(value)` to distinguish
-`Accepted`, `Unsupported`, `Closed` and `Failed` on an open window.
+`Focusable` defaults to true and `Topmost` to false. Initialize `Topmost` before
+`Open`. Use `SetTopmost(value)` at runtime and handle `Accepted`, `Unsupported`,
+`Closed` or `Failed`. Desktop policy controls observed stacking.
+Set `Focusable` before `Open` or on the owner thread afterward. Nonfocusable windows
+never request activation when shown. Unsupported `Focusable` assignments throw
+before changing the configured value.
 `Capabilities` reports operations supported by the current host, or `None` before
 opening. Windows, macOS and X11 expose visibility, passive show, focusability and
 topmost requests. Wayland exposes visibility but reports the other three as
@@ -208,7 +207,7 @@ how to apply locale tags to language and direction styles.
 
 ```gsharp
 using let popup = PopupWindow(window, TooltipCell{}, PopupKind.Tooltip)
-let result = popup.Open(anchor.BorderBox, 240, 120, PortalPlacement.BottomStart)
+let result = popup.Open(anchor.BorderBox, maximum: LayoutSize(240, 120))
 ```
 
 A popup hosts a new Cell root outside its owner's bounds. Portal and widgets
@@ -216,12 +215,13 @@ Menu keep their current in-window behavior.
 
 | Operation | Contract |
 | --- | --- |
-| `Open` | Call once per instance on the owner thread. Use parent-content layout units. Size follows the owner's UiScale. |
+| `Open` | Call once per instance on the owner thread. Use parent-content layout units. `size: LayoutSize(width, height)` sets an explicit size. Nil measures the root once within `maximum` and the display work area. Size follows the owner's UiScale. |
+| Percent root axes | Measured percentages use the smaller of `maximum` and the display work area as their basis. The popup takes the resolved size, so 50% uses half that basis and 100% fills it. |
 | `PopupKind.Menu` | Receives input. Wayland needs the native button, key or touch event being handled, or a parent popup grab. |
 | `PopupKind.Tooltip` | Receives no input. It needs no grab. |
 | `PopupResult.Status` | `Opened`, `Closed`, `Unsupported`, `RequiresUserAction`, `Busy` or `Failed`. |
 | `Metrics` | Actual logical and framebuffer sizes. Native display bounds can change placement and size. |
-| `UpdatePlacement` | Updates the parent-local anchor and size. Wayland anchors must stay inside the parent. Older compositors can return `Unsupported`. |
+| `UpdatePlacement` | Updates the parent-local anchor and size. Nil `size` measures the current root again with the same limits as `Open`. Wayland anchors must stay inside the parent. Older compositors can return `Unsupported`. |
 | `Dismissed` | Runs once after descendants and pending GPU work close. The owner hide/close, Escape, outside input or focus loss dismisses the chain. |
 | `Close`, `Dispose` | Request dismissal. The host retires pending GPU work before disposal. |
 
@@ -251,9 +251,15 @@ viewports explicitly reject these relationships. Self-ownership and cycles are
 rejected before native creation. Existing independent windows remain the default.
 
 ```gsharp
-let owner = Window{Title: "Main", Width: 800, Height: 600, Root: MainCell{}}.Open()
-let dialog = Window{Title: "Settings", Width: 420, Height: 280, Owner: owner, Modal: true, Root: SettingsCell{}}.Open()
-owner.Run()
+let owner = Window{Title: "Main", Size: LayoutSize(800, 600), Root: MainCell{}}.Open()
+let dialog = Window{
+    Title: "Settings",
+    Size: LayoutSize(420, 280),
+    Owner: owner,
+    Modal: true,
+    Root: SettingsCell{}
+}.Open()
+Application.Run(owner)
 ```
 
 `Owner` and `Modal` cannot change while open. One direct modal child may be open
@@ -277,23 +283,41 @@ New children are rejected during teardown. Native ownership failures throw
 
 ## Native size constraints
 
-`Window.MinWidth`, `MinHeight`, `MaxWidth` and `MaxHeight` use layout pixels.
-Goo multiplies them by `UiScale` for native client-area limits.
-`Width` and `Height` stay in native logical pixels.
+`Window.Size`, `MinSize` and `MaxSize` use layout units.
+Goo multiplies them by `UiScale` and rounds once at the native boundary.
+`NativeWidth` and `NativeHeight` report native logical units.
 Zero removes a limit. Values must be nonnegative, and a nonzero maximum must be
 at least its corresponding minimum. An invalid assignment leaves the old value.
 Set these properties before `Open` or on the window's owner UI thread afterward.
 When moving a bounded interval, widen or clear the old bound before crossing it.
 
-`Open` clamps the requested initial size. Later `Width`/`Height` requests are also
-clamped. Changing native limits asks SDL to resize an out-of-range client area;
-`Width`, `Height`, and `MetricsChanged` reflect the compositor's resulting size
-when its queued metrics settle. Limits constrain normal resizing; fullscreen and
+`Open` clamps the requested initial size. Later `Size` requests are also
+clamped. Changing native limits asks SDL to resize an out-of-range client area.
+`Size` and `MetricsChanged` reflect the compositor's resulting size when its
+queued metrics settle. Limits constrain normal resizing. Fullscreen and
 window-manager-controlled states remain subject to platform policy. Native
 failures throw and leave the corresponding configured limit unchanged.
 
 Embedded hosts own viewport geometry: `Attach` rejects preconfigured limits and
 changing a limit on an attached window throws `NotSupportedException`.
+
+## Size to content
+
+```gsharp
+let window = Window{
+    Root: AboutView(),
+    SizeToContent: SizeToContent.Both,
+    MinSize: LayoutSize(240, 120),
+    MaxSize: LayoutSize(640, 800),
+}
+```
+
+`SizeToContent` measures the root once before the first map. `Width` and `Height`
+measure one axis. `Both` measures both axes. The result stays within `MaxSize`
+and the display work area, unless `MinSize` requires more space.
+A root axis with a percentage, `Vw`, `Vh`, or mixed container-dependent size keeps the corresponding `Size` value.
+Descendant `Vw` and `Vh` use the declared `Size` during this measure.
+Later content changes do not resize the window.
 
 ## Observe window metrics
 
@@ -313,7 +337,7 @@ Equal snapshots do not notify. A listener added after another listener has alrea
 ## Frame pacing and manual capture
 
 `VSync` selects the preferred native presentation mode. `FramePacing` separately
-controls `Window.Run`: `Display` is the default and `Uncapped` schedules demanded
+controls `Application.Run`: `Display` is the default and `Uncapped` schedules demanded
 frames as soon as the native queue is ready. Uncapped mode does not override a
 compositor's presentation policy or render hidden and unavailable windows.
 
@@ -362,7 +386,7 @@ A batch tool can block its own thread, like `goo render`:
 let created = OffscreenRenderSession.Create()
 if created.Status == OffscreenRenderStatus.Success {
     using let session = created.Session!!
-    let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
+    let options = OffscreenRenderOptions(LayoutSize(240.0F, 180.0F), 480u, 360u, Color.White, 134217728L)
     let pending = session.RenderAsync(MyPage(), options, CancellationToken.None)
     while !pending.IsCompleted {
         session.Service()
@@ -395,9 +419,10 @@ class RenderPageButton : Cell, IDisposable {
         }
         let active = created.Session!!
         session = active
-        let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
+        let options = OffscreenRenderOptions(LayoutSize(240.0F, 180.0F), 480u, 360u, Color.White, 134217728L)
         let pending = active.RenderAsync(MyPage(), options, window.Closed)
-        timer = window.SetInterval(
+        timer = window.Every(
+            1.0,
             () -> {
                 try {
                     if !pending.IsCompleted {
@@ -409,8 +434,7 @@ class RenderPageButton : Cell, IDisposable {
                     throw error
                 }
                 Dispose()
-            },
-            1.0
+            }
         )
     }
 
@@ -449,7 +473,7 @@ Closing the owner cancels pending pages.
 
 See the [render and diff commands](../devtools/cli.md) for options.
 
-`goo render` builds a project or runs an existing executable. `Window.Run` uses
+`goo render` builds a project or runs an existing executable. `Application.Run` uses
 `OffscreenRenderSession` without opening a window. No display or compositor is needed.
 Size defaults to the declared window size. Scale sets pixels per layout unit and
 the device-pixel grid used to round layout. Theme sets `Window.Preferences.Theme`.
@@ -460,10 +484,12 @@ app services or advance app animations.
 Register named states in the window initializer:
 
 ```gsharp
-Window{
-    Root: Counter(),
-    Scenes: Dictionary[string, Func[Cell]]{["default"] = () -> Counter(), ["incremented"] = () -> Counter(5)}
-}.Run()
+Application.Run(
+    Window{
+        Root: Counter(),
+        Scenes: Dictionary[string, Func[Cell]]{["default"] = () -> Counter(), ["incremented"] = () -> Counter(5)}
+    }
+)
 ```
 
 `Scenes` is a read-only map of names to factories that return fresh, unattached
@@ -486,7 +512,7 @@ expected content scale. Content scale is separate from the current window's
 framebuffer scale. IDs can become stale after hotplug or SDL teardown. Embedded
 hosts return an empty inventory.
 
-`TrySetFullscreenDisplay(id)` requests borderless fullscreen on that display,
+`SetFullscreenDisplay(id)` requests borderless fullscreen on that display,
 including output changes for an existing fullscreen window. It returns `Accepted`, `Closed`,
 `Unsupported` or `Failed`. `Accepted` means SDL accepted the request, not that
 the compositor moved the window. A compositor may keep the current output when
@@ -496,7 +522,7 @@ before showing it.
 
 KWin 6.7.5 can ignore an output change while fullscreen. To request another
 output there, set `State` to `Normal`, wait for `StateChanged` to report
-`Normal`, then call `TrySetFullscreenDisplay(id)` again. The app must wait for
+`Normal`, then call `SetFullscreenDisplay(id)` again. The app must wait for
 the native state event before sending the next request.
 
 Wayland supports fullscreen output selection while normal windowed placement
@@ -515,7 +541,7 @@ let saved = WindowPlacement{
 let window = Window{Root: Cell{}}
 let result = window.ApplyPlacement(saved)
 if result.Status == WindowOperationResult.Accepted {
-    window.Run()
+    Application.Run(window)
 }
 ```
 
@@ -563,9 +589,50 @@ Cancellation callbacks must not throw or use torn-down UI state.
 
 Pump removes an action before it calls the action. If it throws, Pump throws the same exception and later queued actions remain for the next direct `Pump`. `Run` propagates the exception, then closes the window and discards queued work. Accessibility adapters can use `Post` before calling Window accessibility APIs.
 
+## Await UI work
+
+```gsharp
+async func Load() void {
+    let result = await service.LoadAsync(Lifetime)
+    Apply(result)
+}
+```
+
+In a Goo callback, an incomplete `await` resumes on the window's UI thread. A
+completed task continues inline. `ConfigureAwait(false)` opts out. Goo forwards
+continuations to an existing embedded host context. A `go` child has no UI context.
+
+After each continuation, Goo applies the owning Cell's callback rebuild rule.
+State-only Cells do not rebuild when nothing changed. Unmounted Cells do not rebuild.
+
+Use `window.InvokeAsync(action, token)` from any thread to await dispatch. It accepts
+synchronous or Task-returning callbacks and awaits all their work. Generic overloads
+return the function result. Exceptions propagate. Cancellation, closing the window,
+rejected posts and discarded accepted posts cancel the wait.
+
+Use `await window.NextPresentationAsync(token)` on the UI thread to request one
+frame and await its accepted presentation receipt. It works on an idle window.
+The receipt is a queue handoff, not display scanout.
+
+| Close phase | Behavior |
+| --- | --- |
+| Stop | Hide the window. Reject posts, rebuilds and timers. Stop input, layout and paint. |
+| Unmount | Run `Unmounting`, then cancel `Lifetime`, `Latest` and pending window tasks. |
+| Drain | Keep async handlers on the UI thread until they finish or `CloseDrainMs` expires. Other windows keep running. |
+| Late queue | After the bound, serialize continuations for this window on a background thread. Do not access UI state. |
+
+`CloseDrainMs` defaults to 2000 ms. Zero skips the wait. A task that never
+completes cannot run its handler's `finally`. Pending work does not survive process
+exit. Pass `Lifetime` to every awaited operation that accepts cancellation.
+
+An escaped async handler exception is rethrown from the pump. Cancellation is
+ignored. During the close drain, the first other exception is saved until drain
+completion. An unhandled late-queue exception stops the process.
+
+
 ## Schedule window timers
 
-Call `SetTimeout(callback, delayMs)` for one callback or `SetInterval(callback, intervalMs)` for repeated callbacks. Both return a `WindowTimer`. The window must be open, and scheduling and `Dispose` must run on its UI thread. A timeout accepts a zero delay; an interval must be greater than zero. Both durations must be finite and nonnegative.
+Call `After(delayMs, action)` for one callback or `Every(intervalMs, action)` for repeated callbacks. Both return a `WindowTimer`. The window must be open, and scheduling and `Dispose` must run on its UI thread. A delay can be zero. An interval must be greater than zero. Both durations must be finite and nonnegative.
 
 Timers use the window event loop, so callbacks can update UI state directly. The window wakes for the next deadline while idle. Each pump fires due timers once. An overdue interval skips missed periods instead of calling the callback in a burst. Timers scheduled inside a callback wait until a later pump.
 
@@ -607,11 +674,26 @@ Windows and macOS use native choosers. Linux requires the XDG FileChooser portal
 and the bundled SDL bridge. Missing portal or bridge support returns `Unsupported`.
 Embedded hosts return `Unsupported`. `CancelFileDialog` requests native dismissal.
 
+## Ownerless platform services
+
+```gsharp
+let result = await Platform.OpenAsync("/absolute/path", token)
+if result.Status == PlatformOpenStatus.Failed {
+    Console.Error.WriteLine(result.Error)
+}
+```
+
+`Platform.OpenAsync` starts the system handler on a `go` child. `Success` means the handler started, not that it opened the target. Relative paths throw `ArgumentException`. Cancellation stops a launch that has not started.
+
+Use `NativeDialogs.ShowError(title, message)` on the main thread before any window opens or after the last window closes. It blocks the caller and returns `MessageBoxResult` with `Status` and native `Error` detail. Linux and Android return `Unsupported`. Write the message to standard error when no native box is supported.
+
 ## File and image clipboard data
 
-`GetClipboardFormats()` returns an owned MIME list plus `HasFiles` and `HasImage` without copying image payloads or opening listed files. `ReadClipboardFiles()` and `ReadClipboardImage()` return owned data and an explicit `ClipboardReadStatus`: `Success`, `Empty`, `Unsupported`, `TooLarge`, or `Failed`. `Error` explains failures and exceeded limits. Each call reads the current clipboard; a query and later read are not an atomic snapshot. Applications choose which representation to prefer when both files and images are offered.
+`window.Clipboard.GetFormats()` returns an owned MIME list plus `HasFiles` and `HasImage` without copying image payloads or opening listed files. `ReadFiles()` and `ReadImage()` return owned data and an explicit `ClipboardReadStatus`: `Success`, `Empty`, `Unsupported`, `TooLarge`, or `Failed`. `Error` explains failures and exceeded limits. Each call reads the current clipboard. A query and later read are not an atomic snapshot.
 
 Call these methods on the open window's UI thread. Calls before open, after close, or on another thread throw. Embedded windows report `Unsupported` because their clipboard belongs to the host. Clipboard contents are never modified by these methods. Returned paths and bytes survive later clipboard changes and window close and need no disposal.
+
+`window.Clipboard.ReadText()` returns `ClipboardTextResult` with `Status`, `Text`, and `Error`. `ClipboardReadStatus` distinguishes `Success`, `Empty`, `Unsupported`, `TooLarge`, and `Failed`. Text is limited to 16 MiB of UTF-8. `WriteText(value)` returns `ClipboardWriteResult`. Native read and write failures do not throw.
 
 File reads support local `text/uri-list`, GNOME copied-file lists, Windows `CF_HDROP`, and macOS pasteboard file URLs. Paths retain clipboard order; Goo does not read their contents. URI lists reject remote hosts, relative paths, and NUL characters. Limits are 4096 paths, 32768 UTF-16 units per path, and 1048576 total path units; MIME file-list payloads are limited to 1 MiB.
 
@@ -630,14 +712,17 @@ let data = TransferData(
     },
     []Uri{}
 )
-let result = await window.WriteClipboardAsync(data)
+let result = await window.Clipboard.WriteAsync(data)
 ```
 
 Start clipboard calls on the open window's UI thread. Check `result.Status`.
+Pass a trailing `CancellationToken` to `ReadDataAsync` or `WriteAsync` to cancel the
+wait. Cancellation completes the task as canceled and discards a late native
+result. Closing the window also cancels the wait.
 
 | Contract | Behavior |
 | --- | --- |
-| Read | `ReadClipboardDataAsync(types)` copies requested formats from one offer. Include `text/uri-list` for document references. |
+| Read | `window.Clipboard.ReadDataAsync(types)` copies requested formats from one offer. Include `text/uri-list` for document references. |
 | Owned data | Byte snapshots and URI values stay unchanged after replacement or window close. Caller changes cannot alter published bytes. |
 | Text and images | Plain text and HTML use UTF-8 without a terminator. RTF and encoded images keep their bytes. |
 | Files | Put references in `Uris`, not a second URI-list representation. Goo does not open the files. Desktop references must be local file URIs. |
@@ -765,10 +850,42 @@ Reports a native clipboard query/read outcome independently of payload contents.
 - `TooLarge`
 - `Failed`
 
+## `ClipboardTextResult`
+
+
+Contains owned clipboard text and an explicit native outcome.
+
+### `new(ClipboardReadStatus,string,string)`
+
+Creates a host clipboard text result.
+
+- `status`: The native read outcome.
+- `text`: Owned text, or an empty string outside Success.
+- `error`: Native failure detail, or an empty string.
+
+### `Error`
+
+Gets native failure detail, or an empty string.
+
+### `Status`
+
+Gets the read outcome.
+
+### `Text`
+
+Gets the copied text, or an empty string outside Success.
+
 ## `ClipboardWriteResult`
 
 
 Reports whether all requested clipboard representations were published.
+
+### `new(DataTransferStatus,string)`
+
+Creates a host clipboard publication result.
+
+- `status`: The native publication outcome.
+- `error`: Native failure detail, bounded to 1024 characters.
 
 ### `Error`
 
@@ -1254,24 +1371,24 @@ Requests descendant-first dismissal. GPU retirement can defer native destruction
 
 Requests dismissal and prevents this instance from reopening.
 
-### `Open(ElementRect,int32,int32,PortalPlacement)`
+### `Open(ElementRect,System.Nullable{LayoutSize},System.Nullable{LayoutSize},PortalPlacement)`
 
 Opens a native popup relative to its parent's content rectangle in layout units. Wayland menus must open from native input or an active parent popup grab.
 
 - `anchor`: The finite parent-content anchor rectangle.
-- `width`: Requested positive content width in layout units.
-- `height`: Requested positive content height in layout units.
+- `size`: Positive content size in layout units. Nil measures the root once.
+- `maximum`: Positive measurement limits in layout units. The display work area also bounds measurement.
 - `placement`: Preferred side and alignment before native display constraints.
 
 Returns: An explicit native creation result, never a top-level-window fallback.
 
-### `UpdatePlacement(ElementRect,int32,int32,PortalPlacement)`
+### `UpdatePlacement(ElementRect,System.Nullable{LayoutSize},System.Nullable{LayoutSize},PortalPlacement)`
 
 Updates requested size and parent-local placement without changing the root.
 
 - `anchor`: The finite parent-content anchor rectangle.
-- `width`: Requested positive content width in layout units.
-- `height`: Requested positive content height in layout units.
+- `size`: Positive content size in layout units. Nil measures the root once again.
+- `maximum`: Positive measurement limits in layout units. The display work area also bounds measurement.
 - `placement`: Preferred side and alignment before native display constraints.
 
 Returns: Accepted, Closed, Unsupported or Failed from the native operation.
@@ -1325,6 +1442,18 @@ No rendering device is available.
 ### `VirtualGpu`
 
 A virtual GPU.
+
+## `SizeToContent`
+
+
+Selects the client axes measured from the root before the first map.
+
+### Values
+
+- `None`
+- `Width`
+- `Height`
+- `Both`
 
 ## `TransferData`
 
@@ -1382,11 +1511,7 @@ Gets a surface-local rectangle in logical pixels, or nil for the whole window. C
 ## `Window`
 
 
-Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread.
-
-### `ApplicationActivated`
-
-Occurs once per application activation on the process UI thread, not once per open window. Subscribe before initializing activation. Handlers own validation and window selection. The queue retains 1024 requests, with 4096 arguments or documents per request. Text is limited to 64 KiB per UTF-8 string and 1 MiB per request. Native requests outside these limits, or received before initialization or after close, are dropped.
+Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread. State, IsFocused, Size, NativeWidth, NativeHeight, UiScale, PixelScale, Preferences and Modifiers track reads in Build and retained builders. Other mutable window getters keep automatic callback rebuilding.
 
 ### `DisplayChanged`
 
@@ -1457,6 +1582,15 @@ Borrows a native owner for one optional package dialog without exposing SDL stat
 
 Returns: A lease on Success, or an explicit host or lifecycle status.
 
+### `After(float64,System.Action)`
+
+Runs an action once on the UI thread after a delay. Call on the UI thread while the window is open. Does not rebuild a Cell. Closing the window cancels pending timers.
+
+- `delayMs`: finite, nonnegative delay in milliseconds
+- `action`: callback to run once
+
+Returns: a timer to cancel on the UI thread, or an inactive timer when the window rejects work
+
 ### `ApplyPlacement(WindowPlacement)`
 
 Applies supported fields on the owner thread, or stages normal size, position and state before Open. Geometry rounds to SDL integer screen units. Wayland never applies global position. Fullscreen display selection requires an open window. Unsupported fields remain absent from AppliedFields. Accepted means the request was accepted, not that the compositor granted its final geometry or state. Applying normal geometry can wait for a finite native window transition. Capture again after native configure to observe the result. Android and embedded hosts return Unsupported.
@@ -1481,14 +1615,6 @@ Captures normal client bounds and restorable state from the open native window. 
 
 Returns: Accepted with owned placement, Closed without an open window, or an explicit host failure.
 
-### `ConfigureApplication(string,string,string)`
-
-Configures process-wide application identity before SDL initialization.
-
-- `name`: human-readable application name
-- `version`: application version
-- `identifier`: unique reverse-domain identifier
-
 ### `CreateOffscreenSession`
 
 Creates a renderer lease from an open window. Returns NotReady before Open or after close. The lease does not require the window's presentation surface to remain attached. Pages complete in the window loop without calling Service while the window is open.
@@ -1497,21 +1623,20 @@ Returns: A session on Success, or an explicit renderer status.
 
 ### `DragRegion(Container)`
 
-Marks a container subtree as a native drag region for undecorated windows. Clickable or focusable descendants still win their own pointer input.
+Marks a container subtree as a native drag region for undecorated windows. Clickable or focusable descendants still win their own pointer input. Call on a container you created, before returning it. A received container throws.
 
 - `region`: container to mark
 
 Returns: the same container
 
-### `GetClipboardFormats`
+### `Every(float64,System.Action)`
 
-Queries MIME availability without reading image bytes or file contents.
+Runs an action repeatedly on the UI thread. Call on the UI thread while the window is open. Skips missed ticks. Does not rebuild a Cell. Closing the window cancels pending timers.
 
-Returns: An owned format list and explicit query status.
+- `intervalMs`: finite, positive interval in milliseconds
+- `action`: callback to run at each interval
 
-### `GetClipboardText`
-
-Gets the current native clipboard text on the window UI thread. An empty result can mean an empty clipboard, native copy failure, or text exceeding 16 MiB of UTF-8.
+Returns: a timer to cancel on the UI thread, or an inactive timer when the window rejects work
 
 ### `GetCurrentDisplay`
 
@@ -1527,13 +1652,43 @@ Gets an immutable snapshot of the current host's displays. Open the window first
 
 Hides an open desktop window and cancels transient input without destroying its tree. Releases the swapchain and clip atlas after pending GPU work completes. Show recreates them. Modal windows and owners blocked by a modal child or chooser cannot be hidden. Visibility and input change immediately. Regular desktop unmapping can be deferred until pending queue calls complete.
 
-### `InitializeApplicationActivation(ApplicationActivation)`
+### `InvokeAsync(System.Action,System.Threading.CancellationToken)`
 
-Binds activation to the current UI thread and retains the initial request until a window pumps. Call before opening the first desktop window or from the embedded host's owner thread. After all windows close, the same owner thread may initialize a new delivery lifetime.
+Queues an action on the UI thread and awaits its result or exception.
 
-- `initial`: The initial request, copied with its IsInitial value unchanged.
+- `action`: action to run
+- `cancellationToken`: cancels pending dispatch
 
-Returns: Accepted when retained, or Failed when the request exceeds the activation data limits.
+Returns: the pending dispatch task
+
+### `InvokeAsync(System.Func{System.Threading.Tasks.Task},System.Threading.CancellationToken)`
+
+Queues an async action on the UI thread and awaits its work or exception.
+
+- `action`: async action to run
+- `cancellationToken`: cancels dispatch or the wait for its work
+
+Returns: the task that completes after the action's work
+
+### `InvokeAsync``1(System.Func{System.Threading.Tasks.Task{T}},System.Threading.CancellationToken)`
+
+Queues an async function on the UI thread and awaits its result or exception.
+
+- `T`: result type
+- `action`: async function to run
+- `cancellationToken`: cancels dispatch or the wait for its work
+
+Returns: the result after the function's work completes
+
+### `InvokeAsync``1(System.Func{T},System.Threading.CancellationToken)`
+
+Queues a function on the UI thread and awaits its result or exception.
+
+- `T`: result type
+- `action`: function to run
+- `cancellationToken`: cancels pending dispatch
+
+Returns: the function result
 
 ### `MeasureText(string,Style)`
 
@@ -1542,7 +1697,15 @@ Measures single-line Text width in layout units on the window's UI thread. Appli
 - `text`: The text to measure.
 - `style`: The text declarations. A Text blob is also a Style.
 
-Returns: The width in layout pixels.
+Returns: The width in layout units.
+
+### `NextPresentationAsync(System.Threading.CancellationToken)`
+
+Requests a frame and awaits its next accepted presentation, not display scanout. Call this on the UI thread. Closing the window cancels the task.
+
+- `cancellationToken`: cancels the wait
+
+Returns: the next presentation receipt
 
 ### `Open`
 
@@ -1571,39 +1734,11 @@ Attempts to queue an action for the UI thread. A successful enqueue can still be
 
 Returns: True when the action was accepted into the queue.
 
-### `PostApplicationActivation(ApplicationActivation)`
-
-Copies and queues a request from any thread for the process-wide activation event. Accepted confirms queue ownership, not handler completion, document access, or focus. Requests allow 4096 arguments and documents each, 64 KiB per UTF-8 string and 1 MiB total text.
-
-- `value`: The owned request data to copy. Relative URIs and null values are invalid arguments.
-
-Returns: Accepted, NotInitialized, Closed, QueueFull at 1024 pending requests, or TooLarge.
-
 ### `Pump(float64)`
 
 Processes one frame with the specified elapsed time.
 
 - `dt`: elapsed seconds since the previous frame
-
-### `ReadClipboardDataAsync(System.Collections.Generic.IReadOnlyList{string})`
-
-Copies requested available MIME alternatives and URI references from one native clipboard offer.
-
-- `contentTypes`: Exact MIME types to read, including text/uri-list for document references.
-
-Returns: Owned data and explicit status, with no partial payload on a native read failure.
-
-### `ReadClipboardFiles`
-
-Reads at most 4096 absolute paths and 1048576 UTF-16 path units from the current clipboard.
-
-Returns: Owned paths and explicit read status; the clipboard may have changed since a format query.
-
-### `ReadClipboardImage`
-
-Reads at most 64 MiB of encoded image data; native bitmap conversion also limits decoded RGBA to 64 MiB.
-
-Returns: Owned encoded bytes with a MIME type and explicit read status.
 
 ### `RenderOffscreenAsync(Cell,OffscreenRenderOptions,System.Threading.CancellationToken,WindowCapture)`
 
@@ -1632,14 +1767,6 @@ Reuses a previous capture's caller-owned pixels when its size matches. Do not ac
 
 Queues an idempotent close request. This is safe from any thread.
 
-### `Run`
-
-Opens the window and processes frames until all open Goo windows close.
-
-### `SetClipboardText(string)`
-
-Sets the native clipboard text on the window UI thread. Native set failures throw.
-
 ### `SetColors(Color,Color)`
 
 Sets the clear and inherited root text colors together on the owner thread. Explicit element colors take precedence over the inherited foreground.
@@ -1647,9 +1774,9 @@ Sets the clear and inherited root text colors together on the owner thread. Expl
 - `background`: The window clear color.
 - `foreground`: The inherited root text color.
 
-### `SetInterval(System.Action,float64)`
+### `SetFullscreenDisplay(WindowDisplayId)`
 
-Runs a callback repeatedly on the UI thread at the requested interval.
+Requests borderless fullscreen on the selected display, including retargeting an already-fullscreen window. This must run on the window's UI thread. Returns Closed before Open or after close, Unsupported for embedded hosts, Failed for a stale ID or native failure, and Accepted when SDL accepts the request. Acceptance does not guarantee compositor placement. The compositor may keep the current display when retargeting fullscreen.
 
 ### `SetNativeDataDropFormats(System.Collections.Generic.IReadOnlyList{string})`
 
@@ -1659,9 +1786,11 @@ Enables an exact MIME allow-list for native drops on the owning UI thread.
 
 Returns: Accepted, Closed, Unsupported or Failed without changing an unsupported host.
 
-### `SetTimeout(System.Action,float64)`
+### `SetTopmost(bool)`
 
-Runs a callback once on the UI thread after the delay.
+Attempts to submit a topmost request to the current native host. Accepted means the host accepted the request; desktop policy still controls observed stacking.
+
+Returns: Closed, Unsupported, Accepted, or Failed for the host operation.
 
 ### `Show(bool)`
 
@@ -1675,31 +1804,6 @@ Starts one owner-modal chooser on the open window's UI thread; other windows con
 - `options`: Optional title, initial path, filters, and multiple-selection hints copied before launch.
 
 Returns: A task completed on the UI thread with owned paths and an explicit outcome. Await continuations follow normal .NET context rules.
-
-### `TryPost(System.Action)`
-
-- `action`: action to run during a later Pump
-
-Returns: True when the action was accepted into the queue.
-
-### `TrySetFullscreenDisplay(WindowDisplayId)`
-
-Requests borderless fullscreen on the selected display, including retargeting an already-fullscreen window. This must run on the window's UI thread. Returns Closed before Open or after close, Unsupported for embedded hosts, Failed for a stale ID or native failure, and Accepted when SDL accepts the request. Acceptance does not guarantee compositor placement. The compositor may keep the current display when retargeting fullscreen.
-
-### `TrySetTopmost(bool)`
-
-Attempts to submit a topmost request to the current native host. Accepted means the host accepted the request; desktop policy still controls observed stacking.
-
-Returns: Closed, Unsupported, Accepted, or Failed for the host operation.
-
-### `WriteClipboardAsync(TransferData,ClipboardIntent)`
-
-Publishes every MIME alternative and URI reference in one native clipboard publication.
-
-- `data`: The immutable selection to publish without opening referenced documents.
-- `intent`: Copy or a supported deferred file-cut hint, never an instruction to delete source files.
-
-Returns: Explicit publication status. Success does not confirm that a paste occurred.
 
 ### `AccessibilityAdapter`
 
@@ -1729,6 +1833,14 @@ Reports whether programmatic window movement is available.
 
 Gets supported native lifecycle operations, or None before Open or Attach.
 
+### `Clipboard`
+
+Gets clipboard services for this window's UI thread.
+
+### `CloseDrainMs`
+
+Gets or sets the close drain bound in milliseconds on the owning UI thread. The default is 2000. Zero skips the wait. Closing stops UI work and cancels Cell lifetimes before draining async handlers on the UI thread. After this bound, continuations run on a serialized background queue. They must not access UI state.
+
 ### `Closed`
 
 Gets a token cancelled after this window's native teardown finishes or fails. Posted work stops earlier and can be discarded while the window is closing.
@@ -1743,7 +1855,11 @@ Gets or sets whether the system draws window decorations.
 
 ### `DragStartDistance`
 
-Sets the logical pixels a pressed mouse or pen pointer must move on either axis before a drag source starts a drag. Touch contacts start at 4. The default is 8.
+Sets the Euclidean distance in layout units a pressed mouse or pen pointer must move before a drag source starts a drag. Touch contacts start at 4 layout units. The default is 8.
+
+### `Focus`
+
+Gets the owner-thread focus and text editing operations.
 
 ### `Focusable`
 
@@ -1759,15 +1875,11 @@ Gets or sets a portal parent identifier before Open, such as wayland: followed b
 
 ### `FramePacing`
 
-Gets or sets the frame pacing used by Window.Run. Uncapped still honors GPU queue readiness and the selected presentation mode.
+Gets or sets the frame pacing used by Application.Run. Uncapped still honors GPU queue readiness and the selected presentation mode.
 
 ### `FrameTheme`
 
 Gets or sets the native frame and material appearance. Unknown follows the system. Applies immediately on Windows and macOS. Other platforms ignore it.
-
-### `Height`
-
-Gets or sets the window height.
 
 ### `IconPng`
 
@@ -1817,33 +1929,37 @@ Configures this window as a Wayland layer-shell surface before Open. Unsupported
 
 Gets or sets macOS-only material, activation, emphasis and mask options. Changes apply immediately. The native view samples behind the window. Use Style.ShaderEffect to sample Goo content within it.
 
-### `MaxHeight`
+### `MaxSize`
 
-Gets or sets the client maximum height in layout pixels, multiplied by UiScale for the native limit; zero removes the limit. Must be nonnegative and, when nonzero, no smaller than MinHeight. Embedded hosts are unsupported.
+Gets or sets the client maximum size in layout units. Zero removes an axis limit. Each axis must be finite, nonnegative and no smaller than its minimum. Embedded hosts are unsupported.
 
-### `MaxWidth`
+### `MinSize`
 
-Gets or sets the client maximum width in layout pixels, multiplied by UiScale for the native limit; zero removes the limit. Must be nonnegative and, when nonzero, no smaller than MinWidth. Embedded hosts are unsupported.
-
-### `MinHeight`
-
-Gets or sets the client minimum height in layout pixels, multiplied by UiScale. Zero removes the limit. Must be nonnegative and no greater than a nonzero MaxHeight. Embedded hosts are unsupported.
-
-### `MinWidth`
-
-Gets or sets the client minimum width in layout pixels, multiplied by UiScale. Zero removes the limit. Must be nonnegative and no greater than a nonzero MaxWidth. Embedded hosts are unsupported.
+Gets or sets the client minimum size in layout units. Zero removes an axis limit. Each axis must be finite, nonnegative and no greater than its nonzero maximum. Embedded hosts are unsupported.
 
 ### `Modal`
 
 Gets or sets whether this window is modal to Owner or ForeignParentHandle. Configure before Open. One direct modal child may be open per owner. Nested dialogs use the active modal child as their owner.
 
+### `Modifiers`
+
+Gets the modifiers of the current input event, or the last known state outside dispatch.
+
 ### `NativeFileDropEnabled`
 
 Enables native file-drop ingress before Open or on the owning UI thread; disabled by default. Unsupported hosts reject enabling. Disabling cancels any active preview.
 
+### `NativeHeight`
+
+Gets the observed client height in native logical units.
+
 ### `NativeTransferCapabilities`
 
 Gets the current native transfer capabilities; closed and embedded windows return None.
+
+### `NativeWidth`
+
+Gets the observed client width in native logical units.
 
 ### `Occlusion`
 
@@ -1859,11 +1975,11 @@ Gets or sets the native owner before Open. The owner must be an open desktop win
 
 ### `PixelScale`
 
-Gets the display scale multiplied by UiScale, the factor used to snap layout positions and translation-only transforms to device pixels on both axes.
+Gets the display scale multiplied by UiScale, the factor used to snap layout positions and translation-only transforms to device pixels on both axes. Reads in Build and retained builders track display-scale and UiScale changes.
 
 ### `PlatformInput`
 
-Gets the owner-thread platform input and focused-editor contract.
+Gets the owner-thread host input and composition operations.
 
 ### `Preferences`
 
@@ -1883,7 +1999,7 @@ Gets or sets whether the user can resize the window.
 
 ### `ResizeBand`
 
-Gets or sets the undecorated edge resize band in logical pixels. A scrollbar under an edge band takes the pointer. Corners always resize.
+Gets or sets the undecorated edge resize band in layout units. A scrollbar under an edge band takes the pointer. Corners always resize.
 
 ### `Root`
 
@@ -1892,6 +2008,14 @@ Gets the root cell.
 ### `Scenes`
 
 Gets named, unattached Cell factories registered for display-free rendering.
+
+### `Size`
+
+Gets or sets the client size in layout units. Native assignments multiply by UiScale and round once. The native host's observed size is authoritative after Open.
+
+### `SizeToContent`
+
+Measures the selected root axes once before the first map, within MaxSize and the display work area and at least MinSize. A root axis with a percentage or viewport-relative part keeps Size on that axis. Descendant viewport units use the declared Size during this measure. Later resizing belongs to the user. Ignored on embedded and Android hosts, which control the client size.
 
 ### `SmoothScrolling`
 
@@ -1911,7 +2035,7 @@ Gets the macOS window controls' bounds in top-left window logical pixels, includ
 
 ### `Topmost`
 
-Gets or sets the requested desktop topmost preference. Unsupported hosts retain the request without changing native stacking. Desktop policy controls the final stacking order.
+Gets or initializes the desktop topmost preference before Open. Use SetTopmost to change it at runtime. Desktop policy controls the final stacking order.
 
 ### `Transparent`
 
@@ -1919,11 +2043,11 @@ Gets or sets next-open per-pixel alpha. An open window is unchanged. Transparenc
 
 ### `UiScale`
 
-Gets or sets the layout and rendering scale, clamped to 0.5 through 3. The default is 1, or the owner's scale when not explicitly set. Width and Height remain native logical sizes. Layout uses those sizes divided by UiScale, and rendering multiplies the display scale by UiScale.
+Gets or sets the layout and rendering scale, clamped to 0.5 through 3. The default is 1, or the owner's scale when not explicitly set. Size and its limits use layout units. NativeWidth and NativeHeight report the unscaled native logical size.
 
 ### `VSync`
 
-Gets or sets per-window GPU presentation synchronization. True selects FIFO. False prefers Immediate, then Mailbox, then FIFO on every device. Window.Run pacing is controlled separately by FramePacing.
+Gets or sets per-window GPU presentation synchronization. True selects FIFO. False prefers Immediate, then Mailbox, then FIFO on every device. Application.Run pacing is controlled separately by FramePacing.
 
 ### `WaylandBackdrop`
 
@@ -1932,10 +2056,6 @@ Gets or sets Wayland-only blur region options. Changes apply on the next surface
 ### `WheelScrollScale`
 
 Scales the platform wheel distance for this window. The default is 1.
-
-### `Width`
-
-Gets or sets the window width.
 
 ### `WindowsBackdrop`
 
@@ -2044,6 +2164,62 @@ Reports whether an asynchronous window capture request was accepted.
 - `DeviceLost`
 - `Unsupported`
 
+## `WindowClipboard`
+
+
+Reads and writes clipboard data on an open window's UI thread.
+
+### `GetFormats`
+
+Queries MIME availability without reading image bytes or file contents.
+
+Returns: An owned format list and explicit query status.
+
+### `ReadDataAsync(System.Collections.Generic.IReadOnlyList{string},System.Threading.CancellationToken)`
+
+Copies requested available MIME alternatives and URI references from one native clipboard offer.
+
+- `contentTypes`: Exact MIME types to read, including text/uri-list for document references.
+- `cancellationToken`: Cancels the wait and discards a late native result.
+
+Returns: Owned data and explicit status, with no partial payload on a native read failure.
+
+### `ReadFiles`
+
+Reads at most 4096 absolute paths and 1048576 UTF-16 path units from the current clipboard.
+
+Returns: Owned paths and explicit read status; the clipboard may have changed since a format query.
+
+### `ReadImage`
+
+Reads at most 64 MiB of encoded image data; native bitmap conversion also limits decoded RGBA to 64 MiB.
+
+Returns: Owned encoded bytes with a MIME type and explicit read status.
+
+### `ReadText`
+
+Reads bounded plain text with an explicit native outcome.
+
+Returns: Owned text and status. Native failures do not throw.
+
+### `WriteAsync(TransferData,ClipboardIntent,System.Threading.CancellationToken)`
+
+Publishes every MIME alternative and URI reference in one native clipboard publication.
+
+- `data`: The immutable selection to publish without opening referenced documents.
+- `intent`: Copy or a supported deferred file-cut hint, never an instruction to delete source files.
+- `cancellationToken`: Cancels the wait and discards a late native result.
+
+Returns: Explicit publication status. Success does not confirm that a paste occurred.
+
+### `WriteText(string)`
+
+Publishes plain text without throwing for native failures.
+
+- `value`: The text to publish.
+
+Returns: The native publication outcome.
+
 ## `WindowDisplay`
 
 
@@ -2077,7 +2253,7 @@ Identifies one SDL display in the current process. The value can become stale af
 ## `WindowFramePacing`
 
 
-Controls how Window.Run schedules frames that have visual demand.
+Controls how Application.Run schedules frames that have visual demand.
 
 ### Values
 
@@ -2134,13 +2310,13 @@ Gets the reported framebuffer height.
 
 Gets the reported framebuffer width.
 
-### `LogicalHeight`
+### `NativeHeight`
 
-Gets the reported logical height.
+Gets the reported native logical height.
 
-### `LogicalWidth`
+### `NativeWidth`
 
-Gets the reported logical width.
+Gets the reported native logical width.
 
 ### `UiScale`
 

@@ -209,7 +209,7 @@ public class GlassTerminalCell : Cell {
         BorderWidth: 1,
         BorderColor: border,
         BackgroundColor: fill,
-        Hover: Style{BackgroundColor: hover},
+        HoverStyle: Style{BackgroundColor: hover},
         OnClick: action,
     }
 
@@ -248,7 +248,7 @@ public class GlassTerminalCell : Cell {
                 Padding: Edges{Left: 9, Right: 9, Top: 4, Bottom: 4,},
                 BorderRadius: btnRadius,
                 BackgroundColor: Color.Rgba(255, 255, 255, 14),
-                Hover: Style{BackgroundColor: Color.Rgba(255, 255, 255, 30)},
+                HoverStyle: Style{BackgroundColor: Color.Rgba(255, 255, 255, 30)},
                 OnClick: func () {
                     if cornerRadius <= 0.001F {
                         setCornerRadius(12.0F, "12px (Native)")
@@ -611,7 +611,7 @@ public class GlassTerminalCell : Cell {
             Padding: Edges{Left: 8, Right: 8, Top: 4, Bottom: 4,},
             BorderRadius: radius,
             BackgroundColor: bg,
-            Hover: Style{
+            HoverStyle: Style{
                 BackgroundColor: if active {
                     bg
                 } else {
@@ -668,14 +668,13 @@ public class GlassTerminalWindow {
         public func CreateWindow() Window {
             let programPath = Path.Combine(AppContext.BaseDirectory, "Shaders", "terminal_glass.goo-effect")
             let program = ShaderEffectProgram.Load(programPath)
-            let effect = ShaderEffect(program, samplesBackdrop: true, backdropOutset: 24.0F)
+            let effect = ShaderEffect(program, samplesBackdrop: true, backdropOutset: 24.0)
             effect.Playing = false
 
             let cell = GlassTerminalCell(effect)
             let window = Window{
                 Title: "Glass Terminal",
-                Width: 960,
-                Height: 600,
+                Size: LayoutSize(960, 600),
                 Decorated: false,
                 Transparent: true,
                 Resizable: true,
@@ -690,7 +689,7 @@ public class GlassTerminalWindow {
         public func Run() {
             let window = CreateWindow()
             window.Open()
-            window.Run()
+            Application.Run(window)
         }
 
         public func VerifyGlassPipeline() {

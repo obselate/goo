@@ -1,6 +1,88 @@
 package Goo
 
 internal class ShapeGeometryFixtures {
+  func ShapePaintUsesOnlyFillAndStroke() bool {
+    let blue = Color.Rgb(0, 0, 255)
+    let red = Color.Rgb(255, 0, 0)
+    let gradient = LinearGradient(red, blue)
+    let dashes = DashPattern([]float64{2.0, 3.0}, 1.0)
+    let stroke = VectorStroke(3.0, blue){
+      .Cap: StrokeCap.Round, .Join: StrokeJoin.Bevel, .MiterLimit: 2.0, .Dashes: dashes,
+      .VectorEffect: VectorEffect.NonScalingStroke}
+    let stateStyle = Style{Opacity: 0.5}
+    let resolver = Resolver{}
+    let reconciler = Reconciler{Res: resolver}
+    let node = reconciler.Mount(Shape{
+      Fill: VectorPaint(gradient), Stroke: stroke,
+      HoverStyle: stateStyle, ActiveStyle: stateStyle, FocusStyle: stateStyle, DisabledStyle: stateStyle,
+      StrokeStart: 0.25, StrokeEnd: 0.75,
+    })
+    if node.BackgroundGradient != gradient || node.BackgroundColor.A != 0.0F
+      || node.BorderLeftWidth.Px != 3.0F || !node.BorderLeftColor.Equals(blue)
+      || node.ShapeStrokeCap != StrokeCap.Round || node.ShapeStrokeJoin != StrokeJoin.Bevel
+      || node.MiterLimit != 2.0 || node.Dashes != dashes
+      || node.ShapeVectorEffect != VectorEffect.NonScalingStroke
+      || node.StrokeStart != 0.25 || node.StrokeEnd != 0.75 { return false }
+    for state in 0 ... 4 {
+      node.Hovered = state == 0
+      node.Pressed = state == 1
+      node.Focused = state == 2
+      node.FocusVisible = state == 2
+      node.Disabled = state == 3
+      resolver.Invalidate(node, false)
+      resolver.Flush()
+      if node.BackgroundGradient != gradient || node.BorderLeftWidth.Px != 3.0F
+        || !node.BorderLeftColor.Equals(blue) || node.Opacity != 0.5 { return false }
+    }
+    reconciler.Diff(node, Shape{Fill: VectorPaint(red)})
+    if !node.BackgroundColor.Equals(red) || node.BackgroundGradient != nil
+      || node.BorderLeftWidth.Px != 0.0F || node.BorderLeftColor.A != 0.0F { return false }
+    reconciler.Diff(node, Shape{})
+    return node.BackgroundColor.A == 0.0F && node.BackgroundGradient == nil
+      && node.BorderLeftWidth.Unit == LengthUnit.Unset
+  }
+
+  func ShapeRejectsLegacyPaintAndGradientStroke() bool {
+    let gradient = LinearGradient(Color.White, Color.Transparent)
+    let hover = Style{BackgroundColor: Color.White}
+    for paint in 0 ... 3 {
+      for legacy in []Shape{
+        Shape{BackgroundColor: Color.White}, Shape{BackgroundGradient: gradient},
+        Shape{BorderWidth: 2}, Shape{BorderColor: Color.White},
+        Shape{HoverStyle: hover}, Shape{ActiveStyle: hover},
+        Shape{FocusStyle: hover}, Shape{DisabledStyle: hover},
+      } {
+        if paint == 1 { legacy.Fill = VectorPaint(Color.White) }
+        if paint == 2 { legacy.Stroke = VectorStroke(1, Color.White) }
+        var rejected = false
+        try { Reconciler{Res: Resolver{}}.Mount(legacy) }
+        catch (error InvalidOperationException) {
+          rejected = error.Message == "Shape paint moved to Fill and Stroke"
+        }
+        if !rejected { return false }
+      }
+    }
+    try {
+      Reconciler{Res: Resolver{}}.Mount(Shape{Stroke: VectorStroke(2, VectorPaint(gradient))})
+    } catch (_ NotSupportedException) { return true }
+    return false
+  }
+
+  func VectorAssetRenderFitsDocumentViewBox() bool {
+    let path = PathBuilder(5.0, 10.0, 100.0, 50.0).Rectangle(5.0, 10.0, 100.0, 50.0).Build()
+    let asset = VectorAsset(5.0, 10.0, 100.0, 50.0,
+      []VectorNode{VectorNode(path, VectorNodeStyle{Fill: VectorPaint(Color.White)})})
+    for fit in []ShapeFit{ShapeFit.Contain, ShapeFit.Cover, ShapeFit.Fill, ShapeFit.None} {
+      let node = Reconciler{Res: Resolver{}}.Mount(asset.Render(fit, "vector"))
+      if node.Key != "vector" { return false }
+      let viewport = node.Children[0]
+      if Transforming.GetVectorViewport(viewport)?.Fit != fit { return false }
+      Layout().Calculate(node, 200.0F, 200.0F)
+      NodeLifecycle.DisposeTree(node)
+    }
+    return true
+  }
+
   func ArcSubdivisionIsTranslationInvariant() bool {
     var count = 0
     for centerX in []float64{ 0.0, 1000.0, 100000.0 } {
@@ -94,7 +176,7 @@ internal class ShapeGeometryFixtures {
       .MoveTo(10.0, 5.0).LineTo(50.0, 5.0)
       .MoveTo(10.0, 15.0).LineTo(50.0, 15.0).Build()
     let shape = Shape{ Path: path, Width: 100, Height: 20,
-      BorderWidth: 2, BorderColor: Color.White,
+      Stroke: VectorStroke(2, Color.White),
       StrokeStart: 0.25, StrokeEnd: 0.75 }
     let node = Reconciler{Res: Resolver{}}.Mount(shape)
     node.Rect = Rect{ W: 100.0F, H: 20.0F }
@@ -316,12 +398,12 @@ internal class ShapeGeometryFixtures {
     }
     let path = builder.Build()
     let reconciler = Reconciler{Res: Resolver{}}
-    let node = reconciler.Mount(Shape{Width: 1024, Height: 64, Path: path, BorderWidth: 2, BorderColor: Color.White})
-    let next = Shape{Width: 1024, Height: 64, Path: path, BorderWidth: 2, BorderColor: Color.White}
+    let node = reconciler.Mount(Shape{Width: 1024, Height: 64, Path: path, Stroke: VectorStroke(2, Color.White)})
+    let next = Shape{Width: 1024, Height: 64, Path: path, Stroke: VectorStroke(2, Color.White)}
     reconciler.Diff(node, next)
     let before = GC.GetAllocatedBytesForCurrentThread()
     for index in 0 ... 32 {
-      reconciler.Diff(node, Shape{Width: 1024, Height: 64, Path: path, BorderWidth: 2, BorderColor: Color.White})
+      reconciler.Diff(node, Shape{Width: 1024, Height: 64, Path: path, Stroke: VectorStroke(2, Color.White)})
     }
     return GC.GetAllocatedBytesForCurrentThread() - before < 1048576L
       && node.ShapePath.Hash == path.Hash

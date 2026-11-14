@@ -1,8 +1,32 @@
 import System
+import System.Threading
+import System.Threading.Tasks
 import Goo
 import Xunit
 
 public sealed class TransferDataTests {
+    @Fact
+    public async func PlatformOpenRejectsRelativePathsAndHonorsCancellation() Task {
+        Assert.Throws[ArgumentNullException](() -> Platform.OpenAsync(nil))
+        Assert.Throws[ArgumentException](() -> Platform.OpenAsync("relative/file.txt"))
+        Assert.Throws[ArgumentException](() -> Platform.OpenAsync(""))
+        using let cancellation = CancellationTokenSource()
+        cancellation.Cancel()
+        await Assert.ThrowsAnyAsync[OperationCanceledException](() -> Platform.OpenAsync("https://example.invalid/", cancellation.Token))
+    }
+
+    @Fact
+    public func ErrorBoxRejectsInvalidNativeTextBeforeLaunch() {
+        Assert.Throws[ArgumentException](() -> NativeDialogs.ShowError(nil, "message"))
+        if OperatingSystem.IsLinux() {
+            let result = NativeDialogs.ShowError("title", "message")
+            Assert.Equal(MessageBoxStatus.Unsupported, result.Status)
+            Assert.Equal(-1, result.ButtonId)
+            Assert.Equal("", result.Error)
+        }
+        Assert.Throws[ArgumentException](() -> NativeDialogs.ShowError("title", "bad" + char(0)))
+    }
+
     @Fact
     public func CapturesCallerBytesAndSelectionLists() {
         let bytes = []uint8{1, 2, 3}

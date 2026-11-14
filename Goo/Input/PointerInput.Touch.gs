@@ -58,6 +58,25 @@ internal partial class PointerInput {
 
   private func touchPanActive() bool -> current.TouchPan?.Active == true
 
+  private func touchPanReady(state PointerTouchPanState, x float32, y float32) bool {
+    var target = state.Target
+    while let n = target {
+      let origin = TransformGeometry.WindowToNode(n, state.StartX, state.StartY)
+      let point = TransformGeometry.WindowToNode(n, x, y)
+      if !origin.Valid || !point.Valid { return false }
+      let dx = n.OverflowX == Overflow.Scroll && maxScrollX(n) > 0.0F ? point.X - origin.X : 0.0F
+      let dy = n.OverflowY == Overflow.Scroll && maxScrollY(n) > 0.0F ? point.Y - origin.Y : 0.0F
+      let projected = TransformGeometry.NodeToWindow(n, origin.X + dx, origin.Y + dy)
+      if projected.Valid {
+        let windowX = projected.X - state.StartX
+        let windowY = projected.Y - state.StartY
+        if windowX * windowX + windowY * windowY >= 64.0F { return true }
+      }
+      target = n.IsPortal || n.FocusScopeBoundary ? nil : n.Parent
+    }
+    return false
+  }
+
   private func updateTouchPan(root Node?, resolver Resolver, x float32, y float32,
     prevented bool) bool{
       guard let state = current.TouchPan, let tree = root else { return false }
@@ -70,9 +89,7 @@ internal partial class PointerInput {
           return false
         }
       if !state.Active {
-        let dx = x - state.StartX
-        let dy = y - state.StartY
-        if dx * dx + dy * dy < 64.0F { return false }
+        if !touchPanReady(state, x, y) { return false }
         state.Active = true
         try {
           dispatchCancel()

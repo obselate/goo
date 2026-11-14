@@ -13,7 +13,7 @@ internal class Program {
 
         func Main() {
             using let watcher = if OperatingSystem.IsLinux() { LinuxSmoke() } else { nil }
-            owner = Window{ Title: "Goo tray smoke", Width: 240, Height: 160 }.Open()
+            owner = Window{ Title: "Goo tray smoke", Size: LayoutSize(240, 160), }.Open()
             try {
                 owner!!.Pump(0)
                 let result = TrayIcon.Create(owner!!, Options("Initial"))
@@ -56,7 +56,7 @@ internal class Program {
             } finally {
                 if owner!!.IsOpen {
                     owner!!.RequestClose()
-                    owner!!.Run()
+                    Application.Run(owner!!)
                 }
             }
         }

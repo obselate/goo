@@ -18,7 +18,7 @@ dotnet build HelloGoo/HelloGoo.gsproj -c Release
 ## Shared application
 
 Put application Cells and a Window factory in a shared `net10.0` G# library.
-Desktop calls `window.Run()`. Android returns the same Window from
+Desktop calls `Application.Run(window)`. Android returns the same Window from
 `GooActivity.CreateWindow()`:
 
 ```csharp
@@ -49,7 +49,7 @@ protected override Goo.Window CreateWindow()
 {
     if (!subscribed)
     {
-        Goo.Window.ApplicationActivated += activation =>
+        Goo.Application.Activated += activation =>
             Android.Util.Log.Info("Goo", activation.Kind.ToString());
         subscribed = true;
     }
@@ -102,7 +102,7 @@ sizing the SurfaceView. Framebuffer and input coordinates share that content rec
 In a native activity, construct `new GooView(context, window)` on the Android
 main thread. Add it to the native layout and call `Pause()`, `Resume()`, and
 `Dispose()` from the matching activity callbacks. Size it inside safe and keyboard
-insets. Do not call `Window.Run()` or `Window.Pump()` or attach the Window to another view.
+insets. Do not call `Application.Run(window)` or `Window.Pump()` or attach the Window to another view.
 
 Surface replacement keeps the Window and mounted Cells. Activity destruction
 closes the Window. Store process-recreation data in app state.
@@ -240,12 +240,14 @@ Before release, record the Android and TalkBack versions and check:
 
 ```gsharp
 using let popup = PopupWindow(window, TooltipCell{}, PopupKind.Tooltip)
-let result = popup.Open(anchor.BorderBox, 240, 120, PortalPlacement.BottomStart)
+let result = popup.Open(anchor.BorderBox, maximum: LayoutSize(240, 120))
 ```
 
 - Uses Android `PopupWindow` with a separate GooView and Vulkan surface.
 - A menu receives focus and dismisses on Back or outside input. A tooltip receives no input.
 - Coordinates use owner-content layout units. Size follows the owner's UiScale and display density.
+- Omit `size` to measure the root once, within `maximum` and the visible display area. `UpdatePlacement` can measure it again.
+- A measured root percentage uses the smaller of `maximum` and the visible display area as its basis. The popup takes the resolved size, so 50% uses half that basis and 100% fills it.
 - The native window may extend beyond its owner view. Android clips it to the app's display bounds.
 - Pause, surface loss, view detach and owner disposal dismiss the popup chain.
 - A missing live owner view returns `Unsupported`. Native window failure returns `Failed`.

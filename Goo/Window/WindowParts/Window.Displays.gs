@@ -10,12 +10,12 @@ public data struct WindowDisplayId {
 }
 
 /// Describes one display from an immutable SDL inventory snapshot.
-public sealed class WindowDisplay {
+public class WindowDisplay {
   private let id WindowDisplayId
   private let name string
   private let bounds ElementRect
   private let usableBounds ElementRect?
-  private let contentScale float32
+  private let contentScale float64
 
   /// Gets the opaque process-local display ID.
   public prop Id WindowDisplayId{ get -> id }
@@ -26,10 +26,10 @@ public sealed class WindowDisplay {
   /// Gets usable non-fullscreen bounds, or nil if SDL could not provide them.
   public prop UsableBounds ElementRect?{ get -> usableBounds }
   /// Gets SDL's expected content scale for the display, or zero if SDL cannot provide it. A window scale can differ.
-  public prop ContentScale float32{ get -> contentScale }
+  public prop ContentScale float64{ get -> contentScale }
 
   internal init(id WindowDisplayId, name string, bounds ElementRect,
-    usableBounds ElementRect?, contentScale float32) {
+    usableBounds ElementRect?, contentScale float64) {
     this.id = id
     this.name = name
     this.bounds = bounds
@@ -84,11 +84,11 @@ public partial class Window {
   /// This must run on the window's UI thread. Returns Closed before Open or after close, Unsupported for embedded
   /// hosts, Failed for a stale ID or native failure, and Accepted when SDL accepts the request. Acceptance does not
   /// guarantee compositor placement. The compositor may keep the current display when retargeting fullscreen.
-  public func TrySetFullscreenDisplay(display WindowDisplayId) WindowOperationResult {
-    requireUiThread("Window.TrySetFullscreenDisplay")
+  public func SetFullscreenDisplay(display WindowDisplayId) WindowOperationResult {
+    requireUiThread("Window.SetFullscreenDisplay")
     guard let native = host else { return WindowOperationResult.Closed }
     if !IsOpen || native.IsClosing { return WindowOperationResult.Closed }
-    let result = native.TrySetFullscreenDisplay(display)
+    let result = native.SetFullscreenDisplay(display)
     if result == WindowOperationResult.Accepted {
       state = WindowState.Fullscreen
     }

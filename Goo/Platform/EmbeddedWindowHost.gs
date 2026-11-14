@@ -9,6 +9,7 @@ import System.Threading.Tasks
 public open class EmbeddedWindowHost : IDisposable {
   internal var Bridge EmbeddedWindowBridge?
   private var disposed bool
+  private var disposing bool
   private var logicalWidth int32
   private var logicalHeight int32
   private var framebufferWidth int32
@@ -114,15 +115,20 @@ public open class EmbeddedWindowHost : IDisposable {
   }
 
   /// Closes the attached window and releases its retained and presentation resources.
+  /// Pumps UI-thread continuations until the window's close drain completes or expires.
   public func Dispose() {
-    if disposed { return }
+    if disposed || disposing { return }
     RequireOwnerThread()
-    if let window = Window {
-      window.DetachEmbeddedPresentation()
-      window.Close()
-    }
-    disposed = true
-    Bridge = nil
+    disposing = true
+    try {
+      if let window = Window {
+        window.DetachEmbeddedPresentation()
+        window.Close()
+        window.DrainCloseCallbacks()
+      }
+      disposed = true
+      Bridge = nil
+    } finally { disposing = false }
   }
 
   /// Schedules frame service on the owner thread. The framework may call this from any thread.
@@ -152,10 +158,10 @@ public open class EmbeddedWindowHost : IDisposable {
   protected open func StopTextInput() { }
   /// Updates the text caret area in logical viewport units.
   protected open func SetImeArea(x int32, y int32, width int32, height int32, cursor int32) bool -> false
-  /// Gets plain text from the platform clipboard.
-  protected open func GetClipboardText() string -> ""
-  /// Stores plain text in the platform clipboard.
-  protected open func SetClipboardText(value string) { }
+  /// Reads bounded plain text with an explicit native outcome.
+  protected open func ReadClipboardText() ClipboardTextResult -> ClipboardTextResult(ClipboardReadStatus.Unsupported)
+  /// Publishes plain text with an explicit native outcome.
+  protected open func WriteClipboardText(value string) ClipboardWriteResult -> ClipboardWriteResult(DataTransferStatus.Unsupported)
   /// Updates the pointer cursor when the platform supports one.
   protected open func SetCursor(value Cursor) { }
 
@@ -202,10 +208,23 @@ public open class EmbeddedWindowHost : IDisposable {
   internal func EndTextInput() { StopTextInput() }
   internal func SetTextArea(x int32, y int32, width int32, height int32, cursor int32) bool ->
   SetImeArea(x, y, width, height, cursor)
-  internal func ClipboardText() string {
-    let value = GetClipboardText()
-    return ClipboardTransfer.TextFits(value) ? value : ""
+  internal open func ClipboardText() ClipboardTextResult {
+    try {
+      let result = ReadClipboardText()
+      if !ClipboardTransfer.TextFits(result.Text) {
+        return ClipboardTextResult(ClipboardReadStatus.TooLarge, error: "Clipboard text exceeds 16 MiB")
+      }
+      return result
+    } catch (error Exception) {
+      return ClipboardTextResult(ClipboardReadStatus.Failed, error: error.Message)
+    }
   }
-  internal func CopyText(value string) { SetClipboardText(value) }
+  internal open func CopyText(value string) ClipboardWriteResult {
+    try {
+      return WriteClipboardText(value)
+    } catch (error Exception) {
+      return ClipboardWriteResult(DataTransferStatus.Failed, error.Message)
+    }
+  }
   internal func ChangeCursor(value Cursor) { SetCursor(value) }
 }

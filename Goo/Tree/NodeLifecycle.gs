@@ -25,6 +25,7 @@ internal class NodeLifecycle {
       ScrollbarStyles.Remove(n)
       ScrollActivityStates.Remove(n)
       CustomLayouts.Remove(n)
+      LengthDeclarations.Remove(n)
       Stacking.Remove(n)
       Portals.Remove(n)
       n.ResetForReuse()
@@ -34,6 +35,13 @@ internal class NodeLifecycle {
     }
 
     private func disposeTree(n Node) Exception? {
+      var firstError Exception?
+      if let cell = n.Fiber {
+        n.Fiber = nil
+        try {
+          cell.DisposeMounted()
+        } catch (error Exception) { firstError = error }
+      }
       if !n.Retired && FrameRecorder.Current != nil {
         if Virtualization.State(n) != nil {
           FrameWorkCounters.VirtualDiscards += n.Children.Count
@@ -42,6 +50,7 @@ internal class NodeLifecycle {
         }
       }
       n.Retired = true
+      LengthDeclarations.Remove(n)
       n.PaintBindingResolver?.ForgetPaintBindings(n)
       n.Context = nil
       ElementHandles.Detach(n)
@@ -52,27 +61,18 @@ internal class NodeLifecycle {
       if n.HasAccessibilityNodeState {
         AccessibilityNodeStates.Remove(n)
       }
-      var firstError Exception?
       try {
         ScrollbarParts.Dispose(n)
       } catch (error Exception) {
-        firstError = error
+        firstError ??= error
       }
       try {
         Virtualization.Dispose(n)
       } catch (error Exception) {
         firstError ??= error
       }
-      if let cell = n.Fiber {
-        n.Fiber = nil
-        try {
-          cell.DisposeMounted()
-        } catch (error Exception) {
-          if firstError == nil {
-            firstError = error
-          }
-        }
-      }
+      n.RetainedSizedState?.Dispose()
+      n.RetainedSizedState = nil
       TextLayouts.Dispose(n)
       if let editor = n.EditorBinding {
         n.EditorBinding = nil
@@ -85,6 +85,7 @@ internal class NodeLifecycle {
       ShaderEffectStyles.Dispose(n)
       LayoutTransitions.Dispose(n)
       VulkanSceneCompiler.RetireNode(n)
+      Portals.Remove(n)
       for i in 0 ... n.Children.Count {
         if let error = disposeTree(n.Children[i]) {
           if firstError == nil {

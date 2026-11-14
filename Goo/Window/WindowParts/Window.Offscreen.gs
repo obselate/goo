@@ -115,8 +115,8 @@ public partial class Window {
     }
 
   internal func PrepareOffscreenPage(options OffscreenRenderOptions) {
-    offscreenViewport = Vector2(options.LogicalWidth, options.LogicalHeight)
-    dpi = Vector2(float32(options.PixelWidth) / options.LogicalWidth, float32(options.PixelHeight) / options.LogicalHeight)
+    offscreenViewport = Vector2(float32(options.Size.Width), float32(options.Size.Height))
+    dpi = Vector2(float32(float64(options.PixelWidth) / options.Size.Width), float32(float64(options.PixelHeight) / options.Size.Height))
     if let theme = Environment.GetEnvironmentVariable("GOO_RENDER_THEME") {
       applyPreferences(PlatformPreferences{Theme: theme == "dark" ? SystemTheme.Dark : SystemTheme.Light})
     }
@@ -125,11 +125,11 @@ public partial class Window {
 }
 
 internal func validateOffscreenOptions(options OffscreenRenderOptions) {
-  if !Single.IsFinite(options.LogicalWidth) || !Single.IsFinite(options.LogicalHeight)
-    || options.LogicalWidth <= 0.0F || options.LogicalHeight <= 0.0F
-    || options.LogicalWidth >= float32(Int32.MaxValue)
-    || options.LogicalHeight >= float32(Int32.MaxValue) {
-      throw ArgumentOutOfRangeException("options", "Logical dimensions must be finite and positive")
+  if !Double.IsFinite(options.Size.Width) || !Double.IsFinite(options.Size.Height)
+    || options.Size.Width <= 0.0F || options.Size.Height <= 0.0F
+    || options.Size.Width >= float64(Int32.MaxValue)
+    || options.Size.Height >= float64(Int32.MaxValue) {
+      throw ArgumentOutOfRangeException("options", "Layout dimensions must be finite and positive")
     }
   if options.PixelWidth == 0u || options.PixelHeight == 0u || options.MaxBytes <= 0 {
     throw ArgumentOutOfRangeException("options", "Pixel dimensions and MaxBytes must be positive")

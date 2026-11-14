@@ -4,69 +4,147 @@ import System
 
 /// Defines a retained multiline text editor.
 public class TextEditor : Blob {
-  private let controller TextEditorController
+  private var declarationReadOnly bool
+  private var declarationPlaceholder string
+  private var declarationPlaceholderColor Color?
+  private var declarationInputOptions TextInputOptions?
+  private var declarationSelectionColor Color
+  private var declarationCaretColor Color
+  private var declarationShowLineNumbers bool
+  private var declarationLineNumberColor Color
+  private var declarationCurrentLineColor Color
+  private var declarationOnChange Action[TextDocumentChange]?
+  private var declarationOnSubmit Action?
+  private var controller TextEditorController?
   private var layers []TextPresentationLayer
   private var overscanLines int32
 
   internal override func coreBlob() {
   }
 
-  /// Gets the per-view editing controller.
-  public prop Controller TextEditorController{ get -> controller }
+  /// Gets the required per-view editing controller. Set it before mounting.
+  public prop Controller TextEditorController{
+    get -> controller ?? throw InvalidOperationException("TextEditor.Controller is required")
+    set {
+      CheckMutable()
+      if value != nil { validateEditorLayers(value.Document, layers) }
+      controller = value
+    }
+  }
   /// Gets the ordered presentation layers.
   public prop Layers []TextPresentationLayer{
     get -> copyEditorLayers(layers)
-    init{
-      validateEditorLayers(controller.Document, value)
+    set {
+      CheckMutable()
+      for layer in value {
+        if layer == nil { throw ArgumentNullException("Layers") }
+      }
+      if let current = controller { validateEditorLayers(current.Document, value) }
       layers = copyEditorLayers(value)
     }
   }
   internal prop LayerValues []TextPresentationLayer{ get -> layers }
   /// Gets whether editing commands are disabled.
-  public prop ReadOnly bool{ get; init; }
+  public prop ReadOnly bool {
+    get -> declarationReadOnly
+    set {
+      CheckMutable()
+      declarationReadOnly = value
+    }
+  }
   /// Gets the placeholder shown for an empty document.
-  public prop Placeholder string{ get; init; }
+  public prop Placeholder string {
+    get -> declarationPlaceholder
+    set {
+      CheckMutable()
+      declarationPlaceholder = value
+    }
+  }
   /// Gets the placeholder color. Nil draws Color at 45% opacity.
-  public prop PlaceholderColor Color? { get; init; }
+  public prop PlaceholderColor Color? {
+    get -> declarationPlaceholderColor
+    set {
+      CheckMutable()
+      declarationPlaceholderColor = value
+    }
+  }
   /// Gets optional software keyboard and autofill hints.
-  public prop InputOptions TextInputOptions? { get; init; }
+  public prop InputOptions TextInputOptions? {
+    get -> declarationInputOptions
+    set {
+      CheckMutable()
+      declarationInputOptions = value
+    }
+  }
   /// Gets the selection highlight color.
-  public prop SelectionColor Color{ get; init; }
+  public prop SelectionColor Color {
+    get -> declarationSelectionColor
+    set {
+      CheckMutable()
+      declarationSelectionColor = value
+    }
+  }
   /// Gets the caret color.
-  public prop CaretColor Color{ get; init; }
+  public prop CaretColor Color {
+    get -> declarationCaretColor
+    set {
+      CheckMutable()
+      declarationCaretColor = value
+    }
+  }
   /// Gets whether logical line numbers are shown outside the document.
-  public prop ShowLineNumbers bool{ get; init; }
+  public prop ShowLineNumbers bool {
+    get -> declarationShowLineNumbers
+    set {
+      CheckMutable()
+      declarationShowLineNumbers = value
+    }
+  }
   /// Gets the line-number gutter color.
-  public prop LineNumberColor Color{ get; init; }
+  public prop LineNumberColor Color {
+    get -> declarationLineNumberColor
+    set {
+      CheckMutable()
+      declarationLineNumberColor = value
+    }
+  }
   /// Gets the current-line highlight color.
-  public prop CurrentLineColor Color{ get; init; }
+  public prop CurrentLineColor Color {
+    get -> declarationCurrentLineColor
+    set {
+      CheckMutable()
+      declarationCurrentLineColor = value
+    }
+  }
   /// Gets the logical-line overscan used by viewport layout.
   public prop OverscanLines int32{
     get -> overscanLines
-    init{
+    set {
+      CheckMutable()
       if value < 0 { throw ArgumentOutOfRangeException("OverscanLines") }
       overscanLines = value
     }
   }
   /// Gets the callback that receives committed document changes.
-  public prop OnChange Action[TextDocumentChange]? { get; init; }
+  public prop OnChange Action[TextDocumentChange]? {
+    get -> declarationOnChange
+    set {
+      CheckMutable()
+      declarationOnChange = value
+    }
+  }
   /// Gets the callback invoked by an accepted submit command.
-  public prop OnSubmit Action? { get; init; }
-
-  /// Creates an editor without presentation layers.
-  /// @param controller The per-view controller that owns the edited document.
-  public convenience init(controller TextEditorController) {
-    init(controller, []TextPresentationLayer{})
+  public prop OnSubmit Action? {
+    get -> declarationOnSubmit
+    set {
+      CheckMutable()
+      declarationOnSubmit = value
+    }
   }
 
-  /// Creates an editor with ordered presentation layers.
-  /// @param controller The per-view controller that owns the edited document.
-  /// @param layers The ordered presentation layers.
-  public init(controller TextEditorController, layers []TextPresentationLayer) {
-    if controller == nil { throw ArgumentNullException("controller") }
-    this.controller = controller
-    validateEditorLayers(controller.Document, layers)
-    this.layers = copyEditorLayers(layers)
+  /// Creates an editor. Controller must be set before mounting.
+  public init() {
+    layers = []TextPresentationLayer{}
     Placeholder = ""
     SelectionColor = defaultSelectionColor()
     CaretColor = Color.White

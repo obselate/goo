@@ -10,4 +10,20 @@ public data struct KeyModifiers {
   public prop Ctrl bool{ get; init; }
   /// Reports whether Super is pressed.
   public prop Super bool{ get; init; }
+
+  /// Reports whether Super on macOS or Ctrl on other systems is held, regardless of other modifiers.
+  public prop HasPrimary bool { get -> InputPolicy.Mac ? Super : Ctrl }
+
+  shared {
+    /// Gets a value with no modifier keys pressed.
+    public prop None KeyModifiers { get -> KeyModifiers{} }
+    /// Gets Super on macOS or Ctrl on other systems, evaluated when read.
+    public prop Primary KeyModifiers {
+      get -> InputPolicy.Mac ? KeyModifiers{ Super: true } : KeyModifiers{ Ctrl: true }
+    }
+    /// Gets the primary modifier together with Shift, evaluated when read.
+    public prop PrimaryShift KeyModifiers {
+      get -> InputPolicy.Mac ? KeyModifiers{ Super: true, Shift: true } : KeyModifiers{ Ctrl: true, Shift: true }
+    }
+  }
 }

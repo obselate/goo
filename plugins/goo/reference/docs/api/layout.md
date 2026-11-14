@@ -21,6 +21,43 @@ Container{
 
 See [Style](style.md) for the property contracts.
 
+## Row, column, and spacer
+
+```gsharp
+Row{Gap: 8, Text("Title"), Spacer(), Button(){Text("Close")}}
+Container{Position: PositionType.Absolute, Inset: 0}
+Text{Content: "Flexible", Flex: 1, MinWidth: 0}
+```
+
+- `Row` and `Column` fix the main axis. Setting `FlexDirection`, including through a state style, throws at mount.
+- `Spacer` defaults to grow 1, shrink 1, basis 0, and minimum size 0. It has no paint, hit test, or accessibility node.
+- `Flex: n` sets grow n, shrink 1, and basis 0. It does not change the automatic minimum. Later flex declarations override each part.
+- `Inset` accepts `Edges` in top, right, bottom, left order. A uniform length sets every edge. Later offsets override individual edges.
+
+## Relative and intrinsic lengths
+
+```gsharp
+Container{Width: Percent(100) - Rem(2), MaxHeight: Vh(25)}
+Container{Width: Length.FitContent(Em(32.5))}
+```
+
+- Numbers are layout units. G# uses `Percent`, `Em`, `Rem`, `Vw` and `Vh`. Other .NET languages can use `Length.Pixels`, `Length.Percent`, `Length.Em`, `Length.Rem`, `Length.Vw` and `Length.Vh`.
+- `Em` uses the element's computed font size. In `FontSize`, it uses the parent's font size. `Rem` uses the root font size. Platform text scale applies once.
+- `Vw` and `Vh` use percentages of the window layout viewport.
+- Add or subtract lengths, or multiply and divide them by a number. Automatic and intrinsic values cannot be operands.
+- Supported `Style` properties are listed below. `FontSize` accepts layout units, `Em`, `Rem` and mixtures of those units, but not percentages, `Vw` or `Vh`.
+- `Length.MinContent`, `Length.MaxContent`, and `Length.FitContent(limit)` apply to width, height, their minimum and maximum bounds, and `FlexBasis`. They measure retained content without calling `Build`.
+- In a custom layout callback, `context.ResolveLength(value, LayoutAxis.Horizontal)` resolves percentages against the available content width. `Vertical` uses height. `Em` uses the custom-layout container's font size. Automatic and intrinsic values return `nil`. A nonzero percentage part without a finite basis also returns `nil`.
+- Length animations accept one unit. Mixed lengths throw `ArgumentException`.
+
+| Style properties | `Em`, `Rem`, `Vw`, `Vh` |
+| --- | --- |
+| `Width`, `Height`, `MinWidth`, `MinHeight`, `MaxWidth`, `MaxHeight`, `FlexBasis` | All four, including mixed lengths |
+| `Padding`, `PaddingStart`, `PaddingEnd`, `Margin`, `MarginStart`, `MarginEnd`, `Gap`, `RowGap`, `ColumnGap` | All four, including each `Edges` component |
+| `Inset`, `Left`, `Start`, `Top`, `Right`, `End`, `Bottom`, `TransformOriginX`, `TransformOriginY` | All four, including mixed lengths |
+| `FontSize` | `Em` and `Rem` only |
+| `BorderRadius`, `BorderTopLeftRadius`, `BorderTopRightRadius`, `BorderBottomLeftRadius`, `BorderBottomRightRadius`, `BorderWidth`, `BorderStartWidth`, `BorderEndWidth`, `OutlineWidth`, `OutlineOffset`, `TextStrokeWidth`, `LetterSpacing` | None. Use layout units |
+
 ## Padding and margin
 
 `Padding` and `Margin` accept pixel numbers or `Edges`. Two arguments mean
@@ -96,23 +133,17 @@ class VerticalLayout : LayoutAlgorithm {
         var width = 0.0
         var height = 0.0
         for i in 0 ... context.ChildCount {
-            let child = context.MeasureChild(
-                i,
-                LayoutSize{Width: available.Width, Height: System.Double.PositiveInfinity,}
-            )
+            let child = context.MeasureChild(i, LayoutSize(available.Width, System.Double.PositiveInfinity))
             width = System.Math.Max(width, child.Width)
             height += child.Height
         }
-        return LayoutSize{Width: width, Height: height}
+        return LayoutSize(width, height)
     }
 
     public func Arrange(context LayoutContext, finalSize LayoutSize) {
         var y = 0.0
         for i in 0 ... context.ChildCount {
-            let child = context.MeasureChild(
-                i,
-                LayoutSize{Width: finalSize.Width, Height: System.Double.PositiveInfinity,}
-            )
+            let child = context.MeasureChild(i, LayoutSize(finalSize.Width, System.Double.PositiveInfinity))
             context.ArrangeChild(i, ElementRect{Y: y, Width: finalSize.Width, Height: child.Height,})
             y += child.Height
         }
@@ -157,6 +188,19 @@ Returns the desired content size under the available constraints, excluding the 
 
 Returns: A finite, nonnegative desired content size, clamped by the parent constraints.
 
+## `LayoutAxis`
+
+
+Selects a horizontal or vertical length reference.
+
+### `Horizontal`
+
+Uses the available content width.
+
+### `Vertical`
+
+Uses the available content height.
+
 ## `LayoutContext`
 
 
@@ -178,6 +222,15 @@ Measures a retained child subtree without rebuilding it. Root margins are includ
 
 Returns: The child's desired margin-box size under these constraints.
 
+### `ResolveLength(Length,LayoutAxis)`
+
+Resolves a length to layout units during the current callback. Em uses this container's font size. Percent uses the available size of the current callback.
+
+- `value`: The pixel or relative length.
+- `axis`: The available content axis for percentages.
+
+Returns: Layout units, or nil for automatic or intrinsic values, or a nonzero percentage part without a finite basis.
+
 ### `ChildCount`
 
 Gets the number of retained direct children. Access outside a layout callback throws.
@@ -185,12 +238,4 @@ Gets the number of retained direct children. Access outside a layout callback th
 ## `LayoutSize`
 
 
-Describes a logical size, or available constraints with positive infinity on unbounded axes.
-
-### `Height`
-
-Gets the logical height.
-
-### `Width`
-
-Gets the logical width.
+Describes a logical Width and Height, with positive infinity on unbounded axes.

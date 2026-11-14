@@ -3,20 +3,65 @@ package GooGallery
 import Goo
 import System
 
-class GalleryRange : Cell {
+internal data struct GalleryRange {
+    var Key string?
+    var Label string
+    var MinValue float64
+    var MaxValue float64
+    var Value float64
+    var Step float64
+    var OnChange Action[float64]?
+}
+
+internal func operator implicit(value GalleryRange) Blob -> Cell.Mount[GalleryRange, GalleryRangeCell](value.Key, value)
+
+class GalleryRangeCell : Cell[GalleryRange] {
+    protected override func InputChanged(input GalleryRange) {
+        Label = input.Label
+        MinValue = input.MinValue
+        MaxValue = input.MaxValue
+        Value = input.Value
+        Step = input.Step
+        OnChange = input.OnChange
+    }
+
     /// Gets or sets the descriptive label for this slider.
-    public var Label string
+    private let labelState State[string] = State[string]("")
+    public prop Label string {
+        get -> labelState.Value
+        set -> labelState.Value = value
+    }
     /// Gets or sets the minimum value for this slider.
-    public var MinValue float64
+    private let minValueState State[float64] = State[float64](0.0)
+    public prop MinValue float64 {
+        get -> minValueState.Value
+        set -> minValueState.Value = value
+    }
     /// Gets or sets the maximum value for this slider.
-    public var MaxValue float64
+    private let maxValueState State[float64] = State[float64](1.0)
+    public prop MaxValue float64 {
+        get -> maxValueState.Value
+        set -> maxValueState.Value = value
+    }
     /// Gets or sets the current value for this slider.
-    public var Value float64
+    private let valueState State[float64] = State[float64](0.5)
+    public prop Value float64 {
+        get -> valueState.Value
+        set -> valueState.Value = value
+    }
     /// Gets or sets the quantization step size for this slider.
-    public var Step float64
+    private let stepState State[float64] = State[float64](0.0)
+    public prop Step float64 {
+        get -> stepState.Value
+        set -> stepState.Value = value
+    }
     /// Gets or sets the callback invoked when the slider value changes.
-    public var OnChange Action[float64]?
-    private var dragging bool
+    private let onChangeState State[Action[float64]?] = State[Action[float64]?](nil)
+    public prop OnChange Action[float64]? {
+        get -> onChangeState.Value
+        set -> onChangeState.Value = value
+    }
+    private let dragging State[bool] = State[bool](false)
     private let Track ElementHandle
 
     public init() {
@@ -26,7 +71,7 @@ class GalleryRange : Cell {
         Value = 0.5
         Step = 0.0
         OnChange = nil
-        dragging = false
+        dragging.Value = false
         Track = ElementHandle{}
     }
 
@@ -129,18 +174,15 @@ class GalleryRange : Cell {
     private func handleAction(request AccessibilityActionRequest) bool {
         if request.Action == AccessibilityAction.Increment {
             SetValue(Value + stride())
-            Rebuild()
             return true
         }
         if request.Action == AccessibilityAction.Decrement {
             SetValue(Value - stride())
-            Rebuild()
             return true
         }
         if request.Action == AccessibilityAction.SetValue {
             if Double.TryParse(request.Value, out var parsed) {
                 SetValue(parsed)
-                Rebuild()
                 return true
             }
             return false
@@ -150,12 +192,10 @@ class GalleryRange : Cell {
 
     override func Build() Blob {
         let percent = fraction() * 100.0
-        return Container{
-            FlexDirection: FlexDirection.Column,
+        return Column{
             Gap: 8,
-            Container{
+            Row{
                 Key: "head",
-                FlexDirection: FlexDirection.Row,
                 JustifyContent: JustifyContent.SpaceBetween,
                 Text{
                     Key: "label",
@@ -168,18 +208,17 @@ class GalleryRange : Cell {
                 },
                 Text{Key: "value", Content: valueText(), FontSize: 12, Color: GalleryTheme.InkMuted,},
             },
-            Container{
+            Row{
                 Key: "track",
                 Handle: Track,
                 Focusable: true,
                 Cursor: Cursor.Pointer,
                 Height: 24,
                 MinWidth: 120,
-                FlexDirection: FlexDirection.Row,
                 AlignItems: AlignItems.Center,
                 TransitionMs: 100.0,
-                Hover: Style{Opacity: 0.9},
-                Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong, OutlineOffset: 2,},
+                HoverStyle: Style{Opacity: 0.9},
+                FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong, OutlineOffset: 2,},
                 Accessibility: Accessibility{
                     Role: AccessibilityRole.Slider,
                     Name: Label,
@@ -198,21 +237,21 @@ class GalleryRange : Cell {
                 OnPointerDown: func (e PointerEvent) {
                     e.Capture()
                     e.PreventDefault()
-                    dragging = true
+                    dragging.Value = true
                     SetValue(valueFromPointer(e))
                 },
                 OnPointerMove: func (e PointerEvent) {
-                    if dragging {
+                    if dragging.Value {
                         SetValue(valueFromPointer(e))
                     }
                 },
                 OnPointerUp: func (e PointerEvent) {
                     e.ReleaseCapture()
-                    dragging = false
+                    dragging.Value = false
                 },
                 OnPointerCancel: func (e PointerEvent) {
                     e.ReleaseCapture()
-                    dragging = false
+                    dragging.Value = false
                 },
                 OnWheel: func (e WheelEvent) {
                     e.PreventDefault()

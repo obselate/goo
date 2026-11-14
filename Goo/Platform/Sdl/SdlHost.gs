@@ -7,6 +7,7 @@ import System.Diagnostics
 import System.Runtime.InteropServices
 
 internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHost, NativeDragHost, PinchInputHost {
+  internal var CallbackContext WindowCallbackContext?
   private const MousePointerId int64 = 0L
   private const TouchMouseId uint32 = uint32.MaxValue
   private const PenMouseId uint32 = uint32.MaxValue - 1u
@@ -52,9 +53,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       let driver = SDL.GetCurrentVideoDriverS()
       occlusionSupported = driver == "wayland" || driver == "cocoa" || driver == "x11"
       try {
-        if !SdlRuntime.AcquireVulkan() {
-          ThrowSdl("SDL_Vulkan_LoadLibrary")
-        }
+        SdlRuntime.AcquireVulkan()
         vulkanOwned = true
         if let parent = popupParent {
           CreatePopup(parent, width, height, popupKind, popupTimestamp, popupAnchor, popupPlacement, popupScale)
@@ -323,9 +322,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       VisibilityChanged?.Invoke()
       return WindowOperationResult.Accepted
     }
-    if OperatingSystem.IsLinux() && Window.CurrentActivationToken != nil {
+    if OperatingSystem.IsLinux() && Application.CurrentActivationToken != nil {
       if !SDL.SetStringProperty(SDL.GetWindowProperties(window), "Goo.Wayland.ActivationToken.1",
-        Window.CurrentActivationToken!!) { return WindowOperationResult.Failed }
+        Application.CurrentActivationToken!!) { return WindowOperationResult.Failed }
     }
     if deferFirstShow {
       firstShowRequested = true
@@ -403,21 +402,27 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     return SDL.SetTextInputArea(window, &area, cursor)
   }
 
-  public func GetClipboardText() string {
-    ThrowIfDisposed()
-    let native = SDL.GetClipboardText()
-    try { return ClipboardTransfer.BoundedUtf8(nint(native), ClipboardTransfer.MaxTextBytes) }
-    catch (_ ClipboardLimitException) { return "" }
-    finally { SDL.Free(native) }
-  }
-
-  public func SetClipboardText(value string) {
+  public func GetClipboardText() ClipboardTextResult {
     ThrowIfDisposed()
     SDL.ClearError()
-    if !SDL.SetClipboardText(value) {
+    let native = SDL.GetClipboardText()
+    try {
       let error = SDL.GetErrorS()
-      throw InvalidOperationException("SDL_SetClipboardText failed" + if String.IsNullOrEmpty(error) { "" } else { ": " + error })
-    }
+      if !String.IsNullOrEmpty(error) { return ClipboardTextResult(ClipboardReadStatus.Failed, error: error) }
+      let text = ClipboardTransfer.BoundedUtf8(nint(native), ClipboardTransfer.MaxTextBytes)
+      return ClipboardTextResult(if text.Length == 0 { ClipboardReadStatus.Empty } else { ClipboardReadStatus.Success }, text)
+    } catch (error ClipboardLimitException) {
+      return ClipboardTextResult(ClipboardReadStatus.TooLarge, error: error.Message)
+    } catch (error Exception) {
+      return ClipboardTextResult(ClipboardReadStatus.Failed, error: error.Message)
+    } finally { SDL.Free(native) }
+  }
+
+  public func SetClipboardText(value string) ClipboardWriteResult {
+    ThrowIfDisposed()
+    SDL.ClearError()
+    return if SDL.SetClipboardText(value) { ClipboardWriteResult(DataTransferStatus.Success) }
+      else { ClipboardWriteResult(DataTransferStatus.Failed, SDL.GetErrorS()) }
   }
 
   public func BeginClose() {

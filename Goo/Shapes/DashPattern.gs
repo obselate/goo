@@ -6,7 +6,7 @@ import System.Collections.ObjectModel
 
 /// Specifies logical-pixel dash intervals and their phase offset.
 /// Empty intervals produce a solid stroke. Odd interval counts repeat once.
-public sealed class DashPattern {
+public class DashPattern {
   private let intervals ReadOnlyCollection[float64]
   private var offset float64
   private var revision uint64

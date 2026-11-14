@@ -11,7 +11,7 @@ public enum NativeDialogOwnerStatus { Success; Unsupported; Busy; NotReady; Clos
 public enum NativeDialogOwnerKind { Win32; Cocoa; Wayland }
 
 /// Keeps a native dialog owner alive and blocks only that owner's Goo input until disposed.
-public sealed class NativeDialogOwnerLease : IDisposable {
+public class NativeDialogOwnerLease : IDisposable {
   private let owner Window
   private let kind NativeDialogOwnerKind
   private let handle nint

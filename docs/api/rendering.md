@@ -22,7 +22,7 @@ import System.Numerics
 
 let path = Path.Combine(AppContext.BaseDirectory, "Shaders", "glass.goo-effect")
 let program = ShaderEffectProgram.Load(path)
-let effect = ShaderEffect(program, samplesBackdrop: true, backdropOutset: 24.0F)
+let effect = ShaderEffect(program, samplesBackdrop: true, backdropOutset: 24.0)
 effect.SetParameter(0, Vector4(0.18F, 0.65F, 0.9F, 1.0F))
 let data = ShaderEffectData(BitConverter.GetBytes(1.0F))
 effect.SetData(0, data)
@@ -438,7 +438,7 @@ Returns: Success, InvalidData, Unsupported for LUT or incompatible profiles, or 
 ## `OffscreenRenderOptions`
 
 
-Specifies LogicalWidth, LogicalHeight, PixelWidth, PixelHeight, Background and the MaxBytes allocation limit.
+Specifies Size in layout units, PixelWidth, PixelHeight, Background and the MaxBytes allocation limit.
 
 ## `OffscreenRenderResult`
 
@@ -501,14 +501,14 @@ Reports an independent render operation without exposing GPU resource handles.
 
 Owns retained parameter state for one backend-neutral shader effect program.
 
-### `new(ShaderEffectProgram,bool,float32,float32)`
+### `new(ShaderEffectProgram,bool,float64,float64)`
 
 Creates a retained fragment effect with optional bounded backdrop sampling.
 
 - `program`: The compiled shader effect program.
 - `samplesBackdrop`: Whether Goo copies the existing target behind the element for shader sampling.
-- `backdropOutset`: The finite nonnegative logical-pixel distance captured around the element, up to 256.
-- `backdropBlur`: The finite Gaussian standard deviation in logical pixels, from 0 through 256/3. Nonzero blur requires samplesBackdrop. Positive values prefilter at quarter resolution and capture at least three standard deviations around the element.
+- `backdropOutset`: The finite nonnegative distance captured around the element in layout units, up to 256.
+- `backdropBlur`: The finite Gaussian standard deviation in layout units, from 0 through 256/3. Nonzero blur requires samplesBackdrop. Positive values prefilter at quarter resolution and capture at least three standard deviations around the element.
 
 ### `SetData(int32,ShaderEffectData)`
 
@@ -604,6 +604,10 @@ Loads and validates a compiled shader effect program from memory.
 - `program`: The complete Goo shader effect program bytes.
 - `replacesBackdrop`: Whether the shader replaces the target instead of source-over compositing. Use GOO_REPLACES_BACKDROP in the shader to retain clip coverage when replacing a transparent backdrop.
 
+### `Load(System.Reflection.Assembly,string)`
+
+Loads a compiled effect by asset name without the .goo-effect extension.
+
 ### `Load(string)`
 
 Loads and validates a compiled shader effect program from a file.
@@ -639,13 +643,14 @@ Returns the immutable node at a flattened document index.
 
 Returns a node path in the document coordinate space.
 
-### `Render`
+### `Render(ShapeFit,string)`
 
-Creates a retained vector display fitted within its parent.
+Builds a retained display of this document.
 
-### `Render(string)`
+- `fit`: The fit applied to the document view box. The default is Contain.
+- `key`: The optional retained display key.
 
-Creates a keyed retained vector display fitted within its parent.
+Returns: The vector display declaration.
 
 ### `ClipCount`
 

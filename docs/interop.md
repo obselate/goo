@@ -53,7 +53,7 @@ Use `open System` and `open Goo`. Create callbacks outside `Build()`. Assign `Co
 
 ```fsharp
 let counterFactory = Func<Cell>(Counter.create)
-let counter = Cell.Mount<Cell>(counterFactory, "counter")
+let counter = Cell.Mount<Cell>("counter", counterFactory)
 ```
 
 - `Add` accepts derived Blobs. An annotated `Blob` return upcasts a `Container`.
@@ -135,7 +135,7 @@ Keep native assets in the build output. For `Cell[T]`, dot-source the input type
 | Init-only properties | Set them in a hashtable cast, such as `[Goo.Style]@{ Padding = 10 }`. |
 | Structs | Read a copy, construct a changed value, then assign it back. A nested struct edit does not update its owner. |
 | Numeric overloads | Use explicit types, such as `[Math]::Clamp([double]0.7, [double]0, [double]1)`. |
-| Async | PowerShell has no `await`. Load resources before `Run()`. Do not block in `Build()` or handlers. |
+| Async | PowerShell has no `await`. Load resources before `[Goo.Application]::Run($window)`. Do not block in `Build()` or handlers. |
 | Names | Names are case-insensitive. Do not use names that differ only by case or a Cell field named `build`. |
 | Callback output | Use `$null = $handle.Activate()` to keep `Action` handlers free of pipeline output. |
 
@@ -147,8 +147,8 @@ Core `Goo.Button` has no default activation keys. Goo.Widgets buttons bind Enter
 | --- | --- |
 | Child collections | Assign a fresh writable list or add to a new Blob. Do not mutate a retained tree. |
 | State and identity | Mount child Cells. Keep keys stable when siblings move. See [Cell](api/cell.md) and [tree](api/tree.md). |
-| Events | Goo rebuilds the Cell that authored an input callback. Other state changes need `Rebuild()` on the UI thread. |
-| Background work | Return window changes through `Window.Post`. Goo installs no UI synchronization context. |
+| Events | Goo handles rebuilds after its callbacks. A changed `State<T>` rebuilds the Cells that read it in `Build`. Call `Rebuild()` only for plain state changed outside Goo. |
+| Background work | Await in Goo callbacks to resume on the UI thread. Use `Cell.Post` or `Window.InvokeAsync` from background work. Pass `Lifetime` or `Latest(name)` to cancellable work. |
 | Layout and style | See [layout](api/layout.md) and [style](api/style.md). |
 | Virtual rows | Use a bounded viewport, immutable row values, stable keys and a retained builder delegate. |
 | Dialogs | Mount `ModalDialogHost`. Do not dispose it inside `Build()`. |

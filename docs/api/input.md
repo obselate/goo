@@ -76,10 +76,16 @@ controller.UseTabs = false
 controller.IndentWidth = 2
 controller.TabWidth = 8
 
-TextEditor(controller)
+TextEditor{Controller: controller}
 ```
 
-Keys match physical `Key` values and exact `Modifiers`. Omitted modifiers mean none. The first matching binding on the nearest element wins. `Action` runs on press. `OnRelease` is paired with that press and runs only if the original target still owns focus, even if modifiers were released first. Changing focus, disabling, or removing the target cancels the pending release. `Repeat: true` repeats the action after 400 ms and then at 30 Hz while focus remains on the original target. It works on any focusable primitive and any key.
+Keys match physical `Key` values and exact `Modifiers`. Omitted modifiers mean none. The first matching binding on the nearest element wins. `OnPress` runs on press. `OnRelease` is paired with that press and runs only if the original target still owns focus, even if modifiers were released first. Changing focus, disabling, or removing the target cancels the pending release. `Repeat: true` repeats the action after 400 ms and then at 30 Hz while focus remains on the original target. It works on any focusable primitive and any key.
+
+Use `KeyBinding(key, modifiers, onPress)` or set `OnPress` in a literal. `OnRelease` and `Repeat` remain named members. `KeyModifiers.None` has no modifiers. `KeyModifiers.Primary` reads Super on macOS and Ctrl elsewhere. `PrimaryShift` adds Shift. Bindings still match modifiers exactly.
+
+`window.Modifiers` reports the event being dispatched, including pointer and keyboard clicks. Outside dispatch, including accessibility activation, it reports the last known state.
+
+`window.Focus.EditsText` reports a focused editable TextEntry, editable TextEditor, or generic `OnTextInput` client. `KeyEvent.TargetEditsText` captures that state at dispatch. Root navigation handlers must skip text-editing targets. Use `window.Focus.Editor` for the editor snapshot, `Selection` and `SetSelection` for selection, `Execute` for text commands, `Move` for traversal, and `Clear` to blur. Host injection and composition remain on `window.PlatformInput`.
 
 
 Movement and deletion repeat. Clipboard, history, submit, Tab and Escape do not. Shift extends movement selection. Ctrl is the primary and word modifier on Windows and Linux. On macOS, Command is primary and Option moves or deletes words. Primary+A/C/X/V/Z selects all, copies, cuts, pastes and undoes. Primary+Shift+Z and Ctrl+Y redo.
@@ -100,10 +106,10 @@ after an asynchronous continuation. A failing callback propagates its exception
 after terminal pointer, drag, or focus cleanup, and its input event is not replayed.
 `PlatformInput.KeyRelease(key, modifiers)` preserves modifiers still held on release.
 
-Use `window.PlatformInput.Execute(TextCommand)` for focused text actions and clipboard access. `Paste` without `Text` reads the clipboard. Supplied paste text keeps `Paste` command interception and its separate undo group. `CancelEdit` restores a TextEntry's value from when it gained focus, reports the change, and blurs it. `CancelComposition` remains a separate action. A TextEditor controller accepts document commands directly.
+Use `window.Focus.Execute(TextCommand)` for focused text actions and clipboard access. `Paste` without `Text` reads the clipboard. Supplied paste text keeps `Paste` command interception and its separate undo group. `CancelEdit` restores a TextEntry's value from when it gained focus, reports the change, and blurs it. `CancelComposition` remains a separate action. A TextEditor controller accepts document commands directly.
 
 `SelectWord` and `SelectLine` act at the caret, or at an explicit `TextCommand.Position`.
-They work through `PlatformInput.Execute` for either text primitive and through
+They work through `Focus.Execute` for either text primitive and through
 `TextEditorController.Execute` for an editor. `ExtendSelection` preserves the anchor.
 Mouse selection uses the same core operations.
 
@@ -123,11 +129,11 @@ remain one character for selection, clipboard, caret, and hit testing. Single-li
 Middle-click primary-selection paste and a text context menu are not supported.
 Triple-click in a TextEntry selects its whole value, not a wrapped visual line.
 
-Call `window.PlatformInput.MoveFocus(true)` or `MoveFocus(false)` for explicit forward or backward traversal. For buttons, `ElementHandle.Activate()` performs a click. To show a held press and activate on release, bind `Action: () -> { handle.BeginPress() }` and `OnRelease: () -> { handle.EndPress(true) }`. `EndPress(false)` cancels the press. Focus loss, removal, and a canceled or failing key release clear the pressed state.
+Call `window.Focus.Move(true)` or `Move(false)` for explicit forward or backward traversal. For buttons, `ElementHandle.Activate()` performs a click. To show a held press and activate on release, bind `OnPress: () -> { handle.BeginPress() }` and `OnRelease: () -> { handle.EndPress(true) }`. `EndPress(false)` cancels the press. Focus loss, removal, and a canceled or failing key release clear the pressed state.
 
 A focus transfer updates the old and new `Focused` states first, then routes `OnBlur` from the old element to its parents and `OnFocus` from the new element to its parents. These lifecycle callbacks cannot cancel the transfer. `FocusEvent.StopPropagation()` only skips the remaining ancestors. A reentrant focus request from `OnBlur` or `OnFocus` wins over the superseded transfer.
 
-Set `Focusable: true` on a generic Blob. `Button`, `TextEntry`, and `TextEditor` are focusable by default; explicitly setting `Focusable: false` removes them from keyboard focus. During a rebuilt tree update, `AutoFocus` selects the first eligible element only when nothing else holds focus. Calls to `PlatformInput.MoveFocus` visit enabled, visible focusables in depth-first tree order and wrap at the ends. An unprevented primary pointer press focuses the deepest focusable element in its hit route. `ElementHandle.Focus()` and `ElementHandle.Blur()` use the same mounted, visible, enabled eligibility rules.
+Set `Focusable: true` on a generic Blob. `Button`, `TextEntry`, and `TextEditor` are focusable by default; explicitly setting `Focusable: false` removes them from keyboard focus. During a rebuilt tree update, `AutoFocus` selects the first eligible element only when nothing else holds focus. Calls to `Focus.Move` visit enabled, visible focusables in depth-first tree order and wrap at the ends. An unprevented primary pointer press focuses the deepest focusable element in its hit route. `ElementHandle.Focus()` and `ElementHandle.Blur()` use the same mounted, visible, enabled eligibility rules.
 
 ## Project visible focus to a descendant
 
@@ -136,12 +142,12 @@ Container(){
     .Handle: owner,
     .Focusable: true,
     .FocusTarget: activeRow,
-    Container{Handle: activeRow, Focus: Style{BasedOn: focusRing}},
+    Container{Handle: activeRow, FocusStyle: Style{BasedOn: focusRing}},
 }
 ```
 
 `FocusTarget` adds the focused owner's visible focus state to one mounted,
-enabled, visible descendant. The descendant resolves its own `Focus` style
+enabled, visible descendant. The descendant resolves its own `FocusStyle`
 without becoming focusable. The owner keeps keyboard focus and its own focus
 style. Pointer focus does not show the projected style unless the owner's normal
 focus-visible rules require it.
@@ -160,12 +166,12 @@ An active descendant alone does not enable projection.
 
 ## Mounted focus scopes
 
-Call `ElementHandle.BeginFocusScope(FocusScopeOptions)` after the element mounts,
-for example from `MetricsChanged`, and dispose the returned `FocusScope` when an
-overlay closes. The visible, enabled root must be focusable. On the next stable
+Use `Portal{FocusScope: FocusScopeOptions{Modal: true}, ...}` for modal overlays. For a custom scope, call
+`ElementHandle.BeginFocusScope(FocusScopeOptions)` in `Mounted` and dispose
+the returned scope in `Unmounting`. The visible, enabled root must be focusable. On the next stable
 input/tree update, Goo uses the eligible `InitialFocus` handle, an `AutoFocus`
 descendant, the first descendant tab stop, or the root when no child accepts
-focus. Tab and explicit `MoveFocus` calls wrap within the top scope and skip the scope
+focus. Tab and explicit `Window.Focus.Move(forward)` calls wrap within the top scope and skip the scope
 root unless it is the fallback. Editable multiline editors keep Tab for indentation.
 
 `Modal: true` blocks input and accessibility outside the latest modal scope and
@@ -195,6 +201,8 @@ A focusable `Blob` can opt into `OnTextInput`, `OnTextComposition`, `OnTextCompo
 Callbacks run only for the currently focused, enabled, visible client. Queued text is bound to the focus generation that received it, so it is discarded after a focus transfer, including a transfer back to the original element. `TextEntry` and `TextEditor` retain their existing default behavior before these observers run. Goo provides no candidate UI; applications own candidate presentation.
 
 ## Receive pointer lifecycle and pressure input
+
+`PointerDragEvent.Delta` is the change from the previous pointer sample. On `GesturePhase.Started`, it excludes movement before the threshold was crossed. `Translation` includes movement from the press position.
 
 `OnPointerEnter` and `OnPointerLeave` are sparse, non-bubbling lifecycle callbacks. They run only for mouse hover-route changes. Goo sends leaves from the old route leaf to root, then enters from the new route root to leaf. Shared route ancestors receive neither callback. Removal, disable, hidden state, focus loss, and transformed hit routes use the same order.
 
@@ -332,7 +340,7 @@ Core creates one session for each owner and interaction.
 | Explicit cancel | `ElementHandle.CancelGestures()` cancels its sessions without replay. |
 | Touch editor | Defer caret placement until an unclaimed tap release. Mouse selection stays unchanged. |
 
-Use `PlatformInput.Selection` to read effective positions and affinities.
+Use `Focus.Selection` to read effective positions and affinities.
 Use `SetSelection(TextSelection)` to preserve affinities and normalize grapheme boundaries.
 
 ## Use shared recognizers
@@ -1071,19 +1079,7 @@ Identifies a physical keyboard key.
 ## `KeyBinding`
 
 
-Assigns callbacks to one exact physical key and modifier combination.
-
-### `Action`
-
-Gets the callback invoked on key down.
-
-### `Key`
-
-Gets the physical key to match.
-
-### `Modifiers`
-
-Gets the exact modifiers to match. Omitted modifiers mean no modifiers.
+Assigns OnPress to one exact physical Key and Modifiers combination, with optional OnRelease and Repeat behavior.
 
 ### `OnRelease`
 
@@ -1122,6 +1118,10 @@ Gets the modifier keys held for this event.
 
 Reports whether this key down came from Goo key repeat.
 
+### `TargetEditsText`
+
+Reports whether the focused target accepts text editing at dispatch.
+
 ## `KeyModifiers`
 
 
@@ -1134,6 +1134,22 @@ Reports whether Alt is pressed.
 ### `Ctrl`
 
 Reports whether Ctrl is pressed.
+
+### `HasPrimary`
+
+Reports whether Super on macOS or Ctrl on other systems is held, regardless of other modifiers.
+
+### `None`
+
+Gets a value with no modifier keys pressed.
+
+### `Primary`
+
+Gets Super on macOS or Ctrl on other systems, evaluated when read.
+
+### `PrimaryShift`
+
+Gets the primary modifier together with Shift, evaluated when read.
 
 ### `Shift`
 
@@ -1277,11 +1293,7 @@ Reports Phase, owner-local Position, WindowPosition, cumulative Translation, per
 ## `PlatformInput`
 
 
-Routes platform events and semantic editing through the window's existing input system. Call on the window owner thread. Use Window.Post to dispatch from another thread.
-
-### `EditorChanged`
-
-Reports settled focus, text, selection, composition, and caret-area changes.
+Routes platform events and composition through the window's existing input system. Call on the window owner thread. Use Window.Post to dispatch from another thread.
 
 ### `BeginDrag(ElementHandle,KeyModifiers)`
 
@@ -1297,10 +1309,6 @@ Cancels the current in-app drag and releases any pointer capture.
 
 Returns: True when an active drag was canceled.
 
-### `ClearFocus`
-
-Removes editor focus and cancels transient composition.
-
 ### `CommitText(string)`
 
 Replaces editor selection or preedit, or delivers text to a focused generic text client.
@@ -1314,10 +1322,6 @@ Deletes UTF-16 lengths outside the union of selection and composition, retaining
 Completes the active drag through its negotiated target and terminal source callback. Calls from the same drag's negotiation or terminal callback return false.
 
 Returns: True when a drop was delivered, or false when no target accepted it.
-
-### `Execute(TextCommand)`
-
-Executes shared semantic navigation, editing, clipboard, submit, or entry CancelEdit behavior. Paste without Text reads the clipboard. Supplied paste text retains Paste interception and undo grouping.
 
 ### `FinishComposition`
 
@@ -1339,29 +1343,25 @@ Releases a physical key and stops its repeat state.
 
 Releases a physical key with the modifiers still held after the release.
 
-### `MoveFocus(bool)`
-
-Moves focus in the retained focus order, independent of editor indentation.
-
 ### `PointerCancel(System.Int64,PointerDevice)`
 
 Cancels one pointer, releasing capture without generating a click.
 
-### `PointerMove(System.Int64,PointerDevice,float32,float32,KeyModifiers,float32)`
+### `PointerMove(System.Int64,PointerDevice,float64,float64,KeyModifiers,float32)`
 
-Moves a platform pointer in window logical coordinates.
+Moves a platform pointer in native logical window coordinates.
 
-### `PointerPress(System.Int64,PointerDevice,float32,float32,PointerButton,KeyModifiers,float32)`
+### `PointerPress(System.Int64,PointerDevice,float64,float64,PointerButton,KeyModifiers,float32)`
 
-Presses a platform pointer in window logical coordinates.
+Presses a platform pointer in native logical window coordinates.
 
-### `PointerRelease(System.Int64,PointerDevice,float32,float32,PointerButton,KeyModifiers,float32)`
+### `PointerRelease(System.Int64,PointerDevice,float64,float64,PointerButton,KeyModifiers,float32)`
 
-Releases a platform pointer in window logical coordinates.
+Releases a platform pointer in native logical window coordinates.
 
-### `PointerWheel(float32,float32,float32,float32,KeyModifiers)`
+### `PointerWheel(float64,float64,float64,float64,KeyModifiers)`
 
-Dispatches wheel deltas at a window logical position.
+Dispatches wheel deltas at a native logical window position.
 
 ### `SetComposition(string,int32,int32)`
 
@@ -1371,27 +1371,11 @@ Updates preedit and its selected UTF-16 segment without committing the value.
 
 Marks an existing effective UTF-16 range as composing text.
 
-### `SetSelection(TextSelection)`
-
-Selects effective UTF-16 positions while preserving both endpoint affinities. Grapheme normalization and composition use the same rules as the offset-only overload.
-
-### `SetSelection(int32,int32)`
-
-Selects effective UTF-16 offsets. Goo expands ranges to whole grapheme clusters. Selection direction and composing ranges remain independent.
-
 ### `UpdateDrag(ElementHandle,KeyModifiers)`
 
 Targets a drag started with BeginDrag at an element's center, negotiating with its ancestors. Calls from the same drag's negotiation or terminal callback return false.
 
 Returns: True when a drop target accepts the drag.
-
-### `Editor`
-
-Gets a current immutable snapshot, or nil when no text editor has focus.
-
-### `Selection`
-
-Gets the focused editor's effective selection, preserving endpoint affinities, or nil without an editor.
 
 ## `PointerButton`
 
@@ -1431,6 +1415,59 @@ Identifies the pointer device type that produced a pointer event.
 - `Mouse`
 - `Touch`
 - `Pen`
+
+## `PointerDragEvent`
+
+
+Describes a primary-pointer drag in element-local and window coordinates.
+
+### `PreventDefault`
+
+Prevents the default behavior for this input sample.
+
+### `StopPropagation`
+
+Stops further routing of this input sample.
+
+### `Delta`
+
+Gets movement from the previous sample in element-local units. Started excludes movement before the threshold-crossing sample. Use Translation for total movement from the press.
+
+### `Device`
+
+Gets the pointer device.
+
+### `IsOverTarget`
+
+Reports whether normal hit testing at the sample position includes this element. Evaluated when read. Canceled events report false.
+
+### `Modifiers`
+
+Gets the keyboard modifiers at this sample.
+
+### `Phase`
+
+Gets the drag transition.
+
+### `PointerId`
+
+Gets the stable pointer identifier.
+
+### `Position`
+
+Gets the current sample position relative to the receiving element. Started reports the threshold-crossing sample, not the press position.
+
+### `Reason`
+
+Gets why the drag was canceled, or None for other transitions.
+
+### `Translation`
+
+Gets the displacement from the press position in element-local units. The press position is Position minus Translation, including on Started.
+
+### `WindowPosition`
+
+Gets the position in layout units.
 
 ## `PointerEvent`
 
@@ -1588,3 +1625,44 @@ Gets the wheel position in the current handler coordinates.
 ### `WindowPosition`
 
 Gets the wheel position in logical window coordinates.
+
+## `WindowFocus`
+
+
+Provides owner-thread focus state, selection, and text commands for one window. Getter reads in Build and retained builders subscribe to changes.
+
+### `EditorChanged`
+
+Reports settled focus, text, selection, composition, and caret-area changes.
+
+### `Clear`
+
+Clears focus and cancels transient composition.
+
+### `Execute(TextCommand)`
+
+Executes shared navigation, editing, clipboard, submit, or entry CancelEdit behavior. Paste without Text reads the clipboard. Supplied paste text retains interception and undo grouping.
+
+### `Move(bool)`
+
+Moves focus in retained tree order, independent of editor indentation.
+
+### `SetSelection(TextSelection)`
+
+Selects effective UTF-16 positions while preserving endpoint affinities. Grapheme normalization and composition use the same rules as the offset-only overload.
+
+### `SetSelection(int32,int32)`
+
+Selects effective UTF-16 offsets, expanding ranges to whole grapheme clusters. Selection direction and composing ranges remain independent.
+
+### `Editor`
+
+Gets a current immutable editor snapshot, or nil when no text editor has focus.
+
+### `EditsText`
+
+Reports whether the focused element accepts text editing.
+
+### `Selection`
+
+Gets the effective selection and endpoint affinities, or nil without a text selection.

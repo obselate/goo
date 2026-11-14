@@ -4,8 +4,12 @@ import System
 import System.Collections.Generic
 
 internal sealed class VirtualRetainedBlob : Blob {
-  internal init(key string) {
-    SetVirtualKey(key)
+  shared {
+    internal let Unkeyed VirtualRetainedBlob = VirtualRetainedBlob(nil)
+  }
+
+  internal init(key string?) : base(nil) {
+    Key = key
   }
 
   internal override func coreBlob() {
@@ -21,6 +25,7 @@ internal data struct VirtualPlacement {
   internal var HasW bool
   internal var HasH bool
   internal var Item bool
+  internal var ContentKeyed bool
 }
 
 internal data struct VirtualExtent {
@@ -78,12 +83,15 @@ internal sealed class VirtualNodeState {
   private var scrollAlignment ScrollAlignment
   private var scrollAnchor Point?
   private var requestedOffset Point
+  private var waitingForKey bool
+  private var settleScroll bool = true
 
   internal var Context ContextFrame?
   internal var Owner Window?
   internal var DeclaringCell Cell?
   internal var CallbackOwner Cell?
   private var contextReader ContextReader?
+  private var stateReads StateReadScope?
   private var contextDirty bool
   private var contextVersion int64
   private var pendingContextVersion int64
@@ -103,6 +111,7 @@ internal sealed class VirtualNodeState {
   internal prop RecycledRowCount int32 { get -> recycledRows.Count }
   internal prop RecycledNodeCount int32 { get -> recycledNodes }
   internal prop RecycledStorageBytes int32 { get -> recycledBytes }
+  internal prop HasStateChanges bool { get -> stateReads?.StateChanged ?? false }
 
   private func clearRecycledRows() {
     recycledRows.Clear()
@@ -238,6 +247,10 @@ internal sealed class VirtualNodeState {
   internal func BindContext(frame ContextFrame?, owner Window?, callbackOwner Cell?) {
     let changed = Context != frame || Owner != owner || CallbackOwner != callbackOwner
     if changed { clearRecycledRows() }
+    if Owner != owner || CallbackOwner != callbackOwner {
+      stateReads?.Dispose()
+      stateReads = nil
+    }
     let rebound = Owner != nil
     Context = frame
     Owner = owner
@@ -311,7 +324,7 @@ internal sealed class VirtualNodeState {
       let requested = state.NeedsRealize(viewport)
       let settling = needsScroll(n, state)
       let anchoring = Math.Abs(anchorDelta(n)) > 0.01F
-      if !requested && !settling { scrollKey = nil }
+      if !requested && !settling && !waitingForKey { scrollKey = nil }
       if !contextDirty && !requested && !settling && !anchoring { contextReader?.Commit(true) }
       return contextDirty || requested || settling || anchoring
     } catch (_ Exception) {
@@ -332,31 +345,6 @@ internal sealed class VirtualNodeState {
     }
     Cancel(true)
     return realize(n, state, AccessibilityMetadata.Value(n)?.Role == AccessibilityRole.List)
-  }
-
-  internal func OffsetForKey(n Node, key string) Point? {
-    guard let state = current else { return nil }
-    let previous = viewport.Bind(n)
-    let previousContext = enterContext()
-    contextReader?.Begin()
-    try {
-      let offset = state.OffsetOf(viewport, key)
-      if let value = offset {
-        if !Double.IsFinite(value.X) || !Double.IsFinite(value.Y) {
-          throw InvalidOperationException("Virtual item offset must be finite")
-        }
-      }
-      contextReader?.Commit(true)
-      return if let value = offset {
-        Point{X: Math.Max(0.0, value.X), Y: Math.Max(0.0, value.Y)}
-      } else { nil }
-    } catch (error Exception) {
-      contextReader?.Cancel()
-      rethrow
-    } finally {
-      viewport.Bind(previous)
-      ContextEnvironment.Current = previousContext
-    }
   }
 
   internal func ScrollOffsetForKey(n Node, key string, alignment ScrollAlignment, anchor Point? = nil) Point? {
@@ -382,9 +370,22 @@ internal sealed class VirtualNodeState {
     scrollAlignment = alignment
     scrollAnchor = anchor
     requestedOffset = offset
+    waitingForKey = false
+    settleScroll = true
   }
 
-  internal func CancelScroll() { scrollKey = nil }
+  internal func RequestPendingScroll(key string, alignment ScrollAlignment, settle bool, offset Point) {
+    RequestScroll(key, alignment, nil, offset)
+    waitingForKey = true
+    settleScroll = settle
+  }
+
+  internal prop IsWaitingForKey bool { get -> waitingForKey && scrollKey != nil }
+
+  internal func CancelScroll() {
+    scrollKey = nil
+    waitingForKey = false
+  }
 
   internal prop IsScrollSettling bool { get -> scrollKey != nil }
 
@@ -421,8 +422,12 @@ internal sealed class VirtualNodeState {
       throw InvalidOperationException("Virtual item bounds must be finite")
     }
     let fraction = alignment == ScrollAlignment.Center ? 0.5 : alignment == ScrollAlignment.End ? 1.0 : 0.0
-    let x = bounds.X - (anchor?.X ?? (viewport.Size.Width - bounds.Width) * fraction)
-    let y = bounds.Y - (anchor?.Y ?? (viewport.Size.Height - bounds.Height) * fraction)
+    var x = bounds.X - (anchor?.X ?? (viewport.Size.Width - bounds.Width) * fraction)
+    var y = bounds.Y - (anchor?.Y ?? (viewport.Size.Height - bounds.Height) * fraction)
+    if alignment == ScrollAlignment.Nearest {
+      x = nearestOffset(float64(n.ScrollX), bounds.X, bounds.Width, viewport.Size.Width)
+      y = nearestOffset(float64(n.ScrollY), bounds.Y, bounds.Height, viewport.Size.Height)
+    }
     let size = output.ContentSize
     let width = pending == state ? size.Width : float64(extent.Width)
     let height = pending == state ? size.Height : float64(extent.Height)
@@ -432,18 +437,24 @@ internal sealed class VirtualNodeState {
     }
   }
 
+  private func nearestOffset(offset float64, start float64, size float64, viewport float64) float64 {
+    let end = start + size - viewport
+    if size > viewport { return Math.Clamp(offset, start, end) }
+    return Math.Clamp(offset, end, start)
+  }
+
   private func needsScroll(n Node, state VirtualState) bool {
     guard let key = scrollKey else { return false }
-    if Math.Abs(float64(n.ScrollX) - requestedOffset.X) > 0.01
-      || Math.Abs(float64(n.ScrollY) - requestedOffset.Y) > 0.01 {
+    if !waitingForKey && (Math.Abs(float64(n.ScrollX) - requestedOffset.X) > 0.01
+      || Math.Abs(float64(n.ScrollY) - requestedOffset.Y) > 0.01) {
       scrollKey = nil
       return false
     }
     guard let target = itemOffset(n, state, key, scrollAlignment, scrollAnchor) else {
-      scrollKey = nil
+      if !waitingForKey { scrollKey = nil }
       return false
     }
-    return Math.Abs(target.X - float64(n.ScrollX)) > 0.01
+    return waitingForKey || Math.Abs(target.X - float64(n.ScrollX)) > 0.01
       || Math.Abs(target.Y - float64(n.ScrollY)) > 0.01
   }
 
@@ -513,13 +524,18 @@ internal sealed class VirtualNodeState {
     let previousContext = enterContext()
     pendingContextVersion = contextVersion
     output.Bind(this)
+    stateReads ??= StateReadScope(CallbackOwner ?? DeclaringCell, () -> InvalidateContext())
+    let previousReads = stateReads!!.Enter(!contextDirty && state == current)
+    var completed = false
     try {
       state.Realize(viewport, output)
       let delta = anchorDelta(n)
       if let key = scrollKey {
         if let target = itemOffset(n, state, key, scrollAlignment, scrollAnchor) {
           output.ScrollOffset = target
-        } else { scrollKey = nil }
+          waitingForKey = false
+          if !settleScroll { scrollKey = nil }
+        } else if !waitingForKey { scrollKey = nil }
         captureAnchor(n, nil)
       } else {
         if output.AnchorKey == anchorKey && Math.Abs(delta) > 0.01F {
@@ -546,11 +562,13 @@ internal sealed class VirtualNodeState {
         pendingTargetX = float32(Math.Max(0.0, float64(n.ScrollTargetX) + x - float64(n.ScrollX)))
         pendingTargetY = float32(Math.Max(0.0, float64(n.ScrollTargetY) + y - float64(n.ScrollY)))
       }
+      completed = true
       return children
     } catch (error Exception) {
       Cancel()
       rethrow
     } finally {
+      stateReads!!.Exit(previousReads, completed)
       output.Bind(nil)
       viewport.Bind(previous)
       ContextEnvironment.Current = previousContext
@@ -589,12 +607,14 @@ internal sealed class VirtualNodeState {
     var componentType Type?
     if let content = item.Content {
       componentType = if content is CellElement { content.CellType } else { content.GetType() }
+      placement.ContentKeyed = content.Key != nil
     }
     var same = false
     if mounted.TryGetValue(key, out var previous) {
       marker = previous.Marker
       same = sameVirtualPlacement(previous.Placement, placement)
       componentType ??= previous.ComponentType
+      if item.Content == nil { placement.ContentKeyed = previous.Placement.ContentKeyed }
     } else {
       if item.Content == nil { throw InvalidOperationException("Virtual item '$key' at index ${item.Index} in ${pending?.GetType().Name}.Realize has no mounted content: supply Content when the key is first realized.") }
       marker = VirtualRetainedBlob(key)
@@ -605,7 +625,7 @@ internal sealed class VirtualNodeState {
     } else if same {
       children.Add(marker)
     } else {
-      children.Add(virtualWrapper(key, marker, placement))
+      children.Add(virtualWrapper(key, placement.ContentKeyed ? marker : VirtualRetainedBlob.Unkeyed, placement))
     }
   }
 
@@ -646,6 +666,7 @@ internal sealed class VirtualNodeState {
     if let previous = previous {
       if previous != state { previous.Dispose() }
     }
+    if let reads = stateReads { reads.StateChanged = false }
   }
 
   internal func Cancel(preserveReads bool = false) {
@@ -668,6 +689,8 @@ internal sealed class VirtualNodeState {
     Cancel()
     contextReader?.Dispose()
     contextReader = nil
+    stateReads?.Dispose()
+    stateReads = nil
     Context = nil
     Owner = nil
     source = nil
@@ -706,12 +729,11 @@ left.Index == right.Index && left.X == right.X && left.Y == right.Y
   && left.Item == right.Item
 
 internal func virtualItem(item Blob, key string) Blob {
+  item.Freeze()
   if let authored = item.Key {
     if authored != key {
       throw InvalidOperationException("Virtual item '$key' has ${item.GetType().Name} content keyed '$authored': remove the content key or make it equal to the VirtualItem key.")
     }
-  } else {
-    item.SetVirtualKey(key)
   }
   return item
 }

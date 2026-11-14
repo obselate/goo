@@ -45,7 +45,7 @@ public enum PopupDismissReason {
 }
 
 /// Contains a native popup creation outcome and owned failure detail.
-public sealed class PopupResult {
+public class PopupResult {
   /// Gets the native creation outcome.
   public prop Status PopupStatus { get; private set; }
 
@@ -60,7 +60,7 @@ public sealed class PopupResult {
 
 /// Hosts one new Goo root in a transient native surface outside its owner's bounds.
 /// Create a new root and PopupWindow for each opening. Portal ownership is unchanged.
-public sealed partial class PopupWindow : IDisposable {
+public partial class PopupWindow : IDisposable {
   private let owner Window
   private let window Window
   private let kind PopupKind
@@ -120,14 +120,14 @@ public sealed partial class PopupWindow : IDisposable {
   /// Opens a native popup relative to its parent's content rectangle in layout units.
   /// Wayland menus must open from native input or an active parent popup grab.
   /// @param anchor The finite parent-content anchor rectangle.
-  /// @param width Requested positive content width in layout units.
-  /// @param height Requested positive content height in layout units.
+  /// @param size Positive content size in layout units. Nil measures the root once.
+  /// @param maximum Positive measurement limits in layout units. The display work area also bounds measurement.
   /// @param placement Preferred side and alignment before native display constraints.
   /// @returns An explicit native creation result, never a top-level-window fallback.
-  public func Open(anchor ElementRect, width int32, height int32,
+  public func Open(anchor ElementRect, size LayoutSize? = nil, maximum LayoutSize? = nil,
     placement PortalPlacement = PortalPlacement.BottomStart) PopupResult {
     requireUsable()
-    ValidatePlacement(anchor, width, height, placement)
+    ValidatePlacement(anchor, size, maximum, placement)
     if started { throw InvalidOperationException("Create a new PopupWindow and root for each opening") }
     if !owner.PopupOwnerOpen { return PopupResult(PopupStatus.Closed) }
     if !owner.PopupOwnerSupported { return PopupResult(PopupStatus.Unsupported) }
@@ -136,14 +136,14 @@ public sealed partial class PopupWindow : IDisposable {
     NativeTimestamp = PopupInputContext.Timestamp
     closing = false
     reason = PopupDismissReason.Programmatic
-    window.SetPopupPlacement(anchor, width, height, placement)
+    window.SetPopupPlacement(anchor, resolveSize(size, maximum), placement)
     if let focused = owner.PopupFocusedNode { previousFocus = WeakReference(focused) }
     started = true
     try {
       if let factory = owner.EmbeddedPopupFactory {
         let surface = factory(window, kind, Dismiss)
         embeddedSurface = surface
-        let result = surface.Open(anchor, window.Width, window.Height, window.NativePopupPlacement)
+        let result = surface.Open(anchor, window.NativeWidth, window.NativeHeight, window.NativePopupPlacement)
         if result.Status != PopupStatus.Opened {
           surface.Dispose()
           embeddedSurface = nil
@@ -170,16 +170,16 @@ public sealed partial class PopupWindow : IDisposable {
 
   /// Updates requested size and parent-local placement without changing the root.
   /// @param anchor The finite parent-content anchor rectangle.
-  /// @param width Requested positive content width in layout units.
-  /// @param height Requested positive content height in layout units.
+  /// @param size Positive content size in layout units. Nil measures the root once again.
+  /// @param maximum Positive measurement limits in layout units. The display work area also bounds measurement.
   /// @param placement Preferred side and alignment before native display constraints.
   /// @returns Accepted, Closed, Unsupported or Failed from the native operation.
-  public func UpdatePlacement(anchor ElementRect, width int32, height int32,
+  public func UpdatePlacement(anchor ElementRect, size LayoutSize? = nil, maximum LayoutSize? = nil,
     placement PortalPlacement = PortalPlacement.BottomStart) WindowOperationResult {
     requireUsable()
-    ValidatePlacement(anchor, width, height, placement)
+    ValidatePlacement(anchor, size, maximum, placement)
     if !IsOpen || closing { return WindowOperationResult.Closed }
-    return window.UpdateNativePopup(anchor, width, height, placement, embeddedSurface)
+    return window.UpdateNativePopup(anchor, resolveSize(size, maximum), placement, embeddedSurface)
   }
 
   /// Requests descendant-first dismissal. GPU retirement can defer native destruction.
@@ -196,6 +196,19 @@ public sealed partial class PopupWindow : IDisposable {
   private func requireUsable() {
     owner.RequireElementHandleThread("PopupWindow")
     if disposed { throw ObjectDisposedException("PopupWindow") }
+  }
+
+  private func resolveSize(size LayoutSize?, maximum LayoutSize?) LayoutSize {
+    if let explicitSize = size {
+      window.ClearPopupMeasurement()
+      return explicitSize
+    }
+    let area = owner.PopupMaximum
+    let bounds = LayoutSize(Math.Min(maximum?.Width ?? area.Width, area.Width),
+      Math.Min(maximum?.Height ?? area.Height, area.Height))
+    let measured = window.MeasureContentSize(bounds, percentageSize: bounds)
+    return LayoutSize(Math.Max(1.0 / float64(window.UiScale), Math.Min(measured.Width, bounds.Width)),
+      Math.Max(1.0 / float64(window.UiScale), Math.Min(measured.Height, bounds.Height)))
   }
 
   internal prop Kind PopupKind { get -> kind }
@@ -254,13 +267,20 @@ public sealed partial class PopupWindow : IDisposable {
       return Point{ X: PopupCoordinate(x, 1.0F), Y: PopupCoordinate(y, 1.0F) }
     }
 
-    internal func ValidatePlacement(anchor ElementRect, width int32, height int32, placement PortalPlacement) {
+    internal func ValidatePlacement(anchor ElementRect, size LayoutSize?, maximum LayoutSize?, placement PortalPlacement) {
       if !Double.IsFinite(anchor.X) || !Double.IsFinite(anchor.Y) || !Double.IsFinite(anchor.Width)
         || !Double.IsFinite(anchor.Height) || anchor.Width < 0.0 || anchor.Height < 0.0 {
         throw ArgumentOutOfRangeException("anchor")
       }
-      if width <= 0 || height <= 0 { throw ArgumentOutOfRangeException("width") }
+      if let value = size { validateSize(value, "size") }
+      if let value = maximum { validateSize(value, "maximum") }
       if !validPortalPlacement(placement) { throw ArgumentOutOfRangeException("placement") }
+    }
+
+    private func validateSize(value LayoutSize, name string) {
+      if !Double.IsFinite(value.Width) || !Double.IsFinite(value.Height) || value.Width <= 0.0 || value.Height <= 0.0 {
+        throw ArgumentOutOfRangeException(name)
+      }
     }
   }
 }

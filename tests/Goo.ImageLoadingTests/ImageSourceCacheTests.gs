@@ -358,31 +358,14 @@ class ImageSourceCacheTests : IDisposable {
     }
 
     @Fact
-    func LegacyPathFailsWithMigrationInstruction() {
-        let error = Assert.Throws[NotSupportedException](
-            () -> ImageLayouts.ApplyPath(Node(), "asset.png", ImageFit.Contain)
-        )
-        Assert.Contains("ImageSourceCache.LoadAsync", error.Message)
-    }
-
-    @Fact
-    func BackgroundPathChangesPreserveSourcePrecedenceAndOwnership() {
+    func BackgroundSourceChangesPreserveOwnership() {
         let node = Node()
         using let source = ImageSource(1, 1, []uint8{20, 40, 80, 255})
-        BackgroundImageLayouts.SetPath(node, "asset.png", nil)
-        Assert.Same(DecodedImage.Failed, BackgroundImageLayouts.Image(node))
         BackgroundImageLayouts.SetSource(node, source, nil, nil)
         let decoded = BackgroundImageLayouts.Image(node)
         Assert.True(decoded!!.IsValid)
-        BackgroundImageLayouts.SetPath(node, "changed.png", nil)
-        Assert.Same(decoded, BackgroundImageLayouts.Image(node))
         BackgroundImageLayouts.SetSource(node, nil, nil, nil)
-        Assert.Same(DecodedImage.Failed, BackgroundImageLayouts.Image(node))
         Assert.True(decoded!!.IsValid)
-        BackgroundImageLayouts.SetSource(node, source, nil, nil)
-        BackgroundImageLayouts.SetPath(node, "", nil)
-        Assert.Same(decoded, BackgroundImageLayouts.Image(node))
-        BackgroundImageLayouts.SetSource(node, nil, nil, nil)
         Assert.Null(BackgroundImageLayouts.Image(node))
         Assert.False(node.HasBackgroundImageState)
     }

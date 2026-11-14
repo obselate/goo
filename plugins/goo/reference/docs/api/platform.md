@@ -100,11 +100,7 @@ Releases presentation resources and waits for submitted GPU work to finish. The 
 
 ### `Dispose`
 
-Closes the attached window and releases its retained and presentation resources.
-
-### `GetClipboardText`
-
-Gets plain text from the platform clipboard.
+Closes the attached window and releases its retained and presentation resources. Pumps UI-thread continuations until the window's close drain completes or expires.
 
 ### `GetNativeHandle`
 
@@ -126,6 +122,10 @@ Loads or retains the platform Vulkan loader.
 
 Uses the requested framebuffer extent when the native WSI permits scaling.
 
+### `ReadClipboardText`
+
+Reads bounded plain text with an explicit native outcome.
+
 ### `RenderFrame(float64)`
 
 Processes queued work and one externally timed frame without polling native events. The first frame after idle preserves wall time but does not advance animation time.
@@ -145,10 +145,6 @@ Resumes frame service without applying elapsed background time to animations.
 ### `ServicePendingSubmission`
 
 Advances a completed graphics submission into presentation without simulating, rendering, or consuming presentation completion. Returns true when a completed submission was consumed.
-
-### `SetClipboardText(string)`
-
-Stores plain text in the platform clipboard.
 
 ### `SetCursor(Cursor)`
 
@@ -181,6 +177,10 @@ Releases the loader reference acquired by LoadVulkanLibrary.
 ### `UpdatePreferences(PlatformPreferences)`
 
 Updates platform preferences on the owner thread, before or after attaching a window.
+
+### `WriteClipboardText(string)`
+
+Publishes plain text with an explicit native outcome.
 
 ### `IsPresentationAttached`
 
@@ -270,7 +270,7 @@ Contains a native message-box outcome.
 
 ### `ButtonId`
 
-Gets the selected identifier, or -1 outside Success.
+Gets the selected application button identifier, or -1 when no application button was selected.
 
 ### `Error`
 
@@ -298,6 +298,15 @@ Distinguishes selection, dismissal, platform limits, owner conflicts and native 
 
 
 Shows owned native dialogs without a managed fallback.
+
+### `ShowError(string,string)`
+
+Shows a synchronous ownerless platform error box before or after window use. Call on the main thread. Blocks the calling thread. Do not call while Goo windows are open. Linux and Android return Unsupported. Write the message to standard error when unsupported.
+
+- `title`: The native title.
+- `message`: The plain-text error message.
+
+Returns: Success, Unsupported when no simple message box exists, or Failed with native Error detail. ButtonId is -1.
 
 ### `ShowMessageBoxAsync(Window,MessageBoxOptions)`
 
@@ -588,7 +597,7 @@ Gets the operation status.
 ## `NotificationService`
 
 
-Owns a native notification service. Clicks use Window.ApplicationActivated with Kind Notification.
+Owns a native notification service. Clicks use Application.Activated with Kind Notification.
 
 ### `GetPermissionAsync`
 
@@ -692,6 +701,44 @@ Uses the configured desktop application ID and installed native activation route
 - `options`: Platform identity and channel configuration.
 
 Returns: An owned native service, or an explicit unsupported, identity or native failure.
+
+## `Platform`
+
+
+Provides operating-system services without a window owner.
+
+### `OpenAsync(string,System.Threading.CancellationToken)`
+
+Starts the system handler for an absolute path or URI on a background child. Do not pass untrusted targets. The system handler can run executable content.
+
+- `target`: An absolute path or URI. Relative paths are rejected.
+- `cancellationToken`: Cancels launch before the handler is started.
+
+Returns: Success when the handler starts, or an explicit platform failure.
+
+## `PlatformOpenResult`
+
+
+Contains a system-handler launch outcome.
+
+### `Error`
+
+Gets native failure detail, or an empty string.
+
+### `Status`
+
+Gets the launch outcome, not confirmation that the target was opened.
+
+## `PlatformOpenStatus`
+
+
+Reports whether the system handler was started.
+
+### Values
+
+- `Success`
+- `Unsupported`
+- `Failed`
 
 ## `PlatformPreferences`
 

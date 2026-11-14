@@ -17,11 +17,14 @@ internal partial class PointerInput {
     return delta
   }
 
-  private func clearCapture() {
-    current.CaptureTarget = nil
-    current.CaptureButton = PointerButton.None
-    current.CapturePath.Clear()
-    current.CapturePositions.Clear()
+  private func clearCapture(reason GestureCancelReason = GestureCancelReason.LostArbitration) {
+    try { cancelPointerDrag(reason) }
+    finally {
+      current.CaptureTarget = nil
+      current.CaptureButton = PointerButton.None
+      current.CapturePath.Clear()
+      current.CapturePositions.Clear()
+    }
   }
 
   private func rebuildCapturePath(root Node) bool {
@@ -61,11 +64,14 @@ internal partial class PointerInput {
   private func applyCaptureRequests(button PointerButton, route List[NodeMount]) {
     if let requested = control.ReleaseTarget {
       if let owner = current.CaptureTarget {
-        if owner == requested { clearCapture()
+        if owner == requested { clearCapture(GestureCancelReason.Explicit)
           current.LastPressNode = nil }
       }
     }
     if let requested = control.CaptureTarget {
+      if let drag = current.PointerDrag {
+        if drag.Target.Current != requested { cancelPointerDrag(GestureCancelReason.LostArbitration) }
+      }
       if requested != current.LastPressNode { current.LastPressNode = nil }
       current.CapturePath.Clear()
       current.CaptureTarget = requested
@@ -224,13 +230,19 @@ internal partial class PointerInput {
     dx float64, dy float64, button PointerButton, modifiers KeyModifiers, timeS float64 = 0.0) bool{
       guard let tree = root else { return false }
       var captured = false
+      let pendingDrag = kind != PointerEventKind.Press && current.PointerDrag?.Started == false
       if (kind == PointerEventKind.Move || kind == PointerEventKind.Release) && current.CaptureTarget != nil {
         if !rebuildCapturePath(tree) {
           resetClickSequence()
-          clearCapture()
+          clearCapture(GestureCancelReason.OwnerUnavailable)
           return false
         }
         captured = true
+      } else if pendingDrag {
+        if !rebuildActivePath(tree) {
+          clearCapture(GestureCancelReason.OwnerUnavailable)
+          return false
+        }
       } else {
         scratchChain.Clear()
         hitChainInto(tree, x, y, scratchChain)
@@ -240,21 +252,21 @@ internal partial class PointerInput {
           return false
         }
       }
-      let route = captured ? current.CapturePath : scratchChain
+      let route = captured ? current.CapturePath : pendingDrag ? current.ActivePath : scratchChain
       if kind == PointerEventKind.Press {
         beginClickSequence(route, timeS, x, y, button)
         rememberActiveRoute(route)
       } else {
         invalidateMovedClickSequence(x, y)
         if kind == PointerEventKind.Release && button == current.LastPressButton {
-          if captured {
+          if captured || pendingDrag {
             scratchChain.Clear()
             hitChainInto(tree, x, y, scratchChain)
           }
           if chainDisabled(scratchChain) || clickSequenceTarget(scratchChain) != current.LastPressNode {
             current.LastPressNode = nil
           }
-          if captured { scratchChain.Clear() }
+          if captured || pendingDrag { scratchChain.Clear() }
         }
       }
       let transformed = routeHasTransform(route)
@@ -295,11 +307,15 @@ internal partial class PointerInput {
           let callback = if kind == PointerEventKind.Press { n.OnPointerDown }
             else if kind == PointerEventKind.Move { n.OnPointerMove } else { n.OnPointerUp }
           let owner = callback != nil ? CellOwnership.InRoute(route, i - 1) : nil
+          if current.PointerDrag != nil || kind == PointerEventKind.Press && n.OnPointerDrag != nil {
+            dispatchPointerDrag(n, event, kind, route, i - 1, transformed)
+          }
+          let previousContext = owner?.BeginCallback()
           try {
             callback?.Invoke(event)
           } finally {
             control.ClearCurrentTarget(generation)
-            owner?.Rebuild()
+            owner?.EndCallback(previousContext)
           }
           if current != contact || route.Count != routeCount || mount.Current == nil
             || !route[i - 1].Equals(mount) {
@@ -318,7 +334,7 @@ internal partial class PointerInput {
       return prevented
     }
 
-  private func cancelInteraction(root Node?, resolver Resolver) bool {
+  private func cancelInteraction(root Node?, resolver Resolver, reason GestureCancelReason = GestureCancelReason.PointerCanceled) bool {
     if current.Canceling { return false }
     let hadInteraction = current.HeldButtons != PointerButtons.None || current.PressChain.Count > 0
       || current.DragEntry != nil || current.DragEditor != nil || hasScrollDrag()
@@ -332,12 +348,12 @@ internal partial class PointerInput {
     var failure Exception?
     try {
       try {
-        cancelCurrentGestures(root, GestureCancelReason.PointerCanceled)
+        cancelCurrentGestures(root, reason)
       } catch (error Exception) {
         failure = error
       }
       try {
-        dispatchCancel()
+        dispatchCancel(reason)
       } catch (error Exception) {
         if failure == nil { failure = error }
       }
@@ -382,7 +398,8 @@ internal partial class PointerInput {
     return true
   }
 
-  private func dispatchCancel() {
+  private func dispatchCancel(reason GestureCancelReason = GestureCancelReason.LostArbitration) {
+    cancelPointerDrag(reason)
     let captured = current.CapturePath.Count > 0
     let route = captured ? current.CapturePath : current.ActivePath
     let positions = captured ? current.CapturePositions : current.ActivePositions
@@ -415,13 +432,14 @@ internal partial class PointerInput {
         }
         control.SetCurrentTarget(generation, n)
         let owner = n.OnPointerCancel != nil ? CellOwnership.InRoute(route, i - 1) : nil
+        let previousContext = owner?.BeginCallback()
         try {
           if let callback = n.OnPointerCancel {
             callback(event)
           }
         } finally {
           control.ClearCurrentTarget(generation)
-          owner?.Rebuild()
+          owner?.EndCallback(previousContext)
         }
         if current != contact || route.Count != routeCount || mount.Current == nil
           || !route[i - 1].Equals(mount) { return }

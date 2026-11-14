@@ -21,8 +21,7 @@ func RunQueueWakeSmoke() {
     let root = QueueWakeCell{}
     let window = Window{
       Title: "Goo queue completion wake",
-      Width: 180,
-      Height: 96,
+      Size: LayoutSize(180, 96),
       VSync: true,
       Root: root,
     }
@@ -94,7 +93,7 @@ func RunQueueWakeSmoke() {
       worker?.Join()
       if window.IsOpen {
         window.RequestClose()
-        window.Run()
+        Application.Run(window)
       }
     }
   }

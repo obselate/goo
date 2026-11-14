@@ -7,7 +7,7 @@ import System.Numerics
 /// Identifies the requested state of a window.
 public enum WindowState { Normal; Minimized; Maximized; Fullscreen }
 
-/// Controls how Window.Run schedules frames that have visual demand.
+/// Controls how Application.Run schedules frames that have visual demand.
 public enum WindowFramePacing { Display; Uncapped }
 
 /// Identifies input received by a window before routing.
@@ -80,7 +80,7 @@ public enum WindowCaptureRequestStatus {
 }
 
 /// Owns RGBA8, sRGB, premultiplied pixels copied from a completed scene capture.
-public sealed class WindowCapture {
+public class WindowCapture {
   private let pixels []uint8
   private let width uint32
   private let height uint32
@@ -125,18 +125,18 @@ internal enum WindowCaptureOwner { None; Public; Diagnostics }
 
 /// Describes one stable window size and display-scale snapshot.
 public data struct WindowMetrics {
-  private var logicalWidth int32
-  private var logicalHeight int32
+  private var width int32
+  private var height int32
   private var framebufferWidth int32
   private var framebufferHeight int32
   private var displayScaleX float64
   private var displayScaleY float64
-  private var uiScale float32
+  private var uiScale float64
 
-  /// Gets the reported logical width.
-  public prop LogicalWidth int32{ get -> logicalWidth init -> logicalWidth = value }
-  /// Gets the reported logical height.
-  public prop LogicalHeight int32{ get -> logicalHeight init -> logicalHeight = value }
+  /// Gets the reported native logical width.
+  public prop NativeWidth int32{ get -> width init -> width = value }
+  /// Gets the reported native logical height.
+  public prop NativeHeight int32{ get -> height init -> height = value }
   /// Gets the reported framebuffer width.
   public prop FramebufferWidth int32{ get -> framebufferWidth init -> framebufferWidth = value }
   /// Gets the reported framebuffer height.
@@ -146,7 +146,7 @@ public data struct WindowMetrics {
   /// Gets the vertical framebuffer-to-logical scale.
   public prop DisplayScaleY float64{ get -> displayScaleY init -> displayScaleY = value }
   /// Gets the retained UI scale. A default snapshot uses 1.
-  public prop UiScale float32{ get -> uiScale == 0.0F ? 1.0F : uiScale init -> uiScale = value }
+  public prop UiScale float64{ get -> uiScale == 0.0F ? 1.0F : uiScale init -> uiScale = value }
 }
 
 internal struct WindowNotifications {
@@ -214,6 +214,8 @@ internal struct WindowNotifications {
 
 /// Hosts a Goo tree on one process-wide UI thread.
 /// After Open or Attach, only Post and RequestClose are safe from another thread.
+/// State, IsFocused, Size, NativeWidth, NativeHeight, UiScale, PixelScale, Preferences and Modifiers track reads in Build and retained builders.
+/// Other mutable window getters keep automatic callback rebuilding.
 public partial class Window {
   /// Configures this window as a Wayland layer-shell surface before Open.
   /// Unsupported platforms and compositors fail without a normal-window fallback.
@@ -221,17 +223,17 @@ public partial class Window {
 
   /// Gets the selected rendering device, or Unknown with an empty name before Open or when unavailable.
   public prop RenderingDevice RenderingDeviceInfo{
-    get -> (windowTarget as VulkanWindowTarget?)?.RenderingDevice ?? default(RenderingDeviceInfo)
+    get -> ReadUntrackedWindowValue((windowTarget as VulkanWindowTarget?)?.RenderingDevice ?? default(RenderingDeviceInfo))
   }
 
   /// Gets or sets the window clear color. The default is white.
   public prop Background Color{
-    get -> background
+    get -> ReadUntrackedWindowValue(background)
     set(v) -> SetColors(v, foreground)
   }
   /// Gets or sets the inherited root text color. The default is black.
   public prop Foreground Color{
-    get -> foreground
+    get -> ReadUntrackedWindowValue(foreground)
     set(v) -> SetColors(background, v)
   }
   /// Sets the clear and inherited root text colors together on the owner thread.
@@ -259,18 +261,19 @@ public partial class Window {
   /// Configures PNG bytes for the native window icon in the Window initializer before Open.
   /// The icon is decoded when opening, has a 1024 pixel edge limit, and requires no external file.
   public prop IconPng [] ? uint8 {
-    get -> iconPng
+    get -> ReadUntrackedWindowValue(iconPng)
     init -> iconPng = value
   }
   /// Reports whether the window is open.
-  public prop IsOpen bool{ get; private set; }
+  public prop IsOpen bool{ get -> ReadUntrackedWindowValue(isOpen); private set -> isOpen = value }
+  private var isOpen bool
   internal prop Tree Node? { get -> node }
   internal prop DiagnosticsSession DevToolsSession? { get -> diagnosticsSession }
   /// Gets or sets per-window GPU presentation synchronization.
   /// True selects FIFO. False prefers Immediate, then Mailbox, then FIFO on every device.
-  /// Window.Run pacing is controlled separately by FramePacing.
+  /// Application.Run pacing is controlled separately by FramePacing.
   public prop VSync bool{
-    get -> vsync
+    get -> ReadUntrackedWindowValue(vsync)
     set(v) {
       requireUiThread("Window.VSync")
       if vsync == v {
@@ -284,10 +287,10 @@ public partial class Window {
     }
   }
 
-  /// Gets or sets the frame pacing used by Window.Run. Uncapped still honors
+  /// Gets or sets the frame pacing used by Application.Run. Uncapped still honors
   /// GPU queue readiness and the selected presentation mode.
   public prop FramePacing WindowFramePacing{
-    get -> framePacing
+    get -> ReadUntrackedWindowValue(framePacing)
     set(v) {
       requireUiThread("Window.FramePacing")
       if v != WindowFramePacing.Display && v != WindowFramePacing.Uncapped {
@@ -304,13 +307,14 @@ public partial class Window {
   public prop QueueWorkPending bool{
     get {
       requireUiThread("Window.QueueWorkPending")
+      Cell.ObserveUntrackedRead()
       return windowTarget?.QueueWorkPending == true
     }
   }
 
   /// Gets or sets the window title.
   public prop Title string{
-    get -> title
+    get -> ReadUntrackedWindowValue(title)
     set(v) {
       requireUiThread("Window.Title")
       if title == v {
@@ -324,42 +328,44 @@ public partial class Window {
     }
   }
 
-  /// Gets or sets the window width.
-  public prop Width int32{
-    get -> width
-    set(v) {
-      requireUiThread("Window.Width")
-      if width == v {
-        return
+  /// Gets or sets the client size in layout units. Native assignments multiply by UiScale and round once.
+  /// The native host's observed size is authoritative after Open.
+  public prop Size LayoutSize{
+    get -> TrackWindowValue(&trackedSize, CurrentSize)
+    set(value) {
+      requireUiThread("Window.Size")
+      if !Double.IsFinite(value.Width) || !Double.IsFinite(value.Height) || value.Width < 0.0 || value.Height < 0.0 {
+        throw ArgumentOutOfRangeException("value")
       }
+      if CurrentSize == value { return }
       if host != nil && LayerShell != nil { throw NotSupportedException("Layer-shell sizes are configured by the compositor") }
-      width = v
-      pushSize()
+      if host == nil {
+        requestedSize = value
+      } else {
+        width = scaledSize(value.Width)
+        height = scaledSize(value.Height)
+        pushSize()
+      }
       MetricSubscriptions.MarkWindowDirty(this)
       requestRender()
     }
   }
 
-  /// Gets or sets the window height.
-  public prop Height int32{
-    get -> height
-    set(v) {
-      requireUiThread("Window.Height")
-      if height == v {
-        return
-      }
-      if host != nil && LayerShell != nil { throw NotSupportedException("Layer-shell sizes are configured by the compositor") }
-      height = v
-      pushSize()
-      MetricSubscriptions.MarkWindowDirty(this)
-      requestRender()
-    }
+  private prop CurrentSize LayoutSize {
+    get -> requestedSize ?? LayoutSize(float64(host?.LogicalWidth ?? width) / float64(EffectiveUiScale),
+      float64(host?.LogicalHeight ?? height) / float64(EffectiveUiScale))
   }
+
+  /// Gets the observed client width in native logical units.
+  public prop NativeWidth int32{ get -> TrackWindowValue(&trackedWidth, host?.LogicalWidth ?? width) }
+
+  /// Gets the observed client height in native logical units.
+  public prop NativeHeight int32{ get -> TrackWindowValue(&trackedHeight, host?.LogicalHeight ?? height) }
 
   // positionSet distinguishes an explicit (0,0) request.
   /// Gets or sets the requested horizontal position.
   public prop X int32{
-    get -> x
+    get -> ReadUntrackedWindowValue(x)
     set(v) {
       requireUiThread("Window.X")
       positionSet = true
@@ -373,7 +379,7 @@ public partial class Window {
 
   /// Gets or sets the requested vertical position.
   public prop Y int32{
-    get -> y
+    get -> ReadUntrackedWindowValue(y)
     set(v) {
       requireUiThread("Window.Y")
       positionSet = true
@@ -387,7 +393,7 @@ public partial class Window {
 
   /// Gets or sets the window state.
   public prop State WindowState{
-    get -> state
+    get -> TrackWindowValue(&trackedState, state)
     set(v) {
       requireUiThread("Window.State")
       if state == v {
@@ -397,13 +403,14 @@ public partial class Window {
         native.SetState(v)
       }
       state = v
+      trackedState?.Sync(v)
     }
   }
 
   /// Gets or sets next-open per-pixel alpha. An open window is unchanged.
   /// Transparency requires the GPU renderer.
   public prop Transparent bool{
-    get -> transparent
+    get -> ReadUntrackedWindowValue(transparent)
     set(v) {
       requireUiThread("Window.Transparent")
       transparent = v
@@ -412,7 +419,7 @@ public partial class Window {
 
   /// Gets or sets whether the system draws window decorations.
   public prop Decorated bool{
-    get -> decorated
+    get -> ReadUntrackedWindowValue(decorated)
     set(v) {
       requireUiThread("Window.Decorated")
       if decorated == v {
@@ -427,7 +434,7 @@ public partial class Window {
 
   /// Gets or sets whether the user can resize the window.
   public prop Resizable bool{
-    get -> resizable
+    get -> ReadUntrackedWindowValue(resizable)
     set(v) {
       requireUiThread("Window.Resizable")
       if resizable == v {
@@ -440,13 +447,13 @@ public partial class Window {
     }
   }
 
-  /// Gets or sets the undecorated edge resize band in logical pixels.
+  /// Gets or sets the undecorated edge resize band in layout units.
   /// A scrollbar under an edge band takes the pointer. Corners always resize.
-  public prop ResizeBand float32{
-    get -> resizeBand
+  public prop ResizeBand float64{
+    get -> ReadUntrackedWindowValue(resizeBand)
     set(v) {
       requireUiThread("Window.ResizeBand")
-      if !Single.IsFinite(v) || v < 0.0F {
+      if !Double.IsFinite(v) || v < 0.0F {
         throw ArgumentOutOfRangeException("value")
       }
       resizeBand = v
@@ -454,7 +461,15 @@ public partial class Window {
   }
 
   /// Reports whether the window holds native input focus.
-  public prop IsFocused bool{ get; private set; }
+  public prop IsFocused bool{
+    get -> TrackWindowValue(&trackedFocus, isFocused)
+    private set(value) {
+      isFocused = value
+      trackedFocus?.Sync(value)
+    }
+  }
+
+  private var isFocused bool
 
   /// Occurs after the native window reports a new window state.
   public event StateChanged Action[WindowState]{
@@ -506,7 +521,7 @@ public partial class Window {
   /// OS termination bypasses this handler.
   /// Accepted requests do not invoke the handler again while teardown finishes.
   public prop OnClosing(() -> bool)? {
-    get -> onClosing
+    get -> ReadUntrackedWindowValue(onClosing)
     set(v) {
       requireUiThread("Window.OnClosing")
       onClosing = v
@@ -545,35 +560,15 @@ public partial class Window {
     }
   }
 
-  /// Gets the current native clipboard text on the window UI thread.
-  /// An empty result can mean an empty clipboard, native copy failure, or text exceeding 16 MiB of UTF-8.
-  /// @exception InvalidOperationException when the window is not open.
-  public func GetClipboardText() string {
-    requireUiThread("Window.GetClipboardText")
-    if !IsOpen { throw InvalidOperationException("Clipboard access requires an open window") }
-    guard let native = host else {
-      throw InvalidOperationException("Clipboard access requires an open window")
-    }
-    return native.GetClipboardText()
-  }
-
-  /// Sets the native clipboard text on the window UI thread.
-  /// Native set failures throw.
-  /// @exception InvalidOperationException when the window is not open.
-  public func SetClipboardText(value string) {
-    requireUiThread("Window.SetClipboardText")
-    if value == nil { throw ArgumentNullException("value") }
-    if !IsOpen { throw InvalidOperationException("Clipboard access requires an open window") }
-    guard let native = host else {
-      throw InvalidOperationException("Clipboard access requires an open window")
-    }
-    native.SetClipboardText(value)
-  }
+  /// Gets clipboard services for this window's UI thread.
+  public prop Clipboard WindowClipboard { get -> clipboard ??= WindowClipboard(this) }
+  private var clipboard WindowClipboard?
 
   /// Reports whether programmatic window movement is available.
   public prop CanMove bool{
     get {
       requireUiThread("Window.CanMove")
+      Cell.ObserveUntrackedRead()
       return if let native = host { native.CanMove } else { false }
     }
   }
@@ -656,7 +651,7 @@ public partial class Window {
   private var decorated bool
   private var resizable bool
   private var transparent bool
-  private var resizeBand float32
+  private var resizeBand float64
   private var closeRequested int32
   private var postedActions Queue[Action]?
   private var pendingPostedActions int32

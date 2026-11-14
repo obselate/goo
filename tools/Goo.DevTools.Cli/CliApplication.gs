@@ -401,7 +401,7 @@ internal shared class CliApplication {
             if listing { return 0 }
             guard let path = pendingOutput, let destination = output else { return 1 }
             if !File.Exists(path) {
-                throw CliException("The app did not render a frame. Use a Goo version that supports goo render and call Window.Run.")
+                throw CliException("The app did not render a frame. Use a Goo version that supports goo render and call Application.Run.")
             }
             File.Move(path, destination, true)
             Console.WriteLine("[goo] rendered $destination")

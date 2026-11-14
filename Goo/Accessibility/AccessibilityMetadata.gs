@@ -8,6 +8,70 @@ internal class AccessibilityMetadata {
     ConditionalWeakTable[Blob, Accessibility]()
     private let nodeValues ConditionalWeakTable[Node, Accessibility] =
     ConditionalWeakTable[Node, Accessibility]()
+    private let attachmentSources ConditionalWeakTable[Node, AttachmentSource] =
+      ConditionalWeakTable[Node, AttachmentSource]()
+
+    internal func MoveAttachment(attachment AccessibilityAttachmentCell, next Node?, registry AccessibilityAttachmentRegistry) {
+      if let prior = attachment.TargetNode {
+        if prior != next && attachmentSources.TryGetValue(prior, out var source) {
+          source.Attachments.Remove(attachment)
+          source.Registry.Nodes.Add(prior)
+        }
+      }
+      if let node = next {
+        if !attachmentSources.TryGetValue(node, out var source) {
+          source = AttachmentSource(Value(node), registry)
+          attachmentSources.Add(node, source)
+        }
+        if attachment.TargetNode != next { source.Attachments.Add(attachment) }
+        source.Registry.Nodes.Add(node)
+      }
+      attachment.TargetNode = next
+    }
+
+    internal func RefreshAttachments(n Node) bool {
+      if !attachmentSources.TryGetValue(n, out var source) { return false }
+      if n.Retired {
+        attachmentSources.Remove(n)
+        return false
+      }
+      var next = source.Value
+      source.Attachments.Sort((left, right) -> left.Depth().CompareTo(right.Depth()))
+      for attachment in source.Attachments { next = mergeAttachment(next, attachment.Declaration) }
+      if source.Attachments.Count == 0 { attachmentSources.Remove(n) }
+      if sameAccessibility(Value(n), next) { return false }
+      nodeValues.Remove(n)
+      if let value = next { nodeValues.Add(n, value) }
+      n.HasAccessibilityDeclaration = next != nil
+      return true
+    }
+
+    private func mergeAttachment(prior Accessibility?, attachment AccessibilityAttachment) Accessibility? {
+      if attachment.Relationships == nil && attachment.Required == nil && attachment.Invalid == nil { return prior }
+      let next = if let prior = prior { Accessibility{...prior} } else { Accessibility{} }
+      if let additions = attachment.Relationships {
+        let existing = prior?.Relationships ?? AccessibilityRelationships{}
+        next.Relationships = AccessibilityRelationships{...existing,
+          LabelledBy: appendHandles(existing.LabelledBy, additions.LabelledBy),
+          DescribedBy: appendHandles(existing.DescribedBy, additions.DescribedBy),
+          ErrorMessage: appendHandles(existing.ErrorMessage, additions.ErrorMessage),
+          Controls: appendHandles(existing.Controls, additions.Controls),
+          Owns: appendHandles(existing.Owns, additions.Owns),
+          FlowTo: appendHandles(existing.FlowTo, additions.FlowTo),
+          ActiveDescendant: additions.ActiveDescendant ?? existing.ActiveDescendant}
+      }
+      if let required = attachment.Required { next.Required = required }
+      if let invalid = attachment.Invalid { next.Invalid = invalid }
+      next.Freeze(typeof(AccessibilityAttachment))
+      return next
+    }
+
+    private func appendHandles(existing []ElementHandle, additions []ElementHandle) []ElementHandle {
+      if additions.Length == 0 { return existing }
+      let result = System.Collections.Generic.List[ElementHandle](existing)
+      for handle in additions { if !result.Contains(handle) { result.Add(handle) } }
+      return result.ToArray()
+    }
 
     internal func BlobValue(b Blob) Accessibility? -> if blobValues.TryGetValue(b, out var value) { value } else { nil }
 
@@ -20,6 +84,14 @@ internal class AccessibilityMetadata {
 
     internal func Sync(n Node, b Blob) bool {
       let next = BlobValue(b)
+      if attachmentSources.TryGetValue(n, out var source) {
+        next?.Validate()
+        if !sameAccessibility(source.Value, next) {
+          source.Value = next
+          source.Registry.Nodes.Add(n)
+        }
+        return false
+      }
       let prior = Value(n)
       next?.Validate()
       if sameAccessibility(prior, next) { return false }
@@ -34,12 +106,26 @@ internal class AccessibilityMetadata {
     }
 
     internal func Remove(n Node) {
+      if attachmentSources.TryGetValue(n, out var source) { source.Registry.Nodes.Remove(n) }
+      attachmentSources.Remove(n)
       if !n.HasAccessibilityDeclaration {
         return
       }
       nodeValues.Remove(n)
       n.HasAccessibilityDeclaration = false
     }
+  }
+}
+
+internal class AttachmentSource {
+  internal var Value Accessibility?
+  internal let Registry AccessibilityAttachmentRegistry
+  internal let Attachments System.Collections.Generic.List[AccessibilityAttachmentCell] =
+    System.Collections.Generic.List[AccessibilityAttachmentCell]()
+
+  internal init(value Accessibility?, registry AccessibilityAttachmentRegistry) {
+    Value = value
+    Registry = registry
   }
 }
 

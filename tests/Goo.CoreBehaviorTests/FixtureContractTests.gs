@@ -9,6 +9,42 @@ import System.Text.Json
 import Xunit
 
 class FixtureContractTests {
+    @Fact
+    func MountedPlainFieldWritesRebuildContract() ->
+        Assert.True(CellFixtures().MountedPlainFieldWritesRebuild())
+
+    @Fact
+    func ServicesBeforeWindowBindingContract() ->
+        Assert.True(CellFixtures().ServicesBeforeWindowBinding())
+
+    @Fact
+    func CustomLayoutRetainsMixedMaximumMeasurements() ->
+        Assert.True(LayoutFixtures().CustomLayoutRetainsMixedMaximumMeasurements())
+
+    @Fact
+    func RelativeLengthAnimationsUseMatchingUnits() ->
+        Assert.True(MotionFixtures().LengthValidationContract())
+
+    @Fact
+    func CustomLayoutResolvesLengthsInItsViewport() ->
+        Assert.True(LayoutFixtures().CustomLayoutResolvesLengthsInItsViewport())
+
+    @Fact
+    func IntrinsicLimitsUseOwnerConstraints() ->
+        Assert.True(LayoutFixtures().IntrinsicLimitsUseOwnerConstraints())
+
+    @Fact
+    func RelativeLengthsResolveFirstLayoutAndResize() ->
+        Assert.True(LayoutFixtures().RelativeLengthsResolveFirstLayoutAndResize())
+
+    @Fact
+    func IntrinsicLengthsMeasureRetainedContent() ->
+        Assert.True(LayoutFixtures().IntrinsicLengthsMeasureRetainedContent())
+
+    @Fact
+    func RelativeLengthsValidateAtAssignment() ->
+        Assert.True(LayoutFixtures().RelativeLengthsValidateAtAssignment())
+
     @Theory
     @MemberData("Cases")
     func ContractReturnsTrue(fixtureType Type, methodName string) {
@@ -20,6 +56,16 @@ class FixtureContractTests {
         Assert.NotNull(fixture)
         Assert.NotNull(method)
         Assert.True((cast[Func[bool]](method!!.CreateDelegate(typeof(() -> bool), fixture)))())
+    }
+
+    @Fact
+    func ForeignHostContextRebuildsOwner() {
+        Assert.True(WindowStartupFixtures().HostedOwnerContextContract().GetAwaiter().GetResult())
+        if System.Threading.SynchronizationContext.Current is Xunit.Sdk.AsyncTestSyncContext context {
+            System.Threading.SynchronizationContext.SetSynchronizationContext(nil)
+            try { Assert.Null(context.WaitForCompletionAsync().GetAwaiter().GetResult()) }
+            finally { System.Threading.SynchronizationContext.SetSynchronizationContext(context) }
+        }
     }
 
     @Theory
@@ -89,9 +135,48 @@ class FixtureContractTests {
 
     shared {
         func Cases() sequence[[]object] {
+            yield Contract[TreeFixtures]("BuildReturnFreezesBeforeNestedCellContract")
+            yield Contract[RowRecyclingFixtures]("VirtualKeysKeepAuthoredBlobsUnchangedContract")
+            yield Contract[TreeFixtures]("InputOptionsFreezeAtHandOffContract")
+            yield Contract[TreeFixtures]("ScrollbarDeclarationsFreezeAtHandOffContract")
+            yield Contract[TreeFixtures]("VectorStrokeFreezeAtHandOffContract")
+            yield Contract[TreeFixtures]("RetainedImageBranchesFreezeAtHandOffContract")
+            yield Contract[TreeFixtures]("OverlayDeclarationsFreezeAtHandOffContract")
+            yield Contract[TreeFixtures]("BlobAssignmentAfterHandOffContract")
+            yield Contract[TreeFixtures]("AccessibilityAssignmentAfterHandOffContract")
+            yield Contract[TreeFixtures]("ChildrenMutationAfterHandOffContract")
+            yield Contract[TreeFixtures]("ChildrenConstructionBeforeHandOffContract")
+            yield Contract[TreeFixtures]("SharedChildrenCopiedAtHandOffContract")
+            yield Contract[TreeFixtures]("EachFrozenKeylessBlobContract")
+            yield Contract[AccessibilityAttachmentFixtures]("RetainedFieldContract")
+            yield Contract[AccessibilityAttachmentFixtures]("NestedTargetContract")
+            yield Contract[AccessibilityAttachmentFixtures]("IndependentMountsAndPrecedenceContract")
+            yield Contract[AccessibilityAttachmentFixtures]("DragRegionOwnershipContract")
+            yield Contract[StyleFixtures]("StyleAssignmentAfterHandOffContract")
+            yield Contract[StyleFixtures]("StateStylesFreezeAtHandOffContract")
+            yield Contract[LayoutFixtures]("SizedScrollExtentUsesContentContract")
+            yield Contract[LayoutFixtures]("SizedNestedPortalUsesFinalSizeContract")
+            yield Contract[LayoutFixtures]("SizedContentResolvesLengthsInSameFrameContract")
+            yield Contract[LayoutFixtures]("SizedAllottedSizeAndLayoutPassesContract")
+            yield Contract[LayoutFixtures]("SizedNestedAndMountedGeometryContract")
+            yield Contract[LayoutFixtures]("SizedZeroAndUnboundedAxesContract")
+            yield Contract[TreeFixtures]("SizedStateAndContextContract")
+            yield Contract[TreeFixtures]("SizedCallbackOwnershipAndVerificationContract")
+            yield Contract[TreeFixtures]("SizedBuildRejectsStateWritesContract")
+            yield Contract[TreeFixtures]("SizedFailedBuildRetainsSubscriptionsContract")
+            yield Contract[StyleFixtures]("FlexAndInsetDeclarationOrderContract")
+            yield Contract[AccessibilityFixtures]("AccessibilityShorthandOrderContract")
+            yield Contract[AccessibilityFixtures]("AccessibilityShorthandRoundTripContract")
+            yield Contract[FlexConformanceFixtures]("RowColumnSpacerContract")
+            yield Contract[FlexConformanceFixtures]("FixedFlexDirectionContract")
+            yield Contract[FlexConformanceFixtures]("KeyedFlexKindChangeContract")
             yield Contract[ApplicationActivationFixtures]("ProcessQueueOwnsStartupAndForwardedData")
             yield Contract[TreeFixtures]("NodeMountLifetimeContract")
             yield Contract[TreeFixtures]("EmptyChildrenPreserveStyleRetryRootContract")
+            yield Contract[TreeFixtures]("EachAssignsDataKeysContract")
+            yield Contract[TreeFixtures]("EachPreservesExplicitKeysContract")
+            yield Contract[TreeFixtures]("EachReorderRetainsIdentityContract")
+            yield Contract[TreeFixtures]("EachDuplicateKeysThrowContract")
             yield Contract[RowRecyclingFixtures]("ReusesStorageAndResetsKeyScopedStateContract")
             yield Contract[RowRecyclingFixtures]("DisposesRunningAnimationBeforeStorageRebindContract")
             yield Contract[RowRecyclingFixtures]("ExcludesFocusedAndEditingRowsContract")
@@ -104,8 +189,32 @@ class FixtureContractTests {
             yield Contract[WindowOcclusionFixtures]("HostTransitionsNotifyOnUiThread")
             yield Contract[WindowStartupFixtures]("InitialBoundsContract")
             yield Contract[WindowStartupFixtures]("PresentModesContract")
+            yield Contract[WindowStartupFixtures]("AsyncDispatcherContract")
+            yield Contract[WindowStartupFixtures]("AsyncTaskDispatcherContract")
+            yield Contract[WindowStartupFixtures]("HostedContextOperationCountingContract")
+            yield Contract[WindowStartupFixtures]("AsyncOwnerContextContract")
+            yield Contract[WindowStartupFixtures]("AsyncCloseDrainContract")
+            yield Contract[WindowStartupFixtures]("CloseCancelsDragBeforeUnmountContract")
+            yield Contract[WindowStartupFixtures]("EmbeddedCloseDrainsContinuationsContract")
+            yield Contract[WindowStartupFixtures]("EmbeddedCloseRejectsReentrantDisposalContract")
+            yield Contract[WindowStartupFixtures]("AsyncStateContinuationContract")
+            yield Contract[WindowStartupFixtures]("LateFileDialogCompletionContract")
+            yield Contract[WindowStartupFixtures]("SingleInstanceRejectsAttachedWindowContract")
+            yield Contract[WindowStartupFixtures]("ApplicationStateVerificationContract")
+            yield Contract[WindowStartupFixtures]("WindowLayoutSizeContract")
+            yield Contract[WindowStartupFixtures]("SizeToContentContract")
+            yield Contract[WindowStartupFixtures]("RelativeSizeToContentContract")
+            yield Contract[LayoutFixtures]("CustomLayoutLeavesUnboundedPercentUnresolved")
             yield Contract[PathBuilderFixtures]("ResetPreservesPublishedPathAndClearsContour")
+            yield Contract[PathBuilderFixtures]("PrimitivesAppendClosedContoursInViewBoxCoordinates")
             yield Contract[PortalFixtures]("UiScaleLayoutInputAndAnchoredPortalContract")
+            yield Contract[PortalFixtures]("DeclarativeModalFocusTrapContract")
+            yield Contract[PortalFixtures]("DeclarativePortalRestoreFocusContract")
+            yield Contract[PortalFixtures]("DeclarativePortalInitialFocusContract")
+            yield Contract[PortalFixtures]("DeclarativePortalDismissalContract")
+            yield Contract[PortalFixtures]("NonmodalPortalDismissesEscapeWithOutsideFocusContract")
+            yield Contract[PortalFixtures]("PopupMeasuredPlacementContract")
+            yield Contract[AccessibilityFixtures]("DeclarativePortalModalFlagContract")
             yield Contract[PortalFixtures]("AnchoredSubrectangleAndCollisionBoundsContract")
             yield Contract[PortalFixtures]("AnchoredPlacementSizesToSelectedSideContract")
             yield Contract[PortalFixtures]("WindowPointPortalSharesDevicePixelRowsWithTreeContract")
@@ -130,6 +239,34 @@ class FixtureContractTests {
             yield Contract[AccessibilityFixtures]("SyntheticRootAndPrimitiveActionContract")
             yield Contract[AccessibilityFixtures]("ValidationAndRetryContract")
             yield Contract[CellFixtures]("ControlledEditorValueDuringBuildDoesNotRebuildOwner")
+            yield Contract[CellFixtures]("LifecycleHooksAndRequestTokensContract")
+            yield Contract[CellFixtures]("CellSchedulingAndTimerValidationContract")
+            yield Contract[CellFixtures]("TypedFactoryStoresInputWithoutRecreatingCellContract")
+            yield Contract[CellFixtures]("SchedulingPhasesAndFailedMountsContract")
+            yield Contract[StateFixtures]("BuilderScopeDependencyTransactionContract")
+            yield Contract[StateFixtures]("CellBuildRejectsStateWritesContract")
+            yield Contract[StateFixtures]("StateWritesRequireReaderThreadContract")
+            yield Contract[StateFixtures]("StateOnlySchedulingAndMountedContract")
+            yield Contract[StateFixtures]("InputChangedTracksOnlyBuildReadsContract")
+            yield Contract[StateFixtures]("UnsafeStatePayloadFallbackStaysPermanentContract")
+            yield Contract[StateFixtures]("PortalVerificationAcceptsUnchangedDeclarationsContract")
+            yield Contract[StateFixtures]("ContextChangeClearsPendingVerificationContract")
+            yield Contract[StateFixtures]("ProviderChangeClearsPendingVerificationContract")
+            yield Contract[StateFixtures]("FailedRootMountClearsReadsAndKeepsBuildErrorContract")
+            yield Contract[TreeFixtures]("TextRangeStylesFreezeAtHandOffContract")
+            yield Contract[TreeFixtures]("FrozenChildrenCanInitializeMutableContainersContract")
+            yield Contract[TreeFixtures]("SizedReadEntryFailureRestoresContextContract")
+            yield Contract[LayoutFixtures]("RelativeDeclarationsUpdateMountedNodesContract")
+            yield Contract[LayoutFixtures]("RetiredRelativeNodesStopResolvingContract")
+            yield Contract[LayoutFixtures]("RelativeLengthsResolveAfterLateMountContract")
+            yield Contract[StateFixtures]("BuilderScopeIncrementalAndNestedContract")
+            yield Contract[StateFixtures]("VerificationSettingContract")
+            yield Contract[StateFixtures]("VerificationRejectsExternalReadsContract")
+            yield Contract[StateFixtures]("VerificationAcceptsTrackedAndEqualContract")
+            yield Contract[StateFixtures]("VirtualRetainedStateContract")
+            yield Contract[StateFixtures]("VirtualWriteDoesNotMaskVerificationWhenEnabledLaterContract")
+            yield Contract[StateFixtures]("VirtualWriteDoesNotMaskVerificationWhenEnabledContract")
+            yield Contract[StateFixtures]("VirtualTrackedWritePassesVerificationContract")
             yield Contract[CellFixtures]("DeferredScopeAndMountFactoryCallbacksRebuildTheirAuthor")
             yield Contract[CellFixtures]("DirectChildQueuesCanonicalParentOnce")
             yield Contract[CellFixtures]("DirectCompositionAddsNoRenderNode")
@@ -153,10 +290,10 @@ class FixtureContractTests {
             yield Contract[CellFixtures]("RemovedQueuedCellIsNotRebuiltAndDisposesOnce")
             yield Contract[CellFixtures]("RepeatedRebuildRequestsCoalesce")
             yield Contract[CellFixtures]("RootMountRetriesAfterInitialBuildFailure")
-            yield Contract[CellFixtures]("SemanticInputEquivalenceKeepsNewestCallback")
+            yield Contract[CellFixtures]("InputEqualityRebuildsForNewCallback")
             yield Contract[CellFixtures]("ScopeMountedChildCallbacksKeepTheirOwner")
             yield Contract[CellFixtures]("SlottedAndForwardedCallbacksRebuildOnlyTheirAuthor")
-            yield Contract[CellFixtures]("ThrowingInputEquivalenceRetriesSameSnapshot")
+            yield Contract[CellFixtures]("InputEqualityFailureRetriesSameSnapshot")
             yield Contract[CellFixtures]("PostReportsQueueAcceptance")
             yield Contract[CellFixtures]("WindowCloseCompletesAfterCleanupFailures")
             yield Contract[ClickSequenceFixtures]("DragRegionIgnoresFocusableAncestorsButPreservesControls")
@@ -165,6 +302,8 @@ class FixtureContractTests {
             yield Contract[ClickSequenceFixtures]("RoutedInteractiveChildIsRelativeToEachHandler")
             yield Contract[ClickSequenceFixtures]("TextSelectionUsesTheRoutedCountAndCaptureDoesNotCreateFalseClicks")
             yield Contract[ClickSequenceFixtures]("TouchCountsArePerContactAndPenSequencesAreIndependent")
+            yield Contract[ClickSequenceFixtures]("PointerDragThresholdAndSuppressedClickContract")
+            yield Contract[ClickSequenceFixtures]("PointerDragArbitratesChildClicksAndMovementContract")
             yield Contract[GestureFixtures]("RoutedWinnerSuppressesClickScrollAndLosingRecognizer")
             yield Contract[GestureFixtures]("DeadlineAndExplicitCancelHaveOneTerminalNotification")
             yield Contract[GestureFixtures]("CaptureAndNativeCancelDoNotLeakRecognition")
@@ -178,6 +317,11 @@ class FixtureContractTests {
             yield Contract[ClipPathInputFixtures]("TransformedClipPathUsesMappedCoordinates")
             yield Contract[ContextFixtures]("FailedBuildRetryAndDisposalContract")
             yield Contract[ContextFixtures]("FailedPassRetriesNewDependenciesContract")
+            yield Contract[ContextFixtures]("TrackedWindowGettersContract")
+            yield Contract[ContextFixtures]("TrackedWindowRetainedScopeContract")
+            yield Contract[ContextFixtures]("WindowReadDoesNotOptInToTrackedStateContract")
+            yield Contract[ContextFixtures]("InputCarriedStateOptsInToTrackedStateContract")
+            yield Contract[ContextFixtures]("UntrackedWindowGetterKeepsCallbackFallbackContract")
             yield Contract[ContextFixtures]("QueuedStructReadAllocationContract")
             yield Contract[ContextFixtures]("RetainedDirectCleanPortalAndShadowingContract")
             yield Contract[ContextFixtures]("VirtualRetentionVersionAndFailureContract")
@@ -208,9 +352,13 @@ class FixtureContractTests {
             yield Contract[DragDropFixtures]("DragStartDistanceSettingAndTouchContract")
             yield Contract[DragDropFixtures]("DropMutationAndPayloadOwnershipContract")
             yield Contract[DragDropFixtures]("RemovalDisableAndResetContract")
+            yield Contract[ElementHandleFixtures]("MutableHandleReadRebuildContract")
             yield Contract[DragDropFixtures]("SlippedDoubleClickStillClicksContract")
             yield Contract[DragDropFixtures]("ThresholdNegotiationTargetingAndClickContract")
             yield Contract[ElementHandleFixtures]("DuplicateAndCellContract")
+            yield Contract[ElementHandleFixtures]("DeferredSelectionContract")
+            yield Contract[ElementHandleFixtures]("PendingItemAndNearestContract")
+            yield Contract[ElementHandleFixtures]("OptionalAxesAndEndContract")
             yield Contract[ElementHandleFixtures]("FocusContract")
             yield Contract[ElementHandleFixtures]("GeometryContract")
             yield Contract[ElementHandleFixtures]("KeyedRollbackRestoresHandle")
@@ -275,6 +423,11 @@ class FixtureContractTests {
             yield Contract[InputFixtures]("PointerHoverLifecycleOrderAndFailureContract")
             yield Contract[InputFixtures]("PointerIdentityKeepsContactsIndependent")
             yield Contract[InputFixtures]("PointerLifecycleBubblesStopsAndReportsAllMouseButtons")
+            yield Contract[InputFixtures]("PointerDragCaptureCoordinatesAndHitContract")
+            yield Contract[InputFixtures]("PointerDragUsesTrackedCallbackRebuildContract")
+            yield Contract[InputFixtures]("PointerDragTouchScrollArbitrationContract")
+            yield Contract[InputFixtures]("PointerDragMouseRetainsPressRouteBeforeThresholdContract")
+            yield Contract[InputFixtures]("PointerDragCancelUsesNewestCallbackContract")
             yield Contract[InputFixtures]("PointerPrimaryAndPressureContract")
             yield Contract[InputFixtures]("PointerReacquiresHoverAfterRebuild")
             yield Contract[InputFixtures]("PointerResetStartsTheNextTouchSequence")
@@ -296,6 +449,7 @@ class FixtureContractTests {
             yield Contract[InputFixtures]("UnhandledWheelStaysPresentationIdle")
             yield Contract[InputFixtures]("UnfocusedPointerHoverPreservesKeyboardAndPressFocusGate")
             yield Contract[LayoutFixtures]("NarrowRowShrinksLabelAndKeepsFixedIcon")
+            yield Contract[LayoutFixtures]("EllipsisMinimumWidthCanShrinkAndExplicitMinimumWins")
             yield Contract[LayoutFixtures]("ComposedTreeMapsDeclarationsAndRelayouts")
             yield Contract[LayoutFixtures]("CustomMeasurementsPreserveLogicalSizes")
             yield Contract[LayoutFixtures]("CustomPlacementsSnapToDevicePixelsAcrossRelayouts")
@@ -351,6 +505,9 @@ class FixtureContractTests {
             yield Contract[MotionFixtures]("MotionVelocityAdditionPreservesShapeContract")
             yield Contract[MotionFixtures]("MotionVelocityRoutingContract")
             yield Contract[MotionFixtures]("PauseResumeSeekContract")
+            yield Contract[MotionFixtures]("PlayRestartsAndRoutesSpecificationsContract")
+            yield Contract[MotionFixtures]("DelayHoldsAndOffsetsSimulationContract")
+            yield Contract[MotionFixtures]("DelayedAnimationCompletesAndSkipsDisabledMotionContract")
             yield Contract[MotionFixtures]("PausedSimulationAndForcedCompletionContract")
             yield Contract[MotionFixtures]("PointRetargetCarriesIndependentVelocityContract")
             yield Contract[MotionFixtures]("PointSpecRoutingContract")
@@ -405,6 +562,9 @@ class FixtureContractTests {
             yield Contract[ScrollbarFixtures]("PartDisposalContinuesAfterCallbackFailure")
             yield Contract[ScrollbarFixtures]("PublicMetricsAndJumpContract")
             yield Contract[ShapeGeometryFixtures]("LargeStrokeConstructionHasBoundedAllocation")
+            yield Contract[ShapeGeometryFixtures]("ShapePaintUsesOnlyFillAndStroke")
+            yield Contract[ShapeGeometryFixtures]("ShapeRejectsLegacyPaintAndGradientStroke")
+            yield Contract[ShapeGeometryFixtures]("VectorAssetRenderFitsDocumentViewBox")
             yield Contract[ShapeGeometryFixtures]("ArcSubdivisionIsTranslationInvariant")
             yield Contract[ShapeGeometryFixtures]("LoneMoveToContoursPreserveOtherStrokes")
             yield Contract[ShapeGeometryFixtures]("ReturningQuadraticStrokePreservesExcursionAndTrim")
@@ -487,6 +647,8 @@ class FixtureContractTests {
             yield Contract[TextPresentationLayerFixtures]("AbsolutePreviewEditorAvoidsFullDocumentInitialMeasure")
             yield Contract[InputFixtures]("ReadOnlyEntryPreservesTextAndAllowsSelection")
             yield Contract[TextInputPrimitivesFixtures]("UndoHistoryDropsOldestGroupsAndPreservesTypingAndRedo")
+            yield Contract[TextInputPrimitivesFixtures]("SelectableTextUsesSelectionWithoutEditingOrIme")
+            yield Contract[TextInputPrimitivesFixtures]("EditorAndVirtualRequireDeclarationMembersAtMount")
             yield Contract[TextInputPrimitivesFixtures]("EntryUndoDropsOldestGroupsAtCountAndByteLimits")
             yield Contract[TextInputPrimitivesFixtures]("BuiltInDefaultsPrecedeThrowingObserversAndRetainQueuedSuffix")
             yield Contract[TextInputPrimitivesFixtures]("ThrowingPlatformCommitSettlesEditorAndRebuildsOwner")
@@ -501,6 +663,9 @@ class FixtureContractTests {
             yield Contract[TextInputPrimitivesFixtures]("TextCallbackStateStaysAbsentUntilConfigured")
             yield Contract[TextInputPrimitivesFixtures]("UnavailableOrRemovedFocusedClientsDropQueuedText")
             yield Contract[TextInputPrimitivesFixtures]("WordCommandsUseSelectionWordBoundaries")
+            yield Contract[TextInputPrimitivesFixtures]("TextChangesSnapCaretToGraphemeBoundaries")
+            yield Contract[TextInputPrimitivesFixtures]("RichReplacementSnapsCaretToGraphemeBoundaries")
+            yield Contract[TextInputPrimitivesFixtures]("DeletionSnapsCaretAfterJoiningCrLf")
             yield Contract[TreeFixtures]("ButtonStyleSpillContract")
             yield Contract[TreeFixtures]("ControlledEntryComposition")
             yield Contract[TreeFixtures]("ExplicitControlledEntryValue")

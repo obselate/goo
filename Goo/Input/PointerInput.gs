@@ -434,7 +434,7 @@ internal partial class PointerInput {
     }
     current = mouse
     try {
-      cancelInteraction(root, resolver)
+      cancelInteraction(root, resolver, focus.NativeFocusAllowed ? GestureCancelReason.Explicit : GestureCancelReason.FocusLost)
     } catch (error Exception) {
       if failure == nil { failure = error }
     }
@@ -442,7 +442,7 @@ internal partial class PointerInput {
       for i in 0 ... values.Count {
         current = values[i]
         try {
-          cancelInteraction(root, resolver)
+          cancelInteraction(root, resolver, focus.NativeFocusAllowed ? GestureCancelReason.Explicit : GestureCancelReason.FocusLost)
         } catch (error Exception) {
           if failure == nil { failure = error }
         }
@@ -539,9 +539,10 @@ internal partial class PointerInput {
       guard let n = route[i - 1].Captured else { continue }
       if let callback = InputCallbacks.PointerLeave(n) {
         let owner = owners[i - 1]
+        let previousContext = owner?.BeginCallback()
         try { callback(hoverEvent(n, x, y)) }
         catch (error Exception) { failure ??= error }
-        finally { owner?.Rebuild() }
+        finally { owner?.EndCallback(previousContext) }
       }
       if generation != hoverGeneration { break }
     }
@@ -555,9 +556,10 @@ internal partial class PointerInput {
       guard let n = route[i].Current else { continue }
       if let callback = InputCallbacks.PointerEnter(n) {
         let owner = owners[i]
+        let previousContext = owner?.BeginCallback()
         try { callback(hoverEvent(n, x, y)) }
         catch (error Exception) { failure ??= error }
-        finally { owner?.Rebuild() }
+        finally { owner?.EndCallback(previousContext) }
       }
       if generation != hoverGeneration || route[i].Current == nil { break }
     }
@@ -605,12 +607,15 @@ internal partial class PointerInput {
 
   private func afterTreeUpdatedCurrent(root Node?, resolver Resolver) bool {
     guard let tree = root else {
-      let canceled = cancelInteraction(root, resolver)
+      let canceled = cancelInteraction(root, resolver, GestureCancelReason.OwnerUnavailable)
       if current.Device == PointerDevice.Mouse {
         clearHover(resolver)
         cursorValid = false
       }
       return canceled
+    }
+    if let drag = current.PointerDrag {
+      if drag.Target.Current?.OnPointerDrag == nil { clearCapture(GestureCancelReason.OwnerUnavailable) }
     }
     var routeUnavailable = false
     if current.CapturePath.Count > 0 {
@@ -619,7 +624,7 @@ internal partial class PointerInput {
       routeUnavailable = !rebuildActivePath(tree)
     }
     if routeUnavailable {
-      cancelInteraction(root, resolver)
+      cancelInteraction(root, resolver, GestureCancelReason.OwnerUnavailable)
       return true
     }
     if let d = current.DragEntry {
@@ -636,7 +641,7 @@ internal partial class PointerInput {
     if let pan = current.TouchPan {
       let target = pan.Target
       if target == nil || !nodeVisibleInTree(tree, target, false) || !canReceiveInput(target) {
-        cancelInteraction(root, resolver)
+        cancelInteraction(root, resolver, GestureCancelReason.OwnerUnavailable)
         return true
       }
     }
@@ -694,6 +699,11 @@ internal partial class PointerInput {
         let prevented = dispatchPointer(root, PointerEventKind.Move, x, y, delta.X, delta.Y,
           PointerButton.None, modifiers)
         return prevented || updateScrollDrag(root, x, y)
+      }
+      if current.Device == PointerDevice.Touch && current.PointerDrag?.Started == false
+        && updateTouchPan(root, resolver, x, y, false) {
+        cancelCurrentGestures(root, GestureCancelReason.LostArbitration)
+        return true
       }
       var prevented bool
       try {
@@ -776,7 +786,8 @@ internal partial class PointerInput {
             current.DragEntry = nil
             return changed
           }
-          if !current.DragSelectionStarted && dragThresholdCrossed(x, y, 4.0F) {
+          if !current.DragSelectionStarted
+            && (MathF.Abs(x - current.LastPressX) >= 4.0F || MathF.Abs(y - current.LastPressY) >= 4.0F) {
             current.DragSelectionStarted = true
           }
           if !current.DragSelectionStarted { return changed }
@@ -908,13 +919,17 @@ internal partial class PointerInput {
           FollowCaret(entry)
           text.RefreshInputArea(entry)
           current.DragEntry = entry
-        } else if entry.Kind == NodeKind.Editor {
+        } else if entry.Kind == NodeKind.Editor || entry.Selectable {
           let point = TransformGeometry.WindowToNode(entry, x, y)
           if !point.Valid { return false }
           if TextEditorInputAdapter.SelectAt(entry, point.X - entry.Rect.X, point.Y - entry.Rect.Y,
             modifiers.Shift, current.LastPressCount) {
               text.RefreshInputArea(entry)
               current.DragEditor = entry
+              if entry.Selectable {
+                current.DragSelectionOrigin = TextRange(Math.Min(entry.Anchor, entry.Caret),
+                  Math.Abs(entry.Anchor - entry.Caret))
+              }
               if let selected = entry.EditorController?.Selection {
                 current.DragSelectionOrigin = TextRange{
                   Start: Math.Min(selected.Anchor.Offset, selected.Active.Offset),
@@ -950,7 +965,7 @@ internal partial class PointerInput {
         return false
       }
       if current.Device == PointerDevice.Touch && nativePinch?.Claimed == true {
-        return cancelInteraction(root, resolver)
+        return cancelInteraction(root, resolver, GestureCancelReason.LostArbitration)
       }
       beginGestures(root, resolver, x, y)
       if semantic {
@@ -1222,6 +1237,7 @@ internal class PointerContact {
   internal var HeldButtons PointerButtons
   internal var CanceledButtons PointerButtons
   internal var Canceling bool
+  internal var PointerDrag PointerDragState?
   private var captureTargetMount NodeMount
   internal prop CaptureTarget Node? {
     get -> captureTargetMount.Current

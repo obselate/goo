@@ -61,7 +61,7 @@ func WriteMemorySample(eventName string) {
 }
 
 func Main() {
-  Window.ConfigureApplication(
+  Application.Configure(
     "Goo consumer performance",
     "1.0.0",
     "io.github.obselate.goo.consumer-performance")
@@ -70,15 +70,14 @@ func Main() {
   font.Register()
   let window = Window{
     Title: "Goo consumer performance",
-    Width: 640,
-    Height: 480,
+    Size: LayoutSize(640, 480),
     VSync: true,
     Root: ConsumerScene{},
   }
   window.MetricsChanged += (metrics WindowMetrics) -> {
     let scaleX = metrics.DisplayScaleX.ToString("R", CultureInfo.InvariantCulture)
     let scaleY = metrics.DisplayScaleY.ToString("R", CultureInfo.InvariantCulture)
-    Console.WriteLine("{\"kind\":\"fixture\",\"event\":\"metrics\",\"ticks\":${Stopwatch.GetTimestamp()},\"frequency\":${Stopwatch.Frequency},\"logicalWidth\":${metrics.LogicalWidth},\"logicalHeight\":${metrics.LogicalHeight},\"framebufferWidth\":${metrics.FramebufferWidth},\"framebufferHeight\":${metrics.FramebufferHeight},\"displayScaleX\":${scaleX},\"displayScaleY\":${scaleY}}")
+    Console.WriteLine("{\"kind\":\"fixture\",\"event\":\"metrics\",\"ticks\":${Stopwatch.GetTimestamp()},\"frequency\":${Stopwatch.Frequency},\"logicalWidth\":${metrics.NativeWidth},\"logicalHeight\":${metrics.NativeHeight},\"framebufferWidth\":${metrics.FramebufferWidth},\"framebufferHeight\":${metrics.FramebufferHeight},\"displayScaleX\":${scaleX},\"displayScaleY\":${scaleY}}")
     Console.Out.Flush()
   }
   let readyDelayMs = Milliseconds("GOO_CONSUMER_READY_DELAY_MS", 750)
@@ -113,7 +112,7 @@ func Main() {
   closer.IsBackground = true
   closer.Start()
   try {
-    window.Run()
+    Application.Run(window)
   } finally {
     stopped.Set()
     closer.Join()

@@ -27,7 +27,7 @@ class Example : Cell {
         let list = VirtualRows[string](items, theme.ControlHeight, ItemKey, buildRow)
         list.FlexGrow = 1
         list.MinHeight = 0
-        return Container{
+        return Column{
             BasedOn: theme.CanvasStyle,
             Width: Percent(100),
             Height: Percent(100),
@@ -61,9 +61,9 @@ class Example : Cell {
 }
 
 func Main() {
-    Window.ConfigureApplication("A virtual list", "1.0.0", "com.example.tutorial")
-    let window = Window{Title: "A virtual list", Width: 480, Height: 480, Root: Example{}}
+    Application.Configure("A virtual list", "1.0.0", "com.example.tutorial")
+    let window = Window{Title: "A virtual list", Size: LayoutSize(480, 480), Root: Example{}}
     Theme.Attach(window, Theme.Default)
-    window.Run()
+    Application.Run(window)
 }
 ```

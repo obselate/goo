@@ -261,8 +261,8 @@ float strokeCoverage()
     float2 stepX = ddx(pathPosition);
     float2 stepY = ddy(pathPosition);
     uint coverage = 0u;
-    uint firstBand = bandIndexAt(pathPosition.y - abs(pc.sampleStep.w), false);
-    uint lastBand = bandIndexAt(pathPosition.y + abs(pc.sampleStep.w), false);
+    uint firstBand = bandIndexAt(pathPosition.y - abs(pc.sampleStep.w), false, 0.0);
+    uint lastBand = bandIndexAt(pathPosition.y + abs(pc.sampleStep.w), false, 0.0);
     for (uint bandIndex = firstBand; bandIndex <= lastBand; ++bandIndex)
     {
         AnalyticBand band = readBand(bandBase(false) + bandIndex * BandWordCount);

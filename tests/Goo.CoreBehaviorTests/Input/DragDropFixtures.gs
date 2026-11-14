@@ -110,26 +110,29 @@ internal class DragDropFixtures {
     input.QueuePointerMove(17.0F, 10.0F)
     input.Drain(root, resolver, 0.0, nil)
     if started != 0 { return false }
-    input.QueuePointerMove(18.0F, 10.0F)
+    input.QueuePointerMove(16.0F, 16.0F)
     input.Drain(root, resolver, 0.0, nil)
     if started != 1 { return false }
-    input.QueuePointerRelease(18.0F, 10.0F)
+    input.QueuePointerRelease(16.0F, 16.0F)
     input.Drain(root, resolver, 0.0, nil)
 
     input.SetDragStartDistance(20.0F)
     input.QueuePointerPress(10.0F, 10.0F)
-    input.QueuePointerMove(29.0F, 10.0F)
+    input.QueuePointerMove(24.0F, 24.0F)
     input.Drain(root, resolver, 1.0, nil)
     if started != 1 { return false }
-    input.QueuePointerMove(30.0F, 10.0F)
+    input.QueuePointerMove(25.0F, 25.0F)
     input.Drain(root, resolver, 1.0, nil)
     if started != 2 { return false }
-    input.QueuePointerRelease(30.0F, 10.0F)
+    input.QueuePointerRelease(25.0F, 25.0F)
     input.Drain(root, resolver, 1.0, nil)
 
     input.QueuePointerPress(7, PointerDevice.Touch, 10.0F, 10.0F,
       PointerButton.Primary, KeyModifiers{})
-    input.QueuePointerMove(7, PointerDevice.Touch, 14.0F, 10.0F, KeyModifiers{})
+    input.QueuePointerMove(7, PointerDevice.Touch, 12.0F, 12.0F, KeyModifiers{})
+    input.Drain(root, resolver, 2.0, nil)
+    if started != 2 { return false }
+    input.QueuePointerMove(7, PointerDevice.Touch, 13.0F, 13.0F, KeyModifiers{})
     input.Drain(root, resolver, 2.0, nil)
     return started == 3
   }
@@ -449,24 +452,28 @@ internal class DragDropFixtures {
     preventedInput.Drain(preventedRoot, resolver, 0.0, nil)
     if preventedCreates != 0 { return false }
 
-    var capturedCreates int32
-    let capturedRoot = Reconciler{ Res: Resolver{} }.Mount(Container{
-      Width: 100,
-      Height: 50,
-      OnPointerDown: (e PointerEvent) -> e.Capture(),
-      DragSource: DragSource((e DragStartEvent) -> {
+    for automatic in []bool{false, true} {
+      var capturedCreates int32
+      var samples int32
+      let source = DragSource((e DragStartEvent) -> {
         capturedCreates++
         return DragData("captured", DragEffect.Move)
-      }),
-    })
-    Layout().Calculate(capturedRoot, 100.0F, 50.0F)
-    let capturedInput = InputCoordinator()
-    capturedInput.AfterTreeUpdated(capturedRoot, resolver, true)
-    capturedInput.QueuePointerPress(10.0F, 10.0F)
-    capturedInput.QueuePointerMove(20.0F, 10.0F)
-    capturedInput.QueuePointerRelease(20.0F, 10.0F)
-    capturedInput.Drain(capturedRoot, resolver, 0.0, nil)
-    if capturedCreates != 0 { return false }
+      })
+      let captured = automatic
+        ? Container{Width: 100, Height: 50, DragSource: source,
+          OnPointerDrag: (_ PointerDragEvent) -> { samples++ }}
+        : Container{Width: 100, Height: 50, DragSource: source,
+          OnPointerDown: (e PointerEvent) -> e.Capture()}
+      let capturedRoot = Reconciler{Res: Resolver{}}.Mount(captured)
+      Layout().Calculate(capturedRoot, 100.0F, 50.0F)
+      let capturedInput = InputCoordinator()
+      capturedInput.AfterTreeUpdated(capturedRoot, resolver, true)
+      capturedInput.QueuePointerPress(10.0F, 10.0F)
+      capturedInput.QueuePointerMove(20.0F, 10.0F)
+      capturedInput.QueuePointerRelease(20.0F, 10.0F)
+      capturedInput.Drain(capturedRoot, resolver, 0.0, nil)
+      if capturedCreates != 0 || automatic && samples != 2 { return false }
+    }
 
     var captureAfterStart bool
     var capturedMoves int32

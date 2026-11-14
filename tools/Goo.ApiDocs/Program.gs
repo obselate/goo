@@ -21,7 +21,7 @@ func AppendCellInputGuide(text StringBuilder) {
     text.AppendLine("## Build input cells")
     text.AppendLine()
     text.AppendLine(
-        "Derive packaged components as `open class X : Cell<TInput>` and override `protected Build(input TInput) Blob`. Goo passes the stored immutable input snapshot. Same-assembly components can still override parameterless `Build()`. If both overloads are overridden, the typed overload wins. Override `ShouldRebuild(previous, next)` only when default structural equality does not match the rebuild policy."
+        "Derive packaged components as `open class X : Cell<TInput>` and override `protected Build(input TInput) Blob`. Goo passes the stored immutable input snapshot. Same-assembly components can still override parameterless `Build()`. If both overloads are overridden, the typed overload wins. Input equality decides whether the child rebuilds. Derive input-dependent state in `InputChanged(input)`, before Build."
     )
     text.AppendLine()
     text.AppendLine("## Forward input callbacks")
@@ -62,21 +62,34 @@ func AppendCellFactoryGuide(text StringBuilder) {
     text.AppendLine()
     text.AppendLine((`## Mount with a factory
 
-` + "`" + `Cell.Mount[TCell](factory, key)` + "`" + ` mounts a Cell with constructor dependencies without a parameterless constructor.
+` + "`" + `Cell.Mount[TCell](key, factory)` + "`" + ` mounts a Cell with constructor dependencies without a parameterless constructor.
 
 ` + "```" + `gsharp
-Cell.Mount[Counter](() -> Counter(store), "counter")
+Cell.Mount[Counter]("counter", () -> Counter(store))
 ` + "```" + `
 
 A mounted Cell is retained by declared ` + "`" + `TCell` + "`" + ` and sibling key. The factory runs only for a new mount. Rebuilding the parent, replacing the delegate, or changing captured values does not recreate the Cell. Change the key for a new instance. Factories returning the base ` + "`" + `Cell` + "`" + ` type need distinct stable keys for distinct components.
 
 Goo owns and disposes the Cell on removal. Each invocation must return a fresh, unmounted, undisposed instance. Do not share an instance across mounts or return a disposed instance. A null factory or result is rejected.
 
-Constructor arguments initialize the Cell. Update it through typed inputs, configuration, or an external store read by ` + "`" + `Build()` + "`" + `. Call its ` + "`" + `Rebuild()` + "`" + ` after changes outside Goo input callbacks. Read changing values from a store or getter, not a captured scalar copy. Calling ` + "`" + `Build()` + "`" + ` directly returns a Blob tree without mounting the Cell.
+Constructor arguments initialize the Cell. Update it through typed inputs, configuration, or an external store read by ` + "`" + `Build()` + "`" + `. A changed ` + "`" + `State<T>` + "`" + ` rebuilds its readers. Goo handles rebuilds after its input, Cell post, timer and async callbacks. Call ` + "`" + `Rebuild()` + "`" + ` only for plain state changed outside Goo. Await in Goo callbacks to resume on the UI thread. Use ` + "`" + `Cell.Post` + "`" + ` for background results. Read changing values from a store or getter, not a captured scalar copy. Calling ` + "`" + `Build()` + "`" + ` directly returns a Blob tree without mounting the Cell.
 
 See [language interop](../interop.md) for other languages.
 
 Capturing factories inside parent builds can allocate delegates and closures even when the Cell is reused. Cache factories with stable dependencies. Goo never invokes a factory to discover its result's runtime type.`))
+    text.AppendLine()
+    text.AppendLine("With constructor dependencies and typed input, use `Cell.Mount[Input, Page](\"page\", input, () -> Page(service))`. The input is stored on every parent diff. The factory still runs only for a new mount.")
+    text.AppendLine()
+    text.AppendLine("## Own work for the mounted Cell")
+    text.AppendLine()
+    text.AppendLine("`Host` is the owning window. It is valid from window binding, before the first `InputChanged` or `Build`, until `Unmounting` returns. Reading it in a constructor or after unmount throws with the Cell type name.")
+    text.AppendLine()
+    text.AppendLine("Override `Mounted()` for work that needs mounted handles and the first layout. It runs once before paint. Override `Unmounting()` for cleanup before elements are removed. `Lifetime` is cancelled after that hook returns, then Goo calls `IDisposable.Dispose` when implemented.")
+    text.AppendLine()
+    text.AppendLine("Use `Post(action)` from any thread to update the Cell on its UI thread. It returns false when the Cell is not mounted or the window rejects posts. Use `After(delayMs, action)` or `Every(intervalMs, action)` on the UI thread for owned timers. Pending actions and timers stop at unmount or close. Goo applies the normal callback rebuild rule after each action, including one that throws. Use `Host.Every` for work that does not change the Cell.")
+    text.AppendLine("Scheduling with `Post`, `After` or `Every` during `Build` throws. Schedule from `InputChanged`, `Mounted`, callbacks or continuations. `Host` and `Lifetime` can be read during `Build`.")
+    text.AppendLine()
+    text.AppendLine("Pass `Lifetime` to cancellable work. For replaceable requests, call `Latest(\"load\")` on the UI thread. It cancels the previous token for that name and returns a new token linked to `Lifetime`. Before applying a result, check `token.IsCancellationRequested` on the UI thread.")
 }
 
 func AppendStyleCompositionGuide(text StringBuilder) {
@@ -90,6 +103,10 @@ func AppendStyleCompositionGuide(text StringBuilder) {
     text.AppendLine(
         "`BackgroundGradient: nil` is an explicit clear declaration. It removes an earlier composed or lower-state gradient while preserving `BackgroundColor`. Omitting `BackgroundGradient` leaves the earlier declaration in effect."
     )
+    text.AppendLine()
+    text.AppendLine("Use `HoverStyle`, `ActiveStyle`, `FocusStyle`, and `DisabledStyle` for interaction states. Parse color strings with `Color.Parse(\"#fff\")`.")
+    text.AppendLine()
+    text.AppendLine("`AccessibilityName` and `AccessibilityRole` change one field without replacing the other accessibility fields. A later `Accessibility` declaration replaces the whole declaration.")
 }
 
 func AppendImageSourceProviderMembers(text StringBuilder) {
@@ -125,7 +142,7 @@ func AppendShaderEffectGuide(text StringBuilder) {
     text.AppendLine("let program = ShaderEffectProgram.Load(path)")
     text.AppendLine("let effect = ShaderEffect(program,")
     text.AppendLine("  samplesBackdrop: true,")
-    text.AppendLine("  backdropOutset: 24.0F)")
+    text.AppendLine("  backdropOutset: 24.0)")
     text.AppendLine("effect.SetParameter(0, Vector4(0.18F, 0.65F, 0.9F, 1.0F))")
     text.AppendLine("let data = ShaderEffectData(BitConverter.GetBytes(1.0F))")
     text.AppendLine("effect.SetData(0, data)")

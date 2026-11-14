@@ -5,10 +5,30 @@ import System.Collections.Generic
 import System.Runtime.CompilerServices
 
 internal class RowRecyclingFixtures {
+  func VirtualKeysKeepAuthoredBlobsUnchangedContract() bool {
+    if VirtualRetainedBlob.Unkeyed.CallbackOwner != nil { return false }
+    for frozenBefore in []bool{false, true} {
+      let content = Text("row")
+      let reconciler = Reconciler{Res: Resolver{}}
+      if frozenBefore { NodeLifecycle.DisposeTree(reconciler.Mount(content)) }
+      let source = FrozenVirtualSource(content)
+      let node = reconciler.Mount(Virtual{Source: source})
+      try {
+        let mounted = node.Children[0].Children[0]
+        if content.Key != nil || !source.RejectedMutation || node.Children[0].Key != "row" { return false }
+        source.Offset = 10
+        reconciler.Diff(node, Virtual{Source: source})
+        if node.Children[0].Children[0] != mounted || content.Key != nil || mounted.Content != "row"
+          || node.Children[0].Left.Value != 10.0F { return false }
+      } finally { NodeLifecycle.DisposeTree(node) }
+    }
+    return true
+  }
+
   func ReusesStorageAndResetsKeyScopedStateContract() bool {
     let cell = RecyclingViewportCell()
     let adapter = AccessibilityTestAdapter()
-    let window = Window{Root: cell, Width: 100, Height: 20}
+    let window = Window{Root: cell, Size: LayoutSize(100, 20), }
     window.AccessibilityAdapter = adapter
     try {
       window.UpdateTree()
@@ -63,7 +83,7 @@ internal class RowRecyclingFixtures {
 
   func DisposesRunningAnimationBeforeStorageRebindContract() bool {
     let cell = RecyclingViewportCell()
-    let window = Window{Root: cell, Width: 100, Height: 20}
+    let window = Window{Root: cell, Size: LayoutSize(100, 20), }
     try {
       window.UpdateTree()
       guard let initial = cell.Current?.Inner, let body = cell.Handles[0].AttachedNode() else { return false }
@@ -91,7 +111,7 @@ internal class RowRecyclingFixtures {
   func ExcludesFocusedAndEditingRowsContract() bool {
     for editing in []bool{false, true} {
       let cell = RecyclingViewportCell{Editing: editing}
-      let window = Window{Root: cell, Width: 100, Height: 20}
+      let window = Window{Root: cell, Size: LayoutSize(100, 20), }
       try {
         window.UpdateTree()
         guard let first = cell.Handles[0].AttachedNode() else { return false }
@@ -120,7 +140,7 @@ internal class RowRecyclingFixtures {
 
   func ReconcilesChangedShapeAndDrainsSourcePoolContract() bool {
     let cell = RecyclingViewportCell{DifferentShape: true}
-    let window = Window{Root: cell, Width: 100, Height: 20}
+    let window = Window{Root: cell, Size: LayoutSize(100, 20), }
     try {
       window.UpdateTree()
       guard let first = cell.Handles[0].AttachedNode(), let wrapper = first.Parent,
@@ -147,7 +167,7 @@ internal class RowRecyclingFixtures {
 
   func KeepsStorageAcrossOwnerRebuildWithContinuingStateContract() bool {
     let cell = RecyclingViewportCell{FreshSource: true}
-    let window = Window{Root: cell, Width: 100, Height: 20}
+    let window = Window{Root: cell, Size: LayoutSize(100, 20), }
     try {
       window.UpdateTree()
       guard let body = cell.Handles[0].AttachedNode(),
@@ -165,7 +185,7 @@ internal class RowRecyclingFixtures {
 
   func DiscardsFailedRebindAndReleasesRetiredDataContract() bool {
     let cell = RecyclingViewportCell()
-    let window = Window{Root: cell, Width: 100, Height: 20}
+    let window = Window{Root: cell, Size: LayoutSize(100, 20), }
     try {
       window.UpdateTree()
       guard let initial = cell.Handles[0].AttachedNode(), let wrapper = initial.Parent,
@@ -192,8 +212,8 @@ internal class RowRecyclingFixtures {
     for offset in []int32{0, 2} {
       let recycled = RecyclingViewportCell{DetailedText: true, DataOffset: offset}
       let fresh = RecyclingViewportCell{DetailedText: true, DataOffset: offset}
-      let recycledWindow = Window{Root: recycled, Width: 100, Height: 20}
-      let freshWindow = Window{Root: fresh, Width: 100, Height: 20}
+      let recycledWindow = Window{Root: recycled, Size: LayoutSize(100, 20), }
+      let freshWindow = Window{Root: fresh, Size: LayoutSize(100, 20), }
       try {
         recycledWindow.UpdateTree()
         freshWindow.UpdateTree()
@@ -265,7 +285,7 @@ internal class RecyclingViewportCell : Cell {
   override func Build() Blob {
     var source VirtualSource = Source
     if FreshSource { source = RecyclingContinuingSource(Source) }
-    return Virtual(source){Handle = Viewport, Width = 100, Height = 20}
+    return Virtual(){Source = source, Handle = Viewport, Width = 100, Height = 20}
   }
 }
 
@@ -283,12 +303,8 @@ internal class RecyclingRowsSource(owner RecyclingViewportCell) : VirtualState, 
     let item = RecyclingRowData(pendingIndex + owner.DataOffset, owner.Handles[pendingIndex])
     output.Add(VirtualItem{Key: "row-$pendingIndex", Index: pendingIndex,
       Y: float64(pendingIndex) * 20.0, Width: 100, Height: 20,
-      Content: Cell.Mount[RecyclingRowCell]("row-$pendingIndex", (row RecyclingRowCell) -> {
-        row.Host = owner
-        row.Item = item
-        owner.Current = row
-      })})
-    output.ContentSize = LayoutSize{Width: 100, Height: 2000}
+      Content: Cell.Mount[RecyclingRowData, RecyclingRowCell]("row-$pendingIndex", item, () -> RecyclingRowCell(owner))})
+    output.ContentSize = LayoutSize(100, 2000)
     output.ItemCount = 100
   }
 
@@ -306,42 +322,44 @@ internal class RecyclingRowData(index int32, handle ElementHandle) {
   internal let Handle ElementHandle = handle
 }
 
-internal class RecyclingRowCell : Cell, IDisposable {
-  internal var Host RecyclingViewportCell?
+internal class RecyclingRowCell : Cell[RecyclingRowData], IDisposable {
+  private let host RecyclingViewportCell
   internal var Item RecyclingRowData?
   internal var Inner RecyclingInnerCell?
   internal var Local int32
   internal var Disposals int32
 
+  init(host RecyclingViewportCell) { this.host = host }
+
   func Dispose() { Disposals++ }
 
-  override func Build() Blob {
-    guard let host = Host, let item = Item else { throw InvalidOperationException("Missing row inputs") }
-    return Cell.Mount[RecyclingInnerCell](nil, (inner RecyclingInnerCell) -> {
-      inner.Host = host
-      inner.Item = item
-      inner.Outer = this
+  protected override func Build(item RecyclingRowData) Blob {
+    Item = item
+    host.Current = this
+    return Cell.Mount[RecyclingRowData, RecyclingInnerCell](nil, item, () -> {
+      let inner = RecyclingInnerCell(host, this)
       Inner = inner
+      return inner
     })
   }
 }
 
-internal class RecyclingInnerCell : Cell, IDisposable {
-  internal var Host RecyclingViewportCell?
-  internal var Item RecyclingRowData?
-  internal var Outer RecyclingRowCell?
+internal class RecyclingInnerCell : Cell[RecyclingRowData], IDisposable {
+  private let host RecyclingViewportCell
+  private let outer RecyclingRowCell
   internal var Local int32
   internal var Disposals int32
   internal let Animation Anim[float64]
 
-  init() { Animation = Animate(1.0) }
+  init(host RecyclingViewportCell, outer RecyclingRowCell) {
+    this.host = host
+    this.outer = outer
+    Animation = Animate(1.0)
+  }
 
   func Dispose() { Disposals++ }
 
-  override func Build() Blob {
-    guard let host = Host, let item = Item, let outer = Outer else {
-      throw InvalidOperationException("Missing row inputs")
-    }
+  protected override func Build(item RecyclingRowData) Blob {
     if host.ThrowIndex == item.Index { throw InvalidOperationException("Requested row build failure") }
     if host.Editing {
       return TextEntry{Handle: item.Handle, Value: item.Index.ToString(), Width: 100, Height: 20}
@@ -362,4 +380,24 @@ internal class RecyclingInnerCell : Cell, IDisposable {
           Content: detailed ? item.Index == 2 ? "مرحبا" : "مرحبا بالنص المختلف الأطول الذي يمتد على أسطر متعددة" : "${item.Index}:${outer.Local}:$Local"},
     }
   }
+}
+
+internal class FrozenVirtualSource(content Text) : VirtualState, VirtualSource {
+  internal var Offset float64
+  internal var RejectedMutation bool
+  private var committed bool
+
+  public func State(current VirtualState?) VirtualState -> this
+
+  public override func NeedsRealize(viewport VirtualViewport) bool -> false
+
+  public override func Realize(viewport VirtualViewport, output VirtualOutput) {
+    output.Add(VirtualItem{Key: "row", X: Offset, Width: 100, Height: 20, Content: committed ? nil : content})
+    if !committed {
+      try { content.Content = "changed" } catch (_ InvalidOperationException) { RejectedMutation = true }
+    }
+    output.ContentSize = LayoutSize(100, 20)
+  }
+
+  public override func Commit() { committed = true }
 }

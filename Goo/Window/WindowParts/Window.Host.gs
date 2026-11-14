@@ -32,57 +32,15 @@ public partial class Window {
 
   shared {
     private let scheduler WindowScheduler = WindowScheduler()
-    private var nativeActivationHeld bool
+    internal func WakeForApplicationActivations() -> scheduler.WakeForApplicationActivation()
 
-    internal func PrepareNativeApplicationActivation(out initial []ApplicationActivation) WindowOperationResult {
-      initial = Array.Empty[ApplicationActivation]()
-      RequireActivationThread()
-      if activationOwnerThreadId == 0 || activationClosed { return WindowOperationResult.Accepted }
-      SdlRuntime.RequireMainThread("SingleInstance.AcquireAsync")
-      if !nativeActivationHeld {
-        try { SdlRuntime.Acquire() }
-        catch (_ InvalidOperationException) { return WindowOperationResult.Failed }
-        nativeActivationHeld = true
-      }
-      SdlRuntime.PollEvents()
-      lock activationGate {
-        var count int32 = 0
-        for value in pendingActivations {
-          if value.IsInitial && value.Kind != ApplicationActivationKind.Launch { count++ }
-        }
-        if count == 0 { return WindowOperationResult.Accepted }
-        initial = [count]ApplicationActivation
-        count = 0
-        for value in pendingActivations {
-          if value.IsInitial && value.Kind != ApplicationActivationKind.Launch {
-            initial[count] = value
-            count++
-          }
-        }
-      }
-      return WindowOperationResult.Accepted
-    }
-
-    private func ReleaseNativeApplicationActivation() {
-      if !nativeActivationHeld { return }
-      nativeActivationHeld = false
-      SdlRuntime.Release()
-    }
-
-    /// Configures process-wide application identity before SDL initialization.
-    /// @param name human-readable application name
-    /// @param version application version
-    /// @param identifier unique reverse-domain identifier
-    public func ConfigureApplication(name string, version string, identifier string) {
-      SdlRuntime.ConfigureApplication(name, version, identifier)
-    }
 
     internal func RegisterLiveWindow(window Window) {
       scheduler.Register(window)
     }
 
     internal func UnregisterLiveWindow(window Window) {
-      scheduler.Unregister(window, window.observedVisible)
+      scheduler.Unregister(window, window.callbackClosing ? window.callbackWasVisible : window.observedVisible)
     }
 
     internal func RunLiveWindowScheduler() {
@@ -98,6 +56,8 @@ public partial class Window {
     }
 
   }
+
+  internal func WakeForApplicationActivation() { host?.Wake() }
 
   internal func requireUiThread(operation string) {
     if uiThreadBound && Environment.CurrentManagedThreadId != ownerThreadId {
@@ -127,6 +87,7 @@ public partial class Window {
   /// Centers the window when no position is set, otherwise keeps the requested position inside those bounds.
   /// Where the platform reports frame extents before the first show, the decorated frame stays inside too.
   /// @returns this window after native initialization
+  /// @exception GraphicsUnavailableException when Vulkan has no usable device, surface or required feature.
   public func Open() Window {
     requireUiThread("Window.Open")
     if IsOpen {
@@ -138,6 +99,7 @@ public partial class Window {
     ownerThreadId = WindowOwnerThread.Acquire()
     ownerThreadRegistered = true
     uiThreadBound = true
+    var initializingGraphics = false
     try {
       let captureStartup = Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1"
       let originTicks = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
@@ -162,7 +124,9 @@ public partial class Window {
       native.TitlebarControlsChanged += RebuildAllCells
       if minWidth != 0 || minHeight != 0 { native.SetMinimumSize(nativeMinWidth, nativeMinHeight) }
       if maxWidth != 0 || maxHeight != 0 { native.SetMaximumSize(scaledSize(maxWidth), scaledSize(maxHeight)) }
+      initializingGraphics = true
       let target = VulkanWindowTarget(native)
+      initializingGraphics = false
       windowTarget = target
       native.SetBackdrop(backdrop == WindowBackdrop.Blur, windowsBackdrop, macOSBackdrop, waylandBackdrop)
       if captureStartup {
@@ -170,25 +134,29 @@ public partial class Window {
       }
       configureHost(native)
       profiler.Sink = target.ProfileSink
+      initializingGraphics = true
       if !applyNativeResize(
         native.LogicalWidth,
         native.LogicalHeight,
         native.FramebufferWidth,
         native.FramebufferHeight) {
-          throw InvalidOperationException("Window initialization could not create a render target")
+          throw GraphicsUnavailableException("Window initialization could not create a render target")
         }
+      initializingGraphics = false
       x = native.X
       y = native.Y
-      input.SetUiScale(UiScale)
+      input.SetUiScale(float32(UiScale))
       native.TransferPost = Post
       native.NativeDragPost = postNativeDragStart
       input.Attach(native)
       IsOpen = true
+      Application.HasOpenedWindow = true
       attachPresentationNotifications(target)
       family?.NativeDrop?.Bind(native)
       if let adapter = accessibility?.Adapter as NativeAccessibilityAdapter? { adapter.Bind(native) }
       registerOwnership()
       applyPreferences(native.Preferences)
+      measureInitialContent()
       if initiallyVisible {
         let shown = Show()
         if shown != WindowOperationResult.Accepted {
@@ -202,11 +170,17 @@ public partial class Window {
       return this
     } catch (e Exception) {
       try { Close() } catch (cleanup Exception) { }
+      if initializingGraphics && (e is InvalidOperationException || e is PlatformNotSupportedException
+        || e is System.Runtime.InteropServices.ExternalException || e is DllNotFoundException
+        || e is EntryPointNotFoundException) {
+        throw GraphicsUnavailableException(e.Message, e)
+      }
       rethrow
     }
   }
 
   private func configureHost(native WindowHost) {
+    if let sdl = native as SdlHost? { sdl.CallbackContext = CallbackContext() }
     native.PreferencesChanged += applyPreferences
     native.PointerPressed += (id, device, px, py, button, buttons, pressure, modifiers) -> {
       DismissChildMenus(PopupDismissReason.OutsideInteraction)
@@ -252,11 +226,12 @@ public partial class Window {
     let callback Action[int64] = (ticks int64) -> {
       if !IsOpen { return }
       acceptedFrameIndex++
-      if !notifications.HasPresentationAcceptedCallbacks { return }
       let receipt = WindowPresentationAccepted{
         FrameIndex: acceptedFrameIndex,
         AcceptedTicks: ticks,
       }
+      completePresentationWaiters(receipt)
+      if !notifications.HasPresentationAcceptedCallbacks { return }
       Post(() -> {
         if IsOpen { notifications.RaisePresentationAccepted(receipt) }
       })
@@ -378,14 +353,11 @@ public partial class Window {
       guard let native = host else {
         return
       }
+      using let callbackScope = CallbackScope(CallbackContext())
       let queueCompletedAtEntry = windowTarget?.PollQueueCompletion() == true
-      if native.IsClosing {
+      if callbackClosing || native.IsClosing {
         if waitForEvents {
           native.PollEvents()
-        }
-        if windowTarget?.PrepareClose() == false {
-          native.Wake()
-          return
         }
         Close()
         return
@@ -421,11 +393,10 @@ public partial class Window {
         }
         checkPopupDismissal()
         if profiling { profiler.BeginFrameTrace() }
-        Window.DrainApplicationActivations()
+        Application.DrainActivations()
         let repeatStartTicks = Stopwatch.GetTimestamp()
         nativeModal?.DrainCompletion()
         if IsOpen && !native.IsClosing && drainCloseRequest() {
-          stopPosts()
           native.BeginClose()
         }
         if native.IsClosing || !IsOpen {
@@ -584,10 +555,10 @@ public partial class Window {
 
   private func firstShowPending() bool -> (host as SdlHost?)?.FirstShowPending == true
 
-  internal func SchedulerHasImmediateService() bool -> host?.HasPendingEvents == true || hasPostedActions()
+  internal func SchedulerHasImmediateService() bool -> callbackClosing || host?.HasPendingEvents == true || hasPostedActions()
     || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0
     || host?.IsClosing == true
-    || Window.HasPendingApplicationActivation
+    || Application.HasPendingActivation
     || nativeModal?.HasCompletion == true
     || nativeHidePending && windowTarget?.QueueWorkPending != true
 
@@ -607,6 +578,11 @@ public partial class Window {
   }
 
   internal func SchedulerWaitMs(nowTicks float64) int32 {
+    if callbackClosing {
+      if hasContinuations() || Interlocked.CompareExchange(&callbackOperations, 0, 0) == 0 { return 0 }
+      return Math.Max(1, int32(Math.Ceiling(Math.Min(250.0,
+        Math.Max(0.0, callbackDeadline - nowTicks) * 1000.0 / float64(Stopwatch.Frequency)))))
+    }
     if SchedulerHasImmediateService() {
       return 0
     }
@@ -687,15 +663,14 @@ public partial class Window {
     return false
   }
 
-  /// Opens the window and processes frames until all open Goo windows close.
-  public func Run() {
+  internal func RunApplication() {
     let output = Environment.GetEnvironmentVariable("GOO_RENDER_OUT")
     if output != nil || Environment.GetEnvironmentVariable("GOO_RENDER_LIST") == "1" {
       RenderCommandFrame(output ?? "")
       return
     }
     if embeddedHost != nil { throw InvalidOperationException("Embedded windows use the host frame loop") }
-    requireOpenThread("Window.Run")
+    requireOpenThread("Application.Run")
     Open()
     try {
       Window.RunLiveWindowScheduler()
@@ -707,8 +682,8 @@ public partial class Window {
   }
 
   private func closeAfterRun() {
-    let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency
-    while IsOpen && Stopwatch.GetTimestamp() < deadline {
+    let deadline = float64(Stopwatch.GetTimestamp()) + (CloseDrainMs / 1000.0 + 1.0) * float64(Stopwatch.Frequency)
+    while IsOpen && float64(Stopwatch.GetTimestamp()) < deadline {
       Close()
       if IsOpen { host?.WaitEvents(1) }
     }
@@ -779,6 +754,13 @@ public partial class Window {
 
   internal func Close() {
     requireUiThread("Window.Close")
+    using let callbackScope = CallbackScope(CallbackContext())
+    if !callbackClosing { beginCallbackClose()
+    }
+    if !callbackDrainReady {
+      return
+    }
+    if !finishCallbackDrain() { return }
     if !closeNativeModal() { return }
     if !closeFileDialog() { return }
     if !closeOwnedWindows() { return }
@@ -791,7 +773,8 @@ public partial class Window {
       return
     }
     Window.UnregisterLiveWindow(this)
-    var firstError = family?.CloseError
+    var firstError = callbackError ?? family?.CloseError
+    callbackError = nil
     if let state = family { state.CloseError = nil }
     firstError = captureCleanupError(firstError, () -> clearTimers())
     firstError = captureCleanupError(firstError, () -> stopPosts())
@@ -803,14 +786,6 @@ public partial class Window {
     firstError = captureCleanupError(firstError, () -> teardownNative())
     firstError = captureCleanupError(firstError, () -> unregisterOwnership())
 
-    let tree = node
-    node = nil
-    Portals.Sync(nil, portalRoot)
-    if let current = tree {
-      firstError = captureCleanupError(firstError, () -> NodeLifecycle.DisposeTree(current))
-    } else if let current = Root {
-      firstError = captureCleanupError(firstError, () -> current.DisposeMounted())
-    }
     retiredVirtualStates.Clear()
     ClearContextValues()
     firstError = captureCleanupError(firstError, () -> MetricSubscriptions.Flush(this))
@@ -918,8 +893,8 @@ internal func ResolveWindowMetrics(width int32, height int32, fbWidth int32, fbH
       scaleY = float64(displayScale)
     }
   return WindowMetrics{
-    LogicalWidth: width,
-    LogicalHeight: height,
+    NativeWidth: width,
+    NativeHeight: height,
     FramebufferWidth: fbWidth,
     FramebufferHeight: fbHeight,
     DisplayScaleX: scaleX,

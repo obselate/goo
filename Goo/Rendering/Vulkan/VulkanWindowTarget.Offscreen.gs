@@ -97,8 +97,8 @@ internal unsafe partial class VulkanWindowTarget {
       try {
         pageCancellation = cancellation.Register(() -> { Interlocked.Exchange(ref pageCancelled, 1) })
         pageOwnerClose = ownerClosed.Register(() -> { Interlocked.Exchange(ref pageCancelled, 1) })
-        let page = renderWindow ?? Window{ Root: root, Width: int32(Math.Ceiling(options.LogicalWidth)),
-          Height: int32(Math.Ceiling(options.LogicalHeight)), Background: options.Background }
+        let page = renderWindow ?? Window{ Root: root,
+          Size: options.Size, Background: options.Background }
         pageWindow = page
         page.PrepareOffscreenPage(options)
         let atlasBytes = ResolveTextAtlasByteSize(uint64(properties.limits.maxTexelBufferElements) * 8uL)
@@ -168,12 +168,12 @@ internal unsafe partial class VulkanWindowTarget {
       FinishPage(OffscreenRenderStatus.DeviceLost)
       return
     }
-    let scaleX = float32(pageOptions.PixelWidth) / pageOptions.LogicalWidth
-    let scaleY = float32(pageOptions.PixelHeight) / pageOptions.LogicalHeight
+    let scaleX = float32(float64(pageOptions.PixelWidth) / pageOptions.Size.Width)
+    let scaleY = float32(float64(pageOptions.PixelHeight) / pageOptions.Size.Height)
     text.PublishCompletedUploads()
     text.BeginCompile(completed, scaleY)
     let result = compiler.Compile(page.Tree, pageOptions.Background,
-      pageOptions.LogicalWidth, pageOptions.LogicalHeight)
+      float32(pageOptions.Size.Width), float32(pageOptions.Size.Height))
     if result.UnsupportedNodeCount != 0 || result.UnsupportedPrimitiveCount != 0 {
       FinishPage(OffscreenRenderStatus.Unsupported)
       return

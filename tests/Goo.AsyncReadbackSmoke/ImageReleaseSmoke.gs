@@ -52,8 +52,7 @@ func RunImageReleaseSmoke() {
   try {
     let opened = Window{
       Title: "Goo image release gate",
-      Width: 96,
-      Height: 96,
+      Size: LayoutSize(96, 96),
       VSync: false,
       Root: root,
     }
@@ -84,14 +83,14 @@ func RunImageReleaseSmoke() {
       "A disposed image source kept its texture after its element was removed")
 
     opened.RequestClose()
-    opened.Run()
+    Application.Run(opened)
     Require(!opened.IsOpen, "Image release gate window did not close")
   } finally {
     Console.SetError(originalError)
     if let active = window {
       if active.IsOpen {
         active.RequestClose()
-        active.Run()
+        Application.Run(active)
       }
     }
     first.Dispose()
