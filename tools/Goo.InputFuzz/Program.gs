@@ -78,6 +78,9 @@ func Check(input[]uint8, target string, current string) {
             case "tree" {
                 TreeFuzz.Run(input)
             }
+            case "pointer" {
+                PointerFuzz.Run(input)
+            }
             case _ {
                 throw ArgumentException("Unknown managed input target")
             }
