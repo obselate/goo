@@ -141,13 +141,13 @@ class HostChecks {
                         "  macos-notifications PUBLISH OUTPUT\n" +
                         "  wayland-notifications PROGRAM OUTPUT\n" +
                         "  macos-data-transfer APPLICATION OUTPUT\n" +
-                        "  input-build svg|raster|wav|native-image|font")
+                        "  input-build svg|raster|wav|native-image|font|text|tree|pointer")
                     return 0
                 }
                 Require(arguments.Length >= 1, "expected a host check subcommand")
                 let args = arguments.Skip(1).ToArray()
                 if arguments[0] == "input-build" {
-                    Require(args.Length == 1 && []string{"svg", "raster", "wav", "native-image", "font"}.Contains(args[0]), "expected input-build svg|raster|wav|native-image|font")
+                    Require(args.Length == 1 && []string{"svg", "raster", "wav", "native-image", "font", "text", "tree", "pointer"}.Contains(args[0]), "expected input-build svg|raster|wav|native-image|font|text|tree|pointer")
                 } else {
                     Require(args.Length == 2 && args.All(a -> !a.StartsWith("-")), "expected two path arguments")
                 }
