@@ -1168,6 +1168,21 @@ jobs:
             -p:ContinuousIntegrationBuild=true \
             -p:RepositoryCommit="$GITHUB_SHA"
 
+      - name: Verify shipped Release IL
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet tool restore
+          dotnet run --project tools/Goo.RepositoryChecks -c Release -- ilverify \
+            Goo/bin/Release/net10.0/Goo.dll \
+            Goo.Accessibility/bin/Release/net10.0/Goo.Accessibility.dll \
+            Goo.Audio/bin/Release/net10.0/Goo.Audio.dll \
+            tools/Goo.ShaderEffectTool/bin/Release/net10.0/Goo.ShaderEffectTool.dll \
+            tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll \
+            tools/Goo.PluginMcp/bin/Release/net10.0/Goo.PluginMcp.dll \
+            apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll \
+            goo-widgets/src/Goo.Widgets/bin/Release/net10.0/Goo.Widgets.dll \
+            templates/Goo.Templates/bin/Release/net10.0/Goo.Templates.dll
+
       - name: Upload ready packages
         if: needs.changes.outputs.full == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
@@ -1289,6 +1304,14 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh env \
             GOO_APPLICATION_QUIT_SMOKE=1 \
             dotnet artifacts/publish/Goo.PackageSmoke.dll
+
+      - name: Verify clean package consumer IL
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet tool restore
+          dotnet run --project tools/Goo.RepositoryChecks -c Release -- ilverify \
+            artifacts/publish/Goo.PackageSmoke.dll \
+            --assets tests/Goo.PackageSmoke/obj/project.assets.json
 
       - name: Publish and run clean NativeAOT consumer
         if: needs.changes.outputs.full == 'true'
@@ -2357,6 +2380,13 @@ jobs:
           unzip -p artifacts/android-packages/Goo.Android.*.nupkg lib/net10.0-android36.0/Goo.Android.aar > "$RUNNER_TEMP/Goo.Android.aar"
           unzip -p "$RUNNER_TEMP/Goo.Android.aar" res/values/accessibility.xml | grep -F 'name="goo_accessibility_mixed"'
           rm "$RUNNER_TEMP/Goo.Android.aar"
+      - name: Verify Android Release IL
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet tool restore
+          dotnet run --project tools/Goo.RepositoryChecks -c Release -- ilverify \
+            Goo.Android/bin/Release/net10.0-android/Goo.Android.dll
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: needs.changes.outputs.full == 'true'
         with:
