@@ -129,7 +129,7 @@ internal unsafe class VulkanImageFactory {
               try { accounting.Release() } catch (cleanup Exception) { }
             }
           }
-          throw error
+          rethrow
         }
       }
 
@@ -250,7 +250,7 @@ internal unsafe class VulkanImageFactory {
           if let createdAllocation = allocation {
             try { allocator.Release(createdAllocation) } catch (cleanup Exception) { }
           }
-          throw error
+          rethrow
         }
       }
   }

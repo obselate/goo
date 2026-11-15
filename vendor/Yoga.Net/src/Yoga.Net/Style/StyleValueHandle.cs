@@ -15,7 +15,8 @@ namespace Facebook.Yoga
             Percent,
             Number,
             Auto,
-            Keyword
+            Keyword,
+            Mixed
         }
 
         public enum KeywordEnum : byte

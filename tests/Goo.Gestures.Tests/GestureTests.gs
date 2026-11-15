@@ -166,7 +166,7 @@ class GestureTests {
         }
 
         private func Mount(content Blob) Window {
-            let window = Window{Root: SurfaceCell(content), Width: 200, Height: 200}
+            let window = Window{Root: SurfaceCell(content), Size: LayoutSize(200, 200), }
             typeof(Window).GetMethod(
                 "UpdateTree",
                 BindingFlags.Instance | BindingFlags.NonPublic,
@@ -180,7 +180,7 @@ class GestureTests {
             BindingFlags.Instance | BindingFlags.NonPublic
         )!!.Invoke(window, nil)
 
-        private func Down(window Window, id int64, x float32, y float32) -> window.PlatformInput.PointerPress(
+        private func Down(window Window, id int64, x float64, y float64) -> window.PlatformInput.PointerPress(
             id,
             PointerDevice.Touch,
             x,
@@ -190,7 +190,7 @@ class GestureTests {
             1.0F
         )
 
-        private func Move(window Window, id int64, x float32, y float32) -> window.PlatformInput.PointerMove(
+        private func Move(window Window, id int64, x float64, y float64) -> window.PlatformInput.PointerMove(
             id,
             PointerDevice.Touch,
             x,
@@ -199,7 +199,7 @@ class GestureTests {
             1.0F
         )
 
-        private func Up(window Window, id int64, x float32, y float32) -> window.PlatformInput.PointerRelease(
+        private func Up(window Window, id int64, x float64, y float64) -> window.PlatformInput.PointerRelease(
             id,
             PointerDevice.Touch,
             x,

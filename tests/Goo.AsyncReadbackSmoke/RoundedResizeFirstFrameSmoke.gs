@@ -58,8 +58,8 @@ VulkanReadbackResult{
 func RoundedResizeRequireFirstFrame(result VulkanReadbackResult,
   metrics WindowMetrics, iteration int32) {
     PrimitiveRequirePixelNear(result.Pixels, result.Width, metrics,
-      float64(metrics.LogicalWidth) * 0.5,
-      float64(metrics.LogicalHeight) * 0.5,
+      float64(metrics.NativeWidth) * 0.5,
+      float64(metrics.NativeHeight) * 0.5,
       uint8(48), uint8(208), uint8(112), 8,
       "rounded_resize_child_" + iteration.ToString())
     PrimitiveRequirePixelNear(result.Pixels, result.Width, metrics,
@@ -79,8 +79,7 @@ func RunPathUpdateFramesSmoke() {
   let root = PendingPathReadinessCell(PendingPathReadinessCell.CoveredPath)
   let window = Window{
     Title: "Goo path update frames",
-    Width: 180,
-    Height: 120,
+    Size: LayoutSize(180, 120),
     VSync: false,
     Root: root,
   }
@@ -114,22 +113,19 @@ func RunPathUpdateFramesSmoke() {
 func RunPendingPathReadinessSmoke() {
   let submitted = Window{
     Title: "Goo submitted path readiness",
-    Width: 180,
-    Height: 120,
+    Size: LayoutSize(180, 120),
     VSync: false,
     Root: PendingPathReadinessCell(PendingPathReadinessCell.CoveredPath),
   }
   let covered = Window{
     Title: "Goo covered path probe",
-    Width: 180,
-    Height: 120,
+    Size: LayoutSize(180, 120),
     VSync: false,
     Root: PendingPathReadinessCell(PendingPathReadinessCell.CoveredPath),
   }
   let uncovered = Window{
     Title: "Goo uncovered path probe",
-    Width: 180,
-    Height: 120,
+    Size: LayoutSize(180, 120),
     VSync: false,
     Root: PendingPathReadinessCell(PendingPathReadinessCell.UncoveredPath),
   }
@@ -199,8 +195,7 @@ func RunRoundedResizeFirstFrameSmoke() {
     RunPathUpdateFramesSmoke()
     let opened = Window{
       Title: "Goo rounded resize first frame gate",
-      Width: 300,
-      Height: 170,
+      Size: LayoutSize(300, 170),
       VSync: false,
       Background: Color.Rgb(12, 20, 32),
       Root: RoundedResizeFirstFrameCell{},
@@ -224,7 +219,7 @@ func RunRoundedResizeFirstFrameSmoke() {
         "Rounded resize synthetic resize failed at " + iteration.ToString())
       WindowReadbackTestFixture.UpdateTreeOnly(opened, 0.0)
       let metrics = WindowReadbackTestFixture.Metrics(opened)
-      Require(metrics.LogicalWidth == width && metrics.LogicalHeight == height
+      Require(metrics.NativeWidth == width && metrics.NativeHeight == height
           && metrics.FramebufferWidth == pixelWidth && metrics.FramebufferHeight == pixelHeight,
         "Rounded resize metrics were incorrect at " + iteration.ToString())
       let result = RoundedResizeCaptureFirstFrame(opened, metrics)

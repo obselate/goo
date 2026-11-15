@@ -210,7 +210,8 @@ public class TextEditorController : IDisposable {
   }
 
   /// Dispatches and performs a semantic text-editor command. MoveLeft and MoveRight use visual
-  /// order while mounted and logical document order otherwise.
+  /// order while mounted and logical document order otherwise. Text edits snap the caret downstream
+  /// to a grapheme boundary.
   /// @param command The command to dispatch.
   /// @returns True when default handling ran.
   public func Execute(command TextCommand) bool {
@@ -296,6 +297,7 @@ public class TextEditorController : IDisposable {
   }
 
   /// Replaces the selection with source text and persistent fragment-relative styles as one undoable edit.
+  /// Snaps the resulting caret downstream to a grapheme boundary.
   /// @param layer The persistent formatting layer bound to this controller's document.
   /// @param text The replacement source text.
   /// @param fragmentRelativeStyles The replacement's inline styles, measured from zero.
@@ -322,11 +324,9 @@ public class TextEditorController : IDisposable {
         replacingSelection = false
         applyingDocumentEdit = false
       }
-      let caret = replaced.Start + text.Length
-      selection = TextSelection{
-        Anchor: TextPosition{ Offset: caret, Affinity: TextAffinity.Downstream },
-        Active: TextPosition{ Offset: caret, Affinity: TextAffinity.Downstream },
-      }
+      let caret = SnapPosition(TextPosition{ Offset: replaced.Start + text.Length,
+        Affinity: TextAffinity.Downstream })
+      selection = TextSelection{ Anchor: caret, Active: caret }
       composition = nil
       hasDesiredHorizontalPosition = false
       followCaret()
@@ -797,11 +797,9 @@ public class TextEditorController : IDisposable {
       replacingSelection = false
       applyingDocumentEdit = false
     }
-    let caret = actual.Range.Start + actual.InsertedText.Length
-    selection = TextSelection{
-      Anchor: TextPosition{ Offset: caret, Affinity: TextAffinity.Downstream },
-      Active: TextPosition{ Offset: caret, Affinity: TextAffinity.Downstream },
-    }
+    let caret = SnapPosition(TextPosition{ Offset: actual.Range.Start + actual.InsertedText.Length,
+      Affinity: TextAffinity.Downstream })
+    selection = TextSelection{ Anchor: caret, Active: caret }
     hasDesiredHorizontalPosition = false
     followCaret()
     changed()

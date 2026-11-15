@@ -17,7 +17,7 @@ internal class GooInputConnection(view GooView, focusId int64) : BaseInputConnec
             var __spill0 FocusedEditorSnapshot?
             var editor FocusedEditorSnapshot
             return if !closed && {
-                __spill0 = view.Input.Editor
+                __spill0 = view.Window.Focus.Editor
                 __spill0 != nil && {
                     editor = __spill0!!
                     true
@@ -78,7 +78,7 @@ internal class GooInputConnection(view GooView, focusId int64) : BaseInputConnec
         }
         let cursor = int32(Math.Clamp(requested, 0, updated.Text.Length))
         if updated.SelectionStart != cursor || updated.SelectionEnd != cursor {
-            view.Input.SetSelection(cursor, cursor)
+            view.Window.Focus.SetSelection(cursor, cursor)
         }
         return true
     }
@@ -99,7 +99,7 @@ internal class GooInputConnection(view GooView, focusId int64) : BaseInputConnec
 
     override func FinishComposingText() bool -> Editor != nil && view.Input.FinishComposition()
 
-    override func SetSelection(start int32, end int32) bool -> Editor != nil && view.Input.SetSelection(start, end)
+    override func SetSelection(start int32, end int32) bool -> Editor != nil && view.Window.Focus.SetSelection(start, end)
 
     override func DeleteSurroundingText(beforeLength int32, afterLength int32) bool -> Editor != nil &&
         beforeLength >= 0 &&
@@ -236,12 +236,12 @@ internal class GooInputConnection(view GooView, focusId int64) : BaseInputConnec
             return false
         }
         if actionCode == ImeAction.Next {
-            return view.Input.MoveFocus(true)
+            return view.Window.Focus.Move(true)
         }
         if actionCode == ImeAction.Previous {
-            return view.Input.MoveFocus(false)
+            return view.Window.Focus.Move(false)
         }
-        let result = view.Input.Execute(TextCommand(TextCommandKind.Submit, "", false))
+        let result = view.Window.Focus.Execute(TextCommand(TextCommandKind.Submit, "", false))
         if actionCode == ImeAction.Done && view.DismissKeyboardOnSubmit {
             view.EndTextInput()
         }
@@ -263,7 +263,7 @@ internal class GooInputConnection(view GooView, focusId int64) : BaseInputConnec
         if kind == nil || editor.IsPassword && (kind is TextCommandKind.Copy or TextCommandKind.Cut) {
             return false
         }
-        return view.Input.Execute(
+        return view.Window.Focus.Execute(
             TextCommand(
                 kind,
                 if kind == TextCommandKind.Paste {

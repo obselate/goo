@@ -10,8 +10,8 @@ public partial class Window {
   /// Unset fields use Goo defaults, not parent inheritance.
   /// @param text The text to measure.
   /// @param style The text declarations. A Text blob is also a Style.
-  /// @returns The width in layout pixels.
-  public func MeasureText(text string, style Style) float32 {
+  /// @returns The width in layout units.
+  public func MeasureText(text string, style Style) float64 {
     requireUiThread("Window.MeasureText")
     var family = StyleFields.Default(StyleField.FontFamily)
     var language = StyleFields.Default(StyleField.Language)
@@ -38,12 +38,16 @@ public partial class Window {
         }
       }
     }
+    let fontSize = if let declaration = size.Payload as LengthDeclaration {
+      declaration.Value.Value + declaration.Value.EmPart * 16.0F +
+        declaration.Value.RemPart * (node?.FontSize.Px ?? 16.0F)
+    } else { Length{Unit: LengthUnit(int32(size.B)), Value: size.A}.Px }
     let display = TextLayouts.transformText(text, TextTransform(int32(transform.A)))
     let width = TextShaping.MeasureLineUncached(display, 0, display.Length, entryText(family) ?? "",
-      Length{ Unit: LengthUnit(int32(size.B)), Value: size.A }.Px * (preferences.TextScaleFactor ?? 1.0F),
+      fontSize * float32(preferences.TextScaleFactor ?? 1.0),
       int32(weight.A), FontStyle(int32(fontStyle.A)) == FontStyle.Italic,
       Length{ Unit: LengthUnit(int32(spacing.B)), Value: spacing.A }.Px, int32(direction.A),
       entryText(language) ?? "")
-    return PixelGrid.RoundValueToPixelGrid(width, RenderScale.X, true, false)
+    return float64(PixelGrid.RoundValueToPixelGrid(width, RenderScale.X, true, false))
   }
 }

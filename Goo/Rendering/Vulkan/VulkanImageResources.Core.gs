@@ -162,7 +162,7 @@ internal unsafe partial class VulkanImageResources : IDisposable, VulkanGpuCache
         DestroyGeneration()
         DestroyStagingBuffer()
         uploadRing.Dispose()
-        throw error
+        rethrow
       }
     }
 
@@ -209,7 +209,7 @@ internal unsafe partial class VulkanImageResources : IDisposable, VulkanGpuCache
       uploadRing.Dispose()
       ClearLogicalResources()
       disposed = true
-      throw error
+      rethrow
     }
   }
 

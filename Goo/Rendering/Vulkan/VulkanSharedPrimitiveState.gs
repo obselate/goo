@@ -709,7 +709,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
         clipMaskPipelineLayout = CreateClipMaskPipelineLayout()
       } catch (error Exception) {
         Dispose()
-        throw error
+        rethrow
       }
     }
 

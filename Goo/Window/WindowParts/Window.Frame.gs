@@ -12,6 +12,12 @@ internal data struct DirtyCellSubmission {
   internal var Generation int64
 }
 
+internal data struct DirtyFiber {
+  internal var Cell Cell
+  internal var Depth int32
+  internal var Order int32
+}
+
 internal class WindowDefaultTitle {
   shared {
     private var value string?
@@ -31,6 +37,7 @@ internal class WindowDefaultTitle {
 /// Hosts a Goo tree in a native window.
 public partial class Window {
   private var virtualRefreshDeferred bool
+  private var sizedEffects ReconcileEffects
 
   internal func FlushDeferredVirtualization() {
     if virtualRefreshDeferred {
@@ -40,12 +47,13 @@ public partial class Window {
   }
 
   private func prepare() {
-    if Width == 0 {
-      Width = 1280
+    if let size = requestedSize {
+      width = scaledSize(size.Width)
+      height = scaledSize(size.Height)
+      requestedSize = nil
     }
-    if Height == 0 {
-      Height = 720
-    }
+    if width == 0 { width = scaledSize(1280.0) }
+    if height == 0 { height = scaledSize(720.0) }
     if Title == "" {
       Title = WindowDefaultTitle.Value()
     }
@@ -142,11 +150,27 @@ public partial class Window {
     UpdateTreeCore(wallDt, simDt, realizeVirtual)
 
   private func UpdateTreeCore(wallDt float64, simDt float64, realizeVirtual bool = true) bool {
+    let previousCell = Cell.StateReader
+    let previousScope = StateReadScope.Current
+    let previousContext = ContextEnvironment.Enter(ContextEnvironment{})
+    Cell.StateReader = nil
+    StateReadScope.Current = nil
+    try { return UpdateTreeFrame(wallDt, simDt, realizeVirtual) }
+    finally {
+      Cell.StateReader = previousCell
+      StateReadScope.Current = previousScope
+      ContextEnvironment.Current = previousContext
+    }
+  }
+
+  private func UpdateTreeFrame(wallDt float64, simDt float64, realizeVirtual bool) bool {
     validateDelta(wallDt, "wallDt")
     validateDelta(simDt, "simDt")
     virtualRefreshDeferred = false
+    sizedEffects = ReconcileEffects.None
     timeS = timeS + wallDt
     prepare()
+    SyncWindowValues()
     let profiling = profiler.Active
     let motionProfile = profiling ? profiler.Start() : FrameProfilePoint{}
     let motionVersion = motionPump.ClearVersion
@@ -270,6 +294,8 @@ public partial class Window {
         accessibilityLayout = true
         metricsChanged = true
       }
+      if !shouldLayout { refreshSized(n) }
+      effects = combineEffects(effects, sizedEffects)
       let deferVirtual = mayDeferVirtual && !layoutChanged
         && !hasEffect(effects, ReconcileEffects.Structure)
         && !hasEffect(effects, ReconcileEffects.Layout)
@@ -301,6 +327,7 @@ public partial class Window {
         metricsChanged = true
         virtualPass++
       }
+      effects = combineEffects(effects, sizedEffects)
       if hasEffect(effects, ReconcileEffects.Structure)
         || hasEffect(effects, ReconcileEffects.Input)
         || hasEffect(effects, ReconcileEffects.Content)
@@ -399,6 +426,13 @@ public partial class Window {
         }
       }
     }
+    effects = combineEffects(effects, sizedEffects)
+    if sizedEffects != ReconcileEffects.None {
+      layoutChanged = true
+      accessibilityLayout = true
+      metricsChanged = true
+    }
+    completeCellMounts()
     if hasEffect(effects, ReconcileEffects.Paint) {
       changed = true
     }
@@ -467,16 +501,42 @@ public partial class Window {
   private func calculateLayout(n Node, width float32, height float32) {
     if !profiler.Active {
       layout.Calculate(n, portalRoot, width, height)
+      refreshSized(n)
       return
     }
     let point = profiler.Start()
     var completed = false
     try {
       layout.Calculate(n, portalRoot, width, height)
+      refreshSized(n)
       completed = true
     } finally {
       profiler.Record(FrameProfileStage.Layout, point, if completed { 0 } else { -1 })
     }
+  }
+
+  private func refreshSized(n Node) {
+    if !layout.NeedsSizedRefresh(n) { return }
+    let rec = Reconciler{Owner: this, CellInvalidated: cellHook,
+      ImageCompleted: imageCompletionHook, RetainedInvalidated: retainedInvalidationHook,
+      Res: resolver, ChildScratch: childDiffScratch, DeferStyleFlush: true, Pump: motionPump}
+    try {
+      layout.RefreshSized(n, rec)
+    } catch (_ Exception) {
+      pendingReconcileEffects = combineEffects(pendingReconcileEffects, rec.Effects)
+      rec.DiscardStyles()
+      rethrow
+    }
+    if rec.Effects == ReconcileEffects.None { return }
+    sizedEffects = combineEffects(sizedEffects, rec.Effects)
+    if hasEffect(rec.Effects, ReconcileEffects.Structure) {
+      Portals.Sync(n, portalRoot)
+      layout.MarkPortalStructureDirty()
+      layout.Calculate(n, portalRoot, LayoutWidth, LayoutHeight)
+      refreshSized(n)
+    }
+    layout.RefreshRects(n, portalRoot)
+    input.AfterTreeUpdated(n, resolver, true)
   }
 
   private func drain(rec Reconciler) {
@@ -493,16 +553,25 @@ public partial class Window {
       guard let fiber = mounted.Fiber else {
         continue
       }
-      addFiber(fiber)
+      var depth int32
+      var current = mounted
+      while let parent = current.Parent {
+        depth++
+        current = parent
+      }
+      fiberBatch.Add(DirtyFiber{Cell: fiber, Depth: depth, Order: fiberBatch.Count})
     }
     cellBatch.Clear()
 
-    sortFibersParentFirst()
+    fiberBatch.Sort((left, right) -> {
+      let depth = left.Depth.CompareTo(right.Depth)
+      return depth != 0 ? depth : left.Order.CompareTo(right.Order)
+    })
     var nextFiber int32 = 0
     try {
       for i in 0 ... fiberBatch.Count {
         nextFiber = i + 1
-        let fiber = fiberBatch[i]
+        let fiber = fiberBatch[i].Cell
         guard let mounted = fiber.MountedNode() else {
           continue
         }
@@ -515,7 +584,7 @@ public partial class Window {
     } catch (error Exception) {
       try {
         while nextFiber < fiberBatch.Count {
-          let fiber = fiberBatch[nextFiber]
+          let fiber = fiberBatch[nextFiber].Cell
           nextFiber = nextFiber + 1
           guard let mounted = fiber.MountedNode() else {
             continue
@@ -531,38 +600,6 @@ public partial class Window {
     } finally {
       fiberBatch.Clear()
     }
-  }
-
-  private func addFiber(fiber Cell) {
-    fiberBatch.Add(fiber)
-  }
-
-  private func sortFibersParentFirst() {
-    var i int32 = 1
-    while i < fiberBatch.Count {
-      let fiber = fiberBatch[i]
-      let depth = fiberDepth(fiber)
-      var j = i
-      while j > 0 && fiberDepth(fiberBatch[j - 1]) > depth {
-        fiberBatch[j] = fiberBatch[j - 1]
-        j--
-      }
-      fiberBatch[j] = fiber
-      i++
-    }
-  }
-
-  private func fiberDepth(fiber Cell) int32 {
-    guard let mounted = fiber.MountedNode() else {
-      return Int32.MaxValue
-    }
-    var depth int32
-    var current Node = mounted
-    while current.Parent != nil {
-      depth++
-      current = current.Parent!!
-    }
-    return depth
   }
 
   private func replaceFiberRoot(previous Node, replacement Node) {

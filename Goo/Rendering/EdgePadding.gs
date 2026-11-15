@@ -8,7 +8,7 @@ internal func resolveEdgePadding(n Node, edge YGEdge, percentBasis float32) floa
     case YGEdge.Top: n.PaddingTop
     case YGEdge.Right: n.PaddingRight
     case YGEdge.Bottom: n.PaddingBottom
-    default: Length {}
+    default: NodeLength {}
   }
   let value = explicit.Unit == LengthUnit.Unset ? n.Padding : explicit
   if value.Unit == LengthUnit.Px { return value.Value }

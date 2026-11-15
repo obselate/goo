@@ -13,7 +13,7 @@ internal class TextEditorInputFixtures {
         using let controller = TextEditorController(document)
         using let layer = TextPresentationLayer(document)
         layer.SetStyle("large", TextRange(0, 30), Style{ FontSize: 30 })
-        let node = Reconciler{ Res: Resolver{} }.Mount(TextEditor(controller, []TextPresentationLayer{layer}) {
+        let node = Reconciler{ Res: Resolver{} }.Mount(TextEditor(){Controller = controller, Layers = []TextPresentationLayer{layer},
           Width = 160, Height = float64(height), FontSize = 14, LineHeight = 1.5,
           TextWrap = wrap, OverscanLines = 40,
         })
@@ -483,7 +483,7 @@ internal class TextEditorInputCell : Cell {
     Controller = controller
   }
 
-  override func Build() Blob -> TextEditor(Controller) {
+  override func Build() Blob -> TextEditor(){ Controller = Controller,
     Key = "editor",
     Width = 300.0,
     Height = 100.0,
@@ -497,7 +497,7 @@ internal class TextEditorShortCell : Cell {
 
   internal init(controller TextEditorController) { this.controller = controller }
 
-  override func Build() Blob -> TextEditor(controller) { Width = 200.0, Height = 12.0, FontSize = 14.0 }
+  override func Build() Blob -> TextEditor(){ Controller = controller, Width = 200.0, Height = 12.0, FontSize = 14.0 }
 }
 
 internal class TextEditorWrappedCell : Cell {
@@ -505,7 +505,7 @@ internal class TextEditorWrappedCell : Cell {
 
   internal init(controller TextEditorController) { this.controller = controller }
 
-  override func Build() Blob -> TextEditor(controller) {
+  override func Build() Blob -> TextEditor(){ Controller = controller,
     Width = 220.0, Height = 200.0, FontSize = 14.0, TextWrap = TextWrap.Wrap,
   }
 }
@@ -520,7 +520,7 @@ internal class TextEditorInputReadOnlyCell : Cell {
   }
 
   override func Build() Blob -> Container() {.Width: 320.0,.Height: 120.0,.FlexDirection: FlexDirection.Row,
-    TextEditor(Controller) {
+    TextEditor(){ Controller = Controller,
         Key = "editor",
         Width = 250.0,
         Height = 100.0,
@@ -544,7 +544,7 @@ internal class TextEditorGutterCell : Cell {
 
   internal init(controller TextEditorController) { this.controller = controller }
 
-  override func Build() Blob -> TextEditor(controller) {
+  override func Build() Blob -> TextEditor(){ Controller = controller,
     Key = "gutter-editor",
     Width = EditorWidth,
     Height = 278.0,

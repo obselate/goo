@@ -174,7 +174,7 @@ internal sealed class MacMenuBridge {
                 return menu
             } catch (error Exception) {
                 Release(menu)
-                throw error
+                rethrow
             }
         }
 

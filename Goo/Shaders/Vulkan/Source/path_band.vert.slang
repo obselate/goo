@@ -38,12 +38,18 @@ PathBandVertexOutput main(
     };
     float2 minimum = float2(asfloat(pathWord(8u)), asfloat(pathWord(9u)));
     float2 maximum = float2(asfloat(pathWord(10u)), asfloat(pathWord(11u)));
+    float2 origin = pc.params.w == 0u ? minimum : float2(0.0);
     float2 inflation = abs(pc.sampleStep.zw);
-    minimum -= inflation;
-    maximum += inflation;
-    float2 path = lerp(minimum, maximum, positions[vertexIndex]);
-    float3 homogeneous = float3(path, 1.0);
-    float2 clip = float2(dot(pc.transform0.xyz, homogeneous), dot(pc.transform1.xyz, homogeneous));
+    float2 path = lerp(minimum - origin - inflation, maximum - origin + inflation,
+        positions[vertexIndex]);
+    float3 anchor = float3(origin, 1.0);
+    float2 clip = float2(dot(pc.transform0.xyz, anchor), dot(pc.transform1.xyz, anchor))
+        + float2(dot(pc.transform0.xy, path), dot(pc.transform1.xy, path));
+    if (pc.params.w != 0u)
+    {
+        float3 globalPath = float3(path, 1.0);
+        clip = float2(dot(pc.transform0.xyz, globalPath), dot(pc.transform1.xyz, globalPath));
+    }
     PathBandVertexOutput output;
     output.position = float4(clip, 0.0, 1.0);
 #ifndef GOO_CLIP_MASK

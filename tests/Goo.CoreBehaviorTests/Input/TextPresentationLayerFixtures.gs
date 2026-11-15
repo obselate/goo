@@ -70,7 +70,7 @@ internal class TextPresentationLayerFixtures {
       using let controller = TextEditorController(document)
       using let layer = TextPresentationLayer(document)
       layer.SetStyle("color", TextRange(0, 6), Style{ Color: Color.Parse("#ff0000") })
-      let node = Reconciler{ Res: Resolver{} }.Mount(TextEditor(controller, []TextPresentationLayer{layer}) {
+      let node = Reconciler{ Res: Resolver{} }.Mount(TextEditor(){Controller = controller, Layers = []TextPresentationLayer{layer},
         Width = 200, FontSize = 14, LineHeight = lineHeight,
       })
       Layout{}.Calculate(node, 200.0F, 100.0F)
@@ -197,7 +197,7 @@ internal class TextPreviewMeasureCell : Cell {
     let root = Container{ Width: 320, Height: 120, FlexDirection: FlexDirection.Column }
     root.Children.Add(Container{ Height: 20 })
     let wrapper = Container{ FlexGrow: 1, FlexBasis: 0, MinWidth: 0, MinHeight: 0 }
-    wrapper.Children.Add(TextEditor(controller) {
+    wrapper.Children.Add(TextEditor(){ Controller = controller,
       Position = PositionType.Absolute,
       Left = 0,
       Right = 0,
@@ -221,7 +221,7 @@ internal class TextPresentationCacheCell : Cell {
     this.layer = layer
   }
 
-  override func Build() Blob -> TextEditor(controller, []TextPresentationLayer{ layer }) {
+  override func Build() Blob -> TextEditor(){ Controller = controller, Layers = []TextPresentationLayer{ layer },
     Width = 300,
     Height = 100,
     ReadOnly = true,
@@ -239,7 +239,7 @@ internal class TextInlineBaselineCell : Cell {
     this.layer = layer
   }
 
-  override func Build() Blob -> TextEditor(controller, []TextPresentationLayer{layer}) {
+  override func Build() Blob -> TextEditor(){ Controller = controller, Layers = []TextPresentationLayer{layer},
     Width = float64(this.Width),
     Height = 150,
     ReadOnly = true,

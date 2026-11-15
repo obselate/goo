@@ -93,6 +93,47 @@ internal class VulkanSceneCompilerFixtures {
     return true
   }
 
+  func TransparentLeafChunksMatchGenericPaint() bool {
+    let root = Reconciler{Res: Resolver{}}.Mount(Container{
+      Width: 120, Height: 100,
+      Container{Width: 40, Height: 20, Opacity: 0.5, BorderRadius: 8},
+      Container{Width: 40, Height: 20, BackgroundColor: Color.White},
+    })
+    try {
+      Layout().Calculate(root, 120.0F, 100.0F)
+      let compiler = VulkanSceneCompiler(64)
+      let actual = compiler.Compile(root, Color.Transparent, 120.0F, 100.0F)
+      root.Children[0].Hovered = true
+      let oracle = VulkanSceneCompiler(64)
+      let expected = oracle.Compile(root, Color.Transparent, 120.0F, 100.0F)
+      if actual.ChunkCount != expected.ChunkCount || actual.DrawCount != expected.DrawCount
+        || actual.VisibleNodeCount != expected.VisibleNodeCount
+        || actual.EmittedNodeCount != expected.EmittedNodeCount
+        || actual.UnsupportedPrimitiveCount != expected.UnsupportedPrimitiveCount { return false }
+      for index in 0 ... compiler.Frame.ChunkCount {
+        let left = compiler.Frame.Chunks[index]
+        let right = oracle.Frame.Chunks[index]
+        if left.OwnerId != right.OwnerId || left.ContentKey != right.ContentKey
+          || left.TopologyKey != right.TopologyKey || left.TransformKey != right.TransformKey
+          || left.DrawCount != right.DrawCount || left.ResourceCount != right.ResourceCount
+          || left.RetentionState != right.RetentionState { return false }
+      }
+      let leaf = root.Children[0]
+      leaf.Hovered = false
+      leaf.BackgroundColor = Color.White
+      leaf.BumpScenePaintVersion()
+      compiler.Compile(root, Color.Transparent, 120.0F, 100.0F)
+      if compiler.Frame.SolidBoxCount + compiler.Frame.RoundedBoxCount != 2 { return false }
+      leaf.BackgroundColor = Color.Transparent
+      leaf.BumpScenePaintVersion()
+      compiler.Compile(root, Color.Transparent, 120.0F, 100.0F)
+      return compiler.Frame.SolidBoxCount == 1 && compiler.Frame.RoundedBoxCount == 0
+        && leaf.VulkanOwner?.RetainedLeafValid == false
+    } finally {
+      NodeLifecycle.DisposeTree(root)
+    }
+  }
+
   func OpaqueViewportRootSkipsCoveredBackground() bool {
     let resolver = Resolver{}
     let root = Reconciler{Res: resolver}.Mount(Container{

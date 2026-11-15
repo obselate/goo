@@ -46,7 +46,6 @@ class GalleryPosterReflowItem {
         if Math.Abs(delta.X) < 0.01 && Math.Abs(delta.Y) < 0.01 {
             return
         }
-        offset.Snap(Point{X: current.X + delta.X, Y: current.Y + delta.Y,})
-        offset.To(Point{}, GalleryPosterReflowSpec)
+        offset.Play(Point{X: current.X + delta.X, Y: current.Y + delta.Y,}, Point{}, GalleryPosterReflowSpec)
     }
 }

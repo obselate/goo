@@ -65,7 +65,7 @@ func RunGlyphUploadSmoke() {
     File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf")))
   font.Register()
   let cell = GlyphUploadSmokeCell{}
-  let window = Window{ Title: "Goo glyph upload smoke", Width: 200, Height: 60,
+  let window = Window{ Title: "Goo glyph upload smoke", Size: LayoutSize(200, 60),
     VSync: false, Root: cell }
   window.Open()
   try {

@@ -72,7 +72,7 @@ internal class WindowScheduler {
         nextWindow = 0
         nativeStarts?.Clear()
         nativeStarts = nil
-        Window.CloseApplicationActivations()
+        Application.CloseActivations()
       } else if nextWindow >= windows.Count {
         nextWindow = 0
       }

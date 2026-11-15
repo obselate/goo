@@ -64,7 +64,7 @@ func RunBorderSnapScale(uiScale float32) {
   let originalError = Console.Error
   Console.SetError(capturedError)
   let opened = Window{
-    Title: "Goo border snap gate", Width: int32(180.0F * uiScale), Height: int32(40.0F * uiScale),
+    Title: "Goo border snap gate", Size: LayoutSize(float64(int32(180.0F * uiScale)) / float64(uiScale), float64(int32(40.0F * uiScale)) / float64(uiScale)),
     UiScale: uiScale, VSync: false, Decorated: false, Background: Color.White, Root: BorderSnapCell(),
   }
   try {

@@ -19,6 +19,7 @@ public partial class Window {
   public prop AccessibilityAdapter AccessibilityAdapter? {
     get {
       requireUiThread("Window.AccessibilityAdapter")
+      Cell.ObserveUntrackedRead()
       return accessibility?.Adapter
     }
     set(v) {
@@ -40,6 +41,7 @@ public partial class Window {
   public prop LastAccessibilityError Exception? {
     get {
       requireUiThread("Window.LastAccessibilityError")
+      Cell.ObserveUntrackedRead()
       return accessibility?.LastError
     }
   }
@@ -56,8 +58,8 @@ public partial class Window {
     if !Double.IsFinite(y) || Math.Abs(y) > float64(Single.MaxValue) {
       throw ArgumentOutOfRangeException("y")
     }
-    if nativeHidePending || IsInputBlocked || x < 0.0 || y < 0.0 || x >= float64(Width) / float64(UiScale)
-      || y >= float64(Height) / float64(UiScale) { return nil }
+    if nativeHidePending || IsInputBlocked || x < 0.0 || y < 0.0 || x >= Size.Width
+      || y >= Size.Height { return nil }
     guard let root = node, let manager = accessibility else { return nil }
     guard let hit = hitTopmost(root, float32(x), float32(y), manager) else { return nil }
     return manager.DiagnosticNodeFor(hit)?.Id

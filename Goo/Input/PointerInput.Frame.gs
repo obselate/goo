@@ -28,6 +28,7 @@ internal partial class PointerInput {
             var changed = false
             for i in 0 ... count {
                 if motionResetVersion != resetVersion { break }
+                resolver.Owner?.SetInputModifiers(samples[i].Modifiers)
                 if Dispatch(samples[i], root, resolver, timeS, text) { changed = true }
             }
             return changed

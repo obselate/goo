@@ -46,8 +46,7 @@ func RunClipCaptureSmoke() {
   try {
     let opened = Window{
       Title: "Goo clip capture submission gate",
-      Width: 400,
-      Height: 190,
+      Size: LayoutSize(400, 190),
       VSync: false,
       Root: root,
     }
@@ -84,7 +83,7 @@ func RunClipCaptureSmoke() {
       }
     Require(WindowReadbackTestFixture.SubmissionReadyForReconcile(opened),
       "Clip capture offscreen submit did not complete before reconciliation")
-    Require(WindowReadbackTestFixture.Resize(opened, metrics.LogicalWidth, metrics.LogicalHeight,
+    Require(WindowReadbackTestFixture.Resize(opened, metrics.NativeWidth, metrics.NativeHeight,
         metrics.FramebufferWidth + 1, metrics.FramebufferHeight + 1),
       "Clip capture resize did not reconcile the pending submission")
 
@@ -156,8 +155,7 @@ func RunHideResourcesSmoke() {
   let originalError = Console.Error
   let window = Window{
     Title: "Goo hidden resource lifetime gate",
-    Width: 300,
-    Height: 170,
+    Size: LayoutSize(300, 170),
     VSync: false,
     Background: Color.Rgb(12, 20, 32),
     Root: RoundedResizeFirstFrameCell{},
@@ -303,16 +301,14 @@ func RunHiddenDeviceRecoverySmoke() {
   let originalError = Console.Error
   let hiddenWindow = Window{
     Title: "Goo hidden device recovery",
-    Width: 300,
-    Height: 170,
+    Size: LayoutSize(300, 170),
     VSync: false,
     Background: Color.Rgb(12, 20, 32),
     Root: RoundedResizeFirstFrameCell{},
   }
   let newWindow = Window{
     Title: "Goo new window device recovery",
-    Width: 300,
-    Height: 170,
+    Size: LayoutSize(300, 170),
     VSync: false,
     Background: Color.Rgb(12, 20, 32),
     Root: RoundedResizeFirstFrameCell{},
@@ -334,7 +330,7 @@ func RunHiddenDeviceRecoverySmoke() {
     AwaitHiddenResources(hiddenWindow)
     VulkanSharedRuntime.FailNextGraphicsSubmissionForTest()
     let pending = hiddenWindow.RenderOffscreenAsync(ReadbackSmokeCell{},
-      OffscreenRenderOptions(64.0F, 64.0F, 64u, 64u, Color.Black, 16777216L),
+      OffscreenRenderOptions(LayoutSize(64.0F, 64.0F), 64u, 64u, Color.Black, 16777216L),
       CancellationToken.None)
     let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
     while !pending.IsCompleted && Stopwatch.GetTimestamp() < deadline {
@@ -387,11 +383,11 @@ func RunPendingDeviceRecoverySmoke() {
   using let entered = ManualResetEventSlim(false)
   using let release = ManualResetEventSlim(false)
   let owner = Window{
-    Title: "Goo pending recovery owner", Width: 300, Height: 170, VSync: false,
+    Title: "Goo pending recovery owner", Size: LayoutSize(300, 170),  VSync: false,
     Background: Color.Rgb(12, 20, 32), Root: RoundedResizeFirstFrameCell{},
   }
   let child = Window{
-    Title: "Goo pending recovery child", Width: 300, Height: 170, VSync: false,
+    Title: "Goo pending recovery child", Size: LayoutSize(300, 170),  VSync: false,
     Owner: owner, Background: Color.Rgb(12, 20, 32), Root: RoundedResizeFirstFrameCell{},
   }
   try {
@@ -455,11 +451,11 @@ func RunZeroExtentDeviceRecoverySmoke() {
   let capturedError = StringWriter()
   let originalError = Console.Error
   let owner = Window{
-    Title: "Goo zero extent recovery owner", Width: 300, Height: 170, VSync: false,
+    Title: "Goo zero extent recovery owner", Size: LayoutSize(300, 170),  VSync: false,
     Background: Color.Rgb(12, 20, 32), Root: RoundedResizeFirstFrameCell{},
   }
   let child = Window{
-    Title: "Goo zero extent recovery child", Width: 300, Height: 170, VSync: false,
+    Title: "Goo zero extent recovery child", Size: LayoutSize(300, 170),  VSync: false,
     Owner: owner, Background: Color.Rgb(12, 20, 32), Root: RoundedResizeFirstFrameCell{},
   }
   var childTarget VulkanWindowTarget?
@@ -556,7 +552,7 @@ class RenderBudgetSiblingCell : Cell {
 func RunRenderBudgetPressureSmoke() {
   let root = RenderBudgetSiblingCell{}
   let window = Window{ Title: "Goo render budget pressure gate",
-    Width: 1024, Height: 600, VSync: false, Root: root }
+    Size: LayoutSize(1024, 600),  VSync: false, Root: root }
   try {
     window.Open()
     WindowReadbackTestFixture.ForceRender(window, 0.0)

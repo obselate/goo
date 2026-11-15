@@ -96,7 +96,7 @@ internal unsafe partial class SdlHost {
     return ReadDisplay(SDL.GetDisplayForWindow(window))
   }
 
-  public func TrySetFullscreenDisplay(display WindowDisplayId) WindowOperationResult {
+  public func SetFullscreenDisplay(display WindowDisplayId) WindowOperationResult {
     if disposed || IsClosing { return WindowOperationResult.Closed }
     if layerWindow != nil { return WindowOperationResult.Unsupported }
     let id = display.NativeValue

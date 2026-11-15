@@ -167,7 +167,7 @@ func RunNativeDataTransferSmoke() {
     let effect = DragEffect(int32.Parse(Environment.GetEnvironmentVariable("GOO_TRANSFER_EFFECT")!!))
     let expected = NativeTransferExpected(directory, files)
     let scene = NativeTransferScene(expected, outgoing, effect, reject, cancel, files, directory)
-    let window = Window{Title: Environment.GetEnvironmentVariable("GOO_TRANSFER_TITLE")!!, Width: 480, Height: 160, Root: scene}
+    let window = Window{Title: Environment.GetEnvironmentVariable("GOO_TRANSFER_TITLE")!!, Size: LayoutSize(480, 160),  Root: scene}
     scene.Owner = window
     var sibling Window?
     var ticker NativeTransferTicker?
@@ -185,13 +185,13 @@ func RunNativeDataTransferSmoke() {
         if cancel {
             let counter = NativeTransferTicker{}
             ticker = counter
-            let other = Window{Title: "Goo transfer animation", Width: 240, Height: 120, Root: counter}
+            let other = Window{Title: "Goo transfer animation", Size: LayoutSize(240, 120),  Root: counter}
             sibling = other
             other.Open()
-            other.SetInterval(() -> counter.Advance(), 16.0)
+            other.Every(16.0, () -> counter.Advance())
             scene.OnStart = () -> {
                 startTicks = counter.Ticks
-                other.SetTimeout(() -> window.RequestClose(), 600.0)
+                other.After(600.0, () -> window.RequestClose())
             }
             scene.OnEnd = () -> {
                 NativeTransferRequire(counter.Ticks - startTicks >= 5, "Stationary native tracking stopped sibling animation")

@@ -17,7 +17,7 @@ internal class FixtureKeyBindings {
         let primary = InputPolicy.Mac ? modifiers.Super : modifiers.Ctrl
         let word = InputPolicy.Mac ? modifiers.Alt : modifiers.Ctrl
         let extend = modifiers.Shift
-        bindings.Add(KeyBinding{ Key: Key.Tab, Modifiers: modifiers, Action: () -> {
+        bindings.Add(KeyBinding{ Key: Key.Tab, Modifiers: modifiers, OnPress: () -> {
           if node.Kind == NodeKind.Editor && !node.EditorReadOnly {
             input.ExecuteEditorCommand(root, resolver, TextCommand{
               Kind: extend ? TextCommandKind.Outdent : TextCommandKind.InsertTab })
@@ -25,11 +25,11 @@ internal class FixtureKeyBindings {
         } })
         if node.Kind == NodeKind.Button {
           bindings.Add(KeyBinding{ Key: Key.Enter, Modifiers: modifiers,
-            Action: () -> { input.BeginPress(resolver, node)
+            OnPress: () -> { input.BeginPress(resolver, node)
               hitActivate(root, node) },
             OnRelease: () -> { input.EndPress(root, resolver, node, false) } })
           bindings.Add(KeyBinding{ Key: Key.Space, Modifiers: modifiers,
-            Action: () -> { input.BeginPress(resolver, node) },
+            OnPress: () -> { input.BeginPress(resolver, node) },
             OnRelease: () -> { input.EndPress(root, resolver, node, true) } })
         }
         if node.Kind != NodeKind.Entry && node.Kind != NodeKind.Editor { continue }
@@ -47,12 +47,12 @@ internal class FixtureKeyBindings {
           word ? TextCommandKind.DeleteWordForward : TextCommandKind.DeleteForward, true)
         let multiline = node.Kind == NodeKind.Editor
         for key in []Key{ Key.Enter, Key.KeypadEnter } {
-          bindings.Add(KeyBinding{ Key: key, Modifiers: modifiers, Action: () -> {
+          bindings.Add(KeyBinding{ Key: key, Modifiers: modifiers, OnPress: () -> {
             input.ExecuteEditorCommand(root, resolver, TextCommand{
               Kind: multiline && !primary ? TextCommandKind.Insert : TextCommandKind.Submit, Text: "\n" })
           } })
         }
-        bindings.Add(KeyBinding{ Key: Key.Escape, Modifiers: modifiers, Action: () -> {
+        bindings.Add(KeyBinding{ Key: Key.Escape, Modifiers: modifiers, OnPress: () -> {
           if !input.CancelEditorComposition(root) && !multiline {
             input.ExecuteEditorCommand(root, resolver, TextCommand{ Kind: TextCommandKind.CancelEdit })
           }
@@ -84,7 +84,7 @@ internal class FixtureKeyBindings {
 
     private func add(bindings List[KeyBinding], input InputCoordinator, root Node,
       resolver Resolver, key Key, modifiers KeyModifiers, kind TextCommandKind, repeat bool) {
-        bindings.Add(KeyBinding{ Key: key, Modifiers: modifiers, Repeat: repeat, Action: () -> {
+        bindings.Add(KeyBinding{ Key: key, Modifiers: modifiers, Repeat: repeat, OnPress: () -> {
           input.ExecuteEditorCommand(root, resolver, TextCommand{ Kind: kind, ExtendSelection: modifiers.Shift })
         } })
       }

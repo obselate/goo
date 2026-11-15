@@ -47,15 +47,15 @@ internal unsafe partial class SdlRuntime {
     private var mainThreadId int32
     private var references int32
     private var wakeEventType uint32
+    private var wakePending int32
     private var eventModifierMask uint16
     private let cursors []SDLCursorPtr = [int32(Cursor.ResizeWest) + 1]SDLCursorPtr
     private var currentCursor Cursor = Cursor.Default
     private var applicationConfigured bool
-    private var applicationName string?
-    private var applicationVersion string?
-    private var applicationIdentifier string?
 
-    internal prop ApplicationIdentifier string { get -> applicationIdentifier ?? "" }
+    internal func EnsureLibrary() {
+      if !libraryConfigured { throw InvalidOperationException("Goo could not configure SDL3 symbols.") }
+    }
 
     private func ConfigureLibrary() bool {
       if OperatingSystem.IsLinux() && !RuntimeFeature.IsDynamicCodeSupported {
@@ -65,8 +65,10 @@ internal unsafe partial class SdlRuntime {
         }
         if NativeLibrary.TryGetExport(handle, "SDL_IsMainThread", out var symbol) && symbol != nint(0) {
           LibraryLoader.LoadFrom("libSDL3", handle)
+          return true
         }
-      } else if !OperatingSystem.IsAndroid() {
+      }
+      if !OperatingSystem.IsAndroid() {
         let assembly = typeof(SdlRuntime).Assembly
         let directory = if RuntimeFeature.IsDynamicCodeSupported {
           Path.GetDirectoryName(assembly.Location) ?? AppContext.BaseDirectory
@@ -98,7 +100,8 @@ internal unsafe partial class SdlRuntime {
             + Path.Combine(directory, "runtimes", rid, "native") + ", " + Path.GetDirectoryName(path)
             + (if nativeDirectories.Length == 0 { "" } else { ", " + String.Join(", ", nativeDirectories) })
             + ". In a Goo Linux source checkout, run: "
-            + "bash .github/scripts/build-sdl-linux-x64.sh artifacts/native/libSDL3.so")
+            + "bash .github/scripts/build-sdl-linux-x64.sh artifacts/native/libSDL3.so"
+            + ". A NativeAOT source build must import Goo/Goo.targets.")
         }
         let handle = NativeLibrary.Load(path)
         NativeLibrary.SetDllImportResolver(assembly,
@@ -108,35 +111,16 @@ internal unsafe partial class SdlRuntime {
       return true
     }
 
-    internal func ConfigureApplication(name string, version string, identifier string) {
-      if String.IsNullOrWhiteSpace(name) {
-        throw ArgumentException("name")
-      }
-      if String.IsNullOrWhiteSpace(version) {
-        throw ArgumentException("version")
-      }
-      if String.IsNullOrWhiteSpace(identifier) {
-        throw ArgumentException("identifier")
-      }
-
+    internal func ApplyApplicationIdentity(name string, version string, identifier string) {
       lock (sync) {
-        if applicationConfigured {
-          if applicationName == name && applicationVersion == version && applicationIdentifier == identifier {
-            return
-          }
-          throw InvalidOperationException(
-            "Goo application metadata is already configured with different values.")
-        }
-        if mainThreadId != 0 || SDL.WasInit(0u) != 0u {
+        if applicationConfigured { return }
+        if SDL.WasInit(0u) != 0u {
           throw InvalidOperationException(
             "Goo application metadata must be configured before SDL initialization.")
         }
         if !SDL.SetAppMetadata(name, version, identifier) {
           throw InvalidOperationException("SDL_SetAppMetadata failed: " + SDL.GetErrorS())
         }
-        applicationName = name
-        applicationVersion = version
-        applicationIdentifier = identifier
         applicationConfigured = true
       }
     }
@@ -200,11 +184,11 @@ internal unsafe partial class SdlRuntime {
         if references == 0 {
           return
         }
+        if Interlocked.Exchange(ref wakePending, int32(1)) != 0 { return }
         var wakeEvent = SDLEvent{ Type: wakeEventType }
         let added = SDL.PeepEvents(&wakeEvent, 1, SDLEventAction.Addevent, 0u, 0u)
         if added != 1 {
-          throw InvalidOperationException(
-            "SDL_PeepEvents failed to enqueue wake event: " + SDL.GetErrorS())
+          Interlocked.Exchange(ref wakePending, int32(0))
         }
       }
     }
@@ -266,6 +250,7 @@ internal unsafe partial class SdlRuntime {
       lock (sync) {
         RequireMainThreadLocked("Window.Open")
         if references == 0 {
+          Application.ApplyNativeIdentity()
           let requiresWayland = OperatingSystem.IsLinux()
           if requiresWayland && !SDL.SetHintWithPriority(
             SDL.SDL_HINT_VIDEO_DRIVER, "wayland", SDLHintPriority.Override) {
@@ -298,6 +283,7 @@ internal unsafe partial class SdlRuntime {
             throw InvalidOperationException("SDL_RegisterEvents failed to allocate a wake event type.")
           }
           eventModifierMask = SDL.GetModState()
+          Interlocked.Exchange(ref wakePending, int32(0))
         }
         references++
       }
@@ -351,6 +337,7 @@ internal unsafe partial class SdlRuntime {
     }
 
     internal func DispatchOne(nativeEvent SDLEvent) {
+      if nativeEvent.Type == wakeEventType { Interlocked.Exchange(ref wakePending, int32(0)) }
       let previousTimestamp = PopupInputContext.Timestamp
       PopupInputContext.Timestamp = nativeEvent.Common.Timestamp
       try { DispatchNativeEvent(nativeEvent) }

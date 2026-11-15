@@ -75,7 +75,7 @@ internal class BoxGeometry {
         case YGEdge.Top: n.BorderTopWidth
         case YGEdge.Right: n.BorderRightWidth
         case YGEdge.Bottom: n.BorderBottomWidth
-        default: Length {}
+        default: NodeLength {}
       }
       return width.Px
     }

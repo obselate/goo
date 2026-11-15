@@ -13,15 +13,10 @@ import Goo.Widgets.Actions
 
 class Example : Cell {
     private var dark bool
-    private let window Window
-
-    init(window Window) {
-        this.window = window
-    }
 
     override func Build() Blob {
         let theme = Theme.Read()
-        return Container{
+        return Column{
             BasedOn: theme.CanvasStyle,
             Width: Percent(100),
             Height: Percent(100),
@@ -36,7 +31,7 @@ class Example : Cell {
                 Content: "Switch theme",
                 OnClick: () -> {
                     dark = !dark
-                    Theme.SetMode(window, if dark { ThemeMode.Dark } else { ThemeMode.Light })
+                    Theme.SetMode(Host, if dark { ThemeMode.Dark } else { ThemeMode.Light })
                 },
             },
         }
@@ -44,10 +39,9 @@ class Example : Cell {
 }
 
 func Main() {
-    Window.ConfigureApplication("Styling and themes", "1.0.0", "com.example.tutorial")
-    let window = Window{Title: "Styling and themes", Width: 400, Height: 220}
-    window.Root = Example(window)
+    Application.Configure("Styling and themes", "1.0.0", "com.example.tutorial")
+    let window = Window{Title: "Styling and themes", Size: LayoutSize(400, 220), Root: Example{}}
     Theme.Attach(window, Theme.Default)
-    window.Run()
+    Application.Run(window)
 }
 ```

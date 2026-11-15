@@ -199,7 +199,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
         destroyQueryPool(timestampDevice, timestampPool, nil)
         timestampPool = 0uL
         timestampPoolCreated = false
-        throw error
+        rethrow
       }
       timestampPoolCreated = true
       diagnostics?.RecordResult(VulkanDiagnosticEventIds.GpuTimestamp, int32(result))

@@ -14,7 +14,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       CreateDescriptorBlock(capacity, 0)
     } catch (error Exception) {
       DestroyGeneration()
-      throw error
+      rethrow
     }
     nearestSampler = CreateSampler(VkConstants.VK_FILTER_NEAREST)
     linearSampler = CreateSampler(VkConstants.VK_FILTER_LINEAR)
@@ -86,7 +86,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     } catch (error Exception) {
       let destroySampler = dispatch.vkDestroySampler
       destroySampler(device, sampler, nil)
-      throw error
+      rethrow
     }
     return sampler
   }
@@ -124,7 +124,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
           CreateStagingBuffer(stagingByteCapacity)
         } catch (error Exception) {
           DestroyStagingBuffer()
-          throw error
+          rethrow
         }
       }
     }
@@ -156,7 +156,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       uploadRing.GrowCapacity(byteCapacity)
     } catch (error Exception) {
       ReleaseStagingBuffer(creation.Buffer, creation.Allocation)
-      throw error
+      rethrow
     }
     let staleBuffer = stagingBuffer
     let staleAllocation = stagingAllocation

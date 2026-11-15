@@ -87,7 +87,7 @@ internal partial class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   public func SetState(value WindowState) { }
   public func GetDisplays() IReadOnlyList[WindowDisplay] -> Array.Empty[WindowDisplay]()
   public func GetCurrentDisplay() WindowDisplay? -> nil
-  public func TrySetFullscreenDisplay(display WindowDisplayId) WindowOperationResult -> WindowOperationResult.Unsupported
+  public func SetFullscreenDisplay(display WindowDisplayId) WindowOperationResult -> WindowOperationResult.Unsupported
   public func CapturePlacement() WindowPlacementResult -> WindowPlacementResult(WindowOperationResult.Unsupported)
   public func ApplyPlacement(value WindowPlacement) WindowPlacementResult -> WindowPlacementResult(WindowOperationResult.Unsupported)
   public func RequestActivation() WindowOperationResult -> WindowOperationResult.Unsupported
@@ -108,8 +108,8 @@ internal partial class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   }
   public func SetImeArea(x int32, y int32, width int32, height int32, cursor int32) bool ->
   host.SetTextArea(x, y, width, height, cursor)
-  public func GetClipboardText() string -> host.ClipboardText()
-  public func SetClipboardText(value string) { host.CopyText(value) }
+  public func GetClipboardText() ClipboardTextResult -> host.ClipboardText()
+  public func SetClipboardText(value string) ClipboardWriteResult -> host.CopyText(value)
   public func BeginClose() { closing = true }
   public func Dispose() {
     host.Unbind()

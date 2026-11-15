@@ -22,7 +22,7 @@ func RunSvgMorphSmoke() {
     let asset = Svg.Load(Path.Combine(AppContext.BaseDirectory, "SvgCorpus", "s13-morph.svg"))
     let originalHash = asset.PathForNode(1).GetHashCode()
     let window = Window{
-        Title: "Goo SVG morph regression", Width: 256, Height: 256,
+        Title: "Goo SVG morph regression", Size: LayoutSize(256, 256),
         VSync: false, Background: Color.White, Root: SvgMorphSmokeCell(asset),
     }
     try {

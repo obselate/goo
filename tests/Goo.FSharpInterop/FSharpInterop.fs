@@ -60,11 +60,11 @@ type MountStore(initialPayload: string, initialTick: int) as this =
 
     member this.DirectMount(key: string) : Blob =
         let factory = Func<Cell>(fun () -> this.CreateCell())
-        Cell.Mount<Cell>(factory, key)
+        Cell.Mount<Cell>(key, factory)
 
     member this.CurriedMount(key: string) : Blob =
         let mount key (create: unit -> Cell) =
-            Cell.Mount<Cell>(Func<Cell>(create), key)
+            Cell.Mount<Cell>(key, Func<Cell>(create))
         mount key (fun () -> this.CreateCell())
 
 [<Sealed>]

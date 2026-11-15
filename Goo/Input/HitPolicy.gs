@@ -9,6 +9,8 @@ internal func resolvedHitTestSelf(b Blob, focusable bool, entries StyleEntries?,
         if c.HasAuthoredHitTestSelf { return c.HitTestSelf }
         if c.DragsWindow { return true }
       }
+      case row is Row { if row.HasAuthoredHitTestSelf { return row.HitTestSelf } }
+      case column is Column { if column.HasAuthoredHitTestSelf { return column.HitTestSelf } }
       case _ { }
     }
     if b is Button { return true }
@@ -20,6 +22,7 @@ internal func resolvedHitTestSelf(b Blob, focusable bool, entries StyleEntries?,
     if b.OnPointerMove != nil { return true }
     if b.OnPointerUp != nil { return true }
     if b.OnPointerCancel != nil { return true }
+    if b.OnPointerDrag != nil { return true }
     if b.OnPointerEnter != nil { return true }
     if b.OnPointerLeave != nil { return true }
     if b.OnWheel != nil { return true }

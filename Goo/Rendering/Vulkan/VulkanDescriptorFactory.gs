@@ -68,7 +68,7 @@ internal unsafe class VulkanDescriptorFactory {
               try { accounting.Release() } catch (cleanup Exception) { }
             }
           }
-          throw error
+          rethrow
         }
       }
 
@@ -161,7 +161,7 @@ internal unsafe class VulkanDescriptorFactory {
             descriptorSets[index] = 0uL
             index++
           }
-          throw error
+          rethrow
         }
       }
 

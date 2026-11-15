@@ -455,8 +455,8 @@ class StudioCell : Cell {
             BorderRadius: 8,
             Focusable: true,
             TransitionMs: 100.0,
-            Hover: Style{BackgroundColor: GalleryTheme.Border},
-            Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong},
+            HoverStyle: Style{BackgroundColor: GalleryTheme.Border},
+            FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong},
             Accessibility: Accessibility{Role: AccessibilityRole.Button, Name: label, Selected: selectedStyle,},
             OnClick: func () {
                 SelectProgram(index)
@@ -514,8 +514,8 @@ class StudioCell : Cell {
             BorderRadius: 8,
             Focusable: true,
             TransitionMs: 100.0,
-            Hover: Style{BackgroundColor: GalleryTheme.Border},
-            Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong},
+            HoverStyle: Style{BackgroundColor: GalleryTheme.Border},
+            FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong},
             Accessibility: Accessibility{Role: AccessibilityRole.Radio, Name: label, Selected: selectedStyle,},
             OnClick: func () {
                 palette = index
@@ -732,26 +732,22 @@ class StudioCell : Cell {
                 if selected == 4 {
                     addStudioRipple(pointerX, pointerY)
                 }
-                Rebuild()
             },
             OnPointerMove: func (e PointerEvent) {
                 let bounds = Canvas.BorderBox
                 pointerX = Math.Clamp(e.Position.X / Math.Max(bounds.Width, 1.0), 0.0, 1.0)
                 pointerY = Math.Clamp(e.Position.Y / Math.Max(bounds.Height, 1.0), 0.0, 1.0)
                 pointerPressure = e.Pressure
-                Rebuild()
             },
             OnPointerUp: func (e PointerEvent) {
                 pointerDown = false
                 pointerPressure = 0.0
                 e.ReleaseCapture()
-                Rebuild()
             },
             OnPointerCancel: func (e PointerEvent) {
                 pointerDown = false
                 pointerPressure = 0.0
                 e.ReleaseCapture()
-                Rebuild()
             },
             Children: content,
         }
@@ -787,20 +783,18 @@ class StudioCell : Cell {
                 },
                 FlexGrow: 0.0,
                 FlexShrink: 1.0,
-                Cell.Mount[GalleryRange](
-                    "studio-c0",
-                    func (slider GalleryRange) {
-                        slider.Label = firstLabel()
-                        slider.MinValue = firstMin()
-                        slider.MaxValue = firstMax()
-                        slider.Value = c0
-                        slider.Step = firstStep()
-                        slider.OnChange = func (value float64) {
-                            c0 = value
-                            Rebuild()
-                        }
-                    }
-                ),
+                GalleryRange{
+                    Key: "studio-c0",
+                    Label: firstLabel(),
+                    MinValue: firstMin(),
+                    MaxValue: firstMax(),
+                    Value: c0,
+                    Step: firstStep(),
+                    OnChange: (value float64) -> {
+                        c0 = value
+                        Rebuild()
+                    },
+                },
             }
         )
         controls.Add(
@@ -813,20 +807,18 @@ class StudioCell : Cell {
                 },
                 FlexGrow: 0.0,
                 FlexShrink: 1.0,
-                Cell.Mount[GalleryRange](
-                    "studio-c1",
-                    func (slider GalleryRange) {
-                        slider.Label = secondLabel()
-                        slider.MinValue = secondMin()
-                        slider.MaxValue = secondMax()
-                        slider.Value = c1
-                        slider.Step = secondStep()
-                        slider.OnChange = func (value float64) {
-                            c1 = value
-                            Rebuild()
-                        }
-                    }
-                ),
+                GalleryRange{
+                    Key: "studio-c1",
+                    Label: secondLabel(),
+                    MinValue: secondMin(),
+                    MaxValue: secondMax(),
+                    Value: c1,
+                    Step: secondStep(),
+                    OnChange: (value float64) -> {
+                        c1 = value
+                        Rebuild()
+                    },
+                },
             }
         )
         controls.Add(
@@ -839,20 +831,18 @@ class StudioCell : Cell {
                 },
                 FlexGrow: 0.0,
                 FlexShrink: 1.0,
-                Cell.Mount[GalleryRange](
-                    "studio-c2",
-                    func (slider GalleryRange) {
-                        slider.Label = thirdLabel()
-                        slider.MinValue = thirdMin()
-                        slider.MaxValue = thirdMax()
-                        slider.Value = c2
-                        slider.Step = thirdStep()
-                        slider.OnChange = func (value float64) {
-                            c2 = value
-                            Rebuild()
-                        }
-                    }
-                ),
+                GalleryRange{
+                    Key: "studio-c2",
+                    Label: thirdLabel(),
+                    MinValue: thirdMin(),
+                    MaxValue: thirdMax(),
+                    Value: c2,
+                    Step: thirdStep(),
+                    OnChange: (value float64) -> {
+                        c2 = value
+                        Rebuild()
+                    },
+                },
             }
         )
 
@@ -915,7 +905,7 @@ class StudioCell : Cell {
                         BorderWidth: 1,
                         BorderColor: GalleryTheme.Border,
                         SelectionColor: GalleryTheme.BorderStrong,
-                        Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong,},
+                        FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong,},
                         OnChange: func (value string) {
                             title = value
                             Rebuild()

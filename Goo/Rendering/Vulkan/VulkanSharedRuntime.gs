@@ -112,7 +112,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
               try { objects.Release() } catch (cleanup Exception) { }
             }
           }
-          throw error
+          rethrow
         }
       }
 
@@ -405,7 +405,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
             try { createdAllocator.Dispose() } catch (cleanup Exception) { }
           }
           releaseLoader?.Invoke()
-          throw error
+          rethrow
         }
       }
 

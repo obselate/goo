@@ -112,7 +112,7 @@ class GalleryCell : Cell, IDisposable {
         Position: PositionType.Relative,
         FlexDirection: FlexDirection.Column,
         OnKeyDown: func (e KeyEvent) {
-            if attachedWindow?.PlatformInput.Selection != nil {
+            if e.TargetEditsText {
                 return
             }
             if e.Key == Key.PageUp || e.Key == Key.Left {

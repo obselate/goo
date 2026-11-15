@@ -356,7 +356,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
           let destroySwapchain = dispatch.vkDestroySwapchainKHR
           destroySwapchain(device, swapchain, nil)
           swapchain = 0uL
-          throw error
+          rethrow
         }
 
         var queriedImageCount uint32 = 0u
@@ -380,7 +380,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
         if let recorder = FrameRecorder.Current { Profile(recorder, VulkanDiagnosticEventIds.SwapchainCreate) }
       } catch (error Exception) {
         Dispose()
-        throw error
+        rethrow
       }
     }
 

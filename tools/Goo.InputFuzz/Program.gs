@@ -12,14 +12,11 @@ func Main(args[]string) {
         throw InvalidOperationException("INPUT_TARGET is required")
     let current = Environment.GetEnvironmentVariable("INPUT_CURRENT") ??
         throw InvalidOperationException("INPUT_CURRENT is required")
-    if target is not("svg" or "raster" or "wav") {
-        throw ArgumentException("Unknown managed input target")
-    }
     let seeds = Directory.GetFiles(args[0]).Select(File.ReadAllBytes).ToArray()
     if seeds.Length == 0 {
         throw InvalidOperationException("No seed fixtures")
     }
-    let random = Random(0)
+    let random = Random(int32.Parse(Environment.GetEnvironmentVariable("INPUT_SEED") ?? "0"))
     let clock = Stopwatch.StartNew()
     var count int64 = 0
     for seed in seeds {
@@ -74,6 +71,18 @@ func Check(input[]uint8, target string, current string) {
                 } catch (_ InvalidDataException) { } catch (_ NotSupportedException) { } catch (
                     _ ArgumentOutOfRangeException
                 ) { }
+            }
+            case "text" {
+                TextFuzz.Run(input)
+            }
+            case "tree" {
+                TreeFuzz.Run(input)
+            }
+            case "pointer" {
+                PointerFuzz.Run(input)
+            }
+            case _ {
+                throw ArgumentException("Unknown managed input target")
             }
         }
     } catch {

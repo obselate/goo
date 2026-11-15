@@ -121,7 +121,7 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
         DestroyDescriptorResources()
         DestroyBufferView()
         DestroyAtlasBuffer()
-        throw error
+        rethrow
       }
     }
 
@@ -367,7 +367,7 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
       let destroyBufferView = dispatch.vkDestroyBufferView
       destroyBufferView(device, atlasBufferView, nil)
       atlasBufferView = 0uL
-      throw error
+      rethrow
     }
   }
 

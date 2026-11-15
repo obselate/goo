@@ -257,14 +257,13 @@ internal partial class SvgParser {
         } else {
             DashPattern(stroke.Dashes.ToArray(), stroke.DashOffset)
         }
-        return VectorStroke(
-            stroke.Width,
-            BuildPaint(stroke.Paint)!!,
-            StrokeCap(stroke.Cap),
-            StrokeJoin(stroke.Join),
-            stroke.MiterLimit,
-            dashes
-        ){.VectorEffect: stroke.VectorEffect}
+        return VectorStroke(stroke.Width, BuildPaint(stroke.Paint)!!){
+            .Cap: StrokeCap(stroke.Cap),
+            .Join: StrokeJoin(stroke.Join),
+            .MiterLimit: stroke.MiterLimit,
+            .Dashes: dashes,
+            .VectorEffect: stroke.VectorEffect,
+        }
     }
 
     private func BuildPath(source IReadOnlyList[SvgContour]?) VectorPath {

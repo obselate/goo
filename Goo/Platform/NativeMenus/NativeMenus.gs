@@ -17,7 +17,7 @@ public data struct NativeMenuShortcut {
 }
 
 /// Describes one immutable native menu row. Publishing copies the complete model.
-public sealed class NativeMenuItem {
+public class NativeMenuItem {
     /// Gets the unique action identifier. Separators have an empty identifier.
     public prop Id string { get; init; }
     /// Gets the native row title.
@@ -42,7 +42,7 @@ public sealed class NativeMenuItem {
 }
 
 /// Contains an explicit native menu outcome.
-public sealed class NativeMenuResult {
+public class NativeMenuResult {
     /// Gets the operation status.
     public prop Status NativeMenuStatus { get; }
     /// Gets the selected context-menu identifier, or an empty string for all other outcomes.
@@ -58,7 +58,7 @@ public sealed class NativeMenuResult {
 }
 
 /// Owns one native bar for an open Window. Operations are owner-thread-affine.
-public sealed class NativeMenuBar : IDisposable {
+public class NativeMenuBar : IDisposable {
     private let owner Window
     private var binding NativeMenuBinding?
     private var windowsBinding WindowsMenuBinding?
@@ -105,7 +105,7 @@ public sealed class NativeMenuBar : IDisposable {
 }
 
 /// Opens operating-system context menus. No managed-widget fallback is implicit.
-public sealed class NativeMenus {
+public class NativeMenus {
     /// Creates a native menu service.
     public init() { }
 

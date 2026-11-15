@@ -418,6 +418,17 @@ internal partial class Resolver {
   // Direct write on initial resolve, non-animatable fields, or when transitions
   // are off; otherwise starts (or retargets) a lerp from the displayed value.
   internal func writeField(n Node, e StyleEntry, initial bool) {
+    if e.Payload is LengthDeclaration {
+      if LengthDeclarations.Set(n, e, this) {
+        recordResolvedChange(e.Field)
+        pendingEffects = pendingEffects | ReconcileEffects.Layout
+      }
+      finishTransition(n, e.Field)
+      return
+    }
+    if LengthDeclarations.Active && fieldKind(e.Field) == FieldKind.KLength {
+      LengthDeclarations.Set(n, e, this)
+    }
     if hasPaintBinding(n, e.Field) {
       finishTransition(n, e.Field)
       return
@@ -783,7 +794,6 @@ internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Acti
     }
     case StyleField.BackgroundColor { n.BackgroundColor = Color.FromNormalized(e.A, e.B, e.C, e.D) }
     case StyleField.BackgroundGradient { n.BackgroundGradient = entryGradient(e) }
-    case StyleField.BackgroundImage { BackgroundImageLayouts.SetPath(n, entryText(e) ?? "", invalidated) }
     case StyleField.BackgroundImageSource { BackgroundImageLayouts.SetSource(n, entryImageSource(e), invalidated, owner) }
     case StyleField.ShaderEffect { ShaderEffectStyles.Set(n, entryShaderEffect(e), invalidated) }
     case StyleField.BackgroundImageFit { n.BackgroundImageFit = ImageFit(int32(e.A)) }
@@ -922,7 +932,6 @@ internal func readField(n Node, f StyleField) StyleEntry {
     case StyleField.OverflowY { return StyleEntry{ Field: f, A: float32(int32(n.OverflowY)) } }
     case StyleField.BackgroundColor { return StyleEntry{ Field: f, A: n.BackgroundColor.R, B: n.BackgroundColor.G, C: n.BackgroundColor.B, D: n.BackgroundColor.A } }
     case StyleField.BackgroundGradient { return StyleEntry{ Field: f, Payload: n.BackgroundGradient } }
-    case StyleField.BackgroundImage { return StyleEntry{ Field: f, Payload: BackgroundImageLayouts.Path(n) } }
     case StyleField.BackgroundImageSource { return StyleEntry{ Field: f, Payload: BackgroundImageLayouts.Source(n) } }
     case StyleField.ShaderEffect { return StyleEntry{ Field: f, Payload: n.ShaderEffect } }
     case StyleField.BackgroundImageFit { return StyleEntry{ Field: f, A: float32(int32(n.BackgroundImageFit)) } }

@@ -56,7 +56,7 @@ func Main(args []string) {
   using let font = FontSource("Vend Sans", 400, false, File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf")))
   font.Register()
   let scene = Scene(count, wrapped)
-  let window = Window{Root: scene, Width: 1200, Height: 800, SmoothScrolling: false}
+  let window = Window{Root: scene, Size: LayoutSize(1200, 800),  SmoothScrolling: false}
   let jumps = []float64{0.0, 0.7, 0.25, 0.95, 0.5, 0.1, 0.85, 0.35}
   var position = 2000.0
   for frame in 0 ... 1240 {

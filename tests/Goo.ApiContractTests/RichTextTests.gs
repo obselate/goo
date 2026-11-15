@@ -9,6 +9,18 @@ import Xunit
 
 public class RichTextTests {
     @Fact
+    public func TextSpansConcatenateAndKeepUtf16Ranges() {
+        let style = Style{Color: Color.Rgb(210, 30, 40)}
+        let text = Text("a😀", TextSpan("styled", style), " tail")
+        Assert.Equal("a😀styled tail", text.Content)
+        let styled = Assert.Single(text.StyleRanges)
+        Assert.Equal(TextRange(3, 6), styled.Range)
+        Assert.Same(style, styled.Style)
+        Assert.Empty(Text("plain").StyleRanges)
+        Assert.Empty(Text("a", "b").StyleRanges)
+    }
+
+    @Fact
     public func HtmlAndRtfRoundTripPersistentUnicodeStyles() {
         const text string = "red 😀\r\nsecond\tline"
         let style = Style{FontFamily: "DejaVu Sans", FontSize: 20, FontWeight: 700, FontStyle: FontStyle.Italic,

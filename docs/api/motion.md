@@ -100,6 +100,22 @@ Reports completion once after the owning motion pump settles, on its UI thread. 
 
 Holds the current value until Resume, retargeting, or forced completion.
 
+### `Play(T,T)`
+
+Snaps to the start value, then animates with Motion.Default. Restarts on every call. Call it from an event, Mounted or a callback, not unconditionally in Build.
+
+- `from`: value to start from
+- `to`: value to animate toward
+
+### `Play(T,T,System.Func{float64,float64,float64,Simulation},System.Func{float64,float64,float64,Simulation}[])`
+
+Snaps to the start value, then animates toward the target. Restarts on every call. Call it from an event, Mounted or a callback, not unconditionally in Build.
+
+- `from`: value to start from
+- `to`: value to animate toward
+- `spec`: first specification
+- `specs`: remaining specifications, empty for shared behavior
+
 ### `Resume`
 
 Continues a paused animation from its held elapsed time.
@@ -189,6 +205,15 @@ Creates an optional simulation for each position axis. Omission uses DurationMs 
 
 
 Configures the animation core. Animation durations use milliseconds. Simulation elapsed time and velocity use seconds.
+
+### `Delay(float64,System.Func{float64,float64,float64,Simulation})`
+
+Holds the start value before running a scalar simulation factory. Position stays at the start value, velocity is zero, and Done is false during the delay. The simulation then receives elapsed seconds minus the delay. Reduced motion and TimeScale at zero or below skip the delay.
+
+- `delayMs`: finite, nonnegative delay in milliseconds
+- `spec`: simulation factory to run after the delay
+
+Returns: a reusable factory with the delay applied
 
 ### `Tween(float64,Easing)`
 

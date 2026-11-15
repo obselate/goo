@@ -352,7 +352,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
     } catch (error Exception) {
       CaptureDiagnosticFatal(-1, VulkanDiagnosticEventIds.RuntimeStart)
       try { Dispose() } catch (cleanup Exception) { }
-      throw error
+      rethrow
     }
   }
 

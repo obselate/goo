@@ -7,7 +7,7 @@ import System.Threading.Tasks
 /// Holds a shared renderer alive without owning a native presentation surface.
 /// Create, render, service and dispose it on the creating thread.
 /// Window-created sessions progress in the window loop. Other sessions require Service while awaiting pages.
-public sealed class OffscreenRenderSession : IDisposable {
+public class OffscreenRenderSession : IDisposable {
   private let target VulkanWindowTarget
   private let closed CancellationToken
   private let threadId int32

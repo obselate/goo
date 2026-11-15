@@ -77,7 +77,7 @@ public data struct GesturePointer(PointerId int64, Device PointerDevice,
 
 /// Provides callback-lifetime access to an owner's settled contact samples.
 /// Do not retain this object beyond GestureSession.Evaluate.
-public sealed class GestureInput {
+public class GestureInput {
     internal var KindValue GestureInputKind
     internal var TimeValue float64
     internal var ChangedId int64

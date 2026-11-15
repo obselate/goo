@@ -110,7 +110,7 @@ internal unsafe partial class VulkanWindowTarget {
       CloseDiagnosticFrame(false)
       presentationRetirement.CancelPendingPresentationLatency()
       ClearActiveFrame()
-      throw error
+      rethrow
     }
   }
 
@@ -173,7 +173,7 @@ internal unsafe partial class VulkanWindowTarget {
       CloseDiagnosticFrame(false)
       presentationRetirement.CancelPendingPresentationLatency()
       ClearActiveFrame()
-      throw error
+      rethrow
     }
     queueStage = QueueStageSubmit
     return true
@@ -345,7 +345,7 @@ internal unsafe partial class VulkanWindowTarget {
       try { CaptureDiagnosticValidationBoundary() } catch (cleanup Exception) { }
       try { CloseDiagnosticFrame(false) } catch (cleanup Exception) { }
       ClearActiveFrame()
-      throw error
+      rethrow
     }
     TryQueuePresent()
   }
@@ -479,7 +479,7 @@ internal unsafe partial class VulkanWindowTarget {
       try { CloseDiagnosticFrame(false) } catch (cleanup Exception) { }
       presentationRetirement.CancelPendingPresentationLatency()
       ClearActiveFrame()
-      throw error
+      rethrow
     }
     if !mailbox.BeginPresent() {
       mailbox.ResetSubmitCompletion()
@@ -584,7 +584,7 @@ internal unsafe partial class VulkanWindowTarget {
       presentationRetirement.CancelPendingPresentationLatency()
       recreatePending = true
       forceFullRedraw = true
-      throw error
+      rethrow
     } finally {
       queueStage = QueueStageIdle
       CaptureDiagnosticResources()

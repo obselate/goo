@@ -88,7 +88,7 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
             let destroy = dispatch.vkDestroyPipelineCache
             destroy(device, cache, nil)
             cache = 0uL
-            throw error
+            rethrow
           }
         }
         if initialDataAccepted {

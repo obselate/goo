@@ -44,8 +44,8 @@ public class Placement {
             var height = bounds.Height
             if size {
                 let scale = float64(window.UiScale)
-                width = ClampSize(width, window.MinWidth, window.MaxWidth, area.Width, scale)
-                height = ClampSize(height, window.MinHeight, window.MaxHeight, area.Height, scale)
+                width = ClampSize(width, window.MinSize.Width, window.MaxSize.Width, area.Width, scale)
+                height = ClampSize(height, window.MinSize.Height, window.MaxSize.Height, area.Height, scale)
             }
             var x = bounds.X
             var y = bounds.Y
@@ -61,11 +61,11 @@ public class Placement {
                 Fields: saved.Fields,
                 NormalBounds: ElementRect{ X: x, Y: y, Width: width, Height: height },
                 State: if saved.State == WindowState.Minimized { WindowState.Normal } else { saved.State },
-                DisplayName: display.Name, DisplayBounds: display.Bounds, DisplayScale: float64(display.ContentScale),
+                DisplayName: display.Name, DisplayBounds: display.Bounds, DisplayScale: display.ContentScale,
             })
         }
 
-        private func ClampSize(value float64, minimum int32, maximum int32, available float64, scale float64) float64 {
+        private func ClampSize(value float64, minimum float64, maximum float64, available float64, scale float64) float64 {
             let lower = Math.Min(available, Math.Max(1.0, Math.Ceiling(float64(minimum) * scale)))
             let upper = if maximum == 0 { available } else { Math.Min(available, Math.Ceiling(float64(maximum) * scale)) }
             return Math.Clamp(value, Math.Min(lower, upper), upper)
@@ -83,7 +83,7 @@ public class Placement {
                 let y = display.Bounds.Y + display.Bounds.Height / 2.0 - saved.DisplayBounds.Y - saved.DisplayBounds.Height / 2.0
                 let distance = if saved.DisplayBounds.Width > 0.0 && saved.DisplayBounds.Height > 0.0 { x * x + y * y }
                     else { 0.0 }
-                let scale = if saved.DisplayScale > 0.0 { Math.Abs(float64(display.ContentScale) - saved.DisplayScale) }
+                let scale = if saved.DisplayScale > 0.0 { Math.Abs(display.ContentScale - saved.DisplayScale) }
                     else { 0.0 }
                 if (sameName && !matchedName) || (sameName == matchedName
                     && (distance < bestDistance || (distance == bestDistance && scale < bestScale))) {

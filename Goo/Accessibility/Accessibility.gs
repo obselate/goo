@@ -59,19 +59,54 @@ public data struct AccessibilityScrollInfo {
 
 /// Describes one range value exposed by a semantic widget.
 public class AccessibilityValue {
+  private var frozenOwner Type?
+
+  internal func Freeze(owner Type) {
+    frozenOwner ??= owner
+  }
+
+  private func CheckMutable() {
+    if let owner = frozenOwner {
+      throw InvalidOperationException(owner.Name + " modified after it was returned to Goo")
+    }
+  }
   private var now float64?
   private var minimum float64?
   private var maximum float64?
   private var text string
 
   /// Gets the current numeric value, when one exists.
-  public prop Now float64? { get -> now init -> now = validateOptionalNumber(value, "Now") }
+  public prop Now float64? {
+    get -> now
+    set {
+      CheckMutable()
+      now = validateOptionalNumber(value, "Now")
+    }
+  }
   /// Gets the minimum numeric value, when one exists.
-  public prop Minimum float64? { get -> minimum init -> minimum = validateOptionalNumber(value, "Minimum") }
+  public prop Minimum float64? {
+    get -> minimum
+    set {
+      CheckMutable()
+      minimum = validateOptionalNumber(value, "Minimum")
+    }
+  }
   /// Gets the maximum numeric value, when one exists.
-  public prop Maximum float64? { get -> maximum init -> maximum = validateOptionalNumber(value, "Maximum") }
+  public prop Maximum float64? {
+    get -> maximum
+    set {
+      CheckMutable()
+      maximum = validateOptionalNumber(value, "Maximum")
+    }
+  }
   /// Gets the localized value text, when one exists.
-  public prop Text string{ get -> text init -> text = requireString(value, "Text") }
+  public prop Text string {
+    get -> text
+    set {
+      CheckMutable()
+      text = requireString(value, "Text")
+    }
+  }
 
   /// Initializes an empty range value.
   public init() { text = "" }
@@ -95,6 +130,17 @@ public class AccessibilityValue {
 
 /// Defines stable mounted-element relationships for one semantic declaration.
 public class AccessibilityRelationships {
+  private var frozenOwner Type?
+
+  internal func Freeze(owner Type) {
+    frozenOwner ??= owner
+  }
+
+  private func CheckMutable() {
+    if let owner = frozenOwner {
+      throw InvalidOperationException(owner.Name + " modified after it was returned to Goo")
+    }
+  }
   private var labelledBy []ElementHandle
   private var describedBy []ElementHandle
   private var controls []ElementHandle
@@ -106,35 +152,59 @@ public class AccessibilityRelationships {
   /// Gets or sets the elements that label this element.
   public prop LabelledBy []ElementHandle{
     get -> copyValues(labelledBy)
-    init -> labelledBy = cloneHandles(value, "LabelledBy")
+    set {
+      CheckMutable()
+      labelledBy = cloneHandles(value, "LabelledBy")
+    }
   }
   /// Gets or sets the elements that describe this element.
   public prop DescribedBy []ElementHandle{
     get -> copyValues(describedBy)
-    init -> describedBy = cloneHandles(value, "DescribedBy")
+    set {
+      CheckMutable()
+      describedBy = cloneHandles(value, "DescribedBy")
+    }
   }
   /// Gets or sets the elements controlled by this element.
   public prop Controls []ElementHandle{
     get -> copyValues(controls)
-    init -> controls = cloneHandles(value, "Controls")
+    set {
+      CheckMutable()
+      controls = cloneHandles(value, "Controls")
+    }
   }
   /// Gets or sets the elements owned by this element.
   public prop Owns []ElementHandle{
     get -> copyValues(owns)
-    init -> owns = cloneHandles(value, "Owns")
+    set {
+      CheckMutable()
+      owns = cloneHandles(value, "Owns")
+    }
   }
   /// Gets or sets the next logical reading targets for this element.
   public prop FlowTo []ElementHandle{
     get -> copyValues(flowTo)
-    init -> flowTo = cloneHandles(value, "FlowTo")
+    set {
+      CheckMutable()
+      flowTo = cloneHandles(value, "FlowTo")
+    }
   }
   /// Gets or sets the elements that describe a current error.
   public prop ErrorMessage []ElementHandle{
     get -> copyValues(errorMessage)
-    init -> errorMessage = cloneHandles(value, "ErrorMessage")
+    set {
+      CheckMutable()
+      errorMessage = cloneHandles(value, "ErrorMessage")
+    }
   }
   /// Gets or sets the active descendant, when one is mounted.
-  public prop ActiveDescendant ElementHandle? { get -> activeDescendant init -> activeDescendant = value }
+  public prop ActiveDescendant ElementHandle? {
+    get -> activeDescendant
+    set {
+      CheckMutable()
+      activeDescendant = value
+    }
+  }
 
   internal prop RawLabelledBy []ElementHandle{ get -> labelledBy }
   internal prop RawDescribedBy []ElementHandle{ get -> describedBy }
@@ -165,6 +235,46 @@ public class AccessibilityRelationships {
 
 /// Defines accessibility data for a Blob without selecting a platform backend.
 public class Accessibility {
+  private var frozenOwner Type?
+  private var declarationRole AccessibilityRole
+  private var declarationRange AccessibilityValue?
+  private var declarationChecked AccessibilityChecked
+  private var declarationSelected bool?
+  private var declarationExpanded bool?
+  private var declarationReadOnly bool?
+  private var declarationRequired bool?
+  private var declarationInvalid bool?
+  private var declarationBusy bool?
+  private var declarationLevel int32?
+  private var declarationPositionInSet int32?
+  private var declarationSizeOfSet int32?
+  private var declarationRowIndex int32?
+  private var declarationColumnIndex int32?
+  private var declarationRowCount int32?
+  private var declarationColumnCount int32?
+  private var declarationOrientation AccessibilityOrientation
+  private var declarationModal bool?
+  private var declarationMultiline bool?
+  private var declarationMultiSelectable bool?
+  private var declarationHasPopup bool?
+  private var declarationLive AccessibilityLive
+  private var declarationAtomic bool?
+  private var declarationRelationships AccessibilityRelationships?
+  private var declarationHidden bool
+  private var declarationOnAction ((AccessibilityActionRequest) -> bool)?
+
+  internal func Freeze(owner Type) {
+    if frozenOwner != nil { return }
+    frozenOwner = owner
+    Range?.Freeze(owner)
+    Relationships?.Freeze(owner)
+  }
+
+  private func CheckMutable() {
+    if let owner = frozenOwner {
+      throw InvalidOperationException(owner.Name + " modified after it was returned to Goo")
+    }
+  }
   private var actions []AccessibilityAction
   private var customRole string
   private var name string
@@ -172,75 +282,258 @@ public class Accessibility {
   private var value string
 
   /// Gets the role. Auto selects a neutral primitive default when one exists.
-  public prop Role AccessibilityRole{ get; init; }
+  public prop Role AccessibilityRole {
+    get -> declarationRole
+    set {
+      CheckMutable()
+      declarationRole = value
+    }
+  }
   /// Gets the platform-specific custom role name for AccessibilityRole.Custom.
-  public prop CustomRole string{ get -> customRole init -> customRole = requireString(value, "CustomRole") }
+  public prop CustomRole string {
+    get -> customRole
+    set {
+      CheckMutable()
+      customRole = requireString(value, "CustomRole")
+    }
+  }
   /// Gets the accessible name.
-  public prop Name string{ get -> name init -> name = requireString(value, "Name") }
+  public prop Name string {
+    get -> name
+    set {
+      CheckMutable()
+      name = requireString(value, "Name")
+    }
+  }
   /// Gets the accessible description.
-  public prop Description string{ get -> description init -> description = requireString(value, "Description") }
+  public prop Description string {
+    get -> description
+    set {
+      CheckMutable()
+      description = requireString(value, "Description")
+    }
+  }
   /// Gets the string value.
-  public prop Value string{ get -> value init -> this.value = requireString(value, "Value") }
+  public prop Value string {
+    get -> value
+    set {
+      CheckMutable()
+      this.value = requireString(value, "Value")
+    }
+  }
   /// Gets the optional numeric value metadata.
-  public prop Range AccessibilityValue? { get; init; }
+  public prop Range AccessibilityValue? {
+    get -> declarationRange
+    set {
+      CheckMutable()
+      declarationRange = value
+    }
+  }
   /// Gets the check state.
-  public prop Checked AccessibilityChecked{ get; init; }
+  public prop Checked AccessibilityChecked {
+    get -> declarationChecked
+    set {
+      CheckMutable()
+      declarationChecked = value
+    }
+  }
   /// Gets whether the item is selected when explicitly specified.
-  public prop Selected bool? { get; init; }
+  public prop Selected bool? {
+    get -> declarationSelected
+    set {
+      CheckMutable()
+      declarationSelected = value
+    }
+  }
   /// Gets whether the item is expanded when explicitly specified.
-  public prop Expanded bool? { get; init; }
+  public prop Expanded bool? {
+    get -> declarationExpanded
+    set {
+      CheckMutable()
+      declarationExpanded = value
+    }
+  }
   /// Gets whether the item is read-only when explicitly specified.
-  public prop ReadOnly bool? { get; init; }
+  public prop ReadOnly bool? {
+    get -> declarationReadOnly
+    set {
+      CheckMutable()
+      declarationReadOnly = value
+    }
+  }
   /// Gets whether the item is required when explicitly specified.
-  public prop Required bool? { get; init; }
+  public prop Required bool? {
+    get -> declarationRequired
+    set {
+      CheckMutable()
+      declarationRequired = value
+    }
+  }
   /// Gets whether the item is invalid when explicitly specified.
-  public prop Invalid bool? { get; init; }
+  public prop Invalid bool? {
+    get -> declarationInvalid
+    set {
+      CheckMutable()
+      declarationInvalid = value
+    }
+  }
   /// Gets whether the item is busy when explicitly specified.
-  public prop Busy bool? { get; init; }
+  public prop Busy bool? {
+    get -> declarationBusy
+    set {
+      CheckMutable()
+      declarationBusy = value
+    }
+  }
   /// Gets the one-based heading level when explicitly specified.
-  public prop Level int32? { get; init; }
+  public prop Level int32? {
+    get -> declarationLevel
+    set {
+      CheckMutable()
+      declarationLevel = value
+    }
+  }
   /// Gets the zero-based logical item position within its collection, including unrealized items.
-  public prop PositionInSet int32? { get; init; }
+  public prop PositionInSet int32? {
+    get -> declarationPositionInSet
+    set {
+      CheckMutable()
+      declarationPositionInSet = value
+    }
+  }
   /// Gets the logical item count for a collection or an item, including unrealized items.
   /// Desktop adapters use the collection count. Per-level item counts in a flat tree are not exposed.
-  public prop SizeOfSet int32? { get; init; }
+  public prop SizeOfSet int32? {
+    get -> declarationSizeOfSet
+    set {
+      CheckMutable()
+      declarationSizeOfSet = value
+    }
+  }
   /// Gets the zero-based logical row index, including unrealized rows.
   /// Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
-  public prop RowIndex int32? { get; init; }
+  public prop RowIndex int32? {
+    get -> declarationRowIndex
+    set {
+      CheckMutable()
+      declarationRowIndex = value
+    }
+  }
   /// Gets the zero-based logical column index, including unrealized columns.
   /// Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
-  public prop ColumnIndex int32? { get; init; }
+  public prop ColumnIndex int32? {
+    get -> declarationColumnIndex
+    set {
+      CheckMutable()
+      declarationColumnIndex = value
+    }
+  }
   /// Gets the total logical row count, including unrealized rows.
   /// Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
-  public prop RowCount int32? { get; init; }
+  public prop RowCount int32? {
+    get -> declarationRowCount
+    set {
+      CheckMutable()
+      declarationRowCount = value
+    }
+  }
   /// Gets the total logical column count, including unrealized columns.
   /// Android exposes this value. The pinned AT-SPI, UIA and macOS adapters do not.
-  public prop ColumnCount int32? { get; init; }
+  public prop ColumnCount int32? {
+    get -> declarationColumnCount
+    set {
+      CheckMutable()
+      declarationColumnCount = value
+    }
+  }
   /// Gets the orientation when explicitly specified.
-  public prop Orientation AccessibilityOrientation{ get; init; }
+  public prop Orientation AccessibilityOrientation {
+    get -> declarationOrientation
+    set {
+      CheckMutable()
+      declarationOrientation = value
+    }
+  }
   /// Gets whether the item is modal when explicitly specified.
-  public prop Modal bool? { get; init; }
+  public prop Modal bool? {
+    get -> declarationModal
+    set {
+      CheckMutable()
+      declarationModal = value
+    }
+  }
   /// Gets whether the item is multiline when explicitly specified.
-  public prop Multiline bool? { get; init; }
+  public prop Multiline bool? {
+    get -> declarationMultiline
+    set {
+      CheckMutable()
+      declarationMultiline = value
+    }
+  }
   /// Gets whether the item permits multiple selection when explicitly specified.
-  public prop MultiSelectable bool? { get; init; }
+  public prop MultiSelectable bool? {
+    get -> declarationMultiSelectable
+    set {
+      CheckMutable()
+      declarationMultiSelectable = value
+    }
+  }
   /// Gets whether the item opens a popup when explicitly specified.
-  public prop HasPopup bool? { get; init; }
+  public prop HasPopup bool? {
+    get -> declarationHasPopup
+    set {
+      CheckMutable()
+      declarationHasPopup = value
+    }
+  }
   /// Gets live-region announcement behavior.
-  public prop Live AccessibilityLive{ get; init; }
+  public prop Live AccessibilityLive {
+    get -> declarationLive
+    set {
+      CheckMutable()
+      declarationLive = value
+    }
+  }
   /// Gets whether a live-region update is atomic when explicitly specified.
-  public prop Atomic bool? { get; init; }
+  public prop Atomic bool? {
+    get -> declarationAtomic
+    set {
+      CheckMutable()
+      declarationAtomic = value
+    }
+  }
   /// Gets semantic relationships based on mounted ElementHandle identity.
-  public prop Relationships AccessibilityRelationships? { get; init; }
+  public prop Relationships AccessibilityRelationships? {
+    get -> declarationRelationships
+    set {
+      CheckMutable()
+      declarationRelationships = value
+    }
+  }
   /// Gets whether this element and its descendants are excluded from the semantic tree.
-  public prop Hidden bool{ get; init; }
+  public prop Hidden bool {
+    get -> declarationHidden
+    set {
+      CheckMutable()
+      declarationHidden = value
+    }
+  }
   /// Gets or sets actions advertised by a composed control.
   public prop Actions []AccessibilityAction{
     get -> copyValues(actions)
-    init -> actions = cloneActions(value)
+    set {
+      CheckMutable()
+      actions = cloneActions(value)
+    }
   }
   /// Gets the handler for advertised composed-control actions.
-  public prop OnAction((AccessibilityActionRequest) -> bool)? { get; init; }
+  public prop OnAction((AccessibilityActionRequest) -> bool)? {
+    get -> declarationOnAction
+    set {
+      CheckMutable()
+      declarationOnAction = value
+    }
+  }
 
   internal prop RawActions []AccessibilityAction{ get -> actions }
 

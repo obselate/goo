@@ -124,7 +124,7 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
         DestroyLayerViews()
         DestroyImageView()
         DestroyImage()
-        throw error
+        rethrow
       }
     }
 
@@ -280,7 +280,7 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
       }
     } catch (error Exception) {
       DestroyLayerViews()
-      throw error
+      rethrow
     }
   }
 
@@ -309,7 +309,7 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
         let destroySampler = Dispatch.vkDestroySampler
         destroySampler(Device, Sampler, nil)
         Sampler = 0uL
-        throw error
+        rethrow
       }
     }
   }
@@ -543,7 +543,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
           width, height, activeLayerCount, format)
       } catch (error Exception) {
         current = nil
-        throw error
+        rethrow
       }
     }
 
@@ -1214,7 +1214,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
       return true
     } catch (pressure VulkanMemoryPressureException) {
       if !growth {
-        throw pressure
+        rethrow
       }
       maximumLayerCount = activeLayerCount
       return false

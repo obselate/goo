@@ -6,8 +6,8 @@ import System
 import System.Diagnostics
 
 internal unsafe func RunApplicationQuitSmoke() {
-    let first = Window{Title: "Quit guard", Width: 320, Height: 200, Root: Cell{}}
-    let second = Window{Title: "Quit sibling", Width: 320, Height: 200, Root: Cell{}}
+    let first = Window{Title: "Quit guard", Size: LayoutSize(320, 200),  Root: Cell{}}
+    let second = Window{Title: "Quit sibling", Size: LayoutSize(320, 200),  Root: Cell{}}
     var vetoes int32
     first.OnClosing = () -> {
         vetoes++

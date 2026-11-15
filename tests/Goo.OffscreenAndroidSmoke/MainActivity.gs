@@ -120,7 +120,7 @@ class PageActivity : Android.App.Activity {
             Require(source.Paused && !source.HasSurface, "source activity did not lose its surface")
             let task = session.RenderAsync(
                 Page(),
-                OffscreenRenderOptions(240.0f, 180.0f, 480, 360, Color.White, 134217728),
+                OffscreenRenderOptions(LayoutSize(240.0f, 180.0f), 480, 360, Color.White, 134217728),
                 CancellationToken.None
             )
             deadline.Restart()

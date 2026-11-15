@@ -64,21 +64,21 @@ internal class SdlApplicationActivation {
                     break
                 }
             }
-            let initial = Window.IsInitialApplicationActivation
+            let initial = Application.IsInitialActivation
             if filesOnly {
-                Window.PostApplicationActivation(ApplicationActivation{
+                Application.PostActivation(ApplicationActivation{
                     Kind: ApplicationActivationKind.OpenDocuments, IsInitial: initial, Documents: documents,
                 })
                 return
             }
             for document in documents {
                 if document.IsFile {
-                    Window.PostApplicationActivation(ApplicationActivation{
+                    Application.PostActivation(ApplicationActivation{
                         Kind: ApplicationActivationKind.OpenDocuments, IsInitial: initial,
                         Documents: []Uri{ document },
                     })
                 } else {
-                    Window.PostApplicationActivation(ApplicationActivation{
+                    Application.PostActivation(ApplicationActivation{
                         Kind: ApplicationActivationKind.OpenUri, IsInitial: initial, Target: document,
                     })
                 }

@@ -8,19 +8,19 @@ import System.Threading
 import System.Threading.Tasks
 
 /// Identifies one local image and the number of source pixels per logical unit.
-public sealed class ImageVariant {
+public class ImageVariant {
   /// Gets the local image path.
   public prop Path string { get; }
 
   /// Gets the positive finite source pixel density.
-  public prop PixelsPerUnit float32 { get; }
+  public prop PixelsPerUnit float64 { get; }
 
   /// Creates a variant such as logo@2x.png with density 2.
   /// @param path The local file path.
   /// @param pixelsPerUnit The source pixels per logical unit.
-  public init(path string, pixelsPerUnit float32) {
+  public init(path string, pixelsPerUnit float64) {
     if String.IsNullOrWhiteSpace(path) { throw ArgumentException("A local image path is required", "path") }
-    if !Single.IsFinite(pixelsPerUnit) || pixelsPerUnit <= 0.0F { throw ArgumentOutOfRangeException("pixelsPerUnit") }
+    if !Double.IsFinite(pixelsPerUnit) || pixelsPerUnit <= 0.0 { throw ArgumentOutOfRangeException("pixelsPerUnit") }
     Path = System.IO.Path.GetFullPath(path)
     PixelsPerUnit = pixelsPerUnit
   }
@@ -30,7 +30,7 @@ public sealed class ImageVariant {
 public enum ImageAssetStatus { Success; NotReady; NotFound; InvalidData; LimitExceeded; Unsupported; Cancelled; Failed }
 
 /// Contains an independently disposable image owner and its selected density on success.
-public sealed class ImageAssetResult {
+public class ImageAssetResult {
   /// Gets the load outcome.
   public prop Status ImageAssetStatus { get; }
 
@@ -38,12 +38,12 @@ public sealed class ImageAssetResult {
   public prop Source ImageSource? { get; }
 
   /// Gets the selected density. Assign it with Source to Image.PixelsPerUnit.
-  public prop PixelsPerUnit float32 { get; }
+  public prop PixelsPerUnit float64 { get; }
 
   /// Gets a bounded failure explanation, or an empty string.
   public prop Detail string { get; }
 
-  internal init(status ImageAssetStatus, source ImageSource? = nil, density float32 = 1.0F, detail string = "") {
+  internal init(status ImageAssetStatus, source ImageSource? = nil, density float64 = 1.0, detail string = "") {
     Status = status
     Source = source
     PixelsPerUnit = density
@@ -52,7 +52,7 @@ public sealed class ImageAssetResult {
 }
 
 /// Selects and caches explicit local raster variants from stable window metrics.
-public sealed class ImageVariants : IDisposable {
+public class ImageVariants : IDisposable {
   private const MaxVariants int32 = 64
   private let variants []ImageVariant
   private let cache ImageSourceCache

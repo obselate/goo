@@ -121,7 +121,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
     token ImageSourceBindingToken?,
     fit ImageFit,
     opacity float32,
-    transformIndex int32, pixelsPerUnit float32) bool{
+    transformIndex int32, pixelsPerUnit float64) bool{
       guard let binding = token else {
         return false
       }
@@ -209,7 +209,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
 
   private func EmitExternal(frame SceneFrame, bounds ConservativeBounds,
     binding ImageSourceBindingToken, external ExternalFrameLease, fit ImageFit,
-    opacity float32, transformIndex int32, pixelsPerUnit float32) bool {
+    opacity float32, transformIndex int32, pixelsPerUnit float64) bool {
       if external.Terminal || external.Source.Session.IsClosed
         || external.Image.Native.Runtime.Generation != generation { return false }
       if !external.Ready {
@@ -243,7 +243,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
 
   private func EmitLookup(frame SceneFrame, bounds ConservativeBounds,
     lookup VulkanImageResourceLookup, fit ImageFit, opacity float32,
-    transformIndex int32, pixelsPerUnit float32) bool{
+    transformIndex int32, pixelsPerUnit float64) bool{
       EnsurePendingReferenceCapacity(lookup.Id)
       AddPendingReference(lookup.Id)
       let fitResult = Fit(bounds, lookup.Width, lookup.Height, fit, pixelsPerUnit)
@@ -328,9 +328,9 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
     destination ConservativeBounds,
     width uint32,
     height uint32,
-    fit ImageFit, pixelsPerUnit float32) VulkanImageFitResult{
-      let imageWidth = float32(width) / pixelsPerUnit
-      let imageHeight = float32(height) / pixelsPerUnit
+    fit ImageFit, pixelsPerUnit float64) VulkanImageFitResult{
+      let imageWidth = float32(float64(width) / pixelsPerUnit)
+      let imageHeight = float32(float64(height) / pixelsPerUnit)
       var result = VulkanImageFitResult{
         Bounds: destination,
         SourceX: 0.0F,

@@ -459,7 +459,7 @@ internal class EmbeddedHostSmoke {
         Require(Double.IsPositiveInfinity(host.NextFrameDelaySeconds),
           "Detached viewport did not remain idle")
         let initialMetrics = window.CurrentWindowMetrics()
-        Require(initialMetrics.LogicalWidth == 32 && initialMetrics.FramebufferWidth == 64
+        Require(initialMetrics.NativeWidth == 32 && initialMetrics.FramebufferWidth == 64
             && initialMetrics.DisplayScaleX == 2.0,
           "Embedded density did not use separate logical and framebuffer dimensions")
         host.CreateNative()

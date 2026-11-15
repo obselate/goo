@@ -27,7 +27,11 @@ Read [app best practices](references/best-practices.md) before writing or review
 
 Goo is a retained UI framework:
 
-- Build immutable Blobs in `Cell.Build`. Keep local state in Cell fields. Mount fixed children with `Cell.Mount[TCell]()`. Use keys for siblings that can move. Keyed and unkeyed siblings can mix. Unkeyed identity uses the absolute sibling index and never matches a key.
+- Build Blobs in `Cell.Build`. A Blob is frozen when Goo receives it. Later changes throw. Returning the same Blob does not refresh it.
+- Write components as values: `Name{...}`. Use `Cell.Mount` inside a component's conversion and for Cells that need a factory. Use `Row(){a, b}` for children only.
+- Keep state that `Build` reads in `State` fields: `private let count State[int32] = State[int32](0)`. Write `count.Value = next`. Goo tracks reads and rebuilds the readers. Do not call `Rebuild()` for a `State` change.
+- Write async Goo handlers as `async func Name() void`. Awaited continuations return to the UI thread. Pass `Lifetime` or `Latest(name)` to cancellable work. Use `Cell.Post` from background work.
+- Use keys for siblings that can move. Keyed and unkeyed siblings can mix. Unkeyed identity uses the absolute sibling index and never matches a key.
 - For typed Cells consumed across assemblies, use `open class X : Cell[Input]` with `protected override func Build(input Input) Blob`.
 - Put `BasedOn` before overrides. Later style declarations win.
 - Avoid invented convenience APIs and s&box GooPanel patterns.

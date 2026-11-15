@@ -84,7 +84,7 @@ internal unsafe partial class VulkanExternalImageProof {
 
         private func VerifyMetalLifecycle() {
             let root = VulkanExternalProofCell{}
-            let window = Window{ Title: "Metal external image proof", Width: 64, Height: 64, VSync: false, Root: root }
+            let window = Window{ Title: "Metal external image proof", Size: LayoutSize(64, 64),  VSync: false, Root: root }
             try {
                 window.Open()
                 WindowReadbackTestFixture.ForceRender(window, 0.0)

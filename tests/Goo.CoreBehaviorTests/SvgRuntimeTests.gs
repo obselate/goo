@@ -11,6 +11,34 @@ import System.Text
 import Xunit
 
 class SvgRuntimeTests {
+    @Theory
+    @InlineData("M2 3 l10 0 v10 h-10 z")
+    @InlineData("M2 3 C4 8 8 4 12 13 S20 20 22 13 Q20 3 12 3 T2 3 Z")
+    @InlineData("M2 3 A8 5 30 0 1 12 13 M4 5 L8 9")
+    func RawPathMatchesSvgDocumentPath(data string) {
+        let path = VectorPath.Parse(data, ElementRect{X: 2, Y: 3, Width: 20, Height: 20})
+        let asset = Svg.Parse("<svg viewBox='2 3 20 20'><path d='$data'/></svg>")
+        let actual = VectorAsset(2.0, 3.0, 20.0, 20.0, []VectorNode{VectorNode(path)}).PathForNode(0)
+        Assert.Equal(asset.PathForNode(1), actual)
+        Assert.Equal(2.0, path.ViewBoxX)
+        Assert.Equal(3.0, path.ViewBoxY)
+        Assert.Equal(20.0, path.ViewBoxWidth)
+        Assert.Equal(20.0, path.ViewBoxHeight)
+    }
+
+    @Theory
+    @InlineData("M0 0 L", "character position 6")
+    @InlineData("M0 0 X1 1", "character position 6")
+    @InlineData("", "character position 0")
+    @InlineData("M0 0 L1e 1", "character position 8")
+    @InlineData("M0 0 L1e300 1", "character position 11")
+    func RawPathReportsCharacterPosition(data string, position string) {
+        let error = Assert.Throws[SvgParseException](
+            () -> VectorPath.Parse(data, ElementRect{Width: 20, Height: 20})
+        )
+        Assert.Contains(position, error.Message)
+    }
+
     @Fact
     func AuthoredAssetsSnapshotChildAndRootArrays() {
         Assert.Equal(float64(1.0), default(VectorNodeStyle).Opacity)
@@ -37,8 +65,8 @@ class SvgRuntimeTests {
     @Fact
     func ParseProducesVectorAsset() {
         let asset = Svg.Parse(BasicSvg)
-        Assert.Equal(float32(20.0), asset.ViewBoxWidth)
-        Assert.Equal(float32(10.0), asset.ViewBoxHeight)
+        Assert.Equal(20.0, asset.ViewBoxWidth)
+        Assert.Equal(10.0, asset.ViewBoxHeight)
         Assert.Equal(2, asset.NodeCount)
         Assert.Equal(1, asset.ContourCount)
         Assert.Equal(3, asset.CurveCount)

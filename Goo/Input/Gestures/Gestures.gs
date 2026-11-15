@@ -42,7 +42,7 @@ public data struct PressGestureEvent(Phase GesturePhase, Position Point,
 public data struct TapGestureEvent(Position Point, WindowPosition Point) { }
 
 /// Recognizes direct touch movement without adding scrolling or inertia policy.
-public sealed class PanGesture : GestureRecognizer {
+public class PanGesture : GestureRecognizer {
     internal let Changed Action[PanGestureEvent]
     internal let Axis PanAxis
 
@@ -59,7 +59,7 @@ public sealed class PanGesture : GestureRecognizer {
 }
 
 /// Recognizes centroid pan, two-contact pinch and rotation as one exclusive interaction.
-public sealed class TransformGesture : GestureRecognizer {
+public class TransformGesture : GestureRecognizer {
     internal let Changed Action[TransformGestureEvent]
 
     /// Creates a recognizer which accepts one-contact pan or two separated contacts.
@@ -73,19 +73,19 @@ public sealed class TransformGesture : GestureRecognizer {
 }
 
 /// Recognizes a stationary direct-touch hold, then retains ownership until release or cancellation.
-public sealed class LongPressGesture : GestureRecognizer {
+public class LongPressGesture : GestureRecognizer {
     internal let Changed Action[PressGestureEvent]
     internal let Duration float64
 
     /// Creates a hold recognizer with eight logical units of movement slop.
     /// Duration must be finite and positive, in milliseconds.
-    public init(changed Action[PressGestureEvent], durationMilliseconds float64 = 500.0) {
+    public init(changed Action[PressGestureEvent], durationMs float64 = 500.0) {
         if changed == nil { throw ArgumentNullException("changed") }
-        if !Double.IsFinite(durationMilliseconds) || durationMilliseconds <= 0.0 {
-            throw ArgumentOutOfRangeException("durationMilliseconds")
+        if !Double.IsFinite(durationMs) || durationMs <= 0.0 {
+            throw ArgumentOutOfRangeException("durationMs")
         }
         Changed = changed
-        Duration = durationMilliseconds / 1000.0
+        Duration = durationMs / 1000.0
     }
 
     /// Creates isolated state for one routed interaction.
@@ -94,7 +94,7 @@ public sealed class LongPressGesture : GestureRecognizer {
 
 /// Recognizes two completed direct-touch taps within 400 milliseconds and four logical units.
 /// Core defers the first ordinary click only where this recognizer is installed.
-public sealed class DoubleTapGesture : GestureRecognizer {
+public class DoubleTapGesture : GestureRecognizer {
     internal let Recognized Action[TapGestureEvent]
 
     /// Creates a double-tap recognizer with the shared click-count bounds.

@@ -5,7 +5,6 @@ import System
 import System.Diagnostics
 import System.IO
 import System.Linq
-import System.Reflection
 import System.Text
 import System.Threading.Tasks
 import System.Xml.Linq
@@ -22,9 +21,12 @@ async func Run(args []string) Task {
         let read = ActivationArguments.Read(args, Environment.CurrentDirectory)
         Require(read.Status == ActivationReadStatus.Accepted && read.Activation != nil, read.Error)
         var received ApplicationActivation? = nil
-        Window.ApplicationActivated += value -> { received = value }
-        Require(Window.InitializeApplicationActivation(read.Activation!!) == WindowOperationResult.Accepted, "Activation initialization failed")
-        typeof(Window).GetMethod("DrainApplicationActivations", BindingFlags.NonPublic | BindingFlags.Static)!!.Invoke(nil, nil)
+        Application.Activated += value -> { received = value }
+        Application.Configure("Notifications activation smoke", "1.0", "org.goo.notifications.activation." + Guid.NewGuid().ToString("N"))
+        let instance = Application.AcquireSingleInstance(args)
+        Require(instance.Status == SingleInstanceStatus.Primary, "Activation initialization failed")
+        using let lease = instance.Lease
+        Application.DrainActivations()
         Require(received?.Kind == ApplicationActivationKind.Notification, "Protocol did not raise notification activation")
         let activationOutput = Output(Uri(args[1]).Scheme)
         let activation = received!!
@@ -36,7 +38,7 @@ async func Run(args []string) Task {
 
     let scheme = "goo-toast-smoke-" + Guid.NewGuid().ToString("N")
     let identifier = "org.goo.notifications." + Guid.NewGuid().ToString("N")
-    Window.ConfigureApplication("Notifications smoke", "1.0", identifier)
+    Application.Configure("Notifications smoke", "1.0", identifier)
     let options = NotificationOptions{ ActivationScheme: scheme }
     let missing = Notifications.Open(options)
     Require(missing.Status == NotificationStatus.MissingIdentity && missing.Service == nil, "Missing installation was accepted")

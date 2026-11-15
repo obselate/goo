@@ -169,7 +169,7 @@ public class NotificationResult {
     }
 }
 
-/// Owns a native notification service. Clicks use Window.ApplicationActivated with Kind Notification.
+/// Owns a native notification service. Clicks use Application.Activated with Kind Notification.
 public interface NotificationService : IDisposable {
     /// Queries native permission or returns Unknown where the platform has no query.
     /// @returns The current setting and configured activation support.
@@ -228,10 +228,10 @@ public class Notifications {
             ArgumentNullException.ThrowIfNull(options)
             if OperatingSystem.IsAndroid() || (!OperatingSystem.IsWindows() && !OperatingSystem.IsMacOS()
                 && !OperatingSystem.IsLinux()) { return NotificationServiceResult(NotificationStatus.Unsupported) }
-            let identifier = SdlRuntime.ApplicationIdentifier
+            let identifier = Application.Identifier
             if string.IsNullOrEmpty(identifier) {
                 return NotificationServiceResult(NotificationStatus.MissingIdentity,
-                    error: "Call Window.ConfigureApplication with the installed application identifier first")
+                    error: "Call Application.Configure with the installed application identifier first")
             }
             try {
                 if OperatingSystem.IsWindows() { return WindowsNotificationService.Open(identifier, options) }

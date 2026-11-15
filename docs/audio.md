@@ -11,7 +11,7 @@ let queued = audio?.TryPlay(cue, 0.5F)
 Add `Goo.Audio` alongside `Goo` with the same package version. Types use namespace `Goo`.
 Keep the player at application scope.
 
-Open and dispose on the UI thread, after `Window.ConfigureApplication` if used.
+Open and dispose on the UI thread, after `Application.Configure` if used.
 Other operations are thread-safe. Owners of the same output share playback state.
 Completion means drained queues, not exact audible timing.
 See the [audio API](https://github.com/obselate/goo/blob/main/docs/api-audio/README.md) for statuses and controls.

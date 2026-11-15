@@ -20,7 +20,7 @@ class Example : Cell {
 
     override func Build() Blob {
         let theme = Theme.Read()
-        return Container{
+        return Column{
             BasedOn: theme.CanvasStyle,
             Width: Percent(100),
             Height: Percent(100),
@@ -44,9 +44,9 @@ class Example : Cell {
 }
 
 func Main() {
-    Window.ConfigureApplication("A text input form", "1.0.0", "com.example.tutorial")
-    let window = Window{Title: "A text input form", Width: 400, Height: 240, Root: Example{}}
+    Application.Configure("A text input form", "1.0.0", "com.example.tutorial")
+    let window = Window{Title: "A text input form", Size: LayoutSize(400, 240), Root: Example{}}
     Theme.Attach(window, Theme.Default)
-    window.Run()
+    Application.Run(window)
 }
 ```

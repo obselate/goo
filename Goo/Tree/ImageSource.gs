@@ -126,6 +126,8 @@ public partial class ImageSource : ImageSourceProvider, IDisposable {
     }
   }
 
+  internal prop CacheOnly bool{ get { lock gate { return image?.CacheOnly == true } } }
+
   internal func retainImage() DecodedImage? {
     lock gate {
       if disposed { return nil }

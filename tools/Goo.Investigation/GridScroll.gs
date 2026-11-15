@@ -33,7 +33,7 @@ class GridScroll {
                     "-nodeReuse:false",
                     "-p:UseSharedCompilation=false",
                     "-p:WidgetsProject=" + widgets,
-                    "-p:CustomAfterMicrosoftCommonTargets=" + Path.Combine(here, "References.targets"),
+                    "-p:CustomAfterMicrosoftCommonTargets=" + Path.Combine(Runner.Root, "tools/WidgetsReferences.targets"),
                     "-p:IncludeTestFixtures=true",
                     "-p:GooTestFixturesProps=" + Path.Combine(here, "Frames.props")
                 }

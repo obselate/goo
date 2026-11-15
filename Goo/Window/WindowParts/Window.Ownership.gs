@@ -25,7 +25,7 @@ public partial class Window {
   /// Gets or sets the native owner before Open. The owner must be an open desktop window on the same UI thread.
   /// Ownership cannot change while open. Self-ownership and ancestor cycles are rejected.
   public prop Owner Window? {
-    get -> family?.Owner
+    get -> ReadUntrackedWindowValue(family?.Owner)
     set(value) {
       requireUiThread("Window.Owner")
       if IsOpen || host != nil { throw InvalidOperationException("Window ownership must be configured before Open") }
@@ -44,7 +44,7 @@ public partial class Window {
   /// Gets or sets a portal parent identifier before Open, such as wayland: followed by an exported surface handle.
   /// Unsupported or expired handles leave the window unparented. This cannot be combined with Owner.
   public prop ForeignParentHandle string {
-    get -> family?.ForeignParentHandle ?? ""
+    get -> ReadUntrackedWindowValue(family?.ForeignParentHandle ?? "")
     set(value) {
       requireUiThread("Window.ForeignParentHandle")
       if IsOpen || host != nil { throw InvalidOperationException("Window ownership must be configured before Open") }
@@ -57,7 +57,7 @@ public partial class Window {
   /// Gets or sets whether this window is modal to Owner or ForeignParentHandle. Configure before Open.
   /// One direct modal child may be open per owner. Nested dialogs use the active modal child as their owner.
   public prop Modal bool{
-    get -> family?.Modal == true
+    get -> ReadUntrackedWindowValue(family?.Modal == true)
     set(value) {
       requireUiThread("Window.Modal")
       if IsOpen || host != nil { throw InvalidOperationException("Window modality must be configured before Open") }
@@ -69,7 +69,7 @@ public partial class Window {
 
   /// Gets whether a modal child, native chooser, or native modal service blocks this window's input and accessibility actions.
   public prop IsInputBlocked bool{
-    get -> family?.BlockingChild?.IsOpen == true || family?.Dialog != nil || nativeModal != nil || family?.ExternalDialog != nil
+    get -> ReadUntrackedWindowValue(family?.BlockingChild?.IsOpen == true || family?.Dialog != nil || nativeModal != nil || family?.ExternalDialog != nil)
   }
 
   private func validateOwnership() {

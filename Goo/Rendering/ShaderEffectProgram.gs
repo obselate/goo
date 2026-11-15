@@ -3,12 +3,13 @@ package Goo
 import System
 import System.Collections.Generic
 import System.IO
+import System.Reflection
 import System.Security.Cryptography
 import System.Threading
 
 internal data struct ShaderEffectProgramArtifact(Kind uint32, Bytes []uint8) { }
 
-public sealed class ShaderEffectProgram {
+public class ShaderEffectProgram {
   private const Magic uint32 = 0x46464547u
   private const Schema uint32 = 2u
   private const VulkanSpirvKind uint32 = 0x56505356u
@@ -36,6 +37,12 @@ public sealed class ShaderEffectProgram {
 
     public func Load(path string) ShaderEffectProgram ->
     ShaderEffectProgram(BoundedInput.ReadFile(path, MaximumProgramByteCount, "Shader effect program"))
+
+    /// Loads a compiled effect by asset name without the .goo-effect extension.
+    public func Load(assembly Assembly, name string) ShaderEffectProgram {
+      using let stream = Assets.Open(assembly, name + ".goo-effect")
+      return ShaderEffectProgram(BoundedInput.ReadAll(stream, MaximumProgramByteCount, "Shader effect program"))
+    }
 
     internal func LoadEmbedded(fileName string, replacesBackdrop bool = false) ShaderEffectProgram {
       let name = "Goo.Effects." + fileName

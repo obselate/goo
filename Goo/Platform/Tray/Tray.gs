@@ -129,20 +129,20 @@ public class TrayIcon : IDisposable {
     internal func PostActivation(nativeToken string? = nil) {
         Owner.Post(() -> {
             if status == TrayStatus.Closed || Owner.NativeOwnerClosing { return }
-            let previous = Window.CurrentActivationToken
-            Window.CurrentActivationToken = nativeToken
+            let previous = Application.CurrentActivationToken
+            Application.CurrentActivationToken = nativeToken
             try { Activated?.Invoke() }
-            finally { Window.CurrentActivationToken = previous }
+            finally { Application.CurrentActivationToken = previous }
         })
     }
 
     internal func PostCommand(itemId string, nativeToken string? = nil) {
         Owner.Post(() -> {
             if status == TrayStatus.Closed || Owner.NativeOwnerClosing { return }
-            let previous = Window.CurrentActivationToken
-            Window.CurrentActivationToken = nativeToken
+            let previous = Application.CurrentActivationToken
+            Application.CurrentActivationToken = nativeToken
             try { CommandActivated?.Invoke(itemId) }
-            finally { Window.CurrentActivationToken = previous }
+            finally { Application.CurrentActivationToken = previous }
         })
     }
 

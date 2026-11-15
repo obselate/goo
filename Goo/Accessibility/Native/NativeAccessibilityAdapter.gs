@@ -8,7 +8,7 @@ import System.Threading
 
 /// Publishes a desktop window to AT-SPI, UI Automation, or macOS Accessibility through AccessKit.
 /// Assign before Window.Open. Requires the optional Goo.Accessibility native runtime package.
-public sealed partial class NativeAccessibilityAdapter : AccessibilityAdapter, IDisposable {
+public partial class NativeAccessibilityAdapter : AccessibilityAdapter, IDisposable {
   private var owner Window?
   private var native nint
   private var binding int64
@@ -45,7 +45,7 @@ public sealed partial class NativeAccessibilityAdapter : AccessibilityAdapter, I
     if platform == 1 { AccessKitNative.UnixUpdate(native, factoryAddress, data) }
     else if platform == 2 { Raise(AccessKitNative.WindowsUpdate(native, factoryAddress, data)) }
     else { Raise(AccessKitNative.MacUpdate(native, factoryAddress, data)) }
-    if let error = factoryError { throw error }
+    if let error = factoryError { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw() }
   }
 
   /// Detaches from its window and releases native objects on the owning UI thread. Idempotent.
@@ -89,7 +89,7 @@ public sealed partial class NativeAccessibilityAdapter : AccessibilityAdapter, I
       if native == nint(0) { throw InvalidOperationException("AccessKit could not create a native window adapter") }
       FocusChanged(window.IsFocused)
     } catch (error Exception) { Unbind()
-      throw error }
+      rethrow }
   }
 
   internal func Unbind() {

@@ -75,6 +75,8 @@ def check(program, root, mode):
 
 with tempfile.TemporaryDirectory(prefix="native-close-", dir=os.environ["XDG_RUNTIME_DIR"]) as work:
     failures = []
+    subprocess.run(["dotnet", str(Path(sys.argv[1]).resolve()), "async-close",
+                    "org.goo.async-close", f"--output={work}"], check=True, timeout=30)
     for case in ("visible", "tray", "hidden"):
         try:
             check(str(Path(sys.argv[1]).resolve()), Path(work), case)

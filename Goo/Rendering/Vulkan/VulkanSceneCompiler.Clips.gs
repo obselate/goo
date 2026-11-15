@@ -15,8 +15,7 @@ internal partial class VulkanSceneCompiler {
     if !node.HasBackgroundImageState {
       return false
     }
-    return BackgroundImageLayouts.Path(node) != ""
-      || BackgroundImageLayouts.Source(node) != nil
+    return BackgroundImageLayouts.Source(node) != nil
   }
 
   private func TryResolvePathClipParentDepth(
@@ -358,12 +357,8 @@ internal partial class VulkanSceneCompiler {
         VulkanSceneUnsupportedField.BackgroundGradient, primitive)
     }
     if node.HasBackgroundImageState {
-      let path = BackgroundImageLayouts.Path(node)
       let source = BackgroundImageLayouts.Source(node)
-      if path != "" && source == nil {
-        RecordUnsupportedDetail(node, VulkanSceneUnsupportedField.BackgroundImage,
-          VulkanSceneUnsupportedPrimitive.BackgroundImage)
-      } else if source != nil {
+      if source != nil {
         RecordUnsupportedDetail(node, VulkanSceneUnsupportedField.BackgroundImageSource,
           VulkanSceneUnsupportedPrimitive.BackgroundImage)
       }
