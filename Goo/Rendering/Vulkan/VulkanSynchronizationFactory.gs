@@ -37,7 +37,7 @@ internal unsafe class VulkanSynchronizationFactory {
               try { accounting.Release() } catch (cleanup Exception) { }
             }
           }
-          throw error
+          rethrow
         }
       }
 
@@ -75,7 +75,7 @@ internal unsafe class VulkanSynchronizationFactory {
               try { accounting.Release() } catch (cleanup Exception) { }
             }
           }
-          throw error
+          rethrow
         }
       }
   }

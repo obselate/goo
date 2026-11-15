@@ -24,6 +24,8 @@ struct PathBandPushConstants
 [[vk::push_constant]] ConstantBuffer<PathBandPushConstants> pc;
 #endif
 static float2 pathPosition;
+static float2 pathOrigin;
+static float2 pathExtent;
 static float4 gooFragmentPosition;
 static float4 outColor;
 #ifndef GOO_CLIP_MASK
@@ -151,9 +153,11 @@ float rayCoordinate(float2 value, bool vertical)
 AnalyticBand readBand(uint base)
 {
     AnalyticBand result;
-    result.minimum = wordFloat(base);
-    result.maximum = wordFloat(base + 1u);
-    result.split = wordFloat(base + 2u);
+    bool vertical = base >= verticalBandBase();
+    float origin = solveCoordinate(pathOrigin, vertical);
+    result.minimum = wordFloat(base) - origin;
+    result.maximum = wordFloat(base + 1u) - origin;
+    result.split = wordFloat(base + 2u) - rayCoordinate(pathOrigin, vertical);
     result.forwardStart = pathWord(base + 3u);
     result.forwardCount = pathWord(base + 4u);
     result.reverseStart = pathWord(base + 5u);
@@ -166,9 +170,9 @@ QuadraticCurve curveAt(uint index)
 {
     uint base = curveBase() + index * CurveWordCount;
     QuadraticCurve result;
-    result.start = float2(wordFloat(base), wordFloat(base + 1u));
-    result.control = float2(wordFloat(base + 2u), wordFloat(base + 3u));
-    result.finish = float2(wordFloat(base + 4u), wordFloat(base + 5u));
+    result.start = float2(wordFloat(base), wordFloat(base + 1u)) - pathOrigin;
+    result.control = float2(wordFloat(base + 2u), wordFloat(base + 3u)) - pathOrigin;
+    result.finish = float2(wordFloat(base + 4u), wordFloat(base + 5u)) - pathOrigin;
     return result;
 }
 
@@ -212,11 +216,11 @@ uint rootCode(float first, float second, float third)
     return (0x2e74u >> shift) & 0x0101u;
 }
 
-AxisRoots solveRoots(QuadraticCurve curve, float2 point, bool vertical)
+AxisRoots solveRoots(QuadraticCurve curve, float2 point, bool vertical, float offset)
 {
-    float first = solveCoordinate(curve.start - point, vertical);
-    float second = solveCoordinate(curve.control - point, vertical);
-    float third = solveCoordinate(curve.finish - point, vertical);
+    float first = solveCoordinate(curve.start - point, vertical) - offset;
+    float second = solveCoordinate(curve.control - point, vertical) - offset;
+    float third = solveCoordinate(curve.finish - point, vertical) - offset;
     AxisRoots result;
     result.code = rootCode(first, second, third);
     result.first = result.second = -1.0;
@@ -243,14 +247,9 @@ AxisRoots solveRoots(QuadraticCurve curve, float2 point, bool vertical)
     }
     else
     {
-        result.first = result.second = -1.0;
+        result.code = 0u;
     }
     return result;
-}
-
-bool rootInRange(float root)
-{
-    return root >= 0.0 && root <= 1.0;
 }
 
 float endpointDirection(QuadraticCurve curve, float root, bool vertical)
@@ -268,9 +267,11 @@ float endpointDirection(QuadraticCurve curve, float root, bool vertical)
 
 float rayDistance(QuadraticCurve curve, float2 point, float root, bool forward, bool vertical)
 {
-    float value = curveCoordinate(curve, clamp(root, 0.0, 1.0), vertical);
-    float origin = rayCoordinate(point, vertical);
-    return forward ? value - origin : origin - value;
+    curve.start -= point;
+    curve.control -= point;
+    curve.finish -= point;
+    float distance = curveCoordinate(curve, clamp(root, 0.0, 1.0), vertical);
+    return forward ? distance : -distance;
 }
 
 bool rootAt(AxisRoots roots, uint slot, out float root)
@@ -309,7 +310,7 @@ bool rootHit(
 {
     distancePixels = 0.0;
     direction = 0.0;
-    if (!rootInRange(root))
+    if (!isfinite(root))
     {
         return false;
     }
@@ -326,7 +327,7 @@ bool rootHit(
     return true;
 }
 
-uint bandIndexAt(float coordinate, bool vertical)
+uint bandIndexAt(float coordinate, bool vertical, float offset)
 {
     uint count = bandCount(vertical);
     uint base = bandBase(vertical);
@@ -340,7 +341,7 @@ uint bandIndexAt(float coordinate, bool vertical)
     {
         uint middle = low + (high - low) / 2u;
         AnalyticBand candidate = readBand(base + middle * BandWordCount);
-        if (candidate.maximum >= coordinate)
+        if (candidate.maximum - coordinate >= offset)
         {
             high = middle;
         }
@@ -352,9 +353,9 @@ uint bandIndexAt(float coordinate, bool vertical)
     return low < count ? low : count - 1u;
 }
 
-AnalyticBand bandAt(float coordinate, bool vertical)
+AnalyticBand bandAt(float coordinate, bool vertical, float offset)
 {
-    return readBand(bandBase(vertical) + bandIndexAt(coordinate, vertical) * BandWordCount);
+    return readBand(bandBase(vertical) + bandIndexAt(coordinate, vertical, offset) * BandWordCount);
 }
 
 bool rootPrecedes(
@@ -416,6 +417,7 @@ bool rootFollows(
 void accumulateRootDirections(
     float distancePixels,
     float rootSign,
+    bool includeWeight,
     inout float value,
     inout float weight,
     inout float oppositeValue,
@@ -425,17 +427,18 @@ void accumulateRootDirections(
     {
         return;
     }
+    float rootWeight = includeWeight
+        ? clamp(1.0 - abs(distancePixels) * 2.0, 0.0, 1.0) : 0.0;
     if (distancePixels >= -0.5)
     {
         value += rootSign * clamp(distancePixels + 0.5, 0.0, 1.0);
-        weight = max(weight, clamp(1.0 - abs(distancePixels) * 2.0, 0.0, 1.0));
+        weight = max(weight, rootWeight);
     }
     float oppositeDistance = -distancePixels;
     if (oppositeDistance >= -0.5)
     {
         oppositeValue += rootSign * clamp(oppositeDistance + 0.5, 0.0, 1.0);
-        oppositeWeight = max(oppositeWeight,
-            clamp(1.0 - abs(oppositeDistance) * 2.0, 0.0, 1.0));
+        oppositeWeight = max(oppositeWeight, rootWeight);
     }
 }
 
@@ -447,6 +450,7 @@ void accumulateEvenOddOrdered(
     bool forward,
     float2 pixelsPerPath,
     bool vertical,
+    float solveOffset,
     uint totalParity,
     inout float value,
     inout float weight)
@@ -461,6 +465,7 @@ void accumulateEvenOddOrdered(
     {
         bool found = false;
         float bestDistance = 0.0;
+        bool bestTangent = false;
         uint bestCurve = 0u;
         uint bestSlot = 0u;
         for (uint index = 0u; index < count; ++index)
@@ -471,7 +476,10 @@ void accumulateEvenOddOrdered(
                 continue;
             }
             QuadraticCurve curve = curveAt(curveIndex);
-            AxisRoots roots = solveRoots(curve, point, vertical);
+            bool tangent;
+            nearContourEndpoint(curve, point, pixelsPerPath, vertical,
+                endpointTolerance(point, pixelsPerPath, vertical), tangent);
+            AxisRoots roots = solveRoots(curve, point, vertical, solveOffset);
             for (uint slot = 0u; slot < 2u; ++slot)
             {
                 float root;
@@ -494,6 +502,7 @@ void accumulateEvenOddOrdered(
                 {
                     found = true;
                     bestDistance = distancePixels;
+                    bestTangent = tangent;
                     bestCurve = curveIndex;
                     bestSlot = slot;
                 }
@@ -506,7 +515,8 @@ void accumulateEvenOddOrdered(
         float amount = clamp(bestDistance + 0.5, 0.0, 1.0);
         float rootSign = (fractionalCount & 1u) == 0u ? 1.0 : -1.0;
         value += rootSign * amount;
-        weight = max(weight, clamp(1.0 - abs(bestDistance) * 2.0, 0.0, 1.0));
+        weight = max(weight, bestTangent ? 0.0
+            : clamp(1.0 - abs(bestDistance) * 2.0, 0.0, 1.0));
         fractionalCount++;
         hasLast = true;
         lastDistance = bestDistance;
@@ -530,8 +540,37 @@ struct RayAccumulator {
     bool overflow;
 };
 
-float2 nonZeroAxisCoverage(float2 point, float2 pixelsPerPath, AnalyticBand band, bool vertical)
+float endpointTolerance(float2 point, float2 pixelsPerPath, bool vertical)
 {
+    float tolerance = max(CoordinateMinimumTolerance,
+        max(abs(solveCoordinate(point, vertical)), solveCoordinate(pathExtent, vertical))
+            * CoordinateRelativeTolerance);
+    return min(tolerance, 1.0 / (2048.0 * solveCoordinate(pixelsPerPath, vertical)));
+}
+
+bool nearContourEndpoint(
+    QuadraticCurve curve, float2 point, float2 pixelsPerPath, bool vertical,
+    float tolerance, out bool tangent)
+{
+    float2 first = curve.start - point;
+    float2 last = curve.finish - point;
+    float pixels = rayCoordinate(pixelsPerPath, vertical);
+    bool firstNear = abs(solveCoordinate(first, vertical)) <= tolerance
+        && abs(rayCoordinate(first, vertical)) * pixels <= 0.5;
+    bool lastNear = abs(solveCoordinate(last, vertical)) <= tolerance
+        && abs(rayCoordinate(last, vertical)) * pixels <= 0.5;
+    float direction = directionTolerance(curve, vertical);
+    bool firstTangent = abs(curveDerivative(curve, 0.0, vertical)) <= direction;
+    bool lastTangent = abs(curveDerivative(curve, 1.0, vertical)) <= direction;
+    tangent = (firstNear && firstTangent) || (lastNear && lastTangent);
+    return (firstNear && !firstTangent) || (lastNear && !lastTangent);
+}
+
+float2 nonZeroAxisCoverage(
+    float2 point, float2 pixelsPerPath, AnalyticBand band, bool vertical,
+    float solveOffset, float tolerance, out bool nearEndpoint)
+{
+    nearEndpoint = false;
     bool forward = rayCoordinate(point, vertical) < band.split;
     uint indices = indexBase(vertical);
     uint start = forward ? band.forwardStart : band.reverseStart;
@@ -548,11 +587,15 @@ float2 nonZeroAxisCoverage(float2 point, float2 pixelsPerPath, AnalyticBand band
             continue;
         }
         QuadraticCurve curve = curveAt(curveIndex);
-        AxisRoots roots = solveRoots(curve, point, vertical);
+        bool tangent;
+        bool endpoint = nearContourEndpoint(
+            curve, point, pixelsPerPath, vertical, tolerance, tangent);
+        nearEndpoint = nearEndpoint || (solveOffset == 0.0 && endpoint);
+        AxisRoots roots = solveRoots(curve, point, vertical, solveOffset);
         for (uint slot = 0u; slot < 2u; ++slot)
         {
             float root;
-            if (rootAt(roots, slot, root) && rootInRange(root))
+            if (rootAt(roots, slot, root) && isfinite(root))
             {
                 float direction = endpointDirection(curve, root, vertical);
                 if (!(abs(direction) <= directionTolerance(curve, vertical)))
@@ -560,6 +603,7 @@ float2 nonZeroAxisCoverage(float2 point, float2 pixelsPerPath, AnalyticBand band
                     accumulateRootDirections(
                         rayDistance(curve, point, root, forward, vertical) * rayCoordinate(pixelsPerPath, vertical),
                         (vertical ? direction < 0.0 : direction > 0.0) ? 1.0 : -1.0,
+                        !tangent,
                         value, weight, oppositeValue, oppositeWeight);
                 }
             }
@@ -575,11 +619,16 @@ float2 nonZeroAxisCoverage(float2 point, float2 pixelsPerPath, AnalyticBand band
     return float2(primary.x, max(primary.y, opposite.y));
 }
 
-float2 axisCoverage(float2 point, float2 pixelsPerPath, AnalyticBand band, bool vertical)
+float2 axisCoverageAt(
+    float2 point, float2 pixelsPerPath, AnalyticBand band, bool vertical,
+    float solveOffset, out bool nearEndpoint)
 {
+    nearEndpoint = false;
+    float tolerance = endpointTolerance(point, pixelsPerPath, vertical);
     if (pc.params.y != 1u)
     {
-        return nonZeroAxisCoverage(point, pixelsPerPath, band, vertical);
+        return nonZeroAxisCoverage(point, pixelsPerPath, band, vertical,
+            solveOffset, tolerance, nearEndpoint);
     }
     bool forward = rayCoordinate(point, vertical) < band.split;
     uint indices = indexBase(vertical);
@@ -596,7 +645,11 @@ float2 axisCoverage(float2 point, float2 pixelsPerPath, AnalyticBand band, bool 
             continue;
         }
         QuadraticCurve curve = curveAt(curveIndex);
-        AxisRoots roots = solveRoots(curve, point, vertical);
+        bool tangent;
+        bool endpoint = nearContourEndpoint(
+            curve, point, pixelsPerPath, vertical, tolerance, tangent);
+        nearEndpoint = nearEndpoint || (solveOffset == 0.0 && endpoint);
+        AxisRoots roots = solveRoots(curve, point, vertical, solveOffset);
         for (uint slot = 0u; slot < 2u; ++slot)
         {
             float root;
@@ -615,7 +668,8 @@ float2 axisCoverage(float2 point, float2 pixelsPerPath, AnalyticBand band, bool 
                     continue;
                 }
                 RayAccumulator ray = forwardSide ? forwardRay : reverseRay;
-                ray.weight = max(ray.weight, clamp(1.0 - abs(distancePixels) * 2.0, 0.0, 1.0));
+                ray.weight = max(ray.weight, tangent ? 0.0
+                    : clamp(1.0 - abs(distancePixels) * 2.0, 0.0, 1.0));
                 ray.parity ^= 1u;
                 if (distancePixels < 0.5)
                 {
@@ -665,7 +719,7 @@ float2 axisCoverage(float2 point, float2 pixelsPerPath, AnalyticBand band, bool 
             accumulateEvenOddOrdered(point, indices,
                 forwardSide ? band.forwardStart : band.reverseStart,
                 forwardSide ? band.forwardCount : band.reverseCount,
-                forwardSide, pixelsPerPath, vertical, ray.parity,
+                forwardSide, pixelsPerPath, vertical, solveOffset, ray.parity,
                 ray.value, ray.weight);
         }
         else
@@ -702,6 +756,35 @@ float2 axisCoverage(float2 point, float2 pixelsPerPath, AnalyticBand band, bool 
         return float2(opposite.x, max(primary.y, opposite.y));
     }
     return float2(primary.x, max(primary.y, opposite.y));
+}
+
+float2 axisCoverage(float2 point, float2 pixelsPerPath, AnalyticBand band, bool vertical)
+{
+    float margin = endpointTolerance(point, pixelsPerPath, vertical) * 2.0;
+    float value = 0.0;
+    float weight = 0.0;
+    [loop] for (uint sample = 0u; sample < 3u; ++sample)
+    {
+        float offset = sample == 0u ? 0.0 : (sample == 1u ? -margin : margin);
+        AnalyticBand sampleBand = sample == 0u ? band
+            : bandAt(solveCoordinate(point, vertical), vertical, offset);
+        bool nearEndpoint;
+        float2 coverage = axisCoverageAt(point, pixelsPerPath, sampleBand,
+            vertical, offset, nearEndpoint);
+        if (sample == 0u)
+        {
+            if (!nearEndpoint)
+            {
+                return coverage;
+            }
+        }
+        else
+        {
+            value += coverage.x * 0.5;
+            weight = max(weight, coverage.y);
+        }
+    }
+    return float2(value, weight);
 }
 
 float2 pixelsPerPath()
@@ -747,8 +830,8 @@ bool outsideBand(float coordinate, float margin, AnalyticBand band, bool vertica
 float analyticCoverage()
 {
     float2 pixels = pixelsPerPath();
-    AnalyticBand horizontalBand = bandAt(pathPosition.y, false);
-    AnalyticBand verticalBand = bandAt(pathPosition.x, true);
+    AnalyticBand horizontalBand = bandAt(pathPosition.y, false, 0.0);
+    AnalyticBand verticalBand = bandAt(pathPosition.x, true, 0.0);
     if (outsideBand(pathPosition.x, 1.0 / pixels.x, horizontalBand, false)
         && outsideBand(pathPosition.y, 1.0 / pixels.y, verticalBand, true))
     {
@@ -844,10 +927,18 @@ struct PathBandFragmentOutput
 PathBandFragmentOutput main(PathBandFragmentInput input)
 {
     PathBandFragmentOutput output;
+    pathOrigin = float2(wordFloat(8u), wordFloat(9u));
+    pathExtent = float2(wordFloat(10u), wordFloat(11u)) - pathOrigin;
+    if (pc.params.w != 0u)
+    {
+        pathOrigin = float2(0.0);
+    }
 #ifdef GOO_CLIP_MASK
     float2 pixel = input.position.xy - float2(pc.transform0.w, pc.transform1.w);
     float2 clip = pixel * pc.sampleStep.xy * 2.0 - 1.0;
-    float2 translated = clip - float2(pc.transform0.z, pc.transform1.z);
+    float3 anchor = float3(pathOrigin, 1.0);
+    float2 translated = clip
+        - float2(dot(pc.transform0.xyz, anchor), dot(pc.transform1.xyz, anchor));
     float determinant = pc.transform0.x * pc.transform1.y - pc.transform0.y * pc.transform1.x;
     if (pc.borderRect.z <= 0.0 || pc.borderRect.w <= 0.0
         || determinant == 0.0 || !isfinite(determinant))

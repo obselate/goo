@@ -18,63 +18,93 @@ public enum StrokeJoin { Miter; Round; Bevel }
 /// Selects whether strokes scale with geometry or remain in window logical pixels.
 public enum VectorEffect { None; NonScalingStroke }
 
-/// Displays a vector path with fill and one uniform stroke. Side-specific border declarations apply to boxes only.
+/// Displays a vector path with fill and one uniform stroke.
+/// Use Fill and Stroke for path paint. Legacy paint always throws:
+/// "Shape paint moved to Fill and Stroke".
 public class Shape : Blob {
-  private var miterLimit float64
+  private var declarationPath VectorPath
+  private var declarationFit ShapeFit
+  private var declarationFill VectorPaint?
+  private var declarationStroke VectorStroke?
+  private var declarationFillRule FillRule
+  private var declarationUseCurrentColor bool
   private var cornerRadius float64
   private var strokeStart float64
   private var strokeEnd float64
+  private var paintEntries StyleEntries?
 
   internal override func coreBlob() {
   }
 
   /// Gets or sets the vector path to display.
   /// Reuse one path and position instances with Transform to share encoded geometry.
-  public prop Path VectorPath{ get; init; }
+  public prop Path VectorPath {
+    get -> declarationPath
+    set {
+      CheckMutable()
+      declarationPath = value
+    }
+  }
   /// Gets or sets the geometry fit. Cover clips, Fill stretches, and None preserves view-box units.
-  public prop Fit ShapeFit{ get; init; }
+  public prop Fit ShapeFit {
+    get -> declarationFit
+    set {
+      CheckMutable()
+      declarationFit = value
+    }
+  }
+  /// Gets or sets the optional path fill. A gradient takes priority over UseCurrentColor.
+  public prop Fill VectorPaint? {
+    get -> declarationFill
+    set {
+      CheckMutable()
+      declarationFill = value
+    }
+  }
+  /// Gets or sets the complete stroke paint and options. Gradient strokes are not supported.
+  public prop Stroke VectorStroke? {
+    get -> declarationStroke
+    set {
+      CheckMutable()
+      declarationStroke = value
+    }
+  }
   /// Gets or sets the fill rule. The default is NonZero.
-  public prop FillRule FillRule{ get; init; }
+  public prop FillRule FillRule {
+    get -> declarationFillRule
+    set {
+      CheckMutable()
+      declarationFillRule = value
+    }
+  }
   /// Uses the inherited Color for solid fill when true. The default is false.
-  /// BackgroundGradient and stroke colors are unchanged.
-  public prop UseCurrentColor bool{ get; init; }
-  /// Gets or sets the stroke cap style. The default is Butt.
-  public prop StrokeCap StrokeCap{ get; init; }
-  /// Gets or sets the stroke join style. The default is Miter.
-  public prop StrokeJoin StrokeJoin{ get; init; }
-  /// Gets or sets the vector effect. The default is None.
-  /// NonScalingStroke keeps widths and dash lengths in window logical pixels.
-  /// The stroke stays centered on the path.
-  public prop VectorEffect VectorEffect{ get; init; }
-  /// Gets or sets the non-negative finite miter limit. The default is 4.
-  public prop MiterLimit float64{
-    get -> miterLimit
-    init{
-      if !motionFiniteFloat32(value) || value < 0.0 {
-        throw ArgumentOutOfRangeException("MiterLimit")
-      }
-      miterLimit = value
+  /// A gradient Fill and the Stroke paint are unchanged.
+  public prop UseCurrentColor bool {
+    get -> declarationUseCurrentColor
+    set {
+      CheckMutable()
+      declarationUseCurrentColor = value
     }
   }
   /// Gets or sets the non-negative finite corner radius in logical pixels.
   public prop CornerRadius float64{
     get -> cornerRadius
-    init{
+    set {
+      CheckMutable()
       if !motionFiniteFloat32(value) || value < 0.0 {
         throw ArgumentOutOfRangeException("CornerRadius")
       }
       cornerRadius = value
     }
   }
-  /// Gets or sets the stroke dash pattern.
-  public prop Dashes DashPattern? { get; init; }
   /// Gets or sets the stroke start in [0, 1], summed across contours in path order.
   /// None measures flattened geometry after fit mapping.
   /// NonScalingStroke measures geometry after the full transform.
   /// On mount, StrokeStart must not exceed StrokeEnd.
   public prop StrokeStart float64{
     get -> strokeStart
-    init{
+    set {
+      CheckMutable()
       if !motionFiniteFloat32(value) || value < 0.0 || value > 1.0 {
         throw ArgumentOutOfRangeException("StrokeStart")
       }
@@ -84,10 +114,11 @@ public class Shape : Blob {
   /// Gets or sets the stroke end in [0, 1]. Equal bounds omit the stroke;
   /// fill remains unchanged. Trim precedes dashes, whose phase starts at each
   /// trimmed contour. Trim preserves fully included closed contours; partial
-  /// contours use StrokeCap at their open ends.
+  /// contours use the stroke's Cap at their open ends.
   public prop StrokeEnd float64{
     get -> strokeEnd
-    init{
+    set {
+      CheckMutable()
       if !motionFiniteFloat32(value) || value < 0.0 || value > 1.0 {
         throw ArgumentOutOfRangeException("StrokeEnd")
       }
@@ -97,15 +128,41 @@ public class Shape : Blob {
 
   internal prop StrokeInset bool{ get; init; }
 
+  internal func PaintEntries() StyleEntries? {
+    if let cached = paintEntries { return cached }
+    let source = FilterPaintEntries(Entries())
+    if Fill == nil && Stroke == nil { return source }
+    let result = StyleEntries{}
+    if let entries = source { result.AddRange(entries) }
+    let fill = Fill?.Color ?? Color.Transparent
+    let stroke = Stroke?.Paint.Color ?? Color.Transparent
+    result.Add(StyleEntry{Field: StyleField.BackgroundColor, A: fill.R, B: fill.G, C: fill.B, D: fill.A})
+    result.Add(StyleEntry{Field: StyleField.BackgroundGradient, Payload: Fill?.Gradient})
+    result.Add(StyleEntry{Field: StyleField.ShapeStrokeWidth, A: float32(Stroke?.Width ?? 0.0), B: float32(int32(LengthUnit.Px))})
+    result.Add(StyleEntry{Field: StyleField.ShapeStrokeColor, A: stroke.R, B: stroke.G, C: stroke.B, D: stroke.A})
+    paintEntries = result
+    return result
+  }
+
+  internal func FilterPaintEntries(source StyleEntries?) StyleEntries? {
+    guard let entries = source else { return nil }
+    var cursor = entries.Cursor()
+    while cursor.MoveNext() {
+      let field = cursor.Current.Field
+      if field is StyleField.BackgroundColor or StyleField.BackgroundGradient
+        or StyleField.ShapeStrokeWidth or StyleField.ShapeStrokeColor {
+        throw InvalidOperationException("Shape paint moved to Fill and Stroke")
+      }
+    }
+    return source
+  }
+
   /// Creates a shape with default paint options.
   public init() {
     Path = VectorPath.Empty
     Fit = ShapeFit.Contain
     FillRule = FillRule.NonZero
-    StrokeCap = StrokeCap.Butt
-    StrokeJoin = StrokeJoin.Miter
     StrokeInset = true
-    miterLimit = 4.0
     strokeEnd = 1.0
   }
 }

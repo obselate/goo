@@ -218,7 +218,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
       } catch (error Exception) {
         DestroyDescriptorResources()
         DisposeSlots()
-        throw error
+        rethrow
       }
     }
 

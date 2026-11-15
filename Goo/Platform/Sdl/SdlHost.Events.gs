@@ -8,6 +8,7 @@ import Hexa.NET.SDL3
 
 internal unsafe partial class SdlHost {
   private func Dispatch(nativeEvent SDLEvent) {
+    using let callbackScope = CallbackScope(CallbackContext)
     pendingEvents = true
     let eventType = SDLEventType(nativeEvent.Type)
     if eventType == SDLEventType.SystemThemeChanged || eventType == SDLEventType.LocaleChanged {

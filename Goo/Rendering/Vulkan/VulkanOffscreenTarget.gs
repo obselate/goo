@@ -398,7 +398,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
         }
         rollbackIndex = rollbackIndex + 1
       }
-      throw error
+      rethrow
     }
     reservedImageIdCount = frame.CachedImageCount
     reservedTextAtlasIdCount = textAtlasCount
@@ -534,7 +534,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
         AbortResourceUploads()
         ReleaseReservedImageReferences()
         state = VulkanOffscreenState.Idle
-        throw error
+        rethrow
       }
     }
 
@@ -608,7 +608,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       try {
         ReconcileUploadSubmission(submissionSerial)
         MarkSubmittedResourceUses(submissionSerial)
-      } catch (error Exception) { throw error }
+      } catch (error Exception) { rethrow }
       guard let renderer = primitiveRenderer else {
         throw InvalidOperationException("Vulkan offscreen primitive renderer is unavailable")
       }
@@ -1312,7 +1312,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
         let destroyCommandPool = dispatch.vkDestroyCommandPool
         destroyCommandPool(device, commandPool, nil)
         commandPool = 0uL
-        throw error
+        rethrow
       }
       var imageCreateInfo = VkImageCreateInfo{}
       imageCreateInfo.sType = VkConstants.VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO
@@ -1347,7 +1347,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
         let destroyImage = dispatch.vkDestroyImage
         destroyImage(device, image, nil)
         image = 0uL
-        throw error
+        rethrow
       }
       try {
         imageAllocation = allocator.AllocateImage(
@@ -1396,7 +1396,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
         let destroyImageView = dispatch.vkDestroyImageView
         destroyImageView(device, imageView, nil)
         imageView = 0uL
-        throw error
+        rethrow
       }
 
       var bufferCreateInfo = VkBufferCreateInfo{}
@@ -1421,7 +1421,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
         let destroyBuffer = dispatch.vkDestroyBuffer
         destroyBuffer(device, stagingBuffer, nil)
         stagingBuffer = 0uL
-        throw error
+        rethrow
       }
       try {
         stagingAllocation = allocator.AllocateBuffer(
@@ -1488,7 +1488,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       } else {
         try { Dispose() } catch (cleanup Exception) { }
       }
-      throw error
+      rethrow
     }
   }
 

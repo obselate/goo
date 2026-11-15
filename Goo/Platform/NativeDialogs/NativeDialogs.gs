@@ -3,6 +3,7 @@ package Goo
 import System
 import System.Collections.Generic
 import System.Threading.Tasks
+import Hexa.NET.SDL3
 
 /// Selects the native message severity.
 public enum MessageBoxIcon { Information; Warning; Error }
@@ -11,7 +12,7 @@ public enum MessageBoxIcon { Information; Warning; Error }
 public enum MessageBoxStatus { Success; Cancelled; Unsupported; Busy; OwnerClosed; Failed }
 
 /// Describes one native message-box button.
-public sealed class MessageBoxButton {
+public class MessageBoxButton {
     /// Gets the unique nonnegative application identifier.
     public prop Id int32 { get; init; }
     /// Gets the native button label.
@@ -25,7 +26,7 @@ public sealed class MessageBoxButton {
 }
 
 /// Supplies native message-box content, copied when accepted.
-public sealed class MessageBoxOptions {
+public class MessageBoxOptions {
     /// Gets the native title.
     public prop Title string { get; init; }
     /// Gets the plain-text message.
@@ -43,10 +44,10 @@ public sealed class MessageBoxOptions {
 }
 
 /// Contains a native message-box outcome.
-public sealed class MessageBoxResult {
+public class MessageBoxResult {
     /// Gets the explicit outcome.
     public prop Status MessageBoxStatus { get; }
-    /// Gets the selected identifier, or -1 outside Success.
+    /// Gets the selected application button identifier, or -1 when no application button was selected.
     public prop ButtonId int32 { get; }
     /// Gets copied failure detail, or an empty string.
     public prop Error string { get; }
@@ -58,10 +59,34 @@ public sealed class MessageBoxResult {
 }
 
 /// Shows owned native dialogs without a managed fallback.
-public sealed class NativeDialogs {
+public class NativeDialogs {
     private init() { }
 
     shared {
+        /// Shows a synchronous ownerless platform error box before or after window use.
+        /// Call on the main thread. Blocks the calling thread. Do not call while Goo windows are open.
+        /// Linux and Android return Unsupported. Write the message to standard error when unsupported.
+        /// @param title The native title.
+        /// @param message The plain-text error message.
+        /// @returns Success, Unsupported when no simple message box exists, or Failed with native Error detail. ButtonId is -1.
+        public func ShowError(title string, message string) MessageBoxResult {
+            ValidateText(title, "title")
+            ValidateText(message, "message")
+            if !OperatingSystem.IsWindows() && !OperatingSystem.IsMacOS() {
+                return MessageBoxResult(MessageBoxStatus.Unsupported)
+            }
+            try {
+                SdlRuntime.EnsureLibrary()
+                return if SDL.ShowSimpleMessageBox(uint32(SDLMessageBoxFlags.Error), title, message, SDLWindowPtr.Null) {
+                    MessageBoxResult(MessageBoxStatus.Success)
+                } else { MessageBoxResult(MessageBoxStatus.Failed, error: SDL.GetErrorS() ?? "SDL error box failed") }
+            } catch (error DllNotFoundException) { return MessageBoxResult(MessageBoxStatus.Unsupported, error: error.Message) }
+            catch (error EntryPointNotFoundException) { return MessageBoxResult(MessageBoxStatus.Unsupported, error: error.Message) }
+            catch (error TypeInitializationException) when (error.InnerException is DllNotFoundException || error.InnerException is EntryPointNotFoundException) {
+                return MessageBoxResult(MessageBoxStatus.Unsupported, error: error.InnerException!!.Message)
+            }
+        }
+
         /// Queues an owned native message box from the open owner's UI thread.
         /// Desktop SDL display blocks Goo rendering, timers and posted actions until dismissal.
         /// Wayland returns Unsupported. Android supports up to three buttons without Return/Escape defaults.

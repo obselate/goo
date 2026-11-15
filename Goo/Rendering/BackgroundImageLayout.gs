@@ -7,8 +7,6 @@ internal class BackgroundImageLayouts {
   shared {
     private var values ConditionalWeakTable[Node, BackgroundImageValue]?
 
-    internal func Path(n Node) string -> if let value = state(n) { value.Path } else { "" }
-
     internal func Source(n Node) ImageSourceProvider ? -> if let value = state(n) { value.Source } else { nil }
 
     internal func Binding(n Node) ImageSourceBinding ? -> state(n)
@@ -19,41 +17,10 @@ internal class BackgroundImageLayouts {
       return value.Image
     }
 
-    internal func SetPath(n Node, path string, invalidated Action?) bool {
-      var value = state(n)
-      if value == nil {
-        if path == "" { return false }
-        value = create(n)
-      }
-      let current = value
-      let changed = current.Path != path
-      current.Path = path
-      current.Invalidated = invalidated
-      if current.Source != nil {
-        return Refresh(n)
-      }
-      if !changed { return Refresh(n) }
-      if path == "" {
-        remove(n, current)
-        return false
-      }
-      current.Image = DecodedImage.Failed
-      current.Settled = true
-      return false
-    }
-
     internal func SetSource(n Node, source ImageSourceProvider?, invalidated Action?, owner Window?) bool {
       if source == nil {
         guard let current = state(n) else { return false }
-        current.Invalidated = invalidated
-        if current.Source == nil { return Refresh(n) }
-        current.ReleaseSource()
-        if current.Path == "" {
-          remove(n, current)
-          return false
-        }
-        current.Image = DecodedImage.Failed
-        current.Settled = true
+        remove(n, current)
         return false
       }
       var value = state(n)
@@ -111,7 +78,6 @@ internal class BackgroundImageLayouts {
       values?.Remove(n)
       n.HasBackgroundImageState = false
       value.ReleaseSource()
-      value.Path = ""
       value.Image = nil
       value.Settled = false
       value.Invalidated = nil
@@ -169,12 +135,8 @@ internal class BackgroundImageLayouts {
 }
 
 internal class BackgroundImageValue : ImageSourceBinding {
-  internal var Path string
   internal var Image DecodedImage?
   internal var Settled bool
   internal var Invalidated Action?
 
-  internal init() {
-    Path = ""
-  }
 }

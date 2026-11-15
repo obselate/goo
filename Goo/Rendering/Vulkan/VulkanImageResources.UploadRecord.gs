@@ -306,7 +306,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       entries = previousEntries
       currentReferenceCounts = previousReferences
       descriptorSets = previousDescriptorSets
-      throw error
+      rethrow
     }
   }
 

@@ -121,7 +121,7 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
           try { target.AbortPrepared() } catch (cleanup Exception) { }
         }
         state = VulkanReadbackState.Failed
-        throw error
+        rethrow
       }
     }
 
@@ -243,13 +243,13 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
       try { target.Dispose() } catch (error Exception) {
         MarkDeviceLossIfDetected()
         state = VulkanReadbackState.Abandoned
-        throw error
+        rethrow
       }
     } else {
       try { target.Dispose() } catch (error Exception) {
         MarkDeviceLossIfDetected()
         state = VulkanReadbackState.Abandoned
-        throw error
+        rethrow
       }
     }
     disposed = true
@@ -271,7 +271,7 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
     try { target.Dispose() } catch (error Exception) {
       MarkDeviceLossIfDetected()
       state = VulkanReadbackState.Abandoned
-      throw error
+      rethrow
     }
     disposed = true
     sharedLease.Release()

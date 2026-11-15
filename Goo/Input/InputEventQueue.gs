@@ -75,7 +75,20 @@ internal class InputEventQueue {
     return true
   }
 
-  internal func Take(out value QueuedInputEvent) bool -> events.TryDequeue(out value)
+  internal func Take(out value QueuedInputEvent) bool {
+    if !events.TryDequeue(out value) { return false }
+    if value.IsFocusLost { owner?.SetInputModifiers(KeyModifiers.None) }
+    else if value.IsPointer && value.PointerFrame == nil {
+      if value.Pointer.Kind == PointerEventKind.Move || value.Pointer.Kind == PointerEventKind.Press
+        || value.Pointer.Kind == PointerEventKind.Release || value.Pointer.Kind == PointerEventKind.Wheel {
+        owner?.SetInputModifiers(value.Pointer.Modifiers)
+      }
+    } else if !value.IsPointer && !value.IsFocusGained && (value.Keyboard.Kind == KeyboardEventKind.Press
+      || value.Keyboard.Kind == KeyboardEventKind.Release) {
+      owner?.SetInputModifiers(value.Keyboard.Modifiers)
+    }
+    return true
+  }
   internal func Finish() -> draining = false
   internal func Clear() {
     while events.TryDequeue(out var value) {

@@ -156,6 +156,9 @@
 !/THIRD-PARTY-NOTICES.md
 !/Directory.Build.props
 !/Directory.Packages.props
+!/tools/WidgetsReferences.targets
+!/Directory.Build.targets
+!/.github/goo-widgets.commit
 
 **/bin/
 **/obj/

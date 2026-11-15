@@ -66,7 +66,7 @@ internal class MacNotificationBlockLease : IDisposable {
         } catch (error Exception) {
             handle.Free()
             if block != nint(0) { Marshal.FreeHGlobal(block) }
-            throw error
+            rethrow
         }
     }
 

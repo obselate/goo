@@ -111,8 +111,8 @@ class GalleryTheme {
             BorderColor: Border,
             BorderRadius: 8,
             TransitionMs: 100.0,
-            Hover: Style{BackgroundColor: Border, BorderColor: BorderStrong},
-            Focus: Style{OutlineWidth: 1, OutlineColor: BorderStrong},
+            HoverStyle: Style{BackgroundColor: Border, BorderColor: BorderStrong},
+            FocusStyle: Style{OutlineWidth: 1, OutlineColor: BorderStrong},
             OnClick: onClick,
             Text{Content: content, FontSize: 13, FontWeight: 600, Color: Ink,},
         }

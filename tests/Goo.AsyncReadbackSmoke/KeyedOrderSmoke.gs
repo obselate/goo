@@ -30,7 +30,7 @@ func KeyedOrderTop(pixels []uint8, width uint32, metrics WindowMetrics, at float
 
 func RunKeyedOrderSmoke() {
   let cell = KeyedOrderSmokeCell{}
-  let window = Window{ Title: "Goo keyed order smoke", Width: 120, Height: 120, VSync: false, Root: cell }
+  let window = Window{ Title: "Goo keyed order smoke", Size: LayoutSize(120, 120),  VSync: false, Root: cell }
   window.Open()
   try {
     for i in 0 ... 20 { WindowReadbackTestFixture.Pump(window, 0.0) }

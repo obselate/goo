@@ -41,6 +41,7 @@ internal partial class TextInput {
   }
 
   private func beforeBlur(n Node) {
+    if n.Selectable { SelectableText.Set(n, 0, 0) }
     if let history = n.EntryHistory { history.Typing = false }
     cancelEntryComposition(n)
     blurEditor(n)
@@ -115,6 +116,12 @@ internal partial class TextInput {
     let end = start + length
     if end < start || (caret != start && caret != end) { return false }
     let anchor = caret == start ? end : start
+    if target.Selectable {
+      if end > target.Content.Length { return false }
+      let low = textBoundary(target.Content, start, false)
+      let high = textBoundary(target.Content, end, length != 0)
+      return SelectableText.Set(target, caret == start ? high : low, caret == start ? low : high)
+    }
     if target.Kind == NodeKind.Entry {
       let starts = UnicodeGraphemes.Starts(target.Buffer)
       let semanticLength = target.Password ? starts.Length : target.Buffer.Length
@@ -229,10 +236,11 @@ internal partial class TextInput {
       let selectedCandidate = selected >= 0 && selected < values.Count ? selected : -1
       if let callback = TextInputCallbacks.TextCandidates(n) {
         let owner = CellOwnership.ForCallback(n)
+        let previousContext = owner?.BeginCallback()
         try {
           callback(TextCandidateEvent{ Candidates: values, SelectedCandidate: selectedCandidate,
             Horizontal: horizontal })
-        } finally { owner?.RebuildAfterCallback() }
+        } finally { owner?.EndCallback(previousContext) }
       }
     }
 
@@ -257,24 +265,27 @@ internal partial class TextInput {
   private func dispatchTextInput(n Node, value string) {
     if let callback = TextInputCallbacks.TextInput(n) {
       let owner = CellOwnership.ForCallback(n)
+      let previousContext = owner?.BeginCallback()
       try { callback(value) }
-      finally { owner?.RebuildAfterCallback() }
+      finally { owner?.EndCallback(previousContext) }
     }
   }
 
   private func dispatchTextComposition(n Node, value TextCompositionEvent) {
     if let callback = TextInputCallbacks.TextComposition(n) {
       let owner = CellOwnership.ForCallback(n)
+      let previousContext = owner?.BeginCallback()
       try { callback(value) }
-      finally { owner?.RebuildAfterCallback() }
+      finally { owner?.EndCallback(previousContext) }
     }
   }
 
   private func dispatchTextCompositionCancel(n Node) {
     if let callback = TextInputCallbacks.TextCompositionCancel(n) {
       let owner = CellOwnership.ForCallback(n)
+      let previousContext = owner?.BeginCallback()
       try { callback() }
-      finally { owner?.RebuildAfterCallback() }
+      finally { owner?.EndCallback(previousContext) }
     }
   }
 
@@ -364,9 +375,10 @@ internal partial class TextInput {
     let generation = focus.Generation
     let callback = after.Text != before.Text ? n.OnChange : nil
     let owner = callback != nil ? CellOwnership.Within(root, n) : nil
+    let previousContext = owner?.BeginCallback()
     try { callback?.Invoke(after.Text) }
     finally {
-      owner?.RebuildAfterCallback()
+      owner?.EndCallback(previousContext)
       if generation == focus.Generation {
         FollowCaret(n)
         updateTextInputArea(n)
@@ -407,7 +419,16 @@ internal partial class TextInput {
   private func editState(n Node) EditState -> EditState { Text: n.Buffer, Caret: n.Caret, Anchor: n.Anchor }
 
   private func clipboardGet() string {
-    try { return if let native = host { native.GetClipboardText() } else { clipFallback } }
+    try {
+      if let native = host {
+        let result = native.GetClipboardText()
+        if result.Status != ClipboardReadStatus.Success && result.Status != ClipboardReadStatus.Empty {
+          Console.Error.WriteLine("Goo clipboard read failed: " + result.Error)
+        }
+        return result.Text
+      }
+      return clipFallback
+    }
     catch (error Exception) {
       Console.Error.WriteLine("Goo clipboard read failed: " + error.Message)
       return ""
@@ -416,7 +437,13 @@ internal partial class TextInput {
 
   private func clipboardSet(value string) bool {
     try {
-      if let native = host { native.SetClipboardText(value) }
+      if let native = host {
+        let result = native.SetClipboardText(value)
+        if result.Status != DataTransferStatus.Success {
+          Console.Error.WriteLine("Goo clipboard write failed: " + result.Error)
+          return false
+        }
+      }
       else { clipFallback = value }
       return true
     } catch (error Exception) {

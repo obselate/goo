@@ -56,7 +56,7 @@ internal unsafe partial class SdlHost {
                 NormalBounds: ElementRect{ X: float64(placementX), Y: float64(placementY),
                     Width: float64(placementWidth), Height: float64(placementHeight) },
                 State: restored, DisplayName: display?.Name ?? "", DisplayBounds: display?.Bounds ?? ElementRect{},
-                DisplayScale: float64(display?.ContentScale ?? 0.0f),
+                DisplayScale: display?.ContentScale ?? 0.0,
             })
         } catch (error InvalidOperationException) {
             return WindowPlacementResult(WindowOperationResult.Failed, error: error.Message)
@@ -76,7 +76,7 @@ internal unsafe partial class SdlHost {
                 for candidate in GetDisplays() {
                     if String.Equals(candidate.Name, value.DisplayName, StringComparison.Ordinal)
                         && candidate.Bounds.Equals(value.DisplayBounds)
-                        && (value.DisplayScale == 0.0 || float64(candidate.ContentScale) == value.DisplayScale) {
+                        && (value.DisplayScale == 0.0 || candidate.ContentScale == value.DisplayScale) {
                         display = candidate
                         break
                     }
@@ -104,7 +104,7 @@ internal unsafe partial class SdlHost {
                 ObserveNormalPlacement()
             }
             if let chosen = display {
-                let result = TrySetFullscreenDisplay(chosen.Id)
+                let result = SetFullscreenDisplay(chosen.Id)
                 if result != WindowOperationResult.Accepted {
                     return WindowPlacementResult(result, appliedFields: applied, error: "Fullscreen display selection failed")
                 }

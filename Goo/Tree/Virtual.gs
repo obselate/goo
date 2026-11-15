@@ -6,18 +6,22 @@ import Facebook.Yoga
 /// Mounts the items placed by a VirtualSource. It scrolls content coordinates.
 /// Overriding the list role or clearing Accessibility forwards item position to content.
 public class Virtual : Blob {
-  private let source VirtualSource
+  private var source VirtualSource?
 
   internal override func coreBlob() {
   }
 
-  internal prop Source VirtualSource{ get -> source }
+  /// Gets the required item policy. Set a new immutable source on each build.
+  public prop Source VirtualSource{
+    get -> source ?? throw InvalidOperationException("Virtual.Source is required")
+    set {
+      CheckMutable()
+      source = value
+    }
+  }
 
-  /// Initializes a list element that scrolls on both axes.
-  /// @param source The item policy. Create a new source on each build to supply new inputs.
-  public init(source VirtualSource) {
-    if source == nil { throw ArgumentNullException("source") }
-    this.source = source
+  /// Initializes a list element that scrolls on both axes. Source must be set before mounting.
+  public init() {
     Accessibility = Accessibility{ Role: AccessibilityRole.List }
     Position = PositionType.Relative
     OverflowX = Overflow.Scroll
@@ -34,7 +38,7 @@ public interface VirtualSource {
 }
 
 /// Selects an item's alignment in the viewport.
-public enum ScrollAlignment { Start; Center; End }
+public enum ScrollAlignment { Start; Center; End; Nearest }
 
 /// Stores a visible virtual item's key and signed position inside the viewport.
 public data struct VirtualScrollAnchor {
@@ -153,7 +157,7 @@ public class VirtualViewport {
   public prop Size LayoutSize{
     get {
       let n = bound()
-      return LayoutSize{ Width: float64(BoxGeometry.ViewportWidth(n)), Height: float64(BoxGeometry.ViewportHeight(n)) }
+      return LayoutSize(float64(BoxGeometry.ViewportWidth(n)), float64(BoxGeometry.ViewportHeight(n)))
     }
   }
   /// Gets the device pixels per layout unit used to round layout in this window.
@@ -218,13 +222,12 @@ public class VirtualViewport {
   /// @returns The key and the last layout size of the item.
   public func Child(index int32) VirtualChild {
     let child = bound().Children[index]
-    var size = LayoutSize{ Width: float64(child.Rect.W), Height: float64(child.Rect.H) }
+    var size = LayoutSize(float64(child.Rect.W), float64(child.Rect.H))
     var measured = false
     if let yoga = child.Yoga {
-      size = LayoutSize{
-        Width: float64(YGNodeLayoutAPI.YGNodeLayoutGetRawWidth(yoga)),
-        Height: float64(YGNodeLayoutAPI.YGNodeLayoutGetRawHeight(yoga)),
-      }
+      size = LayoutSize(
+        float64(YGNodeLayoutAPI.YGNodeLayoutGetRawWidth(yoga)),
+        float64(YGNodeLayoutAPI.YGNodeLayoutGetRawHeight(yoga)))
       measured = !YGNodeAPI.YGNodeIsDirty(yoga)
     }
     return VirtualChild{ Key: child.Key ?? "", Size: size, Measured: measured }
@@ -243,7 +246,7 @@ public class VirtualOutput {
 
   internal func Bind(state VirtualNodeState?) {
     owner = state
-    contentSize = LayoutSize{}
+    contentSize = LayoutSize(0.0, 0.0)
     itemCount = 0
     scrollOffset = nil
     anchorKey = nil

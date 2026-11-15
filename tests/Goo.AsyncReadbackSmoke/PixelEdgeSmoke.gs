@@ -103,7 +103,7 @@ func RunPixelEdgeSmoke() {
   for text in scales {
     let scale = Single.Parse(text, CultureInfo.InvariantCulture)
     let opened = Window{
-      Title: "Goo pixel edge gate", Width: int32(200.0F * scale), Height: int32(120.0F * scale),
+      Title: "Goo pixel edge gate", Size: LayoutSize(float64(int32(200.0F * scale)) / float64(scale), float64(int32(120.0F * scale)) / float64(scale)),
       UiScale: scale, VSync: false, Decorated: false, Background: Color.White, Root: PixelEdgeCell(),
     }
     try {

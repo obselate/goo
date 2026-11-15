@@ -24,7 +24,23 @@ internal class ProfilerTableRow {
     }
 }
 
-internal partial class ProfilerCell : Cell, IDisposable {
+internal data struct Profiler {
+    var Key string?
+    var Session DiagnosticSession
+    var Owner Window?
+    var Width float64
+    var Revision int32
+}
+
+internal func operator implicit(value Profiler) Blob -> Cell.Mount[Profiler, ProfilerCell](value.Key, value)
+
+internal partial class ProfilerCell : Cell[Profiler] {
+    protected override func InputChanged(input Profiler) {
+        session = input.Session
+        owner = input.Owner
+        Refresh(input.Width)
+    }
+
     private const Pad float64 = 8.0
     private const Span float64 = 1000.0
     internal var session DiagnosticSession
@@ -99,7 +115,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                     Key: "profiler-file-status",
                     FlexShrink: 0.0,
                     Padding: Edges{Left: Pad, Right: Pad, Top: 4},
-                    Banner{Tone: Tone.Danger, Content: fileStatus, Live: true}.Build()
+                    Banner{Tone: Tone.Danger, Content: fileStatus, Live: true}
                 }
             )
         }
@@ -110,7 +126,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                     Key: "profiler-problem",
                     FlexShrink: 0.0,
                     Padding: Edges{Left: Pad, Right: Pad, Top: 4},
-                    Banner{Tone: Tone.Warning, Content: problem, Live: false}.Build()
+                    Banner{Tone: Tone.Warning, Content: problem, Live: false}
                 }
             )
         }
@@ -126,16 +142,16 @@ internal partial class ProfilerCell : Cell, IDisposable {
                         Illustration: MaterialIcons.Create("monitoring", 32.0, theme.FaintTextColor),
                         Title: "No trace",
                         Description: "Select Record, use the app, then select Stop."
-                    }.Build()
+                    }
                 }
             )
-            return Column(children)
+            return BuildPanel(children)
         }
         children.Add(Ruler(trace, theme))
         children.Add(Timing(trace, theme))
         children.Add(Legend(trace, theme))
         children.Add(Analysis(trace, theme))
-        return Column(children)
+        return BuildPanel(children)
     }
 
     private func Toolbar(theme Theme) Container {
@@ -143,7 +159,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
         let active = trace?.Active == true
         let idle = !active && !fileBusy
         let controls = List[Blob]()
-        let record = ActionButton{
+        let record Blob = ActionButton{
             Content: active ? "Stop": "Record",
             Leading: MaterialIcons.Create(active ? "stop": "fiber_manual_record", 18.0, theme.DangerColor),
             Disabled: fileBusy ||
@@ -152,7 +168,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 .Capabilities
                 .ProfilerTrace,
             OnClick: () -> ToggleRecording(active),
-        }.Build()
+        }
         record.Key = "profiler-record"
         controls.Add(record)
         controls.Add(
@@ -260,7 +276,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
         active bool = false
     ) Blob {
         let theme = Theme.Read()
-        let button = IconButton{
+        let button Blob = IconButton{
             Icon: MaterialIcons.Create(icon, 18.0, active ? theme.LinkColor: theme.MutedTextColor),
             AccessibilityName: tip,
             Disabled: !enabled,
@@ -269,7 +285,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 action()
                 Rebuild()
             },
-        }.Build()
+        }
         button.Key = key
         guard let window = owner else {
             return button
@@ -436,7 +452,6 @@ internal partial class ProfilerCell : Cell, IDisposable {
             OnPointerUp: (e PointerEvent) -> {
                 selecting = false
                 e.ReleaseCapture()
-                Rebuild()
             },
             OnPointerCancel: (e PointerEvent) -> {
                 selecting = false
@@ -496,7 +511,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
             BackgroundColor: theme.SunkenColor,
             BorderRadius: theme.RadiusSm!!,
             Focusable: true,
-            Focus: Style{OutlineWidth: 1, OutlineColor: theme.FocusColor},
+            FocusStyle: Style{OutlineWidth: 1, OutlineColor: theme.FocusColor},
             Accessibility: Accessibility{Role: AccessibilityRole.Group, Name: "Frames"},
             OnWheel: (e WheelEvent) -> Wheel(e, w),
             OnPointerDown: (e PointerEvent) -> {
@@ -514,13 +529,11 @@ internal partial class ProfilerCell : Cell, IDisposable {
                 hoverX = e.Position.X
                 if frame != hovered {
                     hovered = frame
-                    Rebuild()
                 }
             },
             OnPointerLeave: (e PointerEvent) -> {
                 if hovered >= 0 {
                     hovered = -1
-                    Rebuild()
                 }
             },
             OnPointerUp: (e PointerEvent) -> {
@@ -539,7 +552,6 @@ internal partial class ProfilerCell : Cell, IDisposable {
                     }
                 }
                 tableKey = ""
-                Rebuild()
             },
             OnPointerCancel: (e PointerEvent) -> {
                 selecting = false
@@ -848,14 +860,13 @@ internal partial class ProfilerCell : Cell, IDisposable {
                         EmptyContent: tab == "Types" ? EmptyState{
                             Title: "No allocation samples",
                             Description: "Turn on Allocation types in the toolbar, then record."
-                        }.Build(): nil,
+                        }: nil,
                         Density: Density.Compact,
                         Height: Length.Auto,
                         AccessibilityName: tab,
-                        CreateRoot: (input DataGridInput, root Container) -> {
+                        ConfigureRoot: (input DataGridInput, root Container) -> {
                             root.FlexGrow = 1
                             root.FlexBasis = 0
-                            return root
                         },
                     }
                 ),
@@ -908,10 +919,10 @@ internal partial class ProfilerCell : Cell, IDisposable {
         Height: Percent(100),
         FlexShrink: 0.0,
         Focusable: true,
-        Focus: Style{OutlineWidth: 1, OutlineColor: theme.FocusColor},
+        FocusStyle: Style{OutlineWidth: 1, OutlineColor: theme.FocusColor},
         Cursor: Cursor.ResizeHorizontal,
         BackgroundColor: resizing ? theme.AccentColor: theme.PanelColor,
-        Hover: Style{BackgroundColor: theme.StrongBorderColor},
+        HoverStyle: Style{BackgroundColor: theme.StrongBorderColor},
         BorderWidth: Edges{Left: 1},
         BorderColor: theme.BorderColor,
         Accessibility: Accessibility{Role: AccessibilityRole.Group, Name: "Resize details"},
@@ -929,28 +940,24 @@ internal partial class ProfilerCell : Cell, IDisposable {
         OnPointerMove: (e PointerEvent) -> {
             if resizing && e.PointerId == resizePointer {
                 detailsWidth = resizeStartWidth + resizeStartX - e.WindowPosition.X
-                Rebuild()
             }
         },
         OnPointerUp: (e PointerEvent) -> {
             if e.PointerId == resizePointer {
                 e.ReleaseCapture()
                 resizing = false
-                Rebuild()
             }
         },
         OnPointerCancel: (e PointerEvent) -> {
             if e.PointerId == resizePointer {
                 e.ReleaseCapture()
                 resizing = false
-                Rebuild()
             }
         },
         OnKeyDown: (e KeyEvent) -> {
             if e.Key == Key.Left || e.Key == Key.Right {
                 detailsWidth = DetailsWidth() + (e.Key == Key.Left ? 16.0: -16.0)
                 e.PreventDefault()
-                Rebuild()
             }
         },
     }
@@ -1604,13 +1611,12 @@ internal partial class ProfilerCell : Cell, IDisposable {
             TextWrap: TextWrap.NoWrap
         }
 
-        private func Column(children List[Blob]) Container -> Container{
+        private func BuildPanel(children List[Blob]) Blob -> Column{
             Key: "profiler-panel",
             Width: Percent(100),
             Height: 0,
             MinHeight: 0,
             FlexGrow: 1.0,
-            FlexDirection: FlexDirection.Column,
             Children: children
         }
 
@@ -1649,7 +1655,7 @@ internal partial class ProfilerCell : Cell, IDisposable {
             Height: Percent(100),
             Path: path,
             Fit: ShapeFit.Fill,
-            BackgroundColor: color,
+            Fill: VectorPaint(color),
         }
 
         private func Rect(path PathBuilder, x float64, y float64, width float64, height float64) {

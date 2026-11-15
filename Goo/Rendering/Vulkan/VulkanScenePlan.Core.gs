@@ -652,7 +652,7 @@ internal partial class SceneFrame {
       Grow[ShaderEffectRecord](&shaderEffects, shaderEffectCount, NextCount(shaderEffectCount))
     } catch (error Exception) {
       ReleaseShaderEffectDataCaptures(value)
-      throw error
+      rethrow
     }
     let data = PackShaderEffectData(value)
     let index = shaderEffectCount

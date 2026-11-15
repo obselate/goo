@@ -392,7 +392,7 @@ internal unsafe func RunProductionTextReadback(effects bool) {
       Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf"), 0u,
       []FontVariation{FontVariation("wght", 400.0F)})
     source.Register()
-    let caption = Window{Title: "Goo caption stroke proof", Width: 64, Height: 64,
+    let caption = Window{Title: "Goo caption stroke proof", Size: LayoutSize(64, 64),
       Root: VulkanCaptionTextCell{}}.Open()
     try {
       WindowReadbackTestFixture.ForceRender(caption, 0.0)
@@ -511,7 +511,7 @@ internal func RunTextAtlasOverflowReadback() {
     for variant in 0 ... 2 {
       Environment.SetEnvironmentVariable("GOO_VK_TEXT_ATLAS_BYTES", variant == 0 ? "262144" : "8192")
       let cell = VulkanAtlasTextCell{}
-      let window = Window{Title: "Goo text atlas overflow", Width: 960, Height: 600,
+      let window = Window{Title: "Goo text atlas overflow", Size: LayoutSize(960, 600),
         VSync: false, Root: cell}.Open()
       try {
         for phase in 0 ... reference.Length {

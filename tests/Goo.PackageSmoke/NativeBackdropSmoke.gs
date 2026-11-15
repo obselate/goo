@@ -76,8 +76,7 @@ func RunNativeBackdropSmoke() {
         let root = TitlebarProbeCell{}
         let window = Window{
             Title: "Goo native backdrop smoke " + opening.ToString(),
-            Width: 320,
-            Height: 200,
+            Size: LayoutSize(320, 200),
             Backdrop: WindowBackdrop.Blur,
             FrameTheme: SystemTheme.Dark,
             ContentUnderTitlebar: true,
@@ -148,8 +147,7 @@ func RunNativeBackdropSmoke() {
             window.MacOSBackdrop = MacOSBackdropOptions{}
             window.WaylandBackdrop = WaylandBackdropOptions{CornerRadius: 12}
             window.Backdrop = WindowBackdrop.Blur
-            window.Width = 360 + opening * 8
-            window.Height = 220 + opening * 8
+            window.Size = LayoutSize(360 + opening * 8, 220 + opening * 8)
             BackdropPump(window)
             BackdropRequire(window.BackdropAvailable == available, "Backdrop support changed after resize")
             window.ContentUnderTitlebar = false
@@ -190,7 +188,7 @@ func RunNativeBackdropSmoke() {
             BackdropClose(window)
         }
     }
-    let opaque = Window{Title: "Goo opaque backdrop smoke", Width: 160, Height: 100, Root: Cell{}}
+    let opaque = Window{Title: "Goo opaque backdrop smoke", Size: LayoutSize(160, 100),  Root: Cell{}}
     opaque.Open()
     try {
         var rejected bool

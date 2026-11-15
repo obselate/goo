@@ -184,7 +184,7 @@ class RichTextClipboard : IDisposable {
                 let selected = Capture(snapshot, range_)
                 let publication = RichTextCodec.Write(selected)
                 let written = await owner
-                    .WriteClipboardAsync(publication, ClipboardIntent.Copy)
+                    .Clipboard.WriteAsync(publication, ClipboardIntent.Copy)
                     .WaitAsync(linked.Token)
                     .ConfigureAwait(false)
                 if written.Status != DataTransferStatus.Success {
@@ -210,7 +210,7 @@ class RichTextClipboard : IDisposable {
                     linked.Token
                 ).ConfigureAwait(false)
             }
-            let data = await owner.ReadClipboardDataAsync(if plain { PlainTypes } else { RichTypes })
+            let data = await owner.Clipboard.ReadDataAsync(if plain { PlainTypes } else { RichTypes })
                 .WaitAsync(linked.Token).ConfigureAwait(false)
             if data.Status != ClipboardReadStatus.Success {
                 return RichTextCodec.Failure(Map(data.Status), data.Error)

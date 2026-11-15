@@ -17,7 +17,7 @@ class PathAtlasGrowthCell : Cell {
         Height: Percent(100),
         Path: PendingPathReadinessCell.CoveredPath,
         Fit: ShapeFit.Fill,
-        BackgroundColor: Color.White,
+        Fill: VectorPaint(Color.White),
       },
     }
     for index in 0 ... Boxes {
@@ -51,15 +51,13 @@ func RunPathAtlasGrowthSmoke() {
       let secondRoot = PendingPathReadinessCell(PendingPathReadinessCell.CoveredPath)
       let first = Window{
         Title: "Goo path atlas recorded use",
-        Width: 180,
-        Height: 120,
+        Size: LayoutSize(180, 120),
         VSync: false,
         Root: firstRoot,
       }
       let second = Window{
         Title: "Goo path atlas growth",
-        Width: 180,
-        Height: 120,
+        Size: LayoutSize(180, 120),
         VSync: false,
         Root: secondRoot,
       }

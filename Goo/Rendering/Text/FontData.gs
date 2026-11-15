@@ -38,7 +38,7 @@ internal unsafe sealed class FontData : SafeHandle {
       SetHandle(accessor.SafeMemoryMappedViewHandle.DangerousGetHandle())
     } catch (error Exception) {
       ReleaseHandle()
-      throw error
+      rethrow
     }
   }
 

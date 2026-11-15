@@ -1420,6 +1420,27 @@ internal shared class Program {
                 partText = partText.Replace(declaration, qualified, StringComparison.Ordinal)
                 partBytes = StrictUtf8.GetBytes(partText)
             }
+            if part.Path == HarfBuzzPaintFragmentPath {
+                const clips =
+                    "      ivec4 op2 = hb_gpu_fetch (cursor + 1);\n" +
+                    "      int clip2_payload = (op2.r << 16) | (op2.g & 0xffff);\n" +
+                    "      int clip3_payload = (op2.b << 16) | (op2.a & 0xffff);\n"
+                const coverage =
+                    "      float cov = _hb_gpu_layer_coverage (renderCoord, pixelsPerEm,\n" +
+                    "\t\t\t\t\t  base, aux,\n" +
+                    "\t\t\t\t\t  payload, clip2_payload, clip3_payload);\n"
+                const boundary = "    if (op_type == 0)"
+                if CountOccurrences(partText, clips) != 2 || CountOccurrences(partText, coverage) != 2 ||
+                    CountOccurrences(partText, boundary) != 1 {
+                    throw InvalidOperationException("HarfBuzz paint coverage source no longer matches: ${part.Path}")
+                }
+                let common = "    float cov = 0.0;\n    if (op_type == 0 || op_type == 1)\n    {\n" +
+                    clips + coverage.Replace("float cov =", "cov =", StringComparison.Ordinal) + "    }\n\n"
+                partText = partText.Replace(clips, "", StringComparison.Ordinal)
+                partText = partText.Replace(coverage, "", StringComparison.Ordinal)
+                partText = partText.Replace(boundary, common + boundary, StringComparison.Ordinal)
+                partBytes = StrictUtf8.GetBytes(partText)
+            }
             output.AddRange(partBytes)
             if partBytes.Length == 0 || partBytes[^1] != uint8('\n') {
                 output.Add(uint8('\n'))

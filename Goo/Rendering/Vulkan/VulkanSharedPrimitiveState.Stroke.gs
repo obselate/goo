@@ -165,7 +165,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState {
                 profileTraceId = nil
             } catch (error Exception) {
                 DisposePathStrokes()
-                throw error
+                rethrow
             }
         }
     }
@@ -203,7 +203,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState {
                 let destroy = dispatch.vkDestroyPipeline
                 destroy(device, pipeline, nil)
             }
-            throw error
+            rethrow
         }
     }
 

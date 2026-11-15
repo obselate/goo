@@ -6,7 +6,7 @@ import System.Collections.Generic
 import System.IO
 import System.Numerics
 
-internal class GlassMaterialBackdropCell : Cell {
+internal data struct GlassMaterialBackdrop {
     private func refractionLines() Container {
         let lines = List[Blob]()
         for index in 0 ... 7 {
@@ -25,7 +25,7 @@ internal class GlassMaterialBackdropCell : Cell {
         return Container{Position: PositionType.Absolute, Left: 0, Top: 0, Right: 0, Bottom: 0, Children: lines,}
     }
 
-    public override func Build() Blob -> Container{
+    internal func Build() Blob -> Container{
         Key: "glass-lab-backdrop",
         Position: PositionType.Absolute,
         Left: 0,
@@ -122,23 +122,33 @@ internal class GlassMaterialBackdropCell : Cell {
     }
 }
 
-internal class GlassMaterialPanelCell : Cell {
-    private let surfaceHandle ElementHandle
+internal func operator implicit(value GlassMaterialBackdrop) Blob -> value.Build()
+
+internal data struct GlassMaterialPanel {
+    var Key string?
+    var LiquidEffect ShaderEffect
+    var TerminalEffect ShaderEffect
+    var InitialTerminal bool
+}
+
+internal func operator implicit(value GlassMaterialPanel) Blob -> Cell.Mount[
+    GlassMaterialPanel,
+    GlassMaterialPanelCell
+](value.Key, value)
+
+internal class GlassMaterialPanelCell : Cell[GlassMaterialPanel] {
+    private let surfaceHandle ElementHandle = ElementHandle{}
     private var liquidEffect ShaderEffect?
     private var terminalEffect ShaderEffect?
     private var terminalMode bool
-    private var configured bool
+    private var initialized bool
 
-    public init() {
-        surfaceHandle = ElementHandle{}
-    }
-
-    internal func Configure(liquid ShaderEffect, terminal ShaderEffect, initialTerminal bool) {
-        liquidEffect = liquid
-        terminalEffect = terminal
-        if !configured {
-            terminalMode = initialTerminal
-            configured = true
+    protected override func InputChanged(input GlassMaterialPanel) {
+        liquidEffect = input.LiquidEffect
+        terminalEffect = input.TerminalEffect
+        if !initialized {
+            terminalMode = input.InitialTerminal
+            initialized = true
         }
     }
 
@@ -179,7 +189,7 @@ internal class GlassMaterialPanelCell : Cell {
             BorderWidth: 1,
             BorderColor: active ? Color.Rgba(39, 72, 82, 62): Color.Rgba(39, 72, 82, 24),
             BackgroundColor: active ? Color.Rgba(249, 253, 252, 218): Color.Rgba(249, 253, 252, 160),
-            Hover: Style{BackgroundColor: Color.Rgba(249, 253, 252, 236)},
+            HoverStyle: Style{BackgroundColor: Color.Rgba(249, 253, 252, 236)},
             OnClick: () -> {
                 selectMode(terminal)
             },
@@ -418,13 +428,13 @@ internal class GlassMaterialRootCell : Cell {
         AlignItems: AlignItems.Center,
         JustifyContent: JustifyContent.Center,
         BackgroundColor: Color.Rgb(226, 239, 235),
-        Cell.Mount[GlassMaterialBackdropCell]("glass-material-backdrop"),
-        Cell.Mount[GlassMaterialPanelCell](
-            "glass-material-panel",
-            (cell GlassMaterialPanelCell) -> {
-                cell.Configure(liquidEffect, terminalEffect, initialTerminal)
-            }
-        ),
+        GlassMaterialBackdrop{},
+        GlassMaterialPanel{
+            Key: "glass-material-panel",
+            LiquidEffect: liquidEffect,
+            TerminalEffect: terminalEffect,
+            InitialTerminal: initialTerminal,
+        },
     }
 }
 
@@ -451,8 +461,8 @@ public class GlassMaterialWindow {
             let terminalProgram = ShaderEffectProgram.Load(
                 Path.Combine(AppContext.BaseDirectory, "Shaders", "terminal_glass.goo-effect")
             )
-            let liquidEffect = ShaderEffect(liquidProgram, samplesBackdrop: true, backdropOutset: 24.0F)
-            let terminalEffect = ShaderEffect(terminalProgram, samplesBackdrop: true, backdropOutset: 24.0F)
+            let liquidEffect = ShaderEffect(liquidProgram, samplesBackdrop: true, backdropOutset: 24.0)
+            let terminalEffect = ShaderEffect(terminalProgram, samplesBackdrop: true, backdropOutset: 24.0)
             configureLiquid(liquidEffect)
             configureTerminal(terminalEffect)
             let requested = Environment.GetEnvironmentVariable("GOO_GLASS_MATERIAL")
@@ -462,8 +472,7 @@ public class GlassMaterialWindow {
             let initialTerminal = requested == "terminal"
             return Window{
                 Title: "Glass materials",
-                Width: 1120,
-                Height: 760,
+                Size: LayoutSize(1120, 760),
                 Resizable: true,
                 VSync: true,
                 Background: Color.Rgb(226, 239, 235),
@@ -474,7 +483,7 @@ public class GlassMaterialWindow {
         public func Run() {
             let window = CreateWindow()
             window.Open()
-            window.Run()
+            Application.Run(window)
         }
     }
 }

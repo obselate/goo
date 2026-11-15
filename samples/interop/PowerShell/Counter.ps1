@@ -8,10 +8,10 @@ class Counter : Goo.Cell {
         $self = $this
         $this.Increment = { $self.Count++ }.GetNewClosure()
         $this.Bindings = [Goo.KeyBinding[]]@(
-            [Goo.KeyBinding]@{ Key = 'Enter'; Action = { $null = $self.ButtonHandle.Activate() }.GetNewClosure() }
+            [Goo.KeyBinding]@{ Key = 'Enter'; OnPress = { $null = $self.ButtonHandle.Activate() }.GetNewClosure() }
             [Goo.KeyBinding]@{
                 Key = 'Space'
-                Action = { $null = $self.ButtonHandle.BeginPress() }.GetNewClosure()
+                OnPress = { $null = $self.ButtonHandle.BeginPress() }.GetNewClosure()
                 OnRelease = { $null = $self.ButtonHandle.EndPress($true) }.GetNewClosure()
             }
         )

@@ -29,7 +29,7 @@ internal class GalleryNavigationView {
             Cursor: Cursor.Pointer,
             Focusable: true,
             TransitionMs: 100.0,
-            Hover: Style{BackgroundColor: GalleryTheme.SurfaceRaised, BorderColor: GalleryTheme.Border,},
+            HoverStyle: Style{BackgroundColor: GalleryTheme.SurfaceRaised, BorderColor: GalleryTheme.Border,},
             OnClick: func () {
                 onSelect(targetIndex)
             },
@@ -71,7 +71,7 @@ internal class GalleryNavigationView {
             AlignItems: AlignItems.Center,
             JustifyContent: JustifyContent.Center,
             TransitionMs: 80.0,
-            Hover: Style{
+            HoverStyle: Style{
                 BackgroundColor: if danger {
                     Color.Rgb(127, 29, 29)
                 } else {
@@ -129,7 +129,7 @@ internal class GalleryNavigationView {
                 Cursor: Cursor.Pointer,
                 Focusable: true,
                 TransitionMs: 100.0,
-                Hover: Style{BackgroundColor: GalleryTheme.SurfaceRaised,},
+                HoverStyle: Style{BackgroundColor: GalleryTheme.SurfaceRaised,},
                 OnClick: func () {
                     onSelect(index)
                 },

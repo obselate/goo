@@ -5,7 +5,29 @@ import System
 import System.Collections.Generic
 import System.Numerics
 
-class MotionChapter : Cell {
+internal data struct MotionChapter {
+    var Key string?
+    var Assets GalleryMathAssets?
+    var Programs GalleryShaderPrograms?
+    var Compact bool
+    var Showcase int32
+    var Active bool
+}
+
+internal func operator implicit(value MotionChapter) Blob -> Cell.Mount[MotionChapter, MotionChapterCell](
+    value.Key,
+    value
+)
+
+class MotionChapterCell : Cell[MotionChapter] {
+    protected override func InputChanged(input MotionChapter) {
+        Assets = input.Assets
+        Programs = input.Programs
+        Compact = input.Compact
+        Showcase = input.Showcase
+        Active = input.Active
+    }
+
     /// Gets or sets the pre-generated mathematical vector and image assets.
     public var Assets GalleryMathAssets?
     /// Gets or sets the compiled shader program suite.
@@ -486,7 +508,7 @@ class MotionChapter : Cell {
         Cursor: Cursor.Pointer,
         Focusable: true,
         TransitionMs: 100.0,
-        Hover: Style{
+        HoverStyle: Style{
             BackgroundColor: if isAct {
                 GalleryTheme.Accent
             } else {
@@ -498,7 +520,7 @@ class MotionChapter : Cell {
                 GalleryTheme.BorderStrong
             },
         },
-        Active: Style{Transform: PanelTransform{Scale: 0.96},},
+        ActiveStyle: Style{Transform: PanelTransform{Scale: 0.96},},
         OnClick: onClick,
         Text{
             Content: label,
@@ -590,7 +612,7 @@ class MotionChapter : Cell {
                 TransitionProperty.BorderColor,
                 TransitionProperty.BackgroundColor,
             },
-            Hover: Style{
+            HoverStyle: Style{
                 BorderColor: GalleryTheme.AccentStrong,
                 Transform: PanelTransform{TranslateX: -16.0, TranslateY: -16.0, Scale: 1.12},
             },
@@ -966,7 +988,7 @@ class MotionChapter : Cell {
             Cursor: Cursor.Pointer,
             Focusable: true,
             TransitionMs: 80.0,
-            Hover: Style{BackgroundColor: GalleryTheme.AccentStrong},
+            HoverStyle: Style{BackgroundColor: GalleryTheme.AccentStrong},
             OnClick: () -> triggerImpulse(),
             Text{
                 Content: "⚡ FIRE 2D IMPULSE",
@@ -1302,7 +1324,7 @@ class MotionChapter : Cell {
             Cursor: Cursor.Pointer,
             Focusable: true,
             TransitionMs: 120.0,
-            Hover: Style{
+            HoverStyle: Style{
                 BackgroundColor: if isSel {
                     GalleryTheme.Accent
                 } else {
@@ -1314,7 +1336,7 @@ class MotionChapter : Cell {
                     GalleryTheme.BorderStrong
                 },
             },
-            Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+            FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
             OnClick: () -> {
                 compCategory = cat
                 Rebuild()
@@ -1405,8 +1427,8 @@ class MotionChapter : Cell {
         BorderRadius: 3,
         Padding: 4,
         TransitionMs: 100.0,
-        Hover: Style{BackgroundColor: Color.Rgb(31, 31, 35)},
-        Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+        HoverStyle: Style{BackgroundColor: Color.Rgb(31, 31, 35)},
+        FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
         OnClick: onToggle,
         Container{
             Width: 18,
@@ -1467,7 +1489,7 @@ class MotionChapter : Cell {
             Color.Transparent
         },
         TransitionMs: 100.0,
-        Hover: Style{
+        HoverStyle: Style{
             BackgroundColor: if isSelected {
                 GalleryTheme.AccentMuted
             } else {
@@ -1479,7 +1501,7 @@ class MotionChapter : Cell {
                 GalleryTheme.BorderStrong
             },
         },
-        Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+        FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
         OnClick: onSelect,
         Container{
             FlexDirection: FlexDirection.Column,
@@ -1514,8 +1536,8 @@ class MotionChapter : Cell {
         AlignItems: AlignItems.Center,
         JustifyContent: JustifyContent.Center,
         TransitionMs: 100.0,
-        Hover: Style{BackgroundColor: Color.Rgb(36, 36, 42), BorderColor: GalleryTheme.BorderStrong},
-        Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+        HoverStyle: Style{BackgroundColor: Color.Rgb(36, 36, 42), BorderColor: GalleryTheme.BorderStrong},
+        FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
         OnClick: onClick,
         Text{Content: label, FontSize: 9, FontWeight: 600, Color: GalleryTheme.InkMuted},
     }
@@ -1560,7 +1582,7 @@ class MotionChapter : Cell {
                 BorderColor: GalleryTheme.BorderStrong,
                 SelectionColor: GalleryTheme.Accent,
                 TransitionMs: 100.0,
-                Focus: Style{BorderColor: GalleryTheme.AccentStrong},
+                FocusStyle: Style{BorderColor: GalleryTheme.AccentStrong},
                 OnChange: onType,
             },
             if value.Length > 0 {
@@ -1578,8 +1600,8 @@ class MotionChapter : Cell {
                         AlignItems: AlignItems.Center,
                         JustifyContent: JustifyContent.Center,
                         TransitionMs: 100.0,
-                        Hover: Style{BackgroundColor: Color.Rgb(36, 36, 42)},
-                        Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+                        HoverStyle: Style{BackgroundColor: Color.Rgb(36, 36, 42)},
+                        FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
                         OnClick: onClear,
                         GalleryTheme.Icon(GalleryTheme.IconClose, 15, GalleryTheme.InkSubtle),
                     },
@@ -1620,8 +1642,8 @@ class MotionChapter : Cell {
                 AlignItems: AlignItems.Center,
                 JustifyContent: JustifyContent.Center,
                 TransitionMs: 100.0,
-                Hover: Style{BackgroundColor: Color.Rgb(36, 36, 42)},
-                Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+                HoverStyle: Style{BackgroundColor: Color.Rgb(36, 36, 42)},
+                FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
                 OnClick: onDec,
                 Text{Content: "-", FontSize: 14, FontWeight: 700, Color: GalleryTheme.Ink},
             },
@@ -1643,8 +1665,8 @@ class MotionChapter : Cell {
                 AlignItems: AlignItems.Center,
                 JustifyContent: JustifyContent.Center,
                 TransitionMs: 100.0,
-                Hover: Style{BackgroundColor: Color.Rgb(36, 36, 42)},
-                Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+                HoverStyle: Style{BackgroundColor: Color.Rgb(36, 36, 42)},
+                FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
                 OnClick: onInc,
                 Text{Content: "+", FontSize: 14, FontWeight: 700, Color: GalleryTheme.Ink},
             },
@@ -1768,8 +1790,8 @@ class MotionChapter : Cell {
                 AlignItems: AlignItems.Center,
                 JustifyContent: JustifyContent.Center,
                 TransitionMs: 100.0,
-                Hover: Style{BackgroundColor: Color.Rgb(40, 42, 54), BorderColor: GalleryTheme.AccentStrong},
-                Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+                HoverStyle: Style{BackgroundColor: Color.Rgb(40, 42, 54), BorderColor: GalleryTheme.AccentStrong},
+                FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
                 OnClick: onStep,
                 Container{
                     FlexDirection: FlexDirection.Row,
@@ -1831,14 +1853,14 @@ class MotionChapter : Cell {
             AlignItems: AlignItems.Center,
             JustifyContent: JustifyContent.Center,
             TransitionMs: 100.0,
-            Hover: Style{
+            HoverStyle: Style{
                 BackgroundColor: if isFollowing {
                     Color.Rgb(36, 36, 42)
                 } else {
                     GalleryTheme.AccentStrong
                 }
             },
-            Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+            FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
             OnClick: onToggle,
             Container{
                 FlexDirection: FlexDirection.Row,
@@ -1887,8 +1909,8 @@ class MotionChapter : Cell {
                     Cursor: Cursor.Pointer,
                     Focusable: true,
                     TransitionMs: 100.0,
-                    Hover: Style{BackgroundColor: Color.Rgb(31, 31, 35)},
-                    Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+                    HoverStyle: Style{BackgroundColor: Color.Rgb(31, 31, 35)},
+                    FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
                     OnClick: onDismiss,
                     Text{Content: "Undo / Restore", FontSize: 10, FontWeight: 600, Color: GalleryTheme.AccentStrong},
                 },
@@ -1920,8 +1942,8 @@ class MotionChapter : Cell {
                 AlignItems: AlignItems.Center,
                 JustifyContent: JustifyContent.Center,
                 TransitionMs: 100.0,
-                Hover: Style{BackgroundColor: Color.Rgb(36, 36, 42)},
-                Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+                HoverStyle: Style{BackgroundColor: Color.Rgb(36, 36, 42)},
+                FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
                 OnClick: onDismiss,
                 GalleryTheme.Icon(GalleryTheme.IconClose, 15, GalleryTheme.InkMuted),
             },
@@ -1943,8 +1965,8 @@ class MotionChapter : Cell {
             AlignItems: AlignItems.Center,
             JustifyContent: JustifyContent.SpaceBetween,
             TransitionMs: 100.0,
-            Hover: Style{BackgroundColor: Color.Rgb(31, 31, 35)},
-            Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+            HoverStyle: Style{BackgroundColor: Color.Rgb(31, 31, 35)},
+            FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
             OnClick: onToggle,
             Text{Content: title, FontSize: 11, FontWeight: 600, Color: GalleryTheme.Ink},
             Container{
@@ -2016,14 +2038,14 @@ class MotionChapter : Cell {
         AlignItems: AlignItems.Center,
         JustifyContent: JustifyContent.Center,
         TransitionMs: 100.0,
-        Hover: Style{
+        HoverStyle: Style{
             BackgroundColor: if isSel {
                 GalleryTheme.Accent
             } else {
                 Color.Rgb(36, 36, 42)
             }
         },
-        Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+        FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
         OnClick: onClick,
         Container{
             FlexDirection: FlexDirection.Row,
@@ -2067,8 +2089,8 @@ class MotionChapter : Cell {
         AlignItems: AlignItems.Center,
         JustifyContent: JustifyContent.Center,
         TransitionMs: 100.0,
-        Hover: Style{BackgroundColor: GalleryTheme.AccentMuted, BorderColor: GalleryTheme.AccentStrong},
-        Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+        HoverStyle: Style{BackgroundColor: GalleryTheme.AccentMuted, BorderColor: GalleryTheme.AccentStrong},
+        FocusStyle: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
         OnClick: onClick,
         Text{Content: label, FontSize: 10, FontWeight: 600, Color: GalleryTheme.AccentStrong},
     }
@@ -2085,8 +2107,8 @@ class MotionChapter : Cell {
         AlignItems: AlignItems.Center,
         JustifyContent: JustifyContent.Center,
         TransitionMs: 100.0,
-        Hover: Style{BackgroundColor: Color.FromNormalized(0.38F, 0.10F, 0.10F, 0.65F)},
-        Focus: Style{OutlineWidth: 1, OutlineColor: Color.Rgb(248, 113, 113)},
+        HoverStyle: Style{BackgroundColor: Color.FromNormalized(0.38F, 0.10F, 0.10F, 0.65F)},
+        FocusStyle: Style{OutlineWidth: 1, OutlineColor: Color.Rgb(248, 113, 113)},
         OnClick: onClick,
         Text{Content: label, FontSize: 10, FontWeight: 600, Color: Color.Rgb(248, 113, 113)},
     }

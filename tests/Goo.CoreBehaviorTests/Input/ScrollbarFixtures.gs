@@ -8,7 +8,7 @@ import System.Text
 internal class ScrollbarFixtures {
   func DescriptorChangesArrangeMountedVirtualPartsContract() bool {
     let cell = ScrollbarDescriptorSwitchCell()
-    let window = Window{ Root: cell, Width: 200, Height: 160 }
+    let window = Window{ Root: cell, Size: LayoutSize(200, 160), }
     try {
       window.UpdateTree()
       let viewport = window.Tree!!
@@ -154,7 +154,7 @@ internal class ScrollbarFixtures {
   func VirtualThumbDragSurvivesRowRetirementContract() bool {
     for deferred in []bool{ false, true } {
       let cell = ScrollbarVirtualDragCell()
-      let window = Window{ Root: cell, Width: 75, Height: 60 }
+      let window = Window{ Root: cell, Size: LayoutSize(75, 60), }
       try {
         window.UpdateTree()
         let root = window.Tree!!
@@ -189,7 +189,7 @@ internal class ScrollbarFixtures {
 
   func RetiredVirtualRowHoverKeepsCellOwnerContract() bool {
     let parent = RetiredHoverParent()
-    let window = Window{ Root: parent, Width: 100, Height: 20 }
+    let window = Window{ Root: parent, Size: LayoutSize(100, 20), }
     try {
       window.UpdateTree()
       let row = NodeMount(window.Tree!!.Children[0])
@@ -240,7 +240,7 @@ internal class ScrollbarFixtures {
 
   func AutoHoverAndFadeContract() bool {
     let descriptor = fadingScrollbar()
-    let window = Window{ Root: ScrollbarFadeCell(descriptor), Width: 100, Height: 100 }
+    let window = Window{ Root: ScrollbarFadeCell(descriptor), Size: LayoutSize(100, 100), }
     window.UpdateTree()
     guard let root = window.Tree else { return false }
     if root.ScrollBarAlpha != 0.0F || ScrollbarParts.ActiveChildren(root).Count != 0 {
@@ -280,7 +280,7 @@ internal class ScrollbarFixtures {
   }
 
   func SmoothScrollingWindowPolicyContract() bool {
-    let window = Window{ Root: ScrollbarFadeCell(fadingScrollbar()), Width: 100, Height: 100 }
+    let window = Window{ Root: ScrollbarFadeCell(fadingScrollbar()), Size: LayoutSize(100, 100), }
     window.UpdateTree()
     guard let root = window.Tree else { return false }
     window.InputForTest.QueuePointerWheel(50.0F, 50.0F, 0.0F, -1.0F)
@@ -307,7 +307,7 @@ internal class ScrollbarFixtures {
   }
 
   func IdleCaretDeadlineAndTouchMomentumContract() bool {
-    let caretWindow = Window{ Root: ScrollIdleCaretCell{}, Width: 100, Height: 30 }
+    let caretWindow = Window{ Root: ScrollIdleCaretCell{}, Size: LayoutSize(100, 30), }
     caretWindow.UpdateTree()
     guard let caret = caretWindow.Tree else { return false }
     caretWindow.SchedulerIdleElapsedForTest(0.6)
@@ -318,7 +318,7 @@ internal class ScrollbarFixtures {
 
     for capture in []bool{ false, true } {
       let cell = ScrollTouchCell{ Capture: capture }
-      let window = Window{ Root: cell, Width: 220, Height: 220 }
+      let window = Window{ Root: cell, Size: LayoutSize(220, 220), }
       window.UpdateTree()
       guard let root = window.Tree else { return false }
       let input = window.InputForTest
@@ -544,9 +544,9 @@ internal class ScrollbarFixtures {
 
   func HoverPartsRemainOwnedByTheirWindow() bool {
     let handle = ElementHandle{}
-    let first = Window{ Root: ScrollbarHoverCell(handle), Width: 100, Height: 100 }
+    let first = Window{ Root: ScrollbarHoverCell(handle), Size: LayoutSize(100, 100), }
     let otherRoot = Cell{}
-    let other = Window{ Root: otherRoot, Width: 100, Height: 100 }
+    let other = Window{ Root: otherRoot, Size: LayoutSize(100, 100), }
     try {
       first.UpdateTree()
       other.UpdateTree()
@@ -568,7 +568,7 @@ internal class ScrollbarFixtures {
   func ThumbHoverCoversScrollbarAndNarrowsInTrack() bool {
     let track = ElementHandle{}
     let thumb = ElementHandle{}
-    let window = Window{ Root: ThinThumbCell(track, thumb), Width: 100, Height: 100 }
+    let window = Window{ Root: ThinThumbCell(track, thumb), Size: LayoutSize(100, 100), }
     try {
       window.UpdateTree()
       guard let trackNode = track.AttachedNode(), let thumbNode = thumb.AttachedNode() else { return false }
@@ -594,7 +594,7 @@ internal class ScrollbarFixtures {
       Track: Container(){ Cell.Mount[string, RetirementDisposableCell]("first", "first"), },
       Thumb: Container(){ Cell.Mount[string, RetirementDisposableCell]("later", "later"), },
     }
-    let window = Window{ Root: ScrollbarFadeCell(descriptor), Width: 100, Height: 100 }
+    let window = Window{ Root: ScrollbarFadeCell(descriptor), Size: LayoutSize(100, 100), }
     window.UpdateTree()
     guard let root = window.Tree else { return false }
     var threw bool
@@ -634,7 +634,7 @@ internal class ScrollbarFixtures {
   func PublicMetricsAndJumpContract() bool {
     let handle = ElementHandle{}
     let cell = ScrollbarPublicCell(handle)
-    let window = Window{ Root: cell, Width: 100, Height: 100 }
+    let window = Window{ Root: cell, Size: LayoutSize(100, 100), }
     var latest ElementMetrics
     handle.MetricsChanged += func(metrics ElementMetrics) { latest = metrics }
     window.UpdateTree()
@@ -714,7 +714,7 @@ internal class ScrollbarFixtures {
 
 internal class ScrollbarEditorCell(controller TextEditorController, padded bool = false,
   readOnly bool = true) : Cell {
-  override func Build() Blob -> TextEditor(controller) {
+  override func Build() Blob -> TextEditor(){ Controller = controller,
     Width = 100,
     Height = 100,
     Padding = if padded { Edges{Left: 10, Right: 10, Top: 10, Bottom: 10} } else { Edges{} },
@@ -801,7 +801,7 @@ internal class ScrollbarHoverCell(handle ElementHandle) : Cell {
   override func Build() Blob -> Container{
     Width: 100, Height: 100, OverflowY: Overflow.Scroll,
     ScrollbarVisibilityY: ScrollbarVisibility.Always,
-    Hover: Style{ ScrollbarY: Scrollbar{ Thumb: Container{ Handle: handle } } },
+    HoverStyle: Style{ ScrollbarY: Scrollbar{ Thumb: Container{ Handle: handle } } },
     Container{ Width: 100, Height: 300, FlexShrink: 0 },
   }
 }
@@ -812,8 +812,8 @@ internal class ThinThumbCell(track ElementHandle, thumb ElementHandle) : Cell {
     ScrollbarVisibilityY: ScrollbarVisibility.Always,
     ScrollbarY: Scrollbar{
       Thickness: 8, Inset: 0,
-      Track: Container{ Handle: track, Hover: Style{ BackgroundColor: Color.Rgb(20, 30, 40) } },
-      Thumb: Container{ Handle: thumb, Width: 4, Hover: Style{ Width: 8 } },
+      Track: Container{ Handle: track, HoverStyle: Style{ BackgroundColor: Color.Rgb(20, 30, 40) } },
+      Thumb: Container{ Handle: thumb, Width: 4, HoverStyle: Style{ Width: 8 } },
     },
     Container{ Width: 100, Height: 300, FlexShrink: 0 },
   }
@@ -825,7 +825,7 @@ internal class ScrollbarDescriptorSwitchCell : Cell {
   internal var Descriptor Scrollbar? = Scrollbar{ Thumb: Container{} }
   private let source ScrollbarDescriptorSwitchSource = ScrollbarDescriptorSwitchSource()
 
-  override func Build() Blob -> Virtual(source){
+  override func Build() Blob -> Virtual(){Source = source,
     Handle = Viewport, Width = 200, Height = 160,
     ScrollbarY = Descriptor, ScrollbarVisibilityY = Visibility,
   }
@@ -843,7 +843,7 @@ internal class ScrollbarDescriptorSwitchSource : VirtualState, VirtualSource {
         Content: Container{ Key: "row-$index" },
       })
     }
-    output.ContentSize = LayoutSize{ Width: 200, Height: 3200 }
+    output.ContentSize = LayoutSize(200, 3200)
     output.ItemCount = 100
   }
 }
@@ -851,7 +851,7 @@ internal class ScrollbarDescriptorSwitchSource : VirtualState, VirtualSource {
 internal class ScrollbarVirtualDragCell : Cell {
   internal let Rows VirtualFixtureCell = VirtualFixtureCell(50)
 
-  override func Build() Blob -> Virtual(VirtualFixtureSource(Rows)){
+  override func Build() Blob -> Virtual(){Source = VirtualFixtureSource(Rows),
     Width = 75, Height = 60,
     ScrollbarY = Scrollbar{ Thickness: 4, Inset: 0, MinThumbLength: 24, Thumb: Container{} },
     ScrollbarVisibilityY = ScrollbarVisibility.Always,
@@ -866,7 +866,7 @@ internal class RetiredHoverParent : Cell, VirtualSource {
 
   override func Build() Blob {
     Builds++
-    return Virtual(this){ Handle = Handle, Width = 100, Height = 20 }
+    return Virtual(){Source = this, Handle = Handle, Width = 100, Height = 20 }
   }
 
   public func State(current VirtualState?) VirtualState -> current ?? RetiredHoverRows(this)
@@ -884,7 +884,7 @@ internal class RetiredHoverRows(parent RetiredHoverParent) : VirtualState {
       Width: 100, Height: 20,
       Content: Cell.Mount[RetiredHoverParent, RetiredHoverRow](index.ToString(), parent),
     })
-    output.ContentSize = LayoutSize{ Width: 100, Height: 20000 }
+    output.ContentSize = LayoutSize(100, 20000)
     output.ItemCount = 1000
   }
 }

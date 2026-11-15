@@ -5,7 +5,7 @@ import System.Runtime.InteropServices
 import System.Threading
 
 /// Owns one retained byte sequence for ShaderEffect data inputs.
-public sealed class ShaderEffectData : IDisposable {
+public class ShaderEffectData : IDisposable {
   private const MaximumBytes int32 = 16777216
   private let gate object
   private let identity uint64

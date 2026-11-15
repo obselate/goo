@@ -52,7 +52,7 @@ internal class ChildDiffScratchScope {
 }
 
 internal class ChildDiffScratch {
-  private const RetainedCapacity int32 = 4096
+  private const RetainedCapacity int32 = 32768
   private const RetainedScopeCount int32 = 32
   private let scopes []ChildDiffScratchScope?
   private var active int32

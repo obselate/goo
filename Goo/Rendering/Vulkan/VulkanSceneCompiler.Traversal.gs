@@ -106,7 +106,7 @@ internal partial class VulkanSceneCompiler {
         node.ShaderEffect
       } else { nil }
       let generatorEffect = if let effect = shaderEffect { effect.SourceIndependent } else { false }
-      let isolatesOpacity = Portals.SourceChildCount(node) != 0 && localOpacity < 1.0F
+      let isolatesOpacity = localOpacity < 1.0F && Portals.SourceChildCount(node) != 0
       let isolatesBlend = blendModeSupported && BlendModeSupported(node.BlendMode)
         && node.BlendMode != BlendMode.Normal
       let combinesEffectAndBlend = shaderEffect != nil && isolatesBlend
@@ -125,6 +125,18 @@ internal partial class VulkanSceneCompiler {
       let bounds = NodeBounds(node)
       let scrollbarParts = ScrollbarParts.ActiveChildren(node)
       let hasActiveScrollbarParts = scrollbarParts.Count != 0
+      if (node.Kind == NodeKind.Container || node.Kind == NodeKind.Button)
+        && node.Children.Count == 0 && !hasActiveScrollbarParts
+        && node.BackgroundColor.A == 0.0F && !HasBorderWidth(node, bounds)
+        && RetainedCommonEligible(node, bounds, opacity, context, true) {
+          InvalidateRetainedText(owner)
+          InvalidateRetainedBox(owner)
+          IncrementSaturated(ref retainedLeaf.Total)
+          IncrementSaturated(ref retainedLeaf.Fallback)
+          frame.AppendPlaceholderChunk(ownerId, frameVersion, bounds)
+          emittedNodeCount++
+          return
+        }
       let earlyOverflowPreflight = PreflightRectOverflowClip(
         node, bounds, context.ParentAxisAligned, context.ParentRectClipDepth)
       let exactCandidate = ExactTextClipCullEligible(node, bounds,

@@ -113,6 +113,32 @@ internal class MotionConverters {
     internal let Color MotionConverter[Color] = MotionConverter[Color](4, readColorMotion, writeColorMotion)
     private let pixelLength MotionConverter[Length] = MotionConverter[Length](1, readPixelLengthMotion, writePixelLengthMotion)
     private let percentLength MotionConverter[Length] = MotionConverter[Length](1, readPercentLengthMotion, writePercentLengthMotion)
+    private let emLength MotionConverter[Length] = relativeLength(LengthUnit.Em)
+    private let remLength MotionConverter[Length] = relativeLength(LengthUnit.Rem)
+    private let vwLength MotionConverter[Length] = relativeLength(LengthUnit.Vw)
+    private let vhLength MotionConverter[Length] = relativeLength(LengthUnit.Vh)
+
+    private func relativeLength(unit LengthUnit) MotionConverter[Length] {
+      let read (Length, []float64) -> void = (value, into) -> {
+        if value.Unit != unit || !value.IsFinite { throw ArgumentException("Length animation requires one matching unit", "value") }
+        into[0] = float64(switch unit {
+          case LengthUnit.Em: value.EmPart
+          case LengthUnit.Rem: value.RemPart
+          case LengthUnit.Vw: value.VwPart
+          case _: value.VhPart
+        })
+      }
+      let write ([]float64) -> Length = dims -> {
+        if !motionFiniteFloat32(dims[0]) { throw ArgumentOutOfRangeException("dims") }
+        return switch unit {
+          case LengthUnit.Em: Em(dims[0])
+          case LengthUnit.Rem: Rem(dims[0])
+          case LengthUnit.Vw: Vw(dims[0])
+          case _: Vh(dims[0])
+        }
+      }
+      return MotionConverter[Length](1, read, write)
+    }
 
     internal func ForLength(initial Length) MotionConverter[Length] {
       if initial.Unit == LengthUnit.Px {
@@ -121,7 +147,13 @@ internal class MotionConverters {
       if initial.Unit == LengthUnit.Percent {
         return percentLength
       }
-      throw ArgumentException("length must use pixels or percent", "initial")
+      return switch initial.Unit {
+        case LengthUnit.Em: emLength
+        case LengthUnit.Rem: remLength
+        case LengthUnit.Vw: vwLength
+        case LengthUnit.Vh: vhLength
+        case _: throw ArgumentException("Length animation requires a single unit", "initial")
+      }
     }
   }
 }

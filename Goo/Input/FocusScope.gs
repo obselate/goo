@@ -6,12 +6,42 @@ import System.Runtime.CompilerServices
 
 /// Configures one mounted focus scope. The root must be focusable for empty-scope fallback.
 public class FocusScopeOptions {
+  private var frozenOwner Type?
+  private var declarationModal bool
+  private var declarationRestoreFocus bool
+  private var declarationInitialFocus ElementHandle?
+
+  internal func Freeze(owner Type) { frozenOwner ??= owner }
+
+  private func CheckMutable() {
+    if let owner = frozenOwner {
+      throw InvalidOperationException(owner.Name + " modified after it was returned to Goo")
+    }
+  }
   /// Blocks input and accessibility outside the top scope while any modal registration is active.
-  public prop Modal bool{ get; init; }
+  public prop Modal bool {
+    get -> declarationModal
+    set {
+      CheckMutable()
+      declarationModal = value
+    }
+  }
   /// Restores prior eligible focus on close unless focus has explicitly moved outside. Defaults to true.
-  public prop RestoreFocus bool{ get; init; }
+  public prop RestoreFocus bool {
+    get -> declarationRestoreFocus
+    set {
+      CheckMutable()
+      declarationRestoreFocus = value
+    }
+  }
   /// Requests initial focus within the scope. Otherwise AutoFocus, the first tab stop, or the root is used.
-  public prop InitialFocus ElementHandle? { get; init; }
+  public prop InitialFocus ElementHandle? {
+    get -> declarationInitialFocus
+    set {
+      CheckMutable()
+      declarationInitialFocus = value
+    }
+  }
 
   /// Initializes a nonmodal scope that restores focus on close.
   public init() { RestoreFocus = true }
@@ -35,6 +65,7 @@ public class FocusScope : IDisposable {
   /// Restoration occurs at the next stable input/tree update.
   public func Dispose(restoreFocus bool) { stack?.Remove(this, restoreFocus) }
   internal func Closed() { stack = nil }
+  internal func Update(options FocusScopeOptions) { stack?.Update(this, options) }
 }
 
 internal class FocusScopeEntry {
@@ -149,6 +180,17 @@ internal class FocusScopeStack {
     bind(root)
     owner.FocusScopeChanged()
     return registration
+  }
+
+  internal func Update(registration FocusScope, options FocusScopeOptions) {
+    for entry in entries {
+      if entry.Scope != registration { continue }
+      if entry.Modal == options.Modal && entry.Restore == options.RestoreFocus { return }
+      entry.Modal = options.Modal
+      entry.Restore = options.RestoreFocus
+      owner.FocusScopeChanged()
+      return
+    }
   }
 
   internal func Remove(registration FocusScope, restoreFocus bool = true) {

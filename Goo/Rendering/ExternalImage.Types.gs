@@ -30,7 +30,7 @@ public data struct ExternalImagePlane {
 }
 
 /// Describes a borrowed exportable 2D Vulkan allocation. Goo duplicates Memory before import.
-public sealed class VulkanExternalImageDescription {
+public class VulkanExternalImageDescription {
     /// Creates allocation metadata. Set all required image and allocation fields before import.
     public init() { }
 
@@ -89,7 +89,7 @@ public data struct ExternalFrameDescription {
 }
 
 /// Describes borrowed producer synchronization. AlreadyComplete requires producer completion before Publish.
-public sealed class ExternalImageSync {
+public class ExternalImageSync {
     /// Creates synchronization metadata. Set the kind, layout and queue family before publication.
     public init() { }
 
@@ -108,7 +108,7 @@ public sealed class ExternalImageSync {
 }
 
 /// Reports the end of a frame lease. Wait the returned dependency before reuse.
-public sealed class ExternalFrameResult {
+public class ExternalFrameResult {
     /// Gets the terminal frame status.
     public prop Status ExternalFrameStatus { get; }
     /// Gets an owned completion or unused acquire handle. Dispose the handle after use.
@@ -124,7 +124,7 @@ public sealed class ExternalFrameResult {
 }
 
 /// Reports an external image import.
-public sealed class ExternalImageResult {
+public class ExternalImageResult {
     /// Gets the import status.
     public prop Status ExternalImageStatus { get; }
     /// Gets the caller-owned image, only on Success.
@@ -140,7 +140,7 @@ public sealed class ExternalImageResult {
 }
 
 /// Reports opening an external image session.
-public sealed class ExternalImageSessionResult {
+public class ExternalImageSessionResult {
     /// Gets the session status.
     public prop Status ExternalImageStatus { get; }
     /// Gets the caller-owned session, only on Success.
@@ -156,7 +156,7 @@ public sealed class ExternalImageSessionResult {
 }
 
 /// Identifies a Windows adapter for a D3D external image producer.
-public sealed class ExternalImageWindowsDevice {
+public class ExternalImageWindowsDevice {
     /// Gets the eight-byte adapter LUID.
     public prop Luid ReadOnlyMemory[uint8] { get; }
     /// Gets the physical device node mask.

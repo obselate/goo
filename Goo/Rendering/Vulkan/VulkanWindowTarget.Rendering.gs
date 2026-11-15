@@ -183,7 +183,7 @@ internal unsafe partial class VulkanWindowTarget {
         try { AbandonRecordedFrameForRetry() } catch (cleanup Exception) { frameFailed = true }
         ClearActiveFrame()
       }
-      throw error
+      rethrow
     } finally {
       if !frameBegun {
         CloseDiagnosticFrame(false)
@@ -467,7 +467,7 @@ internal unsafe partial class VulkanWindowTarget {
         }
         return
       }
-      throw error
+      rethrow
     }
   }
 

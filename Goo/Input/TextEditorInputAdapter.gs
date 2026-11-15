@@ -6,6 +6,7 @@ internal class TextEditorInputAdapter {
   shared {
     internal func SelectAt(n Node, localX float32, localY float32, extend bool,
       clickCount int32) bool{
+        if n.Selectable { return SelectableText.Pointer(n, localX, localY, extend, clickCount, nil) }
         guard let controller = n.EditorController else { return false }
         if TextEditorLayouts.InGutter(n, localX) { return false }
         let position = TextEditorLayouts.HitTest(n, localX, localY, clickCount >= 2)
@@ -24,6 +25,7 @@ internal class TextEditorInputAdapter {
       }
 
     internal func DragTo(n Node, localX float32, localY float32, clicks int32, origin TextRange) bool {
+      if n.Selectable { return SelectableText.Pointer(n, localX, localY, true, clicks, origin) }
       guard let controller = n.EditorController else { return false }
       let x = TextEditorLayouts.InGutter(n, localX) ? TextEditorLayouts.TextLeft(n) - n.Rect.X : localX
       let position = TextEditorLayouts.HitTest(n, x, localY, clicks >= 2)

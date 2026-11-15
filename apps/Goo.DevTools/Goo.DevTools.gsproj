@@ -9,6 +9,8 @@
     <IsPackable>false</IsPackable>
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <WidgetsCommit>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../../.github/goo-widgets.commit').Trim())</WidgetsCommit>
+    <WidgetsProject>$(MSBuildThisFileDirectory)../../goo-widgets/src/Goo.Widgets/Goo.Widgets.gsproj</WidgetsProject>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../tools/Goo.DevTools.Cli/CommandLine.gs" Link="Cli/CommandLine.gs" />
@@ -22,7 +24,14 @@
     <Content Include="../../tests/Goo.VulkanProof/Assets/Text/VendSans-OFL.txt" Link="Fonts/VendSans-OFL.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="../../THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <ProjectReference Include="../../Goo/Goo.gsproj" />
-    <PackageReference Include="Goo.Widgets" Version="0.19.8" />
+    <ProjectReference Include="$(WidgetsProject)" />
   </ItemGroup>
   <Import Project="../../Goo/Goo.targets" />
+  <Target Name="RequireWidgetsSource" BeforeTargets="PrepareForBuild;_GenerateRestoreGraphProjectEntry">
+    <Error Condition="!Exists('$(WidgetsProject)')" Text="Check out obselate/goo-widgets at $(WidgetsCommit) into $(MSBuildThisFileDirectory)../../goo-widgets. Expected project: $(WidgetsProject)" />
+    <Exec Command="git -C &quot;$(MSBuildThisFileDirectory)../../goo-widgets&quot; rev-parse HEAD" ConsoleToMSBuild="true" StandardOutputImportance="Low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="WidgetsCheckoutCommit" />
+    </Exec>
+    <Error Condition="'$(WidgetsCheckoutCommit)' != '$(WidgetsCommit)'" Text="Expected obselate/goo-widgets commit $(WidgetsCommit) at $(MSBuildThisFileDirectory)../../goo-widgets, found $(WidgetsCheckoutCommit)." />
+  </Target>
 </Project>

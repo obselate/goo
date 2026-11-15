@@ -65,7 +65,7 @@ internal unsafe class WaylandBackdrop : NativeBackdrop {
     if display == nint(0) || surface == nint(0) { return }
     try { Initialize() }
     catch (error Exception) { Dispose()
-      throw error }
+      rethrow }
   }
 
   private func Initialize() {

@@ -253,7 +253,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
               entries[index] = entry
               uploadRing.Collect(highestCompletedFence)
               flushPrepared = false
-              throw error
+              rethrow
             }
             entry.UploadCommandBuffer = commandBuffer
             entry.UploadRecorded = true

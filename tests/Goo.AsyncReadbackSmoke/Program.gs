@@ -94,8 +94,7 @@ func TicksToNanoseconds(ticks int64) int64 -> int64(float64(ticks) * 1000000000.
 func ReadbackOpenCell(root ReadbackSmokeCell) Window {
   let opened = Window{
     Title: "Goo Readback async readback",
-    Width: 64,
-    Height: 64,
+    Size: LayoutSize(64, 64),
     VSync: false,
     Root: root,
   }
@@ -471,7 +470,7 @@ func RunSelectedSmoke(modes []SmokeMode) bool {
   return false
 }
 
-Window.ConfigureApplication("Goo Readback async readback smoke", "0.1.0", "io.github.obselate.goo.readback.readback")
+Application.Configure("Goo Readback async readback smoke", "0.1.0", "io.github.obselate.goo.readback.readback")
 let modes = []SmokeMode{
   SmokeMode("GOO_GPU_EXPERIMENT_SMOKE", "1", () -> RunGpuExperimentSmoke()),
   SmokeMode("GOO_CLIPBOARD_DATA_SMOKE", "1", () -> RunClipboardDataSmoke()),
@@ -487,7 +486,7 @@ let modes = []SmokeMode{
   SmokeMode("GOO_ANIMATION_VISIBILITY_SMOKE", "", () -> PaintBindingFixtures.MeasureInfiniteVisibility()),
   SmokeMode("GOO_PROFILER_GC_SMOKE", "1", () -> {
     let root = ProfilerSmokeCell{}
-    let window = Window{Title: "Goo profiler GC scroll smoke", Width: 64, Height: 64, Root: root}.Open()
+    let window = Window{Title: "Goo profiler GC scroll smoke", Size: LayoutSize(64, 64),  Root: root}.Open()
     try {
       ProfilerSmoke.VerifyPauseAndSamples(window, root)
     } finally {

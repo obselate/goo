@@ -339,6 +339,45 @@ Receives the current mutable retained semantic tree on the UI thread.
 
 - `tree`: The current retained semantic tree.
 
+## `AccessibilityAttachment`
+
+
+Adds relationships and state without changing the supplied declaration, layout, or semantic tree shape. Nested attachments merge from outer to inner. The inner attachment wins state overrides.
+
+### `Content`
+
+Gets the supplied declaration.
+
+### `Invalid`
+
+Gets the invalid override. Nil preserves the value. False clears it.
+
+### `Relationships`
+
+Gets relationships to append without duplicates, from outer to inner.
+
+### `Required`
+
+Gets the required override. Nil preserves the value. False clears it.
+
+### `Target`
+
+Gets the descendant handle. Nil selects the rendered root. A missing target has no effect.
+
+### `Build`
+
+Builds a transparent retained attachment.
+
+Returns: The attachment declaration.
+
+### `op_Implicit(AccessibilityAttachment)~Blob`
+
+Creates a transparent retained accessibility attachment.
+
+- `value`: The attachment declaration.
+
+Returns: A transparent declaration that applies the attachment at each mount.
+
 ## `AccessibilityChecked`
 
 

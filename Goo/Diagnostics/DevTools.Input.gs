@@ -89,8 +89,8 @@ internal partial class DevToolsSession {
       } else if eventName == "pointer.move" || eventName == "pointer.down"
         || eventName == "pointer.up" || eventName == "click" || eventName == "wheel" {
           let point = inputPoint(payload)
-          let x = float32(point.X) * owner.UiScale
-          let y = float32(point.Y) * owner.UiScale
+          let x = point.X * owner.UiScale
+          let y = point.Y * owner.UiScale
           let buttonName = inputText(payload, "button", false)
           var button = PointerButton.Primary
           if buttonName != "" && (!Enum.TryParse[PointerButton](buttonName, true, out button)
@@ -104,7 +104,7 @@ internal partial class DevToolsSession {
           if eventName == "pointer.move" {
             input.PointerMove(InputPointerId, PointerDevice.Mouse, x, y, modifiers, 0.0F)
           } else if eventName == "wheel" {
-            input.PointerWheel(x, y, float32(deltaX), float32(deltaY), modifiers)
+            input.PointerWheel(x, y, deltaX, deltaY, modifiers)
           } else {
             if eventName != "pointer.up" {
               input.PointerPress(InputPointerId, PointerDevice.Mouse, x, y, button, modifiers, 1.0F)

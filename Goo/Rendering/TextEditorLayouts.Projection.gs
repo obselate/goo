@@ -27,10 +27,10 @@ internal partial class TextEditorLayouts {
         let start = projection.Range.Start > cursor ? projection.Range.Start : cursor
         if start > cursor {
           appendSourceSegment(result, ref display, snapshot.GetText(TextRange{ Start: cursor,
-            Length: start - cursor }), cursor, styles, baseStyle, state.Controller.TabWidth)
+            Length: start - cursor }), cursor, styles, baseStyle, state.Controller.TabWidth, n)
         }
         if projection.Range.Start >= source.Start && (projection.Range.Start < sourceEnd || insertion) {
-          let style = editorStyleAt(styles, projection.Range.Start, baseStyle)
+          let style = editorStyleAt(styles, projection.Range.Start, baseStyle, n)
           let projectionText = TextLayouts.transformText(projection.Text, style.Transform)
           let displayStart = display.Length
           display = display + projectionText
@@ -59,7 +59,7 @@ internal partial class TextEditorLayouts {
       }
       if cursor < sourceEnd {
         appendSourceSegment(result, ref display, snapshot.GetText(TextRange{ Start: cursor,
-          Length: sourceEnd - cursor }), cursor, styles, baseStyle, state.Controller.TabWidth)
+          Length: sourceEnd - cursor }), cursor, styles, baseStyle, state.Controller.TabWidth, n)
       }
       result.Text = display
       result.Resolution = state.ParagraphResolution(n, display, fingerprint)
@@ -71,11 +71,11 @@ internal partial class TextEditorLayouts {
 
     private func appendSourceSegment(result TextEditorResolvedParagraph, ref display string,
       text string, start int32, styles List[TextEditorPresentationStyle],
-      baseStyle TextResolvedStyle, tabWidth int32) {
+      baseStyle TextResolvedStyle, tabWidth int32, n Node) {
         var cursor int32 = 0
         while cursor < text.Length {
           let absolute = start + cursor
-          let style = editorStyleAt(styles, absolute, baseStyle)
+          let style = editorStyleAt(styles, absolute, baseStyle, n)
           var end = text.Length
           let boundary = nextStyleBoundary(styles, absolute, start + text.Length)
           if boundary > absolute { end = boundary - start }
@@ -247,7 +247,7 @@ internal partial class TextEditorLayouts {
       }
 
     private func editorStyleAt(styles List[TextEditorPresentationStyle], offset int32,
-      baseStyle TextResolvedStyle) TextResolvedStyle{
+      baseStyle TextResolvedStyle, n Node) TextResolvedStyle{
         var result = baseStyle
         var overridden = false
         for item in styles {
@@ -256,7 +256,7 @@ internal partial class TextEditorLayouts {
             result = TextResolvedStyles.Copy(baseStyle)
             overridden = true
           }
-          TextResolvedStyles.Apply(result, item.Declaration)
+          TextResolvedStyles.Apply(result, item.Declaration, n)
         }
         return result
       }

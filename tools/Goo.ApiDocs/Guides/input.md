@@ -72,10 +72,16 @@ controller.UseTabs = false
 controller.IndentWidth = 2
 controller.TabWidth = 8
 
-TextEditor(controller)
+TextEditor{Controller: controller}
 ```
 
-Keys match physical `Key` values and exact `Modifiers`. Omitted modifiers mean none. The first matching binding on the nearest element wins. `Action` runs on press. `OnRelease` is paired with that press and runs only if the original target still owns focus, even if modifiers were released first. Changing focus, disabling, or removing the target cancels the pending release. `Repeat: true` repeats the action after 400 ms and then at 30 Hz while focus remains on the original target. It works on any focusable primitive and any key.
+Keys match physical `Key` values and exact `Modifiers`. Omitted modifiers mean none. The first matching binding on the nearest element wins. `OnPress` runs on press. `OnRelease` is paired with that press and runs only if the original target still owns focus, even if modifiers were released first. Changing focus, disabling, or removing the target cancels the pending release. `Repeat: true` repeats the action after 400 ms and then at 30 Hz while focus remains on the original target. It works on any focusable primitive and any key.
+
+Use `KeyBinding(key, modifiers, onPress)` or set `OnPress` in a literal. `OnRelease` and `Repeat` remain named members. `KeyModifiers.None` has no modifiers. `KeyModifiers.Primary` reads Super on macOS and Ctrl elsewhere. `PrimaryShift` adds Shift. Bindings still match modifiers exactly.
+
+`window.Modifiers` reports the event being dispatched, including pointer and keyboard clicks. Outside dispatch, including accessibility activation, it reports the last known state.
+
+`window.Focus.EditsText` reports a focused editable TextEntry, editable TextEditor, or generic `OnTextInput` client. `KeyEvent.TargetEditsText` captures that state at dispatch. Root navigation handlers must skip text-editing targets. Use `window.Focus.Editor` for the editor snapshot, `Selection` and `SetSelection` for selection, `Execute` for text commands, `Move` for traversal, and `Clear` to blur. Host injection and composition remain on `window.PlatformInput`.
 
 
 Movement and deletion repeat. Clipboard, history, submit, Tab and Escape do not. Shift extends movement selection. Ctrl is the primary and word modifier on Windows and Linux. On macOS, Command is primary and Option moves or deletes words. Primary+A/C/X/V/Z selects all, copies, cuts, pastes and undoes. Primary+Shift+Z and Ctrl+Y redo.
@@ -96,10 +102,10 @@ after an asynchronous continuation. A failing callback propagates its exception
 after terminal pointer, drag, or focus cleanup, and its input event is not replayed.
 `PlatformInput.KeyRelease(key, modifiers)` preserves modifiers still held on release.
 
-Use `window.PlatformInput.Execute(TextCommand)` for focused text actions and clipboard access. `Paste` without `Text` reads the clipboard. Supplied paste text keeps `Paste` command interception and its separate undo group. `CancelEdit` restores a TextEntry's value from when it gained focus, reports the change, and blurs it. `CancelComposition` remains a separate action. A TextEditor controller accepts document commands directly.
+Use `window.Focus.Execute(TextCommand)` for focused text actions and clipboard access. `Paste` without `Text` reads the clipboard. Supplied paste text keeps `Paste` command interception and its separate undo group. `CancelEdit` restores a TextEntry's value from when it gained focus, reports the change, and blurs it. `CancelComposition` remains a separate action. A TextEditor controller accepts document commands directly.
 
 `SelectWord` and `SelectLine` act at the caret, or at an explicit `TextCommand.Position`.
-They work through `PlatformInput.Execute` for either text primitive and through
+They work through `Focus.Execute` for either text primitive and through
 `TextEditorController.Execute` for an editor. `ExtendSelection` preserves the anchor.
 Mouse selection uses the same core operations.
 
@@ -119,11 +125,11 @@ remain one character for selection, clipboard, caret, and hit testing. Single-li
 Middle-click primary-selection paste and a text context menu are not supported.
 Triple-click in a TextEntry selects its whole value, not a wrapped visual line.
 
-Call `window.PlatformInput.MoveFocus(true)` or `MoveFocus(false)` for explicit forward or backward traversal. For buttons, `ElementHandle.Activate()` performs a click. To show a held press and activate on release, bind `Action: () -> { handle.BeginPress() }` and `OnRelease: () -> { handle.EndPress(true) }`. `EndPress(false)` cancels the press. Focus loss, removal, and a canceled or failing key release clear the pressed state.
+Call `window.Focus.Move(true)` or `Move(false)` for explicit forward or backward traversal. For buttons, `ElementHandle.Activate()` performs a click. To show a held press and activate on release, bind `OnPress: () -> { handle.BeginPress() }` and `OnRelease: () -> { handle.EndPress(true) }`. `EndPress(false)` cancels the press. Focus loss, removal, and a canceled or failing key release clear the pressed state.
 
 A focus transfer updates the old and new `Focused` states first, then routes `OnBlur` from the old element to its parents and `OnFocus` from the new element to its parents. These lifecycle callbacks cannot cancel the transfer. `FocusEvent.StopPropagation()` only skips the remaining ancestors. A reentrant focus request from `OnBlur` or `OnFocus` wins over the superseded transfer.
 
-Set `Focusable: true` on a generic Blob. `Button`, `TextEntry`, and `TextEditor` are focusable by default; explicitly setting `Focusable: false` removes them from keyboard focus. During a rebuilt tree update, `AutoFocus` selects the first eligible element only when nothing else holds focus. Calls to `PlatformInput.MoveFocus` visit enabled, visible focusables in depth-first tree order and wrap at the ends. An unprevented primary pointer press focuses the deepest focusable element in its hit route. `ElementHandle.Focus()` and `ElementHandle.Blur()` use the same mounted, visible, enabled eligibility rules.
+Set `Focusable: true` on a generic Blob. `Button`, `TextEntry`, and `TextEditor` are focusable by default; explicitly setting `Focusable: false` removes them from keyboard focus. During a rebuilt tree update, `AutoFocus` selects the first eligible element only when nothing else holds focus. Calls to `Focus.Move` visit enabled, visible focusables in depth-first tree order and wrap at the ends. An unprevented primary pointer press focuses the deepest focusable element in its hit route. `ElementHandle.Focus()` and `ElementHandle.Blur()` use the same mounted, visible, enabled eligibility rules.
 
 ## Project visible focus to a descendant
 
@@ -132,12 +138,12 @@ Container() {
   .Handle: owner,
   .Focusable: true,
   .FocusTarget: activeRow,
-  Container{ Handle: activeRow, Focus: Style{ BasedOn: focusRing } },
+  Container{ Handle: activeRow, FocusStyle: Style{ BasedOn: focusRing } },
 }
 ```
 
 `FocusTarget` adds the focused owner's visible focus state to one mounted,
-enabled, visible descendant. The descendant resolves its own `Focus` style
+enabled, visible descendant. The descendant resolves its own `FocusStyle`
 without becoming focusable. The owner keeps keyboard focus and its own focus
 style. Pointer focus does not show the projected style unless the owner's normal
 focus-visible rules require it.
@@ -156,12 +162,12 @@ An active descendant alone does not enable projection.
 
 ## Mounted focus scopes
 
-Call `ElementHandle.BeginFocusScope(FocusScopeOptions)` after the element mounts,
-for example from `MetricsChanged`, and dispose the returned `FocusScope` when an
-overlay closes. The visible, enabled root must be focusable. On the next stable
+Use `Portal{FocusScope: FocusScopeOptions{Modal: true}, ...}` for modal overlays. For a custom scope, call
+`ElementHandle.BeginFocusScope(FocusScopeOptions)` in `Mounted` and dispose
+the returned scope in `Unmounting`. The visible, enabled root must be focusable. On the next stable
 input/tree update, Goo uses the eligible `InitialFocus` handle, an `AutoFocus`
 descendant, the first descendant tab stop, or the root when no child accepts
-focus. Tab and explicit `MoveFocus` calls wrap within the top scope and skip the scope
+focus. Tab and explicit `Window.Focus.Move(forward)` calls wrap within the top scope and skip the scope
 root unless it is the fallback. Editable multiline editors keep Tab for indentation.
 
 `Modal: true` blocks input and accessibility outside the latest modal scope and
@@ -191,6 +197,8 @@ A focusable `Blob` can opt into `OnTextInput`, `OnTextComposition`, `OnTextCompo
 Callbacks run only for the currently focused, enabled, visible client. Queued text is bound to the focus generation that received it, so it is discarded after a focus transfer, including a transfer back to the original element. `TextEntry` and `TextEditor` retain their existing default behavior before these observers run. Goo provides no candidate UI; applications own candidate presentation.
 
 ## Receive pointer lifecycle and pressure input
+
+`PointerDragEvent.Delta` is the change from the previous pointer sample. On `GesturePhase.Started`, it excludes movement before the threshold was crossed. `Translation` includes movement from the press position.
 
 `OnPointerEnter` and `OnPointerLeave` are sparse, non-bubbling lifecycle callbacks. They run only for mouse hover-route changes. Goo sends leaves from the old route leaf to root, then enters from the new route root to leaf. Shared route ancestors receive neither callback. Removal, disable, hidden state, focus loss, and transformed hit routes use the same order.
 
@@ -326,7 +334,7 @@ Core creates one session for each owner and interaction.
 | Explicit cancel | `ElementHandle.CancelGestures()` cancels its sessions without replay. |
 | Touch editor | Defer caret placement until an unclaimed tap release. Mouse selection stays unchanged. |
 
-Use `PlatformInput.Selection` to read effective positions and affinities.
+Use `Focus.Selection` to read effective positions and affinities.
 Use `SetSelection(TextSelection)` to preserve affinities and normalize grapheme boundaries.
 
 ## Use shared recognizers

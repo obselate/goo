@@ -6,7 +6,7 @@ import Goo.RichText
 
 using let formatting = TextPresentationLayer(controller.Document)
 using let clipboard = RichTextClipboard(window, controller, formatting)
-let editor = TextEditor(controller, []TextPresentationLayer{formatting})
+let editor = TextEditor{Controller: controller, Layers: []TextPresentationLayer{formatting}}
 clipboard.Completed += result -> ShowStatus(result.Status)
 ```
 
@@ -59,5 +59,5 @@ let result = await clipboard.PastePlainTextAsync()
 - A stale Cut leaves the text intact. The clipboard can already contain the copied selection.
 
 Plain-text paste is a separate user action. Start `clipboard.PastePlainTextAsync()`
-on the window's owner thread. Goo installs no UI synchronization context.
+on the window's owner thread. Await it in a Goo callback to resume on the UI thread.
 See the [text API](api/text.md) for result and publication contracts.

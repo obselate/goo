@@ -21,7 +21,7 @@ internal class NativeAccessibilityTextRun {
   internal var Dirty bool = true
 }
 
-public sealed partial class NativeAccessibilityAdapter {
+public partial class NativeAccessibilityAdapter {
   private func UpdateText(node AccessibilityNode, retained NativeAccessibilityNodeCache, source Node?) bool {
     let editable = node.SelectionStart != nil || node.TextSnapshot != nil
     let textual = editable || node.Role == AccessibilityRole.Text
@@ -161,7 +161,7 @@ public sealed partial class NativeAccessibilityAdapter {
       }
       return result
     } catch (error Exception) { AccessKitNative.NodeFree(result)
-      throw error }
+      rethrow }
   }
 
   shared {

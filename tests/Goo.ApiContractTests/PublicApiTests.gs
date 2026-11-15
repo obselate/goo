@@ -35,6 +35,26 @@ open class PublicApiTests {
     }
 
     @Fact
+    func ElementMetricsDeconstructionContainsOnlyPublicValues() {
+        let properties = typeof(ElementMetrics).GetProperties(PublicDeclared)
+        let method = typeof(ElementMetrics).GetMethod("Deconstruct", BindingFlags.Public | BindingFlags.Instance)!!
+        for parameter in method.GetParameters() {
+            Assert.Contains(properties, (property PropertyInfo) ->
+                string.Equals(property.Name, parameter.Name, StringComparison.OrdinalIgnoreCase)
+                    && property.PropertyType == parameter.ParameterType.GetElementType())
+        }
+    }
+
+    @Fact
+    func ApplicationRejectsMissingIdentityAndInvalidTimeouts() {
+        let missing = Assert.Throws[InvalidOperationException](() -> Application.Configure(typeof(object).Assembly))
+        Assert.Contains("GooPackageId", missing.Message)
+        for timeout in []float64{0.0, -1.0, Double.NaN, Double.PositiveInfinity, float64(Int32.MaxValue) + 1.0} {
+            Assert.Throws[ArgumentOutOfRangeException](() -> Application.AcquireSingleInstance([]string{}, timeout))
+        }
+    }
+
+    @Fact
     func PublicSignaturesDoNotLeakSubstrate() {
         let gooAssembly = typeof(Window).Assembly
         let violations = ApiTypes()
@@ -65,6 +85,9 @@ open class PublicApiTests {
         Assert.True(gate.IsVirtual)
         let concreteBlobs = ApiTypes().Where((type Type) -> type != blob && blob.IsAssignableFrom(type)).ToArray()
         Assert.NotEmpty(concreteBlobs)
+        Assert.Contains(typeof(Row), concreteBlobs)
+        Assert.Contains(typeof(Column), concreteBlobs)
+        Assert.Contains(typeof(Spacer), concreteBlobs)
         Assert.All(concreteBlobs, (type Type) -> Assert.True(type.IsSealed, type.FullName))
     }
 
@@ -92,7 +115,7 @@ open class PublicApiTests {
 
     shared {
         private const PublicDeclared BindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly
-        private const ProtectedDeclared BindingFlags = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly
+        private const ProtectedDeclared BindingFlags = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly
         private let Nullability NullabilityInfoContext = NullabilityInfoContext()
         private let ForbiddenNamespaceRoots[]string = []string{
             "Facebook.Yoga",
@@ -144,7 +167,7 @@ open class PublicApiTests {
                 .GetTypes()
                 .Where(IsPackageContainer)
                 .SelectMany((type Type) -> type.GetMethods(PublicDeclared))
-            for name in[]string{"Percent"} {
+            for name in[]string{"Percent", "Em", "Rem", "Vw", "Vh", "Each", "Sized"} {
                 let method = Assert.Single(packageMethods, (method MethodInfo) -> method.Name == name)
                 records.Add(
                     "function|Goo|$name|${PublicApiTests.Visibility(method)}|generic:${DescribeGenericParameters(method.GetGenericArguments())}|(${DescribeParameters(method.GetParameters())})->${TypeIdentity(method.ReturnType, Nullability.Create(method.ReturnParameter))}"
@@ -172,6 +195,7 @@ open class PublicApiTests {
 
         private func DescribeType(type Type) sequence[string] {
             let owner = Owner(type)
+            let flags = !type.IsSealed && !type.IsValueType ? PublicDeclared | ProtectedDeclared : PublicDeclared
             let baseType = if type.BaseType == nil {
                 "-"
             } else {
@@ -192,21 +216,17 @@ open class PublicApiTests {
                     yield "enum|$owner|$name|${Convert.ToString(numeric, CultureInfo.InvariantCulture)}"
                 }
             }
-            for constructor in type.GetConstructors(PublicDeclared) {
+            for constructor in type.GetConstructors(flags).Where((member ConstructorInfo) -> member.IsPublic || member.IsFamily || member.IsFamilyOrAssembly) {
                 yield "ctor|$owner|${PublicApiTests.Visibility(constructor)}|(${DescribeParameters(constructor.GetParameters())})"
             }
-            var properties = type.GetProperties(PublicDeclared).AsEnumerable()
-            if type == typeof(Cell[_]) {
-                properties = properties.Concat(
-                    type.GetProperties(ProtectedDeclared).Where((property PropertyInfo) -> property.Name == "Input")
-                )
-            }
+            let properties = type.GetProperties(flags).Where((property PropertyInfo) ->
+                property.GetAccessors(true).Any((member MethodInfo) -> member.IsPublic || member.IsFamily || member.IsFamilyOrAssembly))
             for property in properties {
                 let accessor = property.GetMethod ?? property.SetMethod!!
                 yield "property|$owner|${property.Name}|${TypeIdentity(property.PropertyType, Nullability.Create(property))}|${Scope(accessor)}|${PropertyAccess(property)}|index:(${DescribeParameters(property.GetIndexParameters())})"
             }
             if !type.IsEnum {
-                for field in type.GetFields(PublicDeclared) {
+                for field in type.GetFields(flags).Where((member FieldInfo) -> member.IsPublic || member.IsFamily || member.IsFamilyOrAssembly) {
                     let mutability = if field.IsLiteral {
                         "const"
                     } else {
@@ -226,32 +246,29 @@ open class PublicApiTests {
                     yield "field|$owner|${field.Name}|${TypeIdentity(field.FieldType, Nullability.Create(field))}|${(if field.IsStatic { "static" } else { "instance" })}|${PublicApiTests.Visibility(field)}|$mutability$value"
                 }
             }
-            for event in type.GetEvents(PublicDeclared) {
+            let events = type.GetEvents(flags).Where((event EventInfo) ->
+                event.AddMethod?.IsPublic == true || event.AddMethod?.IsFamily == true || event.AddMethod?.IsFamilyOrAssembly == true)
+            for event in events {
                 let accessor = event.AddMethod ?? event.RemoveMethod!!
                 yield "event|$owner|${event.Name}|${TypeIdentity(event.EventHandlerType!!, Nullability.Create(event))}|${Scope(accessor)}|${EventAccess(event)}"
             }
             let accessors = properties
                 .SelectMany((property PropertyInfo) -> []MethodInfo? {property.GetMethod, property.SetMethod})
                 .Concat(
-                type.GetEvents(PublicDeclared).SelectMany(
+                events.SelectMany(
                     (event EventInfo) -> []MethodInfo? {event.AddMethod, event.RemoveMethod}
                 )
             )
                 .Where((method MethodInfo?) -> method != nil)
                 .ToHashSet()
-            var methods = type
-                .GetMethods(PublicDeclared)
+            let methods = type
+                .GetMethods(flags)
+                .Where((member MethodInfo) -> member.IsPublic || member.IsFamily || member.IsFamilyOrAssembly)
                 .Where((method MethodInfo) -> !accessors.Contains(method))
                 .Where(
                 (method MethodInfo) -> !method.IsSpecialName || method.Name.StartsWith("op_", StringComparison.Ordinal)
             )
-            if type == typeof(Cell[_]) {
-                methods = methods.Concat(
-                    type.GetMethods(ProtectedDeclared).Where(
-                        (method MethodInfo) -> (method.Name is "Build" or "ShouldRebuild" or "InvokeInputCallback")
-                    )
-                )
-            }
+
             for method in methods {
                 yield "method|$owner|${method.Name}|${Scope(method)}|${PublicApiTests.Visibility(method)}|generic:${DescribeGenericParameters(method.GetGenericArguments())}|(${DescribeParameters(method.GetParameters())})->${TypeIdentity(method.ReturnType, Nullability.Create(method.ReturnParameter))}"
             }

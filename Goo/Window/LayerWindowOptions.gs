@@ -14,7 +14,7 @@ public enum LayerWindowKeyboardInteractivity { None; Exclusive; OnDemand }
 
 /// Configures a Wayland layer-shell surface before Window.Open.
 /// Sizes and margins use compositor logical units. Zero sizes require opposite anchors.
-public sealed class LayerWindowOptions {
+public class LayerWindowOptions {
   private var layer WindowLayer = WindowLayer.Top
   private var width int32 = 640
   private var height int32 = 480

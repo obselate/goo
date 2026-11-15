@@ -6,11 +6,15 @@ namespace Facebook.Yoga
     {
         private readonly FloatOptional _value;
         private readonly Unit _unit;
+        private readonly float _offset;
+        public float Offset => _offset;
+        public bool IsMixed => _offset != 0;
 
-        private StyleSizeLength(FloatOptional value, Unit unit)
+        private StyleSizeLength(FloatOptional value, Unit unit, float offset = 0)
         {
             _value = value;
             _unit = unit;
+            _offset = offset;
         }
 
         public static StyleSizeLength Points(float value)
@@ -32,6 +36,9 @@ namespace Facebook.Yoga
 
             return new StyleSizeLength(new FloatOptional(value), Unit.Percent);
         }
+
+        public static StyleSizeLength Mixed(float pixels, float percent) =>
+            new StyleSizeLength(new FloatOptional(percent), Unit.Percent, pixels);
 
         public static StyleSizeLength Stretch(float fraction)
         {
@@ -120,7 +127,7 @@ namespace Facebook.Yoga
                 case Unit.Point:
                     return _value;
                 case Unit.Percent:
-                    return new FloatOptional(_value.Unwrap() * referenceLength * 0.01f);
+                    return new FloatOptional(_offset + _value.Unwrap() * referenceLength * 0.01f);
                 default:
                     return FloatOptional.Undefined;
             }
@@ -133,7 +140,7 @@ namespace Facebook.Yoga
 
         public bool Equals(StyleSizeLength other)
         {
-            return _value == other._value && _unit == other._unit;
+            return _value == other._value && _unit == other._unit && _offset == other._offset;
         }
 
         public override bool Equals(object? obj)
@@ -143,7 +150,7 @@ namespace Facebook.Yoga
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(_value, _unit);
+            return HashCode.Combine(_value, _unit, _offset);
         }
 
         public static bool operator ==(StyleSizeLength left, StyleSizeLength right)
@@ -158,7 +165,7 @@ namespace Facebook.Yoga
 
         public bool InexactEquals(StyleSizeLength other)
         {
-            return _unit == other._unit &&
+            return _unit == other._unit && _offset == other._offset &&
                    FloatOptional.InexactEquals(_value, other._value);
         }
     }

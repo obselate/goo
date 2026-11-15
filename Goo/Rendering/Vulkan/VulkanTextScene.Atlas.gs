@@ -249,7 +249,7 @@ internal unsafe sealed partial class VulkanTextScene {
       RemoveStateGlyphs(state)
       states[index] = nil
       stateCount = stateCount - 1
-      throw error
+      rethrow
     }
     RemoveStateGlyphs(state)
     state.Reset(atlasSet.AtlasAt(index), identity)

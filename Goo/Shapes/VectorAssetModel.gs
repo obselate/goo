@@ -5,7 +5,7 @@ import System.Collections.Generic
 import System.Collections.ObjectModel
 
 /// Describes one immutable vector fill paint.
-public sealed class VectorPaint {
+public class VectorPaint {
   private let color Color
   private let gradient Gradient?
 
@@ -31,30 +31,76 @@ public sealed class VectorPaint {
 
 }
 
-/// Describes one immutable vector stroke.
-public sealed class VectorStroke {
+/// Describes one vector stroke. Goo freezes it when a Shape or VectorNode receives it.
+public class VectorStroke {
+  private var frozenOwner Type?
+  private var declarationCap StrokeCap
+  private var declarationJoin StrokeJoin
+  private var declarationDashes DashPattern?
+  private var declarationVectorEffect VectorEffect
+
+  internal func Freeze(owner Type) {
+    if frozenOwner != nil { return }
+    frozenOwner = owner
+  }
+
+  private func CheckMutable() {
+    if frozenOwner != nil {
+      throw InvalidOperationException("VectorStroke modified after it was returned to Goo")
+    }
+  }
   private let width float64
   private let paint VectorPaint
-  private let cap StrokeCap
-  private let join StrokeJoin
-  private let miterLimit float64
-  private let dashes DashPattern?
+  private var miterLimit float64
 
   /// Gets the non-negative stroke width in view-box units, or window logical pixels for NonScalingStroke.
   public prop Width float64{ get -> width }
   /// Gets the stroke paint.
   public prop Paint VectorPaint{ get -> paint }
-  /// Gets the line cap style.
-  public prop Cap StrokeCap{ get -> cap }
-  /// Gets the line join style.
-  public prop Join StrokeJoin{ get -> join }
-  /// Gets the finite miter limit.
-  public prop MiterLimit float64{ get -> miterLimit }
-  /// Gets the optional dash pattern.
+  /// Gets or sets the line cap style.
+  public prop Cap StrokeCap {
+    get -> declarationCap
+    set {
+      CheckMutable()
+      declarationCap = value
+    }
+  }
+  /// Gets or sets the line join style.
+  public prop Join StrokeJoin {
+    get -> declarationJoin
+    set {
+      CheckMutable()
+      declarationJoin = value
+    }
+  }
+  /// Gets or sets the non-negative finite miter limit.
+  public prop MiterLimit float64{
+    get -> miterLimit
+    set {
+      CheckMutable()
+      if !finiteVectorValue(value) || value < 0.0 {
+        throw ArgumentOutOfRangeException("MiterLimit")
+      }
+      miterLimit = value
+    }
+  }
+  /// Gets or sets the optional dash pattern.
   /// NonScalingStroke measures dash lengths in window logical pixels.
-  public prop Dashes DashPattern? { get -> dashes }
-  /// Gets the vector effect. The default is None.
-  public prop VectorEffect VectorEffect{ get; init; }
+  public prop Dashes DashPattern? {
+    get -> declarationDashes
+    set {
+      CheckMutable()
+      declarationDashes = value
+    }
+  }
+  /// Gets or sets the vector effect. The default is None.
+  public prop VectorEffect VectorEffect {
+    get -> declarationVectorEffect
+    set {
+      CheckMutable()
+      declarationVectorEffect = value
+    }
+  }
 
   /// Creates a stroke with default cap, join, and miter settings.
   public init(width float64, paint VectorPaint) {
@@ -66,36 +112,16 @@ public sealed class VectorStroke {
     }
     this.width = width
     this.paint = paint
-    cap = StrokeCap.Butt
-    join = StrokeJoin.Miter
+    Cap = StrokeCap.Butt
+    Join = StrokeJoin.Miter
     miterLimit = 4.0
-    dashes = nil
+    Dashes = nil
   }
 
   /// Creates a solid-color stroke with default cap, join, and miter settings.
   public convenience init(width float64, color Color) {
     init(width, VectorPaint(color))
   }
-
-  /// Creates a fully specified immutable stroke.
-  public init(width float64, paint VectorPaint, cap StrokeCap, join StrokeJoin,
-    miterLimit float64, dashes DashPattern?) {
-      if !finiteVectorValue(width) || width < 0.0 {
-        throw ArgumentOutOfRangeException("width")
-      }
-      if Object.ReferenceEquals(paint, nil) {
-        throw ArgumentNullException("paint")
-      }
-      if !finiteVectorValue(miterLimit) || miterLimit < 0.0 {
-        throw ArgumentOutOfRangeException("miterLimit")
-      }
-      this.width = width
-      this.paint = paint
-      this.cap = cap
-      this.join = join
-      this.miterLimit = miterLimit
-      this.dashes = dashes
-    }
 }
 
 /// Describes immutable paint and composition options for a vector node.
@@ -140,7 +166,7 @@ public struct VectorNodeStyle {
 }
 
 /// Describes one immutable vector node and its composed children.
-public sealed class VectorNode {
+public class VectorNode {
   private let key string?
   private let path VectorPath
   private let fill VectorPaint?
@@ -194,12 +220,13 @@ public sealed class VectorNode {
     init(path, style, []VectorNode{})
   }
 
-  /// Creates a path node with immutable style options.
+  /// Creates a path node with immutable style options and freezes its stroke.
   public init(path VectorPath, style VectorNodeStyle, children []VectorNode) {
     this.key = style.Key
     this.path = path
     this.fill = style.Fill
     this.stroke = style.Stroke
+    stroke?.Freeze(typeof(VectorNode))
     this.transform = style.Transform
     this.opacity = style.Opacity
     this.clipPath = style.ClipPath

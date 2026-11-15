@@ -259,7 +259,8 @@ internal class AccessibilityManager {
           textState.Length, textState.Caret, declaration?.Checked ?? AccessibilityChecked.Unspecified,
           declaration?.Selected, declaration?.Expanded, disabled, resolvedReadOnly(n, declaration),
           declaration?.Required, declaration?.Invalid, declaration?.Busy, declaration?.Level,
-          declaration?.Orientation ?? AccessibilityOrientation.Unspecified, declaration?.Modal,
+          declaration?.Orientation ?? AccessibilityOrientation.Unspecified,
+          n.IsPortal && Portals.State(n)?.Options?.Modal == true ? true : declaration?.Modal,
           resolvedMultiline(n, declaration), declaration?.MultiSelectable, declaration?.HasPopup,
           declaration?.Live ?? AccessibilityLive.Off, declaration?.Atomic, n.Focused,
           ElementHandles.BorderBox(n), resolvedActionMask(n, role, disabled, declaration),
@@ -303,7 +304,7 @@ internal class AccessibilityManager {
 
   private func visibleBounds(n Node) ElementRect? ->
     TransformGeometry.VisibleBoundsToWindow(n, ElementHandles.BorderBox(n),
-      float64(owner.Width) / float64(owner.UiScale), float64(owner.Height) / float64(owner.UiScale))
+      owner.Size.Width, owner.Size.Height)
 
   private func resolvedRole(n Node, declaration Accessibility?) AccessibilityRole {
     if let metadata = declaration {
@@ -401,6 +402,7 @@ internal class AccessibilityManager {
   }
 
   private func resolvedReadOnly(n Node, declaration Accessibility?) bool? {
+    if n.Selectable { return true }
     if let metadata = declaration {
       if metadata.ReadOnly != nil { return metadata.ReadOnly }
     }
@@ -424,7 +426,7 @@ internal class AccessibilityManager {
       if role == AccessibilityRole.Button || n.OnClick != nil {
         result = result | actionBit(AccessibilityAction.Activate)
       }
-      if n.Kind == NodeKind.Entry || n.Kind == NodeKind.Editor {
+      if n.Kind == NodeKind.Entry || n.Kind == NodeKind.Editor || n.Selectable {
         result = result | actionBit(AccessibilityAction.SetSelection)
         if resolvedReadOnly(n, declaration) != true { result = result | actionBit(AccessibilityAction.SetValue) }
       }
@@ -438,7 +440,7 @@ internal class AccessibilityManager {
     }
 
   private func textStateFor(n Node) AccessibilityTextState {
-    if n.Kind == NodeKind.Entry {
+    if n.Kind == NodeKind.Entry || n.Selectable {
       let start = n.Anchor < n.Caret ? n.Anchor : n.Caret
       let end = n.Anchor < n.Caret ? n.Caret : n.Anchor
       if n.Password {

@@ -4,6 +4,7 @@ import System
 import System.Collections.Generic
 import System.Globalization
 import System.Text.Json
+import System.Threading
 
 public class DevTools {
   private init() {
@@ -12,6 +13,9 @@ public class DevTools {
   shared {
     private let gate object = Object()
     private let sessions List[DevToolsSession] = List[DevToolsSession]()
+    private var sessionCount int32
+
+    internal prop HasSessions bool { get -> Volatile.Read(&sessionCount) != 0 }
 
     public func Attach(window Window) IDisposable {
       if window == nil { throw ArgumentNullException("window") }
@@ -30,12 +34,18 @@ public class DevTools {
 
     internal func Register(session DevToolsSession) {
       lock gate {
-        if !sessions.Contains(session) { sessions.Add(session) }
+        if !sessions.Contains(session) {
+          sessions.Add(session)
+          Volatile.Write(&sessionCount, sessions.Count)
+        }
       }
     }
 
     internal func Unregister(session DevToolsSession) {
-      lock gate { sessions.Remove(session) }
+      lock gate {
+        sessions.Remove(session)
+        Volatile.Write(&sessionCount, sessions.Count)
+      }
     }
 
     internal func MetadataUpdated() {

@@ -102,7 +102,7 @@ internal unsafe class VulkanCommandFactory {
             commandBuffers[index] = nint(0)
             index++
           }
-          throw error
+          rethrow
         }
       }
   }

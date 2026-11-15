@@ -18,6 +18,39 @@ let content = Container{
 - After a constructor or factory call, unmarked `key: value` calls `Add(key, value)`.
 - `Children: existingList` assigns the list. A spread copies its contents.
 
+Goo may keep the mounted result of a Blob it has already received and not read that Blob again. Returning the same Blob again does not refresh it.
+Declarations can be changed while you build them and throw once Goo has received them.
+
+## Build content from its allotted size
+
+```gsharp
+Sized(size -> size.Width < 600 ? CompactView() : WideView()){
+    .FlexGrow: 1, .MinWidth: 0, .MinHeight: 0,
+}
+```
+
+- `Sized(build)` and `Blob.Sized(build)` pass the border-box `LayoutSize` in layout units.
+- Give the element space through its parent or its own style. It has no intrinsic size. Its content cannot enlarge it.
+- Goo builds before paint in the same frame, after the element gets its size. New content is laid out before `Mounted`.
+- Stable device-pixel sizes do not rebuild content. Changed inputs, observed `State`, context values, and pixel density also refresh it.
+- A zero-size element still builds. An unbounded axis with no authored size, minimum, or padding resolves to zero. The callback never receives infinity.
+- Read state in the builder, but do not write it. Input callbacks belong to the declaring Cell. Returned children keep normal keyed and positional identity.
+- Use `Container.Layout` to place existing children. Use `Sized` to choose or build different content.
+
+## Compose and select text
+
+```gsharp
+Text("Plain ", TextSpan("styled", Style{FontWeight: 700}), " text")
+Text{Content: "Copy this text", Selectable: true}
+TextEditor{Controller: controller, Layers: layers}
+```
+
+- `Text` concatenates spans. Plain strings use inherited style. Each styled span adds one UTF-16 `TextStyleRange`.
+- `Content` and `StyleRanges` remain available for indexed styles.
+- `Selectable` supports pointer selection, word and line selection, Shift plus movement, Select All and Copy. It adds focus and accessibility selection, but no caret, editing or IME.
+- Set `TextEditor.Controller` and `Virtual.Source` before mounting. Missing values compile but throw `InvalidOperationException` at mount. Editor layers must use the controller's document.
+- Ellipsis text has automatic minimum width zero. An explicit `MinWidth` still wins.
+
 ## Present content above the normal tree
 
 Use `Portal` for popups, menus, tooltips, and other content that must escape its
@@ -107,13 +140,23 @@ opacity, overflow clipping, and transforms do not constrain presented geometry.
 Portal children do not participate in their source container's Yoga or custom
 layout and do not enlarge its scroll extent. Apply size, position, transform,
 overflow, and paint styles to the Portal itself when the overlay needs those
-semantics. Goo does not infer an anchor from the declaration parent and does not
-provide automatic dismissal or a named layer system; compose those policies with
-handles, input callbacks, and focus scopes.
+semantics. Goo does not infer an anchor from the declaration parent.
+
+Set `FocusScope: FocusScopeOptions{Modal: true}` for a modal overlay. After its
+first layout, `InitialFocus`, then `AutoFocus`, then the first tab stop receives
+focus. An empty scope focuses the Portal. Closing restores eligible prior focus
+unless `RestoreFocus` is false or focus has moved outside.
+
+`OnDismiss` receives `PopupDismissReason.Escape` outside text composition and
+`OutsideInteraction` on an outside press. Remove the Portal to close it.
+`OnDismiss` alone opens a nonmodal focus scope. Nil `FocusScope` and `OnDismiss`
+leave focus unchanged. `Scrim` paints a full-window layer behind the content.
+A modal scope uses a transparent scrim when `Scrim` is nil and sets the
+accessibility modal flag. Use `AccessibilityRole` and `AccessibilityName` on the Portal.
 
 ## Virtualize large collections
 
-`Virtual(source)` is a scrolling element that mounts only the items that its source places. Goo has no list or grid policy of its own. Goo.Widgets supplies `VirtualItems` for items of one size and `VirtualRows` for rows of measured height. Write a policy when neither fits.
+`Virtual{Source: source}` is a scrolling element that mounts only the items that its source places. Goo has no list or grid policy of its own. Goo.Widgets supplies `VirtualItems` for items of one size and `VirtualRows` for rows of measured height. Write a policy when neither fits.
 
 A policy has two parts:
 
@@ -160,17 +203,32 @@ Set `Blob.LayoutTransition` to a `LayoutTransition(durationMs, easing)` value to
 ## Owned image sources
 
 `Image.Source` and `Style.BackgroundImageSource` accept an `ImageSourceProvider`.
-Source takes precedence over Path. A nonempty `Image.Path` without Source throws
-when mounted. Load local assets with `ImageSourceCache.LoadAsync` and assign Source.
+Use an `ImageSource` for ready pixels. For deferred work, keep an `AsyncImageSource`
+in a field or model. Its loader returns `Task[ImageSource]`. Wrap synchronous loaders
+with `Task.FromResult`. Goo cancels the load when its last pending lease is released,
+including when an image unmounts or changes source.
+
+`Image.Placeholder` and `Image.Fallback` fill and clip to the image box while the
+source is pending or failed. They do not set its measured size. Completion updates
+the image on the UI thread without an app rebuild call.
+
+`Assets.Open(assembly, name)` and `Assets.ReadAllBytes(assembly, name)` first resolve
+the exact manifest resource name, then a file under `AppContext.BaseDirectory`.
+The caller disposes an opened stream. `<GooAsset Include="assets/**" />` copies files
+for normal builds and embeds them for single-file or NativeAOT builds.
+
+`<GooShaderEffect Include="background.slang" Embed="true" />` embeds
+`background.goo-effect`. Load it with `ShaderEffectProgram.Load(assembly, "background")`.
 
 See [image loading and ownership](../images.md) for loading, decoding, buffer
 transfer, provider lifetime and memory-pressure behavior.
 
-Provider updates keep the last-good version visible until a replacement is ready.
+Provider version updates keep the last-good version visible until a replacement is ready.
+Changing to a pending source clears the previous image.
 
 ## Observe mounted element metrics
 
-Subscribe to `ElementHandle.MetricsChanged` on the UI thread. The immutable snapshot contains `IsMounted`, `BorderBox`, `ContentBox`, `ScrollOffset`, `ScrollRange` and `RawBorderBox`, in that positional deconstruction order. `RawBorderBox` is the transformed layout box before device-pixel snapping. Other boxes describe painted geometry in window logical coordinates.
+Subscribe to `ElementHandle.MetricsChanged` on the UI thread. The immutable snapshot contains `IsMounted`, `BorderBox`, `ContentBox`, `ScrollOffset`, `ScrollRange`, `RawBorderBox`, `IsAtEndX` and `IsAtEndY`, in that positional deconstruction order. `RawBorderBox` is the transformed layout box before device-pixel snapping. Other boxes describe painted geometry in window logical coordinates.
 
 Goo calls listeners after reconciliation, layout, rect refresh, and scroll stepping settle. Detach produces one final `IsMounted = false` snapshot after tree disposal. A detach followed by reattach in the same update reports only the final mounted state.
 
@@ -188,8 +246,12 @@ let saved = viewport.VisibleAnchor
 if let anchor = saved { viewport.RestoreAnchor(anchor) }
 ```
 
-`ScrollToItem(key)` moves immediately. The aligned overload and `RestoreAnchor` settle while visible items are measured. Set `settle: false` for one immediate move. Direct scrolling cancels settlement. `ScrollOffsetOf` returns the current measured or estimated target for `ScrollTo` or a consumer animation. `VisibleAnchor` stores the first visible item key and its signed viewport offset.
+`ScrollToItem(key, alignment: ScrollAlignment.Start, settle: true)` moves immediately and settles while visible items are measured. `Nearest` moves only enough to reveal the item. An unknown key on a mounted virtual element is held for up to three frames and applied at the first realization that knows it. A later scroll call, user scroll or unmount cancels the request. Set `settle: false` for one immediate move. `RestoreAnchor` also settles while items are measured. `ScrollOffsetOf` returns the measured or estimated target for `ScrollTo` or an animation. `VisibleAnchor` stores the first visible item key and its signed viewport offset.
 `IsScrollSettling` reports whether measurement is still correcting the request.
+
+`ScrollTo(y: 0.0)` and `JumpTo(y: 0.0)` keep the horizontal offset. `ScrollToEnd()` animates both scrollable axes to their range ends. `IsAtEndX` and `IsAtEndY` on a handle or metrics snapshot are true when the range is zero or the offset is within one device pixel of its end.
+
+`handle.SelectText(start, end)` focuses a text control and selects UTF-16 offsets `[start, end)`. Before mount, it retains one request until the next mount and layout. A later request replaces it. Unmount clears it. A mounted non-text control returns false.
 
 `ScrollbarVisibility.Auto` shows the built-in Vulkan thumb during wheel, programmatic or drag interaction and then fades it. `Always` keeps it visible and draggable without idle frames. `Hidden` hides only the built-in thumb.
 

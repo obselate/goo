@@ -139,7 +139,7 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
         DestroyStagingBuffer()
         DestroyDescriptorResources()
         DestroyAtlasBuffer()
-        throw error
+        rethrow
       }
     }
 

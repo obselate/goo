@@ -302,6 +302,34 @@ class ImageSourceCacheTests : IDisposable {
     }
 
     @Fact
+    async func ReleasedCacheEntriesCanBeEvictedAndDecodedAgain() {
+        let first = Write("first.png", Png(1, 1, 8, 6, []uint8{0, 1, 2, 3, 255}))
+        let second = Write("second.png", Png(1, 1, 8, 6, []uint8{0, 4, 5, 6, 255}))
+        using let cache = ImageSourceCache(4, 1)
+        let source = await cache.LoadAsync(first)
+        source.Dispose()
+        let replacement = await cache.LoadAsync(second)
+        replacement.Dispose()
+        Write("first.png", Png(1, 1, 8, 6, []uint8{0, 7, 8, 9, 255}))
+        using let reloaded = await cache.LoadAsync(first)
+        using let lease = reloaded.Acquire()
+        Assert.Equal([]uint8{7, 8, 9, 255}, lease.Result()!!.Pixels())
+    }
+
+    @Fact
+    async func CacheEvictionUsesThePlatformPathComparer() {
+        let png = Png(1, 1, 8, 6, []uint8{0, 1, 2, 3, 255})
+        let paths = []string{Write("case.png", png), Write("CASE.png", png),
+            Write("second.png", png), Write("third.png", png)}
+        using let cache = ImageSourceCache(4, 1)
+        for path in paths {
+            using let source = await cache.LoadAsync(path)
+            Assert.Equal(1, source.Width)
+            Assert.False(source.IsDisposed)
+        }
+    }
+
+    @Fact
     async func CancellationAndCacheDisposalDoNotInvalidateReturnedSources() {
         let path = Write("cancel.png", Png(1, 1, 8, 6, []uint8{uint8(0), uint8(1), uint8(2), uint8(3), uint8(255)}))
         using let cache = ImageSourceCache()
@@ -330,31 +358,14 @@ class ImageSourceCacheTests : IDisposable {
     }
 
     @Fact
-    func LegacyPathFailsWithMigrationInstruction() {
-        let error = Assert.Throws[NotSupportedException](
-            () -> ImageLayouts.ApplyPath(Node(), "asset.png", ImageFit.Contain)
-        )
-        Assert.Contains("ImageSourceCache.LoadAsync", error.Message)
-    }
-
-    @Fact
-    func BackgroundPathChangesPreserveSourcePrecedenceAndOwnership() {
+    func BackgroundSourceChangesPreserveOwnership() {
         let node = Node()
         using let source = ImageSource(1, 1, []uint8{20, 40, 80, 255})
-        BackgroundImageLayouts.SetPath(node, "asset.png", nil)
-        Assert.Same(DecodedImage.Failed, BackgroundImageLayouts.Image(node))
         BackgroundImageLayouts.SetSource(node, source, nil, nil)
         let decoded = BackgroundImageLayouts.Image(node)
         Assert.True(decoded!!.IsValid)
-        BackgroundImageLayouts.SetPath(node, "changed.png", nil)
-        Assert.Same(decoded, BackgroundImageLayouts.Image(node))
         BackgroundImageLayouts.SetSource(node, nil, nil, nil)
-        Assert.Same(DecodedImage.Failed, BackgroundImageLayouts.Image(node))
         Assert.True(decoded!!.IsValid)
-        BackgroundImageLayouts.SetSource(node, source, nil, nil)
-        BackgroundImageLayouts.SetPath(node, "", nil)
-        Assert.Same(decoded, BackgroundImageLayouts.Image(node))
-        BackgroundImageLayouts.SetSource(node, nil, nil, nil)
         Assert.Null(BackgroundImageLayouts.Image(node))
         Assert.False(node.HasBackgroundImageState)
     }

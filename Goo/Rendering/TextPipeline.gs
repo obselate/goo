@@ -23,6 +23,27 @@ internal class TextAnalysis {
   internal prop First TextParagraphAnalysis{ get; set; }
   internal prop Additional [] ? TextParagraphAnalysis{ get; set; }
   internal prop ParagraphCount int32{ get; set; }
+  internal var Measurements Dictionary[int64, float32]?
+  internal var InitialWrapWidth float32?
+  private var measurementGeneration uint64
+
+  internal func WidthMeasurements(width float32) Dictionary[int64, float32]? {
+    if measurementGeneration != FontRegistry.Generation {
+      Measurements?.Clear()
+      InitialWrapWidth = nil
+      measurementGeneration = FontRegistry.Generation
+    }
+    if Measurements == nil {
+      if let initialWidth = InitialWrapWidth {
+        if initialWidth == width { return nil }
+      } else {
+        InitialWrapWidth = width
+        return nil
+      }
+      Measurements = Dictionary[int64, float32]()
+    }
+    return Measurements
+  }
 
   internal init() {
     Snapshot = TextSourceSnapshot("", "", TextTransform.None)
@@ -328,7 +349,7 @@ internal class TextResolvedStyles {
         let current = ranges[i]
         let end = current.Range.Start + current.Range.Length
         if offset < current.Range.Start || offset >= end { continue }
-        Apply(result, current.Style)
+        Apply(result, current.Style, n)
       }
       return result
     }
@@ -349,7 +370,8 @@ internal class TextResolvedStyles {
       || left.LetterSpacing != right.LetterSpacing || left.Direction != right.Direction
       || left.Transform != right.Transform
 
-    internal func Apply(result TextResolvedStyle, style Style) {
+    internal func Apply(result TextResolvedStyle, style Style, n Node) {
+      let parentFont = result.FontSize
       if let entries = style.Entries() {
         var cursor = entries.Cursor()
         while cursor.MoveNext() {
@@ -362,6 +384,14 @@ internal class TextResolvedStyles {
             case StyleField.FontFamily { result.FontFamily = entryText(entry) ?? result.FontFamily }
             case StyleField.FontSize {
               if LengthUnit(int32(entry.B)) == LengthUnit.Px { result.FontSize = entry.A * result.TextScaleFactor }
+              if let declaration = entry.Payload as LengthDeclaration {
+                let value = declaration.Value
+                var root = n
+                while let parent = root.Parent { root = parent }
+                let rootFont = root.FontSize.Px * result.TextScaleFactor
+                result.FontSize = value.Value * result.TextScaleFactor +
+                  value.EmPart * parentFont + value.RemPart * rootFont
+              }
             }
             case StyleField.FontWeight { result.FontWeight = float64(entry.A) }
             case StyleField.FontStyle { result.FontStyle = FontStyle(int32(entry.A)) }
@@ -424,6 +454,7 @@ internal class TextLineShaper {
 
 internal class TextFlow {
   shared {
+    private const MaximumWidthMeasurements int32 = 512
     internal func Consider(cursor int32, fit int32, preferred int32, overflowed bool,
       candidate int32, width float32, limit float32, breakable bool) TextFlowCandidate{
         let exceeds = width > limit
@@ -442,10 +473,16 @@ internal class TextFlow {
         return shape.Width
       }
 
-    internal func MeasureBase(paragraph TextParagraphAnalysis, start int32, end int32) float32 ->
-      TextShaping.MeasureLineUncached(paragraph.Text, start, end - start, paragraph.FontFamily,
+    internal func MeasureBase(paragraph TextParagraphAnalysis, start int32, end int32,
+      measurements Dictionary[int64, float32]? = nil) float32 {
+      let key = (int64(paragraph.Start + start) << 32) | int64(paragraph.Start + end)
+      if measurements?.TryGetValue(key, out var cached) == true { return cached }
+      let width = TextShaping.MeasureLineUncached(paragraph.Text, start, end - start, paragraph.FontFamily,
         paragraph.FontSize, int32(paragraph.FontWeight), paragraph.Italic, paragraph.LetterSpacing,
         int32(paragraph.Direction), paragraph.Language, paragraph.Resolution)
+      if measurements != nil && measurements.Count < MaximumWidthMeasurements { measurements.TryAdd(key, width) }
+      return width
+    }
   }
 }
 
@@ -509,6 +546,8 @@ internal class TextAnalyses {
         result.Italic = italic
         result.LetterSpacing = letterSpacing
         result.Direction = direction
+        result.Measurements = nil
+        result.InitialWrapWidth = nil
         result.ParagraphCount = paragraphCount(snapshot.Display)
         if result.ParagraphCount > 1 {
           let required = result.ParagraphCount - 1

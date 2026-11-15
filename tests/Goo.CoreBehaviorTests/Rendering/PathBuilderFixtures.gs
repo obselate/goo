@@ -3,6 +3,33 @@ package Goo
 import System
 
 internal class PathBuilderFixtures {
+  func PrimitivesAppendClosedContoursInViewBoxCoordinates() bool {
+    let builder = PathBuilder(2.0, 3.0, 100.0, 100.0)
+    if builder.Rectangle(10.0, 20.0, 30.0, 40.0) != builder
+      || builder.Ellipse(10.0, 20.0, 30.0, 40.0) != builder
+      || builder.RoundedRectangle(10.0, 20.0, 30.0, 40.0, 50.0) != builder {
+      return false
+    }
+    let expected = PathBuilder(2.0, 3.0, 100.0, 100.0)
+      .MoveTo(10.0, 20.0).LineTo(40.0, 20.0).LineTo(40.0, 60.0).LineTo(10.0, 60.0).Close()
+      .MoveTo(10.0, 40.0).ArcTo(15.0, 20.0, 0.0, false, true, 40.0, 40.0)
+      .ArcTo(15.0, 20.0, 0.0, false, true, 10.0, 40.0).Close()
+      .MoveTo(25.0, 20.0).LineTo(25.0, 20.0)
+      .ArcTo(15.0, 15.0, 0.0, false, true, 40.0, 35.0).LineTo(40.0, 45.0)
+      .ArcTo(15.0, 15.0, 0.0, false, true, 25.0, 60.0).LineTo(25.0, 60.0)
+      .ArcTo(15.0, 15.0, 0.0, false, true, 10.0, 45.0).LineTo(10.0, 35.0)
+      .ArcTo(15.0, 15.0, 0.0, false, true, 25.0, 20.0).Close().Build()
+    let path = builder.Build()
+    if !path.Equals(expected) || PathGeometry.For(path).ContourCount != 3
+      || !PathBuilder().RoundedRectangle(0.0, 0.0, 1.0, 1.0, 0.0).Build()
+        .Equals(PathBuilder().Rectangle(0.0, 0.0, 1.0, 1.0).Build()) {
+      return false
+    }
+    try { builder.Ellipse(0.0, 0.0, -1.0, 1.0) }
+    catch (_ ArgumentOutOfRangeException) { return builder.Build().Equals(path) }
+    return false
+  }
+
   func ResetPreservesPublishedPathAndClearsContour() bool {
     let builder = PathBuilder(2.0, 3.0, 10.0, 20.0)
     let first = builder.MoveTo(2.0, 3.0).LineTo(12.0, 3.0).Build()
