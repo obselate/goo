@@ -10,6 +10,10 @@ import Xunit
 
 class FixtureContractTests {
     @Fact
+    func PortalScrollbarPartsUseFinalBounds() ->
+        Assert.True(PortalFixtures().PortalScrollbarPartsUseFinalBoundsContract())
+
+    @Fact
     func MountedPlainFieldWritesRebuildContract() ->
         Assert.True(CellFixtures().MountedPlainFieldWritesRebuild())
 
@@ -208,6 +212,7 @@ class FixtureContractTests {
             yield Contract[PathBuilderFixtures]("ResetPreservesPublishedPathAndClearsContour")
             yield Contract[PathBuilderFixtures]("PrimitivesAppendClosedContoursInViewBoxCoordinates")
             yield Contract[PortalFixtures]("UiScaleLayoutInputAndAnchoredPortalContract")
+            yield Contract[PortalFixtures]("PortalScrollbarPartsUseFinalBoundsContract")
             yield Contract[PortalFixtures]("DeclarativeModalFocusTrapContract")
             yield Contract[PortalFixtures]("DeclarativePortalRestoreFocusContract")
             yield Contract[PortalFixtures]("DeclarativePortalInitialFocusContract")
