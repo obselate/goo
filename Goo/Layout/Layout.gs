@@ -423,6 +423,7 @@ internal partial class Layout {
             portal.PortalPlacementHidden = false
             portal.PortalAnchorClipped = false
             readRect(portal, 0.0F, 0.0F)
+            ScrollbarParts.Arrange(portal)
             placedPortals.Add(portal)
             progressed = true
             continue
@@ -476,6 +477,7 @@ internal partial class Layout {
           portal.PortalPlacementHidden = false
           portal.PortalAnchorClipped = portalAnchorClipped(portal, anchor, bounds)
           readPortalRect(portal, origin.X, origin.Y)
+          ScrollbarParts.Arrange(portal)
           placedPortals.Add(portal)
           progressed = true
         }

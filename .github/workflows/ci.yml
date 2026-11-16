@@ -2082,7 +2082,7 @@ jobs:
           Remove-Item Env:GOO_DIRECT_DRIVER_SMOKE, Env:GOO_VK_DIAGNOSTICS
       - name: Install software Vulkan for native Windows checks
         if: needs.changes.outputs.full == 'true'
-        uses: jakoch/install-vulkan-sdk-action@d17de7e2f5e50efb5d2123efed18497d3c58c533 # v1
+        uses: jakoch/install-vulkan-sdk-action@7fe84289ddbf750f7eff9f8e4588e600e1dd06c8 # v1
         with:
           vulkan_version: 1.4.357.0
           install_runtime: true
@@ -2387,7 +2387,7 @@ jobs:
         with:
           global-json-file: global.json
 
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         if: needs.changes.outputs.full == 'true'
         with:
           distribution: temurin
@@ -2605,7 +2605,7 @@ jobs:
         with:
           global-json-file: global.json
 
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         if: needs.changes.outputs.full == 'true'
         with:
           distribution: temurin
