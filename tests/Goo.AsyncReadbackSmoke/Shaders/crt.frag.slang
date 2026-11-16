@@ -47,11 +47,10 @@ float4 gooEffect(float2 uv, float4 source, float4 backdrop)
 
     float scanline = 0.5 + 0.5 * sin(sampleUv.y * resolution.y * 3.14159265);
     color *= 1.0 - scanlineAmount * scanline;
-    float pixelColumn = floor(sampleUv.x * resolution.x);
-    float maskPhase = frac(pixelColumn / 3.0) * 3.0;
-    float3 mask = maskPhase < 1.0
+    int maskPhase = int(floor(sampleUv.x * resolution.x)) % 3;
+    float3 mask = maskPhase == 0
         ? float3(1.0, 0.88, 0.88)
-        : (maskPhase < 2.0 ? float3(0.88, 1.0, 0.88) : float3(0.88, 0.88, 1.0));
+        : (maskPhase == 1 ? float3(0.88, 1.0, 0.88) : float3(0.88, 0.88, 1.0));
     color *= mask;
     float vignette = 1.0 - smoothstep(0.24, 1.34, radiusSquared);
     color *= 0.72 + 0.28 * vignette;
