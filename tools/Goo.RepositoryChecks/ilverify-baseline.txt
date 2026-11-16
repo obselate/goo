@@ -868,6 +868,7 @@
 [IL]: Error []: [Goo.dll : Goo.SdlHost::CreateVulkanSurface(native int, uint64&)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.SdlHost::DestroyVulkanSurface(native int, uint64)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.SdlHost::DirectVulkanProc(native int, string)] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.SdlRuntime::AcquireVulkan()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.SdlRuntime::NoVulkanDevices()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.SpellCheck.HunspellSpellingService::Check([Goo]Goo.TextSnapshot, [Goo]Goo.TextRange, string, [S.P.CoreLib]System.Threading.CancellationToken)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.SpellCheck.HunspellSpellingService::Dispose()] ImportCalli not implemented
