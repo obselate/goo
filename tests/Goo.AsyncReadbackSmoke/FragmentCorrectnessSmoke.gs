@@ -164,6 +164,9 @@ func RunFragmentCorrectnessSmoke() {
     let crtOpaque = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 476.0, 64.0)
     Require(crtOpaque[2] >= uint8(240) && crtOpaque[3] == uint8(255),
       "CRT opaque source output is invalid: " + PrimitivePixelText(crtOpaque))
+    let crtMask = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 400.0, 64.0)
+    Require(crtMask[1] >= uint8(37) && crtMask[1] <= uint8(41),
+      "CRT RGB mask selected the wrong integer phase: " + PrimitivePixelText(crtMask))
     var crtCoverageFound = false
     for x in 480 ... 482 {
       let sample = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, float64(x), 64.0)
