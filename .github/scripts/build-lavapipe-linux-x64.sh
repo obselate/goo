@@ -68,6 +68,8 @@ install -m644 mesa-build/src/gallium/targets/lavapipe/libvulkan_lvp.so "$output/
 install -m644 loader-build/loader/libvulkan.so.1.3.296 "$output/native/libgoo-vulkan.so.1"
 cp loader/LICENSE.txt "$output/licenses/Vulkan-Loader-LICENSE.txt"
 cp /usr/share/doc/llvm-14/copyright "$output/licenses/LLVM-copyright.txt"
+cp /usr/share/doc/gcc-11-base/copyright "$output/licenses/GCC-copyright.txt"
+cp /usr/share/common-licenses/GPL-3 "$output/licenses/GPL-3.0.txt"
 python3 - "$output" <<'PY'
 import hashlib, json, pathlib, re, shutil, subprocess, sys
 out = pathlib.Path(sys.argv[1])

@@ -46,15 +46,18 @@
       "compressed_bytes": 22096561
     },
     "linux-x64": {
-      "files": 22,
-      "uncompressed_bytes": 63771076,
-      "compressed_bytes": 20527924
+      "files": 24,
+      "uncompressed_bytes": 63876835,
+      "compressed_bytes": 20554245
     }
   },
   "linux_maximum_glibc": "2.34",
   "passed_checks": [
     "Linux pinned Jammy payload build",
     "Package and NativeAOT publish hashes and licenses",
+    "Static GCC runtime notices and Runtime Library Exception",
+    "Package deployment without a RuntimeIdentifier",
+    "Seven-package onboarding metadata",
     "Hardware RADV presentation and readback",
     "System CPU replacement with bundled lavapipe",
     "No-GPU fallback presentation and readback",

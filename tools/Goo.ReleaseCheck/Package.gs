@@ -222,7 +222,14 @@ internal shared partial class ReleaseCheck {
                 let driver = if rid == "win-x64" { "vulkan_lvp.dll" } else { "libvulkan_lvp.so" }
                 let loader = if rid == "win-x64" { "vulkan-1.dll" } else { "libgoo-vulkan.so.1" }
                 Require(artifacts.ContainsKey(driver) && artifacts.ContainsKey(loader), "Renderer driver or loader missing")
-                Require(archive.Entries.Any(e -> e.FullName.StartsWith("licenses/$rid/") && e.Length > 0), "Renderer licenses missing")
+                let licenses = if rid == "win-x64" {
+                    []string{"Mesa-MIT.txt", "Mesa-component-notices.txt", "LLVM-LICENSE.txt", "Apache-2.0.txt", "VulkanRT-License.txt"}
+                } else {
+                    []string{"MIT", "LLVM-copyright.txt", "GCC-copyright.txt", "GPL-3.0.txt", "Vulkan-Loader-LICENSE.txt"}
+                }
+                for name in licenses {
+                    Require(archive.GetEntry("licenses/$rid/$name")?.Length > 0, "Renderer license missing: $rid/$name")
+                }
                 for artifact in artifacts {
                     let bytes = ReadEntry(archive, "runtimes/$rid/native/" + artifact.Key)
                     Require(Hash(bytes) == artifact.Value["sha256"]!!.GetValue[string](), "Renderer hash mismatch: " + artifact.Key)
