@@ -15,6 +15,14 @@ if [[ ${2:-} != --inside ]]; then
   exit
 fi
 
+cleanup() {
+  local result=$?
+  chown -R --reference="$output" "$output" || result=$?
+  rm -rf -- /build/* /build/.[!.]* /build/..?* || result=$?
+  return "$result"
+}
+trap cleanup EXIT
+
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates
 printf 'deb http://snapshot.ubuntu.com/ubuntu/20261115T000000Z jammy main universe\ndeb http://snapshot.ubuntu.com/ubuntu/20261115T000000Z jammy-updates main universe\ndeb http://snapshot.ubuntu.com/ubuntu/20261115T000000Z jammy-security main universe\n' > /etc/apt/sources.list

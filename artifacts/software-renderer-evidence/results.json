@@ -55,6 +55,7 @@
   "passed_checks": [
     "Linux pinned Jammy payload build",
     "Package and NativeAOT publish hashes and licenses",
+    "Container cleanup removes foreign-owned files and restores output ownership",
     "Static GCC runtime notices and Runtime Library Exception",
     "Package deployment without a RuntimeIdentifier",
     "Seven-package onboarding metadata",
