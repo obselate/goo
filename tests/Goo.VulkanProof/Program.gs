@@ -34,6 +34,7 @@ internal unsafe func RunVulkanProof() int32 {
   }
   if Environment.GetEnvironmentVariable("GOO_VK_TEXT_EFFECT_READBACK") == "1" {
     Environment.SetEnvironmentVariable("GOO_VK_DIAGNOSTICS", "1")
+    RunDeferredTextRangeReadback()
     RunProductionTextReadback(false)
     RunProductionTextReadback(true)
     return 0

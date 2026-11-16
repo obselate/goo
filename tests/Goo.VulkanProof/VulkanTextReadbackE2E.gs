@@ -319,6 +319,70 @@ internal func VerifyVulkanTextEffectReadback(result VulkanTextReadbackResult) bo
     && result.OpaquePixels == VulkanTextReadbackContract.Width * VulkanTextReadbackContract.Height
 }
 
+internal unsafe func RunDeferredTextRangeReadback() {
+  using let source = FontSource.FromPath("Deferred text proof", 400, false,
+    Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf"), 0u,
+    []FontVariation{FontVariation("wght", 400.0F)})
+  source.Register()
+  let window = OpenVulkanProductionProofWindow()
+  let reconciler = Reconciler{Res: Resolver{}}
+  let create = (content string) -> Container{
+    Width: 64, Height: 64,
+    Text{Content: content, FontFamily: "Deferred text proof", FontSize: 32, Color: Color.White},
+  }
+  let root = reconciler.Mount(create("A"))
+  try {
+    let atlases = VulkanProductionReadbackFixture.TextAtlases(window)!!
+    let atlas = atlases.AtlasAt(atlases.CurrentAtlasIndex)
+    let scene = VulkanTextScene(atlases)
+    let compiler = VulkanSceneCompiler(64)
+    compiler.SetTextScene(scene)
+    Layout().Calculate(root, 64.0F, 64.0F)
+    scene.BeginCompile(0uL, 1.0F)
+    compiler.Compile(root, Color.Black, 64.0F, 64.0F)
+    scene.PrepareUpload()
+    reconciler.Diff(root, create("B"))
+    Layout().Calculate(root, 64.0F, 64.0F)
+    scene.BeginCompile(0uL, 1.0F)
+    compiler.Compile(root, Color.Black, 64.0F, 64.0F)
+    if !scene.ResourceDeferred || scene.RedrawRequired || compiler.Frame.CachedTextSegmentCount != 0 {
+      throw InvalidOperationException("Text outside the pending upload did not defer")
+    }
+    if !atlas.AbortUpload(nint(0)) {
+      throw InvalidOperationException("Deferred text upload did not abort")
+    }
+    scene.BeginCompile(0uL, 1.0F)
+    compiler.Compile(root, Color.Black, 64.0F, 64.0F)
+    Console.WriteLine("Deferred text range: hits=${compiler.RangeHitCount} text=${compiler.Frame.CachedTextSegmentCount}")
+    if scene.ResourceDeferred || compiler.RangeHitCount != 0 || compiler.Frame.CachedTextSegmentCount != 1 {
+      throw InvalidOperationException("Deferred text range replay omitted the resident glyph")
+    }
+    scene.PrepareUpload()
+    PublishVulkanProofTextAtlasUpload(window, atlases, atlas)
+    scene.PublishCompletedUploads()
+    scene.BeginCompile(0uL, 1.0F)
+    compiler.Compile(root, Color.Black, 64.0F, 64.0F)
+    if compiler.RangeHitCount != 1 || compiler.Frame.CachedTextSegmentCount != 1 {
+      throw InvalidOperationException("Complete text range did not replay")
+    }
+    using let capture = VulkanProductionReadbackFixture.Open(window, 64u, 64u)
+    var clearColor = VkClearColorValue{}
+    clearColor.float32.values[3] = 1.0F
+    WarmVulkanProductionReadback(capture, compiler.Frame, clearColor)
+    let result = RequestVulkanProductionReadback(capture, compiler.Frame, clearColor)
+    fixed pixels * uint8 = result.Pixels {
+      let analyzed = AnalyzeVulkanTextReadback(pixels, result.Width, result.Height)
+      if analyzed.InkPixels == 0u {
+        throw InvalidOperationException("Replayed resident text has no visible pixels")
+      }
+      Console.WriteLine("Deferred text range readback: ink=${analyzed.InkPixels}")
+    }
+  } finally {
+    NodeLifecycle.DisposeTree(root)
+    CloseVulkanProductionProofWindow(window)
+  }
+}
+
 internal unsafe func RunProductionTextReadback(effects bool) {
   let window = OpenVulkanProductionProofWindow()
   var fixture VulkanTextReadbackFixture? = nil
