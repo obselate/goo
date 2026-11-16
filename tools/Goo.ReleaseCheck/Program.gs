@@ -22,16 +22,23 @@ internal shared partial class ReleaseCheck {
     internal func Execute(arguments[]string) {
         if arguments.Any(a -> a == "--help" || a == "-h") {
             Console.WriteLine("Usage: Goo.ReleaseCheck --manifests DIRECTORY --version VERSION\n" +
-                "       Goo.ReleaseCheck --package FILE --symbols FILE --bundle DIRECTORY")
+                "       Goo.ReleaseCheck --package FILE --symbols FILE --bundle DIRECTORY\n" +
+                "       Goo.ReleaseCheck --software-renderer FILE [--renderer-publish DIRECTORY]")
             return
         }
         let values = Dictionary[string, string](StringComparer.Ordinal)
         var index = 0
         while index < arguments.Length {
             Require(index + 1 < arguments.Length, "Expected option and path pairs")
-            Require([]string{"--manifests", "--version", "--package", "--symbols", "--bundle"}.Contains(arguments[index]), "Unknown option: " + arguments[index])
+            Require([]string{"--manifests", "--version", "--package", "--symbols", "--bundle", "--software-renderer", "--renderer-publish"}.Contains(arguments[index]), "Unknown option: " + arguments[index])
             Require(values.TryAdd(arguments[index], arguments[index + 1]), "Duplicate option: " + arguments[index])
             index += 2
+        }
+        if values.ContainsKey("--software-renderer") {
+            Require(values.Count == 1 || (values.Count == 2 && values.ContainsKey("--renderer-publish")), "Expected --software-renderer FILE [--renderer-publish DIRECTORY]")
+            ValidateSoftwareRenderer(values["--software-renderer"],
+                if values.ContainsKey("--renderer-publish") { values["--renderer-publish"] } else { "" })
+            return
         }
         if values.ContainsKey("--manifests") {
             Require(

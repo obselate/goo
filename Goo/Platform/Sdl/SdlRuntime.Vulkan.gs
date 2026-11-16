@@ -48,17 +48,42 @@ internal unsafe partial class SdlRuntime {
         }
         try {
           VulkanDrivers.Freeze()
-          if VulkanDrivers.Enabled {
+          if VulkanDrivers.ManualLoader {
             if directLoader == nint(0) {
-              let local = Path.Combine(AppContext.BaseDirectory, "vulkan-1.dll")
-              if !NativeLibrary.TryLoad(local, out directLoader) {
-                directLoader = NativeLibrary.Load(Path.Combine(
-                  Environment.GetFolderPath(Environment.SpecialFolder.System), "vulkan-1.dll"))
+              if OperatingSystem.IsWindows() && VulkanDrivers.Enabled {
+                NativeLibrary.TryLoad(Path.Combine(AppContext.BaseDirectory, "vulkan-1.dll"), out directLoader)
+              }
+              if directLoader == nint(0) {
+                let system = if OperatingSystem.IsWindows() {
+                  Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "vulkan-1.dll")
+                } else { "libvulkan.so.1" }
+                NativeLibrary.TryLoad(system, out directLoader)
+              }
+              if directLoader != nint(0) {
+                var version uint32 = 0u
+                var address nint = nint(0)
+                if NativeLibrary.TryGetExport(directLoader, "vkEnumerateInstanceVersion", out address) {
+                  let enumerate = address as (unmanaged[Cdecl](*uint32) -> VkResult)?
+                  if enumerate != nil {
+                    let enumerateVersion = enumerate
+                    enumerateVersion(&version)
+                  }
+                }
+                if version < ((1u << 22) | (3u << 12) | 238u) {
+                  NativeLibrary.Free(directLoader)
+                  directLoader = nint(0)
+                }
+              }
+              if directLoader == nint(0) {
+                directLoader = NativeLibrary.Load(Path.Combine(AppContext.BaseDirectory,
+                  if OperatingSystem.IsWindows() { "vulkan-1.dll" } else { "libgoo-vulkan.so.1" }))
               }
             }
-            let address = NativeLibrary.GetExport(directLoader, "vkGetInstanceProcAddr")
-            vulkanSnapshot = SdlVulkanInstanceSnapshot(address,
-              []string{"VK_KHR_surface", "VK_KHR_win32_surface"})
+            let surface = if OperatingSystem.IsWindows() { "VK_KHR_win32_surface" }
+              else if SDL.GetCurrentVideoDriverS() == "wayland" { "VK_KHR_wayland_surface" }
+              else { throw PlatformNotSupportedException("Direct Vulkan loading on Linux requires Wayland.") }
+            vulkanSnapshot = SdlVulkanInstanceSnapshot(NativeLibrary.GetExport(directLoader, "vkGetInstanceProcAddr"),
+              []string{"VK_KHR_surface", surface})
             vulkanLoaded = true
             vulkanReferenceCount = 1
             return true
@@ -209,7 +234,7 @@ internal unsafe partial class SdlRuntime {
           return
         }
         try {
-          if vulkanLoaded && !VulkanDrivers.Enabled {
+          if vulkanLoaded && !VulkanDrivers.ManualLoader {
             SDL.VulkanUnloadLibrary()
           }
         } finally {

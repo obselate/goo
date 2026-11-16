@@ -14,6 +14,23 @@ Check [platform preflight](platform-preflight.md) on the target machine.
 Publish on the target OS. Use `-r win-x64` for Windows x64 or `-r osx-arm64`
 for Apple silicon.
 
+### Optional software renderer
+
+```xml
+<PackageReference Include="Goo.SoftwareRenderer" Version="0.31.0" />
+```
+
+Use the same version as Goo. No renderer code or environment setting is needed.
+Goo tries the hardware driver first. If no hardware device can be used or device creation
+fails, it retries once with the bundled Mesa lavapipe in the same process.
+Explicit `VulkanDrivers.Direct` or `Exclusive` settings disable this fallback.
+
+The package supports `win-x64` and native Wayland `linux-x64` with glibc 2.35+.
+NativeAOT keeps the driver, its dependencies and the fallback Vulkan loader beside
+the executable. Keep `licenses/Goo.SoftwareRenderer` in the distributed output.
+Linux uses a working system Vulkan loader 1.3.238+ before its bundled loader.
+Windows includes `vulkan-1.dll` for machines without an installed Vulkan loader.
+
 ## NativeAOT
 
 ```sh
@@ -209,7 +226,7 @@ Keep writable application data outside the bundle.
 
 AppImage adds no sandbox, updater, publisher certificate, desktop installation,
 launchers, or file/URI associations. The host still needs supported glibc, native
-Wayland, fonts, a Vulkan loader and GPU driver. Packaging does not expand platform
-support. Include all application and dependency license notices, including those
-for the embedded AppImage runtime.
+Wayland and fonts. It also needs a Vulkan loader and GPU driver unless the app
+references `Goo.SoftwareRenderer`. Packaging does not expand platform support.
+Include all application and dependency license notices, including those for the embedded AppImage runtime.
 

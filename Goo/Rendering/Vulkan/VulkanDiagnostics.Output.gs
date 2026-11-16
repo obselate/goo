@@ -5,10 +5,11 @@ import System.Text
 import System.Text.Json
 
 internal unsafe partial class VulkanDiagnostics {
-  internal func WriteDevice(writer TextWriter, name string = "", order string = "", rejected string = "") string {
+  internal func WriteDevice(writer TextWriter, name string = "", order string = "", rejected string = "", fallback string = "") string {
     let selection = if name == "" { "" } else {
       ",\"name\":\"" + JsonEncodedText.Encode(name).ToString()
-        + "\",\"order\":\"" + order + "\",\"rejected\":\"" + JsonEncodedText.Encode(rejected).ToString() + "\""
+        + "\",\"order\":\"" + order + "\",\"rejected\":\"" + JsonEncodedText.Encode(rejected).ToString()
+        + "\",\"fallback\":\"" + JsonEncodedText.Encode(fallback).ToString() + "\""
     }
     let deviceName = Hex(fatalDeviceName, 0, uint32(FatalNameCapacity))
     writer.WriteLine("{\"kind\":\"device\",\"instanceApiVersion\":${fatalInstanceApiVersion},\"physicalApiVersion\":${fatalPhysicalApiVersion},\"driverVersion\":${fatalDriverVersion},\"vendorId\":${fatalVendorId},\"deviceId\":${fatalDeviceId},\"deviceType\":${fatalDeviceType},\"timelineSemaphore\":${fatalTimelineSemaphore},\"synchronization2\":${fatalSynchronization2},\"dynamicRendering\":${fatalDynamicRendering},\"debugUtilsAvailable\":${fatalDebugUtilsAvailable},\"instanceExtensionCount\":${fatalInstanceExtensionCount},\"deviceExtensionCount\":${fatalDeviceExtensionCount},\"deviceNameHex\":\"${deviceName}\"${selection}}")

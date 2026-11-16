@@ -22,7 +22,7 @@ env:
   DOTNET_NOLOGO: 1
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
   GOO_LINUX_APT_PACKAGES: >-
-    binutils clang cmake curl ninja-build pkg-config zlib1g-dev
+    binutils clang cmake curl ninja-build p7zip-full pkg-config zlib1g-dev
     fonts-dejavu-core fonts-noto-cjk fonts-noto-color-emoji
     libcanberra0 sound-theme-freedesktop
     libdbus-1-dev libdecor-0-dev libgl1-mesa-dev libgl1-mesa-dri
@@ -781,6 +781,20 @@ jobs:
 
 
 
+      - name: Restore pinned software renderers
+        id: software-renderer
+        if: needs.changes.outputs.full == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: artifacts/software-renderer
+          key: software-renderer-x64-${{ hashFiles('.github/scripts/build-lavapipe-linux-x64.sh', '.github/scripts/fetch-lavapipe-win-x64.sh', 'Goo.SoftwareRenderer/licenses/**') }}
+
+      - name: Build pinned software renderers
+        if: needs.changes.outputs.full == 'true' && steps.software-renderer.outputs.cache-hit != 'true'
+        run: |
+          .github/scripts/build-lavapipe-linux-x64.sh artifacts/software-renderer/linux-x64
+          .github/scripts/fetch-lavapipe-win-x64.sh artifacts/software-renderer/win-x64
+
       - &linux-build-archive
         name: Archive Linux build state
         if: needs.changes.outputs.full == 'true'
@@ -1076,6 +1090,14 @@ jobs:
             -p:GooWindowsSdlPath="$PWD/artifacts/native/win-x64/SDL3.dll" \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
 
+      - name: Pack optional software renderer
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet pack Goo.SoftwareRenderer/Goo.SoftwareRenderer.csproj -c Release -o artifacts/packages \
+            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet run --project tools/Goo.ReleaseCheck/Goo.ReleaseCheck.gsproj -c Release -- \
+            --software-renderer "artifacts/packages/Goo.SoftwareRenderer.$GOO_VERSION.nupkg"
+
       - name: Pack optional audio
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -1252,6 +1274,28 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         run: dotnet run --project tools/Goo.ReleaseCheck/Goo.ReleaseCheck.gsproj -c Release -- --manifests artifacts/packages --version "$GOO_VERSION"
 
+      - name: Verify packaged NativeAOT software rendering
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet publish tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -c Release -r linux-x64 \
+            -p:PublishAot=true -p:GooUseSoftwareRenderer=true -p:TreatWarningsAsErrors=true \
+            -p:RestorePackagesPath="$RUNNER_TEMP/goo-software-renderer-packages" \
+            --configfile tests/Goo.PackageSmoke/NuGet.config -o artifacts/software-renderer-aot
+          dotnet run --project tools/Goo.ReleaseCheck/Goo.ReleaseCheck.gsproj -c Release -- \
+            --software-renderer "artifacts/packages/Goo.SoftwareRenderer.$GOO_VERSION.nupkg" \
+            --renderer-publish artifacts/software-renderer-aot
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_SOFTWARE_RENDERER_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
+            artifacts/software-renderer-aot/Goo.PackageSmoke
+          mkdir -p "$RUNNER_TEMP/goo-empty-icds"
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_SOFTWARE_RENDERER_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
+            VK_DRIVER_FILES="$RUNNER_TEMP/goo-empty-icds" VK_ICD_FILENAMES="$RUNNER_TEMP/goo-empty-icds" \
+            artifacts/software-renderer-aot/Goo.PackageSmoke
+          .github/scripts/with-headless-wayland.sh env -u VK_DRIVER_FILES -u VK_ICD_FILENAMES -u VK_ADD_DRIVER_FILES \
+            GOO_DIRECT_DRIVER_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
+            artifacts/software-renderer-aot/Goo.PackageSmoke
+
       - name: Generate, build and publish Goo template
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -1405,6 +1449,7 @@ jobs:
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.SoftwareRenderer.${{ env.GOO_VERSION }}.nupkg
             artifacts/linux-x64/
             artifacts/reports/
             artifacts/consumer-performance/*.json
@@ -1433,6 +1478,7 @@ jobs:
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.SoftwareRenderer.${{ env.GOO_VERSION }}.nupkg
 
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Templates.${{ env.GOO_VERSION }}.nupkg
@@ -1935,6 +1981,57 @@ jobs:
         with:
           name: linux-packages
           path: artifacts/packages
+      - name: Verify Windows NativeAOT software renderer
+        if: needs.changes.outputs.full == 'true'
+        shell: pwsh
+        env:
+          NUGET_PACKAGES: ${{ runner.temp }}/goo-windows-software-renderer-packages
+        run: |
+          $version = dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo
+          dotnet publish tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -c Release -r win-x64 `
+            -p:PublishAot=true -p:GooUseSoftwareRenderer=true -p:ImportDirectoryBuildProps=false `
+            -p:GooReleaseVersion=$version -p:TreatWarningsAsErrors=true `
+            --configfile tests/Goo.PackageSmoke/NuGet.config -o artifacts/software-renderer-aot
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --project tools/Goo.ReleaseCheck/Goo.ReleaseCheck.gsproj -c Release -- `
+            --software-renderer "artifacts/packages/Goo.SoftwareRenderer.$version.nupkg" `
+            --renderer-publish artifacts/software-renderer-aot
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          New-Item -ItemType Directory -Force artifacts/software-renderer-results | Out-Null
+          $env:GOO_RENDERER_UNAVAILABLE_SMOKE = "1"
+          Rename-Item artifacts/software-renderer-aot/vulkan_lvp.dll vulkan_lvp.dll.disabled
+          Rename-Item artifacts/software-renderer-aot/vulkan-1.dll vulkan-1.dll.disabled
+          try {
+            & artifacts/software-renderer-aot/Goo.PackageSmoke.exe 2>&1 |
+              Tee-Object artifacts/software-renderer-results/windows-without-package.log
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally {
+            Rename-Item artifacts/software-renderer-aot/vulkan_lvp.dll.disabled vulkan_lvp.dll
+            Rename-Item artifacts/software-renderer-aot/vulkan-1.dll.disabled vulkan-1.dll
+            Remove-Item Env:GOO_RENDERER_UNAVAILABLE_SMOKE
+          }
+          $env:GOO_SOFTWARE_RENDERER_SMOKE = "1"
+          $env:GOO_VK_DIAGNOSTICS = "1"
+          & artifacts/software-renderer-aot/Goo.PackageSmoke.exe 2>&1 |
+            Tee-Object artifacts/software-renderer-results/windows-fallback.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $devices = Get-Content artifacts/software-renderer-results/windows-fallback.log |
+            Where-Object { $_.StartsWith('{"kind":"device"') } | ConvertFrom-Json |
+            Where-Object { $_.name -and $_.deviceType -eq 4 -and $_.fallback }
+          if (!$devices) { throw "The bundled CPU renderer and fallback reason were not logged" }
+          if (!(Select-String -Quiet "pixels matched" artifacts/software-renderer-results/windows-fallback.log)) {
+            throw "The software renderer did not present and capture a frame"
+          }
+          Remove-Item Env:GOO_SOFTWARE_RENDERER_SMOKE, Env:GOO_VK_DIAGNOSTICS
+
+      - name: Upload Windows software renderer evidence
+        if: needs.changes.outputs.full == 'true' && always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: goo-software-renderer-win-x64
+          if-no-files-found: error
+          path: artifacts/software-renderer-results/
+
       - name: Build managed direct driver consumer
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
@@ -1985,7 +2082,7 @@ jobs:
           Remove-Item Env:GOO_DIRECT_DRIVER_SMOKE, Env:GOO_VK_DIAGNOSTICS
       - name: Install software Vulkan for native Windows checks
         if: needs.changes.outputs.full == 'true'
-        uses: jakoch/install-vulkan-sdk-action@d17de7e2f5e50efb5d2123efed18497d3c58c533 # v1
+        uses: jakoch/install-vulkan-sdk-action@7fe84289ddbf750f7eff9f8e4588e600e1dd06c8 # v1
         with:
           vulkan_version: 1.4.357.0
           install_runtime: true
@@ -2230,6 +2327,10 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate --no-symbols
+          dotnet nuget push "artifacts/packages/Goo.SoftwareRenderer.$GOO_VERSION.nupkg" \
+            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate --no-symbols
 
           dotnet nuget push "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
@@ -2242,7 +2343,7 @@ jobs:
 
       - name: Publish Goo packages to GitHub Packages
         run: |
-          for package in Goo Goo.Android Goo.Accessibility Goo.Audio Goo.DevTools Goo.Templates; do
+          for package in Goo Goo.Android Goo.Accessibility Goo.Audio Goo.SoftwareRenderer Goo.DevTools Goo.Templates; do
             dotnet nuget push "artifacts/packages/$package.$GOO_VERSION.nupkg" \
               --api-key "${{ github.token }}" \
               --source https://nuget.pkg.github.com/obselate/index.json \
@@ -2286,7 +2387,7 @@ jobs:
         with:
           global-json-file: global.json
 
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         if: needs.changes.outputs.full == 'true'
         with:
           distribution: temurin
@@ -2504,7 +2605,7 @@ jobs:
         with:
           global-json-file: global.json
 
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         if: needs.changes.outputs.full == 'true'
         with:
           distribution: temurin
