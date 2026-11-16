@@ -30,7 +30,7 @@ internal shared partial class Checks {
         ReleaseText(version)
         MarkdownLinks(tracked)
         XDocument.Load(Path.Combine(Root, "integrations/rider/GooDevTools.xml"))
-        Console.WriteLine("Onboarding metadata OK: Goo $version, 6 packages")
+        Console.WriteLine("Onboarding metadata OK: Goo $version, 7 packages")
     }
 
     private func ProjectVersions(version string, tracked[]string) {
@@ -41,6 +41,7 @@ internal shared partial class Checks {
                 "Goo.Accessibility",
                 "Goo.Audio",
                 "Goo.Android",
+                "Goo.SoftwareRenderer",
                 "Goo.DevTools",
                 "Goo.Templates"
             }
