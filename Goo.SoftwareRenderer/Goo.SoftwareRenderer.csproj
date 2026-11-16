@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <PackageId>Goo.SoftwareRenderer</PackageId>
+    <Version>$(GooReleaseVersion)</Version>
+    <Authors>Xaz</Authors>
+    <Description>Optional Mesa lavapipe fallback for Goo on Windows x64 and Linux x64.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <GooSoftwareRendererRoot Condition="'$(GooSoftwareRendererRoot)' == ''">$(MSBuildThisFileDirectory)../artifacts/software-renderer</GooSoftwareRendererRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="../LICENSE" Pack="true" PackagePath="/" />
+    <None Include="Goo.SoftwareRenderer.targets" Pack="true" PackagePath="buildTransitive/" />
+    <None Include="$(GooSoftwareRendererRoot)/win-x64/native/*" Pack="true" PackagePath="runtimes/win-x64/native/" />
+    <None Include="$(GooSoftwareRendererRoot)/linux-x64/native/*" Pack="true" PackagePath="runtimes/linux-x64/native/" />
+    <None Include="$(GooSoftwareRendererRoot)/win-x64/licenses/*" Pack="true" PackagePath="licenses/win-x64/" />
+    <None Include="$(GooSoftwareRendererRoot)/linux-x64/licenses/*" Pack="true" PackagePath="licenses/linux-x64/" />
+    <None Include="$(GooSoftwareRendererRoot)/win-x64/provenance.json" Pack="true" PackagePath="provenance/win-x64/" />
+    <None Include="$(GooSoftwareRendererRoot)/linux-x64/provenance.json" Pack="true" PackagePath="provenance/linux-x64/" />
+  </ItemGroup>
+  <Target Name="ValidateSoftwareRendererPayload" BeforeTargets="Pack">
+    <Error Condition="!Exists('$(GooSoftwareRendererRoot)/win-x64/native/vulkan_lvp.dll') or !Exists('$(GooSoftwareRendererRoot)/win-x64/native/vulkan-1.dll') or !Exists('$(GooSoftwareRendererRoot)/linux-x64/native/libvulkan_lvp.so') or !Exists('$(GooSoftwareRendererRoot)/linux-x64/native/libgoo-vulkan.so.1')" Text="Build both pinned Goo.SoftwareRenderer native payloads before packing." />
+  </Target>
+</Project>

@@ -4,7 +4,12 @@ import System
 import System.Diagnostics
 import System.Runtime.InteropServices
 
+internal class VulkanDeviceUnavailableException : InvalidOperationException {
+  internal init(message string) : base(message) { }
+}
+
 internal unsafe partial class VulkanWindowTarget {
+  private var softwareFallbackEligible bool = true
   private func Bootstrap() {
     if let recorder = FrameRecorder.Current { activeTraceId = recorder.TraceId }
     var libraryStart uint64 = 0uL
@@ -66,15 +71,26 @@ internal unsafe partial class VulkanWindowTarget {
         } catch (cleanup Exception) { }
       }
       let instanceStart = DiagnosticTimestamp()
-      CreateInstance()
-      LoadInstanceDispatch()
-      RecordDiagnosticTiming(VulkanDiagnosticEventIds.RuntimeInstance,
-        VulkanDiagnosticCategories.Runtime, instanceStart)
-      let surfaceStart = DiagnosticTimestamp()
-      if !(host is VulkanHeadlessHost) { CreateSurface() }
-      RecordDiagnosticTiming(VulkanDiagnosticEventIds.SurfaceCreate,
-        VulkanDiagnosticCategories.Window, surfaceStart)
-      SelectPhysicalDevice()
+      try {
+        CreateInstance()
+        LoadInstanceDispatch()
+        RecordDiagnosticTiming(VulkanDiagnosticEventIds.RuntimeInstance,
+          VulkanDiagnosticCategories.Runtime, instanceStart)
+        let surfaceStart = DiagnosticTimestamp()
+        if !(host is VulkanHeadlessHost) { CreateSurface() }
+        RecordDiagnosticTiming(VulkanDiagnosticEventIds.SurfaceCreate,
+          VulkanDiagnosticCategories.Window, surfaceStart)
+        SelectPhysicalDevice()
+      } catch (error VulkanDeviceUnavailableException) when (host is SdlHost) {
+        if !VulkanDrivers.TryUseSoftware(error.Message) { rethrow }
+        CleanupUnpublishedBootstrap()
+        instanceDispatch = VkInstanceDispatch{}
+        instanceDestroyAvailable = false
+        CreateInstance()
+        LoadInstanceDispatch()
+        CreateSurface()
+        SelectPhysicalDevice()
+      }
     }
     if let activeRuntime = runtime {
       queueMailbox = activeRuntime.QueueWorker.CreateMailbox(host)
@@ -353,6 +369,10 @@ internal unsafe partial class VulkanWindowTarget {
       let createInstance = nullable
       var createdInstance VkInstance = nint(0)
       let result = createInstance(&createInfo, nil, &createdInstance)
+      if result == VkConstants.VK_ERROR_INCOMPATIBLE_DRIVER || result == VkConstants.VK_ERROR_INITIALIZATION_FAILED
+        || result == VkConstants.VK_ERROR_EXTENSION_NOT_PRESENT {
+        throw VulkanDeviceUnavailableException(NoUsableDriverMessage() + " vkCreateInstance failed: " + result.ToString())
+      }
       if result != VkConstants.VK_SUCCESS || createdInstance == nint(0) {
         throw InvalidOperationException("vkCreateInstance failed: " + result.ToString())
       }
@@ -581,11 +601,15 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func SelectPhysicalDevice() {
+    softwareFallbackEligible = true
     var count uint32 = 0u
     let enumerate = instanceDispatch.vkEnumeratePhysicalDevices
-    if enumerate(instance, &count, nil) != VkConstants.VK_SUCCESS || count == 0u {
-      throw InvalidOperationException(NoUsableDriverMessage())
+    let enumerated = enumerate(instance, &count, nil)
+    if enumerated == VkConstants.VK_ERROR_INITIALIZATION_FAILED
+      || (enumerated == VkConstants.VK_SUCCESS && count == 0u) {
+      throw VulkanDeviceUnavailableException(NoUsableDriverMessage())
     }
+    if enumerated != VkConstants.VK_SUCCESS { throw InvalidOperationException("Vulkan physical device enumeration failed") }
     let initialDevices * VkPhysicalDevice = stackalloc[int32(count)]VkPhysicalDevice
     var deviceValues = Span[VkPhysicalDevice](initialDevices, int32(count))
     while true {
@@ -598,9 +622,12 @@ internal unsafe partial class VulkanWindowTarget {
         throw InvalidOperationException("Vulkan physical device enumeration failed")
       }
       count = 0u
-      if enumerate(instance, &count, nil) != VkConstants.VK_SUCCESS || count == 0u {
-        throw InvalidOperationException(NoUsableDriverMessage())
+      let recounted = enumerate(instance, &count, nil)
+      if recounted == VkConstants.VK_ERROR_INITIALIZATION_FAILED
+        || (recounted == VkConstants.VK_SUCCESS && count == 0u) {
+        throw VulkanDeviceUnavailableException(NoUsableDriverMessage())
       }
+      if recounted != VkConstants.VK_SUCCESS { throw InvalidOperationException("Vulkan physical device enumeration failed") }
       if count > uint32(deviceValues.Length) {
         deviceValues = Span[VkPhysicalDevice]([int32(count)]VkPhysicalDevice)
       }
@@ -637,6 +664,9 @@ internal unsafe partial class VulkanWindowTarget {
       let name = Marshal.PtrToStringUTF8(nint(&properties[candidateIndex].deviceName[0])) ?? "unknown"
       let reason = if selectedName != "" {
         "lower priority, not attempted"
+      } else if properties[candidateIndex].deviceType == VkConstants.VK_PHYSICAL_DEVICE_TYPE_CPU
+        && host is SdlHost && VulkanDrivers.ManualLoader && !VulkanDrivers.Enabled {
+        "bundled software renderer preferred"
       } else {
         TryStartPhysicalDevice(deviceValues[candidateIndex], properties[candidateIndex])
       }
@@ -647,11 +677,14 @@ internal unsafe partial class VulkanWindowTarget {
       }
     }
     if selectedName == "" {
+      if softwareFallbackEligible {
+        throw VulkanDeviceUnavailableException("No Vulkan physical device satisfies the Goo presentation requirements: " + rejected)
+      }
       throw InvalidOperationException("No Vulkan physical device satisfies the Goo presentation requirements: " + rejected)
     }
     if let current = diagnostics {
       current.WriteDevice(Console.Error, selectedName,
-        if preserveOrder { "loader" } else { "deviceType" }, rejected)
+        if preserveOrder { "loader" } else { "deviceType" }, rejected, VulkanDrivers.FallbackReason)
     }
   }
 
@@ -680,6 +713,7 @@ internal unsafe partial class VulkanWindowTarget {
     try {
       CreateCandidateRuntime()
     } catch (error Exception) {
+      if !(error is VulkanDeviceUnavailableException) { softwareFallbackEligible = false }
       DestroyWindowResources()
       if let candidateRuntime = runtime {
         candidateRuntime.ReleaseAfterIdle()
@@ -943,7 +977,7 @@ internal unsafe partial class VulkanWindowTarget {
       var createdDevice VkDevice = nint(0)
       let result = createDevice(physicalDevice, &createInfo, nil, &createdDevice)
       if result != VkConstants.VK_SUCCESS || createdDevice == nint(0) {
-        throw InvalidOperationException("vkCreateDevice failed: " + result.ToString())
+        throw VulkanDeviceUnavailableException("vkCreateDevice failed: " + result.ToString())
       }
       try {
         if let accounting = sharedObjectAccounting {

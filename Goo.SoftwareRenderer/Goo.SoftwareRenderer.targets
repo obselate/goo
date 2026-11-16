@@ -1,0 +1,15 @@
+<Project>
+  <PropertyGroup>
+    <_GooSoftwareRendererRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</_GooSoftwareRendererRid>
+    <_GooSoftwareRendererRid Condition="'$(_GooSoftwareRendererRid)' == ''">$(NETCoreSdkRuntimeIdentifier)</_GooSoftwareRendererRid>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(_GooSoftwareRendererRid)' == 'linux-x64' or '$(_GooSoftwareRendererRid)' == 'win-x64'">
+    <Content Include="$(MSBuildThisFileDirectory)../runtimes/$(_GooSoftwareRendererRid)/native/*"
+             Condition="'$(RuntimeIdentifier)' == ''"
+             Link="%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="$(MSBuildThisFileDirectory)../licenses/$(_GooSoftwareRendererRid)/*"
+             Link="licenses/Goo.SoftwareRenderer/%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

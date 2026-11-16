@@ -699,15 +699,15 @@ Gets the view-box y origin.
 ## `VulkanDrivers`
 
 
-Configures additional Vulkan drivers for the process.
+Configures additional Vulkan drivers for the process. Referencing Goo.SoftwareRenderer enables automatic hardware-first fallback to bundled Mesa lavapipe on Windows x64 and Linux x64. Explicit Direct or Exclusive settings disable automatic fallback.
 
 ### `Direct`
 
-Gets or sets driver DLL paths loaded on Windows, alongside system drivers unless Exclusive is true. Set this before opening the first window. Paths are copied and are never read from the environment. Throws PlatformNotSupportedException on other platforms and InvalidOperationException after Vulkan loading starts.
+Gets or sets driver library paths loaded on Windows or Linux, alongside system drivers unless Exclusive is true. Set this before opening the first window. Paths are copied and are never read from the environment. Throws PlatformNotSupportedException on other platforms and InvalidOperationException after Vulkan loading starts.
 
 ### `Exclusive`
 
-Gets or sets whether only Direct drivers are enumerated on Windows. Set this before opening the first window. The default is false. Throws PlatformNotSupportedException on other platforms and InvalidOperationException after Vulkan loading starts.
+Gets or sets whether only Direct drivers are enumerated on Windows or Linux. Set this before opening the first window. The default is false. Throws PlatformNotSupportedException on other platforms and InvalidOperationException after Vulkan loading starts.
 
 ## `VulkanExternalImageDescription`
 
