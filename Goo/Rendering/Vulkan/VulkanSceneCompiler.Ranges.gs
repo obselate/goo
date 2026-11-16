@@ -167,7 +167,8 @@ internal partial class VulkanSceneCompiler {
     }
 
     private func FinishRangeFrame() {
-        if textScene?.RedrawRequired == true || imageScene?.RedrawRequired == true
+        if textScene?.RedrawRequired == true || textScene?.ResourceDeferred == true
+        || imageScene?.RedrawRequired == true
         || pathScene?.RedrawRequired == true || pathScene?.ResourceDeferred == true {
             rangeReady = false
             return
