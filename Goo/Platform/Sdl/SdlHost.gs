@@ -166,7 +166,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     internal func BuildWindowFlags(transparent bool) SDLWindowFlags {
       var baseFlags = SDLWindowFlags.HighPixelDensity |
       SDLWindowFlags.Hidden | SDLWindowFlags.Resizable
-      if !VulkanDrivers.Enabled { baseFlags = baseFlags | SDLWindowFlags.Vulkan }
+      if !VulkanDrivers.ManualLoader { baseFlags = baseFlags | SDLWindowFlags.Vulkan }
       return transparent ? baseFlags | SDLWindowFlags.Transparent : baseFlags
     }
 

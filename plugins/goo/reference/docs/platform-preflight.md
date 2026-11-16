@@ -20,6 +20,13 @@ Goo ships Windows x64, Linux x64, macOS arm64, Android ARM64 and Android x64 ass
 - macOS arm64 requires macOS 14+ on Apple silicon. Goo bundles MoltenVK 1.4.2 and uses Apple system fonts. No Vulkan SDK is needed.
 - Android requires API 33+ and Vulkan 1.3 with identity presentation support. See [Android integration](android.md).
 
+`Goo.SoftwareRenderer` is an optional package for Windows x64 and Linux x64.
+It supplies Mesa lavapipe and a fallback Vulkan loader. Goo uses it automatically
+when no hardware device meets its requirements or logical-device creation fails.
+Linux software rendering needs glibc 2.35+. Wayland and fonts are still required.
+Set `GOO_VK_DIAGNOSTICS=1` to log the selected device and the fallback reason.
+See [shipping](shipping.md#optional-software-renderer).
+
 ## Custom shaders
 
 Only projects with `<GooShaderEffect>` items need these tools:

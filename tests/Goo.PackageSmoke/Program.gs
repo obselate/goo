@@ -408,15 +408,19 @@ func VerifyImageDecode() {
   if image.Width != 2 || image.Height != 1 { throw InvalidOperationException("Packaged image decoder returned a wrong size") }
 }
 
-func RunDirectDriverSmoke() {
-  for name in []string{"VK_ADD_DRIVER_FILES", "VK_DRIVER_FILES", "VK_ICD_FILENAMES"} {
-    if !String.IsNullOrEmpty(Environment.GetEnvironmentVariable(name)) {
-      throw InvalidOperationException(name + " must not be set for the direct driver smoke.")
+func RunRendererSmoke(direct bool) {
+  if direct {
+    for name in []string{"VK_ADD_DRIVER_FILES", "VK_DRIVER_FILES", "VK_ICD_FILENAMES"} {
+      if !String.IsNullOrEmpty(Environment.GetEnvironmentVariable(name)) {
+        throw InvalidOperationException(name + " must not be set for the direct driver smoke.")
+      }
     }
+    VulkanDrivers.Direct = []string{Path.Combine(AppContext.BaseDirectory,
+      if OperatingSystem.IsWindows() { "vulkan_lvp.dll" } else { "libvulkan_lvp.so" })}
+    VulkanDrivers.Exclusive = true
   }
-  VulkanDrivers.Direct = []string{Path.Combine(AppContext.BaseDirectory, "vulkan_lvp.dll")}
   let window = Window{
-    Title: "Goo direct Vulkan driver smoke",
+    Title: "Goo renderer smoke",
     Size: LayoutSize(64, 64),
     VSync: false,
     Background: Color.Rgb(12, 20, 32),
@@ -445,18 +449,18 @@ func RunDirectDriverSmoke() {
               || Math.Abs(int32(capture.Pixels[offset + 1]) - 20) > 1
               || Math.Abs(int32(capture.Pixels[offset + 2]) - 32) > 1
               || capture.Pixels[offset + 3] != 255 {
-              throw InvalidOperationException("Direct driver pixel mismatch at " + pixel.ToString())
+              throw InvalidOperationException("Renderer pixel mismatch at " + pixel.ToString())
             }
           }
-          Console.WriteLine("direct-drivers: pixels matched rgba=12,20,32,255 count=" + (capture.Pixels.Length / 4).ToString())
+          Console.WriteLine((if direct { "direct-drivers" } else { "renderer" }) + ": pixels matched rgba=12,20,32,255 count=" + (capture.Pixels.Length / 4).ToString())
           return
         }
       }
       Thread.Sleep(1)
     }
-    throw InvalidOperationException("Direct driver capture timed out.")
+    throw InvalidOperationException("Renderer capture timed out.")
   } finally {
-    if !CloseWindow(window) { throw InvalidOperationException("Direct driver window did not close.") }
+    if !CloseWindow(window) { throw InvalidOperationException("Renderer window did not close.") }
   }
 }
 
@@ -476,7 +480,18 @@ func Main() {
     return
   }
   if Environment.GetEnvironmentVariable("GOO_DIRECT_DRIVER_SMOKE") == "1" {
-    RunDirectDriverSmoke()
+    RunRendererSmoke(true)
+    return
+  }
+  if Environment.GetEnvironmentVariable("GOO_RENDERER_UNAVAILABLE_SMOKE") == "1" {
+    try { RunRendererSmoke(false) } catch (error GraphicsUnavailableException) {
+      Console.WriteLine("renderer-unavailable: " + error.Message)
+      return
+    }
+    throw InvalidOperationException("The system unexpectedly has a usable Vulkan device.")
+  }
+  if Environment.GetEnvironmentVariable("GOO_SOFTWARE_RENDERER_SMOKE") == "1" {
+    RunRendererSmoke(false)
     return
   }
   if Environment.GetEnvironmentVariable("GOO_NATIVE_DIALOGS_SMOKE") == "1" {

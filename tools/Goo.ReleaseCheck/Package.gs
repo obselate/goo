@@ -209,5 +209,57 @@ internal shared partial class ReleaseCheck {
         }
     }
 
+    private func ValidateSoftwareRenderer(path string, publish string) {
+        using let archive = ZipFile.OpenRead(path)
+        let directory = Path.Combine(Root, "artifacts", "software-renderer-check-" + Guid.NewGuid().ToString())
+        Directory.CreateDirectory(directory)
+        try {
+            for rid in []string{"win-x64", "linux-x64"} {
+                let provenance = ReadJson(archive, "provenance/$rid/provenance.json")
+                Require(provenance["rid"]!!.GetValue[string]() == rid, "Renderer RID mismatch")
+                Require(provenance["mesa"]!!.GetValue[string]() == "26.2.6", "Renderer Mesa version mismatch")
+                let artifacts = provenance["artifacts"]!!.AsObject()
+                let driver = if rid == "win-x64" { "vulkan_lvp.dll" } else { "libvulkan_lvp.so" }
+                let loader = if rid == "win-x64" { "vulkan-1.dll" } else { "libgoo-vulkan.so.1" }
+                Require(artifacts.ContainsKey(driver) && artifacts.ContainsKey(loader), "Renderer driver or loader missing")
+                Require(archive.Entries.Any(e -> e.FullName.StartsWith("licenses/$rid/") && e.Length > 0), "Renderer licenses missing")
+                for artifact in artifacts {
+                    let bytes = ReadEntry(archive, "runtimes/$rid/native/" + artifact.Key)
+                    Require(Hash(bytes) == artifact.Value["sha256"]!!.GetValue[string](), "Renderer hash mismatch: " + artifact.Key)
+                    Require(StartsWithBytes(bytes, if rid == "win-x64" { []byte{77, 90} } else { []byte{127, 69, 76, 70} }), "Renderer native format mismatch: " + artifact.Key)
+                    if rid == "linux-x64" && OperatingSystem.IsLinux() {
+                        let native = Path.Combine(directory, artifact.Key)
+                        File.WriteAllBytes(native, bytes)
+                        let versions = Run("readelf", []string{"--version-info", native}, true)
+                        for match in Regex.Matches(versions, `GLIBC_(\d+\.\d+)`) {
+                            Require(Version.Parse(match.Groups[1].Value).CompareTo(Version(2, 35)) <= 0, "Renderer requires glibc newer than 2.35")
+                        }
+                        let dynamic = Run("readelf", []string{"-d", native}, true)
+                        Require(dynamic.Contains(`$ORIGIN`), "Renderer dependency lookup is not relative to the library")
+                        for match in Regex.Matches(dynamic, `Shared library: \[(.*?)\]`) {
+                            let name = match.Groups[1].Value
+                            Require(artifacts.ContainsKey(name) || []string{"libc.so.6", "libm.so.6", "libdl.so.2", "libpthread.so.0", "librt.so.1", "ld-linux-x86-64.so.2"}.Contains(name), "Renderer dependency is not bundled: " + name)
+                        }
+                    }
+                    if publish != "" && ((rid == "win-x64") == File.Exists(Path.Combine(publish, "vulkan_lvp.dll"))) {
+                        let published = Path.Combine(publish, artifact.Key)
+                        Require(File.Exists(published) && Hash(File.ReadAllBytes(published)) == Hash(bytes), "Published renderer differs: " + artifact.Key)
+                    }
+                }
+                Console.WriteLine("Software renderer $rid: " + artifacts.Sum(a -> a.Value["bytes"]!!.GetValue[int64]()).ToString() + " native bytes")
+                if publish != "" && ((rid == "win-x64") == File.Exists(Path.Combine(publish, "vulkan_lvp.dll"))) {
+                    for license in archive.Entries.Where(e -> e.FullName.StartsWith("licenses/$rid/") && e.Length > 0) {
+                        let published = Path.Combine(publish, "licenses/Goo.SoftwareRenderer", Path.GetFileName(license.FullName))
+                        Require(File.Exists(published) && Hash(File.ReadAllBytes(published)) == Hash(ReadEntry(archive, license.FullName)), "Published renderer license differs: " + license.FullName)
+                    }
+                }
+            }
+            Require(archive.GetEntry("buildTransitive/Goo.SoftwareRenderer.targets") != nil, "Renderer publish targets missing")
+            Console.WriteLine("Software renderer package OK")
+        } finally {
+            Directory.Delete(directory, true)
+        }
+    }
+
     private func StartsWithBytes(bytes[]byte, prefix[]byte) bool -> bytes.AsSpan().StartsWith(prefix.AsSpan())
 }
