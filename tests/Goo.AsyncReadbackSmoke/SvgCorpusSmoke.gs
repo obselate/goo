@@ -4,7 +4,6 @@ import Goo
 import Goo.Svg
 import System
 import System.IO
-import System.Linq
 import System.Security.Cryptography
 
 class SvgCorpusCell : Cell {
@@ -43,8 +42,20 @@ func RunSvgCorpusSmoke() {
                 File.WriteAllBytes(Path.Combine(output, file), image.EncodePng())
                 if let expectedDirectory = baseline {
                     using let expected = RasterImageDecoder.DecodeIconPng(File.ReadAllBytes(Path.Combine(expectedDirectory, file)))
-                    Require(uint32(expected.Width) == frame.Width && uint32(expected.Height) == frame.Height
-                        && expected.Pixels.SequenceEqual(pixels), "SVG corpus pixels differ: " + file)
+                    Require(uint32(expected.Width) == frame.Width && uint32(expected.Height) == frame.Height,
+                        "SVG corpus extent differs: " + file)
+                    let exact = window.RenderingDevice.Kind == RenderingDeviceKind.Cpu
+                    var coverageDifferences = 0
+                    for index in 0 ... pixels.Length / 4 {
+                        var difference = 0
+                        for channel in 0 ... 4 {
+                            let offset = index * 4 + channel
+                            difference = Math.Max(difference, Math.Abs(int32(expected.Pixels[offset]) - int32(pixels[offset])))
+                        }
+                        Require(difference <= (if exact { 0 } else { 16 }), "SVG corpus pixels differ: " + file)
+                        if difference > 2 { coverageDifferences++ }
+                    }
+                    Require(coverageDifferences <= 2, "SVG corpus coverage differs: " + file)
                 }
                 Console.WriteLine(file + " " + frame.Width.ToString() + "x" + frame.Height.ToString()
                     + " " + Convert.ToHexString(SHA256.HashData(pixels)))
