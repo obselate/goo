@@ -818,6 +818,9 @@ public partial class Window {
         return false
       }
       let previousGeneration = target.CurrentPresentGeneration
+      let previousExtent = target.FramebufferExtentForTest()
+      let resizeRequired = previousExtent.Width != framebufferWidth
+        || previousExtent.Height != framebufferHeight
       if !applyNativeResize(logicalWidth, logicalHeight, framebufferWidth,
         framebufferHeight) {
           return false
@@ -825,7 +828,7 @@ public partial class Window {
       let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 2L
       var actual = target.FramebufferExtentForTest()
       var currentGeneration = target.CurrentPresentGeneration
-      while (currentGeneration == previousGeneration
+      while ((resizeRequired && currentGeneration == previousGeneration)
           || actual.Width != framebufferWidth
           || actual.Height != framebufferHeight)
         && Stopwatch.GetTimestamp() < deadline{
@@ -842,7 +845,7 @@ public partial class Window {
       this.framebufferWidth = actual.Width
       this.framebufferHeight = actual.Height
       return currentGeneration != 0uL
-        && currentGeneration != previousGeneration
+        && (!resizeRequired || currentGeneration != previousGeneration)
         && actual.Width == framebufferWidth
         && actual.Height == framebufferHeight
     }
