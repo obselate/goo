@@ -592,6 +592,9 @@ func RunRenderBudgetPressureSmoke() {
     Require(WindowReadbackTestFixture.Resize(window, 1024, 600,
       metrics.FramebufferWidth, metrics.FramebufferHeight),
       "Layer capacity budget recovery resize failed")
+    Require(WindowReadbackTestFixture.Resize(window, 1024, 600,
+      metrics.FramebufferWidth, metrics.FramebufferHeight),
+      "Layer capacity budget idempotent resize failed")
     target.SetMemoryHeadroomForTest(int64(exactBytes) - int64(seeded.layerPoolResidentBytes))
     WindowReadbackTestFixture.SetForceFullRedraw(window, true)
     WindowReadbackTestFixture.ForceRender(window, 0.0)
