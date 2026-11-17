@@ -161,6 +161,7 @@ public partial class NativeAccessibilityAdapter {
     }
 
     private func NodeRole(node AccessibilityNode) uint8 {
+      if node.IsPassword { return AccessKitSchema.PasswordInput }
       if node.Role == AccessibilityRole.List {
         for i in 0 ... node.Children.Count {
           if node.Children[i].Role == AccessibilityRole.ListItem && node.Children[i].Selected != nil { return uint8(87) }
