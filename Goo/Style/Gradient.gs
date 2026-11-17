@@ -2,7 +2,6 @@ package Goo
 
 import System
 import System.Collections.Generic
-import System.Collections.ObjectModel
 
 /// Specifies one immutable gradient color stop.
 public data struct GradientStop {
@@ -253,7 +252,7 @@ internal func computeGradientContentHash(kind int32, a float64, b float64, c flo
     result = HashCode.Combine(result, stops.Count)
     for i in 0 ... stops.Count {
       let stop = stops[i]
-      result = HashCode.Combine(result, stop.Offset, stop.Color.GetHashCode())
+      result = HashCode.Combine(result, stop.Offset, stop.Color.R, stop.Color.G, stop.Color.B, stop.Color.A)
     }
     return result
   }
@@ -264,7 +263,7 @@ internal func computeGradientContentHash4(kind int32, a float64, b float64, c fl
     result = HashCode.Combine(result, stops.Count)
     for i in 0 ... stops.Count {
       let stop = stops[i]
-      result = HashCode.Combine(result, stop.Offset, stop.Color.GetHashCode())
+      result = HashCode.Combine(result, stop.Offset, stop.Color.R, stop.Color.G, stop.Color.B, stop.Color.A)
     }
     return result
   }
