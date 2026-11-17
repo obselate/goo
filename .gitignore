@@ -175,3 +175,9 @@
 **/__pycache__/
 *.user
 *.lscache
+
+!/artifacts/
+/artifacts/*
+!/artifacts/layout-transition-bounds/
+/artifacts/layout-transition-bounds/*
+!/artifacts/layout-transition-bounds/evidence.html
