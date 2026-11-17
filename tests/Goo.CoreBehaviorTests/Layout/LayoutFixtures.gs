@@ -909,6 +909,40 @@ internal class LayoutFixtures {
     return true
   }
 
+  func NestedBaselinesIgnorePixelSnappedPositions() bool {
+    let pair = (size float64) -> Container{
+      Width: 100, FlexDirection: FlexDirection.Row, AlignItems: AlignItems.Baseline,
+      Text{Content: "a", FontSize: 12}, Text{Content: "b", FontSize: size}}
+    let scene = Container{Width: Percent(100), Height: Percent(100), Padding: Edges{Top: 229},
+      Container{FlexDirection: FlexDirection.Row, AlignItems: AlignItems.Baseline,
+        Padding: Edges{Top: 2}, pair(14), pair(18)},
+      Container{Height: 38, Margin: Edges{Top: 2}, BorderWidth: Edges{Bottom: 1},
+        FlexDirection: FlexDirection.Row, AlignItems: AlignItems.Center,
+        Container{Width: 502, Padding: Edges{Left: 6}, FlexDirection: FlexDirection.Row,
+          Overflow: Overflow.Hidden, Text{Content: "notes", FontSize: 12, FlexGrow: 1}}}}
+    for density in []float32{1.0F, 1.25F, 1.5F, 2.0F} {
+      let root = Reconciler{Res: Resolver{}}.Mount(scene)
+      let layout = Layout()
+      layout.SetPixelDensity(density)
+      for resize in 0 ... 10 {
+        let width = 600.0F + float32(resize % 2)
+        layout.Calculate(root, width, 800.0F)
+        let fresh = Reconciler{Res: Resolver{}}.Mount(scene)
+        let freshLayout = Layout()
+        freshLayout.SetPixelDensity(density)
+        freshLayout.Calculate(fresh, width, 800.0F)
+        let actual = List[float32]()
+        let expected = List[float32]()
+        snapshot(root, actual)
+        snapshot(fresh, expected)
+        if !sameSnapshot(actual, expected) {
+          throw InvalidOperationException("density=${density}, resize=${resize}, cached=${root.Children[0].Rect.H}, fresh=${fresh.Children[0].Rect.H}")
+        }
+      }
+    }
+    return true
+  }
+
   func PixelSnappingPreservesCachedLayoutsAcrossResizes() bool {
     let scene = Container{ Width: Percent(100), Height: Percent(100),
       Container{ Position: PositionType.Absolute, Left: 18, Bottom: 14,

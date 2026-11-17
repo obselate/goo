@@ -57,7 +57,7 @@ namespace Facebook.Yoga
             }
 
             float childBaseline = CalculateBaseline(baselineChild);
-            return childBaseline + baselineChild.Layout.Position(PhysicalEdge.Top);
+            return childBaseline + baselineChild.Layout.RawTop;
         }
 
         // Whether any of the children of this node participate in baseline alignment
