@@ -635,9 +635,10 @@ internal class TextLayouts {
       maxWidth float32) TextLine{
         let text = paragraph.Text
         let whole = shape(n, paragraph, 0, text.Length)
+        if n.TextTrimming != TextTrimming.Ellipsis || maxWidth < 0.0F { return whole }
         let width = PassiveTextPresentations.Read(n) != nil
           ? measureRichRange(n, paragraph, 0, text.Length) : whole.Width
-        if n.TextTrimming != TextTrimming.Ellipsis || maxWidth < 0.0F || width <= maxWidth {
+        if width <= maxWidth {
           return whole
         }
         if PassiveTextPresentations.Read(n) != nil {
@@ -689,7 +690,7 @@ internal class TextLayouts {
       let elements = UnicodeGraphemes.Starts(line.Content)
       let direction = if let shape = line.Shape { shape.RightToLeft ? 2 : 1 }
         else { TextShaping.BaseDirection(line.Content, int32(n.Direction)) }
-      var low = 0
+      var low = maxWidth < 0.0F ? elements.Length : 0
       var high = elements.Length
       while low < high {
         let middle = low + (high - low + 1) / 2
@@ -698,7 +699,7 @@ internal class TextLayouts {
         using let shape = TextShaping.Shape(content, n.FontFamily, fontSize(n), int32(n.FontWeight),
           n.FontStyle == FontStyle.Italic, letterSpacing(n), direction, n.Language)
         let candidate = makeRichLine(n, TextLine{Content: content, Shape: shape}, displayStart)
-        let fits = maxWidth < 0.0F || candidate.Width <= maxWidth
+        let fits = candidate.Width <= maxWidth
         disposeRichLine(candidate)
         if fits { low = middle } else { high = middle - 1 }
       }
