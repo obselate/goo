@@ -36,7 +36,10 @@ internal class Page : Cell {
 }
 
 internal class FailingPage : Cell {
+    internal var ArgumentFailure bool
+
     override func Build() Blob {
+        if ArgumentFailure { throw ArgumentException("Fixture page build failed") }
         throw InvalidOperationException("Fixture page build failed")
     }
 }
@@ -142,6 +145,10 @@ try {
         failed.Status == OffscreenRenderStatus.Failed && failed.Error == "Fixture page build failed",
         "offscreen failure lost its cause"
     )
+    let argumentFailure = Pump(session, session.RenderAsync(
+        FailingPage{ ArgumentFailure: true }, options, CancellationToken.None))
+    Require(argumentFailure.Status == OffscreenRenderStatus.Failed
+        && argumentFailure.Error == "Fixture page build failed", "offscreen argument failure lost its cause")
     let first = Pump(session, session.RenderAsync(Page(), options, CancellationToken.None))
     Require(
         first.Status == OffscreenRenderStatus.Success && first.Capture != nil,
