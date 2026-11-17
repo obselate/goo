@@ -86,16 +86,20 @@ namespace Facebook.Yoga
 
             double absoluteNodeRight = absoluteNodeLeft + nodeWidth;
             double absoluteNodeBottom = absoluteNodeTop + nodeHeight;
+            double roundedNodeLeft = absoluteNodeLeft;
+            double roundedNodeTop = absoluteNodeTop;
 
             if (pointScaleFactor != 0.0)
             {
                 bool textRounding = node.GetNodeType() == NodeType.Text;
                 bool parentTextRounding = node.GetOwner()?.GetNodeType() == NodeType.Text;
 
+                roundedNodeLeft = RoundValueToPixelGridDouble(absoluteNodeLeft, pointScaleFactor, false, textRounding);
+                roundedNodeTop = RoundValueToPixelGridDouble(absoluteNodeTop, pointScaleFactor, false, textRounding);
                 layout.SetRoundedPosition(
-                    (float)(RoundValueToPixelGridDouble(absoluteNodeLeft, pointScaleFactor, false, textRounding) -
+                    (float)(roundedNodeLeft -
                         RoundValueToPixelGridDouble(absoluteLeft, pointScaleFactor, false, parentTextRounding)),
-                    (float)(RoundValueToPixelGridDouble(absoluteNodeTop, pointScaleFactor, false, textRounding) -
+                    (float)(roundedNodeTop -
                         RoundValueToPixelGridDouble(absoluteTop, pointScaleFactor, false, parentTextRounding)));
 
                 double scaledNodeWith = nodeWidth * pointScaleFactor;
@@ -109,11 +113,11 @@ namespace Facebook.Yoga
                 double roundedWidth = textRounding
                     ? RoundValueToPixelGridDouble(nodeWidth, pointScaleFactor, true, false)
                     : RoundValueToPixelGridDouble(absoluteNodeRight, pointScaleFactor, false, false) -
-                        RoundValueToPixelGridDouble(absoluteNodeLeft, pointScaleFactor, false, false);
+                        roundedNodeLeft;
                 double roundedHeight = textRounding
                     ? RoundValueToPixelGridDouble(nodeHeight, pointScaleFactor, true, false)
                     : RoundValueToPixelGridDouble(absoluteNodeBottom, pointScaleFactor, false, false) -
-                        RoundValueToPixelGridDouble(absoluteNodeTop, pointScaleFactor, false, false);
+                        roundedNodeTop;
 
                 node.GetLayout().SetDimension(
                     Dimension.Width,
@@ -154,21 +158,17 @@ namespace Facebook.Yoga
             bottom = Math.Max(layout.Dimension(Dimension.Height), bottom + layout.Border(PhysicalEdge.Bottom));
             if (left < 0 || right > layout.Dimension(Dimension.Width))
             {
-                double origin = RoundValueToPixelGridDouble(
-                    absoluteNodeLeft, pointScaleFactor, false, node.GetNodeType() == NodeType.Text);
                 if (left < 0)
-                    left = RoundValueToPixelGridDouble(origin + left, pointScaleFactor, false, true) - origin;
+                    left = RoundValueToPixelGridDouble(roundedNodeLeft + left, pointScaleFactor, false, true) - roundedNodeLeft;
                 if (right > layout.Dimension(Dimension.Width))
-                    right = RoundValueToPixelGridDouble(origin + right, pointScaleFactor, true, false) - origin;
+                    right = RoundValueToPixelGridDouble(roundedNodeLeft + right, pointScaleFactor, true, false) - roundedNodeLeft;
             }
             if (top < 0 || bottom > layout.Dimension(Dimension.Height))
             {
-                double origin = RoundValueToPixelGridDouble(
-                    absoluteNodeTop, pointScaleFactor, false, node.GetNodeType() == NodeType.Text);
                 if (top < 0)
-                    top = RoundValueToPixelGridDouble(origin + top, pointScaleFactor, false, true) - origin;
+                    top = RoundValueToPixelGridDouble(roundedNodeTop + top, pointScaleFactor, false, true) - roundedNodeTop;
                 if (bottom > layout.Dimension(Dimension.Height))
-                    bottom = RoundValueToPixelGridDouble(origin + bottom, pointScaleFactor, true, false) - origin;
+                    bottom = RoundValueToPixelGridDouble(roundedNodeTop + bottom, pointScaleFactor, true, false) - roundedNodeTop;
             }
             layout.SetDimension(Dimension.Width, (float)(right - left));
             layout.SetDimension(Dimension.Height, (float)(bottom - top));
@@ -176,10 +176,10 @@ namespace Facebook.Yoga
                 return;
 
             layout.SetRoundedPosition(
-                left == 0 ? layout.Position(PhysicalEdge.Left) : (float)(RoundValueToPixelGridDouble(
-                    absoluteNodeLeft, pointScaleFactor, false, node.GetNodeType() == NodeType.Text) + left - snappedParentLeft),
-                top == 0 ? layout.Position(PhysicalEdge.Top) : (float)(RoundValueToPixelGridDouble(
-                    absoluteNodeTop, pointScaleFactor, false, node.GetNodeType() == NodeType.Text) + top - snappedParentTop));
+                left == 0 ? layout.Position(PhysicalEdge.Left) :
+                    (float)(roundedNodeLeft + left - snappedParentLeft),
+                top == 0 ? layout.Position(PhysicalEdge.Top) :
+                    (float)(roundedNodeTop + top - snappedParentTop));
             float shiftedNodeLeft = snappedParentLeft + layout.Position(PhysicalEdge.Left);
             float shiftedNodeTop = snappedParentTop + layout.Position(PhysicalEdge.Top);
             var children = new LayoutableChildren<Node>.Iterator(node);
