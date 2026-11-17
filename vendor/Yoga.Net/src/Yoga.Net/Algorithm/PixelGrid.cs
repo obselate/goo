@@ -20,7 +20,7 @@ namespace Facebook.Yoga
             bool forceFloor)
         {
             double scaledValue = value * pointScaleFactor;
-            double fractial = scaledValue % 1.0;
+            double fractial = Math.CopySign(scaledValue - Math.Truncate(scaledValue), scaledValue);
 
             if (fractial < 0)
             {
