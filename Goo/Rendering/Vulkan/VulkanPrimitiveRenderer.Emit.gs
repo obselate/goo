@@ -126,7 +126,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     color uint32,
     opacity float32,
     transformIndex int32,
-    frame SceneFrame) {
+    frame SceneFrame, snapToPixels bool = false) {
       ValidateBounds(bounds)
       ValidateRadius(radiusTopLeft)
       ValidateRadius(radiusTopRight)
@@ -136,12 +136,24 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       ValidateRadius(opaqueBorderHeight)
       ValidateOpacity(opacity)
       ValidateTransformIndex(frame, transformIndex)
-      let transform = ResolveTransform(frame, transformIndex)
-      if bounds.IsEmpty {
+      var transform = ResolveTransform(frame, transformIndex)
+      var solidBounds = bounds
+      if snapToPixels && transform.B == 0.0F && transform.C == 0.0F {
+        let x0 = MathF.Round(transform.A * bounds.X + transform.TX)
+        let x1 = MathF.Round(transform.A * bounds.Right + transform.TX)
+        let y0 = MathF.Round(transform.D * bounds.Y + transform.TY)
+        let y1 = MathF.Round(transform.D * bounds.Bottom + transform.TY)
+        solidBounds = ConservativeBounds{
+          X: MathF.Min(x0, x1), Y: MathF.Min(y0, y1),
+          Width: MathF.Abs(x1 - x0), Height: MathF.Abs(y1 - y0),
+        }
+        transform = PrimitiveTransform{ A: 1.0F, D: 1.0F }
+      }
+      if solidBounds.IsEmpty {
         return
       }
       let scroll = frame.ScrollOffset(transformIndex)
-      EmitSolidResolved(commandBuffer, extent, bounds, radiusTopLeft, radiusTopRight,
+      EmitSolidResolved(commandBuffer, extent, solidBounds, radiusTopLeft, radiusTopRight,
         radiusBottomRight, radiusBottomLeft, opaqueBorderWidth, opaqueBorderHeight,
         color, opacity, transform, currentDitherOffsetX + scroll.X, currentDitherOffsetY + scroll.Y)
     }

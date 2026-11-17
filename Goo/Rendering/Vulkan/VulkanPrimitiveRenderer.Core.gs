@@ -683,7 +683,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         RequireRecordIndex(reference.Index, frame.SolidBoxCount, "solid box index")
         let value = frame.SolidBoxes[reference.Index]
         EmitSolid(commandBuffer, activeExtent, value.Bounds, 0.0F, 0.0F, 0.0F, 0.0F,
-          0.0F, 0.0F, value.Color, value.Opacity, value.TransformIndex, frame)
+          0.0F, 0.0F, value.Color, value.Opacity, value.TransformIndex, frame, value.SnapToPixels)
       }
       case SceneDrawKind.RoundedBox {
         RequireRecordIndex(reference.Index, frame.RoundedBoxCount, "rounded box index")
