@@ -13,8 +13,8 @@ class RichTextClipboard : IDisposable {
     private let owner Window
     private let controller TextEditorController
     private let layer TextPresentationLayer
-    private let previous((TextCommandEvent) -> void)?
-    private let interceptor(TextCommandEvent) -> void
+    private let previous Action[TextCommandEvent]?
+    private let interceptor Action[TextCommandEvent]
     private let threadId int32 = Environment.CurrentManagedThreadId
     private let lifetime CancellationTokenSource = CancellationTokenSource()
     private var readOnly bool
