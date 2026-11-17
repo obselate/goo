@@ -4,6 +4,22 @@ import System
 import System.Collections.Generic
 
 internal class StyleFixtures {
+  func BorderRadiusDeclarationOrderContract() bool {
+    let reconciler = Reconciler{Res: Resolver{}}
+    let node = reconciler.Mount(Container{
+      BorderTopLeftRadius: 1, BorderTopRightRadius: 2,
+      BorderBottomLeftRadius: 3, BorderBottomRightRadius: 4, BorderRadius: 9,
+    })
+    try {
+      if node.BorderTopLeftRadius.Value != 9 || node.BorderTopRightRadius.Value != 9
+        || node.BorderBottomLeftRadius.Value != 9 || node.BorderBottomRightRadius.Value != 9 { return false }
+      reconciler.Diff(node, Container{BorderRadius: 9, BorderTopLeftRadius: 1,
+        BorderTopRightRadius: 2, BorderBottomLeftRadius: 3, BorderBottomRightRadius: 4})
+      return node.BorderTopLeftRadius.Value == 1 && node.BorderTopRightRadius.Value == 2
+        && node.BorderBottomLeftRadius.Value == 3 && node.BorderBottomRightRadius.Value == 4
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
   func StyleAssignmentAfterHandOffContract() bool {
     let blob = Container{Width: 10}
     let node = Reconciler{Res: Resolver{}}.Mount(blob)

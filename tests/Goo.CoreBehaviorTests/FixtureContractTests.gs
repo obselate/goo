@@ -10,6 +10,10 @@ import Xunit
 
 class FixtureContractTests {
     @Fact
+    func BorderRadiusDeclarationOrder() ->
+        Assert.True(StyleFixtures().BorderRadiusDeclarationOrderContract())
+
+    @Fact
     func PortalScrollbarPartsUseFinalBounds() ->
         Assert.True(PortalFixtures().PortalScrollbarPartsUseFinalBoundsContract())
 
