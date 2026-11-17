@@ -61,7 +61,6 @@ internal unsafe partial class VulkanWindowTarget {
     }
     presentationRetirement.ClearPresentationLatency()
     if QueueWorkPending || !DrainStartup() {
-      host.Wake()
       return
     }
     InvalidateLastPresentedImageState()

@@ -87,6 +87,11 @@ internal unsafe class VulkanSwapchainImageSet {
     return renderSemaphores[int32(index)]
   }
 
+  internal func PendingPresentFence(index uint32) VkFence {
+    EnsureIndex(index)
+    return if let present = presentState { present.Fences[int32(index)] } else { 0uL }
+  }
+
   internal func AppliedSceneVersion(index uint32) uint64 {
     EnsureIndex(index)
     return appliedSceneVersions[int32(index)]

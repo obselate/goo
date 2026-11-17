@@ -5,6 +5,30 @@ import System.Diagnostics
 import System.Text
 
 internal class TextPresentationLayerFixtures {
+  func SelectionMergesTouchingRunsAndPreservesBidiGaps() bool {
+    let document = TextDocument("Shape  مرحبا بالعالم\nSecond line")
+    using let controller = TextEditorController(document)
+    using let layer = TextPresentationLayer(document)
+    layer.SetStyle("latin", TextRange(0, 3), Style{ Color: Color.Parse("#ff0000") })
+    layer.SetStyle("arabic", TextRange(7, 12), Style{ Color: Color.Parse("#00ff00") })
+    let node = Reconciler{ Res: Resolver{} }.Mount(TextEditor{
+      Controller: controller, Layers: []TextPresentationLayer{layer},
+      Width: 640, Height: 240, FontSize: 32,
+    })
+    Layout{}.Calculate(node, 640.0F, 240.0F)
+    let layout = TextEditorLayouts.For(node, BoxGeometry.ContentWidth(node), BoxGeometry.ContentHeight(node))
+    if layout.Lines.Count != 2 { return false }
+    let line = layout.Lines[0]
+    let partial = TextEditorLayouts.SelectionRects(line, 2, 12)
+    if partial.Count != 4 || partial[1] <= partial[0]
+      || partial[2] <= partial[1] + 1.0F || partial[3] <= partial[2] { return false }
+    for current in layout.Lines {
+      let full = TextEditorLayouts.SelectionRects(current, 0, current.DisplayLength)
+      if full.Count != 2 || full[1] <= full[0] { return false }
+    }
+    return true
+  }
+
   func FullProjectionDeletionIgnoresInsertionsAndRestoresHistory() bool {
     let document = TextDocument("abcd")
     using let layer = TextPresentationLayer(document)
