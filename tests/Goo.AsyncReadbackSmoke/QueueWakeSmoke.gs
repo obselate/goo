@@ -127,6 +127,8 @@ func RunInitialReplayWakeSmoke() {
       Thread.Yield()
     }
     Require(target.InitialReplayPendingForTest, "Initial replay did not wait for the GPU gate")
+    WindowReadbackTestFixture.Pump(window, 0.0)
+    WindowReadbackTestFixture.DeferSchedulerFrame(window, 30.0)
     WindowReadbackTestFixture.PumpNativeEvents()
     var wakes = 0
     for pump in 0 ... 64 {
