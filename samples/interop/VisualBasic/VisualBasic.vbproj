@@ -4,10 +4,12 @@
     <TargetFramework>net10.0</TargetFramework>
     <OptionStrict>On</OptionStrict>
     <OptionExplicit>On</OptionExplicit>
+    <OptionInfer>On</OptionInfer>
+    <RootNamespace>GooVisualBasic</RootNamespace>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Goo" Version="$(GooReleaseVersion)" />
-    <PackageReference Include="Goo.Widgets" Version="[0.20.0]" />
+    <PackageReference Include="Goo.Widgets" Version="[0.22.2]" />
   </ItemGroup>
 </Project>
