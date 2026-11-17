@@ -822,6 +822,7 @@ internal partial class VulkanSceneCompiler {
     && left.Color == right.Color
     && ExactFloat(left.Opacity, right.Opacity)
     && left.TransformIndex == right.TransformIndex
+    && left.SnapToPixels == right.SnapToPixels
 
   private func ExactRounded(left RoundedBoxRecord, right RoundedBoxRecord) bool -> ExactBounds(left.Bounds, right.Bounds)
     && ExactFloat(left.RadiusTopLeft, right.RadiusTopLeft)

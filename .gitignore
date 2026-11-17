@@ -77,6 +77,7 @@
 !/docs/
 /docs/*
 !/docs/nuget-readme.md
+!/docs/csharp.md
 !/docs/android.md
 !/docs/images.md
 !/docs/svg.md
@@ -84,8 +85,10 @@
 !/docs/printing.md
 !/docs/desktop-integration.md
 !/docs/interop.md
+!/docs/visual-basic.md
 
 !/docs/audio.md
+!/docs/powershell.md
 !/docs/assets/
 !/docs/assets/**
 !/docs/api*/
@@ -143,6 +146,9 @@
 !/plugins/goo/**
 !/templates/
 !/templates/**
+
+!/samples/
+!/samples/**
 
 !/vendor/
 /vendor/*

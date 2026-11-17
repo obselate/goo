@@ -977,6 +977,7 @@
 [IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::SetClipMaskViewport(native int, [Goo]Goo.VulkanClipMaskRegion)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::SetLayerViewport(native int)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::SetScissor(native int, [Goo]Goo.PrimitiveClip)] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanQueueMailbox::RunCompletionWait([Goo]Goo.VkDeviceDispatch, bool)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanReadbackDispatch::CopyImageToBuffer(native int, uint64, int32, uint64, [Goo]Goo.VkBufferImageCopy)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanSharedPrimitiveFormatState::DestroyPipelines()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanSharedPrimitiveState::PreparePipelines()] ImportCalli not implemented

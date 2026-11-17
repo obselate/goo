@@ -219,6 +219,9 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
   internal func RenderSemaphore(index uint32) VkSemaphore
   -> RequireImageSet().RenderSemaphore(index)
 
+  internal func PendingPresentFence(index uint32) VkFence
+  -> RequireImageSet().PendingPresentFence(index)
+
   internal func TryPreparePresent(index uint32, out fence VkFence,
     out completedPresentId uint64) VkResult
   -> RequireImageSet().TryPreparePresent(index, out fence, out completedPresentId)

@@ -284,6 +284,7 @@ internal struct SolidBoxRecord {
   internal var Color uint32
   internal var Opacity float32
   internal var TransformIndex int32
+  internal var SnapToPixels bool
 }
 
 internal struct RoundedBoxRecord {
