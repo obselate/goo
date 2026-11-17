@@ -7,6 +7,24 @@ import Xunit
 
 class ContentContractTests {
     @Fact
+    func EllipsisFitsResolvedInlineTypography() {
+        for limit in []int32{0, 1} {
+            let node = Reconciler{Res: Resolver{}}.Mount(Text{
+                Content: "MMMM", FontFamily: "DejaVu Sans", FontSize: 10,
+                TextWrap: limit == 0 ? TextWrap.NoWrap : TextWrap.Wrap,
+                TextTrimming: TextTrimming.Ellipsis, TextMaxLines: limit,
+                StyleRanges: []TextStyleRange{TextStyleRange(TextRange(0, 4), Style{FontSize: 60})}})
+            try {
+                let layout = TextLayouts.For(node, 100f)
+                Console.WriteLine($"maxLines={limit}, text={layout.Lines[0].Content}, width={layout.Width}")
+                Assert.Single(layout.Lines)
+                Assert.EndsWith("…", layout.Lines[0].Content)
+                Assert.InRange(layout.Width, 0f, 100f)
+            } finally { TextLayouts.Dispose(node) }
+        }
+    }
+
+    @Fact
     func SelectableTextLeavesUnhandledKeysToAncestorBindings() {
         let handle = ElementHandle()
         var bindings = 0
