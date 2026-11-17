@@ -436,7 +436,10 @@ internal partial class Resolver {
                   && sameLength(transition.ToLength, target) { return }
               }
             }
-            if sameLength(current.Value, target) { finishTransition(n, e.Field); return }
+            if sameLength(current.Value, target) {
+              finishTransition(n, e.Field)
+              return
+            }
             finishTransition(n, e.Field)
             n.Transitions ??= List[Transition]()
             n.Transitions!!.Add(Transition{Field: e.Field, FromLength: current.Value, ToLength: target,
