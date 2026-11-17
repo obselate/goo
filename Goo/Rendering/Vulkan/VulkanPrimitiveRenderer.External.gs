@@ -4,7 +4,6 @@ internal unsafe partial class VulkanPrimitiveRenderer {
     private func ApplyExternalFrame(push *VulkanPrimitiveGpuRecord, frame ExternalFrameLease,
         value CachedImageRefRecord, transform PrimitiveTransform, extent VkExtent2D) {
         let crop = frame.Description
-        push -> radii_y = if crop.AlphaMode == ExternalImageAlphaMode.Premultiplied { 1.0F } else { 0.0F }
         let orientation = crop.Orientation
         var x = value.SourceX
         var y = value.SourceY
