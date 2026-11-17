@@ -483,6 +483,7 @@ class FixtureContractTests {
             yield Contract[LayoutFixtures]("KeyedReorderRetainsYogaLayouts")
             yield Contract[LayoutFixtures]("LayoutIsStableAcrossRoots")
             yield Contract[LayoutFixtures]("LayoutTransitionGlidesComputedPosition")
+            yield Contract[LayoutFixtures]("LayoutTransitionSettlesInsideSized")
             yield Contract[LayoutFixtures]("LayoutTransitionRetargetsWithVelocity")
             yield Contract[LayoutFixtures]("LongParagraphWrapResolvesScriptsOnce")
             yield Contract[LayoutFixtures]("WrappedMeasurementsMatchShapedLineWidths")

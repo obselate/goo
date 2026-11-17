@@ -403,6 +403,7 @@ internal class AccessibilityManager {
 
   private func resolvedReadOnly(n Node, declaration Accessibility?) bool? {
     if n.Selectable { return true }
+    if (n.Kind == NodeKind.Entry || n.Kind == NodeKind.Editor) && n.EditorReadOnly { return true }
     if let metadata = declaration {
       if metadata.ReadOnly != nil { return metadata.ReadOnly }
     }
