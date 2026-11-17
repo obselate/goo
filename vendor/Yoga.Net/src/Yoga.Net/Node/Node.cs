@@ -53,8 +53,10 @@ namespace Facebook.Yoga
         public bool HasNewLayout { get => _hasNewLayout; set => SetHasNewLayout(value); }
         public bool AlwaysFormsContainingBlock { get => _alwaysFormsContainingBlock; set => _alwaysFormsContainingBlock = value; }
         public ContentSizing? ContentClipAxes => _contentClipAxes;
-        public void SetContentClipAxes(ContentSizing value)
+        public void SetContentClipAxes(bool clipWidth, bool clipHeight)
         {
+            var value = (clipWidth ? ContentSizing.Width : ContentSizing.None)
+                | (clipHeight ? ContentSizing.Height : ContentSizing.None);
             if (_contentClipAxes == value) return;
             _contentClipAxes = value;
             MarkDirtyAndPropagate();

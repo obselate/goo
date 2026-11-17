@@ -1269,10 +1269,7 @@ internal func applyDisplay(yg Facebook.Yoga.Node, n Node) {
   if YGNodeStyleAPI.YGNodeStyleGetOverflow(yg) != overflow {
     YGNodeStyleAPI.YGNodeStyleSetOverflow(yg, overflow)
   }
-  let clipAxes Facebook.Yoga.ContentSizing =
-    (n.OverflowX != Overflow.Visible ? Facebook.Yoga.ContentSizing.Width : Facebook.Yoga.ContentSizing.None)
-    | (n.OverflowY != Overflow.Visible ? Facebook.Yoga.ContentSizing.Height : Facebook.Yoga.ContentSizing.None)
-  yg.SetContentClipAxes(clipAxes)
+  yg.SetContentClipAxes(n.OverflowX != Overflow.Visible, n.OverflowY != Overflow.Visible)
 }
 
 // Reference equality per slot: Diff reuses Node instances, and syncNode reuses
