@@ -200,6 +200,8 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
       }
       if let mailbox = queueMailbox {
         if activeRuntime.QueueWorker.NotifyWhenIdle(mailbox) { return false }
+      } else if activeRuntime.QueueWorker.HasOutstandingWork {
+        return false
       }
     }
     var ready = true
