@@ -38,7 +38,13 @@ internal unsafe shared class DescriptorLifetimeRegression {
                 nint(&DestroySampler)
             )
         }
-        using let resources = VulkanImageResources(1, dispatch, nil, 256, 256, 4096, 4096, 16, nil, 1, nil)
+        let memory = VkPhysicalDeviceMemoryProperties{
+            memoryTypeCount: 1u, memoryTypes_0: VkMemoryType{propertyFlags: VkConstants.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT},
+            memoryHeapCount: 1u, memoryHeaps_0: VkMemoryHeap{size: 16777216uL, flags: 1u},
+        }
+        let budget = VulkanMemoryBudgetState(1, VkInstanceDispatch{}, 1u, false)
+        using let allocator = VulkanMemoryAllocator(1, dispatch, memory, 1u, 1uL, 1uL, budget, nil)
+        using let resources = VulkanImageResources(1, dispatch, allocator, 256, 256, 4096, 4096, 16, nil, 1, nil)
         let sets = resources.DescriptorSetsForTests
         for var index = 0; index < sets.Length; index++ {
             valid &= sets[index] == FirstSet + uint64(index)

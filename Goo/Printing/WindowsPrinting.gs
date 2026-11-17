@@ -219,7 +219,7 @@ internal unsafe shared class WindowsPrinting {
                 if StartPage(dialog.Dc) <= 0 {
                     return Failure("StartPage")
                 }
-                if !DrawPage(dialog.Dc, reusable!!) {
+                if !DrawPage(dialog.Dc, reusable) {
                     return Failure("StretchDIBits")
                 }
                 if EndPage(dialog.Dc) <= 0 {

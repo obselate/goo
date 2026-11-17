@@ -107,7 +107,7 @@ class SpellCheckSession : IDisposable {
                         let __spill0 = controller.Composition
                         var composition TextComposition
                         if __spill0 != nil && {
-                            composition = __spill0!!
+                            composition = __spill0
                             true
                         } && Overlaps(error.Range, composition.Range) {
                             continue

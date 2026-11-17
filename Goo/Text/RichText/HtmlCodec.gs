@@ -159,7 +159,7 @@ internal shared class HtmlCodec {
             let __spill0 = style.Color
             var color Color
             if __spill0 != nil && {
-                color = __spill0!!
+                color = __spill0
                 true
             } {
                 html

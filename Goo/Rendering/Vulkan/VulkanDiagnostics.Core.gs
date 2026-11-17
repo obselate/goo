@@ -116,17 +116,17 @@ internal unsafe partial class VulkanDiagnostics {
     }
   }
 
-  internal prop ValidationErrorCount int64{ get -> Interlocked.Read(ref validationErrors) }
-  internal prop TraceWriteCount int64{ get -> Interlocked.Read(ref traceWrite) }
-  internal prop ResultWriteCount int64{ get -> Interlocked.Read(ref resultWrite) }
-  internal prop ValidationWriteCount int64{ get -> Interlocked.Read(ref validationWrite) }
-  internal prop IsSealed bool{ get -> Volatile.Read(ref writerState) == WriterSealed }
+  internal prop ValidationErrorCount int64{ get -> Interlocked.Read(in validationErrors) }
+  internal prop TraceWriteCount int64{ get -> Interlocked.Read(in traceWrite) }
+  internal prop ResultWriteCount int64{ get -> Interlocked.Read(in resultWrite) }
+  internal prop ValidationWriteCount int64{ get -> Interlocked.Read(in validationWrite) }
+  internal prop IsSealed bool{ get -> Volatile.Read(in writerState) == WriterSealed }
   internal prop OriginTicks uint64{ get -> originTicks }
   internal prop Counters VulkanDiagnosticCounterSnapshot{ get -> counters.Snapshot }
   internal prop Fatal VulkanDiagnosticFatalSnapshot{
     get {
       return VulkanDiagnosticFatalSnapshot{
-        captured: Volatile.Read(ref fatalSnapshotCaptured) != 0,
+        captured: Volatile.Read(in fatalSnapshotCaptured) != 0,
         code: fatalCode,
         value: fatalValue,
         traceAtCapture: uint64(fatalTraceWrite),
@@ -235,11 +235,11 @@ internal unsafe partial class VulkanDiagnostics {
     }
 
   private func EnterWriter() bool {
-    if Volatile.Read(ref writerState) != WriterOpen {
+    if Volatile.Read(in writerState) != WriterOpen {
       return false
     }
     Interlocked.Increment(ref activeWriters)
-    if Volatile.Read(ref writerState) == WriterOpen {
+    if Volatile.Read(in writerState) == WriterOpen {
       return true
     }
     Interlocked.Decrement(ref activeWriters)
@@ -251,13 +251,13 @@ internal unsafe partial class VulkanDiagnostics {
   }
 
   private func WaitForWriters() {
-    while Volatile.Read(ref activeWriters) != 0 {
+    while Volatile.Read(in activeWriters) != 0 {
     }
   }
 
   internal func Seal() bool {
     while true {
-      let state = Volatile.Read(ref writerState)
+      let state = Volatile.Read(in writerState)
       if state == WriterSealed {
         return true
       }
@@ -277,8 +277,8 @@ internal unsafe partial class VulkanDiagnostics {
         }
         continue
       }
-      while Volatile.Read(ref writerState) == WriterFreezing
-        || Volatile.Read(ref writerState) == WriterSealing{
+      while Volatile.Read(in writerState) == WriterFreezing
+        || Volatile.Read(in writerState) == WriterSealing{
         }
     }
   }
@@ -557,7 +557,7 @@ internal unsafe partial class VulkanDiagnostics {
   internal func CaptureFatal(code int32, value uint64) {
     var won bool = false
     while !won {
-      let state = Volatile.Read(ref writerState)
+      let state = Volatile.Read(in writerState)
       if state == WriterOpen {
         won = Interlocked.CompareExchange(ref writerState, WriterFreezing, WriterOpen) == WriterOpen
       } else if state == WriterSealing {
@@ -572,9 +572,9 @@ internal unsafe partial class VulkanDiagnostics {
       1uL, code, value, 0uL)
     fatalCode = code
     fatalValue = value
-    fatalTraceWrite = Interlocked.Read(ref traceWrite)
-    fatalValidationWrite = Interlocked.Read(ref validationWrite)
-    fatalResultWrite = Interlocked.Read(ref resultWrite)
+    fatalTraceWrite = Interlocked.Read(in traceWrite)
+    fatalValidationWrite = Interlocked.Read(in validationWrite)
+    fatalResultWrite = Interlocked.Read(in resultWrite)
     fatalCounters = counters.Snapshot
     Volatile.Write(ref fatalSnapshotCaptured, 1)
     Volatile.Write(ref writerState, WriterFrozen)

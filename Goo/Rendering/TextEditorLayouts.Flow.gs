@@ -376,7 +376,7 @@ internal partial class TextEditorLayouts {
           let width = segment.BlockSlot && layout.ConstraintWidth > 0.0F
           ? layout.ConstraintWidth : (segment.SlotWidth > 0.0F ? segment.SlotWidth : natural)
           let baseline = (line.Height - (line.Descent - line.Ascent)) * 0.5F - line.Ascent
-          let offset = !segment.BlockSlot && segment.SlotBaseline != nil ? baseline - segment.SlotBaseline!! : 0.0F
+          let offset = !segment.BlockSlot && segment.SlotBaseline != nil ? baseline - segment.SlotBaseline : 0.0F
           line.Slots.Add(TextEditorSlotGeometry{
             Y: offset,
             Range: segment.Source,

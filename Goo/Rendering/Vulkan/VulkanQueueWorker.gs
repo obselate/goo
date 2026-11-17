@@ -83,7 +83,7 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
     }
 
     internal prop EnqueueDeferralCountForTest int64{
-      get -> Interlocked.Read(ref enqueueDeferralCount)
+      get -> Interlocked.Read(in enqueueDeferralCount)
     }
 
     private func TakeHold(kind int32, mailbox VulkanQueueMailbox) bool {
@@ -130,7 +130,7 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
       thread.Start()
     }
 
-  internal func CreateMailbox(host VulkanSurfaceHost) VulkanQueueMailbox -> VulkanQueueMailbox(host)
+  internal func CreateMailbox(host VulkanSurfaceHost?) VulkanQueueMailbox -> VulkanQueueMailbox(host)
 
   internal func EnqueueSubmit(mailbox VulkanQueueMailbox, validate Action[uint64]) bool {
     if Object.ReferenceEquals(validate, nil) { throw ArgumentNullException("validate") }

@@ -77,7 +77,7 @@ internal class WindowsToastNative {
 
         internal func Query(value nint, identity string) nint {
             var iid = Guid(identity)
-            Check(Marshal.QueryInterface(value, ref iid, out var result))
+            Check(Marshal.QueryInterface(value, in iid, out var result))
             return result
         }
 

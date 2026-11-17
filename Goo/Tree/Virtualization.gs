@@ -309,9 +309,9 @@ internal sealed class VirtualNodeState {
         contextReader?.Cancel()
         rethrow
       }
-      guard let selected = state else { throw InvalidOperationException("${source.GetType().Name}.State returned nil: return a VirtualState instance for this Virtual element.") }
-      if selected != current { clearRecycledRows() }
-      return realize(n, selected, items)
+      if state == nil { throw InvalidOperationException("${source.GetType().Name}.State returned nil: return a VirtualState instance for this Virtual element.") }
+      if state != current { clearRecycledRows() }
+      return realize(n, state, items)
     } finally { ContextEnvironment.Current = previousContext }
   }
 

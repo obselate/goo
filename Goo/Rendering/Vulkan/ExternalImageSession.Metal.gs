@@ -19,7 +19,7 @@ public unsafe partial class ExternalImageSession {
         }
         var accepted bool = false
         try {
-            let value = dependency!!.DangerousGetHandle()
+            let value = dependency.DangerousGetHandle()
             if !MetalObjectHandle.SameDevice(value, Runtime.Dispatch.MetalDevice) { return ExternalImageStatus.WrongDevice }
             var typeInfo = VkSemaphoreTypeCreateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
                 semaphoreType: VkConstants.VK_SEMAPHORE_TYPE_TIMELINE }

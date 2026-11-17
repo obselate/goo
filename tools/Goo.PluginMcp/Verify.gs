@@ -127,7 +127,7 @@ shared class Verify {
             ),
             bundled
         )
-        Check(S(provenance, "compilerVersion") == "0.5.212", provenance)
+        Check(S(provenance, "compilerVersion") == "0.5.698", provenance)
         let searchResult = await Call(client, "cellSearch")
         let search = Data(searchResult)
         Check(

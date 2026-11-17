@@ -34,7 +34,7 @@ internal sealed unsafe class InstalledIdentity : IDisposable {
                         Marshal.ThrowExceptionForHR(setPath(link, nint(path)))
                     }
                     var storeId = Guid("886d8eeb-8cf2-4446-8d02-cdba1dbdcf99")
-                    Marshal.ThrowExceptionForHR(Marshal.QueryInterface(link, ref storeId, out var store))
+                    Marshal.ThrowExceptionForHR(Marshal.QueryInterface(link, in storeId, out var store))
                     try {
                         fixed text *char = identifier { SetProperty(store, 5u, uint16(31), nint(text)) }
                         var activator = Guid.NewGuid()
@@ -43,7 +43,7 @@ internal sealed unsafe class InstalledIdentity : IDisposable {
                         Marshal.ThrowExceptionForHR(commit(store))
                     } finally { Marshal.Release(store) }
                     var persistId = Guid("0000010b-0000-0000-c000-000000000046")
-                    Marshal.ThrowExceptionForHR(Marshal.QueryInterface(link, ref persistId, out var persist))
+                    Marshal.ThrowExceptionForHR(Marshal.QueryInterface(link, in persistId, out var persist))
                     try {
                         let save = (Method(persist, 6) as (unmanaged[Stdcall](nint, nint, int32) -> int32)?)!!
                         fixed path *char = shortcut { Marshal.ThrowExceptionForHR(save(persist, nint(path), 1)) }

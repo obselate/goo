@@ -36,7 +36,7 @@ internal unsafe class WindowsDragComWrappers : ComWrappers {
       try {
         var requested = id
         var result nint
-        let status = Marshal.QueryInterface(unknown, ref requested, out result)
+        let status = Marshal.QueryInterface(unknown, in requested, out result)
         if status < 0 { throw WindowsTransferException("IUnknown.QueryInterface", status) }
         return result
       } finally { ClipboardTransfer.WindowsReleaseObject(unknown) }

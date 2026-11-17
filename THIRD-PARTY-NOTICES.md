@@ -34,12 +34,12 @@ Goo selects the MIT license below.
 
 Goo's Linux bundle redistributes `Gsharp.Extensions.dll`,
 `Gsharp.Runtime.Channels.dll` and `Gsharp.Runtime.Values.dll`
-from Gsharp.NET.Sdk 0.5.212.
+from Gsharp.NET.Sdk 0.5.698.
 
 - Copyright (c) 2019 David Obando.
 - License: MIT.
-- Package source commit: `242d8777c778db4272103c9dcefd6d63609e10ee`.
-- [G# license](https://github.com/DavidObando/gsharp/blob/242d8777c778db4272103c9dcefd6d63609e10ee/LICENSE)
+- Package source commit: `388bfab155660bcac2d4ed0b22e859bf6adbf2a5`.
+- [G# license](https://github.com/DavidObando/gsharp/blob/388bfab155660bcac2d4ed0b22e859bf6adbf2a5/LICENSE)
 
 ## G# authoring tools
 
@@ -47,7 +47,7 @@ The compiler and canonical formatter come from `Gsharp.NET.Sdk`, declared in
 `global.json`. `Goo.Gslint` uses that SDK's parser and formatter assemblies.
 Copyright (C) GSharp Authors. All rights reserved.
 
-- [G# license](https://github.com/DavidObando/gsharp/blob/242d8777c778db4272103c9dcefd6d63609e10ee/LICENSE)
+- [G# license](https://github.com/DavidObando/gsharp/blob/388bfab155660bcac2d4ed0b22e859bf6adbf2a5/LICENSE)
 
 ## HarfBuzz and hb-gpu text runtime
 

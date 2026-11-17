@@ -174,7 +174,7 @@ internal partial class PointerInput {
     }
     session.NativeActive = true
     let rootMount = NodeMount(root)
-    let started = (host as NativeDragHost?)?.BeginNativeDrag(data!!, if generalized { session.Data.AllowedEffects } else { DragEffect.Copy },
+    let started = (host as NativeDragHost?)?.BeginNativeDrag(data, if generalized { session.Data.AllowedEffects } else { DragEffect.Copy },
       (result NativeTransferResult) -> {
         if dragSession != session || !session.NativeActive { return }
         session.NativeCompletion = result

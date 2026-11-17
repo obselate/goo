@@ -90,8 +90,9 @@ func RunAutomaticSessionSmoke() {
     })
     Application.Run(owner)
     Require(!timedOut && completed, "window-created session timed out without Service")
-    Require(closing != nil && closing.IsCompleted
-        && closing.GetAwaiter().GetResult().Status == OffscreenRenderStatus.Cancelled,
+    let completedClose = closing
+    Require(completedClose != nil && completedClose.IsCompleted
+        && completedClose.GetAwaiter().GetResult().Status == OffscreenRenderStatus.Cancelled,
         "window close did not drain the caller-owned page")
     Require(session.RenderAsync(Page(), options, CancellationToken.None).GetAwaiter().GetResult().Status
         == OffscreenRenderStatus.Cancelled, "closed source session was disposed instead of cancelled")

@@ -38,7 +38,7 @@ internal partial class Host : IDisposable {
     ) string {
         let timer = Stopwatch.StartNew()
         while true {
-            HostChecks.Require(!Volatile.Read(ref HostChecks.Cancelled), "Activation check cancelled")
+            HostChecks.Require(!Volatile.Read(in HostChecks.Cancelled), "Activation check cancelled")
             if error != "" && File.Exists(error) {
                 throw InvalidOperationException(File.ReadAllText(error))
             }
