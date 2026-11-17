@@ -369,7 +369,7 @@ public class VersionedImageProvider : ImageSourceProvider {
 
 func DiagnosticCounterValue(diagnostics string, name string) uint64 {
   let marker = "\"" + name + "\":"
-  let start = diagnostics.IndexOf(marker)
+  let start = diagnostics.LastIndexOf(marker)
   if start < 0 { return 0uL }
   var index = start + marker.Length
   var value uint64
