@@ -35,12 +35,13 @@ public sealed interface Gradient {
 
 /// Paints a straight-line gradient at an angle.
 public class LinearGradient : Gradient {
-  private let stops IReadOnlyList[GradientStop]
-  private let angle float64
-  private let contentHash int32
+  private let stops List[GradientStop]
+  private let stopView IReadOnlyList[GradientStop]
+  private var angle float64
+  private var contentHash int32
 
   /// Gets the ordered color stops.
-  public prop Stops IReadOnlyList[GradientStop]{ get -> stops }
+  public prop Stops IReadOnlyList[GradientStop]{ get -> stopView }
   /// Gets the direction in degrees. Zero points up and positive angles turn clockwise.
   public prop Angle float64{ get -> angle }
   internal prop ContentHashForCache int32{ get -> contentHash }
@@ -50,6 +51,7 @@ public class LinearGradient : Gradient {
   public init(colors ... Color) {
     angle = 180.0
     stops = spreadGradientColors(colors)
+    stopView = stops.AsReadOnly()
     contentHash = computeGradientContentHash(1, angle, 0.0, 0.0, stops)
   }
 
@@ -59,6 +61,7 @@ public class LinearGradient : Gradient {
   public init(angle float64, colors ... Color) {
     this.angle = validateGradientAngle(angle)
     stops = spreadGradientColors(colors)
+    stopView = stops.AsReadOnly()
     contentHash = computeGradientContentHash(1, this.angle, 0.0, 0.0, stops)
   }
 
@@ -68,20 +71,35 @@ public class LinearGradient : Gradient {
   public init(angle float64, stops []GradientStop) {
     this.angle = validateGradientAngle(angle)
     this.stops = validateGradientStops(stops)
+    stopView = this.stops.AsReadOnly()
     contentHash = computeGradientContentHash(1, this.angle, 0.0, 0.0, this.stops)
+  }
+
+  internal init(source LinearGradient) {
+    angle = source.angle
+    stops = List[GradientStop](source.stops)
+    stopView = stops.AsReadOnly()
+    contentHash = source.contentHash
+  }
+
+  internal func Sample(from LinearGradient, to LinearGradient, t float32) {
+    angle = from.angle + (to.angle - from.angle) * float64(t)
+    interpolateGradientStops(from.Stops, to.Stops, stops, t)
+    contentHash = computeGradientContentHash(1, angle, 0.0, 0.0, stops)
   }
 }
 
 /// Paints a circular gradient from a normalized center.
 public class RadialGradient : Gradient {
-  private let stops IReadOnlyList[GradientStop]
-  private let centerX float64
-  private let centerY float64
-  private let radius float64
-  private let contentHash int32
+  private let stops List[GradientStop]
+  private let stopView IReadOnlyList[GradientStop]
+  private var centerX float64
+  private var centerY float64
+  private var radius float64
+  private var contentHash int32
 
   /// Gets the ordered color stops.
-  public prop Stops IReadOnlyList[GradientStop]{ get -> stops }
+  public prop Stops IReadOnlyList[GradientStop]{ get -> stopView }
   /// Gets the normalized horizontal center from 0 through 1.
   public prop CenterX float64{ get -> centerX }
   /// Gets the normalized vertical center from 0 through 1.
@@ -97,6 +115,7 @@ public class RadialGradient : Gradient {
     centerY = 0.5
     radius = 0.5
     stops = spreadGradientColors(colors)
+    stopView = stops.AsReadOnly()
     contentHash = computeGradientContentHash(2, centerX, centerY, radius, stops)
   }
 
@@ -110,33 +129,51 @@ public class RadialGradient : Gradient {
     this.centerY = validateGradientCenter(centerY, "centerY")
     this.radius = validateGradientRadius(radius)
     this.stops = validateGradientStops(stops)
+    stopView = this.stops.AsReadOnly()
     contentHash = computeGradientContentHash(2, this.centerX, this.centerY, this.radius, this.stops)
+  }
+
+  internal init(source RadialGradient) {
+    centerX = source.centerX
+    centerY = source.centerY
+    radius = source.radius
+    stops = List[GradientStop](source.stops)
+    stopView = stops.AsReadOnly()
+    contentHash = source.contentHash
+  }
+
+  internal func Sample(from RadialGradient, to RadialGradient, t float32) {
+    centerX = from.centerX + (to.centerX - from.centerX) * float64(t)
+    centerY = from.centerY + (to.centerY - from.centerY) * float64(t)
+    radius = from.radius + (to.radius - from.radius) * float64(t)
+    interpolateGradientStops(from.Stops, to.Stops, stops, t)
+    contentHash = computeGradientContentHash(2, centerX, centerY, radius, stops)
   }
 }
 
-internal func spreadGradientColors(colors []Color) IReadOnlyList[GradientStop] {
+internal func spreadGradientColors(colors []Color) List[GradientStop] {
   if colors.Length < 2 {
     throw ArgumentException("colors must contain at least two colors", "colors")
   }
-  let list = List[GradientStop]()
+  let list = List[GradientStop](colors.Length)
   for i in 0 ... colors.Length {
     list.Add(GradientStop{ Offset: float64(i) / float64(colors.Length - 1), Color: colors[i] })
   }
-  return ReadOnlyCollection[GradientStop](list)
+  return list
 }
 
-internal func validateGradientStops(stops []GradientStop) IReadOnlyList[GradientStop] {
+internal func validateGradientStops(stops []GradientStop) List[GradientStop] {
   if stops.Length < 2 {
     throw ArgumentException("stops must contain at least two stops", "stops")
   }
-  let list = List[GradientStop]()
+  let list = List[GradientStop](stops.Length)
   for i in 0 ... stops.Length {
     if i > 0 && stops[i].Offset < stops[i - 1].Offset {
       throw ArgumentException("stops must have non-decreasing offsets", "stops")
     }
     list.Add(stops[i])
   }
-  return ReadOnlyCollection[GradientStop](list)
+  return list
 }
 
 internal func validateGradientAngle(value float64) float64 {
@@ -231,3 +268,45 @@ internal func computeGradientContentHash4(kind int32, a float64, b float64, c fl
     }
     return result
   }
+
+internal sealed class GradientTransitionValues {
+  internal let From Gradient
+  internal let To Gradient
+  internal let Work Gradient
+
+  internal init(from Gradient, to Gradient) {
+    From = from
+    To = to
+    Work = switch from {
+      case value is LinearGradient: LinearGradient(value)
+      case value is RadialGradient: RadialGradient(value)
+      case value is VectorLinearGradient: VectorLinearGradient(value)
+      case value is VectorRadialGradient: VectorRadialGradient(value)
+      case _: throw InvalidOperationException("Unsupported gradient transition")
+    }
+  }
+
+  internal func Sample(t float32) {
+    switch Work {
+      case value is LinearGradient { value.Sample(cast[LinearGradient](From), cast[LinearGradient](To), t) }
+      case value is RadialGradient { value.Sample(cast[RadialGradient](From), cast[RadialGradient](To), t) }
+      case value is VectorLinearGradient { value.Sample(cast[VectorLinearGradient](From), cast[VectorLinearGradient](To), t) }
+      case value is VectorRadialGradient { value.Sample(cast[VectorRadialGradient](From), cast[VectorRadialGradient](To), t) }
+    }
+  }
+}
+
+internal func compatibleGradients(left Gradient?, right Gradient?) bool ->
+  left != nil && right != nil && left.GetType() == right.GetType() && left.Stops.Count == right.Stops.Count
+
+internal func interpolateGradientStops(from IReadOnlyList[GradientStop], to IReadOnlyList[GradientStop],
+  work List[GradientStop], t float32) {
+  for i in 0 ... work.Count {
+    let a = from[i]
+    let b = to[i]
+    work[i] = GradientStop{
+      Offset: a.Offset + (b.Offset - a.Offset) * float64(t),
+      Color: interpolateStyleColor(a.Color, b.Color, t),
+    }
+  }
+}

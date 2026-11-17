@@ -44,7 +44,9 @@ internal enum StyleField {
   ClipPathFillRule;
   ShaderEffect;
   ScrollbarVisibilityX; ScrollbarVisibilityY; ScrollbarX; ScrollbarY; Language;
-  BackdropBlur
+  BackdropBlur;
+  ShapeCornerRadius; StrokeStart; StrokeEnd; MiterLimit;
+  DashOffset; DashIntervals; SelectionColor; CaretColor
 }
 
 internal data struct StyleMask {
@@ -239,6 +241,8 @@ internal func entryShaderEffect(entry StyleEntry) ShaderEffect ? -> entry.Payloa
 
 internal func entryScrollbar(entry StyleEntry) Scrollbar ? -> entry.Payload as Scrollbar?
 
+internal func entryDashes(entry StyleEntry) DashPattern? -> entry.Payload as DashPattern?
+
 internal func sameStyleEntry(left StyleEntry, right StyleEntry) bool {
   if let binding = left.Payload as PaintBinding? {
     return binding.Same(right.Payload as PaintBinding?)
@@ -247,6 +251,9 @@ internal func sameStyleEntry(left StyleEntry, right StyleEntry) bool {
   if left.Payload is LengthDeclaration || right.Payload is LengthDeclaration {
     return left.Payload is LengthDeclaration && right.Payload is LengthDeclaration
       && sameLength((left.Payload as LengthDeclaration)!!.Value, (right.Payload as LengthDeclaration)!!.Value)
+  }
+  if left.Field == StyleField.DashIntervals {
+    return sameDashIntervals(entryDashes(left), entryDashes(right))
   }
   if left.A != right.A || left.B != right.B || left.C != right.C || left.D != right.D {
     return false
