@@ -33,6 +33,8 @@ internal unsafe sealed class VulkanQueueMailbox {
   private var completionSerial uint64
   private var completionFence VkFence
   private var completionResult VkResult
+  internal var IdleWaitNext VulkanQueueMailbox?
+  internal var IdleWaitRegistered bool
 
   internal var SubmitCommandBuffer VkCommandBuffer
   internal var SubmitWaitSemaphore VkSemaphore

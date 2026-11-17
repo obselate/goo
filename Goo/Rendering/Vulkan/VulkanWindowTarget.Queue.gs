@@ -96,7 +96,7 @@ internal unsafe partial class VulkanWindowTarget {
       }
       if !activeRuntime.EnqueueGraphicsSubmission(mailbox, validateGraphicsSubmission) {
         queueStage = QueueStageSubmitRetry
-        if !activeRuntime.QueueWorker.HasOutstandingWork { host.Wake() }
+        if !activeRuntime.QueueWorker.NotifyWhenIdle(mailbox) { host.Wake() }
         return
       }
       queueStage = QueueStageSubmit
@@ -159,7 +159,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
     try {
       if !activeRuntime.EnqueueGraphicsSubmission(mailbox, validateGraphicsSubmission) {
-        if !activeRuntime.QueueWorker.HasOutstandingWork { host.Wake() }
+        if !activeRuntime.QueueWorker.NotifyWhenIdle(mailbox) { host.Wake() }
         return false
       }
     } catch (error Exception) {
@@ -389,8 +389,8 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func TryQueuePresent() {
     if queueMailbox?.CompletionWaitPending == true { return }
-    if runtime?.QueueWorker.HasOutstandingWork == true { return }
     if let mailbox = queueMailbox {
+      if runtime?.QueueWorker.NotifyWhenIdle(mailbox) == true { return }
       if mailbox.CompletionResult != VkConstants.VK_SUCCESS {
         mailbox.ResetSubmitCompletion()
         queueStage = QueueStageIdle
@@ -510,7 +510,7 @@ internal unsafe partial class VulkanWindowTarget {
       mailbox.RetryPresent()
       try { current.ReconcilePreparedPresent(activeImageIndex, false) } catch (cleanup Exception) { }
       pendingPresentFence = 0uL
-      host.Wake()
+      if !activeRuntime.QueueWorker.NotifyWhenIdle(mailbox) { host.Wake() }
       return
     }
     queueStage = QueueStagePresent
