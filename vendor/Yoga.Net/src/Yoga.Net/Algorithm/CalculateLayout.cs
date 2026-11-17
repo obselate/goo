@@ -807,7 +807,7 @@ namespace Facebook.Yoga
                         availableInnerCrossDim, availableInnerWidth).Unwrap()
                     : availableInnerCrossDim;
                 crossSize += child.Style.ComputeMarginForAxis(crossAxis, availableInnerWidth);
-                var crossMode = definiteCrossSize ? SizingMode.StretchFit
+                var crossMode = !isMainAxisRow && definiteCrossSize ? SizingMode.StretchFit
                     : Comparison.IsUndefined(crossSize) ? SizingMode.MaxContent : SizingMode.FitContent;
                 CalculateLayoutInternal(
                     child,

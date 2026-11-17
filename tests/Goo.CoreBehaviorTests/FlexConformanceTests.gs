@@ -10,7 +10,7 @@ import Xunit.Abstractions
 
 class FlexConformanceTests(output ITestOutputHelper) {
     @Fact
-    func AutomaticMinimumKeepsDefiniteCrossSize() {
+    func AutomaticMinimumHeightKeepsDefiniteWidth() {
         using let font = FontSource.FromPath("FlexMinimum", 400, false,
             Path.Combine(AppContext.BaseDirectory, "Layout/VendSans-VariableFont_wght.ttf"))
         font.Register()
