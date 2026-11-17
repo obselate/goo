@@ -167,7 +167,7 @@ Later declarations win.
 | Pixels | Numeric values convert to `Length`. The sample uses `Padding = 24` and `Gap = 12`. |
 | Relative lengths | `Length.Percent(100)` fills the parent axis. `Length.Em(1)` follows the element's font size. |
 | Padding | A single numeric value converts to uniform `Edges`. |
-| Colors | `Color.Rgb(24, 31, 43)` and `Color.Parse("#4a7dff")` are used in `AppTheme`. |
+| Colors | `Color.Rgb(24, 31, 43)` and `Color.Parse("#3664e0")` are used in `AppTheme`. |
 | Flexible regions | Set `FlexGrow = 1` and `MinHeight = 0` for a list inside a sized parent. |
 
 Prefer flex layout to fixed content sizes. See [layout](api/layout.md) and
