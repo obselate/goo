@@ -193,6 +193,20 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
     return true
   }
 
+  internal func EnqueueCompletionWait(mailbox VulkanQueueMailbox, device VkDevice,
+    serial uint64, fence VkFence) {
+    lock gate {
+      if stopping || count >= MailboxCapacity {
+        throw InvalidOperationException("Vulkan queue cannot accept a completion wait")
+      }
+      mailbox.BeginCompletionWait(device, serial, fence)
+      pending[tail] = mailbox
+      tail = (tail + 1) % MailboxCapacity
+      count++
+    }
+    signal.Set()
+  }
+
   internal prop LastEnqueuedGraphicsSubmissionSerial uint64{
     get {
       lock gate { return nextGraphicsSubmissionSerial - 1uL }
@@ -261,6 +275,11 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
                 Interlocked.Exchange(ref faulted, 1)
                 current.FailPresent(VkConstants.VK_ERROR_DEVICE_LOST)
               }
+            }
+          } else if phase == VulkanQueueMailboxPhase.CompletionWaitQueued {
+            current.RunCompletionWait(dispatch, Interlocked.CompareExchange(ref faulted, 0, 0) != 0)
+            if current.CompletionResult == VkConstants.VK_ERROR_DEVICE_LOST {
+              Interlocked.Exchange(ref faulted, 1)
             }
           }
         } finally {

@@ -199,7 +199,6 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
         return true
       }
       if activeRuntime.QueueWorker.HasOutstandingWork {
-        host.Wake()
         return false
       }
     }

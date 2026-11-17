@@ -106,9 +106,76 @@ internal data struct VulkanClipMaskAtlasGrowthTestSnapshot {
   internal var CompletedRegionsReclaimed bool
 }
 
+@StructLayout(LayoutKind.Sequential)
+internal unsafe struct VkQueueWakeSemaphoreSignalInfo {
+  var sType int32
+  var pNext *void
+  var semaphore VkSemaphore
+  var value uint64
+}
+
 internal partial class VulkanWindowTarget {
   internal prop PresentPrepareForTest bool { get -> queueStage == QueueStagePresentPrepare
     && startupState == VulkanWindowStartupState.None }
+
+  private var initialReplayGateForTest VkSemaphore
+  internal prop InitialReplayPendingForTest bool{
+    get -> initialImageUploadFrame && queueStage == QueueStagePresentPrepare
+  }
+
+  internal func BeginInitialReplaySubmissionForTest() bool {
+    BeginFrame()
+    guard let slot = activeFrameSlot, let mailbox = queueMailbox, let active = runtime else { return false }
+    var typeInfo = VkSemaphoreTypeCreateInfo{
+      sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
+      semaphoreType: VkConstants.VK_SEMAPHORE_TYPE_TIMELINE,
+    }
+    var info = VkSemaphoreCreateInfo{
+      sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+      pNext: *void(&typeInfo),
+    }
+    let create = dispatch.vkCreateSemaphore
+    if create(device, &info, nil, &initialReplayGateForTest) != VkConstants.VK_SUCCESS {
+      throw InvalidOperationException("Initial replay gate creation failed")
+    }
+    EndDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.Frame)
+    let end = dispatch.vkEndCommandBuffer
+    if end(slot.CommandBuffer) != VkConstants.VK_SUCCESS
+      || slot.PrepareSubmit() != VkConstants.VK_SUCCESS {
+      throw InvalidOperationException("Initial replay submission preparation failed")
+    }
+    mailbox.PrepareSubmit(slot.CommandBuffer, slot.SubmitWaitSemaphore, 0uL)
+    mailbox.AddExternalWait(initialReplayGateForTest, 1uL, this)
+    if !mailbox.BeginSubmit()
+      || !active.EnqueueGraphicsSubmission(mailbox, validateGraphicsSubmission) {
+      throw InvalidOperationException("Initial replay submission was not queued")
+    }
+    initialImageUploadFrame = true
+    frameRenderDeferred = true
+    queueStage = QueueStageSubmit
+    return true
+  }
+
+  internal func ReleaseInitialReplaySubmissionForTest() {
+    if initialReplayGateForTest == 0uL { return }
+    let signal = ResolveDeviceProc("vkSignalSemaphore") as
+      (unmanaged[Cdecl](VkDevice, *VkQueueWakeSemaphoreSignalInfo) -> VkResult)?
+    if signal == nil { throw InvalidOperationException("Initial replay gate signal is unavailable") }
+    var info = VkQueueWakeSemaphoreSignalInfo{
+      sType: 1000207005, semaphore: initialReplayGateForTest, value: 1uL,
+    }
+    if signal(device, &info) != VkConstants.VK_SUCCESS {
+      throw InvalidOperationException("Initial replay gate signal failed")
+    }
+    if let mailbox = queueMailbox {
+      if mailbox.SubmitSerial != 0uL {
+        runtime?.WaitGraphicsSubmission(mailbox.SubmitSerial, VkConstants.VK_WHOLE_SIZE)
+      }
+    }
+    let destroy = dispatch.vkDestroySemaphore
+    destroy(device, initialReplayGateForTest, nil)
+    initialReplayGateForTest = 0uL
+  }
 
   shared {
     private var nativeSwapchainCreateForTest unmanaged[Cdecl](VkDevice, *VkSwapchainCreateInfoKHR, *VkAllocationCallbacks, *VkSwapchainKHR) -> VkResult
