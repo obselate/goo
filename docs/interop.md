@@ -139,7 +139,7 @@ Keep native assets in the build output. For `Cell[T]`, dot-source the input type
 | Names | Names are case-insensitive. Do not use names that differ only by case or a Cell field named `build`. |
 | Callback output | Use `$null = $handle.Activate()` to keep `Action` handlers free of pipeline output. |
 
-Core `Goo.Button` has no default activation keys. Goo.Widgets buttons bind Enter and Space. The [counter sample](../samples/interop/PowerShell/Counter.ps1) retains an `ElementHandle` and `KeyBinding[]` for a raw button. Enter calls `Activate()`. Space calls `BeginPress()` and `EndPress(true)` on release. `EndPress(false)` cancels. Use [KeyBindings](api/input.md#route-keyboard-and-focus-callbacks), not `OnKeyDown`, for commands.
+Core `Goo.Button` has no default activation keys. Goo.Widgets buttons bind Enter and Space. The [PowerShell guide](powershell.md) covers the script-module log viewer, retained handles, key bindings and background work. Use [KeyBindings](api/input.md#route-keyboard-and-focus-callbacks), not `OnKeyDown`, for commands.
 
 ## Shared contracts
 
