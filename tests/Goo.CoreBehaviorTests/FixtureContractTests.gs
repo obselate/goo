@@ -10,10 +10,6 @@ import Xunit
 
 class FixtureContractTests {
     @Fact
-    func RelativeTransformTransition() ->
-        Assert.True(MotionFixtures().RelativeTransformTransitionContract())
-
-    @Fact
     func PortalScrollbarPartsUseFinalBounds() ->
         Assert.True(PortalFixtures().PortalScrollbarPartsUseFinalBoundsContract())
 
@@ -528,6 +524,7 @@ class FixtureContractTests {
             yield Contract[MotionFixtures]("PumpRejectsReentrantSweepContract")
             yield Contract[MotionFixtures]("PumpThrowingTickRemainsRegisteredContract")
             yield Contract[MotionFixtures]("PumpWakesOnlyOnFirstRegistrationContract")
+            yield Contract[MotionFixtures]("RelativeTransformTransitionContract")
             yield Contract[MotionFixtures]("RetargetAcrossDifferentSpanPreservesRealVelocityContract")
             yield Contract[MotionFixtures]("RetargetPreservesVelocityContract")
             yield Contract[MotionFixtures]("RunningUnchangedTicksDoNotNotifyContract")
