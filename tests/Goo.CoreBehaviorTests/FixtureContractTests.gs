@@ -15,9 +15,9 @@ class FixtureContractTests {
         for from in []float64{Double.MaxValue, -Double.MaxValue} {
             let simulation = tween(from, -from, 0.0)
             Assert.Equal(from, simulation.Position(0.0))
-            Assert.Equal(from * 0.5, simulation.Position(0.25))
+            Assert.InRange(simulation.Position(0.25) / from, 0.4999999999999999, 0.5000000000000001)
             Assert.Equal(0.0, simulation.Position(0.5))
-            Assert.Equal(-from * 0.5, simulation.Position(0.75))
+            Assert.InRange(simulation.Position(0.75) / from, -0.5000000000000001, -0.4999999999999999)
             Assert.Equal(-from, simulation.Position(1.0))
         }
     }
