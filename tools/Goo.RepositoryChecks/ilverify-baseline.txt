@@ -837,7 +837,7 @@
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanTextFrameData::CreateDescriptorResources()][offset 0x0000003D] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanTextScene::EmitText([Goo]Goo.SceneFrame, [Goo]Goo.Node, float32, int32, bool&)][offset 0x00000080] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanWindowTarget::CreateCommandResources()][offset 0x000000C8] Instruction cannot be verified.
-[IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanWindowTarget::CreateInstance()][offset 0x000001FA] Instruction cannot be verified.
+[IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanWindowTarget::CreateInstance()][offset 0x00000212] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.WaylandBackdrop::AddRectangle(native int, int32, int32, int32, int32)][offset 0x00000028] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.WaylandBackdrop::Bind(uint32, native int, native int)][offset 0x0000000B] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.WaylandBackdrop::Initialize()][offset 0x00000168] Instruction cannot be verified.
