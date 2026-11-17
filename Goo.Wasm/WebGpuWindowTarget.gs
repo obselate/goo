@@ -1,7 +1,7 @@
-package Goo.Browser
+package Goo.Wasm
 
 import Goo
-import Goo.Browser.Interop
+import Goo.Wasm.Interop
 import System
 import System.Numerics
 import System.Runtime.InteropServices

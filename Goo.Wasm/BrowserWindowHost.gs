@@ -1,7 +1,7 @@
-package Goo.Browser
+package Goo.Wasm
 
 import Goo
-import Goo.Browser.Interop
+import Goo.Wasm.Interop
 import System
 import System.IO
 import System.Threading.Tasks
@@ -37,7 +37,7 @@ public sealed class BrowserWindowHost : EmbeddedWindowHost {
     }
 
     private func Shader(name string) string {
-      using let stream = typeof(BrowserWindowHost).Assembly.GetManifestResourceStream("Goo.Browser.Shaders.$name.wgsl")
+      using let stream = typeof(BrowserWindowHost).Assembly.GetManifestResourceStream("Goo.Wasm.Shaders.$name.wgsl")
         ?? throw InvalidOperationException("Missing browser shader: $name")
       using let reader = StreamReader(stream)
       return reader.ReadToEnd()

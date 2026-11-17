@@ -1,7 +1,7 @@
 package BrowserBox
 
 import Goo
-import Goo.Browser
+import Goo.Wasm
 import System
 
 shared class BoxTheme {

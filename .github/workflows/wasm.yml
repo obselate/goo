@@ -1,24 +1,24 @@
-name: Browser advisory
+name: Wasm advisory
 
 on:
   pull_request:
     paths:
-      - 'Goo.Browser/**'
+      - 'Goo.Wasm/**'
       - 'samples/BrowserBox/**'
       - 'Goo/Shaders/**'
       - 'Goo/Platform/EmbeddedWindowHost.gs'
       - 'Goo/Platform/WindowHost.gs'
       - 'Goo/Window/WindowParts/Window.Embedded.gs'
       - 'tools/Goo.ShaderGen/**'
-      - '.github/workflows/browser.yml'
+      - '.github/workflows/wasm.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  browser:
-    name: Browser build and WGSL validation (advisory)
+  wasm:
+    name: Wasm build and WGSL validation (advisory)
     runs-on: ubuntu-24.04
     continue-on-error: true
     timeout-minutes: 15

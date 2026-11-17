@@ -1,6 +1,6 @@
 import { dotnet } from './_framework/dotnet.js';
-import { createBrowserImports } from './goo-browser.js';
+import { createBrowserImports } from './goo-wasm.js';
 
 const runtime = await dotnet.create();
-runtime.setModuleImports('goo-browser', createBrowserImports(() => runtime.Module.HEAPU8.buffer));
+runtime.setModuleImports('goo-wasm', createBrowserImports(() => runtime.Module.HEAPU8.buffer));
 await runtime.runMain();

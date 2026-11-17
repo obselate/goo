@@ -1,2 +1,0 @@
-- Add the experimental Goo.Browser host and BrowserBox sample for single-threaded browser-wasm. WebGPU renders Goo scene-compiled solid boxes, rounded corners and borders. Mouse clicks update Cell state. Frames stop when idle.
-- Add Slang-generated WGSL validation in a separate advisory workflow. Browser checks do not gate desktop releases. Text, images, full input, IME and browser accessibility are not supported yet.

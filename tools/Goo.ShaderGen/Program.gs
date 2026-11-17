@@ -1231,7 +1231,7 @@ internal shared class Program {
     private func ExecuteWebGpu(mode string) int32 {
         let root = FindRepositoryRoot()
         let sourceRoot = Path.Combine(root, ShaderDirectory)
-        let outputRoot = Path.Combine(root, "Goo.Browser", "Shaders")
+        let outputRoot = Path.Combine(root, "Goo.Wasm", "Shaders")
         let manifestPath = Path.Combine(root, ProductionDirectory, ManifestName)
         let manifest = DeserializeManifest(manifestPath, File.ReadAllBytes(manifestPath))
         let compiler = FindTool(manifest.Toolchain.Compiler.Executable, "SLANG_SDK")

@@ -9,7 +9,7 @@
     <RunAOTCompilation>false</RunAOTCompilation>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../Goo.Browser/Goo.Browser.gsproj" />
-    <WasmExtraFilesToDeploy Include="index.html;main.js;../../Goo.Browser/goo-browser.js" />
+    <ProjectReference Include="../../Goo.Wasm/Goo.Wasm.gsproj" />
+    <WasmExtraFilesToDeploy Include="index.html;main.js;../../Goo.Wasm/goo-wasm.js" />
   </ItemGroup>
 </Project>
