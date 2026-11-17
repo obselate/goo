@@ -9,4 +9,4 @@ Goo runs on .NET 10. Choose a guide:
 | PowerShell 7.6 | [PowerShell](powershell.md) |
 | F# | [FunGoo](https://github.com/AngelMunoz/FunGoo) |
 
-FunGoo is Angel Muñoz's community-maintained F# library, licensed under MIT, with version 0.8.0 available.
+FunGoo is Angel Muñoz's community-maintained F# library, licensed under MIT, with version 0.9.0 available.

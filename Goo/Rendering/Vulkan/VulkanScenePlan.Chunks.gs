@@ -181,6 +181,7 @@ internal partial class SceneFrame {
     var result = HashBounds(hash, value.Bounds)
     result = Mix(result, uint64(value.Color))
     result = HashFloat(result, value.Opacity)
+    result = Mix(result, value.SnapToPixels ? 1uL : 0uL)
     return HashTransformIndex(result, value.TransformIndex)
   }
 

@@ -1123,10 +1123,15 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         env:
           NUGET_PACKAGES: ${{ runner.temp }}/goo-interop-packages
+          GH_TOKEN: ${{ github.token }}
         run: |
-          dotnet restore samples/interop/PowerShell/PowerShell.csproj --configfile samples/interop/NuGet.Config
-          dotnet build samples/interop/PowerShell/PowerShell.csproj -c Release --no-restore -m:4
-          pwsh -NoProfile -File samples/interop/PowerShell/Start.ps1 --check
+          gh release download v7.6.10 --repo PowerShell/PowerShell --pattern powershell-7.6.10-linux-x64.tar.gz --dir "$RUNNER_TEMP"
+          mkdir "$RUNNER_TEMP/goo-pwsh"
+          tar -xzf "$RUNNER_TEMP/powershell-7.6.10-linux-x64.tar.gz" -C "$RUNNER_TEMP/goo-pwsh"
+          chmod +x "$RUNNER_TEMP/goo-pwsh/pwsh"
+          dotnet restore samples/interop/PowerShell/PowerShell.csproj -r linux-x64 --configfile samples/interop/NuGet.Config
+          dotnet build samples/interop/PowerShell/PowerShell.csproj -c Release -r linux-x64 --no-restore -m:4
+          "$RUNNER_TEMP/goo-pwsh/pwsh" -NoProfile -File samples/interop/PowerShell/Start.ps1 --check
 
       - name: Verify packed NativeAOT gesture consumer
         if: needs.changes.outputs.full == 'true'

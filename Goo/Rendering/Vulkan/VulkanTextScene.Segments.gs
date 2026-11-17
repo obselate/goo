@@ -511,7 +511,7 @@ internal unsafe sealed partial class VulkanTextScene {
             Y: y,
             Width: right - left,
             Height: height,
-          }, color, opacity, transformIndex)
+          }, color, opacity, transformIndex, true)
         }
         index = index + 2
       }
@@ -522,13 +522,14 @@ internal unsafe sealed partial class VulkanTextScene {
     bounds ConservativeBounds,
     color Color,
     opacity float32,
-    transformIndex int32) {
+    transformIndex int32, snapToPixels bool = false) {
       if color.A <= 0.0F || opacity <= 0.0F || bounds.IsEmpty { return }
       frame.AddSolidBox(SolidBoxRecord{
         Bounds: bounds,
         Color: PackedColor(color, opacity),
         Opacity: 1.0F,
         TransformIndex: transformIndex,
+        SnapToPixels: snapToPixels,
       })
     }
 
