@@ -253,6 +253,35 @@ internal partial class TextEditorLayouts {
         let empty = stackalloc[0]float32
         var required int32
         TraverseSelectionRects(line, start, end, 0, empty, result, out required)
+        var index int32 = 2
+        while index + 1 < result.Count {
+          let left = result[index]
+          let right = result[index + 1]
+          var previous = index - 2
+          while previous >= 0 && result[previous] > left {
+            result[previous + 2] = result[previous]
+            result[previous + 3] = result[previous + 1]
+            previous -= 2
+          }
+          result[previous + 2] = left
+          result[previous + 3] = right
+          index += 2
+        }
+        var written int32 = 0
+        index = 0
+        while index + 1 < result.Count {
+          let left = result[index]
+          let right = result[index + 1]
+          if written > 0 && left <= result[written - 1] + 0.001F {
+            result[written - 1] = MathF.Max(result[written - 1], right)
+          } else {
+            result[written] = left
+            result[written + 1] = right
+            written += 2
+          }
+          index += 2
+        }
+        if written < result.Count { result.RemoveRange(written, result.Count - written) }
         return result
       }
 
