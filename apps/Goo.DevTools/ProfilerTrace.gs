@@ -75,7 +75,7 @@ internal class ProfilerLane {
         Records.Sort(
             (a int32, b int32) -> {
                 let order = records[a].Ticks.CompareTo(records[b].Ticks)
-                return order != 0 ? order: records[b].EndTicks.CompareTo(records[a].EndTicks)
+                return order != 0 ? order : records[b].EndTicks.CompareTo(records[a].EndTicks)
             }
         )
         Dirty = false
@@ -148,7 +148,7 @@ internal partial class ProfilerTrace {
         State = Text(root, "state")
         if Id == "" || Number(root, "schemaVersion") != 1uL {
             throw InvalidOperationException(
-                State == "Busy" ? "Another client is recording this target": "Unsupported profiler trace schema"
+                State == "Busy" ? "Another client is recording this target" : "Unsupported profiler trace schema"
             )
         }
         Origin = Int64.Parse(Text(root, "originTicks"), CultureInfo.InvariantCulture)
@@ -199,7 +199,7 @@ internal partial class ProfilerTrace {
                 Sequence: seq,
                 Kind: Text(item, "kind"),
                 Ticks: ticks,
-                EndTicks: Text(item, "endTicks") == "" ? ticks: Int64.Parse(
+                EndTicks: Text(item, "endTicks") == "" ? ticks : Int64.Parse(
                     Text(item, "endTicks"),
                     CultureInfo.InvariantCulture
                 ),
@@ -237,7 +237,7 @@ internal partial class ProfilerTrace {
                 MemoryType: Number(item, "memoryType"),
                 Heap: Number(item, "heapIndex"),
                 HeapFlags: Number(item, "heapFlags"),
-                Dedicated: item.GetProperty("dedicated").ValueKind == JsonValueKind.Null ? nil: item.GetProperty(
+                Dedicated: item.GetProperty("dedicated").ValueKind == JsonValueKind.Null ? nil : item.GetProperty(
                     "dedicated"
                 )
                     .GetBoolean(),
@@ -297,7 +297,7 @@ internal partial class ProfilerTrace {
                 if let device = record.Device {
                     if let owner = record.Owner {
                         if number > 0uL && owner < 8uL {
-                            PositiveOwners[device] = (PositiveOwners.TryGetValue(device, out var mask) ? mask: 0uL)
+                            PositiveOwners[device] = (PositiveOwners.TryGetValue(device, out var mask) ? mask : 0uL)
                             | (1uL << int32(owner))
                         }
                     }
@@ -367,7 +367,7 @@ internal partial class ProfilerTrace {
         scopes.Sort(
             (a int32, b int32) -> {
                 let order = Records[a].Ticks.CompareTo(Records[b].Ticks)
-                return order != 0 ? order: Records[b].EndTicks.CompareTo(Records[a].EndTicks)
+                return order != 0 ? order : Records[b].EndTicks.CompareTo(Records[a].EndTicks)
             }
         )
         let totals = Dictionary[int32, int64]()
@@ -386,14 +386,14 @@ internal partial class ProfilerTrace {
                 other += r.Ticks - cursor
             }
             cursor = r.Ticks
-            let name = r.Category == 0 ? PhaseName(r.Event): r.Source
+            let name = r.Category == 0 ? PhaseName(r.Event) : r.Source
             if !framePhaseIds.TryGetValue(name, out var phase) {
                 phase = FramePhases.Count
                 FramePhases.Add(name)
                 framePhaseIds.Add(name, phase)
             }
             phases.Add(phase)
-            ends.Add(ends.Count > 0 ? Math.Min(r.EndTicks, ends[ends.Count - 1]): r.EndTicks)
+            ends.Add(ends.Count > 0 ? Math.Min(r.EndTicks, ends[ends.Count - 1]) : r.EndTicks)
             if !totals.ContainsKey(phase) {
                 totals.Add(phase, 0L)
             }
@@ -454,10 +454,10 @@ internal partial class ProfilerTrace {
         : record.Source.StartsWith("capture.", StringComparison.Ordinal) ||
             record.Source == "recording.stop" ? "Markers"
         : record.Category == 0 || record.Source.StartsWith("chrome.", StringComparison.Ordinal) ? "CPU"
-        : record.Kind == "duration" ? "CPU": "Frames"
-        let name = group == "Memory" ? record.Name + (record.Owner == nil ? "": " / " + OwnerName(record.Owner))
-        + (record.Device == nil ? "": " / device " + record.Device.ToString())
-        + (record.Heap == nil ? "": " / heap " + record.Heap.ToString())
+        : record.Kind == "duration" ? "CPU" : "Frames"
+        let name = group == "Memory" ? record.Name + (record.Owner == nil ? "" : " / " + OwnerName(record.Owner))
+        + (record.Device == nil ? "" : " / device " + record.Device.ToString())
+        + (record.Heap == nil ? "" : " / heap " + record.Heap.ToString())
         : group == "GPU" ? "GPU stages"
         : group == "Resources" ? ResourceLaneName(record)
         : group == "CPU" ? (
@@ -466,10 +466,10 @@ internal partial class ProfilerTrace {
         )
         : group == "Queue" ? (
             record.Source.StartsWith("present.", StringComparison.Ordinal)
-            || record.Source == "vkQueuePresentKHR" ? "Present": "Submit"
+            || record.Source == "vkQueuePresentKHR" ? "Present" : "Submit"
         )
-        : group == "Markers" ? "Markers": "Frame"
-        let window = group == "Frames" || group == "CPU" || group == "Queue" ? record.Window: ""
+        : group == "Markers" ? "Markers" : "Frame"
+        let window = group == "Frames" || group == "CPU" || group == "Queue" ? record.Window : ""
         let key = group + ":" + name + ":" + window
         if !lanesByKey.TryGetValue(key, out var lane) {
             lane = ProfilerLane(name, group, window)
@@ -491,11 +491,11 @@ internal partial class ProfilerTrace {
             return ResourceName(record.ResourceKind) + " / " + OwnerName(record.Owner)
         }
         let kind = ResourceName(record.ResourceKind)
-        return kind == "MemoryBlock" ? "Allocator blocks": kind == "Font" ? "Font files (CPU)"
-        : kind == "FontFace" ? "Font faces": kind == "ImageSource" ? "Decoded images"
-        : kind == "Image" ? "Image uploads": kind == "Shader" ? "Shaders"
-        : kind == "Pipeline" ? "Pipelines": kind == "PipelineCache" ? "Pipeline caches"
-        : kind == "Swapchain" ? "Swapchain (WSI, estimated payload)": kind
+        return kind == "MemoryBlock" ? "Allocator blocks" : kind == "Font" ? "Font files (CPU)"
+        : kind == "FontFace" ? "Font faces" : kind == "ImageSource" ? "Decoded images"
+        : kind == "Image" ? "Image uploads" : kind == "Shader" ? "Shaders"
+        : kind == "Pipeline" ? "Pipelines" : kind == "PipelineCache" ? "Pipeline caches"
+        : kind == "Swapchain" ? "Swapchain (WSI, estimated payload)" : kind
     }
 
     internal func OwnerChain(record ProfilerRecord) string {
@@ -536,25 +536,25 @@ internal partial class ProfilerTrace {
             return ResourceName(record.ResourceKind)
         }
         return record.Category == 0 && record.Source == "cpu.phase" ? PhaseName(record.Event)
-        : record.Name != "" ? record.Name: record.Category == 0 ? PhaseName(record.Event): record.Source
+        : record.Name != "" ? record.Name : record.Category == 0 ? PhaseName(record.Event) : record.Source
     }
 
     internal func PhaseName(index int32) string -> index >= 0 &&
-        index < Phases.Count ? Phases[index]: "Phase " +
+        index < Phases.Count ? Phases[index] : "Phase " +
         index.ToString(CultureInfo.InvariantCulture)
 
     internal func OwnerName(index uint64?) string {
         guard let value = index else {
             return "Unknown owner"
         }
-        return value < uint64(Owners.Count) ? Owners[int32(value)]: "Unknown owner"
+        return value < uint64(Owners.Count) ? Owners[int32(value)] : "Unknown owner"
     }
 
     internal func ResourceName(index uint64?) string {
         guard let value = index else {
             return "Resource"
         }
-        return value < uint64(Resources.Count) ? Resources[int32(value)]: "Resource"
+        return value < uint64(Resources.Count) ? Resources[int32(value)] : "Resource"
     }
 
     internal func Milliseconds(ticks int64) float64 -> float64(ticks) * 1000.0 / float64(Frequency)
@@ -573,17 +573,17 @@ internal partial class ProfilerTrace {
             if !root.TryGetProperty(name, out var value) || value.ValueKind == JsonValueKind.Null {
                 return ""
             }
-            return value.ValueKind == JsonValueKind.String ? value.GetString() ?? "": value.GetRawText()
+            return value.ValueKind == JsonValueKind.String ? value.GetString() ?? "" : value.GetRawText()
         }
 
         internal func Number(root JsonElement, name string) uint64? {
             let value = Text(root, name)
-            return value == "" ? nil: UInt64.Parse(value, CultureInfo.InvariantCulture)
+            return value == "" ? nil : UInt64.Parse(value, CultureInfo.InvariantCulture)
         }
 
         private func Signed(root JsonElement, name string) int64? {
             let value = Text(root, name)
-            return value == "" ? nil: Int64.Parse(value, CultureInfo.InvariantCulture)
+            return value == "" ? nil : Int64.Parse(value, CultureInfo.InvariantCulture)
         }
 
         private func Names(root JsonElement, name string, output List[string]) {

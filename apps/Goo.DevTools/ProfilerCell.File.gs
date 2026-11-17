@@ -47,7 +47,7 @@ internal partial class ProfilerCell {
             }
         },
         FileButton("profiler-file-browse", "Browse…", () -> BrowseFile()),
-        FileButton("profiler-file-apply", fileBusy ? "Working…": fileAction, () -> ApplyFile()),
+        FileButton("profiler-file-apply", fileBusy ? "Working…" : fileAction, () -> ApplyFile()),
         FileButton(
             "profiler-file-cancel",
             "Cancel",
@@ -72,7 +72,7 @@ internal partial class ProfilerCell {
         }
         try {
             let task = window.ShowFileDialogAsync(
-                fileAction == "Import" ? FileDialogKind.OpenFile: FileDialogKind.SaveFile,
+                fileAction == "Import" ? FileDialogKind.OpenFile : FileDialogKind.SaveFile,
                 FileDialogOptions{
                     Title: fileAction + " profiler trace",
                     InitialPath: Path.GetFullPath(filePath),
@@ -97,7 +97,7 @@ internal partial class ProfilerCell {
                     if result.Status == FileDialogStatus.Success && result.Paths.Count == 1 {
                         filePath = result.Paths[0]
                     } else if result.Status != FileDialogStatus.Cancelled {
-                        fileStatus = result.Error == "" ? "File chooser unavailable. Enter a path directly.": result.Error
+                        fileStatus = result.Error == "" ? "File chooser unavailable. Enter a path directly." : result.Error
                     }
                 }
             )
@@ -170,7 +170,7 @@ internal partial class ProfilerCell {
                             start = 0L
                             end = Math.Max(1L, current.End)
                         }
-                        fileStatus = importing ? "": "Exported " + Path.GetFileName(path)
+                        fileStatus = importing ? "" : "Exported " + Path.GetFileName(path)
                         fileAction = ""
                     }
                 }

@@ -84,7 +84,7 @@ class AudioChecks : Instrumentation {
             var reads = 0
             let caller = Environment.CurrentManagedThreadId
             var readerThread = caller
-            let reader Func[[]float32, int32, int32] = (buffer[]float32, frames int32) -> {
+            let source = SoundStreamSource(8000, 2, (buffer[]float32, frames int32) -> {
                 readerThread = Environment.CurrentManagedThreadId
                 Require(buffer.Length == 2048 && frames > 0 && frames <= 1024, "Unbounded pull")
                 if (reads += 1) > 3 {
@@ -99,22 +99,20 @@ class AudioChecks : Instrumentation {
                     }
                 }
                 return count
-            }
-            let source = SoundStreamSource(8000, 2, reader)
+            })
             Finish(
                 second.TryPlay(source).Playback ?? throw InvalidOperationException("Stream not queued"),
                 SoundPlaybackStatus.Completed
             )
             Require(reads == 4 && caller != readerThread, "Pull did not run to end on audio thread")
             for invalid in[]int32{-1, 1025, 0} {
-                let brokenReader Func[[]float32, int32, int32] = (buffer[]float32, frames int32) -> {
+                let broken = SoundStreamSource(8000, 1, (buffer[]float32, frames int32) -> {
                     if invalid == 0 {
                         buffer[0] = float32.NaN
                         return 1
                     }
                     return invalid
-                }
-                let broken = SoundStreamSource(8000, 1, brokenReader)
+                })
                 Finish(
                     second.TryPlay(broken).Playback ?? throw InvalidOperationException("Broken source not queued"),
                     SoundPlaybackStatus.SourceFailure

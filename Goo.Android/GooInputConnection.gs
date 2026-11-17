@@ -14,15 +14,10 @@ internal class GooInputConnection(view GooView, focusId int64) : BaseInputConnec
 
     private prop Editor FocusedEditorSnapshot? {
         get {
-            var __spill0 FocusedEditorSnapshot?
-            var editor FocusedEditorSnapshot
-            return if !closed && {
-                __spill0 = view.Window.Focus.Editor
-                __spill0 != nil && {
-                    editor = __spill0!!
-                    true
-                }
-            } && editor.FocusId == focusId {
+            if closed {
+                return nil
+            }
+            return if let editor = view.Window.Focus.Editor && editor.FocusId == focusId {
                 editor
             } else {
                 nil

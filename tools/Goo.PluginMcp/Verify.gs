@@ -71,37 +71,33 @@ shared class Verify {
             let app = Path.Combine(output, "app")
             let runtime = Path.Combine(app, ".goo/devtools")
             Directory.CreateDirectory(runtime)
-            let client = await Client(root, Path.Combine(output, "unused-runtime"))
-            try {
-                let tools = await client.ListToolsAsync(ListToolsRequestParams())
-                Check(
-                    JsonNode.DeepEquals(
-                        JsonSerializer.SerializeToNode(tools.Tools),
-                        JsonSerializer.SerializeToNode(ToolDefinitions)
-                    ),
-                    "Tool contracts differ"
-                )
-                File.WriteAllText(Path.Combine(output, "tools.json"), JsonSerializer.Serialize(tools.Tools))
-                await Documents(client, root, output)
-                let checkout = await Checkout(client, output)
-                await Starter(client, root, output, app, checkout)
-                await Live(client, output, app, runtime, false)
-                await Live(client, output, app, runtime, true)
-                let result = JsonObject(){
-                    ["passed"] = true,
-                    ["tools"] = Strings(tools.Tools.Select(x -> x.Name).Order()),
-                    ["fullSnapshots"] = true,
-                    ["stableNodeIds"] = true,
-                    ["projectLocalDiscovery"] = true,
-                    ["inputPermission"] = true,
-                    ["clickPointerKeyboard"] = true,
-                    ["capture"] = true
-                }
-                File.WriteAllText(Path.Combine(output, "result.json"), result.ToJsonString())
-                Console.WriteLine(result.ToJsonString())
-            } finally {
-                await client.DisposeAsync()
+            await using let client = await Client(root, Path.Combine(output, "unused-runtime"))
+            let tools = await client.ListToolsAsync(ListToolsRequestParams())
+            Check(
+                JsonNode.DeepEquals(
+                    JsonSerializer.SerializeToNode(tools.Tools),
+                    JsonSerializer.SerializeToNode(ToolDefinitions)
+                ),
+                "Tool contracts differ"
+            )
+            File.WriteAllText(Path.Combine(output, "tools.json"), JsonSerializer.Serialize(tools.Tools))
+            await Documents(client, root, output)
+            let checkout = await Checkout(client, output)
+            await Starter(client, root, output, app, checkout)
+            await Live(client, output, app, runtime, false)
+            await Live(client, output, app, runtime, true)
+            let result = JsonObject(){
+                ["passed"] = true,
+                ["tools"] = Strings(tools.Tools.Select(x -> x.Name).Order()),
+                ["fullSnapshots"] = true,
+                ["stableNodeIds"] = true,
+                ["projectLocalDiscovery"] = true,
+                ["inputPermission"] = true,
+                ["clickPointerKeyboard"] = true,
+                ["capture"] = true
             }
+            File.WriteAllText(Path.Combine(output, "result.json"), result.ToJsonString())
+            Console.WriteLine(result.ToJsonString())
         } finally {
             Directory.Delete(output, true)
         }
@@ -467,8 +463,8 @@ shared class Verify {
         }
         let untrusted = await Read(client, "starter", JsonObject(){["repository"] = checkout})
         Check(S(untrusted, "lint") == "unavailable" && S(untrusted, "build") == S(starter, "build"), untrusted)
-        let configured = await Client(root, Path.Combine(output, "unused-runtime"), checkout)
-        try {
+        {
+            await using let configured = await Client(root, Path.Combine(output, "unused-runtime"), checkout)
             for explicitSource in[]bool{false, true} {
                 let args = JsonObject()
                 if explicitSource {
@@ -478,8 +474,6 @@ shared class Verify {
                 Check(S(trusted, "lint").StartsWith("dotnet run --project " + linter + " "), trusted)
                 Check(S(trusted, "build") == S(starter, "build"), trusted)
             }
-        } finally {
-            await configured.DisposeAsync()
         }
         for file in starter["files"]!!.AsObject() {
             Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(app, file.Key))!!)

@@ -74,12 +74,7 @@ ViewTreeObserver
             info.AddAction(NativeAction.ActionNextAtMovementGranularity!!)
             info.AddAction(NativeAction.ActionPreviousAtMovementGranularity!!)
         }
-        let __spill0 = node.ScrollInfo
-        var scroll AccessibilityScrollInfo
-        if __spill0 != nil && {
-            scroll = __spill0!!
-            true
-        } && Supports(node, AccessibilityAction.Scroll) {
+        if let scroll = node.ScrollInfo && Supports(node, AccessibilityAction.Scroll) {
             info.Scrollable = scroll.MaximumX > float64(0.0) || scroll.MaximumY > float64(0.0)
             if scroll.TargetY > float64(0.0) {
                 info.AddAction(NativeAction.ActionScrollUp!!)

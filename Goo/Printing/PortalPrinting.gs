@@ -21,9 +21,11 @@ internal shared class PortalPrinting {
         internal init() {
             dbus_threads_init_default()
             var error = Error{}
-            dbus_error_init(&error)
+            // https://github.com/DavidObando/gsharp/issues/6086
+            dbus_error_init(ref error)
             try {
-                connection = dbus_bus_get_private(0, &error)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                connection = dbus_bus_get_private(0, ref error)
                 if connection == 0 {
                     throw PortalUnsupportedException()
                 }
@@ -31,9 +33,11 @@ internal shared class PortalPrinting {
                 dbus_bus_add_match(
                     connection,
                     "type='signal',sender='org.freedesktop.portal.Desktop',interface='org.freedesktop.portal.Request',member='Response'",
-                    &error
+                    // https://github.com/DavidObando/gsharp/issues/6086
+                    ref error
                 )
-                if dbus_error_is_set(&error) != 0 {
+                // https://github.com/DavidObando/gsharp/issues/6086
+                if dbus_error_is_set(ref error) != 0 {
                     throw IOException("The print portal response subscription failed.")
                 }
                 dbus_connection_flush(connection)
@@ -44,7 +48,8 @@ internal shared class PortalPrinting {
                 }
                 rethrow
             } finally {
-                dbus_error_free(&error)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                dbus_error_free(ref error)
             }
         }
 
@@ -52,23 +57,40 @@ internal shared class PortalPrinting {
             let message = Method(ObjectPath, PrintInterface, "PreparePrint")
             try {
                 var arguments = Iter{}
-                dbus_message_iter_init_append(message, &arguments)
-                Connection.String(&arguments, parent)
-                Connection.String(&arguments, title)
-                EmptyDictionary(&arguments)
-                EmptyDictionary(&arguments)
-                var options = Open(&arguments, 'a', "{sv}")
-                Variant(&options, "handle_token", "goo_print_" + Guid.NewGuid().ToString("N"))
-                Variant(&options, "modal", true)
-                var entry = Open(&options, 'e', nil)
-                Connection.String(&entry, "supported_output_file_formats")
-                var variant = Open(&entry, 'v', "as")
-                var formats = Open(&variant, 'a', "s")
-                Connection.String(&formats, "pdf")
-                Close(&variant, &formats)
-                Close(&entry, &variant)
-                Close(&options, &entry)
-                Close(&arguments, &options)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                dbus_message_iter_init_append(message, ref arguments)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Connection.String(ref arguments, parent)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Connection.String(ref arguments, title)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                EmptyDictionary(ref arguments)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                EmptyDictionary(ref arguments)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                var options = Open(ref arguments, 'a', "{sv}")
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Variant(ref options, "handle_token", "goo_print_" + Guid.NewGuid().ToString("N"))
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Variant(ref options, "modal", true)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                var entry = Open(ref options, 'e', nil)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Connection.String(ref entry, "supported_output_file_formats")
+                // https://github.com/DavidObando/gsharp/issues/6086
+                var variant = Open(ref entry, 'v', "as")
+                // https://github.com/DavidObando/gsharp/issues/6086
+                var formats = Open(ref variant, 'a', "s")
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Connection.String(ref formats, "pdf")
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Close(ref variant, ref formats)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Close(ref entry, ref variant)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Close(ref options, ref entry)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Close(ref arguments, ref options)
                 let response = AwaitResponse(Send(message), cancellation)
                 if response.Code != uint32(0) {
                     return Preparation(response.Code, 0, default(PrintPageSettings))
@@ -122,20 +144,33 @@ internal shared class PortalPrinting {
             let message = Method(ObjectPath, PrintInterface, "Print")
             try {
                 var arguments = Iter{}
-                dbus_message_iter_init_append(message, &arguments)
-                Connection.String(&arguments, parent)
-                Connection.String(&arguments, title)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                dbus_message_iter_init_append(message, ref arguments)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Connection.String(ref arguments, parent)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Connection.String(ref arguments, title)
                 var descriptor = checked(int32(file.SafeFileHandle.DangerousGetHandle()))
-                Basic(&arguments, 'h', *void(&descriptor))
-                var options = Open(&arguments, 'a', "{sv}")
-                Variant(&options, "handle_token", "goo_print_" + Guid.NewGuid().ToString("N"))
-                var entry = Open(&options, 'e', nil)
-                Connection.String(&entry, "token")
-                var variant = Open(&entry, 'v', "u")
-                Basic(&variant, 'u', *void(&token))
-                Close(&entry, &variant)
-                Close(&options, &entry)
-                Close(&arguments, &options)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Basic(ref arguments, 'h', *void(&descriptor))
+                // https://github.com/DavidObando/gsharp/issues/6086
+                var options = Open(ref arguments, 'a', "{sv}")
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Variant(ref options, "handle_token", "goo_print_" + Guid.NewGuid().ToString("N"))
+                // https://github.com/DavidObando/gsharp/issues/6086
+                var entry = Open(ref options, 'e', nil)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Connection.String(ref entry, "token")
+                // https://github.com/DavidObando/gsharp/issues/6086
+                var variant = Open(ref entry, 'v', "u")
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Basic(ref variant, 'u', *void(&token))
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Close(ref entry, ref variant)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Close(ref options, ref entry)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Close(ref arguments, ref options)
                 return AwaitResponse(Send(message), cancellation).Code
             } finally {
                 dbus_message_unref(message)
@@ -144,9 +179,11 @@ internal shared class PortalPrinting {
 
         private func Send(message nint) string {
             var error = Error{}
-            dbus_error_init(&error)
+            // https://github.com/DavidObando/gsharp/issues/6086
+            dbus_error_init(ref error)
             try {
-                let reply = dbus_connection_send_with_reply_and_block(connection, message, -1, &error)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                let reply = dbus_connection_send_with_reply_and_block(connection, message, -1, ref error)
                 if reply == 0 {
                     let name = Marshal.PtrToStringUTF8(error.Name)
                     if (
@@ -160,18 +197,22 @@ internal shared class PortalPrinting {
                 }
                 try {
                     var arguments = Iter{}
-                    if dbus_message_iter_init(reply, &arguments) == 0 ||
-                        dbus_message_iter_get_arg_type(&arguments) != int32('o') {
+                    // https://github.com/DavidObando/gsharp/issues/6086
+                    if dbus_message_iter_init(reply, ref arguments) == 0 ||
+                        // https://github.com/DavidObando/gsharp/issues/6086
+                        dbus_message_iter_get_arg_type(ref arguments) != int32('o') {
                         throw IOException("The print portal returned no request handle.")
                     }
                     var path nint = 0
-                    dbus_message_iter_get_basic(&arguments, *void(&path))
+                    // https://github.com/DavidObando/gsharp/issues/6086
+                    dbus_message_iter_get_basic(ref arguments, *void(&path))
                     return Marshal.PtrToStringUTF8(path) ?? throw IOException("The print request handle is empty.")
                 } finally {
                     dbus_message_unref(reply)
                 }
             } finally {
-                dbus_error_free(&error)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                dbus_error_free(ref error)
             }
         }
 
@@ -201,16 +242,21 @@ internal shared class PortalPrinting {
                         continue
                     }
                     var arguments = Iter{}
-                    if dbus_message_iter_init(message, &arguments) == 0 ||
-                        dbus_message_iter_get_arg_type(&arguments) != int32('u') {
+                    // https://github.com/DavidObando/gsharp/issues/6086
+                    if dbus_message_iter_init(message, ref arguments) == 0 ||
+                        // https://github.com/DavidObando/gsharp/issues/6086
+                        dbus_message_iter_get_arg_type(ref arguments) != int32('u') {
                         throw IOException("The print portal returned an invalid response.")
                     }
                     var code uint32 = uint32(0)
-                    dbus_message_iter_get_basic(&arguments, *void(&code))
-                    if dbus_message_iter_next(&arguments) == 0 {
+                    // https://github.com/DavidObando/gsharp/issues/6086
+                    dbus_message_iter_get_basic(ref arguments, *void(&code))
+                    // https://github.com/DavidObando/gsharp/issues/6086
+                    if dbus_message_iter_next(ref arguments) == 0 {
                         return Response(code, Dictionary[string, object?]())
                     }
-                    let values = Read(&arguments, 0) as Dictionary[string, object?] ?? Dictionary[string, object?]()
+                    // https://github.com/DavidObando/gsharp/issues/6086
+                    let values = Read(ref arguments, 0) as Dictionary[string, object?] ?? Dictionary[string, object?]()
                     return Response(code, values)
                 } finally {
                     dbus_message_unref(message)
@@ -247,37 +293,51 @@ internal shared class PortalPrinting {
                 if depth > 8 {
                     throw IOException("The print settings exceed the nesting limit.")
                 }
-                let type = dbus_message_iter_get_arg_type(&iterator)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                let type = dbus_message_iter_get_arg_type(ref iterator)
                 if type == int32('s') || type == int32('o') {
                     var value nint = 0
-                    dbus_message_iter_get_basic(&iterator, *void(&value))
+                    // https://github.com/DavidObando/gsharp/issues/6086
+                    dbus_message_iter_get_basic(ref iterator, *void(&value))
                     return Marshal.PtrToStringUTF8(value)
                 }
                 if type == int32('u') {
                     var value uint32 = uint32(0)
-                    dbus_message_iter_get_basic(&iterator, *void(&value))
+                    // https://github.com/DavidObando/gsharp/issues/6086
+                    dbus_message_iter_get_basic(ref iterator, *void(&value))
                     return value
                 }
                 if type == int32('d') {
                     var value float64 = 0.0
-                    dbus_message_iter_get_basic(&iterator, *void(&value))
+                    // https://github.com/DavidObando/gsharp/issues/6086
+                    dbus_message_iter_get_basic(ref iterator, *void(&value))
                     return value
                 }
                 if type == int32('v') {
-                    dbus_message_iter_recurse(&iterator, out var child)
-                    return Read(&child, depth + 1)
+                    // https://github.com/DavidObando/gsharp/issues/6086
+                    dbus_message_iter_recurse(ref iterator, out var child)
+                    // https://github.com/DavidObando/gsharp/issues/6086
+                    return Read(ref child, depth + 1)
                 }
-                if type == int32('a') && dbus_message_iter_get_element_type(&iterator) == int32('e') {
+                // https://github.com/DavidObando/gsharp/issues/6086
+                if type == int32('a') && dbus_message_iter_get_element_type(ref iterator) == int32('e') {
                     let values = Dictionary[string, object?](StringComparer.Ordinal)
-                    dbus_message_iter_recurse(&iterator, out var entries)
-                    while dbus_message_iter_get_arg_type(&entries) == int32('e') {
-                        dbus_message_iter_recurse(&entries, out var entry)
-                        let key string? = Read(&entry, depth + 1) as string
-                        if key == nil || dbus_message_iter_next(&entry) == 0 || values.Count >= 128 {
+                    // https://github.com/DavidObando/gsharp/issues/6086
+                    dbus_message_iter_recurse(ref iterator, out var entries)
+                    // https://github.com/DavidObando/gsharp/issues/6086
+                    while dbus_message_iter_get_arg_type(ref entries) == int32('e') {
+                        // https://github.com/DavidObando/gsharp/issues/6086
+                        dbus_message_iter_recurse(ref entries, out var entry)
+                        // https://github.com/DavidObando/gsharp/issues/6086
+                        let key string? = Read(ref entry, depth + 1) as string
+                        // https://github.com/DavidObando/gsharp/issues/6086
+                        if key == nil || dbus_message_iter_next(ref entry) == 0 || values.Count >= 128 {
                             throw IOException("The print settings contain an invalid dictionary.")
                         }
-                        values[key] = Read(&entry, depth + 1)
-                        if dbus_message_iter_next(&entries) == 0 {
+                        // https://github.com/DavidObando/gsharp/issues/6086
+                        values[key] = Read(ref entry, depth + 1)
+                        // https://github.com/DavidObando/gsharp/issues/6086
+                        if dbus_message_iter_next(ref entries) == 0 {
                             break
                         }
                     }
@@ -311,23 +371,28 @@ internal shared class PortalPrinting {
             }
 
             private func EmptyDictionary(ref arguments Iter) {
-                var dictionary = Open(&arguments, 'a', "{sv}")
-                Close(&arguments, &dictionary)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                var dictionary = Open(ref arguments, 'a', "{sv}")
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Close(ref arguments, ref dictionary)
             }
 
             private func Open(ref parent Iter, type int32, signature string?) Iter {
                 var child Iter
                 let opened = if let value = signature {
-                    dbus_message_iter_open_container(&parent, type, value, out child)
+                    // https://github.com/DavidObando/gsharp/issues/6086
+                    dbus_message_iter_open_container(ref parent, type, value, out child)
                 } else {
-                    dbus_message_iter_open_container(&parent, type, nint(0), out child)
+                    // https://github.com/DavidObando/gsharp/issues/6086
+                    dbus_message_iter_open_container(ref parent, type, nint(0), out child)
                 }
                 if opened == 0 { throw IOException("Cannot build print settings.") }
                 return child
             }
 
             private func Close(ref parent Iter, ref child Iter) {
-                if dbus_message_iter_close_container(&parent, &child) == 0 {
+                // https://github.com/DavidObando/gsharp/issues/6086
+                if dbus_message_iter_close_container(ref parent, ref child) == 0 {
                     throw IOException("Cannot finish print settings.")
                 }
             }
@@ -335,39 +400,53 @@ internal shared class PortalPrinting {
             private func String(ref iterator Iter, value string) {
                 var text = Marshal.StringToCoTaskMemUTF8(value)
                 try {
-                    Basic(&iterator, 's', *void(&text))
+                    // https://github.com/DavidObando/gsharp/issues/6086
+                    Basic(ref iterator, 's', *void(&text))
                 } finally {
                     Marshal.FreeCoTaskMem(text)
                 }
             }
 
             private func Basic(ref iterator Iter, type int32, value *void) {
-                if dbus_message_iter_append_basic(&iterator, type, value) == 0 {
+                // https://github.com/DavidObando/gsharp/issues/6086
+                if dbus_message_iter_append_basic(ref iterator, type, value) == 0 {
                     throw IOException("Cannot append print settings.")
                 }
             }
 
             private func Variant(ref dictionary Iter, key string, value string) {
-                var entry = Open(&dictionary, 'e', nil)
-                Connection.String(&entry, key)
-                var variant = Open(&entry, 'v', "s")
-                Connection.String(&variant, value)
-                Close(&entry, &variant)
-                Close(&dictionary, &entry)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                var entry = Open(ref dictionary, 'e', nil)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Connection.String(ref entry, key)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                var variant = Open(ref entry, 'v', "s")
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Connection.String(ref variant, value)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Close(ref entry, ref variant)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Close(ref dictionary, ref entry)
             }
 
             private func Variant(ref dictionary Iter, key string, value bool) {
-                var entry = Open(&dictionary, 'e', nil)
-                Connection.String(&entry, key)
-                var variant = Open(&entry, 'v', "b")
+                // https://github.com/DavidObando/gsharp/issues/6086
+                var entry = Open(ref dictionary, 'e', nil)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Connection.String(ref entry, key)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                var variant = Open(ref entry, 'v', "b")
                 var enabled = if value {
                     1
                 } else {
                     0
                 }
-                Basic(&variant, 'b', *void(&enabled))
-                Close(&entry, &variant)
-                Close(&dictionary, &entry)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Basic(ref variant, 'b', *void(&enabled))
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Close(ref entry, ref variant)
+                // https://github.com/DavidObando/gsharp/issues/6086
+                Close(ref dictionary, ref entry)
             }
 
             @DllImport("libdbus-1.so.3")

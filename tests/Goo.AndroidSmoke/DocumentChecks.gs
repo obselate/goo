@@ -62,7 +62,7 @@ public sealed class DocumentChecks : Instrumentation {
     }
 
     private func PickAndPersist() {
-        var selected = Main[Task[DocumentPickerResult]](
+        var selected = Main(
             () -> activity!!.Documents.ShowPickerAsync(FileDialogKind.OpenFile, OpenOptions()))
         Click(FirstDocument)
         var selection = Await(selected)
@@ -81,7 +81,7 @@ public sealed class DocumentChecks : Instrumentation {
             Require(edit.PutString(UriKey, uri.AbsoluteUri)!!.Commit(), "The persisted URI was not saved")
         }
 
-        selected = Main[Task[DocumentPickerResult]](
+        selected = Main(
             () -> activity!!.Documents.ShowPickerAsync(FileDialogKind.OpenFile, OpenOptions(true)))
         Click(FirstDocument, true)
         Click("image.png")
@@ -91,7 +91,7 @@ public sealed class DocumentChecks : Instrumentation {
             "Multiple URI selection failed: " + selection.Error)
         Require(selection.Uris.All(value -> value.Scheme == "content"), "A selected document became a path")
 
-        selected = Main[Task[DocumentPickerResult]](
+        selected = Main(
             () -> activity!!.Documents.ShowPickerAsync(FileDialogKind.OpenFile, OpenOptions()))
         Click("stream.bin")
         selection = Await(selected)
@@ -123,7 +123,7 @@ public sealed class DocumentChecks : Instrumentation {
         let defaults = OpenOptions(access: DocumentAccess.Read | DocumentAccess.Write)
         let save = DocumentPickerOptions{InitialUri: defaults.InitialUri, Access: defaults.Access,
             MimeTypes: []string{"text/plain"}, SuggestedName: "result-" + Guid.NewGuid().ToString("N") + ".txt"}
-        selected = Main[Task[DocumentPickerResult]](
+        selected = Main(
             () -> activity!!.Documents.ShowPickerAsync(FileDialogKind.SaveFile, save))
         Click("Save")
         selection = Await(selected)
@@ -138,7 +138,7 @@ public sealed class DocumentChecks : Instrumentation {
         CheckTreeSelection()
 
         using let cancellation = CancellationTokenSource()
-        selected = Main[Task[DocumentPickerResult]](() -> activity!!.Documents.ShowPickerAsync(
+        selected = Main(() -> activity!!.Documents.ShowPickerAsync(
             FileDialogKind.OpenFile, OpenOptions(), cancellation.Token))
         Wait(() -> Exists(FirstDocument), "Cancellable picker did not open")
         cancellation.Cancel()
@@ -146,7 +146,7 @@ public sealed class DocumentChecks : Instrumentation {
         Wait(() -> Main(() -> activity!!.Window!!.DecorView.HasWindowFocus),
             "Cancelled picker did not return focus")
 
-        selected = Main[Task[DocumentPickerResult]](
+        selected = Main(
             () -> activity!!.Documents.ShowPickerAsync(FileDialogKind.OpenFile, OpenOptions()))
         Wait(() -> Exists(FirstDocument), "Recreation picker did not open")
         let monitor = AddMonitor(activity!!.Class.Name, nil, false)
@@ -167,7 +167,7 @@ public sealed class DocumentChecks : Instrumentation {
     }
 
     private func CheckTreeSelection() {
-        let selected = Main[Task[DocumentPickerResult]](() -> activity!!.Documents.ShowPickerAsync(
+        let selected = Main(() -> activity!!.Documents.ShowPickerAsync(
             FileDialogKind.Folder, OpenOptions(access: DocumentAccess.Read | DocumentAccess.Write)))
         Click("Use this folder")
         Click("Allow")

@@ -679,11 +679,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
                 EndTextInput()
             }
         }
-        var value FocusedEditorSnapshot
-        if editor != nil && {
-            value = editor!!
-            true
-        } {
+        if let value = editor {
             inputMethod.UpdateSelection(
                 this,
                 value.SelectionStart,
@@ -729,11 +725,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
         pendingEditor = nil
         editorPending = false
         OnEditorChanged(editor)
-        var value FocusedEditorSnapshot
-        if editor != nil && {
-            value = editor!!
-            true
-        } {
+        if let value = editor {
             SetImeArea(
                 int32(value.CaretArea.X),
                 int32(value.CaretArea.Y),
@@ -751,12 +743,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
 
     override prop AutofillValue AutofillValue? {
         get {
-            let __spill0 = Window.Focus.Editor
-            var editor FocusedEditorSnapshot
-            return if __spill0 != nil && {
-                editor = __spill0!!
-                true
-            } {
+            return if let editor = Window.Focus.Editor {
                 AutofillValue.ForText(editor.Text)
             } else {
                 default(AutofillValue?)
@@ -852,11 +839,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
         }
 
         private func EditorConfiguration(editor FocusedEditorSnapshot?) int32 {
-            var value FocusedEditorSnapshot
-            return if editor != nil && {
-                value = editor!!
-                true
-            } {
+            return if let value = editor {
                 (
                     if value.IsPassword {
                         1

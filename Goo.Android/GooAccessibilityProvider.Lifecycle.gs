@@ -192,13 +192,9 @@ ViewTreeObserver
             SetHover(AccessibilityNodeProvider.HostViewId)
         } else if (e.ActionMasked is MotionEventActions.HoverEnter or MotionEventActions.HoverMove) {
             let scale = PixelScale
-            let hit = view.Window.AccessibilityHitTest(e.GetX() / scale.X, e.GetY() / scale.Y)
-            var semantic AccessibilityId
             SetHover(
-                if hit != nil && {
-                    semantic = hit!!
-                    true
-                } && ids.TryGetValue(semantic.Value, out var id) {
+                if let semantic = view.Window.AccessibilityHitTest(e.GetX() / scale.X, e.GetY() / scale.Y) &&
+                    ids.TryGetValue(semantic.Value, out var id) {
                     id
                 } else {
                     AccessibilityNodeProvider.HostViewId
@@ -261,12 +257,7 @@ ViewTreeObserver
     private func CanReveal(record NodeRecord) bool {
         var record = record
         while record.Parent != AccessibilityNodeProvider.HostViewId && nodes.TryGetValue(record.Parent, out record) {
-            let __spill4 = record.Node.ScrollInfo
-            var scroll AccessibilityScrollInfo
-            if __spill4 != nil && {
-                scroll = __spill4!!
-                true
-            } && (scroll.MaximumX > float64(0.0) || scroll.MaximumY > float64(0.0)) {
+            if let scroll = record.Node.ScrollInfo && (scroll.MaximumX > float64(0.0) || scroll.MaximumY > float64(0.0)) {
                 return true
             }
         }

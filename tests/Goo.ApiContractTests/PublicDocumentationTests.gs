@@ -2246,7 +2246,7 @@ class PublicDocumentationTests {
 
         private func ExpectedDocumentationIds() IEnumerable[string] {
             let types = ApiTypes().ToArray()
-            let typeIds = types.Where((type Type) -> type != typeof(Window)).Select((type Type) -> "T:${type.FullName}")
+            let typeIds = types.Select((type Type) -> "T:${type.FullName}")
             let propertyIds = types.Where((type Type) -> !SynthesizedPrimaryDataTypes.Contains(type)).SelectMany(
                 (type Type) -> type.GetProperties(PublicDeclared).Select(
                     (property PropertyInfo) -> "P:${type.FullName}.${property.Name}"

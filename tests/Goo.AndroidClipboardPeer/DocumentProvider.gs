@@ -13,7 +13,7 @@ import Doc = Android.Provider.DocumentsContract.Document
 import Root = Android.Provider.DocumentsContract.Root
 
 @ContentProvider([]string{"org.goo.clipboardpeer.documents"}, Name: "org.goo.clipboardpeer.Documents", Exported: true,
-    GrantUriPermissions: true, Permission: "android.permission.MANAGE_DOCUMENTS")
+    GrantUriPermissions: true, Permission: Android.Manifest.Permission.ManageDocuments)
 @IntentFilterAttribute([]string{"android.content.action.DOCUMENTS_PROVIDER"})
 internal sealed class DocumentProvider : DocumentsProvider {
     private var directory string = ""

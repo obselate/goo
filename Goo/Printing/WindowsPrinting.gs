@@ -165,7 +165,8 @@ internal unsafe shared class WindowsPrinting {
         }
         try {
             cancellation.ThrowIfCancellationRequested()
-            let result = PrintDlgExW(&dialog)
+            // https://github.com/DavidObando/gsharp/issues/6086
+            let result = PrintDlgExW(ref dialog)
             if cancellation.IsCancellationRequested || result >= 0 && dialog.ResultAction != PrintAction {
                 return PrintResult(PrintStatus.Cancelled)
             }
@@ -192,7 +193,8 @@ internal unsafe shared class WindowsPrinting {
                     default(string?)
                 }
             }
-            let job = StartDocW(dialog.Dc, &info)
+            // https://github.com/DavidObando/gsharp/issues/6086
+            let job = StartDocW(dialog.Dc, ref info)
             if job <= 0 {
                 return if cancellation.IsCancellationRequested {
                     PrintResult(PrintStatus.Cancelled)
@@ -320,7 +322,8 @@ internal unsafe shared class WindowsPrinting {
                     bitmap.Width,
                     -bitmap.Height,
                     data,
-                    &bitmap,
+                    // https://github.com/DavidObando/gsharp/issues/6086
+                    ref bitmap,
                     0,
                     SourceCopy
                 ) > 0

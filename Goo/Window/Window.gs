@@ -154,7 +154,6 @@ internal struct WindowNotifications {
   private event keyPressed Action[Key, KeyModifiers]
   private event inputActivity Action[WindowInputKind]
   private event previewKeyPressed Func[Key, KeyModifiers, bool]
-  private var previewKeyPressedCallbacks ([]Delegate)?
   private event focusChanged Action[bool]
   private event visibilityChanged Action[bool]
   private event occlusionChanged Action[WindowOcclusion]
@@ -174,18 +173,10 @@ internal struct WindowNotifications {
   internal func RemoveInputActivity(callback Action[WindowInputKind]) { inputActivity -= callback }
   internal func RaiseInputActivity(kind WindowInputKind) { inputActivity?.Invoke(kind) }
 
-  internal func AddPreviewKeyPressed(callback Func[Key, KeyModifiers, bool]) {
-    previewKeyPressed += callback
-    previewKeyPressedCallbacks = previewKeyPressed?.GetInvocationList()
-  }
-  internal func RemovePreviewKeyPressed(callback Func[Key, KeyModifiers, bool]) {
-    previewKeyPressed -= callback
-    previewKeyPressedCallbacks = previewKeyPressed?.GetInvocationList()
-  }
+  internal func AddPreviewKeyPressed(callback Func[Key, KeyModifiers, bool]) { previewKeyPressed += callback }
+  internal func RemovePreviewKeyPressed(callback Func[Key, KeyModifiers, bool]) { previewKeyPressed -= callback }
   internal func PreviewKeyPress(key Key, modifiers KeyModifiers) bool {
-    guard let callbacks = previewKeyPressedCallbacks else { return false }
-    for callback in callbacks {
-      let handler = (callback as Func[Key, KeyModifiers, bool])!!
+    for handler in Delegate.EnumerateInvocationList[Func[Key, KeyModifiers, bool]](previewKeyPressed) {
       if handler(key, modifiers) { return true }
     }
     return false
