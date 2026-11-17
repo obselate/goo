@@ -99,13 +99,7 @@ namespace Facebook.Yoga
                     (float)(roundedNodeTop - roundedParentTop));
 
                 double scaledNodeWith = nodeWidth * pointScaleFactor;
-                bool hasFractionalWidth =
-                    !Comparison.InexactEquals(Math.Round(scaledNodeWith), scaledNodeWith);
-
                 double scaledNodeHeight = nodeHeight * pointScaleFactor;
-                bool hasFractionalHeight =
-                    !Comparison.InexactEquals(Math.Round(scaledNodeHeight), scaledNodeHeight);
-
                 double roundedWidth = textRounding
                     ? RoundValueToPixelGridDouble(nodeWidth, pointScaleFactor, true, false)
                     : RoundValueToPixelGridDouble(absoluteNodeRight, pointScaleFactor, false, false) -
@@ -117,12 +111,14 @@ namespace Facebook.Yoga
 
                 node.GetLayout().SetDimension(
                     Dimension.Width,
-                    (float)(roundedWidth == 0.0 && hasFractionalWidth && scaledNodeWith > 0.0
+                    (float)(roundedWidth == 0.0 && scaledNodeWith > 0.0 &&
+                        !Comparison.InexactEquals(Math.Round(scaledNodeWith), scaledNodeWith)
                         ? 1.0 / pointScaleFactor : roundedWidth));
 
                 node.GetLayout().SetDimension(
                     Dimension.Height,
-                    (float)(roundedHeight == 0.0 && hasFractionalHeight && scaledNodeHeight > 0.0
+                    (float)(roundedHeight == 0.0 && scaledNodeHeight > 0.0 &&
+                        !Comparison.InexactEquals(Math.Round(scaledNodeHeight), scaledNodeHeight)
                         ? 1.0 / pointScaleFactor : roundedHeight));
             }
 
