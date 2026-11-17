@@ -5,7 +5,16 @@ on:
     paths:
       - 'Goo.Wasm/**'
       - 'samples/BrowserBox/**'
+      - 'samples/BrowserCounter/**'
+      - 'samples/interop/CSharp/**'
+      - 'samples/interop/VisualBasic/**'
+      - 'templates/Goo.Templates/content/Program.gs'
+      - '.github/scripts/build-text-native-wasm.sh'
       - 'Goo/Shaders/**'
+      - 'Goo/AppHost/Application.gs'
+      - 'Goo/Rendering/Text/**'
+      - 'Goo/Rendering/Vulkan/VulkanText*.gs'
+      - 'tools/Goo.TextNative/**'
       - 'Goo/Platform/EmbeddedWindowHost.gs'
       - 'Goo/Platform/WindowHost.gs'
       - 'Goo/Window/WindowParts/Window.Embedded.gs'
@@ -18,10 +27,10 @@ permissions:
 
 jobs:
   wasm:
-    name: Wasm build and WGSL validation (advisory)
+    name: Wasm counters and WGSL validation (advisory)
     runs-on: ubuntu-24.04
     continue-on-error: true
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
@@ -29,6 +38,8 @@ jobs:
           global-json-file: global.json
       - name: Install browser workload
         run: dotnet workload install wasm-tools --skip-manifest-update
+      - name: Install native build tools
+        run: sudo apt-get update -qq && sudo apt-get install -y meson ninja-build jq
       - name: Install pinned shader compiler and validator
         shell: bash
         run: |
@@ -43,3 +54,9 @@ jobs:
         run: dotnet run --project tools/Goo.ShaderGen -c Release -p:UseSharedCompilation=false -- check-webgpu
       - name: Publish browser Box sample
         run: dotnet publish samples/BrowserBox/BrowserBox.gsproj -c Release -p:UseSharedCompilation=false
+      - name: Publish the unchanged G# starter
+        run: dotnet publish samples/BrowserCounter/BrowserCounter.gsproj -c Release -p:UseSharedCompilation=false
+      - name: Publish the unchanged C# counter
+        run: dotnet publish samples/BrowserCounter/CSharp/CSharp.csproj -c Release -p:UseSharedCompilation=false
+      - name: Publish the unchanged Visual Basic counter
+        run: dotnet publish samples/BrowserCounter/VisualBasic/VisualBasic.vbproj -c Release -p:UseSharedCompilation=false

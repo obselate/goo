@@ -1,2 +1,3 @@
-- Add the experimental Goo.Wasm host and BrowserBox sample for single-threaded browser-wasm. WebGPU renders Goo scene-compiled solid boxes, rounded corners and borders. Mouse clicks update Cell state. Frames stop when idle.
-- Add Slang-generated WGSL validation in a separate advisory workflow. Browser checks do not gate desktop releases. Text, images, full input, IME and browser accessibility are not supported yet.
+- Add the experimental, non-packable Goo.Wasm host with demand-driven WebGPU rendering of scene-compiled boxes, rounded corners, borders and outline text. Text uses app font assets, the shared glyph atlas layout and Slang-generated WGSL. Pointer input updates Cell state without idle frames.
+- Add browser build targets for the unchanged G# starter and documented C# and Visual Basic counters. Build the counters and validate five WGSL shaders in an advisory workflow. Hosted CI has no deterministic RADV browser runner, so browser checks do not gate desktop releases.
+- Images, gradients, effects, retained text transforms, clipping, scrolling, keyboard input, IME and browser accessibility are not supported yet.
