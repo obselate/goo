@@ -1251,10 +1251,17 @@ internal func applyPositionEdge(
   }
 
 internal func applyDisplay(yg Facebook.Yoga.Node, n Node) {
-  let display = switch n.Display {
-    case Display.Flex: YGDisplay.Flex
-    case Display.None: YGDisplay.None
-    case _: throw NotSupportedException("Layout.applyDisplay: unhandled Display " + n.Display.ToString())
+  var display YGDisplay
+  switch n.Display {
+    case Display.Flex {
+      display = YGDisplay.Flex
+    }
+    case Display.None {
+      display = YGDisplay.None
+    }
+    default {
+      throw NotSupportedException("Layout.applyDisplay: unhandled Display " + n.Display.ToString())
+    }
   }
   if YGNodeStyleAPI.YGNodeStyleGetDisplay(yg) != display {
     YGNodeStyleAPI.YGNodeStyleSetDisplay(yg, display)
