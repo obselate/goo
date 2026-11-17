@@ -46,6 +46,14 @@ class PixelEdgeCell : Cell {
       Position: PositionType.Absolute, Left: 100, Top: 95, Width: 90, Height: 20, Layout: PixelEdgeArrangement(),
       Container{Width: 30, Height: 20, BorderWidth: 1, BorderColor: Color.Black},
     },
+    Container{
+      Position: PositionType.Absolute, Left: 10, Top: 95, Width: 32, Height: 20,
+      BackgroundGradient: LinearGradient(2.0e38, Color.Black, Color.White),
+    },
+    Container{
+      Position: PositionType.Absolute, Left: 42, Top: 95, Width: 32, Height: 20,
+      BackgroundGradient: LinearGradient(2.0e38 % 360.0, Color.Black, Color.White),
+    },
   }
 }
 
@@ -120,6 +128,16 @@ func RunPixelEdgeSmoke() {
         + " ui=" + scale.ToString(CultureInfo.InvariantCulture)
       let root = opened.Tree!!
       let rects = StringBuilder()
+      for y in 97 ... 113 {
+        for x in 12 ... 40 {
+          let large = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, float64(x), float64(y))
+          let reduced = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, float64(x + 32), float64(y))
+          for channel in 0 ... 4 {
+            Require(Math.Abs(int32(large[channel]) - int32(reduced[channel])) <= 1,
+              "A large finite gradient angle differs from its reduced angle")
+          }
+        }
+      }
       PixelEdgeRects(root, device, 0, rects)
       Console.WriteLine("pixel-edge-rects " + tag + " framebuffer=" + metrics.FramebufferWidth.ToString()
         + "x" + metrics.FramebufferHeight.ToString() + "\n" + rects.ToString())
