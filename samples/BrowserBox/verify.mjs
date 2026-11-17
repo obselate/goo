@@ -10,7 +10,8 @@ const [bundle, run, output] = process.argv.slice(2).map(value => path.resolve(va
 const counter = process.argv[5];
 const counterWidth = counter === 'gsharp' || counter === 'readme' ? 360 : 640;
 const counterHeight = counter === 'gsharp' || counter === 'readme' ? 220 : 480;
-const clickY = counter === 'gsharp' || counter === 'fsharp' ? 84 : counter === 'readme' ? 26 : 76;
+const clickY = counter === 'gsharp' || counter === 'fsharp' ? 84
+    : counter === 'readme' ? 26 : counter === 'visualbasic' ? 114 : 76;
 fs.mkdirSync(run, { recursive: true });
 fs.mkdirSync(output, { recursive: true });
 for (const name of ['cache', 'config', 'data']) fs.mkdirSync(path.join(run, name), { recursive: true });
