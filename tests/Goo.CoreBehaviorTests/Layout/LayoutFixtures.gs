@@ -941,6 +941,61 @@ internal class LayoutFixtures {
     } finally { NodeLifecycle.DisposeTree(root) }
   }
 
+  func ContentClipsPreservePaddingAndSnapBorderedEdges() bool {
+    for mode in 0 ... 3 {
+      for padding in []float64{0, 4} {
+        let root = Reconciler{Res: Resolver{}}.Mount(Container{Width: 400, Height: 100,
+          Container{Position: PositionType.Absolute, Left: 0.5, Top: 0.5, BorderWidth: 1, Padding: padding,
+            OverflowX: mode == 2 ? Overflow.Hidden : Overflow.Visible,
+            OverflowY: mode == 0 ? Overflow.Visible : Overflow.Hidden,
+            FlexDirection: FlexDirection.Row,
+            Container{Overflow: Overflow.Visible, FlexDirection: FlexDirection.Row,
+              Text{Content: "gjpqy ÁÉ", FontSize: 12, LineHeight: 1.2, TextWrap: TextWrap.NoWrap}}}})
+        try {
+          let layout = Layout()
+          layout.SetPixelDensity(1.25F)
+          layout.Calculate(root, 400.0F, 100.0F)
+          let parent = root.Children[0]
+          if mode == 2 && padding == 0 {
+            YGNodeStyleAPI.YGNodeStyleSetBorder(parent.Yoga!!, YGEdge.All, 1.0F)
+            YGNodeAPI.YGNodeCalculateLayout(root.Yoga!!, 400.0F, 100.0F, YGDirection.LTR)
+            layout.readRect(root, 0.0F, 0.0F)
+          }
+          let text = parent.Children[0].Children[0]
+          let yoga = parent.Yoga!!.Layout
+          var grew = false
+          for axis in 0 ... 2 {
+            let horizontal = axis == 0
+            let clips = horizontal ? mode == 2 : mode != 0
+            let start = horizontal ? parent.Rect.X : parent.Rect.Y
+            let end = start + (horizontal ? parent.Rect.W : parent.Rect.H)
+            let rawStart = horizontal ? yoga.RawLeft : yoga.RawTop
+            let rawSize = yoga.RawDimension(horizontal ? Dimension.Width : Dimension.Height)
+            let normalStart = PixelGrid.RoundValueToPixelGrid(float64(rawStart), 1.25, false, false)
+            let normalEnd = PixelGrid.RoundValueToPixelGrid(float64(rawStart) + float64(rawSize), 1.25, false, false)
+            if !clips || padding > 0 {
+              if MathF.Abs(start - normalStart) > 0.0001F || MathF.Abs(end - normalEnd) > 0.0001F {
+                throw InvalidOperationException("Unneeded clip growth: mode=${mode}, padding=${padding}, axis=${axis}")
+              }
+            } else {
+              let childStart = horizontal ? text.Rect.X : text.Rect.Y
+              let childEnd = childStart + (horizontal ? text.Rect.W : text.Rect.H)
+              if MathF.Abs(start * 1.25F - MathF.Round(start * 1.25F)) > 0.0001F
+                || MathF.Abs(end * 1.25F - MathF.Round(end * 1.25F)) > 0.0001F
+                || childStart < start + yoga.Border(horizontal ? PhysicalEdge.Left : PhysicalEdge.Top) - 0.0001F
+                || childEnd > end - yoga.Border(horizontal ? PhysicalEdge.Right : PhysicalEdge.Bottom) + 0.0001F {
+                throw InvalidOperationException("Bordered clip containment: mode=${mode}, axis=${axis}, start=${start}, end=${end}")
+              }
+              grew = grew || MathF.Abs(start - normalStart) > 0.0001F || MathF.Abs(end - normalEnd) > 0.0001F
+            }
+          }
+          if mode == 2 && padding == 0 && !grew { return false }
+        } finally { NodeLifecycle.DisposeTree(root) }
+      }
+    }
+    return true
+  }
+
   func NestedBaselinesIgnorePixelSnappedPositions() bool {
     let pair = (size float64) -> Container{
       Width: 100, FlexDirection: FlexDirection.Row, AlignItems: AlignItems.Baseline,

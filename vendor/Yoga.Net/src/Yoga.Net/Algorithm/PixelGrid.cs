@@ -62,7 +62,17 @@ namespace Facebook.Yoga
             double absoluteLeft,
             double absoluteTop)
         {
-            var pointScaleFactor = (double)node.GetConfig()!.GetPointScaleFactor();
+            double scale = node.GetConfig()!.GetPointScaleFactor();
+            bool parentText = node.GetOwner()?.GetNodeType() == NodeType.Text;
+            RoundLayoutResultsToPixelGrid(node, absoluteLeft, absoluteTop, scale,
+                (float)(scale == 0 ? absoluteLeft : RoundValueToPixelGridDouble(absoluteLeft, scale, false, parentText)),
+                (float)(scale == 0 ? absoluteTop : RoundValueToPixelGridDouble(absoluteTop, scale, false, parentText)));
+        }
+
+        private static void RoundLayoutResultsToPixelGrid(
+            Node node, double absoluteLeft, double absoluteTop, double pointScaleFactor,
+            float snappedParentLeft, float snappedParentTop)
+        {
 
             var layout = node.GetLayout();
             double nodeLeft = layout.RawLeft;
@@ -116,63 +126,105 @@ namespace Facebook.Yoga
                         ? 1.0 / pointScaleFactor : roundedHeight));
             }
 
+            float snappedNodeLeft = snappedParentLeft + layout.Position(PhysicalEdge.Left);
+            float snappedNodeTop = snappedParentTop + layout.Position(PhysicalEdge.Top);
             var childCount = node.GetChildCount();
             for (nuint index = 0; index < childCount; index++)
             {
                 var child = node.GetChild(index)!;
-                RoundLayoutResultsToPixelGrid(child, absoluteNodeLeft, absoluteNodeTop);
+                RoundLayoutResultsToPixelGrid(child, absoluteNodeLeft, absoluteNodeTop,
+                    child.GetConfig()!.GetPointScaleFactor(), snappedNodeLeft, snappedNodeTop);
             }
 
             if (pointScaleFactor == 0.0 || childCount == 0 || layout.ContentSizing == ContentSizing.None ||
                 node.Style.Overflow == Overflow.Scroll)
                 return;
+            var contentAxes = layout.ContentSizing & ClippingAxes(node);
+            if (contentAxes == ContentSizing.None)
+                return;
 
-            float left = 0, top = 0;
-            float right = layout.Dimension(Dimension.Width);
-            float bottom = layout.Dimension(Dimension.Height);
-            bool contentWidth = (layout.ContentSizing & ContentSizing.Width) != 0;
-            bool contentHeight = (layout.ContentSizing & ContentSizing.Height) != 0;
-            float leadingX = contentWidth ? RoundValueToPixelGrid(
-                layout.Padding(PhysicalEdge.Left) + layout.Border(PhysicalEdge.Left), pointScaleFactor, true, false) : 0;
-            float trailingX = contentWidth ? RoundValueToPixelGrid(
-                layout.Padding(PhysicalEdge.Right) + layout.Border(PhysicalEdge.Right), pointScaleFactor, true, false) : 0;
-            float leadingY = contentHeight ? RoundValueToPixelGrid(
-                layout.Padding(PhysicalEdge.Top) + layout.Border(PhysicalEdge.Top), pointScaleFactor, true, false) : 0;
-            float trailingY = contentHeight ? RoundValueToPixelGrid(
-                layout.Padding(PhysicalEdge.Bottom) + layout.Border(PhysicalEdge.Bottom), pointScaleFactor, true, false) : 0;
+            double left = layout.Border(PhysicalEdge.Left);
+            double top = layout.Border(PhysicalEdge.Top);
+            double right = (double)layout.Dimension(Dimension.Width) - layout.Border(PhysicalEdge.Right);
+            double bottom = (double)layout.Dimension(Dimension.Height) - layout.Border(PhysicalEdge.Bottom);
+            ExpandContentBounds(node, contentAxes, 0, 0, ref left, ref top, ref right, ref bottom);
+            left = Math.Min(0, left - layout.Border(PhysicalEdge.Left));
+            top = Math.Min(0, top - layout.Border(PhysicalEdge.Top));
+            right = Math.Max(layout.Dimension(Dimension.Width), right + layout.Border(PhysicalEdge.Right));
+            bottom = Math.Max(layout.Dimension(Dimension.Height), bottom + layout.Border(PhysicalEdge.Bottom));
+            if (left < 0 || right > layout.Dimension(Dimension.Width))
+            {
+                double origin = RoundValueToPixelGridDouble(
+                    absoluteNodeLeft, pointScaleFactor, false, node.GetNodeType() == NodeType.Text);
+                if (left < 0)
+                    left = RoundValueToPixelGridDouble(origin + left, pointScaleFactor, false, true) - origin;
+                if (right > layout.Dimension(Dimension.Width))
+                    right = RoundValueToPixelGridDouble(origin + right, pointScaleFactor, true, false) - origin;
+            }
+            if (top < 0 || bottom > layout.Dimension(Dimension.Height))
+            {
+                double origin = RoundValueToPixelGridDouble(
+                    absoluteNodeTop, pointScaleFactor, false, node.GetNodeType() == NodeType.Text);
+                if (top < 0)
+                    top = RoundValueToPixelGridDouble(origin + top, pointScaleFactor, false, true) - origin;
+                if (bottom > layout.Dimension(Dimension.Height))
+                    bottom = RoundValueToPixelGridDouble(origin + bottom, pointScaleFactor, true, false) - origin;
+            }
+            layout.SetDimension(Dimension.Width, (float)(right - left));
+            layout.SetDimension(Dimension.Height, (float)(bottom - top));
+            if (left == 0 && top == 0)
+                return;
+
+            layout.SetRoundedPosition(
+                left == 0 ? layout.Position(PhysicalEdge.Left) : (float)(RoundValueToPixelGridDouble(
+                    absoluteNodeLeft, pointScaleFactor, false, node.GetNodeType() == NodeType.Text) + left - snappedParentLeft),
+                top == 0 ? layout.Position(PhysicalEdge.Top) : (float)(RoundValueToPixelGridDouble(
+                    absoluteNodeTop, pointScaleFactor, false, node.GetNodeType() == NodeType.Text) + top - snappedParentTop));
+            float shiftedNodeLeft = snappedParentLeft + layout.Position(PhysicalEdge.Left);
+            float shiftedNodeTop = snappedParentTop + layout.Position(PhysicalEdge.Top);
+            var children = new LayoutableChildren<Node>.Iterator(node);
+            while (children.MoveNext())
+            {
+                var childLayout = children.Current.Layout;
+                childLayout.SetRoundedPosition(
+                    left == 0 ? childLayout.Position(PhysicalEdge.Left) :
+                        (snappedNodeLeft + childLayout.Position(PhysicalEdge.Left)) - shiftedNodeLeft,
+                    top == 0 ? childLayout.Position(PhysicalEdge.Top) :
+                        (snappedNodeTop + childLayout.Position(PhysicalEdge.Top)) - shiftedNodeTop);
+            }
+        }
+
+        private static ContentSizing ClippingAxes(Node node) =>
+            node.ContentClipAxes ?? (node.Style.Overflow == Overflow.Visible
+                ? ContentSizing.None : ContentSizing.Width | ContentSizing.Height);
+
+        private static void ExpandContentBounds(
+            Node node, ContentSizing axes, double offsetX, double offsetY,
+            ref double left, ref double top, ref double right, ref double bottom)
+        {
             var children = new LayoutableChildren<Node>.Iterator(node);
             while (children.MoveNext())
             {
                 var child = children.Current;
                 if (child.Style.Display == Display.None || child.Style.PositionType == PositionType.Absolute)
                     continue;
-                var childLayout = child.Layout;
-                if (contentWidth)
+                var layout = child.Layout;
+                double childLeft = offsetX + layout.Position(PhysicalEdge.Left);
+                double childTop = offsetY + layout.Position(PhysicalEdge.Top);
+                if ((axes & ContentSizing.Width) != 0)
                 {
-                    left = Math.Min(left, childLayout.Position(PhysicalEdge.Left) - leadingX);
-                    right = Math.Max(right, childLayout.Position(PhysicalEdge.Left) +
-                        childLayout.Dimension(Dimension.Width) + trailingX);
+                    left = Math.Min(left, childLeft);
+                    right = Math.Max(right, childLeft + layout.Dimension(Dimension.Width));
                 }
-                if (contentHeight)
+                if ((axes & ContentSizing.Height) != 0)
                 {
-                    top = Math.Min(top, childLayout.Position(PhysicalEdge.Top) - leadingY);
-                    bottom = Math.Max(bottom, childLayout.Position(PhysicalEdge.Top) +
-                        childLayout.Dimension(Dimension.Height) + trailingY);
+                    top = Math.Min(top, childTop);
+                    bottom = Math.Max(bottom, childTop + layout.Dimension(Dimension.Height));
                 }
-            }
-            layout.SetDimension(Dimension.Width, right - left);
-            layout.SetDimension(Dimension.Height, bottom - top);
-            if (left == 0 && top == 0)
-                return;
-
-            layout.SetRoundedPosition(
-                layout.Position(PhysicalEdge.Left) + left, layout.Position(PhysicalEdge.Top) + top);
-            children = new LayoutableChildren<Node>.Iterator(node);
-            while (children.MoveNext())
-            {
-                var childLayout = children.Current.Layout;
-                childLayout.SetRoundedPosition(
-                    childLayout.Position(PhysicalEdge.Left) - left, childLayout.Position(PhysicalEdge.Top) - top);
+                var visibleAxes = axes & ~ClippingAxes(child);
+                if (visibleAxes != ContentSizing.None && child.GetChildCount() != 0)
+                    ExpandContentBounds(child, visibleAxes, childLeft, childTop,
+                        ref left, ref top, ref right, ref bottom);
             }
         }
     }
