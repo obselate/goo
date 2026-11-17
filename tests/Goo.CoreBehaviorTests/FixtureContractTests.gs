@@ -645,6 +645,7 @@ class FixtureContractTests {
             yield Contract[TextEditorInputFixtures]("ContentHeightKeepsMeasuredParagraphsAfterEviction")
             yield Contract[TextEditorInputFixtures]("MeasuringLinesAboveViewportKeepsVisibleLinesInPlace")
             yield Contract[TextPresentationLayerFixtures]("InlineTextSlotsShareProseBaselineAfterWrapping")
+            yield Contract[TextPresentationLayerFixtures]("SelectionMergesTouchingRunsAndPreservesBidiGaps")
             yield Contract[TextPresentationLayerFixtures]("StyledLinesUseFontSizeLineHeight")
             yield Contract[TextPresentationLayerFixtures]("EditBelowViewportRefreshesLastLineOverflow")
             yield Contract[TextPresentationLayerFixtures]("BulkStyleReplacementIsAtomicAndPreservesProjections")
