@@ -657,13 +657,9 @@ internal partial class Layout {
       let localY = YGNodeLayoutAPI.YGNodeLayoutGetTop(yg) + placementY
       let absX = originX + localX
       let absY = originY + localY
-      let visual = LayoutTransitions.Resolve(n, absX, absY, localX, localY)
-      n.Rect = Rect{
-        X: visual.X,
-        Y: visual.Y,
-        W: YGNodeLayoutAPI.YGNodeLayoutGetWidth(yg),
-        H: YGNodeLayoutAPI.YGNodeLayoutGetHeight(yg),
-      }
+      let visual = LayoutTransitions.Resolve(n, absX, absY, localX, localY,
+        YGNodeLayoutAPI.YGNodeLayoutGetWidth(yg), YGNodeLayoutAPI.YGNodeLayoutGetHeight(yg))
+      n.Rect = visual
       let hiddenSubtree = hidden || n.Display == Display.None
       let editor = n.Kind == NodeKind.Editor
       let custom = CustomLayouts.State(n)
@@ -682,10 +678,12 @@ internal partial class Layout {
         return
       }
       if n.Kind == NodeKind.Image {
-        for child in n.Children {
+        for i in 0 ... n.Children.Count {
+          let child = n.Children[i]
           if child.IsPortal { continue }
           if let yoga = child.Yoga {
-            YGNodeAPI.YGNodeCalculateLayout(yoga, n.Rect.W, n.Rect.H, yogaDirection(n.Direction))
+            YGNodeAPI.YGNodeCalculateLayout(yoga, YGNodeLayoutAPI.YGNodeLayoutGetWidth(yg),
+              YGNodeLayoutAPI.YGNodeLayoutGetHeight(yg), yogaDirection(n.Direction))
             readRect(child, visual.X, visual.Y, hidden: hiddenSubtree)
           }
         }
@@ -710,7 +708,8 @@ internal partial class Layout {
         }
       }
       n.HitContained = !(n.Kind == NodeKind.Shape && n.ShapeVectorEffect == VectorEffect.NonScalingStroke)
-      for child in n.Children {
+      for i in 0 ... n.Children.Count {
+        let child = n.Children[i]
         if child.IsPortal { continue }
         if !child.HitContained || child.HasVisualTransform
           || n.OverflowX == Overflow.Visible && (child.Rect.X < n.Rect.X

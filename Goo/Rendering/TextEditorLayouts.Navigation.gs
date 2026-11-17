@@ -56,7 +56,12 @@ internal partial class TextEditorLayouts {
       return TextRange{ Start: start, Length: end - start }
     }
 
-    internal func For(n Node, width float32, height float32) TextEditorVisualLayout {
+    internal func For(n Node, requestedWidth float32, requestedHeight float32,
+      measuring bool = false) TextEditorVisualLayout {
+      let width = !measuring && n.RetainedLayoutTransition != nil
+        ? BoxGeometry.ContentWidth(n, true) : requestedWidth
+      let height = !measuring && n.RetainedLayoutTransition != nil
+        ? BoxGeometry.ContentHeight(n, true) : requestedHeight
       guard let state = n.EditorState else {
         throw InvalidOperationException("Text editor node has no render state")
       }
@@ -127,7 +132,7 @@ internal partial class TextEditorLayouts {
         let n = nodeFromYoga(yoga)
         let constraint = widthMode == MeasureMode.Undefined ? -1.0F : width
         let heightConstraint = if heightMode == MeasureMode.Exactly { height } else { -1.0F }
-        let layout = For(n, constraint, heightConstraint)
+        let layout = For(n, constraint, heightConstraint, true)
         return TextLayouts.clampMeasuredSize(layout.Width, layout.Height, width, widthMode, height, heightMode)
       }
 

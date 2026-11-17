@@ -47,7 +47,7 @@ internal partial class TextEditorLayouts {
           bottomInset = glyphOverflow(last.Lines[last.Lines.Count - 1])
         }
         let bounded = height >= 0.0F
-        let heights TextEditorLineHeights? = bounded && width == BoxGeometry.ContentWidth(n)
+        let heights TextEditorLineHeights? = bounded && width == BoxGeometry.ContentWidth(n, true)
           ? state.TrackHeights(snapshot, paragraphWidth, fingerprint, lineHeight, metrics.Ascent, metrics.Descent) : nil
         var firstLine int32 = 0
         var lastLine = snapshot.LineCount

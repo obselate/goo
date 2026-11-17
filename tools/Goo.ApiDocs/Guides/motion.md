@@ -55,12 +55,25 @@ for this example. Set the window's root to `AnimatedPanel()`.
 | Unbound animations | Infinite `AnimateValue` without paint bindings requests no frames. Other unbound animations use their owning Cell's mounted element. |
 | Finite simulations | `IsInfinite` defaults to false. Finite and unmarked custom simulations keep ticking and deliver completion. |
 
-## Layout position simulations
+## Layout bounds simulations
 
-`LayoutTransition(durationMs, easing)` uses a timed transition. Set its optional
-`SimulationFactory` to supply a Simulation for each position axis.
+`LayoutTransition(durationMs, easing)` interpolates computed x, y, width and height.
+Set `SimulationFactory` to supply a Simulation for each changed axis.
 The factory receives the starting offset, target offset and incoming velocity.
-Interrupted transitions retain visual position and pass sampled velocity to the replacement.
+Interrupted transitions retain visual bounds and pass sampled velocity to the replacement.
+
+| Values | Owner |
+| --- | --- |
+| Computed position and size, including wrapping and intrinsic sizes | `LayoutTransition` |
+| Declared lengths, spacing, colors, border radii and widths, opacity, shadows, typography and transforms | Style `TransitionProperties` |
+
+The box paints at its interpolated size. Borders and radii are not stretched.
+Descendants keep their final layout sizes and offsets, and follow the interpolated origin.
+Text is not scaled or reflowed on each motion frame. A clipping box clips its descendants
+at its interpolated bounds. Hit testing, metrics and accessibility use the same geometry.
+Style transitions compose with these bounds. Use style transitions to animate declared
+layout values through intermediate layouts, or `LayoutTransition` to glide computed reflow.
+Scrolling and ancestor-only movement do not start a transition.
 
 Spring equations belong to Goo.Animations or an app simulation. Core owns layout,
 sampling and invalidation. The simulation must settle at the supplied target.

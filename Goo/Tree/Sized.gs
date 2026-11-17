@@ -170,7 +170,8 @@ internal partial class Layout {
     for node in sizedNodes {
       guard let state = node.RetainedSizedState else { continue }
       if node.Retired { continue }
-      if state.Dirty || state.Width != node.Rect.W || state.Height != node.Rect.H || state.Scale != scale {
+      if state.Dirty || state.Width != BoxGeometry.LayoutWidth(node)
+        || state.Height != BoxGeometry.LayoutHeight(node) || state.Scale != scale {
         return true
       }
       for child in node.Children {
@@ -189,9 +190,11 @@ internal partial class Layout {
       index++
       if node.Retired { continue }
       guard let state = node.RetainedSizedState else { continue }
-      let resized = state.Width != node.Rect.W || state.Height != node.Rect.H || state.Scale != scale
+      let width = BoxGeometry.LayoutWidth(node)
+      let height = BoxGeometry.LayoutHeight(node)
+      let resized = state.Width != width || state.Height != height || state.Scale != scale
       if state.Dirty || resized {
-        rec.BuildSized(node, LayoutSize(float64(node.Rect.W), float64(node.Rect.H)))
+        rec.BuildSized(node, LayoutSize(float64(width), float64(height)))
         rec.FlushStyles()
         for child in node.Children {
           if !child.IsPortal { syncNode(child, true) }
@@ -199,8 +202,8 @@ internal partial class Layout {
         }
         lengthRoot = nil
         resolveLengths(root, CustomLayouts.ViewportWidth, CustomLayouts.ViewportHeight)
-        state.Width = node.Rect.W
-        state.Height = node.Rect.H
+        state.Width = width
+        state.Height = height
         state.Scale = scale
       }
       arrangeSized(node)
@@ -214,13 +217,14 @@ internal partial class Layout {
 
   private func arrangeSized(node Node, hidden bool = false) {
     guard let yoga = node.Yoga else { return }
-    let width = BoxGeometry.ContentWidth(node)
-    let height = BoxGeometry.ContentHeight(node)
+    let width = BoxGeometry.ContentWidth(node, true)
+    let height = BoxGeometry.ContentHeight(node, true)
     let x = node.Rect.X + CustomLayouts.Inset(yoga, YGEdge.Left)
     let y = node.Rect.Y + CustomLayouts.Inset(yoga, YGEdge.Top)
     let state = node.RetainedSizedState!!
     let resized = state.ContentWidth != width || state.ContentHeight != height
-    for child in node.Children {
+    for i in 0 ... node.Children.Count {
+      let child = node.Children[i]
       if child.IsPortal { continue }
       guard let childYoga = child.Yoga else { continue }
       if resized || YGNodeAPI.YGNodeIsDirty(childYoga) {

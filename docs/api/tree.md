@@ -194,9 +194,9 @@ Goo calls `NeedsRealize` after each layout and scroll. A true result runs `Reali
 Set `output.ScrollOffset` to move the scroll position together with the items, for example to keep an anchor row in place when rows above it change size. A scroll in progress keeps its remaining distance. Own tail-following state in the list or log view. `ElementHandle.MetricsChanged` reports scroll range changes, and `JumpTo` can move to the new end before paint.
 Set `output.AnchorKey` to the retained visible row key to keep its first surviving content node at the same vertical position after layout. No descendant adjustment is applied at vertical scroll offset zero. Implement `BoundsOf` with measured or estimated item bounds for aligned scrolling.
 
-## Animate computed position changes
+## Animate computed bounds changes
 
-Set `Blob.LayoutTransition` to a `LayoutTransition(durationMs, easing)` value to glide a mounted element when its own computed layout slot changes. It is separate from style `TransitionProperties`. The visual rectangle used by painting, hit testing, metrics, descendants, and accessibility moves together. Ordinary scrolling and ancestor-only movement do not start another glide.
+Set `Blob.LayoutTransition` to a `LayoutTransition(durationMs, easing)` value to glide a mounted element when its own computed layout position or size changes. Style `TransitionProperties` owns declared style values. The visual rectangle used by painting, hit testing, metrics and accessibility moves and resizes together. Descendants retain their final layout size and offset, without scaling, and follow the interpolated origin. A clipping element clips to its interpolated bounds. Ordinary scrolling and ancestor-only movement do not start another glide.
 
 ## Owned image sources
 
@@ -381,7 +381,7 @@ Gets explicit key bindings. Focused-element bindings override built-in text edit
 
 ### `LayoutTransition`
 
-Gets the opt-in transition for computed layout position changes.
+Gets the opt-in transition for computed layout position and size changes.
 
 ### `OnBlur`
 

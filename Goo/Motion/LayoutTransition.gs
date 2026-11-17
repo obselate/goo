@@ -3,9 +3,9 @@ package Goo
 import System
 import System.Runtime.CompilerServices
 
-/// Describes an opt-in position transition using DurationMs and Easing, or a custom SimulationFactory.
+/// Describes an opt-in computed-bounds transition using DurationMs and Easing, or a custom SimulationFactory.
 public data struct LayoutTransition(DurationMs float64, Easing Easing) {
-  /// Creates an optional simulation for each position axis. Omission uses DurationMs and Easing.
+  /// Creates an optional simulation for each changed position or size axis. Omission uses DurationMs and Easing.
   /// The simulation starts at from with the supplied velocity and settles at to.
   public prop SimulationFactory ((float64, float64, float64) -> Simulation)? { get; init; }
 }
@@ -35,14 +35,18 @@ internal sealed class LayoutTransitionState : MotionParticle {
   private var invalidated Action[ReconcileEffects]?
   private var lastLocalX float32
   private var lastLocalY float32
-  private var lastBaseX float32
-  private var lastBaseY float32
+  private var lastWidth float32
+  private var lastHeight float32
   private var offsetX float32
   private var offsetY float32
+  private var offsetWidth float32
+  private var offsetHeight float32
   private var simulationX Simulation?
   private var simulationY Simulation?
+  private var simulationWidth Simulation?
+  private var simulationHeight Simulation?
   private var startTime float64
-  private var hasPosition bool
+  private var hasBounds bool
   private var disposed bool
   private var pump MotionPump?
   private var value LayoutTransition
@@ -61,69 +65,57 @@ internal sealed class LayoutTransitionState : MotionParticle {
         if pump != owner { owner.Deregister(this) }
       }
       if this.pump != pump {
-        simulationX = nil
-        simulationY = nil
-        offsetX = 0.0F
-        offsetY = 0.0F
+        snap()
       }
       this.pump = pump
     }
 
   internal func Resolve(baseX float32, baseY float32, localX float32,
-    localY float32) Rect{
-      if !hasPosition {
-        hasPosition = true
-        lastLocalX = localX
-        lastLocalY = localY
-        lastBaseX = baseX
-        lastBaseY = baseY
-        return Rect{ X: baseX, Y: baseY }
+    localY float32, width float32 = 0.0F, height float32 = 0.0F) Rect {
+      if let owner = pump { sample(owner.Now) }
+      if hasBounds && (localX != lastLocalX || localY != lastLocalY
+        || width != lastWidth || height != lastHeight) {
+        bank(lastLocalX + offsetX - localX, lastLocalY + offsetY - localY,
+          lastWidth + offsetWidth - width, lastHeight + offsetHeight - height)
       }
-      if let owner = pump {
-        sample(owner.Now)
-      }
-      if localX != lastLocalX || localY != lastLocalY {
-        let visualX = lastBaseX + offsetX
-        let visualY = lastBaseY + offsetY
-        bank(visualX - baseX, visualY - baseY)
-      }
+      hasBounds = true
       lastLocalX = localX
       lastLocalY = localY
-      lastBaseX = baseX
-      lastBaseY = baseY
-      return Rect{ X: baseX + offsetX, Y: baseY + offsetY }
+      lastWidth = width
+      lastHeight = height
+      return Rect{
+        X: baseX + offsetX, Y: baseY + offsetY,
+        W: MathF.Max(0.0F, width + offsetWidth), H: MathF.Max(0.0F, height + offsetHeight),
+      }
     }
 
-  private func bank(x float32, y float32) {
+  private func bank(x float32, y float32, width float32, height float32) {
     let elapsed = if let owner = pump { Math.Max(0.0, owner.Now - startTime) * Motion.TimeScale } else { 0.0 }
     let velocityX = if let simulation = simulationX { simulation.Velocity(elapsed) } else { 0.0 }
     let velocityY = if let simulation = simulationY { simulation.Velocity(elapsed) } else { 0.0 }
+    let velocityWidth = if let simulation = simulationWidth { simulation.Velocity(elapsed) } else { 0.0 }
+    let velocityHeight = if let simulation = simulationHeight { simulation.Velocity(elapsed) } else { 0.0 }
     guard let pump = pump else {
       snap()
       return
     }
-    if pump.ReducedMotion || Motion.TimeScale <= 0.0 || (value.SimulationFactory == nil && value.DurationMs <= 0.0)
-      || (x == 0.0F && y == 0.0F && velocityX == 0.0 && velocityY == 0.0) {
+    if pump.ReducedMotion || Motion.TimeScale <= 0.0 || (value.SimulationFactory == nil && value.DurationMs <= 0.0) {
       snap()
       pump.Deregister(this)
       return
     }
-    let factory = value.SimulationFactory
-    let nextX = if let create = factory {
-      create(float64(x), 0.0, velocityX)
-    } else {
-      LinearTimed(value.DurationMs / 1000.0, float64(x), 0.0, value.Easing)
-    }
-    let nextY = if let create = factory {
-      create(float64(y), 0.0, velocityY)
-    } else {
-      LinearTimed(value.DurationMs / 1000.0, float64(y), 0.0, value.Easing)
-    }
-    if nextX == nil || nextY == nil {
-      throw InvalidOperationException("LayoutTransition simulation factory returned null")
-    }
+    let nextX = createSimulation(x, velocityX)
+    let nextY = createSimulation(y, velocityY)
+    let nextWidth = createSimulation(width, velocityWidth)
+    let nextHeight = createSimulation(height, velocityHeight)
     simulationX = nextX
     simulationY = nextY
+    simulationWidth = nextWidth
+    simulationHeight = nextHeight
+    offsetX = x
+    offsetY = y
+    offsetWidth = width
+    offsetHeight = height
     startTime = pump.Now
     if sample(startTime) {
       pump.Register(this)
@@ -132,6 +124,16 @@ internal sealed class LayoutTransitionState : MotionParticle {
     }
     invalidated?.Invoke(ReconcileEffects.Rect | ReconcileEffects.Paint
       | ReconcileEffects.Input | ReconcileEffects.Accessibility)
+  }
+
+  private func createSimulation(offset float32, velocity float64) Simulation? {
+    if offset == 0.0F && velocity == 0.0 { return nil }
+    guard let create = value.SimulationFactory else {
+      return LinearTimed(value.DurationMs / 1000.0, float64(offset), 0.0, value.Easing)
+    }
+    let simulation = create(float64(offset), 0.0, velocity)
+    if simulation == nil { throw InvalidOperationException("LayoutTransition simulation factory returned null") }
+    return simulation
   }
 
   internal override func Tick(now float64) bool {
@@ -167,7 +169,23 @@ internal sealed class LayoutTransitionState : MotionParticle {
         offsetY = float32(simulation.Position(elapsed))
       }
     }
-    return simulationX != nil || simulationY != nil
+    if let simulation = simulationWidth {
+      if simulation.Done(elapsed) {
+        offsetWidth = 0.0F
+        simulationWidth = nil
+      } else {
+        offsetWidth = float32(simulation.Position(elapsed))
+      }
+    }
+    if let simulation = simulationHeight {
+      if simulation.Done(elapsed) {
+        offsetHeight = 0.0F
+        simulationHeight = nil
+      } else {
+        offsetHeight = float32(simulation.Position(elapsed))
+      }
+    }
+    return simulationX != nil || simulationY != nil || simulationWidth != nil || simulationHeight != nil
   }
 
   private func snap() {
@@ -175,6 +193,10 @@ internal sealed class LayoutTransitionState : MotionParticle {
     simulationY = nil
     offsetX = 0.0F
     offsetY = 0.0F
+    simulationWidth = nil
+    simulationHeight = nil
+    offsetWidth = 0.0F
+    offsetHeight = 0.0F
   }
 
   internal override func Bind(pump MotionPump) {
@@ -211,11 +233,11 @@ internal class LayoutTransitions {
       }
 
     internal func Resolve(n Node, baseX float32, baseY float32, localX float32,
-      localY float32) Rect{
+      localY float32, width float32, height float32) Rect {
         guard let state = n.RetainedLayoutTransition else {
-          return Rect{ X: baseX, Y: baseY }
+          return Rect{ X: baseX, Y: baseY, W: width, H: height }
         }
-        return state.Resolve(baseX, baseY, localX, localY)
+        return state.Resolve(baseX, baseY, localX, localY, width, height)
       }
 
     internal func Dispose(n Node) {

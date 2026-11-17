@@ -676,6 +676,103 @@ internal class LayoutFixtures {
     return target.Rect.X == 100.0F
   }
 
+  func LayoutTransitionInterpolatesWrappingBounds() bool {
+    let pump = MotionPump()
+    let reconciler = Reconciler{Res: Resolver{}, Pump: pump}
+    let layout = Layout()
+    var root = reconciler.Mount(layoutWrappingScene(false))
+    try {
+      layout.Calculate(root, 300.0F, 260.0F)
+      let card = root.Children[1]
+      let start = card.Rect
+      root = reconciler.Diff(root, layoutWrappingScene(true))
+      layout.MarkStructureDirty()
+      layout.Calculate(root, 300.0F, 260.0F)
+      let label = card.Children[0]
+      let text = TextLayouts.For(label, BoxGeometry.ContentWidth(label))
+      let labelWidth = label.Rect.W
+      let labelHeight = label.Rect.H
+      var previous = start.W
+      for frame in 0 ... 21 {
+        let rect = card.Rect
+        let progress = float32(frame) / 20.0F
+        if rect.X < 10.0F || rect.Y < 10.0F || rect.X + rect.W > 290.001F
+          || rect.Y + rect.H > 250.001F || rect.W < previous
+          || MathF.Abs(rect.W - (140.0F + 120.0F * progress)) > 0.01F
+          || MathF.Abs(rect.H - (50.0F + 50.0F * progress)) > 0.01F {
+          throw InvalidOperationException("Wrapping bounds at frame $frame: ${rect.X},${rect.Y},${rect.W},${rect.H}")
+        }
+        if label.Rect.W != labelWidth || label.Rect.H != labelHeight
+          || label.Rect.X != rect.X + 10.0F || label.Rect.Y != rect.Y + 10.0F
+          || !Object.ReferenceEquals(text, TextLayouts.For(label, BoxGeometry.ContentWidth(label)))
+          || label.HasVisualTransform || card.HasVisualTransform {
+          throw InvalidOperationException("Wrapping text geometry changed at frame $frame")
+        }
+        if hitTopmost(root, rect.X + rect.W * 0.5F, rect.Y + rect.H - 5.0F) != card
+          || hitTopmost(root, rect.X + rect.W + 1.0F, rect.Y + rect.H * 0.5F) == card
+          || hitTopmost(root, rect.X + rect.W + 1.0F, label.Rect.Y + 5.0F) == label {
+          throw InvalidOperationException("Wrapping hit bounds differ at frame $frame")
+        }
+        let radius = BoxGeometry.Radius(card.BorderRadius, card.BorderRadius, rect.W, rect.H)
+        if radius != 20.0F || BoxGeometry.ContainsRounded(card, rect.X + 2.0F, rect.Y + 2.0F)
+          || !BoxGeometry.ContainsRounded(card, rect.X + 6.0F, rect.Y + 6.0F) {
+          throw InvalidOperationException("Wrapping radius differs at frame $frame")
+        }
+        previous = rect.W
+        if frame < 20 {
+          pump.Sweep(0.005)
+          layout.RefreshRects(root)
+        }
+      }
+      if pump.Active || card.Rect.X != 10.0F || card.Rect.Y != 70.0F {
+        throw InvalidOperationException("Wrapping transition did not settle: ${card.Rect.X},${card.Rect.Y}")
+      }
+      root = reconciler.Diff(root, layoutWrappingScene(false))
+      layout.MarkStructureDirty()
+      layout.Calculate(root, 300.0F, 260.0F)
+      pump.Sweep(0.001)
+      layout.RefreshRects(root)
+      let allocated = GC.GetAllocatedBytesForCurrentThread()
+      for frame in 0 ... 50 {
+        pump.Sweep(0.001)
+        layout.RefreshRects(root)
+      }
+      let bytes = GC.GetAllocatedBytesForCurrentThread() - allocated
+      if bytes != 0L { throw InvalidOperationException("Wrapping transition allocated $bytes bytes") }
+      pump.ReducedMotion = true
+      pump.Sweep(0.0)
+      layout.RefreshRects(root)
+      return !pump.Active && card.Rect.X == start.X && card.Rect.Y == start.Y
+        && card.Rect.W == start.W && card.Rect.H == start.H
+    } finally { NodeLifecycle.DisposeTree(root) }
+  }
+
+  func LayoutTransitionBoundsReachMetricsAndAccessibility() bool {
+    var wide = false
+    let handle = ElementHandle()
+    let cell = SizedRootFixture(() -> layoutWrappingScene(wide, handle))
+    let window = Window{Root: cell, Size: LayoutSize(300, 260)}
+    let adapter = AccessibilityTestAdapter()
+    window.AccessibilityAdapter = adapter
+    try {
+      window.UpdateTree()
+      wide = true
+      cell.Rebuild()
+      window.UpdateTree()
+      window.UpdateTree(0.05)
+      let card = window.Tree!!.Children[1]
+      let bounds = handle.BorderBox
+      guard let semantic = adapter.Tree?.Root else { return false }
+      if MathF.Abs(card.Rect.W - 200.0F) > 0.01F
+        || bounds.X != float64(card.Rect.X) || bounds.Y != float64(card.Rect.Y)
+        || bounds.Width != float64(card.Rect.W) || bounds.Height != float64(card.Rect.H)
+        || semantic.Bounds != bounds || semantic.Children[0].Bounds.Width != float64(card.Children[0].Rect.W) {
+        throw InvalidOperationException("Visual width=${card.Rect.W}, metrics=$bounds, accessibility=${semantic.Bounds}")
+      }
+      return true
+    } finally { window.Close() }
+  }
+
   func LayoutTransitionSettlesInsideSized() bool {
     let scene = (columns int32, duration float64) -> Sized(size -> {
       let grid = Container{Width: 680, Height: 680, FlexDirection: FlexDirection.Row,
@@ -752,7 +849,8 @@ internal class LayoutFixtures {
     root = reconciler.Diff(root, layoutSimulationScene(100.0, 120.0, transition))
     layout.MarkStructureDirty()
     layout.Calculate(root, 200.0F, 200.0F)
-    if simulations.Count != 2 || target.Rect.X != 20.0F || target.Rect.Y != 30.0F {
+    if simulations.Count != 4 || target.Rect.X != 20.0F || target.Rect.Y != 30.0F
+      || target.Rect.W != 20.0F || target.Rect.H != 30.0F {
       return false
     }
     pump.Sweep(0.25)
@@ -765,10 +863,13 @@ internal class LayoutFixtures {
     root = reconciler.Diff(root, layoutSimulationScene(150.0, 40.0, transition))
     layout.MarkStructureDirty()
     layout.Calculate(root, 200.0F, 200.0F)
-    if simulations.Count != 4 || MathF.Abs(target.Rect.X - firstX) > 0.001F
+    if simulations.Count != 8 || MathF.Abs(target.Rect.X - firstX) > 0.001F
       || MathF.Abs(target.Rect.Y - firstY) > 0.001F
-      || Math.Abs(simulations[2].InitialVelocity - velocityX) > 0.000001
-      || Math.Abs(simulations[3].InitialVelocity - velocityY) > 0.000001 {
+      || target.Rect.W != target.Rect.X || target.Rect.H != target.Rect.Y
+      || Math.Abs(simulations[4].InitialVelocity - velocityX) > 0.000001
+      || Math.Abs(simulations[5].InitialVelocity - velocityY) > 0.000001
+      || simulations[6].InitialVelocity != simulations[4].InitialVelocity
+      || simulations[7].InitialVelocity != simulations[5].InitialVelocity {
         return false
       }
 
@@ -776,22 +877,26 @@ internal class LayoutFixtures {
     layout.RefreshRects(root)
     let secondX = target.Rect.X
     let secondY = target.Rect.Y
-    let secondVelocityX = simulations[2].Velocity(0.1)
-    let secondVelocityY = simulations[3].Velocity(0.1)
+    let secondVelocityX = simulations[4].Velocity(0.1)
+    let secondVelocityY = simulations[5].Velocity(0.1)
     root = reconciler.Diff(root, layoutSimulationScene(70.0, 80.0, transition))
     layout.MarkStructureDirty()
     layout.Calculate(root, 200.0F, 200.0F)
-    if simulations.Count != 6 || MathF.Abs(target.Rect.X - secondX) > 0.001F
+    if simulations.Count != 12 || MathF.Abs(target.Rect.X - secondX) > 0.001F
       || MathF.Abs(target.Rect.Y - secondY) > 0.001F
-      || Math.Abs(simulations[4].InitialVelocity - secondVelocityX) > 0.000001
-      || Math.Abs(simulations[5].InitialVelocity - secondVelocityY) > 0.000001 {
+      || target.Rect.W != target.Rect.X || target.Rect.H != target.Rect.Y
+      || Math.Abs(simulations[8].InitialVelocity - secondVelocityX) > 0.000001
+      || Math.Abs(simulations[9].InitialVelocity - secondVelocityY) > 0.000001
+      || simulations[10].InitialVelocity != simulations[8].InitialVelocity
+      || simulations[11].InitialVelocity != simulations[9].InitialVelocity {
         return false
       }
 
     pump.ReducedMotion = true
     pump.Sweep(0.01)
     layout.RefreshRects(root)
-    if pump.Active || target.Rect.X != 70.0F || target.Rect.Y != 80.0F { return false }
+    if pump.Active || target.Rect.X != 70.0F || target.Rect.Y != 80.0F
+      || target.Rect.W != 70.0F || target.Rect.H != 80.0F { return false }
     pump.ReducedMotion = false
     root = reconciler.Diff(root, layoutSimulationScene(90.0, 100.0, transition))
     layout.MarkStructureDirty()
@@ -800,6 +905,7 @@ internal class LayoutFixtures {
     LayoutTransitions.Dispose(target)
     layout.RefreshRects(root)
     return !pump.Active && target.Rect.X == 90.0F && target.Rect.Y == 100.0F
+      && target.Rect.W == 90.0F && target.Rect.H == 100.0F
   }
 
   func LongParagraphWrapResolvesScriptsOnce() bool {
@@ -1271,11 +1377,24 @@ internal class LayoutFixtures {
       },
     }
 
+  private func layoutWrappingScene(wide bool, handle ElementHandle? = nil) Container -> Container{
+    Width: 300, Height: 260, Padding: 10, Gap: 10,
+    FlexDirection: FlexDirection.Row, FlexWrap: FlexWrap.Wrap, AlignContent: AlignContent.FlexStart,
+    Container{Key: "first", Width: 130, Height: 50, FlexShrink: 0},
+    Container{
+      Key: "card", Handle: handle, AccessibilityName: "Wrapping card", HitTestSelf: true,
+      Width: wide ? 260 : 140, Height: wide ? 100 : 50, FlexShrink: 0,
+      Padding: 8, BorderWidth: 2, BorderRadius: 20, Overflow: Overflow.Hidden,
+      BackgroundColor: Color.White, LayoutTransition: LayoutTransition(100, Easing.Linear),
+      Text{Content: "Wrapping card", AccessibilityName: "Card label", Height: 24, OnClick: () -> { }},
+    },
+  }
+
   private func layoutSimulationScene(x float64, y float64,
     transition LayoutTransition) Container -> Container() {.Width: 200,.Height: 200,
       Container{
         Key: "target", Position: PositionType.Absolute, Left: x, Top: y,
-        Width: 10, Height: 10, LayoutTransition: transition,
+        Width: x, Height: y, LayoutTransition: transition,
       },
     }
 

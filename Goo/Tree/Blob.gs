@@ -451,7 +451,7 @@ public open class Blob : Style {
     }
   }
   internal prop TransitionSelection StyleMask{ get -> transitionSelection }
-  /// Gets the opt-in transition for computed layout position changes.
+  /// Gets the opt-in transition for computed layout position and size changes.
   public prop LayoutTransition LayoutTransition? {
     get -> LayoutTransitionBlobs.Get(this)
     set {
