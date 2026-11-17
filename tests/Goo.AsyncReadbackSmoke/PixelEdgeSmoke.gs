@@ -46,6 +46,14 @@ class PixelEdgeCell : Cell {
       Position: PositionType.Absolute, Left: 100, Top: 95, Width: 90, Height: 20, Layout: PixelEdgeArrangement(),
       Container{Width: 30, Height: 20, BorderWidth: 1, BorderColor: Color.Black},
     },
+    Container{
+      Position: PositionType.Absolute, Left: 10, Top: 95, Width: 32, Height: 20,
+      Overflow: Overflow.Hidden,
+      Container{
+        Width: 32, Height: 20, BackgroundColor: Color.Rgb(255, 0, 0),
+        OutlineWidth: 2, OutlineOffset: 3, OutlineColor: Color.Rgb(0, 255, 0),
+      },
+    },
   }
 }
 
@@ -127,6 +135,8 @@ func RunPixelEdgeSmoke() {
         let _ = Directory.CreateDirectory(output)
         WriteImage(frame, Path.Combine(output, "pixel-edge-" + Math.Round(device * 100.0).ToString() + ".ppm"))
       }
+      PrimitiveRequirePixelNear(frame.Pixels, frame.Width, metrics, 11.0, 105.0,
+        uint8(255), uint8(0), uint8(0), 1, "clipped_positive_outline")
       let shadow = root.Children[0].Rect
       let shadowRow = PixelEdgeDevice(shadow.Y + shadow.H / 2.0F, device)
       let shadowLeft = PixelEdgeDevice(shadow.X, device)
