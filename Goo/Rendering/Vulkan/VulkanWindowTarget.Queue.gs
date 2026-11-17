@@ -96,7 +96,7 @@ internal unsafe partial class VulkanWindowTarget {
       }
       if !activeRuntime.EnqueueGraphicsSubmission(mailbox, validateGraphicsSubmission) {
         queueStage = QueueStageSubmitRetry
-        host.Wake()
+        if !activeRuntime.QueueWorker.NotifyWhenIdle(mailbox) { host.Wake() }
         return
       }
       queueStage = QueueStageSubmit
@@ -159,7 +159,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
     try {
       if !activeRuntime.EnqueueGraphicsSubmission(mailbox, validateGraphicsSubmission) {
-        host.Wake()
+        if !activeRuntime.QueueWorker.NotifyWhenIdle(mailbox) { host.Wake() }
         return false
       }
     } catch (error Exception) {
@@ -355,7 +355,8 @@ internal unsafe partial class VulkanWindowTarget {
     let ready = slot.PrepareAcquiredImageReplay()
     RecordDiagnosticResult(VulkanDiagnosticEventIds.PresentWait, ready)
     if ready == VkConstants.VK_NOT_READY || ready == VkConstants.VK_TIMEOUT {
-      host.Wake()
+      runtime?.QueueWorker.EnqueueCompletionWait(mailbox, device,
+        slot.GlobalSubmissionSerial, 0uL)
       return
     }
     mailbox.ResetSubmitCompletion()
@@ -387,6 +388,17 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func TryQueuePresent() {
+    if queueMailbox?.CompletionWaitPending == true { return }
+    if let mailbox = queueMailbox {
+      if runtime?.QueueWorker.NotifyWhenIdle(mailbox) == true { return }
+      if mailbox.CompletionResult != VkConstants.VK_SUCCESS {
+        mailbox.ResetSubmitCompletion()
+        queueStage = QueueStageIdle
+        try { HandleFrameFailure(mailbox.CompletionResult, VulkanDiagnosticEventIds.PresentWait) }
+        finally { FinishFailedFrame() }
+        return
+      }
+    }
     if hidden || closing {
       // The submitted frame reuses a swapchain image. Retire that image's earlier present here,
       // as queueing the present would, so its record is not also retired by the submission.
@@ -396,7 +408,10 @@ internal unsafe partial class VulkanWindowTarget {
         completion = current.TryCompletePendingPresent(activeImageIndex, out completedPresentId)
       }
       if completion == VkConstants.VK_NOT_READY || completion == VkConstants.VK_TIMEOUT {
-        host.Wake()
+        if let current = generation, let mailbox = queueMailbox {
+          runtime?.QueueWorker.EnqueueCompletionWait(mailbox, device, 0uL,
+            current.PendingPresentFence(activeImageIndex))
+        }
         return
       }
       queueMailbox?.ResetSubmitCompletion()
@@ -433,10 +448,6 @@ internal unsafe partial class VulkanWindowTarget {
       }
       return
     }
-    if activeRuntime.QueueWorker.HasOutstandingWork {
-      host.Wake()
-      return
-    }
     if initialImageUploadFrame {
       ReplayInitialImageFrame()
       return
@@ -448,7 +459,8 @@ internal unsafe partial class VulkanWindowTarget {
         out pendingPresentFence, out completedPresentId)
       RecordDiagnosticResult(VulkanDiagnosticEventIds.PresentWait, prepareResult)
       if prepareResult == VkConstants.VK_NOT_READY || prepareResult == VkConstants.VK_TIMEOUT {
-        host.Wake()
+        activeRuntime.QueueWorker.EnqueueCompletionWait(mailbox, device, 0uL,
+          current.PendingPresentFence(activeImageIndex))
         return
       }
       if prepareResult != VkConstants.VK_SUCCESS {
@@ -498,7 +510,7 @@ internal unsafe partial class VulkanWindowTarget {
       mailbox.RetryPresent()
       try { current.ReconcilePreparedPresent(activeImageIndex, false) } catch (cleanup Exception) { }
       pendingPresentFence = 0uL
-      host.Wake()
+      if !activeRuntime.QueueWorker.NotifyWhenIdle(mailbox) { host.Wake() }
       return
     }
     queueStage = QueueStagePresent

@@ -19,6 +19,7 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
   private var faulted int32
   private var running int32
   private var notifying int32
+  private var idleWaiters VulkanQueueMailbox?
   private var nextGraphicsSubmissionSerial uint64 = 1uL
   private var disposed bool
 
@@ -193,6 +194,50 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
     return true
   }
 
+  internal func EnqueueCompletionWait(mailbox VulkanQueueMailbox, device VkDevice,
+    serial uint64, fence VkFence) {
+    lock gate {
+      if stopping || count >= MailboxCapacity {
+        throw InvalidOperationException("Vulkan queue cannot accept a completion wait")
+      }
+      mailbox.BeginCompletionWait(device, serial, fence)
+      pending[tail] = mailbox
+      tail = (tail + 1) % MailboxCapacity
+      count++
+    }
+    signal.Set()
+  }
+
+  internal func NotifyWhenIdle(mailbox VulkanQueueMailbox) bool {
+    lock gate {
+      if count == 0 && running == 0 { return false }
+      if !mailbox.IdleWaitRegistered {
+        mailbox.IdleWaitNext = idleWaiters
+        mailbox.IdleWaitRegistered = true
+        idleWaiters = mailbox
+      }
+      return true
+    }
+  }
+
+  private func NotifyIdleWaiters() {
+    while true {
+      var mailbox VulkanQueueMailbox?
+      lock gate {
+        if count != 0 || running != 0 { return }
+        mailbox = idleWaiters
+        if let current = mailbox {
+          idleWaiters = current.IdleWaitNext
+          current.IdleWaitNext = nil
+          current.IdleWaitRegistered = false
+        }
+      }
+      guard let current = mailbox else { return }
+      try { current.NotifyCompletion() }
+      catch (error Exception) { Interlocked.Exchange(ref faulted, 1) }
+    }
+  }
+
   internal prop LastEnqueuedGraphicsSubmissionSerial uint64{
     get {
       lock gate { return nextGraphicsSubmissionSerial - 1uL }
@@ -262,6 +307,11 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
                 current.FailPresent(VkConstants.VK_ERROR_DEVICE_LOST)
               }
             }
+          } else if phase == VulkanQueueMailboxPhase.CompletionWaitQueued {
+            current.RunCompletionWait(dispatch, Interlocked.CompareExchange(ref faulted, 0, 0) != 0)
+            if current.CompletionResult == VkConstants.VK_ERROR_DEVICE_LOST {
+              Interlocked.Exchange(ref faulted, 1)
+            }
           }
         } finally {
           Interlocked.Increment(ref notifying)
@@ -271,6 +321,7 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
           } catch (error Exception) {
             Interlocked.Exchange(ref faulted, 1)
           } finally {
+            NotifyIdleWaiters()
             Interlocked.Decrement(ref notifying)
           }
         }

@@ -198,8 +198,9 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
       if activeRuntime.DeviceLost || activeRuntime.Terminal {
         return true
       }
-      if activeRuntime.QueueWorker.HasOutstandingWork {
-        host.Wake()
+      if let mailbox = queueMailbox {
+        if activeRuntime.QueueWorker.NotifyWhenIdle(mailbox) { return false }
+      } else if activeRuntime.QueueWorker.HasOutstandingWork {
         return false
       }
     }

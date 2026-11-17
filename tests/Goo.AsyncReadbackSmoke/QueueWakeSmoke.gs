@@ -17,6 +17,7 @@ class QueueWakeCell : Cell {
 }
 
 func RunQueueWakeSmoke() {
+  RunInitialReplayWakeSmoke()
   for phase in 0 ... 4 {
     let root = QueueWakeCell{}
     let window = Window{
@@ -98,4 +99,57 @@ func RunQueueWakeSmoke() {
     }
   }
   Console.WriteLine("queue-wake-smoke: submit=1 present=1 frame_deadline_independent=1 blocking_wait=1 close_pending=2 deferred_build=0")
+}
+
+func RunInitialReplayWakeSmoke() {
+  let window = Window{
+    Title: "Goo initial image completion wake",
+    Size: LayoutSize(180, 96),
+    Root: QueueWakeCell{},
+  }
+  try {
+    window.Open()
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    WindowReadbackTestFixture.StabilizeNativeMetrics(window)
+    let target = WindowReadbackTestFixture.CaptureTarget(window)!!
+    var queued = false
+    for attempt in 0 ... 100 {
+      WindowReadbackTestFixture.PumpNativeEvents()
+      if target.BeginInitialReplaySubmissionForTest() {
+        queued = true
+        break
+      }
+    }
+    Require(queued, "Initial replay test did not acquire a frame")
+    let deadline = Environment.TickCount64 + 5000L
+    while !target.InitialReplayPendingForTest && Environment.TickCount64 < deadline {
+      WindowReadbackTestFixture.PollQueueCompletion(window)
+      Thread.Yield()
+    }
+    Require(target.InitialReplayPendingForTest, "Initial replay did not wait for the GPU gate")
+    WindowReadbackTestFixture.Pump(window, 0.0)
+    WindowReadbackTestFixture.DeferSchedulerFrame(window, 30.0)
+    WindowReadbackTestFixture.PumpNativeEvents()
+    var wakes = 0
+    for pump in 0 ... 64 {
+      WindowReadbackTestFixture.PollQueueCompletion(window)
+      wakes += WindowReadbackTestFixture.PendingWakeEvents()
+      WindowReadbackTestFixture.PumpNativeEvents()
+    }
+    Require(wakes <= 1, "Pending initial replay woke its own loop: " + wakes.ToString())
+    Require(WindowReadbackTestFixture.SchedulerWaitMs(window, 0.0) > 0,
+      "Pending initial replay did not allow the scheduler to sleep")
+    target.ReleaseInitialReplaySubmissionForTest()
+    Require(WindowReadbackTestFixture.AwaitQueueCompletionWake(window, 5000),
+      "Initial replay completion did not wake the window")
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    Console.WriteLine("initial-replay-wake-smoke: pending_pumps=64 self_wakes=" + wakes.ToString()
+      +" completion_wake=1")
+  } finally {
+    WindowReadbackTestFixture.CaptureTarget(window)?.ReleaseInitialReplaySubmissionForTest()
+    if window.IsOpen {
+      window.RequestClose()
+      Application.Run(window)
+    }
+  }
 }
