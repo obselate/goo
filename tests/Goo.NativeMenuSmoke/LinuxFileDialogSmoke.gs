@@ -9,6 +9,7 @@ import Tmds.DBus.Protocol
 internal class LinuxFileDialogSmoke : IPathMethodHandler, IDisposable {
     private let connection DBusConnection = DBusConnection(DBusAddress.Session!!)
     private var received int32
+    private var errorName string = ""
     public prop Path string { get -> "/org/freedesktop/portal/desktop" }
     public prop HandlesChildPaths bool { get -> true }
 
@@ -27,6 +28,10 @@ internal class LinuxFileDialogSmoke : IPathMethodHandler, IDisposable {
             writer.WriteString("<node><interface name='org.freedesktop.portal.FileChooser'/></node>")
             context.Reply(writer.CreateMessage())
         } else if request.InterfaceAsString == "org.freedesktop.portal.FileChooser" {
+            if errorName != "" {
+                context.ReplyError(errorName, "Portal regression error")
+                return ValueTask.CompletedTask
+            }
             let reader = request.GetBodyReader()
             reader.ReadString()
             reader.ReadString()
@@ -61,6 +66,17 @@ internal class LinuxFileDialogSmoke : IPathMethodHandler, IDisposable {
             }
             if received != 2 { throw InvalidOperationException("Both chooser methods must reach the portal") }
             Console.WriteLine("PASS portal OpenFile folder and SaveFile current_file/current_name")
+            for name in []string{"UnknownMethod", "UnknownInterface", "NotSupported", "ServiceUnknown", "NameHasNoOwner", "Failed"} {
+                errorName = "org.freedesktop.DBus.Error." + name
+                let pending = window.ShowFileDialogAsync(FileDialogKind.OpenFile)
+                let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
+                while !pending.IsCompleted && Stopwatch.GetTimestamp() < deadline { window.Pump(0.01) }
+                if !pending.IsCompleted { throw TimeoutException("Portal error did not complete") }
+                let result = pending.GetAwaiter().GetResult()
+                let expected = if name == "Failed" { FileDialogStatus.Failed } else { FileDialogStatus.Unsupported }
+                if result.Status != expected { throw InvalidOperationException("$name returned ${result.Status}, expected $expected") }
+            }
+            Console.WriteLine("PASS portal capability errors return Unsupported and execution errors remain Failed")
         } finally { File.Delete(file) }
     }
 
