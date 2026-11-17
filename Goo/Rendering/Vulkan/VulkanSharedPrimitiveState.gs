@@ -71,11 +71,13 @@ internal unsafe class VulkanNativeHandleDestroyer {
 internal sealed class VulkanShaderEffectPipelineEntry {
   internal let Digest []uint8
   internal let Spirv []uint8
+  internal let ReplacesBackdrop bool
   internal var Pipeline VkPipeline
 
-  internal init(digest []uint8, spirv []uint8) {
+  internal init(digest []uint8, spirv []uint8, replacesBackdrop bool) {
     Digest = digest
     Spirv = spirv
+    ReplacesBackdrop = replacesBackdrop
   }
 }
 
@@ -380,7 +382,8 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       var index int32
       while index < shaderEffectPipelineCount {
         if let entry = shaderEffectPipelines[index] {
-          if BytesEqual(entry.Digest, digest) && BytesEqual(entry.Spirv, spirv) {
+          if entry.ReplacesBackdrop == program.ReplacesBackdrop
+            && BytesEqual(entry.Digest, digest) && BytesEqual(entry.Spirv, spirv) {
             shaderEffectPipelineAliases.Add(program, entry)
             return entry.Pipeline
           }
@@ -390,7 +393,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       if shaderEffectPipelineCount >= shaderEffectPipelines.Length {
         throw InvalidOperationException("Vulkan shader effect pipeline capacity exhausted")
       }
-      let entry = VulkanShaderEffectPipelineEntry(digest, spirv)
+      let entry = VulkanShaderEffectPipelineEntry(digest, spirv, program.ReplacesBackdrop)
       let fragmentModule = VulkanPipelineFactory.CreateShaderModule(
         device,
         dispatch,
