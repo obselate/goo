@@ -10,6 +10,20 @@ import Xunit
 
 class FixtureContractTests {
     @Fact
+    func VirtualOutputRejectsReadsAfterRealize() {
+        let cell = VirtualFixtureCell(3)
+        let window = Window{Root: cell, Size: LayoutSize(200, 100)}
+        try {
+            window.UpdateTree()
+            let output = cell.Output!!
+            Assert.Throws[InvalidOperationException](() -> { let value = output.ContentSize })
+            Assert.Throws[InvalidOperationException](() -> { let value = output.ItemCount })
+            Assert.Throws[InvalidOperationException](() -> { let value = output.ScrollOffset })
+            Assert.Throws[InvalidOperationException](() -> { let value = output.AnchorKey })
+        } finally { window.Close() }
+    }
+
+    @Fact
     func PortalScrollbarPartsUseFinalBounds() ->
         Assert.True(PortalFixtures().PortalScrollbarPartsUseFinalBoundsContract())
 
