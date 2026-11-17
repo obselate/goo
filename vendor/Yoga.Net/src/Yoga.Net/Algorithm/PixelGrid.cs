@@ -64,16 +64,16 @@ namespace Facebook.Yoga
         {
             double scale = node.GetConfig()!.GetPointScaleFactor();
             bool parentText = node.GetOwner()?.GetNodeType() == NodeType.Text;
+            double roundedParentLeft = scale == 0 ? absoluteLeft : RoundValueToPixelGridDouble(absoluteLeft, scale, false, parentText);
+            double roundedParentTop = scale == 0 ? absoluteTop : RoundValueToPixelGridDouble(absoluteTop, scale, false, parentText);
             RoundLayoutResultsToPixelGrid(node, absoluteLeft, absoluteTop, scale,
-                (float)(scale == 0 ? absoluteLeft : RoundValueToPixelGridDouble(absoluteLeft, scale, false, parentText)),
-                (float)(scale == 0 ? absoluteTop : RoundValueToPixelGridDouble(absoluteTop, scale, false, parentText)));
+                roundedParentLeft, roundedParentTop, (float)roundedParentLeft, (float)roundedParentTop);
         }
 
         private static void RoundLayoutResultsToPixelGrid(
             Node node, double absoluteLeft, double absoluteTop, double pointScaleFactor,
-            float snappedParentLeft, float snappedParentTop)
+            double roundedParentLeft, double roundedParentTop, float snappedParentLeft, float snappedParentTop)
         {
-
             var layout = node.GetLayout();
             double nodeLeft = layout.RawLeft;
             double nodeTop = layout.RawTop;
@@ -88,19 +88,15 @@ namespace Facebook.Yoga
             double absoluteNodeBottom = absoluteNodeTop + nodeHeight;
             double roundedNodeLeft = absoluteNodeLeft;
             double roundedNodeTop = absoluteNodeTop;
+            bool textRounding = node.GetNodeType() == NodeType.Text;
 
             if (pointScaleFactor != 0.0)
             {
-                bool textRounding = node.GetNodeType() == NodeType.Text;
-                bool parentTextRounding = node.GetOwner()?.GetNodeType() == NodeType.Text;
-
                 roundedNodeLeft = RoundValueToPixelGridDouble(absoluteNodeLeft, pointScaleFactor, false, textRounding);
                 roundedNodeTop = RoundValueToPixelGridDouble(absoluteNodeTop, pointScaleFactor, false, textRounding);
                 layout.SetRoundedPosition(
-                    (float)(roundedNodeLeft -
-                        RoundValueToPixelGridDouble(absoluteLeft, pointScaleFactor, false, parentTextRounding)),
-                    (float)(roundedNodeTop -
-                        RoundValueToPixelGridDouble(absoluteTop, pointScaleFactor, false, parentTextRounding)));
+                    (float)(roundedNodeLeft - roundedParentLeft),
+                    (float)(roundedNodeTop - roundedParentTop));
 
                 double scaledNodeWith = nodeWidth * pointScaleFactor;
                 bool hasFractionalWidth =
@@ -136,8 +132,13 @@ namespace Facebook.Yoga
             for (nuint index = 0; index < childCount; index++)
             {
                 var child = node.GetChild(index)!;
-                RoundLayoutResultsToPixelGrid(child, absoluteNodeLeft, absoluteNodeTop,
-                    child.GetConfig()!.GetPointScaleFactor(), snappedNodeLeft, snappedNodeTop);
+                double childScale = child.GetConfig()!.GetPointScaleFactor();
+                RoundLayoutResultsToPixelGrid(child, absoluteNodeLeft, absoluteNodeTop, childScale,
+                    childScale == pointScaleFactor ? roundedNodeLeft :
+                        RoundValueToPixelGridDouble(absoluteNodeLeft, childScale, false, textRounding),
+                    childScale == pointScaleFactor ? roundedNodeTop :
+                        RoundValueToPixelGridDouble(absoluteNodeTop, childScale, false, textRounding),
+                    snappedNodeLeft, snappedNodeTop);
             }
 
             if (pointScaleFactor == 0.0 || childCount == 0 || layout.ContentSizing == ContentSizing.None ||
