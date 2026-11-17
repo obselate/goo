@@ -70,6 +70,7 @@
 !/docs/
 /docs/*
 !/docs/nuget-readme.md
+!/docs/csharp.md
 !/docs/android.md
 !/docs/images.md
 !/docs/svg.md

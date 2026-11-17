@@ -26,6 +26,7 @@ let paths = List[string]{
     "docs/platform-preflight.md",
     "docs/android.md",
     "docs/images.md",
+    "docs/csharp.md",
     "docs/interop.md",
     "docs/powershell.md",
     "docs/visual-basic.md"

@@ -48,7 +48,7 @@ Add libraries with `dotnet add package PACKAGE`.
 
 | Task | Guide |
 | --- | --- |
-| Use another .NET language | [C#, F#, Visual Basic and PowerShell](interop.md) |
+| Use another .NET language | [C#](csharp.md), [Visual Basic](visual-basic.md), [PowerShell](powershell.md), [F# and interop](interop.md) |
 | Compose primitives and Cells | [Cell](api/cell.md), [tree](api/tree.md) |
 | Layout, styling and input | [Layout](api/layout.md), [style](api/style.md), [text](api/text.md), [input](api/input.md), [accessibility](api/accessibility.md) |
 | Load images and sound | [Images](images.md), [SVG](svg.md), [audio](audio.md), [audio API](api-audio/README.md) |
