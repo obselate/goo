@@ -67,7 +67,10 @@ internal partial class ShapeGeometry {
 
     internal func StrokeExtent(n Node, width float32) float32 {
       let extent = resolveShapeStrokeExtent(width, n.ShapeStrokeJoin, float32(n.MiterLimit))
-      if n.ShapeVectorEffect != VectorEffect.NonScalingStroke { return extent }
+      if n.ShapeVectorEffect != VectorEffect.NonScalingStroke {
+        let mapping = PathGeometry.Map(n.ShapePath, n.ShapeFit, 0.0F, 0.0F, n.Rect.W, n.Rect.H)
+        return extent * MathF.Max(mapping.ScaleX, mapping.ScaleY)
+      }
       let hostExtent = resolveShapeStrokeExtent(width, n.ShapeStrokeJoin, float32(n.MiterLimit), n.ShapeStrokeCap)
       let matrix = TransformGeometry.WindowMatrix(n)
       let determinant = MathF.Abs(matrix.A * matrix.D - matrix.B * matrix.C)
