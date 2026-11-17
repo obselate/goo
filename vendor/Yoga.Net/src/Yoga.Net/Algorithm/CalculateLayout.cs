@@ -801,12 +801,14 @@ namespace Facebook.Yoga
             {
                 bool isMainAxisRow = mainAxis.IsRow();
                 var crossAxis = isMainAxisRow ? FlexDirection.Column : FlexDirection.Row;
-                float crossSize = child.HasDefiniteLength(crossAxis.Dimension(), availableInnerCrossDim)
+                bool definiteCrossSize = child.HasDefiniteLength(crossAxis.Dimension(), availableInnerCrossDim);
+                float crossSize = definiteCrossSize
                     ? child.GetResolvedDimension(direction, crossAxis.Dimension(),
                         availableInnerCrossDim, availableInnerWidth).Unwrap()
                     : availableInnerCrossDim;
                 crossSize += child.Style.ComputeMarginForAxis(crossAxis, availableInnerWidth);
-                var crossMode = Comparison.IsUndefined(crossSize) ? SizingMode.MaxContent : SizingMode.FitContent;
+                var crossMode = !isMainAxisRow && definiteCrossSize ? SizingMode.StretchFit
+                    : Comparison.IsUndefined(crossSize) ? SizingMode.MaxContent : SizingMode.FitContent;
                 CalculateLayoutInternal(
                     child,
                     isMainAxisRow ? 0 : crossSize,

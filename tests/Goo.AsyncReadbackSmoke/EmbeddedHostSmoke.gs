@@ -47,7 +47,12 @@ internal open class EmbeddedSmokeHost : EmbeddedWindowHost {
   private var native SdlHost?
   internal var Creates int32
   internal var Destroys int32
-  internal var ReleaseQueueOnWake bool
+  internal var WakeNotificationForTest ManualResetEventSlim?
+  private var frameRequests int32
+
+  internal prop FrameRequests int32{
+    get -> Interlocked.CompareExchange(ref frameRequests, 0, 0)
+  }
   private var serviceableSubmissionWakes int32
 
   internal prop ServiceableSubmissionWakes int32{
@@ -65,10 +70,8 @@ internal open class EmbeddedSmokeHost : EmbeddedWindowHost {
     native = nil
   }
   protected override func RequestFrame() {
-    if ReleaseQueueOnWake {
-      ReleaseQueueOnWake = false
-      WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
-    }
+    Interlocked.Increment(ref frameRequests)
+    WakeNotificationForTest?.Set()
     if Window?.CaptureTargetForTest()?.EmbeddedSubmitCompletionServiceReadyForTest == true {
       Interlocked.Increment(ref serviceableSubmissionWakes)
     }
@@ -372,13 +375,29 @@ internal class EmbeddedHostSmoke {
         WindowReadbackTestFixture.ForceRenderNonblocking(otherWindow, 0.0)
         Require(WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(otherWindow, 2000),
           "Shared queue did not reach held submission")
-        host.ReleaseQueueOnWake = true
+        using let wake = ManualResetEventSlim(false)
+        host.WakeNotificationForTest = wake
+        let requests = host.FrameRequests
+        Require(window.CaptureTargetForTest()?.PrepareClose() == false,
+          "Embedded close accepted another window's held queue work")
+        Require(host.FrameRequests == requests && !wake.IsSet,
+          "Embedded close woke itself while shared queue work was pending")
+        WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
+        Require(wake.Wait(2000), "Shared queue completion did not wake the detaching host")
+        Require(host.FrameRequests == requests + 1,
+          "Shared queue completion did not wake the detaching host exactly once")
+        host.WakeNotificationForTest = nil
+        let started = Stopwatch.GetTimestamp()
         host.DetachPresentation()
-        Require(!host.ReleaseQueueOnWake && host.Destroys == 1
+        let elapsed = Stopwatch.GetElapsedTime(started).TotalMilliseconds
+        Require(elapsed < 2000.0 && host.Destroys == 1
             && !host.IsPresentationAttached && otherHost.IsPresentationAttached,
-          "Embedded detach did not drain shared queue work before disposal")
+          "Embedded detach did not complete after the shared queue wake")
+        Console.WriteLine("embedded-shared-queue-detach: pending_close_calls=1 self_wakes=0 completion_wakes=1 detach_ms="
+          + elapsed.ToString("F3", System.Globalization.CultureInfo.InvariantCulture))
         Settle(otherHost)
       } finally {
+        host.WakeNotificationForTest = nil
         WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
         host.Dispose()
         otherHost.Dispose()
