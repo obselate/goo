@@ -12,6 +12,8 @@ internal class VulkanQueueMailboxPhase {
     internal const PresentQueued int32 = 4
     internal const PresentRunning int32 = 5
     internal const PresentComplete int32 = 6
+    internal const CompletionWaitQueued int32 = 7
+    internal const CompletionWaitRunning int32 = 8
   }
 }
 
@@ -27,6 +29,12 @@ internal unsafe sealed class VulkanQueueMailbox {
   private let signalInfos []VkSemaphoreSubmitInfo = [2]VkSemaphoreSubmitInfo
   private let waitPins []object? = [ExternalSemaphoreCapacity]object?
   private var externalWaitCount int32
+  private var completionDevice VkDevice
+  private var completionSerial uint64
+  private var completionFence VkFence
+  private var completionResult VkResult
+  internal var IdleWaitNext VulkanQueueMailbox?
+  internal var IdleWaitRegistered bool
 
   internal var SubmitCommandBuffer VkCommandBuffer
   internal var SubmitWaitSemaphore VkSemaphore
@@ -62,6 +70,11 @@ internal unsafe sealed class VulkanQueueMailbox {
   internal prop PresentResult VkResult{ get -> presentResult }
   internal prop SyntheticDrainPerformed bool{ get -> syntheticDrainPerformed }
   internal prop SyntheticDrainResult VkResult{ get -> syntheticDrainResult }
+  internal prop CompletionResult VkResult{ get -> completionResult }
+  internal prop CompletionWaitPending bool{
+    get -> Phase == VulkanQueueMailboxPhase.CompletionWaitQueued
+      || Phase == VulkanQueueMailboxPhase.CompletionWaitRunning
+  }
 
   internal func NotifyCompletion() { host?.Wake() }
 
@@ -69,6 +82,7 @@ internal unsafe sealed class VulkanQueueMailbox {
     signalSemaphore VkSemaphore) {
       if externalWaitCount != 0 { System.Array.Clear(waitPins, 0, externalWaitCount) }
       externalWaitCount = 0
+      completionResult = VkConstants.VK_SUCCESS
       SubmitCommandBuffer = commandBuffer
       SubmitWaitSemaphore = waitSemaphore
       SubmitSignalSemaphore = signalSemaphore
@@ -154,6 +168,44 @@ internal unsafe sealed class VulkanQueueMailbox {
     }
     result = presentResult
     return true
+  }
+
+  internal func BeginCompletionWait(device VkDevice, serial uint64, fence VkFence) {
+    completionDevice = device
+    completionSerial = serial
+    completionFence = fence
+    if Interlocked.CompareExchange(ref phase, VulkanQueueMailboxPhase.CompletionWaitQueued,
+      VulkanQueueMailboxPhase.SubmitComplete) != VulkanQueueMailboxPhase.SubmitComplete {
+      throw System.InvalidOperationException("Vulkan completion wait requires a completed submission")
+    }
+  }
+
+  internal func RunCompletionWait(dispatch VkDeviceDispatch, faulted bool) {
+    Interlocked.Exchange(ref phase, VulkanQueueMailboxPhase.CompletionWaitRunning)
+    try {
+      if faulted {
+        completionResult = VkConstants.VK_ERROR_DEVICE_LOST
+      } else if completionFence != 0uL {
+        var fence = completionFence
+        let wait = dispatch.vkWaitForFences
+        completionResult = wait(completionDevice, 1u, &fence, VkConstants.VK_TRUE,
+          VkConstants.VK_WHOLE_SIZE)
+      } else {
+        var semaphore = SubmitTimeline
+        var serial = completionSerial
+        var info = VkSemaphoreWaitInfo{
+          sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+          semaphoreCount: 1u,
+          pSemaphores: &semaphore,
+          pValues: &serial,
+        }
+        let wait = dispatch.vkWaitSemaphores
+        completionResult = wait(completionDevice, &info, VkConstants.VK_WHOLE_SIZE)
+      }
+    } catch (error System.Exception) {
+      completionResult = VkConstants.VK_ERROR_DEVICE_LOST
+    }
+    Interlocked.Exchange(ref phase, VulkanQueueMailboxPhase.SubmitComplete)
   }
 
   internal func RunSubmit(dispatch VkDeviceDispatch, queue VkQueue) {
