@@ -1,6 +1,7 @@
 package Goo.CoreBehaviorTests
 
 import Goo
+import Goo.RichText
 import Goo.Svg
 import System
 import Xunit
@@ -25,6 +26,27 @@ class ContentContractTests {
                 Assert.InRange(layout.Width, 0f, 100f)
             } finally { TextLayouts.Dispose(node) }
         }
+    }
+
+    @Fact
+    func ClipboardDisposalRestoresOnlyItsOwnCommandHandler() {
+        let owner = Window()
+        try {
+            using let controller = TextEditorController(TextDocument("abc"))
+            using let layer = TextPresentationLayer(controller.Document)
+            let previous Action[TextCommandEvent] = _ -> { }
+            controller.OnCommand = previous
+            let clipboard = RichTextClipboard(owner, controller, layer)
+            clipboard.Dispose()
+            Assert.Same(previous, controller.OnCommand)
+            clipboard.Dispose()
+            Assert.Same(previous, controller.OnCommand)
+            let replacement Action[TextCommandEvent] = _ -> { }
+            let second = RichTextClipboard(owner, controller, layer)
+            controller.OnCommand = replacement
+            second.Dispose()
+            Assert.Same(replacement, controller.OnCommand)
+        } finally { owner.Close() }
     }
 
     @Fact

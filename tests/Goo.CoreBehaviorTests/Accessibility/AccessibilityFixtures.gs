@@ -675,7 +675,7 @@ internal class AccessibilityActionCell : Cell {
         OnAction: func(request AccessibilityActionRequest) bool { return true },
       } }
     },
-    TextEntry{ Value: "start", ReadOnly: ReadOnly },
+    TextEntry{ Value: "start", ReadOnly: ReadOnly, Accessibility: Accessibility{ ReadOnly: false } },
     Container() {.Accessibility: Accessibility{ Role: AccessibilityRole.Generic },.Height: 8,.OverflowY: Overflow.Scroll,
       Text{ Content: "scroll content" }
     } }
