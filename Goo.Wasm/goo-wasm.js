@@ -2,7 +2,7 @@ export function createBrowserImports(getMemory) {
     const hosts = new Map();
     let nextHost = 1;
     return {
-        async initialize(canvasId, vertex, solid, border, frame, resize, pointer, visibility) {
+        async initialize(canvasId, vertex, solid, border, textVertex, textFragment, frame, resize, pointer, visibility) {
             if (!navigator.gpu) throw new Error('WebGPU is unavailable');
             const canvas = document.getElementById(canvasId);
             if (!(canvas instanceof HTMLCanvasElement)) throw new Error(`Canvas not found: ${canvasId}`);
@@ -20,10 +20,14 @@ export function createBrowserImports(getMemory) {
                 { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
                     buffer: { type: 'read-only-storage', minBindingSize: 128 } }
             ] });
+            const atlasLayout = device.createBindGroupLayout({ entries: [
+                { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'sint' } }
+            ] });
             const layout = device.createPipelineLayout({ bindGroupLayouts: [
                 viewportLayout, device.createBindGroupLayout({ entries: [] }), primitiveLayout
             ] });
-            const modules = [vertex, solid, border].map(code => device.createShaderModule({ code }));
+            const textLayout = device.createPipelineLayout({ bindGroupLayouts: [viewportLayout, atlasLayout, primitiveLayout] });
+            const modules = [vertex, solid, border, textVertex, textFragment].map(code => device.createShaderModule({ code }));
             for (const shader of modules) {
                 const info = await shader.getCompilationInfo();
                 const errors = info.messages.filter(message => message.type === 'error');
@@ -32,27 +36,31 @@ export function createBrowserImports(getMemory) {
                     throw new Error(errors.map(message => `${message.lineNum}:${message.linePos}: ${message.message}`).join('\n'));
                 }
             }
-            const pipelines = await Promise.all(modules.slice(1).map(module => device.createRenderPipelineAsync({
-                layout,
-                vertex: { module: modules[0], entryPoint: 'main' },
-                fragment: { module, entryPoint: 'main', targets: [{
+            const pipelines = await Promise.all([1, 2, 4].map(index => device.createRenderPipelineAsync({
+                layout: index === 4 ? textLayout : layout,
+                vertex: { module: modules[index === 4 ? 3 : 0], entryPoint: 'main' },
+                fragment: { module: modules[index], entryPoint: 'main', targets: [{
                     format, blend: {
                         color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
                         alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' }
                     }
                 }] },
-                primitive: { topology: 'triangle-strip', stripIndexFormat: 'uint32' }
+                primitive: index === 4 ? { topology: 'triangle-list' } : { topology: 'triangle-strip', stripIndexFormat: 'uint32' }
             })));
+            pipelines[3] = pipelines.pop();
             const validation = await device.popErrorScope();
             if (validation) { device.destroy(); throw new Error(validation.message); }
             const uniforms = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
             const viewportGroup = device.createBindGroup({ layout: viewportLayout,
                 entries: [{ binding: 0, resource: { buffer: uniforms } }] });
             const id = nextHost++;
-            const state = { canvas, device, context, format, pipelines, uniforms, viewportGroup, primitiveLayout,
+            const state = { canvas, device, context, format, pipelines, uniforms, viewportGroup, primitiveLayout, atlasLayout,
+                atlases: new Map(),
                 primitives: null, primitiveGroup: null, capacity: 0, frame, raf: 0, timer: 0, deadline: Infinity,
                 frames: 0, submissions: 0, renderInteropCalls: 0, scheduled: 0, error: null,
-                adapter: { ...adapter.info }, disposed: false };
+                adapter: { vendor: adapter.info.vendor, architecture: adapter.info.architecture, device: adapter.info.device,
+                    description: adapter.info.description, isFallbackAdapter: adapter.info.isFallbackAdapter ?? adapter.isFallbackAdapter },
+                disposed: false };
             hosts.set(id, state);
             const fail = error => {
                 state.error = String(error.message ?? error);
@@ -115,7 +123,7 @@ export function createBrowserImports(getMemory) {
             if (delaySeconds <= 0) request();
             else state.timer = setTimeout(request, delaySeconds * 1000);
         },
-        submit(id, pointer, count) {
+        submit(id, pointer, count, atlasPointer, atlasCount) {
             const state = hosts.get(id);
             if (!state || state.disposed) throw new Error('The WebGPU host is disposed');
             if (state.error) throw new Error(state.error);
@@ -131,9 +139,36 @@ export function createBrowserImports(getMemory) {
                     entries: [{ binding: 0, resource: { buffer: state.primitives } }] });
             }
             const memory = getMemory();
+            const atlases = new Uint32Array(memory, atlasPointer, atlasCount * 4);
+            for (let index = 0; index < atlasCount; index++) {
+                const slot = atlases[index * 4], version = atlases[index * 4 + 1];
+                const address = atlases[index * 4 + 2], length = atlases[index * 4 + 3];
+                let atlas = state.atlases.get(slot);
+                if (atlas?.version !== version) {
+                    atlas?.texture.destroy();
+                    const texture = device.createTexture({ size: [1024, 128], format: 'rgba16sint',
+                        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+                    atlas = { version, texture, uploaded: 0, group: device.createBindGroup({ layout: state.atlasLayout,
+                        entries: [{ binding: 0, resource: texture.createView() }] }) };
+                    state.atlases.set(slot, atlas);
+                }
+                let offset = atlas.uploaded;
+                while (offset < length) {
+                    const column = (offset / 8) % 1024;
+                    const width = Math.min(1024 - column, (length - offset) / 8);
+                    device.queue.writeTexture({ texture: atlas.texture, origin: [column, Math.floor(offset / 8192)] },
+                        new Uint8Array(memory, address + offset, width * 8), {}, [width, 1]);
+                    offset += width * 8;
+                }
+                atlas.uploaded = length;
+                atlas.frame = state.submissions;
+            }
+            for (const [slot, atlas] of state.atlases) {
+                if (atlas.frame !== state.submissions) { atlas.texture.destroy(); state.atlases.delete(slot); }
+            }
             device.queue.writeBuffer(state.uniforms, 0, new Uint8Array(memory, pointer, 16));
             if (bytes) device.queue.writeBuffer(state.primitives, 0, new Uint8Array(memory, pointer + 16, bytes));
-            const commands = new Uint32Array(memory, pointer + 16 + bytes, count);
+            const commands = new Uint32Array(memory, pointer + 16 + bytes, count * 2);
             const encoder = device.createCommandEncoder();
             const pass = encoder.beginRenderPass({ colorAttachments: [{
                 view: state.context.getCurrentTexture().createView(),
@@ -143,10 +178,11 @@ export function createBrowserImports(getMemory) {
             if (count) pass.setBindGroup(2, state.primitiveGroup);
             let pipeline = -1;
             for (let index = 0; index < count; index++) {
-                const kind = commands[index];
+                const kind = commands[index * 2];
                 if (kind === 2) continue;
                 if (kind !== pipeline) { pass.setPipeline(state.pipelines[kind]); pipeline = kind; }
-                pass.draw(4, 1, 0, index);
+                if (kind === 3) pass.setBindGroup(1, state.atlases.get(commands[index * 2 + 1]).group);
+                pass.draw(kind === 3 ? 6 : 4, 1, 0, index);
             }
             pass.end();
             device.queue.submit([encoder.finish()]);
@@ -165,6 +201,7 @@ export function createBrowserImports(getMemory) {
             state.context.unconfigure();
             state.primitives?.destroy();
             state.uniforms.destroy();
+            for (const atlas of state.atlases.values()) atlas.texture.destroy();
             state.device.destroy();
             hosts.delete(id);
         }

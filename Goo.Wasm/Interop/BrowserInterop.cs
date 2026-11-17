@@ -9,7 +9,7 @@ namespace Goo.Wasm.Interop;
 public static partial class BrowserInterop
 {
     [JSImport("initialize", "goo-wasm")]
-    public static partial Task<int> Initialize(string canvas, string vertex, string solid, string border,
+    public static partial Task<int> Initialize(string canvas, string vertex, string solid, string border, string textVertex, string textFragment,
         [JSMarshalAs<JSType.Function<JSType.Number>>] Action<double> frame,
         [JSMarshalAs<JSType.Function<JSType.Number, JSType.Number, JSType.Number>>] Action<double, double, double> resize,
         [JSMarshalAs<JSType.Function<JSType.Number, JSType.Number, JSType.Number>>] Action<double, double, double> pointer,
@@ -19,7 +19,7 @@ public static partial class BrowserInterop
     public static partial void Schedule(int host, double delaySeconds);
 
     [JSImport("submit", "goo-wasm")]
-    public static partial void Submit(int host, int pointer, int count);
+    public static partial void Submit(int host, int pointer, int count, int atlases, int atlasCount);
 
     [JSImport("dispose", "goo-wasm")]
     public static partial void Dispose(int host);

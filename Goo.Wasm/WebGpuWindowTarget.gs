@@ -5,7 +5,14 @@ import Goo.Wasm.Interop
 import System
 import System.Numerics
 import System.Runtime.InteropServices
-internal unsafe sealed class WebGpuWindowTarget(handle int32) : WindowRenderTarget {
+internal unsafe sealed class WebGpuWindowTarget : WindowRenderTarget {
+  private let handle int32
+  private let atlases VulkanTextAtlasSet = VulkanTextAtlasSet(1048576uL)
+  private let text VulkanTextScene
+  private var atlasPins []GCHandle = [32]GCHandle
+  private var atlasUploads *int32
+  private var atlasCapacity int32
+  private var atlasCount int32
   private let compiler VulkanSceneCompiler = VulkanSceneCompiler()
   private var buffer *uint8
   private var capacity int32
@@ -16,6 +23,12 @@ internal unsafe sealed class WebGpuWindowTarget(handle int32) : WindowRenderTarg
   private var submitted bool
   private var needsRender bool = true
   private var captureFailure Exception?
+
+  internal init(handle int32) {
+    this.handle = handle
+    text = VulkanTextScene(atlases)
+    compiler.SetTextScene(text)
+  }
 
   public event PresentationAccepted Action[int64]
   public prop ProfileSink FrameProfileSink? { get -> nil }
@@ -43,16 +56,20 @@ internal unsafe sealed class WebGpuWindowTarget(handle int32) : WindowRenderTarg
     if overlay != nil { throw NotSupportedException("Browser diagnostic overlays are not supported") }
     let logicalWidth = float32(width) / dpi.X
     let logicalHeight = float32(height) / dpi.Y
+    text.BeginCompile(uint64.MaxValue, MathF.Min(dpi.X, dpi.Y))
     let result = compiler.Compile(root, portalRoot, background, logicalWidth, logicalHeight)
     let frame = compiler.Frame
     if result.HasUnsupported || frame.ClipChainCount > 1 || frame.RectClipCount != 0 {
-      throw NotSupportedException("The browser renderer supports only unclipped solid boxes, rounded boxes and borders")
+      throw NotSupportedException("The browser renderer supports only unclipped boxes, borders and outline text")
     }
     count = frame.DrawRefCount
+    for index in 0 ... frame.CachedTextSegmentCount {
+      count += frame.CachedTextSegments[index].GlyphCount - 1
+    }
     if buffer == nil || count > capacity {
       capacity = Math.Max(count, Math.Max(16, capacity * 2))
       NativeMemory.Free(buffer)
-      buffer = *uint8(NativeMemory.Alloc(nuint(16 + capacity * 132)))
+      buffer = *uint8(NativeMemory.Alloc(nuint(16 + capacity * 136)))
     }
     let uniforms = *float32(buffer)
     uniforms[0] = logicalWidth
@@ -61,12 +78,34 @@ internal unsafe sealed class WebGpuWindowTarget(handle int32) : WindowRenderTarg
     uniforms[3] = dpi.Y
     let records = *VulkanPrimitiveGpuRecord(buffer + 16)
     let commands = *uint32(buffer + 16 + count * 128)
-    for index in 0 ... count {
+    var outputIndex int32 = 0
+    for index in 0 ... frame.DrawRefCount {
       let reference = frame.DrawRefs[index]
+      if reference.Kind == SceneDrawKind.CachedTextSegment {
+        let cached = frame.CachedTextSegments[reference.Index]
+        let segment = cached.Segment ?? throw InvalidOperationException("Missing text segment")
+        if cached.TransformIndex >= 0 || segment.EffectMode != 0u {
+          throw NotSupportedException("Browser text effects and retained text transforms are not supported")
+        }
+        let glyphRecords = *HbGpuTextInstanceRecord(records)
+        for runIndex in 0 ... segment.RunCount {
+          let run = segment.Runs[runIndex]
+          if run.PipelineKind != 0u { throw NotSupportedException("Browser color glyphs are not supported") }
+          let atlasIndex = atlases.FindIndex(run.AtlasId)
+          for glyphIndex in run.FirstInstance ... (run.FirstInstance + run.InstanceCount) {
+            glyphRecords[outputIndex] = segment.Records[glyphIndex]
+            commands[outputIndex * 2] = 3u
+            commands[outputIndex * 2 + 1] = uint32(atlasIndex)
+            outputIndex++
+          }
+        }
+        continue
+      }
       var record = VulkanPrimitiveGpuRecord{}
       var bounds ConservativeBounds
       var transformIndex int32 = -1
-      commands[index] = 0u
+      commands[outputIndex * 2] = 0u
+      commands[outputIndex * 2 + 1] = 0u
       if reference.Kind == SceneDrawKind.SolidBox {
         let value = frame.SolidBoxes[reference.Index]
         bounds = value.Bounds
@@ -115,9 +154,9 @@ internal unsafe sealed class WebGpuWindowTarget(handle int32) : WindowRenderTarg
         record.packedColorsExtra_x = left.Rgb
         record.packedColorsExtra_y = left.Alpha
         record.packedColorsExtra_w = value.Style
-        commands[index] = 1u
+        commands[outputIndex * 2] = 1u
       } else if reference.Kind == SceneDrawKind.Transform {
-        commands[index] = 2u
+        commands[outputIndex * 2] = 2u
       } else {
         throw NotSupportedException("Unsupported browser scene draw: ${reference.Kind}")
       }
@@ -145,12 +184,34 @@ internal unsafe sealed class WebGpuWindowTarget(handle int32) : WindowRenderTarg
       record.Geometry.transform1_x = transform.B
       record.Geometry.transform1_y = transform.D
       record.Geometry.transform1_z = transform.TY
-      records[index] = record
+      records[outputIndex] = record
+      outputIndex++
+    }
+    atlasCount = 0
+    if atlasCapacity < atlases.AtlasSlotCapacity {
+      atlasCapacity = atlases.AtlasSlotCapacity
+      Array.Resize(ref atlasPins, atlasCapacity)
+      NativeMemory.Free(atlasUploads)
+      atlasUploads = *int32(NativeMemory.Alloc(nuint(atlasCapacity * 16)))
+    }
+    for index in 0 ... atlases.AtlasSlotCapacity {
+      if !atlases.IsActive(index) { continue }
+      let bytes = text.AtlasBytes(index, out var length)
+      if length == 0 { continue }
+      if !atlasPins[index].IsAllocated || !Object.ReferenceEquals(atlasPins[index].Target, bytes) {
+        if atlasPins[index].IsAllocated { atlasPins[index].Free() }
+        atlasPins[index] = GCHandle.Alloc(bytes, GCHandleType.Pinned)
+      }
+      atlasUploads[atlasCount * 4] = index
+      atlasUploads[atlasCount * 4 + 1] = int32(atlases.IdentityAt(index).Version)
+      atlasUploads[atlasCount * 4 + 2] = int32(atlasPins[index].AddrOfPinnedObject())
+      atlasUploads[atlasCount * 4 + 3] = length
+      atlasCount++
     }
   }
 
   public func Present() {
-    BrowserInterop.Submit(handle, int32(nint(buffer)), count)
+    BrowserInterop.Submit(handle, int32(nint(buffer)), count, int32(nint(atlasUploads)), atlasCount)
     needsRender = false
     submitted = true
     PresentationAccepted?.Invoke(int64(compiler.LastResult.FrameVersion))
@@ -166,6 +227,12 @@ internal unsafe sealed class WebGpuWindowTarget(handle int32) : WindowRenderTarg
   public func Dispose() {
     NativeMemory.Free(buffer)
     buffer = nil
+    NativeMemory.Free(atlasUploads)
+    atlasUploads = nil
+    for index in 0 ... atlasPins.Length {
+      if atlasPins[index].IsAllocated { atlasPins[index].Free() }
+    }
+    atlases.Dispose()
     BrowserInterop.Dispose(handle)
   }
 

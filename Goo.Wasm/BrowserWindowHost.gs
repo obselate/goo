@@ -16,13 +16,29 @@ public sealed class BrowserWindowHost : EmbeddedWindowHost {
   private init() { }
 
   shared {
+    /// Routes Application.Run to the canvas without changing application source.
+    public func Configure(canvasId string = "goo") {
+      Application.RunHost = (window Window) -> { Start(window, canvasId) }
+    }
+
+    private async func Start(window Window, canvasId string) void {
+      try {
+        await AttachAsync(window, canvasId)
+        Console.WriteLine("GOO_BROWSER_READY")
+      } catch (error Exception) {
+        Console.Error.WriteLine(error.ToString())
+        rethrow
+      }
+    }
+
     /// Initializes WebGPU asynchronously, then attaches the window without SDL.
     public async func AttachAsync(window Window, canvasId string) Task[BrowserWindowHost] {
       if !OperatingSystem.IsBrowser() { throw PlatformNotSupportedException("The browser host requires browser-wasm") }
       let host = BrowserWindowHost()
       host.handle = await BrowserInterop.Initialize(canvasId, Shader("analytic.vert"),
-        Shader("analytic_solid.frag"), Shader("analytic_border.frag"), host.Frame,
-        host.Metrics, host.Pointer, host.Visibility)
+        Shader("analytic_solid.frag"), Shader("analytic_border.frag"),
+        Shader("browser_text.vert"), Shader("browser_text.frag"),
+        host.Frame, host.Metrics, host.Pointer, host.Visibility)
       try {
         window.Attach(host)
         host.AttachPresentation()

@@ -1240,7 +1240,8 @@ internal shared class Program {
         let temporaryRoot = Path.Combine(Path.GetTempPath(), "goo-wgsl-" + Guid.NewGuid().ToString("N"))
         Directory.CreateDirectory(temporaryRoot)
         try {
-            for name in []string{"analytic.vert", "analytic_solid.frag", "analytic_border.frag"} {
+            for name in []string{"analytic.vert", "analytic_solid.frag", "analytic_border.frag",
+                "browser_text.vert", "browser_text.frag"} {
                 let output = Path.Combine(temporaryRoot, name + ".wgsl")
                 let stage = if name.EndsWith(".vert", StringComparison.Ordinal) { "vertex" } else { "fragment" }
                 RequireSuccess(compiler, RunTool(compiler, []string{
@@ -1260,7 +1261,7 @@ internal shared class Program {
                     RequireByteMatch(bytes, destination, "browser WGSL")
                 }
             }
-            Console.WriteLine("Validated three generated browser WGSL shaders")
+            Console.WriteLine("Validated five generated browser WGSL shaders")
             return 0
         } finally {
             Directory.Delete(temporaryRoot, true)
