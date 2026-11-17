@@ -10,6 +10,10 @@ import Xunit
 
 class FixtureContractTests {
     @Fact
+    func RelativeTransformTransition() ->
+        Assert.True(MotionFixtures().RelativeTransformTransitionContract())
+
+    @Fact
     func PortalScrollbarPartsUseFinalBounds() ->
         Assert.True(PortalFixtures().PortalScrollbarPartsUseFinalBoundsContract())
 
