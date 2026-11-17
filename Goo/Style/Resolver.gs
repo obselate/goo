@@ -25,6 +25,16 @@ internal data struct Transition {
   internal var Payload object?
 }
 
+internal sealed class Float64TransitionValues {
+  internal let From float64
+  internal let To float64
+
+  internal init(from float64, to float64) {
+    From = from
+    To = to
+  }
+}
+
 internal class ResolverDiagnostics {
   shared {
     private var values ConditionalWeakTable[Resolver, DiagnosticOverrideStore]?
@@ -502,6 +512,8 @@ internal partial class Resolver {
       if current.Field != e.Field { continue }
       let sameTarget = if current.Payload is GradientTransitionValues values {
         sameGradient(values.To, entryGradient(e))
+      } else if current.Payload is Float64TransitionValues values {
+        values.To == entryFloat64(e)
       } else if current.Payload is DashTransitionValues values {
         sameDashIntervals(values.To, entryDashes(e))
       } else {
@@ -524,11 +536,14 @@ internal partial class Resolver {
       let values = DashTransitionValues(entryDashes(cur)!!, entryDashes(e)!!)
       n.Dashes = values.Work
       payload = values
-    } else if e.Field == StyleField.DashOffset {
-      if let dashes = n.Dashes {
-        if !dashes.TransitionOwned { n.Dashes = DashPattern(dashes, dashes.Offset) }
-      } else {
-        n.Dashes = DashPattern([]float64{}, 0.0){.TransitionOwned: true}
+    } else if fieldKind(e.Field) == FieldKind.KFloat64 {
+      payload = Float64TransitionValues(entryFloat64(cur), entryFloat64(e))
+      if e.Field == StyleField.DashOffset {
+        if let dashes = n.Dashes {
+          if !dashes.TransitionOwned { n.Dashes = DashPattern(dashes, dashes.Offset) }
+        } else {
+          n.Dashes = DashPattern([]float64{}, 0.0){.TransitionOwned: true}
+        }
       }
     }
     let next = Transition{Field: e.Field,
@@ -601,7 +616,8 @@ internal partial class Resolver {
           continue
         }
         let t = tr.Duration <= 0.0 ? 1.0 : Math.Min(1.0, tr.Elapsed / tr.Duration)
-        let ft = float32(ease(tr.Easing, t))
+        let progress = ease(tr.Easing, t)
+        let ft = float32(progress)
         if tr.Field == StyleField.BoxShadows || tr.Field == StyleField.TextShadows {
           guard let from = tr.FromShadows, let to = tr.ToShadows, let work = tr.WorkingShadows else {
             list.RemoveAt(ti - 1)
@@ -613,16 +629,16 @@ internal partial class Resolver {
           n.BumpScenePaintVersion()
           recordResolvedChange(tr.Field)
         } else if tr.Payload is GradientTransitionValues values {
-          values.Sample(ft)
+          values.Sample(progress)
           n.BackgroundGradient = t >= 1.0 ? values.To : values.Work
           n.BumpScenePaintVersion()
           recordResolvedChange(tr.Field)
         } else if tr.Payload is DashTransitionValues values {
-          values.Sample(ft)
+          values.Sample(progress)
           n.BumpScenePaintVersion()
           recordResolvedChange(tr.Field)
         } else {
-          if writeDirectWithInvalidation(n, interpolatedTransitionEntry(tr, ft), PaintResourceInvalidated,
+          if writeDirectWithInvalidation(n, interpolatedTransitionEntry(tr, progress), PaintResourceInvalidated,
             Owner) {
             recordResolvedChange(tr.Field)
           }
@@ -640,7 +656,12 @@ internal partial class Resolver {
     }
   }
 
-  private func interpolatedTransitionEntry(tr Transition, t float32) StyleEntry {
+  private func interpolatedTransitionEntry(tr Transition, progress float64) StyleEntry {
+    if tr.Payload is Float64TransitionValues values {
+      let value = if progress >= 1.0 { values.To } else { values.From + (values.To - values.From) * progress }
+      return float64StyleEntry(tr.Field, value)
+    }
+    let t = float32(progress)
     if fieldKind(tr.Field) != FieldKind.KColor {
       return StyleEntry{ Field: tr.Field,
         A: tr.FromA + (tr.ToA - tr.FromA) * t,
@@ -912,16 +933,16 @@ internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Acti
     case StyleField.TransformOriginY {
       Transforming.SetOriginY(n, Length{ Unit: LengthUnit(int32(e.B)), Value: e.A })
     }
-    case StyleField.ShapeCornerRadius { n.ShapeCornerRadius = float64(e.A) }
-    case StyleField.StrokeStart { n.StrokeStart = float64(e.A) }
-    case StyleField.StrokeEnd { n.StrokeEnd = float64(e.A) }
-    case StyleField.MiterLimit { n.MiterLimit = float64(e.A) }
+    case StyleField.ShapeCornerRadius { n.ShapeCornerRadius = entryFloat64(e) }
+    case StyleField.StrokeStart { n.StrokeStart = entryFloat64(e) }
+    case StyleField.StrokeEnd { n.StrokeEnd = entryFloat64(e) }
+    case StyleField.MiterLimit { n.MiterLimit = entryFloat64(e) }
     case StyleField.DashOffset {
       if let dashes = n.Dashes {
-        if dashes.TransitionOwned { dashes.SetOffset(float64(e.A)) }
-        else { n.Dashes = DashPattern(dashes, float64(e.A)) }
+        if dashes.TransitionOwned { dashes.SetOffset(entryFloat64(e)) }
+        else { n.Dashes = DashPattern(dashes, entryFloat64(e)) }
       } else {
-        n.Dashes = DashPattern([]float64{}, float64(e.A)){.TransitionOwned: true}
+        n.Dashes = DashPattern([]float64{}, entryFloat64(e)){.TransitionOwned: true}
       }
     }
     case StyleField.DashIntervals {
@@ -1074,11 +1095,11 @@ internal func readField(n Node, f StyleField) StyleEntry {
       let value = Transforming.OriginY(n)
       return StyleEntry{ Field: f, A: value.Value, B: float32(int32(value.Unit)) }
     }
-    case StyleField.ShapeCornerRadius { return StyleEntry{Field: f, A: float32(n.ShapeCornerRadius)} }
-    case StyleField.StrokeStart { return StyleEntry{Field: f, A: float32(n.StrokeStart)} }
-    case StyleField.StrokeEnd { return StyleEntry{Field: f, A: float32(n.StrokeEnd)} }
-    case StyleField.MiterLimit { return StyleEntry{Field: f, A: float32(n.MiterLimit)} }
-    case StyleField.DashOffset { return StyleEntry{Field: f, A: float32(n.Dashes?.Offset ?? 0.0)} }
+    case StyleField.ShapeCornerRadius { return float64StyleEntry(f, n.ShapeCornerRadius) }
+    case StyleField.StrokeStart { return float64StyleEntry(f, n.StrokeStart) }
+    case StyleField.StrokeEnd { return float64StyleEntry(f, n.StrokeEnd) }
+    case StyleField.MiterLimit { return float64StyleEntry(f, n.MiterLimit) }
+    case StyleField.DashOffset { return float64StyleEntry(f, n.Dashes?.Offset ?? 0.0) }
     case StyleField.DashIntervals { return StyleEntry{Field: f, Payload: n.Dashes} }
     case StyleField.SelectionColor {
       return StyleEntry{Field: f, A: n.SelectionColor.R, B: n.SelectionColor.G,

@@ -81,8 +81,8 @@ public class LinearGradient : Gradient {
     contentHash = source.contentHash
   }
 
-  internal func Sample(from LinearGradient, to LinearGradient, t float32) {
-    angle = from.angle + (to.angle - from.angle) * float64(t)
+  internal func Sample(from LinearGradient, to LinearGradient, t float64) {
+    angle = from.angle + (to.angle - from.angle) * t
     interpolateGradientStops(from.Stops, to.Stops, stops, t)
     contentHash = computeGradientContentHash(1, angle, 0.0, 0.0, stops)
   }
@@ -141,10 +141,10 @@ public class RadialGradient : Gradient {
     contentHash = source.contentHash
   }
 
-  internal func Sample(from RadialGradient, to RadialGradient, t float32) {
-    centerX = from.centerX + (to.centerX - from.centerX) * float64(t)
-    centerY = from.centerY + (to.centerY - from.centerY) * float64(t)
-    radius = from.radius + (to.radius - from.radius) * float64(t)
+  internal func Sample(from RadialGradient, to RadialGradient, t float64) {
+    centerX = from.centerX + (to.centerX - from.centerX) * t
+    centerY = from.centerY + (to.centerY - from.centerY) * t
+    radius = from.radius + (to.radius - from.radius) * t
     interpolateGradientStops(from.Stops, to.Stops, stops, t)
     contentHash = computeGradientContentHash(2, centerX, centerY, radius, stops)
   }
@@ -285,7 +285,7 @@ internal sealed class GradientTransitionValues {
     }
   }
 
-  internal func Sample(t float32) {
+  internal func Sample(t float64) {
     switch Work {
       case value is LinearGradient { value.Sample(cast[LinearGradient](From), cast[LinearGradient](To), t) }
       case value is RadialGradient { value.Sample(cast[RadialGradient](From), cast[RadialGradient](To), t) }
@@ -299,13 +299,13 @@ internal func compatibleGradients(left Gradient?, right Gradient?) bool ->
   left != nil && right != nil && left.GetType() == right.GetType() && left.Stops.Count == right.Stops.Count
 
 internal func interpolateGradientStops(from IReadOnlyList[GradientStop], to IReadOnlyList[GradientStop],
-  work List[GradientStop], t float32) {
+  work List[GradientStop], t float64) {
   for i in 0 ... work.Count {
     let a = from[i]
     let b = to[i]
     work[i] = GradientStop{
-      Offset: a.Offset + (b.Offset - a.Offset) * float64(t),
-      Color: interpolateStyleColor(a.Color, b.Color, t),
+      Offset: a.Offset + (b.Offset - a.Offset) * t,
+      Color: interpolateStyleColor(a.Color, b.Color, float32(t)),
     }
   }
 }

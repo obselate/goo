@@ -243,6 +243,17 @@ internal func entryScrollbar(entry StyleEntry) Scrollbar ? -> entry.Payload as S
 
 internal func entryDashes(entry StyleEntry) DashPattern? -> entry.Payload as DashPattern?
 
+internal func float64StyleEntry(field StyleField, value float64) StyleEntry {
+  let bits = BitConverter.DoubleToInt64Bits(value)
+  return StyleEntry{Field: field,
+    A: float32((bits >> 48) & 65535L), B: float32((bits >> 32) & 65535L),
+    C: float32((bits >> 16) & 65535L), D: float32(bits & 65535L)}
+}
+
+internal func entryFloat64(entry StyleEntry) float64 ->
+BitConverter.Int64BitsToDouble((int64(entry.A) << 48) | (int64(entry.B) << 32)
+  | (int64(entry.C) << 16) | int64(entry.D))
+
 internal func sameStyleEntry(left StyleEntry, right StyleEntry) bool {
   if let binding = left.Payload as PaintBinding? {
     return binding.Same(right.Payload as PaintBinding?)

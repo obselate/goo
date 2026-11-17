@@ -1124,12 +1124,12 @@ internal partial class Reconciler {
       throw NotSupportedException("Gradient Shape strokes are not supported")
     }
     applyStyleEntries(n, s, s.PaintEntries(), s.Focusable, initial)
-    Res.writeField(n, StyleEntry{Field: StyleField.ShapeCornerRadius, A: float32(s.CornerRadius)}, initial)
-    Res.writeField(n, StyleEntry{Field: StyleField.StrokeStart, A: float32(s.StrokeStart)}, initial)
-    Res.writeField(n, StyleEntry{Field: StyleField.StrokeEnd, A: float32(s.StrokeEnd)}, initial)
-    Res.writeField(n, StyleEntry{Field: StyleField.MiterLimit, A: float32(s.Stroke?.MiterLimit ?? 4.0)}, initial)
+    Res.writeField(n, float64StyleEntry(StyleField.ShapeCornerRadius, s.CornerRadius), initial)
+    Res.writeField(n, float64StyleEntry(StyleField.StrokeStart, s.StrokeStart), initial)
+    Res.writeField(n, float64StyleEntry(StyleField.StrokeEnd, s.StrokeEnd), initial)
+    Res.writeField(n, float64StyleEntry(StyleField.MiterLimit, s.Stroke?.MiterLimit ?? 4.0), initial)
     Res.writeField(n, StyleEntry{Field: StyleField.DashIntervals, Payload: s.Stroke?.Dashes}, initial)
-    Res.writeField(n, StyleEntry{Field: StyleField.DashOffset, A: float32(s.Stroke?.Dashes?.Offset ?? 0.0)}, initial)
+    Res.writeField(n, float64StyleEntry(StyleField.DashOffset, s.Stroke?.Dashes?.Offset ?? 0.0), initial)
     let cap = s.Stroke?.Cap ?? StrokeCap.Butt
     let join = s.Stroke?.Join ?? StrokeJoin.Miter
     let effect = s.Stroke?.VectorEffect ?? VectorEffect.None

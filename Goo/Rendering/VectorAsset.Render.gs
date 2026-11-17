@@ -40,11 +40,11 @@ internal sealed class VectorLinearGradient : Gradient {
     contentHash = source.contentHash
   }
 
-  internal func Sample(from VectorLinearGradient, to VectorLinearGradient, t float32) {
-    x0 = from.x0 + (to.x0 - from.x0) * float64(t)
-    y0 = from.y0 + (to.y0 - from.y0) * float64(t)
-    x1 = from.x1 + (to.x1 - from.x1) * float64(t)
-    y1 = from.y1 + (to.y1 - from.y1) * float64(t)
+  internal func Sample(from VectorLinearGradient, to VectorLinearGradient, t float64) {
+    x0 = from.x0 + (to.x0 - from.x0) * t
+    y0 = from.y0 + (to.y0 - from.y0) * t
+    x1 = from.x1 + (to.x1 - from.x1) * t
+    y1 = from.y1 + (to.y1 - from.y1) * t
     interpolateGradientStops(from.Stops, to.Stops, stops, t)
     contentHash = computeGradientContentHash4(3, x0, y0, x1, y1, stops)
   }
@@ -87,11 +87,11 @@ internal sealed class VectorRadialGradient : Gradient {
     contentHash = source.contentHash
   }
 
-  internal func Sample(from VectorRadialGradient, to VectorRadialGradient, t float32) {
-    centerX = from.centerX + (to.centerX - from.centerX) * float64(t)
-    centerY = from.centerY + (to.centerY - from.centerY) * float64(t)
-    radiusX = from.radiusX + (to.radiusX - from.radiusX) * float64(t)
-    radiusY = from.radiusY + (to.radiusY - from.radiusY) * float64(t)
+  internal func Sample(from VectorRadialGradient, to VectorRadialGradient, t float64) {
+    centerX = from.centerX + (to.centerX - from.centerX) * t
+    centerY = from.centerY + (to.centerY - from.centerY) * t
+    radiusX = from.radiusX + (to.radiusX - from.radiusX) * t
+    radiusY = from.radiusY + (to.radiusY - from.radiusY) * t
     interpolateGradientStops(from.Stops, to.Stops, stops, t)
     contentHash = computeGradientContentHash4(4, centerX, centerY, radiusX, radiusY, stops)
   }

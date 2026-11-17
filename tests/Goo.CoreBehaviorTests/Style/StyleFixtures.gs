@@ -93,6 +93,7 @@ internal class StyleFixtures {
       LinearGradient(90, b), RadialGradient(0.8, 0.7, 0.8, b),
       VectorLinearGradient(0.2, 0.4, 0.8, 0.6, b), VectorRadialGradient(0.8, 0.7, 0.8, 0.6, b)}
     for i in 0 ... sources.Length {
+      let progress = 0.123456789
       let resolver = Resolver{}
       let root = Reconciler{Res: resolver}.Mount(Container{
         BackgroundGradient: sources[i], TransitionMs: 1000, TransitionEasing: Easing.Linear,
@@ -102,17 +103,20 @@ internal class StyleFixtures {
         root.Hovered = true
         resolver.Invalidate(root, false)
         resolver.Flush()
-        resolver.Advance(0.5)
+        resolver.Advance(progress)
         guard let sampled = root.BackgroundGradient else { return false }
-        if sampled.GetType() != sources[i].GetType() || !near(sampled.Stops[0].Offset, 0.1)
-          || !near(sampled.Stops[0].Color.R, 0.5) || !near(sampled.Stops[0].Color.B, 0.5) { return false }
+        if sampled.GetType() != sources[i].GetType() || sampled.Stops[0].Offset != 0.2 * progress
+          || sampled.Stops[1].Offset != 1.0 + (0.8 - 1.0) * progress
+          || !near(sampled.Stops[0].Color.R, 1.0 - progress) || !near(sampled.Stops[0].Color.B, progress) { return false }
         let correct = switch sampled {
-          case value is LinearGradient: value.Angle == 45.0
-          case value is RadialGradient: near(value.CenterX, 0.5) && near(value.CenterY, 0.5) && near(value.Radius, 0.5)
-          case value is VectorLinearGradient: near(value.X0, 0.1) && near(value.Y0, 0.2)
-            && near(value.X1, 0.9) && near(value.Y1, 0.8)
-          case value is VectorRadialGradient: near(value.CenterX, 0.5) && near(value.CenterY, 0.5)
-            && near(value.RadiusX, 0.5) && near(value.RadiusY, 0.5)
+          case value is LinearGradient: value.Angle == 90.0 * progress
+          case value is RadialGradient: value.CenterX == 0.2 + (0.8 - 0.2) * progress
+            && value.CenterY == 0.3 + (0.7 - 0.3) * progress && value.Radius == 0.2 + (0.8 - 0.2) * progress
+          case value is VectorLinearGradient: value.X0 == 0.2 * progress && value.Y0 == 0.4 * progress
+            && value.X1 == 1.0 + (0.8 - 1.0) * progress && value.Y1 == 1.0 + (0.6 - 1.0) * progress
+          case value is VectorRadialGradient: value.CenterX == 0.2 + (0.8 - 0.2) * progress
+            && value.CenterY == 0.3 + (0.7 - 0.3) * progress && value.RadiusX == 0.2 + (0.8 - 0.2) * progress
+            && value.RadiusY == 0.4 + (0.6 - 0.4) * progress
           case _: false
         }
         if !correct { return false }
@@ -171,17 +175,17 @@ internal class StyleFixtures {
     let red = Color.Rgb(255, 0, 0)
     let blue = Color.Rgb(0, 0, 255)
     using let controller = TextEditorController(TextDocument("edit"))
-    let source = DashPattern([]float64{2, 2}, 0)
-    let target = DashPattern([]float64{6, 6}, 8)
+    let source = DashPattern([]float64{2.2, 2.2}, -0.2)
+    let target = DashPattern([]float64{6.6, 6.6}, 8.8)
     let path = PathBuilder().MoveTo(0, 0).LineTo(100, 0).LineTo(100, 100).LineTo(0, 100).Close().Build()
     let scene = (changed bool) -> {
       let stroke = VectorStroke(2, VectorPaint(Color.White))
-      stroke.MiterLimit = changed ? 8 : 4
+      stroke.MiterLimit = changed ? 8.8 : 4.4
       stroke.Dashes = changed ? target : source
       return Container{Children: []Blob{
         Shape{
-          Path: path, Width: 100, Height: 100, CornerRadius: changed ? 10 : 2,
-          StrokeStart: changed ? 0.2 : 0.0, StrokeEnd: changed ? 1.0 : 0.5, Stroke: stroke,
+          Path: path, Width: 100, Height: 100, CornerRadius: changed ? 10.2 : 2.2,
+          StrokeStart: changed ? 0.4 : 0.2, StrokeEnd: changed ? 0.8 : 0.6, Stroke: stroke,
           TransitionMs: 1000, TransitionEasing: Easing.Linear,
           TransitionProperties: []TransitionProperty{
             TransitionProperty.ShapeCornerRadius, TransitionProperty.StrokeStart, TransitionProperty.StrokeEnd,
@@ -195,16 +199,21 @@ internal class StyleFixtures {
     let reconciler = Reconciler{Res: resolver}
     let root = reconciler.Mount(scene(false))
     try {
-      reconciler.Diff(root, scene(true))
-      resolver.Advance(0.5)
       let shape = root.Children[0]
+      if shape.ShapeCornerRadius != 2.2 || shape.StrokeStart != 0.2 || shape.StrokeEnd != 0.6
+        || shape.MiterLimit != 4.4 || shape.Dashes?.Offset != -0.2 || shape.Dashes?.Intervals[0] != 2.2 { return false }
+      reconciler.Diff(root, scene(true))
+      let progress = 0.123456789
+      resolver.Advance(progress)
       let editor = root.Children[1]
       guard let dashes = shape.Dashes else { return false }
-      if shape.ShapeCornerRadius != 6.0 || !near(shape.StrokeStart, 0.1) || !near(shape.StrokeEnd, 0.75)
-        || shape.MiterLimit != 6.0 || !near(dashes.Offset, 4.0) || !near(dashes.Intervals[0], 4.0)
-        || !near(editor.SelectionColor.R, 0.5) || !near(editor.SelectionColor.B, 0.5)
-        || !near(editor.EditorCaretColor.R, 0.5) || !near(editor.EditorCaretColor.B, 0.5)
-        || source.Offset != 0.0 || source.Intervals[0] != 2.0 || target.Offset != 8.0 { return false }
+      if shape.ShapeCornerRadius != 2.2 + (10.2 - 2.2) * progress
+        || shape.StrokeStart != 0.2 + (0.4 - 0.2) * progress || shape.StrokeEnd != 0.6 + (0.8 - 0.6) * progress
+        || shape.MiterLimit != 4.4 + (8.8 - 4.4) * progress || dashes.Offset != -0.2 + (8.8 + 0.2) * progress
+        || dashes.Intervals[0] != 2.2 + (6.6 - 2.2) * progress
+        || !near(editor.SelectionColor.R, 1.0 - progress) || !near(editor.SelectionColor.B, progress)
+        || !near(editor.EditorCaretColor.R, progress) || !near(editor.EditorCaretColor.B, 1.0 - progress)
+        || source.Offset != -0.2 || source.Intervals[0] != 2.2 || target.Offset != 8.8 { return false }
       let allocated = GC.GetAllocatedBytesForCurrentThread()
       for frame in 0 ... 50 { resolver.Advance(0.001) }
       let bytes = GC.GetAllocatedBytesForCurrentThread() - allocated
@@ -216,8 +225,8 @@ internal class StyleFixtures {
       if shape.ShapeCornerRadius != radius || shape.Dashes?.Offset != offset
         || shape.Dashes?.Intervals[0] != interval { return false }
       resolver.Advance(1.0)
-      if shape.ShapeCornerRadius != 2.0 || shape.StrokeStart != 0.0 || shape.StrokeEnd != 0.5
-        || shape.Dashes?.Offset != 0.0 || shape.Dashes?.Intervals[0] != 2.0 { return false }
+      if shape.ShapeCornerRadius != 2.2 || shape.StrokeStart != 0.2 || shape.StrokeEnd != 0.6
+        || shape.MiterLimit != 4.4 || shape.Dashes?.Offset != -0.2 || shape.Dashes?.Intervals[0] != 2.2 { return false }
       let mismatchStroke = VectorStroke(2, VectorPaint(Color.White))
       mismatchStroke.Dashes = DashPattern([]float64{1, 2, 3, 4}, 0)
       let mismatch = Shape{
@@ -2349,6 +2358,7 @@ internal class StyleFixtures {
     case FieldKind.KLength: entry.B == float32(int32(LengthUnit.Px))
     case FieldKind.KColor: entry.D == 1.0F
     case FieldKind.KScalar: entry.A != 0.0F
+    case FieldKind.KFloat64: entryFloat64(entry) != 0.0
     case FieldKind.KEnum: entry.A != 0.0F || entry.B != 0.0F
     case FieldKind.KString: entryText(entry) == "style-field-contract"
     case FieldKind.KGradient: entry.Payload != nil

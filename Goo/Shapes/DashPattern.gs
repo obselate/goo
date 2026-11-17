@@ -63,9 +63,9 @@ public class DashPattern {
     transitionOwned = true
   }
 
-  internal func InterpolateIntervals(from DashPattern, to DashPattern, t float32) {
+  internal func InterpolateIntervals(from DashPattern, to DashPattern, t float64) {
     for i in 0 ... values.Length {
-      values[i] = from.values[i] + (to.values[i] - from.values[i]) * float64(t)
+      values[i] = if t >= 1.0 { to.values[i] } else { from.values[i] + (to.values[i] - from.values[i]) * t }
     }
     revision++
   }
@@ -92,7 +92,7 @@ internal sealed class DashTransitionValues {
     Work = DashPattern(from, from.Offset)
   }
 
-  internal func Sample(t float32) {
+  internal func Sample(t float64) {
     Work.InterpolateIntervals(From, To, t)
   }
 }

@@ -5,7 +5,7 @@ import System.Collections.Generic
 
 internal enum FieldKind {
   KLength; KColor; KScalar; KEnum; KString; KGradient; KBoxShadows; KPath;
-  KImageSource; KShaderEffect; KScrollbar; KDashes
+  KImageSource; KShaderEffect; KScrollbar; KDashes; KFloat64
 }
 
 @Flags
@@ -247,13 +247,13 @@ private func createStyleFieldInfo() []StyleFieldInfo {
     styleFieldInfo(StyleField.Language, FieldKind.KString, layoutPaint, init | inherit,
       StyleEntry{ Field: StyleField.Language, Payload: "" }),
     styleFieldInfo(StyleField.BackdropBlur, FieldKind.KScalar, ReconcileEffects.Paint, lerp | init),
-    styleFieldInfo(StyleField.ShapeCornerRadius, FieldKind.KScalar, paintInput, lerp),
-    styleFieldInfo(StyleField.StrokeStart, FieldKind.KScalar, paintInput, lerp),
-    styleFieldInfo(StyleField.StrokeEnd, FieldKind.KScalar, paintInput, lerp,
-      StyleEntry{Field: StyleField.StrokeEnd, A: 1.0F}),
-    styleFieldInfo(StyleField.MiterLimit, FieldKind.KScalar, paintInput, lerp,
-      StyleEntry{Field: StyleField.MiterLimit, A: 4.0F}),
-    styleFieldInfo(StyleField.DashOffset, FieldKind.KScalar, paintInput, lerp),
+    styleFieldInfo(StyleField.ShapeCornerRadius, FieldKind.KFloat64, paintInput, lerp),
+    styleFieldInfo(StyleField.StrokeStart, FieldKind.KFloat64, paintInput, lerp),
+    styleFieldInfo(StyleField.StrokeEnd, FieldKind.KFloat64, paintInput, lerp,
+      float64StyleEntry(StyleField.StrokeEnd, 1.0)),
+    styleFieldInfo(StyleField.MiterLimit, FieldKind.KFloat64, paintInput, lerp,
+      float64StyleEntry(StyleField.MiterLimit, 4.0)),
+    styleFieldInfo(StyleField.DashOffset, FieldKind.KFloat64, paintInput, lerp),
     styleFieldInfo(StyleField.DashIntervals, FieldKind.KDashes, paintInput, lerp),
     styleFieldInfo(StyleField.SelectionColor, FieldKind.KColor, ReconcileEffects.Paint, lerp),
     styleFieldInfo(StyleField.CaretColor, FieldKind.KColor, ReconcileEffects.Paint, lerp),
