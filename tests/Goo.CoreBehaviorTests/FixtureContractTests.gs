@@ -10,10 +10,6 @@ import Xunit
 
 class FixtureContractTests {
     @Fact
-    func BorderRadiusDeclarationOrder() ->
-        Assert.True(StyleFixtures().BorderRadiusDeclarationOrderContract())
-
-    @Fact
     func PortalScrollbarPartsUseFinalBounds() ->
         Assert.True(PortalFixtures().PortalScrollbarPartsUseFinalBoundsContract())
 
@@ -173,6 +169,7 @@ class FixtureContractTests {
             yield Contract[TreeFixtures]("SizedBuildRejectsStateWritesContract")
             yield Contract[TreeFixtures]("SizedFailedBuildRetainsSubscriptionsContract")
             yield Contract[StyleFixtures]("FlexAndInsetDeclarationOrderContract")
+            yield Contract[StyleFixtures]("BorderRadiusDeclarationOrderContract")
             yield Contract[AccessibilityFixtures]("AccessibilityShorthandOrderContract")
             yield Contract[AccessibilityFixtures]("AccessibilityShorthandRoundTripContract")
             yield Contract[FlexConformanceFixtures]("RowColumnSpacerContract")
