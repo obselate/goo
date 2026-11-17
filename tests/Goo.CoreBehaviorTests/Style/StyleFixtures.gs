@@ -178,7 +178,7 @@ internal class StyleFixtures {
       let stroke = VectorStroke(2, VectorPaint(Color.White))
       stroke.MiterLimit = changed ? 8 : 4
       stroke.Dashes = changed ? target : source
-      return Container{
+      return Container{Children: []Blob{
         Shape{
           Path: path, Width: 100, Height: 100, CornerRadius: changed ? 10 : 2,
           StrokeStart: changed ? 0.2 : 0.0, StrokeEnd: changed ? 1.0 : 0.5, Stroke: stroke,
@@ -189,7 +189,7 @@ internal class StyleFixtures {
         TextEditor{
           Controller: controller, SelectionColor: changed ? blue : red, CaretColor: changed ? red : blue,
           TransitionMs: 1000, TransitionEasing: Easing.Linear,
-          TransitionProperties: []TransitionProperty{TransitionProperty.SelectionColor, TransitionProperty.CaretColor}}}
+          TransitionProperties: []TransitionProperty{TransitionProperty.SelectionColor, TransitionProperty.CaretColor}}}}
     }
     let resolver = Resolver{}
     let reconciler = Reconciler{Res: resolver}
