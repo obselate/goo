@@ -1484,7 +1484,7 @@ internal shared class CliApplication {
                 error ??= StringValue(responseError["message"])
             }
             error ??= "The endpoint rejected the capture request."
-            throw CliException(error!!, code, "capture")
+            throw CliException(error, code, "capture")
         }
         let format = StringValue(payload["format"])
         let rgbaData string? = StringValue(payload["rgbaBase64"])
