@@ -32,7 +32,16 @@ internal class WindowDisplaySmoke {
       }
       Require(window.SetFullscreenDisplay(missingDisplay) == WindowOperationResult.Closed,
         "Closed window accepted a fullscreen display request")
+      var earlyChanges = 0
+      var removedChanges = 0
+      var lateChanges = 0
+      let early Action = () -> { earlyChanges++ }
+      let removed Action = () -> { removedChanges++ }
+      window.DisplayChanged += early
+      window.DisplayChanged += removed
       window.Open()
+      window.DisplayChanged -= removed
+      window.DisplayChanged += () -> { lateChanges++ }
       try {
         let displays = window.GetDisplays()
         Require(displays.Count > 0, "SDL display inventory is empty")
@@ -83,6 +92,10 @@ internal class WindowDisplaySmoke {
         Require(observedFullscreenEvent && nativeState.Fullscreen
             && nativeState.DisplayId == targetId,
           "Native fullscreen did not reach the selected display")
+        if displays.Count > 1 {
+          Require(earlyChanges > 0 && lateChanges > 0 && removedChanges == 0,
+            "DisplayChanged did not use the current subscribers after Open")
+        }
         Require(window.State == WindowState.Fullscreen,
           "Native fullscreen was overwritten by a restore notification")
         let observedDisplayId = nativeState.DisplayId

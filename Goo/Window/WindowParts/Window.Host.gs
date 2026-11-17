@@ -195,7 +195,7 @@ public partial class Window {
       nativeWidth int32, nativeHeight int32) -> {
         queueNativeMetrics(logicalWidth, logicalHeight, nativeWidth, nativeHeight)
       }
-    native.DisplayChanged += notifications.RaiseDisplayChanged
+    native.DisplayChanged += () -> notifications.RaiseDisplayChanged()
     native.StateChanged += (value WindowState) -> {
       state = value
       requestRender()
