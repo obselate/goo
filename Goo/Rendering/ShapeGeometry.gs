@@ -27,7 +27,8 @@ internal partial class ShapeGeometry {
     internal func Resolve(n Node, bounds Rect) ResolvedShapeGeometry {
       let strokeWidth = n.BorderLeftWidth.Px
       let strokeInset = if n.ShapeStrokeInset && n.ShapeVectorEffect == VectorEffect.None {
-        strokeWidth
+        let fit = PathGeometry.Map(n.ShapePath, n.ShapeFit, 0.0F, 0.0F, bounds.W, bounds.H)
+        strokeWidth * MathF.Max(fit.ScaleX, fit.ScaleY)
       } else { 0.0F }
       let halfStroke = strokeInset * 0.5F
       let left = resolveEdgePadding(n, YGEdge.Left, bounds.W)
