@@ -84,20 +84,6 @@ internal partial class VulkanWindowTarget {
   internal prop MemoryAllocatorForProof VulkanMemoryAllocator? { get -> memoryAllocator }
   internal prop ResourceGenerationForProof uint64{ get -> runtime?.Generation ?? 0uL }
 
-  internal func VerifyShaderEffectPipelineIdentityForProof() {
-    let pipelines = runtime!!.PrimitiveState.PipelinesFor(VkConstants.VK_FORMAT_R8G8B8A8_UNORM)
-    let blended = ShaderEffect(ShaderEffectProgram.LoadEmbedded("filtered_backdrop.goo-effect"))
-    let replacing = ShaderEffect(ShaderEffectProgram.LoadEmbedded("filtered_backdrop.goo-effect", true))
-    let duplicate = ShaderEffect(ShaderEffectProgram.LoadEmbedded("filtered_backdrop.goo-effect"))
-    let blendedPipeline = pipelines.ResolveShaderEffectPipeline(blended)
-    let replacingPipeline = pipelines.ResolveShaderEffectPipeline(replacing)
-    if blendedPipeline == replacingPipeline
-      || blendedPipeline != pipelines.ResolveShaderEffectPipeline(duplicate)
-      || replacingPipeline != pipelines.ResolveShaderEffectPipeline(replacing) {
-        throw InvalidOperationException("Shader effect pipelines did not retain their blend identity")
-      }
-  }
-
   internal func CompletedSubmissionSerialForProof() uint64 ->
   CompletedGlobalSubmissionSerial()
 

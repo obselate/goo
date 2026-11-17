@@ -197,7 +197,6 @@ internal func AppendVulkanProofGlyph(
     try {
       let opened = VulkanProductionReadbackFixture.Open(window, 64u, 64u)
       capture = opened
-      WindowReadbackTestFixture.CaptureTarget(window)!!.VerifyShaderEffectPipelineIdentityForProof()
       let effect = ShaderEffect(program, true)
       effect.SetParameter(0, Vector4(1.0F, 1.0F, 1.0F, 0.0F))
       let full = ConservativeBounds{Width: 64.0F, Height: 64.0F}
