@@ -1,5 +1,0 @@
-<Project>
-  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'browser-wasm'">
-    <WasmExtraFilesToDeploy Include="$(MSBuildThisFileDirectory)../contentFiles/any/any/goo-browser.js" />
-  </ItemGroup>
-</Project>
