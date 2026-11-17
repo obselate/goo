@@ -156,7 +156,7 @@ internal class StyleFixtures {
       resolver.Invalidate(node, false)
       resolver.Flush()
       let retargeted = textShadowAt(node.TextShadows, 0)
-      if retargeted.OffsetX != shadow.OffsetX || retargeted.Color != shadow.Color { return false }
+      if !sameLength(retargeted.OffsetX, shadow.OffsetX) || retargeted.Color != shadow.Color { return false }
       node.Hovered = true
       node.HoverStyle = Style{TextShadows: []TextShadow{
         TextShadow{Color: red}, TextShadow{Color: blue}}}.Entries()
