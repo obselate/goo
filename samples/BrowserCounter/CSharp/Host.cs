@@ -14,9 +14,9 @@ internal static class Host
     {
         using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Goo.Counter.Font.ttf")
             ?? throw new InvalidOperationException("Missing counter font");
-        using var bytes = new MemoryStream();
-        stream.CopyTo(bytes);
-        new FontSource("sans-serif", 400, false, bytes.ToArray()).Register();
+        var bytes = GC.AllocateUninitializedArray<byte>(checked((int)stream.Length));
+        stream.ReadExactly(bytes, 0, bytes.Length);
+        new FontSource("sans-serif", 400, false, bytes).Register();
         if (OperatingSystem.IsBrowser()) BrowserWindowHost.Configure();
     }
 }
