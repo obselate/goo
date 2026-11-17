@@ -88,6 +88,17 @@ class SvgRuntimeTests {
     }
 
     @Theory
+    @InlineData("translate(30 0)")
+    @InlineData("translate(7 9) scale(2 3)")
+    @InlineData("rotate(90 10 20)")
+    func SvgRootTransformMatchesGroup(source string) {
+        let root = Svg.Parse("<svg viewBox='2 3 20 10' transform='$source'><rect width='4' height='2'/></svg>")
+        let group = Svg.Parse("<svg viewBox='2 3 20 10'><g transform='$source'><rect width='4' height='2'/></g></svg>")
+        Assert.Equal(group.Nodes[0].Children[0].Transform, root.Nodes[0].Transform)
+        Assert.Equal(group.PathForNode(2), root.PathForNode(1))
+    }
+
+    @Theory
     @InlineData(true, false)
     @InlineData(true, true)
     @InlineData(false, false)
