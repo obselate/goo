@@ -27,6 +27,7 @@
     <Compile Remove="Rendering/Vulkan/VulkanGpuExperiments.Disabled.gs"
              Condition="'$(GooGpuExperiments)' == 'true'" />
     <InternalsVisibleTo Include="Goo.Android" />
+    <InternalsVisibleTo Include="Goo.Browser" />
     <InternalsVisibleTo Include="Goo.Audio" />
     <InternalsVisibleTo Include="Goo.DevTools.Cli" />
     <InternalsVisibleTo Include="Goo.InputFuzz" />

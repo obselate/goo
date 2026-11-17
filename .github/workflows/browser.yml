@@ -1,0 +1,45 @@
+name: Browser advisory
+
+on:
+  pull_request:
+    paths:
+      - 'Goo.Browser/**'
+      - 'samples/BrowserBox/**'
+      - 'Goo/Shaders/**'
+      - 'Goo/Platform/EmbeddedWindowHost.gs'
+      - 'Goo/Platform/WindowHost.gs'
+      - 'Goo/Window/WindowParts/Window.Embedded.gs'
+      - 'tools/Goo.ShaderGen/**'
+      - '.github/workflows/browser.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    name: Browser build and WGSL validation (advisory)
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
+        with:
+          global-json-file: global.json
+      - name: Install browser workload
+        run: dotnet workload install wasm-tools --skip-manifest-update
+      - name: Install pinned shader compiler and validator
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/slang"
+          curl -fL https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-linux-x86_64-glibc-2.27.tar.gz -o "$RUNNER_TEMP/slang.tar.gz"
+          echo "b9c5e195ce9a7124147d47febe78b7f8c59c96829add50b0938bd04b8056fb88  $RUNNER_TEMP/slang.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/slang.tar.gz" -C "$RUNNER_TEMP/slang"
+          cargo install naga-cli --version 27.0.0 --locked --jobs 2 --root "$RUNNER_TEMP/naga"
+          echo "SLANG_SDK=$RUNNER_TEMP/slang" >> "$GITHUB_ENV"
+          echo "NAGA_SDK=$RUNNER_TEMP/naga" >> "$GITHUB_ENV"
+      - name: Regenerate and validate WGSL without changing assets
+        run: dotnet run --project tools/Goo.ShaderGen -c Release -p:UseSharedCompilation=false -- check-webgpu
+      - name: Publish browser Box sample
+        run: dotnet publish samples/BrowserBox/BrowserBox.gsproj -c Release -p:UseSharedCompilation=false

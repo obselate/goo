@@ -1,0 +1,25 @@
+<Project Sdk="Gsharp.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Version>$(GooReleaseVersion)</Version>
+    <PackageId>Goo.Browser</PackageId>
+    <Description>Experimental browser WebGPU host for Goo solid and rounded boxes.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
+    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);IncludeBrowserInterop</TargetsForTfmSpecificBuildOutput>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Goo/Goo.gsproj" />
+    <None Include="goo-browser.js" Pack="true" PackagePath="contentFiles/any/any/goo-browser.js" />
+    <None Include="Goo.Browser.targets" Pack="true" PackagePath="buildTransitive/Goo.Browser.targets" />
+    <EmbeddedResource Include="Shaders/*.wgsl" LogicalName="Goo.Browser.Shaders.%(Filename)%(Extension)" />
+    <ProjectReference Include="Interop/Goo.Browser.Interop.csproj" PrivateAssets="all" />
+  </ItemGroup>
+  <Target Name="IncludeBrowserInterop">
+    <ItemGroup>
+      <BuildOutputInPackage Include="$(OutputPath)Goo.Browser.Interop.dll" />
+    </ItemGroup>
+  </Target>
+</Project>

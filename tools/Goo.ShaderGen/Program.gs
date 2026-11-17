@@ -1210,18 +1210,60 @@ internal shared class Program {
 
     private func Main(args[]string) int32 {
         try {
+            if args.Length == 1 && (args[0] == "generate-webgpu" || args[0] == "check-webgpu") {
+                return ExecuteWebGpu(args[0])
+            }
             if args.Length == 1 && (args[0] == "--help" || args[0] == "-h") {
-                Console.WriteLine("Usage: Goo.ShaderGen generate|check\nGenerate rewrites checked-in shader assets. Check compares them without writing.")
+                Console.WriteLine("Usage: Goo.ShaderGen generate|check|generate-webgpu|check-webgpu")
                 return 0
             }
             if args.Length != 1 || (args[0] != "generate" && args[0] != "check") {
-                Console.Error.WriteLine("Usage: Goo.ShaderGen generate|check")
+                Console.Error.WriteLine("Usage: Goo.ShaderGen generate|check|generate-webgpu|check-webgpu")
                 return 2
             }
             return Execute(args[0])
         } catch (exception Exception) {
             Console.Error.WriteLine(exception.Message)
             return 1
+        }
+    }
+
+    private func ExecuteWebGpu(mode string) int32 {
+        let root = FindRepositoryRoot()
+        let sourceRoot = Path.Combine(root, ShaderDirectory)
+        let outputRoot = Path.Combine(root, "Goo.Browser", "Shaders")
+        let manifestPath = Path.Combine(root, ProductionDirectory, ManifestName)
+        let manifest = DeserializeManifest(manifestPath, File.ReadAllBytes(manifestPath))
+        let compiler = FindTool(manifest.Toolchain.Compiler.Executable, "SLANG_SDK")
+        RequireCompilerVersion(compiler, manifest)
+        let validator = FindTool("naga", "NAGA_SDK")
+        let temporaryRoot = Path.Combine(Path.GetTempPath(), "goo-wgsl-" + Guid.NewGuid().ToString("N"))
+        Directory.CreateDirectory(temporaryRoot)
+        try {
+            for name in []string{"analytic.vert", "analytic_solid.frag", "analytic_border.frag"} {
+                let output = Path.Combine(temporaryRoot, name + ".wgsl")
+                let stage = if name.EndsWith(".vert", StringComparison.Ordinal) { "vertex" } else { "fragment" }
+                RequireSuccess(compiler, RunTool(compiler, []string{
+                    Path.Combine(sourceRoot, name + ".slang"),
+                    "-target", "wgsl", "-std", manifest.Target.SlangVersion,
+                    "-DGOO_WEBGPU=1", "-entry", "main", "-stage", stage,
+                    "-matrix-layout-row-major", "-fp-mode", "precise", "-O2",
+                    "-warnings-as-errors", "all", "-o", output,
+                }))
+                RequireSuccess(validator, RunTool(validator, []string{output}))
+                let bytes = File.ReadAllBytes(output)
+                let destination = Path.Combine(outputRoot, name + ".wgsl")
+                if mode == "generate-webgpu" {
+                    Directory.CreateDirectory(outputRoot)
+                    File.WriteAllBytes(destination, bytes)
+                } else {
+                    RequireByteMatch(bytes, destination, "browser WGSL")
+                }
+            }
+            Console.WriteLine("Validated three generated browser WGSL shaders")
+            return 0
+        } finally {
+            Directory.Delete(temporaryRoot, true)
         }
     }
 
