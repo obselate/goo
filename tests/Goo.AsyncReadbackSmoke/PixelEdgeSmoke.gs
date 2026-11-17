@@ -130,8 +130,8 @@ func RunPixelEdgeSmoke() {
       let rects = StringBuilder()
       for y in 97 ... 113 {
         for x in 12 ... 40 {
-          let large = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, float64(x), float64(y))
-          let reduced = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, float64(x + 32), float64(y))
+          let large = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, float64(x) * float64(scale), float64(y) * float64(scale))
+          let reduced = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, float64(x + 32) * float64(scale), float64(y) * float64(scale))
           for channel in 0 ... 4 {
             Require(Math.Abs(int32(large[channel]) - int32(reduced[channel])) <= 1,
               "A large finite gradient angle differs from its reduced angle")
