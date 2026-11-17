@@ -47,6 +47,7 @@ public partial class Window {
         }
         var applied = WindowPlacementFields.None
         if (value.Fields & WindowPlacementFields.NormalSize) != WindowPlacementFields.None {
+            requestedSize = nil
             width = int32(Math.Round(value.NormalBounds.Width))
             height = int32(Math.Round(value.NormalBounds.Height))
             constrainSize()
