@@ -79,6 +79,7 @@
 !/docs/interop.md
 
 !/docs/audio.md
+!/docs/powershell.md
 !/docs/assets/
 !/docs/assets/**
 !/docs/api*/
@@ -136,6 +137,9 @@
 !/plugins/goo/**
 !/templates/
 !/templates/**
+
+!/samples/
+!/samples/**
 
 !/vendor/
 /vendor/*

@@ -3,8 +3,12 @@
     <TargetFramework>net10.0</TargetFramework>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <OutputPath>GooLog/lib/</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Goo" Version="$(GooReleaseVersion)" />
+    <PackageReference Include="Goo.Widgets" Version="[0.22.2]" />
   </ItemGroup>
 </Project>
