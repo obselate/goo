@@ -1272,7 +1272,7 @@ internal func applyDisplay(yg Facebook.Yoga.Node, n Node) {
   let clipAxes Facebook.Yoga.ContentSizing =
     (n.OverflowX != Overflow.Visible ? Facebook.Yoga.ContentSizing.Width : Facebook.Yoga.ContentSizing.None)
     | (n.OverflowY != Overflow.Visible ? Facebook.Yoga.ContentSizing.Height : Facebook.Yoga.ContentSizing.None)
-  yg.ContentClipAxes = clipAxes
+  yg.SetContentClipAxes(clipAxes)
 }
 
 // Reference equality per slot: Diff reuses Node instances, and syncNode reuses

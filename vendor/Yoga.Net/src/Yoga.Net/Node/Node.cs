@@ -52,15 +52,12 @@ namespace Facebook.Yoga
         
         public bool HasNewLayout { get => _hasNewLayout; set => SetHasNewLayout(value); }
         public bool AlwaysFormsContainingBlock { get => _alwaysFormsContainingBlock; set => _alwaysFormsContainingBlock = value; }
-        public ContentSizing? ContentClipAxes
+        public ContentSizing? ContentClipAxes => _contentClipAxes;
+        public void SetContentClipAxes(ContentSizing value)
         {
-            get => _contentClipAxes;
-            set
-            {
-                if (_contentClipAxes == value) return;
-                _contentClipAxes = value;
-                MarkDirtyAndPropagate();
-            }
+            if (_contentClipAxes == value) return;
+            _contentClipAxes = value;
+            MarkDirtyAndPropagate();
         }
         
         public LayoutableChildren<Node> LayoutChildren => GetLayoutChildren();
