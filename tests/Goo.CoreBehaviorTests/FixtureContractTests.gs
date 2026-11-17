@@ -10,6 +10,19 @@ import Xunit
 
 class FixtureContractTests {
     @Fact
+    func TweenInterpolatesExtremeFiniteEndpoints() {
+        let tween = Motion.Tween(1000.0)
+        for from in []float64{Double.MaxValue, -Double.MaxValue} {
+            let simulation = tween(from, -from, 0.0)
+            Assert.Equal(from, simulation.Position(0.0))
+            Assert.Equal(from * 0.5, simulation.Position(0.25))
+            Assert.Equal(0.0, simulation.Position(0.5))
+            Assert.Equal(-from * 0.5, simulation.Position(0.75))
+            Assert.Equal(-from, simulation.Position(1.0))
+        }
+    }
+
+    @Fact
     func PortalScrollbarPartsUseFinalBounds() ->
         Assert.True(PortalFixtures().PortalScrollbarPartsUseFinalBoundsContract())
 
