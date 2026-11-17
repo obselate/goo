@@ -393,6 +393,7 @@ namespace Facebook.Yoga
                     }
                 }
             }
+            ContentSizing contentSizing = ContentSizing.None;
 
             if (Comparison.IsUndefined(childWidth) || Comparison.IsUndefined(childHeight))
             {
@@ -425,6 +426,7 @@ namespace Facebook.Yoga
                     ref layoutMarkerData,
                     depth,
                     generationCount);
+                contentSizing = child.Layout.ContentSizing;
                 childWidth = child.Layout.MeasuredDimension(Dimension.Width) +
                     child.Style.ComputeMarginForAxis(
                         FlexDirection.Row, containingBlockWidth);
@@ -446,7 +448,8 @@ namespace Facebook.Yoga
                 LayoutPassReason.AbsLayout,
                 ref layoutMarkerData,
                 depth,
-                generationCount);
+                generationCount,
+                contentSizing);
 
             PositionAbsoluteChild(
                 containingNode,

@@ -17,6 +17,7 @@ namespace Facebook.Yoga
 
         public float ComputedWidth;
         public float ComputedHeight;
+        public ContentSizing ContentSizing;
 
         public CachedMeasurement()
         {
@@ -26,12 +27,14 @@ namespace Facebook.Yoga
             HeightSizingMode = SizingMode.MaxContent;
             ComputedWidth = -1;
             ComputedHeight = -1;
+            ContentSizing = ContentSizing.None;
         }
 
         public bool Equals(CachedMeasurement measurement)
         {
             bool isEqual = WidthSizingMode == measurement.WidthSizingMode &&
-                           HeightSizingMode == measurement.HeightSizingMode;
+                           HeightSizingMode == measurement.HeightSizingMode &&
+                           ContentSizing == measurement.ContentSizing;
 
             if (!NumericComparison.IsUndefined(AvailableWidth) ||
                 !NumericComparison.IsUndefined(measurement.AvailableWidth))
@@ -80,7 +83,7 @@ namespace Facebook.Yoga
             return HashCode.Combine(
                 AvailableWidth, AvailableHeight,
                 WidthSizingMode, HeightSizingMode,
-                ComputedWidth, ComputedHeight
+                ComputedWidth, ComputedHeight, ContentSizing
             );
         }
     }

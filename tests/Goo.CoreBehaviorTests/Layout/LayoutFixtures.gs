@@ -909,6 +909,38 @@ internal class LayoutFixtures {
     return true
   }
 
+  func ContentSizingFollowsCurrentCachedLayoutPass() bool {
+    let root = Reconciler{Res: Resolver{}}.Mount(Container{Width: 400, Height: 100,
+      Container{Position: PositionType.Absolute, Top: 0.5, Width: 108,
+        FlexDirection: FlexDirection.Row, Overflow: Overflow.Hidden,
+        Text{Content: "gjpqy ÁÉ", FontSize: 12, LineHeight: 1.2, TextWrap: TextWrap.NoWrap}}})
+    try {
+      Layout().Calculate(root, 400.0F, 100.0F)
+      let parent = root.Children[0].Yoga!!
+      let width = parent.Layout.RawDimension(Dimension.Width)
+      let height = parent.Layout.RawDimension(Dimension.Height)
+      for contentSized in []bool{true, false, true, false} {
+        var counters = LayoutData()
+        Facebook.Yoga.LayoutAlgorithm.CalculateLayoutInternal(parent, width, height, Facebook.Yoga.Direction.LTR,
+          SizingMode.StretchFit, SizingMode.StretchFit, 400.0F, 100.0F, true,
+          LayoutPassReason.AbsLayout, ref counters, 0u, 10000u,
+          contentSized ? ContentSizing.Height : ContentSizing.None)
+        PixelGrid.RoundLayoutResultsToPixelGrid(parent, 0.0, 0.0)
+        let expected = contentSized ? ContentSizing.Height : ContentSizing.None
+        let text = parent.GetChild(0u)!!.Layout
+        if counters.CachedLayouts != 1 || parent.Layout.ContentSizing != expected
+          || (contentSized && (text.Position(PhysicalEdge.Top) < 0
+            || text.Position(PhysicalEdge.Top) + text.Dimension(Dimension.Height)
+              > parent.Layout.Dimension(Dimension.Height)))
+          || (!contentSized && parent.Layout.Dimension(Dimension.Height)
+            != PixelGrid.RoundValueToPixelGrid(0.5 + float64(height), 1.0, false, false) - 1.0F) {
+          throw InvalidOperationException("content=${contentSized}, cache=${counters.CachedLayouts}, flags=${parent.Layout.ContentSizing}")
+        }
+      }
+      return true
+    } finally { NodeLifecycle.DisposeTree(root) }
+  }
+
   func NestedBaselinesIgnorePixelSnappedPositions() bool {
     let pair = (size float64) -> Container{
       Width: 100, FlexDirection: FlexDirection.Row, AlignItems: AlignItems.Baseline,

@@ -9,6 +9,14 @@ namespace Facebook.Yoga
         FitContent,
     }
 
+    [Flags]
+    public enum ContentSizing
+    {
+        None = 0,
+        Width = 1,
+        Height = 2,
+    }
+
     public static class SizingModeExtensions
     {
         public static MeasureMode ToMeasureMode(this SizingMode mode)

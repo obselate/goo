@@ -122,6 +122,7 @@ namespace Facebook.Yoga
             {
                 useResolvedFlexBasis = true;
             }
+            child.Layout.ComputedFlexBasisSizing = ContentSizing.None;
 
             if (useResolvedFlexBasis)
             {
@@ -276,6 +277,8 @@ namespace Facebook.Yoga
                     ownerWidth, ownerHeight, false,
                     LayoutPassReason.MeasureChild,
                     ref layoutMarkerData, depth, generationCount);
+                child.Layout.ComputedFlexBasisSizing = child.Layout.ContentSizing &
+                    (isMainAxisRow ? ContentSizing.Width : ContentSizing.Height);
 
                 child.SetLayoutComputedFlexBasis(new FloatOptional(
                     Comparison.MaxOrDefined(
@@ -321,10 +324,10 @@ namespace Facebook.Yoga
             {
                 node.SetLayoutMeasuredDimension(
                     BoundAxis.ComputeBoundAxis(node, FlexDirection.Row, direction,
-                        availableWidth, ownerWidth, ownerWidth), Dimension.Width);
+                        availableWidth, ownerWidth, ownerWidth, true), Dimension.Width);
                 node.SetLayoutMeasuredDimension(
                     BoundAxis.ComputeBoundAxis(node, FlexDirection.Column, direction,
-                        availableHeight, ownerHeight, ownerWidth), Dimension.Height);
+                        availableHeight, ownerHeight, ownerWidth, true), Dimension.Height);
             }
             else
             {
@@ -358,7 +361,7 @@ namespace Facebook.Yoga
                          widthSizingMode == SizingMode.FitContent)
                             ? measuredSize.Width + paddingAndBorderAxisRow
                             : availableWidth,
-                        ownerWidth, ownerWidth), Dimension.Width);
+                        ownerWidth, ownerWidth, true), Dimension.Width);
 
                 node.SetLayoutMeasuredDimension(
                     BoundAxis.ComputeBoundAxis(node, FlexDirection.Column, direction,
@@ -366,7 +369,7 @@ namespace Facebook.Yoga
                          heightSizingMode == SizingMode.FitContent)
                             ? measuredSize.Height + paddingAndBorderAxisColumn
                             : availableHeight,
-                        ownerHeight, ownerWidth), Dimension.Height);
+                        ownerHeight, ownerWidth, true), Dimension.Height);
             }
         }
 
@@ -387,7 +390,7 @@ namespace Facebook.Yoga
             }
             node.SetLayoutMeasuredDimension(
                 BoundAxis.ComputeBoundAxis(
-                    node, FlexDirection.Row, direction, width, ownerWidth, ownerWidth),
+                    node, FlexDirection.Row, direction, width, ownerWidth, ownerWidth, true),
                 Dimension.Width);
 
             float height = availableHeight;
@@ -400,7 +403,7 @@ namespace Facebook.Yoga
             }
             node.SetLayoutMeasuredDimension(
                 BoundAxis.ComputeBoundAxis(
-                    node, FlexDirection.Column, direction, height, ownerHeight, ownerWidth),
+                    node, FlexDirection.Column, direction, height, ownerHeight, ownerWidth, true),
                 Dimension.Height);
         }
 
@@ -424,14 +427,14 @@ namespace Facebook.Yoga
                         Comparison.IsUndefined(availableWidth) ||
                                 (widthSizingMode == SizingMode.FitContent && availableWidth < 0.0f)
                             ? 0.0f : availableWidth,
-                        ownerWidth, ownerWidth), Dimension.Width);
+                        ownerWidth, ownerWidth, true), Dimension.Width);
 
                 node.SetLayoutMeasuredDimension(
                     BoundAxis.ComputeBoundAxis(node, FlexDirection.Column, direction,
                         Comparison.IsUndefined(availableHeight) ||
                                 (heightSizingMode == SizingMode.FitContent && availableHeight < 0.0f)
                             ? 0.0f : availableHeight,
-                        ownerHeight, ownerWidth), Dimension.Height);
+                        ownerHeight, ownerWidth, true), Dimension.Height);
                 return true;
             }
             return false;
@@ -548,6 +551,7 @@ namespace Facebook.Yoga
                 {
                     child.SetLayoutComputedFlexBasisGeneration(generationCount);
                     child.SetLayoutComputedFlexBasis(new FloatOptional(0));
+                    child.Layout.ComputedFlexBasisSizing = ContentSizing.None;
                 }
                 else
                 {
@@ -709,7 +713,9 @@ namespace Facebook.Yoga
                     availableInnerWidth, availableInnerHeight,
                     isLayoutPass,
                     isLayoutPass ? LayoutPassReason.FlexLayout : LayoutPassReason.FlexMeasure,
-                    ref layoutMarkerData, depth, generationCount);
+                    ref layoutMarkerData, depth, generationCount,
+                    Comparison.InexactEquals(updatedMainSize, currentLineChild.Layout.ComputedFlexBasis.Unwrap())
+                        ? currentLineChild.Layout.ComputedFlexBasisSizing : ContentSizing.None);
                 node.SetLayoutHadOverflow(
                     node.Layout.HadOverflow() || currentLineChild.Layout.HadOverflow());
             }
@@ -1251,7 +1257,7 @@ namespace Facebook.Yoga
                     containerCrossAxis = BoundAxis.ComputeBoundAxis(
                         node, crossAxis, direction,
                         flexLine.Layout.CrossDim + paddingAndBorderAxisCross,
-                        crossAxisOwnerSize, ownerWidth) - paddingAndBorderAxisCross;
+                        crossAxisOwnerSize, ownerWidth, true) - paddingAndBorderAxisCross;
                 }
 
                 if (!isNodeFlexWrap && sizingModeCrossDim == SizingMode.StretchFit)
@@ -1262,7 +1268,7 @@ namespace Facebook.Yoga
                     flexLine.Layout.CrossDim = BoundAxis.ComputeBoundAxis(
                         node, crossAxis, direction,
                         flexLine.Layout.CrossDim + paddingAndBorderAxisCross,
-                        crossAxisOwnerSize, ownerWidth) - paddingAndBorderAxisCross;
+                        crossAxisOwnerSize, ownerWidth, true) - paddingAndBorderAxisCross;
                 }
 
                 // STEP 7: CROSS-AXIS ALIGNMENT
@@ -1316,7 +1322,9 @@ namespace Facebook.Yoga
                                     childWidthSizingMode, childHeightSizingMode,
                                     availableInnerWidth, availableInnerHeight,
                                     true, LayoutPassReason.Stretch,
-                                    ref layoutMarkerData, depth, generationCount);
+                                    ref layoutMarkerData, depth, generationCount,
+                                    child.Layout.ContentSizing &
+                                        (isMainAxisRow ? ContentSizing.Width : ContentSizing.Height));
                             }
                 }
                 else
@@ -1383,7 +1391,7 @@ namespace Facebook.Yoga
 
                 float innerCrossDim = BoundAxis.ComputeBoundAxis(
                     node, crossAxis, direction, unclampedCrossDim,
-                    crossAxisOwnerSize, ownerWidth) - paddingAndBorderAxisCross;
+                    crossAxisOwnerSize, ownerWidth, true) - paddingAndBorderAxisCross;
 
                 float remainingAlignContentDim = innerCrossDim - totalLineCrossDim;
                 Align alignContent = remainingAlignContentDim >= 0
@@ -1497,7 +1505,9 @@ namespace Facebook.Yoga
                                                 SizingMode.StretchFit, SizingMode.StretchFit,
                                                 availableInnerWidth, availableInnerHeight,
                                                 true, LayoutPassReason.MultilineStretch,
-                                                ref layoutMarkerData, depth, generationCount);
+                                                ref layoutMarkerData, depth, generationCount,
+                                                child.Layout.ContentSizing &
+                                                    (isMainAxisRow ? ContentSizing.Width : ContentSizing.Height));
                                         }
                                     }
                                     break;
@@ -1519,17 +1529,19 @@ namespace Facebook.Yoga
             // STEP 9: COMPUTING FINAL DIMENSIONS
             node.SetLayoutMeasuredDimension(
                 BoundAxis.ComputeBoundAxis(node, FlexDirection.Row, direction,
-                    availableWidth - marginAxisRow, ownerWidth, ownerWidth), Dimension.Width);
+                    availableWidth - marginAxisRow, ownerWidth, ownerWidth,
+                    widthSizingMode == SizingMode.StretchFit), Dimension.Width);
             node.SetLayoutMeasuredDimension(
                 BoundAxis.ComputeBoundAxis(node, FlexDirection.Column, direction,
-                    availableHeight - marginAxisColumn, ownerHeight, ownerWidth), Dimension.Height);
+                    availableHeight - marginAxisColumn, ownerHeight, ownerWidth,
+                    heightSizingMode == SizingMode.StretchFit), Dimension.Height);
 
             if (sizingModeMainDim == SizingMode.MaxContent ||
                 (node.Style.Overflow != Overflow.Scroll && sizingModeMainDim == SizingMode.FitContent))
             {
                 node.SetLayoutMeasuredDimension(
                     BoundAxis.ComputeBoundAxis(node, mainAxis, direction,
-                        maxLineMainDim, mainAxisOwnerSize, ownerWidth), mainAxis.Dimension());
+                        maxLineMainDim, mainAxisOwnerSize, ownerWidth, true), mainAxis.Dimension());
             }
             else if (sizingModeMainDim == SizingMode.FitContent && node.Style.Overflow == Overflow.Scroll)
             {
@@ -1547,7 +1559,7 @@ namespace Facebook.Yoga
             {
                 node.SetLayoutMeasuredDimension(
                     BoundAxis.ComputeBoundAxis(node, crossAxis, direction,
-                        totalLineCrossDim + paddingAndBorderAxisCross, crossAxisOwnerSize, ownerWidth),
+                        totalLineCrossDim + paddingAndBorderAxisCross, crossAxisOwnerSize, ownerWidth, true),
                     crossAxis.Dimension());
             }
             else if (sizingModeCrossDim == SizingMode.FitContent && node.Style.Overflow == Overflow.Scroll)
@@ -1622,9 +1634,13 @@ namespace Facebook.Yoga
             SizingMode widthSizingMode, SizingMode heightSizingMode,
             float ownerWidth, float ownerHeight,
             bool performLayout, LayoutPassReason reason,
-            ref LayoutData layoutMarkerData, uint depth, uint generationCount)
+            ref LayoutData layoutMarkerData, uint depth, uint generationCount,
+            ContentSizing contentSizing = ContentSizing.None)
         {
             LayoutResults layout = node.Layout;
+            contentSizing |=
+                (widthSizingMode != SizingMode.StretchFit ? ContentSizing.Width : ContentSizing.None) |
+                (heightSizingMode != SizingMode.StretchFit ? ContentSizing.Height : ContentSizing.None);
         depth++;
 
         bool needToVisitNode =
@@ -1709,11 +1725,25 @@ namespace Facebook.Yoga
         {
                 layout.SetMeasuredDimension(Dimension.Width, cachedResults.Value.ComputedWidth);
                 layout.SetMeasuredDimension(Dimension.Height, cachedResults.Value.ComputedHeight);
+                layout.ContentSizing =
+                    (widthSizingMode == SizingMode.StretchFit
+                        ? (contentSizing & ContentSizing.Width) != 0 &&
+                            Comparison.InexactEquals(availableWidth -
+                                node.Style.ComputeMarginForAxis(FlexDirection.Row, ownerWidth),
+                                cachedResults.Value.ComputedWidth) ? ContentSizing.Width : ContentSizing.None
+                        : cachedResults.Value.ContentSizing & ContentSizing.Width) |
+                    (heightSizingMode == SizingMode.StretchFit
+                        ? (contentSizing & ContentSizing.Height) != 0 &&
+                            Comparison.InexactEquals(availableHeight -
+                                node.Style.ComputeMarginForAxis(FlexDirection.Column, ownerWidth),
+                                cachedResults.Value.ComputedHeight) ? ContentSizing.Height : ContentSizing.None
+                        : cachedResults.Value.ContentSizing & ContentSizing.Height);
                 if (performLayout) layoutMarkerData.CachedLayouts += 1;
                 else layoutMarkerData.CachedMeasures += 1;
         }
         else
         {
+                layout.ContentSizing = contentSizing;
                 CalculateLayoutImpl(node, availableWidth, availableHeight,
                     ownerDirection, widthSizingMode, heightSizingMode,
                     ownerWidth, ownerHeight, performLayout, reason,
@@ -1740,6 +1770,7 @@ namespace Facebook.Yoga
                     HeightSizingMode = heightSizingMode,
                     ComputedWidth = layout.MeasuredDimension(Dimension.Width),
                     ComputedHeight = layout.MeasuredDimension(Dimension.Height),
+                    ContentSizing = layout.ContentSizing,
                 };
 
                 if (performLayout)

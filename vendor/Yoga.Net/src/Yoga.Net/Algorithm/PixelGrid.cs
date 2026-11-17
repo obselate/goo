@@ -122,6 +122,58 @@ namespace Facebook.Yoga
                 var child = node.GetChild(index)!;
                 RoundLayoutResultsToPixelGrid(child, absoluteNodeLeft, absoluteNodeTop);
             }
+
+            if (pointScaleFactor == 0.0 || childCount == 0 || layout.ContentSizing == ContentSizing.None ||
+                node.Style.Overflow == Overflow.Scroll)
+                return;
+
+            float left = 0, top = 0;
+            float right = layout.Dimension(Dimension.Width);
+            float bottom = layout.Dimension(Dimension.Height);
+            bool contentWidth = (layout.ContentSizing & ContentSizing.Width) != 0;
+            bool contentHeight = (layout.ContentSizing & ContentSizing.Height) != 0;
+            float leadingX = contentWidth ? RoundValueToPixelGrid(
+                layout.Padding(PhysicalEdge.Left) + layout.Border(PhysicalEdge.Left), pointScaleFactor, true, false) : 0;
+            float trailingX = contentWidth ? RoundValueToPixelGrid(
+                layout.Padding(PhysicalEdge.Right) + layout.Border(PhysicalEdge.Right), pointScaleFactor, true, false) : 0;
+            float leadingY = contentHeight ? RoundValueToPixelGrid(
+                layout.Padding(PhysicalEdge.Top) + layout.Border(PhysicalEdge.Top), pointScaleFactor, true, false) : 0;
+            float trailingY = contentHeight ? RoundValueToPixelGrid(
+                layout.Padding(PhysicalEdge.Bottom) + layout.Border(PhysicalEdge.Bottom), pointScaleFactor, true, false) : 0;
+            var children = new LayoutableChildren<Node>.Iterator(node);
+            while (children.MoveNext())
+            {
+                var child = children.Current;
+                if (child.Style.Display == Display.None || child.Style.PositionType == PositionType.Absolute)
+                    continue;
+                var childLayout = child.Layout;
+                if (contentWidth)
+                {
+                    left = Math.Min(left, childLayout.Position(PhysicalEdge.Left) - leadingX);
+                    right = Math.Max(right, childLayout.Position(PhysicalEdge.Left) +
+                        childLayout.Dimension(Dimension.Width) + trailingX);
+                }
+                if (contentHeight)
+                {
+                    top = Math.Min(top, childLayout.Position(PhysicalEdge.Top) - leadingY);
+                    bottom = Math.Max(bottom, childLayout.Position(PhysicalEdge.Top) +
+                        childLayout.Dimension(Dimension.Height) + trailingY);
+                }
+            }
+            layout.SetDimension(Dimension.Width, right - left);
+            layout.SetDimension(Dimension.Height, bottom - top);
+            if (left == 0 && top == 0)
+                return;
+
+            layout.SetRoundedPosition(
+                layout.Position(PhysicalEdge.Left) + left, layout.Position(PhysicalEdge.Top) + top);
+            children = new LayoutableChildren<Node>.Iterator(node);
+            while (children.MoveNext())
+            {
+                var childLayout = children.Current.Layout;
+                childLayout.SetRoundedPosition(
+                    childLayout.Position(PhysicalEdge.Left) - left, childLayout.Position(PhysicalEdge.Top) - top);
+            }
         }
     }
 }
