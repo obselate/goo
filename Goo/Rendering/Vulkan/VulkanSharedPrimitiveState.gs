@@ -405,9 +405,9 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       var specializationEntry = VkSpecializationMapEntry{constantID: 0u, size: 4u}
       var specialization = VkSpecializationInfo{
         mapEntryCount: 1u,
-        pMapEntries: *VkSpecializationMapEntry(Unsafe.AsPointer[VkSpecializationMapEntry](&specializationEntry)),
+        pMapEntries: *VkSpecializationMapEntry(Unsafe.AsPointer[VkSpecializationMapEntry](ref specializationEntry)),
         dataSize: 4u,
-        pData: Unsafe.AsPointer[uint32](&coordinates),
+        pData: Unsafe.AsPointer[uint32](ref coordinates),
       }
       try {
         pipeline = VulkanPipelineFactory.CreateGraphics(
