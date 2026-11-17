@@ -394,7 +394,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
         throw InvalidOperationException("Vulkan shader effect pipeline capacity exhausted")
       }
       let entry = VulkanShaderEffectPipelineEntry(digest, spirv, program.ReplacesBackdrop)
-      let fragmentModule = VulkanPipelineFactory.CreateShaderModule(
+      var fragmentModule = VulkanPipelineFactory.CreateShaderModule(
         device,
         dispatch,
         objectAccounting,
@@ -422,17 +422,11 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
           VkConstants.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
           !program.ReplacesBackdrop,
           FullColorWriteMask(),
-          vertexSpecialization: &specialization
+          vertexSpecialization: *VkSpecializationInfo(Unsafe.AsPointer[VkSpecializationInfo](ref specialization))
         )
       } finally {
-        let destroyShaderModule = dispatch.vkDestroyShaderModule
-        destroyShaderModule(device, fragmentModule, nil)
-        if let recorder = FrameRecorder.Current {
-          recorder.Resource(FrameResourceKind.Shader,
-            recorder.NativeResource(FrameResourceKind.Shader, uint64(device), fragmentModule, remove: true),
-            VulkanDiagnosticEventIds.PipelineDestroy, "shader.destroy", device: uint64(device))
-        }
-        if let accounting = objectAccounting { accounting.Release() }
+        VulkanNativeHandleDestroyer.DestroyShaderModule(
+          device, dispatch.vkDestroyShaderModule, objectAccounting, ref fragmentModule)
       }
       entry.Pipeline = pipeline
       shaderEffectPipelines[shaderEffectPipelineCount] = entry
