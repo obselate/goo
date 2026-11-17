@@ -36,6 +36,23 @@ func Require(value bool, message string) {
     }
 }
 
+func RequireApplicationMetadata() {
+    Require(
+        SDL.GetAppMetadataPropertyS(SDL.SDL_PROP_APP_METADATA_NAME_STRING) == "Goo Audio Startup",
+        "Application name did not reach SDL"
+    )
+    Require(
+        SDL.GetAppMetadataPropertyS(SDL.SDL_PROP_APP_METADATA_IDENTIFIER_STRING) == "org.goo.audio-startup",
+        "Application identifier did not reach SDL"
+    )
+}
+
+func CloseWindow(window Window) {
+    window.RequestClose()
+    window.Pump(0.0)
+    Require(!window.IsOpen, "Window did not close")
+}
+
 func Play(player SoundPlayer, source SoundSource) SoundPlayback {
     let result = player.TryPlay(source)
     Require(
@@ -132,6 +149,46 @@ if Environment.GetEnvironmentVariable("GOO_SYSTEM_SOUND_SMOKE") == "1" {
     }
     Require(rejected, "Invalid system sound was accepted")
     Console.WriteLine("system-sounds: platform status=" + expected.ToString() + " invalid-value rejected")
+    return
+}
+
+if Environment.GetEnvironmentVariable("GOO_AUDIO_STARTUP_SMOKE") == "1" {
+    Application.Configure("Goo Audio Startup", "1.0.0", "org.goo.audio-startup")
+    RequireApplicationMetadata()
+    Require(SDL.WasInit(0u) == 0u, "Configure initialized an SDL subsystem")
+    using let first = SoundPlayer.TryOpen().Player ?? throw InvalidOperationException("Audio did not open")
+    Require(SDL.WasInit(uint32(SDLInitFlags.Video)) == 0u, "Audio initialized video")
+    RequireApplicationMetadata()
+    let window = Window{}
+    try {
+        window.Open()
+        RequireApplicationMetadata()
+        first.Dispose()
+        Require(SDL.WasInit(uint32(SDLInitFlags.Audio)) == 0u, "Audio did not shut down")
+        Require(SDL.WasInit(uint32(SDLInitFlags.Video)) != 0u, "Audio disposal shut down video")
+        CloseWindow(window)
+        Require(SDL.WasInit(0u) == 0u, "Window did not shut down SDL")
+
+        window.Open()
+        RequireApplicationMetadata()
+        using let second = SoundPlayer.TryOpen().Player ?? throw InvalidOperationException("Audio did not reopen")
+        CloseWindow(window)
+        Require(SDL.WasInit(uint32(SDLInitFlags.Video)) == 0u, "Window did not shut down video")
+        Require(SDL.WasInit(uint32(SDLInitFlags.Audio)) != 0u, "Window disposal shut down audio")
+        RequireApplicationMetadata()
+        second.Dispose()
+        Require(SDL.WasInit(0u) == 0u, "Audio-only disposal did not shut down SDL")
+
+        using let outputs = SoundPlayer.EnumerateOutputDevices()
+        Require(outputs.Status == SoundDeviceStatus.Enumerated, "Output enumeration did not initialize audio")
+        RequireApplicationMetadata()
+        Require(SDL.WasInit(uint32(SDLInitFlags.Video)) == 0u, "Output enumeration initialized video")
+        outputs.Dispose()
+        Require(SDL.WasInit(0u) == 0u, "Output enumeration did not shut down SDL")
+    } finally {
+        CloseWindow(window)
+    }
+    Console.WriteLine("audio-startup: audio-first window-first metadata subsystem ownership shutdown verified")
     return
 }
 

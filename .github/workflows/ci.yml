@@ -1256,6 +1256,8 @@ jobs:
           .github/scripts/with-headless-wayland.sh env \
             SDL_AUDIO_DRIVER=dummy artifacts/audio-nativeaot/Goo.AudioSmoke
           .github/scripts/with-headless-wayland.sh env \
+            SDL_AUDIO_DRIVER=dummy GOO_AUDIO_STARTUP_SMOKE=1 artifacts/audio-nativeaot/Goo.AudioSmoke
+          .github/scripts/with-headless-wayland.sh env \
             SDL_AUDIO_DRIVER=goo-unavailable GOO_AUDIO_UNAVAILABLE_SMOKE=1 \
             artifacts/audio-nativeaot/Goo.AudioSmoke
           mkdir -p artifacts/audio-theme/sounds/freedesktop/stereo

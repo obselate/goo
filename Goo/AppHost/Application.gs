@@ -45,6 +45,9 @@ public shared class Application {
             applicationVersion = version
             applicationIdentifier = identifier
         }
+        if OperatingSystem.IsWindows() || OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() {
+            SdlRuntime.ApplyApplicationIdentity(name, version, identifier)
+        }
     }
 
     internal func ApplyNativeIdentity() {

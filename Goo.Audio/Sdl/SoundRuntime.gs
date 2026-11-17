@@ -138,17 +138,17 @@ internal unsafe class SoundRuntime : SoundBackend {
                         current.references++
                         return SoundOpenResult(SoundOpenStatus.Opened, SoundPlayer(current))
                     }
-                    if !SDL.InitSubSystem(uint32(SDLInitFlags.Audio)) {
+                    if !SdlRuntime.TryAcquire(uint32(SDLInitFlags.Audio)) {
                         return SoundOpenResult(SoundOpenStatus.SubsystemUnavailable)
                     }
                     let device = SDL.OpenAudioDevice(requested, SDLAudioSpecPtr.Null)
                     if device == 0u {
-                        SDL.QuitSubSystem(uint32(SDLInitFlags.Audio))
+                        SdlRuntime.Release(uint32(SDLInitFlags.Audio))
                         return SoundOpenResult(SoundOpenStatus.DeviceUnavailable)
                     }
                     if !SDL.ResumeAudioDevice(device) {
                         SDL.CloseAudioDevice(device)
-                        SDL.QuitSubSystem(uint32(SDLInitFlags.Audio))
+                        SdlRuntime.Release(uint32(SDLInitFlags.Audio))
                         return SoundOpenResult(SoundOpenStatus.DeviceUnavailable)
                     }
                     let runtime = SoundRuntime(device, requested)
@@ -170,7 +170,7 @@ internal unsafe class SoundRuntime : SoundBackend {
             try {
                 SdlRuntime.RequireMainThread("SoundPlayer.EnumerateOutputDevices")
                 lock sharedGate {
-                    if !SDL.InitSubSystem(uint32(SDLInitFlags.Audio)) {
+                    if !SdlRuntime.TryAcquire(uint32(SDLInitFlags.Audio)) {
                         return SoundOutputDevices(SoundDeviceStatus.SubsystemUnavailable)
                     }
                     var count int32
@@ -194,7 +194,7 @@ internal unsafe class SoundRuntime : SoundBackend {
                     } finally {
                         SDL.Free(nint(ids))
                         if !accepted {
-                            SDL.QuitSubSystem(uint32(SDLInitFlags.Audio))
+                            SdlRuntime.Release(uint32(SDLInitFlags.Audio))
                         }
                     }
                 }
@@ -215,7 +215,7 @@ internal unsafe class SoundRuntime : SoundBackend {
                 }
                 outputs.Disposed = true
                 if outputs.Initialized {
-                    SDL.QuitSubSystem(uint32(SDLInitFlags.Audio))
+                    SdlRuntime.Release(uint32(SDLInitFlags.Audio))
                 }
             }
         }
@@ -239,7 +239,7 @@ internal unsafe class SoundRuntime : SoundBackend {
                 references--
                 if references == 0 {
                     SDL.CloseAudioDevice(device)
-                    SDL.QuitSubSystem(uint32(SDLInitFlags.Audio))
+                    SdlRuntime.Release(uint32(SDLInitFlags.Audio))
                     sharedRuntimes.Remove(requestedDevice)
                 }
             }

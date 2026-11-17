@@ -246,11 +246,27 @@ internal unsafe partial class SdlRuntime {
       case _: throw ArgumentOutOfRangeException("value")
     }
 
+    internal func TryAcquire(subsystems uint32) bool {
+      lock (sync) {
+        Application.ApplyNativeIdentity()
+        return SDL.InitSubSystem(subsystems)
+      }
+    }
+
+    internal func Release(subsystems uint32) {
+      lock (sync) {
+        SDL.QuitSubSystem(subsystems)
+        if SDL.WasInit(0u) == 0u {
+          SDL.Quit()
+          applicationConfigured = false
+        }
+      }
+    }
+
     internal func Acquire() {
       lock (sync) {
         RequireMainThreadLocked("Window.Open")
         if references == 0 {
-          Application.ApplyNativeIdentity()
           let requiresWayland = OperatingSystem.IsLinux()
           if requiresWayland && !SDL.SetHintWithPriority(
             SDL.SDL_HINT_VIDEO_DRIVER, "wayland", SDLHintPriority.Override) {
@@ -259,7 +275,7 @@ internal unsafe partial class SdlRuntime {
             }
           SDL.SetHint(SDL.SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1")
           SDL.SetHint(SDL.SDL_HINT_QUIT_ON_LAST_WINDOW_CLOSE, "0")
-          if !SDL.InitSubSystem(requiredSubsystems) {
+          if !TryAcquire(requiredSubsystems) {
             if requiresWayland {
               throw PlatformNotSupportedException(
                 "Goo requires native Wayland on Linux. SDL could not initialize the Wayland video driver: " +
@@ -273,13 +289,13 @@ internal unsafe partial class SdlRuntime {
           }
           if requiresWayland && !SdlHost.IsWayland() {
             let driver = SDL.GetCurrentVideoDriverS()
-            SDL.QuitSubSystem(requiredSubsystems)
+            Release(requiredSubsystems)
             throw PlatformNotSupportedException(
               "Goo requires native Wayland on Linux, but SDL initialized '" + driver + "'. Log in to a native Wayland session. X11 and XWayland are not supported.")
           }
           wakeEventType = SDL.RegisterEvents(1)
           if wakeEventType == 0u || wakeEventType == uint32.MaxValue {
-            SDL.QuitSubSystem(requiredSubsystems)
+            Release(requiredSubsystems)
             throw InvalidOperationException("SDL_RegisterEvents failed to allocate a wake event type.")
           }
           eventModifierMask = SDL.GetModState()
@@ -307,7 +323,7 @@ internal unsafe partial class SdlRuntime {
           Array.Clear(cursors)
           currentCursor = Cursor.Default
           SdlApplicationActivation.Reset()
-          SDL.QuitSubSystem(requiredSubsystems)
+          Release(requiredSubsystems)
         }
       }
     }
