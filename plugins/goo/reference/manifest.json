@@ -4,7 +4,7 @@
   "files": {
     "docs/svg.md": "0e0a5eb69ae8ec12eb7a6711afce11ef6640e7d22c103afd8785d3322045add9",
     "docs/shipping.md": "ccaf4388065306a9513555a4c13c475b11a75e1ff6d475a2f574ffaf0bf0048f",
-    "docs/platform-preflight.md": "0d4729418bfdefa01802d4bc532ba7aca5efcc2bceec0a257e11f210109030dd",
+    "docs/platform-preflight.md": "6e97f872903017e7b6e61ed35eef59debc9fd4487bffa36b1f786a0942c181c7",
     "docs/android.md": "6772c74ae3d1c5c9119a6d69bffc1abcf987485b429525451c9704735ee8db4d",
     "docs/images.md": "9bf75e5b8b837c46506645cc1757b2e3261032abec8b2a3280b8171eae269131",
     "docs/csharp.md": "e8061c25035372414d829ef468908a55ebd8bb4d018ba35297d6cc9e2a66ec50",
@@ -22,7 +22,7 @@
     "docs/api/motion.md": "897cd00b8d1477be81376c3b934d97220b6ee1edfc184fa963f6161b4cdcee4e",
     "docs/api/platform.md": "d9d85cf4f65ff7dde9f249f1b577a7e8292897ae5fd283de4e9d77a693baf985",
     "docs/api/printing.md": "a47537d177afd6cecbe6a2ebf84d32938c4f2d8e4c9366bcad5c33e9185dd9ee",
-    "docs/api/rendering.md": "455052b4640adcfc22d06d75d795df7665e636249511bbd827bc9be05da17672",
+    "docs/api/rendering.md": "e51cd31785062ed7cf5f3dc33e326518d4d22b6181776e97dc2e4d1af88ab7d6",
     "docs/api/shapes.md": "e5f251ac6521f272e00b60dc0e1f5836bdeeddf58a8952cbf7a39d54bfbba7cd",
     "docs/api/spellcheck.md": "f807616bced2677be634a37a2e78af70d672537f67d7e1c4622744490c4d6660",
     "docs/api/style.md": "5432cc1fdb28f334fe2ee99cbd10ef120ec755d3542db2a0bc0f2d334557ca0f",
