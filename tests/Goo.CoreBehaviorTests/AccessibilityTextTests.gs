@@ -9,6 +9,28 @@ import Xunit
 
 class AccessibilityTextTests {
     @Fact
+    func NativePasswordEntryRetainsProtectedRole() {
+        using let adapter = NativeAccessibilityAdapter()
+        let window = Window{Root: PasswordEntryCell(), AccessibilityAdapter: adapter}
+        try {
+            window.UpdateTree()
+            let dump = Dump(adapter)
+            Assert.Contains("role: PasswordInput", dump)
+            Assert.Contains("role: TextInput", dump)
+            Assert.DoesNotContain("secret", dump)
+        } finally {
+            window.Close()
+        }
+    }
+
+    private class PasswordEntryCell : Cell {
+        override func Build() Blob -> Container() {
+            TextEntry{Value: "plain"},
+            TextEntry{Value: "secret", Password: true},
+        }
+    }
+
+    @Fact
     func CustomRoleDescriptionDoesNotOverrideNativeButtonRole() {
         using let adapter = NativeAccessibilityAdapter()
         let window = Window{Root: CustomRoleCell(), AccessibilityAdapter: adapter}
