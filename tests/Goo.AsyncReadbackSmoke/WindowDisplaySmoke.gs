@@ -32,8 +32,14 @@ internal class WindowDisplaySmoke {
       }
       Require(window.SetFullscreenDisplay(missingDisplay) == WindowOperationResult.Closed,
         "Closed window accepted a fullscreen display request")
+      Require(window.ApplyPlacement(WindowPlacement{
+        Fields: WindowPlacementFields.NormalSize,
+        NormalBounds: ElementRect{ Width: 420.0, Height: 260.0 },
+      }).Status == WindowOperationResult.Accepted, "Staged normal size was not accepted")
       window.Open()
       try {
+        Require(window.NativeWidth == 420 && window.NativeHeight == 260,
+          "Staged normal size did not replace the earlier Size initializer")
         let displays = window.GetDisplays()
         Require(displays.Count > 0, "SDL display inventory is empty")
         let display = displays[0]
@@ -109,6 +115,12 @@ internal class WindowDisplaySmoke {
       } finally {
         CloseWindow(window)
       }
+      var rejected = false
+      try { window.Open() }
+      catch (error InvalidOperationException) {
+        rejected = error.Message == "A closed Window cannot be reopened. Create a new Window."
+      }
+      Require(rejected && !window.IsOpen, "Closed window did not reject Open with its lifecycle contract")
     }
   }
 }
