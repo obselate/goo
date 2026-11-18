@@ -105,6 +105,17 @@ if Environment.GetEnvironmentVariable("GOO_RENDER_OUT") != nil
     return
 }
 
+if Environment.GetEnvironmentVariable("GOO_OFFSCREEN_EXCLUSIVE_EMPTY") == "1" {
+    VulkanDrivers.Direct = []string{}
+    VulkanDrivers.Exclusive = true
+    let created = OffscreenRenderSession.Create()
+    created.Session?.Dispose()
+    Require(created.Status == OffscreenRenderStatus.Failed && created.Error.Length != 0,
+        "an empty exclusive driver list did not return a failure: " + created.Status.ToString())
+    Console.WriteLine("offscreen: empty exclusive driver list rejected")
+    return
+}
+
 RunAutomaticSessionSmoke()
 if Environment.GetEnvironmentVariable("GOO_OFFSCREEN_AUTO_ONLY") == "1" { return }
 

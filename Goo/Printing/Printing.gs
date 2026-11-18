@@ -27,7 +27,7 @@ public shared class Printing {
                 () -> owner.AcquireNativeDialogOwnerAsync(cancellation), cancellation).ConfigureAwait(false))
                 .ConfigureAwait(false)
             if acquisition.Status != NativeDialogOwnerStatus.Success || acquisition.Owner == nil {
-                return PrintResult(MapOwner(acquisition.Status), Error: acquisition.Error ?? "")
+                return PrintResult(MapOwner(acquisition.Status), Error: Detail(acquisition.Error ?? ""))
             }
             let active = acquisition.Owner
             lease = active
@@ -144,7 +144,7 @@ public shared class Printing {
         case OffscreenRenderStatus.DeviceLost: PrintStatus.DeviceLost
         case OffscreenRenderStatus.Cancelled: PrintStatus.Cancelled
         default: PrintStatus.Failed
-    }, Error: result.Error ?? "")
+    }, Error: Detail(result.Error ?? ""))
 
     internal func LayoutFailure(layout PrintLayoutResult) PrintResult -> PrintResult(
         if layout.Status == PrintLayoutStatus.Cancelled { PrintStatus.Cancelled } else { PrintStatus.Failed },

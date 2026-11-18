@@ -71,11 +71,13 @@ internal unsafe class VulkanNativeHandleDestroyer {
 internal sealed class VulkanShaderEffectPipelineEntry {
   internal let Digest []uint8
   internal let Spirv []uint8
+  internal let ReplacesBackdrop bool
   internal var Pipeline VkPipeline
 
-  internal init(digest []uint8, spirv []uint8) {
+  internal init(digest []uint8, spirv []uint8, replacesBackdrop bool) {
     Digest = digest
     Spirv = spirv
+    ReplacesBackdrop = replacesBackdrop
   }
 }
 
@@ -380,7 +382,8 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       var index int32
       while index < shaderEffectPipelineCount {
         if let entry = shaderEffectPipelines[index] {
-          if BytesEqual(entry.Digest, digest) && BytesEqual(entry.Spirv, spirv) {
+          if entry.ReplacesBackdrop == program.ReplacesBackdrop
+            && BytesEqual(entry.Digest, digest) && BytesEqual(entry.Spirv, spirv) {
             shaderEffectPipelineAliases.Add(program, entry)
             return entry.Pipeline
           }
@@ -390,8 +393,8 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       if shaderEffectPipelineCount >= shaderEffectPipelines.Length {
         throw InvalidOperationException("Vulkan shader effect pipeline capacity exhausted")
       }
-      let entry = VulkanShaderEffectPipelineEntry(digest, spirv)
-      let fragmentModule = VulkanPipelineFactory.CreateShaderModule(
+      let entry = VulkanShaderEffectPipelineEntry(digest, spirv, program.ReplacesBackdrop)
+      var fragmentModule = VulkanPipelineFactory.CreateShaderModule(
         device,
         dispatch,
         objectAccounting,
@@ -402,9 +405,9 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       var specializationEntry = VkSpecializationMapEntry{constantID: 0u, size: 4u}
       var specialization = VkSpecializationInfo{
         mapEntryCount: 1u,
-        pMapEntries: &specializationEntry,
+        pMapEntries: *VkSpecializationMapEntry(Unsafe.AsPointer[VkSpecializationMapEntry](ref specializationEntry)),
         dataSize: 4u,
-        pData: *void(&coordinates),
+        pData: Unsafe.AsPointer[uint32](ref coordinates),
       }
       try {
         pipeline = VulkanPipelineFactory.CreateGraphics(
@@ -419,17 +422,11 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
           VkConstants.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
           !program.ReplacesBackdrop,
           FullColorWriteMask(),
-          vertexSpecialization: &specialization
+          vertexSpecialization: *VkSpecializationInfo(Unsafe.AsPointer[VkSpecializationInfo](ref specialization))
         )
       } finally {
-        let destroyShaderModule = dispatch.vkDestroyShaderModule
-        destroyShaderModule(device, fragmentModule, nil)
-        if let recorder = FrameRecorder.Current {
-          recorder.Resource(FrameResourceKind.Shader,
-            recorder.NativeResource(FrameResourceKind.Shader, uint64(device), fragmentModule, remove: true),
-            VulkanDiagnosticEventIds.PipelineDestroy, "shader.destroy", device: uint64(device))
-        }
-        if let accounting = objectAccounting { accounting.Release() }
+        VulkanNativeHandleDestroyer.DestroyShaderModule(
+          device, dispatch.vkDestroyShaderModule, objectAccounting, ref fragmentModule)
       }
       entry.Pipeline = pipeline
       shaderEffectPipelines[shaderEffectPipelineCount] = entry
