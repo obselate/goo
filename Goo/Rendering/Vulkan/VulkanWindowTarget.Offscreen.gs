@@ -146,7 +146,6 @@ internal unsafe partial class VulkanWindowTarget {
         FinishPage(if active.DeviceLost { OffscreenRenderStatus.DeviceLost } else { OffscreenRenderStatus.Failed },
           error.Message)
       } catch (error Exception) {
-        completion.TrySetException(error)
         FinishPage(OffscreenRenderStatus.Failed, error.Message)
       } finally {
         pageBytesRemaining = allocator.EndOperationLimit()
@@ -222,7 +221,6 @@ internal unsafe partial class VulkanWindowTarget {
         OffscreenRenderStatus.DeviceLost
       } else { OffscreenRenderStatus.Failed }, error.Message)
     } catch (error Exception) {
-      pageCompletion?.TrySetException(error)
       FinishPage(OffscreenRenderStatus.Failed, error.Message)
     } finally {
       pageBytesRemaining = allocator.EndOperationLimit()
