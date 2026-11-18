@@ -22,6 +22,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
   private var profileTraceId string?
   private var profileBaseline int64 = -1L
   private var profileRetired bool
+  internal let Composition VulkanCompositionPresentation?
 
   internal func Profile(recorder FrameRecorder, eventId uint64 = 0uL, retired bool = false) {
     if swapchain == 0uL { return }
@@ -160,7 +161,8 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
     generationId uint64,
     enablePresentFence bool,
     nativeObjectAccounting VulkanObjectAccounting?,
-    nativeDiagnostics VulkanDiagnostics? = nil) {
+    nativeDiagnostics VulkanDiagnostics? = nil,
+    composition VulkanCompositionPresentation? = nil) {
       if nativeDevice == nint(0) {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
@@ -209,6 +211,12 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
       | (capabilities.supportedUsageFlags
         &uint32(VkConstants.VK_IMAGE_USAGE_TRANSFER_SRC_BIT))
       this.requestedImageCount = requestedImageCount
+      Composition = composition
+      if let presenter = composition {
+        imageSet = VulkanSwapchainImageSet(device, dispatch, 0uL, 1,
+          VkConstants.VK_FORMAT_B8G8R8A8_UNORM, false, objectAccounting, presenter.Image)
+        return
+      }
       Create(chosenPresentMode, chosenCompositeAlpha, oldSwapchain, nativeDiagnostics)
     }
 
@@ -259,6 +267,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
     }
     disposed = true
     imageSet = nil
+    Composition?.Dispose()
     if swapchain != 0uL {
       let destroySwapchain = dispatch.vkDestroySwapchainKHR
       destroySwapchain(device, swapchain, nil)
