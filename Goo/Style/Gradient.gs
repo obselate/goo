@@ -72,7 +72,7 @@ public class LinearGradient : Gradient {
   }
 }
 
-/// Paints a circular gradient from a normalized center.
+/// Paints an elliptical gradient in box-normalized coordinates.
 public class RadialGradient : Gradient {
   private let stops IReadOnlyList[GradientStop]
   private let centerX float64
@@ -87,6 +87,7 @@ public class RadialGradient : Gradient {
   /// Gets the normalized vertical center from 0 through 1.
   public prop CenterY float64{ get -> centerY }
   /// Gets the normalized radius above 0 and at most 1.
+  /// The horizontal radius is Radius times box width. The vertical radius is Radius times box height.
   public prop Radius float64{ get -> radius }
   internal prop ContentHashForCache int32{ get -> contentHash }
 
@@ -103,7 +104,7 @@ public class RadialGradient : Gradient {
   /// Creates a radial gradient from explicit geometry and stops.
   /// @param centerX The normalized horizontal center from 0 through 1.
   /// @param centerY The normalized vertical center from 0 through 1.
-  /// @param radius The normalized radius above 0 and at most 1.
+  /// @param radius The radius above 0 and at most 1, scaled separately by box width and height.
   /// @param stops At least two stops with non-decreasing offsets.
   public init(centerX float64, centerY float64, radius float64, stops []GradientStop) {
     this.centerX = validateGradientCenter(centerX, "centerX")
