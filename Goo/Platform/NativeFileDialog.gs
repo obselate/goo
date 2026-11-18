@@ -32,7 +32,9 @@ internal partial class NativeFileDialog {
     window = nativeWindow
     this.kind = kind
     title = options.Title
-    initialPath = options.InitialPath
+    initialPath = if OperatingSystem.IsLinux() && kind == FileDialogKind.OpenFile && File.Exists(options.InitialPath) {
+      Path.GetDirectoryName(options.InitialPath)!!
+    } else { options.InitialPath }
     multiple = options.Multiple
     filters = [options.Filters.Count]FileDialogFilter
     for i in 0 ... filters.Length { filters[i] = options.Filters[i] }
