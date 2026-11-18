@@ -324,7 +324,8 @@ internal class TextLayouts {
       if result.Clamped && n.TextTrimming == TextTrimming.Ellipsis && result.Lines.Count > 0 {
         let last = result.Lines.Count - 1
         let prior = result.Lines[last]
-        let elided = ellipsizeClampedLine(n, prior, maxWidth)
+        let displayStart = result.Rich?.Lines[last].DisplayStart ?? 0
+        let elided = ellipsizeClampedLine(n, prior, maxWidth, displayStart)
         result.Lines[last] = elided
         if elided.Content != prior.Content {
           if let retained = geometry {
@@ -602,6 +603,7 @@ internal class TextLayouts {
               continue
             }
             let local = displayStart - paragraph.Start
+            if string.CompareOrdinal(paragraph.Text, local, text, 0, text.Length) != 0 { continue }
             return TextLineShaper.Styled(paragraph, local, local + text.Length, style)
           }
         }
@@ -633,8 +635,14 @@ internal class TextLayouts {
       maxWidth float32) TextLine{
         let text = paragraph.Text
         let whole = shape(n, paragraph, 0, text.Length)
-        if n.TextTrimming != TextTrimming.Ellipsis || maxWidth < 0.0F || whole.Width <= maxWidth {
+        if n.TextTrimming != TextTrimming.Ellipsis || maxWidth < 0.0F { return whole }
+        let width = PassiveTextPresentations.Read(n) != nil
+          ? measureRichRange(n, paragraph, 0, text.Length) : whole.Width
+        if width <= maxWidth {
           return whole
+        }
+        if PassiveTextPresentations.Read(n) != nil {
+          return ellipsizeRichLine(n, whole, paragraph.Start, maxWidth)
         }
         let direction = TextShaping.BaseDirection(text, int32(n.Direction))
         let display = TextShaping.Ellipsize(text, n.FontFamily, fontSize(n), int32(n.FontWeight),
@@ -651,9 +659,13 @@ internal class TextLayouts {
         }
       }
 
-    internal func ellipsizeClampedLine(n Node, line TextLine, maxWidth float32) TextLine {
+    internal func ellipsizeClampedLine(n Node, line TextLine, maxWidth float32,
+      displayStart int32 = 0) TextLine {
       if line.Content.Length > 0 && line.Content[line.Content.Length - 1] == 8230 {
         return line
+      }
+      if PassiveTextPresentations.Read(n) != nil {
+        return ellipsizeRichLine(n, line, displayStart, maxWidth)
       }
       let direction = if let existing = line.Shape {
         existing.RightToLeft ? 2 : 1
@@ -671,6 +683,32 @@ internal class TextLayouts {
         Shape: shaped,
         Width: shaped.Width > line.Width ? shaped.Width : line.Width,
       }
+    }
+
+    private func ellipsizeRichLine(n Node, line TextLine, displayStart int32,
+      maxWidth float32) TextLine {
+      let elements = UnicodeGraphemes.Starts(line.Content)
+      let direction = if let shape = line.Shape { shape.RightToLeft ? 2 : 1 }
+        else { TextShaping.BaseDirection(line.Content, int32(n.Direction)) }
+      var low = maxWidth < 0.0F ? elements.Length : 0
+      var high = elements.Length
+      while low < high {
+        let middle = low + (high - low + 1) / 2
+        let end = middle < elements.Length ? elements[middle] : line.Content.Length
+        let content = line.Content.Substring(0, end) + "\u2026"
+        using let shape = TextShaping.Shape(content, n.FontFamily, fontSize(n), int32(n.FontWeight),
+          n.FontStyle == FontStyle.Italic, letterSpacing(n), direction, n.Language)
+        let candidate = makeRichLine(n, TextLine{Content: content, Shape: shape}, displayStart)
+        let fits = candidate.Width <= maxWidth
+        disposeRichLine(candidate)
+        if fits { low = middle } else { high = middle - 1 }
+      }
+      let end = low < elements.Length ? elements[low] : line.Content.Length
+      let content = line.Content.Substring(0, end) + "\u2026"
+      line.Shape?.Dispose()
+      let shaped = TextShaping.Shape(content, n.FontFamily, fontSize(n), int32(n.FontWeight),
+        n.FontStyle == FontStyle.Italic, letterSpacing(n), direction, n.Language)
+      return TextLine{Content: content, Shape: shaped, Width: MathF.Max(line.Width, shaped.Width)}
     }
 
     internal func matches(layout TextLayout, n Node, maxWidth float32) bool -> layout.Content == n.Content && layout.Language == n.Language && layout.FontFamily == n.FontFamily
