@@ -437,7 +437,7 @@ internal sealed class PathStrokeCache {
         var subpathIndex int32 = 0
         while subpathIndex < subpaths.Count {
           AddStroke(subpaths[subpathIndex], width, cap, join, miterLimit,
-            scaleX, scaleY, scratch.Commands)
+            1.0F, 1.0F, scratch.Commands)
           subpathIndex++
         }
         contourStart = contourEnd
@@ -466,7 +466,9 @@ internal sealed class PathStrokeCache {
       }
       FlattenCount++
       let points = List[PathStrokePoint](current.Points.Count)
-      for point in current.Points { points.Add(point) }
+      for point in current.Points {
+        points.Add(PathStrokePoint{X: point.X / scaleX, Y: point.Y / scaleY})
+      }
       let retained = PathStrokePolyline()
       retained.Set(points, current.Closed)
       let edgeCount = if retained.Closed { points.Count } else { points.Count - 1 }
