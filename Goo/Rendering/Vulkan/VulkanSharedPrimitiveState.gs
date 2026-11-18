@@ -405,9 +405,9 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       var specializationEntry = VkSpecializationMapEntry{constantID: 0u, size: 4u}
       var specialization = VkSpecializationInfo{
         mapEntryCount: 1u,
-        pMapEntries: *VkSpecializationMapEntry(Unsafe.AsPointer[VkSpecializationMapEntry](ref specializationEntry)),
+        pMapEntries: *VkSpecializationMapEntry(Unsafe.AsPointer[VkSpecializationMapEntry](in specializationEntry)),
         dataSize: 4u,
-        pData: Unsafe.AsPointer[uint32](ref coordinates),
+        pData: Unsafe.AsPointer[uint32](in coordinates),
       }
       try {
         pipeline = VulkanPipelineFactory.CreateGraphics(
@@ -422,7 +422,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
           VkConstants.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
           !program.ReplacesBackdrop,
           FullColorWriteMask(),
-          vertexSpecialization: *VkSpecializationInfo(Unsafe.AsPointer[VkSpecializationInfo](ref specialization))
+          vertexSpecialization: *VkSpecializationInfo(Unsafe.AsPointer[VkSpecializationInfo](in specialization))
         )
       } finally {
         VulkanNativeHandleDestroyer.DestroyShaderModule(
