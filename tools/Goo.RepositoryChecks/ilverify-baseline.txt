@@ -445,8 +445,8 @@
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanDescriptorFactory::WriteCombinedImageSampler(native int, [Goo]Goo.VkDeviceDispatch, uint64, uint32, uint64, uint64, int32)][offset 0x0000005B][found address of '[Goo]Goo.VkDescriptorImageInfo'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanDescriptorFactory::WriteStorageBuffer(native int, [Goo]Goo.VkDeviceDispatch, uint64, uint32, uint64, uint64, uint64)][offset 0x0000005B][found address of '[Goo]Goo.VkDescriptorBufferInfo'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanDescriptorFactory::WriteUniformTexelBuffer(native int, [Goo]Goo.VkDeviceDispatch, uint64, uint32, uint64)][offset 0x00000038][found address of UInt64][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanDiagnosticsValidation::OnValidation(int32, uint32, native int, native int)][offset 0x00000018][found Native Int][expected readonly address of '[Goo]Goo.VkDebugUtilsMessengerCallbackDataEXT'] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanDiagnosticsValidation::OnValidation(int32, uint32, native int, native int)][offset 0x0000001E][found Native Int][expected readonly address of '[Goo]Goo.VkDebugUtilsMessengerCallbackDataEXT'] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanDiagnosticsValidation::OnValidation(int32, uint32, native int, native int)][offset 0x0000004E][found Native Int][expected readonly address of '[Goo]Goo.VkDebugUtilsMessengerCallbackDataEXT'] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanDiagnosticsValidation::OnValidation(int32, uint32, native int, native int)][offset 0x00000054][found Native Int][expected readonly address of '[Goo]Goo.VkDebugUtilsMessengerCallbackDataEXT'] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanExternalImage::Create([Goo]Goo.VulkanExternalImageDescription, uint32, bool)][offset 0x0000005F][found address of '[Goo]Goo.VkExternalMemoryImageCreateInfo'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanExternalImage::CreateMetal(native int, bool)][offset 0x00000069][found address of '[Goo]Goo.VkImportMetalIOSurfaceInfoEXT'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanExternalImage::Import([Goo]Goo.VulkanSharedLease, [Goo]Goo.VulkanExternalImageDescription)][offset 0x000001F6][found address of '[Goo]Goo.VkPhysicalDeviceImageDrmFormatModifierInfoEXT'][expected Native Int] Unexpected type on the stack.
@@ -642,8 +642,8 @@
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanDescriptorFactory::CreatePoolAndAllocate(native int, [Goo]Goo.VkDeviceDispatch, [Goo]Goo.VulkanObjectAccounting, [Goo]Goo.VkDescriptorPoolSize*, uint32, uint64*, uint32, uint64*)][offset 0x0000000B] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanDiagnostics::CaptureDeviceFacts(uint32, uint32, uint32, uint32, int32, int8*, uint32, uint32, uint32)][offset 0x000000B4] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanDiagnostics::CaptureValidation(uint32, uint32, int32, int8*)][offset 0x000000E1] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanDiagnosticsValidation::OnValidation(int32, uint32, native int, native int)][offset 0x00000017] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanDiagnosticsValidation::OnValidation(int32, uint32, native int, native int)][offset 0x0000001D] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanDiagnosticsValidation::OnValidation(int32, uint32, native int, native int)][offset 0x0000004D] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanDiagnosticsValidation::OnValidation(int32, uint32, native int, native int)][offset 0x00000053] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanExternalImage::Create([Goo]Goo.VulkanExternalImageDescription, uint32, bool)][offset 0x00000089] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanFrameBuffers::RecordUpload(native int, [Goo]Goo.VkDeviceDispatch, [Goo]Goo.VkBufferCopy[], int32, uint64, uint64)][offset 0x0000004C] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanImageResources::CreateDescriptorBlock(int32, int32)][offset 0x00000116] Unmanaged pointers are not a verifiable type.
@@ -837,7 +837,7 @@
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanTextFrameData::CreateDescriptorResources()][offset 0x0000003D] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanTextScene::EmitText([Goo]Goo.SceneFrame, [Goo]Goo.Node, float32, int32, bool&)][offset 0x00000080] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanWindowTarget::CreateCommandResources()][offset 0x000000C8] Instruction cannot be verified.
-[IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanWindowTarget::CreateInstance()][offset 0x000001FA] Instruction cannot be verified.
+[IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanWindowTarget::CreateInstance()][offset 0x00000212] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.WaylandBackdrop::AddRectangle(native int, int32, int32, int32, int32)][offset 0x00000028] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.WaylandBackdrop::Bind(uint32, native int, native int)][offset 0x0000000B] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.WaylandBackdrop::Initialize()][offset 0x00000168] Instruction cannot be verified.

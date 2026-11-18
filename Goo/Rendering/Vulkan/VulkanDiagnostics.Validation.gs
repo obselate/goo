@@ -13,6 +13,7 @@ internal delegate VulkanDiagnosticsValidationCallback(
 internal unsafe class VulkanDiagnosticsValidation {
   private let callback VulkanDiagnosticsValidationCallback
   private let diagnostics VulkanDiagnostics
+  internal var DriverProbe bool
 
   shared {
     func Create(diagnostics VulkanDiagnostics?, enabled bool) VulkanDiagnosticsValidation? {
@@ -53,8 +54,13 @@ internal unsafe class VulkanDiagnosticsValidation {
     userData nint) VkBool32{
       if callbackData != nint(0) {
         let callbackDataPointer = *VkDebugUtilsMessengerCallbackDataEXT(callbackData)
+        let level = if DriverProbe
+          && uint32(types) == uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
+          && (uint32(severity) & uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)) != 0u {
+          uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+        } else { uint32(severity) }
         diagnostics.CaptureValidation(
-          uint32(severity),
+          level,
           uint32(types),
           callbackDataPointer -> messageIdNumber,
           callbackDataPointer -> pMessage)
