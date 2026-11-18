@@ -23,7 +23,7 @@ Declarations can be changed while you build them and throw once Goo has received
 ## Build content from its allotted size
 
 ```gsharp
-Sized(size -> size.Width < 600 ? CompactView(): WideView()){.FlexGrow: 1, .MinWidth: 0, .MinHeight: 0,}
+Sized(size -> size.Width < 600 ? CompactView() : WideView()){.FlexGrow: 1, .MinWidth: 0, .MinHeight: 0,}
 ```
 
 - `Sized(build)` and `Blob.Sized(build)` pass the border-box `LayoutSize` in layout units.
