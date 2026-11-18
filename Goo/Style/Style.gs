@@ -682,6 +682,9 @@ public open class Style {
     }
   }
   /// Sets the signed pixel offset from the border edge. Positive values move the outline outward.
+  /// Within non-scrolling clipping ancestors, a clipped outward outline moves inward onto the control.
+  /// Where it meets a rounded clip corner, it takes that clip's padding-edge radius.
+  /// Fitting stops at the nearest portal or visual transform. Axes with a scroll range or offset are not fitted.
   public prop OutlineOffset Length {
     set {
       CheckMutable()
