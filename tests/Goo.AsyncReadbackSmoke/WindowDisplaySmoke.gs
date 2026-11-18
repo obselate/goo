@@ -128,6 +128,12 @@ internal class WindowDisplaySmoke {
       } finally {
         CloseWindow(window)
       }
+      var rejected = false
+      try { window.Open() }
+      catch (error InvalidOperationException) {
+        rejected = error.Message == "A closed Window cannot be reopened. Create a new Window."
+      }
+      Require(rejected && !window.IsOpen, "Closed window did not reject Open with its lifecycle contract")
     }
   }
 }
