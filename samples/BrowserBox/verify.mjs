@@ -139,6 +139,7 @@ try {
             if (index === 0) await capture('counter-pressed');
             await call('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 50, y: clickY, button: 'left', clickCount: 1 });
             await until(async () => (await state()).submissions > before.submissions, 'counter update');
+            if (index === 0) await capture('counter-1');
         }
     } else {
         await call('Input.dispatchMouseEvent', { type: 'mousePressed', x: 400, y: 300, button: 'left', clickCount: 1 });
