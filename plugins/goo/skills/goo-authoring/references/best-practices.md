@@ -21,6 +21,7 @@ These app rules override threading, structure and list code in older samples.
 | 13 | Avoid unnecessary idle frames. See Verify. |
 | 14 | Measure the heaviest interaction. Frame `p99` must stay below budget. |
 | 15 | Use standard text controls and built-in editing keys. See Keyboard and text input. |
+| 16 | Center text or an icon alone in a control. Give buttons, pills, chips and tags equal left and right padding and equal top and bottom padding. Controls with extra elements may differ when it is deliberate. |
 
 ## App structure
 
