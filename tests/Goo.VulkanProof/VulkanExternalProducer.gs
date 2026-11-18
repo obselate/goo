@@ -34,7 +34,8 @@ internal unsafe struct VkSemaphoreGetFdInfoKHR {
 }
 
 internal unsafe partial class VulkanWindowTarget {
-    internal func CreateExternalProducerForProof(timeline bool, dma bool = false, syncFd bool = false) VulkanExternalProducer {
+    internal func CreateExternalProducerForProof(timeline bool, dma bool = false, syncFd bool = false,
+        premultiplied bool = false) VulkanExternalProducer {
         let savedDevice = device
         let savedDispatch = dispatch
         let savedIdle = deviceWaitIdleAddress
@@ -61,7 +62,7 @@ internal unsafe partial class VulkanWindowTarget {
                 queueFamilyIndex, getFd, semaphoreFd, lease, sharedObjectAccounting, dma, syncFd, signal, layout)
             transferred = true
             try {
-                producer.Initialize()
+                producer.Initialize(premultiplied)
                 return producer
             } catch (error Exception) {
                 producer.Dispose()
@@ -135,11 +136,11 @@ internal unsafe sealed partial class VulkanExternalProducer : IDisposable {
         memoryProperties = properties
     }
 
-    internal func Initialize() {
+    internal func Initialize(premultiplied bool = false) {
         let getQueue = dispatch.vkGetDeviceQueue
         getQueue(device, family, 0u, &queue)
         CreateImage()
-        CreateStaging()
+        CreateStaging(premultiplied)
         Record()
     }
 
@@ -192,7 +193,7 @@ internal unsafe sealed partial class VulkanExternalProducer : IDisposable {
         handle = ExternalNativeHandle(nint(fd), false)
     }
 
-    private func CreateStaging() {
+    private func CreateStaging(premultiplied bool) {
         var info = VkBufferCreateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
             size: 128uL, usage: uint32(VkConstants.VK_BUFFER_USAGE_TRANSFER_SRC_BIT),
             sharingMode: VkConstants.VK_SHARING_MODE_EXCLUSIVE }
@@ -226,10 +227,11 @@ internal unsafe sealed partial class VulkanExternalProducer : IDisposable {
         for y in 0 ... 4 {
             for x in 0 ... 8 {
                 let offset = (y * 8 + x) * 4
-                pixels[offset] = if (y < 2 && x < 4) || (y >= 2 && x >= 4) { uint8(255) } else { uint8(0) }
-                pixels[offset + 1] = if x >= 4 { uint8(255) } else { uint8(0) }
-                pixels[offset + 2] = if y >= 2 && x < 4 { uint8(255) } else { uint8(0) }
-                pixels[offset + 3] = uint8(0)
+                pixels[offset] = if premultiplied { uint8(128) }
+                    else if (y < 2 && x < 4) || (y >= 2 && x >= 4) { uint8(255) } else { uint8(0) }
+                pixels[offset + 1] = if !premultiplied && x >= 4 { uint8(255) } else { uint8(0) }
+                pixels[offset + 2] = if !premultiplied && y >= 2 && x < 4 { uint8(255) } else { uint8(0) }
+                pixels[offset + 3] = if premultiplied { uint8(128) } else { uint8(0) }
             }
         }
         let unmap = dispatch.vkUnmapMemory

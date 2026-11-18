@@ -1232,7 +1232,7 @@ internal partial class VulkanSceneCompiler {
           return
         }
         case linear is LinearGradient {
-          let radians = float32(linear.Angle) * MathF.PI / 180.0F
+          let radians = float32(linear.Angle % 360.0) * MathF.PI / 180.0F
           let dx = MathF.Sin(radians)
           let dy = -MathF.Cos(radians)
           let half = 0.5F * (MathF.Abs(dx) * bounds.Width + MathF.Abs(dy) * bounds.Height)

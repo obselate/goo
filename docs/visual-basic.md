@@ -143,7 +143,7 @@ Keep colors, fonts and spacing in one theme. Use explicit conversions when a len
 ```vb
 Public Shared ReadOnly Background As Color = Color.Rgb(24, 31, 43)
 Public Shared ReadOnly Foreground As Color = Color.Rgb(236, 240, 248)
-Public Shared ReadOnly Accent As Color = Color.Rgb(74, 125, 255)
+Public Shared ReadOnly Accent As Color = Color.Rgb(54, 100, 224)
 Public Shared ReadOnly ButtonStyle As New Style With {
     .Padding = 12, .BorderRadius = 8, .BackgroundColor = Accent
 }

@@ -157,10 +157,60 @@ func ShaderEffectWarmRetainedResources(window Window) {
     "ShaderEffect retained resources did not stabilize across both frame slots")
 }
 
+class ShaderBlendResultCell : Cell {
+  internal let Effect ShaderEffect
+
+  init(effect ShaderEffect) { Effect = effect }
+
+  override func Build() Blob ->
+  Container{Width: 64, Height: 64, BackgroundColor: Color.White, ShaderEffect: Effect}
+}
+
+func VerifyShaderEffectBlendResults() {
+  let bytes = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "blend_result.frag.goo-effect"))
+  var valid = true
+  for replacingFirst in []bool{false, true} {
+    let created = OffscreenRenderSession.Create()
+    Require(created.Status == OffscreenRenderStatus.Success, "blend result session: " + created.Error)
+    using let session = created.Session!!
+    for index in 0 ... 2 {
+      let replacing = if index == 0 { replacingFirst } else { !replacingFirst }
+      let effect = ShaderEffect(ShaderEffectProgram(bytes, replacing))
+      let pending = session.RenderAsync(ShaderBlendResultCell(effect),
+        OffscreenRenderOptions(LayoutSize(64, 64), 64u, 64u, Color.Rgb(0, 0, 255), 134217728L),
+        System.Threading.CancellationToken.None)
+      let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
+      while !pending.IsCompleted && Stopwatch.GetTimestamp() < deadline {
+        session.Service()
+        System.Threading.Thread.Sleep(1)
+      }
+      Require(pending.IsCompleted, "blend result render timed out")
+      let result = pending.GetAwaiter().GetResult()
+      Require(result.Status == OffscreenRenderStatus.Success, "blend result render: " + result.Error)
+      let capture = result.Capture!!
+      let pixel = 32 * int32(capture.RowBytes) + 32 * 4
+      Console.WriteLine("shader-blend: replacing-first=${replacingFirst} replacing=${replacing} "
+        + "rgba=${capture.Pixels[pixel]},${capture.Pixels[pixel + 1]},"
+        + "${capture.Pixels[pixel + 2]},${capture.Pixels[pixel + 3]}")
+      if let directory = Environment.GetEnvironmentVariable("GOO_SHADER_BLEND_OUTPUT") {
+        Directory.CreateDirectory(directory)
+        using let image = ImageSource.Transfer(64, 64, capture.Pixels, () -> {})
+        File.WriteAllBytes(Path.Combine(directory, "${replacingFirst}-${replacing}.png"), image.EncodePng())
+      }
+      valid = valid && Math.Abs(int32(capture.Pixels[pixel]) - 128) <= 1
+        && capture.Pixels[pixel + 1] == uint8(0)
+        && Math.Abs(int32(capture.Pixels[pixel + 2]) - (if replacing { 0 } else { 127 })) <= 1
+        && Math.Abs(int32(capture.Pixels[pixel + 3]) - (if replacing { 128 } else { 255 })) <= 1
+    }
+  }
+  Require(valid, "shader blend result did not match its backdrop replacement flag")
+}
+
 func RunShaderEffectSmoke() {
   WindowReadbackTestFixture.ShaderEffectVerifyPresentationRetirement()
   Require(Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1",
     "GOO_VK_DIAGNOSTICS=1 is required")
+  VerifyShaderEffectBlendResults()
   let program = ShaderEffectProgram.Load(System.Reflection.Assembly.GetExecutingAssembly(), "embedded-control")
   VulkanProofFixture.VerifyLayerEffectCoordinates(program)
   let effect = ShaderEffect(program, true, 20.0)
