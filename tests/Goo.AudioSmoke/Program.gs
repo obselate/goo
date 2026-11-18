@@ -159,7 +159,7 @@ if Environment.GetEnvironmentVariable("GOO_AUDIO_STARTUP_SMOKE") == "1" {
     using let first = SoundPlayer.TryOpen().Player ?? throw InvalidOperationException("Audio did not open")
     Require(SDL.WasInit(uint32(SDLInitFlags.Video)) == 0u, "Audio initialized video")
     RequireApplicationMetadata()
-    let window = Window{}
+    var window = Window{}
     try {
         window.Open()
         RequireApplicationMetadata()
@@ -169,6 +169,7 @@ if Environment.GetEnvironmentVariable("GOO_AUDIO_STARTUP_SMOKE") == "1" {
         CloseWindow(window)
         Require(SDL.WasInit(0u) == 0u, "Window did not shut down SDL")
 
+        window = Window{}
         window.Open()
         RequireApplicationMetadata()
         using let second = SoundPlayer.TryOpen().Player ?? throw InvalidOperationException("Audio did not reopen")
