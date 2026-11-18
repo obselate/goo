@@ -517,7 +517,7 @@ internal class ShapeGeometryFixtures {
       ShapePath: path,
       ShapeFit: ShapeFit.Fill,
       Rect: Rect{ W: 100.0F, H: 100.0F },
-      BorderLeftWidth: Length{ Unit: LengthUnit.Px, Value: 20.0F },
+      BorderLeftWidth: Length{ Unit: LengthUnit.Px, Value: 2.0F },
       BorderLeftColor: Color.White,
       ShapeStrokeInset: false,
     }
