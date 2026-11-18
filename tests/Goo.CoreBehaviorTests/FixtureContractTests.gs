@@ -540,6 +540,7 @@ class FixtureContractTests {
             yield Contract[MotionFixtures]("PumpRejectsReentrantSweepContract")
             yield Contract[MotionFixtures]("PumpThrowingTickRemainsRegisteredContract")
             yield Contract[MotionFixtures]("PumpWakesOnlyOnFirstRegistrationContract")
+            yield Contract[MotionFixtures]("RelativeTransformTransitionContract")
             yield Contract[MotionFixtures]("RetargetAcrossDifferentSpanPreservesRealVelocityContract")
             yield Contract[MotionFixtures]("RetargetPreservesVelocityContract")
             yield Contract[MotionFixtures]("RunningUnchangedTicksDoNotNotifyContract")
