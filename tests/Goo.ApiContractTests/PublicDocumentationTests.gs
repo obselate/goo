@@ -2221,6 +2221,10 @@ class PublicDocumentationTests {
                 .Where((type Type) -> type.IsAbstract)
                 .Select((type Type) -> type.FullName)
                 .ToHashSet(StringComparer.Ordinal)
+            let dataStructs = apiTypes
+                .Where((type Type) -> type.IsValueType && type.GetMethod("Deconstruct") != nil)
+                .Select((type Type) -> type.FullName)
+                .ToHashSet(StringComparer.Ordinal)
             let coreTypes = apiTypes.Select((type Type) -> type.FullName).ToHashSet(StringComparer.Ordinal)
             let generatedNames = HashSet[string](StringComparer.Ordinal){
                 "<Clone>$",
@@ -2239,6 +2243,7 @@ class PublicDocumentationTests {
                 (parts[]string) -> parts[0] == "ctor" && parts[1] != "Goo.Cell`1" && !SynthesizedPrimaryDataTypes.Any(
                     (type Type) -> type.FullName == parts[1]
                 ) &&
+                    !(parts[3] == "()" && dataStructs.Contains(parts[1])) &&
                     !abstractTypes.Contains(parts[1]) || parts[0] == "method" && !generatedNames.Contains(parts[2])
             )
             Assert.Equal(count, ExpectedMethodIds.Length + ExpectedProtectedMethodIds.Length)

@@ -50,7 +50,7 @@
 [IL]: Error [StackUnexpected]: [Goo.Audio.dll : Goo.AndroidSoundRuntime::Play([Goo.Audio]Goo.SoundPlayer, int32, int32, float32[], [S.P.CoreLib]System.Func`3<float32[],int32,int32>, float32)][offset 0x000000E4][found address of IntPtr][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.Audio.dll : Goo.SoundRuntime::EnumerateOutputs()][offset 0x00000080][found address of Int32][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.Audio.dll : Goo.SystemSoundRuntime::Play([Goo.Audio]Goo.SystemSound)][offset 0x000000BF][found address of IntPtr][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.PackageSmoke.dll : GooPackageSmoke.<Program>::RunApplicationQuitSmoke()][offset 0x000001AA][found address of '[Hexa.NET.SDL3]Hexa.NET.SDL3.SDLEvent'][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.PackageSmoke.dll : GooPackageSmoke.<Program>::RunApplicationQuitSmoke()][offset 0x00000184][found address of '[Hexa.NET.SDL3]Hexa.NET.SDL3.SDLEvent'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.ClipboardTransfer::Query()][offset 0x00000058][found address of UIntPtr][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.ClipboardTransfer::ReadData(string, int32)][offset 0x0000004C][found address of UIntPtr][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.ExternalImageSession::ImportMetalReady([Goo]Goo.ExternalFrameLease)][offset 0x00000129][found address of '[Goo]Goo.VkSemaphoreTypeCreateInfo'][expected Native Int] Unexpected type on the stack.
