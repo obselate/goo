@@ -1890,6 +1890,14 @@ internal class StyleFixtures {
   }
 
   func TransformStateTransitionAndGeometryContract() bool {
+    let tiny = PanelTransform{ Scale: 1.0e-8, ScaleX: 1.0e-8, ScaleY: 1.0e-8 }
+    if tiny.Scale != float64(float32(1.0e-8)) || tiny.ScaleX != tiny.Scale
+      || tiny.ScaleY != tiny.Scale { return false }
+    let defaults = PanelTransform{}
+    let explicitDefaults = PanelTransform{ Scale: 1, ScaleX: 1, ScaleY: 1 }
+    let zero = PanelTransform{ Scale: 0 }
+    if defaults != explicitDefaults || zero.Scale != 0.0 { return false }
+
     let turn = Node{ Kind: NodeKind.Container, Rect: Rect{ W: 20, H: 20 } }
     let turnResolver = Resolver{}
     turn.TransitionMs = 100.0
