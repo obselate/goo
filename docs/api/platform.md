@@ -100,7 +100,7 @@ Releases presentation resources and waits for submitted GPU work to finish. The 
 
 ### `Dispose`
 
-Closes the attached window and releases its retained and presentation resources. Pumps UI-thread continuations until the window's close drain completes or expires.
+Closes the attached window and releases its retained and presentation resources. The host controls how UI-thread close continuations are drained.
 
 ### `GetNativeHandle`
 
@@ -184,7 +184,7 @@ Publishes plain text with an explicit native outcome.
 
 ### `IsPresentationAttached`
 
-Reports whether a Vulkan presentation surface is attached.
+Reports whether a presentation target is attached.
 
 ### `IsSuspended`
 

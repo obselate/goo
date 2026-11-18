@@ -1307,7 +1307,7 @@ internal func maxScrollY(n Node) float32 ->
   if n.OverflowY != Overflow.Scroll && n.Kind != NodeKind.Editor { 0.0F }
   else { scrollRange(n, n.ContentH - scrollViewportHeight(n)) }
 
-private func scrollRange(n Node, overflow float32) float32 {
+internal func scrollRange(n Node, overflow float32) float32 {
   if overflow <= 0.0F { return 0.0F }
   let scale = TransformGeometry.PixelDensity(n)
   return MathF.Ceiling(overflow * scale) / scale

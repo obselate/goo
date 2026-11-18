@@ -2,39 +2,8 @@ package Goo
 
 import System
 import System.Collections.Generic
+import System.Runtime.CompilerServices
 import System.Runtime.InteropServices
-
-@UnmanagedFunctionPointer(CallingConvention.Cdecl)
-internal delegate VulkanTextDrawPoint(funcs nint, data nint, state nint, x float32, y float32, userData nint);
-
-@UnmanagedFunctionPointer(CallingConvention.Cdecl)
-internal delegate VulkanTextDrawQuadratic(
-    funcs nint,
-    data nint,
-    state nint,
-    cx float32,
-    cy float32,
-    x float32,
-    y float32,
-    userData nint
-);
-
-@UnmanagedFunctionPointer(CallingConvention.Cdecl)
-internal delegate VulkanTextDrawCubic(
-    funcs nint,
-    data nint,
-    state nint,
-    cx float32,
-    cy float32,
-    dx float32,
-    dy float32,
-    x float32,
-    y float32,
-    userData nint
-);
-
-@UnmanagedFunctionPointer(CallingConvention.Cdecl)
-internal delegate VulkanTextDrawClose(funcs nint, data nint, state nint, userData nint);
 
 @DllImport("goo-harfbuzz", CallingConvention: CallingConvention.Cdecl)
 internal func hb_draw_funcs_create() nint;
@@ -117,11 +86,7 @@ internal sealed class VulkanTextHinting : IDisposable {
     private let edges List[float32] = List[float32](32)
     private let fitted List[float32] = List[float32](32)
     private let horizontalEdges List[VulkanTextHintHorizontalEdge] = List[VulkanTextHintHorizontalEdge](32)
-    private let moveCallback VulkanTextDrawPoint
-    private let lineCallback VulkanTextDrawPoint
-    private let quadraticCallback VulkanTextDrawQuadratic
-    private let cubicCallback VulkanTextDrawCubic
-    private let closeCallback VulkanTextDrawClose
+    private var callbackState GCHandle
     private var funcs nint
     private var currentX float32
     private var currentY float32
@@ -138,6 +103,36 @@ internal sealed class VulkanTextHinting : IDisposable {
     shared {
         private let HorizontalHeightOrder Comparison[VulkanTextHintHorizontalEdge] =
         (first VulkanTextHintHorizontalEdge, second VulkanTextHintHorizontalEdge) -> first.Y.CompareTo(second.Y)
+
+        private func CallbackTarget(context nint) VulkanTextHinting ->
+            cast[VulkanTextHinting](GCHandle.FromIntPtr(context).Target!!)
+
+        @UnmanagedCallersOnly(CallConvs: []Type{typeof(CallConvCdecl)})
+        private func DrawMove(callbacks nint, data nint, state nint, x float32, y float32, context nint) {
+            CallbackTarget(context).Move(callbacks, data, state, x, y, context)
+        }
+
+        @UnmanagedCallersOnly(CallConvs: []Type{typeof(CallConvCdecl)})
+        private func DrawLine(callbacks nint, data nint, state nint, x float32, y float32, context nint) {
+            CallbackTarget(context).Line(callbacks, data, state, x, y, context)
+        }
+
+        @UnmanagedCallersOnly(CallConvs: []Type{typeof(CallConvCdecl)})
+        private func DrawQuadratic(callbacks nint, data nint, state nint,
+            cx float32, cy float32, x float32, y float32, context nint) {
+            CallbackTarget(context).Quadratic(callbacks, data, state, cx, cy, x, y, context)
+        }
+
+        @UnmanagedCallersOnly(CallConvs: []Type{typeof(CallConvCdecl)})
+        private func DrawCubic(callbacks nint, data nint, state nint,
+            cx float32, cy float32, dx float32, dy float32, x float32, y float32, context nint) {
+            CallbackTarget(context).Cubic(callbacks, data, state, cx, cy, dx, dy, x, y, context)
+        }
+
+        @UnmanagedCallersOnly(CallConvs: []Type{typeof(CallConvCdecl)})
+        private func DrawClose(callbacks nint, data nint, state nint, context nint) {
+            CallbackTarget(context).Close(callbacks, data, state, context)
+        }
     }
 
     internal init(font nint, designScale int32) {
@@ -154,25 +149,24 @@ internal sealed class VulkanTextHinting : IDisposable {
         && float32(extents.YBearing) >= xHeight && float32(extents.YBearing) <= xHeight + units * 0.025F {
             xHeightOvershoot = float32(extents.YBearing)
         }
-        moveCallback = Move
-        lineCallback = Line
-        quadraticCallback = Quadratic
-        cubicCallback = Cubic
-        closeCallback = Close
         funcs = hb_draw_funcs_create()
         if funcs == nint(0) {
             throw InvalidOperationException("HarfBuzz outline callbacks are unavailable")
         }
-        hb_draw_funcs_set_move_to_func(funcs, Marshal.GetFunctionPointerForDelegate(moveCallback), nint(0), nint(0))
-        hb_draw_funcs_set_line_to_func(funcs, Marshal.GetFunctionPointerForDelegate(lineCallback), nint(0), nint(0))
-        hb_draw_funcs_set_quadratic_to_func(
-            funcs,
-            Marshal.GetFunctionPointerForDelegate(quadraticCallback),
-            nint(0),
-            nint(0)
-        )
-        hb_draw_funcs_set_cubic_to_func(funcs, Marshal.GetFunctionPointerForDelegate(cubicCallback), nint(0), nint(0))
-        hb_draw_funcs_set_close_path_func(funcs, Marshal.GetFunctionPointerForDelegate(closeCallback), nint(0), nint(0))
+        try {
+            callbackState = GCHandle.Alloc(this)
+            let context = GCHandle.ToIntPtr(callbackState)
+            unsafe {
+                hb_draw_funcs_set_move_to_func(funcs, nint(&DrawMove), context, nint(0))
+                hb_draw_funcs_set_line_to_func(funcs, nint(&DrawLine), context, nint(0))
+                hb_draw_funcs_set_quadratic_to_func(funcs, nint(&DrawQuadratic), context, nint(0))
+                hb_draw_funcs_set_cubic_to_func(funcs, nint(&DrawCubic), context, nint(0))
+                hb_draw_funcs_set_close_path_func(funcs, nint(&DrawClose), context, nint(0))
+            }
+        } catch {
+            Dispose()
+            rethrow
+        }
     }
 
     internal func Draw(font nint, glyph uint32, draw nint, ppem int32) bool {
@@ -535,5 +529,6 @@ internal sealed class VulkanTextHinting : IDisposable {
             hb_draw_funcs_destroy(funcs)
             funcs = nint(0)
         }
+        if callbackState.IsAllocated { callbackState.Free() }
     }
 }

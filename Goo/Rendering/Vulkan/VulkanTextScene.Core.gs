@@ -44,6 +44,12 @@ internal unsafe sealed partial class VulkanTextScene : VulkanGpuCache {
   internal prop ResourceDeferred bool{ get -> resourceDeferred }
   internal prop TextLayoutRequestCount int32{ get -> textLayoutRequestCount }
 
+  internal func AtlasBytes(index int32, out length int32) []uint8 {
+    let state = states[index] ?? throw ArgumentOutOfRangeException("index")
+    length = int32(state.NextByteOffset)
+    return state.Bytes
+  }
+
   internal func ConsumeColorEffectSkipped() bool {
     let result = colorEffectSkipped
     colorEffectSkipped = false
