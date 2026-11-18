@@ -334,8 +334,10 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
     sceneCompiler = VulkanSceneCompiler()
     presentationRetirement = VulkanPresentationRetirement(64u, 8u)
     retiredSwapchains = VulkanRetiredSwapchainSet(8)
+    let ownsStartupReport = if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.Begin() } else { false }
     try {
       Bootstrap()
+      if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.Current?.Device(deviceFacts) }
       if let resources = textScene {
         sceneCompiler.SetTextScene(resources)
       }
@@ -350,9 +352,11 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
         uint64(framebufferHeight))
       CaptureDiagnosticWsi()
       VulkanDeviceRecoveryCoordinator.Register(this)
+      if ownsStartupReport { VulkanStartupReport.Finish() }
     } catch (error Exception) {
       CaptureDiagnosticFatal(-1, VulkanDiagnosticEventIds.RuntimeStart)
       try { Dispose() } catch (cleanup Exception) { }
+      if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.Finish(error) }
       rethrow
     }
   }

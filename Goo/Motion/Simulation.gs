@@ -53,8 +53,8 @@ internal class LinearTimed : Simulation {
     if Done(elapsed) {
       return to
     }
-    let t = elapsed / duration
-    return from + (to - from) * ease(easing, t)
+    let t = ease(easing, elapsed / duration)
+    return from * (1.0 - t) + to * t
   }
 
   public override func Velocity(elapsed float64) float64 {

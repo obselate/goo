@@ -10,9 +10,9 @@ public struct PanelTransform : IEquatable[PanelTransform] {
   private var translateX Length
   private var translateY Length
   private var rotate float32
-  private var scaleOffset float32
-  private var scaleXOffset float32
-  private var scaleYOffset float32
+  private var scale float32?
+  private var scaleX float32?
+  private var scaleY float32?
   private var skewX float32
   private var skewY float32
 
@@ -45,20 +45,20 @@ public struct PanelTransform : IEquatable[PanelTransform] {
 
   /// Gets or sets uniform scale. The default is 1.
   public prop Scale float64{
-    get -> float64(scaleOffset + 1.0F)
-    init -> scaleOffset = checkedTransformScalar(value, "Scale") - 1.0F
+    get -> float64(scale ?? 1.0F)
+    init -> scale = checkedTransformScalar(value, "Scale")
   }
 
   /// Gets or sets horizontal scale. It multiplies with Scale. The default is 1.
   public prop ScaleX float64{
-    get -> float64(scaleXOffset + 1.0F)
-    init -> scaleXOffset = checkedTransformScalar(value, "ScaleX") - 1.0F
+    get -> float64(scaleX ?? 1.0F)
+    init -> scaleX = checkedTransformScalar(value, "ScaleX")
   }
 
   /// Gets or sets vertical scale. It multiplies with Scale. The default is 1.
   public prop ScaleY float64{
-    get -> float64(scaleYOffset + 1.0F)
-    init -> scaleYOffset = checkedTransformScalar(value, "ScaleY") - 1.0F
+    get -> float64(scaleY ?? 1.0F)
+    init -> scaleY = checkedTransformScalar(value, "ScaleY")
   }
 
   /// Gets or sets the horizontal skew angle in degrees.
@@ -80,8 +80,8 @@ public struct PanelTransform : IEquatable[PanelTransform] {
     let leftY = TranslateY
     let rightY = other.TranslateY
     return sameLength(leftX, rightX) && sameLength(leftY, rightY)
-      && rotate == other.rotate && scaleOffset == other.scaleOffset
-      && scaleXOffset == other.scaleXOffset && scaleYOffset == other.scaleYOffset
+      && rotate == other.rotate && Scale == other.Scale
+      && ScaleX == other.ScaleX && ScaleY == other.ScaleY
       && skewX == other.skewX && skewY == other.skewY
   }
 }

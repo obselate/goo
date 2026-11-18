@@ -89,6 +89,46 @@ internal unsafe partial class VulkanExternalImageProof {
             })
         }
 
+        private func VerifyPremultipliedAlpha(window Window, target VulkanWindowTarget, session ExternalImageSession) {
+            using let producer = target.CreateExternalProducerForProof(false, premultiplied: true)
+            producer.Complete()
+            using let offscreen = window.CreateOffscreenSession().Session!!
+            for mode in []ExternalImageAlphaMode{ExternalImageAlphaMode.Premultiplied, ExternalImageAlphaMode.Opaque} {
+                using let image = session.ImportVulkan(producer.Description(session)).Image!!
+                using let source = session.CreateSource()
+                Require(source.Publish(image, ExternalFrameDescription{Width: 8, Height: 4, Orientation: 1,
+                    AlphaMode: mode, ColorEncoding: ExternalImageColorEncoding.Srgb}, producer.Ready(),
+                    (_ ExternalFrameResult) -> {}) == ExternalImageStatus.Success, "alpha frame publish failed")
+                WaitReady(window, source)
+                let pending = offscreen.RenderAsync(VulkanExternalProofCell{Source: source},
+                    OffscreenRenderOptions(LayoutSize(64, 64), 64u, 64u, Color.White, 134217728L),
+                    System.Threading.CancellationToken.None)
+                PumpUntil(window, () -> {
+                    offscreen.Service()
+                    return pending.IsCompleted
+                })
+                let result = pending.GetAwaiter().GetResult()
+                Require(result.Status == OffscreenRenderStatus.Success, "alpha render failed: " + result.Error)
+                let capture = result.Capture!!
+                let index = 32 * int32(capture.RowBytes) + 32 * 4
+                let red = int32(capture.Pixels[index])
+                let green = int32(capture.Pixels[index + 1])
+                Console.WriteLine("External alpha ${mode}: ${red},${green},"
+                    + "${capture.Pixels[index + 2]},${capture.Pixels[index + 3]}")
+                if let directory = Environment.GetEnvironmentVariable("GOO_EXTERNAL_ALPHA_OUTPUT") {
+                    System.IO.Directory.CreateDirectory(directory)
+                    using let pixels = ImageSource.Transfer(64, 64, capture.Pixels, () -> {})
+                    System.IO.File.WriteAllBytes(
+                        System.IO.Path.Combine(directory, mode.ToString() + ".png"), pixels.EncodePng())
+                }
+                Require(Math.Abs(red - (if mode == ExternalImageAlphaMode.Premultiplied { 255 } else { 128 })) <= 1
+                    && Math.Abs(green - (if mode == ExternalImageAlphaMode.Premultiplied { 127 } else { 0 })) <= 1
+                    && capture.Pixels[index + 2] == capture.Pixels[index + 1]
+                    && capture.Pixels[index + 3] == uint8(255),
+                    "external image alpha was applied incorrectly")
+            }
+        }
+
         private func VerifyLifecycle() bool {
             let root = VulkanExternalProofCell{}
             let window = Window{ Title: "External image lifecycle proof", Size: LayoutSize(64, 64),  VSync: false, Root: root }
@@ -115,6 +155,7 @@ internal unsafe partial class VulkanExternalImageProof {
                     Console.WriteLine("External image import: Unsupported (driver cannot export and import RGBA images)")
                     return false
                 }
+                VerifyPremultipliedAlpha(window, target, session)
                 let timeline = SemaphoreSupported(session.Runtime)
                 Console.WriteLine("External image readiness: timeline=${timeline}")
                 producer = target.CreateExternalProducerForProof(timeline)
