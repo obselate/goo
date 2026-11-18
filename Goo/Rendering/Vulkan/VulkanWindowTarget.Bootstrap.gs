@@ -36,6 +36,7 @@ internal unsafe partial class VulkanWindowTarget {
     if let shared = VulkanSharedRuntime.TryAcquire() {
       runtime = shared
       ApplySharedRuntime(shared)
+      if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.Current?.ReuseRuntime() }
       let surfaceStart = DiagnosticTimestamp()
       if !(host is VulkanHeadlessHost) { CreateSurface() }
       if host is SdlHost && SdlHost.IsWayland() && host.DeferFirstShow() {
@@ -83,6 +84,7 @@ internal unsafe partial class VulkanWindowTarget {
         SelectPhysicalDevice()
       } catch (error VulkanDeviceUnavailableException) when (host is SdlHost) {
         if !VulkanDrivers.TryUseSoftware(error.Message) { rethrow }
+        if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.Current?.Fallback(error) }
         CleanupUnpublishedBootstrap()
         instanceDispatch = VkInstanceDispatch{}
         instanceDestroyAvailable = false
@@ -651,6 +653,7 @@ internal unsafe partial class VulkanWindowTarget {
       || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("__VK_LAYER_NV_optimus"))
     for index in 0 ... int32(count) {
       getProperties(deviceValues[index], &properties[index])
+      if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.Current?.Adapter(&properties[index]) }
       order[index] = index
       if preserveOrder { continue }
       var position = index
@@ -721,6 +724,7 @@ internal unsafe partial class VulkanWindowTarget {
     try {
       CreateCandidateRuntime()
     } catch (error Exception) {
+      if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.Current?.Exception(error) }
       if !(error is VulkanDeviceUnavailableException) { softwareFallbackEligible = false }
       DestroyWindowResources()
       if let candidateRuntime = runtime {

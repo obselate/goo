@@ -27,6 +27,20 @@ Linux software rendering needs glibc 2.35+. Wayland and fonts are still required
 Set `GOO_VK_DIAGNOSTICS=1` to log the selected device and the fallback reason.
 See [shipping](shipping.md#optional-software-renderer).
 
+### Optional startup graphics report
+
+```sh
+GOO_VK_STARTUP_REPORT=1 your-app
+```
+
+Set `GOO_VK_STARTUP_REPORT` to a file path to choose another location. An app can set `VulkanDrivers.StartupReportPath = ""` before its first window to use the default location, or set a full path.
+
+This is off by default. `GOO_VK_DIAGNOSTICS=1` alone does not enable it. When enabled, graphics startup failures, automatic software fallback and explicit driver attempts write a plain-text report of at most 64 KiB. Normal successful startup writes nothing. Disabled reporting does not capture loader messages, collect machine details or access report files.
+
+The default file is `LocalApplicationData/Goo/<entry-assembly-name>/startup-graphics.log`. If it cannot be written, Goo uses `Goo/<entry-assembly-name>/startup-graphics.log` under the system temp directory. A new report replaces the old one. The exception message and `VulkanDrivers.StartupReportPath` give the full path after a report is written.
+
+The report contains local paths, graphics drivers, selected environment values, payload hashes and exception details. Review it before sharing. Goo does not send it anywhere.
+
 ## Custom shaders
 
 Only projects with `<GooShaderEffect>` items need these tools:

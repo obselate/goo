@@ -105,6 +105,7 @@ public partial class Window {
     ownerThreadRegistered = true
     uiThreadBound = true
     var initializingGraphics = false
+    var ownsStartupReport = false
     try {
       let captureStartup = Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1"
       let originTicks = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
@@ -113,6 +114,7 @@ public partial class Window {
       }
       prepare()
       constrainSize()
+      if VulkanDiagnostics.StartupReportEnabled { ownsStartupReport = VulkanStartupReport.Begin() }
       let sdlStart = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
       let native = createNativeHost()
       let sdlEnd = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
@@ -172,13 +174,19 @@ public partial class Window {
       schedulerSimulationBank = 0.0
       Window.RegisterLiveWindow(this)
       WindowDiagnostics.AttachIfEnabled(this)
+      if ownsStartupReport { VulkanStartupReport.Finish() }
       return this
     } catch (e Exception) {
+      if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.Finish(e) }
       try { Close() } catch (cleanup Exception) { }
+      if VulkanDiagnostics.StartupReportEnabled && e is GraphicsUnavailableException {
+        throw GraphicsUnavailableException(VulkanStartupReport.FailureMessage(e.Message), e)
+      }
       if initializingGraphics && (e is InvalidOperationException || e is PlatformNotSupportedException
         || e is System.Runtime.InteropServices.ExternalException || e is DllNotFoundException
         || e is EntryPointNotFoundException) {
-        throw GraphicsUnavailableException(e.Message, e)
+        throw GraphicsUnavailableException(
+          if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.FailureMessage(e.Message) } else { e.Message }, e)
       }
       rethrow
     }
@@ -200,7 +208,7 @@ public partial class Window {
       nativeWidth int32, nativeHeight int32) -> {
         queueNativeMetrics(logicalWidth, logicalHeight, nativeWidth, nativeHeight)
       }
-    native.DisplayChanged += notifications.RaiseDisplayChanged
+    native.DisplayChanged += () -> notifications.RaiseDisplayChanged()
     native.StateChanged += (value WindowState) -> {
       state = value
       requestRender()

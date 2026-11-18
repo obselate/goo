@@ -526,6 +526,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.params_z = value.SourceWidth
       push.params_w = value.SourceHeight
       if let external = lookup.External {
+        push.radii_y = if external.Description.AlphaMode == ExternalImageAlphaMode.Premultiplied { 1.0F } else { 0.0F }
         ApplyExternalFrame(&push, external, value, transform, extent)
       } else {
         push.radii_y = 1.0F
