@@ -259,7 +259,10 @@ public class VirtualOutput {
 
   /// Gets or sets the finite, nonnegative size of the whole content, which sets the scroll range.
   public prop ContentSize LayoutSize{
-    get -> contentSize
+    get {
+      bound()
+      return contentSize
+    }
     set {
       bound()
       contentSize = value
@@ -267,7 +270,10 @@ public class VirtualOutput {
   }
   /// Gets or sets the number of items in the whole collection, for accessibility.
   public prop ItemCount int32{
-    get -> itemCount
+    get {
+      bound()
+      return itemCount
+    }
     set {
       bound()
       itemCount = value
@@ -276,7 +282,10 @@ public class VirtualOutput {
   /// Gets or sets the scroll offset to apply together with the items. Nil keeps the current offset.
   /// A scroll in progress keeps its remaining distance.
   public prop ScrollOffset Point? {
-    get -> scrollOffset
+    get {
+      bound()
+      return scrollOffset
+    }
     set {
       bound()
       scrollOffset = value
@@ -287,7 +296,10 @@ public class VirtualOutput {
   /// Nil leaves descendant anchoring disabled.
   /// No descendant adjustment is applied at vertical scroll offset zero.
   public prop AnchorKey string? {
-    get -> anchorKey
+    get {
+      bound()
+      return anchorKey
+    }
     set {
       bound()
       anchorKey = value

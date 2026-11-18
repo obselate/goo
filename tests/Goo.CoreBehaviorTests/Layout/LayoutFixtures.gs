@@ -676,6 +676,55 @@ internal class LayoutFixtures {
     return target.Rect.X == 100.0F
   }
 
+  func LayoutTransitionSettlesInsideSized() bool {
+    let scene = (columns int32, duration float64) -> Sized(size -> {
+      let grid = Container{Width: 680, Height: 680, FlexDirection: FlexDirection.Row,
+        FlexWrap: FlexWrap.Wrap, Gap: 16}
+      for index in 0 ... 16 {
+        grid.Add(Container{Key: "tile-$index", Width: (696.0 / columns) - 16.0,
+          Height: 100, FlexShrink: 0, LayoutTransition: LayoutTransition(duration, Easing.Linear)})
+      }
+      return grid
+    }){.Width: 680, .Height: 680}
+    let pump = MotionPump()
+    let reconciler = Reconciler{Res: Resolver{}, Pump: pump,
+      RetainedInvalidated: (effects ReconcileEffects) -> { }}
+    let layout = Layout()
+    var root = reconciler.Mount(scene(4, 100))
+    layout.Calculate(root, 680.0F, 680.0F)
+    layout.RefreshSized(root, reconciler)
+    let tiles = root.Children[0].Children
+    let last = tiles[15]
+    let oldRect = last.Rect
+
+    root = reconciler.Diff(root, scene(8, 100))
+    layout.MarkStructureDirty()
+    layout.Calculate(root, 680.0F, 680.0F)
+    layout.RefreshSized(root, reconciler)
+    if !pump.Active || tiles[15] != last || last.Rect.X != oldRect.X || last.Rect.Y != oldRect.Y {
+      return false
+    }
+    for frame in 0 ... 2 {
+      pump.Sweep(0.05)
+      layout.RefreshRects(root)
+    }
+    if pump.Active { return false }
+
+    let truthReconciler = Reconciler{Res: Resolver{}}
+    let truth = truthReconciler.Mount(scene(8, 0))
+    let truthLayout = Layout()
+    truthLayout.Calculate(truth, 680.0F, 680.0F)
+    truthLayout.RefreshSized(truth, truthReconciler)
+    for index in 0 ... tiles.Count {
+      let actual = tiles[index].Rect
+      let expected = truth.Children[0].Children[index].Rect
+      if actual.X != expected.X || actual.Y != expected.Y || actual.W != expected.W || actual.H != expected.H {
+        return false
+      }
+    }
+    return true
+  }
+
   func LayoutTransitionRetargetsWithVelocity() bool {
     let simulations = List[LayoutFixtureSimulation]()
     let factory(float64, float64, float64) -> Simulation = (from float64, to float64, velocity float64) -> {
