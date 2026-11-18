@@ -80,7 +80,7 @@ internal shared class AndroidPopupSmoke {
                     return
                 }
                 stage = 2
-                nested = PopupWindow(
+                let popup = PopupWindow(
                     current,
                     SmokeApplication.CreatePopupRoot(
                         (child Window) -> {
@@ -95,11 +95,12 @@ internal shared class AndroidPopupSmoke {
                     ),
                     PopupKind.Tooltip
                 )
-                nested.Dismissed += (reason PopupDismissReason) -> {
+                nested = popup
+                popup.Dismissed += (reason PopupDismissReason) -> {
                     Require(reason == PopupDismissReason.Programmatic, "Nested popup lost its dismissal reason.")
                     nestedClosed = true
                 }
-                Require(nested.Open(Anchor(4.0), LayoutSize(60, 40)).Status == PopupStatus.Opened, "Nested tooltip did not open.")
+                Require(popup.Open(Anchor(4.0), LayoutSize(60, 40)).Status == PopupStatus.Opened, "Nested tooltip did not open.")
             }
         }
         view.Window.UiScale = 1.5f
