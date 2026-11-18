@@ -1,3 +1,4 @@
+[IL]: Error [ExpectedNumericType]: [Goo.dll : Goo.VulkanStartupReport::Adapter([Goo]Goo.VkPhysicalDeviceProperties*)][offset 0x00000019][found address of '[Goo]Goo.VkPhysicalDeviceProperties+<deviceName>e__FixedBuffer'] Expected numeric type on the stack.
 [IL]: Error [ExpectedNumericType]: [Goo.dll : Goo.VulkanWindowTarget::CaptureDiagnosticDeviceFacts([Goo]Goo.VkPhysicalDeviceProperties)][offset 0x00000040][found address of '[Goo]Goo.VkPhysicalDeviceProperties+<deviceName>e__FixedBuffer'] Expected numeric type on the stack.
 [IL]: Error [ExpectedNumericType]: [Goo.dll : Goo.VulkanWindowTarget::TryStartPhysicalDevice(native int, [Goo]Goo.VkPhysicalDeviceProperties)][offset 0x0000010F][found address of '[Goo]Goo.VkPhysicalDeviceProperties+<deviceName>e__FixedBuffer'] Expected numeric type on the stack.
 [IL]: Error [FieldAccess]: [Goo.DevTools.Cli.dll : Goo.DevTools.Cli.AnonymousType2_38E0A6F42AE9FA0A::.ctor([Goo.DevTools.Cli]Goo.DevTools.Cli.AnonymousType2_38E0A6F42AE9FA0A)][offset 0x00000008] Field is not visible.
@@ -525,6 +526,11 @@
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanSharedRuntime::CreateGraphicsQueueCore(native int, [Goo]Goo.VkDeviceDispatch, native int, [Goo]Goo.VulkanObjectAccounting)][offset 0x00000065][found address of '[Goo]Goo.VkSemaphoreTypeCreateInfo'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanSharedRuntime::WaitGraphicsSubmission(uint64, uint64)][offset 0x00000084][found address of UInt64][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanSharedRuntime::WaitGraphicsSubmission(uint64, uint64)][offset 0x0000008D][found address of UInt64][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanStartupReport::Adapter([Goo]Goo.VkPhysicalDeviceProperties*)][offset 0x00000012][found Native Int][expected address of '[Goo]Goo.VkPhysicalDeviceProperties'] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanStartupReport::TryLoad(string, native int&)][offset 0x000001CE][found address of '[Goo]Goo.StartupGraphicsDlInfo'][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanStartupReport::TryLoad(string, native int&)][offset 0x000001DC][found address of '[Goo]Goo.StartupGraphicsDlInfo'][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanStartupReport::WindowsPlatform()][offset 0x00000231][found address of '[S.P.CoreLib]System.Guid'][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanStartupReport::WindowsPlatform()][offset 0x00000231][found address of IntPtr][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanTextAtlas::CreateDescriptorResources()][offset 0x00000077][found address of '[Goo]Goo.VkDescriptorPoolSize'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanTextAtlas::CreateDescriptorResources()][offset 0x00000077][found address of UInt64][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanTextAtlas::CreateDescriptorResources()][offset 0x00000077][found address of UInt64][expected Native Int] Unexpected type on the stack.
@@ -731,6 +737,11 @@
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanSharedPrimitiveState::CreateTextPipelineLayout()][offset 0x0000005F] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanSharedPrimitiveState::EnsurePathStrokes()][offset 0x000000D4] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanSharedRuntime::Create(native int, [Goo]Goo.VkInstanceDispatch, native int, native int, [Goo]Goo.VkDeviceDispatch, native int, native int, uint32, uint32, native int, [Goo]Goo.VulkanSwapchainMaintenanceVariant, [Goo]Goo.VulkanSwapchainMaintenanceVariant, [Goo]Goo.VulkanSharedDeviceFacts, uint8*, [Goo]Goo.VkPhysicalDeviceMemoryProperties, uint32, uint32, uint64, uint64, bool, [Goo]Goo.VulkanDiagnostics, bool, [Goo]Goo.VulkanDiagnosticsValidation, uint64, bool, bool, bool, [Goo]Goo.VulkanObjectAccounting, [Goo]Goo.VulkanObjectAccounting, [Goo]Goo.VulkanSurfaceHost)][offset 0x00000191] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanStartupReport::Adapter([Goo]Goo.VkPhysicalDeviceProperties*)][offset 0x00000006] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanStartupReport::Drain()][offset 0x0000004A] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanStartupReport::Drain()][offset 0x00000061] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanStartupReport::TryLoad(string, native int&)][offset 0x0000008A] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanStartupReport::TryLoad(string, native int&)][offset 0x0000010E] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanSwapchainImageSet::Create(uint64, int32)][offset 0x00000053] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanTextAtlas::QueueUpload(uint8*, uint64, uint64)][offset 0x00000006] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanTextFont::ShapeInto(string, [Goo]Goo.VulkanTextShapingOptions, [Goo]Goo.VulkanTextShapingWorkspace)][offset 0x0000032D] Unmanaged pointers are not a verifiable type.
@@ -833,6 +844,9 @@
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanSharedPrimitiveState::CreateStrokeMetricPipeline()][offset 0x0000000D] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanSharedPrimitiveState::CreateTextPipelineLayout()][offset 0x0000005C] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanSharedPrimitiveState::EnsurePathStrokes()][offset 0x000000D1] Instruction cannot be verified.
+[IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanStartupReport::StartCapture()][offset 0x00000046] Instruction cannot be verified.
+[IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanStartupReport::TryLoad(string, native int&)][offset 0x0000007E] Instruction cannot be verified.
+[IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanStartupReport::TryLoad(string, native int&)][offset 0x00000104] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanSwapchainGeneration::Create(int32, int32, uint64, [Goo]Goo.VulkanDiagnostics)][offset 0x0000002C] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanTextFrameData::CreateDescriptorResources()][offset 0x0000003D] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanTextScene::EmitText([Goo]Goo.SceneFrame, [Goo]Goo.Node, float32, int32, bool&)][offset 0x00000080] Instruction cannot be verified.
@@ -985,6 +999,7 @@
 [IL]: Error []: [Goo.dll : Goo.VulkanSharedRuntime::GetCompletedGraphicsSubmissionSerial(uint64&)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanSharedRuntime::WaitDeviceIdleResult()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanSharedRuntime::WaitGraphicsSubmission(uint64, uint64)] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanStartupReport::ReleaseCom(native int)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanSwapchainGeneration::Dispose()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanSwapchainGeneration::DisposeAfterDeviceLoss()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanSwapchainImageSet::Create(uint64, int32)] ImportCalli not implemented
