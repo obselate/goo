@@ -8,6 +8,7 @@ curl --fail --location --silent --show-error --retry 5 --retry-all-errors --retr
 printf '%s  %s\n' ee989c2b98bdd201ce026237214c98c39b2f6e40182b6df311a193780e63d075 "$accesskit_work/source.tar.gz" | sha256sum --check
 mkdir -p "$accesskit_work/output"
 cp "$accesskit_root/.github/patches/accesskit/atspi-cache-signal-arguments.patch" "$accesskit_work/atspi-cache-signal-arguments.patch"
+cp "$accesskit_root/.github/patches/accesskit/atspi-relations-states-level.patch" "$accesskit_work/atspi-relations-states-level.patch"
 docker run --rm --name goo-accesskit-build --mount "type=bind,src=$accesskit_work,dst=/input,readonly" --mount "type=bind,src=$accesskit_work/output,dst=/output" ubuntu:18.04@sha256:dca176c9663a7ba4c1f0e710986f5a25e672842963d95b960191e2d9f7185ebe bash -c '
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
@@ -25,6 +26,9 @@ cargo fetch --locked
 accesskit_dependency=$(find /root/.cargo/registry/src -maxdepth 2 -type d -name accesskit_unix-0.23.0)
 test -n "$accesskit_dependency"
 patch --directory="$accesskit_dependency" -p1 < /input/atspi-cache-signal-arguments.patch
+atspi_dependency=$(find /root/.cargo/registry/src -maxdepth 2 -type d -name accesskit_atspi_common-0.20.0)
+test -n "$atspi_dependency"
+patch --directory="$atspi_dependency" -p1 < /input/atspi-relations-states-level.patch
 cargo build --release --locked
 cp target/release/libaccesskit.so /output/
 strip --strip-debug /output/libaccesskit.so
