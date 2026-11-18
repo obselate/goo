@@ -1,0 +1,8 @@
+<Project Sdk="Gsharp.NET.Sdk">
+  <Import Project="BrowserCounter.props" />
+  <ItemGroup>
+    <Compile Remove="**/*.gs" />
+    <Compile Include="Host.gs" />
+    <Compile Include="../../templates/Goo.Templates/content/Program.gs" Link="Program.gs" />
+  </ItemGroup>
+</Project>

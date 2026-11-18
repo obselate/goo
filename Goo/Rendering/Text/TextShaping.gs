@@ -851,6 +851,9 @@ internal partial class TextShaping {
           return TextFontSelection(name, found, nil)
         }
       }
+      if let found = FontRegistry.Resolve("sans-serif", weight, italic) {
+        return TextFontSelection(found.Family, nil, found)
+      }
       if let found = SystemFontResolvers.Current().Find("sans-serif", weight, italic) {
         return TextFontSelection("sans-serif", found, nil)
       }

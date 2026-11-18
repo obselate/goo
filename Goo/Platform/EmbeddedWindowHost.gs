@@ -31,7 +31,7 @@ public open class EmbeddedWindowHost : IDisposable {
 
   /// Gets the attached Goo window, or nil after disposal.
   public prop Window Window? { get -> Bridge?.Owner }
-  /// Reports whether a Vulkan presentation surface is attached.
+  /// Reports whether a presentation target is attached.
   public prop IsPresentationAttached bool{ get -> Window?.EmbeddedPresentationAttached == true }
   /// Reports whether frame simulation and presentation are suspended.
   public prop IsSuspended bool{ get -> suspended }
@@ -115,7 +115,7 @@ public open class EmbeddedWindowHost : IDisposable {
   }
 
   /// Closes the attached window and releases its retained and presentation resources.
-  /// Pumps UI-thread continuations until the window's close drain completes or expires.
+  /// The host controls how UI-thread close continuations are drained.
   public func Dispose() {
     if disposed || disposing { return }
     RequireOwnerThread()
@@ -124,7 +124,7 @@ public open class EmbeddedWindowHost : IDisposable {
       if let window = Window {
         window.DetachEmbeddedPresentation()
         window.Close()
-        window.DrainCloseCallbacks()
+        DrainCloseCallbacks(window)
       }
       disposed = true
       Bridge = nil
@@ -195,6 +195,9 @@ public open class EmbeddedWindowHost : IDisposable {
     return window
   }
   internal func Wake() { RequestFrame() }
+  internal open func CreateRenderTarget(bridge EmbeddedWindowBridge) WindowRenderTarget ->
+    VulkanWindowTarget(bridge)
+  internal open func DrainCloseCallbacks(window Window) { window.DrainCloseCallbacks() }
   internal func LoadLoader() bool -> LoadVulkanLibrary()
   internal func LookupLoader() nint -> GetVulkanGetInstanceProcAddr()
   internal func UnloadLoader() { UnloadVulkanLibrary() }
