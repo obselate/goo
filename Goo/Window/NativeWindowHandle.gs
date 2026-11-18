@@ -43,7 +43,7 @@ public partial class Window {
   /// Do not destroy the window or display. Apps clean up their children before close.
   /// Native children cover Goo content, including in-window overlays, portals and tooltips. Separate PopupWindow surfaces are not affected by this limit.
   /// Goo does not apply scroll-container clipping, transforms, opacity or animation to native children.
-  /// Apps position children, for example from ElementHandle.BorderBox and MetricsChanged. Use Window.PixelScale to convert logical bounds for native APIs that take physical pixels.
+  /// Apps position children, for example from ElementHandle.BorderBox and MetricsChanged. Also reposition on Window.MetricsChanged for scale changes. Use Window.PixelScale to convert logical bounds for native APIs that take physical pixels.
   /// Tab traversal does not cross between Goo and a child. Child accessibility is not merged into Goo's tree.
   public prop NativeHandle NativeWindowHandle{
     get {

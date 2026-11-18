@@ -670,8 +670,9 @@ Native children are not Goo elements:
 - Goo does not apply scroll-container clipping, transforms, opacity or animation
   to them.
 - Position and resize them in app code. For example, use `ElementHandle.BorderBox`
-  and `ElementHandle.MetricsChanged`. Multiply logical bounds by `Window.PixelScale`
-  for native APIs that take physical pixels.
+  and `ElementHandle.MetricsChanged`, and reposition on `Window.MetricsChanged` for
+  scale changes. Multiply logical bounds by `Window.PixelScale` for native APIs that
+  take physical pixels.
 - Tab traversal does not cross between Goo and a child.
 - The child's accessibility is not merged into Goo's tree.
 
