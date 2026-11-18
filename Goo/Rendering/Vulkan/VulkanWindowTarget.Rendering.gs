@@ -128,15 +128,12 @@ internal unsafe partial class VulkanWindowTarget {
       CollectRetiredSwapchains()
       var imageIndex uint32 = 0u
       let acquireNextImage = dispatch.vkAcquireNextImageKHR
-      let acquire = acquireNextImage(
-        device,
-        current.Handle,
-        1000000uL,
-        selectedSlot.AcquireSemaphore,
-        0uL,
-        &imageIndex)
+      let acquire = if current.Composition != nil { VkConstants.VK_SUCCESS } else {
+        acquireNextImage(device, current.Handle, 1000000uL,
+          selectedSlot.AcquireSemaphore, 0uL, &imageIndex)
+      }
       RecordDiagnosticResult(VulkanDiagnosticEventIds.SwapchainAcquire, acquire)
-      let markedAcquire = selectedSlot.MarkAcquired(acquire)
+      let markedAcquire = selectedSlot.MarkAcquired(acquire, current.Composition == nil)
       if markedAcquire != acquire {
         RecordDiagnosticResult(VulkanDiagnosticEventIds.SwapchainAcquire, markedAcquire)
       }

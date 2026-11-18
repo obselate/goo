@@ -1021,7 +1021,7 @@ Gets up to 64 filters; folder dialogs reject nonempty filters.
 
 ### `InitialPath`
 
-Gets the initial absolute directory or full file path; include a filename for a save suggestion.
+Gets the initial absolute directory or full file path; include a filename for a save suggestion. On Linux, OpenFile uses an existing file's parent folder. SaveFile keeps the filename suggestion.
 
 ### `Multiple`
 

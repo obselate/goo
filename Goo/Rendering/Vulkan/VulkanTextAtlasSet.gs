@@ -94,6 +94,18 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
     }
   }
 
+  internal init(byteSize VkDeviceSize) {
+    atlasByteSize = byteSize
+    generation = 1uL
+    atlases = [InitialAtlasSlotCount]VulkanTextAtlas?
+    identities = [InitialAtlasSlotCount]ResourceId
+    lastUseSerial = [InitialAtlasSlotCount]uint64
+    lastTouch = [InitialAtlasSlotCount]uint64
+    active = [InitialAtlasSlotCount]bool
+    currentAtlasIndex = -1
+    CreateAtlas()
+  }
+
   internal init(
     nativeDevice VkDevice,
     nativeDispatch VkDeviceDispatch,
@@ -175,14 +187,16 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
     }
     let touch = TouchValue()
     let identity = NextIdentity()
-    let growth = atlasCount > 0
+    let growth = atlasCount > 0 && device != nint(0)
     if growth {
       allocator.BeginCacheGrowth()
     }
     var created VulkanTextAtlas
     try {
-      created = VulkanTextAtlas(device, dispatch, allocator, atlasByteSize,
-        maxTexelBufferElements, descriptorSetLayout, objectAccounting)
+      created = if device == nint(0) { VulkanTextAtlas(atlasByteSize) } else {
+        VulkanTextAtlas(device, dispatch, allocator, atlasByteSize,
+          maxTexelBufferElements, descriptorSetLayout, objectAccounting)
+      }
     } finally {
       if growth {
         allocator.EndCacheGrowth()
@@ -262,8 +276,10 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
     atlases[index] = nil
     active[index] = false
     try {
-      let replacement = VulkanTextAtlas(device, dispatch, allocator, atlasByteSize,
-        maxTexelBufferElements, descriptorSetLayout, objectAccounting)
+      let replacement = if device == nint(0) { VulkanTextAtlas(atlasByteSize) } else {
+        VulkanTextAtlas(device, dispatch, allocator, atlasByteSize,
+          maxTexelBufferElements, descriptorSetLayout, objectAccounting)
+      }
       atlases[index] = replacement
       if let current = cache { replacement.Track(current, index) }
     } catch (error Exception) {
