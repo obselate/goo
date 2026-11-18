@@ -588,6 +588,11 @@ namespace Facebook.Yoga
                     currentLineChild, direction, mainAxis,
                          currentLineChild.Layout.ComputedFlexBasis,
                     mainAxisOwnerSize, ownerWidth).Unwrap();
+                if (!shrinking && currentLineChild.ResolveFlexGrow() != 0)
+                {
+                    childFlexBasis = Math.Min(childFlexBasis,
+                        currentLineChild.Layout.ComputedFlexBasis.Unwrap());
+                }
                 float updatedMainSize = childFlexBasis;
 
                 if (shrinking)
@@ -738,6 +743,11 @@ namespace Facebook.Yoga
                     currentLineChild, direction, mainAxis,
                                currentLineChild.Layout.ComputedFlexBasis,
                     mainAxisOwnerSize, ownerWidth).Unwrap();
+                if (flexLine.Layout.RemainingFreeSpace > 0 && currentLineChild.ResolveFlexGrow() != 0)
+                {
+                    childFlexBasis = Math.Min(childFlexBasis,
+                        currentLineChild.Layout.ComputedFlexBasis.Unwrap());
+                }
 
                 if (flexLine.Layout.RemainingFreeSpace < 0)
                 {
@@ -834,6 +844,19 @@ namespace Facebook.Yoga
             bool performLayout, ref LayoutData layoutMarkerData,
             uint depth, uint generationCount)
         {
+            bool shrinking = flexLine.Layout.RemainingFreeSpace < 0;
+            if (!shrinking)
+            {
+                for (int i = 0; i < flexLine.ItemsInFlow.Count; i++)
+                {
+                    var child = flexLine.ItemsInFlow[i];
+                    if (child.ResolveFlexGrow() == 0) continue;
+                    float basis = child.Layout.ComputedFlexBasis.Unwrap();
+                    flexLine.Layout.RemainingFreeSpace += Math.Max(0,
+                        BoundAxis.BoundAxisWithinMinAndMax(child, direction, mainAxis,
+                            child.Layout.ComputedFlexBasis, mainAxisOwnerSize, ownerWidth).Unwrap() - basis);
+                }
+            }
             float originalFreeSpace = flexLine.Layout.RemainingFreeSpace;
             DistributeFreeSpaceFirstPass(
                 ref flexLine, direction, mainAxis, ownerWidth,
@@ -846,7 +869,7 @@ namespace Facebook.Yoga
                 ownerWidth, mainAxisOwnerSize,
                 availableInnerMainDim, availableInnerCrossDim,
                 availableInnerWidth, availableInnerHeight,
-                mainAxisOverflows, sizingModeCrossDim, originalFreeSpace < 0, performLayout,
+                mainAxisOverflows, sizingModeCrossDim, shrinking, performLayout,
                 ref layoutMarkerData, depth, generationCount);
 
             flexLine.Layout.RemainingFreeSpace = originalFreeSpace - distributedFreeSpace;

@@ -22,6 +22,9 @@
   that drops as items freeze, and choose shrink or grow once per line from its initial free space.
 - Compute first-pass grow sizes from the line's initial grow ratio instead of a total
   that drops as items freeze at their maximum size.
+- Distribute grow space from flex bases before minimum clamping, then apply the minimum
+  to the target size. Meta Yoga `cac7b345c06804703dc6868f740f04ad8a863f27`
+  still clamps the basis before distribution.
 - Snap a positive border width to at least one whole device pixel
   (`round half away from zero` of `width * pointScaleFactor`) when the style resolves it.
 - Resolve mixed pixel and percentage lengths with pooled mixed values and percentage tracking (#789).
