@@ -470,6 +470,7 @@ class FixtureContractTests {
             yield Contract[LayoutFixtures]("LayoutIsStableAcrossRoots")
             yield Contract[LayoutFixtures]("LayoutTransitionGlidesComputedPosition")
             yield Contract[LayoutFixtures]("LayoutTransitionInterpolatesWrappingBounds")
+            yield Contract[LayoutFixtures]("LayoutTransitionRespectsInterpolatedOverflow")
             yield Contract[LayoutFixtures]("LayoutTransitionBoundsReachMetricsAndAccessibility")
             yield Contract[LayoutFixtures]("LayoutTransitionSettlesInsideSized")
             yield Contract[LayoutFixtures]("LayoutTransitionRetargetsWithVelocity")

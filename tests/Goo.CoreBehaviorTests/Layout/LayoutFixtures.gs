@@ -747,6 +747,98 @@ internal class LayoutFixtures {
     } finally { NodeLifecycle.DisposeTree(root) }
   }
 
+  func LayoutTransitionRespectsInterpolatedOverflow() bool {
+    for overflow in []Overflow{Overflow.Hidden, Overflow.Scroll, Overflow.Visible} {
+      let pump = MotionPump()
+      let reconciler = Reconciler{Res: Resolver{}, Pump: pump}
+      let layout = Layout()
+      var root = reconciler.Mount(layoutWrappingScene(false, overflow: overflow))
+      using let resources = VulkanPathResources(VulkanPathAtlas(16384uL), VulkanPathIdentityRegistry())
+      using let paths = VulkanPathScene(resources)
+      let compiler = VulkanSceneCompiler(64)
+      compiler.SetPathScene(paths)
+      try {
+        layout.Calculate(root, 300.0F, 260.0F)
+        compiler.Compile(root, Color.Transparent, 300.0F, 260.0F)
+        root = reconciler.Diff(root, layoutWrappingScene(true, overflow: overflow))
+        layout.MarkStructureDirty()
+        layout.Calculate(root, 300.0F, 260.0F)
+        let card = root.Children[1]
+        let label = card.Children[0]
+        label.BackgroundColor = Color.Rgb(255, 0, 0)
+        let clipped = overflow != Overflow.Visible
+        for sample in 1 ... 4 {
+          pump.Sweep(0.025)
+          layout.RefreshRects(root)
+          compiler.Compile(root, Color.Transparent, 300.0F, 260.0F)
+          let rect = card.Rect
+          if MathF.Abs(rect.W - (140.0F + 30.0F * float32(sample))) > 0.01F
+            || label.Rect.W != 240.0F {
+            throw InvalidOperationException("Overflow $overflow sample $sample: box ${rect.W}, label ${label.Rect.W}")
+          }
+          let frame = compiler.Frame
+          if clipped {
+            if frame.RectClipCount == 0 || frame.ClipMaskCount != 1 {
+              throw InvalidOperationException("Overflow $overflow: rects ${frame.RectClipCount}, masks ${frame.ClipMaskCount}")
+            }
+            let clip = frame.RectClips[0].Bounds
+            let mask = frame.ClipMasks[0]
+            if clip.X != rect.X + 2.0F || clip.Y != rect.Y + 2.0F
+              || clip.Width != rect.W - 4.0F || clip.Height != rect.H - 4.0F
+              || mask.Bounds.X != clip.X || mask.Bounds.Y != clip.Y
+              || mask.Bounds.Width != clip.Width || mask.Bounds.Height != clip.Height
+              || mask.ScaleX != clip.Width || mask.ScaleY != clip.Height {
+              throw InvalidOperationException("Overflow $overflow sample $sample: clip ${clip.X},${clip.Y},"
+                + "${clip.Width},${clip.Height}, mask ${mask.Bounds.Width},${mask.Bounds.Height},"
+                + " scale ${mask.ScaleX},${mask.ScaleY}")
+            }
+          } else if frame.RectClipCount != 0 || frame.ClipMaskCount != 0 {
+            throw InvalidOperationException("Visible overflow gained a clip")
+          }
+          var painted = false
+          var clipDepth = 0
+          var rounded = false
+          for index in 0 ... frame.DrawRefCount {
+            let draw = frame.DrawRefs[index]
+            if draw.Kind == SceneDrawKind.RectClipBegin {
+              clipDepth++
+              continue
+            }
+            if draw.Kind == SceneDrawKind.RectClipEnd {
+              clipDepth--
+              continue
+            }
+            if draw.Kind == SceneDrawKind.LayerEnd {
+              rounded = draw.ClipChainId != 0
+              continue
+            }
+            if draw.Kind != SceneDrawKind.SolidBox { continue }
+            let box = frame.SolidBoxes[draw.Index]
+            if box.Color != label.BackgroundColor.ToPackedRgba() { continue }
+            if box.Bounds.X != label.Rect.X || box.Bounds.Y != label.Rect.Y
+              || box.Bounds.Width != label.Rect.W || (clipDepth > 0) != clipped {
+              throw InvalidOperationException("Overflow $overflow: child ${box.Bounds.Width}, depth $clipDepth")
+            }
+            painted = true
+          }
+          let outside = hitTopmost(root, rect.X + rect.W + 1.0F, label.Rect.Y + 5.0F) == label
+          if !painted || rounded != clipped || clipDepth != 0 || outside == clipped {
+            throw InvalidOperationException("Overflow $overflow: painted $painted, rounded $rounded,"
+              + " depth $clipDepth, outside $outside")
+          }
+        }
+        let allocated = GC.GetAllocatedBytesForCurrentThread()
+        for frame in 0 ... 50 {
+          pump.Sweep(0.0001)
+          layout.RefreshRects(root)
+        }
+        let bytes = GC.GetAllocatedBytesForCurrentThread() - allocated
+        if bytes != 0L { throw InvalidOperationException("Overflow transition allocated $bytes bytes") }
+      } finally { NodeLifecycle.DisposeTree(root) }
+    }
+    return true
+  }
+
   func LayoutTransitionBoundsReachMetricsAndAccessibility() bool {
     var wide = false
     let handle = ElementHandle()
@@ -1377,14 +1469,15 @@ internal class LayoutFixtures {
       },
     }
 
-  private func layoutWrappingScene(wide bool, handle ElementHandle? = nil) Container -> Container{
+  private func layoutWrappingScene(wide bool, handle ElementHandle? = nil,
+    overflow Overflow = Overflow.Hidden) Container -> Container{
     Width: 300, Height: 260, Padding: 10, Gap: 10,
     FlexDirection: FlexDirection.Row, FlexWrap: FlexWrap.Wrap, AlignContent: AlignContent.FlexStart,
     Container{Key: "first", Width: 130, Height: 50, FlexShrink: 0},
     Container{
       Key: "card", Handle: handle, AccessibilityName: "Wrapping card", HitTestSelf: true,
       Width: wide ? 260 : 140, Height: wide ? 100 : 50, FlexShrink: 0,
-      Padding: 8, BorderWidth: 2, BorderRadius: 20, Overflow: Overflow.Hidden,
+      Padding: 8, BorderWidth: 2, BorderRadius: 20, Overflow: overflow,
       BackgroundColor: Color.White, LayoutTransition: LayoutTransition(100, Easing.Linear),
       Text{Content: "Wrapping card", AccessibilityName: "Card label", Height: 24, OnClick: () -> { }},
     },
