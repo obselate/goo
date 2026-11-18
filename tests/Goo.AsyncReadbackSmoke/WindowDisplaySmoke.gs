@@ -32,11 +32,20 @@ internal class WindowDisplaySmoke {
       }
       Require(window.SetFullscreenDisplay(missingDisplay) == WindowOperationResult.Closed,
         "Closed window accepted a fullscreen display request")
+      var earlyChanges = 0
+      var removedChanges = 0
+      var lateChanges = 0
+      let early Action = () -> { earlyChanges++ }
+      let removed Action = () -> { removedChanges++ }
+      window.DisplayChanged += early
+      window.DisplayChanged += removed
       Require(window.ApplyPlacement(WindowPlacement{
         Fields: WindowPlacementFields.NormalSize,
         NormalBounds: ElementRect{ Width: 420.0, Height: 260.0 },
       }).Status == WindowOperationResult.Accepted, "Staged normal size was not accepted")
       window.Open()
+      window.DisplayChanged -= removed
+      window.DisplayChanged += () -> { lateChanges++ }
       try {
         Require(window.NativeWidth == 420 && window.NativeHeight == 260,
           "Staged normal size did not replace the earlier Size initializer")
@@ -89,6 +98,10 @@ internal class WindowDisplaySmoke {
         Require(observedFullscreenEvent && nativeState.Fullscreen
             && nativeState.DisplayId == targetId,
           "Native fullscreen did not reach the selected display")
+        if displays.Count > 1 {
+          Require(earlyChanges > 0 && lateChanges > 0 && removedChanges == 0,
+            "DisplayChanged did not use the current subscribers after Open")
+        }
         Require(window.State == WindowState.Fullscreen,
           "Native fullscreen was overwritten by a restore notification")
         let observedDisplayId = nativeState.DisplayId
@@ -115,6 +128,12 @@ internal class WindowDisplaySmoke {
       } finally {
         CloseWindow(window)
       }
+      var rejected = false
+      try { window.Open() }
+      catch (error InvalidOperationException) {
+        rejected = error.Message == "A closed Window cannot be reopened. Create a new Window."
+      }
+      Require(rejected && !window.IsOpen, "Closed window did not reject Open with its lifecycle contract")
     }
   }
 }

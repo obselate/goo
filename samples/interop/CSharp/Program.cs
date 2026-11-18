@@ -102,7 +102,7 @@ internal static class AppTheme
 {
     internal static readonly Color Background = Color.Rgb(24, 31, 43);
     internal static readonly Color Foreground = Color.Rgb(240, 244, 252);
-    internal static readonly Color Accent = Color.Parse("#4a7dff");
+    internal static readonly Color Accent = Color.Parse("#3664e0");
     internal static readonly Style Panel = new() { Width = Length.Percent(100), Height = Length.Percent(100), Padding = 24, Gap = 12, BackgroundColor = Background, Color = Foreground };
     internal static readonly Style Button = new() { Padding = 10, BorderRadius = 8, BackgroundColor = Accent, Color = Foreground };
 }
