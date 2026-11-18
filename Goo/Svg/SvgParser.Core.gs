@@ -39,7 +39,7 @@ internal partial class SvgParser {
         let rootStyle = ResolveStyle(root, SvgStyle())
         let rootNode = SvgNode{
             Parent: nil,
-            Transform: SvgMatrix.Identity,
+            Transform: ParseTransform(string?(root.Attribute("transform")), root),
             Opacity: rootStyle.LocalOpacity,
             Clip: if let clip = rootStyle.ClipPath {
                 ParseClip(clip, root)

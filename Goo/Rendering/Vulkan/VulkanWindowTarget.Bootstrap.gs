@@ -368,7 +368,15 @@ internal unsafe partial class VulkanWindowTarget {
       }
       let createInstance = nullable
       var createdInstance VkInstance = nint(0)
-      let result = createInstance(&createInfo, nil, &createdInstance)
+      if let currentValidation = validation {
+        currentValidation.DriverProbe = VulkanDrivers.ManualLoader && !VulkanDrivers.Enabled
+      }
+      var result VkResult
+      try {
+        result = createInstance(&createInfo, nil, &createdInstance)
+      } finally {
+        if let currentValidation = validation { currentValidation.DriverProbe = false }
+      }
       if result == VkConstants.VK_ERROR_INCOMPATIBLE_DRIVER || result == VkConstants.VK_ERROR_INITIALIZATION_FAILED
         || result == VkConstants.VK_ERROR_EXTENSION_NOT_PRESENT {
         throw VulkanDeviceUnavailableException(NoUsableDriverMessage() + " vkCreateInstance failed: " + result.ToString())
