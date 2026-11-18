@@ -89,6 +89,8 @@ internal unsafe partial class VulkanDiagnostics {
   shared {
     private var openOriginTicks uint64
     private var openOriginFrequency uint64
+    internal var StartupReportPath string? = Environment.GetEnvironmentVariable("GOO_VK_STARTUP_REPORT")
+    internal var StartupReportEnabled bool = !string.IsNullOrEmpty(StartupReportPath) && StartupReportPath != "0"
 
     func Create(enabled bool) VulkanDiagnostics? {
       if !enabled {

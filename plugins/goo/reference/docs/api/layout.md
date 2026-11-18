@@ -105,13 +105,14 @@ size, and representable by the renderer's 32-bit logical coordinates.
 `context.MeasureChild(index, available)` asks the existing child subtree for its
 desired margin-box size. It handles wrapping text, images, nested flex layouts, and
 nested custom panels. It does not reconcile or remount children. During `Arrange`,
-call `context.ArrangeChild(index, bounds)` exactly once for every direct child,
+call `context.ArrangeChild(index, bounds)` exactly once for every direct non-Portal child,
 including hidden children. Bounds are margin boxes relative to the content origin;
 Goo subtracts child margins before arranging the child's border box. The algorithm
 controls final width/height even when the child has an authored size or size limit;
 those declarations participate in measurement. Normal relative child offsets still
-apply. Custom layout owns track/gap and out-of-flow policy; all direct children
-participate. Scroll extents and layout transitions include custom placements.
+apply. Custom layout owns track/gap and out-of-flow policy. Portals use their own
+layout and do not participate. Child indices follow declaration order with Portals
+excluded. Scroll extents and layout transitions include custom placements.
 
 Arranged bounds and cached sizes remain unrounded. Absolute child rectangles snap
 to `Window.PixelScale`. Density changes rearrange children. Positive sizes and
@@ -170,11 +171,11 @@ See [Style.Language](style.md#language) and
 ## `LayoutAlgorithm`
 
 
-Measures and arranges the existing children of a Container. Implementations must be immutable and must not mutate UI state during layout.
+Measures and arranges the non-Portal children of a Container. Implementations must be immutable and must not mutate UI state during layout.
 
 ### `Arrange(LayoutContext,LayoutSize)`
 
-Places every child in the final content area; child indices and mounted identity match Container.Children.
+Places every non-Portal child in the final content area. Indices follow Container.Children order with Portals excluded.
 
 - `context`: The retained children available only during this callback.
 - `finalSize`: The finite content size after the surrounding layout resolves the container.
@@ -204,20 +205,20 @@ Uses the available content height.
 ## `LayoutContext`
 
 
-Provides bounded access to retained children during custom measure and arrange callbacks.
+Provides bounded access to retained non-Portal children during custom measure and arrange callbacks.
 
 ### `ArrangeChild(int32,ElementRect)`
 
-Places a child margin box relative to the container's content origin. Every child must be placed exactly once per arrange callback.
+Places a child margin box relative to the container's content origin. Every non-Portal child must be placed exactly once per arrange callback.
 
-- `index`: The zero-based child index.
+- `index`: The zero-based child index, excluding Portals.
 - `bounds`: A finite, nonnegative-size margin box; offsets may be negative.
 
 ### `MeasureChild(int32,LayoutSize)`
 
 Measures a retained child subtree without rebuilding it. Root margins are included in the returned size.
 
-- `index`: The zero-based child index.
+- `index`: The zero-based child index, excluding Portals.
 - `available`: Maximum width and height; positive infinity means unconstrained.
 
 Returns: The child's desired margin-box size under these constraints.
@@ -233,7 +234,7 @@ Returns: Layout units, or nil for automatic or intrinsic values, or a nonzero pe
 
 ### `ChildCount`
 
-Gets the number of retained direct children. Access outside a layout callback throws.
+Gets the number of retained direct children, excluding Portals. Access outside a layout callback throws.
 
 ## `LayoutSize`
 
