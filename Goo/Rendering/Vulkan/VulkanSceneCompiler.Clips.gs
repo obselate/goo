@@ -221,7 +221,9 @@ internal partial class VulkanSceneCompiler {
       guard let renderer = pathScene else {
         return VulkanScenePathClipResult{}
       }
-      let path = renderer.Emit(clipPath, FillRule.NonZero)
+      let path = renderer.Emit(PathGeometry.ForDrawing(clipPath,
+        PathDeviceScale(transformIndex) * MathF.Max(MathF.Abs(mapping.ScaleX), MathF.Abs(mapping.ScaleY))),
+        FillRule.NonZero)
       if !path.Renderable {
         if path.PathId.IsValid && path.AtlasId.IsValid && path.WordCount != 0u
           && path.UploadPending{
@@ -276,7 +278,9 @@ internal partial class VulkanSceneCompiler {
       guard let renderer = pathScene else {
         return VulkanScenePathClipResult{}
       }
-      let path = renderer.Emit(clipPath, FillRule.NonZero)
+      let path = renderer.Emit(PathGeometry.ForDrawing(clipPath,
+        PathDeviceScale(transformIndex) * MathF.Max(MathF.Abs(mapping.ScaleX), MathF.Abs(mapping.ScaleY))),
+        FillRule.NonZero)
       if !path.Renderable {
         if path.PathId.IsValid && path.AtlasId.IsValid && path.WordCount != 0u
           && path.UploadPending{
@@ -395,7 +399,9 @@ internal partial class VulkanSceneCompiler {
       if !mapping.Valid || mapping.ScaleX == 0.0F || mapping.ScaleY == 0.0F {
         return AppendZeroPathClip(parentChainId, stableId, contentKey)
       }
-      let path = renderer.Emit(clip.Path, clip.FillRule)
+      let path = renderer.Emit(PathGeometry.ForDrawing(clip.Path,
+        PathDeviceScale(transformIndex) * MathF.Max(MathF.Abs(mapping.ScaleX), MathF.Abs(mapping.ScaleY))),
+        clip.FillRule)
       if !path.Renderable {
         if path.PathId.IsValid && path.AtlasId.IsValid && path.WordCount != 0u
           && path.UploadPending{

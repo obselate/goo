@@ -60,10 +60,12 @@ internal class PathGeometry {
   internal var MinY float32
   internal var MaxX float32
   internal var MaxY float32
+  internal var DeviceScale float32 = 1.0F
+  private var drawingPath VectorPath
 
   internal init(quadratics []PathQuadratic, contours []PathContour, edges []PathEdge,
     hasClosedContour bool, hasFillContour bool, minX float32, minY float32,
-    maxX float32, maxY float32) {
+    maxX float32, maxY float32, deviceScale float32 = 1.0F) {
       Quadratics = quadratics
       Contours = contours
       Edges = edges
@@ -71,6 +73,7 @@ internal class PathGeometry {
       ContourCount = contours.Length
       EdgeCount = edges.Length
       GeometryRevision = 1uL
+      DeviceScale = deviceScale
       HasClosedContour = hasClosedContour
       HasFillContour = hasFillContour
       MinX = minX
@@ -79,18 +82,21 @@ internal class PathGeometry {
       MaxY = maxY
     }
 
-  private init(owner VectorPathNormalizedOwner) {
+  private init(owner VectorPathNormalizedOwner, deviceScale float32) {
     Quadratics = owner.Quadratics
     Contours = owner.Contours
     Edges = [0]PathEdge
     QuadraticCount = owner.QuadraticCount
     ContourCount = owner.ContourCount
+    DeviceScale = deviceScale
     Refresh(owner)
   }
 
   shared {
     internal const MinimumTolerance float32 = 0.0000001F
     internal const RelativeTolerance float32 = 0.0001F
+    internal const EdgeTolerance float32 = 0.125F
+    internal const ApproximationTolerance float32 = 0.0625F
     internal const MaximumSubdivisionDepth int32 = 12
 
     internal func Quadratic(x0 float32, y0 float32, cx float32, cy float32,
@@ -105,30 +111,38 @@ internal class PathGeometry {
       []PathQuadratic{}, []PathContour{}, []PathEdge{}, false, false,
       0.0F, 0.0F, 0.0F, 0.0F)
 
-    internal func For(path VectorPath) PathGeometry {
+    internal func For(path VectorPath, deviceScale float32 = 1.0F) PathGeometry {
       guard let source = path.payload else { return emptyGeometry }
-      if cache.TryGetValue(source, out var value) {
-        if let owner = source.NormalizedOwner {
-          if value.GeometryRevision != owner.GeometryRevision {
-            lock (PathGeometryCacheLock) {
-              if value.GeometryRevision != owner.GeometryRevision { value.Refresh(owner) }
-            }
-          }
-        }
-        return value
-      }
+      let scale = MathF.Max(1.0F, deviceScale)
+      if cache.TryGetValue(source, out var value) && value.DeviceScale >= scale
+        && value.GeometryRevision == source.GeometryRevision { return value }
       lock (PathGeometryCacheLock) {
-        if cache.TryGetValue(source, out var retained) {
+        if cache.TryGetValue(source, out var retained) && retained.DeviceScale >= scale {
           if let owner = source.NormalizedOwner {
-            if retained.GeometryRevision != owner.GeometryRevision {
-              retained.Refresh(owner)
-            }
+            if retained.GeometryRevision != owner.GeometryRevision { retained.Refresh(owner) }
           }
           return retained
         }
-        let built = build(source)
+        let built = build(source, MathF.Pow(2.0F, MathF.Ceiling(MathF.Log2(scale))))
+        cache.Remove(source)
         cache.Add(source, built)
         return built
+      }
+    }
+
+    internal func ForDrawing(path VectorPath, deviceScale float32) VectorPath {
+      guard let source = path.payload else { return path }
+      if source.NormalizedQuadratics != nil && source.CurveSource == nil { return path }
+      let geometry = For(path, deviceScale)
+      if geometry.drawingPath.payload != nil { return geometry.drawingPath }
+      lock (PathGeometryCacheLock) {
+        if geometry.drawingPath.payload == nil {
+          geometry.drawingPath = VectorPath.CreateNormalized(geometry.Quadratics, geometry.Contours,
+            path.ViewBoxX, path.ViewBoxY, path.ViewBoxWidth, path.ViewBoxHeight,
+            source.CurveSource ?? source)
+          if let normalized = geometry.drawingPath.payload { cache.Add(normalized, geometry) }
+        }
+        return geometry.drawingPath
       }
     }
 
@@ -170,21 +184,22 @@ internal class PathGeometry {
         }
       }
 
-    private func build(source VectorPathData) PathGeometry {
+    private func build(source VectorPathData, deviceScale float32) PathGeometry {
+      if let curveSource = source.CurveSource { return build(curveSource, deviceScale) }
       if let owner = source.NormalizedOwner {
-        return PathGeometry(owner)
+        return PathGeometry(owner, deviceScale)
       }
       guard let normalizedQuadratics = source.NormalizedQuadratics else {
-        return buildCommands(source)
+        return buildCommands(source, deviceScale)
       }
       guard let normalizedContours = source.NormalizedContours else {
-        return buildCommands(source)
+        return buildCommands(source, deviceScale)
       }
-      return Create(normalizedQuadratics, normalizedContours)
+      return Create(normalizedQuadratics, normalizedContours, deviceScale)
     }
 
-    private func buildCommands(source VectorPathData) PathGeometry {
-      let builder = PathGeometryBuilder()
+    private func buildCommands(source VectorPathData, deviceScale float32) PathGeometry {
+      let builder = PathGeometryBuilder(deviceScale)
       for i in 0 ... source.Commands.Length {
         builder.Consume(source.Commands[i])
       }
@@ -236,7 +251,8 @@ internal class PathGeometry {
         }
       }
 
-    internal func Create(quadratics []PathQuadratic, contours []PathContour) PathGeometry {
+    internal func Create(quadratics []PathQuadratic, contours []PathContour,
+      deviceScale float32 = 1.0F) PathGeometry {
       let edges = List[PathEdge]()
       var hasClosed = false
       var hasFill = false
@@ -246,7 +262,7 @@ internal class PathGeometry {
         hasFill = true
         if contour.Closed { hasClosed = true }
         for j in contour.Start ... contour.End {
-          appendEdges(quadratics[j], edges)
+          appendEdges(quadratics[j], edges, EdgeTolerance / deviceScale)
         }
         if !contour.Closed {
           let first = quadratics[contour.Start]
@@ -258,7 +274,7 @@ internal class PathGeometry {
             CY: (last.Y1 + first.Y0) * 0.5F,
             X1: first.X0,
             Y1: first.Y0,
-          }, edges)
+          }, edges, EdgeTolerance / deviceScale)
         }
       }
 
@@ -277,14 +293,10 @@ internal class PathGeometry {
         maxY = 0.0F
       }
       return PathGeometry(quadratics, contours, edges.ToArray(), hasClosed, hasFill,
-        minX, minY, maxX, maxY)
+        minX, minY, maxX, maxY, deviceScale)
     }
 
-    private func appendEdges(q PathQuadratic, edges List[PathEdge]) {
-      let scaleX = MathF.Max(MathF.Abs(q.CX - q.X0), MathF.Abs(q.X1 - q.CX))
-      let scaleY = MathF.Max(MathF.Abs(q.CY - q.Y0), MathF.Abs(q.Y1 - q.CY))
-      let scale = MathF.Max(scaleX, scaleY)
-      let tolerance = MathF.Max(MinimumTolerance, scale * RelativeTolerance)
+    private func appendEdges(q PathQuadratic, edges List[PathEdge], tolerance float32) {
       appendQuadraticEdges(q.X0, q.Y0, q.CX, q.CY, q.X1, q.Y1,
         tolerance, 0, edges)
     }
@@ -388,10 +400,7 @@ internal class PathGeometry {
   }
 
   private func appendOwnerEdges(q PathQuadratic) {
-    let scaleX = MathF.Max(MathF.Abs(q.CX - q.X0), MathF.Abs(q.X1 - q.CX))
-    let scaleY = MathF.Max(MathF.Abs(q.CY - q.Y0), MathF.Abs(q.Y1 - q.CY))
-    let scale = MathF.Max(scaleX, scaleY)
-    let tolerance = MathF.Max(PathGeometry.MinimumTolerance, scale * PathGeometry.RelativeTolerance)
+    let tolerance = EdgeTolerance / DeviceScale
     appendOwnerQuadraticEdges(q.X0, q.Y0, q.CX, q.CY, q.X1, q.Y1, tolerance, 0)
   }
 
@@ -487,6 +496,8 @@ internal class PathGeometry {
 internal class PathGeometryBuilder {
   private let quadratics List[PathQuadratic]
   private let contours List[PathContour]
+  private let deviceScale float32
+  private let tolerance float32
   private var active bool
   private var closed bool
   private var contourStart int32
@@ -495,9 +506,11 @@ internal class PathGeometryBuilder {
   private var startX float32
   private var startY float32
 
-  internal init() {
+  internal init(deviceScale float32 = 1.0F) {
     quadratics = List[PathQuadratic]()
     contours = List[PathContour]()
+    this.deviceScale = deviceScale
+    tolerance = PathGeometry.ApproximationTolerance / deviceScale
   }
 
   internal func Consume(command VectorPathCommand) {
@@ -524,7 +537,7 @@ internal class PathGeometryBuilder {
 
   internal func Build() PathGeometry {
     finishContour()
-    return PathGeometry.Create(quadratics.ToArray(), contours.ToArray())
+    return PathGeometry.Create(quadratics.ToArray(), contours.ToArray(), deviceScale)
   }
 
   private func moveTo(x float32, y float32) {
@@ -566,7 +579,6 @@ internal class PathGeometryBuilder {
     p3 PathPoint, depth int32) {
       let qx = 0.75F * (p1.X + p2.X) - 0.25F * (p0.X + p3.X)
       let qy = 0.75F * (p1.Y + p2.Y) - 0.25F * (p0.Y + p3.Y)
-      let tolerance = cubicTolerance(p0, p1, p2, p3)
       let error = MathF.Max(cubicQuadraticError(p0.X, p1.X, p2.X, p3.X, qx),
         cubicQuadraticError(p0.Y, p1.Y, p2.Y, p3.Y, qy))
       if error <= tolerance || depth >= PathGeometry.MaximumSubdivisionDepth {
@@ -582,18 +594,6 @@ internal class PathGeometryBuilder {
       let middle = midpoint(p012, p123)
       appendCubicQuadratics(p0, p01, p012, middle, depth + 1)
       appendCubicQuadratics(middle, p123, p23, p3, depth + 1)
-    }
-
-  private func cubicTolerance(p0 PathPoint, p1 PathPoint, p2 PathPoint,
-    p3 PathPoint) float32{
-      let scaleX = MathF.Max(MathF.Max(MathF.Abs(p1.X - p0.X), MathF.Abs(p2.X - p1.X)),
-        MathF.Abs(p3.X - p2.X))
-      let scaleY = MathF.Max(MathF.Max(MathF.Abs(p1.Y - p0.Y), MathF.Abs(p2.Y - p1.Y)),
-        MathF.Abs(p3.Y - p2.Y))
-      let spanX = MathF.Abs(p3.X - p0.X)
-      let spanY = MathF.Abs(p3.Y - p0.Y)
-      let scale = MathF.Max(MathF.Max(scaleX, scaleY), MathF.Max(spanX, spanY))
-      return MathF.Max(PathGeometry.MinimumTolerance, scale * PathGeometry.RelativeTolerance)
     }
 
   private func cubicQuadraticError(p0 float32, p1 float32, p2 float32,
@@ -683,12 +683,9 @@ internal class PathGeometryBuilder {
   private func appendArcQuadratics(centerX float32, centerY float32, rx float32, ry float32,
     cosPhi float32, sinPhi float32, angle0 float32, angle1 float32,
     p0 PathPoint, p1 PathPoint, depth int32) {
-      let localStart = ellipsePoint(0.0F, 0.0F, rx, ry, cosPhi, sinPhi, angle0)
-      let localEnd = ellipsePoint(0.0F, 0.0F, rx, ry, cosPhi, sinPhi, angle1)
-      let localControl = arcControl(localStart, rx, ry, cosPhi, sinPhi, angle0, angle1 - angle0)
-      let tolerance = arcTolerance(localStart, localControl, localEnd)
-      let error = arcQuadraticError(0.0F, 0.0F, rx, ry, cosPhi, sinPhi,
-        angle0, angle1, localStart, localControl, localEnd)
+      let cosine = MathF.Cos((angle1 - angle0) * 0.5F)
+      let sagitta = 1.0F - cosine
+      let error = MathF.Max(rx, ry) * sagitta * sagitta / (2.0F * cosine)
       if error <= tolerance || depth >= PathGeometry.MaximumSubdivisionDepth {
         let control = arcControl(p0, rx, ry, cosPhi, sinPhi, angle0, angle1 - angle0)
         addQuadratic(p0.X, p0.Y, control.X, control.Y, p1.X, p1.Y)
@@ -712,38 +709,6 @@ internal class PathGeometryBuilder {
         X: p0.X + factor * (cosPhi * tangentX - sinPhi * tangentY),
         Y: p0.Y + factor * (sinPhi * tangentX + cosPhi * tangentY),
       }
-    }
-
-  private func arcTolerance(p0 PathPoint, control PathPoint, p1 PathPoint) float32 {
-    let scaleX = MathF.Max(MathF.Abs(control.X - p0.X), MathF.Abs(p1.X - control.X))
-    let scaleY = MathF.Max(MathF.Abs(control.Y - p0.Y), MathF.Abs(p1.Y - control.Y))
-    let scale = MathF.Max(scaleX, scaleY)
-    return MathF.Max(PathGeometry.MinimumTolerance, scale * PathGeometry.RelativeTolerance)
-  }
-
-  private func arcQuadraticError(centerX float32, centerY float32, rx float32, ry float32,
-    cosPhi float32, sinPhi float32, angle0 float32, angle1 float32,
-    p0 PathPoint, control PathPoint, p1 PathPoint) float32{
-      let span = angle1 - angle0
-      let quarter = arcPointError(centerX, centerY, rx, ry, cosPhi, sinPhi,
-        angle0 + span * 0.25F, p0, control, p1, 0.25F)
-      let half = arcPointError(centerX, centerY, rx, ry, cosPhi, sinPhi,
-        angle0 + span * 0.5F, p0, control, p1, 0.5F)
-      let threeQuarter = arcPointError(centerX, centerY, rx, ry, cosPhi, sinPhi,
-        angle0 + span * 0.75F, p0, control, p1, 0.75F)
-      return MathF.Max(quarter, MathF.Max(half, threeQuarter))
-    }
-
-  private func arcPointError(centerX float32, centerY float32, rx float32, ry float32,
-    cosPhi float32, sinPhi float32, angle float32, p0 PathPoint,
-    control PathPoint, p1 PathPoint, t float32) float32{
-      let expected = ellipsePoint(centerX, centerY, rx, ry, cosPhi, sinPhi, angle)
-      let inverse = 1.0F - t
-      let actual = PathPoint{
-        X: inverse * inverse * p0.X + 2.0F * inverse * t * control.X + t * t * p1.X,
-        Y: inverse * inverse * p0.Y + 2.0F * inverse * t * control.Y + t * t * p1.Y,
-      }
-      return MathF.Max(MathF.Abs(expected.X - actual.X), MathF.Abs(expected.Y - actual.Y))
     }
 
   private func ellipsePoint(centerX float32, centerY float32, rx float32, ry float32,
