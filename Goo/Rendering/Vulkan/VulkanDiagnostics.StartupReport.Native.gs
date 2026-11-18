@@ -78,7 +78,9 @@ internal unsafe partial class VulkanStartupReport {
             loaderBytes.SetLength(0L)
             readerDone.Reset()
             capturing = true
-            go Drain()
+            let drain = Thread(() -> { Drain() })
+            drain.IsBackground = true
+            drain.Start()
         } catch (error Exception) {
             if capturing {
                 if savedDescriptor >= 0 {
