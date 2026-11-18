@@ -112,7 +112,7 @@ public partial class NativeAccessibilityAdapter {
         if node.Role != AccessibilityRole.Text || node.Name != node.Value { SetString(nativeNode, node.Name, 0) }
         SetString(nativeNode, node.Description, 1)
         SetString(nativeNode, node.ValueText != "" ? node.ValueText : node.Value, 2)
-        SetString(nativeNode, node.CustomRole, 3)
+        if node.Role == AccessibilityRole.Custom { SetString(nativeNode, node.CustomRole, 3) }
         AccessKitNative.NodeSetBounds(nativeNode, NativeBounds(node.Bounds))
         EncodeState(nativeNode, node, sizeOfSet)
         if Supports(node, AccessibilityAction.Scroll) {

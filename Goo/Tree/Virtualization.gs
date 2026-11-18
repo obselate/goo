@@ -428,12 +428,11 @@ internal sealed class VirtualNodeState {
       x = nearestOffset(float64(n.ScrollX), bounds.X, bounds.Width, viewport.Size.Width)
       y = nearestOffset(float64(n.ScrollY), bounds.Y, bounds.Height, viewport.Size.Height)
     }
-    let size = output.ContentSize
-    let width = pending == state ? size.Width : float64(extent.Width)
-    let height = pending == state ? size.Height : float64(extent.Height)
+    let size = if pending == state { output.ContentSize }
+      else { LayoutSize(float64(extent.Width), float64(extent.Height)) }
     return Point{
-      X: Math.Clamp(x, 0.0, Math.Max(0.0, width - viewport.Size.Width)),
-      Y: Math.Clamp(y, 0.0, Math.Max(0.0, height - viewport.Size.Height)),
+      X: Math.Clamp(x, 0.0, Math.Max(0.0, size.Width - viewport.Size.Width)),
+      Y: Math.Clamp(y, 0.0, Math.Max(0.0, size.Height - viewport.Size.Height)),
     }
   }
 

@@ -9,6 +9,28 @@ import Xunit
 
 class AccessibilityTextTests {
     @Fact
+    func CustomRoleDescriptionDoesNotOverrideNativeButtonRole() {
+        using let adapter = NativeAccessibilityAdapter()
+        let window = Window{Root: CustomRoleCell(), AccessibilityAdapter: adapter}
+        try {
+            window.UpdateTree()
+            let dump = Dump(adapter)
+            Assert.Contains("role: Button", dump)
+            Assert.DoesNotContain("role_description: \"override\"", dump)
+            Assert.Contains("role_description: \"custom control\"", dump)
+        } finally {
+            window.Close()
+        }
+    }
+
+    private class CustomRoleCell : Cell {
+        override func Build() Blob -> Container() {
+            Container{Accessibility: Accessibility{Role: AccessibilityRole.Button, CustomRole: "override"}},
+            Container{Accessibility: Accessibility{Role: AccessibilityRole.Custom, CustomRole: "custom control"}},
+        }
+    }
+
+    @Fact
     func NativeRolesAndSparseGridReachAccessKit() {
         using let adapter = NativeAccessibilityAdapter()
         let window = Window{Size: LayoutSize(420, 760),  Root: SmokeApplication.CreateAccessibilityRoot()}

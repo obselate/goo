@@ -1191,6 +1191,7 @@ internal class VirtualFixtureCell : Cell {
   internal var ItemAccessibility Accessibility?
   internal var ProjectFocus bool
   internal var Target ElementHandle?
+  internal var Output VirtualOutput?
 
   init(count int32) {
     for i in 0 ... count { Items.Add(VirtualFixtureItem{ Id: i }) }
@@ -1239,6 +1240,7 @@ internal class VirtualFixtureState : VirtualState {
   internal init(cell VirtualFixtureCell) { this.cell = cell }
 
   public override func Realize(viewport VirtualViewport, output VirtualOutput) {
+    cell.Output = output
     next.Clear()
     observe(viewport)
     var scroll = viewport.ScrollOffset.Y
