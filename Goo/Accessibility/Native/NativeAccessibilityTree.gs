@@ -112,7 +112,7 @@ public partial class NativeAccessibilityAdapter {
         if node.Role != AccessibilityRole.Text || node.Name != node.Value { SetString(nativeNode, node.Name, 0) }
         SetString(nativeNode, node.Description, 1)
         SetString(nativeNode, node.ValueText != "" ? node.ValueText : node.Value, 2)
-        SetString(nativeNode, node.CustomRole, 3)
+        if node.Role == AccessibilityRole.Custom { SetString(nativeNode, node.CustomRole, 3) }
         AccessKitNative.NodeSetBounds(nativeNode, NativeBounds(node.Bounds))
         EncodeState(nativeNode, node, sizeOfSet)
         if Supports(node, AccessibilityAction.Scroll) {
@@ -161,6 +161,7 @@ public partial class NativeAccessibilityAdapter {
     }
 
     private func NodeRole(node AccessibilityNode) uint8 {
+      if node.IsPassword { return AccessKitSchema.PasswordInput }
       if node.Role == AccessibilityRole.List {
         for i in 0 ... node.Children.Count {
           if node.Children[i].Role == AccessibilityRole.ListItem && node.Children[i].Selected != nil { return uint8(87) }

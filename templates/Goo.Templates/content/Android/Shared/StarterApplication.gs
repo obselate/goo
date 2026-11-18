@@ -9,7 +9,7 @@ shared class StarterTheme {
     public let Radius Length = 10
     public let FontSize Length = 24
     public let Background Color = Color.Rgb(24, 31, 43)
-    public let Accent Color = Color.Rgb(74, 125, 255)
+    public let Accent Color = Color.Rgb(54, 100, 224)
     public let Foreground Color = Color.White
 }
 

@@ -91,6 +91,14 @@ class NonScalingStrokeCell : Cell {
     }
 }
 
+class FittedStrokeCell(effect VectorEffect) : Cell {
+    override func Build() Blob -> Shape{
+        Path: PathBuilder(0.0, 0.0, 20.0, 20.0).MoveTo(5.0, 10.0).LineTo(15.0, 10.0).Build(),
+        Fit: ShapeFit.Fill, Width: 100, Height: 100,
+        Stroke: VectorStroke(4, Color.White){.VectorEffect: effect}, StrokeInset: false,
+    }
+}
+
 class NonScalingStrokeBenchCell : Cell {
     internal let Count int32
     internal let NonScaling bool
@@ -285,6 +293,27 @@ func VerifyNonScalingStrokePixels() {
             let shape = FindNonScalingStrokeNode(window.PathProbeNodeForTest()!!)!!
             let reference = NonScalingStrokeHostPath(root.Source, NonScalingStrokeHostMatrix(shape))
             RenderNonScalingStrokePair(session, root, reference, 2.0, "flat=" + index.ToString())
+        }
+        for effect in []VectorEffect{VectorEffect.None, VectorEffect.NonScalingStroke} {
+            let pending = session.RenderAsync(FittedStrokeCell(effect),
+                OffscreenRenderOptions(LayoutSize(100, 100), 100u, 100u, Color.Black, 134217728L),
+                CancellationToken.None)
+            let deadline = Environment.TickCount64 + 10000L
+            while !pending.IsCompleted && Environment.TickCount64 < deadline {
+                session.Service()
+                Thread.Sleep(1)
+            }
+            Require(pending.IsCompleted, "Fitted stroke readback timed out")
+            let result = pending.GetAwaiter().GetResult()
+            Require(result.Status == OffscreenRenderStatus.Success && result.Capture != nil,
+                "Fitted stroke readback failed")
+            let frame = result.Capture!!
+            Directory.CreateDirectory("artifacts/fitted-stroke")
+            File.WriteAllBytes("artifacts/fitted-stroke/" + effect.ToString() + ".rgba", frame.Pixels)
+            Require(frame.Pixels[(44 * 100 + 50) * 4] == (effect == VectorEffect.None ? 255 : 0),
+                "Default stroke width must scale from view-box units, unlike NonScalingStroke")
+            Require(frame.Pixels[(50 * 100 + 50) * 4] == 255, "Fitted stroke center must remain painted")
+            Require(frame.Pixels[(38 * 100 + 50) * 4] == 0, "Fitted stroke must not exceed its width")
         }
     } finally {
         window.Close()

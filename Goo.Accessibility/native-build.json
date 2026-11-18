@@ -10,11 +10,12 @@
     "cargo": "--release --locked",
     "maximum_glibc": "2.25",
     "patches": [
-      ".github/patches/accesskit/atspi-cache-signal-arguments.patch"
+      ".github/patches/accesskit/atspi-cache-signal-arguments.patch",
+      ".github/patches/accesskit/atspi-relations-states-level.patch"
     ]
   },
   "sha256": {
-    "Runtime/linux-x64/libgoo-accesskit-0.23.so": "5f8e3d4c9be52e98aa3d704ab031cc098986c7b9b5ed8e0307f091ded159c6e4",
+    "Runtime/linux-x64/libgoo-accesskit-0.23.so": "5cdd0117ea8e765ebea74599355730450fb967e044413a0dde05961c07a0a517",
     "Runtime/win-x64/goo-accesskit-0.23.dll": "18f787364b5f27b893461c9a782b28fa85d4e325950435e84d9c9a2fffac9451",
     "Runtime/win-arm64/goo-accesskit-0.23.dll": "349eede3df4343ab28de36179f6f3868045cbd56f0022470f07ec0656a0b97e2",
     "Runtime/osx-x64/libgoo-accesskit-0.23.dylib": "e08f334287dfdf4bfcfe7f8c335e256af8c39e50023168f6e613dca062de57ef",

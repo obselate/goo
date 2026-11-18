@@ -1511,7 +1511,7 @@ Gets a surface-local rectangle in logical pixels, or nil for the whole window. C
 ## `Window`
 
 
-Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread. State, IsFocused, Size, NativeWidth, NativeHeight, UiScale, PixelScale, Preferences and Modifiers track reads in Build and retained builders. Other mutable window getters keep automatic callback rebuilding.
+Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread. Each instance has one lifetime. Create a new Window after closing. State, IsFocused, Size, NativeWidth, NativeHeight, UiScale, PixelScale, Preferences and Modifiers track reads in Build and retained builders. Other mutable window getters keep automatic callback rebuilding.
 
 ### `DisplayChanged`
 
@@ -1709,7 +1709,7 @@ Returns: the next presentation receipt
 
 ### `Open`
 
-Creates the native window inside the display's usable bounds unless the declared minimum size exceeds them. Centers the window when no position is set, otherwise keeps the requested position inside those bounds. Where the platform reports frame extents before the first show, the decorated frame stays inside too.
+Creates the native window inside the display's usable bounds unless the declared minimum size exceeds them. Centers the window when no position is set, otherwise keeps the requested position inside those bounds. Where the platform reports frame extents before the first show, the decorated frame stays inside too. A closed window cannot reopen. Create a new Window after closing.
 
 Returns: this window after native initialization
 
@@ -2039,7 +2039,7 @@ Gets or initializes the desktop topmost preference before Open. Use SetTopmost t
 
 ### `Transparent`
 
-Gets or sets next-open per-pixel alpha. An open window is unchanged. Transparency requires the GPU renderer.
+Gets or sets per-pixel alpha for the first Open. An open window is unchanged. Transparency requires the GPU renderer.
 
 ### `UiScale`
 
