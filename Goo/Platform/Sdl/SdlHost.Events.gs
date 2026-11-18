@@ -300,7 +300,7 @@ internal unsafe partial class SdlHost {
       }
       StateChanged?.Invoke(state)
     } else if eventType == SDLEventType.WindowFocusGained {
-      FocusChanged?.Invoke(true)
+      RaiseFocusChanged(true)
     } else if eventType == SDLEventType.WindowMouseEnter {
       var x float32
       var y float32
@@ -310,7 +310,7 @@ internal unsafe partial class SdlHost {
     } else if eventType == SDLEventType.WindowFocusLost {
       pointerButtons = PointerButtons.None
       SDL.CaptureMouse(false)
-      FocusChanged?.Invoke(false)
+      RaiseFocusChanged(false)
     } else if eventType == SDLEventType.WindowCloseRequested {
       RequestClose()
     } else if eventType == SDLEventType.WindowOccluded {
