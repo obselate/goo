@@ -131,7 +131,10 @@ internal class AccessibilityAttachmentRegistry {
   }
 }
 
-/// Hosts a Goo tree in a native window.
+/// Hosts a Goo tree on one process-wide UI thread.
+/// After Open or Attach, only Post and RequestClose are safe from another thread.
+/// State, IsFocused, Size, NativeWidth, NativeHeight, UiScale, PixelScale, Preferences and Modifiers track reads in Build and retained builders.
+/// Other mutable window getters keep automatic callback rebuilding.
 public partial class Window {
   internal var SemanticAttachments AccessibilityAttachmentRegistry?
 }
