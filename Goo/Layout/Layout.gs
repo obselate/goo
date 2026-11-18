@@ -724,7 +724,7 @@ internal partial class Layout {
     }
 
   private func snapPlacement(origin float32, offset float32, density float32) float32 ->
-  density > 0.0F ? MathF.Floor((origin + offset) * density + 0.5F) / density - origin : offset
+  density > 0.0F ? float32(Math.Floor(float64((origin + offset) * density) + 0.5)) / density - origin : offset
 
   private func readEditorSlotRects(n Node, hidden bool, calculate bool = true) {
     let layout = TextEditorLayouts.For(n, BoxGeometry.ContentWidth(n), BoxGeometry.ContentHeight(n))
