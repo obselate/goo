@@ -182,7 +182,9 @@ internal unsafe sealed class VulkanCompositionPresentation : IDisposable {
 
   internal func PrepareSubmit(mailbox VulkanQueueMailbox) {
     if nextValue > uint64.MaxValue - 2uL { throw OverflowException("Composition fence value overflow") }
-    mailbox.AddExternalWait(Semaphore, readyValue, this)
+    mailbox.SubmitWaitSemaphore = Semaphore
+    mailbox.SubmitWaitValue = readyValue
+    mailbox.SubmitHasWait = true
     mailbox.SubmitSignalSemaphore = Semaphore
     mailbox.SubmitHasSignal = true
     mailbox.SubmitSignalValue = nextValue

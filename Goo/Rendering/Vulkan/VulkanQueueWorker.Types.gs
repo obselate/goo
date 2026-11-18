@@ -38,6 +38,7 @@ internal unsafe sealed class VulkanQueueMailbox {
 
   internal var SubmitCommandBuffer VkCommandBuffer
   internal var SubmitWaitSemaphore VkSemaphore
+  internal var SubmitWaitValue uint64
   internal var SubmitSignalSemaphore VkSemaphore
   internal var SubmitSignalValue uint64
   internal var SubmitTimeline VkSemaphore
@@ -88,6 +89,7 @@ internal unsafe sealed class VulkanQueueMailbox {
       completionResult = VkConstants.VK_SUCCESS
       SubmitCommandBuffer = commandBuffer
       SubmitWaitSemaphore = waitSemaphore
+      SubmitWaitValue = 0uL
       SubmitSignalSemaphore = signalSemaphore
       SubmitSignalValue = 0uL
       SubmitTimeline = 0uL
@@ -233,6 +235,7 @@ internal unsafe sealed class VulkanQueueMailbox {
     waitInfos[0] = VkSemaphoreSubmitInfo{
       sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
       semaphore: SubmitWaitSemaphore,
+      value: SubmitWaitValue,
       stageMask: VkConstants.VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
     }
     signalInfos[0] = VkSemaphoreSubmitInfo{
