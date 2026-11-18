@@ -30,6 +30,10 @@ AnalyticVertexOutput main(
         dot(primitive.transform0.xyz, homogeneous),
         dot(primitive.transform1.xyz, homogeneous));
     AnalyticVertexOutput output;
+#ifdef GOO_WEBGPU
+    position = float2(position.x * 2.0 / gooBrowserViewport.size.x - 1.0,
+        1.0 - position.y * 2.0 / gooBrowserViewport.size.y);
+#endif
     output.position = float4(position, 0.0, 1.0);
     float2 effectUvOffset = primitive.stopPositions.yz;
     float2 effectUvScale = float2(primitive.stopPositions.w, primitive.radii.y);

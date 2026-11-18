@@ -67,6 +67,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
           ThrowSdl("SDL_GetWindowFromID")
         }
         SdlRuntime.Register(windowId, Dispatch)
+        BindNativeFocus()
         if popupParent == nil && layerWindow == nil {
           SetBorder(decorated, resizable)
           ObserveNormalPlacement()
@@ -451,6 +452,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       layerWindow = nil
       disposed = true
       SdlTitlebarHooks.Unbind(this)
+      UnbindNativeFocus()
       if windowId != 0u {
         SdlRuntime.Unregister(windowId)
         windowId = 0u
@@ -470,6 +472,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
             SDL.SetWindowFullscreen(window, false)
             SDL.SyncWindow(window)
           }
+        }
+        if OperatingSystem.IsWindows() && popupParent != nil && popupKind == PopupKind.Menu {
+          SDL.HideWindow(window)
         }
         SDL.DestroyWindow(window)
         window = SDLWindowPtr.Null

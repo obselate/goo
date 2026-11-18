@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../BrowserCounter.props" />
+  <PropertyGroup>
+    <RootNamespace>GooVisualBasic</RootNamespace>
+    <StartupObject>GooVisualBasic.BrowserMain</StartupObject>
+    <OptionStrict>On</OptionStrict>
+    <OptionExplicit>On</OptionExplicit>
+    <OptionInfer>On</OptionInfer>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../interop/VisualBasic/Program.vb" Link="Program.vb" />
+    <PackageReference Include="Goo.Widgets" Version="[0.22.2]" />
+  </ItemGroup>
+</Project>

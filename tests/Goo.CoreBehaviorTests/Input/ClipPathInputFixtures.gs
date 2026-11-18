@@ -1,8 +1,47 @@
 package Goo
 
+import System
 import System.Collections.Generic
 
 internal class ClipPathInputFixtures {
+  func RoundedOverflowClipsDescendantHitsAtRest() bool {
+    for overflow in []Overflow{Overflow.Hidden, Overflow.Scroll, Overflow.Visible} {
+      let root = Reconciler{Res: Resolver{}}.Mount(Container{
+        Width: 100, Height: 100, BorderRadius: 20, Overflow: overflow,
+        Container{Width: 100, Height: 100, HitTestSelf: true}})
+      try {
+        Layout().Calculate(root, 100.0F, 100.0F)
+        let child = root.Children[0]
+        let index = DiagnosticHitIndex(root)
+        let chain = List[NodeMount](2)
+        let expected = overflow == Overflow.Visible ? child : nil
+        for x in []float32{1.0F, 99.0F} {
+          for y in []float32{1.0F, 99.0F} {
+            chain.Clear()
+            hitChainInto(root, x, y, chain)
+            if hitTopmost(root, x, y) != expected || index.Hit(x, y) != expected
+              || chain.Count != (expected == nil ? 0 : 2) {
+              throw InvalidOperationException("Rounded overflow $overflow accepts a clipped corner at $x,$y")
+            }
+          }
+        }
+        if hitTopmost(root, 50.0F, 50.0F) != child || index.Hit(50.0F, 50.0F) != child {
+          throw InvalidOperationException("Rounded overflow $overflow rejected the visible center")
+        }
+        let allocated = GC.GetAllocatedBytesForCurrentThread()
+        for sample in 0 ... 50 {
+          hitTopmost(root, 1.0F, 1.0F)
+          index.Hit(1.0F, 1.0F)
+          chain.Clear()
+          hitChainInto(root, 1.0F, 1.0F, chain)
+        }
+        let bytes = GC.GetAllocatedBytesForCurrentThread() - allocated
+        if bytes != 0L { throw InvalidOperationException("Rounded overflow hit tests allocated $bytes bytes") }
+      } finally { NodeLifecycle.DisposeTree(root) }
+    }
+    return true
+  }
+
   func NormalPointerAcquisitionRespectsClipPath() bool {
     let events = List[string]()
     let driver = InputFixtureDriver(ClipPathHitCell{ Events: events }, 200, 100)

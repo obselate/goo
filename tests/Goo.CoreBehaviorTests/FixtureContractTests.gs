@@ -10,6 +10,19 @@ import Xunit
 
 class FixtureContractTests {
     @Fact
+    func TweenInterpolatesExtremeFiniteEndpoints() {
+        let tween = Motion.Tween(1000.0)
+        for from in []float64{Double.MaxValue, -Double.MaxValue} {
+            let simulation = tween(from, -from, 0.0)
+            Assert.Equal(from, simulation.Position(0.0))
+            Assert.InRange(simulation.Position(0.25) / from, 0.4999999999999999, 0.5000000000000001)
+            Assert.Equal(0.0, simulation.Position(0.5))
+            Assert.InRange(simulation.Position(0.75) / from, -0.5000000000000001, -0.4999999999999999)
+            Assert.Equal(-from, simulation.Position(1.0))
+        }
+    }
+
+    @Fact
     func VirtualOutputRejectsReadsAfterRealize() {
         let cell = VirtualFixtureCell(3)
         let window = Window{Root: cell, Size: LayoutSize(200, 100)}
@@ -335,6 +348,7 @@ class FixtureContractTests {
             yield Contract[ClipPathInputFixtures]("NestedClipPathsIntersect")
             yield Contract[ClipPathInputFixtures]("NormalPointerAcquisitionRespectsClipPath")
             yield Contract[ClipPathInputFixtures]("TransformedClipPathUsesMappedCoordinates")
+            yield Contract[ClipPathInputFixtures]("RoundedOverflowClipsDescendantHitsAtRest")
             yield Contract[ContextFixtures]("FailedBuildRetryAndDisposalContract")
             yield Contract[ContextFixtures]("FailedPassRetriesNewDependenciesContract")
             yield Contract[ContextFixtures]("TrackedWindowGettersContract")
@@ -396,7 +410,9 @@ class FixtureContractTests {
             yield Contract[ElementHandleFixtures]("NestedScrollIntoViewKeepsTargetBounds")
             yield Contract[ElementHandleFixtures]("ThrowingVirtualDisposalContract")
             yield Contract[ElementHandleFixtures]("VirtualContract")
+            yield Contract[ElementHandleFixtures]("FractionalVirtualRowsFollowEndContract")
             yield Contract[ElementHandleFixtures]("VirtualDescendantAnchoringSuppressesOrigin")
+            yield Contract[ElementHandleFixtures]("FractionalVirtualDescendantAnchorContract")
             yield Contract[ElementHandleFixtures]("VirtualTransactionContract")
             yield Contract[ElementHandleFixtures]("VirtualViewportContract")
             yield Contract[ElementHandleFixtures]("DeferredVirtualScrollContract")

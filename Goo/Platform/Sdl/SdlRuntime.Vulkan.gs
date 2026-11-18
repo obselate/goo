@@ -51,13 +51,16 @@ internal unsafe partial class SdlRuntime {
           if VulkanDrivers.ManualLoader {
             if directLoader == nint(0) {
               if OperatingSystem.IsWindows() && VulkanDrivers.Enabled {
-                NativeLibrary.TryLoad(Path.Combine(AppContext.BaseDirectory, "vulkan-1.dll"), out directLoader)
+                let local = Path.Combine(AppContext.BaseDirectory, "vulkan-1.dll")
+                if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.TryLoad(local, out directLoader) }
+                else { NativeLibrary.TryLoad(local, out directLoader) }
               }
               if directLoader == nint(0) {
                 let system = if OperatingSystem.IsWindows() {
                   Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "vulkan-1.dll")
                 } else { "libvulkan.so.1" }
-                NativeLibrary.TryLoad(system, out directLoader)
+                if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.TryLoad(system, out directLoader) }
+                else { NativeLibrary.TryLoad(system, out directLoader) }
               }
               if directLoader != nint(0) {
                 var version uint32 = 0u
@@ -75,8 +78,10 @@ internal unsafe partial class SdlRuntime {
                 }
               }
               if directLoader == nint(0) {
-                directLoader = NativeLibrary.Load(Path.Combine(AppContext.BaseDirectory,
-                  if OperatingSystem.IsWindows() { "vulkan-1.dll" } else { "libgoo-vulkan.so.1" }))
+                let bundled = Path.Combine(AppContext.BaseDirectory,
+                  if OperatingSystem.IsWindows() { "vulkan-1.dll" } else { "libgoo-vulkan.so.1" })
+                directLoader = if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.Load(bundled) }
+                  else { NativeLibrary.Load(bundled) }
               }
             }
             let surface = if OperatingSystem.IsWindows() { "VK_KHR_win32_surface" }
@@ -168,7 +173,9 @@ internal unsafe partial class SdlRuntime {
         else if OperatingSystem.IsMacOS() { "libMoltenVK.dylib" }
         else { "libvulkan.so.1" }
       var library nint = nint(0)
-      if !NativeLibrary.TryLoad(libraryName, out library) { return true }
+      let loaded = if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.TryLoad(libraryName, out library) }
+        else { NativeLibrary.TryLoad(libraryName, out library) }
+      if !loaded { return true }
       try {
         let createAddress = NativeLibrary.GetExport(library, "vkCreateInstance")
           as (unmanaged[Cdecl](*VkInstanceCreateInfo, *VkAllocationCallbacks, *VkInstance) -> VkResult)?

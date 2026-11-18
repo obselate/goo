@@ -204,6 +204,19 @@ internal class ElementHandleFixtures {
     return true
   }
 
+  func FractionalVirtualDescendantAnchorContract() bool {
+    let cell = FractionalVirtualAnchorFixtureCell()
+    let window = Window{Root: cell, Size: LayoutSize(100, 200)}
+    try {
+      window.UpdateTree()
+      let before = cell.TextHandle.BorderBox.Y
+      cell.Shift = 0.5
+      cell.Rebuild()
+      for frame in 0 ... 4 { window.UpdateTree() }
+      return cell.TextHandle.BorderBox.Y == before && cell.Handle.ScrollOffset.Y == 201.75
+    } finally { window.Close() }
+  }
+
   func FocusProjectionVirtualizationContract() bool {
     let cell = VirtualFixtureCell(100)
     cell.ProjectFocus = true
@@ -788,6 +801,26 @@ internal class ElementHandleFixtures {
     return Virtualization.State(root) == nil && !cell.Handles[900].IsMounted && cell.Disposes == 1
   }
 
+  func FractionalVirtualRowsFollowEndContract() bool {
+    let cell = VirtualFixtureCell(10)
+    cell.ItemHeight = 64.25
+    cell.RowHeight = 64.25
+    cell.FollowEnd = true
+    let window = Window{Root: cell, Size: LayoutSize(100, 60)}
+    try {
+      for frame in 0 ... 4 { window.UpdateTree() }
+      let last = cell.Handles[9].BorderBox
+      let viewport = cell.Handle.ContentBox
+      if cell.Handle.ScrollOffset.Y != cell.Handle.ScrollRange.Y
+        || last.Y + last.Height != viewport.Y + viewport.Height { return false }
+      cell.FollowEnd = false
+      if !cell.Handle.JumpTo(y: 0) || !cell.Handle.ScrollToItem("row-9", ScrollAlignment.End) { return false }
+      window.UpdateTree()
+      return cell.Handle.ScrollOffset.Y == cell.Handle.ScrollRange.Y
+        && cell.Handles[9].BorderBox.Y + cell.Handles[9].BorderBox.Height == viewport.Y + viewport.Height
+    } finally { window.Close() }
+  }
+
   func VirtualViewportContract() bool {
     let cell = VirtualFixtureCell(1000)
     cell.Inset = 10
@@ -1135,6 +1168,28 @@ internal class VirtualAnchorOriginFixtureState(height float64) : VirtualState {
   public override func NeedsRealize(viewport VirtualViewport) bool -> false
 }
 
+internal class FractionalVirtualAnchorFixtureCell : Cell {
+  internal let Handle ElementHandle = ElementHandle()
+  internal let TextHandle ElementHandle = ElementHandle()
+  internal var Shift float64
+  override func Build() Blob -> Virtual{Source: FractionalVirtualAnchorFixtureSource(this),
+    Handle: Handle, Width: 100, Height: 200}
+}
+
+internal class FractionalVirtualAnchorFixtureSource(cell FractionalVirtualAnchorFixtureCell) : VirtualState, VirtualSource {
+  public func State(current VirtualState?) VirtualState -> this
+  public override func NeedsRealize(viewport VirtualViewport) bool -> false
+  public override func Realize(viewport VirtualViewport, output VirtualOutput) {
+    output.Add(VirtualItem{Key: "anchor-row", Y: 192.75 + cell.Shift, Width: 100,
+      Content: Container{Height: 64.25, FlexShrink: 0, JustifyContent: JustifyContent.Center,
+        Text{Handle: cell.TextHandle, Content: "anchor", FontSize: 14, LineHeight: 1.3}}})
+    output.ContentSize = LayoutSize(100, 1000)
+    output.ItemCount = 1
+    output.ScrollOffset = Point{Y: 201.25 + cell.Shift}
+    output.AnchorKey = "anchor-row"
+  }
+}
+
 internal class VirtualFixtureCell : Cell {
   internal let Items List[VirtualFixtureItem] = List[VirtualFixtureItem]()
   internal let Builds List[int32] = List[int32]()
@@ -1151,6 +1206,8 @@ internal class VirtualFixtureCell : Cell {
   internal var Focused int32
   internal var First VirtualChild
   internal var RowHeight float64 = 13.0
+  internal var ItemHeight float64 = 20.0
+  internal var FollowEnd bool
   internal var PixelScale float64
   internal var ContextVersion int64
   internal var ItemAccessibility Accessibility?
@@ -1192,7 +1249,6 @@ internal class VirtualFixtureSource : VirtualSource {
   }
 }
 
-// Places rows of height 20 in a column, with one row of overscan on each side.
 internal class VirtualFixtureState : VirtualState {
   private let cell VirtualFixtureCell
   private var current Dictionary[string, VirtualFixtureItem] = Dictionary[string, VirtualFixtureItem]()
@@ -1216,7 +1272,11 @@ internal class VirtualFixtureState : VirtualState {
     }
     let size = viewport.Size
     let count = cell.Items.Count
-    let height float64? = if cell.Measure { nil } else { 20.0 }
+    if cell.FollowEnd {
+      scroll = Math.Max(0.0, float64(count) * cell.ItemHeight - size.Height)
+      output.ScrollOffset = Point{Y: scroll}
+    }
+    let height float64? = if cell.Measure { nil } else { cell.ItemHeight }
     pendingStart = first(scroll, count)
     pendingEnd = last(scroll + size.Height, count, pendingStart)
     for index in pendingStart ... pendingEnd {
@@ -1226,11 +1286,11 @@ internal class VirtualFixtureState : VirtualState {
       if !current.TryGetValue(key, out var previous) || previous.Revision != item.Revision {
         content = cell.BuildItem(item)
       }
-      output.Add(VirtualItem{ Key: key, Index: index, Y: float64(index) * 20.0, Width: size.Width, Height: height, Content: content })
+      output.Add(VirtualItem{ Key: key, Index: index, Y: float64(index) * cell.ItemHeight, Width: size.Width, Height: height, Content: content })
       next[key] = item
     }
     if let key = cell.Retain { output.Add(VirtualItem{ Key: key, Index: count }) }
-    output.ContentSize = LayoutSize(size.Width, float64(count) * 20.0)
+    output.ContentSize = LayoutSize(size.Width, float64(count) * cell.ItemHeight)
     output.ItemCount = count
   }
 
@@ -1244,14 +1304,14 @@ internal class VirtualFixtureState : VirtualState {
 
   public override func OffsetOf(viewport VirtualViewport, key string) Point? {
     for i in 0 ... cell.Items.Count {
-      if "row-${cell.Items[i].Id}" == key { return Point{ X: 0.0, Y: float64(i) * 20.0 } }
+      if "row-${cell.Items[i].Id}" == key { return Point{ X: 0.0, Y: float64(i) * cell.ItemHeight } }
     }
     return nil
   }
 
   public override func BoundsOf(viewport VirtualViewport, key string) ElementRect? {
     guard let offset = OffsetOf(viewport, key) else { return nil }
-    return ElementRect{X: offset.X, Y: offset.Y, Width: viewport.Size.Width, Height: 20}
+    return ElementRect{X: offset.X, Y: offset.Y, Width: viewport.Size.Width, Height: cell.ItemHeight}
   }
 
   public override func Commit() {
@@ -1280,10 +1340,10 @@ internal class VirtualFixtureState : VirtualState {
     if viewport.ChildCount > 0 { cell.First = viewport.Child(0) }
   }
 
-  private func first(scroll float64, count int32) int32 -> Math.Clamp(int32(Math.Floor(scroll / 20.0)) - 1, 0, count)
+  private func first(scroll float64, count int32) int32 -> Math.Clamp(int32(Math.Floor(scroll / cell.ItemHeight)) - 1, 0, count)
 
   private func last(bottom float64, count int32, from int32) int32 ->
-  Math.Clamp(int32(Math.Ceiling(bottom / 20.0)) + 1, from, count)
+  Math.Clamp(int32(Math.Ceiling(bottom / cell.ItemHeight)) + 1, from, count)
 }
 
 internal class ThrowingVirtualFixtureSource : VirtualSource {

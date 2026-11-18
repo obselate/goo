@@ -200,8 +200,8 @@ internal class TransformGeometry {
     internal func ScrollOffset(n Node, window Affine2D, x float32, y float32) ScrollTranslation {
       if x == 0.0F && y == 0.0F { return ScrollTranslation{} }
       let scale = PixelDensity(n)
-      let pixelX = MathF.Round((window.A * x + window.B * y) * scale)
-      let pixelY = MathF.Round((window.C * x + window.D * y) * scale)
+      let pixelX = float32(Math.Floor(float64((window.A * x + window.B * y) * scale) + 0.5))
+      let pixelY = float32(Math.Floor(float64((window.C * x + window.D * y) * scale) + 0.5))
       return ScrollTranslation{X: pixelX / scale, Y: pixelY / scale, PixelX: pixelX, PixelY: pixelY}
     }
 
