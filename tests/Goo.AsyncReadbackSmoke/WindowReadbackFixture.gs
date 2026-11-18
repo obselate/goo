@@ -1812,6 +1812,18 @@ public class LayerWindowCloseSmoke {
       for hide in []bool{false, true} {
         let window = Window{ Title: "Layer window close", Root: PopupSmokeCell{},
           LayerShell: LayerWindowOptions{ Width: 160, Height: 100 } }.Open()
+        if window.Hide() != WindowOperationResult.Accepted || window.IsVisible
+          || window.Show(false) != WindowOperationResult.Accepted {
+          throw InvalidOperationException("Layer surface did not hide and show before its first present")
+        }
+        let remapDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5
+        while !window.IsVisible && Stopwatch.GetTimestamp() < remapDeadline {
+          window.Pump(0.0)
+          Thread.Sleep(1)
+        }
+        if !window.IsVisible {
+          throw InvalidOperationException("Layer surface did not remap before its first present")
+        }
         WindowReadbackTestFixture.ForceRender(window, 0.0, 15.0, true)
         let target = window.CaptureTargetForTest()!!
         window.RuntimeHoldNextQueueSubmitForTest()
