@@ -10,6 +10,20 @@ import Xunit
 
 class FixtureContractTests {
     @Fact
+    func VirtualOutputRejectsReadsAfterRealize() {
+        let cell = VirtualFixtureCell(3)
+        let window = Window{Root: cell, Size: LayoutSize(200, 100)}
+        try {
+            window.UpdateTree()
+            let output = cell.Output!!
+            Assert.Throws[InvalidOperationException](() -> { let value = output.ContentSize })
+            Assert.Throws[InvalidOperationException](() -> { let value = output.ItemCount })
+            Assert.Throws[InvalidOperationException](() -> { let value = output.ScrollOffset })
+            Assert.Throws[InvalidOperationException](() -> { let value = output.AnchorKey })
+        } finally { window.Close() }
+    }
+
+    @Fact
     func PortalScrollbarPartsUseFinalBounds() ->
         Assert.True(PortalFixtures().PortalScrollbarPartsUseFinalBoundsContract())
 
@@ -169,6 +183,7 @@ class FixtureContractTests {
             yield Contract[TreeFixtures]("SizedBuildRejectsStateWritesContract")
             yield Contract[TreeFixtures]("SizedFailedBuildRetainsSubscriptionsContract")
             yield Contract[StyleFixtures]("FlexAndInsetDeclarationOrderContract")
+            yield Contract[StyleFixtures]("BorderRadiusDeclarationOrderContract")
             yield Contract[AccessibilityFixtures]("AccessibilityShorthandOrderContract")
             yield Contract[AccessibilityFixtures]("AccessibilityShorthandRoundTripContract")
             yield Contract[FlexConformanceFixtures]("RowColumnSpacerContract")
@@ -469,6 +484,7 @@ class FixtureContractTests {
             yield Contract[LayoutFixtures]("KeyedReorderRetainsYogaLayouts")
             yield Contract[LayoutFixtures]("LayoutIsStableAcrossRoots")
             yield Contract[LayoutFixtures]("LayoutTransitionGlidesComputedPosition")
+            yield Contract[LayoutFixtures]("LayoutTransitionSettlesInsideSized")
             yield Contract[LayoutFixtures]("LayoutTransitionRetargetsWithVelocity")
             yield Contract[LayoutFixtures]("LongParagraphWrapResolvesScriptsOnce")
             yield Contract[LayoutFixtures]("WrappedMeasurementsMatchShapedLineWidths")

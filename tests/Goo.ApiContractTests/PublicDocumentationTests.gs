@@ -13,6 +13,12 @@ import Xunit
 
 class PublicDocumentationTests {
     @Fact
+    func NotificationOpenDocumentsUnreachableSessionBus() {
+        let member = LoadDocumentationMembers()["M:Goo.Notifications.Open(Goo.NotificationOptions)"]
+        Assert.Contains("An unreachable Linux session bus returns Failed.", member.Value, StringComparison.Ordinal)
+    }
+
+    @Fact
     func GeneratedXmlCoversThePublicApi() {
         AssertApprovedCallablesAreTracked()
         let members = LoadDocumentationMembers()

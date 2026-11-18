@@ -38,9 +38,6 @@ internal sealed class SizedNodeState : IDisposable {
   internal var ContentWidth float32 = -1.0F
   internal var ContentHeight float32 = -1.0F
   internal var Scale float32
-  internal var ContentX float32 = Single.NaN
-  internal var ContentY float32 = Single.NaN
-  internal var Hidden bool
   private let invalidated Action[ReconcileEffects]?
 
   internal init(blob SizedBlob, frame ContextFrame?, owner Window?, declaring Cell?, invalidated Action[ReconcileEffects]?) {
@@ -223,23 +220,17 @@ internal partial class Layout {
     let y = node.Rect.Y + CustomLayouts.Inset(yoga, YGEdge.Top)
     let state = node.RetainedSizedState!!
     let resized = state.ContentWidth != width || state.ContentHeight != height
-    let moved = state.ContentX != x || state.ContentY != y || state.Hidden != hidden
     for child in node.Children {
       if child.IsPortal { continue }
       guard let childYoga = child.Yoga else { continue }
       if resized || YGNodeAPI.YGNodeIsDirty(childYoga) {
         YGNodeAPI.YGNodeCalculateLayout(childYoga, width, height, yogaDirection(child.Direction))
         resolveFinalIntrinsic(child, width, height)
-        readRect(child, x, y, hidden: hidden)
-      } else if moved {
-        readRect(child, x, y, hidden: hidden)
       }
+      readRect(child, x, y, hidden: hidden)
     }
     state.ContentWidth = width
     state.ContentHeight = height
-    state.ContentX = x
-    state.ContentY = y
-    state.Hidden = hidden
     if node.OverflowX == Overflow.Scroll || node.OverflowY == Overflow.Scroll {
       measureScrollExtent(node, yoga)
     }
