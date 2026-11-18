@@ -1972,18 +1972,6 @@ jobs:
           global-json-file: global.json
       - name: Verify image cache path comparer
         run: dotnet test tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.gsproj -c Release -p:TreatWarningsAsErrors=true --filter FullyQualifiedName~CacheEvictionUsesThePlatformPathComparer
-      - name: Verify NativeAOT application hosting on Windows
-        if: needs.changes.outputs.full == 'true'
-        shell: pwsh
-        run: |
-          dotnet publish tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj `
-            -c Release -r win-x64 --self-contained true -m:4 `
-            -p:PublishAot=true -p:TreatWarningsAsErrors=true -o artifacts/app-host-aot
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          dotnet run --project tools/Goo.HostChecks -c Release -- app-host artifacts/app-host-aot/Goo.AppHostSmoke.exe "$env:RUNNER_TEMP/app-host-aot"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          dotnet run --project tools/Goo.HostChecks -c Release -- desktop artifacts/app-host-aot/Goo.AppHostSmoke.exe "$env:RUNNER_TEMP/desktop-activation"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         if: needs.changes.outputs.full == 'true'
         with:
@@ -2132,6 +2120,19 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Copy-Item artifacts/windows-smoke/SDL3.dll artifacts/notifications-windows -Force
           & artifacts/notifications-windows/Goo.Notifications.WindowsSmoke.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify NativeAOT application hosting on Windows
+        if: needs.changes.outputs.full == 'true'
+        shell: pwsh
+        run: |
+          dotnet publish tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj `
+            -c Release -r win-x64 --self-contained true -m:4 `
+            -p:PublishAot=true -p:TreatWarningsAsErrors=true `
+            -p:GooWindowsSdlPath="$PWD/artifacts/windows-smoke/SDL3.dll" -o artifacts/app-host-aot
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --project tools/Goo.HostChecks -c Release -- app-host artifacts/app-host-aot/Goo.AppHostSmoke.exe "$env:RUNNER_TEMP/app-host-aot"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --project tools/Goo.HostChecks -c Release -- desktop artifacts/app-host-aot/Goo.AppHostSmoke.exe "$env:RUNNER_TEMP/desktop-activation"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify NativeAOT window placement on Windows
         if: needs.changes.outputs.full == 'true'
