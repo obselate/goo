@@ -141,13 +141,18 @@ internal class Page(width int32, height int32) : Cell {
     }
 }
 
+internal class FailedPage : Cell {
+    override func Build() Blob { throw InvalidOperationException(String('x', 2048)) }
+}
+
 internal class Document : IPrintDocument {
     internal var Created int32
+    internal var FailRender bool
     func Paginate(settings PrintPageSettings) PrintLayoutResult -> PrintLayoutResult{Status: PrintLayoutStatus.Ready, PageCount: 2, Error: ""}
 
     func CreatePage(index int32, settings PrintPageSettings) Cell {
         Created++
-        return Page(240, 180)
+        return if FailRender { FailedPage() } else { Page(240, 180) }
     }
 }
 
@@ -157,6 +162,11 @@ func Main(args[]string) {
 
     try {
         Settle(window)
+        using let failedPdf = MemoryStream()
+        let failed = Pump(window, Printing.ExportPdfAsync(window, Document{FailRender: true},
+            PrintPageSettings{WidthPoints: 72, HeightPoints: 72, DpiX: 72, DpiY: 72}, failedPdf))
+        Require(failed.Status == PrintStatus.Failed && failed.Error == String('x', 512),
+            "PDF render failure did not return bounded error detail: ${failed.Status}, ${failed.Error.Length} characters")
         CheckSystemSpelling()
         CheckRichClipboard()
         let ownerWidth = window.NativeWidth

@@ -369,7 +369,7 @@ public class VersionedImageProvider : ImageSourceProvider {
 
 func DiagnosticCounterValue(diagnostics string, name string) uint64 {
   let marker = "\"" + name + "\":"
-  let start = diagnostics.IndexOf(marker)
+  let start = diagnostics.LastIndexOf(marker)
   if start < 0 { return 0uL }
   var index = start + marker.Length
   var value uint64
@@ -491,7 +491,23 @@ func Main() {
     throw InvalidOperationException("The system unexpectedly has a usable Vulkan device.")
   }
   if Environment.GetEnvironmentVariable("GOO_SOFTWARE_RENDERER_SMOKE") == "1" {
-    RunRendererSmoke(false)
+    let originalError = Console.Error
+    using let capturedError = StringWriter()
+    var diagnostics = ""
+    try {
+      Console.SetError(capturedError)
+      RunRendererSmoke(false)
+    } finally {
+      Console.SetError(originalError)
+      diagnostics = capturedError.ToString()
+      originalError.Write(diagnostics)
+    }
+    if !diagnostics.Contains("\"kind\":\"counters\"") || diagnostics.Contains("\"kind\":\"fatal\"")
+      || DiagnosticCounterValue(diagnostics, "validationErrorCount") != 0uL
+      || DiagnosticCounterValue(diagnostics, "resultFailureCount") != 0uL
+      || DiagnosticCounterValue(diagnostics, "vulkanObjectCount") != 0uL {
+      throw InvalidOperationException("Software renderer emitted invalid diagnostics or leaked Vulkan objects.")
+    }
     return
   }
   if Environment.GetEnvironmentVariable("GOO_NATIVE_DIALOGS_SMOKE") == "1" {

@@ -32,8 +32,14 @@ internal class WindowDisplaySmoke {
       }
       Require(window.SetFullscreenDisplay(missingDisplay) == WindowOperationResult.Closed,
         "Closed window accepted a fullscreen display request")
+      Require(window.ApplyPlacement(WindowPlacement{
+        Fields: WindowPlacementFields.NormalSize,
+        NormalBounds: ElementRect{ Width: 420.0, Height: 260.0 },
+      }).Status == WindowOperationResult.Accepted, "Staged normal size was not accepted")
       window.Open()
       try {
+        Require(window.NativeWidth == 420 && window.NativeHeight == 260,
+          "Staged normal size did not replace the earlier Size initializer")
         let displays = window.GetDisplays()
         Require(displays.Count > 0, "SDL display inventory is empty")
         let display = displays[0]
