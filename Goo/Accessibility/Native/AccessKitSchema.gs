@@ -6,6 +6,7 @@ internal class AccessKitSchema {
     internal const TextRun uint8 = 1
     internal const SelectedItem uint8 = 10
     internal const MultiLineInput uint8 = 31
+    internal const PasswordInput uint8 = 40
     internal func Role(value AccessibilityRole) uint8 -> switch value {
       case AccessibilityRole.Auto: uint8(14)
       case AccessibilityRole.None: uint8(14)

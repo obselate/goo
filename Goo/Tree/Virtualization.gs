@@ -431,9 +431,14 @@ internal sealed class VirtualNodeState {
     let size = if pending == state { output.ContentSize }
       else { LayoutSize(float64(extent.Width), float64(extent.Height)) }
     return Point{
-      X: Math.Clamp(x, 0.0, Math.Max(0.0, size.Width - viewport.Size.Width)),
-      Y: Math.Clamp(y, 0.0, Math.Max(0.0, size.Height - viewport.Size.Height)),
+      X: scrollOffset(n, x, size.Width, viewport.Size.Width),
+      Y: scrollOffset(n, y, size.Height, viewport.Size.Height),
     }
+  }
+
+  private func scrollOffset(n Node, value float64, content float64, viewport float64) float64 {
+    let maximum = MathF.Max(0.0F, float32(content) - float32(viewport))
+    return value >= float64(maximum) ? float64(scrollRange(n, maximum)) : Math.Max(0.0, value)
   }
 
   private func nearestOffset(offset float64, start float64, size float64, viewport float64) float64 {
@@ -562,8 +567,8 @@ internal sealed class VirtualNodeState {
       pendingScroll = false
       if let scroll = output.ScrollOffset {
         if !Double.IsFinite(scroll.X) || !Double.IsFinite(scroll.Y) { throw InvalidOperationException("Virtual scroll offset must be finite") }
-        let x = Math.Max(0.0, scroll.X)
-        let y = Math.Max(0.0, scroll.Y)
+        let x = scrollOffset(n, scroll.X, size.Width, viewport.Size.Width)
+        let y = scrollOffset(n, scroll.Y, size.Height, viewport.Size.Height)
         pendingScroll = true
         pendingScrollX = float32(x)
         pendingScrollY = float32(y)
