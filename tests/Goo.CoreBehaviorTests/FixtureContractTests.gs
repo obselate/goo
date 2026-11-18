@@ -320,6 +320,7 @@ class FixtureContractTests {
             yield Contract[ClipPathInputFixtures]("NestedClipPathsIntersect")
             yield Contract[ClipPathInputFixtures]("NormalPointerAcquisitionRespectsClipPath")
             yield Contract[ClipPathInputFixtures]("TransformedClipPathUsesMappedCoordinates")
+            yield Contract[ClipPathInputFixtures]("RoundedOverflowClipsDescendantHitsAtRest")
             yield Contract[ContextFixtures]("FailedBuildRetryAndDisposalContract")
             yield Contract[ContextFixtures]("FailedPassRetriesNewDependenciesContract")
             yield Contract[ContextFixtures]("TrackedWindowGettersContract")
