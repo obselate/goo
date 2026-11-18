@@ -799,7 +799,7 @@ internal shared class CliApplication {
         }
         if commandLine.Has("target") {
             let targetHandle = commandLine.Get("target")
-            if string.IsNullOrWhiteSpace(targetHandle) || targetHandle!!.Length > 128 {
+            if string.IsNullOrWhiteSpace(targetHandle) || targetHandle.Length > 128 {
                 throw CliException("--target needs an opaque target handle from the selected window snapshot.")
             }
             payload["target"] = targetHandle
@@ -1530,12 +1530,12 @@ internal shared class CliApplication {
             Console.OpenStandardOutput().Write(bytes)
             return 0
         }
-        if IsPngPath(outputPath!!) && !PngEncoder.IsPng(bytes) {
+        if IsPngPath(outputPath) && !PngEncoder.IsPng(bytes) {
             throw CliException(
                 "The endpoint returned bytes that are not a PNG; refusing to write raw data to a .png path."
             )
         }
-        let fullPath = Path.GetFullPath(outputPath!!)
+        let fullPath = Path.GetFullPath(outputPath)
         let parent = Path.GetDirectoryName(fullPath)
         if !string.IsNullOrWhiteSpace(parent) {
             Directory.CreateDirectory(parent)
@@ -1593,7 +1593,7 @@ internal shared class CliApplication {
         let hello = if string.IsNullOrWhiteSpace(handshake) {
             default(JsonObject?)
         } else {
-            JsonNode.Parse(handshake!!) as JsonObject
+            JsonNode.Parse(handshake) as JsonObject
         }
         let rawCapabilities JsonArray? = hello?["capabilities"] as JsonArray
         let validCapabilities = rawCapabilities != nil && rawCapabilities.All(
