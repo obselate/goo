@@ -204,6 +204,19 @@ internal class ElementHandleFixtures {
     return true
   }
 
+  func FractionalVirtualDescendantAnchorContract() bool {
+    let cell = FractionalVirtualAnchorFixtureCell()
+    let window = Window{Root: cell, Size: LayoutSize(100, 200)}
+    try {
+      window.UpdateTree()
+      let before = cell.TextHandle.BorderBox.Y
+      cell.Shift = 0.5
+      cell.Rebuild()
+      for frame in 0 ... 4 { window.UpdateTree() }
+      return cell.TextHandle.BorderBox.Y == before && cell.Handle.ScrollOffset.Y == 201.75
+    } finally { window.Close() }
+  }
+
   func FocusProjectionVirtualizationContract() bool {
     let cell = VirtualFixtureCell(100)
     cell.ProjectFocus = true
@@ -1133,6 +1146,28 @@ internal class VirtualAnchorOriginFixtureState(height float64) : VirtualState {
     output.AnchorKey = "anchor-row"
   }
   public override func NeedsRealize(viewport VirtualViewport) bool -> false
+}
+
+internal class FractionalVirtualAnchorFixtureCell : Cell {
+  internal let Handle ElementHandle = ElementHandle()
+  internal let TextHandle ElementHandle = ElementHandle()
+  internal var Shift float64
+  override func Build() Blob -> Virtual{Source: FractionalVirtualAnchorFixtureSource(this),
+    Handle: Handle, Width: 100, Height: 200}
+}
+
+internal class FractionalVirtualAnchorFixtureSource(cell FractionalVirtualAnchorFixtureCell) : VirtualState, VirtualSource {
+  public func State(current VirtualState?) VirtualState -> this
+  public override func NeedsRealize(viewport VirtualViewport) bool -> false
+  public override func Realize(viewport VirtualViewport, output VirtualOutput) {
+    output.Add(VirtualItem{Key: "anchor-row", Y: 192.75 + cell.Shift, Width: 100,
+      Content: Container{Height: 64.25, FlexShrink: 0, JustifyContent: JustifyContent.Center,
+        Text{Handle: cell.TextHandle, Content: "anchor", FontSize: 14, LineHeight: 1.3}}})
+    output.ContentSize = LayoutSize(100, 1000)
+    output.ItemCount = 1
+    output.ScrollOffset = Point{Y: 201.25 + cell.Shift}
+    output.AnchorKey = "anchor-row"
+  }
 }
 
 internal class VirtualFixtureCell : Cell {
