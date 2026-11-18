@@ -1,11 +1,54 @@
 package Goo.CoreBehaviorTests
 
 import Goo
+import Goo.RichText
 import Goo.Svg
 import System
 import Xunit
 
 class ContentContractTests {
+    @Fact
+    func EllipsisFitsResolvedInlineTypography() {
+        for limit in []int32{0, 1} {
+            let resolver = Goo.Resolver()
+            let node = Reconciler(){Res = resolver}.Mount(Text{
+                Content: "MMMM", FontFamily: "DejaVu Sans", FontSize: 10,
+                TextWrap: limit == 0 ? TextWrap.NoWrap : TextWrap.Wrap,
+                TextTrimming: TextTrimming.Ellipsis, TextMaxLines: limit,
+                StyleRanges: []TextStyleRange{TextStyleRange(TextRange(0, 4), Style{FontSize: 60})}})
+            resolver.FlushEffects()
+            try {
+                let layout = TextLayouts.For(node, 100f)
+                Console.WriteLine("maxLines=" + limit.ToString() + ", text=" + layout.Lines[0].Content
+                    + ", width=" + layout.Width.ToString())
+                Assert.Single(layout.Lines)
+                Assert.EndsWith("…", layout.Lines[0].Content)
+                Assert.InRange(layout.Width, 0f, 100f)
+            } finally { TextLayouts.Dispose(node) }
+        }
+    }
+
+    @Fact
+    func ClipboardDisposalRestoresOnlyItsOwnCommandHandler() {
+        let owner = Window()
+        try {
+            using let controller = TextEditorController(TextDocument("abc"))
+            using let layer = TextPresentationLayer(controller.Document)
+            let previous Action[TextCommandEvent] = _ -> { }
+            controller.OnCommand = previous
+            let clipboard = RichTextClipboard(owner, controller, layer)
+            clipboard.Dispose()
+            Assert.Same(previous, controller.OnCommand)
+            clipboard.Dispose()
+            Assert.Same(previous, controller.OnCommand)
+            let replacement Action[TextCommandEvent] = _ -> { }
+            let second = RichTextClipboard(owner, controller, layer)
+            controller.OnCommand = replacement
+            second.Dispose()
+            Assert.Same(replacement, controller.OnCommand)
+        } finally { owner.Close() }
+    }
+
     @Fact
     func SelectableTextLeavesUnhandledKeysToAncestorBindings() {
         let handle = ElementHandle()
