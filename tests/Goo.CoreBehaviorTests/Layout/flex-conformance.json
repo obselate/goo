@@ -3758,6 +3758,18 @@
           150
         ]
       ]
+    },
+    {
+      "name": "row-grow-minimum-clamped-basis",
+      "viewport": [200, 100],
+      "tree": {
+        "style": {"Width": 200, "Height": 100, "FlexDirection": "Row"},
+        "children": [
+          {"style": {"FlexGrow": 1, "FlexShrink": 1, "FlexBasis": 0, "MinWidth": 60, "MaxWidth": 70}},
+          {"style": {"FlexGrow": 3, "FlexShrink": 1, "FlexBasis": 0}}
+        ]
+      },
+      "boxes": [[0, 0, 200, 100], [0, 0, 60, 100], [60, 0, 140, 100]]
     }
   ]
 }

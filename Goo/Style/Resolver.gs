@@ -845,7 +845,14 @@ internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Acti
     case StyleField.ClipPath { ClipPaths.SetPath(n, entryPath(e)) }
     case StyleField.ClipPathFit { ClipPaths.SetFit(n, ShapeFit(int32(e.A))) }
     case StyleField.ClipPathFillRule { ClipPaths.SetFillRule(n, FillRule(int32(e.A))) }
-    case StyleField.BorderRadius { n.BorderRadius = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
+    case StyleField.BorderRadius {
+      let radius = Length{Unit: LengthUnit(int32(e.B)), Value: e.A}
+      n.BorderRadius = radius
+      n.BorderTopLeftRadius = radius
+      n.BorderTopRightRadius = radius
+      n.BorderBottomLeftRadius = radius
+      n.BorderBottomRightRadius = radius
+    }
     case StyleField.BorderTopLeftRadius { n.BorderTopLeftRadius = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
     case StyleField.BorderTopRightRadius { n.BorderTopRightRadius = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
     case StyleField.BorderBottomLeftRadius { n.BorderBottomLeftRadius = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
