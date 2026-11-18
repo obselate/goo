@@ -642,6 +642,43 @@ Keep the returned timer and call `Dispose` when its owner no longer needs callba
 
 Use clipboard text methods on the open window UI thread. Reads reject more than 16 MiB of UTF-8. An empty result can mean empty data, native failure or oversize data. Set failures throw. Built-in and supplied paste share this limit and leave selection unchanged on rejection.
 
+## Borrow the native desktop window
+
+```gsharp
+let native = window.NativeHandle
+if native.Kind == NativeWindowKind.Win32 {
+    AttachChild(native.Handle)
+}
+```
+
+Read `NativeHandle` on the UI thread after `Open`. It does not block Goo input,
+change focus, or acquire a dialog-owner lease. The app owns any native child.
+Goo does not include a browser component.
+
+| Kind | Handle | Display |
+| --- | --- | --- |
+| `Win32` | HWND | Zero |
+| `Cocoa` | NSWindow | Zero |
+| `Wayland` | wl_surface | wl_display |
+| `X11` | Window | Display |
+| `Unsupported` | Zero | Zero |
+
+Before `Open`, during close, or when native identifiers are unavailable, the kind
+is `Unsupported`. Embedded hosts, including Android, return `Unsupported`.
+Their untyped host handle does not identify a native window kind or display.
+
+These identifiers are borrowed. Do not destroy the window or display, replace
+Goo's native event handling, or change its rendering surface. A Wayland surface
+is not a general-purpose child-window parent. Follow the platform's embedding rules.
+The app manages child bounds, DPI, focus, keyboard routing and cleanup before
+the parent closes. The identifiers expire when close begins or the native window
+is replaced. Read the property again after native changes. Goo currently keeps
+the desktop native window for its open lifetime.
+
+On Windows, Goo reports focus lost when a native child takes keyboard focus.
+A click in Goo's client area restores keyboard focus to Goo. Other platforms
+keep their existing native focus routing.
+
 ## Native file dialogs
 
 `window.ShowFileDialogAsync(FileDialogKind.OpenFile, options)` opens an owner-modal
@@ -1249,6 +1286,48 @@ Reports whether a native service can borrow this window as a modal owner.
 - `Closed`
 - `Cancelled`
 - `Failed`
+
+## `NativeWindowHandle`
+
+
+Borrows native window identifiers without owning them or blocking Goo input.
+
+### `Display`
+
+Gets the wl_display or X11 Display. Zero on other platforms or when unavailable.
+
+### `Handle`
+
+Gets the HWND, NSWindow, wl_surface or X11 Window. Zero means unavailable.
+
+### `Kind`
+
+Gets the native representation, or Unsupported when unavailable.
+
+## `NativeWindowKind`
+
+
+Identifies a borrowed desktop window representation.
+
+### `Cocoa`
+
+A macOS NSWindow.
+
+### `Unsupported`
+
+No supported native window is available.
+
+### `Wayland`
+
+A Wayland wl_surface and wl_display.
+
+### `Win32`
+
+A Win32 HWND.
+
+### `X11`
+
+An X11 Window and Display.
 
 ## `PopupDismissReason`
 
@@ -1948,6 +2027,10 @@ Gets the modifiers of the current input event, or the last known state outside d
 ### `NativeFileDropEnabled`
 
 Enables native file-drop ingress before Open or on the owning UI thread; disabled by default. Unsupported hosts reject enabling. Disabling cancels any active preview.
+
+### `NativeHandle`
+
+Gets the current native desktop window on the UI thread after Open. Returns Unsupported before Open, during close, and on embedded hosts, including Android. Reading this property never blocks Goo input or changes focus. The identifiers expire when close begins or the native window is replaced. Read again after native changes. Do not destroy the window or display. Apps own child layout, focus, input and child cleanup before close.
 
 ### `NativeHeight`
 
