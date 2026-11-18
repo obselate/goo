@@ -403,7 +403,7 @@ internal partial class VulkanSceneCompiler {
     let shapeGeometry = node.Kind == NodeKind.Shape
     ? ShapeGeometry.Resolve(
       node,
-      Rect{X: bounds.X, Y: bounds.Y, W: bounds.Width, H: bounds.Height}) : ResolvedShapeGeometry{}
+      Rect{X: bounds.X, Y: bounds.Y, W: bounds.Width, H: bounds.Height}) : ResolvedShapeGeometry{Path: VectorPath.Empty}
     var shapePaintClip = false
       let nodeContentClipChainId = node.Kind == NodeKind.Shape
       ? overflowPathClipChainId : activePathClipChainId
