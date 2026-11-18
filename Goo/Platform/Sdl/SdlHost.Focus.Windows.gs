@@ -29,11 +29,12 @@ internal unsafe partial class SdlHost {
 
   private func BindNativeFocus() {
     if !OperatingSystem.IsWindows() { return }
-    focusWindow = NativePointer(NativeProperties(WindowHandle), "SDL.window.win32.hwnd", nint(0))
-    focusSubclass = DispatchNativeFocus
-    if focusWindow == nint(0) || SetWindowSubclass(focusWindow, focusSubclass!!, nuint(0x4746), nuint(0)) == 0 {
-      throw InvalidOperationException("Unable to install native window focus routing")
-    }
+    let handle = NativePointer(NativeProperties(WindowHandle), "SDL.window.win32.hwnd", nint(0))
+    if handle == nint(0) { return }
+    let callback SdlFocusSubclass = DispatchNativeFocus
+    if SetWindowSubclass(handle, callback, nuint(0x4746), nuint(0)) == 0 { return }
+    focusWindow = handle
+    focusSubclass = callback
   }
 
   private func UnbindNativeFocus() {
@@ -56,7 +57,7 @@ internal unsafe partial class SdlHost {
   }
 
   private func RaiseFocusChanged(value bool) {
-    if OperatingSystem.IsWindows() && keyboardFocused == value { return }
+    if focusSubclass != nil && keyboardFocused == value { return }
     keyboardFocused = value
     FocusChanged?.Invoke(value)
   }
