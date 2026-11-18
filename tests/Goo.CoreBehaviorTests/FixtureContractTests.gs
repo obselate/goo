@@ -183,6 +183,7 @@ class FixtureContractTests {
             yield Contract[TreeFixtures]("SizedBuildRejectsStateWritesContract")
             yield Contract[TreeFixtures]("SizedFailedBuildRetainsSubscriptionsContract")
             yield Contract[StyleFixtures]("FlexAndInsetDeclarationOrderContract")
+            yield Contract[StyleFixtures]("BorderRadiusDeclarationOrderContract")
             yield Contract[AccessibilityFixtures]("AccessibilityShorthandOrderContract")
             yield Contract[AccessibilityFixtures]("AccessibilityShorthandRoundTripContract")
             yield Contract[FlexConformanceFixtures]("RowColumnSpacerContract")
