@@ -92,7 +92,7 @@ public partial class Window {
       throw InvalidOperationException("Window is not attached to an embedded host")
     }
     if windowTarget != nil { throw InvalidOperationException("Presentation surface is already attached") }
-    let target = VulkanWindowTarget(bridge)
+    let target = externalHost.CreateRenderTarget(bridge)
     try {
       if !target.Resize(bridge.FramebufferWidth, bridge.FramebufferHeight) {
         throw InvalidOperationException("Embedded presentation surface could not be sized")

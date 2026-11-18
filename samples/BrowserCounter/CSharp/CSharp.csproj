@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../BrowserCounter.props" />
+  <PropertyGroup>
+    <LangVersion>14</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>BrowserCounter.CSharp</AssemblyName>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="Counter/**" />
+    <ProjectReference Include="Counter/Counter.csproj" GlobalPropertiesToRemove="RuntimeIdentifier;SelfContained" />
+    <PackageReference Include="Goo.Widgets" Version="[0.22.2]" />
+  </ItemGroup>
+</Project>
