@@ -223,6 +223,7 @@ public class Notifications {
         /// @returns An owned native service, or an explicit unsupported, identity or native failure.
         /// @remarks Subscribe and initialize application activation first. On macOS, open before the first Window opens.
         /// Windows needs its installed AUMID shortcut and private protocol. Android uses AndroidNotifications.Open.
+        /// An unreachable Linux session bus returns Failed. A missing notification service returns Unsupported.
         /// Disposing a service does not erase notifications that the OS already accepted.
         public func Open(options NotificationOptions) NotificationServiceResult {
             ArgumentNullException.ThrowIfNull(options)

@@ -472,6 +472,7 @@ func RunSelectedSmoke(modes []SmokeMode) bool {
 
 Application.Configure("Goo Readback async readback smoke", "0.1.0", "io.github.obselate.goo.readback.readback")
 let modes = []SmokeMode{
+  SmokeMode("GOO_STARTUP_GRAPHICS_SMOKE", "", () -> RunStartupGraphicsReportSmoke()),
   SmokeMode("GOO_GPU_EXPERIMENT_SMOKE", "1", () -> RunGpuExperimentSmoke()),
   SmokeMode("GOO_CLIPBOARD_DATA_SMOKE", "1", () -> RunClipboardDataSmoke()),
   SmokeMode("GOO_ORDERED_MODIFIER_SMOKE", "1", () -> WindowReadbackTestFixture.VerifyOrderedPointerModifiers()),
