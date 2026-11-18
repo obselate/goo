@@ -146,7 +146,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     WaylandBackdrop.wl_proxy_marshal_array(surface, 1u, arguments)
     WaylandBackdrop.wl_proxy_marshal_array(surface, 6u, nil)
     mapped = false
-    Configured = false
+    if Presented { Configured = false }
     Presented = false
     Roundtrip()
   }
