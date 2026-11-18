@@ -662,6 +662,19 @@ On Windows, Goo reports focus lost when a native child takes keyboard focus.
 A click in Goo's client area restores keyboard focus to Goo. Other platforms
 keep their existing native focus routing.
 
+Native children are not Goo elements:
+
+- Goo cannot draw content over them, including in-window overlays, portals and
+  tooltips. `PopupWindow` uses a separate native surface, so this limit does not
+  apply to it.
+- Goo does not apply scroll-container clipping, transforms, opacity or animation
+  to them.
+- Position and resize them in app code. For example, use `ElementHandle.BorderBox`
+  and `ElementHandle.MetricsChanged`. Multiply logical bounds by `Window.PixelScale`
+  for native APIs that take physical pixels.
+- Tab traversal does not cross between Goo and a child.
+- The child's accessibility is not merged into Goo's tree.
+
 ## Native file dialogs
 
 `window.ShowFileDialogAsync(FileDialogKind.OpenFile, options)` opens an owner-modal

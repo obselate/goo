@@ -40,7 +40,11 @@ public partial class Window {
   /// Returns Unsupported before Open, during close, and on embedded hosts, including Android.
   /// Reading this property never blocks Goo input or changes focus.
   /// The identifiers expire when close begins or the native window is replaced. Read again after native changes.
-  /// Do not destroy the window or display. Apps own child layout, focus, input and child cleanup before close.
+  /// Do not destroy the window or display. Apps clean up their children before close.
+  /// Native children cover Goo content, including in-window overlays, portals and tooltips. Separate PopupWindow surfaces are not affected by this limit.
+  /// Goo does not apply scroll-container clipping, transforms, opacity or animation to native children.
+  /// Apps position children, for example from ElementHandle.BorderBox and MetricsChanged. Use Window.PixelScale to convert logical bounds for native APIs that take physical pixels.
+  /// Tab traversal does not cross between Goo and a child. Child accessibility is not merged into Goo's tree.
   public prop NativeHandle NativeWindowHandle{
     get {
       requireUiThread("Window.NativeHandle")

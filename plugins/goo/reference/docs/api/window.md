@@ -679,6 +679,19 @@ On Windows, Goo reports focus lost when a native child takes keyboard focus.
 A click in Goo's client area restores keyboard focus to Goo. Other platforms
 keep their existing native focus routing.
 
+Native children are not Goo elements:
+
+- Goo cannot draw content over them, including in-window overlays, portals and
+  tooltips. `PopupWindow` uses a separate native surface, so this limit does not
+  apply to it.
+- Goo does not apply scroll-container clipping, transforms, opacity or animation
+  to them.
+- Position and resize them in app code. For example, use `ElementHandle.BorderBox`
+  and `ElementHandle.MetricsChanged`. Multiply logical bounds by `Window.PixelScale`
+  for native APIs that take physical pixels.
+- Tab traversal does not cross between Goo and a child.
+- The child's accessibility is not merged into Goo's tree.
+
 ## Native file dialogs
 
 `window.ShowFileDialogAsync(FileDialogKind.OpenFile, options)` opens an owner-modal
@@ -2030,7 +2043,7 @@ Enables native file-drop ingress before Open or on the owning UI thread; disable
 
 ### `NativeHandle`
 
-Gets the current native desktop window on the UI thread after Open. Returns Unsupported before Open, during close, and on embedded hosts, including Android. Reading this property never blocks Goo input or changes focus. The identifiers expire when close begins or the native window is replaced. Read again after native changes. Do not destroy the window or display. Apps own child layout, focus, input and child cleanup before close.
+Gets the current native desktop window on the UI thread after Open. Returns Unsupported before Open, during close, and on embedded hosts, including Android. Reading this property never blocks Goo input or changes focus. The identifiers expire when close begins or the native window is replaced. Read again after native changes. Do not destroy the window or display. Apps clean up their children before close. Native children cover Goo content, including in-window overlays, portals and tooltips. Separate PopupWindow surfaces are not affected by this limit. Goo does not apply scroll-container clipping, transforms, opacity or animation to native children. Apps position children, for example from ElementHandle.BorderBox and MetricsChanged. Use Window.PixelScale to convert logical bounds for native APIs that take physical pixels. Tab traversal does not cross between Goo and a child. Child accessibility is not merged into Goo's tree.
 
 ### `NativeHeight`
 
