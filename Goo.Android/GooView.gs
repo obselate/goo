@@ -661,7 +661,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             editorOptions = editor?.InputOptions
             SetAutofillHints(editorOptions?.AutofillHintValues ?? System.Array.Empty[string]())
             ImportantForAutofill = if editor != nil &&
-                editor!!.IsReadOnly == false &&
+                editor.IsReadOnly == false &&
                 editorOptions
                 ?.AutofillHintValues
                 .Length > 0 {
@@ -673,7 +673,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
                 autofill?.NotifyViewEntered(this)
             }
             inputMethod.RestartInput(this)
-            if editor != nil && editor!!.IsReadOnly == false {
+            if editor != nil && editor.IsReadOnly == false {
                 inputMethod.ShowSoftInput(this, ShowFlags.Implicit)
             } else {
                 EndTextInput()

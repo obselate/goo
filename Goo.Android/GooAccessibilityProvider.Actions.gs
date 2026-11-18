@@ -201,17 +201,17 @@ ViewTreeObserver
                 return nil
             }
             return AccessibilityActionRequest.SetValue(
-                args!!.GetCharSequence(AccessibilityNodeInfo.ActionArgumentSetTextCharsequence)?.ToString() ?? ""
+                args.GetCharSequence(AccessibilityNodeInfo.ActionArgumentSetTextCharsequence)?.ToString() ?? ""
             )
         }
         if action == NodeAction.SetSelection {
-            if args?.ContainsKey(AccessibilityNodeInfo.ActionArgumentSelectionStartInt) != true || !args!!.ContainsKey(
+            if args?.ContainsKey(AccessibilityNodeInfo.ActionArgumentSelectionStartInt) != true || !args.ContainsKey(
                 AccessibilityNodeInfo.ActionArgumentSelectionEndInt
             ) {
                 return nil
             }
-            let start = args!!.GetInt(AccessibilityNodeInfo.ActionArgumentSelectionStartInt)
-            let end = args!!.GetInt(AccessibilityNodeInfo.ActionArgumentSelectionEndInt)
+            let start = args.GetInt(AccessibilityNodeInfo.ActionArgumentSelectionStartInt)
+            let end = args.GetInt(AccessibilityNodeInfo.ActionArgumentSelectionEndInt)
             let length = Text(node).Length
             return if start < 0 || end < 0 || start > length || end > length {
                 default(AccessibilityActionRequest?)
@@ -223,7 +223,7 @@ ViewTreeObserver
             if args?.ContainsKey(AccessibilityNodeInfo.ActionArgumentProgressValue) != true {
                 return nil
             }
-            let value = args!!.GetFloat(AccessibilityNodeInfo.ActionArgumentProgressValue)
+            let value = args.GetFloat(AccessibilityNodeInfo.ActionArgumentProgressValue)
             return if !float32.IsFinite(value) ||
                 node.ValueNow == nil ||
                 node.ValueMinimum is not{} minimum ||
