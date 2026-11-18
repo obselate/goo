@@ -225,7 +225,7 @@ func RunScrollPlacementSmoke() {
             let metrics = WindowReadbackTestFixture.Metrics(window)
             let width = metrics.FramebufferWidth
             let height = metrics.FramebufferHeight
-            let device = (value float64) -> int32(MathF.Round(float32(value * scale)))
+            let device = (value float64) -> int32(Math.Floor(value * scale + 0.5))
             let viewportLeft = device(16.0)
             let viewportRight = device(112.0)
             let viewportTop = device(16.0)
