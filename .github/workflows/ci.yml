@@ -148,24 +148,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libhunspell-1.7-0
           dotnet run --project tools/Goo.Repo -- check spell-check
-      - name: Verify application hosting process ownership
-        if: needs.changes.outputs.api == 'true'
-        run: |
-          dotnet build tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj \
-            -c Release -m:4 -p:TreatWarningsAsErrors=true
-          dotnet run --project tools/Goo.HostChecks -c Release -- app-host \
-            tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll "$RUNNER_TEMP/app-host-managed"
-
-      - name: Verify NativeAOT application hosting on Linux
-        if: needs.changes.outputs.full == 'true'
-        run: |
-          dotnet publish tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj \
-            -c Release -r linux-x64 --self-contained true -m:4 \
-            -p:PublishAot=true -p:TreatWarningsAsErrors=true -o artifacts/app-host-aot
-          dotnet run --project tools/Goo.HostChecks -c Release -- app-host \
-            artifacts/app-host-aot/Goo.AppHostSmoke "$RUNNER_TEMP/app-host-aot"
-          dotnet run --project tools/Goo.HostChecks -c Release -- desktop \
-            artifacts/app-host-aot/Goo.AppHostSmoke "$RUNNER_TEMP/desktop-activation"
       - name: Verify NativeAOT Vulkan GPU experiment selection
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -903,6 +885,24 @@ jobs:
             SDL_VIDEODRIVER=wayland LIBGL_ALWAYS_SOFTWARE=1 \
             VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
             artifacts/printing-nativeaot/Goo.PrintingSmoke artifacts/reports/printing.pdf
+      - name: Verify application hosting process ownership
+        if: needs.changes.outputs.api == 'true'
+        run: |
+          dotnet build tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj \
+            -c Release -m:4 -p:TreatWarningsAsErrors=true
+          dotnet run --project tools/Goo.HostChecks -c Release -- app-host \
+            tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll "$RUNNER_TEMP/app-host-managed"
+
+      - name: Verify NativeAOT application hosting on Linux
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet publish tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj \
+            -c Release -r linux-x64 --self-contained true -m:4 \
+            -p:PublishAot=true -p:TreatWarningsAsErrors=true -o artifacts/app-host-aot
+          dotnet run --project tools/Goo.HostChecks -c Release -- app-host \
+            artifacts/app-host-aot/Goo.AppHostSmoke "$RUNNER_TEMP/app-host-aot"
+          dotnet run --project tools/Goo.HostChecks -c Release -- desktop \
+            artifacts/app-host-aot/Goo.AppHostSmoke "$RUNNER_TEMP/desktop-activation"
       - name: Verify Wayland application activation and placement
         if: needs.changes.outputs.full == 'true'
         run: |
