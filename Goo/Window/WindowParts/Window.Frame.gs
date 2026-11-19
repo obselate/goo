@@ -10,6 +10,7 @@ import System.Threading
 internal data struct DirtyCellSubmission {
   internal var Cell Cell
   internal var Generation int64
+  internal var Cause LayoutCause
 }
 
 internal data struct DirtyFiber {
@@ -38,6 +39,10 @@ internal class WindowDefaultTitle {
 public partial class Window {
   private var virtualRefreshDeferred bool
   private var sizedEffects ReconcileEffects
+  private var layoutCauseFilter LayoutCause
+  private var layoutApplicationPending bool
+  private var fontGeneration uint64
+  private var fontRegistryHook Action?
 
   internal func FlushDeferredVirtualization() {
     if virtualRefreshDeferred {
@@ -59,6 +64,10 @@ public partial class Window {
     }
     acceptImageCompletions()
     acceptRetainedInvalidations()
+    if fontRegistryHook == nil {
+      fontRegistryHook = requestReconcile
+      FontRegistry.Changed += fontRegistryHook
+    }
     if !hookInstalled {
       guard let cell = Root else {
         return
@@ -104,7 +113,7 @@ public partial class Window {
     let generation = cell.TryQueueCanonical(this, out var queueRoot)
     if generation != 0 {
       lock cellQueueGate {
-        let submission = DirtyCellSubmission{ Cell: queueRoot, Generation: generation }
+        let submission = DirtyCellSubmission{ Cell: queueRoot, Generation: generation, Cause: cell.DirtyCause }
         if cellTransactionActive {
           deferredCells.Add(submission)
         } else {
@@ -125,6 +134,7 @@ public partial class Window {
   }
 
   private func endCellTransaction() {
+    cellBatch.Clear()
     lock cellQueueGate {
       cellTransactionActive = false
       pendingCells.AddRange(deferredCells)
@@ -152,11 +162,27 @@ public partial class Window {
   private func UpdateTreeCore(wallDt float64, simDt float64, realizeVirtual bool = true) bool {
     let previousCell = Cell.StateReader
     let previousScope = StateReadScope.Current
+    let previousOrigin = LayoutOrigin.Current
+    let previousBaseline = LayoutOrigin.Baseline
+    let previousPresentation = LayoutOrigin.TrackPresentation
+    let previousFonts = FontRegistry.EnterFrame()
     let previousContext = ContextEnvironment.Enter(ContextEnvironment{})
     Cell.StateReader = nil
     StateReadScope.Current = nil
+    LayoutOrigin.Current = LayoutCause.Environment
+    LayoutOrigin.Baseline = false
+    LayoutOrigin.TrackPresentation = false
     try { return UpdateTreeFrame(wallDt, simDt, realizeVirtual) }
     finally {
+      if layoutApplicationPending { abortLayoutApplication() }
+      if cellTransactionActive { endCellTransaction() }
+      layout.TransitionPhase = LayoutTransitionPhase.Immediate
+      layoutCauseFilter = LayoutCause.None
+      layoutApplicationPending = false
+      LayoutOrigin.Current = previousOrigin
+      FontRegistry.ExitFrame(previousFonts)
+      LayoutOrigin.Baseline = previousBaseline
+      LayoutOrigin.TrackPresentation = previousPresentation
       Cell.StateReader = previousCell
       StateReadScope.Current = previousScope
       ContextEnvironment.Current = previousContext
@@ -171,6 +197,10 @@ public partial class Window {
     timeS = timeS + wallDt
     prepare()
     SyncWindowValues()
+    if fontGeneration != FontRegistry.Generation {
+      fontGeneration = FontRegistry.Generation
+      if let root = node { invalidateFontMeasurements(root) }
+    }
     let profiling = profiler.Active
     let motionProfile = profiling ? profiler.Start() : FrameProfilePoint{}
     let motionVersion = motionPump.ClearVersion
@@ -198,8 +228,19 @@ public partial class Window {
       return false
     }
     var changed = false
+    let transitionFrame = layoutTransitions != nil
+    layout.TransitionPhase = transitionFrame ? LayoutTransitionPhase.Immediate : LayoutTransitionPhase.Application
+    var continuationEffects = ReconcileEffects.None
+    if transitionFrame {
+      resolver.Advance(simDt)
+      continuationEffects = combineEffects(resolver.FlushEffects(), drainImageCompletions())
+    }
     var effects = combineEffects(pendingReconcileEffects, retainedEffects)
-    if dirty || resolver.Scrollbars.HasPending {
+    effects = combineEffects(effects, continuationEffects)
+    if dirty || resolver.Scrollbars.HasPending || transitionFrame
+      && (resolver.HasLayoutCommits || LayoutOrigin.IsApplication(retainedCause)
+        || LayoutOrigin.IsApplication(resolver.ResolvedLayoutCause)
+        || node != nil && layout.HasApplicationSized(node!!)) {
       dirty = false
       let reconcileProfile = profiling ? profiler.Start() : FrameProfilePoint{}
       beginCellTransaction()
@@ -220,9 +261,34 @@ public partial class Window {
         rec.MarkEffects(ReconcileEffects.Paint)
       }
       var stylesFlushed = false
+      let application = transitionFrame && hasApplicationLayoutWork()
       try {
         if let existing = node {
-          drain(rec)
+          if transitionFrame {
+            rec.CauseFilter = LayoutCause.Environment
+            layoutCauseFilter = LayoutCause.Environment
+            drain(rec)
+            rec.FlushStyles()
+            effects = combineEffects(effects, rec.Effects)
+            if hasEffect(rec.Effects, ReconcileEffects.Structure) {
+              layout.MarkStructureDirty()
+              Portals.Sync(existing, portalRoot)
+            }
+            if application {
+              prepareLayoutBaseline(node!!, continuationEffects)
+              beginLayoutApplication()
+              layoutApplicationPending = true
+              layoutCauseFilter = LayoutCause.Application
+              rec.CauseFilter = LayoutCause.Application
+              LayoutOrigin.Current = LayoutCause.Application
+              if LayoutOrigin.IsApplication(retainedCause) { TextEditorLayerBindings.ApplyPresentation(this) }
+              resolver.CommitLayoutTargets()
+              drain(rec)
+            }
+          } else {
+            LayoutOrigin.Current = LayoutCause.Application
+            drain(rec)
+          }
         } else {
           node = rec.MountRoot(cell)
         }
@@ -254,8 +320,9 @@ public partial class Window {
         layout.MarkStructureDirty()
       }
     }
+    LayoutOrigin.TrackPresentation = layoutTransitions != nil
     try {
-      effects = combineEffects(effects, drainImageCompletions())
+      if !transitionFrame { effects = combineEffects(effects, drainImageCompletions()) }
     } catch (_ Exception) {
       pendingReconcileEffects = combineEffects(pendingReconcileEffects, effects)
       rethrow
@@ -264,12 +331,13 @@ public partial class Window {
     var accessibilityLayout bool
     var accessibilityScroll bool
     let resolveProfile = profiling ? profiler.Start() : FrameProfilePoint{}
-    resolver.Advance(simDt)
+    if !transitionFrame { resolver.Advance(simDt) }
     if profiling {
       profiler.Record(FrameProfileStage.Transitions, resolveProfile)
     }
     effects = combineEffects(effects, resolver.FlushEffects())
     var metricsChanged bool
+    resolver.ResolvedLayoutCause = LayoutCause.None
     var layoutChanged bool
     var scrollChanged = hasEffect(effects, ReconcileEffects.ScrollPlacement)
     if let n = node {
@@ -328,6 +396,16 @@ public partial class Window {
         virtualPass++
       }
       effects = combineEffects(effects, sizedEffects)
+      if layoutApplicationPending {
+        layout.RefreshRects(n, portalRoot)
+        commitLayoutApplication()
+        layoutApplicationPending = false
+        layoutCauseFilter = LayoutCause.None
+        LayoutOrigin.Current = LayoutCause.Environment
+        layout.RefreshRects(n, portalRoot)
+      }
+      layout.TransitionPhase = LayoutTransitionPhase.Immediate
+      LayoutOrigin.Current = LayoutCause.Environment
       if hasEffect(effects, ReconcileEffects.Structure)
         || hasEffect(effects, ReconcileEffects.Input)
         || hasEffect(effects, ReconcileEffects.Content)
@@ -404,7 +482,12 @@ public partial class Window {
       }
       // Native repeats use a monotonic dispatch deadline. Test drivers use dt.
       let inputTreeProfile = profiling ? profiler.Start() : FrameProfilePoint{}
-      if input.Step(n, resolver, wallDt) {
+      let previousInputOrigin = LayoutOrigin.Current
+      LayoutOrigin.Current = LayoutCause.Application
+      var inputStepped bool
+      try { inputStepped = input.Step(n, resolver, wallDt) }
+      finally { LayoutOrigin.Current = previousInputOrigin }
+      if inputStepped {
         changed = true
         accessibility?.MarkDirty()
       }
@@ -499,19 +582,21 @@ public partial class Window {
   private func hasEffect(effects ReconcileEffects, value ReconcileEffects) bool -> (int32(effects) & int32(value)) != 0
 
   private func calculateLayout(n Node, width float32, height float32) {
-    if !profiler.Active {
-      layout.Calculate(n, portalRoot, width, height)
-      refreshSized(n)
-      return
+    let previous = LayoutOrigin.Current
+    if layout.TransitionPhase != LayoutTransitionPhase.Staged {
+      LayoutOrigin.Current = LayoutCause.Environment
     }
-    let point = profiler.Start()
+    let point = profiler.Active ? profiler.Start() : FrameProfilePoint{}
     var completed = false
     try {
       layout.Calculate(n, portalRoot, width, height)
       refreshSized(n)
       completed = true
     } finally {
-      profiler.Record(FrameProfileStage.Layout, point, if completed { 0 } else { -1 })
+      LayoutOrigin.Current = previous
+      if profiler.Active {
+        profiler.Record(FrameProfileStage.Layout, point, if completed { 0 } else { -1 })
+      }
     }
   }
 
@@ -520,6 +605,7 @@ public partial class Window {
     let rec = Reconciler{Owner: this, CellInvalidated: cellHook,
       ImageCompleted: imageCompletionHook, RetainedInvalidated: retainedInvalidationHook,
       Res: resolver, ChildScratch: childDiffScratch, DeferStyleFlush: true, Pump: motionPump}
+    rec.CauseFilter = layoutCauseFilter
     try {
       layout.RefreshSized(n, rec)
     } catch (_ Exception) {
@@ -536,7 +622,7 @@ public partial class Window {
       refreshSized(n)
     }
     layout.RefreshRects(n, portalRoot)
-    input.AfterTreeUpdated(n, resolver, true)
+    if !LayoutOrigin.Baseline { input.AfterTreeUpdated(n, resolver, true) }
   }
 
   private func drain(rec Reconciler) {
@@ -561,7 +647,6 @@ public partial class Window {
       }
       fiberBatch.Add(DirtyFiber{Cell: fiber, Depth: depth, Order: fiberBatch.Count})
     }
-    cellBatch.Clear()
 
     fiberBatch.Sort((left, right) -> {
       let depth = left.Depth.CompareTo(right.Depth)
@@ -575,7 +660,7 @@ public partial class Window {
         guard let mounted = fiber.MountedNode() else {
           continue
         }
-        if mounted.Retired || mounted.Fiber != fiber || !fiber.HasDirty() {
+        if mounted.Retired || mounted.Fiber != fiber || !fiber.HasDirtyFor(rec.CauseFilter) {
           continue
         }
         let replacement = rec.RebuildFiber(mounted, fiber)
@@ -600,6 +685,55 @@ public partial class Window {
     } finally {
       fiberBatch.Clear()
     }
+  }
+
+  private func hasApplicationLayoutWork() bool {
+    if resolver.HasLayoutCommits || LayoutOrigin.IsApplication(retainedCause)
+      || LayoutOrigin.IsApplication(resolver.ResolvedLayoutCause) { return true }
+    if let root = node && layout.HasApplicationSized(root) { return true }
+    for submission in cellBatch {
+      if LayoutOrigin.IsApplication(submission.Cause)
+        || submission.Cell.HasDirtyFor(LayoutCause.Application) { return true }
+    }
+    return false
+  }
+
+  private func prepareLayoutBaseline(root Node, continuation ReconcileEffects) {
+    let previousBaseline = LayoutOrigin.Baseline
+    LayoutOrigin.Baseline = true
+    try {
+    layout.SetPixelDensity(RenderScale.X)
+    let viewW = LayoutWidth
+    let viewH = LayoutHeight
+    if layout.NeedsLayout(root, portalRoot, viewW, viewH)
+      || hasEffect(continuation, ReconcileEffects.Layout)
+      || hasEffect(continuation, ReconcileEffects.Structure) {
+      calculateLayout(root, viewW, viewH)
+    } else { refreshSized(root) }
+    var pass int32
+    while pass < 3 {
+      let effects = refreshVirtualization(root)
+      if effects == ReconcileEffects.None { break }
+      if hasEffect(effects, ReconcileEffects.Structure) {
+        layout.MarkStructureDirty()
+        Portals.Sync(root, portalRoot)
+      }
+      calculateLayout(root, viewW, viewH)
+      pass++
+    }
+    } finally { LayoutOrigin.Baseline = previousBaseline }
+  }
+
+  private func invalidateFontMeasurements(root Node) {
+    if root.Kind == NodeKind.Text || root.Kind == NodeKind.Entry {
+      if root.Kind == NodeKind.Entry { TextLayouts.Dispose(root) }
+      TextLayouts.Invalidate(root)
+      root.MarkSceneDirty()
+    } else if root.Kind == NodeKind.Editor {
+      TextEditorLayouts.Invalidate(root)
+      root.MarkSceneDirty()
+    }
+    for child in root.Children { invalidateFontMeasurements(child) }
   }
 
   private func replaceFiberRoot(previous Node, replacement Node) {
@@ -670,6 +804,7 @@ public partial class Window {
       DeferStyleFlush: true,
       Pump: motionPump,
     }
+    rec.CauseFilter = layoutCauseFilter
     var stylesFlushed = false
     try {
       for i in 0 ... candidates.Count {

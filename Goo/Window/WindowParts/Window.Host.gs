@@ -14,6 +14,9 @@ public partial class Window {
 
   internal func RebuildAllCells() {
     if !IsOpen { return }
+    let previous = LayoutOrigin.Current
+    LayoutOrigin.Current = LayoutCause.Environment
+    try {
     Root?.Rebuild()
     if let tree = node {
       let pending = Stack[Node]()
@@ -28,6 +31,7 @@ public partial class Window {
         for child in current.Children { pending.Push(child) }
       }
     }
+    } finally { LayoutOrigin.Current = previous }
   }
 
   shared {
@@ -208,11 +212,20 @@ public partial class Window {
       nativeWidth int32, nativeHeight int32) -> {
         queueNativeMetrics(logicalWidth, logicalHeight, nativeWidth, nativeHeight)
       }
-    native.DisplayChanged += () -> notifications.RaiseDisplayChanged()
+    native.DisplayChanged += () -> {
+      let previous = LayoutOrigin.Current
+      LayoutOrigin.Current = LayoutCause.Environment
+      try { notifications.RaiseDisplayChanged() }
+      finally { LayoutOrigin.Current = previous }
+    }
     native.StateChanged += (value WindowState) -> {
+      let previous = LayoutOrigin.Current
+      LayoutOrigin.Current = LayoutCause.Environment
+      try {
       state = value
       requestRender()
       notifications.RaiseStateChanged(State)
+      } finally { LayoutOrigin.Current = previous }
     }
     native.Moved += (px int32, py int32) -> {
       x = px
@@ -869,6 +882,9 @@ public partial class Window {
   private func applyNativeResize(logicalWidth int32, logicalHeight int32,
     newFramebufferWidth int32, newFramebufferHeight int32) bool{
       using let profile = FrameProfileScope(FrameProfileStage.NativeResize)
+      let previous = LayoutOrigin.Current
+      LayoutOrigin.Current = LayoutCause.Environment
+      try {
       let framebufferValid = newFramebufferWidth > 0 && newFramebufferHeight > 0
       HandleResize(logicalWidth, logicalHeight, framebufferValid)
       if let target = windowTarget {
@@ -883,6 +899,7 @@ public partial class Window {
           host?.DisplayScale ?? 0.0F)
       }
       return true
+      } finally { LayoutOrigin.Current = previous }
     }
 }
 

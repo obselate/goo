@@ -93,6 +93,7 @@ internal sealed class VirtualNodeState {
   private var contextReader ContextReader?
   private var stateReads StateReadScope?
   private var contextDirty bool
+  internal var ContextCause LayoutCause
   private var contextVersion int64
   private var pendingContextVersion int64
   private var pixelScale float32 = 1.0F
@@ -272,6 +273,7 @@ internal sealed class VirtualNodeState {
   internal func InvalidateContext() {
     contextVersion++
     contextDirty = true
+    ContextCause = LayoutOrigin.Combine(ContextCause, LayoutOrigin.Current)
     Owner?.ContextVirtualInvalidated()
   }
 
@@ -649,6 +651,9 @@ internal sealed class VirtualNodeState {
     state.Commit()
     updateRecyclingLimit(owner)
     contextDirty = contextVersion != pendingContextVersion
+    if !contextDirty {
+      ContextCause = LayoutCause.None
+    }
     contextReader?.Commit()
     let old = mounted
     mounted = next
@@ -764,6 +769,9 @@ internal class Virtualization {
 
     internal func Refresh(n Node, rec Reconciler) bool {
       guard let state = State(n) else { return false }
+      if rec.CauseFilter == LayoutCause.Environment && LayoutOrigin.IsApplication(state.ContextCause) {
+        return false
+      }
       if !state.NeedsRefresh(n) { return false }
       let previousContext = rec.Context
       rec.Context = state.Context

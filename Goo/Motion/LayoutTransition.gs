@@ -3,7 +3,34 @@ package Goo
 import System
 import System.Runtime.CompilerServices
 
-/// Describes an opt-in computed-bounds transition using DurationMs and Easing, or a custom SimulationFactory.
+internal enum LayoutCause { None; Application; Environment }
+
+internal class LayoutOrigin {
+  shared {
+    @ThreadStatic
+    private var current LayoutCause
+    @ThreadStatic
+    internal var Baseline bool
+    @ThreadStatic
+    internal var TrackPresentation bool
+
+    internal prop Current LayoutCause {
+      get -> current == LayoutCause.None ? LayoutCause.Application : current
+      set(v) -> current = v
+    }
+
+    internal func Combine(left LayoutCause, right LayoutCause) LayoutCause ->
+      LayoutCause(int32(left) | int32(right))
+
+    internal func IsApplication(cause LayoutCause) bool ->
+      (int32(cause) & int32(LayoutCause.Application)) != 0
+  }
+}
+
+internal enum LayoutTransitionPhase { Application; Immediate; Staged }
+
+/// Describes an opt-in transition for application changes to computed bounds.
+/// Environment changes apply at once and preserve the current application offset and velocity.
 public data struct LayoutTransition(DurationMs float64, Easing Easing) {
   /// Creates an optional simulation for each changed position or size axis. Omission uses DurationMs and Easing.
   /// The simulation starts at from with the supplied velocity and settles at to.
@@ -50,8 +77,15 @@ internal sealed class LayoutTransitionState : MotionParticle {
   private var disposed bool
   private var pump MotionPump?
   private var value LayoutTransition
+  private var baseline Rect
+  private var baselineValid bool
+  private var stagedFresh bool
+  internal var Previous LayoutTransitionState?
+  internal var Next LayoutTransitionState?
+  private var window Window?
 
   internal prop Value LayoutTransition{ get -> value }
+  internal prop IsPortal bool { get -> node.IsPortal }
 
   internal init(n Node) {
     node = n
@@ -65,15 +99,19 @@ internal sealed class LayoutTransitionState : MotionParticle {
         if pump != owner { owner.Deregister(this) }
       }
       if this.pump != pump {
+        window?.RemoveLayoutTransition(this)
+        window = pump?.Owner
+        window?.AddLayoutTransition(this)
         snap()
       }
       this.pump = pump
     }
 
   internal func Resolve(baseX float32, baseY float32, localX float32,
-    localY float32, width float32 = 0.0F, height float32 = 0.0F) Rect {
+    localY float32, width float32, height float32, phase LayoutTransitionPhase) Rect {
       if let owner = pump { sample(owner.Now) }
-      if hasBounds && (localX != lastLocalX || localY != lastLocalY
+      if phase == LayoutTransitionPhase.Staged && !hasBounds { stagedFresh = true }
+      if phase == LayoutTransitionPhase.Application && hasBounds && (localX != lastLocalX || localY != lastLocalY
         || width != lastWidth || height != lastHeight) {
         bank(lastLocalX + offsetX - localX, lastLocalY + offsetY - localY,
           lastWidth + offsetWidth - width, lastHeight + offsetHeight - height)
@@ -88,6 +126,38 @@ internal sealed class LayoutTransitionState : MotionParticle {
         W: MathF.Max(0.0F, width + offsetWidth), H: MathF.Max(0.0F, height + offsetHeight),
       }
     }
+
+  internal func BeginApplication() {
+    baseline = Rect{X: lastLocalX, Y: lastLocalY, W: lastWidth, H: lastHeight}
+    baselineValid = hasBounds && !node.Retired
+    stagedFresh = !hasBounds
+  }
+
+  internal func CommitApplication() {
+    stagedFresh = false
+    let valid = baselineValid
+    baselineValid = false
+    if !valid || !hasBounds || node.Retired { return }
+    if baseline.X != lastLocalX || baseline.Y != lastLocalY
+      || baseline.W != lastWidth || baseline.H != lastHeight {
+      if let owner = pump { sample(owner.Now) }
+      bank(offsetX - (lastLocalX - baseline.X), offsetY - (lastLocalY - baseline.Y),
+        offsetWidth - (lastWidth - baseline.W), offsetHeight - (lastHeight - baseline.H))
+    }
+  }
+
+  internal func AbortApplication() {
+    if stagedFresh {
+      hasBounds = false
+      stagedFresh = false
+    }
+    if !baselineValid { return }
+    baselineValid = false
+    lastLocalX = baseline.X
+    lastLocalY = baseline.Y
+    lastWidth = baseline.W
+    lastHeight = baseline.H
+  }
 
   private func bank(x float32, y float32, width float32, height float32) {
     let elapsed = if let owner = pump { Math.Max(0.0, owner.Now - startTime) * Motion.TimeScale } else { 0.0 }
@@ -206,6 +276,9 @@ internal sealed class LayoutTransitionState : MotionParticle {
     if disposed { return }
     disposed = true
     registrationPump?.Deregister(this)
+    window?.RemoveLayoutTransition(this)
+    window = nil
+    baselineValid = false
     snap()
     pump = nil
     invalidated = nil
@@ -233,17 +306,78 @@ internal class LayoutTransitions {
       }
 
     internal func Resolve(n Node, baseX float32, baseY float32, localX float32,
-      localY float32, width float32, height float32) Rect {
+      localY float32, width float32, height float32, phase LayoutTransitionPhase) Rect {
         guard let state = n.RetainedLayoutTransition else {
           return Rect{ X: baseX, Y: baseY, W: width, H: height }
         }
-        return state.Resolve(baseX, baseY, localX, localY, width, height)
+        return state.Resolve(baseX, baseY, localX, localY, width, height, phase)
       }
 
     internal func Dispose(n Node) {
       guard let state = n.RetainedLayoutTransition else { return }
       n.RetainedLayoutTransition = nil
       state.Dispose()
+    }
+  }
+}
+
+public partial class Window {
+  private var layoutTransitions LayoutTransitionState?
+  internal prop DeferLayoutTargets bool {
+    get -> layoutTransitions != nil && layout.TransitionPhase == LayoutTransitionPhase.Immediate
+  }
+
+  internal func AddLayoutTransition(state LayoutTransitionState) {
+    state.Next = layoutTransitions
+    state.Previous = nil
+    if let first = layoutTransitions { first.Previous = state }
+    layoutTransitions = state
+  }
+
+  internal func RemoveLayoutTransition(state LayoutTransitionState) {
+    if let previous = state.Previous { previous.Next = state.Next }
+    else if layoutTransitions == state { layoutTransitions = state.Next }
+    if let next = state.Next { next.Previous = state.Previous }
+    state.Previous = nil
+    state.Next = nil
+  }
+
+  private func beginLayoutApplication() {
+    var current = layoutTransitions
+    while let state = current {
+      state.BeginApplication()
+      current = state.Next
+    }
+    layout.TransitionPhase = LayoutTransitionPhase.Staged
+  }
+
+  private func abortLayoutApplication() {
+    var current = layoutTransitions
+    while let state = current {
+      state.AbortApplication()
+      current = state.Next
+    }
+  }
+
+  private func commitLayoutApplication() {
+    var current = layoutTransitions
+    var portals = false
+    while let state = current {
+      if state.IsPortal { portals = true }
+      else { state.CommitApplication() }
+      current = state.Next
+    }
+    layout.TransitionPhase = LayoutTransitionPhase.Immediate
+    if !portals { return }
+    let previous = LayoutOrigin.Current
+    LayoutOrigin.Current = LayoutCause.Environment
+    try {
+      if let root = node { layout.RefreshRects(root, portalRoot) }
+    } finally { LayoutOrigin.Current = previous }
+    current = layoutTransitions
+    while let state = current {
+      if state.IsPortal { state.CommitApplication() }
+      current = state.Next
     }
   }
 }

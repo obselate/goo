@@ -33,6 +33,7 @@ internal sealed class SizedNodeState : IDisposable {
   internal let Reads StateReadScope
   internal let ContextReads ContextReader
   internal var Dirty bool = true
+  internal var DirtyCause LayoutCause = LayoutOrigin.Current
   internal var Width float32 = -1.0F
   internal var Height float32 = -1.0F
   internal var ContentWidth float32 = -1.0F
@@ -52,6 +53,7 @@ internal sealed class SizedNodeState : IDisposable {
 
   internal func Invalidate() {
     Dirty = true
+    DirtyCause = LayoutOrigin.Combine(DirtyCause, LayoutOrigin.Current)
     invalidated?.Invoke(ReconcileEffects.Content)
   }
 
@@ -103,6 +105,7 @@ internal partial class Reconciler {
       node.RetainedSizedState = state
     }
     state.Dirty = true
+    state.DirtyCause = LayoutOrigin.Combine(state.DirtyCause, LayoutOrigin.Current)
     state.Builder = blob.Builder
     state.Context = Context
     state.ContextReads.Frame = Context
@@ -126,6 +129,7 @@ internal partial class Reconciler {
       state.ContextReads.Commit()
       state.Reads.StateChanged = false
       state.Dirty = false
+      state.DirtyCause = LayoutCause.None
       state.Verifier = nil
     } catch (_ Exception) {
       state.ContextReads.Cancel()
@@ -164,6 +168,15 @@ internal partial class Layout {
     return sizedNodes.Count != 0
   }
 
+  internal func HasApplicationSized(root Node) bool {
+    if !HasSized(root) { return false }
+    for node in sizedNodes {
+      if let state = node.RetainedSizedState && state.Dirty
+        && LayoutOrigin.IsApplication(state.DirtyCause) { return true }
+    }
+    return false
+  }
+
   internal func NeedsSizedRefresh(root Node) bool {
     if !HasSized(root) { return false }
     let scale = YGConfigAPI.YGConfigGetPointScaleFactor(config)
@@ -193,6 +206,11 @@ internal partial class Layout {
       let width = BoxGeometry.LayoutWidth(node)
       let height = BoxGeometry.LayoutHeight(node)
       let resized = state.Width != width || state.Height != height || state.Scale != scale
+      if rec.CauseFilter == LayoutCause.Environment && state.Dirty
+        && LayoutOrigin.IsApplication(state.DirtyCause) {
+        arrangeSized(node)
+        continue
+      }
       if state.Dirty || resized {
         rec.BuildSized(node, LayoutSize(float64(width), float64(height)))
         rec.FlushStyles()

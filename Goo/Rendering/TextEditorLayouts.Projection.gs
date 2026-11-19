@@ -27,7 +27,7 @@ internal partial class TextEditorLayouts {
         let start = projection.Range.Start > cursor ? projection.Range.Start : cursor
         if start > cursor {
           appendSourceSegment(result, ref display, snapshot.GetText(TextRange{ Start: cursor,
-            Length: start - cursor }), cursor, styles, baseStyle, state.Controller.TabWidth, n)
+            Length: start - cursor }), cursor, styles, baseStyle, state.TabWidth, n)
         }
         if projection.Range.Start >= source.Start && (projection.Range.Start < sourceEnd || insertion) {
           let style = editorStyleAt(styles, projection.Range.Start, baseStyle, n)
@@ -59,7 +59,7 @@ internal partial class TextEditorLayouts {
       }
       if cursor < sourceEnd {
         appendSourceSegment(result, ref display, snapshot.GetText(TextRange{ Start: cursor,
-          Length: sourceEnd - cursor }), cursor, styles, baseStyle, state.Controller.TabWidth, n)
+          Length: sourceEnd - cursor }), cursor, styles, baseStyle, state.TabWidth, n)
       }
       result.Text = display
       result.Resolution = state.ParagraphResolution(n, display, fingerprint)
@@ -149,7 +149,7 @@ internal partial class TextEditorLayouts {
         let values = state.BeginProjections()
         for layerIndex in 0 ... state.LayerCount {
           let layer = state.Layer(layerIndex)
-          for projection in layer.ReadProjections() {
+          for projection in state.LayerProjections(layerIndex) {
             let slot = projection.Kind == TextProjectionKind.InlineSlot
               || projection.Kind == TextProjectionKind.BlockSlot
             let key = textEditorSlotKey(layer, projection)
@@ -167,7 +167,7 @@ internal partial class TextEditorLayouts {
             })
           }
         }
-        if let composition = state.Controller.Composition {
+        if let composition = state.Composition {
           values.Add(TextEditorProjection{ Range: composition.Range, Text: composition.Text,
             Atomic: true, Composition: true,
             CompositionSelectionStart: composition.SelectionStart,
@@ -182,8 +182,7 @@ internal partial class TextEditorLayouts {
       let values = state.BeginStyles()
       var order int32 = 0
       for layerIndex in 0 ... state.LayerCount {
-        let layer = state.Layer(layerIndex)
-        for span in layer.ReadStyleSpans() {
+        for span in state.LayerStyles(layerIndex) {
           values.Add(TextEditorPresentationStyle{ Range: span.Range,
             Declaration: span.Style, Order: order })
           order++
@@ -340,7 +339,7 @@ internal partial class TextEditorLayouts {
 
     private func editorLayerRevision(state TextEditorRenderState) int64 {
       var result int64 = 17
-      for i in 0 ... state.LayerCount { result = result * 31 + state.Layer(i).Revision }
+      for i in 0 ... state.LayerCount { result = result * 31 + state.LayerRevision(i) }
       return result
     }
 
@@ -362,6 +361,7 @@ internal partial class TextEditorLayouts {
       result = result * 31 + int32(n.TextStrokeWidth.Unit)
       result = result * 31 + n.TextStrokeColor.GetHashCode()
       result = result * 31 + (n.TextShadows?.GetHashCode() ?? 0)
+      result = result * 31 + FontRegistry.Generation.GetHashCode()
       return result
     }
 

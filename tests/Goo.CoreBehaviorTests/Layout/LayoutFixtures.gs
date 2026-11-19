@@ -3,6 +3,7 @@ package Goo
 import Facebook.Yoga
 import System
 import System.Collections.Generic
+import System.IO
 import System.Text
 
 internal class LayoutFixtures {
@@ -649,6 +650,296 @@ internal class LayoutFixtures {
     dynamicResolver.Flush()
     layout.Calculate(dynamic, 100.0F, 60.0F)
     return dynamic.Children[0].Rect.X == 70.0F
+  }
+
+  func LayoutTransitionEnvironmentCallbackContract() bool {
+    let width = State[float64](50.0)
+    var factories int32
+    let transition = LayoutTransition{SimulationFactory: (from float64, to float64, velocity float64) -> {
+      factories++
+      return LinearTimed(1.0, from, to, Easing.Linear)
+    }}
+    let window = Window{Size: LayoutSize(400, 200),
+      Root: SizedRootFixture(() -> Container{Width: width.Value, Height: 40, LayoutTransition: transition})}
+    window.MetricsChanged += _ -> { width.Value = window.Size.Width * 0.25 }
+    try {
+      window.UpdateTree()
+      window.UpdateTree()
+      if window.Tree!!.Rect.W != 100.0F || factories != 0 { return false }
+      window.Size = LayoutSize(600, 200)
+      window.UpdateTree()
+      window.UpdateTree()
+      if window.Tree!!.Rect.W != 150.0F || factories != 0 { return false }
+      if !window.PostEnvironment(() -> { width.Value = 180.0 }) { return false }
+      window.drainPostedActions()
+      window.UpdateTree()
+      if window.Tree!!.Rect.W != 180.0F || factories != 0 { return false }
+      if !window.Post(() -> { width.Value = 200.0 }) { return false }
+      window.drainPostedActions()
+      window.UpdateTree()
+      return window.Tree!!.Rect.W == 180.0F && factories == 1 && window.PaintMotionPump.Active
+    } finally { window.Close() }
+  }
+
+  func LayoutTransitionStyleContinuationContract() bool {
+    let wide = State[bool](false)
+    let other = State[bool](false)
+    var factories int32
+    let transition = LayoutTransition{SimulationFactory: (from float64, to float64, velocity float64) -> {
+      factories++
+      return LinearTimed(1.0, from, to, Easing.Linear)
+    }}
+    let cell = SizedRootFixture(() -> Container{
+      Width: Percent(100), Height: Percent(100), FlexDirection: FlexDirection.Row,
+      Container{Width: wide.Value ? 120 : 40, Height: 20, FlexShrink: 0,
+        TransitionMs: 1000, TransitionEasing: Easing.Linear,
+        TransitionProperties: []TransitionProperty{TransitionProperty.Width}, LayoutTransition: transition},
+      Container{Width: other.Value ? 80 : 40, Height: 20, FlexShrink: 0, LayoutTransition: transition},
+      Container{Width: 20, Height: 20, FlexShrink: 0, LayoutTransition: transition},
+    })
+    let window = Window{Root: cell, Size: LayoutSize(400, 200)}
+    try {
+      window.UpdateTree()
+      let children = window.Tree!!.Children
+      wide.Value = true
+      window.UpdateTree(0.25)
+      if children[0].Rect.W != 40.0F || factories != 0 { return false }
+      window.UpdateTree(0.25)
+      if children[0].Rect.W != 60.0F || children[1].Rect.X != 60.0F || factories != 0 { return false }
+      other.Value = true
+      window.UpdateTree(0.25)
+      if children[0].Rect.W != 80.0F || children[1].Rect.X != 80.0F
+        || children[1].Rect.W != 40.0F || children[2].Rect.X != 120.0F || factories != 2 { return false }
+      window.UpdateTree(0.5)
+      if children[0].Rect.W != 120.0F || children[1].Rect.W != 60.0F
+        || children[2].Rect.X != 180.0F || factories != 2 { return false }
+      window.UpdateTree(0.5)
+      return children[1].Rect.W == 80.0F && children[2].Rect.X == 200.0F && factories == 2
+    } finally { window.Close() }
+  }
+
+  func LayoutTransitionFailedCommitContract() bool {
+    var expanded = false
+    var fail = false
+    var enabled = true
+    var factories int32
+    let transition = LayoutTransition{SimulationFactory: (from float64, to float64, velocity float64) -> {
+      factories++
+      return LinearTimed(1.0, from, to, Easing.Linear)
+    }}
+    let cell = SizedRootFixture(() -> Container{
+      Width: expanded ? 240 : 160, Height: 100, LayoutTransition: enabled ? transition : nil,
+      Sized(size -> {
+        if fail { throw InvalidOperationException("Failed layout presentation") }
+        return Container{Width: Percent(100), Height: Percent(100)}
+      }){.Width: Percent(100), .Height: Percent(100)},
+    })
+    let window = Window{Root: cell, Size: LayoutSize(400, 200)}
+    try {
+      window.UpdateTree()
+      expanded = true
+      fail = true
+      cell.Rebuild()
+      var failed = false
+      try { window.UpdateTree() }
+      catch (error InvalidOperationException) {
+        if error.Message != "Failed layout presentation" { rethrow }
+        failed = true
+      }
+      if !failed || factories != 0 || window.PaintMotionPump.Active { return false }
+      fail = false
+      window.UpdateTree()
+      if window.Tree!!.Rect.W != 160.0F || factories != 1 { return false }
+      window.UpdateTree(1.0)
+      window.UpdateTree()
+      if window.Tree!!.Rect.W != 240.0F || factories != 1 { return false }
+      enabled = false
+      cell.Rebuild()
+      window.UpdateTree()
+      return !window.PaintMotionPump.Active && window.Tree!!.RetainedLayoutTransition == nil
+    } finally { window.Close() }
+  }
+
+  func LayoutTransitionRetainedTextContract() bool {
+    let text = "one two three four five six seven eight nine ten"
+    let document = TextDocument(text)
+    using let controller = TextEditorController(document)
+    using let baselineController = TextEditorController(TextDocument(text))
+    var factories int32
+    let transition = LayoutTransition{SimulationFactory: (from float64, to float64, velocity float64) -> {
+      factories++
+      return LinearTimed(1.0, from, to, Easing.Linear)
+    }}
+    let scene = (editor TextEditorController, motion LayoutTransition?) -> Container{
+      Width: Percent(100), Height: Percent(100), AlignItems: AlignItems.FlexStart,
+      TextEditor{Controller: editor, Width: Percent(50), FontSize: 16,
+        TextWrap: TextWrap.Wrap, LayoutTransition: motion},
+      Container{Width: 40, Height: 20, LayoutTransition: motion},
+    }
+    let window = Window{Root: SizedRootFixture(() -> scene(controller, transition)), Size: LayoutSize(400, 200)}
+    let baseline = Window{Root: SizedRootFixture(() -> scene(baselineController, nil)), Size: LayoutSize(600, 200)}
+    try {
+      window.UpdateTree()
+      baseline.UpdateTree()
+      let oldHeight = baseline.Tree!!.Children[0].Rect.H
+      document.Apply(TextChange(TextRange(document.Length, 0), "\nsecond line\nthird line"))
+      window.Size = LayoutSize(600, 200)
+      window.UpdateTree()
+      let editor = window.Tree!!.Children[0]
+      let sibling = window.Tree!!.Children[1]
+      if editor.Rect.W != 300.0F || editor.Rect.H != oldHeight
+        || sibling.Rect.Y != oldHeight || factories != 2 {
+        throw InvalidOperationException("Retained text: ${editor.Rect.W}x${editor.Rect.H}, baseline=$oldHeight, sibling=${sibling.Rect.Y}, factories=$factories")
+      }
+      window.UpdateTree(1.0)
+      return editor.Rect.H == BoxGeometry.LayoutHeight(editor) && editor.Rect.H > oldHeight
+        && sibling.Rect.Y == editor.Rect.H && factories == 2
+    } finally {
+      baseline.Close()
+      window.Close()
+    }
+  }
+
+  func LayoutTransitionFontPublicationContract() bool {
+    let family = "Layout transition publication"
+    let content = "Miiii Wwww 0123456789"
+    using let font = FontSource.FromPath(family, 400, false,
+      Path.Combine(AppContext.BaseDirectory, "Layout", "VendSans-VariableFont_wght.ttf"))
+    let wide = State[bool](false)
+    var publish = false
+    var factories int32
+    let transition = LayoutTransition{SimulationFactory: (from float64, to float64, velocity float64) -> {
+      factories++
+      return LinearTimed(1.0, from, to, Easing.Linear)
+    }}
+    let cell = SizedRootFixture(() -> {
+      if publish {
+        publish = false
+        font.Register()
+      }
+      return Container{Width: Percent(100), Height: Percent(100), AlignItems: AlignItems.FlexStart,
+        Text{FontFamily: family, FontSize: 24, Content: content, LayoutTransition: transition},
+        Container{Width: wide.Value ? 100 : 50, Height: 20, LayoutTransition: transition},
+      }
+    })
+    let window = Window{Root: cell, Size: LayoutSize(400, 200)}
+    var oracle Node?
+    try {
+      window.UpdateTree()
+      let text = window.Tree!!.Children[0]
+      let oldWidth = text.Rect.W
+      wide.Value = true
+      publish = true
+      window.UpdateTree()
+      if text.Rect.W != oldWidth || factories != 1 { return false }
+      window.UpdateTree()
+      oracle = Reconciler{Res: Resolver{}}.Mount(Container{
+        Width: 400, Height: 200, AlignItems: AlignItems.FlexStart,
+        Text{FontFamily: family, FontSize: 24, Content: content},
+      })
+      Layout().Calculate(oracle, 400.0F, 200.0F)
+      return text.Rect.W == oracle.Children[0].Rect.W && text.Rect.W != oldWidth
+        && factories == 1
+    } finally {
+      if let tree = oracle { NodeLifecycle.DisposeTree(tree) }
+      window.Close()
+    }
+  }
+
+  func LayoutTransitionEnvironmentContract() bool {
+    let cell = LayoutCauseFixtureCell()
+    let window = Window{Root: cell, Size: LayoutSize(400, 200)}
+    try {
+      window.UpdateTree()
+      let target = window.Tree!!.Children[1]
+      for frame in 0 ... 8 {
+        window.Size = LayoutSize(400 + frame * 2, 200)
+        window.UpdateTree(0.001)
+      }
+      let before = GC.GetAllocatedBytesForCurrentThread()
+      for frame in 0 ... 120 {
+        window.Size = LayoutSize(400 + frame % 80 * 2, 200)
+        window.UpdateTree(0.001)
+        if target.Rect.W != BoxGeometry.LayoutWidth(target) { return false }
+      }
+      let allocated = GC.GetAllocatedBytesForCurrentThread() - before
+      if allocated != 0L { throw InvalidOperationException("Continuous resize allocated $allocated bytes") }
+      for frame in 0 ... 20 {
+        window.UiScale = 1.0 + float64(frame % 4) * 0.25
+        window.UpdateTree(0.001)
+        if target.Rect.W != BoxGeometry.LayoutWidth(target) { return false }
+      }
+      if let yoga = target.Yoga { YGNodeStyleAPI.YGNodeStyleSetMargin(yoga, YGEdge.Left, 11.0F) }
+      window.UpdateTree()
+      return cell.Simulations.Count == 0 && target.Rect.X > 0.0F
+        && target.Rect.W == BoxGeometry.LayoutWidth(target) && !window.PaintMotionPump.Active
+    } finally { window.Close() }
+  }
+
+  func LayoutTransitionCauseAttributionContract() bool {
+    for variant in 0 ... 4 {
+      let cell = LayoutCauseFixtureCell{UseSized: variant >= 2, ReadMetrics: variant % 2 == 1}
+      let window = Window{Root: cell, Size: LayoutSize(400, 200)}
+      try {
+        window.UpdateTree()
+        window.Size = LayoutSize(600, 200)
+        window.UpdateTree()
+        let root = cell.UseSized ? window.Tree!!.Children[0] : window.Tree!!
+        let parent = root.Children[0]
+        let sibling = parent.Children[1]
+        let environment = root.Children[1]
+        let oldWidth = parent.Rect.W
+        let oldX = sibling.Rect.X
+        if cell.Simulations.Count != 0 || environment.Rect.W != 300.0F { return false }
+        cell.Expanded.Value = true
+        window.Size = LayoutSize(800, 200)
+        window.UpdateTree()
+        if parent.Rect.W != oldWidth || sibling.Rect.X != oldX
+          || environment.Rect.W != 400.0F || cell.Simulations.Count != 2 {
+          throw InvalidOperationException("Mixed commit variant $variant: width=${parent.Rect.W}, x=${sibling.Rect.X}, environment=${environment.Rect.W}, simulations=${cell.Simulations.Count}")
+        }
+        window.UpdateTree(1.0)
+        let firstWidth = cell.ReadMetrics ? 180.0F : 100.0F
+        if parent.Rect.W != firstWidth + 20.0F || sibling.Rect.X != firstWidth
+          || cell.Simulations.Count != 2 || window.PaintMotionPump.Active { return false }
+      } finally { window.Close() }
+    }
+    return true
+  }
+
+  func LayoutTransitionResizeContinuityContract() bool {
+    let cell = LayoutCauseFixtureCell{ReadMetrics: true}
+    let window = Window{Root: cell, Size: LayoutSize(400, 200)}
+    try {
+      window.UpdateTree()
+      let sibling = window.Tree!!.Children[0].Children[1]
+      cell.Expanded.Value = true
+      window.UpdateTree()
+      window.UpdateTree(0.25)
+      let animation = cell.Simulations[0]
+      let offset = float32(animation.Position(0.25))
+      if MathF.Abs(sibling.Rect.X - (140.0F + offset)) > 0.001F { return false }
+      window.Size = LayoutSize(600, 200)
+      window.UpdateTree()
+      if cell.Simulations.Count != 2 || MathF.Abs(sibling.Rect.X - (160.0F + offset)) > 0.001F { return false }
+      window.UpdateTree(0.25)
+      let velocity = animation.Velocity(0.5)
+      let visual = sibling.Rect.X
+      cell.Expanded.Value = false
+      window.Size = LayoutSize(800, 200)
+      window.UpdateTree()
+      if cell.Simulations.Count != 4 || sibling.Rect.X != visual
+        || Math.Abs(cell.Simulations[2].InitialVelocity - velocity) > 0.000001
+        || Math.Abs(cell.Simulations[2].Position(0.0) - (animation.Position(0.5) + 30.0)) > 0.000001 {
+        return false
+      }
+      window.UpdateTree(1.0)
+      if sibling.Rect.X != 130.0F || window.PaintMotionPump.Active { return false }
+      window.PaintMotionPump.ReducedMotion = true
+      cell.Expanded.Value = true
+      window.UpdateTree()
+      return sibling.Rect.X == 180.0F && cell.Simulations.Count == 4 && !window.PaintMotionPump.Active
+    } finally { window.Close() }
   }
 
   func LayoutTransitionGlidesComputedPosition() bool {
@@ -1640,6 +1931,40 @@ internal class LayoutFixtures {
     reconciler.Diff(node, second)
     layout.Calculate(node, 200.0F, 100.0F)
     return child.Rect.X == 0.0F && child.Rect.Y == 0.0F && child.Rect.H == 0.0F
+  }
+}
+
+internal class LayoutCauseFixtureCell : Cell {
+  internal let Expanded State[bool] = State[bool](false)
+  internal let Simulations List[LayoutFixtureSimulation] = List[LayoutFixtureSimulation]()
+  internal var ReadMetrics bool
+  internal var UseSized bool
+  private let transition LayoutTransition
+
+  internal init() {
+    transition = LayoutTransition{SimulationFactory: (from float64, to float64, velocity float64) -> {
+      let simulation = LayoutFixtureSimulation(from, to, velocity)
+      Simulations.Add(simulation)
+      return simulation
+    }}
+  }
+
+  override func Build() Blob {
+    if UseSized {
+      return Sized(size -> content(ReadMetrics ? size.Width * 0.1 : 0.0)){.Width: Percent(100), .Height: Percent(100)}
+    }
+    return content(ReadMetrics ? Host.Size.Width * 0.1 : 0.0)
+  }
+
+  private func content(responsive float64) Blob {
+    let firstWidth = (Expanded.Value ? 100.0 : 50.0) + responsive
+    return Container() {.Width: Percent(100), .Height: Percent(100), .AlignItems: AlignItems.FlexStart,
+      Container() {.Key: "parent", .Height: 40, .FlexDirection: FlexDirection.Row, .LayoutTransition: transition,
+        Container{Width: firstWidth, Height: 40, FlexShrink: 0},
+        Container{Key: "sibling", Width: 20, Height: 40, FlexShrink: 0, LayoutTransition: transition},
+      },
+      Container{Key: "environment", Width: Percent(50), Height: 20, LayoutTransition: transition},
+    }
   }
 }
 

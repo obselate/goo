@@ -29,6 +29,7 @@ internal class ScrollTopology {
 }
 
 internal partial class Layout {
+  internal var TransitionPhase LayoutTransitionPhase
   internal var config Facebook.Yoga.Config?
   internal var lastWidth float32
   internal var lastHeight float32
@@ -238,9 +239,6 @@ internal partial class Layout {
     } else if n.Kind == NodeKind.Shape {
       // Re-derive view-box aspect: ShapePath swaps land outside style writes.
       applyFlexLayout(yg, n, isRoot)
-    }
-    if n.Kind == NodeKind.Image {
-      ImageLayouts.Refresh(n)
     }
     if n.RetainedSizedState != nil {
       YGNodeAPI.YGNodeSetMeasureFunc(yg, SizedNodeState.Measure)
@@ -658,7 +656,7 @@ internal partial class Layout {
       let absX = originX + localX
       let absY = originY + localY
       let visual = LayoutTransitions.Resolve(n, absX, absY, localX, localY,
-        YGNodeLayoutAPI.YGNodeLayoutGetWidth(yg), YGNodeLayoutAPI.YGNodeLayoutGetHeight(yg))
+        YGNodeLayoutAPI.YGNodeLayoutGetWidth(yg), YGNodeLayoutAPI.YGNodeLayoutGetHeight(yg), TransitionPhase)
       n.Rect = visual
       let hiddenSubtree = hidden || n.Display == Display.None
       let editor = n.Kind == NodeKind.Editor
@@ -673,6 +671,9 @@ internal partial class Layout {
       n.PlacedScrollX = n.ScrollX
       n.PlacedScrollY = n.ScrollY
       if editor {
+        if !LayoutOrigin.Baseline && TransitionPhase != LayoutTransitionPhase.Staged {
+          n.EditorState?.AcceptPresentation()
+        }
         readEditorSlotRects(n, hiddenSubtree)
         n.HitContained = true
         return
