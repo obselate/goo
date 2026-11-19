@@ -218,7 +218,7 @@ class SvgRuntimeTests {
         let geometryType = typeof(VectorAsset).Assembly.GetType("Goo.PathGeometry")!!
         let geometry = geometryType.GetMethod("For", BindingFlags.Static | BindingFlags.NonPublic)!!.Invoke(
             nil,
-            []object? {node.ClipPath}
+            []object? {node.ClipPath, 1.0F}
         )!!
         let actualMinX = float32(
             geometryType.GetField("MinX", BindingFlags.Instance | BindingFlags.NonPublic)!!.GetValue(geometry)!!
@@ -240,7 +240,7 @@ class SvgRuntimeTests {
         let geometryFor = geometryType.GetMethod("For", BindingFlags.Static | BindingFlags.NonPublic)!!
         let contains = geometryType.GetMethod("Contains", BindingFlags.Instance | BindingFlags.NonPublic)!!
         let points = [](X float32, Expected bool){(X: 25f, Expected: true), (X: 35f, Expected: false)}
-        let childClip = geometryFor.Invoke(nil, []object? {asset.NodeAt(3).ClipPath})!!
+        let childClip = geometryFor.Invoke(nil, []object? {asset.NodeAt(3).ClipPath, 1.0F})!!
         Assert.Equal(
             0,
             geometryType.GetField("QuadraticCount", BindingFlags.Instance | BindingFlags.NonPublic)!!.GetValue(
@@ -253,7 +253,7 @@ class SvgRuntimeTests {
             for var index = 0; index < 3; index++ {
                 let node = asset.NodeAt(index)
                 x -= float32(node.Transform.TranslateX.Magnitude)
-                let geometry = geometryFor.Invoke(nil, []object? {node.ClipPath})!!
+                let geometry = geometryFor.Invoke(nil, []object? {node.ClipPath, 1.0F})!!
                 inside &= bool(contains.Invoke(geometry, []object? {x, 5f, node.ClipPathFillRule})!!)
             }
             Assert.Equal(point.Item2, inside)

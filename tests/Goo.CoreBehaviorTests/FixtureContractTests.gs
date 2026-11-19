@@ -605,6 +605,7 @@ class FixtureContractTests {
             yield Contract[ShapeGeometryFixtures]("ShapeRejectsLegacyPaintAndGradientStroke")
             yield Contract[ShapeGeometryFixtures]("VectorAssetRenderFitsDocumentViewBox")
             yield Contract[ShapeGeometryFixtures]("ArcSubdivisionIsTranslationInvariant")
+            yield Contract[ShapeGeometryFixtures]("EllipseFlatteningBoundsDeviceErrorAndEdgeCount")
             yield Contract[ShapeGeometryFixtures]("LoneMoveToContoursPreserveOtherStrokes")
             yield Contract[ShapeGeometryFixtures]("ReturningQuadraticStrokePreservesExcursionAndTrim")
             yield Contract[ShapeGeometryFixtures]("StrokeTrimUsesGlobalContourLengthAndHitGeometry")
