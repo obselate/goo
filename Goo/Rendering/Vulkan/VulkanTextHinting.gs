@@ -142,7 +142,8 @@ internal sealed class VulkanTextHinting : IDisposable {
         var extents = VulkanTextGlyphExtents{}
         hb_ot_metrics_get_position_with_fallback(font, VulkanTextTag("xhgt"), ref value)
         xHeight = if hb_font_get_nominal_glyph(font, uint32('x'), ref glyph) != 0u
-        && hb_font_get_glyph_extents(font, glyph, ref extents) != 0u && extents.YBearing > 0 {
+        && hb_font_get_glyph_extents(font, glyph, ref extents) != 0u
+        && extents.YBearing > 0 && extents.YBearing <= value {
             float32(extents.YBearing)
         } else { float32(value) }
         hb_ot_metrics_get_position_with_fallback(font, VulkanTextTag("cpht"), ref value)
