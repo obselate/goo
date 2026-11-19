@@ -728,7 +728,7 @@ Selects relative, absolute, or static positioning; static ignores inset offsets.
 ## `RadialGradient`
 
 
-Paints a circular gradient from a normalized center.
+Paints an elliptical gradient in box-normalized coordinates.
 
 ### `new(Color[])`
 
@@ -742,7 +742,7 @@ Creates a radial gradient from explicit geometry and stops.
 
 - `centerX`: The normalized horizontal center from 0 through 1.
 - `centerY`: The normalized vertical center from 0 through 1.
-- `radius`: The normalized radius above 0 and at most 1.
+- `radius`: The radius above 0 and at most 1, scaled separately by box width and height.
 - `stops`: At least two stops with non-decreasing offsets.
 
 ### `CenterX`
@@ -755,7 +755,7 @@ Gets the normalized vertical center from 0 through 1.
 
 ### `Radius`
 
-Gets the normalized radius above 0 and at most 1.
+Gets the normalized radius above 0 and at most 1. The horizontal radius is Radius times box width. The vertical radius is Radius times box height.
 
 ### `Stops`
 
@@ -1123,7 +1123,7 @@ Binds the outline color without rebuilding or changing layout.
 
 ### `OutlineOffset`
 
-Sets the signed pixel offset from the border edge. Positive values move the outline outward.
+Sets the signed pixel offset from the border edge. Positive values move the outline outward. Within non-scrolling clipping ancestors, a clipped outward outline moves inward onto the control. Where it meets a rounded clip corner, it takes that clip's padding-edge radius. Fitting stops at the nearest portal or visual transform. Axes with a scroll range or offset are not fitted.
 
 ### `OutlineWidth`
 

@@ -32,6 +32,7 @@ public class FileDialogOptions {
   /// Gets the optional title; empty uses the platform default.
   public prop Title string{ get; init; }
   /// Gets the initial absolute directory or full file path; include a filename for a save suggestion.
+  /// On Linux, OpenFile uses an existing file's parent folder. SaveFile keeps the filename suggestion.
   public prop InitialPath string{ get; init; }
   /// Gets whether open-file and folder dialogs may select multiple entries; save dialogs reject true.
   public prop Multiple bool{ get; init; }

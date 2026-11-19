@@ -81,6 +81,15 @@
         "upstreamSha256": "48b9cabe23f0a6b07654f2b7787535165695bd8bf563449088f0ab8ad7d842b2",
         "patchedSha256": "30430015be90e41c4f046daa463eb9d995341976c78e52868faa3f9a3dca5015",
         "description": "Skip empty PNG IDAT transfers without forming a pointer from a null data buffer."
+      },
+      {
+        "name": "stb-jpeg-repeated-scan",
+        "path": "tools/Goo.TextNative/patches/stb-image-2.30-jpeg-repeated-scan.patch",
+        "sha256": "6d5cea9e1744c18ecb0b8ed98e2f585df1e04369b5cad588b4c639970d4c72b1",
+        "upstreamPath": "src/stb_image.h",
+        "upstreamSha256": "30430015be90e41c4f046daa463eb9d995341976c78e52868faa3f9a3dca5015",
+        "patchedSha256": "e2ee323d4e21a96d08856f6f1a207e95b91d2f8133eb576266ac37b91a18ae51",
+        "description": "Reject repeated sequential JPEG scan components before decoding their pixels again."
       }
     ],
     "soname": {

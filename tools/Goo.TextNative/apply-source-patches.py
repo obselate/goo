@@ -31,14 +31,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", required=True, type=Path)
     parser.add_argument("--source-root", required=True, type=Path)
-    parser.add_argument("--patch-name", required=True, choices=("stb-gif-two-back", "stb-png-empty-idat"))
+    parser.add_argument("--patch-name", required=True, choices=("stb-gif-two-back", "stb-png-empty-idat", "stb-jpeg-repeated-scan"))
     args = parser.parse_args()
 
     manifest_path = args.manifest.resolve()
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     patches = manifest.get("build", {}).get("sourcePatches")
-    if not isinstance(patches, list) or {patch["name"] for patch in patches} != {"stb-gif-two-back", "stb-png-empty-idat"}:
-        raise SystemExit("expected stb_image GIF and PNG source patches")
+    if not isinstance(patches, list) or {patch["name"] for patch in patches} != {"stb-gif-two-back", "stb-png-empty-idat", "stb-jpeg-repeated-scan"}:
+        raise SystemExit("expected stb_image GIF, PNG and JPEG source patches")
     patch = next(patch for patch in patches if patch["name"] == args.patch_name)
     if not shutil.which("patch"):
         raise SystemExit("required command missing: patch")

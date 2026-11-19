@@ -106,6 +106,8 @@ private func hitCanTraverseMapped(n Node, x float32, y float32) bool {
 }
 
 private func hitCanTraverseChildrenMapped(n Node, x float32, y float32) bool {
+  if n.OverflowX != Overflow.Visible && n.OverflowY != Overflow.Visible
+    && !BoxGeometry.ContainsRounded(n, x, y) { return false }
   let left = BoxGeometry.ContentLeft(n)
   let top = BoxGeometry.ContentTop(n)
   if verticalScrollbarGutter(n) > 0.0F

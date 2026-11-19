@@ -19,6 +19,9 @@ internal data struct Transition {
   internal var ToShadows BoxShadowStack?
   internal var TargetShadows BoxShadowStack?
   internal var WorkingShadows BoxShadowStack?
+  internal var FromLength Length
+  internal var ToLength Length
+  internal var WorkingLength LengthDeclaration?
   internal var Easing Easing
   internal var Elapsed float64
   internal var Duration float64
@@ -419,6 +422,34 @@ internal partial class Resolver {
   // are off; otherwise starts (or retargets) a lerp from the displayed value.
   internal func writeField(n Node, e StyleEntry, initial bool) {
     if e.Payload is LengthDeclaration {
+      if !initial && Owner?.Preferences.ReducedMotion != true && n.TransitionMs > 0.0
+        && transitionSelected(n.TransitionSelection, e.Field)
+        && (e.Field == StyleField.TransformTranslateX || e.Field == StyleField.TransformTranslateY
+          || e.Field == StyleField.TransformOriginX || e.Field == StyleField.TransformOriginY) {
+        if let state = LengthDeclarations.Get(n) {
+          let target = (e.Payload as LengthDeclaration)!!.Value
+          for current in state.Values {
+            if current.Field != e.Field || current.Value.Unit != target.Unit { continue }
+            if let transitions = n.Transitions {
+              for transition in transitions {
+                if transition.Field == e.Field && transition.WorkingLength != nil
+                  && sameLength(transition.ToLength, target) { return }
+              }
+            }
+            if sameLength(current.Value, target) {
+              finishTransition(n, e.Field)
+              return
+            }
+            finishTransition(n, e.Field)
+            n.Transitions ??= List[Transition]()
+            n.Transitions!!.Add(Transition{Field: e.Field, FromLength: current.Value, ToLength: target,
+              WorkingLength: LengthDeclaration{Value: current.Value}, Easing: n.TransitionEasing,
+              Elapsed: -n.TransitionDelayMs / 1000.0, Duration: n.TransitionMs / 1000.0})
+            if !containsAnimating(n) { Animating.Add(NodeMount(n)) }
+            return
+          }
+        }
+      }
       if LengthDeclarations.Set(n, e, this) {
         recordResolvedChange(e.Field)
         pendingEffects = pendingEffects | ReconcileEffects.Layout
@@ -572,7 +603,21 @@ internal partial class Resolver {
         }
         let t = tr.Duration <= 0.0 ? 1.0 : Math.Min(1.0, tr.Elapsed / tr.Duration)
         let ft = float32(ease(tr.Easing, t))
-        if tr.Field == StyleField.BoxShadows {
+        if let working = tr.WorkingLength {
+          let from = tr.FromLength
+          let to = tr.ToLength
+          working.Value = Length{Unit: to.Unit,
+            Value: from.Value + (to.Value - from.Value) * ft,
+            PercentPart: from.PercentPart + (to.PercentPart - from.PercentPart) * ft,
+            EmPart: from.EmPart + (to.EmPart - from.EmPart) * ft,
+            RemPart: from.RemPart + (to.RemPart - from.RemPart) * ft,
+            VwPart: from.VwPart + (to.VwPart - from.VwPart) * ft,
+            VhPart: from.VhPart + (to.VhPart - from.VhPart) * ft}
+          if LengthDeclarations.Set(n, StyleEntry{Field: tr.Field, Payload: working}, this) {
+            recordResolvedChange(tr.Field)
+            pendingEffects = pendingEffects | ReconcileEffects.Layout
+          }
+        } else if tr.Field == StyleField.BoxShadows {
           guard let from = tr.FromShadows, let to = tr.ToShadows, let work = tr.WorkingShadows else {
             list.RemoveAt(ti - 1)
             continue
@@ -800,7 +845,14 @@ internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Acti
     case StyleField.ClipPath { ClipPaths.SetPath(n, entryPath(e)) }
     case StyleField.ClipPathFit { ClipPaths.SetFit(n, ShapeFit(int32(e.A))) }
     case StyleField.ClipPathFillRule { ClipPaths.SetFillRule(n, FillRule(int32(e.A))) }
-    case StyleField.BorderRadius { n.BorderRadius = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
+    case StyleField.BorderRadius {
+      let radius = Length{Unit: LengthUnit(int32(e.B)), Value: e.A}
+      n.BorderRadius = radius
+      n.BorderTopLeftRadius = radius
+      n.BorderTopRightRadius = radius
+      n.BorderBottomLeftRadius = radius
+      n.BorderBottomRightRadius = radius
+    }
     case StyleField.BorderTopLeftRadius { n.BorderTopLeftRadius = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
     case StyleField.BorderTopRightRadius { n.BorderTopRightRadius = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
     case StyleField.BorderBottomLeftRadius { n.BorderBottomLeftRadius = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }

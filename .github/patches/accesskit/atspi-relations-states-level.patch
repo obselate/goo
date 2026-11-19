@@ -1,0 +1,141 @@
+--- a/src/node.rs
++++ b/src/node.rs
+@@ -325,6 +325,18 @@
+         }
+         if state.is_multiselectable() {
+             atspi_state.insert(State::Multiselectable);
++        }
++        if let Some(expanded) = state.data().is_expanded() {
++            atspi_state.insert(State::Expandable);
++            if expanded {
++                atspi_state.insert(State::Expanded);
++            }
++        }
++        if state.data().invalid().is_some() {
++            atspi_state.insert(State::InvalidEntry);
++        }
++        if state.has_popup().is_some() {
++            atspi_state.insert(State::HasPopup);
+         }
+         if let Some(orientation) = state.orientation() {
+             atspi_state.insert(if orientation == Orientation::Horizontal {
+@@ -414,6 +426,9 @@
+ 
+     fn attributes(&self) -> HashMap<&'static str, String> {
+         let mut attributes = HashMap::new();
++        if let Some(level) = self.0.level() {
++            attributes.insert("level", (level + 1).to_string());
++        }
+         if let Some(placeholder) = self.placeholder() {
+             attributes.insert("placeholder-text", placeholder.to_string());
+         }
+@@ -963,14 +978,25 @@
+     ) -> Result<HashMap<RelationType, Vec<T>>> {
+         self.resolve(|node| {
+             let mut relations = HashMap::new();
+-            let controls: Vec<_> = node
+-                .controls()
+-                .filter(|controlled| filter(controlled) == FilterResult::Include)
+-                .map(|controlled| controlled.id())
+-                .map(f)
+-                .collect();
+-            if !controls.is_empty() {
+-                relations.insert(RelationType::ControllerFor, controls);
++            let (_, tree_id) = node.locate();
++            let error_message = node.data().error_message();
++            for (relation, ids) in [
++                (RelationType::ControllerFor, node.data().controls()),
++                (RelationType::LabelledBy, node.data().labelled_by()),
++                (RelationType::DescribedBy, node.data().described_by()),
++                (RelationType::NodeParentOf, node.data().owns()),
++                (RelationType::FlowsTo, node.data().flow_to()),
++                (RelationType::ErrorMessage, error_message.as_slice()),
++            ] {
++                let targets: Vec<_> = ids
++                    .iter()
++                    .filter_map(|id| node.tree_state.node_by_tree_local_id(*id, tree_id))
++                    .filter(|target| filter(target) == FilterResult::Include)
++                    .map(|target| f(target.id()))
++                    .collect();
++                if !targets.is_empty() {
++                    relations.insert(relation, targets);
++                }
+             }
+             Ok(relations)
+         })
+@@ -2029,3 +2055,75 @@
+     pub role: AtspiRole,
+     pub states: StateSet,
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use accesskit::{HasPopup, Invalid, Node, TreeInfo, TreeUpdate};
++    use crate::context::ActionHandlerNoMut;
++
++    struct ActionHandler;
++
++    impl ActionHandlerNoMut for ActionHandler {
++        fn do_action(&self, _: ActionRequest) {}
++    }
++
++    fn context(mut source: Node) -> Arc<Context> {
++        source.set_children(vec![NodeId(2), NodeId(3)]);
++        let mut hidden = Node::new(Role::Label);
++        hidden.set_hidden();
++        let tree = Tree::new(TreeUpdate {
++            nodes: vec![(NodeId(1), source), (NodeId(2), Node::new(Role::Label)), (NodeId(3), hidden)],
++            tree: Some(TreeInfo::new(NodeId(1))),
++            tree_id: TreeId::ROOT,
++            focus: NodeId(1),
++        }, false);
++        Context::new(&AppContext::new(None), tree, Arc::new(ActionHandler), WindowBounds::default())
++    }
++
++    #[test]
++    fn declared_relations_exclude_hidden_targets() {
++        let mut source = Node::new(Role::Heading);
++        for target in [NodeId(2), NodeId(3)] {
++            source.push_controlled(target);
++            source.push_labelled_by(target);
++            source.push_described_by(target);
++            source.push_owned(target);
++            source.push_flow_to(target);
++        }
++        source.set_error_message(NodeId(2));
++        let context = context(source);
++        let tree = context.read_tree();
++        let target = tree.state().node_by_tree_local_id(NodeId(2), TreeId::ROOT).unwrap().id();
++        let node = PlatformNode::new(&context, 0, tree.state().root_id());
++        drop(tree);
++        let relations = node.relation_set(|id| id).unwrap();
++        assert_eq!(relations.len(), 6);
++        for relation in [RelationType::ControllerFor, RelationType::LabelledBy,
++            RelationType::DescribedBy, RelationType::NodeParentOf,
++            RelationType::FlowsTo, RelationType::ErrorMessage] {
++            assert_eq!(relations[&relation], vec![target]);
++        }
++    }
++
++    #[test]
++    fn expanded_invalid_popup_and_level_are_exposed() {
++        for expanded in [true, false] {
++            let mut source = Node::new(Role::Heading);
++            source.set_expanded(expanded);
++            source.set_invalid(Invalid::True);
++            source.set_has_popup(HasPopup::Menu);
++            source.set_level(2);
++            let context = context(source);
++            let tree = context.read_tree();
++            let node = PlatformNode::new(&context, 0, tree.state().root_id());
++            drop(tree);
++            let state = node.state();
++            assert!(state.contains(State::Expandable));
++            assert_eq!(state.contains(State::Expanded), expanded);
++            assert!(state.contains(State::InvalidEntry));
++            assert!(state.contains(State::HasPopup));
++            assert_eq!(node.attributes().unwrap()["level"], "3");
++        }
++    }
++}

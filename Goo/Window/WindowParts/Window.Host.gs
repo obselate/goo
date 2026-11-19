@@ -86,10 +86,15 @@ public partial class Window {
   /// Creates the native window inside the display's usable bounds unless the declared minimum size exceeds them.
   /// Centers the window when no position is set, otherwise keeps the requested position inside those bounds.
   /// Where the platform reports frame extents before the first show, the decorated frame stays inside too.
+  /// A closed window cannot reopen. Create a new Window after closing.
   /// @returns this window after native initialization
   /// @exception GraphicsUnavailableException when Vulkan has no usable device, surface or required feature.
+  /// @exception InvalidOperationException when this window has started closing.
   public func Open() Window {
     requireUiThread("Window.Open")
+    if callbackClosing {
+      throw InvalidOperationException("A closed Window cannot be reopened. Create a new Window.")
+    }
     if IsOpen {
       WindowDiagnostics.AttachIfEnabled(this)
       return this
@@ -100,6 +105,7 @@ public partial class Window {
     ownerThreadRegistered = true
     uiThreadBound = true
     var initializingGraphics = false
+    var ownsStartupReport = false
     try {
       let captureStartup = Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1"
       let originTicks = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
@@ -108,6 +114,7 @@ public partial class Window {
       }
       prepare()
       constrainSize()
+      if VulkanDiagnostics.StartupReportEnabled { ownsStartupReport = VulkanStartupReport.Begin() }
       let sdlStart = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
       let native = createNativeHost()
       let sdlEnd = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
@@ -167,13 +174,19 @@ public partial class Window {
       schedulerSimulationBank = 0.0
       Window.RegisterLiveWindow(this)
       WindowDiagnostics.AttachIfEnabled(this)
+      if ownsStartupReport { VulkanStartupReport.Finish() }
       return this
     } catch (e Exception) {
+      if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.Finish(e) }
       try { Close() } catch (cleanup Exception) { }
+      if VulkanDiagnostics.StartupReportEnabled && e is GraphicsUnavailableException {
+        throw GraphicsUnavailableException(VulkanStartupReport.FailureMessage(e.Message), e)
+      }
       if initializingGraphics && (e is InvalidOperationException || e is PlatformNotSupportedException
         || e is System.Runtime.InteropServices.ExternalException || e is DllNotFoundException
         || e is EntryPointNotFoundException) {
-        throw GraphicsUnavailableException(e.Message, e)
+        throw GraphicsUnavailableException(
+          if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.FailureMessage(e.Message) } else { e.Message }, e)
       }
       rethrow
     }
@@ -195,7 +208,7 @@ public partial class Window {
       nativeWidth int32, nativeHeight int32) -> {
         queueNativeMetrics(logicalWidth, logicalHeight, nativeWidth, nativeHeight)
       }
-    native.DisplayChanged += notifications.RaiseDisplayChanged
+    native.DisplayChanged += () -> notifications.RaiseDisplayChanged()
     native.StateChanged += (value WindowState) -> {
       state = value
       requestRender()
