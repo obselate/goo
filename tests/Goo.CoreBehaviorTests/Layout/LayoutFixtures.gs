@@ -782,18 +782,20 @@ internal class LayoutFixtures {
       window.UpdateTree()
       baseline.UpdateTree()
       let oldHeight = baseline.Tree!!.Children[0].Rect.H
+      let oldSiblingY = baseline.Tree!!.Children[1].Rect.Y
       document.Apply(TextChange(TextRange(document.Length, 0), "\nsecond line\nthird line"))
       window.Size = LayoutSize(600, 200)
       window.UpdateTree()
       let editor = window.Tree!!.Children[0]
       let sibling = window.Tree!!.Children[1]
       if editor.Rect.W != 300.0F || editor.Rect.H != oldHeight
-        || sibling.Rect.Y != oldHeight || factories != 2 {
+        || sibling.Rect.Y != oldSiblingY || factories != 2 {
         throw InvalidOperationException("Retained text: ${editor.Rect.W}x${editor.Rect.H}, baseline=$oldHeight, sibling=${sibling.Rect.Y}, factories=$factories")
       }
       window.UpdateTree(1.0)
+      guard let siblingYoga = sibling.Yoga else { return false }
       return editor.Rect.H == BoxGeometry.LayoutHeight(editor) && editor.Rect.H > oldHeight
-        && sibling.Rect.Y == editor.Rect.H && factories == 2
+        && sibling.Rect.Y == YGNodeLayoutAPI.YGNodeLayoutGetTop(siblingYoga) && factories == 2
     } finally {
       baseline.Close()
       window.Close()
@@ -849,12 +851,17 @@ internal class LayoutFixtures {
   func LayoutTransitionEnvironmentContract() bool {
     let cell = LayoutCauseFixtureCell()
     let window = Window{Root: cell, Size: LayoutSize(400, 200)}
+    let baseline = Window{Root: LayoutCauseFixtureCell{Transitions: false}, Size: LayoutSize(400, 200)}
     try {
       window.UpdateTree()
+      baseline.UpdateTree()
+      let baselineTarget = baseline.Tree!!.Children[1]
       let target = window.Tree!!.Children[1]
       for frame in 0 ... 8 {
         window.Size = LayoutSize(400 + frame * 2, 200)
         window.UpdateTree(0.001)
+        baseline.Size = LayoutSize(400 + frame * 2, 200)
+        baseline.UpdateTree(0.001)
       }
       let before = GC.GetAllocatedBytesForCurrentThread()
       for frame in 0 ... 120 {
@@ -863,7 +870,16 @@ internal class LayoutFixtures {
         if target.Rect.W != BoxGeometry.LayoutWidth(target) { return false }
       }
       let allocated = GC.GetAllocatedBytesForCurrentThread() - before
-      if allocated != 0L { throw InvalidOperationException("Continuous resize allocated $allocated bytes") }
+      let baselineStart = GC.GetAllocatedBytesForCurrentThread()
+      for frame in 0 ... 120 {
+        baseline.Size = LayoutSize(400 + frame % 80 * 2, 200)
+        baseline.UpdateTree(0.001)
+        if baselineTarget.Rect.W != BoxGeometry.LayoutWidth(baselineTarget) { return false }
+      }
+      let baselineBytes = GC.GetAllocatedBytesForCurrentThread() - baselineStart
+      let added = allocated - baselineBytes
+      Console.WriteLine("resize-allocation: transitioned=$allocated baseline=$baselineBytes added=$added samples=120")
+      if added != 0L { throw InvalidOperationException("Continuous resize added $added bytes") }
       for frame in 0 ... 20 {
         window.UiScale = 1.0 + float64(frame % 4) * 0.25
         window.UpdateTree(0.001)
@@ -873,7 +889,10 @@ internal class LayoutFixtures {
       window.UpdateTree()
       return cell.Simulations.Count == 0 && target.Rect.X > 0.0F
         && target.Rect.W == BoxGeometry.LayoutWidth(target) && !window.PaintMotionPump.Active
-    } finally { window.Close() }
+    } finally {
+      baseline.Close()
+      window.Close()
+    }
   }
 
   func LayoutTransitionCauseAttributionContract() bool {
@@ -1939,6 +1958,7 @@ internal class LayoutCauseFixtureCell : Cell {
   internal let Simulations List[LayoutFixtureSimulation] = List[LayoutFixtureSimulation]()
   internal var ReadMetrics bool
   internal var UseSized bool
+  internal var Transitions bool = true
   private let transition LayoutTransition
 
   internal init() {
@@ -1958,12 +1978,13 @@ internal class LayoutCauseFixtureCell : Cell {
 
   private func content(responsive float64) Blob {
     let firstWidth = (Expanded.Value ? 100.0 : 50.0) + responsive
+    let motion LayoutTransition? = Transitions ? transition : nil
     return Container() {.Width: Percent(100), .Height: Percent(100), .AlignItems: AlignItems.FlexStart,
-      Container() {.Key: "parent", .Height: 40, .FlexDirection: FlexDirection.Row, .LayoutTransition: transition,
+      Container() {.Key: "parent", .Height: 40, .FlexDirection: FlexDirection.Row, .LayoutTransition: motion,
         Container{Width: firstWidth, Height: 40, FlexShrink: 0},
-        Container{Key: "sibling", Width: 20, Height: 40, FlexShrink: 0, LayoutTransition: transition},
+        Container{Key: "sibling", Width: 20, Height: 40, FlexShrink: 0, LayoutTransition: motion},
       },
-      Container{Key: "environment", Width: Percent(50), Height: 20, LayoutTransition: transition},
+      Container{Key: "environment", Width: Percent(50), Height: 20, LayoutTransition: motion},
     }
   }
 }

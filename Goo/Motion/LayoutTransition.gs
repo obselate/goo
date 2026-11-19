@@ -321,6 +321,7 @@ internal class LayoutTransitions {
   }
 }
 
+/// Hosts a Goo tree in a native window.
 public partial class Window {
   private var layoutTransitions LayoutTransitionState?
   internal prop DeferLayoutTargets bool {
