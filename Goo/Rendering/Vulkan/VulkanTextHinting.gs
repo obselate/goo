@@ -138,12 +138,16 @@ internal sealed class VulkanTextHinting : IDisposable {
     internal init(font nint, designScale int32) {
         units = float32(designScale)
         var value int32 = 0
-        hb_ot_metrics_get_position_with_fallback(font, VulkanTextTag("xhgt"), ref value)
-        xHeight = float32(value)
-        hb_ot_metrics_get_position_with_fallback(font, VulkanTextTag("cpht"), ref value)
-        capHeight = float32(value)
         var glyph uint32 = 0u
         var extents = VulkanTextGlyphExtents{}
+        hb_ot_metrics_get_position_with_fallback(font, VulkanTextTag("xhgt"), ref value)
+        xHeight = if hb_font_get_nominal_glyph(font, uint32('x'), ref glyph) != 0u
+        && hb_font_get_glyph_extents(font, glyph, ref extents) != 0u
+        && extents.YBearing > 0 && extents.YBearing <= value {
+            float32(extents.YBearing)
+        } else { float32(value) }
+        hb_ot_metrics_get_position_with_fallback(font, VulkanTextTag("cpht"), ref value)
+        capHeight = float32(value)
         if xHeight > 0.0F && hb_font_get_nominal_glyph(font, uint32('o'), ref glyph) != 0u
         && hb_font_get_glyph_extents(font, glyph, ref extents) != 0u
         && float32(extents.YBearing) >= xHeight && float32(extents.YBearing) <= xHeight + units * 0.025F {
