@@ -32,7 +32,9 @@ internal partial class NativeFileDialog {
     window = nativeWindow
     this.kind = kind
     title = options.Title
-    initialPath = options.InitialPath
+    initialPath = if OperatingSystem.IsLinux() && kind == FileDialogKind.OpenFile && File.Exists(options.InitialPath) {
+      Path.GetDirectoryName(options.InitialPath)!!
+    } else { options.InitialPath }
     multiple = options.Multiple
     filters = [options.Filters.Count]FileDialogFilter
     for i in 0 ... filters.Length { filters[i] = options.Filters[i] }
@@ -179,6 +181,11 @@ internal partial class NativeFileDialog {
         let error = SDL.GetErrorS() ?? "Native chooser failed"
         let unsupported = error.Contains("not built with dialog support", StringComparison.OrdinalIgnoreCase)
           || error.Contains("not supported", StringComparison.OrdinalIgnoreCase)
+          || error.Contains("org.freedesktop.DBus.Error.UnknownMethod:", StringComparison.Ordinal)
+          || error.Contains("org.freedesktop.DBus.Error.UnknownInterface:", StringComparison.Ordinal)
+          || error.Contains("org.freedesktop.DBus.Error.NotSupported:", StringComparison.Ordinal)
+          || error.Contains("org.freedesktop.DBus.Error.ServiceUnknown:", StringComparison.Ordinal)
+          || error.Contains("org.freedesktop.DBus.Error.NameHasNoOwner:", StringComparison.Ordinal)
         let tooLarge = error.Contains("exceeds", StringComparison.OrdinalIgnoreCase) || error.Contains("excessive", StringComparison.OrdinalIgnoreCase)
         return FileDialogResult(if unsupported { FileDialogStatus.Unsupported } else if tooLarge { FileDialogStatus.TooLarge } else { FileDialogStatus.Failed }, []string{}, error: error)
       }

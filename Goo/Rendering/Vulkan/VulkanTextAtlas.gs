@@ -85,6 +85,14 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
     }
   }
 
+  internal init(atlasByteSize VkDeviceSize) {
+    if atlasByteSize == 0uL || atlasByteSize > MaxAtlasBytes
+      || (atlasByteSize % AtlasTexelBytes) != 0uL {
+      throw ArgumentOutOfRangeException("atlasByteSize")
+    }
+    byteSize = atlasByteSize
+  }
+
   internal init(
     nativeDevice VkDevice,
     nativeDispatch VkDeviceDispatch,
@@ -296,6 +304,7 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
   }
 
   internal func Track(cache VulkanGpuCache, handle int32) {
+    if device == nint(0) { return }
     allocator.Track(atlasAllocation!!, cache, handle)
     allocator.Track(stagingAllocation!!, cache, handle)
   }
