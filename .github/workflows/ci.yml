@@ -206,7 +206,7 @@ jobs:
 
   plugin:
     needs: [changes, preflight, linux-x64]
-    if: ${{ !cancelled() && needs.changes.outputs.plugin == 'true' && needs.preflight.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.linux-x64.result) }}
+    if: ${{ !cancelled() && needs.changes.outputs.plugin == 'true' && needs.preflight.result == 'success' && (needs.linux-x64.result == 'success' || (needs.linux-x64.result == 'skipped' && needs.changes.outputs.full != 'true')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
