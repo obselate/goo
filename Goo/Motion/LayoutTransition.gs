@@ -325,7 +325,8 @@ internal class LayoutTransitions {
 public partial class Window {
   private var layoutTransitions LayoutTransitionState?
   internal prop DeferLayoutTargets bool {
-    get -> layoutTransitions != nil && layout.TransitionPhase == LayoutTransitionPhase.Immediate
+    get -> layoutTransitions != nil && !cellTransactionActive
+      && layout.TransitionPhase == LayoutTransitionPhase.Immediate
   }
 
   internal func AddLayoutTransition(state LayoutTransitionState) {

@@ -229,7 +229,7 @@ public partial class Window {
     }
     var changed = false
     let transitionFrame = layoutTransitions != nil
-    layout.TransitionPhase = transitionFrame ? LayoutTransitionPhase.Immediate : LayoutTransitionPhase.Application
+    layout.TransitionPhase = LayoutTransitionPhase.Immediate
     var continuationEffects = ReconcileEffects.None
     if transitionFrame {
       resolver.Advance(simDt)
@@ -622,7 +622,9 @@ public partial class Window {
       refreshSized(n)
     }
     layout.RefreshRects(n, portalRoot)
-    if !LayoutOrigin.Baseline { input.AfterTreeUpdated(n, resolver, true) }
+    if !LayoutOrigin.Baseline && layout.TransitionPhase != LayoutTransitionPhase.Staged {
+      input.AfterTreeUpdated(n, resolver, true)
+    }
   }
 
   private func drain(rec Reconciler) {

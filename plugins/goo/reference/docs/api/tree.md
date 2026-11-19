@@ -196,7 +196,7 @@ Set `output.AnchorKey` to the retained visible row key to keep its first survivi
 
 ## Animate computed bounds changes
 
-Set `Blob.LayoutTransition` to a `LayoutTransition(durationMs, easing)` value to glide a mounted element when its own computed layout position or size changes. Style `TransitionProperties` owns declared style values. The visual rectangle used by painting, hit testing, metrics and accessibility moves and resizes together. Descendants retain their final layout size and offset, without scaling, and follow the interpolated origin. A clipping element clips to its interpolated bounds. Ordinary scrolling and ancestor-only movement do not start another glide.
+Set `Blob.LayoutTransition` to a `LayoutTransition(durationMs, easing)` value to glide application changes to a mounted element's computed position and size. Resize, scale, resource updates and placement apply at once without restarting the animation. Style `TransitionProperties` owns declared style values. Painting, hit testing, metrics and accessibility use the same visual rectangle. Descendants keep their final layout size without scaling and follow the interpolated origin. A clipping element clips to its interpolated bounds. See [layout bounds simulations](motion.md#layout-bounds-simulations).
 
 ## Owned image sources
 
@@ -381,7 +381,7 @@ Gets explicit key bindings. Focused-element bindings override built-in text edit
 
 ### `LayoutTransition`
 
-Gets the opt-in transition for computed layout position and size changes.
+Gets the opt-in transition for application changes to computed layout position and size. Resize, scale, resources and placement do not start or restart it.
 
 ### `OnBlur`
 
