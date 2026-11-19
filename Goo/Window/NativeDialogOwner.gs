@@ -93,6 +93,9 @@ public partial class Window {
     accessibility?.MarkDirty()
     if IsOpen && host?.IsClosing != true && !state.Closing {
       RequestActivation()
+      if let native = host as SdlHost? {
+        if native.HasPopupKeyboardFocus { handleFocusChanged(true) }
+      }
       if let focused = previous?.Target as Node? {
         if !focused.Retired { FocusElement(focused) }
       }

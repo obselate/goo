@@ -473,6 +473,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
             SDL.SyncWindow(window)
           }
         }
+        if OperatingSystem.IsWindows() && popupParent != nil && popupKind == PopupKind.Menu {
+          SDL.HideWindow(window)
+        }
         SDL.DestroyWindow(window)
         window = SDLWindowPtr.Null
         windowHandle = nint(0)
