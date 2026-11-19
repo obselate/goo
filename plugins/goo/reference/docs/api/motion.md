@@ -216,7 +216,7 @@ Gets the current velocity in converter-coordinate units per second. A resting or
 ## `LayoutTransition`
 
 
-Describes an opt-in transition for application changes to computed bounds. Environment changes apply at once and preserve the current application offset and velocity.
+Describes an opt-in transition for application changes to computed bounds using DurationMs and Easing, or a custom SimulationFactory. Environment changes apply at once and preserve the current application offset and velocity.
 
 ### `SimulationFactory`
 

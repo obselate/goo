@@ -29,7 +29,7 @@ internal class LayoutOrigin {
 
 internal enum LayoutTransitionPhase { Application; Immediate; Staged }
 
-/// Describes an opt-in transition for application changes to computed bounds.
+/// Describes an opt-in transition for application changes to computed bounds using DurationMs and Easing, or a custom SimulationFactory.
 /// Environment changes apply at once and preserve the current application offset and velocity.
 public data struct LayoutTransition(DurationMs float64, Easing Easing) {
   /// Creates an optional simulation for each changed position or size axis. Omission uses DurationMs and Easing.
