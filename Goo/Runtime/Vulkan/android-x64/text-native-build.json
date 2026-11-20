@@ -60,7 +60,7 @@
       "runpath": [
         "$ORIGIN/"
       ],
-      "sha256": "e948e2ddbf586eb30d132212fb2a25db14ae18d05217d84402cb6ccf3974af29",
+      "sha256": "0738777319c5df360864094370234a1a776e8eb8712bb552ceea4368dd67a449",
       "soname": "libgoo-harfbuzz-gpu.so"
     },
     "harfbuzz": {
@@ -735,11 +735,11 @@
         "upstreamSha256": "48b9cabe23f0a6b07654f2b7787535165695bd8bf563449088f0ab8ad7d842b2"
       },
       {
-        "description": "Reject repeated sequential JPEG scan components and cap progressive JPEGs at 64 scans.",
+        "description": "Reject repeated sequential JPEG scan components and cap progressive JPEGs at 500 scans.",
         "name": "stb-jpeg-repeated-scan",
-        "patchedSha256": "518a8067979157d4460df7958c02b5152382e042934f3cb99e4520eccaef8489",
+        "patchedSha256": "3ca3f931bb7e4500c6abf22f09874cc01704181b75d5ff81addb9acb757de76a",
         "path": "tools/Goo.TextNative/patches/stb-image-2.30-jpeg-repeated-scan.patch",
-        "sha256": "edf4b7f751c42d717755cd891039fc69e64dccbe60800d4738df97e8b8a8fe45",
+        "sha256": "a8f19196eb5ed73d1dd2a8955caac0cc99e42f7ec04eda9a09841dd8db6d87f4",
         "upstreamPath": "src/stb_image.h",
         "upstreamSha256": "30430015be90e41c4f046daa463eb9d995341976c78e52868faa3f9a3dca5015"
       }
