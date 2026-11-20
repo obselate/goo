@@ -4,6 +4,13 @@ import Hexa.NET.SDL3
 import System.Runtime.InteropServices
 
 internal unsafe partial class SdlHost {
+  private let waylandWindowProperties uint32
+
+  internal prop ResizeConstraints WindowResizeConstraints{
+    get -> if waylandWindowProperties == 0u || disposed { WindowResizeConstraints.None }
+      else { WindowResizeConstraints(NativeNumber(waylandWindowProperties, "Goo.Window.ResizeConstraints.1", 0L)) }
+  }
+
   shared {
     @DllImport("SDL3", EntryPoint: "SDL_GetNumberProperty", CallingConvention: CallingConvention.Cdecl)
     private func NativeNumber(properties uint32, name string, fallback int64) int64;

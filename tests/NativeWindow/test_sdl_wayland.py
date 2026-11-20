@@ -23,7 +23,9 @@ def function(source, name):
 
 
 root = Path(sys.argv[1]) / "src/video/wayland"
-handlers = function((root / "SDL_waylandevents.c").read_text(), "Wayland_ProcessHitTest(")
+events = (root / "SDL_waylandevents.c").read_text()
+handlers = function(events, "pointer_update_hit_test(")
+handlers += "\n" + function(events, "Wayland_ProcessHitTest(")
 handlers += "\n" + function((root / "SDL_waylandwindow.c").read_text(), "handle_xdg_surface_configure(")
 handlers += "\n" + function((root / "SDL_waylandwindow.c").read_text(), "Wayland_CanDeferFirstShow(")
 harness = Path(__file__).with_name("wayland_harness.c").read_text()
