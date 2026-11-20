@@ -1,0 +1,1 @@
+- Fix rendering of rounded Shape corners and non-uniform premultiplied external images.
