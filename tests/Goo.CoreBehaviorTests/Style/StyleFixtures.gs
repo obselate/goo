@@ -20,6 +20,15 @@ internal class StyleFixtures {
     } finally { NodeLifecycle.DisposeTree(node) }
   }
 
+  func BorderRadiusReorderRestoresShorthandCornerContract() bool {
+    let reconciler = Reconciler{Res: Resolver{}}
+    let node = reconciler.Mount(Container{BorderRadius: 9, BorderTopLeftRadius: 4})
+    try {
+      reconciler.Diff(node, Container{BorderTopLeftRadius: 4, BorderRadius: 9})
+      return node.BorderTopLeftRadius.Value == 9
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
   func BorderRadiusTransitionPreservesZeroCornerContract() bool {
     let resolver = Resolver{}
     let reconciler = Reconciler{Res: resolver}
