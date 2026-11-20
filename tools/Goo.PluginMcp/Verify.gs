@@ -123,7 +123,8 @@ shared class Verify {
             ),
             bundled
         )
-        Check(S(provenance, "compilerVersion") == "0.5.698", provenance)
+        let configuration = JsonNode.Parse(File.ReadAllText(Path.Combine(root, "../../global.json")))!!
+        Check(S(provenance, "compilerVersion") == S(configuration["msbuild-sdks"]!!, "Gsharp.NET.Sdk"), provenance)
         let searchResult = await Call(client, "cellSearch")
         let search = Data(searchResult)
         Check(
@@ -428,7 +429,7 @@ shared class Verify {
                     "templates/Goo.Templates/content/Program.gs",
                     "templates/Goo.Templates/content/Properties/PublishProfiles/NativeAot.pubxml",
                     "templates/Goo.Templates/content/Properties/PublishProfiles/Trimmed.pubxml",
-                    "templates/Goo.Templates/content/global.json"
+                    "templates/Goo.Templates/content/global.json.in"
                 }
             ),
             starter
@@ -450,6 +451,7 @@ shared class Verify {
             ),
             starter
         )
+        File.Copy(Path.Combine(root, "../../global.json"), Path.Combine(checkout, "global.json"))
         for source in provenance["sourceFiles"]!!.AsObject() {
             let path = Path.Combine(checkout, source.Key)
             Directory.CreateDirectory(Path.GetDirectoryName(path)!!)

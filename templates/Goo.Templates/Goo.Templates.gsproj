@@ -19,8 +19,24 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="content/**/*.gs" />
-    <Content Include="content/**/*" Exclude="content/**/bin/**;content/**/obj/**" Pack="true" PackagePath="content" />
+    <Content Include="content/**/*" Exclude="content/global.json.in;content/**/*.gsproj;content/**/bin/**;content/**/obj/**" Pack="true" PackagePath="content" />
     <None Update="README.md" Pack="true" PackagePath="/" />
     <None Include="$(MSBuildProjectDirectory)/../../LICENSE" Pack="true" PackagePath="/" />
   </ItemGroup>
+  <Target Name="PrepareTemplateProjects" BeforeTargets="_GetPackageFiles">
+    <Error Condition="'$(GsharpSdkVersion)' == ''" Text="The template package requires a versioned Gsharp.NET.Sdk." />
+    <RemoveDir Directories="$(IntermediateOutputPath)template" />
+    <ItemGroup>
+      <_TemplateProject Include="content/**/*.gsproj" Exclude="content/**/bin/**;content/**/obj/**" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_TemplateProject)"
+          DestinationFiles="@(_TemplateProject->'$(IntermediateOutputPath)template/%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="content/global.json.in" DestinationFiles="$(IntermediateOutputPath)template/global.json" />
+    <ItemGroup>
+      <_PackedTemplateProject Include="$(IntermediateOutputPath)template/**/*.gsproj" />
+      <Content Include="$(IntermediateOutputPath)template/**/*" Pack="true" PackagePath="content" />
+    </ItemGroup>
+    <XmlPoke XmlInputPath="%(_PackedTemplateProject.Identity)"
+             Query="/Project/@Sdk" Value="Gsharp.NET.Sdk/$(GsharpSdkVersion)" />
+  </Target>
 </Project>
