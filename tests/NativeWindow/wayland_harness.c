@@ -8,12 +8,20 @@
 typedef uint64_t Uint64;
 typedef uint32_t Uint32;
 typedef struct { int x, y; } SDL_Point;
-typedef struct { unsigned id, flags; bool hit_test; void *internal; } SDL_Window;
+typedef int SDL_HitTestResult;
+typedef struct SDL_Window SDL_Window;
+struct SDL_Window {
+    unsigned id, flags;
+    SDL_HitTestResult (*hit_test)(SDL_Window *, const SDL_Point *, void *);
+    void *hit_test_data;
+    void *internal;
+};
 typedef struct { unsigned double_click_time; int double_click_radius; } SDL_Mouse;
 struct xdg_surface { int unused; };
 typedef struct {
     SDL_Window *sdlwindow;
     int hit_test_result, shell_surface_type, shell_surface_status;
+    Uint32 toplevel_constraints;
     bool resizing, pending_config_ack;
     bool has_been_shown, show_hide_sync_required;
     struct { struct { unsigned serial; struct { void *xdg_toplevel; } toplevel; } xdg; } shell_surface;
@@ -32,6 +40,8 @@ enum { SDL_HITTEST_NORMAL, SDL_HITTEST_DRAGGABLE, SDL_HITTEST_RESIZE_TOPLEFT,
     SDL_HITTEST_RESIZE_TOP, SDL_HITTEST_RESIZE_TOPRIGHT, SDL_HITTEST_RESIZE_RIGHT,
     SDL_HITTEST_RESIZE_BOTTOMRIGHT, SDL_HITTEST_RESIZE_BOTTOM,
     SDL_HITTEST_RESIZE_BOTTOMLEFT, SDL_HITTEST_RESIZE_LEFT };
+enum { WAYLAND_TOPLEVEL_CONSTRAINED_LEFT = 1, WAYLAND_TOPLEVEL_CONSTRAINED_RIGHT = 2,
+    WAYLAND_TOPLEVEL_CONSTRAINED_TOP = 4, WAYLAND_TOPLEVEL_CONSTRAINED_BOTTOM = 8 };
 enum { XDG_TOPLEVEL_RESIZE_EDGE_TOP_LEFT, XDG_TOPLEVEL_RESIZE_EDGE_TOP,
     XDG_TOPLEVEL_RESIZE_EDGE_TOP_RIGHT, XDG_TOPLEVEL_RESIZE_EDGE_RIGHT,
     XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM_RIGHT, XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM,
@@ -44,6 +54,15 @@ enum { SDL_WINDOW_RESIZABLE = 1, SDL_WINDOW_MAXIMIZED = 2, SDL_WINDOW_FULLSCREEN
 #define SDL_abs abs
 static SDL_Mouse mouse = { 500, 8 };
 static int moves, resizes, maximizes, restores, exposes, geometries, acks;
+static SDL_HitTestResult pointer_hit = SDL_HITTEST_DRAGGABLE;
+static SDL_HitTestResult hit_test(SDL_Window *w, const SDL_Point *point, void *data)
+{
+    (void)w;
+    (void)point;
+    (void)data;
+    return pointer_hit;
+}
+static void Wayland_SeatUpdatePointerCursor(SDL_WaylandSeat *seat) { (void)seat; }
 static bool callback_handles;
 static bool nonblocking_first_show, configure_pending;
 static int callback_count, callback_x, callback_y;
@@ -77,7 +96,7 @@ static void SDL_SendWindowEvent(SDL_Window *w, int event, int x, int y) { (void)
 
 int main(void)
 {
-    SDL_Window window = { .id = 1, .flags = SDL_WINDOW_RESIZABLE, .hit_test = true };
+    SDL_Window window = { .id = 1, .flags = SDL_WINDOW_RESIZABLE, .hit_test = hit_test };
     SDL_WindowData data = { .sdlwindow = &window, .hit_test_result = SDL_HITTEST_DRAGGABLE,
         .shell_surface_type = WAYLAND_SHELL_SURFACE_TYPE_XDG_TOPLEVEL };
     data.shell_surface.xdg.toplevel.xdg_toplevel = &window;
@@ -108,9 +127,9 @@ int main(void)
     seat.pointer.last_motion.x += 20;
     Wayland_ProcessHitTest(&seat, 8, SDL_MS_TO_NS(2700), true);
     assert(maximizes == 1); /* distant clicks */
-    data.hit_test_result = SDL_HITTEST_NORMAL;
+    pointer_hit = SDL_HITTEST_NORMAL;
     assert(!Wayland_ProcessHitTest(&seat, 9, SDL_MS_TO_NS(2750), true));
-    data.hit_test_result = SDL_HITTEST_DRAGGABLE;
+    pointer_hit = SDL_HITTEST_DRAGGABLE;
     Wayland_ProcessHitTest(&seat, 10, SDL_MS_TO_NS(2800), true);
     assert(maximizes == 1); /* client content interrupts the pair */
     window.id = 2;
@@ -140,14 +159,20 @@ int main(void)
     Wayland_ProcessHitTest(&seat, 20, SDL_MS_TO_NS(6100), true);
     assert(callback_count == 3 && maximizes == 2); /* host callback can act on fixed-size windows */
     for (int edge = SDL_HITTEST_RESIZE_TOPLEFT; edge <= SDL_HITTEST_RESIZE_LEFT; ++edge) {
-        data.hit_test_result = edge;
+        pointer_hit = edge;
         Wayland_ProcessHitTest(&seat, 15, SDL_MS_TO_NS(3200), true);
         Wayland_ProcessHitTest(&seat, 16, SDL_MS_TO_NS(3250), false);
     }
     assert(resizes == 8);
-    seat.pointer.locked_pointer = true;
+    data.toplevel_constraints = WAYLAND_TOPLEVEL_CONSTRAINED_LEFT;
     assert(!Wayland_ProcessHitTest(&seat, 17, SDL_MS_TO_NS(3300), true));
-    assert(resizes == 8);
+    assert(data.hit_test_result == SDL_HITTEST_NORMAL && resizes == 8);
+    data.toplevel_constraints = 0;
+    assert(Wayland_ProcessHitTest(&seat, 18, SDL_MS_TO_NS(3350), true));
+    assert(data.hit_test_result == SDL_HITTEST_RESIZE_LEFT && resizes == 9);
+    seat.pointer.locked_pointer = true;
+    assert(!Wayland_ProcessHitTest(&seat, 19, SDL_MS_TO_NS(3400), true));
+    assert(resizes == 9);
 
     struct xdg_surface surface = {0};
     data.resizing = true;
