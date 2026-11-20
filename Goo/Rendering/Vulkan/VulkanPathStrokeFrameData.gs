@@ -8,12 +8,17 @@ private data struct PathStrokeMetricKey(Id uint64, Revision uint64, A float32, B
 
 private class PathStrokeDashWords {
     internal let Words[]uint32
-    internal let Total float32
+    internal var Total float32
+    internal var Revision uint64
     internal var Offset int32 = -1
     internal var Frame uint64
 
     internal init(pattern DashPattern) {
         Words = [pattern.Intervals.Count]uint32
+        Refresh(pattern)
+    }
+
+    internal func Refresh(pattern DashPattern) {
         var total = 0.0F
         for index in 0 ... Words.Length {
             let interval = float32(pattern.Intervals[index])
@@ -21,6 +26,7 @@ private class PathStrokeDashWords {
             total += interval
         }
         Total = total
+        Revision = pattern.Revision
     }
 }
 
@@ -206,9 +212,13 @@ internal unsafe class VulkanPathStrokeFrameData : IDisposable {
             return found
         }
         let packed = dashWords.GetValue(pattern, (value) -> PathStrokeDashWords(value))
+        let changed = packed.Revision != pattern.Revision
+        if changed {
+            packed.Refresh(pattern)
+        }
         let count = packed.Words.Length
         let offset = Reserve(count)
-        if packed.Offset != offset || packed.Frame + 1uL != frame {
+        if changed || packed.Offset != offset || packed.Frame + 1uL != frame {
             Array.Copy(packed.Words, 0, words, offset, count)
             packed.Offset = offset
         }

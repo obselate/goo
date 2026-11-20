@@ -5,7 +5,7 @@ import System.Collections.Generic
 
 internal enum FieldKind {
   KLength; KColor; KScalar; KEnum; KString; KGradient; KBoxShadows; KPath;
-  KImageSource; KShaderEffect; KScrollbar
+  KImageSource; KShaderEffect; KScrollbar; KDashes; KFloat64
 }
 
 @Flags
@@ -158,18 +158,20 @@ private func createStyleFieldInfo() []StyleFieldInfo {
       init | inherit, StyleEntry{ Field: StyleField.TextAlign,
         A: float32(int32(TextAlign.Start)) }),
     styleFieldInfo(StyleField.BackgroundGradient, FieldKind.KGradient,
-      ReconcileEffects.Paint, init),
+      ReconcileEffects.Paint, lerp | init),
     styleFieldInfo(StyleField.Cursor, FieldKind.KEnum, ReconcileEffects.Input, inherit),
     styleFieldInfo(StyleField.ZIndex, FieldKind.KEnum, paintInput, StyleFieldFlags.None),
     styleFieldInfo(StyleField.TextWrap, FieldKind.KEnum, layoutPaint, init | inherit),
     styleFieldInfo(StyleField.TextTrimming, FieldKind.KEnum, layoutPaint, init),
     styleFieldInfo(StyleField.TextTransform, FieldKind.KEnum, layoutPaint, init | inherit),
     styleFieldInfo(StyleField.OutlineWidth, FieldKind.KLength,
-      ReconcileEffects.Paint, StyleFieldFlags.None),
+      ReconcileEffects.Paint, lerp,
+      StyleEntry{Field: StyleField.OutlineWidth, B: float32(int32(LengthUnit.Px))}),
     styleFieldInfo(StyleField.OutlineColor, FieldKind.KColor,
-      ReconcileEffects.Paint, StyleFieldFlags.None),
+      ReconcileEffects.Paint, lerp),
     styleFieldInfo(StyleField.OutlineOffset, FieldKind.KLength,
-      ReconcileEffects.Paint, StyleFieldFlags.None),
+      ReconcileEffects.Paint, lerp,
+      StyleEntry{Field: StyleField.OutlineOffset, B: float32(int32(LengthUnit.Px))}),
     styleFieldInfo(StyleField.Visibility, FieldKind.KEnum, paintInput, init),
     styleFieldInfo(StyleField.TextDecoration, FieldKind.KEnum,
       ReconcileEffects.Paint, init | inherit),
@@ -189,14 +191,15 @@ private func createStyleFieldInfo() []StyleFieldInfo {
       StyleEntry{ Field: StyleField.TransformOriginY, A: 50.0F,
         B: float32(int32(LengthUnit.Percent)) }),
     styleFieldInfo(StyleField.TextShadows, FieldKind.KBoxShadows,
-      ReconcileEffects.Paint, inherit),
+      ReconcileEffects.Paint, lerp | inherit),
     styleFieldInfo(StyleField.ShapeStrokeWidth, FieldKind.KLength, layoutPaint, lerp | init),
     styleFieldInfo(StyleField.ShapeStrokeColor, FieldKind.KColor, paintInput, lerp | init),
     styleFieldInfo(StyleField.TextMaxLines, FieldKind.KEnum, layoutPaint, init),
     styleFieldInfo(StyleField.TextStrokeWidth, FieldKind.KLength,
-      ReconcileEffects.Paint, inherit),
+      ReconcileEffects.Paint, lerp | inherit,
+      StyleEntry{Field: StyleField.TextStrokeWidth, B: float32(int32(LengthUnit.Px))}),
     styleFieldInfo(StyleField.TextStrokeColor, FieldKind.KColor,
-      ReconcileEffects.Paint, inherit),
+      ReconcileEffects.Paint, lerp | inherit),
     styleFieldInfo(StyleField.Direction, FieldKind.KEnum, layoutPaint, init | inherit),
     styleFieldInfo(StyleField.MarginStart, FieldKind.KLength, layoutPaint, logical | lerp),
     styleFieldInfo(StyleField.MarginEnd, FieldKind.KLength, layoutPaint, logical | lerp),
@@ -244,8 +247,18 @@ private func createStyleFieldInfo() []StyleFieldInfo {
     styleFieldInfo(StyleField.Language, FieldKind.KString, layoutPaint, init | inherit,
       StyleEntry{ Field: StyleField.Language, Payload: "" }),
     styleFieldInfo(StyleField.BackdropBlur, FieldKind.KScalar, ReconcileEffects.Paint, lerp | init),
+    styleFieldInfo(StyleField.ShapeCornerRadius, FieldKind.KFloat64, paintInput, lerp),
+    styleFieldInfo(StyleField.StrokeStart, FieldKind.KFloat64, paintInput, lerp),
+    styleFieldInfo(StyleField.StrokeEnd, FieldKind.KFloat64, paintInput, lerp,
+      float64StyleEntry(StyleField.StrokeEnd, 1.0)),
+    styleFieldInfo(StyleField.MiterLimit, FieldKind.KFloat64, paintInput, lerp,
+      float64StyleEntry(StyleField.MiterLimit, 4.0)),
+    styleFieldInfo(StyleField.DashOffset, FieldKind.KFloat64, paintInput, lerp),
+    styleFieldInfo(StyleField.DashIntervals, FieldKind.KDashes, paintInput, lerp),
+    styleFieldInfo(StyleField.SelectionColor, FieldKind.KColor, ReconcileEffects.Paint, lerp),
+    styleFieldInfo(StyleField.CaretColor, FieldKind.KColor, ReconcileEffects.Paint, lerp),
   }
-  let expected = int32(StyleField.BackdropBlur) + 1
+  let expected = int32(StyleField.CaretColor) + 1
   if result.Length != expected {
     throw InvalidOperationException("StyleField metadata count mismatch")
   }

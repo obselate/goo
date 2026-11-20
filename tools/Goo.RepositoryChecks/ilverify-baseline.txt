@@ -833,7 +833,7 @@
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.TextGeometry::SelectionRectCount(int32, int32)][offset 0x00000026] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.TextGeometry::SelectionRects(int32, int32)][offset 0x00000061] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.TextGeometryQueries::copyEditorRange([Goo]Goo.Node, [Goo]Goo.TextRange, [Goo]Goo.TextCoordinateSpace, [S.P.CoreLib]System.Span`1<Goo.ElementRect>, int32&)][offset 0x000000B2] Instruction cannot be verified.
-[IL]: Error [Unverifiable]: [Goo.dll : Goo.TextGeometryQueries::copyEntryRange([Goo]Goo.Node, [Goo]Goo.TextRange, [Goo]Goo.TextCoordinateSpace, [S.P.CoreLib]System.Span`1<Goo.ElementRect>, int32&)][offset 0x000000F5] Instruction cannot be verified.
+[IL]: Error [Unverifiable]: [Goo.dll : Goo.TextGeometryQueries::copyEntryRange([Goo]Goo.Node, [Goo]Goo.TextRange, [Goo]Goo.TextCoordinateSpace, [S.P.CoreLib]System.Span`1<Goo.ElementRect>, int32&)][offset 0x000000F6] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.TextGeometryQueries::copyStaticRange([Goo]Goo.Node, [Goo]Goo.TextRange, [Goo]Goo.TextCoordinateSpace, [S.P.CoreLib]System.Span`1<Goo.ElementRect>, int32&)][offset 0x000000CC] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanClipMaskAtlas::PackedLayerCount(uint32, uint32, uint32, uint32, uint32, bool, bool)][offset 0x0000000D] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanClipMaskFrameData::CreateDescriptorResources()][offset 0x0000000D] Instruction cannot be verified.
@@ -856,7 +856,7 @@
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanStartupReport::TryLoad(string, native int&)][offset 0x00000104] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanSwapchainGeneration::Create(int32, int32, uint64, [Goo]Goo.VulkanDiagnostics)][offset 0x0000002C] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanTextFrameData::CreateDescriptorResources()][offset 0x0000003D] Instruction cannot be verified.
-[IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanTextScene::EmitText([Goo]Goo.SceneFrame, [Goo]Goo.Node, float32, int32, bool&)][offset 0x00000080] Instruction cannot be verified.
+[IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanTextScene::EmitText([Goo]Goo.SceneFrame, [Goo]Goo.Node, float32, int32, bool&)][offset 0x00000081] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanWindowTarget::CreateCommandResources()][offset 0x000000C8] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanWindowTarget::CreateInstance()][offset 0x00000212] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.WaylandBackdrop::AddRectangle(native int, int32, int32, int32, int32)][offset 0x00000028] Instruction cannot be verified.

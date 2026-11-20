@@ -174,6 +174,19 @@ internal func hexValue(value char) int32 {
   return if value >= 'A' && value <= 'F' { int32(value) - int32('A') + 10 } else { -1 }
 }
 
+internal func interpolateStyleColor(from Color, to Color, t float32) Color {
+  let a = from.A * (1.0F - t)
+  let b = to.A * t
+  let alpha = a + b
+  return if alpha <= 0.0F {
+    Color.FromNormalized(from.R + (to.R - from.R) * t,
+      from.G + (to.G - from.G) * t, from.B + (to.B - from.B) * t, 0.0F)
+  } else {
+    Color.FromNormalized((from.R * a + to.R * b) / alpha,
+      (from.G * a + to.G * b) / alpha, (from.B * a + to.B * b) / alpha, alpha)
+  }
+}
+
 internal func parseNamedColor(value string) Color? {
   switch value {
     case "aliceblue" { return Color.Rgb(240, 248, 255) }

@@ -41,6 +41,78 @@ class ImagePublicationTests {
     @Theory
     @InlineData(false)
     @InlineData(true)
+    func ImageCompletionDoesNotBecomeApplicationLayout(beforeBuild bool) {
+        using let first = ImageSource(20, 10, [800]uint8)
+        using let next = ImageSource(80, 40, [12800]uint8)
+        let provider = ReplaceableProvider(first)
+        let root = LayoutImageRoot(provider)
+        let window = Window{Root: root, Size: LayoutSize(200, 200)}
+        try {
+            window.UpdateTree()
+            let image = window.Tree!!.Children[0]
+            let sibling = window.Tree!!.Children[1]
+            if beforeBuild { provider.Replace(next) }
+            else { root.Publish = () -> provider.Replace(next) }
+            root.Wide.Value = true
+            window.UpdateTree()
+            Assert.Equal(beforeBuild ? 80.0F : 20.0F, image.Rect.W)
+            Assert.Equal(beforeBuild ? 40.0F : 10.0F, sibling.Rect.Y)
+            Assert.Equal(1, root.Factories)
+            window.UpdateTree()
+            Assert.Equal(80.0F, image.Rect.W)
+            Assert.Equal(40.0F, sibling.Rect.Y)
+            Assert.Equal(1, root.Factories)
+            window.UpdateTree(1.0)
+            Assert.Equal(100.0F, sibling.Rect.W)
+        } finally { window.Close() }
+    }
+
+    @Fact
+    func AsyncIntrinsicCompletionDoesNotStartBoundsMotion() {
+        let completion = TaskCompletionSource[ImageSource](TaskCreationOptions.RunContinuationsAsynchronously)
+        using let source = AsyncImageSource(token -> completion.Task)
+        let root = LayoutImageRoot(source)
+        let window = Window{Root: root, Size: LayoutSize(200, 200)}
+        try {
+            window.UpdateTree()
+            using let probe = source.Acquire()
+            using let ready = ManualResetEventSlim()
+            using let registration = probe.OnCompleted(() -> ready.Set())
+            completion.SetResult(ImageSource(80, 40, [12800]uint8))
+            Assert.True(ready.Wait(5000))
+            window.drainPostedActions()
+            root.Wide.Value = true
+            window.UpdateTree()
+            Assert.Equal(80.0F, window.Tree!!.Children[0].Rect.W)
+            Assert.Equal(40.0F, window.Tree!!.Children[1].Rect.Y)
+            Assert.Equal(1, root.Factories)
+        } finally { window.Close() }
+    }
+
+    private class LayoutImageRoot(source ImageSourceProvider) : Cell {
+        let Wide State[bool] = State[bool](false)
+        var Factories int32
+        var Publish Action?
+
+        override func Build() Blob {
+            if let publish = Publish {
+                Publish = nil
+                publish()
+            }
+            let transition = LayoutTransition{SimulationFactory: (from float64, to float64, velocity float64) -> {
+                Factories++
+                return LinearTimed(1.0, from, to, Easing.Linear)
+            }}
+            return Container{Width: Percent(100), Height: Percent(100), AlignItems: AlignItems.FlexStart,
+                Image{Source: source, LayoutTransition: transition},
+                Container{Width: Wide.Value ? 100 : 50, Height: 20, LayoutTransition: transition},
+            }
+        }
+    }
+
+    @Theory
+    @InlineData(false)
+    @InlineData(true)
     func PendingLoadCancelsWhenUnmountedOrReplaced(replace bool) {
         let completion = TaskCompletionSource[ImageSource](TaskCreationOptions.RunContinuationsAsynchronously)
         using let started = ManualResetEventSlim()

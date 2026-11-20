@@ -40,6 +40,10 @@ internal class TextStroking {
       return nil
     }
 
+    internal func PrepareTransition(n Node) {
+      if Get(n) == nil { add(n, TextStrokeValue{}) }
+    }
+
     internal func SetWidth(n Node, width Length) {
       let normalized = width.Unit == LengthUnit.Px && width.Value == 0.0F ? Length{} : width
       if let value = Get(n) {

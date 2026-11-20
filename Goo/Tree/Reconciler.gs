@@ -42,6 +42,7 @@ internal partial class Reconciler {
   internal prop DeferStyleFlush bool{ get; init; }
   internal prop Pump MotionPump? { get; init; }
   internal var Effects ReconcileEffects
+  internal var CauseFilter LayoutCause
   internal var ProfileBuildTicks int64
   internal var ProfileBuildBytes int64
   internal var ProfileBuildCalls int64
@@ -534,10 +535,9 @@ internal partial class Reconciler {
       MarkEffects(ReconcileEffects.Input)
       MarkEffects(ReconcileEffects.Paint)
     }
-    if t.Selectable && !n.SelectionColor.Equals(t.SelectionColor) {
-      n.SelectionColor = t.SelectionColor
-      n.BumpScenePaintVersion()
-      MarkEffects(ReconcileEffects.Paint)
+    if t.Selectable {
+      Res.writeField(n, StyleEntry{Field: StyleField.SelectionColor,
+        A: t.SelectionColor.R, B: t.SelectionColor.G, C: t.SelectionColor.B, D: t.SelectionColor.A}, initial)
     }
     let rangeChange = PassiveTextPresentations.Apply(n, t.Content, t.StyleRangeValues)
     let contentChanged = n.Content != t.Content
@@ -632,14 +632,10 @@ internal partial class Reconciler {
         n.PlaceholderColor = t.PlaceholderColor
         paintChanged = true
       }
-      if !n.SelectionColor.ContentEquals(t.SelectionColor) {
-        n.SelectionColor = t.SelectionColor
-        paintChanged = true
-      }
-      if !n.EditorCaretColor.ContentEquals(t.CaretColor) {
-        n.EditorCaretColor = t.CaretColor
-        paintChanged = true
-      }
+      Res.writeField(n, StyleEntry{Field: StyleField.SelectionColor,
+        A: t.SelectionColor.R, B: t.SelectionColor.G, C: t.SelectionColor.B, D: t.SelectionColor.A}, initial)
+      Res.writeField(n, StyleEntry{Field: StyleField.CaretColor,
+        A: t.CaretColor.R, B: t.CaretColor.G, C: t.CaretColor.B, D: t.CaretColor.A}, initial)
       if !n.EditorCurrentLineColor.ContentEquals(t.CurrentLineColor) {
         n.EditorCurrentLineColor = t.CurrentLineColor
         paintChanged = true
@@ -738,10 +734,8 @@ internal partial class Reconciler {
       n.PlaceholderColor = t.PlaceholderColor
       paintChanged = true
     }
-    if !n.SelectionColor.ContentEquals(t.SelectionColor) {
-      n.SelectionColor = t.SelectionColor
-      paintChanged = true
-    }
+    Res.writeField(n, StyleEntry{Field: StyleField.SelectionColor,
+      A: t.SelectionColor.R, B: t.SelectionColor.G, C: t.SelectionColor.B, D: t.SelectionColor.A}, initial)
     n.OnChange = t.OnChange
     n.OnSubmit = t.OnSubmit
     if t.Controlled && n.Focused {
@@ -959,10 +953,10 @@ internal partial class Reconciler {
       configureCell(cell, e)
       cell.SetRebuildSubmission(CellInvalidated)
 
-      if existing != nil && !cell.IsDirty() {
+      if existing != nil && (!cell.IsDirty() || !cell.IsDirtyFor(CauseFilter)) {
         trackContext(cell, true)
         if let child = cell.directChild {
-          if child.HasDirty() {
+          if child.HasDirtyFor(CauseFilter) {
             return rebuildMounted(existing, child, cell)
           }
         }
@@ -1007,6 +1001,9 @@ internal partial class Reconciler {
     let previousCell = expandingCell
     expandingCell = cell
     let previousVerifier = verifyingCell
+    let previousOrigin = LayoutOrigin.Current
+    let cause = cell.DirtyCause
+    if cause != LayoutCause.None { LayoutOrigin.Current = cause }
     let verify = cell.TakeStateVerification()
     let verificationActive = verify || previousVerifier != nil
     if verificationActive {
@@ -1063,6 +1060,7 @@ internal partial class Reconciler {
       }
       Context = previousContext
       expandingCell = previousCell
+      LayoutOrigin.Current = previousOrigin
       treeDepth = previousDepth
       if !completed {
         cell.contextReader?.Cancel()
@@ -1074,6 +1072,7 @@ internal partial class Reconciler {
             prior.Key = slotKey
           }
         }
+        cell.DirtyCause = LayoutOrigin.Combine(cell.DirtyCause, cause)
         cell.RestoreDirtyAndSubmit()
       }
     }
@@ -1106,11 +1105,11 @@ internal partial class Reconciler {
   }
 
   internal func rebuildDirty(n Node, cell Cell, owner Cell?) Node {
-    if cell.IsDirty() {
+    if cell.IsDirtyFor(CauseFilter) {
       return rebuildMounted(n, cell, owner)
     }
     if let child = cell.directChild {
-      if child.HasDirty() {
+      if child.HasDirtyFor(CauseFilter) {
         return rebuildDirty(n, child, cell)
       }
     }
@@ -1131,11 +1130,15 @@ internal partial class Reconciler {
       throw NotSupportedException("Gradient Shape strokes are not supported")
     }
     applyStyleEntries(n, s, s.PaintEntries(), s.Focusable, initial)
+    Res.writeField(n, float64StyleEntry(StyleField.ShapeCornerRadius, s.CornerRadius), initial)
+    Res.writeField(n, float64StyleEntry(StyleField.StrokeStart, s.StrokeStart), initial)
+    Res.writeField(n, float64StyleEntry(StyleField.StrokeEnd, s.StrokeEnd), initial)
+    Res.writeField(n, float64StyleEntry(StyleField.MiterLimit, s.Stroke?.MiterLimit ?? 4.0), initial)
+    Res.writeField(n, StyleEntry{Field: StyleField.DashIntervals, Payload: s.Stroke?.Dashes}, initial)
+    Res.writeField(n, float64StyleEntry(StyleField.DashOffset, s.Stroke?.Dashes?.Offset ?? 0.0), initial)
     let cap = s.Stroke?.Cap ?? StrokeCap.Butt
     let join = s.Stroke?.Join ?? StrokeJoin.Miter
     let effect = s.Stroke?.VectorEffect ?? VectorEffect.None
-    let miterLimit = s.Stroke?.MiterLimit ?? 4.0
-    let dashes = s.Stroke?.Dashes
     var contentChanged = false
     var layoutChanged = false
     var paintChanged = false
@@ -1177,29 +1180,8 @@ internal partial class Reconciler {
       paintChanged = true
       hitGeometryChanged = true
     }
-    if n.MiterLimit != miterLimit {
-      n.MiterLimit = miterLimit
-      paintChanged = true
-      hitGeometryChanged = true
-    }
-    if n.StrokeStart != s.StrokeStart || n.StrokeEnd != s.StrokeEnd {
-      n.StrokeStart = s.StrokeStart
-      n.StrokeEnd = s.StrokeEnd
-      paintChanged = true
-      hitGeometryChanged = true
-    }
-    if n.ShapeCornerRadius != s.CornerRadius {
-      n.ShapeCornerRadius = s.CornerRadius
-      paintChanged = true
-      hitGeometryChanged = true
-    }
     if n.ShapeStrokeInset != s.StrokeInset {
       n.ShapeStrokeInset = s.StrokeInset
-      paintChanged = true
-      hitGeometryChanged = true
-    }
-    if !sameDashPattern(n.Dashes, dashes) {
-      n.Dashes = dashes
       paintChanged = true
       hitGeometryChanged = true
     }
@@ -1239,8 +1221,7 @@ internal partial class Reconciler {
     if !sourceChanged {
       if let binding = ImageLayouts.Binding(n) {
         if binding.PixelsPerUnit != i.PixelsPerUnit {
-          binding.PixelsPerUnit = i.PixelsPerUnit
-          ImageLayouts.Refresh(n)
+          ImageLayouts.ApplySource(n, i.Source!!, i.Fit, ImageCompleted, Owner, i.PixelsPerUnit)
           MarkEffects(ReconcileEffects.Layout | ReconcileEffects.Paint)
         }
       }
@@ -1259,14 +1240,11 @@ internal partial class Reconciler {
       n.ImageFit = i.Fit
       n.BumpScenePaintVersion()
       MarkEffects(ReconcileEffects.Paint)
-    } else if ImageLayouts.Refresh(n) {
-      MarkEffects(ReconcileEffects.Content)
-      MarkEffects(ReconcileEffects.Layout)
-      MarkEffects(ReconcileEffects.Paint)
     }
-    if let binding = ImageLayouts.Binding(n) { binding.Declaration = i }
-    let content = if n.ImageLease?.IsFailed == true { i.Fallback }
-      else if n.ImageLease?.IsComplete == false { i.Placeholder } else { nil }
+    let binding = ImageLayouts.Binding(n)
+    if let current = binding { current.Declaration = i }
+    let content = if binding?.AcceptedFailed == true { i.Fallback }
+      else if binding?.AcceptedComplete == false { i.Placeholder } else { nil }
     if let child = content {
       diffChildren(n, []Blob{Container{Width: Percent(100), Height: Percent(100),
         OverflowX: Overflow.Hidden, OverflowY: Overflow.Hidden, child}})
@@ -1740,27 +1718,6 @@ internal func sameStyleEntries(a StyleEntries?, b StyleEntries?) bool {
     let leftEntry = leftCursor.Current
     let rightEntry = rightCursor.Current
     if leftEntry.Field != rightEntry.Field || !sameStyleEntry(leftEntry, rightEntry) {
-      return false
-    }
-  }
-  return true
-}
-
-internal func sameDashPattern(a DashPattern?, b DashPattern?) bool {
-  if a == b {
-    return true
-  }
-  guard let left = a else {
-    return b == nil
-  }
-  guard let right = b else {
-    return false
-  }
-  if left.Offset != right.Offset || left.Intervals.Count != right.Intervals.Count {
-    return false
-  }
-  for i in 0 ... left.Intervals.Count {
-    if left.Intervals[i] != right.Intervals[i] {
       return false
     }
   }

@@ -39,7 +39,7 @@ internal partial class TextEditorLayouts {
       while expanded {
         expanded = false
         for layerIndex in 0 ... state.LayerCount {
-          for projection in state.Layer(layerIndex).ReadProjections() {
+          for projection in state.LayerProjections(layerIndex) {
             let projectionEnd = projection.Range.Start + projection.Range.Length
             if start >= projectionEnd || projection.Range.Start >= end { continue }
             if projection.Range.Start < start {
@@ -56,20 +56,25 @@ internal partial class TextEditorLayouts {
       return TextRange{ Start: start, Length: end - start }
     }
 
-    internal func For(n Node, width float32, height float32) TextEditorVisualLayout {
+    internal func For(n Node, requestedWidth float32, requestedHeight float32,
+      measuring bool = false) TextEditorVisualLayout {
+      let width = !measuring && n.RetainedLayoutTransition != nil
+        ? BoxGeometry.ContentWidth(n, true) : requestedWidth
+      let height = !measuring && n.RetainedLayoutTransition != nil
+        ? BoxGeometry.ContentHeight(n, true) : requestedHeight
       guard let state = n.EditorState else {
         throw InvalidOperationException("Text editor node has no render state")
       }
       let revision = editorLayerRevision(state)
       if let cached = state.Layout {
-        if !state.Dirty && cached.Version == state.Document.Version && cached.LayerRevision == revision
+        if !state.Dirty && cached.Version == state.PresentationVersion && cached.LayerRevision == revision
           && cached.ConstraintWidth == width && cached.HeightConstraint == height
           && cached.ViewportWidth == editorViewportWidth(n, width){
             return cached
           }
       }
       let fingerprint = editorFontFingerprint(n)
-      let snapshot = state.Document.Snapshot()
+      let snapshot = state.Snapshot()
       let layout = build(n, state, snapshot, width, height, revision, fingerprint)
       state.Layout = layout
       state.Dirty = false
@@ -127,7 +132,7 @@ internal partial class TextEditorLayouts {
         let n = nodeFromYoga(yoga)
         let constraint = widthMode == MeasureMode.Undefined ? -1.0F : width
         let heightConstraint = if heightMode == MeasureMode.Exactly { height } else { -1.0F }
-        let layout = For(n, constraint, heightConstraint)
+        let layout = For(n, constraint, heightConstraint, true)
         return TextLayouts.clampMeasuredSize(layout.Width, layout.Height, width, widthMode, height, heightMode)
       }
 
@@ -286,7 +291,7 @@ internal partial class TextEditorLayouts {
         }
       }
       if !visible {
-        let snapshot = state.Document.Snapshot()
+        let snapshot = state.Snapshot()
         return Point{ X: float64(scroll.X), Y: float64(verticalOffsetForLine(state, snapshot,
           snapshot.GetLineIndex(position.Offset), layout.ParagraphWidth, layout.FontFingerprint,
           layout.LineHeight, layout.Ascent, layout.Descent)) }
@@ -349,7 +354,7 @@ internal partial class TextEditorLayouts {
 
     internal func CurrentForGeometry(n Node) TextEditorVisualLayout? {
       guard let state = n.EditorState, let layout = state.Layout else { return nil }
-      if state.Dirty || layout.Version != state.Document.Version
+      if state.Dirty || layout.Version != state.PresentationVersion
         || layout.ConstraintWidth != BoxGeometry.ContentWidth(n)
         || layout.HeightConstraint != BoxGeometry.ContentHeight(n)
         || layout.ViewportWidth != editorViewportWidth(n, BoxGeometry.ContentWidth(n)) {
@@ -406,7 +411,7 @@ internal partial class TextEditorLayouts {
           let source = layout.Lines[current]
           var y = source.RelativeTop + source.Height * 0.5F + float32(delta) * BoxGeometry.ViewportHeight(n)
           let state = n.EditorState!!
-          let snapshot = state.Document.Snapshot()
+          let snapshot = state.Snapshot()
           var index = snapshot.GetLineIndex(source.Paragraph.Source.Start)
           var movingUp = false
           let projections = editorProjections(state, layout.ParagraphWidth, layout.HeightConstraint)

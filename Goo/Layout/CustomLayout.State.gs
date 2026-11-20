@@ -186,8 +186,8 @@ internal class CustomLayoutState {
     let top = CustomLayouts.Inset(yoga, YGEdge.Top)
     let right = CustomLayouts.Inset(yoga, YGEdge.Right)
     let bottom = CustomLayouts.Inset(yoga, YGEdge.Bottom)
-    let width = Math.Max(0.0F, Node.Rect.W - left - right)
-    let height = Math.Max(0.0F, Node.Rect.H - top - bottom)
+    let width = Math.Max(0.0F, YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga) - left - right)
+    let height = Math.Max(0.0F, YGNodeLayoutAPI.YGNodeLayoutGetHeight(yoga) - top - bottom)
     let density = yoga.Config.GetPointScaleFactor()
     if arrangedVersion == version && arrangedWidth == float64(width)
       && arrangedHeight == float64(height) && arrangedDensity == density { return }

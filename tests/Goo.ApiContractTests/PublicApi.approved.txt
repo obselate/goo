@@ -977,7 +977,9 @@ enum|Goo.TextWrap|NoWrap|1
 enum|Goo.TextWrap|Wrap|0
 enum|Goo.TransitionProperty|All|0
 enum|Goo.TransitionProperty|AspectRatio|7
+enum|Goo.TransitionProperty|BackdropBlur|59
 enum|Goo.TransitionProperty|BackgroundColor|28
+enum|Goo.TransitionProperty|BackgroundGradient|58
 enum|Goo.TransitionProperty|BorderBottomColor|43
 enum|Goo.TransitionProperty|BorderBottomLeftRadius|32
 enum|Goo.TransitionProperty|BorderBottomRightRadius|33
@@ -995,8 +997,11 @@ enum|Goo.TransitionProperty|BorderTopWidth|36
 enum|Goo.TransitionProperty|BorderWidth|34
 enum|Goo.TransitionProperty|Bottom|27
 enum|Goo.TransitionProperty|BoxShadow|45
+enum|Goo.TransitionProperty|CaretColor|67
 enum|Goo.TransitionProperty|Color|46
 enum|Goo.TransitionProperty|ColumnGap|20
+enum|Goo.TransitionProperty|DashIntervals|65
+enum|Goo.TransitionProperty|DashOffset|64
 enum|Goo.TransitionProperty|FlexBasis|23
 enum|Goo.TransitionProperty|FlexGrow|21
 enum|Goo.TransitionProperty|FlexShrink|22
@@ -1016,7 +1021,11 @@ enum|Goo.TransitionProperty|MaxHeight|6
 enum|Goo.TransitionProperty|MaxWidth|5
 enum|Goo.TransitionProperty|MinHeight|4
 enum|Goo.TransitionProperty|MinWidth|3
+enum|Goo.TransitionProperty|MiterLimit|63
 enum|Goo.TransitionProperty|Opacity|44
+enum|Goo.TransitionProperty|OutlineColor|53
+enum|Goo.TransitionProperty|OutlineOffset|54
+enum|Goo.TransitionProperty|OutlineWidth|52
 enum|Goo.TransitionProperty|PaddingBottom|12
 enum|Goo.TransitionProperty|PaddingLeft|9
 enum|Goo.TransitionProperty|PaddingRight|11
@@ -1024,6 +1033,13 @@ enum|Goo.TransitionProperty|PaddingTop|10
 enum|Goo.TransitionProperty|Padding|8
 enum|Goo.TransitionProperty|Right|26
 enum|Goo.TransitionProperty|RowGap|19
+enum|Goo.TransitionProperty|SelectionColor|66
+enum|Goo.TransitionProperty|ShapeCornerRadius|60
+enum|Goo.TransitionProperty|StrokeEnd|62
+enum|Goo.TransitionProperty|StrokeStart|61
+enum|Goo.TransitionProperty|TextShadow|57
+enum|Goo.TransitionProperty|TextStrokeColor|56
+enum|Goo.TransitionProperty|TextStrokeWidth|55
 enum|Goo.TransitionProperty|Top|25
 enum|Goo.TransitionProperty|Transform|51
 enum|Goo.TransitionProperty|Width|1

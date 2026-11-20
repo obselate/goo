@@ -33,6 +33,7 @@ internal sealed class SizedNodeState : IDisposable {
   internal let Reads StateReadScope
   internal let ContextReads ContextReader
   internal var Dirty bool = true
+  internal var DirtyCause LayoutCause = LayoutOrigin.Current
   internal var Width float32 = -1.0F
   internal var Height float32 = -1.0F
   internal var ContentWidth float32 = -1.0F
@@ -52,6 +53,7 @@ internal sealed class SizedNodeState : IDisposable {
 
   internal func Invalidate() {
     Dirty = true
+    DirtyCause = LayoutOrigin.Combine(DirtyCause, LayoutOrigin.Current)
     invalidated?.Invoke(ReconcileEffects.Content)
   }
 
@@ -103,6 +105,7 @@ internal partial class Reconciler {
       node.RetainedSizedState = state
     }
     state.Dirty = true
+    state.DirtyCause = LayoutOrigin.Combine(state.DirtyCause, LayoutOrigin.Current)
     state.Builder = blob.Builder
     state.Context = Context
     state.ContextReads.Frame = Context
@@ -126,6 +129,7 @@ internal partial class Reconciler {
       state.ContextReads.Commit()
       state.Reads.StateChanged = false
       state.Dirty = false
+      state.DirtyCause = LayoutCause.None
       state.Verifier = nil
     } catch (_ Exception) {
       state.ContextReads.Cancel()
@@ -164,13 +168,23 @@ internal partial class Layout {
     return sizedNodes.Count != 0
   }
 
+  internal func HasApplicationSized(root Node) bool {
+    if !HasSized(root) { return false }
+    for node in sizedNodes {
+      if let state = node.RetainedSizedState && state.Dirty
+        && LayoutOrigin.IsApplication(state.DirtyCause) { return true }
+    }
+    return false
+  }
+
   internal func NeedsSizedRefresh(root Node) bool {
     if !HasSized(root) { return false }
     let scale = YGConfigAPI.YGConfigGetPointScaleFactor(config)
     for node in sizedNodes {
       guard let state = node.RetainedSizedState else { continue }
       if node.Retired { continue }
-      if state.Dirty || state.Width != node.Rect.W || state.Height != node.Rect.H || state.Scale != scale {
+      if state.Dirty || state.Width != BoxGeometry.LayoutWidth(node)
+        || state.Height != BoxGeometry.LayoutHeight(node) || state.Scale != scale {
         return true
       }
       for child in node.Children {
@@ -181,6 +195,21 @@ internal partial class Layout {
   }
 
   internal func RefreshSized(root Node, rec Reconciler) {
+    if !standalone {
+      refreshSizedCore(root, rec)
+      return
+    }
+    TransitionPhase = LayoutTransitionPhase.StandaloneSizes
+    try {
+      refreshSizedCore(root, rec)
+      if standaloneTransitions {
+        TransitionPhase = LayoutTransitionPhase.StandalonePositions
+        RefreshRects(root)
+      }
+    } finally { TransitionPhase = LayoutTransitionPhase.Immediate }
+  }
+
+  private func refreshSizedCore(root Node, rec Reconciler) {
     if !HasSized(root) { return }
     let scale = YGConfigAPI.YGConfigGetPointScaleFactor(config)
     var index = 0
@@ -189,9 +218,16 @@ internal partial class Layout {
       index++
       if node.Retired { continue }
       guard let state = node.RetainedSizedState else { continue }
-      let resized = state.Width != node.Rect.W || state.Height != node.Rect.H || state.Scale != scale
+      let width = BoxGeometry.LayoutWidth(node)
+      let height = BoxGeometry.LayoutHeight(node)
+      let resized = state.Width != width || state.Height != height || state.Scale != scale
+      if rec.CauseFilter == LayoutCause.Environment && state.Dirty
+        && LayoutOrigin.IsApplication(state.DirtyCause) {
+        arrangeSized(node)
+        continue
+      }
       if state.Dirty || resized {
-        rec.BuildSized(node, LayoutSize(float64(node.Rect.W), float64(node.Rect.H)))
+        rec.BuildSized(node, LayoutSize(float64(width), float64(height)))
         rec.FlushStyles()
         for child in node.Children {
           if !child.IsPortal { syncNode(child, true) }
@@ -199,8 +235,8 @@ internal partial class Layout {
         }
         lengthRoot = nil
         resolveLengths(root, CustomLayouts.ViewportWidth, CustomLayouts.ViewportHeight)
-        state.Width = node.Rect.W
-        state.Height = node.Rect.H
+        state.Width = width
+        state.Height = height
         state.Scale = scale
       }
       arrangeSized(node)
@@ -214,13 +250,14 @@ internal partial class Layout {
 
   private func arrangeSized(node Node, hidden bool = false) {
     guard let yoga = node.Yoga else { return }
-    let width = BoxGeometry.ContentWidth(node)
-    let height = BoxGeometry.ContentHeight(node)
+    let width = BoxGeometry.ContentWidth(node, true)
+    let height = BoxGeometry.ContentHeight(node, true)
     let x = node.Rect.X + CustomLayouts.Inset(yoga, YGEdge.Left)
     let y = node.Rect.Y + CustomLayouts.Inset(yoga, YGEdge.Top)
     let state = node.RetainedSizedState!!
     let resized = state.ContentWidth != width || state.ContentHeight != height
-    for child in node.Children {
+    for i in 0 ... node.Children.Count {
+      let child = node.Children[i]
       if child.IsPortal { continue }
       guard let childYoga = child.Yoga else { continue }
       if resized || YGNodeAPI.YGNodeIsDirty(childYoga) {
