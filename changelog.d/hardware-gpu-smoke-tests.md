@@ -1,2 +1,0 @@
-- Keep SVG goldens exact on CPU devices and allow bounded hardware color and edge-coverage differences.
-- Accept unchanged framebuffer extents in the resize test fixture without requiring a new swapchain generation.

@@ -1,6 +1,85 @@
 # Changelog
 
 
+## 0.32.0 - 2026-11-20
+
+### Added
+
+- Add optional startup graphics reports through `VulkanDrivers.StartupReportPath` or `GOO_VK_STARTUP_REPORT`. Reports include local platform details, native payload hashes, loader messages, failed attempts and software fallback outcomes. Reporting is off by default.
+- Add a PowerShell 7.6 guide and a script-module log viewer sample with verified Goo callbacks, virtual rows, dialogs and ThreadJob results.
+- Optional `Goo.SoftwareRenderer` package with pinned Mesa lavapipe for Windows x64 and Linux x64, NativeAOT deployment and automatic hardware-first fallback without restarting the process. `VulkanDrivers.Direct` and `Exclusive` now also support Linux Wayland.
+- Add a Visual Basic guide and checked .NET 10 samples for Goo state, composition, input, layout, widgets, async work and NativeAOT publishing.
+- Add the experimental, non-packable Goo.Wasm host with demand-driven WebGPU rendering of scene-compiled boxes, rounded corners, borders and outline text. Text uses app font assets, the shared glyph atlas layout and Slang-generated WGSL. Pointer input updates Cell state without idle frames.
+- Add browser build targets for the unchanged G# starter and documented C# and Visual Basic counters. Build the counters and validate five WGSL shaders in an advisory workflow. Hosted CI has no deterministic RADV browser runner, so browser checks do not gate desktop releases.
+- Images, gradients, effects, retained text transforms, clipping, scrolling, keyboard input, IME and browser accessibility are not supported yet.
+- Read a desktop window's native handle, platform kind and display through `Window.NativeHandle` without blocking Goo input.
+
+### Changed
+
+- Add the C# 14 guide and NativeAOT sample check, and direct F# users to community-maintained FunGoo.
+- Extend `TransitionProperties` with outline width, color and offset, text stroke width and color, text shadow stacks, background gradients, shape corner radius, stroke trim bounds, miter limit, dash phase and intervals, selection color and editor caret color. These use the existing duration, delay, easing and reduced-motion policy. Text shadow counts must match. Gradient types and stop counts must match. Dash interval counts must match after odd-count normalization. Incompatible values remain discrete. Transparent text shadows retain their declared slots for fades. `All` now includes these values. Use an explicit selector list or `TransitionMs: 0` to keep them discrete. Use the new `BackdropBlur` selector to opt in explicitly. Backdrop blur already animates under `All`.
+- Preserve float64 precision for shape geometry, dash values and gradient geometry during transitions.
+- Box shadow colors now interpolate with premultiplied alpha, like other style colors.
+
+### Fixed
+
+- Prevent deferred text glyphs from staying missing when a retained scene range is replayed.
+- Document how outward outlines fit inside non-scrolling clipping ancestors.
+- Clarified that an unreachable Linux session bus returns `NotificationStatus.Failed`, while a missing notification service returns `Unsupported`.
+- Document RadialGradient as elliptical geometry normalized to the box dimensions.
+- CustomRole descriptions no longer replace built-in native accessibility roles.
+- Password entries now expose a protected native accessibility role while keeping their text masked.
+- Read-only text controls no longer advertise editable accessibility state or the SetValue action when metadata declares them writable.
+- Linux accessibility now exposes label, description, ownership, flow and error relations, expanded, invalid and popup states, and heading levels through AT-SPI.
+- Apply BorderRadius to all four corners so later shorthand declarations override earlier corner values.
+- The CRT rendering regression fixture uses the same RGB mask phase on lavapipe, RADV and NVIDIA.
+- Clarify that custom layout child counts and indices exclude Portals.
+- Honor DisplayChanged subscriptions added or removed after Window.Open.
+- Describe drag start distance as Euclidean distance from the press point.
+- Honor exclusive Vulkan driver selection when the direct driver list is empty.
+- Preserve premultiplied RGB when sampling external images.
+- Linux file dialogs now return `Unsupported` for portal capability errors, including an unknown FileChooser method, instead of `Failed`.
+- Render large finite linear gradient angles without overflowing the radians conversion.
+- Fit ellipses with resolved inline typography for unwrapped and line-limited rich text.
+- Allow layer windows to show after hiding before their first presentation.
+- Reject repeated scan components in sequential JPEG images before they can cause excessive decode time.
+- Restore Goo input when a native-owner lease ends while its window is still focused, including when no Goo element had focus.
+- Keep nested baseline alignment and following content stable when cached layouts have already been snapped to device pixels.
+- Return a typed offscreen failure when a page build throws an exception.
+- Linux open-file dialogs now use an existing initial file's parent folder without changing save-file name suggestions.
+- Bound curve subdivision in device pixels. Keep small ellipses and rounded paths compact, and refine cached geometry for larger transforms and display scales.
+- Bound PDF renderer and print dialog owner error detail in PrintResult.
+- Interpolate matching relative transform units before resolving them to pixels.
+- Restore the previous editor command handler when a rich text clipboard binding is disposed.
+- Round scroll offsets half up like layout placement, so content at a whole-pixel distance from the viewport edge no longer paints 1 px off at half-pixel scroll offsets.
+- Pixel snapping no longer moves whole-pixel positions above 8,388,608 px in very long scroll content.
+- Keep backdrop replacement blend state in the Vulkan shader pipeline cache identity.
+- Refresh layout transition positions inside retained `Sized` content until motion settles.
+- Preserve small PanelTransform scale factors instead of rounding them to zero.
+- Record recoverable Vulkan driver discovery errors as warnings during the hardware probe, so successful software fallback does not report a fatal validation failure. Preserve validation-layer and runtime errors.
+- Apply staged normal window size after an earlier Size initializer.
+- Darken the starter template and interop sample accent to `#3664E0` so button text meets the 4.5:1 WCAG AA contrast ratio.
+- Apply SVG root transforms with the same parsing and view-box mapping as group transforms.
+- Text hinting takes the x-height from the `x` glyph when the font declares a taller x-height, so lowercase tops line up in fonts such as Selawik.
+- Keep tween positions finite between opposite extreme finite endpoints.
+- Scale default vector stroke widths and dash lengths from view-box units when `Shape.Fit` resizes a path. Keep `NonScalingStroke` in window logical pixels.
+- Keep retained virtual-row content at its viewport position when fractional measurements change pixel rounding.
+- Reject reads from VirtualOutput outside its realization callback.
+- Keep the last virtual row fully visible when follow-end or item alignment reaches a fractional scroll maximum.
+- Document the single-use Window lifecycle and reject reopening with a clear InvalidOperationException. Create a new Window after closing.
+- Restore mouse and keyboard input after Windows native menu popups close without an application switch.
+- Distribute flex grow space before minimum-size clamping so constrained items do not take space from their siblings.
+- Keep SVG goldens exact on CPU devices and allow bounded hardware color and edge-coverage differences.
+- Accept unchanged framebuffer extents in the resize test fixture without requiring a new swapchain generation.
+- Let the window loop sleep while initial image uploads and prior presentation fences are pending. Queue completion wakes the window without polling on the UI thread.
+- Keep definite widths when measuring automatic flex minimum heights. This prevents gaps and overlapping rows in the DevTools selected-element details panel.
+- Interpolate computed width and height with position in `LayoutTransition` for application commits. Single-line flex placement and absolute insets follow visible sizes without remeasuring or scaling children. Wrapped flex, custom layout and `Sized` keep their target local placement. Resize, scale and resource updates apply at once without restarting application motion. Paint, hit testing, metrics and accessibility use the same bounds. App retargets preserve velocity on all four axes.
+- Arrange scrollbar parts inside anchored and unanchored portals so overflowing popup content shows its scrollbar.
+- Exclude descendants outside rounded corners from hit testing when both overflow axes clip. Hidden and Scroll overflow now use the same rounded box for normal pointer hits, diagnostic hits and hit chains. Visible overflow is unchanged.
+- Remove dark seams between selected text runs and adjacent selected lines.
+- Report keyboard focus lost to app-owned Windows child windows and restore Goo keyboard input when the user clicks Goo content.
+- Keep native child windows above transparent Windows content when DirectComposition and Vulkan D3D11 image and fence sharing are available.
+
 ## 0.31.0 - 2026-11-14
 
 ### Added
