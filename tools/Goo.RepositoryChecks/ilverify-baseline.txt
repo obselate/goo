@@ -107,12 +107,12 @@
 [IL]: Error [InitOnly]: [Goo.dll : Goo.PathGeometry::Contour(int32, int32, bool)][offset 0x0000000B] Cannot change initonly field outside its .ctor.
 [IL]: Error [InitOnly]: [Goo.dll : Goo.PathGeometry::Contour(int32, int32, bool)][offset 0x00000013] Cannot change initonly field outside its .ctor.
 [IL]: Error [InitOnly]: [Goo.dll : Goo.PathGeometry::Contour(int32, int32, bool)][offset 0x0000001B] Cannot change initonly field outside its .ctor.
-[IL]: Error [InitOnly]: [Goo.dll : Goo.PathGeometry::Create([Goo]Goo.PathQuadratic[], [Goo]Goo.PathContour[])][offset 0x00000116] Cannot change initonly field outside its .ctor.
-[IL]: Error [InitOnly]: [Goo.dll : Goo.PathGeometry::Create([Goo]Goo.PathQuadratic[], [Goo]Goo.PathContour[])][offset 0x00000124] Cannot change initonly field outside its .ctor.
-[IL]: Error [InitOnly]: [Goo.dll : Goo.PathGeometry::Create([Goo]Goo.PathQuadratic[], [Goo]Goo.PathContour[])][offset 0x00000140] Cannot change initonly field outside its .ctor.
-[IL]: Error [InitOnly]: [Goo.dll : Goo.PathGeometry::Create([Goo]Goo.PathQuadratic[], [Goo]Goo.PathContour[])][offset 0x0000015C] Cannot change initonly field outside its .ctor.
-[IL]: Error [InitOnly]: [Goo.dll : Goo.PathGeometry::Create([Goo]Goo.PathQuadratic[], [Goo]Goo.PathContour[])][offset 0x0000016A] Cannot change initonly field outside its .ctor.
-[IL]: Error [InitOnly]: [Goo.dll : Goo.PathGeometry::Create([Goo]Goo.PathQuadratic[], [Goo]Goo.PathContour[])][offset 0x00000178] Cannot change initonly field outside its .ctor.
+[IL]: Error [InitOnly]: [Goo.dll : Goo.PathGeometry::Create([Goo]Goo.PathQuadratic[], [Goo]Goo.PathContour[], float32)][offset 0x0000011D] Cannot change initonly field outside its .ctor.
+[IL]: Error [InitOnly]: [Goo.dll : Goo.PathGeometry::Create([Goo]Goo.PathQuadratic[], [Goo]Goo.PathContour[], float32)][offset 0x0000012B] Cannot change initonly field outside its .ctor.
+[IL]: Error [InitOnly]: [Goo.dll : Goo.PathGeometry::Create([Goo]Goo.PathQuadratic[], [Goo]Goo.PathContour[], float32)][offset 0x00000147] Cannot change initonly field outside its .ctor.
+[IL]: Error [InitOnly]: [Goo.dll : Goo.PathGeometry::Create([Goo]Goo.PathQuadratic[], [Goo]Goo.PathContour[], float32)][offset 0x00000163] Cannot change initonly field outside its .ctor.
+[IL]: Error [InitOnly]: [Goo.dll : Goo.PathGeometry::Create([Goo]Goo.PathQuadratic[], [Goo]Goo.PathContour[], float32)][offset 0x00000171] Cannot change initonly field outside its .ctor.
+[IL]: Error [InitOnly]: [Goo.dll : Goo.PathGeometry::Create([Goo]Goo.PathQuadratic[], [Goo]Goo.PathContour[], float32)][offset 0x0000017F] Cannot change initonly field outside its .ctor.
 [IL]: Error [InitOnly]: [Goo.dll : Goo.PathGeometry::Map([Goo]Goo.VectorPath, [Goo]Goo.ShapeFit, float32, float32, float32, float32)][offset 0x0000014A] Cannot change initonly field outside its .ctor.
 [IL]: Error [InitOnly]: [Goo.dll : Goo.PathGeometry::Map([Goo]Goo.VectorPath, [Goo]Goo.ShapeFit, float32, float32, float32, float32)][offset 0x00000152] Cannot change initonly field outside its .ctor.
 [IL]: Error [InitOnly]: [Goo.dll : Goo.PathGeometry::Map([Goo]Goo.VectorPath, [Goo]Goo.ShapeFit, float32, float32, float32, float32)][offset 0x0000015A] Cannot change initonly field outside its .ctor.
@@ -227,9 +227,9 @@
 [IL]: Error [InitOnly]: [Goo.dll : Goo.Reconciler::diffKeyedChildren([Goo]Goo.Node, [S.P.CoreLib]System.Collections.Generic.IList`1<Goo.Blob>, [Goo]Goo.ChildDiffScratchScope)][offset 0x000002E3] Cannot change initonly field outside its .ctor.
 [IL]: Error [InitOnly]: [Goo.dll : Goo.SceneFrame::AppendRange([Goo]Goo.VulkanRetainedSceneData, [Goo]Goo.VulkanSceneRangeBinding, int32, int32, uint64, bool)][offset 0x00000526] Cannot change initonly field outside its .ctor.
 [IL]: Error [InitOnly]: [Goo.dll : Goo.SceneFrame::AppendRange([Goo]Goo.VulkanRetainedSceneData, [Goo]Goo.VulkanSceneRangeBinding, int32, int32, uint64, bool)][offset 0x0000067A] Cannot change initonly field outside its .ctor.
-[IL]: Error [InitOnly]: [Goo.dll : Goo.ShapeGeometry::NonScalingStrokeHit([Goo]Goo.Node, [Goo]Goo.ResolvedShapeGeometry, float32, float32)][offset 0x0000018B] Cannot change initonly field outside its .ctor.
-[IL]: Error [InitOnly]: [Goo.dll : Goo.ShapeGeometry::NonScalingStrokeHit([Goo]Goo.Node, [Goo]Goo.ResolvedShapeGeometry, float32, float32)][offset 0x00000197] Cannot change initonly field outside its .ctor.
-[IL]: Error [InitOnly]: [Goo.dll : Goo.ShapeGeometry::NonScalingStrokeHit([Goo]Goo.Node, [Goo]Goo.ResolvedShapeGeometry, float32, float32)][offset 0x000001A3] Cannot change initonly field outside its .ctor.
+[IL]: Error [InitOnly]: [Goo.dll : Goo.ShapeGeometry::NonScalingStrokeHit([Goo]Goo.Node, [Goo]Goo.ResolvedShapeGeometry, float32, float32)][offset 0x00000190] Cannot change initonly field outside its .ctor.
+[IL]: Error [InitOnly]: [Goo.dll : Goo.ShapeGeometry::NonScalingStrokeHit([Goo]Goo.Node, [Goo]Goo.ResolvedShapeGeometry, float32, float32)][offset 0x0000019C] Cannot change initonly field outside its .ctor.
+[IL]: Error [InitOnly]: [Goo.dll : Goo.ShapeGeometry::NonScalingStrokeHit([Goo]Goo.Node, [Goo]Goo.ResolvedShapeGeometry, float32, float32)][offset 0x000001A8] Cannot change initonly field outside its .ctor.
 [IL]: Error [InitOnly]: [Goo.dll : Goo.ShapeGeometry::Resolve([Goo]Goo.Node, [Goo]Goo.Rect)][offset 0x00000181] Cannot change initonly field outside its .ctor.
 [IL]: Error [InitOnly]: [Goo.dll : Goo.ShapeGeometry::Resolve([Goo]Goo.Node, [Goo]Goo.Rect)][offset 0x0000018A] Cannot change initonly field outside its .ctor.
 [IL]: Error [InitOnly]: [Goo.dll : Goo.ShapeGeometry::Resolve([Goo]Goo.Node, [Goo]Goo.Rect)][offset 0x00000193] Cannot change initonly field outside its .ctor.
@@ -257,7 +257,7 @@
 [IL]: Error [InitOnly]: [Goo.dll : Goo.VectorAssetDocument::.ctor(float64, float64, float64, float64, [Goo]Goo.VectorNode[])][offset 0x000003E7] Cannot change initonly field outside its .ctor.
 [IL]: Error [InitOnly]: [Goo.dll : Goo.VectorPath::Create([Goo]Goo.VectorPathCommand[], float64, float64, float64, float64)][offset 0x0000013C] Cannot change initonly field outside its .ctor.
 [IL]: Error [InitOnly]: [Goo.dll : Goo.VectorPath::CreateMutableNormalized([Goo]Goo.VectorPathNormalizedOwner, float64, float64, float64, float64)][offset 0x00000076] Cannot change initonly field outside its .ctor.
-[IL]: Error [InitOnly]: [Goo.dll : Goo.VectorPath::CreateNormalized([Goo]Goo.PathQuadratic[], [Goo]Goo.PathContour[], float64, float64, float64, float64)][offset 0x00000128] Cannot change initonly field outside its .ctor.
+[IL]: Error [InitOnly]: [Goo.dll : Goo.VectorPath::CreateNormalized([Goo]Goo.PathQuadratic[], [Goo]Goo.PathContour[], float64, float64, float64, float64, [Goo]Goo.VectorPathData)][offset 0x0000012A] Cannot change initonly field outside its .ctor.
 [IL]: Error [InitOnly]: [Goo.dll : Goo.VectorPathData::get_Commands()][offset 0x0000009E] Cannot change initonly field outside its .ctor.
 [IL]: Error [InitOnly]: [Goo.dll : Goo.VectorPathData::get_Commands()][offset 0x000000AD] Cannot change initonly field outside its .ctor.
 [IL]: Error [InitOnly]: [Goo.dll : Goo.VectorPathData::get_Commands()][offset 0x000000BC] Cannot change initonly field outside its .ctor.

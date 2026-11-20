@@ -65,6 +65,7 @@ internal class VectorPathData {
   private let immutableNormalizedQuadratics([]PathQuadratic)?
   private let immutableNormalizedContours([]PathContour)?
   private let normalizedOwner VectorPathNormalizedOwner?
+  internal let CurveSource VectorPathData?
 
   internal prop Hash uint64{
     get {
@@ -204,7 +205,8 @@ internal class VectorPathData {
 
   internal init(commands []VectorPathCommand, hash uint64, hasClosedContour bool,
     viewBoxX float64, viewBoxY float64, storedWidth float64, storedHeight float64,
-    normalizedQuadratics []PathQuadratic, normalizedContours []PathContour) {
+    normalizedQuadratics []PathQuadratic, normalizedContours []PathContour,
+    curveSource VectorPathData? = nil) {
       commandBuffer = nil
       immutableHash = hash
       immutableHasClosedContour = hasClosedContour
@@ -215,6 +217,7 @@ internal class VectorPathData {
       immutableNormalizedQuadratics = normalizedQuadratics
       immutableNormalizedContours = normalizedContours
       normalizedOwner = nil
+      CurveSource = curveSource
     }
 
   internal init(owner VectorPathNormalizedOwner,
@@ -449,7 +452,8 @@ public struct VectorPath {
       }
 
     internal func CreateNormalized(quadratics []PathQuadratic, contours []PathContour,
-      viewBoxX float64, viewBoxY float64, viewBoxWidth float64, viewBoxHeight float64) VectorPath{
+      viewBoxX float64, viewBoxY float64, viewBoxWidth float64, viewBoxHeight float64,
+      curveSource VectorPathData? = nil) VectorPath{
         validateNormalized(quadratics, contours, viewBoxX, viewBoxY, viewBoxWidth, viewBoxHeight)
         let storedWidth = viewBoxWidth == 1.0 ? 0.0 : viewBoxWidth
         let storedHeight = viewBoxHeight == 1.0 ? 0.0 : viewBoxHeight
@@ -467,7 +471,7 @@ public struct VectorPath {
         }
         return VectorPath{
           payload: VectorPathData([]VectorPathCommand{}, hash, closed, viewBoxX, viewBoxY,
-            storedWidth, storedHeight, quadratics, contours),
+            storedWidth, storedHeight, quadratics, contours, curveSource),
         }
       }
 

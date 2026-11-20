@@ -425,7 +425,7 @@ internal func normalizeVectorPath(path VectorPath, viewBoxX float64,
       contourIndex++
     }
     return VectorPath.CreateNormalized(quadratics, contours, 0.0, 0.0,
-      viewBoxWidth, viewBoxHeight)
+      viewBoxWidth, viewBoxHeight, path.payload?.CurveSource ?? path.payload)
   }
 
 internal func validateVectorNodeGraph(node VectorNode, depth int32,
