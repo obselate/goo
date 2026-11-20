@@ -139,6 +139,7 @@ public partial class Window {
       let target = VulkanWindowTarget(native)
       initializingGraphics = false
       windowTarget = target
+      if native is SdlHost && SdlHost.IsWayland() { native.CanMinimize = target.CanMinimizeNativeWindow }
       native.SetBackdrop(backdrop == WindowBackdrop.Blur, windowsBackdrop, macOSBackdrop, waylandBackdrop)
       if captureStartup {
         target.RecordSdlWindowCreate(sdlStart, sdlEnd)
@@ -437,6 +438,7 @@ public partial class Window {
           return
         }
         if nativeHidePending && windowTarget?.QueueWorkPending != true { hideNative(native) }
+        (native as SdlHost?)?.ApplyPendingMinimize()
         consumeNativeMetrics()
         if !IsOpen {
           if profiling {
@@ -587,6 +589,7 @@ public partial class Window {
     || Application.HasPendingActivation
     || nativeModal?.HasCompletion == true
     || nativeHidePending && windowTarget?.QueueWorkPending != true
+    || (host as SdlHost?)?.MinimizeReady == true
 
   internal func SchedulerHasPendingQueueWork() bool -> windowTarget?.QueueWorkPending == true
     || windowTarget?.RetirementWorkPending == true

@@ -85,6 +85,9 @@ internal unsafe partial class SdlHost {
                     return WindowPlacementResult(WindowOperationResult.Failed, error: "The saved fullscreen display is unavailable")
                 }
             }
+            if (value.Fields & WindowPlacementFields.State) != WindowPlacementFields.None && target != WindowState.Minimized {
+                minimizePending = false
+            }
             let size = (value.Fields & WindowPlacementFields.NormalSize) != WindowPlacementFields.None
             let position = CanMove && (value.Fields & WindowPlacementFields.Position) != WindowPlacementFields.None
             if (size || position) && original != WindowState.Normal {

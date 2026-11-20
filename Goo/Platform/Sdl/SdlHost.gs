@@ -295,6 +295,15 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   public func SetState(value WindowState) {
     ThrowIfDisposed()
     if layerWindow != nil { throw NotSupportedException("Layer-shell windows do not support normal window states") }
+    minimizePending = value == WindowState.Minimized && CanMinimize?.Invoke() == false
+    if minimizePending {
+      Wake()
+      return
+    }
+    ApplyState(value)
+  }
+
+  private func ApplyState(value WindowState) {
     if value == WindowState.Normal || value == WindowState.Minimized ||
     value == WindowState.Maximized{
       Require(SDL.SetWindowFullscreen(window, false), "SDL_SetWindowFullscreen")
@@ -310,6 +319,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
 
   public func RequestActivation() WindowOperationResult {
     if disposed || IsClosing { return WindowOperationResult.Closed }
+    minimizePending = false
     if let layer = layerWindow {
       if let target = layer.Output {
         if !HasDisplay(target.NativeValue) {
