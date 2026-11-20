@@ -244,8 +244,8 @@ class ExplicitKeyBindingTests {
             Assert.Equal(value, window.WheelScrollScale)
             Assert.Equal(value, window.DragStartDistance)
             Assert.Equal(8.123456789012, window.ResizeBand)
-            Assert.Equal(WindowHitResult.Left, window.hitTest(9, 20))
-            Assert.Equal(WindowHitResult.Normal, window.hitTest(11, 20))
+            Assert.Equal(WindowHitResult.Left, window.hitTest(9, 24))
+            Assert.Equal(WindowHitResult.Normal, window.hitTest(11, 24))
             window.UiScale = 1.25
             window.UpdateTree()
             window.PlatformInput.PointerPress(0, PointerDevice.Mouse, 1.25000007, 6.25,

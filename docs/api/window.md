@@ -2096,7 +2096,7 @@ Gets or sets whether the user can resize the window.
 
 ### `ResizeBand`
 
-Gets or sets the undecorated edge resize band in layout units. A scrollbar under an edge band takes the pointer. Corners always resize.
+Gets or sets the undecorated edge resize band in logical pixels, multiplied by UiScale. The default is 8. Controls with OnClick and scrollbars under an edge band take the pointer. Corners resize within max(2 * ResizeBand, 16) of each corner.
 
 ### `Root`
 
