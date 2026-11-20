@@ -265,6 +265,7 @@ internal partial class Resolver {
     let disabledMask = n.Disabled ? fieldsMask(n, n.DisabledStyle) : StyleMask{}
     let allStateMasks = styleMaskUnion(styleMaskUnion(hoverMask, focusMask),
       styleMaskUnion(pressMask, disabledMask))
+    n.LocalMask = allStateMasks
     localMask = applyList(n, n.BaseStyle, localMask, initial, allStateMasks, remap)
     if !n.Disabled && n.Hovered {
       localMask = applyList(n, n.HoverStyle, localMask, initial, styleMaskUnion(focusMask, pressMask), remap)
@@ -352,6 +353,7 @@ internal partial class Resolver {
   internal func applyList(n Node, entries StyleEntries?, mask StyleMask, initial bool,
     shadow StyleMask, remap bool) StyleMask {
     guard let list = entries else { return mask }
+    var m = mask
     var cursor = list.Cursor()
     while cursor.MoveNext() {
       if cursor.Current.Payload is PaintBinding { continue }
@@ -362,12 +364,15 @@ internal partial class Resolver {
         let edges = field == StyleField.Margin ? marginEdges : paddingEdges
         for edge in edges {
           layerWinners[int32(edge)] = i
+          m = styleMaskWith(m, edge)
         }
       } else {
-        layerWinners[int32(styleFieldForNode(n, field))] = i
+        let resolved = styleFieldForNode(n, field)
+        layerWinners[int32(resolved)] = i
+        m = styleMaskWith(m, resolved)
       }
     }
-    var m = mask
+    n.LocalMask = styleMaskUnion(n.LocalMask, m)
     cursor = list.Cursor()
     while cursor.MoveNext() {
       let i = cursor.Index
@@ -378,20 +383,18 @@ internal partial class Resolver {
         continue
       }
       if e.Field == StyleField.Direction {
-        m = styleMaskWith(m, StyleField.Direction)
         continue
       }
       if e.Field == StyleField.Margin {
-        m = applyCanonicalBoxEdges(n, e, m, initial, shadow, marginEdges, i)
+        applyCanonicalBoxEdges(n, e, initial, shadow, marginEdges, i)
         continue
       }
       if e.Field == StyleField.Padding {
-        m = applyCanonicalBoxEdges(n, e, m, initial, shadow, paddingEdges, i)
+        applyCanonicalBoxEdges(n, e, initial, shadow, paddingEdges, i)
         continue
       }
       e.Field = styleFieldForNode(n, e.Field)
       if layerWinners[int32(e.Field)] != i { continue }
-      m = styleMaskWith(m, e.Field)
       if !styleMaskHas(shadow, e.Field) {
         writeField(n, e, initial || (logical && remap))
       }
@@ -399,26 +402,15 @@ internal partial class Resolver {
     return m
   }
 
-  private func applyCanonicalBoxEdges(n Node, source StyleEntry, mask StyleMask,
-    initial bool, shadow StyleMask, edges []StyleField, index int32) StyleMask{
-      var m = mask
-      for f in edges {
-        if layerWinners[int32(f)] != index { continue }
-        m = applyCanonicalBoxEdge(n, source, m, initial, shadow, f)
-      }
-      return m
-    }
-
-  private func applyCanonicalBoxEdge(n Node, source StyleEntry, mask StyleMask,
-    initial bool, shadow StyleMask, field StyleField) StyleMask{
+  private func applyCanonicalBoxEdges(n Node, source StyleEntry, initial bool,
+    shadow StyleMask, edges []StyleField, index int32) {
+    for f in edges {
+      if layerWinners[int32(f)] != index || styleMaskHas(shadow, f) { continue }
       var e = source
-      e.Field = field
-      let m = styleMaskWith(mask, field)
-      if !styleMaskHas(shadow, field) {
-        writeField(n, e, initial)
-      }
-      return m
+      e.Field = f
+      writeField(n, e, initial)
     }
+  }
 
   internal func styleFieldForNode(n Node, f StyleField) StyleField {
     if isLogicalStyleField(f) {
@@ -967,10 +959,10 @@ internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Acti
     case StyleField.BorderRadius {
       let radius = Length{Unit: LengthUnit(int32(e.B)), Value: e.A}
       n.BorderRadius = radius
-      n.BorderTopLeftRadius = radius
-      n.BorderTopRightRadius = radius
-      n.BorderBottomLeftRadius = radius
-      n.BorderBottomRightRadius = radius
+      if !styleMaskHas(n.LocalMask, StyleField.BorderTopLeftRadius) { n.BorderTopLeftRadius = radius }
+      if !styleMaskHas(n.LocalMask, StyleField.BorderTopRightRadius) { n.BorderTopRightRadius = radius }
+      if !styleMaskHas(n.LocalMask, StyleField.BorderBottomLeftRadius) { n.BorderBottomLeftRadius = radius }
+      if !styleMaskHas(n.LocalMask, StyleField.BorderBottomRightRadius) { n.BorderBottomRightRadius = radius }
     }
     case StyleField.BorderTopLeftRadius { n.BorderTopLeftRadius = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
     case StyleField.BorderTopRightRadius { n.BorderTopRightRadius = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
