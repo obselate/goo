@@ -18,7 +18,7 @@ internal class ClickSequenceFixtures {
     window.UpdateTree()
     return window.hitTest(196, 50) == WindowHitResult.Normal
       && window.hitTest(4, 50) == WindowHitResult.Left
-      && window.hitTest(100, 96) == WindowHitResult.Bottom
+      && window.hitTest(100, 92) == WindowHitResult.Bottom
       && window.hitTest(196, 96) == WindowHitResult.BottomRight
   }
 

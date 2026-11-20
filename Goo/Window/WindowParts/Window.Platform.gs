@@ -41,9 +41,9 @@ public partial class Window {
       let logicalWidth = float32(NativeWidth)
       let logicalHeight = float32(NativeHeight)
       let left = px < band
-      let right = px > logicalWidth - band
+      let right = px >= logicalWidth - band
       let top = py < band
-      let bottom = py > logicalHeight - band
+      let bottom = py >= logicalHeight - band
 
       if top && left {
         return WindowHitResult.TopLeft
