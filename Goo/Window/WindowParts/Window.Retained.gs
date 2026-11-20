@@ -5,6 +5,8 @@ import System.Threading
 
 /// Hosts a Goo tree in a native window.
 public partial class Window {
+  private var pendingRetainedCause LayoutCause
+  private var retainedCause LayoutCause
   private func acceptRetainedInvalidations() {
     lock retainedInvalidationGate {
       acceptingRetainedInvalidations = true
@@ -12,9 +14,14 @@ public partial class Window {
   }
 
   private func stopRetainedInvalidations() {
+    if let hook = fontRegistryHook {
+      FontRegistry.Changed -= hook
+      fontRegistryHook = nil
+    }
     lock retainedInvalidationGate {
       acceptingRetainedInvalidations = false
       pendingRetainedEffects = ReconcileEffects.None
+      pendingRetainedCause = LayoutCause.None
       Interlocked.Exchange(&pendingRetainedInvalidation, 0)
     }
   }
@@ -26,6 +33,9 @@ public partial class Window {
         return
       }
       pendingRetainedEffects = combineEffects(pendingRetainedEffects, e)
+      if (e & (ReconcileEffects.Layout | ReconcileEffects.Content)) != ReconcileEffects.None {
+        pendingRetainedCause = LayoutOrigin.Combine(pendingRetainedCause, LayoutOrigin.Current)
+      }
       wake = Interlocked.Exchange(&pendingRetainedInvalidation, 1) == 0
     }
     if wake && (embeddedHost != nil || Environment.CurrentManagedThreadId != ownerThreadId) {
@@ -41,6 +51,8 @@ public partial class Window {
         return ReconcileEffects.None
       }
       let result = pendingRetainedEffects
+      retainedCause = pendingRetainedCause
+      pendingRetainedCause = LayoutCause.None
       pendingRetainedEffects = ReconcileEffects.None
       Interlocked.Exchange(&pendingRetainedInvalidation, 0)
       return result

@@ -302,7 +302,10 @@ internal class MotionPump {
         for particle in batch {
           if clearVersion != version { break }
           try {
-            particle.DeliverCompletion()
+            let previous = LayoutOrigin.Current
+            LayoutOrigin.Current = LayoutCause.Application
+            try { particle.DeliverCompletion() }
+            finally { LayoutOrigin.Current = previous }
           } catch (error Exception) {
             if failure == nil { failure = error }
           }

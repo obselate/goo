@@ -27,6 +27,11 @@ internal data struct Transition {
   internal var Duration float64
 }
 
+internal data struct LayoutStyleCommit {
+  internal var Mount NodeMount
+  internal var Entry StyleEntry
+}
+
 internal class ResolverDiagnostics {
   shared {
     private var values ConditionalWeakTable[Resolver, DiagnosticOverrideStore]?
@@ -82,6 +87,37 @@ internal partial class Resolver {
   private var stylePass int64
   internal var VisualDirty bool
   private var pendingEffects ReconcileEffects
+  private let layoutCommits List[LayoutStyleCommit] = List[LayoutStyleCommit]()
+  private var applyingLayoutCommits bool
+  internal var ResolvedLayoutCause LayoutCause
+
+  internal prop HasLayoutCommits bool { get -> layoutCommits.Count != 0 }
+
+  internal func CommitLayoutTargets() {
+    applyingLayoutCommits = true
+    try {
+      for commit in layoutCommits {
+        guard let node = commit.Mount.Current else { continue }
+        writeField(node, commit.Entry, false)
+        if inheritable(commit.Entry.Field) { propagateInherited(node, commit.Entry.Field) }
+      }
+    } finally {
+      layoutCommits.Clear()
+      applyingLayoutCommits = false
+    }
+  }
+
+  private func deferLayoutTarget(n Node, entry StyleEntry) {
+    recordResolvedChange(entry.Field)
+    for i in 0 ... layoutCommits.Count {
+      let pending = layoutCommits[i]
+      if pending.Mount.Current == n && pending.Entry.Field == entry.Field {
+        layoutCommits[i] = LayoutStyleCommit{Mount: pending.Mount, Entry: entry}
+        return
+      }
+    }
+    layoutCommits.Add(LayoutStyleCommit{Mount: NodeMount(n), Entry: entry})
+  }
   internal init() {
     Animating = List[NodeMount]()
     pending = List[NodeMount]()
@@ -121,6 +157,8 @@ internal partial class Resolver {
     Scrollbars.Discard()
     pendingCursor = 0
     pendingEffects = ReconcileEffects.None
+    layoutCommits.Clear()
+    ResolvedLayoutCause = LayoutCause.None
   }
 
   private func queue(n Node) {
@@ -421,6 +459,12 @@ internal partial class Resolver {
   // Direct write on initial resolve, non-animatable fields, or when transitions
   // are off; otherwise starts (or retargets) a lerp from the displayed value.
   internal func writeField(n Node, e StyleEntry, initial bool) {
+    if !initial && !applyingLayoutCommits && Owner?.DeferLayoutTargets == true
+      && LayoutOrigin.IsApplication(LayoutOrigin.Current)
+      && (styleEffects(e.Field) & (ReconcileEffects.Layout | ReconcileEffects.Content)) != ReconcileEffects.None {
+      deferLayoutTarget(n, e)
+      return
+    }
     if e.Payload is LengthDeclaration {
       if !initial && Owner?.Preferences.ReducedMotion != true && n.TransitionMs > 0.0
         && transitionSelected(n.TransitionSelection, e.Field)
@@ -704,6 +748,9 @@ internal partial class Resolver {
   }
 
   private func recordResolvedChange(f StyleField) {
+    if (styleEffects(f) & (ReconcileEffects.Layout | ReconcileEffects.Content)) != ReconcileEffects.None {
+      ResolvedLayoutCause = LayoutOrigin.Combine(ResolvedLayoutCause, LayoutOrigin.Current)
+    }
     pendingEffects = ReconcileEffects(int32(pendingEffects) | int32(styleEffects(f)))
     VisualDirty = true
   }

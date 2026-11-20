@@ -35,6 +35,9 @@ public partial class Window {
   internal prop RenderScale Vector2 { get -> dpi * float32(EffectiveUiScale) }
 
   private func invalidateUiScale() {
+    let previous = LayoutOrigin.Current
+    LayoutOrigin.Current = LayoutCause.Environment
+    try {
     input.ChangeUiScale(node, resolver, float32(EffectiveUiScale))
     pendingReconcileEffects = combineEffects(pendingReconcileEffects,
       ReconcileEffects.Layout | ReconcileEffects.Paint | ReconcileEffects.Input | ReconcileEffects.Accessibility)
@@ -53,6 +56,7 @@ public partial class Window {
     }
     requestRender()
     host?.Wake()
+    } finally { LayoutOrigin.Current = previous }
   }
 
   private func scaledSize(value float64) int32 -> int32(Math.Min(float64(Int32.MaxValue), Math.Round(value * float64(EffectiveUiScale))))

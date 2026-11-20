@@ -654,7 +654,7 @@ public partial class Window {
   private var transparent bool
   private var resizeBand float64
   private var closeRequested int32
-  private var postedActions Queue[Action]?
+  private var postedActions Queue[WindowPostedWork]?
   private var pendingPostedActions int32
   private var acceptingPosts bool
   private var uiThreadBound bool

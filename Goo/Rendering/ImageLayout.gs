@@ -11,6 +11,10 @@ internal open class ImageSourceBinding {
   internal var SourceCompletion ImageSourceCompletion?
   internal var Fallback ImageSourceBindingToken?
   internal var PixelsPerUnit float64 = 1.0
+  internal var AcceptedWidth float64
+  internal var AcceptedHeight float64
+  internal var AcceptedComplete bool
+  internal var AcceptedFailed bool
   internal var Declaration Image?
   private var sourceChangedRegistration Action?
   private var sourceChangedHandler Action?
@@ -28,7 +32,7 @@ internal open class ImageSourceBinding {
     ownerPost = nil
     if let window = owner {
       ownerPost = (action Action) -> {
-        window.Post(action)
+        window.PostEnvironment(action)
       }
     }
     BindSource(source, 0uL)
@@ -119,7 +123,10 @@ internal open class ImageSourceBinding {
         return
       }
     }
-    action()
+    let previous = LayoutOrigin.Current
+    LayoutOrigin.Current = LayoutCause.Environment
+    try { action() }
+    finally { LayoutOrigin.Current = previous }
   }
 
   internal func RebindSource(source ImageSourceProvider) {
@@ -206,8 +213,12 @@ internal class ImageLayouts {
         n.ImageFit = fit
         let prior = sourceState(n)
         if prior?.Source == source {
+          let changed = prior!!.PixelsPerUnit != pixelsPerUnit
           prior!!.PixelsPerUnit = pixelsPerUnit
-          Refresh(n)
+          if changed && prior!!.AcceptedComplete {
+            publishIntrinsic(n, prior!!.AcceptedWidth / pixelsPerUnit,
+              prior!!.AcceptedHeight / pixelsPerUnit, n.DecodedImage)
+          }
           return
         }
         let intrinsicWidth = n.ImageIntrinsicWidth
@@ -240,24 +251,24 @@ internal class ImageLayouts {
       if !lease.IsComplete { return false }
       let decoded = value.CompletedResult()
       let external = lease.ExternalResult()
-      let width = if let image = decoded {
-        image.IsValid && image.Width > 0 ? float32(float64(image.Width) / value.PixelsPerUnit) : 0.0F
-      } else { float32(float64(external?.Width ?? 0) / value.PixelsPerUnit) }
-      let height = if let image = decoded {
-        image.IsValid && image.Height > 0 ? float32(float64(image.Height) / value.PixelsPerUnit) : 0.0F
-      } else { float32(float64(external?.Height ?? 0) / value.PixelsPerUnit) }
-      if n.DecodedImage == decoded
-        && n.ImageIntrinsicWidth == width
-        && n.ImageIntrinsicHeight == height{
-          return false
-        }
+      value.AcceptedComplete = true
+      value.AcceptedFailed = lease.IsFailed
+      value.AcceptedWidth = if let image = decoded { image.IsValid ? float64(image.Width) : 0.0 }
+        else { float64(external?.Width ?? 0) }
+      value.AcceptedHeight = if let image = decoded { image.IsValid ? float64(image.Height) : 0.0 }
+        else { float64(external?.Height ?? 0) }
+      return publishIntrinsic(n, value.AcceptedWidth / value.PixelsPerUnit,
+        value.AcceptedHeight / value.PixelsPerUnit, decoded)
+    }
+
+    private func publishIntrinsic(n Node, width float64, height float64, decoded DecodedImage?) bool {
+      if n.DecodedImage == decoded && n.ImageIntrinsicWidth == float32(width)
+        && n.ImageIntrinsicHeight == float32(height) { return false }
       n.DecodedImage = decoded
-      n.ImageIntrinsicWidth = width
-      n.ImageIntrinsicHeight = height
+      n.ImageIntrinsicWidth = float32(width)
+      n.ImageIntrinsicHeight = float32(height)
       n.BumpScenePaintVersion()
-      if let yoga = n.Yoga {
-        YGNodeAPI.YGNodeMarkDirty(yoga)
-      }
+      if let yoga = n.Yoga { YGNodeAPI.YGNodeMarkDirty(yoga) }
       return true
     }
 
@@ -277,7 +288,6 @@ internal class ImageLayouts {
     internal func Measure(yoga Facebook.Yoga.Node, width float32, widthMode MeasureMode,
       height float32, heightMode MeasureMode) YGSize{
         let n = nodeFromYoga(yoga)
-        Refresh(n)
         if n.ImageIntrinsicWidth <= 0.0F || n.ImageIntrinsicHeight <= 0.0F { return YGSize{} }
         let naturalWidth = n.ImageIntrinsicWidth
         let naturalHeight = n.ImageIntrinsicHeight

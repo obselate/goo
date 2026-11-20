@@ -41,6 +41,13 @@ internal sealed class TextEditorBinding : IDisposable {
       TextEditorLayerBindings.Register(this)
     }
 
+  internal func ApplyPresentation(owner Window) {
+    if CellOwnership.Nearest(node)?.contextWindow != owner
+      || !LayoutOrigin.IsApplication(RenderState.PresentationCause) { return }
+    RenderState.ClearParagraphs()
+    TextEditorLayouts.Invalidate(node)
+  }
+
   public func Dispose() {
     if disposed {
       return
@@ -161,6 +168,7 @@ internal sealed class TextEditorBinding : IDisposable {
   }
 
   private func requestIntrinsicInvalidation() {
+    RenderState.PresentationCause = LayoutOrigin.Combine(RenderState.PresentationCause, LayoutOrigin.Current)
     var effects = ReconcileEffects.Content | ReconcileEffects.Paint
     | ReconcileEffects.Input | ReconcileEffects.Rect
     if !(node.Width.HasMagnitude && node.Height.HasMagnitude) {
@@ -194,6 +202,10 @@ internal func sameEditorComposition(left TextComposition?, right TextComposition
 internal class TextEditorLayerBindings {
   shared {
     private let states List[TextEditorBinding] = List[TextEditorBinding]()
+
+    internal func ApplyPresentation(owner Window) {
+      for state in states { state.ApplyPresentation(owner) }
+    }
 
     internal func Register(state TextEditorBinding) {
       if !states.Contains(state) {
