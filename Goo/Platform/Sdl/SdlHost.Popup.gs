@@ -9,7 +9,9 @@ internal unsafe partial class SdlHost {
   private var popupTimestamp uint64
   private var popupKind PopupKind
 
-  internal prop HasPopupKeyboardFocus bool { get -> !disposed && SDL.GetKeyboardFocus() == window }
+  internal prop HasPopupKeyboardFocus bool {
+    get -> !disposed && SDL.GetKeyboardFocus() == window && (focusSubclass == nil || IsChild(focusWindow, GetFocus()) == 0)
+  }
 
   shared {
     @DllImport("SDL3", EntryPoint: "Goo_ConfigurePopup", CallingConvention: CallingConvention.Cdecl)
