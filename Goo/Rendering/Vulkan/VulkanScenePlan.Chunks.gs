@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Collections.Generic
 
 internal partial class SceneFrame {
   internal func AppendPlaceholderChunk(
@@ -420,6 +421,18 @@ internal partial class SceneFrame {
     growthOperations++
   }
 
+  internal func AddLayerBackdropBounds(firstLayerId int32, capture ConservativeBounds) {
+    let bounds = layerBackdropBounds ??= Dictionary[int32, ConservativeBounds]()
+    var clipLayerId = firstLayerId
+    while clipLayerId != 0 {
+      let clipLayer = clipLayerId - 1
+      bounds[clipLayer] = if bounds.TryGetValue(clipLayer, out var prior) {
+        unionVulkanSceneBounds(prior, capture)
+      } else { capture }
+      clipLayerId = layers[clipLayer].ParentClipLayerId
+    }
+  }
+
   internal func Layer(index int32) LayerRecord {
     var value = PlaceLayer(index, layers[index])
     if value.EffectIndex < 0 &&
@@ -439,14 +452,14 @@ internal partial class SceneFrame {
         Height: MathF.Max(0.0F, bottom - top),
       }
     }
-    if !value.BackdropBounds.IsEmpty {
+    let backdropBounds = layerBackdropBounds
+    if (value.Flags & uint32(LayerRecordFlags.PreservesBackdrop)) != 0u
+      && backdropBounds != nil && backdropBounds.TryGetValue(index, out var capture) {
       let right = value.OriginX + float32(value.ExtentWidth)
       let bottom = value.OriginY + float32(value.ExtentHeight)
-      let capture = value.BackdropBounds
-      if capture.X >= value.OriginX && capture.Y >= value.OriginY
-        && capture.Right <= right && capture.Bottom <= bottom {
-        value.BackdropBounds = ConservativeBounds{}
-      } else {
+      if capture.X < value.OriginX || capture.Y < value.OriginY
+        || capture.Right > right || capture.Bottom > bottom {
+        value.Flags |= uint32(LayerRecordFlags.ExpandedBackdropCapture)
         value.OriginX = MathF.Min(value.OriginX, MathF.Floor(capture.X))
         value.OriginY = MathF.Min(value.OriginY, MathF.Floor(capture.Y))
         value.ExtentWidth = uint32(MathF.Max(right, MathF.Ceiling(capture.Right)) - value.OriginX)

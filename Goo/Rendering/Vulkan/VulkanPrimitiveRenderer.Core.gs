@@ -1095,7 +1095,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           activeExtent)
         clipIndex = clipIndex + 1
       }
-      if !record.BackdropBounds.IsEmpty {
+      if (record.Flags & uint32(LayerRecordFlags.ExpandedBackdropCapture)) != 0u {
         let clip = PrimitiveClip{
           Left: int32(MathF.Floor(record.Bounds.X - record.OriginX)),
           Top: int32(MathF.Floor(record.Bounds.Y - record.OriginY)),

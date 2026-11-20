@@ -486,6 +486,7 @@ internal enum LayerRecordFlags {
   SamplesBackdrop = 1;
   BorrowsParentBackdrop = 2;
   PreservesBackdrop = 4;
+  ExpandedBackdropCapture = 8;
 }
 
 internal struct VulkanSceneLayerCoverage {
@@ -497,7 +498,6 @@ internal struct VulkanSceneLayerCoverage {
 
 internal struct LayerRecord {
   internal var Bounds ConservativeBounds
-  internal var BackdropBounds ConservativeBounds
   internal var OriginX float32
   internal var OriginY float32
   internal var ExtentWidth uint32
