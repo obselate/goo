@@ -3770,6 +3770,30 @@
         ]
       },
       "boxes": [[0, 0, 200, 100], [0, 0, 60, 100], [60, 0, 140, 100]]
+    },
+    {
+      "name": "row-grow-mixed-min-max-violations",
+      "viewport": [100, 20],
+      "tree": {
+        "style": {"Width": 100, "Height": 20, "FlexDirection": "Row"},
+        "children": [
+          {"style": {"FlexGrow": 1, "FlexShrink": 1, "FlexBasis": 0, "MinWidth": 60}},
+          {"style": {"FlexGrow": 1, "FlexShrink": 1, "FlexBasis": 0, "MaxWidth": 10}}
+        ]
+      },
+      "boxes": [[0, 0, 100, 20], [0, 0, 90, 20], [90, 0, 10, 20]]
+    },
+    {
+      "name": "row-shrink-mixed-min-max-violations",
+      "viewport": [200, 20],
+      "tree": {
+        "style": {"Width": 100, "Height": 20, "FlexDirection": "Row"},
+        "children": [
+          {"style": {"FlexShrink": 1, "FlexBasis": 60, "MinWidth": 55}},
+          {"style": {"FlexShrink": 1, "FlexBasis": 100, "MaxWidth": "40%"}}
+        ]
+      },
+      "boxes": [[0, 0, 100, 20], [0, 0, 60, 20], [60, 0, 40, 20]]
     }
   ]
 }
