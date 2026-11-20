@@ -100,7 +100,83 @@
      }
  
      if (wind->shell_surface_status == WAYLAND_SHELL_SURFACE_STATUS_WAITING_FOR_CONFIGURE) {
-@@ -1447,6 +1449,11 @@
+@@ -763,6 +765,8 @@
+     handle_xdg_surface_configure
+ };
+ 
++#define GOO_WINDOW_RESIZE_CONSTRAINTS "Goo.Window.ResizeConstraints.1"
++
+ static void handle_xdg_toplevel_configure(void *data,
+                                           struct xdg_toplevel *xdg_toplevel,
+                                           int32_t width,
+@@ -780,6 +784,8 @@
+     bool active = false;
+     bool resizing = false;
+     bool suspended = false;
++    const Uint32 previous_constraints = wind->toplevel_constraints;
++    Uint32 tiled_edges = 0;
+     wind->toplevel_constraints = 0;
+     wl_array_for_each (state, states) {
+         switch (*state) {
+@@ -798,11 +804,16 @@
+             active = true;
+             break;
+         case XDG_TOPLEVEL_STATE_TILED_LEFT:
++            tiled_edges |= WAYLAND_TOPLEVEL_CONSTRAINED_LEFT;
++            break;
+         case XDG_TOPLEVEL_STATE_TILED_RIGHT:
++            tiled_edges |= WAYLAND_TOPLEVEL_CONSTRAINED_RIGHT;
++            break;
+         case XDG_TOPLEVEL_STATE_TILED_TOP:
++            tiled_edges |= WAYLAND_TOPLEVEL_CONSTRAINED_TOP;
++            break;
+         case XDG_TOPLEVEL_STATE_TILED_BOTTOM:
+-            tiled = true;
+-            floating = false;
++            tiled_edges |= WAYLAND_TOPLEVEL_CONSTRAINED_BOTTOM;
+             break;
+         case XDG_TOPLEVEL_STATE_SUSPENDED:
+             suspended = true;
+@@ -824,6 +835,19 @@
+         }
+     }
+ 
++    tiled = tiled_edges != 0;
++    floating = floating && !tiled;
++    const Uint32 all_edges = WAYLAND_TOPLEVEL_CONSTRAINED_LEFT | WAYLAND_TOPLEVEL_CONSTRAINED_RIGHT |
++                             WAYLAND_TOPLEVEL_CONSTRAINED_TOP | WAYLAND_TOPLEVEL_CONSTRAINED_BOTTOM;
++    if (tiled_edges != all_edges && xdg_toplevel_get_version(xdg_toplevel) <
++        XDG_TOPLEVEL_STATE_CONSTRAINED_LEFT_SINCE_VERSION) {
++        wind->toplevel_constraints = tiled_edges;
++    }
++    if (previous_constraints != wind->toplevel_constraints) {
++        SDL_SetNumberProperty(SDL_GetWindowProperties(window), GOO_WINDOW_RESIZE_CONSTRAINTS,
++                              wind->toplevel_constraints);
++    }
++
+     UpdateWindowFullscreen(window, fullscreen);
+ 
+     /* Always send a maximized/restore event; if the event is redundant it will
+@@ -1202,6 +1226,7 @@
+     bool tiled = false;
+     bool suspended = false;
+     bool resizing = false;
++    const Uint32 previous_constraints = wind->toplevel_constraints;
+     wind->toplevel_constraints = 0;
+ 
+     static const enum libdecor_window_state tiled_states = (LIBDECOR_WINDOW_STATE_TILED_LEFT | LIBDECOR_WINDOW_STATE_TILED_RIGHT |
+@@ -1233,6 +1258,10 @@
+         }
+ #endif
+     }
++    if (previous_constraints != wind->toplevel_constraints) {
++        SDL_SetNumberProperty(SDL_GetWindowProperties(window), GOO_WINDOW_RESIZE_CONSTRAINTS,
++                              wind->toplevel_constraints);
++    }
+     const bool floating = !(fullscreen || maximized || tiled);
+ 
+     UpdateWindowFullscreen(window, fullscreen);
+@@ -1447,6 +1476,11 @@
          struct libdecor_state *state = libdecor_state_new(wind->current.logical_width, wind->current.logical_height);
          libdecor_frame_commit(frame, state, configuration);
          libdecor_state_free(state);
