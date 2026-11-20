@@ -439,7 +439,8 @@ public partial class Window {
     }
   }
 
-  /// Gets or sets the undecorated edge resize band in logical pixels, multiplied by UiScale. The default is 8.
+  /// Gets or sets the undecorated edge resize band inside the window, in logical pixels multiplied by UiScale. The default is 8.
+  /// Windows, macOS and Wayland with the Goo SDL build resize from a border outside the window instead and use no inside band.
   /// Controls and scrollbars under an edge band take the pointer. Corners resize within max(2 * ResizeBand, 16) of each corner.
   public prop ResizeBand float64{
     get -> ReadUntrackedWindowValue(resizeBand)
