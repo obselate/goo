@@ -38,6 +38,7 @@ jobs:
       lint: ${{ steps.paths.outputs.lint }}
       api: ${{ steps.paths.outputs.api }}
       plugin: ${{ steps.paths.outputs.plugin }}
+      widgets-pin-changed: ${{ steps.paths.outputs.widgets-pin-changed }}
     steps:
       - id: paths
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
@@ -46,6 +47,7 @@ jobs:
             let full = context.eventName !== 'pull_request';
             let plugin = false;
             let api = false;
+            let widgetsPinChanged = false;
             if (!full) {
               const files = await github.paginate(github.rest.pulls.listFiles, {
                 ...context.repo, pull_number: context.issue.number, per_page: 100
@@ -53,6 +55,7 @@ jobs:
               full = files.length !== context.payload.pull_request.changed_files;
               for (const file of files) {
                 for (const path of [file.filename, file.previous_filename].filter(Boolean)) {
+                  if (path === '.github/goo-widgets.commit') widgetsPinChanged = true;
                   if (path.startsWith('tools/Goo.PluginMcp/')) plugin = true;
                   if (path.startsWith('plugins/goo/')) plugin = true;
                   else if ((path.startsWith('docs/') || !path.includes('/') || path.startsWith('changelog.d/')) &&
@@ -66,6 +69,7 @@ jobs:
             core.setOutput('lint', full || plugin);
             core.setOutput('api', full || api);
             core.setOutput('plugin', full || plugin);
+            core.setOutput('widgets-pin-changed', widgetsPinChanged);
 
   preflight:
     needs: changes
@@ -1220,7 +1224,8 @@ jobs:
           path: artifacts/packages/
 
   widgets-focus:
-    needs: linux-packages
+    needs: [changes, linux-packages]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.widgets-pin-changed == 'true'
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     defaults:
@@ -2343,7 +2348,7 @@ jobs:
 
   release-goo:
     if: github.repository == 'obselate/goo' && startsWith(github.ref, 'refs/tags/v')
-    needs: [changes, quality, plugin, macos-arm64, macos-checks, linux-build, linux-test-build, linux-validation, linux-fixtures, linux-packages, widgets-focus, linux-x64, android, android-accessibility, android-consumer, android-native-menus, windows-native, windows-x64]
+    needs: [changes, quality, plugin, macos-arm64, macos-checks, linux-build, linux-test-build, linux-validation, linux-fixtures, linux-packages, linux-x64, android, android-accessibility, android-consumer, android-native-menus, windows-native, windows-x64]
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     environment: release
