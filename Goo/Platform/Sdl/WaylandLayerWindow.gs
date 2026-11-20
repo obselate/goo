@@ -174,7 +174,8 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   internal func Pump() {
     if disposed { return }
     if WaylandBackdrop.wl_display_dispatch_queue_pending(display, queue) < 0 {
-      throw InvalidOperationException("Layer-shell event dispatch failed")
+      if WaylandBackdrop.wl_display_get_error(display) == 71 { throw InvalidOperationException("Layer-shell Wayland protocol error") }
+      if mapped { Closed(nint(0), nint(0)) }
     }
     if let error = failure { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw() }
   }
