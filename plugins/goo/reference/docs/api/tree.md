@@ -1343,7 +1343,7 @@ Creates an editor. Controller must be set before mounting.
 
 ### `CaretColor`
 
-Gets the caret color.
+Gets the caret color. Select TransitionProperty.CaretColor to interpolate changes.
 
 ### `Controller`
 
@@ -1391,7 +1391,7 @@ Gets whether editing commands are disabled.
 
 ### `SelectionColor`
 
-Gets the selection highlight color.
+Gets the selection highlight color. Select TransitionProperty.SelectionColor to interpolate changes.
 
 ### `ShowLineNumbers`
 
