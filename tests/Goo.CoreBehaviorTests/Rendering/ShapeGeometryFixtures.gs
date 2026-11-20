@@ -202,6 +202,23 @@ internal class ShapeGeometryFixtures {
       && trimmed.MaxX > 49.5F && trimmed.MaxX < 50.5F
   }
 
+  func RoundedShapeDrawingMatchesHitTest() bool {
+    let path = PathBuilder(0.0, 0.0, 100.0, 100.0)
+      .MoveTo(0.0, 0.0).LineTo(100.0, 0.0).LineTo(100.0, 100.0).LineTo(0.0, 100.0).Close().Build()
+    let node = Reconciler{Res: Resolver{}}.Mount(Shape{
+      Path: path, Width: 100, Height: 100, Fit: ShapeFit.Fill,
+      CornerRadius: 30.0, Fill: VectorPaint(Color.White),
+    })
+    node.Rect = Rect{ W: 100.0F, H: 100.0F }
+    let drawing = PathGeometry.For(ShapeGeometry.Resolve(node, node.Rect, 1.0F).Path)
+    for point in []float32{2.5F, 5.5F, 8.5F, 50.5F} {
+      let inside = point >= 8.5F
+      if ShapeGeometry.HitTest(node, point, point) != inside
+        || drawing.Contains(point, point, FillRule.NonZero) != inside { return false }
+    }
+    return true
+  }
+
   func StrokeTrimUsesGlobalContourLengthAndHitGeometry() bool {
     let path = PathBuilder(0.0, 0.0, 100.0, 20.0)
       .MoveTo(10.0, 5.0).LineTo(50.0, 5.0)

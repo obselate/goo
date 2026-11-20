@@ -628,6 +628,7 @@ class FixtureContractTests {
             yield Contract[ShapeGeometryFixtures]("EllipseFlatteningBoundsDeviceErrorAndEdgeCount")
             yield Contract[ShapeGeometryFixtures]("LoneMoveToContoursPreserveOtherStrokes")
             yield Contract[ShapeGeometryFixtures]("ReturningQuadraticStrokePreservesExcursionAndTrim")
+            yield Contract[ShapeGeometryFixtures]("RoundedShapeDrawingMatchesHitTest")
             yield Contract[ShapeGeometryFixtures]("StrokeTrimUsesGlobalContourLengthAndHitGeometry")
             yield Contract[ShapeGeometryFixtures]("StrokeTrimPreservesFillAndOpensPartialClosedContour")
             yield Contract[ShapeGeometryFixtures]("StrokeTrimKeepsFullyIncludedMiddleContourClosed")
