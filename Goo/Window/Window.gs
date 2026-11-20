@@ -440,7 +440,7 @@ public partial class Window {
   }
 
   /// Gets or sets the undecorated edge resize band in logical pixels, multiplied by UiScale. The default is 8.
-  /// Controls and scrollbars under an edge band take the pointer. Corners resize within max(2 * ResizeBand, 16) of each corner.
+  /// Controls with OnClick and scrollbars under an edge band take the pointer. Corners resize within max(2 * ResizeBand, 16) of each corner.
   public prop ResizeBand float64{
     get -> ReadUntrackedWindowValue(resizeBand)
     set(v) {
