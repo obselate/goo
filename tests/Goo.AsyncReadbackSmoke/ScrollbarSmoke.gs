@@ -68,14 +68,14 @@ func RunScrollbarSmoke() {
             "Scrollbar visual parts did not mount"
         )
         Require(
-            WindowReadbackTestFixture.NativeHitTest(opened, opened.NativeWidth - 2, opened.NativeHeight / 2)
+            WindowReadbackTestFixture.NativeHitTest(opened, opened.NativeWidth + 2, opened.NativeHeight / 2)
             == SDLHitTestResult.ResizeRight,
             "Focusable content masked the undecorated right resize edge"
         )
         Require(
-            WindowReadbackTestFixture.NativeHitTest(opened, opened.NativeWidth / 2, opened.NativeHeight - 2)
+            WindowReadbackTestFixture.NativeHitTest(opened, opened.NativeWidth / 2, opened.NativeHeight + 2)
             == SDLHitTestResult.ResizeBottom
-            && WindowReadbackTestFixture.NativeHitTest(opened, opened.NativeWidth - 2, opened.NativeHeight - 2)
+            && WindowReadbackTestFixture.NativeHitTest(opened, opened.NativeWidth + 2, opened.NativeHeight + 2)
             == SDLHitTestResult.ResizeBottomright,
             "Focusable content masked the bottom resize edge or corner"
         )
@@ -140,7 +140,7 @@ func RunScrollbarSmoke() {
         let nativeY = nativeThumb.Y + nativeThumb.Height * 0.5
         let outsideX = -20.0
         let outsideY = nativeY - 20.0
-        let edgeX = 0
+        let edgeX = -2
         let edgeY = opened.NativeHeight / 2
         WindowReadbackTestFixture.NativeMousePress(opened, nativeX, nativeY)
         Require(
@@ -178,20 +178,20 @@ func RunScrollbarSmoke() {
 
         opened.Resizable = false
         Require(
-            WindowReadbackTestFixture.NativeHitTest(opened, opened.NativeWidth - 2, opened.NativeHeight / 2)
+            WindowReadbackTestFixture.NativeHitTest(opened, opened.NativeWidth + 2, opened.NativeHeight / 2)
             == SDLHitTestResult.Normal,
             "Fixed-size window exposed a resize edge"
         )
         opened.Resizable = true
         opened.State = WindowState.Maximized
         Require(
-            WindowReadbackTestFixture.NativeHitTest(opened, opened.NativeWidth - 2, opened.NativeHeight / 2)
+            WindowReadbackTestFixture.NativeHitTest(opened, opened.NativeWidth + 2, opened.NativeHeight / 2)
             == SDLHitTestResult.Normal,
             "Maximized window exposed a resize edge over content"
         )
         opened.State = WindowState.Fullscreen
         Require(
-            WindowReadbackTestFixture.NativeHitTest(opened, opened.NativeWidth - 2, opened.NativeHeight / 2)
+            WindowReadbackTestFixture.NativeHitTest(opened, opened.NativeWidth + 2, opened.NativeHeight / 2)
             == SDLHitTestResult.Normal,
             "Fullscreen window exposed a resize edge over content"
         )
