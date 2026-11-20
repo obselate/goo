@@ -53,6 +53,7 @@ jobs:
                 ...context.repo, pull_number: context.issue.number, per_page: 100
               });
               full = files.length !== context.payload.pull_request.changed_files;
+              widgetsPinChanged = full;
               for (const file of files) {
                 for (const path of [file.filename, file.previous_filename].filter(Boolean)) {
                   if (path === '.github/goo-widgets.commit') widgetsPinChanged = true;
