@@ -329,7 +329,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
   private func ResolvePipeline(ref pipeline VkPipeline,
     vertex VkShaderModule, fragment VkShaderModule, layout VkPipelineLayout,
     enableBlend bool, primitiveInput bool) VkPipeline{
-      let existing = Volatile.Read(ref pipeline)
+      let existing = Volatile.Read(in pipeline)
       if existing != 0uL { return existing }
       lock (pipelineGate) {
         if disposed {
@@ -405,9 +405,9 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       var specializationEntry = VkSpecializationMapEntry{constantID: 0u, size: 4u}
       var specialization = VkSpecializationInfo{
         mapEntryCount: 1u,
-        pMapEntries: *VkSpecializationMapEntry(Unsafe.AsPointer[VkSpecializationMapEntry](ref specializationEntry)),
+        pMapEntries: *VkSpecializationMapEntry(Unsafe.AsPointer[VkSpecializationMapEntry](in specializationEntry)),
         dataSize: 4u,
-        pData: Unsafe.AsPointer[uint32](ref coordinates),
+        pData: Unsafe.AsPointer[uint32](in coordinates),
       }
       try {
         pipeline = VulkanPipelineFactory.CreateGraphics(
@@ -422,7 +422,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
           VkConstants.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
           !program.ReplacesBackdrop,
           FullColorWriteMask(),
-          vertexSpecialization: *VkSpecializationInfo(Unsafe.AsPointer[VkSpecializationInfo](ref specialization))
+          vertexSpecialization: *VkSpecializationInfo(Unsafe.AsPointer[VkSpecializationInfo](in specialization))
         )
       } finally {
         VulkanNativeHandleDestroyer.DestroyShaderModule(
@@ -765,15 +765,15 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
   private func PreparePipelines() {
     try {
       for state in formatStates {
-        if Volatile.Read(ref preparationStopped) != 0 { return }
+        if Volatile.Read(in preparationStopped) != 0 { return }
         state?.MaterializePipelines()
       }
-      if Volatile.Read(ref preparationStopped) != 0 { return }
+      if Volatile.Read(in preparationStopped) != 0 { return }
       ResolveClipMaskPipeline(ref clipMaskR8Pipeline, VkConstants.VK_FORMAT_R8_UNORM)
       ResolveClipMaskPipeline(ref clipMaskRgba8Pipeline, VkConstants.VK_FORMAT_R8G8B8A8_UNORM)
       let blur = ShaderEffect(ShaderEffectProgram.LoadEmbedded("filtered_backdrop.goo-effect"))
       for state in formatStates {
-        if Volatile.Read(ref preparationStopped) != 0 { return }
+        if Volatile.Read(in preparationStopped) != 0 { return }
         state?.ResolveShaderEffectPipeline(blur)
         state?.ResolveShaderEffectPipeline(BackdropBlurEffect.Shared)
       }
@@ -805,7 +805,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
 
   private func ResolveClipMaskPipeline(ref pipeline VkPipeline,
     targetFormat VkFormat) VkPipeline{
-      let existing = Volatile.Read(ref pipeline)
+      let existing = Volatile.Read(in pipeline)
       if existing != 0uL { return existing }
       lock (clipPipelineGate) {
         EnsureOpen()

@@ -450,7 +450,7 @@ ViewTreeObserver
             } else {
                 virtualViewId
             },
-            text!!,
+            text,
             result
         )
         return result

@@ -29,7 +29,7 @@ internal struct VulkanSceneRangeCompilation {
 }
 
 internal struct VulkanSceneRangeEntry {
-    internal var Owner WeakReference[VulkanSceneOwnerId]?
+    internal var Owner WeakReference[VulkanSceneOwnerId?]?
     internal var OwnerId uint64
     internal var ParentSlot int32
     internal var ParentOwnerId uint64
@@ -75,16 +75,16 @@ internal partial class VulkanSceneCompiler {
     private var rangeCompileCount int32
     private var rangeHitCount int32
     private var rangePeakBytes int64
-    private let rangeRoot WeakReference[Node] = WeakReference[Node](nil)
-    private let rangeOverlayRoot WeakReference[Node] = WeakReference[Node](nil)
+    private let rangeRoot WeakReference[Node?] = WeakReference[Node?](nil)
+    private let rangeOverlayRoot WeakReference[Node?] = WeakReference[Node?](nil)
 
     internal prop RetainedOwnerCount int32 {
         get {
             let retained = HashSet[VulkanSceneOwnerId]()
-            if rangeRoot.TryGetTarget(out var root) {
+            if rangeRoot.TryGetTarget(out var root) && root != nil {
                 CollectRetainedOwners(root, retained)
             }
-            if rangeOverlayRoot.TryGetTarget(out var overlays) {
+            if rangeOverlayRoot.TryGetTarget(out var overlays) && overlays != nil {
                 CollectRetainedOwners(overlays, retained)
             }
             for entry in owners {
@@ -315,7 +315,7 @@ internal partial class VulkanSceneCompiler {
             }
             InvalidateRangeAncestors(slot)
             if let weak = rangeEntries[slot].Owner {
-                if rangeEntries[slot].Boundary == VulkanSceneRangeBoundary.Node && weak.TryGetTarget(out var prior) {
+                if rangeEntries[slot].Boundary == VulkanSceneRangeBoundary.Node && weak.TryGetTarget(out var prior) && prior != nil {
                     prior.RangeSlot = -1
                 }
             }
@@ -323,7 +323,7 @@ internal partial class VulkanSceneCompiler {
         let weak = if let existing = rangeEntries[slot].Owner {
             existing
         } else {
-            WeakReference[VulkanSceneOwnerId](owner)
+            WeakReference[VulkanSceneOwnerId?](owner)
         }
         weak.SetTarget(owner)
         rangeEntries[slot] = VulkanSceneRangeEntry{

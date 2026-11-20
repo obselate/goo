@@ -75,7 +75,7 @@ internal data class DiscoveryDescriptor(
             let name = if string.IsNullOrWhiteSpace(ApplicationName) {
                 ProcessName
             } else {
-                ApplicationName!!
+                ApplicationName
             }
             return if string.IsNullOrWhiteSpace(name) {
                 "process $ProcessId"
@@ -321,7 +321,7 @@ internal shared class Discovery {
             }
             descriptor = DiscoveryDescriptor(
                 Path.GetFullPath(path),
-                protocol!!,
+                protocol,
                 processId,
                 processName,
                 pipe,

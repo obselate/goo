@@ -38,6 +38,7 @@ jobs:
       lint: ${{ steps.paths.outputs.lint }}
       api: ${{ steps.paths.outputs.api }}
       plugin: ${{ steps.paths.outputs.plugin }}
+      widgets-pin-changed: ${{ steps.paths.outputs.widgets-pin-changed }}
     steps:
       - id: paths
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
@@ -46,13 +47,16 @@ jobs:
             let full = context.eventName !== 'pull_request';
             let plugin = false;
             let api = false;
+            let widgetsPinChanged = false;
             if (!full) {
               const files = await github.paginate(github.rest.pulls.listFiles, {
                 ...context.repo, pull_number: context.issue.number, per_page: 100
               });
               full = files.length !== context.payload.pull_request.changed_files;
+              widgetsPinChanged = full;
               for (const file of files) {
                 for (const path of [file.filename, file.previous_filename].filter(Boolean)) {
+                  if (path === '.github/goo-widgets.commit') widgetsPinChanged = true;
                   if (path.startsWith('tools/Goo.PluginMcp/')) plugin = true;
                   if (path.startsWith('plugins/goo/')) plugin = true;
                   else if ((path.startsWith('docs/') || !path.includes('/') || path.startsWith('changelog.d/')) &&
@@ -66,6 +70,7 @@ jobs:
             core.setOutput('lint', full || plugin);
             core.setOutput('api', full || api);
             core.setOutput('plugin', full || plugin);
+            core.setOutput('widgets-pin-changed', widgetsPinChanged);
 
   preflight:
     needs: changes
@@ -1221,6 +1226,94 @@ jobs:
           name: linux-packages
           if-no-files-found: error
           path: artifacts/packages/
+
+  widgets-focus:
+    needs: [changes, linux-packages]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.widgets-pin-changed == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: goo
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: goo
+      - *widgets-pin
+      - *widgets-checkout
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
+        with:
+          global-json-file: goo-widgets/global.json
+      - name: Download same-run Goo candidate packages
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: linux-packages
+          path: ${{ runner.temp }}/goo-candidate-feed
+      - name: Install headless Wayland and Vulkan dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends $GOO_LINUX_APT_PACKAGES dbus-daemon kwin-common
+      - name: Build Widgets and its consumer against the candidate
+        working-directory: goo-widgets
+        env:
+          NUGET_PACKAGES: ${{ runner.temp }}/widgets-focus-nuget
+          MSBUILDDISABLENODEREUSE: 1
+        run: |
+          feed="$RUNNER_TEMP/goo-candidate-feed"
+          shopt -s nullglob
+          packages=("$feed"/Goo.[0-9]*.nupkg)
+          test "${#packages[@]}" -eq 1
+          package="${packages[0]}"
+          version="${package##*/Goo.}"
+          version="${version%.nupkg}"
+          printf 'Goo SHA: %s\nWidgets SHA: %s\nGoo candidate version: %s\n' \
+            "$(git -C ../goo rev-parse HEAD)" "$(git rev-parse HEAD)" "$version"
+          sha256sum "$package"
+          cat > NuGet.Config <<EOF
+          <configuration>
+            <packageSources>
+              <clear />
+              <add key="candidate" value="$feed" />
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+            </packageSources>
+            <packageSourceMapping>
+              <packageSource key="candidate"><package pattern="Goo*" /></packageSource>
+              <packageSource key="nuget.org"><package pattern="*" /></packageSource>
+            </packageSourceMapping>
+          </configuration>
+          EOF
+          targets="$RUNNER_TEMP/widgets-focus.targets"
+          printf '<Project><ItemGroup><PackageReference Update="Goo" Version="[%s]" /></ItemGroup></Project>\n' "$version" > "$targets"
+          flags=(-p:CustomAfterMicrosoftCommonTargets="$targets" -m:1 -p:UseSharedCompilation=false)
+          markdown=src/Goo.Widgets.Markdown/Goo.Widgets.Markdown.gsproj
+          consumer=tests/Goo.Widgets.Consumer/Goo.Widgets.Consumer.gsproj
+          dotnet restore "$markdown" --force-evaluate "${flags[@]}"
+          dotnet build "$markdown" -c Release --no-restore "${flags[@]}"
+          mkdir -p artifacts/{package,markdown-package}/lib/net10.0
+          cp src/Goo.Widgets/bin/Release/net10.0/Goo.Widgets.dll artifacts/package/lib/net10.0/
+          cp src/Goo.Widgets.Markdown/bin/Release/net10.0/Goo.Widgets.Markdown.dll artifacts/markdown-package/lib/net10.0/
+          dotnet restore "$consumer" --force-evaluate "${flags[@]}"
+          cached="$NUGET_PACKAGES/goo/${version,,}"
+          cmp "$package" "$cached/goo.${version,,}.nupkg"
+          source="$(jq -er '.source' "$cached/.nupkg.metadata")"
+          test "$source" = "$feed"
+          printf 'Restored Goo %s from %s (candidate bytes verified)\n' "$version" "$source"
+          dotnet build "$consumer" -c Release --no-restore "${flags[@]}"
+      - name: Compare Widgets focus crops
+        working-directory: goo-widgets
+        run: |
+          icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          test "${#icds[@]}" -eq 1
+          test -f "${icds[0]}"
+          env -u GOO_WIDGETS_APPROVE_FOCUS VK_DRIVER_FILES="${icds[0]}" VK_LOADER_DEBUG=driver \
+            bash scripts/verify-native.sh FOCUS
+      - name: Upload focus failure crops
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: widgets-focus-failures
+          path: goo-widgets/artifacts/native-test/focus/*.png
+          if-no-files-found: ignore
 
   linux-x64:
     needs: [changes, linux-packages]
@@ -2730,7 +2823,7 @@ jobs:
 
   verify:
     if: always()
-    needs: [changes, preflight, quality, plugin, macos-native, macos-arm64, macos-checks, linux-build, linux-validation, linux-test-build, linux-packages, linux-x64, linux-fixtures, windows-native, windows-x64, android, android-native-menus, android-accessibility, android-consumer, android-nativeaot-accessibility]
+    needs: [changes, preflight, quality, plugin, macos-native, macos-arm64, macos-checks, linux-build, linux-validation, linux-test-build, linux-packages, widgets-focus, linux-x64, linux-fixtures, windows-native, windows-x64, android, android-native-menus, android-accessibility, android-consumer, android-nativeaot-accessibility]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

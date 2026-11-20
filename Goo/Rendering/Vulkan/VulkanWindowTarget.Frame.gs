@@ -61,11 +61,6 @@ internal unsafe partial class VulkanWindowTarget {
         VkConstants.VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT)
       }
       RecordDiagnosticBarrier()
-      var clear = VkClearValue{}
-      clear.color.float32.values[0] = 0.0F
-      clear.color.float32.values[1] = 0.0F
-      clear.color.float32.values[2] = 0.0F
-      clear.color.float32.values[3] = 0.0F
       var attachment = VkRenderingAttachmentInfo{}
       attachment.sType = VkConstants.VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO
       attachment.imageView = current.ImageView(imageIndex)
@@ -73,7 +68,6 @@ internal unsafe partial class VulkanWindowTarget {
       attachment.resolveMode = VkConstants.VK_RESOLVE_MODE_NONE
       attachment.loadOp = VkConstants.VK_ATTACHMENT_LOAD_OP_CLEAR
       attachment.storeOp = VkConstants.VK_ATTACHMENT_STORE_OP_STORE
-      attachment.clearValue = clear
       var rendering = VkRenderingInfo{}
       rendering.sType = VkConstants.VK_STRUCTURE_TYPE_RENDERING_INFO
       rendering.renderArea.offset = VkOffset2D{ x: damage.X, y: damage.Y }

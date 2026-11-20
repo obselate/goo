@@ -412,11 +412,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
 
   private func BeginClipMaskRendering(commandBuffer VkCommandBuffer,
     atlas VulkanClipMaskAtlas, dirty VulkanClipMaskDirtyRegion) {
-      var clear = VkClearValue{}
-      clear.color.float32.values[0] = 0.0F
-      clear.color.float32.values[1] = 0.0F
-      clear.color.float32.values[2] = 0.0F
-      clear.color.float32.values[3] = 0.0F
       var attachment = VkRenderingAttachmentInfo{}
       attachment.sType = VkConstants.VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO
       attachment.imageView = atlas.ImageViewAt(dirty.Layer)
@@ -424,7 +419,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       attachment.resolveMode = VkConstants.VK_RESOLVE_MODE_NONE
       attachment.loadOp = VkConstants.VK_ATTACHMENT_LOAD_OP_CLEAR
       attachment.storeOp = VkConstants.VK_ATTACHMENT_STORE_OP_STORE
-      attachment.clearValue = clear
       var rendering = VkRenderingInfo{}
       rendering.sType = VkConstants.VK_STRUCTURE_TYPE_RENDERING_INFO
       rendering.renderArea = VkRect2D{}

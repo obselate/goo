@@ -119,7 +119,7 @@ class DevToolsCell : Cell {
                 NavigationItem{Id: "tab-elements", Label: "Elements"},
                 NavigationItem{Id: "tab-profiler", Label: "Profiler"},
             },
-            SelectedId: showProfiler ? "tab-profiler": "tab-elements",
+            SelectedId: showProfiler ? "tab-profiler" : "tab-elements",
             OnSelect: (id string) -> {
                 showProfiler = id == "tab-profiler"
                 Rebuild()
@@ -148,7 +148,7 @@ class DevToolsCell : Cell {
                 SplitPaneInput{
                     First: tree,
                     Second: BuildInspector(theme),
-                    Value: layoutWidth - (detailsWidth > 0.0 ? detailsWidth: Math.Max(440.0, layoutWidth * 0.35)),
+                    Value: layoutWidth - (detailsWidth > 0.0 ? detailsWidth : Math.Max(440.0, layoutWidth * 0.35)),
                     Unit: SplitUnit.Pixels,
                     MinimumFirst: 280.0,
                     MinimumSecond: 320.0,
@@ -173,9 +173,9 @@ class DevToolsCell : Cell {
             }
             connect.Key = "connection-toggle"
             let banner Blob = Banner{
-                Tone: state == DiagnosticConnectionState.Faulted ? Tone.Danger: Tone.Warning,
-                Content: state == DiagnosticConnectionState.Faulted ? "Connection failed": state.ToString(),
-                Action: state == DiagnosticConnectionState.Reconnecting ? nil: connect,
+                Tone: state == DiagnosticConnectionState.Faulted ? Tone.Danger : Tone.Warning,
+                Content: state == DiagnosticConnectionState.Faulted ? "Connection failed" : state.ToString(),
+                Action: state == DiagnosticConnectionState.Reconnecting ? nil : connect,
                 BorderRadius: 0.0,
             }
             banner.Key = "connection-banner"
@@ -211,7 +211,7 @@ class DevToolsCell : Cell {
         )
         if !session.IsSample {
             let pick Blob = ActionButton{
-                Content: session.Inspecting ? "Stop picking": "Pick element",
+                Content: session.Inspecting ? "Stop picking" : "Pick element",
                 Leading: MaterialIcons.Create("arrow_selector_tool", 18.0),
                 Pressed: session.Inspecting,
                 Disabled: session.State != DiagnosticConnectionState.Connected,
@@ -253,7 +253,7 @@ class DevToolsCell : Cell {
         children.Add(
             Text{
                 Key: "tree-count",
-                Content: elementCount == 1 ? "1 element": elementCount.ToString() + " elements",
+                Content: elementCount == 1 ? "1 element" : elementCount.ToString() + " elements",
                 Color: theme.MutedTextColor,
                 TextWrap: TextWrap.NoWrap,
             }
@@ -296,7 +296,7 @@ class DevToolsCell : Cell {
     private func ToolButton(key string, icon string, name string, active bool, action Action) Blob {
         let theme = Theme.Read()
         let button Blob = IconButton{
-            Icon: MaterialIcons.Create(icon, 18.0, active ? theme.LinkColor: theme.MutedTextColor),
+            Icon: MaterialIcons.Create(icon, 18.0, active ? theme.LinkColor : theme.MutedTextColor),
             AccessibilityName: name,
             Active: active,
             OnClick: () -> {
@@ -355,7 +355,7 @@ class DevToolsCell : Cell {
 
     private func BuildTree(theme Theme) Blob {
         if treeNodes.Length == 0 {
-            return EmptyState{Title: session.Query == "" ? "No elements": "No matches"}
+            return EmptyState{Title: session.Query == "" ? "No elements" : "No matches"}
         }
         return Cell.Mount[TreeViewInput, TreeView](
             "element-tree",
@@ -470,7 +470,7 @@ class DevToolsCell : Cell {
         )
         details.Add(
             ActionButton{
-                Content: showDefaults ? "Hide defaults": "Show defaults",
+                Content: showDefaults ? "Hide defaults" : "Show defaults",
                 OnClick: () -> {
                     showDefaults = !showDefaults
                 },
@@ -581,7 +581,7 @@ class DevToolsCell : Cell {
             let muted = unset || DefaultValues.Contains(";" + name + "=" + value + ";")
             if (showDefaults || !muted) && (text || !TextNames.Contains(";" + name + ";")) {
                 let label = Char.ToUpperInvariant(name[0]).ToString() + name.Substring(1)
-                let shown = unset ? "unset": name.EndsWith("Color") ? Hex(value): Compact(value)
+                let shown = unset ? "unset" : name.EndsWith("Color") ? Hex(value) : Compact(value)
                 AddValue(items, section, label, shown, muted, theme)
             }
         }
@@ -602,7 +602,7 @@ class DevToolsCell : Cell {
             Content: value,
             FontFamily: theme.MonoFontFamily,
             FontSize: theme.CodeFontSize,
-            Color: muted ? theme.FaintTextColor: theme.TextColor,
+            Color: muted ? theme.FaintTextColor : theme.TextColor,
             TextWrap: TextWrap.Wrap,
         }
         items.Add(
@@ -623,14 +623,14 @@ class DevToolsCell : Cell {
                         BackgroundColor: Swatch(value),
                     },
                     content,
-                }: content,
+                } : content,
             }
         )
     }
 
     private func Compact(value string) string {
         let parts = value.Replace("px", "").Split(",")
-        return Array.TrueForAll(parts, (part string) -> part == parts[0]) ? parts[0]: String.Join(" ", parts)
+        return Array.TrueForAll(parts, (part string) -> part == parts[0]) ? parts[0] : String.Join(" ", parts)
     }
 
     private func Flags(fields Dictionary[string, string], names[]string) string {
@@ -641,7 +641,7 @@ class DevToolsCell : Cell {
                     name.StartsWith("has") ? name
                         .Substring(3)
                         .Replace("Handlers", "")
-                        .Replace("Handler", ""): Char
+                        .Replace("Handler", "") : Char
                         .ToUpperInvariant(name[0]).ToString() + name.Substring(1)
                 )
             }
@@ -658,7 +658,7 @@ class DevToolsCell : Cell {
             return role + ", hidden"
         }
         let name = fields.GetValueOrDefault("name", "")
-        let parts = List[string]([]string{name == "" ? role: role + " \"" + name + "\""})
+        let parts = List[string]([]string{name == "" ? role : role + " \"" + name + "\""})
         for key in[]string{"description", "value", "checked", "selected", "expanded", "required", "invalid", "busy"} {
             let value = fields.GetValueOrDefault(key, "")
             if value != "" && value != "Unspecified" && !value.Equals("false", StringComparison.OrdinalIgnoreCase) {
@@ -674,7 +674,7 @@ class DevToolsCell : Cell {
             return value
         }
         var text = "#"
-        for i in 0 ... (parts[3] == "1" ? 3: 4) {
+        for i in 0 ... (parts[3] == "1" ? 3 : 4) {
             text += Channel(parts[i]).ToString("X2")
         }
         return text
@@ -737,7 +737,7 @@ class DevToolsCell : Cell {
 
     private func BoxLayer(label string, outer[]float64, inner[]float64, child Blob, fill Color, theme Theme) Container {
         let edge = (value float64) -> Text{
-            Content: Math.Abs(value) < 0.05 ? "–": Number(value),
+            Content: Math.Abs(value) < 0.05 ? "–" : Number(value),
             FontFamily: theme.MonoFontFamily,
             FontSize: theme.CodeFontSize,
             Color: theme.MutedTextColor,
@@ -807,7 +807,7 @@ class DevToolsCell : Cell {
                 showOverrides = value
                 Rebuild()
             },
-            TextColor: session.OverrideActive ? theme.LinkColor: theme.TextColor,
+            TextColor: session.OverrideActive ? theme.LinkColor : theme.TextColor,
             Content: Container{
                 Gap: theme.ControlGap,
                 entry,
@@ -828,7 +828,7 @@ class DevToolsCell : Cell {
                         ToggleOption{Id: "drawer-console", Label: "Console " + session.Logs.Count.ToString()},
                         ToggleOption{Id: "drawer-captures", Label: "Captures " + session.Screenshots.Count.ToString()},
                     },
-                    SelectedIds: []string{showCaptures ? "drawer-captures": "drawer-console"},
+                    SelectedIds: []string{showCaptures ? "drawer-captures" : "drawer-console"},
                     OnSelectionChange: (ids[]string) -> {
                         showCaptures = ids.Length > 0 && ids[0] == "drawer-captures"
                         Rebuild()
@@ -872,7 +872,7 @@ class DevToolsCell : Cell {
                 followEnd: true
             )
         }
-        rows.Key = showCaptures ? "capture-rows": "log-rows"
+        rows.Key = showCaptures ? "capture-rows" : "log-rows"
         rows.Width = Percent(100)
         rows.Height = 0
         rows.MinHeight = 0

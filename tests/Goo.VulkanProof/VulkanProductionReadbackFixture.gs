@@ -162,10 +162,7 @@ internal partial class VulkanWindowTarget {
       try { readbackLease.Release() } catch (cleanup Exception) { }
       throw error
     }
-    guard let activeTarget = createdTarget else {
-      readbackLease.Release()
-      throw InvalidOperationException("Vulkan production readback target creation failed")
-    }
+    let activeTarget = createdTarget
     let request = VulkanReadbackFactory.Create(activeTarget, readbackLease,
       activeRuntime.Generation)
     try {

@@ -74,7 +74,7 @@ class HotReload {
             XDocument(
                 XElement(
                     "Project",
-                    XAttribute("Sdk", "Gsharp.NET.Sdk/0.5.212"),
+                    XAttribute("Sdk", "Gsharp.NET.Sdk/0.5.698"),
                     XElement(
                         "PropertyGroup",
                         XElement("OutputType", "Exe"),

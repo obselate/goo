@@ -321,7 +321,7 @@ internal unsafe partial class SdlRuntime {
         throw InvalidOperationException("Goo could not configure SDL3 symbols.")
       }
       let currentThreadId = Environment.CurrentManagedThreadId
-      let expectedThreadId = Volatile.Read(ref mainThreadId)
+      let expectedThreadId = Volatile.Read(in mainThreadId)
       if expectedThreadId != 0 && currentThreadId != expectedThreadId {
         let operationText = prefix.Length == 0 ? operation : String.Concat(prefix, operation)
         throw InvalidOperationException(

@@ -12,52 +12,57 @@ internal class Program {
         private var owner Window?
 
         func Main() {
-            using let watcher = if OperatingSystem.IsLinux() { LinuxSmoke() } else { nil }
-            owner = Window{ Title: "Goo tray smoke", Size: LayoutSize(240, 160), }.Open()
+            // https://github.com/DavidObando/gsharp/issues/6087
+            let watcher = if OperatingSystem.IsLinux() { LinuxSmoke() } else { nil }
             try {
-                owner!!.Pump(0)
-                let result = TrayIcon.Create(owner!!, Options("Initial"))
-                Check(result.Icon != nil, "Create: ${result.Status}: ${result.Error}")
-                using let icon = result.Icon!!
-                Check(result.Status == TrayStatus.Registered || OperatingSystem.IsWindows() && result.Status == TrayStatus.NoHost,
-                    "Native registration: ${result.Status}")
-                var activations = 0
-                var commands = 0
-                let thread = Environment.CurrentManagedThreadId
-                icon.Activated += () -> {
-                    Check(Environment.CurrentManagedThreadId == thread, "Activation owner thread")
-                    activations++
-                }
-                icon.CommandActivated += (id string) -> {
-                    Check(Environment.CurrentManagedThreadId == thread && id == "open", "Command owner thread and stable ID")
-                    commands++
-                }
-                let backend = Field(icon, "backend")
-                if watcher != nil {
-                    Wait(watcher.Registered.Task)
-                    Wait(watcher.VerifyAsync("Initial", true))
-                }
-                Check(icon.Update(Options("Updated")) == result.Status, "Native update")
-                if watcher != nil { Wait(watcher.VerifyAsync("Updated", false)) }
-                else if OperatingSystem.IsMacOS() { MacSmoke.Invoke(backend) }
-                else { WindowsSmoke.Invoke(owner!!, backend) }
-                Until(() -> commands == (if watcher != nil { 2 } else { 1 }) && (OperatingSystem.IsMacOS() || activations == 1))
-                icon.Dispose()
-                icon.Dispose()
-                Check(icon.Status == TrayStatus.Closed && icon.Update(Options("Closed")) == TrayStatus.Closed, "Idempotent disposal")
-                if watcher != nil { Wait(watcher.VerifyDisposedAsync()) }
-                else if OperatingSystem.IsMacOS() { Check(nint(Field(backend, "item")) == nint(0), "Status item released") }
-                else { Check(nint(Field(backend, "image")) == nint(0), "Native icon released") }
-                using let closing = TrayIcon.Create(owner!!, Options("Owner close")).Icon!!
-                owner!!.RequestClose()
-                Until(() -> !owner!!.IsOpen)
-                Check(closing.Status == TrayStatus.Closed, "Owner closes tray")
-                Console.WriteLine("Tray smoke passed: ${result.Status}, create, update, menu invocation, dispose, owner close.")
-            } finally {
-                if owner!!.IsOpen {
+                owner = Window{ Title: "Goo tray smoke", Size: LayoutSize(240, 160), }.Open()
+                try {
+                    owner!!.Pump(0)
+                    let result = TrayIcon.Create(owner!!, Options("Initial"))
+                    Check(result.Icon != nil, "Create: ${result.Status}: ${result.Error}")
+                    using let icon = result.Icon!!
+                    Check(result.Status == TrayStatus.Registered || OperatingSystem.IsWindows() && result.Status == TrayStatus.NoHost,
+                        "Native registration: ${result.Status}")
+                    var activations = 0
+                    var commands = 0
+                    let thread = Environment.CurrentManagedThreadId
+                    icon.Activated += () -> {
+                        Check(Environment.CurrentManagedThreadId == thread, "Activation owner thread")
+                        activations++
+                    }
+                    icon.CommandActivated += (id string) -> {
+                        Check(Environment.CurrentManagedThreadId == thread && id == "open", "Command owner thread and stable ID")
+                        commands++
+                    }
+                    let backend = Field(icon, "backend")
+                    if watcher != nil {
+                        Wait(watcher.Registered.Task)
+                        Wait(watcher.VerifyAsync("Initial", true))
+                    }
+                    Check(icon.Update(Options("Updated")) == result.Status, "Native update")
+                    if watcher != nil { Wait(watcher.VerifyAsync("Updated", false)) }
+                    else if OperatingSystem.IsMacOS() { MacSmoke.Invoke(backend) }
+                    else { WindowsSmoke.Invoke(owner!!, backend) }
+                    Until(() -> commands == (if watcher != nil { 2 } else { 1 }) && (OperatingSystem.IsMacOS() || activations == 1))
+                    icon.Dispose()
+                    icon.Dispose()
+                    Check(icon.Status == TrayStatus.Closed && icon.Update(Options("Closed")) == TrayStatus.Closed, "Idempotent disposal")
+                    if watcher != nil { Wait(watcher.VerifyDisposedAsync()) }
+                    else if OperatingSystem.IsMacOS() { Check(nint(Field(backend, "item")) == nint(0), "Status item released") }
+                    else { Check(nint(Field(backend, "image")) == nint(0), "Native icon released") }
+                    using let closing = TrayIcon.Create(owner!!, Options("Owner close")).Icon!!
                     owner!!.RequestClose()
-                    Application.Run(owner!!)
+                    Until(() -> !owner!!.IsOpen)
+                    Check(closing.Status == TrayStatus.Closed, "Owner closes tray")
+                    Console.WriteLine("Tray smoke passed: ${result.Status}, create, update, menu invocation, dispose, owner close.")
+                } finally {
+                    if owner!!.IsOpen {
+                        owner!!.RequestClose()
+                        Application.Run(owner!!)
+                    }
                 }
+            } finally {
+                watcher?.Dispose()
             }
         }
 

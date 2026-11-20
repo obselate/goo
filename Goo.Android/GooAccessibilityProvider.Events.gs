@@ -196,27 +196,15 @@ ViewTreeObserver
         if node.Focused && !record.PublishedFocused {
             Send(id, EventTypes.ViewFocused)
         }
-        let __spill2 = node.ScrollInfo
-        var scroll AccessibilityScrollInfo
-        var __spill3 AccessibilityScrollInfo?
-        var old AccessibilityScrollInfo
-        if __spill2 != nil && {
-            scroll = __spill2!!
-            true
-        } && {
-            __spill3 = record.PublishedScroll
-            (
-                __spill3 == nil || {
-                    old = __spill3!!
-                    false
-                } ||
-                    scroll.X != old.X ||
-                    scroll.Y != old.Y ||
-                    scroll.MaximumX != old.MaximumX ||
-                    scroll.MaximumY != old.MaximumY
-            )
-        } {
-            SendScrollChange(id, record, scroll)
+        if let scroll = node.ScrollInfo {
+            let old = record.PublishedScroll
+            if old == nil ||
+                scroll.X != old.X ||
+                scroll.Y != old.Y ||
+                scroll.MaximumX != old.MaximumX ||
+                scroll.MaximumY != old.MaximumY {
+                SendScrollChange(id, record, scroll)
+            }
         }
     }
 

@@ -580,105 +580,101 @@ internal shared class CliApplication {
         if once {
             cancellation.CancelAfter(ParseWait(commandLine.Get("wait")))
         }
-        let connection = await ConnectAsync(descriptor, cancellation.Token)
+        await using let connection = await ConnectAsync(descriptor, cancellation.Token)
+        var handshake string?
         try {
-            var handshake string?
-            try {
-                handshake = await connection.HandshakeAsync(cancellation.Token)
-            } catch (OperationCanceledException) {
-                throw CliException("Timed out waiting for the Goo endpoint handshake.", "timeout", "handshake")
-            }
-            ValidateHandshake(handshake, descriptor)
-            ValidateRequestRequirements(
-                handshake!!,
-                commandLine.Get("require-capabilities"),
-                commandLine.Get("require-override-property")
-            )
-            WriteProtocolLine(handshake!!, commandLine.Has("json"))
-            if once {
-                let requestCommand = if commandLine.Command == "snapshot" {
-                    "snapshot"
-                } else {
-                    commandLine.Get("command") ?? "snapshot"
-                }
-                let mayHaveApplied = !((requestCommand == "snapshot" || requestCommand == "capture"))
-                var request JsonObject?
-                try {
-                    request = await connection.RequestAsync(
-                        requestCommand,
-                        if commandLine.Command == "snapshot" {
-                            JsonObject(){["full"] = !commandLine.Has("compact")}
-                        } else {
-                            ParsePayload(commandLine.Get("payload"))
-                        },
-                        cancellation.Token
-                    )
-                } catch (exception Exception) when exception is OperationCanceledException ||
-                    exception is IOException ||
-                    exception is SocketException ||
-                    exception is JsonException {
-                    let consequence = if mayHaveApplied {
-                        " It may already have applied. Inspect state before another action."
-                    } else {
-                        ""
-                    }
-                    throw CliException(
-                        "The endpoint did not acknowledge the $requestCommand request.$consequence",
-                        "request-unconfirmed",
-                        requestCommand,
-                        mayHaveApplied,
-                        handshake
-                    )
-                }
-                if request == nil {
-                    let consequence = if mayHaveApplied {
-                        " It may already have applied. Inspect state before another action."
-                    } else {
-                        ""
-                    }
-                    throw CliException(
-                        "The endpoint closed without acknowledging the $requestCommand request.$consequence",
-                        "request-unconfirmed",
-                        requestCommand,
-                        mayHaveApplied,
-                        handshake
-                    )
-                }
-                if IsError(request) {
-                    DecorateError(request, requestCommand, mayHaveApplied, handshake)
-                } else if BoolValue(request["ok"]) != true {
-                    let consequence = if mayHaveApplied {
-                        " It may already have applied. Inspect state before another action."
-                    } else {
-                        ""
-                    }
-                    throw CliException(
-                        "The endpoint returned an invalid acknowledgement for $requestCommand.$consequence",
-                        "request-unconfirmed",
-                        requestCommand,
-                        mayHaveApplied,
-                        handshake
-                    )
-                }
-                WriteProtocolLine(request.ToJsonString(), commandLine.Has("json"))
-                return if BoolValue(request["ok"]) == false ||
-                    StringValue(request["type"]) == "error" ||
-                    request["error"] != nil {
-                    1
-                } else {
-                    0
-                }
-            }
-            await RunInteractiveAsync(
-                connection,
-                commandLine.Has("json"),
-                ParseWait(commandLine.Get("wait")),
-                cancellation.Token
-            )
-            return 0
-        } finally {
-            await connection.DisposeAsync()
+            handshake = await connection.HandshakeAsync(cancellation.Token)
+        } catch (OperationCanceledException) {
+            throw CliException("Timed out waiting for the Goo endpoint handshake.", "timeout", "handshake")
         }
+        ValidateHandshake(handshake, descriptor)
+        ValidateRequestRequirements(
+            handshake!!,
+            commandLine.Get("require-capabilities"),
+            commandLine.Get("require-override-property")
+        )
+        WriteProtocolLine(handshake!!, commandLine.Has("json"))
+        if once {
+            let requestCommand = if commandLine.Command == "snapshot" {
+                "snapshot"
+            } else {
+                commandLine.Get("command") ?? "snapshot"
+            }
+            let mayHaveApplied = !((requestCommand == "snapshot" || requestCommand == "capture"))
+            var request JsonObject?
+            try {
+                request = await connection.RequestAsync(
+                    requestCommand,
+                    if commandLine.Command == "snapshot" {
+                        JsonObject(){["full"] = !commandLine.Has("compact")}
+                    } else {
+                        ParsePayload(commandLine.Get("payload"))
+                    },
+                    cancellation.Token
+                )
+            } catch (exception Exception) when exception is OperationCanceledException ||
+                exception is IOException ||
+                exception is SocketException ||
+                exception is JsonException {
+                let consequence = if mayHaveApplied {
+                    " It may already have applied. Inspect state before another action."
+                } else {
+                    ""
+                }
+                throw CliException(
+                    "The endpoint did not acknowledge the $requestCommand request.$consequence",
+                    "request-unconfirmed",
+                    requestCommand,
+                    mayHaveApplied,
+                    handshake
+                )
+            }
+            if request == nil {
+                let consequence = if mayHaveApplied {
+                    " It may already have applied. Inspect state before another action."
+                } else {
+                    ""
+                }
+                throw CliException(
+                    "The endpoint closed without acknowledging the $requestCommand request.$consequence",
+                    "request-unconfirmed",
+                    requestCommand,
+                    mayHaveApplied,
+                    handshake
+                )
+            }
+            if IsError(request) {
+                DecorateError(request, requestCommand, mayHaveApplied, handshake)
+            } else if BoolValue(request["ok"]) != true {
+                let consequence = if mayHaveApplied {
+                    " It may already have applied. Inspect state before another action."
+                } else {
+                    ""
+                }
+                throw CliException(
+                    "The endpoint returned an invalid acknowledgement for $requestCommand.$consequence",
+                    "request-unconfirmed",
+                    requestCommand,
+                    mayHaveApplied,
+                    handshake
+                )
+            }
+            WriteProtocolLine(request.ToJsonString(), commandLine.Has("json"))
+            return if BoolValue(request["ok"]) == false ||
+                StringValue(request["type"]) == "error" ||
+                request["error"] != nil {
+                1
+            } else {
+                0
+            }
+        }
+        await RunInteractiveAsync(
+            connection,
+            commandLine.Has("json"),
+            ParseWait(commandLine.Get("wait")),
+            cancellation.Token
+        )
+        return 0
     }
 
     private func ValidateRequestRequirements(handshake string, requiredCapabilities string?, requiredProperty string?) {
@@ -803,7 +799,7 @@ internal shared class CliApplication {
         }
         if commandLine.Has("target") {
             let targetHandle = commandLine.Get("target")
-            if string.IsNullOrWhiteSpace(targetHandle) || targetHandle!!.Length > 128 {
+            if string.IsNullOrWhiteSpace(targetHandle) || targetHandle.Length > 128 {
                 throw CliException("--target needs an opaque target handle from the selected window snapshot.")
             }
             payload["target"] = targetHandle
@@ -864,105 +860,101 @@ internal shared class CliApplication {
         ) ??
             await WaitForDescriptorAsync(projectDirectory, processId, commandLine, ParseWait(commandLine.Get("wait")))
         using let timeout = CancellationTokenSource(ParseWait(commandLine.Get("wait")))
-        let connection = await ConnectAsync(descriptor, timeout.Token)
+        await using let connection = await ConnectAsync(descriptor, timeout.Token)
+        var handshake string?
         try {
-            var handshake string?
-            try {
-                handshake = await connection.HandshakeAsync(timeout.Token)
-            } catch (OperationCanceledException) {
-                throw CliException("Timed out waiting for the Goo endpoint handshake.", "timeout", "handshake")
-            }
-            ValidateHandshake(handshake, descriptor)
-            var gestureLease = false
-            var targetHandles = false
-            {
-                using let hello = JsonDocument.Parse(handshake!!)
-                if !hello.RootElement.TryGetProperty("capabilities", out var capabilities) ||
-                    capabilities.ValueKind != JsonValueKind.Array ||
-                    !capabilities
-                    .EnumerateArray().Any(
-                    (value JsonElement) -> value.ValueKind == JsonValueKind.String && value.GetString() == "input"
-                ) {
-                    throw CliException(
-                        "This endpoint does not permit input. Enable GOO_DEVTOOLS=1 and GOO_DEVTOOLS_INPUT=1 in the target application.",
-                        "input-disabled",
-                        "handshake",
-                        false,
-                        handshake
-                    )
-                }
-                gestureLease = capabilities.EnumerateArray().Any(
-                    (value JsonElement) -> value.ValueKind == JsonValueKind.String &&
-                        value.GetString() == "input.gesture-lease"
-                )
-                targetHandles = capabilities.EnumerateArray().Any(
-                    (value JsonElement) -> value.ValueKind == JsonValueKind.String &&
-                        value.GetString() == "target.handles"
-                )
-            }
-            if commandLine.Has("target") && !targetHandles {
+            handshake = await connection.HandshakeAsync(timeout.Token)
+        } catch (OperationCanceledException) {
+            throw CliException("Timed out waiting for the Goo endpoint handshake.", "timeout", "handshake")
+        }
+        ValidateHandshake(handshake, descriptor)
+        var gestureLease = false
+        var targetHandles = false
+        {
+            using let hello = JsonDocument.Parse(handshake!!)
+            if !hello.RootElement.TryGetProperty("capabilities", out var capabilities) ||
+                capabilities.ValueKind != JsonValueKind.Array ||
+                !capabilities
+                .EnumerateArray().Any(
+                (value JsonElement) -> value.ValueKind == JsonValueKind.String && value.GetString() == "input"
+            ) {
                 throw CliException(
-                    "This endpoint does not support opaque target handles. Update the target application's Goo runtime.",
-                    "unsupported-capability",
+                    "This endpoint does not permit input. Enable GOO_DEVTOOLS=1 and GOO_DEVTOOLS_INPUT=1 in the target application.",
+                    "input-disabled",
                     "handshake",
                     false,
                     handshake
                 )
             }
-            if gestureLease && gesture != nil {
-                payload["gestureId"] = gesture
-                if (eventName is "pointer.down" or "key.down") {
-                    Console.Error.WriteLine("[goo] gesture $gesture")
-                }
-            } else if !gestureLease && gesture != nil {
-                Console.Error.WriteLine(
-                    "[goo] endpoint does not advertise gesture leases; ownership and abandoned-input cleanup are unavailable."
-                )
+            gestureLease = capabilities.EnumerateArray().Any(
+                (value JsonElement) -> value.ValueKind == JsonValueKind.String &&
+                    value.GetString() == "input.gesture-lease"
+            )
+            targetHandles = capabilities.EnumerateArray().Any(
+                (value JsonElement) -> value.ValueKind == JsonValueKind.String &&
+                    value.GetString() == "target.handles"
+            )
+        }
+        if commandLine.Has("target") && !targetHandles {
+            throw CliException(
+                "This endpoint does not support opaque target handles. Update the target application's Goo runtime.",
+                "unsupported-capability",
+                "handshake",
+                false,
+                handshake
+            )
+        }
+        if gestureLease && gesture != nil {
+            payload["gestureId"] = gesture
+            if (eventName is "pointer.down" or "key.down") {
+                Console.Error.WriteLine("[goo] gesture $gesture")
             }
-            if payload.ToJsonString().Length > 65536 {
-                throw CliException("Input request exceeds the endpoint request limit.")
-            }
-            var response JsonObject?
-            try {
-                response = await connection.RequestAsync("input", payload, timeout.Token)
-            } catch (OperationCanceledException) {
-                throw CliException(
-                    "Timed out waiting for the input acknowledgement. Inspect state before another action and do not automatically retry input.",
-                    "timeout",
-                    "input",
-                    true,
-                    handshake
-                )
-            } catch (exception Exception) when exception is IOException || exception is SocketException {
-                throw CliException(
-                    "The input acknowledgement was lost: ${exception.Message} Inspect state before another action and do not automatically retry input.",
-                    "input-unconfirmed",
-                    "input",
-                    true,
-                    handshake
-                )
-            }
-            if response == nil {
-                throw CliException(
-                    "The window closed before acknowledging input. Inspect state before another action and do not automatically retry input.",
-                    "input-unconfirmed",
-                    "input",
-                    true,
-                    handshake
-                )
-            }
-            if IsError(response) {
-                DecorateError(response, "input", true, handshake)
-            }
-            response["runtime"] ??= RuntimeStatus(handshake)
-            WriteProtocolLine(response.ToJsonString(), commandLine.Has("json"))
-            return if response["ok"]?.GetValue[bool]() == true {
-                0
-            } else {
-                1
-            }
-        } finally {
-            await connection.DisposeAsync()
+        } else if !gestureLease && gesture != nil {
+            Console.Error.WriteLine(
+                "[goo] endpoint does not advertise gesture leases; ownership and abandoned-input cleanup are unavailable."
+            )
+        }
+        if payload.ToJsonString().Length > 65536 {
+            throw CliException("Input request exceeds the endpoint request limit.")
+        }
+        var response JsonObject?
+        try {
+            response = await connection.RequestAsync("input", payload, timeout.Token)
+        } catch (OperationCanceledException) {
+            throw CliException(
+                "Timed out waiting for the input acknowledgement. Inspect state before another action and do not automatically retry input.",
+                "timeout",
+                "input",
+                true,
+                handshake
+            )
+        } catch (exception Exception) when exception is IOException || exception is SocketException {
+            throw CliException(
+                "The input acknowledgement was lost: ${exception.Message} Inspect state before another action and do not automatically retry input.",
+                "input-unconfirmed",
+                "input",
+                true,
+                handshake
+            )
+        }
+        if response == nil {
+            throw CliException(
+                "The window closed before acknowledging input. Inspect state before another action and do not automatically retry input.",
+                "input-unconfirmed",
+                "input",
+                true,
+                handshake
+            )
+        }
+        if IsError(response) {
+            DecorateError(response, "input", true, handshake)
+        }
+        response["runtime"] ??= RuntimeStatus(handshake)
+        WriteProtocolLine(response.ToJsonString(), commandLine.Has("json"))
+        return if response["ok"]?.GetValue[bool]() == true {
+            0
+        } else {
+            1
         }
     }
 
@@ -988,53 +980,49 @@ internal shared class CliApplication {
             )
         }
         using let captureTimeout = CancellationTokenSource(ParseWait(commandLine.Get("wait")))
-        let connection = await ConnectAsync(descriptor, captureTimeout.Token)
+        await using let connection = await ConnectAsync(descriptor, captureTimeout.Token)
+        var handshake string?
         try {
-            var handshake string?
-            try {
-                handshake = await connection.HandshakeAsync(captureTimeout.Token)
-            } catch (OperationCanceledException) {
-                throw CliException("Timed out waiting for the Goo endpoint handshake.", "timeout", "handshake")
-            }
-            if handshake == nil {
-                throw CliException(
-                    "The Goo endpoint closed before completing its protocol handshake.",
-                    "handshake-closed",
-                    "handshake"
-                )
-            }
-            ValidateHandshake(handshake, descriptor)
-            let payload = JsonObject(){
-                ["window"] = commandLine.Get("window"),
-                ["format"] = commandLine.Get("format") ?? "png"
-            }
-            var response JsonObject
-            try {
-                response = await RequestCaptureAsync(connection, payload, captureTimeout.Token)
-            } catch (exception CliException) {
-                throw CliException(
-                    exception.Message,
-                    exception.Code,
-                    exception.Phase,
-                    exception.MayHaveApplied,
-                    handshake
-                )
-            }
-            if IsError(response) {
-                DecorateError(response, "capture", false, handshake)
-                let error = response["error"] as JsonObject
-                throw CliException(
-                    StringValue(error?["message"]) ?? "The endpoint rejected the capture request.",
-                    StringValue(error?["code"]) ?? "capture-rejected",
-                    "capture",
-                    false,
-                    handshake
-                )
-            }
-            return WriteCapture(response, commandLine.Get("output"), commandLine.Has("json"))
-        } finally {
-            await connection.DisposeAsync()
+            handshake = await connection.HandshakeAsync(captureTimeout.Token)
+        } catch (OperationCanceledException) {
+            throw CliException("Timed out waiting for the Goo endpoint handshake.", "timeout", "handshake")
         }
+        if handshake == nil {
+            throw CliException(
+                "The Goo endpoint closed before completing its protocol handshake.",
+                "handshake-closed",
+                "handshake"
+            )
+        }
+        ValidateHandshake(handshake, descriptor)
+        let payload = JsonObject(){
+            ["window"] = commandLine.Get("window"),
+            ["format"] = commandLine.Get("format") ?? "png"
+        }
+        var response JsonObject
+        try {
+            response = await RequestCaptureAsync(connection, payload, captureTimeout.Token)
+        } catch (exception CliException) {
+            throw CliException(
+                exception.Message,
+                exception.Code,
+                exception.Phase,
+                exception.MayHaveApplied,
+                handshake
+            )
+        }
+        if IsError(response) {
+            DecorateError(response, "capture", false, handshake)
+            let error = response["error"] as JsonObject
+            throw CliException(
+                StringValue(error?["message"]) ?? "The endpoint rejected the capture request.",
+                StringValue(error?["code"]) ?? "capture-rejected",
+                "capture",
+                false,
+                handshake
+            )
+        }
+        return WriteCapture(response, commandLine.Get("output"), commandLine.Has("json"))
     }
 
     private async func RequestCaptureAsync(
@@ -1496,7 +1484,7 @@ internal shared class CliApplication {
                 error ??= StringValue(responseError["message"])
             }
             error ??= "The endpoint rejected the capture request."
-            throw CliException(error!!, code, "capture")
+            throw CliException(error, code, "capture")
         }
         let format = StringValue(payload["format"])
         let rgbaData string? = StringValue(payload["rgbaBase64"])
@@ -1542,12 +1530,12 @@ internal shared class CliApplication {
             Console.OpenStandardOutput().Write(bytes)
             return 0
         }
-        if IsPngPath(outputPath!!) && !PngEncoder.IsPng(bytes) {
+        if IsPngPath(outputPath) && !PngEncoder.IsPng(bytes) {
             throw CliException(
                 "The endpoint returned bytes that are not a PNG; refusing to write raw data to a .png path."
             )
         }
-        let fullPath = Path.GetFullPath(outputPath!!)
+        let fullPath = Path.GetFullPath(outputPath)
         let parent = Path.GetDirectoryName(fullPath)
         if !string.IsNullOrWhiteSpace(parent) {
             Directory.CreateDirectory(parent)
@@ -1605,7 +1593,7 @@ internal shared class CliApplication {
         let hello = if string.IsNullOrWhiteSpace(handshake) {
             default(JsonObject?)
         } else {
-            JsonNode.Parse(handshake!!) as JsonObject
+            JsonNode.Parse(handshake) as JsonObject
         }
         let rawCapabilities JsonArray? = hello?["capabilities"] as JsonArray
         let validCapabilities = rawCapabilities != nil && rawCapabilities.All(

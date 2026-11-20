@@ -280,7 +280,7 @@ internal unsafe class SoundRuntime : SoundBackend {
                 Channels: channels,
                 Freq: sampleRate,
             }
-            let stream = SDL.CreateAudioStream(ref spec, SDLAudioSpecPtr.Null)
+            let stream = SDL.CreateAudioStream(in spec, SDLAudioSpecPtr.Null)
             if stream.IsNull {
                 return SoundPlayResult(SoundPlayStatus.NativeFailure)
             }

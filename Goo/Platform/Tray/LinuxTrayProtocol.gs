@@ -9,7 +9,7 @@ import Tmds.DBus.Protocol
 internal partial class LinuxTrayBackend {
     public func HandleMethodAsync(context MethodContext) ValueTask {
         try {
-            if Volatile.Read(ref closed) != 0 {
+            if Volatile.Read(in closed) != 0 {
                 context.ReplyError("org.freedesktop.DBus.Error.UnknownObject", "The tray icon is closed")
             } else if context.Request.PathAsString != ItemPath && context.Request.PathAsString != MenuPath {
                 context.ReplyError("org.freedesktop.DBus.Error.UnknownObject", "Unknown tray object")
@@ -59,7 +59,7 @@ internal partial class LinuxTrayBackend {
         } else if member == "ContextMenu" && context.Request.SignatureAsString == "ii" {
             reader.ReadInt32()
             reader.ReadInt32()
-            if Volatile.Read(ref current).Root.Children.Length == 0 {
+            if Volatile.Read(in current).Root.Children.Length == 0 {
                 context.ReplyError("org.freedesktop.DBus.Error.NotSupported", "This icon has no menu")
                 return
             }
@@ -95,7 +95,7 @@ internal partial class LinuxTrayBackend {
             context.ReplyError(InvalidArguments, "Unknown tray interface")
             return
         }
-        let state = Volatile.Read(ref current)
+        let state = Volatile.Read(in current)
         if member == "Get" {
             let name = reader.ReadString()
             using var writer = context.CreateReplyWriter("v")

@@ -181,7 +181,7 @@ public sealed class AndroidDocuments {
         RequireMainThread()
         let settings = options ?? DocumentPickerOptions()
         let types = ValidateOptions(kind, settings)
-        if Volatile.Read(ref disposed) || owner.IsFinishing || owner.IsDestroyed
+        if Volatile.Read(in disposed) || owner.IsFinishing || owner.IsDestroyed
             || cancellation.IsCancellationRequested {
             return Task.FromResult(DocumentPickerResult(FileDialogStatus.Cancelled))
         }
@@ -318,7 +318,7 @@ public sealed class AndroidDocuments {
                 error: "Document access requires a content URI"))
         }
         return Task.Run(() -> {
-            if Volatile.Read(ref disposed) || cancellation.IsCancellationRequested {
+            if Volatile.Read(in disposed) || cancellation.IsCancellationRequested {
                 return DocumentStreamResult(DocumentStatus.Cancelled)
             }
             try {
@@ -336,7 +336,7 @@ public sealed class AndroidDocuments {
                 let retained Stream = if !write && stream is InputStreamInvoker input {
                     AndroidInputStream(input.BaseInputStream)
                 } else { stream }
-                if Volatile.Read(ref disposed) || cancellation.IsCancellationRequested {
+                if Volatile.Read(in disposed) || cancellation.IsCancellationRequested {
                     retained.Dispose()
                     return DocumentStreamResult(DocumentStatus.Cancelled)
                 }
@@ -365,7 +365,7 @@ public sealed class AndroidDocuments {
         ValidateAccess(access)
         ArgumentNullException.ThrowIfNull(uri, paramName: "uri")
         if !uri.IsAbsoluteUri { throw ArgumentException("An absolute content URI is required", "uri") }
-        if Volatile.Read(ref disposed) { return DocumentOperationResult(DocumentStatus.Cancelled) }
+        if Volatile.Read(in disposed) { return DocumentOperationResult(DocumentStatus.Cancelled) }
         if uri.Scheme != ContentScheme {
             return DocumentOperationResult(DocumentStatus.Unsupported, "Document grants require a content URI")
         }

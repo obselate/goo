@@ -105,7 +105,7 @@ public shared class Application {
         if parsed.Activation == nil {
             return SingleInstanceResult(SingleInstanceStatus.Rejected, error: parsed.Error)
         }
-        let initial = parsed.Activation!!
+        let initial = parsed.Activation
         EnsureActivation(initial)
         return InstancePipe.AcquireAsync(identifier, initial, int32(Math.Ceiling(timeoutMs))).GetAwaiter().GetResult()
     }
@@ -273,7 +273,7 @@ public shared class Application {
     }
 
     private func RequireActivationThread() {
-        let owner = Volatile.Read(ref activationOwnerThreadId)
+        let owner = Volatile.Read(in activationOwnerThreadId)
         if owner != 0 && owner != Environment.CurrentManagedThreadId {
             throw InvalidOperationException("Application activation belongs to the process UI thread")
         }
@@ -295,7 +295,7 @@ public shared class Application {
     }
 
     internal prop HasPendingActivation bool {
-        get -> applicationActivated != nil && Volatile.Read(ref pendingActivationCount) != 0
+        get -> applicationActivated != nil && Volatile.Read(in pendingActivationCount) != 0
     }
 
     internal prop IsInitialActivation bool {

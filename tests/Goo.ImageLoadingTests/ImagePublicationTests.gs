@@ -389,7 +389,6 @@ class ImagePublicationTests {
     private open class ReplaceableProvider(source ImageSource) : ImageSourceProvider {
         private var current ImageSource = source
         private var _contentVersion uint64 = uint64(1)
-        protected event handlers Action?
 
         prop ContentVersion uint64 {
             get {
@@ -400,10 +399,7 @@ class ImagePublicationTests {
             }
         }
 
-        open event ContentChanged Action? {
-            add { handlers += value }
-            remove { handlers -= value }
-        }
+        open event ContentChanged Action?
         var Acquisitions int32
         var Releases int32
 
@@ -417,7 +413,7 @@ class ImagePublicationTests {
         func Replace(next ImageSource) {
             current = next
             ContentVersion++
-            handlers?()
+            ContentChanged?()
         }
     }
 
@@ -436,10 +432,10 @@ class ImagePublicationTests {
                     worker.Start()
                     worker.Join()
                 }
-                handlers += value
+                base.ContentChanged += value
             }
             remove {
-                handlers -= value
+                base.ContentChanged -= value
             }
         }
 

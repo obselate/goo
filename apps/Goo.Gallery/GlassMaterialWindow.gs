@@ -16,8 +16,8 @@ internal data struct GlassMaterialBackdrop {
                     Left: -100,
                     Top: 250 + index * 28,
                     Width: 1300,
-                    Height: index == 3 ? 4: 1,
-                    BackgroundColor: Color.Rgba(255, 255, 255, index == 3 ? 170: 78),
+                    Height: index == 3 ? 4 : 1,
+                    BackgroundColor: Color.Rgba(255, 255, 255, index == 3 ? 170 : 78),
                     Transform: PanelTransform{Rotate: -22.0},
                 }
             )
@@ -152,16 +152,16 @@ internal class GlassMaterialPanelCell : Cell[GlassMaterialPanel] {
         }
     }
 
-    private func selectedEffect() ShaderEffect? -> terminalMode ? terminalEffect: liquidEffect
+    private func selectedEffect() ShaderEffect? -> terminalMode ? terminalEffect : liquidEffect
 
     private func primaryInk() Color -> terminalMode
-    ? Color.Rgb(242, 247, 250): Color.Rgb(24, 53, 62)
+    ? Color.Rgb(242, 247, 250) : Color.Rgb(24, 53, 62)
 
     private func secondaryInk() Color -> terminalMode
-    ? Color.Rgba(196, 211, 220, 230): Color.Rgba(31, 70, 80, 225)
+    ? Color.Rgba(196, 211, 220, 230) : Color.Rgba(31, 70, 80, 225)
 
     private func accentInk() Color -> terminalMode
-    ? Color.Rgb(116, 221, 200): Color.Rgb(25, 113, 91)
+    ? Color.Rgb(116, 221, 200) : Color.Rgb(25, 113, 91)
 
     private func selectMode(terminal bool) {
         if terminalMode == terminal {
@@ -182,13 +182,13 @@ internal class GlassMaterialPanelCell : Cell[GlassMaterialPanel] {
     private func modeButton(label string, terminal bool) Button {
         let active = terminalMode == terminal
         return Button{
-            Key: terminal ? "terminal-glass": "liquid-glass",
+            Key: terminal ? "terminal-glass" : "liquid-glass",
             Height: 36,
             Padding: Edges{Left: 16, Right: 16,},
             BorderRadius: 18,
             BorderWidth: 1,
-            BorderColor: active ? Color.Rgba(39, 72, 82, 62): Color.Rgba(39, 72, 82, 24),
-            BackgroundColor: active ? Color.Rgba(249, 253, 252, 218): Color.Rgba(249, 253, 252, 160),
+            BorderColor: active ? Color.Rgba(39, 72, 82, 62) : Color.Rgba(39, 72, 82, 24),
+            BackgroundColor: active ? Color.Rgba(249, 253, 252, 218) : Color.Rgba(249, 253, 252, 160),
             HoverStyle: Style{BackgroundColor: Color.Rgba(249, 253, 252, 236)},
             OnClick: () -> {
                 selectMode(terminal)
@@ -197,8 +197,8 @@ internal class GlassMaterialPanelCell : Cell[GlassMaterialPanel] {
                 Content: label,
                 FontFamily: GalleryTheme.GalleryFontFamily,
                 FontSize: 13,
-                FontWeight: active ? 650: 500,
-                Color: active ? Color.Rgb(27, 54, 63): Color.Rgba(27, 54, 63, 220),
+                FontWeight: active ? 650 : 500,
+                Color: active ? Color.Rgb(27, 54, 63) : Color.Rgba(27, 54, 63, 220),
             },
         }
     }
@@ -207,7 +207,7 @@ internal class GlassMaterialPanelCell : Cell[GlassMaterialPanel] {
         Content: text,
         FontFamily: "monospace",
         FontSize: 12,
-        FontWeight: bold ? 650: 450,
+        FontWeight: bold ? 650 : 450,
         Color: color,
     }
 
@@ -216,7 +216,7 @@ internal class GlassMaterialPanelCell : Cell[GlassMaterialPanel] {
         Padding: Edges{Left: 18, Top: 18, Right: 14,},
         Gap: 12,
         BorderWidth: Edges{Right: 1},
-        BorderColor: Edges[Color]{Right: terminalMode ? Color.Rgba(226, 238, 242, 24): Color.Rgba(31, 70, 80, 32)},
+        BorderColor: Edges[Color]{Right: terminalMode ? Color.Rgba(226, 238, 242, 24) : Color.Rgba(31, 70, 80, 32)},
         Text{
             Content: "Workspace",
             FontFamily: "monospace",
@@ -237,7 +237,7 @@ internal class GlassMaterialPanelCell : Cell[GlassMaterialPanel] {
         Container{
             Padding: Edges{Left: 8, Top: 7, Bottom: 7,},
             BorderRadius: 7,
-            BackgroundColor: terminalMode ? Color.Rgba(116, 196, 176, 24): Color.Rgba(25, 113, 91, 20),
+            BackgroundColor: terminalMode ? Color.Rgba(116, 196, 176, 24) : Color.Rgba(25, 113, 91, 20),
             terminalLine("  Vulkan", accentInk(), true),
         },
         terminalLine("  Shaders", secondaryInk()),
@@ -260,7 +260,7 @@ internal class GlassMaterialPanelCell : Cell[GlassMaterialPanel] {
             terminalLine("  0 warnings  ·  0 errors", secondaryInk()),
         },
         terminalLine("$ git status --short", primaryInk(), true),
-        terminalLine(" M  apps/Goo.Gallery", terminalMode ? Color.Rgba(157, 196, 233, 188): Color.Rgb(47, 96, 150)),
+        terminalLine(" M  apps/Goo.Gallery", terminalMode ? Color.Rgba(157, 196, 233, 188) : Color.Rgb(47, 96, 150)),
         Container{Height: 5},
         terminalLine("$ _", primaryInk(), true),
     }
@@ -271,14 +271,14 @@ internal class GlassMaterialPanelCell : Cell[GlassMaterialPanel] {
         Height: 420,
         Position: PositionType.Relative,
         Handle: surfaceHandle,
-        BorderRadius: terminalMode ? 18: 30,
+        BorderRadius: terminalMode ? 18 : 30,
         BoxShadows: []BoxShadow{
             BoxShadow{
                 OffsetX: 0.0,
                 OffsetY: 30.0,
                 Blur: 64.0,
                 Spread: -18.0,
-                Color: terminalMode ? Color.Rgba(10, 25, 40, 102): Color.Rgba(28, 60, 71, 28),
+                Color: terminalMode ? Color.Rgba(10, 25, 40, 102) : Color.Rgba(28, 60, 71, 28),
                 Inset: false
             },
             BoxShadow{
@@ -286,7 +286,7 @@ internal class GlassMaterialPanelCell : Cell[GlassMaterialPanel] {
                 OffsetY: 1.0,
                 Blur: 1.0,
                 Spread: 0.0,
-                Color: terminalMode ? Color.Rgba(210, 232, 244, 48): Color.Rgba(255, 255, 255, 28),
+                Color: terminalMode ? Color.Rgba(210, 232, 244, 48) : Color.Rgba(255, 255, 255, 28),
                 Inset: true
             },
         },
@@ -300,7 +300,7 @@ internal class GlassMaterialPanelCell : Cell[GlassMaterialPanel] {
             Top: 0,
             Right: 0,
             Bottom: 0,
-            BorderRadius: terminalMode ? 18: 30,
+            BorderRadius: terminalMode ? 18 : 30,
             BackgroundColor: Color.Transparent,
             ShaderEffect: selectedEffect(),
         },
@@ -310,11 +310,11 @@ internal class GlassMaterialPanelCell : Cell[GlassMaterialPanel] {
             Top: 0,
             Right: 0,
             Bottom: 0,
-            BorderRadius: terminalMode ? 18: 30,
+            BorderRadius: terminalMode ? 18 : 30,
             OverflowX: Overflow.Hidden,
             OverflowY: Overflow.Hidden,
             BorderWidth: 1,
-            BorderColor: terminalMode ? Color.Transparent: Color.Rgba(255, 255, 255, 40),
+            BorderColor: terminalMode ? Color.Transparent : Color.Rgba(255, 255, 255, 40),
             BackgroundColor: Color.Transparent,
             Container{
                 Height: 54,
@@ -324,7 +324,7 @@ internal class GlassMaterialPanelCell : Cell[GlassMaterialPanel] {
                 Gap: 10,
                 BorderWidth: Edges{Bottom: 1},
                 BorderColor: Edges[Color]{
-                    Bottom: terminalMode ? Color.Rgba(226, 238, 242, 28): Color.Rgba(31, 70, 80, 34)
+                    Bottom: terminalMode ? Color.Rgba(226, 238, 242, 28) : Color.Rgba(31, 70, 80, 34)
                 },
                 Container{Width: 9, Height: 9, BorderRadius: 5, BackgroundColor: Color.Rgb(112, 213, 174)},
                 Text{
@@ -363,9 +363,9 @@ internal class GlassMaterialPanelCell : Cell[GlassMaterialPanel] {
                 Gap: 14,
                 BorderWidth: Edges{Top: 1},
                 BorderColor: Edges[Color]{
-                    Top: terminalMode ? Color.Rgba(226, 238, 242, 22): Color.Rgba(31, 70, 80, 28)
+                    Top: terminalMode ? Color.Rgba(226, 238, 242, 22) : Color.Rgba(31, 70, 80, 28)
                 },
-                terminalLine("main", terminalMode ? Color.Rgba(157, 196, 233, 178): Color.Rgb(47, 96, 150)),
+                terminalLine("main", terminalMode ? Color.Rgba(157, 196, 233, 178) : Color.Rgb(47, 96, 150)),
                 terminalLine("Vulkan", secondaryInk()),
                 Container{FlexGrow: 1.0},
                 terminalLine("UTF-8", secondaryInk()),
@@ -400,7 +400,7 @@ internal class GlassMaterialPanelCell : Cell[GlassMaterialPanel] {
         },
         buildSurface(),
         Text{
-            Content: terminalMode ? "Quiet contrast for focused work": "Responsive lensing over the scene beneath",
+            Content: terminalMode ? "Quiet contrast for focused work" : "Responsive lensing over the scene beneath",
             FontFamily: GalleryTheme.GalleryFontFamily,
             FontSize: 12,
             FontWeight: 500,

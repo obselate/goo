@@ -35,7 +35,7 @@ internal sealed class AndroidClipboard : IDisposable {
 
     internal func ReadText() ClipboardTextResult {
         try {
-            if Volatile.Read(ref disposed) || !view.HasWindowFocus {
+            if Volatile.Read(in disposed) || !view.HasWindowFocus {
                 return ClipboardTextResult(ClipboardReadStatus.Failed, error: "Clipboard reads require a focused Goo view")
             }
             using let clip = Manager.PrimaryClip
@@ -67,7 +67,7 @@ internal sealed class AndroidClipboard : IDisposable {
     }
 
     private func Capture(includeData bool = true) Snapshot {
-        if Volatile.Read(ref disposed) || !view.HasWindowFocus {
+        if Volatile.Read(in disposed) || !view.HasWindowFocus {
             throw IOException("Clipboard reads require a focused Goo view")
         }
         using let clip = Manager.PrimaryClip
@@ -132,7 +132,7 @@ internal sealed class AndroidClipboard : IDisposable {
             let uris = List[Uri]()
             var total int32
             for type in types {
-                if Volatile.Read(ref disposed) { throw IOException("The clipboard owner closed") }
+                if Volatile.Read(in disposed) { throw IOException("The clipboard owner closed") }
                 if type == UriList {
                     for item in snapshot.Items {
                         if let reference = item.Uri { uris.Add(Uri(reference, UriKind.Absolute)) }
@@ -146,7 +146,7 @@ internal sealed class AndroidClipboard : IDisposable {
                 total += bytes.Length
                 items.Add(TransferRepresentation(type, bytes))
             }
-            if Volatile.Read(ref disposed) { throw IOException("The clipboard owner closed") }
+            if Volatile.Read(in disposed) { throw IOException("The clipboard owner closed") }
             return ClipboardDataResult(if items.Count == 0 && uris.Count == 0 { ClipboardReadStatus.Empty }
                 else { ClipboardReadStatus.Success }, TransferData(items, uris))
         } catch (error Exception) when (Known(error)) {
@@ -223,7 +223,7 @@ internal sealed class AndroidClipboard : IDisposable {
         if intent == ClipboardIntent.Cut {
             return ClipboardWriteResult(DataTransferStatus.Unsupported, "Android does not support native file Cut")
         }
-        if Volatile.Read(ref disposed) {
+        if Volatile.Read(in disposed) {
             return ClipboardWriteResult(DataTransferStatus.Cancelled, "The clipboard owner closed")
         }
         if data.Representations.Any(item -> item.ContentType == UriList) {
@@ -269,8 +269,8 @@ internal sealed class AndroidClipboard : IDisposable {
                 TaskCompletionSource[ClipboardWriteResult](TaskCreationOptions.RunContinuationsAsynchronously)
             if !Main.Post(() -> {
                 try {
-                    if cancellation.IsCancellationRequested || Volatile.Read(ref disposed)
-                        || generation != Interlocked.Read(ref writeGeneration) {
+                    if cancellation.IsCancellationRequested || Volatile.Read(in disposed)
+                        || generation != Interlocked.Read(in writeGeneration) {
                         if let staged = publication { GooClipboardProvider.Discard(context, staged) }
                         completion.SetResult(ClipboardWriteResult(DataTransferStatus.Cancelled,
                             "Clipboard publication was superseded"))

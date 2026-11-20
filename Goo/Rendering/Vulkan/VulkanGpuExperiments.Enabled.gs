@@ -16,41 +16,18 @@ internal class VulkanGpuExperiments {
             if !String.IsNullOrEmpty(path) && File.Exists(path) {
                 value = File.ReadAllText(path).Trim()
             }
-            var selected VulkanGpuExperiment
-            switch value {
-                case nil or "" or "none" {
-                    selected = VulkanGpuExperiment.None
-                }
-                case "full-redraw" {
-                    selected = VulkanGpuExperiment.FullRedraw
-                }
-                case "no-text" {
-                    selected = VulkanGpuExperiment.NoText
-                }
-                case "no-shadows" {
-                    selected = VulkanGpuExperiment.NoShadows
-                }
-                case "no-images" {
-                    selected = VulkanGpuExperiment.NoImages
-                }
-                case "no-layers" {
-                    selected = VulkanGpuExperiment.NoLayers
-                }
-                case "no-clip-sampling" {
-                    selected = VulkanGpuExperiment.NoClipSampling
-                }
-                case "clip-clear-only" {
-                    selected = VulkanGpuExperiment.ClipClearOnly
-                }
-                case "clip-regenerate" {
-                    selected = VulkanGpuExperiment.ClipRegenerate
-                }
-                case "no-gpu-timestamps" {
-                    selected = VulkanGpuExperiment.NoGpuTimestamps
-                }
-                default {
-                    throw ArgumentException("Unknown Vulkan GPU experiment: " + value)
-                }
+            let selected = switch value {
+                case nil or "" or "none": VulkanGpuExperiment.None
+                case "full-redraw": VulkanGpuExperiment.FullRedraw
+                case "no-text": VulkanGpuExperiment.NoText
+                case "no-shadows": VulkanGpuExperiment.NoShadows
+                case "no-images": VulkanGpuExperiment.NoImages
+                case "no-layers": VulkanGpuExperiment.NoLayers
+                case "no-clip-sampling": VulkanGpuExperiment.NoClipSampling
+                case "clip-clear-only": VulkanGpuExperiment.ClipClearOnly
+                case "clip-regenerate": VulkanGpuExperiment.ClipRegenerate
+                case "no-gpu-timestamps": VulkanGpuExperiment.NoGpuTimestamps
+                default: throw ArgumentException("Unknown Vulkan GPU experiment: " + value)
             }
             Console.Error.WriteLine("Goo Vulkan GPU experiment: " + (value ?? "none"))
             return selected

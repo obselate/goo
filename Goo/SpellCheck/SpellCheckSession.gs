@@ -104,21 +104,12 @@ class SpellCheckSession : IDisposable {
                             snapshot.GetText(error.Range) != error.Word {
                             continue
                         }
-                        let __spill0 = controller.Composition
-                        var composition TextComposition
-                        if __spill0 != nil && {
-                            composition = __spill0!!
-                            true
-                        } && Overlaps(error.Range, composition.Range) {
+                        if let composition = controller.Composition && Overlaps(error.Range, composition.Range) {
                             continue
                         }
                         errors.Add(error)
                     }
-                    var dirty TextRange
-                    if pendingRange != nil && {
-                        dirty = pendingRange!!
-                        true
-                    } &&
+                    if let dirty = pendingRange &&
                         $range.Start <= dirty.Start &&
                         int64($range.Start) +
                         int64($range.Length) >= int64(dirty.Start) +
@@ -288,11 +279,7 @@ class SpellCheckSession : IDisposable {
             end = Math.Max(end, edit.Range.Start + delta + edit.InsertedText.Length)
             delta += edit.InsertedText.Length - edit.Range.Length
         }
-        var dirty TextRange
-        if pendingRange != nil && {
-            dirty = pendingRange!!
-            true
-        } {
+        if let dirty = pendingRange {
             var dirtyStart int64 = dirty.Start
             var dirtyEnd = int64(dirty.Start) + int64(dirty.Length)
             for var i = change.Changes.Count - 1; i >= 0; i-- {

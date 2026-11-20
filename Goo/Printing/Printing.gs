@@ -29,7 +29,7 @@ public shared class Printing {
             if acquisition.Status != NativeDialogOwnerStatus.Success || acquisition.Owner == nil {
                 return PrintResult(MapOwner(acquisition.Status), Error: Detail(acquisition.Error ?? ""))
             }
-            let active = acquisition.Owner!!
+            let active = acquisition.Owner
             lease = active
             using let linked = CancellationTokenSource.CreateLinkedTokenSource(cancellation, active.Closed)
             return switch active.Kind {
@@ -77,7 +77,7 @@ public shared class Printing {
                     .ConfigureAwait(false)
                 if result.Status != OffscreenRenderStatus.Success || result.Capture == nil { return RenderFailure(result) }
                 reusable = result.Capture
-                pdf.AddPage(reusable!!, linked.Token)
+                pdf.AddPage(reusable, linked.Token)
             }
             linked.Token.ThrowIfCancellationRequested()
             pdf.Complete()

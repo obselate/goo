@@ -2232,6 +2232,10 @@ class PublicDocumentationTests {
                 .Where((type Type) -> type.IsAbstract)
                 .Select((type Type) -> type.FullName)
                 .ToHashSet(StringComparer.Ordinal)
+            let dataStructs = apiTypes
+                .Where((type Type) -> type.IsValueType && type.GetMethod("Deconstruct") != nil)
+                .Select((type Type) -> type.FullName)
+                .ToHashSet(StringComparer.Ordinal)
             let coreTypes = apiTypes.Select((type Type) -> type.FullName).ToHashSet(StringComparer.Ordinal)
             let generatedNames = HashSet[string](StringComparer.Ordinal){
                 "<Clone>$",
@@ -2250,6 +2254,7 @@ class PublicDocumentationTests {
                 (parts[]string) -> parts[0] == "ctor" && parts[1] != "Goo.Cell`1" && !SynthesizedPrimaryDataTypes.Any(
                     (type Type) -> type.FullName == parts[1]
                 ) &&
+                    !(parts[3] == "()" && dataStructs.Contains(parts[1])) &&
                     !abstractTypes.Contains(parts[1]) || parts[0] == "method" && !generatedNames.Contains(parts[2])
             )
             Assert.Equal(count, ExpectedMethodIds.Length + ExpectedProtectedMethodIds.Length)
@@ -2257,7 +2262,7 @@ class PublicDocumentationTests {
 
         private func ExpectedDocumentationIds() IEnumerable[string] {
             let types = ApiTypes().ToArray()
-            let typeIds = types.Where((type Type) -> type != typeof(Window)).Select((type Type) -> "T:${type.FullName}")
+            let typeIds = types.Select((type Type) -> "T:${type.FullName}")
             let propertyIds = types.Where((type Type) -> !SynthesizedPrimaryDataTypes.Contains(type)).SelectMany(
                 (type Type) -> type.GetProperties(PublicDeclared).Select(
                     (property PropertyInfo) -> "P:${type.FullName}.${property.Name}"
