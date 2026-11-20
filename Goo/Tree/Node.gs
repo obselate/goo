@@ -296,6 +296,7 @@ internal class Node {
     }
   }
   internal prop Yoga Facebook.Yoga.Node? { get; set; }
+  internal var PlacementOffset System.Numerics.Vector2
   internal prop YogaStyleMask StyleMask{ get; set; }
   internal prop Width NodeLength{ get; set; }
   internal prop Height NodeLength{ get; set; }

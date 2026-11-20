@@ -72,12 +72,16 @@ internal sealed class LayoutTransitionState : MotionParticle {
   private var simulationY Simulation?
   private var simulationWidth Simulation?
   private var simulationHeight Simulation?
-  private var startTime float64
+  private var startX float64
+  private var startY float64
+  private var startWidth float64
+  private var startHeight float64
   private var hasBounds bool
   private var disposed bool
   private var pump MotionPump?
   private var value LayoutTransition
   private var baseline Rect
+  private var baselinePlacement System.Numerics.Vector2
   private var baselineValid bool
   private var stagedFresh bool
   internal var Previous LayoutTransitionState?
@@ -85,6 +89,7 @@ internal sealed class LayoutTransitionState : MotionParticle {
   private var window Window?
 
   internal prop Value LayoutTransition{ get -> value }
+  internal prop SizeOffset System.Numerics.Vector2 { get -> System.Numerics.Vector2(offsetWidth, offsetHeight) }
   internal prop IsPortal bool { get -> node.IsPortal }
 
   internal init(n Node) {
@@ -131,19 +136,31 @@ internal sealed class LayoutTransitionState : MotionParticle {
     baseline = Rect{X: lastLocalX, Y: lastLocalY, W: lastWidth, H: lastHeight}
     baselineValid = hasBounds && !node.Retired
     stagedFresh = !hasBounds
+    baselinePlacement = node.PlacementOffset
+  }
+
+  internal func CommitSize() {
+    if !baselineValid || !hasBounds || node.Retired { return }
+    if !canAnimate() { return }
+    if baseline.W != lastWidth {
+      retarget(ref simulationWidth, ref offsetWidth, ref startWidth, offsetWidth - (lastWidth - baseline.W))
+    }
+    if baseline.H != lastHeight {
+      retarget(ref simulationHeight, ref offsetHeight, ref startHeight, offsetHeight - (lastHeight - baseline.H))
+    }
+    updateRegistration()
   }
 
   internal func CommitApplication() {
     stagedFresh = false
     let valid = baselineValid
     baselineValid = false
-    if !valid || !hasBounds || node.Retired { return }
-    if baseline.X != lastLocalX || baseline.Y != lastLocalY
-      || baseline.W != lastWidth || baseline.H != lastHeight {
-      if let owner = pump { sample(owner.Now) }
-      bank(offsetX - (lastLocalX - baseline.X), offsetY - (lastLocalY - baseline.Y),
-        offsetWidth - (lastWidth - baseline.W), offsetHeight - (lastHeight - baseline.H))
-    }
+    if !valid || !hasBounds || node.Retired || !canAnimate() { return }
+    retarget(ref simulationX, ref offsetX, ref startX,
+      offsetX - (lastLocalX - baseline.X) + baselinePlacement.X - node.PlacementOffset.X)
+    retarget(ref simulationY, ref offsetY, ref startY,
+      offsetY - (lastLocalY - baseline.Y) + baselinePlacement.Y - node.PlacementOffset.Y)
+    updateRegistration()
   }
 
   internal func AbortApplication() {
@@ -160,38 +177,38 @@ internal sealed class LayoutTransitionState : MotionParticle {
   }
 
   private func bank(x float32, y float32, width float32, height float32) {
-    let elapsed = if let owner = pump { Math.Max(0.0, owner.Now - startTime) * Motion.TimeScale } else { 0.0 }
-    let velocityX = if let simulation = simulationX { simulation.Velocity(elapsed) } else { 0.0 }
-    let velocityY = if let simulation = simulationY { simulation.Velocity(elapsed) } else { 0.0 }
-    let velocityWidth = if let simulation = simulationWidth { simulation.Velocity(elapsed) } else { 0.0 }
-    let velocityHeight = if let simulation = simulationHeight { simulation.Velocity(elapsed) } else { 0.0 }
-    guard let pump = pump else {
+    if !canAnimate() { return }
+    retarget(ref simulationX, ref offsetX, ref startX, x)
+    retarget(ref simulationY, ref offsetY, ref startY, y)
+    retarget(ref simulationWidth, ref offsetWidth, ref startWidth, width)
+    retarget(ref simulationHeight, ref offsetHeight, ref startHeight, height)
+    updateRegistration()
+  }
+
+  private func canAnimate() bool {
+    if pump == nil || pump?.ReducedMotion == true || Motion.TimeScale <= 0.0
+      || (value.SimulationFactory == nil && value.DurationMs <= 0.0) {
       snap()
-      return
+      pump?.Deregister(this)
+      return false
     }
-    if pump.ReducedMotion || Motion.TimeScale <= 0.0 || (value.SimulationFactory == nil && value.DurationMs <= 0.0) {
-      snap()
-      pump.Deregister(this)
-      return
-    }
-    let nextX = createSimulation(x, velocityX)
-    let nextY = createSimulation(y, velocityY)
-    let nextWidth = createSimulation(width, velocityWidth)
-    let nextHeight = createSimulation(height, velocityHeight)
-    simulationX = nextX
-    simulationY = nextY
-    simulationWidth = nextWidth
-    simulationHeight = nextHeight
-    offsetX = x
-    offsetY = y
-    offsetWidth = width
-    offsetHeight = height
-    startTime = pump.Now
-    if sample(startTime) {
-      pump.Register(this)
-    } else {
-      pump.Deregister(this)
-    }
+    return true
+  }
+
+  private func retarget(ref simulation Simulation?, ref offset float32, ref start float64, next float32) {
+    if next == offset { return }
+    let now = pump?.Now ?? 0.0
+    let elapsed = Math.Max(0.0, now - start) * Motion.TimeScale
+    let velocity = simulation?.Velocity(elapsed) ?? 0.0
+    simulation = createSimulation(next, velocity)
+    offset = next
+    start = now
+  }
+
+  private func updateRegistration() {
+    guard let owner = pump else { return }
+    if sample(owner.Now) { owner.Register(this) }
+    else { owner.Deregister(this) }
     invalidated?.Invoke(ReconcileEffects.Rect | ReconcileEffects.Paint
       | ReconcileEffects.Input | ReconcileEffects.Accessibility)
   }
@@ -222,37 +239,40 @@ internal sealed class LayoutTransitionState : MotionParticle {
   }
 
   private func sample(now float64) bool {
-    let elapsed = Math.Max(0.0, now - startTime) * Motion.TimeScale
+    let elapsedX = Math.Max(0.0, now - startX) * Motion.TimeScale
+    let elapsedY = Math.Max(0.0, now - startY) * Motion.TimeScale
+    let elapsedWidth = Math.Max(0.0, now - startWidth) * Motion.TimeScale
+    let elapsedHeight = Math.Max(0.0, now - startHeight) * Motion.TimeScale
     if let simulation = simulationX {
-      if simulation.Done(elapsed) {
+      if simulation.Done(elapsedX) {
         offsetX = 0.0F
         simulationX = nil
       } else {
-        offsetX = float32(simulation.Position(elapsed))
+        offsetX = float32(simulation.Position(elapsedX))
       }
     }
     if let simulation = simulationY {
-      if simulation.Done(elapsed) {
+      if simulation.Done(elapsedY) {
         offsetY = 0.0F
         simulationY = nil
       } else {
-        offsetY = float32(simulation.Position(elapsed))
+        offsetY = float32(simulation.Position(elapsedY))
       }
     }
     if let simulation = simulationWidth {
-      if simulation.Done(elapsed) {
+      if simulation.Done(elapsedWidth) {
         offsetWidth = 0.0F
         simulationWidth = nil
       } else {
-        offsetWidth = float32(simulation.Position(elapsed))
+        offsetWidth = float32(simulation.Position(elapsedWidth))
       }
     }
     if let simulation = simulationHeight {
-      if simulation.Done(elapsed) {
+      if simulation.Done(elapsedHeight) {
         offsetHeight = 0.0F
         simulationHeight = nil
       } else {
-        offsetHeight = float32(simulation.Position(elapsed))
+        offsetHeight = float32(simulation.Position(elapsedHeight))
       }
     }
     return simulationX != nil || simulationY != nil || simulationWidth != nil || simulationHeight != nil
@@ -363,6 +383,12 @@ public partial class Window {
 
   private func commitLayoutApplication() {
     var current = layoutTransitions
+    while let state = current {
+      state.CommitSize()
+      current = state.Next
+    }
+    if let root = node { layout.RefreshRects(root, portalRoot) }
+    current = layoutTransitions
     var portals = false
     while let state = current {
       if state.IsPortal { portals = true }
