@@ -69,8 +69,8 @@ class NativeGlassCell : Cell {
             },
         },
         Text{
-            Content: solid ? "Solid Ink surface": (
-                Window?.BackdropAvailable == true ? "Native compositor blur available": "Native blur unavailable. Solid fallback active."
+            Content: solid ? "Solid Ink surface" : (
+                Window?.BackdropAvailable == true ? "Native compositor blur available" : "Native blur unavailable. Solid fallback active."
             ),
             Color: Color.Parse("#b8bfc9"),
             FontSize: 12,
@@ -80,8 +80,8 @@ class NativeGlassCell : Cell {
     private func SetSolid(value bool) {
         solid = value
         if let window = Window {
-            window.Backdrop = value ? WindowBackdrop.None: WindowBackdrop.Blur
-            window.Background = Color.Parse("#090b10").WithAlpha(value ? 1.0: 0.78)
+            window.Backdrop = value ? WindowBackdrop.None : WindowBackdrop.Blur
+            window.Background = Color.Parse("#090b10").WithAlpha(value ? 1.0 : 0.78)
         }
     }
 }

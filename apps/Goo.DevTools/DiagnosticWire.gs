@@ -1143,7 +1143,7 @@ class DiagnosticPipeTransport : DiagnosticTransport {
         guard let active = queue else {
             return false
         }
-        if Encoding.UTF8.GetByteCount(message.Raw == "" ? message.Payload: message.Raw) > 64 * 1024 {
+        if Encoding.UTF8.GetByteCount(message.Raw == "" ? message.Payload : message.Raw) > 64 * 1024 {
             return false
         }
         select {
@@ -1305,7 +1305,7 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                             }
                         }
                         await output.WriteLineAsync(
-                            message.Raw == "" ? RequestLine(message.Command, message.Payload): message.Raw
+                            message.Raw == "" ? RequestLine(message.Command, message.Payload) : message.Raw
                         )
                     }
                 }

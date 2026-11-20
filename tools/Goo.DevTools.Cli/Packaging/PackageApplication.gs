@@ -113,7 +113,7 @@ internal shared partial class PackageApplication {
             let name = "${metadata.Id}-${metadata.Version}-$rid"
             var artifact string
             if windows {
-                artifact = await PackageWindowsAsync(publish, workspace, symbols, metadata, tool!!)
+                artifact = await PackageWindowsAsync(publish, workspace, symbols, metadata, tool)
             } else if macos {
                 artifact = await PackageMacOsAsync(publish, workspace, symbols, metadata)
             } else {
@@ -135,7 +135,7 @@ internal shared partial class PackageApplication {
                     "env",
                     []string{
                         "ARCH=x86_64",
-                        tool!!,
+                        tool,
                         "--appimage-extract-and-run",
                         "--no-appstream",
                         "--runtime-file",
@@ -209,11 +209,11 @@ internal shared partial class PackageApplication {
                 "validation"
             )
         }
-        using let stream = File.OpenRead(path!!)
+        using let stream = File.OpenRead(path)
         if !Convert.ToHexString(SHA256.HashData(stream)).Equals(expectedHash, StringComparison.OrdinalIgnoreCase) {
             throw CliException("$variable does not match the pinned SHA-256.", "invalid-tool", "validation")
         }
-        return Path.GetFullPath(path!!)
+        return Path.GetFullPath(path)
     }
 
     private async func ReadMetadataAsync(project string, runtime string) Metadata {

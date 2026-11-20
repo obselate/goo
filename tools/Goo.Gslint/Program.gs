@@ -584,7 +584,7 @@ class Program {
             yield break
         }
         if !type.HasQualifier && type.Identifier != nil && TypeAliases.ContainsKey(type.Identifier!!.Text) {
-            yield type.Identifier!!
+            yield type.Identifier
         }
         for token in FindAliasTokens(type.ArrayElementType) {
             yield token
@@ -608,21 +608,21 @@ class Program {
             yield token
         }
         if type.TypeArguments != nil {
-            for argument in type.TypeArguments!! {
+            for argument in type.TypeArguments {
                 for token in FindAliasTokens(argument) {
                     yield token
                 }
             }
         }
         if type.TupleElements != nil {
-            for element in type.TupleElements!! {
+            for element in type.TupleElements {
                 for token in FindAliasTokens(element) {
                     yield token
                 }
             }
         }
         if type.FunctionParameterTypes != nil {
-            for parameter in type.FunctionParameterTypes!! {
+            for parameter in type.FunctionParameterTypes {
                 for token in FindAliasTokens(parameter) {
                     yield token
                 }

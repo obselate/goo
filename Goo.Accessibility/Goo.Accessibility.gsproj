@@ -9,7 +9,6 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
     <IncludeBuildOutput>false</IncludeBuildOutput>
-    <IncludeSymbols>false</IncludeSymbols>
     <NoWarn>$(NoWarn);NU5128</NoWarn>
     <GooAccessibilityRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</GooAccessibilityRid>
     <GooAccessibilityRid Condition="'$(GooAccessibilityRid)' == ''">$(NETCoreSdkRuntimeIdentifier)</GooAccessibilityRid>

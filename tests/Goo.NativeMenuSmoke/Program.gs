@@ -152,16 +152,16 @@ internal unsafe shared class Mac {
     }
 }
 
-using let portal = if OperatingSystem.IsLinux() && Environment.GetEnvironmentVariable("GOO_FILE_DIALOG_SMOKE") == "1" {
-    LinuxFileDialogSmoke()
-} else { nil }
 let first = Window{Title: "Native menu first", Size: LayoutSize(240, 160), }.Open()
 let second = Window{Title: "Native menu second", Size: LayoutSize(240, 160), }.Open()
 
 try {
     first.Pump(0.0)
     second.Pump(0.0)
-    portal?.Run(first)
+    if OperatingSystem.IsLinux() && Environment.GetEnvironmentVariable("GOO_FILE_DIALOG_SMOKE") == "1" {
+        using let portal = LinuxFileDialogSmoke()
+        portal.Run(first)
+    }
     using let firstBar = NativeMenuBar(first)
     using let secondBar = NativeMenuBar(second)
     var firstCount = 0

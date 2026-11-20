@@ -54,8 +54,8 @@ internal partial class ProfilerTrace {
                         if slot == stacks.Count {
                             stacks.Add(List[int64]())
                             names.Add(
-                                (lane.Window == "" ? "": WindowName(lane.Window) + " · ") + lane.Name
-                                + (slot == 0 ? "": " · overlap " + (slot + 1).ToString(CultureInfo.InvariantCulture))
+                                (lane.Window == "" ? "" : WindowName(lane.Window) + " · ") + lane.Name
+                                + (slot == 0 ? "" : " · overlap " + (slot + 1).ToString(CultureInfo.InvariantCulture))
                             )
                             trackNumbers[thread].Add(names.Count)
                         }
@@ -73,7 +73,7 @@ internal partial class ProfilerTrace {
                     writer,
                     "process_name",
                     0,
-                    Process == "" ? "Imported Chrome trace": "Goo profiler · " + Process
+                    Process == "" ? "Imported Chrome trace" : "Goo profiler · " + Process
                 )
                 for index in 0 ... names.Count {
                     WriteName(writer, "thread_name", index + 1, names[index])
@@ -82,10 +82,10 @@ internal partial class ProfilerTrace {
                 var flowSerial = 0L
                 for index in 0 ... Records.Count {
                     let record = Records[index]
-                    let counter = record.FloatingValue ?? (record.Value == nil ? nil: float64(record.Value ?? 0uL))
+                    let counter = record.FloatingValue ?? (record.Value == nil ? nil : float64(record.Value ?? 0uL))
                     let gpu = record.Source.StartsWith("vulkan.timestamp", StringComparison.Ordinal)
-                    let value = gpu ? (record.GpuNs == nil ? nil: float64(record.GpuNs ?? 0uL)): counter
-                    var phase = IsSlice(record) ? "X": (record.Kind == "counter" || gpu) && value != nil ? "C": "i"
+                    let value = gpu ? (record.GpuNs == nil ? nil : float64(record.GpuNs ?? 0uL)) : counter
+                    var phase = IsSlice(record) ? "X" : (record.Kind == "counter" || gpu) && value != nil ? "C" : "i"
                     var category = record.Source
                     var flowId = 0L
                     var binding = ""
@@ -104,7 +104,7 @@ internal partial class ProfilerTrace {
                     }
                     var name = EventName(record)
                     if gpu {
-                        name = GpuStage(record.Event) + (record.GpuNs == nil ? " · " + record.Source: " elapsed (ns)")
+                        name = GpuStage(record.Event) + (record.GpuNs == nil ? " · " + record.Source : " elapsed (ns)")
                         + " / device " + record.Device.ToString()
                         + " generation " + record.DeviceGeneration.ToString()
                     } else if phase == "C" {
@@ -127,7 +127,7 @@ internal partial class ProfilerTrace {
                     writer.WritePropertyName("args")
                     writer.WriteStartObject()
                     if phase == "C" {
-                        writer.WriteNumber(gpu ? "elapsed_ns": record.Unit == "" ? "value": record.Unit, value ?? 0.0)
+                        writer.WriteNumber(gpu ? "elapsed_ns" : record.Unit == "" ? "value" : record.Unit, value ?? 0.0)
                     } else {
                         writer.WriteString("source", record.Source)
                         writer.WriteString("validity", record.Validity)
@@ -286,7 +286,7 @@ internal partial class ProfilerTrace {
                 break
             }
         }
-        return ordinal > 1 ? title + " #" + ordinal.ToString(CultureInfo.InvariantCulture): title
+        return ordinal > 1 ? title + " #" + ordinal.ToString(CultureInfo.InvariantCulture) : title
     }
 
     shared {
@@ -300,9 +300,9 @@ internal partial class ProfilerTrace {
         && !record.Source.Contains("derived", StringComparison.Ordinal)
 
         internal func GpuStage(eventId int32) string -> eventId == 316 ? "Upload"
-        : eventId == 318 ? "Main": eventId == 319 ? "Effects"
-        : eventId == 320 ? "Offscreen": eventId == 336 ? "Frame"
-        : eventId == 337 ? "Clip": eventId == 338 ? "Primitive upload"
+        : eventId == 318 ? "Main" : eventId == 319 ? "Effects"
+        : eventId == 320 ? "Offscreen" : eventId == 336 ? "Frame"
+        : eventId == 337 ? "Clip" : eventId == 338 ? "Primitive upload"
         : "GPU event " + eventId.ToString(CultureInfo.InvariantCulture)
 
         private func WriteName(writer Utf8JsonWriter, kind string, thread int32, name string) {
@@ -329,7 +329,7 @@ internal partial class ProfilerTrace {
             }
             using let document = JsonDocument.Parse(stream, JsonDocumentOptions{MaxDepth: 32})
             let root = document.RootElement
-            let events = root.ValueKind == JsonValueKind.Array ? root: root.GetProperty("traceEvents")
+            let events = root.ValueKind == JsonValueKind.Array ? root : root.GetProperty("traceEvents")
             if events.ValueKind != JsonValueKind.Array || events.GetArrayLength() > EventLimit {
                 throw InvalidDataException("Trace event array is invalid or exceeds 524288 events")
             }
@@ -398,7 +398,7 @@ internal partial class ProfilerTrace {
             if values.GetArrayLength() > 512 {
                 throw InvalidDataException("Too many trace names")
             }
-            let output = key == "phaseNames" ? Phases: key == "ownerKinds" ? Owners: Resources
+            let output = key == "phaseNames" ? Phases : key == "ownerKinds" ? Owners : Resources
             for value in values.EnumerateArray() {
                 let text = value.GetString() ?? ""
                 if text.Length > NameLimit {
@@ -546,7 +546,7 @@ internal partial class ProfilerTrace {
             let tid = CheckedText(item, "tid")
             let key = pid + ":" + tid
             let window = "chrome:" + pid
-            let process = (processNames.TryGetValue(pid, out var processName) ? processName: "Process") +
+            let process = (processNames.TryGetValue(pid, out var processName) ? processName : "Process") +
                 " (pid " +
                 pid +
                 ")"
@@ -554,7 +554,7 @@ internal partial class ProfilerTrace {
             if !threads.TryGetValue(key, out var thread) {
                 thread = uint64(threads.Count + 1)
                 threads.Add(key, thread)
-                ThreadNames[thread] = Intern(threadNames.TryGetValue(key, out var title) ? title: "Thread " + tid)
+                ThreadNames[thread] = Intern(threadNames.TryGetValue(key, out var title) ? title : "Thread " + tid)
             }
             if RetainedBytes > BudgetBytes || strings.Count >= 8192 {
                 throw InvalidDataException("Imported metadata exceeds the retention budget")
@@ -567,7 +567,7 @@ internal partial class ProfilerTrace {
                 stack.Add(item)
                 continue
             }
-            let ticks = phase == "M" ? 0L: ChromeTicks(item, "ts", origin)
+            let ticks = phase == "M" ? 0L : ChromeTicks(item, "ts", origin)
             var source = item
             var chrome = "[" + item.GetRawText() + "]"
             var end = ticks
@@ -592,14 +592,15 @@ internal partial class ProfilerTrace {
             var record = ProfilerRecord{
                 Sequence: LastSequence + 1L,
                 Kind: phase == "X" ||
-                    phase == "E" ? "duration": phase == "C" ? "counter": phase == "M" ? "metadata": "instant",
-                Ticks: phase == "E" ? ChromeTicks(source, "ts", origin): ticks,
+                    phase == "E" ? "duration" : phase == "C" ? "counter" : phase == "M" ? "metadata" : "instant",
+                Ticks: phase == "E" ? ChromeTicks(source, "ts", origin) : ticks,
                 EndTicks: end,
                 Window: window,
                 Thread: thread,
                 Category: -1,
                 Name: CheckedText(source, "name"),
-                Source: "chrome." + (phase == "s" || phase == "t" || phase == "f" ? "flow": CheckedText(source, "cat")),
+                Source: "chrome." +
+                    (phase == "s" || phase == "t" || phase == "f" ? "flow" : CheckedText(source, "cat")),
                 Unit: "",
                 Validity: "imported",
                 Chrome: chrome,
@@ -617,7 +618,7 @@ internal partial class ProfilerTrace {
                     }
                     record.Name = process + " / " + CheckedText(item, "name") + " / " + value.Name
                     record.FloatingValue = number
-                    record.Chrome = count == 0 ? chrome: ""
+                    record.Chrome = count == 0 ? chrome : ""
                     record.Sequence = LastSequence + 1L
                     LastSequence = record.Sequence
                     ImportRecord(record)

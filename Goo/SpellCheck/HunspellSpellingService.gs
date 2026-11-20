@@ -285,8 +285,8 @@ unsafe class HunspellSpellingService : ISpellingService, IDisposable {
             freeList = cast[unmanaged[Cdecl](nint, *nint, int32) -> void](NativeLibrary.GetExport(library, "Hunspell_free_list"))
             destroy = cast[unmanaged[Cdecl](nint) -> void](NativeLibrary.GetExport(library, "Hunspell_destroy"))
             let getEncoding = cast[unmanaged[Cdecl](nint) -> nint](NativeLibrary.GetExport(library, "Hunspell_get_dic_encoding"))
-            let aff []uint8 = Encoding.UTF8.GetBytes(affPath + '\u0000')
-            let dictionary []uint8 = Encoding.UTF8.GetBytes(dictionaryPath + '\u0000')
+            let aff = Encoding.UTF8.GetBytes(affPath + '\u0000')
+            let dictionary = Encoding.UTF8.GetBytes(dictionaryPath + '\u0000')
             fixed nativeAff *uint8 = aff {
                 fixed nativeDictionary *uint8 = dictionary {
                     handle = create(nativeAff, nativeDictionary)

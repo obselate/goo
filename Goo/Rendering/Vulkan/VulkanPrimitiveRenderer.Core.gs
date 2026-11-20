@@ -1219,11 +1219,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     area VkRect2D,
     imageView VkImageView,
     loadExisting bool) {
-      var clear = VkClearValue{}
-      clear.color.float32.values[0] = 0.0F
-      clear.color.float32.values[1] = 0.0F
-      clear.color.float32.values[2] = 0.0F
-      clear.color.float32.values[3] = 0.0F
       var attachment = VkRenderingAttachmentInfo{}
       attachment.sType = VkConstants.VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO
       attachment.imageView = imageView
@@ -1235,7 +1230,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         VkConstants.VK_ATTACHMENT_LOAD_OP_CLEAR
       }
       attachment.storeOp = VkConstants.VK_ATTACHMENT_STORE_OP_STORE
-      attachment.clearValue = clear
       var rendering = VkRenderingInfo{}
       rendering.sType = VkConstants.VK_STRUCTURE_TYPE_RENDERING_INFO
       rendering.renderArea = area
@@ -1304,10 +1298,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       destination.TransitionToTransferDestination(commandBuffer)
       if clearBackdrop {
         var clear = VkClearColorValue{}
-        clear.float32.values[0] = 0.0F
-        clear.float32.values[1] = 0.0F
-        clear.float32.values[2] = 0.0F
-        clear.float32.values[3] = 0.0F
         var subresourceRange = VkImageSubresourceRange{}
         subresourceRange.aspectMask = uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT)
         subresourceRange.baseMipLevel = 0u

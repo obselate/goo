@@ -102,7 +102,7 @@ class DiagnosticMessage {
         Command = ""
         CapabilitiesText = ""
         Succeeded = true
-        ErrorText = kind == DiagnosticMessageKind.Error ? payload: ""
+        ErrorText = kind == DiagnosticMessageKind.Error ? payload : ""
     }
 }
 
@@ -799,7 +799,7 @@ class DiagnosticSession {
                     StopProfiler()
                 }
                 if trace.Active || message.More {
-                    ReadProfiler(message.More ? 0: int32(ProfilerTrace.Number(root, "pollDelayMs") ?? 100uL))
+                    ReadProfiler(message.More ? 0 : int32(ProfilerTrace.Number(root, "pollDelayMs") ?? 100uL))
                 }
             } else if message.Command == "profiler.stop" {
                 trace.State = "Stopping"

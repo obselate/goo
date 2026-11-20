@@ -735,10 +735,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
         allocator.EndCacheGrowth()
       }
     }
-    guard let created = target else {
-      RecordFailure(estimatedBytes, uint64(index))
-      throw InvalidOperationException("Vulkan layer target creation returned null")
-    }
+    let created = target
     allocator.Track(created.Allocation!!, this, index)
     targets[index] = created
     leased[index] = true

@@ -46,10 +46,10 @@ internal partial class LinuxTrayBackend : TrayBackend, IPathMethodHandler {
     }
 
     public func Update(content TrayContent, pixels IReadOnlyList[uint8]) TrayStatus {
-        if Volatile.Read(ref closed) != 0 { return TrayStatus.Closed }
-        if Volatile.Read(ref connected) == 0 { return TrayStatus.Failed }
+        if Volatile.Read(in closed) != 0 { return TrayStatus.Closed }
+        if Volatile.Read(in connected) == 0 { return TrayStatus.Failed }
         var next LinuxTrayState
-        try { next = LinuxTrayState(content, pixels, Volatile.Read(ref current), ref nextMenuId) }
+        try { next = LinuxTrayState(content, pixels, Volatile.Read(in current), ref nextMenuId) }
         catch (error OverflowException) { return TrayStatus.Unsupported }
         Volatile.Write(ref current, next)
         try {
@@ -58,7 +58,7 @@ internal partial class LinuxTrayBackend : TrayBackend, IPathMethodHandler {
                 || !LayoutUpdated(next.Revision) {
                 return TrayStatus.Failed
             }
-            return TrayStatus(Volatile.Read(ref registration))
+            return TrayStatus(Volatile.Read(in registration))
         } catch (error DBusConnectionException) {
             return TrayStatus.Failed
         } catch (error ObjectDisposedException) {
@@ -121,11 +121,11 @@ internal partial class LinuxTrayBackend : TrayBackend, IPathMethodHandler {
                 } catch (error DBusOwnerChangedException) { }
             }
         } catch (error OperationCanceledException) {
-            if Volatile.Read(ref closed) == 0 { ReportRegistration(TrayStatus.Failed) }
+            if Volatile.Read(in closed) == 0 { ReportRegistration(TrayStatus.Failed) }
         } catch (error DBusExceptionBase) { ReportRegistration(TrayStatus.Failed) }
         catch (error TimeoutException) { ReportRegistration(TrayStatus.Failed) }
         catch (error ObjectDisposedException) {
-            if Volatile.Read(ref closed) == 0 { ReportRegistration(TrayStatus.Failed) }
+            if Volatile.Read(in closed) == 0 { ReportRegistration(TrayStatus.Failed) }
         } finally {
             Volatile.Write(ref connected, 0)
             ready.TrySetResult(TrayStatus.Failed)
@@ -136,7 +136,7 @@ internal partial class LinuxTrayBackend : TrayBackend, IPathMethodHandler {
 
     private func ReportRegistration(value TrayStatus) {
         Volatile.Write(ref registration, int32(value))
-        if !ready.TrySetResult(value) && Volatile.Read(ref closed) == 0 { icon.PostStatus(value) }
+        if !ready.TrySetResult(value) && Volatile.Read(in closed) == 0 { icon.PostStatus(value) }
     }
 
     private func RegisterItem(owner string) Task {
