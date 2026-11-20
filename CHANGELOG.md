@@ -17,6 +17,8 @@
 ### Changed
 
 - Add the C# 14 guide and NativeAOT sample check, and direct F# users to community-maintained FunGoo.
+- Build Goo, tools and generated applications with G# SDK 0.5.698. The .NET SDK remains 10.0.403.
+- Rebuild G# dependencies with the same SDK. G# 0.5.698 requires the newer data-struct constructor metadata.
 - Extend `TransitionProperties` with outline width, color and offset, text stroke width and color, text shadow stacks, background gradients, shape corner radius, stroke trim bounds, miter limit, dash phase and intervals, selection color and editor caret color. These use the existing duration, delay, easing and reduced-motion policy. Text shadow counts must match. Gradient types and stop counts must match. Dash interval counts must match after odd-count normalization. Incompatible values remain discrete. Transparent text shadows retain their declared slots for fades. `All` now includes these values. Use an explicit selector list or `TransitionMs: 0` to keep them discrete. Use the new `BackdropBlur` selector to opt in explicitly. Backdrop blur already animates under `All`.
 - Preserve float64 precision for shape geometry, dash values and gradient geometry during transitions.
 - Box shadow colors now interpolate with premultiplied alpha, like other style colors.
@@ -42,6 +44,8 @@
 - Render large finite linear gradient angles without overflowing the radians conversion.
 - Fit ellipses with resolved inline typography for unwrapped and line-limited rich text.
 - Allow layer windows to show after hiding before their first presentation.
+- Releasing native dialog ownership no longer claims focus from a native child. An unfocused release does not restore the previous Goo element.
+- A pointer press recovers a focused window's input gate when no modal input or popup is active.
 - Reject repeated scan components in sequential JPEG images before they can cause excessive decode time.
 - Restore Goo input when a native-owner lease ends while its window is still focused, including when no Goo element had focus.
 - Keep nested baseline alignment and following content stable when cached layouts have already been snapped to device pixels.
