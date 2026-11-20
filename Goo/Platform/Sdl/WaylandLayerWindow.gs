@@ -14,6 +14,8 @@ internal delegate LayerWaylandClosed(data nint, layerSurface nint);
 internal delegate LayerWaylandFrame(data nint, callback nint, time uint32);
 
 internal unsafe sealed class WaylandLayerWindow : IDisposable {
+  private const EPROTO int32 = 71
+
   private let display nint
   private let surface nint
   private let options LayerWindowOptions
@@ -36,6 +38,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   private var surfaceInterface nint
   private var version uint32
   private var mapped bool
+  private var closed bool
   private var disposed bool
   private var failure Exception?
   private var frameListener nint
@@ -138,6 +141,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   internal func Hide() {
     if !mapped { return }
     Pump()
+    if !mapped { return }
     if Presented { DrainFrame() }
     let arguments * BackdropWaylandArgument = stackalloc[3]BackdropWaylandArgument
     arguments[0].Value = nint(0)
@@ -173,9 +177,11 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
 
   internal func Pump() {
     if disposed { return }
-    if WaylandBackdrop.wl_display_dispatch_queue_pending(display, queue) < 0 {
-      if WaylandBackdrop.wl_display_get_error(display) == 71 { throw InvalidOperationException("Layer-shell Wayland protocol error") }
-      if mapped { Closed(nint(0), nint(0)) }
+    if !closed && WaylandBackdrop.wl_display_dispatch_queue_pending(display, queue) < 0 {
+      if WaylandBackdrop.wl_display_get_error(display) == EPROTO {
+        throw InvalidOperationException("Layer-shell Wayland protocol error")
+      }
+      Closed(nint(0), nint(0))
     }
     if let error = failure { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw() }
   }
@@ -198,6 +204,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   }
 
   private func Closed(data nint, proxy nint) {
+    closed = true
     mapped = false
     Configured = false
     try { requestClose() } catch (error Exception) { failure = error }
