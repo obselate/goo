@@ -421,7 +421,6 @@ public partial class Window {
         native.SetBorder(v, resizable)
       }
       decorated = v
-      pointerHit = WindowHitResult.Normal
     }
   }
 
