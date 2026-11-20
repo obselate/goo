@@ -174,23 +174,25 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     internal func EvaluateHitTest(hitTest((int32, int32) -> WindowHitResult),
       x int32, y int32) SDLHitTestResult{
         try {
-          return switch hitTest(x, y) {
-            case WindowHitResult.Normal: SDLHitTestResult.Normal
-            case WindowHitResult.Draggable: SDLHitTestResult.Draggable
-            case WindowHitResult.TopLeft: SDLHitTestResult.ResizeTopleft
-            case WindowHitResult.Top: SDLHitTestResult.ResizeTop
-            case WindowHitResult.TopRight: SDLHitTestResult.ResizeTopright
-            case WindowHitResult.Right: SDLHitTestResult.ResizeRight
-            case WindowHitResult.BottomRight: SDLHitTestResult.ResizeBottomright
-            case WindowHitResult.Bottom: SDLHitTestResult.ResizeBottom
-            case WindowHitResult.BottomLeft: SDLHitTestResult.ResizeBottomleft
-            case WindowHitResult.Left: SDLHitTestResult.ResizeLeft
-            case _: SDLHitTestResult.Normal
-          }
+          return SdlHitTest(hitTest(x, y))
         } catch (e Exception) {
           return SDLHitTestResult.Normal
         }
       }
+
+    internal func SdlHitTest(result WindowHitResult) SDLHitTestResult -> switch result {
+      case WindowHitResult.Normal: SDLHitTestResult.Normal
+      case WindowHitResult.Draggable: SDLHitTestResult.Draggable
+      case WindowHitResult.TopLeft: SDLHitTestResult.ResizeTopleft
+      case WindowHitResult.Top: SDLHitTestResult.ResizeTop
+      case WindowHitResult.TopRight: SDLHitTestResult.ResizeTopright
+      case WindowHitResult.Right: SDLHitTestResult.ResizeRight
+      case WindowHitResult.BottomRight: SDLHitTestResult.ResizeBottomright
+      case WindowHitResult.Bottom: SDLHitTestResult.ResizeBottom
+      case WindowHitResult.BottomLeft: SDLHitTestResult.ResizeBottomleft
+      case WindowHitResult.Left: SDLHitTestResult.ResizeLeft
+      case _: SDLHitTestResult.Normal
+    }
   }
 
   public func PollEvents() {

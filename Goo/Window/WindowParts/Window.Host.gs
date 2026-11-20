@@ -503,7 +503,19 @@ public partial class Window {
         if profiling {
           profiler.Record(FrameProfileStage.Tree, treeProfile)
         }
-        native.SetCursor(input.CurrentCursor())
+        let contentCursor = input.CurrentCursor()
+        let pointerHit = if let p = nativePointer { hitTest(int32(p.X), int32(p.Y)) } else { WindowHitResult.Normal }
+        native.SetCursor(switch pointerHit {
+          case WindowHitResult.TopLeft: Cursor.ResizeNorthwest
+          case WindowHitResult.Top: Cursor.ResizeNorth
+          case WindowHitResult.TopRight: Cursor.ResizeNortheast
+          case WindowHitResult.Right: Cursor.ResizeEast
+          case WindowHitResult.BottomRight: Cursor.ResizeSoutheast
+          case WindowHitResult.Bottom: Cursor.ResizeSouth
+          case WindowHitResult.BottomLeft: Cursor.ResizeSouthwest
+          case WindowHitResult.Left: Cursor.ResizeWest
+          case _: contentCursor
+        })
         let queueCompleted = queueCompletedAtEntry || windowTarget?.PollQueueCompletion() == true
         var rendered = false
         if queueCompleted {
