@@ -64,10 +64,15 @@ namespace Facebook.Yoga
             Direction direction,
             float value,
             float axisSize,
-            float widthSize)
+            float widthSize,
+            bool recordSizing = false)
         {
+            float bounded = BoundAxisWithinMinAndMax(
+                node, direction, axis, new FloatOptional(value), axisSize, widthSize).Unwrap();
+            if (recordSizing && !Comparison.InexactEquals(value, bounded))
+                node.Layout.ContentSizing &= ~(axis.IsRow() ? ContentSizing.Width : ContentSizing.Height);
             return Comparison.MaxOrDefined(
-                BoundAxisWithinMinAndMax(node, direction, axis, new FloatOptional(value), axisSize, widthSize).Unwrap(),
+                bounded,
                 PaddingAndBorderForAxis(node, axis, direction, widthSize));
         }
     }

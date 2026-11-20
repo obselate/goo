@@ -1282,10 +1282,17 @@ internal func applyPositionEdge(
   }
 
 internal func applyDisplay(yg Facebook.Yoga.Node, n Node) {
-  let display = switch n.Display {
-    case Display.Flex: YGDisplay.Flex
-    case Display.None: YGDisplay.None
-    case _: throw NotSupportedException("Layout.applyDisplay: unhandled Display " + n.Display.ToString())
+  var display YGDisplay
+  switch n.Display {
+    case Display.Flex {
+      display = YGDisplay.Flex
+    }
+    case Display.None {
+      display = YGDisplay.None
+    }
+    default {
+      throw NotSupportedException("Layout.applyDisplay: unhandled Display " + n.Display.ToString())
+    }
   }
   if YGNodeStyleAPI.YGNodeStyleGetDisplay(yg) != display {
     YGNodeStyleAPI.YGNodeStyleSetDisplay(yg, display)
@@ -1300,6 +1307,7 @@ internal func applyDisplay(yg Facebook.Yoga.Node, n Node) {
   if YGNodeStyleAPI.YGNodeStyleGetOverflow(yg) != overflow {
     YGNodeStyleAPI.YGNodeStyleSetOverflow(yg, overflow)
   }
+  yg.SetContentClipAxes(n.OverflowX != Overflow.Visible, n.OverflowY != Overflow.Visible)
 }
 
 // Reference equality per slot: Diff reuses Node instances, and syncNode reuses

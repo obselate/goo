@@ -24,6 +24,7 @@ namespace Facebook.Yoga
         private bool _isReferenceBaseline = false;
         private bool _isDirty = true;
         private bool _alwaysFormsContainingBlock = false;
+        private ContentSizing? _contentClipAxes;
         private NodeType _nodeType = NodeType.Default;
         
         private object? _context;
@@ -51,6 +52,15 @@ namespace Facebook.Yoga
         
         public bool HasNewLayout { get => _hasNewLayout; set => SetHasNewLayout(value); }
         public bool AlwaysFormsContainingBlock { get => _alwaysFormsContainingBlock; set => _alwaysFormsContainingBlock = value; }
+        public ContentSizing? ContentClipAxes => _contentClipAxes;
+        public void SetContentClipAxes(bool clipWidth, bool clipHeight)
+        {
+            var value = (clipWidth ? ContentSizing.Width : ContentSizing.None)
+                | (clipHeight ? ContentSizing.Height : ContentSizing.None);
+            if (_contentClipAxes == value) return;
+            _contentClipAxes = value;
+            MarkDirtyAndPropagate();
+        }
         
         public LayoutableChildren<Node> LayoutChildren => GetLayoutChildren();
 
@@ -77,6 +87,7 @@ namespace Facebook.Yoga
             _isReferenceBaseline = other._isReferenceBaseline;
             _isDirty = other._isDirty;
             _alwaysFormsContainingBlock = other._alwaysFormsContainingBlock;
+            _contentClipAxes = other._contentClipAxes;
             _nodeType = other._nodeType;
             _context = other._context;
             _measureFunc = other._measureFunc;
@@ -578,6 +589,7 @@ namespace Facebook.Yoga
             _isReferenceBaseline = false;
             _isDirty = true;
             _alwaysFormsContainingBlock = false;
+            _contentClipAxes = null;
             _nodeType = NodeType.Default;
             _context = null;
             _measureFunc = null;

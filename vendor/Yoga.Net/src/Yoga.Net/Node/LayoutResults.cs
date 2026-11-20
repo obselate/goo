@@ -9,6 +9,8 @@ namespace Facebook.Yoga
 
         public uint ComputedFlexBasisGeneration = 0;
         public FloatOptional ComputedFlexBasis = FloatOptional.Undefined;
+        public ContentSizing ComputedFlexBasisSizing;
+        public ContentSizing ContentSizing;
 
         public uint GenerationCount = 0;
         public uint ConfigVersion = 0;
@@ -205,6 +207,8 @@ namespace Facebook.Yoga
                 LastOwnerDirection = LastOwnerDirection,
                 NextCachedMeasurementsIndex = NextCachedMeasurementsIndex,
                 CachedLayout = CachedLayout,
+                ComputedFlexBasisSizing = ComputedFlexBasisSizing,
+                ContentSizing = ContentSizing,
                 _direction = _direction,
                 _hadOverflow = _hadOverflow,
                 _dimensionWidth = _dimensionWidth,
@@ -249,6 +253,8 @@ namespace Facebook.Yoga
                 _positionBottom == layout._positionBottom &&
                 _dimensionWidth == layout._dimensionWidth &&
                 _dimensionHeight == layout._dimensionHeight &&
+                ContentSizing == layout.ContentSizing &&
+                ComputedFlexBasisSizing == layout.ComputedFlexBasisSizing &&
                 _marginLeft == layout._marginLeft &&
                 _marginTop == layout._marginTop &&
                 _marginRight == layout._marginRight &&
