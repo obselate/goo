@@ -14,7 +14,7 @@ internal delegate LayerWaylandClosed(data nint, layerSurface nint);
 internal delegate LayerWaylandFrame(data nint, callback nint, time uint32);
 
 internal unsafe sealed class WaylandLayerWindow : IDisposable {
-  private const EPROTO int32 = 71
+  private const EPIPE int32 = 32
 
   private let display nint
   private let surface nint
@@ -178,8 +178,9 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   internal func Pump() {
     if disposed { return }
     if !closed && WaylandBackdrop.wl_display_dispatch_queue_pending(display, queue) < 0 {
-      if WaylandBackdrop.wl_display_get_error(display) == EPROTO {
-        throw InvalidOperationException("Layer-shell Wayland protocol error")
+      let errno = WaylandBackdrop.wl_display_get_error(display)
+      if errno != EPIPE {
+        throw InvalidOperationException("Layer-shell event dispatch failed (errno $errno)")
       }
       Closed(nint(0), nint(0))
     }
