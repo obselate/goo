@@ -4,6 +4,16 @@ import Goo
 import System
 import System.IO
 
+internal class StartupReportSmokeCell : Cell {
+    internal var Built bool
+
+    override func Build() Blob {
+        Require(VulkanStartupReport.Current == nil, "Root Cell built during startup graphics capture")
+        Built = true
+        return Container{Width: 160, Height: 90}
+    }
+}
+
 func RunStartupGraphicsReportSmoke() {
     let mode = Environment.GetEnvironmentVariable("GOO_STARTUP_GRAPHICS_SMOKE") ?? "normal"
     if let path = Environment.GetEnvironmentVariable("GOO_STARTUP_REPORT_PATH_OPTION") {
@@ -47,9 +57,11 @@ func RunStartupGraphicsReportSmoke() {
         )
     }
     var failed = false
-    let window = Window{Title: "Goo startup graphics report smoke", Size: LayoutSize(160, 90), Root: Cell{}}
+    let root = StartupReportSmokeCell()
+    let window = Window{Title: "Goo startup graphics report smoke", SizeToContent: SizeToContent.Both, Root: root}
     try {
         window.Open()
+        Require(root.Built, "Window.Open did not measure the root Cell")
         window.Pump(0.0)
         if enabled && (mode == "fallback" || mode == "direct") {
             let path = VulkanDrivers.StartupReportPath!!

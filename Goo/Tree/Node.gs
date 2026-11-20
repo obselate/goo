@@ -142,6 +142,7 @@ internal class Node {
     KeyboardPressed = false
     PointerPressCount = 0
     LocalMask = StyleMask{}
+    BorderCornerMask = StyleMask{}
     AppliedMask = StyleMask{}
     Transitions = nil
     PaintBindings = nil
@@ -666,6 +667,7 @@ internal class Node {
   }
   internal prop FocusVisible bool{ get; set; }
   internal prop LocalMask StyleMask{ get; set; }
+  internal prop BorderCornerMask StyleMask{ get; set; }
   internal prop AppliedMask StyleMask{ get; set; }
   internal prop Transitions List[Transition]? { get; set; }
   internal prop StyleQueuedPass int64{ get; set; }
