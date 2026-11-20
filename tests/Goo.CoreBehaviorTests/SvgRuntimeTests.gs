@@ -88,6 +88,17 @@ class SvgRuntimeTests {
     }
 
     @Theory
+    @InlineData("translate(30 0)")
+    @InlineData("translate(7 9) scale(2 3)")
+    @InlineData("rotate(90 10 20)")
+    func SvgRootTransformMatchesGroup(source string) {
+        let root = Svg.Parse("<svg viewBox='2 3 20 10' transform='$source'><rect width='4' height='2'/></svg>")
+        let group = Svg.Parse("<svg viewBox='2 3 20 10'><g transform='$source'><rect width='4' height='2'/></g></svg>")
+        Assert.Equal(group.Nodes[0].Children[0].Transform, root.Nodes[0].Transform)
+        Assert.Equal(group.PathForNode(2), root.PathForNode(1))
+    }
+
+    @Theory
     @InlineData(true, false)
     @InlineData(true, true)
     @InlineData(false, false)
@@ -207,7 +218,7 @@ class SvgRuntimeTests {
         let geometryType = typeof(VectorAsset).Assembly.GetType("Goo.PathGeometry")!!
         let geometry = geometryType.GetMethod("For", BindingFlags.Static | BindingFlags.NonPublic)!!.Invoke(
             nil,
-            []object? {node.ClipPath}
+            []object? {node.ClipPath, 1.0F}
         )!!
         let actualMinX = float32(
             geometryType.GetField("MinX", BindingFlags.Instance | BindingFlags.NonPublic)!!.GetValue(geometry)!!
@@ -229,7 +240,7 @@ class SvgRuntimeTests {
         let geometryFor = geometryType.GetMethod("For", BindingFlags.Static | BindingFlags.NonPublic)!!
         let contains = geometryType.GetMethod("Contains", BindingFlags.Instance | BindingFlags.NonPublic)!!
         let points = [](X float32, Expected bool){(X: 25f, Expected: true), (X: 35f, Expected: false)}
-        let childClip = geometryFor.Invoke(nil, []object? {asset.NodeAt(3).ClipPath})!!
+        let childClip = geometryFor.Invoke(nil, []object? {asset.NodeAt(3).ClipPath, 1.0F})!!
         Assert.Equal(
             0,
             geometryType.GetField("QuadraticCount", BindingFlags.Instance | BindingFlags.NonPublic)!!.GetValue(
@@ -242,7 +253,7 @@ class SvgRuntimeTests {
             for var index = 0; index < 3; index++ {
                 let node = asset.NodeAt(index)
                 x -= float32(node.Transform.TranslateX.Magnitude)
-                let geometry = geometryFor.Invoke(nil, []object? {node.ClipPath})!!
+                let geometry = geometryFor.Invoke(nil, []object? {node.ClipPath, 1.0F})!!
                 inside &= bool(contains.Invoke(geometry, []object? {x, 5f, node.ClipPathFillRule})!!)
             }
             Assert.Equal(point.Item2, inside)

@@ -13,6 +13,12 @@ import Xunit
 
 class PublicDocumentationTests {
     @Fact
+    func NotificationOpenDocumentsUnreachableSessionBus() {
+        let member = LoadDocumentationMembers()["M:Goo.Notifications.Open(Goo.NotificationOptions)"]
+        Assert.Contains("An unreachable Linux session bus returns Failed.", member.Value, StringComparison.Ordinal)
+    }
+
+    @Fact
     func GeneratedXmlCoversThePublicApi() {
         AssertApprovedCallablesAreTracked()
         let members = LoadDocumentationMembers()
@@ -869,6 +875,11 @@ class PublicDocumentationTests {
             "F:Goo.NativeTransferCapabilities.OutboundData",
             "F:Goo.NativeTransferCapabilities.EffectNegotiation",
             "F:Goo.NativeTransferCapabilities.DataDrop",
+            "F:Goo.NativeWindowKind.Unsupported",
+            "F:Goo.NativeWindowKind.Win32",
+            "F:Goo.NativeWindowKind.Cocoa",
+            "F:Goo.NativeWindowKind.Wayland",
+            "F:Goo.NativeWindowKind.X11",
             "F:Goo.PortalPlacement.BottomStart",
             "F:Goo.PortalPlacement.Bottom",
             "F:Goo.PortalPlacement.BottomEnd",

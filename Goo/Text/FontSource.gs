@@ -225,6 +225,19 @@ internal sealed class FontRegistration {
     }
 }
 
+internal sealed class FontRegistryRevision {
+  internal let Generation uint64
+  internal let Sources Dictionary[string, List[FontRegistration]]
+
+  internal init(generation uint64, sources Dictionary[string, List[FontRegistration]]) {
+    Generation = generation
+    Sources = Dictionary[string, List[FontRegistration]]()
+    for (family, registrations) in sources {
+      Sources.Add(family, List[FontRegistration](registrations))
+    }
+  }
+}
+
 internal sealed class FontRegistry {
   shared {
     private let gate object = Object()
@@ -232,8 +245,28 @@ internal sealed class FontRegistry {
     Dictionary[string, List[FontRegistration]]()
     private var nextSourceId uint64 = 1uL
     private var generation uint64
+    private var revision FontRegistryRevision?
+    @ThreadStatic
+    private var accepted FontRegistryRevision?
+    internal event Changed Action
 
-    internal prop Generation uint64{ get { lock (gate) { return generation } } }
+    internal func EnterFrame() FontRegistryRevision? {
+      let previous = accepted
+      lock (gate) {
+        revision ??= FontRegistryRevision(generation, sources)
+        accepted = revision
+      }
+      return previous
+    }
+
+    internal func ExitFrame(previous FontRegistryRevision?) { accepted = previous }
+
+    internal prop Generation uint64 {
+      get {
+        if let frame = accepted { return frame.Generation }
+        lock (gate) { return generation }
+      }
+    }
 
     internal func AllocateSourceId() uint64 {
       lock (gate) {
@@ -274,10 +307,13 @@ internal sealed class FontRegistry {
           sources.Add(key, values)
         }
         values.Add(registration)
+        revision = nil
       }
+      Changed?.Invoke()
     }
 
     internal func Unregister(source FontSource) {
+      var changed = false
       lock (gate) {
         if !sources.TryGetValue(source.FamilyKey, out var values) { return }
         var index int32 = 0
@@ -289,17 +325,21 @@ internal sealed class FontRegistry {
               throw OverflowException("Font registry generation exhausted")
             }
             generation++
-            return
+            revision = nil
+            changed = true
+            break
           }
           index++
         }
       }
+      if changed { Changed?.Invoke() }
     }
 
     internal func Resolve(family string, weight int32, italic bool) FontRegistration? {
       let key = FontSource.NormalizeFamilyKey(family)
       lock (gate) {
-        if !sources.TryGetValue(key, out var values) { return nil }
+        let registry = accepted?.Sources ?? sources
+        if !registry.TryGetValue(key, out var values) { return nil }
         var best FontRegistration?
         var bestScore int64 = Int64.MaxValue
         for candidate in values {

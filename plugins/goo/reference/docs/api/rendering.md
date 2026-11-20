@@ -709,6 +709,10 @@ Gets or sets driver library paths loaded on Windows or Linux, alongside system d
 
 Gets or sets whether only Direct drivers are enumerated on Windows or Linux. Set this before opening the first window. The default is false. Throws PlatformNotSupportedException on other platforms and InvalidOperationException after Vulkan loading starts.
 
+### `StartupReportPath`
+
+Gets or sets the optional startup graphics report path. Set an empty string for the per-app default, or nil to disable. The default is disabled. GOO_VK_STARTUP_REPORT=1 enables the default path, or its value can specify a path. Set this before Vulkan loading starts. After a report is written, the getter returns its full path. Reports contain local machine and environment details, never use the network, and are limited to 64 KiB. The default file is LocalApplicationData/Goo/entry-assembly-name/startup-graphics.log, with the same relative path under the temp directory as a fallback. Only failures and automatic fallback or explicit driver attempts write a report. A normal successful startup writes nothing. The report replaces the previous report and includes loader stderr, payload hashes, exception chains and local platform details. GOO_VK_DIAGNOSTICS=1 keeps its existing behavior and does not enable report files.
+
 ## `VulkanExternalImageDescription`
 
 

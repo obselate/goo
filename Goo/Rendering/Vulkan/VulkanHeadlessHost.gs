@@ -46,8 +46,12 @@ internal sealed class VulkanHeadlessHost : VulkanSurfaceHost {
         } else {
             "libvulkan.so.1"
         }
-        let loaded = NativeLibrary.TryLoad(Path.Combine(AppContext.BaseDirectory, name), out library) ||
-            NativeLibrary.TryLoad(name, out library)
+        let local = Path.Combine(AppContext.BaseDirectory, name)
+        let loaded = if VulkanDiagnostics.StartupReportEnabled {
+            VulkanStartupReport.TryLoad(local, out library) || VulkanStartupReport.TryLoad(name, out library)
+        } else {
+            NativeLibrary.TryLoad(local, out library) || NativeLibrary.TryLoad(name, out library)
+        }
         if loaded { loaderReferences = 1 }
         return loaded
     }

@@ -93,6 +93,7 @@ internal sealed class VirtualNodeState {
   private var contextReader ContextReader?
   private var stateReads StateReadScope?
   private var contextDirty bool
+  internal var ContextCause LayoutCause
   private var contextVersion int64
   private var pendingContextVersion int64
   private var pixelScale float32 = 1.0F
@@ -272,6 +273,7 @@ internal sealed class VirtualNodeState {
   internal func InvalidateContext() {
     contextVersion++
     contextDirty = true
+    ContextCause = LayoutOrigin.Combine(ContextCause, LayoutOrigin.Current)
     Owner?.ContextVirtualInvalidated()
   }
 
@@ -428,13 +430,17 @@ internal sealed class VirtualNodeState {
       x = nearestOffset(float64(n.ScrollX), bounds.X, bounds.Width, viewport.Size.Width)
       y = nearestOffset(float64(n.ScrollY), bounds.Y, bounds.Height, viewport.Size.Height)
     }
-    let size = output.ContentSize
-    let width = pending == state ? size.Width : float64(extent.Width)
-    let height = pending == state ? size.Height : float64(extent.Height)
+    let size = if pending == state { output.ContentSize }
+      else { LayoutSize(float64(extent.Width), float64(extent.Height)) }
     return Point{
-      X: Math.Clamp(x, 0.0, Math.Max(0.0, width - viewport.Size.Width)),
-      Y: Math.Clamp(y, 0.0, Math.Max(0.0, height - viewport.Size.Height)),
+      X: scrollOffset(n, x, size.Width, viewport.Size.Width),
+      Y: scrollOffset(n, y, size.Height, viewport.Size.Height),
     }
+  }
+
+  private func scrollOffset(n Node, value float64, content float64, viewport float64) float64 {
+    let maximum = MathF.Max(0.0F, float32(content) - float32(viewport))
+    return value >= float64(maximum) ? float64(scrollRange(n, maximum)) : Math.Max(0.0, value)
   }
 
   private func nearestOffset(offset float64, start float64, size float64, viewport float64) float64 {
@@ -458,6 +464,13 @@ internal sealed class VirtualNodeState {
       || Math.Abs(target.Y - float64(n.ScrollY)) > 0.01
   }
 
+  private func scrollPlacementDeltaY(n Node) float32 {
+    if n.ScrollX == n.PlacedScrollX && n.ScrollY == n.PlacedScrollY { return 0.0F }
+    let current = TransformGeometry.ContentPoint(n, 0.0F, 0.0F, n.ScrollX, n.ScrollY)
+    let placed = TransformGeometry.ContentPoint(n, 0.0F, 0.0F)
+    return current.Y - placed.Y
+  }
+
   private func anchorDelta(n Node) float32 {
     if anchorKey == nil || n.ScrollY == 0.0F || Math.Abs(n.ScrollY - anchorScrollY) > 0.01F { return 0.0F }
     for i in 0 ... n.Children.Count {
@@ -469,8 +482,8 @@ internal sealed class VirtualNodeState {
         var parent = retained.Parent
         while let candidate = parent {
           if candidate == child {
-            let bounds = TransformGeometry.BoundsToNode(retained, child)
-            return bounds.Y - child.Rect.Y - entry.Y
+            let bounds = TransformGeometry.BoundsToNode(retained, n)
+            return bounds.Y - BoxGeometry.ContentTop(n) - entry.Y - scrollPlacementDeltaY(n)
           }
           parent = candidate.Parent
         }
@@ -480,7 +493,7 @@ internal sealed class VirtualNodeState {
     return 0.0F
   }
 
-  private func captureAnchor(n Node, key string?) {
+  private func captureAnchor(n Node, key string?, scrollDelta float32 = 0.0F) {
     pendingAnchorNodes.Clear()
     pendingAnchorKey = key
     if key == nil { return }
@@ -488,22 +501,21 @@ internal sealed class VirtualNodeState {
       let child = n.Children[i]
       if child.Key == key {
         let top = BoxGeometry.ContentTop(n)
-        captureDescendants(child, child, n, top, top + BoxGeometry.ViewportHeight(n))
+        captureDescendants(child, n, top, top + BoxGeometry.ViewportHeight(n), scrollDelta + scrollPlacementDeltaY(n))
         break
       }
     }
   }
 
-  private func captureDescendants(n Node, owner Node, viewport Node, top float32, bottom float32) {
+  private func captureDescendants(n Node, viewport Node, top float32, bottom float32, scrollDelta float32) {
     if n.Children.Count == 0 {
       let bounds = TransformGeometry.BoundsToNode(n, viewport)
       if bounds.H > 0.0F && bounds.Y < bottom && bounds.Y + bounds.H > top {
-        let local = TransformGeometry.BoundsToNode(n, owner)
-        pendingAnchorNodes.Add(VirtualAnchorNode{Mount: NodeMount(n), Y: local.Y - owner.Rect.Y})
+        pendingAnchorNodes.Add(VirtualAnchorNode{Mount: NodeMount(n), Y: bounds.Y - top - scrollDelta})
       }
       return
     }
-    for i in 0 ... n.Children.Count { captureDescendants(n.Children[i], owner, viewport, top, bottom) }
+    for i in 0 ... n.Children.Count { captureDescendants(n.Children[i], viewport, top, bottom, scrollDelta) }
   }
 
   internal func Extent() VirtualExtent ? -> if current == nil { nil } else { extent }
@@ -538,11 +550,14 @@ internal sealed class VirtualNodeState {
         } else if !waitingForKey { scrollKey = nil }
         captureAnchor(n, nil)
       } else {
+        var scrollDelta = 0.0F
         if output.AnchorKey == anchorKey && Math.Abs(delta) > 0.01F {
           let offset = output.ScrollOffset ?? viewport.ScrollOffset
-          output.ScrollOffset = Point{X: offset.X, Y: Math.Max(0.0, offset.Y + float64(delta))}
+          let y = Math.Max(0.0, offset.Y + float64(delta))
+          scrollDelta = float32(y - offset.Y)
+          output.ScrollOffset = Point{X: offset.X, Y: y}
         }
-        captureAnchor(n, output.AnchorKey)
+        captureAnchor(n, output.AnchorKey, scrollDelta)
       }
       let size = output.ContentSize
       if !validExtent(size.Width) || !validExtent(size.Height) {
@@ -554,8 +569,8 @@ internal sealed class VirtualNodeState {
       pendingScroll = false
       if let scroll = output.ScrollOffset {
         if !Double.IsFinite(scroll.X) || !Double.IsFinite(scroll.Y) { throw InvalidOperationException("Virtual scroll offset must be finite") }
-        let x = Math.Max(0.0, scroll.X)
-        let y = Math.Max(0.0, scroll.Y)
+        let x = scrollOffset(n, scroll.X, size.Width, viewport.Size.Width)
+        let y = scrollOffset(n, scroll.Y, size.Height, viewport.Size.Height)
         pendingScroll = true
         pendingScrollX = float32(x)
         pendingScrollY = float32(y)
@@ -636,6 +651,9 @@ internal sealed class VirtualNodeState {
     state.Commit()
     updateRecyclingLimit(owner)
     contextDirty = contextVersion != pendingContextVersion
+    if !contextDirty {
+      ContextCause = LayoutCause.None
+    }
     contextReader?.Commit()
     let old = mounted
     mounted = next
@@ -751,6 +769,9 @@ internal class Virtualization {
 
     internal func Refresh(n Node, rec Reconciler) bool {
       guard let state = State(n) else { return false }
+      if rec.CauseFilter == LayoutCause.Environment && LayoutOrigin.IsApplication(state.ContextCause) {
+        return false
+      }
       if !state.NeedsRefresh(n) { return false }
       let previousContext = rec.Context
       rec.Context = state.Context

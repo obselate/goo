@@ -42,6 +42,7 @@ internal partial class Reconciler {
   internal prop DeferStyleFlush bool{ get; init; }
   internal prop Pump MotionPump? { get; init; }
   internal var Effects ReconcileEffects
+  internal var CauseFilter LayoutCause
   internal var ProfileBuildTicks int64
   internal var ProfileBuildBytes int64
   internal var ProfileBuildCalls int64
@@ -952,10 +953,10 @@ internal partial class Reconciler {
       configureCell(cell, e)
       cell.SetRebuildSubmission(CellInvalidated)
 
-      if existing != nil && !cell.IsDirty() {
+      if existing != nil && (!cell.IsDirty() || !cell.IsDirtyFor(CauseFilter)) {
         trackContext(cell, true)
         if let child = cell.directChild {
-          if child.HasDirty() {
+          if child.HasDirtyFor(CauseFilter) {
             return rebuildMounted(existing, child, cell)
           }
         }
@@ -1000,6 +1001,9 @@ internal partial class Reconciler {
     let previousCell = expandingCell
     expandingCell = cell
     let previousVerifier = verifyingCell
+    let previousOrigin = LayoutOrigin.Current
+    let cause = cell.DirtyCause
+    if cause != LayoutCause.None { LayoutOrigin.Current = cause }
     let verify = cell.TakeStateVerification()
     let verificationActive = verify || previousVerifier != nil
     if verificationActive {
@@ -1056,6 +1060,7 @@ internal partial class Reconciler {
       }
       Context = previousContext
       expandingCell = previousCell
+      LayoutOrigin.Current = previousOrigin
       treeDepth = previousDepth
       if !completed {
         cell.contextReader?.Cancel()
@@ -1067,6 +1072,7 @@ internal partial class Reconciler {
             prior.Key = slotKey
           }
         }
+        cell.DirtyCause = LayoutOrigin.Combine(cell.DirtyCause, cause)
         cell.RestoreDirtyAndSubmit()
       }
     }
@@ -1099,11 +1105,11 @@ internal partial class Reconciler {
   }
 
   internal func rebuildDirty(n Node, cell Cell, owner Cell?) Node {
-    if cell.IsDirty() {
+    if cell.IsDirtyFor(CauseFilter) {
       return rebuildMounted(n, cell, owner)
     }
     if let child = cell.directChild {
-      if child.HasDirty() {
+      if child.HasDirtyFor(CauseFilter) {
         return rebuildDirty(n, child, cell)
       }
     }
@@ -1215,8 +1221,7 @@ internal partial class Reconciler {
     if !sourceChanged {
       if let binding = ImageLayouts.Binding(n) {
         if binding.PixelsPerUnit != i.PixelsPerUnit {
-          binding.PixelsPerUnit = i.PixelsPerUnit
-          ImageLayouts.Refresh(n)
+          ImageLayouts.ApplySource(n, i.Source!!, i.Fit, ImageCompleted, Owner, i.PixelsPerUnit)
           MarkEffects(ReconcileEffects.Layout | ReconcileEffects.Paint)
         }
       }
@@ -1235,14 +1240,11 @@ internal partial class Reconciler {
       n.ImageFit = i.Fit
       n.BumpScenePaintVersion()
       MarkEffects(ReconcileEffects.Paint)
-    } else if ImageLayouts.Refresh(n) {
-      MarkEffects(ReconcileEffects.Content)
-      MarkEffects(ReconcileEffects.Layout)
-      MarkEffects(ReconcileEffects.Paint)
     }
-    if let binding = ImageLayouts.Binding(n) { binding.Declaration = i }
-    let content = if n.ImageLease?.IsFailed == true { i.Fallback }
-      else if n.ImageLease?.IsComplete == false { i.Placeholder } else { nil }
+    let binding = ImageLayouts.Binding(n)
+    if let current = binding { current.Declaration = i }
+    let content = if binding?.AcceptedFailed == true { i.Fallback }
+      else if binding?.AcceptedComplete == false { i.Placeholder } else { nil }
     if let child = content {
       diffChildren(n, []Blob{Container{Width: Percent(100), Height: Percent(100),
         OverflowX: Overflow.Hidden, OverflowY: Overflow.Hidden, child}})

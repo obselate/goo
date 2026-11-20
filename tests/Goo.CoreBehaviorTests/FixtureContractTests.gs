@@ -10,6 +10,33 @@ import Xunit
 
 class FixtureContractTests {
     @Fact
+    func TweenInterpolatesExtremeFiniteEndpoints() {
+        let tween = Motion.Tween(1000.0)
+        for from in []float64{Double.MaxValue, -Double.MaxValue} {
+            let simulation = tween(from, -from, 0.0)
+            Assert.Equal(from, simulation.Position(0.0))
+            Assert.InRange(simulation.Position(0.25) / from, 0.4999999999999999, 0.5000000000000001)
+            Assert.Equal(0.0, simulation.Position(0.5))
+            Assert.InRange(simulation.Position(0.75) / from, -0.5000000000000001, -0.4999999999999999)
+            Assert.Equal(-from, simulation.Position(1.0))
+        }
+    }
+
+    @Fact
+    func VirtualOutputRejectsReadsAfterRealize() {
+        let cell = VirtualFixtureCell(3)
+        let window = Window{Root: cell, Size: LayoutSize(200, 100)}
+        try {
+            window.UpdateTree()
+            let output = cell.Output!!
+            Assert.Throws[InvalidOperationException](() -> { let value = output.ContentSize })
+            Assert.Throws[InvalidOperationException](() -> { let value = output.ItemCount })
+            Assert.Throws[InvalidOperationException](() -> { let value = output.ScrollOffset })
+            Assert.Throws[InvalidOperationException](() -> { let value = output.AnchorKey })
+        } finally { window.Close() }
+    }
+
+    @Fact
     func PortalScrollbarPartsUseFinalBounds() ->
         Assert.True(PortalFixtures().PortalScrollbarPartsUseFinalBoundsContract())
 
@@ -173,6 +200,7 @@ class FixtureContractTests {
             yield Contract[TreeFixtures]("SizedBuildRejectsStateWritesContract")
             yield Contract[TreeFixtures]("SizedFailedBuildRetainsSubscriptionsContract")
             yield Contract[StyleFixtures]("FlexAndInsetDeclarationOrderContract")
+            yield Contract[StyleFixtures]("BorderRadiusDeclarationOrderContract")
             yield Contract[AccessibilityFixtures]("AccessibilityShorthandOrderContract")
             yield Contract[AccessibilityFixtures]("AccessibilityShorthandRoundTripContract")
             yield Contract[FlexConformanceFixtures]("RowColumnSpacerContract")
@@ -324,6 +352,7 @@ class FixtureContractTests {
             yield Contract[ClipPathInputFixtures]("NestedClipPathsIntersect")
             yield Contract[ClipPathInputFixtures]("NormalPointerAcquisitionRespectsClipPath")
             yield Contract[ClipPathInputFixtures]("TransformedClipPathUsesMappedCoordinates")
+            yield Contract[ClipPathInputFixtures]("RoundedOverflowClipsDescendantHitsAtRest")
             yield Contract[ContextFixtures]("FailedBuildRetryAndDisposalContract")
             yield Contract[ContextFixtures]("FailedPassRetriesNewDependenciesContract")
             yield Contract[ContextFixtures]("TrackedWindowGettersContract")
@@ -385,7 +414,9 @@ class FixtureContractTests {
             yield Contract[ElementHandleFixtures]("NestedScrollIntoViewKeepsTargetBounds")
             yield Contract[ElementHandleFixtures]("ThrowingVirtualDisposalContract")
             yield Contract[ElementHandleFixtures]("VirtualContract")
+            yield Contract[ElementHandleFixtures]("FractionalVirtualRowsFollowEndContract")
             yield Contract[ElementHandleFixtures]("VirtualDescendantAnchoringSuppressesOrigin")
+            yield Contract[ElementHandleFixtures]("FractionalVirtualDescendantAnchorContract")
             yield Contract[ElementHandleFixtures]("VirtualTransactionContract")
             yield Contract[ElementHandleFixtures]("VirtualViewportContract")
             yield Contract[ElementHandleFixtures]("DeferredVirtualScrollContract")
@@ -478,6 +509,19 @@ class FixtureContractTests {
             yield Contract[LayoutFixtures]("LayoutTransitionBoundsReachMetricsAndAccessibility")
             yield Contract[LayoutFixtures]("LayoutTransitionSettlesInsideSized")
             yield Contract[LayoutFixtures]("LayoutTransitionRetargetsWithVelocity")
+            yield Contract[LayoutFixtures]("LayoutTransitionEnvironmentContract")
+            yield Contract[LayoutFixtures]("LayoutTransitionCauseAttributionContract")
+            yield Contract[LayoutFixtures]("LayoutTransitionResizeContinuityContract")
+            yield Contract[LayoutFixtures]("LayoutTransitionFontPublicationContract")
+            yield Contract[LayoutFixtures]("LayoutTransitionFailedCommitContract")
+            yield Contract[LayoutFixtures]("LayoutTransitionRetainedTextContract")
+            yield Contract[LayoutFixtures]("LayoutTransitionStyleContinuationContract")
+            yield Contract[LayoutFixtures]("LayoutTransitionEnvironmentCallbackContract")
+            yield Contract[LayoutFixtures]("LayoutTransitionDescendantsStayCentered")
+            yield Contract[LayoutFixtures]("LayoutTransitionSiblingPlacementContract")
+            yield Contract[LayoutFixtures]("LayoutTransitionFlexPlacementContract")
+            yield Contract[LayoutFixtures]("LayoutTransitionWrappedPlacementContract")
+            yield Contract[LayoutFixtures]("LayoutTransitionPlacementResizeAllocationContract")
             yield Contract[LayoutFixtures]("LongParagraphWrapResolvesScriptsOnce")
             yield Contract[LayoutFixtures]("WrappedMeasurementsMatchShapedLineWidths")
             yield Contract[LayoutFixtures]("IdenticalTextLayoutsSurviveSiblingRetirement")
@@ -532,6 +576,7 @@ class FixtureContractTests {
             yield Contract[MotionFixtures]("PumpRejectsReentrantSweepContract")
             yield Contract[MotionFixtures]("PumpThrowingTickRemainsRegisteredContract")
             yield Contract[MotionFixtures]("PumpWakesOnlyOnFirstRegistrationContract")
+            yield Contract[MotionFixtures]("RelativeTransformTransitionContract")
             yield Contract[MotionFixtures]("RetargetAcrossDifferentSpanPreservesRealVelocityContract")
             yield Contract[MotionFixtures]("RetargetPreservesVelocityContract")
             yield Contract[MotionFixtures]("RunningUnchangedTicksDoNotNotifyContract")
@@ -580,6 +625,7 @@ class FixtureContractTests {
             yield Contract[ShapeGeometryFixtures]("ShapeRejectsLegacyPaintAndGradientStroke")
             yield Contract[ShapeGeometryFixtures]("VectorAssetRenderFitsDocumentViewBox")
             yield Contract[ShapeGeometryFixtures]("ArcSubdivisionIsTranslationInvariant")
+            yield Contract[ShapeGeometryFixtures]("EllipseFlatteningBoundsDeviceErrorAndEdgeCount")
             yield Contract[ShapeGeometryFixtures]("LoneMoveToContoursPreserveOtherStrokes")
             yield Contract[ShapeGeometryFixtures]("ReturningQuadraticStrokePreservesExcursionAndTrim")
             yield Contract[ShapeGeometryFixtures]("StrokeTrimUsesGlobalContourLengthAndHitGeometry")

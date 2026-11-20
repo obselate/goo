@@ -3,14 +3,8 @@ package Goo
 import Facebook.Yoga
 import System
 
-internal data struct ResolvedShapeGeometry {
-  internal let Content Rect
-  internal let Mapping PathMapping
-  internal let Path VectorPath
-  internal let StrokeWidth float32
-  internal let StrokeExtent float32
-  internal let StrokeVisible bool
-}
+internal data struct ResolvedShapeGeometry(Content Rect, Mapping PathMapping, Path VectorPath,
+  StrokeWidth float32, StrokeExtent float32, StrokeVisible bool) { }
 
 internal data struct PathStrokeStyle {
   internal let Width float32
@@ -24,10 +18,11 @@ internal data struct PathStrokeStyle {
 
 internal partial class ShapeGeometry {
   shared {
-    internal func Resolve(n Node, bounds Rect) ResolvedShapeGeometry {
+    internal func Resolve(n Node, bounds Rect, deviceScale float32 = 0.0F) ResolvedShapeGeometry {
       let strokeWidth = n.BorderLeftWidth.Px
       let strokeInset = if n.ShapeStrokeInset && n.ShapeVectorEffect == VectorEffect.None {
-        strokeWidth
+        let fit = PathGeometry.Map(n.ShapePath, n.ShapeFit, 0.0F, 0.0F, bounds.W, bounds.H)
+        strokeWidth * MathF.Max(fit.ScaleX, fit.ScaleY)
       } else { 0.0F }
       let halfStroke = strokeInset * 0.5F
       let left = resolveEdgePadding(n, YGEdge.Left, bounds.W)
@@ -41,20 +36,16 @@ internal partial class ShapeGeometry {
         H: bounds.H - top - bottom - strokeInset,
       }
       let mapping = PathGeometry.Map(n.ShapePath, n.ShapeFit, content.X, content.Y, content.W, content.H)
+      let source = if mapping.Valid && deviceScale > 0.0F {
+        PathGeometry.ForDrawing(n.ShapePath,
+          deviceScale * MathF.Max(MathF.Abs(mapping.ScaleX), MathF.Abs(mapping.ScaleY)))
+      } else { n.ShapePath }
       let path = mapping.Valid
-      ? PathRoundedCache.Shared.Resolve(n.ShapePath, mapping, n.ShapeCornerRadius) : VectorPath.Empty
+      ? PathRoundedCache.Shared.Resolve(source, mapping, n.ShapeCornerRadius) : VectorPath.Empty
       let strokeVisible = strokeWidth > 0.0F && n.BorderLeftColor.A > 0.0F
         && n.StrokeStart < n.StrokeEnd
-      return ResolvedShapeGeometry{
-        Content: content,
-        Mapping: mapping,
-        Path: path,
-        StrokeWidth: strokeWidth,
-        StrokeExtent: if strokeVisible {
-          StrokeExtent(n, strokeWidth)
-        } else { 0.0F },
-        StrokeVisible: strokeVisible,
-      }
+      return ResolvedShapeGeometry(content, mapping, path, strokeWidth,
+        if strokeVisible { StrokeExtent(n, strokeWidth) } else { 0.0F }, strokeVisible)
     }
 
     internal func StrokeStyle(n Node) PathStrokeStyle -> if n.ShapeVectorEffect == VectorEffect.NonScalingStroke {
@@ -67,7 +58,10 @@ internal partial class ShapeGeometry {
 
     internal func StrokeExtent(n Node, width float32) float32 {
       let extent = resolveShapeStrokeExtent(width, n.ShapeStrokeJoin, float32(n.MiterLimit))
-      if n.ShapeVectorEffect != VectorEffect.NonScalingStroke { return extent }
+      if n.ShapeVectorEffect != VectorEffect.NonScalingStroke {
+        let mapping = PathGeometry.Map(n.ShapePath, n.ShapeFit, 0.0F, 0.0F, n.Rect.W, n.Rect.H)
+        return extent * MathF.Max(mapping.ScaleX, mapping.ScaleY)
+      }
       let hostExtent = resolveShapeStrokeExtent(width, n.ShapeStrokeJoin, float32(n.MiterLimit), n.ShapeStrokeCap)
       let matrix = TransformGeometry.WindowMatrix(n)
       let determinant = MathF.Abs(matrix.A * matrix.D - matrix.B * matrix.C)

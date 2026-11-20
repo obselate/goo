@@ -107,4 +107,3 @@ private func textShadowPayload(value TextShadow) BoxShadow -> BoxShadow {
   Blur: value.Blur,
   Color: value.Color,
 }
-

@@ -4,6 +4,22 @@ import System
 import System.Collections.Generic
 
 internal class StyleFixtures {
+  func BorderRadiusDeclarationOrderContract() bool {
+    let reconciler = Reconciler{Res: Resolver{}}
+    let node = reconciler.Mount(Container{
+      BorderTopLeftRadius: 1, BorderTopRightRadius: 2,
+      BorderBottomLeftRadius: 3, BorderBottomRightRadius: 4, BorderRadius: 9,
+    })
+    try {
+      if node.BorderTopLeftRadius.Value != 9 || node.BorderTopRightRadius.Value != 9
+        || node.BorderBottomLeftRadius.Value != 9 || node.BorderBottomRightRadius.Value != 9 { return false }
+      reconciler.Diff(node, Container{BorderRadius: 9, BorderTopLeftRadius: 1,
+        BorderTopRightRadius: 2, BorderBottomLeftRadius: 3, BorderBottomRightRadius: 4})
+      return node.BorderTopLeftRadius.Value == 1 && node.BorderTopRightRadius.Value == 2
+        && node.BorderBottomLeftRadius.Value == 3 && node.BorderBottomRightRadius.Value == 4
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
   func PaintTransitionsFromZeroDoNotAllocateContract() bool {
     let resolver = Resolver{}
     let root = Reconciler{Res: resolver}.Mount(Container{
@@ -2128,6 +2144,14 @@ internal class StyleFixtures {
   }
 
   func TransformStateTransitionAndGeometryContract() bool {
+    let tiny = PanelTransform{ Scale: 1.0e-8, ScaleX: 1.0e-8, ScaleY: 1.0e-8 }
+    if tiny.Scale != float64(float32(1.0e-8)) || tiny.ScaleX != tiny.Scale
+      || tiny.ScaleY != tiny.Scale { return false }
+    let defaults = PanelTransform{}
+    let explicitDefaults = PanelTransform{ Scale: 1, ScaleX: 1, ScaleY: 1 }
+    let zero = PanelTransform{ Scale: 0 }
+    if defaults != explicitDefaults || zero.Scale != 0.0 { return false }
+
     let turn = Node{ Kind: NodeKind.Container, Rect: Rect{ W: 20, H: 20 } }
     let turnResolver = Resolver{}
     turn.TransitionMs = 100.0

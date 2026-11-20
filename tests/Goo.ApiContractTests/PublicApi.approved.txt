@@ -228,6 +228,7 @@ enum-underlying|Goo.NativeDialogOwnerKind|System.Int32
 enum-underlying|Goo.NativeDialogOwnerStatus|System.Int32
 enum-underlying|Goo.NativeMenuStatus|System.Int32
 enum-underlying|Goo.NativeTransferCapabilities|System.Int32
+enum-underlying|Goo.NativeWindowKind|System.Int32
 enum-underlying|Goo.NotificationActivationSupport|System.Int32
 enum-underlying|Goo.NotificationDelivery|System.Int32
 enum-underlying|Goo.NotificationPermission|System.Int32
@@ -744,6 +745,11 @@ enum|Goo.NativeTransferCapabilities|EffectNegotiation|8
 enum|Goo.NativeTransferCapabilities|FileDrop|1
 enum|Goo.NativeTransferCapabilities|None|0
 enum|Goo.NativeTransferCapabilities|OutboundData|4
+enum|Goo.NativeWindowKind|Cocoa|2
+enum|Goo.NativeWindowKind|Unsupported|0
+enum|Goo.NativeWindowKind|Wayland|3
+enum|Goo.NativeWindowKind|Win32|1
+enum|Goo.NativeWindowKind|X11|4
 enum|Goo.NotificationActivationSupport|None|0
 enum|Goo.NotificationActivationSupport|WarmAndCold|2
 enum|Goo.NotificationActivationSupport|WarmOnly|1
@@ -2502,6 +2508,9 @@ property|Goo.NativeMenuResult|ItemId|System.String|instance|get:public|index:()
 property|Goo.NativeMenuResult|Status|Goo.NativeMenuStatus|instance|get:public|index:()
 property|Goo.NativeMenuShortcut|Key|System.String|instance|get:public,init:public|index:()
 property|Goo.NativeMenuShortcut|Modifiers|Goo.KeyModifiers|instance|get:public,init:public|index:()
+property|Goo.NativeWindowHandle|Display|System.IntPtr|instance|get:public|index:()
+property|Goo.NativeWindowHandle|Handle|System.IntPtr|instance|get:public|index:()
+property|Goo.NativeWindowHandle|Kind|Goo.NativeWindowKind|instance|get:public|index:()
 property|Goo.NotificationMessage|Body|System.String|instance|get:public,init:public|index:()
 property|Goo.NotificationMessage|Id|System.String|instance|get:public,init:public|index:()
 property|Goo.NotificationMessage|Payload|System.String|instance|get:public,init:public|index:()
@@ -2970,6 +2979,7 @@ property|Goo.VirtualViewport|Wrap|Goo.FlexWrap|instance|get:public|index:()
 property|Goo.Virtual|Source|Goo.VirtualSource|instance|get:public,set:public|index:()
 property|Goo.VulkanDrivers|Direct|System.String[]|static|get:public,set:public|index:()
 property|Goo.VulkanDrivers|Exclusive|System.Boolean|static|get:public,set:public|index:()
+property|Goo.VulkanDrivers|StartupReportPath|System.String?|static|get:public,set:public|index:()
 property|Goo.VulkanExternalImageDescription|AllocationSize|System.UInt64|instance|get:public,init:public|index:()
 property|Goo.VulkanExternalImageDescription|DedicatedAllocation|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.VulkanExternalImageDescription|DeviceUuid|System.ReadOnlyMemory`1<System.Byte>|instance|get:public,init:public|index:()
@@ -3069,6 +3079,7 @@ property|Goo.Window|MinSize|Goo.LayoutSize|instance|get:public,set:public|index:
 property|Goo.Window|Modal|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|Modifiers|Goo.KeyModifiers|instance|get:public|index:()
 property|Goo.Window|NativeFileDropEnabled|System.Boolean|instance|get:public,set:public|index:()
+property|Goo.Window|NativeHandle|Goo.NativeWindowHandle|instance|get:public|index:()
 property|Goo.Window|NativeHeight|System.Int32|instance|get:public|index:()
 property|Goo.Window|NativeTransferCapabilities|Goo.NativeTransferCapabilities|instance|get:public|index:()
 property|Goo.Window|NativeWidth|System.Int32|instance|get:public|index:()
@@ -3283,6 +3294,8 @@ type|Goo.NativeMenuShortcut|struct|public|base:System.ValueType|interfaces:Syste
 type|Goo.NativeMenuStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.NativeMenus|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.NativeTransferCapabilities|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.NativeWindowHandle|struct|public|base:System.ValueType|interfaces:|generic:
+type|Goo.NativeWindowKind|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.NotificationActivationSupport|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.NotificationDelivery|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.NotificationMessage|sealed-class|public|base:System.Object|interfaces:|generic:

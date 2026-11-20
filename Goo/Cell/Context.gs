@@ -583,6 +583,9 @@ internal class WindowDependency[T any] {
     internal func Sync(value T) {
         if EqualityComparer[T].Default.Equals(current, value) { return }
         current = value
-        dependency.Changed()
+        let previous = LayoutOrigin.Current
+        LayoutOrigin.Current = LayoutCause.Environment
+        try { dependency.Changed() }
+        finally { LayoutOrigin.Current = previous }
     }
 }

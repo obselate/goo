@@ -96,11 +96,7 @@ internal class ShapeGeometryFixtures {
         count = geometry.QuadraticCount
         if count <= 0 || count > 128 { return false }
         for curve in geometry.Quadratics {
-          let scale = MathF.Max(
-            MathF.Max(MathF.Abs(curve.CX - curve.X0), MathF.Abs(curve.X1 - curve.CX)),
-            MathF.Max(MathF.Abs(curve.CY - curve.Y0), MathF.Abs(curve.Y1 - curve.CY)))
-          let tolerance = float64(MathF.Max(PathGeometry.MinimumTolerance,
-            scale * PathGeometry.RelativeTolerance))
+          let tolerance = float64(PathGeometry.ApproximationTolerance) * Math.Sqrt(2.0)
           for sample in 0 ... 257 {
             let t = float64(sample) / 256.0
             let inverse = 1.0 - t
@@ -113,6 +109,41 @@ internal class ShapeGeometryFixtures {
         }
       } else if geometry.QuadraticCount != count {
         return false
+      }
+    }
+    return true
+  }
+
+  func EllipseFlatteningBoundsDeviceErrorAndEdgeCount() bool {
+    for radius in []float64{3.0, 500.0} {
+      let original = PathBuilder(-radius, -radius, radius * 2.0, radius * 2.0)
+        .Ellipse(-radius, -radius, radius * 2.0, radius * 2.0).Build()
+      let asset = VectorAsset(-radius, -radius, radius * 2.0, radius * 2.0,
+        []VectorNode{VectorNode(original, VectorNodeStyle{Fill: VectorPaint(Color.White)})})
+      for path in []VectorPath{original, asset.PathForNode(0)} {
+        for scale in []float32{1.0F, 4.0F, 256.0F} {
+          let drawing = PathGeometry.ForDrawing(path, scale)
+          let geometry = PathGeometry.For(drawing)
+          if geometry.EdgeCount == 0 || (radius == 3.0 && scale == 1.0F && geometry.EdgeCount > 64) {
+            return false
+          }
+          for index in 0 ... geometry.EdgeCount {
+            let edge = geometry.Edges[index]
+            let x = float64(edge.X0)
+            let y = float64(edge.Y0)
+            let dx = float64(edge.X1) - x
+            let dy = float64(edge.Y1) - y
+            let lengthSquared = dx * dx + dy * dy
+            let t = if lengthSquared > 0.0 { Math.Clamp(-(x * dx + y * dy) / lengthSquared, 0.0, 1.0) } else { 0.0 }
+            let minimum = Math.Sqrt((x + dx * t) * (x + dx * t) + (y + dy * t) * (y + dy * t))
+            let maximum = Math.Sqrt(Math.Max(x * x + y * y, float64(edge.X1) * float64(edge.X1)
+              + float64(edge.Y1) * float64(edge.Y1)))
+            if Math.Max(Math.Abs(minimum - radius), Math.Abs(maximum - radius)) * float64(scale) > 0.25 {
+              return false
+            }
+          }
+          if !PathGeometry.For(path, scale).Contains(0.0F, 0.0F, FillRule.NonZero) { return false }
+        }
       }
     }
     return true
@@ -517,7 +548,7 @@ internal class ShapeGeometryFixtures {
       ShapePath: path,
       ShapeFit: ShapeFit.Fill,
       Rect: Rect{ W: 100.0F, H: 100.0F },
-      BorderLeftWidth: Length{ Unit: LengthUnit.Px, Value: 20.0F },
+      BorderLeftWidth: Length{ Unit: LengthUnit.Px, Value: 2.0F },
       BorderLeftColor: Color.White,
       ShapeStrokeInset: false,
     }

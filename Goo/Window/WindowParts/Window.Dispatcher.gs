@@ -5,6 +5,11 @@ import System.Collections.Generic
 import System.Threading
 import System.Threading.Tasks
 
+internal data struct WindowPostedWork {
+  internal var Action Action
+  internal var Cause LayoutCause
+}
+
 /// Hosts a Goo tree in a native window.
 public partial class Window {
   private var closedSource CancellationTokenSource?
@@ -131,17 +136,21 @@ public partial class Window {
   /// A successful enqueue can still be discarded if teardown begins before the action runs.
   /// @param action action to run during a later Pump
   /// @returns True when the action was accepted into the queue.
-  public func Post(action Action) bool {
+  public func Post(action Action) bool -> postWork(action, LayoutCause.Application)
+
+  internal func PostEnvironment(action Action) bool -> postWork(action, LayoutCause.Environment)
+
+  private func postWork(action Action, cause LayoutCause) bool {
     if action == nil { throw ArgumentNullException("action") }
     var wake = false
     lock cellQueueGate {
       if !acceptingPosts {
         return false
       }
-      if postedActions == nil { postedActions = Queue[Action]() }
+      if postedActions == nil { postedActions = Queue[WindowPostedWork]() }
       let queue = postedActions!!
       let wasEmpty = queue.Count == 0
-      queue.Enqueue(action)
+      queue.Enqueue(WindowPostedWork{Action: action, Cause: cause})
       wake = wasEmpty && Interlocked.Exchange(&pendingPostedActions, 1) == 0
     }
     if wake {
@@ -191,12 +200,15 @@ public partial class Window {
     }
     try {
       for i in 0 ... count {
-        var action Action
+        var work WindowPostedWork
         lock cellQueueGate {
           guard let queue = postedActions else { return }
-          if !queue.TryDequeue(out action) { return }
+          if !queue.TryDequeue(out work) { return }
         }
-        action()
+        let previous = LayoutOrigin.Current
+        LayoutOrigin.Current = work.Cause
+        try { work.Action() }
+        finally { LayoutOrigin.Current = previous }
       }
     } finally {
       lock cellQueueGate {

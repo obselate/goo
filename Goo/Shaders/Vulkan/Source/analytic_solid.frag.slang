@@ -20,11 +20,13 @@ float4 unpackColor(uint packedRgb, uint packedAlpha, uint alphaIndex)
 
 void shade()
 {
+#ifndef GOO_WEBGPU
     if (pc.params.z == 1.0)
     {
         outColor = unpackColor(pc.packedColors.x, pc.packedColors.w, 0u);
         return;
     }
+#endif
     float2 point = uv * pc.rect.zw;
     float2 pointDx = ddx(point);
     float2 pointDy = ddy(point);
