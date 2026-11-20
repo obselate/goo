@@ -141,6 +141,45 @@ class AccessibilityTextTests {
         }
     }
 
+    @Fact
+    func EditorGeometrySurvivesLayoutSizeTransition() {
+        using let controller = TextEditorController(TextDocument("hello"))
+        using let adapter = NativeAccessibilityAdapter()
+        let transition = LayoutTransition(1000.0, Easing.Linear)
+        var expanded = false
+        let cell = SizedRootFixture(() -> Container{
+            AlignItems: AlignItems.FlexStart,
+            TextEditor{Controller: controller, Width: expanded ? 200 : 100,
+                Height: expanded ? 80 : 40, LayoutTransition: transition},
+        })
+        let window = Window{Root: cell, Size: LayoutSize(300, 200), AccessibilityAdapter: adapter}
+        try {
+            window.UpdateTree()
+            expanded = true
+            cell.Rebuild()
+            window.UpdateTree()
+            window.UpdateTree(0.5)
+            let editor = window.Tree!!.Children[0]
+            Assert.InRange(editor.Rect.W, 101.0F, 199.0F)
+            Assert.InRange(editor.Rect.H, 41.0F, 79.0F)
+            let position = TextPosition{Offset: 1, Affinity: TextAffinity.Downstream}
+            Assert.True(TextEditorLayouts.TryCaretRectForGeometry(editor, position, out var caret), "Caret rectangle")
+            Assert.True(TextEditorLayouts.TryHitTestForGeometry(editor, caret.X, caret.Y + caret.H / 2,
+                out var hit))
+            Assert.Equal(position.Offset, hit.Offset)
+            let rects = stackalloc[1]ElementRect
+            Assert.True(TextGeometryQueries.CopyRangeRects(editor, TextRange(0, 5),
+                TextCoordinateSpace.Element, rects, out var required))
+            Assert.Equal(1, required)
+            Assert.True(rects[0].Width > 0 && rects[0].Height > 0)
+            let run = Assert.Single(Encode(adapter))
+            Assert.Equal("hello", run.Text)
+            Assert.True(run.Geometry && run.Bounds.Width > 0 && run.Bounds.Height > 0)
+        } finally {
+            window.Close()
+        }
+    }
+
     private class TextCell(content string) : Cell {
         override func Build() Blob -> Text{Content: content, FontSize: 20, TextWrap: TextWrap.Wrap}
     }
