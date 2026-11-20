@@ -60,7 +60,7 @@
       "runpath": [
         "$ORIGIN/"
       ],
-      "sha256": "420f67f191e715b7bf0eacd5a99d5f23e3389490070b2742dc7526d547c070aa"
+      "sha256": "45513ff17ee8b4fc5deba243423178df8f88a19abaa76ad91d0c55c89d8a5efc"
     },
     "harfbuzz": {
       "bytes": 1898400,
@@ -731,11 +731,11 @@
         "upstreamSha256": "48b9cabe23f0a6b07654f2b7787535165695bd8bf563449088f0ab8ad7d842b2"
       },
       {
-        "description": "Reject repeated sequential JPEG scan components before decoding their pixels again.",
+        "description": "Reject repeated sequential JPEG scan components and cap progressive JPEGs at 64 scans.",
         "name": "stb-jpeg-repeated-scan",
-        "patchedSha256": "e2ee323d4e21a96d08856f6f1a207e95b91d2f8133eb576266ac37b91a18ae51",
+        "patchedSha256": "518a8067979157d4460df7958c02b5152382e042934f3cb99e4520eccaef8489",
         "path": "tools/Goo.TextNative/patches/stb-image-2.30-jpeg-repeated-scan.patch",
-        "sha256": "6d5cea9e1744c18ecb0b8ed98e2f585df1e04369b5cad588b4c639970d4c72b1",
+        "sha256": "edf4b7f751c42d717755cd891039fc69e64dccbe60800d4738df97e8b8a8fe45",
         "upstreamPath": "src/stb_image.h",
         "upstreamSha256": "30430015be90e41c4f046daa463eb9d995341976c78e52868faa3f9a3dca5015"
       }
