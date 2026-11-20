@@ -176,6 +176,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   public prop LastFrameSubmitted bool{ get -> lastFrameSubmitted }
   public prop MemoryPressureWaiting bool{ get -> pressureWaiting }
   public prop QueueWorkPending bool{ get -> queueStage != QueueStageIdle || pageCompletion != nil || queuedPage != nil }
+  internal func CanMinimizeNativeWindow() bool -> !frameBegun && !QueueWorkPending
   public prop RetirementWorkPending bool{
     get -> !disposed && runtime?.DeviceLost != true
       && (hideReleasePending || retiredSwapchains.Count != 0)

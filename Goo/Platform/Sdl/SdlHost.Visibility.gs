@@ -7,6 +7,16 @@ internal unsafe partial class SdlHost {
   private var deferFirstShow bool
   private var firstShowRequested bool
   private var firstShowMapping bool
+  private var minimizePending bool
+  internal var CanMinimize Func[bool]?
+
+  internal prop MinimizeReady bool { get -> minimizePending && CanMinimize?.Invoke() != false }
+
+  internal func ApplyPendingMinimize() {
+    if !MinimizeReady { return }
+    minimizePending = false
+    ApplyState(WindowState.Minimized)
+  }
 
   internal prop FirstShowPending bool { get -> deferFirstShow && firstShowRequested }
   internal prop IsLayerWindow bool { get -> layerWindow != nil }
@@ -97,6 +107,7 @@ internal unsafe partial class SdlHost {
 
   public func Hide() WindowOperationResult {
     if disposed || IsClosing { return WindowOperationResult.Closed }
+    minimizePending = false
     if let layer = layerWindow {
       layer.Hide()
       let result = SDL.HideWindow(window) ? WindowOperationResult.Accepted : WindowOperationResult.Failed

@@ -214,7 +214,12 @@ func RunHideResourcesSmoke() {
       visible = value
     }
     window.InputActivity += _ -> { inputActivities++ }
-    for operation in []string{"hide", "show", "close"} {
+    let operations = if SdlHost.IsWayland() {
+      []string{"minimize", "hide", "show", "close"}
+    } else {
+      []string{"hide", "show", "close"}
+    }
+    for operation in operations {
       WindowReadbackTestFixture.RuntimeHoldNextQueuePresent(window)
       WindowReadbackTestFixture.ForceRenderNonblocking(window, 0.0)
       let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
@@ -229,6 +234,21 @@ func RunHideResourcesSmoke() {
       }
       Require(held, "Present queue work was not held")
       let presentGeneration = target.CurrentPresentGeneration
+      if operation == "minimize" {
+        window.State = WindowState.Minimized
+        window.PumpScheduled(0.0)
+        Require(window.SdlHostForTest()?.IsVisible == true
+            && target.CurrentPresentGeneration == presentGeneration,
+          "Minimize unmapped or replaced the surface during a queued present")
+        window.State = WindowState.Normal
+        WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
+        WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
+        window.PumpScheduled(0.0)
+        Require(window.SdlHostForTest()?.IsVisible == true,
+          "Changing state did not cancel the pending native minimize")
+        Console.WriteLine("held-present minimize: surface retained, pending minimize canceled")
+        continue
+      }
       let previousEvents = visibilityEvents
       let previousActivities = inputActivities
       Require(window.Hide() == WindowOperationResult.Accepted, "Queued Hide was rejected")
