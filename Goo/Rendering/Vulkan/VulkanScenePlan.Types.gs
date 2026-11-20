@@ -497,6 +497,7 @@ internal struct VulkanSceneLayerCoverage {
 
 internal struct LayerRecord {
   internal var Bounds ConservativeBounds
+  internal var BackdropBounds ConservativeBounds
   internal var OriginX float32
   internal var OriginY float32
   internal var ExtentWidth uint32

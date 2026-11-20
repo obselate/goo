@@ -439,6 +439,20 @@ internal partial class SceneFrame {
         Height: MathF.Max(0.0F, bottom - top),
       }
     }
+    if !value.BackdropBounds.IsEmpty {
+      let right = value.OriginX + float32(value.ExtentWidth)
+      let bottom = value.OriginY + float32(value.ExtentHeight)
+      let capture = value.BackdropBounds
+      if capture.X >= value.OriginX && capture.Y >= value.OriginY
+        && capture.Right <= right && capture.Bottom <= bottom {
+        value.BackdropBounds = ConservativeBounds{}
+      } else {
+        value.OriginX = MathF.Min(value.OriginX, MathF.Floor(capture.X))
+        value.OriginY = MathF.Min(value.OriginY, MathF.Floor(capture.Y))
+        value.ExtentWidth = uint32(MathF.Max(right, MathF.Ceiling(capture.Right)) - value.OriginX)
+        value.ExtentHeight = uint32(MathF.Max(bottom, MathF.Ceiling(capture.Bottom)) - value.OriginY)
+      }
+    }
     return value
   }
 
