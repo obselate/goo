@@ -53,7 +53,10 @@ public partial class Window {
     let parent = if popup != nil { Owner?.host as SdlHost? } else { nil }
     return SdlHost(Title, NativeWidth, NativeHeight, x, y, positionSet, State, decorated, resizable,
       transparent || backdrop == WindowBackdrop.Blur, VSync,
-      (px int32, py int32) -> hitTest(px, py), parent, popup?.Kind ?? PopupKind.Menu,
+      (px int32, py int32) -> {
+        pointerHit = hitTest(px, py)
+        return pointerHit
+      }, parent, popup?.Kind ?? PopupKind.Menu,
       popup?.NativeTimestamp ?? 0uL, popupAnchor, popupPlacement, float32(UiScale), LayerShell,
       scaledSize(minWidth), scaledSize(minHeight))
   }

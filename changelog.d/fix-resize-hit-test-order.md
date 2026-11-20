@@ -1,0 +1,6 @@
+## Fixed
+
+- Undecorated windows: controls at a window edge, such as WindowChrome Close, now get clicks inside the resize band. Only the corners and empty edge areas resize.
+- Undecorated windows: each corner now resizes within `max(2 * ResizeBand, 16)` of the corner, not only `ResizeBand x ResizeBand`.
+- Undecorated windows: the pointer now shows the resize cursor whenever a press would resize. Before, the content cursor could replace it.
+- Windows: `ResizeBand` now uses logical pixels and follows the display scale. Before, it used physical pixels.

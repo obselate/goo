@@ -20,6 +20,11 @@ internal class ClickSequenceFixtures {
       && window.hitTest(4, 50) == WindowHitResult.Left
       && window.hitTest(100, 92) == WindowHitResult.Bottom
       && window.hitTest(196, 96) == WindowHitResult.BottomRight
+      && window.hitTest(186, 96) == WindowHitResult.BottomRight
+      && window.hitTest(4, 30) == WindowHitResult.Normal
+      && window.hitTest(20, 4) == WindowHitResult.Normal
+      && window.hitTest(12, 4) == WindowHitResult.TopLeft
+      && window.hitTest(4, 12) == WindowHitResult.TopLeft
   }
 
   func RoutedInteractiveChildIsRelativeToEachHandler() bool {
@@ -261,6 +266,6 @@ internal class EdgeScrollbarCell : Cell {
     OverflowY: Overflow.Scroll,
     ScrollbarVisibilityY: ScrollbarVisibility.Always,
     ScrollbarY: Scrollbar{Thickness: 8, Inset: 0, Track: Container{}, Thumb: Container{}},
-    Container{Width: 200, Height: 300, FlexShrink: 0},
+    Container{Width: 200, Height: 300, FlexShrink: 0, Button{Width: 40, Height: 40, OnClick: () -> { }}},
   }
 }
