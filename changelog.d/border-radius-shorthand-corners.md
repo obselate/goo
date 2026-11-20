@@ -1,2 +1,2 @@
 ### Fixed
-- Explicit border corner radii now take precedence over `BorderRadius`, regardless of declaration order, including during transitions and when the shorthand is removed.
+- Border radius transitions and removals now preserve declaration order between `BorderRadius` and individual corners.

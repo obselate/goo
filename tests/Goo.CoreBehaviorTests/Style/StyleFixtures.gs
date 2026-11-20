@@ -11,8 +11,8 @@ internal class StyleFixtures {
       BorderBottomLeftRadius: 3, BorderBottomRightRadius: 4, BorderRadius: 9,
     })
     try {
-      if node.BorderTopLeftRadius.Value != 1 || node.BorderTopRightRadius.Value != 2
-        || node.BorderBottomLeftRadius.Value != 3 || node.BorderBottomRightRadius.Value != 4 { return false }
+      if node.BorderTopLeftRadius.Value != 9 || node.BorderTopRightRadius.Value != 9
+        || node.BorderBottomLeftRadius.Value != 9 || node.BorderBottomRightRadius.Value != 9 { return false }
       reconciler.Diff(node, Container{BorderRadius: 9, BorderTopLeftRadius: 1,
         BorderTopRightRadius: 2, BorderBottomLeftRadius: 3, BorderBottomRightRadius: 4})
       return node.BorderTopLeftRadius.Value == 1 && node.BorderTopRightRadius.Value == 2
@@ -57,6 +57,32 @@ internal class StyleFixtures {
       if node.BorderTopRightRadius.Value != 12 || node.BorderTopLeftRadius.Value != 5 { return false }
       resolver.Advance(0.5)
       return node.BorderTopRightRadius.Value == 16 && node.BorderTopLeftRadius.Value == 6
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func BorderRadiusTransitionWinsWhenDeclaredLastContract() bool {
+    let resolver = Resolver{}
+    let reconciler = Reconciler{Res: resolver}
+    let node = reconciler.Mount(Container{BorderTopLeftRadius: 4, BorderRadius: 8})
+    try {
+      reconciler.Diff(node, Container{BorderTopLeftRadius: 4, BorderRadius: 16,
+        TransitionMs: 1000, TransitionEasing: Easing.Linear,
+        TransitionProperties: []TransitionProperty{TransitionProperty.BorderRadius}})
+      resolver.Advance(0.5)
+      if node.BorderTopLeftRadius.Value != 12 || node.BorderTopRightRadius.Value != 12
+        || node.BorderBottomLeftRadius.Value != 12 || node.BorderBottomRightRadius.Value != 12 { return false }
+      resolver.Advance(0.5)
+      return node.BorderTopLeftRadius.Value == 16 && node.BorderTopRightRadius.Value == 16
+        && node.BorderBottomLeftRadius.Value == 16 && node.BorderBottomRightRadius.Value == 16
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func BorderRadiusRemainsAfterCornerRemovalContract() bool {
+    let reconciler = Reconciler{Res: Resolver{}}
+    let node = reconciler.Mount(Container{BorderRadius: 9, BorderTopLeftRadius: 4})
+    try {
+      reconciler.Diff(node, Container{BorderRadius: 9})
+      return node.BorderTopLeftRadius.Value == 9
     } finally { NodeLifecycle.DisposeTree(node) }
   }
 

@@ -204,6 +204,8 @@ class FixtureContractTests {
             yield Contract[StyleFixtures]("BorderRadiusTransitionPreservesZeroCornerContract")
             yield Contract[StyleFixtures]("BorderRadiusRemovalPreservesDeclaredCornerContract")
             yield Contract[StyleFixtures]("BorderRadiusAndCornerTransitionIndependentlyContract")
+            yield Contract[StyleFixtures]("BorderRadiusTransitionWinsWhenDeclaredLastContract")
+            yield Contract[StyleFixtures]("BorderRadiusRemainsAfterCornerRemovalContract")
             yield Contract[AccessibilityFixtures]("AccessibilityShorthandOrderContract")
             yield Contract[AccessibilityFixtures]("AccessibilityShorthandRoundTripContract")
             yield Contract[FlexConformanceFixtures]("RowColumnSpacerContract")
