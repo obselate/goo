@@ -1292,16 +1292,12 @@ jobs:
           dotnet build "$consumer" -c Release --no-restore "${flags[@]}"
       - name: Compare Widgets focus crops
         working-directory: goo-widgets
-        env:
-          GOO_VK_STARTUP_REPORT: ${{ runner.temp }}/widgets-focus-vulkan.log
         run: |
           icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
           test "${#icds[@]}" -eq 1
           test -f "${icds[0]}"
-          status=0
-          env -u GOO_WIDGETS_APPROVE_FOCUS VK_DRIVER_FILES="${icds[0]}" bash scripts/verify-native.sh FOCUS || status=$?
-          grep '^Selected device:' "$GOO_VK_STARTUP_REPORT"
-          exit "$status"
+          env -u GOO_WIDGETS_APPROVE_FOCUS VK_DRIVER_FILES="${icds[0]}" VK_LOADER_DEBUG=driver \
+            bash scripts/verify-native.sh FOCUS
       - name: Upload focus failure crops
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
