@@ -48,14 +48,19 @@ public partial class Window {
       let corner = Math.Max(2.0 * resizeBand, 16.0) * scale
       let width = float32(NativeWidth)
       let height = float32(NativeHeight)
-      let left = px < band
-      let right = px >= width - band
-      let top = py < band
-      let bottom = py >= height - band
-      let nearLeft = px < corner
-      let nearRight = px >= width - corner
-      let nearTop = py < corner
-      let nearBottom = py >= height - corner
+      let onLeft = px < band
+      let onRight = px >= width - band
+      let onTop = py < band
+      let onBottom = py >= height - band
+      let constraints = if onLeft || onRight || onTop || onBottom { ResizeConstraints } else { WindowResizeConstraints.None }
+      let nearLeft = px < corner && (constraints & WindowResizeConstraints.Left) == WindowResizeConstraints.None
+      let nearRight = px >= width - corner && (constraints & WindowResizeConstraints.Right) == WindowResizeConstraints.None
+      let nearTop = py < corner && (constraints & WindowResizeConstraints.Top) == WindowResizeConstraints.None
+      let nearBottom = py >= height - corner && (constraints & WindowResizeConstraints.Bottom) == WindowResizeConstraints.None
+      let left = onLeft && nearLeft
+      let right = onRight && nearRight
+      let top = onTop && nearTop
+      let bottom = onBottom && nearBottom
 
       if (top && nearLeft) || (left && nearTop) {
         return WindowHitResult.TopLeft
