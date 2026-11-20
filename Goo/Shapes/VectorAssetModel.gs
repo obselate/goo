@@ -74,6 +74,7 @@ public class VectorStroke {
     }
   }
   /// Gets or sets the non-negative finite miter limit.
+  /// Select TransitionProperty.MiterLimit on the Shape to interpolate changes.
   public prop MiterLimit float64{
     get -> miterLimit
     set {
@@ -86,6 +87,8 @@ public class VectorStroke {
   }
   /// Gets or sets the optional dash pattern.
   /// NonScalingStroke measures dash lengths in window logical pixels.
+  /// Select TransitionProperty.DashOffset or DashIntervals on the Shape.
+  /// Intervals interpolate only when normalized counts match.
   public prop Dashes DashPattern? {
     get -> declarationDashes
     set {

@@ -19,7 +19,12 @@ public enum TransitionProperty {
   BorderColor; BorderLeftColor; BorderTopColor; BorderRightColor; BorderBottomColor;
   Opacity; BoxShadow;
   Color; FontSize; FontWeight; LetterSpacing; LineHeight;
-  Transform
+  Transform;
+  OutlineWidth; OutlineColor; OutlineOffset;
+  TextStrokeWidth; TextStrokeColor; TextShadow;
+  BackgroundGradient; BackdropBlur;
+  ShapeCornerRadius; StrokeStart; StrokeEnd; MiterLimit;
+  DashOffset; DashIntervals; SelectionColor; CaretColor
 }
 
 internal func allTransitionSelection() StyleMask -> StyleMask { Low: UInt64.MaxValue, High: UInt64.MaxValue }
@@ -102,6 +107,22 @@ internal func transitionSelectionProperties(selection StyleMask) []TransitionPro
   addTransitionProperty(result, selection, TransitionProperty.LetterSpacing)
   addTransitionProperty(result, selection, TransitionProperty.LineHeight)
   addTransitionProperty(result, selection, TransitionProperty.Transform)
+  addTransitionProperty(result, selection, TransitionProperty.OutlineWidth)
+  addTransitionProperty(result, selection, TransitionProperty.OutlineColor)
+  addTransitionProperty(result, selection, TransitionProperty.OutlineOffset)
+  addTransitionProperty(result, selection, TransitionProperty.TextStrokeWidth)
+  addTransitionProperty(result, selection, TransitionProperty.TextStrokeColor)
+  addTransitionProperty(result, selection, TransitionProperty.TextShadow)
+  addTransitionProperty(result, selection, TransitionProperty.BackgroundGradient)
+  addTransitionProperty(result, selection, TransitionProperty.BackdropBlur)
+  addTransitionProperty(result, selection, TransitionProperty.ShapeCornerRadius)
+  addTransitionProperty(result, selection, TransitionProperty.StrokeStart)
+  addTransitionProperty(result, selection, TransitionProperty.StrokeEnd)
+  addTransitionProperty(result, selection, TransitionProperty.MiterLimit)
+  addTransitionProperty(result, selection, TransitionProperty.DashOffset)
+  addTransitionProperty(result, selection, TransitionProperty.DashIntervals)
+  addTransitionProperty(result, selection, TransitionProperty.SelectionColor)
+  addTransitionProperty(result, selection, TransitionProperty.CaretColor)
   return result.ToArray()
 }
 
@@ -211,6 +232,22 @@ private func transitionPropertyMask(property TransitionProperty) StyleMask {
       result = styleMaskWith(result, StyleField.TransformOriginX)
       return styleMaskWith(result, StyleField.TransformOriginY)
     }
+    case TransitionProperty.OutlineWidth { return styleMaskWith(result, StyleField.OutlineWidth) }
+    case TransitionProperty.OutlineColor { return styleMaskWith(result, StyleField.OutlineColor) }
+    case TransitionProperty.OutlineOffset { return styleMaskWith(result, StyleField.OutlineOffset) }
+    case TransitionProperty.TextStrokeWidth { return styleMaskWith(result, StyleField.TextStrokeWidth) }
+    case TransitionProperty.TextStrokeColor { return styleMaskWith(result, StyleField.TextStrokeColor) }
+    case TransitionProperty.TextShadow { return styleMaskWith(result, StyleField.TextShadows) }
+    case TransitionProperty.BackgroundGradient { return styleMaskWith(result, StyleField.BackgroundGradient) }
+    case TransitionProperty.BackdropBlur { return styleMaskWith(result, StyleField.BackdropBlur) }
+    case TransitionProperty.ShapeCornerRadius { return styleMaskWith(result, StyleField.ShapeCornerRadius) }
+    case TransitionProperty.StrokeStart { return styleMaskWith(result, StyleField.StrokeStart) }
+    case TransitionProperty.StrokeEnd { return styleMaskWith(result, StyleField.StrokeEnd) }
+    case TransitionProperty.MiterLimit { return styleMaskWith(result, StyleField.MiterLimit) }
+    case TransitionProperty.DashOffset { return styleMaskWith(result, StyleField.DashOffset) }
+    case TransitionProperty.DashIntervals { return styleMaskWith(result, StyleField.DashIntervals) }
+    case TransitionProperty.SelectionColor { return styleMaskWith(result, StyleField.SelectionColor) }
+    case TransitionProperty.CaretColor { return styleMaskWith(result, StyleField.CaretColor) }
     default { throw ArgumentOutOfRangeException("TransitionProperties") }
   }
 }

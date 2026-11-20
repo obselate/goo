@@ -99,6 +99,61 @@ class FittedStrokeCell(effect VectorEffect) : Cell {
     }
 }
 
+class NonScalingDashTransitionCell : Cell {
+    internal let Expanded State[bool] = State[bool](false)
+    private let path VectorPath = PathBuilder(0, 0, 128, 64).MoveTo(8, 20).LineTo(120, 20).Build()
+
+    override func Build() Blob -> Shape{
+        Width: 128, Height: 64, Path: path, Fit: ShapeFit.None, StrokeInset: false,
+        Stroke: VectorStroke(4, Color.White){
+            .VectorEffect: VectorEffect.NonScalingStroke,
+            .Dashes: DashPattern(Expanded.Value ? []float64{12, 15} : []float64{4, 8}, 0),
+        },
+        BoxShadow: BoxShadow{Color: Color.Rgb(255, 0, 0), OffsetY: 16},
+        TransitionMs: 1000, TransitionEasing: Easing.Linear,
+        TransitionProperties: []TransitionProperty{TransitionProperty.DashIntervals},
+    }
+}
+
+func VerifyNonScalingDashTransition() {
+    let root = NonScalingDashTransitionCell{}
+    let window = Window{Title: "Goo non-scaling dash transition", Size: LayoutSize(128, 64),
+        Root: root, Background: Color.Black, VSync: false}.Open()
+    try {
+        WindowReadbackTestFixture.StabilizeNativeMetrics(window)
+        let metrics = WindowReadbackTestFixture.Metrics(window)
+        var matches = true
+        for index in 0 ... 4 {
+            if index == 1 { root.Expanded.Value = true }
+            if index >= 2 { WindowReadbackTestFixture.UpdateTreeOnly(window, 0.5) }
+            WindowReadbackTestFixture.ForceRender(window, 0.0, 10.0)
+            let frame = PrimitiveReadback(window, metrics)
+            let expected = index < 2 ? 24 : (index == 2 ? 39 : 54)
+            for y in []int32{20, 36} {
+                var previous = false
+                var first = -1
+                var runs = 0
+                var span = 0
+                for x in 4 ... 116 {
+                    let pixel = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, float64(x), float64(y))
+                    let painted = pixel[0] > uint8(127)
+                    if painted && !previous {
+                        runs++
+                        if runs == 1 { first = x }
+                        if runs == 3 { span = x - first }
+                    }
+                    previous = painted
+                }
+                Console.WriteLine("non-scaling dash transition: sample=$index row=$y two-period span=$span expected=$expected")
+                matches = matches && span == expected
+            }
+        }
+        Require(matches, "Non-scaling dash transition used stale GPU intervals")
+    } finally {
+        window.Close()
+    }
+}
+
 class NonScalingStrokeBenchCell : Cell {
     internal let Count int32
     internal let NonScaling bool
@@ -156,6 +211,7 @@ func RunNonScalingStrokeSmoke() {
         if measure != "only" {
             VectorRetainSmoke.VerifyNonScalingStrokeHitBounds()
             VerifyNonScalingStrokeSvgStyle()
+            VerifyNonScalingDashTransition()
             VerifyNonScalingStrokePixels()
         }
         if measure != "0" {

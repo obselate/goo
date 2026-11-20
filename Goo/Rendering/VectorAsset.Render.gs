@@ -4,14 +4,15 @@ import System
 import System.Collections.Generic
 
 internal sealed class VectorLinearGradient : Gradient {
-  private let stops IReadOnlyList[GradientStop]
-  private let x0 float64
-  private let y0 float64
-  private let x1 float64
-  private let y1 float64
-  private let contentHash int32
+  private let stops List[GradientStop]
+  private let stopView IReadOnlyList[GradientStop]
+  private var x0 float64
+  private var y0 float64
+  private var x1 float64
+  private var y1 float64
+  private var contentHash int32
 
-  public prop Stops IReadOnlyList[GradientStop]{ get -> stops }
+  public prop Stops IReadOnlyList[GradientStop]{ get -> stopView }
   internal prop X0 float64{ get -> x0 }
   internal prop Y0 float64{ get -> y0 }
   internal prop X1 float64{ get -> x1 }
@@ -25,19 +26,40 @@ internal sealed class VectorLinearGradient : Gradient {
       this.x1 = x1
       this.y1 = y1
       this.stops = validateGradientStops(stops)
+      stopView = this.stops.AsReadOnly()
       contentHash = computeGradientContentHash4(3, x0, y0, x1, y1, this.stops)
     }
+
+  internal init(source VectorLinearGradient) {
+    x0 = source.x0
+    y0 = source.y0
+    x1 = source.x1
+    y1 = source.y1
+    stops = List[GradientStop](source.stops)
+    stopView = stops.AsReadOnly()
+    contentHash = source.contentHash
+  }
+
+  internal func Sample(from VectorLinearGradient, to VectorLinearGradient, t float64) {
+    x0 = from.x0 + (to.x0 - from.x0) * t
+    y0 = from.y0 + (to.y0 - from.y0) * t
+    x1 = from.x1 + (to.x1 - from.x1) * t
+    y1 = from.y1 + (to.y1 - from.y1) * t
+    interpolateGradientStops(from.Stops, to.Stops, stops, t)
+    contentHash = computeGradientContentHash4(3, x0, y0, x1, y1, stops)
+  }
 }
 
 internal sealed class VectorRadialGradient : Gradient {
-  private let stops IReadOnlyList[GradientStop]
-  private let centerX float64
-  private let centerY float64
-  private let radiusX float64
-  private let radiusY float64
-  private let contentHash int32
+  private let stops List[GradientStop]
+  private let stopView IReadOnlyList[GradientStop]
+  private var centerX float64
+  private var centerY float64
+  private var radiusX float64
+  private var radiusY float64
+  private var contentHash int32
 
-  public prop Stops IReadOnlyList[GradientStop]{ get -> stops }
+  public prop Stops IReadOnlyList[GradientStop]{ get -> stopView }
   internal prop CenterX float64{ get -> centerX }
   internal prop CenterY float64{ get -> centerY }
   internal prop RadiusX float64{ get -> radiusX }
@@ -51,8 +73,28 @@ internal sealed class VectorRadialGradient : Gradient {
       this.radiusX = radiusX
       this.radiusY = radiusY
       this.stops = validateGradientStops(stops)
+      stopView = this.stops.AsReadOnly()
       contentHash = computeGradientContentHash4(4, centerX, centerY, radiusX, radiusY, this.stops)
     }
+
+  internal init(source VectorRadialGradient) {
+    centerX = source.centerX
+    centerY = source.centerY
+    radiusX = source.radiusX
+    radiusY = source.radiusY
+    stops = List[GradientStop](source.stops)
+    stopView = stops.AsReadOnly()
+    contentHash = source.contentHash
+  }
+
+  internal func Sample(from VectorRadialGradient, to VectorRadialGradient, t float64) {
+    centerX = from.centerX + (to.centerX - from.centerX) * t
+    centerY = from.centerY + (to.centerY - from.centerY) * t
+    radiusX = from.radiusX + (to.radiusX - from.radiusX) * t
+    radiusY = from.radiusY + (to.radiusY - from.radiusY) * t
+    interpolateGradientStops(from.Stops, to.Stops, stops, t)
+    contentHash = computeGradientContentHash4(4, centerX, centerY, radiusX, radiusY, stops)
+  }
 }
 
 public class VectorAsset {

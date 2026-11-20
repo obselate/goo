@@ -20,6 +20,246 @@ internal class StyleFixtures {
     } finally { NodeLifecycle.DisposeTree(node) }
   }
 
+  func PaintTransitionsFromZeroDoNotAllocateContract() bool {
+    let resolver = Resolver{}
+    let root = Reconciler{Res: resolver}.Mount(Container{
+      TransitionMs: 1000, TransitionEasing: Easing.Linear,
+      TransitionProperties: []TransitionProperty{
+        TransitionProperty.OutlineWidth, TransitionProperty.OutlineColor, TransitionProperty.OutlineOffset,
+        TransitionProperty.TextStrokeWidth, TransitionProperty.TextStrokeColor},
+      HoverStyle: Style{
+        OutlineWidth: 4, OutlineColor: Color.White, OutlineOffset: 4,
+        TextStrokeWidth: 4, TextStrokeColor: Color.White},
+      Text{Content: "Inherited stroke"}})
+    try {
+      root.Hovered = true
+      resolver.Invalidate(root, false)
+      resolver.Flush()
+      let allocated = GC.GetAllocatedBytesForCurrentThread()
+      resolver.Advance(0.25)
+      let bytes = GC.GetAllocatedBytesForCurrentThread() - allocated
+      if bytes != 0L { throw InvalidOperationException("First paint transition tick allocated $bytes bytes") }
+      return root.OutlineWidth.Value == 1.0F && root.OutlineOffset.Value == 1.0F
+        && root.TextStrokeWidth.Value == 1.0F && root.OutlineColor.A == 0.25F && root.TextStrokeColor.A == 0.25F
+        && root.Children[0].TextStrokeWidth.Value == 1.0F && root.Children[0].TextStrokeColor.A == 0.25F
+    } finally { NodeLifecycle.DisposeTree(root) }
+  }
+
+  func ExtendedPaintTransitionsContract() bool {
+    let red = Color.Rgb(255, 0, 0)
+    let blue = Color.Rgb(0, 0, 255)
+    let from = LinearGradient(0.0, []GradientStop{
+      GradientStop{Offset: 0.0, Color: red}, GradientStop{Offset: 1.0, Color: blue}})
+    let to = LinearGradient(90.0, []GradientStop{
+      GradientStop{Offset: 0.2, Color: blue}, GradientStop{Offset: 0.8, Color: red}})
+    let resolver = Resolver{}
+    let root = Reconciler{Res: resolver}.Mount(Container{
+      TransitionMs: 1000, TransitionEasing: Easing.Linear,
+      TransitionProperties: []TransitionProperty{
+        TransitionProperty.OutlineWidth, TransitionProperty.OutlineColor, TransitionProperty.OutlineOffset,
+        TransitionProperty.TextStrokeWidth, TransitionProperty.TextStrokeColor, TransitionProperty.TextShadow,
+        TransitionProperty.BackgroundGradient, TransitionProperty.BackdropBlur},
+      OutlineWidth: 2, OutlineColor: red, OutlineOffset: 1,
+      TextStrokeWidth: 2, TextStrokeColor: red, BackdropBlur: 2, BackgroundGradient: from,
+      TextShadow: TextShadow{OffsetX: 2, Blur: 2, Color: red},
+      HoverStyle: Style{
+        OutlineWidth: 4, OutlineColor: blue, OutlineOffset: -2,
+        TextStrokeWidth: 4, TextStrokeColor: blue, BackdropBlur: 10, BackgroundGradient: to,
+        TextShadow: TextShadow{OffsetX: 10, Blur: 6, Color: blue}},
+      Text{Content: "inherited paint"},
+    })
+    try {
+      let child = root.Children[0]
+      let text = TextLayouts.For(child, 200.0F)
+      root.Hovered = true
+      resolver.Invalidate(root, false)
+      resolver.Flush()
+      resolver.Advance(0.5)
+      guard let gradient = root.BackgroundGradient as LinearGradient? else { return false }
+      let shadow = textShadowAt(child.TextShadows, 0)
+      if root.OutlineWidth.Value != 3.0F || root.OutlineOffset.Value != -0.5F
+        || !near(root.OutlineColor.R, 0.5) || !near(root.OutlineColor.B, 0.5)
+        || child.TextStrokeWidth.Value != 3.0F || !near(child.TextStrokeColor.R, 0.5)
+        || root.BackdropBlur != 6.0F || gradient.Angle != 45.0
+        || !near(gradient.Stops[0].Offset, 0.1) || !near(gradient.Stops[1].Offset, 0.9)
+        || !near(gradient.Stops[0].Color.R, 0.5) || !near(gradient.Stops[0].Color.B, 0.5)
+        || shadow.OffsetX.Value != 6.0F || shadow.Blur.Value != 4.0F
+        || !near(shadow.Color.R, 0.5) || !near(shadow.Color.B, 0.5)
+        || TextLayouts.For(child, 200.0F) != text || from.Angle != 0.0 || to.Angle != 90.0 { return false }
+      let allocated = GC.GetAllocatedBytesForCurrentThread()
+      for frame in 0 ... 50 { resolver.Advance(0.001) }
+      let bytes = GC.GetAllocatedBytesForCurrentThread() - allocated
+      if bytes != 0L { throw InvalidOperationException("Paint transitions allocated $bytes bytes") }
+      resolver.Advance(0.5)
+      return root.BackgroundGradient == to && root.OutlineWidth.Value == 4.0F
+        && child.TextStrokeWidth.Value == 4.0F && textShadowAt(child.TextShadows, 0).OffsetX.Value == 10.0F
+        && resolver.Animating.Count == 0
+    } finally { NodeLifecycle.DisposeTree(root) }
+  }
+
+  func StructuredTransitionCompatibilityContract() bool {
+    let red = Color.Rgb(255, 0, 0)
+    let blue = Color.Rgb(0, 0, 255)
+    let a = []GradientStop{GradientStop{Offset: 0, Color: red}, GradientStop{Offset: 1, Color: blue}}
+    let b = []GradientStop{GradientStop{Offset: 0.2, Color: blue}, GradientStop{Offset: 0.8, Color: red}}
+    let sources = []Gradient{
+      LinearGradient(0, a), RadialGradient(0.2, 0.3, 0.2, a),
+      VectorLinearGradient(0, 0, 1, 1, a), VectorRadialGradient(0.2, 0.3, 0.2, 0.4, a)}
+    let targets = []Gradient{
+      LinearGradient(90, b), RadialGradient(0.8, 0.7, 0.8, b),
+      VectorLinearGradient(0.2, 0.4, 0.8, 0.6, b), VectorRadialGradient(0.8, 0.7, 0.8, 0.6, b)}
+    for i in 0 ... sources.Length {
+      let progress = 0.123456789
+      let resolver = Resolver{}
+      let root = Reconciler{Res: resolver}.Mount(Container{
+        BackgroundGradient: sources[i], TransitionMs: 1000, TransitionEasing: Easing.Linear,
+        TransitionProperties: []TransitionProperty{TransitionProperty.BackgroundGradient},
+        HoverStyle: Style{BackgroundGradient: targets[i]}})
+      try {
+        root.Hovered = true
+        resolver.Invalidate(root, false)
+        resolver.Flush()
+        resolver.Advance(progress)
+        guard let sampled = root.BackgroundGradient else { return false }
+        if sampled.GetType() != sources[i].GetType() || sampled.Stops[0].Offset != 0.2 * progress
+          || sampled.Stops[1].Offset != 1.0 + (0.8 - 1.0) * progress
+          || !near(sampled.Stops[0].Color.R, 1.0 - progress) || !near(sampled.Stops[0].Color.B, progress) { return false }
+        let correct = switch sampled {
+          case value is LinearGradient: value.Angle == 90.0 * progress
+          case value is RadialGradient: value.CenterX == 0.2 + (0.8 - 0.2) * progress
+            && value.CenterY == 0.3 + (0.7 - 0.3) * progress && value.Radius == 0.2 + (0.8 - 0.2) * progress
+          case value is VectorLinearGradient: value.X0 == 0.2 * progress && value.Y0 == 0.4 * progress
+            && value.X1 == 1.0 + (0.8 - 1.0) * progress && value.Y1 == 1.0 + (0.6 - 1.0) * progress
+          case value is VectorRadialGradient: value.CenterX == 0.2 + (0.8 - 0.2) * progress
+            && value.CenterY == 0.3 + (0.7 - 0.3) * progress && value.RadiusX == 0.2 + (0.8 - 0.2) * progress
+            && value.RadiusY == 0.4 + (0.6 - 0.4) * progress
+          case _: false
+        }
+        if !correct { return false }
+        let current = sampled.Stops[0]
+        root.Hovered = false
+        resolver.Invalidate(root, false)
+        resolver.Flush()
+        let retargeted = root.BackgroundGradient!!.Stops[0]
+        if retargeted.Offset != current.Offset || retargeted.Color != current.Color { return false }
+        resolver.Advance(0.5)
+      } finally { NodeLifecycle.DisposeTree(root) }
+    }
+    for target in []Gradient{RadialGradient(red, blue), LinearGradient(red, blue, Color.White)} {
+      let resolver = Resolver{}
+      let root = Reconciler{Res: resolver}.Mount(Container{
+        BackgroundGradient: sources[0], TransitionMs: 1000,
+        TransitionProperties: []TransitionProperty{TransitionProperty.BackgroundGradient},
+        HoverStyle: Style{BackgroundGradient: target}})
+      root.Hovered = true
+      resolver.Invalidate(root, false)
+      resolver.Flush()
+      let correct = root.BackgroundGradient == target && resolver.Animating.Count == 0
+      NodeLifecycle.DisposeTree(root)
+      if !correct { return false }
+    }
+    let resolver = Resolver{}
+    let node = Reconciler{Res: resolver}.Mount(Text{
+      Content: "shadow fade", TextShadow: TextShadow{Color: Color.Transparent},
+      TransitionMs: 1000, TransitionEasing: Easing.Linear,
+      TransitionProperties: []TransitionProperty{TransitionProperty.TextShadow},
+      HoverStyle: Style{TextShadow: TextShadow{OffsetX: 8, Color: blue}}})
+    try {
+      node.Hovered = true
+      resolver.Invalidate(node, false)
+      resolver.Flush()
+      if textShadowAt(node.TextShadows, 0).Color != Color.Transparent { return false }
+      resolver.Advance(0.5)
+      let shadow = textShadowAt(node.TextShadows, 0)
+      if shadow.OffsetX.Value != 4.0F || shadow.Color.A != 0.5F || shadow.Color.B != 1.0F { return false }
+      node.Hovered = false
+      resolver.Invalidate(node, false)
+      resolver.Flush()
+      let retargeted = textShadowAt(node.TextShadows, 0)
+      if !sameLength(retargeted.OffsetX, shadow.OffsetX) || retargeted.Color != shadow.Color { return false }
+      node.Hovered = true
+      node.HoverStyle = Style{TextShadows: []TextShadow{
+        TextShadow{Color: red}, TextShadow{Color: blue}}}.Entries()
+      resolver.Invalidate(node, false)
+      resolver.Flush()
+      resolver.Advance(0.0)
+      return textShadowCount(node.TextShadows) == 2 && resolver.Animating.Count == 0
+    } finally { NodeLifecycle.DisposeTree(node) }
+  }
+
+  func PrimitivePaintTransitionsContract() bool {
+    let red = Color.Rgb(255, 0, 0)
+    let blue = Color.Rgb(0, 0, 255)
+    using let controller = TextEditorController(TextDocument("edit"))
+    let source = DashPattern([]float64{2.2, 2.2}, -0.2)
+    let target = DashPattern([]float64{6.6, 6.6}, 8.8)
+    let path = PathBuilder().MoveTo(0, 0).LineTo(100, 0).LineTo(100, 100).LineTo(0, 100).Close().Build()
+    let scene = (changed bool) -> {
+      let stroke = VectorStroke(2, VectorPaint(Color.White))
+      stroke.MiterLimit = changed ? 8.8 : 4.4
+      stroke.Dashes = changed ? target : source
+      return Container{Children: []Blob{
+        Shape{
+          Path: path, Width: 100, Height: 100, CornerRadius: changed ? 10.2 : 2.2,
+          StrokeStart: changed ? 0.4 : 0.2, StrokeEnd: changed ? 0.8 : 0.6, Stroke: stroke,
+          TransitionMs: 1000, TransitionEasing: Easing.Linear,
+          TransitionProperties: []TransitionProperty{
+            TransitionProperty.ShapeCornerRadius, TransitionProperty.StrokeStart, TransitionProperty.StrokeEnd,
+            TransitionProperty.MiterLimit, TransitionProperty.DashOffset, TransitionProperty.DashIntervals}},
+        TextEditor{
+          Controller: controller, SelectionColor: changed ? blue : red, CaretColor: changed ? red : blue,
+          TransitionMs: 1000, TransitionEasing: Easing.Linear,
+          TransitionProperties: []TransitionProperty{TransitionProperty.SelectionColor, TransitionProperty.CaretColor}}}}
+    }
+    let resolver = Resolver{}
+    let reconciler = Reconciler{Res: resolver}
+    let root = reconciler.Mount(scene(false))
+    try {
+      let shape = root.Children[0]
+      if shape.ShapeCornerRadius != 2.2 || shape.StrokeStart != 0.2 || shape.StrokeEnd != 0.6
+        || shape.MiterLimit != 4.4 || shape.Dashes?.Offset != -0.2 || shape.Dashes?.Intervals[0] != 2.2 { return false }
+      reconciler.Diff(root, scene(true))
+      let progress = 0.123456789
+      resolver.Advance(progress)
+      let editor = root.Children[1]
+      guard let dashes = shape.Dashes else { return false }
+      if shape.ShapeCornerRadius != 2.2 + (10.2 - 2.2) * progress
+        || shape.StrokeStart != 0.2 + (0.4 - 0.2) * progress || shape.StrokeEnd != 0.6 + (0.8 - 0.6) * progress
+        || shape.MiterLimit != 4.4 + (8.8 - 4.4) * progress || dashes.Offset != -0.2 + (8.8 + 0.2) * progress
+        || dashes.Intervals[0] != 2.2 + (6.6 - 2.2) * progress
+        || !near(editor.SelectionColor.R, 1.0 - progress) || !near(editor.SelectionColor.B, progress)
+        || !near(editor.EditorCaretColor.R, progress) || !near(editor.EditorCaretColor.B, 1.0 - progress)
+        || source.Offset != -0.2 || source.Intervals[0] != 2.2 || target.Offset != 8.8 { return false }
+      let allocated = GC.GetAllocatedBytesForCurrentThread()
+      for frame in 0 ... 50 { resolver.Advance(0.001) }
+      let bytes = GC.GetAllocatedBytesForCurrentThread() - allocated
+      if bytes != 0L { throw InvalidOperationException("Primitive transitions allocated $bytes bytes") }
+      let radius = shape.ShapeCornerRadius
+      let offset = dashes.Offset
+      let interval = dashes.Intervals[0]
+      reconciler.Diff(root, scene(false))
+      if shape.ShapeCornerRadius != radius || shape.Dashes?.Offset != offset
+        || shape.Dashes?.Intervals[0] != interval { return false }
+      resolver.Advance(1.0)
+      if shape.ShapeCornerRadius != 2.2 || shape.StrokeStart != 0.2 || shape.StrokeEnd != 0.6
+        || shape.MiterLimit != 4.4 || shape.Dashes?.Offset != -0.2 || shape.Dashes?.Intervals[0] != 2.2 { return false }
+      let mismatchStroke = VectorStroke(2, VectorPaint(Color.White))
+      mismatchStroke.Dashes = DashPattern([]float64{1, 2, 3, 4}, 0)
+      let mismatch = Shape{
+        Path: path, Stroke: mismatchStroke,
+        TransitionMs: 1000, TransitionProperties: []TransitionProperty{TransitionProperty.DashIntervals}}
+      let sourceStroke = VectorStroke(2, VectorPaint(Color.White))
+      sourceStroke.Dashes = source
+      let single = reconciler.Mount(Shape{
+        Path: path, Stroke: sourceStroke,
+        TransitionMs: 1000, TransitionProperties: []TransitionProperty{TransitionProperty.DashIntervals}})
+      reconciler.Diff(single, mismatch)
+      let correct = single.Dashes?.Intervals.Count == 4 && (single.Transitions?.Count ?? 0) == 0
+      NodeLifecycle.DisposeTree(single)
+      return correct
+    } finally { NodeLifecycle.DisposeTree(root) }
+  }
+
   func StyleAssignmentAfterHandOffContract() bool {
     let blob = Container{Width: 10}
     let node = Reconciler{Res: Resolver{}}.Mount(blob)
@@ -774,7 +1014,7 @@ internal class StyleFixtures {
     let copiedResolver = Resolver{}
     copiedResolver.Invalidate(copied, true)
     copiedResolver.Flush()
-    if !copied.HasTextShadowState || textShadowCount(copied.TextShadows) != 1
+    if !copied.HasTextShadowState || textShadowCount(copied.TextShadows) != 2
       || textShadowAt(copied.TextShadows, 0).OffsetX.Magnitude != 3.0
       || !sameColor(textShadowAt(copied.TextShadows, 0).Color, red) {
         return false
@@ -784,7 +1024,8 @@ internal class StyleFixtures {
       Content: "zero",
       TextShadow: TextShadow{ OffsetX: 12, Blur: 8, Color: Color.Transparent },
     })
-    if transparent.HasTextShadowState || textShadowCount(transparent.TextShadows) != 0 {
+    if !transparent.HasTextShadowState || textShadowCount(transparent.TextShadows) != 1
+      || textShadowAt(transparent.TextShadows, 0).Color.A != 0.0F {
       return false
     }
 
@@ -897,6 +1138,11 @@ internal class StyleFixtures {
     root.Hovered = true
     resolver.Invalidate(root, false)
     resolver.Flush()
+    if inherited.TextStrokeWidth.Value != 2.0F || resolver.Animating.Count != 1 { return false }
+    resolver.Advance(0.05)
+    if inherited.TextStrokeWidth.Value != 3.0F || entry.TextStrokeWidth.Value != 3.0F
+      || !near(inherited.TextStrokeColor.R, 0.5) || !near(inherited.TextStrokeColor.B, 0.5) { return false }
+    resolver.Advance(0.05)
     if inherited.TextStrokeWidth.Value != 4.0F || entry.TextStrokeWidth.Value != 4.0F
       || !sameColor(inherited.TextStrokeColor, blue)
       || TextStroking.Visible(widthClear) != nil || TextStroking.Visible(colorClearText) != nil
@@ -909,6 +1155,7 @@ internal class StyleFixtures {
     root.BaseStyle = nil
     resolver.Invalidate(root, false)
     resolver.Flush()
+    resolver.Advance(0.1)
     if root.HasTextStrokeState || inherited.HasTextStrokeState || entry.HasTextStrokeState
       || widthClear.HasTextStrokeState || colorClear.HasTextStrokeState
       || colorClearText.HasTextStrokeState || TextLayouts.For(inherited, 100.0F) != retained{
@@ -1346,6 +1593,11 @@ internal class StyleFixtures {
     root.FocusVisible = true
     resolver.Invalidate(root, false)
     resolver.Flush()
+    if root.OutlineWidth.Value != 2.0F || resolver.Animating.Count != 1 { return false }
+    resolver.Advance(0.05)
+    if root.OutlineWidth.Value != 3.0F || root.OutlineOffset.Value != -0.5F
+      || !near(root.OutlineColor.R, 0.5) || !near(root.OutlineColor.B, 0.5) { return false }
+    resolver.Advance(0.05)
     if root.OutlineWidth.Value != 4.0F || root.OutlineOffset.Value != -2.0F
       || !sameColor(root.OutlineColor, Color.Rgb(0, 0, 255))
       || resolver.Animating.Count != 0 {
@@ -1356,6 +1608,7 @@ internal class StyleFixtures {
     root.FocusVisible = false
     resolver.Invalidate(root, false)
     resolver.Flush()
+    resolver.Advance(0.1)
     if root.OutlineWidth.Value != 2.0F || root.OutlineOffset.Value != 1.0F
       || resolver.Animating.Count != 0 {
         return false
@@ -1364,6 +1617,7 @@ internal class StyleFixtures {
     root.BaseStyle = nil
     resolver.Invalidate(root, false)
     resolver.Flush()
+    resolver.Advance(0.1)
     return !(root.HasOutlineState || root.OutlineWidth.Unit != LengthUnit.Unset
       || root.OutlineOffset.Unit != LengthUnit.Unset
       || !sameColor(root.OutlineColor, Color.Transparent))
@@ -2128,6 +2382,7 @@ internal class StyleFixtures {
     case FieldKind.KLength: entry.B == float32(int32(LengthUnit.Px))
     case FieldKind.KColor: entry.D == 1.0F
     case FieldKind.KScalar: entry.A != 0.0F
+    case FieldKind.KFloat64: entryFloat64(entry) != 0.0
     case FieldKind.KEnum: entry.A != 0.0F || entry.B != 0.0F
     case FieldKind.KString: entryText(entry) == "style-field-contract"
     case FieldKind.KGradient: entry.Payload != nil
@@ -2136,6 +2391,7 @@ internal class StyleFixtures {
     case FieldKind.KImageSource: entry.Payload == nil
     case FieldKind.KShaderEffect: entry.Payload != nil
     case FieldKind.KScrollbar: entryScrollbar(entry) != nil
+    case FieldKind.KDashes: entryDashes(entry) != nil
   }
 
   private func styleFieldEntry(entries StyleEntries, field StyleField) StyleEntry? {

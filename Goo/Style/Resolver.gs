@@ -25,6 +25,17 @@ internal data struct Transition {
   internal var Easing Easing
   internal var Elapsed float64
   internal var Duration float64
+  internal var Payload object?
+}
+
+internal sealed class Float64TransitionValues {
+  internal let From float64
+  internal let To float64
+
+  internal init(from float64, to float64) {
+    From = from
+    To = to
+  }
 }
 
 internal data struct LayoutStyleCommit {
@@ -512,7 +523,7 @@ internal partial class Resolver {
       finishTransition(n, e.Field)
       return
     }
-    if e.Field == StyleField.BoxShadows {
+    if e.Field == StyleField.BoxShadows || e.Field == StyleField.TextShadows {
       writeBoxShadows(n, e, initial)
       return
     }
@@ -523,9 +534,21 @@ internal partial class Resolver {
     }
     if initial || Owner?.Preferences.ReducedMotion == true || n.TransitionMs <= 0.0 || !lerpable(e.Field)
       || !transitionSelected(n.TransitionSelection, e.Field)
-      || (fieldKind(e.Field) == FieldKind.KLength && cur.B != e.B) {
+      || (fieldKind(e.Field) == FieldKind.KLength && cur.B != e.B)
+      || (e.Field == StyleField.BackgroundGradient && !compatibleGradients(entryGradient(cur), entryGradient(e)))
+      || (e.Field == StyleField.DashIntervals && !compatibleDashIntervals(entryDashes(cur), entryDashes(e))) {
         finishTransition(n, e.Field)
-        if writeDirectWithInvalidation(n, e, invalidationFor(e.Field), Owner) {
+        var direct = e
+        if e.Field == StyleField.DashIntervals && !initial && Owner?.Preferences.ReducedMotion != true
+          && n.TransitionMs > 0.0 && transitionSelected(n.TransitionSelection, StyleField.DashOffset) {
+          if let target = entryDashes(e) {
+            let offset = n.Dashes?.Offset ?? 0.0
+            if target.Offset != offset {
+              direct = StyleEntry{Field: e.Field, Payload: DashPattern(target, offset)}
+            }
+          }
+        }
+        if writeDirectWithInvalidation(n, direct, invalidationFor(e.Field), Owner) {
           if e.Field == StyleField.ScrollbarX || e.Field == StyleField.ScrollbarY {
             Scrollbars.Queue(n)
           }
@@ -537,17 +560,18 @@ internal partial class Resolver {
   }
 
   internal func writeBoxShadows(n Node, e StyleEntry, initial bool) {
-    let cur = readField(n, StyleField.BoxShadows)
+    let cur = readField(n, e.Field)
     if sameStyleEntry(cur, e) {
-      finishTransition(n, StyleField.BoxShadows)
+      finishTransition(n, e.Field)
       return
     }
     if initial || Owner?.Preferences.ReducedMotion == true || n.TransitionMs <= 0.0
-      || !transitionSelected(n.TransitionSelection, StyleField.BoxShadows)
-      || !boxShadowListsCompatible(entryShadows(cur), entryShadows(e)) {
-        finishTransition(n, StyleField.BoxShadows)
+      || !transitionSelected(n.TransitionSelection, e.Field)
+      || !boxShadowListsCompatible(entryShadows(cur), entryShadows(e))
+      || (e.Field == StyleField.TextShadows && boxShadowCount(entryShadows(cur)) != boxShadowCount(entryShadows(e))) {
+        finishTransition(n, e.Field)
         if writeDirectWithInvalidation(n, e, PaintResourceInvalidated, Owner) {
-          recordResolvedChange(StyleField.BoxShadows)
+          recordResolvedChange(e.Field)
         }
         return
       }
@@ -555,54 +579,75 @@ internal partial class Resolver {
   }
 
   internal func startOrRetarget(n Node, e StyleEntry, cur StyleEntry) {
-    if n.Transitions == nil {
-      n.Transitions = List[Transition]()
-    }
-    guard let unwrapped = n.Transitions else {
-      return
-    }
-    let list = unwrapped
+    n.Transitions ??= List[Transition]()
+    let list = n.Transitions!!
+    var index = -1
     for i in 0 ... list.Count {
-      if list[i].Field == e.Field {
-        if list[i].ToA == e.A && list[i].ToB == e.B && list[i].ToC == e.C && list[i].ToD == e.D {
-          return
+      let current = list[i]
+      if current.Field != e.Field { continue }
+      let sameTarget = if current.Payload is GradientTransitionValues values {
+        sameGradient(values.To, entryGradient(e))
+      } else if current.Payload is Float64TransitionValues values {
+        values.To == entryFloat64(e)
+      } else if current.Payload is DashTransitionValues values {
+        sameDashIntervals(values.To, entryDashes(e))
+      } else {
+        current.ToA == e.A && current.ToB == e.B && current.ToC == e.C && current.ToD == e.D
+      }
+      if sameTarget { return }
+      index = i
+      break
+    }
+    if e.Field is StyleField.OutlineWidth or StyleField.OutlineColor or StyleField.OutlineOffset {
+      Outlining.PrepareTransition(n)
+    } else if e.Field is StyleField.TextStrokeWidth or StyleField.TextStrokeColor {
+      TextStroking.PrepareTransition(n)
+      propagateInherited(n, e.Field, prepareStroke: true)
+    }
+    var payload object? = nil
+    if e.Field == StyleField.BackgroundGradient {
+      payload = GradientTransitionValues(entryGradient(cur)!!, entryGradient(e)!!)
+    } else if e.Field == StyleField.DashIntervals {
+      let values = DashTransitionValues(entryDashes(cur)!!, entryDashes(e)!!)
+      n.Dashes = values.Work
+      payload = values
+    } else if fieldKind(e.Field) == FieldKind.KFloat64 {
+      payload = Float64TransitionValues(entryFloat64(cur), entryFloat64(e))
+      if e.Field == StyleField.DashOffset {
+        if let dashes = n.Dashes {
+          if !dashes.TransitionOwned { n.Dashes = DashPattern(dashes, dashes.Offset) }
+        } else {
+          n.Dashes = DashPattern([]float64{}, 0.0){.TransitionOwned: true}
         }
-        list[i] = Transition{ Field: e.Field,
-          FromA: cur.A, FromB: cur.B, FromC: cur.C, FromD: cur.D,
-          ToA: e.A, ToB: e.B, ToC: e.C, ToD: e.D,
-          Easing: n.TransitionEasing,
-          Elapsed: -n.TransitionDelayMs / 1000.0, Duration: n.TransitionMs / 1000.0 }
-        return
       }
     }
-    list.Add(Transition{ Field: e.Field,
+    let next = Transition{Field: e.Field,
       FromA: cur.A, FromB: cur.B, FromC: cur.C, FromD: cur.D,
-      ToA: e.A, ToB: e.B, ToC: e.C, ToD: e.D,
+      ToA: e.A, ToB: e.B, ToC: e.C, ToD: e.D, Payload: payload,
       Easing: n.TransitionEasing,
-      Elapsed: -n.TransitionDelayMs / 1000.0, Duration: n.TransitionMs / 1000.0 })
+      Elapsed: -n.TransitionDelayMs / 1000.0, Duration: n.TransitionMs / 1000.0}
+    if index < 0 { list.Add(next) } else { list[index] = next }
     if !containsAnimating(n) { Animating.Add(NodeMount(n)) }
   }
 
   internal func startOrRetargetBoxShadows(n Node, e StyleEntry, cur StyleEntry) {
-    if n.Transitions == nil {
-      n.Transitions = List[Transition]()
-    }
-    guard let unwrapped = n.Transitions else {
-      return
-    }
-    let list = unwrapped
+    n.Transitions ??= List[Transition]()
+    let list = n.Transitions!!
+    var index = -1
     for i in 0 ... list.Count {
-      if list[i].Field == StyleField.BoxShadows {
-        if sameBoxShadows(list[i].TargetShadows, entryShadows(e)) {
-          return
-        }
-        list[i] = makeBoxShadowTransition(entryShadows(cur), entryShadows(e),
-          n.TransitionEasing, n.TransitionMs / 1000.0, n.TransitionDelayMs / 1000.0)
-        return
-      }
+      if list[i].Field != e.Field { continue }
+      if sameBoxShadows(list[i].TargetShadows, entryShadows(e)) { return }
+      index = i
+      break
     }
-    list.Add(makeBoxShadowTransition(entryShadows(cur), entryShadows(e),
-      n.TransitionEasing, n.TransitionMs / 1000.0, n.TransitionDelayMs / 1000.0))
+    let next = makeBoxShadowTransition(e.Field, entryShadows(cur), entryShadows(e),
+      n.TransitionEasing, n.TransitionMs / 1000.0, n.TransitionDelayMs / 1000.0)
+    if index < 0 { list.Add(next) } else { list[index] = next }
+    if e.Field == StyleField.TextShadows {
+      Array.Copy(next.FromShadows!!.Items, next.WorkingShadows!!.Items, next.FromShadows!!.Count)
+      n.TextShadows = next.WorkingShadows
+      propagateInherited(n, e.Field)
+    }
     if !containsAnimating(n) { Animating.Add(NodeMount(n)) }
   }
 
@@ -646,7 +691,8 @@ internal partial class Resolver {
           continue
         }
         let t = tr.Duration <= 0.0 ? 1.0 : Math.Min(1.0, tr.Elapsed / tr.Duration)
-        let ft = float32(ease(tr.Easing, t))
+        let progress = ease(tr.Easing, t)
+        let ft = float32(progress)
         if let working = tr.WorkingLength {
           let from = tr.FromLength
           let to = tr.ToLength
@@ -661,16 +707,27 @@ internal partial class Resolver {
             recordResolvedChange(tr.Field)
             pendingEffects = pendingEffects | ReconcileEffects.Layout
           }
-        } else if tr.Field == StyleField.BoxShadows {
+        } else if tr.Field == StyleField.BoxShadows || tr.Field == StyleField.TextShadows {
           guard let from = tr.FromShadows, let to = tr.ToShadows, let work = tr.WorkingShadows else {
             list.RemoveAt(ti - 1)
             continue
           }
           lerpBoxShadows(from, to, work, ft)
-          n.BoxShadows = t >= 1.0 ? tr.TargetShadows : work
-          recordResolvedChange(StyleField.BoxShadows)
+          let next = t >= 1.0 ? tr.TargetShadows : work
+          if tr.Field == StyleField.BoxShadows { n.BoxShadows = next } else { n.TextShadows = next }
+          n.BumpScenePaintVersion()
+          recordResolvedChange(tr.Field)
+        } else if tr.Payload is GradientTransitionValues values {
+          values.Sample(progress)
+          n.BackgroundGradient = t >= 1.0 ? values.To : values.Work
+          n.BumpScenePaintVersion()
+          recordResolvedChange(tr.Field)
+        } else if tr.Payload is DashTransitionValues values {
+          values.Sample(progress)
+          n.BumpScenePaintVersion()
+          recordResolvedChange(tr.Field)
         } else {
-          if writeDirectWithInvalidation(n, interpolatedTransitionEntry(tr, ft), PaintResourceInvalidated,
+          if writeDirectWithInvalidation(n, interpolatedTransitionEntry(tr, progress), PaintResourceInvalidated,
             Owner) {
             recordResolvedChange(tr.Field)
           }
@@ -688,7 +745,12 @@ internal partial class Resolver {
     }
   }
 
-  private func interpolatedTransitionEntry(tr Transition, t float32) StyleEntry {
+  private func interpolatedTransitionEntry(tr Transition, progress float64) StyleEntry {
+    if tr.Payload is Float64TransitionValues values {
+      let value = if progress >= 1.0 { values.To } else { values.From + (values.To - values.From) * progress }
+      return float64StyleEntry(tr.Field, value)
+    }
+    let t = float32(progress)
     if fieldKind(tr.Field) != FieldKind.KColor {
       return StyleEntry{ Field: tr.Field,
         A: tr.FromA + (tr.ToA - tr.FromA) * t,
@@ -713,7 +775,7 @@ internal partial class Resolver {
       D: alpha }
   }
 
-  internal func propagateInherited(parent Node, f StyleField) {
+  internal func propagateInherited(parent Node, f StyleField, prepareStroke bool = false) {
     for i in 0 ... parent.Children.Count {
       let child = parent.Children[i]
       if styleMaskHas(child.LocalMask, f) {
@@ -725,10 +787,15 @@ internal partial class Resolver {
         }
       }
       finishTransition(child, f)
-      if writeDirectWithInvalidation(child, readField(parent, f), PaintResourceInvalidated, Owner) {
+      if prepareStroke { TextStroking.PrepareTransition(child) }
+      if f == StyleField.TextShadows {
+        child.TextShadows = parent.TextShadows
+        child.BumpScenePaintVersion()
+        recordResolvedChange(f)
+      } else if writeDirectWithInvalidation(child, readField(parent, f), PaintResourceInvalidated, Owner) {
         recordResolvedChange(f)
       }
-      propagateInherited(child, f)
+      propagateInherited(child, f, prepareStroke)
     }
     for child in ScrollbarParts.Children(parent) {
       if styleMaskHas(child.LocalMask, f) {
@@ -740,10 +807,15 @@ internal partial class Resolver {
         }
       }
       finishTransition(child, f)
-      if writeDirectWithInvalidation(child, readField(parent, f), PaintResourceInvalidated, Owner) {
+      if prepareStroke { TextStroking.PrepareTransition(child) }
+      if f == StyleField.TextShadows {
+        child.TextShadows = parent.TextShadows
+        child.BumpScenePaintVersion()
+        recordResolvedChange(f)
+      } else if writeDirectWithInvalidation(child, readField(parent, f), PaintResourceInvalidated, Owner) {
         recordResolvedChange(f)
       }
-      propagateInherited(child, f)
+      propagateInherited(child, f, prepareStroke)
     }
   }
 
@@ -776,11 +848,11 @@ n.Kind != NodeKind.Shape || !StyleFields.Has(f, StyleFieldFlags.ShapeExcluded)
 
 internal func isLogicalStyleField(f StyleField) bool -> StyleFields.Has(f, StyleFieldFlags.Logical)
 
-internal func makeBoxShadowTransition(from BoxShadowStack?, target BoxShadowStack?,
+internal func makeBoxShadowTransition(field StyleField, from BoxShadowStack?, target BoxShadowStack?,
   easing Easing, duration float64, delay float64) Transition{
     let count = Math.Max(boxShadowCount(from), boxShadowCount(target))
     return Transition{
-      Field: StyleField.BoxShadows,
+      Field: field,
       FromShadows: paddedBoxShadows(from, target, count),
       ToShadows: paddedBoxShadows(target, from, count),
       TargetShadows: target,
@@ -960,6 +1032,23 @@ internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Acti
     case StyleField.TransformOriginY {
       Transforming.SetOriginY(n, Length{ Unit: LengthUnit(int32(e.B)), Value: e.A })
     }
+    case StyleField.ShapeCornerRadius { n.ShapeCornerRadius = entryFloat64(e) }
+    case StyleField.StrokeStart { n.StrokeStart = entryFloat64(e) }
+    case StyleField.StrokeEnd { n.StrokeEnd = entryFloat64(e) }
+    case StyleField.MiterLimit { n.MiterLimit = entryFloat64(e) }
+    case StyleField.DashOffset {
+      if let dashes = n.Dashes {
+        if dashes.TransitionOwned { dashes.SetOffset(entryFloat64(e)) }
+        else { n.Dashes = DashPattern(dashes, entryFloat64(e)) }
+      } else {
+        n.Dashes = DashPattern([]float64{}, entryFloat64(e)){.TransitionOwned: true}
+      }
+    }
+    case StyleField.DashIntervals {
+      n.Dashes = entryDashes(e)
+    }
+    case StyleField.SelectionColor { n.SelectionColor = Color.FromNormalized(e.A, e.B, e.C, e.D) }
+    case StyleField.CaretColor { n.EditorCaretColor = Color.FromNormalized(e.A, e.B, e.C, e.D) }
     case StyleField.ZIndex {
       n.ZIndex = (int32(e.A) << 16) | int32(e.B)
     }
@@ -1052,15 +1141,15 @@ internal func readField(n Node, f StyleField) StyleEntry {
     case StyleField.BorderBottomColor { return StyleEntry{ Field: f, A: n.BorderBottomColor.R, B: n.BorderBottomColor.G, C: n.BorderBottomColor.B, D: n.BorderBottomColor.A } }
     case StyleField.ShapeStrokeWidth { return StyleEntry{ Field: f, A: n.BorderLeftWidth.Value, B: float32(int32(n.BorderLeftWidth.Unit)) } }
     case StyleField.ShapeStrokeColor { return StyleEntry{ Field: f, A: n.BorderLeftColor.R, B: n.BorderLeftColor.G, C: n.BorderLeftColor.B, D: n.BorderLeftColor.A } }
-    case StyleField.OutlineWidth { return StyleEntry{ Field: f, A: n.OutlineWidth.Value, B: float32(int32(n.OutlineWidth.Unit)) } }
+    case StyleField.OutlineWidth { return StyleEntry{ Field: f, A: n.OutlineWidth.Value, B: float32(int32(LengthUnit.Px)) } }
     case StyleField.OutlineColor { return StyleEntry{ Field: f, A: n.OutlineColor.R, B: n.OutlineColor.G, C: n.OutlineColor.B, D: n.OutlineColor.A } }
-    case StyleField.OutlineOffset { return StyleEntry{ Field: f, A: n.OutlineOffset.Value, B: float32(int32(n.OutlineOffset.Unit)) } }
+    case StyleField.OutlineOffset { return StyleEntry{ Field: f, A: n.OutlineOffset.Value, B: float32(int32(LengthUnit.Px)) } }
     case StyleField.Opacity { return StyleEntry{ Field: f, A: float32(n.Opacity) } }
     case StyleField.BackdropBlur { return StyleEntry{ Field: f, A: n.BackdropBlur } }
     case StyleField.BoxShadows { return StyleEntry{ Field: f, Payload: n.BoxShadows } }
     case StyleField.TextShadows { return StyleEntry{ Field: f, Payload: n.TextShadows } }
     case StyleField.TextStrokeWidth {
-      return StyleEntry{ Field: f, A: n.TextStrokeWidth.Value, B: float32(int32(n.TextStrokeWidth.Unit)) }
+      return StyleEntry{ Field: f, A: n.TextStrokeWidth.Value, B: float32(int32(LengthUnit.Px)) }
     }
     case StyleField.TextStrokeColor {
       return StyleEntry{ Field: f, A: n.TextStrokeColor.R, B: n.TextStrokeColor.G,
@@ -1104,6 +1193,20 @@ internal func readField(n Node, f StyleField) StyleEntry {
     case StyleField.TransformOriginY {
       let value = Transforming.OriginY(n)
       return StyleEntry{ Field: f, A: value.Value, B: float32(int32(value.Unit)) }
+    }
+    case StyleField.ShapeCornerRadius { return float64StyleEntry(f, n.ShapeCornerRadius) }
+    case StyleField.StrokeStart { return float64StyleEntry(f, n.StrokeStart) }
+    case StyleField.StrokeEnd { return float64StyleEntry(f, n.StrokeEnd) }
+    case StyleField.MiterLimit { return float64StyleEntry(f, n.MiterLimit) }
+    case StyleField.DashOffset { return float64StyleEntry(f, n.Dashes?.Offset ?? 0.0) }
+    case StyleField.DashIntervals { return StyleEntry{Field: f, Payload: n.Dashes} }
+    case StyleField.SelectionColor {
+      return StyleEntry{Field: f, A: n.SelectionColor.R, B: n.SelectionColor.G,
+        C: n.SelectionColor.B, D: n.SelectionColor.A}
+    }
+    case StyleField.CaretColor {
+      return StyleEntry{Field: f, A: n.EditorCaretColor.R, B: n.EditorCaretColor.G,
+        C: n.EditorCaretColor.B, D: n.EditorCaretColor.A}
     }
     case StyleField.ZIndex {
       return StyleEntry{ Field: f, A: float32(n.ZIndex >> 16), B: float32(n.ZIndex & int32(65535)) }

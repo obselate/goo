@@ -35,13 +35,17 @@ internal class Outlining {
       return Length{}
     }
 
+    internal func PrepareTransition(n Node) {
+      if Get(n) == nil { add(n, OutlineValue{}) }
+    }
+
     internal func SetWidth(n Node, width Length) {
       if let value = Get(n) {
-        value.Width = width
+        value.Width = width.Unit == LengthUnit.Px && width.Value == 0.0F ? Length{} : width
         prune(n, value)
         return
       }
-      if emptyLength(width) {
+      if emptyLength(width) || width.Value == 0.0F {
         return
       }
       let value = OutlineValue{ Width: width, Color: Color.Transparent }
@@ -63,11 +67,11 @@ internal class Outlining {
 
     internal func SetOffset(n Node, offset Length) {
       if let value = Get(n) {
-        value.Offset = offset
+        value.Offset = offset.Unit == LengthUnit.Px && offset.Value == 0.0F ? Length{} : offset
         prune(n, value)
         return
       }
-      if emptyLength(offset) {
+      if emptyLength(offset) || offset.Value == 0.0F {
         return
       }
       let value = OutlineValue{ Offset: offset, Color: Color.Transparent }
