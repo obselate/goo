@@ -77,6 +77,7 @@ public class TextEditor : Blob {
     }
   }
   /// Gets the selection highlight color.
+  /// Select TransitionProperty.SelectionColor to interpolate changes.
   public prop SelectionColor Color {
     get -> declarationSelectionColor
     set {
@@ -85,6 +86,7 @@ public class TextEditor : Blob {
     }
   }
   /// Gets the caret color.
+  /// Select TransitionProperty.CaretColor to interpolate changes.
   public prop CaretColor Color {
     get -> declarationCaretColor
     set {

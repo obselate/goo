@@ -507,6 +507,7 @@ public open class Style {
   }
   /// Sets or explicitly clears the background gradient.
   /// A non-nil gradient wins over BackgroundColor when both apply.
+  /// Matching gradient types and stop counts interpolate through TransitionProperty.BackgroundGradient.
   public prop BackgroundGradient Gradient? {
     set {
       CheckMutable()
@@ -682,6 +683,9 @@ public open class Style {
     }
   }
   /// Sets the signed pixel offset from the border edge. Positive values move the outline outward.
+  /// Within non-scrolling clipping ancestors, a clipped outward outline moves inward onto the control.
+  /// Where it meets a rounded clip corner, it takes that clip's padding-edge radius.
+  /// Fitting stops at the nearest portal or visual transform. Axes with a scroll range or offset are not fitted.
   public prop OutlineOffset Length {
     set {
       CheckMutable()
@@ -789,6 +793,7 @@ public open class Style {
   }
   /// Sets the defensively copied inherited front-to-back text shadow stack.
   /// An empty array clears inherited text shadows.
+  /// TransitionProperty.TextShadow interpolates matching counts, including transparent shadows.
   public prop TextShadows []TextShadow {
     set {
       CheckMutable()
@@ -834,11 +839,11 @@ public open class Style {
     }
   }
   /// Sets the inherited non-negative pixel width of the glyph stroke.
-  /// The stroke is paint-only, outlines glyphs only, and snaps during transitions.
+  /// The stroke is paint-only and outlines glyphs only.
   public prop TextStrokeWidth Length{
     set {
       CheckMutable()
-      let normalized = value.Unit == LengthUnit.Px && value.Value == 0.0F ? Length{} : value
+      let normalized = value.Unit == LengthUnit.Unset ? Length.Pixels(0) : value
       pushCheckedLength(StyleField.TextStrokeWidth, normalized, "TextStrokeWidth", false, false, false)
     }
   }

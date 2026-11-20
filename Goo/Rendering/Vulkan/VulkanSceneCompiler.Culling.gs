@@ -66,6 +66,16 @@ internal partial class VulkanSceneCompiler {
     return result
   }
 
+  private func PathDeviceScale(transformIndex int32) float32 {
+    let matrix = ResolveCompilerFrameTransform(transformIndex)
+    let first = matrix.A * matrix.A + matrix.B * matrix.B
+    let second = matrix.C * matrix.C + matrix.D * matrix.D
+    let dot = matrix.A * matrix.C + matrix.B * matrix.D
+    let difference = first - second
+    return MathF.Sqrt(0.5F * (first + second
+      + MathF.Sqrt(difference * difference + 4.0F * dot * dot))) * (textScene?.PixelScale ?? 1.0F)
+  }
+
   private func TransformCompilerBounds(
     bounds ConservativeBounds,
     transform PrimitiveTransform) ConservativeBounds{

@@ -87,6 +87,7 @@ public class Shape : Blob {
     }
   }
   /// Gets or sets the non-negative finite corner radius in logical pixels.
+  /// Select TransitionProperty.ShapeCornerRadius to interpolate changes.
   public prop CornerRadius float64{
     get -> cornerRadius
     set {
@@ -101,6 +102,7 @@ public class Shape : Blob {
   /// None measures flattened geometry after fit mapping.
   /// NonScalingStroke measures geometry after the full transform.
   /// On mount, StrokeStart must not exceed StrokeEnd.
+  /// Select TransitionProperty.StrokeStart to interpolate changes.
   public prop StrokeStart float64{
     get -> strokeStart
     set {
@@ -115,6 +117,7 @@ public class Shape : Blob {
   /// fill remains unchanged. Trim precedes dashes, whose phase starts at each
   /// trimmed contour. Trim preserves fully included closed contours; partial
   /// contours use the stroke's Cap at their open ends.
+  /// Select TransitionProperty.StrokeEnd to interpolate changes.
   public prop StrokeEnd float64{
     get -> strokeEnd
     set {

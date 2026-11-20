@@ -55,7 +55,7 @@ internal class TextShadowing {
         return
       }
       let current = Get(n)
-      if sameTextShadows(current, value) {
+      if Object.ReferenceEquals(current, value) {
         return
       }
       if current != nil { values?.Remove(n) }
@@ -70,30 +70,15 @@ internal class TextShadowing {
 }
 
 internal func copyTextShadows(values []TextShadow) BoxShadowStack {
-  var visible int32 = 0
+  let items = [values.Length]BoxShadow
   for i in 0 ... values.Length {
-    if !transparentTextShadow(values[i]) { visible++ }
-  }
-  let items = [visible]BoxShadow
-  var target int32 = 0
-  for i in 0 ... values.Length {
-    let normalized = normalizeTextShadow(values[i])
-    if normalized.Color.A == 0.0F { continue }
-    items[target] = textShadowPayload(normalized)
-    target++
+    items[i] = textShadowPayload(normalizeTextShadow(values[i]))
   }
   return BoxShadowStack(items)
 }
 
-internal func singleTextShadow(value TextShadow) BoxShadowStack {
-  let normalized = normalizeTextShadow(value)
-  if normalized.Color.A == 0.0F {
-    return BoxShadowStack([0]BoxShadow)
-  }
-  let items = [1]BoxShadow
-  items[0] = textShadowPayload(normalized)
-  return BoxShadowStack(items)
-}
+internal func singleTextShadow(value TextShadow) BoxShadowStack ->
+  BoxShadowStack([]BoxShadow{textShadowPayload(normalizeTextShadow(value))})
 
 internal func normalizeTextShadow(value TextShadow) TextShadow -> TextShadow {
   OffsetX: value.OffsetX,
@@ -122,5 +107,3 @@ private func textShadowPayload(value TextShadow) BoxShadow -> BoxShadow {
   Blur: value.Blur,
   Color: value.Color,
 }
-
-private func transparentTextShadow(value TextShadow) bool -> normalizeTextShadow(value).Color.A == 0.0F

@@ -3,6 +3,12 @@
 !/.gitignore
 !/.gitattributes
 !/global.json
+!/.claude-plugin/
+/.claude-plugin/*
+!/.claude-plugin/marketplace.json
+!/.config/
+/.config/*
+!/.config/dotnet-tools.json
 !/.agents/
 /.agents/*
 !/.agents/plugins/
@@ -13,8 +19,10 @@
 !/.github/workflows/
 /.github/workflows/*
 !/.github/workflows/ci.yml
+!/.github/workflows/wasm.yml
 !/.github/workflows/label-issues.yml
 !/.github/workflows/sync-generated-docs.yml
+!/.github/workflows/nightly-inputs.yml
 !/.github/ISSUE_TEMPLATE/
 !/.github/ISSUE_TEMPLATE/**
 !/.github/PULL_REQUEST_TEMPLATE.md
@@ -30,6 +38,7 @@
 !/.github/scripts/build-sdl-linux-x64.sh
 !/.github/scripts/build-sdl-macos-arm64.sh
 !/.github/scripts/build-text-native-linux-x64.sh
+!/.github/scripts/build-text-native-wasm.sh
 !/.github/scripts/build-text-native-macos-arm64.sh
 !/.github/scripts/build-text-native-win-x64.sh
 !/.github/scripts/build-text-native-android.sh
@@ -42,6 +51,9 @@
 !/.github/scripts/stage-linux-x64.sh
 !/.github/scripts/linux-bundle-files.txt
 !/.github/scripts/stage-macos-arm64.sh
+!/.github/scripts/build-lavapipe-linux-x64.sh
+!/.github/scripts/fetch-lavapipe-win-x64.sh
+!/.github/scripts/devtools-profiler-ui-smoke.mjs
 
 !/.github/scripts/with-headless-wayland.sh
 !/.github/scripts/run-android-native-menus.sh
@@ -56,6 +68,18 @@
 !/Goo.Audio/**
 !/Goo.Android/
 !/Goo.Android/**
+!/Goo.Wasm/
+!/Goo.Wasm/**
+!/Goo.SoftwareRenderer/
+/Goo.SoftwareRenderer/*
+!/Goo.SoftwareRenderer/Goo.SoftwareRenderer.csproj
+!/Goo.SoftwareRenderer/Goo.SoftwareRenderer.targets
+!/Goo.SoftwareRenderer/licenses/
+!/Goo.SoftwareRenderer/licenses/**
+!/samples/
+/samples/*
+!/samples/BrowserBox/
+!/samples/BrowserBox/**
 !/tests/
 !/tests/**
 /tests/GooExtended.Tests/
@@ -69,6 +93,15 @@
 
 !/docs/
 /docs/*
+!/docs/README.md
+!/docs/getting-started.md
+!/docs/platform-preflight.md
+!/docs/richtext.md
+!/docs/shipping.md
+!/docs/tutorials/
+!/docs/tutorials/*.md
+!/docs/tutorials/images/
+!/docs/tutorials/images/drawing-a-gauge.png
 !/docs/nuget-readme.md
 !/docs/csharp.md
 !/docs/android.md
@@ -129,6 +162,13 @@
 !/tools/Goo.Investigation/**
 !/tools/Goo.HostChecks/
 !/tools/Goo.HostChecks/**
+!/tools/Goo.InputFuzz/
+/tools/Goo.InputFuzz/*
+!/tools/Goo.InputFuzz/*.gs
+!/tools/Goo.InputFuzz/Goo.InputFuzz.gsproj
+!/tools/Goo.InputFuzz/font.cc
+!/tools/Goo.InputFuzz/image.c
+!/tools/Goo.InputFuzz/run.sh
 
 !/integrations/
 !/integrations/**
@@ -154,6 +194,7 @@
 
 !/README.md
 !/CONTRIBUTING.md
+!/CONVENTIONS.md
 !/CHANGELOG.md
 !/changelog.d/
 !/changelog.d/*.md

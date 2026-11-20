@@ -12,6 +12,7 @@ public shared class Application {
     private var applicationIdentifier string = ""
     private var nativeIdentityBound bool
     internal prop Identifier string { get -> applicationIdentifier }
+    internal var RunHost Action[Window]?
 
     internal prop HasOpenedWindow bool {
         get;
@@ -114,6 +115,10 @@ public shared class Application {
     public func Run(window Window) {
         if window == nil {
             throw ArgumentNullException("window")
+        }
+        if let run = RunHost {
+            run(window)
+            return
         }
         EnsureActivation()
         window.RunApplication()

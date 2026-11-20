@@ -1,3 +1,6 @@
+#ifdef GOO_WEBGPU
+float gooClipCoverage() { return 1.0; }
+#else
 [[vk::binding(0, 1)]] Sampler2DArray gooClipMaskAtlas;
 [[vk::binding(1, 1)]] StructuredBuffer<uint> gooClipChainBuffer;
 
@@ -88,3 +91,4 @@ float gooClipCoverage()
     }
     return coverage;
 }
+#endif

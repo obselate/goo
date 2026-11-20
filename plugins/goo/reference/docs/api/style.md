@@ -12,6 +12,33 @@ Use `HoverStyle`, `ActiveStyle`, `FocusStyle`, and `DisabledStyle` for interacti
 
 `AccessibilityName` and `AccessibilityRole` change one field without replacing the other accessibility fields. A later `Accessibility` declaration replaces the whole declaration.
 
+## Transition declared values
+
+```gsharp
+Container{
+    OutlineWidth: 1,
+    OutlineColor: Color.Black,
+    TransitionMs: 180,
+    TransitionProperties: []TransitionProperty{TransitionProperty.OutlineWidth, TransitionProperty.OutlineColor},
+    HoverStyle: Style{OutlineWidth: 3, OutlineColor: Color.White},
+}
+```
+
+`TransitionMs`, `TransitionDelayMs` and `TransitionEasing` apply to declared values. Omitted `TransitionProperties` selects `All`. `LayoutTransition` owns computed position and size instead.
+
+| Values | Selectors and interpolation |
+| --- | --- |
+| Outline width, color and offset | `OutlineWidth`, `OutlineColor`, `OutlineOffset` |
+| Glyph stroke width and color | `TextStrokeWidth`, `TextStrokeColor` |
+| Text shadow stacks | `TextShadow`. Counts must match, including transparent shadows. Otherwise the stack changes at once. An empty stack clears it. |
+| Background gradients | `BackgroundGradient`. Gradient type and stop count must match. Geometry, stop positions and colors interpolate. Other changes, including nil, are discrete. |
+| Backdrop blur radius | `BackdropBlur` |
+| Shape geometry | `ShapeCornerRadius`, `StrokeStart`, `StrokeEnd`, `MiterLimit`. These select the Shape and VectorStroke declarations. |
+| Dash pattern | `DashOffset`, `DashIntervals`. Intervals interpolate pairwise when normalized counts match. Other interval changes are discrete. Offset is independent. |
+| Editor paint | `CaretColor`, `SelectionColor`. SelectionColor also applies to TextEntry and selectable Text. |
+
+Shape, dash and editor declarations use the same style sampler when they change between builds. Retargets start from the displayed values. Reduced motion snaps. Working gradient, shadow and dash storage is allocated when a target changes, not on each tick. Declared input objects are not mutated.
+
 ## `AlignContent`
 
 
@@ -875,7 +902,7 @@ Binds the background color without rebuilding or changing layout.
 
 ### `BackgroundGradient`
 
-Sets or explicitly clears the background gradient. A non-nil gradient wins over BackgroundColor when both apply.
+Sets or explicitly clears the background gradient. A non-nil gradient wins over BackgroundColor when both apply. Matching gradient types and stop counts interpolate through TransitionProperty.BackgroundGradient.
 
 ### `BackgroundImageFit`
 
@@ -1123,7 +1150,7 @@ Binds the outline color without rebuilding or changing layout.
 
 ### `OutlineOffset`
 
-Sets the signed pixel offset from the border edge. Positive values move the outline outward.
+Sets the signed pixel offset from the border edge. Positive values move the outline outward. Within non-scrolling clipping ancestors, a clipped outward outline moves inward onto the control. Where it meets a rounded clip corner, it takes that clip's padding-edge radius. Fitting stops at the nearest portal or visual transform. Axes with a scroll range or offset are not fitted.
 
 ### `OutlineWidth`
 
@@ -1219,7 +1246,7 @@ Sets one inherited text shadow as a one-item shadow stack.
 
 ### `TextShadows`
 
-Sets the defensively copied inherited front-to-back text shadow stack. An empty array clears inherited text shadows.
+Sets the defensively copied inherited front-to-back text shadow stack. An empty array clears inherited text shadows. TransitionProperty.TextShadow interpolates matching counts, including transparent shadows.
 
 ### `TextStrokeColor`
 
@@ -1231,7 +1258,7 @@ Binds the inherited glyph stroke color without changing text layout.
 
 ### `TextStrokeWidth`
 
-Sets the inherited non-negative pixel width of the glyph stroke. The stroke is paint-only, outlines glyphs only, and snaps during transitions.
+Sets the inherited non-negative pixel width of the glyph stroke. The stroke is paint-only and outlines glyphs only.
 
 ### `TextTransform`
 
@@ -1412,6 +1439,22 @@ Selects a style property that can interpolate during a transition.
 - `LetterSpacing`
 - `LineHeight`
 - `Transform`
+- `OutlineWidth`
+- `OutlineColor`
+- `OutlineOffset`
+- `TextStrokeWidth`
+- `TextStrokeColor`
+- `TextShadow`
+- `BackgroundGradient`
+- `BackdropBlur`
+- `ShapeCornerRadius`
+- `StrokeStart`
+- `StrokeEnd`
+- `MiterLimit`
+- `DashOffset`
+- `DashIntervals`
+- `SelectionColor`
+- `CaretColor`
 
 ## `Vh`
 

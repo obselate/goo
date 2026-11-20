@@ -47,7 +47,7 @@ internal partial class TextEditorLayouts {
           bottomInset = glyphOverflow(last.Lines[last.Lines.Count - 1])
         }
         let bounded = height >= 0.0F
-        let heights TextEditorLineHeights? = bounded && width == BoxGeometry.ContentWidth(n)
+        let heights TextEditorLineHeights? = bounded && width == BoxGeometry.ContentWidth(n, true)
           ? state.TrackHeights(snapshot, paragraphWidth, fingerprint, lineHeight, metrics.Ascent, metrics.Descent) : nil
         var firstLine int32 = 0
         var lastLine = snapshot.LineCount
@@ -153,10 +153,10 @@ internal partial class TextEditorLayouts {
 
     internal func ScrollViewportChanged(n Node) bool {
       guard let state = n.EditorState, let layout = state.Layout else { return true }
-      if state.Dirty || layout.Version != state.Document.Version { return true }
+      if state.Dirty || layout.Version != state.PresentationVersion { return true }
       if layout.HeightConstraint < 0.0F { return false }
       if layout.Lines.Count == 0 { return true }
-      let snapshot = state.Document.Snapshot()
+      let snapshot = state.Snapshot()
       let line = lineForVerticalOffset(state, snapshot, ScrollPoint(n).Y,
         layout.ParagraphWidth, layout.FontFingerprint, layout.LineHeight, layout.Ascent, layout.Descent)
       let first = Math.Max(0, line - n.EditorOverscanLines)

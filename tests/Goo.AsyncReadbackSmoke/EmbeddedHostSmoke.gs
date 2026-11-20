@@ -92,10 +92,47 @@ internal open class EmbeddedSmokeHost : EmbeddedWindowHost {
   }
 }
 
+internal class EmbeddedLayoutTransitionCell : Cell {
+  internal let Target ElementHandle = ElementHandle()
+  internal let Control ElementHandle = ElementHandle()
+  internal var Factories int32
+
+  public override func Build() Blob -> Container{
+    Width: Percent(100), Height: Percent(100), AlignItems: AlignItems.FlexStart,
+    Container{Handle: Target, Width: Percent(50), Height: 40,
+      LayoutTransition: LayoutTransition{SimulationFactory: (from float64, to float64, velocity float64) -> {
+        Factories++
+        return LinearTimed(1.0, from, to, Easing.Linear)
+      }}},
+    Container{Handle: Control, Width: Percent(50), Height: 40},
+  }
+}
+
 internal class EmbeddedHostSmoke {
   shared {
     private func Require(value bool, message string) {
       if !value { throw InvalidOperationException(message) }
+    }
+
+    private func VerifyLayoutTransitions() {
+      using let host = EmbeddedSmokeHost()
+      let root = EmbeddedLayoutTransitionCell()
+      let window = Window{Root: root}
+      host.Resize(400, 200, 400, 200)
+      window.Attach(host)
+      host.RenderFrame(0.0)
+      for frame in 0 ... 120 {
+        let width = 400 + frame % 80 * 2
+        let scale = frame < 60 ? 1 : 2
+        host.Resize(width, 200, width * scale, 200 * scale)
+        host.RenderFrame(0.016)
+        let actual = root.Target.BorderBox
+        let expected = root.Control.BorderBox
+        Require(actual.X == expected.X && actual.Width == expected.Width
+            && actual.Height == expected.Height && root.Factories == 0,
+          "Embedded resize started a bounds transition at frame $frame")
+      }
+      Console.WriteLine("embedded-layout-transition: samples=120 factory_calls=0 viewport=verified density=verified")
     }
 
     private func VerifyPreferences() {
@@ -463,6 +500,7 @@ internal class EmbeddedHostSmoke {
       Require(unmountedRoot.Builds == 0 && unmountedRoot.Disposals == 1 && !unmountedWindow.IsOpen,
         "Host disposal before the first frame did not dispose the root exactly once")
       VerifyPreferences()
+      VerifyLayoutTransitions()
       VerifyIdleRestart()
       VerifySharedQueueDetach()
       VerifyDetachWithSubmittedFrame()

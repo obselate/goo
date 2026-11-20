@@ -1,0 +1,1 @@
+- Reject repeated scan components in sequential JPEG images before they can cause excessive decode time.

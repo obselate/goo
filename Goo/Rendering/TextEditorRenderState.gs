@@ -4,6 +4,24 @@ import Facebook.Yoga
 import System
 import System.Collections.Generic
 
+internal sealed class TextEditorLayerPresentation {
+  internal let Revision int64
+  internal let Styles []TextStyleSpan
+  internal let Projections []TextPresentationProjection
+
+  internal init(layer TextPresentationLayer) {
+    Revision = layer.Revision
+    Styles = layer.ReadStyleSpans()
+    let projections = layer.ReadProjections()
+    Projections = [projections.Length]TextPresentationProjection
+    for i in 0 ... projections.Length {
+      let source = projections[i]
+      let copy = TextPresentationProjection(source.Key, source.Range)
+      copy.Update(source.Kind, source.Range, source.Text, source.Content)
+      Projections[i] = copy
+    }
+  }
+}
 internal sealed class TextEditorRenderState : IDisposable {
   private let node Node
   private let document TextDocument
@@ -29,6 +47,14 @@ internal sealed class TextEditorRenderState : IDisposable {
   private var gutterFingerprint int32
   private var gutterWidth float32
   private var disposed bool
+  private var presentedSnapshot TextSnapshot?
+  private var presentedComposition TextComposition?
+  private var presentedTabWidth int32
+  private var presentedLayers []TextEditorLayerPresentation
+  internal var PresentationCause LayoutCause
+  private prop UsePresented bool {
+    get -> LayoutOrigin.Baseline && LayoutOrigin.IsApplication(PresentationCause) && presentedSnapshot != nil
+  }
 
   internal prop ReadOnly bool{ get; set; }
   internal prop Layout TextEditorVisualLayout? { get; set; }
@@ -63,6 +89,42 @@ internal sealed class TextEditorRenderState : IDisposable {
   internal prop Controller TextEditorController{ get -> controller }
   internal prop LayerCount int32{ get -> layers.Length }
   internal func Layer(index int32) TextPresentationLayer -> layers[index]
+  internal prop PresentationVersion int64 {
+    get -> UsePresented ? presentedSnapshot!!.Version : document.Version
+  }
+  internal func Snapshot() TextSnapshot ->
+    UsePresented ? presentedSnapshot!! : document.Snapshot()
+  internal prop Composition TextComposition? {
+    get -> UsePresented ? presentedComposition : controller.Composition
+  }
+  internal prop TabWidth int32 {
+    get -> UsePresented ? presentedTabWidth : controller.TabWidth
+  }
+  internal func LayerRevision(index int32) int64 ->
+    UsePresented ? presentedLayers[index].Revision : layers[index].Revision
+  internal func LayerStyles(index int32) []TextStyleSpan ->
+    UsePresented ? presentedLayers[index].Styles : layers[index].ReadStyleSpans()
+  internal func LayerProjections(index int32) []TextPresentationProjection ->
+    UsePresented ? presentedLayers[index].Projections : layers[index].ReadProjections()
+
+  internal func AcceptPresentation() {
+    if !LayoutOrigin.TrackPresentation { return }
+    if presentedSnapshot?.Version != document.Version { presentedSnapshot = document.Snapshot() }
+    presentedComposition = controller.Composition
+    presentedTabWidth = controller.TabWidth
+    if presentedLayers.Length != layers.Length {
+      presentedLayers = [layers.Length]TextEditorLayerPresentation
+      for i in 0 ... layers.Length { presentedLayers[i] = TextEditorLayerPresentation(layers[i]) }
+    } else {
+      for i in 0 ... layers.Length {
+        if presentedLayers[i].Revision != layers[i].Revision {
+          presentedLayers[i] = TextEditorLayerPresentation(layers[i])
+        }
+      }
+    }
+    PresentationCause = LayoutCause.None
+  }
+
   internal func MatchesLayers(values []TextPresentationLayer) bool -> sameArray(layers, values)
   internal prop ParagraphCacheCount int32{ get -> paragraphs.Count }
   internal prop ParagraphBuildCount int32{ get; private set; }

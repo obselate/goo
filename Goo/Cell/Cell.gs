@@ -15,6 +15,7 @@ public open class Cell {
   private let rebuildGate object
   internal var rebuildSubmission Action[Cell]?
   internal var dirty bool
+  internal var DirtyCause LayoutCause
   internal var directChild Cell?
   internal var mountKey string?
   internal var mountType Type?
@@ -342,6 +343,7 @@ public open class Cell {
     }
     var submit Action[Cell]?
     lock rebuildGate {
+      DirtyCause = LayoutOrigin.Combine(DirtyCause, LayoutOrigin.Current)
       if dirty {
         return
       }
@@ -375,6 +377,7 @@ public open class Cell {
   internal func MarkDirtyFromInput() {
     verifyPending = false
     lock rebuildGate {
+      DirtyCause = LayoutOrigin.Combine(DirtyCause, LayoutOrigin.Current)
       dirty = true
     }
   }
@@ -382,6 +385,7 @@ public open class Cell {
   internal func ClearDirty() {
     lock rebuildGate {
       dirty = false
+      DirtyCause = LayoutCause.None
     }
   }
 
@@ -391,6 +395,7 @@ public open class Cell {
       if disposed {
         return
       }
+      DirtyCause = LayoutOrigin.Combine(DirtyCause, LayoutOrigin.Current)
       dirty = true
       submit = rebuildSubmission
     }
@@ -404,6 +409,13 @@ public open class Cell {
       return dirty
     }
   }
+
+  internal func IsDirtyFor(cause LayoutCause) bool ->
+    IsDirty() && (cause == LayoutCause.None
+      || LayoutOrigin.IsApplication(DirtyCause) == LayoutOrigin.IsApplication(cause))
+
+  internal func HasDirtyFor(cause LayoutCause) bool ->
+    IsDirtyFor(cause) || directChild?.HasDirtyFor(cause) == true
 
   internal func TryQueue(owner object) int64 {
     lock rebuildGate {

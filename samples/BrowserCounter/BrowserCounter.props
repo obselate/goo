@@ -1,0 +1,28 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">browser-wasm</RuntimeIdentifier>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <PublishTrimmed>false</PublishTrimmed>
+    <WasmEnableThreads>false</WasmEnableThreads>
+    <RunAOTCompilation>false</RunAOTCompilation>
+    <IsPackable>false</IsPackable>
+    <GooBrowserRoot>$(MSBuildThisFileDirectory)../..</GooBrowserRoot>
+    <GooBrowserNative>$(GooBrowserRoot)/artifacts/wasm-native</GooBrowserNative>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(GooBrowserRoot)/Goo.Wasm/Goo.Wasm.gsproj" />
+    <EmbeddedResource Include="$(GooBrowserRoot)/apps/Goo.Gallery/Assets/SpaceGrotesk-Variable.ttf" LogicalName="Goo.Counter.Font.ttf" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'browser-wasm'">
+    <NativeFileReference Include="$(GooBrowserNative)/goo-harfbuzz.a;$(GooBrowserNative)/goo-harfbuzz-gpu.a" />
+    <WasmExtraFilesToDeploy Include="$(MSBuildThisFileDirectory)index.html;$(MSBuildThisFileDirectory)main.js;$(GooBrowserRoot)/Goo.Wasm/goo-wasm.js" />
+    <WasmExtraFilesToDeploy Include="$(GooBrowserRoot)/apps/Goo.Gallery/Assets/SpaceGrotesk-OFL.txt;$(GooBrowserRoot)/Goo/Runtime/Vulkan/HarfBuzz-COPYING.txt" />
+  </ItemGroup>
+  <Target Name="BuildBrowserTextNative" BeforeTargets="PrepareForBuild" Condition="'$(RuntimeIdentifier)' == 'browser-wasm'"
+          Inputs="$(GooBrowserRoot)/.github/scripts/build-text-native-wasm.sh;$(GooBrowserRoot)/tools/Goo.TextNative/manifest.json"
+          Outputs="$(GooBrowserNative)/goo-harfbuzz.a;$(GooBrowserNative)/goo-harfbuzz-gpu.a">
+    <Exec Command="bash &quot;$(GooBrowserRoot)/.github/scripts/build-text-native-wasm.sh&quot; &quot;$(GooBrowserNative)&quot;" />
+  </Target>
+</Project>

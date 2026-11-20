@@ -32,14 +32,20 @@ internal class BoxGeometry {
 
     internal func ContentTop(n Node) float32 -> n.Rect.Y + BorderWidth(n, YGEdge.Top) + padding(n, YGEdge.Top)
 
-    internal func ContentWidth(n Node) float32 {
-      let width = n.Rect.W - BorderWidth(n, YGEdge.Left) - BorderWidth(n, YGEdge.Right)
+    internal func LayoutWidth(n Node) float32 ->
+      n.RetainedLayoutTransition != nil && n.Yoga is {} yoga ? YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga) : n.Rect.W
+
+    internal func LayoutHeight(n Node) float32 ->
+      n.RetainedLayoutTransition != nil && n.Yoga is {} yoga ? YGNodeLayoutAPI.YGNodeLayoutGetHeight(yoga) : n.Rect.H
+
+    internal func ContentWidth(n Node, layout bool = false) float32 {
+      let width = (layout ? LayoutWidth(n) : n.Rect.W) - BorderWidth(n, YGEdge.Left) - BorderWidth(n, YGEdge.Right)
       -padding(n, YGEdge.Left) - padding(n, YGEdge.Right)
       return width > 0.0F ? width : 0.0F
     }
 
-    internal func ContentHeight(n Node) float32 {
-      let height = n.Rect.H - BorderWidth(n, YGEdge.Top) - BorderWidth(n, YGEdge.Bottom)
+    internal func ContentHeight(n Node, layout bool = false) float32 {
+      let height = (layout ? LayoutHeight(n) : n.Rect.H) - BorderWidth(n, YGEdge.Top) - BorderWidth(n, YGEdge.Bottom)
       -padding(n, YGEdge.Top) - padding(n, YGEdge.Bottom)
       return height > 0.0F ? height : 0.0F
     }

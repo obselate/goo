@@ -145,11 +145,7 @@ internal func lerpBoxShadows(from BoxShadowStack, to BoxShadowStack, work BoxSha
       OffsetY: lerpShadowLength(a.OffsetY, b.OffsetY, t),
       Blur: lerpShadowLength(a.Blur, b.Blur, t),
       Spread: lerpShadowLength(a.Spread, b.Spread, t),
-      Color: Color.FromNormalized(
-        a.Color.R + (b.Color.R - a.Color.R) * t,
-        a.Color.G + (b.Color.G - a.Color.G) * t,
-        a.Color.B + (b.Color.B - a.Color.B) * t,
-        a.Color.A + (b.Color.A - a.Color.A) * t),
+      Color: interpolateStyleColor(a.Color, b.Color, t),
       Inset: a.Inset,
     }
   }

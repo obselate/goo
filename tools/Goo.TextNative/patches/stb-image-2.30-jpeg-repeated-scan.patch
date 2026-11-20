@@ -1,0 +1,27 @@
+--- a/src/stb_image.h
++++ b/src/stb_image.h
+@@ -3411,7 +3411,7 @@
+ // decode image to YCbCr format
+ static int stbi__decode_jpeg_image(stbi__jpeg *j)
+ {
+-   int m;
++   int m, scanned = 0;
+    for (m = 0; m < 4; m++) {
+       j->img_comp[m].raw_data = NULL;
+       j->img_comp[m].raw_coeff = NULL;
+@@ -3422,6 +3422,15 @@
+    while (!stbi__EOI(m)) {
+       if (stbi__SOS(m)) {
+          if (!stbi__process_scan_header(j)) return 0;
++         if (!j->progressive) {
++            int i;
++            for (i = 0; i < j->scan_n; ++i) {
++               int component = 1 << j->order[i];
++               if (scanned & component)
++                  return stbi__err("repeated scan component", "Corrupt JPEG");
++               scanned |= component;
++            }
++         }
+          if (!stbi__parse_entropy_coded_data(j)) return 0;
+          if (j->marker == STBI__MARKER_none ) {
+          j->marker = stbi__skip_jpeg_junk_at_end(j);

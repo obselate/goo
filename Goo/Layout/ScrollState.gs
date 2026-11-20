@@ -180,6 +180,11 @@ internal partial class ScrollState {
         return
       }
       syncEditorExtent(n)
+      if LayoutOrigin.Baseline
+        && LayoutOrigin.IsApplication(n.EditorState?.PresentationCause ?? LayoutCause.None) {
+        SetExtent(n, n.ContentW, n.ContentH)
+        return
+      }
       if let request = controller.ScrollRequest, let state = n.EditorState
         && BoxGeometry.ViewportWidth(n) > 0.0F && BoxGeometry.ViewportHeight(n) > 0.0F {
         state.ResolvingScroll = true
@@ -205,7 +210,10 @@ internal partial class ScrollState {
       guard let controller = n.EditorController else { return }
       n.ScrollY += dy
       n.ScrollTargetY += dy
-      controller.SetScrollTarget(controller.ScrollTargetX, controller.ScrollTargetY + float64(dy))
+      if !LayoutOrigin.Baseline
+        || !LayoutOrigin.IsApplication(n.EditorState?.PresentationCause ?? LayoutCause.None) {
+        controller.SetScrollTarget(controller.ScrollTargetX, controller.ScrollTargetY + float64(dy))
+      }
     }
 
     private func syncEditorExtent(n Node) {

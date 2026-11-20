@@ -23,6 +23,9 @@ public partial class Window {
 
   private func applyPreferences(value PlatformPreferences) {
     if preferences == value { return }
+    let previousOrigin = LayoutOrigin.Current
+    LayoutOrigin.Current = LayoutCause.Environment
+    try {
     let previous = preferences
     preferences = value
     trackedPreferences?.Sync(value)
@@ -32,5 +35,6 @@ public partial class Window {
       requestRender()
     }
     notifications.RaisePreferencesChanged(value)
+    } finally { LayoutOrigin.Current = previousOrigin }
   }
 }

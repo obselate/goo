@@ -83,7 +83,9 @@ internal class TextLayouts {
     Dictionary[string, List[TextLayout]](StringComparer.Ordinal)
     private let sharedOrder Queue[TextLayout] = Queue[TextLayout]()
 
-    internal func For(n Node, maxWidth float32, geometry bool = false) TextLayout {
+    internal func For(n Node, requestedWidth float32, geometry bool = false, measuring bool = false) TextLayout {
+      let maxWidth = !measuring && n.RetainedLayoutTransition != nil
+        ? BoxGeometry.ContentWidth(n, true) : requestedWidth
       if let cached = n.TextLayout {
         if matches(cached, n, maxWidth) && (!geometry || cached.Geometry != nil) {
           return cached
@@ -147,7 +149,7 @@ internal class TextLayouts {
     }
 
     internal func CurrentForGeometry(n Node) TextLayout? {
-      let width = BoxGeometry.ContentWidth(n)
+      let width = BoxGeometry.ContentWidth(n, true)
       if let layout = n.TextLayout {
         if matches(layout, n, width) { return layout }
       }
@@ -246,11 +248,11 @@ internal class TextLayouts {
       height float32, heightMode MeasureMode) YGSize{
         let n = nodeFromYoga(yoga)
         let constraint = widthMode == MeasureMode.Undefined ? -1.0F : width
-        var layout = For(n, constraint)
+        var layout = For(n, constraint, measuring: true)
         let minContent = widthMode == MeasureMode.AtMost && n.TextTrimming == TextTrimming.None
           && n.TextWrap != TextWrap.NoWrap ? layout.MinWidth : 0.0F
         if minContent > width {
-          layout = For(n, minContent)
+          layout = For(n, minContent, measuring: true)
         }
         let size = clampMeasuredSize(layout.Width, layout.Height, width, widthMode, height, heightMode)
         return widthMode == MeasureMode.AtMost && n.TextTrimming == TextTrimming.None

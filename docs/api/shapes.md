@@ -169,7 +169,7 @@ Creates a shape with default paint options.
 
 ### `CornerRadius`
 
-Gets or sets the non-negative finite corner radius in logical pixels.
+Gets or sets the non-negative finite corner radius in logical pixels. Select TransitionProperty.ShapeCornerRadius to interpolate changes.
 
 ### `Fill`
 
@@ -193,11 +193,11 @@ Gets or sets the complete stroke paint and options. Gradient strokes are not sup
 
 ### `StrokeEnd`
 
-Gets or sets the stroke end in [0, 1]. Equal bounds omit the stroke; fill remains unchanged. Trim precedes dashes, whose phase starts at each trimmed contour. Trim preserves fully included closed contours; partial contours use the stroke's Cap at their open ends.
+Gets or sets the stroke end in [0, 1]. Equal bounds omit the stroke; fill remains unchanged. Trim precedes dashes, whose phase starts at each trimmed contour. Trim preserves fully included closed contours; partial contours use the stroke's Cap at their open ends. Select TransitionProperty.StrokeEnd to interpolate changes.
 
 ### `StrokeStart`
 
-Gets or sets the stroke start in [0, 1], summed across contours in path order. None measures flattened geometry after fit mapping. NonScalingStroke measures geometry after the full transform. On mount, StrokeStart must not exceed StrokeEnd.
+Gets or sets the stroke start in [0, 1], summed across contours in path order. None measures flattened geometry after fit mapping. NonScalingStroke measures geometry after the full transform. On mount, StrokeStart must not exceed StrokeEnd. Select TransitionProperty.StrokeStart to interpolate changes.
 
 ### `UseCurrentColor`
 
@@ -431,7 +431,7 @@ Gets or sets the line cap style.
 
 ### `Dashes`
 
-Gets or sets the optional dash pattern. NonScalingStroke measures dash lengths in window logical pixels.
+Gets or sets the optional dash pattern. NonScalingStroke measures dash lengths in window logical pixels. Select TransitionProperty.DashOffset or DashIntervals on the Shape. Intervals interpolate only when normalized counts match.
 
 ### `Join`
 
@@ -439,7 +439,7 @@ Gets or sets the line join style.
 
 ### `MiterLimit`
 
-Gets or sets the non-negative finite miter limit.
+Gets or sets the non-negative finite miter limit. Select TransitionProperty.MiterLimit on the Shape to interpolate changes.
 
 ### `Paint`
 
