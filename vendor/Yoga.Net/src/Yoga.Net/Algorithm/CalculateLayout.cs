@@ -666,6 +666,7 @@ namespace Facebook.Yoga
         {
             public float Basis;
             public float Factor;
+            public float ShrinkFactor;
             public float ScaledFactor;
             public float AutomaticMinimum;
             public float Target;
@@ -683,6 +684,7 @@ namespace Facebook.Yoga
             bool shrinking = initialFreeSpace < 0;
             double remainingFactors = shrinking
                 ? flexLine.Layout.TotalFlexShrinkScaledFactors : flexLine.Layout.TotalFlexGrowFactors;
+            double remainingShrinkFactors = 0;
             int unfrozen = 0;
 
             for (int i = 0; i < sizes.Length; i++)
@@ -698,6 +700,8 @@ namespace Facebook.Yoga
                     basis = Math.Min(basis, computedBasis.Unwrap());
                 }
 
+                if (shrinking)
+                    remainingShrinkFactors -= factor;
                 float scaledFactor = shrinking ? factor * basis : factor;
                 if (Comparison.IsUndefined(scaledFactor))
                     scaledFactor = 0;
@@ -707,6 +711,7 @@ namespace Facebook.Yoga
                 {
                     Basis = basis,
                     Factor = shrinking ? factor * computedBasis.Unwrap() : factor,
+                    ShrinkFactor = shrinking ? -factor : 0,
                     ScaledFactor = scaledFactor,
                     AutomaticMinimum = shrinking && scaledFactor != 0
                         ? AutomaticMinimum(child, mainAxis, direction, availableInnerMainDim, availableInnerCrossDim,
@@ -722,7 +727,15 @@ namespace Facebook.Yoga
             double remainingSpace = initialFreeSpace;
             for (int round = unfrozen; round > 0 && unfrozen > 0; round--)
             {
-                float ratio = shrinking && remainingFactors >= 0 ? 1 : (float)(remainingSpace / remainingFactors);
+                double remainingFlexFactorSum = shrinking ? remainingShrinkFactors : remainingFactors;
+                double spaceToDistribute = remainingSpace;
+                if (remainingFlexFactorSum < 1)
+                {
+                    double fractionalSpace = initialFreeSpace * remainingFlexFactorSum;
+                    if (Math.Abs(fractionalSpace) < Math.Abs(remainingSpace))
+                        spaceToDistribute = fractionalSpace;
+                }
+                float ratio = shrinking && remainingFactors >= 0 ? 1 : (float)(spaceToDistribute / remainingFactors);
                 double totalViolation = 0;
                 for (int i = 0; i < sizes.Length; i++)
                 {
@@ -747,6 +760,7 @@ namespace Facebook.Yoga
                         continue;
                     remainingSpace -= item.Target - item.Basis;
                     remainingFactors -= item.Factor;
+                    remainingShrinkFactors -= item.ShrinkFactor;
                     item.ScaledFactor = 0;
                     unfrozen--;
                 }

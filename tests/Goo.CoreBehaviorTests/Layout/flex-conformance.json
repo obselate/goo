@@ -3833,6 +3833,53 @@
         ]
       },
       "boxes": [[0, 0, 180, 20], [0, 0, 90, 20], [90, 0, 50, 20], [140, 0, 40, 20]]
+    },
+    {
+      "name": "row-grow-fractional-after-freeze",
+      "viewport": [300, 20],
+      "tree": {
+        "style": {"Width": 300, "Height": 20, "FlexDirection": "Row"},
+        "children": [
+          {"style": {"FlexGrow": 1, "FlexBasis": 0, "MaxWidth": 50}},
+          {"style": {"FlexGrow": 0.25, "FlexBasis": 0}}
+        ]
+      },
+      "boxes": [[0, 0, 300, 20], [0, 0, 50, 20], [50, 0, 75, 20]]
+    },
+    {
+      "name": "row-grow-single-fractional-factor",
+      "viewport": [300, 20],
+      "tree": {
+        "style": {"Width": 300, "Height": 20, "FlexDirection": "Row"},
+        "children": [
+          {"style": {"FlexGrow": 0.25, "FlexBasis": 0}}
+        ]
+      },
+      "boxes": [[0, 0, 300, 20], [0, 0, 75, 20]]
+    },
+    {
+      "name": "row-grow-two-fractional-factors",
+      "viewport": [300, 20],
+      "tree": {
+        "style": {"Width": 300, "Height": 20, "FlexDirection": "Row"},
+        "children": [
+          {"style": {"FlexGrow": 0.25, "FlexBasis": 0}},
+          {"style": {"FlexGrow": 0.25, "FlexBasis": 0}}
+        ]
+      },
+      "boxes": [[0, 0, 300, 20], [0, 0, 75, 20], [75, 0, 75, 20]]
+    },
+    {
+      "name": "row-shrink-fractional-after-freeze",
+      "viewport": [100, 20],
+      "tree": {
+        "style": {"Width": 100, "Height": 20, "FlexDirection": "Row"},
+        "children": [
+          {"style": {"FlexShrink": 1, "FlexBasis": 100, "MinWidth": 90}},
+          {"style": {"FlexShrink": 0.25, "FlexBasis": 100, "MinWidth": 0}}
+        ]
+      },
+      "boxes": [[0, 0, 100, 20], [0, 0, 90, 20], [90, 0, 75, 20]]
     }
   ]
 }
