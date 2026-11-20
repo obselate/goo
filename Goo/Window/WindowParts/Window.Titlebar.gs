@@ -12,6 +12,9 @@ public class WindowTitlebarEvent {
   public prop Handled bool{get; set;}
 }
 
+/// Identifies the window edge or corner that Window.BeginResize moves.
+public enum WindowEdge { TopLeft; Top; TopRight; Right; BottomRight; Bottom; BottomLeft; Left }
+
 internal class WindowTitlebarCallbacks {
   internal var Callback Action[WindowTitlebarEvent]?
   shared {
@@ -61,6 +64,52 @@ public partial class Window {
     if let native = host as SdlHost {
       SdlTitlebarHooks.Bind(native, WindowTitlebarCallbacks.Get(this) != nil ? this : nil)
     }
+  }
+
+  /// Starts a system move of the window. Call from a pointer, touch or key press handler.
+  /// With the primary button held, the window follows the pointer.
+  /// From a key press, Windows starts its keyboard move and Wayland sends xdg_toplevel.move with the key serial.
+  /// Accepted means the request was sent. A Wayland compositor can still ignore it.
+  /// Returns Unsupported unless the window is in the normal state on Windows or Wayland.
+  public func BeginMove() WindowOperationResult -> beginInteraction("Window.BeginMove", WindowHitResult.Draggable)
+
+  /// Starts a system resize from an edge or corner. Call from a pointer, touch or key press handler.
+  /// With the primary button held, the edge follows the pointer.
+  /// From a key press, Windows starts its keyboard sizing and Wayland sends xdg_toplevel.resize with the key serial.
+  /// Accepted means the request was sent. A Wayland compositor can still ignore it.
+  /// Returns Unsupported unless the window is resizable and in the normal state on Windows or Wayland.
+  /// @param edge edge or corner to move
+  public func BeginResize(edge WindowEdge) WindowOperationResult {
+    let target = switch edge {
+      case WindowEdge.TopLeft: WindowHitResult.TopLeft
+      case WindowEdge.Top: WindowHitResult.Top
+      case WindowEdge.TopRight: WindowHitResult.TopRight
+      case WindowEdge.Right: WindowHitResult.Right
+      case WindowEdge.BottomRight: WindowHitResult.BottomRight
+      case WindowEdge.Bottom: WindowHitResult.Bottom
+      case WindowEdge.BottomLeft: WindowHitResult.BottomLeft
+      case WindowEdge.Left: WindowHitResult.Left
+      case _: throw ArgumentOutOfRangeException("edge")
+    }
+    return resizable ? beginInteraction("Window.BeginResize", target) : WindowOperationResult.Unsupported
+  }
+
+  /// Shows the platform window menu at a point in layout units. Wayland compositors define its items.
+  /// Returns Unsupported for undecorated Windows windows, which have no system menu.
+  /// @param point menu position in layout units
+  public func ShowSystemMenu(point Point) WindowOperationResult {
+    requireUiThread("Window.ShowSystemMenu")
+    guard let native = host as SdlHost? else { return IsOpen ? WindowOperationResult.Unsupported : WindowOperationResult.Closed }
+    if native.IsClosing { return WindowOperationResult.Closed }
+    if OperatingSystem.IsWindows() && !decorated { return WindowOperationResult.Unsupported }
+    return native.ShowSystemMenu(int32(Math.Round(point.X * UiScale)), int32(Math.Round(point.Y * UiScale)))
+  }
+
+  private func beginInteraction(name string, edge WindowHitResult) WindowOperationResult {
+    requireUiThread(name)
+    guard let native = host as SdlHost? else { return IsOpen ? WindowOperationResult.Unsupported : WindowOperationResult.Closed }
+    if native.IsClosing { return WindowOperationResult.Closed }
+    return state == WindowState.Normal ? native.BeginInteraction(edge) : WindowOperationResult.Unsupported
   }
 
   internal func NativeTitlebarDoubleClick(px float64, py float64) bool {

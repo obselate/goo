@@ -1129,6 +1129,9 @@ internal partial class PointerInput {
       if isInteractiveContent(child) {
         info.HasContent = true
       }
+      if child.MaximizesWindow {
+        info.MaximizeButton = true
+      }
     }
     hitChain.Clear()
     return info
@@ -1304,4 +1307,5 @@ internal class PointerContact {
 internal data struct InputHitInfo {
   internal var HasContent bool
   internal var DragsWindow bool
+  internal var MaximizeButton bool
 }

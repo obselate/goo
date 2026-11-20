@@ -79,6 +79,9 @@ public partial class Window {
         return left ? WindowHitResult.Left : WindowHitResult.Right
       }
     }
+    if info.MaximizeButton {
+      return WindowHitResult.MaximizeButton
+    }
     if info.HasContent {
       return WindowHitResult.Normal
     }
