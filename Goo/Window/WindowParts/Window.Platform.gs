@@ -69,7 +69,7 @@ public partial class Window {
       if (bottom && nearRight) || (right && nearBottom) {
         return WindowHitResult.BottomRight
       }
-      if (top || bottom || left || right) && !info.HasContent && !input.ScrollbarAt(n, layoutX, layoutY) {
+      if (top || bottom || left || right) && !info.HasActivation && !input.ScrollbarAt(n, layoutX, layoutY) {
         if top {
           return WindowHitResult.Top
         }
