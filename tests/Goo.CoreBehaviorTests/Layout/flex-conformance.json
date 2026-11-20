@@ -3794,6 +3794,45 @@
         ]
       },
       "boxes": [[0, 0, 100, 20], [0, 0, 60, 20], [60, 0, 40, 20]]
+    },
+    {
+      "name": "row-grow-chained-maximums",
+      "viewport": [300, 20],
+      "tree": {
+        "style": {"Width": 300, "Height": 20, "FlexDirection": "Row"},
+        "children": [
+          {"style": {"FlexGrow": 1, "FlexBasis": 0, "MaxWidth": 50}},
+          {"style": {"FlexGrow": 1, "FlexBasis": 0, "MaxWidth": 110}},
+          {"style": {"FlexGrow": 1, "FlexBasis": 0}}
+        ]
+      },
+      "boxes": [[0, 0, 300, 20], [0, 0, 50, 20], [50, 0, 110, 20], [160, 0, 140, 20]]
+    },
+    {
+      "name": "row-grow-chained-minimums",
+      "viewport": [300, 20],
+      "tree": {
+        "style": {"Width": 300, "Height": 20, "FlexDirection": "Row"},
+        "children": [
+          {"style": {"FlexGrow": 1, "FlexBasis": 0, "MinWidth": 150}},
+          {"style": {"FlexGrow": 1, "FlexBasis": 0, "MinWidth": 90}},
+          {"style": {"FlexGrow": 1, "FlexBasis": 0}}
+        ]
+      },
+      "boxes": [[0, 0, 300, 20], [0, 0, 150, 20], [150, 0, 90, 20], [240, 0, 60, 20]]
+    },
+    {
+      "name": "row-shrink-chained-minimums",
+      "viewport": [180, 20],
+      "tree": {
+        "style": {"Width": 180, "Height": 20, "FlexDirection": "Row"},
+        "children": [
+          {"style": {"FlexShrink": 1, "FlexBasis": 100, "MinWidth": 90}},
+          {"style": {"FlexShrink": 1, "FlexBasis": 100, "MinWidth": 50}},
+          {"style": {"FlexShrink": 1, "FlexBasis": 100, "MinWidth": 0}}
+        ]
+      },
+      "boxes": [[0, 0, 180, 20], [0, 0, 90, 20], [90, 0, 50, 20], [140, 0, 40, 20]]
     }
   ]
 }

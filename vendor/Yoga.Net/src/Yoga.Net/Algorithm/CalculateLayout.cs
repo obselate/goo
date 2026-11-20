@@ -4,6 +4,7 @@
 // LICENSE file in the root directory of this source tree.
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -564,57 +565,26 @@ namespace Facebook.Yoga
             return totalOuterFlexBasis;
         }
 
-        private static float DistributeFreeSpaceSecondPass(
-            ref FlexLineState flexLine, Node node,
+        private static void LayoutFlexItems(
+            in FlexLineState flexLine, ReadOnlySpan<FlexItemSizing> sizes, Node node,
             FlexDirection mainAxis, FlexDirection crossAxis, Direction direction,
-            float ownerWidth, float mainAxisOwnerSize,
             float availableInnerMainDim, float availableInnerCrossDim,
             float availableInnerWidth, float availableInnerHeight,
-            bool mainAxisOverflows, SizingMode sizingModeCrossDim, bool shrinking, float flexRatio,
+            bool mainAxisOverflows, SizingMode sizingModeCrossDim,
             bool performLayout, ref LayoutData layoutMarkerData,
             uint depth, uint generationCount)
         {
-            float deltaFreeSpace = 0;
             bool isMainAxisRow = mainAxis.IsRow();
             bool isNodeFlexWrap = node.Style.FlexWrap != Wrap.NoWrap;
 
             for (int i = 0; i < flexLine.ItemsInFlow.Count; i++)
             {
                 var currentLineChild = flexLine.ItemsInFlow[i];
-                float flexFactor = shrinking ? -currentLineChild.ResolveFlexShrink() : currentLineChild.ResolveFlexGrow();
-                float childFlexBasis = BoundAxis.BoundAxisWithinMinAndMax(
-                    currentLineChild, direction, mainAxis,
-                         currentLineChild.Layout.ComputedFlexBasis,
-                    mainAxisOwnerSize, ownerWidth).Unwrap();
-                if (!shrinking && flexFactor != 0)
-                {
-                    childFlexBasis = Math.Min(childFlexBasis,
-                        currentLineChild.Layout.ComputedFlexBasis.Unwrap());
-                }
-                float updatedMainSize = childFlexBasis;
-
-                if (shrinking)
-                    flexFactor *= childFlexBasis;
-                if (Comparison.IsDefined(flexRatio) && Comparison.IsDefined(flexFactor) && flexFactor != 0)
-                {
-                    float childSize = childFlexBasis + flexRatio * flexFactor;
-                    if (shrinking)
-                    {
-                        childSize = Math.Max(childSize, AutomaticMinimum(
-                            currentLineChild, mainAxis, direction, availableInnerMainDim, availableInnerCrossDim,
-                            availableInnerWidth, availableInnerHeight, ref layoutMarkerData, depth, generationCount));
-                    }
-                    updatedMainSize = BoundAxis.ComputeBoundAxis(
-                        currentLineChild, mainAxis, direction, childSize, availableInnerMainDim, availableInnerWidth);
-                }
-
-                deltaFreeSpace += updatedMainSize - childFlexBasis;
-
                 float marginMain = currentLineChild.Style.ComputeMarginForAxis(mainAxis, availableInnerWidth);
                 float marginCross = currentLineChild.Style.ComputeMarginForAxis(crossAxis, availableInnerWidth);
 
                 float childCrossSize = YogaConstants.Undefined;
-                float childMainSize = updatedMainSize + marginMain;
+                float childMainSize = sizes[i].Target + marginMain;
                 SizingMode childCrossSizingMode;
                 SizingMode childMainSizingMode = SizingMode.StretchFit;
 
@@ -690,81 +660,109 @@ namespace Facebook.Yoga
                 node.SetLayoutHadOverflow(
                     node.Layout.HadOverflow() || currentLineChild.Layout.HadOverflow());
             }
-            return deltaFreeSpace;
         }
 
-        private static float DistributeFreeSpaceFirstPass(
-            in FlexLineState flexLine, Direction direction, FlexDirection mainAxis,
+        private struct FlexItemSizing
+        {
+            public float Basis;
+            public float Factor;
+            public float ScaledFactor;
+            public float AutomaticMinimum;
+            public float Target;
+            public float Violation;
+        }
+
+        private static float ResolveFlexItemSizes(
+            in FlexLineState flexLine, Span<FlexItemSizing> sizes, Direction direction, FlexDirection mainAxis,
             float ownerWidth, float mainAxisOwnerSize,
             float availableInnerMainDim, float availableInnerCrossDim,
-            float availableInnerWidth, float availableInnerHeight, bool shrinking,
+            float availableInnerWidth, float availableInnerHeight,
             ref LayoutData layoutMarkerData, uint depth, uint generationCount)
         {
-            float freeSpace = flexLine.Layout.RemainingFreeSpace;
-            float totalFlexFactors = shrinking
+            float initialFreeSpace = flexLine.Layout.RemainingFreeSpace;
+            bool shrinking = initialFreeSpace < 0;
+            double remainingFactors = shrinking
                 ? flexLine.Layout.TotalFlexShrinkScaledFactors : flexLine.Layout.TotalFlexGrowFactors;
-            if (shrinking && totalFlexFactors >= 0)
-                return 1;
-            if (!shrinking && !(freeSpace > 0 && totalFlexFactors > 0))
-                return YogaConstants.Undefined;
+            int unfrozen = 0;
 
-            float initialRatio = freeSpace / totalFlexFactors;
-            double totalViolation = 0;
-            float minDelta = 0;
-            float maxDelta = 0;
-            float minFactors = 0;
-            float maxFactors = 0;
-
-            for (int i = 0; i < flexLine.ItemsInFlow.Count; i++)
+            for (int i = 0; i < sizes.Length; i++)
             {
-                var currentLineChild = flexLine.ItemsInFlow[i];
-                float flexFactor = shrinking ? -currentLineChild.ResolveFlexShrink() : currentLineChild.ResolveFlexGrow();
-                if (Comparison.IsUndefined(flexFactor) || flexFactor == 0)
-                    continue;
-
-                var computedBasis = currentLineChild.Layout.ComputedFlexBasis;
-                float childFlexBasis = BoundAxis.BoundAxisWithinMinAndMax(
-                    currentLineChild, direction, mainAxis, computedBasis, mainAxisOwnerSize, ownerWidth).Unwrap();
-                if (!shrinking)
-                    childFlexBasis = Math.Min(childFlexBasis, computedBasis.Unwrap());
-
-                float scaledFactor = shrinking ? flexFactor * childFlexBasis : flexFactor;
-                if (Comparison.IsUndefined(scaledFactor) || scaledFactor == 0)
-                    continue;
-
-                float baseMainSize = childFlexBasis + initialRatio * scaledFactor;
-                if (Comparison.IsUndefined(baseMainSize))
-                    continue;
-                float boundMainSize = BoundAxis.ComputeBoundAxis(
-                    currentLineChild, mainAxis, direction,
-                    shrinking ? Math.Max(baseMainSize, AutomaticMinimum(
-                        currentLineChild, mainAxis, direction, availableInnerMainDim, availableInnerCrossDim,
-                        availableInnerWidth, availableInnerHeight, ref layoutMarkerData, depth, generationCount)) : baseMainSize,
-                    availableInnerMainDim, availableInnerWidth);
-                if (Comparison.IsUndefined(boundMainSize) || baseMainSize == boundMainSize)
-                    continue;
-
-                totalViolation += (double)boundMainSize - baseMainSize;
-                float frozenFactor = shrinking ? flexFactor * computedBasis.Unwrap() : flexFactor;
-                if (boundMainSize > baseMainSize)
+                var child = flexLine.ItemsInFlow[i];
+                var computedBasis = child.Layout.ComputedFlexBasis;
+                float basis = BoundAxis.BoundAxisWithinMinAndMax(
+                    child, direction, mainAxis, computedBasis, mainAxisOwnerSize, ownerWidth).Unwrap();
+                float factor = shrinking ? -child.ResolveFlexShrink() : child.ResolveFlexGrow();
+                if (!shrinking && factor != 0)
                 {
-                    minDelta += boundMainSize - childFlexBasis;
-                    minFactors += frozenFactor;
+                    initialFreeSpace += Math.Max(0, basis - computedBasis.Unwrap());
+                    basis = Math.Min(basis, computedBasis.Unwrap());
                 }
-                else
+
+                float scaledFactor = shrinking ? factor * basis : factor;
+                if (Comparison.IsUndefined(scaledFactor))
+                    scaledFactor = 0;
+                if (scaledFactor != 0)
+                    unfrozen++;
+                sizes[i] = new FlexItemSizing
                 {
-                    maxDelta += boundMainSize - childFlexBasis;
-                    maxFactors += frozenFactor;
+                    Basis = basis,
+                    Factor = shrinking ? factor * computedBasis.Unwrap() : factor,
+                    ScaledFactor = scaledFactor,
+                    AutomaticMinimum = shrinking && scaledFactor != 0
+                        ? AutomaticMinimum(child, mainAxis, direction, availableInnerMainDim, availableInnerCrossDim,
+                            availableInnerWidth, availableInnerHeight, ref layoutMarkerData, depth, generationCount)
+                        : 0,
+                    Target = basis,
+                };
+            }
+
+            if (!shrinking && !(initialFreeSpace > 0 && remainingFactors > 0))
+                return initialFreeSpace;
+
+            double remainingSpace = initialFreeSpace;
+            for (int round = unfrozen; round > 0 && unfrozen > 0; round--)
+            {
+                float ratio = shrinking && remainingFactors >= 0 ? 1 : (float)(remainingSpace / remainingFactors);
+                double totalViolation = 0;
+                for (int i = 0; i < sizes.Length; i++)
+                {
+                    ref var item = ref sizes[i];
+                    if (item.ScaledFactor == 0)
+                        continue;
+                    float proposed = item.Basis + ratio * item.ScaledFactor;
+                    item.Target = BoundAxis.ComputeBoundAxis(
+                        flexLine.ItemsInFlow[i], mainAxis, direction,
+                        shrinking ? Math.Max(proposed, item.AutomaticMinimum) : proposed,
+                        availableInnerMainDim, availableInnerWidth);
+                    item.Violation = Comparison.IsDefined(proposed) ? item.Target - proposed : 0;
+                    totalViolation += item.Violation;
+                }
+                if (totalViolation == 0)
+                    break;
+
+                for (int i = 0; i < sizes.Length; i++)
+                {
+                    ref var item = ref sizes[i];
+                    if (item.ScaledFactor == 0 || !(totalViolation > 0 ? item.Violation > 0 : item.Violation < 0))
+                        continue;
+                    remainingSpace -= item.Target - item.Basis;
+                    remainingFactors -= item.Factor;
+                    item.ScaledFactor = 0;
+                    unfrozen--;
+                }
+
+                if (!shrinking)
+                {
+                    if (remainingFactors <= 0)
+                        break;
+                    remainingSpace = Math.Max(remainingSpace, 0);
                 }
             }
 
-            if (totalViolation == 0)
-                return initialRatio;
-            float remainingFactors = totalFlexFactors - (totalViolation > 0 ? minFactors : maxFactors);
-            if (shrinking ? remainingFactors >= 0 : remainingFactors <= 0)
-                return initialRatio;
-            float remainingSpace = freeSpace - (totalViolation > 0 ? minDelta : maxDelta);
-            return (shrinking ? remainingSpace : Math.Max(remainingSpace, 0)) / remainingFactors;
+            float distributedSpace = 0;
+            for (int i = 0; i < sizes.Length; i++)
+                distributedSpace += sizes[i].Target - sizes[i].Basis;
+            return initialFreeSpace - distributedSpace;
         }
 
         private static float AutomaticMinimum(
@@ -817,35 +815,27 @@ namespace Facebook.Yoga
             bool performLayout, ref LayoutData layoutMarkerData,
             uint depth, uint generationCount)
         {
-            bool shrinking = flexLine.Layout.RemainingFreeSpace < 0;
-            if (!shrinking)
+            int count = flexLine.ItemsInFlow.Count;
+            FlexItemSizing[]? rented = null;
+            Span<FlexItemSizing> sizes = count <= 64
+                ? stackalloc FlexItemSizing[count]
+                : (rented = ArrayPool<FlexItemSizing>.Shared.Rent(count)).AsSpan(0, count);
+            try
             {
-                for (int i = 0; i < flexLine.ItemsInFlow.Count; i++)
-                {
-                    var child = flexLine.ItemsInFlow[i];
-                    if (child.ResolveFlexGrow() == 0) continue;
-                    float basis = child.Layout.ComputedFlexBasis.Unwrap();
-                    flexLine.Layout.RemainingFreeSpace += Math.Max(0,
-                        BoundAxis.BoundAxisWithinMinAndMax(child, direction, mainAxis,
-                            child.Layout.ComputedFlexBasis, mainAxisOwnerSize, ownerWidth).Unwrap() - basis);
-                }
+                flexLine.Layout.RemainingFreeSpace = ResolveFlexItemSizes(
+                    in flexLine, sizes, direction, mainAxis, ownerWidth, mainAxisOwnerSize,
+                    availableInnerMainDim, availableInnerCrossDim, availableInnerWidth, availableInnerHeight,
+                    ref layoutMarkerData, depth, generationCount);
+                LayoutFlexItems(
+                    in flexLine, sizes, node, mainAxis, crossAxis, direction,
+                    availableInnerMainDim, availableInnerCrossDim, availableInnerWidth, availableInnerHeight,
+                    mainAxisOverflows, sizingModeCrossDim, performLayout, ref layoutMarkerData, depth, generationCount);
             }
-            float originalFreeSpace = flexLine.Layout.RemainingFreeSpace;
-            float flexRatio = DistributeFreeSpaceFirstPass(
-                in flexLine, direction, mainAxis, ownerWidth,
-                mainAxisOwnerSize, availableInnerMainDim, availableInnerCrossDim,
-                availableInnerWidth, availableInnerHeight, shrinking,
-                ref layoutMarkerData, depth, generationCount);
-
-            float distributedFreeSpace = DistributeFreeSpaceSecondPass(
-                ref flexLine, node, mainAxis, crossAxis, direction,
-                ownerWidth, mainAxisOwnerSize,
-                availableInnerMainDim, availableInnerCrossDim,
-                availableInnerWidth, availableInnerHeight,
-                mainAxisOverflows, sizingModeCrossDim, shrinking, flexRatio,
-                performLayout, ref layoutMarkerData, depth, generationCount);
-
-            flexLine.Layout.RemainingFreeSpace = originalFreeSpace - distributedFreeSpace;
+            finally
+            {
+                if (rented is not null)
+                    ArrayPool<FlexItemSizing>.Shared.Return(rented);
+            }
         }
 
         private static void JustifyMainAxis(
