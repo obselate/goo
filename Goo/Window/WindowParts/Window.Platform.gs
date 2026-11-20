@@ -4,7 +4,7 @@ import System
 
 /// Hosts a Goo tree in a native window.
 public partial class Window {
-  private var pointerHit WindowHitResult = WindowHitResult.Normal
+  private var nativePointer Point?
 
   internal func NativeResizable() bool -> if let native = host { native.NativeResizable } else { false }
 
