@@ -15,44 +15,75 @@ internal struct StartupGraphicsDlInfo {
     internal var SymbolAddress nint
 }
 
+internal class StartupStderrDrain {
+    internal let Bytes []uint8 = [4096]uint8
+    internal let Done ManualResetEventSlim = ManualResetEventSlim(false)
+    internal var Length int32
+    internal var Owners int32 = 2
+}
+
 internal unsafe partial class VulkanStartupReport {
-    private let loaderBytes MemoryStream = MemoryStream(4096)
-    private let readerDone ManualResetEventSlim = ManualResetEventSlim(false)
-    private var readerDescriptor int32 = -1
+    private const LinuxCloseOnExec int32 = 0x80000
+    private const LinuxGetDescriptorFlags int32 = 1
+    private const LinuxDescriptorCloseOnExec int32 = 1
+    private const LinuxDuplicateCloseOnExec int32 = 1030
+    private const WinHandleInherit uint32 = 1u
+    private const WinPipeBinaryNoInherit int32 = 0x8080
+    private var capture StartupStderrDrain?
     private var savedDescriptor int32 = -1
     private var savedHandle nint
-    private var capturing bool
     private var originalDebug string?
     private var debugOverridden bool
     private var savedHandleFlags uint32
     private var protectedHandle bool
+    private var stderrInherits bool
 
     private func StartCapture() {
         originalDebug = Environment.GetEnvironmentVariable("VK_LOADER_DEBUG")
         SetLoaderDebug("error,warn,driver")
         debugOverridden = true
+        var readerDescriptor = -1
+        var redirected = false
         try {
             Console.Error.Flush()
-            let descriptors *int32 = stackalloc[2]int32
+            let descriptors = [2]int32
             savedHandle = if OperatingSystem.IsWindows() {
                 GetStdHandle(-12)
             } else {
                 nint(0)
             }
             savedDescriptor = Duplicate(2)
-            if OperatingSystem.IsWindows() && savedDescriptor >= 0 && GetOsHandle(2) == savedHandle {
-                var flags uint32
-                if GetHandleInformation(savedHandle, &flags) == 0
-                || SetHandleInformation(savedHandle, 2u, 2u) == 0 {
-                    throw IOException(
-                        "Cannot preserve the original stderr handle: " + Marshal.GetLastPInvokeError().ToString()
-                    )
+            stderrInherits = true
+            if OperatingSystem.IsWindows() {
+                var flags = WinHandleInherit
+                if savedHandle != nint(0) && savedHandle != nint(-1)
+                && GetHandleInformation(savedHandle, out flags) == 0 {
+                    throw IOException("Cannot read stderr handle flags: " + Marshal.GetLastPInvokeError().ToString())
                 }
                 savedHandleFlags = flags
-                protectedHandle = true
+                if savedDescriptor >= 0 {
+                    let crtHandle = GetOsHandle(2)
+                    if crtHandle == savedHandle {
+                        if SetHandleInformation(savedHandle, 2u, 2u) == 0 {
+                            throw IOException("Cannot preserve stderr handle: " + Marshal.GetLastPInvokeError().ToString())
+                        }
+                        protectedHandle = true
+                    } else if GetHandleInformation(crtHandle, out flags) == 0 {
+                        throw IOException("Cannot read CRT stderr handle flags: " + Marshal.GetLastPInvokeError().ToString())
+                    }
+                    stderrInherits = (flags & WinHandleInherit) != 0u
+                }
+            } else if OperatingSystem.IsLinux() && savedDescriptor >= 0 {
+                let flags = LinuxFileControl(2, LinuxGetDescriptorFlags, 0)
+                if flags < 0 {
+                    throw IOException("Cannot read stderr descriptor flags: " + Marshal.GetLastPInvokeError().ToString())
+                }
+                stderrInherits = (flags & LinuxDescriptorCloseOnExec) == 0
             }
             let result = if OperatingSystem.IsWindows() {
-                WinPipe(descriptors, 4096u, 0x8000)
+                WinPipe(descriptors, 4096u, WinPipeBinaryNoInherit)
+            } else if OperatingSystem.IsLinux() {
+                LinuxPipe(descriptors, LinuxCloseOnExec)
             } else {
                 UnixPipe(descriptors)
             }
@@ -64,36 +95,42 @@ internal unsafe partial class VulkanStartupReport {
                 readerDescriptor = Duplicate(descriptors[0])
                 Close(descriptors[0])
             }
-            if DuplicateTo(descriptors[1], 2) < 0 {
-                Close(descriptors[1])
-                Close(readerDescriptor)
-                throw IOException("stderr redirection failed: " + Marshal.GetLastPInvokeError().ToString())
+            var writerDescriptor = descriptors[1]
+            if writerDescriptor == 2 {
+                try { writerDescriptor = Duplicate(descriptors[1]) }
+                finally { Close(descriptors[1]) }
             }
+            if readerDescriptor < 0 || writerDescriptor < 0 || DuplicateToStderr(writerDescriptor) < 0 {
+                let error = Marshal.GetLastPInvokeError()
+                if writerDescriptor >= 0 { Close(writerDescriptor) }
+                throw IOException("stderr redirection failed: " + error.ToString())
+            }
+            redirected = true
+            Close(writerDescriptor)
             if OperatingSystem.IsWindows() {
-                SetStdHandle(-12, GetOsHandle(2))
+                let handle = GetOsHandle(2)
+                if (savedHandleFlags & WinHandleInherit) == 0u && SetHandleInformation(handle, WinHandleInherit, 0u) == 0 {
+                    throw IOException("Cannot preserve stderr inheritance: " + Marshal.GetLastPInvokeError().ToString())
+                }
+                SetStdHandle(-12, handle)
             }
-            if descriptors[1] != 2 {
-                Close(descriptors[1])
-            }
-            loaderBytes.SetLength(0L)
-            readerDone.Reset()
-            capturing = true
-            let drain = Thread(() -> { Drain() })
-            drain.IsBackground = true
-            drain.Start()
+            let state = StartupStderrDrain()
+            capture = state
+            let reader = readerDescriptor
+            let saved = savedDescriptor
+            let handle = savedHandle
+            let thread = Thread(() -> { Drain(state, reader, saved, handle) })
+            thread.IsBackground = true
+            thread.Start()
         } catch (error Exception) {
-            if capturing {
-                if savedDescriptor >= 0 {
-                    DuplicateTo(savedDescriptor, 2)
-                } else {
-                    Close(2)
-                }
-                if OperatingSystem.IsWindows() {
-                    SetStdHandle(-12, savedHandle)
-                }
-                Close(readerDescriptor)
-                capturing = false
+            if redirected {
+                RestoreStderr()
             }
+            if readerDescriptor >= 0 {
+                Close(readerDescriptor)
+            }
+            capture?.Done.Dispose()
+            capture = nil
             RestoreHandleFlags()
             Line("Vulkan loader stderr capture unavailable: " + error.Message)
             if savedDescriptor >= 0 {
@@ -103,91 +140,115 @@ internal unsafe partial class VulkanStartupReport {
         }
     }
 
-    private func Drain() {
+    private func Drain(state StartupStderrDrain, reader int32, saved int32, handle nint) {
+        var pin GCHandle
         try {
             let bytes = [4096]uint8
-            fixed buffer *uint8 = bytes {
-                while true {
-                    let count = if OperatingSystem.IsWindows() {
-                        WinRead(readerDescriptor, buffer, 4096u)
-                    } else {
-                        int32(UnixRead(readerDescriptor, buffer, nuint(4096)))
+            pin = GCHandle.Alloc(bytes, GCHandleType.Pinned)
+            let buffer = pin.AddrOfPinnedObject()
+            while true {
+                let count = if OperatingSystem.IsWindows() {
+                    WinRead(reader, buffer, 4096u)
+                } else {
+                    int32(UnixRead(reader, buffer, nuint(4096)))
+                }
+                if count == 0 {
+                    break
+                }
+                if count < 0 {
+                    if Marshal.GetLastPInvokeError() == 4 {
+                        continue
                     }
-                    if count == 0 {
+                    break
+                }
+                let keep = Math.Min(count, state.Bytes.Length - state.Length)
+                if keep > 0 {
+                    Array.Copy(bytes, 0, state.Bytes, state.Length, keep)
+                    Volatile.Write(ref state.Length, state.Length + keep)
+                }
+                var offset int32
+                while offset < count {
+                    var written int32
+                    if saved >= 0 {
+                        written = if OperatingSystem.IsWindows() {
+                            WinWrite(saved, buffer + nint(offset), uint32(count - offset))
+                        } else {
+                            int32(UnixWrite(saved, buffer + nint(offset), nuint(count - offset)))
+                        }
+                    } else if OperatingSystem.IsWindows() && handle != nint(0) && handle != nint(-1) {
+                        var copied uint32
+                        if WriteFile(handle, buffer + nint(offset), uint32(count - offset), out copied, nint(0)) != 0 {
+                            written = int32(copied)
+                        }
+                    }
+                    if written <= 0 {
                         break
                     }
-                    if count < 0 {
-                        if Marshal.GetLastPInvokeError() == 4 {
-                            continue
-                        }
-                        break
-                    }
-                    let keep = Math.Min(count, 4096 - int32(loaderBytes.Length))
-                    if keep > 0 {
-                        loaderBytes.Write(bytes, 0, keep)
-                    }
-                    var offset int32
-                    while offset < count {
-                        var written int32
-                        if savedDescriptor >= 0 {
-                            written = if OperatingSystem.IsWindows() {
-                                WinWrite(savedDescriptor, buffer + offset, uint32(count - offset))
-                            } else {
-                                int32(UnixWrite(savedDescriptor, buffer + offset, nuint(count - offset)))
-                            }
-                        } else if OperatingSystem.IsWindows() && savedHandle != nint(0) && savedHandle != nint(-1) {
-                            var copied uint32
-                            if WriteFile(savedHandle, buffer + offset, uint32(count - offset), &copied, nint(0)) != 0 {
-                                written = int32(copied)
-                            }
-                        }
-                        if written <= 0 {
-                            break
-                        }
-                        offset += written
-                    }
+                    offset += written
                 }
             }
         } catch (error Exception) { } finally {
-            Close(readerDescriptor)
-            readerDone.Set()
+            if pin.IsAllocated { pin.Free() }
+            Close(reader)
+            state.Done.Set()
+            ReleaseDrain(state, saved)
         }
     }
 
-    private func StopCapture() {
-        if capturing {
+    private func ReleaseDrain(state StartupStderrDrain, saved int32) {
+        if Interlocked.Decrement(ref state.Owners) == 0 {
+            if saved >= 0 { Close(saved) }
+            state.Done.Dispose()
+        }
+    }
+
+    internal func StopCapture() {
+        if let state = capture {
             if OperatingSystem.IsWindows() {
                 WinFlush(nint(0))
             } else {
                 UnixFlush(nint(0))
             }
-            if savedDescriptor >= 0 {
-                DuplicateTo(savedDescriptor, 2)
-            } else {
-                Close(2)
-            }
-            if OperatingSystem.IsWindows() {
-                SetStdHandle(-12, savedHandle)
-            }
+            RestoreStderr()
             RestoreHandleFlags()
-            readerDone.Wait()
-            if savedDescriptor >= 0 {
-                Close(savedDescriptor)
-            }
+            state.Done.Wait(250)
+            ReleaseDrain(state, savedDescriptor)
             savedDescriptor = -1
-            capturing = false
+            capture = nil
+            let length = Volatile.Read(in state.Length)
             Line("Vulkan loader stderr (first 4 KiB):")
             Line(
-                if loaderBytes.Length == 0L {
+                if length == 0 {
                     "  <no messages>"
                 } else {
-                    Encoding.UTF8.GetString(loaderBytes.GetBuffer(), 0, int32(loaderBytes.Length))
+                    Encoding.UTF8.GetString(state.Bytes, 0, length)
                 }
             )
         }
         if debugOverridden {
             SetLoaderDebug(originalDebug)
             debugOverridden = false
+        }
+    }
+
+    private func DuplicateToStderr(source int32) int32 -> if OperatingSystem.IsWindows() {
+        WinDuplicateTo(source, 2)
+    } else if OperatingSystem.IsLinux() && !stderrInherits {
+        LinuxDuplicateTo(source, 2, LinuxCloseOnExec)
+    } else {
+        UnixDuplicateTo(source, 2)
+    }
+
+    private func RestoreStderr() {
+        if savedDescriptor >= 0 {
+            if DuplicateToStderr(savedDescriptor) >= 0 && OperatingSystem.IsWindows() && !stderrInherits {
+                SetHandleInformation(GetOsHandle(2), WinHandleInherit, 0u)
+            }
+        } else {
+            Close(2)
+        }
+        if OperatingSystem.IsWindows() {
+            SetStdHandle(-12, savedHandle)
         }
     }
 
@@ -277,12 +338,21 @@ internal unsafe partial class VulkanStartupReport {
         }
 
         private func Duplicate(descriptor int32) int32 {
+            if OperatingSystem.IsLinux() {
+                return LinuxFileControl(descriptor, LinuxDuplicateCloseOnExec, 0)
+            }
             if !OperatingSystem.IsWindows() {
                 return UnixDuplicate(descriptor)
             }
             let previous = SetInvalidParameterHandler(nint(&HandleClosedStandardError))
             try {
-                return WinDuplicate(descriptor)
+                let duplicate = WinDuplicate(descriptor)
+                if duplicate >= 0 && SetHandleInformation(GetOsHandle(duplicate), WinHandleInherit, 0u) == 0 {
+                    let error = Marshal.GetLastPInvokeError()
+                    Close(duplicate)
+                    throw IOException("Cannot protect saved stderr: " + error.ToString())
+                }
+                return duplicate
             } finally {
                 SetInvalidParameterHandler(previous)
             }
@@ -296,12 +366,6 @@ internal unsafe partial class VulkanStartupReport {
             line uint32,
             reserved nuint
         ) { }
-
-        private func DuplicateTo(source int32, destination int32) int32 -> if OperatingSystem.IsWindows() {
-            WinDuplicateTo(source, destination)
-        } else {
-            UnixDuplicateTo(source, destination)
-        }
 
         private func Close(descriptor int32) {
             if OperatingSystem.IsWindows() {
@@ -362,21 +426,21 @@ internal unsafe partial class VulkanStartupReport {
         @DllImport("kernel32.dll") private func SetStdHandle(kind int32, handle nint) int32;
 
         @DllImport("kernel32.dll", SetLastError: true)
-        private func GetHandleInformation(handle nint, flags *uint32) int32;
+        private func GetHandleInformation(handle nint, out flags uint32) int32;
 
         @DllImport("kernel32.dll", SetLastError: true)
         private func SetHandleInformation(handle nint, mask uint32, flags uint32) int32;
 
         @DllImport("kernel32.dll") private func WriteFile(
             handle nint,
-            buffer *uint8,
+            buffer nint,
             length uint32,
-            written *uint32,
+            out written uint32,
             overlapped nint
         ) int32;
 
         @DllImport("ucrtbase.dll", EntryPoint: "_pipe", SetLastError: true) private func WinPipe(
-            descriptors *int32,
+            @Out descriptors []int32,
             size uint32,
             mode int32
         ) int32;
@@ -397,13 +461,13 @@ internal unsafe partial class VulkanStartupReport {
 
         @DllImport("ucrtbase.dll", EntryPoint: "_read", SetLastError: true) private func WinRead(
             descriptor int32,
-            buffer *uint8,
+            buffer nint,
             length uint32
         ) int32;
 
         @DllImport("ucrtbase.dll", EntryPoint: "_write", SetLastError: true) private func WinWrite(
             descriptor int32,
-            buffer *uint8,
+            buffer nint,
             length uint32
         ) int32;
 
@@ -411,7 +475,17 @@ internal unsafe partial class VulkanStartupReport {
 
         @DllImport("ucrtbase.dll", EntryPoint: "fflush") private func WinFlush(file nint) int32;
 
-        @DllImport("libc", EntryPoint: "pipe", SetLastError: true) private func UnixPipe(descriptors *int32) int32;
+        @DllImport("libc", EntryPoint: "pipe", SetLastError: true)
+        private func UnixPipe(@Out descriptors []int32) int32;
+
+        @DllImport("libc", EntryPoint: "pipe2", SetLastError: true)
+        private func LinuxPipe(@Out descriptors []int32, flags int32) int32;
+
+        @DllImport("libc", EntryPoint: "fcntl", SetLastError: true)
+        private func LinuxFileControl(descriptor int32, command int32, argument int32) int32;
+
+        @DllImport("libc", EntryPoint: "dup3", SetLastError: true)
+        private func LinuxDuplicateTo(source int32, destination int32, flags int32) int32;
 
         @DllImport("libc", EntryPoint: "dup", SetLastError: true) private func UnixDuplicate(descriptor int32) int32;
 
@@ -424,13 +498,13 @@ internal unsafe partial class VulkanStartupReport {
 
         @DllImport("libc", EntryPoint: "read", SetLastError: true) private func UnixRead(
             descriptor int32,
-            buffer *uint8,
+            buffer nint,
             length nuint
         ) nint;
 
         @DllImport("libc", EntryPoint: "write", SetLastError: true) private func UnixWrite(
             descriptor int32,
-            buffer *uint8,
+            buffer nint,
             length nuint
         ) nint;
 
