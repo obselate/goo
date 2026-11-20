@@ -73,6 +73,7 @@ internal unsafe partial class VulkanWindowTarget {
       guard let current = generation else {
         return
       }
+      activeWaylandGeometryVersion = (host as SdlHost?)?.WaylandVulkanGeometryVersion() ?? 0uL
       let slotIndex = frameSlots.CurrentIndex
       let slot = frameSlots.Current
       guard let selectedSlot = slot else {

@@ -19,6 +19,42 @@ internal unsafe struct SdlVulkanWaylandSurfaceInfo {
 }
 
 internal unsafe partial class SdlHost {
+  private var waylandVulkanFrame bool
+
+  shared {
+    @DllImport("SDL3", EntryPoint: "Goo_WaylandVulkanGeometryVersion", CallingConvention: CallingConvention.Cdecl)
+    private func WaylandVulkanGeometryVersionNative(window nint) uint64;
+    @DllImport("SDL3", EntryPoint: "Goo_WaylandVulkanFrameReady", CallingConvention: CallingConvention.Cdecl)
+    private func WaylandVulkanFrameReadyNative(window nint) uint8;
+    @DllImport("SDL3", EntryPoint: "Goo_PrepareWaylandVulkanFrame", CallingConvention: CallingConvention.Cdecl)
+    private func PrepareWaylandVulkanFrameNative(window nint);
+    @DllImport("SDL3", EntryPoint: "Goo_FinishWaylandVulkanFrame", CallingConvention: CallingConvention.Cdecl)
+    private func FinishWaylandVulkanFrameNative(window nint, committed uint8);
+  }
+
+  internal func WaylandVulkanFrameReady() bool ->
+    !waylandVulkanFrame || WaylandVulkanFrameReadyNative(windowHandle) != uint8(0)
+
+  internal func WaylandVulkanGeometryVersion() uint64 ->
+    waylandVulkanFrame ? WaylandVulkanGeometryVersionNative(windowHandle) : 0uL
+
+  internal func WaylandVulkanFrameMatches(version uint64, extent VkExtent2D) bool {
+    let current = WaylandVulkanGeometryVersion()
+    if current == 0uL { return true }
+    var width int32
+    var height int32
+    return current == version && SDL.GetWindowSizeInPixels(window, &width, &height)
+      && uint32(width) == extent.width && uint32(height) == extent.height
+  }
+
+  internal func PrepareWaylandVulkanFrame() {
+    if waylandVulkanFrame { PrepareWaylandVulkanFrameNative(windowHandle) }
+  }
+
+  internal func FinishWaylandVulkanFrame(committed bool) {
+    if waylandVulkanFrame { FinishWaylandVulkanFrameNative(windowHandle, committed ? uint8(1) : uint8(0)) }
+  }
+
   public prop PreferRequestedFramebufferExtent bool{ get -> false }
   public prop AllowInheritedCompositeAlpha bool{ get -> OperatingSystem.IsMacOS() || OperatingSystem.IsWindows() }
   internal prop WindowsPresentationHandle nint {

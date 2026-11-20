@@ -186,6 +186,7 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
         recorder.Instant(VulkanDiagnosticEventIds.SwapchainPresent, VulkanDiagnosticCategories.Timing,
           mailbox.TraceContext, source: "present.enqueue")
       }
+      mailbox.PrepareNativePresent()
       pending[tail] = mailbox
       tail = (tail + 1) % MailboxCapacity
       count++

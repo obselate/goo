@@ -144,7 +144,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       let flags = SDL.GetWindowFlags(window)
       let unavailable = uint64(SDLWindowFlags.Hidden | SDLWindowFlags.Minimized |
         SDLWindowFlags.Occluded)
-      return (flags & unavailable) == 0uL
+      return (flags & unavailable) == 0uL && WaylandVulkanFrameReady()
     }
   }
   public prop WindowHandle nint{
@@ -551,9 +551,14 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         Require(SDL.SetNumberProperty(properties, "SDL.window.create.x", int64(bounds.X)), "SDL_SetNumberProperty")
         Require(SDL.SetNumberProperty(properties, "SDL.window.create.y", int64(bounds.Y)), "SDL_SetNumberProperty")
         Require(SDL.SetNumberProperty(properties, "SDL.window.create.flags", int64(flags)), "SDL_SetNumberProperty")
+        if IsWayland() {
+          Require(SDL.SetBooleanProperty(properties, "Goo.Wayland.VulkanFrame.1", true), "SDL_SetBooleanProperty")
+        }
         window = SDL.CreateWindowWithProperties(properties)
       } finally { SDL.DestroyProperties(properties) }
       if window.IsNull { ThrowSdl("SDL_CreateWindowWithProperties") }
+      waylandVulkanFrame = IsWayland() && SDL.GetBooleanProperty(SDL.GetWindowProperties(window),
+        "Goo.Wayland.VulkanFrameAvailable.1", false)
       if decorated && !IsWayland() {
         if let area = usable { ConstrainFrame(requested, minWidth, minHeight, positionSet, area) }
       }
