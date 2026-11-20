@@ -349,6 +349,7 @@ class FixtureContractTests {
             yield Contract[ClickSequenceFixtures]("PointerDragArbitratesChildClicksAndMovementContract")
             yield Contract[GestureFixtures]("RoutedWinnerSuppressesClickScrollAndLosingRecognizer")
             yield Contract[GestureFixtures]("DeadlineAndExplicitCancelHaveOneTerminalNotification")
+            yield Contract[GestureFixtures]("GestureHitRoutesIgnoreUnmountedOwners")
             yield Contract[GestureFixtures]("CaptureAndNativeCancelDoNotLeakRecognition")
             yield Contract[GestureFixtures]("SelectionMutationPreservesBothEndpointAffinities")
             yield Contract[GestureFixtures]("CallbackFailureSuppressesReleaseAndKeepsOriginalError")

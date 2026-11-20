@@ -1,5 +1,6 @@
 package Goo
 
+import Goo.Gestures
 import Hexa.NET.SDL3
 import System
 import System.Collections.Generic
@@ -53,6 +54,42 @@ internal class GestureFixtures {
         return clicks == 0 && probe.Phases.Count == 2 && probe.Phases[0] == GesturePhase.Started
             && probe.Phases[1] == GesturePhase.Canceled
             && Double.IsPositiveInfinity(pointer.GestureDeadlineSeconds())
+    }
+
+    func GestureHitRoutesIgnoreUnmountedOwners() bool {
+        let resolver = Resolver{}
+        let focus = FocusManager()
+        let pointer = PointerInput(focus, InputEventQueue())
+        let text = TextInput(focus)
+        let reconciler = Reconciler{Res: resolver}
+        let layout = Layout()
+        var root = reconciler.Mount(Container{})
+        var completedHolds = 0
+        let hold = LongPressGesture(event -> {
+            if event.Phase == GesturePhase.Completed { completedHolds++ }
+        })
+
+        for index in 0 ... 2 {
+            root = reconciler.Diff(root, Container{Width: 200, Height: 100,
+                Container{Key: index.ToString(), Width: 200, Height: 100, Gestures: []GestureRecognizer{hold}},
+            })
+            layout.Calculate(root, 200.0F, 100.0F)
+            let time = 10.0 + float64(index)
+            Send(pointer, text, resolver, root, PointerEventKind.Press, int64(index + 1), 20.0F, 20.0F, time)
+            if !pointer.StepGestures(root, resolver, time + 0.5) { return false }
+            Send(pointer, text, resolver, root, PointerEventKind.Release, int64(index + 1), 20.0F, 20.0F, time + 0.6)
+        }
+
+        let pinch = GestureProbe()
+        root = reconciler.Diff(root, Container{Width: 200, Height: 100,
+            Container{Key: "pinch", Width: 200, Height: 100, Gestures: []GestureRecognizer{pinch}},
+        })
+        layout.Calculate(root, 200.0F, 100.0F)
+        Send(pointer, text, resolver, root, PointerEventKind.PinchBegin, 0, 20.0F, 20.0F, 12.0)
+        Send(pointer, text, resolver, root, PointerEventKind.PinchEnd, 0, 20.0F, 20.0F, 12.1)
+
+        return completedHolds == 2 && pinch.Phases.Count == 2
+            && pinch.Phases[0] == GesturePhase.Started && pinch.Phases[1] == GesturePhase.Completed
     }
 
     func CaptureAndNativeCancelDoNotLeakRecognition() bool {
