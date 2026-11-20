@@ -351,9 +351,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       EnableHitTest()
     }
     let windowsFrame = OperatingSystem.IsWindows() && !decorated && resizable
-    var width int32 = 0
-    var height int32 = 0
-    Require(SDL.GetWindowSize(window, &width, &height), "SDL_GetWindowSize")
+    RefreshLogical()
+    let width = LogicalWidth
+    let height = LogicalHeight
     Require(SDL.SetWindowBordered(window, decorated || windowsFrame), "SDL_SetWindowBordered")
     Require(SDL.SetWindowResizable(window, resizable), "SDL_SetWindowResizable")
     if contentUnderTitlebar { MacBackdrop.SetContentUnderTitlebar(macWindow, true) }
