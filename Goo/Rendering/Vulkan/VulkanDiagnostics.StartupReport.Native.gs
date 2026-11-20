@@ -19,7 +19,7 @@ internal class StartupStderrDrain {
     internal let Bytes []uint8 = [4096]uint8
     internal let Done ManualResetEventSlim = ManualResetEventSlim(false)
     internal var Length int32
-    internal var Detached bool
+    internal var Owners int32 = 2
 }
 
 internal unsafe partial class VulkanStartupReport {
@@ -179,14 +179,15 @@ internal unsafe partial class VulkanStartupReport {
             }
         } catch (error Exception) { } finally {
             Close(reader)
-            lock state {
-                if state.Detached {
-                    if saved >= 0 { Close(saved) }
-                    state.Done.Dispose()
-                } else {
-                    state.Done.Set()
-                }
-            }
+            state.Done.Set()
+            ReleaseDrain(state, saved)
+        }
+    }
+
+    private func ReleaseDrain(state StartupStderrDrain, saved int32) {
+        if Interlocked.Decrement(ref state.Owners) == 0 {
+            if saved >= 0 { Close(saved) }
+            state.Done.Dispose()
         }
     }
 
@@ -207,14 +208,7 @@ internal unsafe partial class VulkanStartupReport {
             }
             RestoreHandleFlags()
             state.Done.Wait(250)
-            lock state {
-                if state.Done.IsSet {
-                    if savedDescriptor >= 0 { Close(savedDescriptor) }
-                    state.Done.Dispose()
-                } else {
-                    state.Detached = true
-                }
-            }
+            ReleaseDrain(state, savedDescriptor)
             savedDescriptor = -1
             capture = nil
             let length = Volatile.Read(in state.Length)
