@@ -14,7 +14,7 @@
        if (stbi__SOS(m)) {
           if (!stbi__process_scan_header(j)) return 0;
 +         if (j->progressive) {
-+            if (++progressive_scans > 64)
++            if (++progressive_scans > 500)
 +               return stbi__err("too many scans", "Corrupt JPEG");
 +         } else {
 +            int i;

@@ -1,1 +1,1 @@
-Limit progressive JPEG decoding to 64 scans per image.
+Limit progressive JPEG decoding to 500 scans per image.

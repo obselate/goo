@@ -85,11 +85,11 @@
       {
         "name": "stb-jpeg-repeated-scan",
         "path": "tools/Goo.TextNative/patches/stb-image-2.30-jpeg-repeated-scan.patch",
-        "sha256": "edf4b7f751c42d717755cd891039fc69e64dccbe60800d4738df97e8b8a8fe45",
+        "sha256": "a8f19196eb5ed73d1dd2a8955caac0cc99e42f7ec04eda9a09841dd8db6d87f4",
         "upstreamPath": "src/stb_image.h",
         "upstreamSha256": "30430015be90e41c4f046daa463eb9d995341976c78e52868faa3f9a3dca5015",
-        "patchedSha256": "518a8067979157d4460df7958c02b5152382e042934f3cb99e4520eccaef8489",
-        "description": "Reject repeated sequential JPEG scan components and cap progressive JPEGs at 64 scans."
+        "patchedSha256": "3ca3f931bb7e4500c6abf22f09874cc01704181b75d5ff81addb9acb757de76a",
+        "description": "Reject repeated sequential JPEG scan components and cap progressive JPEGs at 500 scans."
       }
     ],
     "soname": {
