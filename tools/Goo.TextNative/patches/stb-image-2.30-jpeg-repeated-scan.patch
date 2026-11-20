@@ -5,15 +5,18 @@
  static int stbi__decode_jpeg_image(stbi__jpeg *j)
  {
 -   int m;
-+   int m, scanned = 0;
++   int m, scanned = 0, progressive_scans = 0;
     for (m = 0; m < 4; m++) {
        j->img_comp[m].raw_data = NULL;
        j->img_comp[m].raw_coeff = NULL;
-@@ -3422,6 +3422,15 @@
+@@ -3422,6 +3422,18 @@
     while (!stbi__EOI(m)) {
        if (stbi__SOS(m)) {
           if (!stbi__process_scan_header(j)) return 0;
-+         if (!j->progressive) {
++         if (j->progressive) {
++            if (++progressive_scans > 64)
++               return stbi__err("too many scans", "Corrupt JPEG");
++         } else {
 +            int i;
 +            for (i = 0; i < j->scan_n; ++i) {
 +               int component = 1 << j->order[i];
