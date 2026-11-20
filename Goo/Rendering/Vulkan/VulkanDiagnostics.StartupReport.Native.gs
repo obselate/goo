@@ -46,7 +46,7 @@ internal unsafe partial class VulkanStartupReport {
         var redirected = false
         try {
             Console.Error.Flush()
-            let descriptors *int32 = stackalloc[2]int32
+            let descriptors = [2]int32
             savedHandle = if OperatingSystem.IsWindows() {
                 GetStdHandle(-12)
             } else {
@@ -56,7 +56,8 @@ internal unsafe partial class VulkanStartupReport {
             stderrInherits = true
             if OperatingSystem.IsWindows() {
                 var flags = WinHandleInherit
-                if savedHandle != nint(0) && savedHandle != nint(-1) && GetHandleInformation(savedHandle, &flags) == 0 {
+                if savedHandle != nint(0) && savedHandle != nint(-1)
+                && GetHandleInformation(savedHandle, out flags) == 0 {
                     throw IOException("Cannot read stderr handle flags: " + Marshal.GetLastPInvokeError().ToString())
                 }
                 savedHandleFlags = flags
@@ -67,7 +68,7 @@ internal unsafe partial class VulkanStartupReport {
                             throw IOException("Cannot preserve stderr handle: " + Marshal.GetLastPInvokeError().ToString())
                         }
                         protectedHandle = true
-                    } else if GetHandleInformation(crtHandle, &flags) == 0 {
+                    } else if GetHandleInformation(crtHandle, out flags) == 0 {
                         throw IOException("Cannot read CRT stderr handle flags: " + Marshal.GetLastPInvokeError().ToString())
                     }
                     stderrInherits = (flags & WinHandleInherit) != 0u
@@ -140,52 +141,54 @@ internal unsafe partial class VulkanStartupReport {
     }
 
     private func Drain(state StartupStderrDrain, reader int32, saved int32, handle nint) {
+        var pin GCHandle
         try {
             let bytes = [4096]uint8
-            fixed buffer *uint8 = bytes {
-                while true {
-                    let count = if OperatingSystem.IsWindows() {
-                        WinRead(reader, buffer, 4096u)
-                    } else {
-                        int32(UnixRead(reader, buffer, nuint(4096)))
+            pin = GCHandle.Alloc(bytes, GCHandleType.Pinned)
+            let buffer = pin.AddrOfPinnedObject()
+            while true {
+                let count = if OperatingSystem.IsWindows() {
+                    WinRead(reader, buffer, 4096u)
+                } else {
+                    int32(UnixRead(reader, buffer, nuint(4096)))
+                }
+                if count == 0 {
+                    break
+                }
+                if count < 0 {
+                    if Marshal.GetLastPInvokeError() == 4 {
+                        continue
                     }
-                    if count == 0 {
+                    break
+                }
+                let keep = Math.Min(count, state.Bytes.Length - state.Length)
+                if keep > 0 {
+                    Array.Copy(bytes, 0, state.Bytes, state.Length, keep)
+                    Volatile.Write(ref state.Length, state.Length + keep)
+                }
+                var offset int32
+                while offset < count {
+                    var written int32
+                    if saved >= 0 {
+                        written = if OperatingSystem.IsWindows() {
+                            WinWrite(saved, buffer + nint(offset), uint32(count - offset))
+                        } else {
+                            int32(UnixWrite(saved, buffer + nint(offset), nuint(count - offset)))
+                        }
+                    } else if OperatingSystem.IsWindows() && handle != nint(0) && handle != nint(-1) {
+                        var copied uint32
+                        if WriteFile(handle, buffer + nint(offset), uint32(count - offset), out copied, nint(0)) != 0 {
+                            written = int32(copied)
+                        }
+                    }
+                    if written <= 0 {
                         break
                     }
-                    if count < 0 {
-                        if Marshal.GetLastPInvokeError() == 4 {
-                            continue
-                        }
-                        break
-                    }
-                    let keep = Math.Min(count, state.Bytes.Length - state.Length)
-                    if keep > 0 {
-                        Array.Copy(bytes, 0, state.Bytes, state.Length, keep)
-                        Volatile.Write(ref state.Length, state.Length + keep)
-                    }
-                    var offset int32
-                    while offset < count {
-                        var written int32
-                        if saved >= 0 {
-                            written = if OperatingSystem.IsWindows() {
-                                WinWrite(saved, buffer + offset, uint32(count - offset))
-                            } else {
-                                int32(UnixWrite(saved, buffer + offset, nuint(count - offset)))
-                            }
-                        } else if OperatingSystem.IsWindows() && handle != nint(0) && handle != nint(-1) {
-                            var copied uint32
-                            if WriteFile(handle, buffer + offset, uint32(count - offset), &copied, nint(0)) != 0 {
-                                written = int32(copied)
-                            }
-                        }
-                        if written <= 0 {
-                            break
-                        }
-                        offset += written
-                    }
+                    offset += written
                 }
             }
         } catch (error Exception) { } finally {
+            if pin.IsAllocated { pin.Free() }
             Close(reader)
             state.Done.Set()
             ReleaseDrain(state, saved)
@@ -423,21 +426,21 @@ internal unsafe partial class VulkanStartupReport {
         @DllImport("kernel32.dll") private func SetStdHandle(kind int32, handle nint) int32;
 
         @DllImport("kernel32.dll", SetLastError: true)
-        private func GetHandleInformation(handle nint, flags *uint32) int32;
+        private func GetHandleInformation(handle nint, out flags uint32) int32;
 
         @DllImport("kernel32.dll", SetLastError: true)
         private func SetHandleInformation(handle nint, mask uint32, flags uint32) int32;
 
         @DllImport("kernel32.dll") private func WriteFile(
             handle nint,
-            buffer *uint8,
+            buffer nint,
             length uint32,
-            written *uint32,
+            out written uint32,
             overlapped nint
         ) int32;
 
         @DllImport("ucrtbase.dll", EntryPoint: "_pipe", SetLastError: true) private func WinPipe(
-            descriptors *int32,
+            @Out descriptors []int32,
             size uint32,
             mode int32
         ) int32;
@@ -458,13 +461,13 @@ internal unsafe partial class VulkanStartupReport {
 
         @DllImport("ucrtbase.dll", EntryPoint: "_read", SetLastError: true) private func WinRead(
             descriptor int32,
-            buffer *uint8,
+            buffer nint,
             length uint32
         ) int32;
 
         @DllImport("ucrtbase.dll", EntryPoint: "_write", SetLastError: true) private func WinWrite(
             descriptor int32,
-            buffer *uint8,
+            buffer nint,
             length uint32
         ) int32;
 
@@ -472,10 +475,11 @@ internal unsafe partial class VulkanStartupReport {
 
         @DllImport("ucrtbase.dll", EntryPoint: "fflush") private func WinFlush(file nint) int32;
 
-        @DllImport("libc", EntryPoint: "pipe", SetLastError: true) private func UnixPipe(descriptors *int32) int32;
+        @DllImport("libc", EntryPoint: "pipe", SetLastError: true)
+        private func UnixPipe(@Out descriptors []int32) int32;
 
         @DllImport("libc", EntryPoint: "pipe2", SetLastError: true)
-        private func LinuxPipe(descriptors *int32, flags int32) int32;
+        private func LinuxPipe(@Out descriptors []int32, flags int32) int32;
 
         @DllImport("libc", EntryPoint: "fcntl", SetLastError: true)
         private func LinuxFileControl(descriptor int32, command int32, argument int32) int32;
@@ -494,13 +498,13 @@ internal unsafe partial class VulkanStartupReport {
 
         @DllImport("libc", EntryPoint: "read", SetLastError: true) private func UnixRead(
             descriptor int32,
-            buffer *uint8,
+            buffer nint,
             length nuint
         ) nint;
 
         @DllImport("libc", EntryPoint: "write", SetLastError: true) private func UnixWrite(
             descriptor int32,
-            buffer *uint8,
+            buffer nint,
             length nuint
         ) nint;
 
