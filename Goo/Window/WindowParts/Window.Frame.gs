@@ -275,7 +275,7 @@ public partial class Window {
               Portals.Sync(existing, portalRoot)
             }
             if application {
-              prepareLayoutBaseline(node!!, continuationEffects)
+              prepareLayoutBaseline(node!!, combineEffects(continuationEffects, retainedEffects))
               beginLayoutApplication()
               layoutApplicationPending = true
               layoutCauseFilter = LayoutCause.Application
@@ -711,7 +711,10 @@ public partial class Window {
       || hasEffect(continuation, ReconcileEffects.Layout)
       || hasEffect(continuation, ReconcileEffects.Structure) {
       calculateLayout(root, viewW, viewH)
-    } else { refreshSized(root) }
+    } else {
+      refreshSized(root)
+      if hasEffect(continuation, ReconcileEffects.Rect) { layout.RefreshRects(root, portalRoot) }
+    }
     var pass int32
     while pass < 3 {
       let effects = refreshVirtualization(root)

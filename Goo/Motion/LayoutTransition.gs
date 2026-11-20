@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Numerics
 import System.Runtime.CompilerServices
 
 internal enum LayoutCause { None; Application; Environment }
@@ -27,12 +28,13 @@ internal class LayoutOrigin {
   }
 }
 
-internal enum LayoutTransitionPhase { Application; Immediate; Staged }
+internal enum LayoutTransitionPhase { Immediate; Staged; StandaloneSizes; StandalonePositions }
 
 /// Describes an opt-in transition for application changes to computed bounds using DurationMs and Easing, or a custom SimulationFactory.
 /// Environment changes apply at once and preserve the current application offset and velocity.
 public data struct LayoutTransition(DurationMs float64, Easing Easing) {
-  /// Creates an optional simulation for each changed position or size axis. Omission uses DurationMs and Easing.
+  /// Creates an optional simulation for each changed size axis and each position axis not handled by animated size placement.
+  /// Omission uses DurationMs and Easing.
   /// The simulation starts at from with the supplied velocity and settles at to.
   public prop SimulationFactory ((float64, float64, float64) -> Simulation)? { get; init; }
 }
@@ -60,10 +62,9 @@ internal class LayoutTransitionBlobs {
 internal sealed class LayoutTransitionState : MotionParticle {
   private let node Node
   private var invalidated Action[ReconcileEffects]?
-  private var lastLocalX float32
-  private var lastLocalY float32
-  private var lastWidth float32
-  private var lastHeight float32
+  private var target Rect
+  private var idealPosition Vector2
+  private var placement Vector2
   private var offsetX float32
   private var offsetY float32
   private var offsetWidth float32
@@ -81,7 +82,8 @@ internal sealed class LayoutTransitionState : MotionParticle {
   private var pump MotionPump?
   private var value LayoutTransition
   private var baseline Rect
-  private var baselinePlacement System.Numerics.Vector2
+  private var baselineIdealPosition Vector2
+  private var baselinePlacement Vector2
   private var baselineValid bool
   private var stagedFresh bool
   internal var Previous LayoutTransitionState?
@@ -89,7 +91,8 @@ internal sealed class LayoutTransitionState : MotionParticle {
   private var window Window?
 
   internal prop Value LayoutTransition{ get -> value }
-  internal prop SizeOffset System.Numerics.Vector2 { get -> System.Numerics.Vector2(offsetWidth, offsetHeight) }
+  internal prop SizeOffset Vector2 { get -> Vector2(offsetWidth, offsetHeight) }
+  internal prop HasSizeOffset bool { get -> offsetWidth != 0.0F || offsetHeight != 0.0F }
   internal prop IsPortal bool { get -> node.IsPortal }
 
   internal init(n Node) {
@@ -113,19 +116,26 @@ internal sealed class LayoutTransitionState : MotionParticle {
     }
 
   internal func Resolve(baseX float32, baseY float32, localX float32,
-    localY float32, width float32, height float32, phase LayoutTransitionPhase) Rect {
-      if let owner = pump { sample(owner.Now) }
-      if phase == LayoutTransitionPhase.Staged && !hasBounds { stagedFresh = true }
-      if phase == LayoutTransitionPhase.Application && hasBounds && (localX != lastLocalX || localY != lastLocalY
-        || width != lastWidth || height != lastHeight) {
-        bank(lastLocalX + offsetX - localX, lastLocalY + offsetY - localY,
-          lastWidth + offsetWidth - width, lastHeight + offsetHeight - height)
+    localY float32, width float32, height float32, phase LayoutTransitionPhase,
+    placementX float32 = 0.0F, placementY float32 = 0.0F,
+    idealX float32 = 0.0F, idealY float32 = 0.0F) Rect {
+      if phase == LayoutTransitionPhase.StandaloneSizes && !baselineValid && !stagedFresh {
+        if let owner = pump { sample(owner.Now) }
+        BeginApplication()
       }
+      if phase == LayoutTransitionPhase.Staged && !hasBounds { stagedFresh = true }
       hasBounds = true
-      lastLocalX = localX
-      lastLocalY = localY
-      lastWidth = width
-      lastHeight = height
+      let yoga = node.Yoga
+      let previous = target
+      target = Rect{X: localX, Y: localY, W: width, H: height}
+      idealPosition = Vector2(localX + idealX, localY + idealY)
+      if let measured = yoga {
+        idealPosition.X += measured.Layout.RawLeft - Facebook.Yoga.YGNodeLayoutAPI.YGNodeLayoutGetLeft(measured)
+        idealPosition.Y += measured.Layout.RawTop - Facebook.Yoga.YGNodeLayoutAPI.YGNodeLayoutGetTop(measured)
+      }
+      placement = Vector2(placementX, placementY)
+      if phase == LayoutTransitionPhase.StandaloneSizes { commitSize(previous) }
+      else if phase == LayoutTransitionPhase.StandalonePositions { CommitApplication() }
       return Rect{
         X: baseX + offsetX, Y: baseY + offsetY,
         W: MathF.Max(0.0F, width + offsetWidth), H: MathF.Max(0.0F, height + offsetHeight),
@@ -133,21 +143,20 @@ internal sealed class LayoutTransitionState : MotionParticle {
     }
 
   internal func BeginApplication() {
-    baseline = Rect{X: lastLocalX, Y: lastLocalY, W: lastWidth, H: lastHeight}
+    baseline = target
+    baselineIdealPosition = idealPosition
     baselineValid = hasBounds && !node.Retired
     stagedFresh = !hasBounds
-    baselinePlacement = node.PlacementOffset
+    baselinePlacement = placement
   }
 
-  internal func CommitSize() {
-    if !baselineValid || !hasBounds || node.Retired { return }
-    if !canAnimate() { return }
-    if baseline.W != lastWidth {
-      retarget(ref simulationWidth, ref offsetWidth, ref startWidth, offsetWidth - (lastWidth - baseline.W))
-    }
-    if baseline.H != lastHeight {
-      retarget(ref simulationHeight, ref offsetHeight, ref startHeight, offsetHeight - (lastHeight - baseline.H))
-    }
+  internal func CommitSize() { commitSize(baseline) }
+
+  private func commitSize(sizeBaseline Rect) {
+    if !baselineValid || !hasBounds || node.Retired
+      || (sizeBaseline.W == target.W && sizeBaseline.H == target.H) || !canAnimate() { return }
+    retarget(ref simulationWidth, ref offsetWidth, ref startWidth, offsetWidth + (sizeBaseline.W - target.W))
+    retarget(ref simulationHeight, ref offsetHeight, ref startHeight, offsetHeight + (sizeBaseline.H - target.H))
     updateRegistration()
   }
 
@@ -155,11 +164,12 @@ internal sealed class LayoutTransitionState : MotionParticle {
     stagedFresh = false
     let valid = baselineValid
     baselineValid = false
-    if !valid || !hasBounds || node.Retired || !canAnimate() { return }
-    retarget(ref simulationX, ref offsetX, ref startX,
-      offsetX - (lastLocalX - baseline.X) + baselinePlacement.X - node.PlacementOffset.X)
-    retarget(ref simulationY, ref offsetY, ref startY,
-      offsetY - (lastLocalY - baseline.Y) + baselinePlacement.Y - node.PlacementOffset.Y)
+    if !valid || !hasBounds || node.Retired { return }
+    let deltaX = positionDelta(baseline.X - target.X + (baselinePlacement.X - placement.X), baselineIdealPosition.X, idealPosition.X)
+    let deltaY = positionDelta(baseline.Y - target.Y + (baselinePlacement.Y - placement.Y), baselineIdealPosition.Y, idealPosition.Y)
+    if (deltaX == 0.0F && deltaY == 0.0F) || !canAnimate() { return }
+    retarget(ref simulationX, ref offsetX, ref startX, offsetX + deltaX)
+    retarget(ref simulationY, ref offsetY, ref startY, offsetY + deltaY)
     updateRegistration()
   }
 
@@ -170,19 +180,15 @@ internal sealed class LayoutTransitionState : MotionParticle {
     }
     if !baselineValid { return }
     baselineValid = false
-    lastLocalX = baseline.X
-    lastLocalY = baseline.Y
-    lastWidth = baseline.W
-    lastHeight = baseline.H
+    target = baseline
+    idealPosition = baselineIdealPosition
+    placement = baselinePlacement
   }
 
-  private func bank(x float32, y float32, width float32, height float32) {
-    if !canAnimate() { return }
-    retarget(ref simulationX, ref offsetX, ref startX, x)
-    retarget(ref simulationY, ref offsetY, ref startY, y)
-    retarget(ref simulationWidth, ref offsetWidth, ref startWidth, width)
-    retarget(ref simulationHeight, ref offsetHeight, ref startHeight, height)
-    updateRegistration()
+  private func positionDelta(visualDelta float32, oldIdeal float32, newIdeal float32) float32 {
+    let scale = MathF.Max(MathF.Abs(oldIdeal), MathF.Abs(newIdeal))
+    let roundoff = 4.0F * (MathF.BitIncrement(scale) - scale)
+    return MathF.Abs(oldIdeal - newIdeal) <= roundoff ? 0.0F : visualDelta
   }
 
   private func canAnimate() bool {
@@ -326,11 +332,12 @@ internal class LayoutTransitions {
       }
 
     internal func Resolve(n Node, baseX float32, baseY float32, localX float32,
-      localY float32, width float32, height float32, phase LayoutTransitionPhase) Rect {
+      localY float32, width float32, height float32, phase LayoutTransitionPhase,
+      placementX float32, placementY float32, idealX float32, idealY float32) Rect {
         guard let state = n.RetainedLayoutTransition else {
           return Rect{ X: baseX, Y: baseY, W: width, H: height }
         }
-        return state.Resolve(baseX, baseY, localX, localY, width, height, phase)
+        return state.Resolve(baseX, baseY, localX, localY, width, height, phase, placementX, placementY, idealX, idealY)
       }
 
     internal func Dispose(n Node) {
@@ -354,6 +361,7 @@ public partial class Window {
     state.Previous = nil
     if let first = layoutTransitions { first.Previous = state }
     layoutTransitions = state
+    layout.HasWindowLayoutTransitions = true
   }
 
   internal func RemoveLayoutTransition(state LayoutTransitionState) {
@@ -362,6 +370,7 @@ public partial class Window {
     if let next = state.Next { next.Previous = state.Previous }
     state.Previous = nil
     state.Next = nil
+    layout.HasWindowLayoutTransitions = layoutTransitions != nil
   }
 
   private func beginLayoutApplication() {

@@ -4,6 +4,7 @@ import Facebook.Yoga
 import System
 import System.Collections.Generic
 import System.Runtime.CompilerServices
+import System.Numerics
 
 internal class ScrollTopologyValue {
   internal var Version int64
@@ -30,6 +31,9 @@ internal class ScrollTopology {
 
 internal partial class Layout {
   internal var TransitionPhase LayoutTransitionPhase
+  internal var HasWindowLayoutTransitions bool
+  private var standalone bool
+  private var standaloneTransitions bool
   internal var config Facebook.Yoga.Config?
   internal var lastWidth float32
   internal var lastHeight float32
@@ -68,6 +72,7 @@ internal partial class Layout {
   // Walk only when structure changed; targeted style pushes keep Yoga current,
   // and Yoga's setters propagate dirt to the root for the clean early-out.
   internal func Calculate(root Node, width float32, height float32) {
+    standalone = true
     CalculateCore(root, nil, width, height)
   }
 
@@ -107,7 +112,19 @@ internal partial class Layout {
       ? Single.NaN : height
       YGNodeAPI.YGNodeCalculateLayout(yg, width, availableHeight, yogaDirection(root.Direction))
       resolveFinalIntrinsic(root, width, height)
-      readRect(root, 0.0F, 0.0F)
+      if overlayRoot == nil {
+        standaloneTransitions = false
+        TransitionPhase = LayoutTransitionPhase.StandaloneSizes
+        try {
+          readRect(root, 0.0F, 0.0F)
+          if standaloneTransitions {
+            TransitionPhase = LayoutTransitionPhase.StandalonePositions
+            readRect(root, 0.0F, 0.0F)
+          }
+        } finally { TransitionPhase = LayoutTransitionPhase.Immediate }
+      } else {
+        readRect(root, 0.0F, 0.0F)
+      }
       ScrollbarParts.Arrange(root)
     }
     lastRoot = root
@@ -647,16 +664,21 @@ internal partial class Layout {
   left.X == right.X && left.Y == right.Y && left.W == right.W && left.H == right.H
 
   internal func readRect(n Node, originX float32, originY float32,
-    placementX float32 = 0.0F, placementY float32 = 0.0F, hidden bool = false) {
+    placementX float32 = 0.0F, placementY float32 = 0.0F, hidden bool = false,
+    projectedX float32 = 0.0F, projectedY float32 = 0.0F, idealX float32 = 0.0F, idealY float32 = 0.0F) {
       guard let yg = n.Yoga else {
         return
       }
       let localX = YGNodeLayoutAPI.YGNodeLayoutGetLeft(yg) + placementX
       let localY = YGNodeLayoutAPI.YGNodeLayoutGetTop(yg) + placementY
-      let absX = originX + localX
-      let absY = originY + localY
+      if TransitionPhase == LayoutTransitionPhase.StandaloneSizes && n.RetainedLayoutTransition != nil {
+        standaloneTransitions = true
+      }
+      let absX = originX + localX + projectedX
+      let absY = originY + localY + projectedY
       let visual = LayoutTransitions.Resolve(n, absX, absY, localX, localY,
-        YGNodeLayoutAPI.YGNodeLayoutGetWidth(yg), YGNodeLayoutAPI.YGNodeLayoutGetHeight(yg), TransitionPhase)
+        YGNodeLayoutAPI.YGNodeLayoutGetWidth(yg), YGNodeLayoutAPI.YGNodeLayoutGetHeight(yg),
+        TransitionPhase, projectedX, projectedY, idealX, idealY)
       n.Rect = visual
       let hiddenSubtree = hidden || n.Display == Display.None
       let editor = n.Kind == NodeKind.Editor
@@ -702,9 +724,18 @@ internal partial class Layout {
       } else if n.RetainedSizedState != nil {
         arrangeSized(n, hiddenSubtree)
       } else {
+        var ideal = false
+        let projected = !hiddenSubtree && TransitionPhase != LayoutTransitionPhase.StandaloneSizes
+          && (HasWindowLayoutTransitions || standaloneTransitions) && LayoutPlacement.NeedsProjection(n, ref ideal)
+        var placement = projected ? LayoutPlacement(n) : LayoutPlacement{}
+        var idealPlacement = ideal ? LayoutPlacement(n, true) : LayoutPlacement{}
         for i in 0 ... n.Children.Count {
-          if !n.Children[i].IsPortal {
-            readRect(n.Children[i], visual.X, visual.Y, hidden: hiddenSubtree)
+          let child = n.Children[i]
+          if !child.IsPortal {
+            let offset = projected ? placement.Next(child) : Vector2.Zero
+            let idealOffset = ideal ? idealPlacement.Next(child) : offset
+            readRect(child, visual.X, visual.Y, hidden: hiddenSubtree, projectedX: offset.X, projectedY: offset.Y,
+              idealX: idealOffset.X, idealY: idealOffset.Y)
           }
         }
       }

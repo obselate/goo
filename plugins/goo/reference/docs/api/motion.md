@@ -88,7 +88,9 @@ An application retarget keeps the displayed bounds and passes sampled velocity t
 | Declared lengths, spacing, colors, border radii and widths, opacity, shadows, typography and transforms | Style `TransitionProperties` |
 
 The box paints at its interpolated size. Borders and radii are not stretched.
-Descendants keep their final layout sizes and offsets, and follow the interpolated origin.
+Single-line flex placement and absolute insets follow the visible sizes of the box and its children.
+Position simulations animate only the change not explained by that placement.
+Wrapped flex, custom layout and `Sized` keep their target local placement.
 Text is not scaled or reflowed on each motion frame. A clipping box clips its descendants
 at its interpolated bounds. Hit testing, metrics and accessibility use the same geometry.
 Style transitions compose with these bounds. A layout-valued style or Motion binding
@@ -220,7 +222,7 @@ Describes an opt-in transition for application changes to computed bounds using 
 
 ### `SimulationFactory`
 
-Creates an optional simulation for each changed position or size axis. Omission uses DurationMs and Easing. The simulation starts at from with the supplied velocity and settles at to.
+Creates an optional simulation for each changed size axis and each position axis not handled by animated size placement. Omission uses DurationMs and Easing. The simulation starts at from with the supplied velocity and settles at to.
 
 ## `Motion`
 

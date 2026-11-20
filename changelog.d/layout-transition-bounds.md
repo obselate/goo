@@ -1,3 +1,3 @@
 ## Fixed
 
-- Interpolate computed width and height with position in `LayoutTransition` for application commits. Resize, scale, resources and placement apply at once without starting or restarting a transition. An active animation keeps its application offset, velocity and clock. Paint, hit testing, metrics and accessibility use the same bounds. Descendants keep their final layout size without scaling or per-frame text reflow. App retargets preserve velocity on all four axes.
+- Interpolate computed width and height with position in `LayoutTransition` for application commits. Single-line flex placement and absolute insets follow visible sizes without remeasuring or scaling children. Wrapped flex, custom layout and `Sized` keep their target local placement. Resize, scale and resource updates apply at once without restarting application motion. Paint, hit testing, metrics and accessibility use the same bounds. App retargets preserve velocity on all four axes.

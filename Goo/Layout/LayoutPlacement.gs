@@ -4,12 +4,9 @@ import System
 import System.Numerics
 import Facebook.Yoga
 
-internal enum PlacementSizes { Target; Visible }
-
 internal struct LayoutPlacement {
   private var parent Node?
-  private var from PlacementSizes
-  private var to PlacementSizes
+  private var rawTarget bool
   private var direction Facebook.Yoga.Direction
   private var main Facebook.Yoga.FlexDirection
   private var cross Facebook.Yoga.FlexDirection
@@ -23,34 +20,42 @@ internal struct LayoutPlacement {
   private var toBetween float32
   private var fromAuto float32
   private var toAuto float32
+  private var baselineLine bool
+  private var fromLine Vector2
+  private var toLine Vector2
 
-  internal init(n Node, from PlacementSizes, to PlacementSizes) {
+  internal init(n Node, rawTarget bool = false) {
     parent = n
-    this.from = from
-    this.to = to
-    guard let yoga = n.Yoga else { return }
+    this.rawTarget = rawTarget
+    let yoga = n.Yoga!!
     direction = yoga.Layout.GetDirection()
     main = FlexDirectionAlgorithms.ResolveDirection(yoga.Style.FlexDirection, direction)
     cross = FlexDirectionAlgorithms.ResolveCrossDirection(main, direction)
-    fromSize = from == PlacementSizes.Visible ? Vector2(n.Rect.W, n.Rect.H) : size(n, from)
-    toSize = to == PlacementSizes.Visible ? Vector2(n.Rect.W, n.Rect.H) : size(n, to)
+    let rounded = targetSize(yoga, false)
+    fromSize = rawTarget ? targetSize(yoga, true) : rounded
+    toSize = visibleSize(n, rounded)
     let horizontal = inset(yoga, Facebook.Yoga.FlexDirection.Row, false) + inset(yoga, Facebook.Yoga.FlexDirection.Row, true)
     let vertical = inset(yoga, Facebook.Yoga.FlexDirection.Column, false) + inset(yoga, Facebook.Yoga.FlexDirection.Column, true)
     fromInner = Vector2(MathF.Max(0.0F, fromSize.X - horizontal), MathF.Max(0.0F, fromSize.Y - vertical))
     toInner = Vector2(MathF.Max(0.0F, toSize.X - horizontal), MathF.Max(0.0F, toSize.Y - vertical))
     if n.FlexWrap != FlexWrap.NoWrap { return }
+    baselineLine = isRow(main) && n.AlignItems == AlignItems.Baseline
     var count = 0
     var autoMargins = 0
     var fromUsed = 0.0F
     var toUsed = 0.0F
-    for child in n.Children {
+    for i in 0 ... n.Children.Count {
+      let child = n.Children[i]
       if child.IsPortal || child.Display == Display.None || child.Position == PositionType.Absolute { continue }
       guard let yg = child.Yoga else { continue }
       count++
+      baselineLine = baselineLine || isRow(main) && child.AlignSelf == AlignSelf.Baseline
       if yg.Style.FlexStartMarginIsAuto(main, direction) { autoMargins++ }
       if yg.Style.FlexEndMarginIsAuto(main, direction) { autoMargins++ }
-      fromUsed += extent(size(child, from), main) + yg.Style.ComputeMarginForAxis(main, fromInner.X)
-      toUsed += extent(size(child, to), main) + yg.Style.ComputeMarginForAxis(main, toInner.X)
+      let rounded = targetSize(yg, false)
+      let target = rawTarget ? targetSize(yg, true) : rounded
+      fromUsed += extent(target, main) + yg.Style.ComputeMarginForAxis(main, fromInner.X)
+      toUsed += extent(visibleSize(child, rounded), main) + yg.Style.ComputeMarginForAxis(main, toInner.X)
     }
     let fromGap = yoga.Style.ComputeGapForAxis(main, extent(fromInner, main))
     let toGap = yoga.Style.ComputeGapForAxis(main, extent(toInner, main))
@@ -67,30 +72,35 @@ internal struct LayoutPlacement {
       fromCursor += justify(n.JustifyContent, fromFree, count, ref fromBetween)
       toCursor += justify(n.JustifyContent, toFree, count, ref toBetween)
     }
+    if baselineLine {
+      fromLine = lineMetrics(n, fromInner.X, false)
+      toLine = lineMetrics(n, toInner.X, true)
+    }
   }
 
   internal func Next(child Node) Vector2 {
     guard let n = parent else { return Vector2.Zero }
-    guard let yoga = n.Yoga else { return Vector2.Zero }
     guard let yg = child.Yoga else { return Vector2.Zero }
     if child.IsPortal || child.Display == Display.None { return Vector2.Zero }
-    let oldSize = size(child, from)
-    let newSize = size(child, to)
+    let rounded = targetSize(yg, false)
+    let oldSize = rawTarget ? targetSize(yg, true) : rounded
+    let newSize = visibleSize(child, rounded)
     if child.Position == PositionType.Absolute {
-      return Vector2(absolute(n, child, fromSize, oldSize, true) - absolute(n, child, toSize, newSize, true),
-        absolute(n, child, fromSize, oldSize, false) - absolute(n, child, toSize, newSize, false)) * -1.0F
+      return Vector2(absolute(n, child, toSize, newSize, true) - absolute(n, child, fromSize, oldSize, true),
+        absolute(n, child, toSize, newSize, false) - absolute(n, child, fromSize, oldSize, false))
     }
     if n.FlexWrap != FlexWrap.NoWrap { return Vector2.Zero }
     if yg.Style.FlexStartMarginIsAuto(main, direction) {
       fromCursor += fromAuto
       toCursor += toAuto
     }
-    let oldMain = fromCursor + yg.Style.ComputeFlexStartMargin(main, direction, fromInner.X)
+    let childDirection = yg.Layout.GetDirection()
+    let oldMain = fromCursor + yg.Style.ComputeFlexStartMargin(main, childDirection, fromInner.X)
       + relative(yg, main, extent(fromInner, main))
-    let newMain = toCursor + yg.Style.ComputeFlexStartMargin(main, direction, toInner.X)
+    let newMain = toCursor + yg.Style.ComputeFlexStartMargin(main, childDirection, toInner.X)
       + relative(yg, main, extent(toInner, main))
-    let oldCross = crossPosition(n, child, fromInner, oldSize)
-    let newCross = crossPosition(n, child, toInner, newSize)
+    let oldCross = crossPosition(n, child, fromInner, oldSize, fromLine)
+    let newCross = crossPosition(n, child, toInner, newSize, toLine)
     fromCursor += extent(oldSize, main) + yg.Style.ComputeMarginForAxis(main, fromInner.X) + fromBetween
     toCursor += extent(newSize, main) + yg.Style.ComputeMarginForAxis(main, toInner.X) + toBetween
     if yg.Style.FlexEndMarginIsAuto(main, direction) {
@@ -102,30 +112,58 @@ internal struct LayoutPlacement {
     return isRow(main) ? Vector2(deltaMain, deltaCross) : Vector2(deltaCross, deltaMain)
   }
 
-  private func crossPosition(n Node, child Node, inner Vector2, childSize Vector2) float32 {
-    let yoga = n.Yoga!
-    let yg = child.Yoga!
+  private func crossPosition(n Node, child Node, inner Vector2, childSize Vector2, line Vector2) float32 {
+    let yoga = n.Yoga!!
+    let yg = child.Yoga!!
+    let leading = inset(yoga, cross, false)
+    let align = alignment(n, child)
+    if baselineLine {
+      if align == AlignItems.Baseline {
+        return leading + line.Y - retainedBaseline(yg) + yg.Style.ComputeFlexStartPosition(cross, direction, inner.Y)
+      }
+      if align == AlignItems.Center { return leading + (line.X - childSize.Y) * 0.5F }
+      if align == AlignItems.FlexEnd {
+        return leading + line.X - childSize.Y - yg.Style.ComputeFlexEndMargin(cross, direction, inner.X)
+      }
+      if align == AlignItems.Stretch { return leading + yg.Style.ComputeFlexStartMargin(cross, direction, inner.X) }
+      return leading + yg.Style.ComputeFlexStartPosition(cross, direction, inner.X)
+    }
     let free = extent(inner, cross) - extent(childSize, cross) - yg.Style.ComputeMarginForAxis(cross, inner.X)
-    var offset = inset(yoga, cross, false) + yg.Style.ComputeFlexStartMargin(cross, direction, inner.X)
+    var offset = leading + yg.Style.ComputeFlexStartMargin(cross, yg.Layout.GetDirection(), inner.X)
     let startAuto = yg.Style.FlexStartMarginIsAuto(cross, direction)
     let endAuto = yg.Style.FlexEndMarginIsAuto(cross, direction)
     if startAuto { offset += MathF.Max(0.0F, free) / (endAuto ? 2.0F : 1.0F) }
     else if !endAuto {
-      let align = child.AlignSelf == AlignSelf.Auto ? n.AlignItems : switch child.AlignSelf {
-        case AlignSelf.Center: AlignItems.Center
-        case AlignSelf.FlexEnd: AlignItems.FlexEnd
-        case AlignSelf.Baseline: AlignItems.Baseline
-        case _: AlignItems.FlexStart
-      }
       if align == AlignItems.Center { offset += free * 0.5F }
       else if align == AlignItems.FlexEnd { offset += free }
     }
     return offset + relative(yg, cross, extent(inner, cross))
   }
 
+  private func lineMetrics(n Node, width float32, visible bool) Vector2 {
+    var height = 0.0F
+    var ascent = 0.0F
+    var descent = 0.0F
+    for i in 0 ... n.Children.Count {
+      let child = n.Children[i]
+      if child.IsPortal || child.Display == Display.None || child.Position == PositionType.Absolute { continue }
+      guard let yoga = child.Yoga else { continue }
+      let rounded = targetSize(yoga, false)
+      let size = visible ? visibleSize(child, rounded) : rawTarget ? targetSize(yoga, true) : rounded
+      let outer = size.Y + yoga.Style.ComputeMarginForAxis(cross, width)
+      height = MathF.Max(height, outer)
+      if alignment(n, child) == AlignItems.Baseline {
+        let baseline = retainedBaseline(yoga) + yoga.Style.ComputeFlexStartMargin(cross, direction, width)
+        ascent = MathF.Max(ascent, baseline)
+        descent = MathF.Max(descent, outer - baseline)
+      }
+    }
+    return Vector2(MathF.Max(height, ascent + descent), ascent)
+  }
+
   private func absolute(n Node, child Node, parentSize Vector2, childSize Vector2, horizontal bool) float32 {
-    let yoga = n.Yoga!
-    let yg = child.Yoga!
+    let yoga = n.Yoga!!
+    let yg = child.Yoga!!
     let axis = horizontal ? Facebook.Yoga.FlexDirection.Row : Facebook.Yoga.FlexDirection.Column
     let available = extent(parentSize, axis) - yoga.Style.ComputeBorderForAxis(axis)
     if yg.Style.IsInlineStartPositionDefined(axis, direction) && !yg.Style.IsInlineStartPositionAuto(axis, direction) {
@@ -151,24 +189,70 @@ internal struct LayoutPlacement {
       if n.JustifyContent == JustifyContent.FlexEnd { fraction = 1.0F }
       else if n.JustifyContent != JustifyContent.FlexStart && n.JustifyContent != JustifyContent.SpaceBetween { fraction = 0.5F }
     } else {
-      let align = child.AlignSelf == AlignSelf.Auto ? int32(n.AlignItems) + 1 : int32(child.AlignSelf)
-      if align == int32(AlignSelf.Center) { fraction = 0.5F }
-      else if align == int32(AlignSelf.FlexEnd) { fraction = 1.0F }
+      let align = alignment(n, child)
+      if align == AlignItems.Center { fraction = 0.5F }
+      else if (align == AlignItems.FlexEnd) != (n.FlexWrap == FlexWrap.WrapReverse) { fraction = 1.0F }
     }
-    return physical(leading + free * fraction + yg.Style.ComputeFlexStartMargin(resolved, direction, parentSize.X), parentSize, childSize, resolved)
+    let containingWidth = parentSize.X - yoga.Style.ComputeBorderForAxis(Facebook.Yoga.FlexDirection.Row)
+    return physical(leading + free * fraction + yg.Style.ComputeFlexStartMargin(resolved, direction, containingWidth), parentSize, childSize, resolved)
   }
 
   shared {
-    internal func size(n Node, mode PlacementSizes) Vector2 {
-      let yoga = n.Yoga!
-      var result = Vector2(yoga.Layout.RawDimension(Facebook.Yoga.Dimension.Width), yoga.Layout.RawDimension(Facebook.Yoga.Dimension.Height))
-      if mode == PlacementSizes.Visible {
-        if let state = n.RetainedLayoutTransition { result += state.SizeOffset }
-        result.X = MathF.Max(0.0F, result.X)
-        result.Y = MathF.Max(0.0F, result.Y)
+    internal func NeedsProjection(n Node, ref ideal bool) bool {
+      let count = n.Children.Count
+      if count == 0 { return false }
+      var active = n.RetainedLayoutTransition?.HasSizeOffset == true
+      var retainedChild = false
+      for i in 0 ... count {
+        let child = n.Children[i]
+        if child.IsPortal || child.Display == Display.None { continue }
+        if let state = child.RetainedLayoutTransition {
+          retainedChild = true
+          active = active || state.HasSizeOffset
+        }
       }
-      return result
+      if retainedChild {
+        let yoga = n.Yoga!!
+        ideal = targetSize(yoga, false) != targetSize(yoga, true)
+        var i = 0
+        while !ideal && i < count {
+          let child = n.Children[i]
+          i++
+          if child.IsPortal || child.Display == Display.None { continue }
+          if let yg = child.Yoga { ideal = targetSize(yg, false) != targetSize(yg, true) }
+        }
+      }
+      return active
     }
+
+    private func targetSize(yoga Facebook.Yoga.Node, raw bool) Vector2 -> raw
+      ? Vector2(YGNodeLayoutAPI.YGNodeLayoutGetRawWidth(yoga), YGNodeLayoutAPI.YGNodeLayoutGetRawHeight(yoga))
+      : Vector2(YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga), YGNodeLayoutAPI.YGNodeLayoutGetHeight(yoga))
+
+    private func visibleSize(n Node, target Vector2) Vector2 {
+      guard let state = n.RetainedLayoutTransition else { return target }
+      return Vector2.Max(Vector2.Zero, target + state.SizeOffset)
+    }
+
+    private func alignment(parent Node, child Node) AlignItems ->
+      child.AlignSelf == AlignSelf.Auto ? parent.AlignItems : AlignItems(int32(child.AlignSelf) - 1)
+
+    private func retainedBaseline(yoga Facebook.Yoga.Node) float32 {
+      var first Facebook.Yoga.Node?
+      for i in 0 ... int32(yoga.GetChildCount()) {
+        guard let child = yoga.GetChild(nuint(i)) else { continue }
+        if child.Style.Display == Facebook.Yoga.Display.None || child.Style.PositionType == Facebook.Yoga.PositionType.Absolute { continue }
+        if child.GetLineIndex() > 0 { break }
+        let align = child.Style.AlignSelf == Facebook.Yoga.Align.Auto ? yoga.Style.AlignItems : child.Style.AlignSelf
+        if child.IsReferenceBaseline() || align == Facebook.Yoga.Align.Baseline && isRow(yoga.Style.FlexDirection) {
+          return child.Layout.RawTop + retainedBaseline(child)
+        }
+        first ??= child
+      }
+      if let child = first { return child.Layout.RawTop + retainedBaseline(child) }
+      return yoga.Layout.MeasuredDimension(Facebook.Yoga.Dimension.Height)
+    }
+
     private func isRow(axis Facebook.Yoga.FlexDirection) bool ->
       axis == Facebook.Yoga.FlexDirection.Row || axis == Facebook.Yoga.FlexDirection.RowReverse
     private func extent(value Vector2, axis Facebook.Yoga.FlexDirection) float32 -> isRow(axis) ? value.X : value.Y
@@ -188,22 +272,18 @@ internal struct LayoutPlacement {
     private func justify(value JustifyContent, free float32, count int32, ref between float32) float32 {
       if count == 0 { return 0.0F }
       if free < 0.0F && (value == JustifyContent.SpaceBetween || value == JustifyContent.SpaceAround || value == JustifyContent.SpaceEvenly) { return 0.0F }
-      switch value {
-        case JustifyContent.Center: return free * 0.5F
-        case JustifyContent.FlexEnd: return free
-        case JustifyContent.SpaceBetween {
-          if count > 1 { between += free / float32(count - 1) }
-        }
-        case JustifyContent.SpaceAround {
-          let extra = free / float32(count)
-          between += extra
-          return extra * 0.5F
-        }
-        case JustifyContent.SpaceEvenly {
-          let extra = free / float32(count + 1)
-          between += extra
-          return extra
-        }
+      if value == JustifyContent.Center { return free * 0.5F }
+      if value == JustifyContent.FlexEnd { return free }
+      if value == JustifyContent.SpaceBetween && count > 1 {
+        between += free / float32(count - 1)
+      } else if value == JustifyContent.SpaceAround {
+        let extra = free / float32(count)
+        between += extra
+        return extra * 0.5F
+      } else if value == JustifyContent.SpaceEvenly {
+        let extra = free / float32(count + 1)
+        between += extra
+        return extra
       }
       return 0.0F
     }

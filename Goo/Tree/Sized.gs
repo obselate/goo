@@ -195,6 +195,21 @@ internal partial class Layout {
   }
 
   internal func RefreshSized(root Node, rec Reconciler) {
+    if !standalone {
+      refreshSizedCore(root, rec)
+      return
+    }
+    TransitionPhase = LayoutTransitionPhase.StandaloneSizes
+    try {
+      refreshSizedCore(root, rec)
+      if standaloneTransitions {
+        TransitionPhase = LayoutTransitionPhase.StandalonePositions
+        RefreshRects(root)
+      }
+    } finally { TransitionPhase = LayoutTransitionPhase.Immediate }
+  }
+
+  private func refreshSizedCore(root Node, rec Reconciler) {
     if !HasSized(root) { return }
     let scale = YGConfigAPI.YGConfigGetPointScaleFactor(config)
     var index = 0

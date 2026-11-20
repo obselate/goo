@@ -196,7 +196,7 @@ Set `output.AnchorKey` to the retained visible row key to keep its first survivi
 
 ## Animate computed bounds changes
 
-Set `Blob.LayoutTransition` to a `LayoutTransition(durationMs, easing)` value to glide application changes to a mounted element's computed position and size. Resize, scale, resource updates and placement apply at once without restarting the animation. Style `TransitionProperties` owns declared style values. Painting, hit testing, metrics and accessibility use the same visual rectangle. Descendants keep their final layout size without scaling and follow the interpolated origin. A clipping element clips to its interpolated bounds. See [layout bounds simulations](motion.md#layout-bounds-simulations).
+Set `Blob.LayoutTransition` to a `LayoutTransition(durationMs, easing)` value to glide application changes to a mounted element's computed position and size. Resize, scale, resource updates and placement apply at once without restarting the animation. Style `TransitionProperties` owns declared style values. Painting, hit testing, metrics and accessibility use the same visual rectangle. Single-line flex placement and absolute insets follow visible sizes without remeasuring children. Wrapped flex, custom layout and `Sized` keep their target local placement. A clipping element clips to its interpolated bounds. See [layout bounds simulations](motion.md#layout-bounds-simulations).
 
 ## Owned image sources
 
