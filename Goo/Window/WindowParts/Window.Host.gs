@@ -502,6 +502,7 @@ public partial class Window {
           profiler.Record(FrameProfileStage.Tree, treeProfile)
         }
         let contentCursor = input.CurrentCursor()
+        let pointerHit = if let p = nativePointer { hitTest(int32(p.X), int32(p.Y)) } else { WindowHitResult.Normal }
         native.SetCursor(switch pointerHit {
           case WindowHitResult.TopLeft: Cursor.ResizeNorthwest
           case WindowHitResult.Top: Cursor.ResizeNorth
