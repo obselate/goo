@@ -651,6 +651,10 @@ class PublicDocumentationTests {
             "M:Goo.Application.Configure(System.String,System.String,System.String)",
             "M:Goo.Application.Configure(System.Reflection.Assembly)",
             "M:Goo.Window.DragRegion(Goo.Container)",
+            "M:Goo.Window.MaximizeButton(Goo.Button)",
+            "M:Goo.Window.BeginMove",
+            "M:Goo.Window.BeginResize(Goo.WindowEdge)",
+            "M:Goo.Window.ShowSystemMenu(Goo.Point)",
             "M:Goo.WindowClipboard.ReadText",
             "M:Goo.WindowClipboard.GetFormats",
             "M:Goo.WindowClipboard.ReadFiles",
@@ -2060,6 +2064,21 @@ class PublicDocumentationTests {
                 []string{"region"},
                 System.Array.Empty[string](),
                 true
+            ),
+            ["M:Goo.Window.MaximizeButton(Goo.Button)"] = DocumentationShape(
+                []string{"control"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.Window.BeginResize(Goo.WindowEdge)"] = DocumentationShape(
+                []string{"edge"},
+                System.Array.Empty[string](),
+                false
+            ),
+            ["M:Goo.Window.ShowSystemMenu(Goo.Point)"] = DocumentationShape(
+                []string{"point"},
+                System.Array.Empty[string](),
+                false
             ),
             [
                 "M:Goo.Window.PerformAccessibilityAction(Goo.AccessibilityId,Goo.AccessibilityActionRequest)"
