@@ -24,6 +24,8 @@ internal class StartupStderrDrain {
 
 internal unsafe partial class VulkanStartupReport {
     private const LinuxCloseOnExec int32 = 0x80000
+    private const LinuxGetDescriptorFlags int32 = 1
+    private const LinuxDescriptorCloseOnExec int32 = 1
     private const LinuxDuplicateCloseOnExec int32 = 1030
     private const WinHandleInherit uint32 = 1u
     private const WinPipeBinaryNoInherit int32 = 0x8080
@@ -34,6 +36,7 @@ internal unsafe partial class VulkanStartupReport {
     private var debugOverridden bool
     private var savedHandleFlags uint32
     private var protectedHandle bool
+    private var stderrInherits bool
 
     private func StartCapture() {
         originalDebug = Environment.GetEnvironmentVariable("VK_LOADER_DEBUG")
@@ -50,16 +53,31 @@ internal unsafe partial class VulkanStartupReport {
                 nint(0)
             }
             savedDescriptor = Duplicate(2)
-            if OperatingSystem.IsWindows() && savedDescriptor >= 0 && GetOsHandle(2) == savedHandle {
-                var flags uint32
-                if GetHandleInformation(savedHandle, &flags) == 0
-                || SetHandleInformation(savedHandle, 2u, 2u) == 0 {
-                    throw IOException(
-                        "Cannot preserve the original stderr handle: " + Marshal.GetLastPInvokeError().ToString()
-                    )
+            stderrInherits = true
+            if OperatingSystem.IsWindows() {
+                var flags = WinHandleInherit
+                if savedHandle != nint(0) && savedHandle != nint(-1) && GetHandleInformation(savedHandle, &flags) == 0 {
+                    throw IOException("Cannot read stderr handle flags: " + Marshal.GetLastPInvokeError().ToString())
                 }
                 savedHandleFlags = flags
-                protectedHandle = true
+                if savedDescriptor >= 0 {
+                    let crtHandle = GetOsHandle(2)
+                    if crtHandle == savedHandle {
+                        if SetHandleInformation(savedHandle, 2u, 2u) == 0 {
+                            throw IOException("Cannot preserve stderr handle: " + Marshal.GetLastPInvokeError().ToString())
+                        }
+                        protectedHandle = true
+                    } else if GetHandleInformation(crtHandle, &flags) == 0 {
+                        throw IOException("Cannot read CRT stderr handle flags: " + Marshal.GetLastPInvokeError().ToString())
+                    }
+                    stderrInherits = (flags & WinHandleInherit) != 0u
+                }
+            } else if OperatingSystem.IsLinux() && savedDescriptor >= 0 {
+                let flags = LinuxFileControl(2, LinuxGetDescriptorFlags, 0)
+                if flags < 0 {
+                    throw IOException("Cannot read stderr descriptor flags: " + Marshal.GetLastPInvokeError().ToString())
+                }
+                stderrInherits = (flags & LinuxDescriptorCloseOnExec) == 0
             }
             let result = if OperatingSystem.IsWindows() {
                 WinPipe(descriptors, 4096u, WinPipeBinaryNoInherit)
@@ -76,25 +94,22 @@ internal unsafe partial class VulkanStartupReport {
                 readerDescriptor = Duplicate(descriptors[0])
                 Close(descriptors[0])
             }
-            if readerDescriptor < 0 || (descriptors[1] != 2 && (
-                if OperatingSystem.IsLinux() {
-                    LinuxDuplicateTo(descriptors[1], 2, LinuxCloseOnExec)
-                } else {
-                    DuplicateTo(descriptors[1], 2)
-                }
-            ) < 0) {
+            var writerDescriptor = descriptors[1]
+            if writerDescriptor == 2 {
+                try { writerDescriptor = Duplicate(descriptors[1]) }
+                finally { Close(descriptors[1]) }
+            }
+            if readerDescriptor < 0 || writerDescriptor < 0 || DuplicateToStderr(writerDescriptor) < 0 {
                 let error = Marshal.GetLastPInvokeError()
-                Close(descriptors[1])
+                if writerDescriptor >= 0 { Close(writerDescriptor) }
                 throw IOException("stderr redirection failed: " + error.ToString())
             }
             redirected = true
-            if descriptors[1] != 2 {
-                Close(descriptors[1])
-            }
+            Close(writerDescriptor)
             if OperatingSystem.IsWindows() {
                 let handle = GetOsHandle(2)
-                if SetHandleInformation(handle, WinHandleInherit, 0u) == 0 {
-                    throw IOException("Cannot protect redirected stderr: " + Marshal.GetLastPInvokeError().ToString())
+                if (savedHandleFlags & WinHandleInherit) == 0u && SetHandleInformation(handle, WinHandleInherit, 0u) == 0 {
+                    throw IOException("Cannot preserve stderr inheritance: " + Marshal.GetLastPInvokeError().ToString())
                 }
                 SetStdHandle(-12, handle)
             }
@@ -108,14 +123,7 @@ internal unsafe partial class VulkanStartupReport {
             thread.Start()
         } catch (error Exception) {
             if redirected {
-                if savedDescriptor >= 0 {
-                    DuplicateTo(savedDescriptor, 2)
-                } else {
-                    Close(2)
-                }
-                if OperatingSystem.IsWindows() {
-                    SetStdHandle(-12, savedHandle)
-                }
+                RestoreStderr()
             }
             if readerDescriptor >= 0 {
                 Close(readerDescriptor)
@@ -198,14 +206,7 @@ internal unsafe partial class VulkanStartupReport {
             } else {
                 UnixFlush(nint(0))
             }
-            if savedDescriptor >= 0 {
-                DuplicateTo(savedDescriptor, 2)
-            } else {
-                Close(2)
-            }
-            if OperatingSystem.IsWindows() {
-                SetStdHandle(-12, savedHandle)
-            }
+            RestoreStderr()
             RestoreHandleFlags()
             state.Done.Wait(250)
             ReleaseDrain(state, savedDescriptor)
@@ -224,6 +225,27 @@ internal unsafe partial class VulkanStartupReport {
         if debugOverridden {
             SetLoaderDebug(originalDebug)
             debugOverridden = false
+        }
+    }
+
+    private func DuplicateToStderr(source int32) int32 -> if OperatingSystem.IsWindows() {
+        WinDuplicateTo(source, 2)
+    } else if OperatingSystem.IsLinux() && !stderrInherits {
+        LinuxDuplicateTo(source, 2, LinuxCloseOnExec)
+    } else {
+        UnixDuplicateTo(source, 2)
+    }
+
+    private func RestoreStderr() {
+        if savedDescriptor >= 0 {
+            if DuplicateToStderr(savedDescriptor) >= 0 && OperatingSystem.IsWindows() && !stderrInherits {
+                SetHandleInformation(GetOsHandle(2), WinHandleInherit, 0u)
+            }
+        } else {
+            Close(2)
+        }
+        if OperatingSystem.IsWindows() {
+            SetStdHandle(-12, savedHandle)
         }
     }
 
@@ -341,12 +363,6 @@ internal unsafe partial class VulkanStartupReport {
             line uint32,
             reserved nuint
         ) { }
-
-        private func DuplicateTo(source int32, destination int32) int32 -> if OperatingSystem.IsWindows() {
-            WinDuplicateTo(source, destination)
-        } else {
-            UnixDuplicateTo(source, destination)
-        }
 
         private func Close(descriptor int32) {
             if OperatingSystem.IsWindows() {
