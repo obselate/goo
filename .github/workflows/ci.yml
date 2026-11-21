@@ -1410,6 +1410,8 @@ jobs:
             --force --debug:custom-hive "$template_hive"
           dotnet new goo --name Generated --output "$template_output" \
             --debug:custom-hive "$template_hive"
+          sdk=$(jq -er '."msbuild-sdks"."Gsharp.NET.Sdk"' global.json)
+          grep -Fx "<Project Sdk=\"Gsharp.NET.Sdk/$sdk\">" "$template_output/Generated.gsproj"
           dotnet restore "$template_output/Generated.gsproj" \
             --configfile tests/Goo.PackageSmoke/NuGet.config
           dotnet build "$template_output/Generated.gsproj" \
@@ -2755,6 +2757,7 @@ jobs:
           printf '%s\n' '<configuration><packageSources><clear/><add key="local" value="android-packages"/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources><packageSourceMapping><packageSource key="local"><package pattern="Goo"/><package pattern="Goo.Android"/><package pattern="Goo.Audio"/></packageSource><packageSource key="nuget.org"><package pattern="*"/></packageSource></packageSourceMapping></configuration>' > artifacts/android-nuget.config
           consumer=artifacts/android-consumer
           mkdir -p "$consumer"
+          cp global.json "$consumer/"
           set -o pipefail
           for name in Goo.AndroidSmoke Goo.AndroidSmoke.Shared; do
             test ! -e "$consumer/$name"
@@ -2776,6 +2779,10 @@ jobs:
         run: |
           dotnet new install artifacts/android-packages/Goo.Templates.*.nupkg
           dotnet new goo-android --name AndroidStarter --output artifacts/android-starter --application-id org.goo.androidstarter
+          sdk=$(jq -er '."msbuild-sdks"."Gsharp.NET.Sdk"' global.json)
+          for project in AndroidStarter.gsproj Shared/AndroidStarter.Shared.gsproj; do
+            grep -Fx "<Project Sdk=\"Gsharp.NET.Sdk/$sdk\">" "artifacts/android-starter/$project"
+          done
           dotnet build artifacts/android-starter/AndroidStarter.gsproj -c Release -p:RestoreConfigFile="$PWD/artifacts/android-nuget.config" -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
       - name: Publish Android package consumer with NativeAOT
         if: needs.changes.outputs.full == 'true'

@@ -149,11 +149,6 @@ namespace Facebook.Yoga
                 itemsInFlow.Add(child);
             }
 
-            if (totalFlexGrowFactors > 0 && totalFlexGrowFactors < 1)
-            {
-                totalFlexGrowFactors = 1;
-            }
-
             if (totalFlexShrinkScaledFactors > 0 && totalFlexShrinkScaledFactors < 1)
             {
                 totalFlexShrinkScaledFactors = 1;

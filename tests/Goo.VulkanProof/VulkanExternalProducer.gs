@@ -227,9 +227,9 @@ internal unsafe sealed partial class VulkanExternalProducer : IDisposable {
         for y in 0 ... 4 {
             for x in 0 ... 8 {
                 let offset = (y * 8 + x) * 4
-                pixels[offset] = if premultiplied { uint8(128) }
+                pixels[offset] = if premultiplied { if x < 4 { uint8(128) } else { uint8(0) } }
                     else if (y < 2 && x < 4) || (y >= 2 && x >= 4) { uint8(255) } else { uint8(0) }
-                pixels[offset + 1] = if !premultiplied && x >= 4 { uint8(255) } else { uint8(0) }
+                pixels[offset + 1] = if x >= 4 { if premultiplied { uint8(128) } else { uint8(255) } } else { uint8(0) }
                 pixels[offset + 2] = if !premultiplied && y >= 2 && x < 4 { uint8(255) } else { uint8(0) }
                 pixels[offset + 3] = if premultiplied { uint8(128) } else { uint8(0) }
             }

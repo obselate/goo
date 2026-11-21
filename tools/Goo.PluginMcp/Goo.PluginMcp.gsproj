@@ -6,5 +6,6 @@
     <PackageReference Include="ModelContextProtocol" Version="2.3.1" />
     <EmbeddedResource Include="Tools.json" />
     <EmbeddedResource Include="CaseFold.json" />
+    <EmbeddedResource Include="../../global.json" LogicalName="Goo.PluginMcp.global.json" />
   </ItemGroup>
 </Project>

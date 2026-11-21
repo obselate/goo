@@ -110,22 +110,29 @@ internal unsafe partial class VulkanExternalImageProof {
                 let result = pending.GetAwaiter().GetResult()
                 Require(result.Status == OffscreenRenderStatus.Success, "alpha render failed: " + result.Error)
                 let capture = result.Capture!!
-                let index = 32 * int32(capture.RowBytes) + 32 * 4
-                let red = int32(capture.Pixels[index])
-                let green = int32(capture.Pixels[index + 1])
-                Console.WriteLine("External alpha ${mode}: ${red},${green},"
-                    + "${capture.Pixels[index + 2]},${capture.Pixels[index + 3]}")
+                let row = 32 * int32(capture.RowBytes)
+                for x in []int32{8, 56} {
+                    let index = row + x * 4
+                    Console.WriteLine("External alpha ${mode} (${x},32): ${capture.Pixels[index]},"
+                        + "${capture.Pixels[index + 1]},${capture.Pixels[index + 2]},${capture.Pixels[index + 3]}")
+                }
                 if let directory = Environment.GetEnvironmentVariable("GOO_EXTERNAL_ALPHA_OUTPUT") {
                     System.IO.Directory.CreateDirectory(directory)
                     using let pixels = ImageSource.Transfer(64, 64, capture.Pixels, () -> {})
                     System.IO.File.WriteAllBytes(
                         System.IO.Path.Combine(directory, mode.ToString() + ".png"), pixels.EncodePng())
                 }
-                Require(Math.Abs(red - (if mode == ExternalImageAlphaMode.Premultiplied { 255 } else { 128 })) <= 1
-                    && Math.Abs(green - (if mode == ExternalImageAlphaMode.Premultiplied { 127 } else { 0 })) <= 1
-                    && capture.Pixels[index + 2] == capture.Pixels[index + 1]
-                    && capture.Pixels[index + 3] == uint8(255),
-                    "external image alpha was applied incorrectly")
+                let premultiplied = mode == ExternalImageAlphaMode.Premultiplied
+                let high = if premultiplied { 255 } else { 128 }
+                let low = if premultiplied { 127 } else { 0 }
+                for x in []int32{8, 56} {
+                    let index = row + x * 4
+                    Require(Math.Abs(int32(capture.Pixels[index]) - (if x == 8 { high } else { low })) <= 1
+                        && Math.Abs(int32(capture.Pixels[index + 1]) - (if x == 8 { low } else { high })) <= 1
+                        && Math.Abs(int32(capture.Pixels[index + 2]) - low) <= 1
+                        && capture.Pixels[index + 3] == uint8(255),
+                        "external image alpha or sampling was incorrect at (${x},32)")
+                }
             }
         }
 
