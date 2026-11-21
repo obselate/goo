@@ -69,6 +69,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         if windowHandle == nint(0) {
           ThrowSdl("SDL_GetWindowFromID")
         }
+        if driver == "wayland" { waylandWindowProperties = NativeProperties(windowHandle) }
         SdlRuntime.Register(windowId, Dispatch)
         BindNativeFocus()
         if popupParent == nil && layerWindow == nil {

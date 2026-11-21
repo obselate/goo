@@ -23,7 +23,9 @@ def function(source, name):
 
 
 root = Path(sys.argv[1]) / "src/video/wayland"
-handlers = function((root / "SDL_waylandevents.c").read_text(), "Wayland_ProcessHitTest(")
+events = (root / "SDL_waylandevents.c").read_text()
+handlers = function(events, "pointer_update_hit_test(")
+handlers += "\n" + function(events, "Wayland_ProcessHitTest(")
 window_source = (root / "SDL_waylandwindow.c").read_text()
 handlers += "\n" + function(window_source, "Goo_UsesVulkanFrames(")
 handlers += "\n" + function(window_source, "handle_xdg_surface_configure(")
