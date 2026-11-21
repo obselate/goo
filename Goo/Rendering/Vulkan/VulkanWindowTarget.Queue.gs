@@ -400,7 +400,10 @@ internal unsafe partial class VulkanWindowTarget {
         return
       }
     }
-    if hidden || closing {
+    let native = host as SdlHost?
+    let nativeUnavailable = !hidden && !closing && native != nil && !native.IsLayerWindow
+      && !native.IsVisible && !native.FirstShowPending
+    if hidden || closing || nativeUnavailable {
       // The submitted frame reuses a swapchain image. Retire that image's earlier present here,
       // as queueing the present would, so its record is not also retired by the submission.
       var completedPresentId uint64 = 0uL
@@ -426,6 +429,10 @@ internal unsafe partial class VulkanWindowTarget {
         return
       }
       if completedPresentId != 0uL { presentationRetirement.CompletePresent(completedPresentId) }
+      if nativeUnavailable {
+        recreatePending = true
+        forceFullRedraw = true
+      }
       presentationRetirement.CancelPendingPresentationLatency()
       CloseDiagnosticFrame(false)
       ClearActiveFrame()
@@ -453,7 +460,7 @@ internal unsafe partial class VulkanWindowTarget {
       ReplayInitialImageFrame()
       return
     }
-    if host is SdlHost && !host.PrepareFirstPresent() { return }
+    if native != nil && !native.PrepareFirstPresent() { return }
     var completedPresentId uint64 = 0uL
     try {
       let prepareResult = current.TryPreparePresent(activeImageIndex,
