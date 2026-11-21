@@ -400,17 +400,18 @@ internal unsafe partial class VulkanWindowTarget {
         return
       }
     }
+    let native = host as SdlHost?
+    let nativeUnavailable = !hidden && !closing && native != nil && !native.IsLayerWindow
+      && !native.IsVisible && !native.FirstShowPending
     var obsoleteGeometry = false
-    if !hidden && !closing && !initialImageUploadFrame {
-      if let native = host as SdlHost? {
-        if !native.PrepareFirstPresent() { return }
-        if let current = generation {
-          obsoleteGeometry = !native.WaylandVulkanFrameMatches(activeWaylandGeometryVersion, current.Extent)
-        }
-        if !obsoleteGeometry && !native.WaylandVulkanFrameReady() { return }
+    if !hidden && !closing && !nativeUnavailable && !initialImageUploadFrame && native != nil {
+      if !native.PrepareFirstPresent() { return }
+      if let current = generation {
+        obsoleteGeometry = !native.WaylandVulkanFrameMatches(activeWaylandGeometryVersion, current.Extent)
       }
+      if !obsoleteGeometry && !native.WaylandVulkanFrameReady() { return }
     }
-    if hidden || closing || obsoleteGeometry {
+    if hidden || closing || nativeUnavailable || obsoleteGeometry {
       // The submitted frame reuses a swapchain image. Retire that image's earlier present here,
       // as queueing the present would, so its record is not also retired by the submission.
       var completedPresentId uint64 = 0uL
@@ -436,7 +437,7 @@ internal unsafe partial class VulkanWindowTarget {
         return
       }
       if completedPresentId != 0uL { presentationRetirement.CompletePresent(completedPresentId) }
-      if obsoleteGeometry {
+      if nativeUnavailable || obsoleteGeometry {
         recreatePending = true
         forceFullRedraw = true
       }

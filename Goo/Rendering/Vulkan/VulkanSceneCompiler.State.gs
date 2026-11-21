@@ -189,6 +189,21 @@ internal partial class VulkanSceneCompiler {
       frame.TrimLayerCoverage(visibleNodeCount)
       frame.TrimTransformCapacity(visibleNodeCount)
       FinishRangeFrame()
+      if frame.ShaderEffectCount != 0 {
+        for index in 0 ... frame.LayerCount {
+          let layer = frame.Layers[index]
+          if layer.ParentClipLayerId == 0 || layer.EffectIndex < 0
+            || frame.DrawRefs[layer.DrawOrdinal].Kind != SceneDrawKind.LayerBegin { continue }
+          let placed = frame.Layer(index)
+          let capture = IntersectBounds(viewport, ConservativeBounds{
+            X: placed.OriginX, Y: placed.OriginY,
+            Width: float32(placed.ExtentWidth), Height: float32(placed.ExtentHeight),
+          })
+          if !capture.IsEmpty {
+            frame.AddLayerBackdropBounds(layer.ParentClipLayerId, capture)
+          }
+        }
+      }
       ClassifyRetainedChunks()
 
       lastResult.FrameVersion = frameVersion

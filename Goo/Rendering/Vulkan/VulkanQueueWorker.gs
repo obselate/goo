@@ -361,17 +361,28 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
   }
 
   public func Dispose() {
+    Stop(Timeout.Infinite)
+  }
+
+  internal func Stop(timeoutMs int32) bool {
     lock gate {
       if disposed {
-        return
+        return true
       }
-      disposed = true
-      stopping = true
+      if !stopping {
+        stopping = true
+        VulkanQueueWorker.ReleaseHeldQueueCallForTest()
+        VulkanQueueWorker.ClearTestHoldsForShutdown()
+        signal.Set()
+      }
     }
-    VulkanQueueWorker.ReleaseHeldQueueCallForTest()
-    VulkanQueueWorker.ClearTestHoldsForShutdown()
-    signal.Set()
-    thread.Join()
-    signal.Dispose()
+    if !thread.Join(timeoutMs) { return false }
+    lock gate {
+      if !disposed {
+        signal.Dispose()
+        disposed = true
+      }
+    }
+    return true
   }
 }
