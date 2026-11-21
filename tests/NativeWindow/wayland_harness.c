@@ -14,7 +14,7 @@ struct xdg_surface { int unused; };
 typedef struct {
     SDL_Window *sdlwindow;
     int hit_test_result, shell_surface_type, shell_surface_status;
-    bool resizing, pending_config_ack;
+    bool resizing, pending_config_ack, suspended, goo_vulkan_frame;
     bool has_been_shown, show_hide_sync_required;
     struct { struct { unsigned serial; struct { void *xdg_toplevel; } toplevel; } xdg; } shell_surface;
 } SDL_WindowData;
@@ -39,7 +39,8 @@ enum { XDG_TOPLEVEL_RESIZE_EDGE_TOP_LEFT, XDG_TOPLEVEL_RESIZE_EDGE_TOP,
 enum { SDL_WINDOW_RESIZABLE = 1, SDL_WINDOW_MAXIMIZED = 2, SDL_WINDOW_FULLSCREEN = 4,
     WAYLAND_SHELL_SURFACE_TYPE_XDG_TOPLEVEL = 10,
     WAYLAND_SHELL_SURFACE_STATUS_WAITING_FOR_CONFIGURE = 11,
-    WAYLAND_SHELL_SURFACE_STATUS_WAITING_FOR_FRAME = 12, SDL_EVENT_WINDOW_EXPOSED = 13 };
+    WAYLAND_SHELL_SURFACE_STATUS_WAITING_FOR_FRAME = 12, SDL_EVENT_WINDOW_EXPOSED = 13,
+    WAYLAND_SHELL_SURFACE_STATUS_SHOWN = 14 };
 #define SDL_MS_TO_NS(ms) ((Uint64)(ms) * 1000000)
 #define SDL_abs abs
 static SDL_Mouse mouse = { 500, 8 };
@@ -171,5 +172,21 @@ int main(void)
     configure_pending = true;
     handle_xdg_surface_configure(&data, &surface, 105);
     assert(!configure_pending && acks == 3);
+
+    const int previous_exposes = exposes, previous_acks = acks, previous_geometries = geometries;
+    data.goo_vulkan_frame = true;
+    data.shell_surface_status = WAYLAND_SHELL_SURFACE_STATUS_SHOWN;
+    handle_xdg_surface_configure(&data, &surface, 106);
+    assert(data.pending_config_ack && data.shell_surface.xdg.serial == 106);
+    assert(exposes == previous_exposes + 1 && geometries == previous_geometries + 1 && acks == previous_acks);
+    data.resizing = true;
+    handle_xdg_surface_configure(&data, &surface, 107);
+    assert(data.pending_config_ack && data.shell_surface.xdg.serial == 107);
+    assert(exposes == previous_exposes + 1 && geometries == previous_geometries + 2 && acks == previous_acks);
+    data.pending_config_ack = false;
+    data.suspended = true;
+    handle_xdg_surface_configure(&data, &surface, 108);
+    assert(data.pending_config_ack && data.shell_surface.xdg.serial == 108);
+    assert(exposes == previous_exposes + 1 && geometries == previous_geometries + 3 && acks == previous_acks);
     puts("SDL Wayland titlebar and resize regression checks passed");
 }
