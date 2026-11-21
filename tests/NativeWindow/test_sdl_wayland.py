@@ -24,8 +24,10 @@ def function(source, name):
 
 root = Path(sys.argv[1]) / "src/video/wayland"
 handlers = function((root / "SDL_waylandevents.c").read_text(), "Wayland_ProcessHitTest(")
-handlers += "\n" + function((root / "SDL_waylandwindow.c").read_text(), "handle_xdg_surface_configure(")
-handlers += "\n" + function((root / "SDL_waylandwindow.c").read_text(), "Wayland_CanDeferFirstShow(")
+window_source = (root / "SDL_waylandwindow.c").read_text()
+handlers += "\n" + function(window_source, "Goo_UsesVulkanFrames(")
+handlers += "\n" + function(window_source, "handle_xdg_surface_configure(")
+handlers += "\n" + function(window_source, "Wayland_CanDeferFirstShow(")
 harness = Path(__file__).with_name("wayland_harness.c").read_text()
 with tempfile.TemporaryDirectory(prefix="goo-sdl-test-") as temp:
     source = Path(temp) / "test.c"

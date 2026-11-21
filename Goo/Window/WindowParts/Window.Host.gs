@@ -137,6 +137,7 @@ public partial class Window {
       if maxWidth != 0 || maxHeight != 0 { native.SetMaximumSize(scaledSize(maxWidth), scaledSize(maxHeight)) }
       initializingGraphics = true
       let target = VulkanWindowTarget(native)
+      if ownsStartupReport { VulkanStartupReport.Current?.StopCapture() }
       initializingGraphics = false
       windowTarget = target
       native.SetBackdrop(backdrop == WindowBackdrop.Blur, windowsBackdrop, macOSBackdrop, waylandBackdrop)
@@ -154,6 +155,8 @@ public partial class Window {
           throw GraphicsUnavailableException("Window initialization could not create a render target")
         }
       initializingGraphics = false
+      if ownsStartupReport { VulkanStartupReport.Finish() }
+      ownsStartupReport = false
       x = native.X
       y = native.Y
       input.SetUiScale(float32(UiScale))
@@ -178,10 +181,9 @@ public partial class Window {
       schedulerSimulationBank = 0.0
       Window.RegisterLiveWindow(this)
       WindowDiagnostics.AttachIfEnabled(this)
-      if ownsStartupReport { VulkanStartupReport.Finish() }
       return this
     } catch (e Exception) {
-      if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.Finish(e) }
+      if ownsStartupReport { VulkanStartupReport.Finish(e) }
       try { Close() } catch (cleanup Exception) { }
       if VulkanDiagnostics.StartupReportEnabled && e is GraphicsUnavailableException {
         throw GraphicsUnavailableException(VulkanStartupReport.FailureMessage(e.Message), e)

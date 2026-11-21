@@ -1,6 +1,21 @@
 # Changelog
 
 
+## 0.32.1 - 2026-11-20
+
+### Changed
+
+- Generated desktop and Android projects include the G# SDK version from Goo's `global.json`. MCP starters use the selected checkout's version, or the version bundled with the plugin when no checkout is selected.
+
+### Fixed
+
+- Border radius transitions and removals now preserve declaration order between `BorderRadius` and individual corners.
+- Keep text editor caret, hit testing, selection rectangles, and native accessibility text geometry available while the editor changes size through a layout transition.
+- Let shader effects such as the touch magnifier sample backdrop pixels outside rounded overflow clips without changing the visible clip.
+- Limit progressive JPEG decoding to 500 scans per image.
+- Stop Vulkan startup reports from delaying window creation when a child process keeps stderr open.
+- Fix rendering of rounded Shape corners and non-uniform premultiplied external images.
+
 ## 0.32.0 - 2026-11-20
 
 ### Added

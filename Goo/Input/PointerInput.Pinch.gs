@@ -23,6 +23,7 @@ internal partial class PointerInput {
             if mouse.HeldButtons != PointerButtons.None || mouse.CaptureTarget != nil || dragSession != nil
                 || hasHeldContact(PointerDevice.Touch) || hasHeldContact(PointerDevice.Pen) { return false }
             guard let tree = root else { return false }
+            hitChain.Clear()
             hitChainInto(tree, e.X, e.Y, hitChain)
             if chainDisabled(hitChain) { return false }
             guard let created = createGestureGroup(root, resolver) else { return false }

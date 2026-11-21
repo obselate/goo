@@ -15,12 +15,14 @@ partial class Performance {
             "benchmark font or license hash does not match the fixture contract"
         )
         let identity = JsonObject()
+        let configuration = Path.Combine(Runner.Root, "global.json")
+        let configurationPath = Path.GetRelativePath(root, configuration).Replace('\\', '/')
         let sourceFiles = []string{
             "Program.gs",
             "Goo.ConsumerPerformance.gsproj",
             "Directory.Build.props",
             "Directory.Packages.props",
-            "global.json",
+            configurationPath,
             "NuGet.Config",
             FontPath,
             LicensePath
@@ -53,6 +55,8 @@ partial class Performance {
         Command("dotnet-info", []string{"dotnet", "--info"}, 60)
         let version = Command("dotnet-version", []string{"dotnet", "--version"}, 60).Trim()
         Runner.Require(version == "10.0.403", "fixture requires .NET SDK 10.0.403, got '" + version + "'")
+        let compilerVersion = JsonNode.Parse(File.ReadAllText(configuration))!!["msbuild-sdks"]!!["Gsharp.NET.Sdk"]!!
+            .GetValue[string]()
         let sizes = Publish()
         for mode in modes {
             Runner.Require(
@@ -73,11 +77,11 @@ partial class Performance {
             ["schemaVersion"] = 1,
             ["recordedUtc"] = DateTimeOffset.UtcNow.ToString("O"),
             ["options"] = settings.DeepClone(),
-            ["sdk"] = JsonObject(){["dotnetVersion"] = version, ["globalJson"] = identity["global.json"]!!.DeepClone()},
+            ["sdk"] = JsonObject(){["dotnetVersion"] = version, ["globalJson"] = identity[configurationPath]!!.DeepClone()},
             ["restoreConfig"] = JsonObject(){["path"] = config, ["sha256"] = Hash(config)},
             ["packages"] = JsonObject(){
                 ["goo"] = Package("Goo", options["--package-version"]),
-                ["gsharpSdk"] = Package("Gsharp.NET.Sdk", "0.5.698")
+                ["gsharpSdk"] = Package("Gsharp.NET.Sdk", compilerVersion)
             },
             ["source"] = identity,
             ["font"] = JsonObject(){

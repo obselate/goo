@@ -55,8 +55,6 @@ internal unsafe partial class VulkanStartupReport {
                 writeError = error.GetType().Name + ": " + error.Message
                 try {
                     Current?.StopCapture()
-                    Current?.loaderBytes.Dispose()
-                    Current?.readerDone.Dispose()
                 } catch (cleanup Exception) { }
                 Current = nil
                 Monitor.Exit(sync)
@@ -95,8 +93,6 @@ internal unsafe partial class VulkanStartupReport {
             } catch (failure Exception) {
                 writeError = failure.Message
             } finally {
-                report.loaderBytes.Dispose()
-                report.readerDone.Dispose()
                 Current = nil
                 Monitor.Exit(Gate)
             }
