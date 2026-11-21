@@ -1,0 +1,342 @@
+diff --git a/src/dynapi/SDL_dynapi.sym b/src/dynapi/SDL_dynapi.sym
+index ad52bec..fd37b9b 100644
+--- a/src/dynapi/SDL_dynapi.sym
++++ b/src/dynapi/SDL_dynapi.sym
+@@ -1281,6 +1281,7 @@ SDL3_0.0.0 {
+     SDL_SetWindowFillDocument;
+     Goo_ShowPortalFileDialog;
+     Goo_CancelFileDialog;
++    Goo_SetWindowResizeBorder;
+     # extra symbols go here (don't modify this line)
+   local: *;
+ };
+diff --git a/src/video/wayland/SDL_waylanddyn.h b/src/video/wayland/SDL_waylanddyn.h
+index 8a2c8ab..4943481 100644
+--- a/src/video/wayland/SDL_waylanddyn.h
++++ b/src/video/wayland/SDL_waylanddyn.h
+@@ -132,6 +132,8 @@ extern void SDL_WAYLAND_UnloadSymbols(void);
+ #define wl_data_offer_interface          (*WAYLAND_wl_data_offer_interface)
+ #define wl_data_source_interface         (*WAYLAND_wl_data_source_interface)
+ #define wl_data_device_manager_interface (*WAYLAND_wl_data_device_manager_interface)
++#define wl_subcompositor_interface       (*WAYLAND_wl_subcompositor_interface)
++#define wl_subsurface_interface          (*WAYLAND_wl_subsurface_interface)
+ 
+ /*
+  * These must be included before libdecor.h, otherwise the libdecor header
+diff --git a/src/video/wayland/SDL_waylandevents.c b/src/video/wayland/SDL_waylandevents.c
+index 4fc5f96..a3f21cd 100644
+--- a/src/video/wayland/SDL_waylandevents.c
++++ b/src/video/wayland/SDL_waylandevents.c
+@@ -798,8 +798,9 @@ static void pointer_dispatch_absolute_motion(SDL_WaylandSeat *seat)
+     SDL_Window *window = window_data ? window_data->sdlwindow : NULL;
+ 
+     if (window_data) {
+-        const float sx = (float)(wl_fixed_to_double(seat->pointer.pending_frame.absolute.sx) * window_data->pointer_scale.x);
+-        const float sy = (float)(wl_fixed_to_double(seat->pointer.pending_frame.absolute.sy) * window_data->pointer_scale.y);
++        const SDL_Point origin = Goo_GetResizeBorderOrigin(window_data, seat->pointer.goo_border_edge);
++        const float sx = (float)((wl_fixed_to_double(seat->pointer.pending_frame.absolute.sx) + origin.x) * window_data->pointer_scale.x);
++        const float sy = (float)((wl_fixed_to_double(seat->pointer.pending_frame.absolute.sy) + origin.y) * window_data->pointer_scale.y);
+         SDL_SendMouseMotion(seat->pointer.pending_frame.timestamp_ns, window_data->sdlwindow, seat->pointer.sdl_id, false, sx, sy);
+ 
+         seat->pointer.last_motion.x = (int)SDL_floorf(sx);
+@@ -919,7 +920,11 @@ static void pointer_handle_enter(void *data, struct wl_pointer *pointer,
+         return;
+     }
+ 
++    int border_edge = 0;
+     SDL_WindowData *window = Wayland_GetWindowDataForOwnedSurface(surface);
++    if (!window) {
++        window = Goo_GetResizeBorderWindow(surface, &border_edge);
++    }
+     if (!window) {
+         // Not a surface owned by SDL.
+         return;
+@@ -927,6 +932,7 @@ static void pointer_handle_enter(void *data, struct wl_pointer *pointer,
+ 
+     SDL_WaylandSeat *seat = (SDL_WaylandSeat *)data;
+     seat->pointer.focus = window;
++    seat->pointer.goo_border_edge = border_edge;
+     seat->pointer.enter_serial = serial;
+     ++window->pointer_focus_count;
+     SDL_SetMouseFocus(window->sdlwindow);
+@@ -976,6 +982,9 @@ static void pointer_handle_leave(void *data, struct wl_pointer *pointer,
+     }
+ 
+     SDL_WindowData *window = Wayland_GetWindowDataForOwnedSurface(surface);
++    if (!window) {
++        window = Goo_GetResizeBorderWindow(surface, NULL);
++    }
+     if (!window) {
+         // Not a surface owned by SDL.
+         return;
+@@ -986,6 +995,7 @@ static void pointer_handle_leave(void *data, struct wl_pointer *pointer,
+ 
+     SDL_WaylandSeat *seat = (SDL_WaylandSeat *)data;
+     seat->pointer.focus = NULL;
++    seat->pointer.goo_border_edge = 0;
+     for (int i = 0; seat->pointer.buttons_pressed; ++i) {
+         if (seat->pointer.buttons_pressed & SDL_BUTTON_MASK(i)) {
+             SDL_SendMouseButton(0, window->sdlwindow, seat->pointer.sdl_id, i, false);
+@@ -1168,6 +1178,9 @@ static void pointer_handle_button_common(SDL_WaylandSeat *seat, uint32_t serial,
+         if (sdl_button == SDL_BUTTON_LEFT && Wayland_ProcessHitTest(seat, serial, nsTimestamp, down)) {
+             return; // don't pass this event on to app.
+         }
++        if (seat->pointer.goo_border_edge) {
++            return;
++        }
+ 
+         // Possibly ignore this click if it was to gain focus.
+         if (window->last_focus_event_time_ns) {
+diff --git a/src/video/wayland/SDL_waylandevents_c.h b/src/video/wayland/SDL_waylandevents_c.h
+index b6051cc..4d75951 100644
+--- a/src/video/wayland/SDL_waylandevents_c.h
++++ b/src/video/wayland/SDL_waylandevents_c.h
+@@ -196,6 +196,7 @@ typedef struct SDL_WaylandSeat
+         Uint32 enter_serial;
+         SDL_MouseButtonFlags buttons_pressed;
+         SDL_Point last_motion;
++        int goo_border_edge;
+ 
+         // Goo: titlebar clicks are consumed before SDL mouse click tracking.
+         SDL_WindowID titlebar_click_window;
+diff --git a/src/video/wayland/SDL_waylandsym.h b/src/video/wayland/SDL_waylandsym.h
+index 90dcc07..9716bb4 100644
+--- a/src/video/wayland/SDL_waylandsym.h
++++ b/src/video/wayland/SDL_waylandsym.h
+@@ -113,6 +113,8 @@ SDL_WAYLAND_INTERFACE(wl_data_device_interface)
+ SDL_WAYLAND_INTERFACE(wl_data_source_interface)
+ SDL_WAYLAND_INTERFACE(wl_data_offer_interface)
+ SDL_WAYLAND_INTERFACE(wl_data_device_manager_interface)
++SDL_WAYLAND_INTERFACE(wl_subcompositor_interface)
++SDL_WAYLAND_INTERFACE(wl_subsurface_interface)
+ 
+ SDL_WAYLAND_MODULE(WAYLAND_EGL)
+ SDL_WAYLAND_SYM(struct wl_egl_window *, wl_egl_window_create, (struct wl_surface *, int, int))
+diff --git a/src/video/wayland/SDL_waylandvideo.c b/src/video/wayland/SDL_waylandvideo.c
+index ebf53ae..8c3417c 100644
+--- a/src/video/wayland/SDL_waylandvideo.c
++++ b/src/video/wayland/SDL_waylandvideo.c
+@@ -1297,6 +1297,8 @@ static void handle_registry_global(void *data, struct wl_registry *registry, uin
+         xdg_wm_base_add_listener(d->shell.xdg, &_xdg_wm_base_listener, NULL);
+     } else if (SDL_strcmp(interface, "wl_shm") == 0) {
+         d->shm = wl_registry_bind(registry, id, &wl_shm_interface, SDL_min(SDL_WL_SHM_VERSION, version));
++    } else if (SDL_strcmp(interface, "wl_subcompositor") == 0) {
++        d->subcompositor = wl_registry_bind(registry, id, &wl_subcompositor_interface, 1);
+     } else if (SDL_strcmp(interface, "zwp_relative_pointer_manager_v1") == 0) {
+         d->relative_pointer_manager = wl_registry_bind(d->registry, id, &zwp_relative_pointer_manager_v1_interface, 1);
+     } else if (SDL_strcmp(interface, "zwp_pointer_constraints_v1") == 0) {
+@@ -1712,6 +1714,11 @@ static void Wayland_VideoCleanup(SDL_VideoDevice *_this)
+         data->zwp_pointer_gestures = NULL;
+     }
+ 
++    if (data->subcompositor) {
++        wl_subcompositor_destroy(data->subcompositor);
++        data->subcompositor = NULL;
++    }
++
+     if (data->compositor) {
+         wl_compositor_destroy(data->compositor);
+         data->compositor = NULL;
+diff --git a/src/video/wayland/SDL_waylandvideo.h b/src/video/wayland/SDL_waylandvideo.h
+index b98e5f4..725741c 100644
+--- a/src/video/wayland/SDL_waylandvideo.h
++++ b/src/video/wayland/SDL_waylandvideo.h
+@@ -53,6 +53,7 @@ struct SDL_VideoData
+     struct wl_registry *registry;
+     struct wl_compositor *compositor;
+     struct wl_shm *shm;
++    struct wl_subcompositor *subcompositor;
+     SDL_WaylandCursorTheme *cursor_themes;
+     int num_cursor_themes;
+     struct
+diff --git a/src/video/wayland/SDL_waylandwindow.c b/src/video/wayland/SDL_waylandwindow.c
+index accfca1..c5eb89c 100644
+--- a/src/video/wayland/SDL_waylandwindow.c
++++ b/src/video/wayland/SDL_waylandwindow.c
+@@ -336,6 +336,125 @@ static void SetSurfaceOpaqueRegion(SDL_WindowData *wind, bool is_opaque)
+     }
+ }
+ 
++static const char *goo_resize_border_tag = "goo-resize-border";
++
++static SDL_Rect Goo_ResizeBorderRect(SDL_WindowData *data, int edge)
++{
++    const int b = data->goo_border_size;
++    const int w = data->goo_border_width;
++    const int h = data->goo_border_height;
++    const int l = (data->goo_border_edges & 1) ? b : 0;
++    const int r = (data->goo_border_edges & 2) ? b : 0;
++    const SDL_Rect rects[4] = { { -b, 0, b, h }, { w, 0, b, h }, { -l, -b, w + l + r, b }, { -l, h, w + l + r, b } };
++    return rects[edge];
++}
++
++SDL_WindowData *Goo_GetResizeBorderWindow(struct wl_surface *surface, int *edge)
++{
++    if (wl_proxy_get_tag((struct wl_proxy *)surface) != &goo_resize_border_tag) {
++        return NULL;
++    }
++    SDL_WindowData *data = wl_surface_get_user_data(surface);
++    for (int i = 0; edge && i < 4; ++i) {
++        if (data->goo_border_surfaces[i] == surface) {
++            *edge = i + 1;
++        }
++    }
++    return data;
++}
++
++SDL_Point Goo_GetResizeBorderOrigin(SDL_WindowData *data, int edge)
++{
++    const SDL_Rect rect = edge ? Goo_ResizeBorderRect(data, edge - 1) : (SDL_Rect){ 0, 0, 0, 0 };
++    return (SDL_Point){ rect.x, rect.y };
++}
++
++static void Goo_UpdateResizeBorder(SDL_Window *window)
++{
++    SDL_WindowData *data = window->internal;
++    SDL_VideoData *video = data->waylandData;
++    if (!data->goo_border_geometry || !data->shell_surface.xdg.surface) {
++        return;
++    }
++    const int w = data->current.logical_width;
++    const int h = data->current.logical_height;
++    const bool floating = !data->is_fullscreen && !(window->flags & SDL_WINDOW_MAXIMIZED);
++    const int edges = data->goo_border_size > 0 && floating ? 15 & ~(data->goo_tiled_edges | data->toplevel_constraints) : 0;
++    xdg_surface_set_window_geometry(data->shell_surface.xdg.surface, 0, 0, w, h);
++    if (edges == data->goo_border_edges && w == data->goo_border_width && h == data->goo_border_height) {
++        return;
++    }
++    data->goo_border_edges = edges;
++    data->goo_border_width = w;
++    data->goo_border_height = h;
++
++    int size = 0;
++    for (int i = 0; i < 4; ++i) {
++        const SDL_Rect rect = Goo_ResizeBorderRect(data, i);
++        size += (edges & (1 << i)) ? rect.w * rect.h * 4 : 0;
++    }
++    Wayland_SHMPool *pool = Wayland_AllocSHMPool(size);
++    for (int i = 0; i < 4; ++i) {
++        const SDL_Rect rect = Goo_ResizeBorderRect(data, i);
++        Uint32 *pixels = NULL;
++        struct wl_buffer *buffer = (edges & (1 << i)) ? Wayland_AllocBufferFromPool(pool, rect.w, rect.h, (void **)&pixels) : NULL;
++        for (int y = 0; buffer && y < rect.h; ++y) {
++            for (int x = 0; x < rect.w; ++x) {
++                const float px = rect.x + x + 0.5f;
++                const float py = rect.y + y + 0.5f;
++                const float dx = SDL_max(SDL_max(-px, px - w), 0.0f);
++                const float dy = SDL_max(SDL_max(-py, py - h), 0.0f);
++                const float t = SDL_max(1.0f - SDL_sqrtf(dx * dx + dy * dy) / data->goo_border_size, 0.0f);
++                *pixels++ = (Uint32)(t * t * 0.32f * 255.0f + 0.5f) << 24;
++            }
++        }
++        if (!data->goo_border_surfaces[i]) {
++            if (!buffer) {
++                continue;
++            }
++            data->goo_border_surfaces[i] = wl_compositor_create_surface(video->compositor);
++            wl_proxy_set_tag((struct wl_proxy *)data->goo_border_surfaces[i], &goo_resize_border_tag);
++            wl_surface_set_user_data(data->goo_border_surfaces[i], data);
++            data->goo_border_subsurfaces[i] = wl_subcompositor_get_subsurface(video->subcompositor, data->goo_border_surfaces[i], data->surface);
++            wl_subsurface_place_below(data->goo_border_subsurfaces[i], data->surface);
++        }
++        wl_subsurface_set_position(data->goo_border_subsurfaces[i], rect.x, rect.y);
++        wl_surface_attach(data->goo_border_surfaces[i], buffer, 0, 0);
++        wl_surface_damage(data->goo_border_surfaces[i], 0, 0, rect.w, rect.h);
++        wl_surface_commit(data->goo_border_surfaces[i]);
++        if (data->goo_border_buffers[i]) {
++            wl_buffer_destroy(data->goo_border_buffers[i]);
++        }
++        data->goo_border_buffers[i] = buffer;
++    }
++    Wayland_ReleaseSHMPool(pool);
++}
++
++static void Goo_DestroyResizeBorder(SDL_WindowData *data)
++{
++    for (int i = 0; i < 4; ++i) {
++        if (data->goo_border_surfaces[i]) {
++            wl_subsurface_destroy(data->goo_border_subsurfaces[i]);
++            wl_surface_destroy(data->goo_border_surfaces[i]);
++        }
++        if (data->goo_border_buffers[i]) {
++            wl_buffer_destroy(data->goo_border_buffers[i]);
++        }
++    }
++}
++
++__attribute__((visibility("default"))) bool SDLCALL Goo_SetWindowResizeBorder(SDL_Window *window, int size)
++{
++    if (!SDL_GetVideoDevice() || !window || !window->internal || SDL_strcmp(SDL_GetCurrentVideoDriver(), "wayland") != 0 ||
++        window->internal->shell_surface_type != WAYLAND_SHELL_SURFACE_TYPE_XDG_TOPLEVEL || !window->internal->waylandData->subcompositor) {
++        return false;
++    }
++    window->internal->goo_border_size = SDL_max(size, 0);
++    window->internal->goo_border_geometry |= size > 0;
++    Goo_UpdateResizeBorder(window);
++    return true;
++}
++
+ static void ConfigureWindowGeometry(SDL_Window *window)
+ {
+     SDL_WindowData *data = window->internal;
+@@ -468,6 +587,7 @@ static void ConfigureWindowGeometry(SDL_Window *window)
+      * xdg-toplevel windows where the limits should match the window size.
+      */
+     SetMinMaxDimensions(window);
++    Goo_UpdateResizeBorder(window);
+ 
+     // Unconditionally send the window and drawable size, the video core will deduplicate when required.
+     if (!data->scale_to_display) {
+@@ -822,6 +942,7 @@ static void handle_xdg_toplevel_configure(void *data,
+     bool resizing = false;
+     bool suspended = false;
+     wind->toplevel_constraints = 0;
++    wind->goo_tiled_edges = 0;
+     wl_array_for_each (state, states) {
+         switch (*state) {
+         case XDG_TOPLEVEL_STATE_FULLSCREEN:
+@@ -842,6 +963,7 @@ static void handle_xdg_toplevel_configure(void *data,
+         case XDG_TOPLEVEL_STATE_TILED_RIGHT:
+         case XDG_TOPLEVEL_STATE_TILED_TOP:
+         case XDG_TOPLEVEL_STATE_TILED_BOTTOM:
++            wind->goo_tiled_edges |= 1 << (*state - XDG_TOPLEVEL_STATE_TILED_LEFT);
+             tiled = true;
+             floating = false;
+             break;
+@@ -3463,6 +3585,7 @@ void Wayland_DestroyWindow(SDL_VideoDevice *_this, SDL_Window *window)
+          */
+         Wayland_DisplayRemoveWindowReferencesFromSeats(data, wind);
+         Goo_DestroyForeignParent(wind);
++        Goo_DestroyResizeBorder(wind);
+ 
+ #ifdef SDL_VIDEO_OPENGL_EGL
+         if (wind->egl_surface) {
+diff --git a/src/video/wayland/SDL_waylandwindow.h b/src/video/wayland/SDL_waylandwindow.h
+index 4a4bcac..b06fd25 100644
+--- a/src/video/wayland/SDL_waylandwindow.h
++++ b/src/video/wayland/SDL_waylandwindow.h
+@@ -114,6 +114,15 @@ struct SDL_WindowData
+     struct wp_fractional_scale_v1 *fractional_scale;
+     struct zxdg_exported_v2 *exported;
+     struct zxdg_imported_v2 *goo_foreign_parent;
++    struct wl_surface *goo_border_surfaces[4];
++    struct wl_subsurface *goo_border_subsurfaces[4];
++    struct wl_buffer *goo_border_buffers[4];
++    int goo_border_size;
++    int goo_border_edges;
++    int goo_border_width;
++    int goo_border_height;
++    int goo_tiled_edges;
++    bool goo_border_geometry;
+     struct xdg_dialog_v1 *xdg_dialog_v1;
+     struct wp_alpha_modifier_surface_v1 *wp_alpha_modifier_surface_v1;
+     struct xdg_toplevel_icon_v1 *xdg_toplevel_icon_v1;
+@@ -257,6 +266,8 @@ extern void *Wayland_GetWindowICCProfile(SDL_VideoDevice *_this, SDL_Window *win
+ extern bool Wayland_SetWindowHitTest(SDL_Window *window, bool enabled);
+ extern bool Wayland_FlashWindow(SDL_VideoDevice *_this, SDL_Window *window, SDL_FlashOperation operation);
+ extern bool Wayland_SyncWindow(SDL_VideoDevice *_this, SDL_Window *window);
++extern SDL_WindowData *Goo_GetResizeBorderWindow(struct wl_surface *surface, int *edge);
++extern SDL_Point Goo_GetResizeBorderOrigin(SDL_WindowData *data, int edge);
+ extern bool Wayland_ReconfigureWindow(SDL_VideoDevice *_this, SDL_Window *window, SDL_WindowFlags flags);
+ 
+ extern void Wayland_RemoveOutputFromWindow(SDL_WindowData *window, SDL_DisplayData *display_data);

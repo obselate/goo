@@ -44,7 +44,9 @@ public partial class Window {
     if !decorated && resizable && state == WindowState.Normal {
       let displayScale = float64(host?.DisplayScale ?? 0.0F)
       let scale = UiScale * (displayScale > 0.0 ? displayScale / float64(dpi.X) : 1.0)
-      let band = resizeBand * scale
+      let outsideBorder = host?.OutsideResizeBorder == true
+      let cornerSquare = resizeBand * scale
+      let band = outsideBorder ? 0.0 : cornerSquare
       let corner = Math.Max(2.0 * resizeBand, 16.0) * scale
       let width = float32(NativeWidth)
       let height = float32(NativeHeight)
@@ -56,17 +58,18 @@ public partial class Window {
       let nearRight = px >= width - corner
       let nearTop = py < corner
       let nearBottom = py >= height - corner
+      let insideOutsideBorder = outsideBorder && !left && !right && !top && !bottom
 
-      if (top && nearLeft) || (left && nearTop) {
+      if (top && nearLeft) || (left && nearTop) || (insideOutsideBorder && px < cornerSquare && py < cornerSquare) {
         return WindowHitResult.TopLeft
       }
-      if (top && nearRight) || (right && nearTop) {
+      if (top && nearRight) || (right && nearTop) || (insideOutsideBorder && px >= width - cornerSquare && py < cornerSquare) {
         return WindowHitResult.TopRight
       }
-      if (bottom && nearLeft) || (left && nearBottom) {
+      if (bottom && nearLeft) || (left && nearBottom) || (insideOutsideBorder && px < cornerSquare && py >= height - cornerSquare) {
         return WindowHitResult.BottomLeft
       }
-      if (bottom && nearRight) || (right && nearBottom) {
+      if (bottom && nearRight) || (right && nearBottom) || (insideOutsideBorder && px >= width - cornerSquare && py >= height - cornerSquare) {
         return WindowHitResult.BottomRight
       }
       if (top || bottom || left || right) && !info.HasActivation && !input.ScrollbarAt(n, layoutX, layoutY) {

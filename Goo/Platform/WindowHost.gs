@@ -66,6 +66,7 @@ internal interface WindowHost {
   prop HasPendingEvents bool { get; }
   prop SchedulerPacingAvailable bool { get; }
   prop NativeResizable bool { get; }
+  prop OutsideResizeBorder bool { get; }
   prop CanMove bool { get; }
   prop IsVisible bool { get; }
   prop Capabilities WindowCapabilities { get; }

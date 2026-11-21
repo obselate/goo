@@ -85,6 +85,8 @@ patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/wayland-clipboard-replacement.patch"
 patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/wayland-selection-serial.patch"
+patch -d "$work/src" -p1 --fuzz=0 < \
+  "$(dirname "$0")/../patches/sdl/wayland-resize-border.patch"
 python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_wayland.py" "$work/src"
 
 # SDL vendors protocols newer than the baseline wayland-scanner schema.
@@ -125,7 +127,7 @@ find "$work/src/wayland-protocols" -type f -name '*.xml' \
 LD_LIBRARY_PATH="$work/install/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_popup_handlers.py" "$work/src" "$work/install/lib/libSDL3.so"
 
 candidate="$(readlink -f "$work/install/lib/libSDL3.so")"
-for symbol in Goo_ShowPortalFileDialog Goo_CancelFileDialog Goo_GetDataTransferCapabilities Goo_StartDataDrag Goo_CancelDataDrag Goo_SetDataDropCallback Goo_ReceiveDataDrop Goo_FinishDataDrop Goo_SetForeignParent Goo_ConfigurePopup; do
+for symbol in Goo_ShowPortalFileDialog Goo_CancelFileDialog Goo_GetDataTransferCapabilities Goo_StartDataDrag Goo_CancelDataDrag Goo_SetDataDropCallback Goo_ReceiveDataDrop Goo_FinishDataDrop Goo_SetForeignParent Goo_ConfigurePopup Goo_SetWindowResizeBorder; do
   if ! readelf --dyn-syms --wide "$candidate" | grep " $symbol@@" >/dev/null; then
     printf 'libSDL3.so is missing the chooser bridge export: %s\n' "$symbol" >&2
     exit 1

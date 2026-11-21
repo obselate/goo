@@ -159,6 +159,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       return (SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Resizable)) != 0uL
     }
   }
+  public prop OutsideResizeBorder bool{ get; private set }
 
   shared {
     internal func IsWayland() bool -> String.Equals(SDL.GetCurrentVideoDriverS(), "wayland",
@@ -349,7 +350,11 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     if !decorated {
       EnableHitTest()
     }
-    Require(SDL.SetWindowBordered(window, decorated), "SDL_SetWindowBordered")
+    let windowsFrame = OperatingSystem.IsWindows() && !decorated && resizable
+    RefreshLogical()
+    let width = LogicalWidth
+    let height = LogicalHeight
+    Require(SDL.SetWindowBordered(window, decorated || windowsFrame), "SDL_SetWindowBordered")
     Require(SDL.SetWindowResizable(window, resizable), "SDL_SetWindowResizable")
     if contentUnderTitlebar { MacBackdrop.SetContentUnderTitlebar(macWindow, true) }
     if decorated && !contentUnderTitlebar {
@@ -357,7 +362,15 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     }
     if OperatingSystem.IsWindows() {
       WindowsBackdrop.SetCaption(BackdropPointer(BackdropProperties(WindowHandle), "SDL.window.win32.hwnd", nint(0)), decorated)
+      Require(SDL.SetWindowSize(window, width, height), "SDL_SetWindowSize")
     }
+    let outside = !decorated && resizable
+    var waylandBorder = false
+    if IsWayland() {
+      try { waylandBorder = Goo_SetWindowResizeBorderRaw(windowHandle, outside ? 12 : 0) != uint8(0) }
+      catch (_ EntryPointNotFoundException) { }
+    }
+    OutsideResizeBorder = outside && (waylandBorder || windowsFrame || OperatingSystem.IsMacOS())
   }
 
   public func SetVSync(value bool) {
