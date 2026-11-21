@@ -269,6 +269,9 @@ internal partial class VulkanSceneCompiler {
         if combinesEffectAndBlend {
           innerLayerRecord = MakeLayerRecord(ownerId, subtreeBounds, 1.0F,
             BlendMode.Normal, shaderEffect)
+          if shaderEffect?.BackdropOutset > 0.0F {
+            innerLayerRecord.ParentClipLayerId = context.RoundedOverflowLayerId
+          }
           outerLayerRecord = MakeLayerRecord(ownerId, subtreeBounds, localOpacity,
             node.BlendMode, nil)
           if (innerLayerRecord.Flags & uint32(LayerRecordFlags.SamplesBackdrop)) != 0u {
@@ -282,6 +285,9 @@ internal partial class VulkanSceneCompiler {
         } else {
           layerRecord = MakeLayerRecord(ownerId, subtreeBounds, localOpacity,
             isolatesBlend ? node.BlendMode : BlendMode.Normal, shaderEffect)
+          if shaderEffect?.BackdropOutset > 0.0F {
+            layerRecord.ParentClipLayerId = context.RoundedOverflowLayerId
+          }
         }
         frame.SetActiveClipChain(context.ParentPathClipChainId)
         if combinesEffectAndBlend {

@@ -1095,7 +1095,20 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           activeExtent)
         clipIndex = clipIndex + 1
       }
-      if record.EffectIndex >= 0 || needsBackdrop { clipStack[0] = FullClip() }
+      if (record.Flags & uint32(LayerRecordFlags.ExpandedBackdropCapture)) != 0u {
+        let clip = PrimitiveClip{
+          Left: int32(MathF.Floor(record.Bounds.X - record.OriginX)),
+          Top: int32(MathF.Floor(record.Bounds.Y - record.OriginY)),
+          Right: int32(MathF.Ceiling(record.Bounds.Right - record.OriginX)),
+          Bottom: int32(MathF.Ceiling(record.Bounds.Bottom - record.OriginY)),
+        }
+        clipStack[0] = clip
+        for index in 1 ... clipDepth {
+          clipStack[index] = Intersect(clipStack[index], clip)
+        }
+      } else if record.EffectIndex >= 0 || needsBackdrop {
+        clipStack[0] = FullClip()
+      }
       layerStates[layerDepth] = state
       layerDepth = layerDepth + 1
       SetLayerViewport(commandBuffer)

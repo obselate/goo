@@ -27,9 +27,8 @@ diff --git a/src/video/wayland/SDL_waylandevents.c b/src/video/wayland/SDL_wayla
 index 4fc5f96..a3f21cd 100644
 --- a/src/video/wayland/SDL_waylandevents.c
 +++ b/src/video/wayland/SDL_waylandevents.c
-@@ -798,8 +798,9 @@ static void pointer_dispatch_absolute_motion(SDL_WaylandSeat *seat)
-     SDL_Window *window = window_data ? window_data->sdlwindow : NULL;
- 
+@@ -880,7 +880,8 @@ static void pointer_dispatch_absolute_motion(SDL_WaylandSeat *seat)
+     SDL_WindowData *window_data = seat->pointer.focus;
      if (window_data) {
 -        const float sx = (float)(wl_fixed_to_double(seat->pointer.pending_frame.absolute.sx) * window_data->pointer_scale.x);
 -        const float sy = (float)(wl_fixed_to_double(seat->pointer.pending_frame.absolute.sy) * window_data->pointer_scale.y);
@@ -39,7 +38,7 @@ index 4fc5f96..a3f21cd 100644
          SDL_SendMouseMotion(seat->pointer.pending_frame.timestamp_ns, window_data->sdlwindow, seat->pointer.sdl_id, false, sx, sy);
  
          seat->pointer.last_motion.x = (int)SDL_floorf(sx);
-@@ -919,7 +920,11 @@ static void pointer_handle_enter(void *data, struct wl_pointer *pointer,
+@@ -927,14 +928,19 @@ static void pointer_handle_enter(void *data, struct wl_pointer *pointer,
          return;
      }
  
@@ -51,7 +50,7 @@ index 4fc5f96..a3f21cd 100644
      if (!window) {
          // Not a surface owned by SDL.
          return;
-@@ -927,6 +932,7 @@ static void pointer_handle_enter(void *data, struct wl_pointer *pointer,
+     }
  
      SDL_WaylandSeat *seat = (SDL_WaylandSeat *)data;
      seat->pointer.focus = window;
@@ -59,7 +58,7 @@ index 4fc5f96..a3f21cd 100644
      seat->pointer.enter_serial = serial;
      ++window->pointer_focus_count;
      SDL_SetMouseFocus(window->sdlwindow);
-@@ -976,6 +982,9 @@ static void pointer_handle_leave(void *data, struct wl_pointer *pointer,
+@@ -984,16 +990,20 @@ static void pointer_handle_leave(void *data, struct wl_pointer *pointer,
      }
  
      SDL_WindowData *window = Wayland_GetWindowDataForOwnedSurface(surface);
@@ -69,7 +68,10 @@ index 4fc5f96..a3f21cd 100644
      if (!window) {
          // Not a surface owned by SDL.
          return;
-@@ -986,6 +995,7 @@ static void pointer_handle_leave(void *data, struct wl_pointer *pointer,
+     }
+ 
+     // Clear the capture flag and raise all buttons
+     window->sdlwindow->flags &= ~SDL_WINDOW_MOUSE_CAPTURE;
  
      SDL_WaylandSeat *seat = (SDL_WaylandSeat *)data;
      seat->pointer.focus = NULL;
@@ -77,7 +79,7 @@ index 4fc5f96..a3f21cd 100644
      for (int i = 0; seat->pointer.buttons_pressed; ++i) {
          if (seat->pointer.buttons_pressed & SDL_BUTTON_MASK(i)) {
              SDL_SendMouseButton(0, window->sdlwindow, seat->pointer.sdl_id, i, false);
-@@ -1168,6 +1178,9 @@ static void pointer_handle_button_common(SDL_WaylandSeat *seat, uint32_t serial,
+@@ -1179,6 +1189,9 @@ static void pointer_handle_button_common(SDL_WaylandSeat *seat, uint32_t serial,
          if (sdl_button == SDL_BUTTON_LEFT && Wayland_ProcessHitTest(seat, serial, nsTimestamp, down)) {
              return; // don't pass this event on to app.
          }
@@ -287,22 +289,14 @@ index accfca1..c5eb89c 100644
  
      // Unconditionally send the window and drawable size, the video core will deduplicate when required.
      if (!data->scale_to_display) {
-@@ -822,6 +942,7 @@ static void handle_xdg_toplevel_configure(void *data,
-     bool resizing = false;
-     bool suspended = false;
-     wind->toplevel_constraints = 0;
-+    wind->goo_tiled_edges = 0;
-     wl_array_for_each (state, states) {
-         switch (*state) {
-         case XDG_TOPLEVEL_STATE_FULLSCREEN:
-@@ -842,6 +963,7 @@ static void handle_xdg_toplevel_configure(void *data,
-         case XDG_TOPLEVEL_STATE_TILED_RIGHT:
-         case XDG_TOPLEVEL_STATE_TILED_TOP:
-         case XDG_TOPLEVEL_STATE_TILED_BOTTOM:
-+            wind->goo_tiled_edges |= 1 << (*state - XDG_TOPLEVEL_STATE_TILED_LEFT);
-             tiled = true;
-             floating = false;
-             break;
+@@ -843,6 +843,7 @@ static void handle_xdg_toplevel_configure(void *data,
+         }
+     }
+ 
++    wind->goo_tiled_edges = tiled_edges;
+     tiled = tiled_edges != 0;
+     floating = floating && !tiled;
+     const Uint32 all_edges = WAYLAND_TOPLEVEL_CONSTRAINED_LEFT | WAYLAND_TOPLEVEL_CONSTRAINED_RIGHT |
 @@ -3463,6 +3585,7 @@ void Wayland_DestroyWindow(SDL_VideoDevice *_this, SDL_Window *window)
           */
          Wayland_DisplayRemoveWindowReferencesFromSeats(data, wind);

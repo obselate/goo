@@ -262,5 +262,6 @@ internal unsafe class WaylandBackdrop : NativeBackdrop {
     @DllImport("libwayland-client.so.0") internal func wl_display_roundtrip_queue(display nint, queue nint) int32;
     @DllImport("libwayland-client.so.0") internal func wl_display_dispatch_queue_pending(display nint, queue nint) int32;
     @DllImport("libwayland-client.so.0") internal func wl_display_flush(display nint) int32;
+    @DllImport("libwayland-client.so.0") internal func wl_display_get_error(display nint) int32;
   }
 }

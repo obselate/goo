@@ -400,7 +400,18 @@ internal unsafe partial class VulkanWindowTarget {
         return
       }
     }
-    if hidden || closing {
+    let native = host as SdlHost?
+    let nativeUnavailable = !hidden && !closing && native != nil && !native.IsLayerWindow
+      && !native.IsVisible && !native.FirstShowPending
+    var obsoleteGeometry = false
+    if !hidden && !closing && !nativeUnavailable && !initialImageUploadFrame && native != nil {
+      if !native.PrepareFirstPresent() { return }
+      if let current = generation {
+        obsoleteGeometry = !native.WaylandVulkanFrameMatches(activeWaylandGeometryVersion, current.Extent)
+      }
+      if !obsoleteGeometry && !native.WaylandVulkanFrameReady() { return }
+    }
+    if hidden || closing || nativeUnavailable || obsoleteGeometry {
       // The submitted frame reuses a swapchain image. Retire that image's earlier present here,
       // as queueing the present would, so its record is not also retired by the submission.
       var completedPresentId uint64 = 0uL
@@ -426,6 +437,10 @@ internal unsafe partial class VulkanWindowTarget {
         return
       }
       if completedPresentId != 0uL { presentationRetirement.CompletePresent(completedPresentId) }
+      if nativeUnavailable || obsoleteGeometry {
+        recreatePending = true
+        forceFullRedraw = true
+      }
       presentationRetirement.CancelPendingPresentationLatency()
       CloseDiagnosticFrame(false)
       ClearActiveFrame()
@@ -453,7 +468,6 @@ internal unsafe partial class VulkanWindowTarget {
       ReplayInitialImageFrame()
       return
     }
-    if host is SdlHost && !host.PrepareFirstPresent() { return }
     var completedPresentId uint64 = 0uL
     try {
       let prepareResult = current.TryPreparePresent(activeImageIndex,
@@ -520,6 +534,9 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func CompleteQueuePresent(presentResult VkResult) bool {
+    if host is SdlHost {
+      host.FinishWaylandVulkanFrame(presentResult == VkConstants.VK_SUCCESS || presentResult == VkConstants.VK_SUBOPTIMAL_KHR)
+    }
     if let recorder = TraceRecorder {
       recorder.Instant(VulkanDiagnosticEventIds.SwapchainPresent, VulkanDiagnosticCategories.Timing,
         TraceContext(), int32(presentResult), source: "present.completion-observed")

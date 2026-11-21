@@ -46,30 +46,37 @@ public partial class Window {
       let scale = UiScale * (displayScale > 0.0 ? displayScale / float64(dpi.X) : 1.0)
       let outsideBorder = host?.OutsideResizeBorder == true
       let cornerSquare = resizeBand * scale
-      let band = outsideBorder ? 0.0 : cornerSquare
       let corner = Math.Max(2.0 * resizeBand, 16.0) * scale
       let width = float32(NativeWidth)
       let height = float32(NativeHeight)
-      let left = px < band
-      let right = px >= width - band
-      let top = py < band
-      let bottom = py >= height - band
-      let nearLeft = px < corner
-      let nearRight = px >= width - corner
-      let nearTop = py < corner
-      let nearBottom = py >= height - corner
-      let insideOutsideBorder = outsideBorder && !left && !right && !top && !bottom
+      let insideCorner = outsideBorder && px >= 0 && px < width && py >= 0 && py < height
+        && (px < cornerSquare || px >= width - cornerSquare)
+        && (py < cornerSquare || py >= height - cornerSquare)
+      let band = !outsideBorder || insideCorner ? cornerSquare : 0.0
+      let onLeft = px < band
+      let onRight = px >= width - band
+      let onTop = py < band
+      let onBottom = py >= height - band
+      let constraints = if onLeft || onRight || onTop || onBottom { ResizeConstraints } else { WindowResizeConstraints.None }
+      let nearLeft = px < corner && (constraints & WindowResizeConstraints.Left) == WindowResizeConstraints.None
+      let nearRight = px >= width - corner && (constraints & WindowResizeConstraints.Right) == WindowResizeConstraints.None
+      let nearTop = py < corner && (constraints & WindowResizeConstraints.Top) == WindowResizeConstraints.None
+      let nearBottom = py >= height - corner && (constraints & WindowResizeConstraints.Bottom) == WindowResizeConstraints.None
+      let left = onLeft && nearLeft
+      let right = onRight && nearRight
+      let top = onTop && nearTop
+      let bottom = onBottom && nearBottom
 
-      if (top && nearLeft) || (left && nearTop) || (insideOutsideBorder && px < cornerSquare && py < cornerSquare) {
+      if (top && nearLeft) || (left && nearTop) {
         return WindowHitResult.TopLeft
       }
-      if (top && nearRight) || (right && nearTop) || (insideOutsideBorder && px >= width - cornerSquare && py < cornerSquare) {
+      if (top && nearRight) || (right && nearTop) {
         return WindowHitResult.TopRight
       }
-      if (bottom && nearLeft) || (left && nearBottom) || (insideOutsideBorder && px < cornerSquare && py >= height - cornerSquare) {
+      if (bottom && nearLeft) || (left && nearBottom) {
         return WindowHitResult.BottomLeft
       }
-      if (bottom && nearRight) || (right && nearBottom) || (insideOutsideBorder && px >= width - cornerSquare && py >= height - cornerSquare) {
+      if (bottom && nearRight) || (right && nearBottom) {
         return WindowHitResult.BottomRight
       }
       if (top || bottom || left || right) && !info.HasActivation && !input.ScrollbarAt(n, layoutX, layoutY) {
