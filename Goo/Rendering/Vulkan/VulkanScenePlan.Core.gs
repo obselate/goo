@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Collections.Generic
 
 internal partial class SceneFrame {
   private const DefaultCapacity int32 = 8
@@ -46,6 +47,7 @@ internal partial class SceneFrame {
   private var underlineCount int32
   private var layers []LayerRecord
   private var layerCount int32
+  private var layerBackdropBounds Dictionary[int32, ConservativeBounds]?
   private var layerCoverage[]VulkanSceneLayerCoverage = Array.Empty[VulkanSceneLayerCoverage]()
   private var layerCoverageCount int32
   private var layerCoverageLimit int32 = Int32.MaxValue
@@ -209,6 +211,7 @@ internal partial class SceneFrame {
     shadowCount = 0
     underlineCount = 0
     layerCount = 0
+    layerBackdropBounds?.Clear()
     layerCoverageCount = 0
     shaderEffectCount = 0
     activeChunk = -1

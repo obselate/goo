@@ -117,6 +117,10 @@ internal unsafe sealed class VulkanQueueMailbox {
     externalWaitCount++
   }
 
+  internal func PrepareNativePresent() {
+    if host is SdlHost { host.PrepareWaylandVulkanFrame() }
+  }
+
   internal func PreparePresent(swapchain VkSwapchainKHR, imageIndex uint32,
     waitSemaphore VkSemaphore, fence VkFence, fenceEnabled bool) {
       PresentSwapchain = swapchain
