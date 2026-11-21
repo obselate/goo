@@ -86,6 +86,24 @@ func RunScrollbarSmoke() {
             && WindowReadbackTestFixture.NativeHitTest(opened, opened.NativeWidth - 2, opened.NativeHeight - 2) == SDLHitTestResult.ResizeBottomright,
             "Inside corner squares did not resize"
         )
+        Require(WindowReadbackTestFixture.SetResizeConstraints(opened, WindowResizeConstraints.Left),
+            "Could not set the left resize constraint")
+        Require(
+            WindowReadbackTestFixture.NativeHitTest(opened, 2, 2) == SDLHitTestResult.ResizeTop,
+            "Inside top-left corner did not fall back to the unconstrained top edge"
+        )
+        Require(WindowReadbackTestFixture.SetResizeConstraints(opened, WindowResizeConstraints.Left | WindowResizeConstraints.Top),
+            "Could not set both resize constraints")
+        Require(
+            WindowReadbackTestFixture.NativeHitTest(opened, 2, 2) == SDLHitTestResult.Normal,
+            "Inside top-left corner resized with both edges constrained"
+        )
+        Require(WindowReadbackTestFixture.SetResizeConstraints(opened, WindowResizeConstraints.None),
+            "Could not clear the resize constraints")
+        Require(
+            WindowReadbackTestFixture.NativeHitTest(opened, 2, 2) == SDLHitTestResult.ResizeTopleft,
+            "Inside top-left corner did not resume resizing after clearing constraints"
+        )
         Require(
             WindowReadbackTestFixture.NativeHitTest(opened, opened.NativeWidth - 2, opened.NativeHeight / 2)
             == SDLHitTestResult.Normal,

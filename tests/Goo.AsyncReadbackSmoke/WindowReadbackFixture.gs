@@ -1485,6 +1485,10 @@ internal class WindowReadbackTestFixture {
     internal func NativeHitTest(window Window, x int32, y int32) SDLHitTestResult ->
     window.NativeHitTestForTest(x, y)
 
+    internal func SetResizeConstraints(window Window, constraints WindowResizeConstraints) bool ->
+    SDL.SetNumberProperty(SDL.GetWindowProperties(window.SdlHostForTest()!!.NativeWindow),
+      "Goo.Window.ResizeConstraints.1", int64(constraints))
+
     internal func NativeMouseMove(window Window, x float64, y float64, buttons PointerButtons) {
       window.PushNativeMouseMotionForTest(float32(x), float32(y), buttons)
       PumpNativeEvents()
