@@ -42,8 +42,11 @@ internal unsafe partial class SdlHost {
     let current = WaylandVulkanGeometryVersion()
     if current == 0uL { return true }
     if current != version { return false }
-    RefreshFramebuffer()
-    return uint32(FramebufferWidth) == extent.width && uint32(FramebufferHeight) == extent.height
+    var width int32 = 0
+    var height int32 = 0
+    let hasSize = SDL.GetWindowSizeInPixels(window, ref width, ref height)
+    if !hasSize { return false }
+    return uint32(width) == extent.width && uint32(height) == extent.height
   }
 
   internal func PrepareWaylandVulkanFrame() {
