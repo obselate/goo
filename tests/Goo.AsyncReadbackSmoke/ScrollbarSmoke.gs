@@ -79,6 +79,18 @@ func RunScrollbarSmoke() {
             == SDLHitTestResult.ResizeBottomright,
             "Focusable content masked the bottom resize edge or corner"
         )
+        Require(
+            WindowReadbackTestFixture.NativeHitTest(opened, 2, 2) == SDLHitTestResult.ResizeTopleft
+            && WindowReadbackTestFixture.NativeHitTest(opened, opened.NativeWidth - 2, 2) == SDLHitTestResult.ResizeTopright
+            && WindowReadbackTestFixture.NativeHitTest(opened, 2, opened.NativeHeight - 2) == SDLHitTestResult.ResizeBottomleft
+            && WindowReadbackTestFixture.NativeHitTest(opened, opened.NativeWidth - 2, opened.NativeHeight - 2) == SDLHitTestResult.ResizeBottomright,
+            "Inside corner squares did not resize"
+        )
+        Require(
+            WindowReadbackTestFixture.NativeHitTest(opened, opened.NativeWidth - 2, opened.NativeHeight / 2)
+            == SDLHitTestResult.Normal,
+            "Inside right edge resized instead of taking content input"
+        )
         let track = ScrollbarSmokeCell.Track.BorderBox
         let initialThumb = ScrollbarSmokeCell.Thumb.BorderBox
         Require(
