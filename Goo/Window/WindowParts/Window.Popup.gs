@@ -55,7 +55,7 @@ public partial class Window {
       transparent || backdrop == WindowBackdrop.Blur, VSync,
       (px int32, py int32) -> hitTest(px, py), parent, popup?.Kind ?? PopupKind.Menu,
       popup?.NativeTimestamp ?? 0uL, popupAnchor, popupPlacement, float32(UiScale), LayerShell,
-      scaledSize(minWidth), scaledSize(minHeight))
+      scaledSize(minWidth), scaledSize(minHeight), ownsVulkanPresentation: true)
   }
 
   internal func ShowNativePopup() {
