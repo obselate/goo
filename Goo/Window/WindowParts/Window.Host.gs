@@ -47,8 +47,8 @@ public partial class Window {
       scheduler.Unregister(window, window.callbackClosing ? window.callbackWasVisible : window.observedVisible)
     }
 
-    internal func RunLiveWindowScheduler() {
-      scheduler.Run()
+    internal func RunLiveWindowScheduler(session SessionLock? = nil) {
+      scheduler.Run(session)
     }
 
     internal func ServiceNativeTracking() {
@@ -74,7 +74,7 @@ public partial class Window {
   }
 
   private func pushSize() {
-    if LayerShell != nil { return }
+    if LayerShell != nil || LockSurface != nil { return }
     if let native = host {
       constrainSize()
       native.SetSize(width, height)
@@ -714,14 +714,14 @@ public partial class Window {
     Open()
     try {
       Window.RunLiveWindowScheduler()
-      closeAfterRun()
+      CloseAfterRun()
     } catch (_ Exception) {
-      try { closeAfterRun() } catch (_ Exception) { }
+      try { CloseAfterRun() } catch (_ Exception) { }
       rethrow
     }
   }
 
-  private func closeAfterRun() {
+  internal func CloseAfterRun() {
     let deadline = float64(Stopwatch.GetTimestamp()) + (CloseDrainMs / 1000.0 + 1.0) * float64(Stopwatch.Frequency)
     while IsOpen && float64(Stopwatch.GetTimestamp()) < deadline {
       Close()

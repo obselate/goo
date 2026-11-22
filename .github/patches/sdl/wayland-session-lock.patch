@@ -1,0 +1,62 @@
+--- a/src/dynapi/SDL_dynapi.sym
++++ b/src/dynapi/SDL_dynapi.sym
+@@ -1283,4 +1283,5 @@
+     Goo_BeginWindowInteraction;
++    Goo_GetWaylandKeyboardLayoutName;
+     SDL_RotateSurface;
+     SDL_LoadSurface_IO;
+     SDL_LoadSurface;
+--- a/src/video/wayland/SDL_waylandevents.c
++++ b/src/video/wayland/SDL_waylandevents.c
+@@ -4482,5 +4482,28 @@
+         seat->display->last_implicit_grab_seat = seat;
+     }
+ }
++
++__attribute__((visibility("default"))) const char * SDLCALL Goo_GetWaylandKeyboardLayoutName(void)
++{
++    SDL_VideoDevice *device = SDL_GetVideoDevice();
++    if (!device || !device->internal) {
++        return NULL;
++    }
++    SDL_VideoData *display = device->internal;
++    SDL_WaylandSeat *seat;
++    const char *fallback = NULL;
++    wl_list_for_each (seat, &display->seat_list, link) {
++        const xkb_layout_index_t layout = seat->keyboard.xkb.current_layout;
++        if (!seat->keyboard.xkb.keymap || layout >= seat->keyboard.xkb.num_layouts) {
++            continue;
++        }
++        const char *name = WAYLAND_xkb_keymap_layout_get_name(seat->keyboard.xkb.keymap, layout);
++        if (seat->keyboard.focus) {
++            return name;
++        }
++        if (!fallback) { fallback = name; }
++    }
++    return fallback;
++}
+ 
+ #endif // SDL_VIDEO_DRIVER_WAYLAND
+--- a/src/video/wayland/SDL_waylandvideo.c
++++ b/src/video/wayland/SDL_waylandvideo.c
+@@ -548,7 +548,7 @@
+     bool display_is_external = !!display;
+ 
+     // Are we trying to connect to or are currently in a Wayland session?
+-    if (!SDL_getenv("WAYLAND_DISPLAY")) {
++    if (!display && !SDL_getenv("WAYLAND_DISPLAY") && !SDL_getenv("WAYLAND_SOCKET")) {
+         const char *session = SDL_getenv("XDG_SESSION_TYPE");
+         if (session && SDL_strcasecmp(session, "wayland") != 0) {
+             return NULL;
+--- a/src/video/wayland/SDL_waylandwindow.c
++++ b/src/video/wayland/SDL_waylandwindow.c
+@@ -2698,7 +2698,8 @@
+ 
+     data->outputs = NULL;
+     data->num_outputs = 0;
+-    data->scale_to_display = c->scale_to_display_enabled;
++    data->scale_to_display = c->scale_to_display_enabled &&
++                             !SDL_GetBooleanProperty(create_props, "Goo.Wayland.SessionLockSurface.1", false);
+ 
+     // Cache the app_id at creation time, as it may change before the window is mapped.
+     data->app_id = SDL_strdup(SDL_GetAppID());

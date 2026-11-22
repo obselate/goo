@@ -165,7 +165,7 @@ internal class WindowScheduler {
     } finally { servicingWindows = false }
   }
 
-  internal func Run() {
+  internal func Run(session SessionLock? = nil) {
     if running {
       throw InvalidOperationException("Window scheduler is already running")
     }
@@ -173,8 +173,9 @@ internal class WindowScheduler {
     nextWindow = 0
     try {
       while true {
+        if session != nil && !session.Service() { break }
         let currentCount = CaptureSnapshot()
-        if currentCount == 0 {
+        if currentCount == 0 && session == nil {
           break
         }
         var hasOpenWindow bool
@@ -200,8 +201,8 @@ internal class WindowScheduler {
           }
           currentIndex = currentIndex + 1
         }
-        if !hasOpenWindow || (closedVisibleWindow && !hasVisibleWindow && !hasPendingService
-          && TrayIcon.ActiveCount == 0) {
+        if session == nil && (!hasOpenWindow || (closedVisibleWindow && !hasVisibleWindow
+          && !hasPendingService && TrayIcon.ActiveCount == 0)) {
           break
         }
         if hasVisibleWindow { closedVisibleWindow = false }

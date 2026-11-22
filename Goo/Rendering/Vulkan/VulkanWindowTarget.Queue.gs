@@ -523,6 +523,7 @@ internal unsafe partial class VulkanWindowTarget {
       }
       return
     }
+    native?.AckLockConfigure()
     if !activeRuntime.QueueWorker.EnqueuePresent(mailbox) {
       mailbox.RetryPresent()
       try { current.ReconcilePreparedPresent(activeImageIndex, false) } catch (cleanup Exception) { }

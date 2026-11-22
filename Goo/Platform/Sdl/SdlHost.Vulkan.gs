@@ -39,6 +39,7 @@ internal unsafe partial class SdlHost {
     waylandVulkanFrame ? WaylandVulkanGeometryVersionNative(windowHandle) : 0uL
 
   internal func WaylandVulkanFrameMatches(version uint64, extent VkExtent2D) bool {
+    if let role = lockWindow { return role.Matches(extent) }
     let current = WaylandVulkanGeometryVersion()
     if current == 0uL { return true }
     if current != version { return false }
@@ -48,6 +49,8 @@ internal unsafe partial class SdlHost {
     if !hasSize { return false }
     return uint32(width) == extent.width && uint32(height) == extent.height
   }
+
+  internal func AckLockConfigure() { lockWindow?.AckConfigure() }
 
   internal func PrepareWaylandVulkanFrame() {
     if waylandVulkanFrame { PrepareWaylandVulkanFrameNative(windowHandle) }
