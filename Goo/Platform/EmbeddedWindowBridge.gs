@@ -55,6 +55,7 @@ internal partial class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   public prop HasPendingEvents bool{ get -> false }
   public prop SchedulerPacingAvailable bool{ get -> false }
   public prop NativeResizable bool{ get -> false }
+  public prop OutsideResizeBorder bool{ get -> false }
   public prop CanMove bool{ get -> false }
   public prop IsVisible bool { get -> host.IsPresentationAttached && !host.IsSuspended }
   public prop Capabilities WindowCapabilities { get -> WindowCapabilities.None }

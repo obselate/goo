@@ -44,10 +44,15 @@ public partial class Window {
     if !decorated && resizable && state == WindowState.Normal {
       let displayScale = float64(host?.DisplayScale ?? 0.0F)
       let scale = UiScale * (displayScale > 0.0 ? displayScale / float64(dpi.X) : 1.0)
-      let band = resizeBand * scale
+      let outsideBorder = host?.OutsideResizeBorder == true
+      let cornerSquare = resizeBand * scale
       let corner = Math.Max(2.0 * resizeBand, 16.0) * scale
       let width = float32(NativeWidth)
       let height = float32(NativeHeight)
+      let insideCorner = outsideBorder && px >= 0 && px < width && py >= 0 && py < height
+        && (px < cornerSquare || px >= width - cornerSquare)
+        && (py < cornerSquare || py >= height - cornerSquare)
+      let band = !outsideBorder || insideCorner ? cornerSquare : 0.0
       let onLeft = px < band
       let onRight = px >= width - band
       let onTop = py < band
