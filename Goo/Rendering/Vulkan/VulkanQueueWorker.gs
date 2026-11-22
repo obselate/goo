@@ -292,11 +292,12 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
                   VulkanQueueWorker.holdEntered.Set()
                   VulkanQueueWorker.holdReleased.Wait()
                 }
+                let serial = current.SubmitSerial
                 current.RunSubmit(dispatch, queue)
                 if current.SubmitResult != VkConstants.VK_SUCCESS {
                   Interlocked.Exchange(ref faulted, 1)
                 } else {
-                  lock gate { submittedGraphicsSerial = current.SubmitSerial }
+                  lock gate { submittedGraphicsSerial = serial }
                 }
               } catch (error Exception) {
                 Interlocked.Exchange(ref faulted, 1)
