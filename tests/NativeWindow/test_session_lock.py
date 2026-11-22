@@ -119,6 +119,11 @@ with tempfile.TemporaryDirectory(prefix='goo-session-lock-', dir=os.getenv('RUNN
             subprocess.run(['swaymsg', '-s', str(ipc), command], check=True, env=env, stdout=subprocess.DEVNULL)
 
         sway('output HEADLESS-2 scale 2')
+        reentrant = root / 'reentrant'
+        with smoke(reentrant, 'reentrant', env, endpoint):
+            pass
+        trace = (reentrant / 'client.log').read_text()
+        assert not re.search(r'ext_session_lock_manager_v1[#@]\d+\.lock\(', trace), trace
         with subprocess.Popen([peer], env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE) as keyboard:
             try:
                 assert select.select([keyboard.stdout], [], [], 5)[0] and keyboard.stdout.readline() == b'ready\n'
@@ -159,4 +164,4 @@ with tempfile.TemporaryDirectory(prefix='goo-session-lock-', dir=os.getenv('RUNN
     with compositor(root, 'weston', weston, {}) as (env, endpoint, _):
         with smoke(root / 'absent', 'absent', env, endpoint):
             pass
-print('Wayland session lock: inherited socket, two outputs, configure sizes, hotplug, layout changes, unlock, close, rejection and unavailable global passed')
+print('Wayland session lock: inherited socket, configure sizes, hotplug, layout, unlock, close, rejection, nested run and unavailable global passed')

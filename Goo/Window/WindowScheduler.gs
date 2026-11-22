@@ -7,6 +7,7 @@ import System.Diagnostics
 internal class WindowScheduler {
   private const EventBudget int32 = 64
   private const DefaultWaitMs int32 = 250
+  private const SessionLockWaitMs int32 = 16
   private let windows List[Window] = List[Window]()
   private let windowsGate object = Object()
   private var snapshot []Window = []Window{}
@@ -172,6 +173,7 @@ internal class WindowScheduler {
     running = true
     nextWindow = 0
     try {
+      session?.Start()
       while true {
         if session != nil && !session.Service() { break }
         let currentCount = CaptureSnapshot()
@@ -183,6 +185,9 @@ internal class WindowScheduler {
         var hasPendingService bool
         let now = float64(Stopwatch.GetTimestamp())
         var waitMs int32 = if (nativeStarts?.Count ?? 0) > 0 { 0 } else { DefaultWaitMs }
+        if waitMs > SessionLockWaitMs && session?.AwaitingWaylandEvents() == true {
+          waitMs = SessionLockWaitMs
+        }
         var currentIndex int32
         while currentIndex < currentCount {
           let window = snapshot[currentIndex]

@@ -16,7 +16,7 @@
 +__attribute__((visibility("default"))) const char * SDLCALL Goo_GetWaylandKeyboardLayoutName(void)
 +{
 +    SDL_VideoDevice *device = SDL_GetVideoDevice();
-+    if (!device || !device->internal) {
++    if (!device || !device->internal || SDL_strcmp(device->name, "wayland") != 0) {
 +        return NULL;
 +    }
 +    SDL_VideoData *display = device->internal;
@@ -44,7 +44,7 @@
  
      // Are we trying to connect to or are currently in a Wayland session?
 -    if (!SDL_getenv("WAYLAND_DISPLAY")) {
-+    if (!display && !SDL_getenv("WAYLAND_DISPLAY") && !SDL_getenv("WAYLAND_SOCKET")) {
++    if (!SDL_getenv("WAYLAND_DISPLAY") && !SDL_getenv("WAYLAND_SOCKET")) {
          const char *session = SDL_getenv("XDG_SESSION_TYPE");
          if (session && SDL_strcasecmp(session, "wayland") != 0) {
              return NULL;

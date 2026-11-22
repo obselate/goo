@@ -18,6 +18,22 @@ internal shared class SessionLockSmoke {
             return
         }
 
+        if mode == "session-lock-reentrant" {
+            let window = Window{Size: LayoutSize(320, 200), Root: Cell()}
+            window.Open()
+            window.After(0.0, () -> {
+                using let session = SessionLock()
+                try {
+                    session.Run(_ -> throw InvalidOperationException("The lock window factory was called"))
+                    throw InvalidOperationException("The running scheduler accepted a nested session lock")
+                } catch (error InvalidOperationException) {
+                    if error.Message != "Window scheduler is already running" { rethrow }
+                } finally { window.RequestClose() }
+            })
+            Application.Run(window)
+            return
+        }
+
         using let session = SessionLock()
         let windows = Dictionary[int32, Window]()
         var locked int32

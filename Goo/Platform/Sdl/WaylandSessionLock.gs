@@ -86,9 +86,11 @@ internal unsafe sealed class WaylandSessionLock : IDisposable {
     }
 
     internal func Pump() {
-        if WaylandBackdrop.wl_display_dispatch_queue_pending(display, queue) < 0 {
+        let dispatched = WaylandBackdrop.wl_display_dispatch_queue_pending(display, queue)
+        if dispatched < 0 {
             throw InvalidOperationException("The Wayland session lock connection was lost")
         }
+        if dispatched > 0 { SdlRuntime.Wake() }
     }
 
     internal func Reject() {

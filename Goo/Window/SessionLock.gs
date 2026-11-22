@@ -66,8 +66,6 @@ public unsafe class SessionLock : IDisposable {
         factory = createWindow
         running = true
         try {
-            protocol.Start()
-            RefreshOutputs()
             Window.RunLiveWindowScheduler(this)
         } catch (error Exception) {
             unlock?.TrySetException(error)
@@ -127,6 +125,20 @@ public unsafe class SessionLock : IDisposable {
         if eventType == SDLEventType.KeymapChanged || eventType == SDLEventType.WindowFocusGained ||
             eventType == SDLEventType.WindowFocusLost || eventType == SDLEventType.KeyboardAdded ||
             eventType == SDLEventType.KeyboardRemoved { layoutChanged = true }
+    }
+
+    internal func Start() {
+        protocol.Start()
+        RefreshOutputs()
+    }
+
+    internal func AwaitingWaylandEvents() bool {
+        if !protocol.Locked || (unlockSent && !protocol.Synced) { return true }
+        if unlock != nil { return false }
+        for (_, window) in windows {
+            if window.LockSurface?.Configured == false { return true }
+        }
+        return false
     }
 
     internal func Service() bool {
