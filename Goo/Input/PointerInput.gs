@@ -1130,6 +1130,9 @@ internal partial class PointerInput {
       if isInteractiveContent(child) {
         info.HasContent = true
       }
+      if child.MaximizesWindow {
+        info.MaximizeButton = true
+      }
       if hasActivation(child) {
         info.HasActivation = true
       }
@@ -1309,4 +1312,5 @@ internal data struct InputHitInfo {
   internal var HasContent bool
   internal var HasActivation bool
   internal var DragsWindow bool
+  internal var MaximizeButton bool
 }

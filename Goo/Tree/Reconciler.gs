@@ -387,6 +387,7 @@ internal partial class Reconciler {
   internal func mountButton(b Button) Node {
     let n = Node{ Kind: NodeKind.Button, Key: b.Key }
     applyStyle(n, b, b.Focusable, true)
+    n.MaximizesWindow = b.MaximizesWindow
     mountChildren(n, b.Children)
     return n
   }
@@ -1366,6 +1367,10 @@ internal partial class Reconciler {
       return replace(n, b)
     }
     applyStyle(n, b, b.Focusable, false)
+    if n.MaximizesWindow != b.MaximizesWindow {
+      n.MaximizesWindow = b.MaximizesWindow
+      MarkEffects(ReconcileEffects.Input)
+    }
     diffChildren(n, b.Children)
     return n
   }

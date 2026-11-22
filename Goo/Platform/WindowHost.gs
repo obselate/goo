@@ -15,6 +15,7 @@ internal enum WindowHitResult {
   Bottom;
   BottomLeft;
   Left;
+  MaximizeButton;
 }
 
 internal enum WindowCloseReason {

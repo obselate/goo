@@ -173,6 +173,7 @@ internal class Node {
     ClipPathFillRule = FillRule.NonZero
     PortalPlacementHidden = false
     DragsWindow = false
+    MaximizesWindow = false
     HitTestSelf = true
     VulkanOwner = nil
     VulkanOwnerToken = nil
@@ -853,6 +854,7 @@ internal class Node {
     set(v) -> ScrollbarStyles.SetY(this, v)
   }
   internal prop DragsWindow bool{ get; set }
+  internal prop MaximizesWindow bool{ get; set }
   internal prop HitTestSelf bool{ get; set; }
   internal prop ShapePath VectorPath{
     get -> shapeState?.ShapePath ?? VectorPath.Empty
