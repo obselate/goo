@@ -16,6 +16,9 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
   private var tail int32
   private var count int32
   private var stopping bool
+  private var stopped bool
+  private var presenting bool
+  private var presentSequence int64
   private var faulted int32
   private var running int32
   private var notifying int32
@@ -294,6 +297,11 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
             if Interlocked.CompareExchange(ref faulted, 0, 0) != 0 {
               current.FailPresent(VkConstants.VK_ERROR_DEVICE_LOST)
             } else {
+              lock gate {
+                presenting = true
+                presentSequence++
+                if stopping { Monitor.PulseAll(gate) }
+              }
               try {
                 if VulkanQueueWorker.TakeHold(1, current) {
                   VulkanQueueWorker.holdEntered.Set()
@@ -306,6 +314,11 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
               } catch (error Exception) {
                 Interlocked.Exchange(ref faulted, 1)
                 current.FailPresent(VkConstants.VK_ERROR_DEVICE_LOST)
+              } finally {
+                lock gate {
+                  presenting = false
+                  if stopping { Monitor.PulseAll(gate) }
+                }
               }
             }
           } else if phase == VulkanQueueMailboxPhase.CompletionWaitQueued {
@@ -329,6 +342,8 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
       }
       lock gate {
         if stopping && count == 0 {
+          stopped = true
+          Monitor.PulseAll(gate)
           break
         }
       }
@@ -364,19 +379,28 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
     Stop(Timeout.Infinite)
   }
 
-  internal func Stop(timeoutMs int32) bool {
+  internal func Stop(presentTimeoutMs int32) bool {
     lock gate {
       if disposed {
         return true
       }
-      if !stopping {
-        stopping = true
+      if presentTimeoutMs == Timeout.Infinite {
         VulkanQueueWorker.ReleaseHeldQueueCallForTest()
         VulkanQueueWorker.ClearTestHoldsForShutdown()
+      }
+      if !stopping {
+        stopping = true
         signal.Set()
       }
+      while presentTimeoutMs != Timeout.Infinite && !stopped {
+        let present = presentSequence
+        let waitMs = if presenting { presentTimeoutMs } else { Timeout.Infinite }
+        if !Monitor.Wait(gate, waitMs) && presenting && presentSequence == present {
+          return false
+        }
+      }
     }
-    if !thread.Join(timeoutMs) { return false }
+    thread.Join()
     lock gate {
       if !disposed {
         signal.Dispose()
