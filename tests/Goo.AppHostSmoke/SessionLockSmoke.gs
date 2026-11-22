@@ -72,11 +72,14 @@ internal shared class SessionLockSmoke {
 
         try {
             session.Run(_ -> {
-                let window = Window{Size: LayoutSize(320, 200), Background: Color.Black, Root: Cell()}
                 let index = windows.Count + 1
+                let window = Window{Size: LayoutSize(320, 200), Background: Color.Black, Root: Cell(), VSync: index == 3}
                 windows.Add(index, window)
-                window.PresentationAccepted += _ -> File.WriteAllText(Path.Combine(root, "output-" + index.ToString()),
-                    "${window.NativeWidth}x${window.NativeHeight}")
+                window.PresentationAccepted += _ -> {
+                    if index == 3 { window.Background = Color.White }
+                    File.WriteAllText(Path.Combine(root, "output-" + index.ToString()),
+                        "${window.NativeWidth}x${window.NativeHeight}")
+                }
                 return window
             })
         } catch (error InvalidOperationException) {

@@ -33,7 +33,7 @@ internal unsafe partial class SdlHost {
   }
 
   internal func WaylandVulkanFrameReady() bool ->
-    !waylandVulkanFrame || WaylandVulkanFrameReadyNative(windowHandle) != uint8(0)
+    lockWindow?.FrameReady ?? (!waylandVulkanFrame || WaylandVulkanFrameReadyNative(windowHandle) != uint8(0))
 
   internal func WaylandVulkanGeometryVersion() uint64 ->
     waylandVulkanFrame ? WaylandVulkanGeometryVersionNative(windowHandle) : 0uL
@@ -50,13 +50,16 @@ internal unsafe partial class SdlHost {
     return uint32(width) == extent.width && uint32(height) == extent.height
   }
 
-  internal func AckLockConfigure() { lockWindow?.AckConfigure() }
+  internal func PrepareLockPresent() { lockWindow?.PreparePresent() }
+
+  internal func CancelLockPresent() { lockWindow?.FinishPresent(false) }
 
   internal func PrepareWaylandVulkanFrame() {
     if waylandVulkanFrame { PrepareWaylandVulkanFrameNative(windowHandle) }
   }
 
   internal func FinishWaylandVulkanFrame(committed bool) {
+    lockWindow?.FinishPresent(committed)
     if waylandVulkanFrame { FinishWaylandVulkanFrameNative(windowHandle, committed ? uint8(1) : uint8(0)) }
   }
 

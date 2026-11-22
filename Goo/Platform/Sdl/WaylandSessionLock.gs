@@ -33,6 +33,7 @@ internal unsafe sealed class WaylandSessionLock : IDisposable {
     private var managerType nint
     private var sessionType nint
     private var surfaceType nint
+    private let callbackType nint
 
     internal prop Locked bool { get; private set; }
     internal prop Finished bool { get; private set; }
@@ -47,6 +48,7 @@ internal unsafe sealed class WaylandSessionLock : IDisposable {
         onSync = (_, _, _) -> { Synced = true }
         try {
             library = NativeLibrary.Load("libwayland-client.so.0")
+            callbackType = NativeLibrary.GetExport(library, "wl_callback_interface")
             queue = RequireProxy(WaylandBackdrop.wl_display_create_queue(display))
             CreateInterfaces()
             registry = DisplayRequest(1u, "wl_registry_interface")
@@ -83,6 +85,11 @@ internal unsafe sealed class WaylandSessionLock : IDisposable {
         }
         var arguments = WaylandLockArguments{Second: surface, Third: output}
         return RequireProxy(MarshalConstructor(session, 1u, ref arguments, surfaceType, 1u))
+    }
+
+    internal func RequestFrame(surface nint) nint {
+        var argument = nint(0)
+        return RequireProxy(MarshalConstructor(surface, 3u, ref argument, callbackType, 1u))
     }
 
     internal func Pump() {
@@ -226,6 +233,10 @@ internal unsafe sealed class WaylandSessionLock : IDisposable {
 internal sealed class WaylandLockSurface : IDisposable {
     private let session WaylandSessionLock
     private let onConfigure LayerWaylandConfigure
+    private let onFrame LayerWaylandFrame
+    private var surface nint
+    private var frameCallback nint
+    private var framePending bool
     private var proxy nint
     private var listener nint
     private var serial uint32?
@@ -240,6 +251,8 @@ internal sealed class WaylandLockSurface : IDisposable {
         get -> presenting && proxy != nint(0) && configuredWidth != 0u && configuredHeight != 0u
     }
 
+    internal prop FrameReady bool { get -> !framePending }
+
     internal func StopPresenting() { presenting = false }
 
     internal init(session WaylandSessionLock, output WindowDisplayId) {
@@ -251,12 +264,20 @@ internal sealed class WaylandLockSurface : IDisposable {
             configuredHeight = height
             resizePending = true
         }
+        onFrame = (_, callback, _) -> {
+            WaylandBackdrop.wl_proxy_destroy(callback)
+            frameCallback = nint(0)
+            framePending = false
+            SdlRuntime.Wake()
+        }
     }
 
     internal func Attach(display nint, surface nint, output nint) {
+        this.surface = surface
         proxy = session.CreateSurface(display, surface, output)
-        listener = Marshal.AllocHGlobal(IntPtr.Size)
+        listener = Marshal.AllocHGlobal(2 * IntPtr.Size)
         Marshal.WriteIntPtr(listener, Marshal.GetFunctionPointerForDelegate(onConfigure))
+        Marshal.WriteIntPtr(listener, IntPtr.Size, Marshal.GetFunctionPointerForDelegate(onFrame))
         if WaylandBackdrop.wl_proxy_add_listener(proxy, listener, nint(0)) != 0 {
             throw InvalidOperationException("Cannot listen to Wayland session lock surface events")
         }
@@ -275,7 +296,16 @@ internal sealed class WaylandLockSurface : IDisposable {
     internal func Matches(extent VkExtent2D) bool ->
         Configured && extent.width == configuredWidth && extent.height == configuredHeight
 
-    internal func AckConfigure() {
+    internal func PreparePresent() {
+        if frameCallback == nint(0) {
+            frameCallback = session.RequestFrame(surface)
+            if WaylandBackdrop.wl_proxy_add_listener(frameCallback, listener + nint(IntPtr.Size), nint(0)) != 0 {
+                WaylandBackdrop.wl_proxy_destroy(frameCallback)
+                frameCallback = nint(0)
+                throw InvalidOperationException("Cannot listen to Wayland lock surface frame events")
+            }
+        }
+        framePending = true
         if let value = serial {
             var argument = nint(value)
             WaylandSessionLock.MarshalRequest(proxy, 1u, ref argument)
@@ -283,11 +313,20 @@ internal sealed class WaylandLockSurface : IDisposable {
         }
     }
 
+    internal func FinishPresent(committed bool) {
+        if !committed { framePending = false }
+    }
+
     public func Dispose() {
         if proxy == nint(0) { return }
+        if frameCallback != nint(0) {
+            WaylandBackdrop.wl_proxy_destroy(frameCallback)
+            frameCallback = nint(0)
+        }
         WaylandSessionLock.DestroyRequest(proxy, 0u)
         proxy = nint(0)
         Marshal.FreeHGlobal(listener)
         GC.KeepAlive(onConfigure)
+        GC.KeepAlive(onFrame)
     }
 }

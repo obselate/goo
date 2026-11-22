@@ -142,7 +142,7 @@ with tempfile.TemporaryDirectory(prefix='goo-session-lock-', dir=os.getenv('RUNN
                     assert '.unlock_and_destroy()' not in denied_trace, denied_trace
                     sway('output HEADLESS-2 mode --custom 1600x900')
                     expect_sizes(unlock, '1280x720', '800x450')
-                    sway('create_output')
+                    sway('output HEADLESS-3 mode --custom 1920x1080@1Hz; create_output')
                     expect_file(unlock / 'output-3', '1920x1080')
                     sway('output HEADLESS-3 disable')
                     expect_file(unlock / 'removed-3', 'closed')
