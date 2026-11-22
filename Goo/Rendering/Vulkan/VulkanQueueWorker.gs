@@ -24,6 +24,7 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
   private var notifying int32
   private var idleWaiters VulkanQueueMailbox?
   private var nextGraphicsSubmissionSerial uint64 = 1uL
+  private var submittedGraphicsSerial uint64
   private var disposed bool
 
   shared {
@@ -248,6 +249,12 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
     }
   }
 
+  internal prop LastSubmittedGraphicsSubmissionSerial uint64{
+    get {
+      lock gate { return submittedGraphicsSerial }
+    }
+  }
+
   private func Dequeue() VulkanQueueMailbox? {
     lock gate {
       if count == 0 {
@@ -287,6 +294,8 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
                 current.RunSubmit(dispatch, queue)
                 if current.SubmitResult != VkConstants.VK_SUCCESS {
                   Interlocked.Exchange(ref faulted, 1)
+                } else {
+                  lock gate { submittedGraphicsSerial = current.SubmitSerial }
                 }
               } catch (error Exception) {
                 Interlocked.Exchange(ref faulted, 1)
