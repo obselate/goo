@@ -162,6 +162,10 @@ class PublicDocumentationTests {
             "M:Goo.RichText.RichTextFragment.#ctor(System.String,System.Collections.Generic.IReadOnlyList{Goo.TextStyleSpan})",
             "M:Goo.TrayOptions.#ctor",
             "M:Goo.LayerWindowOptions.#ctor",
+            "M:Goo.SessionLock.#ctor",
+            "M:Goo.SessionLock.Dispose",
+            "M:Goo.SessionLock.Run(System.Func{Goo.WindowDisplay,Goo.Window})",
+            "M:Goo.SessionLock.UnlockAsync",
             "M:Goo.TrayIcon.Create(Goo.Window,Goo.TrayOptions)",
             "M:Goo.TrayIcon.Update(Goo.TrayOptions)",
             "M:Goo.TrayIcon.Dispose",
@@ -994,6 +998,9 @@ class PublicDocumentationTests {
                 []string{"assembly"}, System.Array.Empty[string](), false),
             ["M:Goo.Application.Run(Goo.Window)"] = DocumentationShape(
                 []string{"window"}, System.Array.Empty[string](), false),
+            ["M:Goo.SessionLock.Run(System.Func{Goo.WindowDisplay,Goo.Window})"] = DocumentationShape(
+                []string{"createWindow"}, Array.Empty[string](), false),
+            ["M:Goo.SessionLock.UnlockAsync"] = DocumentationShape(Array.Empty[string](), Array.Empty[string](), true),
             ["M:Goo.GraphicsUnavailableException.#ctor(System.String)"] = DocumentationShape(
                 []string{"message"}, System.Array.Empty[string](), false),
             ["M:Goo.GraphicsUnavailableException.#ctor(System.String,System.Exception)"] = DocumentationShape(

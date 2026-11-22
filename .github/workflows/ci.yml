@@ -28,7 +28,7 @@ env:
     libdbus-1-dev libdecor-0-dev libgl1-mesa-dev libgl1-mesa-dri
     libegl1 libfontconfig1 libibus-1.0-dev libwayland-dev
     libxkbcommon-dev mesa-vulkan-drivers vulkan-tools
-    kwin-wayland mako-notifier wayland-protocols weston wl-clipboard
+    kwin-wayland mako-notifier sway wayland-protocols weston wl-clipboard
 
 jobs:
   changes:
@@ -934,6 +934,11 @@ jobs:
           GOO_WAYLAND_COMPOSITOR=kwin .github/scripts/with-headless-wayland.sh env LIBGL_ALWAYS_SOFTWARE=1 \
             LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
             python3 tests/NativeWindow/test_native_close.py \
+            tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll
+      - name: Verify Wayland session lock
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          python3 tests/NativeWindow/test_session_lock.py \
             tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll
       - name: Verify read-only text entry and native clipboard
         if: needs.changes.outputs.full == 'true'

@@ -8,6 +8,27 @@ Source: [`Goo/Window`](https://github.com/obselate/goo/tree/main/Goo/Window)
 Application.Run(Window{Root: Cell{}})
 ```
 
+## Wayland session lock
+
+```gsharp
+using let session = SessionLock()
+session.Run(createLockWindow)
+```
+
+Supply a window factory that can authenticate the user and request unlock.
+`Run` opens one window per output and adds or removes windows on hotplug.
+Goo uses the connection inherited through `WAYLAND_SOCKET` when the compositor provides one.
+Non-Wayland hosts and compositors without
+`ext_session_lock_manager_v1` do not support this API.
+
+Call `UnlockAsync` on the UI thread only after `Locked` and successful
+authentication. Await it before exit. Closing a window, disposing the session
+or losing the connection never sends an unlock request. `Finished` reports
+compositor rejection or termination.
+
+Read `KeyboardLayoutName` after `KeyboardLayoutChanged` to show the active
+keyboard layout.
+
 ## Native library loading
 
 Goo loads its bundled patched SDL and shares that handle with its SDL bindings.
@@ -1535,6 +1556,47 @@ No rendering device is available.
 ### `VirtualGpu`
 
 A virtual GPU.
+
+## `SessionLock`
+
+
+Owns a Wayland session lock on Goo's display connection, including an inherited WAYLAND_SOCKET. Use this API on the UI thread. The app must authenticate the user before it requests unlock.
+
+### `Finished`
+
+Occurs when the compositor rejects or ends this lock. It does not authorize an unlock request.
+
+### `KeyboardLayoutChanged`
+
+Occurs when the active XKB keyboard layout or keymap changes.
+
+### `Locked`
+
+Occurs when the compositor confirms that the session is locked.
+
+### `new`
+
+Opens the Wayland connection if needed and checks that the compositor supports session lock.
+
+### `Dispose`
+
+Closes any lock windows and releases this owner without authorizing unlock.
+
+### `Run(System.Func{WindowDisplay,Window})`
+
+Requests the lock and runs the UI loop until unlock, compositor finish, or a lock window closes. Goo opens and closes one window per Wayland output, including outputs added or removed during the lock.
+
+- `createWindow`: Creates a fresh, visible, focusable desktop window for an output. The compositor sets its size.
+
+### `UnlockAsync`
+
+Requests unlock. Call on the UI thread only after Locked and successful authentication.
+
+Returns: A task that completes after the compositor processes unlock and lock surface removal.
+
+### `KeyboardLayoutName`
+
+Gets the current XKB layout name, or nil if the keyboard has no name or is unavailable.
 
 ## `SizeToContent`
 

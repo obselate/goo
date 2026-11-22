@@ -123,6 +123,7 @@ ctor|Goo.RichText.RichTextFragment|public|(text:System.String,styles:System.Coll
 ctor|Goo.RichText.RichTextResult|public|(Status:Goo.RichText.RichTextStatus,Fragment:Goo.RichText.RichTextFragment,Error:System.String="")
 ctor|Goo.Row|public|()
 ctor|Goo.Scrollbar|public|()
+ctor|Goo.SessionLock|public|()
 ctor|Goo.ShaderEffectData|public|(bytes:System.Byte[])
 ctor|Goo.ShaderEffectProgram|public|(program:System.Byte[],replacesBackdrop:System.Boolean=false)
 ctor|Goo.ShaderEffect|public|(program:Goo.ShaderEffectProgram,samplesBackdrop:System.Boolean=false,backdropOutset:System.Double=0,backdropBlur:System.Double=0)
@@ -1140,6 +1141,9 @@ event|Goo.ImageSource|ContentChanged|System.Action|instance|add:public,remove:pu
 event|Goo.NativeMenuBar|Activated|System.Action`1<System.String>|instance|add:public,remove:public
 event|Goo.PopupWindow|Dismissed|System.Action`1<Goo.PopupDismissReason>|instance|add:public,remove:public
 event|Goo.RichText.RichTextClipboard|Completed|System.Action`1<Goo.RichText.RichTextResult>?|instance|add:public,remove:public
+event|Goo.SessionLock|Finished|System.Action?|instance|add:public,remove:public
+event|Goo.SessionLock|KeyboardLayoutChanged|System.Action?|instance|add:public,remove:public
+event|Goo.SessionLock|Locked|System.Action?|instance|add:public,remove:public
 event|Goo.SpellCheck.SpellCheckSession|Updated|System.Action`1<Goo.SpellCheck.SpellingResult>?|instance|add:public,remove:public
 event|Goo.TextDocument|Changed|System.Action`1<Goo.TextDocumentChange>|instance|add:public,remove:public
 event|Goo.TrayIcon|Activated|System.Action|instance|add:public,remove:public
@@ -1700,6 +1704,9 @@ method|Goo.RichText.RichTextResult|ToString|virtual|public|generic:|()->System.S
 method|Goo.RichText.RichTextResult|op_Equality|static|public|generic:|(left:Goo.RichText.RichTextResult?,right:Goo.RichText.RichTextResult?)->System.Boolean
 method|Goo.RichText.RichTextResult|op_Inequality|static|public|generic:|(left:Goo.RichText.RichTextResult?,right:Goo.RichText.RichTextResult?)->System.Boolean
 method|Goo.Row|Add|instance|public|generic:|(child:Goo.Blob)->System.Void
+method|Goo.SessionLock|Dispose|instance|public|generic:|()->System.Void
+method|Goo.SessionLock|Run|instance|public|generic:|(createWindow:System.Func`2<Goo.WindowDisplay,Goo.Window>)->System.Void
+method|Goo.SessionLock|UnlockAsync|instance|public|generic:|()->System.Threading.Tasks.Task
 method|Goo.ShaderEffectData|Dispose|instance|public|generic:|()->System.Void
 method|Goo.ShaderEffectData|PublishTransferred|instance|public|generic:|(bytes:System.Byte[],released:System.Action)->System.Void
 method|Goo.ShaderEffectData|Publish|instance|public|generic:T[attrs:24,constraints:System.ValueType]|(values:System.ReadOnlySpan`1<!!0>)->System.Void
@@ -2672,6 +2679,7 @@ property|Goo.Scrollbar|ReserveSpace|System.Boolean|instance|get:public,set:publi
 property|Goo.Scrollbar|Thickness|System.Double|instance|get:public,set:public|index:()
 property|Goo.Scrollbar|Thumb|Goo.Container?|instance|get:public,set:public|index:()
 property|Goo.Scrollbar|Track|Goo.Container?|instance|get:public,set:public|index:()
+property|Goo.SessionLock|KeyboardLayoutName|System.String?|instance|get:public,set:private|index:()
 property|Goo.ShaderEffectData|ByteLength|System.Int32|instance|get:public|index:()
 property|Goo.ShaderEffectData|ContentVersion|System.UInt64|instance|get:public|index:()
 property|Goo.ShaderEffectData|IsDisposed|System.Boolean|instance|get:public|index:()
@@ -3390,6 +3398,7 @@ type|Goo.Row|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.ScrollAlignment|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.ScrollbarVisibility|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Scrollbar|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.SessionLock|sealed-class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.ShaderEffectData|sealed-class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.ShaderEffectProgram|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.ShaderEffect|sealed-class|public|base:System.Object|interfaces:|generic:

@@ -212,6 +212,7 @@ public partial class Window {
   /// Configures this window as a Wayland layer-shell surface before Open.
   /// Unsupported platforms and compositors fail without a normal-window fallback.
   public prop LayerShell LayerWindowOptions? { get; init; }
+  internal var LockSurface WaylandLockSurface?
 
   /// Gets the selected rendering device, or Unknown with an empty name before Open or when unavailable.
   public prop RenderingDevice RenderingDeviceInfo{
