@@ -98,14 +98,19 @@ internal unsafe class VulkanQueueWorkerFixtures {
     present.FailSubmit(VkConstants.VK_SUCCESS)
     present.PreparePresent(0uL, 0u, 0uL, 0uL, false)
     VulkanQueueWorker.HoldPresentForMailboxForTest(present)
+    let behind = VulkanQueueMailbox(nil)
+    behind.PrepareSubmit(nint(0), 0uL, 0uL)
     try {
       if !present.BeginPresent() || !presentWorker.EnqueuePresent(present)
         || !VulkanQueueWorker.WaitForHeldQueueCallForTest(5000) { return false }
+      if !behind.BeginSubmit() || !presentWorker.EnqueueSubmit(behind, (serial uint64) -> { }) { return false }
       let stopPresent = Task.Run[bool](() -> {
         let elapsed = Stopwatch.StartNew()
         return !presentWorker.Stop(boundMs) && elapsed.ElapsedMilliseconds >= boundMs - 10
       })
-      return stopPresent.Wait(5000) && stopPresent.Result && presentWorker.HasOutstandingWork
+      if !stopPresent.Wait(5000) || !stopPresent.Result || !presentWorker.HasOutstandingWork { return false }
+      VulkanQueueWorker.ReleaseHeldQueueCallForTest()
+      return presentWorker.Stop(Timeout.Infinite) && behind.Phase == VulkanQueueMailboxPhase.SubmitQueued
     } finally {
       VulkanQueueWorker.ReleaseHeldQueueCallForTest()
     }

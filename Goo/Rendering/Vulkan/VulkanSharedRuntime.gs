@@ -544,7 +544,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
         primitiveState.StopPipelinePreparation()
         if !queueWorker.Stop(presentTimeoutMs: 5000) {
           let submitted = queueWorker.LastSubmittedGraphicsSubmissionSerial
-          if submitted != 0uL { WaitGraphicsSubmission(submitted, 5000000000uL) }
+          if submitted != 0uL { WaitGraphicsSubmission(submitted, UInt64.MaxValue) }
           return
         }
         if WaitDeviceIdleResult() == VkConstants.VK_SUCCESS { pipelineCache.Persist() }

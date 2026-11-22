@@ -1,3 +1,3 @@
 ## Fixed
 
-- Fix an intermittent crash at process exit with software Vulkan. At exit, Goo waits for Vulkan submissions and completion waits, waits up to 5 seconds for a present call, and then waits for submitted rendering to finish before it returns.
+- Fix an intermittent crash at process exit with software Vulkan. At exit, Goo waits for all submitted rendering to finish. Only a present call blocked for more than 5 seconds is abandoned, and no new work starts after it.

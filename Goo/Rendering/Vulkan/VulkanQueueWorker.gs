@@ -17,6 +17,7 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
   private var count int32
   private var stopping bool
   private var stopped bool
+  private var submissionsClosed bool
   private var presenting bool
   private var presentSequence int64
   private var faulted int32
@@ -257,7 +258,7 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
 
   private func Dequeue() VulkanQueueMailbox? {
     lock gate {
-      if count == 0 {
+      if count == 0 || submissionsClosed {
         return nil
       }
       let mailbox = pending[head]
@@ -350,7 +351,7 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
         }
       }
       lock gate {
-        if stopping && count == 0 {
+        if stopping && (count == 0 || submissionsClosed) {
           stopped = true
           Monitor.PulseAll(gate)
           break
@@ -405,6 +406,7 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
         let present = presentSequence
         let waitMs = if presenting { presentTimeoutMs } else { Timeout.Infinite }
         if !Monitor.Wait(gate, waitMs) && presenting && presentSequence == present {
+          submissionsClosed = true
           return false
         }
       }
