@@ -52,6 +52,7 @@ internal unsafe partial class SdlRuntime {
     private let cursors []SDLCursorPtr = [int32(Cursor.ResizeWest) + 1]SDLCursorPtr
     private var currentCursor Cursor = Cursor.Default
     private var applicationConfigured bool
+    internal var LockSession SessionLock?
 
     internal func EnsureLibrary() {
       if !libraryConfigured { throw InvalidOperationException("Goo could not configure SDL3 symbols.") }
@@ -346,6 +347,7 @@ internal unsafe partial class SdlRuntime {
 
     private func DispatchNativeEvent(nativeEvent SDLEvent) {
       let eventType = SDLEventType(nativeEvent.Type)
+      LockSession?.HandleEvent(eventType)
       if nativeEvent.Drop.WindowID == 0u && (eventType == SDLEventType.DropBegin
           || eventType == SDLEventType.DropFile || eventType == SDLEventType.DropComplete) {
         SdlApplicationActivation.Receive(eventType, nint(nativeEvent.Drop.Data))

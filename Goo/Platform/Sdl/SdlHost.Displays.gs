@@ -22,7 +22,7 @@ internal unsafe partial class SdlHost {
       }
     }
 
-    private func ReadDisplays() IReadOnlyList[WindowDisplay] {
+    internal func ReadDisplays() IReadOnlyList[WindowDisplay] {
       var count int32
       let nativeDisplays = SDL.GetDisplays(&count)
       let result = List[WindowDisplay]()
@@ -98,7 +98,7 @@ internal unsafe partial class SdlHost {
 
   public func SetFullscreenDisplay(display WindowDisplayId) WindowOperationResult {
     if disposed || IsClosing { return WindowOperationResult.Closed }
-    if layerWindow != nil { return WindowOperationResult.Unsupported }
+    if layerWindow != nil || lockWindow != nil { return WindowOperationResult.Unsupported }
     let id = display.NativeValue
     if id == 0u || !HasDisplay(id) { return WindowOperationResult.Failed }
     let position = int32(CenteredDisplayMask | id)

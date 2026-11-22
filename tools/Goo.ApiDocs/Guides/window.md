@@ -4,6 +4,27 @@
 Application.Run(Window{Root: Cell{}})
 ```
 
+## Wayland session lock
+
+```gsharp
+using let session = SessionLock()
+session.Run(createLockWindow)
+```
+
+Supply a window factory that can authenticate the user and request unlock.
+`Run` opens one window per output and adds or removes windows on hotplug.
+Goo uses the connection inherited through `WAYLAND_SOCKET` when the compositor provides one.
+Non-Wayland hosts and compositors without
+`ext_session_lock_manager_v1` do not support this API.
+
+Call `UnlockAsync` on the UI thread only after `Locked` and successful
+authentication. Await it before exit. Closing a window, disposing the session
+or losing the connection never sends an unlock request. `Finished` reports
+compositor rejection or termination.
+
+Read `KeyboardLayoutName` after `KeyboardLayoutChanged` to show the active
+keyboard layout.
+
 ## Native library loading
 
 Goo loads its bundled patched SDL and shares that handle with its SDL bindings.

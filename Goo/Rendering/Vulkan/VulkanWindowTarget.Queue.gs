@@ -495,6 +495,7 @@ internal unsafe partial class VulkanWindowTarget {
         current.RenderSemaphore(activeImageIndex), pendingPresentFence, current.PresentFenceEnabled)
       mailbox.PresentComposition = current.Composition
       mailbox.PresentCompositionValue = mailbox.SubmitSignalValue
+      native?.PrepareLockPresent()
     } catch (error Exception) {
       frameFailed = true
       recreatePending = true
@@ -511,6 +512,7 @@ internal unsafe partial class VulkanWindowTarget {
       rethrow
     }
     if !mailbox.BeginPresent() {
+      native?.CancelLockPresent()
       mailbox.ResetSubmitCompletion()
       queueStage = QueueStageIdle
       frameFailed = true
@@ -524,6 +526,7 @@ internal unsafe partial class VulkanWindowTarget {
       return
     }
     if !activeRuntime.QueueWorker.EnqueuePresent(mailbox) {
+      native?.CancelLockPresent()
       mailbox.RetryPresent()
       try { current.ReconcilePreparedPresent(activeImageIndex, false) } catch (cleanup Exception) { }
       pendingPresentFence = 0uL
