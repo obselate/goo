@@ -1,7 +1,7 @@
 {
   "artifacts": {
     "gpu": {
-      "bytes": 246408,
+      "bytes": 246440,
       "exports": [
         "goo_image_decode_rgba",
         "goo_image_free",
@@ -60,7 +60,7 @@
       "runpath": [
         "$ORIGIN/"
       ],
-      "sha256": "ae6e3cbd5437173a28533e3ee3fa458836031bdbf2a0e2022522476b209a9394",
+      "sha256": "0738777319c5df360864094370234a1a776e8eb8712bb552ceea4368dd67a449",
       "soname": "libgoo-harfbuzz-gpu.so"
     },
     "harfbuzz": {
@@ -735,11 +735,11 @@
         "upstreamSha256": "48b9cabe23f0a6b07654f2b7787535165695bd8bf563449088f0ab8ad7d842b2"
       },
       {
-        "description": "Reject repeated sequential JPEG scan components before decoding their pixels again.",
+        "description": "Reject repeated sequential JPEG scan components and cap progressive JPEGs at 500 scans.",
         "name": "stb-jpeg-repeated-scan",
-        "patchedSha256": "e2ee323d4e21a96d08856f6f1a207e95b91d2f8133eb576266ac37b91a18ae51",
+        "patchedSha256": "3ca3f931bb7e4500c6abf22f09874cc01704181b75d5ff81addb9acb757de76a",
         "path": "tools/Goo.TextNative/patches/stb-image-2.30-jpeg-repeated-scan.patch",
-        "sha256": "6d5cea9e1744c18ecb0b8ed98e2f585df1e04369b5cad588b4c639970d4c72b1",
+        "sha256": "a8f19196eb5ed73d1dd2a8955caac0cc99e42f7ec04eda9a09841dd8db6d87f4",
         "upstreamPath": "src/stb_image.h",
         "upstreamSha256": "30430015be90e41c4f046daa463eb9d995341976c78e52868faa3f9a3dca5015"
       }
@@ -760,7 +760,7 @@
       "meson": "1.3.2",
       "minimumApi": 33,
       "ndk": "27.2.12479018",
-      "ninja": "1.11.1",
+      "ninja": "1.13.2",
       "strip": "llvm-strip, compatible with GNU strip"
     }
   },

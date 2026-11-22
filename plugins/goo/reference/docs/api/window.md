@@ -1696,6 +1696,16 @@ Returns: Applied fields with Accepted, Unsupported, Closed, or Failed for invali
 
 Attaches this window to an external viewport without creating a desktop window. The host attaches its native presentation surface separately and drives RenderFrame.
 
+### `BeginMove`
+
+Starts a system move of the window. Call from a pointer, touch or key press handler. With the primary button held, the window follows the pointer. From a key press, Windows starts its keyboard move and Wayland sends xdg_toplevel.move with the key serial. Accepted means the request was sent. A Wayland compositor can still ignore it. Returns Unsupported unless the window is in the normal state on Windows or Wayland.
+
+### `BeginResize(WindowEdge)`
+
+Starts a system resize from an edge or corner. Call from a pointer, touch or key press handler. With the primary button held, the edge follows the pointer. From a key press, Windows starts its keyboard sizing and Wayland sends xdg_toplevel.resize with the key serial. Accepted means the request was sent. A Wayland compositor can still ignore it. Returns Unsupported unless the window is resizable and in the normal state on Windows or Wayland. On Wayland, returns Unsupported if the compositor constrains any requested edge.
+
+- `edge`: edge or corner to move
+
 ### `CancelFileDialog`
 
 Cancels delivery of a pending chooser result on the UI thread and requests native dismissal where available. Native ownership remains active until the platform callback returns.
@@ -1782,6 +1792,14 @@ Queues a function on the UI thread and awaits its result or exception.
 - `cancellationToken`: cancels pending dispatch
 
 Returns: the function result
+
+### `MaximizeButton(Button)`
+
+Marks a button as the custom maximize or restore control of an undecorated window. Windows 11 shows the Snap Layouts flyout when the pointer hovers it. Other platforms ignore the mark. Call on a button you created, before returning it. A received button throws.
+
+- `control`: button to mark
+
+Returns: the same button
 
 ### `MeasureText(string,Style)`
 
@@ -1897,6 +1915,12 @@ Starts one owner-modal chooser on the open window's UI thread; other windows con
 - `options`: Optional title, initial path, filters, and multiple-selection hints copied before launch.
 
 Returns: A task completed on the UI thread with owned paths and an explicit outcome. Await continuations follow normal .NET context rules.
+
+### `ShowSystemMenu(Point)`
+
+Shows the platform window menu at a point in layout units. Wayland compositors define its items. Returns Unsupported for undecorated Windows windows, which have no system menu.
+
+- `point`: menu position in layout units
 
 ### `AccessibilityAdapter`
 
@@ -2096,7 +2120,7 @@ Gets or sets whether the user can resize the window.
 
 ### `ResizeBand`
 
-Gets or sets the undecorated edge resize band in layout units. A scrollbar under an edge band takes the pointer. Corners always resize.
+Gets or sets the undecorated edge resize band inside the window, in logical pixels multiplied by UiScale. The default is 8. Windows and Wayland with the Goo SDL build resize from an outside border and from inside corner squares of ResizeBand size. macOS uses the AppKit resize area instead. Where an inside edge band is used, controls with OnClick and scrollbars take the pointer in that band. Corners extend max(2 * ResizeBand, 16) along each edge.
 
 ### `Root`
 
@@ -2346,6 +2370,22 @@ Gets usable non-fullscreen bounds, or nil if SDL could not provide them.
 
 
 Identifies one SDL display in the current process. The value can become stale after display changes.
+
+## `WindowEdge`
+
+
+Identifies the window edge or corner that Window.BeginResize moves.
+
+### Values
+
+- `TopLeft`
+- `Top`
+- `TopRight`
+- `Right`
+- `BottomRight`
+- `Bottom`
+- `BottomLeft`
+- `Left`
 
 ## `WindowFramePacing`
 

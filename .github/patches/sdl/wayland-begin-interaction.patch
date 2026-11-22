@@ -1,0 +1,69 @@
+--- a/src/dynapi/SDL_dynapi.sym
++++ b/src/dynapi/SDL_dynapi.sym
+@@ -1280,6 +1280,7 @@ SDL3_0.0.0 {
+     Goo_WaylandVulkanFrameReady;
+     Goo_PrepareWaylandVulkanFrame;
+     Goo_FinishWaylandVulkanFrame;
++    Goo_BeginWindowInteraction;
+     SDL_RotateSurface;
+     SDL_LoadSurface_IO;
+     SDL_LoadSurface;
+--- a/src/video/wayland/SDL_waylandwindow.c
++++ b/src/video/wayland/SDL_waylandwindow.c
+@@ -3405,6 +3405,56 @@ void Wayland_ShowWindowSystemMenu(SDL_Window *window, int x, int y)
+     }
+ }
+ 
++// Goo: start a compositor move or resize with the serial of the latest pointer, touch or key press.
++__attribute__((visibility("default"))) bool SDLCALL Goo_BeginWindowInteraction(SDL_Window *window, SDL_HitTestResult edge)
++{
++    static const uint32_t directions[] = {
++        XDG_TOPLEVEL_RESIZE_EDGE_TOP_LEFT, XDG_TOPLEVEL_RESIZE_EDGE_TOP,
++        XDG_TOPLEVEL_RESIZE_EDGE_TOP_RIGHT, XDG_TOPLEVEL_RESIZE_EDGE_RIGHT,
++        XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM_RIGHT, XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM,
++        XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM_LEFT, XDG_TOPLEVEL_RESIZE_EDGE_LEFT
++    };
++    if (!window || !window->internal || SDL_strcmp(SDL_GetCurrentVideoDriver(), "wayland") != 0 ||
++        edge < SDL_HITTEST_DRAGGABLE || edge > SDL_HITTEST_RESIZE_LEFT) {
++        return false;
++    }
++    SDL_WindowData *wind = window->internal;
++    SDL_WaylandSeat *seat = wind->waylandData->last_implicit_grab_seat;
++    if (!seat) {
++        return false;
++    }
++#ifdef HAVE_LIBDECOR_H
++    if (wind->shell_surface_type == WAYLAND_SHELL_SURFACE_TYPE_LIBDECOR) {
++        static const enum libdecor_resize_edge directions_libdecor[] = {
++            LIBDECOR_RESIZE_EDGE_TOP_LEFT, LIBDECOR_RESIZE_EDGE_TOP,
++            LIBDECOR_RESIZE_EDGE_TOP_RIGHT, LIBDECOR_RESIZE_EDGE_RIGHT,
++            LIBDECOR_RESIZE_EDGE_BOTTOM_RIGHT, LIBDECOR_RESIZE_EDGE_BOTTOM,
++            LIBDECOR_RESIZE_EDGE_BOTTOM_LEFT, LIBDECOR_RESIZE_EDGE_LEFT
++        };
++        if (!wind->shell_surface.libdecor.frame) {
++            return false;
++        }
++        if (edge == SDL_HITTEST_DRAGGABLE) {
++            libdecor_frame_move(wind->shell_surface.libdecor.frame, seat->wl_seat, seat->last_implicit_grab_serial);
++        } else {
++            libdecor_frame_resize(wind->shell_surface.libdecor.frame, seat->wl_seat, seat->last_implicit_grab_serial,
++                                  directions_libdecor[edge - SDL_HITTEST_RESIZE_TOPLEFT]);
++        }
++        return true;
++    }
++#endif
++    if (wind->shell_surface_type != WAYLAND_SHELL_SURFACE_TYPE_XDG_TOPLEVEL || !wind->shell_surface.xdg.toplevel.xdg_toplevel) {
++        return false;
++    }
++    if (edge == SDL_HITTEST_DRAGGABLE) {
++        xdg_toplevel_move(wind->shell_surface.xdg.toplevel.xdg_toplevel, seat->wl_seat, seat->last_implicit_grab_serial);
++    } else {
++        xdg_toplevel_resize(wind->shell_surface.xdg.toplevel.xdg_toplevel, seat->wl_seat, seat->last_implicit_grab_serial,
++                            directions[edge - SDL_HITTEST_RESIZE_TOPLEFT]);
++    }
++    return true;
++}
++
+ bool Wayland_SuspendScreenSaver(SDL_VideoDevice *_this)
+ {
+     SDL_VideoData *data = _this->internal;

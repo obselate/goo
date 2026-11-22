@@ -206,11 +206,58 @@ func VerifyShaderEffectBlendResults() {
   Require(valid, "shader blend result did not match its backdrop replacement flag")
 }
 
+class RoundedBackdropCaptureCell : Cell {
+  private let effect ShaderEffect
+
+  init(effect ShaderEffect) { this.effect = effect }
+
+  override func Build() Blob -> Container{
+    Width: 64, Height: 64,
+    Container{Width: 64, Height: 16, BackgroundColor: Color.Rgba(0, 255, 0, 128)},
+    Container{Width: 64, Height: 48, BackgroundColor: Color.Rgba(255, 0, 0, 128)},
+    Container{
+      Position: PositionType.Absolute, Left: 16, Top: 24, Width: 32, Height: 32,
+      BorderRadius: 12, Overflow: Overflow.Hidden,
+      Container{Width: 25, Height: 24, ShaderEffect: effect},
+    },
+  }
+}
+
+func VerifyRoundedBackdropCapture() {
+  let bytes = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "offset_backdrop.frag.goo-effect"))
+  let effect = ShaderEffect(ShaderEffectProgram(bytes, replacesBackdrop: true), true, 22.0)
+  effect.SetParameter(0, Vector4(0.0F, -22.0F, 0.0F, 0.0F))
+  let created = OffscreenRenderSession.Create()
+  Require(created.Status == OffscreenRenderStatus.Success, "rounded backdrop session: " + created.Error)
+  using let session = created.Session!!
+  let pending = session.RenderAsync(RoundedBackdropCaptureCell(effect),
+    OffscreenRenderOptions(LayoutSize(64, 64), 64u, 64u, Color.Transparent, 134217728L),
+    System.Threading.CancellationToken.None)
+  let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
+  while !pending.IsCompleted && Stopwatch.GetTimestamp() < deadline {
+    session.Service()
+    System.Threading.Thread.Sleep(1)
+  }
+  Require(pending.IsCompleted, "rounded backdrop render timed out")
+  let result = pending.GetAwaiter().GetResult()
+  Require(result.Status == OffscreenRenderStatus.Success, "rounded backdrop render: " + result.Error)
+  let capture = result.Capture!!
+  let stride = int32(capture.RowBytes)
+  let lens = BitConverter.ToUInt32(capture.Pixels, 30 * stride + 24 * 4)
+  let interior = BitConverter.ToUInt32(capture.Pixels, 50 * stride + 36 * 4)
+  let corner = BitConverter.ToUInt32(capture.Pixels, 24 * stride + 16 * 4)
+  Console.WriteLine("rounded-backdrop: lens=${lens:X8} interior=${interior:X8} corner=${corner:X8} (ABGR)")
+  Require(interior == 0x80000080u, "rounded backdrop changed the wrapper outside the lens")
+  Require(corner == 0x80000080u, "rounded backdrop changed the clipped corner")
+  Require(lens == 0x80008000u, "rounded backdrop lost the translucent sample outside the clip")
+}
+
 func RunShaderEffectSmoke() {
   WindowReadbackTestFixture.ShaderEffectVerifyPresentationRetirement()
   Require(Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1",
     "GOO_VK_DIAGNOSTICS=1 is required")
   VerifyShaderEffectBlendResults()
+  VerifyRoundedBackdropCapture()
   let program = ShaderEffectProgram.Load(System.Reflection.Assembly.GetExecutingAssembly(), "embedded-control")
   VulkanProofFixture.VerifyLayerEffectCoordinates(program)
   let effect = ShaderEffect(program, true, 20.0)

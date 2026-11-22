@@ -137,6 +137,7 @@ public partial class Window {
       if maxWidth != 0 || maxHeight != 0 { native.SetMaximumSize(scaledSize(maxWidth), scaledSize(maxHeight)) }
       initializingGraphics = true
       let target = VulkanWindowTarget(native)
+      if ownsStartupReport { VulkanStartupReport.Current?.StopCapture() }
       initializingGraphics = false
       windowTarget = target
       native.SetBackdrop(backdrop == WindowBackdrop.Blur, windowsBackdrop, macOSBackdrop, waylandBackdrop)
@@ -154,6 +155,8 @@ public partial class Window {
           throw GraphicsUnavailableException("Window initialization could not create a render target")
         }
       initializingGraphics = false
+      if ownsStartupReport { VulkanStartupReport.Finish() }
+      ownsStartupReport = false
       x = native.X
       y = native.Y
       input.SetUiScale(float32(UiScale))
@@ -178,10 +181,9 @@ public partial class Window {
       schedulerSimulationBank = 0.0
       Window.RegisterLiveWindow(this)
       WindowDiagnostics.AttachIfEnabled(this)
-      if ownsStartupReport { VulkanStartupReport.Finish() }
       return this
     } catch (e Exception) {
-      if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.Finish(e) }
+      if ownsStartupReport { VulkanStartupReport.Finish(e) }
       try { Close() } catch (cleanup Exception) { }
       if VulkanDiagnostics.StartupReportEnabled && e is GraphicsUnavailableException {
         throw GraphicsUnavailableException(VulkanStartupReport.FailureMessage(e.Message), e)
@@ -501,7 +503,19 @@ public partial class Window {
         if profiling {
           profiler.Record(FrameProfileStage.Tree, treeProfile)
         }
-        native.SetCursor(input.CurrentCursor())
+        let contentCursor = input.CurrentCursor()
+        let pointerHit = if let p = nativePointer { hitTest(int32(p.X), int32(p.Y)) } else { WindowHitResult.Normal }
+        native.SetCursor(switch pointerHit {
+          case WindowHitResult.TopLeft: Cursor.ResizeNorthwest
+          case WindowHitResult.Top: Cursor.ResizeNorth
+          case WindowHitResult.TopRight: Cursor.ResizeNortheast
+          case WindowHitResult.Right: Cursor.ResizeEast
+          case WindowHitResult.BottomRight: Cursor.ResizeSoutheast
+          case WindowHitResult.Bottom: Cursor.ResizeSouth
+          case WindowHitResult.BottomLeft: Cursor.ResizeSouthwest
+          case WindowHitResult.Left: Cursor.ResizeWest
+          case _: contentCursor
+        })
         let queueCompleted = queueCompletedAtEntry || windowTarget?.PollQueueCompletion() == true
         var rendered = false
         if queueCompleted {

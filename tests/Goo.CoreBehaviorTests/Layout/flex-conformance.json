@@ -3770,6 +3770,116 @@
         ]
       },
       "boxes": [[0, 0, 200, 100], [0, 0, 60, 100], [60, 0, 140, 100]]
+    },
+    {
+      "name": "row-grow-mixed-min-max-violations",
+      "viewport": [100, 20],
+      "tree": {
+        "style": {"Width": 100, "Height": 20, "FlexDirection": "Row"},
+        "children": [
+          {"style": {"FlexGrow": 1, "FlexShrink": 1, "FlexBasis": 0, "MinWidth": 60}},
+          {"style": {"FlexGrow": 1, "FlexShrink": 1, "FlexBasis": 0, "MaxWidth": 10}}
+        ]
+      },
+      "boxes": [[0, 0, 100, 20], [0, 0, 90, 20], [90, 0, 10, 20]]
+    },
+    {
+      "name": "row-shrink-mixed-min-max-violations",
+      "viewport": [200, 20],
+      "tree": {
+        "style": {"Width": 100, "Height": 20, "FlexDirection": "Row"},
+        "children": [
+          {"style": {"FlexShrink": 1, "FlexBasis": 60, "MinWidth": 55}},
+          {"style": {"FlexShrink": 1, "FlexBasis": 100, "MaxWidth": "40%"}}
+        ]
+      },
+      "boxes": [[0, 0, 100, 20], [0, 0, 60, 20], [60, 0, 40, 20]]
+    },
+    {
+      "name": "row-grow-chained-maximums",
+      "viewport": [300, 20],
+      "tree": {
+        "style": {"Width": 300, "Height": 20, "FlexDirection": "Row"},
+        "children": [
+          {"style": {"FlexGrow": 1, "FlexBasis": 0, "MaxWidth": 50}},
+          {"style": {"FlexGrow": 1, "FlexBasis": 0, "MaxWidth": 110}},
+          {"style": {"FlexGrow": 1, "FlexBasis": 0}}
+        ]
+      },
+      "boxes": [[0, 0, 300, 20], [0, 0, 50, 20], [50, 0, 110, 20], [160, 0, 140, 20]]
+    },
+    {
+      "name": "row-grow-chained-minimums",
+      "viewport": [300, 20],
+      "tree": {
+        "style": {"Width": 300, "Height": 20, "FlexDirection": "Row"},
+        "children": [
+          {"style": {"FlexGrow": 1, "FlexBasis": 0, "MinWidth": 150}},
+          {"style": {"FlexGrow": 1, "FlexBasis": 0, "MinWidth": 90}},
+          {"style": {"FlexGrow": 1, "FlexBasis": 0}}
+        ]
+      },
+      "boxes": [[0, 0, 300, 20], [0, 0, 150, 20], [150, 0, 90, 20], [240, 0, 60, 20]]
+    },
+    {
+      "name": "row-shrink-chained-minimums",
+      "viewport": [180, 20],
+      "tree": {
+        "style": {"Width": 180, "Height": 20, "FlexDirection": "Row"},
+        "children": [
+          {"style": {"FlexShrink": 1, "FlexBasis": 100, "MinWidth": 90}},
+          {"style": {"FlexShrink": 1, "FlexBasis": 100, "MinWidth": 50}},
+          {"style": {"FlexShrink": 1, "FlexBasis": 100, "MinWidth": 0}}
+        ]
+      },
+      "boxes": [[0, 0, 180, 20], [0, 0, 90, 20], [90, 0, 50, 20], [140, 0, 40, 20]]
+    },
+    {
+      "name": "row-grow-fractional-after-freeze",
+      "viewport": [300, 20],
+      "tree": {
+        "style": {"Width": 300, "Height": 20, "FlexDirection": "Row"},
+        "children": [
+          {"style": {"FlexGrow": 1, "FlexBasis": 0, "MaxWidth": 50}},
+          {"style": {"FlexGrow": 0.25, "FlexBasis": 0}}
+        ]
+      },
+      "boxes": [[0, 0, 300, 20], [0, 0, 50, 20], [50, 0, 75, 20]]
+    },
+    {
+      "name": "row-grow-single-fractional-factor",
+      "viewport": [300, 20],
+      "tree": {
+        "style": {"Width": 300, "Height": 20, "FlexDirection": "Row"},
+        "children": [
+          {"style": {"FlexGrow": 0.25, "FlexBasis": 0}}
+        ]
+      },
+      "boxes": [[0, 0, 300, 20], [0, 0, 75, 20]]
+    },
+    {
+      "name": "row-grow-two-fractional-factors",
+      "viewport": [300, 20],
+      "tree": {
+        "style": {"Width": 300, "Height": 20, "FlexDirection": "Row"},
+        "children": [
+          {"style": {"FlexGrow": 0.25, "FlexBasis": 0}},
+          {"style": {"FlexGrow": 0.25, "FlexBasis": 0}}
+        ]
+      },
+      "boxes": [[0, 0, 300, 20], [0, 0, 75, 20], [75, 0, 75, 20]]
+    },
+    {
+      "name": "row-shrink-fractional-after-freeze",
+      "viewport": [100, 20],
+      "tree": {
+        "style": {"Width": 100, "Height": 20, "FlexDirection": "Row"},
+        "children": [
+          {"style": {"FlexShrink": 1, "FlexBasis": 100, "MinWidth": 90}},
+          {"style": {"FlexShrink": 0.25, "FlexBasis": 100, "MinWidth": 0}}
+        ]
+      },
+      "boxes": [[0, 0, 100, 20], [0, 0, 90, 20], [90, 0, 75, 20]]
     }
   ]
 }

@@ -52,6 +52,7 @@ partial class GooServer {
             "templates/Goo.Templates/content/Program.gs",
             "templates/Goo.Templates/content/GooStarter.gsproj",
             "templates/Goo.Templates/content/global.json",
+            "templates/Goo.Templates/content/global.json.in",
             "templates/Goo.Templates/content/.gitignore",
             "templates/Goo.Templates/content/Properties/PublishProfiles/NativeAot.pubxml",
             "templates/Goo.Templates/content/Properties/PublishProfiles/Trimmed.pubxml"
@@ -212,12 +213,15 @@ partial class GooServer {
 
     func Provenance(root string) JsonObject {
         let configuration = Path.Combine(root, "global.json")
-        let project = Path.Combine(root, "templates/Goo.Templates/content/GooStarter.gsproj")
-        let compiler = if File.Exists(configuration) {
-            JsonNode.Parse(File.ReadAllText(configuration))?["msbuild-sdks"]?["Gsharp.NET.Sdk"]?.GetValue[string]() ??
-                "unavailable"
-        } else if File.Exists(project) {
-            Regex.Match(File.ReadAllText(project), `Gsharp.NET.Sdk/([^"]+)`).Groups[1].Value
+        using let settings = if root == Bundle {
+            Assembly.GetExecutingAssembly().GetManifestResourceStream("Goo.PluginMcp.global.json")
+        } else if File.Exists(configuration) {
+            File.OpenRead(configuration)
+        } else {
+            nil
+        }
+        let compiler = if settings != nil {
+            JsonNode.Parse(settings)?["msbuild-sdks"]?["Gsharp.NET.Sdk"]?.GetValue[string]() ?? "unavailable"
         } else {
             "unavailable"
         }
@@ -318,7 +322,7 @@ partial class GooServer {
         result["documents"] = Strings(Documents(root))
         result[
             "runtime"
-        ] = "Install Goo.DevTools 0.32.0 and launch with goo dev --project App.gsproj. Add --input for agent interaction. Use goo_list to list live windows. Runtime tools accept project, pid, pipe, app, window, latest and wait in seconds. GOO_CLI may name a goo executable or built Goo.DevTools.Cli.dll."
+        ] = "Install Goo.DevTools 0.32.1 and launch with goo dev --project App.gsproj. Add --input for agent interaction. Use goo_list to list live windows. Runtime tools accept project, pid, pipe, app, window, latest and wait in seconds. GOO_CLI may name a goo executable or built Goo.DevTools.Cli.dll."
         let preflight = result["preflight"]!!
         let plugin = preflight["plugin"]!!
         plugin["version"] = Version
@@ -443,7 +447,10 @@ partial class GooServer {
             "Properties/PublishProfiles/NativeAot.pubxml",
             "Properties/PublishProfiles/Trimmed.pubxml"
         } {
-            let relative = "templates/Goo.Templates/content/" + filename
+            var relative = "templates/Goo.Templates/content/" + filename
+            if filename == "global.json" && !documents.Contains(relative) {
+                relative += ".in"
+            }
             let template = Document(root, relative, documents)
             let content = File.ReadAllText(template)
             sourceFiles[relative] = Hash(File.ReadAllBytes(template))
@@ -465,6 +472,9 @@ partial class GooServer {
         }
         let build = "dotnet build " + name + ".gsproj -c Release --nologo -warnaserror"
         let provenance = Provenance(root)
+        let sdkVersion = if sdk.Success { sdk.Groups[1].Value } else { S(provenance, "compilerVersion") }
+        Require(sdkVersion != "unavailable", "The starter requires Gsharp.NET.Sdk in global.json")
+        files[name + ".gsproj"] = project.Replace("Sdk=\"Gsharp.NET.Sdk\"", "Sdk=\"Gsharp.NET.Sdk/$sdkVersion\"")
         provenance["sourceFiles"] = sourceFiles
         let generated = JsonObject()
         for file in files {
@@ -475,11 +485,7 @@ partial class GooServer {
             ["source"] = root,
             ["provenance"] = provenance,
             ["versions"] = JsonObject(){
-                ["gsharpSdk"] = if sdk.Success {
-                    sdk.Groups[1].Value
-                } else {
-                    "unavailable"
-                },
+                ["gsharpSdk"] = sdkVersion,
                 ["goo"] = if packageMatch.Success {
                     packageMatch.Groups[1].Value
                 } else {

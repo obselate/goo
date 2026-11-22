@@ -302,6 +302,7 @@ enum-underlying|Goo.Visibility|System.Int32
 enum-underlying|Goo.WindowBackdrop|System.Int32
 enum-underlying|Goo.WindowCapabilities|System.Int32
 enum-underlying|Goo.WindowCaptureRequestStatus|System.Int32
+enum-underlying|Goo.WindowEdge|System.Int32
 enum-underlying|Goo.WindowFramePacing|System.Int32
 enum-underlying|Goo.WindowInputKind|System.Int32
 enum-underlying|Goo.WindowLayer|System.Int32
@@ -1090,6 +1091,14 @@ enum|Goo.WindowCaptureRequestStatus|DeviceLost|5
 enum|Goo.WindowCaptureRequestStatus|Failed|4
 enum|Goo.WindowCaptureRequestStatus|NotReady|3
 enum|Goo.WindowCaptureRequestStatus|Unsupported|6
+enum|Goo.WindowEdge|BottomLeft|6
+enum|Goo.WindowEdge|BottomRight|4
+enum|Goo.WindowEdge|Bottom|5
+enum|Goo.WindowEdge|Left|7
+enum|Goo.WindowEdge|Right|3
+enum|Goo.WindowEdge|TopLeft|0
+enum|Goo.WindowEdge|TopRight|2
+enum|Goo.WindowEdge|Top|1
 enum|Goo.WindowFramePacing|Display|0
 enum|Goo.WindowFramePacing|Uncapped|1
 enum|Goo.WindowInputKind|KeyDown|2
@@ -1996,6 +2005,8 @@ method|Goo.Window|AcquireNativeDialogOwnerAsync|instance|public|generic:|(cancel
 method|Goo.Window|After|instance|public|generic:|(delayMs:System.Double,action:System.Action)->Goo.WindowTimer
 method|Goo.Window|ApplyPlacement|instance|public|generic:|(value:Goo.WindowPlacement)->Goo.WindowPlacementResult
 method|Goo.Window|Attach|instance|public|generic:|(externalHost:Goo.EmbeddedWindowHost)->Goo.Window
+method|Goo.Window|BeginMove|instance|public|generic:|()->Goo.WindowOperationResult
+method|Goo.Window|BeginResize|instance|public|generic:|(edge:Goo.WindowEdge)->Goo.WindowOperationResult
 method|Goo.Window|CancelFileDialog|instance|public|generic:|()->System.Boolean
 method|Goo.Window|CapturePlacement|instance|public|generic:|()->Goo.WindowPlacementResult
 method|Goo.Window|CreateOffscreenSession|instance|public|generic:|()->Goo.OffscreenRenderSessionResult
@@ -2008,6 +2019,7 @@ method|Goo.Window|InvokeAsync|instance|public|generic:T[attrs:0,constraints:]|(a
 method|Goo.Window|InvokeAsync|instance|public|generic:T[attrs:0,constraints:]|(action:System.Func`1<System.Threading.Tasks.Task`1<!!0?>>,cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<!!0?>
 method|Goo.Window|InvokeAsync|instance|public|generic:|(action:System.Action,cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task
 method|Goo.Window|InvokeAsync|instance|public|generic:|(action:System.Func`1<System.Threading.Tasks.Task>,cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task
+method|Goo.Window|MaximizeButton|static|public|generic:|(control:Goo.Button)->Goo.Button
 method|Goo.Window|MeasureText|instance|public|generic:|(text:System.String,style:Goo.Style)->System.Double
 method|Goo.Window|NextPresentationAsync|instance|public|generic:|(cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<Goo.WindowPresentationAccepted>
 method|Goo.Window|Open|instance|public|generic:|()->Goo.Window
@@ -2025,6 +2037,7 @@ method|Goo.Window|SetFullscreenDisplay|instance|public|generic:|(display:Goo.Win
 method|Goo.Window|SetNativeDataDropFormats|instance|public|generic:|(formats:System.Collections.Generic.IReadOnlyList`1<System.String>)->Goo.WindowOperationResult
 method|Goo.Window|SetTopmost|instance|public|generic:|(value:System.Boolean)->Goo.WindowOperationResult
 method|Goo.Window|ShowFileDialogAsync|instance|public|generic:|(kind:Goo.FileDialogKind,options:Goo.FileDialogOptions?=null)->System.Threading.Tasks.Task`1<Goo.FileDialogResult>
+method|Goo.Window|ShowSystemMenu|instance|public|generic:|(point:Goo.Point)->Goo.WindowOperationResult
 method|Goo.Window|Show|instance|public|generic:|(activate:System.Boolean=true)->Goo.WindowOperationResult
 property|Goo.AccessibilityActionRequest|Action|Goo.AccessibilityAction|instance|get:public|index:()
 property|Goo.AccessibilityActionRequest|ScrollX|System.Double|instance|get:public|index:()
@@ -3483,6 +3496,7 @@ type|Goo.WindowCapture|sealed-class|public|base:System.Object|interfaces:|generi
 type|Goo.WindowClipboard|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.WindowDisplayId|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.WindowDisplayId>|generic:
 type|Goo.WindowDisplay|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.WindowEdge|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowFocus|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.WindowFramePacing|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowInputKind|enum|public|base:System.Enum|interfaces:|generic:
