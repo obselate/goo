@@ -759,6 +759,7 @@ class FixtureContractTests {
             yield Contract[TreeFixtures]("VisibilityLifecycleContract")
             yield Contract[TreeFixtures]("ButtonSemanticPrimitiveContract")
             yield Contract[VulkanQueueWorkerFixtures]("WakeFailureDrainsFollowingMailboxAndQuiesces")
+            yield Contract[VulkanQueueWorkerFixtures]("StopTimesOutOnlyDuringPresent")
             yield Contract[VulkanSceneCompilerFixtures]("OwnerIdentitySurvivesCompilerHandoff")
             yield Contract[VulkanSceneCompilerFixtures]("ReboundMountGetsFreshCompilerOwners")
             yield Contract[VulkanSceneCompilerFixtures]("RectangleUpdatesPreserveFloatBits")
