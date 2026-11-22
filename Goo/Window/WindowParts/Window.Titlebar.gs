@@ -78,6 +78,7 @@ public partial class Window {
   /// From a key press, Windows starts its keyboard sizing and Wayland sends xdg_toplevel.resize with the key serial.
   /// Accepted means the request was sent. A Wayland compositor can still ignore it.
   /// Returns Unsupported unless the window is resizable and in the normal state on Windows or Wayland.
+  /// On Wayland, returns Unsupported if the compositor constrains any requested edge.
   /// @param edge edge or corner to move
   public func BeginResize(edge WindowEdge) WindowOperationResult {
     let target = switch edge {

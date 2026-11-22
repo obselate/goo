@@ -1,9 +1,9 @@
 --- a/src/dynapi/SDL_dynapi.sym
 +++ b/src/dynapi/SDL_dynapi.sym
-@@ -1275,6 +1275,7 @@ SDL3_0.0.0 {
-     Goo_FinishDataDrop;
-     Goo_SetForeignParent;
-     Goo_ConfigurePopup;
+@@ -1280,6 +1280,7 @@ SDL3_0.0.0 {
+     Goo_WaylandVulkanFrameReady;
+     Goo_PrepareWaylandVulkanFrame;
+     Goo_FinishWaylandVulkanFrame;
 +    Goo_BeginWindowInteraction;
      SDL_RotateSurface;
      SDL_LoadSurface_IO;

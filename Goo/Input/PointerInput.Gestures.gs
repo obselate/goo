@@ -71,6 +71,7 @@ internal partial class PointerInput {
     private func beginGestures(root Node?, resolver Resolver, x float32, y float32) {
         if current.Device != PointerDevice.Touch || current.CaptureTarget != nil { return }
         guard let tree = root else { return }
+        hitChain.Clear()
         hitChainInto(tree, x, y, hitChain)
         if chainDisabled(hitChain) { return }
         var group GestureGroup?

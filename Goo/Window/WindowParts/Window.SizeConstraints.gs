@@ -6,6 +6,9 @@ import System
 /// Selects the client axes measured from the root before the first map.
 public enum SizeToContent { None; Width; Height; Both }
 
+@Flags
+internal enum WindowResizeConstraints { None = 0; Left = 1; Right = 2; Top = 4; Bottom = 8 }
+
 /// Configures client-area sizes in layout units on the owning UI thread.
 public partial class Window {
   private var minWidth float64
@@ -15,6 +18,10 @@ public partial class Window {
   private var nativeMinWidth int32
   private var nativeMinHeight int32
   private var requestedSize LayoutSize?
+
+  internal prop ResizeConstraints WindowResizeConstraints{
+    get -> (host as SdlHost?)?.ResizeConstraints ?? WindowResizeConstraints.None
+  }
 
   /// Gets or sets the client minimum size in layout units. Zero removes an axis limit.
   /// Each axis must be finite, nonnegative and no greater than its nonzero maximum. Embedded hosts are unsupported.

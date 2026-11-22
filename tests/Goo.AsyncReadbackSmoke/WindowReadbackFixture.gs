@@ -888,6 +888,11 @@ public partial class Window {
       let previousExtent = target.FramebufferExtentForTest()
       let resizeRequired = previousExtent.Width != framebufferWidth
         || previousExtent.Height != framebufferHeight
+      let native = SdlHostForTest()
+      let directWayland = (native?.WaylandVulkanGeometryVersion() ?? 0uL) != 0uL
+      if let host = native && directWayland {
+        if !host.RealizeFramebufferExtentForTest(framebufferWidth, framebufferHeight) { return false }
+      }
       if !applyNativeResize(logicalWidth, logicalHeight, framebufferWidth,
         framebufferHeight) {
           return false
@@ -900,6 +905,7 @@ public partial class Window {
           || actual.Height != framebufferHeight)
         && Stopwatch.GetTimestamp() < deadline{
           Thread.Yield()
+          if directWayland { SdlRuntime.PumpEvents(Int32.MaxValue) }
           target.PollQueueCompletion()
           if !target.Resize(framebufferWidth, framebufferHeight) {
             return false
@@ -907,8 +913,8 @@ public partial class Window {
           actual = target.FramebufferExtentForTest()
           currentGeneration = target.CurrentPresentGeneration
         }
-      SdlHostForTest()?.SetMetricsForTest(logicalWidth, logicalHeight, actual.Width,
-        actual.Height)
+      if directWayland { pendingMetrics = false }
+      native?.SetMetricsForTest(logicalWidth, logicalHeight, actual.Width, actual.Height)
       this.framebufferWidth = actual.Width
       this.framebufferHeight = actual.Height
       return currentGeneration != 0uL
@@ -1066,9 +1072,24 @@ internal unsafe partial class SdlHost {
     framebufferWidth int32, framebufferHeight int32) {
       LogicalWidth = logicalWidth
       LogicalHeight = logicalHeight
-      FramebufferWidth = framebufferWidth
-      FramebufferHeight = framebufferHeight
+      if WaylandVulkanGeometryVersion() == 0uL {
+        FramebufferWidth = framebufferWidth
+        FramebufferHeight = framebufferHeight
+      }
     }
+
+  internal func RealizeFramebufferExtentForTest(width int32, height int32) bool {
+    RefreshLogical()
+    RefreshFramebuffer()
+    if FramebufferWidth == width && FramebufferHeight == height { return true }
+    if FramebufferWidth <= 0 || FramebufferHeight <= 0 { return false }
+    SetSize(int32(Math.Round(float64(width) * float64(LogicalWidth) / float64(FramebufferWidth))),
+      int32(Math.Round(float64(height) * float64(LogicalHeight) / float64(FramebufferHeight))))
+    if !SDL.SyncWindow(window) { return false }
+    SdlRuntime.PumpEvents(Int32.MaxValue)
+    RefreshFramebuffer()
+    return FramebufferWidth == width && FramebufferHeight == height
+  }
 
   internal func HitTestForTest(x int32, y int32) SDLHitTestResult {
     var point = SdlHostPoint(x, y)
@@ -1463,6 +1484,10 @@ internal class WindowReadbackTestFixture {
 
     internal func NativeHitTest(window Window, x int32, y int32) SDLHitTestResult ->
     window.NativeHitTestForTest(x, y)
+
+    internal func SetResizeConstraints(window Window, constraints WindowResizeConstraints) bool ->
+    SDL.SetNumberProperty(SDL.GetWindowProperties(window.SdlHostForTest()!!.NativeWindow),
+      "Goo.Window.ResizeConstraints.1", int64(constraints))
 
     internal func NativeMouseMove(window Window, x float64, y float64, buttons PointerButtons) {
       window.PushNativeMouseMotionForTest(float32(x), float32(y), buttons)

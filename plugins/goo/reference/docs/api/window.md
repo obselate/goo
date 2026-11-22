@@ -1702,7 +1702,7 @@ Starts a system move of the window. Call from a pointer, touch or key press hand
 
 ### `BeginResize(WindowEdge)`
 
-Starts a system resize from an edge or corner. Call from a pointer, touch or key press handler. With the primary button held, the edge follows the pointer. From a key press, Windows starts its keyboard sizing and Wayland sends xdg_toplevel.resize with the key serial. Accepted means the request was sent. A Wayland compositor can still ignore it. Returns Unsupported unless the window is resizable and in the normal state on Windows or Wayland.
+Starts a system resize from an edge or corner. Call from a pointer, touch or key press handler. With the primary button held, the edge follows the pointer. From a key press, Windows starts its keyboard sizing and Wayland sends xdg_toplevel.resize with the key serial. Accepted means the request was sent. A Wayland compositor can still ignore it. Returns Unsupported unless the window is resizable and in the normal state on Windows or Wayland. On Wayland, returns Unsupported if the compositor constrains any requested edge.
 
 - `edge`: edge or corner to move
 
@@ -2120,7 +2120,7 @@ Gets or sets whether the user can resize the window.
 
 ### `ResizeBand`
 
-Gets or sets the undecorated edge resize band in logical pixels, multiplied by UiScale. The default is 8. Controls with OnClick and scrollbars under an edge band take the pointer. Corners resize within max(2 * ResizeBand, 16) of each corner.
+Gets or sets the undecorated edge resize band inside the window, in logical pixels multiplied by UiScale. The default is 8. Windows and Wayland with the Goo SDL build resize from an outside border and from inside corner squares of ResizeBand size. macOS uses the AppKit resize area instead. Where an inside edge band is used, controls with OnClick and scrollbars take the pointer in that band. Corners extend max(2 * ResizeBand, 16) along each edge.
 
 ### `Root`
 

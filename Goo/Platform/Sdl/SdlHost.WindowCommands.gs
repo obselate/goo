@@ -47,6 +47,20 @@ internal unsafe partial class SdlHost {
       return sent != 0 ? WindowOperationResult.Accepted : WindowOperationResult.Failed
     }
     if !IsWayland() { return WindowOperationResult.Unsupported }
+    let resizeEdges = switch edge {
+      case WindowHitResult.TopLeft: WindowResizeConstraints.Top | WindowResizeConstraints.Left
+      case WindowHitResult.Top: WindowResizeConstraints.Top
+      case WindowHitResult.TopRight: WindowResizeConstraints.Top | WindowResizeConstraints.Right
+      case WindowHitResult.Right: WindowResizeConstraints.Right
+      case WindowHitResult.BottomRight: WindowResizeConstraints.Bottom | WindowResizeConstraints.Right
+      case WindowHitResult.Bottom: WindowResizeConstraints.Bottom
+      case WindowHitResult.BottomLeft: WindowResizeConstraints.Bottom | WindowResizeConstraints.Left
+      case WindowHitResult.Left: WindowResizeConstraints.Left
+      case _: WindowResizeConstraints.None
+    }
+    if resizeEdges != WindowResizeConstraints.None && (ResizeConstraints & resizeEdges) != WindowResizeConstraints.None {
+      return WindowOperationResult.Unsupported
+    }
     try {
       return BeginWindowInteraction(windowHandle, int32(SdlHitTest(edge))) != 0
         ? WindowOperationResult.Accepted : WindowOperationResult.Unsupported

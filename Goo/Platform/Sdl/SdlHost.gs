@@ -44,7 +44,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     popupParent SdlHost? = nil, popupKind PopupKind = PopupKind.Menu, popupTimestamp uint64 = 0uL,
     popupAnchor ElementRect = default(ElementRect), popupPlacement PortalPlacement = PortalPlacement.BottomStart,
     popupScale float32 = 1.0F, layerOptions LayerWindowOptions? = nil,
-    minWidth int32 = 0, minHeight int32 = 0) {
+    minWidth int32 = 0, minHeight int32 = 0, ownsVulkanPresentation bool = false) {
       this.hitTest = hitTest
       hitTestRawDelegate = HitTest
       hitTestCallbackAddress = Marshal.GetFunctionPointerForDelegate(hitTestRawDelegate)
@@ -57,7 +57,10 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         vulkanOwned = true
         if let parent = popupParent {
           CreatePopup(parent, width, height, popupKind, popupTimestamp, popupAnchor, popupPlacement, popupScale)
-        } else { CreateWindow(title, width, height, x, y, positionSet, minWidth, minHeight, decorated, transparent, layerOptions) }
+        } else {
+          waylandVulkanFrame = ownsVulkanPresentation && driver == "wayland" && layerOptions == nil
+          CreateWindow(title, width, height, x, y, positionSet, minWidth, minHeight, decorated, transparent, layerOptions)
+        }
         windowId = SDL.GetWindowID(window)
         if windowId == 0u {
           ThrowSdl("SDL_GetWindowID")
@@ -66,6 +69,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         if windowHandle == nint(0) {
           ThrowSdl("SDL_GetWindowFromID")
         }
+        if driver == "wayland" { waylandWindowProperties = NativeProperties(windowHandle) }
         SdlRuntime.Register(windowId, Dispatch)
         BindNativeFocus()
         if popupParent == nil && layerWindow == nil {
@@ -144,7 +148,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       let flags = SDL.GetWindowFlags(window)
       let unavailable = uint64(SDLWindowFlags.Hidden | SDLWindowFlags.Minimized |
         SDLWindowFlags.Occluded)
-      return (flags & unavailable) == 0uL
+      return (flags & unavailable) == 0uL && WaylandVulkanFrameReady()
     }
   }
   public prop WindowHandle nint{
@@ -159,6 +163,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       return (SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Resizable)) != 0uL
     }
   }
+  public prop OutsideResizeBorder bool{ get; private set }
 
   shared {
     internal func IsWayland() bool -> String.Equals(SDL.GetCurrentVideoDriverS(), "wayland",
@@ -351,7 +356,11 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     if !decorated {
       EnableHitTest()
     }
-    Require(SDL.SetWindowBordered(window, decorated), "SDL_SetWindowBordered")
+    let windowsFrame = OperatingSystem.IsWindows() && !decorated && resizable
+    RefreshLogical()
+    let width = LogicalWidth
+    let height = LogicalHeight
+    Require(SDL.SetWindowBordered(window, decorated || windowsFrame), "SDL_SetWindowBordered")
     Require(SDL.SetWindowResizable(window, resizable), "SDL_SetWindowResizable")
     if contentUnderTitlebar { MacBackdrop.SetContentUnderTitlebar(macWindow, true) }
     if decorated && !contentUnderTitlebar {
@@ -359,7 +368,15 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     }
     if OperatingSystem.IsWindows() {
       WindowsBackdrop.SetCaption(BackdropPointer(BackdropProperties(WindowHandle), "SDL.window.win32.hwnd", nint(0)), decorated)
+      Require(SDL.SetWindowSize(window, width, height), "SDL_SetWindowSize")
     }
+    let outside = !decorated && resizable
+    var waylandBorder = false
+    if IsWayland() {
+      try { waylandBorder = Goo_SetWindowResizeBorderRaw(windowHandle, outside ? 12 : 0) != uint8(0) }
+      catch (_ EntryPointNotFoundException) { }
+    }
+    OutsideResizeBorder = outside && (waylandBorder || windowsFrame || OperatingSystem.IsMacOS())
   }
 
   public func SetVSync(value bool) {
@@ -553,9 +570,14 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         Require(SDL.SetNumberProperty(properties, "SDL.window.create.x", int64(bounds.X)), "SDL_SetNumberProperty")
         Require(SDL.SetNumberProperty(properties, "SDL.window.create.y", int64(bounds.Y)), "SDL_SetNumberProperty")
         Require(SDL.SetNumberProperty(properties, "SDL.window.create.flags", int64(flags)), "SDL_SetNumberProperty")
+        if waylandVulkanFrame {
+          Require(SDL.SetBooleanProperty(properties, "Goo.Wayland.VulkanFrame.1", true), "SDL_SetBooleanProperty")
+        }
         window = SDL.CreateWindowWithProperties(properties)
       } finally { SDL.DestroyProperties(properties) }
       if window.IsNull { ThrowSdl("SDL_CreateWindowWithProperties") }
+      waylandVulkanFrame = waylandVulkanFrame && SDL.GetBooleanProperty(SDL.GetWindowProperties(window),
+        "Goo.Wayland.VulkanFrameAvailable.1", false)
       if decorated && !IsWayland() {
         if let area = usable { ConstrainFrame(requested, minWidth, minHeight, positionSet, area) }
       }

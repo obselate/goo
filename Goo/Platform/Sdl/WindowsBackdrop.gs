@@ -104,15 +104,29 @@ internal class WindowsBackdrop : NativeBackdrop {
         SetWindowSubclass(window, captionAddress, nuint(1), nuint(0))
       }
       let style = GetWindowLongPtr(window, -16)
-      SetWindowLongPtr(window, -16, decorated ? style | nint(0x80000) : style & ~nint(0x80000))
+      SetWindowLongPtr(window, -16, decorated ? style | CaptionStyle(style) : style & ~CaptionStyle(style))
       SetWindowPos(window, nint(0), 0, 0, 0, 0, 0x37u)
     }
 
+    private func CaptionStyle(style nint) nint -> (style & nint(0x40000)) != nint(0) ? nint(0xC80000) : nint(0x80000)
+
+    private func SizingFrame(window nint) bool -> (GetWindowLongPtr(window, -16) & nint(0xC40000)) == nint(0x40000)
+
     private func CaptionMessage(window nint, message uint32, wparam nuint, lparam nint, id nuint, data nuint) nint {
       if message == 0x7Cu && (wparam & nuint(0xffffffffu)) == nuint(0xfffffff0u) {
-        Marshal.WriteInt32(lparam, 4, Marshal.ReadInt32(lparam, 4) & ~0x80000)
+        let style = nint(Marshal.ReadInt32(lparam, 4))
+        Marshal.WriteInt32(lparam, 4, int32(style & ~CaptionStyle(style)))
       } else if message == 0x82u {
         RemoveWindowSubclass(window, captionAddress, nuint(1))
+      } else if message == 0x84u && SizingFrame(window) {
+        let hit = DefWindowProc(window, message, wparam, lparam)
+        if hit >= nint(10) && hit <= nint(17) { return hit }
+      } else if message == 0x83u && wparam != nuint(0) && SizingFrame(window) && IsZoomed(window) != 0 {
+        let info = []int32{40, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+        if GetMonitorInfo(MonitorFromWindow(window, 2u), info) != 0 {
+          Marshal.Copy(info, 5, lparam, 4)
+          return nint(0)
+        }
       }
       return DefSubclassProc(window, message, wparam, lparam)
     }
@@ -128,6 +142,10 @@ internal class WindowsBackdrop : NativeBackdrop {
     @DllImport("user32.dll", EntryPoint: "GetWindowLongPtrW") private func GetWindowLongPtr(window nint, index int32) nint;
     @DllImport("user32.dll", EntryPoint: "SetWindowLongPtrW") private func SetWindowLongPtr(window nint, index int32, value nint) nint;
     @DllImport("user32.dll") private func SetWindowPos(window nint, after nint, x int32, y int32, width int32, height int32, flags uint32) int32;
+    @DllImport("user32.dll", EntryPoint: "DefWindowProcW") private func DefWindowProc(window nint, message uint32, wparam nuint, lparam nint) nint;
+    @DllImport("user32.dll") private func IsZoomed(window nint) int32;
+    @DllImport("user32.dll") private func MonitorFromWindow(window nint, flags uint32) nint;
+    @DllImport("user32.dll", EntryPoint: "GetMonitorInfoW") private func GetMonitorInfo(monitor nint, info []int32) int32;
     @DllImport("user32.dll", EntryPoint: "SystemParametersInfoW")
     private func SystemParametersInfo(action uint32, parameter uint32, ref value BackdropWindowsContrast, flags uint32) int32;
   }
