@@ -61,6 +61,7 @@ internal unsafe partial class SdlHost {
 
   private func RaiseFocusChanged(value bool) {
     if focusSubclass != nil && keyboardFocused == value { return }
+    if value && focusSubclass != nil && IsChild(focusWindow, GetFocus()) != 0 { return }
     keyboardFocused = value
     FocusChanged?.Invoke(value)
   }
