@@ -1154,8 +1154,30 @@ jobs:
           dotnet publish tests/Goo.Gestures.Smoke/Goo.Gestures.Smoke.gsproj \
             -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
             --configfile tests/Goo.PackageSmoke/NuGet.config -o artifacts/gesture-nativeaot
+          smoke=artifacts/gesture-nativeaot/Goo.Gestures.Smoke
+          if cores="$(mktemp -d "$RUNNER_TEMP/gesture-cores.XXXXXX")"; then
+            core_pattern="$(cat /proc/sys/kernel/core_pattern)" || core_pattern=
+            trap 'status=$?; if [[ -n "$core_pattern" ]]; then printf "%s\n" "$core_pattern" | sudo tee /proc/sys/kernel/core_pattern >/dev/null || true; fi; rm -rf -- "$cores" || true; exit "$status"' EXIT
+            if [[ -n "$core_pattern" ]]; then
+              printf '%s\n' "$cores/core.%p" | sudo tee /proc/sys/kernel/core_pattern >/dev/null ||
+                echo "::warning::Could not configure gesture smoke core files"
+            fi
+          fi
+          status=0
           LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
-            artifacts/gesture-nativeaot/Goo.Gestures.Smoke
+            bash -c 'ulimit -S -c 131072 || true; exec "$@"' bash "$smoke" || status=$?
+          if (( status != 0 )) && [[ -n "$cores" ]]; then
+            for core in "$cores"/core.*; do
+              [[ -f "$core" ]] || continue
+              if command -v gdb >/dev/null || sudo apt-get install -y --no-install-recommends gdb; then
+                DEBUGINFOD_URLS=https://debuginfod.ubuntu.com DEBUGINFOD_TIMEOUT=15 \
+                  timeout --kill-after=5s 120s gdb -q -nx -batch \
+                  -iex 'set debuginfod enabled on' -ex 'set backtrace limit 64' \
+                  -ex 'thread apply all bt' "$smoke" "$core" || true
+              fi
+            done
+          fi
+          exit "$status"
 
       - name: Pack and validate native accessibility runtimes
         if: needs.changes.outputs.full == 'true'
