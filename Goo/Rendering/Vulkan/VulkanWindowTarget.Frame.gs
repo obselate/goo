@@ -68,6 +68,7 @@ internal unsafe partial class VulkanWindowTarget {
       attachment.resolveMode = VkConstants.VK_RESOLVE_MODE_NONE
       attachment.loadOp = VkConstants.VK_ATTACHMENT_LOAD_OP_CLEAR
       attachment.storeOp = VkConstants.VK_ATTACHMENT_STORE_OP_STORE
+      if current.OpaquePopup { attachment.clearValue.color.float32.values[3] = 1.0F }
       var rendering = VkRenderingInfo{}
       rendering.sType = VkConstants.VK_STRUCTURE_TYPE_RENDERING_INFO
       rendering.renderArea.offset = VkOffset2D{ x: damage.X, y: damage.Y }

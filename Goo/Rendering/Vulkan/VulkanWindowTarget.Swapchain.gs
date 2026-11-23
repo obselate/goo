@@ -448,14 +448,28 @@ internal unsafe partial class VulkanWindowTarget {
     guard let selection = QuerySelection(requestedVsync, transparent, allowInherited) else {
       return VulkanSwapchainCreationResult{SurfaceLost: true}
     }
+    let sdl = host as SdlHost?
+    let alphaUnavailable = selection.CompositeAlpha == VkCompositeAlphaFlagBitsKHR(0)
+    let opaquePopup = sdl?.IsPopup == true && (!transparent || alphaUnavailable)
+    let compositeAlpha = if alphaUnavailable && opaquePopup {
+      SelectCompositeAlpha(selection.Capabilities.supportedCompositeAlpha, false)
+    } else { selection.CompositeAlpha }
+    if compositeAlpha == VkCompositeAlphaFlagBitsKHR(0) {
+      if transparent && !opaquePopup {
+        throw InvalidOperationException(
+          "Vulkan surface has no supported composite alpha mode for the configured transparent window")
+      }
+      throw InvalidOperationException("Vulkan surface has no supported composite alpha mode")
+    }
+
     let extent = VulkanSwapchainGeneration.ResolveExtent(selection.Capabilities,
       VkExtent2D{width: uint32(width), height: uint32(height)}, preferExtent)
     if extent.width == 0u || extent.height == 0u { return VulkanSwapchainCreationResult{} }
     let swapStart = DiagnosticTimestamp()
     var composition VulkanCompositionPresentation?
     if transparent {
-      if let active = runtime, let sdl = host as SdlHost? {
-        composition = VulkanCompositionPresentation.TryCreate(active, sdl.WindowsPresentationHandle,
+      if let active = runtime, let native = sdl {
+        composition = VulkanCompositionPresentation.TryCreate(active, native.WindowsPresentationHandle,
           extent, requestedVsync, previousComposition, windowObjectAccounting)
       }
     }
@@ -472,9 +486,9 @@ internal unsafe partial class VulkanWindowTarget {
     try {
       next = VulkanSwapchainGeneration(device, dispatch, surface, selection.Capabilities,
         format, selection.PresentMode, extent,
-        selection.CompositeAlpha, oldSwapchain, generationId,
+        compositeAlpha, oldSwapchain, generationId,
         swapchainMaintenanceVariant != VulkanSwapchainMaintenanceVariant.None,
-        windowObjectAccounting, diagnostics, composition)
+        windowObjectAccounting, diagnostics, composition, opaquePopup: opaquePopup && composition == nil)
     } catch {
       composition?.Dispose()
       rethrow
@@ -643,13 +657,6 @@ internal unsafe partial class VulkanWindowTarget {
       capabilities.supportedCompositeAlpha,
       transparent,
       allowInherited)
-    if compositeAlpha == VkCompositeAlphaFlagBitsKHR(0) {
-      if transparent {
-        throw InvalidOperationException(
-          "Vulkan surface has no supported composite alpha mode for the configured transparent window")
-      }
-      throw InvalidOperationException("Vulkan surface has no supported composite alpha mode")
-    }
     return VulkanWindowTargetSelection{
       Capabilities: capabilities,
       Format: selectedFormat,
