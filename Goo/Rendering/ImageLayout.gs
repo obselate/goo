@@ -10,6 +10,7 @@ internal open class ImageSourceBinding {
   internal var Lease ImageSourceLease?
   internal var SourceCompletion ImageSourceCompletion?
   internal var Fallback ImageSourceBindingToken?
+  internal var RetainedFallback ImageSourceBindingToken?
   internal var PixelsPerUnit float64 = 1.0
   internal var AcceptedWidth float64
   internal var AcceptedHeight float64
@@ -157,6 +158,12 @@ internal open class ImageSourceBinding {
     return Lease?.Result()
   }
 
+  internal func ReleaseRetainedFallback() {
+    let prior = RetainedFallback
+    RetainedFallback = nil
+    prior?.Lease.Dispose()
+  }
+
   internal func ReleaseSource() {
     if let source = Source {
       if let registration = sourceChangedRegistration {
@@ -209,7 +216,7 @@ internal class ImageLayouts {
 
     internal func ApplySource(n Node, source ImageSourceProvider, fit ImageFit,
       completed((Node, object) -> void)?,
-      owner Window?, pixelsPerUnit float64 = 1.0) {
+      owner Window?, pixelsPerUnit float64 = 1.0, keepPreviousWhilePending bool = false) {
         n.ImageFit = fit
         let prior = sourceState(n)
         if prior?.Source == source {
@@ -224,17 +231,29 @@ internal class ImageLayouts {
         let intrinsicWidth = n.ImageIntrinsicWidth
         let intrinsicHeight = n.ImageIntrinsicHeight
         let fallback = prior?.CurrentToken() ?? prior?.Fallback
+        let value = ImageSourceBinding{Mount: NodeMount(n)}
+        if keepPreviousWhilePending {
+          if let previous = prior {
+            if let token = previous.CurrentToken(), previous.AcceptedComplete
+              && token.Lease.IsComplete && !token.Lease.IsFailed {
+                value.RetainedFallback = token
+                previous.Lease = nil
+            } else {
+              value.RetainedFallback = previous.RetainedFallback
+              previous.RetainedFallback = nil
+            }
+          }
+        }
         removeSource(n, prior)
         n.DecodedImage = nil
         n.ImageIntrinsicWidth = intrinsicWidth
         n.ImageIntrinsicHeight = intrinsicHeight
-        let value = ImageSourceBinding{Mount: NodeMount(n)}
         value.PixelsPerUnit = pixelsPerUnit
         value.SetSourceChanged(() -> {
           if let current = value.Mount.Current { ImageLayouts.refreshSource(current, value, completed) }
         })
         value.BindSource(source, owner)
-        value.Fallback = if value.Lease?.IsComplete == true { fallback } else { nil }
+        if value.Lease?.IsComplete == true { value.Fallback = fallback }
         if sourceValues == nil { sourceValues = ConditionalWeakTable[Node, ImageSourceBinding]() }
         sourceValues?.Add(n, value)
         n.HasDirectImageSourceState = true
@@ -253,12 +272,20 @@ internal class ImageLayouts {
       let external = lease.ExternalResult()
       value.AcceptedComplete = true
       value.AcceptedFailed = lease.IsFailed
+      let retained = value.RetainedFallback
+      if let previous = retained {
+        if !value.AcceptedFailed { value.Fallback = previous }
+        value.ReleaseRetainedFallback()
+      }
       value.AcceptedWidth = if let image = decoded { image.IsValid ? float64(image.Width) : 0.0 }
         else { float64(external?.Width ?? 0) }
       value.AcceptedHeight = if let image = decoded { image.IsValid ? float64(image.Height) : 0.0 }
         else { float64(external?.Height ?? 0) }
-      return publishIntrinsic(n, value.AcceptedWidth / value.PixelsPerUnit,
-        value.AcceptedHeight / value.PixelsPerUnit, decoded)
+      if publishIntrinsic(n, value.AcceptedWidth / value.PixelsPerUnit,
+        value.AcceptedHeight / value.PixelsPerUnit, decoded) { return true }
+      if retained == nil { return false }
+      n.BumpScenePaintVersion()
+      return true
     }
 
     private func publishIntrinsic(n Node, width float64, height float64, decoded DecodedImage?) bool {
@@ -328,6 +355,7 @@ internal class ImageLayouts {
         sourceValues?.Remove(n)
         n.HasDirectImageSourceState = false
         value.ReleaseSource()
+        value.ReleaseRetainedFallback()
       }
     }
     private func refreshSource(n Node, value ImageSourceBinding,

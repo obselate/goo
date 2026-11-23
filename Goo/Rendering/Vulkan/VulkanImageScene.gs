@@ -102,6 +102,10 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
           binding.Fallback = nil
           return
         }
+      if let retained = binding.RetainedFallback {
+        EmitCurrent(frame, bounds, retained, fit, opacity, transformIndex, retained.Binding.PixelsPerUnit)
+        return
+      }
       guard let prior = binding.Fallback else {
         return
       }
