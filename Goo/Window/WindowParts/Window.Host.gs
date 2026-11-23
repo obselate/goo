@@ -123,7 +123,7 @@ public partial class Window {
       let native = createNativeHost()
       let sdlEnd = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
       host = native
-      if let icon = iconPng { native.SetIconPng(icon) }
+      if iconPng != nil || iconPngs.Length != 0 { native.SetIconPng(iconPng, iconPngs) }
       if !focusable { native.SetFocusable(false) }
       if topmost && (native.Capabilities & WindowCapabilities.Topmost) != WindowCapabilities.None {
         native.SetTopmost(true)

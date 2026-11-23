@@ -261,6 +261,13 @@ public partial class Window {
     get -> ReadUntrackedWindowValue(iconPng)
     init -> iconPng = value
   }
+  /// Configures additional native window icon sizes. If IconPng is unset, the first PNG is the primary icon.
+  /// Each PNG is decoded when opening and has a 1024 pixel edge limit.
+  /// Windows chooses the closest size for each icon slot. Wayland uses the primary icon as the base size.
+  public prop IconPngs [][]uint8 {
+    get -> ReadUntrackedWindowValue(iconPngs)
+    init -> iconPngs = value
+  }
   /// Reports whether the window is open.
   public prop IsOpen bool{ get -> ReadUntrackedWindowValue(isOpen); private set -> isOpen = value }
   private var isOpen bool
@@ -656,6 +663,7 @@ public partial class Window {
   private var foregroundPending bool
   private var root Cell?
   private var iconPng [] ? uint8
+  private var iconPngs [][]uint8 = Array.Empty[[]uint8]()
   private var width int32
   private var height int32
   private var x int32

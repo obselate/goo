@@ -55,8 +55,11 @@ func RunImageFileSmoke() {
   let imagePath = Path.Combine(AppContext.BaseDirectory, "local-rgba.png")
   using let source = cache.LoadAsync(imagePath).GetAwaiter().GetResult()
   let root = ImageFileCell(source)
+  let primaryIcon = File.ReadAllBytes(imagePath)
+  let alternateIcon = Convert.FromBase64String(
+    "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAE0lEQVR4nGNgGAWjYBSMAgYwAAAEEAABsax5zAAAAABJRU5ErkJggg==")
   let window = Window{ Title: "Goo local PNG gate", Size: LayoutSize(96, 96),  VSync: false,
-    IconPng: File.ReadAllBytes(imagePath), Root: root }
+    IconPng: primaryIcon, IconPngs: [][]uint8{alternateIcon}, Root: root }
   let capturedError = StringWriter()
   let originalError = Console.Error
   try {
@@ -104,6 +107,20 @@ func RunImageFileSmoke() {
   ReadbackValidateCommonDiagnostics(diagnostics)
   for line in diagnostics.Split('\n') {
     if line.StartsWith("{\"kind\":\"device\",") && !line.Contains("\"name\":") { Console.WriteLine(line) }
+  }
+  let oversizedIcon = Convert.FromBase64String(
+    "iVBORw0KGgoAAAANSUhEUgAABAEAAAABCAYAAACvzLcLAAAAGklEQVR4nO3BAQEAAACCIP+vbkhAAQAAAD0YEAUAAafjJCIAAAAASUVORK5CYII=")
+  let invalid = Window{ InitiallyVisible: false, IconPngs: [][]uint8{primaryIcon, oversizedIcon} }
+  try {
+    invalid.Open()
+    throw InvalidOperationException("Window accepted an oversized alternate icon")
+  } catch (error InvalidDataException) {
+    Require(error.Message == "Window icon exceeds 1024 pixels per side", "Unexpected icon validation error")
+  } finally {
+    if invalid.IsOpen {
+      invalid.RequestClose()
+      WindowReadbackTestFixture.ForceRender(invalid, 0.0)
+    }
   }
   Console.WriteLine("image-file-smoke: png_pixels=4 density_none=verified alpha=verified cache_disposed=1 source_disposed=1 close=1")
   for name in []string {"local-rgb.jpg", "local-progressive.jpg", "local-cmyk.jpg", "local-transparent.gif", "local-animated.gif"} {
