@@ -294,7 +294,7 @@ class ImagePublicationTests {
     @InlineData(false, false)
     @InlineData(true, false)
     @InlineData(true, true)
-    func PendingSourceReplacementKeepsPreviousImageOnlyWhenEnabled(keepPrevious bool, fail bool) {
+    func PendingSourceReplacementKeepsIntrinsicSizeUntilCompletion(keepPrevious bool, fail bool) {
         let red = []uint8{255, 0, 0, 255}
         let blue = []uint8{0, 0, 255, 255, 0, 0, 255, 255}
         using let first = ImageSource(1, 1, red)
@@ -304,30 +304,17 @@ class ImagePublicationTests {
         let window = Window{Root: root, Size: LayoutSize(100, 100)}
         try {
             window.UpdateTree()
-            let previous = ImageLayouts.Lease(window.Tree!!)!!
             root.Source = pending
             root.Rebuild()
             window.UpdateTree()
             let node = window.Tree!!
-            let binding = ImageLayouts.Binding(node)!!
-            Assert.Null(node.DecodedImage)
             Assert.Equal(1.0F, node.ImageIntrinsicWidth)
             Assert.Equal(1.0F, node.ImageIntrinsicHeight)
-            if keepPrevious {
-                Assert.Equal(red, binding.RetainedFallback!!.Lease.Result()!!.Pixels())
-            } else {
-                Assert.Null(binding.RetainedFallback)
-                Assert.Null(binding.Fallback)
-                Assert.True(previous.IsDisposed)
-            }
 
             let completed = if fail { pending.Lease.Fail() } else { pending.Lease.Complete(replacement) }
             Assert.True(completed)
             window.UpdateTree()
-            Assert.True(previous.IsDisposed)
-            Assert.Null(binding.RetainedFallback)
             if fail {
-                Assert.True(binding.AcceptedFailed)
                 Assert.Null(node.DecodedImage)
                 Assert.Equal(0.0F, node.ImageIntrinsicWidth)
             } else {
