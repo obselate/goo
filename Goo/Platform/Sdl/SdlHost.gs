@@ -679,31 +679,43 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     let smallHeight = WindowsIconMetric(50, dpi)
     let largeWidth = WindowsIconMetric(11, dpi)
     let largeHeight = WindowsIconMetric(12, dpi)
-    var small = primary
-    var large = primary
+    var small NativeImage? = nil
+    var large NativeImage? = nil
     var smallDistance = Int64.MaxValue
     var largeDistance = Int64.MaxValue
 
-    for index in (firstAlternate - 1) ... additional.Length {
-      let png = if index < firstAlternate { primary } else { additional[index] }
-      using let image = RasterImageDecoder.DecodeIconPng(png)
-      let toSmall = IconDistance(image, smallWidth, smallHeight)
-      let toLarge = IconDistance(image, largeWidth, largeHeight)
-      if toSmall < smallDistance {
-        small = png
-        smallDistance = toSmall
+    try {
+      for index in (firstAlternate - 1) ... additional.Length {
+        let png = if index < firstAlternate { primary } else { additional[index] }
+        let image = RasterImageDecoder.DecodeIconPng(png)
+        let toSmall = IconDistance(image, smallWidth, smallHeight)
+        let toLarge = IconDistance(image, largeWidth, largeHeight)
+        let oldSmall = small
+        let oldLarge = large
+        if toSmall < smallDistance {
+          small = image
+          smallDistance = toSmall
+        }
+        if toLarge < largeDistance {
+          large = image
+          largeDistance = toLarge
+        }
+        if image != small && image != large { image.Dispose() }
+        if oldSmall != small && oldSmall != large { oldSmall?.Dispose() }
+        if oldLarge != oldSmall && oldLarge != small && oldLarge != large { oldLarge?.Dispose() }
       }
-      if toLarge < largeDistance {
-        large = png
-        largeDistance = toLarge
-      }
-    }
 
-    windowsSmallIcon = CreateWindowsIcon(small, smallWidth, smallHeight)
-    windowsLargeIcon = CreateWindowsIcon(large, largeWidth, largeHeight)
-    const setIcon uint32 = 0x0080u
-    SendMessageW(hwnd, setIcon, nuint(0), windowsSmallIcon)
-    SendMessageW(hwnd, setIcon, nuint(1), windowsLargeIcon)
+      let smallPng = EncodeWindowsIcon(small!!)
+      let largePng = if small == large { smallPng } else { EncodeWindowsIcon(large!!) }
+      windowsSmallIcon = CreateWindowsIcon(smallPng, smallWidth, smallHeight)
+      windowsLargeIcon = CreateWindowsIcon(largePng, largeWidth, largeHeight)
+      const setIcon uint32 = 0x0080u
+      SendMessageW(hwnd, setIcon, nuint(0), windowsSmallIcon)
+      SendMessageW(hwnd, setIcon, nuint(1), windowsLargeIcon)
+    } finally {
+      small?.Dispose()
+      if large != small { large?.Dispose() }
+    }
   }
 
   private func IconDistance(image NativeImage, width int32, height int32) int64 {
@@ -714,6 +726,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
 
   private func WindowsIconMetric(index int32, dpi uint32) int32 ->
     if dpi != 0u { GetSystemMetricsForDpi(index, dpi) } else { GetSystemMetrics(index) }
+
+  private func EncodeWindowsIcon(image NativeImage) []uint8 ->
+    ImageSource.EncodePng(image.Width, image.Height, image.Pixels, false, Int32.MaxValue)
 
   private func CreateWindowsIcon(png []uint8, width int32, height int32) nint {
     fixed bytes * uint8 = png {
