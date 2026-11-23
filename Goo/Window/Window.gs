@@ -159,6 +159,7 @@ internal struct WindowNotifications {
   private event occlusionChanged Action[WindowOcclusion]
   private event preferencesChanged Action[PlatformPreferences]
   private event presentationAccepted Action[WindowPresentationAccepted]
+  private event captureCompleted Action
   private event displayChanged Action
 
   internal func AddStateChanged(callback Action[WindowState]) { stateChanged += callback }
@@ -198,6 +199,9 @@ internal struct WindowNotifications {
   internal func AddPresentationAccepted(callback Action[WindowPresentationAccepted]) { presentationAccepted += callback }
   internal func RemovePresentationAccepted(callback Action[WindowPresentationAccepted]) { presentationAccepted -= callback }
   internal func RaisePresentationAccepted(value WindowPresentationAccepted) { presentationAccepted?.Invoke(value) }
+  internal func AddCaptureCompleted(callback Action) { captureCompleted += callback }
+  internal func RemoveCaptureCompleted(callback Action) { captureCompleted -= callback }
+  internal func RaiseCaptureCompleted() { captureCompleted?.Invoke() }
   internal func AddDisplayChanged(callback Action) { displayChanged += callback }
   internal func RemoveDisplayChanged(callback Action) { displayChanged -= callback }
   internal func RaiseDisplayChanged() { displayChanged?.Invoke() }
@@ -555,6 +559,20 @@ public partial class Window {
     }
   }
 
+  /// Occurs once on the UI thread when an accepted public capture completes or fails.
+  /// Call PollCapture to take the result or throw the failure.
+  /// Does not occur if PollCapture already took the result or failure.
+  public event CaptureCompleted Action{
+    add{
+      requireUiThread("Window.CaptureCompleted")
+      notifications.AddCaptureCompleted(value)
+    }
+    remove{
+      requireUiThread("Window.CaptureCompleted")
+      notifications.RemoveCaptureCompleted(value)
+    }
+  }
+
   /// Gets clipboard services for this window's UI thread.
   public prop Clipboard WindowClipboard { get -> clipboard ??= WindowClipboard(this) }
   private var clipboard WindowClipboard?
@@ -630,7 +648,7 @@ public partial class Window {
   private var presentationAcceptedHook Action[int64]?
   private var captureOwner WindowCaptureOwner
   private var capturePending bool
-  private var captureFailed bool
+  private var captureStatus WindowReadbackPollStatus
   private var reusableCapture WindowCapture?
   private var title string
   private var background Color
@@ -727,7 +745,7 @@ public partial class Window {
     if captureOwner == WindowCaptureOwner.Diagnostics {
       captureOwner = WindowCaptureOwner.None
       capturePending = false
-      captureFailed = false
+      captureStatus = WindowReadbackPollStatus.NotReady
     }
     resolver.DebugOverrides = nil
     input.SetDiagnostics(nil, nil)
@@ -745,7 +763,7 @@ public partial class Window {
 
   /// Starts an asynchronous offscreen replay of the current scene. This may
   /// submit a native present and does not sample a specific display scanout.
-  /// Call PollCapture on the UI thread until it returns pixels.
+  /// Handle CaptureCompleted or call PollCapture on the UI thread.
   public func RequestCapture() WindowCaptureRequestStatus -> RequestCapture(nil)
 
   /// Reuses a previous capture's caller-owned pixels when its size matches.
@@ -774,20 +792,32 @@ public partial class Window {
     capturePending = status == WindowReadbackRequestStatus.Busy || status == WindowReadbackRequestStatus.NotReady
     if status == WindowReadbackRequestStatus.Accepted || capturePending {
       captureOwner = owner
+      captureStatus = WindowReadbackPollStatus.NotReady
       return WindowReadbackRequestStatus.Accepted
     }
     return status
   }
 
-  internal func advanceCapture() {
-    guard let target = windowTarget else { return }
-    if !capturePending || target.QueueWorkPending { return }
-    if startCapture(target, captureOwner) != WindowReadbackRequestStatus.Accepted { captureFailed = true }
+  internal func SchedulerHasPendingPublicCapture() bool -> captureOwner == WindowCaptureOwner.Public
+    && captureStatus == WindowReadbackPollStatus.NotReady
+    && (!capturePending || windowTarget?.QueueWorkPending != true && (IsVisible || firstShowPending()))
+
+  private func advanceCapture() bool {
+    guard let target = windowTarget else { return false }
+    if capturePending && !target.QueueWorkPending
+      && startCapture(target, captureOwner) != WindowReadbackRequestStatus.Accepted {
+      captureStatus = WindowReadbackPollStatus.Failed
+      return captureOwner == WindowCaptureOwner.Public
+    }
+    if captureOwner != WindowCaptureOwner.Public || capturePending
+      || captureStatus != WindowReadbackPollStatus.NotReady { return false }
+    captureStatus = target.PollCapture()
+    return captureStatus != WindowReadbackPollStatus.NotReady
   }
 
   private func takeCaptureFailure() {
-    if !captureFailed { return }
-    captureFailed = false
+    if captureStatus != WindowReadbackPollStatus.Failed { return }
+    captureStatus = WindowReadbackPollStatus.NotReady
     captureOwner = WindowCaptureOwner.None
     reusableCapture = nil
     System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(windowTarget?.CaptureFailure ?? InvalidOperationException("Goo capture readback failed")).Throw()
@@ -797,21 +827,18 @@ public partial class Window {
   /// Failed readback throws and releases this request's ownership.
   public func PollCapture() WindowCapture? {
     requireUiThread("Window.PollCapture")
-    if captureOwner != WindowCaptureOwner.Public { return nil }
-    takeCaptureFailure()
+    if captureOwner != WindowCaptureOwner.Public || capturePending { return nil }
     guard let target = windowTarget else {
       captureOwner = WindowCaptureOwner.None
       reusableCapture = nil
       return nil
     }
-    let status = target.PollCapture()
-    if status == WindowReadbackPollStatus.NotReady { return nil }
+    if captureStatus == WindowReadbackPollStatus.NotReady { captureStatus = target.PollCapture() }
+    if captureStatus == WindowReadbackPollStatus.NotReady { return nil }
+    takeCaptureFailure()
     captureOwner = WindowCaptureOwner.None
     let reusable = reusableCapture
     reusableCapture = nil
-    if status == WindowReadbackPollStatus.Failed {
-      System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(target.CaptureFailure ?? InvalidOperationException("Goo capture readback failed")).Throw()
-    }
     guard let result = target.TakeCaptureResult() else {
       throw InvalidOperationException("Goo capture result was unavailable")
     }

@@ -1150,6 +1150,7 @@ event|Goo.TrayIcon|Activated|System.Action|instance|add:public,remove:public
 event|Goo.TrayIcon|CommandActivated|System.Action`1<System.String>|instance|add:public,remove:public
 event|Goo.TrayIcon|StatusChanged|System.Action`1<Goo.TrayStatus>|instance|add:public,remove:public
 event|Goo.WindowFocus|EditorChanged|System.Action`1<System.Nullable`1<Goo.FocusedEditorSnapshot>>|instance|add:public,remove:public
+event|Goo.Window|CaptureCompleted|System.Action|instance|add:public,remove:public
 event|Goo.Window|DisplayChanged|System.Action|instance|add:public,remove:public
 event|Goo.Window|FocusChanged|System.Action`1<System.Boolean>|instance|add:public,remove:public
 event|Goo.Window|InputActivity|System.Action`1<Goo.WindowInputKind>|instance|add:public,remove:public

@@ -410,13 +410,13 @@ public partial class Window {
             native.PollEvents()
           } else if let recorder = FrameRecorder.Current {
             let waitStart = Stopwatch.GetTimestamp()
-            native.WaitEvents(idleWaitMs())
+            native.WaitEvents(idleWaitMs(float64(waitStart)))
             if Object.ReferenceEquals(FrameRecorder.Current, recorder) {
               recorder.Duration(VulkanDiagnosticEventIds.EventWait, VulkanDiagnosticCategories.Timing,
                 profiler.Context, waitStart, Stopwatch.GetTimestamp(), source: "idle.wait")
             }
           } else {
-            native.WaitEvents(idleWaitMs())
+            native.WaitEvents(idleWaitMs(float64(Stopwatch.GetTimestamp())))
           }
         }
         checkPopupDismissal()
@@ -522,7 +522,14 @@ public partial class Window {
           rendered = true
           native.MarkFrame(float64(Stopwatch.GetTimestamp()))
         }
-        advanceCapture()
+        let captureDemand = SchedulerHasPendingPublicCapture()
+        if advanceCapture() {
+          notifications.RaiseCaptureCompleted()
+          if !IsOpen {
+            if profiling { profiler.EndFrame(frameProfile, rendered) }
+            return
+          }
+        }
         let frameNeeded = needsRenderFrame(resolver.VisualDirty)
         if allowFrame && frameNeeded && windowTarget != nil && windowTarget?.QueueWorkPending != true {
           FlushDeferredVirtualization()
@@ -557,7 +564,7 @@ public partial class Window {
           } else {
             native.DeferFrame(float64(Stopwatch.GetTimestamp()))
           }
-        } else if allowFrame && !frameNeeded {
+        } else if allowFrame && !frameNeeded || captureDemand {
           native.MarkFrame(float64(Stopwatch.GetTimestamp()))
         }
         if profiling {
@@ -629,9 +636,9 @@ public partial class Window {
     if windowTarget?.RetirementWorkPending == true {
       return 1
     }
-    let idle = idleWaitMs()
+    let idle = idleWaitMs(nowTicks)
     let demand = IsVisible && hasDemand()
-    let timed = SchedulerTimedServiceDue()
+    let timed = SchedulerTimedServiceDue(nowTicks)
     if timed {
       return 0
     }
@@ -652,7 +659,8 @@ public partial class Window {
     return pacingWait < idle ? pacingWait : idle
   }
 
-  internal func SchedulerTimedServiceDue() bool ->
+  internal func SchedulerTimedServiceDue(nowTicks float64) bool ->
+  SchedulerHasPendingPublicCapture() && host?.IsFrameDue(nowTicks) == true ||
   Math.Min(nextOffscreenDeadlineSeconds(), Math.Min(nextTimerDeadlineSeconds(),
     Math.Min(nextInputDeadlineSeconds(), nextScrollDeadlineSeconds()))) <= 0.0
 
@@ -671,11 +679,12 @@ public partial class Window {
   // caret blink or key-repeat edge when one is due sooner, so a focused,
   // otherwise-idle window still blocks (near-0 CPU) instead of polling, but
   // wakes itself in time to render each blink transition.
-  private func idleWaitMs() int32 {
+  private func idleWaitMs(nowTicks float64) int32 {
     let deadline = Math.Min(0.25, Math.Min(nextOffscreenDeadlineSeconds(), Math.Min(nextTimerDeadlineSeconds(),
       Math.Min(nextInputDeadlineSeconds(), nextScrollDeadlineSeconds()))))
-    let ms = int32(Math.Ceiling(deadline * 1000.0))
-    return ms < 1 ? 1 : ms
+    let ms = Math.Max(1, int32(Math.Ceiling(deadline * 1000.0)))
+    if SchedulerHasPendingPublicCapture() { return host?.FrameWaitMilliseconds(nowTicks, ms) ?? ms }
+    return ms
   }
 
   private func nextScrollDeadlineSeconds() float64 {
@@ -761,7 +770,7 @@ public partial class Window {
     acceptedFrameIndex = 0uL
     captureOwner = WindowCaptureOwner.None
     capturePending = false
-    captureFailed = false
+    captureStatus = WindowReadbackPollStatus.NotReady
     reusableCapture = nil
     framebufferWidth = 0
     framebufferHeight = 0

@@ -157,7 +157,7 @@ internal class WindowScheduler {
         let window = snapshot[(start + offset) % count]
         if window.IsOpen && !window.ExternallyDriven {
           let service = window.SchedulerHasImmediateService() || window.SchedulerHasPendingQueueWork()
-          let timed = window.SchedulerTimedServiceDue()
+          let timed = window.SchedulerTimedServiceDue(now)
           let frameDue = window.SchedulerFrameDue(now)
           if service || timed || frameDue { window.SchedulerPump(now, frameDue) }
         }
@@ -199,6 +199,7 @@ internal class WindowScheduler {
           hasVisibleWindow = hasVisibleWindow || window.IsVisible
           hasPendingService = hasPendingService || window.SchedulerHasImmediateService()
             || window.SchedulerHasPendingQueueWork() || window.SchedulerStartupPending()
+            || window.SchedulerHasPendingPublicCapture()
             || window.nextOffscreenDeadlineSeconds() != Double.PositiveInfinity
           let candidate = window.SchedulerWaitMs(now)
           if candidate < waitMs {
