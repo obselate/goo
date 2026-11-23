@@ -2566,6 +2566,7 @@ property|Goo.NativeWindowHandle|Kind|Goo.NativeWindowKind|instance|get:public|in
 property|Goo.NotificationMessage|Body|System.String|instance|get:public,init:public|index:()
 property|Goo.NotificationMessage|Id|System.String|instance|get:public,init:public|index:()
 property|Goo.NotificationMessage|Payload|System.String|instance|get:public,init:public|index:()
+property|Goo.NotificationMessage|Silent|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.NotificationMessage|Title|System.String|instance|get:public,init:public|index:()
 property|Goo.NotificationOptions|ActivationScheme|System.String|instance|get:public,init:public|index:()
 property|Goo.NotificationOptions|ChannelId|System.String|instance|get:public,init:public|index:()

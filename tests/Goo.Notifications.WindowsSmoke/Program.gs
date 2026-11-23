@@ -70,6 +70,9 @@ async func Run(args []string) Task {
     let toast = XElement.Parse(xml)
     Require(toast.Attribute("activationType")?.Value == "protocol", "Toast uses a non-protocol activator")
     Require(toast.Descendants("text").First().Value == message.Title, "Toast XML changed plain text")
+    Require(toast.Element("audio") == nil, "Default toast overrides the system sound")
+    let silentToast = XElement.Parse(WindowsNotificationService.Content(scheme, NotificationMessage{ Silent: true }))
+    Require(silentToast.Element("audio")?.Attribute("silent")?.Value == "true", "Silent toast does not suppress sound")
     let launch = toast.Attribute("launch")!!.Value
     let output = Output(scheme)
     try {
