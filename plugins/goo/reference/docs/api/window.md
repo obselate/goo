@@ -1668,6 +1668,10 @@ Gets a surface-local rectangle in logical pixels, or nil for the whole window. C
 
 Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread. Each instance has one lifetime. Create a new Window after closing. State, IsFocused, Size, NativeWidth, NativeHeight, UiScale, PixelScale, Preferences and Modifiers track reads in Build and retained builders. Other mutable window getters keep automatic callback rebuilding.
 
+### `CaptureCompleted`
+
+Occurs once on the UI thread when an accepted public capture completes or fails. Call PollCapture to take the result or throw the failure. Does not occur if PollCapture already took the result or failure.
+
 ### `DisplayChanged`
 
 Occurs on the UI thread when this window changes display or native display scale.
@@ -1930,7 +1934,7 @@ Requests restoration of a minimized window, raising, and keyboard activation. Ca
 
 ### `RequestCapture`
 
-Starts an asynchronous offscreen replay of the current scene. This may submit a native present and does not sample a specific display scanout. Call PollCapture on the UI thread until it returns pixels.
+Starts an asynchronous offscreen replay of the current scene. This may submit a native present and does not sample a specific display scanout. Handle CaptureCompleted or call PollCapture on the UI thread.
 
 ### `RequestCapture(WindowCapture)`
 
@@ -2063,6 +2067,10 @@ Gets or sets the native frame and material appearance. Unknown follows the syste
 ### `IconPng`
 
 Configures PNG bytes for the native window icon in the Window initializer before Open. The icon is decoded when opening, has a 1024 pixel edge limit, and requires no external file.
+
+### `IconPngs`
+
+Configures additional native window icon sizes. If IconPng is unset, the first PNG is the primary icon. Each PNG is decoded when opening and has a 1024 pixel edge limit. Windows chooses the closest size for each icon slot. Wayland uses the primary icon as the base size.
 
 ### `InitiallyVisible`
 

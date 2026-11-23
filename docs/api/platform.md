@@ -507,6 +507,10 @@ Gets the stable replacement identity, containing 1 to 64 UTF-16 units and no NUL
 
 Gets opaque data delivered through ApplicationActivation.Payload after a default click.
 
+### `Silent`
+
+Requests a notification without sound. Defaults to false. On Linux, the notification server must support the hint.
+
 ### `Title`
 
 Gets the plain title. The operating system controls wrapping and truncation.

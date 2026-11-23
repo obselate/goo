@@ -841,6 +841,10 @@ Gets content shown inside the image box when its source fails.
 
 Gets the image fit mode.
 
+### `KeepPreviousWhilePending`
+
+Gets whether to keep the previous image and its intrinsic size while a new source loads. Default false.
+
 ### `PixelsPerUnit`
 
 Gets source pixels per logical layout unit. Positive and finite, default 1. A 128-pixel image at density 2 has a natural width of 64 logical units.
@@ -1008,6 +1012,30 @@ Releases this source's owner reference. Existing mounted leases stay valid.
 Encodes this source as owned PNG bytes with straight RGBA pixels. Encoding is synchronous and can run outside the UI thread.
 
 Returns: The encoded PNG bytes.
+
+### `LoadThumbnail(System.IO.Stream,int32,int32)`
+
+Decodes a bounded thumbnail from the stream's current position and leaves the stream open. Applies EXIF orientation and never upscales the image.
+
+### `LoadThumbnail(System.IO.Stream,int32,int32,ImageDecodeLimits,System.Threading.CancellationToken)`
+
+Decodes a bounded thumbnail with the given limits and leaves the stream open. The decoded-byte limit applies to the reduced pixels.
+
+### `LoadThumbnail(System.IO.Stream,int32,int32,System.Threading.CancellationToken)`
+
+Decodes a bounded thumbnail with cancellation and the default limits. Leaves the stream open.
+
+### `LoadThumbnail(System.ReadOnlyMemory{System.Byte},int32,int32)`
+
+Decodes a bounded thumbnail from PNG, JPEG, or the first GIF frame. Applies EXIF orientation and never upscales the image.
+
+### `LoadThumbnail(System.ReadOnlyMemory{System.Byte},int32,int32,ImageDecodeLimits,System.Threading.CancellationToken)`
+
+Decodes a bounded thumbnail with the given limits. The decoded-byte limit applies to the reduced pixels.
+
+### `LoadThumbnail(System.ReadOnlyMemory{System.Byte},int32,int32,System.Threading.CancellationToken)`
+
+Decodes a bounded thumbnail with cancellation and the default limits.
 
 ### `LoadThumbnail(string,int32,int32)`
 
