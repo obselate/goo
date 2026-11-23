@@ -702,6 +702,7 @@ class FixtureContractTests {
             yield Contract[TextEditorInputFixtures]("ReadOnlyTabEscapesAndCommandsCanCancel")
             yield Contract[TextEditorInputFixtures]("WheelScrollAndCaretBlinkUseEditorState")
             yield Contract[TextEditorInputFixtures]("ScrollToEndBeforeMountReachesMeasuredEnd")
+            yield Contract[TextEditorInputFixtures]("ReadOnlyAppendFollowsEndOnlyWithScrollTo")
             yield Contract[TextEditorInputFixtures]("CaretRevealLandsAfterNearbyParagraphsAreMeasured")
             yield Contract[TextEditorInputFixtures]("CaretRevealInViewportShorterThanCaretIsStable")
             yield Contract[TextEditorInputFixtures]("ContentHeightKeepsMeasuredParagraphsAfterEviction")
