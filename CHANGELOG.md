@@ -1,6 +1,39 @@
 # Changelog
 
 
+## 0.32.2 - 2026-11-23
+
+### Added
+
+- `Window.BeginMove()` and `Window.BeginResize(WindowEdge)` start a system move or resize. Call them from a pointer, touch or key press handler. Windows uses the pointer drag or its keyboard move and size mode. Wayland sends `xdg_toplevel.move` or `resize` with the serial of the latest input event.
+- `Window.ShowSystemMenu(Point)` shows the platform window menu.
+- `Window.MaximizeButton(Button)` marks a custom maximize button. On Windows 11, hovering it shows the Snap Layouts flyout.
+- Add Wayland session locks with one Goo window per output and active keyboard layout notifications.
+
+### Changed
+
+- Undecorated resizable windows now resize from a border outside the window. On Windows and Wayland with the Goo SDL build, inside corner squares of `ResizeBand` size still resize. Edge controls and scrollbars keep the inside edge between the corners.
+- Wayland: undecorated resizable windows get a 12 px outside resize border with a shadow. The xdg window geometry excludes it. Other Linux SDL builds keep the inside `ResizeBand`.
+- Windows: undecorated resizable windows use the native sizing frame outside the client area.
+- macOS: undecorated resizable windows use the AppKit resize area and no inside `ResizeBand`.
+- Linux Goo apps can now connect over an inherited `WAYLAND_SOCKET` without `WAYLAND_DISPLAY`.
+
+### Fixed
+
+- Keep flex item sizes finite and distribute space correctly when layout hits both minimum and maximum size limits.
+- Layer-shell windows close normally when the compositor disconnects, instead of throwing "Layer-shell event dispatch failed". Protocol errors still throw.
+- Undecorated windows now use the full `ResizeBand` width on the right and bottom edges. These edges were one pixel narrower than the left and top edges.
+- Undecorated windows: controls with `OnClick` at a window edge, such as WindowChrome Close, now get clicks inside the resize band. Focusable-only content still resizes there.
+- Undecorated windows: each corner now resizes within `max(2 * ResizeBand, 16)` of the corner, not only `ResizeBand x ResizeBand`.
+- Undecorated windows on Linux and Windows: the pointer now shows the resize cursor whenever a press would resize. Before, the content cursor could replace it. macOS keeps the content cursor, because SDL starts no resize from hit-test results there.
+- Windows: `ResizeBand` now uses logical pixels and follows the display scale. Before, it used physical pixels.
+- Touch and trackpad gestures still work after a previous gesture target is unmounted.
+- Skip Vulkan presents for minimized SDL windows and bound the Vulkan queue worker join at process exit.
+- Fix an intermittent crash at process exit with software Vulkan. At exit, Goo waits for all submitted rendering to finish. Only a present call blocked for more than 5 seconds is abandoned, and no new work starts after it.
+- Keep undecorated Wayland window handles off constrained edges without blocking resize at shared dividers.
+- Wayland: Match resize geometry to the Vulkan frame and pace swaps across resize generations on direct xdg-shell windows.
+- On Windows, keep Goo from claiming keyboard focus while a native child window owns it.
+
 ## 0.32.1 - 2026-11-20
 
 ### Changed

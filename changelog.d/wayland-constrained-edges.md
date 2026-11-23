@@ -1,1 +1,0 @@
-- Keep undecorated Wayland window handles off constrained edges without blocking resize at shared dividers.
