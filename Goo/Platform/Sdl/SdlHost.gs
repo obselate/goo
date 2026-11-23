@@ -206,6 +206,25 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       case WindowHitResult.Left: SDLHitTestResult.ResizeLeft
       case _: SDLHitTestResult.Normal
     }
+
+    @DllImport("user32.dll", EntryPoint: "DestroyIcon")
+    private func DestroyWindowIcon(icon nint) int32;
+
+    @DllImport("user32.dll")
+    private func CreateIconFromResourceEx(bytes * uint8, length uint32, icon int32, version uint32,
+      width int32, height int32, flags uint32) nint;
+
+    @DllImport("user32.dll")
+    private func GetDpiForWindow(window nint) uint32;
+
+    @DllImport("user32.dll")
+    private func GetSystemMetricsForDpi(index int32, dpi uint32) int32;
+
+    @DllImport("user32.dll")
+    private func GetSystemMetrics(index int32) int32;
+
+    @DllImport("user32.dll")
+    private func SendMessageW(window nint, message uint32, wparam nuint, lparam nint) nint;
   }
 
   public func PollEvents() {
@@ -732,27 +751,6 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       if handle == nint(0) { throw InvalidOperationException("CreateIconFromResourceEx failed") }
       return handle
     }
-  }
-
-  shared {
-    @DllImport("user32.dll", EntryPoint: "DestroyIcon")
-    private func DestroyWindowIcon(icon nint) int32;
-
-    @DllImport("user32.dll")
-    private func CreateIconFromResourceEx(bytes * uint8, length uint32, icon int32, version uint32,
-      width int32, height int32, flags uint32) nint;
-
-    @DllImport("user32.dll")
-    private func GetDpiForWindow(window nint) uint32;
-
-    @DllImport("user32.dll")
-    private func GetSystemMetricsForDpi(index int32, dpi uint32) int32;
-
-    @DllImport("user32.dll")
-    private func GetSystemMetrics(index int32) int32;
-
-    @DllImport("user32.dll")
-    private func SendMessageW(window nint, message uint32, wparam nuint, lparam nint) nint;
   }
 
   private func EnableHitTest() {

@@ -234,7 +234,7 @@ internal class ImageLayouts {
         let value = ImageSourceBinding{Mount: NodeMount(n)}
         if keepPreviousWhilePending {
           if let previous = prior {
-            if let token = previous.CurrentToken(), previous.AcceptedComplete
+            if let token = previous.CurrentToken() && previous.AcceptedComplete
               && token.Lease.IsComplete && !token.Lease.IsFailed {
                 value.RetainedFallback = token
                 previous.Lease = nil
