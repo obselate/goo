@@ -679,42 +679,38 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     let smallHeight = WindowsIconMetric(50, dpi)
     let largeWidth = WindowsIconMetric(11, dpi)
     let largeHeight = WindowsIconMetric(12, dpi)
-    var small NativeImage? = nil
-    var large NativeImage? = nil
+    let images = [additional.Length - firstAlternate + 1]NativeImage?
+    var small = 0
+    var large = 0
     var smallDistance = Int64.MaxValue
     var largeDistance = Int64.MaxValue
 
     try {
-      for index in (firstAlternate - 1) ... additional.Length {
-        let png = if index < firstAlternate { primary } else { additional[index] }
+      for index in 0 ... images.Length {
+        let png = if index == 0 { primary } else { additional[firstAlternate + index - 1] }
         let image = RasterImageDecoder.DecodeIconPng(png)
+        images[index] = image
         let toSmall = IconDistance(image, smallWidth, smallHeight)
         let toLarge = IconDistance(image, largeWidth, largeHeight)
-        let oldSmall = small
-        let oldLarge = large
         if toSmall < smallDistance {
-          small = image
+          small = index
           smallDistance = toSmall
         }
         if toLarge < largeDistance {
-          large = image
+          large = index
           largeDistance = toLarge
         }
-        if image != small && image != large { image.Dispose() }
-        if oldSmall != small && oldSmall != large { oldSmall?.Dispose() }
-        if oldLarge != oldSmall && oldLarge != small && oldLarge != large { oldLarge?.Dispose() }
       }
 
-      let smallPng = EncodeWindowsIcon(small!!)
-      let largePng = if small == large { smallPng } else { EncodeWindowsIcon(large!!) }
+      let smallPng = EncodeWindowsIcon(images[small]!!)
+      let largePng = if small == large { smallPng } else { EncodeWindowsIcon(images[large]!!) }
       windowsSmallIcon = CreateWindowsIcon(smallPng, smallWidth, smallHeight)
       windowsLargeIcon = CreateWindowsIcon(largePng, largeWidth, largeHeight)
       const setIcon uint32 = 0x0080u
       SendMessageW(hwnd, setIcon, nuint(0), windowsSmallIcon)
       SendMessageW(hwnd, setIcon, nuint(1), windowsLargeIcon)
     } finally {
-      small?.Dispose()
-      if large != small { large?.Dispose() }
+      for image in images { image?.Dispose() }
     }
   }
 
