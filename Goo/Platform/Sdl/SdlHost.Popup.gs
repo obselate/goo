@@ -9,6 +9,8 @@ internal unsafe partial class SdlHost {
   private var popupTimestamp uint64
   private var popupKind PopupKind
 
+  internal prop IsPopup bool { get -> popupParent != nil }
+
   internal prop HasPopupKeyboardFocus bool {
     get -> !disposed && SDL.GetKeyboardFocus() == window && (focusSubclass == nil || IsChild(focusWindow, GetFocus()) == 0)
   }
@@ -25,9 +27,8 @@ internal unsafe partial class SdlHost {
     popupKind = kind
     popupTimestamp = timestamp
     let position = PopupWindow.PopupPosition(anchor, width, height, placement, scale)
-    var flags = SDLWindowFlags.HighPixelDensity | SDLWindowFlags.Hidden
-    flags = flags | (kind == PopupKind.Menu ? SDLWindowFlags.PopupMenu : SDLWindowFlags.Tooltip)
-    if !VulkanDrivers.Enabled { flags = flags | SDLWindowFlags.Vulkan }
+    let flags = (BuildWindowFlags(transparent: true) & ~SDLWindowFlags.Resizable)
+      | (kind == PopupKind.Menu ? SDLWindowFlags.PopupMenu : SDLWindowFlags.Tooltip)
     window = SDL.CreatePopupWindow(parent.window, int32(position.X), int32(position.Y), width, height, uint64(flags))
     if window.IsNull { ThrowSdl("SDL_CreatePopupWindow") }
     if IsWayland() && !ConfigurePopupGrab(anchor, placement, scale) {

@@ -82,7 +82,7 @@ internal class InstancePipe : IDisposable {
         private let identityEncoding UTF8Encoding = UTF8Encoding(false, true)
 
         internal async func AcquireAsync(applicationId string, activation ApplicationActivation,
-            timeoutMilliseconds int32) SingleInstanceResult {
+            timeoutMilliseconds int32, instanceScope string?) SingleInstanceResult {
             if String.IsNullOrWhiteSpace(applicationId) || identityEncoding.GetByteCount(applicationId) > 255 {
                 throw ArgumentException("An application identity of at most 255 UTF-8 bytes is required", "applicationId")
             }
@@ -100,7 +100,7 @@ internal class InstancePipe : IDisposable {
                         return SingleInstanceResult(SingleInstanceStatus.Failed, error: "Native application activation could not initialize")
                     }
                 }
-                let address = InstanceScope.Create(applicationId)
+                let address = InstanceScope.Create(applicationId, instanceScope)
                 election = InstanceLock.Acquire(address.LeasePath)
                 if let owned = election {
                     let server = NamedPipeServerStream(address.PipeName, PipeDirection.InOut, 1,

@@ -61,6 +61,16 @@ Initializes activation and elects a primary instance before the first window ope
 
 Returns: A primary lease or the explicit forwarding or failure result.
 
+### `AcquireSingleInstance(string[],string,float64)`
+
+Elects a primary instance within the given scope without changing the native application identity.
+
+- `arguments`: The startup arguments, without the executable name.
+- `instanceScope`: A non-empty election scope, or nil for the default election.
+- `timeoutMs`: The positive connection and acknowledgement deadline in milliseconds.
+
+Returns: A primary lease or the explicit forwarding or failure result.
+
 ### `Configure(System.Reflection.Assembly)`
 
 Configures identity from Product, InformationalVersion and GooApplicationId assembly metadata.

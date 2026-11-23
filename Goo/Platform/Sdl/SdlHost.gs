@@ -20,6 +20,8 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   private var window SDLWindowPtr = SDLWindowPtr.Null
   private var windowId uint32
   private var windowHandle nint
+  private var windowsSmallIcon nint
+  private var windowsLargeIcon nint
   private var disposed bool
   private var runtimeOwned bool
   private var vulkanOwned bool
@@ -204,6 +206,25 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       case WindowHitResult.Left: SDLHitTestResult.ResizeLeft
       case _: SDLHitTestResult.Normal
     }
+
+    @DllImport("user32.dll", EntryPoint: "DestroyIcon")
+    private func DestroyWindowIcon(icon nint) int32;
+
+    @DllImport("user32.dll")
+    private func CreateIconFromResourceEx(bytes * uint8, length uint32, icon int32, version uint32,
+      width int32, height int32, flags uint32) nint;
+
+    @DllImport("user32.dll")
+    private func GetDpiForWindow(window nint) uint32;
+
+    @DllImport("user32.dll")
+    private func GetSystemMetricsForDpi(index int32, dpi uint32) int32;
+
+    @DllImport("user32.dll")
+    private func GetSystemMetrics(index int32) int32;
+
+    @DllImport("user32.dll")
+    private func SendMessageW(window nint, message uint32, wparam nuint, lparam nint) nint;
   }
 
   public func PollEvents() {
@@ -511,6 +532,8 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         window = SDLWindowPtr.Null
         windowHandle = nint(0)
       }
+      if windowsSmallIcon != nint(0) { DestroyWindowIcon(windowsSmallIcon) }
+      if windowsLargeIcon != nint(0) { DestroyWindowIcon(windowsLargeIcon) }
       if vulkanOwned {
         vulkanOwned = false
         SdlRuntime.ReleaseVulkan()
@@ -630,13 +653,36 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     return output
   }
 
-  internal func SetIconPng(bytes []uint8) {
+  internal func SetIconPng(primary [] ? uint8, additional [][]uint8) {
     ThrowIfDisposed()
+    let firstAlternate = if primary == nil { 1 } else { 0 }
+    let bytes = primary ?? additional[0]
+    if firstAlternate < additional.Length && OperatingSystem.IsWindows() {
+      let handle = GetNativeWindowHandle()
+      if handle.Kind == NativeWindowKind.Win32 {
+        SetWindowsIcons(handle.Handle, bytes, additional, firstAlternate)
+        return
+      }
+    }
+
     using let image = RasterImageDecoder.DecodeIconPng(bytes)
     let format = if BitConverter.IsLittleEndian { SDLPixelFormat.Abgr8888 } else { SDLPixelFormat.Rgba8888 }
     let surface = SDL.CreateSurfaceFrom(image.Width, image.Height, format, image.Pointer, image.Width * 4)
     if surface.IsNull { ThrowSdl("SDL_CreateSurfaceFrom") }
     try {
+      for index in firstAlternate ... additional.Length {
+        using let alternate = RasterImageDecoder.DecodeIconPng(additional[index])
+        let copy = SDL.CreateSurface(alternate.Width, alternate.Height, format)
+        if copy.IsNull { ThrowSdl("SDL_CreateSurface") }
+        try {
+          let stride = alternate.Width * 4
+          let pixels = *uint8(copy.Pixels)
+          for y in 0 ... alternate.Height {
+            alternate.Pixels.Slice(y * stride, stride).CopyTo(Span[uint8](pixels + y * copy.Pitch, stride))
+          }
+          Require(SDL.AddSurfaceAlternateImage(surface, copy), "SDL_AddSurfaceAlternateImage")
+        } finally { SDL.DestroySurface(copy) }
+      }
       if !SDL.SetWindowIcon(window, surface) {
         let error = SDL.GetErrorS()
         if !IsWayland() || !error.Contains("xdg_toplevel_icon_v1 protocol not supported", StringComparison.Ordinal) {
@@ -644,6 +690,67 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         }
       }
     } finally { SDL.DestroySurface(surface) }
+  }
+
+  private func SetWindowsIcons(hwnd nint, primary []uint8, additional [][]uint8, firstAlternate int32) {
+    let dpi = if OperatingSystem.IsWindowsVersionAtLeast(10, 0, 14393) { GetDpiForWindow(hwnd) } else { 0u }
+    let smallWidth = WindowsIconMetric(49, dpi)
+    let smallHeight = WindowsIconMetric(50, dpi)
+    let largeWidth = WindowsIconMetric(11, dpi)
+    let largeHeight = WindowsIconMetric(12, dpi)
+    let images = [additional.Length - firstAlternate + 1]NativeImage?
+    var small = 0
+    var large = 0
+    var smallDistance = Int64.MaxValue
+    var largeDistance = Int64.MaxValue
+
+    try {
+      for index in 0 ... images.Length {
+        let png = if index == 0 { primary } else { additional[firstAlternate + index - 1] }
+        let image = RasterImageDecoder.DecodeIconPng(png)
+        images[index] = image
+        let toSmall = IconDistance(image, smallWidth, smallHeight)
+        let toLarge = IconDistance(image, largeWidth, largeHeight)
+        if toSmall < smallDistance {
+          small = index
+          smallDistance = toSmall
+        }
+        if toLarge < largeDistance {
+          large = index
+          largeDistance = toLarge
+        }
+      }
+
+      let smallPng = EncodeWindowsIcon(images[small]!!)
+      let largePng = if small == large { smallPng } else { EncodeWindowsIcon(images[large]!!) }
+      windowsSmallIcon = CreateWindowsIcon(smallPng, smallWidth, smallHeight)
+      windowsLargeIcon = CreateWindowsIcon(largePng, largeWidth, largeHeight)
+      const setIcon uint32 = 0x0080u
+      SendMessageW(hwnd, setIcon, nuint(0), windowsSmallIcon)
+      SendMessageW(hwnd, setIcon, nuint(1), windowsLargeIcon)
+    } finally {
+      for image in images { image?.Dispose() }
+    }
+  }
+
+  private func IconDistance(image NativeImage, width int32, height int32) int64 {
+    let dx = int64(image.Width) - width
+    let dy = int64(image.Height) - height
+    return dx * dx + dy * dy
+  }
+
+  private func WindowsIconMetric(index int32, dpi uint32) int32 ->
+    if dpi != 0u { GetSystemMetricsForDpi(index, dpi) } else { GetSystemMetrics(index) }
+
+  private func EncodeWindowsIcon(image NativeImage) []uint8 ->
+    ImageSource.EncodePng(image.Width, image.Height, image.Pixels, false, Int32.MaxValue)
+
+  private func CreateWindowsIcon(png []uint8, width int32, height int32) nint {
+    fixed bytes * uint8 = png {
+      let handle = CreateIconFromResourceEx(bytes, uint32(png.Length), 1, 0x00030000u, width, height, 0u)
+      if handle == nint(0) { throw InvalidOperationException("CreateIconFromResourceEx failed") }
+      return handle
+    }
   }
 
   private func EnableHitTest() {

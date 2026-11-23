@@ -20,6 +20,7 @@ public class Image : Blob {
   private var declarationFit ImageFit
   private var declarationPlaceholder Blob?
   private var declarationFallback Blob?
+  private var keepPreviousWhilePending bool
   private var pixelsPerUnit float64 = 1.0
 
   internal override func coreBlob() {
@@ -55,6 +56,15 @@ public class Image : Blob {
     set {
       CheckMutable()
       declarationFallback = value
+    }
+  }
+
+  /// Gets whether to keep the previous image and its intrinsic size while a new source loads. Default false.
+  public prop KeepPreviousWhilePending bool {
+    get -> keepPreviousWhilePending
+    set {
+      CheckMutable()
+      keepPreviousWhilePending = value
     }
   }
 

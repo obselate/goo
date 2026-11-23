@@ -1150,6 +1150,7 @@ event|Goo.TrayIcon|Activated|System.Action|instance|add:public,remove:public
 event|Goo.TrayIcon|CommandActivated|System.Action`1<System.String>|instance|add:public,remove:public
 event|Goo.TrayIcon|StatusChanged|System.Action`1<Goo.TrayStatus>|instance|add:public,remove:public
 event|Goo.WindowFocus|EditorChanged|System.Action`1<System.Nullable`1<Goo.FocusedEditorSnapshot>>|instance|add:public,remove:public
+event|Goo.Window|CaptureCompleted|System.Action|instance|add:public,remove:public
 event|Goo.Window|DisplayChanged|System.Action|instance|add:public,remove:public
 event|Goo.Window|FocusChanged|System.Action`1<System.Boolean>|instance|add:public,remove:public
 event|Goo.Window|InputActivity|System.Action`1<Goo.WindowInputKind>|instance|add:public,remove:public
@@ -1214,6 +1215,7 @@ method|Goo.Anim`1|To|instance|public|generic:|(target:!0?)->System.Void
 method|Goo.Anim`1|To|instance|public|generic:|(target:!0?,spec:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>,params specs:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>[])->System.Void
 method|Goo.Anim`1|To|instance|public|generic:|(target:!0?,velocity:Goo.MotionVelocity)->System.Void
 method|Goo.Anim`1|To|instance|public|generic:|(target:!0?,velocity:Goo.MotionVelocity,spec:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>,params specs:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>[])->System.Void
+method|Goo.Application|AcquireSingleInstance|static|public|generic:|(arguments:System.String[],instanceScope:System.String?,timeoutMs:System.Double=3000)->Goo.SingleInstanceResult
 method|Goo.Application|AcquireSingleInstance|static|public|generic:|(arguments:System.String[],timeoutMs:System.Double=3000)->Goo.SingleInstanceResult
 method|Goo.Application|Configure|static|public|generic:|(assembly:System.Reflection.Assembly)->System.Void
 method|Goo.Application|Configure|static|public|generic:|(name:System.String,version:System.String,identifier:System.String)->System.Void
@@ -1473,9 +1475,15 @@ method|Goo.ImageSource|Decode|static|public|generic:|(stream:System.IO.Stream,ca
 method|Goo.ImageSource|Decode|static|public|generic:|(stream:System.IO.Stream,limits:Goo.ImageDecodeLimits,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|Dispose|instance|public|generic:|()->System.Void
 method|Goo.ImageSource|EncodePng|instance|public|generic:|()->System.Byte[]
+method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>,maxWidth:System.Int32,maxHeight:System.Int32)->Goo.ImageSource
+method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>,maxWidth:System.Int32,maxHeight:System.Int32,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
+method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>,maxWidth:System.Int32,maxHeight:System.Int32,limits:Goo.ImageDecodeLimits,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(path:System.String,maxWidth:System.Int32,maxHeight:System.Int32)->Goo.ImageSource
 method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(path:System.String,maxWidth:System.Int32,maxHeight:System.Int32,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(path:System.String,maxWidth:System.Int32,maxHeight:System.Int32,limits:Goo.ImageDecodeLimits,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
+method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(stream:System.IO.Stream,maxWidth:System.Int32,maxHeight:System.Int32)->Goo.ImageSource
+method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(stream:System.IO.Stream,maxWidth:System.Int32,maxHeight:System.Int32,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
+method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(stream:System.IO.Stream,maxWidth:System.Int32,maxHeight:System.Int32,limits:Goo.ImageDecodeLimits,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|Transfer|static|public|generic:|(width:System.Int32,height:System.Int32,pixels:System.Byte[],released:System.Action)->Goo.ImageSource
 method|Goo.Images.ImageVariants|Dispose|instance|public|generic:|()->System.Void
 method|Goo.Images.ImageVariants|LoadAsync|instance|public|generic:|(metrics:Goo.WindowMetrics,cancellationToken:System.Threading.CancellationToken)->System.Threading.Tasks.Task`1<Goo.Images.ImageAssetResult>
@@ -2462,6 +2470,7 @@ property|Goo.Images.ImageVariant|Path|System.String|instance|get:public|index:()
 property|Goo.Images.ImageVariant|PixelsPerUnit|System.Double|instance|get:public|index:()
 property|Goo.Image|Fallback|Goo.Blob?|instance|get:public,set:public|index:()
 property|Goo.Image|Fit|Goo.ImageFit|instance|get:public,set:public|index:()
+property|Goo.Image|KeepPreviousWhilePending|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Image|PixelsPerUnit|System.Double|instance|get:public,set:public|index:()
 property|Goo.Image|Placeholder|Goo.Blob?|instance|get:public,set:public|index:()
 property|Goo.Image|Source|Goo.ImageSourceProvider?|instance|get:public,set:public|index:()
@@ -2558,6 +2567,7 @@ property|Goo.NativeWindowHandle|Kind|Goo.NativeWindowKind|instance|get:public|in
 property|Goo.NotificationMessage|Body|System.String|instance|get:public,init:public|index:()
 property|Goo.NotificationMessage|Id|System.String|instance|get:public,init:public|index:()
 property|Goo.NotificationMessage|Payload|System.String|instance|get:public,init:public|index:()
+property|Goo.NotificationMessage|Silent|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.NotificationMessage|Title|System.String|instance|get:public,init:public|index:()
 property|Goo.NotificationOptions|ActivationScheme|System.String|instance|get:public,init:public|index:()
 property|Goo.NotificationOptions|ChannelId|System.String|instance|get:public,init:public|index:()
@@ -3107,6 +3117,7 @@ property|Goo.Window|Foreground|Goo.Color|instance|get:public,set:public|index:()
 property|Goo.Window|ForeignParentHandle|System.String|instance|get:public,set:public|index:()
 property|Goo.Window|FramePacing|Goo.WindowFramePacing|instance|get:public,set:public|index:()
 property|Goo.Window|FrameTheme|Goo.SystemTheme|instance|get:public,set:public|index:()
+property|Goo.Window|IconPngs|System.Byte[][]|instance|get:public,init:public|index:()
 property|Goo.Window|IconPng|System.Byte[]?|instance|get:public,init:public|index:()
 property|Goo.Window|InitiallyVisible|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|IsFocused|System.Boolean|instance|get:public,set:private|index:()

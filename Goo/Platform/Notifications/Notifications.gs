@@ -101,6 +101,9 @@ public class NotificationMessage {
     /// Gets opaque data delivered through ApplicationActivation.Payload after a default click.
     public prop Payload string { get; init; }
 
+    /// Requests a notification without sound. Defaults to false. On Linux, the notification server must support the hint.
+    public prop Silent bool { get; init; }
+
     /// Creates an empty message. Set Id before submission.
     public init() {
         Id = ""

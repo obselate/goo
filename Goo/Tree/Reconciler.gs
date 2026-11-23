@@ -1229,7 +1229,7 @@ internal partial class Reconciler {
     }
     if sourceChanged {
       if let source = i.Source {
-        ImageLayouts.ApplySource(n, source, i.Fit, ImageCompleted, Owner, i.PixelsPerUnit)
+        ImageLayouts.ApplySource(n, source, i.Fit, ImageCompleted, Owner, i.PixelsPerUnit, i.KeepPreviousWhilePending)
       } else {
         ImageLayouts.Dispose(n)
       }
@@ -1245,7 +1245,7 @@ internal partial class Reconciler {
     let binding = ImageLayouts.Binding(n)
     if let current = binding { current.Declaration = i }
     let content = if binding?.AcceptedFailed == true { i.Fallback }
-      else if binding?.AcceptedComplete == false { i.Placeholder } else { nil }
+      else if binding?.AcceptedComplete == false && binding?.RetainedFallback == nil { i.Placeholder } else { nil }
     if let child = content {
       diffChildren(n, []Blob{Container{Width: Percent(100), Height: Percent(100),
         OverflowX: Overflow.Hidden, OverflowY: Overflow.Hidden, child}})
