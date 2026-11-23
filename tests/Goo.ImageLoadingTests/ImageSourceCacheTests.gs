@@ -402,7 +402,8 @@ class ImageSourceCacheTests : IDisposable {
                 raw.Write([]uint8{uint8(200), uint8(100), uint8(50), uint8(128)})
             }
         }
-        let path = Write("large-rgba.png", Png(320, 160, 8, 6, raw.ToArray()))
+        let encoded = Png(320, 160, 8, 6, raw.ToArray())
+        let path = Write("large-rgba.png", encoded)
         using let source = ImageSource.LoadThumbnail(path, 160, 160)
         Assert.Equal(160, source.Width)
         Assert.Equal(80, source.Height)
@@ -411,6 +412,16 @@ class ImageSourceCacheTests : IDisposable {
         Assert.Equal(160 * 80 * 4, pixels.Length)
         Assert.Equal([]uint8{100, 50, 25, 128}, pixels[.. 4])
         Assert.Equal([]uint8{100, 50, 25, 128}, pixels[^4 ..])
+        using let stream = MemoryStream(encoded)
+        using let memory = ImageSource.LoadThumbnail(ReadOnlyMemory[uint8](encoded), 160, 160)
+        using let streamed = ImageSource.LoadThumbnail(stream, 160, 160)
+        for thumbnail in []ImageSource{memory, streamed} {
+            Assert.Equal(source.Width, thumbnail.Width)
+            Assert.Equal(source.Height, thumbnail.Height)
+            using let thumbnailLease = thumbnail.Acquire()
+            Assert.Equal(pixels, thumbnailLease.Result()!!.Pixels())
+        }
+        Assert.True(stream.CanRead)
         using let full = ImageSource.LoadThumbnail(path, 640, 640)
         Assert.Equal(320, full.Width)
         Assert.Equal(160, full.Height)

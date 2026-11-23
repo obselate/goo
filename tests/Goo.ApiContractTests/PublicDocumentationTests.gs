@@ -171,6 +171,7 @@ class PublicDocumentationTests {
             "M:Goo.TrayIcon.Dispose",
             "M:Goo.ActivationArguments.Read(System.Collections.Generic.IReadOnlyList{System.String},System.String)",
             "M:Goo.Application.AcquireSingleInstance(System.String[],System.Double)",
+            "M:Goo.Application.AcquireSingleInstance(System.String[],System.String,System.Double)",
             "M:Goo.GraphicsUnavailableException.#ctor(System.String)",
             "M:Goo.GraphicsUnavailableException.#ctor(System.String,System.Exception)",
             "M:Goo.Placement.Restore(Goo.Window,Goo.WindowPlacement)",
@@ -468,6 +469,12 @@ class PublicDocumentationTests {
             "M:Goo.ImageSource.LoadThumbnail(System.String,System.Int32,System.Int32)",
             "M:Goo.ImageSource.LoadThumbnail(System.String,System.Int32,System.Int32,System.Threading.CancellationToken)",
             "M:Goo.ImageSource.LoadThumbnail(System.String,System.Int32,System.Int32,Goo.ImageDecodeLimits,System.Threading.CancellationToken)",
+            "M:Goo.ImageSource.LoadThumbnail(System.ReadOnlyMemory{System.Byte},System.Int32,System.Int32)",
+            "M:Goo.ImageSource.LoadThumbnail(System.ReadOnlyMemory{System.Byte},System.Int32,System.Int32,System.Threading.CancellationToken)",
+            "M:Goo.ImageSource.LoadThumbnail(System.ReadOnlyMemory{System.Byte},System.Int32,System.Int32,Goo.ImageDecodeLimits,System.Threading.CancellationToken)",
+            "M:Goo.ImageSource.LoadThumbnail(System.IO.Stream,System.Int32,System.Int32)",
+            "M:Goo.ImageSource.LoadThumbnail(System.IO.Stream,System.Int32,System.Int32,System.Threading.CancellationToken)",
+            "M:Goo.ImageSource.LoadThumbnail(System.IO.Stream,System.Int32,System.Int32,Goo.ImageDecodeLimits,System.Threading.CancellationToken)",
             "M:Goo.ImageSourceLease.#ctor",
             "M:Goo.ImageSourceLease.Complete(Goo.ImageSource)",
             "M:Goo.ImageSourceLease.Dispose",
@@ -994,6 +1001,8 @@ class PublicDocumentationTests {
                 []string{"arguments", "workingDirectory"}, System.Array.Empty[string](), true),
             ["M:Goo.Application.AcquireSingleInstance(System.String[],System.Double)"] = DocumentationShape(
                 []string{"arguments", "timeoutMs"}, System.Array.Empty[string](), true),
+            ["M:Goo.Application.AcquireSingleInstance(System.String[],System.String,System.Double)"] = DocumentationShape(
+                []string{"arguments", "instanceScope", "timeoutMs"}, System.Array.Empty[string](), true),
             ["M:Goo.Application.Configure(System.Reflection.Assembly)"] = DocumentationShape(
                 []string{"assembly"}, System.Array.Empty[string](), false),
             ["M:Goo.Application.Run(Goo.Window)"] = DocumentationShape(

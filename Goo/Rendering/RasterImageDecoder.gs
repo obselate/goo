@@ -57,6 +57,13 @@ internal unsafe partial class RasterImageDecoder {
       limits ImageDecodeLimits, token CancellationToken) ImageSource ->
     Load(stream, RasterDecodeBounds{ Limits: limits, MaxWidth: maxWidth, MaxHeight: maxHeight }, token)
 
+    internal func LoadThumbnail(encoded ReadOnlyMemory[uint8], maxWidth int32, maxHeight int32,
+      limits ImageDecodeLimits, token CancellationToken) ImageSource {
+        token.ThrowIfCancellationRequested()
+        return DecodeCore(encoded.Span,
+          RasterDecodeBounds{ Limits: limits, MaxWidth: maxWidth, MaxHeight: maxHeight }, token)
+      }
+
     internal func Load(stream Stream, limits ImageDecodeLimits, token CancellationToken) ImageSource ->
     Load(stream, RasterDecodeBounds{ Limits: limits }, token)
 
