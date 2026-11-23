@@ -35,7 +35,7 @@ class ApplicationIdentityTests {
             Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", runtime.FullName)
             let identity = "org.goo.scope-test"
             let unscoped = InstanceScope.Create(identity)
-            let path = Path.Combine(runtime.FullName, "goo", "515DD88983FDDB72BE47A728D6723F2F0")
+            let path = Path.Combine(runtime.FullName, "goo", "515DD88983FDDB72BE47A728D6723F2F")
             Assert.Equal(path + ".lock", unscoped.LeasePath)
             Assert.Equal(path + ".pipe", unscoped.PipeName)
             let first = InstanceScope.Create(identity, "first")
