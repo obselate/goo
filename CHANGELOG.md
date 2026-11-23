@@ -1,14 +1,5 @@
 # Changelog
 
-## Unreleased
-
-- Add `Window.CaptureCompleted`. It reports that a requested capture is ready to poll, even when the window is idle. (#974)
-- Add `ImageSource.LoadThumbnail` overloads for encoded memory and streams. (#975)
-- Add `Image.KeepPreviousWhilePending` to keep the previous frame and intrinsic size while a different image source loads. (#976)
-- Native popup menus and tooltips have transparent corners where the platform supports alpha, and stay opaque otherwise. (#977)
-- Add `NotificationMessage.Silent` to request a desktop notification without sound. (#978)
-- Add `Window.IconPngs` for several icon sizes. Windows selects the closest size for each icon slot. (#979)
-- Add an `Application.AcquireSingleInstance` overload with an election scope. The native application identity does not change. (#980)
 
 ## 0.32.2 - 2026-11-23
 
