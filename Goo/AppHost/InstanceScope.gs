@@ -4,7 +4,6 @@ import Microsoft.Win32.SafeHandles
 import System
 import System.ComponentModel
 import System.Diagnostics
-import System.Globalization
 import System.IO
 import System.Runtime.InteropServices
 import System.Security.Cryptography
@@ -50,10 +49,7 @@ internal data struct InstanceScope {
             let directory = Path.Combine(root, "goo")
             if OperatingSystem.IsWindows() { Directory.CreateDirectory(directory) }
             else { Directory.CreateDirectory(directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute) }
-            let electionKey = if let scopeValue = instanceScope {
-                applicationId.Length.ToString(CultureInfo.InvariantCulture) + ":" + applicationId
-                    + "\n" + identity + "\n" + scopeValue + "."
-            } else { applicationId + "\n" + identity }
+            let electionKey = applicationId + "\n" + identity + (instanceScope == nil ? "" : "\n" + instanceScope)
             let digest = SHA256.HashData(Encoding.UTF8.GetBytes(electionKey))
             let key = Convert.ToHexString(digest.AsSpan(0, 16))
             return InstanceScope{
