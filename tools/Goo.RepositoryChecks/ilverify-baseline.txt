@@ -41,6 +41,7 @@
 [IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanSharedPrimitiveState::CreateTextPipelineLayout()][offset 0x0000006F][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanSharedPrimitiveState::EnsurePathStrokes()][offset 0x000000E4][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanSwapchainGeneration::Create(int32, int32, uint64, [Goo]Goo.VulkanDiagnostics)][offset 0x0000003A][found Native Int] Expected ByRef on the stack.
+[IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanWindowTarget::BeginRendering([Goo]Goo.VulkanSwapchainGeneration, [Goo]Goo.VulkanFrameSlot, uint32, [Goo]Goo.VulkanDamageRegion)][offset 0x00000190][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanWindowTarget::CreateCommandResources()][offset 0x00000131][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.WindowsTrayBackend::GuidFor(string)][offset 0x00000074][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackUnexpected]: [Goo.Audio.dll : Goo.AndroidSoundRuntime::Open()][offset 0x0000005C][found address of IntPtr][expected Native Int] Unexpected type on the stack.
@@ -199,6 +200,7 @@
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanTextFrameData::SegmentClipMatches([Goo]Goo.VulkanTextFrameSlot, int32, int32)][offset 0x00000018][found Native Int][expected readonly address of '[Goo]Goo.HbGpuTextInstanceRecord'] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanTransitions::RecordBuffer(native int, (*void)(native int,[Goo]Goo.VkDependencyInfo*), uint64, uint64, uint64, uint64, uint64, uint64, uint64)][offset 0x00000083][found address of '[Goo]Goo.VkBufferMemoryBarrier2'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanTransitions::RecordImage(native int, (*void)(native int,[Goo]Goo.VkDependencyInfo*), uint64, [Goo]Goo.VkImageSubresourceRange, int32, int32, uint64, uint64, uint64, uint64)][offset 0x0000008C][found address of '[Goo]Goo.VkImageMemoryBarrier2'][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanWindowTarget::BeginRendering([Goo]Goo.VulkanSwapchainGeneration, [Goo]Goo.VulkanFrameSlot, uint32, [Goo]Goo.VulkanDamageRegion)][offset 0x0000017E][found address of '[Goo]Goo.VkClearValue'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanWindowTarget::BeginRendering([Goo]Goo.VulkanSwapchainGeneration, [Goo]Goo.VulkanFrameSlot, uint32, [Goo]Goo.VulkanDamageRegion)][offset 0x00000219][found address of '[Goo]Goo.VkRenderingAttachmentInfo'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanWindowTarget::CreateDevice()][offset 0x00000044][found address of '[Goo]Goo.VkPhysicalDeviceVulkan12Features'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanWindowTarget::CreateDevice()][offset 0x00000066][found address of '[Goo]Goo.VkPhysicalDeviceVulkan13Features'][expected Native Int] Unexpected type on the stack.
@@ -282,6 +284,7 @@
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SdlHost::CopyCandidates([Hexa.NET.SDL3]Hexa.NET.SDL3.SDLTextEditingCandidatesEvent)][offset 0x00000008] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SdlHost::CreateWindow(string, int32, int32, int32, int32, bool, int32, int32, bool, bool, [Goo]Goo.LayerWindowOptions)][offset 0x0000015F] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SdlHost::CreateWindow(string, int32, int32, int32, int32, bool, int32, int32, bool, bool, [Goo]Goo.LayerWindowOptions)][offset 0x00000161] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SdlHost::CreateWindowsIcon(uint8[], int32, int32)][offset 0x00000025] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SdlHost::Dispatch([Hexa.NET.SDL3]Hexa.NET.SDL3.SDLEvent)][offset 0x00000BF7] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SdlHost::Dispatch([Hexa.NET.SDL3]Hexa.NET.SDL3.SDLEvent)][offset 0x00000C8B] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SdlHost::GetClipboardText()][offset 0x00000056] Unmanaged pointers are not a verifiable type.
@@ -290,6 +293,7 @@
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SdlHost::HitTest(native int, native int, native int)][offset 0x00000041] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SdlHost::HitTest(native int, native int, native int)][offset 0x00000047] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SdlHost::ReadDisplays()][offset 0x00000012] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SdlHost::SetIconPng(uint8[], uint8[][])][offset 0x00000182] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SpellCheck.HunspellSpellingService::Check([Goo]Goo.TextSnapshot, [Goo]Goo.TextRange, string, [S.P.CoreLib]System.Threading.CancellationToken)][offset 0x0000014E] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SpellCheck.HunspellSpellingService::Decode(native int)][offset 0x00000036] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SpellCheck.HunspellSpellingService::Initialize()][offset 0x0000018A] Unmanaged pointers are not a verifiable type.
@@ -406,6 +410,7 @@
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanTextFrameData::CopySegmentRecords([Goo]Goo.VulkanTextFrameSlot, [Goo]Goo.VulkanRetainedTextSegment, int32, int32, int32)][offset 0x000000D0] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanTextFrameData::SegmentClipMatches([Goo]Goo.VulkanTextFrameSlot, int32, int32)][offset 0x0000000C] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanTextScene::PrepareUpload()][offset 0x000000DC] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanWindowTarget::BeginRendering([Goo]Goo.VulkanSwapchainGeneration, [Goo]Goo.VulkanFrameSlot, uint32, [Goo]Goo.VulkanDamageRegion)][offset 0x00000180] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanWindowTarget::CreateCommandResources()][offset 0x000000E8] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanWindowTarget::CreateCommandResources()][offset 0x0000012A] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanWindowTarget::DiscoverExternalExtension([Goo]Goo.VkExtensionProperties*)][offset 0x0000000B] Unmanaged pointers are not a verifiable type.
