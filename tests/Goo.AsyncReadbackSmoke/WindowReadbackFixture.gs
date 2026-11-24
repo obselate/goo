@@ -1950,39 +1950,62 @@ public class LayerWindowCloseSmoke {
         } }.Open()
       try {
         let display = window.GetDisplays()[0].Bounds
-        WaitForGeometry(window, root.Handle, int32(display.Width), 40)
-        WindowReadbackTestFixture.ForceRender(window, 0.0, 15.0, true)
         if window.SetLayerGeometry(LayerWindowOptions{ Namespace: "other" }) != WindowOperationResult.Unsupported {
           throw InvalidOperationException("The layer window accepted a namespace change")
         }
-        if window.SetLayerGeometry(LayerWindowOptions{
-          Anchors: LayerWindowAnchor.Bottom, Width: 300, Height: 48, ExclusiveZone: 48, MarginBottom: 6,
-        }) != WindowOperationResult.Accepted {
-          throw InvalidOperationException("The bottom layer geometry request was not accepted")
+        let sizes = [](int32, int32){ (300, 48), (48, int32(display.Height) - 16) }
+        let options = []LayerWindowOptions{
+          LayerWindowOptions{ Anchors: LayerWindowAnchor.Bottom, Width: 300, Height: 48,
+            ExclusiveZone: 48, MarginBottom: 6 },
+          LayerWindowOptions{ Anchors: LayerWindowAnchor.Left | LayerWindowAnchor.Top | LayerWindowAnchor.Bottom,
+            Width: 48, Height: 0, ExclusiveZone: 54, MarginTop: 7, MarginBottom: 9, MarginLeft: 6 },
         }
-        WaitForGeometry(window, root.Handle, 300, 48)
-        if window.SetLayerGeometry(LayerWindowOptions{
-          Anchors: LayerWindowAnchor.Left | LayerWindowAnchor.Top | LayerWindowAnchor.Bottom,
-          Width: 48, Height: 0, ExclusiveZone: 54, MarginTop: 7, MarginBottom: 9, MarginLeft: 6,
-        }) != WindowOperationResult.Accepted {
-          throw InvalidOperationException("The left layer geometry request was not accepted")
+        let target = window.CaptureTargetForTest()!!
+        var index = -1
+        var started int64
+        var generation uint64
+        var worstMs float64
+        let change Action = () -> {
+          if window.QueueWorkPending {
+            throw InvalidOperationException("The layer window was not idle before the geometry request")
+          }
+          generation = target.CurrentPresentGeneration
+          started = Stopwatch.GetTimestamp()
+          if window.SetLayerGeometry(options[index]) != WindowOperationResult.Accepted {
+            throw InvalidOperationException("The layer geometry request was not accepted")
+          }
         }
-        WaitForGeometry(window, root.Handle, 48, int32(display.Height) - 16)
+        window.PresentationAccepted += receipt -> {
+          if index < 0 {
+            let bounds = root.Handle.RawBorderBox
+            if window.NativeWidth != int32(display.Width) || window.NativeHeight != 40
+              || bounds.Width != display.Width || bounds.Height != 40.0 {
+              throw InvalidOperationException("The first layer presentation did not use the configured size")
+            }
+            index = 0
+            window.After(400.0, change)
+            return
+          }
+          if started == 0 || receipt.AcceptedTicks < started || target.CurrentPresentGeneration == generation { return }
+          let (width, height) = sizes[index]
+          let bounds = root.Handle.RawBorderBox
+          if window.NativeWidth != width || window.NativeHeight != height
+            || bounds.Width != float64(width) || bounds.Height != float64(height) { return }
+          let elapsedMs = Stopwatch.GetElapsedTime(started, receipt.AcceptedTicks).TotalMilliseconds
+          Console.WriteLine("layer-window-geometry: ${width}x$height present accepted in ${elapsedMs.ToString("F1")} ms")
+          worstMs = Math.Max(worstMs, elapsedMs)
+          started = 0
+          index++
+          if index == sizes.Length { window.RequestClose() }
+          else { window.After(400.0, change) }
+        }
+        window.After(15000.0, () -> window.RequestClose())
+        Window.RunLiveWindowScheduler()
+        if index != sizes.Length || worstMs >= 100.0 {
+          throw InvalidOperationException("Expected both layer resizes to present in under 100 ms, got $index presents and worst ${worstMs.ToString("F1")} ms")
+        }
       } finally { window.CloseAfterRun() }
       Console.WriteLine("layer-window-geometry: native resize and content relayout passed")
-    }
-
-    private func WaitForGeometry(window Window, handle ElementHandle, width int32, height int32) {
-      let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5
-      while Stopwatch.GetTimestamp() < deadline {
-        window.Pump(0.0)
-        let bounds = handle.RawBorderBox
-        if window.NativeWidth == width && window.NativeHeight == height
-          && bounds.Width == float64(width) && bounds.Height == float64(height) {
-          return
-        }
-      }
-      throw InvalidOperationException("Expected $width x $height, got native ${window.NativeWidth} x ${window.NativeHeight} and layout ${handle.RawBorderBox.Width} x ${handle.RawBorderBox.Height}")
     }
   }
 }

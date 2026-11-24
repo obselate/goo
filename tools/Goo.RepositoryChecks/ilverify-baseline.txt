@@ -226,7 +226,6 @@
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.WaylandBackdrop::Initialize()][offset 0x00000089][found address of '[Goo]Goo.BackdropWaylandArgument'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.WaylandBackdrop::Initialize()][offset 0x0000017C][found Native Int][expected address of '[Goo]Goo.BackdropWaylandArgument'] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.WaylandBackdrop::Initialize()][offset 0x00000199][found Native Int][expected address of '[Goo]Goo.BackdropWaylandArgument'] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.WaylandLayerWindow::Configure(native int, native int, uint32, uint32, uint32)][offset 0x00000027][found address of '[Goo]Goo.BackdropWaylandArgument'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.WaylandLayerWindow::CreateLayerSurface(native int)][offset 0x0000001E][found Native Int][expected address of '[Goo]Goo.BackdropWaylandArgument'] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.WaylandLayerWindow::CreateLayerSurface(native int)][offset 0x00000039][found Native Int][expected address of '[Goo]Goo.BackdropWaylandArgument'] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.WaylandLayerWindow::CreateLayerSurface(native int)][offset 0x00000050][found Native Int][expected address of '[Goo]Goo.BackdropWaylandArgument'] Unexpected type on the stack.
