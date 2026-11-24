@@ -102,6 +102,7 @@ static void *goo_realloc(void *memory, size_t size)
 #define STBI_NO_THREAD_LOCALS
 #include "stb_image.h"
 
+#undef HAVE_CONFIG_H
 #define WEBP_EXTERN extern
 #include "src/webp/decode.h"
 #include "src/utils/utils.h"

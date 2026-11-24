@@ -83,7 +83,7 @@ def main() -> None:
         raise SystemExit("HarfBuzz Meson GPU source shape drift")
     webp_files = ",\n    ".join("'goo-webp/" + source + "'" for source in webp_sources)
     setup = """  goo_webp_inc = include_directories('goo-webp')
-  goo_webp_args = ['-DWEBP_EXTERN=extern']
+  goo_webp_args = ['-UHAVE_CONFIG_H', '-DWEBP_EXTERN=extern']
   if host_machine.system() != 'emscripten'
     goo_webp_args += '-DWEBP_USE_THREAD'
   endif
