@@ -2088,6 +2088,10 @@ Gets whether a modal child, native chooser, or native modal service blocks this 
 
 Reports whether the window is open.
 
+### `IsTransparent`
+
+Reports whether the window presents with per-pixel alpha. False until the presentation surface is ready.
+
 ### `IsVisible`
 
 Gets whether the host reports a visible viewport and no accepted Hide is pending. This does not imply focus or lack of occlusion.
@@ -2230,7 +2234,7 @@ Gets or initializes the desktop topmost preference before Open. Use SetTopmost t
 
 ### `Transparent`
 
-Gets or sets per-pixel alpha for the first Open. An open window is unchanged. Transparency requires the GPU renderer.
+Gets or sets per-pixel alpha for the first Open. An open window is unchanged. If Vulkan cannot provide transparency, the window opens opaque.
 
 ### `UiScale`
 

@@ -285,7 +285,8 @@ public partial class Window {
   /// Reports whether the open native host accepts blur and advertises support.
   /// The compositor can still vary or suppress its material according to system policy.
   public prop BackdropAvailable bool {
-    get -> ReadUntrackedWindowValue(backdrop == WindowBackdrop.Blur && (host as SdlHost?)?.BackdropAvailable == true)
+    get -> ReadUntrackedWindowValue(IsTransparent && backdrop == WindowBackdrop.Blur
+      && (host as SdlHost?)?.BackdropAvailable == true)
   }
 
   /// Gets or sets the opaque window background used when requested blur is unavailable.

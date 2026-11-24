@@ -1268,6 +1268,50 @@ internal class WindowReadbackTestFixture {
         + " unpublished=ok validation=0 live_objects=0 cleanup=ok")
     }
 
+    internal func VerifyOpaqueWindowFallback() {
+      let opaque = uint32(VkConstants.VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
+      let window = Window{Title: "Opaque window fallback", Size: LayoutSize(64, 64),
+        InitiallyVisible: false, Transparent: true, Backdrop: WindowBackdrop.Blur}
+      var queries = 0
+      var queriesAtStartup = 0
+      try {
+        VulkanWindowTarget.CompositeAlphaForTest = supported -> {
+          queries++
+          return supported & opaque
+        }
+        VulkanWindowTarget.CandidateStartupForTest = _ -> { queriesAtStartup = queries }
+        window.Open()
+        if queriesAtStartup < 2 || !window.Transparent || window.IsTransparent
+          || window.BackdropAvailable || !window.IsOpen {
+          throw InvalidOperationException("An opaque-only device was not selected as a fallback")
+        }
+      } finally {
+        VulkanWindowTarget.CompositeAlphaForTest = nil
+        VulkanWindowTarget.CandidateStartupForTest = nil
+        window.Close()
+      }
+      let failed = Window{Title: "Failed Vulkan startup", InitiallyVisible: false, Transparent: true}
+      try {
+        VulkanWindowTarget.CompositeAlphaForTest = _ -> 0u
+        try {
+          failed.Open()
+          throw InvalidOperationException("A surface with no usable composite alpha opened")
+        } catch (error GraphicsUnavailableException) {
+          if !error.Message.Contains("no supported composite alpha mode") { throw error }
+        }
+      } finally {
+        VulkanWindowTarget.CompositeAlphaForTest = nil
+      }
+      failed.Transparent = false
+      try {
+        failed.Open()
+        throw InvalidOperationException("A failed window opened on retry")
+      } catch (error InvalidOperationException) {
+        if !error.Message.Contains("A closed Window cannot be reopened") { throw error }
+      }
+      Console.WriteLine("transparent-window-fallback: opaque=1 retry-rejected=1")
+    }
+
     internal func AbortPrimitiveMetrics(window Window, finish bool) VulkanPrimitiveFrameStats ->
     window.AbortPrimitiveMetricsForTest(finish)
 

@@ -38,10 +38,20 @@ internal unsafe partial class VulkanWindowTarget {
       ApplySharedRuntime(shared)
       if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.Current?.ReuseRuntime() }
       let surfaceStart = DiagnosticTimestamp()
-      if !(host is VulkanHeadlessHost) { CreateSurface() }
-      if host is SdlHost && SdlHost.IsWayland() && host.DeferFirstShow() {
-        startupState = VulkanWindowStartupState.Pending
-      } else if !(host is VulkanHeadlessHost) { ValidateSharedPresentationSupport() }
+      if !(host is VulkanHeadlessHost) {
+        CreateSurface()
+        if host is SdlHost && SdlHost.IsWayland() && host.DeferFirstShow() {
+          startupState = VulkanWindowStartupState.Pending
+        } else {
+          ValidateSharedPresentationSupport()
+        }
+        if host.Transparent {
+          if let capabilities = QuerySurfaceCapabilities() {
+            IsTransparent = SelectCompositeAlpha(capabilities.supportedCompositeAlpha,
+              true, host.AllowInheritedCompositeAlpha) != VkCompositeAlphaFlagBitsKHR(0)
+          }
+        }
+      }
       RecordDiagnosticTiming(VulkanDiagnosticEventIds.SurfaceCreate,
         VulkanDiagnosticCategories.Window, surfaceStart)
       CreateCommandResources()
@@ -670,22 +680,35 @@ internal unsafe partial class VulkanWindowTarget {
     }
     var selectedName = ""
     var rejected = ""
-    for index in 0 ... int32(count) {
-      let candidateIndex = order[index]
-      let name = Marshal.PtrToStringUTF8(nint(&properties[candidateIndex].deviceName[0])) ?? "unknown"
-      let reason = if selectedName != "" {
-        "lower priority, not attempted"
-      } else if properties[candidateIndex].deviceType == VkConstants.VK_PHYSICAL_DEVICE_TYPE_CPU
-        && host is SdlHost && VulkanDrivers.ManualLoader && !VulkanDrivers.Enabled {
-        "bundled software renderer preferred"
-      } else {
-        TryStartPhysicalDevice(deviceValues[candidateIndex], properties[candidateIndex])
+    var opaqueCount = 0
+    let preferTransparency = host.Transparent && !(host is VulkanHeadlessHost)
+    for pass in 0 ... 2 {
+      let candidateCount = pass == 0 ? int32(count) : opaqueCount
+      for index in 0 ... candidateCount {
+        let candidateIndex = order[index]
+        var deferred = false
+        let reason = if selectedName != "" {
+          "lower priority, not attempted"
+        } else if properties[candidateIndex].deviceType == VkConstants.VK_PHYSICAL_DEVICE_TYPE_CPU
+          && host is SdlHost && VulkanDrivers.ManualLoader && !VulkanDrivers.Enabled {
+          "bundled software renderer preferred"
+        } else {
+          TryStartPhysicalDevice(deviceValues[candidateIndex], properties[candidateIndex],
+            preferTransparency && pass == 0, out deferred)
+        }
+        if deferred {
+          order[opaqueCount] = candidateIndex
+          opaqueCount++
+        } else {
+          let name = Marshal.PtrToStringUTF8(nint(&properties[candidateIndex].deviceName[0])) ?? "unknown"
+          if reason == "" {
+            selectedName = name
+          } else {
+            rejected = rejected + (if rejected == "" { "" } else { ", " }) + name + ": " + reason
+          }
+        }
       }
-      if reason == "" {
-        selectedName = name
-      } else {
-        rejected = rejected + (if rejected == "" { "" } else { ", " }) + name + ": " + reason
-      }
+      if selectedName != "" || opaqueCount == 0 { break }
     }
     if selectedName == "" {
       if softwareFallbackEligible {
@@ -699,7 +722,9 @@ internal unsafe partial class VulkanWindowTarget {
     }
   }
 
-  private func TryStartPhysicalDevice(candidate VkPhysicalDevice, properties VkPhysicalDeviceProperties) string {
+  private func TryStartPhysicalDevice(candidate VkPhysicalDevice, properties VkPhysicalDeviceProperties,
+    preferTransparency bool, out deferred bool) string {
+    deferred = false
     if properties.apiVersion < VkConstants.VK_API_VERSION_1_3 { return "Vulkan 1.3 unavailable" }
     if !HasGraphicsPresentationQueue(candidate) { return "graphics presentation queue unavailable" }
     if !HasRequiredDeviceExtensions(candidate) { return "required device extensions unavailable" }
@@ -722,6 +747,17 @@ internal unsafe partial class VulkanWindowTarget {
       SwapchainMutableFormat: deviceFacts.SwapchainMutableFormat,
     }
     try {
+      if preferTransparency {
+        guard let capabilities = QuerySurfaceCapabilities() else {
+          surfaceLost = true
+          throw InvalidOperationException("Vulkan surface was lost during device selection")
+        }
+        if SelectCompositeAlpha(capabilities.supportedCompositeAlpha, true, host.AllowInheritedCompositeAlpha)
+          == VkCompositeAlphaFlagBitsKHR(0) {
+          deferred = true
+          return ""
+        }
+      }
       CreateCandidateRuntime()
     } catch (error Exception) {
       if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.Current?.Exception(error) }
