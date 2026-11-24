@@ -1466,6 +1466,7 @@ method|Goo.ImageSourceLease|Dispose|instance|public|generic:|()->System.Void
 method|Goo.ImageSourceLease|Fail|instance|public|generic:|()->System.Boolean
 method|Goo.ImageSourceProvider|Acquire|abstract|public|generic:|()->Goo.ImageSourceLease
 method|Goo.ImageSource|Acquire|instance|public|generic:|()->Goo.ImageSourceLease
+method|Goo.ImageSource|CopyPixels|instance|public|generic:|(destination:System.Span`1<System.Byte>)->System.Void
 method|Goo.ImageSource|DecodeColorManaged|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>,limits:Goo.ImageDecodeLimits,cancellationToken:System.Threading.CancellationToken)->Goo.ImageDecodeResult
 method|Goo.ImageSource|Decode|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>)->Goo.ImageSource
 method|Goo.ImageSource|Decode|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource

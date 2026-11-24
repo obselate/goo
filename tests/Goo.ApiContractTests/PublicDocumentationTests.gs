@@ -455,6 +455,7 @@ class PublicDocumentationTests {
             "M:Goo.Images.ImageVariants.Dispose",
             "M:Goo.ImageSource.#ctor(System.Int32,System.Int32,System.Byte[])",
             "M:Goo.ImageSource.Acquire",
+            "M:Goo.ImageSource.CopyPixels(System.Span{System.Byte})",
             "M:Goo.ImageSourceProvider.Acquire",
             "M:Goo.ImageSource.Dispose",
             "M:Goo.ImageSource.EncodePng",
@@ -1573,6 +1574,11 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
                 true
+            ),
+            ["M:Goo.ImageSource.CopyPixels(System.Span{System.Byte})"] = DocumentationShape(
+                []string{"destination"},
+                System.Array.Empty[string](),
+                false
             ),
             ["M:Goo.ImageSource.EncodePng"] = DocumentationShape(
                 System.Array.Empty[string](),

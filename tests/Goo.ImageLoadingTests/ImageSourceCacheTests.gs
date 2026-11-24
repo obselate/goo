@@ -415,6 +415,16 @@ class ImageSourceCacheTests : IDisposable {
     }
 
     @Fact
+    func CopyPixelsPreservesPremultipliedRgba() {
+        let pixels = []uint8{20, 40, 80, 255, 100, 50, 25, 128}
+        using let source = ImageSource(2, 1, pixels)
+        let destination = [8]uint8
+        source.CopyPixels(Span[uint8](destination))
+        Assert.Equal[uint8](pixels, destination)
+        Assert.Throws[ArgumentException](() -> source.CopyPixels(Span[uint8]([7]uint8)))
+    }
+
+    @Fact
     func BackgroundSourceChangesPreserveOwnership() {
         let node = Node()
         using let source = ImageSource(1, 1, []uint8{20, 40, 80, 255})
