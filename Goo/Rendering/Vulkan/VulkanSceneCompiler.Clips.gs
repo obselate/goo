@@ -255,6 +255,7 @@ internal partial class VulkanSceneCompiler {
       if clipBounds.IsEmpty {
         return VulkanScenePathClipResult{}
       }
+      mixedOverflowClipCount++
       let owner = Owner(node)
       let entry = if roundedOverflowPaths.TryGetValue(owner, out var existing) {
         existing

@@ -11,6 +11,7 @@ internal struct VulkanSceneRangeCounters {
     internal var Scroll int32
     internal var Clips int32
     internal var PathClips int32
+    internal var MixedOverflowClips int32
     internal var ExactCandidates int32
     internal var ExactCulls int32
     internal var CachedCulls int32
@@ -41,6 +42,10 @@ internal struct VulkanSceneRangeEntry {
     internal var Context VulkanSceneTraversalContext
     internal var ParentTransform PrimitiveTransform
     internal var RoundedOwnerId uint64
+    internal var ParentScrollX float32
+    internal var ParentScrollY float32
+    internal var ContentScrollX float32
+    internal var ContentScrollY float32
     internal var FirstSlot int32
     internal var EndSlot int32
     internal var ActiveClip int32
@@ -348,6 +353,7 @@ internal partial class VulkanSceneCompiler {
         Scroll: scrollNodeCount,
         Clips: clipCount,
         PathClips: pathClipCount,
+        MixedOverflowClips: mixedOverflowClipCount,
         ExactCandidates: exactTextClipCandidateCount,
         ExactCulls: exactTextClipCullCount,
         CachedCulls: cachedTextPaintCullCount,
@@ -364,6 +370,7 @@ internal partial class VulkanSceneCompiler {
         Scroll: scrollNodeCount - before.Scroll,
         Clips: clipCount - before.Clips,
         PathClips: pathClipCount - before.PathClips,
+        MixedOverflowClips: mixedOverflowClipCount - before.MixedOverflowClips,
         ExactCandidates: exactTextClipCandidateCount - before.ExactCandidates,
         ExactCulls: exactTextClipCullCount - before.ExactCulls,
         CachedCulls: cachedTextPaintCullCount - before.CachedCulls,
@@ -378,6 +385,7 @@ internal partial class VulkanSceneCompiler {
         scrollNodeCount += value.Scroll
         clipCount += value.Clips
         pathClipCount += value.PathClips
+        mixedOverflowClipCount += value.MixedOverflowClips
         exactTextClipCandidateCount += value.ExactCandidates
         exactTextClipCullCount += value.ExactCulls
         cachedTextPaintCullCount += value.CachedCulls
@@ -424,7 +432,8 @@ internal partial class VulkanSceneCompiler {
         return true
     }
 
-    private func EndRangeCompilation(slot int32, state VulkanSceneRangeCompilation, completed bool) {
+    private func EndRangeCompilation(slot int32, state VulkanSceneRangeCompilation, completed bool,
+        scroller Node? = nil) {
         if slot < 0 {
             return
         }
@@ -436,6 +445,13 @@ internal partial class VulkanSceneCompiler {
             entry.ActiveClip = frame.ActiveClipChainId
             entry.ActiveTransform = frame.RangeActiveTransformIndex
             entry.Counters = RangeCounterDifference(state.Counters)
+            if entry.Counters.MixedOverflowClips != 0 {
+                let offset = frame.ScrollOffset(entry.Context.ParentTransformIndex)
+                entry.ParentScrollX = offset.X
+                entry.ParentScrollY = offset.Y
+                entry.ContentScrollX = scroller?.PlacedScrollX ?? 0.0F
+                entry.ContentScrollY = scroller?.PlacedScrollY ?? 0.0F
+            }
             entry.Valid = completed && StaticRangeEffects(entry.Start.Effects, entry.End.Effects)
             && entry.Counters.UnsupportedNodes == 0 && entry.Counters.UnsupportedPrimitives == 0
             rangeEntries[slot] = entry
@@ -469,7 +485,7 @@ internal partial class VulkanSceneCompiler {
         }
     }
 
-    private func TryAppendRange(slot int32, context VulkanSceneTraversalContext) bool {
+    private func TryAppendRange(slot int32, context VulkanSceneTraversalContext, scroller Node? = nil) bool {
         let root = rangeEntries[slot]
         if !rangeReady || rangeForceCompile || !root.Valid || root.Version != rangeSnapshotVersion
         || root.EndSlot - root.FirstSlot > rangeOrder.Length - rangeOrderCount {
@@ -477,6 +493,14 @@ internal partial class VulkanSceneCompiler {
         }
         if !RangeContextMatches(root, context) {
             return false
+        }
+        if root.Counters.MixedOverflowClips != 0 {
+            let offset = frame.ScrollOffset(context.ParentTransformIndex)
+            if offset.X != root.ParentScrollX || offset.Y != root.ParentScrollY
+            || (scroller != nil && (scroller.PlacedScrollX != root.ContentScrollX
+            || scroller.PlacedScrollY != root.ContentScrollY)) {
+                return false
+            }
         }
         if !ProtectRangeResources(root.Start, root.End) {
             return false
