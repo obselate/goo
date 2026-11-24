@@ -49,6 +49,11 @@ for name in []string {"local-rgb.jpg", "local-progressive.jpg", "local-cmyk.jpg"
 }
 Console.WriteLine("image-loading: jpeg_baseline/progressive/cmyk=3x2 gif_transparent/first_frame=3x2 owners=verified")
 
+let webpPath = Path.Combine(AppContext.BaseDirectory, "Assets", "local-lossless-alpha.webp")
+using let webp = ImageSource.LoadThumbnail(webpPath, 2, 2)
+if webp.Width != 2 || webp.Height != 1 { throw InvalidOperationException("Packaged WebP thumbnail dimensions are wrong") }
+Console.WriteLine("image-loading: packaged_webp_thumbnail=2x1")
+
 using let assets = ImageVariants([]ImageVariant{ImageVariant(path, 2.0F)})
 let selected = assets.LoadAsync(WindowMetrics{DisplayScaleX: 1.5, DisplayScaleY: 1.5},
   CancellationToken.None).GetAwaiter().GetResult()
