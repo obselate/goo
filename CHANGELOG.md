@@ -1,6 +1,17 @@
 # Changelog
 
 
+## 0.32.4 - 2026-11-24
+
+### Added
+
+- `ImageSource.CopyPixels` copies premultiplied RGBA pixels into a caller-owned buffer.
+- Decode WebP images and thumbnails, including lossy and lossless images with alpha and the first frame of animated WebP.
+
+### Fixed
+
+- Keep layer-shell protocol descriptors alive after a layer window closes, so an event queued for it no longer crashes the Wayland event pump.
+
 ## 0.32.3 - 2026-11-24
 
 ### Added
