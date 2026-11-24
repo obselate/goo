@@ -17,14 +17,25 @@ class InputBuild {
             let root = HostChecks.Root
             let work = Path.Combine(root, "artifacts/input-fuzz")
             Directory.CreateDirectory(work)
-            let manifest = JsonNode.Parse(
-                File.ReadAllText(Path.Combine(root, "tools/Goo.TextNative/manifest.json"))
-            )!!.AsObject()
+            let manifestPath = Path.Combine(root, "tools/Goo.TextNative/manifest.json")
             let corpus = Path.Combine(work, "corpus", target)
             Directory.CreateDirectory(corpus)
             Seed(target, corpus)
             HostChecks.Require(Directory.EnumerateFileSystemEntries(corpus).Any(), "No seed fixtures for $target")
-            if target is not("native-image" or "font") {
+            if target == "native-image" {
+                HostChecks.Run(
+                    []string{
+                        "python3",
+                        "tools/Goo.TextNative/add-image-sources.py",
+                        "--manifest", manifestPath,
+                        "--source-root", Path.Combine(work, "image-source"),
+                        "--fuzz-output", Path.Combine(work, target)
+                    }
+                )
+            } else if target == "font" {
+                let manifest = JsonNode.Parse(File.ReadAllText(manifestPath))!!.AsObject()
+                BuildFont(work, manifest)
+            } else {
                 HostChecks.Run(
                     []string{
                         "dotnet",
@@ -37,8 +48,6 @@ class InputBuild {
                         Path.Combine(work, "managed-target")
                     }
                 )
-            } else {
-                Native(target, work, manifest)
             }
         }
 
@@ -48,7 +57,8 @@ class InputBuild {
             let raster = []string{
                 "tests/Shared/Assets/local-*.png",
                 "tests/Shared/Assets/local-*.jpg",
-                "tests/Shared/Assets/local-*.gif"
+                "tests/Shared/Assets/local-*.gif",
+                "tests/Shared/Assets/local-*.webp"
             }
             patterns["raster"] = raster
             patterns["native-image"] = raster
@@ -95,7 +105,7 @@ class InputBuild {
             }
         }
 
-        func Native(target string, work string, manifest JsonObject) {
+        func BuildFont(work string, manifest JsonObject) {
             let harfbuzz = manifest["source"]!!["harfbuzz"]!!
             let archive = Path.Combine(work, "harfbuzz.tar.xz")
             Fetch(harfbuzz["archiveUrl"]!!.GetValue[string](), harfbuzz["archiveSha256"]!!.GetValue[string](), archive)
@@ -109,65 +119,16 @@ class InputBuild {
                 HostChecks.Stop(unpack)
             }
             let source = Path.Combine(work, "harfbuzz-" + harfbuzz["version"]!!.GetValue[string]())
-            let patch = []string{
-                "python3",
-                "tools/Goo.TextNative/apply-source-patches.py",
-                "--manifest",
-                "tools/Goo.TextNative/manifest.json",
-                "--source-root",
-                source
-            }
-            let flags = []string{
-                "-O1",
-                "-g",
-                "-fno-omit-frame-pointer",
-                "-fsanitize=fuzzer,address,undefined",
-                "-fno-sanitize-recover=all"
-            }
-            if target == "font" {
-                HostChecks.Run(
-                    []string{"clang++", "-std=c++17"}
-                        .Concat(flags)
-                        .Concat(
-                        []string{
-                            "-I" + Path.Combine(source, "src"),
-                            Path.Combine(source, "src/harfbuzz.cc"),
-                            "tools/Goo.InputFuzz/font.cc",
-                            "-o",
-                            Path.Combine(work, target)
-                        }
-                    )
-                        .ToArray()
-                )
-            } else {
-                let stb = manifest["source"]!!["stbImage"]!!
-                Fetch(
-                    stb["url"]!!.GetValue[string](),
-                    stb["sha256"]!!.GetValue[string](),
-                    Path.Combine(source, "src/stb_image.h")
-                )
-                for entry in manifest["build"]!!["sourcePatches"]!!.AsArray() {
-                    if entry["upstreamPath"]!!.GetValue[string]() == "src/stb_image.h" {
-                        HostChecks.Run(
-                            patch.Concat([]string{"--patch-name", entry["name"]!!.GetValue[string]()}).ToArray()
-                        )
-                    }
+            HostChecks.Run(
+                []string{
+                    "clang++", "-std=c++17", "-O1", "-g", "-fno-omit-frame-pointer",
+                    "-fsanitize=fuzzer,address,undefined", "-fno-sanitize-recover=all",
+                    "-I" + Path.Combine(source, "src"),
+                    Path.Combine(source, "src/harfbuzz.cc"),
+                    "tools/Goo.InputFuzz/font.cc",
+                    "-o", Path.Combine(work, "font")
                 }
-                HostChecks.Run(
-                    []string{"clang"}
-                        .Concat(flags)
-                        .Concat(
-                        []string{
-                            "-I" + Path.Combine(source, "src"),
-                            "tools/Goo.InputFuzz/image.c",
-                            "-lm",
-                            "-o",
-                            Path.Combine(work, target)
-                        }
-                    )
-                        .ToArray()
-                )
-            }
+            )
         }
 
         func Fetch(url string, digest string, path string) {

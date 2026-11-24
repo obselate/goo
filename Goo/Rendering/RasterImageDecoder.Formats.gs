@@ -17,7 +17,16 @@ internal unsafe partial class RasterImageDecoder {
           ValidateGif(bytes, bounds, token)
           return
         }
-      throw NotSupportedException("Only PNG, JPEG, and GIF images are supported; use ImageSource for other formats")
+      if bytes.Length >= 12 && U32(bytes, 0) == 0x52494646u && U32(bytes, 8) == 0x57454250u {
+        fixed data * uint8 = bytes {
+          if goo_image_get_info(data, bytes.Length, out var width, out var height) == 0 {
+            throw InvalidDataException("Invalid WebP header")
+          }
+          ValidateDimensions(width, height, bounds)
+        }
+        return
+      }
+      throw NotSupportedException("Only PNG, JPEG, GIF, and WebP images are supported")
     }
 
     private func ValidateDimensions(width int32, height int32, bounds RasterDecodeBounds) {
