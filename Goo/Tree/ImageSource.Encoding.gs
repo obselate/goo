@@ -5,6 +5,20 @@ import System.IO
 import System.IO.Compression
 
 public partial class ImageSource {
+  /// Copies Width times Height times four bytes of row-major premultiplied RGBA pixels.
+  /// The copy is synchronous and can run outside the UI thread.
+  /// @param destination The buffer to receive the pixels. Extra bytes are left unchanged.
+  /// @exception ArgumentException when destination is too small.
+  /// @exception ObjectDisposedException when this source is disposed.
+  public func CopyPixels(destination Span[uint8]) {
+    guard let current = retainImage() else { throw ObjectDisposedException("ImageSource") }
+    try {
+      if !ReadOnlySpan[uint8](current.Pixels()).TryCopyTo(destination) {
+        throw ArgumentException("Destination is too small", "destination")
+      }
+    } finally { current.Release() }
+  }
+
   /// Encodes this source as owned PNG bytes with straight RGBA pixels.
   /// Encoding is synchronous and can run outside the UI thread.
   /// @returns The encoded PNG bytes.

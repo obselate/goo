@@ -969,6 +969,12 @@ Creates an already-completed binding that retains this source until release.
 
 Returns: The completed binding for this source.
 
+### `CopyPixels(System.Span{System.Byte})`
+
+Copies Width times Height times four bytes of row-major premultiplied RGBA pixels. The copy is synchronous and can run outside the UI thread.
+
+- `destination`: The buffer to receive the pixels. Extra bytes are left unchanged.
+
 ### `Decode(System.IO.Stream)`
 
 Decodes from the stream's current position and leaves the stream open. Uses the same limits and synchronous decoding as the encoded-byte overload.
