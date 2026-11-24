@@ -58,7 +58,7 @@ internal unsafe partial class VulkanWindowTarget {
     hideReleasePending = false
   }
 
-  private func RecreateSwapchain(width int32, height int32, startup bool = false) bool {
+  private func RecreateSwapchain(width int32, height int32, startup bool = false, requireTransparency bool = false) bool {
     using let profile = FrameProfileScope(FrameProfileStage.Swapchain)
     if width <= 0 || height <= 0 {
       recreatePending = true
@@ -87,7 +87,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
     var next VulkanSwapchainGeneration?
     try {
-      if !TryCreateGeneration(width, height, out next) {
+      if !TryCreateGeneration(width, height, out next, requireTransparency) {
         if startup { return false }
         if !surfaceLost {
           return false
@@ -381,7 +381,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func TryCreateGeneration(width int32, height int32,
-    out next VulkanSwapchainGeneration?) bool {
+    out next VulkanSwapchainGeneration?, requireTransparency bool = false) bool {
     next = nil
     if nextGenerationId == uint64.MaxValue {
       throw OverflowException("Vulkan swapchain generation overflow")
@@ -433,7 +433,8 @@ internal unsafe partial class VulkanWindowTarget {
       return false
     }
     let created = CreateGeneration(width, height, vsync, host.Transparent, host.AllowInheritedCompositeAlpha,
-      host.PreferRequestedFramebufferExtent, nextGenerationId, generation?.Handle ?? 0uL, generation?.Composition)
+      host.PreferRequestedFramebufferExtent, nextGenerationId, generation?.Handle ?? 0uL, generation?.Composition,
+      requireTransparency)
     next = created.Generation
     if created.SurfaceLost {
       surfaceLost = true
@@ -445,7 +446,7 @@ internal unsafe partial class VulkanWindowTarget {
   private func CreateGeneration(width int32, height int32, requestedVsync bool,
     transparent bool, allowInherited bool, preferExtent bool,
     generationId uint64, oldSwapchain VkSwapchainKHR,
-    previousComposition VulkanCompositionPresentation?) VulkanSwapchainCreationResult {
+    previousComposition VulkanCompositionPresentation?, requireTransparency bool = false) VulkanSwapchainCreationResult {
     guard let selection = QuerySelection(requestedVsync, transparent, allowInherited) else {
       return VulkanSwapchainCreationResult{SurfaceLost: true}
     }
@@ -464,7 +465,7 @@ internal unsafe partial class VulkanWindowTarget {
     if extent.width == 0u || extent.height == 0u { return VulkanSwapchainCreationResult{} }
     let swapStart = DiagnosticTimestamp()
     var composition VulkanCompositionPresentation?
-    if transparent && (!alphaUnavailable || opaquePopup) {
+    if transparent && OperatingSystem.IsWindows() {
       if let active = runtime, let native = sdl {
         composition = VulkanCompositionPresentation.TryCreate(active, native.WindowsPresentationHandle,
           extent, requestedVsync, previousComposition, windowObjectAccounting)
@@ -475,6 +476,9 @@ internal unsafe partial class VulkanWindowTarget {
       Console.Error.WriteLine(if composition != nil {
         "Goo Windows presentation: DirectComposition, topmost=FALSE, D3D11 shared texture and fence"
       } else { "Goo Windows presentation: Vulkan swapchain fallback, interop unavailable" })
+    }
+    if requireTransparency && alphaUnavailable && composition == nil {
+      return VulkanSwapchainCreationResult{}
     }
     let format = if composition != nil { VkSurfaceFormatKHR{
       format: VkConstants.VK_FORMAT_B8G8R8A8_UNORM,

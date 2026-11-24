@@ -669,7 +669,7 @@
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::BeginPage([Goo]Goo.Cell, [Goo]Goo.OffscreenRenderOptions, [S.P.CoreLib]System.Threading.CancellationToken, [S.P.CoreLib]System.Threading.CancellationToken, [Goo]Goo.WindowCapture, [Goo]Goo.Window, [S.P.CoreLib]System.Threading.Tasks.TaskCompletionSource`1<Goo.OffscreenRenderResult>)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::BeginRendering([Goo]Goo.VulkanSwapchainGeneration, [Goo]Goo.VulkanFrameSlot, uint32, [Goo]Goo.VulkanDamageRegion)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::CleanupUnpublishedBootstrap()] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::CreateCandidateRuntime()] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::CreateCandidateRuntime(bool)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::CreateValidationMessenger()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::Describe()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::DestroyValidationMessenger()] ImportCalli not implemented

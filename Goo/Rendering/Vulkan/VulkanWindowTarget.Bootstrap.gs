@@ -109,7 +109,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
   }
 
-  private func CreateCandidateRuntime() {
+  private func CreateCandidateRuntime(requireTransparency bool) bool {
     let deviceStart = DiagnosticTimestamp()
     CreateDevice()
     LoadDeviceDispatch()
@@ -158,14 +158,16 @@ internal unsafe partial class VulkanWindowTarget {
     CreateCommandResources()
     let width = if requestedWidth > 0 { requestedWidth } else { Math.Max(1, host.FramebufferWidth) }
     let height = if requestedHeight > 0 { requestedHeight } else { Math.Max(1, host.FramebufferHeight) }
-    if !(host is VulkanHeadlessHost) && !RecreateSwapchain(width, height, true) {
+    if !(host is VulkanHeadlessHost) && !RecreateSwapchain(width, height, true, requireTransparency) {
       throw InvalidOperationException("Vulkan initial swapchain creation failed")
     }
+    if requireTransparency && !IsTransparent { return false }
     if let probe = CandidateStartupForTest { probe(this) }
     runtime!!.Publish()
     validation = nil
     validationMessenger = 0uL
     validationMessengerCreated = false
+    return true
   }
 
   private func CreateSurface() {
@@ -746,7 +748,9 @@ internal unsafe partial class VulkanWindowTarget {
       TimestampComputeAndGraphics: timestampComputeAndGraphics,
       SwapchainMutableFormat: deviceFacts.SwapchainMutableFormat,
     }
+    var failure Exception?
     try {
+      var requireComposition = false
       if preferTransparency {
         guard let capabilities = QuerySurfaceCapabilities() else {
           surfaceLost = true
@@ -754,14 +758,21 @@ internal unsafe partial class VulkanWindowTarget {
         }
         if SelectCompositeAlpha(capabilities.supportedCompositeAlpha, true, host.AllowInheritedCompositeAlpha)
           == VkCompositeAlphaFlagBitsKHR(0) {
-          deferred = true
-          return ""
+          requireComposition = OperatingSystem.IsWindows() && host is SdlHost
+            && externalMemoryExtension != "" && externalSemaphoreExtension != ""
+          if !requireComposition {
+            deferred = true
+            return ""
+          }
         }
       }
-      CreateCandidateRuntime()
+      deferred = !CreateCandidateRuntime(requireComposition)
     } catch (error Exception) {
       if VulkanDiagnostics.StartupReportEnabled { VulkanStartupReport.Current?.Exception(error) }
       if !(error is VulkanDeviceUnavailableException) { softwareFallbackEligible = false }
+      failure = error
+    }
+    if deferred || failure != nil {
       DestroyWindowResources()
       if let candidateRuntime = runtime {
         candidateRuntime.ReleaseAfterIdle()
@@ -769,7 +780,7 @@ internal unsafe partial class VulkanWindowTarget {
       } else if device != nint(0) {
         let destroyDevice = ResolveGlobalProc(instance, "vkDestroyDevice") as (unmanaged[Cdecl](VkDevice, *VkAllocationCallbacks) -> void)?
         if destroyDevice == nil {
-          throw InvalidOperationException("vkDestroyDevice is unavailable during candidate rollback", error)
+          throw InvalidOperationException("vkDestroyDevice is unavailable during candidate rollback", failure)
         }
         let destroy = destroyDevice
         destroy(device, nil)
@@ -780,12 +791,16 @@ internal unsafe partial class VulkanWindowTarget {
       deviceDestroyAvailable = false
       deviceWaitIdleAddress = nint(0)
       memoryAllocator = nil
+      IsTransparent = false
       startupFirstSwapchainRecorded = false
       startupFirstRendererRecorded = false
-      if surfaceLost || (error is ExternalException && error.ErrorCode == int32(VkConstants.VK_ERROR_SURFACE_LOST_KHR)) {
-        rethrow
+      if let error = failure {
+        if surfaceLost || (error is ExternalException && error.ErrorCode == int32(VkConstants.VK_ERROR_SURFACE_LOST_KHR)) {
+          throw error
+        }
+        return error.Message
       }
-      return error.Message
+      return ""
     }
     CaptureDiagnosticDeviceFacts(properties)
     CaptureDiagnosticTimestampCapabilities()
