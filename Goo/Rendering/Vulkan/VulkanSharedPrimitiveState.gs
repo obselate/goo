@@ -549,6 +549,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
   private let objectAccounting VulkanObjectAccounting?
   private let generation uint64
   private let formatStates []VulkanSharedPrimitiveFormatState?
+  private let strokePipelineGate object = Object()
   private let clipMaskR8Gate object = Object()
   private let clipMaskRgba8Gate object = Object()
   private var preparationThread Thread?
