@@ -68,7 +68,7 @@ internal unsafe partial class VulkanWindowTarget {
       attachment.resolveMode = VkConstants.VK_RESOLVE_MODE_NONE
       attachment.loadOp = VkConstants.VK_ATTACHMENT_LOAD_OP_CLEAR
       attachment.storeOp = VkConstants.VK_ATTACHMENT_STORE_OP_STORE
-      if current.OpaquePopup {
+      if current.OpaqueClear {
         var opaque = VkClearValue{}
         let channels = *float32(&opaque)
         channels[3] = 1.0F

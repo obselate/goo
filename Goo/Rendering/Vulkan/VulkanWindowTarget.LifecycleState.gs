@@ -145,6 +145,8 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
 
   public prop ProfileSink FrameProfileSink{ get -> this }
 
+  internal prop IsTransparent bool { get; private set }
+
   internal prop RenderingDevice RenderingDeviceInfo{
     get {
       if disposed || runtime == nil || runtime?.DeviceLost == true { return default(RenderingDeviceInfo) }

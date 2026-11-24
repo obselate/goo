@@ -412,13 +412,19 @@ public partial class Window {
   }
 
   /// Gets or sets per-pixel alpha for the first Open. An open window is unchanged.
-  /// Transparency requires the GPU renderer.
+  /// If Vulkan cannot provide transparency, the window opens opaque.
   public prop Transparent bool{
     get -> ReadUntrackedWindowValue(transparent)
     set(v) {
       requireUiThread("Window.Transparent")
       transparent = v
     }
+  }
+
+  /// Reports whether the window presents with per-pixel alpha.
+  /// False until the presentation surface is ready.
+  public prop IsTransparent bool {
+    get -> ReadUntrackedWindowValue((windowTarget as VulkanWindowTarget?)?.IsTransparent == true)
   }
 
   /// Gets or sets whether the system draws window decorations.

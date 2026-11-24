@@ -30,6 +30,7 @@ func RunTransparentWindowSmoke() {
   try {
     Console.SetError(capturedError)
     window.Open()
+    Require(window.IsTransparent, "Transparent window did not use per-pixel alpha")
     var frame int32 = 0
     while frame < 8 {
       WindowReadbackTestFixture.ForceRender(window, 0.0166666666666667)
@@ -57,4 +58,5 @@ func RunTransparentWindowSmoke() {
   }
   ReadbackValidateCommonDiagnostics(capturedError.ToString())
   Console.WriteLine("transparent-window-smoke: frames=8 close=1")
+  WindowReadbackTestFixture.VerifyOpaqueWindowFallback()
 }
