@@ -165,18 +165,6 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     MarshalRequest(layerSurface, 4u, ref arguments)
   }
 
-  shared {
-    // Events queued before a proxy is destroyed still point at these descriptors, so they live for the process.
-    private var managerInterface nint
-    private var surfaceInterface nint
-
-    @DllImport("libwayland-client.so.0", EntryPoint: "wl_proxy_marshal_array")
-    private func MarshalRequest(proxy nint, opcode uint32, ref arguments LayerWaylandArguments);
-
-    @DllImport("libwayland-client.so.0")
-    private func wl_display_roundtrip(display nint) int32;
-  }
-
   internal func Hide() {
     if !mapped { return }
     Pump()
@@ -291,6 +279,16 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   }
 
   shared {
+    // Events queued before a proxy is destroyed still point at these descriptors, so they live for the process.
+    private var managerInterface nint
+    private var surfaceInterface nint
+
+    @DllImport("libwayland-client.so.0", EntryPoint: "wl_proxy_marshal_array")
+    private func MarshalRequest(proxy nint, opcode uint32, ref arguments LayerWaylandArguments);
+
+    @DllImport("libwayland-client.so.0")
+    private func wl_display_roundtrip(display nint) int32;
+
     private func CreateInterfaces(library nint) {
       let manager = Marshal.AllocHGlobal(Marshal.SizeOf[BackdropWaylandInterface]())
       let layerSurface = Marshal.AllocHGlobal(Marshal.SizeOf[BackdropWaylandInterface]())
