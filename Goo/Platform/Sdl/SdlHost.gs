@@ -805,6 +805,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     if logicalWidth != LogicalWidth || logicalHeight != LogicalHeight ||
     framebufferWidth != FramebufferWidth || framebufferHeight != FramebufferHeight{
       RaiseMetrics()
+      if layerWindow != nil { Exposed?.Invoke() }
     }
   }
 

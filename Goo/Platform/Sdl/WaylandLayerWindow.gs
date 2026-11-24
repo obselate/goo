@@ -49,7 +49,8 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   private var mapped bool
   private var closed bool
   private var disposed bool
-  private var failure Exception?
+  private var closePending bool
+  private var pendingConfigure (uint32, uint32, uint32)?
   private var frameListener nint
   private var framePending bool
   internal prop Presented bool { get; set; }
@@ -96,6 +97,8 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
       throw InvalidOperationException("Cannot listen to the Wayland registry")
     }
     Roundtrip()
+    WaylandBackdrop.wl_proxy_destroy(registry)
+    registry = nint(0)
     if manager == nint(0) { throw NotSupportedException("The Wayland compositor does not support zwlr_layer_shell_v1") }
     if version < 2u { throw NotSupportedException("Layer-shell version 2 or newer is required") }
     if options.KeyboardInteractivity == LayerWindowKeyboardInteractivity.OnDemand && version < 4u {
@@ -107,6 +110,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     Marshal.WriteIntPtr(surfaceListener, IntPtr.Size, Marshal.GetFunctionPointerForDelegate(onClosed))
     frameListener = Allocate(IntPtr.Size)
     Marshal.WriteIntPtr(frameListener, Marshal.GetFunctionPointerForDelegate(onFrame))
+    WaylandBackdrop.wl_proxy_set_queue(manager, nint(0))
     CreateLayerSurface(output)
   }
 
@@ -131,7 +135,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     MarshalRequest(layerSurface, 8u, ref arguments)
     mapped = true
     WaylandBackdrop.wl_proxy_marshal_array(surface, 6u, nil)
-    Roundtrip()
+    Roundtrip(dispatchLayer: true)
   }
 
   internal func SupportsGeometry(value LayerWindowOptions) bool ->
@@ -166,6 +170,9 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   shared {
     @DllImport("libwayland-client.so.0", EntryPoint: "wl_proxy_marshal_array")
     private func MarshalRequest(proxy nint, opcode uint32, ref arguments LayerWaylandArguments);
+
+    @DllImport("libwayland-client.so.0")
+    private func wl_display_roundtrip(display nint) int32;
   }
 
   internal func Hide() {
@@ -182,7 +189,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     mapped = false
     if Presented { Configured = false }
     Presented = false
-    Roundtrip()
+    Roundtrip(dispatchLayer: true)
   }
 
   private func DrainFrame() {
@@ -206,39 +213,44 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   }
 
   internal func Pump() {
-    if disposed { return }
-    if !closed && WaylandBackdrop.wl_display_dispatch_queue_pending(display, queue) < 0 {
-      let errno = WaylandBackdrop.wl_display_get_error(display)
-      if errno != EPIPE {
-        throw InvalidOperationException("Layer-shell event dispatch failed (errno $errno)")
-      }
-      Closed(nint(0), nint(0))
+    if disposed || closed { return }
+    let errno = WaylandBackdrop.wl_display_get_error(display)
+    if closePending || errno == EPIPE {
+      closed = true
+      mapped = false
+      Configured = false
+      pendingConfigure = nil
+      requestClose()
+      return
     }
-    if let error = failure { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw() }
-  }
-
-  private func Roundtrip() {
-    if WaylandBackdrop.wl_display_roundtrip_queue(display, queue) < 0 { throw InvalidOperationException("Layer-shell Wayland roundtrip failed") }
-    if let error = failure { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw() }
-  }
-
-  private func Configure(data nint, proxy nint, serial uint32, width uint32, height uint32) {
-    if !mapped { return }
-    try {
-      var argument = BackdropWaylandArgument{Value: nint(serial)}
-      WaylandBackdrop.wl_proxy_marshal_array(proxy, 6u, &argument)
+    if errno != 0 { throw InvalidOperationException("Layer-shell event dispatch failed (errno $errno)") }
+    if let configure = pendingConfigure {
+      pendingConfigure = nil
+      if !mapped { return }
+      let (serial, width, height) = configure
+      var arguments = LayerWaylandArguments{First: nint(serial)}
+      MarshalRequest(layerSurface, 6u, ref arguments)
       resize(width == 0u ? Math.Max(1, geometry.Width) : checked(int32(width)),
         height == 0u ? Math.Max(1, geometry.Height) : checked(int32(height)))
       Configured = true
       WaylandBackdrop.wl_display_flush(display)
-    } catch (error Exception) { failure = error }
+    }
+  }
+
+  private func Roundtrip(dispatchLayer bool = false) {
+    let result = dispatchLayer ? wl_display_roundtrip(display) : WaylandBackdrop.wl_display_roundtrip_queue(display, queue)
+    if result < 0 { throw InvalidOperationException("Layer-shell Wayland roundtrip failed") }
+  }
+
+  private func Configure(data nint, proxy nint, serial uint32, width uint32, height uint32) {
+    if !mapped { return }
+    pendingConfigure = (serial, width, height)
+    SdlRuntime.Wake()
   }
 
   private func Closed(data nint, proxy nint) {
-    closed = true
-    mapped = false
-    Configured = false
-    try { requestClose() } catch (error Exception) { failure = error }
+    closePending = true
+    SdlRuntime.Wake()
   }
 
   private func Global(data nint, registry nint, name uint32, interfaceName nint, advertisedVersion uint32) {
