@@ -1,6 +1,6 @@
 [IL]: Error [ExpectedNumericType]: [Goo.dll : Goo.VulkanStartupReport::Adapter([Goo]Goo.VkPhysicalDeviceProperties*)][offset 0x00000019][found address of '[Goo]Goo.VkPhysicalDeviceProperties+<deviceName>e__FixedBuffer'] Expected numeric type on the stack.
 [IL]: Error [ExpectedNumericType]: [Goo.dll : Goo.VulkanWindowTarget::CaptureDiagnosticDeviceFacts([Goo]Goo.VkPhysicalDeviceProperties)][offset 0x00000040][found address of '[Goo]Goo.VkPhysicalDeviceProperties+<deviceName>e__FixedBuffer'] Expected numeric type on the stack.
-[IL]: Error [ExpectedNumericType]: [Goo.dll : Goo.VulkanWindowTarget::TryStartPhysicalDevice(native int, [Goo]Goo.VkPhysicalDeviceProperties)][offset 0x0000010E][found address of '[Goo]Goo.VkPhysicalDeviceProperties+<deviceName>e__FixedBuffer'] Expected numeric type on the stack.
+[IL]: Error [ExpectedNumericType]: [Goo.dll : Goo.VulkanWindowTarget::TryStartPhysicalDevice(native int, [Goo]Goo.VkPhysicalDeviceProperties, bool, bool&)][offset 0x00000118][found address of '[Goo]Goo.VkPhysicalDeviceProperties+<deviceName>e__FixedBuffer'] Expected numeric type on the stack.
 [IL]: Error [FieldAccess]: [Goo.DevTools.Cli.dll : Goo.DevTools.Cli.AnonymousType2_38E0A6F42AE9FA0A::.ctor([Goo.DevTools.Cli]Goo.DevTools.Cli.AnonymousType2_38E0A6F42AE9FA0A)][offset 0x00000008] Field is not visible.
 [IL]: Error [FieldAccess]: [Goo.DevTools.Cli.dll : Goo.DevTools.Cli.AnonymousType2_38E0A6F42AE9FA0A::.ctor([Goo.DevTools.Cli]Goo.DevTools.Cli.AnonymousType2_38E0A6F42AE9FA0A)][offset 0x0000000D] Field is not visible.
 [IL]: Error [FieldAccess]: [Goo.DevTools.Cli.dll : Goo.DevTools.Cli.AnonymousType2_38E0A6F42AE9FA0A::.ctor([S.P.CoreLib]System.Collections.Generic.List`1<Goo.DevTools.Cli.CliApplication+DoctorCheck>, [S.P.CoreLib]System.Collections.Generic.IReadOnlyList`1<Goo.DevTools.Cli.DiscoveryDescriptor>)][offset 0x00000008] Field is not visible.
@@ -711,6 +711,7 @@
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::Present()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::QueryClipMaskFormatSupport(uint32)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::QuerySelection(bool, bool, bool)] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::QuerySurfaceCapabilities()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::ReadbackFormatSupported(int32)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::ResolveDeviceProc(string)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::ResolveExternalDeviceDispatch()] ImportCalli not implemented
