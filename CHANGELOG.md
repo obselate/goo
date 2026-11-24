@@ -1,6 +1,12 @@
 # Changelog
 
 
+## 0.32.5 - 2026-11-24
+
+### Fixed
+
+- Wayland layer windows with keyboard interactivity disabled still receive clicks after hiding and showing.
+
 ## 0.32.4 - 2026-11-24
 
 ### Added
