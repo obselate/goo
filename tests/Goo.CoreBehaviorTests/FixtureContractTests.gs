@@ -168,6 +168,7 @@ class FixtureContractTests {
         func Cases() sequence[[]object] {
             yield Contract[TreeFixtures]("BuildReturnFreezesBeforeNestedCellContract")
             yield Contract[RowRecyclingFixtures]("VirtualKeysKeepAuthoredBlobsUnchangedContract")
+            yield Contract[RowRecyclingFixtures]("VirtualPlacementSurvivesDeferredStyleCommitContract")
             yield Contract[TreeFixtures]("InputOptionsFreezeAtHandOffContract")
             yield Contract[TreeFixtures]("ScrollbarDeclarationsFreezeAtHandOffContract")
             yield Contract[TreeFixtures]("VectorStrokeFreezeAtHandOffContract")

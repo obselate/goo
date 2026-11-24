@@ -25,6 +25,31 @@ internal class RowRecyclingFixtures {
     return true
   }
 
+  func VirtualPlacementSurvivesDeferredStyleCommitContract() bool {
+    let window = Window{Root: SizedRootFixture(() -> Container{LayoutTransition: LayoutTransition(1000.0, Easing.Linear)})}
+    let previous = LayoutOrigin.Current
+    let resolver = Resolver{Owner: window}
+    let reconciler = Reconciler{Res: resolver}
+    let source = FrozenVirtualSource(Text("row"))
+    let node = reconciler.Mount(Virtual{Source: source})
+    try {
+      window.UpdateTree()
+      let wrapper = node.Children[0]
+      LayoutOrigin.Current = LayoutCause.Application
+      resolver.Invalidate(wrapper, false)
+      resolver.Flush()
+      LayoutOrigin.Current = LayoutCause.Environment
+      source.Offset = 10.0
+      reconciler.Diff(node, Virtual{Source: source})
+      resolver.CommitLayoutTargets()
+      return wrapper.Left.Value == 10.0F
+    } finally {
+      LayoutOrigin.Current = previous
+      NodeLifecycle.DisposeTree(node)
+      window.Close()
+    }
+  }
+
   func ReusesStorageAndResetsKeyScopedStateContract() bool {
     let cell = RecyclingViewportCell()
     let adapter = AccessibilityTestAdapter()
