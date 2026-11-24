@@ -72,7 +72,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState {
     }
 
     private func ResolveStrokePipeline(ref pipeline VkPipeline, format VkFormat, mask bool) VkPipeline {
-        lock (clipPipelineGate) {
+        lock (strokePipelineGate) {
             EnsurePathStrokes()
             if pipeline == 0uL {
                 pipeline = VulkanPipelineFactory.CreateGraphics(
@@ -100,7 +100,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState {
     }
 
     private func EnsurePathStrokes() {
-        lock (clipPipelineGate) {
+        lock (strokePipelineGate) {
             EnsureOpen()
             if strokeMetricPipeline != 0uL {
                 return
