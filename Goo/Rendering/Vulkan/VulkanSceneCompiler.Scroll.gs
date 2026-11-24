@@ -52,7 +52,7 @@ internal partial class VulkanSceneCompiler {
     let slot = scrolls ? RangeSlot(owner, VulkanSceneRangeBoundary.Content) : -1
     if slot >= 0 && !contentDirty && !node.Retired {
       let start = frame.RangePosition()
-      if TryAppendRange(slot, context) {
+      if TryAppendRange(slot, context, node) {
         UpdateScrollPlacement(node, owner, context, start)
         return
       }
@@ -123,7 +123,7 @@ internal partial class VulkanSceneCompiler {
       }
       completed = !node.SceneContentDirty
     } finally {
-      EndRangeCompilation(slot, state, completed)
+      EndRangeCompilation(slot, state, completed, node)
     }
   }
 }

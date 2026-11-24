@@ -208,8 +208,9 @@ func ScrollPlacementWhiteRow(pixels[]uint8, width int32, left int32, right int32
 }
 
 func RunScrollPlacementSmoke() {
-    RunScrollImagePlacementSmoke()
     Require(Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1", "GOO_VK_DIAGNOSTICS=1 is required")
+    RunMixedOverflowScrollPlacementSmoke()
+    RunScrollImagePlacementSmoke()
     let program = ShaderEffectProgram.Load(Path.Combine(AppContext.BaseDirectory, "control_effect.frag.goo-effect"))
     let effect = ShaderEffect(program, true)
     effect.SetParameter(0, Vector4(1.0F, 1.0F, 1.0F, 0.0F))
@@ -325,6 +326,48 @@ func RunScrollPlacementSmoke() {
     Console.WriteLine(
         "scroll-placement: comparisons=${comparisons} scales=1,1.25,1.5,2 nested=true partial-steps=${partialSteps} fresh-equal=1"
     )
+}
+
+class MixedOverflowScrollPlacementCell : Cell {
+    internal let Scroller ElementHandle = ElementHandle{}
+
+    override func Build() Blob -> Container{
+        Width: 160, Height: 96, OverflowY: Overflow.Scroll, Handle: Scroller,
+        BackgroundColor: Color.Black,
+        Container{Height: 250, FlexShrink: 0},
+        Row{
+            OverflowX: Overflow.Scroll, FlexShrink: 0,
+            Container{Width: 72, Height: 32, BackgroundColor: Color.Rgb(224, 48, 32),
+                BorderWidth: 1, BorderColor: Color.White, Text{Content: "table"},
+            },
+        },
+        Container{Height: 20, FlexShrink: 0, BackgroundColor: Color.Rgb(32, 48, 224)},
+        Container{Height: 96, FlexShrink: 0},
+    }
+}
+
+func RunMixedOverflowScrollPlacementSmoke() {
+    let cell = MixedOverflowScrollPlacementCell{}
+    let window = Window{
+        Title: "Goo mixed overflow scroll placement",
+        Size: LayoutSize(160, 96), UiScale: 1.0F, VSync: false, Decorated: false, Root: cell,
+    }
+    try {
+        window.Open()
+        WindowReadbackTestFixture.ForceRender(window, 0.0)
+        let metrics = WindowReadbackTestFixture.Metrics(window)
+        let width = uint32(metrics.FramebufferWidth)
+        let initial = PartialRedrawSettledCapture(window, metrics)
+        PrimitiveRequirePixelNear(initial, width, metrics, 60.0, 32.0, 0, 0, 0, 0, "row initially offscreen")
+
+        Require(cell.Scroller.JumpTo(0.0, 230.0), "Outer scroll offset was not applied")
+        WindowReadbackTestFixture.ForceRender(window, 0.0)
+        let scrolled = PartialRedrawSettledCapture(window, metrics)
+        PrimitiveRequirePixelNear(scrolled, width, metrics, 60.0, 62.0, 32, 48, 224, 2, "sibling after row")
+        PrimitiveRequirePixelNear(scrolled, width, metrics, 60.0, 32.0, 224, 48, 32, 2, "row after scrolling")
+    } finally {
+        window.Close()
+    }
 }
 
 class ScrollImagePlacementCell(source ImageSourceProvider) : Cell {
