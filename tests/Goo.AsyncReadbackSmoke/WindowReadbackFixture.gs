@@ -1878,7 +1878,12 @@ internal class PreventedKeyRepeatCell : Cell {
 internal class LayerGeometryCell : Cell {
   internal let Handle ElementHandle = ElementHandle()
 
-  override func Build() Blob -> Container{ Handle: Handle, Width: Percent(100), Height: Percent(100) }
+  internal var Clicks int32
+
+  override func Build() Blob -> Button{
+    Handle: Handle, Width: Percent(100), Height: Percent(100),
+    OnClick: () -> { Clicks++ },
+  }
 }
 
 public class LayerWindowCloseSmoke {
@@ -1886,11 +1891,14 @@ public class LayerWindowCloseSmoke {
     public func Run() {
       CheckLiveGeometry()
       for hide in []bool{false, true} {
-        let window = Window{ Title: "Layer window close", Root: PopupSmokeCell{},
-          LayerShell: LayerWindowOptions{ Width: 160, Height: 100 } }.Open()
+        let root = LayerGeometryCell()
+        let window = Window{ Title: "Layer window close", Root: root, UiScale: 1.0F,
+          LayerShell: LayerWindowOptions{ Width: 160, Height: 100,
+            KeyboardInteractivity: LayerWindowKeyboardInteractivity.Exclusive } }.Open()
         if window.Hide() != WindowOperationResult.Accepted || window.IsVisible
+          || window.SetLayerGeometry(LayerWindowOptions{ Width: 160, Height: 100 }) != WindowOperationResult.Accepted
           || window.Show(false) != WindowOperationResult.Accepted {
-          throw InvalidOperationException("Layer surface did not hide and show before its first present")
+          throw InvalidOperationException("Layer surface did not hide, change keyboard mode and show before its first present")
         }
         let remapDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5
         while !window.IsVisible && Stopwatch.GetTimestamp() < remapDeadline {
@@ -1901,6 +1909,14 @@ public class LayerWindowCloseSmoke {
           throw InvalidOperationException("Layer surface did not remap before its first present")
         }
         WindowReadbackTestFixture.ForceRender(window, 0.0, 15.0, true)
+        if !hide {
+          WindowReadbackTestFixture.InputQueuePointerPress(window, 10.0, 10.0)
+          WindowReadbackTestFixture.InputQueuePointerRelease(window, 10.0, 10.0)
+          window.InputForTest.Drain(window.Tree, window.ResolverForTest, 0.0, nil)
+          if root.Clicks != 1 || window.IsFocused || window.InputForTest.FocusedNode() != nil {
+            throw InvalidOperationException("The remapped pointer-only layer did not click without focus")
+          }
+        }
         let target = window.CaptureTargetForTest()!!
         window.RuntimeHoldNextQueueSubmitForTest()
         window.ForceRenderForTest(0.0)

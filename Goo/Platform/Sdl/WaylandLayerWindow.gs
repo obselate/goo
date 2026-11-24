@@ -55,6 +55,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   internal prop Configured bool { get; private set; }
   internal prop Visible bool { get -> mapped && Configured }
   internal prop Output WindowDisplayId? { get -> options.Output }
+  internal prop KeyboardInteractivity LayerWindowKeyboardInteractivity { get -> geometry.KeyboardInteractivity }
 
   internal init(display nint, surface nint, output nint, options LayerWindowOptions,
     resize Action[int32, int32], requestClose Action) {
