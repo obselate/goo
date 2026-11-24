@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.IO
+import System.Runtime.InteropServices
 import System.Threading
 
 internal unsafe partial class RasterImageDecoder {
@@ -18,12 +19,10 @@ internal unsafe partial class RasterImageDecoder {
           return
         }
       if bytes.Length >= 12 && U32(bytes, 0) == 0x52494646u && U32(bytes, 8) == 0x57454250u {
-        fixed data * uint8 = bytes {
-          if goo_image_get_info(data, bytes.Length, out var width, out var height) == 0 {
-            throw InvalidDataException("Invalid WebP header")
-          }
-          ValidateDimensions(width, height, bounds)
+        if goo_image_get_info(ref MemoryMarshal.GetReference[uint8](bytes), bytes.Length, out var width, out var height) == 0 {
+          throw InvalidDataException("Invalid WebP header")
         }
+        ValidateDimensions(width, height, bounds)
         return
       }
       throw NotSupportedException("Only PNG, JPEG, GIF, and WebP images are supported")
