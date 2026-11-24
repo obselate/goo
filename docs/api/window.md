@@ -1113,7 +1113,7 @@ Controls keyboard focus for a layer-shell window.
 ## `LayerWindowOptions`
 
 
-Configures a Wayland layer-shell surface before Window.Open. Sizes and margins use compositor logical units. Zero sizes require opposite anchors.
+Configures a Wayland layer-shell surface. Sizes and margins use compositor logical units. Zero sizes require opposite anchors.
 
 ### `new`
 
@@ -1955,6 +1955,14 @@ Sets the clear and inherited root text colors together on the owner thread. Expl
 
 Requests borderless fullscreen on the selected display, including retargeting an already-fullscreen window. This must run on the window's UI thread. Returns Closed before Open or after close, Unsupported for embedded hosts, Failed for a stale ID or native failure, and Accepted when SDL accepts the request. Acceptance does not guarantee compositor placement. The compositor may keep the current display when retargeting fullscreen.
 
+### `SetLayerGeometry(LayerWindowOptions)`
+
+Requests new anchors, size, margins, exclusive zone and keyboard interactivity for an open layer window. Layer, namespace and output must match LayerShell. The compositor controls the final size. Requests made while hidden apply on the next Show.
+
+- `geometry`: the new options, with sizes and margins in compositor logical units
+
+Returns: Accepted if queued or submitted, Closed if not open, or Unsupported for another window type, a change to a fixed option, or a keyboard policy the compositor does not support
+
 ### `SetNativeDataDropFormats(System.Collections.Generic.IReadOnlyList{string})`
 
 Enables an exact MIME allow-list for native drops on the owning UI thread.
@@ -2114,7 +2122,7 @@ Gets the latest native drop capture status.
 
 ### `LayerShell`
 
-Configures this window as a Wayland layer-shell surface before Open. Unsupported platforms and compositors fail without a normal-window fallback.
+Configures this window as a Wayland layer-shell surface before Open. Unsupported platforms and compositors fail without a normal-window fallback. Use SetLayerGeometry to request new geometry after Open. This property keeps the initial options.
 
 ### `MacOSBackdrop`
 

@@ -1875,9 +1875,16 @@ internal class PreventedKeyRepeatCell : Cell {
   }
 }
 
+internal class LayerGeometryCell : Cell {
+  internal let Handle ElementHandle = ElementHandle()
+
+  override func Build() Blob -> Container{ Handle: Handle, Width: Percent(100), Height: Percent(100) }
+}
+
 public class LayerWindowCloseSmoke {
   shared {
     public func Run() {
+      CheckLiveGeometry()
       for hide in []bool{false, true} {
         let window = Window{ Title: "Layer window close", Root: PopupSmokeCell{},
           LayerShell: LayerWindowOptions{ Width: 160, Height: 100 } }.Open()
@@ -1931,6 +1938,51 @@ public class LayerWindowCloseSmoke {
         if window.IsOpen { throw InvalidOperationException("Layer close did not finish within 2000 passes") }
       }
       Console.WriteLine("layer-window-close: close=passed hide=passed")
+    }
+
+    private func CheckLiveGeometry() {
+      let root = LayerGeometryCell()
+      let window = Window{ Title: "Layer window geometry", UiScale: 1.0F,
+        Root: root,
+        LayerShell: LayerWindowOptions{
+          Anchors: LayerWindowAnchor.Bottom | LayerWindowAnchor.Left | LayerWindowAnchor.Right,
+          Width: 0, Height: 40, ExclusiveZone: 40,
+        } }.Open()
+      try {
+        let display = window.GetDisplays()[0].Bounds
+        WaitForGeometry(window, root.Handle, int32(display.Width), 40)
+        WindowReadbackTestFixture.ForceRender(window, 0.0, 15.0, true)
+        if window.SetLayerGeometry(LayerWindowOptions{ Namespace: "other" }) != WindowOperationResult.Unsupported {
+          throw InvalidOperationException("The layer window accepted a namespace change")
+        }
+        if window.SetLayerGeometry(LayerWindowOptions{
+          Anchors: LayerWindowAnchor.Bottom, Width: 300, Height: 48, ExclusiveZone: 48, MarginBottom: 6,
+        }) != WindowOperationResult.Accepted {
+          throw InvalidOperationException("The bottom layer geometry request was not accepted")
+        }
+        WaitForGeometry(window, root.Handle, 300, 48)
+        if window.SetLayerGeometry(LayerWindowOptions{
+          Anchors: LayerWindowAnchor.Left | LayerWindowAnchor.Top | LayerWindowAnchor.Bottom,
+          Width: 48, Height: 0, ExclusiveZone: 54, MarginTop: 7, MarginBottom: 9, MarginLeft: 6,
+        }) != WindowOperationResult.Accepted {
+          throw InvalidOperationException("The left layer geometry request was not accepted")
+        }
+        WaitForGeometry(window, root.Handle, 48, int32(display.Height) - 16)
+      } finally { window.CloseAfterRun() }
+      Console.WriteLine("layer-window-geometry: native resize and content relayout passed")
+    }
+
+    private func WaitForGeometry(window Window, handle ElementHandle, width int32, height int32) {
+      let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5
+      while Stopwatch.GetTimestamp() < deadline {
+        window.Pump(0.0)
+        let bounds = handle.RawBorderBox
+        if window.NativeWidth == width && window.NativeHeight == height
+          && bounds.Width == float64(width) && bounds.Height == float64(height) {
+          return
+        }
+      }
+      throw InvalidOperationException("Expected $width x $height, got native ${window.NativeWidth} x ${window.NativeHeight} and layout ${handle.RawBorderBox.Width} x ${handle.RawBorderBox.Height}")
     }
   }
 }
