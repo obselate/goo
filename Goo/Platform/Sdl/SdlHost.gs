@@ -307,6 +307,10 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     Require(SDL.SetWindowSize(window, width, height), "SDL_SetWindowSize")
   }
 
+  internal prop IsPointerOnlyLayer bool {
+    get -> layerWindow?.KeyboardInteractivity == LayerWindowKeyboardInteractivity.None
+  }
+
   internal func SupportsLayerGeometry(geometry LayerWindowOptions) bool -> layerWindow!!.SupportsGeometry(geometry)
   internal func SetLayerGeometry(geometry LayerWindowOptions) -> layerWindow!!.SetGeometry(geometry)
 

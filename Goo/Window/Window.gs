@@ -218,6 +218,7 @@ public partial class Window {
   /// Use SetLayerGeometry to request new geometry after Open. This property keeps the initial options.
   public prop LayerShell LayerWindowOptions? { get; init; }
   internal var LockSurface WaylandLockSurface?
+  internal prop IsPointerOnlyLayer bool { get -> (host as SdlHost?)?.IsPointerOnlyLayer == true }
 
   private var pendingLayerGeometry LayerWindowOptions?
 

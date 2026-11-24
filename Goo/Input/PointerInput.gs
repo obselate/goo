@@ -885,7 +885,7 @@ internal partial class PointerInput {
         }
       }
       let focusedBefore = focus.FocusedNode()
-      focus.SetFocus(resolver, target)
+      focus.SetFocus(resolver, resolver.Owner?.IsPointerOnlyLayer == true ? nil : target)
       if focus.FocusedNode() != focusedBefore {
         current.FocusTarget = focus.FocusedNode()
       } else {
