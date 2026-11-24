@@ -1,6 +1,27 @@
 # Changelog
 
 
+## 0.32.3 - 2026-11-24
+
+### Added
+
+- Add `Window.SetLayerGeometry` to update a Wayland layer window without closing it.
+- Add `Window.CaptureCompleted`. It reports that a requested capture is ready to poll, even when the window is idle.
+- Add `ImageSource.LoadThumbnail` overloads for encoded memory and streams.
+- Add `Image.KeepPreviousWhilePending` to keep the previous frame and intrinsic size while a different image source loads.
+- Native popup menus and tooltips have transparent corners where the platform supports alpha, and stay opaque otherwise.
+- Add `NotificationMessage.Silent` to request a desktop notification without sound.
+- Add `Window.IconPngs` for several icon sizes. Windows selects the closest size for each icon slot.
+- Add an `Application.AcquireSingleInstance` overload with an election scope. The native application identity does not change.
+
+### Fixed
+
+- Resize and redraw idle Wayland layer windows without waiting for unrelated events.
+- Open transparent windows as opaque when Vulkan cannot provide per-pixel alpha. Use `Window.IsTransparent` to check the result before rendering.
+- Let Vulkan frames create pipelines without waiting for background preparation of other pipelines.
+- Draw single-axis scroll containers when an ancestor scrolls them into view.
+- Keep virtual rows from overlapping when their positions change during a window layout transition.
+
 ## 0.32.2 - 2026-11-23
 
 ### Added
