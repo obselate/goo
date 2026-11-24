@@ -215,8 +215,35 @@ internal struct WindowNotifications {
 public partial class Window {
   /// Configures this window as a Wayland layer-shell surface before Open.
   /// Unsupported platforms and compositors fail without a normal-window fallback.
+  /// Use SetLayerGeometry to request new geometry after Open. This property keeps the initial options.
   public prop LayerShell LayerWindowOptions? { get; init; }
   internal var LockSurface WaylandLockSurface?
+
+  private var pendingLayerGeometry LayerWindowOptions?
+
+  /// Requests new anchors, size, margins, exclusive zone and keyboard interactivity for an open layer window.
+  /// Layer, namespace and output must match LayerShell. The compositor controls the final size.
+  /// Requests made while hidden apply on the next Show.
+  /// @param geometry the new options, with sizes and margins in compositor logical units
+  /// @returns Accepted if queued or submitted, Closed if not open, or Unsupported for another window type,
+  /// a change to a fixed option, or a keyboard policy the compositor does not support
+  /// @exception ArgumentException when the options are invalid.
+  public func SetLayerGeometry(geometry LayerWindowOptions) WindowOperationResult {
+    requireUiThread("Window.SetLayerGeometry")
+    if !IsOpen || host?.IsClosing == true { return WindowOperationResult.Closed }
+    guard let native = host as SdlHost? else { return WindowOperationResult.Unsupported }
+    if !native.IsLayerWindow { return WindowOperationResult.Unsupported }
+    ArgumentNullException.ThrowIfNull(geometry)
+    if !native.SupportsLayerGeometry(geometry) { return WindowOperationResult.Unsupported }
+    geometry.Validate("geometry")
+    if windowTarget?.QueueWorkPending == true {
+      pendingLayerGeometry = geometry
+    } else {
+      pendingLayerGeometry = nil
+      native.SetLayerGeometry(geometry)
+    }
+    return WindowOperationResult.Accepted
+  }
 
   /// Gets the selected rendering device, or Unknown with an empty name before Open or when unavailable.
   public prop RenderingDevice RenderingDeviceInfo{

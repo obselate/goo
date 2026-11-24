@@ -13,12 +13,21 @@ internal delegate LayerWaylandClosed(data nint, layerSurface nint);
 @UnmanagedFunctionPointer(CallingConvention.Cdecl)
 internal delegate LayerWaylandFrame(data nint, callback nint, time uint32);
 
+@StructLayout(LayoutKind.Sequential)
+internal struct LayerWaylandArguments {
+  internal var First nint
+  internal var Second nint
+  internal var Third nint
+  internal var Fourth nint
+}
+
 internal unsafe sealed class WaylandLayerWindow : IDisposable {
   private const EPIPE int32 = 32
 
   private let display nint
   private let surface nint
   private let options LayerWindowOptions
+  private var geometry LayerWindowOptions
   private let resize Action[int32, int32]
   private let requestClose Action
   private let allocations List[nint] = List[nint]()
@@ -53,6 +62,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     this.display = display
     this.surface = surface
     this.options = options
+    geometry = options
     this.resize = resize
     this.requestClose = requestClose
     onGlobal = Global
@@ -116,26 +126,46 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
 
   internal func Show() {
     if mapped { return }
-    let arguments * BackdropWaylandArgument = stackalloc[4]BackdropWaylandArgument
-    arguments[0].Value = nint(options.Width)
-    arguments[1].Value = nint(options.Height)
-    WaylandBackdrop.wl_proxy_marshal_array(layerSurface, 0u, arguments)
-    arguments[0].Value = nint(uint32(options.Anchors))
-    WaylandBackdrop.wl_proxy_marshal_array(layerSurface, 1u, arguments)
-    arguments[0].Value = nint(options.ExclusiveZone)
-    WaylandBackdrop.wl_proxy_marshal_array(layerSurface, 2u, arguments)
-    arguments[0].Value = nint(options.MarginTop)
-    arguments[1].Value = nint(options.MarginRight)
-    arguments[2].Value = nint(options.MarginBottom)
-    arguments[3].Value = nint(options.MarginLeft)
-    WaylandBackdrop.wl_proxy_marshal_array(layerSurface, 3u, arguments)
-    arguments[0].Value = nint(uint32(options.KeyboardInteractivity))
-    WaylandBackdrop.wl_proxy_marshal_array(layerSurface, 4u, arguments)
-    arguments[0].Value = nint(uint32(options.Layer))
-    WaylandBackdrop.wl_proxy_marshal_array(layerSurface, 8u, arguments)
+    ApplyGeometry()
+    var arguments = LayerWaylandArguments{First: nint(uint32(options.Layer))}
+    MarshalRequest(layerSurface, 8u, ref arguments)
     mapped = true
     WaylandBackdrop.wl_proxy_marshal_array(surface, 6u, nil)
     Roundtrip()
+  }
+
+  internal func SupportsGeometry(value LayerWindowOptions) bool ->
+    value.Layer == options.Layer && value.Namespace == options.Namespace
+      && value.Output?.NativeValue == options.Output?.NativeValue
+      && (value.KeyboardInteractivity != LayerWindowKeyboardInteractivity.OnDemand || version >= 4u)
+
+  internal func SetGeometry(value LayerWindowOptions) {
+    geometry = value
+    if !mapped { return }
+    ApplyGeometry()
+    WaylandBackdrop.wl_proxy_marshal_array(surface, 6u, nil)
+    WaylandBackdrop.wl_display_flush(display)
+  }
+
+  private func ApplyGeometry() {
+    var arguments = LayerWaylandArguments{First: nint(geometry.Width), Second: nint(geometry.Height)}
+    MarshalRequest(layerSurface, 0u, ref arguments)
+    arguments.First = nint(uint32(geometry.Anchors))
+    MarshalRequest(layerSurface, 1u, ref arguments)
+    arguments.First = nint(geometry.ExclusiveZone)
+    MarshalRequest(layerSurface, 2u, ref arguments)
+    arguments.First = nint(geometry.MarginTop)
+    arguments.Second = nint(geometry.MarginRight)
+    arguments.Third = nint(geometry.MarginBottom)
+    arguments.Fourth = nint(geometry.MarginLeft)
+    MarshalRequest(layerSurface, 3u, ref arguments)
+    arguments.First = nint(uint32(geometry.KeyboardInteractivity))
+    MarshalRequest(layerSurface, 4u, ref arguments)
+  }
+
+  shared {
+    @DllImport("libwayland-client.so.0", EntryPoint: "wl_proxy_marshal_array")
+    private func MarshalRequest(proxy nint, opcode uint32, ref arguments LayerWaylandArguments);
   }
 
   internal func Hide() {
@@ -197,8 +227,8 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     try {
       var argument = BackdropWaylandArgument{Value: nint(serial)}
       WaylandBackdrop.wl_proxy_marshal_array(proxy, 6u, &argument)
-      resize(width == 0u ? Math.Max(1, options.Width) : checked(int32(width)),
-        height == 0u ? Math.Max(1, options.Height) : checked(int32(height)))
+      resize(width == 0u ? Math.Max(1, geometry.Width) : checked(int32(width)),
+        height == 0u ? Math.Max(1, geometry.Height) : checked(int32(height)))
       Configured = true
       WaylandBackdrop.wl_display_flush(display)
     } catch (error Exception) { failure = error }

@@ -2049,6 +2049,7 @@ method|Goo.Window|RequestCapture|instance|public|generic:|(reusable:Goo.WindowCa
 method|Goo.Window|RequestClose|instance|public|generic:|()->System.Void
 method|Goo.Window|SetColors|instance|public|generic:|(background:Goo.Color,foreground:Goo.Color)->System.Void
 method|Goo.Window|SetFullscreenDisplay|instance|public|generic:|(display:Goo.WindowDisplayId)->Goo.WindowOperationResult
+method|Goo.Window|SetLayerGeometry|instance|public|generic:|(geometry:Goo.LayerWindowOptions)->Goo.WindowOperationResult
 method|Goo.Window|SetNativeDataDropFormats|instance|public|generic:|(formats:System.Collections.Generic.IReadOnlyList`1<System.String>)->Goo.WindowOperationResult
 method|Goo.Window|SetTopmost|instance|public|generic:|(value:System.Boolean)->Goo.WindowOperationResult
 method|Goo.Window|ShowFileDialogAsync|instance|public|generic:|(kind:Goo.FileDialogKind,options:Goo.FileDialogOptions?=null)->System.Threading.Tasks.Task`1<Goo.FileDialogResult>

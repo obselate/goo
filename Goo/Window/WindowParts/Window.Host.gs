@@ -439,6 +439,11 @@ public partial class Window {
           return
         }
         if nativeHidePending && windowTarget?.QueueWorkPending != true { hideNative(native) }
+        if pendingLayerGeometry != nil && windowTarget?.QueueWorkPending != true {
+          let geometry = pendingLayerGeometry!!
+          pendingLayerGeometry = nil
+          (native as SdlHost?)!!.SetLayerGeometry(geometry)
+        }
         consumeNativeMetrics()
         if !IsOpen {
           if profiling {
@@ -608,6 +613,7 @@ public partial class Window {
     || Application.HasPendingActivation
     || nativeModal?.HasCompletion == true
     || nativeHidePending && windowTarget?.QueueWorkPending != true
+    || pendingLayerGeometry != nil && windowTarget?.QueueWorkPending != true
 
   internal func SchedulerHasPendingQueueWork() bool -> windowTarget?.QueueWorkPending == true
     || windowTarget?.RetirementWorkPending == true
@@ -763,6 +769,7 @@ public partial class Window {
     profiler.Sink = nil
     windowTarget = nil
     host = nil
+    pendingLayerGeometry = nil
     embeddedHost = nil
     nativeHidePending = false
     schedulerLastTicks = 0.0

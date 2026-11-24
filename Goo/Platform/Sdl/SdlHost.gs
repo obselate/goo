@@ -307,6 +307,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     Require(SDL.SetWindowSize(window, width, height), "SDL_SetWindowSize")
   }
 
+  internal func SupportsLayerGeometry(geometry LayerWindowOptions) bool -> layerWindow!!.SupportsGeometry(geometry)
+  internal func SetLayerGeometry(geometry LayerWindowOptions) -> layerWindow!!.SetGeometry(geometry)
+
   public func SetMinimumSize(width int32, height int32) {
     ThrowIfDisposed()
     if layerWindow != nil || lockWindow != nil { return }
