@@ -480,7 +480,18 @@ let modes = []SmokeMode{
   SmokeMode("GOO_WINDOW_DISPLAY_SMOKE", "1", () -> WindowDisplaySmoke.Run()),
   SmokeMode("GOO_WINDOW_ACTIVATION_SMOKE", "1", () -> WindowActivationSmoke.Run()),
   SmokeMode("GOO_NATIVE_POPUP_SMOKE", "1", () -> PopupWindowSmoke.Run()),
-  SmokeMode("GOO_LAYER_WINDOW_CLOSE_SMOKE", "1", () -> LayerWindowCloseSmoke.Run()),
+  SmokeMode("GOO_LAYER_WINDOW_CLOSE_SMOKE", "1", () -> {
+    LayerWindowCloseSmoke.Run()
+    let info = ProcessStartInfo("python3")
+    info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "test_layer_window_failure.py"))
+    info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "Goo.AsyncReadbackSmoke.dll"))
+    info.Environment.Remove("GOO_LAYER_WINDOW_CLOSE_SMOKE")
+    using let fixture = Process.Start(info)!!
+    fixture.WaitForExit()
+    Require(fixture.ExitCode == 0, "Layer window disconnect or protocol error check failed")
+  }),
+  SmokeMode("GOO_LAYER_WINDOW_FAILURE_SMOKE", "", () -> LayerWindowCloseSmoke.RunFailure(
+    Environment.GetEnvironmentVariable("GOO_LAYER_WINDOW_FAILURE_SMOKE") == "protocol")),
   SmokeMode("GOO_EMBEDDED_HOST_SMOKE", "1", () -> EmbeddedHostSmoke.Run()),
   SmokeMode("GOO_DIAGNOSTIC_CAPTURE_BUSY_SMOKE", "1", () -> DiagnosticCaptureFixture.Run()),
   SmokeMode("GOO_PROFILER_SMOKE", "1", () -> ProfilerSmoke.Run()),

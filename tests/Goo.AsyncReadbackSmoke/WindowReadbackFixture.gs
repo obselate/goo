@@ -1888,6 +1888,31 @@ internal class LayerGeometryCell : Cell {
 
 public class LayerWindowCloseSmoke {
   shared {
+    public func RunFailure(protocolError bool) {
+      let window = Window{ Title: "Layer window failure", Root: LayerGeometryCell(),
+        LayerShell: LayerWindowOptions{ Width: 160, Height: 100 } }.Open()
+      let native = window.SdlHostForTest()!!
+      if !window.IsVisible { throw InvalidOperationException("The layer window did not configure") }
+      if protocolError {
+        unsafe {
+          let properties = SDL.GetWindowProperties(native.NativeWindow)
+          let surface = nint(SDL.GetPointerProperty(properties, "SDL.window.wayland.surface", nil))
+          let setBufferScale = 8u
+          var invalidScale = BackdropWaylandArgument{}
+          WaylandBackdrop.wl_proxy_marshal_array(surface, setBufferScale, &invalidScale)
+        }
+        native.Hide()
+      } else {
+        if native.Hide() != WindowOperationResult.Accepted {
+          throw InvalidOperationException("The layer window did not hide")
+        }
+        Console.WriteLine("layer-window-disconnect: ready")
+        Console.ReadLine()
+        native.RequestActivation()
+      }
+      Application.Run(window)
+    }
+
     public func Run() {
       CheckLiveGeometry()
       for hide in []bool{false, true} {
