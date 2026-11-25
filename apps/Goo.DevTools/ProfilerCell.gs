@@ -164,9 +164,7 @@ internal partial class ProfilerCell : Cell[Profiler] {
             Leading: MaterialIcons.Create(active ? "stop" : "fiber_manual_record", 18.0, theme.DangerColor),
             Disabled: fileBusy ||
                 session.State != DiagnosticConnectionState.Connected ||
-                !session
-                .Capabilities
-                .ProfilerTrace,
+                !session.Capabilities.ProfilerTrace,
             OnClick: () -> ToggleRecording(active),
         }
         record.Key = "profiler-record"
@@ -346,9 +344,7 @@ internal partial class ProfilerCell : Cell[Profiler] {
     private func Problem() string {
         guard let trace = session.Profiler else {
             let unavailable = session.State == DiagnosticConnectionState.Connected &&
-                !session
-                .Capabilities
-                .ProfilerTrace
+                !session.Capabilities.ProfilerTrace
             return unavailable ? "Recording is not available for this target" : ""
         }
         let parts = List[string]()
