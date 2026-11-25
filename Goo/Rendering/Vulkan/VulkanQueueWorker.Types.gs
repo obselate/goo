@@ -1,6 +1,5 @@
 package Goo
 
-import System
 import System.Threading
 import System.Diagnostics
 
@@ -81,9 +80,7 @@ internal unsafe sealed class VulkanQueueMailbox {
       || Phase == VulkanQueueMailboxPhase.CompletionWaitRunning
   }
 
-  internal func NotifyCompletion() {
-    host?.Wake()
-  }
+  internal func NotifyCompletion() { host?.Wake() }
 
   internal func PrepareSubmit(commandBuffer VkCommandBuffer, waitSemaphore VkSemaphore,
     signalSemaphore VkSemaphore) {

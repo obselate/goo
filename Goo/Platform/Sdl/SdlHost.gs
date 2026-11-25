@@ -350,7 +350,8 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   internal func SetLayerGeometry(geometry LayerWindowOptions, holdForConfigure bool = false) ->
     layerWindow!!.SetGeometry(geometry, holdForConfigure)
 
-  internal func SupportsInputRegion() bool -> waylandWindowProperties != 0u && lockWindow == nil && popupParent == nil
+  internal func SupportsInputRegion() bool ->
+    waylandWindowProperties != 0u && lockWindow == nil && popupParent == nil && !PresentsStillImage
 
   internal func SetInputRegion(rectangles [] ? ElementRect) bool {
     if inputRegion == nil {

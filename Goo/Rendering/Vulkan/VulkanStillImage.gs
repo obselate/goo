@@ -191,7 +191,6 @@ internal unsafe sealed class VulkanStillImage : IDisposable {
     fd.SetHandleAsInvalid()
     memory = allocated
     var binding = VkBindImageMemoryInfo{sType: VkConstants.VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO, image: image, memory: memory}
-    if memory == 0uL { throw ExternalException("The still image requires a dedicated import") }
     let bind = Marshal.GetDelegateForFunctionPointer[StillBindImage](nint(native.vkBindImageMemory2))
     staging = VulkanBufferFactory.CreateMapped(device, native, runtime.MemoryAllocator, nil, uint64(Width) * uint64(Height) * 4uL,
       uint32(VkConstants.VK_BUFFER_USAGE_TRANSFER_SRC_BIT), VulkanMemoryPolicy(

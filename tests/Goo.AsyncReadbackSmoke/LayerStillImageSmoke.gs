@@ -30,6 +30,8 @@ internal class LayerStillImageSmoke {
         if direct {
           Require(first.CaptureTargetForTest() == nil && second.CaptureTargetForTest() == nil,
             "Direct layer windows created swapchain targets")
+          Require(first.SetInputRegion([]ElementRect{}) == WindowOperationResult.Unsupported,
+            "Direct layer windows accepted an input region")
           Wait(first, second, () -> sharedImage.NativeStorage != nil
             && !first.SdlHostForTest()!!.StillImagePending && !second.SdlHostForTest()!!.StillImagePending)
           guard let storage = sharedImage.NativeStorage else { throw InvalidOperationException("Shared image was not uploaded") }

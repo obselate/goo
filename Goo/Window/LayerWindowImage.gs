@@ -166,10 +166,10 @@ public class LayerWindowImage {
         runtime = VulkanSharedRuntime.TryAcquire()
       }
       guard let active = runtime else { return FailImport(presenter) }
-      if !VulkanStillImage.Supports(active) { return FailImport(presenter) }
+      if !VulkanStillImage.Supports(active) { return FailImport(presenter, cacheFailure: true) }
       if let pixels = reduced ?? decoded.Source {
         guard let candidate = VulkanStillImage.TryImport(pixels, presenter.RenderNode!!, presenter.Formats,
-          ref nextCandidate) else { return FailImport(presenter) }
+          ref nextCandidate) else { return FailImport(presenter, cacheFailure: true) }
         importing = candidate
         let transfer = candidate.StartUpload(pixels)
         uploading = transfer
@@ -209,8 +209,8 @@ public class LayerWindowImage {
     }
   }
 
-  private func FailImport(presenter WaylandStillImage) bool {
-    if storage == nil { failedRenderNode = presenter.RenderNode }
+  private func FailImport(presenter WaylandStillImage, cacheFailure bool = false) bool {
+    if cacheFailure && storage == nil { failedRenderNode = presenter.RenderNode }
     if !importFailureReported {
       Console.Error.WriteLine("Wayland still image '$path' cannot import DMA-BUFs from ${presenter.RenderNode}. Using the swapchain.")
       importFailureReported = true

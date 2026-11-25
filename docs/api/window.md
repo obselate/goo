@@ -1981,7 +1981,7 @@ Requests borderless fullscreen on the selected display, including retargeting an
 
 ### `SetInputRegion(ElementRect[])`
 
-Sets the input region for an open Wayland toplevel or layer-shell window. The compositor applies the region when the next frame is committed.
+Sets the input region for an open Wayland toplevel or layer-shell window. The compositor applies the region when the next frame is committed. Direct still-image presentation does not support input regions.
 
 - `rectangles`: the union of rectangles in surface-local logical pixels, rounded out to whole pixels. Null restores the full surface. An empty array disables pointer and touch input.
 
