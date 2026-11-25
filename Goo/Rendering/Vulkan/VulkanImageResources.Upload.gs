@@ -427,12 +427,12 @@ internal unsafe partial class VulkanImageResources : IDisposable {
                   throw InvalidOperationException("Vulkan image upload submission identity is invalid")
                 }
             } else {
-              if !entry.UploadRecorded || entry.UploadCommandBuffer == 0uL {
-                throw InvalidOperationException("Vulkan image upload is not recorded")
-              }
               if entry.UploadCommandBuffer != commandBuffer {
                 index++
                 continue
+              }
+              if !entry.UploadRecorded {
+                throw InvalidOperationException("Vulkan image upload is not recorded")
               }
               if entry.UploadFence != 0uL {
                 throw InvalidOperationException("Vulkan image upload fence is assigned before submit")
