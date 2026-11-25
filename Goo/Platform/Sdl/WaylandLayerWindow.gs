@@ -37,6 +37,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   private let onClosed LayerWaylandClosed
   private let onFrame LayerWaylandFrame
   private var library nint
+  private var callbackInterface nint
   private var queue nint
   private var registry nint
   private var manager nint
@@ -50,10 +51,12 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   private var closePending bool
   private var pendingConfigure (uint32, uint32, uint32)?
   private var frameListener nint
+  private var presentFrame nint
   private var framePending bool
   internal prop Presented bool { get; set; }
   internal prop Configured bool { get; private set; }
   internal prop Visible bool { get -> mapped && Configured }
+  internal prop FrameReady bool { get -> presentFrame == nint(0) }
   internal prop Output WindowDisplayId? { get -> options.Output }
   internal prop KeyboardInteractivity LayerWindowKeyboardInteractivity { get -> geometry.KeyboardInteractivity }
 
@@ -69,7 +72,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     onRemove = Remove
     onConfigure = Configure
     onClosed = Closed
-    onFrame = (data nint, callback nint, time uint32) -> { framePending = false }
+    onFrame = FrameDone
     try { Initialize(output) }
     catch (error Exception) { Dispose()
       rethrow }
@@ -77,6 +80,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
 
   private func Initialize(output nint) {
     library = NativeLibrary.Load("libwayland-client.so.0")
+    callbackInterface = NativeLibrary.GetExport(library, "wl_callback_interface")
     queue = WaylandBackdrop.wl_display_create_queue(display)
     if queue == nint(0) { throw InvalidOperationException("Cannot create the layer-shell event queue") }
     if surfaceInterface == nint(0) { CreateInterfaces(library) }
@@ -180,19 +184,46 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     mapped = false
     if Presented { Configured = false }
     Presented = false
+    FinishPresent(false)
     Roundtrip(dispatchLayer: true)
   }
 
-  private func DrainFrame() {
+  internal func PreparePresent() {
+    presentFrame = RequestFrame(nint(0))
+  }
+
+  internal func FinishPresent(committed bool) {
+    if !committed && presentFrame != nint(0) {
+      WaylandBackdrop.wl_proxy_destroy(presentFrame)
+      presentFrame = nint(0)
+    }
+  }
+
+  private func FrameDone(data nint, callback nint, time uint32) {
+    if callback == presentFrame {
+      WaylandBackdrop.wl_proxy_destroy(callback)
+      presentFrame = nint(0)
+      SdlRuntime.Wake()
+    } else {
+      framePending = false
+    }
+  }
+
+  private func RequestFrame(eventQueue nint) nint {
     var argument = BackdropWaylandArgument{}
-    let callback = WaylandBackdrop.wl_proxy_marshal_array_constructor_versioned(surface, 3u, &argument,
-      NativeLibrary.GetExport(library, "wl_callback_interface"), 1u)
+    let callback = WaylandBackdrop.wl_proxy_marshal_array_constructor_versioned(surface, 3u, &argument, callbackInterface, 1u)
     if callback == nint(0) { throw InvalidOperationException("Cannot create the layer frame callback") }
+    WaylandBackdrop.wl_proxy_set_queue(callback, eventQueue)
+    if WaylandBackdrop.wl_proxy_add_listener(callback, frameListener, nint(0)) != 0 {
+      WaylandBackdrop.wl_proxy_destroy(callback)
+      throw InvalidOperationException("Cannot listen to the layer frame callback")
+    }
+    return callback
+  }
+
+  private func DrainFrame() {
+    let callback = RequestFrame(queue)
     try {
-      WaylandBackdrop.wl_proxy_set_queue(callback, queue)
-      if WaylandBackdrop.wl_proxy_add_listener(callback, frameListener, nint(0)) != 0 {
-        throw InvalidOperationException("Cannot listen to the layer frame callback")
-      }
       framePending = true
       WaylandBackdrop.wl_proxy_marshal_array(surface, 6u, nil)
       let started = Stopwatch.GetTimestamp()
@@ -260,6 +291,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   public func Dispose() {
     if disposed { return }
     disposed = true
+    FinishPresent(false)
     if layerSurface != nint(0) {
       WaylandBackdrop.wl_proxy_marshal_array(layerSurface, 7u, nil)
       WaylandBackdrop.wl_proxy_destroy(layerSurface)

@@ -1918,12 +1918,15 @@ public class LayerWindowCloseSmoke {
           }
         }
         let target = window.CaptureTargetForTest()!!
+        let native = window.SdlHostForTest()!!
+        WaitForLayerFrame(native)
+        if !hide { CheckFramePacing(window, target, native) }
         window.RuntimeHoldNextQueueSubmitForTest()
         window.ForceRenderForTest(0.0)
         if !window.RuntimeWaitForHeldQueueCallForTest(5000) {
           throw InvalidOperationException("Layer frame did not reach held submission")
         }
-        if window.SdlHostForTest()!!.Hide() != WindowOperationResult.Accepted {
+        if native.Hide() != WindowOperationResult.Accepted {
           throw InvalidOperationException("Layer surface did not hide")
         }
         VulkanSharedRuntime.ReleaseHeldQueueCallForTest()
@@ -1932,7 +1935,7 @@ public class LayerWindowCloseSmoke {
           if target.PresentPrepareForTest { break }
           Thread.Sleep(1)
         }
-        if !target.PresentPrepareForTest || window.SdlHostForTest()!!.PrepareFirstPresent() {
+        if !target.PresentPrepareForTest || native.PrepareFirstPresent() {
           throw InvalidOperationException("Hidden layer frame did not stop at present preparation")
         }
         if hide {
@@ -1954,6 +1957,35 @@ public class LayerWindowCloseSmoke {
         if window.IsOpen { throw InvalidOperationException("Layer close did not finish within 2000 passes") }
       }
       Console.WriteLine("layer-window-close: close=passed hide=passed")
+    }
+
+    private func WaitForLayerFrame(native SdlHost) {
+      let deadline = Environment.TickCount64 + 5000L
+      while !native.WaylandVulkanFrameReady() && Environment.TickCount64 < deadline {
+        SdlRuntime.WaitEventsBounded(100, 64)
+      }
+      if !native.WaylandVulkanFrameReady() {
+        throw InvalidOperationException("Visible layer frame callback did not arrive")
+      }
+    }
+
+    private func CheckFramePacing(window Window, target VulkanWindowTarget, native SdlHost) {
+      let presented = window.PresentationAcceptedIndexForTest
+      window.ForceRenderForTest(0.0)
+      let deadline = Environment.TickCount64 + 5000L
+      while window.PresentationAcceptedIndexForTest == presented && Environment.TickCount64 < deadline {
+        target.PollQueueCompletion()
+        Thread.Sleep(1)
+      }
+      if window.PresentationAcceptedIndexForTest == presented || native.WaylandVulkanFrameReady() {
+        throw InvalidOperationException("Layer present did not leave a Wayland frame callback pending")
+      }
+      window.ForceRenderForTest(0.0)
+      if target.QueueWorkPending {
+        throw InvalidOperationException("Layer frame queued work before the previous callback was dispatched")
+      }
+      WaitForLayerFrame(native)
+      Console.WriteLine("layer-window-pacing: pending callback prevented another submission and then woke rendering")
     }
 
     private func CheckLiveGeometry() {
