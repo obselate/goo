@@ -325,6 +325,95 @@ internal class VulkanSceneCompilerFixtures {
     }
   }
 
+  func AnimatedStrokeRetainsResidentSibling() bool {
+    let owner = VectorPathNormalizedOwner(1, 1, 0.0, 0.0, 20.0, 20.0)
+    let path = VectorPath.CreateMutableNormalized(owner, 0.0, 0.0, 20.0, 20.0)
+    let curves = []PathQuadratic{PathGeometry.Quadratic(2.0F, 10.0F, 10.0F, 10.0F, 18.0F, 10.0F)}
+    let contours = []PathContour{PathGeometry.Contour(0, 1, false)}
+    if !path.UpdateNormalized(curves, 1, contours, 1) { return false }
+    let siblingPath = PathBuilder(0.0, 0.0, 20.0, 20.0)
+      .MoveTo(2.0, 2.0).LineTo(18.0, 2.0).LineTo(10.0, 18.0).Close().Build()
+    let create = (end float64) -> Container{
+      Width: 100, Height: 100,
+      Container{Width: 20, Height: 20, Shape{
+        Width: 20, Height: 20, Path: path, Stroke: VectorStroke(2.0, Color.White), StrokeEnd: end,
+      }},
+      Container{Width: 20, Height: 20, Shape{
+        Width: 20, Height: 20, Path: siblingPath, Fill: VectorPaint(Color.White),
+      }},
+    }
+    let resolver = Resolver{}
+    let reconciler = Reconciler{Res: resolver}
+    let root = reconciler.Mount(create(1.0))
+    using let resources = VulkanPathResources(VulkanPathAtlas(16384uL), VulkanPathIdentityRegistry())
+    using let paths = VulkanPathScene(resources)
+    let compiler = VulkanSceneCompiler(64)
+    let frame = compiler.Frame
+    let compile = () -> compiler.Compile(root, Color.Transparent, 100.0F, 100.0F)
+    let changeStroke = (end float64) -> {
+      reconciler.Diff(root, create(end))
+      resolver.FlushEffects()
+    }
+    var fence uint64
+    let publish = () -> {
+      fence++
+      paths.RecordUpload(1)
+      if paths.FlushBeforeSubmit() != 0 { throw InvalidOperationException("Path upload flush failed") }
+      paths.MarkSubmitted(1, fence)
+      paths.Collect(fence)
+    }
+    try {
+      Layout().Calculate(root, 100.0F, 100.0F)
+      compiler.SetPathScene(paths)
+      compile()
+      if frame.AnalyticPathBandCount != 2 { return false }
+      var previous = frame.AnalyticPathBands[0].PathId
+      let sibling = frame.AnalyticPathBands[1].PathId
+      paths.PrepareUpload()
+      publish()
+      for end in []float64{0.8, 0.6, 0.4} {
+        changeStroke(end)
+        if compile().PathResourceDeferred || compiler.RangeHitCount != 1 || compiler.RangeCompileCount != 3
+          || frame.AnalyticPathBandCount != 2 { return false }
+        let current = frame.AnalyticPathBands[0].PathId
+        if current.LogicalId != previous.LogicalId || current.Version <= previous.Version
+          || frame.AnalyticPathBands[1].PathId.Version != sibling.Version
+          || frame.AnalyticPathBands[1].PathId.LogicalId != sibling.LogicalId { return false }
+        previous = current
+        if end == 0.4 {
+          if compile().PathResourceDeferred || compiler.RangeHitCount != 1 || compiler.RangeCompileCount != 3
+            || frame.AnalyticPathBandCount != 2 || frame.AnalyticPathBands[0].PathId.Version != current.Version {
+            return false
+          }
+        }
+        paths.PrepareUpload()
+        if end != 0.4 { publish() }
+      }
+      changeStroke(0.2)
+      for _ in 0 ... 2 {
+        if !compile().PathResourceDeferred || compiler.RangeHitCount != 1 || compiler.RangeCompileCount != 3
+          || frame.AnalyticPathBandCount != 1 || frame.AnalyticPathBands[0].PathId.LogicalId != sibling.LogicalId {
+          return false
+        }
+      }
+      publish()
+      paths.PrepareUpload()
+      publish()
+      if compile().PathResourceDeferred || compiler.RangeHitCount != 1 || compiler.RangeCompileCount != 3
+        || frame.AnalyticPathBandCount != 2 { return false }
+      let stroke = root.Children[0].Children[0]
+      let expected = resources.Resolve(ShapeGeometry.Stroke(stroke, ShapeGeometry.Resolve(stroke, stroke.Rect)), FillRule.NonZero)
+      let current = frame.AnalyticPathBands[0]
+      if !expected.Published || current.PathId.LogicalId != previous.LogicalId
+        || current.PathId.Version <= previous.Version || current.PathId.Version != expected.PathId.Version
+        || current.AtlasWordOffset != expected.BaseWord || current.AtlasWordCount != expected.WordCount { return false }
+      compile()
+      return compiler.RangeHitCount == 1 && compiler.RangeCompileCount == 0 && frame.AnalyticPathBandCount == 2
+    } finally {
+      NodeLifecycle.DisposeTree(root)
+    }
+  }
+
   func LayerPaintCoverageSurvivesViewportClipping() bool {
     let create = (height int32) -> Container{
       Width: 100,

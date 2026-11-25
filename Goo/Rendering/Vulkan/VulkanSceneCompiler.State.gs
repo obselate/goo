@@ -190,6 +190,7 @@ internal partial class VulkanSceneCompiler {
 
       frame.TrimLayerCoverage(visibleNodeCount)
       frame.TrimTransformCapacity(visibleNodeCount)
+      pathScene?.CommitCurrentReferences()
       FinishRangeFrame()
       if frame.ShaderEffectCount != 0 {
         for index in 0 ... frame.LayerCount {
