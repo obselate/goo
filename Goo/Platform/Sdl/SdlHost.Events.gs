@@ -22,9 +22,6 @@ internal unsafe partial class SdlHost {
     }
     if eventType >= SDLEventType.DisplayFirst && eventType <= SDLEventType.DisplayLast {
       RefreshDisplayPacingForDisplay(nativeEvent.Display.DisplayID)
-      if PresentsStillImage && (layerWindow?.Output?.NativeValue ?? SDL.GetDisplayForWindow(window)) == nativeEvent.Display.DisplayID {
-        DisplayChanged?.Invoke()
-      }
       return
     }
     if eventType >= SDLEventType.WindowFirst && eventType <= SDLEventType.WindowLast {

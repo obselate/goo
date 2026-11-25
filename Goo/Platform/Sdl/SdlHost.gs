@@ -291,6 +291,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     pacing.DisplayId == displayId{
       RefreshDisplayPacing(true)
     }
+    if PresentsStillImage && (layerWindow?.Output?.NativeValue ?? currentDisplay) == displayId {
+      DisplayChanged?.Invoke()
+    }
   }
 
   public func Wake() {

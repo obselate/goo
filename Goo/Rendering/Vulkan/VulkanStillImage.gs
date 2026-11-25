@@ -5,6 +5,7 @@ import System.Collections.Generic
 import System.Runtime.CompilerServices
 import System.Runtime.InteropServices
 import System.Threading
+import System.Threading.Tasks
 
 internal data struct WaylandDmaFormat(FourCC uint32, Modifier uint64) { }
 internal data struct WaylandDmaPlane(Offset uint32, Stride uint32) { }
@@ -74,6 +75,9 @@ internal unsafe sealed class VulkanStillImage : IDisposable {
   }
 
   shared {
+    private var activeUploads int32
+    internal prop UploadPending bool { get -> Interlocked.CompareExchange(ref activeUploads, 0, 0) != 0 }
+
     internal func Supports(runtime VulkanSharedLease) bool ->
       (runtime.Dispatch.ExternalMemoryKinds & DmaBuf) != 0u && runtime.Dispatch.ForeignQueueFamily
 
@@ -198,7 +202,15 @@ internal unsafe sealed class VulkanStillImage : IDisposable {
 
   internal func Export() ExternalNativeHandle? -> initialized ? buffer.Export() : nil
 
-  internal func Upload(source ImageSource) bool {
+  internal func StartUpload(source ImageSource) Task[bool] {
+    Interlocked.Increment(ref activeUploads)
+    return Task.Run[bool](() -> {
+      try { return Upload(source) }
+      finally { Interlocked.Decrement(ref activeUploads) }
+    })
+  }
+
+  private func Upload(source ImageSource) bool {
     let scratch = Marshal.AllocHGlobal(Unsafe.SizeOf[StillImageScratch]())
     try {
       let format = if Format.FourCC == 0x34324241u { VkConstants.VK_FORMAT_R8G8B8A8_UNORM }
@@ -296,16 +308,20 @@ internal unsafe sealed class VulkanStillImage : IDisposable {
 
   internal func ReleaseStaging() {
     if staging.Buffer == 0uL { return }
-    DestroyHandle(nint(runtime.Dispatch.vkDestroyBuffer), staging.Buffer)
-    runtime.MemoryAllocator.Release(staging.Allocation)
+    if !runtime.Disposed {
+      DestroyHandle(nint(runtime.Dispatch.vkDestroyBuffer), staging.Buffer)
+      runtime.MemoryAllocator.Release(staging.Allocation)
+    }
     staging = VulkanBufferCreation{}
   }
 
   private func Destroy() {
     ReleaseStaging()
-    let dispatch = runtime.Dispatch
-    DestroyHandle(nint(dispatch.vkDestroyImage), image)
-    DestroyHandle(nint(dispatch.vkFreeMemory), memory)
+    if !runtime.Disposed {
+      let dispatch = runtime.Dispatch
+      DestroyHandle(nint(dispatch.vkDestroyImage), image)
+      DestroyHandle(nint(dispatch.vkFreeMemory), memory)
+    }
     buffer.Dispose()
   }
 

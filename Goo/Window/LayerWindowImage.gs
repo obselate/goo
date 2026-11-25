@@ -171,7 +171,7 @@ public class LayerWindowImage {
         guard let candidate = VulkanStillImage.TryImport(pixels, presenter.RenderNode!!, presenter.Formats,
           ref nextCandidate) else { return FailImport(presenter) }
         importing = candidate
-        let transfer = Task.Run[bool](() -> candidate.Upload(pixels))
+        let transfer = candidate.StartUpload(pixels)
         uploading = transfer
         transfer.ContinueWith((task Task) -> owner.NotifyStillImageReady(), TaskScheduler.Default)
       } else {
