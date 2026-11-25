@@ -27,6 +27,7 @@ internal enum VulkanSceneRangeBoundary {
 internal struct VulkanSceneRangeCompilation {
     internal var ParentSlot int32
     internal var Counters VulkanSceneRangeCounters
+    internal var PathResourceRetryCount int32
 }
 
 internal struct VulkanSceneRangeEntry {
@@ -173,8 +174,7 @@ internal partial class VulkanSceneCompiler {
 
     private func FinishRangeFrame() {
         if textScene?.RedrawRequired == true || textScene?.ResourceDeferred == true
-        || imageScene?.RedrawRequired == true
-        || pathScene?.RedrawRequired == true || pathScene?.ResourceDeferred == true {
+        || imageScene?.RedrawRequired == true {
             rangeReady = false
             return
         }
@@ -397,7 +397,11 @@ internal partial class VulkanSceneCompiler {
         if slot < 0 {
             return VulkanSceneRangeCompilation{}
         }
-        let state = VulkanSceneRangeCompilation{ParentSlot: rangeActiveSlot, Counters: RangeCounters()}
+        let state = VulkanSceneRangeCompilation{
+            ParentSlot: rangeActiveSlot,
+            Counters: RangeCounters(),
+            PathResourceRetryCount: pathScene?.ResourceRetryCount ?? 0,
+        }
         if slot >= 0 {
             var entry = rangeEntries[slot]
             entry.Valid = false
@@ -453,6 +457,7 @@ internal partial class VulkanSceneCompiler {
                 entry.ContentScrollY = scroller?.PlacedScrollY ?? 0.0F
             }
             entry.Valid = completed && StaticRangeEffects(entry.Start.Effects, entry.End.Effects)
+            && state.PathResourceRetryCount == (pathScene?.ResourceRetryCount ?? 0)
             && entry.Counters.UnsupportedNodes == 0 && entry.Counters.UnsupportedPrimitives == 0
             rangeEntries[slot] = entry
         }
