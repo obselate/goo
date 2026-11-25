@@ -4,6 +4,8 @@ import System
 
 /// Hosts a Goo tree in a native window.
 public partial class Window {
+  private var nativePointer Point?
+
   internal func NativeResizable() bool -> if let native = host { native.NativeResizable } else { false }
 
   internal func queueNativeMetrics(logicalWidth int32, logicalHeight int32,
@@ -36,28 +38,48 @@ public partial class Window {
         }
       }
     }
+    let layoutX = float32(float64(px) / UiScale)
+    let layoutY = float32(float64(py) / UiScale)
+    let info = input.HitInfo(n, layoutX, layoutY)
     if !decorated && resizable && state == WindowState.Normal {
-      let band = resizeBand * UiScale
-      let logicalWidth = float32(NativeWidth)
-      let logicalHeight = float32(NativeHeight)
-      let left = px < band
-      let right = px > logicalWidth - band
-      let top = py < band
-      let bottom = py > logicalHeight - band
+      let displayScale = float64(host?.DisplayScale ?? 0.0F)
+      let scale = UiScale * (displayScale > 0.0 ? displayScale / float64(dpi.X) : 1.0)
+      let outsideBorder = host?.OutsideResizeBorder == true
+      let cornerSquare = resizeBand * scale
+      let corner = Math.Max(2.0 * resizeBand, 16.0) * scale
+      let width = float32(NativeWidth)
+      let height = float32(NativeHeight)
+      let insideCorner = outsideBorder && px >= 0 && px < width && py >= 0 && py < height
+        && (px < cornerSquare || px >= width - cornerSquare)
+        && (py < cornerSquare || py >= height - cornerSquare)
+      let band = !outsideBorder || insideCorner ? cornerSquare : 0.0
+      let onLeft = px < band
+      let onRight = px >= width - band
+      let onTop = py < band
+      let onBottom = py >= height - band
+      let constraints = if onLeft || onRight || onTop || onBottom { ResizeConstraints } else { WindowResizeConstraints.None }
+      let nearLeft = px < corner && (constraints & WindowResizeConstraints.Left) == WindowResizeConstraints.None
+      let nearRight = px >= width - corner && (constraints & WindowResizeConstraints.Right) == WindowResizeConstraints.None
+      let nearTop = py < corner && (constraints & WindowResizeConstraints.Top) == WindowResizeConstraints.None
+      let nearBottom = py >= height - corner && (constraints & WindowResizeConstraints.Bottom) == WindowResizeConstraints.None
+      let left = onLeft && nearLeft
+      let right = onRight && nearRight
+      let top = onTop && nearTop
+      let bottom = onBottom && nearBottom
 
-      if top && left {
+      if (top && nearLeft) || (left && nearTop) {
         return WindowHitResult.TopLeft
       }
-      if top && right {
+      if (top && nearRight) || (right && nearTop) {
         return WindowHitResult.TopRight
       }
-      if bottom && left {
+      if (bottom && nearLeft) || (left && nearBottom) {
         return WindowHitResult.BottomLeft
       }
-      if bottom && right {
+      if (bottom && nearRight) || (right && nearBottom) {
         return WindowHitResult.BottomRight
       }
-      if (top || bottom || left || right) && !input.ScrollbarAt(n, float32(float64(px) / UiScale), float32(float64(py) / UiScale)) {
+      if (top || bottom || left || right) && !info.HasActivation && !input.ScrollbarAt(n, layoutX, layoutY) {
         if top {
           return WindowHitResult.Top
         }
@@ -67,7 +89,9 @@ public partial class Window {
         return left ? WindowHitResult.Left : WindowHitResult.Right
       }
     }
-    let info = input.HitInfo(n, float32(float64(px) / UiScale), float32(float64(py) / UiScale))
+    if info.MaximizeButton {
+      return WindowHitResult.MaximizeButton
+    }
     if info.HasContent {
       return WindowHitResult.Normal
     }

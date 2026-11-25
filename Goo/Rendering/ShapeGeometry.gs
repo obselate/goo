@@ -36,12 +36,12 @@ internal partial class ShapeGeometry {
         H: bounds.H - top - bottom - strokeInset,
       }
       let mapping = PathGeometry.Map(n.ShapePath, n.ShapeFit, content.X, content.Y, content.W, content.H)
-      let source = if mapping.Valid && deviceScale > 0.0F {
-        PathGeometry.ForDrawing(n.ShapePath,
+      let rounded = mapping.Valid
+      ? PathRoundedCache.Shared.Resolve(n.ShapePath, mapping, n.ShapeCornerRadius) : VectorPath.Empty
+      let path = if mapping.Valid && deviceScale > 0.0F {
+        PathGeometry.ForDrawing(rounded,
           deviceScale * MathF.Max(MathF.Abs(mapping.ScaleX), MathF.Abs(mapping.ScaleY)))
-      } else { n.ShapePath }
-      let path = mapping.Valid
-      ? PathRoundedCache.Shared.Resolve(source, mapping, n.ShapeCornerRadius) : VectorPath.Empty
+      } else { rounded }
       let strokeVisible = strokeWidth > 0.0F && n.BorderLeftColor.A > 0.0F
         && n.StrokeStart < n.StrokeEnd
       return ResolvedShapeGeometry(content, mapping, path, strokeWidth,

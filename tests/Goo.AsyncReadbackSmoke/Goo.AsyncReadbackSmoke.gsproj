@@ -15,6 +15,8 @@
                      Embed="true" TargetPath="embedded-control.goo-effect" />
     <GooShaderEffect Include="Shaders/blend_result.frag.slang"
                      TargetPath="blend_result.frag.goo-effect" SourceIndependent="true" />
+    <GooShaderEffect Include="Shaders/offset_backdrop.frag.slang"
+                     TargetPath="offset_backdrop.frag.goo-effect" />
     <GooShaderEffect Include="Shaders/generator_effect.frag.slang"
                      TargetPath="generator_effect.frag.goo-effect"
                      SourceIndependent="true" />
@@ -31,6 +33,14 @@
     <Compile Remove="VectorRetainSmoke.gs" />
     <Compile Include="../Shared/RoundedOverflowScene.gs" Link="RoundedOverflowScene.gs" />
     <Compile Include="../Shared/ClipboardDataSmoke.gs" Link="ClipboardDataSmoke.gs" />
+    <Content Include="../NativeWindow/test_layer_window_failure.py" Link="test_layer_window_failure.py"
+             CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../NativeWindow/test_layer_window_resize.py" Link="test_layer_window_resize.py"
+             CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../NativeWindow/test_window_input_region.py;../NativeWindow/virtual_pointer.c"
+             Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../.github/scripts/with-headless-wayland.sh"
+             Link="with-headless-wayland.sh" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../Shared/Assets/local-rgba.png" Link="local-rgba.png"
              CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../Shared/Assets/local-*.jpg;../Shared/Assets/local-*.gif" Link="%(Filename)%(Extension)"

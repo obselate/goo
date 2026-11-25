@@ -285,7 +285,7 @@ public class TextDocument {
         && undoHistory.Count != 0 && undoHistory.Last!!.Value.Group == historyGroup
       if !coalescing && groupHistory.Count == 0 && undoHistory.Count == HistoryLimit {
         discarded ??= List[TextHistoryTransaction]()
-        for value in undoHistory.First!!.Value.Transactions { discarded!!.Add(value) }
+        for value in undoHistory.First!!.Value.Transactions { discarded.Add(value) }
         undoHistory.RemoveFirst()
       }
       if undoGroupDepth != 0 {

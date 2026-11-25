@@ -19,6 +19,56 @@ internal unsafe struct SdlVulkanWaylandSurfaceInfo {
 }
 
 internal unsafe partial class SdlHost {
+  private var waylandVulkanFrame bool
+
+  shared {
+    @DllImport("SDL3", EntryPoint: "Goo_WaylandVulkanGeometryVersion", CallingConvention: CallingConvention.Cdecl)
+    private func WaylandVulkanGeometryVersionNative(window nint) uint64;
+    @DllImport("SDL3", EntryPoint: "Goo_WaylandVulkanFrameReady", CallingConvention: CallingConvention.Cdecl)
+    private func WaylandVulkanFrameReadyNative(window nint) uint8;
+    @DllImport("SDL3", EntryPoint: "Goo_PrepareWaylandVulkanFrame", CallingConvention: CallingConvention.Cdecl)
+    private func PrepareWaylandVulkanFrameNative(window nint);
+    @DllImport("SDL3", EntryPoint: "Goo_FinishWaylandVulkanFrame", CallingConvention: CallingConvention.Cdecl)
+    private func FinishWaylandVulkanFrameNative(window nint, committed uint8);
+  }
+
+  internal prop WaylandLayer WindowLayer? { get -> layerWindow?.Layer }
+
+  internal func WaylandVulkanFrameReady() bool ->
+    lockWindow?.FrameReady ?? layerWindow?.FrameReady ?? (!waylandVulkanFrame || WaylandVulkanFrameReadyNative(windowHandle) != uint8(0))
+
+  internal func WaylandVulkanGeometryVersion() uint64 ->
+    waylandVulkanFrame ? WaylandVulkanGeometryVersionNative(windowHandle) : 0uL
+
+  internal func WaylandVulkanFrameMatches(version uint64, extent VkExtent2D) bool {
+    if let role = lockWindow { return role.Matches(extent) }
+    let current = WaylandVulkanGeometryVersion()
+    if current == 0uL { return true }
+    if current != version { return false }
+    var width int32 = 0
+    var height int32 = 0
+    let hasSize = SDL.GetWindowSizeInPixels(window, ref width, ref height)
+    if !hasSize { return false }
+    return uint32(width) == extent.width && uint32(height) == extent.height
+  }
+
+  internal func PrepareLockPresent() { lockWindow?.PreparePresent() }
+
+  internal func CancelLockPresent() { lockWindow?.FinishPresent(false) }
+
+  internal func PrepareWaylandVulkanFrame() {
+    layerWindow?.PreparePresent()
+    if waylandVulkanFrame { PrepareWaylandVulkanFrameNative(windowHandle) }
+    inputRegion?.Apply(LogicalWidth, LogicalHeight, FramebufferWidth, FramebufferHeight, DisplayScale)
+  }
+
+  internal func FinishWaylandVulkanFrame(committed bool) {
+    lockWindow?.FinishPresent(committed)
+    layerWindow?.FinishPresent(committed)
+    if waylandVulkanFrame { FinishWaylandVulkanFrameNative(windowHandle, committed ? uint8(1) : uint8(0)) }
+    if !committed { inputRegion?.Invalidate() }
+  }
+
   public prop PreferRequestedFramebufferExtent bool{ get -> false }
   public prop AllowInheritedCompositeAlpha bool{ get -> OperatingSystem.IsMacOS() || OperatingSystem.IsWindows() }
   internal prop WindowsPresentationHandle nint {

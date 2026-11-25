@@ -88,7 +88,7 @@ internal partial class ProfilerCell {
         header.Add(
             Caption(
                 "alloc",
-                peaks[key + "a"] < 0.0 ? "No allocation data": "Allocated per frame, max " + Bytes(peaks[key + "a"]),
+                peaks[key + "a"] < 0.0 ? "No allocation data" : "Allocated per frame, max " + Bytes(peaks[key + "a"]),
                 theme.MutedTextColor
             )
         )
@@ -144,7 +144,7 @@ internal partial class ProfilerCell {
                 continue
             }
             var ticks = r.EndTicks - r.Ticks
-            var bytes = r.Allocated == nil ? -1L: int64(r.Allocated ?? 0uL)
+            var bytes = r.Allocated == nil ? -1L : int64(r.Allocated ?? 0uL)
             if track >= 0 {
                 ticks = 0L
                 bytes = -1L
@@ -204,7 +204,7 @@ internal partial class ProfilerCell {
             shapes.Add(
                 Text{
                     Key: "bar-" + bar.Record.ToString(),
-                    Content: bar.Width >= 120.0 ? name + "  " + Time(trace, r.EndTicks - r.Ticks): name,
+                    Content: bar.Width >= 120.0 ? name + "  " + Time(trace, r.EndTicks - r.Ticks) : name,
                     Position: PositionType.Absolute,
                     Left: bar.Left + 4.0,
                     Top: float64(bar.Depth) * Row,
@@ -282,9 +282,9 @@ internal partial class ProfilerCell {
                 e.ReleaseCapture()
                 if Math.Abs(e.Position.X - pressX) <= 3.0 {
                     let bar = BarAt(track, e.Position.X, e.Position.Y)
-                    Select(bar >= 0 ? bars[bar].Record: -1)
-                    selectionStart = bar >= 0 ? trace.Records[selected].Ticks: 0L
-                    selectionEnd = bar >= 0 ? Math.Max(selectionStart + 1L, trace.Records[selected].EndTicks): 0L
+                    Select(bar >= 0 ? bars[bar].Record : -1)
+                    selectionStart = bar >= 0 ? trace.Records[selected].Ticks : 0L
+                    selectionEnd = bar >= 0 ? Math.Max(selectionStart + 1L, trace.Records[selected].EndTicks) : 0L
                 }
                 tableKey = ""
                 Rebuild()
@@ -316,8 +316,8 @@ internal partial class ProfilerCell {
                 },
                 Detail("Inclusive", Time(trace, r.EndTicks - r.Ticks), theme),
                 Detail("Exclusive", Time(trace, Math.Max(0L, nesting.Exclusive[bar.Record])), theme),
-                Detail("Allocated", r.Allocated == nil ? "No data": Bytes(float64(r.Allocated ?? 0uL)), theme),
-                Detail("Self allocated", own < 0L ? "No data": Bytes(float64(own)), theme),
+                Detail("Allocated", r.Allocated == nil ? "No data" : Bytes(float64(r.Allocated ?? 0uL)), theme),
+                Detail("Self allocated", own < 0L ? "No data" : Bytes(float64(own)), theme),
                 Detail(
                     "Start",
                     trace.Milliseconds(r.Ticks).ToString("F3", CultureInfo.InvariantCulture) + " ms",
@@ -368,10 +368,10 @@ internal partial class ProfilerCell {
     private func Wheel(e WheelEvent, w float64) {
         if e.Modifiers.Ctrl {
             e.PreventDefault()
-            Zoom(e.Delta.Y > 0.0 ? 0.8: 1.25, Math.Clamp(e.Position.X / w, 0.0, 1.0))
+            Zoom(e.Delta.Y > 0.0 ? 0.8 : 1.25, Math.Clamp(e.Position.X / w, 0.0, 1.0))
         } else if e.Modifiers.Shift {
             e.PreventDefault()
-            Pan(e.Delta.Y > 0.0 ? -0.1: 0.1)
+            Pan(e.Delta.Y > 0.0 ? -0.1 : 0.1)
         }
     }
 
@@ -418,7 +418,7 @@ internal partial class ProfilerCell {
             last[slot] = int32(left + barWidth)
             let slotIndex = track * groups + GroupOf(name) + 1
             let top = float64(depth) * Row + 1.0
-            Rect(builders[slotIndex], left, top, barWidth > 3.0 ? barWidth - 1.0: barWidth, Row - 2.0)
+            Rect(builders[slotIndex], left, top, barWidth > 3.0 ? barWidth - 1.0 : barWidth, Row - 2.0)
             Rect(builders[edges + slotIndex], left, top, Math.Min(2.0, barWidth), Row - 2.0)
             bars.Add(ProfilerBar{Record: index, Track: track, Depth: depth, Left: left, Width: barWidth})
         }
@@ -457,7 +457,7 @@ internal partial class ProfilerCell {
                         Window: r.Window,
                         Thread: r.Thread,
                         Pump: r.Pump,
-                        Allocated: r.Allocated == nil ? -1L: int64(r.Allocated ?? 0uL),
+                        Allocated: r.Allocated == nil ? -1L : int64(r.Allocated ?? 0uL),
                         Observed: r.Source.EndsWith("-observed", StringComparison.Ordinal),
                     }
                 )
@@ -507,12 +507,12 @@ internal partial class ProfilerCell {
             || filterWindow != "" && r.Window != "" && r.Window != filterWindow {
                 continue
             }
-            var name = gpu ? "GPU " + ProfilerTrace.GpuStage(r.Event): LaneTitle(trace.EventName(r))
+            var name = gpu ? "GPU " + ProfilerTrace.GpuStage(r.Event) : LaneTitle(trace.EventName(r))
             if filterWindow == "" && trace.WindowNames.Count > 1 && r.Window != "" {
                 name = WindowTitle(r.Window) + " / " + name
             }
             if !timers.TryGetValue(name, out var t) {
-                t = []int64{0L, 0L, 0L, 0L, 0L, 0L, gpu ? 1L: 0L}
+                t = []int64{0L, 0L, 0L, 0L, 0L, 0L, gpu ? 1L : 0L}
                 timers.Add(name, t)
             }
             t[0]++
@@ -535,24 +535,24 @@ internal partial class ProfilerCell {
         for pair in timers {
             let t = pair.Value
             let gpu = t[6] == 1L
-            let mark = t[5] > 0L && t[5] < t[0]? " *": ""
+            let mark = t[5] > 0L && t[5] < t[0]? " *" : ""
             rows.Add(
                 ProfilerTableRow(
                     []string{
                         pair.Key,
                         t[0].ToString(CultureInfo.InvariantCulture),
                         Time(trace, t[1]),
-                        gpu ? "—": Time(trace, t[2]),
-                        t[5] == 0L ? "—": Bytes(float64(t[3])) + mark,
-                        t[5] == 0L ? "—": Bytes(float64(t[4])) + mark
+                        gpu ? "—" : Time(trace, t[2]),
+                        t[5] == 0L ? "—" : Bytes(float64(t[3])) + mark,
+                        t[5] == 0L ? "—" : Bytes(float64(t[4])) + mark
                     },
                     []float64{
                         0.0,
                         float64(t[0]),
                         float64(t[1]),
-                        gpu ? -1.0: float64(t[2]),
-                        t[5] == 0L ? -1.0: float64(t[3]),
-                        t[5] == 0L ? -1.0: float64(t[4])
+                        gpu ? -1.0 : float64(t[2]),
+                        t[5] == 0L ? -1.0 : float64(t[3]),
+                        t[5] == 0L ? -1.0 : float64(t[4])
                     },
                     "timer-" + pair.Key
                 )
@@ -580,14 +580,14 @@ internal partial class ProfilerCell {
         : name == "Motion" || name == "Transitions" ? 3
         : name == "Render" || name == "Paint" || name == "LayerCollect" || name == "LayerCreate" || name == "ClipAtlas"
         || name == "CanvasFlush" ? 4
-        : name == "Diagnostics" ? 6: 5
+        : name == "Diagnostics" ? 6 : 5
 
         private func TrackOf(name string) int32 {
             let group = GroupOf(name)
-            return group < 5 ? 0: group - 4
+            return group < 5 ? 0 : group - 4
         }
 
-        private func GroupColor(theme Theme, group int32) Color -> group < 0 ? theme.FaintTextColor: PhaseColor(
+        private func GroupColor(theme Theme, group int32) Color -> group < 0 ? theme.FaintTextColor : PhaseColor(
             theme,
             group
         )

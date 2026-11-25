@@ -130,6 +130,10 @@ internal class VulkanDeviceRecoveryCoordinator {
           throw InvalidOperationException("Vulkan shared runtime is unavailable during recovery")
         }
         oldRuntime.MarkDeviceLost()
+        if VulkanStillImage.UploadPending {
+          recoveryInProgress = false
+          return true
+        }
         oldRuntime.QuiesceQueueAfterDeviceLoss()
         index = 0
         while index < targetCount {

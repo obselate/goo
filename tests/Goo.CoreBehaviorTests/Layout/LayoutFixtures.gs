@@ -994,8 +994,10 @@ internal class LayoutFixtures {
       var childCalls = 0
       let parentMotion = LayoutTransition{SimulationFactory: (from float64, to float64, speed float64) -> {
         parentCalls++
-        return if variant == 0 { LayoutFixtureSimulation(from, to, speed) as Simulation }
-          else { LayoutPlacementSpeedSimulation(from, to, 220.0) as Simulation }
+        if variant == 0 {
+          return LayoutFixtureSimulation(from, to, speed)
+        }
+        return LayoutPlacementSpeedSimulation(from, to, 220.0)
       }}
       let childMotion = LayoutTransition{SimulationFactory: (from float64, to float64, speed float64) -> {
         childCalls++

@@ -133,132 +133,132 @@ internal class VulkanDiagnosticCounters {
   internal prop Snapshot VulkanDiagnosticCounterSnapshot{
     get {
       return VulkanDiagnosticCounterSnapshot{
-        rebuildCount: Interlocked.Read(ref rebuildCount),
-        layoutCount: Interlocked.Read(ref layoutCount),
-        planCompileCount: Interlocked.Read(ref planCompileCount),
-        uploadCount: Interlocked.Read(ref uploadCount),
-        recordCount: Interlocked.Read(ref recordCount),
-        submitCount: Interlocked.Read(ref submitCount),
-        presentCount: Interlocked.Read(ref presentCount),
-        readbackCount: Interlocked.Read(ref readbackCount),
-        managedAllocatedBytes: Interlocked.Read(ref managedAllocatedBytes),
+        rebuildCount: Interlocked.Read(in rebuildCount),
+        layoutCount: Interlocked.Read(in layoutCount),
+        planCompileCount: Interlocked.Read(in planCompileCount),
+        uploadCount: Interlocked.Read(in uploadCount),
+        recordCount: Interlocked.Read(in recordCount),
+        submitCount: Interlocked.Read(in submitCount),
+        presentCount: Interlocked.Read(in presentCount),
+        readbackCount: Interlocked.Read(in readbackCount),
+        managedAllocatedBytes: Interlocked.Read(in managedAllocatedBytes),
         heapBudgetAvailable: Interlocked.CompareExchange(ref heapBudgetAvailable, 0u, 0u),
         heapBudgetSampleCurrent: Interlocked.CompareExchange(ref heapBudgetSampleCurrent, 0u, 0u),
-        heapBudget: Interlocked.Read(ref heapBudget),
-        driverHeapUsage: Interlocked.Read(ref driverHeapUsage),
-        heapHeadroom: Interlocked.Read(ref heapHeadroom),
-        memoryEvictionCount: Interlocked.Read(ref memoryEvictionCount),
-        memoryAllocationRetryCount: Interlocked.Read(ref memoryAllocationRetryCount),
-        memoryPressureCount: Interlocked.Read(ref memoryPressureCount),
-        vulkanObjectCount: Interlocked.Read(ref vulkanObjectCount),
-        vulkanObjectAllocationCount: Interlocked.Read(ref vulkanObjectAllocationCount),
-        vulkanDeviceMemoryAllocationCount: Interlocked.Read(ref vulkanDeviceMemoryAllocationCount),
-        vulkanDeviceMemoryBytes: Interlocked.Read(ref vulkanDeviceMemoryBytes),
-        cacheBytes: Interlocked.Read(ref cacheBytes),
-        imageResidentBytes: Interlocked.Read(ref imageResidentBytes),
-        imageLiveObjectCount: Interlocked.Read(ref imageLiveObjectCount),
-        imagePeakResidentBytes: Interlocked.Read(ref imagePeakResidentBytes),
-        imagePeakLiveObjectCount: Interlocked.Read(ref imagePeakLiveObjectCount),
-        imageUploadChunkCount: Interlocked.Read(ref imageUploadChunkCount),
-        imageUploadDeferredCount: Interlocked.Read(ref imageUploadDeferredCount),
-        imageUploadCompletedCount: Interlocked.Read(ref imageUploadCompletedCount),
-        imagePressureFailureCount: Interlocked.Read(ref imagePressureFailureCount),
-        textAtlasPressureFailureCount: Interlocked.Read(ref textAtlasPressureFailureCount),
-        textAtlasCount: Interlocked.Read(ref textAtlasCount),
-        textAtlasResidentBytes: Interlocked.Read(ref textAtlasResidentBytes),
-        textAtlasLiveObjectCount: Interlocked.Read(ref textAtlasLiveObjectCount),
-        textAtlasPeakCount: Interlocked.Read(ref textAtlasPeakCount),
-        textAtlasPeakResidentBytes: Interlocked.Read(ref textAtlasPeakResidentBytes),
-        textAtlasPeakLiveObjectCount: Interlocked.Read(ref textAtlasPeakLiveObjectCount),
-        textAtlasRecordedUploadBytes: Interlocked.Read(ref textAtlasRecordedUploadBytes),
-        textAtlasEvictionCount: Interlocked.Read(ref textAtlasEvictionCount),
-        textAtlasRetirementCount: Interlocked.Read(ref textAtlasRetirementCount),
-        pathAtlasByteBudget: Interlocked.Read(ref pathAtlasByteBudget),
-        pathAtlasResidentWords: Interlocked.Read(ref pathAtlasResidentWords),
-        pathAtlasFreeWords: Interlocked.Read(ref pathAtlasFreeWords),
-        pathAtlasPathCount: Interlocked.Read(ref pathAtlasPathCount),
-        pathAtlasActiveReferenceCount: Interlocked.Read(ref pathAtlasActiveReferenceCount),
-        pathAtlasLiveObjectCount: Interlocked.Read(ref pathAtlasLiveObjectCount),
-        pathAtlasEvictionCount: Interlocked.Read(ref pathAtlasEvictionCount),
-        pathAtlasRetiredWords: Interlocked.Read(ref pathAtlasRetiredWords),
-        pathAtlasReuseCount: Interlocked.Read(ref pathAtlasReuseCount),
-        pathAtlasPressureEventCount: Interlocked.Read(ref pathAtlasPressureEventCount),
-        pathAtlasPressureFailureCount: Interlocked.Read(ref pathAtlasPressureFailureCount),
-        clipMaskAtlasByteBudget: Interlocked.Read(ref clipMaskAtlasByteBudget),
-        clipMaskAtlasResidentBytes: Interlocked.Read(ref clipMaskAtlasResidentBytes),
-        clipMaskAtlasRegionCount: Interlocked.Read(ref clipMaskAtlasRegionCount),
-        clipMaskAtlasFreePlacementCount: Interlocked.Read(ref clipMaskAtlasFreePlacementCount),
-        clipMaskAtlasActiveLayerCount: Interlocked.Read(ref clipMaskAtlasActiveLayerCount),
-        clipMaskAtlasMaximumLayerCount: Interlocked.Read(ref clipMaskAtlasMaximumLayerCount),
-        clipMaskAtlasRetiredGenerationCount: Interlocked.Read(ref clipMaskAtlasRetiredGenerationCount),
-        clipMaskAtlasEvictionCount: Interlocked.Read(ref clipMaskAtlasEvictionCount),
-        clipMaskAtlasPressureEventCount: Interlocked.Read(ref clipMaskAtlasPressureEventCount),
-        clipMaskAtlasPressureFailureCount: Interlocked.Read(ref clipMaskAtlasPressureFailureCount),
-        clipFrameWrittenBytes: Interlocked.Read(ref clipFrameWrittenBytes),
-        clipFrameSkippedBytes: Interlocked.Read(ref clipFrameSkippedBytes),
-        clipFrameMappedWrites: Interlocked.Read(ref clipFrameMappedWrites),
-        clipFrameFlushes: Interlocked.Read(ref clipFrameFlushes),
-        clipFrameRetainedReuse: Interlocked.Read(ref clipFrameRetainedReuse),
-        clipFrameSlotIndex: Interlocked.Read(ref clipFrameSlotIndex),
-        clipFrameDrawCount: Interlocked.Read(ref clipFrameDrawCount),
-        clipFrameMaskCount: Interlocked.Read(ref clipFrameMaskCount),
-        clipFrameChainCount: Interlocked.Read(ref clipFrameChainCount),
-        clipFrameLayerCount: Interlocked.Read(ref clipFrameLayerCount),
-        clipFrameByteCount: Interlocked.Read(ref clipFrameByteCount),
-        clipFrameCapacity: Interlocked.Read(ref clipFrameCapacity),
-        clipFrameBufferGeneration: Interlocked.Read(ref clipFrameBufferGeneration),
-        clipFrameLastUseSerial: Interlocked.Read(ref clipFrameLastUseSerial),
+        heapBudget: Interlocked.Read(in heapBudget),
+        driverHeapUsage: Interlocked.Read(in driverHeapUsage),
+        heapHeadroom: Interlocked.Read(in heapHeadroom),
+        memoryEvictionCount: Interlocked.Read(in memoryEvictionCount),
+        memoryAllocationRetryCount: Interlocked.Read(in memoryAllocationRetryCount),
+        memoryPressureCount: Interlocked.Read(in memoryPressureCount),
+        vulkanObjectCount: Interlocked.Read(in vulkanObjectCount),
+        vulkanObjectAllocationCount: Interlocked.Read(in vulkanObjectAllocationCount),
+        vulkanDeviceMemoryAllocationCount: Interlocked.Read(in vulkanDeviceMemoryAllocationCount),
+        vulkanDeviceMemoryBytes: Interlocked.Read(in vulkanDeviceMemoryBytes),
+        cacheBytes: Interlocked.Read(in cacheBytes),
+        imageResidentBytes: Interlocked.Read(in imageResidentBytes),
+        imageLiveObjectCount: Interlocked.Read(in imageLiveObjectCount),
+        imagePeakResidentBytes: Interlocked.Read(in imagePeakResidentBytes),
+        imagePeakLiveObjectCount: Interlocked.Read(in imagePeakLiveObjectCount),
+        imageUploadChunkCount: Interlocked.Read(in imageUploadChunkCount),
+        imageUploadDeferredCount: Interlocked.Read(in imageUploadDeferredCount),
+        imageUploadCompletedCount: Interlocked.Read(in imageUploadCompletedCount),
+        imagePressureFailureCount: Interlocked.Read(in imagePressureFailureCount),
+        textAtlasPressureFailureCount: Interlocked.Read(in textAtlasPressureFailureCount),
+        textAtlasCount: Interlocked.Read(in textAtlasCount),
+        textAtlasResidentBytes: Interlocked.Read(in textAtlasResidentBytes),
+        textAtlasLiveObjectCount: Interlocked.Read(in textAtlasLiveObjectCount),
+        textAtlasPeakCount: Interlocked.Read(in textAtlasPeakCount),
+        textAtlasPeakResidentBytes: Interlocked.Read(in textAtlasPeakResidentBytes),
+        textAtlasPeakLiveObjectCount: Interlocked.Read(in textAtlasPeakLiveObjectCount),
+        textAtlasRecordedUploadBytes: Interlocked.Read(in textAtlasRecordedUploadBytes),
+        textAtlasEvictionCount: Interlocked.Read(in textAtlasEvictionCount),
+        textAtlasRetirementCount: Interlocked.Read(in textAtlasRetirementCount),
+        pathAtlasByteBudget: Interlocked.Read(in pathAtlasByteBudget),
+        pathAtlasResidentWords: Interlocked.Read(in pathAtlasResidentWords),
+        pathAtlasFreeWords: Interlocked.Read(in pathAtlasFreeWords),
+        pathAtlasPathCount: Interlocked.Read(in pathAtlasPathCount),
+        pathAtlasActiveReferenceCount: Interlocked.Read(in pathAtlasActiveReferenceCount),
+        pathAtlasLiveObjectCount: Interlocked.Read(in pathAtlasLiveObjectCount),
+        pathAtlasEvictionCount: Interlocked.Read(in pathAtlasEvictionCount),
+        pathAtlasRetiredWords: Interlocked.Read(in pathAtlasRetiredWords),
+        pathAtlasReuseCount: Interlocked.Read(in pathAtlasReuseCount),
+        pathAtlasPressureEventCount: Interlocked.Read(in pathAtlasPressureEventCount),
+        pathAtlasPressureFailureCount: Interlocked.Read(in pathAtlasPressureFailureCount),
+        clipMaskAtlasByteBudget: Interlocked.Read(in clipMaskAtlasByteBudget),
+        clipMaskAtlasResidentBytes: Interlocked.Read(in clipMaskAtlasResidentBytes),
+        clipMaskAtlasRegionCount: Interlocked.Read(in clipMaskAtlasRegionCount),
+        clipMaskAtlasFreePlacementCount: Interlocked.Read(in clipMaskAtlasFreePlacementCount),
+        clipMaskAtlasActiveLayerCount: Interlocked.Read(in clipMaskAtlasActiveLayerCount),
+        clipMaskAtlasMaximumLayerCount: Interlocked.Read(in clipMaskAtlasMaximumLayerCount),
+        clipMaskAtlasRetiredGenerationCount: Interlocked.Read(in clipMaskAtlasRetiredGenerationCount),
+        clipMaskAtlasEvictionCount: Interlocked.Read(in clipMaskAtlasEvictionCount),
+        clipMaskAtlasPressureEventCount: Interlocked.Read(in clipMaskAtlasPressureEventCount),
+        clipMaskAtlasPressureFailureCount: Interlocked.Read(in clipMaskAtlasPressureFailureCount),
+        clipFrameWrittenBytes: Interlocked.Read(in clipFrameWrittenBytes),
+        clipFrameSkippedBytes: Interlocked.Read(in clipFrameSkippedBytes),
+        clipFrameMappedWrites: Interlocked.Read(in clipFrameMappedWrites),
+        clipFrameFlushes: Interlocked.Read(in clipFrameFlushes),
+        clipFrameRetainedReuse: Interlocked.Read(in clipFrameRetainedReuse),
+        clipFrameSlotIndex: Interlocked.Read(in clipFrameSlotIndex),
+        clipFrameDrawCount: Interlocked.Read(in clipFrameDrawCount),
+        clipFrameMaskCount: Interlocked.Read(in clipFrameMaskCount),
+        clipFrameChainCount: Interlocked.Read(in clipFrameChainCount),
+        clipFrameLayerCount: Interlocked.Read(in clipFrameLayerCount),
+        clipFrameByteCount: Interlocked.Read(in clipFrameByteCount),
+        clipFrameCapacity: Interlocked.Read(in clipFrameCapacity),
+        clipFrameBufferGeneration: Interlocked.Read(in clipFrameBufferGeneration),
+        clipFrameLastUseSerial: Interlocked.Read(in clipFrameLastUseSerial),
         clipFrameRetentionEligible: Interlocked.CompareExchange(ref clipFrameRetentionEligible, 0u, 0u),
         clipFrameRetained: Interlocked.CompareExchange(ref clipFrameRetained, 0u, 0u),
         clipFrameRetentionValid: Interlocked.CompareExchange(ref clipFrameRetentionValid, 0u, 0u),
-        textFrameWrittenBytes: Interlocked.Read(ref textFrameWrittenBytes),
-        textFrameSkippedBytes: Interlocked.Read(ref textFrameSkippedBytes),
-        textFrameDirtySegmentCount: Interlocked.Read(ref textFrameDirtySegmentCount),
-        textFrameUploadRangeCount: Interlocked.Read(ref textFrameUploadRangeCount),
-        textFrameFullUploadCount: Interlocked.Read(ref textFrameFullUploadCount),
-        textFrameMappedWrites: Interlocked.Read(ref textFrameMappedWrites),
-        textFrameFlushes: Interlocked.Read(ref textFrameFlushes),
-        textFrameRetainedReuse: Interlocked.Read(ref textFrameRetainedReuse),
-        textFrameSlotIndex: Interlocked.Read(ref textFrameSlotIndex),
-        textFrameSegmentCount: Interlocked.Read(ref textFrameSegmentCount),
-        textFrameRunCount: Interlocked.Read(ref textFrameRunCount),
-        textFrameRecordCount: Interlocked.Read(ref textFrameRecordCount),
-        textFrameByteCount: Interlocked.Read(ref textFrameByteCount),
-        textFrameCapacity: Interlocked.Read(ref textFrameCapacity),
-        textFrameBufferGeneration: Interlocked.Read(ref textFrameBufferGeneration),
-        textFrameTopologyKey: Interlocked.Read(ref textFrameTopologyKey),
-        textFrameLastUseSerial: Interlocked.Read(ref textFrameLastUseSerial),
+        textFrameWrittenBytes: Interlocked.Read(in textFrameWrittenBytes),
+        textFrameSkippedBytes: Interlocked.Read(in textFrameSkippedBytes),
+        textFrameDirtySegmentCount: Interlocked.Read(in textFrameDirtySegmentCount),
+        textFrameUploadRangeCount: Interlocked.Read(in textFrameUploadRangeCount),
+        textFrameFullUploadCount: Interlocked.Read(in textFrameFullUploadCount),
+        textFrameMappedWrites: Interlocked.Read(in textFrameMappedWrites),
+        textFrameFlushes: Interlocked.Read(in textFrameFlushes),
+        textFrameRetainedReuse: Interlocked.Read(in textFrameRetainedReuse),
+        textFrameSlotIndex: Interlocked.Read(in textFrameSlotIndex),
+        textFrameSegmentCount: Interlocked.Read(in textFrameSegmentCount),
+        textFrameRunCount: Interlocked.Read(in textFrameRunCount),
+        textFrameRecordCount: Interlocked.Read(in textFrameRecordCount),
+        textFrameByteCount: Interlocked.Read(in textFrameByteCount),
+        textFrameCapacity: Interlocked.Read(in textFrameCapacity),
+        textFrameBufferGeneration: Interlocked.Read(in textFrameBufferGeneration),
+        textFrameTopologyKey: Interlocked.Read(in textFrameTopologyKey),
+        textFrameLastUseSerial: Interlocked.Read(in textFrameLastUseSerial),
         textFramePrepared: Interlocked.CompareExchange(ref textFramePrepared, 0u, 0u),
-        imageEvictionCount: Interlocked.Read(ref imageEvictionCount),
-        imageRetirementCount: Interlocked.Read(ref imageRetirementCount),
-        allocatorBytes: Interlocked.Read(ref allocatorBytes),
-        dirtyChunkCount: Interlocked.Read(ref dirtyChunkCount),
-        reusedChunkCount: Interlocked.Read(ref reusedChunkCount),
-        uploadBytes: Interlocked.Read(ref uploadBytes),
-        drawCount: Interlocked.Read(ref drawCount),
-        pipelineChangeCount: Interlocked.Read(ref pipelineChangeCount),
-        descriptorChangeCount: Interlocked.Read(ref descriptorChangeCount),
-        passCount: Interlocked.Read(ref passCount),
-        barrierCount: Interlocked.Read(ref barrierCount),
-        damageCount: Interlocked.Read(ref damageCount),
-        damageArea: Interlocked.Read(ref damageArea),
-        surfaceRecoveryCount: Interlocked.Read(ref surfaceRecoveryCount),
-        deviceRecoveryCount: Interlocked.Read(ref deviceRecoveryCount),
-        validationErrorCount: Interlocked.Read(ref validationErrorCount),
-        resultCount: Interlocked.Read(ref resultCount),
-        resultFailureCount: Interlocked.Read(ref resultFailureCount),
-        layerPoolResidentBytes: Interlocked.Read(ref layerPoolResidentBytes),
-        layerPoolTargetCount: Interlocked.Read(ref layerPoolTargetCount),
-        layerPoolLeasedCount: Interlocked.Read(ref layerPoolLeasedCount),
-        layerPoolResolutionShift: Interlocked.Read(ref layerPoolResolutionShift),
-        layerPoolCreateCount: Interlocked.Read(ref layerPoolCreateCount),
-        layerPoolReuseCount: Interlocked.Read(ref layerPoolReuseCount),
-        layerPoolEvictionCount: Interlocked.Read(ref layerPoolEvictionCount),
-        layerPoolPressureEventCount: Interlocked.Read(ref layerPoolPressureEventCount),
-        layerPoolPressureFailureCount: Interlocked.Read(ref layerPoolPressureFailureCount),
-        layerPoolFailureCount: Interlocked.Read(ref layerPoolFailureCount),
-        layerPoolPassCount: Interlocked.Read(ref layerPoolPassCount),
-        layerPoolCompositeCount: Interlocked.Read(ref layerPoolCompositeCount),
+        imageEvictionCount: Interlocked.Read(in imageEvictionCount),
+        imageRetirementCount: Interlocked.Read(in imageRetirementCount),
+        allocatorBytes: Interlocked.Read(in allocatorBytes),
+        dirtyChunkCount: Interlocked.Read(in dirtyChunkCount),
+        reusedChunkCount: Interlocked.Read(in reusedChunkCount),
+        uploadBytes: Interlocked.Read(in uploadBytes),
+        drawCount: Interlocked.Read(in drawCount),
+        pipelineChangeCount: Interlocked.Read(in pipelineChangeCount),
+        descriptorChangeCount: Interlocked.Read(in descriptorChangeCount),
+        passCount: Interlocked.Read(in passCount),
+        barrierCount: Interlocked.Read(in barrierCount),
+        damageCount: Interlocked.Read(in damageCount),
+        damageArea: Interlocked.Read(in damageArea),
+        surfaceRecoveryCount: Interlocked.Read(in surfaceRecoveryCount),
+        deviceRecoveryCount: Interlocked.Read(in deviceRecoveryCount),
+        validationErrorCount: Interlocked.Read(in validationErrorCount),
+        resultCount: Interlocked.Read(in resultCount),
+        resultFailureCount: Interlocked.Read(in resultFailureCount),
+        layerPoolResidentBytes: Interlocked.Read(in layerPoolResidentBytes),
+        layerPoolTargetCount: Interlocked.Read(in layerPoolTargetCount),
+        layerPoolLeasedCount: Interlocked.Read(in layerPoolLeasedCount),
+        layerPoolResolutionShift: Interlocked.Read(in layerPoolResolutionShift),
+        layerPoolCreateCount: Interlocked.Read(in layerPoolCreateCount),
+        layerPoolReuseCount: Interlocked.Read(in layerPoolReuseCount),
+        layerPoolEvictionCount: Interlocked.Read(in layerPoolEvictionCount),
+        layerPoolPressureEventCount: Interlocked.Read(in layerPoolPressureEventCount),
+        layerPoolPressureFailureCount: Interlocked.Read(in layerPoolPressureFailureCount),
+        layerPoolFailureCount: Interlocked.Read(in layerPoolFailureCount),
+        layerPoolPassCount: Interlocked.Read(in layerPoolPassCount),
+        layerPoolCompositeCount: Interlocked.Read(in layerPoolCompositeCount),
       }
     }
   }
@@ -299,7 +299,7 @@ internal class VulkanDiagnosticCounters {
   }
   internal func SetImagePeakResidentBytes(value uint64) {
     while true {
-      let current = Interlocked.Read(ref imagePeakResidentBytes)
+      let current = Interlocked.Read(in imagePeakResidentBytes)
       if value <= current || Interlocked.CompareExchange(ref imagePeakResidentBytes, value, current) == current {
         return
       }
@@ -307,7 +307,7 @@ internal class VulkanDiagnosticCounters {
   }
   internal func SetImagePeakLiveObjectCount(value uint64) {
     while true {
-      let current = Interlocked.Read(ref imagePeakLiveObjectCount)
+      let current = Interlocked.Read(in imagePeakLiveObjectCount)
       if value <= current || Interlocked.CompareExchange(ref imagePeakLiveObjectCount, value, current) == current {
         return
       }
@@ -324,7 +324,7 @@ internal class VulkanDiagnosticCounters {
   }
   internal func SetTextAtlasPeakCount(value uint64) {
     while true {
-      let current = Interlocked.Read(ref textAtlasPeakCount)
+      let current = Interlocked.Read(in textAtlasPeakCount)
       if value <= current || Interlocked.CompareExchange(ref textAtlasPeakCount, value, current) == current {
         return
       }
@@ -332,7 +332,7 @@ internal class VulkanDiagnosticCounters {
   }
   internal func SetTextAtlasPeakResidentBytes(value uint64) {
     while true {
-      let current = Interlocked.Read(ref textAtlasPeakResidentBytes)
+      let current = Interlocked.Read(in textAtlasPeakResidentBytes)
       if value <= current || Interlocked.CompareExchange(ref textAtlasPeakResidentBytes, value, current) == current {
         return
       }
@@ -340,7 +340,7 @@ internal class VulkanDiagnosticCounters {
   }
   internal func SetTextAtlasPeakLiveObjectCount(value uint64) {
     while true {
-      let current = Interlocked.Read(ref textAtlasPeakLiveObjectCount)
+      let current = Interlocked.Read(in textAtlasPeakLiveObjectCount)
       if value <= current || Interlocked.CompareExchange(ref textAtlasPeakLiveObjectCount, value, current) == current {
         return
       }
@@ -493,7 +493,7 @@ internal class VulkanDiagnosticCounters {
 
   internal func RemoveVulkanObjects(value uint64) {
     while true {
-      let current = Interlocked.Read(ref vulkanObjectCount)
+      let current = Interlocked.Read(in vulkanObjectCount)
       let next = if value >= current { 0uL } else { current - value }
       if Interlocked.CompareExchange(ref vulkanObjectCount, next, current) == current {
         return
@@ -507,7 +507,7 @@ internal class VulkanDiagnosticCounters {
 
   internal func RemoveVulkanDeviceMemoryBytes(value uint64) {
     while true {
-      let current = Interlocked.Read(ref vulkanDeviceMemoryBytes)
+      let current = Interlocked.Read(in vulkanDeviceMemoryBytes)
       let next = if value >= current { 0uL } else { current - value }
       if Interlocked.CompareExchange(ref vulkanDeviceMemoryBytes, next, current) == current {
         return

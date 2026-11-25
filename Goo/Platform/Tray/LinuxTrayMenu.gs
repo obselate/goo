@@ -8,7 +8,7 @@ internal partial class LinuxTrayBackend {
     private func HandleMenu(context MethodContext) {
         let member = context.Request.MemberAsString
         let signature = context.Request.SignatureAsString
-        let state = Volatile.Read(ref current)
+        let state = Volatile.Read(in current)
         var reader = context.Request.GetBodyReader()
         if member == "GetLayout" && signature == "iias" {
             let id = reader.ReadInt32()

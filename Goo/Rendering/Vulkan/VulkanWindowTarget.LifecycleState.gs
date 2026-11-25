@@ -87,6 +87,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   private var requestedHeight int32
   private var nextFrameId uint64
   private var activeFrameId uint64
+  private var activeWaylandGeometryVersion uint64
   private var activeFrameSlot VulkanFrameSlot? = nil
   private var activeFrameSlotIndex uint32
   private var activeImageIndex uint32
@@ -143,6 +144,8 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   private var startupFirstPresentTicks uint64
 
   public prop ProfileSink FrameProfileSink{ get -> this }
+
+  internal prop IsTransparent bool { get; private set }
 
   internal prop RenderingDevice RenderingDeviceInfo{
     get {

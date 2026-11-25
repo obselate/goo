@@ -36,6 +36,10 @@ internal unsafe partial class VulkanWindowTarget {
       recreatePending = true
       return true
     }
+    if host is SdlHost && !host.WaylandVulkanFrameReady() {
+      recreatePending = true
+      return true
+    }
     if hidden || hideReleasePending || QueueWorkPending || DeferForPendingReadbackSubmission() {
       recreatePending = true
       return true

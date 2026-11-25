@@ -13,17 +13,21 @@ android-type|Goo.AndroidNotifications
 android-type|Goo.Printing.AndroidPrinting
 android-type|Goo.SpellCheck.AndroidSpellingService
 ctor|Goo.AccessibilityActionRequest|public|(action:Goo.AccessibilityAction)
+ctor|Goo.AccessibilityAttachment|public|()
 ctor|Goo.AccessibilityId|public|(Value:System.Int64)
 ctor|Goo.AccessibilityRelationships|public|()
+ctor|Goo.AccessibilityScrollInfo|public|()
 ctor|Goo.AccessibilityValue|public|()
 ctor|Goo.Accessibility|public|()
 ctor|Goo.ApplicationActivation|public|()
 ctor|Goo.AsyncImageSource|public|(load:System.Func`2<System.Threading.CancellationToken,System.Threading.Tasks.Task`1<Goo.ImageSource>>)
+ctor|Goo.BoxShadow|public|()
 ctor|Goo.Button|public|()
 ctor|Goo.Cell`1|public|()
 ctor|Goo.Cell|public|()
 ctor|Goo.ClipboardTextResult|public|(status:Goo.ClipboardReadStatus,text:System.String="",error:System.String="")
 ctor|Goo.ClipboardWriteResult|public|(status:Goo.DataTransferStatus,error:System.String="")
+ctor|Goo.Color|public|()
 ctor|Goo.Column|public|()
 ctor|Goo.Container|public|()
 ctor|Goo.Context`1|public|()
@@ -33,16 +37,20 @@ ctor|Goo.DragData|public|(value:System.Object,allowedEffects:Goo.DragEffect,nati
 ctor|Goo.DragSource|public|(create:System.Func`2<Goo.DragStartEvent,Goo.DragData?>,end:System.Action`1<Goo.DragEndEvent>?=null)
 ctor|Goo.DropTarget|public|(query:System.Func`2<Goo.DragEvent,Goo.DragEffect>,changed:System.Action`1<Goo.DragEvent>?,stopAncestorRouting:System.Boolean)
 ctor|Goo.DropTarget|public|(query:System.Func`2<Goo.DragEvent,Goo.DragEffect>,changed:System.Action`1<Goo.DragEvent>?=null)
-ctor|Goo.Edges`1|public|(all:!0)
-ctor|Goo.Edges`1|public|(top:!0,horizontal:!0,bottom:!0)
-ctor|Goo.Edges`1|public|(top:!0,right:!0,bottom:!0,left:!0)
-ctor|Goo.Edges`1|public|(vertical:!0,horizontal:!0)
+ctor|Goo.Edges`1|public|(all:!0?)
+ctor|Goo.Edges`1|public|(top:!0?,horizontal:!0?,bottom:!0?)
+ctor|Goo.Edges`1|public|(top:!0?,right:!0?,bottom:!0?,left:!0?)
+ctor|Goo.Edges`1|public|(vertical:!0?,horizontal:!0?)
 ctor|Goo.Edges|public|(all:Goo.Length)
 ctor|Goo.Edges|public|(top:Goo.Length,horizontal:Goo.Length,bottom:Goo.Length)
 ctor|Goo.Edges|public|(top:Goo.Length,right:Goo.Length,bottom:Goo.Length,left:Goo.Length)
 ctor|Goo.Edges|public|(vertical:Goo.Length,horizontal:Goo.Length)
 ctor|Goo.ElementHandle|public|()
+ctor|Goo.ElementMetrics|public|()
+ctor|Goo.ElementRect|public|()
 ctor|Goo.EmbeddedWindowHost|public|()
+ctor|Goo.ExternalFrameDescription|public|()
+ctor|Goo.ExternalImagePlane|public|()
 ctor|Goo.ExternalImageSync|public|()
 ctor|Goo.FileDialogFilter|public|(name:System.String,pattern:System.String)
 ctor|Goo.FileDialogOptions|public|()
@@ -63,6 +71,7 @@ ctor|Goo.Gestures.PressGestureEvent|public|(Phase:Goo.GesturePhase,Position:Goo.
 ctor|Goo.Gestures.TapGestureEvent|public|(Position:Goo.Point,WindowPosition:Goo.Point)
 ctor|Goo.Gestures.TransformGestureEvent|public|(Phase:Goo.GesturePhase,Source:Goo.GestureSource,Center:Goo.Point,WindowCenter:Goo.Point,Translation:Goo.Point,Scale:System.Double,Rotation:Goo.Gestures.GestureRotationResult,Reason:Goo.GestureCancelReason)
 ctor|Goo.Gestures.TransformGesture|public|(changed:System.Action`1<Goo.Gestures.TransformGestureEvent>)
+ctor|Goo.GradientStop|public|()
 ctor|Goo.GraphicsUnavailableException|public|(message:System.String)
 ctor|Goo.GraphicsUnavailableException|public|(message:System.String,innerException:System.Exception)
 ctor|Goo.ImageDecodeLimits|public|()
@@ -73,20 +82,24 @@ ctor|Goo.Images.ImageVariants|public|(variants:System.Collections.Generic.IReadO
 ctor|Goo.Images.ImageVariant|public|(path:System.String,pixelsPerUnit:System.Double)
 ctor|Goo.Image|public|()
 ctor|Goo.KeyBinding|public|(Key:Goo.Key,Modifiers:Goo.KeyModifiers,OnPress:System.Action?)
+ctor|Goo.KeyModifiers|public|()
+ctor|Goo.LayerWindowImage|public|(path:System.String,fit:Goo.ImageFit=Cover)
 ctor|Goo.LayerWindowOptions|public|()
 ctor|Goo.LayoutSize|public|(Width:System.Double,Height:System.Double)
 ctor|Goo.LayoutTransition|public|(DurationMs:System.Double,Easing:Goo.Easing)
 ctor|Goo.LinearGradient|public|(angle:System.Double,params colors:Goo.Color[])
 ctor|Goo.LinearGradient|public|(angle:System.Double,stops:Goo.GradientStop[])
 ctor|Goo.LinearGradient|public|(params colors:Goo.Color[])
+ctor|Goo.MacOSBackdropOptions|public|()
 ctor|Goo.MessageBoxButton|public|()
 ctor|Goo.MessageBoxOptions|public|()
-ctor|Goo.MotionConverter`1|public|(dimensions:System.Int32,read:System.Action`2<!0,System.Double[]>,write:System.Func`2<System.Double[],!0>)
+ctor|Goo.MotionConverter`1|public|(dimensions:System.Int32,read:System.Action`2<!0?,System.Double[]>,write:System.Func`2<System.Double[],!0?>)
 ctor|Goo.NativeAccessibilityAdapter|public|()
 ctor|Goo.NativeDialogOwnerResult|public|(Status:Goo.NativeDialogOwnerStatus,Owner:Goo.NativeDialogOwnerLease?,Error:System.String)
 ctor|Goo.NativeFileDrag|public|(values:System.Collections.Generic.IReadOnlyList`1<System.String>)
 ctor|Goo.NativeMenuBar|public|(owner:Goo.Window)
 ctor|Goo.NativeMenuItem|public|()
+ctor|Goo.NativeMenuShortcut|public|()
 ctor|Goo.NativeMenus|public|()
 ctor|Goo.NotificationMessage|public|()
 ctor|Goo.NotificationOptions|public|()
@@ -95,6 +108,8 @@ ctor|Goo.OffscreenRenderResult|public|(Status:Goo.OffscreenRenderStatus,Capture:
 ctor|Goo.OffscreenRenderSessionResult|public|(Status:Goo.OffscreenRenderStatus,Session:Goo.OffscreenRenderSession?,Error:System.String)
 ctor|Goo.PathBuilder|public|()
 ctor|Goo.PathBuilder|public|(viewBoxX:System.Double,viewBoxY:System.Double,viewBoxWidth:System.Double,viewBoxHeight:System.Double)
+ctor|Goo.PlatformPreferences|public|()
+ctor|Goo.Point|public|()
 ctor|Goo.PopupWindow|public|(owner:Goo.PopupWindow,root:Goo.Cell,kind:Goo.PopupKind=Menu)
 ctor|Goo.PopupWindow|public|(owner:Goo.Window,root:Goo.Cell,kind:Goo.PopupKind=Menu)
 ctor|Goo.Portal|public|()
@@ -103,11 +118,13 @@ ctor|Goo.Printing.PrintPageSettings|public|(WidthPoints:System.Double,HeightPoin
 ctor|Goo.Printing.PrintResult|public|(Status:Goo.Printing.PrintStatus,JobId:System.String="",Error:System.String="")
 ctor|Goo.RadialGradient|public|(centerX:System.Double,centerY:System.Double,radius:System.Double,stops:Goo.GradientStop[])
 ctor|Goo.RadialGradient|public|(params colors:Goo.Color[])
+ctor|Goo.RenderingDeviceInfo|public|()
 ctor|Goo.RichText.RichTextClipboard|public|(owner:Goo.Window,controller:Goo.TextEditorController,layer:Goo.TextPresentationLayer)
 ctor|Goo.RichText.RichTextFragment|public|(text:System.String,styles:System.Collections.Generic.IReadOnlyList`1<Goo.TextStyleSpan>)
 ctor|Goo.RichText.RichTextResult|public|(Status:Goo.RichText.RichTextStatus,Fragment:Goo.RichText.RichTextFragment,Error:System.String="")
 ctor|Goo.Row|public|()
 ctor|Goo.Scrollbar|public|()
+ctor|Goo.SessionLock|public|()
 ctor|Goo.ShaderEffectData|public|(bytes:System.Byte[])
 ctor|Goo.ShaderEffectProgram|public|(program:System.Byte[],replacesBackdrop:System.Boolean=false)
 ctor|Goo.ShaderEffect|public|(program:Goo.ShaderEffectProgram,samplesBackdrop:System.Boolean=false,backdropOutset:System.Double=0,backdropBlur:System.Double=0)
@@ -122,7 +139,7 @@ ctor|Goo.SpellCheck.SpellCheckSession|public|(owner:Goo.Window,controller:Goo.Te
 ctor|Goo.SpellCheck.SpellingResult|public|(Status:Goo.SpellCheck.SpellingStatus,Version:System.Int64,Language:System.String,Errors:System.Collections.Generic.IReadOnlyList`1<Goo.SpellCheck.Misspelling>,Error:System.String="")
 ctor|Goo.SpellCheck.SpellingSuggestions|public|(Status:Goo.SpellCheck.SpellingStatus,Version:System.Int64,Language:System.String,Range:Goo.TextRange,Word:System.String,Values:System.Collections.Generic.IReadOnlyList`1<System.String>,Error:System.String="")
 ctor|Goo.SpellCheck.SystemSpellingService|public|()
-ctor|Goo.State`1|public|(initial:!0)
+ctor|Goo.State`1|public|(initial:!0?)
 ctor|Goo.Style|public|()
 ctor|Goo.Svg.SvgParseException|public|(message:System.String,innerException:System.Exception?=null)
 ctor|Goo.TextCandidateEvent|public|(Candidates:System.Collections.Generic.IReadOnlyList`1<System.String>,SelectedCandidate:System.Int32,Horizontal:System.Boolean)
@@ -141,6 +158,7 @@ ctor|Goo.TextPosition|public|(Offset:System.Int32,Affinity:Goo.TextAffinity)
 ctor|Goo.TextPresentationLayer|public|(document:Goo.TextDocument)
 ctor|Goo.TextRange|public|(Start:System.Int32,Length:System.Int32)
 ctor|Goo.TextSelection|public|(Anchor:Goo.TextPosition,Active:Goo.TextPosition)
+ctor|Goo.TextShadow|public|()
 ctor|Goo.TextSpan|public|(Text:System.String,Style:Goo.Style?)
 ctor|Goo.TextStyleProperties|public|(FontFamily:System.String?,FontSize:System.Nullable`1<System.Double>,FontWeight:System.Nullable`1<System.Double>,FontStyle:System.Nullable`1<Goo.FontStyle>,Color:System.Nullable`1<Goo.Color>,TextDecoration:System.Nullable`1<Goo.TextDecoration>)
 ctor|Goo.TextStyleRange|public|(Range:Goo.TextRange,Style:Goo.Style)
@@ -161,11 +179,19 @@ ctor|Goo.VectorPaint|public|(color:Goo.Color)
 ctor|Goo.VectorPaint|public|(gradient:Goo.Gradient)
 ctor|Goo.VectorStroke|public|(width:System.Double,color:Goo.Color)
 ctor|Goo.VectorStroke|public|(width:System.Double,paint:Goo.VectorPaint)
+ctor|Goo.VirtualChild|public|()
+ctor|Goo.VirtualItem|public|()
+ctor|Goo.VirtualScrollAnchor|public|()
 ctor|Goo.VirtualState|public|()
 ctor|Goo.Virtual|public|()
 ctor|Goo.VulkanExternalImageDescription|public|()
+ctor|Goo.WaylandBackdropOptions|public|()
 ctor|Goo.WindowBackdropMask|public|(width:System.Int32,height:System.Int32,alpha:System.Byte[])
+ctor|Goo.WindowDisplayId|public|()
+ctor|Goo.WindowMetrics|public|()
 ctor|Goo.WindowPlacement|public|()
+ctor|Goo.WindowPresentationAccepted|public|()
+ctor|Goo.WindowsBackdropOptions|public|()
 ctor|Goo.Window|public|()
 enum-underlying|Goo.AccessibilityAction|System.Int32
 enum-underlying|Goo.AccessibilityChecked|System.Int32
@@ -278,6 +304,7 @@ enum-underlying|Goo.Visibility|System.Int32
 enum-underlying|Goo.WindowBackdrop|System.Int32
 enum-underlying|Goo.WindowCapabilities|System.Int32
 enum-underlying|Goo.WindowCaptureRequestStatus|System.Int32
+enum-underlying|Goo.WindowEdge|System.Int32
 enum-underlying|Goo.WindowFramePacing|System.Int32
 enum-underlying|Goo.WindowInputKind|System.Int32
 enum-underlying|Goo.WindowLayer|System.Int32
@@ -1066,6 +1093,14 @@ enum|Goo.WindowCaptureRequestStatus|DeviceLost|5
 enum|Goo.WindowCaptureRequestStatus|Failed|4
 enum|Goo.WindowCaptureRequestStatus|NotReady|3
 enum|Goo.WindowCaptureRequestStatus|Unsupported|6
+enum|Goo.WindowEdge|BottomLeft|6
+enum|Goo.WindowEdge|BottomRight|4
+enum|Goo.WindowEdge|Bottom|5
+enum|Goo.WindowEdge|Left|7
+enum|Goo.WindowEdge|Right|3
+enum|Goo.WindowEdge|TopLeft|0
+enum|Goo.WindowEdge|TopRight|2
+enum|Goo.WindowEdge|Top|1
 enum|Goo.WindowFramePacing|Display|0
 enum|Goo.WindowFramePacing|Uncapped|1
 enum|Goo.WindowInputKind|KeyDown|2
@@ -1097,22 +1132,26 @@ enum|Goo.WindowsBackdropMaterial|MicaAlt|3
 enum|Goo.WindowsBackdropMaterial|Mica|2
 event|Goo.Anim`1|Completed|System.Action`1<Goo.MotionCompletionReason>|instance|add:public,remove:public
 event|Goo.Application|Activated|System.Action`1<Goo.ApplicationActivation>|static|add:public,remove:public
-event|Goo.AsyncImageSource|ContentChanged|System.Action|virtual|add:public,remove:public
+event|Goo.AsyncImageSource|ContentChanged|System.Action|instance|add:public,remove:public
 event|Goo.ElementHandle|MetricsChanged|System.Action`1<Goo.ElementMetrics>|instance|add:public,remove:public
 event|Goo.ExternalImageSession|Invalidated|System.Action`1<Goo.ExternalImageStatus>|instance|add:public,remove:public
-event|Goo.ExternalImageSource|ContentChanged|System.Action|virtual|add:public,remove:public
+event|Goo.ExternalImageSource|ContentChanged|System.Action|instance|add:public,remove:public
 event|Goo.ImageSourceLease|Released|System.Action|instance|add:public,remove:public
 event|Goo.ImageSourceProvider|ContentChanged|System.Action|abstract|add:public,remove:public
-event|Goo.ImageSource|ContentChanged|System.Action|virtual|add:public,remove:public
+event|Goo.ImageSource|ContentChanged|System.Action|instance|add:public,remove:public
 event|Goo.NativeMenuBar|Activated|System.Action`1<System.String>|instance|add:public,remove:public
 event|Goo.PopupWindow|Dismissed|System.Action`1<Goo.PopupDismissReason>|instance|add:public,remove:public
 event|Goo.RichText.RichTextClipboard|Completed|System.Action`1<Goo.RichText.RichTextResult>?|instance|add:public,remove:public
+event|Goo.SessionLock|Finished|System.Action?|instance|add:public,remove:public
+event|Goo.SessionLock|KeyboardLayoutChanged|System.Action?|instance|add:public,remove:public
+event|Goo.SessionLock|Locked|System.Action?|instance|add:public,remove:public
 event|Goo.SpellCheck.SpellCheckSession|Updated|System.Action`1<Goo.SpellCheck.SpellingResult>?|instance|add:public,remove:public
 event|Goo.TextDocument|Changed|System.Action`1<Goo.TextDocumentChange>|instance|add:public,remove:public
 event|Goo.TrayIcon|Activated|System.Action|instance|add:public,remove:public
 event|Goo.TrayIcon|CommandActivated|System.Action`1<System.String>|instance|add:public,remove:public
 event|Goo.TrayIcon|StatusChanged|System.Action`1<Goo.TrayStatus>|instance|add:public,remove:public
 event|Goo.WindowFocus|EditorChanged|System.Action`1<System.Nullable`1<Goo.FocusedEditorSnapshot>>|instance|add:public,remove:public
+event|Goo.Window|CaptureCompleted|System.Action|instance|add:public,remove:public
 event|Goo.Window|DisplayChanged|System.Action|instance|add:public,remove:public
 event|Goo.Window|FocusChanged|System.Action`1<System.Boolean>|instance|add:public,remove:public
 event|Goo.Window|InputActivity|System.Action`1<Goo.WindowInputKind>|instance|add:public,remove:public
@@ -1130,7 +1169,7 @@ field|Goo.AccessibilityAttachment|Invalid|System.Nullable`1<System.Boolean>|inst
 field|Goo.AccessibilityAttachment|Relationships|Goo.AccessibilityRelationships?|instance|public|mutable
 field|Goo.AccessibilityAttachment|Required|System.Nullable`1<System.Boolean>|instance|public|mutable
 field|Goo.AccessibilityAttachment|Target|Goo.ElementHandle?|instance|public|mutable
-function|Goo|Each|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob[]
+function|Goo|Each|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0?>,itemKey:System.Func`2<!!0?,System.String>,itemBuilder:System.Func`2<!!0?,Goo.Blob>)->Goo.Blob[]
 function|Goo|Em|public|generic:|(value:System.Double)->Goo.Length
 function|Goo|Percent|public|generic:|(value:System.Double)->Goo.Length
 function|Goo|Rem|public|generic:|(value:System.Double)->Goo.Length
@@ -1167,16 +1206,17 @@ method|Goo.AccessibilityScrollInfo|op_Equality|static|public|generic:|(left:Goo.
 method|Goo.AccessibilityScrollInfo|op_Inequality|static|public|generic:|(left:Goo.AccessibilityScrollInfo,right:Goo.AccessibilityScrollInfo)->System.Boolean
 method|Goo.ActivationArguments|Read|static|public|generic:|(arguments:System.Collections.Generic.IReadOnlyList`1<System.String>,workingDirectory:System.String)->Goo.ActivationReadResult
 method|Goo.Anim`1|Pause|instance|public|generic:|()->System.Void
-method|Goo.Anim`1|Play|instance|public|generic:|(from:!0,to:!0)->System.Void
-method|Goo.Anim`1|Play|instance|public|generic:|(from:!0,to:!0,spec:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>,params specs:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>[])->System.Void
+method|Goo.Anim`1|Play|instance|public|generic:|(from:!0?,to:!0?)->System.Void
+method|Goo.Anim`1|Play|instance|public|generic:|(from:!0?,to:!0?,spec:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>,params specs:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>[])->System.Void
 method|Goo.Anim`1|Resume|instance|public|generic:|()->System.Void
 method|Goo.Anim`1|Seek|instance|public|generic:|(elapsedMs:System.Double)->System.Void
-method|Goo.Anim`1|Set|instance|public|generic:|(value:!0)->System.Void
-method|Goo.Anim`1|Snap|instance|public|generic:|(value:!0)->System.Void
-method|Goo.Anim`1|To|instance|public|generic:|(target:!0)->System.Void
-method|Goo.Anim`1|To|instance|public|generic:|(target:!0,spec:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>,params specs:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>[])->System.Void
-method|Goo.Anim`1|To|instance|public|generic:|(target:!0,velocity:Goo.MotionVelocity)->System.Void
-method|Goo.Anim`1|To|instance|public|generic:|(target:!0,velocity:Goo.MotionVelocity,spec:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>,params specs:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>[])->System.Void
+method|Goo.Anim`1|Set|instance|public|generic:|(value:!0?)->System.Void
+method|Goo.Anim`1|Snap|instance|public|generic:|(value:!0?)->System.Void
+method|Goo.Anim`1|To|instance|public|generic:|(target:!0?)->System.Void
+method|Goo.Anim`1|To|instance|public|generic:|(target:!0?,spec:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>,params specs:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>[])->System.Void
+method|Goo.Anim`1|To|instance|public|generic:|(target:!0?,velocity:Goo.MotionVelocity)->System.Void
+method|Goo.Anim`1|To|instance|public|generic:|(target:!0?,velocity:Goo.MotionVelocity,spec:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>,params specs:System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>[])->System.Void
+method|Goo.Application|AcquireSingleInstance|static|public|generic:|(arguments:System.String[],instanceScope:System.String?,timeoutMs:System.Double=3000)->Goo.SingleInstanceResult
 method|Goo.Application|AcquireSingleInstance|static|public|generic:|(arguments:System.String[],timeoutMs:System.Double=3000)->Goo.SingleInstanceResult
 method|Goo.Application|Configure|static|public|generic:|(assembly:System.Reflection.Assembly)->System.Void
 method|Goo.Application|Configure|static|public|generic:|(name:System.String,version:System.String,identifier:System.String)->System.Void
@@ -1186,7 +1226,7 @@ method|Goo.Assets|Open|static|public|generic:|(assembly:System.Reflection.Assemb
 method|Goo.Assets|ReadAllBytes|static|public|generic:|(assembly:System.Reflection.Assembly,name:System.String)->System.Byte[]
 method|Goo.AsyncImageSource|Acquire|instance|public|generic:|()->Goo.ImageSourceLease
 method|Goo.AsyncImageSource|Dispose|instance|public|generic:|()->System.Void
-method|Goo.Blob|Each|static|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob[]
+method|Goo.Blob|Each|static|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0?>,itemKey:System.Func`2<!!0?,System.String>,itemBuilder:System.Func`2<!!0?,Goo.Blob>)->Goo.Blob[]
 method|Goo.Blob|Sized|static|public|generic:|(build:System.Func`2<Goo.LayoutSize,Goo.Blob>)->Goo.Blob
 method|Goo.BoxShadow|Deconstruct|instance|public|generic:|(out offsetX:Goo.Length&,out offsetY:Goo.Length&,out blur:Goo.Length&,out spread:Goo.Length&,out color:Goo.Color&,out inset:System.Boolean&)->System.Void
 method|Goo.BoxShadow|Equals|instance|public|generic:|(other:Goo.BoxShadow)->System.Boolean
@@ -1196,20 +1236,20 @@ method|Goo.BoxShadow|ToString|virtual|public|generic:|()->System.String
 method|Goo.BoxShadow|op_Equality|static|public|generic:|(left:Goo.BoxShadow,right:Goo.BoxShadow)->System.Boolean
 method|Goo.BoxShadow|op_Inequality|static|public|generic:|(left:Goo.BoxShadow,right:Goo.BoxShadow)->System.Boolean
 method|Goo.Button|Add|instance|public|generic:|(child:Goo.Blob)->System.Void
-method|Goo.Cell`1|Build|virtual|protected|generic:|(input:!0)->Goo.Blob
-method|Goo.Cell`1|InputChanged|virtual|protected|generic:|(input:!0)->System.Void
-method|Goo.Cell`1|InvokeInputCallback|instance|protected|generic:T1[attrs:0,constraints:];T2[attrs:0,constraints:]|(callback:System.Action`2<!!0,!!1>?,first:!!0,second:!!1)->System.Void
-method|Goo.Cell`1|InvokeInputCallback|instance|protected|generic:T[attrs:0,constraints:];TResult[attrs:0,constraints:]|(callback:System.Func`2<!!0,!!1>?,value:!!0,fallback:!!1)->!!1
-method|Goo.Cell`1|InvokeInputCallback|instance|protected|generic:T[attrs:0,constraints:]|(callback:System.Action`1<!!0>?,value:!!0)->System.Void
+method|Goo.Cell`1|Build|virtual|protected|generic:|(input:!0?)->Goo.Blob
+method|Goo.Cell`1|InputChanged|virtual|protected|generic:|(input:!0?)->System.Void
+method|Goo.Cell`1|InvokeInputCallback|instance|protected|generic:T1[attrs:0,constraints:];T2[attrs:0,constraints:]|(callback:System.Action`2<!!0?,!!1?>?,first:!!0?,second:!!1?)->System.Void
+method|Goo.Cell`1|InvokeInputCallback|instance|protected|generic:T[attrs:0,constraints:];TResult[attrs:0,constraints:]|(callback:System.Func`2<!!0?,!!1?>?,value:!!0?,fallback:!!1?)->!!1?
+method|Goo.Cell`1|InvokeInputCallback|instance|protected|generic:T[attrs:0,constraints:]|(callback:System.Action`1<!!0?>?,value:!!0?)->System.Void
 method|Goo.Cell`1|InvokeInputCallback|instance|protected|generic:|(callback:System.Action?)->System.Void
 method|Goo.Cell|After|instance|protected|generic:|(delayMs:System.Double,action:System.Action)->Goo.WindowTimer
-method|Goo.Cell|AnimateValue|instance|public|generic:T[attrs:0,constraints:]|(initial:!!0,converter:Goo.MotionConverter`1<!!0>)->Goo.Anim`1<!!0>
+method|Goo.Cell|AnimateValue|instance|public|generic:T[attrs:0,constraints:]|(initial:!!0?,converter:Goo.MotionConverter`1<!!0?>)->Goo.Anim`1<!!0?>
 method|Goo.Cell|AnimateValue|instance|public|generic:|(initial:Goo.Color)->Goo.Anim`1<Goo.Color>
 method|Goo.Cell|AnimateValue|instance|public|generic:|(initial:Goo.Length)->Goo.Anim`1<Goo.Length>
 method|Goo.Cell|AnimateValue|instance|public|generic:|(initial:Goo.Point)->Goo.Anim`1<Goo.Point>
 method|Goo.Cell|AnimateValue|instance|public|generic:|(initial:System.Double)->Goo.Anim`1<System.Double>
-method|Goo.Cell|Animate|instance|public|generic:T[attrs:0,constraints:]|(initial:!!0,converter:Goo.MotionConverter`1<!!0>)->Goo.Anim`1<!!0>
-method|Goo.Cell|Animate|instance|public|generic:T[attrs:0,constraints:]|(initial:!!0,converter:Goo.MotionConverter`1<!!0>,onChange:System.Action`1<!!0>)->Goo.Anim`1<!!0>
+method|Goo.Cell|Animate|instance|public|generic:T[attrs:0,constraints:]|(initial:!!0?,converter:Goo.MotionConverter`1<!!0?>)->Goo.Anim`1<!!0?>
+method|Goo.Cell|Animate|instance|public|generic:T[attrs:0,constraints:]|(initial:!!0?,converter:Goo.MotionConverter`1<!!0?>,onChange:System.Action`1<!!0?>)->Goo.Anim`1<!!0?>
 method|Goo.Cell|Animate|instance|public|generic:|(initial:Goo.Color)->Goo.Anim`1<Goo.Color>
 method|Goo.Cell|Animate|instance|public|generic:|(initial:Goo.Color,onChange:System.Action`1<Goo.Color>)->Goo.Anim`1<Goo.Color>
 method|Goo.Cell|Animate|instance|public|generic:|(initial:Goo.Length)->Goo.Anim`1<Goo.Length>
@@ -1224,8 +1264,8 @@ method|Goo.Cell|Latest|instance|protected|generic:|(name:System.String)->System.
 method|Goo.Cell|Mounted|virtual|protected|generic:|()->System.Void
 method|Goo.Cell|Mount|static|public|generic:TCell[attrs:0,constraints:Goo.Cell]|(key:System.String?,factory:System.Func`1<!!0>)->Goo.Blob
 method|Goo.Cell|Mount|static|public|generic:TCell[attrs:16,constraints:Goo.Cell]|(key:System.String?=null)->Goo.Blob
-method|Goo.Cell|Mount|static|public|generic:TInput[attrs:0,constraints:];TCell[attrs:0,constraints:Goo.Cell`1<!!0>]|(key:System.String?,input:!!0,factory:System.Func`1<!!1>)->Goo.Blob
-method|Goo.Cell|Mount|static|public|generic:TInput[attrs:0,constraints:];TCell[attrs:16,constraints:Goo.Cell`1<!!0>]|(key:System.String?,input:!!0)->Goo.Blob
+method|Goo.Cell|Mount|static|public|generic:TInput[attrs:0,constraints:];TCell[attrs:0,constraints:Goo.Cell`1<!!0>]|(key:System.String?,input:!!0?,factory:System.Func`1<!!1>)->Goo.Blob
+method|Goo.Cell|Mount|static|public|generic:TInput[attrs:0,constraints:];TCell[attrs:16,constraints:Goo.Cell`1<!!0>]|(key:System.String?,input:!!0?)->Goo.Blob
 method|Goo.Cell|Post|instance|protected|generic:|(action:System.Action)->System.Boolean
 method|Goo.Cell|Rebuild|instance|public|generic:|()->System.Void
 method|Goo.Cell|Unmounting|virtual|protected|generic:|()->System.Void
@@ -1245,11 +1285,11 @@ method|Goo.Color|op_Implicit|static|public|generic:|(value:Goo.Color)->Goo.Edges
 method|Goo.Color|op_Inequality|static|public|generic:|(left:Goo.Color,right:Goo.Color)->System.Boolean
 method|Goo.Column|Add|instance|public|generic:|(child:Goo.Blob)->System.Void
 method|Goo.Container|Add|instance|public|generic:|(child:Goo.Blob)->System.Void
-method|Goo.Context`1|Read|instance|public|generic:|()->!0
-method|Goo.Context`1|Read|instance|public|generic:|(window:Goo.Window)->!0
-method|Goo.Context`1|Scope|instance|public|generic:|(value:!0,build:System.Func`1<Goo.Blob>)->Goo.Blob
-method|Goo.Context`1|Set|instance|public|generic:|(window:Goo.Window,value:!0)->System.Void
-method|Goo.Context`1|TryRead|instance|public|generic:|(window:Goo.Window,out value:!0&)->System.Boolean
+method|Goo.Context`1|Read|instance|public|generic:|()->!0?
+method|Goo.Context`1|Read|instance|public|generic:|(window:Goo.Window)->!0?
+method|Goo.Context`1|Scope|instance|public|generic:|(value:!0?,build:System.Func`1<Goo.Blob>)->Goo.Blob
+method|Goo.Context`1|Set|instance|public|generic:|(window:Goo.Window,value:!0?)->System.Void
+method|Goo.Context`1|TryRead|instance|public|generic:|(window:Goo.Window,out value:!0?&)->System.Boolean
 method|Goo.DevTools|Attach|static|public|generic:|(window:Goo.Window)->System.IDisposable
 method|Goo.DevTools|Attach|static|public|generic:|(window:Goo.Window,allowInput:System.Boolean)->System.IDisposable
 method|Goo.Edges|op_Implicit|static|public|generic:|(value:System.Double)->Goo.Edges
@@ -1427,6 +1467,7 @@ method|Goo.ImageSourceLease|Dispose|instance|public|generic:|()->System.Void
 method|Goo.ImageSourceLease|Fail|instance|public|generic:|()->System.Boolean
 method|Goo.ImageSourceProvider|Acquire|abstract|public|generic:|()->Goo.ImageSourceLease
 method|Goo.ImageSource|Acquire|instance|public|generic:|()->Goo.ImageSourceLease
+method|Goo.ImageSource|CopyPixels|instance|public|generic:|(destination:System.Span`1<System.Byte>)->System.Void
 method|Goo.ImageSource|DecodeColorManaged|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>,limits:Goo.ImageDecodeLimits,cancellationToken:System.Threading.CancellationToken)->Goo.ImageDecodeResult
 method|Goo.ImageSource|Decode|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>)->Goo.ImageSource
 method|Goo.ImageSource|Decode|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
@@ -1436,9 +1477,15 @@ method|Goo.ImageSource|Decode|static|public|generic:|(stream:System.IO.Stream,ca
 method|Goo.ImageSource|Decode|static|public|generic:|(stream:System.IO.Stream,limits:Goo.ImageDecodeLimits,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|Dispose|instance|public|generic:|()->System.Void
 method|Goo.ImageSource|EncodePng|instance|public|generic:|()->System.Byte[]
+method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>,maxWidth:System.Int32,maxHeight:System.Int32)->Goo.ImageSource
+method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>,maxWidth:System.Int32,maxHeight:System.Int32,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
+method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>,maxWidth:System.Int32,maxHeight:System.Int32,limits:Goo.ImageDecodeLimits,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(path:System.String,maxWidth:System.Int32,maxHeight:System.Int32)->Goo.ImageSource
 method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(path:System.String,maxWidth:System.Int32,maxHeight:System.Int32,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(path:System.String,maxWidth:System.Int32,maxHeight:System.Int32,limits:Goo.ImageDecodeLimits,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
+method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(stream:System.IO.Stream,maxWidth:System.Int32,maxHeight:System.Int32)->Goo.ImageSource
+method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(stream:System.IO.Stream,maxWidth:System.Int32,maxHeight:System.Int32,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
+method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(stream:System.IO.Stream,maxWidth:System.Int32,maxHeight:System.Int32,limits:Goo.ImageDecodeLimits,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|Transfer|static|public|generic:|(width:System.Int32,height:System.Int32,pixels:System.Byte[],released:System.Action)->Goo.ImageSource
 method|Goo.Images.ImageVariants|Dispose|instance|public|generic:|()->System.Void
 method|Goo.Images.ImageVariants|LoadAsync|instance|public|generic:|(metrics:Goo.WindowMetrics,cancellationToken:System.Threading.CancellationToken)->System.Threading.Tasks.Task`1<Goo.Images.ImageAssetResult>
@@ -1667,6 +1714,9 @@ method|Goo.RichText.RichTextResult|ToString|virtual|public|generic:|()->System.S
 method|Goo.RichText.RichTextResult|op_Equality|static|public|generic:|(left:Goo.RichText.RichTextResult?,right:Goo.RichText.RichTextResult?)->System.Boolean
 method|Goo.RichText.RichTextResult|op_Inequality|static|public|generic:|(left:Goo.RichText.RichTextResult?,right:Goo.RichText.RichTextResult?)->System.Boolean
 method|Goo.Row|Add|instance|public|generic:|(child:Goo.Blob)->System.Void
+method|Goo.SessionLock|Dispose|instance|public|generic:|()->System.Void
+method|Goo.SessionLock|Run|instance|public|generic:|(createWindow:System.Func`2<Goo.WindowDisplay,Goo.Window>)->System.Void
+method|Goo.SessionLock|UnlockAsync|instance|public|generic:|()->System.Threading.Tasks.Task
 method|Goo.ShaderEffectData|Dispose|instance|public|generic:|()->System.Void
 method|Goo.ShaderEffectData|PublishTransferred|instance|public|generic:|(bytes:System.Byte[],released:System.Action)->System.Void
 method|Goo.ShaderEffectData|Publish|instance|public|generic:T[attrs:24,constraints:System.ValueType]|(values:System.ReadOnlySpan`1<!!0>)->System.Void
@@ -1728,7 +1778,7 @@ method|Goo.SpellCheck.SpellingSuggestions|op_Inequality|static|public|generic:|(
 method|Goo.SpellCheck.SystemSpellingService|CheckAsync|instance|public|generic:|(snapshot:Goo.TextSnapshot,range:Goo.TextRange,language:System.String,cancellation:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<Goo.SpellCheck.SpellingResult>
 method|Goo.SpellCheck.SystemSpellingService|SuggestAsync|instance|public|generic:|(snapshot:Goo.TextSnapshot,range:Goo.TextRange,language:System.String,cancellation:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<Goo.SpellCheck.SpellingSuggestions>
 method|Goo.State`1|ToString|virtual|public|generic:|()->System.String
-method|Goo.State`1|op_Implicit|static|public|generic:|(value:Goo.State`1<!0>)->!0
+method|Goo.State`1|op_Implicit|static|public|generic:|(value:Goo.State`1<!0?>)->!0?
 method|Goo.Style|TryGetTextStyle|instance|public|generic:|(out properties:Goo.TextStyleProperties&)->System.Boolean
 method|Goo.Svg.Svg|Load|static|public|generic:|(path:System.String)->Goo.VectorAsset
 method|Goo.Svg.Svg|Load|static|public|generic:|(stream:System.IO.Stream)->Goo.VectorAsset
@@ -1972,6 +2022,8 @@ method|Goo.Window|AcquireNativeDialogOwnerAsync|instance|public|generic:|(cancel
 method|Goo.Window|After|instance|public|generic:|(delayMs:System.Double,action:System.Action)->Goo.WindowTimer
 method|Goo.Window|ApplyPlacement|instance|public|generic:|(value:Goo.WindowPlacement)->Goo.WindowPlacementResult
 method|Goo.Window|Attach|instance|public|generic:|(externalHost:Goo.EmbeddedWindowHost)->Goo.Window
+method|Goo.Window|BeginMove|instance|public|generic:|()->Goo.WindowOperationResult
+method|Goo.Window|BeginResize|instance|public|generic:|(edge:Goo.WindowEdge)->Goo.WindowOperationResult
 method|Goo.Window|CancelFileDialog|instance|public|generic:|()->System.Boolean
 method|Goo.Window|CapturePlacement|instance|public|generic:|()->Goo.WindowPlacementResult
 method|Goo.Window|CreateOffscreenSession|instance|public|generic:|()->Goo.OffscreenRenderSessionResult
@@ -1980,10 +2032,11 @@ method|Goo.Window|Every|instance|public|generic:|(intervalMs:System.Double,actio
 method|Goo.Window|GetCurrentDisplay|instance|public|generic:|()->Goo.WindowDisplay?
 method|Goo.Window|GetDisplays|instance|public|generic:|()->System.Collections.Generic.IReadOnlyList`1<Goo.WindowDisplay>
 method|Goo.Window|Hide|instance|public|generic:|()->Goo.WindowOperationResult
-method|Goo.Window|InvokeAsync|instance|public|generic:T[attrs:0,constraints:]|(action:System.Func`1<!!0>,cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<!!0>
-method|Goo.Window|InvokeAsync|instance|public|generic:T[attrs:0,constraints:]|(action:System.Func`1<System.Threading.Tasks.Task`1<!!0>>,cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<!!0>
+method|Goo.Window|InvokeAsync|instance|public|generic:T[attrs:0,constraints:]|(action:System.Func`1<!!0?>,cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<!!0?>
+method|Goo.Window|InvokeAsync|instance|public|generic:T[attrs:0,constraints:]|(action:System.Func`1<System.Threading.Tasks.Task`1<!!0?>>,cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<!!0?>
 method|Goo.Window|InvokeAsync|instance|public|generic:|(action:System.Action,cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task
 method|Goo.Window|InvokeAsync|instance|public|generic:|(action:System.Func`1<System.Threading.Tasks.Task>,cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task
+method|Goo.Window|MaximizeButton|static|public|generic:|(control:Goo.Button)->Goo.Button
 method|Goo.Window|MeasureText|instance|public|generic:|(text:System.String,style:Goo.Style)->System.Double
 method|Goo.Window|NextPresentationAsync|instance|public|generic:|(cancellationToken:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<Goo.WindowPresentationAccepted>
 method|Goo.Window|Open|instance|public|generic:|()->Goo.Window
@@ -1998,9 +2051,12 @@ method|Goo.Window|RequestCapture|instance|public|generic:|(reusable:Goo.WindowCa
 method|Goo.Window|RequestClose|instance|public|generic:|()->System.Void
 method|Goo.Window|SetColors|instance|public|generic:|(background:Goo.Color,foreground:Goo.Color)->System.Void
 method|Goo.Window|SetFullscreenDisplay|instance|public|generic:|(display:Goo.WindowDisplayId)->Goo.WindowOperationResult
+method|Goo.Window|SetInputRegion|instance|public|generic:|(rectangles:Goo.ElementRect[]?)->Goo.WindowOperationResult
+method|Goo.Window|SetLayerGeometry|instance|public|generic:|(geometry:Goo.LayerWindowOptions)->Goo.WindowOperationResult
 method|Goo.Window|SetNativeDataDropFormats|instance|public|generic:|(formats:System.Collections.Generic.IReadOnlyList`1<System.String>)->Goo.WindowOperationResult
 method|Goo.Window|SetTopmost|instance|public|generic:|(value:System.Boolean)->Goo.WindowOperationResult
 method|Goo.Window|ShowFileDialogAsync|instance|public|generic:|(kind:Goo.FileDialogKind,options:Goo.FileDialogOptions?=null)->System.Threading.Tasks.Task`1<Goo.FileDialogResult>
+method|Goo.Window|ShowSystemMenu|instance|public|generic:|(point:Goo.Point)->Goo.WindowOperationResult
 method|Goo.Window|Show|instance|public|generic:|(activate:System.Boolean=true)->Goo.WindowOperationResult
 property|Goo.AccessibilityActionRequest|Action|Goo.AccessibilityAction|instance|get:public|index:()
 property|Goo.AccessibilityActionRequest|ScrollX|System.Double|instance|get:public|index:()
@@ -2119,8 +2175,8 @@ property|Goo.ActivationReadResult|Status|Goo.ActivationReadStatus|instance|get:p
 property|Goo.Anim`1|IsDisposed|System.Boolean|instance|get:public|index:()
 property|Goo.Anim`1|IsPaused|System.Boolean|instance|get:public|index:()
 property|Goo.Anim`1|Running|System.Boolean|instance|get:public|index:()
-property|Goo.Anim`1|Target|!0|instance|get:public|index:()
-property|Goo.Anim`1|Value|!0|instance|get:public|index:()
+property|Goo.Anim`1|Target|!0?|instance|get:public|index:()
+property|Goo.Anim`1|Value|!0?|instance|get:public|index:()
 property|Goo.Anim`1|Velocity|Goo.MotionVelocity|instance|get:public|index:()
 property|Goo.ApplicationActivation|ActionId|System.String|instance|get:public,init:public|index:()
 property|Goo.ApplicationActivation|Arguments|System.Collections.Generic.IReadOnlyList`1<System.String>|instance|get:public,init:public|index:()
@@ -2182,7 +2238,7 @@ property|Goo.BoxShadow|OffsetX|Goo.Length|instance|get:public,init:public|index:
 property|Goo.BoxShadow|OffsetY|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.BoxShadow|Spread|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.Button|Children|System.Collections.Generic.IList`1<Goo.Blob>|instance|get:public,set:public|index:()
-property|Goo.Cell`1|Input|!0|instance|get:protected|index:()
+property|Goo.Cell`1|Input|!0?|instance|get:protected|index:()
 property|Goo.Cell|Host|Goo.Window|instance|get:protected|index:()
 property|Goo.Cell|Lifetime|System.Threading.CancellationToken|instance|get:protected|index:()
 property|Goo.ClipboardDataResult|Data|Goo.TransferData|instance|get:public|index:()
@@ -2251,10 +2307,10 @@ property|Goo.DragStartEvent|WindowPosition|Goo.Point|instance|get:public,init:pu
 property|Goo.DropTarget|Changed|System.Action`1<Goo.DragEvent>?|instance|get:public|index:()
 property|Goo.DropTarget|Query|System.Func`2<Goo.DragEvent,Goo.DragEffect>|instance|get:public|index:()
 property|Goo.DropTarget|StopAncestorRouting|System.Boolean|instance|get:public|index:()
-property|Goo.Edges`1|Bottom|!0|instance|get:public,init:public|index:()
-property|Goo.Edges`1|Left|!0|instance|get:public,init:public|index:()
-property|Goo.Edges`1|Right|!0|instance|get:public,init:public|index:()
-property|Goo.Edges`1|Top|!0|instance|get:public,init:public|index:()
+property|Goo.Edges`1|Bottom|!0?|instance|get:public,init:public|index:()
+property|Goo.Edges`1|Left|!0?|instance|get:public,init:public|index:()
+property|Goo.Edges`1|Right|!0?|instance|get:public,init:public|index:()
+property|Goo.Edges`1|Top|!0?|instance|get:public,init:public|index:()
 property|Goo.Edges|Bottom|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.Edges|Left|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.Edges|Right|Goo.Length|instance|get:public,init:public|index:()
@@ -2418,6 +2474,7 @@ property|Goo.Images.ImageVariant|Path|System.String|instance|get:public|index:()
 property|Goo.Images.ImageVariant|PixelsPerUnit|System.Double|instance|get:public|index:()
 property|Goo.Image|Fallback|Goo.Blob?|instance|get:public,set:public|index:()
 property|Goo.Image|Fit|Goo.ImageFit|instance|get:public,set:public|index:()
+property|Goo.Image|KeepPreviousWhilePending|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Image|PixelsPerUnit|System.Double|instance|get:public,set:public|index:()
 property|Goo.Image|Placeholder|Goo.Blob?|instance|get:public,set:public|index:()
 property|Goo.Image|Source|Goo.ImageSourceProvider?|instance|get:public,set:public|index:()
@@ -2439,6 +2496,8 @@ property|Goo.KeyModifiers|PrimaryShift|Goo.KeyModifiers|static|get:public|index:
 property|Goo.KeyModifiers|Primary|Goo.KeyModifiers|static|get:public|index:()
 property|Goo.KeyModifiers|Shift|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.KeyModifiers|Super|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.LayerWindowImage|Fit|Goo.ImageFit|instance|get:public|index:()
+property|Goo.LayerWindowImage|Path|System.String|instance|get:public|index:()
 property|Goo.LayerWindowOptions|Anchors|Goo.LayerWindowAnchor|instance|get:public,init:public|index:()
 property|Goo.LayerWindowOptions|ExclusiveZone|System.Int32|instance|get:public,init:public|index:()
 property|Goo.LayerWindowOptions|Height|System.Int32|instance|get:public,init:public|index:()
@@ -2450,6 +2509,7 @@ property|Goo.LayerWindowOptions|MarginRight|System.Int32|instance|get:public,ini
 property|Goo.LayerWindowOptions|MarginTop|System.Int32|instance|get:public,init:public|index:()
 property|Goo.LayerWindowOptions|Namespace|System.String|instance|get:public,init:public|index:()
 property|Goo.LayerWindowOptions|Output|System.Nullable`1<Goo.WindowDisplayId>|instance|get:public,init:public|index:()
+property|Goo.LayerWindowOptions|StillImage|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.LayerWindowOptions|Width|System.Int32|instance|get:public,init:public|index:()
 property|Goo.LayoutContext|ChildCount|System.Int32|instance|get:public|index:()
 property|Goo.LayoutSize|Height|System.Double|instance|get:public,init:public|index:()
@@ -2514,6 +2574,7 @@ property|Goo.NativeWindowHandle|Kind|Goo.NativeWindowKind|instance|get:public|in
 property|Goo.NotificationMessage|Body|System.String|instance|get:public,init:public|index:()
 property|Goo.NotificationMessage|Id|System.String|instance|get:public,init:public|index:()
 property|Goo.NotificationMessage|Payload|System.String|instance|get:public,init:public|index:()
+property|Goo.NotificationMessage|Silent|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.NotificationMessage|Title|System.String|instance|get:public,init:public|index:()
 property|Goo.NotificationOptions|ActivationScheme|System.String|instance|get:public,init:public|index:()
 property|Goo.NotificationOptions|ChannelId|System.String|instance|get:public,init:public|index:()
@@ -2635,6 +2696,7 @@ property|Goo.Scrollbar|ReserveSpace|System.Boolean|instance|get:public,set:publi
 property|Goo.Scrollbar|Thickness|System.Double|instance|get:public,set:public|index:()
 property|Goo.Scrollbar|Thumb|Goo.Container?|instance|get:public,set:public|index:()
 property|Goo.Scrollbar|Track|Goo.Container?|instance|get:public,set:public|index:()
+property|Goo.SessionLock|KeyboardLayoutName|System.String?|instance|get:public,set:private|index:()
 property|Goo.ShaderEffectData|ByteLength|System.Int32|instance|get:public|index:()
 property|Goo.ShaderEffectData|ContentVersion|System.UInt64|instance|get:public|index:()
 property|Goo.ShaderEffectData|IsDisposed|System.Boolean|instance|get:public|index:()
@@ -2684,7 +2746,7 @@ property|Goo.SpellCheck.SpellingSuggestions|Status|Goo.SpellCheck.SpellingStatus
 property|Goo.SpellCheck.SpellingSuggestions|Values|System.Collections.Generic.IReadOnlyList`1<System.String>|instance|get:public,init:public|index:()
 property|Goo.SpellCheck.SpellingSuggestions|Version|System.Int64|instance|get:public,init:public|index:()
 property|Goo.SpellCheck.SpellingSuggestions|Word|System.String|instance|get:public,init:public|index:()
-property|Goo.State`1|Value|!0|instance|get:public,set:public|index:()
+property|Goo.State`1|Value|!0?|instance|get:public,set:public|index:()
 property|Goo.Style|AlignContent|Goo.AlignContent|instance|set:public|index:()
 property|Goo.Style|AlignItems|Goo.AlignItems|instance|set:public|index:()
 property|Goo.Style|AlignSelf|Goo.AlignSelf|instance|set:public|index:()
@@ -3062,16 +3124,19 @@ property|Goo.Window|Foreground|Goo.Color|instance|get:public,set:public|index:()
 property|Goo.Window|ForeignParentHandle|System.String|instance|get:public,set:public|index:()
 property|Goo.Window|FramePacing|Goo.WindowFramePacing|instance|get:public,set:public|index:()
 property|Goo.Window|FrameTheme|Goo.SystemTheme|instance|get:public,set:public|index:()
+property|Goo.Window|IconPngs|System.Byte[][]|instance|get:public,init:public|index:()
 property|Goo.Window|IconPng|System.Byte[]?|instance|get:public,init:public|index:()
 property|Goo.Window|InitiallyVisible|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|IsFocused|System.Boolean|instance|get:public,set:private|index:()
 property|Goo.Window|IsInputBlocked|System.Boolean|instance|get:public|index:()
 property|Goo.Window|IsOpen|System.Boolean|instance|get:public,set:private|index:()
+property|Goo.Window|IsTransparent|System.Boolean|instance|get:public|index:()
 property|Goo.Window|IsVisible|System.Boolean|instance|get:public|index:()
 property|Goo.Window|LastAccessibilityError|System.Exception?|instance|get:public|index:()
 property|Goo.Window|LastNativeFileDropError|System.String?|instance|get:public|index:()
 property|Goo.Window|LastNativeTransferError|System.String|instance|get:public|index:()
 property|Goo.Window|LastNativeTransferStatus|Goo.DataTransferStatus|instance|get:public|index:()
+property|Goo.Window|LayerImage|Goo.LayerWindowImage?|instance|get:public,set:public|index:()
 property|Goo.Window|LayerShell|Goo.LayerWindowOptions?|instance|get:public,init:public|index:()
 property|Goo.Window|MacOSBackdrop|Goo.MacOSBackdropOptions|instance|get:public,set:public|index:()
 property|Goo.Window|MaxSize|Goo.LayoutSize|instance|get:public,set:public|index:()
@@ -3257,6 +3322,7 @@ type|Goo.KeyEvent|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.KeyModifiers|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.KeyModifiers>|generic:
 type|Goo.Key|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.LayerWindowAnchor|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.LayerWindowImage|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.LayerWindowKeyboardInteractivity|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.LayerWindowOptions|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.LayoutAlgorithm|interface|public|base:-|interfaces:|generic:
@@ -3353,6 +3419,7 @@ type|Goo.Row|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.ScrollAlignment|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.ScrollbarVisibility|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Scrollbar|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.SessionLock|sealed-class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.ShaderEffectData|sealed-class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.ShaderEffectProgram|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.ShaderEffect|sealed-class|public|base:System.Object|interfaces:|generic:
@@ -3459,6 +3526,7 @@ type|Goo.WindowCapture|sealed-class|public|base:System.Object|interfaces:|generi
 type|Goo.WindowClipboard|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.WindowDisplayId|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.WindowDisplayId>|generic:
 type|Goo.WindowDisplay|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.WindowEdge|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowFocus|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.WindowFramePacing|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowInputKind|enum|public|base:System.Enum|interfaces:|generic:

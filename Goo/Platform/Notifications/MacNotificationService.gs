@@ -136,6 +136,10 @@ internal class MacNotificationService : NotificationService {
         try {
             Send(content, Sel("setTitle:"), Text(message.Title))
             Send(content, Sel("setBody:"), Text(message.Body))
+            if !message.Silent {
+                let sound = Send(objc_getClass("UNNotificationSound"), Sel("defaultSound"))
+                Send(content, Sel("setSound:"), sound)
+            }
             let data = Send(objc_getClass("NSMutableDictionary"), Sel("dictionary"))
             Send(data, Sel("setObject:forKey:"), Text(message.Id), Text("Goo.NotificationId"))
             Send(data, Sel("setObject:forKey:"), Text(message.Payload), Text("Goo.Payload"))

@@ -20,9 +20,10 @@ internal unsafe partial class SdlHost {
 
   internal prop FirstShowPending bool { get -> deferFirstShow && firstShowRequested }
   internal prop IsLayerWindow bool { get -> layerWindow != nil }
+  internal prop LayerResizePending bool { get -> layerWindow?.ResizePending == true }
 
   internal func DeferFirstShow() bool {
-    if layerWindow != nil { return false }
+    if layerWindow != nil || lockWindow != nil { return false }
     let properties = SDL.GetWindowProperties(window)
     if !SDL.GetBooleanProperty(properties, "Goo.Wayland.NonblockingFirstShowAvailable.1", false) {
       return false
@@ -32,6 +33,7 @@ internal unsafe partial class SdlHost {
   }
 
   internal func PrepareFirstPresent() bool {
+    if let role = lockWindow { return role.Configured }
     if let layer = layerWindow {
       if layer.Visible { layer.Presented = true }
       return layer.Visible
@@ -55,11 +57,14 @@ internal unsafe partial class SdlHost {
     return true
   }
 
-  public prop IsVisible bool { get -> !disposed && !IsClosing && (layerWindow?.Visible
-    ?? ((SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Hidden | SDLWindowFlags.Minimized)) == 0uL)) }
+  public prop IsVisible bool {
+    get -> !disposed && !IsClosing && (lockWindow?.Configured ?? layerWindow?.Visible
+      ?? ((SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Hidden | SDLWindowFlags.Minimized)) == 0uL))
+  }
 
   public prop Capabilities WindowCapabilities {
     get {
+      if lockWindow != nil { return WindowCapabilities.None }
       if layerWindow != nil { return WindowCapabilities.Visibility | WindowCapabilities.ShowWithoutActivation }
       let driver = SDL.GetCurrentVideoDriverS()
       return if driver == "windows" || driver == "cocoa" || driver == "x11" {
@@ -87,7 +92,7 @@ internal unsafe partial class SdlHost {
 
   public func ShowWithoutActivation() WindowOperationResult {
     if disposed || IsClosing { return WindowOperationResult.Closed }
-    if layerWindow != nil { return RequestActivation() }
+    if layerWindow != nil || lockWindow != nil { return RequestActivation() }
     if (Capabilities & WindowCapabilities.ShowWithoutActivation) == WindowCapabilities.None {
       return WindowOperationResult.Unsupported
     }
@@ -108,6 +113,11 @@ internal unsafe partial class SdlHost {
   public func Hide() WindowOperationResult {
     if disposed || IsClosing { return WindowOperationResult.Closed }
     minimizePending = false
+    inputRegion?.Invalidate()
+    if let role = lockWindow {
+      role.StopPresenting()
+      return WindowOperationResult.Accepted
+    }
     if let layer = layerWindow {
       layer.Hide()
       let result = SDL.HideWindow(window) ? WindowOperationResult.Accepted : WindowOperationResult.Failed

@@ -448,14 +448,15 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
   Register(path, fillRule, false)
 
   internal func TryRetain(pathId ResourceId, expectedAtlas ResourceId, wordOffset uint32,
-    wordCount uint32, fillRuleCode uint32, renderAfterPlannedUpload bool) bool {
+    wordCount uint32, fillRuleCode uint32) bool {
     EnsureOpen()
     if expectedAtlas.LogicalId != atlasId.LogicalId || expectedAtlas.Version != atlasId.Version
       || !records.TryGetValue(pathId.LogicalId, out var record)
       || record.Identity.PathId.Version != pathId.Version || record.BaseWord != wordOffset
       || record.WordCount != wordCount { return false }
     let fillRule = fillRuleCode == FillRuleEvenOdd ? FillRule.EvenOdd : FillRule.NonZero
-    if !BuildRenderable(record, fillRule, renderAfterPlannedUpload).Renderable { return false }
+    let renderable = BuildRenderable(record, fillRule)
+    if !renderable.Published || !renderable.Renderable { return false }
     TouchRecord(record)
     return true
   }

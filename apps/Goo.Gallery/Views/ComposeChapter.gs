@@ -113,7 +113,7 @@ open class ComposeChapterCell : Cell[ComposeChapter], IDisposable {
             snapshot.Sort(
                 (left, right) -> {
                     let rank = ranks[left.Index].CompareTo(ranks[right.Index])
-                    return rank == 0 ? left.Index.CompareTo(right.Index): rank
+                    return rank == 0 ? left.Index.CompareTo(right.Index) : rank
                 }
             )
             cancellation.Token.ThrowIfCancellationRequested()

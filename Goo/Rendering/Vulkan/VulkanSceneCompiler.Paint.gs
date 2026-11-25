@@ -405,7 +405,9 @@ internal partial class VulkanSceneCompiler {
       }
       if shapePaintClip {
         if let gradient = node.BackgroundGradient {
-          PaintGradient(node, gradient, bounds, opacity, transformIndex)
+          let maskIndex = frame.ClipChains[frame.ActiveClipChainId].MaskIndex
+          let coverage = maskIndex >= 0 ? frame.ClipMasks[maskIndex].Bounds : bounds
+          PaintGradient(node, gradient, bounds, opacity, transformIndex, paintBounds: coverage)
         } else {
           PaintSolid(fillColor, node, bounds, opacity, transformIndex)
         }
@@ -958,6 +960,17 @@ internal partial class VulkanSceneCompiler {
             } else {
               bounds
             }
+      if node.Kind == NodeKind.Shape {
+        let shape = ShapeGeometry.Resolve(node,
+          Rect{X: bounds.X, Y: bounds.Y, W: bounds.Width, H: bounds.Height})
+        if shape.Mapping.Valid && shape.Path.CommandCount != 0 {
+          let path = PathGeometry.For(shape.Path)
+          let source = ConservativeBounds{X: path.MinX, Y: path.MinY,
+            Width: path.MaxX - path.MinX, Height: path.MaxY - path.MinY}
+          let painted = MappedPathBounds(source, shape.Mapping).Inflate(shape.StrokeExtent + 1.0F)
+          result = unionVulkanSceneBounds(result, painted)
+        }
+      }
       let outlineBounds = OutlineBounds(node, bounds)
       if !outlineBounds.IsEmpty {
         result = unionVulkanSceneBounds(result, outlineBounds)
@@ -1162,7 +1175,8 @@ internal partial class VulkanSceneCompiler {
     bounds ConservativeBounds,
     opacity float32,
     transformIndex int32,
-    clipOwnsOuterCoverage bool = false) {
+    clipOwnsOuterCoverage bool = false,
+    paintBounds ConservativeBounds = default(ConservativeBounds)) {
       if bounds.IsEmpty {
         return
       }
@@ -1194,10 +1208,11 @@ internal partial class VulkanSceneCompiler {
         })
         index = index + 1
       }
+      let coverage = paintBounds.IsEmpty ? bounds : paintBounds
       switch gradient {
         case compiled is VectorLinearGradient {
           frame.AddLinearGradient(LinearGradientRecord{
-            Bounds: bounds,
+            Bounds: coverage,
             RadiusTopLeft: clipOwnsOuterCoverage ? 0.0F : Radius(node.BorderTopLeftRadius, node.BorderRadius, bounds),
             RadiusTopRight: clipOwnsOuterCoverage ? 0.0F : Radius(node.BorderTopRightRadius, node.BorderRadius, bounds),
             RadiusBottomRight: clipOwnsOuterCoverage ? 0.0F : Radius(node.BorderBottomRightRadius, node.BorderRadius, bounds),
@@ -1215,7 +1230,7 @@ internal partial class VulkanSceneCompiler {
         }
         case compiled is VectorRadialGradient {
           frame.AddRadialGradient(RadialGradientRecord{
-            Bounds: bounds,
+            Bounds: coverage,
             RadiusTopLeft: clipOwnsOuterCoverage ? 0.0F : Radius(node.BorderTopLeftRadius, node.BorderRadius, bounds),
             RadiusTopRight: clipOwnsOuterCoverage ? 0.0F : Radius(node.BorderTopRightRadius, node.BorderRadius, bounds),
             RadiusBottomRight: clipOwnsOuterCoverage ? 0.0F : Radius(node.BorderBottomRightRadius, node.BorderRadius, bounds),
@@ -1239,7 +1254,7 @@ internal partial class VulkanSceneCompiler {
           let centerX = bounds.X + bounds.Width * 0.5F
           let centerY = bounds.Y + bounds.Height * 0.5F
           frame.AddLinearGradient(LinearGradientRecord{
-            Bounds: bounds,
+            Bounds: coverage,
             RadiusTopLeft: clipOwnsOuterCoverage ? 0.0F : Radius(node.BorderTopLeftRadius, node.BorderRadius, bounds),
             RadiusTopRight: clipOwnsOuterCoverage ? 0.0F : Radius(node.BorderTopRightRadius, node.BorderRadius, bounds),
             RadiusBottomRight: clipOwnsOuterCoverage ? 0.0F : Radius(node.BorderBottomRightRadius, node.BorderRadius, bounds),
@@ -1257,7 +1272,7 @@ internal partial class VulkanSceneCompiler {
         }
         case radial is RadialGradient {
           frame.AddRadialGradient(RadialGradientRecord{
-            Bounds: bounds,
+            Bounds: coverage,
             RadiusTopLeft: clipOwnsOuterCoverage ? 0.0F : Radius(node.BorderTopLeftRadius, node.BorderRadius, bounds),
             RadiusTopRight: clipOwnsOuterCoverage ? 0.0F : Radius(node.BorderTopRightRadius, node.BorderRadius, bounds),
             RadiusBottomRight: clipOwnsOuterCoverage ? 0.0F : Radius(node.BorderBottomRightRadius, node.BorderRadius, bounds),

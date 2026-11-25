@@ -8,6 +8,27 @@ Source: [`Goo/Window`](../../Goo/Window)
 Application.Run(Window{Root: Cell{}})
 ```
 
+## Wayland session lock
+
+```gsharp
+using let session = SessionLock()
+session.Run(createLockWindow)
+```
+
+Supply a window factory that can authenticate the user and request unlock.
+`Run` opens one window per output and adds or removes windows on hotplug.
+Goo uses the connection inherited through `WAYLAND_SOCKET` when the compositor provides one.
+Non-Wayland hosts and compositors without
+`ext_session_lock_manager_v1` do not support this API.
+
+Call `UnlockAsync` on the UI thread only after `Locked` and successful
+authentication. Await it before exit. Closing a window, disposing the session
+or losing the connection never sends an unlock request. `Finished` reports
+compositor rejection or termination.
+
+Read `KeyboardLayoutName` after `KeyboardLayoutChanged` to show the active
+keyboard layout.
+
 ## Native library loading
 
 Goo loads its bundled patched SDL and shares that handle with its SDL bindings.
@@ -1078,6 +1099,26 @@ Selects the output edges to which a layer-shell window is anchored.
 - `Left`
 - `Right`
 
+## `LayerWindowImage`
+
+
+Describes a still image for a Wayland layer window. Share the same instance across outputs.
+
+### `new(string,ImageFit)`
+
+Describes one image without opening the file. Create a new instance after replacing the file.
+
+- `path`: The local image path.
+- `fit`: The fit mode. The default is Cover.
+
+### `Fit`
+
+Gets the fit used to paint the image over the window background.
+
+### `Path`
+
+Gets the local PNG, JPEG, GIF or WebP path. Only the first frame is used. Limits: 64 MiB encoded, 144 MiB decoded RGBA, and 8192 pixels per side or the device's lower limit.
+
 ## `LayerWindowKeyboardInteractivity`
 
 
@@ -1092,7 +1133,7 @@ Controls keyboard focus for a layer-shell window.
 ## `LayerWindowOptions`
 
 
-Configures a Wayland layer-shell surface before Window.Open. Sizes and margins use compositor logical units. Zero sizes require opposite anchors.
+Configures a Wayland layer-shell surface. Sizes and margins use compositor logical units. Zero sizes require opposite anchors.
 
 ### `new`
 
@@ -1141,6 +1182,10 @@ Gets the compositor namespace. The default is goo.
 ### `Output`
 
 Gets the target display. Null lets the compositor choose.
+
+### `StillImage`
+
+Presents Window.LayerImage over Window.Background without drawing a Goo tree. Uses the normal Vulkan swapchain when direct Wayland presentation is unavailable. Do not set Window.Root in this mode.
 
 ### `Width`
 
@@ -1536,6 +1581,47 @@ No rendering device is available.
 
 A virtual GPU.
 
+## `SessionLock`
+
+
+Owns a Wayland session lock on Goo's display connection, including an inherited WAYLAND_SOCKET. Use this API on the UI thread. The app must authenticate the user before it requests unlock.
+
+### `Finished`
+
+Occurs when the compositor rejects or ends this lock. It does not authorize an unlock request.
+
+### `KeyboardLayoutChanged`
+
+Occurs when the active XKB keyboard layout or keymap changes.
+
+### `Locked`
+
+Occurs when the compositor confirms that the session is locked.
+
+### `new`
+
+Opens the Wayland connection if needed and checks that the compositor supports session lock.
+
+### `Dispose`
+
+Closes any lock windows and releases this owner without authorizing unlock.
+
+### `Run(System.Func{WindowDisplay,Window})`
+
+Requests the lock and runs the UI loop until unlock, compositor finish, or a lock window closes. Goo opens and closes one window per Wayland output, including outputs added or removed during the lock.
+
+- `createWindow`: Creates a fresh, visible, focusable desktop window for an output. The compositor sets its size.
+
+### `UnlockAsync`
+
+Requests unlock. Call on the UI thread only after Locked and successful authentication.
+
+Returns: A task that completes after the compositor processes unlock and lock surface removal.
+
+### `KeyboardLayoutName`
+
+Gets the current XKB layout name, or nil if the keyboard has no name or is unavailable.
+
 ## `SizeToContent`
 
 
@@ -1605,6 +1691,10 @@ Gets a surface-local rectangle in logical pixels, or nil for the whole window. C
 
 
 Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread. Each instance has one lifetime. Create a new Window after closing. State, IsFocused, Size, NativeWidth, NativeHeight, UiScale, PixelScale, Preferences and Modifiers track reads in Build and retained builders. Other mutable window getters keep automatic callback rebuilding.
+
+### `CaptureCompleted`
+
+Occurs once on the UI thread when an accepted public capture completes or fails. Call PollCapture to take the result or throw the failure. Does not occur if PollCapture already took the result or failure.
 
 ### `DisplayChanged`
 
@@ -1696,6 +1786,16 @@ Returns: Applied fields with Accepted, Unsupported, Closed, or Failed for invali
 
 Attaches this window to an external viewport without creating a desktop window. The host attaches its native presentation surface separately and drives RenderFrame.
 
+### `BeginMove`
+
+Starts a system move of the window. Call from a pointer, touch or key press handler. With the primary button held, the window follows the pointer. From a key press, Windows starts its keyboard move and Wayland sends xdg_toplevel.move with the key serial. Accepted means the request was sent. A Wayland compositor can still ignore it. Returns Unsupported unless the window is in the normal state on Windows or Wayland.
+
+### `BeginResize(WindowEdge)`
+
+Starts a system resize from an edge or corner. Call from a pointer, touch or key press handler. With the primary button held, the edge follows the pointer. From a key press, Windows starts its keyboard sizing and Wayland sends xdg_toplevel.resize with the key serial. Accepted means the request was sent. A Wayland compositor can still ignore it. Returns Unsupported unless the window is resizable and in the normal state on Windows or Wayland. On Wayland, returns Unsupported if the compositor constrains any requested edge.
+
+- `edge`: edge or corner to move
+
 ### `CancelFileDialog`
 
 Cancels delivery of a pending chooser result on the UI thread and requests native dismissal where available. Native ownership remains active until the platform callback returns.
@@ -1783,6 +1883,14 @@ Queues a function on the UI thread and awaits its result or exception.
 
 Returns: the function result
 
+### `MaximizeButton(Button)`
+
+Marks a button as the custom maximize or restore control of an undecorated window. Windows 11 shows the Snap Layouts flyout when the pointer hovers it. Other platforms ignore the mark. Call on a button you created, before returning it. A received button throws.
+
+- `control`: button to mark
+
+Returns: the same button
+
 ### `MeasureText(string,Style)`
 
 Measures single-line Text width in layout units on the window's UI thread. Applies text scale and pixel-grid rounding. Line breaks are ignored. Reads FontFamily, Language, FontSize, FontWeight, FontStyle, LetterSpacing, TextTransform and Direction. Unset fields use Goo defaults, not parent inheritance.
@@ -1850,7 +1958,7 @@ Requests restoration of a minimized window, raising, and keyboard activation. Ca
 
 ### `RequestCapture`
 
-Starts an asynchronous offscreen replay of the current scene. This may submit a native present and does not sample a specific display scanout. Call PollCapture on the UI thread until it returns pixels.
+Starts an asynchronous offscreen replay of the current scene. This may submit a native present and does not sample a specific display scanout. Handle CaptureCompleted or call PollCapture on the UI thread.
 
 ### `RequestCapture(WindowCapture)`
 
@@ -1870,6 +1978,22 @@ Sets the clear and inherited root text colors together on the owner thread. Expl
 ### `SetFullscreenDisplay(WindowDisplayId)`
 
 Requests borderless fullscreen on the selected display, including retargeting an already-fullscreen window. This must run on the window's UI thread. Returns Closed before Open or after close, Unsupported for embedded hosts, Failed for a stale ID or native failure, and Accepted when SDL accepts the request. Acceptance does not guarantee compositor placement. The compositor may keep the current display when retargeting fullscreen.
+
+### `SetInputRegion(ElementRect[])`
+
+Sets the input region for an open Wayland toplevel or layer-shell window. The compositor applies the region when the next frame is committed. Direct still-image presentation does not support input regions.
+
+- `rectangles`: the union of rectangles in surface-local logical pixels, rounded out to whole pixels. Null restores the full surface. An empty array disables pointer and touch input.
+
+Returns: Accepted if queued, Closed if not open, or Unsupported for other window types and platforms.
+
+### `SetLayerGeometry(LayerWindowOptions)`
+
+Requests new anchors, size, margins, exclusive zone and keyboard interactivity for an open layer window. Layer, namespace and output must match LayerShell. The compositor controls the final size. Requests made while hidden apply on the next Show. A size change from a layout metrics callback keeps the previous buffer until the next configure.
+
+- `geometry`: the new options, with sizes and margins in compositor logical units
+
+Returns: Accepted if queued or submitted, Closed if not open, or Unsupported for another window type, a change to a fixed option, or a keyboard policy the compositor does not support
 
 ### `SetNativeDataDropFormats(System.Collections.Generic.IReadOnlyList{string})`
 
@@ -1897,6 +2021,12 @@ Starts one owner-modal chooser on the open window's UI thread; other windows con
 - `options`: Optional title, initial path, filters, and multiple-selection hints copied before launch.
 
 Returns: A task completed on the UI thread with owned paths and an explicit outcome. Await continuations follow normal .NET context rules.
+
+### `ShowSystemMenu(Point)`
+
+Shows the platform window menu at a point in layout units. Wayland compositors define its items. Returns Unsupported for undecorated Windows windows, which have no system menu.
+
+- `point`: menu position in layout units
 
 ### `AccessibilityAdapter`
 
@@ -1978,6 +2108,10 @@ Gets or sets the native frame and material appearance. Unknown follows the syste
 
 Configures PNG bytes for the native window icon in the Window initializer before Open. The icon is decoded when opening, has a 1024 pixel edge limit, and requires no external file.
 
+### `IconPngs`
+
+Configures additional native window icon sizes. If IconPng is unset, the first PNG is the primary icon. Each PNG is decoded when opening and has a 1024 pixel edge limit. Windows chooses the closest size for each icon slot. Wayland uses the primary icon as the base size.
+
 ### `InitiallyVisible`
 
 Gets or sets whether Open shows the desktop window. Configure before Open.
@@ -1993,6 +2127,10 @@ Gets whether a modal child, native chooser, or native modal service blocks this 
 ### `IsOpen`
 
 Reports whether the window is open.
+
+### `IsTransparent`
+
+Reports whether the window presents with per-pixel alpha. False until the presentation surface is ready.
 
 ### `IsVisible`
 
@@ -2014,9 +2152,13 @@ Gets the latest native drop explanation, bounded to 1024 characters.
 
 Gets the latest native drop capture status.
 
+### `LayerImage`
+
+Gets or sets the image for a layer window with LayerWindowOptions.StillImage enabled. A null or unreadable image shows only Background. Change this on the window owner thread.
+
 ### `LayerShell`
 
-Configures this window as a Wayland layer-shell surface before Open. Unsupported platforms and compositors fail without a normal-window fallback.
+Configures this window as a Wayland layer-shell surface before Open. Unsupported platforms and compositors fail without a normal-window fallback. Use SetLayerGeometry to request new geometry after Open. This property keeps the initial options.
 
 ### `MacOSBackdrop`
 
@@ -2096,7 +2238,7 @@ Gets or sets whether the user can resize the window.
 
 ### `ResizeBand`
 
-Gets or sets the undecorated edge resize band in layout units. A scrollbar under an edge band takes the pointer. Corners always resize.
+Gets or sets the undecorated edge resize band inside the window, in logical pixels multiplied by UiScale. The default is 8. Windows and Wayland with the Goo SDL build resize from an outside border and from inside corner squares of ResizeBand size. macOS uses the AppKit resize area instead. Where an inside edge band is used, controls with OnClick and scrollbars take the pointer in that band. Corners extend max(2 * ResizeBand, 16) along each edge.
 
 ### `Root`
 
@@ -2136,7 +2278,7 @@ Gets or initializes the desktop topmost preference before Open. Use SetTopmost t
 
 ### `Transparent`
 
-Gets or sets per-pixel alpha for the first Open. An open window is unchanged. Transparency requires the GPU renderer.
+Gets or sets per-pixel alpha for the first Open. An open window is unchanged. If Vulkan cannot provide transparency, the window opens opaque.
 
 ### `UiScale`
 
@@ -2346,6 +2488,22 @@ Gets usable non-fullscreen bounds, or nil if SDL could not provide them.
 
 
 Identifies one SDL display in the current process. The value can become stale after display changes.
+
+## `WindowEdge`
+
+
+Identifies the window edge or corner that Window.BeginResize moves.
+
+### Values
+
+- `TopLeft`
+- `Top`
+- `TopRight`
+- `Right`
+- `BottomRight`
+- `Bottom`
+- `BottomLeft`
+- `Left`
 
 ## `WindowFramePacing`
 

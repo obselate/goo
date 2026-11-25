@@ -154,12 +154,12 @@ internal struct WindowNotifications {
   private event keyPressed Action[Key, KeyModifiers]
   private event inputActivity Action[WindowInputKind]
   private event previewKeyPressed Func[Key, KeyModifiers, bool]
-  private var previewKeyPressedCallbacks ([]Delegate)?
   private event focusChanged Action[bool]
   private event visibilityChanged Action[bool]
   private event occlusionChanged Action[WindowOcclusion]
   private event preferencesChanged Action[PlatformPreferences]
   private event presentationAccepted Action[WindowPresentationAccepted]
+  private event captureCompleted Action
   private event displayChanged Action
 
   internal func AddStateChanged(callback Action[WindowState]) { stateChanged += callback }
@@ -174,18 +174,10 @@ internal struct WindowNotifications {
   internal func RemoveInputActivity(callback Action[WindowInputKind]) { inputActivity -= callback }
   internal func RaiseInputActivity(kind WindowInputKind) { inputActivity?.Invoke(kind) }
 
-  internal func AddPreviewKeyPressed(callback Func[Key, KeyModifiers, bool]) {
-    previewKeyPressed += callback
-    previewKeyPressedCallbacks = previewKeyPressed?.GetInvocationList()
-  }
-  internal func RemovePreviewKeyPressed(callback Func[Key, KeyModifiers, bool]) {
-    previewKeyPressed -= callback
-    previewKeyPressedCallbacks = previewKeyPressed?.GetInvocationList()
-  }
+  internal func AddPreviewKeyPressed(callback Func[Key, KeyModifiers, bool]) { previewKeyPressed += callback }
+  internal func RemovePreviewKeyPressed(callback Func[Key, KeyModifiers, bool]) { previewKeyPressed -= callback }
   internal func PreviewKeyPress(key Key, modifiers KeyModifiers) bool {
-    guard let callbacks = previewKeyPressedCallbacks else { return false }
-    for callback in callbacks {
-      let handler = (callback as Func[Key, KeyModifiers, bool])!!
+    for handler in Delegate.EnumerateInvocationList[Func[Key, KeyModifiers, bool]](previewKeyPressed) {
       if handler(key, modifiers) { return true }
     }
     return false
@@ -207,6 +199,9 @@ internal struct WindowNotifications {
   internal func AddPresentationAccepted(callback Action[WindowPresentationAccepted]) { presentationAccepted += callback }
   internal func RemovePresentationAccepted(callback Action[WindowPresentationAccepted]) { presentationAccepted -= callback }
   internal func RaisePresentationAccepted(value WindowPresentationAccepted) { presentationAccepted?.Invoke(value) }
+  internal func AddCaptureCompleted(callback Action) { captureCompleted += callback }
+  internal func RemoveCaptureCompleted(callback Action) { captureCompleted -= callback }
+  internal func RaiseCaptureCompleted() { captureCompleted?.Invoke() }
   internal func AddDisplayChanged(callback Action) { displayChanged += callback }
   internal func RemoveDisplayChanged(callback Action) { displayChanged -= callback }
   internal func RaiseDisplayChanged() { displayChanged?.Invoke() }
@@ -220,7 +215,79 @@ internal struct WindowNotifications {
 public partial class Window {
   /// Configures this window as a Wayland layer-shell surface before Open.
   /// Unsupported platforms and compositors fail without a normal-window fallback.
+  /// Use SetLayerGeometry to request new geometry after Open. This property keeps the initial options.
   public prop LayerShell LayerWindowOptions? { get; init; }
+
+  private var layerImage LayerWindowImage?
+  private var layerImageFallback LayerWindowImageFallback?
+
+  /// Gets or sets the image for a layer window with LayerWindowOptions.StillImage enabled.
+  /// A null or unreadable image shows only Background. Change this on the window owner thread.
+  public prop LayerImage LayerWindowImage? {
+    get -> ReadUntrackedWindowValue(layerImage)
+    set(value) {
+      requireUiThread("Window.LayerImage")
+      if Object.ReferenceEquals(layerImage, value) { return }
+      layerImage = value
+      requestRender()
+      host?.Wake()
+    }
+  }
+  internal var LockSurface WaylandLockSurface?
+  internal prop IsPointerOnlyLayer bool { get -> (host as SdlHost?)?.IsPointerOnlyLayer == true }
+
+  private var pendingLayerGeometry LayerWindowOptions?
+  private var pendingLayerGeometryHold bool
+
+  /// Requests new anchors, size, margins, exclusive zone and keyboard interactivity for an open layer window.
+  /// Layer, namespace and output must match LayerShell. The compositor controls the final size.
+  /// Requests made while hidden apply on the next Show.
+  /// A size change from a layout metrics callback keeps the previous buffer until the next configure.
+  /// @param geometry the new options, with sizes and margins in compositor logical units
+  /// @returns Accepted if queued or submitted, Closed if not open, or Unsupported for another window type,
+  /// a change to a fixed option, or a keyboard policy the compositor does not support
+  /// @exception ArgumentException when the options are invalid.
+  public func SetLayerGeometry(geometry LayerWindowOptions) WindowOperationResult {
+    requireUiThread("Window.SetLayerGeometry")
+    if !IsOpen || host?.IsClosing == true { return WindowOperationResult.Closed }
+    guard let native = host as SdlHost? else { return WindowOperationResult.Unsupported }
+    if !native.IsLayerWindow { return WindowOperationResult.Unsupported }
+    ArgumentNullException.ThrowIfNull(geometry)
+    if !native.SupportsLayerGeometry(geometry) { return WindowOperationResult.Unsupported }
+    geometry.Validate("geometry")
+    if windowTarget?.QueueWorkPending == true {
+      pendingLayerGeometry = geometry
+      pendingLayerGeometryHold = flushingMetricsBeforeRender
+    } else {
+      pendingLayerGeometry = nil
+      native.SetLayerGeometry(geometry, flushingMetricsBeforeRender)
+    }
+    return WindowOperationResult.Accepted
+  }
+
+  /// Sets the input region for an open Wayland toplevel or layer-shell window.
+  /// The compositor applies the region when the next frame is committed.
+  /// Direct still-image presentation does not support input regions.
+  /// @param rectangles the union of rectangles in surface-local logical pixels, rounded out to whole pixels.
+  /// Null restores the full surface. An empty array disables pointer and touch input.
+  /// @returns Accepted if queued, Closed if not open, or Unsupported for other window types and platforms.
+  /// @exception ArgumentException when a rectangle has a nonfinite coordinate or a negative size.
+  public func SetInputRegion(rectangles [] ? ElementRect) WindowOperationResult {
+    requireUiThread("Window.SetInputRegion")
+    if !IsOpen || host?.IsClosing == true { return WindowOperationResult.Closed }
+    guard let native = host as SdlHost? else { return WindowOperationResult.Unsupported }
+    if !native.SupportsInputRegion() { return WindowOperationResult.Unsupported }
+    if let values = rectangles {
+      for rect in values {
+        if !Double.IsFinite(rect.X) || !Double.IsFinite(rect.Y) || !Double.IsFinite(rect.Width)
+          || !Double.IsFinite(rect.Height) || rect.Width < 0.0 || rect.Height < 0.0 {
+          throw ArgumentException("Input rectangles require finite coordinates and nonnegative sizes", "rectangles")
+        }
+      }
+    }
+    if native.SetInputRegion(rectangles) { requestRender() }
+    return WindowOperationResult.Accepted
+  }
 
   /// Gets the selected rendering device, or Unknown with an empty name before Open or when unavailable.
   public prop RenderingDevice RenderingDeviceInfo{
@@ -264,6 +331,13 @@ public partial class Window {
   public prop IconPng [] ? uint8 {
     get -> ReadUntrackedWindowValue(iconPng)
     init -> iconPng = value
+  }
+  /// Configures additional native window icon sizes. If IconPng is unset, the first PNG is the primary icon.
+  /// Each PNG is decoded when opening and has a 1024 pixel edge limit.
+  /// Windows chooses the closest size for each icon slot. Wayland uses the primary icon as the base size.
+  public prop IconPngs [][]uint8 {
+    get -> ReadUntrackedWindowValue(iconPngs)
+    init -> iconPngs = value
   }
   /// Reports whether the window is open.
   public prop IsOpen bool{ get -> ReadUntrackedWindowValue(isOpen); private set -> isOpen = value }
@@ -409,13 +483,19 @@ public partial class Window {
   }
 
   /// Gets or sets per-pixel alpha for the first Open. An open window is unchanged.
-  /// Transparency requires the GPU renderer.
+  /// If Vulkan cannot provide transparency, the window opens opaque.
   public prop Transparent bool{
     get -> ReadUntrackedWindowValue(transparent)
     set(v) {
       requireUiThread("Window.Transparent")
       transparent = v
     }
+  }
+
+  /// Reports whether the window presents with per-pixel alpha.
+  /// False until the presentation surface is ready.
+  public prop IsTransparent bool {
+    get -> ReadUntrackedWindowValue((windowTarget as VulkanWindowTarget?)?.IsTransparent == true)
   }
 
   /// Gets or sets whether the system draws window decorations.
@@ -448,8 +528,10 @@ public partial class Window {
     }
   }
 
-  /// Gets or sets the undecorated edge resize band in layout units.
-  /// A scrollbar under an edge band takes the pointer. Corners always resize.
+  /// Gets or sets the undecorated edge resize band inside the window, in logical pixels multiplied by UiScale. The default is 8.
+  /// Windows and Wayland with the Goo SDL build resize from an outside border and from inside corner squares of ResizeBand size.
+  /// macOS uses the AppKit resize area instead.
+  /// Where an inside edge band is used, controls with OnClick and scrollbars take the pointer in that band. Corners extend max(2 * ResizeBand, 16) along each edge.
   public prop ResizeBand float64{
     get -> ReadUntrackedWindowValue(resizeBand)
     set(v) {
@@ -561,6 +643,20 @@ public partial class Window {
     }
   }
 
+  /// Occurs once on the UI thread when an accepted public capture completes or fails.
+  /// Call PollCapture to take the result or throw the failure.
+  /// Does not occur if PollCapture already took the result or failure.
+  public event CaptureCompleted Action{
+    add{
+      requireUiThread("Window.CaptureCompleted")
+      notifications.AddCaptureCompleted(value)
+    }
+    remove{
+      requireUiThread("Window.CaptureCompleted")
+      notifications.RemoveCaptureCompleted(value)
+    }
+  }
+
   /// Gets clipboard services for this window's UI thread.
   public prop Clipboard WindowClipboard { get -> clipboard ??= WindowClipboard(this) }
   private var clipboard WindowClipboard?
@@ -636,7 +732,7 @@ public partial class Window {
   private var presentationAcceptedHook Action[int64]?
   private var captureOwner WindowCaptureOwner
   private var capturePending bool
-  private var captureFailed bool
+  private var captureStatus WindowReadbackPollStatus
   private var reusableCapture WindowCapture?
   private var title string
   private var background Color
@@ -644,6 +740,7 @@ public partial class Window {
   private var foregroundPending bool
   private var root Cell?
   private var iconPng [] ? uint8
+  private var iconPngs [][]uint8 = Array.Empty[[]uint8]()
   private var width int32
   private var height int32
   private var x int32
@@ -733,7 +830,7 @@ public partial class Window {
     if captureOwner == WindowCaptureOwner.Diagnostics {
       captureOwner = WindowCaptureOwner.None
       capturePending = false
-      captureFailed = false
+      captureStatus = WindowReadbackPollStatus.NotReady
     }
     resolver.DebugOverrides = nil
     input.SetDiagnostics(nil, nil)
@@ -751,7 +848,7 @@ public partial class Window {
 
   /// Starts an asynchronous offscreen replay of the current scene. This may
   /// submit a native present and does not sample a specific display scanout.
-  /// Call PollCapture on the UI thread until it returns pixels.
+  /// Handle CaptureCompleted or call PollCapture on the UI thread.
   public func RequestCapture() WindowCaptureRequestStatus -> RequestCapture(nil)
 
   /// Reuses a previous capture's caller-owned pixels when its size matches.
@@ -780,20 +877,32 @@ public partial class Window {
     capturePending = status == WindowReadbackRequestStatus.Busy || status == WindowReadbackRequestStatus.NotReady
     if status == WindowReadbackRequestStatus.Accepted || capturePending {
       captureOwner = owner
+      captureStatus = WindowReadbackPollStatus.NotReady
       return WindowReadbackRequestStatus.Accepted
     }
     return status
   }
 
-  internal func advanceCapture() {
-    guard let target = windowTarget else { return }
-    if !capturePending || target.QueueWorkPending { return }
-    if startCapture(target, captureOwner) != WindowReadbackRequestStatus.Accepted { captureFailed = true }
+  internal func SchedulerHasPendingPublicCapture() bool -> captureOwner == WindowCaptureOwner.Public
+    && captureStatus == WindowReadbackPollStatus.NotReady
+    && (!capturePending || windowTarget?.QueueWorkPending != true && (IsVisible || firstShowPending()))
+
+  private func advanceCapture() bool {
+    guard let target = windowTarget else { return false }
+    if capturePending && !target.QueueWorkPending
+      && startCapture(target, captureOwner) != WindowReadbackRequestStatus.Accepted {
+      captureStatus = WindowReadbackPollStatus.Failed
+      return captureOwner == WindowCaptureOwner.Public
+    }
+    if captureOwner != WindowCaptureOwner.Public || capturePending
+      || captureStatus != WindowReadbackPollStatus.NotReady { return false }
+    captureStatus = target.PollCapture()
+    return captureStatus != WindowReadbackPollStatus.NotReady
   }
 
   private func takeCaptureFailure() {
-    if !captureFailed { return }
-    captureFailed = false
+    if captureStatus != WindowReadbackPollStatus.Failed { return }
+    captureStatus = WindowReadbackPollStatus.NotReady
     captureOwner = WindowCaptureOwner.None
     reusableCapture = nil
     System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(windowTarget?.CaptureFailure ?? InvalidOperationException("Goo capture readback failed")).Throw()
@@ -803,21 +912,18 @@ public partial class Window {
   /// Failed readback throws and releases this request's ownership.
   public func PollCapture() WindowCapture? {
     requireUiThread("Window.PollCapture")
-    if captureOwner != WindowCaptureOwner.Public { return nil }
-    takeCaptureFailure()
+    if captureOwner != WindowCaptureOwner.Public || capturePending { return nil }
     guard let target = windowTarget else {
       captureOwner = WindowCaptureOwner.None
       reusableCapture = nil
       return nil
     }
-    let status = target.PollCapture()
-    if status == WindowReadbackPollStatus.NotReady { return nil }
+    if captureStatus == WindowReadbackPollStatus.NotReady { captureStatus = target.PollCapture() }
+    if captureStatus == WindowReadbackPollStatus.NotReady { return nil }
+    takeCaptureFailure()
     captureOwner = WindowCaptureOwner.None
     let reusable = reusableCapture
     reusableCapture = nil
-    if status == WindowReadbackPollStatus.Failed {
-      System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(target.CaptureFailure ?? InvalidOperationException("Goo capture readback failed")).Throw()
-    }
     guard let result = target.TakeCaptureResult() else {
       throw InvalidOperationException("Goo capture result was unavailable")
     }

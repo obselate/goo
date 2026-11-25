@@ -24,28 +24,67 @@ func WriteImage(result VulkanReadbackResult, path string) {
 }
 
 class ImageFileCell : Cell {
-  private var source ImageSource
+  private var source ImageSourceProvider
   private var visible bool = true
   private var density float32 = 1.0F
   private var fit ImageFit = ImageFit.Fill
+  private var keepPreviousWhilePending bool
 
   init(image ImageSource) { source = image }
 
   func Hide() { visible = false
     Rebuild() }
-  func Remount(image ImageSource, pixelsPerUnit float32 = 1.0F, mode ImageFit = ImageFit.Fill) {
+  func Remount(image ImageSourceProvider, pixelsPerUnit float32 = 1.0F, mode ImageFit = ImageFit.Fill,
+    keepPrevious bool = false) {
     source = image
     density = pixelsPerUnit
     fit = mode
+    keepPreviousWhilePending = keepPrevious
     visible = true
     Rebuild()
   }
 
   override func Build() Blob {
     var child Blob = Container{}
-    if visible { child = Image{Source: source, Width: 96, Height: 96, Fit: fit, PixelsPerUnit: density} }
+    if visible {
+      child = Image{Source: source, Width: 96, Height: 96, Fit: fit, PixelsPerUnit: density,
+        KeepPreviousWhilePending: keepPreviousWhilePending}
+    }
     return Container() {.Width: 96,.Height: 96,.BackgroundColor: Color.Rgb(0, 0, 0), child,
     }
+  }
+}
+
+private class PendingImageFileProvider : ImageSourceProvider {
+  let Lease ImageSourceLease = ImageSourceLease()
+  prop ContentVersion uint64 { get -> 1uL }
+  event ContentChanged Action?
+  func Acquire() ImageSourceLease -> Lease
+}
+
+func VerifyPendingImageReplacement(window Window, root ImageFileCell, metrics WindowMetrics) {
+  using let red = ImageSource(1, 1, []uint8{255, 0, 0, 255})
+  using let blue = ImageSource(1, 1, []uint8{0, 0, 255, 255})
+  for keepPrevious in []bool{true, false} {
+    root.Remount(red, keepPrevious: keepPrevious)
+    ImageStagingSettle(window)
+    let initial = PrimitiveReadback(window, metrics)
+    PrimitiveRequirePixelNear(initial.Pixels, initial.Width, metrics, 48.0, 48.0,
+      uint8(255), uint8(0), uint8(0), 2, "replacement_initial")
+
+    let pending = PendingImageFileProvider()
+    root.Remount(pending, keepPrevious: keepPrevious)
+    ImageStagingSettle(window)
+    let loading = PrimitiveReadback(window, metrics)
+    let expectedRed = if keepPrevious { uint8(255) } else { uint8(0) }
+    PrimitiveRequirePixelNear(loading.Pixels, loading.Width, metrics, 48.0, 48.0,
+      expectedRed, uint8(0), uint8(0), 2, "replacement_pending")
+
+    Require(pending.Lease.Complete(blue), "Pending image source did not complete")
+    ImageStagingSettle(window)
+    let completed = PrimitiveReadback(window, metrics)
+    PrimitiveRequirePixelNear(completed.Pixels, completed.Width, metrics, 48.0, 48.0,
+      uint8(0), uint8(0), uint8(255), 2, "replacement_completed")
   }
 }
 
@@ -55,8 +94,11 @@ func RunImageFileSmoke() {
   let imagePath = Path.Combine(AppContext.BaseDirectory, "local-rgba.png")
   using let source = cache.LoadAsync(imagePath).GetAwaiter().GetResult()
   let root = ImageFileCell(source)
+  let primaryIcon = File.ReadAllBytes(imagePath)
+  let alternateIcon = Convert.FromBase64String(
+    "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAE0lEQVR4nGNgGAWjYBSMAgYwAAAEEAABsax5zAAAAABJRU5ErkJggg==")
   let window = Window{ Title: "Goo local PNG gate", Size: LayoutSize(96, 96),  VSync: false,
-    IconPng: File.ReadAllBytes(imagePath), Root: root }
+    IconPng: primaryIcon, IconPngs: [][]uint8{alternateIcon}, Root: root }
   let capturedError = StringWriter()
   let originalError = Console.Error
   try {
@@ -89,6 +131,7 @@ func RunImageFileSmoke() {
       uint8(255), uint8(255), uint8(255), 1, "density_none_inside")
     PrimitiveRequirePixelNear(densityFrame.Pixels, densityFrame.Width, metrics, 40.0, 40.0,
       uint8(0), uint8(0), uint8(0), 1, "density_none_outside")
+    VerifyPendingImageReplacement(window, root, metrics)
     window.RequestClose()
     WindowReadbackTestFixture.ForceRender(window, 0.0)
     Require(!window.IsOpen && WindowReadbackTestFixture.ResidentResourceBytes(window) == 0uL,
@@ -104,6 +147,20 @@ func RunImageFileSmoke() {
   ReadbackValidateCommonDiagnostics(diagnostics)
   for line in diagnostics.Split('\n') {
     if line.StartsWith("{\"kind\":\"device\",") && !line.Contains("\"name\":") { Console.WriteLine(line) }
+  }
+  let oversizedIcon = Convert.FromBase64String(
+    "iVBORw0KGgoAAAANSUhEUgAABAEAAAABCAYAAACvzLcLAAAAGklEQVR4nO3BAQEAAACCIP+vbkhAAQAAAD0YEAUAAafjJCIAAAAASUVORK5CYII=")
+  let invalid = Window{ InitiallyVisible: false, IconPngs: [][]uint8{primaryIcon, oversizedIcon} }
+  try {
+    invalid.Open()
+    throw InvalidOperationException("Window accepted an oversized alternate icon")
+  } catch (error InvalidDataException) {
+    Require(error.Message == "Window icon exceeds 1024 pixels per side", "Unexpected icon validation error")
+  } finally {
+    if invalid.IsOpen {
+      invalid.RequestClose()
+      WindowReadbackTestFixture.ForceRender(invalid, 0.0)
+    }
   }
   Console.WriteLine("image-file-smoke: png_pixels=4 density_none=verified alpha=verified cache_disposed=1 source_disposed=1 close=1")
   for name in []string {"local-rgb.jpg", "local-progressive.jpg", "local-cmyk.jpg", "local-transparent.gif", "local-animated.gif"} {

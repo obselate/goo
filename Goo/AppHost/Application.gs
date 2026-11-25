@@ -90,10 +90,20 @@ public shared class Application {
     /// @param arguments The startup arguments, without the executable name.
     /// @param timeoutMs The positive connection and acknowledgement deadline in milliseconds.
     /// @returns A primary lease or the explicit forwarding or failure result.
-    public func AcquireSingleInstance(arguments[]string, timeoutMs float64 = 3000.0) SingleInstanceResult {
+    public func AcquireSingleInstance(arguments[]string, timeoutMs float64 = 3000.0) SingleInstanceResult ->
+        AcquireSingleInstance(arguments, nil, timeoutMs)
+
+    /// Elects a primary instance within the given scope without changing the native application identity.
+    /// @param arguments The startup arguments, without the executable name.
+    /// @param instanceScope A non-empty election scope, or nil for the default election.
+    /// @param timeoutMs The positive connection and acknowledgement deadline in milliseconds.
+    /// @returns A primary lease or the explicit forwarding or failure result.
+    public func AcquireSingleInstance(arguments[]string, instanceScope string?,
+        timeoutMs float64 = 3000.0) SingleInstanceResult {
         if !Double.IsFinite(timeoutMs) || timeoutMs <= 0.0 || timeoutMs > float64(Int32.MaxValue) {
             throw ArgumentOutOfRangeException("timeoutMs")
         }
+        if instanceScope == "" { throw ArgumentException("An election scope cannot be empty", "instanceScope") }
         let identifier = Identifier
         if HasOpenedWindow {
             throw InvalidOperationException("Acquire a single instance before opening the first window")
@@ -105,9 +115,10 @@ public shared class Application {
         if parsed.Activation == nil {
             return SingleInstanceResult(SingleInstanceStatus.Rejected, error: parsed.Error)
         }
-        let initial = parsed.Activation!!
+        let initial = parsed.Activation
         EnsureActivation(initial)
-        return InstancePipe.AcquireAsync(identifier, initial, int32(Math.Ceiling(timeoutMs))).GetAwaiter().GetResult()
+        return InstancePipe.AcquireAsync(identifier, initial, int32(Math.Ceiling(timeoutMs)), instanceScope)
+            .GetAwaiter().GetResult()
     }
 
     /// Opens the window and runs the UI event loop until all Goo windows close.
@@ -273,7 +284,7 @@ public shared class Application {
     }
 
     private func RequireActivationThread() {
-        let owner = Volatile.Read(ref activationOwnerThreadId)
+        let owner = Volatile.Read(in activationOwnerThreadId)
         if owner != 0 && owner != Environment.CurrentManagedThreadId {
             throw InvalidOperationException("Application activation belongs to the process UI thread")
         }
@@ -295,7 +306,7 @@ public shared class Application {
     }
 
     internal prop HasPendingActivation bool {
-        get -> applicationActivated != nil && Volatile.Read(ref pendingActivationCount) != 0
+        get -> applicationActivated != nil && Volatile.Read(in pendingActivationCount) != 0
     }
 
     internal prop IsInitialActivation bool {

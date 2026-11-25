@@ -68,13 +68,14 @@ class HotReload {
             Runner.Require(File.Exists(runtime), runtime)
             let app = Path.Combine(output, "app")
             Directory.CreateDirectory(app)
+            File.Copy(Path.Combine(Runner.Root, "global.json"), Path.Combine(app, "global.json"))
             let program = Path.Combine(app, "Program.gs")
             File.Copy(Path.Combine(Runner.Root, "tests/Goo.HotReloadSmoke/Program.gs"), program)
             let project = Path.Combine(app, "Smoke.gsproj")
             XDocument(
                 XElement(
                     "Project",
-                    XAttribute("Sdk", "Gsharp.NET.Sdk/0.5.212"),
+                    XAttribute("Sdk", "Gsharp.NET.Sdk"),
                     XElement(
                         "PropertyGroup",
                         XElement("OutputType", "Exe"),
@@ -123,9 +124,10 @@ class HotReload {
             if !OperatingSystem.IsWindows() {
                 build.InsertRange(0, []string{"nice", "-n", "10"})
             }
-            Runner.Run(build.ToArray(), seconds: 120, log: Path.Combine(output, "build.log"))
+            Runner.Run(build.ToArray(), directory: app, seconds: 120, log: Path.Combine(output, "build.log"))
             using let watch = Runner.Start(
                 []string{"dotnet", "watch", "--project", project, "--non-interactive"},
+                directory: app,
                 environment: environment
             )
             using let log = StreamWriter(Path.Combine(output, "watch.log"))

@@ -43,9 +43,9 @@ internal class ProfilerNesting {
         Array.Fill(Depths, -1)
         Array.Sort(
             scopes,
-            (x ProfilerScope, y ProfilerScope) -> x.Ticks != y.Ticks ? x.Ticks.CompareTo(y.Ticks): y.EndTicks.CompareTo(
-                x.EndTicks
-            )
+            (x ProfilerScope, y ProfilerScope) -> x.Ticks != y.Ticks ? x.Ticks.CompareTo(y.Ticks) : y
+                .EndTicks
+                .CompareTo(x.EndTicks)
         )
         let stacks = Dictionary[string, List[int32]]()
         for position in 0 ... scopes.Length {

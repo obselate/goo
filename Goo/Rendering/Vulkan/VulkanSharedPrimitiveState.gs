@@ -68,6 +68,11 @@ internal unsafe class VulkanNativeHandleDestroyer {
   }
 }
 
+internal struct VulkanPipelineSlot {
+  internal var Handle VkPipeline
+  internal var Creating bool
+}
+
 internal sealed class VulkanShaderEffectPipelineEntry {
   internal let Digest []uint8
   internal let Spirv []uint8
@@ -109,19 +114,21 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
   private let textFragmentModule VkShaderModule
   private let textPaintFragmentModule VkShaderModule
   private let pipelineGate object
+  private var activePipelineCreations int32
   private var shaderEffectPipelineCount int32
-  private var solidPipeline VkPipeline
-  private var opaqueSolidPipeline VkPipeline
-  private var shadowPipeline VkPipeline
-  private var borderPipeline VkPipeline
-  private var linearPipeline VkPipeline
-  private var radialPipeline VkPipeline
-  private var sampledPipeline VkPipeline
-  private var blendPipeline VkPipeline
-  private var clipCompositePipeline VkPipeline
-  private var pathPipeline VkPipeline
-  private var textPipeline VkPipeline
-  private var textPaintPipeline VkPipeline
+  private var shaderEffectReadyCount int32
+  private var solidPipeline VulkanPipelineSlot
+  private var opaqueSolidPipeline VulkanPipelineSlot
+  private var shadowPipeline VulkanPipelineSlot
+  private var borderPipeline VulkanPipelineSlot
+  private var linearPipeline VulkanPipelineSlot
+  private var radialPipeline VulkanPipelineSlot
+  private var sampledPipeline VulkanPipelineSlot
+  private var blendPipeline VulkanPipelineSlot
+  private var clipCompositePipeline VulkanPipelineSlot
+  private var pathPipeline VulkanPipelineSlot
+  private var textPipeline VulkanPipelineSlot
+  private var textPaintPipeline VulkanPipelineSlot
   private var disposed bool
 
   internal prop Format VkFormat{ get -> format }
@@ -139,9 +146,10 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
   }
   internal func ProfileResources(recorder FrameRecorder) {
     lock pipelineGate {
-      for pipeline in []uint64{solidPipeline, opaqueSolidPipeline, shadowPipeline, borderPipeline, linearPipeline,
-        radialPipeline, sampledPipeline, blendPipeline, clipCompositePipeline,
-        pathPipeline, textPipeline, textPaintPipeline} {
+      for pipeline in []uint64{solidPipeline.Handle, opaqueSolidPipeline.Handle, shadowPipeline.Handle,
+        borderPipeline.Handle, linearPipeline.Handle, radialPipeline.Handle, sampledPipeline.Handle,
+        blendPipeline.Handle, clipCompositePipeline.Handle, pathPipeline.Handle, textPipeline.Handle,
+        textPaintPipeline.Handle} {
         recorder.Resource(FrameResourceKind.Pipeline,
           recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), pipeline),
           VulkanDiagnosticEventIds.PipelineCreate, "pipeline", device: uint64(device), baseline: true)
@@ -198,19 +206,19 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
   internal prop LiveObjectCount uint64{
     get {
       var count uint64 = 0uL
-      if solidPipeline != 0uL { count++ }
-      if opaqueSolidPipeline != 0uL { count++ }
-      if shadowPipeline != 0uL { count++ }
-      if borderPipeline != 0uL { count++ }
-      if linearPipeline != 0uL { count++ }
-      if radialPipeline != 0uL { count++ }
-      if sampledPipeline != 0uL { count++ }
-      if blendPipeline != 0uL { count++ }
-      if clipCompositePipeline != 0uL { count++ }
-      if pathPipeline != 0uL { count++ }
-      if textPipeline != 0uL { count++ }
-      if textPaintPipeline != 0uL { count++ }
-      count = count + uint64(shaderEffectPipelineCount)
+      if solidPipeline.Handle != 0uL { count++ }
+      if opaqueSolidPipeline.Handle != 0uL { count++ }
+      if shadowPipeline.Handle != 0uL { count++ }
+      if borderPipeline.Handle != 0uL { count++ }
+      if linearPipeline.Handle != 0uL { count++ }
+      if radialPipeline.Handle != 0uL { count++ }
+      if sampledPipeline.Handle != 0uL { count++ }
+      if blendPipeline.Handle != 0uL { count++ }
+      if clipCompositePipeline.Handle != 0uL { count++ }
+      if pathPipeline.Handle != 0uL { count++ }
+      if textPipeline.Handle != 0uL { count++ }
+      if textPaintPipeline.Handle != 0uL { count++ }
+      count += uint64(shaderEffectReadyCount)
       return count
     }
   }
@@ -326,39 +334,38 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       textPaintFragmentModule, textPipelineLayout, true, false)
   }
 
-  private func ResolvePipeline(ref pipeline VkPipeline,
+  private func ResolvePipeline(ref pipeline VulkanPipelineSlot,
     vertex VkShaderModule, fragment VkShaderModule, layout VkPipelineLayout,
-    enableBlend bool, primitiveInput bool) VkPipeline{
-      let existing = Volatile.Read(ref pipeline)
-      if existing != 0uL { return existing }
+    enableBlend bool, primitiveInput bool) VkPipeline {
+    let existing = Volatile.Read(in pipeline.Handle)
+    if existing != 0uL { return existing }
+    lock (pipelineGate) {
+      while pipeline.Creating { Monitor.Wait(pipelineGate) }
+      if disposed { throw ObjectDisposedException("VulkanSharedPrimitiveFormatState") }
+      if pipeline.Handle != 0uL { return pipeline.Handle }
+      pipeline.Creating = true
+      activePipelineCreations++
+    }
+    var created VkPipeline
+    try {
+      let topology = if primitiveInput {
+        VkConstants.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP
+      } else {
+        VkConstants.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST
+      }
+      created = VulkanPipelineFactory.CreateGraphics(
+        device, dispatch, pipelineCache, objectAccounting, vertex, fragment, layout,
+        format, topology, enableBlend, FullColorWriteMask(), nil)
+      return created
+    } finally {
       lock (pipelineGate) {
-        if disposed {
-          throw ObjectDisposedException("VulkanSharedPrimitiveFormatState")
-        }
-        if pipeline == 0uL {
-          let topology = if primitiveInput {
-            VkConstants.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP
-          } else {
-            VkConstants.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST
-          }
-          Volatile.Write(ref pipeline, VulkanPipelineFactory.CreateGraphics(
-            device,
-            dispatch,
-            pipelineCache,
-            objectAccounting,
-            vertex,
-            fragment,
-            layout,
-            format,
-            topology,
-            enableBlend,
-            FullColorWriteMask(),
-            nil
-          ))
-        }
-        return pipeline
+        Volatile.Write(ref pipeline.Handle, created)
+        pipeline.Creating = false
+        activePipelineCreations--
+        Monitor.PulseAll(pipelineGate)
       }
     }
+  }
 
   private func FullColorWriteMask() uint32 ->
   uint32(VkConstants.VK_COLOR_COMPONENT_R_BIT)
@@ -372,67 +379,98 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
     if shaderEffectPipelineAliases.TryGetValue(program, out var existing) {
       return existing.Pipeline
     }
-    lock (pipelineGate) {
-      if disposed { throw ObjectDisposedException("VulkanSharedPrimitiveFormatState") }
-      if shaderEffectPipelineAliases.TryGetValue(program, out var cached) {
-        return cached.Pipeline
+    let (entry, create) = ReserveShaderEffectPipeline(program)
+    if !create { return entry.Pipeline }
+    var created VkPipeline
+    try {
+      created = CreateShaderEffectPipeline(entry)
+      return created
+    } finally {
+      lock (pipelineGate) {
+        if created != 0uL {
+          entry.Pipeline = created
+          shaderEffectReadyCount++
+        } else {
+          let index = Array.IndexOf(shaderEffectPipelines, entry)
+          shaderEffectPipelineCount--
+          shaderEffectPipelines[index] = shaderEffectPipelines[shaderEffectPipelineCount]
+          shaderEffectPipelines[shaderEffectPipelineCount] = nil
+        }
+        activePipelineCreations--
+        Monitor.PulseAll(pipelineGate)
+        if created != 0uL { shaderEffectPipelineAliases.Add(program, entry) }
       }
-      let spirv = program.VulkanSpirv
-      let digest = program.VulkanSpirvDigest
-      var index int32
-      while index < shaderEffectPipelineCount {
-        if let entry = shaderEffectPipelines[index] {
-          if entry.ReplacesBackdrop == program.ReplacesBackdrop
-            && BytesEqual(entry.Digest, digest) && BytesEqual(entry.Spirv, spirv) {
-            shaderEffectPipelineAliases.Add(program, entry)
-            return entry.Pipeline
+    }
+  }
+
+  private func ReserveShaderEffectPipeline(program ShaderEffectProgram) (VulkanShaderEffectPipelineEntry, bool) {
+    let spirv = program.VulkanSpirv
+    let digest = program.VulkanSpirvDigest
+    lock (pipelineGate) {
+      while true {
+        if disposed { throw ObjectDisposedException("VulkanSharedPrimitiveFormatState") }
+        if shaderEffectPipelineAliases.TryGetValue(program, out var cached) {
+          return (cached, false)
+        }
+        var matched VulkanShaderEffectPipelineEntry?
+        for i in 0 ... shaderEffectPipelineCount {
+          if let entry = shaderEffectPipelines[i] {
+            if entry.ReplacesBackdrop == program.ReplacesBackdrop
+              && BytesEqual(entry.Digest, digest) && BytesEqual(entry.Spirv, spirv) {
+              matched = entry
+              break
+            }
           }
         }
-        index++
+        if let entry = matched {
+          if entry.Pipeline == 0uL {
+            Monitor.Wait(pipelineGate)
+            continue
+          }
+          shaderEffectPipelineAliases.Add(program, entry)
+          return (entry, false)
+        }
+        if shaderEffectPipelineCount >= shaderEffectPipelines.Length {
+          throw InvalidOperationException("Vulkan shader effect pipeline capacity exhausted")
+        }
+        let entry = VulkanShaderEffectPipelineEntry(digest, spirv, program.ReplacesBackdrop)
+        shaderEffectPipelines[shaderEffectPipelineCount] = entry
+        shaderEffectPipelineCount++
+        activePipelineCreations++
+        return (entry, true)
       }
-      if shaderEffectPipelineCount >= shaderEffectPipelines.Length {
-        throw InvalidOperationException("Vulkan shader effect pipeline capacity exhausted")
-      }
-      let entry = VulkanShaderEffectPipelineEntry(digest, spirv, program.ReplacesBackdrop)
-      var fragmentModule = VulkanPipelineFactory.CreateShaderModule(
+    }
+  }
+
+  private func CreateShaderEffectPipeline(entry VulkanShaderEffectPipelineEntry) VkPipeline {
+    var fragmentModule = VulkanPipelineFactory.CreateShaderModule(
+      device, dispatch, objectAccounting, entry.Spirv, "shader effect")
+    var coordinates uint32 = 1u
+    var specializationEntry = VkSpecializationMapEntry{constantID: 0u, size: 4u}
+    var specialization = VkSpecializationInfo{
+      mapEntryCount: 1u,
+      pMapEntries: *VkSpecializationMapEntry(Unsafe.AsPointer[VkSpecializationMapEntry](in specializationEntry)),
+      dataSize: 4u,
+      pData: Unsafe.AsPointer[uint32](in coordinates),
+    }
+    try {
+      return VulkanPipelineFactory.CreateGraphics(
         device,
         dispatch,
+        pipelineCache,
         objectAccounting,
-        spirv,
-        "shader effect")
-      var pipeline VkPipeline
-      var coordinates uint32 = 1u
-      var specializationEntry = VkSpecializationMapEntry{constantID: 0u, size: 4u}
-      var specialization = VkSpecializationInfo{
-        mapEntryCount: 1u,
-        pMapEntries: *VkSpecializationMapEntry(Unsafe.AsPointer[VkSpecializationMapEntry](ref specializationEntry)),
-        dataSize: 4u,
-        pData: Unsafe.AsPointer[uint32](ref coordinates),
-      }
-      try {
-        pipeline = VulkanPipelineFactory.CreateGraphics(
-          device,
-          dispatch,
-          pipelineCache,
-          objectAccounting,
-          analyticVertexModule,
-          fragmentModule,
-          blendPipelineLayout,
-          format,
-          VkConstants.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
-          !program.ReplacesBackdrop,
-          FullColorWriteMask(),
-          vertexSpecialization: *VkSpecializationInfo(Unsafe.AsPointer[VkSpecializationInfo](ref specialization))
-        )
-      } finally {
-        VulkanNativeHandleDestroyer.DestroyShaderModule(
-          device, dispatch.vkDestroyShaderModule, objectAccounting, ref fragmentModule)
-      }
-      entry.Pipeline = pipeline
-      shaderEffectPipelines[shaderEffectPipelineCount] = entry
-      shaderEffectPipelineCount++
-      shaderEffectPipelineAliases.Add(program, entry)
-      return pipeline
+        analyticVertexModule,
+        fragmentModule,
+        blendPipelineLayout,
+        format,
+        VkConstants.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+        !entry.ReplacesBackdrop,
+        FullColorWriteMask(),
+        vertexSpecialization: *VkSpecializationInfo(Unsafe.AsPointer[VkSpecializationInfo](in specialization))
+      )
+    } finally {
+      VulkanNativeHandleDestroyer.DestroyShaderModule(
+        device, dispatch.vkDestroyShaderModule, objectAccounting, ref fragmentModule)
     }
   }
 
@@ -445,6 +483,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
         return
       }
       disposed = true
+      while activePipelineCreations != 0 { Monitor.Wait(pipelineGate) }
       DestroyPipelines()
     }
   }
@@ -469,30 +508,31 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
     }
     shaderEffectPipelineAliases.Clear()
     shaderEffectPipelineCount = 0
+    shaderEffectReadyCount = 0
     VulkanNativeHandleDestroyer.DestroyPipeline(
-      device, dispatch.vkDestroyPipeline, objectAccounting, ref textPaintPipeline)
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref textPaintPipeline.Handle)
     VulkanNativeHandleDestroyer.DestroyPipeline(
-      device, dispatch.vkDestroyPipeline, objectAccounting, ref textPipeline)
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref textPipeline.Handle)
     VulkanNativeHandleDestroyer.DestroyPipeline(
-      device, dispatch.vkDestroyPipeline, objectAccounting, ref sampledPipeline)
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref sampledPipeline.Handle)
     VulkanNativeHandleDestroyer.DestroyPipeline(
-      device, dispatch.vkDestroyPipeline, objectAccounting, ref blendPipeline)
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref blendPipeline.Handle)
     VulkanNativeHandleDestroyer.DestroyPipeline(
-      device, dispatch.vkDestroyPipeline, objectAccounting, ref clipCompositePipeline)
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref clipCompositePipeline.Handle)
     VulkanNativeHandleDestroyer.DestroyPipeline(
-      device, dispatch.vkDestroyPipeline, objectAccounting, ref pathPipeline)
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref pathPipeline.Handle)
     VulkanNativeHandleDestroyer.DestroyPipeline(
-      device, dispatch.vkDestroyPipeline, objectAccounting, ref shadowPipeline)
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref shadowPipeline.Handle)
     VulkanNativeHandleDestroyer.DestroyPipeline(
-      device, dispatch.vkDestroyPipeline, objectAccounting, ref radialPipeline)
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref radialPipeline.Handle)
     VulkanNativeHandleDestroyer.DestroyPipeline(
-      device, dispatch.vkDestroyPipeline, objectAccounting, ref linearPipeline)
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref linearPipeline.Handle)
     VulkanNativeHandleDestroyer.DestroyPipeline(
-      device, dispatch.vkDestroyPipeline, objectAccounting, ref borderPipeline)
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref borderPipeline.Handle)
     VulkanNativeHandleDestroyer.DestroyPipeline(
-      device, dispatch.vkDestroyPipeline, objectAccounting, ref solidPipeline)
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref solidPipeline.Handle)
     VulkanNativeHandleDestroyer.DestroyPipeline(
-      device, dispatch.vkDestroyPipeline, objectAccounting, ref opaqueSolidPipeline)
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref opaqueSolidPipeline.Handle)
   }
 
   deinit{
@@ -509,7 +549,9 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
   private let objectAccounting VulkanObjectAccounting?
   private let generation uint64
   private let formatStates []VulkanSharedPrimitiveFormatState?
-  private let clipPipelineGate object
+  private let strokePipelineGate object = Object()
+  private let clipMaskR8Gate object = Object()
+  private let clipMaskRgba8Gate object = Object()
   private var preparationThread Thread?
   private var preparationStopped int32
   private var vertexModule VkShaderModule
@@ -662,7 +704,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
       objectAccounting = nativeObjectAccounting
       generation = nativeGeneration
       formatStates = [FormatCapacity]VulkanSharedPrimitiveFormatState?
-      clipPipelineGate = Object()
       let vertexCode = LoadShaderCode("analytic.vert.spv")
       let solidCode = LoadShaderCode("analytic_solid.frag.spv")
       let shadowCode = LoadShaderCode("analytic_shadow.frag.spv")
@@ -765,15 +806,15 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
   private func PreparePipelines() {
     try {
       for state in formatStates {
-        if Volatile.Read(ref preparationStopped) != 0 { return }
+        if Volatile.Read(in preparationStopped) != 0 { return }
         state?.MaterializePipelines()
       }
-      if Volatile.Read(ref preparationStopped) != 0 { return }
+      if Volatile.Read(in preparationStopped) != 0 { return }
       ResolveClipMaskPipeline(ref clipMaskR8Pipeline, VkConstants.VK_FORMAT_R8_UNORM)
       ResolveClipMaskPipeline(ref clipMaskRgba8Pipeline, VkConstants.VK_FORMAT_R8G8B8A8_UNORM)
       let blur = ShaderEffect(ShaderEffectProgram.LoadEmbedded("filtered_backdrop.goo-effect"))
       for state in formatStates {
-        if Volatile.Read(ref preparationStopped) != 0 { return }
+        if Volatile.Read(in preparationStopped) != 0 { return }
         state?.ResolveShaderEffectPipeline(blur)
         state?.ResolveShaderEffectPipeline(BackdropBlurEffect.Shared)
       }
@@ -805,9 +846,9 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
 
   private func ResolveClipMaskPipeline(ref pipeline VkPipeline,
     targetFormat VkFormat) VkPipeline{
-      let existing = Volatile.Read(ref pipeline)
+      let existing = Volatile.Read(in pipeline)
       if existing != 0uL { return existing }
-      lock (clipPipelineGate) {
+      lock (if targetFormat == VkConstants.VK_FORMAT_R8_UNORM { clipMaskR8Gate } else { clipMaskRgba8Gate }) {
         EnsureOpen()
         if pipeline == 0uL {
           Volatile.Write(ref pipeline, CreateClipMaskPipeline(targetFormat))

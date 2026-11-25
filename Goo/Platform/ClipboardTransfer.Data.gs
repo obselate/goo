@@ -181,7 +181,7 @@ internal unsafe partial class ClipboardTransfer {
                 if !watching { throw IOException(SDL.GetErrorS() ?? "Clipboard change observation failed") }
                 let formats = Query()
                 if formats.Status != ClipboardReadStatus.Success { return ClipboardDataResult(formats.Status, error: formats.Error) }
-                let generation = Interlocked.Read(ref clipboardGeneration)
+                let generation = Interlocked.Read(in clipboardGeneration)
                 let items = List[TransferRepresentation](types.Count)
                 let uris = List[Uri]()
                 var intent = ClipboardIntent.Copy
@@ -201,7 +201,7 @@ internal unsafe partial class ClipboardTransfer {
                     total += bytes.Length
                     items.Add(TransferRepresentation(contentType, bytes))
                 }
-                if Interlocked.Read(ref clipboardGeneration) != generation { throw IOException("Clipboard ownership changed during the multi-format read") }
+                if Interlocked.Read(in clipboardGeneration) != generation { throw IOException("Clipboard ownership changed during the multi-format read") }
                 let data = TransferData(items, uris)
                 return ClipboardDataResult(if items.Count == 0 && uris.Count == 0 { ClipboardReadStatus.Empty } else { ClipboardReadStatus.Success }, data, intent)
             } catch (error ClipboardLimitException) { return ClipboardDataResult(ClipboardReadStatus.TooLarge, error: error.Message) }

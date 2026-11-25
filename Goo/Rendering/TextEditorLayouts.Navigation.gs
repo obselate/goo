@@ -354,10 +354,11 @@ internal partial class TextEditorLayouts {
 
     internal func CurrentForGeometry(n Node) TextEditorVisualLayout? {
       guard let state = n.EditorState, let layout = state.Layout else { return nil }
+      let width = BoxGeometry.ContentWidth(n, true)
       if state.Dirty || layout.Version != state.PresentationVersion
-        || layout.ConstraintWidth != BoxGeometry.ContentWidth(n)
-        || layout.HeightConstraint != BoxGeometry.ContentHeight(n)
-        || layout.ViewportWidth != editorViewportWidth(n, BoxGeometry.ContentWidth(n)) {
+        || layout.ConstraintWidth != width
+        || layout.HeightConstraint != BoxGeometry.ContentHeight(n, true)
+        || layout.ViewportWidth != editorViewportWidth(n, width) {
           return nil
         }
       return layout

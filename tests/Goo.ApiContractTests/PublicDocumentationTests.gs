@@ -161,12 +161,18 @@ class PublicDocumentationTests {
             "M:Goo.RichText.RichTextCodec.Write(Goo.RichText.RichTextFragment)",
             "M:Goo.RichText.RichTextFragment.#ctor(System.String,System.Collections.Generic.IReadOnlyList{Goo.TextStyleSpan})",
             "M:Goo.TrayOptions.#ctor",
+            "M:Goo.LayerWindowImage.#ctor(System.String,Goo.ImageFit)",
             "M:Goo.LayerWindowOptions.#ctor",
+            "M:Goo.SessionLock.#ctor",
+            "M:Goo.SessionLock.Dispose",
+            "M:Goo.SessionLock.Run(System.Func{Goo.WindowDisplay,Goo.Window})",
+            "M:Goo.SessionLock.UnlockAsync",
             "M:Goo.TrayIcon.Create(Goo.Window,Goo.TrayOptions)",
             "M:Goo.TrayIcon.Update(Goo.TrayOptions)",
             "M:Goo.TrayIcon.Dispose",
             "M:Goo.ActivationArguments.Read(System.Collections.Generic.IReadOnlyList{System.String},System.String)",
             "M:Goo.Application.AcquireSingleInstance(System.String[],System.Double)",
+            "M:Goo.Application.AcquireSingleInstance(System.String[],System.String,System.Double)",
             "M:Goo.GraphicsUnavailableException.#ctor(System.String)",
             "M:Goo.GraphicsUnavailableException.#ctor(System.String,System.Exception)",
             "M:Goo.Placement.Restore(Goo.Window,Goo.WindowPlacement)",
@@ -277,6 +283,8 @@ class PublicDocumentationTests {
             "M:Goo.Window.GetDisplays",
             "M:Goo.Window.GetCurrentDisplay",
             "M:Goo.Window.SetFullscreenDisplay(Goo.WindowDisplayId)",
+            "M:Goo.Window.SetLayerGeometry(Goo.LayerWindowOptions)",
+            "M:Goo.Window.SetInputRegion(Goo.ElementRect[])",
             "M:Goo.Window.SetTopmost(System.Boolean)",
             "M:Goo.Window.RequestCapture",
             "M:Goo.Window.RequestCapture(Goo.WindowCapture)",
@@ -449,6 +457,7 @@ class PublicDocumentationTests {
             "M:Goo.Images.ImageVariants.Dispose",
             "M:Goo.ImageSource.#ctor(System.Int32,System.Int32,System.Byte[])",
             "M:Goo.ImageSource.Acquire",
+            "M:Goo.ImageSource.CopyPixels(System.Span{System.Byte})",
             "M:Goo.ImageSourceProvider.Acquire",
             "M:Goo.ImageSource.Dispose",
             "M:Goo.ImageSource.EncodePng",
@@ -464,6 +473,12 @@ class PublicDocumentationTests {
             "M:Goo.ImageSource.LoadThumbnail(System.String,System.Int32,System.Int32)",
             "M:Goo.ImageSource.LoadThumbnail(System.String,System.Int32,System.Int32,System.Threading.CancellationToken)",
             "M:Goo.ImageSource.LoadThumbnail(System.String,System.Int32,System.Int32,Goo.ImageDecodeLimits,System.Threading.CancellationToken)",
+            "M:Goo.ImageSource.LoadThumbnail(System.ReadOnlyMemory{System.Byte},System.Int32,System.Int32)",
+            "M:Goo.ImageSource.LoadThumbnail(System.ReadOnlyMemory{System.Byte},System.Int32,System.Int32,System.Threading.CancellationToken)",
+            "M:Goo.ImageSource.LoadThumbnail(System.ReadOnlyMemory{System.Byte},System.Int32,System.Int32,Goo.ImageDecodeLimits,System.Threading.CancellationToken)",
+            "M:Goo.ImageSource.LoadThumbnail(System.IO.Stream,System.Int32,System.Int32)",
+            "M:Goo.ImageSource.LoadThumbnail(System.IO.Stream,System.Int32,System.Int32,System.Threading.CancellationToken)",
+            "M:Goo.ImageSource.LoadThumbnail(System.IO.Stream,System.Int32,System.Int32,Goo.ImageDecodeLimits,System.Threading.CancellationToken)",
             "M:Goo.ImageSourceLease.#ctor",
             "M:Goo.ImageSourceLease.Complete(Goo.ImageSource)",
             "M:Goo.ImageSourceLease.Dispose",
@@ -651,6 +666,10 @@ class PublicDocumentationTests {
             "M:Goo.Application.Configure(System.String,System.String,System.String)",
             "M:Goo.Application.Configure(System.Reflection.Assembly)",
             "M:Goo.Window.DragRegion(Goo.Container)",
+            "M:Goo.Window.MaximizeButton(Goo.Button)",
+            "M:Goo.Window.BeginMove",
+            "M:Goo.Window.BeginResize(Goo.WindowEdge)",
+            "M:Goo.Window.ShowSystemMenu(Goo.Point)",
             "M:Goo.WindowClipboard.ReadText",
             "M:Goo.WindowClipboard.GetFormats",
             "M:Goo.WindowClipboard.ReadFiles",
@@ -986,10 +1005,15 @@ class PublicDocumentationTests {
                 []string{"arguments", "workingDirectory"}, System.Array.Empty[string](), true),
             ["M:Goo.Application.AcquireSingleInstance(System.String[],System.Double)"] = DocumentationShape(
                 []string{"arguments", "timeoutMs"}, System.Array.Empty[string](), true),
+            ["M:Goo.Application.AcquireSingleInstance(System.String[],System.String,System.Double)"] = DocumentationShape(
+                []string{"arguments", "instanceScope", "timeoutMs"}, System.Array.Empty[string](), true),
             ["M:Goo.Application.Configure(System.Reflection.Assembly)"] = DocumentationShape(
                 []string{"assembly"}, System.Array.Empty[string](), false),
             ["M:Goo.Application.Run(Goo.Window)"] = DocumentationShape(
                 []string{"window"}, System.Array.Empty[string](), false),
+            ["M:Goo.SessionLock.Run(System.Func{Goo.WindowDisplay,Goo.Window})"] = DocumentationShape(
+                []string{"createWindow"}, Array.Empty[string](), false),
+            ["M:Goo.SessionLock.UnlockAsync"] = DocumentationShape(Array.Empty[string](), Array.Empty[string](), true),
             ["M:Goo.GraphicsUnavailableException.#ctor(System.String)"] = DocumentationShape(
                 []string{"message"}, System.Array.Empty[string](), false),
             ["M:Goo.GraphicsUnavailableException.#ctor(System.String,System.Exception)"] = DocumentationShape(
@@ -1089,11 +1113,17 @@ class PublicDocumentationTests {
                 DocumentationShape([]string{"data", "intent", "cancellationToken"}, Array.Empty[string](), true),
             ["M:Goo.Window.SetNativeDataDropFormats(System.Collections.Generic.IReadOnlyList{System.String})"] =
                 DocumentationShape([]string{"formats"}, Array.Empty[string](), true),
+            ["M:Goo.Window.SetLayerGeometry(Goo.LayerWindowOptions)"] =
+                DocumentationShape([]string{"geometry"}, Array.Empty[string](), true),
+            ["M:Goo.Window.SetInputRegion(Goo.ElementRect[])"] =
+                DocumentationShape([]string{"rectangles"}, Array.Empty[string](), true),
             ["M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)"] = DocumentationShape(
                 []string{"x", "y"},
                 System.Array.Empty[string](),
                 false
             ),
+            ["M:Goo.LayerWindowImage.#ctor(System.String,Goo.ImageFit)"] =
+                DocumentationShape([]string{"path", "fit"}, Array.Empty[string](), false),
             ["M:Goo.Window.AccessibilityHitTest(System.Double,System.Double)"] = DocumentationShape(
                 []string{"x", "y"},
                 System.Array.Empty[string](),
@@ -1550,6 +1580,11 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
                 true
+            ),
+            ["M:Goo.ImageSource.CopyPixels(System.Span{System.Byte})"] = DocumentationShape(
+                []string{"destination"},
+                System.Array.Empty[string](),
+                false
             ),
             ["M:Goo.ImageSource.EncodePng"] = DocumentationShape(
                 System.Array.Empty[string](),
@@ -2061,6 +2096,21 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
+            ["M:Goo.Window.MaximizeButton(Goo.Button)"] = DocumentationShape(
+                []string{"control"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.Window.BeginResize(Goo.WindowEdge)"] = DocumentationShape(
+                []string{"edge"},
+                System.Array.Empty[string](),
+                false
+            ),
+            ["M:Goo.Window.ShowSystemMenu(Goo.Point)"] = DocumentationShape(
+                []string{"point"},
+                System.Array.Empty[string](),
+                false
+            ),
             [
                 "M:Goo.Window.PerformAccessibilityAction(Goo.AccessibilityId,Goo.AccessibilityActionRequest)"
             ] = DocumentationShape([]string{"id", "request"}, System.Array.Empty[string](), true),
@@ -2232,6 +2282,10 @@ class PublicDocumentationTests {
                 .Where((type Type) -> type.IsAbstract)
                 .Select((type Type) -> type.FullName)
                 .ToHashSet(StringComparer.Ordinal)
+            let dataStructs = apiTypes
+                .Where((type Type) -> type.IsValueType && type.GetMethod("Deconstruct") != nil)
+                .Select((type Type) -> type.FullName)
+                .ToHashSet(StringComparer.Ordinal)
             let coreTypes = apiTypes.Select((type Type) -> type.FullName).ToHashSet(StringComparer.Ordinal)
             let generatedNames = HashSet[string](StringComparer.Ordinal){
                 "<Clone>$",
@@ -2250,6 +2304,7 @@ class PublicDocumentationTests {
                 (parts[]string) -> parts[0] == "ctor" && parts[1] != "Goo.Cell`1" && !SynthesizedPrimaryDataTypes.Any(
                     (type Type) -> type.FullName == parts[1]
                 ) &&
+                    !(parts[3] == "()" && dataStructs.Contains(parts[1])) &&
                     !abstractTypes.Contains(parts[1]) || parts[0] == "method" && !generatedNames.Contains(parts[2])
             )
             Assert.Equal(count, ExpectedMethodIds.Length + ExpectedProtectedMethodIds.Length)
@@ -2257,7 +2312,7 @@ class PublicDocumentationTests {
 
         private func ExpectedDocumentationIds() IEnumerable[string] {
             let types = ApiTypes().ToArray()
-            let typeIds = types.Where((type Type) -> type != typeof(Window)).Select((type Type) -> "T:${type.FullName}")
+            let typeIds = types.Select((type Type) -> "T:${type.FullName}")
             let propertyIds = types.Where((type Type) -> !SynthesizedPrimaryDataTypes.Contains(type)).SelectMany(
                 (type Type) -> type.GetProperties(PublicDeclared).Select(
                     (property PropertyInfo) -> "P:${type.FullName}.${property.Name}"

@@ -885,7 +885,7 @@ internal partial class PointerInput {
         }
       }
       let focusedBefore = focus.FocusedNode()
-      focus.SetFocus(resolver, target)
+      focus.SetFocus(resolver, resolver.Owner?.IsPointerOnlyLayer == true ? nil : target)
       if focus.FocusedNode() != focusedBefore {
         current.FocusTarget = focus.FocusedNode()
       } else {
@@ -1125,9 +1125,16 @@ internal partial class PointerInput {
       if child.DragsWindow {
         info.DragsWindow = true
         info.HasContent = false
+        info.HasActivation = false
       }
       if isInteractiveContent(child) {
         info.HasContent = true
+      }
+      if child.MaximizesWindow {
+        info.MaximizeButton = true
+      }
+      if hasActivation(child) {
+        info.HasActivation = true
       }
     }
     hitChain.Clear()
@@ -1303,5 +1310,7 @@ internal class PointerContact {
 
 internal data struct InputHitInfo {
   internal var HasContent bool
+  internal var HasActivation bool
   internal var DragsWindow bool
+  internal var MaximizeButton bool
 }

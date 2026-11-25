@@ -1143,7 +1143,7 @@ class DiagnosticPipeTransport : DiagnosticTransport {
         guard let active = queue else {
             return false
         }
-        if Encoding.UTF8.GetByteCount(message.Raw == "" ? message.Payload: message.Raw) > 64 * 1024 {
+        if Encoding.UTF8.GetByteCount(message.Raw == "" ? message.Payload : message.Raw) > 64 * 1024 {
             return false
         }
         select {
@@ -1305,7 +1305,7 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                             }
                         }
                         await output.WriteLineAsync(
-                            message.Raw == "" ? RequestLine(message.Command, message.Payload): message.Raw
+                            message.Raw == "" ? RequestLine(message.Command, message.Payload) : message.Raw
                         )
                     }
                 }
@@ -1322,7 +1322,7 @@ class DiagnosticPipeTransport : DiagnosticTransport {
         }
     }
 
-    private func Handshake() string -> "{\"type\":\"hello\",\"protocol\":\"goo.devtools/1\",\"client\":\"goo-devtools\",\"version\":\"0.31.0\",\"capabilities\":[\"tree\",\"properties\",\"layout\",\"events\",\"logs\",\"accessibility\",\"capture\",\"source-navigation\",\"hot-reload\"]}"
+    private func Handshake() string -> "{\"type\":\"hello\",\"protocol\":\"goo.devtools/1\",\"client\":\"goo-devtools\",\"version\":\"0.32.9\",\"capabilities\":[\"tree\",\"properties\",\"layout\",\"events\",\"logs\",\"accessibility\",\"capture\",\"source-navigation\",\"hot-reload\"]}"
 
     private func RequestLine(command string, payload string) string {
         requestSequence = requestSequence + 1

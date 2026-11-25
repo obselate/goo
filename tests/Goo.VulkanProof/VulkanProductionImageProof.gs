@@ -470,7 +470,12 @@ private unsafe func VulkanProductionImageFirstPass(
         }
 
       VulkanProductionImageRegister(resources, logical, VulkanImageSamplerMode.Nearest)
+      WindowReadbackTestFixture.ForceRenderNonblocking(window, 0.0)
+      if !WindowReadbackTestFixture.RuntimeQueueWorkPending(window) {
+        throw InvalidOperationException("Vulkan production frame is not in flight before the image upload")
+      }
       VulkanProductionImageQueueUpload(resources, logical.Id, pixels, generation)
+      WindowReadbackTestFixture.DrainWindowQueue(window, 2000)
       VulkanProductionImageCompleteUpload(window, resources, generation, true)
       capture = VulkanProductionReadbackFixture.Open(window,
         VulkanImageE2EContract.Width, VulkanImageE2EContract.Height)

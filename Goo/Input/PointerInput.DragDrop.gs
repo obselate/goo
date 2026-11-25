@@ -24,6 +24,7 @@ internal class PointerDragSession {
     get -> targetMount.Current
     set -> targetMount = NodeMount(value)
   }
+  internal var TargetPosition Point
   internal var Effect DragEffect
   internal var Terminating bool
   internal var Negotiating bool
@@ -174,7 +175,7 @@ internal partial class PointerInput {
     }
     session.NativeActive = true
     let rootMount = NodeMount(root)
-    let started = (host as NativeDragHost?)?.BeginNativeDrag(data!!, if generalized { session.Data.AllowedEffects } else { DragEffect.Copy },
+    let started = (host as NativeDragHost?)?.BeginNativeDrag(data, if generalized { session.Data.AllowedEffects } else { DragEffect.Copy },
       (result NativeTransferResult) -> {
         if dragSession != session || !session.NativeActive { return }
         session.NativeCompletion = result
@@ -248,7 +249,7 @@ internal partial class PointerInput {
               var queried DragEffect
               let previousContext = owner?.BeginCallback()
               try { queried = descriptor.Query(event) }
-              finally { owner?.EndCallback(previousContext) }
+              finally { owner?.EndCallback(previousContext, rebuild: false) }
               if !ensureDragSession(root, session) {
                 path.Clear()
                 return nil
@@ -257,6 +258,7 @@ internal partial class PointerInput {
                 let accepted = acceptedDragEffect(queried, session.Data.AllowedEffects)
                 if accepted != DragEffect.None {
                   selected = target
+                  session.TargetPosition = event.Position
                   effect = accepted
                   break
                 }
@@ -304,6 +306,10 @@ internal partial class PointerInput {
       if session.Terminating || session.Negotiating { return }
       session.Negotiating = true
       try {
+        let inputChanged = x != session.X || y != session.Y
+          || !sameDragModifiers(session.Modifiers, modifiers)
+        let previousPosition = session.TargetPosition
+        let previousEffect = session.Effect
         session.X = x
         session.Y = y
         session.Modifiers = modifiers
@@ -333,7 +339,8 @@ internal partial class PointerInput {
               }
             }
           }
-        } else if notifyMove {
+        } else if notifyMove && (inputChanged || previousPosition != session.TargetPosition
+          || previousEffect != effect) {
           if let currentTarget = selectedMount.Current {
             let retained = notifyDragTarget(root, session, currentTarget, DragEventKind.Move,
               x, y, modifiers, effect)

@@ -134,6 +134,7 @@ public partial class Window {
     requireUiThread("Window.Hide")
     guard let native = host else { return WindowOperationResult.Closed }
     if !IsOpen || native.IsClosing { return WindowOperationResult.Closed }
+    if LockSurface != nil { return WindowOperationResult.Unsupported }
     if Modal || IsInputBlocked { return WindowOperationResult.Unsupported }
     if (native.Capabilities & WindowCapabilities.Visibility) == WindowCapabilities.None { return native.Hide() }
     if let target = windowTarget {
