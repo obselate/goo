@@ -1,5 +1,6 @@
 package Goo
 
+import Hexa.NET.SDL3
 import System
 import System.Collections.Generic
 import System.Runtime.InteropServices
@@ -23,6 +24,7 @@ internal struct LayerWaylandArguments {
 
 internal unsafe sealed class WaylandLayerWindow : IDisposable {
   private const EPIPE int32 = 32
+  private const ECONNRESET int32 = 104
 
   private let display nint
   private let surface nint
@@ -99,7 +101,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     if WaylandBackdrop.wl_proxy_add_listener(registry, listener, nint(0)) != 0 {
       throw InvalidOperationException("Cannot listen to the Wayland registry")
     }
-    Roundtrip()
+    if !Roundtrip() { return }
     WaylandBackdrop.wl_proxy_destroy(registry)
     registry = nint(0)
     if manager == nint(0) { throw NotSupportedException("The Wayland compositor does not support zwlr_layer_shell_v1") }
@@ -132,7 +134,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   }
 
   internal func Show() {
-    if mapped { return }
+    if closed || mapped { return }
     ApplyGeometry()
     var arguments = LayerWaylandArguments{First: nint(uint32(options.Layer))}
     MarshalRequest(layerSurface, 8u, ref arguments)
@@ -174,7 +176,10 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     if !mapped { return }
     Pump()
     if !mapped { return }
-    if Presented { DrainFrame() }
+    if Presented {
+      DrainFrame()
+      if !mapped { return }
+    }
     let arguments * BackdropWaylandArgument = stackalloc[3]BackdropWaylandArgument
     arguments[0].Value = nint(0)
     arguments[1].Value = nint(0)
@@ -228,7 +233,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
       WaylandBackdrop.wl_proxy_marshal_array(surface, 6u, nil)
       let started = Stopwatch.GetTimestamp()
       while framePending && Stopwatch.GetElapsedTime(started).TotalMilliseconds < 500.0 {
-        Roundtrip()
+        if !Roundtrip() { return }
         if framePending { Thread.Sleep(1) }
       }
     } finally { WaylandBackdrop.wl_proxy_destroy(callback) }
@@ -237,15 +242,15 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   internal func Pump() {
     if disposed || closed { return }
     let errno = WaylandBackdrop.wl_display_get_error(display)
-    if closePending || errno == EPIPE {
-      closed = true
-      mapped = false
-      Configured = false
-      pendingConfigure = nil
+    if errno != 0 {
+      if HandleDisconnect(errno) { return }
+      throw InvalidOperationException("Layer-shell event dispatch failed (errno $errno)")
+    }
+    if closePending {
+      MarkClosed()
       requestClose()
       return
     }
-    if errno != 0 { throw InvalidOperationException("Layer-shell event dispatch failed (errno $errno)") }
     if let configure = pendingConfigure {
       pendingConfigure = nil
       if !mapped { return }
@@ -259,9 +264,28 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     }
   }
 
-  private func Roundtrip(dispatchLayer bool = false) {
+  private func MarkClosed() {
+    closed = true
+    mapped = false
+    Configured = false
+    pendingConfigure = nil
+  }
+
+  private func HandleDisconnect(errno int32) bool {
+    if errno != EPIPE && errno != ECONNRESET { return false }
+    let protocolCode = wl_display_get_protocol_error(display, out var protocolInterface, out var objectId)
+    if protocolCode != 0u || protocolInterface != nint(0) || objectId != 0u { return false }
+    MarkClosed()
+    var termination = SDLEvent{Type: uint32(SDLEventType.Terminating)}
+    SDL.PushEvent(ref termination)
+    return true
+  }
+
+  private func Roundtrip(dispatchLayer bool = false) bool {
     let result = dispatchLayer ? wl_display_roundtrip(display) : WaylandBackdrop.wl_display_roundtrip_queue(display, queue)
-    if result < 0 { throw InvalidOperationException("Layer-shell Wayland roundtrip failed") }
+    if result >= 0 { return true }
+    if HandleDisconnect(WaylandBackdrop.wl_display_get_error(display)) { return false }
+    throw InvalidOperationException("Layer-shell Wayland roundtrip failed")
   }
 
   private func Configure(data nint, proxy nint, serial uint32, width uint32, height uint32) {
@@ -321,6 +345,9 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
 
     @DllImport("libwayland-client.so.0")
     private func wl_display_roundtrip(display nint) int32;
+
+    @DllImport("libwayland-client.so.0")
+    private func wl_display_get_protocol_error(display nint, out protocolInterface nint, out objectId uint32) uint32;
 
     private func CreateInterfaces(library nint) {
       let manager = Marshal.AllocHGlobal(Marshal.SizeOf[BackdropWaylandInterface]())
