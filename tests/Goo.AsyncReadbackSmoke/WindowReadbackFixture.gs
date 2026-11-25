@@ -8,6 +8,7 @@ import System.Numerics
 import System.Runtime.CompilerServices
 import System.Runtime.InteropServices
 import System.Threading
+import System.Threading.Tasks
 import System.Text.Json
 
 internal data struct VulkanPrimitiveFrameRetentionTestSnapshot {
@@ -1954,6 +1955,73 @@ public class LayerWindowCloseSmoke {
         CheckContentGrowth(window, root)
       } finally { window.CloseAfterRun() }
       Console.WriteLine("layer-window-resize-layout: passed")
+    }
+
+    public func RunInputRegion() {
+      let background = Window{Title: "Input region background", Root: Cell{},
+        State: WindowState.Fullscreen, Decorated: false, UiScale: 1.0F}.Open()
+      try {
+        let initial = LayerWindowOptions{Layer: WindowLayer.Overlay, Width: 160, Height: 100,
+          Anchors: LayerWindowAnchor.Top | LayerWindowAnchor.Left}
+        let window = Window{Title: "Input region layer", Root: Cell{}, UiScale: 1.0F,
+          LayerShell: initial}.Open()
+        let backgroundHost = background.SdlHostForTest()!!
+        let layerHost = window.SdlHostForTest()!!
+        try {
+          var xdg bool
+          backgroundHost.PointerPressed += (id, device, x, y, button, buttons, pressure, mods) -> {
+            Console.WriteLine(xdg && y < 64.0F ? "click outside xdg region" : "click background")
+          }
+          window.InputActivity += kind -> {
+            if kind == WindowInputKind.PointerDown { Console.WriteLine("click layer") }
+          }
+          let pumpUntil Action[Func[bool]] = ready -> {
+            let deadline = Environment.TickCount64 + 10000L
+            while !ready() {
+              if Environment.TickCount64 >= deadline { throw InvalidOperationException("Input region fixture timed out") }
+              background.Pump(0.0)
+              window.Pump(0.0)
+              Thread.Sleep(1)
+            }
+          }
+          pumpUntil(() -> background.PresentationAcceptedIndexForTest > 0uL
+            && window.PresentationAcceptedIndexForTest > 0uL)
+          let rectangles = []ElementRect{ElementRect{Y: 64, Width: 260, Height: 40}}
+          var command = "set"
+          while command != "quit" {
+            let active = command == "xdg" ? background : window
+            let before = active.PresentationAcceptedIndexForTest
+            let result = switch command {
+              case "set": window.SetInputRegion(rectangles)
+              case "resize": window.SetLayerGeometry(LayerWindowOptions{Layer: initial.Layer, Anchors: initial.Anchors,
+                Width: 200, Height: 120})
+              case "scale": {
+                Console.WriteLine("scale pending")
+                WindowOperationResult.Accepted
+              }
+              case "empty": window.SetInputRegion(Array.Empty[ElementRect]())
+              case "reset": window.SetInputRegion(nil)
+              case "xdg": {
+                xdg = true
+                if window.Hide() != WindowOperationResult.Accepted {
+                  throw InvalidOperationException("Could not hide the layer window")
+                }
+                background.SetInputRegion(rectangles)
+              }
+              case _: throw InvalidOperationException("Unexpected region test command: $command")
+            }
+            if result != WindowOperationResult.Accepted { throw InvalidOperationException("Input region command failed: $command") }
+            pumpUntil(() -> active.PresentationAcceptedIndexForTest > before
+              && (xdg ? !window.IsVisible && backgroundHost.WaylandVulkanFrameReady() : layerHost.WaylandVulkanFrameReady())
+              && (command != "resize" || window.NativeWidth == 200 && window.NativeHeight == 120)
+              && (command != "scale" || window.PixelScale == 2.0))
+            Console.WriteLine("ready $command")
+            let read = Task.Run[string?](() -> Console.ReadLine())
+            pumpUntil(() -> read.IsCompleted)
+            command = read.Result ?? "quit"
+          }
+        } finally { window.CloseAfterRun() }
+      } finally { background.CloseAfterRun() }
     }
 
     private func CheckContentGrowth(window Window, root LayerGeometryCell) {

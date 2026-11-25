@@ -57,12 +57,14 @@ internal unsafe partial class SdlHost {
   internal func PrepareWaylandVulkanFrame() {
     layerWindow?.PreparePresent()
     if waylandVulkanFrame { PrepareWaylandVulkanFrameNative(windowHandle) }
+    inputRegion?.Apply(LogicalWidth, LogicalHeight, FramebufferWidth, FramebufferHeight)
   }
 
   internal func FinishWaylandVulkanFrame(committed bool) {
     lockWindow?.FinishPresent(committed)
     layerWindow?.FinishPresent(committed)
     if waylandVulkanFrame { FinishWaylandVulkanFrameNative(windowHandle, committed ? uint8(1) : uint8(0)) }
+    if !committed { inputRegion?.Invalidate() }
   }
 
   public prop PreferRequestedFramebufferExtent bool{ get -> false }

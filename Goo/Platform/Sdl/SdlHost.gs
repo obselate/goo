@@ -38,6 +38,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   private var penPressures Dictionary[int64, float32]?
   private var nextTouchPointerId int64 = Int64.MinValue
   private var layerWindow WaylandLayerWindow?
+  private var inputRegion WaylandInputRegion?
   private let lockWindow WaylandLockSurface?
   private let occlusionSupported bool
 
@@ -317,6 +318,19 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   internal func SetLayerGeometry(geometry LayerWindowOptions, holdForConfigure bool = false) ->
     layerWindow!!.SetGeometry(geometry, holdForConfigure)
 
+  internal func SupportsInputRegion() bool -> waylandWindowProperties != 0u && lockWindow == nil && popupParent == nil
+
+  internal func SetInputRegion(rectangles [] ? ElementRect) bool {
+    if inputRegion == nil {
+      if rectangles == nil { return false }
+      let properties = SDL.GetWindowProperties(window)
+      inputRegion = WaylandInputRegion(
+        nint(SDL.GetPointerProperty(properties, "SDL.window.wayland.display", nil)),
+        nint(SDL.GetPointerProperty(properties, "SDL.window.wayland.surface", nil)))
+    }
+    return inputRegion!!.Set(rectangles)
+  }
+
   public func SetMinimumSize(width int32, height int32) {
     ThrowIfDisposed()
     if layerWindow != nil || lockWindow != nil { return }
@@ -509,6 +523,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       nativeBackdrop?.Dispose()
       nativeBackdrop = nil
       BackdropAvailable = false
+      inputRegion?.Dispose()
       layerWindow?.Dispose()
       layerWindow = nil
       lockWindow?.Dispose()

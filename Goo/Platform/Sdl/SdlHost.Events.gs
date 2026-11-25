@@ -273,6 +273,7 @@ internal unsafe partial class SdlHost {
     eventType == SDLEventType.WindowDisplayScaleChanged{
       RefreshDisplayPacing(true)
       pixelDensityChange = true
+      inputRegion?.Invalidate()
       RefreshMetrics()
       RaiseMetrics()
       DisplayChanged?.Invoke()

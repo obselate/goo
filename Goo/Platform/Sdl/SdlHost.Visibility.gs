@@ -102,6 +102,7 @@ internal unsafe partial class SdlHost {
 
   public func Hide() WindowOperationResult {
     if disposed || IsClosing { return WindowOperationResult.Closed }
+    inputRegion?.Invalidate()
     if let role = lockWindow {
       role.StopPresenting()
       return WindowOperationResult.Accepted

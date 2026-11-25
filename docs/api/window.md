@@ -1955,6 +1955,14 @@ Sets the clear and inherited root text colors together on the owner thread. Expl
 
 Requests borderless fullscreen on the selected display, including retargeting an already-fullscreen window. This must run on the window's UI thread. Returns Closed before Open or after close, Unsupported for embedded hosts, Failed for a stale ID or native failure, and Accepted when SDL accepts the request. Acceptance does not guarantee compositor placement. The compositor may keep the current display when retargeting fullscreen.
 
+### `SetInputRegion(ElementRect[])`
+
+Sets the input region for an open Wayland toplevel or layer-shell window. The compositor applies the region when the next frame is committed.
+
+- `rectangles`: the union of rectangles in surface-local logical pixels, rounded out to whole pixels. Null restores the full surface. An empty array disables pointer and touch input.
+
+Returns: Accepted if queued, Closed if not open, or Unsupported for other window types and platforms.
+
 ### `SetLayerGeometry(LayerWindowOptions)`
 
 Requests new anchors, size, margins, exclusive zone and keyboard interactivity for an open layer window. Layer, namespace and output must match LayerShell. The compositor controls the final size. Requests made while hidden apply on the next Show. A size change from a layout metrics callback keeps the previous buffer until the next configure.

@@ -283,6 +283,7 @@ class PublicDocumentationTests {
             "M:Goo.Window.GetCurrentDisplay",
             "M:Goo.Window.SetFullscreenDisplay(Goo.WindowDisplayId)",
             "M:Goo.Window.SetLayerGeometry(Goo.LayerWindowOptions)",
+            "M:Goo.Window.SetInputRegion(Goo.ElementRect[])",
             "M:Goo.Window.SetTopmost(System.Boolean)",
             "M:Goo.Window.RequestCapture",
             "M:Goo.Window.RequestCapture(Goo.WindowCapture)",
@@ -1113,6 +1114,8 @@ class PublicDocumentationTests {
                 DocumentationShape([]string{"formats"}, Array.Empty[string](), true),
             ["M:Goo.Window.SetLayerGeometry(Goo.LayerWindowOptions)"] =
                 DocumentationShape([]string{"geometry"}, Array.Empty[string](), true),
+            ["M:Goo.Window.SetInputRegion(Goo.ElementRect[])"] =
+                DocumentationShape([]string{"rectangles"}, Array.Empty[string](), true),
             ["M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)"] = DocumentationShape(
                 []string{"x", "y"},
                 System.Array.Empty[string](),
