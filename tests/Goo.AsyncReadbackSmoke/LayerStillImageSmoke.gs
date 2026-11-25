@@ -110,12 +110,16 @@ internal class LayerStillImageSmoke {
             return Environment.TickCount64 >= deadline
           })
           writer!!.Write(File.ReadAllBytes(path))
+          let ready = Path.Combine(directory.FullName, "ready")
+          File.Copy(path, ready)
+          File.Move(ready, fifo, overwrite: true)
           writer!!.Dispose()
+          Wait(window, window, () -> if window.SdlHostForTest()!!.PresentsStillImage {
+            window.SdlHostForTest()!!.LayerPresentedForTest
+          } else { window.PresentationAcceptedIndexForTest != 0uL })
           if window.SdlHostForTest()!!.PresentsStillImage {
-            Wait(window, window, () -> window.SdlHostForTest()!!.LayerPresentedForTest)
             Require(image.NativeStorage != nil, "The first DMA-BUF commit did not include the still image")
           } else {
-            Wait(window, window, () -> window.PresentationAcceptedIndexForTest != 0uL)
             Require(window.PresentationAcceptedIndexForTest == 1uL && window.CaptureTargetForTest()?.SceneImageCountForTest() == 1,
               "The first swapchain frame did not include the still image")
           }
