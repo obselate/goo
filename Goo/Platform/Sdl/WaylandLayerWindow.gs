@@ -52,8 +52,11 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   private var disposed bool
   private var closePending bool
   private var pendingConfigure (uint32, uint32, uint32)?
+  private var configureAck uint32?
+  private var pendingGeometry LayerWindowOptions?
   private var frameListener nint
   private var presentFrame nint
+  private var bufferCommitPending bool
   private var framePending bool
   internal prop Presented bool { get; set; }
   internal prop Configured bool { get; private set; }
@@ -149,6 +152,11 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
       && (value.KeyboardInteractivity != LayerWindowKeyboardInteractivity.OnDemand || version >= 4u)
 
   internal func SetGeometry(value LayerWindowOptions) {
+    if bufferCommitPending {
+      pendingGeometry = value
+      return
+    }
+    pendingGeometry = nil
     geometry = value
     if !mapped { return }
     ApplyGeometry()
@@ -186,6 +194,12 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     arguments[2].Value = nint(0)
     WaylandBackdrop.wl_proxy_marshal_array(surface, 1u, arguments)
     WaylandBackdrop.wl_proxy_marshal_array(surface, 6u, nil)
+    bufferCommitPending = false
+    configureAck = nil
+    if let next = pendingGeometry {
+      geometry = next
+      pendingGeometry = nil
+    }
     mapped = false
     if Presented { Configured = false }
     Presented = false
@@ -194,6 +208,12 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   }
 
   internal func PreparePresent() {
+    if let serial = configureAck {
+      var arguments = LayerWaylandArguments{First: nint(serial)}
+      MarshalRequest(layerSurface, 6u, ref arguments)
+      configureAck = nil
+    }
+    bufferCommitPending = true
     presentFrame = RequestFrame(nint(0))
   }
 
@@ -208,6 +228,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     if callback == presentFrame {
       WaylandBackdrop.wl_proxy_destroy(callback)
       presentFrame = nint(0)
+      bufferCommitPending = false
       SdlRuntime.Wake()
     } else {
       framePending = false
@@ -227,6 +248,14 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   }
 
   private func DrainFrame() {
+    if bufferCommitPending {
+      let started = Stopwatch.GetTimestamp()
+      while presentFrame != nint(0) && Stopwatch.GetElapsedTime(started).TotalMilliseconds < 500.0 {
+        if !Roundtrip(dispatchLayer: true) { return }
+        if presentFrame != nint(0) { Thread.Sleep(1) }
+      }
+      return
+    }
     let callback = RequestFrame(queue)
     try {
       framePending = true
@@ -255,13 +284,12 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
       pendingConfigure = nil
       if !mapped { return }
       let (serial, width, height) = configure
-      var arguments = LayerWaylandArguments{First: nint(serial)}
-      MarshalRequest(layerSurface, 6u, ref arguments)
+      configureAck = serial
       resize(width == 0u ? Math.Max(1, geometry.Width) : checked(int32(width)),
         height == 0u ? Math.Max(1, geometry.Height) : checked(int32(height)))
       Configured = true
-      WaylandBackdrop.wl_display_flush(display)
     }
+    if !bufferCommitPending && pendingGeometry != nil { SetGeometry(pendingGeometry!!) }
   }
 
   private func MarkClosed() {
