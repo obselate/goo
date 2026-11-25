@@ -6,7 +6,7 @@ import System.Threading
 
 public partial class ImageSource {
   shared {
-    /// Decodes PNG, JPEG, or the first GIF frame into an owned premultiplied RGBA source.
+    /// Decodes PNG, JPEG, or the first frame of GIF or WebP into an owned premultiplied RGBA source.
     /// PNG and JPEG EXIF orientation is applied. Color-profile metadata is not converted.
     /// The default ImageDecodeLimits apply. An image that exceeds a limit throws ImageLimitException.
     /// Decoding is synchronous. Call from a worker when loading outside the UI thread.
@@ -41,7 +41,7 @@ public partial class ImageSource {
         return RasterImageDecoder.Load(stream, limits, cancellationToken)
       }
 
-    /// Loads a local PNG, JPEG, or first GIF frame as an owned bounded thumbnail.
+    /// Loads a local PNG, JPEG, or the first frame of GIF or WebP as an owned bounded thumbnail.
     /// The image applies EXIF orientation, keeps its displayed aspect ratio, never grows, and retains only reduced pixels.
     /// This synchronous operation belongs on a worker outside the UI thread.
     public func LoadThumbnail(path string, maxWidth int32, maxHeight int32) ImageSource ->
@@ -61,6 +61,46 @@ public partial class ImageSource {
         if maxHeight <= 0 { throw ArgumentOutOfRangeException("maxHeight") }
         if Object.ReferenceEquals(limits, nil) { throw ArgumentNullException("limits") }
         return RasterImageDecoder.LoadThumbnail(path, maxWidth, maxHeight, limits, cancellationToken)
+      }
+
+    /// Decodes a bounded thumbnail from PNG, JPEG, or the first frame of GIF or WebP.
+    /// Applies EXIF orientation and never upscales the image.
+    public func LoadThumbnail(encoded ReadOnlyMemory[uint8], maxWidth int32, maxHeight int32) ImageSource ->
+    LoadThumbnail(encoded, maxWidth, maxHeight, CancellationToken.None)
+
+    /// Decodes a bounded thumbnail with cancellation and the default limits.
+    public func LoadThumbnail(encoded ReadOnlyMemory[uint8], maxWidth int32, maxHeight int32,
+      cancellationToken CancellationToken) ImageSource ->
+    LoadThumbnail(encoded, maxWidth, maxHeight, ImageDecodeLimits.Default, cancellationToken)
+
+    /// Decodes a bounded thumbnail with the given limits. The decoded-byte limit applies to the reduced pixels.
+    public func LoadThumbnail(encoded ReadOnlyMemory[uint8], maxWidth int32, maxHeight int32,
+      limits ImageDecodeLimits, cancellationToken CancellationToken) ImageSource {
+        if maxWidth <= 0 { throw ArgumentOutOfRangeException("maxWidth") }
+        if maxHeight <= 0 { throw ArgumentOutOfRangeException("maxHeight") }
+        if Object.ReferenceEquals(limits, nil) { throw ArgumentNullException("limits") }
+        return RasterImageDecoder.LoadThumbnail(encoded, maxWidth, maxHeight, limits, cancellationToken)
+      }
+
+    /// Decodes a bounded thumbnail from the stream's current position and leaves the stream open.
+    /// Applies EXIF orientation and never upscales the image.
+    public func LoadThumbnail(stream Stream, maxWidth int32, maxHeight int32) ImageSource ->
+    LoadThumbnail(stream, maxWidth, maxHeight, CancellationToken.None)
+
+    /// Decodes a bounded thumbnail with cancellation and the default limits. Leaves the stream open.
+    public func LoadThumbnail(stream Stream, maxWidth int32, maxHeight int32,
+      cancellationToken CancellationToken) ImageSource ->
+    LoadThumbnail(stream, maxWidth, maxHeight, ImageDecodeLimits.Default, cancellationToken)
+
+    /// Decodes a bounded thumbnail with the given limits and leaves the stream open.
+    /// The decoded-byte limit applies to the reduced pixels.
+    public func LoadThumbnail(stream Stream, maxWidth int32, maxHeight int32,
+      limits ImageDecodeLimits, cancellationToken CancellationToken) ImageSource {
+        if Object.ReferenceEquals(stream, nil) { throw ArgumentNullException("stream") }
+        if maxWidth <= 0 { throw ArgumentOutOfRangeException("maxWidth") }
+        if maxHeight <= 0 { throw ArgumentOutOfRangeException("maxHeight") }
+        if Object.ReferenceEquals(limits, nil) { throw ArgumentNullException("limits") }
+        return RasterImageDecoder.LoadThumbnail(stream, maxWidth, maxHeight, limits, cancellationToken)
       }
   }
 }

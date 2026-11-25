@@ -293,6 +293,54 @@ class ImagePublicationTests {
     @Theory
     @InlineData(false, false)
     @InlineData(true, false)
+    @InlineData(true, true)
+    func PendingSourceReplacementKeepsIntrinsicSizeUntilCompletion(keepPrevious bool, fail bool) {
+        let red = []uint8{255, 0, 0, 255}
+        let blue = []uint8{0, 0, 255, 255, 0, 0, 255, 255}
+        using let first = ImageSource(1, 1, red)
+        using let replacement = ImageSource(2, 1, blue)
+        let pending = PendingProvider()
+        let root = SwitchingImageRoot(first, keepPrevious)
+        let window = Window{Root: root, Size: LayoutSize(100, 100)}
+        try {
+            window.UpdateTree()
+            root.Source = pending
+            root.Rebuild()
+            window.UpdateTree()
+            let node = window.Tree!!
+            Assert.Equal(1.0F, node.ImageIntrinsicWidth)
+            Assert.Equal(1.0F, node.ImageIntrinsicHeight)
+
+            let completed = if fail { pending.Lease.Fail() } else { pending.Lease.Complete(replacement) }
+            Assert.True(completed)
+            window.UpdateTree()
+            if fail {
+                Assert.Null(node.DecodedImage)
+                Assert.Equal(0.0F, node.ImageIntrinsicWidth)
+            } else {
+                Assert.Equal(blue, node.DecodedImage!!.Pixels())
+                Assert.Equal(2.0F, node.ImageIntrinsicWidth)
+            }
+        } finally {
+            window.Close()
+        }
+    }
+
+    private class SwitchingImageRoot(source ImageSourceProvider, keepPrevious bool) : Cell {
+        var Source ImageSourceProvider = source
+        override func Build() Blob -> Image{Source: Source, KeepPreviousWhilePending: keepPrevious}
+    }
+
+    private class PendingProvider : ImageSourceProvider {
+        let Lease ImageSourceLease = ImageSourceLease()
+        prop ContentVersion uint64 { get -> 1uL }
+        event ContentChanged Action?
+        func Acquire() ImageSourceLease -> Lease
+    }
+
+    @Theory
+    @InlineData(false, false)
+    @InlineData(true, false)
     @InlineData(false, true)
     @InlineData(true, true)
     func ProviderAdvanceWhileBindingPublishesLatestVersion(background bool, duringAcquire bool) {

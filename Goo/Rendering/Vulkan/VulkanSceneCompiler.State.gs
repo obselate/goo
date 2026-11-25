@@ -45,6 +45,7 @@ internal partial class VulkanSceneCompiler {
   private var unsupportedMask uint32
   private var clipCount int32
   private var pathClipCount int32
+  private var mixedOverflowClipCount int32
   private var clipMaskCount int32
   private var clipChainCount int32
   private var blendModeSupported bool
@@ -139,6 +140,7 @@ internal partial class VulkanSceneCompiler {
       unsupportedMask = 0u
       clipCount = 0
       pathClipCount = 0
+      mixedOverflowClipCount = 0
       clipMaskCount = 0
       clipChainCount = 0
       backgroundDrawn = false
@@ -188,7 +190,23 @@ internal partial class VulkanSceneCompiler {
 
       frame.TrimLayerCoverage(visibleNodeCount)
       frame.TrimTransformCapacity(visibleNodeCount)
+      pathScene?.CommitCurrentReferences()
       FinishRangeFrame()
+      if frame.ShaderEffectCount != 0 {
+        for index in 0 ... frame.LayerCount {
+          let layer = frame.Layers[index]
+          if layer.ParentClipLayerId == 0 || layer.EffectIndex < 0
+            || frame.DrawRefs[layer.DrawOrdinal].Kind != SceneDrawKind.LayerBegin { continue }
+          let placed = frame.Layer(index)
+          let capture = IntersectBounds(viewport, ConservativeBounds{
+            X: placed.OriginX, Y: placed.OriginY,
+            Width: float32(placed.ExtentWidth), Height: float32(placed.ExtentHeight),
+          })
+          if !capture.IsEmpty {
+            frame.AddLayerBackdropBounds(layer.ParentClipLayerId, capture)
+          }
+        }
+      }
       ClassifyRetainedChunks()
 
       lastResult.FrameVersion = frameVersion

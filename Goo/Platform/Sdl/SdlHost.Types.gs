@@ -12,6 +12,9 @@ internal func SDL_SetWindowHitTestRaw(window nint, callback nint, userData nint)
 @DllImport("SDL3", EntryPoint: "SDL_GetWindowFromID", CallingConvention: CallingConvention.Cdecl)
 internal func SDL_GetWindowFromIdRaw(windowId uint32) nint;
 
+@DllImport("SDL3", EntryPoint: "Goo_SetWindowResizeBorder", CallingConvention: CallingConvention.Cdecl)
+internal func Goo_SetWindowResizeBorderRaw(window nint, size int32) uint8;
+
 @DllImport("SDL3", EntryPoint: "SDL_Vulkan_GetVkGetInstanceProcAddr", CallingConvention: CallingConvention.Cdecl)
 internal func SDL_Vulkan_GetVkGetInstanceProcAddrRaw() nint;
 

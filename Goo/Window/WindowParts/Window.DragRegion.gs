@@ -13,5 +13,16 @@ public partial class Window {
       region.DragsWindow = true
       return region
     }
+
+    /// Marks a button as the custom maximize or restore control of an undecorated window.
+    /// Windows 11 shows the Snap Layouts flyout when the pointer hovers it. Other platforms ignore the mark.
+    /// Call on a button you created, before returning it. A received button throws.
+    /// @param control button to mark
+    /// @returns the same button
+    public func MaximizeButton(control Button) Button {
+      control.CheckMutable()
+      control.MaximizesWindow = true
+      return control
+    }
   }
 }

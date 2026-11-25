@@ -1,6 +1,57 @@
 --- a/src/video/wayland/SDL_waylandevents.c
 +++ b/src/video/wayland/SDL_waylandevents.c
-@@ -891,7 +891,7 @@
+@@ -680,21 +680,9 @@
+-static void pointer_dispatch_absolute_motion(SDL_WaylandSeat *seat)
++static void pointer_update_hit_test(SDL_WaylandSeat *seat)
+ {
+     SDL_WindowData *window_data = seat->pointer.focus;
+-    SDL_Window *window = window_data ? window_data->sdlwindow : NULL;
+ 
+     if (window_data) {
+-        const float sx = (float)(wl_fixed_to_double(seat->pointer.pending_frame.absolute.sx) * window_data->pointer_scale.x);
+-        const float sy = (float)(wl_fixed_to_double(seat->pointer.pending_frame.absolute.sy) * window_data->pointer_scale.y);
+-        SDL_SendMouseMotion(seat->pointer.pending_frame.timestamp_ns, window_data->sdlwindow, seat->pointer.sdl_id, false, sx, sy);
+-
+-        seat->pointer.last_motion.x = (int)SDL_floorf(sx);
+-        seat->pointer.last_motion.y = (int)SDL_floorf(sy);
+-
+-        // If the pointer should be confined, but wasn't for some reason, keep trying until it is.
+-        if (!SDL_RectEmpty(&window->mouse_rect) && !seat->pointer.is_confined) {
+-            Wayland_SeatUpdatePointerGrab(seat);
+-        }
+-
++        SDL_Window *window = window_data->sdlwindow;
+         if (window->hit_test) {
+             SDL_HitTestResult rc = window->hit_test(window, &seat->pointer.last_motion, window->hit_test_data);
+ 
+@@ -772,6 +760,26 @@
+     }
+ }
+ 
++static void pointer_dispatch_absolute_motion(SDL_WaylandSeat *seat)
++{
++    SDL_WindowData *window_data = seat->pointer.focus;
++    if (window_data) {
++        const float sx = (float)(wl_fixed_to_double(seat->pointer.pending_frame.absolute.sx) * window_data->pointer_scale.x);
++        const float sy = (float)(wl_fixed_to_double(seat->pointer.pending_frame.absolute.sy) * window_data->pointer_scale.y);
++        SDL_SendMouseMotion(seat->pointer.pending_frame.timestamp_ns, window_data->sdlwindow, seat->pointer.sdl_id, false, sx, sy);
++
++        seat->pointer.last_motion.x = (int)SDL_floorf(sx);
++        seat->pointer.last_motion.y = (int)SDL_floorf(sy);
++
++        // If the pointer should be confined, but wasn't for some reason, keep trying until it is.
++        if (!SDL_RectEmpty(&window_data->sdlwindow->mouse_rect) && !seat->pointer.is_confined) {
++            Wayland_SeatUpdatePointerGrab(seat);
++        }
++
++        pointer_update_hit_test(seat);
++    }
++}
++
+ static void pointer_handle_motion(void *data, struct wl_pointer *pointer,
+                                   uint32_t time, wl_fixed_t sx, wl_fixed_t sy)
+ {
+@@ -891,7 +899,7 @@
      Wayland_SeatUpdatePointerCursor(seat);
  }
  
@@ -9,13 +60,16 @@
  {
      // Pointer is immobilized, do nothing.
      if (seat->pointer.locked_pointer) {
-@@ -918,8 +918,41 @@
+@@ -918,8 +926,44 @@
          };
  #endif
  
 +        // Goo: releases must not initiate another compositor move/resize.
 +        if (window_data->hit_test_result != SDL_HITTEST_NORMAL && !down) {
 +            return true;
++        }
++        if (down) {
++            pointer_update_hit_test(seat);
 +        }
 +        if (window_data->hit_test_result != SDL_HITTEST_DRAGGABLE) {
 +            seat->pointer.titlebar_click_window = 0;
@@ -52,7 +106,7 @@
  #ifdef HAVE_LIBDECOR_H
              if (window_data->shell_surface_type == WAYLAND_SHELL_SURFACE_TYPE_LIBDECOR) {
                  if (window_data->shell_surface.libdecor.frame) {
-@@ -937,6 +970,7 @@
+@@ -937,6 +981,7 @@
                  }
              }
              return true;
@@ -60,7 +114,7 @@
  
          case SDL_HITTEST_RESIZE_TOPLEFT:
          case SDL_HITTEST_RESIZE_TOP:
-@@ -1007,7 +1041,10 @@
+@@ -1007,7 +1052,10 @@
              seat->pointer.buttons_pressed &= ~(SDL_BUTTON_MASK(sdl_button));
          }
  
@@ -100,7 +154,92 @@
      }
  
      if (wind->shell_surface_status == WAYLAND_SHELL_SURFACE_STATUS_WAITING_FOR_CONFIGURE) {
-@@ -1447,6 +1449,11 @@
+@@ -763,6 +765,16 @@
+     handle_xdg_surface_configure
+ };
+ 
++static void PublishResizeConstraints(SDL_WindowData *wind, Uint32 previous_constraints)
++{
++    if (previous_constraints == wind->toplevel_constraints) {
++        return;
++    }
++    SDL_SetNumberProperty(SDL_GetWindowProperties(wind->sdlwindow), "Goo.Window.ResizeConstraints.1",
++                          wind->toplevel_constraints);
++    SDL_SendWindowEvent(wind->sdlwindow, SDL_EVENT_WINDOW_EXPOSED, 0, 0);
++}
++
+ static void handle_xdg_toplevel_configure(void *data,
+                                           struct xdg_toplevel *xdg_toplevel,
+                                           int32_t width,
+@@ -780,6 +792,8 @@
+     bool active = false;
+     bool resizing = false;
+     bool suspended = false;
++    const Uint32 previous_constraints = wind->toplevel_constraints;
++    Uint32 tiled_edges = 0;
+     wind->toplevel_constraints = 0;
+     wl_array_for_each (state, states) {
+         switch (*state) {
+@@ -798,11 +812,16 @@
+             active = true;
+             break;
+         case XDG_TOPLEVEL_STATE_TILED_LEFT:
++            tiled_edges |= WAYLAND_TOPLEVEL_CONSTRAINED_LEFT;
++            break;
+         case XDG_TOPLEVEL_STATE_TILED_RIGHT:
++            tiled_edges |= WAYLAND_TOPLEVEL_CONSTRAINED_RIGHT;
++            break;
+         case XDG_TOPLEVEL_STATE_TILED_TOP:
++            tiled_edges |= WAYLAND_TOPLEVEL_CONSTRAINED_TOP;
++            break;
+         case XDG_TOPLEVEL_STATE_TILED_BOTTOM:
+-            tiled = true;
+-            floating = false;
++            tiled_edges |= WAYLAND_TOPLEVEL_CONSTRAINED_BOTTOM;
+             break;
+         case XDG_TOPLEVEL_STATE_SUSPENDED:
+             suspended = true;
+@@ -824,6 +843,15 @@
+         }
+     }
+ 
++    tiled = tiled_edges != 0;
++    floating = floating && !tiled;
++    const Uint32 all_edges = WAYLAND_TOPLEVEL_CONSTRAINED_LEFT | WAYLAND_TOPLEVEL_CONSTRAINED_RIGHT |
++                             WAYLAND_TOPLEVEL_CONSTRAINED_TOP | WAYLAND_TOPLEVEL_CONSTRAINED_BOTTOM;
++    if (tiled_edges != all_edges && xdg_toplevel_get_version(xdg_toplevel) <
++        XDG_TOPLEVEL_STATE_CONSTRAINED_LEFT_SINCE_VERSION) {
++        wind->toplevel_constraints = tiled_edges;
++    }
++
+     UpdateWindowFullscreen(window, fullscreen);
+ 
+     /* Always send a maximized/restore event; if the event is redundant it will
+@@ -986,6 +1014,7 @@
+     wind->active = active;
+     window->tiled = tiled;
+     wind->resizing = resizing;
++    PublishResizeConstraints(wind, previous_constraints);
+ }
+ 
+ static void handle_xdg_toplevel_close(void *data, struct xdg_toplevel *xdg_toplevel)
+@@ -1202,6 +1231,7 @@
+     bool tiled = false;
+     bool suspended = false;
+     bool resizing = false;
++    const Uint32 previous_constraints = wind->toplevel_constraints;
+     wind->toplevel_constraints = 0;
+ 
+     static const enum libdecor_window_state tiled_states = (LIBDECOR_WINDOW_STATE_TILED_LEFT | LIBDECOR_WINDOW_STATE_TILED_RIGHT |
+@@ -1416,6 +1446,7 @@
+     wind->active = active;
+     window->tiled = tiled;
+     wind->resizing = resizing;
++    PublishResizeConstraints(wind, previous_constraints);
+ 
+     // Update the window manager capabilities.
+ #if SDL_LIBDECOR_CHECK_VERSION(0, 3, 0)
+@@ -1447,6 +1478,11 @@
          struct libdecor_state *state = libdecor_state_new(wind->current.logical_width, wind->current.logical_height);
          libdecor_frame_commit(frame, state, configuration);
          libdecor_state_free(state);

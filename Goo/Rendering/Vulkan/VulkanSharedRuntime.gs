@@ -542,7 +542,11 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
       references = 1
       processExit = (_, _) -> {
         primitiveState.StopPipelinePreparation()
-        queueWorker.Dispose()
+        if !queueWorker.Stop(presentTimeoutMs: 5000) {
+          let submitted = queueWorker.LastSubmittedGraphicsSubmissionSerial
+          if submitted != 0uL { WaitGraphicsSubmission(submitted, UInt64.MaxValue) }
+          return
+        }
         if WaitDeviceIdleResult() == VkConstants.VK_SUCCESS { pipelineCache.Persist() }
       }
       AppDomain.CurrentDomain.ProcessExit += processExit
@@ -584,6 +588,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
   internal prop Diagnostics VulkanDiagnostics? { get -> diagnostics }
   internal prop DebugUtilsEnabled bool{ get -> debugUtilsEnabled }
   internal prop DeviceLost bool{ get -> deviceLost }
+  internal prop Disposed bool{ get -> disposed }
   internal prop Terminal bool{ get -> terminal }
   internal prop TerminalIdleResult VkResult{ get -> terminalIdleResult }
   internal prop Generation uint64{ get -> generation }
@@ -966,6 +971,7 @@ internal unsafe sealed class VulkanSharedLease : IDisposable {
   internal prop Diagnostics VulkanDiagnostics? { get -> owner.Diagnostics }
   internal prop DebugUtilsEnabled bool{ get -> owner.DebugUtilsEnabled }
   internal prop DeviceLost bool{ get -> owner.DeviceLost }
+  internal prop Disposed bool{ get -> owner.Disposed }
   internal prop Terminal bool{ get -> owner.Terminal }
   internal prop TerminalIdleResult VkResult{ get -> owner.TerminalIdleResult }
   internal prop Generation uint64{ get -> owner.Generation }

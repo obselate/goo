@@ -131,6 +131,7 @@ internal unsafe partial class VulkanWindowTarget {
       layerPool = nil
     }
     generation = created
+    IsTransparent = created.IsTransparent
     if let previous = old {
       InvalidateLastPresentedImageState()
       retiredSwapchains.Enqueue(previous, presentationRetirement)
@@ -448,14 +449,24 @@ internal unsafe partial class VulkanWindowTarget {
     guard let selection = QuerySelection(requestedVsync, transparent, allowInherited) else {
       return VulkanSwapchainCreationResult{SurfaceLost: true}
     }
+    let sdl = host as SdlHost?
+    let alphaUnavailable = selection.CompositeAlpha == VkCompositeAlphaFlagBitsKHR(0)
+    let opaquePopup = sdl?.IsPopup == true && (!transparent || alphaUnavailable)
+    let compositeAlpha = if alphaUnavailable {
+      SelectCompositeAlpha(selection.Capabilities.supportedCompositeAlpha, false)
+    } else { selection.CompositeAlpha }
+    if compositeAlpha == VkCompositeAlphaFlagBitsKHR(0) {
+      throw InvalidOperationException("Vulkan surface has no supported composite alpha mode")
+    }
+
     let extent = VulkanSwapchainGeneration.ResolveExtent(selection.Capabilities,
       VkExtent2D{width: uint32(width), height: uint32(height)}, preferExtent)
     if extent.width == 0u || extent.height == 0u { return VulkanSwapchainCreationResult{} }
     let swapStart = DiagnosticTimestamp()
     var composition VulkanCompositionPresentation?
-    if transparent {
-      if let active = runtime, let sdl = host as SdlHost? {
-        composition = VulkanCompositionPresentation.TryCreate(active, sdl.WindowsPresentationHandle,
+    if transparent && (!alphaUnavailable || opaquePopup) {
+      if let active = runtime, let native = sdl {
+        composition = VulkanCompositionPresentation.TryCreate(active, native.WindowsPresentationHandle,
           extent, requestedVsync, previousComposition, windowObjectAccounting)
       }
     }
@@ -472,9 +483,13 @@ internal unsafe partial class VulkanWindowTarget {
     try {
       next = VulkanSwapchainGeneration(device, dispatch, surface, selection.Capabilities,
         format, selection.PresentMode, extent,
-        selection.CompositeAlpha, oldSwapchain, generationId,
+        compositeAlpha, oldSwapchain, generationId,
         swapchainMaintenanceVariant != VulkanSwapchainMaintenanceVariant.None,
-        windowObjectAccounting, diagnostics, composition)
+        windowObjectAccounting, diagnostics, composition,
+        opaqueClear: composition == nil && (opaquePopup || (transparent && alphaUnavailable)),
+        transparent: composition != nil || (transparent && !alphaUnavailable),
+        minimumImageCount: sdl?.WaylandLayer == WindowLayer.Background
+          && selection.PresentMode == VkConstants.VK_PRESENT_MODE_FIFO_KHR)
     } catch {
       composition?.Dispose()
       rethrow
@@ -519,18 +534,7 @@ internal unsafe partial class VulkanWindowTarget {
     if supportResult != VkConstants.VK_SUCCESS || support != VkConstants.VK_TRUE {
       throw InvalidOperationException("Vulkan selected queue does not support the SDL surface")
     }
-    var capabilities = VkSurfaceCapabilitiesKHR{}
-    let getSurfaceCapabilities = instanceDispatch.vkGetPhysicalDeviceSurfaceCapabilitiesKHR
-    let capabilitiesResult = getSurfaceCapabilities(
-      physicalDevice,
-      surface,
-      &capabilities)
-    if capabilitiesResult == VkConstants.VK_ERROR_SURFACE_LOST_KHR {
-      return nil
-    }
-    if capabilitiesResult != VkConstants.VK_SUCCESS {
-      throw InvalidOperationException("Vulkan surface capabilities query failed: " + capabilitiesResult.ToString())
-    }
+    guard let capabilities = QuerySurfaceCapabilities() else { return nil }
     if (capabilities.supportedUsageFlags & uint32(VkConstants.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) == 0u {
       throw InvalidOperationException("Vulkan surface does not support color attachment swapchain images")
     }
@@ -643,19 +647,26 @@ internal unsafe partial class VulkanWindowTarget {
       capabilities.supportedCompositeAlpha,
       transparent,
       allowInherited)
-    if compositeAlpha == VkCompositeAlphaFlagBitsKHR(0) {
-      if transparent {
-        throw InvalidOperationException(
-          "Vulkan surface has no supported composite alpha mode for the configured transparent window")
-      }
-      throw InvalidOperationException("Vulkan surface has no supported composite alpha mode")
-    }
     return VulkanWindowTargetSelection{
       Capabilities: capabilities,
       Format: selectedFormat,
       PresentMode: presentMode,
       CompositeAlpha: compositeAlpha,
     }
+  }
+
+  private func QuerySurfaceCapabilities() VkSurfaceCapabilitiesKHR? {
+    var capabilities VkSurfaceCapabilitiesKHR
+    let getCapabilities = instanceDispatch.vkGetPhysicalDeviceSurfaceCapabilitiesKHR
+    let result = getCapabilities(physicalDevice, surface, &capabilities)
+    if result == VkConstants.VK_ERROR_SURFACE_LOST_KHR { return nil }
+    if result != VkConstants.VK_SUCCESS {
+      throw InvalidOperationException("Vulkan surface capabilities query failed: " + result.ToString())
+    }
+    if let probe = CompositeAlphaForTest {
+      capabilities.supportedCompositeAlpha = probe(capabilities.supportedCompositeAlpha)
+    }
+    return capabilities
   }
 
   private func SelectEncodedFormat(
@@ -710,6 +721,7 @@ internal unsafe partial class VulkanWindowTarget {
   shared {
     internal var SecondaryStartupForTest Action?
     internal var RecoveryStartupForTest Action[VulkanWindowTarget]?
+    internal var CompositeAlphaForTest Func[VkCompositeAlphaFlagsKHR, VkCompositeAlphaFlagsKHR]?
 
     internal func SelectCompositeAlpha(
       supported VkCompositeAlphaFlagsKHR,

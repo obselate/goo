@@ -9,8 +9,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
         return 0;
     int width = 0;
     int height = 0;
-    int channels;
-    if (!stbi_info_from_memory(data, (int)size, &width, &height, &channels)
+    if (!goo_image_get_info(data, (int)size, &width, &height)
         || width <= 0 || height <= 0 || width > 8192 || height > 8192
         || (uint64_t)width * height * 4 > INT_MAX
         || (uint64_t)width * height * 4 > 64 * 1024 * 1024)

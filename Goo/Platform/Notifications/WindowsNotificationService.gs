@@ -159,9 +159,10 @@ internal class WindowsNotificationService : NotificationService {
         internal func Content(scheme string, message NotificationMessage) string {
             let launch = scheme + "://goo-notification/activate?id=" + Uri.EscapeDataString(message.Id)
                 + "&action=&data=" + Uri.EscapeDataString(message.Payload)
+            let audio = if message.Silent { `<audio silent="true"/>` } else { "" }
             return `<toast activationType="protocol" launch="` + SecurityElement.Escape(launch)
                 + `"><visual><binding template="ToastGeneric"><text>` + SecurityElement.Escape(message.Title)
-                + "</text><text>" + SecurityElement.Escape(message.Body) + "</text></binding></visual></toast>"
+                + "</text><text>" + SecurityElement.Escape(message.Body) + "</text></binding></visual>" + audio + "</toast>"
         }
 
         internal func Open(identifier string, options NotificationOptions) NotificationServiceResult {

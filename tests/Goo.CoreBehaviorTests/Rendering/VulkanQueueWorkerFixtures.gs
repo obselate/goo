@@ -2,7 +2,10 @@ package Goo
 
 import System
 import System.Diagnostics
+import System.Runtime.CompilerServices
+import System.Runtime.InteropServices
 import System.Threading
+import System.Threading.Tasks
 
 internal class ThrowingQueueWakeHost : VulkanSurfaceHost {
   private var throwNext int32 = 1
@@ -43,6 +46,76 @@ internal class ThrowingQueueWakeHost : VulkanSurfaceHost {
 }
 
 internal unsafe class VulkanQueueWorkerFixtures {
+  shared {
+    private let submitReleased ManualResetEventSlim = ManualResetEventSlim(true)
+
+    @UnmanagedCallersOnly(CallConvs = []Type{typeof(CallConvCdecl)})
+    private func Submit(queue VkQueue, count uint32, info *VkSubmitInfo2, fence VkFence) VkResult {
+      submitReleased.Wait()
+      return VkConstants.VK_SUCCESS
+    }
+
+    @UnmanagedCallersOnly(CallConvs = []Type{typeof(CallConvCdecl)})
+    private func Present(queue VkQueue, info *VkPresentInfoKHR) VkResult -> VkConstants.VK_SUCCESS
+  }
+
+  internal func StopTimesOutOnlyDuringPresent() bool {
+    let boundMs = 100
+    let dispatch = VkDeviceDispatch{
+      vkQueueSubmit2: cast[unmanaged[Cdecl](VkQueue, uint32, *VkSubmitInfo2, VkFence) -> VkResult](nint(&Submit)),
+      vkQueuePresentKHR: cast[unmanaged[Cdecl](VkQueue, *VkPresentInfoKHR) -> VkResult](nint(&Present)),
+    }
+    using let submitWorker = VulkanQueueWorker(nint(1), dispatch, 1uL)
+    let submit = VulkanQueueMailbox(nil)
+    submit.PrepareSubmit(nint(0), 0uL, 0uL)
+    VulkanQueueWorker.HoldSubmitForMailboxForTest(submit)
+    submitReleased.Reset()
+    var stopped = false
+    let stopSubmit = Thread(() -> { stopped = submitWorker.Stop(boundMs) })
+    stopSubmit.IsBackground = true
+    try {
+      if !submit.BeginSubmit() || !submitWorker.EnqueueSubmit(submit, (serial uint64) -> { })
+        || !VulkanQueueWorker.WaitForHeldQueueCallForTest(5000) { return false }
+      stopSubmit.Start()
+      if !SpinWait.SpinUntil(() -> !stopSubmit.IsAlive
+        || (int32(stopSubmit.ThreadState) & int32(System.Threading.ThreadState.WaitSleepJoin)) != 0, 5000) {
+        return false
+      }
+      if stopSubmit.Join(boundMs * 3) {
+        throw InvalidOperationException("Stop returned before the held submit was released")
+      }
+    } finally {
+      submitReleased.Set()
+      VulkanQueueWorker.ReleaseHeldQueueCallForTest()
+    }
+    if !stopSubmit.Join(5000) || !stopped || submitWorker.HasOutstandingWork
+      || submit.Phase != VulkanQueueMailboxPhase.SubmitComplete || submit.SubmitResult != VkConstants.VK_SUCCESS {
+      return false
+    }
+
+    using let presentWorker = VulkanQueueWorker(nint(1), dispatch, 1uL)
+    let present = VulkanQueueMailbox(nil)
+    present.FailSubmit(VkConstants.VK_SUCCESS)
+    present.PreparePresent(0uL, 0u, 0uL, 0uL, false)
+    VulkanQueueWorker.HoldPresentForMailboxForTest(present)
+    let behind = VulkanQueueMailbox(nil)
+    behind.PrepareSubmit(nint(0), 0uL, 0uL)
+    try {
+      if !present.BeginPresent() || !presentWorker.EnqueuePresent(present)
+        || !VulkanQueueWorker.WaitForHeldQueueCallForTest(5000) { return false }
+      if !behind.BeginSubmit() || !presentWorker.EnqueueSubmit(behind, (serial uint64) -> { }) { return false }
+      let stopPresent = Task.Run[bool](() -> {
+        let elapsed = Stopwatch.StartNew()
+        return !presentWorker.Stop(boundMs) && elapsed.ElapsedMilliseconds >= boundMs - 10
+      })
+      if !stopPresent.Wait(5000) || !stopPresent.Result || !presentWorker.HasOutstandingWork { return false }
+      VulkanQueueWorker.ReleaseHeldQueueCallForTest()
+      return presentWorker.Stop(Timeout.Infinite) && behind.Phase == VulkanQueueMailboxPhase.SubmitQueued
+    } finally {
+      VulkanQueueWorker.ReleaseHeldQueueCallForTest()
+    }
+  }
+
   internal func WakeFailureDrainsFollowingMailboxAndQuiesces() bool {
     let host = ThrowingQueueWakeHost()
     using let worker = VulkanQueueWorker(nint(1), VkDeviceDispatch{}, 1uL)

@@ -253,6 +253,48 @@ internal class DiagnosticCaptureFixture {
         }
         Require(!window.IsOpen, "Capture regression window did not close")
       }
+      RunIdlePublicCapture()
+    }
+
+    private func RunIdlePublicCapture() {
+      let window = Window{
+        Title: "Goo idle capture notification",
+        Size: LayoutSize(64, 64), Root: DiagnosticCaptureCell{},
+      }.Open()
+      try {
+        WindowReadbackTestFixture.StabilizeNativeMetrics(window)
+        WindowReadbackTestFixture.ForceRender(window, 0.0, waitForPresentation: true)
+        let target = WindowReadbackTestFixture.CaptureTarget(window)!!
+        target.UsePresentedSceneForTest(1.0F, 1.0F)
+
+        let uiThread = Environment.CurrentManagedThreadId
+        var completed bool
+        window.CaptureCompleted += () -> {
+          Require(!completed && Environment.CurrentManagedThreadId == uiThread,
+            "Capture notification did not run once on the UI thread")
+          guard let capture = window.PollCapture() else {
+            throw InvalidOperationException("Capture notification preceded readback completion")
+          }
+          Require(capture.Width == 64u && capture.Height == 64u
+            && capture.Pixels.Length == int32(capture.RowBytes * capture.Height),
+            "Idle capture returned invalid pixels")
+          completed = true
+          window.RequestClose()
+        }
+        Require(window.RequestCapture() == WindowCaptureRequestStatus.Accepted
+          && target.ReadbackRequestCount == 1uL && !window.QueueWorkPending,
+          "Idle capture did not start readback without a native present")
+        window.After(10000.0, () -> {
+          throw TimeoutException("Idle capture did not notify the UI thread")
+        })
+        Application.Run(window)
+        Require(completed, "Idle capture did not complete")
+      } finally {
+        if window.IsOpen {
+          window.RequestClose()
+          Application.Run(window)
+        }
+      }
     }
   }
 }

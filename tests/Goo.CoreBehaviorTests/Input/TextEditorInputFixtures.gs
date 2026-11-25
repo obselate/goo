@@ -384,6 +384,39 @@ internal class TextEditorInputFixtures {
       && last.Top + last.Height <= float32(controller.ScrollTargetY) + BoxGeometry.ViewportHeight(node) + 0.01F
   }
 
+  func ReadOnlyAppendFollowsEndOnlyWithScrollTo() bool {
+    let text = StringBuilder()
+    for i in 0 ... 40 { text.Append("\nline") }
+    let appended = text.ToString()
+    let document = TextDocument("line" + appended)
+    using let controller = TextEditorController(document)
+    controller.ScrollTo(0.0, 10000000.0)
+    let cell = TextEditorInputReadOnlyCell(document, controller)
+    let driver = InputFixtureDriver(cell, 320, 120)
+    driver.Update()
+    let handle = cell.EditorHandle
+    if !handle.IsMounted || !handle.IsAtEndY || handle.ScrollOffset.Y <= 0.0 { return false }
+
+    for follow in []bool{ true, false } {
+      let before = handle.ScrollOffset
+      document.Apply(TextChange(TextRange(document.Length, 0), appended))
+      if follow { controller.ScrollTo(before.X, 10000000.0) }
+      driver.Update()
+      let offset = handle.ScrollOffset
+      if handle.IsAtEndY != follow || (!follow && offset != before) { return false }
+      let node = driver.Window.Tree!!.Children[0]
+      let layout = TextEditorLayouts.For(node, BoxGeometry.ContentWidth(node), BoxGeometry.ContentHeight(node))
+      let top = float32(offset.Y)
+      let bottom = top + BoxGeometry.ViewportHeight(node)
+      var lastVisibleEnd int32 = -1
+      for line in layout.Lines {
+        if line.Top < bottom && line.Top + line.Height > top { lastVisibleEnd = line.SourceEnd }
+      }
+      if lastVisibleEnd < 0 || (lastVisibleEnd == document.Length) != follow { return false }
+    }
+    return true
+  }
+
   func CaretRevealLandsAfterNearbyParagraphsAreMeasured() bool {
     using let controller = TextEditorController(TextDocument(wrappedParagraphs()))
     let driver = InputFixtureDriver(TextEditorWrappedCell(controller), 400, 300)
@@ -513,6 +546,7 @@ internal class TextEditorWrappedCell : Cell {
 internal class TextEditorInputReadOnlyCell : Cell {
   internal let Document TextDocument
   internal let Controller TextEditorController
+  internal let EditorHandle ElementHandle = ElementHandle()
 
   internal init(document TextDocument, controller TextEditorController) {
     Document = document
@@ -522,6 +556,7 @@ internal class TextEditorInputReadOnlyCell : Cell {
   override func Build() Blob -> Container() {.Width: 320.0,.Height: 120.0,.FlexDirection: FlexDirection.Row,
     TextEditor(){ Controller = Controller,
         Key = "editor",
+        Handle = EditorHandle,
         Width = 250.0,
         Height = 100.0,
         ReadOnly = true,

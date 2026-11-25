@@ -9,6 +9,7 @@ public class Button : Blob {
   }
 
   private var children IList[Blob]?
+  internal prop MaximizesWindow bool{ get; set }
   internal override func coreBlob() {
   }
 

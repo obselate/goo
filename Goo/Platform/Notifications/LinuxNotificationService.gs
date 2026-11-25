@@ -82,6 +82,11 @@ internal class LinuxNotificationService : NotificationService {
         writer.WriteDictionaryEntryStart()
         writer.WriteString("desktop-entry")
         writer.WriteVariantString(identifier)
+        if message.Silent {
+            writer.WriteDictionaryEntryStart()
+            writer.WriteString("suppress-sound")
+            writer.WriteVariantBool(true)
+        }
         writer.WriteDictionaryEnd(hints)
         writer.WriteInt32(-1)
         return connection.CallMethodAsync[uint32](writer.CreateMessage(), ReadId)

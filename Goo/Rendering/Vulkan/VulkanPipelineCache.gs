@@ -4,6 +4,7 @@ import System
 import System.Diagnostics
 import System.IO
 import System.Runtime.InteropServices
+import System.Threading
 
 internal data struct VulkanPipelineCacheMetrics {
   var Enabled bool
@@ -21,7 +22,8 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
   private let device VkDevice
   private let dispatch VkDeviceDispatch
   private let objectAccounting VulkanObjectAccounting?
-  private let gate object
+  private let cacheGate ReaderWriterLockSlim = ReaderWriterLockSlim()
+  private let metricsGate object = Object()
   private var cachePath string = ""
   private var cache VkPipelineCache
   private var persistenceEnabled bool
@@ -49,7 +51,6 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
       device = nativeDevice
       dispatch = nativeDispatch
       objectAccounting = nativeObjectAccounting
-      gate = Object()
       if nativeDevice == nint(0) || pipelineCacheUuid == nil
         || Environment.GetEnvironmentVariable("GOO_VK_PIPELINE_CACHE") == "0" {
           return
@@ -116,28 +117,35 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
 
   internal prop Metrics VulkanPipelineCacheMetrics{
     get {
-      lock (gate) {
-        return VulkanPipelineCacheMetrics{
-          Enabled: cache != 0uL,
-          LoadedBytes: loadedBytes,
-          PersistedBytes: persistedBytes,
-          GraphicsPipelineCreateCount: graphicsPipelineCreateCount,
-          GraphicsPipelineCreateNanoseconds: graphicsPipelineCreateNanoseconds,
+      cacheGate.EnterReadLock()
+      try {
+        lock (metricsGate) {
+          return VulkanPipelineCacheMetrics{
+            Enabled: cache != 0uL,
+            LoadedBytes: loadedBytes,
+            PersistedBytes: persistedBytes,
+            GraphicsPipelineCreateCount: graphicsPipelineCreateCount,
+            GraphicsPipelineCreateNanoseconds: graphicsPipelineCreateNanoseconds,
+          }
         }
+      } finally {
+        cacheGate.ExitReadLock()
       }
     }
   }
 
   internal func CreateGraphicsPipelines(count uint32,
     createInfos * VkGraphicsPipelineCreateInfo, pipelines * VkPipeline) VkResult{
-      lock (gate) {
+      cacheGate.EnterReadLock()
+      try {
         let start = Stopwatch.GetTimestamp()
         let create = dispatch.vkCreateGraphicsPipelines
         let result = create(device, cache, count, createInfos, nil, pipelines)
         let elapsed = Stopwatch.GetTimestamp() - start
-        graphicsPipelineCreateCount = graphicsPipelineCreateCount + int64(count)
-        graphicsPipelineCreateNanoseconds = graphicsPipelineCreateNanoseconds
-        +TicksToNanoseconds(elapsed)
+        lock (metricsGate) {
+          graphicsPipelineCreateCount += int64(count)
+          graphicsPipelineCreateNanoseconds += TicksToNanoseconds(elapsed)
+        }
         if let recorder = FrameRecorder.Current {
           let parent = recorder.NativeResource(FrameResourceKind.PipelineCache, uint64(device), cache)
           for i in 0 ... int32(count) {
@@ -151,13 +159,18 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
           }
         }
         return result
+      } finally {
+        cacheGate.ExitReadLock()
       }
     }
 
   internal func CreateComputePipeline(info * VkComputePipelineCreateInfo, pipeline * VkPipeline) VkResult {
-    lock (gate) {
+    cacheGate.EnterReadLock()
+    try {
       let create = dispatch.vkCreateComputePipelines
       return create(device, cache, 1u, info, nil, pipeline)
+    } finally {
+      cacheGate.ExitReadLock()
     }
   }
 
@@ -244,8 +257,11 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
     }
 
   internal func Persist() {
-    lock (gate) {
+    cacheGate.EnterWriteLock()
+    try {
       if !disposed { PersistCore() }
+    } finally {
+      cacheGate.ExitWriteLock()
     }
   }
 
@@ -349,7 +365,8 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
   }
 
   private func DisposeCore(save bool) {
-    lock (gate) {
+    cacheGate.EnterWriteLock()
+    try {
       if disposed {
         return
       }
@@ -366,6 +383,8 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
         if let accounting = objectAccounting { accounting.Release() }
         cache = 0uL
       }
+    } finally {
+      cacheGate.ExitWriteLock()
     }
   }
 

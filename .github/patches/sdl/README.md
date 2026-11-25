@@ -25,6 +25,8 @@ The builder applies these patches to checksum-pinned SDL with no fuzz. Review ba
 | `wayland-activation-token.patch` | Preserve Wayland activation-token routing | AppHost checks |
 | `wayland-clipboard-replacement.patch` | Keep clipboard data when a cleared selection is replaced, upstream `01997ebebde6a57af1506956764732554c2b85b0` | `Goo.HostChecks wayland-clipboard` |
 | `wayland-selection-serial.patch` | Publish a selection set before input with the latest serial, upstream `7063546818de5fcd78ac7afe0b8404b753a95ab6` | `Goo.HostChecks wayland-clipboard` |
+| `wayland-resize-border.patch` | Outside resize border and shadow for undecorated toplevels: `Goo_SetWindowResizeBorder`, xdg window geometry excludes it | Idle resize qualification |
+| `wayland-begin-interaction.patch` | `Goo_BeginWindowInteraction` starts `xdg_toplevel.move` or `resize` with the latest pointer, touch or key serial | Manual KWin check |
 
 Python check names without a prefix are under `tests/NativeWindow`. The build script owns patch order and automatic native checks.
 

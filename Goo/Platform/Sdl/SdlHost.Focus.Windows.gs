@@ -45,6 +45,9 @@ internal unsafe partial class SdlHost {
   }
 
   private func DispatchNativeFocus(handle nint, message uint32, wparam nuint, lparam nint, id nuint, data nuint) nint {
+    if message == 0x84u || message == 0x2A2u || message == 0x2A3u || (message >= 0xA0u && message <= 0xA3u) {
+      return DispatchMaximizeButton(handle, message, wparam, lparam)
+    }
     if message == 0x7u || message == 0x8u {
       var nativeEvent SDLEvent
       nativeEvent.Window.Type = message == 0x7u ? SDLEventType.WindowFocusGained : SDLEventType.WindowFocusLost
@@ -58,6 +61,7 @@ internal unsafe partial class SdlHost {
 
   private func RaiseFocusChanged(value bool) {
     if focusSubclass != nil && keyboardFocused == value { return }
+    if value && focusSubclass != nil && IsChild(focusWindow, GetFocus()) != 0 { return }
     keyboardFocused = value
     FocusChanged?.Invoke(value)
   }

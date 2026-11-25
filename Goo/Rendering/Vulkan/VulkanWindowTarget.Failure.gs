@@ -32,7 +32,7 @@ internal unsafe partial class VulkanWindowTarget {
   private func CancelDeferredInitialFrame() {
     if !frameBegun || queueStage != QueueStageIdle || !frameRenderDeferred { return }
     AbortUnsubmittedTextUpload()
-    AbortUnsubmittedImageUploads()
+    try { AbortUnsubmittedImageUploads() } catch (cleanup Exception) { }
     AbortUnsubmittedPathUpload()
     if runtime?.DeviceLost != true && runtime?.Terminal != true { AbandonRecordedFrameForRetry() }
     CloseDiagnosticFrame(false)

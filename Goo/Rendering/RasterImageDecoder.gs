@@ -57,6 +57,13 @@ internal unsafe partial class RasterImageDecoder {
       limits ImageDecodeLimits, token CancellationToken) ImageSource ->
     Load(stream, RasterDecodeBounds{ Limits: limits, MaxWidth: maxWidth, MaxHeight: maxHeight }, token)
 
+    internal func LoadThumbnail(encoded ReadOnlyMemory[uint8], maxWidth int32, maxHeight int32,
+      limits ImageDecodeLimits, token CancellationToken) ImageSource {
+        token.ThrowIfCancellationRequested()
+        return DecodeCore(encoded.Span,
+          RasterDecodeBounds{ Limits: limits, MaxWidth: maxWidth, MaxHeight: maxHeight }, token)
+      }
+
     internal func Load(stream Stream, limits ImageDecodeLimits, token CancellationToken) ImageSource ->
     Load(stream, RasterDecodeBounds{ Limits: limits }, token)
 
@@ -166,7 +173,7 @@ internal unsafe partial class RasterImageDecoder {
       }
     }
 
-    private func Resample(pixels ReadOnlySpan[uint8], sourceWidth int32, sourceHeight int32,
+    internal func Resample(pixels ReadOnlySpan[uint8], sourceWidth int32, sourceHeight int32,
       width int32, height int32, orientation int32, token CancellationToken) []uint8 {
         let resized = [width * height * 4]uint8
         let spans = [width * 4]int32

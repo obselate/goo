@@ -28,7 +28,7 @@ env:
     libdbus-1-dev libdecor-0-dev libgl1-mesa-dev libgl1-mesa-dri
     libegl1 libfontconfig1 libibus-1.0-dev libwayland-dev
     libxkbcommon-dev mesa-vulkan-drivers vulkan-tools
-    kwin-wayland mako-notifier wayland-protocols weston wl-clipboard
+    kwin-wayland mako-notifier sway wayland-protocols weston wl-clipboard
 
 jobs:
   changes:
@@ -935,6 +935,11 @@ jobs:
             LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
             python3 tests/NativeWindow/test_native_close.py \
             tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll
+      - name: Verify Wayland session lock
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          python3 tests/NativeWindow/test_session_lock.py \
+            tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll
       - name: Verify read-only text entry and native clipboard
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -1149,8 +1154,30 @@ jobs:
           dotnet publish tests/Goo.Gestures.Smoke/Goo.Gestures.Smoke.gsproj \
             -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
             --configfile tests/Goo.PackageSmoke/NuGet.config -o artifacts/gesture-nativeaot
+          smoke=artifacts/gesture-nativeaot/Goo.Gestures.Smoke
+          if cores="$(mktemp -d "$RUNNER_TEMP/gesture-cores.XXXXXX")"; then
+            core_pattern="$(cat /proc/sys/kernel/core_pattern)" || core_pattern=
+            trap 'status=$?; if [[ -n "$core_pattern" ]]; then printf "%s\n" "$core_pattern" | sudo tee /proc/sys/kernel/core_pattern >/dev/null || true; fi; rm -rf -- "$cores" || true; exit "$status"' EXIT
+            if [[ -n "$core_pattern" ]]; then
+              printf '%s\n' "$cores/core.%p" | sudo tee /proc/sys/kernel/core_pattern >/dev/null ||
+                echo "::warning::Could not configure gesture smoke core files"
+            fi
+          fi
+          status=0
           LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
-            artifacts/gesture-nativeaot/Goo.Gestures.Smoke
+            bash -c 'ulimit -S -c 131072 || true; exec "$@"' bash "$smoke" || status=$?
+          if (( status != 0 )) && [[ -n "$cores" ]]; then
+            for core in "$cores"/core.*; do
+              [[ -f "$core" ]] || continue
+              if command -v gdb >/dev/null || sudo apt-get install -y --no-install-recommends gdb; then
+                DEBUGINFOD_URLS=https://debuginfod.ubuntu.com DEBUGINFOD_TIMEOUT=15 \
+                  timeout --kill-after=5s 120s gdb -q -nx -batch \
+                  -iex 'set debuginfod enabled on' -ex 'set backtrace limit 64' \
+                  -ex 'thread apply all bt' "$smoke" "$core" || true
+              fi
+            done
+          fi
+          exit "$status"
 
       - name: Pack and validate native accessibility runtimes
         if: needs.changes.outputs.full == 'true'
@@ -1410,6 +1437,8 @@ jobs:
             --force --debug:custom-hive "$template_hive"
           dotnet new goo --name Generated --output "$template_output" \
             --debug:custom-hive "$template_hive"
+          sdk=$(jq -er '."msbuild-sdks"."Gsharp.NET.Sdk"' global.json)
+          grep -Fx "<Project Sdk=\"Gsharp.NET.Sdk/$sdk\">" "$template_output/Generated.gsproj"
           dotnet restore "$template_output/Generated.gsproj" \
             --configfile tests/Goo.PackageSmoke/NuGet.config
           dotnet build "$template_output/Generated.gsproj" \
@@ -2755,6 +2784,7 @@ jobs:
           printf '%s\n' '<configuration><packageSources><clear/><add key="local" value="android-packages"/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources><packageSourceMapping><packageSource key="local"><package pattern="Goo"/><package pattern="Goo.Android"/><package pattern="Goo.Audio"/></packageSource><packageSource key="nuget.org"><package pattern="*"/></packageSource></packageSourceMapping></configuration>' > artifacts/android-nuget.config
           consumer=artifacts/android-consumer
           mkdir -p "$consumer"
+          cp global.json "$consumer/"
           set -o pipefail
           for name in Goo.AndroidSmoke Goo.AndroidSmoke.Shared; do
             test ! -e "$consumer/$name"
@@ -2776,6 +2806,10 @@ jobs:
         run: |
           dotnet new install artifacts/android-packages/Goo.Templates.*.nupkg
           dotnet new goo-android --name AndroidStarter --output artifacts/android-starter --application-id org.goo.androidstarter
+          sdk=$(jq -er '."msbuild-sdks"."Gsharp.NET.Sdk"' global.json)
+          for project in AndroidStarter.gsproj Shared/AndroidStarter.Shared.gsproj; do
+            grep -Fx "<Project Sdk=\"Gsharp.NET.Sdk/$sdk\">" "artifacts/android-starter/$project"
+          done
           dotnet build artifacts/android-starter/AndroidStarter.gsproj -c Release -p:RestoreConfigFile="$PWD/artifacts/android-nuget.config" -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
       - name: Publish Android package consumer with NativeAOT
         if: needs.changes.outputs.full == 'true'

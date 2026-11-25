@@ -45,6 +45,54 @@ class FixtureContractTests {
         Assert.True(CellFixtures().MountedPlainFieldWritesRebuild())
 
     @Fact
+    func StationaryDragHoverDoesNotRedispatchChanged() {
+        let cell = DragHoverCell()
+        let window = Window{Root: cell, Size: LayoutSize(160, 50)}.Open()
+        try {
+            window.UpdateTree()
+            let input = window.InputForTest
+            input.QueuePointerPress(10.0F, 10.0F)
+            input.QueuePointerMove(90.0F, 10.0F)
+            window.PumpScheduled(0.01)
+            window.PumpScheduled(0.01)
+            let queries = cell.Queries
+            for _ in 0 ... 16 { window.PumpScheduled(0.01) }
+            Assert.Equal(1, cell.Events.Count)
+            Assert.Equal(DragEventKind.Enter, cell.Events[0].Kind)
+            Assert.Equal(queries, cell.Queries)
+
+            input.QueuePointerMove(95.0F, 10.0F)
+            input.QueuePointerMove(95.0F, 10.0F)
+            window.PumpScheduled(0.01)
+            Assert.Equal(2, cell.Events.Count)
+            Assert.Equal(DragEventKind.Move, cell.Events[1].Kind)
+            Assert.Equal(15.0, cell.Events[1].Position.X)
+
+            cell.TargetLeft = 85
+            cell.Rebuild()
+            window.PumpScheduled(0.01)
+            Assert.Equal(3, cell.Events.Count)
+            Assert.Equal(DragEventKind.Move, cell.Events[2].Kind)
+            Assert.Equal(10.0, cell.Events[2].Position.X)
+
+            cell.Effect = DragEffect.Copy
+            cell.Rebuild()
+            window.PumpScheduled(0.01)
+            Assert.Equal(4, cell.Events.Count)
+            Assert.Equal(DragEventKind.Move, cell.Events[3].Kind)
+            Assert.Equal(DragEffect.Copy, cell.Events[3].Effect)
+
+            input.QueuePointerMove(140.0F, 10.0F)
+            window.PumpScheduled(0.01)
+            Assert.Equal(5, cell.Events.Count)
+            Assert.Equal(DragEventKind.Leave, cell.Events[4].Kind)
+            input.QueuePointerRelease(140.0F, 10.0F)
+            window.PumpScheduled(0.01)
+            Assert.Equal(5, cell.Events.Count)
+        } finally { window.Close() }
+    }
+
+    @Fact
     func ServicesBeforeWindowBindingContract() ->
         Assert.True(CellFixtures().ServicesBeforeWindowBinding())
 
@@ -168,6 +216,7 @@ class FixtureContractTests {
         func Cases() sequence[[]object] {
             yield Contract[TreeFixtures]("BuildReturnFreezesBeforeNestedCellContract")
             yield Contract[RowRecyclingFixtures]("VirtualKeysKeepAuthoredBlobsUnchangedContract")
+            yield Contract[RowRecyclingFixtures]("VirtualPlacementSurvivesDeferredStyleCommitContract")
             yield Contract[TreeFixtures]("InputOptionsFreezeAtHandOffContract")
             yield Contract[TreeFixtures]("ScrollbarDeclarationsFreezeAtHandOffContract")
             yield Contract[TreeFixtures]("VectorStrokeFreezeAtHandOffContract")
@@ -201,6 +250,12 @@ class FixtureContractTests {
             yield Contract[TreeFixtures]("SizedFailedBuildRetainsSubscriptionsContract")
             yield Contract[StyleFixtures]("FlexAndInsetDeclarationOrderContract")
             yield Contract[StyleFixtures]("BorderRadiusDeclarationOrderContract")
+            yield Contract[StyleFixtures]("BorderRadiusTransitionPreservesZeroCornerContract")
+            yield Contract[StyleFixtures]("BorderRadiusRemovalPreservesDeclaredCornerContract")
+            yield Contract[StyleFixtures]("BorderRadiusAndCornerTransitionIndependentlyContract")
+            yield Contract[StyleFixtures]("BorderRadiusTransitionWinsWhenDeclaredLastContract")
+            yield Contract[StyleFixtures]("BorderRadiusRemainsAfterCornerRemovalContract")
+            yield Contract[StyleFixtures]("BorderRadiusReorderRestoresShorthandCornerContract")
             yield Contract[AccessibilityFixtures]("AccessibilityShorthandOrderContract")
             yield Contract[AccessibilityFixtures]("AccessibilityShorthandRoundTripContract")
             yield Contract[FlexConformanceFixtures]("RowColumnSpacerContract")
@@ -343,6 +398,7 @@ class FixtureContractTests {
             yield Contract[ClickSequenceFixtures]("PointerDragArbitratesChildClicksAndMovementContract")
             yield Contract[GestureFixtures]("RoutedWinnerSuppressesClickScrollAndLosingRecognizer")
             yield Contract[GestureFixtures]("DeadlineAndExplicitCancelHaveOneTerminalNotification")
+            yield Contract[GestureFixtures]("GestureHitRoutesIgnoreUnmountedOwners")
             yield Contract[GestureFixtures]("CaptureAndNativeCancelDoNotLeakRecognition")
             yield Contract[GestureFixtures]("SelectionMutationPreservesBothEndpointAffinities")
             yield Contract[GestureFixtures]("CallbackFailureSuppressesReleaseAndKeepsOriginalError")
@@ -628,6 +684,7 @@ class FixtureContractTests {
             yield Contract[ShapeGeometryFixtures]("EllipseFlatteningBoundsDeviceErrorAndEdgeCount")
             yield Contract[ShapeGeometryFixtures]("LoneMoveToContoursPreserveOtherStrokes")
             yield Contract[ShapeGeometryFixtures]("ReturningQuadraticStrokePreservesExcursionAndTrim")
+            yield Contract[ShapeGeometryFixtures]("RoundedShapeDrawingMatchesHitTest")
             yield Contract[ShapeGeometryFixtures]("StrokeTrimUsesGlobalContourLengthAndHitGeometry")
             yield Contract[ShapeGeometryFixtures]("StrokeTrimPreservesFillAndOpensPartialClosedContour")
             yield Contract[ShapeGeometryFixtures]("StrokeTrimKeepsFullyIncludedMiddleContourClosed")
@@ -694,6 +751,7 @@ class FixtureContractTests {
             yield Contract[TextEditorInputFixtures]("ReadOnlyTabEscapesAndCommandsCanCancel")
             yield Contract[TextEditorInputFixtures]("WheelScrollAndCaretBlinkUseEditorState")
             yield Contract[TextEditorInputFixtures]("ScrollToEndBeforeMountReachesMeasuredEnd")
+            yield Contract[TextEditorInputFixtures]("ReadOnlyAppendFollowsEndOnlyWithScrollTo")
             yield Contract[TextEditorInputFixtures]("CaretRevealLandsAfterNearbyParagraphsAreMeasured")
             yield Contract[TextEditorInputFixtures]("CaretRevealInViewportShorterThanCaretIsStable")
             yield Contract[TextEditorInputFixtures]("ContentHeightKeepsMeasuredParagraphsAfterEviction")
@@ -751,10 +809,12 @@ class FixtureContractTests {
             yield Contract[TreeFixtures]("VisibilityLifecycleContract")
             yield Contract[TreeFixtures]("ButtonSemanticPrimitiveContract")
             yield Contract[VulkanQueueWorkerFixtures]("WakeFailureDrainsFollowingMailboxAndQuiesces")
+            yield Contract[VulkanQueueWorkerFixtures]("StopTimesOutOnlyDuringPresent")
             yield Contract[VulkanSceneCompilerFixtures]("OwnerIdentitySurvivesCompilerHandoff")
             yield Contract[VulkanSceneCompilerFixtures]("ReboundMountGetsFreshCompilerOwners")
             yield Contract[VulkanSceneCompilerFixtures]("RectangleUpdatesPreserveFloatBits")
             yield Contract[VulkanSceneCompilerFixtures]("DirtySubtreeRecompileMatchesFresh")
+            yield Contract[VulkanSceneCompilerFixtures]("AnimatedStrokeRetainsResidentSibling")
             yield Contract[VulkanSceneCompilerFixtures]("LayerPaintCoverageSurvivesViewportClipping")
             yield Contract[VulkanSceneCompilerFixtures]("ScrollOffsetRetainsCanonicalContent")
             yield Contract[VulkanSceneCompilerFixtures]("OpaqueViewportRootSkipsCoveredBackground")
@@ -763,4 +823,30 @@ class FixtureContractTests {
 
         private func Contract[TFixture](methodName string)[]object -> []object{typeof(TFixture), methodName}
     }
+}
+
+internal class DragHoverCell : Cell {
+    internal let Events List[DragEvent] = List[DragEvent]()
+    internal var Queries int32
+    internal var TargetLeft Length = 80
+    internal var Effect DragEffect = DragEffect.Move
+
+    override func Build() Blob ->
+        Container(){
+            Container{
+                Width: 40,
+                Height: 40,
+                DragSource: DragSource(_ -> DragData("payload", DragEffect.Copy | DragEffect.Move)),
+            },
+            Container{
+                Position: PositionType.Absolute,
+                Left: TargetLeft,
+                Width: 40,
+                Height: 40,
+                DropTarget: DropTarget((_ DragEvent) -> {
+                    Queries++
+                    return Effect
+                }, (event DragEvent) -> Events.Add(event)),
+            },
+        }
 }

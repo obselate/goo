@@ -1,0 +1,321 @@
+--- a/src/video/wayland/SDL_waylandwindow.c
++++ b/src/video/wayland/SDL_waylandwindow.c
+@@ -302,4 +302,23 @@
+ }
+ 
++static bool Goo_UsesVulkanFrames(const SDL_WindowData *wind)
++{
++    return wind->goo_vulkan_frame &&
++           (wind->shell_surface_type == WAYLAND_SHELL_SURFACE_TYPE_XDG_TOPLEVEL ||
++            wind->shell_surface_type == WAYLAND_SHELL_SURFACE_TYPE_CUSTOM);
++}
++
++static void SetWindowBufferGeometry(SDL_WindowData *wind, int width, int height, int scale)
++{
++    if (Goo_UsesVulkanFrames(wind)) {
++        wind->goo_buffer_scale = scale;
++        wind->goo_geometry_pending = true;
++    } else if (wind->viewport) {
++        wp_viewport_set_destination(wind->viewport, width, height);
++    } else {
++        wl_surface_set_buffer_scale(wind->surface, scale);
++    }
++}
++
+ static void ConfigureWindowGeometry(SDL_Window *window)
+ {
+@@ -365,5 +382,5 @@
+         if (window_size_changed || buffer_size_changed) {
+             if (data->viewport) {
+-                wp_viewport_set_destination(data->viewport, output_width, output_height);
++                SetWindowBufferGeometry(data, output_width, output_height, 1);
+ 
+                 data->current.logical_width = output_width;
+@@ -373,5 +390,5 @@
+                 const int32_t int_scale = SDL_max(window->current_fullscreen_mode.w / output_width, 1);
+ 
+-                wl_surface_set_buffer_scale(data->surface, int_scale);
++                SetWindowBufferGeometry(data, output_width, output_height, int_scale);
+                 data->current.logical_width = window->current_fullscreen_mode.w;
+                 data->current.logical_height = window->current_fullscreen_mode.h;
+@@ -389,8 +406,8 @@
+         if (window_size_changed || buffer_size_changed) {
+             if (data->viewport) {
+-                wp_viewport_set_destination(data->viewport, window_width, window_height);
++                SetWindowBufferGeometry(data, window_width, window_height, 1);
+             } else if (window->flags & SDL_WINDOW_HIGH_PIXEL_DENSITY) {
+                 // Don't change this if the DPI awareness flag is unset, as an application may have set this manually on a custom or external surface.
+-                wl_surface_set_buffer_scale(data->surface, (int32_t)scale_factor);
++                SetWindowBufferGeometry(data, window_width, window_height, (int32_t)scale_factor);
+             }
+ 
+@@ -409,9 +426,13 @@
+     }
+ 
++    if (Goo_UsesVulkanFrames(data) && (window_size_changed || buffer_size_changed)) {
++        ++data->goo_geometry_version;
++    }
++
+     /*
+      * The surface geometry, opaque region and pointer confinement region only
+      * need to be recalculated if the output size has changed.
+      */
+-    if (window_size_changed) {
++    if (window_size_changed && !Goo_UsesVulkanFrames(data)) {
+         /* XXX: This is a hack and only set on the xdg-toplevel path when viewports
+          *      aren't supported to avoid a potential protocol violation if a buffer
+@@ -423,5 +444,6 @@
+ 
+         SetSurfaceOpaqueRegion(data, !(window->flags & SDL_WINDOW_TRANSPARENT) && window->opacity == 1.0f);
+-
++    }
++    if (window_size_changed) {
+         // Ensure that child popup windows are still in bounds.
+         for (SDL_Window *child = window->first_child; child; child = child->next_sibling) {
+@@ -609,5 +631,7 @@
+         if (fullscreen) {
+             Wayland_SetWindowResizable(SDL_GetVideoDevice(), window, true);
+-            wl_surface_commit(wind->surface);
++            if (!wind->goo_frame_commit_pending) {
++                wl_surface_commit(wind->surface);
++            }
+ 
+             xdg_toplevel_set_fullscreen(wind->shell_surface.xdg.toplevel.xdg_toplevel, output);
+@@ -667,5 +691,16 @@
+ {
+     SDL_WindowData *wind = (SDL_WindowData *)data;
++    const bool goo_vulkan_frame = Goo_UsesVulkanFrames(wind);
+ 
++    if (goo_vulkan_frame) {
++        wl_callback_destroy(cb);
++        wind->surface_frame_callback = NULL;
++        wind->goo_frame_pending = false;
++        if (wind->goo_frame_waiting && !wind->suspended) {
++            SDL_SendWindowEvent(wind->sdlwindow, SDL_EVENT_WINDOW_EXPOSED, 0, 0);
++        }
++        wind->goo_frame_waiting = false;
++    }
++
+     /* XXX: This is needed to work around an Nvidia egl-wayland bug due to buffer coordinates
+      *      being used with wl_surface_damage, which causes part of the output to not be
+@@ -678,12 +713,14 @@
+     }
+ 
+-    if (wind->shell_surface_type == WAYLAND_SHELL_SURFACE_TYPE_XDG_TOPLEVEL) {
+-        if (wind->pending_config_ack) {
+-            wind->pending_config_ack = false;
+-            ConfigureWindowGeometry(wind->sdlwindow);
+-            xdg_surface_ack_configure(wind->shell_surface.xdg.surface, wind->shell_surface.xdg.serial);
++    if (!goo_vulkan_frame) {
++        if (wind->shell_surface_type == WAYLAND_SHELL_SURFACE_TYPE_XDG_TOPLEVEL) {
++            if (wind->pending_config_ack) {
++                wind->pending_config_ack = false;
++                ConfigureWindowGeometry(wind->sdlwindow);
++                xdg_surface_ack_configure(wind->shell_surface.xdg.surface, wind->shell_surface.xdg.serial);
++            }
++        } else {
++            wind->resizing = false;
+         }
+-    } else {
+-        wind->resizing = false;
+     }
+ 
+@@ -711,7 +748,9 @@
+     }
+ 
+-    wl_callback_destroy(cb);
+-    wind->surface_frame_callback = wl_surface_frame(wind->surface);
+-    wl_callback_add_listener(wind->surface_frame_callback, &surface_frame_listener, data);
++    if (!goo_vulkan_frame) {
++        wl_callback_destroy(cb);
++        wind->surface_frame_callback = wl_surface_frame(wind->surface);
++        wl_callback_add_listener(wind->surface_frame_callback, &surface_frame_listener, data);
++    }
+ }
+ 
+@@ -720,4 +761,73 @@
+ };
+ 
++__attribute__((visibility("default"))) Uint64 SDLCALL Goo_WaylandVulkanGeometryVersion(SDL_Window *window)
++{
++    SDL_WindowData *wind = window->internal;
++    return Goo_UsesVulkanFrames(wind) ? wind->goo_geometry_version : 0;
++}
++
++__attribute__((visibility("default"))) bool SDLCALL Goo_WaylandVulkanFrameReady(SDL_Window *window)
++{
++    SDL_WindowData *wind = window->internal;
++    if (Goo_UsesVulkanFrames(wind) && wind->goo_frame_pending &&
++        (wind->resizing || wind->goo_geometry_pending)) {
++        wind->goo_frame_waiting = true;
++        return false;
++    }
++    return true;
++}
++
++__attribute__((visibility("default"))) void SDLCALL Goo_PrepareWaylandVulkanFrame(SDL_Window *window)
++{
++    SDL_WindowData *wind = window->internal;
++    const bool toplevel = wind->shell_surface_type == WAYLAND_SHELL_SURFACE_TYPE_XDG_TOPLEVEL;
++    if (!Goo_UsesVulkanFrames(wind) || (toplevel && !wind->shell_surface.xdg.surface)) {
++        return;
++    }
++
++    wind->goo_frame_commit_pending = true;
++    if (wind->goo_geometry_pending) {
++        const int width = wind->current.logical_width;
++        const int height = wind->current.logical_height;
++        if (wind->viewport) {
++            wp_viewport_set_destination(wind->viewport, width, height);
++        } else {
++            wl_surface_set_buffer_scale(wind->surface, wind->goo_buffer_scale);
++        }
++        if (toplevel) {
++            xdg_surface_set_window_geometry(wind->shell_surface.xdg.surface, 0, 0, width, height);
++        }
++        SetSurfaceOpaqueRegion(wind, !(window->flags & SDL_WINDOW_TRANSPARENT) && window->opacity == 1.0f);
++        wind->goo_geometry_pending = false;
++    }
++    if (!toplevel) {
++        return;
++    }
++    if (wind->pending_config_ack) {
++        xdg_surface_ack_configure(wind->shell_surface.xdg.surface, wind->shell_surface.xdg.serial);
++        wind->pending_config_ack = false;
++    }
++    wind->goo_frame_armed = !wind->goo_frame_pending;
++    if (!wind->goo_frame_armed) {
++        return;
++    }
++    if (!wind->surface_frame_callback) {
++        wind->surface_frame_callback = wl_surface_frame(wind->surface);
++        wl_callback_add_listener(wind->surface_frame_callback, &surface_frame_listener, wind);
++    }
++    wind->goo_frame_pending = true;
++}
++
++__attribute__((visibility("default"))) void SDLCALL Goo_FinishWaylandVulkanFrame(SDL_Window *window, bool committed)
++{
++    SDL_WindowData *wind = window->internal;
++    if (committed) {
++        wind->goo_frame_commit_pending = false;
++    } else if (wind->goo_frame_armed) {
++        wind->goo_frame_pending = false;
++    }
++    wind->goo_frame_armed = false;
++}
++
+ static const struct wl_callback_listener gles_swap_frame_listener;
+ 
+@@ -747,5 +849,12 @@
+      */
+     wind->shell_surface.xdg.serial = serial;
+-    if (!wind->resizing) {
++    if (Goo_UsesVulkanFrames(wind)) {
++        if (!wind->pending_config_ack && !wind->suspended &&
++            wind->shell_surface_status == WAYLAND_SHELL_SURFACE_STATUS_SHOWN) {
++            SDL_SendWindowEvent(window, SDL_EVENT_WINDOW_EXPOSED, 0, 0);
++        }
++        wind->pending_config_ack = true;
++        ConfigureWindowGeometry(window);
++    } else if (!wind->resizing) {
+         wind->pending_config_ack = false;
+         ConfigureWindowGeometry(window);
+@@ -1519,4 +1628,7 @@
+     if (factor != old_factor) {
+         window_data->scale_factor = factor;
++        if (Goo_UsesVulkanFrames(window_data)) {
++            ++window_data->goo_geometry_version;
++        }
+ 
+         if (window_data->scale_to_display) {
+@@ -1904,4 +2016,8 @@
+     wl_surface_attach(data->surface, NULL, 0, 0);
+     wl_surface_commit(data->surface);
++    if (!Goo_UsesVulkanFrames(data) && !data->surface_frame_callback) {
++        data->surface_frame_callback = wl_surface_frame(data->surface);
++        wl_callback_add_listener(data->surface_frame_callback, &surface_frame_listener, data);
++    }
+ 
+     // Create the shell surface and map the toplevel/popup
+@@ -2190,4 +2306,16 @@
+ 
+     wind->shell_surface_status = WAYLAND_SHELL_SURFACE_STATUS_HIDDEN;
++    if (Goo_UsesVulkanFrames(wind)) {
++        if (wind->surface_frame_callback) {
++            wl_callback_destroy(wind->surface_frame_callback);
++            wind->surface_frame_callback = NULL;
++        }
++        wind->goo_frame_pending = false;
++        wind->goo_frame_waiting = false;
++        wind->goo_frame_armed = false;
++        wind->goo_frame_commit_pending = false;
++        wind->goo_geometry_pending = true;
++        wind->pending_config_ack = false;
++    }
+ 
+     if (wind->server_decoration) {
+@@ -2537,6 +2665,7 @@
+         }
+ 
+-        // Commit to preserve any pending size data.
+-        wl_surface_commit(wind->surface);
++        if (!wind->goo_frame_commit_pending) {
++            wl_surface_commit(wind->surface);
++        }
+         xdg_toplevel_set_maximized(wind->shell_surface.xdg.toplevel.xdg_toplevel);
+ 
+@@ -2780,11 +2909,4 @@
+     }
+ 
+-    // No frame callback on external surfaces as it may already have one attached.
+-    if (!external_surface) {
+-        // Fire a callback when the compositor wants a new frame to set the surface damage region.
+-        data->surface_frame_callback = wl_surface_frame(data->surface);
+-        wl_callback_add_listener(data->surface_frame_callback, &surface_frame_listener, data);
+-    }
+-
+     if (window->flags & SDL_WINDOW_TRANSPARENT) {
+         if (_this->gl_config.alpha_size == 0) {
+@@ -2830,4 +2952,15 @@
+     }
+ 
++    data->goo_vulkan_frame = SDL_GetBooleanProperty(create_props, "Goo.Wayland.VulkanFrame.1", false);
++    if (Goo_UsesVulkanFrames(data)) {
++        data->goo_geometry_version = 1;
++        data->goo_geometry_pending = true;
++        data->goo_buffer_scale = (int)GetWindowScale(window);
++        SDL_SetBooleanProperty(SDL_GetWindowProperties(window), "Goo.Wayland.VulkanFrameAvailable.1", true);
++    } else if (!external_surface) {
++        data->surface_frame_callback = wl_surface_frame(data->surface);
++        wl_callback_add_listener(data->surface_frame_callback, &surface_frame_listener, data);
++    }
++
+     if (SDL_GetHintBoolean(SDL_HINT_VIDEO_DOUBLE_BUFFER, false)) {
+         data->double_buffer = true;
+--- a/src/video/wayland/SDL_waylandwindow.h
++++ b/src/video/wayland/SDL_waylandwindow.h
+@@ -207,4 +207,12 @@
+     bool active;
+     bool pending_config_ack;
++    bool goo_vulkan_frame;
++    bool goo_geometry_pending;
++    bool goo_frame_pending;
++    bool goo_frame_waiting;
++    bool goo_frame_armed;
++    bool goo_frame_commit_pending;
++    int goo_buffer_scale;
++    Uint64 goo_geometry_version;
+     bool is_fullscreen;
+     bool fullscreen_exclusive;
+--- a/src/dynapi/SDL_dynapi.sym
++++ b/src/dynapi/SDL_dynapi.sym
+@@ -1270,4 +1270,8 @@
+     Goo_SetForeignParent;
+     Goo_ConfigurePopup;
++    Goo_WaylandVulkanGeometryVersion;
++    Goo_WaylandVulkanFrameReady;
++    Goo_PrepareWaylandVulkanFrame;
++    Goo_FinishWaylandVulkanFrame;
+     SDL_RotateSurface;
+     SDL_LoadSurface_IO;

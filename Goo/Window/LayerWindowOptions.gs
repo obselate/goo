@@ -12,7 +12,7 @@ public enum LayerWindowAnchor { None = 0; Top = 1; Bottom = 2; Left = 4; Right =
 /// Controls keyboard focus for a layer-shell window.
 public enum LayerWindowKeyboardInteractivity { None; Exclusive; OnDemand }
 
-/// Configures a Wayland layer-shell surface before Window.Open.
+/// Configures a Wayland layer-shell surface.
 /// Sizes and margins use compositor logical units. Zero sizes require opposite anchors.
 public class LayerWindowOptions {
   private var layer WindowLayer = WindowLayer.Top
@@ -47,20 +47,24 @@ public class LayerWindowOptions {
   public prop Output WindowDisplayId? { get; init; }
   /// Gets the compositor namespace. The default is goo.
   public prop Namespace string { get -> namespaceName init -> namespaceName = value }
+  /// Presents Window.LayerImage over Window.Background without drawing a Goo tree.
+  /// Uses the normal Vulkan swapchain when direct Wayland presentation is unavailable.
+  /// Do not set Window.Root in this mode.
+  public prop StillImage bool { get; init; }
 
-  internal func Validate() {
+  internal func Validate(parameterName string = "LayerShell") {
     if uint32(Layer) > 3u || uint32(KeyboardInteractivity) > 2u || (uint32(Anchors) & ~15u) != 0u {
-      throw ArgumentOutOfRangeException("LayerShell", "Invalid layer-shell enum value")
+      throw ArgumentOutOfRangeException(parameterName, "Invalid layer-shell enum value")
     }
     if Width < 0 || Height < 0 || ExclusiveZone < -1 || String.IsNullOrWhiteSpace(Namespace)
       || Namespace.Contains('\0') {
-      throw ArgumentException("Invalid layer-shell size, exclusive zone or namespace", "LayerShell")
+      throw ArgumentException("Invalid layer-shell size, exclusive zone or namespace", parameterName)
     }
     let horizontal = LayerWindowAnchor.Left | LayerWindowAnchor.Right
     let vertical = LayerWindowAnchor.Top | LayerWindowAnchor.Bottom
     if (Width == 0 && (Anchors & horizontal) != horizontal)
       || (Height == 0 && (Anchors & vertical) != vertical) {
-      throw ArgumentException("A zero layer-shell dimension requires both opposite anchors", "LayerShell")
+      throw ArgumentException("A zero layer-shell dimension requires both opposite anchors", parameterName)
     }
   }
 }

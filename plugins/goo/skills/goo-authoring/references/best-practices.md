@@ -22,6 +22,7 @@ These app rules override threading, structure and list code in older samples.
 | 14 | Measure the heaviest interaction. Frame `p99` must stay below budget. |
 | 15 | Use standard text controls and built-in editing keys. See Keyboard and text input. |
 | 16 | Center text or an icon alone in a control. Give buttons, pills, chips and tags equal left and right padding and equal top and bottom padding. Controls with extra elements may differ when it is deliberate. |
+| 17 | Keep nested rounded corners concentric. A rounded child inset from a rounded parent has radius equal to the parent radius minus the inset, with equal insets on both sides of that corner. Derive both from theme values (`Outer = Inner + Inset`). Square the child when the result is 0 or less. |
 
 ## App structure
 

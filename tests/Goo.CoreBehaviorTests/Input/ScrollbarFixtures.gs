@@ -311,10 +311,10 @@ internal class ScrollbarFixtures {
     caretWindow.UpdateTree()
     guard let caret = caretWindow.Tree else { return false }
     caretWindow.SchedulerIdleElapsedForTest(0.6)
-    if !caretWindow.SchedulerTimedServiceDue() { return false }
+    if !caretWindow.SchedulerTimedServiceDue(float64(Stopwatch.GetTimestamp())) { return false }
     caretWindow.UpdateTree(0.6, 0.0)
     caretWindow.SchedulerIdleElapsedForTest(0.0)
-    if caret.BlinkT != 0.6 || caretWindow.SchedulerTimedServiceDue() { return false }
+    if caret.BlinkT != 0.6 || caretWindow.SchedulerTimedServiceDue(float64(Stopwatch.GetTimestamp())) { return false }
 
     for capture in []bool{ false, true } {
       let cell = ScrollTouchCell{ Capture: capture }

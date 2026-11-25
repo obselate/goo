@@ -30,6 +30,10 @@ internal class Program {
             let root = Path.GetFullPath(args[2].Substring("--output=".Length))
             let tag = if args.Length == 4 { args[3] } else { mode }
             Application.Configure("Goo application host smoke", "1.0", identity)
+            if mode.StartsWith("session-lock-", StringComparison.Ordinal) {
+                SessionLockSmoke.Run(mode, root)
+                return 0
+            }
             if mode == "graphics-unavailable" {
                 Environment.SetEnvironmentVariable("VK_DRIVER_FILES", Path.Combine(root, "missing-driver.json"))
                 let window = Window{Size: LayoutSize(160, 100), Root: Cell()}

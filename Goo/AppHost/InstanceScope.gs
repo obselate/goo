@@ -17,7 +17,7 @@ internal data struct InstanceScope {
     shared {
         private const DarwinUserTemporaryDirectory int32 = 65537
 
-        internal func Create(applicationId string) InstanceScope {
+        internal func Create(applicationId string, instanceScope string? = nil) InstanceScope {
             var root string
             var identity = ""
             if OperatingSystem.IsWindows() {
@@ -49,7 +49,8 @@ internal data struct InstanceScope {
             let directory = Path.Combine(root, "goo")
             if OperatingSystem.IsWindows() { Directory.CreateDirectory(directory) }
             else { Directory.CreateDirectory(directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute) }
-            let digest = SHA256.HashData(Encoding.UTF8.GetBytes(applicationId + "\n" + identity))
+            let electionKey = applicationId + "\n" + identity + (instanceScope == nil ? "" : "\n" + instanceScope)
+            let digest = SHA256.HashData(Encoding.UTF8.GetBytes(electionKey))
             let key = Convert.ToHexString(digest.AsSpan(0, 16))
             return InstanceScope{
                 LeasePath: Path.Combine(directory, key + ".lock"),
