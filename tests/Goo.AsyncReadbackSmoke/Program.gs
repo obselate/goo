@@ -481,6 +481,7 @@ let modes = []SmokeMode{
   SmokeMode("GOO_WINDOW_ACTIVATION_SMOKE", "1", () -> WindowActivationSmoke.Run()),
   SmokeMode("GOO_NATIVE_POPUP_SMOKE", "1", () -> PopupWindowSmoke.Run()),
   SmokeMode("GOO_LAYER_WINDOW_CLOSE_SMOKE", "1", () -> {
+    LayerStillImageSmoke.Run()
     LayerWindowCloseSmoke.Run()
     for script in []string{"test_layer_window_resize.py", "test_window_input_region.py", "test_layer_window_failure.py"} {
       let usesSway = script == "test_window_input_region.py"
@@ -503,6 +504,7 @@ let modes = []SmokeMode{
   SmokeMode("GOO_WINDOW_INPUT_REGION_SMOKE", "1", () -> LayerWindowCloseSmoke.RunInputRegion()),
   SmokeMode("GOO_LAYER_WINDOW_FAILURE_SMOKE", "", () -> LayerWindowCloseSmoke.RunFailure(
     Environment.GetEnvironmentVariable("GOO_LAYER_WINDOW_FAILURE_SMOKE") == "protocol")),
+  SmokeMode("GOO_LAYER_STILL_IMAGE_SMOKE", "1", () -> LayerStillImageSmoke.Run()),
   SmokeMode("GOO_EMBEDDED_HOST_SMOKE", "1", () -> EmbeddedHostSmoke.Run()),
   SmokeMode("GOO_DIAGNOSTIC_CAPTURE_BUSY_SMOKE", "1", () -> DiagnosticCaptureFixture.Run()),
   SmokeMode("GOO_PROFILER_SMOKE", "1", () -> ProfilerSmoke.Run()),

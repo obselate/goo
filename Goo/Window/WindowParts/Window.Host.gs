@@ -136,16 +136,22 @@ public partial class Window {
       if minWidth != 0 || minHeight != 0 { native.SetMinimumSize(nativeMinWidth, nativeMinHeight) }
       if maxWidth != 0 || maxHeight != 0 { native.SetMaximumSize(scaledSize(maxWidth), scaledSize(maxHeight)) }
       initializingGraphics = true
-      let target = VulkanWindowTarget(native)
+      let still = LayerShell?.StillImage == true
+      if still && Root != nil { throw InvalidOperationException("A still-image layer window does not have a root cell") }
+      var target VulkanWindowTarget?
+      if !still || !native.SetStillImage(layerImage, RenderBackground, this) {
+        if still { prepareStillImageFallback(native) }
+        target = VulkanWindowTarget(native)
+      }
       if ownsStartupReport { VulkanStartupReport.Current?.StopCapture() }
       initializingGraphics = false
       windowTarget = target
       native.SetBackdrop(backdrop == WindowBackdrop.Blur, windowsBackdrop, macOSBackdrop, waylandBackdrop)
       if captureStartup {
-        target.RecordSdlWindowCreate(sdlStart, sdlEnd)
+        target?.RecordSdlWindowCreate(sdlStart, sdlEnd)
       }
       configureHost(native)
-      profiler.Sink = target.ProfileSink
+      profiler.Sink = target?.ProfileSink
       initializingGraphics = true
       if !applyNativeResize(
         native.LogicalWidth,
@@ -165,7 +171,7 @@ public partial class Window {
       input.Attach(native)
       IsOpen = true
       Application.HasOpenedWindow = true
-      attachPresentationNotifications(target)
+      if let renderer = target { attachPresentationNotifications(renderer) }
       family?.NativeDrop?.Bind(native)
       if let adapter = accessibility?.Adapter as NativeAccessibilityAdapter? { adapter.Bind(native) }
       registerOwnership()
@@ -217,6 +223,7 @@ public partial class Window {
     native.DisplayChanged += () -> {
       let previous = LayoutOrigin.Current
       LayoutOrigin.Current = LayoutCause.Environment
+      if LayerShell?.StillImage == true { requestRender() }
       try { notifications.RaiseDisplayChanged() }
       finally { LayoutOrigin.Current = previous }
     }
@@ -468,6 +475,25 @@ public partial class Window {
           return
         }
 
+        if LayerShell?.StillImage == true {
+          if let sdl = native as SdlHost? {
+            if sdl.PresentsStillImage && (renderDirty || sdl.StillImagePreparationReady)
+              && !sdl.SetStillImage(layerImage, RenderBackground, this) {
+              prepareStillImageFallback(sdl)
+              let target = VulkanWindowTarget(sdl)
+              windowTarget = target
+              profiler.Sink = target.ProfileSink
+              attachPresentationNotifications(target)
+              if !target.Resize(framebufferWidth, framebufferHeight) {
+                Close()
+                if profiling { profiler.EndFrame(frameProfile, false) }
+                return
+              }
+            }
+          }
+          layerImageFallback?.SetImage(layerImage)
+        }
+
         // Drain returns true only for visually relevant input; bare moves stay quiet.
         let inputProfile = profiling ? profiler.Start() : FrameProfilePoint{}
         var inputChanged = false
@@ -535,6 +561,17 @@ public partial class Window {
             return
           }
         }
+        if LayerShell?.StillImage == true {
+          if let sdl = native as SdlHost? {
+            if sdl.PresentsStillImage {
+              let presented = sdl.PresentStillImage()
+              if presented { native.MarkFrame(float64(Stopwatch.GetTimestamp())) }
+              markFrameRendered()
+              if profiling { profiler.EndFrame(frameProfile, presented) }
+              return
+            }
+          }
+        }
         let frameNeeded = needsRenderFrame(resolver.VisualDirty)
         if allowFrame && frameNeeded && windowTarget != nil && windowTarget?.QueueWorkPending != true {
           FlushDeferredVirtualization()
@@ -597,6 +634,7 @@ public partial class Window {
     || pendingImageCompletion != 0 || pendingRetainedInvalidation != 0 || hasScrollDemand()
     || accessibility?.HasDemand == true || hasPostedActions() || MetricSubscriptions.HasDemand(this)
     || windowTarget?.NeedsRender == true && !memoryPressureWaiting || windowTarget?.QueueWorkPending == true
+    || LayerShell?.StillImage == true && (host as SdlHost?)?.StillImagePending == true
     || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0
     || host?.IsClosing == true || nativeHidePending
     || scheduler.HasPendingStartup()
@@ -607,11 +645,17 @@ public partial class Window {
 
   private func firstShowPending() bool -> (host as SdlHost?)?.FirstShowPending == true
 
+  internal func NotifyStillImageReady() {
+    Post(() -> requestRender())
+    SdlRuntime.Wake()
+  }
+
   internal func SchedulerHasImmediateService() bool -> callbackClosing || host?.HasPendingEvents == true || hasPostedActions()
     || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0
     || host?.IsClosing == true
     || Application.HasPendingActivation
     || nativeModal?.HasCompletion == true
+    || LayerShell?.StillImage == true && (host as SdlHost?)?.StillImagePreparationReady == true
     || nativeHidePending && windowTarget?.QueueWorkPending != true
     || pendingLayerGeometry != nil && windowTarget?.QueueWorkPending != true
 
@@ -769,6 +813,8 @@ public partial class Window {
     profiler.Sink = nil
     windowTarget = nil
     host = nil
+    layerImageFallback?.ReleaseImage()
+    layerImageFallback = nil
     pendingLayerGeometry = nil
     embeddedHost = nil
     nativeHidePending = false
@@ -810,6 +856,7 @@ public partial class Window {
 
   internal func Close() {
     requireUiThread("Window.Close")
+    if (host as SdlHost?)?.FinishStillImagePreparation() == false { return }
     using let callbackScope = CallbackScope(CallbackContext())
     if !callbackClosing { beginCallbackClose()
     }
@@ -919,7 +966,7 @@ public partial class Window {
       HandleResize(logicalWidth, logicalHeight, framebufferValid)
       if let target = windowTarget {
         if !target.Resize(newFramebufferWidth, newFramebufferHeight) { return false }
-      } else if embeddedHost == nil {
+      } else if embeddedHost == nil && (host as SdlHost?)?.PresentsStillImage != true {
         return false
       }
       framebufferWidth = newFramebufferWidth
@@ -931,6 +978,15 @@ public partial class Window {
       return true
       } finally { LayoutOrigin.Current = previous }
     }
+
+  private func prepareStillImageFallback(native SdlHost) {
+    native.StopStillImage()
+    let fallback = LayerWindowImageFallback()
+    fallback.SetImage(layerImage)
+    layerImageFallback = fallback
+    root = fallback
+    prepare()
+  }
 }
 
 internal func DpiScale(width int32, height int32, fbWidth int32, fbHeight int32,

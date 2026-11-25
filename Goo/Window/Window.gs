@@ -217,6 +217,22 @@ public partial class Window {
   /// Unsupported platforms and compositors fail without a normal-window fallback.
   /// Use SetLayerGeometry to request new geometry after Open. This property keeps the initial options.
   public prop LayerShell LayerWindowOptions? { get; init; }
+
+  private var layerImage LayerWindowImage?
+  private var layerImageFallback LayerWindowImageFallback?
+
+  /// Gets or sets the image for a layer window with LayerWindowOptions.StillImage enabled.
+  /// A null or unreadable image shows only Background. Change this on the window owner thread.
+  public prop LayerImage LayerWindowImage? {
+    get -> ReadUntrackedWindowValue(layerImage)
+    set(value) {
+      requireUiThread("Window.LayerImage")
+      if Object.ReferenceEquals(layerImage, value) { return }
+      layerImage = value
+      requestRender()
+      host?.Wake()
+    }
+  }
   internal var LockSurface WaylandLockSurface?
   internal prop IsPointerOnlyLayer bool { get -> (host as SdlHost?)?.IsPointerOnlyLayer == true }
 
@@ -251,6 +267,7 @@ public partial class Window {
 
   /// Sets the input region for an open Wayland toplevel or layer-shell window.
   /// The compositor applies the region when the next frame is committed.
+  /// Direct still-image presentation does not support input regions.
   /// @param rectangles the union of rectangles in surface-local logical pixels, rounded out to whole pixels.
   /// Null restores the full surface. An empty array disables pointer and touch input.
   /// @returns Accepted if queued, Closed if not open, or Unsupported for other window types and platforms.
