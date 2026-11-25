@@ -1,6 +1,12 @@
 # Changelog
 
 
+## 0.32.6 - 2026-11-25
+
+### Fixed
+
+- Keep other windows presenting when a Wayland layer window is covered.
+
 ## 0.32.5 - 2026-11-24
 
 ### Fixed
