@@ -490,6 +490,7 @@ let modes = []SmokeMode{
     fixture.WaitForExit()
     Require(fixture.ExitCode == 0, "Layer window disconnect or protocol error check failed")
   }),
+  SmokeMode("GOO_LAYER_WINDOW_RESIZE_SMOKE", "1", () -> LayerWindowCloseSmoke.RunResize()),
   SmokeMode("GOO_LAYER_WINDOW_FAILURE_SMOKE", "", () -> LayerWindowCloseSmoke.RunFailure(
     Environment.GetEnvironmentVariable("GOO_LAYER_WINDOW_FAILURE_SMOKE") == "protocol")),
   SmokeMode("GOO_EMBEDDED_HOST_SMOKE", "1", () -> EmbeddedHostSmoke.Run()),
