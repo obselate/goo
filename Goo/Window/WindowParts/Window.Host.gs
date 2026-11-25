@@ -442,7 +442,7 @@ public partial class Window {
         if pendingLayerGeometry != nil && windowTarget?.QueueWorkPending != true {
           let geometry = pendingLayerGeometry!!
           pendingLayerGeometry = nil
-          (native as SdlHost?)!!.SetLayerGeometry(geometry)
+          (native as SdlHost?)!!.SetLayerGeometry(geometry, pendingLayerGeometryHold)
         }
         consumeNativeMetrics()
         if !IsOpen {
@@ -538,8 +538,8 @@ public partial class Window {
         let frameNeeded = needsRenderFrame(resolver.VisualDirty)
         if allowFrame && frameNeeded && windowTarget != nil && windowTarget?.QueueWorkPending != true {
           FlushDeferredVirtualization()
-          if !IsOpen {
-            if profiling { profiler.EndFrame(frameProfile, false) }
+          if !IsOpen || pendingLayerGeometry != nil || (native as SdlHost?)?.LayerResizePending == true {
+            if profiling { profiler.EndFrame(frameProfile, rendered, IsOpen) }
             return
           }
           let renderProfile = profiling ? profiler.Start() : FrameProfilePoint{}

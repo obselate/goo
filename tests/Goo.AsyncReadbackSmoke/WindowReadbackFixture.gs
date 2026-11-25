@@ -1877,12 +1877,15 @@ internal class PreventedKeyRepeatCell : Cell {
 
 internal class LayerGeometryCell : Cell {
   internal let Handle ElementHandle = ElementHandle()
+  internal let Content ElementHandle = ElementHandle()
+  internal let ContentWidth State[int32] = State[int32](0)
 
   internal var Clicks int32
 
   override func Build() Blob -> Button{
     Handle: Handle, Width: Percent(100), Height: Percent(100),
     OnClick: () -> { Clicks++ },
+    Container{Handle: Content, Width: float64(ContentWidth.Value), Height: 1, FlexShrink: 0},
   }
 }
 
@@ -1948,8 +1951,39 @@ public class LayerWindowCloseSmoke {
         if bounds.Width != 476.0 || bounds.Height != 128.0 {
           throw InvalidOperationException("The first resized layer frame did not lay out at the configured size")
         }
+        CheckContentGrowth(window, root)
       } finally { window.CloseAfterRun() }
       Console.WriteLine("layer-window-resize-layout: passed")
+    }
+
+    private func CheckContentGrowth(window Window, root LayerGeometryCell) {
+      var started int64
+      var accepted bool
+      root.Content.MetricsChanged += metrics -> {
+        if started != 0 || metrics.BorderBox.Width != 540.0 { return }
+        if window.NativeWidth != 476 { throw InvalidOperationException("Expected growth in the old layout") }
+        Console.Error.WriteLine("layer-window-content-growth: requested")
+        started = Stopwatch.GetTimestamp()
+        if window.SetLayerGeometry(LayerWindowOptions{Width: 500, Height: 128}) != WindowOperationResult.Accepted
+          || window.SetLayerGeometry(LayerWindowOptions{
+            Width: 580, Height: 128, Anchors: LayerWindowAnchor.Left | LayerWindowAnchor.Right,
+            MarginLeft: 20, MarginRight: 20,
+          }) != WindowOperationResult.Accepted {
+          throw InvalidOperationException("The layer content size request was not accepted")
+        }
+      }
+      window.PresentationAccepted += receipt -> {
+        if started == 0 || receipt.AcceptedTicks < started { return }
+        if root.Content.RawBorderBox.Width > float64(window.NativeWidth) {
+          throw InvalidOperationException("The grown layer content was submitted at the old size")
+        }
+        accepted = window.NativeWidth == 540
+        window.RequestClose()
+      }
+      root.ContentWidth.Value = 540
+      window.After(1500.0, () -> window.RequestClose())
+      Window.RunLiveWindowScheduler()
+      if !accepted { throw InvalidOperationException("The superseding, clamped layer size did not present") }
     }
 
     public func Run() {

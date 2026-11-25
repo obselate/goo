@@ -314,7 +314,8 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   }
 
   internal func SupportsLayerGeometry(geometry LayerWindowOptions) bool -> layerWindow!!.SupportsGeometry(geometry)
-  internal func SetLayerGeometry(geometry LayerWindowOptions) -> layerWindow!!.SetGeometry(geometry)
+  internal func SetLayerGeometry(geometry LayerWindowOptions, holdForConfigure bool = false) ->
+    layerWindow!!.SetGeometry(geometry, holdForConfigure)
 
   public func SetMinimumSize(width int32, height int32) {
     ThrowIfDisposed()

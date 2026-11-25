@@ -1957,7 +1957,7 @@ Requests borderless fullscreen on the selected display, including retargeting an
 
 ### `SetLayerGeometry(LayerWindowOptions)`
 
-Requests new anchors, size, margins, exclusive zone and keyboard interactivity for an open layer window. Layer, namespace and output must match LayerShell. The compositor controls the final size. Requests made while hidden apply on the next Show.
+Requests new anchors, size, margins, exclusive zone and keyboard interactivity for an open layer window. Layer, namespace and output must match LayerShell. The compositor controls the final size. Requests made while hidden apply on the next Show. A size change from a layout metrics callback keeps the previous buffer until the next configure.
 
 - `geometry`: the new options, with sizes and margins in compositor logical units
 
