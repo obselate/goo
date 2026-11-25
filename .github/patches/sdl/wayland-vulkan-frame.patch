@@ -1,11 +1,13 @@
 --- a/src/video/wayland/SDL_waylandwindow.c
 +++ b/src/video/wayland/SDL_waylandwindow.c
-@@ -302,4 +302,21 @@
+@@ -302,4 +302,23 @@
  }
  
 +static bool Goo_UsesVulkanFrames(const SDL_WindowData *wind)
 +{
-+    return wind->goo_vulkan_frame && wind->shell_surface_type == WAYLAND_SHELL_SURFACE_TYPE_XDG_TOPLEVEL;
++    return wind->goo_vulkan_frame &&
++           (wind->shell_surface_type == WAYLAND_SHELL_SURFACE_TYPE_XDG_TOPLEVEL ||
++            wind->shell_surface_type == WAYLAND_SHELL_SURFACE_TYPE_CUSTOM);
 +}
 +
 +static void SetWindowBufferGeometry(SDL_WindowData *wind, int width, int height, int scale)
@@ -131,7 +133,7 @@
 +    }
  }
  
-@@ -720,4 +759,67 @@
+@@ -720,4 +761,73 @@
  };
  
 +__attribute__((visibility("default"))) Uint64 SDLCALL Goo_WaylandVulkanGeometryVersion(SDL_Window *window)
@@ -154,7 +156,8 @@
 +__attribute__((visibility("default"))) void SDLCALL Goo_PrepareWaylandVulkanFrame(SDL_Window *window)
 +{
 +    SDL_WindowData *wind = window->internal;
-+    if (!Goo_UsesVulkanFrames(wind) || !wind->shell_surface.xdg.surface) {
++    const bool toplevel = wind->shell_surface_type == WAYLAND_SHELL_SURFACE_TYPE_XDG_TOPLEVEL;
++    if (!Goo_UsesVulkanFrames(wind) || (toplevel && !wind->shell_surface.xdg.surface)) {
 +        return;
 +    }
 +
@@ -167,9 +170,14 @@
 +        } else {
 +            wl_surface_set_buffer_scale(wind->surface, wind->goo_buffer_scale);
 +        }
-+        xdg_surface_set_window_geometry(wind->shell_surface.xdg.surface, 0, 0, width, height);
++        if (toplevel) {
++            xdg_surface_set_window_geometry(wind->shell_surface.xdg.surface, 0, 0, width, height);
++        }
 +        SetSurfaceOpaqueRegion(wind, !(window->flags & SDL_WINDOW_TRANSPARENT) && window->opacity == 1.0f);
 +        wind->goo_geometry_pending = false;
++    }
++    if (!toplevel) {
++        return;
 +    }
 +    if (wind->pending_config_ack) {
 +        xdg_surface_ack_configure(wind->shell_surface.xdg.surface, wind->shell_surface.xdg.serial);

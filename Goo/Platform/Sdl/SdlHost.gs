@@ -63,8 +63,10 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         if let parent = popupParent {
           CreatePopup(parent, width, height, popupKind, popupTimestamp, popupAnchor, popupPlacement, popupScale)
         } else {
-          waylandVulkanFrame = ownsVulkanPresentation && driver == "wayland" && layerOptions == nil && lockWindow == nil
+          waylandVulkanFrame = ownsVulkanPresentation && driver == "wayland" && lockWindow == nil
           CreateWindow(title, width, height, x, y, positionSet, minWidth, minHeight, decorated, transparent, layerOptions)
+          waylandVulkanFrame = waylandVulkanFrame && SDL.GetBooleanProperty(SDL.GetWindowProperties(window),
+            "Goo.Wayland.VulkanFrameAvailable.1", false)
         }
         windowId = SDL.GetWindowID(window)
         if windowId == 0u {
@@ -582,6 +584,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         Require(SDL.SetNumberProperty(properties, "SDL.window.create.height", Math.Max(1, layerOptions?.Height ?? height)), "SDL_SetNumberProperty")
         Require(SDL.SetNumberProperty(properties, "SDL.window.create.flags", int64(flags)), "SDL_SetNumberProperty")
         Require(SDL.SetBooleanProperty(properties, "SDL.window.create.wayland.surface_role_custom", true), "SDL_SetBooleanProperty")
+        if waylandVulkanFrame {
+          Require(SDL.SetBooleanProperty(properties, "Goo.Wayland.VulkanFrame.1", true), "SDL_SetBooleanProperty")
+        }
         if lockWindow != nil {
           Require(SDL.SetBooleanProperty(properties, "Goo.Wayland.SessionLockSurface.1", true), "SDL_SetBooleanProperty")
         }
@@ -625,8 +630,6 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         window = SDL.CreateWindowWithProperties(properties)
       } finally { SDL.DestroyProperties(properties) }
       if window.IsNull { ThrowSdl("SDL_CreateWindowWithProperties") }
-      waylandVulkanFrame = waylandVulkanFrame && SDL.GetBooleanProperty(SDL.GetWindowProperties(window),
-        "Goo.Wayland.VulkanFrameAvailable.1", false)
       if decorated && !IsWayland() {
         if let area = usable { ConstrainFrame(requested, minWidth, minHeight, positionSet, area) }
       }
