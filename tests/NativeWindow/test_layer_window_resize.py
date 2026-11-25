@@ -16,9 +16,13 @@ surface, = re.findall(r'get_layer_surface\(new id zwlr_layer_surface_v1#\d+, (wl
 viewport, = re.findall(rf'get_viewport\(new id (wp_viewport#\d+), {surface}\)', trace)
 buffers = {}
 buffer = None
+attached = False
 destination = None
 sizes = []
+growing = False
 for line in trace.splitlines():
+    if line == 'layer-window-content-growth: requested':
+        growing = True
     created = re.search(r'(?:create_immed|create_buffer)\(new id (wl_buffer#\d+), (\d+), (\d+),', line)
     if created:
         name, width, height = created.groups()
@@ -31,10 +35,13 @@ for line in trace.splitlines():
         assert tuple(map(float, match[1].split(', '))) == (-1, -1, -1, -1), line
     elif match := re.search(rf'{surface}\.attach\((wl_buffer#\d+|nil|NULL),', line):
         buffer = buffers[match[1]] if match[1].startswith('wl_buffer#') else None
+        attached = True
     elif f'{surface}.commit()' in line and buffer is not None:
         assert destination == buffer, f'{surface} committed viewport {destination} with buffer {buffer}'
+        assert not (growing and attached) or buffer[0] >= 540, f'Grown content committed in buffer {buffer}'
         if not sizes or destination != sizes[-1]:
             sizes.append(destination)
+        attached = False
 
-assert sizes == [(412, 64), (476, 128)], f'Expected initial and unstretched resized frame, got {sizes}'
-print('layer-window-resize-viewport: passed (412x64 to 476x128, no stretched commit)')
+assert sizes == [(412, 64), (476, 128), (540, 128)], f'Expected initial and unstretched resized frames, got {sizes}'
+print('layer-window-resize-viewport: passed (no stretched or clipped commit)')

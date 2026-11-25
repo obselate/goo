@@ -54,6 +54,9 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   private var pendingConfigure (uint32, uint32, uint32)?
   private var configureAck uint32?
   private var pendingGeometry LayerWindowOptions?
+  private var pendingGeometryHold bool
+  private var awaitingResizeConfigure bool
+  private var resizeConfigureReceived bool
   private var frameListener nint
   private var presentFrame nint
   private var bufferCommitPending bool
@@ -61,7 +64,8 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   internal prop Presented bool { get; set; }
   internal prop Configured bool { get; private set; }
   internal prop Visible bool { get -> mapped && Configured }
-  internal prop FrameReady bool { get -> presentFrame == nint(0) }
+  internal prop ResizePending bool { get -> awaitingResizeConfigure || pendingGeometryHold }
+  internal prop FrameReady bool { get -> presentFrame == nint(0) && !ResizePending }
   internal prop Output WindowDisplayId? { get -> options.Output }
   internal prop KeyboardInteractivity LayerWindowKeyboardInteractivity { get -> geometry.KeyboardInteractivity }
 
@@ -151,12 +155,18 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
       && value.Output?.NativeValue == options.Output?.NativeValue
       && (value.KeyboardInteractivity != LayerWindowKeyboardInteractivity.OnDemand || version >= 4u)
 
-  internal func SetGeometry(value LayerWindowOptions) {
-    if bufferCommitPending {
+  internal func SetGeometry(value LayerWindowOptions, holdForConfigure bool) {
+    if bufferCommitPending || awaitingResizeConfigure && holdForConfigure {
       pendingGeometry = value
+      pendingGeometryHold = holdForConfigure
       return
     }
     pendingGeometry = nil
+    pendingGeometryHold = false
+    if mapped && (geometry.Width != value.Width || geometry.Height != value.Height) {
+      awaitingResizeConfigure = holdForConfigure
+      resizeConfigureReceived = false
+    }
     geometry = value
     if !mapped { return }
     ApplyGeometry()
@@ -193,6 +203,9 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     WaylandBackdrop.wl_proxy_marshal_array(surface, 6u, nil)
     bufferCommitPending = false
     configureAck = nil
+    awaitingResizeConfigure = false
+    pendingGeometryHold = false
+    resizeConfigureReceived = false
     if let next = pendingGeometry {
       geometry = next
       pendingGeometry = nil
@@ -285,8 +298,11 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
       resize(width == 0u ? Math.Max(1, geometry.Width) : checked(int32(width)),
         height == 0u ? Math.Max(1, geometry.Height) : checked(int32(height)))
       Configured = true
+      if resizeConfigureReceived { awaitingResizeConfigure = false }
     }
-    if !bufferCommitPending && pendingGeometry != nil { SetGeometry(pendingGeometry!!) }
+    if !bufferCommitPending && !awaitingResizeConfigure && pendingGeometry != nil {
+      SetGeometry(pendingGeometry!!, pendingGeometryHold)
+    }
   }
 
   private func MarkClosed() {
@@ -316,6 +332,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   private func Configure(data nint, proxy nint, serial uint32, width uint32, height uint32) {
     if !mapped { return }
     pendingConfigure = (serial, width, height)
+    resizeConfigureReceived = true
     SdlRuntime.Wake()
   }
 

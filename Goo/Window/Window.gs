@@ -221,10 +221,12 @@ public partial class Window {
   internal prop IsPointerOnlyLayer bool { get -> (host as SdlHost?)?.IsPointerOnlyLayer == true }
 
   private var pendingLayerGeometry LayerWindowOptions?
+  private var pendingLayerGeometryHold bool
 
   /// Requests new anchors, size, margins, exclusive zone and keyboard interactivity for an open layer window.
   /// Layer, namespace and output must match LayerShell. The compositor controls the final size.
   /// Requests made while hidden apply on the next Show.
+  /// A size change from a layout metrics callback keeps the previous buffer until the next configure.
   /// @param geometry the new options, with sizes and margins in compositor logical units
   /// @returns Accepted if queued or submitted, Closed if not open, or Unsupported for another window type,
   /// a change to a fixed option, or a keyboard policy the compositor does not support
@@ -239,9 +241,10 @@ public partial class Window {
     geometry.Validate("geometry")
     if windowTarget?.QueueWorkPending == true {
       pendingLayerGeometry = geometry
+      pendingLayerGeometryHold = flushingMetricsBeforeRender
     } else {
       pendingLayerGeometry = nil
-      native.SetLayerGeometry(geometry)
+      native.SetLayerGeometry(geometry, flushingMetricsBeforeRender)
     }
     return WindowOperationResult.Accepted
   }
