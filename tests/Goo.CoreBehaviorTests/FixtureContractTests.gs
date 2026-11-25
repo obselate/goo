@@ -45,6 +45,54 @@ class FixtureContractTests {
         Assert.True(CellFixtures().MountedPlainFieldWritesRebuild())
 
     @Fact
+    func StationaryDragHoverDoesNotRedispatchChanged() {
+        let cell = DragHoverCell()
+        let window = Window{Root: cell, Size: LayoutSize(160, 50)}.Open()
+        try {
+            window.UpdateTree()
+            let input = window.InputForTest
+            input.QueuePointerPress(10.0F, 10.0F)
+            input.QueuePointerMove(90.0F, 10.0F)
+            window.PumpScheduled(0.01)
+            window.PumpScheduled(0.01)
+            let queries = cell.Queries
+            for _ in 0 ... 16 { window.PumpScheduled(0.01) }
+            Assert.Equal(1, cell.Events.Count)
+            Assert.Equal(DragEventKind.Enter, cell.Events[0].Kind)
+            Assert.Equal(queries, cell.Queries)
+
+            input.QueuePointerMove(95.0F, 10.0F)
+            input.QueuePointerMove(95.0F, 10.0F)
+            window.PumpScheduled(0.01)
+            Assert.Equal(2, cell.Events.Count)
+            Assert.Equal(DragEventKind.Move, cell.Events[1].Kind)
+            Assert.Equal(15.0, cell.Events[1].Position.X)
+
+            cell.TargetLeft = 85
+            cell.Rebuild()
+            window.PumpScheduled(0.01)
+            Assert.Equal(3, cell.Events.Count)
+            Assert.Equal(DragEventKind.Move, cell.Events[2].Kind)
+            Assert.Equal(10.0, cell.Events[2].Position.X)
+
+            cell.Effect = DragEffect.Copy
+            cell.Rebuild()
+            window.PumpScheduled(0.01)
+            Assert.Equal(4, cell.Events.Count)
+            Assert.Equal(DragEventKind.Move, cell.Events[3].Kind)
+            Assert.Equal(DragEffect.Copy, cell.Events[3].Effect)
+
+            input.QueuePointerMove(140.0F, 10.0F)
+            window.PumpScheduled(0.01)
+            Assert.Equal(5, cell.Events.Count)
+            Assert.Equal(DragEventKind.Leave, cell.Events[4].Kind)
+            input.QueuePointerRelease(140.0F, 10.0F)
+            window.PumpScheduled(0.01)
+            Assert.Equal(5, cell.Events.Count)
+        } finally { window.Close() }
+    }
+
+    @Fact
     func ServicesBeforeWindowBindingContract() ->
         Assert.True(CellFixtures().ServicesBeforeWindowBinding())
 
@@ -775,4 +823,30 @@ class FixtureContractTests {
 
         private func Contract[TFixture](methodName string)[]object -> []object{typeof(TFixture), methodName}
     }
+}
+
+internal class DragHoverCell : Cell {
+    internal let Events List[DragEvent] = List[DragEvent]()
+    internal var Queries int32
+    internal var TargetLeft Length = 80
+    internal var Effect DragEffect = DragEffect.Move
+
+    override func Build() Blob ->
+        Container(){
+            Container{
+                Width: 40,
+                Height: 40,
+                DragSource: DragSource(_ -> DragData("payload", DragEffect.Copy | DragEffect.Move)),
+            },
+            Container{
+                Position: PositionType.Absolute,
+                Left: TargetLeft,
+                Width: 40,
+                Height: 40,
+                DropTarget: DropTarget((_ DragEvent) -> {
+                    Queries++
+                    return Effect
+                }, (event DragEvent) -> Events.Add(event)),
+            },
+        }
 }
