@@ -1,1 +1,0 @@
-- Use the Vulkan minimum FIFO swapchain image count for Wayland background layers.

@@ -1,6 +1,21 @@
 # Changelog
 
 
+## 0.32.9 - 2026-11-25
+
+### Added
+
+- Set an input region on Wayland toplevel and layer-shell windows so pointer input can reach surfaces behind them.
+- Add still-image Wayland layer windows. Outputs that share a `LayerWindowImage` use one DMA-BUF allocation when supported, with a Vulkan swapchain fallback.
+
+### Changed
+
+- Use the Vulkan minimum FIFO swapchain image count for Wayland background layers.
+
+### Fixed
+
+- Fix missing SVG paths under animated ancestors and clipped gradient fills in transformed SVG groups.
+
 ## 0.32.8 - 2026-11-25
 
 ### Fixed
