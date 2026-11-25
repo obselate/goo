@@ -10,6 +10,7 @@ internal unsafe partial class SdlHost {
 
   internal prop FirstShowPending bool { get -> deferFirstShow && firstShowRequested }
   internal prop IsLayerWindow bool { get -> layerWindow != nil }
+  internal prop LayerResizePending bool { get -> layerWindow?.ResizePending == true }
 
   internal func DeferFirstShow() bool {
     if layerWindow != nil || lockWindow != nil { return false }
@@ -101,6 +102,7 @@ internal unsafe partial class SdlHost {
 
   public func Hide() WindowOperationResult {
     if disposed || IsClosing { return WindowOperationResult.Closed }
+    inputRegion?.Invalidate()
     if let role = lockWindow {
       role.StopPresenting()
       return WindowOperationResult.Accepted

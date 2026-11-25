@@ -1,6 +1,61 @@
 # Changelog
 
 
+## 0.32.9 - 2026-11-25
+
+### Added
+
+- Set an input region on Wayland toplevel and layer-shell windows so pointer input can reach surfaces behind them.
+- Add still-image Wayland layer windows. Outputs that share a `LayerWindowImage` use one DMA-BUF allocation when supported, with a Vulkan swapchain fallback.
+
+### Changed
+
+- Use the Vulkan minimum FIFO swapchain image count for Wayland background layers.
+
+### Fixed
+
+- Fix missing SVG paths under animated ancestors and clipped gradient fills in transformed SVG groups.
+
+## 0.32.8 - 2026-11-25
+
+### Fixed
+
+- Stop repeated in-app drag-over callbacks when the pointer and drop target stay unchanged.
+- Keep the last Wayland layer-window buffer visible while a size request waits for a configure, so new content is not clipped to the old size.
+
+## 0.32.7 - 2026-11-25
+
+### Fixed
+
+- Close Wayland layer-shell applications cleanly when the compositor disconnects.
+- Keep Vulkan frame submissions from failing when another window has image uploads that are queued but not recorded.
+- Keep closing or hiding a window with a deferred frame from failing while another window has recorded image uploads in flight.
+- Prevent Wayland layer windows from stretching the old frame during resize.
+- Keep unchanged Vulkan scene ranges reusable when an animated stroke updates its path.
+
+## 0.32.6 - 2026-11-25
+
+### Fixed
+
+- Keep other windows presenting when a Wayland layer window is covered.
+
+## 0.32.5 - 2026-11-24
+
+### Fixed
+
+- Wayland layer windows with keyboard interactivity disabled still receive clicks after hiding and showing.
+
+## 0.32.4 - 2026-11-24
+
+### Added
+
+- `ImageSource.CopyPixels` copies premultiplied RGBA pixels into a caller-owned buffer.
+- Decode WebP images and thumbnails, including lossy and lossless images with alpha and the first frame of animated WebP.
+
+### Fixed
+
+- Keep layer-shell protocol descriptors alive after a layer window closes, so an event queued for it no longer crashes the Wayland event pump.
+
 ## 0.32.3 - 2026-11-24
 
 ### Added

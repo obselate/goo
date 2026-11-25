@@ -165,7 +165,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
     nativeObjectAccounting VulkanObjectAccounting?,
     nativeDiagnostics VulkanDiagnostics? = nil,
     composition VulkanCompositionPresentation? = nil,
-    opaqueClear bool = false, transparent bool = false) {
+    opaqueClear bool = false, transparent bool = false, minimumImageCount bool = false) {
       if nativeDevice == nint(0) {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
@@ -188,7 +188,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
         throw InvalidOperationException("Vulkan surface minimum image count cannot be incremented")
       }
 
-      var requestedImageCount = capabilities.minImageCount + 1u
+      var requestedImageCount = capabilities.minImageCount + (minimumImageCount ? 0u : 1u)
       if capabilities.maxImageCount != 0u && requestedImageCount > capabilities.maxImageCount {
         requestedImageCount = capabilities.maxImageCount
       }

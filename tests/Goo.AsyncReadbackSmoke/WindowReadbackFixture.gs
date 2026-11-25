@@ -8,6 +8,7 @@ import System.Numerics
 import System.Runtime.CompilerServices
 import System.Runtime.InteropServices
 import System.Threading
+import System.Threading.Tasks
 import System.Text.Json
 
 internal data struct VulkanPrimitiveFrameRetentionTestSnapshot {
@@ -1877,20 +1878,195 @@ internal class PreventedKeyRepeatCell : Cell {
 
 internal class LayerGeometryCell : Cell {
   internal let Handle ElementHandle = ElementHandle()
+  internal let Content ElementHandle = ElementHandle()
+  internal let ContentWidth State[int32] = State[int32](0)
 
-  override func Build() Blob -> Container{ Handle: Handle, Width: Percent(100), Height: Percent(100) }
+  internal var Clicks int32
+
+  override func Build() Blob -> Button{
+    Handle: Handle, Width: Percent(100), Height: Percent(100),
+    OnClick: () -> { Clicks++ },
+    Container{Handle: Content, Width: float64(ContentWidth.Value), Height: 1, FlexShrink: 0},
+  }
 }
 
 public class LayerWindowCloseSmoke {
   shared {
+    public func RunFailure(protocolError bool) {
+      let window = Window{ Title: "Layer window failure", Root: LayerGeometryCell(),
+        LayerShell: LayerWindowOptions{ Width: 160, Height: 100 } }.Open()
+      let native = window.SdlHostForTest()!!
+      if !window.IsVisible { throw InvalidOperationException("The layer window did not configure") }
+      if protocolError {
+        unsafe {
+          let properties = SDL.GetWindowProperties(native.NativeWindow)
+          let surface = nint(SDL.GetPointerProperty(properties, "SDL.window.wayland.surface", nil))
+          let setBufferScale = 8u
+          var invalidScale = BackdropWaylandArgument{}
+          WaylandBackdrop.wl_proxy_marshal_array(surface, setBufferScale, &invalidScale)
+        }
+        native.Hide()
+      } else {
+        if native.Hide() != WindowOperationResult.Accepted {
+          throw InvalidOperationException("The layer window did not hide")
+        }
+        Console.WriteLine("layer-window-disconnect: ready")
+        Console.ReadLine()
+        native.RequestActivation()
+      }
+      Application.Run(window)
+    }
+
+    public func RunResize() {
+      let root = LayerGeometryCell()
+      let window = Window{ Title: "Layer window resize", Root: root, UiScale: 1.0F,
+        LayerShell: LayerWindowOptions{ Width: 412, Height: 64 } }.Open()
+      try {
+        let native = window.SdlHostForTest()!!
+        let target = window.CaptureTargetForTest()!!
+        WindowReadbackTestFixture.ForceRender(window, 0.0, 5.0, true)
+        WaitForLayerFrame(native)
+        window.RuntimeHoldNextQueueSubmitForTest()
+        try {
+          window.ForceRenderForTest(0.0)
+          if !window.RuntimeWaitForHeldQueueCallForTest(5000) {
+            throw InvalidOperationException("The old-size layer frame did not reach its held submission")
+          }
+          native.SetLayerGeometry(LayerWindowOptions{ Width: 476, Height: 128 })
+          let deadline = Environment.TickCount64 + 5000L
+          while window.NativeWidth != 476 || window.NativeHeight != 128 {
+            if Environment.TickCount64 >= deadline { throw InvalidOperationException("The layer resize did not configure") }
+            SdlRuntime.WaitEventsBounded(20, 64)
+            native.RefreshMetricsIfChanged()
+          }
+        } finally { VulkanSharedRuntime.ReleaseHeldQueueCallForTest() }
+        let deadline = Environment.TickCount64 + 5000L
+        while target.QueueWorkPending {
+          if Environment.TickCount64 >= deadline { throw InvalidOperationException("The old-size layer frame did not retire") }
+          target.PollQueueCompletion()
+          SdlRuntime.WaitEventsBounded(20, 64)
+        }
+        WindowReadbackTestFixture.ForceRender(window, 0.0, 5.0, true)
+        WaitForLayerFrame(native)
+        let bounds = root.Handle.RawBorderBox
+        if bounds.Width != 476.0 || bounds.Height != 128.0 {
+          throw InvalidOperationException("The first resized layer frame did not lay out at the configured size")
+        }
+        CheckContentGrowth(window, root)
+      } finally { window.CloseAfterRun() }
+      Console.WriteLine("layer-window-resize-layout: passed")
+    }
+
+    public func RunInputRegion() {
+      let background = Window{Title: "Input region background", Root: Cell{},
+        State: WindowState.Fullscreen, Decorated: false, UiScale: 1.0F}.Open()
+      try {
+        let initial = LayerWindowOptions{Layer: WindowLayer.Overlay, Width: 160, Height: 100,
+          Anchors: LayerWindowAnchor.Top | LayerWindowAnchor.Left}
+        let window = Window{Title: "Input region layer", Root: Cell{}, UiScale: 1.0F,
+          LayerShell: initial}.Open()
+        let backgroundHost = background.SdlHostForTest()!!
+        let layerHost = window.SdlHostForTest()!!
+        try {
+          var xdg bool
+          backgroundHost.PointerPressed += (id, device, x, y, button, buttons, pressure, mods) -> {
+            Console.WriteLine(xdg && y < 64.0F ? "click outside xdg region" : "click background")
+          }
+          window.InputActivity += kind -> {
+            if kind == WindowInputKind.PointerDown { Console.WriteLine("click layer") }
+          }
+          let pumpUntil Action[Func[bool]] = ready -> {
+            let deadline = Environment.TickCount64 + 10000L
+            while !ready() {
+              if Environment.TickCount64 >= deadline { throw InvalidOperationException("Input region fixture timed out") }
+              background.Pump(0.0)
+              window.Pump(0.0)
+              Thread.Sleep(1)
+            }
+          }
+          pumpUntil(() -> background.PresentationAcceptedIndexForTest > 0uL
+            && window.PresentationAcceptedIndexForTest > 0uL)
+          let rectangles = []ElementRect{ElementRect{Y: 64, Width: 260, Height: 40}}
+          var command = "set"
+          while command != "quit" {
+            let active = command == "xdg" ? background : window
+            let activeHost = command == "xdg" ? backgroundHost : layerHost
+            pumpUntil(() -> !active.QueueWorkPending && activeHost.WaylandVulkanFrameReady())
+            let before = active.PresentationAcceptedIndexForTest
+            let result = switch command {
+              case "set": window.SetInputRegion(rectangles)
+              case "resize": window.SetLayerGeometry(LayerWindowOptions{Layer: initial.Layer, Anchors: initial.Anchors,
+                Width: 200, Height: 120})
+              case "scale": {
+                Console.WriteLine("scale pending")
+                WindowOperationResult.Accepted
+              }
+              case "empty": window.SetInputRegion(Array.Empty[ElementRect]())
+              case "reset": window.SetInputRegion(nil)
+              case "xdg": {
+                xdg = true
+                if window.Hide() != WindowOperationResult.Accepted {
+                  throw InvalidOperationException("Could not hide the layer window")
+                }
+                background.SetInputRegion(rectangles)
+              }
+              case _: throw InvalidOperationException("Unexpected region test command: $command")
+            }
+            if result != WindowOperationResult.Accepted { throw InvalidOperationException("Input region command failed: $command") }
+            pumpUntil(() -> active.PresentationAcceptedIndexForTest > before
+              && !active.QueueWorkPending && activeHost.WaylandVulkanFrameReady() && (!xdg || !window.IsVisible)
+              && (command != "resize" || window.NativeWidth == 200 && window.NativeHeight == 120)
+              && (command != "scale" || window.PixelScale == 2.0))
+            Console.WriteLine("ready $command")
+            let read = Task.Run[string?](() -> Console.ReadLine())
+            pumpUntil(() -> read.IsCompleted)
+            command = read.Result ?? "quit"
+          }
+        } finally { window.CloseAfterRun() }
+      } finally { background.CloseAfterRun() }
+    }
+
+    private func CheckContentGrowth(window Window, root LayerGeometryCell) {
+      var started int64
+      var accepted bool
+      root.Content.MetricsChanged += metrics -> {
+        if started != 0 || metrics.BorderBox.Width != 540.0 { return }
+        if window.NativeWidth != 476 { throw InvalidOperationException("Expected growth in the old layout") }
+        Console.Error.WriteLine("layer-window-content-growth: requested")
+        started = Stopwatch.GetTimestamp()
+        if window.SetLayerGeometry(LayerWindowOptions{Width: 500, Height: 128}) != WindowOperationResult.Accepted
+          || window.SetLayerGeometry(LayerWindowOptions{
+            Width: 580, Height: 128, Anchors: LayerWindowAnchor.Left | LayerWindowAnchor.Right,
+            MarginLeft: 20, MarginRight: 20,
+          }) != WindowOperationResult.Accepted {
+          throw InvalidOperationException("The layer content size request was not accepted")
+        }
+      }
+      window.PresentationAccepted += receipt -> {
+        if started == 0 || receipt.AcceptedTicks < started { return }
+        if root.Content.RawBorderBox.Width > float64(window.NativeWidth) {
+          throw InvalidOperationException("The grown layer content was submitted at the old size")
+        }
+        accepted = window.NativeWidth == 540
+        window.RequestClose()
+      }
+      root.ContentWidth.Value = 540
+      window.After(1500.0, () -> window.RequestClose())
+      Window.RunLiveWindowScheduler()
+      if !accepted { throw InvalidOperationException("The superseding, clamped layer size did not present") }
+    }
+
     public func Run() {
       CheckLiveGeometry()
       for hide in []bool{false, true} {
-        let window = Window{ Title: "Layer window close", Root: PopupSmokeCell{},
-          LayerShell: LayerWindowOptions{ Width: 160, Height: 100 } }.Open()
+        let root = LayerGeometryCell()
+        let window = Window{ Title: "Layer window close", Root: root, UiScale: 1.0F,
+          LayerShell: LayerWindowOptions{ Width: 160, Height: 100,
+            KeyboardInteractivity: LayerWindowKeyboardInteractivity.Exclusive } }.Open()
         if window.Hide() != WindowOperationResult.Accepted || window.IsVisible
+          || window.SetLayerGeometry(LayerWindowOptions{ Width: 160, Height: 100 }) != WindowOperationResult.Accepted
           || window.Show(false) != WindowOperationResult.Accepted {
-          throw InvalidOperationException("Layer surface did not hide and show before its first present")
+          throw InvalidOperationException("Layer surface did not hide, change keyboard mode and show before its first present")
         }
         let remapDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5
         while !window.IsVisible && Stopwatch.GetTimestamp() < remapDeadline {
@@ -1901,13 +2077,24 @@ public class LayerWindowCloseSmoke {
           throw InvalidOperationException("Layer surface did not remap before its first present")
         }
         WindowReadbackTestFixture.ForceRender(window, 0.0, 15.0, true)
+        if !hide {
+          WindowReadbackTestFixture.InputQueuePointerPress(window, 10.0, 10.0)
+          WindowReadbackTestFixture.InputQueuePointerRelease(window, 10.0, 10.0)
+          window.InputForTest.Drain(window.Tree, window.ResolverForTest, 0.0, nil)
+          if root.Clicks != 1 || window.IsFocused || window.InputForTest.FocusedNode() != nil {
+            throw InvalidOperationException("The remapped pointer-only layer did not click without focus")
+          }
+        }
         let target = window.CaptureTargetForTest()!!
+        let native = window.SdlHostForTest()!!
+        WaitForLayerFrame(native)
+        if !hide { CheckFramePacing(window, target, native) }
         window.RuntimeHoldNextQueueSubmitForTest()
         window.ForceRenderForTest(0.0)
         if !window.RuntimeWaitForHeldQueueCallForTest(5000) {
           throw InvalidOperationException("Layer frame did not reach held submission")
         }
-        if window.SdlHostForTest()!!.Hide() != WindowOperationResult.Accepted {
+        if native.Hide() != WindowOperationResult.Accepted {
           throw InvalidOperationException("Layer surface did not hide")
         }
         VulkanSharedRuntime.ReleaseHeldQueueCallForTest()
@@ -1916,7 +2103,7 @@ public class LayerWindowCloseSmoke {
           if target.PresentPrepareForTest { break }
           Thread.Sleep(1)
         }
-        if !target.PresentPrepareForTest || window.SdlHostForTest()!!.PrepareFirstPresent() {
+        if !target.PresentPrepareForTest || native.PrepareFirstPresent() {
           throw InvalidOperationException("Hidden layer frame did not stop at present preparation")
         }
         if hide {
@@ -1938,6 +2125,35 @@ public class LayerWindowCloseSmoke {
         if window.IsOpen { throw InvalidOperationException("Layer close did not finish within 2000 passes") }
       }
       Console.WriteLine("layer-window-close: close=passed hide=passed")
+    }
+
+    private func WaitForLayerFrame(native SdlHost) {
+      let deadline = Environment.TickCount64 + 5000L
+      while !native.WaylandVulkanFrameReady() && Environment.TickCount64 < deadline {
+        SdlRuntime.WaitEventsBounded(100, 64)
+      }
+      if !native.WaylandVulkanFrameReady() {
+        throw InvalidOperationException("Visible layer frame callback did not arrive")
+      }
+    }
+
+    private func CheckFramePacing(window Window, target VulkanWindowTarget, native SdlHost) {
+      let presented = window.PresentationAcceptedIndexForTest
+      window.ForceRenderForTest(0.0)
+      let deadline = Environment.TickCount64 + 5000L
+      while window.PresentationAcceptedIndexForTest == presented && Environment.TickCount64 < deadline {
+        target.PollQueueCompletion()
+        Thread.Sleep(1)
+      }
+      if window.PresentationAcceptedIndexForTest == presented || native.WaylandVulkanFrameReady() {
+        throw InvalidOperationException("Layer present did not leave a Wayland frame callback pending")
+      }
+      window.ForceRenderForTest(0.0)
+      if target.QueueWorkPending {
+        throw InvalidOperationException("Layer frame queued work before the previous callback was dispatched")
+      }
+      WaitForLayerFrame(native)
+      Console.WriteLine("layer-window-pacing: pending callback prevented another submission and then woke rendering")
     }
 
     private func CheckLiveGeometry() {

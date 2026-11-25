@@ -20,6 +20,7 @@ internal unsafe sealed class VulkanPathScene : IDisposable {
   private var observedRedrawSequence uint64
   private var renderAfterPlannedUpload bool
   private var resourceDeferred bool
+  private var resourceRetryCount int32
   private var usePending bool
   private var disposed bool
 
@@ -27,6 +28,7 @@ internal unsafe sealed class VulkanPathScene : IDisposable {
   internal prop Atlas VulkanPathAtlas{ get -> resources.Atlas }
   internal prop AtlasId ResourceId{ get -> resources.AtlasId }
   internal prop ResourceDeferred bool{ get -> resourceDeferred }
+  internal prop ResourceRetryCount int32{ get -> resourceRetryCount }
   internal prop CurrentPathCount int32{
     get {
       CommitCurrentReferences()
@@ -71,6 +73,7 @@ internal unsafe sealed class VulkanPathScene : IDisposable {
     redrawRequired = false
     renderAfterPlannedUpload = resources.CanRenderAfterPlannedUpload
     resourceDeferred = false
+    resourceRetryCount = 0
   }
 
   internal func Emit(path VectorPath, fillRule FillRule) VulkanPathRenderable {
@@ -82,6 +85,7 @@ internal unsafe sealed class VulkanPathScene : IDisposable {
     }
     if renderable.RedrawRequired {
       redrawRequired = true
+      resourceRetryCount++
     }
     if renderable.RedrawRequired && !renderable.Renderable {
       resourceDeferred = true
@@ -94,7 +98,7 @@ internal unsafe sealed class VulkanPathScene : IDisposable {
   internal func TryRetain(pathId ResourceId, atlasId ResourceId, wordOffset uint32,
     wordCount uint32, fillRule uint32) bool {
     EnsureOpen()
-    if !resources.TryRetain(pathId, atlasId, wordOffset, wordCount, fillRule, renderAfterPlannedUpload) {
+    if !resources.TryRetain(pathId, atlasId, wordOffset, wordCount, fillRule) {
       return false
     }
     AddPendingPath(pathId)
@@ -189,7 +193,7 @@ internal unsafe sealed class VulkanPathScene : IDisposable {
     currentPaths.Add(id)
   }
 
-  private func CommitCurrentReferences() {
+  internal func CommitCurrentReferences() {
     if disposed || referencesCommitted {
       return
     }

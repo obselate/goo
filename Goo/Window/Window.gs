@@ -217,13 +217,32 @@ public partial class Window {
   /// Unsupported platforms and compositors fail without a normal-window fallback.
   /// Use SetLayerGeometry to request new geometry after Open. This property keeps the initial options.
   public prop LayerShell LayerWindowOptions? { get; init; }
+
+  private var layerImage LayerWindowImage?
+  private var layerImageFallback LayerWindowImageFallback?
+
+  /// Gets or sets the image for a layer window with LayerWindowOptions.StillImage enabled.
+  /// A null or unreadable image shows only Background. Change this on the window owner thread.
+  public prop LayerImage LayerWindowImage? {
+    get -> ReadUntrackedWindowValue(layerImage)
+    set(value) {
+      requireUiThread("Window.LayerImage")
+      if Object.ReferenceEquals(layerImage, value) { return }
+      layerImage = value
+      requestRender()
+      host?.Wake()
+    }
+  }
   internal var LockSurface WaylandLockSurface?
+  internal prop IsPointerOnlyLayer bool { get -> (host as SdlHost?)?.IsPointerOnlyLayer == true }
 
   private var pendingLayerGeometry LayerWindowOptions?
+  private var pendingLayerGeometryHold bool
 
   /// Requests new anchors, size, margins, exclusive zone and keyboard interactivity for an open layer window.
   /// Layer, namespace and output must match LayerShell. The compositor controls the final size.
   /// Requests made while hidden apply on the next Show.
+  /// A size change from a layout metrics callback keeps the previous buffer until the next configure.
   /// @param geometry the new options, with sizes and margins in compositor logical units
   /// @returns Accepted if queued or submitted, Closed if not open, or Unsupported for another window type,
   /// a change to a fixed option, or a keyboard policy the compositor does not support
@@ -238,10 +257,35 @@ public partial class Window {
     geometry.Validate("geometry")
     if windowTarget?.QueueWorkPending == true {
       pendingLayerGeometry = geometry
+      pendingLayerGeometryHold = flushingMetricsBeforeRender
     } else {
       pendingLayerGeometry = nil
-      native.SetLayerGeometry(geometry)
+      native.SetLayerGeometry(geometry, flushingMetricsBeforeRender)
     }
+    return WindowOperationResult.Accepted
+  }
+
+  /// Sets the input region for an open Wayland toplevel or layer-shell window.
+  /// The compositor applies the region when the next frame is committed.
+  /// Direct still-image presentation does not support input regions.
+  /// @param rectangles the union of rectangles in surface-local logical pixels, rounded out to whole pixels.
+  /// Null restores the full surface. An empty array disables pointer and touch input.
+  /// @returns Accepted if queued, Closed if not open, or Unsupported for other window types and platforms.
+  /// @exception ArgumentException when a rectangle has a nonfinite coordinate or a negative size.
+  public func SetInputRegion(rectangles [] ? ElementRect) WindowOperationResult {
+    requireUiThread("Window.SetInputRegion")
+    if !IsOpen || host?.IsClosing == true { return WindowOperationResult.Closed }
+    guard let native = host as SdlHost? else { return WindowOperationResult.Unsupported }
+    if !native.SupportsInputRegion() { return WindowOperationResult.Unsupported }
+    if let values = rectangles {
+      for rect in values {
+        if !Double.IsFinite(rect.X) || !Double.IsFinite(rect.Y) || !Double.IsFinite(rect.Width)
+          || !Double.IsFinite(rect.Height) || rect.Width < 0.0 || rect.Height < 0.0 {
+          throw ArgumentException("Input rectangles require finite coordinates and nonnegative sizes", "rectangles")
+        }
+      }
+    }
+    if native.SetInputRegion(rectangles) { requestRender() }
     return WindowOperationResult.Accepted
   }
 

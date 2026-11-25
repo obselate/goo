@@ -35,13 +35,22 @@ internal partial class InputCoordinator {
           changed = true
           continue
         }
-        if !focus.NativeFocusAllowed && e.IsPointer && e.Pointer.Kind == PointerEventKind.Press {
-          if let owner = resolver.Owner {
-            if owner.IsFocused && !owner.IsInputBlocked && !owner.HasChildPopup { focus.SetNativeFocus(true) }
+        if !focus.NativeFocusAllowed {
+          if !e.IsPointer { continue }
+          let kind = e.Pointer.Kind
+          if kind != PointerEventKind.Move && kind != PointerEventKind.Wheel
+            && kind != PointerEventKind.HoverInvalidation {
+            guard let owner = resolver.Owner && !owner.IsInputBlocked && !owner.HasChildPopup else { continue }
+            if owner.IsPointerOnlyLayer {
+              if kind != PointerEventKind.Press && kind != PointerEventKind.Release
+                && kind != PointerEventKind.Cancel { continue }
+            } else {
+              if kind != PointerEventKind.Press || !owner.IsFocused { continue }
+              focus.SetNativeFocus(true)
+              if !focus.NativeFocusAllowed { continue }
+            }
           }
         }
-        if !focus.NativeFocusAllowed && !(e.IsPointer && (e.Pointer.Kind == PointerEventKind.Move
-          || e.Pointer.Kind == PointerEventKind.Wheel || e.Pointer.Kind == PointerEventKind.HoverInvalidation)) { continue }
         if !e.IsPointer || !pointer.CanDeferVirtualization(e.Pointer) {
           if let owner = resolver.Owner {
             owner.FlushDeferredVirtualization()

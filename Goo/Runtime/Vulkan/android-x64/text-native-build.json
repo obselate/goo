@@ -1,10 +1,11 @@
 {
   "artifacts": {
     "gpu": {
-      "bytes": 246440,
+      "bytes": 558032,
       "exports": [
         "goo_image_decode_rgba",
         "goo_image_free",
+        "goo_image_get_info",
         "goo_image_realloc",
         "hb_gpu_draw_clear",
         "hb_gpu_draw_create_or_fail",
@@ -60,7 +61,7 @@
       "runpath": [
         "$ORIGIN/"
       ],
-      "sha256": "0738777319c5df360864094370234a1a776e8eb8712bb552ceea4368dd67a449",
+      "sha256": "f49a8b9a12337ff2e4a3e62c24734d1b3db2c5e4b1f94e1545f8dd3cc91d057b",
       "soname": "libgoo-harfbuzz-gpu.so"
     },
     "harfbuzz": {
@@ -775,6 +776,7 @@
     "gpu": [
       "goo_image_decode_rgba",
       "goo_image_free",
+      "goo_image_get_info",
       "goo_image_realloc",
       "hb_gpu_draw_create_or_fail",
       "hb_gpu_draw_destroy",
@@ -839,6 +841,13 @@
       "signedTagCommit": "35f656a1a2bab548ea7f54a6dd3fba2b09680d14",
       "tag": "15.0.0",
       "version": "15.0.0"
+    },
+    "libwebp": {
+      "archiveSha256": "e4ab7009bf0629fd11982d4c2aa83964cf244cffba7347ecd39019a9e38c4564",
+      "archiveUrl": "https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.6.0.tar.gz",
+      "license": "BSD-3-Clause",
+      "licenseUrl": "https://github.com/webmproject/libwebp/blob/v1.6.0/COPYING",
+      "version": "1.6.0"
     },
     "stbImage": {
       "commit": "013ac3beddff3dbffafd5177e7972067cd2b5083",

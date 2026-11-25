@@ -35,7 +35,16 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if [[ "${GOO_WAYLAND_COMPOSITOR:-}" != kwin ]] && command -v weston >/dev/null 2>&1; then
+if [[ "${GOO_WAYLAND_COMPOSITOR:-}" == sway ]]; then
+  unset WAYLAND_SOCKET DISPLAY SWAYSOCK
+  mkdir -p "$runtime_root"/{cache,config,data}
+  setsid env -u WAYLAND_DISPLAY \
+    XDG_CACHE_HOME="$runtime_root/cache" XDG_CONFIG_HOME="$runtime_root/config" \
+    XDG_DATA_HOME="$runtime_root/data" WLR_BACKENDS=headless WLR_HEADLESS_OUTPUTS=1 \
+    WLR_RENDERER=pixman WLR_LIBINPUT_NO_DEVICES=1 sway -c /dev/null >"$compositor_log" 2>&1 &
+  compositor_pid=$!
+  compositor_target=-$compositor_pid
+elif [[ "${GOO_WAYLAND_COMPOSITOR:-}" != kwin ]] && command -v weston >/dev/null 2>&1; then
   weston --backend=headless-backend.so --renderer="${GOO_WESTON_RENDERER:-pixman}" \
     ${GOO_HEADLESS_WIDTH:+--width="$GOO_HEADLESS_WIDTH"} ${GOO_HEADLESS_HEIGHT:+--height="$GOO_HEADLESS_HEIGHT"} \
     --socket="$WAYLAND_DISPLAY" --idle-time=0 >"$compositor_log" 2>&1 &
@@ -51,6 +60,16 @@ else
   compositor_target=-$compositor_pid
 fi
 for _ in $(seq 1 50); do
+  if [[ "${GOO_WAYLAND_COMPOSITOR:-}" == sway ]]; then
+    ipc=("$runtime_root"/sway-ipc.*.sock)
+    [[ -S "${ipc[0]}" ]] || { sleep 0.1; continue; }
+    for endpoint in "$runtime_root"/wayland-*; do
+      if [[ -S "$endpoint" ]]; then
+        export WAYLAND_DISPLAY="${endpoint##*/}"
+        break
+      fi
+    done
+  fi
   test -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" && break
   sleep 0.1
 done

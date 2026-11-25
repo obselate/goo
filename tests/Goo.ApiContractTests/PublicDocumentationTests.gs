@@ -161,6 +161,7 @@ class PublicDocumentationTests {
             "M:Goo.RichText.RichTextCodec.Write(Goo.RichText.RichTextFragment)",
             "M:Goo.RichText.RichTextFragment.#ctor(System.String,System.Collections.Generic.IReadOnlyList{Goo.TextStyleSpan})",
             "M:Goo.TrayOptions.#ctor",
+            "M:Goo.LayerWindowImage.#ctor(System.String,Goo.ImageFit)",
             "M:Goo.LayerWindowOptions.#ctor",
             "M:Goo.SessionLock.#ctor",
             "M:Goo.SessionLock.Dispose",
@@ -283,6 +284,7 @@ class PublicDocumentationTests {
             "M:Goo.Window.GetCurrentDisplay",
             "M:Goo.Window.SetFullscreenDisplay(Goo.WindowDisplayId)",
             "M:Goo.Window.SetLayerGeometry(Goo.LayerWindowOptions)",
+            "M:Goo.Window.SetInputRegion(Goo.ElementRect[])",
             "M:Goo.Window.SetTopmost(System.Boolean)",
             "M:Goo.Window.RequestCapture",
             "M:Goo.Window.RequestCapture(Goo.WindowCapture)",
@@ -455,6 +457,7 @@ class PublicDocumentationTests {
             "M:Goo.Images.ImageVariants.Dispose",
             "M:Goo.ImageSource.#ctor(System.Int32,System.Int32,System.Byte[])",
             "M:Goo.ImageSource.Acquire",
+            "M:Goo.ImageSource.CopyPixels(System.Span{System.Byte})",
             "M:Goo.ImageSourceProvider.Acquire",
             "M:Goo.ImageSource.Dispose",
             "M:Goo.ImageSource.EncodePng",
@@ -1112,11 +1115,15 @@ class PublicDocumentationTests {
                 DocumentationShape([]string{"formats"}, Array.Empty[string](), true),
             ["M:Goo.Window.SetLayerGeometry(Goo.LayerWindowOptions)"] =
                 DocumentationShape([]string{"geometry"}, Array.Empty[string](), true),
+            ["M:Goo.Window.SetInputRegion(Goo.ElementRect[])"] =
+                DocumentationShape([]string{"rectangles"}, Array.Empty[string](), true),
             ["M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)"] = DocumentationShape(
                 []string{"x", "y"},
                 System.Array.Empty[string](),
                 false
             ),
+            ["M:Goo.LayerWindowImage.#ctor(System.String,Goo.ImageFit)"] =
+                DocumentationShape([]string{"path", "fit"}, Array.Empty[string](), false),
             ["M:Goo.Window.AccessibilityHitTest(System.Double,System.Double)"] = DocumentationShape(
                 []string{"x", "y"},
                 System.Array.Empty[string](),
@@ -1573,6 +1580,11 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
                 true
+            ),
+            ["M:Goo.ImageSource.CopyPixels(System.Span{System.Byte})"] = DocumentationShape(
+                []string{"destination"},
+                System.Array.Empty[string](),
+                false
             ),
             ["M:Goo.ImageSource.EncodePng"] = DocumentationShape(
                 System.Array.Empty[string](),

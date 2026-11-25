@@ -47,6 +47,10 @@ public class LayerWindowOptions {
   public prop Output WindowDisplayId? { get; init; }
   /// Gets the compositor namespace. The default is goo.
   public prop Namespace string { get -> namespaceName init -> namespaceName = value }
+  /// Presents Window.LayerImage over Window.Background without drawing a Goo tree.
+  /// Uses the normal Vulkan swapchain when direct Wayland presentation is unavailable.
+  /// Do not set Window.Root in this mode.
+  public prop StillImage bool { get; init; }
 
   internal func Validate(parameterName string = "LayerShell") {
     if uint32(Layer) > 3u || uint32(KeyboardInteractivity) > 2u || (uint32(Anchors) & ~15u) != 0u {

@@ -491,7 +491,9 @@ internal unsafe partial class VulkanWindowTarget {
         swapchainMaintenanceVariant != VulkanSwapchainMaintenanceVariant.None,
         windowObjectAccounting, diagnostics, composition,
         opaqueClear: composition == nil && (opaquePopup || (transparent && alphaUnavailable)),
-        transparent: composition != nil || (transparent && !alphaUnavailable))
+        transparent: composition != nil || (transparent && !alphaUnavailable),
+        minimumImageCount: sdl?.WaylandLayer == WindowLayer.Background
+          && selection.PresentMode == VkConstants.VK_PRESENT_MODE_FIFO_KHR)
     } catch {
       composition?.Dispose()
       rethrow

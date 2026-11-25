@@ -7,6 +7,9 @@ import System.Runtime.InteropServices
 @DllImport("goo-harfbuzz-gpu", EntryPoint: "goo_image_decode_rgba", CallingConvention: CallingConvention.Cdecl)
 internal unsafe func goo_image_decode_rgba(data * uint8, length int32, out width int32, out height int32) * uint8;
 
+@DllImport("goo-harfbuzz-gpu", EntryPoint: "goo_image_get_info", CallingConvention: CallingConvention.Cdecl)
+internal func goo_image_get_info(ref data uint8, length int32, out width int32, out height int32) int32;
+
 @DllImport("goo-harfbuzz-gpu", EntryPoint: "goo_image_realloc", CallingConvention: CallingConvention.Cdecl)
 internal unsafe func goo_image_realloc(memory * uint8, size nuint) * uint8;
 

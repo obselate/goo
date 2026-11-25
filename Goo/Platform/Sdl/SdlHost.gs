@@ -38,6 +38,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   private var penPressures Dictionary[int64, float32]?
   private var nextTouchPointerId int64 = Int64.MinValue
   private var layerWindow WaylandLayerWindow?
+  private var inputRegion WaylandInputRegion?
   private let lockWindow WaylandLockSurface?
   private let occlusionSupported bool
 
@@ -63,8 +64,10 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         if let parent = popupParent {
           CreatePopup(parent, width, height, popupKind, popupTimestamp, popupAnchor, popupPlacement, popupScale)
         } else {
-          waylandVulkanFrame = ownsVulkanPresentation && driver == "wayland" && layerOptions == nil && lockWindow == nil
+          waylandVulkanFrame = ownsVulkanPresentation && driver == "wayland" && lockWindow == nil
           CreateWindow(title, width, height, x, y, positionSet, minWidth, minHeight, decorated, transparent, layerOptions)
+          waylandVulkanFrame = waylandVulkanFrame && SDL.GetBooleanProperty(SDL.GetWindowProperties(window),
+            "Goo.Wayland.VulkanFrameAvailable.1", false)
         }
         windowId = SDL.GetWindowID(window)
         if windowId == 0u {
@@ -288,6 +291,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     pacing.DisplayId == displayId{
       RefreshDisplayPacing(true)
     }
+    if PresentsStillImage && (layerWindow?.Output?.NativeValue ?? currentDisplay) == displayId {
+      DisplayChanged?.Invoke()
+    }
   }
 
   public func Wake() {
@@ -295,6 +301,35 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       return
     }
     SdlRuntime.Wake()
+  }
+
+  internal prop PresentsStillImage bool { get -> layerWindow?.PresentsStillImage == true }
+  internal prop StillImagePending bool { get -> layerWindow?.StillImagePending == true }
+
+  internal prop StillImagePreparationReady bool { get -> layerWindow?.StillImagePreparationReady == true }
+  internal func FinishStillImagePreparation() bool -> layerWindow?.FinishStillImagePreparation() != false
+
+  internal func SetStillImage(source LayerWindowImage?, background Color, owner Window) bool {
+    let properties = SDL.GetWindowProperties(window)
+    let viewport = nint(SDL.GetPointerProperty(properties, "SDL.window.wayland.viewport", nil))
+    let alpha = if Transparent { background.A } else { 1.0F }
+    let pixel = (uint32(MathF.Round(alpha * 255.0F)) << 24)
+      | (uint32(MathF.Round(background.R * alpha * 255.0F)) << 16)
+      | (uint32(MathF.Round(background.G * alpha * 255.0F)) << 8)
+      | uint32(MathF.Round(background.B * alpha * 255.0F))
+    return layerWindow?.SetStillImage(this, viewport, source, pixel, owner) == true
+  }
+
+  internal func StopStillImage() { layerWindow?.StopStillImage() }
+
+  internal func PresentStillImage() bool -> layerWindow?.PresentStillImage() == true
+
+  internal func StillImageOutputPixels() (int32, int32) {
+    let display = layerWindow?.Output?.NativeValue ?? SDL.GetDisplayForWindow(window)
+    let mode = SDL.GetDesktopDisplayMode(display)
+    if mode.IsNull { return (0, 0) }
+    let density = float64(mode.PixelDensity)
+    return (int32(Math.Round(mode.W * density)), int32(Math.Round(mode.H * density)))
   }
 
   public func SetTitle(value string) {
@@ -307,8 +342,27 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     Require(SDL.SetWindowSize(window, width, height), "SDL_SetWindowSize")
   }
 
+  internal prop IsPointerOnlyLayer bool {
+    get -> layerWindow?.KeyboardInteractivity == LayerWindowKeyboardInteractivity.None
+  }
+
   internal func SupportsLayerGeometry(geometry LayerWindowOptions) bool -> layerWindow!!.SupportsGeometry(geometry)
-  internal func SetLayerGeometry(geometry LayerWindowOptions) -> layerWindow!!.SetGeometry(geometry)
+  internal func SetLayerGeometry(geometry LayerWindowOptions, holdForConfigure bool = false) ->
+    layerWindow!!.SetGeometry(geometry, holdForConfigure)
+
+  internal func SupportsInputRegion() bool ->
+    waylandWindowProperties != 0u && lockWindow == nil && popupParent == nil && !PresentsStillImage
+
+  internal func SetInputRegion(rectangles [] ? ElementRect) bool {
+    if inputRegion == nil {
+      if rectangles == nil { return false }
+      let properties = SDL.GetWindowProperties(window)
+      inputRegion = WaylandInputRegion(
+        nint(SDL.GetPointerProperty(properties, "SDL.window.wayland.display", nil)),
+        nint(SDL.GetPointerProperty(properties, "SDL.window.wayland.surface", nil)))
+    }
+    return inputRegion!!.Set(rectangles)
+  }
 
   public func SetMinimumSize(width int32, height int32) {
     ThrowIfDisposed()
@@ -502,6 +556,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       nativeBackdrop?.Dispose()
       nativeBackdrop = nil
       BackdropAvailable = false
+      inputRegion?.Dispose()
       layerWindow?.Dispose()
       layerWindow = nil
       lockWindow?.Dispose()
@@ -578,6 +633,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         Require(SDL.SetNumberProperty(properties, "SDL.window.create.height", Math.Max(1, layerOptions?.Height ?? height)), "SDL_SetNumberProperty")
         Require(SDL.SetNumberProperty(properties, "SDL.window.create.flags", int64(flags)), "SDL_SetNumberProperty")
         Require(SDL.SetBooleanProperty(properties, "SDL.window.create.wayland.surface_role_custom", true), "SDL_SetBooleanProperty")
+        if waylandVulkanFrame {
+          Require(SDL.SetBooleanProperty(properties, "Goo.Wayland.VulkanFrame.1", true), "SDL_SetBooleanProperty")
+        }
         if lockWindow != nil {
           Require(SDL.SetBooleanProperty(properties, "Goo.Wayland.SessionLockSurface.1", true), "SDL_SetBooleanProperty")
         }
@@ -621,8 +679,6 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         window = SDL.CreateWindowWithProperties(properties)
       } finally { SDL.DestroyProperties(properties) }
       if window.IsNull { ThrowSdl("SDL_CreateWindowWithProperties") }
-      waylandVulkanFrame = waylandVulkanFrame && SDL.GetBooleanProperty(SDL.GetWindowProperties(window),
-        "Goo.Wayland.VulkanFrameAvailable.1", false)
       if decorated && !IsWayland() {
         if let area = usable { ConstrainFrame(requested, minWidth, minHeight, positionSet, area) }
       }

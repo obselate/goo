@@ -18,6 +18,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
     if hideReleasePending { ReleaseHiddenResources() }
     if hidden || hideReleasePending { return }
+    if host is SdlHost && host.IsLayerWindow && !host.WaylandVulkanFrameReady() { return }
     if let activeRuntime = runtime {
       if activeRuntime.DeviceLost {
         if !VulkanDeviceRecoveryCoordinator.Recover(VkConstants.VK_ERROR_DEVICE_LOST) {

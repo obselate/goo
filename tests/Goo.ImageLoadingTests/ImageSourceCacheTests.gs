@@ -55,6 +55,63 @@ class ImageSourceCacheTests : IDisposable {
         Assert.False(decoded.IsValid)
     }
 
+    @Fact
+    async func LossyWebpLoadsFromAPathByContent() {
+        let bytes = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Assets", "local-lossy.webp"))
+        using let cache = ImageSourceCache()
+        using let source = await cache.LoadAsync(Write("webp-without-extension", bytes))
+        Assert.Equal((4, 2), (source.Width, source.Height))
+        using let lease = source.Acquire()
+        let pixels = lease.Result()!!.Pixels()!!
+        Assert.InRange(int32(pixels[0]), 217, 223)
+        Assert.InRange(int32(pixels[1]), 57, 64)
+        Assert.InRange(int32(pixels[2]), 27, 33)
+        Assert.Equal(255, int32(pixels[3]))
+    }
+
+    @Fact
+    func LosslessWebpPreservesPremultipliedPixels() {
+        using let stream = File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Assets", "local-lossless-alpha.webp"))
+        using let source = ImageSource.Decode(stream)
+        Assert.Equal((4, 2), (source.Width, source.Height))
+        using let lease = source.Acquire()
+        Assert.Equal([]uint8{
+            100, 50, 25, 128, 0, 100, 200, 255, 100, 50, 25, 128, 0, 100, 200, 255,
+            100, 50, 25, 128, 0, 100, 200, 255, 100, 50, 25, 128, 0, 100, 200, 255
+        }, lease.Result()!!.Pixels())
+        Assert.True(stream.CanRead)
+    }
+
+    @Fact
+    func WebpThumbnailFromMemoryAppliesDecodeLimits() {
+        let bytes = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Assets", "local-lossless-alpha.webp"))
+        let limits = ImageDecodeLimits{MaxDecodedBytes: 8}
+        using let source = ImageSource.LoadThumbnail(bytes, 2, 2, limits, CancellationToken.None)
+        Assert.Equal((2, 1), (source.Width, source.Height))
+        using let lease = source.Acquire()
+        Assert.Equal([]uint8{50, 75, 112, 192, 50, 75, 112, 192}, lease.Result()!!.Pixels())
+        let error = Assert.Throws[ImageLimitException](() -> ImageSource.Decode(bytes, limits, CancellationToken.None))
+        Assert.Equal((4, 2), (error.Width, error.Height))
+    }
+
+    @Fact
+    func AnimatedWebpPlacesOnlyTheFirstFrameOnTheCanvas() {
+        let path = Path.Combine(AppContext.BaseDirectory, "Assets", "local-animated.webp")
+        using let source = ImageSource.LoadThumbnail(path, 4, 2)
+        Assert.Equal((4, 2), (source.Width, source.Height))
+        using let lease = source.Acquire()
+        Assert.Equal([]uint8{
+            0, 0, 0, 0, 0, 0, 0, 0, 100, 50, 25, 128, 100, 50, 25, 128,
+            0, 0, 0, 0, 0, 0, 0, 0, 100, 50, 25, 128, 100, 50, 25, 128
+        }, lease.Result()!!.Pixels())
+    }
+
+    @Fact
+    func WebpRejectsTruncatedChunks() {
+        let bytes = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Assets", "local-lossless-alpha.webp"))
+        Assert.Throws[InvalidDataException](() -> ImageSource.Decode(bytes[.. ^2]))
+    }
+
     @Theory
     @InlineData("local-rgb.jpg")
     @InlineData("local-transparent.gif")
@@ -355,6 +412,16 @@ class ImageSourceCacheTests : IDisposable {
         Assert.Equal("Encoded image exceeds 32 bytes", error.Message)
         Assert.Equal(int64(readBytes), stream.Position)
         Assert.True(stream.CanRead)
+    }
+
+    @Fact
+    func CopyPixelsPreservesPremultipliedRgba() {
+        let pixels = []uint8{20, 40, 80, 255, 100, 50, 25, 128}
+        using let source = ImageSource(2, 1, pixels)
+        let destination = [8]uint8
+        source.CopyPixels(Span[uint8](destination))
+        Assert.Equal[uint8](pixels, destination)
+        Assert.Throws[ArgumentException](() -> source.CopyPixels(Span[uint8]([7]uint8)))
     }
 
     @Fact

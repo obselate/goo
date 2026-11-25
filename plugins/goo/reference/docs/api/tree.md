@@ -969,6 +969,12 @@ Creates an already-completed binding that retains this source until release.
 
 Returns: The completed binding for this source.
 
+### `CopyPixels(System.Span{System.Byte})`
+
+Copies Width times Height times four bytes of row-major premultiplied RGBA pixels. The copy is synchronous and can run outside the UI thread.
+
+- `destination`: The buffer to receive the pixels. Extra bytes are left unchanged.
+
 ### `Decode(System.IO.Stream)`
 
 Decodes from the stream's current position and leaves the stream open. Uses the same limits and synchronous decoding as the encoded-byte overload.
@@ -983,7 +989,7 @@ Decodes a stream with cancellation between reads and during validation. Leaves t
 
 ### `Decode(System.ReadOnlyMemory{System.Byte})`
 
-Decodes PNG, JPEG, or the first GIF frame into an owned premultiplied RGBA source. PNG and JPEG EXIF orientation is applied. Color-profile metadata is not converted. The default ImageDecodeLimits apply. An image that exceeds a limit throws ImageLimitException. Decoding is synchronous. Call from a worker when loading outside the UI thread.
+Decodes PNG, JPEG, or the first frame of GIF or WebP into an owned premultiplied RGBA source. PNG and JPEG EXIF orientation is applied. Color-profile metadata is not converted. The default ImageDecodeLimits apply. An image that exceeds a limit throws ImageLimitException. Decoding is synchronous. Call from a worker when loading outside the UI thread.
 
 ### `Decode(System.ReadOnlyMemory{System.Byte},ImageDecodeLimits,System.Threading.CancellationToken)`
 
@@ -1027,7 +1033,7 @@ Decodes a bounded thumbnail with cancellation and the default limits. Leaves the
 
 ### `LoadThumbnail(System.ReadOnlyMemory{System.Byte},int32,int32)`
 
-Decodes a bounded thumbnail from PNG, JPEG, or the first GIF frame. Applies EXIF orientation and never upscales the image.
+Decodes a bounded thumbnail from PNG, JPEG, or the first frame of GIF or WebP. Applies EXIF orientation and never upscales the image.
 
 ### `LoadThumbnail(System.ReadOnlyMemory{System.Byte},int32,int32,ImageDecodeLimits,System.Threading.CancellationToken)`
 
@@ -1039,7 +1045,7 @@ Decodes a bounded thumbnail with cancellation and the default limits.
 
 ### `LoadThumbnail(string,int32,int32)`
 
-Loads a local PNG, JPEG, or first GIF frame as an owned bounded thumbnail. The image applies EXIF orientation, keeps its displayed aspect ratio, never grows, and retains only reduced pixels. This synchronous operation belongs on a worker outside the UI thread.
+Loads a local PNG, JPEG, or the first frame of GIF or WebP as an owned bounded thumbnail. The image applies EXIF orientation, keeps its displayed aspect ratio, never grows, and retains only reduced pixels. This synchronous operation belongs on a worker outside the UI thread.
 
 ### `LoadThumbnail(string,int32,int32,ImageDecodeLimits,System.Threading.CancellationToken)`
 
@@ -1079,7 +1085,7 @@ Gets this immutable source's pixel width.
 ## `ImageSourceCache`
 
 
-Loads local PNG, JPEG, and static GIF assets outside painting and shares immutable decoded pixels. Each result is an independently disposable owner. Mounted leases survive both result and cache disposal. Cache-only entries can be evicted in least-recently-used order. A later load decodes an evicted path again and can read changed file content.
+Loads local PNG, JPEG, GIF, and WebP assets outside painting and shares immutable decoded pixels. Each result is an independently disposable owner. Mounted leases survive both result and cache disposal. Cache-only entries can be evicted in least-recently-used order. A later load decodes an evicted path again and can read changed file content.
 
 ### `new(int32,int32,ImageDecodeLimits)`
 
@@ -1091,11 +1097,11 @@ Cancels queued/in-flight loads and releases cached owners. Existing returned sou
 
 ### `LoadAsync(string)`
 
-Loads a local PNG, JPEG, or static GIF and returns an owned source for Image.Source. File, decoding, unsupported-format, and capacity errors fault the task.
+Loads a local raster image and returns an owned source for Image.Source. Only the first frame is loaded. File, decoding, unsupported-format, and capacity errors fault the task.
 
 ### `LoadAsync(string,System.Threading.CancellationToken)`
 
-Loads a local PNG, JPEG, or static GIF with cancellation before reading, during validation, and before publication. Cancellation affects only this caller. Concurrent loads serialize decoding and reuse completed paths; failed loads can be retried.
+Loads a local raster image with cancellation before reading, during validation, and before publication. Cancellation affects only this caller. Concurrent loads serialize decoding and reuse completed paths; failed loads can be retried.
 
 ## `ImageSourceLease`
 

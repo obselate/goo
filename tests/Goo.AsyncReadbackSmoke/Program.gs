@@ -480,7 +480,31 @@ let modes = []SmokeMode{
   SmokeMode("GOO_WINDOW_DISPLAY_SMOKE", "1", () -> WindowDisplaySmoke.Run()),
   SmokeMode("GOO_WINDOW_ACTIVATION_SMOKE", "1", () -> WindowActivationSmoke.Run()),
   SmokeMode("GOO_NATIVE_POPUP_SMOKE", "1", () -> PopupWindowSmoke.Run()),
-  SmokeMode("GOO_LAYER_WINDOW_CLOSE_SMOKE", "1", () -> LayerWindowCloseSmoke.Run()),
+  SmokeMode("GOO_LAYER_WINDOW_CLOSE_SMOKE", "1", () -> {
+    LayerStillImageSmoke.Run()
+    LayerWindowCloseSmoke.Run()
+    for script in []string{"test_layer_window_resize.py", "test_window_input_region.py", "test_layer_window_failure.py"} {
+      let usesSway = script == "test_window_input_region.py"
+      let info = ProcessStartInfo(usesSway ? "bash" : "python3")
+      if usesSway {
+        info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "with-headless-wayland.sh"))
+        info.ArgumentList.Add("python3")
+        info.Environment.Remove("GOO_HEADLESS_PRIVATE_BUS")
+        info.Environment["GOO_WAYLAND_COMPOSITOR"] = "sway"
+      }
+      info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, script))
+      info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "Goo.AsyncReadbackSmoke.dll"))
+      info.Environment.Remove("GOO_LAYER_WINDOW_CLOSE_SMOKE")
+      using let fixture = Process.Start(info)!!
+      fixture.WaitForExit()
+      Require(fixture.ExitCode == 0, "$script failed")
+    }
+  }),
+  SmokeMode("GOO_LAYER_WINDOW_RESIZE_SMOKE", "1", () -> LayerWindowCloseSmoke.RunResize()),
+  SmokeMode("GOO_WINDOW_INPUT_REGION_SMOKE", "1", () -> LayerWindowCloseSmoke.RunInputRegion()),
+  SmokeMode("GOO_LAYER_WINDOW_FAILURE_SMOKE", "", () -> LayerWindowCloseSmoke.RunFailure(
+    Environment.GetEnvironmentVariable("GOO_LAYER_WINDOW_FAILURE_SMOKE") == "protocol")),
+  SmokeMode("GOO_LAYER_STILL_IMAGE_SMOKE", "1", () -> LayerStillImageSmoke.Run()),
   SmokeMode("GOO_EMBEDDED_HOST_SMOKE", "1", () -> EmbeddedHostSmoke.Run()),
   SmokeMode("GOO_DIAGNOSTIC_CAPTURE_BUSY_SMOKE", "1", () -> DiagnosticCaptureFixture.Run()),
   SmokeMode("GOO_PROFILER_SMOKE", "1", () -> ProfilerSmoke.Run()),
