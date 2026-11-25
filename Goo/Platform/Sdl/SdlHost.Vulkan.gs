@@ -57,7 +57,7 @@ internal unsafe partial class SdlHost {
   internal func PrepareWaylandVulkanFrame() {
     layerWindow?.PreparePresent()
     if waylandVulkanFrame { PrepareWaylandVulkanFrameNative(windowHandle) }
-    inputRegion?.Apply(LogicalWidth, LogicalHeight, FramebufferWidth, FramebufferHeight)
+    inputRegion?.Apply(LogicalWidth, LogicalHeight, FramebufferWidth, FramebufferHeight, DisplayScale)
   }
 
   internal func FinishWaylandVulkanFrame(committed bool) {
