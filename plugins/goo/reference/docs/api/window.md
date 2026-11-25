@@ -1099,6 +1099,26 @@ Selects the output edges to which a layer-shell window is anchored.
 - `Left`
 - `Right`
 
+## `LayerWindowImage`
+
+
+Describes a still image for a Wayland layer window. Share the same instance across outputs.
+
+### `new(string,ImageFit)`
+
+Describes one image without opening the file. Create a new instance after replacing the file.
+
+- `path`: The local image path.
+- `fit`: The fit mode. The default is Cover.
+
+### `Fit`
+
+Gets the fit used to paint the image over the window background.
+
+### `Path`
+
+Gets the local PNG, JPEG, GIF or WebP path. Only the first frame is used.
+
 ## `LayerWindowKeyboardInteractivity`
 
 
@@ -1162,6 +1182,10 @@ Gets the compositor namespace. The default is goo.
 ### `Output`
 
 Gets the target display. Null lets the compositor choose.
+
+### `StillImage`
+
+Presents Window.LayerImage over Window.Background without drawing a Goo tree. Uses the normal Vulkan swapchain when direct Wayland presentation is unavailable. Do not set Window.Root in this mode.
 
 ### `Width`
 
@@ -2127,6 +2151,10 @@ Gets the latest native drop explanation, bounded to 1024 characters.
 ### `LastNativeTransferStatus`
 
 Gets the latest native drop capture status.
+
+### `LayerImage`
+
+Gets or sets the image for a layer window with LayerWindowOptions.StillImage enabled. A null or unreadable image shows only Background. Change this on the window owner thread.
 
 ### `LayerShell`
 

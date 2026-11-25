@@ -207,7 +207,10 @@ internal unsafe sealed class WaylandStillImage : IDisposable {
     if registry == nint(0) { return false }
     let onGlobal BackdropWaylandGlobal = Global
     let onRemove BackdropWaylandRemove = (_, _, _) -> {}
-    if !Listen(registry, []Delegate{onGlobal, onRemove}) || !Roundtrip() || dmabuf == nint(0)
+    delegates.Add(onGlobal)
+    delegates.Add(onRemove)
+    if !Listen(registry, []nint{Marshal.GetFunctionPointerForDelegate[BackdropWaylandGlobal](onGlobal),
+        Marshal.GetFunctionPointerForDelegate[BackdropWaylandRemove](onRemove)}) || !Roundtrip() || dmabuf == nint(0)
       || viewporter == nint(0) || shm == nint(0) || compositor == nint(0) || subcompositor == nint(0) { return false }
     var args = StillImageArguments{}
     child = Construct(compositor, 0u, ref args, surfaceType, wl_proxy_get_version(compositor))
@@ -225,7 +228,15 @@ internal unsafe sealed class WaylandStillImage : IDisposable {
     let onTranche WaylandLockEvent = (_, _) -> {}
     let onFormats WaylandStillFormats = TrancheFormats
     let onFlags BackdropWaylandCapabilities = (_, _, _) -> {}
-    if !Listen(feedback, []Delegate{onDone, onTable, onMainDevice, onTranche, onDevice, onFormats, onFlags})
+    delegates.AddRange([]Delegate{onDone, onTable, onMainDevice, onTranche, onDevice, onFormats, onFlags})
+    if !Listen(feedback, []nint{
+        Marshal.GetFunctionPointerForDelegate[WaylandLockEvent](onDone),
+        Marshal.GetFunctionPointerForDelegate[WaylandStillFormatTable](onTable),
+        Marshal.GetFunctionPointerForDelegate[WaylandStillFormats](onMainDevice),
+        Marshal.GetFunctionPointerForDelegate[WaylandLockEvent](onTranche),
+        Marshal.GetFunctionPointerForDelegate[WaylandStillFormats](onDevice),
+        Marshal.GetFunctionPointerForDelegate[WaylandStillFormats](onFormats),
+        Marshal.GetFunctionPointerForDelegate[BackdropWaylandCapabilities](onFlags)})
       || !Roundtrip() || !feedbackDone || formats.Count == 0 { return false }
     Destroy(feedback)
     feedback = nint(0)
@@ -312,12 +323,11 @@ internal unsafe sealed class WaylandStillImage : IDisposable {
     }
   }
 
-  private func Listen(proxy nint, callbacks []Delegate) bool {
+  private func Listen(proxy nint, callbacks []nint) bool {
     let listener = Marshal.AllocHGlobal(callbacks.Length * IntPtr.Size)
     listeners.Add(listener)
     for index in 0 ... callbacks.Length {
-      delegates.Add(callbacks[index])
-      Marshal.WriteIntPtr(listener, index * IntPtr.Size, Marshal.GetFunctionPointerForDelegate(callbacks[index]))
+      Marshal.WriteIntPtr(listener, index * IntPtr.Size, callbacks[index])
     }
     return WaylandBackdrop.wl_proxy_add_listener(proxy, listener, nint(0)) == 0
   }
@@ -355,8 +365,8 @@ internal unsafe sealed class WaylandStillImage : IDisposable {
     let onFailed WaylandLockEvent = (_, _) -> { bufferDone = true }
     let listener = Marshal.AllocHGlobal(2 * IntPtr.Size)
     try {
-      Marshal.WriteIntPtr(listener, Marshal.GetFunctionPointerForDelegate(onCreated))
-      Marshal.WriteIntPtr(listener, IntPtr.Size, Marshal.GetFunctionPointerForDelegate(onFailed))
+      Marshal.WriteIntPtr(listener, Marshal.GetFunctionPointerForDelegate[WaylandStillBufferCreated](onCreated))
+      Marshal.WriteIntPtr(listener, IntPtr.Size, Marshal.GetFunctionPointerForDelegate[WaylandLockEvent](onFailed))
       if WaylandBackdrop.wl_proxy_add_listener(parameters, listener, nint(0)) != 0 { return nint(0) }
       for index in 0 ... image.Planes.Length {
         let plane = image.Planes[index]
