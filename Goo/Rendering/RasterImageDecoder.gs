@@ -173,7 +173,7 @@ internal unsafe partial class RasterImageDecoder {
       }
     }
 
-    private func Resample(pixels ReadOnlySpan[uint8], sourceWidth int32, sourceHeight int32,
+    internal func Resample(pixels ReadOnlySpan[uint8], sourceWidth int32, sourceHeight int32,
       width int32, height int32, orientation int32, token CancellationToken) []uint8 {
         let resized = [width * height * 4]uint8
         let spans = [width * 4]int32

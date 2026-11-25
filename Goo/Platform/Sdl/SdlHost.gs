@@ -317,6 +317,35 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   internal func SetLayerGeometry(geometry LayerWindowOptions, holdForConfigure bool = false) ->
     layerWindow!!.SetGeometry(geometry, holdForConfigure)
 
+  internal prop PresentsStillImage bool { get -> layerWindow?.PresentsStillImage == true }
+
+  internal func SetStillImage(source LayerWindowImage?, background Color) bool {
+    let properties = SDL.GetWindowProperties(window)
+    let viewport = nint(SDL.GetPointerProperty(properties, "SDL.window.wayland.viewport", nil))
+    let alpha = if Transparent { background.A } else { 1.0F }
+    let pixel = (uint32(MathF.Round(alpha * 255.0F)) << 24)
+      | (uint32(MathF.Round(background.R * alpha * 255.0F)) << 16)
+      | (uint32(MathF.Round(background.G * alpha * 255.0F)) << 8)
+      | uint32(MathF.Round(background.B * alpha * 255.0F))
+    return layerWindow?.SetStillImage(this, viewport, source, pixel) == true
+  }
+
+  internal func StopStillImage() { layerWindow?.StopStillImage() }
+
+  internal func PresentStillImage() bool -> layerWindow?.PresentStillImage() == true
+
+  internal func StillImageScale(width int32, height int32, fit ImageFit) float64 {
+    if fit == ImageFit.None { return 1.0 }
+    var scale = 0.0
+    for display in GetDisplays() {
+      let density = Math.Max(1.0, display.ContentScale)
+      let x = display.Bounds.Width * density / width
+      let y = display.Bounds.Height * density / height
+      scale = Math.Max(scale, if fit == ImageFit.Contain { Math.Min(x, y) } else { Math.Max(x, y) })
+    }
+    return if scale > 0.0 { Math.Min(1.0, scale) } else { 1.0 }
+  }
+
   public func SetMinimumSize(width int32, height int32) {
     ThrowIfDisposed()
     if layerWindow != nil || lockWindow != nil { return }

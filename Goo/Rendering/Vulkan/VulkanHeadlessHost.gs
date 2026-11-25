@@ -7,6 +7,12 @@ import System.Runtime.InteropServices
 internal sealed class VulkanHeadlessHost : VulkanSurfaceHost {
     private var library nint
     private var loaderReferences int32
+    private let extensions []string
+
+    internal init(extensions ([]string)? = nil) {
+        this.extensions = extensions ?? []string{"VK_KHR_surface"}
+    }
+
     public prop LogicalWidth int32 {
         get -> 1
     }
@@ -72,7 +78,7 @@ internal sealed class VulkanHeadlessHost : VulkanSurfaceHost {
         }
     }
 
-    public func GetVulkanInstanceExtensions()[]string -> []string{"VK_KHR_surface"}
+    public func GetVulkanInstanceExtensions() []string -> extensions
 
     public func CreateVulkanSurface(instance nint, out surface uint64) bool {
         surface = 0uL

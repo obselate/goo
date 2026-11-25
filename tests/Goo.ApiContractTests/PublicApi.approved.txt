@@ -83,6 +83,7 @@ ctor|Goo.Images.ImageVariant|public|(path:System.String,pixelsPerUnit:System.Dou
 ctor|Goo.Image|public|()
 ctor|Goo.KeyBinding|public|(Key:Goo.Key,Modifiers:Goo.KeyModifiers,OnPress:System.Action?)
 ctor|Goo.KeyModifiers|public|()
+ctor|Goo.LayerWindowImage|public|(path:System.String,fit:Goo.ImageFit=Cover)
 ctor|Goo.LayerWindowOptions|public|()
 ctor|Goo.LayoutSize|public|(Width:System.Double,Height:System.Double)
 ctor|Goo.LayoutTransition|public|(DurationMs:System.Double,Easing:Goo.Easing)
@@ -2494,6 +2495,8 @@ property|Goo.KeyModifiers|PrimaryShift|Goo.KeyModifiers|static|get:public|index:
 property|Goo.KeyModifiers|Primary|Goo.KeyModifiers|static|get:public|index:()
 property|Goo.KeyModifiers|Shift|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.KeyModifiers|Super|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.LayerWindowImage|Fit|Goo.ImageFit|instance|get:public|index:()
+property|Goo.LayerWindowImage|Path|System.String|instance|get:public|index:()
 property|Goo.LayerWindowOptions|Anchors|Goo.LayerWindowAnchor|instance|get:public,init:public|index:()
 property|Goo.LayerWindowOptions|ExclusiveZone|System.Int32|instance|get:public,init:public|index:()
 property|Goo.LayerWindowOptions|Height|System.Int32|instance|get:public,init:public|index:()
@@ -2505,6 +2508,7 @@ property|Goo.LayerWindowOptions|MarginRight|System.Int32|instance|get:public,ini
 property|Goo.LayerWindowOptions|MarginTop|System.Int32|instance|get:public,init:public|index:()
 property|Goo.LayerWindowOptions|Namespace|System.String|instance|get:public,init:public|index:()
 property|Goo.LayerWindowOptions|Output|System.Nullable`1<Goo.WindowDisplayId>|instance|get:public,init:public|index:()
+property|Goo.LayerWindowOptions|StillImage|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.LayerWindowOptions|Width|System.Int32|instance|get:public,init:public|index:()
 property|Goo.LayoutContext|ChildCount|System.Int32|instance|get:public|index:()
 property|Goo.LayoutSize|Height|System.Double|instance|get:public,init:public|index:()
@@ -3131,6 +3135,7 @@ property|Goo.Window|LastAccessibilityError|System.Exception?|instance|get:public
 property|Goo.Window|LastNativeFileDropError|System.String?|instance|get:public|index:()
 property|Goo.Window|LastNativeTransferError|System.String|instance|get:public|index:()
 property|Goo.Window|LastNativeTransferStatus|Goo.DataTransferStatus|instance|get:public|index:()
+property|Goo.Window|LayerImage|Goo.LayerWindowImage?|instance|get:public,set:public|index:()
 property|Goo.Window|LayerShell|Goo.LayerWindowOptions?|instance|get:public,init:public|index:()
 property|Goo.Window|MacOSBackdrop|Goo.MacOSBackdropOptions|instance|get:public,set:public|index:()
 property|Goo.Window|MaxSize|Goo.LayoutSize|instance|get:public,set:public|index:()
@@ -3316,6 +3321,7 @@ type|Goo.KeyEvent|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.KeyModifiers|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.KeyModifiers>|generic:
 type|Goo.Key|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.LayerWindowAnchor|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.LayerWindowImage|class|public|base:System.Object|interfaces:|generic:
 type|Goo.LayerWindowKeyboardInteractivity|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.LayerWindowOptions|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.LayoutAlgorithm|interface|public|base:-|interfaces:|generic:

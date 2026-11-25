@@ -482,6 +482,7 @@ let modes = []SmokeMode{
   SmokeMode("GOO_NATIVE_POPUP_SMOKE", "1", () -> PopupWindowSmoke.Run()),
   SmokeMode("GOO_LAYER_WINDOW_CLOSE_SMOKE", "1", () -> {
     LayerWindowCloseSmoke.Run()
+    LayerStillImageSmoke.Run()
     for script in []string{"test_layer_window_resize.py", "test_layer_window_failure.py"} {
       let info = ProcessStartInfo("python3")
       info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, script))
@@ -495,6 +496,7 @@ let modes = []SmokeMode{
   SmokeMode("GOO_LAYER_WINDOW_RESIZE_SMOKE", "1", () -> LayerWindowCloseSmoke.RunResize()),
   SmokeMode("GOO_LAYER_WINDOW_FAILURE_SMOKE", "", () -> LayerWindowCloseSmoke.RunFailure(
     Environment.GetEnvironmentVariable("GOO_LAYER_WINDOW_FAILURE_SMOKE") == "protocol")),
+  SmokeMode("GOO_LAYER_STILL_IMAGE_SMOKE", "1", () -> LayerStillImageSmoke.Run()),
   SmokeMode("GOO_EMBEDDED_HOST_SMOKE", "1", () -> EmbeddedHostSmoke.Run()),
   SmokeMode("GOO_DIAGNOSTIC_CAPTURE_BUSY_SMOKE", "1", () -> DiagnosticCaptureFixture.Run()),
   SmokeMode("GOO_PROFILER_SMOKE", "1", () -> ProfilerSmoke.Run()),

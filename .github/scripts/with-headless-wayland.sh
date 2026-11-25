@@ -35,7 +35,18 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if [[ "${GOO_WAYLAND_COMPOSITOR:-}" != kwin ]] && command -v weston >/dev/null 2>&1; then
+if [[ "${GOO_WAYLAND_COMPOSITOR:-}" == sway ]]; then
+  export WAYLAND_DISPLAY=wayland-1
+  printf 'xwayland disable\nswaybg_command -\noutput HEADLESS-1 resolution %sx%s\n' \
+    "${GOO_HEADLESS_WIDTH:-1400}" "${GOO_HEADLESS_HEIGHT:-900}" >"$runtime_root/sway.conf"
+  export XDG_CONFIG_HOME="$runtime_root/config" XDG_CACHE_HOME="$runtime_root/cache" \
+    XDG_DATA_HOME="$runtime_root/data"
+  WLR_BACKENDS=headless WLR_LIBINPUT_NO_DEVICES=1 WLR_RENDERER="${WLR_RENDERER:-pixman}" \
+    setsid sway --unsupported-gpu --config "$runtime_root/sway.conf" >"$compositor_log" 2>&1 &
+  compositor_pid=$!
+  compositor_target=-$compositor_pid
+  printf '%s\n' "$compositor_pid" >"$runtime_root/pgid"
+elif [[ "${GOO_WAYLAND_COMPOSITOR:-}" != kwin ]] && command -v weston >/dev/null 2>&1; then
   weston --backend=headless-backend.so --renderer="${GOO_WESTON_RENDERER:-pixman}" \
     ${GOO_HEADLESS_WIDTH:+--width="$GOO_HEADLESS_WIDTH"} ${GOO_HEADLESS_HEIGHT:+--height="$GOO_HEADLESS_HEIGHT"} \
     --socket="$WAYLAND_DISPLAY" --idle-time=0 >"$compositor_log" 2>&1 &

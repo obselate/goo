@@ -61,6 +61,12 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   private var presentFrame nint
   private var bufferCommitPending bool
   private var framePending bool
+  private var still WaylandStillImage?
+  private var stillSource LayerWindowImage?
+  private var stillStorageAttached bool
+  private var configuredWidth int32
+  private var configuredHeight int32
+  internal prop PresentsStillImage bool { get -> still != nil }
   internal prop Presented bool { get; set; }
   internal prop Configured bool { get; private set; }
   internal prop Visible bool { get -> mapped && Configured }
@@ -195,7 +201,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     if !mapped { return }
     Pump()
     if !mapped { return }
-    if Presented {
+    if Presented && still == nil {
       DrainFrame()
       if !mapped { return }
     }
@@ -214,18 +220,59 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     mapped = false
     if Presented { Configured = false }
     Presented = false
+    still?.Invalidate()
     FinishPresent(false)
     Roundtrip(dispatchLayer: true)
   }
 
-  internal func PreparePresent() {
+  internal func SetStillImage(host SdlHost, viewport nint, source LayerWindowImage?, pixel uint32) bool {
+    still ??= WaylandStillImage.TryCreate(display, surface, viewport)
+    guard let presenter = still else { return false }
+    if !presenter.SetCanvas(pixel) { return false }
+    if Object.ReferenceEquals(source, stillSource) { return true }
+    if !(source?.TryAttach(host, presenter) ?? presenter.SetImage(nil)) { return false }
+    if stillStorageAttached { stillSource?.ReleaseNative() }
+    stillSource = source
+    stillStorageAttached = source?.NativeStorage != nil
+    return true
+  }
+
+  internal func StopStillImage() {
+    if still == nil { return }
+    FinishPresent(false)
+    bufferCommitPending = false
+    still?.Dispose()
+    still = nil
+    if stillStorageAttached { stillSource?.ReleaseNative() }
+    stillStorageAttached = false
+    stillSource = nil
+  }
+
+  internal func PresentStillImage() bool {
+    guard let presenter = still else { return false }
+    if !Visible || !FrameReady { return false }
+    let changed = presenter.NeedsCommit(configuredWidth, configuredHeight)
+    if configureAck == nil && !changed { return false }
+    PreparePresent(changed)
+    if changed {
+      presenter.PrepareCommit(configuredWidth, configuredHeight, stillSource?.Fit ?? ImageFit.Cover)
+      Presented = true
+    }
+    WaylandBackdrop.wl_proxy_marshal_array(surface, 6u, nil)
+    WaylandBackdrop.wl_display_flush(display)
+    return changed
+  }
+
+  internal func PreparePresent(requestFrame bool = true) {
     if let serial = configureAck {
       var arguments = LayerWaylandArguments{First: nint(serial)}
       MarshalRequest(layerSurface, 6u, ref arguments)
       configureAck = nil
     }
-    bufferCommitPending = true
-    presentFrame = RequestFrame(nint(0))
+    if requestFrame {
+      bufferCommitPending = true
+      presentFrame = RequestFrame(nint(0))
+    }
   }
 
   internal func FinishPresent(committed bool) {
@@ -296,8 +343,9 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
       if !mapped { return }
       let (serial, width, height) = configure
       configureAck = serial
-      resize(width == 0u ? Math.Max(1, geometry.Width) : checked(int32(width)),
-        height == 0u ? Math.Max(1, geometry.Height) : checked(int32(height)))
+      configuredWidth = width == 0u ? Math.Max(1, geometry.Width) : checked(int32(width))
+      configuredHeight = height == 0u ? Math.Max(1, geometry.Height) : checked(int32(height))
+      resize(configuredWidth, configuredHeight)
       Configured = true
       if resizeConfigureReceived { awaitingResizeConfigure = false }
     }
@@ -358,6 +406,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   public func Dispose() {
     if disposed { return }
     disposed = true
+    StopStillImage()
     FinishPresent(false)
     if layerSurface != nint(0) {
       WaylandBackdrop.wl_proxy_marshal_array(layerSurface, 7u, nil)

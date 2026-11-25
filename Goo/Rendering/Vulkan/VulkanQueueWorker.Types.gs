@@ -1,5 +1,6 @@
 package Goo
 
+import System
 import System.Threading
 import System.Diagnostics
 
@@ -62,8 +63,11 @@ internal unsafe sealed class VulkanQueueMailbox {
     }
   }
 
-  internal init(nativeHost VulkanSurfaceHost?) {
+  private let completed Action?
+
+  internal init(nativeHost VulkanSurfaceHost?, completed Action? = nil) {
     host = nativeHost
+    this.completed = completed
   }
 
   internal prop Phase int32{
@@ -80,7 +84,10 @@ internal unsafe sealed class VulkanQueueMailbox {
       || Phase == VulkanQueueMailboxPhase.CompletionWaitRunning
   }
 
-  internal func NotifyCompletion() { host?.Wake() }
+  internal func NotifyCompletion() {
+    host?.Wake()
+    completed?.Invoke()
+  }
 
   internal func PrepareSubmit(commandBuffer VkCommandBuffer, waitSemaphore VkSemaphore,
     signalSemaphore VkSemaphore) {
