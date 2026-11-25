@@ -1990,6 +1990,8 @@ public class LayerWindowCloseSmoke {
           var command = "set"
           while command != "quit" {
             let active = command == "xdg" ? background : window
+            let activeHost = command == "xdg" ? backgroundHost : layerHost
+            pumpUntil(() -> !active.QueueWorkPending && activeHost.WaylandVulkanFrameReady())
             let before = active.PresentationAcceptedIndexForTest
             let result = switch command {
               case "set": window.SetInputRegion(rectangles)
@@ -2012,7 +2014,7 @@ public class LayerWindowCloseSmoke {
             }
             if result != WindowOperationResult.Accepted { throw InvalidOperationException("Input region command failed: $command") }
             pumpUntil(() -> active.PresentationAcceptedIndexForTest > before
-              && (xdg ? !window.IsVisible && backgroundHost.WaylandVulkanFrameReady() : layerHost.WaylandVulkanFrameReady())
+              && !active.QueueWorkPending && activeHost.WaylandVulkanFrameReady() && (!xdg || !window.IsVisible)
               && (command != "resize" || window.NativeWidth == 200 && window.NativeHeight == 120)
               && (command != "scale" || window.PixelScale == 2.0))
             Console.WriteLine("ready $command")
