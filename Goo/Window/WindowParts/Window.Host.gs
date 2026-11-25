@@ -630,10 +630,11 @@ public partial class Window {
   // latch Pump into an unpaced, unrendered poll spin instead of a bounded
   // sleep. idleWaitMs() below is where their timing actually gets honored.
   private func hasDemand() bool -> motionPump.Active || resolver.Animating.Count > 0
-    || renderDirty && !memoryPressureWaiting || pendingRebuild != 0 || resolver.Scrollbars.HasPending
+    || !memoryPressureWaiting && (renderDirty || windowTarget?.NeedsRender == true) && !stillImageFallbackPreparing()
+    || pendingRebuild != 0 || resolver.Scrollbars.HasPending
     || pendingImageCompletion != 0 || pendingRetainedInvalidation != 0 || hasScrollDemand()
     || accessibility?.HasDemand == true || hasPostedActions() || MetricSubscriptions.HasDemand(this)
-    || windowTarget?.NeedsRender == true && !memoryPressureWaiting || windowTarget?.QueueWorkPending == true
+    || windowTarget?.QueueWorkPending == true
     || LayerShell?.StillImage == true && (host as SdlHost?)?.StillImagePending == true
     || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0
     || host?.IsClosing == true || nativeHidePending
@@ -670,8 +671,7 @@ public partial class Window {
     guard let native = host else {
       return false
     }
-    if (!IsVisible && !firstShowPending()) || !hasDemand() || windowTarget?.QueueWorkPending == true
-      || stillImageFallbackPreparing() {
+    if (!IsVisible && !firstShowPending()) || !hasDemand() || windowTarget?.QueueWorkPending == true {
       return false
     }
     if firstShowPending() { return true }
@@ -692,7 +692,7 @@ public partial class Window {
       return 1
     }
     let idle = idleWaitMs(nowTicks)
-    let demand = IsVisible && hasDemand() && !stillImageFallbackPreparing()
+    let demand = IsVisible && hasDemand()
     let timed = SchedulerTimedServiceDue(nowTicks)
     if timed {
       return 0
