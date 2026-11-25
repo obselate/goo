@@ -1,0 +1,1 @@
+- Fix missing SVG paths under animated ancestors and clipped gradient fills in transformed SVG groups.

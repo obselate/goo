@@ -109,8 +109,11 @@ internal partial class VulkanSceneCompiler {
           }
         return VulkanScenePathClipResult{}
       }
+      let coverage = node.BackgroundGradient != nil
+      ? unionVulkanSceneBounds(bounds, MappedPathBounds(closedBounds, mapping).Inflate(1.0F))
+      : bounds
       return PublishPathClip(parentChainId, parentDepth, stableId, contentKey, path,
-        bounds, mapping, ShapeFit.Fill, path.FillRule, transformIndex)
+        coverage, mapping, ShapeFit.Fill, path.FillRule, transformIndex)
     }
 
   private func ShapePaintMaskId(node Node) uint64 -> OwnerId(node) | ShapePaintMaskBit
