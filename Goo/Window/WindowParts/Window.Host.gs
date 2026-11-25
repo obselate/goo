@@ -572,7 +572,7 @@ public partial class Window {
             }
           }
         }
-        let frameNeeded = needsRenderFrame(resolver.VisualDirty)
+        let frameNeeded = !stillImageFallbackPreparing() && needsRenderFrame(resolver.VisualDirty)
         if allowFrame && frameNeeded && windowTarget != nil && windowTarget?.QueueWorkPending != true {
           FlushDeferredVirtualization()
           if !IsOpen || pendingLayerGeometry != nil || (native as SdlHost?)?.LayerResizePending == true {
@@ -645,12 +645,16 @@ public partial class Window {
 
   private func firstShowPending() bool -> (host as SdlHost?)?.FirstShowPending == true
 
+  private func stillImageFallbackPreparing() bool ->
+    layerImageFallback?.Preparing(layerImage, node) == true
+
   internal func NotifyStillImageReady() {
     Post(() -> requestRender())
     SdlRuntime.Wake()
   }
 
   internal func SchedulerHasImmediateService() bool -> callbackClosing || host?.HasPendingEvents == true || hasPostedActions()
+    || layerImageFallback != nil && pendingImageCompletion != 0
     || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0
     || host?.IsClosing == true
     || Application.HasPendingActivation
@@ -666,7 +670,8 @@ public partial class Window {
     guard let native = host else {
       return false
     }
-    if (!IsVisible && !firstShowPending()) || !hasDemand() || windowTarget?.QueueWorkPending == true {
+    if (!IsVisible && !firstShowPending()) || !hasDemand() || windowTarget?.QueueWorkPending == true
+      || stillImageFallbackPreparing() {
       return false
     }
     if firstShowPending() { return true }
@@ -687,7 +692,7 @@ public partial class Window {
       return 1
     }
     let idle = idleWaitMs(nowTicks)
-    let demand = IsVisible && hasDemand()
+    let demand = IsVisible && hasDemand() && !stillImageFallbackPreparing()
     let timed = SchedulerTimedServiceDue(nowTicks)
     if timed {
       return 0

@@ -212,7 +212,7 @@ public class LayerWindowImage {
   private func FailImport(presenter WaylandStillImage, cacheFailure bool = false) bool {
     if cacheFailure && storage == nil { failedRenderNode = presenter.RenderNode }
     if !importFailureReported {
-      Console.Error.WriteLine("Wayland still image '$path' cannot import DMA-BUFs from ${presenter.RenderNode}. Using the swapchain.")
+      Console.Error.WriteLine("Wayland still image '$path' cannot import DMA-BUFs from ${presenter.RenderNode}.")
       importFailureReported = true
     }
     ResetPreparation()
@@ -302,6 +302,10 @@ public class LayerWindowImage {
 internal sealed class LayerWindowImageFallback : Cell {
   private var image LayerWindowImage?
   private var source ImageSourceProvider?
+
+  internal func Preparing(value LayerWindowImage?, node Node?) bool ->
+    source != nil && Object.ReferenceEquals(value, image) && node != nil
+      && ImageLayouts.Binding(node)?.AcceptedComplete == false
 
   internal func SetImage(value LayerWindowImage?) {
     if Object.ReferenceEquals(image, value) { return }

@@ -69,9 +69,11 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   private var configuredWidth int32
   private var configuredHeight int32
   internal prop PresentsStillImage bool { get -> still != nil }
+  internal prop UsesStillImage bool { get -> options.StillImage }
   internal prop StillImagePreparationReady bool { get -> loadingImage?.PreparationReady == true }
   internal prop StillImagePending bool {
-    get -> still != nil && (configureAck != nil || still?.NeedsCommit(configuredWidth, configuredHeight) == true)
+    get -> still != nil && (Presented || loadingImage == nil)
+      && (configureAck != nil || still?.NeedsCommit(configuredWidth, configuredHeight) == true)
   }
   internal prop Presented bool { get; set; }
   internal prop Configured bool { get; private set; }
@@ -240,7 +242,11 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
       let result = requested.TryAttach(host, presenter, owner)
       loadingImage = result == nil ? requested : nil
       if result == nil { return true }
-      if result == false { return false }
+      if result == false {
+        if !Presented { return false }
+        if Object.ReferenceEquals(source, stillSource) { return true }
+        presenter.SetImage(nil)
+      }
     } else if stillSource != nil && !presenter.SetImage(nil) { return false }
     if !Object.ReferenceEquals(source, stillSource) { stillSource?.ReleaseNative(presenter) }
     stillSource = source
@@ -267,7 +273,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
 
   internal func PresentStillImage() bool {
     guard let presenter = still else { return false }
-    if !Visible || !FrameReady { return false }
+    if !Visible || !FrameReady || !Presented && loadingImage != nil { return false }
     let changed = presenter.NeedsCommit(configuredWidth, configuredHeight)
     if configureAck == nil && !changed { return false }
     PreparePresent(changed)

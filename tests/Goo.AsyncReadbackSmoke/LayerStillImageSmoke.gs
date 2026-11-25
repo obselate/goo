@@ -12,8 +12,15 @@ internal class LayerStillImageSmoke {
     @DllImport("libc", EntryPoint: "fcntl")
     private func DescriptorFlags(fd int32, command int32) int32;
 
+    @DllImport("libc", EntryPoint: "mkfifo")
+    private func MakeFifo(path string, mode uint32) int32;
+
+    @DllImport("libc", EntryPoint: "open")
+    private func OpenFifo(path string, flags int32) int32;
+
     internal func Run() {
       let path = Path.Combine(AppContext.BaseDirectory, "local-rgba.png")
+      VerifyFirstImage(path)
       let sharedImage = LayerWindowImage(path, ImageFit.Cover)
       let alternate = LayerWindowImage(path, ImageFit.Contain)
       let first = Open(sharedImage, 251, 143)
@@ -78,6 +85,46 @@ internal class LayerStillImageSmoke {
         if second.IsOpen { second.RequestClose() }
         Wait(first, second, () -> !first.IsOpen && !second.IsOpen)
       }
+    }
+
+    private func VerifyFirstImage(path string) {
+      let directory = Directory.CreateDirectory(Path.Combine(Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR")!!,
+        "goo-still-image-" + Guid.NewGuid().ToString("N")))
+      let fifo = Path.Combine(directory.FullName, "image")
+      try {
+        Require(MakeFifo(fifo, 0x180u) == 0, "Cannot create the image fixture stream")
+        let image = LayerWindowImage(fifo)
+        let window = Open(image, 251, 143)
+        var writer FileStream?
+        try {
+          Wait(window, window, () -> {
+            let fd = OpenFifo(fifo, 0x80801)
+            if fd < 0 { return false }
+            writer = FileStream(Microsoft.Win32.SafeHandles.SafeFileHandle(nint(fd), true), FileAccess.Write)
+            return true
+          })
+          Wait(window, window, () -> window.IsVisible)
+          let deadline = Environment.TickCount64 + 850L
+          Wait(window, window, () -> {
+            Require(!window.SdlHostForTest()!!.LayerPresentedForTest, "The window committed the canvas before the image")
+            return Environment.TickCount64 >= deadline
+          })
+          writer!!.Write(File.ReadAllBytes(path))
+          writer!!.Dispose()
+          if window.SdlHostForTest()!!.PresentsStillImage {
+            Wait(window, window, () -> window.SdlHostForTest()!!.LayerPresentedForTest)
+            Require(image.NativeStorage != nil, "The first DMA-BUF commit did not include the still image")
+          } else {
+            Wait(window, window, () -> window.PresentationAcceptedIndexForTest != 0uL)
+            Require(window.PresentationAcceptedIndexForTest == 1uL && window.CaptureTargetForTest()?.SceneImageCountForTest() == 1,
+              "The first swapchain frame did not include the still image")
+          }
+        } finally {
+          writer?.Dispose()
+          window.RequestClose()
+          Wait(window, window, () -> !window.IsOpen)
+        }
+      } finally { directory.Delete(true) }
     }
 
     private func Open(image LayerWindowImage, width int32, height int32) Window -> Window{
