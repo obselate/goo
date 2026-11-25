@@ -338,9 +338,11 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     if fit == ImageFit.None { return 1.0 }
     var scale = 0.0
     for display in GetDisplays() {
-      let density = Math.Max(1.0, display.ContentScale)
-      let x = display.Bounds.Width * density / width
-      let y = display.Bounds.Height * density / height
+      let mode = SDL.GetDesktopDisplayMode(display.Id.NativeValue)
+      if mode.IsNull { return 1.0 }
+      let density = float64(mode.PixelDensity)
+      let x = Math.Round(mode.W * density) / width
+      let y = Math.Round(mode.H * density) / height
       scale = Math.Max(scale, if fit == ImageFit.Contain { Math.Min(x, y) } else { Math.Max(x, y) })
     }
     return if scale > 0.0 { Math.Min(1.0, scale) } else { 1.0 }
