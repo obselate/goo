@@ -59,7 +59,8 @@ func VerifyTransformedSvg() {
     try {
         window.Open()
         for sample in 0 ... 3 {
-            WindowReadbackTestFixture.ForceRender(window, 0.05)
+            WindowReadbackTestFixture.ForceRender(window, 0.05,
+                timeoutSeconds: sample == 0 ? 10.0 : 2.0)
             let metrics = WindowReadbackTestFixture.Metrics(window)
             let frame = PrimitiveReadback(window, metrics)
             for column in 0 ... 3 {
