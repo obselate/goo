@@ -1,1 +1,0 @@
-- Add still-image Wayland layer windows. Outputs that share a `LayerWindowImage` use one DMA-BUF allocation when supported, with a Vulkan swapchain fallback.
