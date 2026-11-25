@@ -58,6 +58,7 @@ internal unsafe sealed class VulkanStillImage : IDisposable {
   private let buffer VulkanStillBuffer
   private var image VkImage
   private var memory VkDeviceMemory
+  private var staging VulkanBufferCreation
   private var initialized bool
   internal let Width int32
   internal let Height int32
@@ -76,8 +77,8 @@ internal unsafe sealed class VulkanStillImage : IDisposable {
     internal func Supports(runtime VulkanSharedLease) bool ->
       (runtime.Dispatch.ExternalMemoryKinds & DmaBuf) != 0u && runtime.Dispatch.ForeignQueueFamily
 
-    internal func TryCreate(source ImageSource, renderNode string, offered List[WaylandDmaFormat],
-      importBuffer Func[VulkanStillImage, bool]) VulkanStillImage? {
+    internal func TryImport(source ImageSource, renderNode string, offered List[WaylandDmaFormat],
+      ref nextCandidate int32) VulkanStillImage? {
       guard let runtime = VulkanSharedRuntime.TryAcquire() else { return nil }
       var keepLease = false
       var scratch nint
@@ -85,7 +86,9 @@ internal unsafe sealed class VulkanStillImage : IDisposable {
         if !Supports(runtime) || uint32(source.Width) > runtime.Facts.MaxImageDimension2D
           || uint32(source.Height) > runtime.Facts.MaxImageDimension2D { return nil }
         scratch = Marshal.AllocHGlobal(Unsafe.SizeOf[StillImageScratch]())
-        for candidate in offered {
+        while nextCandidate < offered.Count {
+          let candidate = offered[nextCandidate]
+          nextCandidate++
           let format = if candidate.FourCC == 0x34324241u { VkConstants.VK_FORMAT_R8G8B8A8_UNORM }
             else { VkConstants.VK_FORMAT_B8G8R8A8_UNORM }
           if !CanImport(runtime, format, candidate.Modifier, source.Width, source.Height, scratch) { continue }
@@ -94,11 +97,9 @@ internal unsafe sealed class VulkanStillImage : IDisposable {
           }
           let result = VulkanStillImage(runtime, source.Width, source.Height, candidate, buffer)
           try {
-            result.Create(source, format, scratch)
-            if importBuffer.Invoke(result) {
-              keepLease = true
-              return result
-            }
+            result.Import(format, scratch)
+            keepLease = true
+            return result
           } catch (_ ExternalException) {
           } finally {
             if !keepLease { result.Destroy() }
@@ -140,7 +141,7 @@ internal unsafe sealed class VulkanStillImage : IDisposable {
     }
   }
 
-  private func Create(source ImageSource, format VkFormat, scratch nint) {
+  private func Import(format VkFormat, scratch nint) {
     let native = runtime.Dispatch
     let device = runtime.Device
     var next = scratch
@@ -186,53 +187,54 @@ internal unsafe sealed class VulkanStillImage : IDisposable {
     fd.SetHandleAsInvalid()
     memory = allocated
     var binding = VkBindImageMemoryInfo{sType: VkConstants.VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO, image: image, memory: memory}
-    if Unsafe.Read[VkMemoryDedicatedAllocateInfo](*void(dedicated)).image != binding.image
-      || binding.memoryOffset != 0uL || memory == 0uL {
-      throw ExternalException("The still image requires a dedicated import")
-    }
+    if memory == 0uL { throw ExternalException("The still image requires a dedicated import") }
     let bind = Marshal.GetDelegateForFunctionPointer[StillBindImage](nint(native.vkBindImageMemory2))
+    staging = VulkanBufferFactory.CreateMapped(device, native, runtime.MemoryAllocator, nil, uint64(Width) * uint64(Height) * 4uL,
+      uint32(VkConstants.VK_BUFFER_USAGE_TRANSFER_SRC_BIT), VulkanMemoryPolicy(
+        uint32(VkConstants.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) | uint32(VkConstants.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+        uint32(VkConstants.VK_MEMORY_PROPERTY_HOST_CACHED_BIT)))
     Check(bind(device, 1u, ref binding), "Cannot bind the still-image DMA-BUF")
-    Upload(source, format, extent, scratch)
-    initialized = true
   }
 
   internal func Export() ExternalNativeHandle? -> initialized ? buffer.Export() : nil
 
-  private func Upload(source ImageSource, format VkFormat, extent VkExtent3D, scratch nint) {
+  internal func Upload(source ImageSource) bool {
+    let scratch = Marshal.AllocHGlobal(Unsafe.SizeOf[StillImageScratch]())
+    try {
+      let format = if Format.FourCC == 0x34324241u { VkConstants.VK_FORMAT_R8G8B8A8_UNORM }
+        else { VkConstants.VK_FORMAT_B8G8R8A8_UNORM }
+      UploadPixels(source, format, VkExtent3D{width: uint32(Width), height: uint32(Height), depth: 1u}, scratch)
+      initialized = true
+      return true
+    } catch (_ ExternalException) { return false }
+      catch (_ InvalidOperationException) { return false }
+      finally { Marshal.FreeHGlobal(scratch) }
+  }
+
+  private func UploadPixels(source ImageSource, format VkFormat, extent VkExtent3D, scratch nint) {
     guard let decoded = source.retainImage() else { throw ExternalException("Still image is disposed") }
     try {
       guard let pixels = decoded.Pixels() else { throw ExternalException("Still image has no pixels") }
       let dispatch = runtime.Dispatch
       let device = runtime.Device
-      let allocator = runtime.MemoryAllocator
-      let size = uint64(pixels.Length)
-      let staging = VulkanBufferFactory.CreateMapped(device, dispatch, allocator, nil, size,
-        uint32(VkConstants.VK_BUFFER_USAGE_TRANSFER_SRC_BIT), VulkanMemoryPolicy.HostVisibleCoherentCached)
-      try {
-        let target = Span[uint8](staging.Allocation.mapped, pixels.Length)
-        if format == VkConstants.VK_FORMAT_R8G8B8A8_UNORM {
-          ReadOnlySpan[uint8](pixels).CopyTo(target)
-        } else {
-          var index = 0
-          while index < pixels.Length {
-            target[index] = pixels[index + 2]
-            target[index + 1] = pixels[index + 1]
-            target[index + 2] = pixels[index]
-            target[index + 3] = pixels[index + 3]
-            index += 4
-          }
+      if pixels.Length != Width * Height * 4 { throw ExternalException("Still image has an invalid pixel length") }
+      let target = Span[uint8](staging.Allocation.mapped, pixels.Length)
+      if format == VkConstants.VK_FORMAT_R8G8B8A8_UNORM {
+        ReadOnlySpan[uint8](pixels).CopyTo(target)
+      } else {
+        var index = 0
+        while index < pixels.Length {
+          target[index] = pixels[index + 2]
+          target[index + 1] = pixels[index + 1]
+          target[index + 2] = pixels[index]
+          target[index + 3] = pixels[index + 3]
+          index += 4
         }
-        Check(allocator.FlushBeforeSubmit(staging.Allocation, 0uL, size), "Cannot flush still image upload")
-        let commands = VulkanCommandFactory.CreatePoolAndAllocate(device, dispatch, nil, runtime.GraphicsFamilyIndex,
-          uint32(VkConstants.VK_COMMAND_POOL_CREATE_TRANSIENT_BIT), VkConstants.VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1u, *VkCommandBuffer(scratch))
-        try { SubmitUpload(Marshal.ReadIntPtr(scratch), staging.Buffer, extent, scratch) }
-        finally {
-          DestroyHandle(nint(dispatch.vkDestroyCommandPool), commands.Pool)
-        }
-      } finally {
-        DestroyHandle(nint(dispatch.vkDestroyBuffer), staging.Buffer)
-        allocator.Release(staging.Allocation)
       }
+      let commands = VulkanCommandFactory.CreatePoolAndAllocate(device, dispatch, nil, runtime.GraphicsFamilyIndex,
+        uint32(VkConstants.VK_COMMAND_POOL_CREATE_TRANSIENT_BIT), VkConstants.VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1u, *VkCommandBuffer(scratch))
+      try { SubmitUpload(Marshal.ReadIntPtr(scratch), staging.Buffer, extent, scratch) }
+      finally { DestroyHandle(nint(dispatch.vkDestroyCommandPool), commands.Pool) }
     } finally { decoded.Release() }
   }
 
@@ -266,16 +268,24 @@ internal unsafe sealed class VulkanStillImage : IDisposable {
     pipelineBarrier(command, ref dependency)
     let end = Marshal.GetDelegateForFunctionPointer[StillEndCommands](nint(dispatch.vkEndCommandBuffer))
     Check(end(command), "Cannot end still image upload")
-    using let finished = AutoResetEvent(false)
-    let mailbox = VulkanQueueMailbox(nil, () -> { finished.Set() })
+    let mailbox = VulkanQueueMailbox(nil)
     mailbox.PrepareSubmit(command, 0uL, 0uL)
-    mailbox.BeginSubmit()
-    if !runtime.EnqueueGraphicsSubmission(mailbox, (serial uint64) -> {}) {
-      throw ExternalException("Vulkan upload queue is unavailable")
+    if !mailbox.BeginSubmit() { throw InvalidOperationException("Still-image upload mailbox was not idle") }
+    var enqueued = false
+    try {
+      while !enqueued {
+        enqueued = runtime.EnqueueGraphicsSubmission(mailbox, (serial uint64) -> {})
+        if !enqueued { Thread.Sleep(1) }
+      }
+    } finally {
+      if !enqueued { mailbox.CancelSubmit() }
     }
-    finished.WaitOne()
-    Check(mailbox.SubmitResult, "Cannot submit still image upload")
-    Check(runtime.WaitGraphicsSubmission(mailbox.SubmitSerial, VkConstants.VK_WHOLE_SIZE), "Still image upload did not complete")
+    var submitted VkResult
+    while !mailbox.TakeSubmitCompletion(out submitted) { Thread.Sleep(1) }
+    mailbox.ResetSubmitCompletion()
+    if submitted == VkConstants.VK_ERROR_DEVICE_LOST { runtime.MarkDeviceLost() }
+    Check(submitted, "Cannot submit still image upload")
+    Check(runtime.WaitGraphicsSubmission(mailbox.SubmitSerial, uint64.MaxValue), "Still image upload did not complete")
   }
 
   private func DestroyHandle(address nint, handle uint64) {
@@ -284,7 +294,15 @@ internal unsafe sealed class VulkanStillImage : IDisposable {
     destroy(runtime.Device, handle, nint(0))
   }
 
+  internal func ReleaseStaging() {
+    if staging.Buffer == 0uL { return }
+    DestroyHandle(nint(runtime.Dispatch.vkDestroyBuffer), staging.Buffer)
+    runtime.MemoryAllocator.Release(staging.Allocation)
+    staging = VulkanBufferCreation{}
+  }
+
   private func Destroy() {
+    ReleaseStaging()
     let dispatch = runtime.Dispatch
     DestroyHandle(nint(dispatch.vkDestroyImage), image)
     DestroyHandle(nint(dispatch.vkFreeMemory), memory)

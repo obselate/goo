@@ -1117,7 +1117,7 @@ Gets the fit used to paint the image over the window background.
 
 ### `Path`
 
-Gets the local PNG, JPEG, GIF or WebP path. Only the first frame is used.
+Gets the local PNG, JPEG, GIF or WebP path. Only the first frame is used. Limits: 64 MiB encoded, 144 MiB decoded RGBA, and 8192 pixels per side or the device's lower limit.
 
 ## `LayerWindowKeyboardInteractivity`
 

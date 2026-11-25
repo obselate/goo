@@ -20,6 +20,8 @@ internal struct LayerWaylandArguments {
   internal var Second nint
   internal var Third nint
   internal var Fourth nint
+  internal var Fifth nint
+  internal var Sixth nint
 }
 
 internal unsafe sealed class WaylandLayerWindow : IDisposable {
@@ -63,9 +65,11 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   private var framePending bool
   private var still WaylandStillImage?
   private var stillSource LayerWindowImage?
+  private var loadingImage LayerWindowImage?
   private var configuredWidth int32
   private var configuredHeight int32
   internal prop PresentsStillImage bool { get -> still != nil }
+  internal prop StillImagePreparationReady bool { get -> loadingImage?.PreparationReady == true }
   internal prop StillImagePending bool {
     get -> still != nil && (configureAck != nil || still?.NeedsCommit(configuredWidth, configuredHeight) == true)
   }
@@ -227,16 +231,27 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     Roundtrip(dispatchLayer: true)
   }
 
-  internal func SetStillImage(host SdlHost, viewport nint, source LayerWindowImage?, pixel uint32) bool {
+  internal func SetStillImage(host SdlHost, viewport nint, source LayerWindowImage?, pixel uint32, owner Window) bool {
     still ??= WaylandStillImage.TryCreate(display, surface, viewport)
     guard let presenter = still else { return false }
-    if !presenter.SetCanvas(pixel) { return false }
-    if Object.ReferenceEquals(source, stillSource) {
-      return source?.NativeStorage == nil || source?.TryAttach(host, presenter) == true
-    }
-    if !(source?.TryAttach(host, presenter) ?? presenter.SetImage(nil)) { return false }
-    stillSource?.ReleaseNative(presenter)
+    if !presenter.SetCanvas(pixel) { return !FinishStillImagePreparation() }
+    if !Object.ReferenceEquals(loadingImage, source) && !FinishStillImagePreparation() { return true }
+    if let requested = source {
+      let result = requested.TryAttach(host, presenter, owner)
+      loadingImage = result == nil ? requested : nil
+      if result == nil { return true }
+      if result == false { return false }
+    } else if stillSource != nil && !presenter.SetImage(nil) { return false }
+    if !Object.ReferenceEquals(source, stillSource) { stillSource?.ReleaseNative(presenter) }
     stillSource = source
+    return true
+  }
+
+  internal func FinishStillImagePreparation() bool {
+    if let presenter = still {
+      if loadingImage?.FinishPreparation(presenter) == false { return false }
+    }
+    loadingImage = nil
     return true
   }
 
@@ -444,46 +459,46 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     private func wl_display_get_protocol_error(display nint, out protocolInterface nint, out objectId uint32) uint32;
 
     private func CreateInterfaces(library nint) {
-      let manager = Marshal.AllocHGlobal(Marshal.SizeOf[BackdropWaylandInterface]())
-      let layerSurface = Marshal.AllocHGlobal(Marshal.SizeOf[BackdropWaylandInterface]())
-      let messageSize = Marshal.SizeOf[BackdropWaylandMessage]()
-      let managerMethods = Marshal.AllocHGlobal(messageSize * 2)
-      let types = Marshal.AllocHGlobal(IntPtr.Size * 5)
-      Marshal.WriteIntPtr(types, layerSurface)
-      Marshal.WriteIntPtr(types, IntPtr.Size, NativeLibrary.GetExport(library, "wl_surface_interface"))
-      Marshal.WriteIntPtr(types, IntPtr.Size * 2, NativeLibrary.GetExport(library, "wl_output_interface"))
-      Marshal.WriteIntPtr(types, IntPtr.Size * 3, nint(0))
-      Marshal.WriteIntPtr(types, IntPtr.Size * 4, nint(0))
-      WriteMessage(managerMethods, "get_layer_surface", "no?ous", types)
-      WriteMessage(managerMethods + nint(messageSize), "destroy", "3", nint(0))
-      let methods = Marshal.AllocHGlobal(messageSize * 9)
-      WriteMessage(methods, "set_size", "uu", nint(0))
-      WriteMessage(methods + nint(messageSize), "set_anchor", "u", nint(0))
-      WriteMessage(methods + nint(messageSize * 2), "set_exclusive_zone", "i", nint(0))
-      WriteMessage(methods + nint(messageSize * 3), "set_margin", "iiii", nint(0))
-      WriteMessage(methods + nint(messageSize * 4), "set_keyboard_interactivity", "u", nint(0))
-      WriteMessage(methods + nint(messageSize * 5), "get_popup", "o", nint(0))
-      WriteMessage(methods + nint(messageSize * 6), "ack_configure", "u", nint(0))
-      WriteMessage(methods + nint(messageSize * 7), "destroy", "", nint(0))
-      WriteMessage(methods + nint(messageSize * 8), "set_layer", "2u", nint(0))
-      let events = Marshal.AllocHGlobal(messageSize * 2)
-      WriteMessage(events, "configure", "uuu", nint(0))
-      WriteMessage(events + nint(messageSize), "closed", "", nint(0))
-      Marshal.StructureToPtr[BackdropWaylandInterface](BackdropWaylandInterface{
-        Name: Marshal.StringToHGlobalAnsi("zwlr_layer_shell_v1"), Version: 4, MethodCount: 2, Methods: managerMethods,
-      }, manager, false)
-      Marshal.StructureToPtr[BackdropWaylandInterface](BackdropWaylandInterface{
-        Name: Marshal.StringToHGlobalAnsi("zwlr_layer_surface_v1"), Version: 4, MethodCount: 9, Methods: methods,
-        EventCount: 2, Events: events,
-      }, layerSurface, false)
+      let manager = AllocateInterface()
+      let layerSurface = AllocateInterface()
+      WriteInterface(manager, "zwlr_layer_shell_v1", 4, [](string, string, []nint){
+        ("get_layer_surface", "no?ous", []nint{layerSurface, NativeLibrary.GetExport(library, "wl_surface_interface"),
+          NativeLibrary.GetExport(library, "wl_output_interface"), nint(0), nint(0)}),
+        ("destroy", "3", []nint{})}, [](string, string, []nint){})
+      WriteInterface(layerSurface, "zwlr_layer_surface_v1", 4, [](string, string, []nint){
+        ("set_size", "uu", []nint{}), ("set_anchor", "u", []nint{}), ("set_exclusive_zone", "i", []nint{}),
+        ("set_margin", "iiii", []nint{}), ("set_keyboard_interactivity", "u", []nint{}), ("get_popup", "o", []nint{}),
+        ("ack_configure", "u", []nint{}), ("destroy", "", []nint{}), ("set_layer", "2u", []nint{})},
+        [](string, string, []nint){("configure", "uuu", []nint{}), ("closed", "", []nint{})})
       managerInterface = manager
       surfaceInterface = layerSurface
     }
 
-    private func WriteMessage(address nint, name string, signature string, types nint) {
-      Marshal.StructureToPtr[BackdropWaylandMessage](BackdropWaylandMessage{
-        Name: Marshal.StringToHGlobalAnsi(name), Signature: Marshal.StringToHGlobalAnsi(signature), Types: types,
-      }, address, false)
+    internal func AllocateInterface() nint -> Marshal.AllocHGlobal(Marshal.SizeOf[BackdropWaylandInterface]())
+
+    internal func WriteInterface(address nint, name string, version int32,
+      methods [](string, string, []nint), events [](string, string, []nint)) {
+      Marshal.StructureToPtr[BackdropWaylandInterface](BackdropWaylandInterface{
+        Name: Marshal.StringToHGlobalAnsi(name), Version: version, MethodCount: methods.Length, Methods: WriteMessages(methods),
+        EventCount: events.Length, Events: WriteMessages(events)}, address, false)
+    }
+
+    private func WriteMessages(messages [](string, string, []nint)) nint {
+      if messages.Length == 0 { return nint(0) }
+      let size = Marshal.SizeOf[BackdropWaylandMessage]()
+      let address = Marshal.AllocHGlobal(size * messages.Length)
+      for index in 0 ... messages.Length {
+        let (name, signature, types) = messages[index]
+        var nativeTypes nint
+        if types.Length != 0 {
+          nativeTypes = Marshal.AllocHGlobal(IntPtr.Size * types.Length)
+          Marshal.Copy(types, 0, nativeTypes, types.Length)
+        }
+        Marshal.StructureToPtr[BackdropWaylandMessage](BackdropWaylandMessage{
+          Name: Marshal.StringToHGlobalAnsi(name), Signature: Marshal.StringToHGlobalAnsi(signature), Types: nativeTypes},
+          address + nint(index * size), false)
+      }
+      return address
     }
   }
 

@@ -3322,7 +3322,7 @@ type|Goo.KeyEvent|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.KeyModifiers|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.KeyModifiers>|generic:
 type|Goo.Key|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.LayerWindowAnchor|enum|public|base:System.Enum|interfaces:|generic:
-type|Goo.LayerWindowImage|class|public|base:System.Object|interfaces:|generic:
+type|Goo.LayerWindowImage|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.LayerWindowKeyboardInteractivity|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.LayerWindowOptions|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.LayoutAlgorithm|interface|public|base:-|interfaces:|generic:

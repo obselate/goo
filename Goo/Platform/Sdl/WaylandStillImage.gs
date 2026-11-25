@@ -6,16 +6,6 @@ import System.IO
 import System.Runtime.InteropServices
 
 @StructLayout(LayoutKind.Sequential)
-internal struct StillImageArguments {
-  var First nint
-  var Second nint
-  var Third nint
-  var Fourth nint
-  var Fifth nint
-  var Sixth nint
-}
-
-@StructLayout(LayoutKind.Sequential)
 internal struct WaylandArray {
   var Size nuint
   var Capacity nuint
@@ -114,67 +104,40 @@ internal unsafe sealed class WaylandStillImage : IDisposable {
     private let library nint = NativeLibrary.Load("libwayland-client.so.0")
     private let surfaceType nint = Core("wl_surface")
     private let bufferType nint = Core("wl_buffer")
-    private let dmaType nint = AllocateInterface()
-    private let paramsType nint = AllocateInterface()
-    private let feedbackType nint = AllocateInterface()
-    private let viewporterType nint = AllocateInterface()
-    private let viewportType nint = AllocateInterface()
+    private let dmaType nint = WaylandLayerWindow.AllocateInterface()
+    private let paramsType nint = WaylandLayerWindow.AllocateInterface()
+    private let feedbackType nint = WaylandLayerWindow.AllocateInterface()
+    private let viewporterType nint = WaylandLayerWindow.AllocateInterface()
+    private let viewportType nint = WaylandLayerWindow.AllocateInterface()
     private let protocols bool = InitializeProtocols()
 
     private func InitializeProtocols() bool {
-      WriteInterface(dmaType, "zwp_linux_dmabuf_v1", 4, [](string, string, []nint){
+      WaylandLayerWindow.WriteInterface(dmaType, "zwp_linux_dmabuf_v1", 4, [](string, string, []nint){
         ("destroy", "", []nint{}), ("create_params", "n", []nint{paramsType}),
         ("get_default_feedback", "4n", []nint{feedbackType}),
         ("get_surface_feedback", "4no", []nint{feedbackType, surfaceType})}, [](string, string, []nint){
         ("format", "u", []nint{}), ("modifier", "3uuu", []nint{})})
-      WriteInterface(paramsType, "zwp_linux_buffer_params_v1", 4, [](string, string, []nint){
+      WaylandLayerWindow.WriteInterface(paramsType, "zwp_linux_buffer_params_v1", 4, [](string, string, []nint){
         ("destroy", "", []nint{}), ("add", "huuuuu", []nint{}), ("create", "iiuu", []nint{}),
         ("create_immed", "2niiuu", []nint{bufferType, nint(0), nint(0), nint(0), nint(0)})},
         [](string, string, []nint){("created", "n", []nint{bufferType}), ("failed", "", []nint{})})
-      WriteInterface(feedbackType, "zwp_linux_dmabuf_feedback_v1", 4, [](string, string, []nint){("destroy", "", []nint{})},
+      WaylandLayerWindow.WriteInterface(feedbackType, "zwp_linux_dmabuf_feedback_v1", 4, [](string, string, []nint){("destroy", "", []nint{})},
         [](string, string, []nint){("done", "", []nint{}), ("format_table", "hu", []nint{}), ("main_device", "a", []nint{}),
         ("tranche_done", "", []nint{}), ("tranche_target_device", "a", []nint{}), ("tranche_formats", "a", []nint{}),
         ("tranche_flags", "u", []nint{})})
-      WriteInterface(viewporterType, "wp_viewporter", 1, [](string, string, []nint){
+      WaylandLayerWindow.WriteInterface(viewporterType, "wp_viewporter", 1, [](string, string, []nint){
         ("destroy", "", []nint{}), ("get_viewport", "no", []nint{viewportType, surfaceType})}, [](string, string, []nint){})
-      WriteInterface(viewportType, "wp_viewport", 1, [](string, string, []nint){
+      WaylandLayerWindow.WriteInterface(viewportType, "wp_viewport", 1, [](string, string, []nint){
         ("destroy", "", []nint{}), ("set_source", "ffff", []nint{}), ("set_destination", "ii", []nint{})}, [](string, string, []nint){})
       return true
     }
 
     private func Core(name string) nint -> NativeLibrary.GetExport(library, name + "_interface")
 
-    private func AllocateInterface() nint -> Marshal.AllocHGlobal(Marshal.SizeOf[BackdropWaylandInterface]())
-
-    private func WriteInterface(address nint, name string, version int32,
-      methods [](string, string, []nint), events [](string, string, []nint)) {
-      Marshal.StructureToPtr[BackdropWaylandInterface](BackdropWaylandInterface{
-        Name: Marshal.StringToHGlobalAnsi(name), Version: version, MethodCount: methods.Length, Methods: WriteMessages(methods),
-        EventCount: events.Length, Events: WriteMessages(events)}, address, false)
-    }
-
-    private func WriteMessages(messages [](string, string, []nint)) nint {
-      if messages.Length == 0 { return nint(0) }
-      let size = Marshal.SizeOf[BackdropWaylandMessage]()
-      let address = Marshal.AllocHGlobal(size * messages.Length)
-      for index in 0 ... messages.Length {
-        let (name, signature, types) = messages[index]
-        var nativeTypes nint
-        if types.Length != 0 {
-          nativeTypes = Marshal.AllocHGlobal(IntPtr.Size * types.Length)
-          Marshal.Copy(types, 0, nativeTypes, types.Length)
-        }
-        Marshal.StructureToPtr[BackdropWaylandMessage](BackdropWaylandMessage{
-          Name: Marshal.StringToHGlobalAnsi(name), Signature: Marshal.StringToHGlobalAnsi(signature), Types: nativeTypes},
-          address + nint(index * size), false)
-      }
-      return address
-    }
-
     @DllImport("libwayland-client.so.0", EntryPoint: "wl_proxy_marshal_array_constructor_versioned")
-    private func Construct(proxy nint, opcode uint32, ref args StillImageArguments, kind nint, version uint32) nint;
+    private func Construct(proxy nint, opcode uint32, ref args LayerWaylandArguments, kind nint, version uint32) nint;
     @DllImport("libwayland-client.so.0", EntryPoint: "wl_proxy_marshal_array")
-    private func Send(proxy nint, opcode uint32, ref args StillImageArguments);
+    private func Send(proxy nint, opcode uint32, ref args LayerWaylandArguments);
     @DllImport("libwayland-client.so.0")
     private func wl_proxy_get_version(proxy nint) uint32;
     @DllImport("libc", EntryPoint: "memfd_create")
@@ -201,7 +164,7 @@ internal unsafe sealed class WaylandStillImage : IDisposable {
     try {
       if queue == nint(0) { return false }
       WaylandBackdrop.wl_proxy_set_queue(wrapper, queue)
-      var args = StillImageArguments{}
+      var args = LayerWaylandArguments{}
       registry = Construct(wrapper, 1u, ref args, Core("wl_registry"), 1u)
     } finally { WaylandBackdrop.wl_proxy_wrapper_destroy(wrapper) }
     if registry == nint(0) { return false }
@@ -212,7 +175,7 @@ internal unsafe sealed class WaylandStillImage : IDisposable {
     if !Listen(registry, []nint{Marshal.GetFunctionPointerForDelegate[BackdropWaylandGlobal](onGlobal),
         Marshal.GetFunctionPointerForDelegate[BackdropWaylandRemove](onRemove)}) || !Roundtrip() || dmabuf == nint(0)
       || viewporter == nint(0) || shm == nint(0) || compositor == nint(0) || subcompositor == nint(0) { return false }
-    var args = StillImageArguments{}
+    var args = LayerWaylandArguments{}
     child = Construct(compositor, 0u, ref args, surfaceType, wl_proxy_get_version(compositor))
     if child == nint(0) { return false }
     args.Second = child
@@ -243,7 +206,7 @@ internal unsafe sealed class WaylandStillImage : IDisposable {
     UnmapFormatTable()
     RenderNode = FindRenderNode()
     if RenderNode == nil { return false }
-    args = StillImageArguments{}
+    args = LayerWaylandArguments{}
     let region = Construct(compositor, 1u, ref args, Core("wl_region"), 1u)
     if region == nint(0) { return false }
     args.First = region
@@ -263,7 +226,7 @@ internal unsafe sealed class WaylandStillImage : IDisposable {
       default: (nint(0), 0u)
     }
     if bindVersion == 0u { return }
-    var args = StillImageArguments{First: nint(name), Second: interfaceName, Third: nint(bindVersion)}
+    var args = LayerWaylandArguments{First: nint(name), Second: interfaceName, Third: nint(bindVersion)}
     let value = Construct(registry, 0u, ref args, kind, bindVersion)
     switch text {
       case "wl_compositor" { compositor = value }
@@ -357,7 +320,7 @@ internal unsafe sealed class WaylandStillImage : IDisposable {
     guard let exported = image.Export() else { return nint(0) }
     using let fd = exported
     if fd.IsInvalid { return nint(0) }
-    var args = StillImageArguments{}
+    var args = LayerWaylandArguments{}
     let parameters = Construct(dmabuf, 1u, ref args, paramsType, 4u)
     if parameters == nint(0) { return nint(0) }
     let onCreated WaylandStillBufferCreated = (_, _, buffer) -> { createdBuffer = buffer
@@ -370,11 +333,11 @@ internal unsafe sealed class WaylandStillImage : IDisposable {
       if WaylandBackdrop.wl_proxy_add_listener(parameters, listener, nint(0)) != 0 { return nint(0) }
       for index in 0 ... image.Planes.Length {
         let plane = image.Planes[index]
-        args = StillImageArguments{First: fd.DangerousGetHandle(), Second: nint(index),
+        args = LayerWaylandArguments{First: fd.DangerousGetHandle(), Second: nint(index),
           Third: nint(plane.Offset), Fourth: nint(plane.Stride), Fifth: nint(image.Format.Modifier >> 32), Sixth: nint(uint32(image.Format.Modifier))}
         Send(parameters, 1u, ref args)
       }
-      args = StillImageArguments{First: nint(image.Width), Second: nint(image.Height), Third: nint(image.Format.FourCC)}
+      args = LayerWaylandArguments{First: nint(image.Width), Second: nint(image.Height), Third: nint(image.Format.FourCC)}
       Send(parameters, 2u, ref args)
       if !Roundtrip() || !bufferDone { return nint(0) }
       let buffer = createdBuffer
@@ -397,11 +360,11 @@ internal unsafe sealed class WaylandStillImage : IDisposable {
     using let handle = ExternalNativeHandle(nint(fd), false)
     var packed = pixel
     if Write(fd, ref packed, nuint(4)) != nint(4) { return nint(0) }
-    var args = StillImageArguments{Second: nint(fd), Third: nint(4)}
+    var args = LayerWaylandArguments{Second: nint(fd), Third: nint(4)}
     let pool = Construct(shm, 0u, ref args, Core("wl_shm_pool"), 1u)
     if pool == nint(0) { return nint(0) }
     try {
-      args = StillImageArguments{Third: nint(1), Fourth: nint(1), Fifth: nint(4)}
+      args = LayerWaylandArguments{Third: nint(1), Fourth: nint(1), Fifth: nint(4)}
       return Construct(pool, 0u, ref args, bufferType, 1u)
     } finally { Destroy(pool, 1u) }
   }
@@ -426,24 +389,28 @@ internal unsafe sealed class WaylandStillImage : IDisposable {
     canvasWidth = width
     canvasHeight = height
     dirty = false
-    var args = StillImageArguments{First: nint(width), Second: nint(height)}
+    var args = LayerWaylandArguments{First: nint(1)}
+    if wl_proxy_get_version(parent) >= 3u { Send(parent, 8u, ref args) }
+    args = LayerWaylandArguments{First: nint(-256), Second: nint(-256), Third: nint(-256), Fourth: nint(-256)}
+    Send(parentViewport, 1u, ref args)
+    args = LayerWaylandArguments{First: nint(width), Second: nint(height)}
     Send(parentViewport, 2u, ref args)
-    args = StillImageArguments{First: canvasBuffer}
+    args = LayerWaylandArguments{First: canvasBuffer}
     Send(parent, 1u, ref args)
-    args = StillImageArguments{Third: nint(width), Fourth: nint(height)}
+    args = LayerWaylandArguments{Third: nint(width), Fourth: nint(height)}
     Send(parent, 2u, ref args)
-    args = StillImageArguments{First: imageBuffer}
+    args = LayerWaylandArguments{First: imageBuffer}
     Send(child, 1u, ref args)
     if imageBuffer != nint(0) {
       let (source, destination) = Geometry(imageWidth, imageHeight, width, height, fit)
-      args = StillImageArguments{First: nint(int32(destination.X)), Second: nint(int32(destination.Y))}
+      args = LayerWaylandArguments{First: nint(int32(destination.X)), Second: nint(int32(destination.Y))}
       Send(subsurface, 1u, ref args)
-      args = StillImageArguments{First: nint(int32(source.X)), Second: nint(int32(source.Y)),
+      args = LayerWaylandArguments{First: nint(int32(source.X)), Second: nint(int32(source.Y)),
         Third: nint(int32(source.Width)), Fourth: nint(int32(source.Height))}
       Send(viewport, 1u, ref args)
-      args = StillImageArguments{First: nint(int32(destination.Width)), Second: nint(int32(destination.Height))}
+      args = LayerWaylandArguments{First: nint(int32(destination.Width)), Second: nint(int32(destination.Height))}
       Send(viewport, 2u, ref args)
-      args = StillImageArguments{Third: args.First, Fourth: args.Second}
+      args = LayerWaylandArguments{Third: args.First, Fourth: args.Second}
       Send(child, 2u, ref args)
     }
     WaylandBackdrop.wl_proxy_marshal_array(child, 6u, nil)

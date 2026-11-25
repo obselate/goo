@@ -303,7 +303,10 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   internal prop PresentsStillImage bool { get -> layerWindow?.PresentsStillImage == true }
   internal prop StillImagePending bool { get -> layerWindow?.StillImagePending == true }
 
-  internal func SetStillImage(source LayerWindowImage?, background Color) bool {
+  internal prop StillImagePreparationReady bool { get -> layerWindow?.StillImagePreparationReady == true }
+  internal func FinishStillImagePreparation() bool -> layerWindow?.FinishStillImagePreparation() != false
+
+  internal func SetStillImage(source LayerWindowImage?, background Color, owner Window) bool {
     let properties = SDL.GetWindowProperties(window)
     let viewport = nint(SDL.GetPointerProperty(properties, "SDL.window.wayland.viewport", nil))
     let alpha = if Transparent { background.A } else { 1.0F }
@@ -311,25 +314,19 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       | (uint32(MathF.Round(background.R * alpha * 255.0F)) << 16)
       | (uint32(MathF.Round(background.G * alpha * 255.0F)) << 8)
       | uint32(MathF.Round(background.B * alpha * 255.0F))
-    return layerWindow?.SetStillImage(this, viewport, source, pixel) == true
+    return layerWindow?.SetStillImage(this, viewport, source, pixel, owner) == true
   }
 
   internal func StopStillImage() { layerWindow?.StopStillImage() }
 
   internal func PresentStillImage() bool -> layerWindow?.PresentStillImage() == true
 
-  internal func StillImageScale(width int32, height int32, fit ImageFit) float64 {
-    if fit == ImageFit.None { return 1.0 }
-    var scale = 0.0
-    for display in GetDisplays() {
-      let mode = SDL.GetDesktopDisplayMode(display.Id.NativeValue)
-      if mode.IsNull { return 1.0 }
-      let density = float64(mode.PixelDensity)
-      let x = Math.Round(mode.W * density) / width
-      let y = Math.Round(mode.H * density) / height
-      scale = Math.Max(scale, if fit == ImageFit.Contain { Math.Min(x, y) } else { Math.Max(x, y) })
-    }
-    return if scale > 0.0 { Math.Min(1.0, scale) } else { 1.0 }
+  internal func StillImageOutputPixels() (int32, int32) {
+    let display = layerWindow?.Output?.NativeValue ?? SDL.GetDisplayForWindow(window)
+    let mode = SDL.GetDesktopDisplayMode(display)
+    if mode.IsNull { return (0, 0) }
+    let density = float64(mode.PixelDensity)
+    return (int32(Math.Round(mode.W * density)), int32(Math.Round(mode.H * density)))
   }
 
   public func SetTitle(value string) {

@@ -81,3 +81,7 @@ with subprocess.Popen([str(peer)], stdin=subprocess.PIPE, stdout=subprocess.PIPE
         pointer.stdin.close()
         assert pointer.wait(timeout=5) == 0
 print('Wayland input region: layer and xdg routing, resize, scale, empty and reset passed')
+env.pop('GOO_WINDOW_INPUT_REGION_SMOKE')
+env['GOO_LAYER_STILL_IMAGE_SMOKE'] = '1'
+env['GOO_LAYER_STILL_IMAGE_EXPECT'] = 'swapchain'
+subprocess.run(['dotnet', sys.argv[1]], env=env, timeout=15, check=True)

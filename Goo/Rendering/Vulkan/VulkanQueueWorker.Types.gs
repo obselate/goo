@@ -63,11 +63,8 @@ internal unsafe sealed class VulkanQueueMailbox {
     }
   }
 
-  private let completed Action?
-
-  internal init(nativeHost VulkanSurfaceHost?, completed Action? = nil) {
+  internal init(nativeHost VulkanSurfaceHost?) {
     host = nativeHost
-    this.completed = completed
   }
 
   internal prop Phase int32{
@@ -86,7 +83,6 @@ internal unsafe sealed class VulkanQueueMailbox {
 
   internal func NotifyCompletion() {
     host?.Wake()
-    completed?.Invoke()
   }
 
   internal func PrepareSubmit(commandBuffer VkCommandBuffer, waitSemaphore VkSemaphore,

@@ -19,7 +19,9 @@ internal class LayerStillImageSmoke {
       let first = Open(sharedImage, 251, 143)
       let second = Open(sharedImage, 137, 253)
       try {
-        Wait(first, second, () -> first.IsVisible && second.IsVisible)
+        Wait(first, second, () -> first.IsVisible && second.IsVisible
+          && (sharedImage.NativeStorage != nil
+          || !first.SdlHostForTest()!!.PresentsStillImage && !second.SdlHostForTest()!!.PresentsStillImage))
         let direct = first.SdlHostForTest()!!.PresentsStillImage
         Require(direct == second.SdlHostForTest()!!.PresentsStillImage, "Layer windows chose different presentation modes")
         let mode = if direct { "dmabuf" } else { "swapchain" }
@@ -28,18 +30,27 @@ internal class LayerStillImageSmoke {
         if direct {
           Require(first.CaptureTargetForTest() == nil && second.CaptureTargetForTest() == nil,
             "Direct layer windows created swapchain targets")
+          Wait(first, second, () -> sharedImage.NativeStorage != nil
+            && !first.SdlHostForTest()!!.StillImagePending && !second.SdlHostForTest()!!.StillImagePending)
           guard let storage = sharedImage.NativeStorage else { throw InvalidOperationException("Shared image was not uploaded") }
           VerifyCloseOnExec(storage)
           let count = FdCount()
+          let deferrals = VulkanSharedRuntime.QueueEnqueueDeferralCountForTest
+          VulkanSharedRuntime.DeferNextQueueEnqueueForTest()
           first.LayerImage = alternate
+          first.PumpScheduled(0.0)
+          Require(Object.ReferenceEquals(sharedImage.NativeStorage, storage) && alternate.NativeStorage == nil,
+            "The previous image was retired before the new upload completed")
           Wait(first, second, () -> alternate.NativeStorage != nil)
+          Require(VulkanSharedRuntime.QueueEnqueueDeferralCountForTest > deferrals
+            && first.SdlHostForTest()!!.PresentsStillImage, "A temporary queue refusal stopped direct presentation")
           Require(Object.ReferenceEquals(sharedImage.NativeStorage, storage), "Replacing one output retired the other output's image")
           second.RequestClose()
           Wait(first, second, () -> !second.IsOpen && !first.SdlHostForTest()!!.StillImagePending)
           Require(sharedImage.NativeStorage == nil, "Closing the last output did not retire the old image")
           for _ in 0 ... 3 {
             first.LayerImage = sharedImage
-            Wait(first, second, () -> sharedImage.NativeStorage != nil)
+            Wait(first, second, () -> sharedImage.NativeStorage != nil && !first.SdlHostForTest()!!.StillImagePending)
             Require(!first.SdlHostForTest()!!.WaylandVulkanFrameReady(), "The new still image did not request a frame callback")
             first.LayerImage = alternate
             first.PumpScheduled(0.0)

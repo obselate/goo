@@ -139,7 +139,7 @@ public partial class Window {
       let still = LayerShell?.StillImage == true
       if still && Root != nil { throw InvalidOperationException("A still-image layer window does not have a root cell") }
       var target VulkanWindowTarget?
-      if !still || !native.SetStillImage(layerImage, RenderBackground) {
+      if !still || !native.SetStillImage(layerImage, RenderBackground, this) {
         if still { prepareStillImageFallback(native) }
         target = VulkanWindowTarget(native)
       }
@@ -223,6 +223,7 @@ public partial class Window {
     native.DisplayChanged += () -> {
       let previous = LayoutOrigin.Current
       LayoutOrigin.Current = LayoutCause.Environment
+      if LayerShell?.StillImage == true { requestRender() }
       try { notifications.RaiseDisplayChanged() }
       finally { LayoutOrigin.Current = previous }
     }
@@ -476,7 +477,8 @@ public partial class Window {
 
         if LayerShell?.StillImage == true {
           if let sdl = native as SdlHost? {
-            if sdl.PresentsStillImage && renderDirty && !sdl.SetStillImage(layerImage, RenderBackground) {
+            if sdl.PresentsStillImage && (renderDirty || sdl.StillImagePreparationReady)
+              && !sdl.SetStillImage(layerImage, RenderBackground, this) {
               prepareStillImageFallback(sdl)
               let target = VulkanWindowTarget(sdl)
               windowTarget = target
@@ -643,11 +645,17 @@ public partial class Window {
 
   private func firstShowPending() bool -> (host as SdlHost?)?.FirstShowPending == true
 
+  internal func NotifyStillImageReady() {
+    Post(() -> requestRender())
+    SdlRuntime.Wake()
+  }
+
   internal func SchedulerHasImmediateService() bool -> callbackClosing || host?.HasPendingEvents == true || hasPostedActions()
     || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0
     || host?.IsClosing == true
     || Application.HasPendingActivation
     || nativeModal?.HasCompletion == true
+    || LayerShell?.StillImage == true && (host as SdlHost?)?.StillImagePreparationReady == true
     || nativeHidePending && windowTarget?.QueueWorkPending != true
     || pendingLayerGeometry != nil && windowTarget?.QueueWorkPending != true
 
@@ -848,6 +856,7 @@ public partial class Window {
 
   internal func Close() {
     requireUiThread("Window.Close")
+    if (host as SdlHost?)?.FinishStillImagePreparation() == false { return }
     using let callbackScope = CallbackScope(CallbackContext())
     if !callbackClosing { beginCallbackClose()
     }
