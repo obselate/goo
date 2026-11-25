@@ -146,7 +146,9 @@ public partial class Window {
       if ownsStartupReport { VulkanStartupReport.Current?.StopCapture() }
       initializingGraphics = false
       windowTarget = target
-      if native is SdlHost && SdlHost.IsWayland() { native.CanMinimize = target.CanMinimizeNativeWindow }
+      if native is SdlHost && SdlHost.IsWayland() && target != nil {
+        native.CanMinimize = target.CanMinimizeNativeWindow
+      }
       native.SetBackdrop(backdrop == WindowBackdrop.Blur, windowsBackdrop, macOSBackdrop, waylandBackdrop)
       if captureStartup {
         target?.RecordSdlWindowCreate(sdlStart, sdlEnd)
