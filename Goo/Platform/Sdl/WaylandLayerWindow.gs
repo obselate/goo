@@ -188,11 +188,8 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
       DrainFrame()
       if !mapped { return }
     }
-    let arguments * BackdropWaylandArgument = stackalloc[3]BackdropWaylandArgument
-    arguments[0].Value = nint(0)
-    arguments[1].Value = nint(0)
-    arguments[2].Value = nint(0)
-    WaylandBackdrop.wl_proxy_marshal_array(surface, 1u, arguments)
+    var arguments = LayerWaylandArguments{}
+    MarshalRequest(surface, 1u, ref arguments)
     WaylandBackdrop.wl_proxy_marshal_array(surface, 6u, nil)
     bufferCommitPending = false
     configureAck = nil

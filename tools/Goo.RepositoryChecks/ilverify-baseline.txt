@@ -235,9 +235,6 @@
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.WaylandLayerWindow::Global(native int, native int, uint32, native int, uint32)][offset 0x00000075][found Native Int][expected address of '[Goo]Goo.BackdropWaylandArgument'] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.WaylandLayerWindow::Global(native int, native int, uint32, native int, uint32)][offset 0x00000092][found Native Int][expected address of '[Goo]Goo.BackdropWaylandArgument'] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.WaylandLayerWindow::Global(native int, native int, uint32, native int, uint32)][offset 0x000000AB][found Native Int][expected address of '[Goo]Goo.BackdropWaylandArgument'] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.WaylandLayerWindow::Hide()][offset 0x00000062][found Native Int][expected address of '[Goo]Goo.BackdropWaylandArgument'] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.WaylandLayerWindow::Hide()][offset 0x00000079][found Native Int][expected address of '[Goo]Goo.BackdropWaylandArgument'] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.WaylandLayerWindow::Hide()][offset 0x00000091][found Native Int][expected address of '[Goo]Goo.BackdropWaylandArgument'] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.WaylandLayerWindow::Initialize(native int)][offset 0x000000CC][found address of '[Goo]Goo.BackdropWaylandArgument'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.WaylandLayerWindow::RequestFrame(native int)][offset 0x0000001A][found address of '[Goo]Goo.BackdropWaylandArgument'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.WaylandTransferPipe::Wait(int32, int16, [S.P.CoreLib]System.Threading.CancellationToken)][offset 0x0000002B][found address of '[Goo]Goo.TransferPollDescriptor'][expected Native Int] Unexpected type on the stack.
@@ -434,10 +431,6 @@
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.WaylandLayerWindow::Global(native int, native int, uint32, native int, uint32)][offset 0x0000007C] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.WaylandLayerWindow::Global(native int, native int, uint32, native int, uint32)][offset 0x0000009A] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.WaylandLayerWindow::Global(native int, native int, uint32, native int, uint32)][offset 0x000000B6] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.WaylandLayerWindow::Hide()][offset 0x00000052] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.WaylandLayerWindow::Hide()][offset 0x00000069] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.WaylandLayerWindow::Hide()][offset 0x00000080] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.WaylandLayerWindow::Hide()][offset 0x000000A0] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.WindowsMenuBridge::BuildAccelerators([Goo]Goo.NativeMenuSnapshot, [Goo]Goo.NativeMenuStatus&, int32)][offset 0x00000292] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.WindowsTrayBackend::GuidFor(string)][offset 0x0000002C] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.WindowsTrayBackend::GuidFor(string)][offset 0x0000004A] Unmanaged pointers are not a verifiable type.
@@ -491,7 +484,6 @@
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.WaylandBackdrop::Initialize()][offset 0x00000168] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.WaylandLayerWindow::CreateLayerSurface(native int)][offset 0x0000000B] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.WaylandLayerWindow::Global(native int, native int, uint32, native int, uint32)][offset 0x0000004B] Instruction cannot be verified.
-[IL]: Error [Unverifiable]: [Goo.dll : Goo.WaylandLayerWindow::Hide()][offset 0x0000004F] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.WindowsCompositionDevice::Initialize(native int, uint64)][offset 0x0000007B] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.WindowsDragComWrappers::DefineSource()][offset 0x0000000B] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.WindowsDragComWrappers::DefineTarget()][offset 0x0000000B] Instruction cannot be verified.
