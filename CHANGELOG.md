@@ -8,6 +8,7 @@
 - Close Wayland layer-shell applications cleanly when the compositor disconnects.
 - Keep Vulkan frame submissions from failing when another window has image uploads that are queued but not recorded.
 - Keep closing or hiding a window with a deferred frame from failing while another window has recorded image uploads in flight.
+- Prevent Wayland layer windows from stretching the old frame during resize.
 - Keep unchanged Vulkan scene ranges reusable when an animated stroke updates its path.
 
 ## 0.32.6 - 2026-11-25
