@@ -1913,6 +1913,45 @@ public class LayerWindowCloseSmoke {
       Application.Run(window)
     }
 
+    public func RunResize() {
+      let root = LayerGeometryCell()
+      let window = Window{ Title: "Layer window resize", Root: root, UiScale: 1.0F,
+        LayerShell: LayerWindowOptions{ Width: 412, Height: 64 } }.Open()
+      try {
+        let native = window.SdlHostForTest()!!
+        let target = window.CaptureTargetForTest()!!
+        WindowReadbackTestFixture.ForceRender(window, 0.0, 5.0, true)
+        WaitForLayerFrame(native)
+        window.RuntimeHoldNextQueueSubmitForTest()
+        try {
+          window.ForceRenderForTest(0.0)
+          if !window.RuntimeWaitForHeldQueueCallForTest(5000) {
+            throw InvalidOperationException("The old-size layer frame did not reach its held submission")
+          }
+          native.SetLayerGeometry(LayerWindowOptions{ Width: 476, Height: 128 })
+          let deadline = Environment.TickCount64 + 5000L
+          while window.NativeWidth != 476 || window.NativeHeight != 128 {
+            if Environment.TickCount64 >= deadline { throw InvalidOperationException("The layer resize did not configure") }
+            SdlRuntime.WaitEventsBounded(20, 64)
+            native.RefreshMetricsIfChanged()
+          }
+        } finally { VulkanSharedRuntime.ReleaseHeldQueueCallForTest() }
+        let deadline = Environment.TickCount64 + 5000L
+        while target.QueueWorkPending {
+          if Environment.TickCount64 >= deadline { throw InvalidOperationException("The old-size layer frame did not retire") }
+          target.PollQueueCompletion()
+          SdlRuntime.WaitEventsBounded(20, 64)
+        }
+        WindowReadbackTestFixture.ForceRender(window, 0.0, 5.0, true)
+        WaitForLayerFrame(native)
+        let bounds = root.Handle.RawBorderBox
+        if bounds.Width != 476.0 || bounds.Height != 128.0 {
+          throw InvalidOperationException("The first resized layer frame did not lay out at the configured size")
+        }
+      } finally { window.CloseAfterRun() }
+      Console.WriteLine("layer-window-resize-layout: passed")
+    }
+
     public func Run() {
       CheckLiveGeometry()
       for hide in []bool{false, true} {

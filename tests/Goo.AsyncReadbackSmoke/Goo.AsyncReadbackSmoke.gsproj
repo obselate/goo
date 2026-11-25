@@ -35,6 +35,8 @@
     <Compile Include="../Shared/ClipboardDataSmoke.gs" Link="ClipboardDataSmoke.gs" />
     <Content Include="../NativeWindow/test_layer_window_failure.py" Link="test_layer_window_failure.py"
              CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../NativeWindow/test_layer_window_resize.py" Link="test_layer_window_resize.py"
+             CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../Shared/Assets/local-rgba.png" Link="local-rgba.png"
              CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../Shared/Assets/local-*.jpg;../Shared/Assets/local-*.gif" Link="%(Filename)%(Extension)"
