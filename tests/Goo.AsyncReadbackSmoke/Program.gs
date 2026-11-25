@@ -482,8 +482,15 @@ let modes = []SmokeMode{
   SmokeMode("GOO_NATIVE_POPUP_SMOKE", "1", () -> PopupWindowSmoke.Run()),
   SmokeMode("GOO_LAYER_WINDOW_CLOSE_SMOKE", "1", () -> {
     LayerWindowCloseSmoke.Run()
-    for script in []string{"test_layer_window_resize.py", "test_layer_window_failure.py"} {
-      let info = ProcessStartInfo("python3")
+    for script in []string{"test_layer_window_resize.py", "test_window_input_region.py", "test_layer_window_failure.py"} {
+      let usesSway = script == "test_window_input_region.py"
+      let info = ProcessStartInfo(usesSway ? "bash" : "python3")
+      if usesSway {
+        info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "with-headless-wayland.sh"))
+        info.ArgumentList.Add("python3")
+        info.Environment.Remove("GOO_HEADLESS_PRIVATE_BUS")
+        info.Environment["GOO_WAYLAND_COMPOSITOR"] = "sway"
+      }
       info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, script))
       info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "Goo.AsyncReadbackSmoke.dll"))
       info.Environment.Remove("GOO_LAYER_WINDOW_CLOSE_SMOKE")
@@ -493,6 +500,7 @@ let modes = []SmokeMode{
     }
   }),
   SmokeMode("GOO_LAYER_WINDOW_RESIZE_SMOKE", "1", () -> LayerWindowCloseSmoke.RunResize()),
+  SmokeMode("GOO_WINDOW_INPUT_REGION_SMOKE", "1", () -> LayerWindowCloseSmoke.RunInputRegion()),
   SmokeMode("GOO_LAYER_WINDOW_FAILURE_SMOKE", "", () -> LayerWindowCloseSmoke.RunFailure(
     Environment.GetEnvironmentVariable("GOO_LAYER_WINDOW_FAILURE_SMOKE") == "protocol")),
   SmokeMode("GOO_EMBEDDED_HOST_SMOKE", "1", () -> EmbeddedHostSmoke.Run()),
