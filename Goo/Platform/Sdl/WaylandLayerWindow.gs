@@ -67,6 +67,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   internal prop ResizePending bool { get -> awaitingResizeConfigure || pendingGeometryHold }
   internal prop FrameReady bool { get -> presentFrame == nint(0) && !ResizePending }
   internal prop Output WindowDisplayId? { get -> options.Output }
+  internal prop Layer WindowLayer { get -> options.Layer }
   internal prop KeyboardInteractivity LayerWindowKeyboardInteractivity { get -> geometry.KeyboardInteractivity }
 
   internal init(display nint, surface nint, output nint, options LayerWindowOptions,

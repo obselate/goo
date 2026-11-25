@@ -32,6 +32,8 @@ internal unsafe partial class SdlHost {
     private func FinishWaylandVulkanFrameNative(window nint, committed uint8);
   }
 
+  internal prop WaylandLayer WindowLayer? { get -> layerWindow?.Layer }
+
   internal func WaylandVulkanFrameReady() bool ->
     lockWindow?.FrameReady ?? layerWindow?.FrameReady ?? (!waylandVulkanFrame || WaylandVulkanFrameReadyNative(windowHandle) != uint8(0))
 
