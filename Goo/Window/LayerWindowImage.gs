@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Collections.Generic
 import System.IO
 import System.Threading
 
@@ -13,7 +14,9 @@ public sealed class LayerWindowImage {
   private let path string
   private let fit ImageFit
   private var storage VulkanStillImage?
-  private var nativeUsers int32
+  private let nativeSurfaces List[WaylandStillImage] = List[WaylandStillImage]()
+  private var sourceWidth int32
+  private var sourceHeight int32
   private var fallbackUsers int32
   private var fallbackSource ImageSource?
 
@@ -42,10 +45,15 @@ public sealed class LayerWindowImage {
   }
 
   internal func TryAttach(host SdlHost, presenter WaylandStillImage) bool {
+    let registered = nativeSurfaces.Contains(presenter)
     if let resident = storage {
-      if !presenter.SetImage(resident) { return false }
-      nativeUsers++
-      return true
+      let scale = host.StillImageScale(sourceWidth, sourceHeight, Fit)
+      if resident.Width >= Math.Ceiling(sourceWidth * scale) && resident.Height >= Math.Ceiling(sourceHeight * scale) {
+        if registered { return true }
+        if !presenter.SetImage(resident) { return false }
+        nativeSurfaces.Add(presenter)
+        return true
+      }
     }
     var headless VulkanWindowTarget?
     var runtime = VulkanSharedRuntime.TryAcquire()
@@ -57,7 +65,7 @@ public sealed class LayerWindowImage {
       guard let active = runtime else { return false }
       if !VulkanStillImage.Supports(active) { return false }
       let source = fallbackSource ?? Load(int32(active.Facts.MaxImageDimension2D))
-      if source == nil { return presenter.SetImage(nil) }
+      if source == nil { return storage == nil && presenter.SetImage(nil) }
       var reduced ImageSource?
       try {
         let scale = host.StillImageScale(source.Width, source.Height, Fit)
@@ -74,13 +82,18 @@ public sealed class LayerWindowImage {
             } finally { decoded.Release() }
           }
         }
-        storage = VulkanStillImage.TryCreate(reduced ?? source, presenter.RenderNode!!, presenter.Formats,
-          (image VulkanStillImage) -> presenter.SetImage(image))
-        if storage == nil {
-          fallbackSource ??= source
+        let previous = storage
+        let created = VulkanStillImage.TryCreate(reduced ?? source, presenter.RenderNode!!, presenter.Formats,
+          (image VulkanStillImage) -> ReplaceBuffers(presenter, image, registered))
+        if created == nil {
+          if previous == nil { fallbackSource ??= source }
           return false
         }
-        nativeUsers = 1
+        storage = created
+        sourceWidth = source.Width
+        sourceHeight = source.Height
+        if !registered { nativeSurfaces.Add(presenter) }
+        previous?.Dispose()
         return true
       } finally {
         reduced?.Dispose()
@@ -93,10 +106,30 @@ public sealed class LayerWindowImage {
       }
   }
 
-  internal func ReleaseNative() {
-    if nativeUsers == 0 { return }
-    nativeUsers--
-    if nativeUsers == 0 {
+  private func ReplaceBuffers(presenter WaylandStillImage, image VulkanStillImage, registered bool) bool {
+    let count = nativeSurfaces.Count
+    if count == 0 { return presenter.SetImage(image) }
+    let staged = [count + (registered ? 0 : 1)]nint
+    try {
+      for index in 0 ... staged.Length {
+        let surface = if index < count { nativeSurfaces[index] } else { presenter }
+        staged[index] = surface.CreateBuffer(image)
+        if staged[index] == nint(0) { return false }
+      }
+      for index in 0 ... staged.Length {
+        let surface = if index < count { nativeSurfaces[index] } else { presenter }
+        surface.SetBuffer(image, staged[index])
+        staged[index] = nint(0)
+      }
+      SdlRuntime.Wake()
+      return true
+    } finally {
+      for buffer in staged { WaylandStillImage.Destroy(buffer) }
+    }
+  }
+
+  internal func ReleaseNative(presenter WaylandStillImage) {
+    if nativeSurfaces.Remove(presenter) && nativeSurfaces.Count == 0 {
       storage?.Dispose()
       storage = nil
     }

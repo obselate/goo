@@ -632,6 +632,7 @@ public partial class Window {
     || pendingImageCompletion != 0 || pendingRetainedInvalidation != 0 || hasScrollDemand()
     || accessibility?.HasDemand == true || hasPostedActions() || MetricSubscriptions.HasDemand(this)
     || windowTarget?.NeedsRender == true && !memoryPressureWaiting || windowTarget?.QueueWorkPending == true
+    || LayerShell?.StillImage == true && (host as SdlHost?)?.StillImagePending == true
     || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0
     || host?.IsClosing == true || nativeHidePending
     || scheduler.HasPendingStartup()

@@ -186,7 +186,7 @@ internal unsafe sealed class WaylandStillImage : IDisposable {
     @DllImport("libc", EntryPoint: "munmap")
     private func Unmap(address nint, size nuint) int32;
 
-    private func Destroy(proxy nint, opcode uint32 = 0u) {
+    internal func Destroy(proxy nint, opcode uint32 = 0u) {
       if proxy == nint(0) { return }
       WaylandBackdrop.wl_proxy_marshal_array(proxy, opcode, nil)
       WaylandBackdrop.wl_proxy_destroy(proxy)
@@ -327,19 +327,23 @@ internal unsafe sealed class WaylandStillImage : IDisposable {
   internal func SetImage(image VulkanStillImage?) bool {
     var buffer nint
     if let next = image {
-      if !formats.Contains(next.Format) { return false }
       buffer = CreateBuffer(next)
       if buffer == nint(0) { return false }
     }
+    SetBuffer(image, buffer)
+    return true
+  }
+
+  internal func SetBuffer(image VulkanStillImage?, buffer nint) {
     Destroy(imageBuffer)
     imageBuffer = buffer
     imageWidth = image?.Width ?? 0
     imageHeight = image?.Height ?? 0
     dirty = true
-    return true
   }
 
-  private func CreateBuffer(image VulkanStillImage) nint {
+  internal func CreateBuffer(image VulkanStillImage) nint {
+    if !formats.Contains(image.Format) { return nint(0) }
     guard let exported = image.Export() else { return nint(0) }
     using let fd = exported
     if fd.IsInvalid { return nint(0) }

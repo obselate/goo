@@ -35,16 +35,18 @@ internal class LayerStillImageSmoke {
           Wait(first, second, () -> alternate.NativeStorage != nil)
           Require(Object.ReferenceEquals(sharedImage.NativeStorage, storage), "Replacing one output retired the other output's image")
           second.RequestClose()
-          Wait(first, second, () -> !second.IsOpen)
+          Wait(first, second, () -> !second.IsOpen && !first.SdlHostForTest()!!.StillImagePending)
           Require(sharedImage.NativeStorage == nil, "Closing the last output did not retire the old image")
           for _ in 0 ... 3 {
             first.LayerImage = sharedImage
             Wait(first, second, () -> sharedImage.NativeStorage != nil)
+            Require(!first.SdlHostForTest()!!.WaylandVulkanFrameReady(), "The new still image did not request a frame callback")
             first.LayerImage = alternate
-            Wait(first, second, () -> alternate.NativeStorage != nil)
+            first.PumpScheduled(0.0)
+            Wait(first, second, () -> alternate.NativeStorage != nil && !first.SdlHostForTest()!!.StillImagePending)
           }
           first.LayerImage = nil
-          Wait(first, second, () -> alternate.NativeStorage == nil)
+          Wait(first, second, () -> alternate.NativeStorage == nil && !first.SdlHostForTest()!!.StillImagePending)
           Require(FdCount() <= count, "Still-image replacement leaked file descriptors")
         } else {
           Require(first.CaptureTargetForTest() != nil && second.CaptureTargetForTest() != nil,
@@ -74,12 +76,22 @@ internal class LayerStillImageSmoke {
       let deadline = Environment.TickCount64 + 5000L
       while Environment.TickCount64 < deadline {
         SdlRuntime.PumpEvents(64)
-        if first.IsOpen { first.PumpScheduled(0.0) }
-        if second.IsOpen { second.PumpScheduled(0.0) }
+        Pump(first)
+        Pump(second)
         if condition.Invoke() { return }
         Thread.Sleep(1)
       }
       throw InvalidOperationException("Still-image layer window did not reach the expected state")
+    }
+
+    private func Pump(window Window) {
+      if !window.IsOpen { return }
+      window.RefreshSchedulerMetrics()
+      let now = float64(Stopwatch.GetTimestamp())
+      let frameDue = window.SchedulerFrameDue(now)
+      if frameDue || window.SchedulerHasImmediateService() || window.SchedulerHasPendingQueueWork() {
+        window.SchedulerPump(now, frameDue)
+      }
     }
 
     private func FdCount() int32 -> Directory.GetFiles("/proc/self/fd").Length

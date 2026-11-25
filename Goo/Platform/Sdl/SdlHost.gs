@@ -318,6 +318,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     layerWindow!!.SetGeometry(geometry, holdForConfigure)
 
   internal prop PresentsStillImage bool { get -> layerWindow?.PresentsStillImage == true }
+  internal prop StillImagePending bool { get -> layerWindow?.StillImagePending == true }
 
   internal func SetStillImage(source LayerWindowImage?, background Color) bool {
     let properties = SDL.GetWindowProperties(window)

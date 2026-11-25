@@ -63,10 +63,12 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   private var framePending bool
   private var still WaylandStillImage?
   private var stillSource LayerWindowImage?
-  private var stillStorageAttached bool
   private var configuredWidth int32
   private var configuredHeight int32
   internal prop PresentsStillImage bool { get -> still != nil }
+  internal prop StillImagePending bool {
+    get -> still != nil && (configureAck != nil || still?.NeedsCommit(configuredWidth, configuredHeight) == true)
+  }
   internal prop Presented bool { get; set; }
   internal prop Configured bool { get; private set; }
   internal prop Visible bool { get -> mapped && Configured }
@@ -229,22 +231,22 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     still ??= WaylandStillImage.TryCreate(display, surface, viewport)
     guard let presenter = still else { return false }
     if !presenter.SetCanvas(pixel) { return false }
-    if Object.ReferenceEquals(source, stillSource) { return true }
+    if Object.ReferenceEquals(source, stillSource) {
+      return source?.NativeStorage == nil || source?.TryAttach(host, presenter) == true
+    }
     if !(source?.TryAttach(host, presenter) ?? presenter.SetImage(nil)) { return false }
-    if stillStorageAttached { stillSource?.ReleaseNative() }
+    stillSource?.ReleaseNative(presenter)
     stillSource = source
-    stillStorageAttached = source?.NativeStorage != nil
     return true
   }
 
   internal func StopStillImage() {
-    if still == nil { return }
+    guard let presenter = still else { return }
     FinishPresent(false)
     bufferCommitPending = false
-    still?.Dispose()
+    presenter.Dispose()
     still = nil
-    if stillStorageAttached { stillSource?.ReleaseNative() }
-    stillStorageAttached = false
+    stillSource?.ReleaseNative(presenter)
     stillSource = nil
   }
 
