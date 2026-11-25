@@ -481,8 +481,8 @@ let modes = []SmokeMode{
   SmokeMode("GOO_WINDOW_ACTIVATION_SMOKE", "1", () -> WindowActivationSmoke.Run()),
   SmokeMode("GOO_NATIVE_POPUP_SMOKE", "1", () -> PopupWindowSmoke.Run()),
   SmokeMode("GOO_LAYER_WINDOW_CLOSE_SMOKE", "1", () -> {
-    LayerWindowCloseSmoke.Run()
     LayerStillImageSmoke.Run()
+    LayerWindowCloseSmoke.Run()
     for script in []string{"test_layer_window_resize.py", "test_layer_window_failure.py"} {
       let info = ProcessStartInfo("python3")
       info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, script))

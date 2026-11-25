@@ -299,24 +299,6 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     SdlRuntime.Wake()
   }
 
-  public func SetTitle(value string) {
-    ThrowIfDisposed()
-    Require(SDL.SetWindowTitle(window, value), "SDL_SetWindowTitle")
-  }
-
-  public func SetSize(width int32, height int32) {
-    ThrowIfDisposed()
-    Require(SDL.SetWindowSize(window, width, height), "SDL_SetWindowSize")
-  }
-
-  internal prop IsPointerOnlyLayer bool {
-    get -> layerWindow?.KeyboardInteractivity == LayerWindowKeyboardInteractivity.None
-  }
-
-  internal func SupportsLayerGeometry(geometry LayerWindowOptions) bool -> layerWindow!!.SupportsGeometry(geometry)
-  internal func SetLayerGeometry(geometry LayerWindowOptions, holdForConfigure bool = false) ->
-    layerWindow!!.SetGeometry(geometry, holdForConfigure)
-
   internal prop PresentsStillImage bool { get -> layerWindow?.PresentsStillImage == true }
   internal prop StillImagePending bool { get -> layerWindow?.StillImagePending == true }
 
@@ -348,6 +330,24 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     }
     return if scale > 0.0 { Math.Min(1.0, scale) } else { 1.0 }
   }
+
+  public func SetTitle(value string) {
+    ThrowIfDisposed()
+    Require(SDL.SetWindowTitle(window, value), "SDL_SetWindowTitle")
+  }
+
+  public func SetSize(width int32, height int32) {
+    ThrowIfDisposed()
+    Require(SDL.SetWindowSize(window, width, height), "SDL_SetWindowSize")
+  }
+
+  internal prop IsPointerOnlyLayer bool {
+    get -> layerWindow?.KeyboardInteractivity == LayerWindowKeyboardInteractivity.None
+  }
+
+  internal func SupportsLayerGeometry(geometry LayerWindowOptions) bool -> layerWindow!!.SupportsGeometry(geometry)
+  internal func SetLayerGeometry(geometry LayerWindowOptions, holdForConfigure bool = false) ->
+    layerWindow!!.SetGeometry(geometry, holdForConfigure)
 
   public func SetMinimumSize(width int32, height int32) {
     ThrowIfDisposed()

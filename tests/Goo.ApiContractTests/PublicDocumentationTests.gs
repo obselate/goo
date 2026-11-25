@@ -1114,13 +1114,13 @@ class PublicDocumentationTests {
                 DocumentationShape([]string{"formats"}, Array.Empty[string](), true),
             ["M:Goo.Window.SetLayerGeometry(Goo.LayerWindowOptions)"] =
                 DocumentationShape([]string{"geometry"}, Array.Empty[string](), true),
-            ["M:Goo.LayerWindowImage.#ctor(System.String,Goo.ImageFit)"] =
-                DocumentationShape([]string{"path", "fit"}, Array.Empty[string](), false),
             ["M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)"] = DocumentationShape(
                 []string{"x", "y"},
                 System.Array.Empty[string](),
                 false
             ),
+            ["M:Goo.LayerWindowImage.#ctor(System.String,Goo.ImageFit)"] =
+                DocumentationShape([]string{"path", "fit"}, Array.Empty[string](), false),
             ["M:Goo.Window.AccessibilityHitTest(System.Double,System.Double)"] = DocumentationShape(
                 []string{"x", "y"},
                 System.Array.Empty[string](),
